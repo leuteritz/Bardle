@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
+import LevelComponent from './components/LevelComponent.vue'
+
 const gameStore = useGameStore()
 
 onMounted(() => {
@@ -11,14 +13,25 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full h-screen bg-yellow-200">
+  <div class="relative flex flex-col items-center justify-center w-full h-screen bg-yellow-200">
+    <LevelComponent />
     <h1 class="mb-8 text-6xl font-bold text-center">Bard Idle Game</h1>
     <div class="flex flex-col mb-6 text-3xl">
-      Meeps: <span class="font-mono">{{ gameStore.meeps }} </span> Meeps per second:
+      Chimes: <span class="font-mono">{{ gameStore.chimes }}</span> Meeps:
+      <span class="font-mono">{{ gameStore.meeps }} </span> Meeps per second:
       <span class="font-mono">{{ gameStore.meepsPerSecond = 3 }}</span> Gold:
       <span class="font-mono">{{ gameStore.gold }}</span>
     </div>
     <div class="flex flex-row items-center justify-center">
+      <div
+        class="flex items-center justify-center w-24 h-24 transition cursor-pointer hover:scale-110"
+      >
+        <img
+          src="./assets/img/BardChime2.png"
+          @click="gameStore.addChime"
+          class="object-contain w-full h-full"
+        />
+      </div>
       <div
         class="flex items-center justify-center w-24 h-24 transition cursor-pointer hover:scale-110"
       >
