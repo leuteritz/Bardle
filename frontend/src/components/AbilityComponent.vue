@@ -12,7 +12,7 @@
       ></div>
     </div>
     <div class="flex flex-col items-center justify-center w-16 h-16">
-      <img :src="icon" class="object-contain w-full h-full" />
+      <img :src="icon" class="object-contain w-full h-full drop-shadow-lg" />
     </div>
     <span class="mt-2 text-xs font-bold text-amber-400">{{ ability }}</span>
   </div>
@@ -31,7 +31,6 @@ export default defineComponent({
     const abilityLevel = ref(0)
     function increaseLevel() {
       if (abilityLevel.value < 5) abilityLevel.value++
-      console.log(abilityLevel.value)
     }
     return { abilityLevel, increaseLevel }
   },

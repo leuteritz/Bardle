@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import LevelComponent from './components/LevelComponent.vue'
 import AbilityComponent from './components/AbilityComponent.vue'
 
 const gameStore = useGameStore()
+
+const chimeGainPos = ref({ x: 0, y: 0 })
+const chimeGainKey = ref(0)
+
+function handleChimeClick(event) {
+  gameStore.addChime()
+  chimeGainPos.value = { x: event.clientX, y: event.clientY }
+  chimeGainKey.value++
+}
 
 onMounted(() => {
   setInterval(() => {
@@ -45,21 +54,21 @@ onMounted(() => {
     </div>
     <div class="flex flex-row items-center justify-center gap-8">
       <div
-        class="flex items-center justify-center w-32 h-32 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
+        class="relative flex items-center justify-center w-32 h-32 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
       >
         <img
-          src="/img/BardChime.png"
-          @click="gameStore.addChime"
-          class="object-contain w-full h-full p-4"
+          src="/img/BardAbilities/BardChime.png"
+          @click="handleChimeClick"
+          class="object-contain w-full h-full p-4 drop-shadow-lg"
         />
       </div>
       <div
         class="flex items-center justify-center w-32 h-32 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
       >
         <img
-          src="/img/BardMeep.png"
+          src="/img/BardAbilities/BardMeep.png"
           @click="gameStore.addMeep"
-          class="object-contain w-full h-full p-4"
+          class="object-contain w-full h-full p-4 drop-shadow-lg"
         />
       </div>
 
@@ -70,5 +79,29 @@ onMounted(() => {
         +1 Gold
       </button>
     </div>
+    <div
+      :key="chimeGainKey"
+      class="fixed z-50 text-2xl font-bold pointer-events-none text-amber-800 drop-shadow chime-popup"
+      :style="{ left: chimeGainPos.x + 'px', top: chimeGainPos.y - 32 + 'px' }"
+    >
+      +{{ gameStore.chimesPerClick }}
+    </div>
   </div>
 </template>
+
+<style scoped>
+.chime-popup {
+  animation: fadeUp 0.7s ease-out forwards;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+</style>

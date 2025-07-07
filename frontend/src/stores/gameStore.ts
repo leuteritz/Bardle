@@ -4,10 +4,16 @@ export const useGameStore = defineStore('game', {
   state: () => ({
     chimes: 0,
     chimesForNextLevel: 10,
+    chimesPerClick: 1,
     meeps: 0,
     meepsPerSecond: 15,
     gold: 0,
     level: 1,
+    currentRank: {
+      tier: 'Challenger',
+      division: 'III',
+      lp: 0,
+    },
   }),
   actions: {
     addMeep() {
