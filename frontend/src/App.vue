@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import LevelComponent from './components/LevelComponent.vue'
+import AbilityComponent from './components/AbilityComponent.vue'
 
 const gameStore = useGameStore()
 
@@ -47,7 +48,7 @@ onMounted(() => {
         class="flex items-center justify-center w-32 h-32 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
       >
         <img
-          src="./assets/img/BardChime.png"
+          src="/img/BardChime.png"
           @click="gameStore.addChime"
           class="object-contain w-full h-full p-4"
         />
@@ -56,7 +57,7 @@ onMounted(() => {
         class="flex items-center justify-center w-32 h-32 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
       >
         <img
-          src="./assets/img/BardMeep.png"
+          src="/img/BardMeep.png"
           @click="gameStore.addMeep"
           class="object-contain w-full h-full p-4"
         />
