@@ -20,7 +20,7 @@ export default defineComponent({
 
 <template>
   <div
-    class="absolute flex flex-col items-center w-72 gap-3 px-6 py-4 text-xl font-bold text-white rounded-2xl shadow-2xl h-72 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 top-4 left-4 font-['MedievalSharp'] border-2 border-amber-400 backdrop-blur-sm"
+    class="absolute flex flex-col items-center w-72 gap-3 px-6 py-4 text-xl font-bold text-white rounded-2xl shadow-2xl h-78 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 top-4 left-4 font-['MedievalSharp'] border-2 border-amber-400 backdrop-blur-sm"
   >
     <div class="flex items-center gap-3">
       <div class="relative">
