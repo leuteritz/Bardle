@@ -1,7 +1,6 @@
 <template>
   <div
     class="flex flex-col items-center justify-center transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
-    @click="increaseLevel"
   >
     <div class="flex flex-row gap-0.5 mb-1">
       <div
@@ -15,24 +14,27 @@
       <img :src="icon" class="object-contain w-full h-full drop-shadow-lg" />
     </div>
     <span class="mt-2 text-xs font-bold text-amber-400">{{ ability }}</span>
+    <button
+      v-if="canUpgrade"
+      @click.stop="$emit('upgrade')"
+      class="px-2 py-1 mt-2 text-xs font-bold text-white transition-all border rounded shadow bg-amber-500 hover:bg-amber-600 border-amber-700"
+    >
+      Upgrade
+    </button>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 
 export default defineComponent({
   name: 'AbilityComponent',
   props: {
     icon: String,
     ability: String,
+    abilityLevel: Number,
+    canUpgrade: Boolean,
   },
-  setup() {
-    const abilityLevel = ref(0)
-    function increaseLevel() {
-      if (abilityLevel.value < 5) abilityLevel.value++
-    }
-    return { abilityLevel, increaseLevel }
-  },
+  emits: ['upgrade'],
 })
 </script>

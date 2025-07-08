@@ -19,22 +19,21 @@ export default defineComponent({
     lp: Number,
   },
   setup(props) {
-    // Beispiel: Mapping von Tier zu Icon (du kannst die Pfade anpassen)
     const rankIcon = computed(() => {
       switch (props.tier) {
-        case 'Eisen':
+        case 'Iron':
           return '/img/RankBorder/RankIron.png'
         case 'Bronze':
           return '/img/RankBorder/RankBronze.png'
-        case 'Silber':
+        case 'Silver':
           return '/img/RankBorder/RankSilver.png'
         case 'Gold':
           return '/img/RankBorder/RankGold.png'
-        case 'Platin':
+        case 'Platinum':
           return '/img/RankBorder/RankPlatin.png'
         case 'Emerald':
           return '/img/RankBorder/RankEmerald.png'
-        case 'Diamant':
+        case 'Diamond':
           return '/img/RankBorder/RankDiamand.png'
         case 'Master':
           return '/img/RankBorder/RankMaster.png'
