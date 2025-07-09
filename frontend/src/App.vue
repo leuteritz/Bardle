@@ -12,17 +12,14 @@ const battleStore = useBattleStore()
 const chimeGainPos = ref({ x: 0, y: 0 })
 const chimeGainKey = ref(0)
 
-// Battle result state
-const showBattleResult = ref(false)
-const battleResult = ref(null)
-const mmrChange = ref(0)
-const lpChange = ref(0)
-
 // AutoBattle result state
 const showAutoBattleResult = ref(false)
 const autoBattleResult = ref(null)
 const autoBattleMmrChange = ref(0)
 const autoBattleLpChange = ref(0)
+const autoBattleResultKey = ref(0)
+
+const autoBattleResultComponentRef = ref(null)
 
 function handleChimeClick(event) {
   gameStore.addChime()
@@ -36,36 +33,23 @@ function handleChimeClick(event) {
   }
 }
 
-async function handleBattle() {
-  const oldMMR = gameStore.mmr
-  const oldLP = gameStore.currentRank.lp
-
-  const result = await battleStore.simulateBattle(gameStore.mmr)
-
-  // Calculate changes
-  mmrChange.value = gameStore.mmr - oldMMR
-  lpChange.value = gameStore.currentRank.lp - oldLP
-
-  battleResult.value = result
-  showBattleResult.value = true
-}
-
-function closeBattleResult() {
-  showBattleResult.value = false
-  battleResult.value = null
-}
-
 function handleAutoBattleResult() {
   if (battleStore.lastAutoBattleResult && battleStore.showAutoBattleResult) {
-    const oldMMR = gameStore.mmr
-    const oldLP = gameStore.currentRank.lp
+    // Verwende die im Store gespeicherten alten Werte
+    const oldMMR = battleStore.autoBattleOldMMR
+    const oldLP = battleStore.autoBattleOldLP
 
-    // Calculate changes
     autoBattleMmrChange.value = gameStore.mmr - oldMMR
     autoBattleLpChange.value = gameStore.currentRank.lp - oldLP
 
     autoBattleResult.value = battleStore.lastAutoBattleResult
     showAutoBattleResult.value = true
+    autoBattleResultKey.value++
+
+    // Champions neu generieren
+    if (autoBattleResultComponentRef.value && autoBattleResultComponentRef.value.refreshTeams) {
+      autoBattleResultComponentRef.value.refreshTeams()
+    }
 
     // Reset battleStore state
     battleStore.lastAutoBattleResult = null
@@ -132,18 +116,11 @@ watch(
         Bard Idle Game
       </h1>
       <div class="flex flex-col items-center justify-center w-full max-w-2xl">
-        <BattleResultComponent
-          v-if="battleResult"
-          :result="battleResult"
-          :show-result="showBattleResult"
-          :mmr-change="mmrChange"
-          :lp-change="lpChange"
-          @close="closeBattleResult"
-        />
-
         <!-- AutoBattle Result Component -->
         <BattleResultComponent
           v-if="autoBattleResult"
+          ref="autoBattleResultComponentRef"
+          :key="autoBattleResultKey"
           :result="autoBattleResult"
           :show-result="showAutoBattleResult"
           :mmr-change="autoBattleMmrChange"
@@ -151,13 +128,6 @@ watch(
           @close="closeAutoBattleResult"
         />
         <div class="flex flex-col items-center gap-4 mt-8">
-          <button
-            @click="handleBattle"
-            class="px-10 py-6 text-2xl font-bold text-white transition-all duration-300 border-2 border-red-700 shadow-lg bg-gradient-to-r from-red-500 to-red-600 rounded-2xl hover:shadow-xl hover:scale-105 hover:from-red-400 hover:to-red-500"
-          >
-            Battle
-          </button>
-
           <div class="flex gap-4">
             <button
               v-if="!battleStore.autoBattleEnabled"
