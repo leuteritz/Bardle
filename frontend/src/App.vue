@@ -5,6 +5,7 @@ import { useBattleStore } from './stores/battleStore'
 import LevelComponent from './components/LevelComponent.vue'
 import AbilityComponent from './components/AbilityComponent.vue'
 import BattleResultComponent from './components/BattleResultComponent.vue'
+import StatsBarComponent from './components/StatsBarComponent.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -81,96 +82,81 @@ watch(
 
 <template>
   <div
-    class="relative flex flex-row items-stretch justify-center w-full h-screen bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-200 font-['MedievalSharp']"
+    class="relative flex flex-col items-center justify-center w-full h-screen bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-200 font-['MedievalSharp']"
   >
-    <!-- Linke Spalte: LevelComponent und Click-Buttons -->
-    <div class="flex flex-col items-start justify-center w-1/5 min-w-[200px] p-4">
-      <LevelComponent />
+    <!-- Hauptinhalt -->
+    <div class="flex flex-row items-stretch justify-center w-full h-full">
+      <!-- Linke Spalte: LevelComponent und Click-Buttons -->
+      <div class="flex flex-col items-start justify-center w-1/5 min-w-[200px] p-4">
+        <LevelComponent />
 
-      <!-- Click-Buttons für Chimes und Meeps -->
-      <div class="flex flex-col items-center gap-6 mt-8">
-        <div
-          class="relative flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
-        >
-          <img
-            src="/img/BardAbilities/BardChime.png"
-            @click="handleChimeClick"
-            class="object-contain w-full h-full p-2 drop-shadow-lg"
-          />
-        </div>
-        <div
-          class="flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
-        >
-          <img
-            src="/img/BardAbilities/BardMeep.png"
-            @click="gameStore.addMeep"
-            class="object-contain w-full h-full p-2 drop-shadow-lg"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Mitte: BattleResultComponent und Battle-Button -->
-    <div class="flex flex-col items-center justify-center flex-1 px-4">
-      <h1 class="mb-8 font-bold text-center text-7xl text-amber-800 drop-shadow-lg">
-        Bard Idle Game
-      </h1>
-      <div class="flex flex-col items-center justify-center w-full max-w-2xl">
-        <!-- AutoBattle Result Component -->
-        <BattleResultComponent
-          v-if="autoBattleResult"
-          ref="autoBattleResultComponentRef"
-          :key="autoBattleResultKey"
-          :result="autoBattleResult"
-          :show-result="showAutoBattleResult"
-          :mmr-change="autoBattleMmrChange"
-          :lp-change="autoBattleLpChange"
-          @close="closeAutoBattleResult"
-        />
-        <div class="flex flex-col items-center gap-4 mt-8">
-          <div class="flex gap-4">
-            <button
-              v-if="!battleStore.autoBattleEnabled"
-              @click="battleStore.startAutoBattle()"
-              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-green-700 shadow-lg bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-green-400 hover:to-green-500"
-            >
-              Auto Battle Start
-            </button>
-            <button
-              v-else
-              @click="battleStore.stopAutoBattle()"
-              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-orange-700 shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-orange-400 hover:to-orange-500"
-            >
-              Auto Battle Stop
-            </button>
+        <!-- Click-Buttons für Chimes und Meeps -->
+        <div class="flex flex-col items-center gap-6 mt-8">
+          <div
+            class="relative flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
+          >
+            <img
+              src="/img/BardAbilities/BardChime.png"
+              @click="handleChimeClick"
+              class="object-contain w-full h-full p-2 drop-shadow-lg"
+            />
+          </div>
+          <div
+            class="flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
+          >
+            <img
+              src="/img/BardAbilities/BardMeep.png"
+              @click="gameStore.addMeep"
+              class="object-contain w-full h-full p-2 drop-shadow-lg"
+            />
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Rechte Spalte: Statistiken -->
-    <div class="flex flex-col items-end justify-center w-1/5 min-w-[250px] p-4">
-      <div
-        class="flex flex-col w-full max-w-xs gap-6 p-6 border shadow-xl bg-white/80 backdrop-blur-sm rounded-2xl border-amber-200"
-      >
-        <div class="flex items-center gap-3">
-          <span class="text-amber-600">Chimes:</span>
-          <span class="text-3xl font-bold text-amber-800">{{ gameStore.chimes }}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-blue-600">Meeps:</span>
-          <span class="text-3xl font-bold text-blue-800">{{ gameStore.meeps }}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-green-600">Meeps/s:</span>
-          <span class="text-3xl font-bold text-green-800">{{ gameStore.meepsPerSecond }}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-yellow-600">Gold:</span>
-          <span class="text-3xl font-bold text-yellow-800">{{ gameStore.gold }}</span>
+      <!-- Mitte: BattleResultComponent und Battle-Button -->
+      <div class="flex flex-col items-center justify-center flex-1 px-4">
+        <h1 class="mb-8 font-bold text-center text-7xl text-amber-800 drop-shadow-lg">
+          Chime Clicker
+        </h1>
+        <div class="flex flex-col items-center justify-center w-full max-w-5xl">
+          <!-- AutoBattle Result Component -->
+          <BattleResultComponent
+            v-if="autoBattleResult"
+            ref="autoBattleResultComponentRef"
+            :key="autoBattleResultKey"
+            :result="autoBattleResult"
+            :show-result="showAutoBattleResult"
+            :mmr-change="autoBattleMmrChange"
+            :lp-change="autoBattleLpChange"
+            @close="closeAutoBattleResult"
+          />
+          <div class="flex flex-col items-center gap-4 mt-8">
+            <div class="flex gap-4">
+              <button
+                v-if="!battleStore.autoBattleEnabled"
+                @click="battleStore.startAutoBattle()"
+                class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-green-700 shadow-lg bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-green-400 hover:to-green-500"
+              >
+                Auto Battle Start
+              </button>
+              <button
+                v-else
+                @click="battleStore.stopAutoBattle()"
+                class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-orange-700 shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-orange-400 hover:to-orange-500"
+              >
+                Auto Battle Stop
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Rechte Spalte: Leer für Balance -->
+      <div class="w-1/5 min-w-[250px] p-4"></div>
     </div>
+
+    <!-- Untere Mitte: Statistiken in schönem Rahmen -->
+    <StatsBarComponent />
 
     <!-- Chime Popup Animation -->
     <div

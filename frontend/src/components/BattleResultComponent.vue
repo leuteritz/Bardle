@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="showResult"
-    class="relative w-full max-w-2xl p-8 mx-4 border shadow-2xl bg-white/95 backdrop-blur-sm rounded-3xl border-amber-200"
+    class="relative w-full max-w-5xl p-8 mx-4 border shadow-2xl bg-white/95 backdrop-blur-sm rounded-3xl border-amber-200"
   >
     <!-- Close Button -->
     <button
