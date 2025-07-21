@@ -341,4 +341,34 @@ export const useBattleStore = defineStore('battle', {
       }
     },
   },
+
+  getters: {
+    chimesToNextLevel(): number {
+      return this.chimesForNextLevel - this.chimes
+    },
+    levelProgress(): number {
+      const chimesForlastLevel = this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      const progress = this.chimes - chimesForlastLevel
+      const total = this.chimesForNextLevel - chimesForlastLevel
+      return Math.min(100, Math.max(0, (progress / total) * 100))
+    },
+
+    // Zusätzliche Getter für die BardHudComponent
+    totalChimesForLevel(): number {
+      const chimesForlastLevel = this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      return this.chimesForNextLevel - chimesForlastLevel
+    },
+    currentLevelXP(): number {
+      const chimesForlastLevel = this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      return this.chimes - chimesForlastLevel
+    },
+    nextLevelXP(): number {
+      const chimesForlastLevel = this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      return this.chimesForNextLevel - chimesForlastLevel
+    },
+
+    totalPower(): number {
+      return this.meeps * 100 + this.gold * 1000 + this.chimes * 1000
+    },
+  },
 })

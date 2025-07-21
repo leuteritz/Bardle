@@ -59,24 +59,6 @@ export default defineComponent({
       class="w-4/5 h-1 mt-3 mb-2 rounded-full shadow-md bg-gradient-to-r from-yellow-400 via-yellow-200 to-orange-300"
     ></div>
 
-    <div class="flex flex-row items-center justify-center gap-4 p-2 mt-2">
-      <AbilityComponent
-        v-for="(level, idx) in gameStore.abilityLevels"
-        :key="idx"
-        :icon="
-          [
-            '/img/BardAbilities/BardQ.png',
-            '/img/BardAbilities/BardW.png',
-            '/img/BardAbilities/BardE.png',
-            '/img/BardAbilities/BardR.png',
-          ][idx]
-        "
-        :ability="['Q', 'W', 'E', 'R'][idx]"
-        :abilityLevel="level"
-        :canUpgrade="gameStore.skillPoints > 0 && level < 5"
-        @upgrade="gameStore.upgradeAbility(idx)"
-      />
-    </div>
     <div class="mb-2 text-lg font-bold text-center text-amber-400">
       Skillpunkte: {{ gameStore.skillPoints }}
     </div>

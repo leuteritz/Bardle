@@ -3,12 +3,15 @@ import { ref, onMounted, watch } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { useBattleStore } from './stores/battleStore'
 import LevelComponent from './components/LevelComponent.vue'
-import AbilityComponent from './components/AbilityComponent.vue'
-import BattleResultComponent from './components/BattleResultComponent.vue'
-import StatsBarComponent from './components/StatsBarComponent.vue'
+import BattleResultComponent from './components/battle/BattleResultComponent.vue'
+import StatsPanelComponent from './components/StatsPanelComponent.vue'
+import AbilityBarComponent from './components/AbilityBarComponent.vue'
+import BardHudComponent from './components/BardHudComponent.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
+
+const title = ref('Bardle')
 
 const chimeGainPos = ref({ x: 0, y: 0 })
 const chimeGainKey = ref(0)
@@ -91,7 +94,7 @@ watch(
         <LevelComponent />
 
         <!-- Click-Buttons für Chimes und Meeps -->
-        <div class="flex flex-col items-center gap-6 mt-8">
+        <div class="absolute gap-1 left-10">
           <div
             class="relative flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
           >
@@ -113,12 +116,13 @@ watch(
         </div>
       </div>
 
+      <h1 class="absolute font-bold text-center top-10 text-7xl text-amber-800 drop-shadow-lg">
+        {{ title }}
+      </h1>
+
       <!-- Mitte: BattleResultComponent und Battle-Button -->
       <div class="flex flex-col items-center justify-center flex-1 px-4">
-        <h1 class="mb-8 font-bold text-center text-7xl text-amber-800 drop-shadow-lg">
-          Chime Clicker
-        </h1>
-        <div class="flex flex-col items-center justify-center w-full max-w-5xl">
+        <div class="flex flex-col items-center justify-center w-full max-w-5xl mb-24">
           <!-- AutoBattle Result Component -->
           <BattleResultComponent
             v-if="autoBattleResult"
@@ -155,8 +159,22 @@ watch(
       <div class="w-1/5 min-w-[250px] p-4"></div>
     </div>
 
-    <!-- Untere Mitte: Statistiken in schönem Rahmen -->
-    <StatsBarComponent />
+    <!-- Neue HUD-Leiste unten links: BardHud + StatsPanel -->
+    <div class="absolute z-50 flex flex-row items-end bottom-12 left-2">
+      <StatsPanelComponent />
+    </div>
+
+    <!-- AbilityBarComponent fest in der Mitte -->
+    <div
+      class="absolute z-50 grid items-center grid-cols-2 gap-4 -translate-x-1/2 bottom-12 left-1/2"
+    >
+      <div class="mr-[200px]">
+        <BardHudComponent />
+      </div>
+      <div class="">
+        <AbilityBarComponent />
+      </div>
+    </div>
 
     <!-- Chime Popup Animation -->
     <div

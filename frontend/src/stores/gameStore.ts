@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
+    gameSpeed: 1000,
     chimes: 0,
     chimesForNextLevel: 10,
     chimesPerClick: 1,
@@ -38,7 +39,7 @@ export const useGameStore = defineStore('game', {
       this.calculateLevel()
     },
     calculateLevel() {
-      if (this.chimes >= this.chimesForNextLevel) {
+      while (this.chimes >= this.chimesForNextLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(10 * Math.pow(this.level, 1.2))
         if (this.level % 2 === 0) {
@@ -58,18 +59,36 @@ export const useGameStore = defineStore('game', {
     chimesToNextLevel(): number {
       return this.chimesForNextLevel - this.chimes
     },
+
+    // Verbesserte Fortschrittsberechnung
     levelProgress(): number {
-      const chimesForlastLevel = Math.ceil(10 * Math.pow(this.level - 1, 1.2))
-      const progress = this.chimes - chimesForlastLevel
-      const total = this.chimesForNextLevel - chimesForlastLevel
-      // console.log(
-      //   'chimesForNextLevel: ' + this.chimesForNextLevel,
-      //   'chimesForlastLevel: ' + chimesForlastLevel,
-      //   'progress: ' + progress,
-      //   'total: ' + total,
-      // )
-      return Math.min(100, Math.max(0, (progress / total) * 100))
+      // Berechne Chimes die für das aktuelle Level benötigt wurden
+      const chimesForCurrentLevel =
+        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+
+      // Chimes die im aktuellen Level bereits gesammelt wurden
+      const currentLevelChimes = this.chimes - chimesForCurrentLevel
+
+      // Total Chimes die für das aktuelle Level benötigt werden
+      const totalChimesThisLevel = this.chimesForNextLevel - chimesForCurrentLevel
+
+      // Fortschritt als Prozent (0-100)
+      return Math.min(100, Math.max(0, (currentLevelChimes / totalChimesThisLevel) * 100))
     },
+
+    // Zusätzliche hilfreiche Getter
+    currentLevelChimes(): number {
+      const chimesForCurrentLevel =
+        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      return this.chimes - chimesForCurrentLevel
+    },
+
+    totalChimesThisLevel(): number {
+      const chimesForCurrentLevel =
+        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      return this.chimesForNextLevel - chimesForCurrentLevel
+    },
+
     totalPower(): number {
       return this.meeps * 100 + this.gold * 1000 + this.chimes * 1000
     },
