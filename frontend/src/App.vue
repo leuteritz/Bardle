@@ -5,8 +5,8 @@ import { useBattleStore } from './stores/battleStore'
 import LevelComponent from './components/LevelComponent.vue'
 import BattleResultComponent from './components/battle/BattleResultComponent.vue'
 import StatsPanelComponent from './components/StatsPanelComponent.vue'
-import AbilityBarComponent from './components/AbilityBarComponent.vue'
-import BardHudComponent from './components/BardHudComponent.vue'
+import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
+import BardHudComponent from './components/bottom/BardHudComponent.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -121,36 +121,35 @@ watch(
       </h1>
 
       <!-- Mitte: BattleResultComponent und Battle-Button -->
-      <div class="flex flex-col items-center justify-center flex-1 px-4">
-        <div class="flex flex-col items-center justify-center w-full max-w-5xl mb-24">
-          <!-- AutoBattle Result Component -->
-          <BattleResultComponent
-            v-if="autoBattleResult"
-            ref="autoBattleResultComponentRef"
-            :key="autoBattleResultKey"
-            :result="autoBattleResult"
-            :show-result="showAutoBattleResult"
-            :mmr-change="autoBattleMmrChange"
-            :lp-change="autoBattleLpChange"
-            @close="closeAutoBattleResult"
-          />
-          <div class="flex flex-col items-center gap-4 mt-8">
-            <div class="flex gap-4">
-              <button
-                v-if="!battleStore.autoBattleEnabled"
-                @click="battleStore.startAutoBattle()"
-                class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-green-700 shadow-lg bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-green-400 hover:to-green-500"
-              >
-                Auto Battle Start
-              </button>
-              <button
-                v-else
-                @click="battleStore.stopAutoBattle()"
-                class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-orange-700 shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-orange-400 hover:to-orange-500"
-              >
-                Auto Battle Stop
-              </button>
-            </div>
+
+      <div class="flex flex-col items-center justify-center">
+        <!-- AutoBattle Result Component -->
+        <BattleResultComponent
+          v-if="autoBattleResult"
+          ref="autoBattleResultComponentRef"
+          :key="autoBattleResultKey"
+          :result="autoBattleResult"
+          :show-result="showAutoBattleResult"
+          :mmr-change="autoBattleMmrChange"
+          :lp-change="autoBattleLpChange"
+          @close="closeAutoBattleResult"
+        />
+        <div class="flex flex-col items-center gap-4 mt-12">
+          <div class="flex gap-4">
+            <button
+              v-if="!battleStore.autoBattleEnabled"
+              @click="battleStore.startAutoBattle()"
+              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-green-700 shadow-lg bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-green-400 hover:to-green-500"
+            >
+              Auto Battle Start
+            </button>
+            <button
+              v-else
+              @click="battleStore.stopAutoBattle()"
+              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-orange-700 shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-orange-400 hover:to-orange-500"
+            >
+              Auto Battle Stop
+            </button>
           </div>
         </div>
       </div>
@@ -159,21 +158,20 @@ watch(
       <div class="w-1/5 min-w-[250px] p-4"></div>
     </div>
 
-    <!-- Neue HUD-Leiste unten links: BardHud + StatsPanel -->
-    <div class="absolute z-50 flex flex-row items-end bottom-12 left-2">
+    <!-- Statspanel -->
+    <div class="absolute bottom-12 left-5">
       <StatsPanelComponent />
     </div>
 
-    <!-- AbilityBarComponent fest in der Mitte -->
-    <div
-      class="absolute z-50 grid items-center grid-cols-2 gap-4 -translate-x-1/2 bottom-12 left-1/2"
-    >
-      <div class="mr-[200px]">
+    <!-- AbilityBarComponent + Bard HUD-->
+    <div class="absolute grid items-center w-1/3 grid-cols-3 bottom-12">
+      <div class="justify-self-start">
         <BardHudComponent />
       </div>
-      <div class="">
+      <div class="justify-self-center">
         <AbilityBarComponent />
       </div>
+      <div></div>
     </div>
 
     <!-- Chime Popup Animation -->

@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="showResult"
-    class="relative w-full max-w-5xl p-8 mx-4 border shadow-2xl bg-white/95 backdrop-blur-sm rounded-3xl border-amber-200"
+    class="relative w-full p-8 mx-4 shadow-2xl bg-white/95 backdrop-blur-sm rounded-3xl border-amber-200"
   >
     <!-- Close Button -->
     <button
@@ -28,6 +28,7 @@
       >
         {{ result.won ? 'VICTORY!' : 'DEFEAT!' }}
       </h2>
+      <BattleMessageComponent />
       <span
         v-if="typeof lpChange === 'number'"
         class="min-w-[90px] text-2xl font-bold border rounded-lg shadow px-4 py-1 flex items-center justify-center absolute right-0"
@@ -41,7 +42,7 @@
         {{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP
       </span>
     </div>
-    <!-- LoL Ladebildschirm (5 vs 5) -->
+    <!-- LoL Loading Screen (5 vs 5) -->
     <div v-if="showResult" class="mb-8">
       <div class="relative flex flex-row w-full gap-6">
         <!-- Main Content -->
@@ -65,18 +66,24 @@
                   :alt="champ.name"
                 />
 
+                <div
+                  v-if="champ.name === 'Bard'"
+                  class="absolute inset-0 border-4 rounded-full pointer-events-none border-amber-500"
+                  style="z-index: 2"
+                ></div>
                 <img
                   v-if="champ.rank"
                   :src="getBorderImage(champ.rank)"
                   class="absolute bottom-0 right-0 w-10 h-10 bg-white border-2 border-white rounded-full drop-shadow-lg"
-                  style="z-index: 2"
+                  style="z-index: 3"
                   :alt="champ.rank + ' Border'"
                 />
               </div>
               <span
                 class="mt-2 text-base font-bold text-gray-900 bg-white/80 px-2 py-0.5 rounded drop-shadow-lg border border-amber-200"
+                :title="champ.name"
               >
-                {{ champ.name }}
+                {{ champ.name.length > 10 ? champ.name.slice(0, 10) + '...' : champ.name }}
               </span>
               <span
                 class="text-xs mt-1 text-gray-700 bg-white/70 px-2 py-0.5 rounded shadow border border-gray-200 flex flex-row gap-2 items-center"
@@ -126,6 +133,7 @@
             </div>
           </div>
         </div>
+
         <!-- Chat Panel + Minimap als Spalte -->
         <div
           class="w-80 min-w-[300px] max-w-xs flex flex-col bg-white/90 border border-amber-300 rounded-2xl shadow-lg p-3 h-[32rem]"
@@ -152,10 +160,11 @@ import { ref, onMounted, watch, nextTick, defineComponent } from 'vue'
 import { battleChatMessages } from '../../config/battleChatMessages'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
+import BattleMessageComponent from './BattleMessageComponent.vue'
 
 export default defineComponent({
   name: 'BattleResultComponent',
-  components: { MiniMapComponent, ChatPanelComponent },
+  components: { MiniMapComponent, ChatPanelComponent, BattleMessageComponent },
   props: {
     result: { type: Object, required: true },
     showResult: { type: Boolean, required: true },
@@ -166,7 +175,7 @@ export default defineComponent({
     const team1 = ref<any[]>([])
     const team2 = ref<any[]>([])
     const gameStore = useGameStore()
-    const gameTime = ref(120)
+    const gameTime = ref(120) // 120 s -> 02:00 min
     const chatMessages = ref<any[]>([])
 
     function closeResult() {
@@ -231,20 +240,32 @@ export default defineComponent({
     }
     function showRandomChatMessagesSequentially() {
       chatMessages.value = []
+
+      if (!team1.value.length || !team2.value.length) {
+        setTimeout(() => showRandomChatMessagesSequentially(), 100)
+        return
+      }
       const messages = [...battleChatMessages]
+
       function showNext() {
         if (messages.length === 0) return
         const idx = Math.floor(Math.random() * messages.length)
         const msg = messages[idx]
         let chatMsg
         if (typeof msg === 'string') {
-          const user = Math.random() < 0.5 ? 'Team' : 'Enemy'
-          chatMsg = { user, text: msg, time: formatTime(gameTime.value) }
-        } else if (typeof msg === 'object' && msg !== null) {
-          const m = msg as any
-          chatMsg = { user: m.user, text: m.text, time: formatTime(gameTime.value) }
-        } else {
-          chatMsg = { user: 'Team', text: String(msg), time: formatTime(gameTime.value) }
+          const allChampions = [
+            ...team1.value.map((champ) => ({ name: champ.name, team: 1 })),
+            ...team2.value.map((champ) => ({ name: champ.name, team: 2 })),
+          ]
+
+          const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
+
+          chatMsg = {
+            user: randomChampion.name,
+            text: msg,
+            time: formatTime(gameTime.value),
+            team: randomChampion.team,
+          }
         }
         chatMessages.value.push(chatMsg)
         messages.splice(idx, 1)
@@ -255,29 +276,43 @@ export default defineComponent({
       }
       showNext()
     }
-    function getRandomStats() {
+
+    function getStats() {
       return {
-        kills: Math.floor(Math.random() * 16),
-        deaths: Math.floor(Math.random() * 11),
-        assists: Math.floor(Math.random() * 21),
+        kills: 0,
+        deaths: 0,
+        assists: 0,
       }
     }
+
     function refreshTeams() {
       loadChampions().then((champions) => {
         const selected = getRandomChampions(champions, 9)
         team1.value = [
-          { name: 'Bard', rank: gameStore.currentRank.tier, ...getRandomStats() },
-          ...selected.slice(0, 4).map((name) => ({ name, rank: 'Silver', ...getRandomStats() })),
+          { name: 'Bard', rank: gameStore.currentRank.tier, ...getStats() },
+          ...selected.slice(0, 4).map((name) => ({ name, rank: 'Silver', ...getStats() })),
         ]
-        team2.value = selected
-          .slice(4, 9)
-          .map((name) => ({ name, rank: 'Silver', ...getRandomStats() }))
+        team2.value = selected.slice(4, 9).map((name) => ({ name, rank: 'Silver', ...getStats() }))
       })
     }
+
+    function randomStatsTick() {
+      ;[team1.value, team2.value].forEach((team) => {
+        team.forEach((champ) => {
+          if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
+          if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
+          if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
+        })
+      })
+      setTimeout(randomStatsTick, gameStore.gameSpeed)
+    }
+
     onMounted(() => {
       refreshTeams()
       showRandomChatMessagesSequentially()
+      randomStatsTick()
     })
+
     expose({ refreshTeams })
     watch(
       () => chatMessages.value.length,

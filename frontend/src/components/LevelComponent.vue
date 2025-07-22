@@ -1,7 +1,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useGameStore } from '../stores/gameStore'
-import AbilityComponent from './AbilityComponent.vue'
+import AbilityComponent from './bottom/AbilityComponent.vue'
 import RankComponent from './RankComponent.vue'
 
 export default defineComponent({
@@ -44,20 +44,6 @@ export default defineComponent({
         :lp="gameStore.currentRank.lp"
       />
     </div>
-    <div class="text-center min-w-60">
-      <div class="mb-1 text-sm font-normal text-amber-200">
-        {{ gameStore.chimesToNextLevel }} Chimes bis Level {{ gameStore.level + 1 }}
-      </div>
-      <div class="w-full h-3 border rounded-full shadow-inner bg-amber-900/50 border-amber-800">
-        <div
-          class="h-3 transition-all duration-500 ease-out rounded-full shadow-lg bg-gradient-to-r from-yellow-400 to-yellow-300"
-          :style="{ width: `${gameStore.levelProgress}%` }"
-        ></div>
-      </div>
-    </div>
-    <div
-      class="w-4/5 h-1 mt-3 mb-2 rounded-full shadow-md bg-gradient-to-r from-yellow-400 via-yellow-200 to-orange-300"
-    ></div>
 
     <div class="mb-2 text-lg font-bold text-center text-amber-400">
       Skillpunkte: {{ gameStore.skillPoints }}

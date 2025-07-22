@@ -15,11 +15,16 @@
       >
         <div v-for="(msg, idx) in chatMessages" :key="'msg-' + idx" class="flex items-start gap-2">
           <span class="mr-2 text-xs text-gray-400 min-w-[40px]">{{ msg.time }}</span>
-          <span class="font-bold text-amber-700" v-if="msg.user === 'Bard'">{{ msg.user }}:</span>
-          <span class="font-bold text-blue-700" v-else-if="msg.user === 'Team'"
-            >{{ msg.user }}:</span
+          <span
+            class="font-bold"
+            :class="{
+              'text-amber-500': msg.user === 'Bard',
+              'text-blue-600': msg.team === 1 && msg.user !== 'Bard',
+              'text-red-600': msg.team === 2 && msg.user !== 'Bard',
+            }"
           >
-          <span class="font-bold text-red-700" v-else>{{ msg.user }}:</span>
+            {{ msg.user }}:
+          </span>
           <span class="break-words">{{ msg.text }}</span>
         </div>
       </div>
