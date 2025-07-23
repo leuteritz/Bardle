@@ -21,12 +21,15 @@ export const useBattleStore = defineStore('battle', {
     ],
 
     autoBattleEnabled: false,
-    autoBattleInterval: 7000, // 7 Sekunden zwischen Kämpfen
+    autoBattleInterval: 10000, // 10 Sekunden zwischen Kämpfen
     autoBattleTimer: null,
     lastAutoBattleResult: null,
     showAutoBattleResult: false,
     autoBattleOldMMR: 0,
     autoBattleOldLP: 0,
+
+    ownedChampions: ['Bard'],
+    selectedChampions: [],
 
     // Battle Mechanics
     battleFormula: {

@@ -10,6 +10,7 @@ export default defineComponent({
     const showMessage = ref(false)
     const currentMessage = ref('')
     const messageKey = ref(0)
+    const messageDuration = ref(2000)
 
     // Battle-Nachrichten wie in League of Legends
     const battleMessages = [
@@ -41,10 +42,9 @@ export default defineComponent({
       showMessage.value = true
       messageKey.value++
 
-      // Nachricht nach 1 Sekunden ausblenden
       messageTimeout = window.setTimeout(() => {
         showMessage.value = false
-      }, 1000)
+      }, messageDuration.value)
     }
 
     function startMessageInterval() {
@@ -55,12 +55,12 @@ export default defineComponent({
       // Kontinuierlich während des Kampfes Nachrichten anzeigen
       messageInterval = window.setInterval(() => {
         if (battleStore.autoBattleEnabled) {
-          // 30% Chance pro 500ms eine Nachricht zu zeigen
-          if (Math.random() < 0.3) {
+          // 50% Chance pro Sekunde eine Nachricht zu zeigen
+          if (Math.random() < 0.5) {
             showRandomMessage()
           }
         }
-      }, 500) // Jede Sekunde prüfen
+      }, messageDuration.value)
     }
 
     function stopMessageInterval() {
@@ -107,24 +107,3 @@ export default defineComponent({
     </div>
   </div>
 </template>
-
-<!-- <style scoped>
-.animate-pulse {
-  animation: pulse 1s ease-in-out;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0;
-    transform: scale(0.5) translate(-50%, -50%);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1) translate(-50%, -50%);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1) translate(-50%, -50%);
-  }
-}
-</style> -->

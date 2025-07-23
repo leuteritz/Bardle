@@ -7,6 +7,7 @@ import BattleResultComponent from './components/battle/BattleResultComponent.vue
 import StatsPanelComponent from './components/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
+import ChampionLobbyComponent from './components/ChampionLobbyComponent.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -24,6 +25,11 @@ const autoBattleLpChange = ref(0)
 const autoBattleResultKey = ref(0)
 
 const autoBattleResultComponentRef = ref(null)
+
+const showLobby = ref(false)
+
+// Beispiel für ownedChampions (später aus Store/Shop übernehmen)
+const ownedChampions = ref(['Bard'])
 
 function handleChimeClick(event) {
   gameStore.addChime()
@@ -87,6 +93,15 @@ watch(
   <div
     class="relative flex flex-col items-center justify-center w-full h-screen bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-200 font-['MedievalSharp']"
   >
+    <!-- Lobby Button -->
+    <button
+      class="absolute z-50 flex items-center justify-center gap-2 px-6 py-2 font-bold shadow top-6 right-10 bg-amber-400 text-amber-900 rounded-xl hover:bg-amber-300"
+      @click="showLobby = true"
+    >
+      💪 Champion-Lobby
+    </button>
+    <!-- Champion Lobby Overlay -->
+    <ChampionLobbyComponent v-if="showLobby" @close="showLobby = false" />
     <!-- Hauptinhalt -->
     <div class="flex flex-row items-stretch justify-center w-full h-full">
       <!-- Linke Spalte: LevelComponent und Click-Buttons -->

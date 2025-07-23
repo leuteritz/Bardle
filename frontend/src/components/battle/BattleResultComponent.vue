@@ -161,6 +161,7 @@ import { battleChatMessages } from '../../config/battleChatMessages'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import BattleMessageComponent from './BattleMessageComponent.vue'
+import { useBattleStore } from '../../stores/battleStore'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -178,6 +179,7 @@ export default defineComponent({
     const gameTime = ref(120) // 120 s -> 02:00 min
     const chatMessages = ref<any[]>([])
 
+    const battleStore = useBattleStore()
     function closeResult() {
       emit('close')
     }
@@ -287,12 +289,12 @@ export default defineComponent({
 
     function refreshTeams() {
       loadChampions().then((champions) => {
-        const selected = getRandomChampions(champions, 9)
+        const selected = getRandomChampions(champions, 5)
         team1.value = [
           { name: 'Bard', rank: gameStore.currentRank.tier, ...getStats() },
-          ...selected.slice(0, 4).map((name) => ({ name, rank: 'Silver', ...getStats() })),
+          ...battleStore.selectedChampions.map((name) => ({ name, rank: 'Silver', ...getStats() })),
         ]
-        team2.value = selected.slice(4, 9).map((name) => ({ name, rank: 'Silver', ...getStats() }))
+        team2.value = selected.map((name) => ({ name, rank: 'Silver', ...getStats() }))
       })
     }
 
