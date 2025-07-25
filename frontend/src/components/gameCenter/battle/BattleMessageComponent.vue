@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useBattleStore } from '../../stores/battleStore'
+import { useBattleStore } from '../../../stores/battleStore'
 
 export default defineComponent({
   name: 'BattleMessageComponent',

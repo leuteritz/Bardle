@@ -34,7 +34,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
+import { useGameStore } from '../../../stores/gameStore'
 
 export default defineComponent({
   name: 'MiniMapComponent',

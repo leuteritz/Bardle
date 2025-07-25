@@ -3,19 +3,16 @@ import { ref, onMounted, watch } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { useBattleStore } from './stores/battleStore'
 import LevelComponent from './components/LevelComponent.vue'
-import BattleResultComponent from './components/battle/BattleResultComponent.vue'
+
 import StatsPanelComponent from './components/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
-import ChampionLobbyComponent from './components/ChampionLobbyComponent.vue'
+import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 
 const title = ref('Bardle')
-
-const chimeGainPos = ref({ x: 0, y: 0 })
-const chimeGainKey = ref(0)
 
 // AutoBattle result state
 const showAutoBattleResult = ref(false)
@@ -25,23 +22,6 @@ const autoBattleLpChange = ref(0)
 const autoBattleResultKey = ref(0)
 
 const autoBattleResultComponentRef = ref(null)
-
-const showLobby = ref(false)
-
-// Beispiel für ownedChampions (später aus Store/Shop übernehmen)
-const ownedChampions = ref(['Bard'])
-
-function handleChimeClick(event) {
-  gameStore.addChime()
-  chimeGainPos.value = { x: event.clientX, y: event.clientY }
-  chimeGainKey.value++
-  if (gameStore.chimesForMeep >= gameStore.meepChimeRequirement) {
-    setTimeout(() => {
-      gameStore.addMeep()
-      gameStore.chimesForMeep = 0
-    }, 100) // Animation noch anzeigen lassen
-  }
-}
 
 function handleAutoBattleResult() {
   if (battleStore.lastAutoBattleResult && battleStore.showAutoBattleResult) {
@@ -91,54 +71,37 @@ watch(
 
 <template>
   <div
-    class="relative flex flex-col items-center justify-center w-full h-screen bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-200 font-['MedievalSharp']"
+    class="flex flex-col justify-between p-4 w-full min-h-screen bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-200 font-['MedievalSharp']"
   >
-    <!-- Lobby Button -->
-    <button
-      class="absolute z-50 flex items-center justify-center gap-2 px-6 py-2 font-bold shadow top-6 right-10 bg-amber-400 text-amber-900 rounded-xl hover:bg-amber-300"
-      @click="showLobby = true"
-    >
-      💪 Champion-Lobby
-    </button>
-    <!-- Champion Lobby Overlay -->
-    <ChampionLobbyComponent v-if="showLobby" @close="showLobby = false" />
-    <!-- Hauptinhalt -->
-    <div class="flex flex-row items-stretch justify-center w-full h-full">
-      <!-- Linke Spalte: LevelComponent und Click-Buttons -->
-      <div class="flex flex-col items-start justify-center w-1/5 min-w-[200px] p-4">
+    <!-- Top -->
+    <div class="grid w-full h-32 grid-cols-3 border-amber-400">
+      <!-- Linke Spalte: LevelComponent -->
+      <div class="flex items-center justify-start col-span-1">
         <LevelComponent />
-
-        <!-- Click-Buttons für Chimes und Meeps -->
-        <div class="absolute gap-1 left-10">
-          <div
-            class="relative flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
-          >
-            <img
-              src="/img/BardAbilities/BardChime.png"
-              @click="handleChimeClick"
-              class="object-contain w-full h-full p-2 drop-shadow-lg"
-            />
-          </div>
-          <div
-            class="flex items-center justify-center w-24 h-24 transition-all duration-300 cursor-pointer hover:scale-110 hover:rotate-12"
-          >
-            <img
-              src="/img/BardAbilities/BardMeep.png"
-              @click="gameStore.addMeep"
-              class="object-contain w-full h-full p-2 drop-shadow-lg"
-            />
-          </div>
-        </div>
       </div>
 
-      <h1 class="absolute font-bold text-center top-10 text-7xl text-amber-800 drop-shadow-lg">
+      <!-- Titel -->
+      <h1
+        class="flex items-center justify-center col-span-1 font-bold text-8xl text-amber-800 drop-shadow-lg"
+      >
         {{ title }}
       </h1>
 
-      <!-- Mitte: BattleResultComponent und Battle-Button -->
+      <!-- Rechte Spalte: Platzhalter -->
+      <div class="flex items-center justify-end col-span-1">
+        <div
+          class="flex items-center justify-center w-full h-full gap-2 rounded-xl border-amber-400/50"
+        >
+          <p class="text-xl select-none text-amber-700">
+            Klicke auf den Chime um Chimes zu bekommen! 🎵
+          </p>
+        </div>
+      </div>
+    </div>
 
-      <div class="flex flex-col items-center justify-center">
-        <!-- AutoBattle Result Component -->
+    <!-- Mitte -->
+    <!-- <div class="flex justify-center w-full">
+      <div class="w-2/3">
         <BattleResultComponent
           v-if="autoBattleResult"
           ref="autoBattleResultComponentRef"
@@ -168,51 +131,30 @@ watch(
           </div>
         </div>
       </div>
-
-      <!-- Rechte Spalte: Leer für Balance -->
-      <div class="w-1/5 min-w-[250px] p-4"></div>
-    </div>
-
-    <!-- Statspanel -->
-    <div class="absolute bottom-12 left-5">
-      <StatsPanelComponent />
-    </div>
-
-    <!-- AbilityBarComponent + Bard HUD-->
-    <div class="absolute grid items-center w-1/3 grid-cols-3 bottom-12">
-      <div class="justify-self-start">
-        <BardHudComponent />
+    </div> -->
+    <div class="flex justify-center w-full h-full">
+      <div class="w-2/3">
+        <GameCenterComponent />
       </div>
-      <div class="justify-self-center">
-        <AbilityBarComponent />
-      </div>
-      <div></div>
     </div>
 
-    <!-- Chime Popup Animation -->
-    <div
-      :key="chimeGainKey"
-      class="fixed z-50 text-2xl font-bold pointer-events-none text-amber-800 drop-shadow chime-popup"
-      :style="{ left: chimeGainPos.x + 'px', top: chimeGainPos.y - 32 + 'px' }"
-    >
-      +{{ gameStore.chimesPerClick }}
+    <!-- Bottom Panel -->
+    <div class="flex justify-center w-full h-full">
+      <div
+        className="flex w-1/3 bg-gradient-to-br rounded-2xl shadow-2xl from-amber-600 via-amber-700 to-orange-700 border-2 border-amber-400 items-center"
+      >
+        <div className="w-64 flex items-center justify-center">
+          <BardHudComponent />
+        </div>
+
+        <div className=" flex justify-center items-center">
+          <AbilityBarComponent />
+        </div>
+
+        <div className="w-64 flex items-center justify-center">
+          <StatsPanelComponent />
+        </div>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.chime-popup {
-  animation: fadeUp 0.7s ease-out forwards;
-}
-
-@keyframes fadeUp {
-  0% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-}
-</style>

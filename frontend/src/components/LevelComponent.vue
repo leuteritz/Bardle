@@ -22,7 +22,7 @@ export default defineComponent({
 
 <template>
   <div
-    class="absolute flex flex-col items-center w-102 gap-3 px-6 py-4 text-xl font-bold text-white rounded-2xl shadow-2xl h-78 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 top-4 left-4 font-['MedievalSharp'] border-2 border-amber-400 backdrop-blur-sm"
+    class="flex flex-col items-center px-6 py-4 border-2 shadow-2xl rounded-2xl h-78 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 border-amber-400 backdrop-blur-sm"
   >
     <div class="flex flex-row items-start justify-between w-full gap-6">
       <div class="flex items-center gap-3">

@@ -23,7 +23,7 @@ export default defineComponent({
 
 <template>
   <div
-    class="flex flex-row items-end gap-4 p-4 border-4 shadow-2xl bg-white/90 border-amber-300 rounded-2xl"
+    class="flex flex-row items-end w-full h-full gap-2 p-4 border-l-2 border-r-2 border-amber-400"
   >
     <AbilityComponent
       v-for="(icon, idx) in abilityIcons"

@@ -5,7 +5,7 @@ export const useGameStore = defineStore('game', {
     gameSpeed: 1000,
     chimes: 0,
     chimesForNextLevel: 10,
-    chimesPerClick: 1,
+    chimesPerClick: 2,
     chimesForMeep: 0,
     meeps: 0,
     meepsPerSecond: 0,

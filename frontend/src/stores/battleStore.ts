@@ -21,7 +21,7 @@ export const useBattleStore = defineStore('battle', {
     ],
 
     autoBattleEnabled: false,
-    autoBattleInterval: 10000, // 10 Sekunden zwischen Kämpfen
+    autoBattleInterval: 7000, // 7 Sekunden zwischen Kämpfen
     autoBattleTimer: null,
     lastAutoBattleResult: null,
     showAutoBattleResult: false,
@@ -305,7 +305,7 @@ export const useBattleStore = defineStore('battle', {
 
     startAutoBattle() {
       if (this.autoBattleEnabled) return
-
+      console.log('Auto Battle started')
       this.autoBattleEnabled = true
 
       // Ersten Kampf sofort starten
@@ -326,9 +326,9 @@ export const useBattleStore = defineStore('battle', {
         this.autoBattleOldMMR = gameStore.mmr
         this.autoBattleOldLP = gameStore.currentRank.lp
         const result = await this.simulateBattle(gameStore.mmr)
-
         // Emit event für AutoBattle Result
         this.$patch((state) => {
+          console.log('Auto Battle result', result)
           state.lastAutoBattleResult = result
           state.showAutoBattleResult = true
         })

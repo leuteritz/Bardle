@@ -27,7 +27,7 @@ export default defineComponent({
       <!-- Bard Image -->
       <img
         src="/img/BardAbilities/Bard.png"
-        class="w-24 h-24 bg-white border-4 rounded-full shadow-lg border-amber-300"
+        class="w-32 h-32 border-4 rounded-full shadow-lg border-amber-300"
       />
       <!-- Level Badge -->
       <div
@@ -44,11 +44,11 @@ export default defineComponent({
       </div>
     </div>
     <!-- Chimes to next Level */* -->
-    <div class="mt-2 text-xs text-center text-amber-700">
+    <!-- <div class="mt-2 text-xs text-center text-white">
       <div class="font-semibold">
         {{ gameStore.currentLevelChimes }} / {{ gameStore.totalChimesThisLevel }} Chimes
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

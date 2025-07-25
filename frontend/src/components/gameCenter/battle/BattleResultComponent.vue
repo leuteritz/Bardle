@@ -1,16 +1,5 @@
 <template>
-  <div
-    v-if="showResult"
-    class="relative w-full p-8 mx-4 shadow-2xl bg-white/95 backdrop-blur-sm rounded-3xl border-amber-200"
-  >
-    <!-- Close Button -->
-    <button
-      @click="closeResult"
-      class="absolute text-2xl text-gray-500 transition-colors top-4 right-4 hover:text-gray-700"
-    >
-      ✕
-    </button>
-
+  <div class="">
     <!-- Battle Result Header -->
     <div
       class="relative flex flex-row items-center justify-between w-full px-2 mb-6 text-center"
@@ -42,13 +31,18 @@
         {{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP
       </span>
     </div>
-    <!-- LoL Loading Screen (5 vs 5) -->
-    <div v-if="showResult" class="mb-8">
-      <div class="relative flex flex-row w-full gap-6">
+    <!-- Battle Result -->
+    <div
+      class="flex flex-row bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-2xl border-amber-300/40 backdrop-blur-md"
+    >
+      <!-- Chat Panel -->
+      <div class="flex items-center justify-center w-1/4 min-h-max">
+        <ChatPanelComponent :chat-messages="chatMessages" />
+      </div>
+      <!-- LoL Loading Screen (5 vs 5) -->
+      <div class="w-1/2 border-l-2 border-r-2 min-h-max">
         <!-- Main Content -->
-        <div
-          class="flex flex-col items-center justify-center flex-1 px-2 py-8 border-4 shadow-2xl bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-2xl border-amber-300/40 backdrop-blur-md"
-        >
+        <div class="flex flex-col items-center justify-center p-4">
           <!-- Team 1 (oben) -->
           <div class="flex flex-row items-end justify-center mb-4 space-x-4">
             <div
@@ -133,42 +127,34 @@
             </div>
           </div>
         </div>
-
-        <!-- Chat Panel + Minimap als Spalte -->
-        <div
-          class="w-80 min-w-[300px] max-w-xs flex flex-col bg-white/90 border border-amber-300 rounded-2xl shadow-lg p-3 h-[32rem]"
-        >
-          <div class="flex flex-col flex-1 h-full">
-            <!-- Chat  -->
-            <div class="flex-1 min-h-0 mb-2" style="max-height: 48%">
-              <ChatPanelComponent :chat-messages="chatMessages" />
-            </div>
-            <!-- Minimap -->
-            <div class="flex items-center justify-center flex-1 min-h-0" style="max-height: 40%">
-              <MiniMapComponent />
-            </div>
-          </div>
-        </div>
+      </div>
+      <div class="flex items-center justify-center w-1/4 min-h-max">
+        <MiniMapComponent />
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { useGameStore } from '../../stores/gameStore'
+import { useGameStore } from '../../../stores/gameStore'
 import { ref, onMounted, watch, nextTick, defineComponent } from 'vue'
-import { battleChatMessages } from '../../config/battleChatMessages'
+import { battleChatMessages } from '../../../config/battleChatMessages'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import BattleMessageComponent from './BattleMessageComponent.vue'
-import { useBattleStore } from '../../stores/battleStore'
+import { useBattleStore } from '../../../stores/battleStore'
+import ChampionLobbyComponent from '../../ChampionLobbyComponent.vue'
 
 export default defineComponent({
   name: 'BattleResultComponent',
-  components: { MiniMapComponent, ChatPanelComponent, BattleMessageComponent },
+  components: {
+    MiniMapComponent,
+    ChatPanelComponent,
+    BattleMessageComponent,
+    ChampionLobbyComponent,
+  },
   props: {
     result: { type: Object, required: true },
-    showResult: { type: Boolean, required: true },
     mmrChange: { type: Number, required: true },
     lpChange: { type: Number, required: true },
   },
@@ -178,10 +164,22 @@ export default defineComponent({
     const gameStore = useGameStore()
     const gameTime = ref(120) // 120 s -> 02:00 min
     const chatMessages = ref<any[]>([])
+    const activeTab = ref('idle')
 
     const battleStore = useBattleStore()
+
     function closeResult() {
       emit('close')
+    }
+
+    function handleChimeClick(event) {
+      gameStore.addChime()
+      if (gameStore.chimesForMeep >= gameStore.meepChimeRequirement) {
+        setTimeout(() => {
+          gameStore.addMeep()
+          gameStore.chimesForMeep = 0
+        }, 100)
+      }
     }
     async function loadChampions() {
       const response = await fetch('/src/config/champion.csv')
@@ -332,12 +330,92 @@ export default defineComponent({
       gameTime,
       chatMessages,
       closeResult,
+      handleChimeClick,
       getChampionImage,
       getBorderImage,
       formatTime,
       refreshTeams,
+      activeTab,
+      gameStore,
+      battleStore,
       ...props,
     }
   },
 })
 </script>
+
+<style scoped>
+/* Chime Main Button */
+.chime-main-button {
+  transition: all 0.2s ease;
+}
+
+.chime-main-button:hover {
+  transform: scale(1.05);
+}
+
+.chime-main-button:active {
+  transform: scale(0.95);
+}
+
+/* Äußere Ring-Animation */
+.chime-outer-ring {
+  background: linear-gradient(45deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3));
+  animation: rotate 4s linear infinite;
+  border: 4px solid rgba(251, 191, 36, 0.5);
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Innere Ring-Animation */
+.chime-inner-ring {
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(251, 191, 36, 0.2));
+  animation: pulse 2s ease-in-out infinite;
+  border: 2px solid rgba(251, 191, 36, 0.3);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* Chime Icon Animation */
+.chime-icon {
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(3deg);
+  }
+}
+
+/* Hover-Effekte */
+.chime-main-button:hover .chime-outer-ring {
+  animation-duration: 2s;
+  border-color: rgba(251, 191, 36, 0.8);
+}
+
+.chime-main-button:hover .chime-icon {
+  filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8));
+}
+</style>
