@@ -138,7 +138,7 @@
 <script lang="ts">
 import { useGameStore } from '../../../stores/gameStore'
 import { ref, onMounted, watch, nextTick, defineComponent } from 'vue'
-import { battleChatMessages } from '../../../config/battleChatMessages'
+import { battleMessages } from '../../../config/messages'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import BattleMessageComponent from './BattleMessageComponent.vue'
@@ -245,7 +245,7 @@ export default defineComponent({
         setTimeout(() => showRandomChatMessagesSequentially(), 100)
         return
       }
-      const messages = [...battleChatMessages]
+      const messages = [...battleMessages]
 
       function showNext() {
         if (messages.length === 0) return

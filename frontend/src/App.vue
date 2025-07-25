@@ -3,7 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { useBattleStore } from './stores/battleStore'
 import LevelComponent from './components/LevelComponent.vue'
-
+import { titleMessages } from './config/messages'
 import StatsPanelComponent from './components/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
@@ -22,6 +22,13 @@ const autoBattleLpChange = ref(0)
 const autoBattleResultKey = ref(0)
 
 const autoBattleResultComponentRef = ref(null)
+
+const currentMsg = ref('')
+
+function getRandomMsg() {
+  const randomMsg = titleMessages[Math.floor(Math.random() * titleMessages.length)]
+  currentMsg.value = randomMsg
+}
 
 function handleAutoBattleResult() {
   if (battleStore.lastAutoBattleResult && battleStore.showAutoBattleResult) {
@@ -53,9 +60,14 @@ function closeAutoBattleResult() {
 }
 
 onMounted(() => {
+  getRandomMsg()
   setInterval(() => {
     gameStore.gernerateMeeps()
   }, 1000)
+
+  setInterval(() => {
+    getRandomMsg()
+  }, 5000)
 })
 
 // Watch for AutoBattle results
@@ -92,8 +104,10 @@ watch(
         <div
           class="flex items-center justify-center w-full h-full gap-2 rounded-xl border-amber-400/50"
         >
-          <p class="text-xl select-none text-amber-700">
-            Klicke auf den Chime um Chimes zu bekommen! 🎵
+          <p
+            class="text-xl cursor-default select-none text-amber-700 drop-shadow-lg hover:text-amber-800 hover:scale-105 animate-bounce"
+          >
+            {{ currentMsg }}
           </p>
         </div>
       </div>
