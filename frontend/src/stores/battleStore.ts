@@ -27,6 +27,7 @@ export const useBattleStore = defineStore('battle', {
     showAutoBattleResult: false,
     autoBattleOldMMR: 0,
     autoBattleOldLP: 0,
+    autoBattleReady: true,
 
     ownedChampions: ['Bard'],
     selectedChampions: [],
@@ -303,36 +304,56 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    startAutoBattle() {
+    async startAutoBattle() {
       if (this.autoBattleEnabled) return
-      console.log('Auto Battle started')
+
       this.autoBattleEnabled = true
-
-      // Ersten Kampf sofort starten
       const gameStore = useGameStore()
-      this.autoBattleOldMMR = gameStore.mmr
-      this.autoBattleOldLP = gameStore.currentRank.lp
-      this.simulateBattle(gameStore.mmr).then((result) => {
-        this.$patch((state) => {
-          state.lastAutoBattleResult = result
-          state.showAutoBattleResult = true
-        })
-      })
 
-      // Weitere Kämpfe im Intervall
-      this.autoBattleTimer = setInterval(async () => {
-        const gameStore = useGameStore()
-        // Speichere alten MMR/LP vor dem Battle
+      const runNextBattle = async () => {
+        if (!this.autoBattleEnabled) return
+
+        // Warte bis die Komponente bereit ist
+        if (!this.autoBattleReady) {
+          // Wenn nicht bereit, versuche es in 500ms erneut
+          this.autoBattleTimer = setTimeout(() => {
+            runNextBattle()
+          }, 500)
+          return
+        }
+
+        console.log('Starting new battle...')
+
+        // Reset States
+        this.showAutoBattleResult = false
+        this.lastAutoBattleResult = null
+        this.autoBattleReady = false // Setze auf "nicht bereit"
+
+        // Speichere alte Werte
         this.autoBattleOldMMR = gameStore.mmr
         this.autoBattleOldLP = gameStore.currentRank.lp
+
+        // Führe Battle aus
         const result = await this.simulateBattle(gameStore.mmr)
-        // Emit event für AutoBattle Result
-        this.$patch((state) => {
-          console.log('Auto Battle result', result)
-          state.lastAutoBattleResult = result
-          state.showAutoBattleResult = true
-        })
-      }, this.autoBattleInterval)
+
+        // Update State
+        console.log('Auto Battle result', result)
+        this.lastAutoBattleResult = result
+        this.showAutoBattleResult = true
+
+        // Nächster Battle nach Interval (aber nur wenn Komponente bereit ist)
+        this.autoBattleTimer = setTimeout(() => {
+          runNextBattle()
+        }, this.autoBattleInterval)
+      }
+
+      // Ersten Battle starten
+      runNextBattle()
+    },
+
+    markBattleProcessed() {
+      console.log('Battle processed by component')
+      this.autoBattleReady = true
     },
 
     stopAutoBattle() {

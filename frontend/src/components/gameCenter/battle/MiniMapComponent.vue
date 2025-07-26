@@ -33,29 +33,26 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onBeforeUnmount } from 'vue'
+import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 
 export default defineComponent({
   name: 'MiniMapComponent',
-  setup() {
-    const blueChampions = ref([
-      { x: 40, y: 80 },
-      { x: 40, y: 80 },
-      { x: 40, y: 80 },
-      { x: 40, y: 80 },
-      { x: 40, y: 80 },
-    ])
-    const redChampions = ref([
-      { x: 200, y: 180 },
-      { x: 200, y: 180 },
-      { x: 200, y: 180 },
-      { x: 200, y: 180 },
-      { x: 200, y: 180 },
-    ])
+  props: {
+    battleId: {
+      type: [String, Number],
+      default: 0,
+    },
+  },
+  setup(props) {
+    const blueChampions = ref([])
+    const redChampions = ref([])
+
+    resetChampions()
 
     const move = ref(100)
     const gameStore = useGameStore()
+    let moveTimeout: any = null
 
     function moveChampions() {
       const min = 25
@@ -73,11 +70,75 @@ export default defineComponent({
         champ.y = Math.max(min, Math.min(max, champ.y + dy))
       })
 
-      setTimeout(moveChampions, gameStore.gameSpeed)
+      moveTimeout = setTimeout(moveChampions, gameStore.gameSpeed)
     }
 
+    function startMovementAfterDelay() {
+      // Alle laufenden Timeouts stoppen
+      if (moveTimeout) {
+        clearTimeout(moveTimeout)
+        moveTimeout = null
+      }
+
+      // Nach 1 Sekunde mit Bewegung starten
+      moveTimeout = setTimeout(() => {
+        moveChampions()
+      }, 1000)
+    }
+
+    function stopMovement() {
+      if (moveTimeout) {
+        clearTimeout(moveTimeout)
+        moveTimeout = null
+      }
+    }
+
+    function resetChampions() {
+      blueChampions.value = [
+        // Support
+        { x: 80, y: 250 },
+        // Adc
+        { x: 60, y: 250 },
+        // Mid
+        { x: 60, y: 210 },
+        // Top
+        { x: 30, y: 200 },
+        // Jungle
+        { x: 50, y: 190 },
+      ]
+      redChampions.value = [
+        // Top
+        { x: 200, y: 30 },
+        // Mid
+        { x: 210, y: 60 },
+        // Jungle
+        { x: 230, y: 90 },
+        // Support
+        { x: 250, y: 80 },
+        // Adc
+        { x: 250, y: 60 },
+      ]
+    }
+
+    watch(
+      () => props.battleId,
+      () => {
+        console.log('battleId changed')
+
+        // Erst alle Bewegungen stoppen
+        stopMovement()
+
+        // Dann zurücksetzen
+        resetChampions()
+
+        // Nach 1 Sekunde starten
+        startMovementAfterDelay()
+      },
+    )
+
     onMounted(() => {
-      moveChampions()
+      // Nach 1 Sekunde starten beim ersten Laden
+      startMovementAfterDelay()
     })
 
     return {

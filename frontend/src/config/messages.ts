@@ -497,6 +497,8 @@ export const battleMessages = [
 ]
 
 export const titleMessages = [
+  'Meep',
+  'Ootay',
   'Die Melodie des Universums kennt weder Anfang noch Ende.',
   'Zwischen den Sternen ruht das Gleichgewicht und ich wache darüber.',
   'Jede Reise birgt ein neues Lied, das darauf wartet, entdeckt zu werden.',

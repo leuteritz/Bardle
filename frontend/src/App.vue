@@ -99,7 +99,7 @@ watch(
         {{ title }}
       </h1>
 
-      <!-- Rechte Spalte: Platzhalter -->
+      <!-- Rechte Spalte: Message -->
       <div class="flex items-center justify-end col-span-1">
         <div
           class="flex items-center justify-center w-full h-full gap-2 rounded-xl border-amber-400/50"
@@ -114,38 +114,6 @@ watch(
     </div>
 
     <!-- Mitte -->
-    <!-- <div class="flex justify-center w-full">
-      <div class="w-2/3">
-        <BattleResultComponent
-          v-if="autoBattleResult"
-          ref="autoBattleResultComponentRef"
-          :key="autoBattleResultKey"
-          :result="autoBattleResult"
-          :show-result="showAutoBattleResult"
-          :mmr-change="autoBattleMmrChange"
-          :lp-change="autoBattleLpChange"
-          @close="closeAutoBattleResult"
-        />
-        <div class="flex flex-col items-center gap-4 mt-12">
-          <div class="flex gap-4">
-            <button
-              v-if="!battleStore.autoBattleEnabled"
-              @click="battleStore.startAutoBattle()"
-              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-green-700 shadow-lg bg-gradient-to-r from-green-500 to-green-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-green-400 hover:to-green-500"
-            >
-              Auto Battle Start
-            </button>
-            <button
-              v-else
-              @click="battleStore.stopAutoBattle()"
-              class="px-6 py-3 text-lg font-bold text-white transition-all duration-300 border-2 border-orange-700 shadow-lg bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl hover:shadow-xl hover:scale-105 hover:from-orange-400 hover:to-orange-500"
-            >
-              Auto Battle Stop
-            </button>
-          </div>
-        </div>
-      </div>
-    </div> -->
     <div class="flex justify-center w-full h-full">
       <div class="w-2/3">
         <GameCenterComponent />
@@ -157,14 +125,17 @@ watch(
       <div
         className="flex w-1/3 bg-gradient-to-br rounded-2xl shadow-2xl from-amber-600 via-amber-700 to-orange-700 border-2 border-amber-400 items-center"
       >
+        <!-- Bard Hud -->
         <div className="w-64 flex items-center justify-center">
           <BardHudComponent />
         </div>
 
+        <!-- Ability Bar -->
         <div className=" flex justify-center items-center">
           <AbilityBarComponent />
         </div>
 
+        <!-- Stats Panel -->
         <div className="w-64 flex items-center justify-center">
           <StatsPanelComponent />
         </div>

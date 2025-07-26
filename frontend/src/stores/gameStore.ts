@@ -15,7 +15,7 @@ export const useGameStore = defineStore('game', {
     currentRank: {
       tier: 'Challenger',
       division: 'I',
-      lp: 0,
+      lp: 1000,
     },
     meepChimeRequirement: 20,
     skillPoints: 0,
@@ -23,7 +23,7 @@ export const useGameStore = defineStore('game', {
   }),
   actions: {
     addMeep() {
-      this.meeps++
+      this.meeps += this.chimesPerClick
       this.meepChimeRequirement = Math.max(20, Math.ceil(20 * Math.pow(this.meeps, 1.2)))
     },
     gernerateMeeps() {
@@ -34,8 +34,8 @@ export const useGameStore = defineStore('game', {
     },
     addChime() {
       console.log('addChime')
-      this.chimes++
-      this.chimesForMeep++
+      this.chimes += this.chimesPerClick
+      this.chimesForMeep += this.chimesPerClick
       this.calculateLevel()
     },
     calculateLevel() {

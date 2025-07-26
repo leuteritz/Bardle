@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="relative w-full p-8 mx-4 border-4 shadow-2xl bg-gradient-to-br from-amber-50 via-yellow-100 to-orange-100 backdrop-blur-sm rounded-3xl border-amber-300"
-  >
+  <div class="relative w-full p-8 mx-4">
     <!-- Tab Navigation -->
     <div class="flex justify-center mb-6">
       <button
@@ -38,13 +36,7 @@
     </div>
 
     <div v-else-if="activeTab === 'battle'" class="min-h-[600px]">
-      <BattleResultComponent
-        ref="autoBattleResultComponentRef"
-        :key="autoBattleResultKey"
-        :result="autoBattleResult || { won: true, opponent: { name: 'Lade nächsten Kampf...' } }"
-        :mmr-change="autoBattleMmrChange"
-        :lp-change="autoBattleLpChange"
-      />
+      <BattleResultComponent :result="initialBattleResult" :mmr-change="0" :lp-change="0" />
     </div>
 
     <div v-else-if="activeTab === 'champions'" class="min-h-[600px]">
@@ -54,12 +46,11 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, onMounted, watch, onUnmounted } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useBattleStore } from '../../stores/battleStore'
+import { ref, defineComponent } from 'vue'
 import ChampionLobbyComponent from '../ChampionLobbyComponent.vue'
 import IdleGameComponent from './idle/IdleGameComponent.vue'
 import BattleResultComponent from './battle/BattleResultComponent.vue'
+import { useGameStore } from '../../stores/gameStore'
 
 export default defineComponent({
   name: 'GameCenterComponent',
@@ -72,75 +63,21 @@ export default defineComponent({
   setup() {
     const activeTab = ref('idle')
     const gameStore = useGameStore()
-    const battleStore = useBattleStore()
-
-    // AutoBattle result state
-    const autoBattleResult = ref(null)
-    const autoBattleMmrChange = ref(0)
-    const autoBattleLpChange = ref(0)
-    const autoBattleResultKey = ref(0)
-    const autoBattleResultComponentRef = ref(null)
-
-    function handleAutoBattleResult() {
-      if (battleStore.lastAutoBattleResult && battleStore.showAutoBattleResult) {
-        // Verwende die im Store gespeicherten alten Werte
-        const oldMMR = battleStore.autoBattleOldMMR
-        const oldLP = battleStore.autoBattleOldLP
-
-        autoBattleMmrChange.value = gameStore.mmr - oldMMR
-        autoBattleLpChange.value = gameStore.currentRank.lp - oldLP
-
-        autoBattleResult.value = battleStore.lastAutoBattleResult
-        autoBattleResultKey.value++
-
-        // Champions neu generieren
-        if (autoBattleResultComponentRef.value && autoBattleResultComponentRef.value.refreshTeams) {
-          autoBattleResultComponentRef.value.refreshTeams()
-        }
-
-        // Reset battleStore state
-        battleStore.lastAutoBattleResult = null
-        battleStore.showAutoBattleResult = false
-      }
-    }
-
-    // Auto Battle beim App-Start automatisch starten
-    onMounted(() => {
-      // Auto Battle sofort beim Laden der Komponente starten
-      if (!battleStore.autoBattleEnabled) {
-        console.log('Auto Battle started')
-        battleStore.startAutoBattle()
-        console.log(battleStore.showAutoBattleResult)
-      }
-    })
-
-    // Watch for AutoBattle results - WICHTIG für kontinuierliche Kämpfe
-    watch(
-      () => battleStore.showAutoBattleResult,
-      (newValue) => {
-        console.log('Auto Battle result received', newValue)
-        if (newValue) {
-          console.log('Auto Battle result received')
-          handleAutoBattleResult()
-        }
+    // Initial Battle Result für die erste Anzeige
+    const initialBattleResult = {
+      won: true,
+      opponent: {
+        name: 'Bereit für Battle!',
+        mmr: gameStore.mmr,
+        power: gameStore.totalPower,
+        rank: gameStore.currentRank,
       },
-    )
-
-    // Cleanup beim Unmount (optional, falls die Komponente entladen wird)
-    onUnmounted(() => {
-      // Auto Battle läuft weiter, auch wenn diese Komponente entladen wird
-      // Kein battleStore.stopAutoBattle() hier!
-    })
+      winProbability: 0.5,
+    }
 
     return {
       activeTab,
-      gameStore,
-      battleStore,
-      autoBattleResult,
-      autoBattleMmrChange,
-      autoBattleLpChange,
-      autoBattleResultKey,
-      autoBattleResultComponentRef,
+      initialBattleResult,
     }
   },
 })

@@ -1,8 +1,6 @@
 <template>
   <div class="w-full">
-    <div
-      class="relative w-full max-w-4xl p-8 mx-auto border-4 shadow-2xl bg-gradient-to-br from-amber-100 via-yellow-200 to-orange-100 rounded-2xl border-amber-400"
-    >
+    <div class="relative w-full max-w-4xl p-8 mx-auto">
       <div class="flex items-center justify-center mb-6">
         <button
           :class="tab === 'shop' ? 'bg-amber-400 text-amber-900' : 'bg-white text-amber-700'"
