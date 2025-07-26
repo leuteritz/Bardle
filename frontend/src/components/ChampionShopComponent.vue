@@ -52,9 +52,9 @@ export default defineComponent({
 </script>
 
 <template>
-  <div class="p-6 bg-white/95 rounded-2xl shadow-2xl max-w-2xl mx-auto min-h-[400px]">
+  <div class="min-h-[300px] max-w-2xl p-6 mx-auto shadow-2xl bg-white/95 rounded-2xl">
     <h2 class="mb-4 text-3xl font-bold text-center text-amber-800">Champion-Shop</h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[420px] overflow-y-auto pr-2">
+    <div class="grid grid-cols-2 gap-4 pr-2 overflow-y-auto md:grid-cols-3">
       <div
         v-for="champion in availableChampions"
         :key="champion.name"

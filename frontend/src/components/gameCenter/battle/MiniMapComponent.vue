@@ -2,6 +2,20 @@
   <div
     class="relative w-[300px] h-[300px] rounded-2xl shadow-2xl border-4 border-amber-300 overflow-hidden"
   >
+    <!-- Game Time Display -->
+    <div
+      class="absolute z-10 px-2 py-1 text-sm font-bold text-white rounded top-2 left-2 bg-black/50"
+    >
+      {{ formatTime(gameTime) }}
+    </div>
+
+    <!-- Score Display -->
+    <div class="absolute z-10 px-2 py-1 text-sm font-bold rounded top-2 right-2 bg-black/50">
+      <span class="text-blue-400">{{ score.team1Kills }}</span>
+      <span class="text-white"> vs </span>
+      <span class="text-red-400">{{ score.team2Kills }}</span>
+    </div>
+
     <!-- Minimap-Bild als Hintergrund -->
     <img src="/img/minimap.png" class="absolute w-full h-full pointer-events-none select-none" />
 
@@ -43,6 +57,14 @@ export default defineComponent({
       type: [String, Number],
       default: 0,
     },
+    gameTime: {
+      type: Number,
+      default: 0,
+    },
+    score: {
+      type: Object,
+      default: () => ({ kills: 0, deaths: 0, assists: 0 }),
+    },
   },
   setup(props) {
     const blueChampions = ref([])
@@ -53,6 +75,12 @@ export default defineComponent({
     const move = ref(100)
     const gameStore = useGameStore()
     let moveTimeout: any = null
+
+    function formatTime(seconds: number) {
+      const min = Math.floor(seconds / 60)
+      const sec = seconds % 60
+      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+    }
 
     function moveChampions() {
       const min = 25
@@ -83,7 +111,7 @@ export default defineComponent({
       // Nach 1 Sekunde mit Bewegung starten
       moveTimeout = setTimeout(() => {
         moveChampions()
-      }, 1000)
+      }, gameStore.gameSpeed)
     }
 
     function stopMovement() {
@@ -144,6 +172,7 @@ export default defineComponent({
     return {
       blueChampions,
       redChampions,
+      formatTime,
     }
   },
 })

@@ -9,7 +9,7 @@
         class="mx-auto text-4xl font-bold"
         :class="currentResult.won ? 'text-green-600' : 'text-red-600'"
       >
-        {{ currentResult.won ? 'VICTORY!' : 'DEFEAT!' }}
+        {{ currentResult.won ? '🏆 VICTORY!' : '💀 DEFEAT!' }}
       </h2>
       <BattleMessageComponent />
       <span
@@ -47,11 +47,16 @@
 
     <!-- Rest of your existing battle display... -->
     <div
-      class="flex flex-row bg-gradient-to-br from-gray-900/90 via-gray-800/80 to-gray-900/90 rounded-2xl border-amber-300/40 backdrop-blur-md"
+      class="flex flex-row bg-gradient-to-br from-amber-200 via-yellow-200 to-orange-200 rounded-2xl border-amber-400"
     >
       <!-- Chat Panel -->
       <div class="flex items-center justify-center w-1/4 min-h-max">
-        <ChatPanelComponent :team1="team1" :team2="team2" :battle-id="currentBattleId" />
+        <ChatPanelComponent
+          :team1="team1"
+          :team2="team2"
+          :battle-id="currentBattleId"
+          @gameTimeUpdate="handleGameTimeUpdate"
+        />
       </div>
 
       <!-- LoL Loading Screen (5 vs 5) -->
@@ -103,7 +108,7 @@
             </div>
           </div>
 
-          <div class="mb-2 text-2xl font-bold text-amber-700">VS</div>
+          <div class="mb-2 text-2xl font-bold text-amber-700">⚔️ VS ⚔️</div>
 
           <div class="flex flex-row items-start justify-center mt-2 space-x-4">
             <div
@@ -146,7 +151,11 @@
       </div>
 
       <div class="flex items-center justify-center w-1/4 min-h-max">
-        <MiniMapComponent :battle-id="currentBattleId" />
+        <MiniMapComponent
+          :battle-id="currentBattleId"
+          :game-time="currentGameTime"
+          :score="score"
+        />
       </div>
     </div>
   </div>
@@ -177,13 +186,17 @@ export default defineComponent({
     const team2 = ref<any[]>([])
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
-    const currentBattleId = ref(0)
+
+    const score = ref({
+      team1Kills: 0,
+      team2Kills: 0,
+    })
 
     // Auto Battle State
     const isAutoBattleActive = ref(false)
     const autoBattleCountdown = ref<any>(null)
     const timeUntilNextBattle = ref(0)
-    const autoBattleInterval = 7000 // 7 Sekunden
+    const currentBattleId = ref(0)
 
     // Current Battle State
     const currentResult = ref(props.result)
@@ -191,6 +204,7 @@ export default defineComponent({
     const currentMmrChange = ref(props.mmrChange)
     const oldMmr = ref(gameStore.mmr)
     const oldLp = ref(gameStore.currentRank.lp)
+    const currentGameTime = ref(0) // Game time from ChatPanelComponent
 
     // Alle bestehenden Funktionen bleiben gleich...
     async function loadChampions() {
@@ -254,6 +268,10 @@ export default defineComponent({
       }
     }
 
+    function handleGameTimeUpdate(newTime: number) {
+      currentGameTime.value = newTime
+    }
+
     async function refreshTeams() {
       loadChampions().then((champions) => {
         const selected = getRandomChampions(champions, 5)
@@ -284,8 +302,14 @@ export default defineComponent({
       currentMmrChange.value = newMmrChange
       currentLpChange.value = newLpChange
 
-      // Increment battle ID to trigger chat reload
+      // Increment battle ID to trigger chat/minimap reload
       currentBattleId.value++
+
+      // Reset score
+      score.value = {
+        team1Kills: 0,
+        team2Kills: 0,
+      }
 
       // Refresh teams für neue Anzeige
       await refreshTeams()
@@ -298,7 +322,7 @@ export default defineComponent({
     }
 
     function startCountdown() {
-      timeUntilNextBattle.value = autoBattleInterval / 1000
+      timeUntilNextBattle.value = battleStore.autoBattleInterval / 1000
 
       autoBattleCountdown.value = setInterval(() => {
         timeUntilNextBattle.value--
@@ -324,7 +348,7 @@ export default defineComponent({
         startCountdown()
 
         // Schedule nächsten Battle
-        setTimeout(runBattleCycle, autoBattleInterval)
+        setTimeout(runBattleCycle, battleStore.autoBattleInterval)
       }
 
       // Ersten Battle sofort ausführen
@@ -332,13 +356,22 @@ export default defineComponent({
     }
 
     function randomStatsTick() {
-      ;[team1.value, team2.value].forEach((team) => {
-        team.forEach((champ) => {
-          if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
-          if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
-          if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
-        })
+      // Calculate team1 kills
+      team1.value.forEach((champ) => {
+        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
+        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
+        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
+        score.value.team1Kills += champ.kills
       })
+
+      // Calculate team2 kills
+      team2.value.forEach((champ) => {
+        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
+        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
+        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
+        score.value.team2Kills += champ.kills
+      })
+
       setTimeout(randomStatsTick, gameStore.gameSpeed)
     }
 
@@ -357,6 +390,7 @@ export default defineComponent({
       isAutoBattleActive,
       timeUntilNextBattle,
       currentBattleId,
+      currentGameTime,
       getChampionImage,
       getBorderImage,
       refreshTeams,
@@ -364,6 +398,8 @@ export default defineComponent({
       gameStore,
       battleStore,
       startAutoBattle,
+      handleGameTimeUpdate,
+      score,
     }
   },
 })

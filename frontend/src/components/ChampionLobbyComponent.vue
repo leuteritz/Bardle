@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <div class="relative w-full max-w-4xl p-8 mx-auto">
+    <div class="w-full max-w-4xl p-8 mx-auto">
       <div class="flex items-center justify-center mb-6">
         <button
           :class="tab === 'shop' ? 'bg-amber-400 text-amber-900' : 'bg-white text-amber-700'"

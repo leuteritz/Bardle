@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-center w-full h-full">
-    <div class="flex items-center gap-2 mb-2 text-lg font-bold text-white">
+    <div class="flex items-center gap-2 mb-2 text-lg font-bold text-black">
       <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
         <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H6l-4 3V5z" />
       </svg>
@@ -49,9 +49,10 @@ export default defineComponent({
       default: 0,
     },
   },
-  setup(props) {
+  emits: ['gameTimeUpdate'],
+  setup(props, { emit }) {
     const gameStore = useGameStore()
-    const gameTime = ref(120) // 120 s -> 02:00 min
+    const gameTime = ref(0)
     const chatMessages = ref<any[]>([])
     const currentTimeoutId = ref<any>(null)
 
@@ -90,6 +91,9 @@ export default defineComponent({
 
           const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
 
+          // Zeit zuerst erhöhen, damit Chat und MiniMap synchron sind
+          gameTime.value += getRandomTimeIncrement()
+
           chatMsg = {
             user: randomChampion.name,
             text: msg,
@@ -100,7 +104,6 @@ export default defineComponent({
 
         chatMessages.value.push(chatMsg)
         messages.splice(idx, 1)
-        gameTime.value += getRandomTimeIncrement()
 
         if (messages.length > 0) {
           // Timeout-ID speichern
@@ -141,9 +144,20 @@ export default defineComponent({
       },
     )
 
+    // Emit gameTime changes to parent component
+    watch(
+      () => gameTime.value,
+      (newTime) => {
+        // Emit the gameTime to parent component
+        // This will be used by MiniMapComponent
+        emit('gameTimeUpdate', newTime)
+      },
+    )
+
     return {
       chatMessages,
       showRandomChatMessagesSequentially,
+      gameTime,
     }
   },
 })
