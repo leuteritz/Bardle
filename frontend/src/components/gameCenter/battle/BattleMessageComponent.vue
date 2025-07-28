@@ -1,5 +1,19 @@
+<template>
+  <div
+    v-if="showMessage"
+    :key="messageKey"
+    class="fixed z-40 transform -translate-x-1/2 left-1/2 top-16"
+  >
+    <div
+      class="px-4 py-2 text-lg font-bold text-center text-white border-2 border-yellow-400 rounded-lg shadow-xl bg-gradient-to-r from-red-600 to-orange-600 animate-bounce"
+    >
+      {{ currentMessage }}
+    </div>
+  </div>
+</template>
+
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 
 export default defineComponent({
@@ -10,17 +24,16 @@ export default defineComponent({
     const showMessage = ref(false)
     const currentMessage = ref('')
     const messageKey = ref(0)
-    const messageDuration = ref(2000)
+    const messageDuration = ref(1500) // Kürzere Dauer
 
-    // Battle-Nachrichten wie in League of Legends
     const battleMessages = [
       'PENTAKILL!',
       'QUADRAKILL!',
       'TRIPLE KILL!',
       'DOUBLE KILL!',
       'FIRST BLOOD!',
-      'BARON HAS BEEN SLAIN!',
-      'DRAGON HAS BEEN SLAIN!',
+      'BARON SLAIN!',
+      'DRAGON SLAIN!',
       'ACE!',
       'UNSTOPPABLE!',
       'DOMINATING!',
@@ -28,7 +41,6 @@ export default defineComponent({
       'LEGENDARY!',
       'SHUTDOWN!',
       'EXECUTED!',
-      'AFK!',
     ]
 
     let messageInterval: number | null = null
@@ -52,15 +64,14 @@ export default defineComponent({
         clearInterval(messageInterval)
       }
 
-      // Kontinuierlich während des Kampfes Nachrichten anzeigen
       messageInterval = window.setInterval(() => {
         if (battleStore.autoBattleEnabled) {
-          // 50% Chance pro Sekunde eine Nachricht zu zeigen
-          if (Math.random() < 0.5) {
+          if (Math.random() < 0.3) {
+            // Reduzierte Häufigkeit
             showRandomMessage()
           }
         }
-      }, messageDuration.value)
+      }, messageDuration.value * 2) // Längere Intervalle
     }
 
     function stopMessageInterval() {
@@ -93,17 +104,3 @@ export default defineComponent({
   },
 })
 </script>
-
-<template>
-  <div
-    v-if="showMessage"
-    :key="messageKey"
-    class="fixed z-50 mt-32 transform -translate-x-1/2 left-1/2"
-  >
-    <div
-      class="px-8 py-4 text-4xl font-bold text-center text-white border-4 border-yellow-400 rounded-lg shadow-2xl bg-gradient-to-r from-red-600 to-orange-600 animate-pulse"
-    >
-      {{ currentMessage }}
-    </div>
-  </div>
-</template>

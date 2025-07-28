@@ -1,38 +1,52 @@
 <template>
-  <div class="relative flex flex-col items-center justify-center mb-8">
-    <!-- Chime Button - Groß und zentral -->
+  <div
+    class="relative flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 rounded-2xl"
+  >
+    <!-- mb-8 → mb-4 -->
+    <!-- Kompakter Chime Button -->
     <div
       @click="handleChimeClick"
-      class="relative flex flex-col items-center justify-center w-64 h-64 cursor-pointer chime-main-button"
+      class="relative flex flex-col items-center justify-center w-40 h-40 cursor-pointer chime-main-button"
     >
+      <!-- w-64 h-64 → w-40 h-40 -->
+
       <!-- Hintergrund-Ringe -->
       <div class="absolute inset-0 rounded-full chime-outer-ring"></div>
-      <div class="absolute rounded-full inset-4 chime-inner-ring"></div>
+      <div class="absolute rounded-full inset-3 chime-inner-ring"></div>
+      <!-- inset-4 → inset-3 -->
 
-      <!-- Chime Icon -->
+      <!-- Kompakteres Chime Icon -->
       <img
         src="/img/BardAbilities/BardChime.png"
-        class="relative w-48 h-48 select-none drop-shadow-2xl chime-icon"
+        class="relative select-none w-28 h-28 drop-shadow-2xl chime-icon"
       />
+      <!-- w-48 h-48 → w-28 h-28 -->
 
-      <!-- Klick-Hinweis -->
-      <div class="absolute text-center -bottom-8">
-        <p class="text-2xl font-bold text-amber-800 drop-shadow-lg">
+      <!-- Kompakter Klick-Hinweis -->
+      <div class="absolute text-center -bottom-6">
+        <!-- -bottom-8 → -bottom-6 -->
+        <p class="text-lg font-bold text-amber-800 drop-shadow-lg">
+          <!-- text-2xl → text-lg -->
           +{{ gameStore.chimesPerClick }} pro Klick
         </p>
-        <p class="text-sm text-amber-600 animate-pulse">Klicke für Chimes!</p>
+        <p class="text-xs text-amber-600 animate-pulse">Klicke für Chimes!</p>
+        <!-- text-sm → text-xs -->
       </div>
     </div>
 
-    <!-- Meep Progress -->
+    <!-- Kompakter Meep Progress -->
     <div class="mt-8 text-center">
+      <!-- mt-8 → mt-4 -->
       <div class="flex items-center justify-center gap-2 mb-2">
-        <img src="/img/BardAbilities/BardMeep.png" class="w-8 h-8" />
-        <span class="text-lg font-bold text-amber-800">
+        <img src="/img/BardAbilities/BardMeep.png" class="w-6 h-6" />
+        <!-- w-8 h-8 → w-6 h-6 -->
+        <span class="text-base font-bold text-amber-800">
+          <!-- text-lg → text-base -->
           {{ gameStore.chimesForMeep }} / {{ gameStore.meepChimeRequirement }}
         </span>
       </div>
-      <div class="w-48 h-3 overflow-hidden rounded-full bg-amber-200">
+      <div class="w-32 h-2 overflow-hidden rounded-full bg-amber-200">
+        <!-- w-48 h-3 → w-32 h-2 -->
         <div
           class="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500"
           :style="{
@@ -45,9 +59,10 @@
     <!-- Chime Popup Animation -->
     <div
       :key="chimeGainKey"
-      class="fixed z-50 text-2xl font-bold pointer-events-none text-amber-800 drop-shadow chime-popup"
-      :style="{ top: chimeGainPos.y - 64 + 'px' }"
+      class="fixed z-50 text-xl font-bold pointer-events-none text-amber-800 drop-shadow chime-popup"
+      :style="{ top: chimeGainPos.y - 48 + 'px' }"
     >
+      <!-- -64 → -48 angepasst für kleinere Komponente -->
       +{{ gameStore.chimesPerClick }}
     </div>
   </div>
@@ -74,7 +89,7 @@ export default defineComponent({
         setTimeout(() => {
           gameStore.addMeep()
           gameStore.chimesForMeep = 0
-        }, 100) // Animation noch anzeigen lassen
+        }, 100)
       }
     }
 
@@ -89,6 +104,8 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Alle CSS-Animationen bleiben unverändert */
+
 /* Chime Main Button */
 .chime-main-button {
   transition: all 0.2s ease;

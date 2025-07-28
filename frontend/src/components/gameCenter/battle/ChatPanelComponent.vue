@@ -1,29 +1,42 @@
 <template>
-  <div class="flex flex-col items-center justify-center w-full h-full">
-    <div class="flex items-center gap-2 mb-2 text-lg font-bold text-black">
-      <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+  <div class="flex flex-col items-center justify-center w-full h-full p-2">
+    <!-- Kompakter Header -->
+    <div class="flex items-center gap-1 mb-2 text-sm font-bold text-amber-800">
+      <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
         <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H6l-4 3V5z" />
       </svg>
-      Chat
+      Battle Chat
     </div>
+
+    <!-- Kompakte Chat Box -->
     <div
       id="battle-chat-box"
-      class="h-48 p-2 mb-2 space-y-1 overflow-y-auto text-sm border rounded w-80 opacity-70 bg-white/70 border-amber-100"
+      class="w-full h-32 max-w-xs p-2 mb-2 space-y-1 overflow-y-auto text-xs border rounded-lg shadow-inner bg-white/80 border-amber-200"
     >
-      <div v-for="(msg, idx) in chatMessages" :key="'msg-' + idx" class="flex items-start gap-2">
-        <span class="mr-2 text-xs text-gray-400">{{ msg.time }}</span>
+      <div
+        v-for="(msg, idx) in chatMessages"
+        :key="'msg-' + idx"
+        class="flex items-start gap-1 py-0.5"
+      >
+        <span class="text-xs text-amber-600 font-medium min-w-[30px]">{{ msg.time }}</span>
         <span
-          class="font-bold"
+          class="font-bold text-xs min-w-[50px]"
           :class="{
-            'text-amber-500': msg.user === 'Bard',
+            'text-amber-600': msg.user === 'Bard',
             'text-blue-600': msg.team === 1 && msg.user !== 'Bard',
             'text-red-600': msg.team === 2 && msg.user !== 'Bard',
           }"
         >
           {{ msg.user }}:
         </span>
-        <span class="break-words">{{ msg.text }}</span>
+        <span class="text-xs leading-tight break-words">{{ msg.text }}</span>
       </div>
+    </div>
+
+    <!-- Kompakter Status -->
+    <div class="flex items-center space-x-1 text-xs">
+      <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+      <span class="font-medium text-amber-700">Live Chat</span>
     </div>
   </div>
 </template>
@@ -57,7 +70,6 @@ export default defineComponent({
     const currentTimeoutId = ref<any>(null)
 
     function showRandomChatMessagesSequentially() {
-      // Alten Timeout abbrechen falls vorhanden
       if (currentTimeoutId.value) {
         clearTimeout(currentTimeoutId.value)
         currentTimeoutId.value = null
@@ -66,7 +78,6 @@ export default defineComponent({
       chatMessages.value = []
 
       if (!props.team1.length || !props.team2.length) {
-        console.log('No team1 or team2')
         currentTimeoutId.value = setTimeout(() => showRandomChatMessagesSequentially(), 100)
         return
       }
@@ -75,7 +86,7 @@ export default defineComponent({
 
       function showNext() {
         if (messages.length === 0) {
-          currentTimeoutId.value = null // Reset when done
+          currentTimeoutId.value = null
           return
         }
 
@@ -90,8 +101,6 @@ export default defineComponent({
           ]
 
           const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
-
-          // Zeit zuerst erhöhen, damit Chat und MiniMap synchron sind
           gameTime.value += getRandomTimeIncrement()
 
           chatMsg = {
@@ -106,7 +115,6 @@ export default defineComponent({
         messages.splice(idx, 1)
 
         if (messages.length > 0) {
-          // Timeout-ID speichern
           currentTimeoutId.value = setTimeout(showNext, gameStore.gameSpeed)
         } else {
           currentTimeoutId.value = null
@@ -120,6 +128,7 @@ export default defineComponent({
       const sec = seconds % 60
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     }
+
     function getRandomTimeIncrement() {
       return Math.floor(Math.random() * 471) + 30
     }
@@ -138,18 +147,14 @@ export default defineComponent({
     watch(
       () => props.battleId,
       () => {
-        console.log('battleId changed')
-        gameTime.value = 120 // Reset game time
+        gameTime.value = 120
         showRandomChatMessagesSequentially()
       },
     )
 
-    // Emit gameTime changes to parent component
     watch(
       () => gameTime.value,
       (newTime) => {
-        // Emit the gameTime to parent component
-        // This will be used by MiniMapComponent
         emit('gameTimeUpdate', newTime)
       },
     )

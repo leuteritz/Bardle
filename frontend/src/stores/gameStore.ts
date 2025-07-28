@@ -13,9 +13,9 @@ export const useGameStore = defineStore('game', {
     level: 1,
     mmr: 1000,
     currentRank: {
-      tier: 'Challenger',
-      division: 'I',
-      lp: 1000,
+      tier: 'Iron',
+      division: 'IV',
+      lp: 0,
     },
     meepChimeRequirement: 20,
     skillPoints: 0,

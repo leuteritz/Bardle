@@ -38,6 +38,14 @@ export const useBattleStore = defineStore('battle', {
       powerDifferenceMultiplier: 0.1,
       luckFactor: 0.15, // Zufallseinfluss
     },
+
+    // Battle History
+    totalBattles: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    totalKills: 0,
+    totalDeaths: 0,
+    totalAssists: 0,
   }),
 
   actions: {
@@ -58,10 +66,13 @@ export const useBattleStore = defineStore('battle', {
       // Update Ranking basierend auf Ergebnis
       await this.updateRanking(battleResult, opponentMMR)
 
-      // Belohnungen bei Sieg
-      // if (battleResult) {
-      //   gameStore.meeps += this.calculateMeepReward(opponent.rank)
-      // }
+      // Update Battle History
+      this.totalBattles++
+      if (battleResult) {
+        this.totalWins++
+      } else {
+        this.totalLosses++
+      }
 
       return {
         won: battleResult,

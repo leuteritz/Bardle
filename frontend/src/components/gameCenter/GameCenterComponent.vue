@@ -1,56 +1,39 @@
 <template>
-  <div class="relative w-full p-8 mx-4">
-    <!-- Tab Navigation -->
-    <div class="flex justify-center mb-6">
-      <button
-        :class="activeTab === 'idle' ? 'bg-amber-400 text-amber-900' : 'bg-white text-amber-700'"
-        class="flex items-center gap-2 px-6 py-2 mr-2 font-bold transition border-2 shadow rounded-xl border-amber-300 hover:bg-amber-200"
-        @click="activeTab = 'idle'"
-      >
-        🎵 Idle
-      </button>
-      <button
-        :class="activeTab === 'battle' ? 'bg-amber-400 text-amber-900' : 'bg-white text-amber-700'"
-        class="flex items-center gap-2 px-6 py-2 mr-2 font-bold transition border-2 shadow rounded-xl border-amber-300 hover:bg-amber-200"
-        @click="activeTab = 'battle'"
-      >
-        ⚔️ Battle
-      </button>
-      <button
-        :class="
-          activeTab === 'champions' ? 'bg-amber-400 text-amber-900' : 'bg-white text-amber-700'
-        "
-        class="flex items-center gap-2 px-6 py-2 font-bold transition border-2 shadow rounded-xl border-amber-300 hover:bg-amber-200"
-        @click="activeTab = 'champions'"
-      >
-        🏆 Champions
-      </button>
+  <div class="relative w-full p-2 mx-1">
+    <!-- Ultra-Kompakte Tab Navigation -->
+    <div class="flex justify-center mb-2">
+      <div class="flex bg-amber-100 rounded-lg border border-amber-300 shadow-sm p-0.5">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          :class="
+            activeTab === tab.id
+              ? 'bg-amber-400 text-amber-900 shadow-sm'
+              : 'text-amber-700 hover:bg-amber-200'
+          "
+          class="flex items-center gap-1 px-3 py-1.5 font-semibold transition rounded-md text-lg"
+          @click="activeTab = tab.id"
+        >
+          <span>{{ tab.icon }}</span>
+          <span class="hidden sm:inline">{{ tab.label }}</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Tab Content -->
-    <div
-      v-if="activeTab === 'idle'"
-      class="flex flex-col items-center justify-center min-h-[600px]"
-    >
-      <IdleGameComponent />
-    </div>
-
-    <div v-else-if="activeTab === 'battle'" class="min-h-[600px]">
-      <BattleResultComponent :result="initialBattleResult" :mmr-change="0" :lp-change="0" />
-    </div>
-
-    <div v-else-if="activeTab === 'champions'" class="min-h-[600px]">
-      <ChampionLobbyComponent />
+    <!-- Ultra-Kompakter Content -->
+    <div class="">
+      <component :is="currentComponent" v-bind="currentProps" class="h-full" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, defineComponent } from 'vue'
+import { ref, defineComponent, computed, onMounted } from 'vue'
 import ChampionLobbyComponent from '../ChampionLobbyComponent.vue'
 import IdleGameComponent from './idle/IdleGameComponent.vue'
 import BattleResultComponent from './battle/BattleResultComponent.vue'
 import { useGameStore } from '../../stores/gameStore'
+import { useBattleStore } from '../../stores/battleStore'
 
 export default defineComponent({
   name: 'GameCenterComponent',
@@ -63,21 +46,85 @@ export default defineComponent({
   setup() {
     const activeTab = ref('idle')
     const gameStore = useGameStore()
-    // Initial Battle Result für die erste Anzeige
-    const initialBattleResult = {
-      won: true,
-      opponent: {
-        name: 'Bereit für Battle!',
-        mmr: gameStore.mmr,
-        power: gameStore.totalPower,
-        rank: gameStore.currentRank,
-      },
-      winProbability: 0.5,
+    const battleStore = useBattleStore()
+
+    // Initial Battle State
+    const initialBattleResult = ref(null)
+    const initialMmrChange = ref(0)
+    const initialLpChange = ref(0)
+    const isInitialBattleReady = ref(false)
+
+    const tabs = [
+      { id: 'idle', label: 'Idle', icon: '🎵' },
+      { id: 'battle', label: 'Battle', icon: '⚔️' },
+      { id: 'champions', label: 'Champions', icon: '🏆' },
+    ]
+
+    const currentComponent = computed(() => {
+      switch (activeTab.value) {
+        case 'idle':
+          return IdleGameComponent
+        case 'battle':
+          return BattleResultComponent
+        case 'champions':
+          return ChampionLobbyComponent
+        default:
+          return IdleGameComponent
+      }
+    })
+
+    const currentProps = computed(() => {
+      if (activeTab.value === 'battle' && isInitialBattleReady.value) {
+        return {
+          result: initialBattleResult.value,
+          mmrChange: initialMmrChange.value,
+          lpChange: initialLpChange.value,
+        }
+      } else if (activeTab.value === 'battle') {
+        // Loading state bis der erste Battle simuliert ist
+        return {
+          result: {
+            won: null,
+            opponent: {
+              name: 'Lade ersten Battle...',
+              mmr: gameStore.mmr,
+              power: gameStore.totalPower,
+              rank: gameStore.currentRank,
+            },
+            winProbability: 0.5,
+          },
+          mmrChange: 0,
+          lpChange: 0,
+        }
+      }
+      return {}
+    })
+
+    // Ersten Battle beim Mount simulieren
+    async function simulateInitialBattle() {
+      const oldMmr = gameStore.mmr
+      const oldLp = gameStore.currentRank.lp
+
+      // Ersten Battle simulieren
+      const battleResult = await battleStore.simulateBattle(gameStore.mmr)
+
+      initialBattleResult.value = battleResult
+      initialMmrChange.value = gameStore.mmr - oldMmr
+      initialLpChange.value = gameStore.currentRank.lp - oldLp
+      isInitialBattleReady.value = true
     }
+
+    onMounted(async () => {
+      // Ersten Battle sofort simulieren
+      await simulateInitialBattle()
+    })
 
     return {
       activeTab,
-      initialBattleResult,
+      tabs,
+      currentComponent,
+      currentProps,
+      isInitialBattleReady,
     }
   },
 })
