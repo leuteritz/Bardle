@@ -89,16 +89,12 @@ watch(
     <div class="grid w-full h-8 grid-cols-3 border-amber-400">
       <!-- Linke Spalte: RankComponent -->
       <div class="flex items-center justify-start col-span-1">
-        <RankComponent
-          :tier="gameStore.currentRank.tier"
-          :division="gameStore.currentRank.division"
-          :lp="gameStore.currentRank.lp"
-        />
+        <RankComponent />
       </div>
 
       <!-- Titel -->
       <h1
-        class="flex items-start justify-center col-span-1 text-6xl font-bold text-amber-800 drop-shadow-lg"
+        class="flex items-start justify-center col-span-1 text-4xl font-bold text-amber-800 drop-shadow-lg"
       >
         {{ title }}
       </h1>

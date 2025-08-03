@@ -1,6 +1,7 @@
 <template>
   <div
-    class="relative p-4 shadow-xl battle-container bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 rounded-2xl"
+    class="w-full h-full overflow-hidden bg-center bg-no-repeat bg-cover"
+    style="background-image: url('img/BardBattle.png'); background-color: #f7fafc"
   >
     <!-- Kompakter Battle Result Header -->
     <div class="flex flex-row items-center justify-between w-full p-4 text-center">
@@ -18,21 +19,23 @@
       <!-- Kompakter Battle Result -->
       <div class="flex flex-col items-center w-1/2">
         <h2
-          v-if="showBattleResult"
-          class="font-bold text-1xl battle-title drop-shadow-md"
-          :class="currentResult.won ? 'text-green-600' : 'text-red-600'"
+          class="font-bold transition-opacity duration-300 text-1xl battle-title drop-shadow-md"
+          :class="[
+            currentResult.won ? 'text-green-600' : 'text-red-600',
+            showBattleResult ? 'opacity-100' : 'opacity-0',
+          ]"
         >
           <span class="text-2xl">{{ currentResult.won ? '🏆' : '💀' }}</span>
           <div class="mt-1 text-xl">{{ currentResult.won ? 'VICTORY!' : 'DEFEAT!' }}</div>
         </h2>
         <div
-          v-if="currentLpChange !== 0 && showBattleResult"
           class="flex items-center justify-center px-2 py-1 font-bold transition-all duration-300 border rounded-xl lp-change-container"
-          :class="
+          :class="[
             currentLpChange >= 0
               ? 'text-green-800 bg-gradient-to-r from-green-100 to-green-200 border-green-300'
-              : 'text-red-800 bg-gradient-to-r from-red-100 to-red-200 border-red-300'
-          "
+              : 'text-red-800 bg-gradient-to-r from-red-100 to-red-200 border-red-300',
+            showBattleResult && currentLpChange !== 0 ? 'opacity-100' : 'opacity-0',
+          ]"
         >
           <span class="mr-2 text-sm">{{ currentLpChange >= 0 ? '📈' : '📉' }}</span>
           <span>{{ currentLpChange >= 0 ? '+' : '' }}{{ currentLpChange }} LP</span>
@@ -60,12 +63,7 @@
         <div
           class="p-2 border shadow-md chat-panel-wrapper bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border-amber-300"
         >
-          <ChatPanelComponent
-            :team1="team1"
-            :team2="team2"
-            :battle-id="currentBattleId"
-            @gameTimeUpdate="handleGameTimeUpdate"
-          />
+          <ChatPanelComponent :team1="team1" :team2="team2" :battle-id="currentBattleId" />
         </div>
       </div>
 
@@ -184,11 +182,7 @@
         <div
           class="p-2 border shadow-md minimap-wrapper bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border-amber-300"
         >
-          <MiniMapComponent
-            :battle-id="currentBattleId"
-            :game-time="currentGameTime"
-            :score="score"
-          />
+          <MiniMapComponent :battle-id="currentBattleId" :score="score" />
         </div>
       </div>
     </div>
@@ -230,18 +224,23 @@ export default defineComponent({
     const showBattleResult = computed(() => timeUntilNextBattle.value <= 1)
 
     // Auto Battle State
-    const isAutoBattleActive = ref(false)
-    const autoBattleCountdown = ref<any>(null)
-    const timeUntilNextBattle = ref(0)
-    const currentBattleId = ref(0)
+    const isAutoBattleActive = computed(() => battleStore.autoBattleEnabled)
+    const timeUntilNextBattle = computed(() => battleStore.timeUntilNextBattle)
+    const currentBattleId = computed(() => battleStore.currentBattleId)
 
-    // Current Battle State
-    const currentResult = ref(props.result)
-    const currentLpChange = ref(props.lpChange)
-    const currentMmrChange = ref(props.mmrChange)
-    const oldMmr = ref(gameStore.mmr)
-    const oldLp = ref(gameStore.currentRank.lp)
-    const currentGameTime = ref(0)
+    const currentResult = computed(() => battleStore.lastAutoBattleResult || props.result)
+    const currentLpChange = computed(() => {
+      if (battleStore.lastAutoBattleResult) {
+        return gameStore.currentRank.lp - battleStore.autoBattleOldLP
+      }
+      return props.lpChange
+    })
+    const currentMmrChange = computed(() => {
+      if (battleStore.lastAutoBattleResult) {
+        return gameStore.mmr - battleStore.autoBattleOldMMR
+      }
+      return props.mmrChange
+    })
 
     // Alle bestehenden Funktionen bleiben gleich...
     async function loadChampions() {
@@ -301,10 +300,6 @@ export default defineComponent({
       return { kills: 0, deaths: 0, assists: 0 }
     }
 
-    function handleGameTimeUpdate(newTime: number) {
-      currentGameTime.value = newTime
-    }
-
     async function refreshTeams() {
       loadChampions().then((champions) => {
         const selected = getRandomChampions(champions, 5)
@@ -314,44 +309,6 @@ export default defineComponent({
         ]
         team2.value = selected.map((name) => ({ name, rank: 'Silver', ...getStats() }))
       })
-    }
-
-    async function simulateNewBattle() {
-      console.log('Simulating new battle...')
-      oldMmr.value = gameStore.mmr
-      oldLp.value = gameStore.currentRank.lp
-      const battleResult = await battleStore.simulateBattle(gameStore.mmr)
-      const newMmrChange = gameStore.mmr - oldMmr.value
-      const newLpChange = gameStore.currentRank.lp - oldLp.value
-      currentResult.value = battleResult
-      currentMmrChange.value = newMmrChange
-      currentLpChange.value = newLpChange
-      currentBattleId.value++
-      await refreshTeams()
-    }
-
-    function startCountdown() {
-      timeUntilNextBattle.value = battleStore.autoBattleInterval / 1000
-      autoBattleCountdown.value = setInterval(() => {
-        timeUntilNextBattle.value--
-        if (timeUntilNextBattle.value <= 0) {
-          clearInterval(autoBattleCountdown.value)
-        }
-      }, 1000)
-    }
-
-    async function startAutoBattle() {
-      if (isAutoBattleActive.value) return
-      isAutoBattleActive.value = true
-
-      const runBattleCycle = async () => {
-        if (!isAutoBattleActive.value) return
-        await simulateNewBattle()
-        startCountdown()
-        setTimeout(runBattleCycle, battleStore.autoBattleInterval)
-      }
-
-      await runBattleCycle()
     }
 
     function randomStatsTick() {
@@ -372,7 +329,7 @@ export default defineComponent({
 
     onMounted(async () => {
       await refreshTeams()
-      startAutoBattle()
+      await battleStore.initializePersistentAutoBattle()
       randomStatsTick()
     })
 
@@ -385,15 +342,11 @@ export default defineComponent({
       isAutoBattleActive,
       timeUntilNextBattle,
       currentBattleId,
-      currentGameTime,
       getChampionImage,
       getBorderImage,
       refreshTeams,
-      simulateNewBattle,
       gameStore,
       battleStore,
-      startAutoBattle,
-      handleGameTimeUpdate,
       score,
       showBattleResult,
     }

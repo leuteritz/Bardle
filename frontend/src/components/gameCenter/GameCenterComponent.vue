@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full p-2 mx-1">
+  <div class="relative w-full">
     <!-- Ultra-Kompakte Tab Navigation -->
     <div class="flex justify-center mb-2">
       <div class="flex bg-amber-100 rounded-lg border border-amber-300 shadow-sm p-0.5">
@@ -21,7 +21,9 @@
     </div>
 
     <!-- Ultra-Kompakter Content -->
-    <div class="">
+    <div
+      class="w-full h-[600px] p-4 bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 rounded-2xl"
+    >
       <component :is="currentComponent" v-bind="currentProps" class="h-full" />
     </div>
   </div>

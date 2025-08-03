@@ -46,7 +46,9 @@
         <div class="flex flex-col flex-1">
           <!-- Rank Title -->
           <div class="flex items-center mb-2 space-x-2">
-            <h3 class="text-2xl font-black text-amber-100">{{ tier }} {{ division }}</h3>
+            <h3 class="text-2xl font-black text-amber-100">
+              {{ gameStore.currentRank.tier }} {{ gameStore.currentRank.division }}
+            </h3>
             <div class="px-2 py-1 border rounded-full bg-amber-100/20 border-amber-300/30">
               <span class="text-xs font-medium text-amber-200">Current Rank</span>
             </div>
@@ -55,7 +57,7 @@
           <!-- LP Information -->
           <div class="flex items-center mb-3 space-x-3">
             <div class="flex items-center space-x-1">
-              <span class="text-lg font-bold text-amber-100">{{ lp }}</span>
+              <span class="text-lg font-bold text-amber-100">{{ gameStore.currentRank.lp }}</span>
               <span class="text-sm text-amber-200">LP</span>
             </div>
 
@@ -226,16 +228,14 @@
 <script lang="ts">
 import { defineComponent, computed, ref } from 'vue'
 import { useBattleStore } from '../stores/battleStore'
+import { useGameStore } from '../stores/gameStore'
 
 export default defineComponent({
   name: 'RankComponent',
-  props: {
-    tier: String,
-    division: String,
-    lp: Number,
-  },
-  setup(props) {
+
+  setup() {
     const battleStore = useBattleStore()
+    const gameStore = useGameStore()
     const showBattleStats = ref(false)
 
     const toggleBattleStats = () => {
@@ -243,7 +243,7 @@ export default defineComponent({
     }
 
     const rankIcon = computed(() => {
-      switch (props.tier) {
+      switch (gameStore.currentRank.tier) {
         case 'Iron':
           return '/img/RankBorder/RankIron.png'
         case 'Bronze':
@@ -271,7 +271,7 @@ export default defineComponent({
 
     // [Alle bestehenden Funktionen bleiben unverändert]
     const getRankQualityColor = () => {
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       switch (tier) {
         case 'iron':
         case 'bronze':
@@ -298,7 +298,7 @@ export default defineComponent({
     }
 
     const getRankQualityIcon = () => {
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       switch (tier) {
         case 'iron':
           return '🥉'
@@ -326,11 +326,11 @@ export default defineComponent({
     }
 
     const isMaxRank = () => {
-      return props.tier === 'Challenger'
+      return gameStore.currentRank.tier === 'Challenger'
     }
 
     const getPromotionThreshold = () => {
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       switch (tier) {
         case 'master':
           return 500
@@ -344,41 +344,41 @@ export default defineComponent({
     }
 
     const getLPProgress = () => {
-      if (!props.lp || isMaxRank()) return 0
+      if (!gameStore.currentRank.lp || isMaxRank()) return 0
       const threshold = getPromotionThreshold()
       if (!threshold) return 0
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       if (tier === 'master' || tier === 'grandmaster') {
-        return Math.min(100, (props.lp / threshold) * 100)
+        return Math.min(100, (gameStore.currentRank.lp / threshold) * 100)
       } else {
-        return Math.min(100, props.lp % threshold)
+        return Math.min(100, gameStore.currentRank.lp % threshold)
       }
     }
 
     const getLPToNext = () => {
-      if (!props.lp || isMaxRank()) return null
+      if (!gameStore.currentRank.lp || isMaxRank()) return null
       const threshold = getPromotionThreshold()
       if (!threshold) return null
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       if (tier === 'master' || tier === 'grandmaster') {
-        return Math.max(0, threshold - props.lp)
+        return Math.max(0, threshold - gameStore.currentRank.lp)
       } else {
-        return threshold - (props.lp % threshold)
+        return threshold - (gameStore.currentRank.lp % threshold)
       }
     }
 
     const getNextRank = () => {
       if (isMaxRank()) return 'Max Rank'
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       if (tier === 'master') {
         return 'Grandmaster'
       } else if (tier === 'grandmaster') {
         return 'Challenger'
       } else {
         const divisions = ['IV', 'III', 'II', 'I']
-        const currentDiv = divisions.indexOf(props.division)
+        const currentDiv = divisions.indexOf(gameStore.currentRank.division)
         if (currentDiv < divisions.length - 1) {
-          return `${props.tier} ${divisions[currentDiv + 1]}`
+          return `${gameStore.currentRank.tier} ${divisions[currentDiv + 1]}`
         } else {
           const tiers = [
             'Iron',
@@ -390,7 +390,7 @@ export default defineComponent({
             'Diamond',
             'Master',
           ]
-          const currentTier = tiers.indexOf(props.tier)
+          const currentTier = tiers.indexOf(gameStore.currentRank.tier)
           if (currentTier < tiers.length - 1) {
             const nextTier = tiers[currentTier + 1]
             return nextTier === 'Master' ? 'Master' : `${nextTier} IV`
@@ -413,11 +413,11 @@ export default defineComponent({
         'Grandmaster',
         'Challenger',
       ]
-      return tiers.indexOf(props.tier) + 1
+      return tiers.indexOf(gameStore.currentRank.tier) + 1
     }
 
     const getRankPercentile = () => {
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       switch (tier) {
         case 'iron':
           return 95
@@ -445,28 +445,28 @@ export default defineComponent({
     }
 
     const isPromotionClose = () => {
-      if (!props.lp || isMaxRank()) return false
+      if (!gameStore.currentRank.lp || isMaxRank()) return false
       const threshold = getPromotionThreshold()
       if (!threshold) return false
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       if (tier === 'master') {
-        return props.lp >= 400
+        return gameStore.currentRank.lp >= 400
       } else if (tier === 'grandmaster') {
-        return props.lp >= 800
+        return gameStore.currentRank.lp >= 800
       } else {
-        return props.lp % threshold >= 80
+        return gameStore.currentRank.lp % threshold >= 80
       }
     }
 
     const getStatus = () => {
       if (isMaxRank()) return 'Apex'
       if (isPromotionClose()) return 'Promotion'
-      const tier = props.tier?.toLowerCase()
+      const tier = gameStore.currentRank.tier?.toLowerCase()
       if (tier === 'master' || tier === 'grandmaster') {
-        if (props.lp <= 50) return 'Danger'
+        if (gameStore.currentRank.lp <= 50) return 'Danger'
         return 'Climbing'
       } else {
-        if (props.lp && props.lp % 100 <= 20) return 'Safe'
+        if (gameStore.currentRank.lp && gameStore.currentRank.lp % 100 <= 20) return 'Safe'
         return 'Climbing'
       }
     }
@@ -576,6 +576,7 @@ export default defineComponent({
       getBattleRankColor,
       getAverageGameTime,
       getBestWinStreak,
+      gameStore,
     }
   },
 })

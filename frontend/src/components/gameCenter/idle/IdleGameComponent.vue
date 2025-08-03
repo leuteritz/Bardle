@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="relative flex flex-col items-center justify-center p-4 bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 rounded-2xl"
-  >
+  <div class="relative flex flex-col items-center justify-center w-full h-full">
     <!-- mb-8 → mb-4 -->
     <!-- Kompakter Chime Button -->
     <div

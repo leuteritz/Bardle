@@ -11,7 +11,7 @@
       <div
         class="absolute z-10 px-2 py-1 text-xs font-bold text-white rounded-md top-1 left-1 bg-black/60"
       >
-        {{ formatTime(gameTime) }}
+        {{ formatTime(battleStore.gameTime) }}
       </div>
 
       <!-- Score Display -->
@@ -76,16 +76,13 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
+import { useBattleStore } from '../../../stores/battleStore'
 
 export default defineComponent({
   name: 'MiniMapComponent',
   props: {
     battleId: {
       type: [String, Number],
-      default: 0,
-    },
-    gameTime: {
-      type: Number,
       default: 0,
     },
     score: {
@@ -98,6 +95,7 @@ export default defineComponent({
     const redChampions = ref([])
     const move = ref(80) // Reduzierte Bewegung
     const gameStore = useGameStore()
+    const battleStore = useBattleStore()
     let moveTimeout: any = null
 
     function formatTime(seconds: number) {
@@ -180,6 +178,7 @@ export default defineComponent({
       blueChampions,
       redChampions,
       formatTime,
+      battleStore,
     }
   },
 })

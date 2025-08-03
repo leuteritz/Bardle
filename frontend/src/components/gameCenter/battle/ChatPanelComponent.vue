@@ -14,7 +14,7 @@
       class="w-full h-32 max-w-xs p-2 mb-2 space-y-1 overflow-y-auto text-xs border rounded-lg shadow-inner bg-white/80 border-amber-200"
     >
       <div
-        v-for="(msg, idx) in chatMessages"
+        v-for="(msg, idx) in battleStore.chatMessages"
         :key="'msg-' + idx"
         class="flex items-start gap-1 py-0.5"
       >
@@ -42,31 +42,21 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, watch, nextTick, ref, onMounted } from 'vue'
+import { defineComponent, PropType, watch, nextTick, ref } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
+import { useBattleStore } from '../../../stores/battleStore'
 import { battleMessages } from '../../../config/messages'
 
 export default defineComponent({
   name: 'ChatPanelComponent',
   props: {
-    team1: {
-      type: Array as PropType<any[]>,
-      required: true,
-    },
-    team2: {
-      type: Array as PropType<any[]>,
-      required: true,
-    },
-    battleId: {
-      type: [String, Number],
-      default: 0,
-    },
+    team1: { type: Array as PropType<any[]>, required: true },
+    team2: { type: Array as PropType<any[]>, required: true },
+    battleId: { type: [String, Number], default: 0 },
   },
-  emits: ['gameTimeUpdate'],
-  setup(props, { emit }) {
+  setup(props) {
     const gameStore = useGameStore()
-    const gameTime = ref(0)
-    const chatMessages = ref<any[]>([])
+    const battleStore = useBattleStore()
     const currentTimeoutId = ref<any>(null)
 
     function showRandomChatMessagesSequentially() {
@@ -74,46 +64,37 @@ export default defineComponent({
         clearTimeout(currentTimeoutId.value)
         currentTimeoutId.value = null
       }
-
-      chatMessages.value = []
+      battleStore.chatMessages = []
 
       if (!props.team1.length || !props.team2.length) {
         currentTimeoutId.value = setTimeout(() => showRandomChatMessagesSequentially(), 100)
         return
       }
-
       const messages = [...battleMessages]
-
       function showNext() {
         if (messages.length === 0) {
           currentTimeoutId.value = null
           return
         }
-
         const idx = Math.floor(Math.random() * messages.length)
         const msg = messages[idx]
         let chatMsg
-
         if (typeof msg === 'string') {
           const allChampions = [
             ...props.team1.map((champ) => ({ name: champ.name, team: 1 })),
             ...props.team2.map((champ) => ({ name: champ.name, team: 2 })),
           ]
-
           const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
-          gameTime.value += getRandomTimeIncrement()
-
+          battleStore.gameTime += getRandomTimeIncrement()
           chatMsg = {
             user: randomChampion.name,
             text: msg,
-            time: formatTime(gameTime.value),
+            time: formatTime(battleStore.gameTime),
             team: randomChampion.team,
           }
         }
-
-        chatMessages.value.push(chatMsg)
+        battleStore.chatMessages.push(chatMsg)
         messages.splice(idx, 1)
-
         if (messages.length > 0) {
           currentTimeoutId.value = setTimeout(showNext, gameStore.gameSpeed)
         } else {
@@ -122,19 +103,17 @@ export default defineComponent({
       }
       showNext()
     }
-
     function formatTime(seconds: number) {
       const min = Math.floor(seconds / 60)
       const sec = seconds % 60
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     }
-
     function getRandomTimeIncrement() {
       return Math.floor(Math.random() * 471) + 30
     }
 
     watch(
-      () => chatMessages.value.length,
+      () => battleStore.chatMessages.length,
       async () => {
         await nextTick()
         const chatBox = document.getElementById('battle-chat-box')
@@ -147,22 +126,15 @@ export default defineComponent({
     watch(
       () => props.battleId,
       () => {
-        gameTime.value = 120
+        battleStore.gameTime = 120
         showRandomChatMessagesSequentially()
       },
     )
 
-    watch(
-      () => gameTime.value,
-      (newTime) => {
-        emit('gameTimeUpdate', newTime)
-      },
-    )
-
     return {
-      chatMessages,
+      gameStore,
+      battleStore,
       showRandomChatMessagesSequentially,
-      gameTime,
     }
   },
 })
