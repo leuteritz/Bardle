@@ -291,6 +291,8 @@ export default defineComponent({
       switch (name) {
         case 'Bard':
           return '/img/BardAbilities/Bard.png'
+        case name:
+          return '/img/champion/' + name + '.jpg'
         default:
           return '/img/Enemy.png'
       }

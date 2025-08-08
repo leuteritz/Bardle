@@ -1,15 +1,15 @@
 <template>
-  <div class="relative w-full">
+  <div class="relative z-50 w-full">
     <!-- Ultra-Kompakte Tab Navigation -->
     <div class="flex justify-center mb-2">
-      <div class="flex bg-amber-100 rounded-lg border border-amber-300 shadow-sm p-0.5">
+      <div class="flex rounded-lg shadow-sm p-0.5">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           :class="
             activeTab === tab.id
               ? 'bg-amber-400 text-amber-900 shadow-sm'
-              : 'text-amber-700 hover:bg-amber-200'
+              : 'text-amber-500 hover:bg-amber-200'
           "
           class="flex items-center gap-1 px-3 py-1.5 font-semibold transition rounded-md text-lg"
           @click="activeTab = tab.id"

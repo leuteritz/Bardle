@@ -144,7 +144,7 @@
     <!-- Battle Statistics Dropdown - ABSOLUT POSITIONIERT -->
     <div
       v-if="showBattleStats"
-      class="absolute left-0 right-0 z-50 mt-2 transition-all duration-300 ease-in-out top-full"
+      class="absolute left-0 right-0 mt-2 transition-all duration-300 ease-in-out top-full"
     >
       <div
         class="p-4 border shadow-xl bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl border-amber-400"
