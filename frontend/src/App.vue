@@ -8,8 +8,6 @@ import BardHudComponent from './components/bottom/BardHudComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
 
-const gameStore = useGameStore()
-
 const title = ref('Bardle')
 
 const currentMsg = ref('')
@@ -122,9 +120,6 @@ function createStars() {
 
 onMounted(() => {
   getRandomMsg()
-  setInterval(() => {
-    gameStore.gernerateMeeps()
-  }, 1000)
 
   // Bewegende Sterne erstellen
   setTimeout(() => {

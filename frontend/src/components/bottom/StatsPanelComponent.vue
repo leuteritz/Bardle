@@ -4,7 +4,7 @@
     <div
       class="p-2 transition-all duration-300 border rounded-lg shadow-sm bg-gradient-to-r from-yellow-100/20 to-amber-100/20 border-yellow-300/30 hover:shadow-md"
     >
-      <div class="grid items-center justify-center grid-cols-2">
+      <div class="flex flex-row items-center justify-center">
         <div class="flex flex-col items-center">
           <div class="text-sm font-black text-yellow-100">
             {{ formatNumber(gameStore.chimes || 0) }}
@@ -17,6 +17,13 @@
             {{ formatNumber(gameStore.meeps || 0) }}
           </div>
           <img src="/img/BardAbilities/BardMeep.png" class="w-12 h-12 select-none" />
+        </div>
+
+        <div class="flex flex-col items-center">
+          <div class="text-sm font-black text-yellow-100">
+            {{ formatNumber(gameStore.gold || 0) }}
+          </div>
+          <img src="/img/BardGold.png" class="w-12 h-12 select-none" />
         </div>
       </div>
     </div>

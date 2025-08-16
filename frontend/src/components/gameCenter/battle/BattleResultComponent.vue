@@ -43,7 +43,7 @@
       </div>
 
       <!-- Kompakte Auto Battle Controls -->
-      <div class="flex flex-col items-center w-1/4 space-x-4">
+      <div class="flex flex-col items-center w-1/4">
         <div
           v-if="isAutoBattleActive"
           class="flex items-center px-4 py-2 text-xs font-bold border shadow-md countdown-container bg-gradient-to-r from-white to-amber-50 border-amber-300 rounded-xl"

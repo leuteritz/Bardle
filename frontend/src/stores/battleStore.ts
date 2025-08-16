@@ -51,7 +51,7 @@ export const useBattleStore = defineStore('battle', {
   }),
 
   actions: {
-    // Zentral: Merke alte MMR/LP vor dem Kampf, berechne Delta nach Update!
+    // Simuliert einen Kampf und aktualisiert das Ranking
     async simulateBattle(opponentMMR) {
       const gameStore = useGameStore()
       // Merke ALT-Werte
@@ -88,6 +88,7 @@ export const useBattleStore = defineStore('battle', {
       return this.lastAutoBattleResult
     },
 
+    // Befördert den Spieler in den nächsthöheren Rang
     async promoteRank() {
       const gameStore = useGameStore()
       const currentTier = gameStore.currentRank.tier
@@ -122,6 +123,7 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    // Degradiert den Spieler in den nächstniedrigeren Rang
     async demoteRank() {
       const gameStore = useGameStore()
       const currentTier = gameStore.currentRank.tier
@@ -158,6 +160,7 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    // Berechnet die LP-Änderung basierend auf MMR-Änderung und Kampfergebnis
     calculateLPChange(mmrChange, won) {
       const baseLPChange = 20
       const lpChange = won ? baseLPChange : -baseLPChange
@@ -165,10 +168,12 @@ export const useBattleStore = defineStore('battle', {
       return Math.round(lpChange * mmrFactor)
     },
 
+    // Konvertiert MMR in Kampfkraft
     mmrToPower(mmr) {
       return Math.max(100, Math.floor(mmr * 1.5))
     },
 
+    // Berechnet die Gewinnwahrscheinlichkeit basierend auf Kampfkraft
     calculateWinProbability(playerPower, opponentPower) {
       const powerDifference = playerPower - opponentPower
       const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / 400))
@@ -176,6 +181,7 @@ export const useBattleStore = defineStore('battle', {
       return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier))
     },
 
+    // Generiert einen Gegner mit zufälligem MMR
     generateOpponent(targetMMR) {
       const mmrVariance = 200
       const opponentMMR = targetMMR + (Math.random() - 0.5) * mmrVariance
@@ -183,22 +189,10 @@ export const useBattleStore = defineStore('battle', {
         mmr: opponentMMR,
         power: this.mmrToPower(opponentMMR),
         rank: this.mmrToRank(opponentMMR),
-        name: this.generateOpponentName(),
       }
     },
 
-    generateOpponentName() {
-      const names = [
-        'Bardischer Meister',
-        'Chime Sammler',
-        'Meep Jäger',
-        'Goldener Barde',
-        'Mystischer Wanderer',
-        'Klang Magier',
-      ]
-      return names[Math.floor(Math.random() * names.length)]
-    },
-
+    // Konvertiert MMR in Rang und Division
     mmrToRank(mmr) {
       const ranks = [
         { tier: 'Iron', division: 'IV', minMMR: 0 },
@@ -217,6 +211,7 @@ export const useBattleStore = defineStore('battle', {
       return ranks[0]
     },
 
+    // Aktualisiert das MMR basierend auf Kampfergebnis
     async updateRanking(won, opponentMMR) {
       const gameStore = useGameStore()
       const currentMMR = gameStore.mmr
@@ -229,6 +224,7 @@ export const useBattleStore = defineStore('battle', {
       await this.updateLP(lpChange)
     },
 
+    // Aktualisiert die LP und prüft auf Beförderung/Degradierung
     async updateLP(lpChange) {
       const gameStore = useGameStore()
       const currentTier = gameStore.currentRank.tier
@@ -240,6 +236,7 @@ export const useBattleStore = defineStore('battle', {
       if (gameStore.currentRank.lp < 0) await this.demoteRank()
     },
 
+    // Startet den automatischen Kampfmodus
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
@@ -256,12 +253,14 @@ export const useBattleStore = defineStore('battle', {
       await runBattleCycle()
     },
 
+    // Initialisiert den persistenten automatischen Kampfmodus
     async initializePersistentAutoBattle() {
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
       await this.startAutoBattle()
     },
 
+    // Startet den Countdown bis zum nächsten Kampf
     startCountdown() {
       this.timeUntilNextBattle = this.autoBattleInterval / 1000
       if (this.countdownTimer) clearInterval(this.countdownTimer)
@@ -274,34 +273,16 @@ export const useBattleStore = defineStore('battle', {
       }, 1000)
     },
 
+    // Markiert einen Kampf als verarbeitet
     markBattleProcessed() {
       this.autoBattleReady = true
     },
+
+    // Stoppt den automatischen Kampfmodus
     stopAutoBattle() {
       this.autoBattleEnabled = false
       if (this.autoBattleTimer) clearTimeout(this.autoBattleTimer)
       if (this.countdownTimer) clearInterval(this.countdownTimer)
-    },
-
-    // Optional: Chat-Methoden
-    addChatMessage(message) {
-      this.chatMessages.push({
-        user: message.user || 'System',
-        text: message.text,
-        time: message.time || this.formatTime(this.gameTime),
-        team: message.team || 0,
-      })
-    },
-    clearChatMessages() {
-      this.chatMessages = []
-    },
-    formatTime(seconds) {
-      const min = Math.floor(seconds / 60)
-      const sec = seconds % 60
-      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
-    },
-    addSystemMessage(text) {
-      this.addChatMessage({ user: 'System', text, team: 0 })
     },
   },
 })
