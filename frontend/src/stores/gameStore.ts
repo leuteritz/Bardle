@@ -20,6 +20,21 @@ export const useGameStore = defineStore('game', {
     meepChimeRequirement: 20,
     skillPoints: 0,
     abilityLevels: [0, 0, 0, 0], // Q, W, E, R
+    chimesToUniverseRescue: 1000000,
+    // Neue Universum-spezifische Eigenschaften
+    currentUniverse: 1,
+    universes: [
+      { id: 1, name: 'Runeterra Prime', description: 'Das ursprüngliche Universum' },
+      { id: 2, name: 'Void Nexus', description: 'Dimension der Leere' },
+      { id: 3, name: 'Celestial Realm', description: 'Himmlisches Reich' },
+      { id: 4, name: 'Shadow Isles', description: 'Inseln der Schatten' },
+      { id: 5, name: 'Freljord', description: 'Ewige Eiswüste' },
+      { id: 6, name: 'Shurima', description: 'Antike Wüstenzivilisation' },
+      { id: 7, name: 'Ionia', description: 'Land der Harmonie' },
+      { id: 8, name: 'Noxus', description: 'Imperium der Stärke' },
+      { id: 9, name: 'Demacia', description: 'Königreich der Gerechtigkeit' },
+      { id: 10, name: 'Piltover', description: 'Stadt des Fortschritts' },
+    ],
   }),
   actions: {
     addMeep() {
@@ -91,6 +106,15 @@ export const useGameStore = defineStore('game', {
 
     totalPower(): number {
       return this.meeps * 100 + this.gold * 1000 + this.chimes * 1000
+    },
+
+    universeRescueProgress(): number {
+      return Math.min(100, (this.chimes / this.chimesToUniverseRescue) * 100)
+    },
+
+    // Neue Getter für Universum-Informationen
+    currentUniverseInfo() {
+      return this.universes.find((u) => u.id === this.currentUniverse) || this.universes[0]
     },
   },
 })

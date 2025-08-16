@@ -7,7 +7,7 @@
     <div class="flex flex-row items-center justify-between w-full p-4 text-center">
       <!-- Battle Counter -->
       <div class="flex flex-col items-center w-1/4">
-        <span class="text-xs font-medium text-amber-700">Battle #{{ currentBattleId }}</span>
+        <span class="text-xs font-medium text-amber-100">Battle #{{ currentBattleId }}</span>
         <div class="w-12 h-0.5 bg-amber-300 rounded-full mt-1">
           <div
             class="h-full transition-all duration-500 rounded-full bg-amber-500"

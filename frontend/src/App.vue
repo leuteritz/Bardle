@@ -149,12 +149,8 @@ onMounted(() => {
       <!-- Top -->
       <div class="z-50 grid w-full h-8 grid-cols-3">
         <!-- Linke Spalte: RankComponent -->
-        <div class="flex items-center justify-center col-span-1">
-          <div class="flex items-start justify-center col-span-1 mb-44">
-            <p class="text-xl break-words cursor-default select-none text-amber-500 drop-shadow-lg">
-              {{ currentMsg }}
-            </p>
-          </div>
+        <div class="flex items-center justify-start col-span-1">
+          <RankComponent />
         </div>
 
         <!-- Titel -->
@@ -165,8 +161,10 @@ onMounted(() => {
         </h1>
 
         <!-- Rechte Spalte: Message -->
-        <div class="flex items-center justify-end col-span-1">
-          <RankComponent />
+        <div class="flex items-center justify-center col-span-1 mb-44">
+          <p class="text-xl cursor-default select-none text-amber-500 drop-shadow-lg">
+            {{ currentMsg }}
+          </p>
         </div>
       </div>
 
@@ -202,7 +200,7 @@ onMounted(() => {
       <!-- Bottom Panel  -->
       <div class="z-20 flex justify-center w-full">
         <div
-          class="w-full max-w-4xl overflow-hidden border shadow-xl border-amber-400 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl"
+          class="w-full max-w-4xl overflow-hidden shadow-xl border-amber-400 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl"
         >
           <!-- Main Content Grid - Reduzierte Höhe -->
           <div class="grid grid-cols-12 min-h-[140px]">
@@ -233,9 +231,6 @@ onMounted(() => {
               </div>
             </div>
           </div>
-
-          <!-- Dünnere Top border decoration -->
-          <div class="h-0.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400"></div>
         </div>
       </div>
     </div>

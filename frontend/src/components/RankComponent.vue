@@ -2,7 +2,7 @@
   <div class="relative">
     <!-- Main Rank Display (feste Höhe) -->
     <div
-      class="relative p-4 overflow-hidden transition-all duration-300 border-2 shadow-lg group bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl border-amber-400 hover:shadow-xl"
+      class="relative p-4 overflow-hidden transition-all duration-300 shadow-lg group bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl border-amber-400 hover:shadow-xl"
     >
       <!-- Background Decoration -->
       <div
