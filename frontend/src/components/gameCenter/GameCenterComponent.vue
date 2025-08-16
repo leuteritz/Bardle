@@ -89,9 +89,9 @@ export default defineComponent({
             won: null,
             opponent: {
               name: 'Lade ersten Battle...',
-              mmr: gameStore.mmr,
+              mmr: battleStore.mmr,
               power: gameStore.totalPower,
-              rank: gameStore.currentRank,
+              rank: battleStore.currentRank,
             },
             winProbability: 0.5,
           },
@@ -104,15 +104,15 @@ export default defineComponent({
 
     // Ersten Battle beim Mount simulieren
     async function simulateInitialBattle() {
-      const oldMmr = gameStore.mmr
-      const oldLp = gameStore.currentRank.lp
+      const oldMmr = battleStore.mmr
+      const oldLp = battleStore.currentRank.lp
 
       // Ersten Battle simulieren
-      const battleResult = await battleStore.simulateBattle(gameStore.mmr)
+      const battleResult = await battleStore.simulateBattle(battleStore.mmr)
 
       initialBattleResult.value = battleResult
-      initialMmrChange.value = gameStore.mmr - oldMmr
-      initialLpChange.value = gameStore.currentRank.lp - oldLp
+      initialMmrChange.value = battleStore.mmr - oldMmr
+      initialLpChange.value = battleStore.currentRank.lp - oldLp
       isInitialBattleReady.value = true
     }
 

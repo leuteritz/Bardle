@@ -3,6 +3,12 @@ import { useGameStore } from './gameStore'
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
+    mmr: 1000,
+    currentRank: {
+      tier: 'Iron',
+      division: 'IV',
+      lp: 0,
+    },
     // Battle History
     battleHistory: [],
     rankOrder: ['IV', 'III', 'II', 'I'],
@@ -55,8 +61,8 @@ export const useBattleStore = defineStore('battle', {
     async simulateBattle(opponentMMR) {
       const gameStore = useGameStore()
       // Merke ALT-Werte
-      this.autoBattleOldMMR = gameStore.mmr
-      this.autoBattleOldLP = gameStore.currentRank.lp
+      this.autoBattleOldMMR = this.mmr
+      this.autoBattleOldLP = this.currentRank.lp
 
       const playerPower = gameStore.totalPower
 
@@ -69,8 +75,8 @@ export const useBattleStore = defineStore('battle', {
       await this.updateRanking(battleResult, opponentMMR)
 
       // Berechne Änderung nach Update
-      const actualMmrChange = gameStore.mmr - this.autoBattleOldMMR
-      const actualLpChange = gameStore.currentRank.lp - this.autoBattleOldLP
+      const actualMmrChange = this.mmr - this.autoBattleOldMMR
+      const actualLpChange = this.currentRank.lp - this.autoBattleOldLP
 
       this.totalBattles++
       if (battleResult) this.totalWins++
@@ -91,71 +97,71 @@ export const useBattleStore = defineStore('battle', {
     // Befördert den Spieler in den nächsthöheren Rang
     async promoteRank() {
       const gameStore = useGameStore()
-      const currentTier = gameStore.currentRank.tier
+      const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
       if (currentTier === 'Master') {
-        if (gameStore.currentRank.lp >= 500) {
-          gameStore.currentRank.tier = 'Grandmaster'
-          gameStore.currentRank.division = 'I'
+        if (this.currentRank.lp >= 500) {
+          this.currentRank.tier = 'Grandmaster'
+          this.currentRank.division = 'I'
         }
         return
       }
       if (currentTier === 'Grandmaster') {
-        if (gameStore.currentRank.lp >= 1000) {
-          gameStore.currentRank.tier = 'Challenger'
-          gameStore.currentRank.division = 'I'
+        if (this.currentRank.lp >= 1000) {
+          this.currentRank.tier = 'Challenger'
+          this.currentRank.division = 'I'
         }
         return
       }
       if (currentTier === 'Challenger') return
 
-      const currentDivisionIndex = this.rankOrder.indexOf(gameStore.currentRank.division)
+      const currentDivisionIndex = this.rankOrder.indexOf(this.currentRank.division)
       if (currentDivisionIndex < this.rankOrder.length - 1) {
-        gameStore.currentRank.division = this.rankOrder[currentDivisionIndex + 1]
-        gameStore.currentRank.lp = 0
+        this.currentRank.division = this.rankOrder[currentDivisionIndex + 1]
+        this.currentRank.lp = 0
       } else {
         const nextTier = this.tierOrder[currentTierIndex + 1]
-        gameStore.currentRank.tier = nextTier
-        if (nextTier === 'Master') gameStore.currentRank.division = 'I'
-        else gameStore.currentRank.division = 'IV'
-        gameStore.currentRank.lp = 0
+        this.currentRank.tier = nextTier
+        if (nextTier === 'Master') this.currentRank.division = 'I'
+        else this.currentRank.division = 'IV'
+        this.currentRank.lp = 0
       }
     },
 
     // Degradiert den Spieler in den nächstniedrigeren Rang
     async demoteRank() {
       const gameStore = useGameStore()
-      const currentTier = gameStore.currentRank.tier
+      const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
       if (currentTier === 'Challenger') {
-        gameStore.currentRank.tier = 'Grandmaster'
-        gameStore.currentRank.lp = 900
-        gameStore.currentRank.division = 'I'
+        this.currentRank.tier = 'Grandmaster'
+        this.currentRank.lp = 900
+        this.currentRank.division = 'I'
         return
       }
       if (currentTier === 'Grandmaster') {
-        gameStore.currentRank.tier = 'Master'
-        gameStore.currentRank.lp = 400
-        gameStore.currentRank.division = 'I'
+        this.currentRank.tier = 'Master'
+        this.currentRank.lp = 400
+        this.currentRank.division = 'I'
         return
       }
       if (currentTier === 'Master') {
-        gameStore.currentRank.tier = 'Diamond'
-        gameStore.currentRank.lp = 75
-        gameStore.currentRank.division = 'I'
+        this.currentRank.tier = 'Diamond'
+        this.currentRank.lp = 75
+        this.currentRank.division = 'I'
         return
       }
 
-      gameStore.currentRank.lp = 75
-      const currentDivisionIndex = this.rankOrder.indexOf(gameStore.currentRank.division)
+      this.currentRank.lp = 75
+      const currentDivisionIndex = this.rankOrder.indexOf(this.currentRank.division)
       if (currentDivisionIndex > 0) {
-        gameStore.currentRank.division = this.rankOrder[currentDivisionIndex - 1]
+        this.currentRank.division = this.rankOrder[currentDivisionIndex - 1]
       } else {
         if (currentTierIndex > 0) {
-          gameStore.currentRank.tier = this.tierOrder[currentTierIndex - 1]
-          gameStore.currentRank.division = 'I'
+          this.currentRank.tier = this.tierOrder[currentTierIndex - 1]
+          this.currentRank.division = 'I'
         }
       }
     },
@@ -214,12 +220,12 @@ export const useBattleStore = defineStore('battle', {
     // Aktualisiert das MMR basierend auf Kampfergebnis
     async updateRanking(won, opponentMMR) {
       const gameStore = useGameStore()
-      const currentMMR = gameStore.mmr
+      const currentMMR = this.mmr
       const K = 32
       const expectedScore = 1 / (1 + Math.pow(10, (opponentMMR - currentMMR) / 400))
       const actualScore = won ? 1 : 0
       const mmrChange = Math.round(K * (actualScore - expectedScore))
-      gameStore.mmr += mmrChange
+      this.mmr += mmrChange
       const lpChange = this.calculateLPChange(mmrChange, won)
       await this.updateLP(lpChange)
     },
@@ -227,13 +233,13 @@ export const useBattleStore = defineStore('battle', {
     // Aktualisiert die LP und prüft auf Beförderung/Degradierung
     async updateLP(lpChange) {
       const gameStore = useGameStore()
-      const currentTier = gameStore.currentRank.tier
-      gameStore.currentRank.lp += lpChange
+      const currentTier = this.currentRank.tier
+      this.currentRank.lp += lpChange
       let promotionThreshold = 100
       if (currentTier === 'Master') promotionThreshold = 500
       else if (currentTier === 'Grandmaster') promotionThreshold = 1000
-      if (gameStore.currentRank.lp >= promotionThreshold) await this.promoteRank()
-      if (gameStore.currentRank.lp < 0) await this.demoteRank()
+      if (this.currentRank.lp >= promotionThreshold) await this.promoteRank()
+      if (this.currentRank.lp < 0) await this.demoteRank()
     },
 
     // Startet den automatischen Kampfmodus
@@ -244,7 +250,7 @@ export const useBattleStore = defineStore('battle', {
       const runBattleCycle = async () => {
         if (!this.autoBattleEnabled) return
         this.currentBattleId++
-        const result = await this.simulateBattle(gameStore.mmr)
+        const result = await this.simulateBattle(this.mmr)
         this.lastAutoBattleResult = result
         this.showAutoBattleResult = true
         this.startCountdown()

@@ -231,13 +231,13 @@ export default defineComponent({
     const currentResult = computed(() => battleStore.lastAutoBattleResult || props.result)
     const currentLpChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {
-        return gameStore.currentRank.lp - battleStore.autoBattleOldLP
+        return battleStore.currentRank.lp - battleStore.autoBattleOldLP
       }
       return props.lpChange
     })
     const currentMmrChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {
-        return gameStore.mmr - battleStore.autoBattleOldMMR
+        return battleStore.mmr - battleStore.autoBattleOldMMR
       }
       return props.mmrChange
     })
@@ -306,7 +306,7 @@ export default defineComponent({
       loadChampions().then((champions) => {
         const selected = getRandomChampions(champions, 5)
         team1.value = [
-          { name: 'Bard', rank: gameStore.currentRank.tier, ...getStats() },
+          { name: 'Bard', rank: battleStore.currentRank.tier, ...getStats() },
           ...battleStore.selectedChampions.map((name) => ({ name, rank: 'Silver', ...getStats() })),
         ]
         team2.value = selected.map((name) => ({ name, rank: 'Silver', ...getStats() }))

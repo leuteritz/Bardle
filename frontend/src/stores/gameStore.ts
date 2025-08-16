@@ -16,12 +16,7 @@ export const useGameStore = defineStore('game', {
 
     gold: 0,
     level: 1,
-    mmr: 1000,
-    currentRank: {
-      tier: 'Iron',
-      division: 'IV',
-      lp: 0,
-    },
+
     skillPoints: 0,
     abilityLevels: [0, 0, 0, 0], // Q, W, E, R
 
