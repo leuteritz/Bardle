@@ -1,17 +1,42 @@
 <template>
   <div
-    class="w-full h-full overflow-hidden bg-center bg-no-repeat bg-cover"
-    style="background-image: url('img/BardBattle.png'); background-color: #f7fafc"
+    class="relative w-full h-full overflow-hidden bg-center bg-no-repeat bg-cover bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+    style="
+      background-image:
+        linear-gradient(rgba(30, 27, 75, 0.7), rgba(88, 28, 135, 0.8)), url('img/BardBattle.png');
+      background-color: #1e1b4b;
+    "
   >
+    <!-- Animated Background -->
+    <div class="absolute inset-0 opacity-20">
+      <div
+        class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+      ></div>
+      <div
+        class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+      ></div>
+      <div
+        class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
+      ></div>
+    </div>
+
     <!-- Kompakter Battle Result Header -->
-    <div class="flex flex-row items-center justify-between w-full p-4 text-center">
+    <div
+      class="relative z-10 flex flex-row items-center justify-between w-full p-4 text-center border-b backdrop-blur-sm bg-white/5 border-white/20"
+    >
       <!-- Battle Counter -->
       <div class="flex flex-col items-center w-1/4">
-        <span class="text-xs font-medium text-amber-100">Battle #{{ currentBattleId }}</span>
-        <div class="w-12 h-0.5 bg-amber-300 rounded-full mt-1">
+        <span
+          class="text-xs font-medium text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          >Battle #{{ currentBattleId }}</span
+        >
+        <div class="w-12 h-0.5 bg-purple-700/50 rounded-full mt-1 border border-purple-500/30">
           <div
-            class="h-full transition-all duration-500 rounded-full bg-amber-500"
-            :style="{ width: `${(currentBattleId % 10) * 10}%` }"
+            class="h-full transition-all duration-500 rounded-full shadow-sm bg-gradient-to-r from-purple-400 to-pink-500"
+            :style="{
+              width: `${(currentBattleId % 10) * 10}%`,
+              boxShadow: '0 0 8px rgba(168, 85, 247, 0.6)',
+            }"
           ></div>
         </div>
       </div>
@@ -19,21 +44,25 @@
       <!-- Kompakter Battle Result -->
       <div class="flex flex-col items-center w-1/2">
         <h2
-          class="font-bold transition-opacity duration-300 text-1xl battle-title drop-shadow-md"
+          class="font-bold transition-opacity duration-300 text-1xl battle-title drop-shadow-lg"
           :class="[
-            currentResult.won ? 'text-green-600' : 'text-red-600',
+            currentResult.won ? 'text-green-400' : 'text-red-400',
             showBattleResult ? 'opacity-100' : 'opacity-0',
           ]"
         >
-          <span class="text-2xl">{{ currentResult.won ? '🏆' : '💀' }}</span>
-          <div class="mt-1 text-xl">{{ currentResult.won ? 'VICTORY!' : 'DEFEAT!' }}</div>
+          <span class="text-base">{{ currentResult.won ? '🏆' : '💀' }}</span>
+          <div
+            class="mt-1 text-base text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          >
+            {{ currentResult.won ? 'VICTORY!' : 'DEFEAT!' }}
+          </div>
         </h2>
         <div
-          class="flex items-center justify-center px-2 py-1 font-bold transition-all duration-300 border rounded-xl lp-change-container"
+          class="flex items-center justify-center px-2 py-1 font-bold transition-all duration-300 border rounded-xl lp-change-container backdrop-blur-sm"
           :class="[
             currentLpChange >= 0
-              ? 'text-green-800 bg-gradient-to-r from-green-100 to-green-200 border-green-300'
-              : 'text-red-800 bg-gradient-to-r from-red-100 to-red-200 border-red-300',
+              ? 'text-green-300 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-400/30'
+              : 'text-red-300 bg-gradient-to-r from-red-500/20 to-red-600/20 border-red-400/30',
             showBattleResult && currentLpChange !== 0 ? 'opacity-100' : 'opacity-0',
           ]"
         >
@@ -46,22 +75,26 @@
       <div class="flex flex-col items-center w-1/4">
         <div
           v-if="isAutoBattleActive"
-          class="flex items-center px-4 py-2 text-xs font-bold border shadow-md countdown-container bg-gradient-to-r from-white to-amber-50 border-amber-300 rounded-xl"
+          class="flex items-center px-4 py-2 text-xs font-bold border shadow-lg countdown-container bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 rounded-xl backdrop-blur-sm"
         >
           <span class="mr-2 text-lg animate-spin">⏱️</span>
-          <span class="text-amber-800">
-            Nächstes Battle: <strong class="text-amber-900">{{ timeUntilNextBattle }}s</strong>
+          <span class="text-purple-300">
+            Nächstes Battle:
+            <strong
+              class="text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+              >{{ timeUntilNextBattle }}s</strong
+            >
           </span>
         </div>
       </div>
     </div>
 
     <!-- Kompakte Battle Display -->
-    <div class="flex flex-row space-x-2 battle-display">
+    <div class="relative z-10 flex flex-row p-4 space-x-2 battle-display">
       <!-- Chat Panel -->
       <div class="flex items-center justify-center w-1/4">
         <div
-          class="p-2 border shadow-md chat-panel-wrapper bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border-amber-300"
+          class="p-2 transition-all duration-300 border shadow-lg chat-panel-wrapper bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
         >
           <ChatPanelComponent :team1="team1" :team2="team2" :battle-id="currentBattleId" />
         </div>
@@ -70,7 +103,7 @@
       <!-- Kompakte LoL Loading Screen -->
       <div class="w-1/2">
         <div
-          class="flex flex-col items-center justify-center p-4 border shadow-inner bg-gradient-to-br from-white/80 to-amber-50/80 rounded-2xl border-amber-200"
+          class="flex flex-col items-center justify-center p-4 border shadow-2xl bg-gradient-to-br from-white/10 to-purple-500/10 rounded-2xl border-purple-400/30 backdrop-blur-lg"
         >
           <!-- Team 1 -->
           <div class="mb-4">
@@ -84,16 +117,16 @@
                   class="relative flex items-center justify-center w-20 h-20 transition-all duration-300 group hover:scale-110"
                 >
                   <div
-                    class="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 animate-pulse"
+                    class="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 animate-pulse opacity-60"
                   ></div>
                   <img
                     :src="getChampionImage(champ.name)"
-                    class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-blue-500 rounded-full drop-shadow-lg"
+                    class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-blue-400 rounded-full drop-shadow-xl"
                     :alt="champ.name"
                   />
                   <div
                     v-if="champ.name === 'Bard'"
-                    class="absolute inset-0 border-4 rounded-full pointer-events-none border-amber-500 animate-pulse"
+                    class="absolute inset-0 border-4 border-purple-400 rounded-full pointer-events-none animate-pulse"
                     style="z-index: 15"
                   ></div>
                   <div
@@ -105,22 +138,22 @@
                   <img
                     v-if="champ.rank"
                     :src="getBorderImage(champ.rank)"
-                    class="absolute bottom-0 right-0 z-20 w-8 h-8 bg-white border border-white rounded-full drop-shadow-md"
+                    class="absolute bottom-0 right-0 z-20 w-8 h-8 border rounded-full bg-white/90 border-purple-400/50 drop-shadow-lg backdrop-blur-sm"
                     :alt="champ.rank + ' Border'"
                   />
                 </div>
                 <span
-                  class="px-2 py-1 mt-2 text-sm font-bold text-gray-900 border rounded-lg bg-gradient-to-r from-white to-amber-50 border-amber-200"
+                  class="px-2 py-1 mt-2 text-sm font-bold text-purple-300 border rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-600/10 border-purple-400/30 backdrop-blur-sm"
                   :title="champ.name"
                 >
                   {{ champ.name.length > 8 ? champ.name.slice(0, 8) + '...' : champ.name }}
                 </span>
                 <div
-                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border border-gray-200 rounded bg-gradient-to-r from-white to-gray-50"
+                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border rounded border-white/20 bg-gradient-to-r from-white/10 to-purple-500/10 backdrop-blur-sm"
                 >
-                  <span class="font-bold text-green-700">{{ champ.kills }}K</span>
-                  <span class="font-bold text-red-700">{{ champ.deaths }}D</span>
-                  <span class="font-bold text-blue-700">{{ champ.assists }}A</span>
+                  <span class="font-bold text-green-300">{{ champ.kills }}K</span>
+                  <span class="font-bold text-red-300">{{ champ.deaths }}D</span>
+                  <span class="font-bold text-blue-300">{{ champ.assists }}A</span>
                 </div>
               </div>
             </div>
@@ -128,7 +161,7 @@
 
           <!-- VS Divider -->
           <div
-            class="my-4 text-3xl font-extrabold vs-divider text-amber-700 drop-shadow-md animate-pulse"
+            class="my-4 text-3xl font-extrabold text-transparent vs-divider bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text drop-shadow-lg animate-pulse"
           >
             ⚔️ VS ⚔️
           </div>
@@ -145,31 +178,31 @@
                   class="relative flex items-center justify-center w-20 h-20 transition-all duration-300 group hover:scale-110"
                 >
                   <div
-                    class="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 to-red-600 animate-pulse"
+                    class="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 to-red-600 animate-pulse opacity-60"
                   ></div>
                   <img
                     :src="getChampionImage(champ.name)"
-                    class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-red-500 rounded-full drop-shadow-lg"
+                    class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-red-400 rounded-full drop-shadow-xl"
                     :alt="champ.name"
                   />
                   <img
                     v-if="champ.rank"
                     :src="getBorderImage(champ.rank)"
-                    class="absolute bottom-0 right-0 z-20 w-8 h-8 bg-white border border-white rounded-full drop-shadow-md"
+                    class="absolute bottom-0 right-0 z-20 w-8 h-8 border rounded-full bg-white/90 border-red-400/50 drop-shadow-lg backdrop-blur-sm"
                     :alt="champ.rank + ' Border'"
                   />
                 </div>
                 <span
-                  class="px-2 py-1 mt-2 text-sm font-bold text-gray-900 border border-blue-200 rounded-lg bg-gradient-to-r from-white to-blue-50"
+                  class="px-2 py-1 mt-2 text-sm font-bold text-red-300 border rounded-lg border-red-400/30 bg-gradient-to-r from-red-500/20 to-red-600/10 backdrop-blur-sm"
                 >
                   {{ champ.name.length > 8 ? champ.name.slice(0, 8) + '...' : champ.name }}
                 </span>
                 <div
-                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border border-gray-200 rounded bg-gradient-to-r from-white to-gray-50"
+                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border rounded border-white/20 bg-gradient-to-r from-white/10 to-red-500/10 backdrop-blur-sm"
                 >
-                  <span class="font-bold text-green-700">{{ champ.kills }}K</span>
-                  <span class="font-bold text-red-700">{{ champ.deaths }}D</span>
-                  <span class="font-bold text-blue-700">{{ champ.assists }}A</span>
+                  <span class="font-bold text-green-300">{{ champ.kills }}K</span>
+                  <span class="font-bold text-red-300">{{ champ.deaths }}D</span>
+                  <span class="font-bold text-blue-300">{{ champ.assists }}A</span>
                 </div>
               </div>
             </div>
@@ -180,7 +213,7 @@
       <!-- MiniMap -->
       <div class="flex items-center justify-center w-1/4">
         <div
-          class="p-2 border shadow-md minimap-wrapper bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border-amber-300"
+          class="p-2 transition-all duration-300 border shadow-lg minimap-wrapper bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
         >
           <MiniMapComponent :battle-id="currentBattleId" :score="score" />
         </div>
@@ -357,7 +390,32 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Kompakte Animationen - reduzierte Intensität */
+/* Futuristische Animationen */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
 .battle-container {
   animation: fadeInScale 0.6s ease-out forwards;
 }
@@ -406,7 +464,7 @@ export default defineComponent({
 }
 
 .leader-crown {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(168, 85, 247, 0.6));
 }
 
 .countdown-container {
@@ -416,10 +474,10 @@ export default defineComponent({
 @keyframes countdownPulse {
   0%,
   100% {
-    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
   }
   50% {
-    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.5);
   }
 }
 
@@ -440,5 +498,14 @@ export default defineComponent({
 .chat-panel-wrapper:hover,
 .minimap-wrapper:hover {
   transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.3);
+}
+
+/* Glassmorphism */
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+}
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
 }
 </style>

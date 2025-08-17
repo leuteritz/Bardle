@@ -1,36 +1,51 @@
 <template>
-  <div class="w-full lobby-container">
-    <div class="w-full max-w-5xl p-8 mx-auto">
-      <!-- Tab Navigation -->
-      <div class="flex items-center justify-center mb-8">
+  <div
+    class="relative w-full h-full overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl"
+  >
+    <!-- Animated Background -->
+    <div class="absolute inset-0 opacity-20">
+      <div
+        class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+      ></div>
+      <div
+        class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+      ></div>
+      <div
+        class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
+      ></div>
+    </div>
+
+    <div class="relative z-10 w-full h-full p-4">
+      <!-- Kompakte Tab Navigation -->
+      <div class="flex items-center justify-center mb-4">
         <div
-          class="flex p-2 border-2 shadow-lg tab-container bg-gradient-to-r from-amber-100 to-yellow-100 rounded-2xl border-amber-300"
+          class="flex p-1 border shadow-lg tab-container bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl border-purple-400/30 backdrop-blur-sm"
         >
           <button
             :class="tab === 'shop' ? 'tab-active' : 'tab-inactive'"
-            class="flex items-center gap-3 px-8 py-4 mr-3 font-bold transition-all duration-300 tab-button rounded-xl"
+            class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-bold transition-all duration-300 rounded-lg tab-button"
             @click="tab = 'shop'"
           >
-            <span class="text-2xl">🛒</span>
-            <span class="text-lg">Champion Shop</span>
+            <span class="text-lg">🛒</span>
+            <span class="hidden sm:inline">Shop</span>
           </button>
           <button
             :class="tab === 'team' ? 'tab-active' : 'tab-inactive'"
-            class="flex items-center gap-3 px-8 py-4 font-bold transition-all duration-300 tab-button rounded-xl"
+            class="flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all duration-300 rounded-lg tab-button"
             @click="tab = 'team'"
           >
-            <span class="text-2xl">⚔️</span>
-            <span class="text-lg">Team</span>
+            <span class="text-lg">⚔️</span>
+            <span class="hidden sm:inline">Team</span>
           </button>
         </div>
       </div>
 
       <!-- Content Area -->
-      <div class="content-wrapper">
-        <div v-if="tab === 'shop'" class="tab-content">
+      <div class="content-wrapper h-[calc(100%-4rem)]">
+        <div v-if="tab === 'shop'" class="h-full tab-content">
           <ChampionShopComponent />
         </div>
-        <div v-else class="tab-content">
+        <div v-else class="h-full tab-content">
           <ChampionTeamComponent />
         </div>
       </div>
@@ -49,90 +64,53 @@ export default {
 
   setup() {
     const tab = ref('shop')
-
     return { tab }
   },
 }
 </script>
 
 <style scoped>
-.lobby-container {
-  animation: fadeInUp 0.8s ease-out;
-}
-
-@keyframes fadeInUp {
+@keyframes blob {
   0% {
-    opacity: 0;
-    transform: translateY(20px);
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
   }
   100% {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
-.tab-container {
-  position: relative;
-  overflow: hidden;
+.animate-blob {
+  animation: blob 7s infinite;
 }
-
-.tab-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(251, 191, 36, 0.1), transparent);
-  animation: shimmer 4s linear infinite;
-  pointer-events: none;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%) translateY(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) translateY(100%) rotate(45deg);
-  }
-}
-
-.tab-button {
-  position: relative;
-  overflow: hidden;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
 .tab-active {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #92400e;
-  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.8), rgba(236, 72, 153, 0.8));
+  color: white;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
   transform: scale(1.05);
 }
 
 .tab-inactive {
-  background: linear-gradient(135deg, #ffffff, #fef3c7);
-  color: #b45309;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(168, 85, 247, 0.1));
+  color: rgba(168, 85, 247, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tab-button:hover {
   transform: scale(1.1);
-  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.5);
-}
-
-.tab-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s ease;
-}
-
-.tab-button:hover::before {
-  left: 100%;
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
 }
 
 .content-wrapper {

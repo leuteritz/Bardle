@@ -13,7 +13,7 @@ const MESSAGE_INTERVAL = 5000 // Alle 5 Sekunden wechselt die Nachricht
 const STAR_CONNECTION_INTERVAL = 3000 // Alle 3 Sekunden entstehen neue Sterne-Verbindungen
 const LINE_DURATION = 2000 // Verbindungslinien sind 2 Sekunden lang sichtbar
 const ANIMATION_SPEED_MIN = 10 // Langsamste Geschwindigkeit für Sterne
-const ANIMATION_SPEED_MAX = 50 // Schnellste Geschwindigkeit für Sterne
+const ANIMATION_SPEED_MAX = 200 // Schnellste Geschwindigkeit für Sterne
 
 // Daten die sich ändern können (reactive)
 const title = ref('Bardle') // Name des Spiels im Titel
@@ -266,13 +266,26 @@ onUnmounted(() => {
       <!-- Unterer Bereich mit Spieler-Informationen -->
       <div class="z-20 flex justify-center w-full">
         <div
-          class="w-full max-w-4xl overflow-hidden shadow-xl border-amber-400 bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 rounded-xl"
+          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-purple-400/30 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl backdrop-blur-lg"
         >
+          <!-- Animated Background -->
+          <div class="absolute inset-0 opacity-20">
+            <div
+              class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+            ></div>
+            <div
+              class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+            ></div>
+            <div
+              class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
+            ></div>
+          </div>
+
           <!-- 3-spaltiges Layout für verschiedene Bildschirmgrößen -->
-          <div class="grid grid-cols-1 md:grid-cols-12 min-h-[140px] gap-2 md:gap-0">
+          <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 min-h-[140px] gap-2 md:gap-0">
             <!-- Links: Charakter-Status -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-r border-amber-500/30 bg-gradient-to-br from-amber-600/30 to-orange-600/30"
+              class="flex items-center justify-center p-1 md:col-span-3 md:border-r border-purple-400/30 bg-gradient-to-br from-purple-500/20 to-pink-500/10 backdrop-blur-sm"
             >
               <div class="w-full max-w-[200px]">
                 <BardHudComponent />
@@ -281,7 +294,7 @@ onUnmounted(() => {
 
             <!-- Mitte: Fähigkeiten-Leiste -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-6 bg-gradient-to-br from-amber-700/30 to-orange-700/30"
+              class="flex items-center justify-center p-1 md:col-span-6 bg-gradient-to-br from-purple-600/20 to-pink-600/10 backdrop-blur-sm"
             >
               <div class="w-full max-w-lg">
                 <AbilityBarComponent />
@@ -290,13 +303,16 @@ onUnmounted(() => {
 
             <!-- Rechts: Statistiken -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-l border-amber-500/30 bg-gradient-to-br from-amber-600/30 to-orange-600/30"
+              class="flex items-center justify-center p-1 md:col-span-3 md:border-l border-purple-400/30 bg-gradient-to-br from-purple-500/20 to-pink-500/10 backdrop-blur-sm"
             >
               <div class="w-full">
                 <StatsPanelComponent />
               </div>
             </div>
           </div>
+
+          <!-- Glassmorphism Border Effect -->
+          <div class="absolute inset-0 border pointer-events-none rounded-xl border-white/20"></div>
         </div>
       </div>
     </div>
@@ -420,5 +436,40 @@ onUnmounted(() => {
   transition-property: opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 500ms;
+}
+
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+}
+
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
 }
 </style>

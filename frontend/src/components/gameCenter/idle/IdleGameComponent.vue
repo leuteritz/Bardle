@@ -1,122 +1,192 @@
 <template>
-  <div class="relative flex flex-col w-full h-full">
+  <div
+    class="relative flex flex-col w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+  >
+    <!-- Animated Background -->
+    <div class="absolute inset-0 opacity-20">
+      <div
+        class="absolute bg-purple-500 rounded-full top-10 left-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob"
+      ></div>
+      <div
+        class="absolute bg-yellow-500 rounded-full top-10 right-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+      ></div>
+      <div
+        class="absolute bg-pink-500 rounded-full -bottom-8 left-20 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
+      ></div>
+    </div>
+
+    <!-- Header mit Glassmorphism -->
     <div
-      class="flex flex-row items-center justify-between w-full text-center border-b border-blue-200"
+      class="relative z-10 flex flex-row items-center justify-between w-full text-center border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
     >
-      <!-- Universum-Zahl in der oberen linken Ecke -->
+      <!-- Universum-Info -->
       <div class="flex flex-col items-center w-1/4">
-        <div class="flex flex-row items-center justify-center gap-2">
-          <div class="mb-1 text-xs text-blue-600">Universum</div>
-          <div class="mb-1 text-lg font-bold text-blue-800">
+        <div class="flex flex-row items-center justify-center gap-3">
+          <div
+            class="px-3 py-1 text-xs font-medium text-blue-300 border rounded-full bg-blue-500/20 backdrop-blur-sm border-blue-400/30"
+          >
+            Universum
+          </div>
+          <div
+            class="px-4 py-2 text-xl font-bold text-transparent border bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text border-blue-400/30 rounded-xl backdrop-blur-sm bg-white/10"
+          >
             {{ gameStore.currentUniverse }}
           </div>
         </div>
       </div>
 
+      <!-- Progress Section -->
       <div class="flex flex-col items-center w-1/2">
-        <div class="flex items-center justify-center gap-2 mb-2">
-          <span class="text-sm font-bold text-blue-800">
+        <div class="flex items-center justify-center gap-3 mb-4">
+          <span
+            class="text-base font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text"
+          >
             🌌 Universum-Rettung: {{ gameStore.universeRescueProgress.toFixed(2) }}%
           </span>
         </div>
-        <div class="w-64 h-1 mx-auto overflow-hidden bg-blue-200 rounded-full">
+        <div
+          class="relative h-2 mx-auto overflow-hidden border rounded-full shadow-inner w-80 bg-gray-700/50 backdrop-blur-sm border-white/20"
+        >
           <div
-            class="h-full transition-all duration-500 rounded-full bg-gradient-to-r from-blue-400 to-purple-500"
+            class="h-full transition-all duration-1000 ease-out rounded-full shadow-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
             :style="{
               width: gameStore.universeRescueProgress + '%',
+              boxShadow: '0 0 20px rgba(168, 85, 247, 0.8)',
             }"
           ></div>
+          <div
+            class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
+          ></div>
         </div>
-        <p class="mt-2 text-sm text-blue-600">
+        <p class="mt-3 text-sm font-medium text-purple-300">
           {{ formatNumber(gameStore.chimesForNextUniverse) }} /
           {{ formatNumber(gameStore.chimesToUniverseRescue) }} Chimes gesammelt
         </p>
       </div>
 
-      <div class="flex flex-col items-center w-1/4">
-        <div class="text-sm font-semibold text-blue-700 max-w-32">
+      <!-- Universe Info -->
+      <div class="flex flex-col items-center w-1/4 p-4">
+        <div
+          class="px-4 py-2 text-base font-bold text-transparent border bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text backdrop-blur-sm bg-white/10 border-emerald-400/30 rounded-xl"
+        >
           {{ universes[gameStore.currentUniverse - 1].name }}
         </div>
-        <div class="mt-1 text-xs italic text-blue-500">
+        <div class="mt-2 text-xs font-medium text-emerald-300 opacity-80">
           {{ universes[gameStore.currentUniverse - 1].description }}
         </div>
       </div>
     </div>
 
-    <!-- Hauptinhalt in der Mitte des Bildschirms -->
-    <div class="grid flex-1 w-full min-h-0 grid-cols-3">
-      <!-- <div class="col-span-1"></div> -->
-      <div class="flex flex-col items-center justify-center col-span-2">
-        <span class="mb-4 text-sm text-blue-600">Sammle Chimes um das Universum zu retten!</span>
+    <!-- Hauptinhalt -->
+    <div class="relative z-10 grid flex-1 w-full min-h-0 grid-cols-3">
+      <div class="flex flex-col items-center justify-center col-span-2 text-center">
+        <!-- Motivationstext -->
+        <div
+          class="mb-4 border bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/30 rounded-2xl"
+        >
+          <span
+            class="p-2 text-base font-medium text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          >
+            ✨ Sammle Chimes um das Universum zu retten! ✨
+          </span>
+        </div>
+
+        <!-- Chime Button - Verbessertes Design -->
         <div
           @click="handleChimeClick"
-          class="relative flex flex-col items-center justify-center w-40 h-40 cursor-pointer chime-main-button"
+          class="relative flex flex-col items-center justify-center w-48 h-48 cursor-pointer group chime-main-button"
         >
-          <!-- w-64 h-64 → w-40 h-40 -->
+          <!-- Outer Glow Ring -->
+          <div
+            class="absolute inset-0 rounded-full opacity-75 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-spin-slow"
+          ></div>
+          <div
+            class="absolute rounded-full inset-1 bg-gradient-to-r from-purple-600 to-blue-600 opacity-60 animate-pulse"
+          ></div>
 
-          <!-- Hintergrund-Ringe -->
-          <div class="absolute inset-0 rounded-full chime-outer-ring"></div>
-          <div class="absolute rounded-full inset-3 chime-inner-ring"></div>
-          <!-- inset-4 → inset-3 -->
+          <!-- Inner Button -->
+          <div
+            class="relative flex items-center justify-center w-40 h-40 border rounded-full shadow-2xl backdrop-blur-sm bg-gradient-to-br from-white/20 to-white/5 border-white/30"
+          >
+            <img
+              src="/img/BardAbilities/BardChime.png"
+              class="relative w-32 h-32 transition-all duration-300 select-none drop-shadow-2xl group-hover:scale-110 chime-icon"
+              style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
+            />
+          </div>
 
-          <!-- Kompakteres Chime Icon -->
-          <img
-            src="/img/BardAbilities/BardChime.png"
-            class="relative select-none w-28 h-28 drop-shadow-2xl chime-icon"
-          />
-
-          <!-- Kompakter Klick-Hinweis -->
-          <div class="absolute text-center -bottom-6">
-            <!-- -bottom-8 → -bottom-6 -->
-            <p class="text-lg font-bold text-amber-800 drop-shadow-lg">
-              <!-- text-2xl → text-lg -->
+          <!-- Click Info -->
+          <div class="absolute text-center -bottom-12">
+            <p
+              class="text-xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text drop-shadow-lg"
+            >
               +{{ gameStore.chimesPerClick }} pro Klick
             </p>
-            <p class="text-xs text-amber-600 animate-pulse">Klicke für Chimes!</p>
-            <!-- text-sm → text-xs -->
+            <p class="text-sm font-medium text-yellow-300 animate-pulse">
+              💫 Klicke für Chimes! 💫
+            </p>
           </div>
         </div>
 
-        <!-- Kompakter Meep Progress -->
-        <div class="mt-6 text-center">
-          <!-- mt-8 → mt-4 -->
-          <div class="flex items-center justify-center gap-2 mb-2">
-            <img src="/img/BardAbilities/BardMeep.png" class="w-6 h-6" />
-            <!-- w-8 h-8 → w-6 h-6 -->
-            <span class="text-base font-bold text-amber-800">
-              <!-- text-lg → text-base -->
+        <!-- Meep Progress - Verbessert -->
+        <div class="mt-12 text-center">
+          <div class="flex items-center justify-center gap-3 mb-3">
+            <div
+              class="p-1 border rounded-full bg-gradient-to-r from-orange-500/20 to-yellow-500/20 backdrop-blur-sm border-orange-400/30"
+            >
+              <img src="/img/BardAbilities/BardMeep.png" class="w-8 h-8" />
+            </div>
+            <span
+              class="text-lg font-bold text-transparent bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text"
+            >
               {{ gameStore.chimesForMeep }} / {{ gameStore.meepChimeRequirement }}
             </span>
           </div>
-          <div class="w-32 h-2 overflow-hidden rounded-full bg-amber-200">
-            <!-- w-48 h-3 → w-32 h-2 -->
+          <div
+            class="relative w-48 h-3 mx-auto overflow-hidden border rounded-full shadow-inner bg-gray-700/50 backdrop-blur-sm border-white/20"
+          >
             <div
-              class="h-full transition-all duration-300 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500"
+              class="h-full transition-all duration-500 ease-out rounded-full shadow-lg bg-gradient-to-r from-orange-500 to-yellow-500"
               :style="{
                 width: (gameStore.chimesForMeep / gameStore.meepChimeRequirement) * 100 + '%',
+                boxShadow: '0 0 15px rgba(249, 115, 22, 0.6)',
               }"
             ></div>
           </div>
         </div>
 
-        <span class="mt-6 text-base font-bold text-green-600">
-          {{ gameStore.chimesPerSecond }} Chimes/s
-        </span>
+        <!-- Chimes per Second -->
+        <div
+          class="px-6 py-3 mt-8 border bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-green-400/30 rounded-2xl"
+        >
+          <span
+            class="text-xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
+          >
+            🚀 {{ gameStore.chimesPerSecond }} Chimes/s
+          </span>
+        </div>
       </div>
 
-      <div class="h-full col-span-1 overflow-x-hidden overflow-y-auto">
+      <!-- Shop Area mit Glassmorphism -->
+
+      <div
+        class="h-full col-span-1 overflow-x-hidden overflow-y-auto border-l shadow-xl backdrop-blur-lg bg-white/5 border-white/20 custom-scrollbar"
+      >
         <ShopComponent />
       </div>
     </div>
 
-    <!-- Chime Popup Animation -->
+    <!-- Enhanced Chime Popup -->
     <div
       :key="chimeGainKey"
-      class="fixed z-50 text-xl font-bold pointer-events-none text-amber-800 drop-shadow chime-popup"
-      :style="{ top: chimeGainPos.y - 48 + 'px', left: chimeGainPos.x - 48 + 'px' }"
+      class="fixed z-50 text-2xl font-bold text-transparent pointer-events-none bg-gradient-to-r from-purple-700 to-pink-500 bg-clip-text chime-popup"
+      :style="{
+        top: chimeGainPos.y - 200 + 'px',
+        left: chimeGainPos.x - 400 + 'px',
+        filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.8))',
+      }"
     >
-      <!-- -64 → -48 angepasst für kleinere Komponente -->
-      +{{ gameStore.chimesPerClick }}
+      +{{ gameStore.chimesPerClick }} ✨
     </div>
   </div>
 </template>
@@ -124,7 +194,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
-import { formatNumber } from '../../../config/numberFormat' // Direkte Import
+import { formatNumber } from '../../../config/numberFormat'
 import ShopComponent from './ShopComponent.vue'
 import { universes } from '../../../config/universes'
 
@@ -153,11 +223,10 @@ export default defineComponent({
       }
     }
 
-    // Timer für passive Einnahmen
     const startGameTimer = () => {
       gameTimer = setInterval(() => {
         gameStore.tick()
-      }, 1000) // Jede Sekunde
+      }, 1000)
     }
 
     const stopGameTimer = () => {
@@ -189,29 +258,32 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Alle CSS-Animationen bleiben unverändert */
-
-/* Chime Main Button */
-.chime-main-button {
-  transition: all 0.2s ease;
+/* Animationen */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
 }
 
-.chime-main-button:hover {
-  transform: scale(1.05);
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-.chime-main-button:active {
-  transform: scale(0.95);
-}
-
-/* Äußere Ring-Animation */
-.chime-outer-ring {
-  background: linear-gradient(45deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3));
-  animation: rotate 4s linear infinite;
-  border: 4px solid rgba(251, 191, 36, 0.5);
-}
-
-@keyframes rotate {
+@keyframes spin-slow {
   from {
     transform: rotate(0deg);
   }
@@ -220,64 +292,205 @@ export default defineComponent({
   }
 }
 
-/* Innere Ring-Animation */
-.chime-inner-ring {
-  background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(251, 191, 36, 0.2));
-  animation: pulse 2s ease-in-out infinite;
-  border: 2px solid rgba(251, 191, 36, 0.3);
-}
-
-@keyframes pulse {
+@keyframes float-enhanced {
   0%,
   100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-12px) rotate(5deg) scale(1.05);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
     transform: scale(1);
-    opacity: 0.7;
   }
   50% {
-    transform: scale(1.1);
-    opacity: 1;
+    box-shadow: 0 0 40px rgba(251, 191, 36, 0.9);
+    transform: scale(1.02);
   }
 }
 
-/* Chime Icon Animation */
-.chime-icon {
-  animation: float 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(3deg);
-  }
-}
-
-/* Hover-Effekte */
-.chime-main-button:hover .chime-outer-ring {
-  animation-duration: 2s;
-  border-color: rgba(251, 191, 36, 0.8);
-}
-
-.chime-main-button:hover .chime-icon {
-  filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8));
-}
-
-/* Chime Popup Animation */
-.chime-popup {
-  animation: fadeUp 0.7s ease-out forwards;
-}
-
-@keyframes fadeUp {
+@keyframes fadeUpEnhanced {
   0% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.2);
   }
   100% {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-30px) scale(0.8);
+  }
+}
+
+/* Klassen */
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Chime Button Styles */
+.chime-main-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chime-main-button:hover {
+  transform: scale(1.08);
+}
+
+.chime-main-button:active {
+  transform: scale(0.95);
+}
+
+.chime-icon {
+  animation: float-enhanced 4s ease-in-out infinite;
+}
+
+.chime-main-button:hover .chime-icon {
+  animation-duration: 2s;
+}
+
+/* Popup Animation */
+.chime-popup {
+  animation: fadeUpEnhanced 1s ease-out forwards;
+}
+
+/* Glassmorphism Utilities */
+.backdrop-blur-lg {
+  backdrop-filter: blur(16px);
+}
+
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .w-48 {
+    width: 10rem;
+  }
+
+  .h-48 {
+    height: 10rem;
+  }
+
+  .w-40 {
+    width: 8rem;
+  }
+
+  .h-40 {
+    height: 8rem;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(30, 27, 75, 0.3);
+  border-radius: 10px;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 0.8) 0%,
+    rgba(236, 72, 153, 0.8) 50%,
+    rgba(168, 85, 247, 0.6) 100%
+  );
+  border-radius: 10px;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow:
+    0 0 10px rgba(168, 85, 247, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(168, 85, 247, 1) 0%,
+    rgba(236, 72, 153, 1) 50%,
+    rgba(168, 85, 247, 0.8) 100%
+  );
+  box-shadow:
+    0 0 20px rgba(168, 85, 247, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: scaleY(1.1);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(
+    180deg,
+    rgba(147, 51, 234, 1) 0%,
+    rgba(219, 39, 119, 1) 50%,
+    rgba(147, 51, 234, 0.9) 100%
+  );
+  box-shadow:
+    0 0 25px rgba(168, 85, 247, 1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(30, 27, 75, 0.3);
+  border-radius: 10px;
+}
+
+/* Firefox Scrollbar (falls unterstützt) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.8) rgba(30, 27, 75, 0.3);
+}
+
+/* Glow-Effekt beim Hovern der Shop-Area */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  animation: scrollbarGlow 2s ease-in-out infinite;
+}
+
+@keyframes scrollbarGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 15px rgba(168, 85, 247, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(168, 85, 247, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 }
 </style>

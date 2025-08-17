@@ -8,6 +8,7 @@ export const useGameStore = defineStore('game', {
     chimesPerSecond: 0,
     chimesForNextLevel: 10,
     chimesPerClick: 5,
+    baseChimesPerClick: 5,
     chimesForMeep: 0,
     chimesForNextUniverse: 0,
     chimesToUniverseRescue: 100000,
@@ -123,7 +124,7 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet den Fortschritt zur Universumsrettung als Prozent
     universeRescueProgress(): number {
-      return Math.min(100, (this.chimes / this.chimesToUniverseRescue) * 100)
+      return Math.min(100, (this.chimesForNextUniverse / this.chimesToUniverseRescue) * 100)
     },
 
     // Gibt die Gesamtanzahl der Universen zurück

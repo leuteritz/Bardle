@@ -1,10 +1,20 @@
 <template>
-  <div class="p-3">
+  <div class="relative p-3 overflow-hidden">
+    <!-- Animated Background -->
+    <div class="absolute inset-0 opacity-20">
+      <div
+        class="absolute w-16 h-16 bg-purple-500 rounded-full top-2 left-2 mix-blend-multiply filter blur-xl animate-blob"
+      ></div>
+      <div
+        class="absolute w-12 h-12 bg-pink-500 rounded-full top-2 right-2 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+      ></div>
+    </div>
+
     <!-- Kompakter Header -->
-    <div class="mb-3 text-center">
+    <div class="relative z-10 mb-3 text-center">
       <div class="text-xs">
         <span
-          class="px-2 py-1 text-xs font-semibold border rounded-full bg-amber-100/20 text-amber-100 border-amber-300/30"
+          class="px-2 py-1 text-xs font-semibold text-purple-300 border rounded-full bg-purple-500/20 border-purple-400/30 backdrop-blur-sm"
         >
           Skill Points: {{ gameStore.skillPoints }}
         </span>
@@ -12,7 +22,7 @@
     </div>
 
     <!-- Kompakte Abilities Grid -->
-    <div class="flex justify-center gap-2">
+    <div class="relative z-10 flex justify-center gap-2">
       <AbilityComponent
         v-for="(icon, idx) in abilityIcons"
         :key="abilityKeys[idx]"
@@ -48,3 +58,27 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(15px, -25px) scale(1.1);
+  }
+  66% {
+    transform: translate(-10px, 10px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+</style>

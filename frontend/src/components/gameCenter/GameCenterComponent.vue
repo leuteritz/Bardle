@@ -22,7 +22,7 @@
 
     <!-- Ultra-Kompakter Content -->
     <div
-      class="w-full h-[600px] p-4 bg-gradient-to-br from-amber-100 via-yellow-100 to-orange-100 rounded-2xl"
+      class="w-full h-[600px] p-4 backdrop-blur-xl bg-white/5 border border-white/20 rounded-2xl shadow-2xl"
     >
       <component :is="currentComponent" v-bind="currentProps" class="h-full" />
     </div>
