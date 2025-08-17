@@ -22,7 +22,7 @@
 
     <!-- Kompakter Battle Result Header -->
     <div
-      class="relative z-10 flex flex-row items-center justify-between w-full p-4 text-center border-b backdrop-blur-sm bg-white/5 border-white/20"
+      class="flex flex-row items-center justify-between w-full p-2 border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
     >
       <!-- Battle Counter -->
       <div class="flex flex-col items-center w-1/4">
@@ -42,7 +42,7 @@
       </div>
 
       <!-- Kompakter Battle Result -->
-      <div class="flex flex-col items-center w-1/2">
+      <div class="flex flex-col items-center w-1/2 text-center">
         <h2
           class="font-bold transition-opacity duration-300 text-1xl battle-title drop-shadow-lg"
           :class="[
@@ -120,7 +120,7 @@
                     class="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 animate-pulse opacity-60"
                   ></div>
                   <img
-                    :src="getChampionImage(champ.name)"
+                    :src="battleStore.getChampionImage(champ.name)"
                     class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-blue-400 rounded-full drop-shadow-xl"
                     :alt="champ.name"
                   />
@@ -181,7 +181,7 @@
                     class="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 to-red-600 animate-pulse opacity-60"
                   ></div>
                   <img
-                    :src="getChampionImage(champ.name)"
+                    :src="battleStore.getChampionImage(champ.name)"
                     class="relative z-10 object-cover w-16 h-16 transition-all duration-300 border-2 border-red-400 rounded-full drop-shadow-xl"
                     :alt="champ.name"
                   />
@@ -320,17 +320,6 @@ export default defineComponent({
       }
     }
 
-    function getChampionImage(name: string) {
-      switch (name) {
-        case 'Bard':
-          return '/img/BardAbilities/Bard.png'
-        case name:
-          return '/img/champion/' + name + '.jpg'
-        default:
-          return '/img/Enemy.png'
-      }
-    }
-
     function getStats() {
       return { kills: 0, deaths: 0, assists: 0 }
     }
@@ -377,7 +366,6 @@ export default defineComponent({
       isAutoBattleActive,
       timeUntilNextBattle,
       currentBattleId,
-      getChampionImage,
       getBorderImage,
       refreshTeams,
       gameStore,

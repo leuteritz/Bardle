@@ -19,20 +19,19 @@
 
     <!-- Champions Grid -->
     <div class="champions-grid h-[calc(100%-8rem)] overflow-y-auto pr-2 custom-scrollbar">
-      <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div class="grid grid-cols-2 gap-4 p-2 md:grid-cols-3 lg:grid-cols-4">
         <div
           v-for="champion in availableChampions"
           :key="champion.name"
           class="relative flex flex-col items-center p-3 transition-all duration-500 border shadow-lg champion-card bg-gradient-to-br from-white/10 to-purple-500/5 rounded-xl border-purple-400/30 hover:scale-105 hover:shadow-purple-500/50 backdrop-blur-sm"
         >
           <!-- Champion Avatar -->
-          <div
-            class="relative flex items-center justify-center w-12 h-12 mb-2 border-2 rounded-full shadow-lg champion-avatar bg-gradient-to-br from-purple-400/30 to-pink-500/30 border-purple-400/50"
-          >
-            <span class="text-lg">⚔️</span>
-            <div
-              class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent to-white/20"
-            ></div>
+          <div class="relative flex items-center justify-center w-12 h-12 mb-2 shadow-lg">
+            <img
+              :src="battleStore.getChampionImage(champion.name)"
+              class="relative z-10 object-cover w-16 h-16 rounded-xl"
+              :alt="champion.name"
+            />
           </div>
 
           <!-- Champion Name -->
@@ -132,16 +131,13 @@ export default defineComponent({
       champions,
       buyChampion,
       availableChampions,
+      battleStore,
     }
   },
 })
 </script>
 
 <style scoped>
-.champion-card {
-  animation: cardFloat 4s ease-in-out infinite;
-}
-
 .champion-card:nth-child(odd) {
   animation-delay: -2s;
 }
@@ -158,10 +154,6 @@ export default defineComponent({
   50% {
     transform: translateY(-3px);
   }
-}
-
-.champion-avatar {
-  animation: avatarRotate 6s linear infinite;
 }
 
 @keyframes avatarRotate {

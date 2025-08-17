@@ -17,7 +17,7 @@
 
     <!-- Header mit Glassmorphism -->
     <div
-      class="relative z-10 flex flex-row items-center justify-between w-full text-center border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
+      class="flex flex-row items-center justify-between w-full p-2 border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
     >
       <!-- Universum-Info -->
       <div class="flex flex-col items-center w-1/4">
@@ -37,7 +37,7 @@
 
       <!-- Progress Section -->
       <div class="flex flex-col items-center w-1/2">
-        <div class="flex items-center justify-center gap-3 mb-4">
+        <div class="flex items-center justify-center mb-4">
           <span
             class="text-base font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text"
           >
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Universe Info -->
-      <div class="flex flex-col items-center w-1/4 p-4">
+      <div class="flex flex-col items-center w-1/4">
         <div
           class="px-4 py-2 text-base font-bold text-transparent border bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text backdrop-blur-sm bg-white/10 border-emerald-400/30 rounded-xl"
         >

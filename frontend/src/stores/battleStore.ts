@@ -57,6 +57,17 @@ export const useBattleStore = defineStore('battle', {
   }),
 
   actions: {
+    // Get Champion Image
+    getChampionImage(name: string) {
+      switch (name) {
+        case 'Bard':
+          return '/img/BardAbilities/Bard.png'
+        case name:
+          return '/img/champion/' + name + '.jpg'
+        default:
+          return '/img/Enemy.png'
+      }
+    },
     // Simuliert einen Kampf und aktualisiert das Ranking
     async simulateBattle(opponentMMR) {
       const gameStore = useGameStore()
