@@ -1,5 +1,26 @@
 <template>
   <div class="flex flex-col w-full h-full p-4 space-y-6">
+    <!-- Kaufmengen-Auswahl -->
+    <div
+      class="flex items-center justify-center gap-2 p-4 border bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl border-white/20 backdrop-blur-md"
+    >
+      <span class="mr-4 text-lg font-semibold text-white">Kaufmenge:</span>
+      <button
+        v-for="option in buyOptions"
+        :key="option.value"
+        @click="shopStore.setBuyAmount(option.value)"
+        class="px-4 py-2 text-sm font-bold transition-all duration-300 border-2 rounded-xl"
+        :class="{
+          'bg-gradient-to-r from-purple-500 to-blue-600 text-white border-purple-400 shadow-lg shadow-purple-500/40':
+            shopStore.buyAmount === option.value,
+          'bg-gray-700/40 text-gray-300 border-gray-500/40 hover:border-purple-400/60 hover:text-white':
+            shopStore.buyAmount !== option.value,
+        }"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+
     <!-- Shop Items -->
     <div
       v-for="upgrade in shopStore.shopUpgrades"
@@ -52,6 +73,20 @@
             >
               Lv. {{ upgrade.level }}
             </span>
+            <!-- Kaufmenge anzeigen wenn > 1 -->
+            <span
+              v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
+              class="px-2 py-1 font-bold text-orange-300 border rounded-md shadow-sm bg-orange-500/20 border-orange-400/40"
+            >
+              {{ shopStore.buyAmount }}x
+            </span>
+
+            <span
+              v-if="shopStore.buyAmount === 'max'"
+              class="px-2 py-1 font-bold text-orange-300 border rounded-md shadow-sm bg-orange-500/20 border-orange-400/40"
+            >
+              Max: {{ shopStore.getMaxAffordableAmount(upgrade) }}x
+            </span>
           </div>
         </div>
       </div>
@@ -69,7 +104,7 @@
         >
           <div class="flex flex-col items-center justify-center">
             <span class="block text-lg">
-              {{ formatNumber(shopStore.getUpgradeCost(upgrade)) }}
+              {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
             </span>
             <img src="/img/BardAbilities/BardChime.png" class="w-6 h-6" />
           </div>
@@ -89,14 +124,26 @@ import { defineComponent } from 'vue'
 import { useShopStore } from '../../../stores/shopStore'
 import { formatNumber } from '../../../config/numberFormat'
 
+interface BuyOption {
+  value: number | 'max'
+  label: string
+}
+
 export default defineComponent({
   name: 'ShopComponent',
   setup() {
     const shopStore = useShopStore()
 
+    const buyOptions: BuyOption[] = [
+      { value: 1, label: '1x' },
+      { value: 10, label: '10x' },
+      { value: 'max', label: 'Max' },
+    ]
+
     const handleUpgradeClick = (upgrade: any) => {
-      if (shopStore.buyUpgrade(upgrade.id)) {
-        console.log(`${upgrade.name} erfolgreich gekauft!`)
+      const purchasedAmount = shopStore.buyUpgrade(upgrade.id)
+      if (purchasedAmount > 0) {
+        console.log(`${upgrade.name} ${purchasedAmount}x erfolgreich gekauft!`)
       }
     }
 
@@ -118,7 +165,7 @@ export default defineComponent({
       return /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(icon)
     }
 
-    return { shopStore, handleUpgradeClick, getUpgradeStats, isImageUrl, formatNumber }
+    return { shopStore, handleUpgradeClick, getUpgradeStats, isImageUrl, formatNumber, buyOptions }
   },
 })
 </script>

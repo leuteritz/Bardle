@@ -9,6 +9,7 @@ import zeitEchoIcon from '/img/ZeitEcho.png'
 
 export const useShopStore = defineStore('shop', {
   state: () => ({
+    buyAmount: 1 as number | 'max', // Neue State-Variable
     shopUpgrades: [
       {
         id: 'chimeClicker',
@@ -25,7 +26,6 @@ export const useShopStore = defineStore('shop', {
         baseCost: 25,
         baseCPS: 1,
         level: 0,
-
         costMultiplier: 1.15,
         icon: glockenturmIcon,
       },
@@ -68,16 +68,79 @@ export const useShopStore = defineStore('shop', {
     ],
   }),
   actions: {
-    // Kauft ein Upgrade wenn genügend Chimes vorhanden sind
-    buyUpgrade(upgradeId: string): boolean {
+    // Setzt die gewählte Kaufmenge
+    setBuyAmount(amount: number | 'max') {
+      this.buyAmount = amount
+    },
+
+    // Berechnet wie viele Upgrades maximal gekauft werden können
+    getMaxAffordableAmount(upgrade: any): number {
+      const gameStore = useGameStore()
+      let maxAmount = 0
+      let totalCost = 0
+      let currentLevel = upgrade.level
+
+      while (true) {
+        const nextCost = Math.ceil(
+          upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel),
+        )
+        if (totalCost + nextCost > gameStore.chimes) {
+          break
+        }
+        totalCost += nextCost
+        maxAmount++
+        currentLevel++
+      }
+
+      return maxAmount
+    },
+
+    // Berechnet die Gesamtkosten für den Kauf basierend auf buyAmount
+    getTotalUpgradeCost(upgrade: any): number {
+      let amount = this.buyAmount
+
+      if (amount === 'max') {
+        amount = this.getMaxAffordableAmount(upgrade)
+      }
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        return this.getUpgradeCost(upgrade)
+      }
+
+      let totalCost = 0
+      let currentLevel = upgrade.level
+
+      for (let i = 0; i < amount; i++) {
+        const cost = Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel))
+        totalCost += cost
+        currentLevel++
+      }
+
+      return totalCost
+    },
+
+    // Erweiterte buyUpgrade-Funktion für mehrere Käufe
+    buyUpgrade(upgradeId: string): number {
       const gameStore = useGameStore()
       const upgrade = this.shopUpgrades.find((u) => u.id === upgradeId)
-      if (!upgrade) return false
+      if (!upgrade) return 0
 
-      const cost = this.getUpgradeCost(upgrade)
-      if (gameStore.chimes >= cost) {
-        gameStore.chimes -= cost
-        upgrade.level++
+      let amount = this.buyAmount
+
+      if (amount === 'max') {
+        amount = this.getMaxAffordableAmount(upgrade)
+      }
+
+      if (typeof amount !== 'number' || amount <= 0) {
+        amount = 1
+      }
+
+      const totalCost = this.getTotalUpgradeCost(upgrade)
+
+      if (gameStore.chimes >= totalCost && amount > 0) {
+        gameStore.chimes -= totalCost
+        upgrade.level += amount
+
         if (upgrade.baseCPC != null) {
           gameStore.chimesPerClick = this.calculateTotalCPC()
           console.log('buyUpgrade gameStore.chimesPerClick: ', gameStore.chimesPerClick)
@@ -86,9 +149,9 @@ export const useShopStore = defineStore('shop', {
           gameStore.chimesPerSecond = this.calculateTotalCPS()
           console.log('buyUpgrade gameStore.chimesPerSecond: ', gameStore.chimesPerSecond)
         }
-        return true
+        return amount
       }
-      return false
+      return 0
     },
 
     // Berechnet die Gesamtanzahl der Chimes pro Sekunde
@@ -109,15 +172,25 @@ export const useShopStore = defineStore('shop', {
       return gameStore.baseChimesPerClick + upgradeBonus
     },
 
-    // Berechnet den aktuellen Preis für ein Upgrade
+    // Berechnet den aktuellen Preis für ein einzelnes Upgrade
     getUpgradeCost(upgrade: any): number {
       return Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level))
     },
 
-    // Prüft ob der Spieler sich ein Upgrade leisten kann
+    // Prüft ob der Spieler sich die gewählte Anzahl an Upgrades leisten kann
     canAffordUpgrade(upgrade: any): boolean {
       const gameStore = useGameStore()
-      return gameStore.chimes >= this.getUpgradeCost(upgrade)
+      const totalCost = this.getTotalUpgradeCost(upgrade)
+      return gameStore.chimes >= totalCost && this.getActualBuyAmount(upgrade) > 0
+    },
+
+    // Hilfsfunktion um die tatsächliche Kaufmenge zu ermitteln
+    getActualBuyAmount(upgrade: any): number {
+      let amount = this.buyAmount
+      if (amount === 'max') {
+        amount = this.getMaxAffordableAmount(upgrade)
+      }
+      return typeof amount === 'number' ? Math.max(0, amount) : 0
     },
   },
 })

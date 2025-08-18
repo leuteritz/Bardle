@@ -152,7 +152,7 @@ export const useBattleStore = defineStore('battle', {
     // Setzt alle Kampfstatistiken zurück und stoppt laufende Timer für einen neuen Kampf
     clearBattle() {
       console.log('clearBattle')
-      this.intervals.forEach((interval) => clearInterval(interval))
+      this.intervals.forEach((interval) => clearTimeout(interval))
       this.intervals.length = 0
       this.team1.forEach((champ) => {
         champ.kills = 0
@@ -220,7 +220,6 @@ export const useBattleStore = defineStore('battle', {
     // Hauptfunktion die einen kompletten Kampf simuliert und MMR/LP basierend auf Sieg/Niederlage aktualisiert
     async simulateBattle(opponentMMR) {
       console.log('simulateBattle')
-      this.randomStatsTick()
       const gameStore = useGameStore()
 
       // Speichert alte Werte für Vergleich
@@ -419,12 +418,14 @@ export const useBattleStore = defineStore('battle', {
 
     // Startet den automatischen Kampfmodus der alle 10 Sekunden neue Kämpfe simuliert
     async startAutoBattle() {
+      console.log('startAutoBattle')
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
 
       // Teams und Chat sofort beim Start erstellen
       this.clearBattle()
       await this.refreshTeams()
+      this.randomStatsTick()
 
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.showRandomChatMessagesSequentially()
@@ -444,6 +445,7 @@ export const useBattleStore = defineStore('battle', {
         setTimeout(async () => {
           this.clearBattle()
           await this.refreshTeams()
+          this.randomStatsTick()
 
           if (this.team1.length > 0 && this.team2.length > 0) {
             this.showRandomChatMessagesSequentially()

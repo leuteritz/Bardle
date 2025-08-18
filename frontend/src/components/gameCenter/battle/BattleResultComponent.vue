@@ -239,7 +239,7 @@ export default defineComponent({
       team2Kills: battleStore.team2.reduce((sum, champ) => sum + champ.kills, 0),
     }))
 
-    const showBattleResult = computed(() => timeUntilNextBattle.value <= 2)
+    const showBattleResult = computed(() => timeUntilNextBattle.value < 2)
 
     // Auto Battle State
     const isAutoBattleActive = computed(() => battleStore.autoBattleEnabled)
