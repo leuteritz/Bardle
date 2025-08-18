@@ -24,7 +24,7 @@
     <div
       class="w-full h-[600px] p-4 backdrop-blur-xl bg-white/5 border border-white/20 rounded-2xl shadow-2xl"
     >
-      <component :is="currentComponent" v-bind="currentProps" class="h-full" />
+      <component :is="currentComponent" />
     </div>
   </div>
 </template>
@@ -34,7 +34,6 @@ import { ref, defineComponent, computed, onMounted } from 'vue'
 import ChampionLobbyComponent from '../ChampionLobbyComponent.vue'
 import IdleGameComponent from './idle/IdleGameComponent.vue'
 import BattleResultComponent from './battle/BattleResultComponent.vue'
-import { useGameStore } from '../../stores/gameStore'
 import { useBattleStore } from '../../stores/battleStore'
 
 export default defineComponent({
@@ -47,14 +46,7 @@ export default defineComponent({
 
   setup() {
     const activeTab = ref('idle')
-    const gameStore = useGameStore()
     const battleStore = useBattleStore()
-
-    // Initial Battle State
-    const initialBattleResult = ref(null)
-    const initialMmrChange = ref(0)
-    const initialLpChange = ref(0)
-    const isInitialBattleReady = ref(false)
 
     const tabs = [
       { id: 'idle', label: 'Idle', icon: '🎵' },
@@ -75,58 +67,14 @@ export default defineComponent({
       }
     })
 
-    const currentProps = computed(() => {
-      if (activeTab.value === 'battle' && isInitialBattleReady.value) {
-        return {
-          result: initialBattleResult.value,
-          mmrChange: initialMmrChange.value,
-          lpChange: initialLpChange.value,
-        }
-      } else if (activeTab.value === 'battle') {
-        // Loading state bis der erste Battle simuliert ist
-        return {
-          result: {
-            won: null,
-            opponent: {
-              name: 'Lade ersten Battle...',
-              mmr: battleStore.mmr,
-              power: gameStore.totalPower,
-              rank: battleStore.currentRank,
-            },
-            winProbability: 0.5,
-          },
-          mmrChange: 0,
-          lpChange: 0,
-        }
-      }
-      return {}
-    })
-
-    // Ersten Battle beim Mount simulieren
-    async function simulateInitialBattle() {
-      const oldMmr = battleStore.mmr
-      const oldLp = battleStore.currentRank.lp
-
-      // Ersten Battle simulieren
-      const battleResult = await battleStore.simulateBattle(battleStore.mmr)
-
-      initialBattleResult.value = battleResult
-      initialMmrChange.value = battleStore.mmr - oldMmr
-      initialLpChange.value = battleStore.currentRank.lp - oldLp
-      isInitialBattleReady.value = true
-    }
-
     onMounted(async () => {
-      // Ersten Battle sofort simulieren
-      await simulateInitialBattle()
+      await battleStore.initializePersistentAutoBattle()
     })
 
     return {
       activeTab,
       tabs,
       currentComponent,
-      currentProps,
-      isInitialBattleReady,
     }
   },
 })

@@ -25,24 +25,15 @@
       class="flex flex-row items-center justify-between w-full p-2 border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
     >
       <!-- Battle Counter -->
-      <div class="flex flex-col items-center w-1/4">
+      <div class="flex flex-col items-center justify-center w-1/4">
         <span
-          class="text-xs font-medium text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          class="text-lg font-bold text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
           >Battle #{{ currentBattleId }}</span
         >
-        <div class="w-12 h-0.5 bg-purple-700/50 rounded-full mt-1 border border-purple-500/30">
-          <div
-            class="h-full transition-all duration-500 rounded-full shadow-sm bg-gradient-to-r from-purple-400 to-pink-500"
-            :style="{
-              width: `${(currentBattleId % 10) * 10}%`,
-              boxShadow: '0 0 8px rgba(168, 85, 247, 0.6)',
-            }"
-          ></div>
-        </div>
       </div>
 
       <!-- Kompakter Battle Result -->
-      <div class="flex flex-col items-center w-1/2 text-center">
+      <div class="flex flex-col items-center justify-center w-1/2 h-20 text-center">
         <h2
           class="font-bold transition-opacity duration-300 text-1xl battle-title drop-shadow-lg"
           :class="[
@@ -58,12 +49,12 @@
           </div>
         </h2>
         <div
+          v-if="showLpChange && showBattleResult"
           class="flex items-center justify-center px-2 py-1 font-bold transition-all duration-300 border rounded-xl lp-change-container backdrop-blur-sm"
           :class="[
             currentLpChange >= 0
               ? 'text-green-300 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-400/30'
               : 'text-red-300 bg-gradient-to-r from-red-500/20 to-red-600/20 border-red-400/30',
-            showBattleResult && currentLpChange !== 0 ? 'opacity-100' : 'opacity-0',
           ]"
         >
           <span class="mr-2 text-sm">{{ currentLpChange >= 0 ? '📈' : '📉' }}</span>
@@ -96,7 +87,7 @@
         <div
           class="p-2 transition-all duration-300 border shadow-lg chat-panel-wrapper bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
         >
-          <ChatPanelComponent :team1="team1" :team2="team2" :battle-id="currentBattleId" />
+          <ChatPanelComponent />
         </div>
       </div>
 
@@ -109,7 +100,7 @@
           <div class="mb-4">
             <div class="flex flex-row items-end justify-center space-x-3">
               <div
-                v-for="(champ, idx) in team1"
+                v-for="(champ, idx) in battleStore.team1"
                 :key="'team1-' + idx"
                 class="flex flex-col items-center champion-card"
               >
@@ -170,7 +161,7 @@
           <div class="mt-4">
             <div class="flex flex-row items-start justify-center space-x-3">
               <div
-                v-for="(champ, idx) in team2"
+                v-for="(champ, idx) in battleStore.team2"
                 :key="'team2-' + idx"
                 class="flex flex-col items-center champion-card"
               >
@@ -225,7 +216,7 @@
 <script lang="ts">
 // Script bleibt unverändert
 import { useGameStore } from '../../../stores/gameStore'
-import { ref, onMounted, defineComponent, computed } from 'vue'
+import { defineComponent, computed } from 'vue'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import BattleMessageComponent from './BattleMessageComponent.vue'
@@ -238,62 +229,41 @@ export default defineComponent({
     ChatPanelComponent,
     BattleMessageComponent,
   },
-  props: {
-    result: { type: Object, required: true },
-    mmrChange: { type: Number, required: true },
-    lpChange: { type: Number, required: true },
-  },
-  setup(props) {
-    const team1 = ref<any[]>([])
-    const team2 = ref<any[]>([])
+
+  setup() {
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
 
     const score = computed(() => ({
-      team1Kills: team1.value.reduce((sum, champ) => sum + champ.kills, 0),
-      team2Kills: team2.value.reduce((sum, champ) => sum + champ.kills, 0),
+      team1Kills: battleStore.team1.reduce((sum, champ) => sum + champ.kills, 0),
+      team2Kills: battleStore.team2.reduce((sum, champ) => sum + champ.kills, 0),
     }))
 
-    const showBattleResult = computed(() => timeUntilNextBattle.value <= 1)
+    const showBattleResult = computed(() => timeUntilNextBattle.value <= 2)
 
     // Auto Battle State
     const isAutoBattleActive = computed(() => battleStore.autoBattleEnabled)
     const timeUntilNextBattle = computed(() => battleStore.timeUntilNextBattle)
     const currentBattleId = computed(() => battleStore.currentBattleId)
 
-    const currentResult = computed(() => battleStore.lastAutoBattleResult || props.result)
+    const currentResult = computed(() => battleStore.lastAutoBattleResult)
+
     const currentLpChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {
         return battleStore.currentRank.lp - battleStore.autoBattleOldLP
       }
-      return props.lpChange
+      return null
     })
+
+    const showLpChange = computed(() => {
+      return currentLpChange.value !== null && battleStore.lastAutoBattleResult
+    })
+
     const currentMmrChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {
         return battleStore.mmr - battleStore.autoBattleOldMMR
       }
-      return props.mmrChange
     })
-
-    // Alle bestehenden Funktionen bleiben gleich...
-    async function loadChampions() {
-      const response = await fetch('/src/config/champion.csv')
-      const text = await response.text()
-      return text
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean)
-    }
-
-    function getRandomChampions(champions: string[], count: number) {
-      const arr = [...champions]
-      const result = []
-      for (let i = 0; i < count; i++) {
-        const idx = Math.floor(Math.random() * arr.length)
-        result.push(arr.splice(idx, 1)[0])
-      }
-      return result
-    }
 
     function getBorderImage(rank: string) {
       switch (rank) {
@@ -320,46 +290,7 @@ export default defineComponent({
       }
     }
 
-    function getStats() {
-      return { kills: 0, deaths: 0, assists: 0 }
-    }
-
-    async function refreshTeams() {
-      loadChampions().then((champions) => {
-        const selected = getRandomChampions(champions, 5)
-        team1.value = [
-          { name: 'Bard', rank: battleStore.currentRank.tier, ...getStats() },
-          ...battleStore.selectedChampions.map((name) => ({ name, rank: 'Silver', ...getStats() })),
-        ]
-        team2.value = selected.map((name) => ({ name, rank: 'Silver', ...getStats() }))
-      })
-    }
-
-    function randomStatsTick() {
-      team1.value.forEach((champ) => {
-        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
-        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
-        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
-      })
-
-      team2.value.forEach((champ) => {
-        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
-        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
-        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
-      })
-
-      setTimeout(randomStatsTick, gameStore.gameSpeed)
-    }
-
-    onMounted(async () => {
-      await refreshTeams()
-      await battleStore.initializePersistentAutoBattle()
-      randomStatsTick()
-    })
-
     return {
-      team1,
-      team2,
       currentResult,
       currentLpChange,
       currentMmrChange,
@@ -367,11 +298,11 @@ export default defineComponent({
       timeUntilNextBattle,
       currentBattleId,
       getBorderImage,
-      refreshTeams,
       gameStore,
       battleStore,
       score,
       showBattleResult,
+      showLpChange,
     }
   },
 })

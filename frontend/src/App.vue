@@ -8,7 +8,7 @@ import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue
 import RankComponent from './components/RankComponent.vue'
 
 // Einstellungen die sich nicht ändern
-const STAR_COUNT = 500 // So viele Sterne werden gleichzeitig angezeigt
+const STAR_COUNT = 300 // So viele Sterne werden gleichzeitig angezeigt
 const MESSAGE_INTERVAL = 5000 // Alle 5 Sekunden wechselt die Nachricht
 const STAR_CONNECTION_INTERVAL = 3000 // Alle 3 Sekunden entstehen neue Sterne-Verbindungen
 const LINE_DURATION = 2000 // Verbindungslinien sind 2 Sekunden lang sichtbar

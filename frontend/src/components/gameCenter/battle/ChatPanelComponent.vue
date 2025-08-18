@@ -68,73 +68,13 @@
 import { defineComponent, PropType, watch, nextTick, ref } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { useBattleStore } from '../../../stores/battleStore'
-import { battleMessages } from '../../../config/messages'
 
 export default defineComponent({
   name: 'ChatPanelComponent',
-  props: {
-    team1: { type: Array as PropType<any[]>, required: true },
-    team2: { type: Array as PropType<any[]>, required: true },
-    battleId: { type: [String, Number], default: 0 },
-  },
-  setup(props) {
+
+  setup() {
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
-    const currentTimeoutId = ref<any>(null)
-
-    function showRandomChatMessagesSequentially() {
-      if (currentTimeoutId.value) {
-        clearTimeout(currentTimeoutId.value)
-        currentTimeoutId.value = null
-      }
-      battleStore.chatMessages = []
-      if (!props.team1.length || !props.team2.length) {
-        currentTimeoutId.value = setTimeout(() => showRandomChatMessagesSequentially(), 100)
-        return
-      }
-      const messages = [...battleMessages]
-      function showNext() {
-        if (messages.length === 0) {
-          currentTimeoutId.value = null
-          return
-        }
-        const idx = Math.floor(Math.random() * messages.length)
-        const msg = messages[idx]
-        let chatMsg
-        if (typeof msg === 'string') {
-          const allChampions = [
-            ...props.team1.map((champ) => ({ name: champ.name, team: 1 })),
-            ...props.team2.map((champ) => ({ name: champ.name, team: 2 })),
-          ]
-          const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
-          battleStore.gameTime += getRandomTimeIncrement()
-          chatMsg = {
-            user: randomChampion.name,
-            text: msg,
-            time: formatTime(battleStore.gameTime),
-            team: randomChampion.team,
-          }
-        }
-        battleStore.chatMessages.push(chatMsg)
-        messages.splice(idx, 1)
-        if (messages.length > 0) {
-          currentTimeoutId.value = setTimeout(showNext, gameStore.gameSpeed)
-        } else {
-          currentTimeoutId.value = null
-        }
-      }
-      showNext()
-    }
-
-    function formatTime(seconds: number) {
-      const min = Math.floor(seconds / 60)
-      const sec = seconds % 60
-      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
-    }
-
-    function getRandomTimeIncrement() {
-      return Math.floor(Math.random() * 471) + 30
-    }
 
     watch(
       () => battleStore.chatMessages.length,
@@ -147,18 +87,9 @@ export default defineComponent({
       },
     )
 
-    watch(
-      () => props.battleId,
-      () => {
-        battleStore.gameTime = 120
-        showRandomChatMessagesSequentially()
-      },
-    )
-
     return {
       gameStore,
       battleStore,
-      showRandomChatMessagesSequentially,
     }
   },
 })

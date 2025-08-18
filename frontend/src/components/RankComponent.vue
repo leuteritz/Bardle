@@ -236,7 +236,7 @@
             <div
               class="text-sm font-bold text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
             >
-              {{ getCurrentWinStreak() }}
+              {{ battleStore.currentWinStreak }}
             </div>
             <div class="text-xs text-purple-400">Win Streak</div>
           </div>
@@ -275,7 +275,7 @@
           <div
             class="p-2 text-center border rounded-lg bg-amber-500/20 border-amber-400/30 backdrop-blur-sm"
           >
-            <div class="text-sm font-bold text-amber-300">{{ getBestWinStreak() }}</div>
+            <div class="text-sm font-bold text-amber-300">{{ battleStore.bestWinStreak }}</div>
             <div class="text-xs text-purple-400">Best Streak</div>
           </div>
         </div>
@@ -568,10 +568,6 @@ export default defineComponent({
       return 'bg-gradient-to-r from-red-400 to-red-500'
     }
 
-    const getCurrentWinStreak = () => {
-      return Math.max(0, Math.floor(Math.random() * 5))
-    }
-
     const getBattleRank = () => {
       const winRate = getWinRate()
       if (winRate >= 80) return 'Legend'
@@ -606,11 +602,6 @@ export default defineComponent({
       return Math.round(15 + Math.random() * 10)
     }
 
-    const getBestWinStreak = () => {
-      // Placeholder für beste Win-Streak
-      return Math.round(5 + Math.random() * 10)
-    }
-
     return {
       battleStore,
       showBattleStats,
@@ -630,11 +621,9 @@ export default defineComponent({
       getWinRate,
       getWinRateColor,
       getWinRateBarColor,
-      getCurrentWinStreak,
       getBattleRank,
       getBattleRankColor,
       getAverageGameTime,
-      getBestWinStreak,
     }
   },
 })
