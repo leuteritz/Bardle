@@ -60,6 +60,7 @@ export const useBattleStore = defineStore('battle', {
     totalDeaths: 0,
     totalAssists: 0,
     avgGameTime: 0,
+    totalGameTime: 0,
     bestWinStreak: 0,
     currentWinStreak: 0,
 
@@ -85,6 +86,10 @@ export const useBattleStore = defineStore('battle', {
         default:
           return '/img/Enemy.png'
       }
+    },
+
+    getAvgGameTime(): number {
+      return this.formatTime(Math.round(this.totalGameTime / this.totalBattles) || 0)
     },
 
     // Aktualisiert zufällig die Kampfstatistiken (Kills/Deaths/Assists) aller Champions während eines Kampfes
@@ -246,6 +251,7 @@ export const useBattleStore = defineStore('battle', {
         this.currentWinStreak = 0
       }
 
+      this.totalGameTime += this.gameTime
       this.lastMmrChange = actualMmrChange
       this.lastLpChange = actualLpChange
       this.lastAutoBattleResult = {
@@ -259,7 +265,6 @@ export const useBattleStore = defineStore('battle', {
 
     // Befördert den Spieler in den nächsthöheren Rang oder Division basierend auf genügend LP
     async promoteRank() {
-      const gameStore = useGameStore()
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
@@ -417,15 +422,16 @@ export const useBattleStore = defineStore('battle', {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
 
+      // Teams und Chat sofort beim Start erstellen
+      this.clearBattle()
+      await this.refreshTeams()
+
+      if (this.team1.length > 0 && this.team2.length > 0) {
+        this.showRandomChatMessagesSequentially()
+      }
+
       const runBattleCycle = async () => {
-        console.log('startAutoBattle')
-        this.clearBattle()
-
-        await this.refreshTeams()
-
-        if (this.team1.length > 0 && this.team2.length > 0) {
-          this.showRandomChatMessagesSequentially()
-        }
+        console.log('runBattleCycle')
 
         if (!this.autoBattleEnabled) return
 
@@ -433,12 +439,24 @@ export const useBattleStore = defineStore('battle', {
         const result = await this.simulateBattle(this.mmr)
         this.lastAutoBattleResult = result
         this.showAutoBattleResult = true
-        this.startCountdown()
 
-        setTimeout(runBattleCycle, this.autoBattleInterval)
+        // Nach dem Battle neue Teams für den nächsten Battle erstellen
+        setTimeout(async () => {
+          this.clearBattle()
+          await this.refreshTeams()
+
+          if (this.team1.length > 0 && this.team2.length > 0) {
+            this.showRandomChatMessagesSequentially()
+          }
+
+          this.startCountdown()
+          setTimeout(runBattleCycle, this.autoBattleInterval)
+        }, 1000) // Kurze Pause um das Ergebnis zu zeigen
       }
 
-      await runBattleCycle()
+      // Ersten Battle nach 10 Sekunden starten
+      this.startCountdown()
+      setTimeout(runBattleCycle, this.autoBattleInterval)
     },
 
     // Initialisiert den dauerhaften Auto-Battle Modus nur einmal pro Session

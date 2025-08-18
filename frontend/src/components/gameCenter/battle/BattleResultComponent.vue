@@ -246,7 +246,7 @@ export default defineComponent({
     const timeUntilNextBattle = computed(() => battleStore.timeUntilNextBattle)
     const currentBattleId = computed(() => battleStore.currentBattleId)
 
-    const currentResult = computed(() => battleStore.lastAutoBattleResult)
+    const currentResult = computed(() => battleStore.lastAutoBattleResult || { won: false })
 
     const currentLpChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {

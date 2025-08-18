@@ -8,7 +8,7 @@ import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue
 import RankComponent from './components/RankComponent.vue'
 
 // Einstellungen die sich nicht ändern
-const STAR_COUNT = 300 // So viele Sterne werden gleichzeitig angezeigt
+const STAR_COUNT = 150 // So viele Sterne werden gleichzeitig angezeigt
 const MESSAGE_INTERVAL = 5000 // Alle 5 Sekunden wechselt die Nachricht
 const STAR_CONNECTION_INTERVAL = 3000 // Alle 3 Sekunden entstehen neue Sterne-Verbindungen
 const LINE_DURATION = 2000 // Verbindungslinien sind 2 Sekunden lang sichtbar
@@ -124,7 +124,6 @@ function createStars(): void {
 
     // Gibt jedem Stern zufällige Eigenschaften
     const speed = Math.random() * (ANIMATION_SPEED_MAX - ANIMATION_SPEED_MIN) + ANIMATION_SPEED_MIN
-    const delay = Math.random() * 10 // Wartet 0-10 Sekunden bevor Animation startet
     const size = Math.random() * 4 + 2 // Stern ist zwischen 2px und 6px groß
 
     // Setzt alle Stern-Eigenschaften auf einmal (ist schneller)
@@ -138,7 +137,6 @@ function createStars(): void {
       border-radius: 50%;
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
       animation: moveLeftStar ${speed}s linear infinite, twinkle 3s ease-in-out infinite;
-      animation-delay: ${delay}s;
       will-change: transform, opacity;
       transform: translateZ(0);
     `

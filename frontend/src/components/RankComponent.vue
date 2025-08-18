@@ -269,7 +269,7 @@
           <div
             class="p-2 text-center border rounded-lg bg-blue-500/20 border-blue-400/30 backdrop-blur-sm"
           >
-            <div class="text-sm font-bold text-blue-300">{{ getAverageGameTime() }}min</div>
+            <div class="text-sm font-bold text-blue-300">{{ battleStore.getAvgGameTime() }}min</div>
             <div class="text-xs text-purple-400">Avg. Game Time</div>
           </div>
           <div
