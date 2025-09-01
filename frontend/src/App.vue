@@ -6,6 +6,9 @@ import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
+import { useGameStore } from './stores/gameStore'
+
+const gameStore = useGameStore()
 
 // Einstellungen die sich nicht ändern
 const STAR_COUNT = 150 // So viele Sterne werden gleichzeitig angezeigt
@@ -264,7 +267,8 @@ onUnmounted(() => {
       <!-- Unterer Bereich mit Spieler-Informationen -->
       <div class="z-20 flex justify-center w-full">
         <div
-          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-purple-400/30 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl backdrop-blur-lg"
+          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-purple-400/30 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl"
+          :class="{ 'opacity-50': gameStore.isCPSModalOpen }"
         >
           <!-- Animated Background -->
           <div class="absolute inset-0 opacity-20">

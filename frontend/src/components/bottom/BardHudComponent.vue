@@ -1,5 +1,8 @@
 <template>
-  <div class="relative flex flex-col items-center p-4 overflow-hidden">
+  <div
+    class="relative flex flex-col items-center p-4 overflow-hidden"
+    :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }"
+  >
     <!-- Kompaktere Bard Portrait -->
     <div class="relative z-10 group">
       <div

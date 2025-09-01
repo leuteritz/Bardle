@@ -1,5 +1,5 @@
 <template>
-  <div class="relative group">
+  <div class="relative group" :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }">
     <!-- Kompakter Ability Container -->
     <div
       class="relative p-2 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-purple-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
@@ -105,15 +105,32 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { useGameStore } from '../../stores/gameStore'
 
 export default defineComponent({
   name: 'AbilityComponent',
   props: {
-    icon: String,
-    ability: String,
-    abilityLevel: Number,
-    canUpgrade: Boolean,
+    icon: {
+      type: String,
+      required: true,
+    },
+    ability: {
+      type: String,
+      required: true,
+    },
+    abilityLevel: {
+      type: Number,
+      required: true,
+    },
+    canUpgrade: {
+      type: Boolean,
+      required: true,
+    },
   },
   emits: ['upgrade'],
+  setup() {
+    const gameStore = useGameStore()
+    return { gameStore }
+  },
 })
 </script>

@@ -26,7 +26,7 @@
             class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-bold transition-all duration-300 rounded-lg tab-button"
             @click="tab = 'shop'"
           >
-            <span class="text-lg">🛒</span>
+            <span class="text-base">🛒</span>
             <span class="hidden sm:inline">Shop</span>
           </button>
           <button
@@ -34,7 +34,7 @@
             class="flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all duration-300 rounded-lg tab-button"
             @click="tab = 'team'"
           >
-            <span class="text-lg">⚔️</span>
+            <span class="text-base">⚔️</span>
             <span class="hidden sm:inline">Team</span>
           </button>
         </div>

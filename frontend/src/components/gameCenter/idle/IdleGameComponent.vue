@@ -79,7 +79,54 @@
 
     <!-- Hauptinhalt -->
     <div class="relative z-10 grid flex-1 w-full min-h-0 grid-cols-3">
-      <div class="flex flex-col items-center justify-center col-span-2 text-center">
+      <div class="relative flex flex-col items-center justify-center col-span-2 text-center">
+        <!-- Absolute positionierte Stats links -->
+        <div
+          class="absolute flex flex-col gap-6 transform -translate-y-1/2 left-8 top-1/2 stats-left"
+        >
+          <!-- Chimes per Click -->
+          <div
+            class="px-6 py-4 border bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border-yellow-400/30 rounded-2xl"
+          >
+            <div class="flex flex-col items-center">
+              <p class="mb-1 text-sm font-medium text-yellow-300">Pro Klick</p>
+              <div class="flex flex-row items-center justify-center gap-1">
+                <p
+                  class="text-xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text"
+                >
+                  +{{ formatNumber(gameStore.chimesPerClick) }}
+                </p>
+                <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Chimes per Second - jetzt klickbar -->
+          <div
+            class="px-6 py-4 transition-all duration-300 border cursor-pointer bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-green-400/30 rounded-2xl hover:border-green-300/50"
+            @click="gameStore.setCPSModalOpen(true)"
+          >
+            <div class="flex flex-col items-center">
+              <p class="mb-1 text-sm font-medium text-green-300">Pro Sekunde</p>
+              <div class="flex flex-row items-center justify-center gap-1">
+                <p
+                  class="text-xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
+                >
+                  {{ gameStore.chimesPerSecond }}
+                </p>
+                <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
+              </div>
+              <p class="text-xs text-green-400/80 animate-pulse">📊 Details anzeigen</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CPS Modal -->
+        <ChimesPerSecondModal
+          :is-visible="gameStore.isCPSModalOpen"
+          @close="gameStore.setCPSModalOpen(false)"
+        />
+
         <!-- Motivationstext -->
         <div
           class="mb-4 border bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/30 rounded-2xl"
@@ -117,11 +164,6 @@
 
           <!-- Click Info -->
           <div class="absolute text-center -bottom-12">
-            <p
-              class="text-xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text drop-shadow-lg"
-            >
-              +{{ gameStore.chimesPerClick }} pro Klick
-            </p>
             <p class="text-sm font-medium text-yellow-300 animate-pulse">
               💫 Klicke für Chimes! 💫
             </p>
@@ -129,7 +171,7 @@
         </div>
 
         <!-- Meep Progress - Verbessert -->
-        <div class="mt-12 text-center">
+        <div class="mt-20 text-center">
           <div class="flex items-center justify-center gap-3 mb-3">
             <div
               class="p-1 border rounded-full bg-gradient-to-r from-orange-500/20 to-yellow-500/20 backdrop-blur-sm border-orange-400/30"
@@ -154,21 +196,9 @@
             ></div>
           </div>
         </div>
-
-        <!-- Chimes per Second -->
-        <div
-          class="px-6 py-3 mt-8 border bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-green-400/30 rounded-2xl"
-        >
-          <span
-            class="text-xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
-          >
-            🚀 {{ gameStore.chimesPerSecond }} Chimes/s
-          </span>
-        </div>
       </div>
 
       <!-- Shop Area mit Glassmorphism -->
-
       <div
         class="h-full col-span-1 overflow-x-hidden overflow-y-auto border-l shadow-xl backdrop-blur-lg bg-white/5 border-white/20 custom-scrollbar"
       >
@@ -197,11 +227,13 @@ import { useGameStore } from '../../../stores/gameStore'
 import { formatNumber } from '../../../config/numberFormat'
 import ShopComponent from './ShopComponent.vue'
 import { universes } from '../../../config/universes'
+import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     ShopComponent,
+    ChimesPerSecondModal,
   },
   setup() {
     const gameStore = useGameStore()
@@ -258,7 +290,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Animationen */
+/* Bestehende Animationen und Styles bleiben unverändert */
 @keyframes blob {
   0% {
     transform: translate(0px, 0px) scale(1);
@@ -384,7 +416,7 @@ export default defineComponent({
   backdrop-filter: blur(4px);
 }
 
-/* Responsive */
+/* Responsive - Stats ausblenden bei kleineren Bildschirmen */
 @media (max-width: 1024px) {
   .grid-cols-3 {
     grid-template-columns: 1fr;
@@ -392,6 +424,10 @@ export default defineComponent({
 
   .col-span-2 {
     grid-column: span 1;
+  }
+
+  .stats-left {
+    display: none;
   }
 }
 
@@ -413,6 +449,7 @@ export default defineComponent({
   }
 }
 
+/* Scrollbar Styles bleiben unverändert */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
@@ -469,7 +506,7 @@ export default defineComponent({
   border-radius: 10px;
 }
 
-/* Firefox Scrollbar (falls unterstützt) */
+/* Firefox Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(168, 85, 247, 0.8) rgba(30, 27, 75, 0.3);

@@ -1,5 +1,8 @@
 <template>
-  <div class="relative p-3 overflow-hidden">
+  <div
+    class="relative p-3 overflow-hidden"
+    :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }"
+  >
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div

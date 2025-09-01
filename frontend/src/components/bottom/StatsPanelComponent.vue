@@ -1,5 +1,8 @@
 <template>
-  <div class="relative p-3 overflow-hidden">
+  <div
+    class="relative p-3 overflow-hidden"
+    :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }"
+  >
     <!-- Resources Summary -->
     <div
       class="relative z-10 p-2 transition-all duration-300 border rounded-lg shadow-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 hover:shadow-md backdrop-blur-sm"

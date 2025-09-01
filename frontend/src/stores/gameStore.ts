@@ -1,4 +1,14 @@
 import { defineStore } from 'pinia'
+import { useShopStore } from './shopStore'
+
+// Interface für Building-Produktion
+interface BuildingProduction {
+  [key: string]: number[]
+}
+
+interface TotalBuildingProduction {
+  [key: string]: number
+}
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -7,8 +17,8 @@ export const useGameStore = defineStore('game', {
     chimes: 0,
     chimesPerSecond: 0,
     chimesForNextLevel: 10,
-    chimesPerClick: 5,
-    baseChimesPerClick: 5,
+    chimesPerClick: 20,
+    baseChimesPerClick: 20,
     chimesForMeep: 0,
     chimesForNextUniverse: 0,
     chimesToUniverseRescue: 100000,
@@ -22,6 +32,12 @@ export const useGameStore = defineStore('game', {
     abilityLevels: [0, 0, 0, 0], // Q, W, E, R
 
     currentUniverse: 1,
+
+    buildingProductionHistory: {} as BuildingProduction,
+    totalBuildingProduction: {} as TotalBuildingProduction,
+
+    // Modal Status für UI-Effekte
+    isCPSModalOpen: false,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -69,8 +85,36 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    trackBuildingProduction() {
+      console.log('trackBuildingProduction')
+      // Dynamischer Import um Zirkular-Dependency zu vermeiden
+      const shopStore = useShopStore()
+
+      shopStore.shopUpgrades.forEach((upgrade: any) => {
+        if (upgrade.baseCPS && upgrade.level > 0) {
+          const production = (upgrade.baseCPS || 0) * upgrade.level
+
+          // Initialisiere Arrays falls nicht vorhanden
+          if (!this.buildingProductionHistory[upgrade.id]) {
+            this.buildingProductionHistory[upgrade.id] = []
+            this.totalBuildingProduction[upgrade.id] = 0
+          }
+
+          // Füge aktuelle Produktion zur Historie hinzu
+          this.buildingProductionHistory[upgrade.id].push(production)
+          this.totalBuildingProduction[upgrade.id] += production
+
+          // Begrenze Historie auf letzte 60 Einträge
+          if (this.buildingProductionHistory[upgrade.id].length > 60) {
+            this.buildingProductionHistory[upgrade.id].shift()
+          }
+        }
+      })
+    },
+
     // Verarbeitet passive Einnahmen pro Sekunde
     tick() {
+      console.log('tick')
       const cps = this.chimesPerSecond
       if (cps > 0) {
         this.chimes += cps
@@ -78,9 +122,17 @@ export const useGameStore = defineStore('game', {
         this.chimesForNextUniverse += cps
         this.calculateLevel()
         this.addMeep()
+        this.trackBuildingProduction()
       }
     },
+
+    // Setzt den Modal-Status für UI-Effekte
+    setCPSModalOpen(isOpen: boolean) {
+      this.isCPSModalOpen = isOpen
+      console.log('isCPSModalOpen', isOpen)
+    },
   },
+
   getters: {
     // Berechnet die verbleibenden Chimes bis zum nächsten Level
     chimesToNextLevel(): number {
