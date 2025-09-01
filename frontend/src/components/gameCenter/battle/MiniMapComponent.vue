@@ -31,7 +31,7 @@
       <div
         class="absolute z-10 px-2 py-1 text-xs font-bold text-white border rounded-md top-1 left-1 bg-purple-900/80 border-purple-400/30 backdrop-blur-sm"
       >
-        {{ formatTime(battleStore.gameTime) }}
+        {{ formatTime(battleStore.battleTime) }}
       </div>
 
       <!-- Score Display -->

@@ -43,7 +43,7 @@ export const useBattleStore = defineStore('battle', {
     autoBattleReady: true,
 
     // Spiel-Logik - Champions, Teams und Kampfstatistiken
-    gameTime: 0,
+    battleTime: 0,
     ownedChampions: ['Bard'],
     selectedChampions: [],
     battleFormula: {
@@ -59,8 +59,8 @@ export const useBattleStore = defineStore('battle', {
     totalKills: 0,
     totalDeaths: 0,
     totalAssists: 0,
-    avgGameTime: 0,
-    totalGameTime: 0,
+    avgBattleTime: 0,
+    totalBattleTime: 0,
     bestWinStreak: 0,
     currentWinStreak: 0,
 
@@ -88,8 +88,8 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    getAvgGameTime(): number {
-      return this.formatTime(Math.round(this.totalGameTime / this.totalBattles) || 0)
+    getAvgBattleTime(): number {
+      return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
     },
 
     // Aktualisiert zufällig die Kampfstatistiken (Kills/Deaths/Assists) aller Champions während eines Kampfes
@@ -165,7 +165,7 @@ export const useBattleStore = defineStore('battle', {
         champ.assists = 0
       })
       this.chatMessages = []
-      this.gameTime = 0
+      this.battleTime = 0
     },
 
     // Zeigt nacheinander zufällige Chat-Nachrichten von Champions während des Kampfes an
@@ -185,11 +185,11 @@ export const useBattleStore = defineStore('battle', {
             ...this.team2.map((champ) => ({ name: champ.name, team: 2 })),
           ]
           const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
-          this.gameTime += this.getRandomTimeIncrement()
+          this.battleTime += this.getRandomTimeIncrement()
           chatMsg = {
             user: randomChampion.name,
             text: msg,
-            time: this.formatTime(this.gameTime),
+            time: this.formatTime(this.battleTime),
             team: randomChampion.team,
           }
         }
@@ -250,7 +250,7 @@ export const useBattleStore = defineStore('battle', {
         this.currentWinStreak = 0
       }
 
-      this.totalGameTime += this.gameTime
+      this.totalBattleTime += this.battleTime
       this.lastMmrChange = actualMmrChange
       this.lastLpChange = actualLpChange
       this.lastAutoBattleResult = {

@@ -13,6 +13,7 @@ interface TotalBuildingProduction {
 export const useGameStore = defineStore('game', {
   state: () => ({
     gameSpeed: 1000,
+    inGameTime: 0,
 
     chimes: 0,
     chimesPerSecond: 0,
@@ -114,6 +115,7 @@ export const useGameStore = defineStore('game', {
 
     // Verarbeitet passive Einnahmen pro Sekunde
     tick() {
+      this.inGameTime++
       console.log('tick')
       const cps = this.chimesPerSecond
       if (cps > 0) {

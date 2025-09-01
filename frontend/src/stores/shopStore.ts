@@ -465,11 +465,11 @@ export const useShopStore = defineStore('shop', {
       const dataTimeSpan = (history.length - 1) * (config.interval / 1000)
 
       if (dataTimeSpan < 60) {
-        return `-${Math.floor(dataTimeSpan + 1)}s`
+        return `${Math.floor(dataTimeSpan + 1)}s`
       } else if (dataTimeSpan < 3600) {
-        return `-${Math.floor(dataTimeSpan / 60 + 1)}min`
+        return `${Math.floor(dataTimeSpan / 60 + 1)}min`
       } else {
-        return `-${Math.floor(dataTimeSpan / 3600 + 1)}h`
+        return `${Math.floor(dataTimeSpan / 3600 + 1)}h`
       }
     },
 
@@ -483,11 +483,11 @@ export const useShopStore = defineStore('shop', {
       const midTime = dataTimeSpan / 2
 
       if (midTime < 60) {
-        return `-${Math.floor(midTime + 1)}s`
+        return `${Math.floor(midTime + 1)}s`
       } else if (midTime < 3600) {
-        return `-${Math.floor(midTime / 60 + 1)}min`
+        return `${Math.floor(midTime / 60 + 1)}min`
       } else {
-        return `-${Math.floor(midTime / 3600 + 1)}h`
+        return `${Math.floor(midTime / 3600 + 1)}h`
       }
     },
 

@@ -7,78 +7,82 @@ import BardHudComponent from './components/bottom/BardHudComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
 import { useGameStore } from './stores/gameStore'
+import { useBattleStore } from './stores/battleStore'
 
 const gameStore = useGameStore()
+const battleStore = useBattleStore()
 
-// Einstellungen die sich nicht ändern
-const STAR_COUNT = 150 // So viele Sterne werden gleichzeitig angezeigt
-const MESSAGE_INTERVAL = 5000 // Alle 5 Sekunden wechselt die Nachricht
-const STAR_CONNECTION_INTERVAL = 3000 // Alle 3 Sekunden entstehen neue Sterne-Verbindungen
-const LINE_DURATION = 2000 // Verbindungslinien sind 2 Sekunden lang sichtbar
-const ANIMATION_SPEED_MIN = 10 // Langsamste Geschwindigkeit für Sterne
-const ANIMATION_SPEED_MAX = 200 // Schnellste Geschwindigkeit für Sterne
+// Konstante Settings
+const STAR_COUNT = 500
+const MESSAGE_INTERVAL = 5000
+const STAR_CONNECTION_INTERVAL = 3000
+const LINE_DURATION = 2000
+const ANIMATION_SPEED_MIN = 10
+const ANIMATION_SPEED_MAX = 200
 
-// Daten die sich ändern können (reactive)
-const title = ref('Bardle') // Name des Spiels im Titel
-const currentMsg = ref('') // Die gerade angezeigte Nachricht
-const starsContainer = ref<HTMLElement>() // Verbindung zum HTML-Element mit den Sternen
-const prefersReducedMotion = ref(false) // Speichert ob der Nutzer weniger Animationen will
+// Reactive State
+const title = ref('Bardle')
+const currentMsg = ref('')
+const starsContainer = ref<HTMLElement>()
+const prefersReducedMotion = ref(false)
 
-// Listen zum Aufräumen von Timern
-const intervals: ReturnType<typeof setInterval>[] = [] // Sammelt alle wiederholenden Timer
-const timeouts: ReturnType<typeof setTimeout>[] = [] // Sammelt alle einmaligen Timer
+// Timer-Listen
+const intervals: ReturnType<typeof setInterval>[] = []
+const timeouts: ReturnType<typeof setTimeout>[] = []
 
-// Prüft ob der Browser weniger Animationen anzeigen soll
+// Neues: Stern-Typ und reaktives Array
+type StarItem = {
+  id: number
+  el: HTMLDivElement
+  onEnd: (e: AnimationEvent) => void
+}
+
+const stars = ref<StarItem[]>([])
+let nextStarId = 1
+
 const checkReducedMotion = () => {
   if (typeof window !== 'undefined') {
     prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   }
 }
 
-// Wählt eine zufällige Nachricht aus der Liste
+// Message-Rotation
 function getRandomMessage(): void {
-  if (titleMessages.length === 0) return // Stoppt wenn keine Nachrichten vorhanden
+  if (titleMessages.length === 0) return
   const randomMsg = titleMessages[Math.floor(Math.random() * titleMessages.length)]
   currentMsg.value = randomMsg
 }
 
-// Verbindet zwei zufällige Sterne mit einer Linie
+// Linie zwischen zwei zufälligen Sternen
 async function connectRandomStars(): Promise<void> {
-  if (!starsContainer.value || prefersReducedMotion.value) return // Stoppt wenn Container fehlt oder Animationen aus
+  if (!starsContainer.value || prefersReducedMotion.value) return
+  await nextTick()
+  const nodeList = starsContainer.value.querySelectorAll('.star')
+  if (nodeList.length < 2) return
 
-  await nextTick() // Wartet bis Vue fertig mit Updates ist
-  const stars = starsContainer.value.querySelectorAll('.star')
-
-  if (stars.length < 2) return // Braucht mindestens 2 Sterne
-
-  // Wählt zwei verschiedene Sterne aus
-  let index1 = Math.floor(Math.random() * stars.length)
-  let index2: number
+  let i1 = Math.floor(Math.random() * nodeList.length)
+  let i2: number
   do {
-    index2 = Math.floor(Math.random() * stars.length)
-  } while (index1 === index2) // Wiederholt bis zwei verschiedene Sterne gefunden
+    i2 = Math.floor(Math.random() * nodeList.length)
+  } while (i1 === i2)
 
-  const star1 = stars[index1] as HTMLElement
-  const star2 = stars[index2] as HTMLElement
+  const star1 = nodeList[i1] as HTMLElement
+  const star2 = nodeList[i2] as HTMLElement
 
-  // Berechnet wo sich die Sterne auf dem Bildschirm befinden
   const rect = starsContainer.value.getBoundingClientRect()
-  const rect1 = star1.getBoundingClientRect()
-  const rect2 = star2.getBoundingClientRect()
+  const r1 = star1.getBoundingClientRect()
+  const r2 = star2.getBoundingClientRect()
 
-  // Findet die Mitte von jedem Stern
-  const x1 = rect1.left + rect1.width / 2 - rect.left
-  const y1 = rect1.top + rect1.height / 2 - rect.top
-  const x2 = rect2.left + rect2.width / 2 - rect.left
-  const y2 = rect2.top + rect2.height / 2 - rect.top
+  const x1 = r1.left + r1.width / 2 - rect.left
+  const y1 = r1.top + r1.height / 2 - rect.top
+  const x2 = r2.left + r2.width / 2 - rect.left
+  const y2 = r2.top + r2.height / 2 - rect.top
 
-  // Berechnet Entfernung und Winkel zwischen den Sternen
   const dx = x2 - x1
   const dy = y2 - y1
   const dist = Math.sqrt(dx * dx + dy * dy)
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI
 
-  // Erstellt eine Linie als HTML-Element
   const line = document.createElement('div')
   line.className = 'star-connection'
   line.style.cssText = `
@@ -95,96 +99,129 @@ async function connectRandomStars(): Promise<void> {
     opacity: 0;
     animation: fadeInOut ${LINE_DURATION}ms ease-in-out;
   `
+  starsContainer.value.appendChild(line)
 
-  starsContainer.value.appendChild(line) // Fügt die Linie zur Seite hinzu
-
-  // Entfernt die Linie nach der festgelegten Zeit automatisch
   const timeoutId = setTimeout(() => {
     if (starsContainer.value && starsContainer.value.contains(line)) {
       starsContainer.value.removeChild(line)
     }
   }, LINE_DURATION)
-
-  timeouts.push(timeoutId) // Speichert Timer-ID für späteres Aufräumen
+  timeouts.push(timeoutId)
 }
 
-// Erstellt alle Sterne auf der Seite
+// Hilfsfunktionen zum Erstellen und Entfernen von Sternen
+function removeStar(item: StarItem) {
+  // Listener ab
+  item.el.removeEventListener('animationend', item.onEnd as EventListener)
+  // DOM-Entfernung
+  if (starsContainer.value && item.el.parentElement === starsContainer.value) {
+    starsContainer.value.removeChild(item.el)
+  }
+  // Array bereinigen
+  const idx = stars.value.findIndex((s) => s.id === item.id)
+  if (idx !== -1) stars.value.splice(idx, 1)
+}
+
+function spawnStar(): StarItem | null {
+  if (!starsContainer.value) return null
+
+  const star = document.createElement('div')
+  star.className = 'star'
+
+  // 60% außerhalb rechts, 40% im Viewport
+  const startLeft = Math.random() < 0.6 ? 105 + Math.random() * 20 : Math.random() * 100
+
+  const speed = Math.random() * (ANIMATION_SPEED_MAX - ANIMATION_SPEED_MIN) + ANIMATION_SPEED_MIN
+  const size = Math.random() * 4 + 2
+
+  // WICHTIG: moveLeftStar einmalig (forwards), twinkle bleibt infinite
+  star.style.cssText = `
+    position: absolute;
+    left: ${startLeft}%;
+    top: ${Math.random() * 100}%;
+    width: ${size}px;
+    height: ${size}px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    animation: moveLeftStar ${speed}s linear forwards, twinkle 3s ease-in-out infinite;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    pointer-events: none;
+  `
+  star.style.setProperty('--start-left', `${startLeft}%`)
+
+  const item: StarItem = {
+    id: nextStarId++,
+    el: star,
+    onEnd: (e: AnimationEvent) => {
+      // Nur auf moveLeftStar reagieren, twinkle ist unendlich
+      if (e.animationName !== 'moveLeftStar') return
+      removeStar(item)
+      // Optional: neuen Stern erzeugen, um die Zielanzahl zu halten
+      if (!prefersReducedMotion.value) {
+        spawnStar()
+      }
+    },
+  }
+
+  // Listener registrieren
+  star.addEventListener('animationend', item.onEnd as EventListener)
+
+  // DOM-Anfügen + Array pflegen
+  starsContainer.value.appendChild(star)
+  stars.value.push(item)
+  return item
+}
+
 function createStars(): void {
-  if (!starsContainer.value || prefersReducedMotion.value) return // Stoppt wenn Container fehlt oder Animationen aus
-
-  starsContainer.value.innerHTML = '' // Löscht alle alten Sterne
-
-  // Erstellt jeden einzelnen Stern
+  if (!starsContainer.value || prefersReducedMotion.value) return
+  // Säubern (idempotent)
+  starsContainer.value.innerHTML = ''
+  stars.value.length = 0
   for (let i = 0; i < STAR_COUNT; i++) {
-    const star = document.createElement('div')
-    star.className = 'star'
-
-    // Entscheidet wo der Stern startet (50% rechts außerhalb, 50% im sichtbaren Bereich)
-    const startLeft =
-      Math.random() < 0.5
-        ? 105 + Math.random() * 20 // Startet rechts außerhalb des Bildschirms
-        : Math.random() * 100 // Startet irgendwo im sichtbaren Bereich
-
-    // Gibt jedem Stern zufällige Eigenschaften
-    const speed = Math.random() * (ANIMATION_SPEED_MAX - ANIMATION_SPEED_MIN) + ANIMATION_SPEED_MIN
-    const size = Math.random() * 4 + 2 // Stern ist zwischen 2px und 6px groß
-
-    // Setzt alle Stern-Eigenschaften auf einmal (ist schneller)
-    star.style.cssText = `
-      position: absolute;
-      left: ${startLeft}%;
-      top: ${Math.random() * 100}%;
-      width: ${size}px;
-      height: ${size}px;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-      animation: moveLeftStar ${speed}s linear infinite, twinkle 3s ease-in-out infinite;
-      will-change: transform, opacity;
-      transform: translateZ(0);
-    `
-
-    // Speichert Startposition für CSS-Animation
-    star.style.setProperty('--start-left', `${startLeft}%`)
-    starsContainer.value.appendChild(star) // Fügt Stern zur Seite hinzu
+    spawnStar()
   }
 }
 
-// Räumt alle Timer auf um Speicher zu sparen
 function cleanup(): void {
-  intervals.forEach((id) => clearInterval(id)) // Stoppt alle wiederholenden Timer
-  timeouts.forEach((id) => clearTimeout(id)) // Stoppt alle einmaligen Timer
-  intervals.length = 0 // Leert die Liste
+  intervals.forEach((id) => clearInterval(id))
+  timeouts.forEach((id) => clearTimeout(id))
+  intervals.length = 0
   timeouts.length = 0
 
+  // Alle Stern-Listener und DOM entfernen
+  stars.value.forEach((item) => {
+    item.el.removeEventListener('animationend', item.onEnd as EventListener)
+    if (starsContainer.value && item.el.parentElement === starsContainer.value) {
+      starsContainer.value.removeChild(item.el)
+    }
+  })
+  stars.value.length = 0
+
   if (starsContainer.value) {
-    starsContainer.value.innerHTML = '' // Entfernt alle Sterne von der Seite
+    starsContainer.value.innerHTML = ''
   }
 }
 
-// Wird ausgeführt wenn die Komponente geladen ist
 onMounted(async () => {
-  checkReducedMotion() // Prüft Animation-Einstellungen
-  getRandomMessage() // Lädt erste Nachricht
+  checkReducedMotion()
+  getRandomMessage()
 
   if (!prefersReducedMotion.value) {
-    // Erstellt Sterne nur wenn Animationen erwünscht sind
-    await nextTick() // Wartet bis Vue fertig ist
-    setTimeout(createStars, 100) // Erstellt Sterne nach kurzer Pause
+    await nextTick()
+    setTimeout(createStars, 100)
 
-    // Startet automatisches Erstellen von Sterne-Verbindungen
     const starConnectionInterval = setInterval(connectRandomStars, STAR_CONNECTION_INTERVAL)
-    intervals.push(starConnectionInterval) // Speichert Timer-ID
+    intervals.push(starConnectionInterval)
   }
 
-  // Startet automatisches Wechseln der Nachrichten
   const messageInterval = setInterval(getRandomMessage, MESSAGE_INTERVAL)
-  intervals.push(messageInterval) // Speichert Timer-ID
+  intervals.push(messageInterval)
 })
 
-// Wird ausgeführt wenn die Komponente entfernt wird
 onUnmounted(() => {
-  cleanup() // Räumt alle Timer auf um Speicher zu sparen
+  cleanup()
 })
 </script>
 
@@ -221,6 +258,17 @@ onUnmounted(() => {
           >
             {{ currentMsg }}
           </p>
+        </div>
+        <div class="absolute z-20 top-3 right-3">
+          <div
+            class="px-3 py-1 transition-colors duration-200 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 group-hover:from-purple-500/30 group-hover:to-pink-500/30"
+          >
+            <span
+              class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300"
+            >
+              ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
+            </span>
+          </div>
         </div>
       </div>
 
