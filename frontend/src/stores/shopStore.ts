@@ -245,7 +245,7 @@ export const useShopStore = defineStore('shop', {
     },
 
     // Berechnet maximale Anzahl eines Upgrades die mit verfügbaren Chimes kaufbar ist
-    getMaxAffordableAmount(upgrade: any): number {
+    getMaxAffordableAmount(upgrade: ShopUpgrade): number {
       const gameStore = useGameStore()
       let maxAmount = 0
       let totalCost = 0
@@ -267,7 +267,7 @@ export const useShopStore = defineStore('shop', {
     },
 
     // Berechnet Gesamtkosten für Upgrade-Kauf basierend auf buyAmount
-    getTotalUpgradeCost(upgrade: any): number {
+    getTotalUpgradeCost(upgrade: ShopUpgrade): number {
       let amount = this.buyAmount
 
       if (amount === 'max') {
@@ -342,19 +342,19 @@ export const useShopStore = defineStore('shop', {
     },
 
     // Berechnet aktuelle Kosten eines Upgrades basierend auf Level
-    getUpgradeCost(upgrade: any): number {
+    getUpgradeCost(upgrade: ShopUpgrade): number {
       return Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level))
     },
 
     // Prüft ob Upgrade mit aktuellen Chimes und buyAmount kaufbar ist
-    canAffordUpgrade(upgrade: any): boolean {
+    canAffordUpgrade(upgrade: ShopUpgrade): boolean {
       const gameStore = useGameStore()
       const totalCost = this.getTotalUpgradeCost(upgrade)
       return gameStore.chimes >= totalCost && this.getActualBuyAmount(upgrade) > 0
     },
 
     // Ermittelt tatsächliche Kaufmenge unter Berücksichtigung der max-Option
-    getActualBuyAmount(upgrade: any): number {
+    getActualBuyAmount(upgrade: ShopUpgrade): number {
       let amount = this.buyAmount
       if (amount === 'max') {
         amount = this.getMaxAffordableAmount(upgrade)

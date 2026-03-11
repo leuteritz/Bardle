@@ -15,67 +15,7 @@
       ></div>
     </div>
 
-    <!-- Header mit Glassmorphism -->
-    <div
-      class="flex flex-row items-center justify-between w-full p-2 border-b shadow-lg backdrop-blur-lg bg-white/10 border-white/20"
-    >
-      <!-- Universum-Info -->
-      <div class="flex flex-col items-center w-1/4">
-        <div class="flex flex-row items-center justify-center gap-3">
-          <div
-            class="px-3 py-1 text-xs font-medium text-blue-300 border rounded-full bg-blue-500/20 backdrop-blur-sm border-blue-400/30"
-          >
-            Universum
-          </div>
-          <div
-            class="px-4 py-2 text-xl font-bold text-transparent border bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text border-blue-400/30 rounded-xl backdrop-blur-sm bg-white/10"
-          >
-            {{ gameStore.currentUniverse }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Progress Section -->
-      <div class="flex flex-col items-center w-1/2">
-        <div class="flex items-center justify-center mb-4">
-          <span
-            class="text-base font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text"
-          >
-            🌌 Universum-Rettung: {{ gameStore.universeRescueProgress.toFixed(2) }}%
-          </span>
-        </div>
-        <div
-          class="relative h-2 mx-auto overflow-hidden border rounded-full shadow-inner w-80 bg-gray-700/50 backdrop-blur-sm border-white/20"
-        >
-          <div
-            class="h-full transition-all duration-1000 ease-out rounded-full shadow-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
-            :style="{
-              width: gameStore.universeRescueProgress + '%',
-              boxShadow: '0 0 20px rgba(168, 85, 247, 0.8)',
-            }"
-          ></div>
-          <div
-            class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
-          ></div>
-        </div>
-        <p class="mt-3 text-sm font-medium text-purple-300">
-          {{ formatNumber(gameStore.chimesForNextUniverse) }} /
-          {{ formatNumber(gameStore.chimesToUniverseRescue) }} Chimes gesammelt
-        </p>
-      </div>
-
-      <!-- Universe Info -->
-      <div class="flex flex-col items-center w-1/4">
-        <div
-          class="px-4 py-2 text-base font-bold text-transparent border bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text backdrop-blur-sm bg-white/10 border-emerald-400/30 rounded-xl"
-        >
-          {{ universes[gameStore.currentUniverse - 1].name }}
-        </div>
-        <div class="mt-2 text-xs font-medium text-emerald-300 opacity-80">
-          {{ universes[gameStore.currentUniverse - 1].description }}
-        </div>
-      </div>
-    </div>
+    <UniverseProgressComponent />
 
     <!-- Hauptinhalt -->
     <div class="relative z-10 grid flex-1 w-full min-h-0 grid-cols-3">
@@ -170,32 +110,7 @@
           </div>
         </div>
 
-        <!-- Meep Progress - Verbessert -->
-        <div class="mt-20 text-center">
-          <div class="flex items-center justify-center gap-3 mb-3">
-            <div
-              class="p-1 border rounded-full bg-gradient-to-r from-orange-500/20 to-yellow-500/20 backdrop-blur-sm border-orange-400/30"
-            >
-              <img src="/img/BardAbilities/BardMeep.png" class="w-8 h-8" />
-            </div>
-            <span
-              class="text-lg font-bold text-transparent bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text"
-            >
-              {{ gameStore.chimesForMeep }} / {{ gameStore.meepChimeRequirement }}
-            </span>
-          </div>
-          <div
-            class="relative w-48 h-3 mx-auto overflow-hidden border rounded-full shadow-inner bg-gray-700/50 backdrop-blur-sm border-white/20"
-          >
-            <div
-              class="h-full transition-all duration-500 ease-out rounded-full shadow-lg bg-gradient-to-r from-orange-500 to-yellow-500"
-              :style="{
-                width: (gameStore.chimesForMeep / gameStore.meepChimeRequirement) * 100 + '%',
-                boxShadow: '0 0 15px rgba(249, 115, 22, 0.6)',
-              }"
-            ></div>
-          </div>
-        </div>
+        <MeepProgressComponent />
       </div>
 
       <!-- Shop Area mit Glassmorphism -->
@@ -228,22 +143,25 @@ import { formatNumber } from '../../../config/numberFormat'
 import ShopComponent from './ShopComponent.vue'
 import { universes } from '../../../config/universes'
 import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
+import UniverseProgressComponent from './UniverseProgressComponent.vue'
+import MeepProgressComponent from './MeepProgressComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     ShopComponent,
     ChimesPerSecondModal,
+    UniverseProgressComponent,
+    MeepProgressComponent,
   },
   setup() {
     const gameStore = useGameStore()
-    const showShop = ref(false)
 
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
     let gameTimer: ReturnType<typeof setInterval> | null = null
 
-    function handleChimeClick(event) {
+    function handleChimeClick(event: MouseEvent) {
       gameStore.addChime()
       chimeGainPos.value = { x: event.clientX, y: event.clientY }
       chimeGainKey.value++
@@ -278,7 +196,6 @@ export default defineComponent({
 
     return {
       gameStore,
-      showShop,
       formatNumber,
       handleChimeClick,
       chimeGainPos,

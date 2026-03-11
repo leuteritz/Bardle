@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
+import { universes } from '../config/universes'
 
 // Interface für Building-Produktion
 interface BuildingProduction {
@@ -9,6 +10,12 @@ interface BuildingProduction {
 interface TotalBuildingProduction {
   [key: string]: number
 }
+
+function chimeThresholdForLevel(level: number): number {
+  return level > 0 ? Math.ceil(10 * Math.pow(level, 1.2)) : 0
+}
+
+let _shopStore: ReturnType<typeof useShopStore> | null = null
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -87,9 +94,9 @@ export const useGameStore = defineStore('game', {
     },
 
     trackBuildingProduction() {
-      console.log('trackBuildingProduction')
       // Dynamischer Import um Zirkular-Dependency zu vermeiden
-      const shopStore = useShopStore()
+      if (!_shopStore) _shopStore = useShopStore()
+      const shopStore = _shopStore
 
       shopStore.shopUpgrades.forEach((upgrade: any) => {
         if (upgrade.baseCPS && upgrade.level > 0) {
@@ -116,7 +123,6 @@ export const useGameStore = defineStore('game', {
     // Verarbeitet passive Einnahmen pro Sekunde
     tick() {
       this.inGameTime++
-      console.log('tick')
       const cps = this.chimesPerSecond
       if (cps > 0) {
         this.chimes += cps
@@ -131,7 +137,6 @@ export const useGameStore = defineStore('game', {
     // Setzt den Modal-Status für UI-Effekte
     setCPSModalOpen(isOpen: boolean) {
       this.isCPSModalOpen = isOpen
-      console.log('isCPSModalOpen', isOpen)
     },
   },
 
@@ -144,8 +149,7 @@ export const useGameStore = defineStore('game', {
     // Berechnet den Fortschritt im aktuellen Level als Prozent
     levelProgress(): number {
       // Berechne Chimes die für das aktuelle Level benötigt wurden
-      const chimesForCurrentLevel =
-        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
 
       // Chimes die im aktuellen Level bereits gesammelt wurden
       const currentLevelChimes = this.chimes - chimesForCurrentLevel
@@ -159,15 +163,13 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet die Chimes die im aktuellen Level gesammelt wurden
     currentLevelChimes(): number {
-      const chimesForCurrentLevel =
-        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
       return this.chimes - chimesForCurrentLevel
     },
 
     // Berechnet die Gesamtanzahl der Chimes die für das aktuelle Level benötigt werden
     totalChimesThisLevel(): number {
-      const chimesForCurrentLevel =
-        this.level > 1 ? Math.ceil(10 * Math.pow(this.level - 1, 1.2)) : 0
+      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
       return this.chimesForNextLevel - chimesForCurrentLevel
     },
 
@@ -183,7 +185,7 @@ export const useGameStore = defineStore('game', {
 
     // Gibt die Gesamtanzahl der Universen zurück
     totalUniverses(): number {
-      return this.universes.length
+      return universes.length
     },
   },
 })

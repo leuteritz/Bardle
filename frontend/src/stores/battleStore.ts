@@ -72,7 +72,7 @@ export const useBattleStore = defineStore('battle', {
     chatMessages: [],
     team1: [],
     team2: [],
-    intervals: [] as ReturnType<typeof setInterval>[],
+    timerIds: [] as ReturnType<typeof setTimeout>[],
   }),
 
   actions: {
@@ -81,14 +81,12 @@ export const useBattleStore = defineStore('battle', {
       switch (name) {
         case 'Bard':
           return '/img/BardAbilities/Bard.png'
-        case name:
-          return '/img/champion/' + name + '.jpg'
         default:
-          return '/img/Enemy.png'
+          return '/img/champion/' + name + '.jpg'
       }
     },
 
-    getAvgBattleTime(): number {
+    getAvgBattleTime(): string {
       return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
     },
 
@@ -107,8 +105,8 @@ export const useBattleStore = defineStore('battle', {
         if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
       })
 
-      const interval = setTimeout(this.randomStatsTick, gameStore.gameSpeed)
-      this.intervals.push(interval)
+      const interval = setTimeout(() => this.randomStatsTick(), gameStore.gameSpeed)
+      this.timerIds.push(interval)
     },
 
     // Lädt die Champion-Liste aus einer CSV-Datei und gibt sie als Array zurück
@@ -151,9 +149,8 @@ export const useBattleStore = defineStore('battle', {
 
     // Setzt alle Kampfstatistiken zurück und stoppt laufende Timer für einen neuen Kampf
     clearBattle() {
-      console.log('clearBattle')
-      this.intervals.forEach((interval) => clearTimeout(interval))
-      this.intervals.length = 0
+      this.timerIds.forEach((interval) => clearTimeout(interval))
+      this.timerIds.length = 0
       this.team1.forEach((champ) => {
         champ.kills = 0
         champ.deaths = 0
@@ -198,7 +195,7 @@ export const useBattleStore = defineStore('battle', {
 
         if (messages.length > 0) {
           const currentTimeoutId = setTimeout(showNext, gameStore.gameSpeed)
-          this.intervals.push(currentTimeoutId)
+          this.timerIds.push(currentTimeoutId)
         }
       }
 
@@ -217,9 +214,18 @@ export const useBattleStore = defineStore('battle', {
       return Math.floor(Math.random() * 471) + 30
     },
 
+    // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Chat starten
+    async initializeBattle() {
+      this.clearBattle()
+      await this.refreshTeams()
+      this.randomStatsTick()
+      if (this.team1.length > 0 && this.team2.length > 0) {
+        this.showRandomChatMessagesSequentially()
+      }
+    },
+
     // Hauptfunktion die einen kompletten Kampf simuliert und MMR/LP basierend auf Sieg/Niederlage aktualisiert
-    async simulateBattle(opponentMMR) {
-      console.log('simulateBattle')
+    async simulateBattle(opponentMMR: number) {
       const gameStore = useGameStore()
 
       // Speichert alte Werte für Vergleich
@@ -418,22 +424,13 @@ export const useBattleStore = defineStore('battle', {
 
     // Startet den automatischen Kampfmodus der alle 10 Sekunden neue Kämpfe simuliert
     async startAutoBattle() {
-      console.log('startAutoBattle')
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
 
       // Teams und Chat sofort beim Start erstellen
-      this.clearBattle()
-      await this.refreshTeams()
-      this.randomStatsTick()
-
-      if (this.team1.length > 0 && this.team2.length > 0) {
-        this.showRandomChatMessagesSequentially()
-      }
+      await this.initializeBattle()
 
       const runBattleCycle = async () => {
-        console.log('runBattleCycle')
-
         if (!this.autoBattleEnabled) return
 
         this.currentBattleId++
@@ -443,27 +440,20 @@ export const useBattleStore = defineStore('battle', {
 
         // Nach dem Battle neue Teams für den nächsten Battle erstellen
         setTimeout(async () => {
-          this.clearBattle()
-          await this.refreshTeams()
-          this.randomStatsTick()
-
-          if (this.team1.length > 0 && this.team2.length > 0) {
-            this.showRandomChatMessagesSequentially()
-          }
+          await this.initializeBattle()
 
           this.startCountdown()
-          setTimeout(runBattleCycle, this.autoBattleInterval)
+          this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
         }, 1000) // Kurze Pause um das Ergebnis zu zeigen
       }
 
       // Ersten Battle nach 10 Sekunden starten
       this.startCountdown()
-      setTimeout(runBattleCycle, this.autoBattleInterval)
+      this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
     },
 
     // Initialisiert den dauerhaften Auto-Battle Modus nur einmal pro Session
     async initializePersistentAutoBattle() {
-      console.log('initializePersistentAutoBattle')
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
       await this.startAutoBattle()

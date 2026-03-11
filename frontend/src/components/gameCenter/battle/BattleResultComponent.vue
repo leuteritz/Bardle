@@ -259,12 +259,6 @@ export default defineComponent({
       return currentLpChange.value !== null && battleStore.lastAutoBattleResult
     })
 
-    const currentMmrChange = computed(() => {
-      if (battleStore.lastAutoBattleResult) {
-        return battleStore.mmr - battleStore.autoBattleOldMMR
-      }
-    })
-
     function getBorderImage(rank: string) {
       switch (rank) {
         case 'Iron':
@@ -293,7 +287,6 @@ export default defineComponent({
     return {
       currentResult,
       currentLpChange,
-      currentMmrChange,
       isAutoBattleActive,
       timeUntilNextBattle,
       currentBattleId,

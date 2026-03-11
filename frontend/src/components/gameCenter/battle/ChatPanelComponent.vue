@@ -25,6 +25,7 @@
     <!-- Kompakte Chat Box mit fixer Breite -->
     <div
       id="battle-chat-box"
+      ref="chatBoxRef"
       class="relative z-10 w-full h-32 p-2 mb-2 space-y-1 overflow-y-auto text-xs border rounded-lg shadow-inner bg-white/10 border-purple-400/30 backdrop-blur-sm custom-scrollbar"
     >
       <div
@@ -65,7 +66,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, watch, nextTick, ref } from 'vue'
+import { defineComponent, watch, nextTick, ref } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { useBattleStore } from '../../../stores/battleStore'
 
@@ -75,14 +76,14 @@ export default defineComponent({
   setup() {
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
+    const chatBoxRef = ref<HTMLElement | null>(null)
 
     watch(
       () => battleStore.chatMessages.length,
       async () => {
         await nextTick()
-        const chatBox = document.getElementById('battle-chat-box')
-        if (chatBox) {
-          chatBox.scrollTop = chatBox.scrollHeight
+        if (chatBoxRef.value) {
+          chatBoxRef.value.scrollTop = chatBoxRef.value.scrollHeight
         }
       },
     )
@@ -90,6 +91,7 @@ export default defineComponent({
     return {
       gameStore,
       battleStore,
+      chatBoxRef,
     }
   },
 })
