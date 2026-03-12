@@ -171,15 +171,15 @@
             <!-- Zeitraum-Auswahl -->
             <div class="flex gap-2">
               <button
-                v-for="period in shopStore.timePeriods"
+                v-for="period in cpsStore.timePeriods"
                 :key="period.key"
-                @click="shopStore.setSelectedTimePeriod(period.key)"
+                @click="cpsStore.setSelectedTimePeriod(period.key)"
                 class="px-4 py-2 text-sm font-medium transition-all duration-200 border rounded-lg"
                 :class="{
                   'bg-cyan-500/20 border-cyan-400/50 text-cyan-300':
-                    shopStore.selectedTimePeriod === period.key,
+                    cpsStore.selectedTimePeriod === period.key,
                   'bg-white/5 border-white/20 text-gray-300 hover:bg-white/10':
-                    shopStore.selectedTimePeriod !== period.key,
+                    cpsStore.selectedTimePeriod !== period.key,
                 }"
               >
                 {{ period.label }}
@@ -193,16 +193,16 @@
             <!-- Chart -->
             <div
               class="flex items-end justify-between h-32 gap-1"
-              v-if="shopStore.currentProductionHistory.length > 0"
+              v-if="cpsStore.currentProductionHistory.length > 0"
             >
               <div
-                v-for="(value, index) in shopStore.currentProductionHistory"
+                v-for="(value, index) in cpsStore.currentProductionHistory"
                 :key="index"
                 class="flex-1 transition-all duration-300 rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400"
                 :style="{
-                  height: Math.max(4, (value / shopStore.currentMaxHistoryValue) * 120) + 'px',
+                  height: Math.max(4, (value / cpsStore.currentMaxHistoryValue) * 120) + 'px',
                 }"
-                :title="shopStore.getTooltipText(value, index)"
+                :title="cpsStore.getTooltipText(value, index)"
               ></div>
             </div>
 
@@ -216,8 +216,8 @@
 
             <!-- Zeit-Labels -->
             <div class="flex justify-between mt-2 text-xs text-gray-400">
-              <span>{{ shopStore.getStartTimeLabel() }}</span>
-              <span>{{ shopStore.getMidTimeLabel() }}</span>
+              <span>{{ cpsStore.getStartTimeLabel() }}</span>
+              <span>{{ cpsStore.getMidTimeLabel() }}</span>
               <span>Jetzt</span>
             </div>
           </div>
@@ -231,6 +231,7 @@
 import { defineComponent, onMounted, onUnmounted, watch } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { useShopStore } from '../../../stores/shopStore'
+import { useCpsStore } from '../../../stores/cpsStore'
 import { formatNumber } from '../../../config/numberFormat'
 
 export default defineComponent({
@@ -245,6 +246,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const gameStore = useGameStore()
     const shopStore = useShopStore()
+    const cpsStore = useCpsStore()
 
     const close = () => {
       emit('close')
@@ -252,18 +254,18 @@ export default defineComponent({
 
     // Lifecycle
     onMounted(() => {
-      shopStore.startProductionTracking()
+      cpsStore.startProductionTracking()
     })
 
     onUnmounted(() => {
-      shopStore.stopProductionTracking()
+      cpsStore.stopProductionTracking()
     })
 
     // Watch für sofortige Aktualisierung bei CPS-Änderungen
     watch(
       () => gameStore.chimesPerSecond,
       (newCPS) => {
-        shopStore.updateCurrentCPS(newCPS || 0)
+        cpsStore.updateCurrentCPS(newCPS || 0)
       },
       { immediate: true },
     )
@@ -271,6 +273,7 @@ export default defineComponent({
     return {
       gameStore,
       shopStore,
+      cpsStore,
       close,
       formatNumber,
     }

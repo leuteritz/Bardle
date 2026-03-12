@@ -1,18 +1,11 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { universes } from '../config/universes'
-
-// Interface für Building-Produktion
-interface BuildingProduction {
-  [key: string]: number[]
-}
-
-interface TotalBuildingProduction {
-  [key: string]: number
-}
+import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, MEEP_COST_EXPONENT } from '../config/constants'
+import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade } from '../types'
 
 function chimeThresholdForLevel(level: number): number {
-  return level > 0 ? Math.ceil(10 * Math.pow(level, 1.2)) : 0
+  return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, LEVEL_EXPONENT)) : 0
 }
 
 let _shopStore: ReturnType<typeof useShopStore> | null = null
@@ -24,14 +17,14 @@ export const useGameStore = defineStore('game', {
 
     chimes: 0,
     chimesPerSecond: 0,
-    chimesForNextLevel: 10,
+    chimesForNextLevel: LEVEL_BASE,
     chimesPerClick: 20,
     baseChimesPerClick: 20,
     chimesForMeep: 0,
     chimesForNextUniverse: 0,
     chimesToUniverseRescue: 100000,
     meeps: 0,
-    meepChimeRequirement: 20,
+    meepChimeRequirement: MEEP_BASE_COST,
 
     gold: 0,
     level: 1,
@@ -53,7 +46,10 @@ export const useGameStore = defineStore('game', {
       if (this.chimesForMeep >= this.meepChimeRequirement) {
         setTimeout(() => {
           this.meeps += 1
-          this.meepChimeRequirement = Math.max(20, Math.ceil(20 * Math.pow(this.meeps, 1.2)))
+          this.meepChimeRequirement = Math.max(
+            MEEP_BASE_COST,
+            Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
+          )
           this.chimesForMeep = 0
         }, 100)
       }
@@ -77,7 +73,7 @@ export const useGameStore = defineStore('game', {
     calculateLevel() {
       while (this.chimes >= this.chimesForNextLevel) {
         this.level++
-        this.chimesForNextLevel = Math.ceil(10 * Math.pow(this.level, 1.2))
+        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, LEVEL_EXPONENT))
         if (this.level % 2 === 0) {
           this.skillPoints++
         }
@@ -98,7 +94,7 @@ export const useGameStore = defineStore('game', {
       if (!_shopStore) _shopStore = useShopStore()
       const shopStore = _shopStore
 
-      shopStore.shopUpgrades.forEach((upgrade: any) => {
+      shopStore.shopUpgrades.forEach((upgrade: ShopUpgrade) => {
         if (upgrade.baseCPS && upgrade.level > 0) {
           const production = (upgrade.baseCPS || 0) * upgrade.level
 
@@ -148,16 +144,9 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet den Fortschritt im aktuellen Level als Prozent
     levelProgress(): number {
-      // Berechne Chimes die für das aktuelle Level benötigt wurden
       const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
-
-      // Chimes die im aktuellen Level bereits gesammelt wurden
       const currentLevelChimes = this.chimes - chimesForCurrentLevel
-
-      // Total Chimes die für das aktuelle Level benötigt werden
       const totalChimesThisLevel = this.chimesForNextLevel - chimesForCurrentLevel
-
-      // Fortschritt als Prozent (0-100)
       return Math.min(100, Math.max(0, (currentLevelChimes / totalChimesThisLevel) * 100))
     },
 

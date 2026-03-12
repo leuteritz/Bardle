@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { battleMessages } from '../config/messages'
+import {
+  ELO_K_FACTOR,
+  ELO_RATING_SCALE,
+  ELO_LUCK_FACTOR,
+  AUTO_BATTLE_INTERVAL_MS,
+  MMR_TO_POWER_MULTIPLIER,
+} from '../config/constants'
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -28,9 +35,9 @@ export const useBattleStore = defineStore('battle', {
       'Challenger',
     ],
 
-    // Auto-Battle System - steuert automatische Kämpfe alle 10 Sekunden
+    // Auto-Battle System - steuert automatische Kämpfe
     autoBattleEnabled: false,
-    autoBattleInterval: 10000,
+    autoBattleInterval: AUTO_BATTLE_INTERVAL_MS,
     autoBattleTimer: null,
     lastAutoBattleResult: null,
 
@@ -49,7 +56,7 @@ export const useBattleStore = defineStore('battle', {
     battleFormula: {
       baseWinChance: 0.5,
       powerDifferenceMultiplier: 0.1,
-      luckFactor: 0.15,
+      luckFactor: ELO_LUCK_FACTOR,
     },
 
     // Statistiken - verfolgt Gesamtstatistiken aller Kämpfe
@@ -111,7 +118,7 @@ export const useBattleStore = defineStore('battle', {
 
     // Lädt die Champion-Liste aus einer CSV-Datei und gibt sie als Array zurück
     async loadChampions() {
-      const response = await fetch('/src/config/champion.csv')
+      const response = await fetch('/data/champion.csv')
       const text = await response.text()
       return text
         .split('\n')
@@ -348,23 +355,23 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Berechnet LP-Gewinn/Verlust basierend auf MMR-Änderung (mehr MMR-Änderung = mehr LP)
+    // Berechnet LP-Gewinn/Verlust basierend auf MMR-Änderung
     calculateLPChange(mmrChange, won) {
       const baseLPChange = 20
       const lpChange = won ? baseLPChange : -baseLPChange
-      const mmrFactor = Math.abs(mmrChange) / 32
+      const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
       return Math.round(lpChange * mmrFactor)
     },
 
-    // Konvertiert MMR-Wert in Kampfstärke für Kampfsimulationen (MMR × 1,5)
+    // Konvertiert MMR-Wert in Kampfstärke für Kampfsimulationen
     mmrToPower(mmr) {
-      return Math.max(100, Math.floor(mmr * 1.5))
+      return Math.max(100, Math.floor(mmr * MMR_TO_POWER_MULTIPLIER))
     },
 
     // Berechnet Gewinnwahrscheinlichkeit basierend auf Kampfkraft-Unterschied zwischen Spieler und Gegner
     calculateWinProbability(playerPower, opponentPower) {
       const powerDifference = playerPower - opponentPower
-      const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / 400))
+      const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / ELO_RATING_SCALE))
       const luckModifier = (Math.random() - 0.5) * this.battleFormula.luckFactor
       return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier))
     },
@@ -399,13 +406,12 @@ export const useBattleStore = defineStore('battle', {
       return ranks[0]
     },
 
-    // Aktualisiert MMR nach Kampf mit ELO-Rating System (K-Faktor 32)
+    // Aktualisiert MMR nach Kampf mit ELO-Rating System
     async updateRanking(won, opponentMMR) {
       const currentMMR = this.mmr
-      const K = 32
-      const expectedScore = 1 / (1 + Math.pow(10, (opponentMMR - currentMMR) / 400))
+      const expectedScore = 1 / (1 + Math.pow(10, (opponentMMR - currentMMR) / ELO_RATING_SCALE))
       const actualScore = won ? 1 : 0
-      const mmrChange = Math.round(K * (actualScore - expectedScore))
+      const mmrChange = Math.round(ELO_K_FACTOR * (actualScore - expectedScore))
       this.mmr += mmrChange
       const lpChange = this.calculateLPChange(mmrChange, won)
       await this.updateLP(lpChange)
@@ -422,7 +428,7 @@ export const useBattleStore = defineStore('battle', {
       if (this.currentRank.lp < 0) await this.demoteRank()
     },
 
-    // Startet den automatischen Kampfmodus der alle 10 Sekunden neue Kämpfe simuliert
+    // Startet den automatischen Kampfmodus
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
@@ -447,7 +453,7 @@ export const useBattleStore = defineStore('battle', {
         }, 1000) // Kurze Pause um das Ergebnis zu zeigen
       }
 
-      // Ersten Battle nach 10 Sekunden starten
+      // Ersten Battle nach Intervall starten
       this.startCountdown()
       this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
     },

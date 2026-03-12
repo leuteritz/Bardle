@@ -31,7 +31,7 @@
 
 <script lang="ts">
 import { ref, defineComponent, computed, onMounted } from 'vue'
-import ChampionLobbyComponent from '../ChampionLobbyComponent.vue'
+import ChampionLobbyComponent from './champion/ChampionLobbyComponent.vue'
 import IdleGameComponent from './idle/IdleGameComponent.vue'
 import BattleResultComponent from './battle/BattleResultComponent.vue'
 import { useBattleStore } from '../../stores/battleStore'

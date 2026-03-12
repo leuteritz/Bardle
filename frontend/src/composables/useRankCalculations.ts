@@ -1,34 +1,12 @@
 import { computed } from 'vue'
 import { useBattleStore } from '../stores/battleStore'
+import { RANK_BORDER_IMAGES } from '../config/constants'
 
 export function useRankCalculations() {
   const battleStore = useBattleStore()
 
   const rankIcon = computed(() => {
-    switch (battleStore.currentRank.tier) {
-      case 'Iron':
-        return '/img/RankBorder/RankIron.png'
-      case 'Bronze':
-        return '/img/RankBorder/RankBronze.png'
-      case 'Silver':
-        return '/img/RankBorder/RankSilver.png'
-      case 'Gold':
-        return '/img/RankBorder/RankGold.png'
-      case 'Platinum':
-        return '/img/RankBorder/RankPlatin.png'
-      case 'Emerald':
-        return '/img/RankBorder/RankEmerald.png'
-      case 'Diamond':
-        return '/img/RankBorder/RankDiamand.png'
-      case 'Master':
-        return '/img/RankBorder/RankMaster.png'
-      case 'Grandmaster':
-        return '/img/RankBorder/RankGrandMaster.png'
-      case 'Challenger':
-        return '/img/RankBorder/RankChallenger.png'
-      default:
-        return '/img/RankBorder/RankIron.png'
-    }
+    return RANK_BORDER_IMAGES[battleStore.currentRank.tier] ?? RANK_BORDER_IMAGES.Iron
   })
 
   const getRankQualityColor = () => {

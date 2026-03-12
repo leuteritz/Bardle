@@ -214,13 +214,13 @@
 </template>
 
 <script lang="ts">
-// Script bleibt unverändert
 import { useGameStore } from '../../../stores/gameStore'
 import { defineComponent, computed } from 'vue'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import BattleMessageComponent from './BattleMessageComponent.vue'
 import { useBattleStore } from '../../../stores/battleStore'
+import { RANK_BORDER_IMAGES } from '../../../config/constants'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -260,28 +260,7 @@ export default defineComponent({
     })
 
     function getBorderImage(rank: string) {
-      switch (rank) {
-        case 'Iron':
-          return '/img/RankBorder/RankIron.png'
-        case 'Gold':
-          return '/img/RankBorder/RankGold.png'
-        case 'Silver':
-          return '/img/RankBorder/RankSilver.png'
-        case 'Bronze':
-          return '/img/RankBorder/RankBronze.png'
-        case 'Emerald':
-          return '/img/RankBorder/RankEmerald.png'
-        case 'Diamond':
-          return '/img/RankBorder/RankDiamand.png'
-        case 'Master':
-          return '/img/RankBorder/RankMaster.png'
-        case 'Grandmaster':
-          return '/img/RankBorder/RankGrandMaster.png'
-        case 'Challenger':
-          return '/img/RankBorder/RankChallenger.png'
-        case 'Platinum':
-          return '/img/RankBorder/RankPlatin.png'
-      }
+      return RANK_BORDER_IMAGES[rank] ?? RANK_BORDER_IMAGES.Iron
     }
 
     return {
@@ -302,32 +281,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Futuristische Animationen */
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
 .battle-container {
   animation: fadeInScale 0.6s ease-out forwards;
 }
