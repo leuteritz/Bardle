@@ -1,16 +1,15 @@
 <template>
   <div
     v-if="isVisible"
-    class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
     @click.self="close"
-    style="min-height: 75vh"
   >
     <div
-      class="relative w-full max-w-4xl overflow-hidden border shadow-2xl max-h-[80vh] rounded-3xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 border-white/20"
+      class="relative w-full max-w-4xl mx-4 overflow-hidden border shadow-2xl shadow-purple-900/50 max-h-[80vh] rounded-3xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 border-white/30"
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-center p-6 border-b backdrop-blur-lg bg-white/10 border-white/20"
+        class="relative flex items-center justify-center p-6 border-b backdrop-blur-lg bg-white/10 border-white/20"
       >
         <div class="flex items-center gap-4">
           <div
