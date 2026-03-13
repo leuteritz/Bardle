@@ -8,6 +8,7 @@ import BardHudComponent from './components/bottom/BardHudComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
+import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -148,6 +149,17 @@ const title = 'Bardle'
         </div>
       </div>
     </div>
+    <!-- Encyclopedia Toggle Button -->
+    <button
+      v-show="!gameStore.isEncyclopediaOpen"
+      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 border border-r-0 shadow-lg top-1/2 -translate-y-1/2 rounded-l-xl bg-gradient-to-b from-purple-800/80 to-pink-900/80 backdrop-blur-sm border-purple-400/30 hover:from-purple-700/90 hover:to-pink-800/90 hover:shadow-purple-500/20 hover:pr-3 group"
+      @click="gameStore.toggleEncyclopedia()"
+    >
+      <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
+    </button>
+
+    <!-- Encyclopedia Panel -->
+    <EncyclopediaPanel />
   </div>
 </template>
 

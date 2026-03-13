@@ -40,6 +40,7 @@ export const useGameStore = defineStore('game', {
     // Modal Status für UI-Effekte
     isCPSModalOpen: false,
     isExpeditionModalOpen: false,
+    isEncyclopediaOpen: false,
 
     activeExpedition: null as Expedition | null,
   }),
@@ -180,6 +181,10 @@ export const useGameStore = defineStore('game', {
 
     setExpeditionModalOpen(isOpen: boolean) {
       this.isExpeditionModalOpen = isOpen
+    },
+
+    toggleEncyclopedia() {
+      this.isEncyclopediaOpen = !this.isEncyclopediaOpen
     },
 
     // Schickt Meeps auf eine Portal-Expedition
