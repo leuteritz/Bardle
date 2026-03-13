@@ -52,7 +52,7 @@ const filteredData = computed(() => {
     <Transition name="slide">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-purple-400/30 bg-gradient-to-bl from-slate-900/98 via-purple-950/95 to-slate-900/98 font-['MedievalSharp']"
+        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-purple-400/30 bg-gradient-to-bl from-slate-900 via-purple-950 to-slate-900 font-['MedievalSharp']"
       >
         <!-- Animated background particles -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
@@ -111,7 +111,7 @@ const filteredData = computed(() => {
           >
             <!-- Category header -->
             <button
-              class="flex items-center w-full gap-2 px-3 py-2.5 text-left transition-all duration-200 border rounded-xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 group"
+              class="flex items-center w-full gap-2 px-3 py-2.5 text-left transition-all duration-200 border rounded-xl bg-white/10 border-white/15 hover:bg-white/15 hover:border-white/25 group"
               :class="{ 'bg-white/8 border-purple-400/30': expandedCategories.has(category.id) }"
               @click="toggleCategory(category.id)"
             >
@@ -142,7 +142,7 @@ const filteredData = computed(() => {
               <div
                 v-for="entry in category.entries"
                 :key="entry.id"
-                class="p-3 transition-all duration-200 border rounded-xl bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-purple-400/20"
+                class="p-3 transition-all duration-200 border rounded-xl bg-white/8 border-white/10 hover:bg-white/12 hover:border-purple-400/30"
               >
                 <div class="flex items-start gap-3">
                   <!-- Icon -->
