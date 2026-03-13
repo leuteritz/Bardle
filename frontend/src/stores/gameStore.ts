@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { universes } from '../config/universes'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, MEEP_COST_EXPONENT } from '../config/constants'
-import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade } from '../types'
+import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition } from '../types'
 
 function chimeThresholdForLevel(level: number): number {
   return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, LEVEL_EXPONENT)) : 0
@@ -39,6 +39,9 @@ export const useGameStore = defineStore('game', {
 
     // Modal Status für UI-Effekte
     isCPSModalOpen: false,
+    isExpeditionModalOpen: false,
+
+    activeExpedition: null as Expedition | null,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -174,6 +177,41 @@ export const useGameStore = defineStore('game', {
     setCPSModalOpen(isOpen: boolean) {
       this.isCPSModalOpen = isOpen
     },
+
+    setExpeditionModalOpen(isOpen: boolean) {
+      this.isExpeditionModalOpen = isOpen
+    },
+
+    // Schickt Meeps auf eine Portal-Expedition
+    startExpedition(
+      universeId: number,
+      universeName: string,
+      meepsSent: number,
+      durationMs: number,
+      reward: number,
+    ) {
+      if (this.activeExpedition || meepsSent < 1 || meepsSent > this.meeps) return
+      this.meeps -= meepsSent
+      this.activeExpedition = {
+        universeId,
+        universeName,
+        meepsSent,
+        startTime: Date.now(),
+        durationMs,
+        reward,
+        collected: false,
+      }
+    },
+
+    // Sammelt abgeschlossene Expedition ein
+    collectExpedition() {
+      if (!this.activeExpedition) return
+      if (Date.now() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
+      this.chimes += this.activeExpedition.reward
+      this.meeps += this.activeExpedition.meepsSent
+      this.activeExpedition = null
+      this.calculateLevel()
+    },
   },
 
   getters: {
@@ -229,6 +267,19 @@ export const useGameStore = defineStore('game', {
     // Gibt die Gesamtanzahl der Universen zurück
     totalUniverses(): number {
       return universes.length
+    },
+
+    // Ob die aktive Expedition abgeschlossen ist
+    isExpeditionComplete(): boolean {
+      if (!this.activeExpedition) return false
+      return Date.now() >= this.activeExpedition.startTime + this.activeExpedition.durationMs
+    },
+
+    // Fortschritt der aktiven Expedition in Prozent (0–100)
+    expeditionProgress(): number {
+      if (!this.activeExpedition) return 0
+      const elapsed = Date.now() - this.activeExpedition.startTime
+      return Math.min(100, (elapsed / this.activeExpedition.durationMs) * 100)
     },
   },
 })

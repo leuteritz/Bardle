@@ -41,6 +41,17 @@ export interface TotalBuildingProduction {
   [key: string]: number
 }
 
+// Expedition types
+export interface Expedition {
+  universeId: number
+  universeName: string
+  meepsSent: number
+  startTime: number
+  durationMs: number
+  reward: number
+  collected: boolean
+}
+
 // Battle types
 export interface CurrentRank {
   tier: string

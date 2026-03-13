@@ -110,7 +110,11 @@
           </div>
         </div>
 
-        <MeepProgressComponent />
+        <MeepProgressComponent @click="gameStore.setExpeditionModalOpen(true)" />
+        <ExpeditionComponent
+          :is-visible="gameStore.isExpeditionModalOpen"
+          @close="gameStore.setExpeditionModalOpen(false)"
+        />
       </div>
 
       <!-- Shop Area mit Glassmorphism -->
@@ -145,6 +149,7 @@ import { universes } from '../../../config/universes'
 import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
 import UniverseProgressComponent from './UniverseProgressComponent.vue'
 import MeepProgressComponent from './MeepProgressComponent.vue'
+import ExpeditionComponent from './ExpeditionComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -153,6 +158,7 @@ export default defineComponent({
     ChimesPerSecondModal,
     UniverseProgressComponent,
     MeepProgressComponent,
+    ExpeditionComponent,
   },
   setup() {
     const gameStore = useGameStore()
