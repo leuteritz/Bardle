@@ -2,14 +2,14 @@
   <div class="flex flex-col w-full h-full p-4 space-y-6">
     <!-- Kaufmengen-Auswahl -->
     <div
-      class="flex items-center justify-center gap-2 p-4 border bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl border-white/20 backdrop-blur-md"
+      class="flex flex-wrap items-center justify-center gap-2 p-4 border bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl border-white/20 backdrop-blur-md"
     >
-      <span class="mr-4 text-lg font-semibold text-white">Kaufmenge:</span>
+      <span class="mr-4 text-sm font-semibold text-white">Kaufmenge:</span>
       <button
         v-for="option in buyOptions"
         :key="option.value"
         @click="shopStore.setBuyAmount(option.value)"
-        class="px-4 py-2 text-sm font-bold transition-all duration-300 border-2 rounded-xl"
+        class="px-3 py-1.5 text-sm font-bold transition-all duration-300 border-2 rounded-xl"
         :class="{
           'bg-gradient-to-r from-purple-500 to-blue-600 text-white border-purple-400 shadow-lg shadow-purple-500/40':
             shopStore.buyAmount === option.value,
@@ -34,7 +34,7 @@
       }"
     >
       <!-- Upgrade Icon + Info -->
-      <div class="flex items-center flex-1 gap-5">
+      <div class="flex items-center flex-1 min-w-0 gap-5">
         <!-- Icon mit Glow -->
         <div
           class="flex items-center justify-center w-20 h-20 transition-all duration-300 b group-hover:scale-105"
@@ -48,14 +48,14 @@
           <span v-else class="text-3xl">{{ upgrade.icon }}</span>
         </div>
         <!-- Text -->
-        <div class="flex flex-col">
+        <div class="flex flex-col min-w-0">
           <h3
-            class="mb-1 text-lg font-bold text-transparent bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text"
+            class="mb-1 text-base font-bold leading-tight text-transparent bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text"
           >
             {{ upgrade.name }}
           </h3>
           <!-- Upgrade Stats -->
-          <div class="flex flex-wrap gap-3 mt-1 text-xs">
+          <div class="flex flex-wrap gap-2 mt-1 text-xs">
             <span
               v-if="getUpgradeStats(upgrade).cps"
               class="px-2 py-1 font-semibold text-green-300 border rounded-md shadow-sm bg-green-500/20 border-green-400/40"
@@ -91,9 +91,9 @@
         </div>
       </div>
       <!-- Upgrade Button -->
-      <div class="flex flex-col items-center ml-4">
+      <div class="flex-shrink-0 w-24 ml-4">
         <button
-          class="px-6 py-3 text-sm font-bold transition-all duration-300 shadow-md rounded-xl"
+          class="w-full px-3 py-2 text-sm font-bold transition-all duration-300 shadow-md rounded-xl"
           :class="{
             'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-green-500/40 hover:scale-105 active:scale-95 border border-green-500/60':
               shopStore.canAffordUpgrade(upgrade),
@@ -102,11 +102,11 @@
           }"
           :disabled="!shopStore.canAffordUpgrade(upgrade)"
         >
-          <div class="flex flex-col items-center justify-center">
-            <span class="block text-lg">
+          <div class="flex flex-row items-center justify-center gap-1.5">
+            <img src="/img/BardAbilities/BardChime.png" class="w-6 h-6" />
+            <span class="text-sm font-bold whitespace-nowrap">
               {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
             </span>
-            <img src="/img/BardAbilities/BardChime.png" class="w-6 h-6" />
           </div>
         </button>
       </div>
