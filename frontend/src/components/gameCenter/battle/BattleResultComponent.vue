@@ -239,24 +239,27 @@ export default defineComponent({
       team2Kills: battleStore.team2.reduce((sum, champ) => sum + champ.kills, 0),
     }))
 
-    const showBattleResult = computed(() => timeUntilNextBattle.value < 2)
-
     // Auto Battle State
     const isAutoBattleActive = computed(() => battleStore.autoBattleEnabled)
     const timeUntilNextBattle = computed(() => battleStore.timeUntilNextBattle)
     const currentBattleId = computed(() => battleStore.currentBattleId)
 
+    // Show result for most of the countdown (hide in last 2s before next battle)
+    const showBattleResult = computed(
+      () => battleStore.lastAutoBattleResult !== null && battleStore.timeUntilNextBattle >= 2,
+    )
+
     const currentResult = computed(() => battleStore.lastAutoBattleResult || { won: false })
 
     const currentLpChange = computed(() => {
       if (battleStore.lastAutoBattleResult) {
-        return battleStore.currentRank.lp - battleStore.autoBattleOldLP
+        return battleStore.lastLpChange
       }
       return null
     })
 
     const showLpChange = computed(() => {
-      return currentLpChange.value !== null && battleStore.lastAutoBattleResult
+      return currentLpChange.value !== null && battleStore.lastAutoBattleResult !== null
     })
 
     function getBorderImage(rank: string) {

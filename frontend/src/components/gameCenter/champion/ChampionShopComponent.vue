@@ -15,6 +15,7 @@
       <p class="mt-2 text-sm font-semibold text-purple-300">
         Erweitere dein Team mit mächtigen Champions!
       </p>
+      <p v-if="loadError" class="mt-1 text-xs text-red-400">{{ loadError }}</p>
     </div>
 
     <!-- Champions Grid -->
@@ -49,14 +50,16 @@
             :class="
               champion.owned
                 ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-105 hover:shadow-green-400/50'
+                : canAfford
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-105 hover:shadow-green-400/50'
+                  : 'bg-gray-700 cursor-not-allowed opacity-60'
             "
-            :disabled="champion.owned"
+            :disabled="champion.owned || !canAfford"
             @click="buyChampion(champion.name)"
           >
             <span v-if="!champion.owned" class="flex items-center justify-center gap-1">
-              <span>💰</span>
-              <span>Kaufen</span>
+              <span>{{ formatNumber(CHAMPION_COST) }}</span>
+              <img src="/img/BardAbilities/BardChime.png" class="w-3 h-3" />
             </span>
             <span v-else class="flex items-center justify-center gap-1">
               <span>✅</span>
@@ -88,6 +91,10 @@
 <script lang="ts">
 import { ref, onMounted, defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
+import { useGameStore } from '../../../stores/gameStore'
+import { formatNumber } from '../../../config/numberFormat'
+
+const CHAMPION_COST = 500
 
 interface Champion {
   name: string
@@ -99,25 +106,34 @@ export default defineComponent({
   setup() {
     const champions = ref<Champion[]>([])
     const battleStore = useBattleStore()
+    const gameStore = useGameStore()
+    const loadError = ref<string | null>(null)
 
     async function loadChampions() {
-      const response = await fetch('/data/champion.csv')
-      if (!response.ok) throw new Error('Fehler beim Laden der Champion-Liste')
-      const text = await response.text()
-      champions.value = text
-        .split('\n')
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0)
-        .map((name) => ({ name, owned: battleStore.ownedChampions.includes(name) }))
+      try {
+        const response = await fetch('/data/champion.csv')
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const text = await response.text()
+        champions.value = text
+          .split('\n')
+          .map((name) => name.trim())
+          .filter((name) => name.length > 0)
+          .map((name) => ({ name, owned: battleStore.ownedChampions.includes(name) }))
+      } catch (e) {
+        loadError.value = 'Champions konnten nicht geladen werden.'
+      }
     }
 
     function buyChampion(name: string) {
-      if (!battleStore.ownedChampions.includes(name)) {
+      if (!battleStore.ownedChampions.includes(name) && gameStore.chimes >= CHAMPION_COST) {
+        gameStore.chimes -= CHAMPION_COST
         battleStore.ownedChampions.push(name)
         const champ = champions.value.find((c) => c.name === name)
         if (champ) champ.owned = true
       }
     }
+
+    const canAfford = computed(() => gameStore.chimes >= CHAMPION_COST)
 
     const availableChampions = computed(() =>
       champions.value.filter((c) => !battleStore.ownedChampions.includes(c.name)),
@@ -132,6 +148,11 @@ export default defineComponent({
       buyChampion,
       availableChampions,
       battleStore,
+      gameStore,
+      canAfford,
+      loadError,
+      CHAMPION_COST,
+      formatNumber,
     }
   },
 })

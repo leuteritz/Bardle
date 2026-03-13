@@ -36,7 +36,7 @@
           <div
             class="text-sm font-black text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
           >
-            {{ formatNumber(gameStore.gold || 0) }}
+            {{ formatNumber(gameStore.totalPower || 0) }}
           </div>
           <img
             src="/img/BardGold.png"

@@ -26,13 +26,13 @@ export const useGameStore = defineStore('game', {
     meeps: 0,
     meepChimeRequirement: MEEP_BASE_COST,
 
-    gold: 0,
     level: 1,
 
     skillPoints: 0,
-    abilityLevels: [0, 0, 0, 0], // Q, W, E, R
+    abilityLevels: [0, 0, 0, 0], // Q=CPS, W=Power, E=MeepCost, R=CPC
 
     currentUniverse: 1,
+    prestigeAvailable: false,
 
     buildingProductionHistory: {} as BuildingProduction,
     totalBuildingProduction: {} as TotalBuildingProduction,
@@ -46,18 +46,14 @@ export const useGameStore = defineStore('game', {
       if (this.chimesForMeep >= this.meepChimeRequirement) {
         setTimeout(() => {
           this.meeps += 1
-          this.meepChimeRequirement = Math.max(
+          const baseCost = Math.max(
             MEEP_BASE_COST,
             Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
           )
+          this.meepChimeRequirement = Math.ceil(baseCost * this.abilityMeepCostMultiplier)
           this.chimesForMeep = 0
         }, 100)
       }
-    },
-
-    // Fügt Gold hinzu
-    addGold() {
-      this.gold++
     },
 
     // Fügt Chimes hinzu und aktualisiert alle abhängigen Werte
@@ -67,6 +63,7 @@ export const useGameStore = defineStore('game', {
       this.chimesForNextUniverse += this.chimesPerClick
       this.calculateLevel()
       this.addMeep()
+      this.checkPrestigeAvailability()
     },
 
     // Berechnet das aktuelle Level basierend auf gesammelten Chimes
@@ -86,6 +83,10 @@ export const useGameStore = defineStore('game', {
       if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
         this.abilityLevels[index]++
         this.skillPoints--
+        // Recalculate CPS and CPC after ability upgrade
+        if (!_shopStore) _shopStore = useShopStore()
+        this.chimesPerSecond = _shopStore.calculateTotalCPS()
+        this.chimesPerClick = _shopStore.calculateTotalCPC()
       }
     },
 
@@ -116,6 +117,44 @@ export const useGameStore = defineStore('game', {
       })
     },
 
+    // Prüft ob Prestige verfügbar ist
+    checkPrestigeAvailability() {
+      if (
+        !this.prestigeAvailable &&
+        this.chimesForNextUniverse >= this.chimesToUniverseRescue &&
+        this.currentUniverse < this.totalUniverses
+      ) {
+        this.prestigeAvailable = true
+      }
+    },
+
+    // Führt Prestige durch: wechselt Universum und setzt Spielstand zurück
+    triggerPrestige() {
+      if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
+      this.currentUniverse++
+      this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
+      this.chimesForNextUniverse = 0
+      this.prestigeAvailable = false
+      // Reset resources
+      this.chimes = 0
+      this.chimesForMeep = 0
+      this.level = 1
+      this.chimesForNextLevel = LEVEL_BASE
+      this.meeps = 0
+      this.meepChimeRequirement = MEEP_BASE_COST
+      this.skillPoints = 0
+      this.abilityLevels = [0, 0, 0, 0]
+      this.buildingProductionHistory = {}
+      this.totalBuildingProduction = {}
+      // Reset shop buildings and recalculate
+      if (!_shopStore) _shopStore = useShopStore()
+      _shopStore.shopUpgrades.forEach((u) => {
+        u.level = 0
+      })
+      this.chimesPerSecond = _shopStore.calculateTotalCPS()
+      this.chimesPerClick = _shopStore.calculateTotalCPC()
+    },
+
     // Verarbeitet passive Einnahmen pro Sekunde
     tick() {
       this.inGameTime++
@@ -128,6 +167,7 @@ export const useGameStore = defineStore('game', {
         this.addMeep()
         this.trackBuildingProduction()
       }
+      this.checkPrestigeAvailability()
     },
 
     // Setzt den Modal-Status für UI-Effekte
@@ -164,7 +204,21 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet die Gesamtkampfkraft des Spielers
     totalPower(): number {
-      return this.meeps * 100 + this.gold * 1000 + this.chimes * 1000
+      return this.meeps * 100 + this.abilityPowerBonus
+    },
+
+    // Ability-Multiplikatoren für Q/W/E/R-Effekte
+    abilityCPSMultiplier(): number {
+      return 1 + this.abilityLevels[0] * 0.15 // Q: +15% CPS pro Level
+    },
+    abilityPowerBonus(): number {
+      return this.abilityLevels[1] * 300 // W: +300 Kampfkraft pro Level
+    },
+    abilityMeepCostMultiplier(): number {
+      return Math.max(0.5, 1 - this.abilityLevels[2] * 0.1) // E: -10% Meep-Kosten pro Level
+    },
+    abilityCPCMultiplier(): number {
+      return 1 + this.abilityLevels[3] * 0.25 // R: +25% CPC pro Level
     },
 
     // Berechnet den Fortschritt zur Universumsrettung als Prozent

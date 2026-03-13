@@ -48,7 +48,7 @@
       </p>
     </div>
 
-    <!-- Universe Info -->
+    <!-- Universe Info + Prestige Button -->
     <div class="flex flex-col items-center w-1/4">
       <div
         class="px-4 py-2 text-base font-bold text-transparent border bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text backdrop-blur-sm bg-white/10 border-emerald-400/30 rounded-xl"
@@ -58,6 +58,13 @@
       <div class="mt-2 text-xs font-medium text-emerald-300 opacity-80">
         {{ universes[gameStore.currentUniverse - 1].description }}
       </div>
+      <button
+        v-if="gameStore.prestigeAvailable"
+        @click="gameStore.triggerPrestige()"
+        class="mt-2 px-4 py-2 text-sm font-bold text-white border rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 border-purple-400/50 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/40 active:scale-95 transition-all duration-300 animate-pulse"
+      >
+        🌌 Prestige!
+      </button>
     </div>
   </div>
 </template>

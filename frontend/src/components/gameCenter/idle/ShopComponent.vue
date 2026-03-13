@@ -136,6 +136,7 @@ export default defineComponent({
 
     const buyOptions: BuyOption[] = [
       { value: 1, label: '1x' },
+      { value: 5, label: '5x' },
       { value: 10, label: '10x' },
       { value: 'max', label: 'Max' },
     ]
@@ -147,15 +148,15 @@ export default defineComponent({
       }
     }
 
-    // Berechnet die Werte für Upgrade
+    // Zeigt aktuelle Gesamtproduktion (0 bei Level 0)
     const getUpgradeStats = (upgrade: any) => {
       if (upgrade.baseCPS != null) {
         return {
-          cps: upgrade.baseCPS ? upgrade.baseCPS * Math.max(1, upgrade.level) : null,
+          cps: upgrade.baseCPS && upgrade.level > 0 ? upgrade.baseCPS * upgrade.level : null,
         }
       } else if (upgrade.baseCPC != null) {
         return {
-          cpc: upgrade.baseCPC ? upgrade.baseCPC * Math.max(1, upgrade.level) : null,
+          cpc: upgrade.baseCPC && upgrade.level > 0 ? upgrade.baseCPC * upgrade.level : null,
         }
       }
       return { cps: null, cpc: null }

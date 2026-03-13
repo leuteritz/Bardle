@@ -121,7 +121,7 @@ export const useShopStore = defineStore('shop', {
         .sort((a, b) => b.lifetimeProduction - a.lifetimeProduction)
     },
 
-    // Summiert die gesamte Lebenszeit-Produktion aller CPS-Gebäude
+    // Summiert die gesamte Lebenszeit-Produktion aller CPS-Gebäude (ohne Ability-Bonus)
     totalLifetimeProduction(): number {
       const gameStore = useGameStore()
       return this.shopUpgrades
@@ -230,14 +230,16 @@ export const useShopStore = defineStore('shop', {
       return 0
     },
 
-    // Summiert CPS-Werte aller Upgrades für automatische Chime-Generierung
+    // Summiert CPS-Werte aller Upgrades und wendet Q-Ability-Bonus an
     calculateTotalCPS(): number {
-      return this.shopUpgrades.reduce((total, upgrade) => {
+      const gameStore = useGameStore()
+      const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         return total + (upgrade.baseCPS || 0) * upgrade.level
       }, 0)
+      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier)
     },
 
-    // Summiert CPC-Boni aller Upgrades zum Basis-Klickwert
+    // Summiert CPC-Boni aller Upgrades und wendet R-Ability-Bonus an
     calculateTotalCPC(): number {
       const gameStore = useGameStore()
 
@@ -245,7 +247,7 @@ export const useShopStore = defineStore('shop', {
         return total + (upgrade.baseCPC || 0) * upgrade.level
       }, 0)
 
-      return gameStore.baseChimesPerClick + upgradeBonus
+      return Math.floor((gameStore.baseChimesPerClick + upgradeBonus) * gameStore.abilityCPCMultiplier)
     },
 
     // Berechnet aktuelle Kosten eines Upgrades basierend auf Level
