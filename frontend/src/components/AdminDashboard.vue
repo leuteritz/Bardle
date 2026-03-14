@@ -10,6 +10,8 @@ const shopStore = useShopStore()
 
 const isOpen = ref(false)
 const search = ref('')
+const editingKey = ref<string | null>(null)
+const editingValue = ref<string>('')
 
 function toggle() {
   isOpen.value = !isOpen.value
@@ -246,9 +248,12 @@ function resetSection(sectionId: string) {
                 type="number"
                 :min="field.min"
                 :max="(field as any).max"
-                :value="getValue(field.key)"
+                :value="editingKey === field.key ? editingValue : getValue(field.key)"
                 class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
-                @change="setValue(field.key, ($event.target as HTMLInputElement).value)"
+                @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
+                @input="editingValue = ($event.target as HTMLInputElement).value"
+                @change="setValue(field.key, editingValue); editingKey = null"
+                @blur="setValue(field.key, editingValue); editingKey = null"
               />
 
               <!-- Range slider -->
