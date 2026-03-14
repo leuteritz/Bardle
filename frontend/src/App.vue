@@ -13,8 +13,6 @@ import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const { currentMsg } = useTitleRotation()
-
-const title = 'Bardle'
 </script>
 
 <template>
@@ -29,12 +27,8 @@ const title = 'Bardle'
           <RankComponent />
         </div>
 
-        <!-- Mitte: Spiel-Titel -->
-        <h1
-          class="flex items-start justify-center col-span-1 text-4xl font-bold text-amber-600 drop-shadow-lg"
-        >
-          {{ title }}
-        </h1>
+        <!-- Mitte: leer -->
+        <div class="col-span-1"></div>
 
         <!-- Rechts: Wechselnde Nachrichten -->
         <div class="flex items-center justify-center col-span-1 mb-44">
@@ -107,7 +101,7 @@ const title = 'Bardle'
               class="absolute w-32 h-32 bg-blue-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
             ></div>
             <div
-              class="absolute bg-violet-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+              class="absolute rounded-full bg-violet-500 top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
             ></div>
             <div
               class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
@@ -152,7 +146,7 @@ const title = 'Bardle'
     <!-- Encyclopedia Toggle Button -->
     <button
       v-show="!gameStore.isEncyclopediaOpen"
-      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 border border-r-0 shadow-lg top-1/2 -translate-y-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
+      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
       @click="gameStore.toggleEncyclopedia()"
     >
       <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
@@ -160,6 +154,11 @@ const title = 'Bardle'
 
     <!-- Encyclopedia Panel -->
     <EncyclopediaPanel />
+
+    <span
+      class="fixed z-50 text-sm bottom-2 right-3 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
+      >©Leuteritz</span
+    >
   </div>
 </template>
 
