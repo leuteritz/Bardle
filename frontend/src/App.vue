@@ -28,20 +28,10 @@ const { currentMsg } = useTitleRotation()
           <RankComponent />
         </div>
 
-        <!-- Mitte: leer -->
-        <div class="col-span-1"></div>
-
-        <!-- Rechts: Wechselnde Nachrichten -->
-        <div class="flex items-center justify-center col-span-1 mb-44">
-          <p
-            class="text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg"
-          >
-            {{ currentMsg }}
-          </p>
-        </div>
-        <div class="absolute z-20 top-3 right-3">
+        <!-- Mitte: Zeit -->
+        <div class="flex items-start justify-center col-span-1">
           <div
-            class="px-3 py-1 transition-colors duration-200 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 group-hover:from-blue-500/30 group-hover:to-violet-500/30"
+            class="px-3 py-1 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30"
           >
             <span
               class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
@@ -49,6 +39,15 @@ const { currentMsg } = useTitleRotation()
               ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
             </span>
           </div>
+        </div>
+
+        <!-- Rechts: Wechselnde Nachrichten -->
+        <div class="flex items-start justify-end col-span-1">
+          <p
+            class="text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg"
+          >
+            {{ currentMsg }}
+          </p>
         </div>
       </div>
 
