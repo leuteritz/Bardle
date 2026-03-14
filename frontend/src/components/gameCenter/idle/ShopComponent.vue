@@ -37,7 +37,7 @@
       <div class="flex items-center flex-1 min-w-0 gap-5">
         <!-- Icon mit Glow -->
         <div
-          class="flex items-center justify-center w-20 h-20 transition-all duration-300 b group-hover:scale-105"
+          class="flex items-center justify-center w-20 h-20 transition-all duration-300 group-hover:scale-105"
         >
           <img
             v-if="isImageUrl(upgrade.icon)"
@@ -57,16 +57,16 @@
           <!-- Upgrade Stats -->
           <div class="flex flex-wrap gap-2 mt-1 text-xs">
             <span
-              v-if="getUpgradeStats(upgrade).cps"
+              v-if="upgrade.baseCPS && upgrade.level > 0"
               class="px-2 py-1 font-semibold text-green-300 border rounded-md shadow-sm bg-green-500/20 border-green-400/40"
             >
-              +{{ getUpgradeStats(upgrade).cps }} Chimes/s
+              +{{ upgrade.baseCPS * upgrade.level }} Chimes/s
             </span>
             <span
-              v-if="getUpgradeStats(upgrade).cpc"
+              v-if="upgrade.baseCPC && upgrade.level > 0"
               class="px-2 py-1 font-semibold border rounded-md shadow-sm bg-amber-500/20 border-amber-400/40 text-amber-300"
             >
-              +{{ getUpgradeStats(upgrade).cpc }} Chimes/click
+              +{{ upgrade.baseCPC * upgrade.level }} Chimes/click
             </span>
             <span
               class="px-2 py-1 font-bold text-blue-300 border rounded-md shadow-sm bg-blue-500/20 border-blue-400/40"
@@ -123,6 +123,7 @@
 import { defineComponent } from 'vue'
 import { useShopStore } from '../../../stores/shopStore'
 import { formatNumber } from '../../../config/numberFormat'
+import type { ShopUpgrade } from '../../../types'
 
 interface BuyOption {
   value: number | 'max'
@@ -141,32 +142,18 @@ export default defineComponent({
       { value: 'max', label: 'Max' },
     ]
 
-    const handleUpgradeClick = (upgrade: any) => {
+    const handleUpgradeClick = (upgrade: ShopUpgrade) => {
       const purchasedAmount = shopStore.buyUpgrade(upgrade.id)
       if (purchasedAmount > 0) {
         console.log(`${upgrade.name} ${purchasedAmount}x erfolgreich gekauft!`)
       }
     }
 
-    // Zeigt aktuelle Gesamtproduktion (0 bei Level 0)
-    const getUpgradeStats = (upgrade: any) => {
-      if (upgrade.baseCPS != null) {
-        return {
-          cps: upgrade.baseCPS && upgrade.level > 0 ? upgrade.baseCPS * upgrade.level : null,
-        }
-      } else if (upgrade.baseCPC != null) {
-        return {
-          cpc: upgrade.baseCPC && upgrade.level > 0 ? upgrade.baseCPC * upgrade.level : null,
-        }
-      }
-      return { cps: null, cpc: null }
-    }
-
     const isImageUrl = (icon: string): boolean => {
       return /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(icon)
     }
 
-    return { shopStore, handleUpgradeClick, getUpgradeStats, isImageUrl, formatNumber, buyOptions }
+    return { shopStore, handleUpgradeClick, isImageUrl, formatNumber, buyOptions }
   },
 })
 </script>

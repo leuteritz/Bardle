@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { universes } from '../config/universes'
-import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, MEEP_COST_EXPONENT } from '../config/constants'
+import {
+  LEVEL_BASE,
+  LEVEL_EXPONENT,
+  MEEP_BASE_COST,
+  MEEP_COST_EXPONENT,
+  MAX_ABILITY_LEVEL,
+} from '../config/constants'
 import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition } from '../types'
 
 function chimeThresholdForLevel(level: number): number {
@@ -81,10 +87,17 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    // Setzt das Level einer Fähigkeit direkt (Admin-Funktion)
+    setAbilityLevel(index: number, value: number) {
+      this.abilityLevels[index] = Math.max(0, Math.min(MAX_ABILITY_LEVEL, value))
+      if (!_shopStore) _shopStore = useShopStore()
+      this.chimesPerSecond = _shopStore.calculateTotalCPS()
+      this.chimesPerClick = _shopStore.calculateTotalCPC()
+    },
+
     // Erhöht das Level einer Fähigkeit wenn Skillpunkte verfügbar sind
     upgradeAbility(index) {
-      const maxLevel = 5
-      if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
+      if (this.skillPoints > 0 && this.abilityLevels[index] < MAX_ABILITY_LEVEL) {
         this.abilityLevels[index]++
         this.skillPoints--
         // Recalculate CPS and CPC after ability upgrade
@@ -225,24 +238,27 @@ export const useGameStore = defineStore('game', {
       return this.chimesForNextLevel - this.chimes
     },
 
-    // Berechnet den Fortschritt im aktuellen Level als Prozent
-    levelProgress(): number {
-      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
-      const currentLevelChimes = this.chimes - chimesForCurrentLevel
-      const totalChimesThisLevel = this.chimesForNextLevel - chimesForCurrentLevel
-      return Math.min(100, Math.max(0, (currentLevelChimes / totalChimesThisLevel) * 100))
+    // Schwellenwert am Anfang des aktuellen Levels (gemeinsame Basis)
+    chimesAtLevelStart(): number {
+      return chimeThresholdForLevel(this.level - 1)
     },
 
     // Berechnet die Chimes die im aktuellen Level gesammelt wurden
     currentLevelChimes(): number {
-      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
-      return this.chimes - chimesForCurrentLevel
+      return this.chimes - this.chimesAtLevelStart
     },
 
     // Berechnet die Gesamtanzahl der Chimes die für das aktuelle Level benötigt werden
     totalChimesThisLevel(): number {
-      const chimesForCurrentLevel = chimeThresholdForLevel(this.level - 1)
-      return this.chimesForNextLevel - chimesForCurrentLevel
+      return this.chimesForNextLevel - this.chimesAtLevelStart
+    },
+
+    // Berechnet den Fortschritt im aktuellen Level als Prozent
+    levelProgress(): number {
+      return Math.min(
+        100,
+        Math.max(0, (this.currentLevelChimes / this.totalChimesThisLevel) * 100),
+      )
     },
 
     // Berechnet die Gesamtkampfkraft des Spielers

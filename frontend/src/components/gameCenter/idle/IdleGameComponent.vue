@@ -171,12 +171,6 @@ export default defineComponent({
       gameStore.addChime()
       chimeGainPos.value = { x: event.clientX, y: event.clientY }
       chimeGainKey.value++
-      if (gameStore.chimesForMeep >= gameStore.meepChimeRequirement) {
-        setTimeout(() => {
-          gameStore.addMeep()
-          gameStore.chimesForMeep = 0
-        }, 100)
-      }
     }
 
     const startGameTimer = () => {

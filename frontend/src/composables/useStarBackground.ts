@@ -15,7 +15,7 @@ const ANIMATION_SPEED_MAX = 200
 export function useStarBackground() {
   const starsContainer = ref<HTMLElement>()
   const prefersReducedMotion = ref(false)
-  const stars = ref<StarItem[]>([])
+  const stars: StarItem[] = []
   let nextStarId = 1
 
   const intervals: ReturnType<typeof setInterval>[] = []
@@ -87,8 +87,8 @@ export function useStarBackground() {
     if (starsContainer.value && item.el.parentElement === starsContainer.value) {
       starsContainer.value.removeChild(item.el)
     }
-    const idx = stars.value.findIndex((s) => s.id === item.id)
-    if (idx !== -1) stars.value.splice(idx, 1)
+    const idx = stars.findIndex((s) => s.id === item.id)
+    if (idx !== -1) stars.splice(idx, 1)
   }
 
   function spawnStar(): StarItem | null {
@@ -141,14 +141,14 @@ export function useStarBackground() {
 
     star.addEventListener('animationend', item.onEnd as EventListener)
     starsContainer.value.appendChild(star)
-    stars.value.push(item)
+    stars.push(item)
     return item
   }
 
   function createStars(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     starsContainer.value.innerHTML = ''
-    stars.value.length = 0
+    stars.length = 0
     for (let i = 0; i < STAR_COUNT; i++) {
       spawnStar()
     }
@@ -160,13 +160,13 @@ export function useStarBackground() {
     intervals.length = 0
     timeouts.length = 0
 
-    stars.value.forEach((item) => {
+    stars.forEach((item) => {
       item.el.removeEventListener('animationend', item.onEnd as EventListener)
       if (starsContainer.value && item.el.parentElement === starsContainer.value) {
         starsContainer.value.removeChild(item.el)
       }
     })
-    stars.value.length = 0
+    stars.length = 0
 
     if (starsContainer.value) {
       starsContainer.value.innerHTML = ''

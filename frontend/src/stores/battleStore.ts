@@ -7,7 +7,10 @@ import {
   ELO_LUCK_FACTOR,
   AUTO_BATTLE_INTERVAL_MS,
   MMR_TO_POWER_MULTIPLIER,
+  RANK_DIVISIONS,
+  RANK_TIERS,
 } from '../config/constants'
+import { fetchChampionNames } from '../utils/champions'
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -21,19 +24,8 @@ export const useBattleStore = defineStore('battle', {
 
     // Kampf-Historie und Rang-Hierarchie - Listen für Kampfverlauf und die Reihenfolge der Ränge
     battleHistory: [],
-    rankOrder: ['IV', 'III', 'II', 'I'],
-    tierOrder: [
-      'Iron',
-      'Bronze',
-      'Silver',
-      'Gold',
-      'Platinum',
-      'Emerald',
-      'Diamond',
-      'Master',
-      'Grandmaster',
-      'Challenger',
-    ],
+    rankOrder: [...RANK_DIVISIONS] as string[],
+    tierOrder: [...RANK_TIERS] as string[],
 
     // Auto-Battle System - steuert automatische Kämpfe
     autoBattleEnabled: false,
@@ -118,12 +110,7 @@ export const useBattleStore = defineStore('battle', {
 
     // Lädt die Champion-Liste aus einer CSV-Datei und gibt sie als Array zurück
     async loadChampions() {
-      const response = await fetch('/data/champion.csv')
-      const text = await response.text()
-      return text
-        .split('\n')
-        .map((l) => l.trim())
-        .filter(Boolean)
+      return fetchChampionNames()
     },
 
     // Erstellt neue zufällige Teams für den nächsten Kampf mit Bard als Spieler-Champion
@@ -157,7 +144,7 @@ export const useBattleStore = defineStore('battle', {
     // Setzt alle Kampfstatistiken zurück und stoppt laufende Timer für einen neuen Kampf
     clearBattle() {
       this.timerIds.forEach((interval) => clearTimeout(interval))
-      this.timerIds.length = 0
+      this.timerIds = []
       this.team1.forEach((champ) => {
         champ.kills = 0
         champ.deaths = 0
@@ -445,12 +432,13 @@ export const useBattleStore = defineStore('battle', {
         this.showAutoBattleResult = true
 
         // Nach dem Battle neue Teams für den nächsten Battle erstellen
-        setTimeout(async () => {
+        const pauseId = setTimeout(async () => {
           await this.initializeBattle()
 
           this.startCountdown()
           this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
         }, 1000) // Kurze Pause um das Ergebnis zu zeigen
+        this.timerIds.push(pauseId)
       }
 
       // Ersten Battle nach Intervall starten

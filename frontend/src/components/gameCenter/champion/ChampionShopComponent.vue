@@ -40,7 +40,7 @@
             <span
               class="text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
             >
-              {{ champion.name.length > 10 ? champion.name.slice(0, 10) + '...' : champion.name }}
+              {{ truncate(champion.name, 10) }}
             </span>
           </div>
 
@@ -92,7 +92,8 @@
 import { ref, onMounted, defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useGameStore } from '../../../stores/gameStore'
-import { formatNumber } from '../../../config/numberFormat'
+import { formatNumber, truncate } from '../../../config/numberFormat'
+import { fetchChampionNames } from '../../../utils/champions'
 
 const CHAMPION_COST = 500
 
@@ -111,15 +112,12 @@ export default defineComponent({
 
     async function loadChampions() {
       try {
-        const response = await fetch('/data/champion.csv')
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const text = await response.text()
-        champions.value = text
-          .split('\n')
-          .map((name) => name.trim())
-          .filter((name) => name.length > 0)
-          .map((name) => ({ name, owned: battleStore.ownedChampions.includes(name) }))
-      } catch (e) {
+        const names = await fetchChampionNames()
+        champions.value = names.map((name) => ({
+          name,
+          owned: battleStore.ownedChampions.includes(name),
+        }))
+      } catch {
         loadError.value = 'Champions konnten nicht geladen werden.'
       }
     }
@@ -153,6 +151,7 @@ export default defineComponent({
       loadError,
       CHAMPION_COST,
       formatNumber,
+      truncate,
     }
   },
 })

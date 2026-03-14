@@ -19,6 +19,24 @@ export const MMR_TO_POWER_MULTIPLIER = 1.5
 export const STAR_COUNT = 500
 export const TITLE_MESSAGE_INTERVAL_MS = 5000
 
+// Rank system
+export const RANK_DIVISIONS = ['IV', 'III', 'II', 'I'] as const
+export const RANK_TIERS = [
+  'Iron',
+  'Bronze',
+  'Silver',
+  'Gold',
+  'Platinum',
+  'Emerald',
+  'Diamond',
+  'Master',
+  'Grandmaster',
+  'Challenger',
+] as const
+
+// Abilities
+export const MAX_ABILITY_LEVEL = 5
+
 // Rank border image paths (eliminates duplication between useRankCalculations.ts and BattleResultComponent.vue)
 export const RANK_BORDER_IMAGES: Record<string, string> = {
   Iron: '/img/RankBorder/RankIron.png',

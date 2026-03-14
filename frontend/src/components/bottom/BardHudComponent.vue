@@ -70,11 +70,7 @@ export default defineComponent({
   setup() {
     const gameStore = useGameStore()
 
-    const xpProgress = computed(() => {
-      const currentChimes = gameStore.currentLevelChimes
-      const totalChimes = gameStore.totalChimesThisLevel
-      return totalChimes > 0 ? Math.max(0, Math.min(1, currentChimes / totalChimes)) : 0
-    })
+    const xpProgress = computed(() => gameStore.levelProgress / 100)
 
     return {
       gameStore,

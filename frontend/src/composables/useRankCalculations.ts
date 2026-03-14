@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { useBattleStore } from '../stores/battleStore'
-import { RANK_BORDER_IMAGES } from '../config/constants'
+import { RANK_BORDER_IMAGES, RANK_DIVISIONS, RANK_TIERS } from '../config/constants'
 
 export function useRankCalculations() {
   const battleStore = useBattleStore()
@@ -114,24 +114,18 @@ export function useRankCalculations() {
     } else if (tier === 'grandmaster') {
       return 'Challenger'
     } else {
-      const divisions = ['IV', 'III', 'II', 'I']
-      const currentDiv = divisions.indexOf(battleStore.currentRank.division)
-      if (currentDiv < divisions.length - 1) {
-        return `${battleStore.currentRank.tier} ${divisions[currentDiv + 1]}`
+      const currentDiv = RANK_DIVISIONS.indexOf(
+        battleStore.currentRank.division as (typeof RANK_DIVISIONS)[number],
+      )
+      if (currentDiv < RANK_DIVISIONS.length - 1) {
+        return `${battleStore.currentRank.tier} ${RANK_DIVISIONS[currentDiv + 1]}`
       } else {
-        const tiers = [
-          'Iron',
-          'Bronze',
-          'Silver',
-          'Gold',
-          'Platinum',
-          'Emerald',
-          'Diamond',
-          'Master',
-        ]
-        const currentTier = tiers.indexOf(battleStore.currentRank.tier)
-        if (currentTier < tiers.length - 1) {
-          const nextTier = tiers[currentTier + 1]
+        const tiersUpToMaster = RANK_TIERS.slice(0, -2) // excludes Grandmaster, Challenger
+        const currentTier = tiersUpToMaster.indexOf(
+          battleStore.currentRank.tier as (typeof tiersUpToMaster)[number],
+        )
+        if (currentTier < tiersUpToMaster.length - 1) {
+          const nextTier = tiersUpToMaster[currentTier + 1]
           return nextTier === 'Master' ? 'Master' : `${nextTier} IV`
         }
         return 'Master'
@@ -140,19 +134,7 @@ export function useRankCalculations() {
   }
 
   const getRankTier = () => {
-    const tiers = [
-      'Iron',
-      'Bronze',
-      'Silver',
-      'Gold',
-      'Platinum',
-      'Emerald',
-      'Diamond',
-      'Master',
-      'Grandmaster',
-      'Challenger',
-    ]
-    return tiers.indexOf(battleStore.currentRank.tier) + 1
+    return RANK_TIERS.indexOf(battleStore.currentRank.tier as (typeof RANK_TIERS)[number]) + 1
   }
 
   const getRankPercentile = () => {

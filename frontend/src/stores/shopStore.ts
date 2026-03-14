@@ -149,6 +149,16 @@ export const useShopStore = defineStore('shop', {
       this.buyAmount = amount
     },
 
+    // Setzt das Level eines Gebäudes direkt und berechnet CPS/CPC neu (Admin-Funktion)
+    setBuildingLevel(index: number, value: number) {
+      const upgrade = this.shopUpgrades[index]
+      if (!upgrade) return
+      upgrade.level = Math.max(0, value)
+      const gameStore = useGameStore()
+      gameStore.chimesPerSecond = this.calculateTotalCPS()
+      gameStore.chimesPerClick = this.calculateTotalCPC()
+    },
+
     // Berechnet maximale Anzahl eines Upgrades die mit verfügbaren Chimes kaufbar ist
     getMaxAffordableAmount(upgrade: ShopUpgrade): number {
       const gameStore = useGameStore()

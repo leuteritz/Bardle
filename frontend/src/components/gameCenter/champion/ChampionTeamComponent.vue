@@ -56,7 +56,7 @@
             class="relative flex items-center justify-center w-12 h-12 transition-all duration-300 border-2 border-blue-400 rounded-full shadow-lg slot-container bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:scale-110 backdrop-blur-sm"
           >
             <span class="px-1 text-xs font-bold text-center text-blue-300">
-              {{ champion.length > 6 ? champion.slice(0, 6) + '...' : champion }}
+              {{ truncate(champion, 6) }}
             </span>
             <div
               class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent to-white/20"
@@ -148,6 +148,7 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
+import { truncate } from '../../../config/numberFormat'
 
 export default defineComponent({
   name: 'ChampionTeamComponent',
@@ -178,6 +179,7 @@ export default defineComponent({
       selectableChampions,
       addChampion,
       removeChampion,
+      truncate,
     }
   },
 })

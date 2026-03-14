@@ -29,3 +29,7 @@ export function formatNumber(num: number): string {
 
   return Math.floor(num).toString()
 }
+
+export function truncate(str: string, len: number): string {
+  return str.length > len ? str.slice(0, len) + '...' : str
+}

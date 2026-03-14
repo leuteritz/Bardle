@@ -32,7 +32,7 @@
         :icon="icon"
         :ability="abilityKeys[idx]"
         :abilityLevel="gameStore.abilityLevels[idx]"
-        :canUpgrade="gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < 5"
+        :canUpgrade="gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < MAX_ABILITY_LEVEL"
         @upgrade="gameStore.upgradeAbility(idx)"
       />
     </div>
@@ -42,6 +42,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
+import { MAX_ABILITY_LEVEL } from '../../config/constants'
 import AbilityComponent from './AbilityComponent.vue'
 
 const abilityIcons = [
@@ -57,7 +58,7 @@ export default defineComponent({
   components: { AbilityComponent },
   setup() {
     const gameStore = useGameStore()
-    return { gameStore, abilityIcons, abilityKeys }
+    return { gameStore, abilityIcons, abilityKeys, MAX_ABILITY_LEVEL }
   },
 })
 </script>

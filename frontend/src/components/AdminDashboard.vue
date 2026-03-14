@@ -30,11 +30,6 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-// After changing ability levels or building levels, recalculate derived stats
-function recalcStats() {
-  gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
-  gameStore.chimesPerClick = shopStore.calculateTotalCPC()
-}
 
 const abilityNames = ['Q (CPS)', 'W (Power)', 'E (Meep Cost)', 'R (CPC)']
 
@@ -136,12 +131,10 @@ function setValue(key: string, raw: string | boolean) {
   else if (key === 'rankLp' && !isNaN(int)) battleStore.currentRank.lp = int
   else if (key.startsWith('ability_') && !isNaN(int)) {
     const i = parseInt(key.split('_')[1])
-    gameStore.abilityLevels[i] = int
-    recalcStats()
+    gameStore.setAbilityLevel(i, int)
   } else if (key.startsWith('building_') && !isNaN(int)) {
     const i = parseInt(key.split('_')[1])
-    shopStore.shopUpgrades[i].level = int
-    recalcStats()
+    shopStore.setBuildingLevel(i, int)
   } else if (key === 'currentUniverse' && !isNaN(int)) gameStore.currentUniverse = int
   else if (key === 'gameSpeed' && !isNaN(int)) gameStore.gameSpeed = int
   else if (key === 'autoBattle' && typeof raw === 'boolean') battleStore.autoBattleEnabled = raw
