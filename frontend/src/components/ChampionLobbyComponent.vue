@@ -1,14 +1,14 @@
 <template>
   <div
-    class="relative w-full h-full overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl"
+    class="relative w-full h-full overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 rounded-xl"
   >
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div
-        class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+        class="absolute w-32 h-32 bg-blue-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
       ></div>
       <div
-        class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+        class="absolute bg-violet-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
       ></div>
       <div
         class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
@@ -19,7 +19,7 @@
       <!-- Kompakte Tab Navigation -->
       <div class="flex items-center justify-center mb-4">
         <div
-          class="flex p-1 border shadow-lg tab-container bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl border-purple-400/30 backdrop-blur-sm"
+          class="flex p-1 border shadow-lg tab-container bg-gradient-to-r from-blue-500/20 to-violet-500/20 rounded-xl border-blue-400/30 backdrop-blur-sm"
         >
           <button
             :class="tab === 'shop' ? 'tab-active' : 'tab-inactive'"
@@ -71,21 +71,21 @@ export default {
 
 <style scoped>
 .tab-active {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.8), rgba(236, 72, 153, 0.8));
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.8));
   color: white;
-  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
   transform: scale(1.05);
 }
 
 .tab-inactive {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(168, 85, 247, 0.1));
-  color: rgba(168, 85, 247, 0.8);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(59, 130, 246, 0.1));
+  color: rgba(59, 130, 246, 0.8);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tab-button:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
 }
 
 .content-wrapper {

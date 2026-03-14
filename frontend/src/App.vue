@@ -46,10 +46,10 @@ const title = 'Bardle'
         </div>
         <div class="absolute z-20 top-3 right-3">
           <div
-            class="px-3 py-1 transition-colors duration-200 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 group-hover:from-purple-500/30 group-hover:to-pink-500/30"
+            class="px-3 py-1 transition-colors duration-200 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 group-hover:from-blue-500/30 group-hover:to-violet-500/30"
           >
             <span
-              class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300"
+              class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
             >
               ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
             </span>
@@ -98,16 +98,16 @@ const title = 'Bardle'
       <!-- Unterer Bereich mit Spieler-Informationen -->
       <div class="z-20 flex justify-center w-full">
         <div
-          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-purple-400/30 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl"
+          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-blue-400/30 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 rounded-xl"
           :class="{ 'opacity-50': gameStore.isCPSModalOpen }"
         >
           <!-- Animated Background -->
           <div class="absolute inset-0 opacity-20">
             <div
-              class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+              class="absolute w-32 h-32 bg-blue-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
             ></div>
             <div
-              class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+              class="absolute bg-violet-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
             ></div>
             <div
               class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
@@ -118,7 +118,7 @@ const title = 'Bardle'
           <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 min-h-[140px] gap-2 md:gap-0">
             <!-- Links: Charakter-Status -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-r border-purple-400/30 bg-gradient-to-br from-purple-500/20 to-pink-500/10 backdrop-blur-sm"
+              class="flex items-center justify-center p-1 md:col-span-3 md:border-r border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-violet-500/10 backdrop-blur-sm"
             >
               <div class="w-full max-w-[200px]">
                 <BardHudComponent />
@@ -127,7 +127,7 @@ const title = 'Bardle'
 
             <!-- Mitte: Fähigkeiten-Leiste -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-6 bg-gradient-to-br from-purple-600/20 to-pink-600/10 backdrop-blur-sm"
+              class="flex items-center justify-center p-1 md:col-span-6 bg-gradient-to-br from-blue-600/20 to-violet-600/10 backdrop-blur-sm"
             >
               <div class="w-full max-w-lg">
                 <AbilityBarComponent />
@@ -136,7 +136,7 @@ const title = 'Bardle'
 
             <!-- Rechts: Statistiken -->
             <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-l border-purple-400/30 bg-gradient-to-br from-purple-500/20 to-pink-500/10 backdrop-blur-sm"
+              class="flex items-center justify-center p-1 md:col-span-3 md:border-l border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-violet-500/10 backdrop-blur-sm"
             >
               <div class="w-full">
                 <StatsPanelComponent />
@@ -152,7 +152,7 @@ const title = 'Bardle'
     <!-- Encyclopedia Toggle Button -->
     <button
       v-show="!gameStore.isEncyclopediaOpen"
-      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 border border-r-0 shadow-lg top-1/2 -translate-y-1/2 rounded-l-xl bg-gradient-to-b from-purple-800/80 to-pink-900/80 backdrop-blur-sm border-purple-400/30 hover:from-purple-700/90 hover:to-pink-800/90 hover:shadow-purple-500/20 hover:pr-3 group"
+      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 border border-r-0 shadow-lg top-1/2 -translate-y-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
       @click="gameStore.toggleEncyclopedia()"
     >
       <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
@@ -167,7 +167,7 @@ const title = 'Bardle'
 :root {
   --star-base-size: 2px;
   --star-max-size: 6px;
-  --cosmic-gradient: linear-gradient(45deg, #1e1b4b, #312e81, #3730a3, #1e40af);
+  --cosmic-gradient: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
 }
 
 .cosmic-bg {

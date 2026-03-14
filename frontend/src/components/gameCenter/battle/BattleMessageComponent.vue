@@ -5,20 +5,20 @@
     class="fixed z-40 transform -translate-x-1/2 left-1/2 top-16"
   >
     <div
-      class="relative px-6 py-3 overflow-hidden text-xl font-bold text-center border-2 shadow-2xl rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400/50 backdrop-blur-lg animate-bounce"
+      class="relative px-6 py-3 overflow-hidden text-xl font-bold text-center border-2 shadow-2xl rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 border-blue-400/50 backdrop-blur-lg animate-bounce"
     >
       <!-- Animated Background -->
       <div class="absolute inset-0 opacity-30">
         <div
-          class="absolute top-0 left-0 w-8 h-8 bg-purple-500 rounded-full mix-blend-multiply filter blur-lg animate-blob"
+          class="absolute top-0 left-0 w-8 h-8 bg-blue-500 rounded-full mix-blend-multiply filter blur-lg animate-blob"
         ></div>
         <div
-          class="absolute bottom-0 right-0 w-6 h-6 bg-pink-500 rounded-full mix-blend-multiply filter blur-lg animate-blob animation-delay-2000"
+          class="absolute bottom-0 right-0 w-6 h-6 bg-violet-500 rounded-full mix-blend-multiply filter blur-lg animate-blob animation-delay-2000"
         ></div>
       </div>
 
       <span
-        class="relative z-10 text-transparent bg-gradient-to-r from-white to-purple-100 bg-clip-text drop-shadow-lg"
+        class="relative z-10 text-transparent bg-gradient-to-r from-white to-blue-100 bg-clip-text drop-shadow-lg"
       >
         {{ currentMessage }}
       </span>

@@ -2,7 +2,7 @@
   <div class="flex flex-col w-full h-full p-4 space-y-6">
     <!-- Kaufmengen-Auswahl -->
     <div
-      class="flex flex-wrap items-center justify-center gap-2 p-4 border bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl border-white/20 backdrop-blur-md"
+      class="flex flex-wrap items-center justify-center gap-2 p-4 border bg-gradient-to-r from-blue-500/20 to-violet-500/20 rounded-2xl border-white/20 backdrop-blur-md"
     >
       <span class="mr-4 text-sm font-semibold text-white">Kaufmenge:</span>
       <button
@@ -11,9 +11,9 @@
         @click="shopStore.setBuyAmount(option.value)"
         class="px-3 py-1.5 text-sm font-bold transition-all duration-300 border-2 rounded-xl"
         :class="{
-          'bg-gradient-to-r from-purple-500 to-blue-600 text-white border-purple-400 shadow-lg shadow-purple-500/40':
+          'bg-gradient-to-r from-blue-500 to-violet-600 text-white border-blue-400 shadow-lg shadow-blue-500/40':
             shopStore.buyAmount === option.value,
-          'bg-gray-700/40 text-gray-300 border-gray-500/40 hover:border-purple-400/60 hover:text-white':
+          'bg-gray-700/40 text-gray-300 border-gray-500/40 hover:border-blue-400/60 hover:text-white':
             shopStore.buyAmount !== option.value,
         }"
       >
@@ -26,7 +26,7 @@
       v-for="upgrade in shopStore.shopUpgrades"
       :key="upgrade.id"
       @click="handleUpgradeClick(upgrade)"
-      class="relative flex items-center justify-between p-4 transition-all duration-300 rounded-2xl cursor-pointer group backdrop-blur-md bg-gradient-to-br from-white/10 to-white/5 border border-white/20 hover:scale-[1.02] hover:shadow-xl hover:border-purple-400/30"
+      class="relative flex items-center justify-between p-4 transition-all duration-300 rounded-2xl cursor-pointer group backdrop-blur-md bg-gradient-to-br from-white/10 to-white/5 border border-white/20 hover:scale-[1.02] hover:shadow-xl hover:border-blue-400/30"
       :class="{
         'from-green-500/20 to-emerald-500/10 border-green-400/40 shadow-green-500/20':
           shopStore.canAffordUpgrade(upgrade),
@@ -50,7 +50,7 @@
         <!-- Text -->
         <div class="flex flex-col min-w-0">
           <h3
-            class="mb-1 text-base font-bold leading-tight text-transparent bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text"
+            class="mb-1 text-base font-bold leading-tight text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             {{ upgrade.name }}
           </h3>

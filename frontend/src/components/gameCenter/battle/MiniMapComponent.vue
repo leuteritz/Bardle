@@ -1,14 +1,14 @@
 <template>
   <div
-    class="relative flex flex-col items-center w-full h-full p-2 overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-xl"
+    class="relative flex flex-col items-center w-full h-full p-2 overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 rounded-xl"
   >
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div
-        class="absolute w-20 h-20 bg-purple-500 rounded-full top-2 left-2 mix-blend-multiply filter blur-xl animate-blob"
+        class="absolute w-20 h-20 bg-blue-500 rounded-full top-2 left-2 mix-blend-multiply filter blur-xl animate-blob"
       ></div>
       <div
-        class="absolute w-16 h-16 bg-pink-500 rounded-full bottom-2 right-2 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+        class="absolute w-16 h-16 bg-violet-500 rounded-full bottom-2 right-2 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
       ></div>
       <div
         class="absolute w-12 h-12 bg-yellow-500 rounded-full top-1/2 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
@@ -18,25 +18,25 @@
     <!-- Kompakter Header -->
     <div class="relative z-10 flex items-center gap-2 mb-2 text-sm font-bold">
       <span class="text-lg">🗺️</span>
-      <span class="text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+      <span class="text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
         >Battle Map</span
       >
     </div>
 
     <!-- Kompakte Minimap -->
     <div
-      class="relative z-10 w-48 h-48 overflow-hidden border-2 shadow-2xl rounded-xl border-purple-400/50 bg-gradient-to-br from-green-200 to-green-400 backdrop-blur-sm"
+      class="relative z-10 w-48 h-48 overflow-hidden border-2 shadow-2xl rounded-xl border-blue-400/50 bg-gradient-to-br from-green-200 to-green-400 backdrop-blur-sm"
     >
       <!-- Game Time Display -->
       <div
-        class="absolute z-10 px-2 py-1 text-xs font-bold text-white border rounded-md top-1 left-1 bg-purple-900/80 border-purple-400/30 backdrop-blur-sm"
+        class="absolute z-10 px-2 py-1 text-xs font-bold text-white border rounded-md top-1 left-1 bg-blue-900/80 border-blue-400/30 backdrop-blur-sm"
       >
         {{ formatTime(battleStore.battleTime) }}
       </div>
 
       <!-- Score Display -->
       <div
-        class="absolute z-10 px-2 py-1 text-xs font-bold border rounded-md top-1 right-1 bg-purple-900/80 border-purple-400/30 backdrop-blur-sm"
+        class="absolute z-10 px-2 py-1 text-xs font-bold border rounded-md top-1 right-1 bg-blue-900/80 border-blue-400/30 backdrop-blur-sm"
       >
         <span class="text-blue-300">{{ score.team1Kills }}</span>
         <span class="text-white"> vs </span>
@@ -64,12 +64,12 @@
           :class="[
             'rounded-full border shadow-lg transition-all duration-200',
             i === 0
-              ? 'w-3 h-3 bg-purple-400 border-purple-600 shadow-purple-500/50'
+              ? 'w-3 h-3 bg-blue-400 border-blue-600 shadow-blue-500/50'
               : 'w-3 h-3 bg-blue-500 border-blue-700 shadow-blue-500/50',
           ]"
           :style="{
             boxShadow:
-              i === 0 ? '0 0 8px rgba(168, 85, 247, 0.8)' : '0 0 6px rgba(59, 130, 246, 0.6)',
+              i === 0 ? '0 0 8px rgba(59, 130, 246, 0.8)' : '0 0 6px rgba(59, 130, 246, 0.6)',
           }"
         ></div>
       </div>
@@ -98,10 +98,10 @@
     <!-- Kompakte Map Info -->
     <div class="relative z-10 flex items-center justify-center mt-2 space-x-2 text-xs">
       <div
-        class="w-2 h-2 rounded-full shadow-lg bg-gradient-to-r from-purple-400 to-pink-500 animate-pulse"
+        class="w-2 h-2 rounded-full shadow-lg bg-gradient-to-r from-blue-400 to-violet-500 animate-pulse"
       ></div>
       <span
-        class="font-medium text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+        class="font-medium text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
         >Live Map</span
       >
     </div>

@@ -7,7 +7,7 @@
     >
       <!-- Modal Card -->
       <div
-        class="relative w-full max-w-sm mx-4 border rounded-2xl bg-gradient-to-br from-purple-900/90 to-slate-900/95 backdrop-blur-xl border-purple-400/40 shadow-2xl expedition-modal-glow"
+        class="relative w-full max-w-sm mx-4 border rounded-2xl bg-gradient-to-br from-blue-950/90 to-slate-950/95 backdrop-blur-xl border-blue-400/40 shadow-2xl expedition-modal-glow"
       >
         <!-- Animated star dots background -->
         <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
@@ -19,16 +19,16 @@
         </div>
 
         <!-- Header -->
-        <div class="relative flex items-center justify-between px-5 pt-4 pb-3 border-b border-purple-400/20">
+        <div class="relative flex items-center justify-between px-5 pt-4 pb-3 border-b border-blue-400/20">
           <div class="flex items-center gap-2">
             <span class="text-xl">🌀</span>
-            <span class="text-base font-bold text-transparent bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text">
+            <span class="text-base font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text">
               Portal-Expeditionen
             </span>
           </div>
           <button
             @click="$emit('close')"
-            class="flex items-center justify-center w-7 h-7 text-purple-300 transition-all duration-200 border rounded-lg border-purple-400/30 hover:bg-purple-500/20 hover:text-white hover:border-purple-400/60"
+            class="flex items-center justify-center w-7 h-7 text-blue-300 transition-all duration-200 border rounded-lg border-blue-400/30 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/60"
           >
             ✕
           </button>
@@ -40,10 +40,10 @@
           <div v-if="!gameStore.activeExpedition">
             <!-- Universe select -->
             <div class="mb-3">
-              <label class="block mb-1 text-xs text-purple-300">Ziel-Universum</label>
+              <label class="block mb-1 text-xs text-blue-300">Ziel-Universum</label>
               <select
                 v-model="selectedUniverseId"
-                class="w-full px-3 py-2 text-sm text-white border rounded-xl bg-slate-800/80 border-purple-400/30 focus:outline-none focus:border-purple-400"
+                class="w-full px-3 py-2 text-sm text-white border rounded-xl bg-slate-800/80 border-blue-400/30 focus:outline-none focus:border-blue-400"
               >
                 <option v-for="cfg in EXPEDITION_CONFIGS" :key="cfg.universeId" :value="cfg.universeId">
                   {{ cfg.name }} — {{ formatDuration(cfg.durationMs) }} (×{{ cfg.multiplier }})
@@ -83,7 +83,7 @@
               class="w-full py-2 text-sm font-bold transition-all duration-200 rounded-xl"
               :class="
                 meepsSent >= 1 && gameStore.meeps >= 1
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white cursor-pointer'
+                  ? 'bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white cursor-pointer'
                   : 'bg-slate-700/50 text-slate-400 cursor-not-allowed'
               "
             >
@@ -94,10 +94,10 @@
           <!-- Active expedition -->
           <div v-else>
             <div class="mb-3 text-center">
-              <div class="text-xs text-purple-300">
+              <div class="text-xs text-blue-300">
                 {{ gameStore.activeExpedition.meepsSent }} Meeps erkunden
               </div>
-              <div class="text-sm font-bold text-transparent bg-gradient-to-r from-purple-300 to-blue-300 bg-clip-text">
+              <div class="text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text">
                 {{ gameStore.activeExpedition.universeName }}
               </div>
             </div>
@@ -105,10 +105,10 @@
             <!-- Progress bar -->
             <div class="relative w-full h-3 mb-1 overflow-hidden border rounded-full bg-slate-700/50 border-white/20">
               <div
-                class="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000"
+                class="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-1000"
                 :style="{
                   width: progress + '%',
-                  boxShadow: '0 0 10px rgba(168, 85, 247, 0.6)',
+                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.6)',
                 }"
               ></div>
             </div>
@@ -250,15 +250,15 @@ export default defineComponent({
 <style scoped>
 .expedition-modal-glow {
   box-shadow:
-    0 0 40px rgba(168, 85, 247, 0.25),
-    0 0 80px rgba(168, 85, 247, 0.1),
+    0 0 40px rgba(59, 130, 246, 0.25),
+    0 0 80px rgba(59, 130, 246, 0.1),
     0 25px 50px rgba(0, 0, 0, 0.5);
   animation: borderPulse 3s ease-in-out infinite;
 }
 
 @keyframes borderPulse {
-  0%, 100% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.25), 0 0 80px rgba(168, 85, 247, 0.1), 0 25px 50px rgba(0,0,0,0.5); }
-  50% { box-shadow: 0 0 60px rgba(168, 85, 247, 0.45), 0 0 100px rgba(99, 102, 241, 0.2), 0 25px 50px rgba(0,0,0,0.5); }
+  0%, 100% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.25), 0 0 80px rgba(59, 130, 246, 0.1), 0 25px 50px rgba(0,0,0,0.5); }
+  50% { box-shadow: 0 0 60px rgba(59, 130, 246, 0.45), 0 0 100px rgba(99, 102, 241, 0.2), 0 25px 50px rgba(0,0,0,0.5); }
 }
 
 .star {

@@ -101,15 +101,25 @@ export function useStarBackground() {
     const speed = Math.random() * (ANIMATION_SPEED_MAX - ANIMATION_SPEED_MIN) + ANIMATION_SPEED_MIN
     const size = Math.random() * 4 + 2
 
+    const starColors = [
+      { bg: 'rgba(255, 255, 255, 0.95)', glow: 'rgba(255, 255, 255, 0.8)' },
+      { bg: 'rgba(235, 240, 255, 0.9)', glow: 'rgba(200, 220, 255, 0.7)' },
+      { bg: 'rgba(255, 248, 235, 0.9)', glow: 'rgba(255, 240, 200, 0.7)' },
+      { bg: 'rgba(220, 225, 255, 0.85)', glow: 'rgba(180, 200, 255, 0.6)' },
+      { bg: 'rgba(255, 240, 250, 0.9)', glow: 'rgba(255, 210, 240, 0.7)' },
+      { bg: 'rgba(245, 245, 255, 0.92)', glow: 'rgba(230, 230, 255, 0.75)' },
+    ]
+    const color = starColors[Math.floor(Math.random() * starColors.length)]
+
     star.style.cssText = `
       position: absolute;
       left: ${startLeft}%;
       top: ${Math.random() * 100}%;
       width: ${size}px;
       height: ${size}px;
-      background: rgba(255, 255, 255, 0.95);
+      background: ${color.bg};
       border-radius: 50%;
-      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+      box-shadow: 0 0 10px ${color.glow};
       animation: moveLeftStar ${speed}s linear forwards, twinkle 3s ease-in-out infinite;
       will-change: transform, opacity;
       transform: translateZ(0);

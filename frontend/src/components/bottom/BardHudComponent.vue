@@ -6,7 +6,7 @@
     <!-- Kompaktere Bard Portrait -->
     <div class="relative z-10 group">
       <div
-        class="absolute rounded-full -inset-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 opacity-40 animate-pulse"
+        class="absolute rounded-full -inset-2 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 opacity-40 animate-pulse"
       ></div>
 
       <!-- Kleinerer XP Progress Ring -->
@@ -17,7 +17,7 @@
             cy="50"
             r="45"
             fill="none"
-            stroke="rgb(168 85 247 / 0.3)"
+            stroke="rgb(59 130 246 / 0.3)"
             stroke-width="8"
           />
           <circle
@@ -25,17 +25,17 @@
             cy="50"
             r="45"
             fill="none"
-            stroke="rgb(168 85 247)"
+            stroke="rgb(59 130 246)"
             stroke-width="8"
             stroke-linecap="round"
             :stroke-dasharray="`${xpProgress * 283} 283`"
             class="transition-all duration-1000 ease-out"
-            style="filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.8))"
+            style="filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8))"
           />
         </svg>
 
         <div
-          class="absolute overflow-hidden border-2 rounded-full shadow-2xl inset-2 border-purple-400/50 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-sm"
+          class="absolute overflow-hidden border-2 rounded-full shadow-2xl inset-2 border-blue-400/50 bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-sm"
         >
           <img
             src="/img/BardAbilities/Bard.png"
@@ -47,7 +47,7 @@
       <!-- Kompakte Level Badge -->
       <div class="absolute -bottom-1 -right-1">
         <div
-          class="flex items-center justify-center w-8 h-8 border-2 rounded-full shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 border-purple-300/50"
+          class="flex items-center justify-center w-8 h-8 border-2 rounded-full shadow-lg bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
         >
           <span class="text-sm font-black text-white">{{ gameStore.level }}</span>
         </div>
@@ -56,7 +56,7 @@
 
     <!-- Kompakte Character Info -->
     <div class="relative z-10 mt-4 space-y-1 text-center">
-      <div class="text-xs text-purple-300">{{ Math.round(xpProgress * 100) }}% XP</div>
+      <div class="text-xs text-blue-300">{{ Math.round(xpProgress * 100) }}% XP</div>
     </div>
   </div>
 </template>

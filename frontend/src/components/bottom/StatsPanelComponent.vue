@@ -5,12 +5,12 @@
   >
     <!-- Resources Summary -->
     <div
-      class="relative z-10 p-2 transition-all duration-300 border rounded-lg shadow-sm bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 hover:shadow-md backdrop-blur-sm"
+      class="relative z-10 p-2 transition-all duration-300 border rounded-lg shadow-sm bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 hover:shadow-md backdrop-blur-sm"
     >
       <div class="flex flex-row items-center justify-center">
         <div class="flex flex-col items-center">
           <div
-            class="text-sm font-black text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+            class="text-sm font-black text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             {{ formatNumber(gameStore.chimes || 0) }}
           </div>
@@ -22,7 +22,7 @@
 
         <div class="flex flex-col items-center">
           <div
-            class="text-sm font-black text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+            class="text-sm font-black text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             {{ formatNumber(gameStore.meeps || 0) }}
           </div>
@@ -34,7 +34,7 @@
 
         <div class="flex flex-col items-center">
           <div
-            class="text-sm font-black text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+            class="text-sm font-black text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             {{ formatNumber(gameStore.totalPower || 0) }}
           </div>

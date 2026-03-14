@@ -2,8 +2,8 @@
   <div class="relative group" :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }">
     <!-- Kompakter Ability Container -->
     <div
-      class="relative p-2 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-purple-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
-      :class="{ 'ring-2 ring-purple-400 ring-opacity-50 shadow-purple-500/20': canUpgrade }"
+      class="relative p-2 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-blue-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
+      :class="{ 'ring-2 ring-blue-400 ring-opacity-50 shadow-blue-500/20': canUpgrade }"
     >
       <!-- Kompakte Level Indicators -->
       <div class="flex justify-center mb-2 space-x-0.5">
@@ -13,7 +13,7 @@
           class="w-2 h-2 transition-all duration-300 border rounded-full"
           :class="
             n <= abilityLevel
-              ? 'bg-gradient-to-br from-purple-400 to-pink-500 border-purple-400 shadow-sm'
+              ? 'bg-gradient-to-br from-blue-400 to-violet-500 border-blue-400 shadow-sm'
               : 'bg-gray-700/50 border-gray-500/50'
           "
         ></div>
@@ -32,7 +32,7 @@
 
         <!-- Kompakter Ability Key Badge -->
         <div
-          class="absolute flex items-center justify-center w-5 h-5 border rounded-full shadow-md -top-1 -right-1 bg-gradient-to-br from-purple-500 to-purple-600 border-purple-300/50"
+          class="absolute flex items-center justify-center w-5 h-5 border rounded-full shadow-md -top-1 -right-1 bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300/50"
         >
           <span class="text-xs font-bold text-white">{{ ability }}</span>
         </div>
@@ -49,7 +49,7 @@
       <!-- Kompakter Ability Level -->
       <div class="mb-2 text-center">
         <div
-          class="text-sm font-black text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          class="text-sm font-black text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
         >
           Lv.{{ abilityLevel }}
         </div>
@@ -60,14 +60,14 @@
         <button
           v-if="canUpgrade"
           @click.stop="$emit('upgrade')"
-          class="relative px-2 py-1 text-xs font-bold text-white transition-all duration-200 border rounded-full shadow-md group bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:shadow-lg hover:scale-105 active:scale-95 border-purple-400/50"
+          class="relative px-2 py-1 text-xs font-bold text-white transition-all duration-200 border rounded-full shadow-md group bg-gradient-to-r from-blue-500 to-violet-500 hover:from-blue-600 hover:to-violet-600 hover:shadow-lg hover:scale-105 active:scale-95 border-blue-400/50"
         >
           <span class="relative z-10 flex items-center">
             <span class="mr-1 text-xs">⬆️</span>
             <span class="text-xs">Up</span>
           </span>
           <div
-            class="absolute inset-0 transition-opacity duration-200 rounded-full opacity-0 bg-gradient-to-r from-purple-600 to-pink-600 group-hover:opacity-100"
+            class="absolute inset-0 transition-opacity duration-200 rounded-full opacity-0 bg-gradient-to-r from-blue-600 to-violet-600 group-hover:opacity-100"
           ></div>
         </button>
 
@@ -95,9 +95,9 @@
       <!-- Kompakter Upgrade Available Indicator -->
       <div
         v-if="canUpgrade"
-        class="absolute w-3 h-3 rounded-full shadow-lg bg-gradient-to-r from-purple-400 to-pink-500 -top-1 -right-1 animate-bounce"
+        class="absolute w-3 h-3 rounded-full shadow-lg bg-gradient-to-r from-blue-400 to-violet-500 -top-1 -right-1 animate-bounce"
       >
-        <div class="absolute inset-0 bg-purple-400 rounded-full animate-ping"></div>
+        <div class="absolute inset-0 bg-blue-400 rounded-full animate-ping"></div>
       </div>
     </div>
   </div>

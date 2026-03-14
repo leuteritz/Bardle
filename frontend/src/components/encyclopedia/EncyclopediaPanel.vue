@@ -52,15 +52,15 @@ const filteredData = computed(() => {
     <Transition name="slide">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-purple-400/30 bg-gradient-to-bl from-slate-900 via-purple-950 to-slate-900 font-['MedievalSharp']"
+        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-blue-400/30 bg-gradient-to-bl from-slate-950 via-blue-950 to-slate-950 font-['MedievalSharp']"
       >
         <!-- Animated background particles -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
           <div
-            class="absolute w-40 h-40 rounded-full -top-10 -left-10 bg-purple-600/10 blur-3xl animate-blob"
+            class="absolute w-40 h-40 rounded-full -top-10 -left-10 bg-blue-600/10 blur-3xl animate-blob"
           />
           <div
-            class="absolute w-32 h-32 rounded-full -bottom-10 -right-10 bg-pink-600/10 blur-3xl animate-blob animation-delay-2000"
+            class="absolute w-32 h-32 rounded-full -bottom-10 -right-10 bg-violet-600/10 blur-3xl animate-blob animation-delay-2000"
           />
           <div
             class="absolute w-24 h-24 rounded-full top-1/2 left-1/4 bg-blue-600/8 blur-2xl animate-blob animation-delay-4000"
@@ -69,12 +69,12 @@ const filteredData = computed(() => {
 
         <!-- Header -->
         <div
-          class="relative z-10 flex items-center justify-between px-5 py-4 border-b shrink-0 border-purple-400/20 bg-gradient-to-r from-purple-900/40 to-pink-900/20 backdrop-blur-lg"
+          class="relative z-10 flex items-center justify-between px-5 py-4 border-b shrink-0 border-blue-400/20 bg-gradient-to-r from-blue-900/40 to-violet-900/20 backdrop-blur-lg"
         >
           <div class="flex items-center gap-3">
             <span class="text-2xl">📖</span>
             <h2
-              class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300"
+              class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-violet-300 to-amber-300"
             >
               Bardle Enzyklopaedie
             </h2>
@@ -83,21 +83,21 @@ const filteredData = computed(() => {
             class="flex items-center justify-center w-8 h-8 transition-all duration-200 border rounded-lg bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-110"
             @click="closePanel"
           >
-            <span class="text-sm text-purple-300">✕</span>
+            <span class="text-sm text-blue-300">✕</span>
           </button>
         </div>
 
         <!-- Search -->
-        <div class="relative z-10 px-5 py-3 border-b shrink-0 border-purple-400/10">
+        <div class="relative z-10 px-5 py-3 border-b shrink-0 border-blue-400/10">
           <div class="relative">
-            <span class="absolute text-sm -translate-y-1/2 left-3 top-1/2 text-purple-400/60"
+            <span class="absolute text-sm -translate-y-1/2 left-3 top-1/2 text-blue-400/60"
               >🔍</span
             >
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Suche..."
-              class="w-full py-2 pl-9 pr-3 text-sm text-purple-100 transition-all duration-200 border rounded-lg bg-white/5 border-purple-400/20 placeholder-purple-400/40 focus:outline-none focus:border-purple-400/50 focus:bg-white/8"
+              class="w-full py-2 pl-9 pr-3 text-sm text-blue-100 transition-all duration-200 border rounded-lg bg-white/5 border-blue-400/20 placeholder-blue-400/40 focus:outline-none focus:border-blue-400/50 focus:bg-white/8"
             />
           </div>
         </div>
@@ -112,22 +112,22 @@ const filteredData = computed(() => {
             <!-- Category header -->
             <button
               class="flex items-center w-full gap-2 px-3 py-2.5 text-left transition-all duration-200 border rounded-xl bg-white/10 border-white/15 hover:bg-white/15 hover:border-white/25 group"
-              :class="{ 'bg-white/8 border-purple-400/30': expandedCategories.has(category.id) }"
+              :class="{ 'bg-white/8 border-blue-400/30': expandedCategories.has(category.id) }"
               @click="toggleCategory(category.id)"
             >
               <span class="text-lg">{{ category.icon }}</span>
               <span
-                class="flex-1 text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200"
+                class="flex-1 text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-violet-200"
               >
                 {{ category.title }}
               </span>
               <span
-                class="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-400/20 text-purple-300 font-mono"
+                class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-400/20 text-blue-300 font-mono"
               >
                 {{ category.entries.length }}
               </span>
               <span
-                class="text-xs transition-transform duration-200 text-purple-400/60"
+                class="text-xs transition-transform duration-200 text-blue-400/60"
                 :class="{ 'rotate-90': expandedCategories.has(category.id) }"
               >
                 ▶
@@ -142,7 +142,7 @@ const filteredData = computed(() => {
               <div
                 v-for="entry in category.entries"
                 :key="entry.id"
-                class="p-3 transition-all duration-200 border rounded-xl bg-white/8 border-white/10 hover:bg-white/12 hover:border-purple-400/30"
+                class="p-3 transition-all duration-200 border rounded-xl bg-white/8 border-white/10 hover:bg-white/12 hover:border-blue-400/30"
               >
                 <div class="flex items-start gap-3">
                   <!-- Icon -->
@@ -155,23 +155,23 @@ const filteredData = computed(() => {
                   <div class="flex-1 min-w-0">
                     <!-- Name -->
                     <h4
-                      class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300"
+                      class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
                     >
                       {{ entry.name }}
                     </h4>
                     <!-- Description -->
-                    <p class="mt-1 text-xs leading-relaxed text-purple-200/80">
+                    <p class="mt-1 text-xs leading-relaxed text-blue-200/80">
                       {{ entry.description }}
                     </p>
                     <!-- Formula -->
                     <p
                       v-if="entry.formula"
-                      class="px-2 py-1 mt-1.5 text-[11px] font-mono rounded-md bg-purple-900/40 text-amber-300/80 border border-purple-400/10"
+                      class="px-2 py-1 mt-1.5 text-[11px] font-mono rounded-md bg-blue-900/40 text-amber-300/80 border border-blue-400/10"
                     >
                       {{ entry.formula }}
                     </p>
                     <!-- Lore -->
-                    <p class="mt-1.5 text-[11px] italic leading-relaxed text-purple-400/60">
+                    <p class="mt-1.5 text-[11px] italic leading-relaxed text-blue-400/60">
                       {{ entry.lore }}
                     </p>
                   </div>
@@ -183,7 +183,7 @@ const filteredData = computed(() => {
           <!-- Empty state -->
           <div
             v-if="filteredData.length === 0"
-            class="flex flex-col items-center justify-center py-12 text-purple-400/40"
+            class="flex flex-col items-center justify-center py-12 text-blue-400/40"
           >
             <span class="text-4xl">🔮</span>
             <p class="mt-2 text-sm">Keine Eintraege gefunden</p>
@@ -192,9 +192,9 @@ const filteredData = computed(() => {
 
         <!-- Footer -->
         <div
-          class="relative z-10 px-5 py-2.5 text-center border-t shrink-0 border-purple-400/10 bg-purple-950/50"
+          class="relative z-10 px-5 py-2.5 text-center border-t shrink-0 border-blue-400/10 bg-blue-950/50"
         >
-          <p class="text-[10px] text-purple-400/40 italic">
+          <p class="text-[10px] text-blue-400/40 italic">
             {{ encyclopediaData.reduce((sum, c) => sum + c.entries.length, 0) }} Eintraege in
             {{ encyclopediaData.length }} Kategorien
           </p>

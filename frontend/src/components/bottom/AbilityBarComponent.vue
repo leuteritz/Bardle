@@ -6,10 +6,10 @@
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div
-        class="absolute w-16 h-16 bg-purple-500 rounded-full top-2 left-2 mix-blend-multiply filter blur-xl animate-blob"
+        class="absolute w-16 h-16 bg-blue-500 rounded-full top-2 left-2 mix-blend-multiply filter blur-xl animate-blob"
       ></div>
       <div
-        class="absolute w-12 h-12 bg-pink-500 rounded-full top-2 right-2 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+        class="absolute w-12 h-12 bg-violet-500 rounded-full top-2 right-2 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
       ></div>
     </div>
 
@@ -17,7 +17,7 @@
     <div class="relative z-10 mb-3 text-center">
       <div class="text-xs">
         <span
-          class="px-2 py-1 text-xs font-semibold text-purple-300 border rounded-full bg-purple-500/20 border-purple-400/30 backdrop-blur-sm"
+          class="px-2 py-1 text-xs font-semibold text-blue-300 border rounded-full bg-blue-500/20 border-blue-400/30 backdrop-blur-sm"
         >
           Skill Points: {{ gameStore.skillPoints }}
         </span>

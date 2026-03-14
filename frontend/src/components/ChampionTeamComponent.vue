@@ -1,16 +1,16 @@
 <template>
   <div
-    class="relative h-full p-3 overflow-hidden border team-container bg-gradient-to-br from-white/5 to-purple-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
+    class="relative h-full p-3 overflow-hidden border team-container bg-gradient-to-br from-white/5 to-blue-500/10 rounded-xl border-blue-400/30 backdrop-blur-sm"
   >
     <!-- Header -->
     <div class="mb-3 text-center">
       <h2
-        class="mb-2 text-xl font-extrabold text-transparent team-title bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+        class="mb-2 text-xl font-extrabold text-transparent team-title bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
       >
         ⚔️ Dein Team
       </h2>
       <div
-        class="w-20 h-0.5 mx-auto rounded-full bg-gradient-to-r from-purple-400 to-pink-500"
+        class="w-20 h-0.5 mx-auto rounded-full bg-gradient-to-r from-blue-400 to-violet-500"
       ></div>
     </div>
 
@@ -20,13 +20,13 @@
       <div class="flex flex-col items-center bard-container">
         <div class="relative">
           <div
-            class="relative flex items-center justify-center w-16 h-16 overflow-hidden border rounded-full shadow-xl bard-avatar bg-gradient-to-br from-purple-400/30 to-pink-500/30 border-purple-400/50"
+            class="relative flex items-center justify-center w-16 h-16 overflow-hidden border rounded-full shadow-xl bard-avatar bg-gradient-to-br from-blue-400/30 to-violet-500/30 border-blue-400/50"
           >
             <img src="/img/BardAbilities/Bard.png" alt="Bard" class="w-16 h-16 rounded-full" />
             <div
               class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent to-white/30"
             ></div>
-            <div class="absolute inset-0 border border-purple-400 rounded-full animate-pulse"></div>
+            <div class="absolute inset-0 border border-blue-400 rounded-full animate-pulse"></div>
           </div>
           <div
             class="absolute text-sm transform -translate-x-1/2 leader-crown -top-2 left-1/2 animate-bounce"
@@ -35,14 +35,14 @@
           </div>
         </div>
         <span
-          class="mt-1 text-sm font-bold text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          class="mt-1 text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >Bard</span
         >
-        <span class="text-xs font-semibold text-purple-400">Leader</span>
+        <span class="text-xs font-semibold text-blue-400">Leader</span>
       </div>
 
       <!-- Plus Sign -->
-      <div class="text-2xl font-bold text-purple-400 plus-sign animate-pulse">+</div>
+      <div class="text-2xl font-bold text-blue-400 plus-sign animate-pulse">+</div>
 
       <!-- Team Members -->
       <div class="flex flex-wrap justify-center gap-2 team-members">
@@ -69,7 +69,7 @@
             ×
           </button>
           <div
-            class="absolute flex items-center justify-center w-4 h-4 text-xs font-bold text-white transform -translate-x-1/2 bg-purple-400 rounded-full slot-number -bottom-1 left-1/2"
+            class="absolute flex items-center justify-center w-4 h-4 text-xs font-bold text-white transform -translate-x-1/2 bg-blue-400 rounded-full slot-number -bottom-1 left-1/2"
           >
             {{ index + 1 }}
           </div>
@@ -97,14 +97,14 @@
 
     <!-- Team Instructions -->
     <div
-      class="p-2 mb-3 text-center border rounded-lg instructions bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 backdrop-blur-sm"
+      class="p-2 mb-3 text-center border rounded-lg instructions bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 backdrop-blur-sm"
     >
-      <h3 class="mb-1 text-sm font-bold text-purple-300">📋 Team-Aufstellung</h3>
-      <p class="text-xs text-purple-400">
+      <h3 class="mb-1 text-sm font-bold text-blue-300">📋 Team-Aufstellung</h3>
+      <p class="text-xs text-blue-400">
         Wähle bis zu <strong>4 Champions</strong> für dein Team aus. Bard ist automatisch dein Team
         Leader!
       </p>
-      <div class="mt-1 text-xs text-purple-500">
+      <div class="mt-1 text-xs text-blue-500">
         <span class="font-semibold">{{ battleStore.selectedChampions.length }}/4</span> Champions
         ausgewählt
       </div>
@@ -112,7 +112,7 @@
 
     <!-- Available Champions -->
     <div class="available-champions">
-      <h3 class="mb-2 text-sm font-bold text-center text-purple-300">Verfügbare Champions:</h3>
+      <h3 class="mb-2 text-sm font-bold text-center text-blue-300">Verfügbare Champions:</h3>
       <div class="champions-list h-[calc(100%-16rem)] overflow-y-auto pr-2 custom-scrollbar">
         <div class="flex flex-wrap justify-center gap-2">
           <button
@@ -137,8 +137,8 @@
         <!-- No Champions Available Message -->
         <div v-if="selectableChampions.length === 0" class="py-6 text-center no-champions">
           <div class="mb-3 text-3xl">🛒</div>
-          <h4 class="mb-2 text-lg font-bold text-purple-300">Keine Champions verfügbar</h4>
-          <p class="text-sm text-purple-400">Besuche den Shop, um mehr Champions zu kaufen!</p>
+          <h4 class="mb-2 text-lg font-bold text-blue-300">Keine Champions verfügbar</h4>
+          <p class="text-sm text-blue-400">Besuche den Shop, um mehr Champions zu kaufen!</p>
         </div>
       </div>
     </div>
@@ -191,15 +191,15 @@ export default defineComponent({
 @keyframes bardGlow {
   0%,
   100% {
-    box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
   }
   50% {
-    box-shadow: 0 0 25px rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
   }
 }
 
 .leader-crown {
-  filter: drop-shadow(0 2px 4px rgba(168, 85, 247, 0.6));
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.6));
 }
 
 .team-slot {

@@ -1,19 +1,19 @@
 <template>
   <div
-    class="relative w-full h-full overflow-hidden bg-center bg-no-repeat bg-cover bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+    class="relative w-full h-full overflow-hidden bg-center bg-no-repeat bg-cover bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950"
     style="
       background-image:
         linear-gradient(rgba(30, 27, 75, 0.7), rgba(88, 28, 135, 0.8)), url('img/BardBattle.png');
-      background-color: #1e1b4b;
+      background-color: #110b3d;
     "
   >
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div
-        class="absolute w-32 h-32 bg-purple-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
+        class="absolute w-32 h-32 bg-blue-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
       ></div>
       <div
-        class="absolute bg-pink-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
+        class="absolute bg-violet-500 rounded-full top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
       ></div>
       <div
         class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
@@ -27,7 +27,7 @@
       <!-- Battle Counter -->
       <div class="flex flex-col items-center justify-center w-1/4">
         <span
-          class="text-lg font-bold text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+          class="text-lg font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >Battle #{{ currentBattleId }}</span
         >
       </div>
@@ -43,7 +43,7 @@
         >
           <span class="text-base">{{ currentResult.won ? '🏆' : '💀' }}</span>
           <div
-            class="mt-1 text-base text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+            class="mt-1 text-base text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             {{ currentResult.won ? 'VICTORY!' : 'DEFEAT!' }}
           </div>
@@ -66,13 +66,13 @@
       <div class="flex flex-col items-center w-1/4">
         <div
           v-if="isAutoBattleActive"
-          class="flex items-center px-4 py-2 text-xs font-bold border shadow-lg countdown-container bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-400/30 rounded-xl backdrop-blur-sm"
+          class="flex items-center px-4 py-2 text-xs font-bold border shadow-lg countdown-container bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 rounded-xl backdrop-blur-sm"
         >
           <span class="mr-2 text-lg animate-spin">⏱️</span>
-          <span class="text-purple-300">
+          <span class="text-blue-300">
             Nächstes Battle:
             <strong
-              class="text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+              class="text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
               >{{ timeUntilNextBattle }}s</strong
             >
           </span>
@@ -85,7 +85,7 @@
       <!-- Chat Panel -->
       <div class="flex items-center justify-center w-1/4">
         <div
-          class="p-2 transition-all duration-300 border shadow-lg chat-panel-wrapper bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
+          class="p-2 transition-all duration-300 border shadow-lg chat-panel-wrapper bg-gradient-to-br from-blue-500/20 to-violet-500/10 rounded-xl border-blue-400/30 backdrop-blur-sm"
         >
           <ChatPanelComponent />
         </div>
@@ -94,7 +94,7 @@
       <!-- Kompakte LoL Loading Screen -->
       <div class="w-1/2">
         <div
-          class="flex flex-col items-center justify-center p-4 border shadow-2xl bg-gradient-to-br from-white/10 to-purple-500/10 rounded-2xl border-purple-400/30 backdrop-blur-lg"
+          class="flex flex-col items-center justify-center p-4 border shadow-2xl bg-gradient-to-br from-white/10 to-blue-500/10 rounded-2xl border-blue-400/30 backdrop-blur-lg"
         >
           <!-- Team 1 -->
           <div class="mb-4">
@@ -117,7 +117,7 @@
                   />
                   <div
                     v-if="champ.name === 'Bard'"
-                    class="absolute inset-0 border-4 border-purple-400 rounded-full pointer-events-none animate-pulse"
+                    class="absolute inset-0 border-4 border-blue-400 rounded-full pointer-events-none animate-pulse"
                     style="z-index: 15"
                   ></div>
                   <div
@@ -129,18 +129,18 @@
                   <img
                     v-if="champ.rank"
                     :src="getBorderImage(champ.rank)"
-                    class="absolute bottom-0 right-0 z-20 w-8 h-8 border rounded-full bg-white/90 border-purple-400/50 drop-shadow-lg backdrop-blur-sm"
+                    class="absolute bottom-0 right-0 z-20 w-8 h-8 border rounded-full bg-white/90 border-blue-400/50 drop-shadow-lg backdrop-blur-sm"
                     :alt="champ.rank + ' Border'"
                   />
                 </div>
                 <span
-                  class="px-2 py-1 mt-2 text-sm font-bold text-purple-300 border rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-600/10 border-purple-400/30 backdrop-blur-sm"
+                  class="px-2 py-1 mt-2 text-sm font-bold text-blue-300 border rounded-lg bg-gradient-to-r from-blue-500/20 to-blue-600/10 border-blue-400/30 backdrop-blur-sm"
                   :title="champ.name"
                 >
                   {{ champ.name.length > 8 ? champ.name.slice(0, 8) + '...' : champ.name }}
                 </span>
                 <div
-                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border rounded border-white/20 bg-gradient-to-r from-white/10 to-purple-500/10 backdrop-blur-sm"
+                  class="flex flex-row items-center gap-2 px-2 py-1 mt-1 text-xs border rounded border-white/20 bg-gradient-to-r from-white/10 to-blue-500/10 backdrop-blur-sm"
                 >
                   <span class="font-bold text-green-300">{{ champ.kills }}K</span>
                   <span class="font-bold text-red-300">{{ champ.deaths }}D</span>
@@ -152,7 +152,7 @@
 
           <!-- VS Divider -->
           <div
-            class="my-4 text-3xl font-extrabold text-transparent vs-divider bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text drop-shadow-lg animate-pulse"
+            class="my-4 text-3xl font-extrabold text-transparent vs-divider bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text drop-shadow-lg animate-pulse"
           >
             ⚔️ VS ⚔️
           </div>
@@ -204,7 +204,7 @@
       <!-- MiniMap -->
       <div class="flex items-center justify-center w-1/4">
         <div
-          class="p-2 transition-all duration-300 border shadow-lg minimap-wrapper bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-xl border-purple-400/30 backdrop-blur-sm"
+          class="p-2 transition-all duration-300 border shadow-lg minimap-wrapper bg-gradient-to-br from-blue-500/20 to-violet-500/10 rounded-xl border-blue-400/30 backdrop-blur-sm"
         >
           <MiniMapComponent :battle-id="currentBattleId" :score="score" />
         </div>
@@ -332,7 +332,7 @@ export default defineComponent({
 }
 
 .leader-crown {
-  filter: drop-shadow(0 2px 4px rgba(168, 85, 247, 0.6));
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.6));
 }
 
 .countdown-container {
@@ -342,10 +342,10 @@ export default defineComponent({
 @keyframes countdownPulse {
   0%,
   100% {
-    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   }
   50% {
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.5);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
   }
 }
 
@@ -366,7 +366,7 @@ export default defineComponent({
 .chat-panel-wrapper:hover,
 .minimap-wrapper:hover {
   transform: scale(1.02);
-  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.3);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 }
 
 /* Glassmorphism */

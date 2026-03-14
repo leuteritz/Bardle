@@ -5,7 +5,7 @@
     @click.self="close"
   >
     <div
-      class="relative w-full max-w-4xl mx-4 overflow-hidden border shadow-2xl shadow-purple-900/50 max-h-[80vh] rounded-3xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 border-white/30"
+      class="relative w-full max-w-4xl mx-4 overflow-hidden border shadow-2xl shadow-blue-900/50 max-h-[80vh] rounded-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 border-white/30"
     >
       <!-- Header -->
       <div
@@ -51,12 +51,12 @@
           </div>
 
           <div
-            class="p-6 border rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/30"
+            class="p-6 border rounded-2xl bg-gradient-to-r from-blue-500/20 to-violet-500/20 backdrop-blur-sm border-blue-400/30"
           >
             <div class="text-center">
-              <h3 class="mb-2 text-lg font-bold text-purple-300">Lifetime Produktion</h3>
+              <h3 class="mb-2 text-lg font-bold text-blue-300">Lifetime Produktion</h3>
               <p
-                class="text-3xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text"
+                class="text-3xl font-bold text-transparent bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text"
               >
                 {{ formatNumber(shopStore.totalLifetimeProduction) }}
               </p>

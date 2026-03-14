@@ -1,17 +1,17 @@
 <template>
   <div
-    class="relative flex flex-col w-full h-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
+    class="relative flex flex-col w-full h-full bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950"
   >
     <!-- Animated Background -->
     <div class="absolute inset-0 opacity-20">
       <div
-        class="absolute bg-purple-500 rounded-full top-10 left-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob"
+        class="absolute bg-blue-500 rounded-full top-10 left-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob"
       ></div>
       <div
         class="absolute bg-yellow-500 rounded-full top-10 right-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
       ></div>
       <div
-        class="absolute bg-pink-500 rounded-full -bottom-8 left-20 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
+        class="absolute bg-violet-500 rounded-full -bottom-8 left-20 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
       ></div>
     </div>
 
@@ -69,10 +69,10 @@
 
         <!-- Motivationstext -->
         <div
-          class="mb-4 border bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border-purple-400/30 rounded-2xl"
+          class="mb-4 border bg-gradient-to-r from-blue-500/20 to-violet-500/20 backdrop-blur-sm border-blue-400/30 rounded-2xl"
         >
           <span
-            class="p-2 text-base font-medium text-transparent bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text"
+            class="p-2 text-base font-medium text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             ✨ Sammle Chimes um das Universum zu retten! ✨
           </span>
@@ -88,7 +88,7 @@
             class="absolute inset-0 rounded-full opacity-75 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-spin-slow"
           ></div>
           <div
-            class="absolute rounded-full inset-1 bg-gradient-to-r from-purple-600 to-blue-600 opacity-60 animate-pulse"
+            class="absolute rounded-full inset-1 bg-gradient-to-r from-blue-600 to-violet-600 opacity-60 animate-pulse"
           ></div>
 
           <!-- Inner Button -->
@@ -128,7 +128,7 @@
     <!-- Enhanced Chime Popup -->
     <div
       :key="chimeGainKey"
-      class="fixed z-50 text-2xl font-bold text-transparent pointer-events-none bg-gradient-to-r from-purple-700 to-pink-500 bg-clip-text chime-popup"
+      class="fixed z-50 text-2xl font-bold text-transparent pointer-events-none bg-gradient-to-r from-blue-700 to-violet-500 bg-clip-text chime-popup"
       :style="{
         top: chimeGainPos.y - 200 + 'px',
         left: chimeGainPos.x - 400 + 'px',

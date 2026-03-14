@@ -30,9 +30,7 @@ const { starsContainer, prefersReducedMotion } = useStarBackground()
 /* Aussehen der einzelnen Sterne */
 .star {
   position: absolute !important;
-  background: rgba(255, 255, 255, 0.95) !important;
   border-radius: 50% !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8) !important;
   will-change:
     transform, opacity !important;
   transform: translateZ(0) !important;
