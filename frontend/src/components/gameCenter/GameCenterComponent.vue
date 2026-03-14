@@ -2,16 +2,12 @@
   <div class="relative z-50 w-full">
     <!-- Ultra-Kompakte Tab Navigation -->
     <div class="flex justify-center mb-2">
-      <div class="flex rounded-lg shadow-sm p-0.5">
+      <div class="flex gap-3 p-1 shadow-lgrounded-xl backdrop-blur-sm">
         <button
           v-for="tab in tabs"
           :key="tab.id"
-          :class="
-            activeTab === tab.id
-              ? 'bg-amber-400 text-amber-900 shadow-sm'
-              : 'text-amber-500 hover:bg-amber-200'
-          "
-          class="flex items-center gap-1 px-3 py-1.5 font-semibold transition rounded-md text-lg"
+          :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
+          class="tab-button flex items-center gap-1 px-3 py-1.5 font-semibold transition-all duration-300 rounded-lg text-lg"
           @click="activeTab = tab.id"
         >
           <span>{{ tab.icon }}</span>
@@ -79,3 +75,22 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.tab-active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.8));
+  color: white;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  transform: scale(1.05);
+}
+
+.tab-inactive {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(59, 130, 246, 0.1));
+  color: rgba(59, 130, 246, 0.8);
+}
+
+.tab-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+</style>
