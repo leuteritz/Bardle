@@ -30,9 +30,7 @@ const { currentMsg } = useTitleRotation()
 
         <!-- Mitte: Zeit -->
         <div class="flex items-start justify-center col-span-1">
-          <div
-            class="px-3 py-1 border rounded-full shadow-lg backdrop-blur-sm bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30"
-          >
+          <div class="px-3 py-1 shadow-lg backdrop-blur-sm">
             <span
               class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
             >
@@ -42,7 +40,7 @@ const { currentMsg } = useTitleRotation()
         </div>
 
         <!-- Rechts: Wechselnde Nachrichten -->
-        <div class="flex items-start justify-end col-span-1">
+        <div class="flex items-center justify-center col-span-1">
           <p
             class="text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg"
           >

@@ -33,7 +33,6 @@ const { starsContainer, prefersReducedMotion } = useStarBackground()
   border-radius: 50% !important;
   will-change:
     transform, opacity !important;
-  transform: translateZ(0) !important;
 }
 
 /* Optimierung für die Linien zwischen Sternen */
@@ -54,16 +53,6 @@ const { starsContainer, prefersReducedMotion } = useStarBackground()
   }
   100% {
     opacity: 0;
-  }
-}
-
-/* Sterne bewegen sich von ihrer Startposition nach links raus */
-@keyframes moveLeftStar {
-  0% {
-    left: var(--start-left);
-  }
-  100% {
-    left: -10%;
   }
 }
 

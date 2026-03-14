@@ -4,19 +4,32 @@ import { STAR_COUNT } from '../config/constants'
 type StarItem = {
   id: number
   el: HTMLDivElement
-  onEnd: (e: AnimationEvent) => void
+  x: number
+  y: number
+  vx: number
+  vy: number
+  targetVx: number
+  targetVy: number
+  nextDirectionChange: number
 }
+
+const SPEED_MIN = 5
+const SPEED_MAX = 10
+const DIR_CHANGE_MIN = 4000
+const DIR_CHANGE_MAX = 10_000
+const LERP_RATE = 1.5
 
 const STAR_CONNECTION_INTERVAL = 3000
 const LINE_DURATION = 2000
-const ANIMATION_SPEED_MIN = 10
-const ANIMATION_SPEED_MAX = 200
 
 export function useStarBackground() {
   const starsContainer = ref<HTMLElement>()
   const prefersReducedMotion = ref(false)
   const stars: StarItem[] = []
   let nextStarId = 1
+  let animFrame = 0
+  let lastTimestamp = 0
+  let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 
   const intervals: ReturnType<typeof setInterval>[] = []
   const timeouts: ReturnType<typeof setTimeout>[] = []
@@ -25,6 +38,12 @@ export function useStarBackground() {
     if (typeof window !== 'undefined') {
       prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     }
+  }
+
+  function getRandomVelocity(): { vx: number; vy: number } {
+    const angle = Math.random() * Math.PI * 2
+    const speed = SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN)
+    return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed }
   }
 
   async function connectRandomStars(): Promise<void> {
@@ -82,24 +101,15 @@ export function useStarBackground() {
     timeouts.push(timeoutId)
   }
 
-  function removeStar(item: StarItem) {
-    item.el.removeEventListener('animationend', item.onEnd as EventListener)
-    if (starsContainer.value && item.el.parentElement === starsContainer.value) {
-      starsContainer.value.removeChild(item.el)
-    }
-    const idx = stars.findIndex((s) => s.id === item.id)
-    if (idx !== -1) stars.splice(idx, 1)
-  }
-
-  function spawnStar(): StarItem | null {
+  function spawnStar(timestamp: number): StarItem | null {
     if (!starsContainer.value) return null
 
     const star = document.createElement('div')
     star.className = 'star'
 
-    const startLeft = Math.random() < 0.6 ? 105 + Math.random() * 20 : Math.random() * 100
-    const speed = Math.random() * (ANIMATION_SPEED_MAX - ANIMATION_SPEED_MIN) + ANIMATION_SPEED_MIN
     const size = Math.random() * 4 + 2
+    const w = starsContainer.value.clientWidth || window.innerWidth
+    const h = starsContainer.value.clientHeight || window.innerHeight
 
     const starColors = [
       { bg: 'rgba(255, 255, 255, 0.95)', glow: 'rgba(255, 255, 255, 0.8)' },
@@ -113,60 +123,117 @@ export function useStarBackground() {
 
     star.style.cssText = `
       position: absolute;
-      left: ${startLeft}%;
-      top: ${Math.random() * 100}%;
+      left: 0;
+      top: 0;
       width: ${size}px;
       height: ${size}px;
       background: ${color.bg};
       border-radius: 50%;
       box-shadow: 0 0 10px ${color.glow};
-      animation: moveLeftStar ${speed}s linear forwards, twinkle 3s ease-in-out infinite;
+      animation: twinkle 3s ease-in-out infinite;
       will-change: transform, opacity;
-      transform: translateZ(0);
       pointer-events: none;
     `
-    star.style.setProperty('--start-left', `${startLeft}%`)
+
+    const x = Math.random() * w
+    const y = Math.random() * h
+    const { vx, vy } = getRandomVelocity()
+    const { vx: tvx, vy: tvy } = getRandomVelocity()
 
     const item: StarItem = {
       id: nextStarId++,
       el: star,
-      onEnd: (e: AnimationEvent) => {
-        if (e.animationName !== 'moveLeftStar') return
-        removeStar(item)
-        if (!prefersReducedMotion.value) {
-          spawnStar()
-        }
-      },
+      x,
+      y,
+      vx,
+      vy,
+      targetVx: tvx,
+      targetVy: tvy,
+      nextDirectionChange:
+        timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN),
     }
 
-    star.addEventListener('animationend', item.onEnd as EventListener)
+    star.style.transform = `translate(${x}px, ${y}px)`
     starsContainer.value.appendChild(star)
     stars.push(item)
     return item
+  }
+
+  function animateStars(timestamp: number): void {
+    if (lastTimestamp === 0) lastTimestamp = timestamp
+    const rawDelta = (timestamp - lastTimestamp) / 1000
+    const delta = Math.min(rawDelta, 0.1)
+    lastTimestamp = timestamp
+
+    const w = starsContainer.value?.clientWidth ?? window.innerWidth
+    const h = starsContainer.value?.clientHeight ?? window.innerHeight
+
+    for (const star of stars) {
+      const lerpFactor = Math.min(1, LERP_RATE * delta)
+      star.vx += (star.targetVx - star.vx) * lerpFactor
+      star.vy += (star.targetVy - star.vy) * lerpFactor
+
+      star.x += star.vx * delta
+      star.y += star.vy * delta
+
+      const pad = 10
+      if (star.x < -pad) star.x += w + pad * 2
+      else if (star.x > w + pad) star.x -= w + pad * 2
+      if (star.y < -pad) star.y += h + pad * 2
+      else if (star.y > h + pad) star.y -= h + pad * 2
+
+      star.el.style.transform = `translate(${star.x}px, ${star.y}px)`
+
+      if (timestamp >= star.nextDirectionChange) {
+        const { vx, vy } = getRandomVelocity()
+        star.targetVx = vx
+        star.targetVy = vy
+        star.nextDirectionChange =
+          timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN)
+      }
+    }
+
+    animFrame = requestAnimationFrame(animateStars)
+  }
+
+  function handleResize(): void {
+    if (resizeTimeout) clearTimeout(resizeTimeout)
+    resizeTimeout = setTimeout(() => {
+      if (!starsContainer.value || stars.length === 0) return
+      const w = starsContainer.value.clientWidth || window.innerWidth
+      const h = starsContainer.value.clientHeight || window.innerHeight
+      for (const star of stars) {
+        star.x = Math.random() * w
+        star.y = Math.random() * h
+        star.el.style.transform = `translate(${star.x}px, ${star.y}px)`
+      }
+    }, 150)
   }
 
   function createStars(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     starsContainer.value.innerHTML = ''
     stars.length = 0
+    const now = performance.now()
     for (let i = 0; i < STAR_COUNT; i++) {
-      spawnStar()
+      spawnStar(now)
     }
+    lastTimestamp = 0
+    animFrame = requestAnimationFrame(animateStars)
   }
 
   function cleanup(): void {
+    if (animFrame) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    }
     intervals.forEach((id) => clearInterval(id))
     timeouts.forEach((id) => clearTimeout(id))
     intervals.length = 0
     timeouts.length = 0
-
-    stars.forEach((item) => {
-      item.el.removeEventListener('animationend', item.onEnd as EventListener)
-      if (starsContainer.value && item.el.parentElement === starsContainer.value) {
-        starsContainer.value.removeChild(item.el)
-      }
-    })
     stars.length = 0
+    window.removeEventListener('resize', handleResize)
+    if (resizeTimeout) clearTimeout(resizeTimeout)
 
     if (starsContainer.value) {
       starsContainer.value.innerHTML = ''
@@ -179,6 +246,7 @@ export function useStarBackground() {
     if (!prefersReducedMotion.value) {
       await nextTick()
       setTimeout(createStars, 100)
+      window.addEventListener('resize', handleResize)
 
       const starConnectionInterval = setInterval(connectRandomStars, STAR_CONNECTION_INTERVAL)
       intervals.push(starConnectionInterval)

@@ -5,12 +5,12 @@ import { useCpsStore } from './cpsStore'
 import type { ShopUpgrade, BuildingStat } from '../types'
 
 // Icon-Importe für verschiedene Upgrade-Typen im Shop-System
-import chimeClickerIcon from '/img/ChimesPerClick.png'
-import glockenturmIcon from '/img/Glockenturm.png'
-import klanggeneratorIcon from '/img/KlangGenerator.png'
-import harmoniewerkIcon from '/img/HarmonieWerk.png'
-import sphaerenMusikIcon from '/img/SphaerenMusik.png'
-import zeitEchoIcon from '/img/ZeitEcho.png'
+const chimeClickerIcon = '/img/ChimesPerClick.png'
+const glockenturmIcon = '/img/Glockenturm.png'
+const klanggeneratorIcon = '/img/KlangGenerator.png'
+const harmoniewerkIcon = '/img/HarmonieWerk.png'
+const sphaerenMusikIcon = '/img/SphaerenMusik.png'
+const zeitEchoIcon = '/img/ZeitEcho.png'
 
 export const useShopStore = defineStore('shop', {
   state: () => ({
@@ -257,7 +257,9 @@ export const useShopStore = defineStore('shop', {
         return total + (upgrade.baseCPC || 0) * upgrade.level
       }, 0)
 
-      return Math.floor((gameStore.baseChimesPerClick + upgradeBonus) * gameStore.abilityCPCMultiplier)
+      return Math.floor(
+        (gameStore.baseChimesPerClick + upgradeBonus) * gameStore.abilityCPCMultiplier,
+      )
     },
 
     // Berechnet aktuelle Kosten eines Upgrades basierend auf Level
