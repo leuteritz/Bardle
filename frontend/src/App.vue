@@ -9,6 +9,7 @@ import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue
 import RankComponent from './components/RankComponent.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
+import AdminDashboard from './components/AdminDashboard.vue'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -154,6 +155,9 @@ const { currentMsg } = useTitleRotation()
 
     <!-- Encyclopedia Panel -->
     <EncyclopediaPanel />
+
+    <!-- Admin Dashboard -->
+    <AdminDashboard />
 
     <span
       class="fixed z-50 text-sm bottom-2 right-3 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
