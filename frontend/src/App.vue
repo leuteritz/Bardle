@@ -39,14 +39,8 @@ const { currentMsg } = useTitleRotation()
           </div>
         </div>
 
-        <!-- Rechts: Wechselnde Nachrichten -->
-        <div class="flex items-center justify-center col-span-1">
-          <p
-            class="text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg"
-          >
-            {{ currentMsg }}
-          </p>
-        </div>
+        <!-- Rechts: Platzhalter (Nachricht ist fixed) -->
+        <div class="col-span-1"></div>
       </div>
 
       <!-- Hauptbereich mit 3 Spalten (responsive) -->
@@ -156,8 +150,15 @@ const { currentMsg } = useTitleRotation()
     <!-- Admin Dashboard -->
     <AdminDashboard />
 
+    <!-- Wechselnde Nachrichten – fixed, garantiert über allem -->
+    <p
+      class="fixed top-10 right-10 z-[200] font-['MedievalSharp'] text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg pointer-events-none"
+    >
+      {{ currentMsg }}
+    </p>
+
     <span
-      class="fixed z-50 text-sm bottom-2 right-3 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
+      class="fixed z-50 text-sm bottom-5 right-5 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
       >©Leuteritz</span
     >
   </div>
