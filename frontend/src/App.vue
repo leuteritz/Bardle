@@ -2,6 +2,7 @@
 import { useGameStore } from './stores/gameStore'
 import { useTitleRotation } from './composables/useTitleRotation'
 import { formatNumber } from './config/numberFormat'
+import { universes } from './config/universes'
 import StatsPanelComponent from './components/bottom/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
@@ -32,16 +33,43 @@ const { currentMsg } = useTitleRotation()
           <!-- Gesamt-Chimes -->
           <div class="flex items-center gap-1 px-4 py-1">
             <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
-            <span class="font-bold text-transparent text-7xl whitespace-nowrap tracking-wider bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-400 chimes-text-glow">
+            <span
+              class="font-bold tracking-wider text-transparent text-7xl whitespace-nowrap bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-400 chimes-text-glow"
+            >
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
           <!-- CPS (kein Rahmen) -->
           <div class="flex items-center gap-1 px-2 py-0.5">
-            <img src="/img/BardAbilities/BardChime.png" class="h-10 w-10 chime-glow-green" />
-            <span class="text-2xl font-semibold text-transparent whitespace-nowrap tracking-wide bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow">
+            <img src="/img/BardAbilities/BardChime.png" class="w-10 h-10 chime-glow-green" />
+            <span
+              class="text-2xl font-semibold tracking-wide text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow"
+            >
               {{ gameStore.chimesPerSecond }}/s
             </span>
+          </div>
+          <!-- Universum / Prestige Progress -->
+          <div class="flex flex-col items-center w-56 gap-1 mt-1">
+            <!-- Progress Bar -->
+            <div class="relative w-full h-1 overflow-hidden rounded-full bg-violet-900/40">
+              <div
+                class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-violet-500 to-indigo-400"
+                :style="{ width: gameStore.universeRescueProgress + '%' }"
+              ></div>
+            </div>
+            <!-- Chimes counter -->
+            <p class="text-sm text-violet-400/60 tabular-nums">
+              {{ formatNumber(gameStore.chimesForNextUniverse) }} /
+              {{ formatNumber(gameStore.chimesToUniverseRescue) }} chimes to prestige
+            </p>
+            <!-- Prestige Button -->
+            <button
+              v-if="gameStore.prestigeAvailable"
+              @click.stop="gameStore.triggerPrestige()"
+              class="px-4 py-0.5 text-[11px] font-bold tracking-wide rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white animate-pulse hover:animate-none hover:from-violet-400 hover:to-indigo-400 transition-all duration-200"
+            >
+              🌌 Prestige!
+            </button>
           </div>
         </div>
 
@@ -225,11 +253,13 @@ const { currentMsg } = useTitleRotation()
 }
 
 .chime-glow {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6)) drop-shadow(0 0 20px rgba(251, 191, 36, 0.3));
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6))
+    drop-shadow(0 0 20px rgba(251, 191, 36, 0.3));
 }
 
 .chime-glow-green {
-  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 16px rgba(52, 211, 153, 0.25));
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5))
+    drop-shadow(0 0 16px rgba(52, 211, 153, 0.25));
 }
 
 .chimes-text-glow {

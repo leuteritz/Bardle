@@ -15,8 +15,6 @@
       ></div>
     </div>
 
-    <UniverseProgressComponent />
-
     <!-- Hauptinhalt -->
     <div class="relative z-10 grid flex-1 w-full min-h-0 grid-cols-3">
       <div class="relative flex flex-col items-center justify-center col-span-2 text-center">
@@ -56,7 +54,13 @@
                 </p>
                 <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
               </div>
-              <p class="text-xs text-green-400/80 animate-pulse">📊 Details anzeigen</p>
+              <div class="flex flex-col items-center gap-1 mt-1">
+                <!-- Thin shimmer bar representing passive income flow -->
+                <div class="relative w-16 h-0.5 overflow-hidden rounded-full bg-green-900/50">
+                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-green-400 to-transparent animate-cps-shimmer"></div>
+                </div>
+                <span class="text-[10px] font-medium tracking-widest uppercase text-green-500/70">♪ /s</span>
+              </div>
             </div>
           </div>
 
@@ -159,9 +163,7 @@ import { useGameStore } from '../../../stores/gameStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { formatNumber } from '../../../config/numberFormat'
 import ShopComponent from './ShopComponent.vue'
-import { universes } from '../../../config/universes'
 import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
-import UniverseProgressComponent from './UniverseProgressComponent.vue'
 import MeepProgressComponent from './MeepProgressComponent.vue'
 import ExpeditionComponent from './ExpeditionComponent.vue'
 
@@ -170,7 +172,6 @@ export default defineComponent({
   components: {
     ShopComponent,
     ChimesPerSecondModal,
-    UniverseProgressComponent,
     MeepProgressComponent,
     ExpeditionComponent,
   },
@@ -216,7 +217,6 @@ export default defineComponent({
       handleChimeClick,
       chimeGainPos,
       chimeGainKey,
-      universes,
     }
   },
 })
@@ -246,6 +246,11 @@ export default defineComponent({
   100% {
     transform: translateX(100%);
   }
+}
+
+@keyframes cps-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
 
 @keyframes spin-slow {
@@ -300,6 +305,10 @@ export default defineComponent({
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
+}
+
+.animate-cps-shimmer {
+  animation: cps-shimmer 1.8s ease-in-out infinite;
 }
 
 .animate-spin-slow {
