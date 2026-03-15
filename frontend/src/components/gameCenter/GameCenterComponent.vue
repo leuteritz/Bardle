@@ -1,26 +1,26 @@
 <template>
-  <div class="relative z-50 w-full">
-    <!-- Ultra-Kompakte Tab Navigation -->
-    <div class="flex justify-center mb-2">
-      <div class="flex gap-3 p-1 shadow-lgrounded-xl backdrop-blur-sm">
+  <div class="relative z-50 w-full flex flex-col">
+    <!-- Content -->
+    <div
+      class="w-full h-[600px] p-4 backdrop-blur-xl bg-white/5 border border-white/20 rounded-t-2xl rounded-b-none shadow-2xl"
+    >
+      <component :is="currentComponent" />
+    </div>
+
+    <!-- Tab Navigation (unten) -->
+    <div class="flex justify-center">
+      <div class="flex gap-1 px-3 py-2 bg-white/5 border border-t-0 border-white/15 rounded-b-2xl backdrop-blur-md">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
-          class="tab-button flex items-center gap-1 px-3 py-1.5 font-semibold transition-all duration-300 rounded-lg text-lg"
+          class="tab-button flex items-center gap-1.5 px-4 py-1.5 font-semibold transition-all duration-300 rounded-lg text-base"
           @click="activeTab = tab.id"
         >
           <span>{{ tab.icon }}</span>
           <span class="hidden sm:inline">{{ tab.label }}</span>
         </button>
       </div>
-    </div>
-
-    <!-- Ultra-Kompakter Content -->
-    <div
-      class="w-full h-[600px] p-4 backdrop-blur-xl bg-white/5 border border-white/20 rounded-2xl shadow-2xl"
-    >
-      <component :is="currentComponent" />
     </div>
   </div>
 </template>
@@ -78,19 +78,20 @@ export default defineComponent({
 
 <style scoped>
 .tab-active {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.8));
-  color: white;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.85), rgba(234, 179, 8, 0.85));
+  color: #1a1000;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.45);
   transform: scale(1.05);
 }
 
 .tab-inactive {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(59, 130, 246, 0.1));
-  color: rgba(59, 130, 246, 0.8);
+  background: transparent;
+  color: rgba(251, 191, 36, 0.5);
 }
 
 .tab-button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+  transform: scale(1.08);
+  color: rgba(251, 191, 36, 0.9);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 </style>

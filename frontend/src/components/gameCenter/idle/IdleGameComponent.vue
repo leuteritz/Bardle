@@ -78,6 +78,13 @@
           </span>
         </div>
 
+        <!-- Zeit-Anzeige -->
+        <div class="mb-6 px-3 py-1 border shadow-lg backdrop-blur-sm bg-blue-500/10 border-blue-400/30 rounded-xl">
+          <span class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300">
+            ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
+          </span>
+        </div>
+
         <!-- Chime Button - Verbessertes Design -->
         <div
           @click="handleChimeClick"
@@ -143,6 +150,7 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
+import { useBattleStore } from '../../../stores/battleStore'
 import { formatNumber } from '../../../config/numberFormat'
 import ShopComponent from './ShopComponent.vue'
 import { universes } from '../../../config/universes'
@@ -162,6 +170,7 @@ export default defineComponent({
   },
   setup() {
     const gameStore = useGameStore()
+    const battleStore = useBattleStore()
 
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
@@ -196,6 +205,7 @@ export default defineComponent({
 
     return {
       gameStore,
+      battleStore,
       formatNumber,
       handleChimeClick,
       chimeGainPos,

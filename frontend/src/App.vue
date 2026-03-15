@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useGameStore } from './stores/gameStore'
-import { useBattleStore } from './stores/battleStore'
 import { useTitleRotation } from './composables/useTitleRotation'
+import { formatNumber } from './config/numberFormat'
 import StatsPanelComponent from './components/bottom/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import BardHudComponent from './components/bottom/BardHudComponent.vue'
@@ -12,7 +12,6 @@ import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 
 const gameStore = useGameStore()
-const battleStore = useBattleStore()
 const { currentMsg } = useTitleRotation()
 </script>
 
@@ -28,13 +27,20 @@ const { currentMsg } = useTitleRotation()
           <RankComponent />
         </div>
 
-        <!-- Mitte: Zeit -->
-        <div class="flex items-start justify-center col-span-1">
-          <div class="px-3 py-1 shadow-lg backdrop-blur-sm">
-            <span
-              class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
-            >
-              ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
+        <!-- Mitte: Chimes & CPS -->
+        <div class="flex flex-col items-center justify-center col-span-1 gap-0">
+          <!-- Gesamt-Chimes -->
+          <div class="flex items-center gap-1 px-4 py-1">
+            <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
+            <span class="font-bold text-transparent text-7xl whitespace-nowrap tracking-wider bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-400 chimes-text-glow">
+              {{ formatNumber(gameStore.chimes) }}
+            </span>
+          </div>
+          <!-- CPS (kein Rahmen) -->
+          <div class="flex items-center gap-1 px-2 py-0.5">
+            <img src="/img/BardAbilities/BardChime.png" class="h-10 w-10 chime-glow-green" />
+            <span class="text-2xl font-semibold text-transparent whitespace-nowrap tracking-wide bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow">
+              {{ gameStore.chimesPerSecond }}/s
             </span>
           </div>
         </div>
@@ -56,7 +62,7 @@ const { currentMsg } = useTitleRotation()
             loading="lazy"
           />
           <!-- Portal Effect -->
-          <div class="portal-effect absolute w-20 h-36 lg:w-28 lg:h-52 lg:-right-12">
+          <div class="absolute w-20 portal-effect h-36 lg:w-28 lg:h-52 lg:-right-12">
             <div class="portal-glow"></div>
             <div class="portal-vortex"></div>
             <div class="portal-ring"></div>
@@ -79,7 +85,7 @@ const { currentMsg } = useTitleRotation()
             loading="lazy"
           />
           <!-- Portal Effect -->
-          <div class="portal-effect absolute w-20 h-36 lg:w-28 lg:h-52 lg:-left-12">
+          <div class="absolute w-20 portal-effect h-36 lg:w-28 lg:h-52 lg:-left-12">
             <div class="portal-glow"></div>
             <div class="portal-vortex"></div>
             <div class="portal-ring"></div>
@@ -218,6 +224,22 @@ const { currentMsg } = useTitleRotation()
   backdrop-filter: blur(4px);
 }
 
+.chime-glow {
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6)) drop-shadow(0 0 20px rgba(251, 191, 36, 0.3));
+}
+
+.chime-glow-green {
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 16px rgba(52, 211, 153, 0.25));
+}
+
+.chimes-text-glow {
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5));
+}
+
+.cps-text-glow {
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
+}
+
 /* ── Portal Effect ── */
 .portal-effect {
   border-radius: 50%;
@@ -244,15 +266,14 @@ const { currentMsg } = useTitleRotation()
   position: absolute;
   inset: 4px;
   border-radius: 50%;
-  background:
-    conic-gradient(
-      from 0deg,
-      rgba(255, 215, 0, 0.6),
-      rgba(180, 130, 20, 0.2),
-      rgba(255, 200, 50, 0.5),
-      rgba(120, 80, 10, 0.15),
-      rgba(255, 215, 0, 0.6)
-    );
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 215, 0, 0.6),
+    rgba(180, 130, 20, 0.2),
+    rgba(255, 200, 50, 0.5),
+    rgba(120, 80, 10, 0.15),
+    rgba(255, 215, 0, 0.6)
+  );
 
   mask-image: radial-gradient(
     ellipse at center,
@@ -290,7 +311,7 @@ const { currentMsg } = useTitleRotation()
   border-radius: 50%;
   border: 3px solid transparent;
   background:
-    linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box,
+    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)) padding-box,
     linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
   box-shadow:
     0 0 15px 3px rgba(255, 215, 0, 0.4),
@@ -300,7 +321,8 @@ const { currentMsg } = useTitleRotation()
 }
 
 @keyframes portalPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.8;
     transform: scale(1);
   }
@@ -309,6 +331,4 @@ const { currentMsg } = useTitleRotation()
     transform: scale(1.05);
   }
 }
-
-
 </style>
