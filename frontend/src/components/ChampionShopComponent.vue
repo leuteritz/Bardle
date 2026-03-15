@@ -1,3 +1,4 @@
+ww
 <template>
   <div
     class="relative h-full p-4 overflow-hidden border shop-container bg-gradient-to-br from-white/5 to-blue-500/10 rounded-2xl border-blue-400/30 backdrop-blur-sm"
@@ -164,5 +165,4 @@ export default defineComponent({
     transform: rotate(360deg);
   }
 }
-
 </style>

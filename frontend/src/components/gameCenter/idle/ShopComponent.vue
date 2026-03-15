@@ -138,7 +138,6 @@ export default defineComponent({
     const buyOptions: BuyOption[] = [
       { value: 1, label: '1x' },
       { value: 5, label: '5x' },
-      { value: 10, label: '10x' },
       { value: 'max', label: 'Max' },
     ]
 
