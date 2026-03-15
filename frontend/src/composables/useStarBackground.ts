@@ -45,8 +45,8 @@ type GalaxyTypeConfig = {
 
 // ─── Star Constants ───────────────────────────────────────────────────────────
 
-const SPEED_MIN = 5
-const SPEED_MAX = 10
+const SPEED_MIN = 2
+const SPEED_MAX = 5
 const DIR_CHANGE_MIN = 4000
 const DIR_CHANGE_MAX = 10_000
 const LERP_RATE = 1.5
@@ -129,35 +129,60 @@ const GALAXY_PALETTES_BY_TYPE: Record<GalaxyType, GalaxyPalette[]> = {
     { center: '#ffffff', mid: '#06b6d4', outer: '#6366f1', arm: '#67e8f9' },
     { center: '#ffffff', mid: '#ec4899', outer: '#8b5cf6', arm: '#f9a8d4' },
     { center: '#e0f2fe', mid: '#38bdf8', outer: '#0369a1', arm: '#7dd3fc' },
+    // new palettes
+    { center: '#ffffff', mid: '#14b8a6', outer: '#d97706', arm: '#5eead4' },   // teal/gold
+    { center: '#fff1f2', mid: '#fb7185', outer: '#f59e0b', arm: '#fda4af' },   // rose/amber
+    { center: '#f0fdf4', mid: '#84cc16', outer: '#059669', arm: '#bef264' },   // lime/emerald
+    { center: '#e0f7ff', mid: '#7dd3fc', outer: '#bfdbfe', arm: '#bae6fd' },   // cold ice-blue
   ],
   'barred-spiral': [
     { center: '#fff7ed', mid: '#f59e0b', outer: '#ef4444', arm: '#fcd34d' },
     { center: '#fef3c7', mid: '#f97316', outer: '#dc2626', arm: '#fde68a' },
     { center: '#ffffff', mid: '#fb923c', outer: '#9333ea', arm: '#fdba74' },
+    // new palettes
+    { center: '#f0f9ff', mid: '#38bdf8', outer: '#14b8a6', arm: '#7dd3fc' },   // cool steel-blue/teal
+    { center: '#f0fdf4', mid: '#4ade80', outer: '#d97706', arm: '#86efac' },   // emerald/gold
+    { center: '#fff1f2', mid: '#fb7185', outer: '#dc2626', arm: '#fda4af' },   // rose/crimson
   ],
   elliptical: [
     { center: '#fff7ed', mid: '#fbbf24', outer: '#d97706' },
     { center: '#fef9ee', mid: '#f59e0b', outer: '#b45309' },
     { center: '#ffffff', mid: '#fde68a', outer: '#f59e0b' },
     { center: '#fdf4ff', mid: '#e9d5ff', outer: '#a855f7' },
+    // new palettes
+    { center: '#7f1d1d', mid: '#dc2626', outer: '#450a0a' },                   // red-giant deep red
+    { center: '#f8fafc', mid: '#cbd5e1', outer: '#94a3b8' },                   // cool silver-white
+    { center: '#eff6ff', mid: '#bfdbfe', outer: '#93c5fd' },                   // blue-white
   ],
   globular: [
     { center: '#fffbeb', mid: '#fef08a', outer: '#fbbf24' },
     { center: '#ffffff', mid: '#e0f2fe', outer: '#7dd3fc' },
     { center: '#f0fdf4', mid: '#bbf7d0', outer: '#4ade80' },
     { center: '#fdf2f8', mid: '#fbcfe8', outer: '#db2777' },
+    // new palettes
+    { center: '#fff7ed', mid: '#fdba74', outer: '#d97706' },                   // orange/amber dense
+    { center: '#faf5ff', mid: '#c4b5fd', outer: '#6d28d9' },                   // deep violet
+    { center: '#ecfeff', mid: '#99f6e4', outer: '#0d9488' },                   // teal/seafoam
   ],
   irregular: [
     { center: '#eff6ff', mid: '#60a5fa', outer: '#2563eb' },
     { center: '#fdf4ff', mid: '#e879f9', outer: '#a855f7' },
     { center: '#ecfdf5', mid: '#34d399', outer: '#059669' },
     { center: '#fff1f2', mid: '#fda4af', outer: '#e11d48' },
+    // new palettes
+    { center: '#fff7ed', mid: '#fb923c', outer: '#b45309' },                   // warm amber/terracotta
+    { center: '#ecfeff', mid: '#22d3ee', outer: '#0e7490' },                   // cyan/teal
+    { center: '#fdf2f8', mid: '#f0abfc', outer: '#a21caf' },                   // magenta/neon
   ],
   ring: [
     { center: '#ecfeff', mid: '#22d3ee', outer: '#0891b2' },
     { center: '#f0f9ff', mid: '#38bdf8', outer: '#0284c7' },
     { center: '#fdf4ff', mid: '#c084fc', outer: '#7c3aed' },
     { center: '#fff7ed', mid: '#fed7aa', outer: '#ea580c' },
+    // new palettes
+    { center: '#fffbeb', mid: '#fcd34d', outer: '#b45309' },                   // gold/amber
+    { center: '#f0fdf4', mid: '#86efac', outer: '#4d7c0f' },                   // teal/lime
+    { center: '#fdf2f8', mid: '#f0abfc', outer: '#7e22ce' },                   // magenta/violet
   ],
 }
 
@@ -242,25 +267,44 @@ function drawSpiral(
   halo.setAttribute('fill', `url(#${id}h)`)
   svg.appendChild(halo)
 
-  // Spiral arms (2–4)
+  // Spiral arms (2–4) with variable curvature and width
   const armCount = 2 + Math.floor(Math.random() * 3)
+  const curl = 0.8 + Math.random() * 1.0
   for (let i = 0; i < armCount; i++) {
     const sa = (i / armCount) * Math.PI * 2
     const ar = r * 0.42
     const x1 = cx + Math.cos(sa) * ar * 0.3
     const y1 = cy + Math.sin(sa) * ar * 0.3
-    const x2 = cx + Math.cos(sa + 1.2) * ar * 0.7
-    const y2 = cy + Math.sin(sa + 1.2) * ar * 0.7
-    const x3 = cx + Math.cos(sa + 2.4) * ar
-    const y3 = cy + Math.sin(sa + 2.4) * ar
+    const x2 = cx + Math.cos(sa + curl) * ar * 0.7
+    const y2 = cy + Math.sin(sa + curl) * ar * 0.7
+    const x3 = cx + Math.cos(sa + curl * 2) * ar
+    const y3 = cy + Math.sin(sa + curl * 2) * ar
+    const armWidth = size * 0.045 * (0.8 + Math.random() * 0.4)
     const arm = svgEl('path')
     arm.setAttribute('d', `M ${cx} ${cy} Q ${x1} ${y1} ${x2} ${y2} T ${x3} ${y3}`)
     arm.setAttribute('stroke', palette.arm ?? palette.mid)
     arm.setAttribute('stroke-opacity', '0.45')
-    arm.setAttribute('stroke-width', String(size * 0.045))
+    arm.setAttribute('stroke-width', String(armWidth))
     arm.setAttribute('fill', 'none')
     arm.setAttribute('filter', `url(#${id}f)`)
     svg.appendChild(arm)
+
+    // Star knots (stellar nurseries) along arm with 50% probability
+    if (Math.random() < 0.5) {
+      const knotCount = 2 + Math.floor(Math.random() * 3)
+      for (let k = 1; k <= knotCount; k++) {
+        const t = k / (knotCount + 1)
+        const kx = cx + Math.cos(sa + curl * 2 * t) * ar * t
+        const ky = cy + Math.sin(sa + curl * 2 * t) * ar * t
+        const knot = svgEl('circle')
+        knot.setAttribute('cx', String(kx))
+        knot.setAttribute('cy', String(ky))
+        knot.setAttribute('r', String(1.2 + Math.random() * 2.0))
+        knot.setAttribute('fill', palette.arm ?? palette.mid)
+        knot.setAttribute('opacity', String(0.55 + Math.random() * 0.4))
+        svg.appendChild(knot)
+      }
+    }
   }
 
   // Center glow
@@ -384,7 +428,7 @@ function drawElliptical(
   cx: number,
   cy: number,
   r: number,
-  _size: number,
+  size: number,
   palette: GalaxyPalette,
 ): void {
   const axisRatio = 0.35 + Math.random() * 0.55
@@ -420,10 +464,17 @@ function drawElliptical(
   addStop(cGrad, '60%', palette.center, 0.5)
   addStop(cGrad, '100%', palette.center, 0)
 
+  const dustFilter = svgEl('filter')
+  dustFilter.id = `${id}d`
+  const dustBlur = svgEl('feGaussianBlur')
+  dustBlur.setAttribute('stdDeviation', '2')
+  dustFilter.appendChild(dustBlur)
+
   defs.appendChild(bodyGrad)
   defs.appendChild(haloGrad)
   defs.appendChild(cGrad)
   defs.appendChild(makeBlurFilter(`${id}f`, 5))
+  defs.appendChild(dustFilter)
   svg.appendChild(defs)
 
   // Outer halo ellipse
@@ -454,6 +505,20 @@ function drawElliptical(
   center.setAttribute('r', String(r * 0.14))
   center.setAttribute('fill', `url(#${id}c)`)
   svg.appendChild(center)
+
+  // Dust lane (40% probability) — makes some ellipticals look edge-on
+  if (Math.random() < 0.4) {
+    const dustAngle = Math.random() * 180
+    const dustLane = svgEl('rect')
+    dustLane.setAttribute('x', String(cx - r * 0.9))
+    dustLane.setAttribute('y', String(cy - size * 0.025))
+    dustLane.setAttribute('width', String(r * 1.8))
+    dustLane.setAttribute('height', String(size * 0.05))
+    dustLane.setAttribute('fill', 'rgba(0,0,0,0.25)')
+    dustLane.setAttribute('filter', `url(#${id}d)`)
+    dustLane.setAttribute('transform', `rotate(${dustAngle + tiltDeg}, ${cx}, ${cy})`)
+    svg.appendChild(dustLane)
+  }
 }
 
 function drawGlobular(
@@ -498,7 +563,7 @@ function drawGlobular(
   glow.setAttribute('fill', `url(#${id}g)`)
   svg.appendChild(glow)
 
-  // Gaussian-distributed star dots
+  // Gaussian-distributed star dots with color variety
   const starCount = 40 + Math.floor(Math.random() * 30)
   for (let i = 0; i < starCount; i++) {
     const u = Math.max(1e-6, Math.random())
@@ -509,11 +574,14 @@ function drawGlobular(
     const sx = cx + Math.cos(angle) * dist
     const sy = cy + Math.sin(angle) * dist
 
+    const roll = Math.random()
+    const dotColor = roll < 0.70 ? '#ffffff' : roll < 0.85 ? palette.center : palette.mid
+
     const dot = svgEl('circle')
     dot.setAttribute('cx', String(sx))
     dot.setAttribute('cy', String(sy))
-    dot.setAttribute('r', String(0.5 + Math.random() * 1.2))
-    dot.setAttribute('fill', '#ffffff')
+    dot.setAttribute('r', String(0.4 + Math.random() * 1.8))
+    dot.setAttribute('fill', dotColor)
     dot.setAttribute('opacity', String(0.4 + Math.random() * 0.6))
     svg.appendChild(dot)
   }
@@ -557,18 +625,23 @@ function drawIrregular(
   defs.appendChild(makeBlurFilter(`${id}f`, 3.5))
   svg.appendChild(defs)
 
-  // Irregular blob patches
+  // Irregular ellipse blob patches (more organic than circles)
   for (let i = 0; i < blobCount; i++) {
     const ox = (Math.random() - 0.5) * r * 0.65
     const oy = (Math.random() - 0.5) * r * 0.65
-    const br = r * (0.22 + Math.random() * 0.4)
+    const baseR = r * (0.22 + Math.random() * 0.4)
+    const rxRatio = 0.5 + Math.random() * 1.3
+    const ryRatio = 0.5 + Math.random() * 1.3
+    const blobRot = Math.random() * 360
 
-    const blob = svgEl('circle')
+    const blob = svgEl('ellipse')
     blob.setAttribute('cx', String(cx + ox))
     blob.setAttribute('cy', String(cy + oy))
-    blob.setAttribute('r', String(br))
+    blob.setAttribute('rx', String(baseR * rxRatio))
+    blob.setAttribute('ry', String(baseR * ryRatio))
     blob.setAttribute('fill', `url(#${id}b${i})`)
     blob.setAttribute('filter', `url(#${id}f)`)
+    blob.setAttribute('transform', `rotate(${blobRot}, ${cx + ox}, ${cy + oy})`)
     svg.appendChild(blob)
   }
 
@@ -586,6 +659,27 @@ function drawIrregular(
     region.setAttribute('fill', '#ffffff')
     region.setAttribute('opacity', String(0.5 + Math.random() * 0.45))
     svg.appendChild(region)
+  }
+
+  // Tidal stream (40% probability)
+  if (Math.random() < 0.4) {
+    const startAngle = Math.random() * Math.PI * 2
+    const sx = cx + Math.cos(startAngle) * r * 0.7
+    const sy = cy + Math.sin(startAngle) * r * 0.7
+    const ex = cx + Math.cos(startAngle + Math.PI * 0.6) * r * 1.5
+    const ey = cy + Math.sin(startAngle + Math.PI * 0.6) * r * 1.5
+    const cpx = cx + Math.cos(startAngle + Math.PI * 0.3) * r * 1.1
+    const cpy = cy + Math.sin(startAngle + Math.PI * 0.3) * r * 1.1
+
+    const stream = svgEl('path')
+    stream.setAttribute('d', `M ${sx} ${sy} Q ${cpx} ${cpy} ${ex} ${ey}`)
+    stream.setAttribute('stroke', palette.mid)
+    stream.setAttribute('stroke-opacity', '0.18')
+    stream.setAttribute('stroke-width', String(r * 0.18))
+    stream.setAttribute('fill', 'none')
+    stream.setAttribute('stroke-linecap', 'round')
+    stream.setAttribute('filter', `url(#${id}f)`)
+    svg.appendChild(stream)
   }
 }
 
@@ -626,14 +720,60 @@ function drawRing(
   defs.appendChild(makeBlurFilter(`${id}f`, 1.5))
   svg.appendChild(defs)
 
-  // Ring
-  const ring = svgEl('circle')
-  ring.setAttribute('cx', String(cx))
-  ring.setAttribute('cy', String(cy))
-  ring.setAttribute('r', String(r * 0.88))
-  ring.setAttribute('fill', `url(#${id}r)`)
-  ring.setAttribute('filter', `url(#${id}f)`)
-  svg.appendChild(ring)
+  const isTilted = Math.random() < 0.5
+  const tiltDeg = Math.random() * 60
+
+  if (isTilted) {
+    // Perspective-tilted ring rendered as ellipse
+    const ry = r * 0.88 * (0.3 + Math.random() * 0.5)
+    const ring = svgEl('ellipse')
+    ring.setAttribute('cx', String(cx))
+    ring.setAttribute('cy', String(cy))
+    ring.setAttribute('rx', String(r * 0.88))
+    ring.setAttribute('ry', String(ry))
+    ring.setAttribute('fill', `url(#${id}r)`)
+    ring.setAttribute('filter', `url(#${id}f)`)
+    ring.setAttribute('transform', `rotate(${tiltDeg}, ${cx}, ${cy})`)
+    svg.appendChild(ring)
+
+    // Double ring (30% chance)
+    if (Math.random() < 0.3) {
+      const outerRy = ry * 1.15
+      const outerRing = svgEl('ellipse')
+      outerRing.setAttribute('cx', String(cx))
+      outerRing.setAttribute('cy', String(cy))
+      outerRing.setAttribute('rx', String(r * 0.88 * 1.15))
+      outerRing.setAttribute('ry', String(outerRy))
+      outerRing.setAttribute('fill', 'none')
+      outerRing.setAttribute('stroke', palette.mid)
+      outerRing.setAttribute('stroke-opacity', '0.22')
+      outerRing.setAttribute('stroke-width', String(_size * 0.025))
+      outerRing.setAttribute('transform', `rotate(${tiltDeg}, ${cx}, ${cy})`)
+      svg.appendChild(outerRing)
+    }
+  } else {
+    // Flat circular ring
+    const ring = svgEl('circle')
+    ring.setAttribute('cx', String(cx))
+    ring.setAttribute('cy', String(cy))
+    ring.setAttribute('r', String(r * 0.88))
+    ring.setAttribute('fill', `url(#${id}r)`)
+    ring.setAttribute('filter', `url(#${id}f)`)
+    svg.appendChild(ring)
+
+    // Double ring (30% chance)
+    if (Math.random() < 0.3) {
+      const outerRing = svgEl('circle')
+      outerRing.setAttribute('cx', String(cx))
+      outerRing.setAttribute('cy', String(cy))
+      outerRing.setAttribute('r', String(r * 0.88 * 1.15))
+      outerRing.setAttribute('fill', 'none')
+      outerRing.setAttribute('stroke', palette.mid)
+      outerRing.setAttribute('stroke-opacity', '0.22')
+      outerRing.setAttribute('stroke-width', String(_size * 0.025))
+      svg.appendChild(outerRing)
+    }
+  }
 
   // Small center remnant
   const center = svgEl('circle')
@@ -699,6 +839,7 @@ export function useStarBackground() {
     const dx = x2 - x1
     const dy = y2 - y1
     const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist > 250) return
     const angle = (Math.atan2(dy, dx) * 180) / Math.PI
 
     const line = document.createElement('div')
@@ -738,12 +879,26 @@ export function useStarBackground() {
     const size = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin)
     const w = starsContainer.value.clientWidth || window.innerWidth
     const h = starsContainer.value.clientHeight || window.innerHeight
-    const x = Math.random() * w
-    const y = Math.random() * h
-    const moveAngle = Math.random() * Math.PI * 2
     const speed = config.speedMin + Math.random() * (config.speedMax - config.speedMin)
-    const vx = Math.cos(moveAngle) * speed
-    const vy = Math.sin(moveAngle) * speed
+    const edge = Math.floor(Math.random() * 4)
+    let x: number, y: number, vx: number, vy: number
+    if (edge === 0) { // top
+      x = Math.random() * w; y = -size
+      const a = Math.PI * 0.25 + Math.random() * Math.PI * 0.5
+      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
+    } else if (edge === 1) { // bottom
+      x = Math.random() * w; y = h + size
+      const a = -Math.PI + Math.PI * 0.25 + Math.random() * Math.PI * 0.5
+      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
+    } else if (edge === 2) { // left
+      x = -size; y = Math.random() * h
+      const a = -Math.PI * 0.25 + Math.random() * Math.PI * 0.5
+      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
+    } else { // right
+      x = w + size; y = Math.random() * h
+      const a = Math.PI - Math.PI * 0.25 + Math.random() * (-Math.PI * 0.5)
+      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
+    }
 
     const svg = document.createElementNS(NS, 'svg')
     svg.setAttribute('width', String(size))
@@ -836,7 +991,7 @@ export function useStarBackground() {
         background: ${color.bg};
         border-radius: 50%;
         box-shadow: 0 0 10px ${color.glow};
-        animation: twinkle 3s ease-in-out infinite;
+        animation: twinkle 3s ease-in-out ${-(Math.random() * 3).toFixed(2)}s infinite;
         will-change: transform, opacity;
         pointer-events: none;
       `
