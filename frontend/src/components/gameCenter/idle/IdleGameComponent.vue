@@ -1,158 +1,35 @@
 <template>
-  <div
-    class="relative flex flex-col w-full h-full bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950"
-  >
-    <!-- Animated Background -->
-    <div class="absolute inset-0 opacity-20">
-      <div
-        class="absolute bg-blue-500 rounded-full top-10 left-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob"
-      ></div>
-      <div
-        class="absolute bg-yellow-500 rounded-full top-10 right-10 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
-      ></div>
-      <div
-        class="absolute bg-violet-500 rounded-full -bottom-8 left-20 w-72 h-72 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
-      ></div>
-    </div>
+  <div class="relative flex items-center justify-center w-full h-full">
+    <!-- Chime Button - zentriert, nur das -->
+    <div
+      @click="handleChimeClick"
+      class="relative z-10 flex flex-col items-center justify-center w-48 h-48 cursor-pointer group chime-main-button"
+    >
+      <!-- Outer Glow Ring -->
 
-    <!-- Hauptinhalt -->
-    <div class="relative z-10 grid flex-1 w-full min-h-0 grid-cols-3">
-      <div class="relative flex flex-col items-center justify-center col-span-2 text-center">
-        <!-- Absolute positionierte Stats links -->
-        <div
-          class="absolute flex flex-col gap-6 transform -translate-y-1/2 left-8 top-1/2 stats-left"
-        >
-          <!-- Chimes per Click -->
-          <div
-            class="px-6 py-4 border bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border-yellow-400/30 rounded-2xl"
-          >
-            <div class="flex flex-col items-center">
-              <p class="mb-1 text-sm font-medium text-yellow-300">Pro Klick</p>
-              <div class="flex flex-row items-center justify-center gap-1">
-                <p
-                  class="text-xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text"
-                >
-                  +{{ formatNumber(gameStore.chimesPerClick) }}
-                </p>
-                <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Chimes per Second - jetzt klickbar -->
-          <div
-            class="px-6 py-4 transition-all duration-300 border cursor-pointer bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-green-400/30 rounded-2xl hover:border-green-300/50"
-            @click="gameStore.setCPSModalOpen(true)"
-          >
-            <div class="flex flex-col items-center">
-              <p class="mb-1 text-sm font-medium text-green-300">Pro Sekunde</p>
-              <div class="flex flex-row items-center justify-center gap-1">
-                <p
-                  class="text-xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
-                >
-                  {{ gameStore.chimesPerSecond }}
-                </p>
-                <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
-              </div>
-              <div class="flex flex-col items-center gap-1 mt-1">
-                <!-- Thin shimmer bar representing passive income flow -->
-                <div class="relative w-16 h-0.5 overflow-hidden rounded-full bg-green-900/50">
-                  <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-green-400 to-transparent animate-cps-shimmer"></div>
-                </div>
-                <span class="text-[10px] font-medium tracking-widest uppercase text-green-500/70">♪ /s</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Spielzeit -->
-          <div class="px-6 py-4 border bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 backdrop-blur-sm border-cyan-400/30 rounded-2xl">
-            <div class="flex flex-col items-center gap-1">
-              <p class="text-sm font-medium text-cyan-300">Spielzeit</p>
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                <p class="text-xl font-bold text-transparent bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text tabular-nums">
-                  {{ battleStore.formatTime(gameStore.inGameTime) }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CPS Modal -->
-        <ChimesPerSecondModal
-          :is-visible="gameStore.isCPSModalOpen"
-          @close="gameStore.setCPSModalOpen(false)"
+      <!-- Inner Button -->
+      <div class="relative flex items-center justify-center w-40 h-40">
+        <img
+          src="/img/BardAbilities/BardChime.png"
+          class="relative w-32 h-32 transition-all duration-300 select-none drop-shadow-2xl group-hover:scale-110 chime-icon"
+          style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
         />
-
-        <!-- Motivationstext -->
-        <div
-          class="mb-4 border bg-gradient-to-r from-blue-500/20 to-violet-500/20 backdrop-blur-sm border-blue-400/30 rounded-2xl"
-        >
-          <span
-            class="p-2 text-base font-medium text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
-          >
-            ✨ Sammle Chimes um das Universum zu retten! ✨
-          </span>
-        </div>
-
-        <!-- Chime Button - Verbessertes Design -->
-        <div
-          @click="handleChimeClick"
-          class="relative flex flex-col items-center justify-center w-48 h-48 cursor-pointer group chime-main-button"
-        >
-          <!-- Outer Glow Ring -->
-          <div
-            class="absolute inset-0 rounded-full opacity-75 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-spin-slow"
-          ></div>
-          <div
-            class="absolute rounded-full inset-1 bg-gradient-to-r from-blue-600 to-violet-600 opacity-60 animate-pulse"
-          ></div>
-
-          <!-- Inner Button -->
-          <div
-            class="relative flex items-center justify-center w-40 h-40 border rounded-full shadow-2xl backdrop-blur-sm bg-gradient-to-br from-white/20 to-white/5 border-white/30"
-          >
-            <img
-              src="/img/BardAbilities/BardChime.png"
-              class="relative w-32 h-32 transition-all duration-300 select-none drop-shadow-2xl group-hover:scale-110 chime-icon"
-              style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
-            />
-          </div>
-
-          <!-- Click Info -->
-          <div class="absolute text-center -bottom-12">
-            <p class="text-sm font-medium text-yellow-300 animate-pulse">
-              💫 Klicke für Chimes! 💫
-            </p>
-          </div>
-        </div>
-
-        <MeepProgressComponent @click="gameStore.setExpeditionModalOpen(true)" />
-        <ExpeditionComponent
-          :is-visible="gameStore.isExpeditionModalOpen"
-          @close="gameStore.setExpeditionModalOpen(false)"
-        />
-      </div>
-
-      <!-- Shop Area mit Glassmorphism -->
-      <div
-        class="h-full col-span-1 overflow-x-hidden overflow-y-auto border-l shadow-xl backdrop-blur-lg bg-white/5 border-white/20 custom-scrollbar"
-      >
-        <ShopComponent />
       </div>
     </div>
 
-    <!-- Enhanced Chime Popup -->
+    <!-- Click Popup Animation -->
     <div
       :key="chimeGainKey"
-      class="fixed z-50 text-2xl font-bold text-transparent pointer-events-none bg-gradient-to-r from-blue-700 to-violet-500 bg-clip-text chime-popup"
+      class="fixed z-50 flex items-center gap-1 font-bold pointer-events-none chime-popup"
       :style="{
-        top: chimeGainPos.y - 200 + 'px',
-        left: chimeGainPos.x - 400 + 'px',
-        filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.8))',
+        top: chimeGainPos.y + 'px',
+        left: chimeGainPos.x + 'px',
       }"
     >
-      +{{ gameStore.chimesPerClick }} ✨
+      <span class="text-transparent bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.9)]">
+        +{{ gameStore.chimesPerClick }}
+      </span>
+      <img src="/img/BardAbilities/BardChime.png" class="w-6 h-6" style="filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))" />
     </div>
   </div>
 </template>
@@ -249,8 +126,12 @@ export default defineComponent({
 }
 
 @keyframes cps-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 @keyframes spin-slow {
@@ -287,14 +168,14 @@ export default defineComponent({
 @keyframes fadeUpEnhanced {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -100%) scale(1);
   }
   50% {
-    transform: translateY(-10px) scale(1.2);
+    transform: translate(-50%, -120%) scale(1.2);
   }
   100% {
     opacity: 0;
-    transform: translateY(-30px) scale(0.8);
+    transform: translate(-50%, -160%) scale(0.8);
   }
 }
 
@@ -390,5 +271,4 @@ export default defineComponent({
     height: 8rem;
   }
 }
-
 </style>

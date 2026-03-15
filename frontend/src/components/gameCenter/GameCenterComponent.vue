@@ -1,15 +1,15 @@
 <template>
-  <div class="relative z-50 w-full flex flex-col">
+  <div class="relative z-50 flex flex-col w-full">
     <!-- Content -->
-    <div
-      class="w-full h-[600px] p-4 backdrop-blur-xl bg-white/5 border border-white/20 rounded-t-2xl rounded-b-none shadow-2xl"
-    >
+    <div class="w-full h-[600px] p-4">
       <component :is="currentComponent" />
     </div>
 
     <!-- Tab Navigation (unten) -->
     <div class="flex justify-center">
-      <div class="flex gap-1 px-3 py-2 bg-white/5 border border-t-0 border-white/15 rounded-b-2xl backdrop-blur-md">
+      <div
+        class="flex gap-1 px-3 py-2 border border-t-0 bg-white/5 border-white/15 rounded-b-2xl backdrop-blur-md"
+      >
         <button
           v-for="tab in tabs"
           :key="tab.id"
