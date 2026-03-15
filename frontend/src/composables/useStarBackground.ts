@@ -5,7 +5,6 @@ import { STAR_COUNT } from '../config/constants'
 
 type StarItem = {
   id: number
-  el: HTMLDivElement
   x: number
   y: number
   vx: number
@@ -13,6 +12,12 @@ type StarItem = {
   targetVx: number
   targetVy: number
   nextDirectionChange: number
+  size: number
+  r: number
+  g: number
+  b: number
+  twinklePhase: number
+  twinkleSpeed: number
 }
 
 type GalaxyItem = {
@@ -50,9 +55,6 @@ const SPEED_MAX = 5
 const DIR_CHANGE_MIN = 4000
 const DIR_CHANGE_MAX = 10_000
 const LERP_RATE = 1.5
-
-const STAR_CONNECTION_INTERVAL = 3000
-const LINE_DURATION = 2000
 
 // ─── Galaxy Constants ─────────────────────────────────────────────────────────
 
@@ -129,60 +131,54 @@ const GALAXY_PALETTES_BY_TYPE: Record<GalaxyType, GalaxyPalette[]> = {
     { center: '#ffffff', mid: '#06b6d4', outer: '#6366f1', arm: '#67e8f9' },
     { center: '#ffffff', mid: '#ec4899', outer: '#8b5cf6', arm: '#f9a8d4' },
     { center: '#e0f2fe', mid: '#38bdf8', outer: '#0369a1', arm: '#7dd3fc' },
-    // new palettes
-    { center: '#ffffff', mid: '#14b8a6', outer: '#d97706', arm: '#5eead4' },   // teal/gold
-    { center: '#fff1f2', mid: '#fb7185', outer: '#f59e0b', arm: '#fda4af' },   // rose/amber
-    { center: '#f0fdf4', mid: '#84cc16', outer: '#059669', arm: '#bef264' },   // lime/emerald
-    { center: '#e0f7ff', mid: '#7dd3fc', outer: '#bfdbfe', arm: '#bae6fd' },   // cold ice-blue
+    { center: '#ffffff', mid: '#14b8a6', outer: '#d97706', arm: '#5eead4' },
+    { center: '#fff1f2', mid: '#fb7185', outer: '#f59e0b', arm: '#fda4af' },
+    { center: '#f0fdf4', mid: '#84cc16', outer: '#059669', arm: '#bef264' },
+    { center: '#e0f7ff', mid: '#7dd3fc', outer: '#bfdbfe', arm: '#bae6fd' },
   ],
   'barred-spiral': [
     { center: '#fff7ed', mid: '#f59e0b', outer: '#ef4444', arm: '#fcd34d' },
     { center: '#fef3c7', mid: '#f97316', outer: '#dc2626', arm: '#fde68a' },
     { center: '#ffffff', mid: '#fb923c', outer: '#9333ea', arm: '#fdba74' },
-    // new palettes
-    { center: '#f0f9ff', mid: '#38bdf8', outer: '#14b8a6', arm: '#7dd3fc' },   // cool steel-blue/teal
-    { center: '#f0fdf4', mid: '#4ade80', outer: '#d97706', arm: '#86efac' },   // emerald/gold
-    { center: '#fff1f2', mid: '#fb7185', outer: '#dc2626', arm: '#fda4af' },   // rose/crimson
+    { center: '#f0f9ff', mid: '#38bdf8', outer: '#14b8a6', arm: '#7dd3fc' },
+    { center: '#f0fdf4', mid: '#4ade80', outer: '#d97706', arm: '#86efac' },
+    { center: '#fff1f2', mid: '#fb7185', outer: '#dc2626', arm: '#fda4af' },
   ],
   elliptical: [
     { center: '#fff7ed', mid: '#fbbf24', outer: '#d97706' },
     { center: '#fef9ee', mid: '#f59e0b', outer: '#b45309' },
     { center: '#ffffff', mid: '#fde68a', outer: '#f59e0b' },
     { center: '#fdf4ff', mid: '#e9d5ff', outer: '#a855f7' },
-    // new palettes
-    { center: '#7f1d1d', mid: '#dc2626', outer: '#450a0a' },                   // red-giant deep red
-    { center: '#f8fafc', mid: '#cbd5e1', outer: '#94a3b8' },                   // cool silver-white
-    { center: '#eff6ff', mid: '#bfdbfe', outer: '#93c5fd' },                   // blue-white
+    { center: '#7f1d1d', mid: '#dc2626', outer: '#450a0a' },
+    { center: '#f8fafc', mid: '#cbd5e1', outer: '#94a3b8' },
+    { center: '#eff6ff', mid: '#bfdbfe', outer: '#93c5fd' },
   ],
   globular: [
     { center: '#fffbeb', mid: '#fef08a', outer: '#fbbf24' },
     { center: '#ffffff', mid: '#e0f2fe', outer: '#7dd3fc' },
     { center: '#f0fdf4', mid: '#bbf7d0', outer: '#4ade80' },
     { center: '#fdf2f8', mid: '#fbcfe8', outer: '#db2777' },
-    // new palettes
-    { center: '#fff7ed', mid: '#fdba74', outer: '#d97706' },                   // orange/amber dense
-    { center: '#faf5ff', mid: '#c4b5fd', outer: '#6d28d9' },                   // deep violet
-    { center: '#ecfeff', mid: '#99f6e4', outer: '#0d9488' },                   // teal/seafoam
+    { center: '#fff7ed', mid: '#fdba74', outer: '#d97706' },
+    { center: '#faf5ff', mid: '#c4b5fd', outer: '#6d28d9' },
+    { center: '#ecfeff', mid: '#99f6e4', outer: '#0d9488' },
   ],
   irregular: [
     { center: '#eff6ff', mid: '#60a5fa', outer: '#2563eb' },
     { center: '#fdf4ff', mid: '#e879f9', outer: '#a855f7' },
     { center: '#ecfdf5', mid: '#34d399', outer: '#059669' },
     { center: '#fff1f2', mid: '#fda4af', outer: '#e11d48' },
-    // new palettes
-    { center: '#fff7ed', mid: '#fb923c', outer: '#b45309' },                   // warm amber/terracotta
-    { center: '#ecfeff', mid: '#22d3ee', outer: '#0e7490' },                   // cyan/teal
-    { center: '#fdf2f8', mid: '#f0abfc', outer: '#a21caf' },                   // magenta/neon
+    { center: '#fff7ed', mid: '#fb923c', outer: '#b45309' },
+    { center: '#ecfeff', mid: '#22d3ee', outer: '#0e7490' },
+    { center: '#fdf2f8', mid: '#f0abfc', outer: '#a21caf' },
   ],
   ring: [
     { center: '#ecfeff', mid: '#22d3ee', outer: '#0891b2' },
     { center: '#f0f9ff', mid: '#38bdf8', outer: '#0284c7' },
     { center: '#fdf4ff', mid: '#c084fc', outer: '#7c3aed' },
     { center: '#fff7ed', mid: '#fed7aa', outer: '#ea580c' },
-    // new palettes
-    { center: '#fffbeb', mid: '#fcd34d', outer: '#b45309' },                   // gold/amber
-    { center: '#f0fdf4', mid: '#86efac', outer: '#4d7c0f' },                   // teal/lime
-    { center: '#fdf2f8', mid: '#f0abfc', outer: '#7e22ce' },                   // magenta/violet
+    { center: '#fffbeb', mid: '#fcd34d', outer: '#b45309' },
+    { center: '#f0fdf4', mid: '#86efac', outer: '#4d7c0f' },
+    { center: '#fdf2f8', mid: '#f0abfc', outer: '#7e22ce' },
   ],
 }
 
@@ -506,7 +502,7 @@ function drawElliptical(
   center.setAttribute('fill', `url(#${id}c)`)
   svg.appendChild(center)
 
-  // Dust lane (40% probability) — makes some ellipticals look edge-on
+  // Dust lane (40% probability)
   if (Math.random() < 0.4) {
     const dustAngle = Math.random() * 180
     const dustLane = svgEl('rect')
@@ -625,7 +621,7 @@ function drawIrregular(
   defs.appendChild(makeBlurFilter(`${id}f`, 3.5))
   svg.appendChild(defs)
 
-  // Irregular ellipse blob patches (more organic than circles)
+  // Irregular ellipse blob patches
   for (let i = 0; i < blobCount; i++) {
     const ox = (Math.random() - 0.5) * r * 0.65
     const oy = (Math.random() - 0.5) * r * 0.65
@@ -724,7 +720,6 @@ function drawRing(
   const tiltDeg = Math.random() * 60
 
   if (isTilted) {
-    // Perspective-tilted ring rendered as ellipse
     const ry = r * 0.88 * (0.3 + Math.random() * 0.5)
     const ring = svgEl('ellipse')
     ring.setAttribute('cx', String(cx))
@@ -736,7 +731,6 @@ function drawRing(
     ring.setAttribute('transform', `rotate(${tiltDeg}, ${cx}, ${cy})`)
     svg.appendChild(ring)
 
-    // Double ring (30% chance)
     if (Math.random() < 0.3) {
       const outerRy = ry * 1.15
       const outerRing = svgEl('ellipse')
@@ -752,7 +746,6 @@ function drawRing(
       svg.appendChild(outerRing)
     }
   } else {
-    // Flat circular ring
     const ring = svgEl('circle')
     ring.setAttribute('cx', String(cx))
     ring.setAttribute('cy', String(cy))
@@ -761,7 +754,6 @@ function drawRing(
     ring.setAttribute('filter', `url(#${id}f)`)
     svg.appendChild(ring)
 
-    // Double ring (30% chance)
     if (Math.random() < 0.3) {
       const outerRing = svgEl('circle')
       outerRing.setAttribute('cx', String(cx))
@@ -786,8 +778,19 @@ function drawRing(
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
+// Star color palette as [r, g, b] tuples
+const STAR_COLORS: [number, number, number][] = [
+  [255, 255, 255],
+  [235, 240, 255],
+  [255, 248, 235],
+  [220, 225, 255],
+  [255, 240, 250],
+  [245, 245, 255],
+]
+
 export function useStarBackground() {
   const starsContainer = ref<HTMLElement>()
+  const starCanvas = ref<HTMLCanvasElement>()
   const prefersReducedMotion = ref(false)
   const stars: StarItem[] = []
   const galaxies: GalaxyItem[] = []
@@ -797,7 +800,6 @@ export function useStarBackground() {
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
 
-  const intervals: ReturnType<typeof setInterval>[] = []
   const timeouts: ReturnType<typeof setTimeout>[] = []
 
   const checkReducedMotion = () => {
@@ -812,60 +814,10 @@ export function useStarBackground() {
     return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed }
   }
 
-  async function connectRandomStars(): Promise<void> {
-    if (!starsContainer.value || prefersReducedMotion.value) return
-    await nextTick()
-    const nodeList = starsContainer.value.querySelectorAll('.star')
-    if (nodeList.length < 2) return
-
-    const i1 = Math.floor(Math.random() * nodeList.length)
-    let i2: number
-    do {
-      i2 = Math.floor(Math.random() * nodeList.length)
-    } while (i1 === i2)
-
-    const star1 = nodeList[i1] as HTMLElement
-    const star2 = nodeList[i2] as HTMLElement
-
-    const rect = starsContainer.value.getBoundingClientRect()
-    const r1 = star1.getBoundingClientRect()
-    const r2 = star2.getBoundingClientRect()
-
-    const x1 = r1.left + r1.width / 2 - rect.left
-    const y1 = r1.top + r1.height / 2 - rect.top
-    const x2 = r2.left + r2.width / 2 - rect.left
-    const y2 = r2.top + r2.height / 2 - rect.top
-
-    const dx = x2 - x1
-    const dy = y2 - y1
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist > 250) return
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI
-
-    const line = document.createElement('div')
-    line.className = 'star-connection'
-    line.style.cssText = `
-      position: absolute;
-      left: ${x1}px;
-      top: ${y1}px;
-      width: ${dist}px;
-      height: 2px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,223,100,0.6), rgba(255,255,255,0.1));
-      transform-origin: 0 0;
-      transform: rotate(${angle}deg);
-      pointer-events: none;
-      z-index: 5;
-      opacity: 0;
-      animation: fadeInOut ${LINE_DURATION}ms ease-in-out;
-    `
-    starsContainer.value.appendChild(line)
-
-    const timeoutId = setTimeout(() => {
-      if (starsContainer.value && starsContainer.value.contains(line)) {
-        starsContainer.value.removeChild(line)
-      }
-    }, LINE_DURATION)
-    timeouts.push(timeoutId)
+  function resizeCanvas(): void {
+    if (!starCanvas.value || !starsContainer.value) return
+    starCanvas.value.width = starsContainer.value.clientWidth || window.innerWidth
+    starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
   }
 
   function spawnGalaxy(): void {
@@ -962,48 +914,19 @@ export function useStarBackground() {
     }, delay)
   }
 
-  function spawnStar(timestamp: number): StarItem | null {
-    if (!starsContainer.value) return null
-
-    const star = document.createElement('div')
-    star.className = 'star'
+  function spawnStar(timestamp: number): StarItem {
+    const w = starsContainer.value?.clientWidth || window.innerWidth
+    const h = starsContainer.value?.clientHeight || window.innerHeight
 
     const size = Math.random() * 4 + 2
-    const w = starsContainer.value.clientWidth || window.innerWidth
-    const h = starsContainer.value.clientHeight || window.innerHeight
-
-    const starColors = [
-      { bg: 'rgba(255, 255, 255, 0.95)', glow: 'rgba(255, 255, 255, 0.8)' },
-      { bg: 'rgba(235, 240, 255, 0.9)', glow: 'rgba(200, 220, 255, 0.7)' },
-      { bg: 'rgba(255, 248, 235, 0.9)', glow: 'rgba(255, 240, 200, 0.7)' },
-      { bg: 'rgba(220, 225, 255, 0.85)', glow: 'rgba(180, 200, 255, 0.6)' },
-      { bg: 'rgba(255, 240, 250, 0.9)', glow: 'rgba(255, 210, 240, 0.7)' },
-      { bg: 'rgba(245, 245, 255, 0.92)', glow: 'rgba(230, 230, 255, 0.75)' },
-    ]
-    const color = starColors[Math.floor(Math.random() * starColors.length)]
-
-    star.style.cssText = `
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: ${size}px;
-        height: ${size}px;
-        background: ${color.bg};
-        border-radius: 50%;
-        box-shadow: 0 0 10px ${color.glow};
-        animation: twinkle 3s ease-in-out ${-(Math.random() * 3).toFixed(2)}s infinite;
-        will-change: transform, opacity;
-        pointer-events: none;
-      `
-
     const x = Math.random() * w
     const y = Math.random() * h
     const { vx, vy } = getRandomVelocity()
     const { vx: tvx, vy: tvy } = getRandomVelocity()
+    const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
 
     const item: StarItem = {
       id: nextStarId++,
-      el: star,
       x,
       y,
       vx,
@@ -1012,10 +935,14 @@ export function useStarBackground() {
       targetVy: tvy,
       nextDirectionChange:
         timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN),
+      size,
+      r,
+      g,
+      b,
+      twinklePhase: Math.random() * Math.PI * 2,
+      twinkleSpeed: 0.5 + Math.random() * 1.5,
     }
 
-    star.style.transform = `translate(${x}px, ${y}px)`
-    starsContainer.value.appendChild(star)
     stars.push(item)
     return item
   }
@@ -1029,6 +956,11 @@ export function useStarBackground() {
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
     const h = starsContainer.value?.clientHeight ?? window.innerHeight
 
+    const ctx = starCanvas.value?.getContext('2d') ?? null
+    if (ctx) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    }
+
     for (const star of stars) {
       const lerpFactor = Math.min(1, LERP_RATE * delta)
       star.vx += (star.targetVx - star.vx) * lerpFactor
@@ -1037,13 +969,16 @@ export function useStarBackground() {
       star.x += star.vx * delta
       star.y += star.vy * delta
 
+      // Wrap around edges
       const pad = 10
       if (star.x < -pad) star.x += w + pad * 2
       else if (star.x > w + pad) star.x -= w + pad * 2
       if (star.y < -pad) star.y += h + pad * 2
       else if (star.y > h + pad) star.y -= h + pad * 2
 
-      star.el.style.transform = `translate(${star.x}px, ${star.y}px)`
+      // Twinkle via sine wave on alpha
+      star.twinklePhase += star.twinkleSpeed * delta
+      const alpha = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(star.twinklePhase))
 
       if (timestamp >= star.nextDirectionChange) {
         const { vx, vy } = getRandomVelocity()
@@ -1051,6 +986,20 @@ export function useStarBackground() {
         star.targetVy = vy
         star.nextDirectionChange =
           timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN)
+      }
+
+      if (ctx) {
+        const halfSize = star.size / 2
+        // Core circle
+        ctx.beginPath()
+        ctx.arc(star.x, star.y, halfSize, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
+        ctx.fill()
+        // Soft glow (larger, more transparent circle)
+        ctx.beginPath()
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.15).toFixed(2)})`
+        ctx.fill()
       }
     }
 
@@ -1074,21 +1023,21 @@ export function useStarBackground() {
   function handleResize(): void {
     if (resizeTimeout) clearTimeout(resizeTimeout)
     resizeTimeout = setTimeout(() => {
+      resizeCanvas()
       if (!starsContainer.value || stars.length === 0) return
       const w = starsContainer.value.clientWidth || window.innerWidth
       const h = starsContainer.value.clientHeight || window.innerHeight
       for (const star of stars) {
         star.x = Math.random() * w
         star.y = Math.random() * h
-        star.el.style.transform = `translate(${star.x}px, ${star.y}px)`
       }
     }, 150)
   }
 
   function createStars(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
-    starsContainer.value.innerHTML = ''
     stars.length = 0
+    resizeCanvas()
     const now = performance.now()
     for (let i = 0; i < STAR_COUNT; i++) {
       spawnStar(now)
@@ -1106,16 +1055,19 @@ export function useStarBackground() {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
     }
-    intervals.forEach((id) => clearInterval(id))
     timeouts.forEach((id) => clearTimeout(id))
-    intervals.length = 0
     timeouts.length = 0
     stars.length = 0
     galaxies.length = 0
     window.removeEventListener('resize', handleResize)
     if (resizeTimeout) clearTimeout(resizeTimeout)
     if (starsContainer.value) {
-      starsContainer.value.innerHTML = ''
+      // Remove galaxy SVGs; canvas is managed by Vue
+      for (const galaxy of galaxies) {
+        if (starsContainer.value.contains(galaxy.el)) {
+          starsContainer.value.removeChild(galaxy.el)
+        }
+      }
     }
   }
 
@@ -1125,10 +1077,6 @@ export function useStarBackground() {
       await nextTick()
       setTimeout(createStars, 100)
       window.addEventListener('resize', handleResize)
-
-      const starConnectionInterval = setInterval(connectRandomStars, STAR_CONNECTION_INTERVAL)
-      intervals.push(starConnectionInterval)
-
       scheduleNextGalaxy()
     }
   })
@@ -1137,5 +1085,5 @@ export function useStarBackground() {
     cleanup()
   })
 
-  return { starsContainer, prefersReducedMotion }
+  return { starsContainer, starCanvas, prefersReducedMotion }
 }

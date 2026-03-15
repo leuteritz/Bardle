@@ -16,7 +16,7 @@ export const AUTO_BATTLE_INTERVAL_MS = 10000
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
-export const STAR_COUNT = 500
+export const STAR_COUNT = 150
 export const TITLE_MESSAGE_INTERVAL_MS = 5000
 
 // Rank system

@@ -5,12 +5,14 @@
     id="stars"
     v-show="!prefersReducedMotion"
     aria-hidden="true"
-  ></div>
+  >
+    <canvas ref="starCanvas" class="star-canvas"></canvas>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { useStarBackground } from '../../composables/useStarBackground'
-const { starsContainer, prefersReducedMotion } = useStarBackground()
+const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
 </script>
 
 <style>
@@ -25,39 +27,11 @@ const { starsContainer, prefersReducedMotion } = useStarBackground()
   overflow: hidden !important;
 }
 
-.star {
-  position: absolute !important;
-  border-radius: 50% !important;
-  will-change: transform, opacity !important;
-}
-
-.star-connection {
-  will-change: opacity;
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.8;
-  }
-  80% {
-    opacity: 0.8;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
+.star-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
 
 .galaxy {
@@ -101,8 +75,6 @@ const { starsContainer, prefersReducedMotion } = useStarBackground()
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .star,
-  .star-connection,
   .galaxy {
     animation: none !important;
   }
