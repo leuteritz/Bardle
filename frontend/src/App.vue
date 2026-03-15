@@ -55,9 +55,12 @@ const { currentMsg } = useTitleRotation()
             class="relative z-30 w-32 h-32 lg:w-48 lg:h-48 lg:-right-10"
             loading="lazy"
           />
-          <div
-            class="absolute w-16 h-32 bg-yellow-500 rounded-full shadow-lg lg:w-24 lg:h-48 lg:-right-12"
-          ></div>
+          <!-- Portal Effect -->
+          <div class="portal-effect absolute w-20 h-36 lg:w-28 lg:h-52 lg:-right-12">
+            <div class="portal-glow"></div>
+            <div class="portal-vortex"></div>
+            <div class="portal-ring"></div>
+          </div>
         </div>
 
         <!-- Mitte: Hauptspiel-Komponente -->
@@ -75,9 +78,12 @@ const { currentMsg } = useTitleRotation()
             class="relative z-30 w-32 h-32 lg:w-48 lg:h-48 lg:-left-10"
             loading="lazy"
           />
-          <div
-            class="absolute w-16 h-32 bg-yellow-500 rounded-full shadow-lg lg:w-24 lg:h-48 lg:-left-12"
-          ></div>
+          <!-- Portal Effect -->
+          <div class="portal-effect absolute w-20 h-36 lg:w-28 lg:h-52 lg:-left-12">
+            <div class="portal-glow"></div>
+            <div class="portal-vortex"></div>
+            <div class="portal-ring"></div>
+          </div>
         </div>
       </div>
 
@@ -211,4 +217,98 @@ const { currentMsg } = useTitleRotation()
 .backdrop-blur-sm {
   backdrop-filter: blur(4px);
 }
+
+/* ── Portal Effect ── */
+.portal-effect {
+  border-radius: 50%;
+  position: absolute;
+  overflow: visible;
+}
+
+.portal-glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 215, 0, 0.4) 0%,
+    rgba(255, 180, 0, 0.2) 40%,
+    rgba(180, 120, 0, 0.1) 70%,
+    transparent 100%
+  );
+  filter: blur(10px);
+  animation: portalPulse 3s ease-in-out infinite;
+}
+
+.portal-vortex {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(255, 215, 0, 0.6),
+      rgba(180, 130, 20, 0.2),
+      rgba(255, 200, 50, 0.5),
+      rgba(120, 80, 10, 0.15),
+      rgba(255, 215, 0, 0.6)
+    );
+
+  mask-image: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    black 50%,
+    black 70%,
+    transparent 90%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    black 50%,
+    black 70%,
+    transparent 90%
+  );
+}
+
+.portal-vortex::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(40, 20, 5, 0.9) 0%,
+    rgba(80, 50, 10, 0.7) 35%,
+    rgba(180, 120, 20, 0.3) 60%,
+    transparent 80%
+  );
+}
+
+.portal-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)) padding-box,
+    linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
+  box-shadow:
+    0 0 15px 3px rgba(255, 215, 0, 0.4),
+    inset 0 0 15px 3px rgba(255, 215, 0, 0.2),
+    0 0 30px 6px rgba(255, 180, 0, 0.15);
+  animation: portalPulse 3s ease-in-out infinite;
+}
+
+@keyframes portalPulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+
 </style>
