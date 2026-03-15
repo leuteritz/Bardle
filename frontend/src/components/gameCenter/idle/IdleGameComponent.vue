@@ -59,6 +59,19 @@
               <p class="text-xs text-green-400/80 animate-pulse">📊 Details anzeigen</p>
             </div>
           </div>
+
+          <!-- Spielzeit -->
+          <div class="px-6 py-4 border bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 backdrop-blur-sm border-cyan-400/30 rounded-2xl">
+            <div class="flex flex-col items-center gap-1">
+              <p class="text-sm font-medium text-cyan-300">Spielzeit</p>
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <p class="text-xl font-bold text-transparent bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text tabular-nums">
+                  {{ battleStore.formatTime(gameStore.inGameTime) }}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- CPS Modal -->
@@ -75,13 +88,6 @@
             class="p-2 text-base font-medium text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
           >
             ✨ Sammle Chimes um das Universum zu retten! ✨
-          </span>
-        </div>
-
-        <!-- Zeit-Anzeige -->
-        <div class="mb-6 px-3 py-1 border shadow-lg backdrop-blur-sm bg-blue-500/10 border-blue-400/30 rounded-xl">
-          <span class="text-sm font-bold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300">
-            ⏱ {{ battleStore.formatTime(gameStore.inGameTime) }}
           </span>
         </div>
 
