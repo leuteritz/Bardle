@@ -1,5 +1,40 @@
 // Shared TypeScript interfaces
 
+// Universe modifier types
+export interface ModifierEffects {
+  cpsMultiplier?: number
+  cpcMultiplier?: number
+  buildingCostMultiplier?: number
+  meepCostMultiplier?: number
+  meepPowerMultiplier?: number
+  levelExponent?: number
+  maxAbilityLevel?: number
+  skillPointInterval?: number
+  baseChimesPerClick?: number
+  expeditionRewardMultiplier?: number
+  eloPowerMultiplier?: number
+  buildingMultipliers?: Record<string, number>
+  abilityCPSPerLevel?: number
+  abilityCPCPerLevel?: number
+  abilityPowerPerLevel?: number
+  abilityMeepCostPerLevel?: number
+}
+
+export interface UniverseModifier {
+  id: string
+  name: string
+  description: string
+  icon: string
+  effects: ModifierEffects
+}
+
+export interface UniverseConfig {
+  id: number
+  name: string
+  description: string
+  modifier: UniverseModifier | null
+}
+
 // Shop types (extracted from shopStore.ts)
 export interface ShopUpgrade {
   id: string

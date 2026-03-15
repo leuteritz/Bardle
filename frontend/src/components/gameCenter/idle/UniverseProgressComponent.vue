@@ -17,6 +17,17 @@
           {{ gameStore.currentUniverse }}
         </div>
       </div>
+      <!-- Modifier Badge -->
+      <div
+        v-if="currentModifier"
+        class="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg border bg-purple-500/10 backdrop-blur-sm border-purple-400/30"
+      >
+        <span class="text-base">{{ currentModifier.icon }}</span>
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-purple-300">{{ currentModifier.name }}</span>
+          <span class="text-[10px] text-purple-400/80">{{ currentModifier.description }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Progress Section -->
@@ -70,7 +81,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { universes } from '../../../config/universes'
 import { formatNumber } from '../../../config/numberFormat'
@@ -81,10 +92,15 @@ export default defineComponent({
   setup() {
     const gameStore = useGameStore()
 
+    const currentModifier = computed(() => {
+      return universes[gameStore.currentUniverse - 1]?.modifier ?? null
+    })
+
     return {
       gameStore,
       universes,
       formatNumber,
+      currentModifier,
     }
   },
 })

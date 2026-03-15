@@ -81,6 +81,7 @@ const sections = computed(() => [
     label: 'Advanced',
     fields: [
       { key: 'currentUniverse', label: 'Universe', type: 'number', min: 1, max: 10 },
+      { key: 'chimesForNextUniverse', label: 'Chimes for Next Universe', type: 'number', min: 0 },
       { key: 'gameSpeed', label: 'Game Speed (ms)', type: 'number', min: 100 },
       { key: 'autoBattle', label: 'Auto Battle', type: 'checkbox' },
       { key: 'prestige', label: 'Prestige Available', type: 'checkbox' },
@@ -111,6 +112,7 @@ function getValue(key: string): number | string | boolean {
   if (key.startsWith('ability_')) return gameStore.abilityLevels[parseInt(key.split('_')[1])]
   if (key.startsWith('building_')) return shopStore.shopUpgrades[parseInt(key.split('_')[1])].level
   if (key === 'currentUniverse') return gameStore.currentUniverse
+  if (key === 'chimesForNextUniverse') return gameStore.chimesForNextUniverse
   if (key === 'gameSpeed') return gameStore.gameSpeed
   if (key === 'autoBattle') return battleStore.autoBattleEnabled
   if (key === 'prestige') return gameStore.prestigeAvailable
@@ -136,6 +138,7 @@ function setValue(key: string, raw: string | boolean) {
     const i = parseInt(key.split('_')[1])
     shopStore.setBuildingLevel(i, int)
   } else if (key === 'currentUniverse' && !isNaN(int)) gameStore.currentUniverse = int
+  else if (key === 'chimesForNextUniverse' && !isNaN(num)) gameStore.chimesForNextUniverse = num
   else if (key === 'gameSpeed' && !isNaN(int)) gameStore.gameSpeed = int
   else if (key === 'autoBattle' && typeof raw === 'boolean') battleStore.autoBattleEnabled = raw
   else if (key === 'prestige' && typeof raw === 'boolean') gameStore.prestigeAvailable = raw
@@ -146,7 +149,7 @@ const defaultValues: Record<string, number | string | boolean> = {
   mmr: 1000, rankTier: 'Iron', rankDivision: 'IV', rankLp: 0,
   ability_0: 0, ability_1: 0, ability_2: 0, ability_3: 0,
   building_0: 0, building_1: 0, building_2: 0, building_3: 0, building_4: 0, building_5: 0,
-  currentUniverse: 1, gameSpeed: 1000, autoBattle: false, prestige: false,
+  currentUniverse: 1, chimesForNextUniverse: 0, gameSpeed: 1000, autoBattle: false, prestige: false,
 }
 
 function resetSection(sectionId: string) {

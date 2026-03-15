@@ -162,13 +162,14 @@ export const useShopStore = defineStore('shop', {
     // Berechnet maximale Anzahl eines Upgrades die mit verfügbaren Chimes kaufbar ist
     getMaxAffordableAmount(upgrade: ShopUpgrade): number {
       const gameStore = useGameStore()
+      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
       let maxAmount = 0
       let totalCost = 0
       let currentLevel = upgrade.level
 
       while (true) {
         const nextCost = Math.ceil(
-          upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel),
+          upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel) * costMul,
         )
         if (totalCost + nextCost > gameStore.chimes) {
           break
@@ -196,8 +197,11 @@ export const useShopStore = defineStore('shop', {
       let totalCost = 0
       let currentLevel = upgrade.level
 
+      const gameStore = useGameStore()
+      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
+
       for (let i = 0; i < amount; i++) {
-        const cost = Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel))
+        const cost = Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel) * costMul)
         totalCost += cost
         currentLevel++
       }
@@ -243,28 +247,36 @@ export const useShopStore = defineStore('shop', {
     // Summiert CPS-Werte aller Upgrades und wendet Q-Ability-Bonus an
     calculateTotalCPS(): number {
       const gameStore = useGameStore()
+      const mod = gameStore.activeModifier
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
-        return total + (upgrade.baseCPS || 0) * upgrade.level
+        const buildingMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
+        return total + (upgrade.baseCPS || 0) * upgrade.level * buildingMul
       }, 0)
-      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier)
+      const cpsMul = mod.cpsMultiplier ?? 1
+      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
     },
 
     // Summiert CPC-Boni aller Upgrades und wendet R-Ability-Bonus an
     calculateTotalCPC(): number {
       const gameStore = useGameStore()
+      const mod = gameStore.activeModifier
 
       const upgradeBonus = this.shopUpgrades.reduce((total, upgrade) => {
         return total + (upgrade.baseCPC || 0) * upgrade.level
       }, 0)
 
+      const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
+      const cpcMul = mod.cpcMultiplier ?? 1
       return Math.floor(
-        (gameStore.baseChimesPerClick + upgradeBonus) * gameStore.abilityCPCMultiplier,
+        (baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul,
       )
     },
 
     // Berechnet aktuelle Kosten eines Upgrades basierend auf Level
     getUpgradeCost(upgrade: ShopUpgrade): number {
-      return Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level))
+      const gameStore = useGameStore()
+      const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
+      return Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.level) * costMul)
     },
 
     // Prüft ob Upgrade mit aktuellen Chimes und buyAmount kaufbar ist

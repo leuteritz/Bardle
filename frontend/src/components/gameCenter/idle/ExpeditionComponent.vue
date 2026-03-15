@@ -223,7 +223,8 @@ export default defineComponent({
       if (meepsSent.value < 1 || meepsSent.value > gameStore.meeps) return
       const cfg = selectedConfig.value
       const base = 50 * gameStore.meepChimeRequirement
-      const reward = Math.floor(meepsSent.value * base * cfg.multiplier)
+      const expeditionMul = gameStore.activeModifier.expeditionRewardMultiplier ?? 1
+      const reward = Math.floor(meepsSent.value * base * cfg.multiplier * expeditionMul)
       gameStore.startExpedition(cfg.universeId, cfg.name, meepsSent.value, cfg.durationMs, reward)
       meepsSent.value = 1
     }

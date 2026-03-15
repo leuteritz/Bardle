@@ -8,10 +8,10 @@ import {
   MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
 } from '../config/constants'
-import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition } from '../types'
+import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition, ModifierEffects } from '../types'
 
-function chimeThresholdForLevel(level: number): number {
-  return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, LEVEL_EXPONENT)) : 0
+function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
+  return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
 }
 
 let _shopStore: ReturnType<typeof useShopStore> | null = null
@@ -60,7 +60,8 @@ export const useGameStore = defineStore('game', {
             MEEP_BASE_COST,
             Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
           )
-          this.meepChimeRequirement = Math.ceil(baseCost * this.abilityMeepCostMultiplier)
+          const meepCostMod = this.activeModifier.meepCostMultiplier ?? 1
+          this.meepChimeRequirement = Math.ceil(baseCost * this.abilityMeepCostMultiplier * meepCostMod)
           this.chimesForMeep = 0
         }, 100)
       }
@@ -78,10 +79,12 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet das aktuelle Level basierend auf gesammelten Chimes
     calculateLevel() {
+      const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
+      const spInterval = this.activeModifier.skillPointInterval ?? 2
       while (this.chimes >= this.chimesForNextLevel) {
         this.level++
-        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, LEVEL_EXPONENT))
-        if (this.level % 2 === 0) {
+        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        if (this.level % spInterval === 0) {
           this.skillPoints++
         }
       }
@@ -89,7 +92,8 @@ export const useGameStore = defineStore('game', {
 
     // Setzt das Level einer Fähigkeit direkt (Admin-Funktion)
     setAbilityLevel(index: number, value: number) {
-      this.abilityLevels[index] = Math.max(0, Math.min(MAX_ABILITY_LEVEL, value))
+      const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
+      this.abilityLevels[index] = Math.max(0, Math.min(maxLevel, value))
       if (!_shopStore) _shopStore = useShopStore()
       this.chimesPerSecond = _shopStore.calculateTotalCPS()
       this.chimesPerClick = _shopStore.calculateTotalCPC()
@@ -97,7 +101,8 @@ export const useGameStore = defineStore('game', {
 
     // Erhöht das Level einer Fähigkeit wenn Skillpunkte verfügbar sind
     upgradeAbility(index) {
-      if (this.skillPoints > 0 && this.abilityLevels[index] < MAX_ABILITY_LEVEL) {
+      const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
+      if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
         this.abilityLevels[index]++
         this.skillPoints--
         // Recalculate CPS and CPC after ability upgrade
@@ -233,6 +238,11 @@ export const useGameStore = defineStore('game', {
   },
 
   getters: {
+    // Aktiver Universe-Modifier (leer wenn Universe 1)
+    activeModifier(): ModifierEffects {
+      return universes[this.currentUniverse - 1]?.modifier?.effects ?? {}
+    },
+
     // Berechnet die verbleibenden Chimes bis zum nächsten Level
     chimesToNextLevel(): number {
       return this.chimesForNextLevel - this.chimes
@@ -240,7 +250,8 @@ export const useGameStore = defineStore('game', {
 
     // Schwellenwert am Anfang des aktuellen Levels (gemeinsame Basis)
     chimesAtLevelStart(): number {
-      return chimeThresholdForLevel(this.level - 1)
+      const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
+      return chimeThresholdForLevel(this.level - 1, exponent)
     },
 
     // Berechnet die Chimes die im aktuellen Level gesammelt wurden
@@ -263,21 +274,27 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet die Gesamtkampfkraft des Spielers
     totalPower(): number {
-      return this.meeps * 100 + this.abilityPowerBonus
+      const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
+      const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
+      return Math.floor((this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod)
     },
 
     // Ability-Multiplikatoren für Q/W/E/R-Effekte
     abilityCPSMultiplier(): number {
-      return 1 + this.abilityLevels[0] * 0.15 // Q: +15% CPS pro Level
+      const perLevel = this.activeModifier.abilityCPSPerLevel ?? 0.15
+      return 1 + this.abilityLevels[0] * perLevel
     },
     abilityPowerBonus(): number {
-      return this.abilityLevels[1] * 300 // W: +300 Kampfkraft pro Level
+      const perLevel = this.activeModifier.abilityPowerPerLevel ?? 300
+      return this.abilityLevels[1] * perLevel
     },
     abilityMeepCostMultiplier(): number {
-      return Math.max(0.5, 1 - this.abilityLevels[2] * 0.1) // E: -10% Meep-Kosten pro Level
+      const perLevel = this.activeModifier.abilityMeepCostPerLevel ?? 0.1
+      return Math.max(0.5, 1 - this.abilityLevels[2] * perLevel)
     },
     abilityCPCMultiplier(): number {
-      return 1 + this.abilityLevels[3] * 0.25 // R: +25% CPC pro Level
+      const perLevel = this.activeModifier.abilityCPCPerLevel ?? 0.25
+      return 1 + this.abilityLevels[3] * perLevel
     },
 
     // Berechnet den Fortschritt zur Universumsrettung als Prozent
