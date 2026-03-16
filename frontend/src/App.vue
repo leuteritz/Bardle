@@ -3,9 +3,10 @@ import { ref, computed } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { formatNumber } from './config/numberFormat'
 import { universes } from './config/universes'
-import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
+import AbilityComponent from './components/bottom/AbilityComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
+import { MAX_ABILITY_LEVEL } from './config/constants'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
@@ -27,6 +28,14 @@ const toggleBardPanel = () => {
   bardPanelOpen.value = !bardPanelOpen.value
 }
 const xpProgress = computed(() => gameStore.levelProgress / 100)
+
+const abilityIcons = [
+  '/img/BardAbilities/BardQ.png',
+  '/img/BardAbilities/BardW.png',
+  '/img/BardAbilities/BardE.png',
+  '/img/BardAbilities/BardR.png',
+]
+const abilityKeys = ['Q', 'W', 'E', 'R']
 </script>
 
 <template>
@@ -96,13 +105,34 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
               </div>
             </div>
 
+            <!-- Horizontal abilities panel to the right of portrait -->
+            <div v-show="bardPanelOpen" class="absolute top-0 flex flex-col items-center gap-1" style="left: 11.5rem">
+              <span
+                class="px-2 py-0.5 text-xs font-semibold text-blue-300 border rounded-full bg-blue-500/20 border-blue-400/30 whitespace-nowrap mb-2"
+              >
+                SP: {{ gameStore.skillPoints }}
+              </span>
+              <div class="flex flex-row items-start gap-2">
+                <AbilityComponent
+                  v-for="(icon, idx) in abilityIcons"
+                  :key="abilityKeys[idx]"
+                  :icon="icon"
+                  :ability="abilityKeys[idx]"
+                  :abilityLevel="gameStore.abilityLevels[idx]"
+                  :canUpgrade="
+                    gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < MAX_ABILITY_LEVEL
+                  "
+                  @upgrade="gameStore.upgradeAbility(idx)"
+                />
+              </div>
+            </div>
+
             <!-- Dropdown panel -->
             <div
               v-show="bardPanelOpen"
               class="absolute left-0 z-50 flex flex-col gap-4 mt-8 top-full"
             >
               <RankComponent />
-              <AbilityBarComponent />
             </div>
           </div>
         </div>

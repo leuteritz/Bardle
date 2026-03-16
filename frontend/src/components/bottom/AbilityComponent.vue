@@ -1,8 +1,8 @@
 <template>
-  <div class="relative group" :class="{ 'backdrop-blur-sm': gameStore.isCPSModalOpen }">
+  <div class="relative group">
     <!-- Kompakter Ability Container -->
     <div
-      class="relative p-2 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-blue-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
+      class="relative p-1.5 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-blue-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
       :class="{ 'ring-2 ring-blue-400 ring-opacity-50 shadow-blue-500/20': canUpgrade }"
     >
       <!-- Kompakte Level Indicators -->
@@ -10,7 +10,7 @@
         <div
           v-for="n in 5"
           :key="n"
-          class="w-2 h-2 transition-all duration-300 border rounded-full"
+          class="w-1.5 h-1.5 transition-all duration-300 border rounded-full"
           :class="
             n <= abilityLevel
               ? 'bg-gradient-to-br from-blue-400 to-violet-500 border-blue-400 shadow-sm'
@@ -22,7 +22,7 @@
       <!-- Kompaktes Ability Icon -->
       <div class="relative flex justify-center mb-2">
         <div
-          class="w-12 h-12 overflow-hidden border rounded-lg shadow-inner bg-gradient-to-br from-white/20 to-white/5 border-white/30"
+          class="overflow-hidden border rounded-lg shadow-inner w-9 h-9 bg-gradient-to-br from-white/20 to-white/5 border-white/30"
         >
           <img
             :src="icon"
