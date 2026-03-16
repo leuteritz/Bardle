@@ -38,7 +38,7 @@ const tabs = [
       class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
     >
       <!-- Oberer Bereich mit Navigation -->
-      <div class="z-50 grid w-full h-8 grid-cols-3">
+      <div class="z-[100] grid w-full h-8 grid-cols-3">
         <!-- Links: Bard portrait toggle -->
         <div class="flex items-start justify-start col-span-1 px-4 py-4">
           <BardProfileMenu />

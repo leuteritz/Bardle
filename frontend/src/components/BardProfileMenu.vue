@@ -19,16 +19,19 @@ const abilityIcons = [
 ]
 const abilityKeys = ['Q', 'W', 'E', 'R']
 
-type ModalId = 'shop' | 'rank' | 'abilities' | 'admin'
+type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'idle' | 'battle' | 'champions'
 
 const menuOpen = ref(false)
 const activeModal = ref<ModalId | null>(null)
 
-const menuItems: { id: ModalId; label: string; icon: string }[] = [
-  { id: 'shop', label: 'Shop', icon: '🏪' },
-  { id: 'rank', label: 'Rang', icon: '🏆' },
-  { id: 'abilities', label: 'Fähigkeiten', icon: '⚡' },
-  { id: 'admin', label: 'Admin', icon: '⚙️' },
+const menuItems: { id: ModalId; label: string; icon: string; src: string }[] = [
+  { id: 'shop', label: 'Shop', icon: '', src: '/img/menu/SHOP.png' },
+  { id: 'rank', label: 'Rang', icon: '', src: '/img/menu/RANK.png' },
+  { id: 'abilities', label: 'Skills', icon: '⚡', src: '/img/menu/SKILLS.png' },
+  { id: 'idle', label: 'Idle', icon: '🎵', src: '/img/menu/IDLE.png' },
+  { id: 'battle', label: 'Battle', icon: '⚔️', src: '' },
+  { id: 'champions', label: 'Champions', icon: '🏆', src: '' },
+  { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
 const toggleMenu = () => {
@@ -59,10 +62,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           class="absolute rounded-full -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 opacity-40 animate-pulse"
         ></div>
         <!-- XP ring -->
-        <svg
-          class="absolute inset-0 w-full h-full transform -rotate-90"
-          viewBox="0 0 100 100"
-        >
+        <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
@@ -106,10 +106,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
 
     <!-- Vertical menu below portrait -->
     <Transition name="slide-down">
-      <div
-        v-show="menuOpen"
-        class="absolute top-full left-0 mt-5 z-50 flex flex-col gap-1.5"
-      >
+      <div v-show="menuOpen" class="absolute top-full left-0 mt-5 z-50 flex flex-col gap-1.5">
         <button
           v-for="item in menuItems"
           :key="item.id"
@@ -121,8 +118,9 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           "
           @click.stop="openModal(item.id)"
         >
-          <span class="text-lg">{{ item.icon }}</span>
-          <span class="text-sm font-semibold text-white/90">{{ item.label }}</span>
+          <img v-if="item.src" :src="item.src" class="object-contain w-10 h-10" :alt="item.label" />
+          <span v-else class="text-lg">{{ item.icon }}</span>
+          <span class="text-xl font-semibold text-white/90">{{ item.label }}</span>
         </button>
       </div>
     </Transition>
