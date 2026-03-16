@@ -1,11 +1,10 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { useTitleRotation } from './composables/useTitleRotation'
 import { formatNumber } from './config/numberFormat'
 import { universes } from './config/universes'
-import StatsPanelComponent from './components/bottom/StatsPanelComponent.vue'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
-import BardHudComponent from './components/bottom/BardHudComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
@@ -15,6 +14,12 @@ import UniversePortalComponent from './components/UniversePortalComponent.vue'
 
 const gameStore = useGameStore()
 const { currentMsg } = useTitleRotation()
+
+const bardPanelOpen = ref(false)
+const toggleBardPanel = () => {
+  bardPanelOpen.value = !bardPanelOpen.value
+}
+const xpProgress = computed(() => gameStore.levelProgress / 100)
 </script>
 
 <template>
@@ -24,9 +29,71 @@ const { currentMsg } = useTitleRotation()
     <div class="flex flex-col justify-between p-4 w-full min-h-screen font-['MedievalSharp']">
       <!-- Oberer Bereich mit Navigation -->
       <div class="z-50 grid w-full h-8 grid-cols-3">
-        <!-- Links: Rang-Komponente -->
-        <div class="flex items-center justify-start col-span-1">
-          <RankComponent />
+        <!-- Links: Bard portrait toggle -->
+        <div class="flex items-start justify-start col-span-1 px-4 py-4">
+          <div class="relative flex items-start">
+            <!-- Clickable Bard portrait -->
+            <div class="cursor-pointer group" @click="toggleBardPanel">
+              <div class="relative w-36 h-36">
+                <!-- Pulse glow -->
+                <div
+                  class="absolute rounded-full -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 opacity-40 animate-pulse"
+                ></div>
+                <!-- XP ring -->
+                <svg
+                  class="absolute inset-0 w-full h-full transform -rotate-90"
+                  viewBox="0 0 100 100"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    stroke="rgb(59 130 246 / 0.3)"
+                    stroke-width="8"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    stroke="rgb(59 130 246)"
+                    stroke-width="8"
+                    stroke-linecap="round"
+                    :stroke-dasharray="`${xpProgress * 283} 283`"
+                    class="transition-all duration-1000 ease-out"
+                    style="filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))"
+                  />
+                </svg>
+                <!-- Portrait image -->
+                <div
+                  class="absolute overflow-hidden border-2 rounded-full shadow-2xl inset-2 border-blue-400/50 bg-gradient-to-br from-white/20 to-white/5"
+                >
+                  <img
+                    src="/img/BardAbilities/Bard.png"
+                    class="object-cover w-full h-full transition-transform duration-500 transform group-hover:scale-110"
+                  />
+                </div>
+                <!-- Level badge -->
+                <div class="absolute -bottom-1 -right-1">
+                  <div
+                    class="flex items-center justify-center border-2 rounded-full shadow-lg h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
+                  >
+                    <span class="text-xl font-black text-white">{{ gameStore.level }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dropdown panel -->
+            <div
+              v-show="bardPanelOpen"
+              class="absolute left-0 z-50 flex flex-col gap-4 mt-8 top-full"
+            >
+              <RankComponent />
+              <AbilityBarComponent />
+            </div>
+          </div>
         </div>
 
         <!-- Mitte: Chimes & CPS -->
@@ -65,60 +132,6 @@ const { currentMsg } = useTitleRotation()
         </div>
 
         <UniversePortalComponent />
-      </div>
-
-      <!-- Unterer Bereich mit Spieler-Informationen -->
-      <div class="z-20 flex justify-center w-full">
-        <div
-          class="relative w-full max-w-4xl overflow-hidden shadow-2xl border-blue-400/30 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 rounded-xl"
-          :class="{ 'opacity-50': gameStore.isCPSModalOpen }"
-        >
-          <!-- Animated Background -->
-          <div class="absolute inset-0 opacity-20">
-            <div
-              class="absolute w-32 h-32 bg-blue-500 rounded-full top-4 left-4 mix-blend-multiply filter blur-xl animate-blob"
-            ></div>
-            <div
-              class="absolute rounded-full bg-violet-500 top-4 right-4 w-28 h-28 mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"
-            ></div>
-            <div
-              class="absolute w-24 h-24 bg-yellow-500 rounded-full bottom-4 left-1/2 mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"
-            ></div>
-          </div>
-
-          <!-- 3-spaltiges Layout -->
-          <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 min-h-[140px] gap-2 md:gap-0">
-            <!-- Links: Charakter-Status -->
-            <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-r border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-violet-500/10 backdrop-blur-sm"
-            >
-              <div class="w-full max-w-[200px]">
-                <BardHudComponent />
-              </div>
-            </div>
-
-            <!-- Mitte: Fähigkeiten-Leiste -->
-            <div
-              class="flex items-center justify-center p-1 md:col-span-6 bg-gradient-to-br from-blue-600/20 to-violet-600/10 backdrop-blur-sm"
-            >
-              <div class="w-full max-w-lg">
-                <AbilityBarComponent />
-              </div>
-            </div>
-
-            <!-- Rechts: Statistiken -->
-            <div
-              class="flex items-center justify-center p-1 md:col-span-3 md:border-l border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-violet-500/10 backdrop-blur-sm"
-            >
-              <div class="w-full">
-                <StatsPanelComponent />
-              </div>
-            </div>
-          </div>
-
-          <!-- Glassmorphism Border Effect -->
-          <div class="absolute inset-0 border pointer-events-none rounded-xl border-white/20"></div>
-        </div>
       </div>
     </div>
     <!-- Encyclopedia Toggle Button -->
@@ -215,5 +228,4 @@ const { currentMsg } = useTitleRotation()
 .cps-text-glow {
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
 }
-
 </style>
