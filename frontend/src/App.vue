@@ -11,6 +11,7 @@ import RankComponent from './components/RankComponent.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import UniversePortalComponent from './components/UniversePortalComponent.vue'
 
 const gameStore = useGameStore()
 const { currentMsg } = useTitleRotation()
@@ -48,77 +49,22 @@ const { currentMsg } = useTitleRotation()
               {{ gameStore.chimesPerSecond }}/s
             </span>
           </div>
-          <!-- Universum / Prestige Progress -->
-          <div class="flex flex-col items-center w-56 gap-1 mt-1">
-            <!-- Progress Bar -->
-            <div class="relative w-full h-1 overflow-hidden rounded-full bg-violet-900/40">
-              <div
-                class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-violet-500 to-indigo-400"
-                :style="{ width: gameStore.universeRescueProgress + '%' }"
-              ></div>
-            </div>
-            <!-- Chimes counter -->
-            <p class="text-sm text-violet-400/60 tabular-nums">
-              {{ formatNumber(gameStore.chimesForNextUniverse) }} /
-              {{ formatNumber(gameStore.chimesToUniverseRescue) }} chimes to prestige
-            </p>
-            <!-- Prestige Button -->
-            <button
-              v-if="gameStore.prestigeAvailable"
-              @click.stop="gameStore.triggerPrestige()"
-              class="px-4 py-0.5 text-[11px] font-bold tracking-wide rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white animate-pulse hover:animate-none hover:from-violet-400 hover:to-indigo-400 transition-all duration-200"
-            >
-              🌌 Prestige!
-            </button>
-          </div>
         </div>
 
         <!-- Rechts: Platzhalter (Nachricht ist fixed) -->
         <div class="col-span-1"></div>
       </div>
 
-      <!-- Hauptbereich mit 3 Spalten (responsive) -->
-      <div class="grid w-full h-full grid-cols-1 gap-4 lg:grid-cols-5">
-        <!-- Links: Charakter mit Portal-Effekt -->
-        <div
-          class="relative z-20 flex items-center justify-center w-full lg:justify-end lg:col-span-1"
-        >
-          <img
-            src="/img/BardPortalRichtig.png"
-            alt="Game Character"
-            class="relative z-30 w-32 h-32 lg:w-48 lg:h-48 lg:-right-10"
-            loading="lazy"
-          />
-          <!-- Portal Effect -->
-          <div class="absolute w-20 portal-effect h-36 lg:w-28 lg:h-52 lg:-right-12">
-            <div class="portal-glow"></div>
-            <div class="portal-vortex"></div>
-            <div class="portal-ring"></div>
+      <!-- Hauptbereich -->
+      <div class="flex flex-col w-full gap-2">
+        <!-- GameCenter: zentriert -->
+        <div class="flex justify-center w-full">
+          <div class="w-full">
+            <GameCenterComponent />
           </div>
         </div>
 
-        <!-- Mitte: Hauptspiel-Komponente -->
-        <div class="w-full lg:col-span-3">
-          <GameCenterComponent />
-        </div>
-
-        <!-- Rechts: Zweiter Charakter mit Portal-Effekt -->
-        <div
-          class="relative z-20 flex items-center justify-center w-full lg:justify-start lg:col-span-1"
-        >
-          <img
-            src="/img/PortalEndeRichtig.png"
-            alt="Game Character"
-            class="relative z-30 w-32 h-32 lg:w-48 lg:h-48 lg:-left-10"
-            loading="lazy"
-          />
-          <!-- Portal Effect -->
-          <div class="absolute w-20 portal-effect h-36 lg:w-28 lg:h-52 lg:-left-12">
-            <div class="portal-glow"></div>
-            <div class="portal-vortex"></div>
-            <div class="portal-ring"></div>
-          </div>
-        </div>
+        <UniversePortalComponent />
       </div>
 
       <!-- Unterer Bereich mit Spieler-Informationen -->
@@ -270,95 +216,4 @@ const { currentMsg } = useTitleRotation()
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
 }
 
-/* ── Portal Effect ── */
-.portal-effect {
-  border-radius: 50%;
-  position: absolute;
-  overflow: visible;
-}
-
-.portal-glow {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 215, 0, 0.4) 0%,
-    rgba(255, 180, 0, 0.2) 40%,
-    rgba(180, 120, 0, 0.1) 70%,
-    transparent 100%
-  );
-  filter: blur(10px);
-  animation: portalPulse 3s ease-in-out infinite;
-}
-
-.portal-vortex {
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 215, 0, 0.6),
-    rgba(180, 130, 20, 0.2),
-    rgba(255, 200, 50, 0.5),
-    rgba(120, 80, 10, 0.15),
-    rgba(255, 215, 0, 0.6)
-  );
-
-  mask-image: radial-gradient(
-    ellipse at center,
-    transparent 30%,
-    black 50%,
-    black 70%,
-    transparent 90%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    transparent 30%,
-    black 50%,
-    black 70%,
-    transparent 90%
-  );
-}
-
-.portal-vortex::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(40, 20, 5, 0.9) 0%,
-    rgba(80, 50, 10, 0.7) 35%,
-    rgba(180, 120, 20, 0.3) 60%,
-    transparent 80%
-  );
-}
-
-.portal-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)) padding-box,
-    linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
-  box-shadow:
-    0 0 15px 3px rgba(255, 215, 0, 0.4),
-    inset 0 0 15px 3px rgba(255, 215, 0, 0.2),
-    0 0 30px 6px rgba(255, 180, 0, 0.15);
-  animation: portalPulse 3s ease-in-out infinite;
-}
-
-@keyframes portalPulse {
-  0%,
-  100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-}
 </style>
