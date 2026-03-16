@@ -7,6 +7,8 @@ import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import RankComponent from './components/RankComponent.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
+import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
+import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import UniversePortalComponent from './components/UniversePortalComponent.vue'
@@ -30,6 +32,8 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
 <template>
   <div class="min-h-screen cosmic-bg">
     <StarBackgroundComponent />
+    <PlanetRescueOverlay />
+    <PlanetRescueModal />
 
     <div
       class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
@@ -126,13 +130,15 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
         </div>
 
         <!-- Rechts: Tab Bar -->
-        <div class="flex items-start justify-end col-span-1 pr-2">
-          <div class="flex gap-1.5 p-1.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/15">
+        <div class="flex items-start justify-end col-span-1 pr-10">
+          <div
+            class="flex gap-1.5 p-1.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/15"
+          >
             <button
               v-for="tab in tabs"
               :key="tab.id"
               :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
-              class="tab-btn flex items-center gap-2 px-5 py-3 rounded-xl text-base font-semibold transition-all duration-300"
+              class="flex items-center gap-2 px-5 py-3 text-base font-semibold transition-all duration-300 tab-btn rounded-xl"
               @click="activeTab = tab.id"
             >
               <span>{{ tab.icon }}</span>

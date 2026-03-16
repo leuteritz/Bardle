@@ -37,7 +37,19 @@ export const RANK_TIERS = [
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
 
-// Rank border image paths (eliminates duplication between useRankCalculations.ts and BattleResultComponent.vue)
+// Planet events
+export const PLANET_MAX_COUNT = 3
+export const PLANET_SPAWN_INTERVAL_MIN = 8_000
+export const PLANET_SPAWN_INTERVAL_MAX = 18_000
+export const PLANET_RESCUE_DURATION_MIN = 5_000
+export const PLANET_RESCUE_DURATION_MAX = 10_000
+export const PLANET_RESCUE_CLICKS_MIN = 5
+export const PLANET_RESCUE_CLICKS_MAX = 15
+export const PLANET_RESCUE_BASE_REWARD = 500
+export const PLANET_EVENT_BASE_CHANCE = 0.6
+export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
+
+// Rank border image paths
 export const RANK_BORDER_IMAGES: Record<string, string> = {
   Iron: '/img/RankBorder/RankIron.png',
   Bronze: '/img/RankBorder/RankBronze.png',

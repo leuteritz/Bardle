@@ -87,6 +87,32 @@ export interface Expedition {
   collected: boolean
 }
 
+// Planet event types
+export type PlanetType = 'rocky' | 'ice' | 'gas-giant' | 'lava' | 'ocean'
+
+export interface PlanetItem {
+  id: string
+  el: SVGSVGElement
+  x: number
+  y: number
+  vx: number
+  vy: number
+  type: PlanetType
+  isRescueTarget: boolean
+}
+
+export interface PlanetRescueEvent {
+  planetId: string
+  planetType: PlanetType
+  startTime: number
+  durationMs: number
+  reward: number
+  clicksRequired: number
+  clicksMade: number
+  saved: boolean
+  expired: boolean
+}
+
 // Battle types
 export interface CurrentRank {
   tier: string

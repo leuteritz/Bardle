@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
+import { usePlanetEventStore } from './planetEventStore'
 import { universes } from '../config/universes'
 import {
   LEVEL_BASE,
@@ -15,6 +16,7 @@ function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT
 }
 
 let _shopStore: ReturnType<typeof useShopStore> | null = null
+let _planetEventStore: ReturnType<typeof usePlanetEventStore> | null = null
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -190,6 +192,8 @@ export const useGameStore = defineStore('game', {
         this.trackBuildingProduction()
       }
       this.checkPrestigeAvailability()
+      if (!_planetEventStore) _planetEventStore = usePlanetEventStore()
+      _planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
     },
 
     // Setzt den Modal-Status für UI-Effekte

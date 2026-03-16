@@ -12,7 +12,10 @@
 
 <script setup lang="ts">
 import { useStarBackground } from '../../composables/useStarBackground'
+import { usePlanetBackground } from '../../composables/usePlanetBackground'
+
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
+usePlanetBackground(starsContainer)
 </script>
 
 <style>
@@ -76,6 +79,106 @@ const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
 
 @media (prefers-reduced-motion: reduce) {
   .galaxy {
+    animation: none !important;
+  }
+}
+
+/* ─── Planets ─────────────────────────────────────────────────────────────── */
+
+.planet {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  will-change: transform, opacity, filter;
+}
+
+.planet--rescue {
+  pointer-events: none; /* wird durch stars--rescue-active überschrieben */
+  cursor: default;
+  z-index: 4;
+  animation: planetDistress 2s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 8px rgba(255, 120, 0, 0.7)) drop-shadow(0 0 18px rgba(255, 60, 0, 0.4));
+}
+
+@keyframes planetLifecycle {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  10% {
+    opacity: 0.9;
+    scale: 1;
+  }
+  80% {
+    opacity: 0.9;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+
+@keyframes planetDistress {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(255, 120, 0, 0.7)) drop-shadow(0 0 18px rgba(255, 60, 0, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(255, 60, 0, 1)) drop-shadow(0 0 30px rgba(255, 80, 0, 0.6));
+  }
+}
+
+@keyframes planetExplode {
+  0% {
+    opacity: 1;
+    scale: 1;
+    filter: none;
+  }
+  30% {
+    opacity: 0.85;
+    scale: 1.5;
+    filter: brightness(3) saturate(3);
+  }
+  100% {
+    opacity: 0;
+    scale: 2.2;
+    filter: brightness(0.5);
+  }
+}
+
+@keyframes planetSaved {
+  0% {
+    opacity: 1;
+    scale: 1;
+    filter: drop-shadow(0 0 8px rgba(100, 255, 150, 0.9));
+  }
+  50% {
+    opacity: 0.9;
+    scale: 1.25;
+    filter: drop-shadow(0 0 28px rgba(100, 255, 150, 1))
+      drop-shadow(0 0 55px rgba(200, 255, 210, 0.7));
+  }
+  100% {
+    opacity: 0;
+    scale: 1.6;
+    filter: drop-shadow(0 0 4px rgba(100, 255, 150, 0.3));
+  }
+}
+
+.stars--rescue-active {
+  z-index: 9999 !important;
+  pointer-events: none !important; /* Container selbst bleibt pass-through */
+}
+
+.stars--rescue-active .planet--rescue {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet,
+  .planet--rescue {
     animation: none !important;
   }
 }
