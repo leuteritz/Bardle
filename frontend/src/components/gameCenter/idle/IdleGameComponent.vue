@@ -31,7 +31,7 @@
       }"
     >
       <span
-        class="text-transparent bg-gradient-to-r from-red-800 to-red-900 bg-clip-text text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.9)]"
+        class="text-transparent bg-gradient-to-r from-cyan-500 to-emerald-800 bg-clip-text text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.9)]"
       >
         +{{ gameStore.chimesPerClick }}
       </span>

@@ -40,9 +40,9 @@ interface DynamicRay {
 export default defineComponent({
   name: 'SunComponent',
   setup() {
-    const RAY_COUNT = 16
-    const MIN_LENGTH = 55
-    const MAX_LENGTH = 200
+    const RAY_COUNT = 15
+    const MIN_LENGTH = 70
+    const MAX_LENGTH = 250
 
     const dynamicRays = ref<DynamicRay[]>(
       Array.from({ length: RAY_COUNT }, (_, i) => {

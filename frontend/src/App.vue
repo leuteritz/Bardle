@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useGameStore } from './stores/gameStore'
-import { useTitleRotation } from './composables/useTitleRotation'
 import { formatNumber } from './config/numberFormat'
 import { universes } from './config/universes'
 import AbilityBarComponent from './components/bottom/AbilityBarComponent.vue'
@@ -13,7 +12,13 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import UniversePortalComponent from './components/UniversePortalComponent.vue'
 
 const gameStore = useGameStore()
-const { currentMsg } = useTitleRotation()
+
+const activeTab = ref('idle')
+const tabs = [
+  { id: 'idle', label: 'Idle', icon: '🎵' },
+  { id: 'battle', label: 'Battle', icon: '⚔️' },
+  { id: 'champions', label: 'Champions', icon: '🏆' },
+]
 
 const bardPanelOpen = ref(false)
 const toggleBardPanel = () => {
@@ -120,8 +125,21 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
           </div>
         </div>
 
-        <!-- Rechts: Platzhalter (Nachricht ist fixed) -->
-        <div class="col-span-1"></div>
+        <!-- Rechts: Tab Bar -->
+        <div class="flex items-start justify-end col-span-1 pr-2">
+          <div class="flex gap-1.5 p-1.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/15">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
+              class="tab-btn flex items-center gap-2 px-5 py-3 rounded-xl text-base font-semibold transition-all duration-300"
+              @click="activeTab = tab.id"
+            >
+              <span>{{ tab.icon }}</span>
+              <span>{{ tab.label }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Hauptbereich -->
@@ -129,7 +147,7 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
         <!-- GameCenter: zentriert -->
         <div class="flex justify-center w-full">
           <div class="w-full">
-            <GameCenterComponent />
+            <GameCenterComponent :active-tab="activeTab" />
           </div>
         </div>
 
@@ -150,13 +168,6 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
 
     <!-- Admin Dashboard -->
     <AdminDashboard />
-
-    <!-- Wechselnde Nachrichten – fixed, garantiert über allem -->
-    <p
-      class="fixed top-10 right-10 z-[200] font-['MedievalSharp'] text-xl transition-opacity duration-500 cursor-default select-none text-amber-500 drop-shadow-lg pointer-events-none"
-    >
-      {{ currentMsg }}
-    </p>
 
     <span
       class="fixed z-50 text-sm bottom-5 right-5 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
@@ -229,5 +240,22 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 .cps-text-glow {
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
+}
+</style>
+
+<style scoped>
+.tab-active {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.85), rgba(234, 179, 8, 0.85));
+  color: #1a1000;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.45);
+}
+
+.tab-inactive {
+  color: rgba(251, 191, 36, 0.5);
+}
+
+.tab-btn:hover {
+  color: rgba(251, 191, 36, 0.9);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 </style>
