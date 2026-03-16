@@ -7,6 +7,9 @@ import RankComponent from './RankComponent.vue'
 import AbilityComponent from './bottom/AbilityComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 
+defineProps<{ activeTab: string }>()
+const emit = defineEmits<{ 'update:activeTab': [value: string] }>()
+
 const gameStore = useGameStore()
 
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -39,6 +42,11 @@ const toggleMenu = () => {
   if (!menuOpen.value) activeModal.value = null
 }
 const openModal = (id: ModalId) => {
+  if (id === 'idle' || id === 'battle' || id === 'champions') {
+    emit('update:activeTab', id)
+    menuOpen.value = false
+    return
+  }
   activeModal.value = activeModal.value === id ? null : id
 }
 const closeAll = () => {
@@ -112,7 +120,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           :key="item.id"
           class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-2.5 flex items-center gap-3 hover:bg-white/20 transition-all text-left whitespace-nowrap"
           :class="
-            activeModal === item.id
+            activeModal === item.id || (activeTab === item.id && (item.id === 'idle' || item.id === 'battle' || item.id === 'champions'))
               ? 'bg-gradient-to-r from-blue-600/60 to-violet-600/60 border-blue-400/40'
               : ''
           "

@@ -21,11 +21,6 @@ const canAffordAny = computed(() =>
 )
 
 const activeTab = ref('idle')
-const tabs = [
-  { id: 'idle', label: 'Idle', icon: '🎵' },
-  { id: 'battle', label: 'Battle', icon: '⚔️' },
-  { id: 'champions', label: 'Champions', icon: '🏆' },
-]
 </script>
 
 <template>
@@ -41,7 +36,7 @@ const tabs = [
       <div class="z-[100] grid w-full h-8 grid-cols-3">
         <!-- Links: Bard portrait toggle -->
         <div class="flex items-start justify-start col-span-1 px-4 py-4">
-          <BardProfileMenu />
+          <BardProfileMenu :active-tab="activeTab" @update:active-tab="activeTab = $event" />
         </div>
 
         <!-- Mitte: Chimes & CPS -->
@@ -66,23 +61,7 @@ const tabs = [
           </div>
         </div>
 
-        <!-- Rechts: Tab Bar -->
-        <div class="flex items-start justify-end col-span-1 pr-10">
-          <div
-            class="flex gap-1.5 p-1.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/15"
-          >
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
-              class="flex items-center gap-2 px-5 py-3 text-base font-semibold transition-all duration-300 tab-btn rounded-xl"
-              @click="activeTab = tab.id"
-            >
-              <span>{{ tab.icon }}</span>
-              <span>{{ tab.label }}</span>
-            </button>
-          </div>
-        </div>
+        <div class="col-span-1"></div>
       </div>
 
       <!-- Hauptbereich -->
@@ -187,19 +166,3 @@ const tabs = [
 }
 </style>
 
-<style scoped>
-.tab-active {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.85), rgba(234, 179, 8, 0.85));
-  color: #1a1000;
-  box-shadow: 0 0 14px rgba(251, 191, 36, 0.45);
-}
-
-.tab-inactive {
-  color: rgba(251, 191, 36, 0.5);
-}
-
-.tab-btn:hover {
-  color: rgba(251, 191, 36, 0.9);
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
-}
-</style>
