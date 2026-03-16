@@ -2,7 +2,7 @@
   <!-- Meep Progress - Verbessert -->
   <div class="mt-20 text-center">
     <div
-      class="inline-block px-4 py-3 transition-all duration-300 border rounded-2xl cursor-pointer group bg-gradient-to-br from-orange-500/10 to-yellow-500/10 backdrop-blur-sm border-orange-400/30 hover:border-orange-300/60 hover:bg-orange-500/15 hover:scale-105"
+      class="inline-block px-4 py-3 transition-all duration-300 border cursor-pointer rounded-2xl group bg-gradient-to-br from-orange-500/10 to-yellow-500/10 backdrop-blur-sm border-orange-400/30 hover:border-orange-300/60 hover:bg-orange-500/15 hover:scale-105"
       @click="$emit('click')"
     >
       <div class="flex items-center justify-center gap-3 mb-2">

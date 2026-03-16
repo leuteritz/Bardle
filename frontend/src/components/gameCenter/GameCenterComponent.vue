@@ -1,26 +1,22 @@
 <template>
-  <div class="relative z-50 flex flex-col w-full">
-    <!-- Content -->
-    <div class="w-full h-[600px] p-4">
-      <component :is="currentComponent" />
+  <div class="relative z-50 flex w-full">
+    <!-- Tab Navigation (links) -->
+    <div class="flex flex-col gap-1 px-2 py-3 border border-l-0 bg-white/5 border-white/15 rounded-r-2xl backdrop-blur-md">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
+        class="tab-button flex flex-col items-center gap-1 px-3 py-2 font-semibold transition-all duration-300 rounded-lg text-sm"
+        @click="activeTab = tab.id"
+      >
+        <span class="text-lg">{{ tab.icon }}</span>
+        <span class="hidden sm:inline text-xs">{{ tab.label }}</span>
+      </button>
     </div>
 
-    <!-- Tab Navigation (unten) -->
-    <div class="flex justify-center">
-      <div
-        class="flex gap-1 px-3 py-2 border border-t-0 bg-white/5 border-white/15 rounded-b-2xl backdrop-blur-md"
-      >
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          :class="activeTab === tab.id ? 'tab-active' : 'tab-inactive'"
-          class="tab-button flex items-center gap-1.5 px-4 py-1.5 font-semibold transition-all duration-300 rounded-lg text-base"
-          @click="activeTab = tab.id"
-        >
-          <span>{{ tab.icon }}</span>
-          <span class="hidden sm:inline">{{ tab.label }}</span>
-        </button>
-      </div>
+    <!-- Content -->
+    <div class="flex-1 h-[600px] p-4">
+      <component :is="currentComponent" />
     </div>
   </div>
 </template>

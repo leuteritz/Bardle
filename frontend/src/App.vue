@@ -26,7 +26,9 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
   <div class="min-h-screen cosmic-bg">
     <StarBackgroundComponent />
 
-    <div class="flex flex-col justify-between p-4 w-full min-h-screen font-['MedievalSharp']">
+    <div
+      class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
+    >
       <!-- Oberer Bereich mit Navigation -->
       <div class="z-50 grid w-full h-8 grid-cols-3">
         <!-- Links: Bard portrait toggle -->
