@@ -4,6 +4,8 @@ import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useShopStore } from '../stores/shopStore'
 
+const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
+
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const shopStore = useShopStore()
@@ -18,6 +20,7 @@ function toggle() {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  if (props.inline) return
   if (e.ctrlKey && e.shiftKey && e.key === 'A') {
     e.preventDefault()
     toggle()
@@ -164,136 +167,199 @@ function resetSection(sectionId: string) {
 </script>
 
 <template>
-  <!-- Toggle Button -->
-  <button
-    class="fixed z-[100] bottom-4 left-4 w-9 h-9 flex items-center justify-center rounded-lg border border-blue-400/40 bg-gradient-to-br from-blue-900/80 to-violet-900/80 backdrop-blur-sm text-blue-300 hover:border-blue-400/70 hover:text-blue-100 transition-all duration-200 shadow-lg hover:shadow-blue-500/20"
-    title="Admin Dashboard (Ctrl+Shift+A)"
-    @click="toggle"
-  >
-    <span class="text-base leading-none">⚙</span>
-  </button>
+  <!-- ── STANDALONE MODE ─────────────────────────────────────────── -->
+  <template v-if="!inline">
+    <!-- Backdrop -->
+    <Transition name="fade">
+      <div
+        v-if="isOpen"
+        class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm"
+        @click.self="isOpen = false"
+      />
+    </Transition>
 
-  <!-- Backdrop -->
-  <Transition name="fade">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm"
-      @click.self="isOpen = false"
-    />
-  </Transition>
-
-  <!-- Modal -->
-  <Transition name="slide-up">
-    <div
-      v-if="isOpen"
-      class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,95vw)] max-h-[85vh] flex flex-col rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#0a0620]/95 via-[#110b3d]/95 to-[#0a0620]/95 backdrop-blur-xl shadow-2xl shadow-blue-900/40"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-3 border-b border-blue-400/20">
-        <div class="flex items-center gap-2">
-          <span class="text-violet-400 text-lg">⚙</span>
-          <span class="font-mono text-sm font-bold text-blue-200 tracking-widest uppercase">Admin Dashboard</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-blue-500/60 font-mono">Ctrl+Shift+A</span>
-          <button
-            class="w-6 h-6 flex items-center justify-center rounded text-blue-400/60 hover:text-blue-200 hover:bg-blue-500/20 transition-colors"
-            @click="isOpen = false"
-          >✕</button>
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="px-5 py-2.5 border-b border-blue-400/10">
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search fields..."
-          class="w-full bg-blue-950/40 border border-blue-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-blue-400/60 focus:bg-blue-950/60 transition-all"
-        />
-      </div>
-
-      <!-- Sections -->
-      <div class="overflow-y-auto flex-1 px-5 py-3 space-y-4 scrollbar-thin">
-        <div
-          v-for="section in filteredSections"
-          :key="section.id"
-          class="rounded-xl border border-blue-400/15 bg-blue-950/20 overflow-hidden"
-        >
-          <!-- Section header -->
-          <div class="flex items-center justify-between px-4 py-2 bg-blue-900/20 border-b border-blue-400/10">
-            <span class="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{{ section.label }}</span>
-            <button
-              class="text-[10px] font-mono text-blue-500/60 hover:text-blue-300 transition-colors px-2 py-0.5 rounded border border-blue-500/20 hover:border-blue-400/40"
-              @click="resetSection(section.id)"
-            >reset</button>
+    <!-- Modal -->
+    <Transition name="slide-up">
+      <div
+        v-if="isOpen"
+        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,95vw)] max-h-[85vh] flex flex-col rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#0a0620]/95 via-[#110b3d]/95 to-[#0a0620]/95 backdrop-blur-xl shadow-2xl shadow-blue-900/40"
+      >
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3 border-b border-blue-400/20">
+          <div class="flex items-center gap-2">
+            <span class="text-violet-400 text-lg">⚙</span>
+            <span class="font-mono text-sm font-bold text-blue-200 tracking-widest uppercase">Admin Dashboard</span>
           </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-blue-500/60 font-mono">Ctrl+Shift+A</span>
+            <button
+              class="w-6 h-6 flex items-center justify-center rounded text-blue-400/60 hover:text-blue-200 hover:bg-blue-500/20 transition-colors"
+              @click="isOpen = false"
+            >✕</button>
+          </div>
+        </div>
 
-          <!-- Fields grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
-            <div
-              v-for="field in section.fields"
-              :key="field.key"
-              class="flex items-center justify-between gap-3 px-4 py-2 bg-[#0a0620]/60 hover:bg-blue-950/40 transition-colors"
-            >
-              <label class="text-xs font-mono text-blue-300/80 whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
+        <!-- Search -->
+        <div class="px-5 py-2.5 border-b border-blue-400/10">
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search fields..."
+            class="w-full bg-blue-950/40 border border-blue-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-blue-400/60 focus:bg-blue-950/60 transition-all"
+          />
+        </div>
 
-              <!-- Number input -->
-              <input
-                v-if="field.type === 'number'"
-                type="number"
-                :min="field.min"
-                :max="(field as any).max"
-                :value="editingKey === field.key ? editingValue : getValue(field.key)"
-                class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
-                @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
-                @input="editingValue = ($event.target as HTMLInputElement).value"
-                @change="setValue(field.key, editingValue); editingKey = null"
-                @blur="setValue(field.key, editingValue); editingKey = null"
-              />
-
-              <!-- Range slider -->
-              <div v-else-if="field.type === 'range'" class="flex items-center gap-2 flex-1">
+        <!-- Sections -->
+        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-4 scrollbar-thin">
+          <div
+            v-for="section in filteredSections"
+            :key="section.id"
+            class="rounded-xl border border-blue-400/15 bg-blue-950/20 overflow-hidden"
+          >
+            <div class="flex items-center justify-between px-4 py-2 bg-blue-900/20 border-b border-blue-400/10">
+              <span class="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{{ section.label }}</span>
+              <button
+                class="text-[10px] font-mono text-blue-500/60 hover:text-blue-300 transition-colors px-2 py-0.5 rounded border border-blue-500/20 hover:border-blue-400/40"
+                @click="resetSection(section.id)"
+              >reset</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
+              <div
+                v-for="field in section.fields"
+                :key="field.key"
+                class="flex items-center justify-between gap-3 px-4 py-2 bg-[#0a0620]/60 hover:bg-blue-950/40 transition-colors"
+              >
+                <label class="text-xs font-mono text-blue-300/80 whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
                 <input
-                  type="range"
+                  v-if="field.type === 'number'"
+                  type="number"
                   :min="field.min"
                   :max="(field as any).max"
+                  :value="editingKey === field.key ? editingValue : getValue(field.key)"
+                  class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
+                  @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
+                  @input="editingValue = ($event.target as HTMLInputElement).value"
+                  @change="setValue(field.key, editingValue); editingKey = null"
+                  @blur="setValue(field.key, editingValue); editingKey = null"
+                />
+                <div v-else-if="field.type === 'range'" class="flex items-center gap-2 flex-1">
+                  <input
+                    type="range"
+                    :min="field.min"
+                    :max="(field as any).max"
+                    :value="getValue(field.key)"
+                    class="flex-1 accent-violet-500 cursor-pointer h-1.5"
+                    @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
+                  />
+                  <span class="text-xs font-mono text-violet-300 w-4 text-right">{{ getValue(field.key) }}</span>
+                </div>
+                <select
+                  v-else-if="field.type === 'select'"
                   :value="getValue(field.key)"
-                  class="flex-1 accent-violet-500 cursor-pointer h-1.5"
-                  @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
-                />
-                <span class="text-xs font-mono text-violet-300 w-4 text-right">{{ getValue(field.key) }}</span>
-              </div>
-
-              <!-- Select -->
-              <select
-                v-else-if="field.type === 'select'"
-                :value="getValue(field.key)"
-                class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 transition-all"
-                @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
-              >
-                <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
-              </select>
-
-              <!-- Checkbox -->
-              <div v-else-if="field.type === 'checkbox'" class="flex items-center">
-                <input
-                  type="checkbox"
-                  :checked="getValue(field.key) as boolean"
-                  class="w-4 h-4 accent-violet-500 cursor-pointer"
-                  @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
-                />
+                  class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 transition-all"
+                  @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+                <div v-else-if="field.type === 'checkbox'" class="flex items-center">
+                  <input
+                    type="checkbox"
+                    :checked="getValue(field.key) as boolean"
+                    class="w-4 h-4 accent-violet-500 cursor-pointer"
+                    @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div v-if="filteredSections.length === 0" class="text-center py-8 text-blue-500/40 font-mono text-sm">
-          No fields match "{{ search }}"
+          <div v-if="filteredSections.length === 0" class="text-center py-8 text-blue-500/40 font-mono text-sm">
+            No fields match "{{ search }}"
+          </div>
         </div>
       </div>
+    </Transition>
+  </template>
+
+  <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
+  <template v-else>
+    <!-- Search -->
+    <div class="px-5 py-2.5 border-b border-blue-400/10">
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Search fields..."
+        class="w-full bg-blue-950/40 border border-blue-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-blue-400/60 focus:bg-blue-950/60 transition-all"
+      />
     </div>
-  </Transition>
+
+    <!-- Sections -->
+    <div class="px-5 py-3 space-y-4 scrollbar-thin">
+      <div
+        v-for="section in filteredSections"
+        :key="section.id"
+        class="rounded-xl border border-blue-400/15 bg-blue-950/20 overflow-hidden"
+      >
+        <div class="flex items-center justify-between px-4 py-2 bg-blue-900/20 border-b border-blue-400/10">
+          <span class="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{{ section.label }}</span>
+          <button
+            class="text-[10px] font-mono text-blue-500/60 hover:text-blue-300 transition-colors px-2 py-0.5 rounded border border-blue-500/20 hover:border-blue-400/40"
+            @click="resetSection(section.id)"
+          >reset</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
+          <div
+            v-for="field in section.fields"
+            :key="field.key"
+            class="flex items-center justify-between gap-3 px-4 py-2 bg-[#0a0620]/60 hover:bg-blue-950/40 transition-colors"
+          >
+            <label class="text-xs font-mono text-blue-300/80 whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
+            <input
+              v-if="field.type === 'number'"
+              type="number"
+              :min="field.min"
+              :max="(field as any).max"
+              :value="editingKey === field.key ? editingValue : getValue(field.key)"
+              class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
+              @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
+              @input="editingValue = ($event.target as HTMLInputElement).value"
+              @change="setValue(field.key, editingValue); editingKey = null"
+              @blur="setValue(field.key, editingValue); editingKey = null"
+            />
+            <div v-else-if="field.type === 'range'" class="flex items-center gap-2 flex-1">
+              <input
+                type="range"
+                :min="field.min"
+                :max="(field as any).max"
+                :value="getValue(field.key)"
+                class="flex-1 accent-violet-500 cursor-pointer h-1.5"
+                @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
+              />
+              <span class="text-xs font-mono text-violet-300 w-4 text-right">{{ getValue(field.key) }}</span>
+            </div>
+            <select
+              v-else-if="field.type === 'select'"
+              :value="getValue(field.key)"
+              class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 transition-all"
+              @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
+            >
+              <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+            <div v-else-if="field.type === 'checkbox'" class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="getValue(field.key) as boolean"
+                class="w-4 h-4 accent-violet-500 cursor-pointer"
+                @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="filteredSections.length === 0" class="text-center py-8 text-blue-500/40 font-mono text-sm">
+        No fields match "{{ search }}"
+      </div>
+    </div>
+  </template>
 </template>
 
 <style scoped>

@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useGameStore } from './stores/gameStore'
+import { useShopStore } from './stores/shopStore'
 import { formatNumber } from './config/numberFormat'
-import { universes } from './config/universes'
-import AbilityComponent from './components/bottom/AbilityComponent.vue'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
-import RankComponent from './components/RankComponent.vue'
-import { MAX_ABILITY_LEVEL } from './config/constants'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import UniversePortalComponent from './components/UniversePortalComponent.vue'
+import BardProfileMenu from './components/BardProfileMenu.vue'
 
 const gameStore = useGameStore()
+const shopStore = useShopStore()
+
+const totalUpgrades = computed(() => shopStore.shopUpgrades.reduce((sum, u) => sum + u.level, 0))
+const canAffordAny = computed(() =>
+  shopStore.shopUpgrades.some((u) => shopStore.canAffordUpgrade(u)),
+)
 
 const activeTab = ref('idle')
 const tabs = [
@@ -22,20 +26,6 @@ const tabs = [
   { id: 'battle', label: 'Battle', icon: '⚔️' },
   { id: 'champions', label: 'Champions', icon: '🏆' },
 ]
-
-const bardPanelOpen = ref(false)
-const toggleBardPanel = () => {
-  bardPanelOpen.value = !bardPanelOpen.value
-}
-const xpProgress = computed(() => gameStore.levelProgress / 100)
-
-const abilityIcons = [
-  '/img/BardAbilities/BardQ.png',
-  '/img/BardAbilities/BardW.png',
-  '/img/BardAbilities/BardE.png',
-  '/img/BardAbilities/BardR.png',
-]
-const abilityKeys = ['Q', 'W', 'E', 'R']
 </script>
 
 <template>
@@ -51,90 +41,7 @@ const abilityKeys = ['Q', 'W', 'E', 'R']
       <div class="z-50 grid w-full h-8 grid-cols-3">
         <!-- Links: Bard portrait toggle -->
         <div class="flex items-start justify-start col-span-1 px-4 py-4">
-          <div class="relative flex items-start">
-            <!-- Clickable Bard portrait -->
-            <div class="cursor-pointer group" @click="toggleBardPanel">
-              <div class="relative w-36 h-36">
-                <!-- Pulse glow -->
-                <div
-                  class="absolute rounded-full -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 opacity-40 animate-pulse"
-                ></div>
-                <!-- XP ring -->
-                <svg
-                  class="absolute inset-0 w-full h-full transform -rotate-90"
-                  viewBox="0 0 100 100"
-                >
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke="rgb(59 130 246 / 0.3)"
-                    stroke-width="8"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke="rgb(59 130 246)"
-                    stroke-width="8"
-                    stroke-linecap="round"
-                    :stroke-dasharray="`${xpProgress * 283} 283`"
-                    class="transition-all duration-1000 ease-out"
-                    style="filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))"
-                  />
-                </svg>
-                <!-- Portrait image -->
-                <div
-                  class="absolute overflow-hidden border-2 rounded-full shadow-2xl inset-2 border-blue-400/50 bg-gradient-to-br from-white/20 to-white/5"
-                >
-                  <img
-                    src="/img/BardAbilities/Bard.png"
-                    class="object-cover w-full h-full transition-transform duration-500 transform group-hover:scale-110"
-                  />
-                </div>
-                <!-- Level badge -->
-                <div class="absolute -bottom-1 -right-1">
-                  <div
-                    class="flex items-center justify-center border-2 rounded-full shadow-lg h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
-                  >
-                    <span class="text-xl font-black text-white">{{ gameStore.level }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Horizontal abilities panel to the right of portrait -->
-            <div v-show="bardPanelOpen" class="absolute top-0 flex flex-col items-center gap-1" style="left: 11.5rem">
-              <span
-                class="px-2 py-0.5 text-xs font-semibold text-blue-300 border rounded-full bg-blue-500/20 border-blue-400/30 whitespace-nowrap mb-2"
-              >
-                SP: {{ gameStore.skillPoints }}
-              </span>
-              <div class="flex flex-row items-start gap-2">
-                <AbilityComponent
-                  v-for="(icon, idx) in abilityIcons"
-                  :key="abilityKeys[idx]"
-                  :icon="icon"
-                  :ability="abilityKeys[idx]"
-                  :abilityLevel="gameStore.abilityLevels[idx]"
-                  :canUpgrade="
-                    gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < MAX_ABILITY_LEVEL
-                  "
-                  @upgrade="gameStore.upgradeAbility(idx)"
-                />
-              </div>
-            </div>
-
-            <!-- Dropdown panel -->
-            <div
-              v-show="bardPanelOpen"
-              class="absolute left-0 z-50 flex flex-col gap-4 mt-8 top-full"
-            >
-              <RankComponent />
-            </div>
-          </div>
+          <BardProfileMenu />
         </div>
 
         <!-- Mitte: Chimes & CPS -->
@@ -190,10 +97,11 @@ const abilityKeys = ['Q', 'W', 'E', 'R']
         <UniversePortalComponent />
       </div>
     </div>
+
     <!-- Encyclopedia Toggle Button -->
     <button
       v-show="!gameStore.isEncyclopediaOpen"
-      class="fixed right-0 z-40 px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
+      class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
       @click="gameStore.toggleEncyclopedia()"
     >
       <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
@@ -202,7 +110,7 @@ const abilityKeys = ['Q', 'W', 'E', 'R']
     <!-- Encyclopedia Panel -->
     <EncyclopediaPanel />
 
-    <!-- Admin Dashboard -->
+    <!-- Admin Dashboard (standalone, keyboard shortcut Ctrl+Shift+A) -->
     <AdminDashboard />
 
     <span
