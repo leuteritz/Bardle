@@ -16,8 +16,7 @@ export const AUTO_BATTLE_INTERVAL_MS = 10000
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
-export const STAR_COUNT = 150
-export const TITLE_MESSAGE_INTERVAL_MS = 5000
+export const STAR_COUNT = 400
 
 // Rank system
 export const RANK_DIVISIONS = ['IV', 'III', 'II', 'I'] as const
@@ -39,8 +38,8 @@ export const MAX_ABILITY_LEVEL = 5
 
 // Planet events
 export const PLANET_MAX_COUNT = 3
-export const PLANET_SPAWN_INTERVAL_MIN = 8_000
-export const PLANET_SPAWN_INTERVAL_MAX = 18_000
+export const PLANET_SPAWN_INTERVAL_MIN = 11_000
+export const PLANET_SPAWN_INTERVAL_MAX = 24_000
 export const PLANET_RESCUE_DURATION_MIN = 5_000
 export const PLANET_RESCUE_DURATION_MAX = 10_000
 export const PLANET_RESCUE_CLICKS_MIN = 5

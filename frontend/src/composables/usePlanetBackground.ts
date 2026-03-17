@@ -22,8 +22,10 @@ interface PlanetItem {
   el: SVGSVGElement
   x: number
   y: number
-  vx: number
-  vy: number
+  scale: number
+  scaleEnd: number
+  lifetime: number
+  elapsed: number
   removeTimeout: ReturnType<typeof setTimeout> | null
   orbiting?: boolean
   orbitAngle?: number
@@ -59,50 +61,27 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     planets.splice(idx, 1)
   }
 
-  function spawnPlanet(immediate = false): string {
+  function spawnPlanet(): string {
     if (!container.value) return ''
     const config = pickConfig()
     const size = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin)
     const r = size / 2
-    const speed = config.speedMin + Math.random() * (config.speedMax - config.speedMin)
     const w = container.value.clientWidth || window.innerWidth
     const h = container.value.clientHeight || window.innerHeight
 
-    let x: number, y: number, vx: number, vy: number
-    if (immediate) {
-      x = w * 0.2 + Math.random() * w * 0.6
-      y = h * 0.2 + Math.random() * h * 0.5
-      const angle = Math.random() * Math.PI * 2
-      vx = Math.cos(angle) * speed * 0.4
-      vy = Math.sin(angle) * speed * 0.4
-    } else {
-      const edge = Math.floor(Math.random() * 4)
-      if (edge === 0) {
-        x = Math.random() * w
-        y = -size
-        const a = Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-        vx = Math.cos(a) * speed
-        vy = Math.sin(a) * speed
-      } else if (edge === 1) {
-        x = Math.random() * w
-        y = h + size
-        const a = -Math.PI + Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-        vx = Math.cos(a) * speed
-        vy = Math.sin(a) * speed
-      } else if (edge === 2) {
-        x = -size
-        y = Math.random() * h
-        const a = -Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-        vx = Math.cos(a) * speed
-        vy = Math.sin(a) * speed
-      } else {
-        x = w + size
-        y = Math.random() * h
-        const a = Math.PI - Math.PI * 0.25 + Math.random() * (-Math.PI * 0.5)
-        vx = Math.cos(a) * speed
-        vy = Math.sin(a) * speed
-      }
-    }
+    const mx = w * 0.12, my = h * 0.12
+    const minCenterDist = Math.min(w, h) * 0.22
+    let cx: number, cy: number
+    let attempts = 0
+    do {
+      cx = mx + Math.random() * (w - 2 * mx)
+      cy = my + Math.random() * (h - 2 * my)
+      attempts++
+    } while (Math.hypot(cx - w / 2, cy - h / 2) < minCenterDist && attempts < 10)
+    const x = cx - r, y = cy - r
+
+    const lifetime = 8_000 + Math.random() * 4_000
+    const scaleEnd = 0.85 + Math.random() * 0.75
 
     const id = `planet-${++planetIdCounter}`
     const svg = document.createElementNS(NS, 'svg')
@@ -111,22 +90,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
     svg.classList.add('planet')
     svg.dataset.planetId = id
-
-    if (!immediate) {
-      svg.style.animation = `planetLifecycle ${config.lifetime}ms ease-in-out forwards`
-    } else {
-      svg.style.opacity = '0.95'
-    }
+    svg.style.opacity = '0'
 
     drawPlanet(svg, id, config.type, r, r, r, size)
 
-    svg.style.transform = `translate(${x}px, ${y}px)`
+    svg.style.transform = `translate(${x}px,${y}px) scale(0.05)`
     container.value.appendChild(svg)
 
-    const removeTimeout = immediate ? null : setTimeout(() => removePlanet(id), config.lifetime)
-    if (removeTimeout) timeouts.push(removeTimeout)
-
-    const item: PlanetItem = { id, el: svg, x, y, vx, vy, removeTimeout }
+    const item: PlanetItem = { id, el: svg, x, y, scale: 0.05, scaleEnd, lifetime, elapsed: 0, removeTimeout: null }
     planets.push(item)
     return id
   }
@@ -169,8 +140,10 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       el: svg,
       x,
       y,
-      vx: 0,
-      vy: 0,
+      scale: 1,
+      scaleEnd: 1,
+      lifetime: Infinity,
+      elapsed: 0,
       removeTimeout: null,
       orbiting: true,
       orbitAngle: startAngle,
@@ -262,25 +235,31 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const w = container.value?.clientWidth ?? window.innerWidth
     const h = container.value?.clientHeight ?? window.innerHeight
 
-    for (const planet of planets) {
+    for (let i = planets.length - 1; i >= 0; i--) {
+      const planet = planets[i]
       if (planet.orbiting) {
         planet.orbitAngle! += planet.orbitSpeed! * delta
         const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
         planet.x = planet.orbitCx! + planet.orbitRadius! * Math.cos(planet.orbitAngle!) - pSize / 2
         planet.y = planet.orbitCy! + planet.orbitRadius! * Math.sin(planet.orbitAngle!) - pSize / 2
+        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
       } else {
-        planet.x += planet.vx * delta
-        planet.y += planet.vy * delta
+        planet.elapsed += delta * 1000
+        const p = Math.min(planet.elapsed / planet.lifetime, 1)
+        planet.scale = 0.05 + (planet.scaleEnd - 0.05) * (p * p)
 
-        const pSize = parseFloat(planet.el.getAttribute('width') ?? '80')
-        const pad = pSize
-        if (planet.x < -pad) planet.x += w + pad * 2
-        else if (planet.x > w + pad) planet.x -= w + pad * 2
-        if (planet.y < -pad) planet.y += h + pad * 2
-        else if (planet.y > h + pad) planet.y -= h + pad * 2
+        let opacity: number
+        if (p < 0.10)      opacity = p / 0.10
+        else if (p < 0.80) opacity = 1
+        else               opacity = 1 - (p - 0.80) / 0.20
+
+        planet.el.style.opacity = opacity.toFixed(2)
+        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px) scale(${planet.scale.toFixed(3)})`
+
+        if (p >= 1) {
+          removePlanet(planet.id)
+        }
       }
-
-      planet.el.style.transform = `translate(${planet.x}px, ${planet.y}px)`
     }
 
     animFrame = requestAnimationFrame(animatePlanets)

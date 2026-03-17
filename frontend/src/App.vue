@@ -52,11 +52,10 @@ const activeTab = ref('idle')
           </div>
           <!-- CPS (kein Rahmen) -->
           <div class="flex items-center gap-1 px-2 py-0.5">
-            <img src="/img/BardAbilities/BardChime.png" class="w-10 h-10 chime-glow-green" />
             <span
-              class="text-2xl font-semibold tracking-wide text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow"
+              class="text-4xl font-semibold tracking-wide text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow"
             >
-              {{ gameStore.chimesPerSecond }}/s
+              {{ gameStore.chimesPerSecond }} CPS
             </span>
           </div>
         </div>
@@ -165,4 +164,3 @@ const activeTab = ref('idle')
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
 }
 </style>
-

@@ -88,7 +88,7 @@ export interface Expedition {
 }
 
 // Planet event types
-export type PlanetType = 'rocky' | 'ice' | 'gas-giant' | 'lava' | 'ocean'
+export type PlanetType = 'rocky' | 'ice' | 'gas-giant' | 'lava' | 'ocean' | 'desert' | 'jungle' | 'ringed'
 
 export interface PlanetItem {
   id: string

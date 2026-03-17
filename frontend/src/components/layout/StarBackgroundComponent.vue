@@ -6,6 +6,10 @@
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+    <div class="nebula nebula-4"></div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
   </div>
 </template>
@@ -46,41 +50,74 @@ usePlanetBackground(starsContainer)
   filter: blur(0.5px) brightness(1.1) saturate(1.3);
 }
 
-@keyframes galaxyLifecycle {
-  0% {
-    opacity: 0;
-    filter: blur(3px) brightness(0.7) saturate(0.7);
-    scale: 0.65;
-    rotate: 0deg;
-  }
-  12% {
-    opacity: 0.75;
-    filter: blur(0.5px) brightness(1.15) saturate(1.4);
-    scale: 1;
-  }
-  50% {
-    opacity: 0.82;
-    filter: blur(0.3px) brightness(1.2) saturate(1.5);
-    scale: 1.04;
-  }
-  88% {
-    opacity: 0.7;
-    filter: blur(0.5px) brightness(1.1) saturate(1.3);
-    scale: 1;
-    rotate: var(--rot);
-  }
-  100% {
-    opacity: 0;
-    filter: blur(3px) brightness(0.6) saturate(0.6);
-    scale: 0.7;
-    rotate: var(--rot);
-  }
+@keyframes galaxyEnter {
+  0%   { opacity: 0; scale: 0.75; filter: blur(3px) brightness(0.8); }
+  100% { opacity: 0.82; scale: 1; filter: blur(0.4px) brightness(1.15) saturate(1.4); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .galaxy {
     animation: none !important;
   }
+}
+
+/* ─── Nebula ──────────────────────────────────────────────────────────────── */
+
+.nebula {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.nebula-1 {
+  width: 600px; height: 500px;
+  top: -10%; left: 5%;
+  background: radial-gradient(ellipse, rgba(88,28,135,0.07) 0%, transparent 70%);
+  animation: nebulaFloat1 90s ease-in-out infinite;
+}
+.nebula-2 {
+  width: 700px; height: 550px;
+  top: 40%; right: -5%;
+  background: radial-gradient(ellipse, rgba(6,78,130,0.06) 0%, transparent 70%);
+  animation: nebulaFloat2 110s ease-in-out infinite;
+}
+.nebula-3 {
+  width: 500px; height: 600px;
+  bottom: -5%; left: 30%;
+  background: radial-gradient(ellipse, rgba(14,116,144,0.055) 0%, transparent 70%);
+  animation: nebulaFloat3 80s ease-in-out infinite;
+}
+.nebula-4 {
+  width: 450px; height: 450px;
+  top: 20%; left: 45%;
+  background: radial-gradient(ellipse, rgba(131,24,67,0.05) 0%, transparent 70%);
+  animation: nebulaFloat4 125s ease-in-out infinite;
+}
+
+@keyframes nebulaFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(4%, 6%) scale(1.08); }
+  66%       { transform: translate(-3%, 3%) scale(0.95); }
+}
+@keyframes nebulaFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%       { transform: translate(-5%, -4%) scale(1.06); }
+  70%       { transform: translate(3%, -7%) scale(0.97); }
+}
+@keyframes nebulaFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(6%, -5%) scale(1.1); }
+}
+@keyframes nebulaFloat4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30%       { transform: translate(-4%, 5%) scale(0.92); }
+  60%       { transform: translate(5%, 2%) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nebula { animation: none !important; }
 }
 
 /* ─── Planets ─────────────────────────────────────────────────────────────── */
@@ -101,22 +138,10 @@ usePlanetBackground(starsContainer)
 }
 
 @keyframes planetLifecycle {
-  0% {
-    opacity: 0;
-    scale: 0.5;
-  }
-  10% {
-    opacity: 0.9;
-    scale: 1;
-  }
-  80% {
-    opacity: 0.9;
-    scale: 1;
-  }
-  100% {
-    opacity: 0;
-    scale: 0.8;
-  }
+  0%   { opacity: 0; scale: 0.05; }
+  10%  { opacity: 0.9; }
+  80%  { opacity: 0.9; }
+  100% { opacity: 0; scale: 2.0; }
 }
 
 @keyframes planetDistress {

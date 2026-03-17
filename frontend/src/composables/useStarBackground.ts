@@ -5,14 +5,9 @@ import { STAR_COUNT } from '../config/constants'
 
 type StarItem = {
   id: number
-  x: number
-  y: number
-  vx: number
-  vy: number
-  targetVx: number
-  targetVy: number
-  nextDirectionChange: number
-  size: number
+  angle: number // Winkel vom Bildschirmzentrum (radians)
+  dist: number // Aktuelle Distanz vom Zentrum
+  baseSpeed: number // Zufälliger Basis-Geschwindigkeitsmultiplikator (0.5–1.5)
   r: number
   g: number
   b: number
@@ -24,11 +19,22 @@ type GalaxyItem = {
   el: SVGSVGElement
   x: number
   y: number
-  vx: number
-  vy: number
+  scale: number
+  maxScale: number
+  lifetime: number
+  elapsed: number
+  rot: number
 }
 
-type GalaxyType = 'spiral' | 'barred-spiral' | 'elliptical' | 'globular' | 'irregular' | 'ring'
+type GalaxyType =
+  | 'spiral'
+  | 'barred-spiral'
+  | 'elliptical'
+  | 'globular'
+  | 'irregular'
+  | 'ring'
+  | 'lenticular'
+  | 'starburst'
 
 type GalaxyPalette = {
   center: string
@@ -50,39 +56,15 @@ type GalaxyTypeConfig = {
 
 // ─── Star Constants ───────────────────────────────────────────────────────────
 
-const SPEED_MIN = 2
-const SPEED_MAX = 5
-const DIR_CHANGE_MIN = 4000
-const DIR_CHANGE_MAX = 10_000
-const LERP_RATE = 1.5
+const WARP_SPEED_MAX = 70 // max px/s am Bildschirmrand
 
 // ─── Galaxy Constants ─────────────────────────────────────────────────────────
 
 const GALAXY_SPAWN_INTERVAL_MIN = 5_000
-const GALAXY_SPAWN_INTERVAL_MAX = 10_000
-const GALAXY_MAX_COUNT = 3
+const GALAXY_SPAWN_INTERVAL_MAX = 12_000
+const GALAXY_MAX_COUNT = 4
 
 const GALAXY_TYPE_CONFIGS: GalaxyTypeConfig[] = [
-  {
-    type: 'spiral',
-    sizeMin: 120,
-    sizeMax: 220,
-    speedMin: 0.4,
-    speedMax: 1.5,
-    lifetime: 18_000,
-    rotRange: [20, 45],
-    weight: 3,
-  },
-  {
-    type: 'barred-spiral',
-    sizeMin: 140,
-    sizeMax: 240,
-    speedMin: 0.3,
-    speedMax: 1.2,
-    lifetime: 20_000,
-    rotRange: [15, 35],
-    weight: 2,
-  },
   {
     type: 'elliptical',
     sizeMin: 160,
@@ -114,14 +96,14 @@ const GALAXY_TYPE_CONFIGS: GalaxyTypeConfig[] = [
     weight: 2,
   },
   {
-    type: 'ring',
-    sizeMin: 90,
-    sizeMax: 170,
-    speedMin: 0.4,
-    speedMax: 1.5,
-    lifetime: 16_000,
-    rotRange: [8, 25],
-    weight: 1,
+    type: 'starburst',
+    sizeMin: 80,
+    sizeMax: 150,
+    speedMin: 0.8,
+    speedMax: 2.5,
+    lifetime: 14_000,
+    rotRange: [30, 90],
+    weight: 2,
   },
 ]
 
@@ -179,6 +161,22 @@ const GALAXY_PALETTES_BY_TYPE: Record<GalaxyType, GalaxyPalette[]> = {
     { center: '#fffbeb', mid: '#fcd34d', outer: '#b45309' },
     { center: '#f0fdf4', mid: '#86efac', outer: '#4d7c0f' },
     { center: '#fdf2f8', mid: '#f0abfc', outer: '#7e22ce' },
+  ],
+  lenticular: [
+    { center: '#fffbeb', mid: '#fde68a', outer: '#d97706' },
+    { center: '#fff7ed', mid: '#fdba74', outer: '#c2410c' },
+    { center: '#f8fafc', mid: '#cbd5e1', outer: '#64748b' },
+    { center: '#fdf4ff', mid: '#e9d5ff', outer: '#7c3aed' },
+    { center: '#eff6ff', mid: '#bfdbfe', outer: '#3b82f6' },
+    { center: '#f0fdf4', mid: '#bbf7d0', outer: '#059669' },
+  ],
+  starburst: [
+    { center: '#ffffff', mid: '#fef08a', outer: '#f59e0b' },
+    { center: '#ffffff', mid: '#fbcfe8', outer: '#ec4899' },
+    { center: '#ffffff', mid: '#a5f3fc', outer: '#06b6d4' },
+    { center: '#ffffff', mid: '#bbf7d0', outer: '#10b981' },
+    { center: '#ffffff', mid: '#ddd6fe', outer: '#8b5cf6' },
+    { center: '#ffffff', mid: '#fed7aa', outer: '#f97316' },
   ],
 }
 
@@ -571,7 +569,7 @@ function drawGlobular(
     const sy = cy + Math.sin(angle) * dist
 
     const roll = Math.random()
-    const dotColor = roll < 0.70 ? '#ffffff' : roll < 0.85 ? palette.center : palette.mid
+    const dotColor = roll < 0.7 ? '#ffffff' : roll < 0.85 ? palette.center : palette.mid
 
     const dot = svgEl('circle')
     dot.setAttribute('cx', String(sx))
@@ -776,6 +774,162 @@ function drawRing(
   svg.appendChild(center)
 }
 
+function drawLenticular(
+  svg: SVGSVGElement,
+  id: string,
+  cx: number,
+  cy: number,
+  r: number,
+  size: number,
+  palette: GalaxyPalette,
+): void {
+  const defs = svgEl('defs')
+
+  const bodyGrad = svgEl('radialGradient')
+  bodyGrad.id = `${id}g`
+  bodyGrad.setAttribute('cx', '50%')
+  bodyGrad.setAttribute('cy', '50%')
+  bodyGrad.setAttribute('r', '50%')
+  addStop(bodyGrad, '0%', '#ffffff', 1)
+  addStop(bodyGrad, '20%', palette.center, 0.9)
+  addStop(bodyGrad, '55%', palette.mid, 0.5)
+  addStop(bodyGrad, '80%', palette.outer, 0.15)
+  addStop(bodyGrad, '100%', palette.outer, 0)
+
+  const haloGrad = svgEl('radialGradient')
+  haloGrad.id = `${id}h`
+  haloGrad.setAttribute('cx', '50%')
+  haloGrad.setAttribute('cy', '50%')
+  haloGrad.setAttribute('r', '50%')
+  addStop(haloGrad, '0%', palette.outer, 0.1)
+  addStop(haloGrad, '100%', palette.outer, 0)
+
+  defs.appendChild(bodyGrad)
+  defs.appendChild(haloGrad)
+  defs.appendChild(makeBlurFilter(`${id}f`, 3))
+  svg.appendChild(defs)
+
+  // Outer lens halo
+  const halo = svgEl('ellipse')
+  halo.setAttribute('cx', String(cx))
+  halo.setAttribute('cy', String(cy))
+  halo.setAttribute('rx', String(r))
+  halo.setAttribute('ry', String(r * 0.22))
+  halo.setAttribute('fill', `url(#${id}h)`)
+  svg.appendChild(halo)
+
+  // Main disk body (softly blurred)
+  const body = svgEl('ellipse')
+  body.setAttribute('cx', String(cx))
+  body.setAttribute('cy', String(cy))
+  body.setAttribute('rx', String(r * 0.75))
+  body.setAttribute('ry', String(r * 0.17))
+  body.setAttribute('fill', `url(#${id}g)`)
+  body.setAttribute('filter', `url(#${id}f)`)
+  svg.appendChild(body)
+
+  // Subtle dust ring
+  const dust = svgEl('ellipse')
+  dust.setAttribute('cx', String(cx))
+  dust.setAttribute('cy', String(cy))
+  dust.setAttribute('rx', String(r * 0.82))
+  dust.setAttribute('ry', String(r * 0.08))
+  dust.setAttribute('fill', 'none')
+  dust.setAttribute('stroke', palette.outer)
+  dust.setAttribute('stroke-opacity', '0.22')
+  dust.setAttribute('stroke-width', String(size * 0.018))
+  svg.appendChild(dust)
+
+  // Bright center
+  const center = svgEl('circle')
+  center.setAttribute('cx', String(cx))
+  center.setAttribute('cy', String(cy))
+  center.setAttribute('r', String(r * 0.1))
+  center.setAttribute('fill', '#ffffff')
+  center.setAttribute('opacity', '0.9')
+  svg.appendChild(center)
+}
+
+function drawStarburst(
+  svg: SVGSVGElement,
+  id: string,
+  cx: number,
+  cy: number,
+  r: number,
+  size: number,
+  palette: GalaxyPalette,
+): void {
+  const defs = svgEl('defs')
+
+  const coreGrad = svgEl('radialGradient')
+  coreGrad.id = `${id}c`
+  coreGrad.setAttribute('cx', '50%')
+  coreGrad.setAttribute('cy', '50%')
+  coreGrad.setAttribute('r', '50%')
+  addStop(coreGrad, '0%', '#ffffff', 1)
+  addStop(coreGrad, '40%', palette.center, 0.85)
+  addStop(coreGrad, '100%', palette.mid, 0)
+
+  const bloomGrad = svgEl('radialGradient')
+  bloomGrad.id = `${id}b`
+  bloomGrad.setAttribute('cx', '50%')
+  bloomGrad.setAttribute('cy', '50%')
+  bloomGrad.setAttribute('r', '50%')
+  addStop(bloomGrad, '0%', palette.center, 0.4)
+  addStop(bloomGrad, '60%', palette.mid, 0.12)
+  addStop(bloomGrad, '100%', palette.outer, 0)
+
+  defs.appendChild(coreGrad)
+  defs.appendChild(bloomGrad)
+  defs.appendChild(makeBlurFilter(`${id}f`, 2))
+  svg.appendChild(defs)
+
+  // Bloom halo
+  const bloom = svgEl('circle')
+  bloom.setAttribute('cx', String(cx))
+  bloom.setAttribute('cy', String(cy))
+  bloom.setAttribute('r', String(r))
+  bloom.setAttribute('fill', `url(#${id}b)`)
+  svg.appendChild(bloom)
+
+  // Radiant spike lines (6–8)
+  const spikeCount = 6 + Math.floor(Math.random() * 3)
+  for (let i = 0; i < spikeCount; i++) {
+    const angle = (i / spikeCount) * Math.PI * 2 + Math.random() * 0.2
+    const len = r * (0.5 + Math.random() * 0.45)
+    const ex = cx + Math.cos(angle) * len
+    const ey = cy + Math.sin(angle) * len
+    const spike = svgEl('line')
+    spike.setAttribute('x1', String(cx))
+    spike.setAttribute('y1', String(cy))
+    spike.setAttribute('x2', String(ex))
+    spike.setAttribute('y2', String(ey))
+    spike.setAttribute('stroke', palette.center)
+    spike.setAttribute('stroke-opacity', String((0.35 + Math.random() * 0.3).toFixed(2)))
+    spike.setAttribute('stroke-width', String(size * 0.018 * (1 - (i % 3) * 0.15)))
+    spike.setAttribute('stroke-linecap', 'round')
+    spike.setAttribute('filter', `url(#${id}f)`)
+    svg.appendChild(spike)
+  }
+
+  // Core glow
+  const core = svgEl('circle')
+  core.setAttribute('cx', String(cx))
+  core.setAttribute('cy', String(cy))
+  core.setAttribute('r', String(r * 0.22))
+  core.setAttribute('fill', `url(#${id}c)`)
+  svg.appendChild(core)
+
+  // Bright point
+  const point = svgEl('circle')
+  point.setAttribute('cx', String(cx))
+  point.setAttribute('cy', String(cy))
+  point.setAttribute('r', String(r * 0.07))
+  point.setAttribute('fill', '#ffffff')
+  point.setAttribute('opacity', '1')
+  svg.appendChild(point)
+}
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 // Star color palette as [r, g, b] tuples
@@ -808,12 +962,6 @@ export function useStarBackground() {
     }
   }
 
-  function getRandomVelocity(): { vx: number; vy: number } {
-    const angle = Math.random() * Math.PI * 2
-    const speed = SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN)
-    return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed }
-  }
-
   function resizeCanvas(): void {
     if (!starCanvas.value || !starsContainer.value) return
     starCanvas.value.width = starsContainer.value.clientWidth || window.innerWidth
@@ -831,37 +979,27 @@ export function useStarBackground() {
     const size = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin)
     const w = starsContainer.value.clientWidth || window.innerWidth
     const h = starsContainer.value.clientHeight || window.innerHeight
-    const speed = config.speedMin + Math.random() * (config.speedMax - config.speedMin)
-    const edge = Math.floor(Math.random() * 4)
-    let x: number, y: number, vx: number, vy: number
-    if (edge === 0) { // top
-      x = Math.random() * w; y = -size
-      const a = Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
-    } else if (edge === 1) { // bottom
-      x = Math.random() * w; y = h + size
-      const a = -Math.PI + Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
-    } else if (edge === 2) { // left
-      x = -size; y = Math.random() * h
-      const a = -Math.PI * 0.25 + Math.random() * Math.PI * 0.5
-      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
-    } else { // right
-      x = w + size; y = Math.random() * h
-      const a = Math.PI - Math.PI * 0.25 + Math.random() * (-Math.PI * 0.5)
-      vx = Math.cos(a) * speed; vy = Math.sin(a) * speed
-    }
+
+    const mx = w * 0.1,
+      my = h * 0.1
+    const cx2 = mx + Math.random() * (w - 2 * mx)
+    const cy2 = my + Math.random() * (h - 2 * my)
+    const x = cx2 - size / 2
+    const y = cy2 - size / 2
+
+    const lifetime = 10_000 + Math.random() * 6_000
+    const maxScale = 0.75 + Math.random() * 0.6
+
+    const rotDir = Math.random() > 0.5 ? 1 : -1
+    const rotDeg = config.rotRange[0] + Math.random() * (config.rotRange[1] - config.rotRange[0])
+    const rot = rotDir * rotDeg
 
     const svg = document.createElementNS(NS, 'svg')
     svg.setAttribute('width', String(size))
     svg.setAttribute('height', String(size))
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
     svg.classList.add('galaxy')
-    svg.style.animation = `galaxyLifecycle ${config.lifetime}ms ease-in-out forwards`
-
-    const rotDir = Math.random() > 0.5 ? 1 : -1
-    const rotDeg = config.rotRange[0] + Math.random() * (config.rotRange[1] - config.rotRange[0])
-    svg.style.setProperty('--rot', `${rotDir * rotDeg}deg`)
+    svg.style.opacity = '0'
 
     const cx = size / 2
     const cy = size / 2
@@ -887,21 +1025,18 @@ export function useStarBackground() {
       case 'ring':
         drawRing(svg, id, cx, cy, r, size, palette)
         break
+      case 'lenticular':
+        drawLenticular(svg, id, cx, cy, r, size, palette)
+        break
+      case 'starburst':
+        drawStarburst(svg, id, cx, cy, r, size, palette)
+        break
     }
 
-    const item: GalaxyItem = { el: svg, x, y, vx, vy }
-    svg.style.transform = `translate(${x}px, ${y}px)`
+    svg.style.transform = `translate(${x}px,${y}px) scale(0.05) rotate(${rot}deg)`
     starsContainer.value.appendChild(svg)
+    const item: GalaxyItem = { el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot }
     galaxies.push(item)
-
-    const removeTimeout = setTimeout(() => {
-      if (starsContainer.value && starsContainer.value.contains(svg)) {
-        starsContainer.value.removeChild(svg)
-      }
-      const idx = galaxies.indexOf(item)
-      if (idx !== -1) galaxies.splice(idx, 1)
-    }, config.lifetime)
-    timeouts.push(removeTimeout)
   }
 
   function scheduleNextGalaxy(): void {
@@ -914,28 +1049,24 @@ export function useStarBackground() {
     }, delay)
   }
 
-  function spawnStar(timestamp: number): StarItem {
+  function spawnStar(randomDist = false): StarItem {
     const w = starsContainer.value?.clientWidth || window.innerWidth
     const h = starsContainer.value?.clientHeight || window.innerHeight
+    const cx = w / 2,
+      cy = h / 2
+    const maxDist = Math.hypot(cx, cy) + 20
 
-    const size = Math.random() * 4 + 2
-    const x = Math.random() * w
-    const y = Math.random() * h
-    const { vx, vy } = getRandomVelocity()
-    const { vx: tvx, vy: tvy } = getRandomVelocity()
+    const angle = Math.random() * Math.PI * 2
+    const minDist = maxDist * 0.1
+    const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
+    const baseSpeed = 0.5 + Math.random() * 1.0
     const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
 
     const item: StarItem = {
       id: nextStarId++,
-      x,
-      y,
-      vx,
-      vy,
-      targetVx: tvx,
-      targetVy: tvy,
-      nextDirectionChange:
-        timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN),
-      size,
+      angle,
+      dist,
+      baseSpeed,
       r,
       g,
       b,
@@ -961,60 +1092,68 @@ export function useStarBackground() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
     }
 
+    const cx = w / 2,
+      cy = h / 2
+    const maxDist = Math.hypot(cx, cy) + 20
+
     for (const star of stars) {
-      const lerpFactor = Math.min(1, LERP_RATE * delta)
-      star.vx += (star.targetVx - star.vx) * lerpFactor
-      star.vy += (star.targetVy - star.vy) * lerpFactor
+      const norm = star.dist / maxDist // 0–1
+      const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX // quadratisch → langsam nahe Mitte
+      star.dist += speed * delta
 
-      star.x += star.vx * delta
-      star.y += star.vy * delta
-
-      // Wrap around edges
-      const pad = 10
-      if (star.x < -pad) star.x += w + pad * 2
-      else if (star.x > w + pad) star.x -= w + pad * 2
-      if (star.y < -pad) star.y += h + pad * 2
-      else if (star.y > h + pad) star.y -= h + pad * 2
-
-      // Twinkle via sine wave on alpha
-      star.twinklePhase += star.twinkleSpeed * delta
-      const alpha = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(star.twinklePhase))
-
-      if (timestamp >= star.nextDirectionChange) {
-        const { vx, vy } = getRandomVelocity()
-        star.targetVx = vx
-        star.targetVy = vy
-        star.nextDirectionChange =
-          timestamp + DIR_CHANGE_MIN + Math.random() * (DIR_CHANGE_MAX - DIR_CHANGE_MIN)
+      if (star.dist > maxDist) {
+        star.angle = Math.random() * Math.PI * 2
+        star.dist = maxDist * (0.1 + Math.random() * 0.35)
+        star.baseSpeed = 0.5 + Math.random() * 1.0
       }
 
+      // Polar → Kartesisch
+      const x = cx + Math.cos(star.angle) * star.dist
+      const y = cy + Math.sin(star.angle) * star.dist
+
+      // Einblenden nahe Zentrum, heller weiter außen
+      const distAlpha = Math.min(1, norm * 4)
+      star.twinklePhase += star.twinkleSpeed * delta
+      const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
+      const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
+      const alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
+
+      // Größe wächst mit Distanz
+      const starSize = 0.8 + norm * norm * 5.0
+
       if (ctx) {
-        const halfSize = star.size / 2
-        // Core circle
+        // Core
         ctx.beginPath()
-        ctx.arc(star.x, star.y, halfSize, 0, Math.PI * 2)
+        ctx.arc(x, y, starSize, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
         ctx.fill()
-        // Soft glow (larger, more transparent circle)
+        // Glow
         ctx.beginPath()
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.15).toFixed(2)})`
+        ctx.arc(x, y, starSize * 2, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.12).toFixed(2)})`
         ctx.fill()
       }
     }
 
-    for (const galaxy of galaxies) {
-      galaxy.x += galaxy.vx * delta
-      galaxy.y += galaxy.vy * delta
+    for (let i = galaxies.length - 1; i >= 0; i--) {
+      const g = galaxies[i]
+      g.elapsed += delta * 1000
+      const p = Math.min(g.elapsed / g.lifetime, 1)
 
-      const gSize = parseFloat(galaxy.el.getAttribute('width') ?? '220')
-      const pad = gSize
-      if (galaxy.x < -pad) galaxy.x += w + pad * 2
-      else if (galaxy.x > w + pad) galaxy.x -= w + pad * 2
-      if (galaxy.y < -pad) galaxy.y += h + pad * 2
-      else if (galaxy.y > h + pad) galaxy.y -= h + pad * 2
+      g.scale = 0.05 + (g.maxScale - 0.05) * (p * p)
 
-      galaxy.el.style.transform = `translate(${galaxy.x}px, ${galaxy.y}px)`
+      let opacity: number
+      if (p < 0.15) opacity = p / 0.15
+      else if (p < 0.75) opacity = 1
+      else opacity = 1 - (p - 0.75) / 0.25
+
+      g.el.style.opacity = opacity.toFixed(2)
+      g.el.style.transform = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+
+      if (p >= 1) {
+        if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
+        galaxies.splice(i, 1)
+      }
     }
 
     animFrame = requestAnimationFrame(animateStars)
@@ -1023,13 +1162,17 @@ export function useStarBackground() {
   function handleResize(): void {
     if (resizeTimeout) clearTimeout(resizeTimeout)
     resizeTimeout = setTimeout(() => {
+      const oldW = starCanvas.value?.width || window.innerWidth
+      const oldH = starCanvas.value?.height || window.innerHeight
+      const oldMaxDist = Math.hypot(oldW / 2, oldH / 2) + 20
       resizeCanvas()
       if (!starsContainer.value || stars.length === 0) return
       const w = starsContainer.value.clientWidth || window.innerWidth
       const h = starsContainer.value.clientHeight || window.innerHeight
+      const newMaxDist = Math.hypot(w / 2, h / 2) + 20
+      const scale = newMaxDist / oldMaxDist
       for (const star of stars) {
-        star.x = Math.random() * w
-        star.y = Math.random() * h
+        star.dist = star.dist * scale
       }
     }, 150)
   }
@@ -1038,9 +1181,8 @@ export function useStarBackground() {
     if (!starsContainer.value || prefersReducedMotion.value) return
     stars.length = 0
     resizeCanvas()
-    const now = performance.now()
     for (let i = 0; i < STAR_COUNT; i++) {
-      spawnStar(now)
+      spawnStar(true)
     }
     lastTimestamp = 0
     animFrame = requestAnimationFrame(animateStars)
