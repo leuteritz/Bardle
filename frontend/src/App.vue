@@ -36,7 +36,7 @@ const activeTab = ref('idle')
       <div class="z-[100] grid w-full h-8 grid-cols-3">
         <!-- Links: Bard portrait toggle -->
         <div class="flex items-start justify-start col-span-1 px-4 py-4">
-          <BardProfileMenu :active-tab="activeTab" @update:active-tab="activeTab = $event" />
+          <BardProfileMenu />
         </div>
 
         <!-- Mitte: Chimes & CPS -->

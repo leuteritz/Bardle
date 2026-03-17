@@ -9,9 +9,6 @@ import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
 import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue' // ← fehlte
 
-defineProps<{ activeTab: string }>()
-const emit = defineEmits<{ 'update:activeTab': [value: string] }>()
-
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
 
@@ -23,7 +20,7 @@ const abilityIcons = [
 ]
 const abilityKeys = ['Q', 'W', 'E', 'R']
 
-type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'idle' | 'battle' | 'champions'
+type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'battle' | 'champions'
 
 const menuOpen = ref(false)
 const activeModal = ref<ModalId | null>(null)
@@ -32,9 +29,8 @@ const menuItems: { id: ModalId; label: string; icon: string; src: string }[] = [
   { id: 'shop', label: 'Shop', icon: '', src: '/img/menu/SHOP.png' },
   { id: 'rank', label: 'Rang', icon: '', src: '/img/menu/RANK.png' },
   { id: 'abilities', label: 'Skills', icon: '⚡', src: '/img/menu/SKILLS.png' },
-  { id: 'idle', label: 'Idle', icon: '🎵', src: '/img/menu/IDLE.png' },
-  { id: 'battle', label: 'Battle', icon: '⚔️', src: '' },
-  { id: 'champions', label: 'Champions', icon: '🏆', src: '' }, // ← kein src nötig
+  { id: 'battle', label: 'Battle', icon: '', src: '/img/menu/BATTLE.png' },
+  { id: 'champions', label: 'Champions', icon: '', src: '/img/menu/CHAMPIONS.png' }, // ← kein src nötig
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
@@ -44,12 +40,6 @@ const toggleMenu = () => {
 }
 
 const openModal = (id: ModalId) => {
-  // ← 'champions' aus dem Emit entfernt, wird jetzt als Modal geöffnet
-  if (id === 'idle') {
-    emit('update:activeTab', id)
-    menuOpen.value = false
-    return
-  }
   activeModal.value = activeModal.value === id ? null : id
 }
 
@@ -113,14 +103,14 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
 
     <!-- ─── Vertikales Menü ─── -->
     <Transition name="slide-down">
-      <div v-show="menuOpen" class="absolute top-full left-0 mt-3 z-50 flex flex-col gap-1.5 w-48">
+      <div v-show="menuOpen" class="absolute top-full left-0 mt-6 z-50 flex flex-col gap-1.5 w-48">
         <div
           v-for="item in menuItems"
           :key="item.id"
           @click.stop="openModal(item.id)"
           class="group/item relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
           :class="
-            activeModal === item.id || (activeTab === item.id && item.id === 'idle')
+            activeModal === item.id
               ? 'bg-gradient-to-br from-blue-600/40 via-violet-600/30 to-blue-600/20 border-blue-400/50 shadow-[0_0_20px_rgba(99,102,241,0.25)]'
               : 'bg-gradient-to-br from-white/10 to-white/[0.04] border-white/10 hover:border-white/20'
           "
@@ -131,23 +121,23 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           />
           <!-- Active Glow Pulse -->
           <div
-            v-if="activeModal === item.id || (activeTab === item.id && item.id === 'idle')"
+            v-if="activeModal === item.id"
             class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/40 animate-pulse"
           />
           <div class="relative flex items-center gap-3 px-4 py-2.5">
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-10 h-10 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover/item:scale-110"
+              class="relative flex items-center justify-center flex-shrink-0 w-10 h-10 transition-transform duration-300 group-hover/item:scale-110"
             >
               <img
                 v-if="item.src"
                 :src="item.src"
                 :alt="item.label"
-                class="relative z-10 object-contain w-6 h-6 drop-shadow-lg"
+                class="relative z-10 object-contain w-10 h-10 drop-shadow-lg"
               />
               <span v-else class="relative z-10 text-lg drop-shadow-lg">{{ item.icon }}</span>
             </div>
             <span
-              class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
+              class="text-xl font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
             >
               {{ item.label }}
             </span>
@@ -197,19 +187,17 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           class="relative flex items-center justify-between flex-shrink-0 px-5 py-4 border-b border-white/10"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="flex items-center justify-center w-8 h-8 border rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15"
-            >
+            <div class="flex items-center justify-center w-8 h-8">
               <img
                 v-if="activeMenuItem?.src"
                 :src="activeMenuItem.src"
                 :alt="activeMenuItem.label"
-                class="object-contain w-5 h-5"
+                class="object-contain w-12 h-12"
               />
               <span v-else class="text-base">{{ activeMenuItem?.icon }}</span>
             </div>
             <span
-              class="text-sm font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
+              class="text-2xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
             >
               {{ activeMenuItem?.label }}
             </span>
