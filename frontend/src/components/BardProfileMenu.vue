@@ -7,6 +7,7 @@ import RankComponent from './RankComponent.vue'
 import AbilityComponent from './bottom/AbilityComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
+import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue' // ← fehlte
 
 defineProps<{ activeTab: string }>()
 const emit = defineEmits<{ 'update:activeTab': [value: string] }>()
@@ -44,7 +45,7 @@ const toggleMenu = () => {
 
 const openModal = (id: ModalId) => {
   // ← 'champions' aus dem Emit entfernt, wird jetzt als Modal geöffnet
-  if (id === 'idle' || id === 'battle') {
+  if (id === 'idle') {
     emit('update:activeTab', id)
     menuOpen.value = false
     return
@@ -119,20 +120,18 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           @click.stop="openModal(item.id)"
           class="group/item relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
           :class="
-            activeModal === item.id ||
-            (activeTab === item.id && (item.id === 'idle' || item.id === 'battle'))
+            activeModal === item.id || (activeTab === item.id && item.id === 'idle')
               ? 'bg-gradient-to-br from-blue-600/40 via-violet-600/30 to-blue-600/20 border-blue-400/50 shadow-[0_0_20px_rgba(99,102,241,0.25)]'
               : 'bg-gradient-to-br from-white/10 to-white/[0.04] border-white/10 hover:border-white/20'
           "
         >
+          <!-- Shimmer Sweep -->
           <div
             class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover/item:translate-x-[100%] transition-transform duration-700"
           />
+          <!-- Active Glow Pulse -->
           <div
-            v-if="
-              activeModal === item.id ||
-              (activeTab === item.id && (item.id === 'idle' || item.id === 'battle'))
-            "
+            v-if="activeModal === item.id || (activeTab === item.id && item.id === 'idle')"
             class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/40 animate-pulse"
           />
           <div class="relative flex items-center gap-3 px-4 py-2.5">
@@ -174,15 +173,18 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
       class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[95vw]"
       :class="{
         'w-[600px]': activeModal === 'admin',
-        'w-[480px]': activeModal === 'champions', // ← etwas breiter für die zwei Tabs
-        'w-96': activeModal !== 'admin' && activeModal !== 'champions',
+        'w-[560px]': activeModal === 'battle' || activeModal === 'champions',
+        'w-96': activeModal !== 'admin' && activeModal !== 'battle' && activeModal !== 'champions',
       }"
     >
       <div
         class="group relative overflow-hidden rounded-2xl border backdrop-blur-xl bg-black/30 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col"
         :class="{
-          'max-h-[80vh]':
-            activeModal === 'shop' || activeModal === 'admin' || activeModal === 'champions',
+          'max-h-[85vh]':
+            activeModal === 'shop' ||
+            activeModal === 'admin' ||
+            activeModal === 'champions' ||
+            activeModal === 'battle',
         }"
       >
         <!-- Shimmer Sweep -->
@@ -232,9 +234,9 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
             <div
               class="flex items-center justify-center p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
             >
-              <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50"
-                >Skill Points</span
-              >
+              <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50">
+                Skill Points
+              </span>
               <span
                 class="px-3 py-1 text-xs font-black tracking-wider text-blue-200 border rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border-blue-400/30"
               >
@@ -256,8 +258,9 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
             </div>
           </div>
 
-          <!-- ← Champions als Modal, identisch zur Shop-Struktur -->
           <ChampionLobbyComponent v-else-if="activeModal === 'champions'" />
+
+          <BattleResultComponent v-else-if="activeModal === 'battle'" />
 
           <AdminDashboard v-else-if="activeModal === 'admin'" :inline="true" />
         </div>

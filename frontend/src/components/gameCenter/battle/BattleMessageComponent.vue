@@ -1,32 +1,28 @@
 <template>
-  <div
-    v-if="showMessage"
-    :key="messageKey"
-    class="fixed z-40 transform -translate-x-1/2 left-1/2 top-16"
-  >
+  <Transition name="battle-msg">
     <div
-      class="relative px-6 py-3 overflow-hidden text-xl font-bold text-center border-2 shadow-2xl rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 border-blue-400/50 backdrop-blur-lg animate-bounce"
+      v-if="showMessage"
+      :key="messageKey"
+      class="fixed z-40 -translate-x-1/2 pointer-events-none left-1/2 top-16"
     >
-      <!-- Animated Background -->
-      <div class="absolute inset-0 opacity-30">
-        <div
-          class="absolute top-0 left-0 w-8 h-8 bg-blue-500 rounded-full mix-blend-multiply filter blur-lg animate-blob"
-        ></div>
-        <div
-          class="absolute bottom-0 right-0 w-6 h-6 bg-violet-500 rounded-full mix-blend-multiply filter blur-lg animate-blob animation-delay-2000"
-        ></div>
-      </div>
-
-      <span
-        class="relative z-10 text-transparent bg-gradient-to-r from-white to-blue-100 bg-clip-text drop-shadow-lg"
+      <div
+        class="relative overflow-hidden px-6 py-3 rounded-2xl border backdrop-blur-xl bg-black/40 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
       >
-        {{ currentMessage }}
-      </span>
-
-      <!-- Glow Effect -->
-      <div class="absolute inset-0 border pointer-events-none rounded-2xl border-white/20"></div>
+        <!-- Shimmer -->
+        <div
+          class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-[shimmer_1s_ease-out]"
+        />
+        <span
+          class="relative z-10 text-xl font-black tracking-widest text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text drop-shadow-lg"
+        >
+          {{ currentMessage }}
+        </span>
+        <div
+          class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/20 animate-pulse"
+        />
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <script lang="ts">
@@ -40,7 +36,7 @@ export default defineComponent({
     const showMessage = ref(false)
     const currentMessage = ref('')
     const messageKey = ref(0)
-    const messageDuration = ref(1500)
+    const messageDuration = 1500
 
     const battleMessages = [
       'PENTAKILL!',
@@ -64,29 +60,22 @@ export default defineComponent({
 
     function showRandomMessage() {
       if (!battleStore.autoBattleEnabled) return
-      const randomMessage = battleMessages[Math.floor(Math.random() * battleMessages.length)]
-      currentMessage.value = randomMessage
+      currentMessage.value = battleMessages[Math.floor(Math.random() * battleMessages.length)]
       showMessage.value = true
       messageKey.value++
       messageTimeout = window.setTimeout(() => {
         showMessage.value = false
-      }, messageDuration.value)
+      }, messageDuration)
     }
 
-    function startMessageInterval() {
-      if (messageInterval) {
-        clearInterval(messageInterval)
-      }
+    function start() {
+      if (messageInterval) clearInterval(messageInterval)
       messageInterval = window.setInterval(() => {
-        if (battleStore.autoBattleEnabled) {
-          if (Math.random() < 0.3) {
-            showRandomMessage()
-          }
-        }
-      }, messageDuration.value * 2)
+        if (battleStore.autoBattleEnabled && Math.random() < 0.3) showRandomMessage()
+      }, messageDuration * 2)
     }
 
-    function stopMessageInterval() {
+    function stop() {
       if (messageInterval) {
         clearInterval(messageInterval)
         messageInterval = null
@@ -99,44 +88,41 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      if (battleStore.autoBattleEnabled) {
-        startMessageInterval()
-      }
+      if (battleStore.autoBattleEnabled) start()
     })
+    onUnmounted(() => stop())
 
-    onUnmounted(() => {
-      stopMessageInterval()
-    })
-
-    return {
-      showMessage,
-      currentMessage,
-      messageKey,
-    }
+    return { showMessage, currentMessage, messageKey }
   },
 })
 </script>
 
 <style scoped>
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(15px, -25px) scale(1.1);
-  }
-  66% {
-    transform: translate(-10px, 10px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
+.battle-msg-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.battle-msg-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.battle-msg-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px) scale(0.9);
+}
+.battle-msg-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-4px) scale(0.95);
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
-}
-.animation-delay-2000 {
-  animation-delay: 2s;
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>
