@@ -1,88 +1,111 @@
 <template>
-  <div
-    class="relative h-full p-4 overflow-hidden border shop-container bg-gradient-to-br from-white/5 to-blue-500/10 rounded-2xl border-blue-400/30 backdrop-blur-sm"
-  >
-    <!-- Header -->
-    <div class="mb-4 text-center">
-      <h2
-        class="mb-2 text-2xl font-extrabold text-transparent shop-title bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
+  <div class="flex flex-col w-full h-full p-4 space-y-4">
+    <!-- ─── Header Badge ─── -->
+    <div
+      class="flex items-center justify-between p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    >
+      <span class="text-xs font-bold tracking-widest uppercase text-white/50">Champion Shop</span>
+      <span
+        class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
       >
-        🛒 Champion Shop
-      </h2>
-      <div
-        class="w-24 h-0.5 mx-auto rounded-full bg-gradient-to-r from-blue-400 to-violet-500"
-      ></div>
-      <p class="mt-2 text-sm font-semibold text-blue-300">
-        Erweitere dein Team mit mächtigen Champions!
-      </p>
-      <p v-if="loadError" class="mt-1 text-xs text-red-400">{{ loadError }}</p>
+        {{ availableChampions.length }} verfügbar
+      </span>
     </div>
 
-    <!-- Champions Grid -->
-    <div class="champions-grid h-[calc(100%-8rem)] overflow-y-auto pr-2 custom-scrollbar">
-      <div class="grid grid-cols-2 gap-4 p-2 md:grid-cols-3 lg:grid-cols-4">
-        <div
-          v-for="champion in availableChampions"
-          :key="champion.name"
-          class="relative flex flex-col items-center p-3 transition-all duration-500 border shadow-lg champion-card bg-gradient-to-br from-white/10 to-blue-500/5 rounded-xl border-blue-400/30 hover:scale-105 hover:shadow-blue-500/50 backdrop-blur-sm"
-        >
-          <!-- Champion Avatar -->
-          <div class="relative flex items-center justify-center w-12 h-12 mb-2 shadow-lg">
-            <img
-              :src="battleStore.getChampionImage(champion.name)"
-              class="relative z-10 object-cover w-16 h-16 rounded-xl"
-              :alt="champion.name"
-            />
-          </div>
+    <p v-if="loadError" class="text-xs text-center text-red-400">{{ loadError }}</p>
 
-          <!-- Champion Name -->
-          <div class="mb-2 text-center champion-name">
-            <span
-              class="text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
-            >
-              {{ truncate(champion.name, 10) }}
-            </span>
-          </div>
-
-          <!-- Buy Button -->
-          <button
-            class="w-full px-2 py-1.5 text-xs font-bold text-white transition-all duration-300 shadow-md buy-button rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            :class="
-              champion.owned
-                ? 'bg-gray-600 cursor-not-allowed'
-                : canAfford
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-105 hover:shadow-green-400/50'
-                  : 'bg-gray-700 cursor-not-allowed opacity-60'
-            "
-            :disabled="champion.owned || !canAfford"
-            @click="buyChampion(champion.name)"
-          >
-            <span v-if="!champion.owned" class="flex items-center justify-center gap-1">
-              <span>{{ formatNumber(CHAMPION_COST) }}</span>
-              <img src="/img/BardAbilities/BardChime.png" class="w-3 h-3" />
-            </span>
-            <span v-else class="flex items-center justify-center gap-1">
-              <span>✅</span>
-              <span>Gekauft</span>
-            </span>
-          </button>
-
-          <!-- Glow Effect -->
-          <div
-            class="absolute inset-0 transition-opacity duration-500 opacity-0 pointer-events-none rounded-xl bg-gradient-to-r from-blue-400/0 via-blue-400/20 to-blue-400/0 champion-glow"
-          ></div>
-        </div>
-      </div>
-
+    <!-- ─── Champions Grid ─── -->
+    <div class="flex-1 min-h-0 overflow-y-auto">
       <!-- Empty State -->
-      <div v-if="availableChampions.length === 0" class="py-8 text-center empty-state">
-        <div class="mb-3 text-4xl">🎉</div>
+      <div
+        v-if="availableChampions.length === 0"
+        class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+      >
+        <span class="text-4xl">🎉</span>
         <h3
-          class="mb-2 text-lg font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
+          class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
         >
           Alle Champions gekauft!
         </h3>
-        <p class="text-sm text-blue-400">Du besitzt bereits alle verfügbaren Champions.</p>
+        <p class="text-xs text-blue-400">Du besitzt bereits alle verfügbaren Champions.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div
+          v-for="champion in availableChampions"
+          :key="champion.name"
+          @click="buyChampion(champion.name)"
+          class="group relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
+          :class="
+            !champion.owned && canAfford
+              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)] cursor-pointer'
+              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
+          "
+        >
+          <!-- Shimmer Sweep -->
+          <div
+            v-if="!champion.owned && canAfford"
+            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+          />
+          <!-- Glow Pulse Border -->
+          <div
+            v-if="!champion.owned && canAfford"
+            class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
+          />
+
+          <div class="flex flex-col items-center gap-2 p-3">
+            <!-- Icon -->
+            <div
+              class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+            >
+              <div
+                v-if="!champion.owned && canAfford"
+                class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
+              />
+              <img
+                :src="battleStore.getChampionImage(champion.name)"
+                :alt="champion.name"
+                class="relative z-10 object-cover w-10 h-10 rounded-lg drop-shadow-lg"
+              />
+            </div>
+
+            <!-- Name -->
+            <h3
+              class="text-xs font-black leading-tight tracking-wide text-center text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
+            >
+              {{ truncate(champion.name, 10) }}
+            </h3>
+
+            <!-- Buy Button -->
+            <button
+              class="relative w-full px-2 py-2 overflow-hidden text-xs font-bold transition-all duration-300 border group/btn rounded-xl"
+              :class="
+                champion.owned
+                  ? 'bg-gray-800/50 border-gray-600/20 text-gray-400 cursor-not-allowed'
+                  : canAfford
+                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
+                    : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+              "
+              :disabled="champion.owned || !canAfford"
+            >
+              <!-- Button Shimmer -->
+              <div
+                v-if="!champion.owned && canAfford"
+                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
+              />
+              <div class="relative flex items-center justify-center gap-1.5">
+                <template v-if="!champion.owned">
+                  <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
+                  <span class="font-black tracking-tight">{{ formatNumber(CHAMPION_COST) }}</span>
+                </template>
+                <template v-else>
+                  <span>✅</span>
+                  <span>Gekauft</span>
+                </template>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -132,14 +155,11 @@ export default defineComponent({
     }
 
     const canAfford = computed(() => gameStore.chimes >= CHAMPION_COST)
-
     const availableChampions = computed(() =>
       champions.value.filter((c) => !battleStore.ownedChampions.includes(c.name)),
     )
 
-    onMounted(() => {
-      loadChampions()
-    })
+    onMounted(() => loadChampions())
 
     return {
       champions,
@@ -156,33 +176,3 @@ export default defineComponent({
   },
 })
 </script>
-
-<style scoped>
-.champion-card:nth-child(odd) {
-  animation-delay: -2s;
-}
-
-.champion-card:hover .champion-glow {
-  opacity: 1;
-}
-
-@keyframes cardFloat {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-@keyframes avatarRotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-</style>

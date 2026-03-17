@@ -1,77 +1,97 @@
 <template>
-  <div
-    class="relative h-full p-3 overflow-hidden border team-container bg-gradient-to-br from-white/5 to-blue-500/10 rounded-xl border-blue-400/30 backdrop-blur-sm"
-  >
-    <!-- Header -->
-    <div class="mb-3 text-center">
-      <h2
-        class="mb-2 text-xl font-extrabold text-transparent team-title bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
-      >
-        ⚔️ Dein Team
-      </h2>
+  <div class="flex flex-col w-full h-full p-4 space-y-4">
+    <!-- ─── Bard Leader Card ─── -->
+    <div
+      class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-blue-900/30 via-violet-900/20 to-blue-900/10 border-blue-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+    >
       <div
-        class="w-20 h-0.5 mx-auto rounded-full bg-gradient-to-r from-blue-400 to-violet-500"
-      ></div>
-    </div>
+        class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/30 animate-pulse"
+      />
+      <div class="flex items-center gap-4 p-4">
+        <!-- Bard Icon -->
+        <div
+          class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15"
+        >
+          <div
+            class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-blue-400/40 to-violet-400/20"
+          />
+          <img
+            src="/img/BardAbilities/Bard.png"
+            alt="Bard"
+            class="relative z-10 object-cover w-10 h-10 rounded-lg drop-shadow-lg"
+          />
+          <!-- Crown -->
+          <span class="absolute text-sm -translate-x-1/2 -top-3 left-1/2 drop-shadow-lg">👑</span>
+        </div>
 
-    <!-- Team Display -->
-    <div class="flex flex-col items-center gap-3 mb-3 team-display lg:flex-row lg:justify-center">
-      <!-- Bard (Leader) -->
-      <div class="flex flex-col items-center bard-container">
-        <div class="relative">
-          <div
-            class="relative flex items-center justify-center w-16 h-16 overflow-hidden border rounded-full shadow-xl bard-avatar bg-gradient-to-br from-blue-400/30 to-violet-500/30 border-blue-400/50"
+        <div class="flex-1 min-w-0">
+          <h3
+            class="mb-1 text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
           >
-            <img src="/img/BardAbilities/Bard.png" alt="Bard" class="w-16 h-16 rounded-full" />
-            <div
-              class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent to-white/30"
-            ></div>
-            <div class="absolute inset-0 border border-blue-400 rounded-full animate-pulse"></div>
-          </div>
-          <div
-            class="absolute text-sm transform -translate-x-1/2 leader-crown -top-2 left-1/2 animate-bounce"
-          >
-            👑
+            Bard
+          </h3>
+          <div class="flex flex-wrap gap-1.5">
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-black rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 tracking-wider"
+            >
+              👑 Team Leader
+            </span>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-black rounded-full bg-violet-500/20 border border-violet-400/30 text-violet-200 tracking-wider"
+            >
+              Permanent
+            </span>
           </div>
         </div>
-        <span
-          class="mt-1 text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
-          >Bard</span
+      </div>
+    </div>
+
+    <!-- ─── Team Slots ─── -->
+    <div
+      class="p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    >
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-bold tracking-widest uppercase text-white/50"
+          >Team-Aufstellung</span
         >
-        <span class="text-xs font-semibold text-blue-400">Leader</span>
+        <span
+          class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
+        >
+          {{ battleStore.selectedChampions.length }}/4
+        </span>
       </div>
 
-      <!-- Plus Sign -->
-      <div class="text-2xl font-bold text-blue-400 plus-sign animate-pulse">+</div>
-
-      <!-- Team Members -->
-      <div class="flex flex-wrap justify-center gap-2 team-members">
-        <!-- Selected Champions -->
+      <div class="grid grid-cols-4 gap-2">
+        <!-- Filled Slots -->
         <div
           v-for="(champion, index) in battleStore.selectedChampions"
           :key="champion"
-          class="relative team-slot selected-slot"
+          class="relative group/slot"
         >
           <div
-            class="relative flex items-center justify-center w-12 h-12 transition-all duration-300 border-2 border-blue-400 rounded-full shadow-lg slot-container bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:scale-110 backdrop-blur-sm"
+            class="relative overflow-hidden rounded-xl border transition-all duration-300 bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
           >
-            <span class="px-1 text-xs font-bold text-center text-blue-300">
-              {{ truncate(champion, 6) }}
-            </span>
             <div
-              class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent to-white/20"
-            ></div>
-          </div>
-          <button
-            class="absolute w-5 h-5 text-xs font-bold text-white transition-all duration-300 rounded-full shadow-lg remove-btn -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 hover:scale-110 hover:shadow-red-400/50"
-            @click="removeChampion(champion)"
-          >
-            ×
-          </button>
-          <div
-            class="absolute flex items-center justify-center w-4 h-4 text-xs font-bold text-white transform -translate-x-1/2 bg-blue-400 rounded-full slot-number -bottom-1 left-1/2"
-          >
-            {{ index + 1 }}
+              class="absolute inset-0 border pointer-events-none rounded-xl border-emerald-400/30 animate-pulse"
+            />
+            <div class="flex flex-col items-center gap-1 p-2">
+              <span
+                class="px-1.5 py-0.5 text-[10px] font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200"
+              >
+                #{{ index + 1 }}
+              </span>
+              <span
+                class="text-[11px] font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
+              >
+                {{ truncate(champion, 7) }}
+              </span>
+              <button
+                @click="removeChampion(champion)"
+                class="w-full px-1 py-0.5 text-[10px] font-black rounded-lg bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/40 transition-colors duration-200"
+              >
+                ✕ Remove
+              </button>
+            </div>
           </div>
         </div>
 
@@ -79,66 +99,117 @@
         <div
           v-for="n in 4 - battleStore.selectedChampions.length"
           :key="'empty-' + n"
-          class="relative team-slot empty-slot"
+          class="relative"
         >
           <div
-            class="flex items-center justify-center w-12 h-12 transition-all duration-300 border-2 border-gray-500 border-dashed rounded-full shadow-inner slot-container bg-gradient-to-br from-gray-700/20 to-gray-800/20 opacity-60 hover:opacity-80 backdrop-blur-sm"
+            class="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-dashed bg-white/[0.02] border-white/10 min-h-[80px] opacity-50"
           >
-            <span class="text-lg text-gray-400">+</span>
-          </div>
-          <div
-            class="absolute flex items-center justify-center w-4 h-4 text-xs font-bold text-gray-400 transform -translate-x-1/2 bg-gray-600 rounded-full slot-number -bottom-1 left-1/2"
-          >
-            {{ battleStore.selectedChampions.length + n }}
+            <span class="text-xl text-white/20">+</span>
+            <span class="text-[10px] text-white/20 font-bold"
+              >#{{ battleStore.selectedChampions.length + n }}</span
+            >
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Team Instructions -->
+    <!-- ─── Available Champions ─── -->
     <div
-      class="p-2 mb-3 text-center border rounded-lg instructions bg-gradient-to-r from-blue-500/20 to-violet-500/20 border-blue-400/30 backdrop-blur-sm"
+      class="flex items-center justify-between px-3 py-2 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
     >
-      <h3 class="mb-1 text-sm font-bold text-blue-300">📋 Team-Aufstellung</h3>
-      <p class="text-xs text-blue-400">
-        Wähle bis zu <strong>4 Champions</strong> für dein Team aus. Bard ist automatisch dein Team
-        Leader!
-      </p>
-      <div class="mt-1 text-xs text-blue-500">
-        <span class="font-semibold">{{ battleStore.selectedChampions.length }}/4</span> Champions
-        ausgewählt
-      </div>
+      <span class="text-xs font-bold tracking-widest uppercase text-white/50">Verfügbar</span>
+      <span
+        class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
+      >
+        {{ selectableChampions.length }} Champions
+      </span>
     </div>
 
-    <!-- Available Champions -->
-    <div class="available-champions">
-      <h3 class="mb-2 text-sm font-bold text-center text-blue-300">Verfügbare Champions:</h3>
-      <div class="champions-list h-[calc(100%-16rem)] overflow-y-auto pr-2 custom-scrollbar">
-        <div class="flex flex-wrap justify-center gap-2">
-          <button
-            v-for="champion in selectableChampions"
-            :key="champion"
-            class="px-3 py-1 text-xs font-bold text-white transition-all duration-300 rounded-lg shadow-lg champion-btn hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-            :class="
-              battleStore.selectedChampions.length >= 4
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-green-400/50'
-            "
-            @click="addChampion(champion)"
-            :disabled="battleStore.selectedChampions.length >= 4"
-          >
-            <span class="flex items-center gap-1">
-              <span class="text-xs">⚔️</span>
-              <span>{{ champion }}</span>
-            </span>
-          </button>
-        </div>
+    <div class="flex-1 min-h-0 space-y-3 overflow-y-auto">
+      <!-- No Champions State -->
+      <div
+        v-if="selectableChampions.length === 0"
+        class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+      >
+        <span class="text-3xl">🛒</span>
+        <h4
+          class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
+        >
+          Keine Champions verfügbar
+        </h4>
+        <p class="text-xs text-blue-400">Besuche den Shop, um mehr Champions zu kaufen!</p>
+      </div>
 
-        <!-- No Champions Available Message -->
-        <div v-if="selectableChampions.length === 0" class="py-6 text-center no-champions">
-          <div class="mb-3 text-3xl">🛒</div>
-          <h4 class="mb-2 text-lg font-bold text-blue-300">Keine Champions verfügbar</h4>
-          <p class="text-sm text-blue-400">Besuche den Shop, um mehr Champions zu kaufen!</p>
+      <!-- Champion Cards -->
+      <div
+        v-for="champion in selectableChampions"
+        :key="champion"
+        @click="addChampion(champion)"
+        class="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
+        :class="
+          battleStore.selectedChampions.length < 4
+            ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)]'
+            : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
+        "
+      >
+        <!-- Shimmer Sweep -->
+        <div
+          v-if="battleStore.selectedChampions.length < 4"
+          class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+        />
+        <!-- Glow Pulse -->
+        <div
+          v-if="battleStore.selectedChampions.length < 4"
+          class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
+        />
+
+        <div class="flex items-center gap-4 p-4 pr-3">
+          <!-- Icon -->
+          <div
+            class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+          >
+            <div
+              v-if="battleStore.selectedChampions.length < 4"
+              class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
+            />
+            <span class="relative z-10 text-2xl drop-shadow-lg">⚔️</span>
+          </div>
+
+          <!-- Name & Info -->
+          <div class="flex-1 min-w-0">
+            <h3
+              class="mb-1.5 text-sm font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
+            >
+              {{ champion }}
+            </h3>
+            <div class="flex flex-wrap gap-1.5">
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
+              >
+                <span class="text-emerald-400">⚔️</span>
+                Bereit
+              </span>
+            </div>
+          </div>
+
+          <!-- Add Button -->
+          <div class="flex-shrink-0 w-20 ml-1">
+            <button
+              class="group/btn relative w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
+              :class="
+                battleStore.selectedChampions.length < 4
+                  ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
+                  : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+              "
+              :disabled="battleStore.selectedChampions.length >= 4"
+            >
+              <div
+                v-if="battleStore.selectedChampions.length < 4"
+                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
+              />
+              <span class="relative font-black tracking-tight">+ Add</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -174,86 +245,7 @@ export default defineComponent({
       battleStore.selectedChampions = battleStore.selectedChampions.filter((c) => c !== champion)
     }
 
-    return {
-      battleStore,
-      selectableChampions,
-      addChampion,
-      removeChampion,
-      truncate,
-    }
+    return { battleStore, selectableChampions, addChampion, removeChampion, truncate }
   },
 })
 </script>
-
-<style scoped>
-.bard-avatar {
-  animation: bardGlow 2s ease-in-out infinite;
-}
-
-@keyframes bardGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
-  }
-}
-
-.leader-crown {
-  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.6));
-}
-
-.team-slot {
-  animation: slotFloat 4s ease-in-out infinite;
-}
-
-.team-slot:nth-child(odd) {
-  animation-delay: -2s;
-}
-
-@keyframes slotFloat {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-.remove-btn {
-  animation: removeButtonPulse 2s ease-in-out infinite;
-}
-
-@keyframes removeButtonPulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-}
-
-.champion-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-.champion-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s ease;
-}
-
-.champion-btn:hover::before {
-  left: 100%;
-}
-
-</style>
