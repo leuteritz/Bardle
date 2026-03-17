@@ -15,8 +15,6 @@ function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT
   return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
 }
 
-let _shopStore: ReturnType<typeof useShopStore> | null = null
-let _planetEventStore: ReturnType<typeof usePlanetEventStore> | null = null
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -96,28 +94,26 @@ export const useGameStore = defineStore('game', {
     setAbilityLevel(index: number, value: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
       this.abilityLevels[index] = Math.max(0, Math.min(maxLevel, value))
-      if (!_shopStore) _shopStore = useShopStore()
-      this.chimesPerSecond = _shopStore.calculateTotalCPS()
-      this.chimesPerClick = _shopStore.calculateTotalCPC()
+      const shopStore = useShopStore()
+      this.chimesPerSecond = shopStore.calculateTotalCPS()
+      this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
     // Erhöht das Level einer Fähigkeit wenn Skillpunkte verfügbar sind
-    upgradeAbility(index) {
+    upgradeAbility(index: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
       if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
         this.abilityLevels[index]++
         this.skillPoints--
         // Recalculate CPS and CPC after ability upgrade
-        if (!_shopStore) _shopStore = useShopStore()
-        this.chimesPerSecond = _shopStore.calculateTotalCPS()
-        this.chimesPerClick = _shopStore.calculateTotalCPC()
+        const shopStore = useShopStore()
+        this.chimesPerSecond = shopStore.calculateTotalCPS()
+        this.chimesPerClick = shopStore.calculateTotalCPC()
       }
     },
 
     trackBuildingProduction() {
-      // Dynamischer Import um Zirkular-Dependency zu vermeiden
-      if (!_shopStore) _shopStore = useShopStore()
-      const shopStore = _shopStore
+      const shopStore = useShopStore()
 
       shopStore.shopUpgrades.forEach((upgrade: ShopUpgrade) => {
         if (upgrade.baseCPS && upgrade.level > 0) {
@@ -171,12 +167,12 @@ export const useGameStore = defineStore('game', {
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
       // Reset shop buildings and recalculate
-      if (!_shopStore) _shopStore = useShopStore()
-      _shopStore.shopUpgrades.forEach((u) => {
+      const shopStore = useShopStore()
+      shopStore.shopUpgrades.forEach((u) => {
         u.level = 0
       })
-      this.chimesPerSecond = _shopStore.calculateTotalCPS()
-      this.chimesPerClick = _shopStore.calculateTotalCPC()
+      this.chimesPerSecond = shopStore.calculateTotalCPS()
+      this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
     // Verarbeitet passive Einnahmen pro Sekunde
@@ -192,8 +188,8 @@ export const useGameStore = defineStore('game', {
         this.trackBuildingProduction()
       }
       this.checkPrestigeAvailability()
-      if (!_planetEventStore) _planetEventStore = usePlanetEventStore()
-      _planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
+      const planetEventStore = usePlanetEventStore()
+      planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
     },
 
     // Setzt den Modal-Status für UI-Effekte

@@ -114,6 +114,21 @@ export interface PlanetRescueEvent {
 }
 
 // Battle types
+export interface ChampionState {
+  name: string
+  rank: string
+  kills: number
+  deaths: number
+  assists: number
+}
+
+export interface ChatMessage {
+  user: string
+  text: string
+  time: string
+  team: number
+}
+
 export interface CurrentRank {
   tier: string
   division: string

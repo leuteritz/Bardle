@@ -9,7 +9,19 @@ import {
   MMR_TO_POWER_MULTIPLIER,
   RANK_DIVISIONS,
   RANK_TIERS,
+  LP_NORMAL_PROMOTION_THRESHOLD,
+  LP_MASTER_PROMOTION_THRESHOLD,
+  LP_GRANDMASTER_PROMOTION_THRESHOLD,
+  LP_DEMOTION_VALUE,
+  LP_MASTER_DEMOTION_VALUE,
+  LP_GRANDMASTER_DEMOTION_VALUE,
+  LP_BASE_CHANGE,
+  OPPONENT_MMR_VARIANCE,
+  BATTLE_TIME_MIN_SECONDS,
+  BATTLE_TIME_RANGE_SECONDS,
+  MMR_RANK_THRESHOLDS,
 } from '../config/constants'
+import type { BattleResult, ChampionState, ChatMessage } from '../types'
 import { fetchChampionNames } from '../utils/champions'
 
 export const useBattleStore = defineStore('battle', {
@@ -23,15 +35,15 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Kampf-Historie und Rang-Hierarchie - Listen für Kampfverlauf und die Reihenfolge der Ränge
-    battleHistory: [],
+    battleHistory: [] as BattleResult[],
     rankOrder: [...RANK_DIVISIONS] as string[],
     tierOrder: [...RANK_TIERS] as string[],
 
     // Auto-Battle System - steuert automatische Kämpfe
     autoBattleEnabled: false,
     autoBattleInterval: AUTO_BATTLE_INTERVAL_MS,
-    autoBattleTimer: null,
-    lastAutoBattleResult: null,
+    autoBattleTimer: null as ReturnType<typeof setTimeout> | null,
+    lastAutoBattleResult: null as BattleResult | null,
 
     // UI-Anzeige Variablen - zeigt Änderungen von MMR und LP nach Kämpfen an
     lastMmrChange: 0,
@@ -44,7 +56,7 @@ export const useBattleStore = defineStore('battle', {
     // Spiel-Logik - Champions, Teams und Kampfstatistiken
     battleTime: 0,
     ownedChampions: ['Bard'],
-    selectedChampions: [],
+    selectedChampions: [] as string[],
     battleFormula: {
       baseWinChance: 0.5,
       powerDifferenceMultiplier: 0.1,
@@ -67,10 +79,10 @@ export const useBattleStore = defineStore('battle', {
     isAutoBattleInitialized: false,
     currentBattleId: 0,
     timeUntilNextBattle: 0,
-    countdownTimer: null,
-    chatMessages: [],
-    team1: [],
-    team2: [],
+    countdownTimer: null as ReturnType<typeof setInterval> | null,
+    chatMessages: [] as ChatMessage[],
+    team1: [] as ChampionState[],
+    team2: [] as ChampionState[],
     timerIds: [] as ReturnType<typeof setTimeout>[],
   }),
 
@@ -184,7 +196,7 @@ export const useBattleStore = defineStore('battle', {
             team: randomChampion.team,
           }
         }
-        this.chatMessages.push(chatMsg)
+        if (chatMsg) this.chatMessages.push(chatMsg)
         messages.splice(idx, 1)
 
         if (messages.length > 0) {
@@ -205,7 +217,7 @@ export const useBattleStore = defineStore('battle', {
 
     // Generiert eine zufällige Zeitspanne zwischen 30 und 500 Sekunden für Chat-Messages
     getRandomTimeIncrement() {
-      return Math.floor(Math.random() * 471) + 30
+      return Math.floor(Math.random() * BATTLE_TIME_RANGE_SECONDS) + BATTLE_TIME_MIN_SECONDS
     },
 
     // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Chat starten
@@ -234,7 +246,7 @@ export const useBattleStore = defineStore('battle', {
       const battleResult = Math.random() < winProbability
 
       // Aktualisiert Rang basierend auf Kampfergebnis
-      await this.updateRanking(battleResult, opponentMMR)
+      this.updateRanking(battleResult, opponentMMR)
 
       // Berechnet tatsächliche Änderungen für UI-Anzeige
       const actualMmrChange = this.mmr - this.autoBattleOldMMR
@@ -263,20 +275,20 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Befördert den Spieler in den nächsthöheren Rang oder Division basierend auf genügend LP
-    async promoteRank() {
+    promoteRank() {
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
       // Spezielle Logik für höchste Ränge
       if (currentTier === 'Master') {
-        if (this.currentRank.lp >= 500) {
+        if (this.currentRank.lp >= LP_MASTER_PROMOTION_THRESHOLD) {
           this.currentRank.tier = 'Grandmaster'
           this.currentRank.division = 'I'
         }
         return
       }
       if (currentTier === 'Grandmaster') {
-        if (this.currentRank.lp >= 1000) {
+        if (this.currentRank.lp >= LP_GRANDMASTER_PROMOTION_THRESHOLD) {
           this.currentRank.tier = 'Challenger'
           this.currentRank.division = 'I'
         }
@@ -299,7 +311,7 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Degradiert den Spieler in den nächstniedrigeren Rang bei zu wenig LP
-    async demoteRank() {
+    demoteRank() {
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
@@ -312,25 +324,25 @@ export const useBattleStore = defineStore('battle', {
       // Spezielle Abstiegslogik für höchste Ränge
       if (currentTier === 'Challenger') {
         this.currentRank.tier = 'Grandmaster'
-        this.currentRank.lp = 900
+        this.currentRank.lp = LP_GRANDMASTER_DEMOTION_VALUE
         this.currentRank.division = 'I'
         return
       }
       if (currentTier === 'Grandmaster') {
         this.currentRank.tier = 'Master'
-        this.currentRank.lp = 400
+        this.currentRank.lp = LP_MASTER_DEMOTION_VALUE
         this.currentRank.division = 'I'
         return
       }
       if (currentTier === 'Master') {
         this.currentRank.tier = 'Diamond'
-        this.currentRank.lp = 75
+        this.currentRank.lp = LP_DEMOTION_VALUE
         this.currentRank.division = 'I'
         return
       }
 
       // Normale Abstiegslogik
-      this.currentRank.lp = 75
+      this.currentRank.lp = LP_DEMOTION_VALUE
       const currentDivisionIndex = this.rankOrder.indexOf(this.currentRank.division)
       if (currentDivisionIndex > 0) {
         this.currentRank.division = this.rankOrder[currentDivisionIndex - 1]
@@ -343,20 +355,19 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Berechnet LP-Gewinn/Verlust basierend auf MMR-Änderung
-    calculateLPChange(mmrChange, won) {
-      const baseLPChange = 20
-      const lpChange = won ? baseLPChange : -baseLPChange
+    calculateLPChange(mmrChange: number, won: boolean) {
+      const lpChange = won ? LP_BASE_CHANGE : -LP_BASE_CHANGE
       const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
       return Math.round(lpChange * mmrFactor)
     },
 
     // Konvertiert MMR-Wert in Kampfstärke für Kampfsimulationen
-    mmrToPower(mmr) {
+    mmrToPower(mmr: number) {
       return Math.max(100, Math.floor(mmr * MMR_TO_POWER_MULTIPLIER))
     },
 
     // Berechnet Gewinnwahrscheinlichkeit basierend auf Kampfkraft-Unterschied zwischen Spieler und Gegner
-    calculateWinProbability(playerPower, opponentPower) {
+    calculateWinProbability(playerPower: number, opponentPower: number) {
       const powerDifference = playerPower - opponentPower
       const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / ELO_RATING_SCALE))
       const luckModifier = (Math.random() - 0.5) * this.battleFormula.luckFactor
@@ -364,9 +375,8 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Erstellt einen zufälligen Gegner mit ähnlichem MMR (±200 Variation)
-    generateOpponent(targetMMR) {
-      const mmrVariance = 200
-      const opponentMMR = targetMMR + (Math.random() - 0.5) * mmrVariance
+    generateOpponent(targetMMR: number) {
+      const opponentMMR = targetMMR + (Math.random() - 0.5) * OPPONENT_MMR_VARIANCE
       return {
         mmr: opponentMMR,
         power: this.mmrToPower(opponentMMR),
@@ -375,44 +385,33 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Konvertiert MMR-Wert in entsprechenden Rang und Division basierend auf festen Schwellenwerten
-    mmrToRank(mmr) {
-      const ranks = [
-        { tier: 'Iron', division: 'IV', minMMR: 0 },
-        { tier: 'Bronze', division: 'IV', minMMR: 500 },
-        { tier: 'Silver', division: 'IV', minMMR: 1000 },
-        { tier: 'Gold', division: 'IV', minMMR: 1500 },
-        { tier: 'Platinum', division: 'IV', minMMR: 2000 },
-        { tier: 'Diamond', division: 'IV', minMMR: 2500 },
-        { tier: 'Master', division: 'I', minMMR: 3000 },
-        { tier: 'Grandmaster', division: 'I', minMMR: 3500 },
-        { tier: 'Challenger', division: 'I', minMMR: 4000 },
-      ]
-      for (let i = ranks.length - 1; i >= 0; i--) {
-        if (mmr >= ranks[i].minMMR) return ranks[i]
+    mmrToRank(mmr: number) {
+      for (let i = MMR_RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+        if (mmr >= MMR_RANK_THRESHOLDS[i].minMMR) return MMR_RANK_THRESHOLDS[i]
       }
-      return ranks[0]
+      return MMR_RANK_THRESHOLDS[0]
     },
 
     // Aktualisiert MMR nach Kampf mit ELO-Rating System
-    async updateRanking(won, opponentMMR) {
+    updateRanking(won: boolean, opponentMMR: number) {
       const currentMMR = this.mmr
       const expectedScore = 1 / (1 + Math.pow(10, (opponentMMR - currentMMR) / ELO_RATING_SCALE))
       const actualScore = won ? 1 : 0
       const mmrChange = Math.round(ELO_K_FACTOR * (actualScore - expectedScore))
       this.mmr += mmrChange
       const lpChange = this.calculateLPChange(mmrChange, won)
-      await this.updateLP(lpChange)
+      this.updateLP(lpChange)
     },
 
     // Aktualisiert LP und prüft automatisch auf Beförderung oder Abstieg
-    async updateLP(lpChange) {
+    updateLP(lpChange: number) {
       const currentTier = this.currentRank.tier
       this.currentRank.lp += lpChange
-      let promotionThreshold = 100
-      if (currentTier === 'Master') promotionThreshold = 500
-      else if (currentTier === 'Grandmaster') promotionThreshold = 1000
-      if (this.currentRank.lp >= promotionThreshold) await this.promoteRank()
-      if (this.currentRank.lp < 0) await this.demoteRank()
+      let promotionThreshold = LP_NORMAL_PROMOTION_THRESHOLD
+      if (currentTier === 'Master') promotionThreshold = LP_MASTER_PROMOTION_THRESHOLD
+      else if (currentTier === 'Grandmaster') promotionThreshold = LP_GRANDMASTER_PROMOTION_THRESHOLD
+      if (this.currentRank.lp >= promotionThreshold) this.promoteRank()
+      if (this.currentRank.lp < 0) this.demoteRank()
     },
 
     // Startet den automatischen Kampfmodus

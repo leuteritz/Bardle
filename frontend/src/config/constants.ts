@@ -48,6 +48,36 @@ export const PLANET_RESCUE_BASE_REWARD = 500
 export const PLANET_EVENT_BASE_CHANCE = 0.6
 export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
 
+// Title rotation
+export const TITLE_MESSAGE_INTERVAL_MS = 5000
+
+// LP thresholds
+export const LP_NORMAL_PROMOTION_THRESHOLD = 100
+export const LP_MASTER_PROMOTION_THRESHOLD = 500
+export const LP_GRANDMASTER_PROMOTION_THRESHOLD = 1000
+export const LP_DEMOTION_VALUE = 75
+export const LP_MASTER_DEMOTION_VALUE = 400
+export const LP_GRANDMASTER_DEMOTION_VALUE = 900
+export const LP_BASE_CHANGE = 20
+
+// Battle constants
+export const OPPONENT_MMR_VARIANCE = 200
+export const BATTLE_TIME_MIN_SECONDS = 30
+export const BATTLE_TIME_RANGE_SECONDS = 471
+
+// MMR rank thresholds
+export const MMR_RANK_THRESHOLDS = [
+  { tier: 'Iron', division: 'IV', minMMR: 0 },
+  { tier: 'Bronze', division: 'IV', minMMR: 500 },
+  { tier: 'Silver', division: 'IV', minMMR: 1000 },
+  { tier: 'Gold', division: 'IV', minMMR: 1500 },
+  { tier: 'Platinum', division: 'IV', minMMR: 2000 },
+  { tier: 'Diamond', division: 'IV', minMMR: 2500 },
+  { tier: 'Master', division: 'I', minMMR: 3000 },
+  { tier: 'Grandmaster', division: 'I', minMMR: 3500 },
+  { tier: 'Challenger', division: 'I', minMMR: 4000 },
+] as const
+
 // Rank border image paths
 export const RANK_BORDER_IMAGES: Record<string, string> = {
   Iron: '/img/RankBorder/RankIron.png',

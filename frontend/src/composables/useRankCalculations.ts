@@ -1,6 +1,13 @@
 import { computed } from 'vue'
 import { useBattleStore } from '../stores/battleStore'
-import { RANK_BORDER_IMAGES, RANK_DIVISIONS, RANK_TIERS } from '../config/constants'
+import {
+  RANK_BORDER_IMAGES,
+  RANK_DIVISIONS,
+  RANK_TIERS,
+  LP_NORMAL_PROMOTION_THRESHOLD,
+  LP_MASTER_PROMOTION_THRESHOLD,
+  LP_GRANDMASTER_PROMOTION_THRESHOLD,
+} from '../config/constants'
 
 export function useRankCalculations() {
   const battleStore = useBattleStore()
@@ -72,13 +79,13 @@ export function useRankCalculations() {
     const tier = battleStore.currentRank.tier?.toLowerCase()
     switch (tier) {
       case 'master':
-        return 500
+        return LP_MASTER_PROMOTION_THRESHOLD
       case 'grandmaster':
-        return 1000
+        return LP_GRANDMASTER_PROMOTION_THRESHOLD
       case 'challenger':
         return null
       default:
-        return 100
+        return LP_NORMAL_PROMOTION_THRESHOLD
     }
   }
 
@@ -171,9 +178,9 @@ export function useRankCalculations() {
     if (!threshold) return false
     const tier = battleStore.currentRank.tier?.toLowerCase()
     if (tier === 'master') {
-      return battleStore.currentRank.lp >= 400
+      return battleStore.currentRank.lp >= LP_MASTER_PROMOTION_THRESHOLD * 0.8
     } else if (tier === 'grandmaster') {
-      return battleStore.currentRank.lp >= 800
+      return battleStore.currentRank.lp >= LP_GRANDMASTER_PROMOTION_THRESHOLD * 0.8
     } else {
       return battleStore.currentRank.lp % threshold >= 80
     }

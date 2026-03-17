@@ -77,12 +77,16 @@ export const useShopStore = defineStore('shop', {
   }),
 
   getters: {
+    // Gibt alle Upgrades zurück die CPS produzieren und mindestens Level 1 haben
+    cpsProducingUpgrades(): ShopUpgrade[] {
+      return this.shopUpgrades.filter((upgrade) => upgrade.baseCPS && upgrade.level > 0)
+    },
+
     // Berechnet detaillierte Statistiken aller aktiven Gebäude mit Effizienz-Sternen
     buildingStats(): BuildingStat[] {
       const gameStore = useGameStore()
 
-      const upgrades = this.shopUpgrades
-        .filter((upgrade) => upgrade.baseCPS && upgrade.level > 0)
+      const upgrades = this.cpsProducingUpgrades
         .map((upgrade) => {
           const currentCPS = (upgrade.baseCPS || 0) * upgrade.level
           const lifetimeProduction =
@@ -124,8 +128,7 @@ export const useShopStore = defineStore('shop', {
     // Summiert die gesamte Lebenszeit-Produktion aller CPS-Gebäude (ohne Ability-Bonus)
     totalLifetimeProduction(): number {
       const gameStore = useGameStore()
-      return this.shopUpgrades
-        .filter((upgrade) => upgrade.baseCPS && upgrade.level > 0)
+      return this.cpsProducingUpgrades
         .reduce((total, upgrade) => {
           const lifetimeProduction =
             gameStore.totalBuildingProduction[upgrade.id] ||
