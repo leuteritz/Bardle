@@ -12,9 +12,7 @@
 
   <!-- Planet Lost toast -->
   <Transition name="toast-slide">
-    <div v-if="showLostToast" class="planet-toast planet-toast--lost">
-      💥 Planet Lost!
-    </div>
+    <div v-if="showLostToast" class="planet-toast planet-toast--lost">💥 Planet Lost!</div>
   </Transition>
 
   <!-- Planet Saved toast -->
@@ -107,16 +105,28 @@ watch(
   background: radial-gradient(ellipse at center, transparent 40%, rgba(255, 60, 0, 0.35) 100%);
 }
 
-.vignette-fade-enter-active { animation: vignetteIn 0.3s ease-out; }
-.vignette-fade-leave-active { animation: vignetteOut 1.2s ease-in forwards; }
+.vignette-fade-enter-active {
+  animation: vignetteIn 0.3s ease-out;
+}
+.vignette-fade-leave-active {
+  animation: vignetteOut 1.2s ease-in forwards;
+}
 
 @keyframes vignetteIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes vignetteOut {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* Countdown bar */
@@ -136,7 +146,9 @@ watch(
 .planet-countdown-fill {
   height: 100%;
   background: linear-gradient(90deg, #ff6a00, #ff0000);
-  box-shadow: 0 0 8px rgba(255, 60, 0, 0.8), 0 0 16px rgba(255, 60, 0, 0.4);
+  box-shadow:
+    0 0 8px rgba(255, 60, 0, 0.8),
+    0 0 16px rgba(255, 60, 0, 0.4);
   transition: width 0.2s linear;
 }
 
@@ -157,7 +169,7 @@ watch(
 /* Toasts */
 .planet-toast {
   position: fixed;
-  top: 3rem;
+  top: 23vh;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
@@ -184,15 +196,31 @@ watch(
   box-shadow: 0 0 20px rgba(80, 220, 120, 0.4);
 }
 
-.toast-slide-enter-active { animation: toastIn 0.3s ease-out; }
-.toast-slide-leave-active { animation: toastOut 0.4s ease-in forwards; }
+.toast-slide-enter-active {
+  animation: toastIn 0.3s ease-out;
+}
+.toast-slide-leave-active {
+  animation: toastOut 0.4s ease-in forwards;
+}
 
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 @keyframes toastOut {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to   { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
 }
 </style>
