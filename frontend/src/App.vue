@@ -11,6 +11,7 @@ import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import UniversePortalComponent from './components/UniversePortalComponent.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
+import MeepIndicatorComponent from './components/ui/MeepIndicatorComponent.vue'
 
 const gameStore = useGameStore()
 const shopStore = useShopStore()
@@ -60,7 +61,9 @@ const activeTab = ref('idle')
           </div>
         </div>
 
-        <div class="col-span-1"></div>
+        <div class="col-span-1 flex justify-end items-center px-4 py-4">
+          <MeepIndicatorComponent />
+        </div>
       </div>
 
       <!-- Hauptbereich -->
