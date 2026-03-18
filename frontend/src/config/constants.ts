@@ -68,6 +68,14 @@ export const OPPONENT_MMR_VARIANCE = 200
 export const BATTLE_TIME_MIN_SECONDS = 30
 export const BATTLE_TIME_RANGE_SECONDS = 471
 
+// Battle stat tick chances and max values
+export const STAT_KILL_CHANCE = 0.5
+export const STAT_DEATH_CHANCE = 0.3
+export const STAT_ASSIST_CHANCE = 0.7
+export const STAT_MAX_KILLS = 3
+export const STAT_MAX_DEATHS = 2
+export const STAT_MAX_ASSISTS = 7
+
 // MMR rank thresholds
 export const MMR_RANK_THRESHOLDS = [
   { tier: 'Iron', division: 'IV', minMMR: 0 },

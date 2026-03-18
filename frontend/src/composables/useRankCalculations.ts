@@ -16,59 +16,40 @@ export function useRankCalculations() {
     return RANK_BORDER_IMAGES[battleStore.currentRank.tier] ?? RANK_BORDER_IMAGES.Iron
   })
 
+  const RANK_QUALITY_COLORS: Record<string, string> = {
+    iron: 'bg-gradient-to-br from-gray-400 to-gray-500',
+    bronze: 'bg-gradient-to-br from-gray-400 to-gray-500',
+    silver: 'bg-gradient-to-br from-gray-300 to-gray-400',
+    gold: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+    platinum: 'bg-gradient-to-br from-cyan-400 to-cyan-500',
+    emerald: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+    diamond: 'bg-gradient-to-br from-blue-400 to-blue-500',
+    master: 'bg-gradient-to-br from-purple-400 to-purple-500',
+    grandmaster: 'bg-gradient-to-br from-red-400 to-red-500',
+    challenger: 'bg-gradient-to-br from-amber-400 to-amber-500',
+  }
+
   const getRankQualityColor = () => {
     const tier = battleStore.currentRank.tier?.toLowerCase()
-    switch (tier) {
-      case 'iron':
-      case 'bronze':
-        return 'bg-gradient-to-br from-gray-400 to-gray-500'
-      case 'silver':
-        return 'bg-gradient-to-br from-gray-300 to-gray-400'
-      case 'gold':
-        return 'bg-gradient-to-br from-yellow-400 to-yellow-500'
-      case 'platinum':
-        return 'bg-gradient-to-br from-cyan-400 to-cyan-500'
-      case 'emerald':
-        return 'bg-gradient-to-br from-emerald-400 to-emerald-500'
-      case 'diamond':
-        return 'bg-gradient-to-br from-blue-400 to-blue-500'
-      case 'master':
-        return 'bg-gradient-to-br from-purple-400 to-purple-500'
-      case 'grandmaster':
-        return 'bg-gradient-to-br from-red-400 to-red-500'
-      case 'challenger':
-        return 'bg-gradient-to-br from-amber-400 to-amber-500'
-      default:
-        return 'bg-gradient-to-br from-gray-400 to-gray-500'
-    }
+    return RANK_QUALITY_COLORS[tier] ?? 'bg-gradient-to-br from-gray-400 to-gray-500'
+  }
+
+  const RANK_QUALITY_ICONS: Record<string, string> = {
+    iron: '🥉',
+    bronze: '🥉',
+    silver: '🥈',
+    gold: '🥇',
+    platinum: '💎',
+    emerald: '💚',
+    diamond: '💠',
+    master: '👑',
+    grandmaster: '⭐',
+    challenger: '🏆',
   }
 
   const getRankQualityIcon = () => {
     const tier = battleStore.currentRank.tier?.toLowerCase()
-    switch (tier) {
-      case 'iron':
-        return '🥉'
-      case 'bronze':
-        return '🥉'
-      case 'silver':
-        return '🥈'
-      case 'gold':
-        return '🥇'
-      case 'platinum':
-        return '💎'
-      case 'emerald':
-        return '💚'
-      case 'diamond':
-        return '💠'
-      case 'master':
-        return '👑'
-      case 'grandmaster':
-        return '⭐'
-      case 'challenger':
-        return '🏆'
-      default:
-        return '•'
-    }
+    return RANK_QUALITY_ICONS[tier] ?? '•'
   }
 
   const isMaxRank = () => {
@@ -144,32 +125,22 @@ export function useRankCalculations() {
     return RANK_TIERS.indexOf(battleStore.currentRank.tier as (typeof RANK_TIERS)[number]) + 1
   }
 
+  const RANK_PERCENTILES: Record<string, number> = {
+    iron: 95,
+    bronze: 85,
+    silver: 70,
+    gold: 50,
+    platinum: 30,
+    emerald: 15,
+    diamond: 5,
+    master: 1,
+    grandmaster: 0.1,
+    challenger: 0.01,
+  }
+
   const getRankPercentile = () => {
     const tier = battleStore.currentRank.tier?.toLowerCase()
-    switch (tier) {
-      case 'iron':
-        return 95
-      case 'bronze':
-        return 85
-      case 'silver':
-        return 70
-      case 'gold':
-        return 50
-      case 'platinum':
-        return 30
-      case 'emerald':
-        return 15
-      case 'diamond':
-        return 5
-      case 'master':
-        return 1
-      case 'grandmaster':
-        return 0.1
-      case 'challenger':
-        return 0.01
-      default:
-        return 100
-    }
+    return RANK_PERCENTILES[tier] ?? 100
   }
 
   const isPromotionClose = () => {
@@ -220,20 +191,28 @@ export function useRankCalculations() {
     return Math.round((battleStore.totalWins / battleStore.totalBattles) * 100)
   }
 
-  const getWinRateColor = () => {
+  const WIN_RATE_THRESHOLDS = [70, 50, 30] as const
+
+  const getWinRateThresholdIndex = () => {
     const winRate = getWinRate()
-    if (winRate >= 70) return 'text-green-300'
-    if (winRate >= 50) return 'text-yellow-300'
-    if (winRate >= 30) return 'text-orange-300'
-    return 'text-red-300'
+    return WIN_RATE_THRESHOLDS.findIndex((t) => winRate >= t)
+  }
+
+  const getWinRateColor = () => {
+    const colors = ['text-green-300', 'text-yellow-300', 'text-orange-300', 'text-red-300']
+    const idx = getWinRateThresholdIndex()
+    return idx === -1 ? colors[3] : colors[idx]
   }
 
   const getWinRateBarColor = () => {
-    const winRate = getWinRate()
-    if (winRate >= 70) return 'bg-gradient-to-r from-green-400 to-green-500'
-    if (winRate >= 50) return 'bg-gradient-to-r from-yellow-400 to-yellow-500'
-    if (winRate >= 30) return 'bg-gradient-to-r from-orange-400 to-orange-500'
-    return 'bg-gradient-to-r from-red-400 to-red-500'
+    const colors = [
+      'bg-gradient-to-r from-green-400 to-green-500',
+      'bg-gradient-to-r from-yellow-400 to-yellow-500',
+      'bg-gradient-to-r from-orange-400 to-orange-500',
+      'bg-gradient-to-r from-red-400 to-red-500',
+    ]
+    const idx = getWinRateThresholdIndex()
+    return idx === -1 ? colors[3] : colors[idx]
   }
 
   const getBattleRank = () => {
@@ -246,22 +225,17 @@ export function useRankCalculations() {
     return 'Novice'
   }
 
+  const BATTLE_RANK_COLORS: Record<string, string> = {
+    Legend: 'text-purple-300',
+    Elite: 'text-blue-300',
+    Veteran: 'text-green-300',
+    Fighter: 'text-yellow-300',
+    Rookie: 'text-orange-300',
+  }
+
   const getBattleRankColor = () => {
     const rank = getBattleRank()
-    switch (rank) {
-      case 'Legend':
-        return 'text-purple-300'
-      case 'Elite':
-        return 'text-blue-300'
-      case 'Veteran':
-        return 'text-green-300'
-      case 'Fighter':
-        return 'text-yellow-300'
-      case 'Rookie':
-        return 'text-orange-300'
-      default:
-        return 'text-gray-300'
-    }
+    return BATTLE_RANK_COLORS[rank] ?? 'text-gray-300'
   }
 
   return {

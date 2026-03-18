@@ -20,6 +20,12 @@ import {
   BATTLE_TIME_MIN_SECONDS,
   BATTLE_TIME_RANGE_SECONDS,
   MMR_RANK_THRESHOLDS,
+  STAT_KILL_CHANCE,
+  STAT_DEATH_CHANCE,
+  STAT_ASSIST_CHANCE,
+  STAT_MAX_KILLS,
+  STAT_MAX_DEATHS,
+  STAT_MAX_ASSISTS,
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage } from '../types'
 import { fetchChampionNames } from '../utils/champions'
@@ -58,8 +64,6 @@ export const useBattleStore = defineStore('battle', {
     ownedChampions: ['Bard'],
     selectedChampions: [] as string[],
     battleFormula: {
-      baseWinChance: 0.5,
-      powerDifferenceMultiplier: 0.1,
       luckFactor: ELO_LUCK_FACTOR,
     },
 
@@ -101,21 +105,20 @@ export const useBattleStore = defineStore('battle', {
       return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
     },
 
+    // Aktualisiert zufällig die Kampfstatistiken eines Teams
+    randomizeTeamStats(team: ChampionState[]) {
+      team.forEach((champ) => {
+        if (Math.random() < STAT_KILL_CHANCE) champ.kills += Math.round(Math.random() * STAT_MAX_KILLS)
+        if (Math.random() < STAT_DEATH_CHANCE) champ.deaths += Math.round(Math.random() * STAT_MAX_DEATHS)
+        if (Math.random() < STAT_ASSIST_CHANCE) champ.assists += Math.round(Math.random() * STAT_MAX_ASSISTS)
+      })
+    },
+
     // Aktualisiert zufällig die Kampfstatistiken (Kills/Deaths/Assists) aller Champions während eines Kampfes
     randomStatsTick() {
       const gameStore = useGameStore()
-      this.team1.forEach((champ) => {
-        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
-        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
-        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
-      })
-
-      this.team2.forEach((champ) => {
-        if (Math.random() < 0.5) champ.kills += Math.round(Math.random() * 3)
-        if (Math.random() < 0.3) champ.deaths += Math.round(Math.random() * 2)
-        if (Math.random() < 0.7) champ.assists += Math.round(Math.random() * 7)
-      })
-
+      this.randomizeTeamStats(this.team1)
+      this.randomizeTeamStats(this.team2)
       const interval = setTimeout(() => this.randomStatsTick(), gameStore.gameSpeed)
       this.timerIds.push(interval)
     },
@@ -153,20 +156,21 @@ export const useBattleStore = defineStore('battle', {
       return result
     },
 
+    // Setzt die Statistiken aller Champions eines Teams auf 0 zurück
+    resetTeamStats(team: ChampionState[]) {
+      team.forEach((champ) => {
+        champ.kills = 0
+        champ.deaths = 0
+        champ.assists = 0
+      })
+    },
+
     // Setzt alle Kampfstatistiken zurück und stoppt laufende Timer für einen neuen Kampf
     clearBattle() {
       this.timerIds.forEach((interval) => clearTimeout(interval))
       this.timerIds = []
-      this.team1.forEach((champ) => {
-        champ.kills = 0
-        champ.deaths = 0
-        champ.assists = 0
-      })
-      this.team2.forEach((champ) => {
-        champ.kills = 0
-        champ.deaths = 0
-        champ.assists = 0
-      })
+      this.resetTeamStats(this.team1)
+      this.resetTeamStats(this.team2)
       this.chatMessages = []
       this.battleTime = 0
     },
