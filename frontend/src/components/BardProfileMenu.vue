@@ -8,6 +8,7 @@ import AbilityComponent from './bottom/AbilityComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
 import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue' // ← fehlte
+import MissionComponent from './missions/MissionComponent.vue'
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -20,7 +21,7 @@ const abilityIcons = [
 ]
 const abilityKeys = ['Q', 'W', 'E', 'R']
 
-type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'battle' | 'champions'
+type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'battle' | 'champions' | 'missions'
 
 const menuOpen = ref(false)
 const activeModal = ref<ModalId | null>(null)
@@ -31,6 +32,7 @@ const menuItems: { id: ModalId; label: string; icon: string; src: string }[] = [
   { id: 'abilities', label: 'Skills', icon: '⚡', src: '/img/menu/SKILLS.png' },
   { id: 'battle', label: 'Battle', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'champions', label: 'Champions', icon: '', src: '/img/menu/CHAMPIONS.png' }, // ← kein src nötig
+  { id: 'missions', label: 'Missionen', icon: '📜', src: '' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
@@ -163,8 +165,8 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
       class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[95vw]"
       :class="{
         'w-[600px]': activeModal === 'admin',
-        'w-[560px]': activeModal === 'battle' || activeModal === 'champions',
-        'w-96': activeModal !== 'admin' && activeModal !== 'battle' && activeModal !== 'champions',
+        'w-[560px]': activeModal === 'battle' || activeModal === 'champions' || activeModal === 'missions',
+        'w-96': activeModal !== 'admin' && activeModal !== 'battle' && activeModal !== 'champions' && activeModal !== 'missions',
       }"
     >
       <div
@@ -174,7 +176,8 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
             activeModal === 'shop' ||
             activeModal === 'admin' ||
             activeModal === 'champions' ||
-            activeModal === 'battle',
+            activeModal === 'battle' ||
+            activeModal === 'missions',
         }"
       >
         <!-- Shimmer Sweep -->
@@ -249,6 +252,8 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           <ChampionLobbyComponent v-else-if="activeModal === 'champions'" />
 
           <BattleResultComponent v-else-if="activeModal === 'battle'" />
+
+          <MissionComponent v-else-if="activeModal === 'missions'" />
 
           <AdminDashboard v-else-if="activeModal === 'admin'" :inline="true" />
         </div>

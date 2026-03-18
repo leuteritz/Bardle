@@ -1,5 +1,26 @@
 // Shared TypeScript interfaces
 
+// Champion role types
+export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
+
+// Mission types
+export type MissionStatus = 'active' | 'success' | 'failure'
+
+export interface Mission {
+  id: string
+  configId: string
+  name: string
+  description: string
+  requiredRoles: ChampionRole[]
+  assignedChampions: { name: string; role: ChampionRole }[]
+  durationSeconds: number
+  startTime: number
+  baseReward: number
+  successChance: number
+  status: MissionStatus
+  reward: number
+}
+
 // Universe modifier types
 export interface ModifierEffects {
   cpsMultiplier?: number

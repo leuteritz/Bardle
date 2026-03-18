@@ -219,18 +219,21 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
+import { useMissionStore } from '../../../stores/missionStore'
 import { truncate } from '../../../config/numberFormat'
 
 export default defineComponent({
   name: 'ChampionTeamComponent',
   setup() {
     const battleStore = useBattleStore()
+    const missionStore = useMissionStore()
 
-    const selectableChampions = computed(() =>
-      battleStore.ownedChampions.filter(
-        (c) => c !== 'Bard' && !battleStore.selectedChampions.includes(c),
-      ),
-    )
+    const selectableChampions = computed(() => {
+      const onMission = missionStore.championsOnMission
+      return battleStore.ownedChampions.filter(
+        (c) => c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onMission.includes(c),
+      )
+    })
 
     function addChampion(champion: string) {
       if (

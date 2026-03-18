@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { usePlanetEventStore } from './planetEventStore'
+import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
 import {
   LEVEL_BASE,
@@ -190,6 +191,8 @@ export const useGameStore = defineStore('game', {
       this.checkPrestigeAvailability()
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
+      const missionStore = useMissionStore()
+      missionStore.checkMissions()
     },
 
     // Setzt den Modal-Status für UI-Effekte
