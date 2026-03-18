@@ -283,12 +283,12 @@ function resetSection(sectionId: string) {
   <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
   <template v-else>
     <!-- Search -->
-    <div class="px-5 py-2.5 border-b border-blue-400/10">
+    <div class="px-5 py-2.5 border-b border-cyan-400/10">
       <input
         v-model="search"
         type="text"
         placeholder="Search fields..."
-        class="w-full bg-blue-950/40 border border-blue-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-blue-400/60 focus:bg-blue-950/60 transition-all"
+        class="w-full bg-[#050310]/60 border border-cyan-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-cyan-400/60 focus:bg-[#050310]/80 transition-all"
       />
     </div>
 
@@ -297,12 +297,12 @@ function resetSection(sectionId: string) {
       <div
         v-for="section in filteredSections"
         :key="section.id"
-        class="rounded-xl border border-blue-400/15 bg-blue-950/20 overflow-hidden"
+        class="rounded-xl border border-cyan-400/15 bg-cyan-950/10 overflow-hidden"
       >
-        <div class="flex items-center justify-between px-4 py-2 bg-blue-900/20 border-b border-blue-400/10">
-          <span class="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{{ section.label }}</span>
+        <div class="flex items-center justify-between px-4 py-2 bg-cyan-900/10 border-b border-cyan-400/10">
+          <span class="text-xs font-mono font-bold text-cyan-300 tracking-wider uppercase">{{ section.label }}</span>
           <button
-            class="text-[10px] font-mono text-blue-500/60 hover:text-blue-300 transition-colors px-2 py-0.5 rounded border border-blue-500/20 hover:border-blue-400/40"
+            class="text-[10px] font-mono text-cyan-500/60 hover:text-cyan-300 transition-colors px-2 py-0.5 rounded border border-cyan-500/20 hover:border-cyan-400/40"
             @click="resetSection(section.id)"
           >reset</button>
         </div>

@@ -26,12 +26,26 @@ type ModalId = 'shop' | 'charakter' | 'kampf' | 'admin'
 const menuOpen = ref(false)
 const activeModal = ref<ModalId | null>(null)
 
-const menuItems: { id: ModalId; label: string; icon: string; src: string }[] = [
-  { id: 'charakter', label: 'Charakter', icon: '🎭', src: '' },
-  { id: 'kampf', label: 'Kampf', icon: '', src: '/img/menu/BATTLE.png' },
-  { id: 'shop', label: 'Shop', icon: '', src: '/img/menu/SHOP.png' },
-  { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
+const menuItems: { id: ModalId; label: string; icon: string; src: string; color: string }[] = [
+  { id: 'charakter', label: 'Charakter', icon: '🎭', src: '', color: 'violet' },
+  { id: 'kampf', label: 'Kampf', icon: '', src: '/img/menu/BATTLE.png', color: 'rose' },
+  { id: 'shop', label: 'Shop', icon: '', src: '/img/menu/SHOP.png', color: 'emerald' },
+  { id: 'admin', label: 'Admin', icon: '⚙️', src: '', color: 'cyan' },
 ]
+
+const menuActiveClasses: Record<string, string> = {
+  violet: 'bg-gradient-to-br from-violet-600/40 via-purple-600/30 to-violet-600/20 border-violet-400/50 shadow-[0_0_20px_rgba(124,58,237,0.3)]',
+  rose: 'bg-gradient-to-br from-rose-600/40 via-red-600/30 to-rose-600/20 border-rose-400/50 shadow-[0_0_20px_rgba(225,29,72,0.3)]',
+  emerald: 'bg-gradient-to-br from-emerald-600/40 via-green-600/30 to-teal-600/20 border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]',
+  cyan: 'bg-gradient-to-br from-cyan-600/40 via-indigo-600/30 to-cyan-600/20 border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.3)]',
+}
+
+const menuActivePulseClasses: Record<string, string> = {
+  violet: 'border-violet-400/40',
+  rose: 'border-rose-400/40',
+  emerald: 'border-emerald-400/40',
+  cyan: 'border-cyan-400/40',
+}
 
 const activeCharTab = ref<'rang' | 'faehigkeiten' | 'missionen'>('rang')
 const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
@@ -53,6 +67,56 @@ const closeModal = () => {
   activeModal.value = null
 }
 const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal.value))
+
+const modalTheme = computed(() => {
+  const themes: Record<ModalId, {
+    accentBar: string
+    headerBg: string
+    border: string
+    glow: string
+    tabActive: string
+    iconGlow: string
+    closeHover: string
+  }> = {
+    charakter: {
+      accentBar: 'from-violet-500 via-purple-400 to-violet-500',
+      headerBg: 'bg-gradient-to-r from-violet-950/50 via-purple-950/30 to-transparent',
+      border: 'border-violet-500/20',
+      glow: 'shadow-[0_0_80px_rgba(124,58,237,0.12)]',
+      tabActive: 'bg-gradient-to-r from-violet-500 to-purple-600',
+      iconGlow: 'shadow-[0_0_12px_rgba(124,58,237,0.4)] ring-1 ring-violet-400/40',
+      closeHover: 'hover:bg-violet-500/20',
+    },
+    kampf: {
+      accentBar: 'from-rose-500 via-red-400 to-rose-500',
+      headerBg: 'bg-gradient-to-r from-rose-950/50 via-red-950/30 to-transparent',
+      border: 'border-rose-500/20',
+      glow: 'shadow-[0_0_80px_rgba(225,29,72,0.10)]',
+      tabActive: 'bg-gradient-to-r from-rose-500 to-red-600',
+      iconGlow: 'shadow-[0_0_12px_rgba(225,29,72,0.4)] ring-1 ring-rose-400/40',
+      closeHover: 'hover:bg-rose-500/20',
+    },
+    shop: {
+      accentBar: 'from-emerald-400 via-amber-400 to-emerald-400',
+      headerBg: 'bg-gradient-to-r from-emerald-950/50 via-teal-950/30 to-transparent',
+      border: 'border-emerald-500/20',
+      glow: 'shadow-[0_0_80px_rgba(16,185,129,0.10)]',
+      tabActive: '',
+      iconGlow: 'shadow-[0_0_12px_rgba(16,185,129,0.4)] ring-1 ring-emerald-400/40',
+      closeHover: 'hover:bg-emerald-500/20',
+    },
+    admin: {
+      accentBar: 'from-cyan-400 via-indigo-400 to-cyan-400',
+      headerBg: 'bg-gradient-to-r from-cyan-950/50 via-indigo-950/30 to-transparent',
+      border: 'border-cyan-500/20',
+      glow: 'shadow-[0_0_80px_rgba(6,182,212,0.10)]',
+      tabActive: '',
+      iconGlow: 'shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/40',
+      closeHover: 'hover:bg-cyan-500/20',
+    },
+  }
+  return activeModal.value ? themes[activeModal.value] : themes.charakter
+})
 </script>
 
 <template>
@@ -113,7 +177,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           class="group/item relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
           :class="
             activeModal === item.id
-              ? 'bg-gradient-to-br from-blue-600/40 via-violet-600/30 to-blue-600/20 border-blue-400/50 shadow-[0_0_20px_rgba(99,102,241,0.25)]'
+              ? menuActiveClasses[item.color]
               : 'bg-gradient-to-br from-white/10 to-white/[0.04] border-white/10 hover:border-white/20'
           "
         >
@@ -124,7 +188,8 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           <!-- Active Glow Pulse -->
           <div
             v-if="activeModal === item.id"
-            class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/40 animate-pulse"
+            class="absolute inset-0 border pointer-events-none rounded-2xl animate-pulse"
+            :class="menuActivePulseClasses[item.color]"
           />
           <div class="relative flex items-center gap-3 px-4 py-2.5">
             <div
@@ -153,7 +218,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
   <Transition name="backdrop">
     <div
       v-if="activeModal !== null"
-      class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md"
       @click="closeAll"
     />
   </Transition>
@@ -170,8 +235,15 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
       }"
     >
       <div
-        class="group relative overflow-hidden rounded-2xl border backdrop-blur-xl bg-black/30 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col max-h-[90vh]"
+        class="group relative overflow-hidden rounded-3xl border backdrop-blur-xl bg-gradient-to-b from-[#050310]/97 via-[#0c0828]/95 to-[#060415]/97 flex flex-col max-h-[90vh]"
+        :class="[modalTheme.border, modalTheme.glow]"
       >
+        <!-- Top Accent Bar -->
+        <div
+          class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r rounded-t-3xl pointer-events-none"
+          :class="modalTheme.accentBar"
+        />
+
         <!-- Shimmer Sweep -->
         <div
           class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
@@ -179,26 +251,31 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
 
         <!-- Modal Header -->
         <div
-          class="relative flex items-center justify-between flex-shrink-0 px-6 py-5 border-b border-white/10"
+          class="relative flex items-center justify-between flex-shrink-0 px-6 py-5 border-b"
+          :class="[modalTheme.headerBg, modalTheme.border]"
         >
           <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-8 h-8">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-xl"
+              :class="modalTheme.iconGlow"
+            >
               <img
                 v-if="activeMenuItem?.src"
                 :src="activeMenuItem.src"
                 :alt="activeMenuItem.label"
-                class="object-contain w-12 h-12"
+                class="object-contain w-8 h-8"
               />
-              <span v-else class="text-base">{{ activeMenuItem?.icon }}</span>
+              <span v-else class="text-xl">{{ activeMenuItem?.icon }}</span>
             </div>
             <span
-              class="text-2xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
+              class="text-3xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
             >
               {{ activeMenuItem?.label }}
             </span>
           </div>
           <button
-            class="flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:bg-white/15 hover:text-white hover:scale-105"
+            class="flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
+            :class="modalTheme.closeHover"
             @click="closeModal"
           >
             ✕
@@ -208,40 +285,50 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
         <!-- ─── Charakter Tabs ─── -->
         <div
           v-if="activeModal === 'charakter'"
-          class="flex border-b border-white/10 flex-shrink-0"
+          class="flex p-1.5 gap-1 bg-white/[0.04] border border-white/10 mx-4 my-3 rounded-2xl flex-shrink-0"
         >
           <button
             v-for="tab in [{ id: 'rang', label: 'Rang' }, { id: 'faehigkeiten', label: 'Fähigkeiten' }, { id: 'missionen', label: 'Missionen' }]"
             :key="tab.id"
             @click="activeCharTab = tab.id as 'rang' | 'faehigkeiten' | 'missionen'"
-            class="px-6 py-3 text-sm font-bold tracking-wide transition-all duration-200"
+            class="relative flex-1 px-4 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
             :class="
               activeCharTab === tab.id
-                ? 'border-b-2 border-blue-400 text-white'
-                : 'text-white/50 hover:text-white/80'
+                ? 'text-white shadow-lg shadow-violet-500/30'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
             "
           >
-            {{ tab.label }}
+            <span
+              v-if="activeCharTab === tab.id"
+              class="absolute inset-0 rounded-xl"
+              :class="modalTheme.tabActive"
+            />
+            <span class="relative z-10">{{ tab.label }}</span>
           </button>
         </div>
 
         <!-- ─── Kampf Tabs ─── -->
         <div
           v-if="activeModal === 'kampf'"
-          class="flex border-b border-white/10 flex-shrink-0"
+          class="flex p-1.5 gap-1 bg-white/[0.04] border border-white/10 mx-4 my-3 rounded-2xl flex-shrink-0"
         >
           <button
             v-for="tab in [{ id: 'champions', label: 'Champions' }, { id: 'ergebnisse', label: 'Ergebnisse' }]"
             :key="tab.id"
             @click="activeKampfTab = tab.id as 'champions' | 'ergebnisse'"
-            class="px-6 py-3 text-sm font-bold tracking-wide transition-all duration-200"
+            class="relative flex-1 px-4 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
             :class="
               activeKampfTab === tab.id
-                ? 'border-b-2 border-blue-400 text-white'
-                : 'text-white/50 hover:text-white/80'
+                ? 'text-white shadow-lg shadow-rose-500/30'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
             "
           >
-            {{ tab.label }}
+            <span
+              v-if="activeKampfTab === tab.id"
+              class="absolute inset-0 rounded-xl"
+              :class="modalTheme.tabActive"
+            />
+            <span class="relative z-10">{{ tab.label }}</span>
           </button>
         </div>
 

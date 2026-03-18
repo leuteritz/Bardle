@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-xl bg-black/30 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_40px_rgba(139,92,246,0.25)] hover:scale-[1.005] hover:-translate-y-0.5"
+    class="group relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-xl bg-black/30 border-violet-500/15 shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:shadow-[0_8px_40px_rgba(139,92,246,0.25)] hover:scale-[1.005] hover:-translate-y-0.5"
   >
     <!-- Shimmer Sweep on Hover -->
     <div
@@ -109,7 +109,7 @@
       <!-- ── RANK STATS ROW ── -->
       <div class="grid grid-cols-3 gap-3 mt-5">
         <div
-          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
         >
           <div
             class="text-sm font-black text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
@@ -119,7 +119,7 @@
           <div class="text-xs text-blue-400 mt-0.5">Tier</div>
         </div>
         <div
-          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
         >
           <div
             class="text-sm font-black text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
@@ -129,7 +129,7 @@
           <div class="text-xs text-blue-400 mt-0.5">Top Players</div>
         </div>
         <div
-          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+          class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
         >
           <div class="text-sm font-black" :class="getStatusColor()">{{ getStatus() }}</div>
           <div class="text-xs text-blue-400 mt-0.5">Status</div>
@@ -141,7 +141,7 @@
         <div class="flex items-center gap-2 mb-4">
           <span class="text-base">⚔️</span>
           <h4
-            class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
+            class="text-sm font-black tracking-wide text-violet-300"
           >
             Battle Statistics
           </h4>
@@ -155,7 +155,7 @@
         <!-- Win / Loss / Total -->
         <div class="grid grid-cols-3 gap-3 mb-4">
           <div
-            class="p-3 text-center transition-colors duration-200 border rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 backdrop-blur-sm hover:bg-white/10"
+            class="p-3 text-center transition-colors duration-200 border rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border-white/15 backdrop-blur-sm hover:bg-white/10"
           >
             <div
               class="text-xl font-black text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
@@ -198,7 +198,7 @@
         <!-- Extra Stats Grid -->
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div
-            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
           >
             <div class="text-sm font-black text-blue-200">
               {{ battleStore.getAvgBattleTime() }}min
@@ -216,13 +216,13 @@
         <!-- Bottom Row -->
         <div class="grid grid-cols-3 gap-3 pt-3 border-t border-white/10">
           <div
-            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
           >
             <div class="text-sm font-black" :class="getWinRateColor()">{{ getWinRate() }}%</div>
             <div class="text-xs text-blue-400 mt-0.5">Win Rate</div>
           </div>
           <div
-            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
           >
             <div
               class="text-sm font-black text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
@@ -232,7 +232,7 @@
             <div class="text-xs text-blue-400 mt-0.5">Win Streak</div>
           </div>
           <div
-            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 backdrop-blur-sm"
+            class="p-2.5 text-center rounded-xl bg-gradient-to-br from-violet-900/20 to-white/5 border border-white/15 backdrop-blur-sm"
           >
             <div class="text-sm font-black" :class="getBattleRankColor()">
               {{ getBattleRank() }}

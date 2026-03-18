@@ -1,45 +1,51 @@
 <template>
-  <div class="flex flex-col w-full h-full space-y-4">
+  <div class="flex flex-col w-full h-full gap-3">
     <!-- Max missions warning -->
-    <div v-if="!missionStore.canStartMission"
-      class="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-200"
+    <div
+      v-if="!missionStore.canStartMission"
+      class="flex items-center gap-2 px-3 py-2 text-xs font-semibold border rounded-xl bg-amber-500/10 border-amber-400/20 text-amber-300/80"
     >
       <span>⚠️</span>
-      <span>Maximale Anzahl aktiver Missionen erreicht ({{ MAX_ACTIVE_MISSIONS }})</span>
+      <span>Maximale Missionsanzahl erreicht ({{ MAX_ACTIVE_MISSIONS }})</span>
     </div>
 
     <!-- Mission Cards -->
     <div
       v-for="config in missionConfigs"
       :key="config.id"
-      class="group relative overflow-hidden rounded-2xl border backdrop-blur-md transition-all duration-300 bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-white/20"
+      class="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0d1117] hover:border-white/[0.12] transition-all duration-200"
     >
-      <div class="relative p-4 space-y-3">
+      <div class="p-4 space-y-3.5">
         <!-- Header -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">{{ config.icon }}</span>
-            <div>
-              <h3 class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text">
-                {{ config.name }}
-              </h3>
-              <p class="text-[11px] text-white/40">{{ config.description }}</p>
-            </div>
+        <div class="flex items-start gap-3">
+          <span class="text-2xl mt-0.5">{{ config.icon }}</span>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-bold tracking-wide text-white/90">{{ config.name }}</h3>
+            <p class="text-[11px] text-white/35 mt-0.5 leading-relaxed">{{ config.description }}</p>
           </div>
         </div>
 
-        <!-- Mission Info Badges -->
+        <!-- Info Badges -->
         <div class="flex flex-wrap gap-1.5">
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200">
-            ⏱️ {{ formatDuration(config.durationSeconds) }}
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md bg-white/[0.05] border border-white/[0.08] text-white/50"
+          >
+            ⏱ {{ formatDuration(config.durationSeconds) }}
           </span>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-full bg-yellow-500/20 border border-yellow-400/30 text-yellow-200">
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md bg-amber-400/10 border border-amber-400/20 text-amber-300/70"
+          >
             🎵 {{ config.baseReward }} Chimes
           </span>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-full bg-violet-500/20 border border-violet-400/30 text-violet-200">
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md bg-violet-400/10 border border-violet-400/20 text-violet-300/70"
+          >
             ⚡ {{ config.minPowerThreshold }} Power
           </span>
         </div>
+
+        <!-- Divider -->
+        <div class="h-px bg-white/[0.05]" />
 
         <!-- Role Slots -->
         <div class="space-y-2">
@@ -48,23 +54,26 @@
             :key="role + '-' + roleIdx"
             class="flex items-center gap-2"
           >
-            <span class="w-16 px-2 py-0.5 text-[10px] font-black uppercase rounded-full text-center"
+            <span
+              class="w-14 shrink-0 px-2 py-0.5 text-[9px] font-black uppercase rounded-md text-center tracking-widest"
               :class="roleColors[role]"
             >
               {{ role }}
             </span>
             <select
               :value="getSelection(config.id, roleIdx)"
-              @change="setSelection(config.id, roleIdx, ($event.target as HTMLSelectElement).value, role)"
-              class="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg bg-white/5 border border-white/10 text-white/80 focus:outline-none focus:border-blue-400/50 appearance-none cursor-pointer"
+              @change="
+                setSelection(config.id, roleIdx, ($event.target as HTMLSelectElement).value, role)
+              "
+              class="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/70 focus:outline-none focus:border-indigo-400/40 appearance-none cursor-pointer transition-colors hover:border-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
               :disabled="!missionStore.canStartMission"
             >
-              <option value="" class="bg-gray-900">-- Champion wählen --</option>
+              <option value="" class="bg-[#0d1117] text-white/50">— Champion wählen —</option>
               <option
                 v-for="champ in getAvailableChampions(config.id, roleIdx, role)"
                 :key="champ"
                 :value="champ"
-                class="bg-gray-900"
+                class="bg-[#0d1117]"
               >
                 {{ champ }}
               </option>
@@ -72,31 +81,34 @@
           </div>
         </div>
 
-        <!-- Success Chance & Start Button -->
-        <div class="flex items-center justify-between pt-1">
-          <div v-if="isFullyAssigned(config.id, config.requiredRoles.length)" class="flex items-center gap-2">
-            <span class="text-[11px] text-white/40">Erfolgschance:</span>
-            <span class="text-sm font-black"
-              :class="getSuccessChanceColor(getSuccessChance(config.id))"
-            >
-              {{ Math.round(getSuccessChance(config.id) * 100) }}%
-            </span>
+        <!-- Footer Row -->
+        <div class="flex items-center justify-between pt-0.5">
+          <!-- Success Chance -->
+          <div class="flex items-center h-6">
+            <template v-if="isFullyAssigned(config.id, config.requiredRoles.length)">
+              <span class="text-[11px] text-white/30 mr-1.5">Chance:</span>
+              <span
+                class="text-sm font-black"
+                :class="getSuccessChanceColor(getSuccessChance(config.id))"
+              >
+                {{ Math.round(getSuccessChance(config.id) * 100) }}%
+              </span>
+            </template>
+            <span v-else class="text-[11px] text-white/20">Alle Rollen besetzen …</span>
           </div>
-          <div v-else class="text-[11px] text-white/30">Alle Rollen besetzen...</div>
 
+          <!-- Start Button -->
           <button
             @click="startMission(config.id)"
             :disabled="!canStart(config.id, config.requiredRoles.length)"
-            class="relative px-4 py-2 text-xs font-black rounded-xl border overflow-hidden transition-all duration-300 active:scale-95"
-            :class="canStart(config.id, config.requiredRoles.length)
-              ? 'bg-gradient-to-b from-blue-500 to-violet-700 border-blue-400/50 text-white shadow-lg shadow-violet-900/50 hover:shadow-violet-500/50 hover:from-blue-400'
-              : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+            class="px-5 py-2 text-xs font-bold transition-all duration-200 border rounded-xl active:scale-95"
+            :class="
+              canStart(config.id, config.requiredRoles.length)
+                ? 'bg-gradient-to-br from-indigo-500 to-violet-600 border-indigo-400/30 text-white shadow-md shadow-violet-900/40 hover:shadow-violet-500/30 hover:brightness-110'
+                : 'bg-white/[0.03] border-white/[0.06] text-white/20 cursor-not-allowed'
             "
           >
-            <div v-if="canStart(config.id, config.requiredRoles.length)"
-              class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-500"
-            />
-            <span class="relative">Mission starten</span>
+            Starten
           </button>
         </div>
       </div>
@@ -119,15 +131,14 @@ export default defineComponent({
     const missionStore = useMissionStore()
     const battleStore = useBattleStore()
 
-    // Track selections per mission: { configId: { roleIdx: championName } }
     const selections = reactive<Record<string, Record<number, string>>>({})
 
     const roleColors: Record<ChampionRole, string> = {
-      top: 'bg-red-500/20 border border-red-400/30 text-red-200',
-      jungle: 'bg-green-500/20 border border-green-400/30 text-green-200',
-      mid: 'bg-blue-500/20 border border-blue-400/30 text-blue-200',
-      adc: 'bg-yellow-500/20 border border-yellow-400/30 text-yellow-200',
-      support: 'bg-pink-500/20 border border-pink-400/30 text-pink-200',
+      top: 'bg-red-400/10     border border-red-400/20     text-red-300/70',
+      jungle: 'bg-emerald-400/10 border border-emerald-400/20 text-emerald-300/70',
+      mid: 'bg-blue-400/10    border border-blue-400/20    text-blue-300/70',
+      adc: 'bg-amber-400/10   border border-amber-400/20   text-amber-300/70',
+      support: 'bg-pink-400/10    border border-pink-400/20    text-pink-300/70',
     }
 
     function getSelection(configId: string, roleIdx: number): string {
@@ -139,22 +150,19 @@ export default defineComponent({
       selections[configId][roleIdx] = value
     }
 
-    function getAvailableChampions(configId: string, roleIdx: number, role: ChampionRole): string[] {
+    function getAvailableChampions(
+      configId: string,
+      roleIdx: number,
+      role: ChampionRole,
+    ): string[] {
       const onMission = missionStore.championsOnMission
-      const owned = battleStore.ownedChampions.filter(
-        (c) => c !== 'Bard' && !onMission.includes(c),
-      )
-
-      // Filter by role
+      const owned = battleStore.ownedChampions.filter((c) => c !== 'Bard' && !onMission.includes(c))
       const withRole = owned.filter((c) => getChampionRoles(c).includes(role))
-
-      // Exclude already selected for OTHER slots in this mission
       const currentSelections = selections[configId] ?? {}
       const selectedElsewhere = Object.entries(currentSelections)
         .filter(([idx]) => Number(idx) !== roleIdx)
         .map(([, name]) => name)
         .filter(Boolean)
-
       return withRole.filter((c) => !selectedElsewhere.includes(c))
     }
 
@@ -175,17 +183,14 @@ export default defineComponent({
       const config = MISSION_CONFIGS.find((m) => m.id === configId)
       if (!config) return 0
       const sel = selections[configId] ?? {}
-      const assigned = config.requiredRoles.map((role, idx) => ({
-        name: sel[idx] ?? '',
-        role,
-      }))
+      const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx] ?? '', role }))
       if (assigned.some((a) => !a.name)) return 0
       return missionStore.calculateSuccessChance(assigned, configId)
     }
 
     function getSuccessChanceColor(chance: number): string {
       if (chance >= 0.7) return 'text-emerald-400'
-      if (chance >= 0.4) return 'text-yellow-400'
+      if (chance >= 0.4) return 'text-amber-400'
       return 'text-red-400'
     }
 
@@ -201,17 +206,10 @@ export default defineComponent({
       const config = MISSION_CONFIGS.find((m) => m.id === configId)
       if (!config) return
       const sel = selections[configId] ?? {}
-      const assigned = config.requiredRoles.map((role, idx) => ({
-        name: sel[idx],
-        role,
-      }))
+      const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx], role }))
       if (assigned.some((a) => !a.name)) return
-
       const success = missionStore.startMission(configId, assigned)
-      if (success) {
-        // Clear selections for this mission
-        delete selections[configId]
-      }
+      if (success) delete selections[configId]
     }
 
     return {

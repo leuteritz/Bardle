@@ -2,8 +2,8 @@
   <div class="relative group">
     <!-- Kompakter Ability Container -->
     <div
-      class="relative p-1.5 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-blue-400/30 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
-      :class="{ 'ring-2 ring-blue-400 ring-opacity-50 shadow-blue-500/20': canUpgrade }"
+      class="relative p-1.5 transition-all duration-300 border-2 shadow-md cursor-pointer bg-gradient-to-br from-white/10 to-white/5 rounded-xl border-violet-400/40 hover:shadow-xl hover:scale-105 backdrop-blur-sm"
+      :class="{ 'ring-2 ring-violet-400 ring-opacity-50 shadow-violet-500/20': canUpgrade }"
     >
       <!-- Kompakte Level Indicators -->
       <div class="flex justify-center mb-2 space-x-0.5">
@@ -13,7 +13,7 @@
           class="w-1.5 h-1.5 transition-all duration-300 border rounded-full"
           :class="
             n <= abilityLevel
-              ? 'bg-gradient-to-br from-blue-400 to-violet-500 border-blue-400 shadow-sm'
+              ? 'bg-gradient-to-br from-violet-400 to-purple-500 border-violet-400 shadow-sm'
               : 'bg-gray-700/50 border-gray-500/50'
           "
         ></div>
@@ -60,14 +60,14 @@
         <button
           v-if="canUpgrade"
           @click.stop="$emit('upgrade')"
-          class="relative px-2 py-1 text-xs font-bold text-white transition-all duration-200 border rounded-full shadow-md group bg-gradient-to-r from-blue-500 to-violet-500 hover:from-blue-600 hover:to-violet-600 hover:shadow-lg hover:scale-105 active:scale-95 border-blue-400/50"
+          class="relative px-2 py-1 text-xs font-bold text-white transition-all duration-200 border rounded-full shadow-md group bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 active:scale-95 border-violet-400/50"
         >
           <span class="relative z-10 flex items-center">
             <span class="mr-1 text-xs">⬆️</span>
             <span class="text-xs">Up</span>
           </span>
           <div
-            class="absolute inset-0 transition-opacity duration-200 rounded-full opacity-0 bg-gradient-to-r from-blue-600 to-violet-600 group-hover:opacity-100"
+            class="absolute inset-0 transition-opacity duration-200 rounded-full opacity-0 bg-gradient-to-r from-violet-600 to-purple-700 group-hover:opacity-100"
           ></div>
         </button>
 
@@ -95,9 +95,9 @@
       <!-- Kompakter Upgrade Available Indicator -->
       <div
         v-if="canUpgrade"
-        class="absolute w-3 h-3 rounded-full shadow-lg bg-gradient-to-r from-blue-400 to-violet-500 -top-1 -right-1 animate-bounce"
+        class="absolute w-3 h-3 rounded-full shadow-lg bg-gradient-to-r from-violet-400 to-purple-500 -top-1 -right-1 animate-bounce"
       >
-        <div class="absolute inset-0 bg-blue-400 rounded-full animate-ping"></div>
+        <div class="absolute inset-0 bg-violet-400 rounded-full animate-ping"></div>
       </div>
     </div>
   </div>

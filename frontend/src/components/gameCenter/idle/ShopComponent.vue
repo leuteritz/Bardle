@@ -1,8 +1,8 @@
 <template>
-  <div class="flex flex-col w-full h-full p-4 space-y-4">
+  <div class="flex flex-col w-full h-full p-4 space-y-5">
     <!-- ─── Kaufmengen-Selector ─── -->
     <div
-      class="sticky top-0 z-10 flex items-center justify-center gap-2 p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+      class="sticky top-0 z-10 flex items-center justify-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
     >
       <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50"> Kaufen </span>
       <div class="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">

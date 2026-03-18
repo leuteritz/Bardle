@@ -1,131 +1,154 @@
 <template>
-  <div class="flex flex-col w-full h-full space-y-4">
-    <!-- Active Missions -->
-    <div v-if="missionStore.activeMissions.length === 0 && missionStore.completedMissions.length === 0"
-      class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+  <div class="flex flex-col w-full h-full gap-3">
+    <!-- Empty State -->
+    <div
+      v-if="missionStore.activeMissions.length === 0 && missionStore.completedMissions.length === 0"
+      class="flex flex-col items-center justify-center gap-3 text-center border border-dashed py-14 rounded-2xl border-white/10"
     >
-      <span class="text-3xl">📜</span>
-      <h4 class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text">
-        Keine aktiven Missionen
-      </h4>
-      <p class="text-xs text-blue-400">Starte eine Mission im "Neue Mission" Tab!</p>
+      <span class="text-4xl opacity-40">📜</span>
+      <p class="text-sm font-semibold text-white/30">Keine aktiven Missionen</p>
+      <p class="text-xs text-white/20">Starte eine Mission im "Neue Mission" Tab</p>
     </div>
 
     <!-- Active Mission Cards -->
     <div
       v-for="mission in missionStore.activeMissions"
       :key="mission.id"
-      class="group relative overflow-hidden rounded-2xl border backdrop-blur-md transition-all duration-300"
-      :class="mission.status === 'active'
-        ? 'bg-gradient-to-br from-blue-900/30 via-violet-900/20 to-blue-900/10 border-blue-500/30 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-        : mission.status === 'success'
-          ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
-          : 'bg-gradient-to-br from-red-900/30 via-rose-900/20 to-red-900/10 border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
-      "
+      class="relative overflow-hidden transition-all duration-300 border rounded-2xl"
+      :class="{
+        'bg-[#0d1117] border-indigo-500/20': mission.status === 'active',
+        'bg-[#0d1117] border-emerald-500/20': mission.status === 'success',
+        'bg-[#0d1117] border-red-500/20': mission.status === 'failure',
+      }"
     >
-      <!-- Pulse glow for active missions -->
-      <div v-if="mission.status === 'active'"
-        class="absolute inset-0 border pointer-events-none rounded-2xl border-blue-400/30 animate-pulse"
+      <!-- Top accent line -->
+      <div
+        class="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
+        :class="{
+          'bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500':
+            mission.status === 'active',
+          'bg-gradient-to-r from-emerald-500 to-teal-500': mission.status === 'success',
+          'bg-gradient-to-r from-red-500 to-rose-500': mission.status === 'failure',
+        }"
       />
 
-      <div class="relative p-4 space-y-3">
-        <!-- Header -->
+      <div class="p-4 pt-5 space-y-3">
+        <!-- Header Row -->
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">{{ getMissionIcon(mission.configId) }}</span>
-            <h3 class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text">
-              {{ mission.name }}
-            </h3>
+          <div class="flex items-center gap-2.5">
+            <span class="text-lg">{{ getMissionIcon(mission.configId) }}</span>
+            <span class="text-sm font-bold tracking-wide text-white/90">{{ mission.name }}</span>
           </div>
-          <span v-if="mission.status === 'active'"
-            class="px-2 py-0.5 text-xs font-black rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 tracking-wider"
+
+          <span
+            class="px-2.5 py-0.5 text-[10px] font-bold rounded-full tracking-widest uppercase"
+            :class="{
+              'bg-indigo-500/15 text-indigo-300 border border-indigo-400/20':
+                mission.status === 'active',
+              'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20':
+                mission.status === 'success',
+              'bg-red-500/15 text-red-300 border border-red-400/20': mission.status === 'failure',
+            }"
           >
-            Aktiv
-          </span>
-          <span v-else-if="mission.status === 'success'"
-            class="px-2 py-0.5 text-xs font-black rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 tracking-wider"
-          >
-            Erfolg!
-          </span>
-          <span v-else
-            class="px-2 py-0.5 text-xs font-black rounded-full bg-red-500/20 border border-red-400/30 text-red-200 tracking-wider"
-          >
-            Fehlgeschlagen
+            {{
+              mission.status === 'active'
+                ? 'Läuft'
+                : mission.status === 'success'
+                  ? 'Erfolg'
+                  : 'Fehlgeschl.'
+            }}
           </span>
         </div>
 
-        <!-- Champions -->
+        <!-- Champions Row -->
         <div class="flex flex-wrap gap-1.5">
-          <span v-for="champ in mission.assignedChampions" :key="champ.name"
-            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-white/10 border border-white/15 text-white/80"
+          <span
+            v-for="champ in mission.assignedChampions"
+            :key="champ.name"
+            class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-white/[0.05] border border-white/[0.08] text-white/70"
           >
-            <img :src="getChampionImage(champ.name)" :alt="champ.name"
-              class="w-4 h-4 rounded-full object-cover"
+            <img
+              :src="getChampionImage(champ.name)"
+              :alt="champ.name"
+              class="w-3.5 h-3.5 rounded-full object-cover ring-1 ring-white/10"
             />
             {{ champ.name }}
-            <span class="text-[10px] uppercase text-white/40">{{ champ.role }}</span>
+            <span class="text-[9px] uppercase text-white/30 font-bold">{{ champ.role }}</span>
           </span>
         </div>
 
-        <!-- Progress Bar (active) -->
-        <div v-if="mission.status === 'active'" class="space-y-1">
-          <div class="w-full h-2 overflow-hidden rounded-full bg-white/10">
-            <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-1000"
+        <!-- Progress (active) -->
+        <div v-if="mission.status === 'active'" class="space-y-1.5">
+          <div class="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              class="h-full transition-all duration-1000 ease-linear rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
               :style="{ width: getProgress(mission) + '%' }"
             />
           </div>
-          <div class="flex justify-between text-[10px] text-white/40 font-bold">
-            <span>{{ getTimeRemaining(mission) }}</span>
+          <div class="flex justify-between text-[10px] font-semibold text-white/30">
+            <span class="font-mono">{{ getTimeRemaining(mission) }}</span>
             <span>{{ Math.round(mission.successChance * 100) }}% Chance</span>
           </div>
         </div>
 
-        <!-- Reward display (completed) -->
-        <div v-else class="flex items-center justify-between">
-          <span class="text-xs text-white/50">
-            Belohnung: <span class="font-black" :class="mission.status === 'success' ? 'text-yellow-300' : 'text-red-300'">
+        <!-- Reward Row (completed) -->
+        <div v-else class="flex items-center justify-between pt-0.5">
+          <div class="text-xs text-white/40">
+            Belohnung:
+            <span
+              class="ml-1 font-bold"
+              :class="mission.status === 'success' ? 'text-amber-300' : 'text-red-400'"
+            >
               {{ mission.reward }} Chimes
             </span>
-          </span>
-          <button @click="missionStore.collectMission(mission.id)"
-            class="relative px-4 py-2 text-xs font-black rounded-xl border overflow-hidden transition-all duration-300 active:scale-95"
-            :class="mission.status === 'success'
-              ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400'
-              : 'bg-gradient-to-b from-gray-600 to-gray-800 border-gray-500/50 text-white shadow-lg hover:from-gray-500'
+          </div>
+          <button
+            @click="missionStore.collectMission(mission.id)"
+            class="px-4 py-1.5 text-xs font-bold rounded-lg border transition-all duration-200 active:scale-95"
+            :class="
+              mission.status === 'success'
+                ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/30'
+                : 'bg-white/[0.04] border-white/10 text-white/40 hover:bg-white/[0.08]'
             "
           >
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-500" />
-            <span class="relative">Einsammeln</span>
+            Einsammeln
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Completed History -->
-    <div v-if="missionStore.completedMissions.length > 0" class="space-y-2">
-      <div class="flex items-center px-3 py-2 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl">
-        <span class="text-xs font-bold tracking-widest uppercase text-white/50">Verlauf</span>
+    <!-- History Section -->
+    <template v-if="missionStore.completedMissions.length > 0">
+      <div class="flex items-center gap-3 px-1 pt-2">
+        <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-white/25">Verlauf</span>
+        <div class="flex-1 h-px bg-white/5" />
       </div>
 
       <div
-        v-for="mission in missionStore.completedMissions"
-        :key="mission.id"
-        class="flex items-center justify-between px-4 py-2 rounded-xl border backdrop-blur-md bg-white/[0.03] border-white/5"
+        class="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]"
       >
-        <div class="flex items-center gap-2">
-          <span class="text-sm">{{ getMissionIcon(mission.configId) }}</span>
-          <span class="text-xs font-bold text-white/60">{{ mission.name }}</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span :class="mission.status === 'success' ? 'text-emerald-400' : 'text-red-400'"
-            class="text-xs font-black"
-          >
-            {{ mission.status === 'success' ? '+' : '' }}{{ mission.reward }} Chimes
-          </span>
-          <span class="text-[10px]">{{ mission.status === 'success' ? '✅' : '❌' }}</span>
+        <div
+          v-for="mission in missionStore.completedMissions"
+          :key="mission.id"
+          class="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-sm opacity-60">{{ getMissionIcon(mission.configId) }}</span>
+            <span class="text-xs font-medium text-white/50">{{ mission.name }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              class="text-xs font-bold"
+              :class="mission.status === 'success' ? 'text-emerald-400' : 'text-red-400'"
+            >
+              {{ mission.status === 'success' ? '+' : '' }}{{ mission.reward }}
+              <span class="text-[10px] text-white/30 font-normal">Chimes</span>
+            </span>
+            <span class="text-xs">{{ mission.status === 'success' ? '✅' : '❌' }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -150,7 +173,6 @@ export default defineComponent({
         now.value = Date.now()
       }, 1000)
     })
-
     onUnmounted(() => {
       if (timer) clearInterval(timer)
     })
