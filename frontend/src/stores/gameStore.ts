@@ -9,6 +9,7 @@ import {
   MEEP_BASE_COST,
   MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
+  SKILL_MEEP_COSTS,
 } from '../config/constants'
 import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition, ModifierEffects } from '../types'
 
@@ -98,6 +99,20 @@ export const useGameStore = defineStore('game', {
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
+    },
+
+    // Schaltet eine Fähigkeit mit Meeps frei (einmalig, sequenziell)
+    unlockSkillWithMeeps(index: number) {
+      const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
+      if (index > 0 && this.abilityLevels[index - 1] === 0) return
+      const cost = SKILL_MEEP_COSTS[index]
+      if (this.meeps >= cost && this.abilityLevels[index] === 0) {
+        this.meeps -= cost
+        this.abilityLevels[index] = maxLevel
+        const shopStore = useShopStore()
+        this.chimesPerSecond = shopStore.calculateTotalCPS()
+        this.chimesPerClick = shopStore.calculateTotalCPC()
+      }
     },
 
     // Erhöht das Level einer Fähigkeit wenn Skillpunkte verfügbar sind

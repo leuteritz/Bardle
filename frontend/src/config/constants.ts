@@ -36,6 +36,9 @@ export const RANK_TIERS = [
 // Abilities
 export const MAX_ABILITY_LEVEL = 5
 
+// Skill Tree Meep costs (Q, W, E, R)
+export const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
+
 // Planet events
 export const PLANET_MAX_COUNT = 3
 export const PLANET_SPAWN_INTERVAL_MIN = 11_000
