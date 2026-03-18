@@ -9,9 +9,8 @@ import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
-import UniversePortalComponent from './components/UniversePortalComponent.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
-import MeepIndicatorComponent from './components/ui/MeepIndicatorComponent.vue'
+import TopRightHudComponent from './components/ui/TopRightHudComponent.vue'
 
 const gameStore = useGameStore()
 const shopStore = useShopStore()
@@ -34,7 +33,7 @@ const activeTab = ref('idle')
       class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
     >
       <!-- Oberer Bereich mit Navigation -->
-      <div class="z-[100] grid w-full h-8 grid-cols-3">
+      <div class="z-[100] grid w-full min-h-8 grid-cols-3 items-start">
         <!-- Links: Bard portrait toggle -->
         <div class="flex items-start justify-start col-span-1 px-4 py-4">
           <BardProfileMenu />
@@ -61,8 +60,8 @@ const activeTab = ref('idle')
           </div>
         </div>
 
-        <div class="col-span-1 flex justify-end items-center px-4 py-4">
-          <MeepIndicatorComponent />
+        <div class="col-span-1 flex justify-end items-start px-4 py-4">
+          <TopRightHudComponent />
         </div>
       </div>
 
@@ -75,7 +74,6 @@ const activeTab = ref('idle')
           </div>
         </div>
 
-        <UniversePortalComponent />
       </div>
     </div>
 

@@ -183,26 +183,57 @@ const modalTheme = computed(() => {
 
         <!-- Modal Header -->
         <div
-          class="relative flex items-center justify-between flex-shrink-0 px-6 py-5 border-b"
+          class="relative flex items-center flex-shrink-0 border-b overflow-hidden"
           :class="[modalTheme.headerBg, modalTheme.border]"
         >
-          <div class="flex items-center gap-3">
-            <div class="flex items-center justify-center w-9 h-9 rounded-xl overflow-hidden border border-white/10 bg-white/5">
-              <img src="/img/BardAbilities/Bard.png" class="object-cover w-full h-full" />
+          <!-- Portal Links -->
+          <div class="relative flex items-center justify-center w-20 h-20 flex-shrink-0">
+            <img
+              src="/img/BardPortalRichtig.png"
+              alt="Portal Start"
+              class="relative z-10 w-16 h-16 object-contain"
+            />
+            <div class="portal-effect absolute inset-0">
+              <div class="portal-glow"></div>
+              <div class="portal-vortex"></div>
+              <div class="portal-ring"></div>
             </div>
-            <span
-              class="text-2xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
-            >
-              Bard
-            </span>
           </div>
-          <button
-            class="flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
-            :class="modalTheme.closeHover"
-            @click="closeModal"
-          >
-            ✕
-          </button>
+
+          <!-- Mitte: Bard-Info + Close -->
+          <div class="flex flex-1 items-center justify-between px-4 py-5">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-9 h-9 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                <img src="/img/BardAbilities/Bard.png" class="object-cover w-full h-full" />
+              </div>
+              <span
+                class="text-2xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
+              >
+                Bard
+              </span>
+            </div>
+            <button
+              class="flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
+              :class="modalTheme.closeHover"
+              @click="closeModal"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- Portal Rechts -->
+          <div class="relative flex items-center justify-center w-20 h-20 flex-shrink-0">
+            <img
+              src="/img/PortalEndeRichtig.png"
+              alt="Portal Ende"
+              class="relative z-10 w-16 h-16 object-contain"
+            />
+            <div class="portal-effect absolute inset-0">
+              <div class="portal-glow"></div>
+              <div class="portal-vortex"></div>
+              <div class="portal-ring"></div>
+            </div>
+          </div>
         </div>
 
         <!-- ─── Charakter Tabs ─── -->
@@ -286,6 +317,97 @@ const modalTheme = computed(() => {
 </template>
 
 <style scoped>
+/* ── Portal Effect ── */
+.portal-effect {
+  border-radius: 50%;
+  position: absolute;
+  overflow: visible;
+}
+
+.portal-glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 215, 0, 0.65) 0%,
+    rgba(255, 180, 0, 0.38) 40%,
+    rgba(180, 120, 0, 0.1) 70%,
+    transparent 100%
+  );
+  filter: blur(14px);
+  animation: portalPulse 3s ease-in-out infinite;
+}
+
+.portal-vortex {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 215, 0, 0.6),
+    rgba(180, 130, 20, 0.2),
+    rgba(255, 200, 50, 0.5),
+    rgba(120, 80, 10, 0.15),
+    rgba(255, 215, 0, 0.6)
+  );
+  mask-image: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    black 50%,
+    black 70%,
+    transparent 90%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    black 50%,
+    black 70%,
+    transparent 90%
+  );
+}
+
+.portal-vortex::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(40, 20, 5, 0.45) 0%,
+    rgba(80, 50, 10, 0.35) 35%,
+    rgba(180, 120, 20, 0.3) 60%,
+    transparent 80%
+  );
+}
+
+.portal-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)) padding-box,
+    linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
+  box-shadow:
+    0 0 15px 3px rgba(255, 215, 0, 0.65),
+    inset 0 0 15px 3px rgba(255, 215, 0, 0.4),
+    0 0 30px 6px rgba(255, 180, 0, 0.3);
+  animation: portalPulse 3s ease-in-out infinite;
+}
+
+@keyframes portalPulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
 .accent-bar-enter-active,
 .accent-bar-leave-active {
   transition: opacity 0.15s ease;
