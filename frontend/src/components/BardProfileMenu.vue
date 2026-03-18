@@ -7,7 +7,7 @@ import RankComponent from './RankComponent.vue'
 import AbilityComponent from './bottom/AbilityComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
-import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue' // ← fehlte
+import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue'
 import MissionComponent from './missions/MissionComponent.vue'
 
 const gameStore = useGameStore()
@@ -21,20 +21,20 @@ const abilityIcons = [
 ]
 const abilityKeys = ['Q', 'W', 'E', 'R']
 
-type ModalId = 'shop' | 'rank' | 'abilities' | 'admin' | 'battle' | 'champions' | 'missions'
+type ModalId = 'shop' | 'charakter' | 'kampf' | 'admin'
 
 const menuOpen = ref(false)
 const activeModal = ref<ModalId | null>(null)
 
 const menuItems: { id: ModalId; label: string; icon: string; src: string }[] = [
+  { id: 'charakter', label: 'Charakter', icon: '🎭', src: '' },
+  { id: 'kampf', label: 'Kampf', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'shop', label: 'Shop', icon: '', src: '/img/menu/SHOP.png' },
-  { id: 'rank', label: 'Rang', icon: '', src: '/img/menu/RANK.png' },
-  { id: 'abilities', label: 'Skills', icon: '⚡', src: '/img/menu/SKILLS.png' },
-  { id: 'battle', label: 'Battle', icon: '', src: '/img/menu/BATTLE.png' },
-  { id: 'champions', label: 'Champions', icon: '', src: '/img/menu/CHAMPIONS.png' }, // ← kein src nötig
-  { id: 'missions', label: 'Missionen', icon: '📜', src: '' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
+
+const activeCharTab = ref<'rang' | 'faehigkeiten' | 'missionen'>('rang')
+const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
@@ -164,21 +164,13 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
       v-if="activeModal !== null"
       class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[95vw]"
       :class="{
-        'w-[600px]': activeModal === 'admin',
-        'w-[560px]': activeModal === 'battle' || activeModal === 'champions' || activeModal === 'missions',
-        'w-96': activeModal !== 'admin' && activeModal !== 'battle' && activeModal !== 'champions' && activeModal !== 'missions',
+        'w-[720px]': activeModal === 'charakter' || activeModal === 'kampf',
+        'w-[640px]': activeModal === 'shop',
+        'w-[700px]': activeModal === 'admin',
       }"
     >
       <div
-        class="group relative overflow-hidden rounded-2xl border backdrop-blur-xl bg-black/30 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col"
-        :class="{
-          'max-h-[85vh]':
-            activeModal === 'shop' ||
-            activeModal === 'admin' ||
-            activeModal === 'champions' ||
-            activeModal === 'battle' ||
-            activeModal === 'missions',
-        }"
+        class="group relative overflow-hidden rounded-2xl border backdrop-blur-xl bg-black/30 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex flex-col max-h-[90vh]"
       >
         <!-- Shimmer Sweep -->
         <div
@@ -187,7 +179,7 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
 
         <!-- Modal Header -->
         <div
-          class="relative flex items-center justify-between flex-shrink-0 px-5 py-4 border-b border-white/10"
+          class="relative flex items-center justify-between flex-shrink-0 px-6 py-5 border-b border-white/10"
         >
           <div class="flex items-center gap-3">
             <div class="flex items-center justify-center w-8 h-8">
@@ -213,48 +205,93 @@ const activeMenuItem = computed(() => menuItems.find((m) => m.id === activeModal
           </button>
         </div>
 
+        <!-- ─── Charakter Tabs ─── -->
+        <div
+          v-if="activeModal === 'charakter'"
+          class="flex border-b border-white/10 flex-shrink-0"
+        >
+          <button
+            v-for="tab in [{ id: 'rang', label: 'Rang' }, { id: 'faehigkeiten', label: 'Fähigkeiten' }, { id: 'missionen', label: 'Missionen' }]"
+            :key="tab.id"
+            @click="activeCharTab = tab.id as 'rang' | 'faehigkeiten' | 'missionen'"
+            class="px-6 py-3 text-sm font-bold tracking-wide transition-all duration-200"
+            :class="
+              activeCharTab === tab.id
+                ? 'border-b-2 border-blue-400 text-white'
+                : 'text-white/50 hover:text-white/80'
+            "
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <!-- ─── Kampf Tabs ─── -->
+        <div
+          v-if="activeModal === 'kampf'"
+          class="flex border-b border-white/10 flex-shrink-0"
+        >
+          <button
+            v-for="tab in [{ id: 'champions', label: 'Champions' }, { id: 'ergebnisse', label: 'Ergebnisse' }]"
+            :key="tab.id"
+            @click="activeKampfTab = tab.id as 'champions' | 'ergebnisse'"
+            class="px-6 py-3 text-sm font-bold tracking-wide transition-all duration-200"
+            :class="
+              activeKampfTab === tab.id
+                ? 'border-b-2 border-blue-400 text-white'
+                : 'text-white/50 hover:text-white/80'
+            "
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
         <!-- Modal Content -->
         <div class="relative flex-1 min-h-0 overflow-y-auto">
+          <!-- Shop -->
           <ShopComponent v-if="activeModal === 'shop'" />
 
-          <div v-else-if="activeModal === 'rank'" class="p-4">
-            <RankComponent />
-          </div>
-
-          <div v-else-if="activeModal === 'abilities'" class="p-4 space-y-4">
-            <div
-              class="flex items-center justify-center p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-            >
-              <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50">
-                Skill Points
-              </span>
-              <span
-                class="px-3 py-1 text-xs font-black tracking-wider text-blue-200 border rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border-blue-400/30"
+          <!-- Charakter -->
+          <div v-else-if="activeModal === 'charakter'">
+            <div v-if="activeCharTab === 'rang'" class="p-4">
+              <RankComponent />
+            </div>
+            <div v-else-if="activeCharTab === 'faehigkeiten'" class="p-4 space-y-4">
+              <div
+                class="flex items-center justify-center p-3 backdrop-blur-xl bg-black/30 border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
               >
-                {{ gameStore.skillPoints }} SP
-              </span>
+                <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50">
+                  Skill Points
+                </span>
+                <span
+                  class="px-3 py-1 text-xs font-black tracking-wider text-blue-200 border rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border-blue-400/30"
+                >
+                  {{ gameStore.skillPoints }} SP
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <AbilityComponent
+                  v-for="(icon, idx) in abilityIcons"
+                  :key="abilityKeys[idx]"
+                  :icon="icon"
+                  :ability="abilityKeys[idx]"
+                  :abilityLevel="gameStore.abilityLevels[idx]"
+                  :canUpgrade="
+                    gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < MAX_ABILITY_LEVEL
+                  "
+                  @upgrade="gameStore.upgradeAbility(idx)"
+                />
+              </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <AbilityComponent
-                v-for="(icon, idx) in abilityIcons"
-                :key="abilityKeys[idx]"
-                :icon="icon"
-                :ability="abilityKeys[idx]"
-                :abilityLevel="gameStore.abilityLevels[idx]"
-                :canUpgrade="
-                  gameStore.skillPoints > 0 && gameStore.abilityLevels[idx] < MAX_ABILITY_LEVEL
-                "
-                @upgrade="gameStore.upgradeAbility(idx)"
-              />
-            </div>
+            <MissionComponent v-else-if="activeCharTab === 'missionen'" />
           </div>
 
-          <ChampionLobbyComponent v-else-if="activeModal === 'champions'" />
+          <!-- Kampf -->
+          <div v-else-if="activeModal === 'kampf'">
+            <ChampionLobbyComponent v-if="activeKampfTab === 'champions'" />
+            <BattleResultComponent v-else-if="activeKampfTab === 'ergebnisse'" />
+          </div>
 
-          <BattleResultComponent v-else-if="activeModal === 'battle'" />
-
-          <MissionComponent v-else-if="activeModal === 'missions'" />
-
+          <!-- Admin -->
           <AdminDashboard v-else-if="activeModal === 'admin'" :inline="true" />
         </div>
       </div>
