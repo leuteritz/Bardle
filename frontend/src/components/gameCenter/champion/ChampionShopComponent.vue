@@ -12,13 +12,38 @@
       </span>
     </div>
 
+    <!-- ─── Search ─── -->
+    <input
+      v-model="searchQuery"
+      type="text"
+      placeholder="Champion suchen…"
+      class="w-full px-3 py-2 text-xs rounded-xl bg-white/5 border border-white/10 text-white/80 placeholder-white/30 focus:outline-none focus:border-blue-400/50"
+    />
+
+    <!-- ─── Role Filter ─── -->
+    <div class="flex flex-wrap gap-1.5">
+      <button
+        v-for="role in roles"
+        :key="role.value"
+        @click="activeRole = role.value"
+        class="px-2.5 py-1 text-xs font-bold rounded-full border transition-all"
+        :class="
+          activeRole === role.value
+            ? 'bg-violet-500/40 border-violet-400/60 text-violet-200'
+            : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+        "
+      >
+        {{ role.label }}
+      </button>
+    </div>
+
     <p v-if="loadError" class="text-xs text-center text-red-400">{{ loadError }}</p>
 
     <!-- ─── Champions Grid ─── -->
     <div class="flex-1 min-h-0 overflow-y-auto">
-      <!-- Empty State -->
+      <!-- All purchased -->
       <div
-        v-if="availableChampions.length === 0"
+        v-if="allPurchased"
         class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
       >
         <span class="text-4xl">🎉</span>
@@ -30,7 +55,16 @@
         <p class="text-xs text-blue-400">Du besitzt bereits alle verfügbaren Champions.</p>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <!-- No filter match -->
+      <div
+        v-else-if="availableChampions.length === 0"
+        class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+      >
+        <span class="text-4xl">🔍</span>
+        <p class="text-xs text-white/40">Kein Champion gefunden.</p>
+      </div>
+
+      <div v-else class="grid grid-cols-2 gap-3 md:grid-cols-3">
         <div
           v-for="champion in availableChampions"
           :key="champion.name"
@@ -76,6 +110,17 @@
               {{ truncate(champion.name, 10) }}
             </h3>
 
+            <!-- Role Badges -->
+            <div class="flex gap-1 flex-wrap justify-center">
+              <span
+                v-for="role in getChampionRoles(champion.name)"
+                :key="role"
+                class="px-1.5 py-0.5 text-[10px] rounded-full bg-white/10 text-white/40 border border-white/10"
+              >
+                {{ role }}
+              </span>
+            </div>
+
             <!-- Buy Button -->
             <button
               class="relative w-full px-2 py-2 overflow-hidden text-xs font-bold transition-all duration-300 border group/btn rounded-xl"
@@ -117,8 +162,19 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { formatNumber, truncate } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
+import { getChampionRoles } from '../../../config/championRoles'
+import type { ChampionRole } from '../../../types'
 
 const CHAMPION_COST = 500
+
+const roles = [
+  { value: 'all' as const, label: 'Alle' },
+  { value: 'top' as const, label: 'Top' },
+  { value: 'jungle' as const, label: 'Jungle' },
+  { value: 'mid' as const, label: 'Mid' },
+  { value: 'adc' as const, label: 'ADC' },
+  { value: 'support' as const, label: 'Support' },
+]
 
 interface Champion {
   name: string
@@ -132,6 +188,8 @@ export default defineComponent({
     const battleStore = useBattleStore()
     const gameStore = useGameStore()
     const loadError = ref<string | null>(null)
+    const activeRole = ref<ChampionRole | 'all'>('all')
+    const searchQuery = ref('')
 
     async function loadChampions() {
       try {
@@ -155,8 +213,22 @@ export default defineComponent({
     }
 
     const canAfford = computed(() => gameStore.chimes >= CHAMPION_COST)
+
+    const allPurchased = computed(() =>
+      champions.value.length > 0 &&
+      champions.value.every((c) => battleStore.ownedChampions.includes(c.name)),
+    )
+
     const availableChampions = computed(() =>
-      champions.value.filter((c) => !battleStore.ownedChampions.includes(c.name)),
+      champions.value.filter((c) => {
+        if (battleStore.ownedChampions.includes(c.name)) return false
+        if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
+          return false
+        if (searchQuery.value.trim()) {
+          return c.name.toLowerCase().includes(searchQuery.value.toLowerCase().trim())
+        }
+        return true
+      }),
     )
 
     onMounted(() => loadChampions())
@@ -165,6 +237,7 @@ export default defineComponent({
       champions,
       buyChampion,
       availableChampions,
+      allPurchased,
       battleStore,
       gameStore,
       canAfford,
@@ -172,6 +245,10 @@ export default defineComponent({
       CHAMPION_COST,
       formatNumber,
       truncate,
+      getChampionRoles,
+      activeRole,
+      searchQuery,
+      roles,
     }
   },
 })
