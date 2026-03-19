@@ -34,12 +34,18 @@
 
         <!-- Mögliche Material-Drops -->
         <div class="drop-list">
-          <p class="drop-list-title">Mögliche Drops</p>
-          <div v-for="mat in MATERIALS" :key="mat.id" class="drop-row">
-            <span class="drop-icon">{{ mat.icon }}</span>
-            <span class="drop-name" :class="`rarity--${mat.rarity}`">{{ mat.name }}</span>
-            <span class="drop-chance">{{ (mat.dropChance * 100).toFixed(0) }}%</span>
-          </div>
+          <p class="drop-list-title">Möglicher Drop</p>
+          <template v-if="assignedMaterial">
+            <div class="drop-row">
+              <span class="drop-icon">{{ assignedMaterial.icon }}</span>
+              <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
+                {{ assignedMaterial.name }}
+              </span>
+              <span class="drop-chance">
+                {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
+              </span>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -118,6 +124,11 @@ watch(
   },
 )
 
+const assignedMaterial = computed(() => {
+  const id = planetEventStore.activePlanetEvent?.potentialMaterialId
+  return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
+})
+
 function handleClick() {
   const reward = planetEventStore.activePlanetEvent?.reward ?? 0
   const completed = planetEventStore.registerClick()
@@ -128,7 +139,11 @@ function handleClick() {
       gameStore.chimesForNextUniverse += Math.floor(reward * 0.3)
       gameStore.calculateLevel()
     }
-    inventoryStore.tryDropMaterial(0.30)
+    const ev = planetEventStore.activePlanetEvent
+    if (ev?.potentialMaterialId) {
+      const dropped = inventoryStore.tryDropSpecificMaterial(ev.potentialMaterialId, ev.assignedDropChance)
+      planetEventStore.lastDroppedMaterialId = dropped ? ev.potentialMaterialId : null
+    }
   } else {
     // Pulse feedback on intermediate clicks
     const svg = planetStage.value?.querySelector('svg') as SVGSVGElement | null

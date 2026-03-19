@@ -19,6 +19,16 @@
   <Transition name="toast-slide">
     <div v-if="showSavedToast" class="planet-toast planet-toast--saved">
       ✨ Planet Saved! +{{ formatNumber(savedReward) }} Chimes
+      <template v-if="droppedMaterial">
+        <br />
+        <span class="toast-material">
+          {{ droppedMaterial.icon }} {{ droppedMaterial.name }} erhalten!
+        </span>
+      </template>
+      <template v-else>
+        <br />
+        <span class="toast-material toast-material--none">Kein Material gedroppt</span>
+      </template>
     </div>
   </Transition>
 </template>
@@ -27,6 +37,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { formatNumber } from '../../config/numberFormat'
+import { MATERIALS } from '../../config/materials'
 
 const planetEventStore = usePlanetEventStore()
 
@@ -77,6 +88,12 @@ watch(
       showLostToast.value = false
     }, 2500)
   },
+)
+
+const droppedMaterial = computed(() =>
+  planetEventStore.lastDroppedMaterialId
+    ? (MATERIALS.find((m) => m.id === planetEventStore.lastDroppedMaterialId) ?? null)
+    : null
 )
 
 // Saved toast
@@ -177,7 +194,7 @@ watch(
   border-radius: 0.75rem;
   font-weight: bold;
   font-size: 1rem;
-  white-space: nowrap;
+  text-align: center;
   pointer-events: none;
   backdrop-filter: blur(8px);
 }
@@ -187,6 +204,16 @@ watch(
   border: 1px solid rgba(255, 60, 0, 0.6);
   color: #ff6030;
   box-shadow: 0 0 20px rgba(255, 60, 0, 0.4);
+}
+
+.toast-material {
+  font-size: 0.75rem;
+  font-weight: normal;
+  opacity: 0.85;
+}
+
+.toast-material--none {
+  opacity: 0.5;
 }
 
 .planet-toast--saved {

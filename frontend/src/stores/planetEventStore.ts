@@ -18,6 +18,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
     pendingRescue: false,
     lastEventCheckSecond: 0,
     rescueModalOpen: false,
+    lastDroppedMaterialId: null as string | null,
   }),
 
   actions: {
@@ -96,6 +97,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       const reward = Math.floor(PLANET_RESCUE_BASE_REWARD * (1 + difficulty * 4))
 
       const potentialMaterial = pickMaterial()
+      const assignedDropChance = 0.2 + Math.random() * 0.4
 
       this.activePlanetEvent = {
         planetId,
@@ -108,8 +110,10 @@ export const usePlanetEventStore = defineStore('planetEvent', {
         saved: false,
         expired: false,
         potentialMaterialId: potentialMaterial.id,
+        assignedDropChance,
       }
       this.pendingRescue = false
+      this.lastDroppedMaterialId = null
     },
 
     openRescueModal() {

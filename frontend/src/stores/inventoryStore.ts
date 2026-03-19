@@ -12,6 +12,12 @@ export const useInventoryStore = defineStore('inventory', {
       this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + 1
     },
 
+    tryDropSpecificMaterial(materialId: string, dropChance: number): boolean {
+      if (Math.random() > dropChance) return false
+      this.addMaterial(materialId)
+      return true
+    },
+
     tryDropMaterial(baseDropChance = 0.30): Material | null {
       if (Math.random() > baseDropChance) return null
 
