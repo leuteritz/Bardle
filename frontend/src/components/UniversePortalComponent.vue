@@ -11,7 +11,7 @@ const gameStore = useGameStore()
       <!-- Label + Prozent -->
       <div class="flex items-center justify-center px-0.5">
         <span
-          class="text-sm font-extrabold tabular-nums"
+          class="text-2xl font-extrabold tabular-nums"
           style="
             color: rgba(255, 215, 0, 0.9);
             text-shadow:
@@ -24,42 +24,27 @@ const gameStore = useGameStore()
       </div>
 
       <!-- Progress Bar -->
-      <div class="relative w-full h-5">
-        <div class="absolute inset-0 rounded-full tube-bg"></div>
+      <div class="relative w-full h-8 overflow-hidden rounded-full">
+        <!-- Leerer Hintergrund -->
+        <div class="absolute inset-0 tube-bg"></div>
+
+        <!-- Füllung: nur rechts runden, links clippt der Container -->
         <div
-          class="absolute inset-y-0 left-0 transition-all duration-1000 rounded-full tube-fill"
+          class="absolute inset-y-0 left-0 transition-all duration-1000 rounded-r-full tube-fill"
           :style="{ width: gameStore.universeRescueProgress + '%' }"
         ></div>
-        <!-- Shimmer -->
-        <div class="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
-          <div
-            class="h-full transition-all duration-700 ease-out"
-            :style="{
-              width: gameStore.universeRescueProgress + '%',
-              background: 'linear-gradient(to right, rgba(255,200,0,0.08), rgba(255,230,80,0.18))',
-            }"
-          ></div>
-        </div>
-        <!-- Chimes-Text im Balken -->
-        <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <span
-            class="text-[9px] font-bold tabular-nums tracking-wide"
-            style="
-              color: rgba(255, 230, 120, 0.92);
-              text-shadow:
-                0 0 7px rgba(255, 200, 0, 0.85),
-                0 1px 3px rgba(0, 0, 0, 0.95);
-            "
-          >
-            {{ formatNumber(gameStore.chimesForNextUniverse) }}
-            <span class="opacity-50">/</span>
-            {{ formatNumber(gameStore.chimesToUniverseRescue) }} chimes
-          </span>
-        </div>
-        <div class="absolute inset-0 rounded-full pointer-events-none tube-highlight"></div>
+
+        <!-- Shimmer über Füllung -->
         <div
-          class="absolute h-0.5 rounded-full top-1 left-3 right-3 tube-shine pointer-events-none"
+          class="absolute inset-y-0 left-0 transition-all duration-700 ease-out pointer-events-none"
+          :style="{
+            width: gameStore.universeRescueProgress + '%',
+            background: 'linear-gradient(to right, rgba(255,200,0,0.05), rgba(255,230,80,0.22))',
+          }"
         ></div>
+
+        <div class="absolute inset-0 pointer-events-none tube-highlight"></div>
+        <div class="absolute h-0.5 top-1.5 left-3 right-3 tube-shine pointer-events-none"></div>
       </div>
 
       <!-- Prestige Button -->
@@ -76,39 +61,29 @@ const gameStore = useGameStore()
 </template>
 
 <style scoped>
+/* Leere Bar: fast unsichtbar, nur ein feiner Goldrahmen */
 .tube-bg {
-  background:
-    linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.04) 0%,
-        transparent 20%,
-        transparent 80%,
-        rgba(0, 0, 0, 0.25) 100%
-      )
-      padding-box,
-    linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
-  background-color: rgba(20, 10, 2, 0.55);
-  border: 1.5px solid transparent;
+  background-color: rgba(10, 5, 0, 0.18);
+  border: 1.5px solid rgba(255, 215, 0, 0.2);
   box-shadow:
-    0 0 10px 2px rgba(255, 215, 0, 0.18),
-    inset 0 0 12px 3px rgba(255, 215, 0, 0.06),
-    inset 0 2px 8px rgba(0, 0, 0, 0.7),
-    inset 0 -2px 8px rgba(0, 0, 0, 0.55);
+    0 0 6px 1px rgba(255, 215, 0, 0.06),
+    inset 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
+/* Füllung: sattes Gold mit Glühen */
 .tube-fill {
   background: linear-gradient(
     to bottom,
-    rgba(255, 210, 80, 0.2) 0%,
-    rgba(255, 180, 0, 0.38) 30%,
-    rgba(200, 120, 0, 0.44) 50%,
-    rgba(255, 180, 0, 0.38) 70%,
-    rgba(255, 210, 80, 0.2) 100%
+    rgba(255, 220, 100, 0.55) 0%,
+    rgba(255, 185, 0, 0.85) 30%,
+    rgba(210, 130, 0, 0.95) 50%,
+    rgba(255, 185, 0, 0.85) 70%,
+    rgba(255, 220, 100, 0.55) 100%
   );
   box-shadow:
-    0 0 16px rgba(255, 215, 0, 0.3),
-    0 0 36px rgba(255, 180, 0, 0.12),
-    inset 0 0 14px rgba(255, 215, 0, 0.12);
+    0 0 20px rgba(255, 215, 0, 0.45),
+    0 0 45px rgba(255, 180, 0, 0.2),
+    inset 0 0 16px rgba(255, 215, 0, 0.18);
   overflow: hidden;
   animation: tubePulse 3s ease-in-out infinite;
 }
@@ -120,8 +95,8 @@ const gameStore = useGameStore()
   background: repeating-linear-gradient(
     90deg,
     transparent 0px,
-    rgba(255, 215, 0, 0.1) 15px,
-    rgba(255, 215, 0, 0.05) 25px,
+    rgba(255, 215, 0, 0.12) 15px,
+    rgba(255, 215, 0, 0.06) 25px,
     transparent 40px
   );
   animation: tubeFlow 2.5s linear infinite;
@@ -130,10 +105,10 @@ const gameStore = useGameStore()
 .tube-highlight {
   background: linear-gradient(
     to bottom,
-    rgba(255, 220, 100, 0.08) 0%,
+    rgba(255, 220, 100, 0.06) 0%,
     transparent 35%,
     transparent 65%,
-    rgba(0, 0, 0, 0.18) 100%
+    rgba(0, 0, 0, 0.14) 100%
   );
 }
 
@@ -141,9 +116,9 @@ const gameStore = useGameStore()
   background: linear-gradient(
     to right,
     transparent,
-    rgba(255, 215, 0, 0.12) 20%,
-    rgba(255, 235, 120, 0.22) 50%,
-    rgba(255, 215, 0, 0.12) 80%,
+    rgba(255, 215, 0, 0.1) 20%,
+    rgba(255, 235, 120, 0.2) 50%,
+    rgba(255, 215, 0, 0.1) 80%,
     transparent
   );
 }
@@ -153,16 +128,16 @@ const gameStore = useGameStore()
   100% {
     opacity: 0.85;
     box-shadow:
-      0 0 16px rgba(255, 215, 0, 0.3),
-      0 0 36px rgba(255, 180, 0, 0.12),
-      inset 0 0 14px rgba(255, 215, 0, 0.12);
+      0 0 20px rgba(255, 215, 0, 0.4),
+      0 0 45px rgba(255, 180, 0, 0.18),
+      inset 0 0 16px rgba(255, 215, 0, 0.14);
   }
   50% {
     opacity: 1;
     box-shadow:
-      0 0 28px rgba(255, 215, 0, 0.45),
-      0 0 55px rgba(255, 180, 0, 0.2),
-      inset 0 0 22px rgba(255, 215, 0, 0.2);
+      0 0 32px rgba(255, 215, 0, 0.6),
+      0 0 65px rgba(255, 180, 0, 0.28),
+      inset 0 0 24px rgba(255, 215, 0, 0.24);
   }
 }
 

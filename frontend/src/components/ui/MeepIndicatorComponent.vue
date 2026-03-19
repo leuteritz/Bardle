@@ -43,9 +43,9 @@ watch(
     />
 
     <!-- Text-Block -->
-    <div class="flex flex-col items-start leading-tight">
+    <div class="flex flex-col items-center leading-tight">
       <!-- Kleines Label -->
-      <span class="text-[9px] font-bold tracking-widest uppercase text-orange-600/50 mb-0.5">
+      <span class="text-[13px] font-bold tracking-widest uppercase text-orange-600/50 mb-0.5">
         Meeps
       </span>
 
@@ -61,16 +61,6 @@ watch(
       >
         {{ formatNumber(displayValue) }}
       </span>
-
-      <!-- Subtiler Unterstrich-Glow -->
-      <div
-        class="w-full h-px mt-1 transition-all duration-300 rounded-full"
-        :class="
-          isIncreasing
-            ? 'bg-gradient-to-r from-transparent via-orange-400/60 to-transparent'
-            : 'bg-gradient-to-r from-transparent via-orange-800/30 to-transparent'
-        "
-      />
     </div>
   </div>
 </template>

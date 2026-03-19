@@ -11,9 +11,12 @@ import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
 import TopRightHudComponent from './components/ui/TopRightHudComponent.vue'
+import InventoryModal from './components/InventoryModal.vue'
 
 const gameStore = useGameStore()
 const shopStore = useShopStore()
+
+const isInventoryOpen = ref(false)
 
 const totalUpgrades = computed(() => shopStore.shopUpgrades.reduce((sum, u) => sum + u.level, 0))
 const canAffordAny = computed(() =>
@@ -28,6 +31,7 @@ const activeTab = ref('idle')
     <StarBackgroundComponent />
     <PlanetRescueOverlay />
     <PlanetRescueModal />
+    <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div
       class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
@@ -60,7 +64,11 @@ const activeTab = ref('idle')
           </div>
         </div>
 
-        <div class="col-span-1 flex justify-end items-start px-4 py-4">
+        <div class="flex items-stretch justify-end col-span-1 px-4 py-4 gap-9">
+          <!-- Inventar-Button -->
+          <button class="w-24 h-24" title="Inventar öffnen" @click="isInventoryOpen = true">
+            <img src="/img/Bag.png" class="inventory-btn-img" alt="Inventar" />
+          </button>
           <TopRightHudComponent />
         </div>
       </div>
@@ -73,7 +81,6 @@ const activeTab = ref('idle')
             <GameCenterComponent :active-tab="activeTab" />
           </div>
         </div>
-
       </div>
     </div>
 

@@ -108,9 +108,12 @@ export const useBattleStore = defineStore('battle', {
     // Aktualisiert zufällig die Kampfstatistiken eines Teams
     randomizeTeamStats(team: ChampionState[]) {
       team.forEach((champ) => {
-        if (Math.random() < STAT_KILL_CHANCE) champ.kills += Math.round(Math.random() * STAT_MAX_KILLS)
-        if (Math.random() < STAT_DEATH_CHANCE) champ.deaths += Math.round(Math.random() * STAT_MAX_DEATHS)
-        if (Math.random() < STAT_ASSIST_CHANCE) champ.assists += Math.round(Math.random() * STAT_MAX_ASSISTS)
+        if (Math.random() < STAT_KILL_CHANCE)
+          champ.kills += Math.round(Math.random() * STAT_MAX_KILLS)
+        if (Math.random() < STAT_DEATH_CHANCE)
+          champ.deaths += Math.round(Math.random() * STAT_MAX_DEATHS)
+        if (Math.random() < STAT_ASSIST_CHANCE)
+          champ.assists += Math.round(Math.random() * STAT_MAX_ASSISTS)
       })
     },
 
@@ -413,7 +416,8 @@ export const useBattleStore = defineStore('battle', {
       this.currentRank.lp += lpChange
       let promotionThreshold = LP_NORMAL_PROMOTION_THRESHOLD
       if (currentTier === 'Master') promotionThreshold = LP_MASTER_PROMOTION_THRESHOLD
-      else if (currentTier === 'Grandmaster') promotionThreshold = LP_GRANDMASTER_PROMOTION_THRESHOLD
+      else if (currentTier === 'Grandmaster')
+        promotionThreshold = LP_GRANDMASTER_PROMOTION_THRESHOLD
       if (this.currentRank.lp >= promotionThreshold) this.promoteRank()
       if (this.currentRank.lp < 0) this.demoteRank()
     },
