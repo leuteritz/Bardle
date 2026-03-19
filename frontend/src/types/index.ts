@@ -133,6 +133,7 @@ export interface PlanetRescueEvent {
   saved: boolean
   expired: boolean
   potentialMaterialId: string
+  assignedDropChance: number
 }
 
 // Battle types

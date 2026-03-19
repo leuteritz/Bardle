@@ -16,11 +16,46 @@ type ModalId = 'shop' | 'charakter' | 'kampf' | 'admin'
 
 const activeModal = ref<ModalId | null>(null)
 
-const menuItems: { id: ModalId; label: string; icon: string; src: string; color: string; gradient: string }[] = [
-  { id: 'charakter', label: 'Charakter', icon: '🎭', src: '', color: 'violet', gradient: 'bg-gradient-to-r from-violet-500 to-purple-600' },
-  { id: 'kampf',     label: 'Kampf',     icon: '',   src: '/img/menu/BATTLE.png', color: 'rose', gradient: 'bg-gradient-to-r from-rose-500 to-red-600' },
-  { id: 'shop',      label: 'Shop',      icon: '',   src: '/img/menu/SHOP.png', color: 'emerald', gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600' },
-  { id: 'admin',     label: 'Admin',     icon: '⚙️', src: '', color: 'cyan', gradient: 'bg-gradient-to-r from-cyan-500 to-indigo-600' },
+const menuItems: {
+  id: ModalId
+  label: string
+  icon: string
+  src: string
+  color: string
+  gradient: string
+}[] = [
+  {
+    id: 'charakter',
+    label: 'Charakter',
+    icon: '🎭',
+    src: '',
+    color: 'violet',
+    gradient: 'bg-gradient-to-r from-violet-500 to-purple-600',
+  },
+  {
+    id: 'kampf',
+    label: 'Kampf',
+    icon: '',
+    src: '/img/menu/BATTLE.png',
+    color: 'rose',
+    gradient: 'bg-gradient-to-r from-rose-500 to-red-600',
+  },
+  {
+    id: 'shop',
+    label: 'Shop',
+    icon: '',
+    src: '/img/menu/SHOP.png',
+    color: 'emerald',
+    gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600',
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    icon: '⚙️',
+    src: '',
+    color: 'cyan',
+    gradient: 'bg-gradient-to-r from-cyan-500 to-indigo-600',
+  },
 ]
 
 const activeCharTab = ref<'rang' | 'faehigkeiten' | 'missionen'>('rang')
@@ -29,19 +64,26 @@ const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
 const openBardModal = () => {
   activeModal.value = activeModal.value !== null ? null : 'charakter'
 }
-const setTab = (id: ModalId) => { activeModal.value = id }
-const closeModal = () => { activeModal.value = null }
+const setTab = (id: ModalId) => {
+  activeModal.value = id
+}
+const closeModal = () => {
+  activeModal.value = null
+}
 
 const modalTheme = computed(() => {
-  const themes: Record<ModalId, {
-    accentBar: string
-    headerBg: string
-    border: string
-    glow: string
-    tabActive: string
-    iconGlow: string
-    closeHover: string
-  }> = {
+  const themes: Record<
+    ModalId,
+    {
+      accentBar: string
+      headerBg: string
+      border: string
+      glow: string
+      tabActive: string
+      iconGlow: string
+      closeHover: string
+    }
+  > = {
     charakter: {
       accentBar: 'from-violet-500 via-purple-400 to-violet-500',
       headerBg: 'bg-gradient-to-r from-violet-950/50 via-purple-950/30 to-transparent',
@@ -172,10 +214,23 @@ const modalTheme = computed(() => {
             :key="item.id"
             @click="setTab(item.id)"
             class="relative flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
-            :class="activeModal === item.id ? 'text-white shadow-lg' : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'"
+            :class="
+              activeModal === item.id
+                ? 'text-white shadow-lg'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
+            "
           >
-            <span v-if="activeModal === item.id" class="absolute inset-0 rounded-xl" :class="item.gradient" />
-            <img v-if="item.src" :src="item.src" :alt="item.label" class="relative z-10 w-5 h-5 object-contain" />
+            <span
+              v-if="activeModal === item.id"
+              class="absolute inset-0 rounded-xl"
+              :class="item.gradient"
+            />
+            <img
+              v-if="item.src"
+              :src="item.src"
+              :alt="item.label"
+              class="relative z-10 object-contain w-5 h-5"
+            />
             <span v-else class="relative z-10 text-base leading-none">{{ item.icon }}</span>
             <span class="relative z-10">{{ item.label }}</span>
           </button>
@@ -183,17 +238,17 @@ const modalTheme = computed(() => {
 
         <!-- Modal Header -->
         <div
-          class="relative flex items-center flex-shrink-0 border-b overflow-hidden"
+          class="relative flex items-center flex-shrink-0 overflow-hidden border-b"
           :class="[modalTheme.headerBg, modalTheme.border]"
         >
           <!-- Portal Links -->
-          <div class="relative flex items-center justify-center w-20 h-20 flex-shrink-0">
+          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/BardPortalRichtig.png"
               alt="Portal Start"
-              class="relative z-10 w-16 h-16 object-contain"
+              class="relative z-10 object-contain w-16 h-16"
             />
-            <div class="portal-effect absolute inset-0">
+            <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
               <div class="portal-vortex"></div>
               <div class="portal-ring"></div>
@@ -201,9 +256,11 @@ const modalTheme = computed(() => {
           </div>
 
           <!-- Mitte: Bard-Info + Close -->
-          <div class="flex flex-1 items-center justify-between px-4 py-5">
+          <div class="flex items-center justify-between flex-1 px-4 py-5">
             <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center w-9 h-9 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+              <div
+                class="flex items-center justify-center overflow-hidden border w-9 h-9 rounded-xl border-white/10 bg-white/5"
+              >
                 <img src="/img/BardAbilities/Bard.png" class="object-cover w-full h-full" />
               </div>
               <span
@@ -222,13 +279,13 @@ const modalTheme = computed(() => {
           </div>
 
           <!-- Portal Rechts -->
-          <div class="relative flex items-center justify-center w-20 h-20 flex-shrink-0">
+          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/PortalEndeRichtig.png"
               alt="Portal Ende"
-              class="relative z-10 w-16 h-16 object-contain"
+              class="relative z-10 object-contain w-16 h-16"
             />
-            <div class="portal-effect absolute inset-0">
+            <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
               <div class="portal-vortex"></div>
               <div class="portal-ring"></div>
@@ -242,10 +299,14 @@ const modalTheme = computed(() => {
           class="flex p-1.5 gap-1 bg-white/[0.04] border border-white/10 mx-4 my-3 rounded-2xl flex-shrink-0"
         >
           <button
-            v-for="tab in [{ id: 'rang', label: 'Rang' }, { id: 'faehigkeiten', label: 'Fähigkeiten' }, { id: 'missionen', label: 'Missionen' }]"
+            v-for="tab in [
+              { id: 'rang', label: 'Rang' },
+              { id: 'faehigkeiten', label: 'Fähigkeiten' },
+              { id: 'missionen', label: 'Missionen' },
+            ]"
             :key="tab.id"
             @click="activeCharTab = tab.id as 'rang' | 'faehigkeiten' | 'missionen'"
-            class="relative flex-1 px-4 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
+            class="relative flex-1 px-4 py-2 overflow-hidden text-sm font-bold tracking-wide transition-all duration-200 rounded-xl"
             :class="
               activeCharTab === tab.id
                 ? 'text-white shadow-lg shadow-violet-500/30'
@@ -267,10 +328,13 @@ const modalTheme = computed(() => {
           class="flex p-1.5 gap-1 bg-white/[0.04] border border-white/10 mx-4 my-3 rounded-2xl flex-shrink-0"
         >
           <button
-            v-for="tab in [{ id: 'champions', label: 'Champions' }, { id: 'ergebnisse', label: 'Ergebnisse' }]"
+            v-for="tab in [
+              { id: 'champions', label: 'Champions' },
+              { id: 'ergebnisse', label: 'Ergebnisse' },
+            ]"
             :key="tab.id"
             @click="activeKampfTab = tab.id as 'champions' | 'ergebnisse'"
-            class="relative flex-1 px-4 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
+            class="relative flex-1 px-4 py-2 overflow-hidden text-sm font-bold tracking-wide transition-all duration-200 rounded-xl"
             :class="
               activeKampfTab === tab.id
                 ? 'text-white shadow-lg shadow-rose-500/30'
@@ -296,7 +360,7 @@ const modalTheme = computed(() => {
             <div v-if="activeCharTab === 'rang'" class="p-4">
               <RankComponent />
             </div>
-            <div v-else-if="activeCharTab === 'faehigkeiten'" class="p-4">
+            <div v-else-if="activeCharTab === 'faehigkeiten'" class="p-2 overflow-hidden">
               <SkillTreeComponent />
             </div>
             <MissionComponent v-else-if="activeCharTab === 'missionen'" />

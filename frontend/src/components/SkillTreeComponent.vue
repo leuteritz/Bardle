@@ -1,7 +1,26 @@
 <script setup lang="ts">
+import { computed, markRaw, onMounted, nextTick } from 'vue'
+import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
+import { Background } from '@vue-flow/background'
+import { Controls } from '@vue-flow/controls'
+import { MiniMap } from '@vue-flow/minimap'
 import { useGameStore } from '../stores/gameStore'
+import SkillNode from './SkillNode.vue'
+
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
+import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
 
 const gameStore = useGameStore()
+const { fitView } = useVueFlow() // ← neu
+
+// fitView manuell nach dem Mount auslösen
+onMounted(async () => {
+  // ← neu
+  await nextTick()
+  setTimeout(() => fitView({ padding: 0.25, duration: 300 }), 100)
+})
 
 const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
 
@@ -32,150 +51,89 @@ const skills = [
   },
 ]
 
-// Arrow costs = cost of the skill to the right
-const arrowCosts = [SKILL_MEEP_COSTS[1], SKILL_MEEP_COSTS[2], SKILL_MEEP_COSTS[3]]
+// 2D-Positionen – frei im Raum verteilt (nach Belieben anpassen)
+const positions = [
+  { x: 60, y: 60 }, // Q – oben links
+  { x: 320, y: 200 }, // W – Mitte
+  { x: 100, y: 380 }, // E – unten links
+  { x: 520, y: 360 }, // R – unten rechts
+]
 
-function skillState(index: number): 'bought' | 'buyable' | 'locked' {
-  if (gameStore.abilityLevels[index] > 0) return 'bought'
+// ---------- Hilfsfunktion (spiegelt gameStore-Logik) ----------
+function skillState(idx: number): 'bought' | 'buyable' | 'locked' {
+  if (gameStore.abilityLevels[idx] > 0) return 'bought'
   if (
-    (index === 0 || gameStore.abilityLevels[index - 1] > 0) &&
-    gameStore.meeps >= SKILL_MEEP_COSTS[index]
+    (idx === 0 || gameStore.abilityLevels[idx - 1] > 0) &&
+    gameStore.meeps >= SKILL_MEEP_COSTS[idx]
   )
     return 'buyable'
   return 'locked'
 }
 
-function arrowState(arrowIndex: number): 'bought' | 'buyable' | 'locked' {
-  // Arrow arrowIndex connects skill[arrowIndex] → skill[arrowIndex+1]
-  const rightSkillIndex = arrowIndex + 1
-  return skillState(rightSkillIndex)
-}
+// ---------- Nodes ----------
+const nodes = computed(() =>
+  skills.map((skill, idx) => ({
+    id: skill.key,
+    type: 'skill',
+    position: positions[idx],
+    // Verhindert, dass VueFlow einen eigenen Wrapper-Border zeichnet
+    style: { background: 'transparent', border: 'none', padding: 0 },
+    data: { skill, index: idx, cost: SKILL_MEEP_COSTS[idx] },
+  })),
+)
 
-function handleBuy(index: number) {
-  if (skillState(index) === 'buyable') {
-    gameStore.unlockSkillWithMeeps(index)
-  }
-}
+// ---------- Edges  Q→W  W→E  E→R ----------
+const edgeDefs = [
+  { source: 'Q', target: 'W', targetIdx: 1 },
+  { source: 'W', target: 'E', targetIdx: 2 },
+  { source: 'E', target: 'R', targetIdx: 3 },
+]
+
+const edges = computed(() =>
+  edgeDefs.map(({ source, target, targetIdx }) => {
+    const s = skillState(targetIdx)
+    const color =
+      s === 'bought' ? '#f59e0b' : s === 'buyable' ? '#8b5cf6' : 'rgba(255,255,255,0.12)'
+    return {
+      id: `${source}-${target}`,
+      source,
+      target,
+      type: 'smoothstep',
+      animated: s === 'buyable',
+      label: `${SKILL_MEEP_COSTS[targetIdx]} Meeps`,
+      labelStyle: {
+        fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#c4b5fd' : 'rgba(255,255,255,0.2)',
+        fontWeight: '700',
+        fontSize: '10px',
+      },
+      labelBgStyle: { fill: 'rgba(10,5,30,0.75)', rx: 4 },
+      style: { stroke: color, strokeWidth: s === 'bought' ? 3 : 2 },
+      markerEnd: { type: MarkerType.ArrowClosed, color },
+    }
+  }),
+)
+
+const nodeTypes = { skill: markRaw(SkillNode) }
 </script>
 
 <template>
-  <div class="flex items-center w-full px-4 py-8 gap-0">
-    <template v-for="(skill, idx) in skills" :key="skill.key">
-      <!-- Skill Node -->
-      <div
-        class="relative flex flex-col items-center gap-2 flex-shrink-0 w-28"
-        :class="skillState(idx) === 'locked' ? 'opacity-50' : ''"
-      >
-        <!-- Key Badge -->
-        <div
-          class="absolute -top-2 -left-2 z-10 w-6 h-6 flex items-center justify-center rounded-full text-xs font-black border"
-          :class="{
-            'bg-yellow-500/80 border-yellow-300/80 text-yellow-900': skillState(idx) === 'bought',
-            'bg-violet-600/80 border-violet-400/80 text-white': skillState(idx) === 'buyable',
-            'bg-white/10 border-white/20 text-white/50': skillState(idx) === 'locked',
-          }"
-        >
-          {{ skill.key }}
-        </div>
-
-        <!-- Box -->
-        <button
-          class="relative w-20 h-20 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 overflow-hidden"
-          :class="{
-            'border-yellow-400/80 bg-gradient-to-br from-yellow-900/40 to-amber-900/30 shadow-[0_0_20px_rgba(234,179,8,0.3)] ring-2 ring-yellow-400/50':
-              skillState(idx) === 'bought',
-            'border-violet-400/60 bg-gradient-to-br from-violet-900/30 to-purple-900/20 hover:shadow-[0_0_16px_rgba(124,58,237,0.3)] cursor-pointer hover:border-violet-300/80':
-              skillState(idx) === 'buyable',
-            'border-white/10 bg-white/5 cursor-not-allowed': skillState(idx) === 'locked',
-          }"
-          :disabled="skillState(idx) !== 'buyable'"
-          @click="handleBuy(idx)"
-        >
-          <!-- Gold shimmer for bought -->
-          <div
-            v-if="skillState(idx) === 'bought'"
-            class="absolute inset-0 bg-gradient-to-br from-yellow-400/10 to-transparent"
-          />
-          <img :src="skill.icon" :alt="skill.key" class="w-12 h-12 object-contain relative z-10" />
-        </button>
-
-        <!-- Effect label -->
-        <div class="text-center">
-          <div
-            class="text-xs font-bold leading-tight"
-            :class="{
-              'text-yellow-300': skillState(idx) === 'bought',
-              'text-violet-300': skillState(idx) === 'buyable',
-              'text-white/30': skillState(idx) === 'locked',
-            }"
-          >
-            {{ skill.effect }}
-          </div>
-          <div class="text-[10px] text-white/40 leading-tight mt-0.5">
-            {{ skill.description }}
-          </div>
-        </div>
-
-        <!-- Cost / Unlocked badge -->
-        <div
-          v-if="skillState(idx) !== 'bought'"
-          class="text-[10px] font-bold px-2 py-0.5 rounded-full border"
-          :class="{
-            'bg-violet-900/50 border-violet-400/40 text-violet-200': skillState(idx) === 'buyable',
-            'bg-white/5 border-white/10 text-white/30': skillState(idx) === 'locked',
-          }"
-        >
-          {{ SKILL_MEEP_COSTS[idx] }} Meeps
-        </div>
-        <div
-          v-else
-          class="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-yellow-900/40 border-yellow-400/40 text-yellow-300"
-        >
-          Freigeschaltet
-        </div>
-      </div>
-
-      <!-- Arrow between nodes -->
-      <div
-        v-if="idx < 3"
-        class="relative flex items-center flex-shrink-0"
-        :style="{ flexGrow: arrowCosts[idx] }"
-      >
-        <!-- Arrow line -->
-        <div
-          class="w-full h-1 rounded-full relative"
-          :class="{
-            'bg-gradient-to-r from-yellow-500 to-amber-400 shadow-[0_0_8px_rgba(234,179,8,0.6)]':
-              arrowState(idx) === 'bought',
-            'bg-gradient-to-r from-violet-500/50 to-purple-400/50': arrowState(idx) === 'buyable',
-            'bg-white/10': arrowState(idx) === 'locked',
-          }"
-        >
-          <!-- Cost label above arrow -->
-          <div
-            class="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold whitespace-nowrap"
-            :class="{
-              'text-yellow-400/80': arrowState(idx) === 'bought',
-              'text-violet-300/70': arrowState(idx) === 'buyable',
-              'text-white/20': arrowState(idx) === 'locked',
-            }"
-          >
-            {{ arrowCosts[idx] }} Meeps
-          </div>
-
-          <!-- Arrowhead -->
-          <div
-            class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full text-xs leading-none"
-            :class="{
-              'text-amber-400': arrowState(idx) === 'bought',
-              'text-purple-400/60': arrowState(idx) === 'buyable',
-              'text-white/15': arrowState(idx) === 'locked',
-            }"
-          >
-            ▶
-          </div>
-        </div>
-      </div>
-    </template>
+  <div style="width: 100%; height: 460px; position: relative">
+    <VueFlow
+      :nodes="nodes"
+      :edges="edges"
+      :node-types="nodeTypes"
+      :nodes-draggable="false"
+      :nodes-connectable="false"
+      :elements-selectable="false"
+      :select-nodes-on-drag="false"
+      :min-zoom="0.3"
+      :max-zoom="2.5"
+      :fit-view-on-init="false"
+      class="!bg-transparent"
+    >
+      <Background variant="dots" :gap="28" pattern-color="rgba(255,255,255,0.04)" :size="1.2" />
+      <Controls position="bottom-left" />
+      <!-- MiniMap entfernt -->
+    </VueFlow>
   </div>
 </template>
