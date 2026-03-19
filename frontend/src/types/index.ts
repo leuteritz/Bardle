@@ -167,3 +167,15 @@ export interface BattleResult {
   opponent: Opponent
   winProbability: number
 }
+
+// Material types
+export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
+
+export interface Material {
+  id: string
+  name: string
+  icon: string
+  description: string
+  rarity: MaterialRarity
+  dropChance: number
+}

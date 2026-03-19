@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { useShopStore } from '../stores/shopStore'
-import { formatNumber } from '../config/numberFormat'
+import { useInventoryStore } from '../stores/inventoryStore'
+import { MATERIALS } from '../config/materials'
 
-const gameStore = useGameStore()
-const shopStore = useShopStore()
+const inventoryStore = useInventoryStore()
 
-const ownedBuildings = computed(() =>
-  shopStore.shopUpgrades.filter((u) => u.level > 0),
+const allMaterials = computed(() =>
+  MATERIALS.map((m) => ({
+    ...m,
+    count: inventoryStore.collectedMaterials[m.id] ?? 0,
+  })),
 )
+
+const rarityColor: Record<string, string> = {
+  common: '#fbbf24',
+  uncommon: '#34d399',
+  rare: '#60a5fa',
+  epic: '#c084fc',
+}
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -31,34 +39,33 @@ function onBackdropClick(e: MouseEvent) {
 
         <div class="divider" />
 
-        <!-- Ressourcen -->
+        <!-- Materialien -->
         <section class="w-full">
-          <h3 class="section-label">Ressourcen</h3>
-          <ul class="item-list">
-            <li class="item-row">
-              <img src="/img/BardAbilities/BardChime.png" class="item-icon" />
-              <span class="item-name">Chimes</span>
-              <span class="item-count">{{ formatNumber(gameStore.chimes) }}</span>
-            </li>
-            <li class="item-row">
-              <img src="/img/BardAbilities/BardMeep.png" class="item-icon" />
-              <span class="item-name">Meeps</span>
-              <span class="item-count">{{ formatNumber(gameStore.meeps) }}</span>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Gebäude -->
-        <section class="w-full mt-2">
-          <h3 class="section-label">Gebäude</h3>
-          <ul v-if="ownedBuildings.length > 0" class="item-list">
-            <li v-for="building in ownedBuildings" :key="building.id" class="item-row">
-              <img :src="building.icon" class="item-icon" :alt="building.name" />
-              <span class="item-name">{{ building.name }}</span>
-              <span class="item-count">{{ building.level }}</span>
-            </li>
-          </ul>
-          <p v-else class="empty-hint">Noch keine Gebäude erworben.</p>
+          <h3 class="section-label">Materialien</h3>
+          <div class="material-grid">
+            <div
+              v-for="material in allMaterials"
+              :key="material.id"
+              class="material-card"
+              :class="{ 'material-card--empty': material.count === 0 }"
+              :style="{
+                borderColor: rarityColor[material.rarity],
+                boxShadow: material.count > 0
+                  ? `0 0 10px ${rarityColor[material.rarity]}55, inset 0 0 8px ${rarityColor[material.rarity]}15`
+                  : `0 0 4px ${rarityColor[material.rarity]}22`,
+              }"
+            >
+              <span
+                class="material-card__count"
+                :style="{ color: material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.45)' }"
+              >{{ material.count }}</span>
+              <div class="material-card__emoji">{{ material.icon }}</div>
+              <div
+                class="material-card__name"
+                :style="{ color: material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.4)' }"
+              >{{ material.name }}</div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -132,63 +139,55 @@ function onBackdropClick(e: MouseEvent) {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(251, 146, 60, 0.45);
-  margin: 0 0 0.4rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
-.item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+.material-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
   width: 100%;
 }
 
-.item-row {
+.material-card {
+  position: relative;
+  padding: 0.75rem 0.6rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid;
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.15s;
-}
-.item-row:hover {
-  background: rgba(251, 146, 60, 0.06);
+  gap: 0.25rem;
+  transition: box-shadow 0.2s, opacity 0.2s;
 }
 
-.item-icon {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.3));
+.material-card--empty {
+  opacity: 0.35;
+  filter: grayscale(0.6);
 }
 
-.item-name {
-  flex: 1;
-  font-size: 0.88rem;
-  color: rgba(255, 220, 160, 0.85);
-  font-family: 'MedievalSharp', serif;
-}
-
-.item-count {
-  font-size: 0.95rem;
+.material-card__count {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
   font-weight: bold;
-  color: #fbbf24;
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
   font-family: 'MedievalSharp', serif;
-  min-width: 2.5rem;
-  text-align: right;
+  line-height: 1;
 }
 
-.empty-hint {
-  font-size: 0.78rem;
-  color: rgba(255, 200, 130, 0.4);
-  margin: 0.25rem 0 0;
-  font-style: italic;
+.material-card__emoji {
+  font-size: 2rem;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.material-card__name {
+  font-size: 0.7rem;
+  text-align: center;
+  font-family: 'MedievalSharp', serif;
+  line-height: 1.2;
 }
 
 /* Transition */

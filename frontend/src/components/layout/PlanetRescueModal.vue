@@ -40,10 +40,12 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { useGameStore } from '../../stores/gameStore'
+import { useInventoryStore } from '../../stores/inventoryStore'
 import { NS, drawPlanet } from '../../utils/planetDraw'
 
 const planetEventStore = usePlanetEventStore()
 const gameStore = useGameStore()
+const inventoryStore = useInventoryStore()
 
 const planetStage = ref<HTMLDivElement | null>(null)
 
@@ -115,6 +117,7 @@ function handleClick() {
       gameStore.chimesForNextUniverse += Math.floor(reward * 0.3)
       gameStore.calculateLevel()
     }
+    inventoryStore.tryDropMaterial(0.30)
   } else {
     // Pulse feedback on intermediate clicks
     const svg = planetStage.value?.querySelector('svg') as SVGSVGElement | null
