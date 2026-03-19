@@ -41,8 +41,9 @@ export const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
 
 // Planet events
 export const PLANET_MAX_COUNT = 3
-export const PLANET_SPAWN_INTERVAL_MIN = 11_000
-export const PLANET_SPAWN_INTERVAL_MAX = 24_000
+export const PLANET_SPAWN_INTERVAL_MIN = 6_000
+export const PLANET_SPAWN_INTERVAL_MAX = 14_000
+export const PLANET_EVENT_CHECK_INTERVAL = 30
 export const PLANET_RESCUE_DURATION_MIN = 5_000
 export const PLANET_RESCUE_DURATION_MAX = 10_000
 export const PLANET_RESCUE_CLICKS_MIN = 5

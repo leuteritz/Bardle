@@ -14,6 +14,7 @@ import {
   type PlanetTypeConfig,
   PLANET_TYPE_CONFIGS,
 } from '../utils/planetDraw'
+import { MATERIALS } from '../config/materials'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     return { id, type: config.type }
   }
 
-  function markPlanetAsRescue(id: string): void {
+  function markPlanetAsRescue(id: string, materialIcon?: string): void {
     const item = planets.find((p) => p.id === id)
     if (!item) return
 
@@ -169,11 +170,12 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     // Distress animation + styling
     item.el.classList.add('planet--rescue')
 
-    // Add "!" warning text inside the SVG
     const size = parseFloat(item.el.getAttribute('width') ?? '80')
+
+    // Add "!" warning text inside the SVG (shifted up to make room for material icon)
     const warning = document.createElementNS(NS, 'text')
     warning.setAttribute('x', String(size / 2))
-    warning.setAttribute('y', String(size * 0.22))
+    warning.setAttribute('y', String(size * (materialIcon ? 0.15 : 0.22)))
     warning.setAttribute('text-anchor', 'middle')
     warning.setAttribute('dominant-baseline', 'middle')
     warning.setAttribute('font-size', String(size * 0.28))
@@ -183,6 +185,19 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     warning.setAttribute('pointer-events', 'none')
     warning.textContent = '!'
     item.el.appendChild(warning)
+
+    // Add material icon below the "!" if available
+    if (materialIcon) {
+      const matText = document.createElementNS(NS, 'text')
+      matText.setAttribute('x', String(size / 2))
+      matText.setAttribute('y', String(size * 0.52))
+      matText.setAttribute('text-anchor', 'middle')
+      matText.setAttribute('dominant-baseline', 'middle')
+      matText.setAttribute('font-size', String(size * 0.30))
+      matText.setAttribute('pointer-events', 'none')
+      matText.textContent = materialIcon
+      item.el.appendChild(matText)
+    }
 
     // Click opens the rescue modal
     item.el.addEventListener('click', () => {
@@ -273,8 +288,11 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     (pending) => {
       if (!pending || !container.value) return
       const { id: targetId, type: targetType } = spawnOrbitPlanet()
-      markPlanetAsRescue(targetId)
+      // Activate first so potentialMaterialId is set before we render the icon
       planetEventStore.activatePlanetRescue(targetId, targetType)
+      const materialId = planetEventStore.activePlanetEvent?.potentialMaterialId
+      const materialIcon = materialId ? (MATERIALS.find((m) => m.id === materialId)?.icon) : undefined
+      markPlanetAsRescue(targetId, materialIcon)
       container.value.classList.add('stars--rescue-active')
     },
   )

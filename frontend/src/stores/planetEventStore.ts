@@ -8,7 +8,9 @@ import {
   PLANET_RESCUE_BASE_REWARD,
   PLANET_EVENT_BASE_CHANCE,
   PLANET_EVENT_PRESTIGE_BONUS,
+  PLANET_EVENT_CHECK_INTERVAL,
 } from '../config/constants'
+import { pickMaterial } from '../config/materials'
 
 export const usePlanetEventStore = defineStore('planetEvent', {
   state: () => ({
@@ -39,7 +41,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       }
 
       // Roll for new event every 60 in-game seconds
-      if (inGameTime - this.lastEventCheckSecond < 60) return
+      if (inGameTime - this.lastEventCheckSecond < PLANET_EVENT_CHECK_INTERVAL) return
       if (this.activePlanetEvent || this.pendingRescue) return
 
       this.lastEventCheckSecond = inGameTime
@@ -93,6 +95,8 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       // Reward scales from BASE (easy) to BASE * 5 (hardest)
       const reward = Math.floor(PLANET_RESCUE_BASE_REWARD * (1 + difficulty * 4))
 
+      const potentialMaterial = pickMaterial()
+
       this.activePlanetEvent = {
         planetId,
         planetType,
@@ -103,6 +107,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
         clicksMade: 0,
         saved: false,
         expired: false,
+        potentialMaterialId: potentialMaterial.id,
       }
       this.pendingRescue = false
     },

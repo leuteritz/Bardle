@@ -50,3 +50,13 @@ export const MATERIALS: Material[] = [
     dropChance: 0.02,
   },
 ]
+
+export function pickMaterial(): Material {
+  const total = MATERIALS.reduce((sum, m) => sum + m.dropChance, 0)
+  let roll = Math.random() * total
+  for (const m of MATERIALS) {
+    roll -= m.dropChance
+    if (roll <= 0) return m
+  }
+  return MATERIALS[MATERIALS.length - 1]
+}

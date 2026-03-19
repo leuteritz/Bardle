@@ -31,6 +31,16 @@
         </div>
 
         <p class="hint-text">Click the planet to rescue it!</p>
+
+        <!-- Mögliche Material-Drops -->
+        <div class="drop-list">
+          <p class="drop-list-title">Mögliche Drops</p>
+          <div v-for="mat in MATERIALS" :key="mat.id" class="drop-row">
+            <span class="drop-icon">{{ mat.icon }}</span>
+            <span class="drop-name" :class="`rarity--${mat.rarity}`">{{ mat.name }}</span>
+            <span class="drop-chance">{{ (mat.dropChance * 100).toFixed(0) }}%</span>
+          </div>
+        </div>
       </div>
     </div>
   </Transition>
@@ -42,6 +52,7 @@ import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { useGameStore } from '../../stores/gameStore'
 import { useInventoryStore } from '../../stores/inventoryStore'
 import { NS, drawPlanet } from '../../utils/planetDraw'
+import { MATERIALS } from '../../config/materials'
 
 const planetEventStore = usePlanetEventStore()
 const gameStore = useGameStore()
@@ -243,6 +254,54 @@ function handleClick() {
   margin: 0;
   letter-spacing: 0.03em;
 }
+
+.drop-list {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.drop-list-title {
+  font-size: 0.6rem;
+  color: rgba(255, 200, 130, 0.45);
+  margin: 0 0 0.2rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.drop-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+}
+
+.drop-icon {
+  font-size: 0.85rem;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.drop-name {
+  flex: 1;
+}
+
+.drop-chance {
+  color: rgba(255, 200, 100, 0.75);
+  font-weight: bold;
+  min-width: 2rem;
+  text-align: right;
+}
+
+.rarity--common   { color: rgba(200, 200, 200, 0.75); }
+.rarity--uncommon { color: rgba(100, 220, 100, 0.9); }
+.rarity--rare     { color: rgba(100, 150, 255, 0.9); }
+.rarity--epic     { color: rgba(200, 100, 255, 0.9); }
 
 /* Transition */
 .modal-fade-enter-active {

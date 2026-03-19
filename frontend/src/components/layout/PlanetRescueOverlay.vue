@@ -169,7 +169,7 @@ watch(
 /* Toasts */
 .planet-toast {
   position: fixed;
-  top: 23vh;
+  top: 15vh;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;

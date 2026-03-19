@@ -132,6 +132,7 @@ export interface PlanetRescueEvent {
   clicksMade: number
   saved: boolean
   expired: boolean
+  potentialMaterialId: string
 }
 
 // Battle types
