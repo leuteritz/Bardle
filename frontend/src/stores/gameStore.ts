@@ -12,12 +12,18 @@ import {
   MAX_ABILITY_LEVEL,
   SKILL_MEEP_COSTS,
 } from '../config/constants'
-import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition, ModifierEffects, AugmentEffects } from '../types'
+import type {
+  BuildingProduction,
+  TotalBuildingProduction,
+  ShopUpgrade,
+  Expedition,
+  ModifierEffects,
+  AugmentEffects,
+} from '../types'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
 }
-
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -56,6 +62,8 @@ export const useGameStore = defineStore('game', {
     isEncyclopediaOpen: false,
 
     activeExpedition: null as Expedition | null,
+
+    isHyperspaceActive: false,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -68,7 +76,9 @@ export const useGameStore = defineStore('game', {
             Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
           )
           const meepCostMod = this.activeModifier.meepCostMultiplier ?? 1
-          this.meepChimeRequirement = Math.ceil(baseCost * this.abilityMeepCostMultiplier * meepCostMod)
+          this.meepChimeRequirement = Math.ceil(
+            baseCost * this.abilityMeepCostMultiplier * meepCostMod,
+          )
           this.chimesForMeep = 0
         }, 100)
       }
@@ -113,6 +123,45 @@ export const useGameStore = defineStore('game', {
       this.activeAugments.push(id)
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
+      const shopStore = useShopStore()
+      this.chimesPerSecond = shopStore.calculateTotalCPS()
+      this.chimesPerClick = shopStore.calculateTotalCPC()
+    },
+
+    skipAllAugments() {
+      // Aktuell ausstehende Auswahl: erstes Augment nehmen
+      if (this.pendingAugmentOptions.length > 0) {
+        const firstId = this.pendingAugmentOptions[0]
+        if (!this.activeAugments.includes(firstId)) {
+          this.activeAugments.push(firstId)
+        }
+      }
+
+      this.pendingAugmentChoice = false
+      this.pendingAugmentOptions = []
+
+      const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
+      const spInterval = this.activeModifier.skillPointInterval ?? 2
+
+      // Alle verbleibenden Level-Ups abarbeiten, jeweils erstes Augment auto-wählen
+      while (this.chimes >= this.chimesForNextLevel) {
+        this.level++
+        this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        if (this.level % spInterval === 0) {
+          this.skillPoints++
+        }
+
+        this.triggerAugmentSelection()
+        if (this.pendingAugmentOptions.length > 0) {
+          const firstId = this.pendingAugmentOptions[0]
+          if (!this.activeAugments.includes(firstId)) {
+            this.activeAugments.push(firstId)
+          }
+        }
+        this.pendingAugmentChoice = false
+        this.pendingAugmentOptions = []
+      }
+
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
@@ -190,9 +239,8 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Führt Prestige durch: wechselt Universum und setzt Spielstand zurück
-    triggerPrestige() {
-      if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
+    // Führt den eigentlichen Prestige-Reset durch
+    executePrestigeReset() {
       this.currentUniverse++
       this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
       this.chimesForNextUniverse = 0
@@ -218,6 +266,31 @@ export const useGameStore = defineStore('game', {
       })
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
+    },
+
+    // Führt Prestige durch: startet Hyperspace-Animation, dann Reset
+    triggerPrestige() {
+      if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
+      if (this.isHyperspaceActive) return
+
+      // Skip animation for reduced motion
+      if (
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        this.executePrestigeReset()
+        return
+      }
+
+      this.isHyperspaceActive = true
+      // Execute reset during white flash (at 2.5s)
+      setTimeout(() => {
+        this.executePrestigeReset()
+      }, 2500)
+      // End animation after flash fades (at 3.5s)
+      setTimeout(() => {
+        this.isHyperspaceActive = false
+      }, 3500)
     },
 
     // Verarbeitet passive Einnahmen pro Sekunde
@@ -296,7 +369,8 @@ export const useGameStore = defineStore('game', {
           if (k === 'abilityPowerPerLevel') {
             result[k] = ((result[k] as number | undefined) ?? 0) + (val as number)
           } else {
-            ;(result as Record<string, number>)[k] = ((result[k] as number | undefined) ?? 1) * (val as number)
+            ;(result as Record<string, number>)[k] =
+              ((result[k] as number | undefined) ?? 1) * (val as number)
           }
         }
       }
@@ -310,10 +384,12 @@ export const useGameStore = defineStore('game', {
       return {
         cpsMultiplier: (base.cpsMultiplier ?? 1) * (aug.cpsMultiplier ?? 1),
         cpcMultiplier: (base.cpcMultiplier ?? 1) * (aug.cpcMultiplier ?? 1),
-        buildingCostMultiplier: (base.buildingCostMultiplier ?? 1) * (aug.buildingCostMultiplier ?? 1),
+        buildingCostMultiplier:
+          (base.buildingCostMultiplier ?? 1) * (aug.buildingCostMultiplier ?? 1),
         meepCostMultiplier: (base.meepCostMultiplier ?? 1) * (aug.meepCostMultiplier ?? 1),
         meepPowerMultiplier: (base.meepPowerMultiplier ?? 1) * (aug.meepPowerMultiplier ?? 1),
-        expeditionRewardMultiplier: (base.expeditionRewardMultiplier ?? 1) * (aug.expeditionRewardMultiplier ?? 1),
+        expeditionRewardMultiplier:
+          (base.expeditionRewardMultiplier ?? 1) * (aug.expeditionRewardMultiplier ?? 1),
         levelExponent: base.levelExponent,
         maxAbilityLevel: base.maxAbilityLevel,
         skillPointInterval: base.skillPointInterval,
@@ -350,10 +426,7 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet den Fortschritt im aktuellen Level als Prozent
     levelProgress(): number {
-      return Math.min(
-        100,
-        Math.max(0, (this.currentLevelChimes / this.totalChimesThisLevel) * 100),
-      )
+      return Math.min(100, Math.max(0, (this.currentLevelChimes / this.totalChimesThisLevel) * 100))
     },
 
     // Berechnet die Gesamtkampfkraft des Spielers

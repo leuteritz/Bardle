@@ -9,6 +9,7 @@ import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
 import AugmentSelectionModal from './components/AugmentSelectionModal.vue'
 import AugmentBuffPanel from './components/AugmentBuffPanel.vue'
+import HyperspaceOverlay from './components/HyperspaceOverlay.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
@@ -35,6 +36,7 @@ const activeTab = ref('idle')
     <PlanetRescueModal />
     <AugmentSelectionModal />
     <AugmentBuffPanel />
+    <HyperspaceOverlay />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div

@@ -86,6 +86,16 @@ function getEffectLines(aug: AugmentDefinition): string[] {
           </div>
         </div>
 
+        <!-- Skip -->
+        <div class="flex justify-center pt-4 px-6">
+          <button
+            class="text-sm text-gray-400 hover:text-white underline"
+            @click="gameStore.skipAllAugments()"
+          >
+            Alle ausstehenden Auswahlen überspringen
+          </button>
+        </div>
+
         <!-- Cards -->
         <div class="flex flex-row gap-4 p-6">
           <button

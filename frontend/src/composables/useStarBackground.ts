@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useGameStore } from '../stores/gameStore'
 import { STAR_COUNT } from '../config/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -951,6 +952,8 @@ export function useStarBackground() {
   let nextStarId = 1
   let animFrame = 0
   let lastTimestamp = 0
+  let hyperspaceElapsed = 0
+  let wasHyperspaceActive = false
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -1084,6 +1087,24 @@ export function useStarBackground() {
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
+    // Hyperspace state — access store directly each frame to avoid circular dep issues
+    const gameStore = useGameStore()
+    const hyperActive = gameStore.isHyperspaceActive
+
+    if (hyperActive && !wasHyperspaceActive) {
+      hyperspaceElapsed = 0
+    }
+    wasHyperspaceActive = hyperActive
+
+    if (hyperActive) {
+      hyperspaceElapsed += delta
+    }
+
+    // Speed multiplier: ramps from 1× to 20× over first 2s of hyperspace
+    const speedMultiplier = hyperActive
+      ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
+      : 1
+
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
     const h = starsContainer.value?.clientHeight ?? window.innerHeight
 
@@ -1098,12 +1119,15 @@ export function useStarBackground() {
 
     for (const star of stars) {
       const norm = star.dist / maxDist // 0–1
-      const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX // quadratisch → langsam nahe Mitte
+      const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
       star.dist += speed * delta
 
       if (star.dist > maxDist) {
         star.angle = Math.random() * Math.PI * 2
-        star.dist = maxDist * (0.1 + Math.random() * 0.35)
+        // During hyperspace, respawn closer to center for "rushing past" effect
+        star.dist = hyperActive
+          ? maxDist * (0.02 + Math.random() * 0.08)
+          : maxDist * (0.1 + Math.random() * 0.35)
         star.baseSpeed = 0.5 + Math.random() * 1.0
       }
 
@@ -1116,22 +1140,38 @@ export function useStarBackground() {
       star.twinklePhase += star.twinkleSpeed * delta
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
-      const alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
-
-      // Größe wächst mit Distanz
-      const starSize = 0.8 + norm * norm * 5.0
+      const alpha = hyperActive
+        ? Math.min(1, distAlpha * 1.5)
+        : distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
 
       if (ctx) {
-        // Core
-        ctx.beginPath()
-        ctx.arc(x, y, starSize, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
-        ctx.fill()
-        // Glow
-        ctx.beginPath()
-        ctx.arc(x, y, starSize * 2, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.12).toFixed(2)})`
-        ctx.fill()
+        if (hyperActive && speedMultiplier > 1.5) {
+          // Draw radial streaks instead of circles
+          const trailLength = speed * delta * 2
+          const prevX = cx + Math.cos(star.angle) * (star.dist - trailLength)
+          const prevY = cy + Math.sin(star.angle) * (star.dist - trailLength)
+          const lineWidth = 1 + speedMultiplier * 0.15
+          ctx.beginPath()
+          ctx.moveTo(prevX, prevY)
+          ctx.lineTo(x, y)
+          ctx.strokeStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
+          ctx.lineWidth = lineWidth
+          ctx.lineCap = 'round'
+          ctx.stroke()
+        } else {
+          // Normal star rendering
+          const starSize = 0.8 + norm * norm * 5.0
+          // Core
+          ctx.beginPath()
+          ctx.arc(x, y, starSize, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
+          ctx.fill()
+          // Glow
+          ctx.beginPath()
+          ctx.arc(x, y, starSize * 2, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.12).toFixed(2)})`
+          ctx.fill()
+        }
       }
     }
 
@@ -1146,6 +1186,11 @@ export function useStarBackground() {
       if (p < 0.15) opacity = p / 0.15
       else if (p < 0.75) opacity = 1
       else opacity = 1 - (p - 0.75) / 0.25
+
+      // Fade galaxies out during hyperspace
+      if (hyperActive) {
+        opacity *= Math.max(0, 1 - hyperspaceElapsed * 2)
+      }
 
       g.el.style.opacity = opacity.toFixed(2)
       g.el.style.transform = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
