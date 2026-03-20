@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
+import { usePersistence } from '../composables/usePersistence'
 import ShopComponent from './gameCenter/idle/ShopComponent.vue'
 import RankComponent from './RankComponent.vue'
 import SkillTreeComponent from './SkillTreeComponent.vue'
@@ -11,6 +12,13 @@ import MissionComponent from './missions/MissionComponent.vue'
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
+
+const { resetGame } = usePersistence()
+const handleReset = () => {
+  if (window.confirm('Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    resetGame()
+  }
+}
 
 type ModalId = 'shop' | 'charakter' | 'kampf' | 'admin'
 
@@ -126,7 +134,7 @@ const modalTheme = computed(() => {
 </script>
 
 <template>
-  <div class="relative flex items-start">
+  <div class="relative flex items-start gap-2">
     <!-- ─── Bard Portrait ─── -->
     <div class="cursor-pointer group" @click="openBardModal">
       <div class="relative w-36 h-36">
@@ -172,6 +180,15 @@ const modalTheme = computed(() => {
         </div>
       </div>
     </div>
+
+    <!-- ─── Reset Button ─── -->
+    <button
+      class="mt-1 px-3 py-1.5 text-xs rounded-lg border border-red-500/40 bg-gradient-to-b from-red-900/60 to-red-950/80 backdrop-blur-sm text-red-300 hover:text-red-200 hover:border-red-400/60 hover:from-red-800/70 transition-all duration-200"
+      title="Spielstand löschen (Entwickler-Reset)"
+      @click="handleReset"
+    >
+      Reset
+    </button>
   </div>
 
   <!-- ─── Backdrop ─── -->
