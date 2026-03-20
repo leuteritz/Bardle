@@ -3,14 +3,12 @@ import { computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { MiniMap } from '@vue-flow/minimap'
 import { useGameStore } from '../stores/gameStore'
 import SkillNode from './SkillNode.vue'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
-import '@vue-flow/minimap/dist/style.css'
 
 const gameStore = useGameStore()
 const { fitView } = useVueFlow() // ← neu
