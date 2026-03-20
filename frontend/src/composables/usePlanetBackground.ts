@@ -70,7 +70,8 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const w = container.value.clientWidth || window.innerWidth
     const h = container.value.clientHeight || window.innerHeight
 
-    const mx = w * 0.12, my = h * 0.12
+    const mx = w * 0.12,
+      my = h * 0.12
     const minCenterDist = Math.min(w, h) * 0.22
     let cx: number, cy: number
     let attempts = 0
@@ -79,7 +80,8 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       cy = my + Math.random() * (h - 2 * my)
       attempts++
     } while (Math.hypot(cx - w / 2, cy - h / 2) < minCenterDist && attempts < 10)
-    const x = cx - r, y = cy - r
+    const x = cx - r,
+      y = cy - r
 
     const lifetime = 8_000 + Math.random() * 4_000
     const scaleEnd = 0.85 + Math.random() * 0.75
@@ -98,7 +100,17 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     svg.style.transform = `translate(${x}px,${y}px) scale(0.05)`
     container.value.appendChild(svg)
 
-    const item: PlanetItem = { id, el: svg, x, y, scale: 0.05, scaleEnd, lifetime, elapsed: 0, removeTimeout: null }
+    const item: PlanetItem = {
+      id,
+      el: svg,
+      x,
+      y,
+      scale: 0.05,
+      scaleEnd,
+      lifetime,
+      elapsed: 0,
+      removeTimeout: null,
+    }
     planets.push(item)
     return id
   }
@@ -172,28 +184,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
     const size = parseFloat(item.el.getAttribute('width') ?? '80')
 
-    // Add "!" warning text inside the SVG (shifted up to make room for material icon)
-    const warning = document.createElementNS(NS, 'text')
-    warning.setAttribute('x', String(size / 2))
-    warning.setAttribute('y', String(size * (materialIcon ? 0.15 : 0.22)))
-    warning.setAttribute('text-anchor', 'middle')
-    warning.setAttribute('dominant-baseline', 'middle')
-    warning.setAttribute('font-size', String(size * 0.28))
-    warning.setAttribute('fill', '#ff4400')
-    warning.setAttribute('font-weight', 'bold')
-    warning.setAttribute('font-family', 'sans-serif')
-    warning.setAttribute('pointer-events', 'none')
-    warning.textContent = '!'
-    item.el.appendChild(warning)
-
-    // Add material icon below the "!" if available
+    // Add material icon at the top if available
     if (materialIcon) {
       const matText = document.createElementNS(NS, 'text')
       matText.setAttribute('x', String(size / 2))
-      matText.setAttribute('y', String(size * 0.52))
+      matText.setAttribute('y', String(size * 0.3))
       matText.setAttribute('text-anchor', 'middle')
       matText.setAttribute('dominant-baseline', 'middle')
-      matText.setAttribute('font-size', String(size * 0.30))
+      matText.setAttribute('font-size', String(size * 0.5))
       matText.setAttribute('pointer-events', 'none')
       matText.textContent = materialIcon
       item.el.appendChild(matText)
@@ -264,9 +262,9 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         planet.scale = 0.05 + (planet.scaleEnd - 0.05) * (p * p)
 
         let opacity: number
-        if (p < 0.10)      opacity = p / 0.10
-        else if (p < 0.80) opacity = 1
-        else               opacity = 1 - (p - 0.80) / 0.20
+        if (p < 0.1) opacity = p / 0.1
+        else if (p < 0.8) opacity = 1
+        else opacity = 1 - (p - 0.8) / 0.2
 
         planet.el.style.opacity = opacity.toFixed(2)
         planet.el.style.transform = `translate(${planet.x}px,${planet.y}px) scale(${planet.scale.toFixed(3)})`
@@ -291,7 +289,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       // Activate first so potentialMaterialId is set before we render the icon
       planetEventStore.activatePlanetRescue(targetId, targetType)
       const materialId = planetEventStore.activePlanetEvent?.potentialMaterialId
-      const materialIcon = materialId ? (MATERIALS.find((m) => m.id === materialId)?.icon) : undefined
+      const materialIcon = materialId ? MATERIALS.find((m) => m.id === materialId)?.icon : undefined
       markPlanetAsRescue(targetId, materialIcon)
       container.value.classList.add('stars--rescue-active')
     },
