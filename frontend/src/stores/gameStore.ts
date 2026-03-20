@@ -3,6 +3,7 @@ import { useShopStore } from './shopStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
+import { AUGMENTS } from '../config/augments'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -11,7 +12,7 @@ import {
   MAX_ABILITY_LEVEL,
   SKILL_MEEP_COSTS,
 } from '../config/constants'
-import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition, ModifierEffects } from '../types'
+import type { BuildingProduction, TotalBuildingProduction, ShopUpgrade, Expedition, ModifierEffects, AugmentEffects } from '../types'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
@@ -38,6 +39,10 @@ export const useGameStore = defineStore('game', {
 
     skillPoints: 0,
     abilityLevels: [0, 0, 0, 0], // Q=CPS, W=Power, E=MeepCost, R=CPC
+
+    activeAugments: [] as string[],
+    pendingAugmentChoice: false,
+    pendingAugmentOptions: [] as string[],
 
     currentUniverse: 1,
     prestigeAvailable: false,
@@ -81,6 +86,7 @@ export const useGameStore = defineStore('game', {
 
     // Berechnet das aktuelle Level basierend auf gesammelten Chimes
     calculateLevel() {
+      if (this.pendingAugmentChoice) return
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
       while (this.chimes >= this.chimesForNextLevel) {
@@ -89,7 +95,27 @@ export const useGameStore = defineStore('game', {
         if (this.level % spInterval === 0) {
           this.skillPoints++
         }
+        this.triggerAugmentSelection()
+        break
       }
+    },
+
+    triggerAugmentSelection() {
+      const pool = AUGMENTS.filter((a) => !this.activeAugments.includes(a.id))
+      const source = pool.length >= 3 ? pool : AUGMENTS
+      const shuffled = [...source].sort(() => Math.random() - 0.5)
+      this.pendingAugmentOptions = shuffled.slice(0, 3).map((a) => a.id)
+      this.pendingAugmentChoice = true
+    },
+
+    chooseAugment(id: string) {
+      if (!this.pendingAugmentOptions.includes(id)) return
+      this.activeAugments.push(id)
+      this.pendingAugmentChoice = false
+      this.pendingAugmentOptions = []
+      const shopStore = useShopStore()
+      this.chimesPerSecond = shopStore.calculateTotalCPS()
+      this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
     // Setzt das Level einer Fähigkeit direkt (Admin-Funktion)
@@ -180,6 +206,9 @@ export const useGameStore = defineStore('game', {
       this.meepChimeRequirement = MEEP_BASE_COST
       this.skillPoints = 0
       this.abilityLevels = [0, 0, 0, 0]
+      this.activeAugments = []
+      this.pendingAugmentChoice = false
+      this.pendingAugmentOptions = []
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
       // Reset shop buildings and recalculate
@@ -256,9 +285,46 @@ export const useGameStore = defineStore('game', {
   },
 
   getters: {
-    // Aktiver Universe-Modifier (leer wenn Universe 1)
+    // Merged augment effects from all active augments
+    combinedAugmentEffects(): AugmentEffects {
+      const result: AugmentEffects = {}
+      for (const id of this.activeAugments) {
+        const aug = AUGMENTS.find((a) => a.id === id)
+        if (!aug) continue
+        for (const [key, val] of Object.entries(aug.effects)) {
+          const k = key as keyof AugmentEffects
+          if (k === 'abilityPowerPerLevel') {
+            result[k] = ((result[k] as number | undefined) ?? 0) + (val as number)
+          } else {
+            ;(result as Record<string, number>)[k] = ((result[k] as number | undefined) ?? 1) * (val as number)
+          }
+        }
+      }
+      return result
+    },
+
+    // Aktiver Universe-Modifier (leer wenn Universe 1), merged mit Augment-Effekten
     activeModifier(): ModifierEffects {
-      return universes[this.currentUniverse - 1]?.modifier?.effects ?? {}
+      const base = universes[this.currentUniverse - 1]?.modifier?.effects ?? {}
+      const aug = this.combinedAugmentEffects
+      return {
+        cpsMultiplier: (base.cpsMultiplier ?? 1) * (aug.cpsMultiplier ?? 1),
+        cpcMultiplier: (base.cpcMultiplier ?? 1) * (aug.cpcMultiplier ?? 1),
+        buildingCostMultiplier: (base.buildingCostMultiplier ?? 1) * (aug.buildingCostMultiplier ?? 1),
+        meepCostMultiplier: (base.meepCostMultiplier ?? 1) * (aug.meepCostMultiplier ?? 1),
+        meepPowerMultiplier: (base.meepPowerMultiplier ?? 1) * (aug.meepPowerMultiplier ?? 1),
+        expeditionRewardMultiplier: (base.expeditionRewardMultiplier ?? 1) * (aug.expeditionRewardMultiplier ?? 1),
+        levelExponent: base.levelExponent,
+        maxAbilityLevel: base.maxAbilityLevel,
+        skillPointInterval: base.skillPointInterval,
+        baseChimesPerClick: base.baseChimesPerClick,
+        eloPowerMultiplier: base.eloPowerMultiplier,
+        buildingMultipliers: base.buildingMultipliers,
+        abilityCPSPerLevel: base.abilityCPSPerLevel,
+        abilityCPCPerLevel: base.abilityCPCPerLevel,
+        abilityMeepCostPerLevel: base.abilityMeepCostPerLevel,
+        abilityPowerPerLevel: (base.abilityPowerPerLevel ?? 300) + (aug.abilityPowerPerLevel ?? 0),
+      }
     },
 
     // Berechnet die verbleibenden Chimes bis zum nächsten Level

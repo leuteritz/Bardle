@@ -3,6 +3,7 @@ import { useShopStore } from '../stores/shopStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useMissionStore } from '../stores/missionStore'
 import { useInventoryStore } from '../stores/inventoryStore'
+import { LEVEL_BASE, LEVEL_EXPONENT } from '../config/constants'
 
 const SAVE_KEY = 'bard-idle-save'
 const SAVE_VERSION = 1
@@ -37,6 +38,9 @@ export function usePersistence() {
         activeExpedition: gameStore.activeExpedition,
         buildingProductionHistory: gameStore.buildingProductionHistory,
         totalBuildingProduction: gameStore.totalBuildingProduction,
+        activeAugments: [...gameStore.activeAugments],
+        pendingAugmentChoice: gameStore.pendingAugmentChoice,
+        pendingAugmentOptions: [...gameStore.pendingAugmentOptions],
       },
       shop: {
         buyAmount: shopStore.buyAmount,
@@ -91,7 +95,9 @@ export function usePersistence() {
         const g = saved.game
         gameStore.inGameTime = g.inGameTime ?? gameStore.inGameTime
         gameStore.chimes = g.chimes ?? gameStore.chimes
-        gameStore.chimesForNextLevel = g.chimesForNextLevel ?? gameStore.chimesForNextLevel
+        // Always recalculate from current formula so balance changes take effect immediately
+        const restoredLevel = g.level ?? gameStore.level
+        gameStore.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(restoredLevel, LEVEL_EXPONENT))
         gameStore.baseChimesPerClick = g.baseChimesPerClick ?? gameStore.baseChimesPerClick
         gameStore.chimesForMeep = g.chimesForMeep ?? gameStore.chimesForMeep
         gameStore.chimesForNextUniverse = g.chimesForNextUniverse ?? gameStore.chimesForNextUniverse
@@ -106,6 +112,9 @@ export function usePersistence() {
         gameStore.activeExpedition = g.activeExpedition ?? null
         if (g.buildingProductionHistory) gameStore.buildingProductionHistory = g.buildingProductionHistory
         if (g.totalBuildingProduction) gameStore.totalBuildingProduction = g.totalBuildingProduction
+        if (Array.isArray(g.activeAugments)) gameStore.activeAugments = g.activeAugments
+        gameStore.pendingAugmentChoice = g.pendingAugmentChoice ?? false
+        if (Array.isArray(g.pendingAugmentOptions)) gameStore.pendingAugmentOptions = g.pendingAugmentOptions
       }
 
       // Restore shopStore

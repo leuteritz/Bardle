@@ -170,6 +170,28 @@ export interface BattleResult {
   winProbability: number
 }
 
+// Augment types
+export type AugmentRarity = 'common' | 'rare' | 'epic'
+
+export interface AugmentEffects {
+  cpsMultiplier?: number
+  cpcMultiplier?: number
+  buildingCostMultiplier?: number
+  meepCostMultiplier?: number
+  meepPowerMultiplier?: number
+  expeditionRewardMultiplier?: number
+  abilityPowerPerLevel?: number
+}
+
+export interface AugmentDefinition {
+  id: string
+  name: string
+  description: string
+  icon: string
+  rarity: AugmentRarity
+  effects: AugmentEffects
+}
+
 // Material types
 export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 

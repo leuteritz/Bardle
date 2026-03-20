@@ -7,6 +7,7 @@ import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
+import AugmentSelectionModal from './components/AugmentSelectionModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
@@ -31,6 +32,7 @@ const activeTab = ref('idle')
     <StarBackgroundComponent />
     <PlanetRescueOverlay />
     <PlanetRescueModal />
+    <AugmentSelectionModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div
