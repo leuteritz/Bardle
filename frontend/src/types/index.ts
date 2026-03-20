@@ -198,7 +198,8 @@ export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 export interface Material {
   id: string
   name: string
-  icon: string
+  icon?: string
+  image?: string
   description: string
   rarity: MaterialRarity
   dropChance: number

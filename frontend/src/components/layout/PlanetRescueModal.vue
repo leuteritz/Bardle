@@ -37,7 +37,9 @@
           <p class="drop-list-title">Möglicher Drop</p>
           <template v-if="assignedMaterial">
             <div class="drop-row">
-              <span class="drop-icon">{{ assignedMaterial.icon }}</span>
+              <span class="drop-icon">
+                <img :src="assignedMaterial.image" class="drop-icon-img" alt="" />
+              </span>
               <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
                 {{ assignedMaterial.name }}
               </span>
@@ -300,6 +302,16 @@ function handleClick() {
   font-size: 0.85rem;
   width: 1.25rem;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drop-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  vertical-align: middle;
 }
 
 .drop-name {

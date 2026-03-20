@@ -169,7 +169,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     return { id, type: config.type }
   }
 
-  function markPlanetAsRescue(id: string, materialIcon?: string): void {
+  function markPlanetAsRescue(id: string, materialIcon?: string, materialImage?: string): void {
     const item = planets.find((p) => p.id === id)
     if (!item) return
 
@@ -184,8 +184,17 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
     const size = parseFloat(item.el.getAttribute('width') ?? '80')
 
-    // Add material icon at the top if available
-    if (materialIcon) {
+    // Add material image or icon at the top if available
+    if (materialImage) {
+      const img = document.createElementNS(NS, 'image')
+      img.setAttribute('href', materialImage)
+      img.setAttribute('x', String(size * 0.25))
+      img.setAttribute('y', String(size * 0.05))
+      img.setAttribute('width', String(size * 0.5))
+      img.setAttribute('height', String(size * 0.5))
+      img.setAttribute('pointer-events', 'none')
+      item.el.appendChild(img)
+    } else if (materialIcon) {
       const matText = document.createElementNS(NS, 'text')
       matText.setAttribute('x', String(size / 2))
       matText.setAttribute('y', String(size * 0.3))
@@ -289,8 +298,8 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       // Activate first so potentialMaterialId is set before we render the icon
       planetEventStore.activatePlanetRescue(targetId, targetType)
       const materialId = planetEventStore.activePlanetEvent?.potentialMaterialId
-      const materialIcon = materialId ? MATERIALS.find((m) => m.id === materialId)?.icon : undefined
-      markPlanetAsRescue(targetId, materialIcon)
+      const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
+      markPlanetAsRescue(targetId, material?.icon, material?.image)
       container.value.classList.add('stars--rescue-active')
     },
   )

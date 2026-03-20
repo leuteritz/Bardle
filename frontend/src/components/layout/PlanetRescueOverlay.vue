@@ -22,7 +22,8 @@
       <template v-if="droppedMaterial">
         <br />
         <span class="toast-material">
-          {{ droppedMaterial.icon }} {{ droppedMaterial.name }} erhalten!
+          <img :src="droppedMaterial.image" class="toast-material-img" alt="" />
+          {{ droppedMaterial.name }} erhalten!
         </span>
       </template>
       <template v-else>
@@ -214,6 +215,13 @@ watch(
 
 .toast-material--none {
   opacity: 0.5;
+}
+
+.toast-material-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  vertical-align: middle;
 }
 
 .planet-toast--saved {

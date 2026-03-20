@@ -4,7 +4,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'stardust',
     name: 'Sternstaub',
-    icon: '✨',
+    image: '/img/Sternenstaub.png',
     description: 'Feiner Staub von fernen Sternen.',
     rarity: 'common',
     dropChance: 0.35,
@@ -12,7 +12,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'moon_crystal',
     name: 'Mondkristall',
-    icon: '🔮',
+    image: '/img/Mondkristall.png',
     description: 'Ein Kristall, der im Mondlicht schimmert.',
     rarity: 'common',
     dropChance: 0.25,
@@ -20,7 +20,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'nebula_quartz',
     name: 'Nebelquarz',
-    icon: '💎',
+    image: '/img/Nebelquarz.png',
     description: 'Quarz aus den Tiefen eines Nebels.',
     rarity: 'uncommon',
     dropChance: 0.20,
@@ -28,7 +28,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'solar_essence',
     name: 'Sonnenessenz',
-    icon: '☀️',
+    image: '/img/Sonnenessenz.png',
     description: 'Konzentrierte Energie eines Sterns.',
     rarity: 'rare',
     dropChance: 0.12,
@@ -36,7 +36,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'void_shard',
     name: 'Leerscherbe',
-    icon: '🌑',
+    image: '/img/Leerscherbe.png',
     description: 'Ein Splitter aus dem Nichts.',
     rarity: 'rare',
     dropChance: 0.06,
@@ -44,7 +44,7 @@ export const MATERIALS: Material[] = [
   {
     id: 'dark_matter',
     name: 'Dunkle Materie',
-    icon: '⚫',
+    image: '/img/DunkleMaterie.png',
     description: 'Unfassbare Materie jenseits des Sichtbaren.',
     rarity: 'epic',
     dropChance: 0.02,

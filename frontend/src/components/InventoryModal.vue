@@ -29,7 +29,13 @@ function onBackdropClick(e: MouseEvent) {
 
 <template>
   <Transition name="modal-fade">
-    <div v-if="open" class="modal-backdrop" @click="onBackdropClick" aria-modal="true" role="dialog">
+    <div
+      v-if="open"
+      class="modal-backdrop"
+      @click="onBackdropClick"
+      aria-modal="true"
+      role="dialog"
+    >
       <div class="modal-card">
         <!-- Header -->
         <div class="flex items-center justify-between w-full mb-1">
@@ -50,20 +56,32 @@ function onBackdropClick(e: MouseEvent) {
               :class="{ 'material-card--empty': material.count === 0 }"
               :style="{
                 borderColor: rarityColor[material.rarity],
-                boxShadow: material.count > 0
-                  ? `0 0 10px ${rarityColor[material.rarity]}55, inset 0 0 8px ${rarityColor[material.rarity]}15`
-                  : `0 0 4px ${rarityColor[material.rarity]}22`,
+                boxShadow:
+                  material.count > 0
+                    ? `0 0 10px ${rarityColor[material.rarity]}55, inset 0 0 8px ${rarityColor[material.rarity]}15`
+                    : `0 0 4px ${rarityColor[material.rarity]}22`,
               }"
             >
               <span
                 class="material-card__count"
-                :style="{ color: material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.45)' }"
-              >{{ material.count }}</span>
-              <div class="material-card__emoji">{{ material.icon }}</div>
+                :style="{
+                  color:
+                    material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.45)',
+                }"
+                >{{ material.count }}</span
+              >
+              <div class="material-card__icon-wrapper">
+                <img :src="material.image" class="material-card__img" alt="" />
+              </div>
               <div
                 class="material-card__name"
-                :style="{ color: material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.4)' }"
-              >{{ material.name }}</div>
+                :style="{
+                  color:
+                    material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.4)',
+                }"
+              >
+                {{ material.name }}
+              </div>
             </div>
           </div>
         </section>
@@ -119,7 +137,9 @@ function onBackdropClick(e: MouseEvent) {
   line-height: 1;
   padding: 0.25rem 0.4rem;
   border-radius: 0.4rem;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 .close-btn:hover {
   color: #fb923c;
@@ -159,7 +179,9 @@ function onBackdropClick(e: MouseEvent) {
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  transition: box-shadow 0.2s, opacity 0.2s;
+  transition:
+    box-shadow 0.2s,
+    opacity 0.2s;
 }
 
 .material-card--empty {
@@ -171,20 +193,27 @@ function onBackdropClick(e: MouseEvent) {
   position: absolute;
   top: 0.35rem;
   right: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 1.5rem;
   font-weight: bold;
   font-family: 'MedievalSharp', serif;
   line-height: 1;
 }
 
-.material-card__emoji {
-  font-size: 2rem;
-  text-align: center;
-  line-height: 1.1;
+.material-card__icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 10rem;
+}
+
+.material-card__img {
+  width: 10rem;
+  height: 10rem;
+  object-fit: contain;
 }
 
 .material-card__name {
-  font-size: 0.7rem;
+  font-size: 1.2rem;
   text-align: center;
   font-family: 'MedievalSharp', serif;
   line-height: 1.2;
@@ -199,11 +228,23 @@ function onBackdropClick(e: MouseEvent) {
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.9) translateY(-8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 @keyframes modalOut {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.92); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92);
+  }
 }
 </style>
