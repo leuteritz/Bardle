@@ -12,10 +12,28 @@ const activeAugmentDefs = computed<AugmentDefinition[]>(() =>
     .filter((a): a is AugmentDefinition => !!a),
 )
 
+const rarityGlow: Record<string, string> = {
+  common: 'shadow-[0_0_14px_rgba(96,165,250,0.35)] hover:shadow-[0_0_22px_rgba(96,165,250,0.55)]',
+  rare: 'shadow-[0_0_14px_rgba(168,85,247,0.35)] hover:shadow-[0_0_22px_rgba(168,85,247,0.55)]',
+  epic: 'shadow-[0_0_14px_rgba(251,191,36,0.40)] hover:shadow-[0_0_22px_rgba(251,191,36,0.65)]',
+}
+
 const rarityBorder: Record<string, string> = {
-  common: 'border-blue-400/60',
-  rare: 'border-purple-400/60',
-  epic: 'border-amber-400/70',
+  common: 'border-blue-400/50',
+  rare: 'border-purple-400/50',
+  epic: 'border-amber-400/60',
+}
+
+const rarityAccent: Record<string, string> = {
+  common: 'from-blue-500/30 to-blue-600/10',
+  rare: 'from-purple-500/30 to-purple-600/10',
+  epic: 'from-amber-500/35 to-amber-600/10',
+}
+
+const rarityIconRing: Record<string, string> = {
+  common: 'ring-blue-400/50',
+  rare: 'ring-purple-400/50',
+  epic: 'ring-amber-400/60',
 }
 
 const rarityBadge: Record<string, string> = {
@@ -57,45 +75,136 @@ function getEffectLines(aug: AugmentDefinition): string[] {
 </script>
 
 <template>
-  <div
-    v-if="activeAugmentDefs.length > 0"
-    class="fixed left-4 top-[180px] z-[60] flex flex-col gap-2"
-  >
-    <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative group">
-      <!-- Icon button -->
-      <div
-        class="w-12 h-12 flex items-center justify-center rounded-full border-2 bg-slate-900/80 backdrop-blur-sm cursor-default text-2xl shadow-lg"
-        :class="rarityBorder[aug.rarity]"
-      >
-        {{ aug.icon }}
+  <Transition name="augment-panel">
+    <div
+      v-if="activeAugmentDefs.length > 0"
+      class="fixed left-8 top-[200px] z-[60] flex flex-col gap-1.5 max-w-[148px]"
+    >
+      <!-- Section header -->
+      <div class="flex items-center gap-1.5 px-1 mb-0.5">
+        <div class="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent" />
+        <span class="text-[9px] font-bold tracking-[0.15em] text-white/30 uppercase">Augments</span>
+        <div class="flex-1 h-px bg-gradient-to-l from-white/20 to-transparent" />
       </div>
 
-      <!-- Tooltip (rechts beim Hover) -->
-      <div
-        class="absolute left-14 top-0 hidden group-hover:flex flex-col min-w-[200px] max-w-[240px] p-3 rounded-xl border bg-slate-950/95 border-white/20 shadow-2xl backdrop-blur-sm z-[70]"
-      >
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xl">{{ aug.icon }}</span>
-          <span class="text-sm font-bold text-white">{{ aug.name }}</span>
-        </div>
-        <span
-          class="text-xs px-2 py-0.5 rounded-full border self-start mb-2"
-          :class="rarityBadge[aug.rarity]"
-        >
-          {{ rarityLabel[aug.rarity] }}
-        </span>
-        <p class="text-xs text-blue-200/60 mb-2">{{ aug.description }}</p>
-        <div class="space-y-1 p-2 rounded-lg bg-black/30 border border-white/10">
+      <!-- Augment cards -->
+      <TransitionGroup name="aug-card" tag="div" class="flex flex-col gap-1.5">
+        <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative group">
+          <!-- Card -->
           <div
-            v-for="(line, i) in getEffectLines(aug)"
-            :key="i"
-            class="flex items-center gap-1.5 text-xs"
+            class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border bg-slate-950/80 backdrop-blur-sm cursor-default transition-all duration-300 overflow-hidden"
+            :class="[rarityBorder[aug.rarity], rarityGlow[aug.rarity]]"
           >
-            <span class="text-emerald-400">▲</span>
-            <span class="text-blue-100/80">{{ line }}</span>
+            <!-- Rarity gradient overlay -->
+            <div
+              class="absolute inset-0 pointer-events-none bg-gradient-to-r opacity-60"
+              :class="rarityAccent[aug.rarity]"
+            />
+
+            <!-- Shimmer sweep on hover -->
+            <div
+              class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.06] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[600ms]"
+            />
+
+            <!-- Icon -->
+            <div
+              class="relative z-10 flex items-center justify-center flex-shrink-0 w-8 h-8 text-lg transition-transform duration-200 rounded-lg bg-black/40 ring-1 group-hover:scale-110"
+              :class="rarityIconRing[aug.rarity]"
+            >
+              {{ aug.icon }}
+            </div>
+
+            <!-- Name -->
+            <span
+              class="relative z-10 text-[11px] font-bold text-white/90 leading-tight line-clamp-2 flex-1"
+            >
+              {{ aug.name }}
+            </span>
+          </div>
+
+          <!-- Tooltip — erscheint rechts beim Hover -->
+          <div
+            class="absolute left-[calc(100%+10px)] top-0 hidden group-hover:flex flex-col min-w-[210px] max-w-[250px] p-3.5 rounded-2xl border bg-slate-950/97 border-white/15 shadow-2xl backdrop-blur-md z-[70] pointer-events-none"
+            :class="rarityBorder[aug.rarity]"
+          >
+            <!-- Top accent line -->
+            <div
+              class="absolute top-0 h-px left-4 right-4 bg-gradient-to-r from-transparent to-transparent"
+              :class="{
+                'via-blue-400/60': aug.rarity === 'common',
+                'via-purple-400/60': aug.rarity === 'rare',
+                'via-amber-400/70': aug.rarity === 'epic',
+              }"
+            />
+
+            <!-- Header -->
+            <div class="flex items-center gap-2.5 mb-2">
+              <div
+                class="flex items-center justify-center flex-shrink-0 text-xl w-9 h-9 rounded-xl bg-black/50 ring-1"
+                :class="rarityIconRing[aug.rarity]"
+              >
+                {{ aug.icon }}
+              </div>
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-sm font-bold leading-tight text-white">{{ aug.name }}</span>
+                <span
+                  class="text-[10px] px-1.5 py-px rounded-full border self-start font-semibold"
+                  :class="rarityBadge[aug.rarity]"
+                >
+                  {{ rarityLabel[aug.rarity] }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="h-px mb-2 bg-white/10" />
+
+            <!-- Description -->
+            <p class="text-[11px] text-blue-200/60 mb-2.5 leading-relaxed">{{ aug.description }}</p>
+
+            <!-- Effects -->
+            <div class="space-y-1 p-2.5 rounded-xl bg-black/40 border border-white/[0.08]">
+              <div
+                v-for="(line, i) in getEffectLines(aug)"
+                :key="i"
+                class="flex items-center gap-1.5 text-[11px]"
+              >
+                <span class="text-emerald-400 flex-shrink-0 text-[9px]">▲</span>
+                <span class="text-blue-100/85">{{ line }}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </TransitionGroup>
     </div>
-  </div>
+  </Transition>
 </template>
+
+<style scoped>
+.augment-panel-enter-active,
+.augment-panel-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.augment-panel-enter-from,
+.augment-panel-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.aug-card-enter-active,
+.aug-card-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.aug-card-enter-from,
+.aug-card-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+.aug-card-move {
+  transition: transform 0.25s ease;
+}
+</style>

@@ -253,7 +253,7 @@ const modalTheme = computed(() => {
               v-for="item in menuItems"
               :key="item.id"
               @click="setTab(item.id)"
-              class="relative flex items-center justify-center gap-2 px-3 py-2 overflow-hidden text-sm font-bold tracking-wide transition-all duration-200 rounded-xl"
+              class="relative flex items-center justify-center gap-2 px-3 py-2 overflow-hidden text-xl font-bold tracking-wide transition-all duration-200 rounded-xl"
               :class="
                 activeModal === item.id
                   ? 'text-white shadow-lg'
@@ -269,7 +269,7 @@ const modalTheme = computed(() => {
                 v-if="item.src"
                 :src="item.src"
                 :alt="item.label"
-                class="relative z-10 object-contain w-5 h-5"
+                class="relative z-10 object-contain w-10 h-10"
               />
               <span v-else class="relative z-10 text-base leading-none">{{ item.icon }}</span>
               <span class="relative z-10">{{ item.label }}</span>

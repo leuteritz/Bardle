@@ -4,13 +4,13 @@
     <div
       class="sticky top-0 z-10 flex items-center justify-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
     >
-      <span class="mr-2 text-xs font-bold tracking-widest uppercase text-white/50">Kaufen</span>
+      <span class="mr-2 text-sm font-bold tracking-widest uppercase text-white/50">Kaufen</span>
       <div class="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
         <button
           v-for="option in buyOptions"
           :key="option.value"
           @click="shopStore.setBuyAmount(option.value)"
-          class="relative px-4 py-1.5 text-sm font-bold rounded-lg transition-all duration-300 overflow-hidden"
+          class="relative px-4 py-1.5 text-xl font-bold rounded-lg transition-all duration-300 overflow-hidden"
           :class="
             shopStore.buyAmount === option.value
               ? 'text-white shadow-lg shadow-violet-500/40'
