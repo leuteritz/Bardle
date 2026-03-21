@@ -83,6 +83,14 @@ const closeModal = () => {
   activeModal.value = null
 }
 
+const chimesForLevel = computed(() => {
+  const progress = gameStore.levelProgress / 100
+  if (progress <= 0) return { current: 0, total: gameStore.chimesToNextLevel }
+  const total = Math.round(gameStore.chimesToNextLevel / (1 - progress))
+  const current = total - gameStore.chimesToNextLevel
+  return { current, total }
+})
+
 const modalTheme = computed(() => {
   const themes: Record<
     ModalId,
@@ -175,16 +183,33 @@ const modalTheme = computed(() => {
             class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
           />
         </div>
-        <div class="absolute -bottom-1 -right-1">
+
+        <!-- Level Badge + Hover Tooltip -->
+        <div class="absolute flex items-center -bottom-1 -right-1">
+          <!-- Badge -->
           <div
-            class="flex items-center justify-center border-2 rounded-full shadow-lg h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
+            class="z-10 flex items-center justify-center border-2 rounded-full shadow-lg h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
           >
             <span class="text-xl font-black text-white">{{ gameStore.level }}</span>
+          </div>
+
+          <!-- Tooltip – erscheint rechts neben dem Badge beim Hover -->
+          <div
+            class="absolute left-full ml-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-blue-500/25 bg-gradient-to-r from-[#0a0820]/90 to-[#0d0a2a]/90 backdrop-blur-md shadow-[0_0_16px_rgba(59,130,246,0.15)] opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 ease-out whitespace-nowrap"
+          >
+            <!-- Wert -->
+            <span class="text-sm font-bold text-amber-300">
+              {{ chimesForLevel.current.toLocaleString() }}
+            </span>
+            <span class="text-sm text-white/30">/</span>
+            <span class="text-sm font-semibold text-white/60">
+              {{ chimesForLevel.total.toLocaleString() }}
+            </span>
+            <span class="text-sm text-white/30 ml-0.5">Chimes</span>
           </div>
         </div>
       </div>
     </div>
-
     <!-- ─── Reset Button ─── -->
     <button
       class="mt-1 px-3 py-1.5 text-xs rounded-lg border border-red-500/40 bg-gradient-to-b from-red-900/60 to-red-950/80 backdrop-blur-sm text-red-300 hover:text-red-200 hover:border-red-400/60 hover:from-red-800/70 transition-all duration-200"
