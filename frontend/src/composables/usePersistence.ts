@@ -45,6 +45,7 @@ export function usePersistence() {
       shop: {
         buyAmount: shopStore.buyAmount,
         shopUpgrades: shopStore.shopUpgrades.map((u) => ({ id: u.id, level: u.level })),
+        permanentUpgrades: shopStore.permanentUpgrades.map((u) => ({ id: u.id, purchased: u.purchased })),
       },
       battle: {
         mmr: battleStore.mmr,
@@ -124,6 +125,12 @@ export function usePersistence() {
           for (const savedUpgrade of saved.shop.shopUpgrades) {
             const upgrade = shopStore.shopUpgrades.find((u) => u.id === savedUpgrade.id)
             if (upgrade) upgrade.level = savedUpgrade.level ?? 0
+          }
+        }
+        if (Array.isArray(saved.shop.permanentUpgrades)) {
+          for (const savedUpgrade of saved.shop.permanentUpgrades) {
+            const upgrade = shopStore.permanentUpgrades.find((u) => u.id === savedUpgrade.id)
+            if (upgrade) upgrade.purchased = savedUpgrade.purchased ?? false
           }
         }
       }

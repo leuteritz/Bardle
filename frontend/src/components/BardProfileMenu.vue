@@ -37,6 +37,14 @@ const menuItems: {
   gradient: string
 }[] = [
   {
+    id: 'shop',
+    label: 'Shop',
+    icon: '',
+    src: '/img/menu/SHOP.png',
+    color: 'emerald',
+    gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600',
+  },
+  {
     id: 'charakter',
     label: 'Charakter',
     icon: '🎭',
@@ -53,14 +61,6 @@ const menuItems: {
     gradient: 'bg-gradient-to-r from-rose-500 to-red-600',
   },
   {
-    id: 'shop',
-    label: 'Shop',
-    icon: '',
-    src: '/img/menu/SHOP.png',
-    color: 'emerald',
-    gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600',
-  },
-  {
     id: 'admin',
     label: 'Admin',
     icon: '⚙️',
@@ -74,7 +74,7 @@ const activeCharTab = ref<'rang' | 'faehigkeiten' | 'missionen'>('rang')
 const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
 
 const openBardModal = () => {
-  activeModal.value = activeModal.value !== null ? null : 'charakter'
+  activeModal.value = activeModal.value !== null ? null : 'shop'
 }
 const setTab = (id: ModalId) => {
   activeModal.value = id
@@ -273,13 +273,6 @@ const modalTheme = computed(() => {
               />
               <span v-else class="relative z-10 text-base leading-none">{{ item.icon }}</span>
               <span class="relative z-10">{{ item.label }}</span>
-            </button>
-            <button
-              class="absolute flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border right-4 rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
-              :class="modalTheme.closeHover"
-              @click="closeModal"
-            >
-              ✕
             </button>
           </div>
 

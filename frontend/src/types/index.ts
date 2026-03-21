@@ -68,6 +68,28 @@ export interface ShopUpgrade {
   icon: string
 }
 
+export interface PermanentUpgradeEffect {
+  type: 'cpsMultiplier' | 'cpcMultiplier' | 'buildingBoost'
+  value: number
+  buildingId?: string
+}
+
+export interface PermanentUpgradeRequirement {
+  buildingId: string
+  minLevel: number
+}
+
+export interface PermanentUpgrade {
+  id: string
+  name: string
+  description: string
+  icon: string
+  cost: number
+  purchased: boolean
+  effect: PermanentUpgradeEffect
+  requirement?: PermanentUpgradeRequirement
+}
+
 export interface BuildingStat {
   id: string
   name: string
