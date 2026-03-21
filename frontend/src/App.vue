@@ -14,7 +14,8 @@ import HyperspaceOverlay from './components/HyperspaceOverlay.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import BardProfileMenu from './components/BardProfileMenu.vue'
-import TopRightHudComponent from './components/ui/TopRightHudComponent.vue'
+import UniversePortalComponent from './components/UniversePortalComponent.vue'
+import MeepIndicatorComponent from './components/ui/MeepIndicatorComponent.vue'
 import InventoryModal from './components/InventoryModal.vue'
 
 const gameStore = useGameStore()
@@ -53,7 +54,6 @@ const activeTab = ref('idle')
 
         <!-- Mitte: Chimes & CPS -->
         <div class="flex flex-col items-center justify-center col-span-1 gap-0">
-          <!-- Gesamt-Chimes -->
           <div class="flex items-center gap-1 px-4 py-1">
             <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
             <span
@@ -62,7 +62,6 @@ const activeTab = ref('idle')
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
-          <!-- CPS (kein Rahmen) -->
           <div class="flex items-center gap-1 px-2 py-0.5">
             <span
               class="text-4xl font-semibold tracking-wide text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow"
@@ -72,29 +71,37 @@ const activeTab = ref('idle')
           </div>
         </div>
 
-        <div class="flex items-stretch justify-end col-span-1 px-4 py-4 gap-9">
-          <!-- Inventar-Button mit Hover-Tooltip -->
-          <div class="relative flex items-center">
+        <!-- Rechts: Inventar, Portal, Meep -->
+        <!-- Rechts: Inventar, Portal, Meep -->
+        <!-- Rechts: Inventar, Portal, Meep -->
+        <div class="flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6">
+          <!-- Bag: self-center stellt sicher, dass er zur Mitte der Portal+Meep-Gruppe zeigt -->
+          <div class="relative self-center">
             <button
-              class="w-24 h-24"
+              class="w-32 h-32"
               title="Inventar öffnen"
               @mouseenter="isHovering = true"
               @mouseleave="isHovering = false"
               @click="isInventoryOpen = true"
             >
-              <img src="/img/Bag.png" class="inventory-btn-img" alt="Inventar" />
+              <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar" />
             </button>
-
             <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
           </div>
 
-          <TopRightHudComponent />
+          <!-- Portal & Meep untereinander, zentriert -->
+          <div class="flex flex-col items-center self-center gap-1">
+            <UniversePortalComponent />
+            <MeepIndicatorComponent />
+          </div>
         </div>
+
+        <!-- ↑ Rechte Spalte korrekt geschlossen -->
       </div>
+      <!-- ↑ Grid geschlossen -->
 
       <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
-        <!-- GameCenter: zentriert -->
         <div class="flex justify-center w-full">
           <div class="w-full">
             <GameCenterComponent :active-tab="activeTab" />
@@ -102,6 +109,7 @@ const activeTab = ref('idle')
         </div>
       </div>
     </div>
+    <!-- ↑ flex flex-col justify-between geschlossen -->
 
     <!-- Encyclopedia Toggle Button -->
     <button
@@ -112,10 +120,7 @@ const activeTab = ref('idle')
       <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
     </button>
 
-    <!-- Encyclopedia Panel -->
     <EncyclopediaPanel />
-
-    <!-- Admin Dashboard (standalone, keyboard shortcut Ctrl+Shift+A) -->
     <AdminDashboard />
 
     <span
