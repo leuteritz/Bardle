@@ -163,7 +163,7 @@ function handleClick() {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9999; /* war 50 — jetzt über allem */
+  z-index: 55;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -246,7 +246,7 @@ usePlanetBackground(starsContainer)
 }
 
 .stars--rescue-active {
-  z-index: 9999 !important;
+  z-index: 20 !important;
   pointer-events: none !important; /* Container selbst bleibt pass-through */
 }
 
