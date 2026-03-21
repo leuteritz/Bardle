@@ -4,6 +4,7 @@ import { useGameStore } from './stores/gameStore'
 import { useShopStore } from './stores/shopStore'
 import { formatNumber } from './config/numberFormat'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
+import InventoryTooltip from './components/InventoryTooltip.vue'
 import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
 import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
@@ -20,6 +21,7 @@ const gameStore = useGameStore()
 const shopStore = useShopStore()
 
 const isInventoryOpen = ref(false)
+const isHovering = ref(false)
 
 const totalUpgrades = computed(() => shopStore.shopUpgrades.reduce((sum, u) => sum + u.level, 0))
 const canAffordAny = computed(() =>
@@ -71,10 +73,21 @@ const activeTab = ref('idle')
         </div>
 
         <div class="flex items-stretch justify-end col-span-1 px-4 py-4 gap-9">
-          <!-- Inventar-Button -->
-          <button class="w-24 h-24" title="Inventar öffnen" @click="isInventoryOpen = true">
-            <img src="/img/Bag.png" class="inventory-btn-img" alt="Inventar" />
-          </button>
+          <!-- Inventar-Button mit Hover-Tooltip -->
+          <div class="relative flex items-center">
+            <button
+              class="w-24 h-24"
+              title="Inventar öffnen"
+              @mouseenter="isHovering = true"
+              @mouseleave="isHovering = false"
+              @click="isInventoryOpen = true"
+            >
+              <img src="/img/Bag.png" class="inventory-btn-img" alt="Inventar" />
+            </button>
+
+            <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
+          </div>
+
           <TopRightHudComponent />
         </div>
       </div>
@@ -177,4 +190,5 @@ const activeTab = ref('idle')
 .cps-text-glow {
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
 }
+
 </style>
