@@ -15,7 +15,11 @@ const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 const { resetGame } = usePersistence()
 const handleReset = () => {
-  if (window.confirm('Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+  if (
+    window.confirm(
+      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    )
+  ) {
     resetGame()
   }
 }
@@ -207,7 +211,7 @@ const modalTheme = computed(() => {
       class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] max-w-[95vw]"
     >
       <div
-        class="group relative overflow-hidden rounded-3xl border backdrop-blur-xl bg-gradient-to-b from-[#050310]/97 via-[#0c0828]/95 to-[#060415]/97 flex flex-col max-h-[90vh]"
+        class="group relative overflow-hidden rounded-3xl border backdrop-blur-xl bg-gradient-to-b from-[#050310]/97 via-[#0c0828]/95 to-[#060415]/97 flex flex-col h-[900px] max-h-[90vh]"
         :class="[modalTheme.border, modalTheme.glow]"
       >
         <!-- Top Accent Bar -->
@@ -244,12 +248,12 @@ const modalTheme = computed(() => {
           </div>
 
           <!-- Mitte: Tabs + Close -->
-          <div class="relative flex items-center justify-center flex-1 px-4 py-2 gap-1">
+          <div class="relative flex items-center justify-center flex-1 gap-1 px-4 py-2">
             <button
               v-for="item in menuItems"
               :key="item.id"
               @click="setTab(item.id)"
-              class="relative flex items-center justify-center gap-2 px-3 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
+              class="relative flex items-center justify-center gap-2 px-3 py-2 overflow-hidden text-sm font-bold tracking-wide transition-all duration-200 rounded-xl"
               :class="
                 activeModal === item.id
                   ? 'text-white shadow-lg'
@@ -271,7 +275,7 @@ const modalTheme = computed(() => {
               <span class="relative z-10">{{ item.label }}</span>
             </button>
             <button
-              class="absolute right-4 flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
+              class="absolute flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border right-4 rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
               :class="modalTheme.closeHover"
               @click="closeModal"
             >
