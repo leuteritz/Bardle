@@ -190,5 +190,4 @@ const activeTab = ref('idle')
 .cps-text-glow {
   filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
 }
-
 </style>

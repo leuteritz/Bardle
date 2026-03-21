@@ -224,35 +224,6 @@ const modalTheme = computed(() => {
           class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
         />
 
-        <!-- ─── Top-Level Tab Bar ─── -->
-        <div class="flex p-1.5 gap-1 bg-white/[0.04] border-b border-white/10 flex-shrink-0">
-          <button
-            v-for="item in menuItems"
-            :key="item.id"
-            @click="setTab(item.id)"
-            class="relative flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
-            :class="
-              activeModal === item.id
-                ? 'text-white shadow-lg'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
-            "
-          >
-            <span
-              v-if="activeModal === item.id"
-              class="absolute inset-0 rounded-xl"
-              :class="item.gradient"
-            />
-            <img
-              v-if="item.src"
-              :src="item.src"
-              :alt="item.label"
-              class="relative z-10 object-contain w-5 h-5"
-            />
-            <span v-else class="relative z-10 text-base leading-none">{{ item.icon }}</span>
-            <span class="relative z-10">{{ item.label }}</span>
-          </button>
-        </div>
-
         <!-- Modal Header -->
         <div
           class="relative flex items-center flex-shrink-0 overflow-hidden border-b"
@@ -272,22 +243,35 @@ const modalTheme = computed(() => {
             </div>
           </div>
 
-          <!-- Mitte: Bard-Info + Close -->
-          <div class="flex items-center justify-between flex-1 px-4 py-5">
-            <div class="flex items-center gap-3">
-              <div
-                class="flex items-center justify-center overflow-hidden border w-9 h-9 rounded-xl border-white/10 bg-white/5"
-              >
-                <img src="/img/BardAbilities/Bard.png" class="object-cover w-full h-full" />
-              </div>
-              <span
-                class="text-2xl font-black tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent font-['MedievalSharp']"
-              >
-                Bard
-              </span>
-            </div>
+          <!-- Mitte: Tabs + Close -->
+          <div class="relative flex items-center justify-center flex-1 px-4 py-2 gap-1">
             <button
-              class="flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
+              v-for="item in menuItems"
+              :key="item.id"
+              @click="setTab(item.id)"
+              class="relative flex items-center justify-center gap-2 px-3 py-2 text-sm font-bold tracking-wide transition-all duration-200 rounded-xl overflow-hidden"
+              :class="
+                activeModal === item.id
+                  ? 'text-white shadow-lg'
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
+              "
+            >
+              <span
+                v-if="activeModal === item.id"
+                class="absolute inset-0 rounded-xl"
+                :class="item.gradient"
+              />
+              <img
+                v-if="item.src"
+                :src="item.src"
+                :alt="item.label"
+                class="relative z-10 object-contain w-5 h-5"
+              />
+              <span v-else class="relative z-10 text-base leading-none">{{ item.icon }}</span>
+              <span class="relative z-10">{{ item.label }}</span>
+            </button>
+            <button
+              class="absolute right-4 flex items-center justify-center w-8 h-8 text-blue-300 transition-all duration-200 border rounded-xl border-white/10 bg-white/5 hover:text-white hover:scale-105"
               :class="modalTheme.closeHover"
               @click="closeModal"
             >
