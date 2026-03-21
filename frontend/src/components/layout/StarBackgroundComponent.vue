@@ -207,4 +207,58 @@ usePlanetBackground(starsContainer)
     animation: none !important;
   }
 }
+
+/* ─── Planet Labels ────────────────────────────────────────────────────────── */
+
+.planet-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: left center;
+  pointer-events: none;
+  z-index: 5;
+  background: rgba(5, 5, 25, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 160, 50, 0.35);
+  border-radius: 8px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.planet-label__name {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+
+.planet-label__material {
+  color: rgba(255, 200, 100, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.planet-label__material img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.planet-label__reward {
+  color: rgba(120, 255, 180, 0.85);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-label {
+    display: none;
+  }
+}
 </style>

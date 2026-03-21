@@ -15,6 +15,7 @@ import {
   PLANET_TYPE_CONFIGS,
 } from '../utils/planetDraw'
 import { MATERIALS } from '../config/materials'
+import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ interface PlanetItem {
   orbitSpeed?: number
   orbitCx?: number
   orbitCy?: number
+  labelEl?: HTMLDivElement
+  name?: string
 }
 
 // Re-export for consumers (avoids unused import warnings)
@@ -59,6 +62,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const item = planets[idx]
     if (item.removeTimeout !== null) clearTimeout(item.removeTimeout)
     if (container.value?.contains(item.el)) container.value.removeChild(item.el)
+    if (item.labelEl) {
+      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
+      item.labelEl = undefined
+    }
+    if (item.name) {
+      releasePlanetName(item.name)
+      item.name = undefined
+    }
     planets.splice(idx, 1)
   }
 
@@ -164,6 +175,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       orbitSpeed,
       orbitCx: cx,
       orbitCy: cy,
+      name: generateUniquePlanetName(),
     }
     planets.push(item)
     return { id, type: config.type }
@@ -210,6 +222,29 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     item.el.addEventListener('click', () => {
       planetEventStore.openRescueModal()
     })
+
+    // Label-DIV erstellen
+    const event = planetEventStore.activePlanetEvent
+    const materialId = event?.potentialMaterialId
+    const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
+    const reward = event?.reward ?? 0
+    const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
+
+    const label = document.createElement('div')
+    label.className = 'planet-label'
+    label.innerHTML = `
+      <span class="planet-label__name">${item.name ?? ''}</span>
+      <span class="planet-label__material">
+        ${material?.image ? `<img src="${material.image}" alt="">` : material?.icon ?? ''}
+        ${material?.name ?? ''}
+      </span>
+      <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>
+    `
+    const labelX = item.x + pSize + 10
+    const labelY = item.y + pSize / 2
+    label.style.transform = `translate(${labelX}px, ${labelY}px) translateY(-50%)`
+    container.value.appendChild(label)
+    item.labelEl = label
   }
 
   function triggerExplosion(planetId: string): void {
@@ -217,6 +252,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     if (idx === -1) return
     const item = planets[idx]
     planets.splice(idx, 1)
+    if (item.labelEl) {
+      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
+      item.labelEl = undefined
+    }
+    if (item.name) {
+      releasePlanetName(item.name)
+      item.name = undefined
+    }
     item.el.style.animation = 'planetExplode 0.7s ease-out forwards'
     item.el.style.pointerEvents = 'none'
     setTimeout(() => {
@@ -229,6 +272,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     if (idx === -1) return
     const item = planets[idx]
     planets.splice(idx, 1)
+    if (item.labelEl) {
+      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
+      item.labelEl = undefined
+    }
+    if (item.name) {
+      releasePlanetName(item.name)
+      item.name = undefined
+    }
     item.el.style.animation = 'planetSaved 0.55s ease-out forwards'
     item.el.style.pointerEvents = 'none'
     setTimeout(() => {
@@ -265,6 +316,12 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         planet.x = planet.orbitCx! + planet.orbitRadius! * Math.cos(planet.orbitAngle!) - pSize / 2
         planet.y = planet.orbitCy! + planet.orbitRadius! * Math.sin(planet.orbitAngle!) - pSize / 2
         planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
+
+        if (planet.labelEl) {
+          const labelX = planet.x + pSize + 10
+          const labelY = planet.y + pSize / 2
+          planet.labelEl.style.transform = `translate(${labelX}px, ${labelY}px) translateY(-50%)`
+        }
       } else {
         planet.elapsed += delta * 1000
         const p = Math.min(planet.elapsed / planet.lifetime, 1)
@@ -351,9 +408,15 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       stalePlanets.forEach((el) => {
         if (container.value?.contains(el)) container.value.removeChild(el)
       })
+      // Veraltete Labels entfernen
+      const staleLabels = container.value.querySelectorAll('.planet-label')
+      staleLabels.forEach((el) => {
+        if (container.value?.contains(el)) container.value.removeChild(el)
+      })
       // Auch aus planets-Array entfernen
       for (let i = planets.length - 1; i >= 0; i--) {
         if (planets[i].el.classList.contains('planet--rescue')) {
+          if (planets[i].name) releasePlanetName(planets[i].name!)
           planets.splice(i, 1)
         }
       }
@@ -374,6 +437,10 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     timeouts.forEach(clearTimeout)
     for (const planet of planets) {
       if (container.value?.contains(planet.el)) container.value.removeChild(planet.el)
+      if (planet.labelEl && container.value?.contains(planet.labelEl)) {
+        container.value.removeChild(planet.labelEl)
+      }
+      if (planet.name) releasePlanetName(planet.name)
     }
     planets.length = 0
   })
