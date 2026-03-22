@@ -42,16 +42,16 @@
               class="space-y-1"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-white/70">{{
-                  getMissionIcon(mission.configId)
-                }} {{ mission.name }}</span>
+                <span class="text-[11px] font-semibold text-white/70"
+                  >{{ getMissionIcon(mission.configId) }} {{ mission.name }}</span
+                >
                 <span class="text-[10px] font-mono text-white/40">{{
                   getTimeRemaining(mission)
                 }}</span>
               </div>
               <div class="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
                 <div
-                  class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000"
+                  class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-amber-500 to-orange-500"
                   :style="{ width: getProgress(mission) + '%' }"
                 />
               </div>
@@ -127,7 +127,7 @@
           class="relative group/slot"
         >
           <div
-            class="relative overflow-hidden rounded-xl border transition-all duration-300"
+            class="relative overflow-hidden transition-all duration-300 border rounded-xl"
             :class="
               isOnExpedition(champion)
                 ? 'bg-gradient-to-br from-gray-900/40 via-gray-800/30 to-gray-900/20 border-gray-500/20 opacity-60'
@@ -147,7 +147,7 @@
               <img
                 :src="battleStore.getChampionImage(champion)"
                 :alt="champion"
-                class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/20 shadow-md"
+                class="object-cover w-10 h-10 rounded-lg shadow-md ring-1 ring-white/20"
                 :class="isOnExpedition(champion) ? 'grayscale opacity-60' : ''"
                 @error="onImgError"
               />
@@ -162,10 +162,7 @@
                 {{ truncate(champion, 7) }}
               </span>
               <!-- Expedition indicator on champion -->
-              <span
-                v-if="isOnExpedition(champion)"
-                class="text-[10px] text-amber-400/70 font-bold"
-              >
+              <span v-if="isOnExpedition(champion)" class="text-[10px] text-amber-400/70 font-bold">
                 ⏳ Expedition
               </span>
               <button
@@ -213,7 +210,7 @@
       <!-- No Champions State -->
       <div
         v-if="selectableChampions.length === 0"
-        class="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border border-dashed border-white/10"
+        class="flex flex-col items-center justify-center gap-2 p-6 border border-dashed rounded-xl border-white/10"
       >
         <span class="text-2xl opacity-40">🛒</span>
         <p class="text-xs text-white/30">Keine Champions verfügbar — besuche den Shop!</p>
@@ -235,12 +232,10 @@
           <img
             :src="battleStore.getChampionImage(champion)"
             :alt="champion"
-            class="w-8 h-8 rounded-lg object-cover ring-1 ring-white/15 flex-shrink-0"
+            class="flex-shrink-0 object-cover w-8 h-8 rounded-lg ring-1 ring-white/15"
             @error="onImgError"
           />
-          <span
-            class="flex-1 text-[11px] font-bold text-white/70 truncate"
-          >
+          <span class="flex-1 text-[11px] font-bold text-white/70 truncate">
             {{ champion }}
           </span>
           <span
@@ -256,15 +251,6 @@
     <!-- ═══════════════════════════════════════════════════ -->
     <!-- SEKTION B — Expeditionen                           -->
     <!-- ═══════════════════════════════════════════════════ -->
-    <div class="flex items-center gap-3 px-1 pt-4">
-      <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-white/30"
-        >Expeditionen</span
-      >
-      <div class="flex-1 h-px bg-white/5" />
-    </div>
-
-    <!-- Active Expeditions -->
-    <MissionActiveComponent />
 
     <!-- Available Expeditions -->
     <div class="flex items-center gap-3 px-1 pt-2">
@@ -317,8 +303,8 @@ export default defineComponent({
       )
     })
 
-    const activeExpeditionCount = computed(() =>
-      missionStore.activeMissions.filter((m) => m.status === 'active').length,
+    const activeExpeditionCount = computed(
+      () => missionStore.activeMissions.filter((m) => m.status === 'active').length,
     )
 
     function isOnExpedition(champion: string): boolean {

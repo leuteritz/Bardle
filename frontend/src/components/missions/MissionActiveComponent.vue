@@ -1,15 +1,5 @@
 <template>
   <div class="flex flex-col w-full h-full gap-3">
-    <!-- Empty State -->
-    <div
-      v-if="missionStore.activeMissions.length === 0 && missionStore.completedMissions.length === 0"
-      class="flex flex-col items-center justify-center gap-3 text-center border border-dashed py-14 rounded-2xl border-white/10"
-    >
-      <span class="text-4xl opacity-40">📜</span>
-      <p class="text-sm font-semibold text-white/30">Keine aktiven Missionen</p>
-      <p class="text-xs text-white/20">Starte eine Mission im "Neue Mission" Tab</p>
-    </div>
-
     <!-- Active Mission Cards -->
     <div
       v-for="mission in missionStore.activeMissions"
