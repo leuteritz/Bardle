@@ -15,6 +15,7 @@ import {
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { useBattleStore } from './battleStore'
+import { logger } from '../utils/logger'
 
 export const usePlanetEventStore = defineStore('planetEvent', {
   state: () => ({
@@ -38,6 +39,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
         if (elapsed >= this.activePlanetEvent.durationMs) {
           this.activePlanetEvent.expired = true
           this.rescueModalOpen = false
+          logger.info('Planet', 'Planet event expired')
           setTimeout(() => {
             this.activePlanetEvent = null
           }, 900)
@@ -56,6 +58,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       if (Math.random() > chance) return
 
       this.pendingRescue = true
+      logger.info('Planet', 'Planet rescue event spawned')
     },
 
     // Neue Action hinzufügen
@@ -136,6 +139,11 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       }
       this.pendingRescue = false
       this.lastDroppedMaterialId = null
+      logger.info('Planet', `Rescue activated: ${planetType}`, {
+        clicksRequired,
+        reward,
+        duration: Math.round(duration / 1000) + 's',
+      })
     },
 
     openRescueModal() {

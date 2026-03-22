@@ -31,6 +31,7 @@ import {
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
+import { logger } from '../utils/logger'
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -126,6 +127,7 @@ export const useBattleStore = defineStore('battle', {
       this.ownedChampions.push(name)
       this.recruitedChampions.push(name)
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
+      logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost })
       return true
     },
 
@@ -263,6 +265,10 @@ export const useBattleStore = defineStore('battle', {
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.showRandomChatMessagesSequentially()
       }
+      logger.group('Battle Init', () => {
+        logger.info('Battle', `Team 1: ${this.team1.map((c) => c.name).join(', ')}`)
+        logger.info('Battle', `Team 2: ${this.team2.map((c) => c.name).join(', ')}`)
+      })
     },
 
     // Hauptfunktion die einen kompletten Kampf simuliert und MMR/LP basierend auf Sieg/Niederlage aktualisiert
@@ -318,6 +324,11 @@ export const useBattleStore = defineStore('battle', {
       this.totalBattleTime += this.battleTime
       this.lastMmrChange = actualMmrChange
       this.lastLpChange = actualLpChange
+      logger.info('Battle', `Result: ${battleResult ? 'WIN' : 'LOSS'}`, {
+        mmrChange: actualMmrChange,
+        lpChange: actualLpChange,
+        newMMR: this.mmr,
+      })
       this.lastAutoBattleResult = {
         won: battleResult,
         opponent,
@@ -448,12 +459,17 @@ export const useBattleStore = defineStore('battle', {
     // Aktualisiert MMR nach Kampf mit ELO-Rating System
     updateRanking(won: boolean, opponentMMR: number) {
       const currentMMR = this.mmr
+      const oldRank = `${this.currentRank.tier} ${this.currentRank.division}`
       const expectedScore = 1 / (1 + Math.pow(10, (opponentMMR - currentMMR) / ELO_RATING_SCALE))
       const actualScore = won ? 1 : 0
       const mmrChange = Math.round(ELO_K_FACTOR * (actualScore - expectedScore))
       this.mmr += mmrChange
       const lpChange = this.calculateLPChange(mmrChange, won)
       this.updateLP(lpChange)
+      const newRank = `${this.currentRank.tier} ${this.currentRank.division}`
+      if (oldRank !== newRank) {
+        logger.info('Battle', `Rank change: ${oldRank} -> ${newRank}`)
+      }
     },
 
     // Aktualisiert LP und prüft automatisch auf Beförderung oder Abstieg

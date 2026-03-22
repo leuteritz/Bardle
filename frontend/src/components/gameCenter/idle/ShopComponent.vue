@@ -267,10 +267,7 @@ export default defineComponent({
     ]
 
     const handleUpgradeClick = (upgrade: ShopUpgrade) => {
-      const purchasedAmount = shopStore.buyUpgrade(upgrade.id)
-      if (purchasedAmount > 0) {
-        console.log(`${upgrade.name} ${purchasedAmount}x erfolgreich gekauft!`)
-      }
+      shopStore.buyUpgrade(upgrade.id)
     }
 
     const isImageUrl = (icon: string): boolean => {

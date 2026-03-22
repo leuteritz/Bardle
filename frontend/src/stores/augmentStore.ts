@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { AUGMENTS } from '../config/augments'
 import type { TimedBuff } from '../types'
+import { logger } from '../utils/logger'
 
 export const useAugmentStore = defineStore('augment', {
   state: () => ({
@@ -82,6 +83,7 @@ export const useAugmentStore = defineStore('augment', {
         }
       }
 
+      if (bonus > 0) logger.debug('Augment', `Click proc: +${bonus}`, { click: this.clickCounter })
       return bonus
     },
 
@@ -111,6 +113,7 @@ export const useAugmentStore = defineStore('augment', {
 
     registerAugment(id: string, activeAugments?: string[]) {
       this.lastChosenAugmentId = id
+      logger.info('Augment', `Registered: ${id}`)
 
       const aug = AUGMENTS.find((a) => a.id === id)
       if (!aug?.specialEffect) return

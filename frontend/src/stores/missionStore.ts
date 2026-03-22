@@ -9,6 +9,7 @@ import {
   MAX_ACTIVE_MISSIONS,
 } from '../config/constants'
 import type { Mission, MissionStatus, ChampionRole } from '../types'
+import { logger } from '../utils/logger'
 
 export const useMissionStore = defineStore('mission', {
   state: () => ({
@@ -89,6 +90,10 @@ export const useMissionStore = defineStore('mission', {
       }
 
       this.activeMissions.push(mission)
+      logger.info('Mission', `Started: ${config.name}`, {
+        champions: assignedChampions.map((c) => c.name),
+        successChance,
+      })
 
       // Remove champions from battle team
       const battleStore = useBattleStore()
@@ -110,6 +115,7 @@ export const useMissionStore = defineStore('mission', {
           const success = Math.random() < mission.successChance
           mission.status = success ? 'success' : 'failure'
           mission.reward = success ? mission.baseReward : Math.floor(mission.baseReward * 0.1)
+          logger.info('Mission', `Resolved: ${mission.name} - ${mission.status.toUpperCase()}`, { reward: mission.reward })
         }
       }
     },

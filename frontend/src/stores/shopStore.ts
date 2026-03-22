@@ -4,6 +4,7 @@ import { useGameStore } from './gameStore'
 import { useCpsStore } from './cpsStore'
 import { useAugmentStore } from './augmentStore'
 import type { ShopUpgrade, BuildingStat, PermanentUpgrade } from '../types'
+import { logger } from '../utils/logger'
 
 // Icon-Importe für verschiedene Upgrade-Typen im Shop-System
 const chimeClickerIcon = '/img/ChimesPerClick.png'
@@ -365,6 +366,7 @@ export const useShopStore = defineStore('shop', {
           gameStore.chimesPerSecond = newCPS
           useCpsStore().updateCurrentCPS(newCPS)
         }
+        logger.info('Shop', `Bought ${upgrade.name} x${amount}`, { cost: totalCost, newLevel: upgrade.level })
         return amount
       }
       return 0
@@ -407,6 +409,7 @@ export const useShopStore = defineStore('shop', {
       upgrade.purchased = true
       gameStore.chimesPerSecond = this.calculateTotalCPS()
       gameStore.chimesPerClick = this.calculateTotalCPC()
+      logger.info('Shop', `Permanent upgrade: ${upgrade.name}`, { cost: upgrade.cost })
       return true
     },
 

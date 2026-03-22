@@ -7,6 +7,7 @@ import { useAugmentStore } from '../stores/augmentStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { useCpsStore } from '../stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
+import { logger } from '../utils/logger'
 
 const SAVE_KEY = 'bard-idle-save'
 const SAVE_VERSION = 1
@@ -205,12 +206,21 @@ export function usePersistence() {
         // Expire stale timed buffs
         augmentStore.onTick()
       }
+
+      logger.info('System', 'Game loaded', {
+        level: gameStore.level,
+        chimes: gameStore.chimes,
+        cps: gameStore.chimesPerSecond,
+        universe: gameStore.currentUniverse,
+      })
     } catch {
       // Silent fail — start fresh
     }
   }
 
   function resetGame() {
+    console.clear()
+    logger.warn('System', 'Game reset initiated')
     // 1. Stop all timers
     const battleStore = useBattleStore()
     battleStore.stopAutoBattle()

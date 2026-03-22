@@ -23,6 +23,7 @@ import type {
   AugmentDefinition,
   AugmentRarity,
 } from '../types'
+import { logger } from '../utils/logger'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
   return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
@@ -102,6 +103,7 @@ export const useGameStore = defineStore('game', {
       if (this.pendingAugmentChoice) return
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
+      const oldLevel = this.level
       while (this.chimes >= this.chimesForNextLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
@@ -110,6 +112,7 @@ export const useGameStore = defineStore('game', {
         }
         const augmentStore = useAugmentStore()
         augmentStore.onLevelUp(this.activeAugments)
+        logger.info('Game', `Level up: ${oldLevel} -> ${this.level}`, { skillPoints: this.skillPoints })
         this.triggerAugmentSelection()
         break
       }
@@ -150,6 +153,7 @@ export const useGameStore = defineStore('game', {
       this.pendingAugmentOptions = []
       const augmentStore = useAugmentStore()
       augmentStore.registerAugment(id, this.activeAugments)
+      logger.info('Game', `Augment chosen: ${id}`, { totalActive: this.activeAugments.length })
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
@@ -268,6 +272,7 @@ export const useGameStore = defineStore('game', {
 
     // Führt den eigentlichen Prestige-Reset durch
     executePrestigeReset() {
+      logger.info('Game', `Prestige reset -> Universe ${this.currentUniverse + 1}`)
       this.currentUniverse++
       this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
       this.chimesForNextUniverse = 0
@@ -376,14 +381,17 @@ export const useGameStore = defineStore('game', {
         reward,
         collected: false,
       }
+      logger.info('Game', `Expedition started: ${universeName}`, { meepsSent, durationMs, reward })
     },
 
     // Sammelt abgeschlossene Expedition ein
     collectExpedition() {
       if (!this.activeExpedition) return
       if (Date.now() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
-      this.chimes += this.activeExpedition.reward
-      this.meeps += this.activeExpedition.meepsSent
+      const { reward, meepsSent } = this.activeExpedition
+      this.chimes += reward
+      this.meeps += meepsSent
+      logger.info('Game', `Expedition collected: +${reward} chimes, ${meepsSent} meeps returned`)
       this.activeExpedition = null
       this.calculateLevel()
     },

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { MATERIALS } from '../config/materials'
 import type { Material } from '../types'
+import { logger } from '../utils/logger'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -10,6 +11,7 @@ export const useInventoryStore = defineStore('inventory', {
   actions: {
     addMaterial(materialId: string): void {
       this.collectedMaterials[materialId] = (this.collectedMaterials[materialId] ?? 0) + 1
+      logger.debug('Inventory', `+1 ${materialId}`, { total: this.collectedMaterials[materialId] })
     },
 
     tryDropSpecificMaterial(materialId: string, dropChance: number): boolean {
@@ -29,6 +31,7 @@ export const useInventoryStore = defineStore('inventory', {
       for (const [matId, qty] of Object.entries(costs)) {
         this.collectedMaterials[matId] -= qty
       }
+      logger.info('Inventory', 'Materials spent', costs)
       return true
     },
 

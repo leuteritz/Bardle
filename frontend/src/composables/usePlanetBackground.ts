@@ -196,28 +196,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
     const size = parseFloat(item.el.getAttribute('width') ?? '80')
 
-    // Add material image or icon at the top if available
-    if (materialImage) {
-      const img = document.createElementNS(NS, 'image')
-      img.setAttribute('href', materialImage)
-      img.setAttribute('x', String(size * 0.25))
-      img.setAttribute('y', String(size * 0.05))
-      img.setAttribute('width', String(size * 0.5))
-      img.setAttribute('height', String(size * 0.5))
-      img.setAttribute('pointer-events', 'none')
-      item.el.appendChild(img)
-    } else if (materialIcon) {
-      const matText = document.createElementNS(NS, 'text')
-      matText.setAttribute('x', String(size / 2))
-      matText.setAttribute('y', String(size * 0.3))
-      matText.setAttribute('text-anchor', 'middle')
-      matText.setAttribute('dominant-baseline', 'middle')
-      matText.setAttribute('font-size', String(size * 0.5))
-      matText.setAttribute('pointer-events', 'none')
-      matText.textContent = materialIcon
-      item.el.appendChild(matText)
-    }
-
     // Click opens the rescue modal
     item.el.addEventListener('click', () => {
       planetEventStore.openRescueModal()
@@ -235,7 +213,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     label.innerHTML = `
       <span class="planet-label__name">${item.name ?? ''}</span>
       <span class="planet-label__material">
-        ${material?.image ? `<img src="${material.image}" alt="">` : material?.icon ?? ''}
+        ${material?.image ? `<img src="${material.image}" alt="">` : (material?.icon ?? '')}
         ${material?.name ?? ''}
       </span>
       <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>
