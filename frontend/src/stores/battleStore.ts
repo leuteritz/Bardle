@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
+import { useAugmentStore } from './augmentStore'
 import { battleMessages } from '../config/messages'
 import {
   ELO_K_FACTOR,
@@ -245,11 +246,29 @@ export const useBattleStore = defineStore('battle', {
       this.autoBattleOldMMR = this.mmr
       this.autoBattleOldLP = this.currentRank.lp
 
-      const playerPower = gameStore.totalPower
+      let playerPower = gameStore.totalPower
 
       // Erstellt Gegner und berechnet Gewinnchancen
       const opponent = this.generateOpponent(opponentMMR)
-      const winProbability = this.calculateWinProbability(playerPower, opponent.power)
+
+      // Augment battle modifiers
+      const augmentStore = useAugmentStore()
+      const battleMods = augmentStore.getActiveBattleModifiers(
+        gameStore.activeAugments,
+        gameStore.activeModifier as Record<string, unknown>,
+      )
+      const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
+      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * 30
+      const finalOpponentPower = Math.max(
+        effectiveOpponentPower * 0.1,
+        effectiveOpponentPower * (1 - drainReduction),
+      )
+      if (battleMods.bigBangAvailable) {
+        playerPower *= 5
+        augmentStore.consumeBigBang()
+      }
+
+      const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
       const battleResult = Math.random() < winProbability
 
       // Aktualisiert Rang basierend auf Kampfergebnis

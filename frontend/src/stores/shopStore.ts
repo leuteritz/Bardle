@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useCpsStore } from './cpsStore'
+import { useAugmentStore } from './augmentStore'
 import type { ShopUpgrade, BuildingStat, PermanentUpgrade } from '../types'
 
 // Icon-Importe für verschiedene Upgrade-Typen im Shop-System
@@ -412,13 +413,14 @@ export const useShopStore = defineStore('shop', {
     // Summiert CPS-Werte aller Upgrades und wendet Q-Ability-Bonus an
     calculateTotalCPS(): number {
       const gameStore = useGameStore()
+      const augmentStore = useAugmentStore()
       const mod = gameStore.activeModifier
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
         const permBuildingMul = this.getPermanentBuildingMultiplier(upgrade.id)
         return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * permBuildingMul
       }, 0)
-      const cpsMul = (mod.cpsMultiplier ?? 1) * this.permanentCPSMultiplier
+      const cpsMul = (mod.cpsMultiplier ?? 1) * this.permanentCPSMultiplier * augmentStore.temporaryCPSMultiplier
       return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
     },
 

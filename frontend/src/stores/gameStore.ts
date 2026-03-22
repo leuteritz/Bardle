@@ -3,7 +3,8 @@ import { useShopStore } from './shopStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
-import { AUGMENTS } from '../config/augments'
+import { AUGMENTS, RARITY_WEIGHTS } from '../config/augments'
+import { useAugmentStore } from './augmentStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -19,6 +20,8 @@ import type {
   Expedition,
   ModifierEffects,
   AugmentEffects,
+  AugmentDefinition,
+  AugmentRarity,
 } from '../types'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
@@ -105,6 +108,8 @@ export const useGameStore = defineStore('game', {
         if (this.level % spInterval === 0) {
           this.skillPoints++
         }
+        const augmentStore = useAugmentStore()
+        augmentStore.onLevelUp(this.activeAugments)
         this.triggerAugmentSelection()
         break
       }
@@ -112,9 +117,29 @@ export const useGameStore = defineStore('game', {
 
     triggerAugmentSelection() {
       const pool = AUGMENTS.filter((a) => !this.activeAugments.includes(a.id))
-      const source = pool.length >= 3 ? pool : AUGMENTS
-      const shuffled = [...source].sort(() => Math.random() - 0.5)
-      this.pendingAugmentOptions = shuffled.slice(0, 3).map((a) => a.id)
+      const source = pool.length >= 3 ? pool : [...AUGMENTS]
+      const picked: AugmentDefinition[] = []
+      const remaining = [...source]
+
+      for (let i = 0; i < 3 && remaining.length > 0; i++) {
+        const totalWeight = remaining.reduce(
+          (sum, a) => sum + (RARITY_WEIGHTS[a.rarity as AugmentRarity] ?? 60),
+          0,
+        )
+        let roll = Math.random() * totalWeight
+        let chosen = remaining[remaining.length - 1]
+        for (const aug of remaining) {
+          roll -= RARITY_WEIGHTS[aug.rarity as AugmentRarity] ?? 60
+          if (roll <= 0) {
+            chosen = aug
+            break
+          }
+        }
+        picked.push(chosen)
+        remaining.splice(remaining.indexOf(chosen), 1)
+      }
+
+      this.pendingAugmentOptions = picked.map((a) => a.id)
       this.pendingAugmentChoice = true
     },
 
@@ -123,6 +148,8 @@ export const useGameStore = defineStore('game', {
       this.activeAugments.push(id)
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
+      const augmentStore = useAugmentStore()
+      augmentStore.registerAugment(id, this.activeAugments)
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
@@ -259,6 +286,9 @@ export const useGameStore = defineStore('game', {
       this.pendingAugmentOptions = []
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
+      // Reset augment store
+      const augmentStore = useAugmentStore()
+      augmentStore.$reset()
       // Reset shop buildings and recalculate
       const shopStore = useShopStore()
       shopStore.shopUpgrades.forEach((u) => {
@@ -310,6 +340,8 @@ export const useGameStore = defineStore('game', {
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
       const missionStore = useMissionStore()
       missionStore.checkMissions()
+      const augmentStore = useAugmentStore()
+      augmentStore.onTick()
     },
 
     // Setzt den Modal-Status für UI-Effekte
@@ -361,18 +393,28 @@ export const useGameStore = defineStore('game', {
     // Merged augment effects from all active augments
     combinedAugmentEffects(): AugmentEffects {
       const result: AugmentEffects = {}
+      const additiveKeys: (keyof AugmentEffects)[] = ['abilityPowerPerLevel', 'enemyMaxHPDrainPerSecond']
       for (const id of this.activeAugments) {
         const aug = AUGMENTS.find((a) => a.id === id)
         if (!aug) continue
         for (const [key, val] of Object.entries(aug.effects)) {
           const k = key as keyof AugmentEffects
-          if (k === 'abilityPowerPerLevel') {
-            result[k] = ((result[k] as number | undefined) ?? 0) + (val as number)
+          if (additiveKeys.includes(k)) {
+            ;(result as Record<string, number>)[k] =
+              ((result[k] as number | undefined) ?? 0) + (val as number)
           } else {
             ;(result as Record<string, number>)[k] =
               ((result[k] as number | undefined) ?? 1) * (val as number)
           }
         }
+      }
+      // Apply keyboard smash modifiers from augmentStore
+      const augmentStore = useAugmentStore()
+      const ksm = augmentStore.keyboardSmashModifiers
+      for (const [key, val] of Object.entries(ksm)) {
+        const k = key as keyof AugmentEffects
+        ;(result as Record<string, number>)[k] =
+          ((result[k] as number | undefined) ?? 1) * (val as number)
       }
       return result
     },
@@ -400,6 +442,9 @@ export const useGameStore = defineStore('game', {
         abilityCPCPerLevel: base.abilityCPCPerLevel,
         abilityMeepCostPerLevel: base.abilityMeepCostPerLevel,
         abilityPowerPerLevel: (base.abilityPowerPerLevel ?? 300) + (aug.abilityPowerPerLevel ?? 0),
+        cooldownMultiplier: aug.cooldownMultiplier,
+        enemySpeedMultiplier: aug.enemySpeedMultiplier,
+        enemyMaxHPDrainPerSecond: aug.enemyMaxHPDrainPerSecond,
       }
     },
 

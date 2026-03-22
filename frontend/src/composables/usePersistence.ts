@@ -3,6 +3,7 @@ import { useShopStore } from '../stores/shopStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useMissionStore } from '../stores/missionStore'
 import { useInventoryStore } from '../stores/inventoryStore'
+import { useAugmentStore } from '../stores/augmentStore'
 import { LEVEL_BASE, LEVEL_EXPONENT } from '../config/constants'
 
 const SAVE_KEY = 'bard-idle-save'
@@ -15,6 +16,8 @@ export function usePersistence() {
     const battleStore = useBattleStore()
     const missionStore = useMissionStore()
     const inventoryStore = useInventoryStore()
+
+    const augmentStore = useAugmentStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -71,6 +74,14 @@ export function usePersistence() {
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
+      },
+      augment: {
+        clickCounter: augmentStore.clickCounter,
+        lastClickValues: [...augmentStore.lastClickValues],
+        activeTimedBuffs: augmentStore.activeTimedBuffs,
+        bigBangUsed: augmentStore.bigBangUsed,
+        keyboardSmashModifiers: { ...augmentStore.keyboardSmashModifiers },
+        lastChosenAugmentId: augmentStore.lastChosenAugmentId,
       },
     }
 
@@ -173,6 +184,20 @@ export function usePersistence() {
       // Restore inventoryStore
       if (saved.inventory?.collectedMaterials) {
         inventoryStore.collectedMaterials = { ...saved.inventory.collectedMaterials }
+      }
+
+      // Restore augmentStore
+      const augmentStore = useAugmentStore()
+      if (saved.augment) {
+        const a = saved.augment
+        augmentStore.clickCounter = a.clickCounter ?? 0
+        if (Array.isArray(a.lastClickValues)) augmentStore.lastClickValues = a.lastClickValues
+        if (Array.isArray(a.activeTimedBuffs)) augmentStore.activeTimedBuffs = a.activeTimedBuffs
+        augmentStore.bigBangUsed = a.bigBangUsed ?? false
+        if (a.keyboardSmashModifiers) augmentStore.keyboardSmashModifiers = a.keyboardSmashModifiers
+        augmentStore.lastChosenAugmentId = a.lastChosenAugmentId ?? null
+        // Expire stale timed buffs
+        augmentStore.onTick()
       }
     } catch {
       // Silent fail — start fresh

@@ -48,6 +48,7 @@
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { useBattleStore } from '../../../stores/battleStore'
+import { useAugmentStore } from '../../../stores/augmentStore'
 import { formatNumber } from '../../../config/numberFormat'
 import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
 import MeepProgressComponent from './MeepProgressComponent.vue'
@@ -72,6 +73,14 @@ export default defineComponent({
 
     function handleChimeClick(event: MouseEvent) {
       gameStore.addChime()
+      // Apply special augment click effects (Double Tap, Chain Reaction, etc.)
+      const augmentStore = useAugmentStore()
+      const bonus = augmentStore.onClick(gameStore.chimesPerClick, gameStore.activeAugments)
+      if (bonus > 0) {
+        gameStore.chimes += bonus
+        gameStore.chimesForMeep += bonus
+        gameStore.chimesForNextUniverse += bonus
+      }
       chimeGainPos.value = { x: event.clientX, y: event.clientY }
       chimeGainKey.value++
     }

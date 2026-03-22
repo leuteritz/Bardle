@@ -39,6 +39,9 @@ export interface ModifierEffects {
   abilityCPCPerLevel?: number
   abilityPowerPerLevel?: number
   abilityMeepCostPerLevel?: number
+  cooldownMultiplier?: number
+  enemySpeedMultiplier?: number
+  enemyMaxHPDrainPerSecond?: number
 }
 
 export interface UniverseModifier {
@@ -193,7 +196,7 @@ export interface BattleResult {
 }
 
 // Augment types
-export type AugmentRarity = 'common' | 'rare' | 'epic'
+export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export interface AugmentEffects {
   cpsMultiplier?: number
@@ -203,15 +206,44 @@ export interface AugmentEffects {
   meepPowerMultiplier?: number
   expeditionRewardMultiplier?: number
   abilityPowerPerLevel?: number
+  cooldownMultiplier?: number
+  enemySpeedMultiplier?: number
+  enemyMaxHPDrainPerSecond?: number
+}
+
+export type AugmentSpecialEffectType =
+  | 'doubleTap'
+  | 'chainReaction'
+  | 'overclock'
+  | 'bigBang'
+  | 'infiniteLoop'
+  | 'gravityFlip'
+  | 'bardsCurse'
+  | 'quantumLuck'
+  | 'echoChamber'
+  | 'keyboardSmash'
+
+export interface AugmentSpecialEffect {
+  type: AugmentSpecialEffectType
+  params: Record<string, number>
 }
 
 export interface AugmentDefinition {
   id: string
   name: string
   description: string
+  effectLine: string
   icon: string
   rarity: AugmentRarity
   effects: AugmentEffects
+  specialEffect?: AugmentSpecialEffect
+}
+
+export interface TimedBuff {
+  augmentId: string
+  effectKey: string
+  multiplier: number
+  expiresAt: number
 }
 
 // Material types

@@ -30,43 +30,25 @@ const rarityGlow: Record<string, string> = {
   common: 'shadow-[0_0_14px_rgba(96,165,250,0.35)] hover:shadow-[0_0_22px_rgba(96,165,250,0.55)]',
   rare: 'shadow-[0_0_14px_rgba(168,85,247,0.35)] hover:shadow-[0_0_22px_rgba(168,85,247,0.55)]',
   epic: 'shadow-[0_0_14px_rgba(251,191,36,0.40)] hover:shadow-[0_0_22px_rgba(251,191,36,0.65)]',
+  legendary: 'shadow-[0_0_18px_rgba(251,191,36,0.55)] hover:shadow-[0_0_28px_rgba(251,191,36,0.75)] legendary-glow',
 }
 
 const rarityBorder: Record<string, string> = {
   common: 'border-blue-400/50',
   rare: 'border-purple-400/50',
   epic: 'border-amber-400/60',
+  legendary: 'border-yellow-400/70',
 }
 
 const rarityAccent: Record<string, string> = {
   common: 'from-blue-500/30 to-blue-600/10',
   rare: 'from-purple-500/30 to-purple-600/10',
   epic: 'from-amber-500/35 to-amber-600/10',
+  legendary: 'from-yellow-500/40 to-amber-600/15',
 }
 
-function formatEffect(key: string, val: number): string {
-  switch (key) {
-    case 'cpsMultiplier':
-      return `+${Math.round((val - 1) * 100)}% CPS`
-    case 'cpcMultiplier':
-      return `+${Math.round((val - 1) * 100)}% CPC`
-    case 'buildingCostMultiplier':
-      return `-${Math.round((1 - val) * 100)}% Gebäudekosten`
-    case 'meepCostMultiplier':
-      return `-${Math.round((1 - val) * 100)}% Meep-Kosten`
-    case 'meepPowerMultiplier':
-      return `+${Math.round((val - 1) * 100)}% Meep-Power`
-    case 'expeditionRewardMultiplier':
-      return `+${Math.round((val - 1) * 100)}% Expeditions-Belohnung`
-    case 'abilityPowerPerLevel':
-      return `+${val} Power pro Fähigkeitsstufe`
-    default:
-      return `${key}: ${val}`
-  }
-}
-
-function getEffectLines(aug: AugmentDefinition): string[] {
-  return Object.entries(aug.effects).map(([k, v]) => formatEffect(k, v as number))
+function getDisplayLine(aug: AugmentDefinition): string {
+  return aug.effectLine
 }
 </script>
 
@@ -85,7 +67,6 @@ function getEffectLines(aug: AugmentDefinition): string[] {
         <div class="flex-1 h-px bg-gradient-to-l from-white/20 to-transparent" />
       </div>
 
-      <!-- ✅ Scrollbarer Wrapper mit max-height -->
       <div class="relative">
         <div
           ref="scrollEl"
@@ -98,7 +79,6 @@ function getEffectLines(aug: AugmentDefinition): string[] {
         >
           <TransitionGroup name="aug-card" tag="div" class="flex flex-col gap-1.5">
             <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative">
-              <!-- Card -->
               <div
                 class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border bg-slate-950/80 backdrop-blur-sm cursor-default transition-all duration-300 overflow-hidden"
                 :class="[rarityBorder[aug.rarity], rarityGlow[aug.rarity]]"
@@ -109,15 +89,11 @@ function getEffectLines(aug: AugmentDefinition): string[] {
                   :class="rarityAccent[aug.rarity]"
                 />
 
-                <!-- Effects -->
+                <!-- Effect line -->
                 <div class="relative z-10 flex flex-col gap-0.5 flex-1">
-                  <div
-                    v-for="(line, i) in getEffectLines(aug)"
-                    :key="i"
-                    class="flex items-center gap-1 text-[11px]"
-                  >
+                  <div class="flex items-center gap-1 text-[11px]">
                     <span class="text-emerald-400 flex-shrink-0 text-[8px]">▲</span>
-                    <span class="leading-tight text-blue-100/85">{{ line }}</span>
+                    <span class="leading-tight text-blue-100/85">{{ getDisplayLine(aug) }}</span>
                   </div>
                 </div>
               </div>
@@ -125,7 +101,6 @@ function getEffectLines(aug: AugmentDefinition): string[] {
           </TransitionGroup>
         </div>
 
-        <!-- ✅ Fade-Overlay unten: zeigt an, dass weitere Items vorhanden sind -->
         <Transition name="fade">
           <div
             v-if="isScrollable && !atBottom"
@@ -172,5 +147,13 @@ function getEffectLines(aug: AugmentDefinition): string[] {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@keyframes legendary-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.65); }
+}
+.legendary-glow {
+  animation: legendary-pulse 2s ease-in-out infinite;
 }
 </style>
