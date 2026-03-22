@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { usePersistence } from '../composables/usePersistence'
 import ShopComponent from './gameCenter/idle/ShopComponent.vue'
-import RankComponent from './RankComponent.vue'
 import SkillTreeComponent from './SkillTreeComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
@@ -24,7 +23,7 @@ const handleReset = () => {
   }
 }
 
-type ModalId = 'shop' | 'charakter' | 'kampf' | 'admin'
+type ModalId = 'shop' | 'tree' | 'missionen' | 'kampf' | 'admin'
 
 const activeModal = ref<ModalId | null>(null)
 
@@ -45,12 +44,20 @@ const menuItems: {
     gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600',
   },
   {
-    id: 'charakter',
-    label: 'Charakter',
-    icon: '🎭',
+    id: 'tree',
+    label: 'Tree',
+    icon: '🌳',
     src: '',
     color: 'violet',
     gradient: 'bg-gradient-to-r from-violet-500 to-purple-600',
+  },
+  {
+    id: 'missionen',
+    label: 'Missionen',
+    icon: '📜',
+    src: '',
+    color: 'amber',
+    gradient: 'bg-gradient-to-r from-amber-500 to-orange-600',
   },
   {
     id: 'kampf',
@@ -70,7 +77,6 @@ const menuItems: {
   },
 ]
 
-const activeCharTab = ref<'rang' | 'faehigkeiten' | 'missionen'>('rang')
 const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
 
 const openBardModal = () => {
@@ -104,7 +110,7 @@ const modalTheme = computed(() => {
       closeHover: string
     }
   > = {
-    charakter: {
+    tree: {
       accentBar: 'from-violet-500 via-purple-400 to-violet-500',
       headerBg: 'bg-gradient-to-r from-violet-950/50 via-purple-950/30 to-transparent',
       border: 'border-violet-500/20',
@@ -112,6 +118,15 @@ const modalTheme = computed(() => {
       tabActive: 'bg-gradient-to-r from-violet-500 to-purple-600',
       iconGlow: 'shadow-[0_0_12px_rgba(124,58,237,0.4)] ring-1 ring-violet-400/40',
       closeHover: 'hover:bg-violet-500/20',
+    },
+    missionen: {
+      accentBar: 'from-amber-500 via-orange-400 to-amber-500',
+      headerBg: 'bg-gradient-to-r from-amber-950/50 via-orange-950/30 to-transparent',
+      border: 'border-amber-500/20',
+      glow: 'shadow-[0_0_80px_rgba(245,158,11,0.10)]',
+      tabActive: 'bg-gradient-to-r from-amber-500 to-orange-600',
+      iconGlow: 'shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400/40',
+      closeHover: 'hover:bg-amber-500/20',
     },
     kampf: {
       accentBar: 'from-rose-500 via-red-400 to-rose-500',
@@ -141,7 +156,7 @@ const modalTheme = computed(() => {
       closeHover: 'hover:bg-cyan-500/20',
     },
   }
-  return activeModal.value ? themes[activeModal.value] : themes.charakter
+  return activeModal.value ? themes[activeModal.value] : themes.shop
 })
 </script>
 
@@ -316,35 +331,6 @@ const modalTheme = computed(() => {
           </div>
         </div>
 
-        <!-- ─── Charakter Tabs ─── -->
-        <div
-          v-if="activeModal === 'charakter'"
-          class="flex p-1.5 gap-1 bg-white/[0.04] border border-white/10 mx-4 my-3 rounded-2xl flex-shrink-0"
-        >
-          <button
-            v-for="tab in [
-              { id: 'rang', label: 'Rang' },
-              { id: 'faehigkeiten', label: 'Fähigkeiten' },
-              { id: 'missionen', label: 'Missionen' },
-            ]"
-            :key="tab.id"
-            @click="activeCharTab = tab.id as 'rang' | 'faehigkeiten' | 'missionen'"
-            class="relative flex-1 px-4 py-2 overflow-hidden text-sm font-bold tracking-wide transition-all duration-200 rounded-xl"
-            :class="
-              activeCharTab === tab.id
-                ? 'text-white shadow-lg shadow-violet-500/30'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
-            "
-          >
-            <span
-              v-if="activeCharTab === tab.id"
-              class="absolute inset-0 rounded-xl"
-              :class="modalTheme.tabActive"
-            />
-            <span class="relative z-10">{{ tab.label }}</span>
-          </button>
-        </div>
-
         <!-- ─── Kampf Tabs ─── -->
         <div
           v-if="activeModal === 'kampf'"
@@ -378,16 +364,13 @@ const modalTheme = computed(() => {
           <!-- Shop -->
           <ShopComponent v-if="activeModal === 'shop'" />
 
-          <!-- Charakter -->
-          <div v-else-if="activeModal === 'charakter'">
-            <div v-if="activeCharTab === 'rang'" class="p-4">
-              <RankComponent />
-            </div>
-            <div v-else-if="activeCharTab === 'faehigkeiten'" class="p-2 overflow-hidden">
-              <SkillTreeComponent />
-            </div>
-            <MissionComponent v-else-if="activeCharTab === 'missionen'" />
+          <!-- Tree -->
+          <div v-else-if="activeModal === 'tree'" class="p-2 overflow-hidden">
+            <SkillTreeComponent />
           </div>
+
+          <!-- Missionen -->
+          <MissionComponent v-else-if="activeModal === 'missionen'" />
 
           <!-- Kampf -->
           <div v-else-if="activeModal === 'kampf'">
