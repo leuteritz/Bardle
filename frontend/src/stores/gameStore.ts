@@ -68,6 +68,7 @@ export const useGameStore = defineStore('game', {
     activeExpedition: null as Expedition | null,
 
     isHyperspaceActive: false,
+    showUniverseSelectModal: false,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -271,9 +272,10 @@ export const useGameStore = defineStore('game', {
     },
 
     // Führt den eigentlichen Prestige-Reset durch
-    executePrestigeReset() {
-      logger.info('Game', `Prestige reset -> Universe ${this.currentUniverse + 1}`)
-      this.currentUniverse++
+    executePrestigeReset(targetUniverse?: number) {
+      const nextUniverse = targetUniverse ?? this.currentUniverse + 1
+      logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
+      this.currentUniverse = nextUniverse
       this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
       this.chimesForNextUniverse = 0
       this.prestigeAvailable = false
@@ -303,24 +305,38 @@ export const useGameStore = defineStore('game', {
       this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
-    // Führt Prestige durch: startet Hyperspace-Animation, dann Reset
-    triggerPrestige() {
+    // Öffnet das Universum-Auswahl-Modal
+    openPrestigeModal() {
       if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
       if (this.isHyperspaceActive) return
+      this.showUniverseSelectModal = true
+    },
+
+    // Schließt das Universum-Auswahl-Modal
+    closePrestigeModal() {
+      this.showUniverseSelectModal = false
+    },
+
+    // Wählt ein Universum aus und startet die Hyperspace-Animation + Reset
+    selectPrestigeUniverse(targetUniverse: number) {
+      if (targetUniverse === this.currentUniverse) return
+      if (this.isHyperspaceActive) return
+
+      this.showUniverseSelectModal = false
 
       // Skip animation for reduced motion
       if (
         typeof window !== 'undefined' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ) {
-        this.executePrestigeReset()
+        this.executePrestigeReset(targetUniverse)
         return
       }
 
       this.isHyperspaceActive = true
       // Execute reset during white flash (at 2.5s)
       setTimeout(() => {
-        this.executePrestigeReset()
+        this.executePrestigeReset(targetUniverse)
       }, 2500)
       // End animation after flash fades (at 3.5s)
       setTimeout(() => {

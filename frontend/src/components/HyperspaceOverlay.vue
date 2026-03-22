@@ -176,7 +176,7 @@ onUnmounted(() => {
 .hyperspace-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 9999;
   pointer-events: none;
   background: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
 }
