@@ -25,21 +25,21 @@
           <button
             v-for="uid in choices"
             :key="uid"
-            class="group relative flex flex-col items-center p-5 border rounded-2xl bg-white/5 backdrop-blur-sm border-white/15 hover:border-violet-400/60 hover:bg-violet-500/10 hover:scale-105 hover:shadow-lg hover:shadow-violet-500/20 transition-all duration-300 cursor-pointer text-left"
+            class="relative flex flex-col items-center p-5 text-left transition-all duration-300 border cursor-pointer group rounded-2xl bg-white/5 backdrop-blur-sm border-white/15 hover:border-violet-400/60 hover:bg-violet-500/10 hover:scale-105 hover:shadow-lg hover:shadow-violet-500/20"
             @click="$emit('select', uid)"
           >
             <!-- Icon -->
-            <span class="text-4xl mb-3">{{ getUniverse(uid)?.modifier?.icon ?? '🌌' }}</span>
+            <span class="mb-3 text-4xl">{{ getUniverse(uid)?.modifier?.icon ?? '🌌' }}</span>
 
             <!-- Name -->
             <h3
-              class="text-lg font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text mb-1 text-center"
+              class="mb-1 text-lg font-bold text-center text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
             >
               {{ getUniverse(uid)?.name }}
             </h3>
 
             <!-- Description -->
-            <p class="text-xs text-blue-400/70 mb-4 text-center">
+            <p class="mb-4 text-xs text-center text-blue-400/70">
               {{ getUniverse(uid)?.description }}
             </p>
 
@@ -48,7 +48,7 @@
               v-if="getUniverse(uid)?.modifier"
               class="w-full space-y-1.5 p-3 rounded-xl bg-black/30 border border-white/10"
             >
-              <div class="text-xs font-bold text-violet-300 mb-2 text-center">
+              <div class="mb-2 text-xs font-bold text-center text-violet-300">
                 {{ getUniverse(uid)!.modifier!.name }}
               </div>
               <div
@@ -75,7 +75,7 @@
         <!-- Cancel -->
         <div class="flex justify-center pb-5">
           <button
-            class="px-6 py-2 text-sm text-blue-400/60 hover:text-blue-300 border border-blue-400/20 hover:border-blue-400/40 rounded-xl transition-all duration-200"
+            class="px-6 py-2 text-sm transition-all duration-200 border text-blue-400/60 hover:text-blue-300 border-blue-400/20 hover:border-blue-400/40 rounded-xl"
             @click="$emit('cancel')"
           >
             Abbrechen
@@ -108,19 +108,36 @@ const effectLabels: Record<keyof ModifierEffects, { label: string; neutral: numb
   abilityMeepCostPerLevel: { label: 'Ability Meep-Kosten/Lvl', neutral: 0.1 },
   baseChimesPerClick: { label: 'Basis-CPC', neutral: 20 },
   buildingMultipliers: { label: 'Gebäude-Multiplikatoren', neutral: 1 },
+  // ✅ NEU
+  cooldownMultiplier: { label: 'Cooldown', neutral: 1 },
+  enemySpeedMultiplier: { label: 'Gegner-Geschwindigkeit', neutral: 1 },
+  enemyMaxHPDrainPerSecond: { label: 'Gegner-HP-Drain/Sek', neutral: 0 },
 }
 
-// Keys where higher = better for the player
+// 2️⃣  higherIsBetter – enemyMaxHPDrainPerSecond ergänzen (mehr Drain = besser für den Spieler)
 const higherIsBetter = new Set([
-  'cpsMultiplier', 'cpcMultiplier', 'meepPowerMultiplier', 'maxAbilityLevel',
-  'eloPowerMultiplier', 'expeditionRewardMultiplier', 'baseChimesPerClick',
-  'abilityCPSPerLevel', 'abilityCPCPerLevel', 'abilityPowerPerLevel',
+  'cpsMultiplier',
+  'cpcMultiplier',
+  'meepPowerMultiplier',
+  'maxAbilityLevel',
+  'eloPowerMultiplier',
+  'expeditionRewardMultiplier',
+  'baseChimesPerClick',
+  'abilityCPSPerLevel',
+  'abilityCPCPerLevel',
+  'abilityPowerPerLevel',
+  'enemyMaxHPDrainPerSecond', // ✅ NEU
 ])
 
 // Keys where lower = better
 const lowerIsBetter = new Set([
-  'buildingCostMultiplier', 'meepCostMultiplier', 'levelExponent',
-  'skillPointInterval', 'abilityMeepCostPerLevel',
+  'buildingCostMultiplier',
+  'meepCostMultiplier',
+  'levelExponent',
+  'skillPointInterval',
+  'abilityMeepCostPerLevel',
+  'cooldownMultiplier', // ✅ NEU – weniger Cooldown = besser
+  'enemySpeedMultiplier', // ✅ NEU – langsamere Gegner = besser
 ])
 
 export default defineComponent({

@@ -1258,6 +1258,25 @@ export function useStarBackground() {
     }
   }
 
+  function handleVisibilityChange(): void {
+    if (document.hidden) {
+      if (animFrame) {
+        cancelAnimationFrame(animFrame)
+        animFrame = 0
+      }
+      if (galaxySpawnTimeout) {
+        clearTimeout(galaxySpawnTimeout)
+        galaxySpawnTimeout = null
+      }
+    } else {
+      if (!prefersReducedMotion.value && stars.length > 0) {
+        lastTimestamp = 0
+        animFrame = requestAnimationFrame(animateStars)
+        scheduleNextGalaxy()
+      }
+    }
+  }
+
   onMounted(async () => {
     checkReducedMotion()
     if (!prefersReducedMotion.value) {
@@ -1266,9 +1285,11 @@ export function useStarBackground() {
       window.addEventListener('resize', handleResize)
       scheduleNextGalaxy()
     }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
   })
 
   onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
     cleanup()
   })
 

@@ -484,6 +484,7 @@ export const useBattleStore = defineStore('battle', {
       this.timeUntilNextBattle = this.autoBattleInterval / 1000
       if (this.countdownTimer) clearInterval(this.countdownTimer)
       this.countdownTimer = setInterval(() => {
+        if (document.hidden) return
         this.timeUntilNextBattle--
         if (this.timeUntilNextBattle <= 0) {
           clearInterval(this.countdownTimer)

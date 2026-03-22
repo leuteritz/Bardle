@@ -98,11 +98,21 @@ export default defineComponent({
       }
     }
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopGameTimer()
+      } else {
+        if (!gameTimer) startGameTimer()
+      }
+    }
+
     onMounted(() => {
       startGameTimer()
+      document.addEventListener('visibilitychange', handleVisibilityChange)
     })
 
     onUnmounted(() => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       stopGameTimer()
     })
 

@@ -15,4 +15,19 @@ app.mount('#app')
 
 const { loadGame, saveGame } = usePersistence()
 loadGame()
-setInterval(saveGame, 5000)
+
+let saveTimer: ReturnType<typeof setInterval> | null = setInterval(saveGame, 5000)
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (saveTimer) {
+      clearInterval(saveTimer)
+      saveTimer = null
+    }
+    saveGame()
+  } else {
+    if (!saveTimer) {
+      saveTimer = setInterval(saveGame, 5000)
+    }
+  }
+})

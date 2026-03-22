@@ -129,6 +129,8 @@ export const useCpsStore = defineStore('cps', {
       this.mainTimer = setInterval(() => {
         this.updateAllHistories()
       }, 1000)
+
+      document.addEventListener('visibilitychange', this._handleVisibilityChange)
     },
 
     // Stoppt den Haupt-Timer und bereinigt Timer-Referenz
@@ -136,6 +138,22 @@ export const useCpsStore = defineStore('cps', {
       if (this.mainTimer) {
         clearInterval(this.mainTimer)
         this.mainTimer = null
+      }
+      document.removeEventListener('visibilitychange', this._handleVisibilityChange)
+    },
+
+    _handleVisibilityChange() {
+      if (document.hidden) {
+        if (this.mainTimer) {
+          clearInterval(this.mainTimer)
+          this.mainTimer = null
+        }
+      } else {
+        if (!this.mainTimer) {
+          this.mainTimer = setInterval(() => {
+            this.updateAllHistories()
+          }, 1000)
+        }
       }
     },
 
