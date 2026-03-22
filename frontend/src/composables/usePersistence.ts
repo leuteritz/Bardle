@@ -4,7 +4,9 @@ import { useBattleStore } from '../stores/battleStore'
 import { useMissionStore } from '../stores/missionStore'
 import { useInventoryStore } from '../stores/inventoryStore'
 import { useAugmentStore } from '../stores/augmentStore'
-import { LEVEL_BASE, LEVEL_EXPONENT } from '../config/constants'
+import { usePlanetEventStore } from '../stores/planetEventStore'
+import { useCpsStore } from '../stores/cpsStore'
+import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
 
 const SAVE_KEY = 'bard-idle-save'
 const SAVE_VERSION = 1
@@ -209,8 +211,100 @@ export function usePersistence() {
   }
 
   function resetGame() {
+    // 1. Stop all timers
+    const battleStore = useBattleStore()
+    battleStore.stopAutoBattle()
+    battleStore.clearBattle()
+
+    const cpsStore = useCpsStore()
+    cpsStore.stopProductionTracking()
+
+    // 2. Reset gameStore
+    const gameStore = useGameStore()
+    gameStore.inGameTime = 0
+    gameStore.chimes = 0
+    gameStore.chimesPerSecond = 0
+    gameStore.chimesPerClick = 20
+    gameStore.baseChimesPerClick = 20
+    gameStore.chimesForNextLevel = LEVEL_BASE
+    gameStore.chimesForMeep = 0
+    gameStore.chimesForNextUniverse = 0
+    gameStore.chimesToUniverseRescue = 100000
+    gameStore.meeps = 0
+    gameStore.meepChimeRequirement = MEEP_BASE_COST
+    gameStore.level = 1
+    gameStore.skillPoints = 0
+    gameStore.abilityLevels = [0, 0, 0, 0]
+    gameStore.activeAugments = []
+    gameStore.pendingAugmentChoice = false
+    gameStore.pendingAugmentOptions = []
+    gameStore.currentUniverse = 1
+    gameStore.prestigeAvailable = false
+    gameStore.buildingProductionHistory = {}
+    gameStore.totalBuildingProduction = {}
+    gameStore.activeExpedition = null
+    gameStore.isHyperspaceActive = false
+    gameStore.isCPSModalOpen = false
+    gameStore.isExpeditionModalOpen = false
+    gameStore.isEncyclopediaOpen = false
+
+    // 3. Reset shopStore
+    const shopStore = useShopStore()
+    shopStore.shopUpgrades.forEach((u) => { u.level = 0 })
+    shopStore.permanentUpgrades.forEach((u) => { u.purchased = false })
+    shopStore.buyAmount = 1
+
+    // 4. Reset augmentStore
+    const augmentStore = useAugmentStore()
+    augmentStore.$reset()
+
+    // 5. Reset battleStore (timers already stopped)
+    battleStore.mmr = 1000
+    battleStore.currentRank = { tier: 'Iron', division: 'IV', lp: 0 }
+    battleStore.ownedChampions = ['Bard']
+    battleStore.selectedChampions = []
+    battleStore.totalBattles = 0
+    battleStore.totalWins = 0
+    battleStore.totalLosses = 0
+    battleStore.totalKills = 0
+    battleStore.totalDeaths = 0
+    battleStore.totalAssists = 0
+    battleStore.avgBattleTime = 0
+    battleStore.totalBattleTime = 0
+    battleStore.bestWinStreak = 0
+    battleStore.currentWinStreak = 0
+    battleStore.battleHistory = []
+    battleStore.team1 = []
+    battleStore.team2 = []
+    battleStore.chatMessages = []
+    battleStore.isAutoBattleInitialized = false
+    battleStore.autoBattleEnabled = false
+    battleStore.lastAutoBattleResult = null
+    battleStore.showAutoBattleResult = false
+    battleStore.recruitableChampions = []
+    battleStore.recruitedChampions = []
+    battleStore.battleTime = 0
+    battleStore.timeUntilNextBattle = 0
+    battleStore.currentBattleId = 0
+
+    // 6. Reset remaining stores
+    const inventoryStore = useInventoryStore()
+    inventoryStore.$reset()
+    const missionStore = useMissionStore()
+    missionStore.$reset()
+    const planetEventStore = usePlanetEventStore()
+    planetEventStore.$reset()
+    cpsStore.$reset()
+
+    // 7. Recalculate CPS/CPC from clean state
+    gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+    gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+
+    // 8. Re-start CPS tracking
+    cpsStore.startProductionTracking()
+
+    // 9. Clear localStorage
     localStorage.removeItem(SAVE_KEY)
-    window.location.reload()
   }
 
   return { saveGame, loadGame, resetGame }
