@@ -6,14 +6,16 @@
       class="relative flex items-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
     >
       <!-- Upgrade Icons (scrollbar) -->
-      <div class="flex items-center gap-2 overflow-x-auto overflow-y-hidden custom-scrollbar flex-1 min-w-0">
+      <div
+        class="flex items-center flex-1 min-w-0 gap-2 overflow-x-auto overflow-y-hidden custom-scrollbar"
+      >
         <button
           v-for="pUpgrade in availableUpgrades"
           :key="pUpgrade.id"
           @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
           @mouseenter="showTooltip($event, pUpgrade)"
           @mouseleave="hideTooltip"
-          class="relative flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-xl border transition-all duration-300 overflow-hidden"
+          class="relative flex items-center justify-center flex-shrink-0 overflow-hidden transition-all duration-300 border w-14 h-14 rounded-xl"
           :class="
             shopStore.canAffordPermanentUpgrade(pUpgrade.id)
               ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/20 border-emerald-500/40 shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:scale-110 hover:shadow-[0_0_24px_rgba(16,185,129,0.4)] cursor-pointer'
@@ -23,14 +25,16 @@
           <!-- Glow background for affordable -->
           <div
             v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 rounded-xl blur-md opacity-50 bg-gradient-to-br from-emerald-400/30 to-teal-400/15"
+            class="absolute inset-0 opacity-50 rounded-xl blur-md bg-gradient-to-br from-emerald-400/30 to-teal-400/15"
           />
           <!-- Pulse border for affordable -->
           <div
             v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 border border-emerald-400/40 rounded-xl animate-pulse pointer-events-none"
+            class="absolute inset-0 border pointer-events-none border-emerald-400/40 rounded-xl animate-pulse"
           />
-          <span class="relative z-10 text-2xl leading-none drop-shadow-lg">{{ pUpgrade.icon }}</span>
+          <span class="relative z-10 text-2xl leading-none drop-shadow-lg">{{
+            pUpgrade.icon
+          }}</span>
         </button>
       </div>
 
@@ -45,23 +49,18 @@
         "
         :disabled="!hasAffordableUpgrade"
       >
-        <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-        <span class="font-black tracking-tight whitespace-nowrap">Buy All</span>
+        <span class="text-sm font-black tracking-tight whitespace-nowrap">Buy All</span>
       </button>
     </div>
 
     <!-- ─── Tooltip ─── -->
     <Teleport to="body">
-      <div
-        v-if="hoveredUpgrade"
-        class="fixed z-[9999] pointer-events-none"
-        :style="tooltipStyle"
-      >
+      <div v-if="hoveredUpgrade" class="fixed z-[9999] pointer-events-none" :style="tooltipStyle">
         <div
-          class="w-56 p-3 bg-black/85 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl"
+          class="w-56 p-3 border shadow-2xl bg-black/85 backdrop-blur-xl border-white/10 rounded-xl"
         >
           <h4
-            class="text-sm font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
+            class="text-sm font-black leading-tight tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
           >
             {{ hoveredUpgrade.name }}
           </h4>
@@ -98,32 +97,23 @@
       </div>
     </Teleport>
 
-    <!-- ─── Kaufmengen-Selector (sticky, volle Breite) ─── -->
-    <div
-      class="sticky top-0 z-10 flex items-center justify-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-    >
-      <span class="mr-2 text-sm font-bold tracking-widest uppercase text-white/50">Kaufen</span>
-      <div class="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
+    <!-- ─── Kaufmengen-Selector (sticky, kompakt) ─── -->
+    <div class="sticky top-0 z-10 flex justify-center">
+      <div
+        class="inline-flex gap-0.5 p-0.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.07]"
+      >
         <button
           v-for="option in buyOptions"
           :key="option.value"
           @click="shopStore.setBuyAmount(option.value)"
-          class="relative px-4 py-1.5 text-xl font-bold rounded-lg transition-all duration-300 overflow-hidden"
+          class="px-3 py-1 text-xs font-bold transition-all duration-200 rounded-md"
           :class="
             shopStore.buyAmount === option.value
-              ? 'text-white shadow-lg shadow-violet-500/40'
-              : 'text-gray-400 hover:text-white hover:bg-white/10'
+              ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
+              : 'text-white/40 hover:text-white/70 hover:bg-white/5'
           "
         >
-          <span
-            v-if="shopStore.buyAmount === option.value"
-            class="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-violet-600"
-          />
-          <span
-            v-if="shopStore.buyAmount === option.value"
-            class="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"
-          />
-          <span class="relative z-10">{{ option.label }}</span>
+          {{ option.label }}
         </button>
       </div>
     </div>
@@ -295,9 +285,7 @@ export default defineComponent({
     // ── Upgrade Icon Bar ──
 
     const availableUpgrades = computed(() =>
-      shopStore.permanentUpgrades
-        .filter((u) => !u.purchased)
-        .sort((a, b) => a.cost - b.cost),
+      shopStore.permanentUpgrades.filter((u) => !u.purchased).sort((a, b) => a.cost - b.cost),
     )
 
     const hasAffordableUpgrade = computed(() =>
@@ -355,15 +343,3 @@ export default defineComponent({
   },
 })
 </script>
-
-<style scoped>
-/* Shimmer-Keyframe für den Buy-Selector */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-</style>
