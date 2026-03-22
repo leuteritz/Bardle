@@ -7,7 +7,7 @@ import SkillTreeComponent from './SkillTreeComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
 import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue'
-import MissionComponent from './missions/MissionComponent.vue'
+import TeamTabComponent from './missions/TeamTabComponent.vue'
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -23,7 +23,7 @@ const handleReset = () => {
   }
 }
 
-type ModalId = 'shop' | 'tree' | 'missionen' | 'kampf' | 'admin'
+type ModalId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin'
 
 const activeModal = ref<ModalId | null>(null)
 
@@ -52,9 +52,9 @@ const menuItems: {
     gradient: 'bg-gradient-to-r from-violet-500 to-purple-600',
   },
   {
-    id: 'missionen',
-    label: 'Missionen',
-    icon: '📜',
+    id: 'team',
+    label: 'Team',
+    icon: '👥',
     src: '',
     color: 'amber',
     gradient: 'bg-gradient-to-r from-amber-500 to-orange-600',
@@ -119,7 +119,7 @@ const modalTheme = computed(() => {
       iconGlow: 'shadow-[0_0_12px_rgba(124,58,237,0.4)] ring-1 ring-violet-400/40',
       closeHover: 'hover:bg-violet-500/20',
     },
-    missionen: {
+    team: {
       accentBar: 'from-amber-500 via-orange-400 to-amber-500',
       headerBg: 'bg-gradient-to-r from-amber-950/50 via-orange-950/30 to-transparent',
       border: 'border-amber-500/20',
@@ -369,8 +369,8 @@ const modalTheme = computed(() => {
             <SkillTreeComponent />
           </div>
 
-          <!-- Missionen -->
-          <MissionComponent v-else-if="activeModal === 'missionen'" />
+          <!-- Team -->
+          <TeamTabComponent v-else-if="activeModal === 'team'" />
 
           <!-- Kampf -->
           <div v-else-if="activeModal === 'kampf'">
