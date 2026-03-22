@@ -210,7 +210,7 @@ function resetSection(sectionId: string) {
         </div>
 
         <!-- Sections -->
-        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-4 scrollbar-thin">
+        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-4 custom-scrollbar">
           <div
             v-for="section in filteredSections"
             :key="section.id"
@@ -382,15 +382,5 @@ function resetSection(sectionId: string) {
   transform: translate(-50%, -48%);
 }
 
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
-}
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
-  border-radius: 2px;
-}
+
 </style>

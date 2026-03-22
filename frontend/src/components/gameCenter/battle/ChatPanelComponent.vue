@@ -31,7 +31,7 @@
       <div
         id="battle-chat-box"
         ref="chatBoxRef"
-        class="p-2 space-y-1 overflow-y-auto border h-28 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
+        class="p-2 space-y-1 overflow-y-auto custom-scrollbar border h-28 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
       >
         <div
           v-for="(msg, idx) in battleStore.chatMessages"

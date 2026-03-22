@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col w-full h-full gap-4 p-4 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
+    class="flex flex-col w-full h-full gap-4 p-4 overflow-y-auto custom-scrollbar"
   >
     <!-- ═══════════════════════════════════════════════════ -->
     <!-- SEKTION A — Teamaufstellung                        -->
@@ -367,15 +367,3 @@ export default defineComponent({
 })
 </script>
 
-<style scoped>
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scrollbar-thumb-white\/10::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-}
-</style>

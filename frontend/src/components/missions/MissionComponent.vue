@@ -24,7 +24,7 @@
 
     <!-- Content -->
     <div
-      class="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
+      class="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
     >
       <MissionCreateComponent v-if="tab === 'create'" />
       <MissionActiveComponent v-else />
@@ -51,15 +51,3 @@ export default {
 }
 </script>
 
-<style scoped>
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scrollbar-thumb-white\/10::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-}
-</style>

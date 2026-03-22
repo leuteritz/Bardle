@@ -360,7 +360,7 @@ const modalTheme = computed(() => {
         </div>
 
         <!-- Modal Content -->
-        <div class="relative flex-1 min-h-0 overflow-y-auto">
+        <div class="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar">
           <!-- Shop -->
           <ShopComponent v-if="activeModal === 'shop'" />
 

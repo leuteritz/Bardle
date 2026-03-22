@@ -40,7 +40,7 @@
     <p v-if="loadError" class="text-xs text-center text-red-400">{{ loadError }}</p>
 
     <!-- ─── Champions Grid ─── -->
-    <div class="flex-1 min-h-0 overflow-y-auto">
+    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
       <!-- All purchased -->
       <div
         v-if="allPurchased"

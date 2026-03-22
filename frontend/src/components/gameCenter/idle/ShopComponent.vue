@@ -6,7 +6,7 @@
       class="relative flex items-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
     >
       <!-- Upgrade Icons (scrollbar) -->
-      <div class="flex items-center gap-2 overflow-x-auto flex-1 min-w-0">
+      <div class="flex items-center gap-2 overflow-x-auto overflow-y-hidden custom-scrollbar flex-1 min-w-0">
         <button
           v-for="pUpgrade in availableUpgrades"
           :key="pUpgrade.id"
