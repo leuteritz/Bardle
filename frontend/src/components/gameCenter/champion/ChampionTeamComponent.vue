@@ -80,6 +80,12 @@
               >
                 #{{ index + 1 }}
               </span>
+              <img
+                :src="battleStore.getChampionImage(champion)"
+                :alt="champion"
+                class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/20 shadow-md"
+                @error="onImgError"
+              />
               <span
                 class="text-[11px] font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
               >
@@ -166,13 +172,18 @@
         <div class="flex items-center gap-4 p-4 pr-3">
           <!-- Icon -->
           <div
-            class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+            class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110 overflow-hidden"
           >
             <div
               v-if="battleStore.selectedChampions.length < 4"
               class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
             />
-            <span class="relative z-10 text-2xl drop-shadow-lg">⚔️</span>
+            <img
+              :src="battleStore.getChampionImage(champion)"
+              :alt="champion"
+              class="relative z-10 w-12 h-12 rounded-lg object-cover drop-shadow-lg"
+              @error="onImgError"
+            />
           </div>
 
           <!-- Name & Info -->
@@ -186,7 +197,6 @@
               <span
                 class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
               >
-                <span class="text-emerald-400">⚔️</span>
                 Bereit
               </span>
             </div>
@@ -248,7 +258,12 @@ export default defineComponent({
       battleStore.selectedChampions = battleStore.selectedChampions.filter((c) => c !== champion)
     }
 
-    return { battleStore, selectableChampions, addChampion, removeChampion, truncate }
+    function onImgError(e: Event) {
+      const img = e.target as HTMLImageElement
+      img.style.display = 'none'
+    }
+
+    return { battleStore, selectableChampions, addChampion, removeChampion, onImgError, truncate }
   },
 })
 </script>

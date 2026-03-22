@@ -144,6 +144,13 @@
               >
                 #{{ index + 1 }}
               </span>
+              <img
+                :src="battleStore.getChampionImage(champion)"
+                :alt="champion"
+                class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/20 shadow-md"
+                :class="isOnExpedition(champion) ? 'grayscale opacity-60' : ''"
+                @error="onImgError"
+              />
               <span
                 class="text-[11px] font-black text-center leading-tight"
                 :class="
@@ -218,14 +225,19 @@
           v-for="champion in selectableChampions"
           :key="champion"
           @click="addChampion(champion)"
-          class="flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all duration-200 border"
+          class="flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-all duration-200 border min-h-[56px]"
           :class="
             battleStore.selectedChampions.length < 4
               ? 'bg-emerald-900/20 border-emerald-500/20 hover:border-emerald-400/40 hover:bg-emerald-900/30'
               : 'bg-white/[0.02] border-white/10 opacity-50 cursor-not-allowed'
           "
         >
-          <span class="text-lg">⚔️</span>
+          <img
+            :src="battleStore.getChampionImage(champion)"
+            :alt="champion"
+            class="w-8 h-8 rounded-lg object-cover ring-1 ring-white/15 flex-shrink-0"
+            @error="onImgError"
+          />
           <span
             class="flex-1 text-[11px] font-bold text-white/70 truncate"
           >
@@ -244,7 +256,7 @@
     <!-- ═══════════════════════════════════════════════════ -->
     <!-- SEKTION B — Expeditionen                           -->
     <!-- ═══════════════════════════════════════════════════ -->
-    <div class="flex items-center gap-3 px-1 pt-2">
+    <div class="flex items-center gap-3 px-1 pt-4">
       <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-white/30"
         >Expeditionen</span
       >
@@ -255,7 +267,7 @@
     <MissionActiveComponent />
 
     <!-- Available Expeditions -->
-    <div class="flex items-center gap-3 px-1">
+    <div class="flex items-center gap-3 px-1 pt-2">
       <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-white/25"
         >Neue Expedition</span
       >
@@ -344,6 +356,11 @@ export default defineComponent({
       return MISSION_CONFIGS.find((m) => m.id === configId)?.icon ?? '📜'
     }
 
+    function onImgError(e: Event) {
+      const img = e.target as HTMLImageElement
+      img.style.display = 'none'
+    }
+
     return {
       battleStore,
       missionStore,
@@ -357,6 +374,7 @@ export default defineComponent({
       getTimeRemaining,
       getMissionIcon,
       truncate,
+      onImgError,
       MAX_ACTIVE_MISSIONS,
     }
   },

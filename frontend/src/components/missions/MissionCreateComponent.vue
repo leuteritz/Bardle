@@ -48,36 +48,64 @@
         <div class="h-px bg-white/[0.05]" />
 
         <!-- Role Slots -->
-        <div class="space-y-2">
+        <div class="space-y-3">
           <div
             v-for="(role, roleIdx) in config.requiredRoles"
             :key="role + '-' + roleIdx"
-            class="flex items-center gap-2"
           >
-            <span
-              class="w-14 shrink-0 px-2 py-0.5 text-[9px] font-black uppercase rounded-md text-center tracking-widest"
-              :class="roleColors[role]"
-            >
-              {{ role }}
-            </span>
-            <select
-              :value="getSelection(config.id, roleIdx)"
-              @change="
-                setSelection(config.id, roleIdx, ($event.target as HTMLSelectElement).value, role)
-              "
-              class="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/70 focus:outline-none focus:border-indigo-400/40 appearance-none cursor-pointer transition-colors hover:border-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
-              :disabled="!missionStore.canStartMission"
-            >
-              <option value="" class="bg-[#0d1117] text-white/50">— Champion wählen —</option>
-              <option
+            <div class="flex items-center gap-2 mb-1.5">
+              <span
+                class="w-14 shrink-0 px-2 py-0.5 text-[9px] font-black uppercase rounded-md text-center tracking-widest"
+                :class="roleColors[role]"
+              >
+                {{ role }}
+              </span>
+              <span v-if="getSelection(config.id, roleIdx)" class="text-[10px] font-bold text-indigo-300/70">
+                {{ getSelection(config.id, roleIdx) }}
+              </span>
+              <span v-else class="text-[10px] text-white/25">Nicht besetzt</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <div
                 v-for="champ in getAvailableChampions(config.id, roleIdx, role)"
                 :key="champ"
-                :value="champ"
-                class="bg-[#0d1117]"
+                @click="!isSelectedElsewhere(config.id, roleIdx, champ) && missionStore.canStartMission ? toggleSelection(config.id, roleIdx, champ, role) : undefined"
+                class="flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all duration-150 cursor-pointer"
+                :class="
+                  getSelection(config.id, roleIdx) === champ
+                    ? 'bg-indigo-500/20 border-indigo-400/40 ring-1 ring-indigo-400/30'
+                    : isSelectedElsewhere(config.id, roleIdx, champ)
+                      ? 'bg-white/[0.02] border-white/[0.05] opacity-30 grayscale cursor-not-allowed'
+                      : missionStore.canStartMission
+                        ? 'bg-white/[0.03] border-white/[0.06] hover:border-white/15 hover:bg-white/[0.06]'
+                        : 'bg-white/[0.02] border-white/[0.05] opacity-30 cursor-not-allowed'
+                "
               >
-                {{ champ }}
-              </option>
-            </select>
+                <div class="relative">
+                  <img
+                    :src="getChampionImage(champ)"
+                    :alt="champ"
+                    class="w-8 h-8 rounded-md object-cover ring-1 ring-white/10"
+                    @error="onImgError"
+                  />
+                  <div
+                    v-if="getSelection(config.id, roleIdx) === champ"
+                    class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-indigo-500 border border-indigo-300/50 flex items-center justify-center"
+                  >
+                    <span class="text-[8px] text-white font-bold">✓</span>
+                  </div>
+                </div>
+                <span class="text-[8px] font-semibold text-white/50 text-center leading-tight truncate w-full">
+                  {{ truncateName(champ, 6) }}
+                </span>
+              </div>
+            </div>
+            <div
+              v-if="getAvailableChampions(config.id, roleIdx, role).length === 0"
+              class="py-2 text-center text-[10px] text-white/20 border border-dashed border-white/[0.06] rounded-lg"
+            >
+              Keine Champions mit Rolle {{ role }}
+            </div>
           </div>
         </div>
 
@@ -123,6 +151,7 @@ import { useBattleStore } from '../../stores/battleStore'
 import { MISSION_CONFIGS } from '../../config/missions'
 import { getChampionRoles } from '../../config/championRoles'
 import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
+import { truncate as truncateName } from '../../config/numberFormat'
 import type { ChampionRole } from '../../types'
 
 export default defineComponent({
@@ -202,6 +231,30 @@ export default defineComponent({
       return `${min}m ${sec}s`
     }
 
+    function toggleSelection(configId: string, roleIdx: number, champ: string, role: ChampionRole) {
+      if (getSelection(configId, roleIdx) === champ) {
+        setSelection(configId, roleIdx, '', role)
+      } else {
+        setSelection(configId, roleIdx, champ, role)
+      }
+    }
+
+    function isSelectedElsewhere(configId: string, roleIdx: number, champ: string): boolean {
+      const currentSelections = selections[configId] ?? {}
+      return Object.entries(currentSelections)
+        .filter(([idx]) => Number(idx) !== roleIdx)
+        .some(([, name]) => name === champ)
+    }
+
+    function getChampionImage(name: string): string {
+      return battleStore.getChampionImage(name)
+    }
+
+    function onImgError(e: Event) {
+      const img = e.target as HTMLImageElement
+      img.style.display = 'none'
+    }
+
     function startMission(configId: string) {
       const config = MISSION_CONFIGS.find((m) => m.id === configId)
       if (!config) return
@@ -219,7 +272,12 @@ export default defineComponent({
       roleColors,
       getSelection,
       setSelection,
+      toggleSelection,
       getAvailableChampions,
+      isSelectedElsewhere,
+      getChampionImage,
+      onImgError,
+      truncateName,
       isFullyAssigned,
       canStart,
       getSuccessChance,
