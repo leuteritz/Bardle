@@ -52,6 +52,24 @@ export const PLANET_RESCUE_BASE_REWARD = 500
 export const PLANET_EVENT_BASE_CHANCE = 0.6
 export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
 
+// Planet material drop chance (probability that a rescue planet carries material)
+export const PLANET_MATERIAL_CHANCE = 0.6
+
+// Champion home planet discovery chance
+export const CHAMPION_HOME_PLANET_CHANCE = 0.15
+
+// Planet type display names (German)
+export const PLANET_TYPE_NAMES: Record<string, string> = {
+  rocky: 'Felsplanet',
+  ice: 'Eisplanet',
+  'gas-giant': 'Gasriese',
+  lava: 'Lavaplanet',
+  ocean: 'Ozeanplanet',
+  desert: 'Wüstenplanet',
+  jungle: 'Dschungelplanet',
+  ringed: 'Ringplanet',
+}
+
 // Title rotation
 export const TITLE_MESSAGE_INTERVAL_MS = 5000
 

@@ -67,6 +67,8 @@ export function usePersistence() {
         currentWinStreak: battleStore.currentWinStreak,
         autoBattleEnabled: battleStore.autoBattleEnabled,
         battleHistory: battleStore.battleHistory.slice(-20),
+        recruitableChampions: battleStore.recruitableChampions,
+        recruitedChampions: [...battleStore.recruitedChampions],
       },
       missions: {
         activeMissions: missionStore.activeMissions,
@@ -171,6 +173,8 @@ export function usePersistence() {
         // autoBattleEnabled is restored so the UI shows the correct toggle state,
         // but the actual battle loop is started by the UI component on mount.
         battleStore.autoBattleEnabled = b.autoBattleEnabled ?? false
+        if (Array.isArray(b.recruitableChampions)) battleStore.recruitableChampions = b.recruitableChampions
+        if (Array.isArray(b.recruitedChampions)) battleStore.recruitedChampions = b.recruitedChampions
       }
 
       // Restore missionStore

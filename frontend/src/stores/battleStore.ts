@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
+import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
 import { battleMessages } from '../config/messages'
 import {
@@ -28,7 +29,7 @@ import {
   STAT_MAX_DEATHS,
   STAT_MAX_ASSISTS,
 } from '../config/constants'
-import type { BattleResult, ChampionState, ChatMessage } from '../types'
+import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
 
 export const useBattleStore = defineStore('battle', {
@@ -89,6 +90,10 @@ export const useBattleStore = defineStore('battle', {
     team1: [] as ChampionState[],
     team2: [] as ChampionState[],
     timerIds: [] as ReturnType<typeof setTimeout>[],
+
+    // Champion recruitment via planet rescue
+    recruitableChampions: [] as RecruitableChampion[],
+    recruitedChampions: [] as string[],
   }),
 
   actions: {
@@ -100,6 +105,28 @@ export const useBattleStore = defineStore('battle', {
         default:
           return '/img/champion/' + name + '.jpg'
       }
+    },
+
+    addRecruitableChampion(name: string, materialCost: Record<string, number>) {
+      if (this.ownedChampions.includes(name)) return
+      if (this.recruitableChampions.some((c) => c.name === name)) return
+      if (this.recruitedChampions.includes(name)) return
+      this.recruitableChampions.push({ name, materialCost, discoveredAt: Date.now() })
+    },
+
+    recruitChampion(name: string): boolean {
+      const recruit = this.recruitableChampions.find((c) => c.name === name)
+      if (!recruit) return false
+
+      const inventoryStore = useInventoryStore()
+
+      if (!inventoryStore.hasMaterials(recruit.materialCost)) return false
+      inventoryStore.removeMaterials(recruit.materialCost)
+
+      this.ownedChampions.push(name)
+      this.recruitedChampions.push(name)
+      this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
+      return true
     },
 
     getAvgBattleTime(): string {

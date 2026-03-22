@@ -18,6 +18,20 @@ export const useInventoryStore = defineStore('inventory', {
       return true
     },
 
+    hasMaterials(costs: Record<string, number>): boolean {
+      return Object.entries(costs).every(
+        ([matId, qty]) => (this.collectedMaterials[matId] ?? 0) >= qty,
+      )
+    },
+
+    removeMaterials(costs: Record<string, number>): boolean {
+      if (!this.hasMaterials(costs)) return false
+      for (const [matId, qty] of Object.entries(costs)) {
+        this.collectedMaterials[matId] -= qty
+      }
+      return true
+    },
+
     tryDropMaterial(baseDropChance = 0.30): Material | null {
       if (Math.random() > baseDropChance) return null
 

@@ -6,9 +6,9 @@
     >
       <span class="text-xs font-bold tracking-widest uppercase text-white/50">Champion Shop</span>
       <span
-        class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
+        class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border border-cyan-400/30 text-cyan-200 tracking-wider"
       >
-        {{ availableChampions.length }} verfügbar
+        {{ unlockedCount }} freigeschaltet
       </span>
     </div>
 
@@ -41,23 +41,9 @@
 
     <!-- ─── Champions Grid ─── -->
     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-      <!-- All purchased -->
-      <div
-        v-if="allPurchased"
-        class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
-      >
-        <span class="text-4xl">🎉</span>
-        <h3
-          class="text-sm font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
-        >
-          Alle Champions gekauft!
-        </h3>
-        <p class="text-xs text-blue-400">Du besitzt bereits alle verfügbaren Champions.</p>
-      </div>
-
       <!-- No filter match -->
       <div
-        v-else-if="availableChampions.length === 0"
+        v-if="filteredChampions.length === 0"
         class="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
       >
         <span class="text-4xl">🔍</span>
@@ -66,25 +52,21 @@
 
       <div v-else class="grid grid-cols-2 gap-3 md:grid-cols-3">
         <div
-          v-for="champion in availableChampions"
+          v-for="champion in filteredChampions"
           :key="champion.name"
-          @click="buyChampion(champion.name)"
-          class="group relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
-          :class="
-            !champion.owned && canAfford
-              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)] cursor-pointer'
-              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
-          "
+          class="group relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-md"
+          :class="getCardClass(champion.name)"
+          @click="handleBuy(champion.name)"
         >
-          <!-- Shimmer Sweep -->
+          <!-- Shimmer Sweep (unlocked + affordable) -->
           <div
-            v-if="!champion.owned && canAfford"
+            v-if="isUnlocked(champion.name) && !isOwned(champion.name) && canAffordChampion(champion.name)"
             class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
           />
           <!-- Glow Pulse Border -->
           <div
-            v-if="!champion.owned && canAfford"
-            class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
+            v-if="isUnlocked(champion.name) && !isOwned(champion.name) && canAffordChampion(champion.name)"
+            class="absolute inset-0 border pointer-events-none rounded-2xl border-cyan-400/40 animate-pulse"
           />
 
           <div class="flex flex-col items-center gap-2 p-3">
@@ -93,8 +75,8 @@
               class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
             >
               <div
-                v-if="!champion.owned && canAfford"
-                class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
+                v-if="isUnlocked(champion.name) && !isOwned(champion.name) && canAffordChampion(champion.name)"
+                class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-cyan-400/40 to-blue-400/20"
               />
               <img
                 :src="battleStore.getChampionImage(champion.name)"
@@ -121,34 +103,43 @@
               </span>
             </div>
 
-            <!-- Buy Button -->
+            <!-- Material Cost (unlocked but not owned) -->
+            <div v-if="isUnlocked(champion.name) && !isOwned(champion.name)" class="flex flex-wrap gap-1 justify-center w-full">
+              <span
+                v-for="(qty, matId) in getMaterialCost(champion.name)"
+                :key="matId"
+                class="cost-badge"
+                :class="hasEnoughMaterial(String(matId), qty as number) ? 'cost-badge--ok' : 'cost-badge--missing'"
+              >
+                {{ getMaterialName(String(matId)) }}: {{ inventoryStore.collectedMaterials[String(matId)] ?? 0 }}/{{ qty }}
+              </span>
+            </div>
+
+            <!-- Buy / Status Button -->
             <button
               class="relative w-full px-2 py-2 overflow-hidden text-xs font-bold transition-all duration-300 border group/btn rounded-xl"
-              :class="
-                champion.owned
-                  ? 'bg-gray-800/50 border-gray-600/20 text-gray-400 cursor-not-allowed'
-                  : canAfford
-                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
-                    : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
-              "
-              :disabled="champion.owned || !canAfford"
+              :class="getButtonClass(champion.name)"
+              :disabled="!canClickBuy(champion.name)"
             >
-              <!-- Button Shimmer -->
-              <div
-                v-if="!champion.owned && canAfford"
-                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
-              />
               <div class="relative flex items-center justify-center gap-1.5">
-                <template v-if="!champion.owned">
-                  <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-                  <span class="font-black tracking-tight">{{ formatNumber(CHAMPION_COST) }}</span>
-                </template>
-                <template v-else>
+                <template v-if="isOwned(champion.name)">
                   <span>✅</span>
                   <span>Gekauft</span>
                 </template>
+                <template v-else-if="isUnlocked(champion.name)">
+                  <span>Rekrutieren</span>
+                </template>
+                <template v-else>
+                  <span>🔒</span>
+                  <span>Gesperrt</span>
+                </template>
               </div>
             </button>
+          </div>
+
+          <!-- Tooltip for locked champions -->
+          <div v-if="isLocked(champion.name)" class="locked-tooltip">
+            {{ getLockedTooltip(champion.name) }}
           </div>
         </div>
       </div>
@@ -159,13 +150,14 @@
 <script lang="ts">
 import { ref, onMounted, defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
-import { useGameStore } from '../../../stores/gameStore'
-import { formatNumber, truncate } from '../../../config/numberFormat'
+import { useInventoryStore } from '../../../stores/inventoryStore'
+import { truncate } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles } from '../../../config/championRoles'
+import { MATERIALS } from '../../../config/materials'
+import { getHomePlanetConfig } from '../../../config/championHomePlanets'
+import { PLANET_TYPE_NAMES } from '../../../config/constants'
 import type { ChampionRole } from '../../../types'
-
-const CHAMPION_COST = 500
 
 const roles = [
   { value: 'all' as const, label: 'Alle' },
@@ -176,80 +168,183 @@ const roles = [
   { value: 'support' as const, label: 'Support' },
 ]
 
-interface Champion {
-  name: string
-  owned: boolean
-}
-
 export default defineComponent({
   name: 'ChampionShopComponent',
   setup() {
-    const champions = ref<Champion[]>([])
+    const championNames = ref<string[]>([])
     const battleStore = useBattleStore()
-    const gameStore = useGameStore()
+    const inventoryStore = useInventoryStore()
     const loadError = ref<string | null>(null)
     const activeRole = ref<ChampionRole | 'all'>('all')
     const searchQuery = ref('')
 
     async function loadChampions() {
       try {
-        const names = await fetchChampionNames()
-        champions.value = names.map((name) => ({
-          name,
-          owned: battleStore.ownedChampions.includes(name),
-        }))
+        championNames.value = await fetchChampionNames()
       } catch {
         loadError.value = 'Champions konnten nicht geladen werden.'
       }
     }
 
-    function buyChampion(name: string) {
-      if (!battleStore.ownedChampions.includes(name) && gameStore.chimes >= CHAMPION_COST) {
-        gameStore.chimes -= CHAMPION_COST
-        battleStore.ownedChampions.push(name)
-        const champ = champions.value.find((c) => c.name === name)
-        if (champ) champ.owned = true
-      }
+    function isOwned(name: string): boolean {
+      return battleStore.ownedChampions.includes(name)
     }
 
-    const canAfford = computed(() => gameStore.chimes >= CHAMPION_COST)
+    function isUnlocked(name: string): boolean {
+      return battleStore.recruitableChampions.some((r) => r.name === name)
+    }
 
-    const allPurchased = computed(() =>
-      champions.value.length > 0 &&
-      champions.value.every((c) => battleStore.ownedChampions.includes(c.name)),
-    )
+    function isLocked(name: string): boolean {
+      return !isOwned(name) && !isUnlocked(name)
+    }
 
-    const availableChampions = computed(() =>
-      champions.value.filter((c) => {
-        if (battleStore.ownedChampions.includes(c.name)) return false
-        if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
-          return false
-        if (searchQuery.value.trim()) {
-          return c.name.toLowerCase().includes(searchQuery.value.toLowerCase().trim())
-        }
-        return true
-      }),
-    )
+    function getMaterialCost(name: string): Record<string, number> {
+      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
+      return recruit?.materialCost ?? {}
+    }
+
+    function canAffordChampion(name: string): boolean {
+      const cost = getMaterialCost(name)
+      return Object.keys(cost).length > 0 && inventoryStore.hasMaterials(cost)
+    }
+
+    function canClickBuy(name: string): boolean {
+      return isUnlocked(name) && !isOwned(name) && canAffordChampion(name)
+    }
+
+    function handleBuy(name: string) {
+      if (!canClickBuy(name)) return
+      battleStore.recruitChampion(name)
+    }
+
+    function hasEnoughMaterial(matId: string, qty: number): boolean {
+      return (inventoryStore.collectedMaterials[matId] ?? 0) >= qty
+    }
+
+    function getMaterialName(matId: string): string {
+      return MATERIALS.find((m) => m.id === matId)?.name ?? matId
+    }
+
+    function getLockedTooltip(name: string): string {
+      const config = getHomePlanetConfig(name)
+      if (!config) return 'Planet retten, um freizuschalten.'
+      const planetName = PLANET_TYPE_NAMES[config.planetType] ?? config.planetType
+      return `Rette einen ${planetName}, um diesen Champion freizuschalten.`
+    }
+
+    function getCardClass(name: string): string {
+      if (isOwned(name)) {
+        return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 cursor-default'
+      }
+      if (isUnlocked(name) && canAffordChampion(name)) {
+        return 'bg-gradient-to-br from-cyan-900/30 via-blue-900/20 to-teal-900/10 border-cyan-500/30 shadow-[0_0_20px_rgba(0,180,255,0.15)] hover:shadow-[0_0_35px_rgba(0,180,255,0.3)] hover:scale-[1.015] hover:-translate-y-0.5 cursor-pointer'
+      }
+      if (isUnlocked(name)) {
+        return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-cyan-500/15 opacity-70 cursor-default'
+      }
+      // Locked
+      return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-40 grayscale cursor-default champion-locked'
+    }
+
+    function getButtonClass(name: string): string {
+      if (isOwned(name)) {
+        return 'bg-gray-800/50 border-gray-600/20 text-gray-400 cursor-not-allowed'
+      }
+      if (isUnlocked(name) && canAffordChampion(name)) {
+        return 'bg-gradient-to-b from-cyan-500 to-blue-600 border-cyan-400/50 text-white shadow-lg shadow-cyan-900/50 hover:shadow-cyan-500/50 hover:from-cyan-400 active:scale-95'
+      }
+      return 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+    }
+
+    const filteredChampions = computed(() => {
+      return championNames.value
+        .map((name) => ({ name }))
+        .filter((c) => {
+          if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
+            return false
+          if (searchQuery.value.trim()) {
+            return c.name.toLowerCase().includes(searchQuery.value.toLowerCase().trim())
+          }
+          return true
+        })
+    })
+
+    const unlockedCount = computed(() => {
+      return battleStore.recruitableChampions.length
+    })
 
     onMounted(() => loadChampions())
 
     return {
-      champions,
-      buyChampion,
-      availableChampions,
-      allPurchased,
+      filteredChampions,
+      unlockedCount,
       battleStore,
-      gameStore,
-      canAfford,
+      inventoryStore,
       loadError,
-      CHAMPION_COST,
-      formatNumber,
       truncate,
       getChampionRoles,
       activeRole,
       searchQuery,
       roles,
+      isOwned,
+      isUnlocked,
+      isLocked,
+      getMaterialCost,
+      canAffordChampion,
+      canClickBuy,
+      handleBuy,
+      hasEnoughMaterial,
+      getMaterialName,
+      getLockedTooltip,
+      getCardClass,
+      getButtonClass,
     }
   },
 })
 </script>
+
+<style scoped>
+.cost-badge {
+  font-size: 0.55rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.cost-badge--ok {
+  background: rgba(80, 200, 120, 0.15);
+  color: rgba(120, 230, 150, 0.9);
+}
+
+.cost-badge--missing {
+  background: rgba(255, 80, 80, 0.15);
+  color: rgba(255, 130, 130, 0.9);
+}
+
+.champion-locked {
+  position: relative;
+}
+
+.locked-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4rem 0.6rem;
+  background: rgba(0, 5, 20, 0.95);
+  border: 1px solid rgba(100, 180, 255, 0.25);
+  border-radius: 0.5rem;
+  font-size: 0.55rem;
+  color: rgba(150, 200, 255, 0.9);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.champion-locked:hover .locked-tooltip {
+  opacity: 1;
+}
+</style>

@@ -9,8 +9,12 @@ import {
   PLANET_EVENT_BASE_CHANCE,
   PLANET_EVENT_PRESTIGE_BONUS,
   PLANET_EVENT_CHECK_INTERVAL,
+  PLANET_MATERIAL_CHANCE,
+  CHAMPION_HOME_PLANET_CHANCE,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
+import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { useBattleStore } from './battleStore'
 
 export const usePlanetEventStore = defineStore('planetEvent', {
   state: () => ({
@@ -96,8 +100,25 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       // Reward scales from BASE (easy) to BASE * 5 (hardest)
       const reward = Math.floor(PLANET_RESCUE_BASE_REWARD * (1 + difficulty * 4))
 
-      const potentialMaterial = pickMaterial()
-      const assignedDropChance = 0.2 + Math.random() * 0.4
+      // Material drop — only some planets carry materials
+      const hasMaterial = Math.random() < PLANET_MATERIAL_CHANCE
+      const potentialMaterialId = hasMaterial ? pickMaterial().id : undefined
+      const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
+
+      // Champion home planet — roll for a champion discovery
+      let homePlanetChampion: string | undefined = undefined
+      if (Math.random() < CHAMPION_HOME_PLANET_CHANCE) {
+        const battleStore = useBattleStore()
+        const candidates = CHAMPION_HOME_PLANETS.filter(
+          (c) =>
+            c.planetType === planetType &&
+            !battleStore.ownedChampions.includes(c.championName) &&
+            !battleStore.recruitableChampions.some((r) => r.name === c.championName),
+        )
+        if (candidates.length > 0) {
+          homePlanetChampion = candidates[Math.floor(Math.random() * candidates.length)].championName
+        }
+      }
 
       this.activePlanetEvent = {
         planetId,
@@ -109,8 +130,9 @@ export const usePlanetEventStore = defineStore('planetEvent', {
         clicksMade: 0,
         saved: false,
         expired: false,
-        potentialMaterialId: potentialMaterial.id,
-        assignedDropChance,
+        ...(potentialMaterialId !== undefined && { potentialMaterialId }),
+        ...(assignedDropChance !== undefined && { assignedDropChance }),
+        ...(homePlanetChampion && { homePlanetChampion }),
       }
       this.pendingRescue = false
       this.lastDroppedMaterialId = null

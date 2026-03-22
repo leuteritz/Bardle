@@ -157,8 +157,15 @@ export interface PlanetRescueEvent {
   clicksMade: number
   saved: boolean
   expired: boolean
-  potentialMaterialId: string
-  assignedDropChance: number
+  potentialMaterialId?: string
+  assignedDropChance?: number
+  homePlanetChampion?: string
+}
+
+export interface RecruitableChampion {
+  name: string
+  materialCost: Record<string, number>
+  discoveredAt: number
 }
 
 // Battle types

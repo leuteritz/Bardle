@@ -26,9 +26,15 @@
           {{ droppedMaterial.name }} erhalten!
         </span>
       </template>
-      <template v-else>
+      <template v-else-if="savedHadMaterial">
         <br />
         <span class="toast-material toast-material--none">Kein Material gedroppt</span>
+      </template>
+      <template v-if="savedChampionName">
+        <br />
+        <span class="toast-material toast-material--champion">
+          {{ savedChampionName }} entdeckt! Sieh im Champion Shop nach.
+        </span>
       </template>
     </div>
   </Transition>
@@ -100,11 +106,15 @@ const droppedMaterial = computed(() =>
 // Saved toast
 const showSavedToast = ref(false)
 const savedReward = ref(0)
+const savedHadMaterial = ref(false)
+const savedChampionName = ref<string | null>(null)
 watch(
   () => planetEventStore.activePlanetEvent?.saved,
   (saved) => {
     if (!saved || !planetEventStore.activePlanetEvent) return
     savedReward.value = planetEventStore.activePlanetEvent.reward
+    savedHadMaterial.value = !!planetEventStore.activePlanetEvent.potentialMaterialId
+    savedChampionName.value = planetEventStore.activePlanetEvent.homePlanetChampion ?? null
     showSavedToast.value = true
     setTimeout(() => {
       showSavedToast.value = false
@@ -215,6 +225,11 @@ watch(
 
 .toast-material--none {
   opacity: 0.5;
+}
+
+.toast-material--champion {
+  color: rgba(100, 180, 255, 0.95);
+  font-weight: bold;
 }
 
 .toast-material-img {

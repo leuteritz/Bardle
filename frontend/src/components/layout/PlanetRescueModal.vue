@@ -33,21 +33,25 @@
         <p class="hint-text">Click the planet to rescue it!</p>
 
         <!-- Mögliche Material-Drops -->
-        <div class="drop-list">
+        <div v-if="assignedMaterial" class="drop-list">
           <p class="drop-list-title">Möglicher Drop</p>
-          <template v-if="assignedMaterial">
-            <div class="drop-row">
-              <span class="drop-icon">
-                <img :src="assignedMaterial.image" class="drop-icon-img" alt="" />
-              </span>
-              <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
-                {{ assignedMaterial.name }}
-              </span>
-              <span class="drop-chance">
-                {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
-              </span>
-            </div>
-          </template>
+          <div class="drop-row">
+            <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
+              {{ assignedMaterial.name }}
+            </span>
+            <span class="drop-chance">
+              {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
+            </span>
+          </div>
+        </div>
+
+        <!-- Heimatplanet eines Champions -->
+        <div v-if="homePlanetChampion" class="drop-list home-planet-info">
+          <p class="drop-list-title">Heimatplanet</p>
+          <div class="drop-row">
+            <span class="home-planet-champion-name">{{ homePlanetChampion }}</span>
+          </div>
+          <p class="home-planet-hint">Rette den Planeten, um diesen Champion freizuschalten!</p>
         </div>
       </div>
     </div>
@@ -59,12 +63,15 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { useGameStore } from '../../stores/gameStore'
 import { useInventoryStore } from '../../stores/inventoryStore'
+import { useBattleStore } from '../../stores/battleStore'
 import { NS, drawPlanet } from '../../utils/planetDraw'
 import { MATERIALS } from '../../config/materials'
+import { CHAMPION_HOME_PLANETS } from '../../config/championHomePlanets'
 
 const planetEventStore = usePlanetEventStore()
 const gameStore = useGameStore()
 const inventoryStore = useInventoryStore()
+const battleStore = useBattleStore()
 
 const planetStage = ref<HTMLDivElement | null>(null)
 
@@ -131,6 +138,8 @@ const assignedMaterial = computed(() => {
   return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
 })
 
+const homePlanetChampion = computed(() => planetEventStore.activePlanetEvent?.homePlanetChampion ?? null)
+
 function handleClick() {
   const reward = planetEventStore.activePlanetEvent?.reward ?? 0
   const completed = planetEventStore.registerClick()
@@ -142,9 +151,17 @@ function handleClick() {
       gameStore.calculateLevel()
     }
     const ev = planetEventStore.activePlanetEvent
-    if (ev?.potentialMaterialId) {
+    if (ev?.potentialMaterialId && ev.assignedDropChance != null) {
       const dropped = inventoryStore.tryDropSpecificMaterial(ev.potentialMaterialId, ev.assignedDropChance)
       planetEventStore.lastDroppedMaterialId = dropped ? ev.potentialMaterialId : null
+    }
+
+    // Champion recruitment from home planet
+    if (ev?.homePlanetChampion) {
+      const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === ev.homePlanetChampion)
+      if (config) {
+        battleStore.addRecruitableChampion(ev.homePlanetChampion, config.materialCost)
+      }
     }
   } else {
     // Pulse feedback on intermediate clicks
@@ -298,22 +315,6 @@ function handleClick() {
   font-size: 0.7rem;
 }
 
-.drop-icon {
-  font-size: 0.85rem;
-  width: 1.25rem;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drop-icon-img {
-  width: 1.5rem;
-  height: 1.5rem;
-  object-fit: contain;
-  vertical-align: middle;
-}
-
 .drop-name {
   flex: 1;
 }
@@ -323,6 +324,23 @@ function handleClick() {
   font-weight: bold;
   min-width: 2rem;
   text-align: right;
+}
+
+.home-planet-info {
+  border-color: rgba(100, 180, 255, 0.2);
+  background: rgba(60, 130, 255, 0.05);
+}
+
+.home-planet-champion-name {
+  color: rgba(100, 180, 255, 0.95);
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.home-planet-hint {
+  font-size: 0.55rem;
+  color: rgba(100, 180, 255, 0.5);
+  margin: 0.15rem 0 0;
 }
 
 .rarity--common   { color: rgba(200, 200, 200, 0.75); }
