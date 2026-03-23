@@ -41,8 +41,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 // ── Planet Spawn ─────────────────────────────────────────────────────────────
 
-function spawnPlanet() {
+async function spawnPlanet() {
   planetEventStore.pendingRescue = true
+  await nextTick()
+  if (planetEventStore.activePlanetEvent) {
+    planetEventStore.activePlanetEvent.potentialMaterialId = undefined
+    planetEventStore.activePlanetEvent.assignedDropChance = undefined
+    planetEventStore.activePlanetEvent.homePlanetChampion = undefined
+  }
 }
 
 async function spawnPlanetWithMaterial() {
@@ -51,6 +57,7 @@ async function spawnPlanetWithMaterial() {
   if (planetEventStore.activePlanetEvent) {
     planetEventStore.activePlanetEvent.potentialMaterialId = pickMaterial().id
     planetEventStore.activePlanetEvent.assignedDropChance = 1.0
+    planetEventStore.activePlanetEvent.homePlanetChampion = undefined
   }
 }
 
@@ -66,6 +73,8 @@ async function spawnPlanetWithChampion() {
   await nextTick()
   if (planetEventStore.activePlanetEvent) {
     planetEventStore.activePlanetEvent.homePlanetChampion = pick.championName
+    planetEventStore.activePlanetEvent.potentialMaterialId = undefined
+    planetEventStore.activePlanetEvent.assignedDropChance = undefined
   }
 }
 

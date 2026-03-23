@@ -1,4 +1,4 @@
-import { watch, onMounted, onUnmounted } from 'vue'
+import { watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import {
@@ -337,12 +337,16 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
   // 1. Rescue spawnen
   watch(
     () => planetEventStore.pendingRescue,
-    (pending) => {
+    async (pending) => {
       if (!pending || !container.value) return
       const { id: targetId, type: targetType } = spawnOrbitPlanet()
-      // Activate first so potentialMaterialId is set before we render the icon
       planetEventStore.activatePlanetRescue(targetId, targetType)
-      const materialId = planetEventStore.activePlanetEvent?.potentialMaterialId
+      // Wait one tick so admin overrides (material/champion clear/set) are applied
+      // before we build the label. For normal spawns this has no visible effect.
+      await nextTick()
+      const event = planetEventStore.activePlanetEvent
+      if (!event || !container.value) return
+      const materialId = event.potentialMaterialId
       const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
       markPlanetAsRescue(targetId, material?.icon, material?.image)
       container.value.classList.add('stars--rescue-active')
