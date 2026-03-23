@@ -65,9 +65,7 @@
               >
                 {{ truncate(champion, 7) }}
               </span>
-              <span
-                v-if="isOnExpedition(champion)"
-                class="text-[8px] text-amber-400/50 font-bold"
+              <span v-if="isOnExpedition(champion)" class="text-[8px] text-amber-400/50 font-bold"
                 >⏳</span
               >
               <button
@@ -91,9 +89,9 @@
             >
               <span class="text-xs leading-none text-white/15">+</span>
             </div>
-            <span class="text-[8px] text-white/12 font-bold tracking-wider uppercase"
-              >{{ battleStore.selectedChampions.length + n }}</span
-            >
+            <span class="text-[8px] text-white/12 font-bold tracking-wider uppercase">{{
+              battleStore.selectedChampions.length + n
+            }}</span>
           </div>
         </div>
       </div>
@@ -125,7 +123,7 @@
             @error="onImgError"
           />
           <span
-            class="text-[10px] font-semibold text-white/40 group-hover:text-white/60 transition-colors duration-200"
+            class="text-sm font-semibold transition-colors duration-200 text-white/40 group-hover:text-white/60"
           >
             {{ truncate(champion, 8) }}
           </span>

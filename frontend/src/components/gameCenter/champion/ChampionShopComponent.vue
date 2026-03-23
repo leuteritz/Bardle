@@ -273,6 +273,7 @@ export default defineComponent({
       return championNames.value
         .map((name) => ({ name }))
         .filter((c) => {
+          if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
           if (searchQuery.value.trim()) {
@@ -281,8 +282,8 @@ export default defineComponent({
           return true
         })
         .sort((a, b) => {
-          const aUnlocked = isOwned(a.name) || isUnlocked(a.name) ? 0 : 1
-          const bUnlocked = isOwned(b.name) || isUnlocked(b.name) ? 0 : 1
+          const aUnlocked = isUnlocked(a.name) ? 0 : 1
+          const bUnlocked = isUnlocked(b.name) ? 0 : 1
           if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked
           return a.name.localeCompare(b.name)
         })
