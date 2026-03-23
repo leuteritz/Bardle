@@ -3,115 +3,110 @@
     <!-- ── Search ── -->
     <div class="relative">
       <span
-        class="absolute text-xs -translate-y-1/2 pointer-events-none left-3 top-1/2 text-white/20"
+        class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-white/25 pointer-events-none"
         >⌕</span
       >
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Champion suchen…"
-        class="w-full pl-7 pr-3 py-2 text-sm rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/60 placeholder-white/20 focus:outline-none focus:border-blue-400/30 transition-colors duration-200"
+        class="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-white/[0.04] border border-white/10 text-white/70 placeholder-white/25 focus:outline-none focus:border-blue-400/40 transition-colors duration-200"
       />
     </div>
 
     <!-- ── Role Filter ── -->
-    <div class="flex flex-wrap gap-1.5">
+    <div class="flex flex-wrap gap-2">
       <button
         v-for="role in roles"
         :key="role.value"
         @click="activeRole = role.value"
-        class="px-2.5 py-0.5 text-xs font-bold rounded-lg border transition-all duration-200"
+        class="px-3 py-1 text-xs font-bold transition-all duration-200 border rounded-xl"
         :class="
           activeRole === role.value
-            ? 'bg-violet-500/15 border-violet-400/30 text-violet-300/80'
-            : 'bg-white/[0.02] border-white/[0.06] text-white/25 hover:text-white/45 hover:border-white/10'
+            ? 'bg-violet-500/20 border-violet-400/35 text-violet-300/90'
+            : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/55 hover:border-white/15'
         "
       >
         {{ role.label }}
       </button>
     </div>
 
-    <p v-if="loadError" class="text-[11px] text-center text-red-400/70">{{ loadError }}</p>
+    <p v-if="loadError" class="text-xs text-center text-red-400/70">{{ loadError }}</p>
 
     <!-- ── Champion Grid ── -->
     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
-      <!-- Leer-Zustand -->
       <div
         v-if="filteredChampions.length === 0"
-        class="flex flex-col items-center justify-center gap-3 py-10"
+        class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div
-          class="w-12 h-12 rounded-2xl border border-dashed border-white/[0.08] flex items-center justify-center"
+          class="flex items-center justify-center border border-dashed w-14 h-14 rounded-2xl border-white/10"
         >
-          <span class="text-xl opacity-20">🔍</span>
+          <span class="text-2xl opacity-20">🔍</span>
         </div>
-        <p class="text-sm text-white/20">Kein Champion gefunden.</p>
+        <p class="text-sm text-white/25">Kein Champion gefunden.</p>
       </div>
 
-      <div v-else class="grid grid-cols-2 gap-2 md:grid-cols-3">
+      <div v-else class="grid grid-cols-2 gap-2.5 md:grid-cols-3">
         <div
           v-for="champion in filteredChampions"
           :key="champion.name"
-          class="relative overflow-hidden transition-all duration-300 border group rounded-xl champion-card"
+          class="relative overflow-hidden transition-all duration-300 border rounded-2xl group champion-card"
           :class="getCardClass(champion.name)"
           @click="handleBuy(champion.name)"
-          style="min-height: 160px"
         >
-          <!-- ── Vollbild Champion-Bild (Hintergrund) ── -->
+          <!-- Hintergrundbild -->
           <img
             :src="battleStore.getChampionImage(champion.name)"
             :alt="champion.name"
-            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-110"
+            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-105"
             :class="isLocked(champion.name) ? 'grayscale' : ''"
           />
 
-          <!-- ── Gradient Overlay für Lesbarkeit ── -->
+          <!-- Gradient Overlay -->
           <div
             class="absolute inset-0"
             :class="
               isOwned(champion.name)
-                ? 'bg-gradient-to-t from-black/80 via-black/40 to-black/20'
+                ? 'bg-gradient-to-t from-black/85 via-black/45 to-black/15'
                 : isUnlocked(champion.name) && canAffordChampion(champion.name)
-                  ? 'bg-gradient-to-t from-black/90 via-black/30 to-transparent'
-                  : 'bg-gradient-to-t from-black/80 via-black/40 to-black/10'
+                  ? 'bg-gradient-to-t from-black/90 via-black/35 to-transparent'
+                  : 'bg-gradient-to-t from-black/85 via-black/45 to-black/10'
             "
           />
 
-          <!-- ── Shimmer (kaufbar) ── -->
+          <!-- Shimmer -->
           <div
             v-if="
               isUnlocked(champion.name) &&
               !isOwned(champion.name) &&
               canAffordChampion(champion.name)
             "
-            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.06] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.07] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
           />
 
-          <!-- ── Inhalt (oben: Rollen; unten: Name, Kosten, Button) ── -->
-          <div
-            class="relative z-10 flex flex-col justify-between h-full p-2.5"
-            style="min-height: 160px"
-          >
+          <!-- Content -->
+          <div class="relative z-10 flex flex-col justify-between h-full p-3">
             <!-- Rollen oben rechts -->
             <div class="flex flex-wrap self-end justify-end gap-1">
               <span
                 v-for="role in getChampionRoles(champion.name)"
                 :key="role"
-                class="px-1.5 py-0.5 text-[8px] font-semibold rounded-md bg-black/40 text-white/50 border border-white/[0.08] backdrop-blur-sm"
+                class="px-2 py-0.5 text-[9px] font-semibold rounded-md bg-black/50 text-white/55 border border-white/10 backdrop-blur-sm"
               >
                 {{ role }}
               </span>
             </div>
 
-            <!-- Unterer Bereich: Name + Kosten + Button -->
-            <div class="flex flex-col gap-1.5 mt-auto">
+            <!-- Unterer Bereich -->
+            <div class="flex flex-col gap-2 mt-auto">
               <!-- Name -->
               <span
                 class="text-sm font-black leading-tight tracking-wide drop-shadow-lg"
                 :class="
                   isOwned(champion.name) || isLocked(champion.name)
-                    ? 'text-white/40'
-                    : 'text-white/90'
+                    ? 'text-white/45'
+                    : 'text-white/95'
                 "
               >
                 {{ truncate(champion.name, 12) }}
@@ -137,15 +132,15 @@
                 </span>
               </div>
 
-              <!-- Aktion Button -->
+              <!-- Button -->
               <button
-                class="w-full py-1.5 text-[10px] font-black rounded-lg border transition-all duration-200 backdrop-blur-sm"
+                class="w-full py-2 text-xs font-bold transition-all duration-200 border rounded-xl backdrop-blur-sm"
                 :class="getButtonClass(champion.name)"
                 :disabled="!canClickBuy(champion.name)"
               >
-                <span v-if="isOwned(champion.name)" class="text-white/30">✓ Rekrutiert</span>
+                <span v-if="isOwned(champion.name)" class="text-white/35">✓ Rekrutiert</span>
                 <span v-else-if="isUnlocked(champion.name)">Rekrutieren</span>
-                <span v-else class="text-white/20">🔒 Gesperrt</span>
+                <span v-else class="text-white/25">🔒 Gesperrt</span>
               </button>
             </div>
           </div>
@@ -324,56 +319,46 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.champion-card {
+  min-height: 175px;
+  height: 175px;
+}
+
 .cost-badge {
-  font-size: 0.6rem;
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.3rem;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.35rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
 }
-
 .cost-badge--ok {
-  background: rgba(16, 185, 129, 0.09);
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  color: rgba(110, 231, 183, 0.75);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: rgba(110, 231, 183, 0.8);
 }
-
 .cost-badge--missing {
-  background: rgba(239, 68, 68, 0.09);
-  border: 1px solid rgba(239, 68, 68, 0.18);
-  color: rgba(252, 165, 165, 0.75);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: rgba(252, 165, 165, 0.8);
 }
-
-.champion-locked {
-  position: relative;
-}
-
 .locked-tooltip {
   position: absolute;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.35rem 0.6rem;
+  padding: 0.4rem 0.75rem;
   background: rgba(5, 3, 18, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 0.5rem;
-  font-size: 0.55rem;
-  color: rgba(200, 220, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  font-size: 0.6rem;
+  color: rgba(200, 220, 255, 0.65);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease;
   z-index: 10;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
-
-.champion-locked:hover .locked-tooltip {
+.champion-card:hover .locked-tooltip {
   opacity: 1;
-}
-
-/* NEU: Champion-Card Höhe fixieren damit Bild die ganze Fläche füllt */
-.champion-card {
-  min-height: 160px;
-  height: 160px;
 }
 </style>
