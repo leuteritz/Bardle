@@ -1,21 +1,5 @@
 <template>
   <div class="flex flex-col w-full h-full gap-3 p-4">
-    <!-- ── Header ── -->
-    <div class="flex items-center justify-between px-1">
-      <div class="flex items-center gap-2">
-        <div class="w-0.5 h-3.5 rounded-full bg-gradient-to-b from-cyan-400/80 to-blue-500/80" />
-        <span class="text-[10px] font-bold tracking-[0.18em] uppercase text-white/30">
-          Champion Shop
-        </span>
-      </div>
-      <div
-        class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/[0.07] border border-cyan-400/[0.12]"
-      >
-        <span class="text-[10px] font-black text-cyan-300/60">{{ unlockedCount }}</span>
-        <span class="text-[10px] font-black text-white/20">freigeschaltet</span>
-      </div>
-    </div>
-
     <!-- ── Search ── -->
     <div class="relative">
       <span
@@ -26,7 +10,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="Champion suchen…"
-        class="w-full pl-7 pr-3 py-2 text-[11px] rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/60 placeholder-white/20 focus:outline-none focus:border-blue-400/30 transition-colors duration-200"
+        class="w-full pl-7 pr-3 py-2 text-sm rounded-xl bg-white/[0.03] border border-white/[0.07] text-white/60 placeholder-white/20 focus:outline-none focus:border-blue-400/30 transition-colors duration-200"
       />
     </div>
 
@@ -36,7 +20,7 @@
         v-for="role in roles"
         :key="role.value"
         @click="activeRole = role.value"
-        class="px-2.5 py-0.5 text-[10px] font-bold rounded-lg border transition-all duration-200"
+        class="px-2.5 py-0.5 text-xs font-bold rounded-lg border transition-all duration-200"
         :class="
           activeRole === role.value
             ? 'bg-violet-500/15 border-violet-400/30 text-violet-300/80'
@@ -61,7 +45,7 @@
         >
           <span class="text-xl opacity-20">🔍</span>
         </div>
-        <p class="text-[11px] text-white/20">Kein Champion gefunden.</p>
+        <p class="text-sm text-white/20">Kein Champion gefunden.</p>
       </div>
 
       <div v-else class="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -85,7 +69,7 @@
           <div class="flex flex-col items-center gap-2 p-3">
             <!-- Champion Icon -->
             <div
-              class="relative flex items-center justify-center transition-transform duration-300 border w-14 h-14 rounded-xl group-hover:scale-105"
+              class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 group-hover:scale-105"
               :class="
                 isUnlocked(champion.name) &&
                 !isOwned(champion.name) &&
@@ -100,18 +84,18 @@
                   !isOwned(champion.name) &&
                   canAffordChampion(champion.name)
                 "
-                class="absolute inset-0 rounded-xl blur-lg opacity-40 bg-gradient-to-br from-cyan-400/30 to-blue-400/10"
+                class="absolute inset-0"
               />
               <img
                 :src="battleStore.getChampionImage(champion.name)"
                 :alt="champion.name"
-                class="relative z-10 object-cover rounded-lg w-9 h-9"
+                class="relative z-10 object-cover rounded-lg w-14 h-14"
               />
             </div>
 
             <!-- Name -->
             <span
-              class="text-[11px] font-bold leading-tight tracking-wide text-center"
+              class="text-sm font-bold leading-tight tracking-wide text-center"
               :class="
                 isOwned(champion.name) || isLocked(champion.name)
                   ? 'text-white/25'
@@ -338,7 +322,7 @@ export default defineComponent({
 
 <style scoped>
 .cost-badge {
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   padding: 0.1rem 0.35rem;
   border-radius: 0.3rem;
   font-weight: 700;
