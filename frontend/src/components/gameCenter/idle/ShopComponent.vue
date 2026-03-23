@@ -1,47 +1,160 @@
 <template>
-  <div class="flex flex-col w-full min-h-full gap-4 p-4">
-    <!-- ─── Upgrade Icon Bar (horizontale Reihe) ─── -->
-    <div
-      v-if="availableUpgrades.length > 0"
-      class="relative flex items-center gap-2 p-3 backdrop-blur-xl bg-black/40 border border-white/[0.07] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-    >
-      <!-- Upgrade Icons (scrollbar) -->
-      <div
-        class="flex items-center flex-1 min-w-0 gap-2 overflow-x-auto overflow-y-hidden custom-scrollbar"
-      >
-        <button
-          v-for="pUpgrade in availableUpgrades"
-          :key="pUpgrade.id"
-          @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
-          @mouseenter="showTooltip($event, pUpgrade)"
-          @mouseleave="hideTooltip"
-          class="relative flex items-center justify-center flex-shrink-0 overflow-hidden transition-all duration-300 border w-14 h-14 rounded-xl"
-          :class="
-            shopStore.canAffordPermanentUpgrade(pUpgrade.id)
-              ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/20 border-emerald-500/40 shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:scale-110 hover:shadow-[0_0_24px_rgba(16,185,129,0.4)] cursor-pointer'
-              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-45 grayscale cursor-not-allowed'
-          "
+  <!-- Äußerer Wrapper: jetzt flex-row statt flex-col -->
+  <div class="flex w-full min-h-full gap-4 p-4">
+    <!-- ─── Linke Spalte: Kaufmengen + Gebäude ─── -->
+    <div class="flex flex-col flex-1 min-w-0 gap-3">
+      <!-- Kaufmengen-Selector (sticky links oben) -->
+      <div class="sticky top-0 z-10 flex justify-center">
+        <div
+          class="inline-flex gap-0.5 p-0.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.07]"
         >
-          <!-- Glow background for affordable -->
-          <div
-            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 opacity-50 rounded-xl blur-md bg-gradient-to-br from-emerald-400/30 to-teal-400/15"
-          />
-          <!-- Pulse border for affordable -->
-          <div
-            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 border pointer-events-none border-emerald-400/40 rounded-xl animate-pulse"
-          />
-          <span class="relative z-10 text-2xl leading-none drop-shadow-lg">{{
-            pUpgrade.icon
-          }}</span>
-        </button>
+          <button
+            v-for="option in buyOptions"
+            :key="option.value"
+            @click="shopStore.setBuyAmount(option.value)"
+            class="px-3 py-1 text-xs font-bold transition-all duration-200 rounded-md"
+            :class="
+              shopStore.buyAmount === option.value
+                ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            "
+          >
+            {{ option.label }}
+          </button>
+        </div>
       </div>
 
+      <!-- Sektion-Header Gebäude -->
+      <div class="flex items-center gap-3">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <span class="text-xs font-black tracking-widest uppercase text-white/40">Gebäude</span>
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      </div>
+
+      <!-- Shop Items -->
+      <div class="flex flex-col gap-3">
+        <div
+          v-for="upgrade in shopStore.shopUpgrades"
+          :key="upgrade.id"
+          @click="handleUpgradeClick(upgrade)"
+          class="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
+          :class="
+            shopStore.canAffordUpgrade(upgrade)
+              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)]'
+              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
+          "
+        >
+          <!-- Shimmer-Sweep -->
+          <div
+            v-if="shopStore.canAffordUpgrade(upgrade)"
+            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+          />
+          <!-- Glow-Pulse Rahmen -->
+          <div
+            v-if="shopStore.canAffordUpgrade(upgrade)"
+            class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
+          />
+          <!-- Level-Badge -->
+          <div class="absolute z-10 top-3 right-3">
+            <span
+              class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
+            >
+              LV {{ upgrade.level }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-4 p-4 pr-3">
+            <!-- Icon Container -->
+            <div
+              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+            >
+              <div
+                v-if="shopStore.canAffordUpgrade(upgrade)"
+                class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
+              />
+              <img
+                v-if="isImageUrl(upgrade.icon)"
+                :src="upgrade.icon"
+                :alt="upgrade.name"
+                class="relative z-10 object-contain w-11 h-11 drop-shadow-lg"
+              />
+              <span v-else class="relative z-10 text-2xl drop-shadow-lg">{{ upgrade.icon }}</span>
+            </div>
+
+            <!-- Text & Stats -->
+            <div class="flex-1 min-w-0">
+              <h3
+                class="mb-1.5 text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
+              >
+                {{ upgrade.name }}
+              </h3>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-if="upgrade.baseCPS && upgrade.level > 0"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
+                >
+                  <img src="/img/BardAbilities/BardChime.png" class="w-3.5 h-3.5 drop-shadow-sm" />
+                  {{ upgrade.baseCPS * upgrade.level }}/s
+                </span>
+                <span
+                  v-if="upgrade.baseCPC && upgrade.level > 0"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300"
+                >
+                  <span class="text-amber-400">✦</span>
+                  {{ upgrade.baseCPC * upgrade.level }}/klick
+                </span>
+                <span
+                  v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
+                  class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
+                >
+                  {{ shopStore.buyAmount }}×
+                </span>
+                <span
+                  v-if="shopStore.buyAmount === 'max'"
+                  class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
+                >
+                  Max {{ shopStore.getMaxAffordableAmount(upgrade) }}×
+                </span>
+              </div>
+            </div>
+
+            <!-- Kauf-Button -->
+            <div class="flex-shrink-0 ml-1 w-28">
+              <button
+                class="group/btn relative w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
+                :class="
+                  shopStore.canAffordUpgrade(upgrade)
+                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
+                    : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+                "
+                :disabled="!shopStore.canAffordUpgrade(upgrade)"
+              >
+                <div
+                  v-if="shopStore.canAffordUpgrade(upgrade)"
+                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
+                />
+                <div class="relative flex items-center justify-center gap-1.5">
+                  <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
+                  <span class="text-xs font-black tracking-tight">
+                    {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Rechte Spalte: Buy All + Permanente Upgrades ─── -->
+    <div
+      v-if="availableUpgrades.length > 0"
+      class="flex flex-col gap-2 w-[4.5rem] flex-shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]"
+    >
       <!-- Buy All Button -->
       <button
         @click="buyAllAffordable"
-        class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
+        class="flex items-center justify-center w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border flex-shrink-0"
         :class="
           hasAffordableUpgrade
             ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95 cursor-pointer'
@@ -49,8 +162,54 @@
         "
         :disabled="!hasAffordableUpgrade"
       >
-        <span class="text-sm font-black tracking-tight whitespace-nowrap">Buy All</span>
+        <span class="text-[11px] font-black tracking-tight whitespace-nowrap">Buy All</span>
       </button>
+
+      <!-- Upgrade Icons (vertikale Scrollbar) -->
+      <div class="flex flex-col flex-1 gap-2 overflow-y-auto custom-scrollbar">
+        <button
+          v-for="pUpgrade in availableUpgrades"
+          :key="pUpgrade.id"
+          @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
+          @mouseenter="showTooltip($event, pUpgrade)"
+          @mouseleave="hideTooltip"
+          class="relative flex flex-col items-center justify-center flex-shrink-0 w-full gap-1 px-1 py-2 overflow-hidden transition-all duration-300 border rounded-xl"
+          :class="
+            shopStore.canAffordPermanentUpgrade(pUpgrade.id)
+              ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/20 border-emerald-500/40 shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:scale-105 hover:shadow-[0_0_24px_rgba(16,185,129,0.4)] cursor-pointer'
+              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-45 grayscale cursor-not-allowed'
+          "
+        >
+          <!-- Glow-Hintergrund -->
+          <div
+            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
+            class="absolute inset-0 opacity-50 rounded-xl blur-md bg-gradient-to-br from-emerald-400/30 to-teal-400/15"
+          />
+          <!-- Pulse-Rahmen -->
+          <div
+            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
+            class="absolute inset-0 border pointer-events-none border-emerald-400/40 rounded-xl animate-pulse"
+          />
+          <!-- Icon -->
+          <span class="relative z-10 text-2xl leading-none drop-shadow-lg">
+            {{ pUpgrade.icon }}
+          </span>
+          <!-- Preis -->
+          <div class="relative z-10 flex items-center gap-0.5">
+            <img src="/img/BardAbilities/BardChime.png" class="w-3 h-3 drop-shadow-sm" />
+            <span
+              class="text-[9px] font-black leading-none"
+              :class="
+                shopStore.canAffordPermanentUpgrade(pUpgrade.id)
+                  ? 'text-emerald-300'
+                  : 'text-red-400/70'
+              "
+            >
+              {{ formatNumber(pUpgrade.cost) }}
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <!-- ─── Tooltip ─── -->
@@ -96,149 +255,6 @@
         </div>
       </div>
     </Teleport>
-
-    <!-- ─── Kaufmengen-Selector (sticky, kompakt) ─── -->
-    <div class="sticky top-0 z-10 flex justify-center">
-      <div
-        class="inline-flex gap-0.5 p-0.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.07]"
-      >
-        <button
-          v-for="option in buyOptions"
-          :key="option.value"
-          @click="shopStore.setBuyAmount(option.value)"
-          class="px-3 py-1 text-xs font-bold transition-all duration-200 rounded-md"
-          :class="
-            shopStore.buyAmount === option.value
-              ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
-              : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-          "
-        >
-          {{ option.label }}
-        </button>
-      </div>
-    </div>
-
-    <!-- ─── Gebäude (volle Breite) ─── -->
-    <div class="flex flex-col gap-3">
-      <!-- Sektion-Header Gebäude -->
-      <div class="flex items-center gap-3">
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <span class="text-xs font-black tracking-widest uppercase text-white/40">Gebäude</span>
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-      </div>
-
-      <!-- Shop Items -->
-      <div
-        v-for="upgrade in shopStore.shopUpgrades"
-        :key="upgrade.id"
-        @click="handleUpgradeClick(upgrade)"
-        class="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
-        :class="
-          shopStore.canAffordUpgrade(upgrade)
-            ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)]'
-            : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
-        "
-      >
-        <!-- Shimmer-Sweep -->
-        <div
-          v-if="shopStore.canAffordUpgrade(upgrade)"
-          class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
-        />
-        <!-- Glow-Pulse Rahmen -->
-        <div
-          v-if="shopStore.canAffordUpgrade(upgrade)"
-          class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
-        />
-        <!-- Level-Badge -->
-        <div class="absolute z-10 top-3 right-3">
-          <span
-            class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
-          >
-            LV {{ upgrade.level }}
-          </span>
-        </div>
-
-        <div class="flex items-center gap-4 p-4 pr-3">
-          <!-- Icon Container -->
-          <div
-            class="relative flex items-center justify-center flex-shrink-0 transition-transform duration-300 border shadow-inner w-16 h-16 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
-          >
-            <div
-              v-if="shopStore.canAffordUpgrade(upgrade)"
-              class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
-            />
-            <img
-              v-if="isImageUrl(upgrade.icon)"
-              :src="upgrade.icon"
-              :alt="upgrade.name"
-              class="relative z-10 object-contain w-11 h-11 drop-shadow-lg"
-            />
-            <span v-else class="relative z-10 text-2xl drop-shadow-lg">{{ upgrade.icon }}</span>
-          </div>
-
-          <!-- Text & Stats -->
-          <div class="flex-1 min-w-0">
-            <h3
-              class="mb-1.5 text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
-            >
-              {{ upgrade.name }}
-            </h3>
-            <div class="flex flex-wrap gap-1.5">
-              <span
-                v-if="upgrade.baseCPS && upgrade.level > 0"
-                class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
-              >
-                <span class="text-emerald-400">▲</span>
-                {{ upgrade.baseCPS * upgrade.level }}/s
-              </span>
-              <span
-                v-if="upgrade.baseCPC && upgrade.level > 0"
-                class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300"
-              >
-                <span class="text-amber-400">✦</span>
-                {{ upgrade.baseCPC * upgrade.level }}/klick
-              </span>
-              <span
-                v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
-                class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-              >
-                {{ shopStore.buyAmount }}×
-              </span>
-              <span
-                v-if="shopStore.buyAmount === 'max'"
-                class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-              >
-                Max {{ shopStore.getMaxAffordableAmount(upgrade) }}×
-              </span>
-            </div>
-          </div>
-
-          <!-- Kauf-Button -->
-          <div class="flex-shrink-0 w-28 ml-1">
-            <button
-              class="group/btn relative w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
-              :class="
-                shopStore.canAffordUpgrade(upgrade)
-                  ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
-                  : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
-              "
-              :disabled="!shopStore.canAffordUpgrade(upgrade)"
-            >
-              <div
-                v-if="shopStore.canAffordUpgrade(upgrade)"
-                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
-              />
-              <div class="relative flex items-center justify-center gap-1.5">
-                <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-                <span class="font-black tracking-tight text-xs">
-                  {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
-                </span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
