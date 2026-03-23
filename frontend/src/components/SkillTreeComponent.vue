@@ -95,7 +95,7 @@ const edges = computed(() =>
       labelStyle: {
         fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#ddd6fe' : 'rgba(255,255,255,0.18)',
         fontWeight: '600',
-        fontSize: '10px',
+        fontSize: '18px',
         fontFamily: 'inherit',
       },
       labelBgStyle: { fill: 'rgba(8,4,26,0.88)', rx: 6, ry: 6 },
@@ -111,11 +111,6 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 
 <template>
   <div class="st-wrapper">
-    <!-- Minimaler Header -->
-    <div class="st-header">
-      <span class="st-title">Fähigkeiten</span>
-    </div>
-
     <!-- Canvas -->
     <div class="st-canvas">
       <VueFlow
@@ -143,6 +138,7 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 .st-wrapper {
   display: flex;
   flex-direction: column;
+  height: 100%;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -172,7 +168,8 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 /* ── Canvas ──────────────────────────────────────────── */
 .st-canvas {
   width: 100%;
-  height: 420px;
+  flex: 1;
+  min-height: 0;
   position: relative;
 }
 

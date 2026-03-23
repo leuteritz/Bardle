@@ -319,7 +319,7 @@ const modalTheme = computed(() => {
               <ShopComponent />
             </div>
 
-            <div v-else-if="activeModal === 'tree'" key="tree" class="p-2 overflow-hidden">
+            <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-2 overflow-hidden">
               <SkillTreeComponent />
             </div>
 

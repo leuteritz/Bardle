@@ -49,16 +49,14 @@ function handleBuy() {
     >
       <!-- Bought shimmer overlay -->
       <div v-if="state === 'bought'" class="sn-shimmer" />
-
       <img :src="data.skill.icon" :alt="data.skill.key" class="sn-icon" />
     </button>
 
-    <!-- Labels -->
+    <!-- Labels: nur Effect, keine Description -->
     <div class="sn-labels">
       <span :class="['sn-effect', `sn-effect--${state}`]">
         {{ data.skill.effect }}
       </span>
-      <span class="sn-description">{{ data.skill.description }}</span>
     </div>
 
     <!-- Cost / Unlocked pill -->
@@ -78,7 +76,7 @@ function handleBuy() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 88px;
+  width: 116px; /* ↑ vorher 88px */
   transition: opacity 0.2s;
 }
 .sn-root--locked {
@@ -88,15 +86,15 @@ function handleBuy() {
 /* ── Key Badge ─────────────────────────────────────────── */
 .sn-badge {
   position: absolute;
-  top: -8px;
-  left: -8px;
+  top: -10px;
+  left: -10px;
   z-index: 10;
-  width: 20px;
-  height: 20px;
+  width: 24px; /* ↑ vorher 20px */
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 14px; /* ↑ vorher 10px */
   font-weight: 800;
   border-radius: 50%;
   border: 1px solid;
@@ -121,9 +119,9 @@ function handleBuy() {
 /* ── Button ────────────────────────────────────────────── */
 .sn-btn {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
+  width: 96px; /* ↑ vorher 72px */
+  height: 96px; /* ↑ vorher 72px */
+  border-radius: 20px; /* ↑ vorher 16px */
   border: 1.5px solid;
   display: flex;
   align-items: center;
@@ -179,8 +177,8 @@ function handleBuy() {
 .sn-icon {
   position: relative;
   z-index: 1;
-  width: 42px;
-  height: 42px;
+  width: 58px; /* ↑ vorher 42px */
+  height: 58px;
   object-fit: contain;
 }
 
@@ -190,11 +188,10 @@ function handleBuy() {
   flex-direction: column;
   align-items: center;
   margin-top: 8px;
-  gap: 2px;
 }
 
 .sn-effect {
-  font-size: 11px;
+  font-size: 18px; /* ↑ vorher 11px */
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.01em;
@@ -209,12 +206,6 @@ function handleBuy() {
   color: rgba(255, 255, 255, 0.25);
 }
 
-.sn-description {
-  font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.3);
-  line-height: 1.2;
-}
-
 /* ── Cost / Status pill ────────────────────────────────── */
 .sn-pill-row {
   display: flex;
@@ -223,7 +214,7 @@ function handleBuy() {
 }
 
 .sn-pill {
-  font-size: 9.5px;
+  font-size: 15px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;

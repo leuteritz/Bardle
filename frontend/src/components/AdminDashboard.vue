@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useShopStore } from '../stores/shopStore'
@@ -43,19 +43,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 function spawnPlanet() {
   planetEventStore.pendingRescue = true
-  planetEventStore.activatePlanetRescue('admin-spawn', 'rocky')
 }
 
-function spawnPlanetWithMaterial() {
+async function spawnPlanetWithMaterial() {
   planetEventStore.pendingRescue = true
-  planetEventStore.activatePlanetRescue('admin-spawn', 'rocky')
+  await nextTick()
   if (planetEventStore.activePlanetEvent) {
     planetEventStore.activePlanetEvent.potentialMaterialId = pickMaterial().id
     planetEventStore.activePlanetEvent.assignedDropChance = 1.0
   }
 }
 
-function spawnPlanetWithChampion() {
+async function spawnPlanetWithChampion() {
   const candidates = CHAMPION_HOME_PLANETS.filter(
     (c) =>
       !battleStore.ownedChampions.includes(c.championName) &&
@@ -64,7 +63,7 @@ function spawnPlanetWithChampion() {
   if (candidates.length === 0) return
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
   planetEventStore.pendingRescue = true
-  planetEventStore.activatePlanetRescue('admin-spawn', pick.planetType)
+  await nextTick()
   if (planetEventStore.activePlanetEvent) {
     planetEventStore.activePlanetEvent.homePlanetChampion = pick.championName
   }
