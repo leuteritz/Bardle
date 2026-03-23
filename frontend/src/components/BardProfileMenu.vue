@@ -45,23 +45,23 @@ const menuItems: {
   },
   {
     id: 'tree',
-    label: 'Tree',
-    icon: '🌳',
-    src: '',
+    label: '',
+    icon: '',
+    src: '/img/menu/TREE.png',
     color: 'violet',
     gradient: 'bg-gradient-to-r from-violet-500 to-purple-600',
   },
   {
     id: 'team',
-    label: 'Team',
-    icon: '👥',
-    src: '',
+    label: '',
+    icon: '',
+    src: '/img/menu/TEAM.png',
     color: 'amber',
     gradient: 'bg-gradient-to-r from-amber-500 to-orange-600',
   },
   {
     id: 'kampf',
-    label: 'Kampf',
+    label: '',
     icon: '',
     src: '/img/menu/BATTLE.png',
     color: 'rose',
@@ -247,23 +247,6 @@ const modalTheme = computed(() => {
           />
         </Transition>
 
-        <!-- Close Button -->
-        <button
-          class="absolute top-3 right-3 z-20 flex items-center justify-center w-8 h-8 rounded-full text-white/40 hover:text-white hover:bg-white/[0.08] transition-all duration-150"
-          @click="closeModal"
-        >
-          <svg
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-
         <!-- Modal Header -->
         <div
           class="relative flex items-center flex-shrink-0 overflow-hidden bg-white/[0.03] border-b border-white/[0.06]"
@@ -273,7 +256,7 @@ const modalTheme = computed(() => {
             <img
               src="/img/BardPortalRichtig.png"
               alt="Portal Start"
-              class="relative z-10 object-contain w-12 h-12"
+              class="relative z-10 object-contain w-14 h-14"
             />
             <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
@@ -288,22 +271,26 @@ const modalTheme = computed(() => {
               v-for="item in menuItems"
               :key="item.id"
               @click="setTab(item.id)"
-              class="relative flex items-center justify-center gap-1.5 px-3 py-2 overflow-hidden text-base font-bold tracking-wide transition-all duration-200 rounded-lg"
-              :class="
+              class="relative flex items-center justify-center gap-1.5 overflow-hidden text-base font-bold tracking-wide transition-all duration-200 rounded-lg"
+              :class="[
                 activeModal === item.id
                   ? 'text-white bg-white/[0.06]'
-                  : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]'
-              "
+                  : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]',
+                item.src ? 'px-3 py-3.5' : 'px-3 py-2',
+              ]"
             >
               <img
                 v-if="item.src"
                 :src="item.src"
                 :alt="item.label"
-                class="relative z-10 object-contain w-7 h-7"
-                :class="activeModal === item.id ? modalTheme.iconGlow + ' rounded-md' : ''"
+                class="relative z-10 object-contain"
+                :class="[
+                  item.src ? 'w-14 h-14' : 'w-14 h-14',
+                  activeModal === item.id ? modalTheme.iconGlow + ' rounded-md' : '',
+                ]"
               />
               <span v-else class="relative z-10 text-sm leading-none">{{ item.icon }}</span>
-              <span class="relative z-10">{{ item.label }}</span>
+              <span v-if="item.label" class="relative z-10">{{ item.label }}</span>
               <!-- Bottom indicator -->
               <span
                 v-if="activeModal === item.id"
@@ -318,7 +305,7 @@ const modalTheme = computed(() => {
             <img
               src="/img/PortalEndeRichtig.png"
               alt="Portal Ende"
-              class="relative z-10 object-contain w-12 h-12"
+              class="relative z-10 object-contain w-14 h-14"
             />
             <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
