@@ -143,7 +143,9 @@
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-default transition-all duration-200"
           :class="
             missionStore.activeMissions.length > 0
-              ? 'bg-amber-500/10 border-amber-400/20 text-amber-300/70'
+              ? completedExpeditionCount > 0
+                ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300/70'
+                : 'bg-amber-500/10 border-amber-400/20 text-amber-300/70'
               : 'bg-white/[0.03] border-white/10 text-white/30'
           "
         >
@@ -152,41 +154,85 @@
             {{ activeExpeditionCount }}/{{ MAX_ACTIVE_MISSIONS }}
           </span>
         </div>
+        <!-- Pulsierender Dot bei abgeschlossenen Missionen -->
+        <span
+          v-if="completedExpeditionCount > 0"
+          class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"
+        />
 
         <!-- Tooltip -->
         <div
           v-if="missionStore.activeMissions.length > 0"
           class="absolute right-0 top-full mt-2 z-50 w-72 p-4 rounded-2xl border border-amber-500/15 bg-[#09071a]/97 backdrop-blur-xl shadow-2xl opacity-0 scale-95 pointer-events-none group-hover/indicator:opacity-100 group-hover/indicator:scale-100 transition-all duration-200"
         >
-          <span
-            class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-amber-300/40"
-          >
-            Aktive Expeditionen
-          </span>
-          <div class="space-y-4">
-            <div
-              v-for="mission in missionStore.activeMissions.filter((m) => m.status === 'active')"
-              :key="mission.id"
-              class="space-y-2"
+          <!-- Laufende Missionen -->
+          <template v-if="activeExpeditionCount > 0">
+            <span
+              class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-amber-300/40"
             >
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-white/60">
-                  {{ getMissionIcon(mission.configId) }} {{ mission.name }}
-                </span>
-                <span class="font-mono text-xs text-white/35">{{ getTimeRemaining(mission) }}</span>
-              </div>
-              <div class="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-amber-500/80 to-orange-400/80"
-                  :style="{ width: getProgress(mission) + '%' }"
-                />
+              Aktive Expeditionen
+            </span>
+            <div class="space-y-4">
+              <div
+                v-for="mission in missionStore.activeMissions.filter((m) => m.status === 'active')"
+                :key="mission.id"
+                class="space-y-2"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-white/60">
+                    {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                  </span>
+                  <span class="font-mono text-xs text-white/35">{{
+                    getTimeRemaining(mission)
+                  }}</span>
+                </div>
+                <div class="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div
+                    class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-amber-500/80 to-orange-400/80"
+                    :style="{ width: getProgress(mission) + '%' }"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </template>
+          <!-- Abgeschlossene Missionen -->
+          <template v-if="completedExpeditionCount > 0">
+            <div :class="activeExpeditionCount > 0 ? 'mt-4 pt-4 border-t border-white/[0.06]' : ''">
+              <span
+                class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-emerald-300/40"
+              >
+                Abgeschlossen
+              </span>
+              <div class="space-y-2">
+                <div
+                  v-for="mission in missionStore.activeMissions.filter(
+                    (m) => m.status !== 'active',
+                  )"
+                  :key="mission.id"
+                  class="flex items-center justify-between"
+                >
+                  <span class="text-xs font-semibold text-white/60">
+                    {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                  </span>
+                  <span
+                    class="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                    :class="
+                      mission.status === 'success'
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-red-500/15 text-red-300'
+                    "
+                  >
+                    {{ mission.status === 'success' ? '✓ Erfolg' : '✗ Fehlschl.' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
 
+    <MissionActiveComponent v-if="missionStore.activeMissions.length > 0" />
     <MissionCreateComponent />
   </div>
 </template>
@@ -235,6 +281,10 @@ export default defineComponent({
       () => missionStore.activeMissions.filter((m) => m.status === 'active').length,
     )
 
+    const completedExpeditionCount = computed(
+      () => missionStore.activeMissions.filter((m) => m.status !== 'active').length,
+    )
+
     function isOnExpedition(champion: string): boolean {
       return missionStore.championsOnMission.includes(champion)
     }
@@ -279,6 +329,7 @@ export default defineComponent({
       gameStore,
       selectableChampions,
       activeExpeditionCount,
+      completedExpeditionCount,
       isOnExpedition,
       addChampion,
       removeChampion,

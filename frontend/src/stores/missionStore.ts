@@ -23,7 +23,7 @@ export const useMissionStore = defineStore('mission', {
     },
 
     canStartMission(): boolean {
-      return this.activeMissions.length < MAX_ACTIVE_MISSIONS
+      return this.activeMissions.filter((m) => m.status === 'active').length < MAX_ACTIVE_MISSIONS
     },
   },
 
@@ -60,7 +60,7 @@ export const useMissionStore = defineStore('mission', {
     },
 
     startMission(configId: string, assignedChampions: { name: string; role: ChampionRole }[]) {
-      if (this.activeMissions.length >= MAX_ACTIVE_MISSIONS) return false
+      if (this.activeMissions.filter((m) => m.status === 'active').length >= MAX_ACTIVE_MISSIONS) return false
 
       const config = MISSION_CONFIGS.find((m) => m.id === configId)
       if (!config) return false
