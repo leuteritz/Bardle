@@ -144,21 +144,27 @@
 
         <!-- Team-Slots -->
         <div class="grid flex-shrink-0 grid-cols-2 gap-2 mb-3">
-          <!-- Belegte Slots -->
-          <div v-for="(champion, index) in battleStore.selectedChampions" :key="champion">
+          <div
+            v-for="(assignment, index) in battleStore.teamSlotAssignments"
+            :key="'slot-' + index"
+            class="group/slot cursor-pointer"
+            @click="openSlotIndex = index"
+          >
+            <!-- Gefüllter Slot -->
             <div
-              class="relative overflow-hidden transition-all duration-300 border team-slot-card rounded-xl"
+              v-if="assignment"
+              class="relative overflow-hidden transition-all duration-200 border team-slot-card rounded-xl hover:ring-1 hover:ring-blue-400/30"
               :class="
-                isOnExpedition(champion)
+                isOnExpedition(assignment)
                   ? 'border-white/[0.06] opacity-50'
-                  : 'border-emerald-500/25'
+                  : 'border-emerald-500/25 hover:border-blue-400/40'
               "
             >
               <img
-                :src="battleStore.getChampionImage(champion)"
-                :alt="champion"
+                :src="battleStore.getChampionImage(assignment)"
+                :alt="assignment"
                 class="absolute inset-0 object-cover object-top w-full h-full"
-                :class="isOnExpedition(champion) ? 'grayscale' : ''"
+                :class="isOnExpedition(assignment) ? 'grayscale' : ''"
                 @error="onImgError"
               />
               <div
@@ -170,14 +176,14 @@
                 >
                 <div class="flex flex-col gap-1">
                   <span class="text-sm font-bold leading-tight text-white/80 drop-shadow">
-                    {{ truncate(champion, 8) }}
+                    {{ truncate(assignment, 8) }}
                   </span>
-                  <span v-if="isOnExpedition(champion)" class="text-[11px] text-amber-400/70"
+                  <span v-if="isOnExpedition(assignment)" class="text-[11px] text-amber-400/70"
                     >⏳ Expedition</span
                   >
                   <button
                     v-else
-                    @click="removeChampion(champion)"
+                    @click.stop="removeChampion(assignment)"
                     class="w-full py-0.5 text-xs font-bold rounded bg-red-500/20 border border-red-400/25 text-red-300/70 hover:bg-red-500/35 hover:text-red-200 transition-all duration-200"
                   >
                     Entfernen
@@ -185,24 +191,33 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Leere Slots -->
-          <div v-for="n in 4 - battleStore.selectedChampions.length" :key="'empty-' + n">
+            <!-- Leerer Slot -->
             <div
-              class="team-slot-card flex flex-col items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-white/10 bg-white/[0.015]"
+              v-else
+              class="team-slot-card flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border border-dashed border-white/10 bg-white/[0.015] transition-all duration-200 hover:border-blue-400/30 hover:bg-blue-900/10 group-hover/slot:border-blue-400/30"
             >
               <div
-                class="flex items-center justify-center w-8 h-8 border border-dashed rounded-lg border-white/10"
+                class="flex items-center justify-center w-9 h-9 border border-dashed rounded-xl border-white/10 group-hover/slot:border-blue-400/30 transition-colors duration-200"
               >
-                <span class="text-base text-white/20">+</span>
+                <span class="text-lg text-white/20 group-hover/slot:text-blue-400/70 transition-colors duration-200">+</span>
               </div>
-              <span class="text-xl font-semibold tracking-wider uppercase text-white/20">
-                Slot {{ battleStore.selectedChampions.length + n }}
+              <span class="text-[10px] font-bold tracking-wider uppercase text-white/20 group-hover/slot:text-white/40 transition-colors duration-200">
+                Slot {{ index + 1 }}
+              </span>
+              <span class="text-[9px] text-white/15 group-hover/slot:text-blue-400/50 transition-colors duration-200">
+                Tippen zum Hinzufügen
               </span>
             </div>
           </div>
         </div>
+
+        <!-- Champion Slot Modal -->
+        <ChampionSlotModal
+          :show="openSlotIndex !== null"
+          :slotIndex="openSlotIndex ?? 0"
+          @close="openSlotIndex = null"
+        />
 
         <!-- Divider -->
         <div class="h-px bg-white/[0.06] mb-3 flex-shrink-0" />
@@ -284,6 +299,7 @@ import MissionCreateComponent from './MissionCreateComponent.vue'
 import MissionActiveComponent from './MissionActiveComponent.vue'
 import ChampionShopComponent from '../gameCenter/champion/ChampionShopComponent.vue'
 import ItemShopComponent from '../gameCenter/ItemShopComponent.vue'
+import ChampionSlotModal from '../ChampionSlotModal.vue'
 import type { Mission } from '../../types'
 
 export default defineComponent({
@@ -293,12 +309,14 @@ export default defineComponent({
     MissionActiveComponent,
     ChampionShopComponent,
     ItemShopComponent,
+    ChampionSlotModal,
   },
   setup() {
     const battleStore = useBattleStore()
     const missionStore = useMissionStore()
     const gameStore = useGameStore()
     const now = ref(Date.now())
+    const openSlotIndex = ref<number | null>(null)
     let timer: ReturnType<typeof setInterval> | null = null
 
     onMounted(() => {
@@ -328,15 +346,15 @@ export default defineComponent({
       return missionStore.championsOnMission.includes(champion)
     }
     function addChampion(champion: string) {
-      if (
-        battleStore.selectedChampions.length < 4 &&
-        !battleStore.selectedChampions.includes(champion)
-      ) {
-        battleStore.selectedChampions.push(champion)
+      if (battleStore.selectedChampions.length < 4) {
+        const emptySlot = battleStore.teamSlotAssignments.indexOf(null)
+        if (emptySlot !== -1) {
+          battleStore.assignToSlot(emptySlot, champion)
+        }
       }
     }
     function removeChampion(champion: string) {
-      battleStore.selectedChampions = battleStore.selectedChampions.filter((c) => c !== champion)
+      battleStore.removeChampionFromSlots(champion)
     }
     function getProgress(mission: Mission): number {
       return Math.min(
@@ -366,6 +384,7 @@ export default defineComponent({
       battleStore,
       missionStore,
       gameStore,
+      openSlotIndex,
       selectableChampions,
       activeExpeditionCount,
       completedExpeditionCount,

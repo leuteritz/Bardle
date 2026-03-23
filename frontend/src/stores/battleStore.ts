@@ -65,7 +65,7 @@ export const useBattleStore = defineStore('battle', {
     // Spiel-Logik - Champions, Teams und Kampfstatistiken
     battleTime: 0,
     ownedChampions: ['Bard'],
-    selectedChampions: [] as string[],
+    teamSlotAssignments: [null, null, null, null] as (string | null)[],
     battleFormula: {
       luckFactor: ELO_LUCK_FACTOR,
     },
@@ -96,6 +96,11 @@ export const useBattleStore = defineStore('battle', {
     recruitableChampions: [] as RecruitableChampion[],
     recruitedChampions: [] as string[],
   }),
+
+  getters: {
+    selectedChampions: (state) =>
+      state.teamSlotAssignments.filter((s): s is string => s !== null),
+  },
 
   actions: {
     // Gibt den Bildpfad für einen Champion zurück basierend auf seinem Namen
@@ -129,6 +134,21 @@ export const useBattleStore = defineStore('battle', {
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
       logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost })
       return true
+    },
+
+    assignToSlot(slotIndex: number, championName: string) {
+      const existing = this.teamSlotAssignments.indexOf(championName)
+      if (existing !== -1) this.teamSlotAssignments[existing] = null
+      this.teamSlotAssignments[slotIndex] = championName
+    },
+
+    removeFromSlot(slotIndex: number) {
+      this.teamSlotAssignments[slotIndex] = null
+    },
+
+    removeChampionFromSlots(championName: string) {
+      const idx = this.teamSlotAssignments.indexOf(championName)
+      if (idx !== -1) this.teamSlotAssignments[idx] = null
     },
 
     getAvgBattleTime(): string {

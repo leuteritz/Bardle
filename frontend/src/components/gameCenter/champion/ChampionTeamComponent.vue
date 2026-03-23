@@ -62,14 +62,16 @@
       </div>
 
       <div class="grid grid-cols-4 gap-2">
-        <!-- Filled Slots -->
         <div
-          v-for="(champion, index) in battleStore.selectedChampions"
-          :key="champion"
-          class="relative group/slot"
+          v-for="(assignment, index) in battleStore.teamSlotAssignments"
+          :key="'slot-' + index"
+          class="relative group/slot cursor-pointer"
+          @click="openSlotIndex = index"
         >
+          <!-- Filled Slot -->
           <div
-            class="relative overflow-hidden rounded-xl border transition-all duration-300 bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+            v-if="assignment"
+            class="relative overflow-hidden rounded-xl border transition-all duration-300 bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)] hover:border-blue-400/60 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)]"
           >
             <div
               class="absolute inset-0 border pointer-events-none rounded-xl border-emerald-400/30 animate-pulse"
@@ -81,38 +83,33 @@
                 #{{ index + 1 }}
               </span>
               <img
-                :src="battleStore.getChampionImage(champion)"
-                :alt="champion"
+                :src="battleStore.getChampionImage(assignment)"
+                :alt="assignment"
                 class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/20 shadow-md"
                 @error="onImgError"
               />
               <span
                 class="text-[11px] font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
               >
-                {{ truncate(champion, 7) }}
+                {{ truncate(assignment, 7) }}
               </span>
               <button
-                @click="removeChampion(champion)"
+                @click.stop="battleStore.removeFromSlot(index)"
                 class="w-full px-1 py-0.5 text-[10px] font-black rounded-lg bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/40 transition-colors duration-200"
               >
                 ✕ Remove
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- Empty Slots -->
-        <div
-          v-for="n in 4 - battleStore.selectedChampions.length"
-          :key="'empty-' + n"
-          class="relative"
-        >
+          <!-- Empty Slot -->
           <div
-            class="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-dashed bg-white/[0.02] border-white/10 min-h-[80px] opacity-50"
+            v-else
+            class="flex flex-col items-center justify-center gap-1 p-2 rounded-xl border-2 border-dashed bg-white/[0.02] border-white/10 min-h-[80px] transition-all duration-200 hover:border-blue-400/40 hover:bg-blue-900/10 group-hover/slot:border-blue-400/40"
           >
-            <span class="text-xl text-white/20">+</span>
-            <span class="text-[10px] text-white/20 font-bold"
-              >#{{ battleStore.selectedChampions.length + n }}</span
+            <span class="text-xl text-white/20 group-hover/slot:text-blue-300/60 transition-colors duration-200">+</span>
+            <span class="text-[10px] text-white/20 group-hover/slot:text-white/50 font-bold transition-colors duration-200"
+              >#{{ index + 1 }}</span
             >
           </div>
         </div>
@@ -224,46 +221,45 @@
       </div>
     </div>
   </div>
+
+  <!-- Champion Slot Modal -->
+  <ChampionSlotModal
+    :show="openSlotIndex !== null"
+    :slotIndex="openSlotIndex ?? 0"
+    @close="openSlotIndex = null"
+  />
 </template>
 
-<script lang="ts">
-import { defineComponent, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useMissionStore } from '../../../stores/missionStore'
 import { truncate } from '../../../config/numberFormat'
+import ChampionSlotModal from '../../ChampionSlotModal.vue'
 
-export default defineComponent({
-  name: 'ChampionTeamComponent',
-  setup() {
-    const battleStore = useBattleStore()
-    const missionStore = useMissionStore()
+const battleStore = useBattleStore()
+const missionStore = useMissionStore()
 
-    const selectableChampions = computed(() => {
-      const onMission = missionStore.championsOnMission
-      return battleStore.ownedChampions.filter(
-        (c) => c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onMission.includes(c),
-      )
-    })
+const openSlotIndex = ref<number | null>(null)
 
-    function addChampion(champion: string) {
-      if (
-        battleStore.selectedChampions.length < 4 &&
-        !battleStore.selectedChampions.includes(champion)
-      ) {
-        battleStore.selectedChampions.push(champion)
-      }
-    }
-
-    function removeChampion(champion: string) {
-      battleStore.selectedChampions = battleStore.selectedChampions.filter((c) => c !== champion)
-    }
-
-    function onImgError(e: Event) {
-      const img = e.target as HTMLImageElement
-      img.style.display = 'none'
-    }
-
-    return { battleStore, selectableChampions, addChampion, removeChampion, onImgError, truncate }
-  },
+const selectableChampions = computed(() => {
+  const onMission = missionStore.championsOnMission
+  return battleStore.ownedChampions.filter(
+    (c) => c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onMission.includes(c),
+  )
 })
+
+function addChampion(champion: string) {
+  if (battleStore.selectedChampions.length < 4) {
+    const emptySlot = battleStore.teamSlotAssignments.indexOf(null)
+    if (emptySlot !== -1) {
+      battleStore.assignToSlot(emptySlot, champion)
+    }
+  }
+}
+
+function onImgError(e: Event) {
+  const img = e.target as HTMLImageElement
+  img.style.display = 'none'
+}
 </script>

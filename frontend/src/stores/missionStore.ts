@@ -97,10 +97,7 @@ export const useMissionStore = defineStore('mission', {
 
       // Remove champions from battle team
       const battleStore = useBattleStore()
-      const names = assignedChampions.map((c) => c.name)
-      battleStore.selectedChampions = battleStore.selectedChampions.filter(
-        (c) => !names.includes(c),
-      )
+      assignedChampions.forEach((c) => battleStore.removeChampionFromSlots(c.name))
 
       return true
     },
