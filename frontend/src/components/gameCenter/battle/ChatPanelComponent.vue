@@ -31,18 +31,18 @@
       <div
         id="battle-chat-box"
         ref="chatBoxRef"
-        class="p-2 space-y-1 overflow-y-auto custom-scrollbar border h-28 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
+        class="p-2 space-y-1 overflow-y-auto custom-scrollbar border h-40 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
       >
         <div
           v-for="(msg, idx) in battleStore.chatMessages"
           :key="'msg-' + idx"
           class="flex items-start min-h-0 gap-1"
         >
-          <span class="flex-shrink-0 text-[9px] font-bold text-white/30 mt-0.5">{{
+          <span class="flex-shrink-0 text-[11px] font-bold text-white/30 mt-0.5">{{
             msg.time
           }}</span>
           <span
-            class="flex-shrink-0 text-[10px] font-black truncate"
+            class="flex-shrink-0 text-xs font-black truncate"
             :class="{
               'text-violet-300': msg.user === 'Bard',
               'text-blue-300': msg.team === 1 && msg.user !== 'Bard',
@@ -50,7 +50,7 @@
             }"
             >{{ msg.user }}:</span
           >
-          <span class="flex-1 min-w-0 text-[10px] leading-tight text-white/60 break-words">{{
+          <span class="flex-1 min-w-0 text-xs leading-tight text-white/60 break-words">{{
             msg.text
           }}</span>
         </div>

@@ -2,7 +2,7 @@
   <div class="flex flex-col w-full h-full gap-4 p-4 overflow-y-auto custom-scrollbar">
     <!-- ── Champion Shop ── -->
     <div
-      class="h-[320px] rounded-2xl border border-white/10 bg-black/25 overflow-hidden flex-shrink-0"
+      class="h-[360px] rounded-2xl border border-white/10 bg-black/25 overflow-hidden flex-shrink-0"
     >
       <ChampionShopComponent />
     </div>
@@ -11,7 +11,7 @@
     <div class="p-4 bg-white/[0.03] border border-white/10 rounded-2xl">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <span class="text-xs font-bold tracking-widest uppercase text-white/40">Team</span>
+        <span class="text-sm font-bold tracking-widest uppercase text-white/40">Team</span>
         <div
           class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-400/20"
         >
@@ -44,20 +44,20 @@
             <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
             <!-- Content -->
             <div class="relative z-10 flex flex-col justify-between h-full p-2">
-              <span class="text-[9px] font-bold tracking-widest text-white/40 uppercase"
+              <span class="text-[11px] font-bold tracking-widest text-white/40 uppercase"
                 >#{{ index + 1 }}</span
               >
               <div class="flex flex-col gap-1">
                 <span class="text-sm font-bold leading-tight text-white/80 drop-shadow">
                   {{ truncate(champion, 8) }}
                 </span>
-                <span v-if="isOnExpedition(champion)" class="text-[9px] text-amber-400/70"
+                <span v-if="isOnExpedition(champion)" class="text-[11px] text-amber-400/70"
                   >⏳ Expedition</span
                 >
                 <button
                   v-else
                   @click="removeChampion(champion)"
-                  class="w-full py-0.5 text-[11px] font-bold rounded bg-red-500/20 border border-red-400/25 text-red-300/70 hover:bg-red-500/35 hover:text-red-200 transition-all duration-200"
+                  class="w-full py-0.5 text-xs font-bold rounded bg-red-500/20 border border-red-400/25 text-red-300/70 hover:bg-red-500/35 hover:text-red-200 transition-all duration-200"
                 >
                   Entfernen
                 </button>
@@ -92,7 +92,7 @@
       </div>
       <div
         v-else
-        class="grid grid-cols-3 gap-2 max-h-[240px] overflow-y-auto custom-scrollbar pr-0.5"
+        class="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-0.5"
       >
         <div
           v-for="champion in selectableChampions"
@@ -295,11 +295,11 @@ export default defineComponent({
 
 <style scoped>
 .team-slot-card {
-  min-height: 130px;
-  height: 130px;
+  min-height: 150px;
+  height: 150px;
 }
 .available-card {
-  min-height: 110px;
-  height: 110px;
+  min-height: 130px;
+  height: 130px;
 }
 </style>

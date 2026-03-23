@@ -21,7 +21,7 @@
         </span>
         <div class="flex items-center gap-1 ml-auto">
           <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span class="text-[10px] text-emerald-300 font-bold">Live</span>
+          <span class="text-xs text-emerald-300 font-bold">Live</span>
         </div>
       </div>
 
@@ -31,7 +31,7 @@
       >
         <!-- Time -->
         <div
-          class="absolute z-10 top-1 left-1 px-1.5 py-0.5 text-[10px] font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+          class="absolute z-10 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
         >
           {{ formatTime(battleStore.battleTime) }}
         </div>
@@ -39,9 +39,9 @@
         <div
           class="absolute z-10 top-1 right-1 px-1.5 py-0.5 rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
         >
-          <span class="text-[10px] font-black text-blue-300">{{ score.team1Kills }}</span>
-          <span class="text-[10px] text-white/40"> vs </span>
-          <span class="text-[10px] font-black text-red-300">{{ score.team2Kills }}</span>
+          <span class="text-xs font-black text-blue-300">{{ score.team1Kills }}</span>
+          <span class="text-xs text-white/40"> vs </span>
+          <span class="text-xs font-black text-red-300">{{ score.team2Kills }}</span>
         </div>
 
         <img

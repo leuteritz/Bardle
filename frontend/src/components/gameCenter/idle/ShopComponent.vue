@@ -161,7 +161,7 @@
         <div class="flex items-center gap-4 p-4 pr-3">
           <!-- Icon Container -->
           <div
-            class="relative flex items-center justify-center flex-shrink-0 transition-transform duration-300 border shadow-inner w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+            class="relative flex items-center justify-center flex-shrink-0 transition-transform duration-300 border shadow-inner w-16 h-16 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
           >
             <div
               v-if="shopStore.canAffordUpgrade(upgrade)"
@@ -171,7 +171,7 @@
               v-if="isImageUrl(upgrade.icon)"
               :src="upgrade.icon"
               :alt="upgrade.name"
-              class="relative z-10 object-contain w-9 h-9 drop-shadow-lg"
+              class="relative z-10 object-contain w-11 h-11 drop-shadow-lg"
             />
             <span v-else class="relative z-10 text-2xl drop-shadow-lg">{{ upgrade.icon }}</span>
           </div>
@@ -179,7 +179,7 @@
           <!-- Text & Stats -->
           <div class="flex-1 min-w-0">
             <h3
-              class="mb-1.5 text-sm font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
+              class="mb-1.5 text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
             >
               {{ upgrade.name }}
             </h3>
@@ -214,7 +214,7 @@
           </div>
 
           <!-- Kauf-Button -->
-          <div class="flex-shrink-0 w-24 ml-1">
+          <div class="flex-shrink-0 w-28 ml-1">
             <button
               class="group/btn relative w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
               :class="
@@ -230,7 +230,7 @@
               />
               <div class="relative flex items-center justify-center gap-1.5">
                 <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-                <span class="font-black tracking-tight text-[11px]">
+                <span class="font-black tracking-tight text-xs">
                   {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
                 </span>
               </div>

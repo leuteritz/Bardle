@@ -67,7 +67,7 @@
               class="flex flex-col items-center gap-1"
             >
               <div
-                class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-blue-400/30 hover:scale-110"
+                class="relative flex items-center justify-center w-20 h-20 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-blue-400/30 hover:scale-110"
               >
                 <div
                   class="absolute inset-0 rounded-xl blur-md opacity-40 bg-gradient-to-br from-blue-400/40 to-blue-600/20"
@@ -75,7 +75,7 @@
                 <img
                   :src="battleStore.getChampionImage(champ.name)"
                   :alt="champ.name"
-                  class="relative z-10 object-cover w-10 h-10 rounded-lg drop-shadow-lg"
+                  class="relative z-10 object-cover w-14 h-14 rounded-lg drop-shadow-lg"
                 />
                 <span
                   v-if="champ.name === 'Bard'"
@@ -85,22 +85,22 @@
                 <img
                   v-if="champ.rank"
                   :src="getBorderImage(champ.rank)"
-                  class="absolute z-20 w-6 h-6 border rounded-full -bottom-1 -right-1 border-blue-400/50 bg-white/90"
+                  class="absolute z-20 w-7 h-7 border rounded-full -bottom-1 -right-1 border-blue-400/50 bg-white/90"
                 />
               </div>
               <span
-                class="text-[10px] font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
+                class="text-sm font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
               >
-                {{ champ.name.length > 7 ? champ.name.slice(0, 7) + '…' : champ.name }}
+                {{ champ.name.length > 9 ? champ.name.slice(0, 9) + '…' : champ.name }}
               </span>
               <div
                 class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg border bg-white/5 border-white/10"
               >
-                <span class="text-[9px] font-bold text-emerald-300">{{ champ.kills }}K</span>
-                <span class="text-[9px] text-white/30">/</span>
-                <span class="text-[9px] font-bold text-red-300">{{ champ.deaths }}D</span>
-                <span class="text-[9px] text-white/30">/</span>
-                <span class="text-[9px] font-bold text-blue-300">{{ champ.assists }}A</span>
+                <span class="text-[11px] font-bold text-emerald-300">{{ champ.kills }}K</span>
+                <span class="text-[11px] text-white/30">/</span>
+                <span class="text-[11px] font-bold text-red-300">{{ champ.deaths }}D</span>
+                <span class="text-[11px] text-white/30">/</span>
+                <span class="text-[11px] font-bold text-blue-300">{{ champ.assists }}A</span>
               </div>
             </div>
           </div>
@@ -131,7 +131,7 @@
               class="flex flex-col items-center gap-1"
             >
               <div
-                class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-red-400/30 hover:scale-110"
+                class="relative flex items-center justify-center w-20 h-20 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-red-400/30 hover:scale-110"
               >
                 <div
                   class="absolute inset-0 rounded-xl blur-md opacity-40 bg-gradient-to-br from-red-400/40 to-red-600/20"
@@ -139,25 +139,25 @@
                 <img
                   :src="battleStore.getChampionImage(champ.name)"
                   :alt="champ.name"
-                  class="relative z-10 object-cover w-10 h-10 rounded-lg drop-shadow-lg"
+                  class="relative z-10 object-cover w-14 h-14 rounded-lg drop-shadow-lg"
                 />
                 <img
                   v-if="champ.rank"
                   :src="getBorderImage(champ.rank)"
-                  class="absolute z-20 w-6 h-6 border rounded-full -bottom-1 -right-1 border-red-400/50 bg-white/90"
+                  class="absolute z-20 w-7 h-7 border rounded-full -bottom-1 -right-1 border-red-400/50 bg-white/90"
                 />
               </div>
-              <span class="text-[10px] font-black text-center text-red-300 leading-tight">
-                {{ champ.name.length > 7 ? champ.name.slice(0, 7) + '…' : champ.name }}
+              <span class="text-sm font-black text-center text-red-300 leading-tight">
+                {{ champ.name.length > 9 ? champ.name.slice(0, 9) + '…' : champ.name }}
               </span>
               <div
                 class="flex items-center gap-1 px-1.5 py-0.5 rounded-lg border bg-white/5 border-white/10"
               >
-                <span class="text-[9px] font-bold text-emerald-300">{{ champ.kills }}K</span>
-                <span class="text-[9px] text-white/30">/</span>
-                <span class="text-[9px] font-bold text-red-300">{{ champ.deaths }}D</span>
-                <span class="text-[9px] text-white/30">/</span>
-                <span class="text-[9px] font-bold text-blue-300">{{ champ.assists }}A</span>
+                <span class="text-[11px] font-bold text-emerald-300">{{ champ.kills }}K</span>
+                <span class="text-[11px] text-white/30">/</span>
+                <span class="text-[11px] font-bold text-red-300">{{ champ.deaths }}D</span>
+                <span class="text-[11px] text-white/30">/</span>
+                <span class="text-[11px] font-bold text-blue-300">{{ champ.assists }}A</span>
               </div>
             </div>
           </div>
