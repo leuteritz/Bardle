@@ -174,7 +174,7 @@ usePlanetBackground(starsContainer)
 }
 
 .planet--rescue {
-  pointer-events: none; /* wird durch stars--rescue-active überschrieben */
+  pointer-events: none;
   cursor: default;
   z-index: 4;
   animation: planetDistress 2s ease-in-out infinite !important;
@@ -247,7 +247,7 @@ usePlanetBackground(starsContainer)
 
 .stars--rescue-active {
   z-index: 100 !important;
-  pointer-events: none !important; /* Container selbst bleibt pass-through */
+  pointer-events: none !important;
 }
 
 .stars--rescue-active .planet--rescue {
@@ -271,43 +271,142 @@ usePlanetBackground(starsContainer)
   transform-origin: left center;
   pointer-events: none;
   z-index: 5;
-  background: rgba(5, 5, 25, 0.7);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 160, 50, 0.35);
-  border-radius: 8px;
-  padding: 5px 10px;
+
+  background: linear-gradient(135deg, rgba(8, 8, 32, 0.88) 0%, rgba(18, 10, 45, 0.8) 100%);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+
+  border: 1px solid rgba(255, 165, 55, 0.55);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(255, 160, 50, 0.08),
+    0 0 14px rgba(255, 130, 30, 0.28),
+    0 6px 28px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  padding: 8px 13px;
+  min-width: 140px;
   white-space: nowrap;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
-  line-height: 1.4;
+  gap: 4px;
+
+  /* ✅ FIX: Kein transform in der Animation – JS-Positionierung bleibt unberührt */
+  animation: labelFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* ✅ FIX: position: absolute damit top/left/bottom/right greifen */
+.planet-label::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 11px;
+  height: 11px;
+  border-top: 2px solid rgba(255, 185, 80, 0.95);
+  border-left: 2px solid rgba(255, 185, 80, 0.95);
+  border-radius: 10px 0 0 0;
+  pointer-events: none;
+}
+
+.planet-label::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
+  border-bottom: 2px solid rgba(255, 140, 50, 0.75);
+  border-right: 2px solid rgba(255, 140, 50, 0.75);
+  border-radius: 0 0 10px 0;
+  pointer-events: none;
+}
+
+/* ✅ FIX: Kein transform – nur opacity + filter animieren */
+@keyframes labelFadeIn {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+/* ── Name ── */
 .planet-label__name {
-  color: #ffffff;
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.05em;
+  font-size: 13px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 210, 155, 0.9) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  /* ✅ FIX: color: transparent für Firefox-Kompatibilität */
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 165, 50, 0.22);
+  margin-bottom: 2px;
 }
 
+/* ── Material ── */
 .planet-label__material {
-  color: rgba(255, 200, 100, 0.9);
+  color: rgba(255, 215, 120, 0.95);
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 15px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .planet-label__material img {
   width: 16px;
   height: 16px;
   object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.65));
 }
 
+/* ── Reward ── */
 .planet-label__reward {
-  color: rgba(120, 255, 180, 0.85);
-  font-size: 14px;
+  color: rgba(120, 255, 185, 0.92);
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.planet-label__reward::before {
+  content: '✦';
+  font-size: 9px;
+  opacity: 0.75;
+  color: rgba(100, 255, 165, 0.85);
+}
+
+/* ── Champion ── */
+.planet-label__champion {
+  color: rgba(195, 160, 255, 0.95);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  padding-top: 4px;
+  border-top: 1px solid rgba(180, 140, 255, 0.18);
+  margin-top: 2px;
+}
+
+.planet-label__champion img {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid rgba(190, 150, 255, 0.65);
+  box-shadow: 0 0 7px rgba(160, 120, 255, 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {

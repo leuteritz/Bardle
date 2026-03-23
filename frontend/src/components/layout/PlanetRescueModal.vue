@@ -9,18 +9,14 @@
       <div class="modal-card">
         <h3 class="modal-title">⚠ Planet in Distress</h3>
 
-        <!-- Countdown bar -->
         <div class="countdown-bar">
           <div class="countdown-fill" :style="{ width: progressPercent + '%' }" />
         </div>
 
-        <!-- Seconds remaining -->
         <span class="timer-text">{{ secondsRemaining }}s</span>
 
-        <!-- Planet stage — click here to rescue -->
         <div ref="planetStage" class="planet-stage" @click="handleClick" />
 
-        <!-- Click progress dots -->
         <div v-if="planetEventStore.activePlanetEvent" class="click-progress">
           <span
             v-for="i in planetEventStore.activePlanetEvent.clicksRequired"
@@ -32,7 +28,6 @@
 
         <p class="hint-text">Click the planet to rescue it!</p>
 
-        <!-- Mögliche Material-Drops -->
         <div v-if="assignedMaterial" class="drop-list">
           <p class="drop-list-title">Möglicher Drop</p>
           <div class="drop-row">
@@ -45,7 +40,6 @@
           </div>
         </div>
 
-        <!-- Heimatplanet eines Champions -->
         <div v-if="homePlanetChampion" class="drop-list home-planet-info">
           <p class="drop-list-title">Heimatplanet</p>
           <div class="drop-row">
@@ -138,7 +132,9 @@ const assignedMaterial = computed(() => {
   return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
 })
 
-const homePlanetChampion = computed(() => planetEventStore.activePlanetEvent?.homePlanetChampion ?? null)
+const homePlanetChampion = computed(
+  () => planetEventStore.activePlanetEvent?.homePlanetChampion ?? null,
+)
 
 function handleClick() {
   const reward = planetEventStore.activePlanetEvent?.reward ?? 0
@@ -152,7 +148,10 @@ function handleClick() {
     }
     const ev = planetEventStore.activePlanetEvent
     if (ev?.potentialMaterialId && ev.assignedDropChance != null) {
-      const dropped = inventoryStore.tryDropSpecificMaterial(ev.potentialMaterialId, ev.assignedDropChance)
+      const dropped = inventoryStore.tryDropSpecificMaterial(
+        ev.potentialMaterialId,
+        ev.assignedDropChance,
+      )
       planetEventStore.lastDroppedMaterialId = dropped ? ev.potentialMaterialId : null
     }
 
@@ -176,7 +175,69 @@ function handleClick() {
 }
 </script>
 
+Hier sind beide Komponenten mit komplett überarbeitetem Style, passend zur
+Planet-Label-Designsprache (Glassmorphism, Glow-Rahmen, Eckakzente, Gradient-Text, konsistente
+Farbpalette): PlanetRescueModal vue
+<template>
+  <Transition name="modal-fade">
+    <div
+      v-if="planetEventStore.rescueModalOpen"
+      class="modal-backdrop"
+      aria-modal="true"
+      role="dialog"
+    >
+      <div class="modal-card">
+        <h3 class="modal-title">⚠ Planet in Distress</h3>
+
+        <div class="countdown-bar">
+          <div class="countdown-fill" :style="{ width: progressPercent + '%' }" />
+        </div>
+
+        <span class="timer-text">{{ secondsRemaining }}s</span>
+
+        <div ref="planetStage" class="planet-stage" @click="handleClick" />
+
+        <div v-if="planetEventStore.activePlanetEvent" class="click-progress">
+          <span
+            v-for="i in planetEventStore.activePlanetEvent.clicksRequired"
+            :key="i"
+            class="dot"
+            :class="{ 'dot--done': i <= (planetEventStore.activePlanetEvent.clicksMade ?? 0) }"
+          />
+        </div>
+
+        <p class="hint-text">Click the planet to rescue it!</p>
+
+        <div v-if="assignedMaterial" class="drop-list">
+          <p class="drop-list-title">Möglicher Drop</p>
+          <div class="drop-row">
+            <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
+              {{ assignedMaterial.name }}
+            </span>
+            <span class="drop-chance">
+              {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
+            </span>
+          </div>
+        </div>
+
+        <div v-if="homePlanetChampion" class="drop-list home-planet-info">
+          <p class="drop-list-title">Heimatplanet</p>
+          <div class="drop-row">
+            <span class="home-planet-champion-name">{{ homePlanetChampion }}</span>
+          </div>
+          <p class="home-planet-hint">Rette den Planeten, um diesen Champion freizuschalten!</p>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</template>
+
+<script setup lang="ts">
+// ... (script bleibt unverändert)
+</script>
+
 <style scoped>
+/* ─── Backdrop ─────────────────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -184,21 +245,34 @@ function handleClick() {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: auto; /* war none — blockiert jetzt Hintergrund */
-  background: rgba(0, 2, 15, 0.75); /* etwas dunkler für besseres Overlay */
-  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  background: rgba(0, 2, 18, 0.82);
+  backdrop-filter: blur(10px);
 }
 
+/* ─── Card ─────────────────────────────────────────────────────────────────── */
 .modal-card {
+  position: relative;
   pointer-events: auto;
   width: clamp(360px, 45vw, 560px);
-  background: linear-gradient(135deg, #020818 0%, #06152e 50%, #020c1a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 1rem;
+
+  background: linear-gradient(
+    135deg,
+    rgba(8, 8, 32, 0.92) 0%,
+    rgba(20, 10, 48, 0.88) 50%,
+    rgba(6, 12, 28, 0.92) 100%
+  );
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+
+  border: 1px solid rgba(255, 140, 40, 0.45);
+  border-radius: 14px;
   box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(255, 80, 0, 0.15);
-  backdrop-filter: blur(16px);
+    0 0 0 1px rgba(255, 140, 40, 0.07),
+    0 0 30px rgba(255, 100, 20, 0.22),
+    0 30px 70px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
   padding: 1.75rem 2rem;
   display: flex;
   flex-direction: column;
@@ -206,62 +280,113 @@ function handleClick() {
   gap: 0.85rem;
 }
 
-.modal-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #ff8040;
-  text-shadow: 0 0 10px rgba(255, 80, 0, 0.7);
-  letter-spacing: 0.04em;
-  margin: 0;
+/* Eckakzent oben-links */
+.modal-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid rgba(255, 185, 70, 0.9);
+  border-left: 2px solid rgba(255, 185, 70, 0.9);
+  border-radius: 14px 0 0 0;
+  pointer-events: none;
 }
 
+/* Eckakzent unten-rechts */
+.modal-card::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  border-bottom: 2px solid rgba(255, 120, 40, 0.7);
+  border-right: 2px solid rgba(255, 120, 40, 0.7);
+  border-radius: 0 0 14px 0;
+  pointer-events: none;
+}
+
+/* ─── Title ────────────────────────────────────────────────────────────────── */
+.modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+
+  background: linear-gradient(90deg, #ff9040 0%, #ffcc70 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  filter: drop-shadow(0 0 10px rgba(255, 100, 20, 0.6));
+}
+
+/* ─── Countdown bar ────────────────────────────────────────────────────────── */
 .countdown-bar {
   width: 100%;
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .countdown-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff6a00, #ff0000);
-  box-shadow: 0 0 8px rgba(255, 60, 0, 0.8);
+  background: linear-gradient(90deg, #ff6a00, #ff2200);
+  box-shadow:
+    0 0 10px rgba(255, 60, 0, 0.9),
+    0 0 20px rgba(255, 40, 0, 0.4);
   transition: width 0.2s linear;
+  border-radius: 4px;
 }
 
+/* ─── Timer ────────────────────────────────────────────────────────────────── */
+.timer-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, #ff7030 0%, #ffaa50 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px rgba(255, 80, 0, 0.7));
+}
+
+/* ─── Planet Stage ─────────────────────────────────────────────────────────── */
 .planet-stage {
   width: 320px;
   height: 320px;
   cursor: pointer;
   border-radius: 50%;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    filter 0.1s ease;
+  filter: drop-shadow(0 0 18px rgba(255, 100, 20, 0.25));
 }
 
 .planet-stage:hover {
   transform: scale(1.04);
+  filter: drop-shadow(0 0 28px rgba(255, 120, 30, 0.45));
 }
 
 .planet-stage:active {
   transform: scale(0.96);
 }
 
-.timer-text {
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: #ff6a00;
-  text-shadow: 0 0 12px rgba(255, 80, 0, 0.8);
-  letter-spacing: 0.05em;
-}
-
+/* ─── Click-Progress Dots ──────────────────────────────────────────────────── */
 .click-progress {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -270,49 +395,57 @@ function handleClick() {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: rgba(255, 100, 0, 0.2);
-  border: 1.5px solid rgba(255, 100, 0, 0.6);
+  background: rgba(255, 100, 0, 0.12);
+  border: 1.5px solid rgba(255, 120, 30, 0.4);
   transition:
     background 0.12s,
-    box-shadow 0.12s;
+    box-shadow 0.12s,
+    border-color 0.12s;
 }
 
 .dot--done {
-  background: rgba(255, 160, 40, 0.9);
-  box-shadow: 0 0 7px rgba(255, 100, 0, 0.9);
+  background: rgba(255, 170, 50, 0.95);
+  border-color: rgba(255, 200, 80, 0.8);
+  box-shadow:
+    0 0 6px rgba(255, 140, 20, 0.9),
+    0 0 12px rgba(255, 100, 0, 0.5);
 }
 
+/* ─── Hint ─────────────────────────────────────────────────────────────────── */
 .hint-text {
-  font-size: 0.72rem;
-  color: rgba(255, 200, 130, 0.6);
+  font-size: 0.7rem;
+  color: rgba(255, 200, 130, 0.5);
   margin: 0;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
+/* ─── Drop List ────────────────────────────────────────────────────────────── */
 .drop-list {
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 165, 50, 0.18);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .drop-list-title {
-  font-size: 0.6rem;
-  color: rgba(255, 200, 130, 0.45);
-  margin: 0 0 0.2rem;
-  letter-spacing: 0.06em;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: rgba(255, 185, 80, 0.45);
+  margin: 0 0 0.25rem;
 }
 
 .drop-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.7rem;
+  gap: 0.5rem;
+  font-size: 0.72rem;
 }
 
 .drop-name {
@@ -320,37 +453,51 @@ function handleClick() {
 }
 
 .drop-chance {
-  color: rgba(255, 200, 100, 0.75);
-  font-weight: bold;
-  min-width: 2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 205, 100, 0.85);
+  min-width: 2.2rem;
   text-align: right;
+  letter-spacing: 0.02em;
 }
 
+/* ─── Home Planet ──────────────────────────────────────────────────────────── */
 .home-planet-info {
-  border-color: rgba(100, 180, 255, 0.2);
-  background: rgba(60, 130, 255, 0.05);
+  border-color: rgba(100, 160, 255, 0.22);
+  background: rgba(40, 90, 255, 0.04);
 }
 
 .home-planet-champion-name {
-  color: rgba(100, 180, 255, 0.95);
-  font-weight: bold;
-  font-size: 0.8rem;
+  color: rgba(130, 190, 255, 0.95);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
 }
 
 .home-planet-hint {
   font-size: 0.55rem;
-  color: rgba(100, 180, 255, 0.5);
+  color: rgba(100, 170, 255, 0.45);
   margin: 0.15rem 0 0;
+  letter-spacing: 0.02em;
 }
 
-.rarity--common   { color: rgba(200, 200, 200, 0.75); }
-.rarity--uncommon { color: rgba(100, 220, 100, 0.9); }
-.rarity--rare     { color: rgba(100, 150, 255, 0.9); }
-.rarity--epic     { color: rgba(200, 100, 255, 0.9); }
+/* ─── Rarity ───────────────────────────────────────────────────────────────── */
+.rarity--common {
+  color: rgba(200, 200, 200, 0.75);
+}
+.rarity--uncommon {
+  color: rgba(100, 230, 120, 0.9);
+}
+.rarity--rare {
+  color: rgba(90, 160, 255, 0.95);
+}
+.rarity--epic {
+  color: rgba(210, 110, 255, 0.95);
+}
 
-/* Transition */
+/* ─── Transition ───────────────────────────────────────────────────────────── */
 .modal-fade-enter-active {
-  animation: modalIn 0.25s ease-out;
+  animation: modalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .modal-fade-leave-active {
   animation: modalOut 0.22s ease-in forwards;
@@ -360,20 +507,24 @@ function handleClick() {
   from {
     opacity: 0;
     transform: scale(0.88);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: scale(1);
+    filter: blur(0);
   }
 }
 @keyframes modalOut {
   from {
     opacity: 1;
     transform: scale(1);
+    filter: blur(0);
   }
   to {
     opacity: 0;
     transform: scale(0.9);
+    filter: blur(3px);
   }
 }
 </style>

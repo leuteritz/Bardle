@@ -210,6 +210,12 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
     const reward = event?.reward ?? 0
     const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
+    const champion = event?.homePlanetChampion ?? null
+    const championImg = champion
+      ? champion === 'Bard'
+        ? '/img/BardAbilities/Bard.png'
+        : `/img/champion/${champion}.jpg`
+      : null
 
     const label = document.createElement('div')
     label.className = 'planet-label'
@@ -220,6 +226,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         ${material?.name ?? ''}
       </span>
       <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>
+      ${champion && championImg ? `<span class="planet-label__champion"><img src="${championImg}" alt="${champion}" onerror="this.style.display='none'">${champion}</span>` : ''}
     `
     const labelX = item.x + pSize + 10
     const labelY = item.y + pSize / 2

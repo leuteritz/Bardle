@@ -100,7 +100,7 @@ watch(
 const droppedMaterial = computed(() =>
   planetEventStore.lastDroppedMaterialId
     ? (MATERIALS.find((m) => m.id === planetEventStore.lastDroppedMaterialId) ?? null)
-    : null
+    : null,
 )
 
 // Saved toast
@@ -124,20 +124,25 @@ watch(
 </script>
 
 <style scoped>
-/* Vignette flash */
+/* ─── Vignette Flash ───────────────────────────────────────────────────────── */
 .planet-vignette {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 15;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(255, 60, 0, 0.35) 100%);
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(255, 55, 0, 0.28) 75%,
+    rgba(255, 30, 0, 0.45) 100%
+  );
 }
 
 .vignette-fade-enter-active {
-  animation: vignetteIn 0.3s ease-out;
+  animation: vignetteIn 0.25s ease-out;
 }
 .vignette-fade-leave-active {
-  animation: vignetteOut 1.2s ease-in forwards;
+  animation: vignetteOut 1.3s ease-in forwards;
 }
 
 @keyframes vignetteIn {
@@ -157,97 +162,126 @@ watch(
   }
 }
 
-/* Countdown bar */
+/* ─── Countdown Bar ────────────────────────────────────────────────────────── */
 .planet-countdown-bar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 6px;
+  height: 5px;
   z-index: 16;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
 }
 
 .planet-countdown-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff6a00, #ff0000);
+  background: linear-gradient(90deg, #ff6a00, #ff1500);
   box-shadow:
-    0 0 8px rgba(255, 60, 0, 0.8),
-    0 0 16px rgba(255, 60, 0, 0.4);
+    0 0 10px rgba(255, 60, 0, 0.9),
+    0 0 22px rgba(255, 40, 0, 0.45);
   transition: width 0.2s linear;
+  border-radius: 0 3px 3px 0;
 }
 
 .planet-countdown-label {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 8px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: #ff8040;
-  text-shadow: 0 0 8px rgba(255, 60, 0, 0.9);
+  top: 9px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   white-space: nowrap;
-  letter-spacing: 0.05em;
   pointer-events: none;
+
+  background: linear-gradient(90deg, #ff9040 0%, #ffcc60 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(255, 80, 0, 0.8));
 }
 
-/* Toasts */
+/* ─── Toasts ───────────────────────────────────────────────────────────────── */
 .planet-toast {
   position: fixed;
   top: 15vh;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
-  padding: 0.6rem 1.4rem;
-  border-radius: 0.75rem;
-  font-weight: bold;
-  font-size: 1rem;
+  padding: 0.65rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
   text-align: center;
   pointer-events: none;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* ─── Lost Toast ───────────────────────────────────────────────────────────── */
 .planet-toast--lost {
-  background: rgba(40, 0, 0, 0.85);
-  border: 1px solid rgba(255, 60, 0, 0.6);
-  color: #ff6030;
-  box-shadow: 0 0 20px rgba(255, 60, 0, 0.4);
+  background: linear-gradient(135deg, rgba(30, 4, 4, 0.92), rgba(20, 6, 6, 0.88));
+  border: 1px solid rgba(255, 60, 0, 0.5);
+  color: #ff6535;
+  box-shadow:
+    0 0 0 1px rgba(255, 60, 0, 0.08),
+    0 0 20px rgba(255, 50, 0, 0.35),
+    0 12px 40px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  text-shadow: 0 0 12px rgba(255, 60, 0, 0.6);
 }
 
+/* ─── Saved Toast ──────────────────────────────────────────────────────────── */
+.planet-toast--saved {
+  background: linear-gradient(135deg, rgba(4, 24, 12, 0.92), rgba(6, 20, 10, 0.88));
+  border: 1px solid rgba(70, 220, 120, 0.45);
+  color: #55ee88;
+  box-shadow:
+    0 0 0 1px rgba(70, 220, 120, 0.07),
+    0 0 20px rgba(60, 200, 100, 0.3),
+    0 12px 40px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  text-shadow: 0 0 10px rgba(60, 220, 100, 0.55);
+}
+
+/* ─── Toast sub-content ────────────────────────────────────────────────────── */
 .toast-material {
-  font-size: 0.75rem;
-  font-weight: normal;
-  opacity: 0.85;
+  font-size: 0.74rem;
+  font-weight: 500;
+  opacity: 0.88;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .toast-material--none {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .toast-material--champion {
-  color: rgba(100, 180, 255, 0.95);
-  font-weight: bold;
+  color: rgba(130, 190, 255, 0.95);
+  font-weight: 700;
 }
 
 .toast-material-img {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.4rem;
+  height: 1.4rem;
   object-fit: contain;
   vertical-align: middle;
+  filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.55));
 }
 
-.planet-toast--saved {
-  background: rgba(0, 30, 10, 0.85);
-  border: 1px solid rgba(80, 220, 120, 0.6);
-  color: #60ee90;
-  box-shadow: 0 0 20px rgba(80, 220, 120, 0.4);
-}
-
+/* ─── Toast Transition ─────────────────────────────────────────────────────── */
 .toast-slide-enter-active {
-  animation: toastIn 0.3s ease-out;
+  animation: toastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .toast-slide-leave-active {
   animation: toastOut 0.4s ease-in forwards;
@@ -256,21 +290,23 @@ watch(
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-12px);
+    transform: translateX(-50%) translateY(-14px) scale(0.95);
+    filter: blur(3px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 @keyframes toastOut {
   from {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: translateX(-50%) translateY(-12px);
+    transform: translateX(-50%) translateY(-10px) scale(0.96);
   }
 }
 </style>

@@ -56,7 +56,7 @@ export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
 export const PLANET_MATERIAL_CHANCE = 0.6
 
 // Champion home planet discovery chance
-export const CHAMPION_HOME_PLANET_CHANCE = 0.15
+export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
 // Planet type display names (German)
 export const PLANET_TYPE_NAMES: Record<string, string> = {
