@@ -313,25 +313,42 @@ const modalTheme = computed(() => {
         </div>
 
         <!-- Modal Content -->
-        <div class="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div class="relative flex-1 min-h-0 overflow-hidden">
           <Transition name="tab-fade" mode="out-in">
-            <div v-if="activeModal === 'shop'" key="shop">
+            <!-- Shop: eigener Scroll -->
+            <div
+              v-if="activeModal === 'shop'"
+              key="shop"
+              class="h-full overflow-y-auto custom-scrollbar"
+            >
               <ShopComponent />
             </div>
 
+            <!-- Tree: unverändert -->
             <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
               <SkillTreeComponent />
             </div>
 
-            <div v-else-if="activeModal === 'team'" key="team">
+            <!-- Team: h-full, kein Scroll – TeamTabComponent verwaltet alles intern -->
+            <div v-else-if="activeModal === 'team'" key="team" class="h-full">
               <TeamTabComponent />
             </div>
 
-            <div v-else-if="activeModal === 'kampf'" key="kampf">
+            <!-- Kampf: eigener Scroll -->
+            <div
+              v-else-if="activeModal === 'kampf'"
+              key="kampf"
+              class="h-full overflow-y-auto custom-scrollbar"
+            >
               <BattleResultComponent />
             </div>
 
-            <div v-else-if="activeModal === 'admin'" key="admin">
+            <!-- Admin: eigener Scroll -->
+            <div
+              v-else-if="activeModal === 'admin'"
+              key="admin"
+              class="h-full overflow-y-auto custom-scrollbar"
+            >
               <AdminDashboard :inline="true" />
             </div>
           </Transition>

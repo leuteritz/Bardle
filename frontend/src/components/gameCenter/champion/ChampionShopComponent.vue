@@ -47,7 +47,7 @@
         <p class="text-sm text-white/25">Kein Champion gefunden.</p>
       </div>
 
-      <div v-else class="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+      <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
         <div
           v-for="champion in filteredChampions"
           :key="champion.name"
@@ -86,7 +86,7 @@
           />
 
           <!-- Content -->
-          <div class="relative z-10 flex flex-col justify-between h-full p-3">
+          <div class="relative z-10 flex flex-col justify-between h-full p-2">
             <!-- Rollen oben rechts -->
             <div class="flex flex-wrap self-end justify-end gap-1">
               <span
@@ -320,8 +320,8 @@ export default defineComponent({
 
 <style scoped>
 .champion-card {
-  min-height: 175px;
-  height: 175px;
+  min-height: 140px;
+  height: 140px;
 }
 
 .cost-badge {
