@@ -26,93 +26,224 @@ const state = computed((): 'bought' | 'buyable' | 'locked' => {
 })
 
 function handleBuy() {
-  if (state.value === 'buyable') {
-    gameStore.unlockSkillWithMeeps(props.data.index)
-  }
+  if (state.value === 'buyable') gameStore.unlockSkillWithMeeps(props.data.index)
 }
 </script>
 
 <template>
-  <!-- ✅ pointer-events: none auf dem Wrapper – Vue Flow blockiert sonst alles -->
-  <div
-    :class="['relative select-none', state === 'locked' ? 'opacity-50' : '']"
-    style="pointer-events: none"
-  >
+  <div :class="['sn-root', `sn-root--${state}`]" style="pointer-events: none">
     <Handle type="target" :position="Position.Left" class="!opacity-0 !w-1 !h-1" />
     <Handle type="source" :position="Position.Right" class="!opacity-0 !w-1 !h-1" />
 
     <!-- Key Badge -->
-    <div
-      class="absolute z-10 flex items-center justify-center w-6 h-6 text-xs font-black border rounded-full -top-2 -left-2"
-      :class="{
-        'bg-yellow-500/80 border-yellow-300/80 text-yellow-900': state === 'bought',
-        'bg-violet-600/80 border-violet-400/80 text-white': state === 'buyable',
-        'bg-white/10 border-white/20 text-white/50': state === 'locked',
-      }"
-    >
+    <div :class="['sn-badge', `sn-badge--${state}`]">
       {{ data.skill.key }}
     </div>
 
-    <!-- ✅ pointer-events: all nur auf dem Button -->
+    <!-- Main Button -->
     <button
+      :class="['sn-btn', `sn-btn--${state}`]"
       style="pointer-events: all"
-      class="relative flex items-center justify-center w-20 h-20 overflow-hidden transition-all duration-300 border-2 rounded-2xl"
-      :class="{
-        'border-yellow-400/80 bg-gradient-to-br from-yellow-900/40 to-amber-900/30 shadow-[0_0_20px_rgba(234,179,8,0.3)] ring-2 ring-yellow-400/50':
-          state === 'bought',
-        'border-violet-400/60 bg-gradient-to-br from-violet-900/30 to-purple-900/20 hover:shadow-[0_0_16px_rgba(124,58,237,0.4)] cursor-pointer hover:border-violet-300/80':
-          state === 'buyable',
-        'border-white/10 bg-white/5 cursor-not-allowed': state === 'locked',
-      }"
       :disabled="state !== 'buyable'"
       @click.stop="handleBuy"
     >
-      <div
-        v-if="state === 'bought'"
-        class="absolute inset-0 bg-gradient-to-br from-yellow-400/10 to-transparent"
-      />
-      <img
-        :src="data.skill.icon"
-        :alt="data.skill.key"
-        class="relative z-10 object-contain w-12 h-12"
-      />
+      <!-- Bought shimmer overlay -->
+      <div v-if="state === 'bought'" class="sn-shimmer" />
+
+      <img :src="data.skill.icon" :alt="data.skill.key" class="sn-icon" />
     </button>
 
-    <!-- Effekt-Text -->
-    <div class="mt-2 text-center">
-      <div
-        class="text-xs font-bold leading-tight"
-        :class="{
-          'text-yellow-300': state === 'bought',
-          'text-violet-300': state === 'buyable',
-          'text-white/30': state === 'locked',
-        }"
-      >
+    <!-- Labels -->
+    <div class="sn-labels">
+      <span :class="['sn-effect', `sn-effect--${state}`]">
         {{ data.skill.effect }}
-      </div>
-      <div class="text-[10px] text-white/40 leading-tight mt-0.5">
-        {{ data.skill.description }}
-      </div>
+      </span>
+      <span class="sn-description">{{ data.skill.description }}</span>
     </div>
 
-    <!-- Kosten / Freigeschaltet Badge -->
-    <div class="flex justify-center mt-1">
-      <div
-        v-if="state !== 'bought'"
-        class="text-[10px] font-bold px-2 py-0.5 rounded-full border"
-        :class="{
-          'bg-violet-900/50 border-violet-400/40 text-violet-200': state === 'buyable',
-          'bg-white/5 border-white/10 text-white/30': state === 'locked',
-        }"
-      >
+    <!-- Cost / Unlocked pill -->
+    <div class="sn-pill-row">
+      <div v-if="state !== 'bought'" :class="['sn-pill', `sn-pill--${state}`]">
         {{ data.cost }} Meeps
       </div>
-      <div
-        v-else
-        class="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-yellow-900/40 border-yellow-400/40 text-yellow-300"
-      >
-        Freigeschaltet ✓
-      </div>
+      <div v-else class="sn-pill sn-pill--bought">✓ Aktiv</div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* ── Root ──────────────────────────────────────────────── */
+.sn-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 88px;
+  transition: opacity 0.2s;
+}
+.sn-root--locked {
+  opacity: 0.4;
+}
+
+/* ── Key Badge ─────────────────────────────────────────── */
+.sn-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  z-index: 10;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 50%;
+  border: 1px solid;
+  line-height: 1;
+}
+.sn-badge--bought {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(253, 212, 77, 0.6);
+  color: #fcd34d;
+}
+.sn-badge--buyable {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(167, 139, 250, 0.6);
+  color: #ddd6fe;
+}
+.sn-badge--locked {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ── Button ────────────────────────────────────────────── */
+.sn-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+  outline: none;
+}
+
+.sn-btn--bought {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.35), rgba(78, 35, 10, 0.25));
+  box-shadow:
+    0 0 18px rgba(234, 179, 8, 0.22),
+    inset 0 1px 0 rgba(253, 212, 77, 0.08);
+  cursor: default;
+}
+
+.sn-btn--buyable {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, rgba(76, 29, 149, 0.3), rgba(46, 16, 101, 0.2));
+  box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  cursor: pointer;
+}
+.sn-btn--buyable:hover {
+  border-color: rgba(167, 139, 250, 0.75);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+  transform: translateY(-1px);
+}
+.sn-btn--buyable:active {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+}
+
+.sn-btn--locked {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: not-allowed;
+}
+
+/* ── Shimmer (bought) ──────────────────────────────────── */
+.sn-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(253, 212, 77, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── Icon ──────────────────────────────────────────────── */
+.sn-icon {
+  position: relative;
+  z-index: 1;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+/* ── Labels ────────────────────────────────────────────── */
+.sn-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+  gap: 2px;
+}
+
+.sn-effect {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+.sn-effect--bought {
+  color: #fcd34d;
+}
+.sn-effect--buyable {
+  color: #c4b5fd;
+}
+.sn-effect--locked {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.sn-description {
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.3);
+  line-height: 1.2;
+}
+
+/* ── Cost / Status pill ────────────────────────────────── */
+.sn-pill-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 5px;
+}
+
+.sn-pill {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+.sn-pill--buyable {
+  background: rgba(76, 29, 149, 0.3);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #ddd6fe;
+}
+.sn-pill--locked {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.25);
+}
+.sn-pill--bought {
+  background: rgba(120, 53, 15, 0.25);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fcd34d;
+}
+</style>

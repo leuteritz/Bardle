@@ -11,13 +11,11 @@ import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 
 const gameStore = useGameStore()
-const { fitView } = useVueFlow() // ← neu
+const { fitView } = useVueFlow()
 
-// fitView manuell nach dem Mount auslösen
 onMounted(async () => {
-  // ← neu
   await nextTick()
-  setTimeout(() => fitView({ padding: 0.25, duration: 300 }), 100)
+  setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100)
 })
 
 const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
@@ -49,15 +47,13 @@ const skills = [
   },
 ]
 
-// 2D-Positionen – frei im Raum verteilt (nach Belieben anpassen)
 const positions = [
-  { x: 60, y: 60 }, // Q – oben links
-  { x: 320, y: 200 }, // W – Mitte
-  { x: 100, y: 380 }, // E – unten links
-  { x: 520, y: 360 }, // R – unten rechts
+  { x: 60, y: 60 },
+  { x: 320, y: 200 },
+  { x: 100, y: 380 },
+  { x: 520, y: 360 },
 ]
 
-// ---------- Hilfsfunktion (spiegelt gameStore-Logik) ----------
 function skillState(idx: number): 'bought' | 'buyable' | 'locked' {
   if (gameStore.abilityLevels[idx] > 0) return 'bought'
   if (
@@ -68,19 +64,16 @@ function skillState(idx: number): 'bought' | 'buyable' | 'locked' {
   return 'locked'
 }
 
-// ---------- Nodes ----------
 const nodes = computed(() =>
   skills.map((skill, idx) => ({
     id: skill.key,
     type: 'skill',
     position: positions[idx],
-    // Verhindert, dass VueFlow einen eigenen Wrapper-Border zeichnet
     style: { background: 'transparent', border: 'none', padding: 0 },
     data: { skill, index: idx, cost: SKILL_MEEP_COSTS[idx] },
   })),
 )
 
-// ---------- Edges  Q→W  W→E  E→R ----------
 const edgeDefs = [
   { source: 'Q', target: 'W', targetIdx: 1 },
   { source: 'W', target: 'E', targetIdx: 2 },
@@ -91,7 +84,7 @@ const edges = computed(() =>
   edgeDefs.map(({ source, target, targetIdx }) => {
     const s = skillState(targetIdx)
     const color =
-      s === 'bought' ? '#f59e0b' : s === 'buyable' ? '#8b5cf6' : 'rgba(255,255,255,0.12)'
+      s === 'bought' ? '#f59e0b' : s === 'buyable' ? '#a78bfa' : 'rgba(255,255,255,0.09)'
     return {
       id: `${source}-${target}`,
       source,
@@ -100,12 +93,14 @@ const edges = computed(() =>
       animated: s === 'buyable',
       label: `${SKILL_MEEP_COSTS[targetIdx]} Meeps`,
       labelStyle: {
-        fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#c4b5fd' : 'rgba(255,255,255,0.2)',
-        fontWeight: '700',
+        fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#ddd6fe' : 'rgba(255,255,255,0.18)',
+        fontWeight: '600',
         fontSize: '10px',
+        fontFamily: 'inherit',
       },
-      labelBgStyle: { fill: 'rgba(10,5,30,0.75)', rx: 4 },
-      style: { stroke: color, strokeWidth: s === 'bought' ? 3 : 2 },
+      labelBgStyle: { fill: 'rgba(8,4,26,0.88)', rx: 6, ry: 6 },
+      labelBgPadding: [6, 4] as [number, number],
+      style: { stroke: color, strokeWidth: s === 'bought' ? 2.5 : 1.5 },
       markerEnd: { type: MarkerType.ArrowClosed, color },
     }
   }),
@@ -115,23 +110,109 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 </script>
 
 <template>
-  <div style="width: 100%; height: 460px; position: relative">
-    <VueFlow
-      :nodes="nodes"
-      :edges="edges"
-      :node-types="nodeTypes"
-      :nodes-draggable="false"
-      :nodes-connectable="false"
-      :elements-selectable="false"
-      :select-nodes-on-drag="false"
-      :min-zoom="0.3"
-      :max-zoom="2.5"
-      :fit-view-on-init="false"
-      class="!bg-transparent"
-    >
-      <Background variant="dots" :gap="28" pattern-color="rgba(255,255,255,0.04)" :size="1.2" />
-      <Controls position="bottom-left" />
-      <!-- MiniMap entfernt -->
-    </VueFlow>
+  <div class="st-wrapper">
+    <!-- Minimaler Header -->
+    <div class="st-header">
+      <span class="st-title">Fähigkeiten</span>
+    </div>
+
+    <!-- Canvas -->
+    <div class="st-canvas">
+      <VueFlow
+        :nodes="nodes"
+        :edges="edges"
+        :node-types="nodeTypes"
+        :nodes-draggable="false"
+        :nodes-connectable="false"
+        :elements-selectable="false"
+        :select-nodes-on-drag="false"
+        :min-zoom="0.3"
+        :max-zoom="2.5"
+        :fit-view-on-init="false"
+        class="!bg-transparent"
+      >
+        <Background variant="dots" :gap="24" pattern-color="rgba(255,255,255,0.05)" :size="1" />
+        <Controls position="bottom-right" />
+      </VueFlow>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* ── Wrapper ─────────────────────────────────────────── */
+.st-wrapper {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(155deg, rgba(15, 8, 42, 0.94) 0%, rgba(8, 4, 26, 0.97) 100%);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.07),
+    0 8px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.st-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.st-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.65);
+}
+
+/* ── Canvas ──────────────────────────────────────────── */
+.st-canvas {
+  width: 100%;
+  height: 420px;
+  position: relative;
+}
+
+/* ── Controls ────────────────────────────────────────── */
+:deep(.vue-flow__controls) {
+  background: rgba(8, 4, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  gap: 0;
+}
+
+:deep(.vue-flow__controls-button) {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+:deep(.vue-flow__controls-button:last-child) {
+  border-bottom: none;
+}
+
+:deep(.vue-flow__controls-button:hover) {
+  background: rgba(139, 92, 246, 0.14);
+  color: rgba(196, 181, 253, 0.9);
+}
+
+:deep(.vue-flow__controls-button svg) {
+  fill: currentColor;
+  width: 11px;
+  height: 11px;
+}
+</style>
