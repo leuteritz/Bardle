@@ -5,7 +5,6 @@ import { usePersistence } from '../composables/usePersistence'
 import ShopComponent from './gameCenter/idle/ShopComponent.vue'
 import SkillTreeComponent from './SkillTreeComponent.vue'
 import AdminDashboard from './AdminDashboard.vue'
-import ChampionLobbyComponent from './gameCenter/champion/ChampionLobbyComponent.vue'
 import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue'
 import TeamTabComponent from './missions/TeamTabComponent.vue'
 
@@ -76,8 +75,6 @@ const menuItems: {
     gradient: 'bg-gradient-to-r from-cyan-500 to-indigo-600',
   },
 ]
-
-const activeKampfTab = ref<'champions' | 'ergebnisse'>('champions')
 
 const openBardModal = () => {
   activeModal.value = activeModal.value !== null ? null : 'shop'
@@ -315,29 +312,6 @@ const modalTheme = computed(() => {
           </div>
         </div>
 
-        <!-- Kampf Sub-tabs -->
-        <div
-          v-if="activeModal === 'kampf'"
-          class="flex p-1 gap-1 bg-white/[0.03] border border-white/[0.06] mx-5 mt-3 mb-1 rounded-xl flex-shrink-0"
-        >
-          <button
-            v-for="tab in [
-              { id: 'champions', label: 'Champions' },
-              { id: 'ergebnisse', label: 'Ergebnisse' },
-            ]"
-            :key="tab.id"
-            @click="activeKampfTab = tab.id as 'champions' | 'ergebnisse'"
-            class="relative flex-1 px-4 py-2 overflow-hidden text-xs font-semibold tracking-wider uppercase transition-all duration-200 rounded-lg"
-            :class="
-              activeKampfTab === tab.id
-                ? 'text-white bg-rose-500/15 border border-rose-500/20'
-                : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04] border border-transparent'
-            "
-          >
-            <span class="relative z-10">{{ tab.label }}</span>
-          </button>
-        </div>
-
         <!-- Modal Content -->
         <div class="relative flex-1 min-h-0 overflow-y-auto custom-scrollbar">
           <Transition name="tab-fade" mode="out-in">
@@ -353,9 +327,8 @@ const modalTheme = computed(() => {
               <TeamTabComponent />
             </div>
 
-            <div v-else-if="activeModal === 'kampf'" :key="'kampf-' + activeKampfTab">
-              <ChampionLobbyComponent v-if="activeKampfTab === 'champions'" />
-              <BattleResultComponent v-else-if="activeKampfTab === 'ergebnisse'" />
+            <div v-else-if="activeModal === 'kampf'" key="kampf">
+              <BattleResultComponent />
             </div>
 
             <div v-else-if="activeModal === 'admin'" key="admin">
