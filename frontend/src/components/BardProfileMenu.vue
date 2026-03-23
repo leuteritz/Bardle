@@ -230,10 +230,10 @@ const modalTheme = computed(() => {
   <Transition name="modal-pop">
     <div
       v-if="activeModal !== null"
-      class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] max-w-[95vw]"
+      class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
     >
       <div
-        class="relative overflow-hidden rounded-3xl border border-white/[0.08] backdrop-blur-xl bg-gradient-to-b from-[#080520] via-[#0a0730] to-[#060418] shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex flex-col h-[850px] max-h-[90vh]"
+        class="relative overflow-hidden rounded-3xl border border-white/[0.08] backdrop-blur-xl bg-gradient-to-b from-[#080520] via-[#0a0730] to-[#060418] shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex flex-col h-[960px] max-h-[90vh]"
       >
         <!-- Top Accent Bar -->
         <Transition name="accent-bar">
@@ -249,11 +249,11 @@ const modalTheme = computed(() => {
           class="relative flex items-center flex-shrink-0 overflow-hidden bg-white/[0.03] border-b border-white/[0.06]"
         >
           <!-- Portal Left -->
-          <div class="relative flex items-center justify-center flex-shrink-0 w-16 h-16">
+          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/BardPortalRichtig.png"
               alt="Portal Start"
-              class="relative z-10 object-contain w-14 h-14"
+              class="relative z-10 object-contain w-[72px] h-[72px]"
             />
             <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
@@ -263,7 +263,7 @@ const modalTheme = computed(() => {
           </div>
 
           <!-- Tabs -->
-          <div class="relative flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
+          <div class="relative flex items-center justify-center flex-1 gap-2 px-2 py-2">
             <button
               v-for="item in menuItems"
               :key="item.id"
@@ -273,7 +273,7 @@ const modalTheme = computed(() => {
                 activeModal === item.id
                   ? 'text-white bg-white/[0.06]'
                   : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]',
-                item.src ? 'px-3 py-3.5' : 'px-3 py-2',
+                item.src ? 'px-4 py-[18px]' : 'px-4 py-3',
               ]"
             >
               <img
@@ -282,7 +282,7 @@ const modalTheme = computed(() => {
                 :alt="item.label"
                 class="relative z-10 object-contain"
                 :class="[
-                  item.src ? 'w-14 h-14' : 'w-14 h-14',
+                  item.src ? 'w-16 h-16' : 'w-16 h-16',
                   activeModal === item.id ? modalTheme.iconGlow + ' rounded-md' : '',
                 ]"
               />
@@ -298,11 +298,11 @@ const modalTheme = computed(() => {
           </div>
 
           <!-- Portal Right -->
-          <div class="relative flex items-center justify-center flex-shrink-0 w-16 h-16">
+          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/PortalEndeRichtig.png"
               alt="Portal Ende"
-              class="relative z-10 object-contain w-14 h-14"
+              class="relative z-10 object-contain w-[72px] h-[72px]"
             />
             <div class="absolute inset-0 portal-effect">
               <div class="portal-glow"></div>
@@ -319,7 +319,7 @@ const modalTheme = computed(() => {
               <ShopComponent />
             </div>
 
-            <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-2 overflow-hidden">
+            <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
               <SkillTreeComponent />
             </div>
 
