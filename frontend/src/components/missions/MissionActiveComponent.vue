@@ -105,38 +105,6 @@
       </div>
     </div>
 
-    <!-- History -->
-    <template v-if="missionStore.completedMissions.length > 0">
-      <div class="flex items-center gap-3 px-1 pt-2">
-        <span class="text-xs font-bold tracking-widest uppercase text-white/30">Verlauf</span>
-        <div class="flex-1 h-px bg-white/[0.06]" />
-      </div>
-
-      <div
-        class="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden divide-y divide-white/[0.05]"
-      >
-        <div
-          v-for="mission in missionStore.completedMissions"
-          :key="mission.id"
-          class="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors"
-        >
-          <div class="flex items-center gap-2.5">
-            <span class="text-base opacity-60">{{ getMissionIcon(mission.configId) }}</span>
-            <span class="text-xs font-semibold text-white/55">{{ mission.name }}</span>
-          </div>
-          <div class="flex items-center gap-2.5">
-            <span
-              class="text-sm font-bold"
-              :class="mission.status === 'success' ? 'text-emerald-400' : 'text-red-400'"
-            >
-              {{ mission.status === 'success' ? '+' : '' }}{{ mission.reward }}
-              <span class="text-xs text-white/30 font-normal ml-0.5">Chimes</span>
-            </span>
-            <span class="text-sm">{{ mission.status === 'success' ? '✅' : '❌' }}</span>
-          </div>
-        </div>
-      </div>
-    </template>
   </div>
 </template>
 

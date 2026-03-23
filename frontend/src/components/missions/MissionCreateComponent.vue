@@ -12,13 +12,13 @@
     <div
       v-for="config in missionConfigs"
       :key="config.id"
-      class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-4"
+      class="rounded-2xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5"
     >
       <!-- Header: Icon + Name + Meta -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="text-lg">{{ config.icon }}</span>
-          <span class="text-base font-bold text-white/85">{{ config.name }}</span>
+          <span class="text-sm">{{ config.icon }}</span>
+          <span class="text-sm font-bold text-white/85">{{ config.name }}</span>
         </div>
         <div class="flex items-center gap-3 text-xs font-semibold text-white/35">
           <span>⏱ {{ formatDuration(config.durationSeconds) }}</span>
@@ -26,13 +26,11 @@
         </div>
       </div>
 
-      <div class="h-px bg-white/[0.05]" />
-
       <!-- Role Slots -->
-      <div class="space-y-4">
+      <div class="space-y-1.5">
         <div v-for="(role, roleIdx) in config.requiredRoles" :key="role + '-' + roleIdx">
           <!-- Role label -->
-          <div class="flex items-center gap-2 mb-2">
+          <div class="flex items-center gap-2 mb-0.5">
             <span
               class="px-2 py-0.5 text-[10px] font-black uppercase rounded-md tracking-widest"
               :class="roleColors[role]"
@@ -45,7 +43,7 @@
           </div>
 
           <!-- Champion Grid -->
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-1">
             <div
               v-for="champ in getAvailableChampions(config.id, roleIdx, role)"
               :key="champ"
@@ -54,7 +52,7 @@
                   ? toggleSelection(config.id, roleIdx, champ, role)
                   : undefined
               "
-              class="relative flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all duration-150 cursor-pointer"
+              class="relative flex flex-col items-center gap-1 p-1.5 rounded-xl border transition-all duration-150 cursor-pointer"
               :class="
                 getSelection(config.id, roleIdx) === champ
                   ? 'bg-indigo-500/20 border-indigo-400/40'
@@ -66,7 +64,7 @@
               <img
                 :src="getChampionImage(champ)"
                 :alt="champ"
-                class="object-cover rounded-lg w-12 h-12"
+                class="object-cover rounded-lg w-8 h-8"
                 @error="onImgError"
               />
               <!-- Checkmark -->
@@ -76,9 +74,6 @@
               >
                 <span class="text-[10px] text-white">✓</span>
               </div>
-              <span class="text-[11px] text-white/40 truncate w-full text-center leading-tight">
-                {{ truncateName(champ, 9) }}
-              </span>
             </div>
 
             <p
@@ -92,7 +87,7 @@
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between pt-1">
+      <div class="flex items-center justify-between pt-0">
         <span
           v-if="isFullyAssigned(config.id, config.requiredRoles.length)"
           class="text-sm font-bold"
@@ -105,7 +100,7 @@
         <button
           @click="startMission(config.id)"
           :disabled="!canStart(config.id, config.requiredRoles.length)"
-          class="px-6 py-2 text-base font-bold rounded-xl transition-all duration-150 active:scale-95"
+          class="px-4 py-1.5 text-sm font-bold rounded-xl transition-all duration-150 active:scale-95"
           :class="
             canStart(config.id, config.requiredRoles.length)
               ? 'bg-indigo-600 hover:bg-indigo-500 text-white'

@@ -118,7 +118,11 @@
         <!-- Header -->
         <div class="flex items-center flex-shrink-0 gap-3 mb-3">
           <!-- Expedition-Indikator -->
-          <div class="relative group/indicator">
+          <div
+            class="relative"
+            @mouseenter="showTooltip = true"
+            @mouseleave="showTooltip = false"
+          >
             <div
               class="flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-default transition-all duration-200"
               :class="
@@ -140,9 +144,10 @@
             />
 
             <!-- Tooltip -->
+            <Transition name="expedition-tooltip">
             <div
-              v-if="missionStore.activeMissions.length > 0"
-              class="absolute right-0 top-full mt-2 z-50 w-72 p-4 rounded-2xl border border-amber-500/15 bg-[#09071a]/97 backdrop-blur-xl shadow-2xl opacity-0 scale-95 pointer-events-none group-hover/indicator:opacity-100 group-hover/indicator:scale-100 transition-all duration-200"
+              v-show="showTooltip && missionStore.activeMissions.length > 0"
+              class="absolute left-0 top-full mt-2 z-50 w-72 p-4 rounded-2xl border border-amber-500/15 bg-[#09071a]/97 backdrop-blur-xl shadow-2xl"
             >
               <template v-if="activeExpeditionCount > 0">
                 <span
@@ -195,27 +200,32 @@
                       <span class="text-xs font-semibold text-white/60">
                         {{ getMissionIcon(mission.configId) }} {{ mission.name }}
                       </span>
-                      <span
-                        class="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                      <button
+                        @click="missionStore.collectMission(mission.id)"
+                        class="text-[11px] font-bold px-2 py-0.5 rounded-full transition-colors cursor-pointer"
                         :class="
                           mission.status === 'success'
-                            ? 'bg-emerald-500/15 text-emerald-300'
-                            : 'bg-red-500/15 text-red-300'
+                            ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/30'
+                            : 'bg-red-500/15 text-red-300 hover:bg-red-500/30'
                         "
                       >
-                        {{ mission.status === 'success' ? '✓ Erfolg' : '✗ Fehlschl.' }}
-                      </span>
+                        {{
+                          mission.status === 'success'
+                            ? `+${mission.reward} Einsammeln`
+                            : '✕ Entfernen'
+                        }}
+                      </button>
                     </div>
                   </div>
                 </div>
               </template>
             </div>
+            </Transition>
           </div>
         </div>
 
         <!-- Mission-Komponenten -->
         <div class="flex flex-col flex-1 min-h-0 gap-3 overflow-y-auto custom-scrollbar">
-          <MissionActiveComponent v-if="missionStore.activeMissions.length > 0" />
           <MissionCreateComponent />
         </div>
       </div>
@@ -241,7 +251,6 @@ import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
 import { MISSION_CONFIGS } from '../../config/missions'
 import { truncate } from '../../config/numberFormat'
 import MissionCreateComponent from './MissionCreateComponent.vue'
-import MissionActiveComponent from './MissionActiveComponent.vue'
 import ChampionShopComponent from '../gameCenter/champion/ChampionShopComponent.vue'
 import ItemShopComponent from '../gameCenter/ItemShopComponent.vue'
 import ChampionSlotModal from '../ChampionSlotModal.vue'
@@ -251,7 +260,6 @@ export default defineComponent({
   name: 'TeamTabComponent',
   components: {
     MissionCreateComponent,
-    MissionActiveComponent,
     ChampionShopComponent,
     ItemShopComponent,
     ChampionSlotModal,
@@ -262,6 +270,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const now = ref(Date.now())
     const openSlotIndex = ref<number | null>(null)
+    const showTooltip = ref(false)
     let timer: ReturnType<typeof setInterval> | null = null
 
     onMounted(() => {
@@ -330,6 +339,7 @@ export default defineComponent({
       missionStore,
       gameStore,
       openSlotIndex,
+      showTooltip,
       selectableChampions,
       activeExpeditionCount,
       completedExpeditionCount,
@@ -354,5 +364,16 @@ export default defineComponent({
 .available-card {
   min-height: 90px;
   height: 90px;
+}
+.expedition-tooltip-enter-active {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.expedition-tooltip-leave-active {
+  transition: opacity 0.08s ease, transform 0.08s ease;
+}
+.expedition-tooltip-enter-from,
+.expedition-tooltip-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(-2px);
 }
 </style>
