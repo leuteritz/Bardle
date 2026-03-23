@@ -3,12 +3,18 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useShopStore } from '../stores/shopStore'
+import { usePlanetEventStore } from '../stores/planetEventStore'
+import { useInventoryStore } from '../stores/inventoryStore'
+import { MATERIALS, pickMaterial } from '../config/materials'
+import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 
 const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const shopStore = useShopStore()
+const planetEventStore = usePlanetEventStore()
+const inventoryStore = useInventoryStore()
 
 const isOpen = ref(false)
 const search = ref('')
@@ -33,10 +39,39 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
+// ── Planet Spawn ─────────────────────────────────────────────────────────────
 
-const abilityNames = ['Q (CPS)', 'W (Power)', 'E (Meep Cost)', 'R (CPC)']
+function spawnPlanet() {
+  planetEventStore.pendingRescue = true
+  planetEventStore.activatePlanetRescue('admin-spawn', 'rocky')
+}
 
-// All fields grouped by section for search filtering
+function spawnPlanetWithMaterial() {
+  planetEventStore.pendingRescue = true
+  planetEventStore.activatePlanetRescue('admin-spawn', 'rocky')
+  if (planetEventStore.activePlanetEvent) {
+    planetEventStore.activePlanetEvent.potentialMaterialId = pickMaterial().id
+    planetEventStore.activePlanetEvent.assignedDropChance = 1.0
+  }
+}
+
+function spawnPlanetWithChampion() {
+  const candidates = CHAMPION_HOME_PLANETS.filter(
+    (c) =>
+      !battleStore.ownedChampions.includes(c.championName) &&
+      !battleStore.recruitableChampions.some((r) => r.name === c.championName),
+  )
+  if (candidates.length === 0) return
+  const pick = candidates[Math.floor(Math.random() * candidates.length)]
+  planetEventStore.pendingRescue = true
+  planetEventStore.activatePlanetRescue('admin-spawn', pick.planetType)
+  if (planetEventStore.activePlanetEvent) {
+    planetEventStore.activePlanetEvent.homePlanetChampion = pick.championName
+  }
+}
+
+// ── Sections ─────────────────────────────────────────────────────────────────
+
 const sections = computed(() => [
   {
     id: 'core',
@@ -59,14 +94,13 @@ const sections = computed(() => [
     ],
   },
   {
-    id: 'abilities',
-    label: 'Abilities',
-    fields: abilityNames.map((name, i) => ({
-      key: `ability_${i}`,
-      label: name,
-      type: 'range',
+    id: 'materials',
+    label: 'Materials',
+    fields: MATERIALS.map((m) => ({
+      key: `mat_${m.id}`,
+      label: m.name,
+      type: 'number',
       min: 0,
-      max: 5,
     })),
   },
   {
@@ -103,6 +137,21 @@ const filteredSections = computed(() => {
     .filter((s) => s.fields.length > 0)
 })
 
+// Section header accent colors
+const sectionColors: Record<string, { header: string; label: string; reset: string }> = {
+  core:      { header: 'bg-violet-900/20 border-violet-400/15', label: 'text-violet-300', reset: 'text-violet-500/60 hover:text-violet-300 border-violet-500/20 hover:border-violet-400/40' },
+  battle:    { header: 'bg-blue-900/20 border-blue-400/15',     label: 'text-blue-300',   reset: 'text-blue-500/60 hover:text-blue-300 border-blue-500/20 hover:border-blue-400/40' },
+  materials: { header: 'bg-teal-900/20 border-teal-400/15',     label: 'text-teal-300',   reset: 'text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40' },
+  buildings: { header: 'bg-orange-900/20 border-orange-400/15', label: 'text-orange-300', reset: 'text-orange-500/60 hover:text-orange-300 border-orange-500/20 hover:border-orange-400/40' },
+  advanced:  { header: 'bg-rose-900/20 border-rose-400/15',     label: 'text-rose-300',   reset: 'text-rose-500/60 hover:text-rose-300 border-rose-500/20 hover:border-rose-400/40' },
+}
+
+function getSectionColor(id: string) {
+  return sectionColors[id] ?? sectionColors['core']
+}
+
+// ── getValue / setValue ───────────────────────────────────────────────────────
+
 function getValue(key: string): number | string | boolean {
   if (key === 'chimes') return gameStore.chimes
   if (key === 'meeps') return gameStore.meeps
@@ -112,7 +161,7 @@ function getValue(key: string): number | string | boolean {
   if (key === 'rankTier') return battleStore.currentRank.tier
   if (key === 'rankDivision') return battleStore.currentRank.division
   if (key === 'rankLp') return battleStore.currentRank.lp
-  if (key.startsWith('ability_')) return gameStore.abilityLevels[parseInt(key.split('_')[1])]
+  if (key.startsWith('mat_')) return inventoryStore.collectedMaterials[key.slice(4)] ?? 0
   if (key.startsWith('building_')) return shopStore.shopUpgrades[parseInt(key.split('_')[1])].level
   if (key === 'currentUniverse') return gameStore.currentUniverse
   if (key === 'chimesForNextUniverse') return gameStore.chimesForNextUniverse
@@ -134,10 +183,8 @@ function setValue(key: string, raw: string | boolean) {
   else if (key === 'rankTier' && typeof raw === 'string') battleStore.currentRank.tier = raw
   else if (key === 'rankDivision' && typeof raw === 'string') battleStore.currentRank.division = raw
   else if (key === 'rankLp' && !isNaN(int)) battleStore.currentRank.lp = int
-  else if (key.startsWith('ability_') && !isNaN(int)) {
-    const i = parseInt(key.split('_')[1])
-    gameStore.setAbilityLevel(i, int)
-  } else if (key.startsWith('building_') && !isNaN(int)) {
+  else if (key.startsWith('mat_') && !isNaN(int)) inventoryStore.collectedMaterials[key.slice(4)] = int
+  else if (key.startsWith('building_') && !isNaN(int)) {
     const i = parseInt(key.split('_')[1])
     shopStore.setBuildingLevel(i, int)
   } else if (key === 'currentUniverse' && !isNaN(int)) gameStore.currentUniverse = int
@@ -150,7 +197,8 @@ function setValue(key: string, raw: string | boolean) {
 const defaultValues: Record<string, number | string | boolean> = {
   chimes: 0, meeps: 0, level: 1, skillPoints: 0,
   mmr: 1000, rankTier: 'Iron', rankDivision: 'IV', rankLp: 0,
-  ability_0: 0, ability_1: 0, ability_2: 0, ability_3: 0,
+  mat_stardust: 0, mat_moon_crystal: 0, mat_nebula_quartz: 0,
+  mat_solar_essence: 0, mat_void_shard: 0, mat_dark_matter: 0,
   building_0: 0, building_1: 0, building_2: 0, building_3: 0, building_4: 0, building_5: 0,
   currentUniverse: 1, chimesForNextUniverse: 0, gameSpeed: 1000, autoBattle: false, prestige: false,
 }
@@ -182,7 +230,7 @@ function resetSection(sectionId: string) {
     <Transition name="slide-up">
       <div
         v-if="isOpen"
-        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(760px,95vw)] max-h-[85vh] flex flex-col rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#0a0620]/95 via-[#110b3d]/95 to-[#0a0620]/95 backdrop-blur-xl shadow-2xl shadow-blue-900/40"
+        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(780px,95vw)] max-h-[88vh] flex flex-col rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#0a0620]/97 via-[#110b3d]/97 to-[#0a0620]/97 backdrop-blur-xl shadow-2xl shadow-blue-900/40"
       >
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-3 border-b border-blue-400/20">
@@ -199,6 +247,53 @@ function resetSection(sectionId: string) {
           </div>
         </div>
 
+        <!-- Quick Actions -->
+        <div class="px-5 py-3 border-b border-blue-400/20 bg-[#050215]/70" style="box-shadow: 0 2px 16px 0 rgba(99,102,241,0.10) inset;">
+          <div class="text-[10px] font-mono font-bold text-indigo-400/70 tracking-widest uppercase mb-2">Quick Actions</div>
+          <!-- Inline Editable Values -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            <div v-for="qf in [
+              { key: 'chimes', label: 'Chimes' },
+              { key: 'meeps', label: 'Meeps' },
+              { key: 'level', label: 'Level' },
+              { key: 'skillPoints', label: 'Skill Points' },
+            ]" :key="qf.key" class="flex flex-col gap-0.5">
+              <label class="text-[10px] font-mono text-blue-400/60 uppercase tracking-wider">{{ qf.label }}</label>
+              <input
+                type="number"
+                :min="qf.key === 'level' ? 1 : 0"
+                :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
+                class="bg-[#0a0620]/80 border border-indigo-400/30 rounded-lg px-2.5 py-1.5 text-sm font-mono text-blue-100 focus:outline-none focus:border-indigo-400/70 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.18)] transition-all text-right"
+                @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
+                @input="editingValue = ($event.target as HTMLInputElement).value"
+                @change="setValue(qf.key, editingValue); editingKey = null"
+                @blur="setValue(qf.key, editingValue); editingKey = null"
+              />
+            </div>
+          </div>
+          <!-- Planet Spawn Buttons -->
+          <div class="flex flex-wrap gap-2">
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-slate-500/50 text-slate-300 hover:bg-slate-700/30 hover:border-slate-400/70 hover:text-slate-100 transition-all"
+              @click="spawnPlanet"
+            >
+              <span>🌍</span> Spawn Planet
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-blue-500/50 text-blue-300 hover:bg-blue-700/25 hover:border-blue-400/70 hover:text-blue-100 transition-all"
+              @click="spawnPlanetWithMaterial"
+            >
+              <span>💎</span> Spawn + Material
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-yellow-500/50 text-yellow-300 hover:bg-yellow-700/20 hover:border-yellow-400/70 hover:text-yellow-100 transition-all"
+              @click="spawnPlanetWithChampion"
+            >
+              <span>🏆</span> Spawn + Champion
+            </button>
+          </div>
+        </div>
+
         <!-- Search -->
         <div class="px-5 py-2.5 border-b border-blue-400/10">
           <input
@@ -210,16 +305,20 @@ function resetSection(sectionId: string) {
         </div>
 
         <!-- Sections -->
-        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-4 custom-scrollbar">
+        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-3 custom-scrollbar">
           <div
             v-for="section in filteredSections"
             :key="section.id"
-            class="rounded-xl border border-blue-400/15 bg-blue-950/20 overflow-hidden"
+            class="rounded-xl border border-blue-400/10 overflow-hidden"
           >
-            <div class="flex items-center justify-between px-4 py-2 bg-blue-900/20 border-b border-blue-400/10">
-              <span class="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{{ section.label }}</span>
+            <div
+              class="flex items-center justify-between px-4 py-2 border-b border-blue-400/10"
+              :class="getSectionColor(section.id).header"
+            >
+              <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
               <button
-                class="text-[10px] font-mono text-blue-500/60 hover:text-blue-300 transition-colors px-2 py-0.5 rounded border border-blue-500/20 hover:border-blue-400/40"
+                class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+                :class="getSectionColor(section.id).reset"
                 @click="resetSection(section.id)"
               >reset</button>
             </div>
@@ -282,6 +381,53 @@ function resetSection(sectionId: string) {
 
   <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
   <template v-else>
+    <!-- Quick Actions -->
+    <div class="px-5 py-3 border-b border-cyan-400/15 bg-[#050215]/60" style="box-shadow: 0 2px 12px 0 rgba(99,102,241,0.08) inset;">
+      <div class="text-[10px] font-mono font-bold text-indigo-400/70 tracking-widest uppercase mb-2">Quick Actions</div>
+      <!-- Inline Editable Values -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+        <div v-for="qf in [
+          { key: 'chimes', label: 'Chimes' },
+          { key: 'meeps', label: 'Meeps' },
+          { key: 'level', label: 'Level' },
+          { key: 'skillPoints', label: 'Skill Points' },
+        ]" :key="qf.key" class="flex flex-col gap-0.5">
+          <label class="text-[10px] font-mono text-blue-400/60 uppercase tracking-wider">{{ qf.label }}</label>
+          <input
+            type="number"
+            :min="qf.key === 'level' ? 1 : 0"
+            :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
+            class="bg-[#0a0620]/80 border border-indigo-400/30 rounded-lg px-2.5 py-1.5 text-sm font-mono text-blue-100 focus:outline-none focus:border-indigo-400/70 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.18)] transition-all text-right"
+            @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
+            @input="editingValue = ($event.target as HTMLInputElement).value"
+            @change="setValue(qf.key, editingValue); editingKey = null"
+            @blur="setValue(qf.key, editingValue); editingKey = null"
+          />
+        </div>
+      </div>
+      <!-- Planet Spawn Buttons -->
+      <div class="flex flex-wrap gap-2">
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-slate-500/50 text-slate-300 hover:bg-slate-700/30 hover:border-slate-400/70 hover:text-slate-100 transition-all"
+          @click="spawnPlanet"
+        >
+          <span>🌍</span> Spawn Planet
+        </button>
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-blue-500/50 text-blue-300 hover:bg-blue-700/25 hover:border-blue-400/70 hover:text-blue-100 transition-all"
+          @click="spawnPlanetWithMaterial"
+        >
+          <span>💎</span> Spawn + Material
+        </button>
+        <button
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-yellow-500/50 text-yellow-300 hover:bg-yellow-700/20 hover:border-yellow-400/70 hover:text-yellow-100 transition-all"
+          @click="spawnPlanetWithChampion"
+        >
+          <span>🏆</span> Spawn + Champion
+        </button>
+      </div>
+    </div>
+
     <!-- Search -->
     <div class="px-5 py-2.5 border-b border-cyan-400/10">
       <input
@@ -293,16 +439,20 @@ function resetSection(sectionId: string) {
     </div>
 
     <!-- Sections -->
-    <div class="px-5 py-3 space-y-4 scrollbar-thin">
+    <div class="px-5 py-3 space-y-3 scrollbar-thin">
       <div
         v-for="section in filteredSections"
         :key="section.id"
-        class="rounded-xl border border-cyan-400/15 bg-cyan-950/10 overflow-hidden"
+        class="rounded-xl border border-blue-400/10 overflow-hidden"
       >
-        <div class="flex items-center justify-between px-4 py-2 bg-cyan-900/10 border-b border-cyan-400/10">
-          <span class="text-xs font-mono font-bold text-cyan-300 tracking-wider uppercase">{{ section.label }}</span>
+        <div
+          class="flex items-center justify-between px-4 py-2 border-b border-blue-400/10"
+          :class="getSectionColor(section.id).header"
+        >
+          <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
           <button
-            class="text-[10px] font-mono text-cyan-500/60 hover:text-cyan-300 transition-colors px-2 py-0.5 rounded border border-cyan-500/20 hover:border-cyan-400/40"
+            class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+            :class="getSectionColor(section.id).reset"
             @click="resetSection(section.id)"
           >reset</button>
         </div>
@@ -381,6 +531,4 @@ function resetSection(sectionId: string) {
   opacity: 0;
   transform: translate(-50%, -48%);
 }
-
-
 </style>

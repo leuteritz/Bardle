@@ -52,100 +52,102 @@
         <div
           v-for="champion in filteredChampions"
           :key="champion.name"
-          class="relative overflow-hidden transition-all duration-300 border group rounded-xl"
+          class="relative overflow-hidden transition-all duration-300 border group rounded-xl champion-card"
           :class="getCardClass(champion.name)"
           @click="handleBuy(champion.name)"
+          style="min-height: 160px"
         >
-          <!-- Shimmer (kaufbar) -->
+          <!-- ── Vollbild Champion-Bild (Hintergrund) ── -->
+          <img
+            :src="battleStore.getChampionImage(champion.name)"
+            :alt="champion.name"
+            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-110"
+            :class="isLocked(champion.name) ? 'grayscale' : ''"
+          />
+
+          <!-- ── Gradient Overlay für Lesbarkeit ── -->
+          <div
+            class="absolute inset-0"
+            :class="
+              isOwned(champion.name)
+                ? 'bg-gradient-to-t from-black/80 via-black/40 to-black/20'
+                : isUnlocked(champion.name) && canAffordChampion(champion.name)
+                  ? 'bg-gradient-to-t from-black/90 via-black/30 to-transparent'
+                  : 'bg-gradient-to-t from-black/80 via-black/40 to-black/10'
+            "
+          />
+
+          <!-- ── Shimmer (kaufbar) ── -->
           <div
             v-if="
               isUnlocked(champion.name) &&
               !isOwned(champion.name) &&
               canAffordChampion(champion.name)
             "
-            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.04] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.06] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
           />
 
-          <div class="flex flex-col items-center gap-2 p-3">
-            <!-- Champion Icon -->
-            <div
-              class="relative flex items-center justify-center w-16 h-16 transition-transform duration-300 group-hover:scale-105"
-              :class="
-                isUnlocked(champion.name) &&
-                !isOwned(champion.name) &&
-                canAffordChampion(champion.name)
-                  ? 'bg-gradient-to-br from-cyan-500/[0.12] to-blue-500/[0.06] border-cyan-400/15'
-                  : 'bg-white/[0.03] border-white/[0.07]'
-              "
-            >
-              <div
-                v-if="
-                  isUnlocked(champion.name) &&
-                  !isOwned(champion.name) &&
-                  canAffordChampion(champion.name)
-                "
-                class="absolute inset-0"
-              />
-              <img
-                :src="battleStore.getChampionImage(champion.name)"
-                :alt="champion.name"
-                class="relative z-10 object-cover rounded-lg w-14 h-14"
-              />
-            </div>
-
-            <!-- Name -->
-            <span
-              class="text-sm font-bold leading-tight tracking-wide text-center"
-              :class="
-                isOwned(champion.name) || isLocked(champion.name)
-                  ? 'text-white/25'
-                  : 'text-white/65'
-              "
-            >
-              {{ truncate(champion.name, 10) }}
-            </span>
-
-            <!-- Role Badges -->
-            <div class="flex flex-wrap justify-center gap-1">
+          <!-- ── Inhalt (oben: Rollen; unten: Name, Kosten, Button) ── -->
+          <div
+            class="relative z-10 flex flex-col justify-between h-full p-2.5"
+            style="min-height: 160px"
+          >
+            <!-- Rollen oben rechts -->
+            <div class="flex flex-wrap self-end justify-end gap-1">
               <span
                 v-for="role in getChampionRoles(champion.name)"
                 :key="role"
-                class="px-1.5 py-0.5 text-[9px] rounded-md bg-white/[0.04] text-white/25 border border-white/[0.06]"
+                class="px-1.5 py-0.5 text-[8px] font-semibold rounded-md bg-black/40 text-white/50 border border-white/[0.08] backdrop-blur-sm"
               >
                 {{ role }}
               </span>
             </div>
 
-            <!-- Material-Kosten -->
-            <div
-              v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-              class="flex flex-wrap justify-center w-full gap-1"
-            >
+            <!-- Unterer Bereich: Name + Kosten + Button -->
+            <div class="flex flex-col gap-1.5 mt-auto">
+              <!-- Name -->
               <span
-                v-for="(qty, matId) in getMaterialCost(champion.name)"
-                :key="matId"
-                class="cost-badge"
+                class="text-sm font-black leading-tight tracking-wide drop-shadow-lg"
                 :class="
-                  hasEnoughMaterial(String(matId), qty as number)
-                    ? 'cost-badge--ok'
-                    : 'cost-badge--missing'
+                  isOwned(champion.name) || isLocked(champion.name)
+                    ? 'text-white/40'
+                    : 'text-white/90'
                 "
               >
-                {{ getMaterialName(String(matId)) }}:
-                {{ inventoryStore.collectedMaterials[String(matId)] ?? 0 }}/{{ qty }}
+                {{ truncate(champion.name, 12) }}
               </span>
-            </div>
 
-            <!-- Aktion Button -->
-            <button
-              class="w-full py-1.5 text-[10px] font-black rounded-lg border transition-all duration-200"
-              :class="getButtonClass(champion.name)"
-              :disabled="!canClickBuy(champion.name)"
-            >
-              <span v-if="isOwned(champion.name)" class="text-white/20">✓ Rekrutiert</span>
-              <span v-else-if="isUnlocked(champion.name)">Rekrutieren</span>
-              <span v-else class="text-white/15">🔒 Gesperrt</span>
-            </button>
+              <!-- Material-Kosten -->
+              <div
+                v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
+                class="flex flex-wrap gap-1"
+              >
+                <span
+                  v-for="(qty, matId) in getMaterialCost(champion.name)"
+                  :key="matId"
+                  class="cost-badge"
+                  :class="
+                    hasEnoughMaterial(String(matId), qty as number)
+                      ? 'cost-badge--ok'
+                      : 'cost-badge--missing'
+                  "
+                >
+                  {{ getMaterialName(String(matId)) }}:
+                  {{ inventoryStore.collectedMaterials[String(matId)] ?? 0 }}/{{ qty }}
+                </span>
+              </div>
+
+              <!-- Aktion Button -->
+              <button
+                class="w-full py-1.5 text-[10px] font-black rounded-lg border transition-all duration-200 backdrop-blur-sm"
+                :class="getButtonClass(champion.name)"
+                :disabled="!canClickBuy(champion.name)"
+              >
+                <span v-if="isOwned(champion.name)" class="text-white/30">✓ Rekrutiert</span>
+                <span v-else-if="isUnlocked(champion.name)">Rekrutieren</span>
+                <span v-else class="text-white/20">🔒 Gesperrt</span>
+              </button>
+            </div>
           </div>
 
           <!-- Locked Tooltip -->
@@ -366,5 +368,11 @@ export default defineComponent({
 
 .champion-locked:hover .locked-tooltip {
   opacity: 1;
+}
+
+/* NEU: Champion-Card Höhe fixieren damit Bild die ganze Fläche füllt */
+.champion-card {
+  min-height: 160px;
+  height: 160px;
 }
 </style>

@@ -126,7 +126,7 @@ const activeTab = ref('idle')
     <AdminDashboard />
 
     <span
-      class="fixed z-50 text-sm bottom-5 right-5 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
+      class="fixed z-50 text-xl bottom-5 right-5 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
       >©Leuteritz</span
     >
   </div>
