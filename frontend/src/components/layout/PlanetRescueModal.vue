@@ -175,67 +175,6 @@ function handleClick() {
 }
 </script>
 
-Hier sind beide Komponenten mit komplett überarbeitetem Style, passend zur
-Planet-Label-Designsprache (Glassmorphism, Glow-Rahmen, Eckakzente, Gradient-Text, konsistente
-Farbpalette): PlanetRescueModal vue
-<template>
-  <Transition name="modal-fade">
-    <div
-      v-if="planetEventStore.rescueModalOpen"
-      class="modal-backdrop"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div class="modal-card">
-        <h3 class="modal-title">⚠ Planet in Distress</h3>
-
-        <div class="countdown-bar">
-          <div class="countdown-fill" :style="{ width: progressPercent + '%' }" />
-        </div>
-
-        <span class="timer-text">{{ secondsRemaining }}s</span>
-
-        <div ref="planetStage" class="planet-stage" @click="handleClick" />
-
-        <div v-if="planetEventStore.activePlanetEvent" class="click-progress">
-          <span
-            v-for="i in planetEventStore.activePlanetEvent.clicksRequired"
-            :key="i"
-            class="dot"
-            :class="{ 'dot--done': i <= (planetEventStore.activePlanetEvent.clicksMade ?? 0) }"
-          />
-        </div>
-
-        <p class="hint-text">Click the planet to rescue it!</p>
-
-        <div v-if="assignedMaterial" class="drop-list">
-          <p class="drop-list-title">Möglicher Drop</p>
-          <div class="drop-row">
-            <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
-              {{ assignedMaterial.name }}
-            </span>
-            <span class="drop-chance">
-              {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
-            </span>
-          </div>
-        </div>
-
-        <div v-if="homePlanetChampion" class="drop-list home-planet-info">
-          <p class="drop-list-title">Heimatplanet</p>
-          <div class="drop-row">
-            <span class="home-planet-champion-name">{{ homePlanetChampion }}</span>
-          </div>
-          <p class="home-planet-hint">Rette den Planeten, um diesen Champion freizuschalten!</p>
-        </div>
-      </div>
-    </div>
-  </Transition>
-</template>
-
-<script setup lang="ts">
-// ... (script bleibt unverändert)
-</script>
-
 <style scoped>
 /* ─── Backdrop ─────────────────────────────────────────────────────────────── */
 .modal-backdrop {

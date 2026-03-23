@@ -267,6 +267,12 @@ export default defineComponent({
           }
           return true
         })
+        .sort((a, b) => {
+          const aUnlocked = isOwned(a.name) || isUnlocked(a.name) ? 0 : 1
+          const bUnlocked = isOwned(b.name) || isUnlocked(b.name) ? 0 : 1
+          if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked
+          return a.name.localeCompare(b.name)
+        })
     })
 
     const unlockedCount = computed(() => {
