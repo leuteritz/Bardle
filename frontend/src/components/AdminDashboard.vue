@@ -220,6 +220,10 @@ function resetSection(sectionId: string) {
     }
   })
 }
+
+function fillAllMaterials() {
+  MATERIALS.forEach((m) => setValue('mat_' + m.id, '9999'))
+}
 </script>
 
 <template>
@@ -324,11 +328,18 @@ function resetSection(sectionId: string) {
               :class="getSectionColor(section.id).header"
             >
               <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
-              <button
-                class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
-                :class="getSectionColor(section.id).reset"
-                @click="resetSection(section.id)"
-              >reset</button>
+              <div class="flex items-center gap-1">
+                <button
+                  v-if="section.id === 'materials'"
+                  class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40"
+                  @click="fillAllMaterials()"
+                >💎 +9999 all</button>
+                <button
+                  class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+                  :class="getSectionColor(section.id).reset"
+                  @click="resetSection(section.id)"
+                >reset</button>
+              </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
               <div
@@ -458,11 +469,18 @@ function resetSection(sectionId: string) {
           :class="getSectionColor(section.id).header"
         >
           <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
-          <button
-            class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
-            :class="getSectionColor(section.id).reset"
-            @click="resetSection(section.id)"
-          >reset</button>
+          <div class="flex items-center gap-1">
+            <button
+              v-if="section.id === 'materials'"
+              class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40"
+              @click="fillAllMaterials()"
+            >💎 +9999 all</button>
+            <button
+              class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+              :class="getSectionColor(section.id).reset"
+              @click="resetSection(section.id)"
+            >reset</button>
+          </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
           <div
