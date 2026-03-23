@@ -104,8 +104,8 @@ export default defineComponent({
   transform: translate(-50%, -50%);
   width: 360px;
   height: 360px;
-  z-index: 5;
-  pointer-events: none;
+  z-index: 5; /* ← liegt über den Orbit-Planeten */
+  pointer-events: none; /* ← ausgeschaltet, aber... */
 }
 
 .sun-atmosphere {

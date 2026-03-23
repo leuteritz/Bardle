@@ -37,7 +37,7 @@ const menuItems: {
 }[] = [
   {
     id: 'shop',
-    label: 'Shop',
+    label: '',
     icon: '',
     src: '/img/menu/SHOP.png',
     color: 'emerald',
@@ -154,7 +154,7 @@ const modalTheme = computed(() => {
     <div class="cursor-pointer group" @click="openBardModal">
       <div class="relative w-36 h-36">
         <div
-          class="absolute rounded-full -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 opacity-25 animate-pulse"
+          class="absolute rounded-full opacity-25 -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 animate-pulse"
         />
         <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
           <circle
@@ -252,7 +252,14 @@ const modalTheme = computed(() => {
           class="absolute top-3 right-3 z-20 flex items-center justify-center w-8 h-8 rounded-full text-white/40 hover:text-white hover:bg-white/[0.08] transition-all duration-150"
           @click="closeModal"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <svg
+            class="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>

@@ -180,7 +180,7 @@ function handleClick() {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 55;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: center;

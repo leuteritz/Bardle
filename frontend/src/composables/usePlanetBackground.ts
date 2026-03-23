@@ -37,6 +37,7 @@ interface PlanetItem {
   orbitCy?: number
   labelEl?: HTMLDivElement
   name?: string
+  clickHandler?: () => void
 }
 
 // Re-export for consumers (avoids unused import warnings)
@@ -193,6 +194,8 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
     // Distress animation + styling
     item.el.classList.add('planet--rescue')
+    item.el.style.pointerEvents = 'auto'
+    item.el.style.cursor = 'pointer'
 
     const size = parseFloat(item.el.getAttribute('width') ?? '80')
 
