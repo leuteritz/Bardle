@@ -62,7 +62,8 @@ function handleBuy() {
     <!-- Cost / Unlocked pill -->
     <div class="sn-pill-row">
       <div v-if="state !== 'bought'" :class="['sn-pill', `sn-pill--${state}`]">
-        {{ data.cost }} Meeps
+        <img src="/img/BardAbilities/BardMeep.png" alt="Meeps" class="sn-pill__meeps-icon" />
+        <span class="sn-pill__cost">{{ data.cost }}</span>
       </div>
       <div v-else class="sn-pill sn-pill--bought">✓ Aktiv</div>
     </div>
@@ -221,6 +222,9 @@ function handleBuy() {
   border: 1px solid;
   line-height: 1.5;
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .sn-pill--buyable {
   background: rgba(76, 29, 149, 0.3);
@@ -236,5 +240,14 @@ function handleBuy() {
   background: rgba(120, 53, 15, 0.25);
   border-color: rgba(251, 191, 36, 0.35);
   color: #fcd34d;
+}
+.sn-pill__cost {
+  font-size: 20px; /* ← nach Geschmack anpassen */
+  font-weight: 700;
+  line-height: 1;
+}
+.sn-pill__meeps-icon {
+  height: 1.6em; /* mitwachsen lassen, damit Bild zur Zahl passt */
+  width: auto;
 }
 </style>
