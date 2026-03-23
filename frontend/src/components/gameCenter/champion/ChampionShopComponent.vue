@@ -134,14 +134,10 @@
 
               <!-- Button -->
               <button
-                class="w-full py-2 text-xs font-bold transition-all duration-200 border rounded-xl backdrop-blur-sm"
+                class="w-full"
                 :class="getButtonClass(champion.name)"
                 :disabled="!canClickBuy(champion.name)"
-              >
-                <span v-if="isOwned(champion.name)" class="text-white/35">✓ Rekrutiert</span>
-                <span v-else-if="isUnlocked(champion.name)">Rekrutieren</span>
-                <span v-else class="text-white/25">🔒 Gesperrt</span>
-              </button>
+              ></button>
             </div>
           </div>
 
