@@ -12,7 +12,10 @@ export const MEEP_BASE_COST = 20
 export const MEEP_COST_EXPONENT = 1.2
 
 // Auto-battle
-export const AUTO_BATTLE_INTERVAL_MS = 10000
+export const AUTO_BATTLE_INTERVAL_MS = 30000
+export const BATTLE_REAL_DURATION_SECONDS = 30
+export const KILL_EVENTS_PER_TEAM_MIN = 20
+export const KILL_EVENTS_PER_TEAM_MAX = 40
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)

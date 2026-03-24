@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
-import { battleMessages } from '../config/messages'
+import { earlyGameMessages, midGameMessages, lateGameMessages } from '../config/messages'
 import {
   ELO_K_FACTOR,
   ELO_RATING_SCALE,
@@ -22,12 +22,9 @@ import {
   BATTLE_TIME_MIN_SECONDS,
   BATTLE_TIME_RANGE_SECONDS,
   MMR_RANK_THRESHOLDS,
-  STAT_KILL_CHANCE,
-  STAT_DEATH_CHANCE,
-  STAT_ASSIST_CHANCE,
-  STAT_MAX_KILLS,
-  STAT_MAX_DEATHS,
-  STAT_MAX_ASSISTS,
+  BATTLE_REAL_DURATION_SECONDS,
+  KILL_EVENTS_PER_TEAM_MIN,
+  KILL_EVENTS_PER_TEAM_MAX,
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
@@ -95,6 +92,14 @@ export const useBattleStore = defineStore('battle', {
     // Champion recruitment via planet rescue
     recruitableChampions: [] as RecruitableChampion[],
     recruitedChampions: [] as string[],
+
+    // Battle simulation
+    battleSimIntervalId: null as ReturnType<typeof setInterval> | null,
+    killEventSchedule: [] as Array<{ gameTime: number; team: 1 | 2 }>,
+    battlePhase: 'playing' as 'playing' | 'result',
+    autoSkipEnabled: true,
+    resultCountdown: 0,
+    resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
   }),
 
   getters: {
@@ -155,25 +160,57 @@ export const useBattleStore = defineStore('battle', {
       return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
     },
 
-    // Aktualisiert zufällig die Kampfstatistiken eines Teams
-    randomizeTeamStats(team: ChampionState[]) {
-      team.forEach((champ) => {
-        if (Math.random() < STAT_KILL_CHANCE)
-          champ.kills += Math.round(Math.random() * STAT_MAX_KILLS)
-        if (Math.random() < STAT_DEATH_CHANCE)
-          champ.deaths += Math.round(Math.random() * STAT_MAX_DEATHS)
-        if (Math.random() < STAT_ASSIST_CHANCE)
-          champ.assists += Math.round(Math.random() * STAT_MAX_ASSISTS)
-      })
+    // Generiert einen Kill-Schedule: pro Team zufällig viele Kill-Events verteilt über die Spielzeit
+    generateKillSchedule() {
+      const events: Array<{ gameTime: number; team: 1 | 2 }> = []
+      const totalEvents =
+        KILL_EVENTS_PER_TEAM_MIN +
+        Math.floor(Math.random() * (KILL_EVENTS_PER_TEAM_MAX - KILL_EVENTS_PER_TEAM_MIN + 1))
+      for (let i = 0; i < totalEvents; i++) {
+        // Kill-Events erst ab Spielminute 2 (120s), gleichmäßig bis Ende
+        const gameTime = 120 + Math.floor(Math.random() * (1800 - 120))
+        const team = (Math.random() < 0.5 ? 1 : 2) as 1 | 2
+        events.push({ gameTime, team })
+      }
+      events.sort((a, b) => a.gameTime - b.gameTime)
+      this.killEventSchedule = events
     },
 
-    // Aktualisiert zufällig die Kampfstatistiken (Kills/Deaths/Assists) aller Champions während eines Kampfes
-    randomStatsTick() {
-      const gameStore = useGameStore()
-      this.randomizeTeamStats(this.team1)
-      this.randomizeTeamStats(this.team2)
-      const interval = setTimeout(() => this.randomStatsTick(), gameStore.gameSpeed)
-      this.timerIds.push(interval)
+    // Startet die 30-Sekunden-Battle-Simulation: Game-Timer + Kill-Events pro Tick
+    startBattleSimulation() {
+      if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
+      this.battleSimIntervalId = setInterval(() => {
+        this.battleTime += 60 // 1 Spielminute pro Sekunde
+
+        // Kill-Events abarbeiten, die bis zur aktuellen Spielzeit eingetreten sind
+        const pending = this.killEventSchedule.filter((e) => e.gameTime <= this.battleTime)
+        this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > this.battleTime)
+        for (const event of pending) {
+          const attackingTeam = event.team === 1 ? this.team1 : this.team2
+          const defendingTeam = event.team === 1 ? this.team2 : this.team1
+          if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
+          // Kill auf zufälligen Angreifer
+          const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
+          killer.kills += 1
+          // 1-2 Assists
+          const assistCount = Math.random() < 0.6 ? 1 : 2
+          const others = attackingTeam.filter((c) => c !== killer)
+          for (let i = 0; i < Math.min(assistCount, others.length); i++) {
+            others[Math.floor(Math.random() * others.length)].assists += 1
+          }
+          // Death auf zufälligen Verteidiger
+          if (Math.random() < 0.85) {
+            defendingTeam[Math.floor(Math.random() * defendingTeam.length)].deaths += 1
+          }
+        }
+
+        // Simulation beenden nach 30 Spielminuten
+        if (this.battleTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
+          clearInterval(this.battleSimIntervalId!)
+          this.battleSimIntervalId = null
+          this.battlePhase = 'result'
+        }
+      }, 1000)
     },
 
     // Lädt die Champion-Liste aus einer CSV-Datei und gibt sie als Array zurück
@@ -222,47 +259,57 @@ export const useBattleStore = defineStore('battle', {
     clearBattle() {
       this.timerIds.forEach((interval) => clearTimeout(interval))
       this.timerIds = []
+      if (this.battleSimIntervalId) {
+        clearInterval(this.battleSimIntervalId)
+        this.battleSimIntervalId = null
+      }
+      if (this.resultCountdownTimer) {
+        clearInterval(this.resultCountdownTimer)
+        this.resultCountdownTimer = null
+      }
+      this.resultCountdown = 0
+      this.killEventSchedule = []
       this.resetTeamStats(this.team1)
       this.resetTeamStats(this.team2)
       this.chatMessages = []
       this.battleTime = 0
+      this.battlePhase = 'playing'
     },
 
-    // Zeigt nacheinander zufällige Chat-Nachrichten von Champions während des Kampfes an
+    // Zeigt zeitgestaffelte Chat-Nachrichten mit phasenbezogenem Inhalt über 30 real-Sekunden
     showRandomChatMessagesSequentially() {
-      const gameStore = useGameStore()
+      const MESSAGE_COUNT = 14
+      const allChampions = [
+        ...this.team1.map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
+        ...this.team2.map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
+      ]
+      if (allChampions.length === 0) return
 
-      const messages = [...battleMessages]
-
-      const showNext = () => {
-        const idx = Math.floor(Math.random() * messages.length)
-        const msg = messages[idx]
-        let chatMsg
-
-        if (typeof msg === 'string') {
-          const allChampions = [
-            ...this.team1.map((champ) => ({ name: champ.name, team: 1 })),
-            ...this.team2.map((champ) => ({ name: champ.name, team: 2 })),
-          ]
-          const randomChampion = allChampions[Math.floor(Math.random() * allChampions.length)]
-          this.battleTime += this.getRandomTimeIncrement()
-          chatMsg = {
-            user: randomChampion.name,
-            text: msg,
-            time: this.formatTime(this.battleTime),
-            team: randomChampion.team,
+      for (let i = 0; i < MESSAGE_COUNT; i++) {
+        // Zufälliger Delay zwischen 0 und 29000ms, leicht gegen Ende gewichtet
+        const delay = Math.floor(Math.random() * (BATTLE_REAL_DURATION_SECONDS - 1) * 1000)
+        const timeoutId = setTimeout(() => {
+          const currentGameTime = this.battleTime
+          // Phasenbasierte Nachrichtenauswahl
+          let pool: string[]
+          if (currentGameTime < 600) {
+            pool = earlyGameMessages
+          } else if (currentGameTime < 1200) {
+            pool = midGameMessages
+          } else {
+            pool = lateGameMessages
           }
-        }
-        if (chatMsg) this.chatMessages.push(chatMsg)
-        messages.splice(idx, 1)
-
-        if (messages.length > 0) {
-          const currentTimeoutId = setTimeout(showNext, gameStore.gameSpeed)
-          this.timerIds.push(currentTimeoutId)
-        }
+          const text = pool[Math.floor(Math.random() * pool.length)]
+          const champ = allChampions[Math.floor(Math.random() * allChampions.length)]
+          this.chatMessages.push({
+            user: champ.name,
+            text,
+            time: this.formatTime(currentGameTime),
+            team: champ.team,
+          })
+        }, delay)
+        this.timerIds.push(timeoutId)
       }
-
-      showNext()
     },
 
     // Formatiert Sekunden in MM:SS Format für die Chat-Zeitanzeige
@@ -277,12 +324,14 @@ export const useBattleStore = defineStore('battle', {
       return Math.floor(Math.random() * BATTLE_TIME_RANGE_SECONDS) + BATTLE_TIME_MIN_SECONDS
     },
 
-    // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Chat starten
+    // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Simulation starten
     async initializeBattle() {
       this.clearBattle()
+      this.currentBattleId++
       await this.refreshTeams()
-      this.randomStatsTick()
       if (this.team1.length > 0 && this.team2.length > 0) {
+        this.generateKillSchedule()
+        this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
       }
       logger.group('Battle Init', () => {
@@ -504,35 +553,74 @@ export const useBattleStore = defineStore('battle', {
       if (this.currentRank.lp < 0) this.demoteRank()
     },
 
+    // Ein Battle-Zyklus: Ergebnis berechnen, anzeigen, dann je nach autoSkip weiterfahren
+    async runBattleCycle() {
+      if (!this.autoBattleEnabled) return
+
+      const result = await this.simulateBattle(this.mmr)
+      this.lastAutoBattleResult = result
+      this.showAutoBattleResult = true
+
+      if (this.autoSkipEnabled) {
+        // Countdown von 4 bis 0 anzeigen
+        this.resultCountdown = 4
+        if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
+        this.resultCountdownTimer = setInterval(() => {
+          this.resultCountdown--
+          if (this.resultCountdown <= 0) {
+            clearInterval(this.resultCountdownTimer!)
+            this.resultCountdownTimer = null
+          }
+        }, 1000)
+        // Nach 4s automatisch weitergehen
+        const pauseId = setTimeout(async () => {
+          await this.proceedToNextBattle()
+        }, 4000)
+        this.timerIds.push(pauseId)
+      }
+      // sonst: warten auf manualDismissResult()-Aufruf durch UI
+    },
+
+    // Startet die nächste Battle: Reset, neue Teams, neuer Countdown
+    async proceedToNextBattle() {
+      await this.initializeBattle()
+      this.startCountdown()
+      this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
+    },
+
+    // Manuelles Weiterklicken: laufende Pause-Timer abbrechen und sofort zur nächsten Battle
+    async manualDismissResult() {
+      this.timerIds.forEach((id) => clearTimeout(id))
+      this.timerIds = []
+      if (this.resultCountdownTimer) {
+        clearInterval(this.resultCountdownTimer)
+        this.resultCountdownTimer = null
+      }
+      this.resultCountdown = 0
+      await this.proceedToNextBattle()
+    },
+
+    // Wechselt Auto-Skip an/aus
+    toggleAutoSkip() {
+      this.autoSkipEnabled = !this.autoSkipEnabled
+      if (!this.autoSkipEnabled) {
+        this.timerIds.forEach((id) => clearTimeout(id))
+        this.timerIds = []
+        if (this.resultCountdownTimer) {
+          clearInterval(this.resultCountdownTimer)
+          this.resultCountdownTimer = null
+        }
+        this.resultCountdown = 0
+      }
+    },
+
     // Startet den automatischen Kampfmodus
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
-
-      // Teams und Chat sofort beim Start erstellen
       await this.initializeBattle()
-
-      const runBattleCycle = async () => {
-        if (!this.autoBattleEnabled) return
-
-        this.currentBattleId++
-        const result = await this.simulateBattle(this.mmr)
-        this.lastAutoBattleResult = result
-        this.showAutoBattleResult = true
-
-        // Nach dem Battle neue Teams für den nächsten Battle erstellen
-        const pauseId = setTimeout(async () => {
-          await this.initializeBattle()
-
-          this.startCountdown()
-          this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
-        }, 1000) // Kurze Pause um das Ergebnis zu zeigen
-        this.timerIds.push(pauseId)
-      }
-
-      // Ersten Battle nach Intervall starten
       this.startCountdown()
-      this.autoBattleTimer = setTimeout(runBattleCycle, this.autoBattleInterval)
+      this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
     // Initialisiert den dauerhaften Auto-Battle Modus nur einmal pro Session
