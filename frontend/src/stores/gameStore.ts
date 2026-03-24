@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
+import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
@@ -502,7 +503,8 @@ export const useGameStore = defineStore('game', {
     totalPower(): number {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
-      return Math.floor((this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod)
+      const itemPowerMul = useItemStore().totalPowerMultiplier
+      return Math.floor((this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul)
     },
 
     // Ability-Multiplikatoren für Q/W/E/R-Effekte

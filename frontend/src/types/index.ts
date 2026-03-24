@@ -257,14 +257,30 @@ export interface TimedBuff {
 export type ItemCategory = 'weapon' | 'armor' | 'misc'
 export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
+export interface ItemEffect {
+  cpsMultiplier?: number
+  powerMultiplier?: number
+}
+
+export interface ItemSetBonus {
+  setId: string
+  setName: string
+  icon: string
+  description: string
+  bonusEffect: ItemEffect
+}
+
 export interface ShopItem {
   id: string
   name: string
   description: string
   icon: string
   price: number
+  materialCost?: Record<string, number>
   rarity: ItemRarity
   category: ItemCategory
+  effects: ItemEffect
+  setId?: string
 }
 
 export interface SlotEquipment {
