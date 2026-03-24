@@ -127,8 +127,12 @@
                       : 'cost-badge--missing'
                   "
                 >
-                  {{ getMaterialName(String(matId)) }}:
-                  {{ inventoryStore.collectedMaterials[String(matId)] ?? 0 }}/{{ qty }}
+                  <img
+                    :src="getMaterialImage(String(matId))"
+                    :alt="getMaterialName(String(matId))"
+                    class="inline-block w-3.5 h-3.5 object-contain align-middle"
+                  />
+                  {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{ formatNumber(qty as number) }}
                 </span>
               </div>
 
@@ -155,7 +159,7 @@
 import { ref, onMounted, defineComponent, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
-import { truncate } from '../../../config/numberFormat'
+import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles } from '../../../config/championRoles'
 import { MATERIALS } from '../../../config/materials'
@@ -227,6 +231,10 @@ export default defineComponent({
 
     function getMaterialName(matId: string): string {
       return MATERIALS.find((m) => m.id === matId)?.name ?? matId
+    }
+
+    function getMaterialImage(matId: string): string {
+      return MATERIALS.find((m) => m.id === matId)?.image ?? ''
     }
 
     function getLockedTooltip(name: string): string {
@@ -306,6 +314,8 @@ export default defineComponent({
       handleBuy,
       hasEnoughMaterial,
       getMaterialName,
+      getMaterialImage,
+      formatNumber,
       getLockedTooltip,
       getCardClass,
       getButtonClass,
