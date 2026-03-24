@@ -55,7 +55,9 @@ const activeTab = ref('idle')
         </div>
 
         <!-- Mitte: Chimes & CPS -->
-        <div class="flex flex-col items-center justify-center col-span-1 gap-0">
+        <div
+          class="relative z-[65] flex flex-col items-center justify-center col-span-1 gap-0 pointer-events-none"
+        >
           <div class="flex items-center gap-1 px-4 py-1">
             <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
             <span
