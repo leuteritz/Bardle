@@ -60,10 +60,11 @@
         <!-- Icon + Badges -->
         <div class="relative z-10 flex items-start justify-between gap-1">
           <div
-            class="flex items-center justify-center flex-shrink-0 w-10 h-10 text-xl rounded-lg"
+            class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-lg"
             :class="rarityIconBg(item.rarity)"
           >
-            {{ item.icon }}
+            <img v-if="item.icon.startsWith('/')" :src="item.icon" class="w-10 h-10 object-contain" />
+            <span v-else class="text-2xl">{{ item.icon }}</span>
           </div>
           <div class="flex flex-col items-end gap-1">
             <span
@@ -142,19 +143,16 @@ export default defineComponent({
     const gameStore = useGameStore()
     const itemStore = useItemStore()
     const inventoryStore = useInventoryStore()
-    const activeCategory = ref('all')
+    const activeCategory = ref('weapon')
 
     const categories = [
-      { id: 'all', icon: '✦', label: 'Alle' },
       { id: 'weapon', icon: '⚔️', label: 'Waffen' },
       { id: 'armor', icon: '🛡️', label: 'Rüstung' },
       { id: 'misc', icon: '📿', label: 'Misc' },
     ]
 
     const filteredItems = computed(() =>
-      activeCategory.value === 'all'
-        ? SHOP_ITEMS
-        : SHOP_ITEMS.filter((i) => i.category === activeCategory.value),
+      SHOP_ITEMS.filter((i) => i.category === activeCategory.value),
     )
 
     const materialMap = Object.fromEntries(MATERIALS.map((m) => [m.id, m]))

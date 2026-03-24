@@ -1,42 +1,22 @@
 import type { ShopItem } from '../types'
 
 export const SHOP_ITEMS: ShopItem[] = [
-  // ── Waffen ──────────────────────────────────────────────────────────────────
+  // ── Waffen: Schwerter ─────────────────────────────────────────────────────────
   {
     id: 'holzschwert',
     name: 'Holzschwert',
     description: '+8% Kampfkraft',
-    icon: '🗡️',
+    icon: '/img/sword.png',
     price: 500,
     rarity: 'common',
     category: 'weapon',
     effects: { powerMultiplier: 1.08 },
   },
   {
-    id: 'eisenschwert',
-    name: 'Eisenschwert',
-    description: '+15% Kampfkraft',
-    icon: '⚔️',
-    price: 2000,
-    rarity: 'common',
-    category: 'weapon',
-    effects: { powerMultiplier: 1.15 },
-  },
-  {
-    id: 'runenschwert',
-    name: 'Runenschwert',
-    description: '+25% Kampfkraft',
-    icon: '🔱',
-    price: 8000,
-    rarity: 'rare',
-    category: 'weapon',
-    effects: { powerMultiplier: 1.25 },
-  },
-  {
-    id: 'arkanklinge',
-    name: 'Arkan-Klinge',
+    id: 'arkanschwert',
+    name: 'Arkan-Schwert',
     description: '+35% Kampfkraft, +5% CPS',
-    icon: '🪄',
+    icon: '/img/sword.png',
     price: 20000,
     materialCost: { nebula_quartz: 2 },
     rarity: 'rare',
@@ -44,23 +24,47 @@ export const SHOP_ITEMS: ShopItem[] = [
     effects: { powerMultiplier: 1.35, cpsMultiplier: 1.05 },
     setId: 'arcane',
   },
+
+  // ── Waffen: Zauberstäbe ───────────────────────────────────────────────────────
   {
-    id: 'himmelsklinge',
-    name: 'Himmelsklinge',
-    description: '+50% Kampfkraft, +10% CPS',
-    icon: '⚡',
-    price: 60000,
+    id: 'kristallstab',
+    name: 'Kristallstab',
+    description: '+12% CPS',
+    icon: '/img/staff.png',
+    price: 1500,
+    rarity: 'common',
+    category: 'weapon',
+    effects: { cpsMultiplier: 1.12 },
+  },
+  {
+    id: 'kosmischerstab',
+    name: 'Kosmischer Stab',
+    description: '+48% CPS',
+    icon: '/img/staff.png',
+    price: 50000,
     materialCost: { void_shard: 1 },
     rarity: 'epic',
     category: 'weapon',
-    effects: { powerMultiplier: 1.5, cpsMultiplier: 1.1 },
+    effects: { cpsMultiplier: 1.48 },
     setId: 'cosmic',
   },
+
+  // ── Waffen: Hämmer ────────────────────────────────────────────────────────────
   {
-    id: 'sternenschwert',
-    name: 'Sternenschwert',
+    id: 'eisenhammer',
+    name: 'Eisenhammer',
+    description: '+15% Kampfkraft',
+    icon: '/img/hammer.png',
+    price: 2000,
+    rarity: 'common',
+    category: 'weapon',
+    effects: { powerMultiplier: 1.15 },
+  },
+  {
+    id: 'sternenhammer',
+    name: 'Sternen-Hammer',
     description: '+80% Kampfkraft, +20% CPS',
-    icon: '🌟',
+    icon: '/img/hammer.png',
     price: 250000,
     materialCost: { dark_matter: 2 },
     rarity: 'legendary',
@@ -69,7 +73,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     setId: 'stellar',
   },
 
-  // ── Ruestung ─────────────────────────────────────────────────────────────────
+  // ── Rüstung ───────────────────────────────────────────────────────────────────
   {
     id: 'lederpanzer',
     name: 'Lederpanzer',

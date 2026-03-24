@@ -2,18 +2,16 @@
   <!-- 2×2 Grid: Shop | Team / Expedition | ItemShop -->
   <div class="w-full h-full p-4 overflow-hidden">
     <!-- 2 Flex-Spalten: Links 3fr (ChampionShop + Expedition), Rechts 2fr (Team + ItemShop 50/50) -->
-    <div class="flex gap-3 h-full">
-
+    <div class="flex h-full gap-3">
       <!-- ╔══════════════════════════╗
            ║  Linke Spalte (3fr)       ║
            ╚══════════════════════════╝ -->
-      <div class="flex flex-col gap-3 min-h-0" style="flex: 3">
-
+      <div class="flex flex-col min-h-0 gap-3" style="flex: 3">
         <!-- ╔══════════════════════════╗
              ║  Oben links: Champion Shop ║
              ╚══════════════════════════╝ -->
         <div
-          class="flex flex-col overflow-hidden border rounded-2xl border-white/15 bg-black/20 min-h-0"
+          class="flex flex-col min-h-0 overflow-hidden border rounded-2xl border-white/15 bg-black/20"
           style="flex: 2"
         >
           <div class="flex-1 min-h-0 overflow-hidden">
@@ -30,7 +28,11 @@
         >
           <!-- Header -->
           <div class="flex items-center flex-shrink-0 gap-3 mb-3">
-            <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+            <div
+              class="relative"
+              @mouseenter="showTooltip = true"
+              @mouseleave="showTooltip = false"
+            >
               <div
                 class="flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-default transition-all duration-200"
                 :class="
@@ -139,14 +141,12 @@
             <MissionCreateComponent />
           </div>
         </div>
-
       </div>
 
       <!-- ╔══════════════════════════╗
            ║  Rechte Spalte (2fr)      ║
            ╚══════════════════════════╝ -->
-      <div class="flex flex-col gap-3 min-h-0" style="flex: 2">
-
+      <div class="flex flex-col min-h-0 gap-3" style="flex: 2">
         <!-- ╔══════════════════════════╗
              ║  Oben rechts: Team        ║
              ╚══════════════════════════╝ -->
@@ -236,7 +236,7 @@
                   <div
                     v-for="cat in equipCategories"
                     :key="cat.key"
-                    class="relative flex items-center justify-center transition-all duration-150 rounded-lg cursor-pointer w-7 h-7"
+                    class="relative flex items-center justify-center transition-all duration-150 rounded-lg cursor-pointer w-9 h-9"
                     :class="
                       getEquipIcon(index, cat.key)
                         ? 'bg-white/10 border border-white/20 hover:bg-white/20 shadow-inner'
@@ -244,7 +244,12 @@
                     "
                     @click.stop="toggleEquipPicker(index, cat.key)"
                   >
-                    <span class="text-[11px] leading-none">{{
+                    <img
+                      v-if="getEquipIcon(index, cat.key)?.startsWith('/')"
+                      :src="getEquipIcon(index, cat.key)!"
+                      class="object-contain w-10 h-10"
+                    />
+                    <span v-else class="text-sm leading-none">{{
                       getEquipIcon(index, cat.key) || cat.icon
                     }}</span>
                   </div>
@@ -275,10 +280,17 @@
                   <div
                     v-for="cat in equipCategories"
                     :key="cat.key"
-                    class="relative flex items-center justify-center w-6 h-6 transition-all duration-150 border border-dashed rounded-md cursor-pointer border-white/10 hover:border-blue-400/30 hover:bg-blue-900/10"
+                    class="relative flex items-center justify-center w-8 h-8 transition-all duration-150 border border-dashed rounded-md cursor-pointer border-white/10 hover:border-blue-400/30 hover:bg-blue-900/10"
                     @click.stop="toggleEquipPicker(index, cat.key)"
                   >
-                    <span class="text-[10px]">{{ getEquipIcon(index, cat.key) || cat.icon }}</span>
+                    <img
+                      v-if="getEquipIcon(index, cat.key)?.startsWith('/')"
+                      :src="getEquipIcon(index, cat.key)!"
+                      class="object-contain w-5 h-5"
+                    />
+                    <span v-else class="text-xs">{{
+                      getEquipIcon(index, cat.key) || cat.icon
+                    }}</span>
                   </div>
                 </div>
               </div>
@@ -309,7 +321,12 @@
                 class="flex items-center justify-between p-1.5 mb-1 rounded-lg bg-emerald-500/10 border border-emerald-400/20"
               >
                 <div class="flex items-center gap-1.5">
-                  <span class="text-sm">{{ equippedItemInPicker.icon }}</span>
+                  <img
+                    v-if="equippedItemInPicker.icon.startsWith('/')"
+                    :src="equippedItemInPicker.icon"
+                    class="object-contain w-6 h-6"
+                  />
+                  <span v-else class="text-base">{{ equippedItemInPicker.icon }}</span>
                   <span class="text-[10px] font-bold text-white/70">{{
                     equippedItemInPicker.name
                   }}</span>
@@ -330,7 +347,12 @@
                   @click="equipItemFromPicker(item.id)"
                 >
                   <div class="flex items-center gap-1.5">
-                    <span class="text-sm">{{ item.icon }}</span>
+                    <img
+                      v-if="item.icon.startsWith('/')"
+                      :src="item.icon"
+                      class="object-contain w-6 h-6"
+                    />
+                    <span v-else class="text-base">{{ item.icon }}</span>
                     <span class="text-[10px] font-bold text-white/60">{{ item.name }}</span>
                   </div>
                   <span class="text-[9px] text-white/30"
@@ -364,9 +386,7 @@
         >
           <ItemShopComponent />
         </div>
-
       </div>
-
     </div>
   </div>
 </template>
