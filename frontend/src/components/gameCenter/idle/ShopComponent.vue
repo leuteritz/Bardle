@@ -12,7 +12,7 @@
             v-for="option in buyOptions"
             :key="option.value"
             @click="shopStore.setBuyAmount(option.value)"
-            class="px-3 py-1 text-xs font-bold transition-all duration-200 rounded-md"
+            class="px-3 py-1 text-xl font-bold transition-all duration-200 rounded-md"
             :class="
               shopStore.buyAmount === option.value
                 ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
@@ -22,13 +22,6 @@
             {{ option.label }}
           </button>
         </div>
-      </div>
-
-      <!-- Sektion-Header Gebäude -->
-      <div class="flex items-center gap-3">
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <span class="text-xs font-black tracking-widest uppercase text-white/40">Gebäude</span>
-        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
 
       <!-- Shop Items -->
@@ -66,7 +59,7 @@
           <div class="flex items-center gap-4 p-4 pr-3">
             <!-- Icon Container -->
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 border shadow-inner rounded-xl bg-gradient-to-br from-white/10 to-white/5 border-white/15 group-hover:scale-110"
+              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 group-hover:scale-110"
             >
               <div
                 v-if="shopStore.canAffordUpgrade(upgrade)"
@@ -76,7 +69,7 @@
                 v-if="isImageUrl(upgrade.icon)"
                 :src="upgrade.icon"
                 :alt="upgrade.name"
-                class="relative z-10 object-contain w-11 h-11 drop-shadow-lg"
+                class="relative z-10 object-contain w-full h-full drop-shadow-lg"
               />
               <span v-else class="relative z-10 text-2xl drop-shadow-lg">{{ upgrade.icon }}</span>
             </div>

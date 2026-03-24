@@ -78,7 +78,7 @@ const activeTab = ref('idle')
         <!-- Rechts: Inventar, Portal, Meep -->
         <!-- Rechts: Inventar, Portal, Meep -->
         <!-- Rechts: Inventar, Portal, Meep -->
-        <div class="flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6">
+        <div class="relative z-[65] flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6">
           <!-- Bag: self-center stellt sicher, dass er zur Mitte der Portal+Meep-Gruppe zeigt -->
           <div class="relative self-center">
             <button
