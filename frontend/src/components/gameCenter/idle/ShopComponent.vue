@@ -25,7 +25,7 @@
       </div>
 
       <!-- Shop Items -->
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-2">
         <div
           v-for="upgrade in shopStore.shopUpgrades"
           :key="upgrade.id"
@@ -39,10 +39,10 @@
               : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
           "
         >
-          <div class="flex items-center gap-4 p-4">
+          <div class="flex items-center gap-3 p-3">
             <!-- Icon -->
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-200 group-hover:scale-110"
+              class="relative flex items-center justify-center flex-shrink-0 w-12 h-12 transition-transform duration-200 group-hover:scale-110"
             >
               <div
                 v-if="shopStore.canAffordUpgrade(upgrade)"
@@ -60,7 +60,7 @@
             <!-- Text & Stats -->
             <div class="flex-1 min-w-0">
               <!-- Name + Level -->
-              <div class="flex items-center justify-between gap-2 mb-1.5">
+              <div class="flex items-center justify-between gap-2 mb-1">
                 <h3
                   class="text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent truncate"
                 >
@@ -75,7 +75,7 @@
               <!-- CPS / CPC -->
               <div
                 v-if="(upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))) || (upgrade.baseCPC && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0)))"
-                class="flex flex-wrap gap-1.5 mb-1.5"
+                class="flex flex-wrap gap-1.5 mb-1"
               >
                 <span
                   v-if="upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))"
@@ -139,7 +139,7 @@
     <!-- ─── Rechte Spalte: Buy All + Permanente Upgrades ─── -->
     <div
       v-if="availableUpgrades.length > 0"
-      class="flex flex-col gap-2 w-[4.5rem] flex-shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]"
+      class="flex flex-col gap-2 w-52 flex-shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]"
     >
       <!-- Buy All Button -->
       <button
@@ -156,7 +156,7 @@
       </button>
 
       <!-- Upgrade Icons (vertikale Scrollbar) -->
-      <div class="flex flex-col flex-1 gap-2 overflow-y-auto custom-scrollbar">
+      <div class="grid grid-cols-2 flex-1 gap-2 overflow-y-auto custom-scrollbar content-start">
         <button
           v-for="pUpgrade in availableUpgrades"
           :key="pUpgrade.id"
@@ -186,9 +186,9 @@
           </span>
           <!-- Preis -->
           <div class="relative z-10 flex items-center gap-0.5">
-            <img src="/img/BardAbilities/BardChime.png" class="w-3 h-3 drop-shadow-sm" />
+            <img src="/img/BardAbilities/BardChime.png" class="w-3.5 h-3.5 drop-shadow-sm" />
             <span
-              class="text-[9px] font-black leading-none"
+              class="text-[10px] font-black leading-none"
               :class="
                 shopStore.canAffordPermanentUpgrade(pUpgrade.id)
                   ? 'text-emerald-300'
