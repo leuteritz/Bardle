@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useBattleStore } from '../stores/battleStore'
 import { useMissionStore } from '../stores/missionStore'
 import { CHAMPION_ROLES } from '../config/championRoles'
@@ -28,23 +28,53 @@ const roleLabel: Record<string, string> = {
   support: 'Support',
 }
 
-const currentChampion = computed(() => battleStore.teamSlotAssignments[props.slotIndex])
+const searchQuery = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
 
-const availableChampions = computed(() => {
-  const onMission = missionStore.championsOnMission
-  return battleStore.ownedChampions.filter(
-    (c) => c !== 'Bard' && !onMission.includes(c),
-  )
+watch(() => props.show, (val) => {
+  if (val) {
+    searchQuery.value = ''
+    nextTick(() => searchInput.value?.focus())
+  }
 })
 
-const filteredChampions = computed(() =>
-  availableChampions.value.filter((c) => {
-    if (selectedRole.value === 'all') return true
-    return CHAMPION_ROLES[c]?.includes(selectedRole.value as 'top' | 'jungle' | 'mid' | 'adc' | 'support')
-  }),
+const currentChampion = computed(() => battleStore.teamSlotAssignments[props.slotIndex])
+
+const allChampions = computed(() =>
+  battleStore.ownedChampions.filter((c) => c !== 'Bard')
 )
 
+const championsInOtherSlots = computed(() => {
+  const map: Record<string, number> = {}
+  battleStore.teamSlotAssignments.forEach((name, idx) => {
+    if (name && idx !== props.slotIndex) map[name] = idx + 1
+  })
+  return map
+})
+
+const onMissionSet = computed(() => new Set(missionStore.championsOnMission))
+
+const filteredChampions = computed(() =>
+  allChampions.value.filter((c) => {
+    const matchesSearch =
+      !searchQuery.value || c.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchesRole =
+      selectedRole.value === 'all' ||
+      CHAMPION_ROLES[c]?.includes(selectedRole.value as 'top' | 'jungle' | 'mid' | 'adc' | 'support')
+    return matchesSearch && matchesRole
+  })
+)
+
+function getChampionStatus(champion: string): 'current' | 'other-slot' | 'on-mission' | 'available' {
+  if (currentChampion.value === champion) return 'current'
+  if (championsInOtherSlots.value[champion] !== undefined) return 'other-slot'
+  if (onMissionSet.value.has(champion)) return 'on-mission'
+  return 'available'
+}
+
 function selectChampion(champion: string) {
+  const status = getChampionStatus(champion)
+  if (status === 'other-slot' || status === 'on-mission') return
   battleStore.assignToSlot(props.slotIndex, champion)
   emit('close')
 }
@@ -124,6 +154,17 @@ function onImgError(e: Event) {
           </button>
         </div>
 
+        <!-- Search -->
+        <div class="px-5 py-2.5 border-b border-white/10 flex-shrink-0">
+          <input
+            ref="searchInput"
+            v-model="searchQuery"
+            type="text"
+            placeholder="Champion suchen..."
+            class="w-full px-3 py-1.5 text-xs rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-blue-400/40 focus:bg-white/[0.08] transition-all"
+          />
+        </div>
+
         <!-- Champion Grid -->
         <div class="flex-1 overflow-y-auto p-4 min-h-0">
           <!-- Empty state -->
@@ -133,7 +174,7 @@ function onImgError(e: Event) {
           >
             <span class="text-3xl">🛒</span>
             <p class="text-sm font-bold text-white/30">Keine Champions verfügbar</p>
-            <p class="text-xs text-blue-400/60">{{ availableChampions.length === 0 ? 'Kaufe Champions im Shop!' : 'Kein Champion mit dieser Rolle.' }}</p>
+            <p class="text-xs text-blue-400/60">{{ allChampions.length === 0 ? 'Kaufe Champions im Shop!' : 'Kein Champion gefunden.' }}</p>
           </div>
 
           <div v-else class="grid grid-cols-2 gap-2">
@@ -142,14 +183,31 @@ function onImgError(e: Event) {
               :key="champion"
               @click="selectChampion(champion)"
               class="group relative flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200 text-left overflow-hidden"
-              :class="
-                currentChampion === champion
-                  ? 'bg-gradient-to-br from-emerald-900/50 to-teal-900/30 border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                  : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.08] hover:border-blue-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-              "
+              :class="{
+                'bg-gradient-to-br from-emerald-900/50 to-teal-900/30 border-emerald-400/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]':
+                  getChampionStatus(champion) === 'current',
+                'opacity-50 cursor-not-allowed bg-white/[0.03] border-white/10':
+                  getChampionStatus(champion) === 'other-slot' || getChampionStatus(champion) === 'on-mission',
+                'bg-white/[0.03] border-white/10 hover:bg-white/[0.08] hover:border-blue-400/40 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]':
+                  getChampionStatus(champion) === 'available',
+              }"
             >
               <!-- Shimmer -->
               <div class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+
+              <!-- Status badges -->
+              <div
+                v-if="getChampionStatus(champion) === 'other-slot'"
+                class="absolute top-1 right-1 px-1.5 py-0.5 text-[8px] font-bold rounded-full bg-orange-500/70 border border-orange-400/30 text-white z-10 pointer-events-none"
+              >
+                Slot {{ championsInOtherSlots[champion] }}
+              </div>
+              <div
+                v-else-if="getChampionStatus(champion) === 'on-mission'"
+                class="absolute top-1 right-1 px-1.5 py-0.5 text-[8px] font-bold rounded-full bg-purple-500/70 border border-purple-400/30 text-white z-10 pointer-events-none"
+              >
+                Auf Expedition
+              </div>
 
               <div class="relative flex-shrink-0 w-12 h-12 rounded-xl overflow-hidden border border-white/10">
                 <img
