@@ -4,6 +4,7 @@ import { useBattleStore } from '../stores/battleStore'
 import { useMissionStore } from '../stores/missionStore'
 import { useInventoryStore } from '../stores/inventoryStore'
 import { useAugmentStore } from '../stores/augmentStore'
+import { useItemStore } from '../stores/itemStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { useCpsStore } from '../stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
@@ -21,6 +22,7 @@ export function usePersistence() {
     const inventoryStore = useInventoryStore()
 
     const augmentStore = useAugmentStore()
+    const itemStore = useItemStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -87,6 +89,10 @@ export function usePersistence() {
         bigBangUsed: augmentStore.bigBangUsed,
         keyboardSmashModifiers: { ...augmentStore.keyboardSmashModifiers },
         lastChosenAugmentId: augmentStore.lastChosenAugmentId,
+      },
+      items: {
+        ownedItems: { ...itemStore.ownedItems },
+        slotEquipment: itemStore.slotEquipment.map((s) => ({ ...s })),
       },
     }
 
@@ -207,6 +213,23 @@ export function usePersistence() {
         augmentStore.onTick()
       }
 
+      // Restore itemStore
+      const itemStore = useItemStore()
+      if (saved.items) {
+        if (saved.items.ownedItems) itemStore.ownedItems = { ...saved.items.ownedItems }
+        if (Array.isArray(saved.items.slotEquipment)) {
+          for (let i = 0; i < 4; i++) {
+            if (saved.items.slotEquipment[i]) {
+              itemStore.slotEquipment[i] = {
+                weapon: saved.items.slotEquipment[i].weapon ?? null,
+                armor: saved.items.slotEquipment[i].armor ?? null,
+                misc: saved.items.slotEquipment[i].misc ?? null,
+              }
+            }
+          }
+        }
+      }
+
       logger.info('System', 'Game loaded', {
         level: gameStore.level,
         chimes: gameStore.chimes,
@@ -304,6 +327,8 @@ export function usePersistence() {
     missionStore.$reset()
     const planetEventStore = usePlanetEventStore()
     planetEventStore.$reset()
+    const itemStore = useItemStore()
+    itemStore.$reset()
     cpsStore.$reset()
 
     // 7. Recalculate CPS/CPC from clean state

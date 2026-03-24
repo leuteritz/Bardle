@@ -253,6 +253,26 @@ export interface TimedBuff {
   expiresAt: number
 }
 
+// Item types
+export type ItemCategory = 'weapon' | 'armor' | 'misc'
+export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
+export interface ShopItem {
+  id: string
+  name: string
+  description: string
+  icon: string
+  price: number
+  rarity: ItemRarity
+  category: ItemCategory
+}
+
+export interface SlotEquipment {
+  weapon: string | null
+  armor: string | null
+  misc: string | null
+}
+
 // Material types
 export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 

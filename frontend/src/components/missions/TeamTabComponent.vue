@@ -34,47 +34,82 @@
           <div
             v-for="(assignment, index) in battleStore.teamSlotAssignments"
             :key="'slot-' + index"
-            class="h-full cursor-pointer group/slot"
-            @click="openSlotIndex = index"
+            class="h-full group/slot"
           >
-            <!-- Gefüllter Slot -->
+            <!-- Gefuellter Slot -->
             <div
               v-if="assignment"
-              class="relative overflow-hidden transition-all duration-200 border team-slot-card rounded-xl hover:ring-1 hover:ring-blue-400/30"
+              class="relative flex flex-col overflow-hidden transition-all duration-200 border cursor-pointer rounded-xl group/card"
               :class="
                 isOnExpedition(assignment)
                   ? 'border-white/[0.06] opacity-50'
-                  : 'border-emerald-500/25 hover:border-blue-400/40'
+                  : 'border-white/10 hover:border-blue-400/40 hover:shadow-lg hover:shadow-blue-500/10'
               "
+              style="height: 100%"
             >
-              <img
-                :src="battleStore.getChampionImage(assignment)"
-                :alt="assignment"
-                class="absolute inset-0 object-cover object-top w-full h-full"
-                :class="isOnExpedition(assignment) ? 'grayscale' : ''"
-                @error="onImgError"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10"
-              />
-              <div class="relative z-10 flex flex-col justify-between h-full p-2">
-                <span class="text-[11px] font-bold tracking-widest text-white/40 uppercase"
-                  >#{{ index + 1 }}</span
-                >
-                <div class="flex flex-col gap-1">
-                  <span class="text-sm font-bold leading-tight text-white/80 drop-shadow">
-                    {{ truncate(assignment, 8) }}
-                  </span>
-                  <span v-if="isOnExpedition(assignment)" class="text-[11px] text-amber-400/70"
-                    >⏳ Expedition</span
+              <!-- Champion Image -->
+              <div class="relative flex-1 min-h-0 overflow-hidden" @click="openSlotIndex = index">
+                <img
+                  :src="battleStore.getChampionImage(assignment)"
+                  :alt="assignment"
+                  class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover/card:scale-105"
+                  :class="isOnExpedition(assignment) ? 'grayscale' : ''"
+                  @error="onImgError"
+                />
+                <div
+                  class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent"
+                />
+
+                <!-- Slot-Nummer -->
+                <div class="absolute z-10 top-2 left-2">
+                  <span
+                    class="text-[9px] font-black tracking-[0.2em] uppercase px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm text-white/40 border border-white/[0.08]"
                   >
+                    #{{ index + 1 }}
+                  </span>
+                </div>
+
+                <!-- Name + Status/Button -->
+                <div class="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-1 p-2">
+                  <span
+                    class="text-[13px] font-bold leading-tight text-white drop-shadow-lg tracking-wide"
+                  >
+                    {{ truncate(assignment, 10) }}
+                  </span>
+                  <span
+                    v-if="isOnExpedition(assignment)"
+                    class="text-[10px] font-semibold text-amber-400/80 flex items-center gap-1"
+                  >
+                    <span>⏳</span> Expedition
+                  </span>
                   <button
                     v-else
                     @click.stop="removeChampion(assignment)"
-                    class="w-full py-0.5 text-xs font-bold rounded bg-red-500/20 border border-red-400/25 text-red-300/70 hover:bg-red-500/35 hover:text-red-200 transition-all duration-200"
+                    class="w-full py-1 text-[10px] font-bold rounded-lg transition-all duration-200 bg-black/50 backdrop-blur-sm border border-white/[0.08] text-white/40 hover:bg-red-500/30 hover:border-red-400/40 hover:text-red-300 opacity-0 group-hover/card:opacity-100 translate-y-1 group-hover/card:translate-y-0"
                   >
                     Entfernen
                   </button>
+                </div>
+              </div>
+
+              <!-- Equipment Row -->
+              <div
+                class="flex-shrink-0 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-black/80 border-t border-white/[0.05]"
+              >
+                <div
+                  v-for="cat in equipCategories"
+                  :key="cat.key"
+                  class="relative flex items-center justify-center transition-all duration-150 rounded-lg cursor-pointer w-7 h-7"
+                  :class="
+                    getEquipIcon(index, cat.key)
+                      ? 'bg-white/10 border border-white/20 hover:bg-white/20 shadow-inner'
+                      : 'border border-dashed border-white/[0.12] hover:border-blue-400/40 hover:bg-blue-900/15'
+                  "
+                  @click.stop="toggleEquipPicker(index, cat.key)"
+                >
+                  <span class="text-[11px] leading-none">{{
+                    getEquipIcon(index, cat.key) || cat.icon
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -82,7 +117,9 @@
             <!-- Leerer Slot -->
             <div
               v-else
-              class="team-slot-card flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-dashed border-white/10 bg-white/[0.015] transition-all duration-200 hover:border-blue-400/30 hover:bg-blue-900/10 group-hover/slot:border-blue-400/30"
+              class="flex flex-col items-center justify-center gap-1.5 p-2 rounded-xl border border-dashed border-white/10 bg-white/[0.015] transition-all duration-200 hover:border-blue-400/30 hover:bg-blue-900/10 group-hover/slot:border-blue-400/30 cursor-pointer"
+              style="height: 100%"
+              @click="openSlotIndex = index"
             >
               <div
                 class="flex items-center justify-center w-8 h-8 transition-colors duration-200 border border-dashed rounded-xl border-white/10 group-hover/slot:border-blue-400/30"
@@ -97,9 +134,81 @@
               >
                 Slot {{ index + 1 }}
               </span>
+              <div class="flex items-center gap-1 mt-1">
+                <div
+                  v-for="cat in equipCategories"
+                  :key="cat.key"
+                  class="relative flex items-center justify-center w-6 h-6 transition-all duration-150 border border-dashed rounded-md cursor-pointer border-white/10 hover:border-blue-400/30 hover:bg-blue-900/10"
+                  @click.stop="toggleEquipPicker(index, cat.key)"
+                >
+                  <span class="text-[10px]">{{ getEquipIcon(index, cat.key) || cat.icon }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Equipment Picker Popup -->
+        <Transition name="equip-picker">
+          <div
+            v-if="equipPicker"
+            class="absolute z-50 p-2 rounded-xl border border-white/15 bg-[#0d0b1e]/97 backdrop-blur-xl shadow-2xl"
+            :style="{ bottom: '10px', right: '10px', width: '200px' }"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-bold tracking-widest uppercase text-white/40">
+                {{ equipPickerLabel }}
+              </span>
+              <button
+                @click="equipPicker = null"
+                class="text-[10px] text-white/30 hover:text-white/60 transition-colors"
+              >
+                X
+              </button>
+            </div>
+            <!-- Ausgeruestetes Item -->
+            <div
+              v-if="equippedItemInPicker"
+              class="flex items-center justify-between p-1.5 mb-1 rounded-lg bg-emerald-500/10 border border-emerald-400/20"
+            >
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">{{ equippedItemInPicker.icon }}</span>
+                <span class="text-[10px] font-bold text-white/70">{{
+                  equippedItemInPicker.name
+                }}</span>
+              </div>
+              <button
+                @click="unequipCurrent"
+                class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 border border-red-400/25 text-red-300 hover:bg-red-500/40 transition-colors"
+              >
+                Ablegen
+              </button>
+            </div>
+            <!-- Verfuegbare Items -->
+            <div class="space-y-1 overflow-y-auto max-h-32">
+              <div
+                v-for="item in availableItemsForPicker"
+                :key="item.id"
+                class="flex items-center justify-between p-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] cursor-pointer transition-colors duration-150"
+                @click="equipItemFromPicker(item.id)"
+              >
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm">{{ item.icon }}</span>
+                  <span class="text-[10px] font-bold text-white/60">{{ item.name }}</span>
+                </div>
+                <span class="text-[9px] text-white/30"
+                  >x{{ itemStore.availableCount(item.id) }}</span
+                >
+              </div>
+              <div
+                v-if="availableItemsForPicker.length === 0 && !equippedItemInPicker"
+                class="py-2 text-center"
+              >
+                <span class="text-[9px] text-white/20">Keine Items verfuegbar</span>
+              </div>
+            </div>
+          </div>
+        </Transition>
 
         <!-- Champion Slot Modal -->
         <ChampionSlotModal
@@ -117,12 +226,7 @@
       >
         <!-- Header -->
         <div class="flex items-center flex-shrink-0 gap-3 mb-3">
-          <!-- Expedition-Indikator -->
-          <div
-            class="relative"
-            @mouseenter="showTooltip = true"
-            @mouseleave="showTooltip = false"
-          >
+          <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
             <div
               class="flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-default transition-all duration-200"
               :class="
@@ -145,81 +249,83 @@
 
             <!-- Tooltip -->
             <Transition name="expedition-tooltip">
-            <div
-              v-show="showTooltip && missionStore.activeMissions.length > 0"
-              class="absolute left-0 top-full mt-2 z-50 w-72 p-4 rounded-2xl border border-amber-500/15 bg-[#09071a]/97 backdrop-blur-xl shadow-2xl"
-            >
-              <template v-if="activeExpeditionCount > 0">
-                <span
-                  class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-amber-300/40"
-                >
-                  Aktive Expeditionen
-                </span>
-                <div class="space-y-4">
-                  <div
-                    v-for="mission in missionStore.activeMissions.filter(
-                      (m) => m.status === 'active',
-                    )"
-                    :key="mission.id"
-                    class="space-y-2"
-                  >
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold text-white/60">
-                        {{ getMissionIcon(mission.configId) }} {{ mission.name }}
-                      </span>
-                      <span class="font-mono text-xs text-white/35">{{
-                        getTimeRemaining(mission)
-                      }}</span>
-                    </div>
-                    <div class="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-amber-500/80 to-orange-400/80"
-                        :style="{ width: getProgress(mission) + '%' }"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </template>
-              <template v-if="completedExpeditionCount > 0">
-                <div
-                  :class="activeExpeditionCount > 0 ? 'mt-4 pt-4 border-t border-white/[0.06]' : ''"
-                >
+              <div
+                v-show="showTooltip && missionStore.activeMissions.length > 0"
+                class="absolute left-0 top-full mt-2 z-50 w-72 p-4 rounded-2xl border border-amber-500/15 bg-[#09071a]/97 backdrop-blur-xl shadow-2xl"
+              >
+                <template v-if="activeExpeditionCount > 0">
                   <span
-                    class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-emerald-300/40"
+                    class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-amber-300/40"
                   >
-                    Abgeschlossen
+                    Aktive Expeditionen
                   </span>
-                  <div class="space-y-2">
+                  <div class="space-y-4">
                     <div
                       v-for="mission in missionStore.activeMissions.filter(
-                        (m) => m.status !== 'active',
+                        (m) => m.status === 'active',
                       )"
                       :key="mission.id"
-                      class="flex items-center justify-between"
+                      class="space-y-2"
                     >
-                      <span class="text-xs font-semibold text-white/60">
-                        {{ getMissionIcon(mission.configId) }} {{ mission.name }}
-                      </span>
-                      <button
-                        @click="missionStore.collectMission(mission.id)"
-                        class="text-[11px] font-bold px-2 py-0.5 rounded-full transition-colors cursor-pointer"
-                        :class="
-                          mission.status === 'success'
-                            ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/30'
-                            : 'bg-red-500/15 text-red-300 hover:bg-red-500/30'
-                        "
-                      >
-                        {{
-                          mission.status === 'success'
-                            ? `+${mission.reward} Einsammeln`
-                            : '✕ Entfernen'
-                        }}
-                      </button>
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-white/60">
+                          {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                        </span>
+                        <span class="font-mono text-xs text-white/35">{{
+                          getTimeRemaining(mission)
+                        }}</span>
+                      </div>
+                      <div class="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          class="h-full transition-all duration-1000 rounded-full bg-gradient-to-r from-amber-500/80 to-orange-400/80"
+                          :style="{ width: getProgress(mission) + '%' }"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </template>
-            </div>
+                </template>
+                <template v-if="completedExpeditionCount > 0">
+                  <div
+                    :class="
+                      activeExpeditionCount > 0 ? 'mt-4 pt-4 border-t border-white/[0.06]' : ''
+                    "
+                  >
+                    <span
+                      class="block mb-3 text-[10px] font-bold tracking-widest uppercase text-emerald-300/40"
+                    >
+                      Abgeschlossen
+                    </span>
+                    <div class="space-y-2">
+                      <div
+                        v-for="mission in missionStore.activeMissions.filter(
+                          (m) => m.status !== 'active',
+                        )"
+                        :key="mission.id"
+                        class="flex items-center justify-between"
+                      >
+                        <span class="text-xs font-semibold text-white/60">
+                          {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                        </span>
+                        <button
+                          @click="missionStore.collectMission(mission.id)"
+                          class="text-[11px] font-bold px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                          :class="
+                            mission.status === 'success'
+                              ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/30'
+                              : 'bg-red-500/15 text-red-300 hover:bg-red-500/30'
+                          "
+                        >
+                          {{
+                            mission.status === 'success'
+                              ? `+${mission.reward} Einsammeln`
+                              : '✕ Entfernen'
+                          }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </Transition>
           </div>
         </div>
@@ -247,14 +353,16 @@ import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '../../stores/battleStore'
 import { useMissionStore } from '../../stores/missionStore'
 import { useGameStore } from '../../stores/gameStore'
+import { useItemStore } from '../../stores/itemStore'
 import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
 import { MISSION_CONFIGS } from '../../config/missions'
+import { SHOP_ITEMS, getItemById } from '../../config/items'
 import { truncate } from '../../config/numberFormat'
 import MissionCreateComponent from './MissionCreateComponent.vue'
 import ChampionShopComponent from '../gameCenter/champion/ChampionShopComponent.vue'
 import ItemShopComponent from '../gameCenter/ItemShopComponent.vue'
 import ChampionSlotModal from '../ChampionSlotModal.vue'
-import type { Mission } from '../../types'
+import type { Mission, ItemCategory } from '../../types'
 
 export default defineComponent({
   name: 'TeamTabComponent',
@@ -268,9 +376,11 @@ export default defineComponent({
     const battleStore = useBattleStore()
     const missionStore = useMissionStore()
     const gameStore = useGameStore()
+    const itemStore = useItemStore()
     const now = ref(Date.now())
     const openSlotIndex = ref<number | null>(null)
     const showTooltip = ref(false)
+    const equipPicker = ref<{ slotIndex: number; category: ItemCategory } | null>(null)
     let timer: ReturnType<typeof setInterval> | null = null
 
     onMounted(() => {
@@ -281,6 +391,12 @@ export default defineComponent({
     onUnmounted(() => {
       if (timer) clearInterval(timer)
     })
+
+    const equipCategories = [
+      { key: 'weapon' as ItemCategory, icon: '⚔️' },
+      { key: 'armor' as ItemCategory, icon: '🛡️' },
+      { key: 'misc' as ItemCategory, icon: '📿' },
+    ]
 
     const selectableChampions = computed(() => {
       const onMission = missionStore.championsOnMission
@@ -295,6 +411,31 @@ export default defineComponent({
     const completedExpeditionCount = computed(
       () => missionStore.activeMissions.filter((m) => m.status !== 'active').length,
     )
+
+    const equipPickerLabel = computed(() => {
+      if (!equipPicker.value) return ''
+      const labels: Record<ItemCategory, string> = {
+        weapon: 'Waffe',
+        armor: 'Ruestung',
+        misc: 'Misc',
+      }
+      return labels[equipPicker.value.category]
+    })
+
+    const equippedItemInPicker = computed(() => {
+      if (!equipPicker.value) return null
+      const eq = itemStore.slotEquipment[equipPicker.value.slotIndex]
+      const itemId = eq[equipPicker.value.category]
+      return itemId ? (getItemById(itemId) ?? null) : null
+    })
+
+    const availableItemsForPicker = computed(() => {
+      if (!equipPicker.value) return []
+      const cat = equipPicker.value.category
+      return SHOP_ITEMS.filter(
+        (item) => item.category === cat && itemStore.availableCount(item.id) > 0,
+      )
+    })
 
     function isOnExpedition(champion: string): boolean {
       return missionStore.championsOnMission.includes(champion)
@@ -334,15 +475,53 @@ export default defineComponent({
       img.style.display = 'none'
     }
 
+    function getEquipIcon(slotIndex: number, category: ItemCategory): string | null {
+      const eq = itemStore.slotEquipment[slotIndex]
+      const itemId = eq[category]
+      if (!itemId) return null
+      const item = getItemById(itemId)
+      return item?.icon ?? null
+    }
+
+    function toggleEquipPicker(slotIndex: number, category: ItemCategory) {
+      if (
+        equipPicker.value &&
+        equipPicker.value.slotIndex === slotIndex &&
+        equipPicker.value.category === category
+      ) {
+        equipPicker.value = null
+      } else {
+        equipPicker.value = { slotIndex, category }
+      }
+    }
+
+    function equipItemFromPicker(itemId: string) {
+      if (!equipPicker.value) return
+      itemStore.equipItem(equipPicker.value.slotIndex, itemId)
+      equipPicker.value = null
+    }
+
+    function unequipCurrent() {
+      if (!equipPicker.value) return
+      itemStore.unequipItem(equipPicker.value.slotIndex, equipPicker.value.category)
+      equipPicker.value = null
+    }
+
     return {
       battleStore,
       missionStore,
       gameStore,
+      itemStore,
       openSlotIndex,
       showTooltip,
+      equipPicker,
+      equipCategories,
       selectableChampions,
       activeExpeditionCount,
       completedExpeditionCount,
+      equipPickerLabel,
+      equippedItemInPicker,
+      availableItemsForPicker,
       isOnExpedition,
       addChampion,
       removeChampion,
@@ -351,6 +530,10 @@ export default defineComponent({
       getMissionIcon,
       truncate,
       onImgError,
+      getEquipIcon,
+      toggleEquipPicker,
+      equipItemFromPicker,
+      unequipCurrent,
       MAX_ACTIVE_MISSIONS,
     }
   },
@@ -366,14 +549,33 @@ export default defineComponent({
   height: 90px;
 }
 .expedition-tooltip-enter-active {
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
 }
 .expedition-tooltip-leave-active {
-  transition: opacity 0.08s ease, transform 0.08s ease;
+  transition:
+    opacity 0.08s ease,
+    transform 0.08s ease;
 }
 .expedition-tooltip-enter-from,
 .expedition-tooltip-leave-to {
   opacity: 0;
   transform: scale(0.95) translateY(-2px);
+}
+.equip-picker-enter-active {
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+.equip-picker-leave-active {
+  transition:
+    opacity 0.08s ease,
+    transform 0.08s ease;
+}
+.equip-picker-enter-from,
+.equip-picker-leave-to {
+  opacity: 0;
+  transform: scale(0.95) translateY(4px);
 }
 </style>

@@ -75,7 +75,7 @@
                 <img
                   :src="battleStore.getChampionImage(champ.name)"
                   :alt="champ.name"
-                  class="relative z-10 object-cover w-14 h-14 rounded-lg drop-shadow-lg"
+                  class="relative z-10 object-cover rounded-lg w-14 h-14 drop-shadow-lg"
                 />
                 <span
                   v-if="champ.name === 'Bard'"
@@ -85,11 +85,11 @@
                 <img
                   v-if="champ.rank"
                   :src="getBorderImage(champ.rank)"
-                  class="absolute z-20 w-7 h-7 border rounded-full -bottom-1 -right-1 border-blue-400/50 bg-white/90"
+                  class="absolute z-20 border rounded-full w-7 h-7 -bottom-1 -right-1 border-blue-400/50 bg-white/90"
                 />
               </div>
               <span
-                class="text-sm font-black text-center bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent leading-tight"
+                class="text-sm font-black leading-tight text-center text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
               >
                 {{ champ.name.length > 9 ? champ.name.slice(0, 9) + '…' : champ.name }}
               </span>
@@ -139,15 +139,15 @@
                 <img
                   :src="battleStore.getChampionImage(champ.name)"
                   :alt="champ.name"
-                  class="relative z-10 object-cover w-14 h-14 rounded-lg drop-shadow-lg"
+                  class="relative z-10 object-cover rounded-lg w-14 h-14 drop-shadow-lg"
                 />
                 <img
                   v-if="champ.rank"
                   :src="getBorderImage(champ.rank)"
-                  class="absolute z-20 w-7 h-7 border rounded-full -bottom-1 -right-1 border-red-400/50 bg-white/90"
+                  class="absolute z-20 border rounded-full w-7 h-7 -bottom-1 -right-1 border-red-400/50 bg-white/90"
                 />
               </div>
-              <span class="text-sm font-black text-center text-red-300 leading-tight">
+              <span class="text-sm font-black leading-tight text-center text-red-300">
                 {{ champ.name.length > 9 ? champ.name.slice(0, 9) + '…' : champ.name }}
               </span>
               <div
