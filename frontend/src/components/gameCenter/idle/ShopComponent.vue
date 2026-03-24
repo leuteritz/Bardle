@@ -30,40 +30,23 @@
           v-for="upgrade in shopStore.shopUpgrades"
           :key="upgrade.id"
           @click="handleUpgradeClick(upgrade)"
-          class="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border backdrop-blur-md hover:scale-[1.015] hover:-translate-y-0.5"
+          @mouseenter="hoveredUpgradeId = upgrade.id"
+          @mouseleave="hoveredUpgradeId = null"
+          class="group rounded-2xl cursor-pointer transition-all duration-200 border backdrop-blur-md hover:scale-[1.01]"
           :class="
             shopStore.canAffordUpgrade(upgrade)
-              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_35px_rgba(16,185,129,0.3)]'
+              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.12)]'
               : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
           "
         >
-          <!-- Shimmer-Sweep -->
-          <div
-            v-if="shopStore.canAffordUpgrade(upgrade)"
-            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
-          />
-          <!-- Glow-Pulse Rahmen -->
-          <div
-            v-if="shopStore.canAffordUpgrade(upgrade)"
-            class="absolute inset-0 border pointer-events-none rounded-2xl border-emerald-400/40 animate-pulse"
-          />
-          <!-- Level-Badge -->
-          <div class="absolute z-10 top-3 right-3">
-            <span
-              class="px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
-            >
-              LV {{ upgrade.level }}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-4 p-4 pr-3">
-            <!-- Icon Container -->
+          <div class="flex items-center gap-4 p-4">
+            <!-- Icon -->
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-300 group-hover:scale-110"
+              class="relative flex items-center justify-center flex-shrink-0 w-16 h-16 transition-transform duration-200 group-hover:scale-110"
             >
               <div
                 v-if="shopStore.canAffordUpgrade(upgrade)"
-                class="absolute inset-0 rounded-xl blur-md opacity-60 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
+                class="absolute inset-0 rounded-xl blur-md opacity-50 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
               />
               <img
                 v-if="isImageUrl(upgrade.icon)"
@@ -76,62 +59,76 @@
 
             <!-- Text & Stats -->
             <div class="flex-1 min-w-0">
-              <h3
-                class="mb-1.5 text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent"
-              >
-                {{ upgrade.name }}
-              </h3>
-              <div class="flex flex-wrap gap-1.5">
+              <!-- Name + Level -->
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <h3
+                  class="text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent truncate"
+                >
+                  {{ upgrade.name }}
+                </h3>
                 <span
-                  v-if="upgrade.baseCPS && upgrade.level > 0"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300"
+                  class="flex-shrink-0 px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
+                >
+                  Lv {{ upgrade.level }}
+                </span>
+              </div>
+              <!-- CPS / CPC -->
+              <div
+                v-if="(upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))) || (upgrade.baseCPC && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0)))"
+                class="flex flex-wrap gap-1.5 mb-1.5"
+              >
+                <span
+                  v-if="upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full border transition-all duration-150"
+                  :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                    ? 'bg-emerald-500/40 border-emerald-400/60 text-emerald-200'
+                    : 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300'"
                 >
                   <img src="/img/BardAbilities/BardChime.png" class="w-3.5 h-3.5 drop-shadow-sm" />
-                  {{ upgrade.baseCPS * upgrade.level }}/s
+                  {{ formatNumber(upgrade.baseCPS * (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                    ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
+                    : upgrade.level)) }}/s
                 </span>
                 <span
-                  v-if="upgrade.baseCPC && upgrade.level > 0"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300"
+                  v-if="upgrade.baseCPC && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full border transition-all duration-150"
+                  :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                    ? 'bg-amber-500/40 border-amber-400/60 text-amber-200'
+                    : 'bg-amber-500/20 border-amber-400/30 text-amber-300'"
                 >
-                  <span class="text-amber-400">✦</span>
-                  {{ upgrade.baseCPC * upgrade.level }}/klick
-                </span>
-                <span
-                  v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
-                  class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-                >
-                  {{ shopStore.buyAmount }}×
-                </span>
-                <span
-                  v-if="shopStore.buyAmount === 'max'"
-                  class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-                >
-                  Max {{ shopStore.getMaxAffordableAmount(upgrade) }}×
+                  <span :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0 ? 'text-amber-300' : 'text-amber-400'">✦</span>
+                  {{ formatNumber(upgrade.baseCPC * (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                    ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
+                    : upgrade.level)) }}/klick
                 </span>
               </div>
             </div>
 
-            <!-- Kauf-Button -->
-            <div class="flex-shrink-0 ml-1 w-28">
+            <!-- Kauf-Button mit Kosten -->
+            <div class="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
+              <span
+                v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
+                class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
+              >
+                {{ shopStore.buyAmount }}×
+              </span>
+              <span
+                v-if="shopStore.buyAmount === 'max'"
+                class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
+              >
+                Max {{ shopStore.getMaxAffordableAmount(upgrade) }}×
+              </span>
               <button
-                class="group/btn relative w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-all duration-200 border"
                 :class="
                   shopStore.canAffordUpgrade(upgrade)
-                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95'
+                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-md shadow-emerald-900/50 hover:from-emerald-400 active:scale-95'
                     : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
                 "
                 :disabled="!shopStore.canAffordUpgrade(upgrade)"
               >
-                <div
-                  v-if="shopStore.canAffordUpgrade(upgrade)"
-                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500"
-                />
-                <div class="relative flex items-center justify-center gap-1.5">
-                  <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-                  <span class="text-xs font-black tracking-tight">
-                    {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
-                  </span>
-                </div>
+                <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
+                <span>{{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}</span>
               </button>
             </div>
           </div>
@@ -306,6 +303,10 @@ export default defineComponent({
       }
     }
 
+    // ── Gebäude-Hover Preview ──
+
+    const hoveredUpgradeId = ref<string | null>(null)
+
     // ── Tooltip ──
 
     const hoveredUpgrade = ref<PermanentUpgrade | null>(null)
@@ -341,6 +342,7 @@ export default defineComponent({
       availableUpgrades,
       hasAffordableUpgrade,
       buyAllAffordable,
+      hoveredUpgradeId,
       hoveredUpgrade,
       tooltipStyle,
       showTooltip,
