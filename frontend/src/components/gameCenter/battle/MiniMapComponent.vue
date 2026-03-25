@@ -9,24 +9,6 @@
     />
 
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
-      <!-- Header -->
-      <div class="flex items-center flex-shrink-0 gap-2">
-        <div
-          class="flex items-center justify-center w-6 h-6 border rounded-lg bg-gradient-to-br from-white/10 to-white/5 border-white/15"
-        >
-          <span class="text-xs">🗺️</span>
-        </div>
-        <span
-          class="text-xs font-black tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
-        >
-          Battle Map
-        </span>
-        <div class="flex items-center gap-1 ml-auto">
-          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span class="text-xs font-bold text-emerald-300">Live</span>
-        </div>
-      </div>
-
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
         <div

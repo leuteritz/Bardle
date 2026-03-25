@@ -43,13 +43,21 @@
       </div>
     </div>
 
-    <!-- MiniMap: full width, takes remaining vertical space -->
-    <MiniMapComponent class="flex-1 min-h-0" :battle-id="currentBattleId" :score="score" />
-
-    <!-- Bottom row: Chat | Scoreboard, two equal columns -->
-    <div class="grid grid-cols-2 gap-3 flex-shrink-0 h-36">
-      <ChatPanelComponent class="h-full" />
-      <ScoreboardComponent class="h-full" />
+    <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
+    <div class="flex flex-row flex-1 min-h-0 gap-3">
+      <!-- Left: MiniMap square, fills available height -->
+      <div class="flex items-center justify-center flex-1 min-h-0">
+        <MiniMapComponent
+          class="h-full aspect-square"
+          :battle-id="currentBattleId"
+          :score="score"
+        />
+      </div>
+      <!-- Right: Chat top + Scoreboard bottom, equal height split -->
+      <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
+        <ChatPanelComponent class="flex-1 min-h-0" />
+        <ScoreboardComponent class="flex-1 min-h-0" />
+      </div>
     </div>
   </div>
 
