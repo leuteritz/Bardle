@@ -125,7 +125,6 @@ function onBackdropClick(e: MouseEvent) {
   text-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
   letter-spacing: 0.05em;
   margin: 0;
-  font-family: 'MedievalSharp', serif;
 }
 
 .close-btn {
@@ -195,7 +194,6 @@ function onBackdropClick(e: MouseEvent) {
   right: 0.5rem;
   font-size: 1.5rem;
   font-weight: bold;
-  font-family: 'MedievalSharp', serif;
   line-height: 1;
 }
 
@@ -215,7 +213,6 @@ function onBackdropClick(e: MouseEvent) {
 .material-card__name {
   font-size: 1.2rem;
   text-align: center;
-  font-family: 'MedievalSharp', serif;
   line-height: 1.2;
 }
 

@@ -113,7 +113,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           <div class="relative flex items-center justify-center p-6 border-b backdrop-blur-lg bg-white/5 border-white/10">
             <h2
               class="text-3xl font-bold text-transparent bg-gradient-to-r from-purple-400 via-amber-300 to-purple-400 bg-clip-text"
-              style="font-family: 'MedievalSharp', cursive"
             >
               Wähle dein nächstes Universum
             </h2>

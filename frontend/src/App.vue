@@ -38,7 +38,7 @@ const activeTab = ref('idle')
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div
-      class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen font-['MedievalSharp']"
+      class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen"
     >
       <!-- Oberer Bereich mit Navigation -->
       <div class="z-[100] grid w-full min-h-8 grid-cols-3 items-start">
@@ -121,7 +121,7 @@ const activeTab = ref('idle')
     <AdminDashboard />
 
     <span
-      class="fixed z-50 text-xl bottom-5 right-5 font-['MedievalSharp'] text-amber-500 drop-shadow-lg"
+      class="fixed z-50 text-xl bottom-5 right-5 text-amber-500 drop-shadow-lg"
       >©Leuteritz</span
     >
   </div>

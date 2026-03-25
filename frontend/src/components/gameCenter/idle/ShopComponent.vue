@@ -1,254 +1,180 @@
 <template>
-  <!-- Äußerer Wrapper: jetzt flex-row statt flex-col -->
-  <div class="flex w-full min-h-full gap-4 p-4">
-    <!-- ─── Linke Spalte: Kaufmengen + Gebäude ─── -->
-    <div class="flex flex-col flex-1 min-w-0 gap-3">
-      <!-- Kaufmengen-Selector (sticky links oben) -->
-      <div class="sticky top-0 z-10 flex justify-center">
-        <div
-          class="inline-flex gap-0.5 p-0.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.07]"
-        >
-          <button
-            v-for="option in buyOptions"
-            :key="option.value"
-            @click="shopStore.setBuyAmount(option.value)"
-            class="px-3 py-1 text-xl font-bold transition-all duration-200 rounded-md"
-            :class="
-              shopStore.buyAmount === option.value
-                ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-            "
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
+  <div class="shop-frame">
+    <!-- ── Kaufmengen-Selector ── -->
+    <div class="selector-bar">
+      <button
+        v-for="option in buyOptions"
+        :key="option.value"
+        @click="shopStore.setBuyAmount(option.value)"
+        class="selector-btn"
+        :class="{ 'selector-btn--active': shopStore.buyAmount === option.value }"
+      >
+        {{ option.label }}
+      </button>
+    </div>
 
-      <!-- Shop Items -->
-      <div class="flex flex-col gap-2">
+    <div class="shop-body">
+      <!-- ── Linke Spalte: Shop-Upgrades ── -->
+      <div class="upgrade-list">
         <div
           v-for="upgrade in shopStore.shopUpgrades"
           :key="upgrade.id"
           @click="handleUpgradeClick(upgrade)"
           @mouseenter="hoveredUpgradeId = upgrade.id"
           @mouseleave="hoveredUpgradeId = null"
-          class="group rounded-2xl cursor-pointer transition-all duration-200 border backdrop-blur-md hover:scale-[1.01]"
-          :class="
-            shopStore.canAffordUpgrade(upgrade)
-              ? 'bg-gradient-to-br from-emerald-900/30 via-green-900/20 to-teal-900/10 border-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.12)]'
-              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 grayscale cursor-not-allowed'
-          "
+          class="upgrade-row"
+          :class="{
+            'upgrade-row--affordable': shopStore.canAffordUpgrade(upgrade),
+            'upgrade-row--locked': !shopStore.canAffordUpgrade(upgrade),
+          }"
         >
-          <div class="flex items-center gap-3 p-3">
-            <!-- Icon -->
+          <!-- Icon -->
+          <div class="upgrade-icon-box">
+            <img
+              v-if="isImageUrl(upgrade.icon)"
+              :src="upgrade.icon"
+              :alt="upgrade.name"
+              class="upgrade-icon-img"
+            />
+            <span v-else class="upgrade-icon-emoji">{{ upgrade.icon }}</span>
+          </div>
+
+          <!-- Info -->
+          <div class="upgrade-info">
+            <div class="upgrade-level-row">
+              <span class="upgrade-level">Lv. {{ upgrade.level }}</span>
+              <span class="upgrade-name">{{ upgrade.name }}</span>
+            </div>
             <div
-              class="relative flex items-center justify-center flex-shrink-0 w-12 h-12 transition-transform duration-200 group-hover:scale-110"
+              class="upgrade-stat"
+              v-if="
+                upgrade.baseCPS &&
+                (upgrade.level > 0 ||
+                  (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))
+              "
             >
-              <div
-                v-if="shopStore.canAffordUpgrade(upgrade)"
-                class="absolute inset-0 rounded-xl blur-md opacity-50 bg-gradient-to-br from-emerald-400/40 to-teal-400/20"
-              />
-              <img
-                v-if="isImageUrl(upgrade.icon)"
-                :src="upgrade.icon"
-                :alt="upgrade.name"
-                class="relative z-10 object-contain w-full h-full drop-shadow-lg"
-              />
-              <span v-else class="relative z-10 text-2xl drop-shadow-lg">{{ upgrade.icon }}</span>
+              <img src="/img/BardAbilities/BardChime.png" class="stat-icon" />
+              +{{
+                formatNumber(
+                  upgrade.baseCPS *
+                    (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                      ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
+                      : upgrade.level),
+                )
+              }}
+              CpS
             </div>
-
-            <!-- Text & Stats -->
-            <div class="flex-1 min-w-0">
-              <!-- Name + Level -->
-              <div class="flex items-center justify-between gap-2 mb-1">
-                <h3
-                  class="text-base font-black leading-tight tracking-wide bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text text-transparent truncate"
-                >
-                  {{ upgrade.name }}
-                </h3>
-                <span
-                  class="flex-shrink-0 px-2 py-0.5 text-xs font-black rounded-full bg-gradient-to-r from-blue-500/30 to-violet-500/30 border border-blue-400/30 text-blue-200 tracking-wider"
-                >
-                  Lv {{ upgrade.level }}
-                </span>
-              </div>
-              <!-- CPS / CPC -->
-              <div
-                v-if="(upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))) || (upgrade.baseCPC && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0)))"
-                class="flex flex-wrap gap-1.5 mb-1"
-              >
-                <span
-                  v-if="upgrade.baseCPS && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full border transition-all duration-150"
-                  :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
-                    ? 'bg-emerald-500/40 border-emerald-400/60 text-emerald-200'
-                    : 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300'"
-                >
-                  <img src="/img/BardAbilities/BardChime.png" class="w-3.5 h-3.5 drop-shadow-sm" />
-                  {{ formatNumber(upgrade.baseCPS * (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
-                    ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
-                    : upgrade.level)) }}/s
-                </span>
-                <span
-                  v-if="upgrade.baseCPC && (upgrade.level > 0 || (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full border transition-all duration-150"
-                  :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
-                    ? 'bg-amber-500/40 border-amber-400/60 text-amber-200'
-                    : 'bg-amber-500/20 border-amber-400/30 text-amber-300'"
-                >
-                  <span :class="hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0 ? 'text-amber-300' : 'text-amber-400'">✦</span>
-                  {{ formatNumber(upgrade.baseCPC * (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
-                    ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
-                    : upgrade.level)) }}/klick
-                </span>
-              </div>
-            </div>
-
-            <!-- Kauf-Button mit Kosten -->
-            <div class="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
-              <span
-                v-if="typeof shopStore.buyAmount === 'number' && shopStore.buyAmount > 1"
-                class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-              >
-                {{ shopStore.buyAmount }}×
-              </span>
-              <span
-                v-if="shopStore.buyAmount === 'max'"
-                class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-500/20 border border-orange-400/30 text-orange-300"
-              >
-                Max {{ shopStore.getMaxAffordableAmount(upgrade) }}×
-              </span>
-              <button
-                class="flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-all duration-200 border"
-                :class="
-                  shopStore.canAffordUpgrade(upgrade)
-                    ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-md shadow-emerald-900/50 hover:from-emerald-400 active:scale-95'
-                    : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
-                "
-                :disabled="!shopStore.canAffordUpgrade(upgrade)"
-              >
-                <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-                <span>{{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}</span>
-              </button>
+            <div
+              class="upgrade-stat upgrade-stat--cpc"
+              v-if="
+                upgrade.baseCPC &&
+                (upgrade.level > 0 ||
+                  (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0))
+              "
+            >
+              ✦
+              {{
+                formatNumber(
+                  upgrade.baseCPC *
+                    (hoveredUpgradeId === upgrade.id && shopStore.getActualBuyAmount(upgrade) > 0
+                      ? upgrade.level + shopStore.getActualBuyAmount(upgrade)
+                      : upgrade.level),
+                )
+              }}
+              /klick
             </div>
           </div>
+
+          <!-- Kauf-Button -->
+          <button
+            class="upgrade-buy-btn"
+            :class="
+              shopStore.canAffordUpgrade(upgrade)
+                ? 'upgrade-buy-btn--green'
+                : 'upgrade-buy-btn--disabled'
+            "
+            :disabled="!shopStore.canAffordUpgrade(upgrade)"
+          >
+            <span class="buy-label">
+              Buy
+              {{
+                shopStore.buyAmount === 'max'
+                  ? shopStore.getMaxAffordableAmount(upgrade)
+                  : shopStore.getActualBuyAmount(upgrade)
+              }}
+            </span>
+            <span class="buy-cost">
+              {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }}
+              <img src="/img/BardAbilities/BardChime.png" class="coin-icon" />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Rechte Spalte: Permanente Upgrades ── -->
+      <div v-if="availableUpgrades.length > 0" class="perm-panel">
+        <button
+          class="buy-all-btn"
+          :class="hasAffordableUpgrade ? 'buy-all-btn--active' : 'buy-all-btn--disabled'"
+          :disabled="!hasAffordableUpgrade"
+          @click="buyAllAffordable"
+        >
+          Buy All
+        </button>
+
+        <div class="perm-grid">
+          <button
+            v-for="pUpgrade in availableUpgrades"
+            :key="pUpgrade.id"
+            class="perm-btn"
+            :class="
+              shopStore.canAffordPermanentUpgrade(pUpgrade.id)
+                ? 'perm-btn--affordable'
+                : 'perm-btn--locked'
+            "
+            @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
+            @mouseenter="showTooltip($event, pUpgrade)"
+            @mouseleave="hideTooltip"
+          >
+            <span class="perm-icon">{{ pUpgrade.icon }}</span>
+            <div class="perm-cost">
+              <img src="/img/BardAbilities/BardChime.png" class="coin-icon-sm" />
+              <span>{{ formatNumber(pUpgrade.cost) }}</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- ─── Rechte Spalte: Buy All + Permanente Upgrades ─── -->
-    <div
-      v-if="availableUpgrades.length > 0"
-      class="flex flex-col gap-2 w-52 flex-shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)]"
-    >
-      <!-- Buy All Button -->
-      <button
-        @click="buyAllAffordable"
-        class="flex items-center justify-center w-full px-2 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 overflow-hidden border flex-shrink-0"
-        :class="
-          hasAffordableUpgrade
-            ? 'bg-gradient-to-b from-emerald-500 to-emerald-700 border-emerald-400/50 text-white shadow-lg shadow-emerald-900/50 hover:shadow-emerald-500/50 hover:from-emerald-400 active:scale-95 cursor-pointer'
-            : 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
-        "
-        :disabled="!hasAffordableUpgrade"
-      >
-        <span class="text-[11px] font-black tracking-tight whitespace-nowrap">Buy All</span>
-      </button>
-
-      <!-- Upgrade Icons (vertikale Scrollbar) -->
-      <div class="grid grid-cols-2 flex-1 gap-2 overflow-y-auto custom-scrollbar content-start">
-        <button
-          v-for="pUpgrade in availableUpgrades"
-          :key="pUpgrade.id"
-          @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
-          @mouseenter="showTooltip($event, pUpgrade)"
-          @mouseleave="hideTooltip"
-          class="relative flex flex-col items-center justify-center flex-shrink-0 w-full gap-1 px-1 py-2 overflow-hidden transition-all duration-300 border rounded-xl"
-          :class="
-            shopStore.canAffordPermanentUpgrade(pUpgrade.id)
-              ? 'bg-gradient-to-br from-emerald-900/40 to-teal-900/20 border-emerald-500/40 shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:scale-105 hover:shadow-[0_0_24px_rgba(16,185,129,0.4)] cursor-pointer'
-              : 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-45 grayscale cursor-not-allowed'
-          "
-        >
-          <!-- Glow-Hintergrund -->
-          <div
-            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 opacity-50 rounded-xl blur-md bg-gradient-to-br from-emerald-400/30 to-teal-400/15"
-          />
-          <!-- Pulse-Rahmen -->
-          <div
-            v-if="shopStore.canAffordPermanentUpgrade(pUpgrade.id)"
-            class="absolute inset-0 border pointer-events-none border-emerald-400/40 rounded-xl animate-pulse"
-          />
-          <!-- Icon -->
-          <span class="relative z-10 text-2xl leading-none drop-shadow-lg">
-            {{ pUpgrade.icon }}
-          </span>
-          <!-- Preis -->
-          <div class="relative z-10 flex items-center gap-0.5">
-            <img src="/img/BardAbilities/BardChime.png" class="w-3.5 h-3.5 drop-shadow-sm" />
-            <span
-              class="text-[10px] font-black leading-none"
-              :class="
-                shopStore.canAffordPermanentUpgrade(pUpgrade.id)
-                  ? 'text-emerald-300'
-                  : 'text-red-400/70'
-              "
-            >
-              {{ formatNumber(pUpgrade.cost) }}
-            </span>
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- ─── Tooltip ─── -->
+    <!-- ── Tooltip ── -->
     <Teleport to="body">
-      <div v-if="hoveredUpgrade" class="fixed z-[9999] pointer-events-none" :style="tooltipStyle">
-        <div
-          class="w-56 p-3 border shadow-2xl bg-black/85 backdrop-blur-xl border-white/10 rounded-xl"
-        >
-          <h4
-            class="text-sm font-black leading-tight tracking-wide text-transparent bg-gradient-to-r from-blue-200 via-violet-200 to-blue-300 bg-clip-text"
-          >
-            {{ hoveredUpgrade.name }}
-          </h4>
-          <p class="mt-1 text-[11px] leading-snug text-white/60">
-            {{ hoveredUpgrade.description }}
-          </p>
-          <div class="flex items-center gap-1.5 mt-2">
-            <img src="/img/BardAbilities/BardChime.png" class="w-4 h-4 drop-shadow-sm" />
-            <span
-              class="text-xs font-black"
-              :class="
-                shopStore.canAffordPermanentUpgrade(hoveredUpgrade.id)
-                  ? 'text-emerald-300'
-                  : 'text-red-400'
-              "
-            >
-              {{ formatNumber(hoveredUpgrade.cost) }}
-            </span>
-          </div>
-          <div
-            v-if="
-              hoveredUpgrade.requirement &&
-              !shopStore.isPermanentUpgradeRequirementMet(hoveredUpgrade.id)
+      <div v-if="hoveredUpgrade" class="upgrade-tooltip" :style="tooltipStyle">
+        <h4 class="tooltip-title">{{ hoveredUpgrade.name }}</h4>
+        <p class="tooltip-desc">{{ hoveredUpgrade.description }}</p>
+        <div class="tooltip-cost">
+          <img src="/img/BardAbilities/BardChime.png" class="coin-icon-sm" />
+          <span
+            :class="
+              shopStore.canAffordPermanentUpgrade(hoveredUpgrade.id) ? 'text-green' : 'text-red'
             "
-            class="flex items-center gap-1 mt-2 px-2 py-1 text-[10px] font-bold rounded-lg bg-amber-500/15 border border-amber-400/25 text-amber-300"
           >
-            <span>🔒</span>
-            <span>
-              {{ hoveredUpgrade.requirement.minLevel }}×
-              {{ getBuildingName(hoveredUpgrade.requirement.buildingId) }} benötigt
-            </span>
-          </div>
+            {{ formatNumber(hoveredUpgrade.cost) }}
+          </span>
+        </div>
+        <div
+          v-if="
+            hoveredUpgrade.requirement &&
+            !shopStore.isPermanentUpgradeRequirementMet(hoveredUpgrade.id)
+          "
+          class="tooltip-req"
+        >
+          🔒 {{ hoveredUpgrade.requirement.minLevel }}×
+          {{ getBuildingName(hoveredUpgrade.requirement.buildingId) }} benötigt
         </div>
       </div>
     </Teleport>
   </div>
 </template>
-
-<!-- Script & Style bleiben identisch -->
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue'
@@ -288,8 +214,6 @@ export default defineComponent({
       return building?.name ?? buildingId
     }
 
-    // ── Upgrade Icon Bar ──
-
     const availableUpgrades = computed(() =>
       shopStore.permanentUpgrades.filter((u) => !u.purchased).sort((a, b) => a.cost - b.cost),
     )
@@ -306,12 +230,7 @@ export default defineComponent({
       }
     }
 
-    // ── Gebäude-Hover Preview ──
-
     const hoveredUpgradeId = ref<string | null>(null)
-
-    // ── Tooltip ──
-
     const hoveredUpgrade = ref<PermanentUpgrade | null>(null)
     const tooltipStyle = ref<Record<string, string>>({})
 
@@ -319,7 +238,7 @@ export default defineComponent({
       hoveredUpgrade.value = upgrade
       const target = event.currentTarget as HTMLElement
       const rect = target.getBoundingClientRect()
-      const tooltipWidth = 224 // w-56 = 14rem = 224px
+      const tooltipWidth = 220
 
       let left = rect.left + rect.width / 2 - tooltipWidth / 2
       if (left < 8) left = 8
@@ -354,3 +273,441 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+/* ═══════════════════════════════════════════
+   SHOP FRAME – Holz-Rahmen wie im Screenshot
+   ═══════════════════════════════════════════ */
+.shop-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #111008;
+  border: 4px solid #7a4e20;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 4px 20px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   KAUFMENGEN-SELECTOR
+   ═══════════════════════════════════════════ */
+.selector-bar {
+  display: flex;
+  gap: 3px;
+  padding: 6px 10px;
+  background: #1e1006;
+  border-bottom: 2px solid #5c3310;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.selector-btn {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #888;
+  background: #1a1008;
+  border: 1px solid #444;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.1s;
+}
+
+.selector-btn:hover {
+  color: #eee;
+  background: #2a1a0a;
+  border-color: #666;
+}
+
+.selector-btn--active {
+  background: linear-gradient(to bottom, #4a8a28, #2d6018);
+  border-color: #6ec040;
+  color: #fff;
+  box-shadow: 0 0 6px rgba(100, 200, 50, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   SHOP BODY LAYOUT
+   ═══════════════════════════════════════════ */
+.shop-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════
+   UPGRADE LIST
+   ═══════════════════════════════════════════ */
+.upgrade-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+.upgrade-list::-webkit-scrollbar {
+  width: 6px;
+}
+.upgrade-list::-webkit-scrollbar-track {
+  background: #111;
+}
+.upgrade-list::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 3px;
+}
+
+/* ── Einzelne Zeile ── */
+.upgrade-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #2a2a2a;
+  cursor: pointer;
+  min-height: 76px;
+  transition: background 0.1s;
+}
+
+.upgrade-row:hover.upgrade-row--affordable {
+  background: #252520;
+}
+
+.upgrade-row--affordable {
+  background: #1c1c18;
+}
+
+.upgrade-row--locked {
+  background: #141410;
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+}
+
+/* ── Icon-Box ── */
+.upgrade-icon-box {
+  width: 68px;
+  min-width: 68px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141410;
+  border-right: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.upgrade-icon-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+}
+
+.upgrade-icon-emoji {
+  font-size: 34px;
+}
+
+/* ── Text-Info ── */
+.upgrade-info {
+  flex: 1;
+  padding: 8px 10px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.upgrade-level-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.upgrade-level {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffffff;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.upgrade-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #b0b0a0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upgrade-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #e8c040;
+  text-shadow: 0 0 6px rgba(230, 180, 40, 0.4);
+}
+
+.upgrade-stat--cpc {
+  color: #e09030;
+}
+
+.stat-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Kauf-Button ── */
+.upgrade-buy-btn {
+  flex-shrink: 0;
+  width: 108px;
+  min-height: 58px;
+  margin: 8px 8px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: all 0.1s;
+}
+
+.upgrade-buy-btn--green {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #70d040;
+  color: #fff;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-buy-btn--green:hover {
+  background: linear-gradient(to bottom, #60d038, #388e22);
+  box-shadow:
+    0 0 10px rgba(80, 200, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-buy-btn--green:active {
+  transform: scale(0.96);
+  background: linear-gradient(to bottom, #2e7a1a, #1a4e0a);
+}
+
+.upgrade-buy-btn--disabled {
+  background: #2a2a26;
+  border: 1px solid #444;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.buy-label {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+}
+
+.buy-cost {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+}
+
+.coin-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* ═══════════════════════════════════════════
+   PERMANENTE UPGRADES PANEL
+   ═══════════════════════════════════════════ */
+.perm-panel {
+  width: 118px;
+  flex-shrink: 0;
+  border-left: 2px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  background: #141410;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+.buy-all-btn {
+  width: 100%;
+  padding: 7px 4px;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+
+.buy-all-btn--active {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #70d040;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.buy-all-btn--active:hover {
+  background: linear-gradient(to bottom, #60d038, #388e22);
+}
+
+.buy-all-btn--disabled {
+  background: #2a2a26;
+  border: 1px solid #444;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.perm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.perm-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 3px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #1c1c18;
+  gap: 3px;
+  transition: all 0.15s;
+}
+
+.perm-btn--affordable {
+  border: 1px solid #52b830;
+  background: #182414;
+  box-shadow:
+    0 0 8px rgba(80, 180, 40, 0.3),
+    inset 0 0 4px rgba(80, 180, 40, 0.1);
+  animation: perm-pulse 2s ease-in-out infinite;
+}
+
+@keyframes perm-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px rgba(80, 180, 40, 0.25),
+      inset 0 0 4px rgba(80, 180, 40, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(80, 180, 40, 0.55),
+      inset 0 0 6px rgba(80, 180, 40, 0.18);
+  }
+}
+
+.perm-btn--locked {
+  border: 1px solid #333;
+  opacity: 0.45;
+  filter: grayscale(50%);
+  cursor: not-allowed;
+}
+
+.perm-btn--affordable:hover {
+  transform: scale(1.06);
+}
+
+.perm-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.perm-cost {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #999;
+}
+
+.coin-icon-sm {
+  width: 9px;
+  height: 9px;
+}
+
+/* ═══════════════════════════════════════════
+   TOOLTIP
+   ═══════════════════════════════════════════ */
+.upgrade-tooltip {
+  position: fixed;
+  z-index: 9999;
+  width: 220px;
+  padding: 10px 12px;
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 5px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 1px #2a1a08;
+  pointer-events: none;
+}
+
+.tooltip-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: #e8c040;
+  margin: 0 0 5px 0;
+  text-shadow: 0 0 6px rgba(230, 190, 40, 0.4);
+}
+
+.tooltip-desc {
+  font-size: 11px;
+  color: #999;
+  margin: 0 0 6px 0;
+  line-height: 1.45;
+}
+
+.tooltip-cost {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.text-green {
+  color: #52b830;
+}
+.text-red {
+  color: #e04040;
+}
+
+.tooltip-req {
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: bold;
+  background: rgba(200, 130, 0, 0.12);
+  border: 1px solid rgba(200, 130, 0, 0.3);
+  color: #c89040;
+  border-radius: 3px;
+}
+</style>

@@ -51,7 +51,7 @@ watch(
 
       <!-- Hauptzahl -->
       <span
-        class="text-4xl font-['MedievalSharp'] font-bold tabular-nums transition-colors duration-300 leading-none"
+        class="text-4xl font-bold tabular-nums transition-colors duration-300 leading-none"
         :class="isIncreasing ? 'text-orange-300' : 'text-orange-100'"
         :style="
           isIncreasing

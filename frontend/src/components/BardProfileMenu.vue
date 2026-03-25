@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// ── Script identisch, keine Änderungen ──
 import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { usePersistence } from '../composables/usePersistence'
@@ -23,7 +24,6 @@ const handleReset = () => {
 }
 
 type ModalId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin'
-
 const activeModal = ref<ModalId | null>(null)
 
 const menuItems: {
@@ -31,49 +31,12 @@ const menuItems: {
   label: string
   icon: string
   src: string
-  color: string
-  gradient: string
 }[] = [
-  {
-    id: 'shop',
-    label: '',
-    icon: '',
-    src: '/img/menu/SHOP.png',
-    color: 'emerald',
-    gradient: 'bg-gradient-to-r from-emerald-500 to-teal-600',
-  },
-  {
-    id: 'tree',
-    label: '',
-    icon: '',
-    src: '/img/menu/TREE.png',
-    color: 'violet',
-    gradient: 'bg-gradient-to-r from-violet-500 to-purple-600',
-  },
-  {
-    id: 'team',
-    label: '',
-    icon: '',
-    src: '/img/menu/TEAM.png',
-    color: 'amber',
-    gradient: 'bg-gradient-to-r from-amber-500 to-orange-600',
-  },
-  {
-    id: 'kampf',
-    label: '',
-    icon: '',
-    src: '/img/menu/BATTLE.png',
-    color: 'rose',
-    gradient: 'bg-gradient-to-r from-rose-500 to-red-600',
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    icon: '⚙️',
-    src: '',
-    color: 'cyan',
-    gradient: 'bg-gradient-to-r from-cyan-500 to-indigo-600',
-  },
+  { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP.png' },
+  { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
+  { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
+  { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
+  { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
 const openBardModal = () => {
@@ -93,211 +56,125 @@ const chimesForLevel = computed(() => {
   const current = total - gameStore.chimesToNextLevel
   return { current, total }
 })
-
-const modalTheme = computed(() => {
-  const themes: Record<
-    ModalId,
-    {
-      accentBar: string
-      tabActive: string
-      tabIndicator: string
-      iconGlow: string
-      closeHover: string
-    }
-  > = {
-    shop: {
-      accentBar: 'from-emerald-400 via-amber-400 to-emerald-400',
-      tabActive: 'bg-emerald-500/15 border-emerald-500/25',
-      tabIndicator: 'bg-emerald-400',
-      iconGlow: 'shadow-[0_0_12px_rgba(16,185,129,0.4)] ring-1 ring-emerald-400/40',
-      closeHover: 'hover:bg-white/[0.08]',
-    },
-    tree: {
-      accentBar: 'from-violet-500 via-purple-400 to-violet-500',
-      tabActive: 'bg-violet-500/15 border-violet-500/25',
-      tabIndicator: 'bg-violet-400',
-      iconGlow: 'shadow-[0_0_12px_rgba(124,58,237,0.4)] ring-1 ring-violet-400/40',
-      closeHover: 'hover:bg-white/[0.08]',
-    },
-    team: {
-      accentBar: 'from-amber-500 via-orange-400 to-amber-500',
-      tabActive: 'bg-amber-500/15 border-amber-500/25',
-      tabIndicator: 'bg-amber-400',
-      iconGlow: 'shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400/40',
-      closeHover: 'hover:bg-white/[0.08]',
-    },
-    kampf: {
-      accentBar: 'from-rose-500 via-red-400 to-rose-500',
-      tabActive: 'bg-rose-500/15 border-rose-500/25',
-      tabIndicator: 'bg-rose-400',
-      iconGlow: 'shadow-[0_0_12px_rgba(225,29,72,0.4)] ring-1 ring-rose-400/40',
-      closeHover: 'hover:bg-white/[0.08]',
-    },
-    admin: {
-      accentBar: 'from-cyan-400 via-indigo-400 to-cyan-400',
-      tabActive: 'bg-cyan-500/15 border-cyan-500/25',
-      tabIndicator: 'bg-cyan-400',
-      iconGlow: 'shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/40',
-      closeHover: 'hover:bg-white/[0.08]',
-    },
-  }
-  return activeModal.value ? themes[activeModal.value] : themes.shop
-})
 </script>
 
 <template>
   <div class="relative flex items-start gap-2">
-    <!-- Bard Portrait -->
-    <div class="cursor-pointer group" @click="openBardModal">
+    <!-- ══ Bard Portrait ══ -->
+    <div class="bard-portrait-wrapper group" @click="openBardModal">
       <div class="relative w-36 h-36">
-        <div
-          class="absolute rounded-full opacity-25 -inset-1 bg-gradient-to-r from-blue-400 via-violet-400 to-blue-500 animate-pulse"
-        />
-        <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <!-- XP-Ring (Gold statt Blau) -->
+        <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
             r="45"
             fill="none"
-            stroke="rgb(59 130 246 / 0.3)"
-            stroke-width="8"
+            stroke="rgba(160,110,15,0.25)"
+            stroke-width="7"
           />
           <circle
             cx="50"
             cy="50"
             r="45"
             fill="none"
-            stroke="rgb(59 130 246)"
-            stroke-width="8"
-            stroke-linecap="round"
+            stroke="#d4a020"
+            stroke-width="7"
+            stroke-linecap="butt"
             :stroke-dasharray="`${xpProgress * 283} 283`"
             class="transition-all duration-1000 ease-out"
-            style="filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))"
+            style="filter: drop-shadow(0 0 6px rgba(210, 160, 20, 0.8))"
           />
         </svg>
-        <div
-          class="absolute overflow-hidden border-2 rounded-full shadow-2xl inset-2 border-blue-400/50 bg-gradient-to-br from-white/20 to-white/5"
-        >
+
+        <!-- Portrait -->
+        <div class="absolute overflow-hidden inset-2 bard-portrait-inner">
           <img
             src="/img/BardAbilities/Bard.png"
             class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
           />
         </div>
 
-        <!-- Level Badge + Hover Tooltip -->
+        <!-- Level Badge + Hover XP Tooltip -->
         <div class="absolute flex items-center -bottom-1 -right-1">
-          <div
-            class="z-10 flex items-center justify-center border-2 rounded-full shadow-lg h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600 border-blue-300/50"
-          >
-            <span class="text-xl font-black text-white">{{ gameStore.level }}</span>
+          <div class="z-10 flex items-center justify-center bard-level-badge h-9 w-9">
+            <span class="bard-level-text">{{ gameStore.level }}</span>
           </div>
 
           <div
-            class="absolute left-full ml-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-blue-500/25 bg-gradient-to-r from-[#0a0820]/90 to-[#0d0a2a]/90 backdrop-blur-md shadow-[0_0_16px_rgba(59,130,246,0.15)] opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 ease-out whitespace-nowrap"
+            class="absolute ml-2 transition-all duration-200 scale-95 opacity-0 pointer-events-none bard-xp-tooltip left-full group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap"
           >
-            <span class="text-sm font-bold text-amber-300">
-              {{ chimesForLevel.current.toLocaleString() }}
-            </span>
-            <span class="text-sm text-white/30">/</span>
-            <span class="text-sm font-semibold text-white/60">
-              {{ chimesForLevel.total.toLocaleString() }}
-            </span>
-            <span class="text-sm text-white/30 ml-0.5">Chimes</span>
+            <span class="xp-current">{{ chimesForLevel.current.toLocaleString() }}</span>
+            <span class="xp-sep">/</span>
+            <span class="xp-total">{{ chimesForLevel.total.toLocaleString() }}</span>
+            <span class="xp-label">Chimes</span>
           </div>
         </div>
       </div>
     </div>
+
     <!-- Reset Button -->
-    <button
-      class="mt-1 px-3 py-1.5 text-xs rounded-lg border border-red-500/40 bg-gradient-to-b from-red-900/60 to-red-950/80 backdrop-blur-sm text-red-300 hover:text-red-200 hover:border-red-400/60 hover:from-red-800/70 transition-all duration-200"
-      title="Spielstand löschen (Entwickler-Reset)"
-      @click="handleReset"
-    >
-      Reset
-    </button>
+    <button class="mt-1 rp-reset-btn" title="Spielstand löschen" @click="handleReset">Reset</button>
   </div>
 
-  <!-- Backdrop -->
+  <!-- ══ Backdrop ══ -->
   <Transition name="backdrop">
-    <div
-      v-if="activeModal !== null"
-      class="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md"
-      @click="closeModal"
-    />
+    <div v-if="activeModal !== null" class="fixed inset-0 z-[60] bg-black/80" @click="closeModal" />
   </Transition>
 
-  <!-- Modal -->
+  <!-- ══ Modal ══ -->
   <Transition name="modal-pop">
     <div
       v-if="activeModal !== null"
       class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
     >
-      <div
-        class="relative overflow-hidden rounded-3xl border border-white/[0.08] backdrop-blur-xl bg-gradient-to-b from-[#080520] via-[#0a0730] to-[#060418] shadow-[0_25px_60px_rgba(0,0,0,0.7)] flex flex-col h-[960px] max-h-[90vh]"
-      >
-        <!-- Top Accent Bar -->
-        <Transition name="accent-bar">
-          <div
-            :key="activeModal"
-            class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r rounded-t-3xl pointer-events-none z-10"
-            :class="modalTheme.accentBar"
-          />
-        </Transition>
+      <div class="rp-modal flex flex-col h-[960px] max-h-[90vh]">
+        <!-- Goldene Akzentlinie oben -->
+        <div class="rp-accent-bar" />
 
-        <!-- Modal Header -->
-        <div
-          class="relative flex items-center flex-shrink-0 overflow-hidden bg-white/[0.03] border-b border-white/[0.06]"
-        >
-          <!-- Portal Left -->
+        <!-- ── Header ── -->
+        <div class="flex items-center flex-shrink-0 rp-modal-header">
+          <!-- Portal Links -->
           <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/BardPortalRichtig.png"
-              alt="Portal Start"
+              alt="Portal"
               class="relative z-10 object-contain w-[72px] h-[72px]"
             />
             <div class="absolute inset-0 portal-effect">
-              <div class="portal-glow"></div>
-              <div class="portal-vortex"></div>
-              <div class="portal-ring"></div>
+              <div class="portal-glow" />
+              <div class="portal-vortex" />
+              <div class="portal-ring" />
             </div>
           </div>
 
           <!-- Tabs -->
-          <div class="relative flex items-center justify-center flex-1 gap-2 px-2 py-2">
+          <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
             <button
               v-for="item in menuItems"
               :key="item.id"
               @click="setTab(item.id)"
-              class="relative flex items-center justify-center gap-1.5 overflow-hidden text-base font-bold tracking-wide transition-all duration-200 rounded-lg"
-              :class="[
-                activeModal === item.id
-                  ? 'text-white bg-white/[0.06]'
-                  : 'text-white/40 hover:text-white/60 hover:bg-white/[0.04]',
-                item.src ? 'px-4 py-[18px]' : 'px-4 py-3',
-              ]"
+              class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
+              :class="activeModal === item.id ? 'rp-tab--active' : ''"
             >
               <img
                 v-if="item.src"
                 :src="item.src"
                 :alt="item.label"
-                class="relative z-10 object-contain"
-                :class="[
-                  item.src ? 'w-16 h-16' : 'w-16 h-16',
-                  activeModal === item.id ? modalTheme.iconGlow + ' rounded-md' : '',
-                ]"
+                class="relative z-10 object-contain w-14 h-14"
+                :class="activeModal === item.id ? 'rp-tab-img-glow' : ''"
               />
-              <span v-else class="relative z-10 text-sm leading-none">{{ item.icon }}</span>
-              <span v-if="item.label" class="relative z-10">{{ item.label }}</span>
-              <!-- Bottom indicator -->
+              <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
+              <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
+              <!-- Aktiv-Indikator -->
               <span
                 v-if="activeModal === item.id"
-                class="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                :class="modalTheme.tabIndicator"
+                class="absolute bottom-0 rp-tab-indicator left-2 right-2"
               />
             </button>
           </div>
 
-          <!-- Portal Right -->
+          <!-- Portal Rechts -->
           <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
             <img
               src="/img/PortalEndeRichtig.png"
@@ -305,49 +182,40 @@ const modalTheme = computed(() => {
               class="relative z-10 object-contain w-[72px] h-[72px]"
             />
             <div class="absolute inset-0 portal-effect">
-              <div class="portal-glow"></div>
-              <div class="portal-vortex"></div>
-              <div class="portal-ring"></div>
+              <div class="portal-glow" />
+              <div class="portal-vortex" />
+              <div class="portal-ring" />
             </div>
           </div>
         </div>
 
-        <!-- Modal Content -->
-        <div class="relative flex-1 min-h-0 overflow-hidden">
+        <!-- ── Content ── -->
+        <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
           <Transition name="tab-fade" mode="out-in">
-            <!-- Shop: eigener Scroll -->
             <div
               v-if="activeModal === 'shop'"
               key="shop"
-              class="h-full overflow-y-auto custom-scrollbar"
+              class="h-full overflow-y-auto rp-scrollbar"
             >
               <ShopComponent />
             </div>
-
-            <!-- Tree: unverändert -->
             <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
               <SkillTreeComponent />
             </div>
-
-            <!-- Team: h-full, kein Scroll – TeamTabComponent verwaltet alles intern -->
             <div v-else-if="activeModal === 'team'" key="team" class="h-full">
               <TeamTabComponent />
             </div>
-
-            <!-- Kampf: eigener Scroll -->
             <div
               v-else-if="activeModal === 'kampf'"
               key="kampf"
-              class="h-full overflow-y-auto custom-scrollbar"
+              class="h-full overflow-y-auto rp-scrollbar"
             >
               <BattleResultComponent />
             </div>
-
-            <!-- Admin: eigener Scroll -->
             <div
               v-else-if="activeModal === 'admin'"
               key="admin"
-              class="h-full overflow-y-auto custom-scrollbar"
+              class="h-full overflow-y-auto rp-scrollbar"
             >
               <AdminDashboard :inline="true" />
             </div>
@@ -359,7 +227,197 @@ const modalTheme = computed(() => {
 </template>
 
 <style scoped>
-/* Portal Effect */
+/* ═══════════════════════════════════════════
+   BARD PORTRAIT
+   ═══════════════════════════════════════════ */
+.bard-portrait-wrapper {
+  cursor: pointer;
+}
+
+.bard-portrait-inner {
+  border-radius: 50%;
+}
+
+.bard-level-badge {
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #4a8a28, #2e6018);
+  border: 2px solid #6ec040;
+  box-shadow:
+    0 0 8px rgba(80, 180, 40, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.bard-level-text {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* XP Tooltip */
+.bard-xp-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #16140e;
+  border: 2px solid #7a4e20;
+  border-radius: 3px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px #2a1a08;
+}
+.xp-current {
+  font-size: 13px;
+  font-weight: 900;
+  color: #e8c040;
+}
+.xp-sep {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.25);
+}
+.xp-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+}
+.xp-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.25);
+  margin-left: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   RESET BUTTON
+   ═══════════════════════════════════════════ */
+.rp-reset-btn {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  background: linear-gradient(to bottom, #4a1010, #2e0808);
+  border: 2px solid #8a3020;
+  border-radius: 3px;
+  color: #cc6050;
+  cursor: pointer;
+  transition: all 0.1s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+.rp-reset-btn:hover {
+  background: linear-gradient(to bottom, #5a1515, #3e0c0c);
+  color: #e08070;
+  border-color: #aa4030;
+}
+
+/* ═══════════════════════════════════════════
+   MODAL RAHMEN (gleicher Holz-Stil wie Shop)
+   ═══════════════════════════════════════════ */
+.rp-modal {
+  position: relative;
+  overflow: hidden;
+  background: #111008;
+  border: 4px solid #7a4e20;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 0 1px #2a1608;
+}
+
+/* Gold-Shimmer oben */
+.rp-accent-bar {
+  height: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  box-shadow: 0 0 8px rgba(200, 150, 30, 0.5);
+}
+
+/* ═══════════════════════════════════════════
+   MODAL HEADER
+   ═══════════════════════════════════════════ */
+.rp-modal-header {
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════ */
+.rp-tab {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #555;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.rp-tab:hover:not(.rp-tab--active) {
+  color: #999;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #333;
+}
+
+.rp-tab--active {
+  background: linear-gradient(to bottom, #1e2e12, #131e0c);
+  border-color: #4a8a28;
+  color: #fff;
+  box-shadow:
+    0 0 10px rgba(74, 138, 40, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rp-tab-img-glow {
+  filter: drop-shadow(0 0 6px rgba(100, 210, 50, 0.55));
+}
+
+.rp-tab-label {
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rp-tab-indicator {
+  height: 2px;
+  background: #52b830;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(82, 184, 48, 0.7);
+}
+
+/* ═══════════════════════════════════════════
+   MODAL CONTENT
+   ═══════════════════════════════════════════ */
+.rp-modal-content {
+  background: #1a1008;
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════ */
+.rp-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.rp-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.rp-scrollbar::-webkit-scrollbar-track {
+  background: #111;
+}
+.rp-scrollbar::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════
+   PORTAL EFFECTS (unverändert)
+   ═══════════════════════════════════════════ */
 .portal-effect {
   border-radius: 50%;
   position: absolute;
@@ -408,7 +466,6 @@ const modalTheme = computed(() => {
     transparent 90%
   );
 }
-
 .portal-vortex::after {
   content: '';
   position: absolute;
@@ -449,16 +506,9 @@ const modalTheme = computed(() => {
   }
 }
 
-/* Transitions */
-.accent-bar-enter-active,
-.accent-bar-leave-active {
-  transition: opacity 0.2s ease;
-}
-.accent-bar-enter-from,
-.accent-bar-leave-to {
-  opacity: 0;
-}
-
+/* ═══════════════════════════════════════════
+   TRANSITIONS
+   ═══════════════════════════════════════════ */
 .modal-pop-enter-active,
 .modal-pop-leave-active {
   transition:

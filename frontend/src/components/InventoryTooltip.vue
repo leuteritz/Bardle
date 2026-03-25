@@ -73,7 +73,6 @@ const tooltipMaterials = computed(() =>
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
   margin-bottom: 0.5rem;
-  font-family: 'MedievalSharp', serif;
 }
 
 .inventory-tooltip__grid {
@@ -107,7 +106,6 @@ const tooltipMaterials = computed(() =>
 
 .inventory-tooltip__name {
   font-size: 0.9rem;
-  font-family: 'MedievalSharp', serif;
   text-align: center;
   line-height: 1.1;
 }
@@ -115,7 +113,6 @@ const tooltipMaterials = computed(() =>
 .inventory-tooltip__count {
   font-size: 0.85rem;
   font-weight: bold;
-  font-family: 'MedievalSharp', serif;
   line-height: 1;
 }
 

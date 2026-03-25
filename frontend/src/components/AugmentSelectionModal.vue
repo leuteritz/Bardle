@@ -57,7 +57,6 @@ const rarityLabel: Record<string, string> = {
           <div class="text-center">
             <h2
               class="text-2xl font-bold text-transparent bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text"
-              style="font-family: 'MedievalSharp', cursive"
             >
               Level {{ gameStore.level }}
             </h2>
@@ -90,7 +89,6 @@ const rarityLabel: Record<string, string> = {
             <!-- Name -->
             <h3
               class="text-base font-bold text-white mb-1 text-center leading-tight"
-              style="font-family: 'MedievalSharp', cursive"
             >
               {{ aug.name }}
             </h3>

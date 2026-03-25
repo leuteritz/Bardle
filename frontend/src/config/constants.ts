@@ -12,8 +12,8 @@ export const MEEP_BASE_COST = 20
 export const MEEP_COST_EXPONENT = 1.2
 
 // Auto-battle
-export const AUTO_BATTLE_INTERVAL_MS = 30000
-export const BATTLE_REAL_DURATION_SECONDS = 30
+export const AUTO_BATTLE_INTERVAL_MS = 45000
+export const BATTLE_REAL_DURATION_SECONDS = 45
 export const KILL_EVENTS_PER_TEAM_MIN = 20
 export const KILL_EVENTS_PER_TEAM_MAX = 40
 export const MMR_TO_POWER_MULTIPLIER = 1.5
@@ -86,15 +86,21 @@ export const LP_GRANDMASTER_DEMOTION_VALUE = 900
 export const LP_BASE_CHANGE = 20
 
 // Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 1800)
-export const MINIMAP_PHASE_LANING_END = 720
-export const MINIMAP_PHASE_HOLD_END = 1080
-export const MINIMAP_PHASE_TEAMFIGHT_END = 1440
-export const MINIMAP_PHASE_PUSH_END = 1680
+export const MINIMAP_PHASE_LANING_END = 700
+export const MINIMAP_PHASE_DRAKE_END = 1200
+export const MINIMAP_PHASE_MIDFIGHT_END = 1500
+export const MINIMAP_PHASE_BARON_END = 2200
+export const MINIMAP_PHASE_PUSH_END = 2700
 
 export const BLUE_NEXUS = { x: 12, y: 88 }
 export const RED_NEXUS = { x: 88, y: 12 }
 export const BLUE_FOUNTAIN = { x: 8, y: 92 }
 export const RED_FOUNTAIN = { x: 92, y: 8 }
+
+// Objective positions
+export const DRAKE_POS = { x: 72, y: 72 }
+export const BARON_POS = { x: 28, y: 28 }
+export const MID_CENTER = { x: 50, y: 50 }
 
 // Battle constants
 export const OPPONENT_MMR_VARIANCE = 200

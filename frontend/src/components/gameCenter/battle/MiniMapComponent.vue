@@ -2,8 +2,6 @@
   <div
     class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 flex flex-col"
   >
-    <!--  ↑ h-full entfernt – flex-1 vom Elternteil übernimmt die Höhe -->
-
     <div
       class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
@@ -14,8 +12,6 @@
         <div
           class="relative h-full max-w-full overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
         >
-          <!--  ↑ h-full max-w-full: Höhe = verfügbarer Platz, Breite = Höhe (Quadrat), nie breiter als Container -->
-
           <!-- Time -->
           <div
             class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
@@ -48,7 +44,7 @@
               v-if="battleStore.team1[i]"
               :src="battleStore.getChampionImage(battleStore.team1[i].name)"
               :alt="battleStore.team1[i].name"
-              class="w-[22px] h-[22px] rounded-full object-cover border-2 border-blue-400"
+              class="w-[26px] h-[26px] rounded-full object-cover border-2 border-blue-400"
               :class="{ 'opacity-30 grayscale': champ.dead }"
               :style="{ boxShadow: '0 0 6px rgba(59,130,246,0.8)' }"
             />
@@ -65,7 +61,7 @@
               v-if="battleStore.team2[i]"
               :src="battleStore.getChampionImage(battleStore.team2[i].name)"
               :alt="battleStore.team2[i].name"
-              class="w-[22px] h-[22px] rounded-full object-cover border-2 border-red-400"
+              class="w-[26px] h-[26px] rounded-full object-cover border-2 border-red-400"
               :class="{ 'opacity-30 grayscale': champ.dead }"
               :style="{ boxShadow: '0 0 6px rgba(239,68,68,0.6)' }"
             />
@@ -83,13 +79,16 @@ import { defineComponent, ref, onMounted, onUnmounted, watch, computed } from 'v
 import { useBattleStore } from '../../../stores/battleStore'
 import {
   MINIMAP_PHASE_LANING_END,
-  MINIMAP_PHASE_HOLD_END,
-  MINIMAP_PHASE_TEAMFIGHT_END,
-  MINIMAP_PHASE_PUSH_END,
+  MINIMAP_PHASE_DRAKE_END,
+  MINIMAP_PHASE_MIDFIGHT_END,
+  MINIMAP_PHASE_BARON_END,
   BLUE_FOUNTAIN,
   RED_FOUNTAIN,
   BLUE_NEXUS,
   RED_NEXUS,
+  DRAKE_POS,
+  BARON_POS,
+  MID_CENTER,
 } from '../../../config/constants'
 
 interface ChampPos {
@@ -98,37 +97,22 @@ interface ChampPos {
   dead: boolean
 }
 
-type MapPhase = 'laning' | 'hold' | 'teamfight' | 'push' | 'nexusFall'
+type MapPhase = 'laning' | 'drake' | 'midFight' | 'baron' | 'nexusPush'
 
-// Lane targets per role (index 0=Top, 1=Jungle, 2=Mid, 3=ADC, 4=Support)
+// Lane targets per role (index 0=Top, 1=Jungle, 2=Mid, 3=Bot ADC, 4=Bot Support)
 const BLUE_LANE_TARGETS = [
-  { cx: 12, cy: 22 }, // Top
-  { cx: 25, cy: 48 }, // Jungle
-  { cx: 30, cy: 62 }, // Mid
-  { cx: 68, cy: 80 }, // ADC
-  { cx: 60, cy: 84 }, // Support
+  { cx: 16, cy: 28 }, // Top — Mitte Top-Lane
+  { cx: 24, cy: 70 }, // Jungle — Blue Buff Position
+  { cx: 44, cy: 56 }, // Mid — Mitte Mid-Lane, leicht blue-side
+  { cx: 85, cy: 84 }, // Bot ADC — Mitte Bot-Lane
+  { cx: 85, cy: 88 }, // Bot Support — knapp hinter ADC
 ]
 const RED_LANE_TARGETS = [
-  { cx: 88, cy: 78 }, // Top
-  { cx: 72, cy: 52 }, // Jungle
-  { cx: 68, cy: 36 }, // Mid
-  { cx: 32, cy: 18 }, // ADC
-  { cx: 40, cy: 14 }, // Support
-]
-
-const TEAMFIGHT_TARGETS_BLUE = [
-  { cx: 46, cy: 46 },
-  { cx: 48, cy: 52 },
-  { cx: 50, cy: 50 },
-  { cx: 44, cy: 54 },
-  { cx: 42, cy: 56 },
-]
-const TEAMFIGHT_TARGETS_RED = [
-  { cx: 54, cy: 54 },
-  { cx: 52, cy: 48 },
-  { cx: 50, cy: 50 },
-  { cx: 56, cy: 46 },
-  { cx: 58, cy: 44 },
+  { cx: 20, cy: 24 }, // Top — Mitte Top-Lane
+  { cx: 76, cy: 30 }, // Jungle — Red Blue Buff Position
+  { cx: 56, cy: 44 }, // Mid — Mitte Mid-Lane, leicht red-side
+  { cx: 85, cy: 78 }, // Bot ADC — Mitte Bot-Lane
+  { cx: 85, cy: 74 }, // Bot Support — knapp hinter ADC
 ]
 
 function getPhaseTarget(
@@ -142,38 +126,39 @@ function getPhaseTarget(
   switch (phase) {
     case 'laning': {
       const t = isBlue ? BLUE_LANE_TARGETS[idx] : RED_LANE_TARGETS[idx]
-      return { ...t, spread: 4, lerpFactor: 0.15 }
+      return { ...t, spread: 4, lerpFactor: 0.35 }
     }
-    case 'hold': {
-      const t = isBlue ? BLUE_LANE_TARGETS[idx] : RED_LANE_TARGETS[idx]
-      // Jungle roams more
-      const spread = idx === 1 ? 10 : 3
-      return { ...t, spread, lerpFactor: 0.05 }
+    case 'drake': {
+      // Both teams converge on drake — blue slightly south-west, red slightly north-east
+      const offset = isBlue ? -3 : 3
+      return { cx: DRAKE_POS.x + offset, cy: DRAKE_POS.y + offset, spread: 6, lerpFactor: 0.12 }
     }
-    case 'teamfight': {
-      const t = isBlue ? TEAMFIGHT_TARGETS_BLUE[idx] : TEAMFIGHT_TARGETS_RED[idx]
-      return { ...t, spread: 8, lerpFactor: 0.15 }
-    }
-    case 'push': {
-      const isWinning = isBlue === isBlueWinning
-      if (isWinning) {
-        // Push toward enemy nexus
-        const nexus = isBlue ? RED_NEXUS : BLUE_NEXUS
-        return { cx: nexus.x, cy: nexus.y, spread: 10, lerpFactor: 0.12 }
-      } else {
-        // Retreat toward own base
-        const base = isBlue ? BLUE_FOUNTAIN : RED_FOUNTAIN
-        return { cx: base.x, cy: base.y, spread: 8, lerpFactor: 0.08 }
+    case 'midFight': {
+      const offset = isBlue ? -3 : 3
+      return {
+        cx: MID_CENTER.x + offset,
+        cy: MID_CENTER.y + offset,
+        spread: 6,
+        lerpFactor: 0.12,
       }
     }
-    case 'nexusFall': {
+    case 'baron': {
+      const offset = isBlue ? -3 : 3
+      return {
+        cx: BARON_POS.x + offset,
+        cy: BARON_POS.y + offset,
+        spread: 6,
+        lerpFactor: 0.12,
+      }
+    }
+    case 'nexusPush': {
       const isWinning = isBlue === isBlueWinning
       if (isWinning) {
         const nexus = isBlue ? RED_NEXUS : BLUE_NEXUS
-        return { cx: nexus.x, cy: nexus.y, spread: 5, lerpFactor: 0.2 }
+        return { cx: nexus.x, cy: nexus.y, spread: 5, lerpFactor: 0.15 }
       } else {
-        const base = isBlue ? BLUE_FOUNTAIN : RED_FOUNTAIN
-        return { cx: base.x, cy: base.y, spread: 3, lerpFactor: 0.05 }
+        const nexus = isBlue ? BLUE_NEXUS : RED_NEXUS
+        return { cx: nexus.x, cy: nexus.y, spread: 3, lerpFactor: 0.08 }
       }
     }
   }
@@ -195,10 +180,10 @@ export default defineComponent({
     const phase = computed((): MapPhase => {
       const t = battleStore.battleTime
       if (t < MINIMAP_PHASE_LANING_END) return 'laning'
-      if (t < MINIMAP_PHASE_HOLD_END) return 'hold'
-      if (t < MINIMAP_PHASE_TEAMFIGHT_END) return 'teamfight'
-      if (t < MINIMAP_PHASE_PUSH_END) return 'push'
-      return 'nexusFall'
+      if (t < MINIMAP_PHASE_DRAKE_END) return 'drake'
+      if (t < MINIMAP_PHASE_MIDFIGHT_END) return 'midFight'
+      if (t < MINIMAP_PHASE_BARON_END) return 'baron'
+      return 'nexusPush'
     })
 
     function formatTime(seconds: number) {
@@ -252,8 +237,8 @@ export default defineComponent({
         champ.y = clamp(lerp(champ.y, ty, target.lerpFactor), 2, 98)
       })
 
-      // During nexus fall, progressively mark losing team as dead
-      if (currentPhase === 'nexusFall') {
+      // During nexus push, progressively mark losing team as dead in last stretch
+      if (currentPhase === 'nexusPush' && battleStore.battleTime >= 2520) {
         const losingTeam = isBlueWinning ? redChampions : blueChampions
         const alive = losingTeam.value.filter((c) => !c.dead)
         if (alive.length > 0 && Math.random() < 0.4) {

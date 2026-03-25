@@ -96,7 +96,6 @@ const edges = computed(() =>
         fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#ddd6fe' : 'rgba(255,255,255,0.18)',
         fontWeight: '600',
         fontSize: '18px',
-        fontFamily: 'inherit',
       },
       labelBgStyle: { fill: 'rgba(8,4,26,0.88)', rx: 6, ry: 6 },
       labelBgPadding: [6, 4] as [number, number],

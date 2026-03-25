@@ -52,7 +52,7 @@ const filteredData = computed(() => {
     <Transition name="slide">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-blue-400/30 bg-gradient-to-bl from-slate-950 via-blue-950 to-slate-950 font-['MedievalSharp']"
+        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-blue-400/30 bg-gradient-to-bl from-slate-950 via-blue-950 to-slate-950"
       >
         <!-- Animated background particles -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
