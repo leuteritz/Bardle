@@ -45,10 +45,10 @@
 
     <!-- Main Content: Minimap + Chat | Scoreboard -->
     <div class="flex-1 grid grid-cols-[1fr_14rem] grid-rows-1 gap-3 min-h-0">
+      <MiniMapComponent class="flex-1 min-h-0" :battle-id="currentBattleId" :score="score" />
       <!-- Left: Minimap + Chat stacked -->
-      <div class="flex flex-col gap-3 min-h-0">
-        <MiniMapComponent class="flex-1 min-h-0" :battle-id="currentBattleId" :score="score" />
-        <ChatPanelComponent class="h-28 flex-shrink-0" />
+      <div class="flex flex-col min-h-0 gap-3">
+        <ChatPanelComponent class="flex-shrink-0 h-28" />
       </div>
 
       <!-- Right: Scoreboard -->
@@ -64,16 +64,16 @@
       style="background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px)"
     >
       <div
-        class="relative max-w-sm w-full mx-4 rounded-3xl border p-6 text-center shadow-2xl"
+        class="relative w-full max-w-sm p-6 mx-4 text-center border shadow-2xl rounded-3xl"
         :class="
           lastResult.won
             ? 'bg-gradient-to-br from-emerald-900/80 to-black/90 border-emerald-400/40'
             : 'bg-gradient-to-br from-red-900/80 to-black/90 border-red-400/40'
         "
       >
-        <div class="text-5xl mb-2">{{ lastResult.won ? '🏆' : '💀' }}</div>
+        <div class="mb-2 text-5xl">{{ lastResult.won ? '🏆' : '💀' }}</div>
         <div
-          class="text-3xl font-black tracking-widest mb-3"
+          class="mb-3 text-3xl font-black tracking-widest"
           :class="lastResult.won ? 'text-emerald-300' : 'text-red-300'"
         >
           {{ lastResult.won ? 'VICTORY!' : 'DEFEAT!' }}
@@ -91,13 +91,13 @@
         <div class="flex items-center justify-center gap-3">
           <button
             @click="battleStore.manualDismissResult()"
-            class="px-5 py-2 rounded-xl text-sm font-black border transition-all duration-200 hover:scale-105 active:scale-95 bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
+            class="px-5 py-2 text-sm font-black transition-all duration-200 border rounded-xl hover:scale-105 active:scale-95 bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
           >
             Weiter →
           </button>
           <button
             @click="battleStore.toggleAutoSkip()"
-            class="px-4 py-2 rounded-xl text-sm font-black border transition-all duration-200 hover:scale-105 active:scale-95"
+            class="px-4 py-2 text-sm font-black transition-all duration-200 border rounded-xl hover:scale-105 active:scale-95"
             :class="
               battleStore.autoSkipEnabled
                 ? 'bg-violet-500/20 border-violet-400/30 text-violet-300'

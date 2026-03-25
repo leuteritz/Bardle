@@ -2,24 +2,20 @@
   <div class="relative z-50 flex w-full">
     <!-- Content -->
     <div class="flex-1 h-[600px] p-4">
-      <component :is="currentComponent" />
+      <component :is="currentComponent" class="h-full" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, computed, onMounted } from 'vue'
-import ChampionLobbyComponent from './champion/ChampionLobbyComponent.vue'
 import IdleGameComponent from './idle/IdleGameComponent.vue'
-import BattleResultComponent from './battle/BattleResultComponent.vue'
 import { useBattleStore } from '../../stores/battleStore'
 
 export default defineComponent({
   name: 'GameCenterComponent',
   components: {
-    ChampionLobbyComponent,
     IdleGameComponent,
-    BattleResultComponent,
   },
 
   props: {
@@ -36,10 +32,6 @@ export default defineComponent({
       switch (props.activeTab) {
         case 'idle':
           return IdleGameComponent
-        case 'battle':
-          return BattleResultComponent
-        case 'champions':
-          return ChampionLobbyComponent
         default:
           return IdleGameComponent
       }

@@ -1,14 +1,16 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 h-full flex flex-col"
+    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 flex flex-col"
   >
+    <!--  ↑ h-full entfernt – flex-1 vom Elternteil übernimmt die Höhe -->
+
     <div
       class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
 
-    <div class="p-3 flex flex-col flex-1 min-h-0 space-y-2">
+    <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
       <!-- Header -->
-      <div class="flex items-center gap-2 flex-shrink-0">
+      <div class="flex items-center flex-shrink-0 gap-2">
         <div
           class="flex items-center justify-center w-6 h-6 border rounded-lg bg-gradient-to-br from-white/10 to-white/5 border-white/15"
         >
@@ -21,21 +23,24 @@
         </span>
         <div class="flex items-center gap-1 ml-auto">
           <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span class="text-xs text-emerald-300 font-bold">Live</span>
+          <span class="text-xs font-bold text-emerald-300">Live</span>
         </div>
       </div>
 
       <!-- Map Container -->
-      <div class="flex-1 min-h-0 flex justify-center">
+      <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
         <div
-          class="relative overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
+          class="relative h-full max-w-full overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
         >
+          <!--  ↑ h-full max-w-full: Höhe = verfügbarer Platz, Breite = Höhe (Quadrat), nie breiter als Container -->
+
           <!-- Time -->
           <div
             class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
           >
             {{ formatTime(battleStore.battleTime) }}
           </div>
+
           <!-- Score -->
           <div
             class="absolute z-20 top-1 right-1 px-1.5 py-0.5 rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
@@ -55,11 +60,7 @@
             v-for="(champ, i) in blueChampions"
             :key="'blue-' + i"
             class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
-            :style="{
-              left: champ.x + '%',
-              top: champ.y + '%',
-              zIndex: 5,
-            }"
+            :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
               v-if="battleStore.team1[i]"
@@ -76,11 +77,7 @@
             v-for="(champ, i) in redChampions"
             :key="'red-' + i"
             class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
-            :style="{
-              left: champ.x + '%',
-              top: champ.y + '%',
-              zIndex: 5,
-            }"
+            :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
               v-if="battleStore.team2[i]"
