@@ -46,9 +46,9 @@
     <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
     <div class="flex flex-row flex-1 min-h-0 gap-3">
       <!-- Left: MiniMap square, fills available height -->
-      <div class="flex items-center justify-center flex-1 min-h-0">
+      <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
         <MiniMapComponent
-          class="h-full aspect-square"
+          class="w-full max-h-full aspect-square"
           :battle-id="currentBattleId"
           :score="score"
         />

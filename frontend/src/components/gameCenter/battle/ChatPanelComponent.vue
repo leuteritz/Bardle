@@ -18,7 +18,7 @@
           :key="'msg-' + idx"
           class="flex items-start min-h-0 gap-1"
         >
-          <span class="flex-shrink-0 text-[11px] font-bold text-white/30 mt-0.5">{{
+          <span class="flex-shrink-0 text-xs font-bold text-white/30 mt-0.5">{{
             msg.time
           }}</span>
           <span

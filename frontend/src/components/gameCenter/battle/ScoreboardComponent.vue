@@ -20,10 +20,10 @@
             :alt="champ.name"
             class="w-6 h-6 rounded-full object-cover border border-blue-400/40 flex-shrink-0"
           />
-          <span class="text-[10px] font-bold text-blue-200 truncate flex-1">
+          <span class="text-xs font-bold text-blue-200 flex-1">
             {{ champ.name }}
           </span>
-          <div class="flex items-center gap-0.5 text-[9px] flex-shrink-0">
+          <div class="flex items-center gap-0.5 text-[10px] flex-shrink-0">
             <span class="font-bold text-emerald-300">{{ champ.kills }}</span>
             <span class="text-white/30">/</span>
             <span class="font-bold text-red-300">{{ champ.deaths }}</span>
@@ -52,10 +52,10 @@
             :alt="champ.name"
             class="w-6 h-6 rounded-full object-cover border border-red-400/40 flex-shrink-0"
           />
-          <span class="text-[10px] font-bold text-red-200 truncate flex-1">
+          <span class="text-xs font-bold text-red-200 flex-1">
             {{ champ.name }}
           </span>
-          <div class="flex items-center gap-0.5 text-[9px] flex-shrink-0">
+          <div class="flex items-center gap-0.5 text-[10px] flex-shrink-0">
             <span class="font-bold text-emerald-300">{{ champ.kills }}</span>
             <span class="text-white/30">/</span>
             <span class="font-bold text-red-300">{{ champ.deaths }}</span>
