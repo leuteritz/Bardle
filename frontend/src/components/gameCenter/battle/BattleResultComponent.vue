@@ -43,16 +43,13 @@
       </div>
     </div>
 
-    <!-- Main Content: Minimap + Chat | Scoreboard -->
-    <div class="flex-1 grid grid-cols-[1fr_14rem] grid-rows-1 gap-3 min-h-0">
-      <MiniMapComponent class="flex-1 min-h-0" :battle-id="currentBattleId" :score="score" />
-      <!-- Left: Minimap + Chat stacked -->
-      <div class="flex flex-col min-h-0 gap-3">
-        <ChatPanelComponent class="flex-shrink-0 h-28" />
-      </div>
+    <!-- MiniMap: full width, takes remaining vertical space -->
+    <MiniMapComponent class="flex-1 min-h-0" :battle-id="currentBattleId" :score="score" />
 
-      <!-- Right: Scoreboard -->
-      <ScoreboardComponent />
+    <!-- Bottom row: Chat | Scoreboard, two equal columns -->
+    <div class="grid grid-cols-2 gap-3 flex-shrink-0 h-36">
+      <ChatPanelComponent class="h-full" />
+      <ScoreboardComponent class="h-full" />
     </div>
   </div>
 
