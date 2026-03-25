@@ -100,6 +100,7 @@ export const useBattleStore = defineStore('battle', {
     autoSkipEnabled: true,
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
+    predeterminedWin: null as boolean | null,
   }),
 
   getters: {
@@ -274,6 +275,7 @@ export const useBattleStore = defineStore('battle', {
       this.chatMessages = []
       this.battleTime = 0
       this.battlePhase = 'playing'
+      this.predeterminedWin = null
     },
 
     // Zeigt zeitgestaffelte Chat-Nachrichten mit phasenbezogenem Inhalt über 30 real-Sekunden
@@ -324,11 +326,35 @@ export const useBattleStore = defineStore('battle', {
       return Math.floor(Math.random() * BATTLE_TIME_RANGE_SECONDS) + BATTLE_TIME_MIN_SECONDS
     },
 
+    // Bestimmt den Kampfausgang vorab, damit die Minimap den Nexus-Push animieren kann
+    predetermineOutcome() {
+      const gameStore = useGameStore()
+      const augmentStore = useAugmentStore()
+      let playerPower = gameStore.totalPower
+      const opponent = this.generateOpponent(this.mmr)
+      const battleMods = augmentStore.getActiveBattleModifiers(
+        gameStore.activeAugments,
+        gameStore.activeModifier as Record<string, unknown>,
+      )
+      const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
+      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * 30
+      const finalOpponentPower = Math.max(
+        effectiveOpponentPower * 0.1,
+        effectiveOpponentPower * (1 - drainReduction),
+      )
+      if (battleMods.bigBangAvailable) {
+        playerPower *= 5
+      }
+      const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
+      this.predeterminedWin = Math.random() < winProbability
+    },
+
     // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Simulation starten
     async initializeBattle() {
       this.clearBattle()
       this.currentBattleId++
       await this.refreshTeams()
+      this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.generateKillSchedule()
         this.startBattleSimulation()
@@ -371,7 +397,7 @@ export const useBattleStore = defineStore('battle', {
       }
 
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
-      const battleResult = Math.random() < winProbability
+      const battleResult = this.predeterminedWin ?? Math.random() < winProbability
 
       // Aktualisiert Rang basierend auf Kampfergebnis
       this.updateRanking(battleResult, opponentMMR)
@@ -627,6 +653,7 @@ export const useBattleStore = defineStore('battle', {
     async initializePersistentAutoBattle() {
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
+      this.autoBattleEnabled = false // reset: verhindert early-return in startAutoBattle() nach Page-Reload
       await this.startAutoBattle()
     },
 

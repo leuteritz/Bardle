@@ -1,14 +1,14 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 h-full flex flex-col"
   >
     <div
       class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
 
-    <div class="p-3 space-y-2">
+    <div class="p-3 flex flex-col flex-1 min-h-0 space-y-2">
       <!-- Header -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-shrink-0">
         <div
           class="flex items-center justify-center w-6 h-6 border rounded-lg bg-gradient-to-br from-white/10 to-white/5 border-white/15"
         >
@@ -25,66 +25,75 @@
         </div>
       </div>
 
-      <!-- Map -->
-      <div
-        class="relative w-full max-w-[192px] mx-auto overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
-      >
-        <!-- Time -->
+      <!-- Map Container -->
+      <div class="flex-1 min-h-0 flex justify-center">
         <div
-          class="absolute z-10 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+          class="relative overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
         >
-          {{ formatTime(battleStore.battleTime) }}
-        </div>
-        <!-- Score -->
-        <div
-          class="absolute z-10 top-1 right-1 px-1.5 py-0.5 rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
-        >
-          <span class="text-xs font-black text-blue-300">{{ score.team1Kills }}</span>
-          <span class="text-xs text-white/40"> vs </span>
-          <span class="text-xs font-black text-red-300">{{ score.team2Kills }}</span>
-        </div>
-
-        <img
-          src="/img/minimap.png"
-          class="absolute w-full h-full pointer-events-none select-none opacity-80"
-        />
-
-        <!-- Blue Champions -->
-        <div
-          v-for="(champ, i) in blueChampions"
-          :key="'blue-' + i"
-          class="absolute transition-all duration-500"
-          :style="{
-            left: champ.x + '%',
-            top: champ.y + '%',
-            zIndex: i === 0 ? 2 : 1,
-          }"
-        >
+          <!-- Time -->
           <div
-            class="border rounded-full shadow-lg"
-            :class="
-              i === 0
-                ? 'w-3 h-3 bg-blue-400 border-blue-600'
-                : 'w-3 h-3 bg-blue-500 border-blue-700'
-            "
-            :style="{ boxShadow: '0 0 6px rgba(59,130,246,0.8)' }"
-          />
-        </div>
-
-        <!-- Red Champions -->
-        <div
-          v-for="(champ, i) in redChampions"
-          :key="'red-' + i"
-          class="absolute transition-all duration-500"
-          :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 1 }"
-        >
+            class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+          >
+            {{ formatTime(battleStore.battleTime) }}
+          </div>
+          <!-- Score -->
           <div
-            class="w-3 h-3 bg-red-500 border border-red-700 rounded-full"
-            style="box-shadow: 0 0 6px rgba(239, 68, 68, 0.6)"
-          />
-        </div>
+            class="absolute z-20 top-1 right-1 px-1.5 py-0.5 rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+          >
+            <span class="text-xs font-black text-blue-300">{{ score.team1Kills }}</span>
+            <span class="text-xs text-white/40"> vs </span>
+            <span class="text-xs font-black text-red-300">{{ score.team2Kills }}</span>
+          </div>
 
-        <div class="absolute inset-0 border pointer-events-none rounded-xl border-white/20" />
+          <img
+            src="/img/minimap.png"
+            class="absolute w-full h-full pointer-events-none select-none opacity-80"
+          />
+
+          <!-- Blue Champions -->
+          <div
+            v-for="(champ, i) in blueChampions"
+            :key="'blue-' + i"
+            class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
+            :style="{
+              left: champ.x + '%',
+              top: champ.y + '%',
+              zIndex: 5,
+            }"
+          >
+            <img
+              v-if="battleStore.team1[i]"
+              :src="battleStore.getChampionImage(battleStore.team1[i].name)"
+              :alt="battleStore.team1[i].name"
+              class="w-[22px] h-[22px] rounded-full object-cover border-2 border-blue-400"
+              :class="{ 'opacity-30 grayscale': champ.dead }"
+              :style="{ boxShadow: '0 0 6px rgba(59,130,246,0.8)' }"
+            />
+          </div>
+
+          <!-- Red Champions -->
+          <div
+            v-for="(champ, i) in redChampions"
+            :key="'red-' + i"
+            class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
+            :style="{
+              left: champ.x + '%',
+              top: champ.y + '%',
+              zIndex: 5,
+            }"
+          >
+            <img
+              v-if="battleStore.team2[i]"
+              :src="battleStore.getChampionImage(battleStore.team2[i].name)"
+              :alt="battleStore.team2[i].name"
+              class="w-[22px] h-[22px] rounded-full object-cover border-2 border-red-400"
+              :class="{ 'opacity-30 grayscale': champ.dead }"
+              :style="{ boxShadow: '0 0 6px rgba(239,68,68,0.6)' }"
+            />
+          </div>
+
+          <div class="absolute inset-0 border pointer-events-none rounded-xl border-white/20" />
+        </div>
       </div>
     </div>
   </div>
@@ -93,68 +102,102 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
+import {
+  MINIMAP_PHASE_LANING_END,
+  MINIMAP_PHASE_HOLD_END,
+  MINIMAP_PHASE_TEAMFIGHT_END,
+  MINIMAP_PHASE_PUSH_END,
+  BLUE_FOUNTAIN,
+  RED_FOUNTAIN,
+  BLUE_NEXUS,
+  RED_NEXUS,
+} from '../../../config/constants'
 
 interface ChampPos {
   x: number
   y: number
+  dead: boolean
 }
 
-// LoL-Rollen: index 0=Top, 1=Jungle, 2=Mid, 3=ADC, 4=Support
-// Zielzone basierend auf Rolle und Phase – gibt Mittelpunkt und Streuradius zurück
-function getRoleTarget(
+type MapPhase = 'laning' | 'hold' | 'teamfight' | 'push' | 'nexusFall'
+
+// Lane targets per role (index 0=Top, 1=Jungle, 2=Mid, 3=ADC, 4=Support)
+const BLUE_LANE_TARGETS = [
+  { cx: 12, cy: 22 }, // Top
+  { cx: 25, cy: 48 }, // Jungle
+  { cx: 30, cy: 62 }, // Mid
+  { cx: 68, cy: 80 }, // ADC
+  { cx: 60, cy: 84 }, // Support
+]
+const RED_LANE_TARGETS = [
+  { cx: 88, cy: 78 }, // Top
+  { cx: 72, cy: 52 }, // Jungle
+  { cx: 68, cy: 36 }, // Mid
+  { cx: 32, cy: 18 }, // ADC
+  { cx: 40, cy: 14 }, // Support
+]
+
+const TEAMFIGHT_TARGETS_BLUE = [
+  { cx: 46, cy: 46 },
+  { cx: 48, cy: 52 },
+  { cx: 50, cy: 50 },
+  { cx: 44, cy: 54 },
+  { cx: 42, cy: 56 },
+]
+const TEAMFIGHT_TARGETS_RED = [
+  { cx: 54, cy: 54 },
+  { cx: 52, cy: 48 },
+  { cx: 50, cy: 50 },
+  { cx: 56, cy: 46 },
+  { cx: 58, cy: 44 },
+]
+
+function getPhaseTarget(
   isBlue: boolean,
   roleIndex: number,
-  phase: 'early' | 'mid' | 'late',
-): { cx: number; cy: number; spread: number } {
-  // Blue base: unten-links, Red base: oben-rechts (LoL-Standard)
-  const blueTargets: Record<'early' | 'mid' | 'late', { cx: number; cy: number; spread: number }[]> = {
-    early: [
-      { cx: 12, cy: 22, spread: 5 },  // Top – oben-links Lane
-      { cx: 25, cy: 48, spread: 8 },  // Jungle – obere Junglemitte
-      { cx: 30, cy: 62, spread: 5 },  // Mid – Mid-Lane
-      { cx: 68, cy: 80, spread: 5 },  // ADC – Bot-Lane
-      { cx: 60, cy: 84, spread: 5 },  // Support – Bot-Lane
-    ],
-    mid: [
-      { cx: 30, cy: 38, spread: 8 },  // Top – roamt zu Objectives
-      { cx: 48, cy: 68, spread: 10 }, // Jungle – Drake-Bereich (~50,70)
-      { cx: 44, cy: 52, spread: 8 },  // Mid – Midlane-Kontroverse
-      { cx: 54, cy: 72, spread: 8 },  // ADC – roamt Drake
-      { cx: 46, cy: 65, spread: 8 },  // Support – roamt Drake
-    ],
-    late: [
-      { cx: 46, cy: 46, spread: 10 }, // Top – Teamfight Mitte
-      { cx: 48, cy: 52, spread: 10 }, // Jungle – Teamfight Mitte
-      { cx: 50, cy: 50, spread: 8 },  // Mid – Teamfight Mitte
-      { cx: 44, cy: 54, spread: 10 }, // ADC – Teamfight Mitte
-      { cx: 42, cy: 56, spread: 8 },  // Support – Teamfight Mitte
-    ],
-  }
-  const redTargets: Record<'early' | 'mid' | 'late', { cx: number; cy: number; spread: number }[]> = {
-    early: [
-      { cx: 88, cy: 78, spread: 5 },  // Top – unten-rechts Lane
-      { cx: 72, cy: 52, spread: 8 },  // Jungle – untere Junglemitte
-      { cx: 68, cy: 36, spread: 5 },  // Mid – Mid-Lane
-      { cx: 32, cy: 18, spread: 5 },  // ADC – Top-Lane (Bot für Rot)
-      { cx: 40, cy: 14, spread: 5 },  // Support – Top-Lane
-    ],
-    mid: [
-      { cx: 68, cy: 60, spread: 8 },  // Top – roamt zu Objectives
-      { cx: 50, cy: 30, spread: 10 }, // Jungle – Baron-Bereich (~45,28)
-      { cx: 54, cy: 46, spread: 8 },  // Mid – Midlane-Kontrolle
-      { cx: 44, cy: 28, spread: 8 },  // ADC – roamt Baron
-      { cx: 52, cy: 33, spread: 8 },  // Support – roamt Baron
-    ],
-    late: [
-      { cx: 54, cy: 54, spread: 10 }, // Top – Teamfight Mitte
-      { cx: 52, cy: 48, spread: 10 }, // Jungle – Teamfight Mitte
-      { cx: 50, cy: 50, spread: 8 },  // Mid – Teamfight Mitte
-      { cx: 56, cy: 46, spread: 10 }, // ADC – Teamfight Mitte
-      { cx: 58, cy: 44, spread: 8 },  // Support – Teamfight Mitte
-    ],
-  }
+  phase: MapPhase,
+  isBlueWinning: boolean,
+): { cx: number; cy: number; spread: number; lerpFactor: number } {
   const idx = Math.min(roleIndex, 4)
-  return isBlue ? blueTargets[phase][idx] : redTargets[phase][idx]
+
+  switch (phase) {
+    case 'laning': {
+      const t = isBlue ? BLUE_LANE_TARGETS[idx] : RED_LANE_TARGETS[idx]
+      return { ...t, spread: 4, lerpFactor: 0.15 }
+    }
+    case 'hold': {
+      const t = isBlue ? BLUE_LANE_TARGETS[idx] : RED_LANE_TARGETS[idx]
+      // Jungle roams more
+      const spread = idx === 1 ? 10 : 3
+      return { ...t, spread, lerpFactor: 0.05 }
+    }
+    case 'teamfight': {
+      const t = isBlue ? TEAMFIGHT_TARGETS_BLUE[idx] : TEAMFIGHT_TARGETS_RED[idx]
+      return { ...t, spread: 8, lerpFactor: 0.15 }
+    }
+    case 'push': {
+      const isWinning = isBlue === isBlueWinning
+      if (isWinning) {
+        // Push toward enemy nexus
+        const nexus = isBlue ? RED_NEXUS : BLUE_NEXUS
+        return { cx: nexus.x, cy: nexus.y, spread: 10, lerpFactor: 0.12 }
+      } else {
+        // Retreat toward own base
+        const base = isBlue ? BLUE_FOUNTAIN : RED_FOUNTAIN
+        return { cx: base.x, cy: base.y, spread: 8, lerpFactor: 0.08 }
+      }
+    }
+    case 'nexusFall': {
+      const isWinning = isBlue === isBlueWinning
+      if (isWinning) {
+        const nexus = isBlue ? RED_NEXUS : BLUE_NEXUS
+        return { cx: nexus.x, cy: nexus.y, spread: 5, lerpFactor: 0.2 }
+      } else {
+        const base = isBlue ? BLUE_FOUNTAIN : RED_FOUNTAIN
+        return { cx: base.x, cy: base.y, spread: 3, lerpFactor: 0.05 }
+      }
+    }
+  }
 }
 
 export default defineComponent({
@@ -170,12 +213,13 @@ export default defineComponent({
     const blueChampions = ref<ChampPos[]>([])
     const redChampions = ref<ChampPos[]>([])
 
-    // Phase basierend auf Game-Zeit (0-1800s = 0-30 Spielminuten)
-    const phase = computed((): 'early' | 'mid' | 'late' => {
+    const phase = computed((): MapPhase => {
       const t = battleStore.battleTime
-      if (t < 600) return 'early'
-      if (t < 1200) return 'mid'
-      return 'late'
+      if (t < MINIMAP_PHASE_LANING_END) return 'laning'
+      if (t < MINIMAP_PHASE_HOLD_END) return 'hold'
+      if (t < MINIMAP_PHASE_TEAMFIGHT_END) return 'teamfight'
+      if (t < MINIMAP_PHASE_PUSH_END) return 'push'
+      return 'nexusFall'
     })
 
     function formatTime(seconds: number) {
@@ -185,22 +229,18 @@ export default defineComponent({
     }
 
     function resetChampions() {
-      // Startpositionen in % – rollenbasiert (0=Top, 1=Jungle, 2=Mid, 3=ADC, 4=Support)
-      // Blau: base unten-links; Rot: base oben-rechts
-      blueChampions.value = [
-        { x: 12, y: 22 },  // Top
-        { x: 25, y: 48 },  // Jungle
-        { x: 30, y: 62 },  // Mid
-        { x: 68, y: 80 },  // ADC
-        { x: 60, y: 84 },  // Support
-      ]
-      redChampions.value = [
-        { x: 88, y: 78 },  // Top
-        { x: 72, y: 52 },  // Jungle
-        { x: 68, y: 36 },  // Mid
-        { x: 32, y: 18 },  // ADC
-        { x: 40, y: 14 },  // Support
-      ]
+      const blueCount = battleStore.team1.length || 5
+      const redCount = battleStore.team2.length || 5
+      blueChampions.value = Array.from({ length: blueCount }, () => ({
+        x: BLUE_FOUNTAIN.x,
+        y: BLUE_FOUNTAIN.y,
+        dead: false,
+      }))
+      redChampions.value = Array.from({ length: redCount }, () => ({
+        x: RED_FOUNTAIN.x,
+        y: RED_FOUNTAIN.y,
+        dead: false,
+      }))
     }
 
     function lerp(a: number, b: number, t: number) {
@@ -213,22 +253,34 @@ export default defineComponent({
 
     function moveChampions() {
       const currentPhase = phase.value
+      const isBlueWinning = battleStore.predeterminedWin === true
 
       blueChampions.value.forEach((champ, i) => {
-        const target = getRoleTarget(true, i, currentPhase)
+        if (champ.dead) return
+        const target = getPhaseTarget(true, i, currentPhase, isBlueWinning)
         const tx = target.cx + (Math.random() - 0.5) * target.spread * 2
         const ty = target.cy + (Math.random() - 0.5) * target.spread * 2
-        champ.x = clamp(lerp(champ.x, tx, 0.2) + (Math.random() - 0.5) * 2, 2, 95)
-        champ.y = clamp(lerp(champ.y, ty, 0.2) + (Math.random() - 0.5) * 2, 2, 95)
+        champ.x = clamp(lerp(champ.x, tx, target.lerpFactor), 2, 98)
+        champ.y = clamp(lerp(champ.y, ty, target.lerpFactor), 2, 98)
       })
 
       redChampions.value.forEach((champ, i) => {
-        const target = getRoleTarget(false, i, currentPhase)
+        if (champ.dead) return
+        const target = getPhaseTarget(false, i, currentPhase, isBlueWinning)
         const tx = target.cx + (Math.random() - 0.5) * target.spread * 2
         const ty = target.cy + (Math.random() - 0.5) * target.spread * 2
-        champ.x = clamp(lerp(champ.x, tx, 0.2) + (Math.random() - 0.5) * 2, 2, 95)
-        champ.y = clamp(lerp(champ.y, ty, 0.2) + (Math.random() - 0.5) * 2, 2, 95)
+        champ.x = clamp(lerp(champ.x, tx, target.lerpFactor), 2, 98)
+        champ.y = clamp(lerp(champ.y, ty, target.lerpFactor), 2, 98)
       })
+
+      // During nexus fall, progressively mark losing team as dead
+      if (currentPhase === 'nexusFall') {
+        const losingTeam = isBlueWinning ? redChampions : blueChampions
+        const alive = losingTeam.value.filter((c) => !c.dead)
+        if (alive.length > 0 && Math.random() < 0.4) {
+          alive[Math.floor(Math.random() * alive.length)].dead = true
+        }
+      }
     }
 
     function startMovement() {
@@ -236,7 +288,7 @@ export default defineComponent({
       moveInterval = setInterval(moveChampions, 500)
     }
 
-    // Bei Kill-Event: einen Dot jedes Teams kurz zur Mitte ziehen (Teamfight-Signal)
+    // Kill event reaction
     let lastScore = { team1Kills: 0, team2Kills: 0 }
     watch(
       () => props.score,
@@ -245,16 +297,19 @@ export default defineComponent({
           newScore.team1Kills > lastScore.team1Kills ||
           newScore.team2Kills > lastScore.team2Kills
         ) {
-          // Ersten Dot jedes Teams kurz Richtung Mitte (50,50) ziehen
           if (blueChampions.value.length > 0) {
             const b = blueChampions.value[0]
-            b.x = lerp(b.x, 48, 0.4)
-            b.y = lerp(b.y, 52, 0.4)
+            if (!b.dead) {
+              b.x = lerp(b.x, 48, 0.4)
+              b.y = lerp(b.y, 52, 0.4)
+            }
           }
           if (redChampions.value.length > 0) {
             const r = redChampions.value[0]
-            r.x = lerp(r.x, 52, 0.4)
-            r.y = lerp(r.y, 48, 0.4)
+            if (!r.dead) {
+              r.x = lerp(r.x, 52, 0.4)
+              r.y = lerp(r.y, 48, 0.4)
+            }
           }
         }
         lastScore = { team1Kills: newScore.team1Kills ?? 0, team2Kills: newScore.team2Kills ?? 0 }
@@ -262,7 +317,6 @@ export default defineComponent({
       { deep: true },
     )
 
-    // Reset wenn neue Battle startet (battlePhase wechselt zu 'playing')
     watch(
       () => battleStore.battlePhase,
       (newPhase) => {

@@ -85,6 +85,17 @@ export const LP_MASTER_DEMOTION_VALUE = 400
 export const LP_GRANDMASTER_DEMOTION_VALUE = 900
 export const LP_BASE_CHANGE = 20
 
+// Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 1800)
+export const MINIMAP_PHASE_LANING_END = 720
+export const MINIMAP_PHASE_HOLD_END = 1080
+export const MINIMAP_PHASE_TEAMFIGHT_END = 1440
+export const MINIMAP_PHASE_PUSH_END = 1680
+
+export const BLUE_NEXUS = { x: 12, y: 88 }
+export const RED_NEXUS = { x: 88, y: 12 }
+export const BLUE_FOUNTAIN = { x: 8, y: 92 }
+export const RED_FOUNTAIN = { x: 92, y: 8 }
+
 // Battle constants
 export const OPPONENT_MMR_VARIANCE = 200
 export const BATTLE_TIME_MIN_SECONDS = 30

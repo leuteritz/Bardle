@@ -1,12 +1,12 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10"
+    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 h-full flex flex-col"
   >
     <div
       class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
 
-    <div class="p-3 space-y-2">
+    <div class="p-3 space-y-2 flex flex-col flex-1 min-h-0">
       <!-- Header -->
       <div class="flex items-center gap-2">
         <div
@@ -31,7 +31,7 @@
       <div
         id="battle-chat-box"
         ref="chatBoxRef"
-        class="p-2 space-y-1 overflow-y-auto custom-scrollbar border h-40 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
+        class="p-2 space-y-1 overflow-y-auto custom-scrollbar border flex-1 min-h-0 rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
       >
         <div
           v-for="(msg, idx) in battleStore.chatMessages"
