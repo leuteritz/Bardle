@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useGameStore } from './stores/gameStore'
-import { useShopStore } from './stores/shopStore'
 import { formatNumber } from './config/numberFormat'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
 import InventoryTooltip from './components/InventoryTooltip.vue'
@@ -20,15 +19,9 @@ import MeepIndicatorComponent from './components/ui/MeepIndicatorComponent.vue'
 import InventoryModal from './components/InventoryModal.vue'
 
 const gameStore = useGameStore()
-const shopStore = useShopStore()
 
 const isInventoryOpen = ref(false)
 const isHovering = ref(false)
-
-const totalUpgrades = computed(() => shopStore.shopUpgrades.reduce((sum, u) => sum + u.level, 0))
-const canAffordAny = computed(() =>
-  shopStore.shopUpgrades.some((u) => shopStore.canAffordUpgrade(u)),
-)
 
 const activeTab = ref('idle')
 </script>
@@ -76,9 +69,9 @@ const activeTab = ref('idle')
         </div>
 
         <!-- Rechts: Inventar, Portal, Meep -->
-        <!-- Rechts: Inventar, Portal, Meep -->
-        <!-- Rechts: Inventar, Portal, Meep -->
-        <div class="relative z-[65] flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6">
+        <div
+          class="relative z-[65] flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6"
+        >
           <!-- Bag: self-center stellt sicher, dass er zur Mitte der Portal+Meep-Gruppe zeigt -->
           <div class="relative self-center">
             <button
