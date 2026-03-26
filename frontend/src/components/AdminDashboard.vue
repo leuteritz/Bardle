@@ -147,11 +147,11 @@ const filteredSections = computed(() => {
 
 // Section header accent colors
 const sectionColors: Record<string, { header: string; label: string; reset: string }> = {
-  core:      { header: 'bg-violet-900/20 border-violet-400/15', label: 'text-violet-300', reset: 'text-violet-500/60 hover:text-violet-300 border-violet-500/20 hover:border-violet-400/40' },
-  battle:    { header: 'bg-blue-900/20 border-blue-400/15',     label: 'text-blue-300',   reset: 'text-blue-500/60 hover:text-blue-300 border-blue-500/20 hover:border-blue-400/40' },
-  materials: { header: 'bg-teal-900/20 border-teal-400/15',     label: 'text-teal-300',   reset: 'text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40' },
-  buildings: { header: 'bg-orange-900/20 border-orange-400/15', label: 'text-orange-300', reset: 'text-orange-500/60 hover:text-orange-300 border-orange-500/20 hover:border-orange-400/40' },
-  advanced:  { header: 'bg-rose-900/20 border-rose-400/15',     label: 'text-rose-300',   reset: 'text-rose-500/60 hover:text-rose-300 border-rose-500/20 hover:border-rose-400/40' },
+  core:      { header: 'section-header--core',      label: 'section-label--core',      reset: 'section-reset--core' },
+  battle:    { header: 'section-header--battle',    label: 'section-label--battle',    reset: 'section-reset--battle' },
+  materials: { header: 'section-header--materials', label: 'section-label--materials', reset: 'section-reset--materials' },
+  buildings: { header: 'section-header--buildings', label: 'section-label--buildings', reset: 'section-reset--buildings' },
+  advanced:  { header: 'section-header--advanced',  label: 'section-label--advanced',  reset: 'section-reset--advanced' },
 }
 
 function getSectionColor(id: string) {
@@ -233,7 +233,7 @@ function fillAllMaterials() {
     <Transition name="fade">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm"
+        class="fixed inset-0 z-[110] rpg-overlay"
         @click.self="isOpen = false"
       />
     </Transition>
@@ -242,26 +242,26 @@ function fillAllMaterials() {
     <Transition name="slide-up">
       <div
         v-if="isOpen"
-        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(780px,95vw)] max-h-[88vh] flex flex-col rounded-2xl border border-blue-400/30 bg-gradient-to-br from-[#0a0620]/97 via-[#110b3d]/97 to-[#0a0620]/97 backdrop-blur-xl shadow-2xl shadow-blue-900/40"
+        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(780px,95vw)] max-h-[88vh] flex flex-col rpg-frame"
       >
+        <!-- Gold accent bar -->
+        <div class="rpg-accent-bar" />
+
         <!-- Header -->
-        <div class="flex items-center justify-between px-5 py-3 border-b border-blue-400/20">
+        <div class="flex items-center justify-between px-5 py-3 rpg-header">
           <div class="flex items-center gap-2">
-            <span class="text-violet-400 text-lg">⚙</span>
-            <span class="font-mono text-sm font-bold text-blue-200 tracking-widest uppercase">Admin Dashboard</span>
+            <span class="admin-icon">⚙</span>
+            <span class="admin-title">Admin Dashboard</span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-blue-500/60 font-mono">Ctrl+Shift+A</span>
-            <button
-              class="w-6 h-6 flex items-center justify-center rounded text-blue-400/60 hover:text-blue-200 hover:bg-blue-500/20 transition-colors"
-              @click="isOpen = false"
-            >✕</button>
+            <span class="admin-shortcut">Ctrl+Shift+A</span>
+            <button class="w-6 h-6 flex items-center justify-center rpg-close-btn" @click="isOpen = false">✕</button>
           </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="px-5 py-3 border-b border-blue-400/20 bg-[#050215]/70" style="box-shadow: 0 2px 16px 0 rgba(99,102,241,0.10) inset;">
-          <div class="text-[10px] font-mono font-bold text-indigo-400/70 tracking-widest uppercase mb-2">Quick Actions</div>
+        <div class="px-5 py-3 admin-quick-actions">
+          <div class="admin-section-label mb-2">Quick Actions</div>
           <!-- Inline Editable Values -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
             <div v-for="qf in [
@@ -270,12 +270,12 @@ function fillAllMaterials() {
               { key: 'level', label: 'Level' },
               { key: 'skillPoints', label: 'Skill Points' },
             ]" :key="qf.key" class="flex flex-col gap-0.5">
-              <label class="text-[10px] font-mono text-blue-400/60 uppercase tracking-wider">{{ qf.label }}</label>
+              <label class="admin-field-label">{{ qf.label }}</label>
               <input
                 type="number"
                 :min="qf.key === 'level' ? 1 : 0"
                 :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
-                class="bg-[#0a0620]/80 border border-indigo-400/30 rounded-lg px-2.5 py-1.5 text-sm font-mono text-blue-100 focus:outline-none focus:border-indigo-400/70 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.18)] transition-all text-right"
+                class="admin-input text-right"
                 @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
                 @input="editingValue = ($event.target as HTMLInputElement).value"
                 @change="setValue(qf.key, editingValue); editingKey = null"
@@ -285,76 +285,67 @@ function fillAllMaterials() {
           </div>
           <!-- Planet Spawn Buttons -->
           <div class="flex flex-wrap gap-2">
-            <button
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-slate-500/50 text-slate-300 hover:bg-slate-700/30 hover:border-slate-400/70 hover:text-slate-100 transition-all"
-              @click="spawnPlanet"
-            >
+            <button class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanet">
               <span>🌍</span> Spawn Planet
             </button>
-            <button
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-blue-500/50 text-blue-300 hover:bg-blue-700/25 hover:border-blue-400/70 hover:text-blue-100 transition-all"
-              @click="spawnPlanetWithMaterial"
-            >
+            <button class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithMaterial">
               <span>💎</span> Spawn + Material
             </button>
-            <button
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-yellow-500/50 text-yellow-300 hover:bg-yellow-700/20 hover:border-yellow-400/70 hover:text-yellow-100 transition-all"
-              @click="spawnPlanetWithChampion"
-            >
+            <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
               <span>🏆</span> Spawn + Champion
             </button>
           </div>
         </div>
 
         <!-- Search -->
-        <div class="px-5 py-2.5 border-b border-blue-400/10">
+        <div class="px-5 py-2.5 admin-search-bar">
           <input
             v-model="search"
             type="text"
             placeholder="Search fields..."
-            class="w-full bg-blue-950/40 border border-blue-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-blue-400/60 focus:bg-blue-950/60 transition-all"
+            class="w-full admin-search-input"
           />
         </div>
 
         <!-- Sections -->
-        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-3 custom-scrollbar">
+        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-3 rpg-scrollbar">
           <div
             v-for="section in filteredSections"
             :key="section.id"
-            class="rounded-xl border border-blue-400/10 overflow-hidden"
+            class="admin-section overflow-hidden"
           >
             <div
-              class="flex items-center justify-between px-4 py-2 border-b border-blue-400/10"
+              class="flex items-center justify-between px-4 py-2 admin-section-header"
               :class="getSectionColor(section.id).header"
             >
-              <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
+              <span class="admin-section-title" :class="getSectionColor(section.id).label">{{ section.label }}</span>
               <div class="flex items-center gap-1">
                 <button
                   v-if="section.id === 'materials'"
-                  class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40"
+                  class="admin-action-btn section-reset--materials"
                   @click="fillAllMaterials()"
                 >💎 +9999 all</button>
                 <button
-                  class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+                  class="admin-action-btn"
                   :class="getSectionColor(section.id).reset"
                   @click="resetSection(section.id)"
                 >reset</button>
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-px admin-fields-grid p-0">
               <div
                 v-for="field in section.fields"
                 :key="field.key"
-                class="flex items-center justify-between gap-3 px-4 py-2 bg-[#0a0620]/60 hover:bg-blue-950/40 transition-colors"
+                class="flex items-center justify-between gap-3 px-4 py-2 admin-field-row"
               >
-                <label class="text-xs font-mono text-blue-300/80 whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
+                <label class="admin-field-name whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
                 <input
                   v-if="field.type === 'number'"
                   type="number"
                   :min="field.min"
                   :max="(field as any).max"
                   :value="editingKey === field.key ? editingValue : getValue(field.key)"
-                  class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
+                  class="w-full max-w-[140px] admin-input admin-input--sm text-right"
                   @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
                   @input="editingValue = ($event.target as HTMLInputElement).value"
                   @change="setValue(field.key, editingValue); editingKey = null"
@@ -366,15 +357,15 @@ function fillAllMaterials() {
                     :min="field.min"
                     :max="(field as any).max"
                     :value="getValue(field.key)"
-                    class="flex-1 accent-violet-500 cursor-pointer h-1.5"
+                    class="flex-1 admin-range cursor-pointer h-1.5"
                     @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
                   />
-                  <span class="text-xs font-mono text-violet-300 w-4 text-right">{{ getValue(field.key) }}</span>
+                  <span class="admin-range-value w-4 text-right">{{ getValue(field.key) }}</span>
                 </div>
                 <select
                   v-else-if="field.type === 'select'"
                   :value="getValue(field.key)"
-                  class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 transition-all"
+                  class="w-full max-w-[140px] admin-select"
                   @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
                 >
                   <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
@@ -383,14 +374,14 @@ function fillAllMaterials() {
                   <input
                     type="checkbox"
                     :checked="getValue(field.key) as boolean"
-                    class="w-4 h-4 accent-violet-500 cursor-pointer"
+                    class="w-4 h-4 admin-checkbox cursor-pointer"
                     @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
                   />
                 </div>
               </div>
             </div>
           </div>
-          <div v-if="filteredSections.length === 0" class="text-center py-8 text-blue-500/40 font-mono text-sm">
+          <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg font-mono text-sm">
             No fields match "{{ search }}"
           </div>
         </div>
@@ -401,8 +392,8 @@ function fillAllMaterials() {
   <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
   <template v-else>
     <!-- Quick Actions -->
-    <div class="px-5 py-3 border-b border-cyan-400/15 bg-[#050215]/60" style="box-shadow: 0 2px 12px 0 rgba(99,102,241,0.08) inset;">
-      <div class="text-[10px] font-mono font-bold text-indigo-400/70 tracking-widest uppercase mb-2">Quick Actions</div>
+    <div class="px-5 py-3 admin-quick-actions">
+      <div class="admin-section-label mb-2">Quick Actions</div>
       <!-- Inline Editable Values -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <div v-for="qf in [
@@ -411,12 +402,12 @@ function fillAllMaterials() {
           { key: 'level', label: 'Level' },
           { key: 'skillPoints', label: 'Skill Points' },
         ]" :key="qf.key" class="flex flex-col gap-0.5">
-          <label class="text-[10px] font-mono text-blue-400/60 uppercase tracking-wider">{{ qf.label }}</label>
+          <label class="admin-field-label">{{ qf.label }}</label>
           <input
             type="number"
             :min="qf.key === 'level' ? 1 : 0"
             :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
-            class="bg-[#0a0620]/80 border border-indigo-400/30 rounded-lg px-2.5 py-1.5 text-sm font-mono text-blue-100 focus:outline-none focus:border-indigo-400/70 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.18)] transition-all text-right"
+            class="admin-input text-right"
             @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
             @input="editingValue = ($event.target as HTMLInputElement).value"
             @change="setValue(qf.key, editingValue); editingKey = null"
@@ -426,76 +417,67 @@ function fillAllMaterials() {
       </div>
       <!-- Planet Spawn Buttons -->
       <div class="flex flex-wrap gap-2">
-        <button
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-slate-500/50 text-slate-300 hover:bg-slate-700/30 hover:border-slate-400/70 hover:text-slate-100 transition-all"
-          @click="spawnPlanet"
-        >
+        <button class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanet">
           <span>🌍</span> Spawn Planet
         </button>
-        <button
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-blue-500/50 text-blue-300 hover:bg-blue-700/25 hover:border-blue-400/70 hover:text-blue-100 transition-all"
-          @click="spawnPlanetWithMaterial"
-        >
+        <button class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithMaterial">
           <span>💎</span> Spawn + Material
         </button>
-        <button
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border border-yellow-500/50 text-yellow-300 hover:bg-yellow-700/20 hover:border-yellow-400/70 hover:text-yellow-100 transition-all"
-          @click="spawnPlanetWithChampion"
-        >
+        <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
           <span>🏆</span> Spawn + Champion
         </button>
       </div>
     </div>
 
     <!-- Search -->
-    <div class="px-5 py-2.5 border-b border-cyan-400/10">
+    <div class="px-5 py-2.5 admin-search-bar">
       <input
         v-model="search"
         type="text"
         placeholder="Search fields..."
-        class="w-full bg-[#050310]/60 border border-cyan-400/20 rounded-lg px-3 py-1.5 text-sm font-mono text-blue-100 placeholder-blue-500/40 focus:outline-none focus:border-cyan-400/60 focus:bg-[#050310]/80 transition-all"
+        class="w-full admin-search-input"
       />
     </div>
 
     <!-- Sections -->
-    <div class="px-5 py-3 space-y-3 scrollbar-thin">
+    <div class="px-5 py-3 space-y-3 rpg-scrollbar">
       <div
         v-for="section in filteredSections"
         :key="section.id"
-        class="rounded-xl border border-blue-400/10 overflow-hidden"
+        class="admin-section overflow-hidden"
       >
         <div
-          class="flex items-center justify-between px-4 py-2 border-b border-blue-400/10"
+          class="flex items-center justify-between px-4 py-2 admin-section-header"
           :class="getSectionColor(section.id).header"
         >
-          <span class="text-xs font-mono font-bold tracking-wider uppercase" :class="getSectionColor(section.id).label">{{ section.label }}</span>
+          <span class="admin-section-title" :class="getSectionColor(section.id).label">{{ section.label }}</span>
           <div class="flex items-center gap-1">
             <button
               v-if="section.id === 'materials'"
-              class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border text-teal-500/60 hover:text-teal-300 border-teal-500/20 hover:border-teal-400/40"
+              class="admin-action-btn section-reset--materials"
               @click="fillAllMaterials()"
             >💎 +9999 all</button>
             <button
-              class="text-[10px] font-mono transition-colors px-2 py-0.5 rounded border"
+              class="admin-action-btn"
               :class="getSectionColor(section.id).reset"
               @click="resetSection(section.id)"
             >reset</button>
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-blue-400/5 p-0">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-px admin-fields-grid p-0">
           <div
             v-for="field in section.fields"
             :key="field.key"
-            class="flex items-center justify-between gap-3 px-4 py-2 bg-[#0a0620]/60 hover:bg-blue-950/40 transition-colors"
+            class="flex items-center justify-between gap-3 px-4 py-2 admin-field-row"
           >
-            <label class="text-xs font-mono text-blue-300/80 whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
+            <label class="admin-field-name whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
             <input
               v-if="field.type === 'number'"
               type="number"
               :min="field.min"
               :max="(field as any).max"
               :value="editingKey === field.key ? editingValue : getValue(field.key)"
-              class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all text-right"
+              class="w-full max-w-[140px] admin-input admin-input--sm text-right"
               @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
               @input="editingValue = ($event.target as HTMLInputElement).value"
               @change="setValue(field.key, editingValue); editingKey = null"
@@ -507,15 +489,15 @@ function fillAllMaterials() {
                 :min="field.min"
                 :max="(field as any).max"
                 :value="getValue(field.key)"
-                class="flex-1 accent-violet-500 cursor-pointer h-1.5"
+                class="flex-1 admin-range cursor-pointer h-1.5"
                 @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
               />
-              <span class="text-xs font-mono text-violet-300 w-4 text-right">{{ getValue(field.key) }}</span>
+              <span class="admin-range-value w-4 text-right">{{ getValue(field.key) }}</span>
             </div>
             <select
               v-else-if="field.type === 'select'"
               :value="getValue(field.key)"
-              class="w-full max-w-[140px] bg-blue-950/60 border border-blue-400/20 rounded px-2 py-0.5 text-xs font-mono text-blue-100 focus:outline-none focus:border-violet-400/60 transition-all"
+              class="w-full max-w-[140px] admin-select"
               @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
             >
               <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
@@ -524,14 +506,14 @@ function fillAllMaterials() {
               <input
                 type="checkbox"
                 :checked="getValue(field.key) as boolean"
-                class="w-4 h-4 accent-violet-500 cursor-pointer"
+                class="w-4 h-4 admin-checkbox cursor-pointer"
                 @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
               />
             </div>
           </div>
         </div>
       </div>
-      <div v-if="filteredSections.length === 0" class="text-center py-8 text-blue-500/40 font-mono text-sm">
+      <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg font-mono text-sm">
         No fields match "{{ search }}"
       </div>
     </div>
@@ -539,6 +521,7 @@ function fillAllMaterials() {
 </template>
 
 <style scoped>
+/* ── Transitions ── */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.15s ease;
@@ -556,5 +539,242 @@ function fillAllMaterials() {
 .slide-up-leave-to {
   opacity: 0;
   transform: translate(-50%, -48%);
+}
+
+/* ── Header text ── */
+.admin-icon {
+  color: var(--rpg-gold);
+  font-size: 1.125rem;
+}
+.admin-title {
+  font-family: monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.admin-shortcut {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--rpg-text-dim);
+}
+
+/* ── Quick Actions area ── */
+.admin-quick-actions {
+  background: var(--rpg-bg-dark);
+  border-bottom: 1px solid var(--rpg-wood-mid);
+}
+
+/* ── Section / field labels ── */
+.admin-section-label {
+  font-family: monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--rpg-text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.admin-field-label {
+  font-family: monospace;
+  font-size: 0.625rem;
+  color: var(--rpg-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Inputs ── */
+.admin-input {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  padding: 0.375rem 0.625rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: var(--rpg-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.admin-input:focus {
+  border-color: var(--rpg-gold-dim);
+  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.2);
+}
+.admin-input--sm {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+}
+
+/* ── Select ── */
+.admin-select {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  padding: 0.125rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--rpg-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.admin-select:focus {
+  border-color: var(--rpg-gold-dim);
+}
+
+/* ── Range ── */
+.admin-range {
+  accent-color: var(--rpg-gold);
+}
+.admin-range-value {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--rpg-gold);
+}
+
+/* ── Checkbox ── */
+.admin-checkbox {
+  accent-color: var(--rpg-gold);
+}
+
+/* ── Planet Spawn Buttons ── */
+.admin-spawn-btn {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid var(--rpg-wood-mid);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.admin-spawn-btn--neutral {
+  color: var(--rpg-text-muted);
+  border-color: #444;
+}
+.admin-spawn-btn--neutral:hover {
+  background: rgba(180, 160, 120, 0.1);
+  border-color: var(--rpg-text-muted);
+  color: var(--rpg-text);
+}
+.admin-spawn-btn--material {
+  color: var(--rpg-gold-dim);
+  border-color: var(--rpg-wood-mid);
+}
+.admin-spawn-btn--material:hover {
+  background: rgba(200, 144, 64, 0.12);
+  border-color: var(--rpg-gold-dim);
+  color: var(--rpg-gold);
+}
+.admin-spawn-btn--champion {
+  color: var(--rpg-gold);
+  border-color: var(--rpg-wood-mid);
+}
+.admin-spawn-btn--champion:hover {
+  background: rgba(232, 192, 64, 0.12);
+  border-color: var(--rpg-gold);
+  color: var(--rpg-gold-bright);
+}
+
+/* ── Search bar ── */
+.admin-search-bar {
+  border-bottom: 1px solid var(--rpg-wood-mid);
+}
+.admin-search-input {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  padding: 0.375rem 0.75rem;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: var(--rpg-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.admin-search-input::placeholder {
+  color: var(--rpg-text-dim);
+}
+.admin-search-input:focus {
+  border-color: var(--rpg-gold-dim);
+  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.15);
+}
+
+/* ── Section containers ── */
+.admin-section {
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+
+/* ── Section header ── */
+.admin-section-header {
+  border-bottom: 1px solid var(--rpg-wood-mid);
+}
+.admin-section-title {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Section header accent colors ── */
+.section-header--core      { background: rgba(100, 60, 160, 0.15); }
+.section-header--battle    { background: rgba(40, 80, 160, 0.15); }
+.section-header--materials { background: rgba(30, 120, 100, 0.15); }
+.section-header--buildings { background: rgba(160, 90, 30, 0.15); }
+.section-header--advanced  { background: rgba(160, 40, 60, 0.15); }
+
+.section-label--core      { color: #c4a0e8; }
+.section-label--battle    { color: #80b0e8; }
+.section-label--materials { color: #60d0b0; }
+.section-label--buildings { color: var(--rpg-gold-dim); }
+.section-label--advanced  { color: #e08070; }
+
+/* ── Action buttons (reset / fill) ── */
+.admin-action-btn {
+  font-family: monospace;
+  font-size: 0.625rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--rpg-wood-mid);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  color: var(--rpg-text-dim);
+}
+.admin-action-btn:hover {
+  color: var(--rpg-text);
+  border-color: var(--rpg-text-muted);
+}
+
+.section-reset--core      { color: #a070d0; border-color: rgba(160, 80, 220, 0.3); }
+.section-reset--core:hover { color: #c4a0e8; border-color: rgba(196, 160, 232, 0.6); }
+.section-reset--battle    { color: #5080c0; border-color: rgba(60, 100, 200, 0.3); }
+.section-reset--battle:hover { color: #80b0e8; border-color: rgba(128, 176, 232, 0.6); }
+.section-reset--materials { color: #30a080; border-color: rgba(40, 160, 120, 0.3); }
+.section-reset--materials:hover { color: #60d0b0; border-color: rgba(96, 208, 176, 0.6); }
+.section-reset--buildings { color: var(--rpg-wood-mid); border-color: rgba(92, 51, 16, 0.4); }
+.section-reset--buildings:hover { color: var(--rpg-gold-dim); border-color: rgba(200, 144, 64, 0.5); }
+.section-reset--advanced  { color: #c05040; border-color: rgba(180, 60, 60, 0.3); }
+.section-reset--advanced:hover { color: #e08070; border-color: rgba(220, 100, 90, 0.6); }
+
+/* ── Field rows ── */
+.admin-fields-grid {
+  background: var(--rpg-border-row);
+}
+.admin-field-row {
+  background: var(--rpg-bg-deep);
+  transition: background 0.1s;
+}
+.admin-field-row:hover {
+  background: var(--rpg-bg-row);
+}
+.admin-field-name {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--rpg-text-muted);
+}
+
+/* ── Empty state ── */
+.admin-empty-msg {
+  color: var(--rpg-text-dim);
 }
 </style>

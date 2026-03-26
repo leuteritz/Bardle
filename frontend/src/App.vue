@@ -54,14 +54,16 @@ const activeTab = ref('idle')
           <div class="flex items-center gap-1 px-4 py-1">
             <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
             <span
-              class="font-bold tracking-wider text-transparent text-7xl whitespace-nowrap bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-400 chimes-text-glow"
+              class="font-bold tracking-wider text-7xl whitespace-nowrap chimes-text-glow"
+              style="color: #e8c040"
             >
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
           <div class="flex items-center gap-1 px-2 py-0.5">
             <span
-              class="text-4xl font-semibold tracking-wide text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-emerald-300 to-green-400 cps-text-glow"
+              class="text-4xl font-semibold tracking-wide whitespace-nowrap cps-text-glow"
+              style="color: #6ec040"
             >
               {{ gameStore.chimesPerSecond }} CPS
             </span>
@@ -111,7 +113,7 @@ const activeTab = ref('idle')
     <!-- Encyclopedia Toggle Button -->
     <button
       v-show="!gameStore.isEncyclopediaOpen"
-      class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 rounded-l-xl bg-gradient-to-b from-blue-800/80 to-violet-900/80 backdrop-blur-sm border-blue-400/30 hover:from-blue-700/90 hover:to-violet-800/90 hover:shadow-blue-500/20 hover:pr-3 group"
+      class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
       @click="gameStore.toggleEncyclopedia()"
     >
       <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
@@ -167,12 +169,14 @@ const activeTab = ref('idle')
   transition-duration: 500ms;
 }
 
-.backdrop-blur-lg {
-  backdrop-filter: blur(16px);
+.encyclopedia-toggle {
+  background: var(--rpg-bg-header);
+  border-color: var(--rpg-wood-mid);
+  border-radius: 4px 0 0 4px;
 }
-
-.backdrop-blur-sm {
-  backdrop-filter: blur(4px);
+.encyclopedia-toggle:hover {
+  background: #2a1a0a;
+  border-color: var(--rpg-wood);
 }
 
 .chime-glow {

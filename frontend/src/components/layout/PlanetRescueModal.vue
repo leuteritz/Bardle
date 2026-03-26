@@ -185,8 +185,7 @@ function handleClick() {
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  background: rgba(0, 2, 18, 0.82);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.7);
 }
 
 /* ─── Card ─────────────────────────────────────────────────────────────────── */
@@ -195,22 +194,13 @@ function handleClick() {
   pointer-events: auto;
   width: clamp(360px, 45vw, 560px);
 
-  background: linear-gradient(
-    135deg,
-    rgba(8, 8, 32, 0.92) 0%,
-    rgba(20, 10, 48, 0.88) 50%,
-    rgba(6, 12, 28, 0.92) 100%
-  );
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-
-  border: 1px solid rgba(255, 140, 40, 0.45);
-  border-radius: 14px;
+  background: var(--rpg-bg-deep);
+  border: 4px solid var(--rpg-wood);
+  border-radius: 4px;
   box-shadow:
-    0 0 0 1px rgba(255, 140, 40, 0.07),
-    0 0 30px rgba(255, 100, 20, 0.22),
-    0 30px 70px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    inset 0 0 0 2px var(--rpg-wood-inner),
+    inset 0 0 0 4px var(--rpg-wood-mid),
+    0 20px 50px rgba(0, 0, 0, 0.8);
 
   padding: 1.75rem 2rem;
   display: flex;
@@ -229,7 +219,7 @@ function handleClick() {
   height: 16px;
   border-top: 2px solid rgba(255, 185, 70, 0.9);
   border-left: 2px solid rgba(255, 185, 70, 0.9);
-  border-radius: 14px 0 0 0;
+  border-radius: 4px 0 0 0;
   pointer-events: none;
 }
 
@@ -243,7 +233,7 @@ function handleClick() {
   height: 16px;
   border-bottom: 2px solid rgba(255, 120, 40, 0.7);
   border-right: 2px solid rgba(255, 120, 40, 0.7);
-  border-radius: 0 0 14px 0;
+  border-radius: 0 0 4px 0;
   pointer-events: none;
 }
 
@@ -255,13 +245,8 @@ function handleClick() {
   text-transform: uppercase;
   margin: 0;
 
-  background: linear-gradient(90deg, #ff9040 0%, #ffcc70 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-
-  filter: drop-shadow(0 0 10px rgba(255, 100, 20, 0.6));
+  color: var(--rpg-gold);
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
 }
 
 /* ─── Countdown bar ────────────────────────────────────────────────────────── */
@@ -289,12 +274,8 @@ function handleClick() {
   font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  background: linear-gradient(90deg, #ff7030 0%, #ffaa50 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 8px rgba(255, 80, 0, 0.7));
+  color: var(--rpg-gold);
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
 }
 
 /* ─── Planet Stage ─────────────────────────────────────────────────────────── */
@@ -363,7 +344,7 @@ function handleClick() {
   width: 100%;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 165, 50, 0.18);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 0.55rem 0.85rem;
   display: flex;
   flex-direction: column;

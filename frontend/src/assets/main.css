@@ -1,3 +1,5 @@
+@import './rpg-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,84 +37,26 @@
   animation-delay: 4s;
 }
 
-/* Global Custom Scrollbar */
+/* Global Custom Scrollbar — RPG Wood Theme */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(17, 11, 61, 0.3);
-  border-radius: 10px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  backdrop-filter: blur(4px);
+  background: #111;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(59, 130, 246, 0.8) 0%,
-    rgba(139, 92, 246, 0.8) 50%,
-    rgba(59, 130, 246, 0.6) 100%
-  );
-  border-radius: 10px;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  box-shadow:
-    0 0 10px rgba(59, 130, 246, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
+  background: #5c3310;
+  border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(59, 130, 246, 1) 0%,
-    rgba(139, 92, 246, 1) 50%,
-    rgba(59, 130, 246, 0.8) 100%
-  );
-  box-shadow:
-    0 0 20px rgba(59, 130, 246, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transform: scaleY(1.1);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(
-    180deg,
-    rgba(37, 99, 235, 1) 0%,
-    rgba(124, 58, 237, 1) 50%,
-    rgba(37, 99, 235, 0.9) 100%
-  );
-  box-shadow:
-    0 0 25px rgba(59, 130, 246, 1),
-    inset 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.custom-scrollbar::-webkit-scrollbar-corner {
-  background: rgba(17, 11, 61, 0.3);
-  border-radius: 10px;
+  background: #7a4e20;
 }
 
 /* Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.8) rgba(17, 11, 61, 0.3);
-}
-
-/* Glow on hover */
-.custom-scrollbar:hover::-webkit-scrollbar-thumb {
-  animation: scrollbarGlow 2s ease-in-out infinite;
-}
-
-@keyframes scrollbarGlow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 15px rgba(59, 130, 246, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-  50% {
-    box-shadow:
-      0 0 30px rgba(59, 130, 246, 0.9),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  }
+  scrollbar-color: #5c3310 #111;
 }

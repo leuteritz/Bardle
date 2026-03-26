@@ -3,17 +3,13 @@
     <!-- Max missions warning -->
     <div
       v-if="!missionStore.canStartMission"
-      class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border rounded-xl bg-amber-500/10 border-amber-500/20 text-amber-300/70"
+      class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold mc-warning"
     >
       ⚠️ Maximum erreicht ({{ MAX_ACTIVE_MISSIONS }})
     </div>
 
     <!-- Mission Cards -->
-    <div
-      v-for="config in missionConfigs"
-      :key="config.id"
-      class="rounded-2xl border border-white/10 bg-white/[0.03] p-2 space-y-1.5"
-    >
+    <div v-for="config in missionConfigs" :key="config.id" class="p-2 space-y-1.5 mc-card">
       <!-- Header: Icon + Name + Meta -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -52,25 +48,25 @@
                   ? toggleSelection(config.id, roleIdx, champ, role)
                   : undefined
               "
-              class="relative flex flex-col items-center gap-1 p-1.5 rounded-xl border transition-all duration-150 cursor-pointer"
+              class="relative flex flex-col items-center gap-1 p-1.5 transition-all duration-150 cursor-pointer mc-champ-pick"
               :class="
                 getSelection(config.id, roleIdx) === champ
-                  ? 'bg-indigo-500/20 border-indigo-400/40'
+                  ? 'mc-champ-pick--selected'
                   : isSelectedElsewhere(config.id, roleIdx, champ) || !missionStore.canStartMission
-                    ? 'border-transparent opacity-20 cursor-not-allowed'
-                    : 'border-transparent hover:bg-white/[0.05] hover:border-white/10'
+                    ? 'mc-champ-pick--disabled'
+                    : 'mc-champ-pick--available'
               "
             >
               <img
                 :src="getChampionImage(champ)"
                 :alt="champ"
-                class="object-cover rounded-lg w-8 h-8"
+                class="object-cover w-8 h-8 rounded-lg"
                 @error="onImgError"
               />
               <!-- Checkmark -->
               <div
                 v-if="getSelection(config.id, roleIdx) === champ"
-                class="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center"
+                class="absolute flex items-center justify-center w-4 h-4 rounded-full -top-1 -right-1 mc-checkmark"
               >
                 <span class="text-[10px] text-white">✓</span>
               </div>
@@ -100,11 +96,9 @@
         <button
           @click="startMission(config.id)"
           :disabled="!canStart(config.id, config.requiredRoles.length)"
-          class="px-4 py-1.5 text-sm font-bold rounded-xl transition-all duration-150 active:scale-95"
+          class="px-4 py-1.5 text-sm font-bold transition-all duration-150 active:scale-95"
           :class="
-            canStart(config.id, config.requiredRoles.length)
-              ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-              : 'bg-white/[0.04] text-white/20 cursor-not-allowed'
+            canStart(config.id, config.requiredRoles.length) ? 'rpg-btn-green' : 'rpg-btn-disabled'
           "
         >
           Starten
@@ -133,11 +127,11 @@ export default defineComponent({
     const selections = reactive<Record<string, Record<number, string>>>({})
 
     const roleColors: Record<ChampionRole, string> = {
-      top: 'bg-red-400/10     text-red-300/60',
-      jungle: 'bg-emerald-400/10 text-emerald-300/60',
-      mid: 'bg-blue-400/10    text-blue-300/60',
-      adc: 'bg-amber-400/10   text-amber-300/60',
-      support: 'bg-pink-400/10    text-pink-300/60',
+      top: 'mc-role--top',
+      jungle: 'mc-role--jungle',
+      mid: 'mc-role--mid',
+      adc: 'mc-role--adc',
+      support: 'mc-role--support',
     }
 
     function getSelection(configId: string, roleIdx: number): string {

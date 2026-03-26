@@ -43,7 +43,7 @@ const filteredData = computed(() => {
     <Transition name="fade">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="fixed inset-0 z-[60] bg-black/30 backdrop-blur-[2px]"
+        class="rpg-overlay fixed inset-0 z-[60]"
         @click="closePanel"
       />
     </Transition>
@@ -52,58 +52,42 @@ const filteredData = computed(() => {
     <Transition name="slide">
       <div
         v-if="gameStore.isEncyclopediaOpen"
-        class="fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden shadow-2xl border-l border-blue-400/30 bg-gradient-to-bl from-slate-950 via-blue-950 to-slate-950"
+        class="enc-panel fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden"
       >
-        <!-- Animated background particles -->
-        <div class="absolute inset-0 overflow-hidden pointer-events-none">
-          <div
-            class="absolute w-40 h-40 rounded-full -top-10 -left-10 bg-blue-600/10 blur-3xl animate-blob"
-          />
-          <div
-            class="absolute w-32 h-32 rounded-full -bottom-10 -right-10 bg-violet-600/10 blur-3xl animate-blob animation-delay-2000"
-          />
-          <div
-            class="absolute w-24 h-24 rounded-full top-1/2 left-1/4 bg-blue-600/8 blur-2xl animate-blob animation-delay-4000"
-          />
-        </div>
+        <!-- Gold accent bar -->
+        <div class="rpg-accent-bar"></div>
 
         <!-- Header -->
-        <div
-          class="relative z-10 flex items-center justify-between px-5 py-4 border-b shrink-0 border-blue-400/20 bg-gradient-to-r from-blue-900/40 to-violet-900/20 backdrop-blur-lg"
-        >
+        <div class="enc-header relative z-10 flex items-center justify-between px-5 py-4 shrink-0">
           <div class="flex items-center gap-3">
             <span class="text-2xl">📖</span>
-            <h2
-              class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-violet-300 to-amber-300"
-            >
+            <h2 class="enc-title text-xl font-bold">
               Bardle Enzyklopaedie
             </h2>
           </div>
           <button
-            class="flex items-center justify-center w-8 h-8 transition-all duration-200 border rounded-lg bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-110"
+            class="rpg-close-btn flex items-center justify-center w-8 h-8"
             @click="closePanel"
           >
-            <span class="text-sm text-blue-300">✕</span>
+            <span class="text-sm">✕</span>
           </button>
         </div>
 
         <!-- Search -->
-        <div class="relative z-10 px-5 py-3 border-b shrink-0 border-blue-400/10">
+        <div class="enc-search-wrap relative z-10 px-5 py-3 shrink-0">
           <div class="relative">
-            <span class="absolute text-sm -translate-y-1/2 left-3 top-1/2 text-blue-400/60"
-              >🔍</span
-            >
+            <span class="enc-search-icon absolute text-sm -translate-y-1/2 left-3 top-1/2">🔍</span>
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Suche..."
-              class="w-full py-2 pl-9 pr-3 text-sm text-blue-100 transition-all duration-200 border rounded-lg bg-white/5 border-blue-400/20 placeholder-blue-400/40 focus:outline-none focus:border-blue-400/50 focus:bg-white/8"
+              class="enc-search-input w-full py-2 pl-9 pr-3 text-sm"
             />
           </div>
         </div>
 
         <!-- Scrollable content -->
-        <div class="relative z-10 flex-1 px-4 py-3 overflow-y-auto custom-scrollbar">
+        <div class="rpg-scrollbar relative z-10 flex-1 px-4 py-3 overflow-y-auto">
           <div
             v-for="category in filteredData"
             :key="category.id"
@@ -111,23 +95,19 @@ const filteredData = computed(() => {
           >
             <!-- Category header -->
             <button
-              class="flex items-center w-full gap-2 px-3 py-2.5 text-left transition-all duration-200 border rounded-xl bg-white/10 border-white/15 hover:bg-white/15 hover:border-white/25 group"
-              :class="{ 'bg-white/8 border-blue-400/30': expandedCategories.has(category.id) }"
+              class="enc-category-btn flex items-center w-full gap-2 px-3 py-2.5 text-left"
+              :class="{ 'enc-category-btn--active': expandedCategories.has(category.id) }"
               @click="toggleCategory(category.id)"
             >
               <span class="text-lg">{{ category.icon }}</span>
-              <span
-                class="flex-1 text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-violet-200"
-              >
+              <span class="enc-category-title flex-1 text-sm font-bold">
                 {{ category.title }}
               </span>
-              <span
-                class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-400/20 text-blue-300 font-mono"
-              >
+              <span class="enc-badge text-[10px] px-1.5 py-0.5 font-mono">
                 {{ category.entries.length }}
               </span>
               <span
-                class="text-xs transition-transform duration-200 text-blue-400/60"
+                class="enc-arrow text-xs"
                 :class="{ 'rotate-90': expandedCategories.has(category.id) }"
               >
                 ▶
@@ -142,36 +122,34 @@ const filteredData = computed(() => {
               <div
                 v-for="entry in category.entries"
                 :key="entry.id"
-                class="p-3 transition-all duration-200 border rounded-xl bg-white/8 border-white/10 hover:bg-white/12 hover:border-blue-400/30"
+                class="enc-entry p-3"
               >
                 <div class="flex items-start gap-3">
                   <!-- Icon -->
                   <img
                     :src="entry.icon"
                     :alt="entry.name"
-                    class="object-contain w-10 h-10 rounded-lg shrink-0 bg-black/20 ring-1 ring-white/10"
+                    class="rpg-icon-box object-contain w-10 h-10 shrink-0"
                     loading="lazy"
                   />
                   <div class="flex-1 min-w-0">
                     <!-- Name -->
-                    <h4
-                      class="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-violet-300"
-                    >
+                    <h4 class="enc-entry-name text-sm font-bold">
                       {{ entry.name }}
                     </h4>
                     <!-- Description -->
-                    <p class="mt-1 text-xs leading-relaxed text-blue-200/80">
+                    <p class="enc-entry-desc mt-1 text-xs leading-relaxed">
                       {{ entry.description }}
                     </p>
                     <!-- Formula -->
                     <p
                       v-if="entry.formula"
-                      class="px-2 py-1 mt-1.5 text-[11px] font-mono rounded-md bg-blue-900/40 text-amber-300/80 border border-blue-400/10"
+                      class="enc-formula px-2 py-1 mt-1.5 text-[11px] font-mono"
                     >
                       {{ entry.formula }}
                     </p>
                     <!-- Lore -->
-                    <p class="mt-1.5 text-[11px] italic leading-relaxed text-blue-400/60">
+                    <p class="enc-lore mt-1.5 text-[11px] italic leading-relaxed">
                       {{ entry.lore }}
                     </p>
                   </div>
@@ -183,7 +161,7 @@ const filteredData = computed(() => {
           <!-- Empty state -->
           <div
             v-if="filteredData.length === 0"
-            class="flex flex-col items-center justify-center py-12 text-blue-400/40"
+            class="enc-empty flex flex-col items-center justify-center py-12"
           >
             <span class="text-4xl">🔮</span>
             <p class="mt-2 text-sm">Keine Eintraege gefunden</p>
@@ -191,10 +169,8 @@ const filteredData = computed(() => {
         </div>
 
         <!-- Footer -->
-        <div
-          class="relative z-10 px-5 py-2.5 text-center border-t shrink-0 border-blue-400/10 bg-blue-950/50"
-        >
-          <p class="text-[10px] text-blue-400/40 italic">
+        <div class="enc-footer relative z-10 px-5 py-2.5 text-center shrink-0">
+          <p class="text-[10px] italic">
             {{ encyclopediaData.reduce((sum, c) => sum + c.entries.length, 0) }} Eintraege in
             {{ encyclopediaData.length }} Kategorien
           </p>
@@ -205,24 +181,131 @@ const filteredData = computed(() => {
 </template>
 
 <style scoped>
+/* ── Transitions ── */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .slide-enter-from,
 .slide-leave-to {
   transform: translateX(100%);
 }
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
 
+/* ── Panel ── */
+.enc-panel {
+  background: var(--rpg-bg-deep);
+  border-left: 4px solid var(--rpg-wood);
+  box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid),
+    -8px 0 24px rgba(0, 0, 0, 0.7);
+}
+
+/* ── Header ── */
+.enc-header {
+  background: var(--rpg-bg-header);
+  border-bottom: 3px solid var(--rpg-wood-mid);
+}
+.enc-title {
+  color: var(--rpg-gold);
+}
+
+/* ── Search ── */
+.enc-search-wrap {
+  border-bottom: 1px solid var(--rpg-wood-inner);
+}
+.enc-search-icon {
+  color: var(--rpg-text-dim);
+}
+.enc-search-input {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  color: var(--rpg-text);
+  outline: none;
+}
+.enc-search-input::placeholder {
+  color: var(--rpg-text-dim);
+}
+.enc-search-input:focus {
+  border-color: var(--rpg-gold-dim);
+  background: var(--rpg-bg-row);
+}
+
+/* ── Category button ── */
+.enc-category-btn {
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-wood-inner);
+  border-radius: 4px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.enc-category-btn:hover {
+  background: var(--rpg-bg-header);
+  border-color: var(--rpg-wood-mid);
+}
+.enc-category-btn--active {
+  background: var(--rpg-bg-header);
+  border-color: var(--rpg-wood);
+}
+.enc-category-title {
+  color: var(--rpg-gold);
+}
+.enc-badge {
+  background: var(--rpg-wood-inner);
+  color: var(--rpg-gold-dim);
+  border-radius: 4px;
+}
+.enc-arrow {
+  color: var(--rpg-gold-dim);
+  transition: transform 0.2s;
+}
+
+/* ── Entry card ── */
+.enc-entry {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-inner);
+  border-radius: 4px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.enc-entry:hover {
+  background: var(--rpg-bg-row);
+  border-color: var(--rpg-wood-mid);
+}
+.enc-entry-name {
+  color: var(--rpg-gold);
+}
+.enc-entry-desc {
+  color: var(--rpg-text-muted);
+}
+
+/* ── Formula box ── */
+.enc-formula {
+  background: var(--rpg-bg-icon);
+  color: var(--rpg-gold-bright);
+  border: 1px solid var(--rpg-wood-inner);
+  border-radius: 4px;
+}
+
+/* ── Lore text ── */
+.enc-lore {
+  color: var(--rpg-text-dim);
+}
+
+/* ── Empty state ── */
+.enc-empty {
+  color: var(--rpg-text-dim);
+}
+
+/* ── Footer ── */
+.enc-footer {
+  background: var(--rpg-bg-header);
+  border-top: 1px solid var(--rpg-wood-mid);
+  color: var(--rpg-text-dim);
+}
 </style>

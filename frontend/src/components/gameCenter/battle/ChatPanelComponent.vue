@@ -1,9 +1,9 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 h-full flex flex-col"
+    class="group relative overflow-hidden h-full flex flex-col chat-panel"
   >
     <div
-      class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+      class="absolute inset-0 pointer-events-none chat-shimmer translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
 
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
@@ -11,7 +11,7 @@
       <div
         id="battle-chat-box"
         ref="chatBoxRef"
-        class="flex-1 min-h-0 p-2 space-y-1 overflow-y-auto border custom-scrollbar rounded-xl bg-black/20 border-white/10 backdrop-blur-sm"
+        class="flex-1 min-h-0 p-2 space-y-1 overflow-y-auto rpg-scrollbar chat-box"
       >
         <div
           v-for="(msg, idx) in battleStore.chatMessages"
@@ -61,3 +61,21 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.chat-panel {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+
+.chat-shimmer {
+  background: linear-gradient(to right, transparent, rgba(92, 51, 16, 0.08), transparent);
+}
+
+.chat-box {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+</style>

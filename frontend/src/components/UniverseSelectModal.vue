@@ -93,15 +93,16 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
     <Transition name="modal-fade">
       <div
         v-if="visible"
-        class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-md"
+        class="fixed inset-0 z-[9998] flex items-center justify-center rpg-overlay"
         @click.self="gameStore.closePrestigeModal()"
       >
-        <div
-          class="relative w-full max-w-4xl mx-4 overflow-hidden border shadow-2xl shadow-purple-900/50 rounded-3xl bg-gradient-to-br from-slate-950 via-purple-950/80 to-slate-950 border-white/20"
-        >
+        <div class="relative w-full max-w-4xl mx-4 overflow-hidden rpg-frame">
+          <!-- Gold Accent -->
+          <div class="rpg-accent-bar"></div>
+
           <!-- Close Button -->
           <button
-            class="absolute z-10 flex items-center justify-center w-8 h-8 transition-all rounded-full top-4 right-4 bg-white/10 hover:bg-white/20 text-white/60 hover:text-white"
+            class="absolute z-10 top-4 right-4 w-8 h-8 flex items-center justify-center rpg-close-btn"
             @click="gameStore.closePrestigeModal()"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,32 +111,30 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           </button>
 
           <!-- Header -->
-          <div class="relative flex items-center justify-center p-6 border-b backdrop-blur-lg bg-white/5 border-white/10">
-            <h2
-              class="text-3xl font-bold text-transparent bg-gradient-to-r from-purple-400 via-amber-300 to-purple-400 bg-clip-text"
-            >
+          <div class="rpg-header flex items-center justify-center p-6 relative">
+            <h2 class="uni-title text-3xl font-bold">
               Wähle dein nächstes Universum
             </h2>
           </div>
 
           <!-- Universe Cards Grid -->
-          <div class="grid grid-cols-2 gap-4 p-6 overflow-y-auto lg:grid-cols-3 max-h-[65vh]">
+          <div class="grid grid-cols-2 gap-4 p-6 overflow-y-auto rpg-scrollbar lg:grid-cols-3 max-h-[65vh]">
             <button
               v-for="universe in universes"
               :key="universe.id"
               :disabled="universe.id === gameStore.currentUniverse"
-              class="universe-card relative flex flex-col items-center p-4 text-left transition-all duration-300 border cursor-pointer group rounded-2xl backdrop-blur-sm"
+              class="uni-card relative flex flex-col items-center p-4 text-left group"
               :class="
                 universe.id === gameStore.currentUniverse
-                  ? 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
-                  : 'bg-white/5 border-white/15 hover:border-violet-400/60 hover:bg-violet-500/10 hover:scale-[1.03] hover:shadow-lg hover:shadow-violet-500/20'
+                  ? 'uni-card--current'
+                  : 'uni-card--selectable'
               "
               @click="gameStore.selectPrestigeUniverse(universe.id)"
             >
               <!-- Current badge -->
               <span
                 v-if="universe.id === gameStore.currentUniverse"
-                class="absolute px-2 py-0.5 text-[10px] font-bold text-emerald-300 border rounded-full top-2 right-2 bg-emerald-500/20 border-emerald-400/30"
+                class="uni-active-badge absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold"
               >
                 AKTIV
               </span>
@@ -144,23 +143,21 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               <span class="mb-2 text-3xl">{{ universe.modifier?.icon ?? '🌍' }}</span>
 
               <!-- Name -->
-              <h3
-                class="mb-1 text-base font-bold text-center text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text"
-              >
+              <h3 class="uni-name mb-1 text-base font-bold text-center">
                 {{ universe.name }}
               </h3>
 
               <!-- Description -->
-              <p class="mb-3 text-[11px] text-center text-blue-400/70">
+              <p class="uni-desc mb-3 text-[11px] text-center">
                 {{ universe.description }}
               </p>
 
               <!-- Modifier Effects -->
               <div
                 v-if="universe.modifier"
-                class="w-full space-y-1 p-2.5 rounded-xl bg-black/30 border border-white/10"
+                class="uni-effects w-full space-y-1 p-2.5"
               >
-                <div class="mb-1.5 text-[10px] font-bold text-center text-violet-300">
+                <div class="uni-modifier-name mb-1.5 text-[10px] font-bold text-center">
                   {{ universe.modifier.name }}
                 </div>
                 <div
@@ -168,17 +165,17 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
                   :key="i"
                   class="flex items-center gap-1.5 text-[10px]"
                 >
-                  <span :class="line.positive ? 'text-emerald-400' : 'text-red-400'">
+                  <span :class="line.positive ? 'eff-positive' : 'eff-negative'">
                     {{ line.positive ? '▲' : '▼' }}
                   </span>
-                  <span class="text-blue-200/80">{{ line.text }}</span>
+                  <span class="uni-effect-text">{{ line.text }}</span>
                 </div>
               </div>
 
               <!-- No modifier hint -->
               <div
                 v-else
-                class="w-full p-2.5 rounded-xl bg-black/20 border border-white/5 text-center text-[10px] text-blue-300/50"
+                class="uni-no-mod w-full p-2.5 text-center text-[10px]"
               >
                 Keine Modifikatoren
               </div>
@@ -186,9 +183,9 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           </div>
 
           <!-- Footer -->
-          <div class="flex justify-center p-4 border-t border-white/10">
+          <div class="uni-footer flex justify-center p-4">
             <button
-              class="px-6 py-2 text-sm transition-all duration-200 border text-blue-400/60 hover:text-blue-300 border-blue-400/20 hover:border-blue-400/40 rounded-xl"
+              class="uni-cancel-btn px-6 py-2 text-sm"
               @click="gameStore.closePrestigeModal()"
             >
               Abbrechen
@@ -208,5 +205,97 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+.uni-title {
+  color: var(--rpg-gold);
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+}
+
+.uni-card {
+  border-radius: 4px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.uni-card--current {
+  background: var(--rpg-bg-icon);
+  border: 1px solid var(--rpg-border-row);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.uni-card--selectable {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-border-row);
+}
+
+.uni-card--selectable:hover {
+  border-color: var(--rpg-gold-dim);
+  background: #252520;
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(200, 144, 64, 0.2);
+}
+
+.uni-active-badge {
+  color: var(--rpg-green-top);
+  background: rgba(82, 184, 48, 0.15);
+  border: 1px solid rgba(82, 184, 48, 0.3);
+  border-radius: 4px;
+}
+
+.uni-name {
+  color: var(--rpg-gold);
+}
+
+.uni-desc {
+  color: var(--rpg-text-dim);
+}
+
+.uni-effects {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+
+.uni-modifier-name {
+  color: var(--rpg-gold-dim);
+}
+
+.eff-positive {
+  color: var(--rpg-green-top);
+}
+
+.eff-negative {
+  color: var(--rpg-red);
+}
+
+.uni-effect-text {
+  color: var(--rpg-text-muted);
+}
+
+.uni-no-mod {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  color: var(--rpg-text-dim);
+}
+
+.uni-footer {
+  border-top: 1px solid var(--rpg-border-row);
+}
+
+.uni-cancel-btn {
+  color: var(--rpg-text-dim);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.uni-cancel-btn:hover {
+  color: var(--rpg-text-muted);
+  border-color: var(--rpg-text-dim);
 }
 </style>

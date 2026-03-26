@@ -27,24 +27,24 @@ function checkScrollable(el: HTMLElement) {
 }
 
 const rarityGlow: Record<string, string> = {
-  common: 'shadow-[0_0_14px_rgba(96,165,250,0.35)] hover:shadow-[0_0_22px_rgba(96,165,250,0.55)]',
-  rare: 'shadow-[0_0_14px_rgba(168,85,247,0.35)] hover:shadow-[0_0_22px_rgba(168,85,247,0.55)]',
-  epic: 'shadow-[0_0_14px_rgba(251,191,36,0.40)] hover:shadow-[0_0_22px_rgba(251,191,36,0.65)]',
-  legendary: 'shadow-[0_0_18px_rgba(251,191,36,0.55)] hover:shadow-[0_0_28px_rgba(251,191,36,0.75)] legendary-glow',
+  common: 'glow-common',
+  rare: 'glow-rare',
+  epic: 'glow-epic',
+  legendary: 'glow-legendary',
 }
 
 const rarityBorder: Record<string, string> = {
-  common: 'border-blue-400/50',
-  rare: 'border-purple-400/50',
-  epic: 'border-amber-400/60',
-  legendary: 'border-yellow-400/70',
+  common: 'border-common',
+  rare: 'border-rare',
+  epic: 'border-epic',
+  legendary: 'border-legendary',
 }
 
 const rarityAccent: Record<string, string> = {
-  common: 'from-blue-500/30 to-blue-600/10',
-  rare: 'from-purple-500/30 to-purple-600/10',
-  epic: 'from-amber-500/35 to-amber-600/10',
-  legendary: 'from-yellow-500/40 to-amber-600/15',
+  common: 'accent-common',
+  rare: 'accent-rare',
+  epic: 'accent-epic',
+  legendary: 'accent-legendary',
 }
 
 function getDisplayLine(aug: AugmentDefinition): string {
@@ -60,17 +60,17 @@ function getDisplayLine(aug: AugmentDefinition): string {
     >
       <!-- Section header -->
       <div class="flex items-center gap-1.5 px-1 mb-0.5">
-        <div class="flex-1 h-px bg-gradient-to-r from-white/20 to-transparent" />
-        <span class="text-[13px] font-bold tracking-[0.15em] text-white/30 uppercase"
+        <div class="aug-header-line flex-1 h-px" />
+        <span class="aug-header-label text-[13px] font-bold tracking-[0.15em] uppercase"
           >Augments</span
         >
-        <div class="flex-1 h-px bg-gradient-to-l from-white/20 to-transparent" />
+        <div class="aug-header-line flex-1 h-px" />
       </div>
 
       <div class="relative">
         <div
           ref="scrollEl"
-          class="custom-scrollbar flex flex-col gap-1.5 mt-2 overflow-x-hidden pr-0.5"
+          class="rpg-scrollbar flex flex-col gap-1.5 mt-2 overflow-x-hidden pr-0.5"
           :class="activeAugmentDefs.length > 1 ? 'overflow-y-auto' : 'overflow-y-hidden'"
           style="max-height: calc(100vh - 240px)"
           @scroll="onScroll"
@@ -80,20 +80,20 @@ function getDisplayLine(aug: AugmentDefinition): string {
           <TransitionGroup name="aug-card" tag="div" class="flex flex-col gap-1.5">
             <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative">
               <div
-                class="relative flex items-center gap-2 px-2.5 py-2 rounded-xl border bg-slate-950/80 backdrop-blur-sm cursor-default transition-all duration-300 overflow-hidden"
+                class="aug-item relative flex items-center gap-2 px-2.5 py-2 cursor-default overflow-hidden"
                 :class="[rarityBorder[aug.rarity], rarityGlow[aug.rarity]]"
               >
                 <!-- Rarity gradient overlay -->
                 <div
-                  class="absolute inset-0 pointer-events-none bg-gradient-to-r opacity-60"
+                  class="absolute inset-0 pointer-events-none opacity-60"
                   :class="rarityAccent[aug.rarity]"
                 />
 
                 <!-- Effect line -->
                 <div class="relative z-10 flex flex-col gap-0.5 flex-1">
                   <div class="flex items-center gap-1 text-[11px]">
-                    <span class="text-emerald-400 flex-shrink-0 text-[8px]">▲</span>
-                    <span class="leading-tight text-blue-100/85">{{ getDisplayLine(aug) }}</span>
+                    <span class="aug-arrow flex-shrink-0 text-[8px]">▲</span>
+                    <span class="aug-text leading-tight">{{ getDisplayLine(aug) }}</span>
                   </div>
                 </div>
               </div>
@@ -104,7 +104,7 @@ function getDisplayLine(aug: AugmentDefinition): string {
         <Transition name="fade">
           <div
             v-if="isScrollable && !atBottom"
-            class="absolute bottom-0 left-0 right-0 h-10 rounded-b-lg pointer-events-none bg-gradient-to-t from-slate-950/80 to-transparent"
+            class="aug-fade-bottom absolute bottom-0 left-0 right-0 h-10 pointer-events-none"
           />
         </Transition>
       </div>
@@ -149,11 +149,60 @@ function getDisplayLine(aug: AugmentDefinition): string {
   opacity: 0;
 }
 
-@keyframes legendary-pulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
-  50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.65); }
+.aug-header-line {
+  background: rgba(92, 51, 16, 0.4);
 }
-.legendary-glow {
+
+.aug-header-label {
+  color: rgba(232, 192, 64, 0.35);
+}
+
+.aug-item {
+  background: var(--rpg-bg-deep);
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.aug-arrow {
+  color: var(--rpg-green-top);
+}
+
+.aug-text {
+  color: var(--rpg-text-muted);
+}
+
+.aug-fade-bottom {
+  background: linear-gradient(to top, var(--rpg-bg-deep), transparent);
+  border-radius: 0 0 4px 4px;
+}
+
+/* Rarity borders */
+.border-common { border: 1px solid #5b8dd9; }
+.border-rare { border: 1px solid #a87ed8; }
+.border-epic { border: 1px solid #d9a03e; }
+.border-legendary { border: 1px solid #e8c040; }
+
+/* Rarity glows */
+.glow-common { box-shadow: 0 0 10px rgba(91, 141, 217, 0.3); }
+.glow-common:hover { box-shadow: 0 0 18px rgba(91, 141, 217, 0.5); }
+.glow-rare { box-shadow: 0 0 10px rgba(168, 126, 216, 0.3); }
+.glow-rare:hover { box-shadow: 0 0 18px rgba(168, 126, 216, 0.5); }
+.glow-epic { box-shadow: 0 0 10px rgba(217, 160, 62, 0.35); }
+.glow-epic:hover { box-shadow: 0 0 18px rgba(217, 160, 62, 0.55); }
+.glow-legendary {
+  box-shadow: 0 0 14px rgba(232, 192, 64, 0.45);
   animation: legendary-pulse 2s ease-in-out infinite;
+}
+.glow-legendary:hover { box-shadow: 0 0 24px rgba(232, 192, 64, 0.65); }
+
+/* Rarity accent overlays */
+.accent-common { background: linear-gradient(to right, rgba(91, 141, 217, 0.2), transparent); }
+.accent-rare { background: linear-gradient(to right, rgba(168, 126, 216, 0.2), transparent); }
+.accent-epic { background: linear-gradient(to right, rgba(217, 160, 62, 0.25), transparent); }
+.accent-legendary { background: linear-gradient(to right, rgba(232, 192, 64, 0.3), transparent); }
+
+@keyframes legendary-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(232, 192, 64, 0.35); }
+  50% { box-shadow: 0 0 22px rgba(232, 192, 64, 0.6); }
 }
 </style>

@@ -31,7 +31,8 @@
       }"
     >
       <span
-        class="text-transparent bg-gradient-to-r from-cyan-500 to-emerald-800 bg-clip-text text-2xl drop-shadow-[0_0_8px_rgba(34,211,238,0.9)]"
+        class="text-2xl"
+        style="color: #e8c040; text-shadow: 0 0 8px rgba(232, 192, 64, 0.9);"
       >
         +{{ gameStore.chimesPerClick }}
       </span>
@@ -257,15 +258,6 @@ export default defineComponent({
 /* Popup Animation */
 .chime-popup {
   animation: fadeUpEnhanced 1s ease-out forwards;
-}
-
-/* Glassmorphism Utilities */
-.backdrop-blur-lg {
-  backdrop-filter: blur(16px);
-}
-
-.backdrop-blur-sm {
-  backdrop-filter: blur(4px);
 }
 
 /* Responsive - Stats ausblenden bei kleineren Bildschirmen */

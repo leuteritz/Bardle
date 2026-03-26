@@ -1,27 +1,27 @@
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border backdrop-blur-md bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 flex flex-col"
+    class="group relative overflow-hidden flex flex-col minimap-panel"
   >
     <div
-      class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+      class="absolute inset-0 pointer-events-none minimap-shimmer translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
 
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
         <div
-          class="relative h-full max-w-full overflow-hidden border-2 rounded-xl border-white/10 bg-gradient-to-br from-green-200 to-green-400 aspect-square"
+          class="relative h-full max-w-full overflow-hidden aspect-square minimap-field"
         >
           <!-- Time -->
           <div
-            class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+            class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white minimap-overlay-badge"
           >
             {{ formatTime(battleStore.battleTime) }}
           </div>
 
           <!-- Score -->
           <div
-            class="absolute z-20 top-1 right-1 px-1.5 py-0.5 rounded-lg bg-black/60 border border-white/10 backdrop-blur-sm"
+            class="absolute z-20 top-1 right-1 px-1.5 py-0.5 minimap-overlay-badge"
           >
             <span class="text-xs font-black text-blue-300">{{ score.team1Kills }}</span>
             <span class="text-xs text-white/40"> vs </span>
@@ -67,7 +67,7 @@
             />
           </div>
 
-          <div class="absolute inset-0 border pointer-events-none rounded-xl border-white/20" />
+          <div class="absolute inset-0 pointer-events-none minimap-inner-border" />
         </div>
       </div>
     </div>
@@ -312,3 +312,32 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.minimap-panel {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+
+.minimap-shimmer {
+  background: linear-gradient(to right, transparent, rgba(92, 51, 16, 0.08), transparent);
+}
+
+.minimap-field {
+  border: 2px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  background: linear-gradient(to bottom right, #a8d8a0, #6ab860);
+}
+
+.minimap-overlay-badge {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+
+.minimap-inner-border {
+  border: 1px solid rgba(92, 51, 16, 0.3);
+  border-radius: 4px;
+}
+</style>

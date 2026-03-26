@@ -36,17 +36,20 @@ function onBackdropClick(e: MouseEvent) {
       aria-modal="true"
       role="dialog"
     >
-      <div class="modal-card">
+      <div class="modal-card rpg-frame">
+        <!-- Gold Accent -->
+        <div class="rpg-accent-bar" style="width: 100%" />
+
         <!-- Header -->
-        <div class="flex items-center justify-between w-full mb-1">
+        <div class="flex items-center justify-between w-full mb-1 px-6 pt-4">
           <h2 class="modal-title">🎒 Inventar</h2>
-          <button class="close-btn" @click="emit('close')" aria-label="Schließen">✕</button>
+          <button class="rpg-close-btn px-2 py-1" @click="emit('close')" aria-label="Schließen">✕</button>
         </div>
 
         <div class="divider" />
 
         <!-- Materialien -->
-        <section class="w-full">
+        <section class="w-full px-6 pb-5">
           <h3 class="section-label">Materialien</h3>
           <div class="material-grid">
             <div
@@ -98,57 +101,31 @@ function onBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 2, 15, 0.7);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .modal-card {
   width: clamp(300px, 38vw, 480px);
-  background: linear-gradient(135deg, #020818 0%, #06152e 50%, #020c1a 100%);
-  border: 1px solid rgba(251, 146, 60, 0.2);
-  border-radius: 1rem;
-  box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(251, 146, 60, 0.08);
-  backdrop-filter: blur(16px);
-  padding: 1.5rem 1.75rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
+  overflow: hidden;
 }
 
 .modal-title {
   font-size: 1.1rem;
   font-weight: bold;
-  color: #fbbf24;
-  text-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
+  color: var(--rpg-gold);
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
   letter-spacing: 0.05em;
   margin: 0;
-}
-
-.close-btn {
-  color: rgba(251, 146, 60, 0.6);
-  background: transparent;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0.25rem 0.4rem;
-  border-radius: 0.4rem;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-.close-btn:hover {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.1);
 }
 
 .divider {
   width: 100%;
   height: 1px;
-  background: rgba(251, 146, 60, 0.15);
+  background: var(--rpg-wood-mid);
   margin: 0.25rem 0;
 }
 
@@ -157,8 +134,8 @@ function onBackdropClick(e: MouseEvent) {
   font-weight: bold;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(251, 146, 60, 0.45);
-  margin: 0 0 0.5rem 0;
+  color: var(--rpg-gold-dim);
+  margin: 0.5rem 0;
 }
 
 .material-grid {
@@ -171,9 +148,9 @@ function onBackdropClick(e: MouseEvent) {
 .material-card {
   position: relative;
   padding: 0.75rem 0.6rem 0.6rem;
-  border-radius: 0.6rem;
+  border-radius: 4px;
   border: 1px solid;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--rpg-bg-dark);
   display: flex;
   flex-direction: column;
   align-items: center;

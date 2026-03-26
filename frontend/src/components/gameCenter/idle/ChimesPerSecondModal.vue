@@ -1,78 +1,61 @@
 <template>
   <div
     v-if="isVisible"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+    class="fixed inset-0 z-50 flex items-center justify-center rpg-overlay"
     @click.self="close"
   >
-    <div
-      class="relative w-full max-w-4xl mx-4 overflow-hidden border shadow-2xl shadow-blue-900/50 max-h-[80vh] rounded-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 border-white/30"
-    >
+    <div class="relative w-full max-w-4xl mx-4 overflow-hidden rpg-frame max-h-[80vh]">
+      <!-- Gold Accent -->
+      <div class="rpg-accent-bar"></div>
+
       <!-- Header -->
-      <div
-        class="relative flex items-center justify-center p-6 border-b backdrop-blur-lg bg-white/10 border-white/20"
-      >
+      <div class="rpg-header flex items-center justify-center p-6 relative">
         <div class="flex items-center gap-4">
-          <div
-            class="p-3 border rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-green-400/30"
-          >
+          <div class="cps-icon-box p-3">
             <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
           </div>
           <div>
-            <h2
-              class="text-2xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
-            >
+            <h2 class="cps-title text-2xl font-bold">
               Chimes pro Sekunde Analyse
             </h2>
           </div>
         </div>
         <button
           @click="close"
-          class="absolute p-2 text-white transition-all duration-200 border right-10 rounded-xl hover:bg-red-500/20 border-red-400/30 hover:border-red-400/60"
+          class="absolute right-10 p-2 rpg-close-btn"
         >
           ✕
         </button>
       </div>
 
       <!-- Content -->
-      <div class="p-6 overflow-y-auto max-h-[calc(85vh-160px)] custom-scrollbar">
+      <div class="p-6 overflow-y-auto max-h-[calc(85vh-160px)] rpg-scrollbar cps-content">
         <!-- Zusammenfassung -->
         <div class="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
-          <div
-            class="p-6 border rounded-2xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border-blue-400/30"
-          >
+          <div class="stat-card p-6">
             <div class="text-center">
-              <h3 class="mb-2 text-lg font-bold text-blue-300">Aktuelle CPS</h3>
-              <p
-                class="text-3xl font-bold text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text"
-              >
+              <h3 class="stat-card-label mb-2 text-lg font-bold">Aktuelle CPS</h3>
+              <p class="stat-card-value text-3xl font-bold">
                 {{ gameStore.chimesPerSecond }}
               </p>
             </div>
           </div>
 
-          <div
-            class="p-6 border rounded-2xl bg-gradient-to-r from-blue-500/20 to-violet-500/20 backdrop-blur-sm border-blue-400/30"
-          >
+          <div class="stat-card p-6">
             <div class="text-center">
-              <h3 class="mb-2 text-lg font-bold text-blue-300">Lifetime Produktion</h3>
-              <p
-                class="text-3xl font-bold text-transparent bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text"
-              >
+              <h3 class="stat-card-label mb-2 text-lg font-bold">Lifetime Produktion</h3>
+              <p class="stat-card-value text-3xl font-bold">
                 {{ formatNumber(shopStore.totalLifetimeProduction) }}
               </p>
             </div>
           </div>
 
-          <div
-            class="p-6 border rounded-2xl bg-gradient-to-r from-orange-500/20 to-yellow-500/20 backdrop-blur-sm border-orange-400/30"
-          >
+          <div class="stat-card p-6">
             <div class="text-center">
-              <h3 class="mb-2 text-lg font-bold text-orange-300">Top Produzent</h3>
+              <h3 class="stat-card-label mb-2 text-lg font-bold">Top Produzent</h3>
               <div class="flex items-center justify-center gap-2">
                 <img :src="shopStore.topProducer.icon" class="w-6 h-6" />
-                <p
-                  class="text-xl font-bold text-transparent bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text"
-                >
+                <p class="stat-card-value text-xl font-bold">
                   {{ shopStore.topProducer.name }}
                 </p>
               </div>
@@ -82,56 +65,49 @@
 
         <!-- Gebäude-Statistiken -->
         <div class="mb-8">
-          <h3
-            class="mb-6 text-xl font-bold text-transparent bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text"
-          >
+          <h3 class="section-title mb-6 text-xl font-bold">
             🏭 Gebäude-Produktionsanalyse
           </h3>
           <div class="space-y-4">
             <div
               v-for="building in shopStore.buildingStats"
               :key="building.id"
-              class="p-4 transition-all duration-300 border rounded-2xl backdrop-blur-sm bg-white/5 border-white/10 hover:border-white/20"
+              class="building-row p-4"
             >
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
                   <img :src="building.icon" class="w-10 h-10" />
                   <div>
                     <h4 class="font-bold text-white">{{ building.name }}</h4>
-                    <p class="text-sm text-gray-300">Level {{ building.level }}</p>
+                    <p class="building-sublabel text-sm">Level {{ building.level }}</p>
                   </div>
                 </div>
                 <div class="text-right">
-                  <p
-                    class="text-lg font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text"
-                  >
+                  <p class="building-cps text-lg font-bold">
                     {{ building.currentCPS }}/s
                   </p>
-                  <p class="text-sm text-gray-400">
+                  <p class="building-sublabel text-sm">
                     {{ formatNumber(building.lifetimeProduction) }} total
                   </p>
                 </div>
               </div>
 
               <!-- Produktions-Fortschrittsbalken -->
-              <div
-                class="relative h-3 mb-2 overflow-hidden border rounded-full bg-gray-700/50 border-white/10"
-              >
+              <div class="progress-track relative h-3 mb-2 overflow-hidden">
                 <div
-                  class="h-full transition-all duration-1000 ease-out rounded-full bg-gradient-to-r from-green-500 to-emerald-500"
+                  class="progress-fill h-full"
                   :style="{
                     width: building.productionPercentage + '%',
-                    boxShadow: '0 0 15px rgba(34, 197, 94, 0.6)',
                   }"
                 ></div>
               </div>
 
               <!-- Effizienz-Meter -->
               <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-400">Effizienz:</span>
+                <span class="building-sublabel">Effizienz:</span>
                 <div class="flex items-center gap-2">
                   <div class="flex">
-                    <div v-for="star in 5" :key="star" class="text-lg text-yellow-400">
+                    <div v-for="star in 5" :key="star" class="star-icon text-lg">
                       {{
                         star <= Math.floor(building.efficiencyStars)
                           ? '★'
@@ -145,9 +121,9 @@
 
                   <span
                     :class="{
-                      'text-green-400': building.efficiency >= 80,
-                      'text-yellow-400': building.efficiency >= 60 && building.efficiency < 80,
-                      'text-red-400': building.efficiency < 60,
+                      'eff-good': building.efficiency >= 80,
+                      'eff-mid': building.efficiency >= 60 && building.efficiency < 80,
+                      'eff-bad': building.efficiency < 60,
                     }"
                   >
                     {{ building.efficiency }}%
@@ -161,9 +137,7 @@
         <!-- Produktions-Timeline -->
         <div class="mb-8">
           <div class="flex items-center justify-between mb-6">
-            <h3
-              class="text-xl font-bold text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text"
-            >
+            <h3 class="section-title text-xl font-bold">
               📈 Produktions-Timeline
             </h3>
 
@@ -173,12 +147,9 @@
                 v-for="period in cpsStore.timePeriods"
                 :key="period.key"
                 @click="cpsStore.setSelectedTimePeriod(period.key)"
-                class="px-4 py-2 text-sm font-medium transition-all duration-200 border rounded-lg"
+                class="period-btn px-4 py-2 text-sm font-medium"
                 :class="{
-                  'bg-cyan-500/20 border-cyan-400/50 text-cyan-300':
-                    cpsStore.selectedTimePeriod === period.key,
-                  'bg-white/5 border-white/20 text-gray-300 hover:bg-white/10':
-                    cpsStore.selectedTimePeriod !== period.key,
+                  'period-btn--active': cpsStore.selectedTimePeriod === period.key,
                 }"
               >
                 {{ period.label }}
@@ -186,9 +157,7 @@
             </div>
           </div>
 
-          <div
-            class="p-6 border rounded-2xl bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm border-slate-400/30"
-          >
+          <div class="chart-container p-6">
             <!-- Chart -->
             <div
               class="flex items-end justify-between h-32 gap-1"
@@ -197,7 +166,7 @@
               <div
                 v-for="(value, index) in cpsStore.currentProductionHistory"
                 :key="index"
-                class="flex-1 transition-all duration-300 rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400"
+                class="chart-bar flex-1"
                 :style="{
                   height: Math.max(4, (value / cpsStore.currentMaxHistoryValue) * 120) + 'px',
                 }"
@@ -206,7 +175,7 @@
             </div>
 
             <!-- Keine Daten verfügbar -->
-            <div v-else class="flex items-center justify-center h-32 text-gray-400">
+            <div v-else class="flex items-center justify-center h-32 no-data-text">
               <div class="text-center">
                 <p class="mb-2">📊 Keine Daten verfügbar</p>
                 <p class="text-sm">Warte auf Produktionsdaten...</p>
@@ -214,7 +183,7 @@
             </div>
 
             <!-- Zeit-Labels -->
-            <div class="flex justify-between mt-2 text-xs text-gray-400">
+            <div class="flex justify-between mt-2 text-xs time-labels">
               <span>{{ cpsStore.getStartTimeLabel() }}</span>
               <span>{{ cpsStore.getMidTimeLabel() }}</span>
               <span>Jetzt</span>
@@ -279,3 +248,126 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.cps-content {
+  background: var(--rpg-bg-deep);
+}
+
+.cps-icon-box {
+  background: var(--rpg-bg-icon);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+
+.cps-title {
+  color: var(--rpg-gold);
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+}
+
+.section-title {
+  color: var(--rpg-gold);
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.3);
+}
+
+.stat-card {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+
+.stat-card-label {
+  color: var(--rpg-text-muted);
+}
+
+.stat-card-value {
+  color: var(--rpg-gold);
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.4);
+}
+
+.building-row {
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.building-row:hover {
+  background: #252520;
+}
+
+.building-sublabel {
+  color: var(--rpg-text-dim);
+}
+
+.building-cps {
+  color: var(--rpg-green-border);
+  text-shadow: 0 0 6px rgba(110, 192, 64, 0.3);
+}
+
+.progress-track {
+  background: #2a2a26;
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 3px;
+}
+
+.progress-fill {
+  background: linear-gradient(to right, var(--rpg-green-bottom), var(--rpg-green-top));
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.4);
+  transition: width 1s ease-out;
+}
+
+.star-icon {
+  color: var(--rpg-gold);
+}
+
+.eff-good { color: var(--rpg-green-top); }
+.eff-mid { color: var(--rpg-gold); }
+.eff-bad { color: var(--rpg-red); }
+
+.period-btn {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  color: var(--rpg-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.period-btn:hover {
+  background: #252520;
+  color: #eee;
+}
+
+.period-btn--active {
+  background: linear-gradient(to bottom, #4a8a28, #2d6018);
+  border-color: var(--rpg-green-border);
+  color: #fff;
+  box-shadow: 0 0 6px rgba(100, 200, 50, 0.4);
+}
+
+.chart-container {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+
+.chart-bar {
+  background: linear-gradient(to top, var(--rpg-green-bottom), var(--rpg-green-top));
+  border-radius: 2px 2px 0 0;
+  transition: all 0.3s;
+}
+
+.chart-bar:hover {
+  background: linear-gradient(to top, #388e22, #60d038);
+}
+
+.no-data-text {
+  color: var(--rpg-text-dim);
+}
+
+.time-labels {
+  color: var(--rpg-text-dim);
+}
+</style>

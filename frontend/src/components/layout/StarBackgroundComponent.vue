@@ -272,12 +272,10 @@ usePlanetBackground(starsContainer)
   pointer-events: none;
   z-index: 5;
 
-  background: linear-gradient(135deg, rgba(8, 8, 32, 0.88) 0%, rgba(18, 10, 45, 0.8) 100%);
-  backdrop-filter: blur(14px) saturate(1.5);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  background: linear-gradient(135deg, rgba(8, 8, 32, 0.95) 0%, rgba(18, 10, 45, 0.92) 100%);
 
   border: 1px solid rgba(255, 165, 55, 0.55);
-  border-radius: 10px;
+  border-radius: 4px;
   box-shadow:
     0 0 0 1px rgba(255, 160, 50, 0.08),
     0 0 14px rgba(255, 130, 30, 0.28),
@@ -305,7 +303,7 @@ usePlanetBackground(starsContainer)
   height: 11px;
   border-top: 2px solid rgba(255, 185, 80, 0.95);
   border-left: 2px solid rgba(255, 185, 80, 0.95);
-  border-radius: 10px 0 0 0;
+  border-radius: 4px 0 0 0;
   pointer-events: none;
 }
 
@@ -318,7 +316,7 @@ usePlanetBackground(starsContainer)
   height: 11px;
   border-bottom: 2px solid rgba(255, 140, 50, 0.75);
   border-right: 2px solid rgba(255, 140, 50, 0.75);
-  border-radius: 0 0 10px 0;
+  border-radius: 0 0 4px 0;
   pointer-events: none;
 }
 
@@ -341,12 +339,8 @@ usePlanetBackground(starsContainer)
   letter-spacing: 0.09em;
   text-transform: uppercase;
 
-  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 210, 155, 0.9) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  /* ✅ FIX: color: transparent für Firefox-Kompatibilität */
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  color: rgba(255, 225, 180, 0.95);
+  text-shadow: 0 0 6px rgba(255, 200, 130, 0.3);
 
   padding-bottom: 5px;
   border-bottom: 1px solid rgba(255, 165, 50, 0.22);

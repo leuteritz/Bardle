@@ -4,21 +4,20 @@
     <div
       v-for="mission in missionStore.activeMissions"
       :key="mission.id"
-      class="relative overflow-hidden transition-all duration-300 border rounded-2xl"
+      class="relative overflow-hidden transition-all duration-300 mission-card"
       :class="{
-        'bg-white/[0.03] border-indigo-500/20': mission.status === 'active',
-        'bg-white/[0.03] border-emerald-500/25': mission.status === 'success',
-        'bg-white/[0.03] border-red-500/20': mission.status === 'failure',
+        'mission-card--active': mission.status === 'active',
+        'mission-card--success': mission.status === 'success',
+        'mission-card--failure': mission.status === 'failure',
       }"
     >
       <!-- Top accent line -->
       <div
-        class="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
+        class="absolute top-0 left-0 right-0 h-[2px] mission-accent"
         :class="{
-          'bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500':
-            mission.status === 'active',
-          'bg-gradient-to-r from-emerald-500 to-teal-500': mission.status === 'success',
-          'bg-gradient-to-r from-red-500 to-rose-500': mission.status === 'failure',
+          'mission-accent--active': mission.status === 'active',
+          'mission-accent--success': mission.status === 'success',
+          'mission-accent--failure': mission.status === 'failure',
         }"
       />
 
@@ -30,12 +29,11 @@
             <span class="text-sm font-bold tracking-wide text-white/90">{{ mission.name }}</span>
           </div>
           <span
-            class="px-3 py-1 text-[11px] font-bold rounded-full tracking-widest uppercase border"
+            class="px-3 py-1 text-[11px] font-bold tracking-widest uppercase mission-status-badge"
             :class="{
-              'bg-indigo-500/15 text-indigo-300 border-indigo-400/25': mission.status === 'active',
-              'bg-emerald-500/15 text-emerald-300 border-emerald-400/25':
-                mission.status === 'success',
-              'bg-red-500/15 text-red-300 border-red-400/25': mission.status === 'failure',
+              'mission-status--active': mission.status === 'active',
+              'mission-status--success': mission.status === 'success',
+              'mission-status--failure': mission.status === 'failure',
             }"
           >
             {{
@@ -53,7 +51,7 @@
           <span
             v-for="champ in mission.assignedChampions"
             :key="champ.name"
-            class="inline-flex items-center gap-2 px-2.5 py-1 text-xs font-semibold rounded-xl bg-white/[0.05] border border-white/10 text-white/75"
+            class="inline-flex items-center gap-2 px-2.5 py-1 text-xs font-semibold mission-champ-tag"
           >
             <img
               :src="getChampionImage(champ.name)"
@@ -67,9 +65,9 @@
 
         <!-- Progress (aktiv) -->
         <div v-if="mission.status === 'active'" class="space-y-2">
-          <div class="w-full h-2 rounded-full bg-white/[0.07] overflow-hidden">
+          <div class="w-full h-2 rounded-full overflow-hidden mission-progress-track">
             <div
-              class="h-full transition-all duration-1000 ease-linear rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+              class="h-full transition-all duration-1000 ease-linear rounded-full mission-progress-fill"
               :style="{ width: getProgress(mission) + '%' }"
             />
           </div>
@@ -92,11 +90,11 @@
           </div>
           <button
             @click="missionStore.collectMission(mission.id)"
-            class="px-5 py-2 text-sm font-bold transition-all duration-200 border rounded-xl active:scale-95"
+            class="px-5 py-2 text-sm font-bold transition-all duration-200 active:scale-95"
             :class="
               mission.status === 'success'
-                ? 'bg-emerald-500/20 border-emerald-400/35 text-emerald-300 hover:bg-emerald-500/30'
-                : 'bg-white/[0.04] border-white/10 text-white/45 hover:bg-white/[0.08]'
+                ? 'rpg-btn-green'
+                : 'rpg-btn-disabled'
             "
           >
             Einsammeln
@@ -158,3 +156,67 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.mission-card {
+  border-radius: 4px;
+  border: 1px solid;
+}
+.mission-card--active {
+  background: var(--rpg-bg-dark);
+  border-color: rgba(92, 51, 16, 0.4);
+}
+.mission-card--success {
+  background: var(--rpg-bg-dark);
+  border-color: rgba(82, 184, 48, 0.3);
+}
+.mission-card--failure {
+  background: var(--rpg-bg-dark);
+  border-color: rgba(204, 96, 80, 0.3);
+}
+
+.mission-accent--active {
+  background: linear-gradient(to right, var(--rpg-wood-mid), var(--rpg-gold-dim), var(--rpg-wood-mid));
+}
+.mission-accent--success {
+  background: linear-gradient(to right, var(--rpg-green-bottom), var(--rpg-green-top));
+}
+.mission-accent--failure {
+  background: linear-gradient(to right, var(--rpg-red), #a04030);
+}
+
+.mission-status-badge {
+  border-radius: 4px;
+  border: 1px solid;
+}
+.mission-status--active {
+  background: rgba(200, 144, 64, 0.12);
+  border-color: rgba(200, 144, 64, 0.25);
+  color: var(--rpg-gold-dim);
+}
+.mission-status--success {
+  background: rgba(82, 184, 48, 0.12);
+  border-color: rgba(82, 184, 48, 0.25);
+  color: var(--rpg-green-top);
+}
+.mission-status--failure {
+  background: rgba(204, 96, 80, 0.12);
+  border-color: rgba(204, 96, 80, 0.25);
+  color: var(--rpg-red);
+}
+
+.mission-champ-tag {
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  color: var(--rpg-text-muted);
+}
+
+.mission-progress-track {
+  background: var(--rpg-bg-deep);
+  border: 1px solid var(--rpg-border-row);
+}
+.mission-progress-fill {
+  background: linear-gradient(to right, var(--rpg-gold-dim), var(--rpg-gold));
+}
+</style>

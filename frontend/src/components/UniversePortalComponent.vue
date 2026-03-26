@@ -51,7 +51,7 @@ const gameStore = useGameStore()
       <div v-if="gameStore.prestigeAvailable" class="flex justify-center mt-0.5">
         <button
           @click.stop="gameStore.openPrestigeModal()"
-          class="prestige-btn-sm px-4 py-1 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-gradient-to-r from-purple-900 via-violet-700 to-amber-500 text-white border border-amber-400/40 hover:scale-[1.03] active:scale-95 transition-all duration-300"
+          class="prestige-btn-sm px-4 py-1 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 hover:scale-[1.03] active:scale-95"
         >
           PRESTIGE
         </button>
@@ -151,28 +151,33 @@ const gameStore = useGameStore()
 }
 
 .prestige-btn-sm {
+  background: linear-gradient(to right, #4a2080, #6d3ab8, #c89040);
+  color: #fff;
+  border: 1px solid var(--rpg-gold-dim);
+  border-radius: 4px;
+  cursor: pointer;
   box-shadow:
-    0 0 14px rgba(139, 92, 246, 0.45),
-    0 0 30px rgba(139, 92, 246, 0.15);
+    0 0 14px rgba(200, 144, 64, 0.4),
+    0 0 30px rgba(200, 144, 64, 0.15);
   animation: prestigeGlowSm 2.5s ease-in-out infinite;
 }
 
 .prestige-btn-sm:hover {
   box-shadow:
-    0 0 20px rgba(139, 92, 246, 0.65),
-    0 0 45px rgba(139, 92, 246, 0.3);
+    0 0 20px rgba(200, 144, 64, 0.6),
+    0 0 45px rgba(200, 144, 64, 0.3);
 }
 
 @keyframes prestigeGlowSm {
   0%, 100% {
     box-shadow:
-      0 0 14px rgba(139, 92, 246, 0.45),
-      0 0 30px rgba(139, 92, 246, 0.15);
+      0 0 14px rgba(200, 144, 64, 0.4),
+      0 0 30px rgba(200, 144, 64, 0.15);
   }
   50% {
     box-shadow:
-      0 0 22px rgba(139, 92, 246, 0.65),
-      0 0 50px rgba(139, 92, 246, 0.3);
+      0 0 22px rgba(200, 144, 64, 0.6),
+      0 0 50px rgba(200, 144, 64, 0.3);
   }
 }
 </style>

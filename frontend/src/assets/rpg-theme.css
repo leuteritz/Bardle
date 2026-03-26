@@ -1,0 +1,150 @@
+/* ═══════════════════════════════════════════
+   RPG THEME — Pixel-RPG Design System
+   Reference: ShopComponent.vue
+   ═══════════════════════════════════════════ */
+
+:root {
+  --rpg-bg-deep: #111008;
+  --rpg-bg-dark: #1a1008;
+  --rpg-bg-row: #1c1c18;
+  --rpg-bg-header: #1e1006;
+  --rpg-bg-icon: #141410;
+  --rpg-wood: #7a4e20;
+  --rpg-wood-mid: #5c3310;
+  --rpg-wood-inner: #3e200a;
+  --rpg-gold: #e8c040;
+  --rpg-gold-bright: #e8c060;
+  --rpg-gold-dim: #c89040;
+  --rpg-green-top: #52b830;
+  --rpg-green-bottom: #2e7a1a;
+  --rpg-green-border: #6ec040;
+  --rpg-red: #cc6050;
+  --rpg-text: #ffffff;
+  --rpg-text-muted: #b0b0a0;
+  --rpg-text-dim: #888;
+  --rpg-border-row: #2a2a2a;
+  --rpg-btn-disabled-bg: #2a2a26;
+  --rpg-btn-disabled-border: #444;
+}
+
+/* ── Wooden Frame (containers, modals) ── */
+.rpg-frame {
+  background: var(--rpg-bg-deep);
+  border: 2px solid var(--rpg-wood);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 2px var(--rpg-wood-inner),
+    inset 0 0 0 4px var(--rpg-wood-mid),
+    0 4px 20px rgba(0, 0, 0, 0.8); /* ← neu */
+  overflow: hidden; /* ← neu */
+}
+
+/* ── Gold Accent Bar ── */
+.rpg-accent-bar {
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  flex-shrink: 0;
+}
+
+/* ── Header Strip ── */
+.rpg-header {
+  background: var(--rpg-bg-header);
+  border-bottom: 3px solid var(--rpg-wood-mid);
+}
+
+/* ── Green Button ── */
+.rpg-btn-green {
+  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
+  border: 1px solid var(--rpg-green-border);
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.1s;
+}
+.rpg-btn-green:hover {
+  background: linear-gradient(to bottom, #60d038, #388e22);
+  box-shadow:
+    0 0 10px rgba(80, 200, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.rpg-btn-green:active {
+  transform: scale(0.96);
+}
+
+/* ── Disabled Button ── */
+.rpg-btn-disabled {
+  background: var(--rpg-btn-disabled-bg);
+  border: 1px solid var(--rpg-btn-disabled-border);
+  color: #555;
+  border-radius: 4px;
+  cursor: not-allowed;
+}
+
+/* ── Item Row ── */
+.rpg-row {
+  background: var(--rpg-bg-row);
+  border-bottom: 1px solid var(--rpg-border-row);
+}
+
+.rpg-row--locked {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+}
+
+/* ── Icon Box ── */
+.rpg-icon-box {
+  background: var(--rpg-bg-icon);
+  border-right: 1px solid var(--rpg-border-row);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Tooltip ── */
+.rpg-tooltip {
+  background: #16140e;
+  border: 2px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+/* ── Scrollbar ── */
+.rpg-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rpg-wood-mid) #111;
+}
+.rpg-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.rpg-scrollbar::-webkit-scrollbar-track {
+  background: #111;
+}
+.rpg-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--rpg-wood-mid);
+  border-radius: 3px;
+}
+
+/* ── Modal Overlay ── */
+.rpg-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* ── Close Button ── */
+.rpg-close-btn {
+  color: #999;
+  border: 1px solid #444;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rpg-close-btn:hover {
+  color: var(--rpg-red);
+  border-color: var(--rpg-red);
+  background: rgba(204, 96, 80, 0.1);
+}

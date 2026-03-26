@@ -4,7 +4,7 @@
     <div class="flex justify-end px-4 pt-4 pb-2">
       <button
         @click="showShop = true"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-black text-white transition-all duration-300 border rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 border-cyan-500/40 hover:from-cyan-500 hover:to-blue-600 hover:shadow-lg hover:shadow-cyan-900/50 active:scale-95"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-black text-white transition-all duration-300 rpg-btn-green active:scale-95"
       >
         🛒 Champion Shop
       </button>
@@ -24,20 +24,20 @@
       >
         <!-- Backdrop -->
         <div
-          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          class="absolute inset-0 rpg-overlay"
           @click="showShop = false"
         />
 
         <!-- Modal Container -->
         <div
-          class="relative z-10 w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
+          class="relative z-10 w-full max-w-2xl max-h-[85vh] flex flex-col rpg-frame"
         >
           <!-- Modal Header -->
-          <div class="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
-            <span class="text-sm font-black tracking-widest uppercase text-white/70">Champion Shop</span>
+          <div class="flex items-center justify-between px-5 py-3 rpg-header flex-shrink-0">
+            <span class="text-sm font-black tracking-widest uppercase" style="color: var(--rpg-gold);">Champion Shop</span>
             <button
               @click="showShop = false"
-              class="flex items-center justify-center w-7 h-7 text-sm font-black text-white/50 transition-all duration-200 border rounded-lg border-white/10 bg-white/5 hover:bg-white/15 hover:text-white active:scale-95"
+              class="rpg-close-btn flex items-center justify-center w-7 h-7 text-sm font-black active:scale-95"
             >
               ✕
             </button>

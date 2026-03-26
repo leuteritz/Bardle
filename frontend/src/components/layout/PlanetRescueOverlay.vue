@@ -198,12 +198,8 @@ watch(
   white-space: nowrap;
   pointer-events: none;
 
-  background: linear-gradient(90deg, #ff9040 0%, #ffcc60 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 6px rgba(255, 80, 0, 0.8));
+  color: rgba(255, 180, 80, 0.95);
+  text-shadow: 0 0 6px rgba(255, 80, 0, 0.8);
 }
 
 /* ─── Toasts ───────────────────────────────────────────────────────────────── */
@@ -214,13 +210,11 @@ watch(
   transform: translateX(-50%);
   z-index: 60;
   padding: 0.65rem 1.5rem;
-  border-radius: 10px;
+  border-radius: 4px;
   font-weight: 700;
   font-size: 0.95rem;
   text-align: center;
   pointer-events: none;
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);

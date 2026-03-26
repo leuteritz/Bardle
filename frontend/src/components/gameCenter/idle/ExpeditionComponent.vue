@@ -2,15 +2,15 @@
   <Teleport to="body">
     <div
       v-if="isVisible"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+      class="fixed inset-0 z-50 flex items-center justify-center rpg-overlay"
       @click.self="$emit('close')"
     >
       <!-- Modal Card -->
       <div
-        class="relative w-full max-w-sm mx-4 border rounded-2xl bg-gradient-to-br from-blue-950/90 to-slate-950/95 backdrop-blur-xl border-blue-400/40 shadow-2xl expedition-modal-glow"
+        class="relative w-full max-w-sm mx-4 rpg-frame expedition-modal-glow"
       >
         <!-- Animated star dots background -->
-        <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none" style="border-radius: 4px;">
           <div class="star star-1"></div>
           <div class="star star-2"></div>
           <div class="star star-3"></div>
@@ -19,16 +19,16 @@
         </div>
 
         <!-- Header -->
-        <div class="relative flex items-center justify-between px-5 pt-4 pb-3 border-b border-blue-400/20">
+        <div class="relative flex items-center justify-between px-5 pt-4 pb-3 rpg-header">
           <div class="flex items-center gap-2">
             <span class="text-xl">🌀</span>
-            <span class="text-base font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text">
+            <span class="text-base font-bold" style="color: var(--rpg-gold);">
               Portal-Expeditionen
             </span>
           </div>
           <button
             @click="$emit('close')"
-            class="flex items-center justify-center w-7 h-7 text-blue-300 transition-all duration-200 border rounded-lg border-blue-400/30 hover:bg-blue-500/20 hover:text-white hover:border-blue-400/60"
+            class="rpg-close-btn flex items-center justify-center w-7 h-7"
           >
             ✕
           </button>
@@ -43,7 +43,7 @@
               <label class="block mb-1 text-xs text-blue-300">Ziel-Universum</label>
               <select
                 v-model="selectedUniverseId"
-                class="w-full px-3 py-2 text-sm text-white border rounded-xl bg-slate-800/80 border-blue-400/30 focus:outline-none focus:border-blue-400"
+                class="w-full px-3 py-2 text-sm text-white border expedition-select focus:outline-none"
               >
                 <option v-for="cfg in EXPEDITION_CONFIGS" :key="cfg.universeId" :value="cfg.universeId">
                   {{ cfg.name }} — {{ formatDuration(cfg.durationMs) }} (×{{ cfg.multiplier }})
@@ -57,14 +57,14 @@
               <div class="flex items-center gap-3">
                 <button
                   @click="decrementMeeps"
-                  class="w-8 h-8 rounded-lg bg-slate-700/80 border border-white/20 text-white text-sm hover:bg-slate-600 transition-colors"
+                  class="w-8 h-8 expedition-stepper text-white text-sm transition-colors"
                 >
                   -
                 </button>
-                <span class="flex-1 text-base font-bold text-center text-orange-300">{{ meepsSent }}</span>
+                <span class="flex-1 text-base font-bold text-center" style="color: var(--rpg-gold-dim);">{{ meepsSent }}</span>
                 <button
                   @click="incrementMeeps"
-                  class="w-8 h-8 rounded-lg bg-slate-700/80 border border-white/20 text-white text-sm hover:bg-slate-600 transition-colors"
+                  class="w-8 h-8 expedition-stepper text-white text-sm transition-colors"
                 >
                   +
                 </button>
@@ -72,7 +72,7 @@
             </div>
 
             <!-- Reward preview -->
-            <div class="mb-3 text-sm text-center text-yellow-300/80">
+            <div class="mb-3 text-sm text-center" style="color: var(--rpg-gold);">
               ~{{ formatNumber(expectedReward) }} ✨ Belohnung
             </div>
 
@@ -80,11 +80,11 @@
             <button
               @click="startExpedition"
               :disabled="meepsSent < 1 || gameStore.meeps < 1"
-              class="w-full py-2 text-sm font-bold transition-all duration-200 rounded-xl"
+              class="w-full py-2 text-sm font-bold transition-all duration-200"
               :class="
                 meepsSent >= 1 && gameStore.meeps >= 1
-                  ? 'bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white cursor-pointer'
-                  : 'bg-slate-700/50 text-slate-400 cursor-not-allowed'
+                  ? 'rpg-btn-green cursor-pointer'
+                  : 'rpg-btn-disabled'
               "
             >
               🌀 Portal öffnen
@@ -97,15 +97,15 @@
               <div class="text-xs text-blue-300">
                 {{ gameStore.activeExpedition.meepsSent }} Meeps erkunden
               </div>
-              <div class="text-sm font-bold text-transparent bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text">
+              <div class="text-sm font-bold" style="color: var(--rpg-gold);">
                 {{ gameStore.activeExpedition.universeName }}
               </div>
             </div>
 
             <!-- Progress bar -->
-            <div class="relative w-full h-3 mb-1 overflow-hidden border rounded-full bg-slate-700/50 border-white/20">
+            <div class="relative w-full h-3 mb-1 overflow-hidden rounded-full expedition-bar-track">
               <div
-                class="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-1000"
+                class="h-full rounded-full expedition-bar-fill transition-all duration-1000"
                 :style="{
                   width: progress + '%',
                   boxShadow: '0 0 10px rgba(59, 130, 246, 0.6)',
@@ -115,7 +115,7 @@
 
             <div class="mb-2 text-xs text-center text-slate-400">{{ countdown }}</div>
 
-            <div class="mb-3 text-sm text-center text-yellow-300/80">
+            <div class="mb-3 text-sm text-center" style="color: var(--rpg-gold);">
               {{ formatNumber(gameStore.activeExpedition.reward) }} ✨ Belohnung
             </div>
 
@@ -123,11 +123,11 @@
             <button
               @click="gameStore.collectExpedition()"
               :disabled="!isComplete"
-              class="w-full py-2 text-sm font-bold transition-all duration-200 rounded-xl"
+              class="w-full py-2 text-sm font-bold transition-all duration-200"
               :class="
                 isComplete
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white cursor-pointer animate-pulse'
-                  : 'bg-slate-700/50 text-slate-400 cursor-not-allowed'
+                  ? 'rpg-btn-green cursor-pointer animate-pulse'
+                  : 'rpg-btn-disabled'
               "
             >
               {{ isComplete ? '✨ Einsammeln!' : '⏳ Unterwegs...' }}
@@ -251,15 +251,45 @@ export default defineComponent({
 <style scoped>
 .expedition-modal-glow {
   box-shadow:
-    0 0 40px rgba(59, 130, 246, 0.25),
-    0 0 80px rgba(59, 130, 246, 0.1),
+    inset 0 0 0 2px var(--rpg-wood-inner),
+    inset 0 0 0 4px var(--rpg-wood-mid),
+    0 0 30px rgba(200, 144, 64, 0.2),
     0 25px 50px rgba(0, 0, 0, 0.5);
   animation: borderPulse 3s ease-in-out infinite;
 }
 
 @keyframes borderPulse {
-  0%, 100% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.25), 0 0 80px rgba(59, 130, 246, 0.1), 0 25px 50px rgba(0,0,0,0.5); }
-  50% { box-shadow: 0 0 60px rgba(59, 130, 246, 0.45), 0 0 100px rgba(99, 102, 241, 0.2), 0 25px 50px rgba(0,0,0,0.5); }
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 30px rgba(200, 144, 64, 0.2), 0 25px 50px rgba(0,0,0,0.5); }
+  50% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 50px rgba(200, 144, 64, 0.4), 0 25px 50px rgba(0,0,0,0.5); }
+}
+
+.expedition-select {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+.expedition-select:focus {
+  border-color: var(--rpg-gold-dim);
+}
+
+.expedition-stepper {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.expedition-stepper:hover {
+  background: var(--rpg-bg-row);
+  border-color: var(--rpg-wood-mid);
+}
+
+.expedition-bar-track {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-border-row);
+}
+
+.expedition-bar-fill {
+  background: linear-gradient(to right, var(--rpg-green-bottom), var(--rpg-green-top));
 }
 
 .star {

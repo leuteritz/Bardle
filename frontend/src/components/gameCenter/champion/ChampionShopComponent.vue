@@ -1,57 +1,49 @@
 <template>
-  <div class="flex flex-col w-full h-full gap-3 p-4">
-    <!-- ── Search ── -->
-    <div class="relative">
-      <span
-        class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-white/25 pointer-events-none"
-        >⌕</span
-      >
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Champion suchen…"
-        class="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-white/[0.04] border border-white/10 text-white/70 placeholder-white/25 focus:outline-none focus:border-blue-400/40 transition-colors duration-200"
-      />
-    </div>
+  <div class="cs-frame">
+    <!-- ── Header: Search + Role Filter ── -->
+    <div class="cs-header">
+      <div class="relative">
+        <span class="search-icon">⌕</span>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Champion suchen…"
+          class="w-full pl-9 pr-4 py-2.5 shop-search"
+        />
+      </div>
 
-    <!-- ── Role Filter ── -->
-    <div class="flex flex-wrap gap-2">
-      <button
-        v-for="role in roles"
-        :key="role.value"
-        @click="activeRole = role.value"
-        class="px-3 py-1 text-xs font-bold transition-all duration-200 border rounded-xl"
-        :class="
-          activeRole === role.value
-            ? 'bg-violet-500/20 border-violet-400/35 text-violet-300/90'
-            : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/55 hover:border-white/15'
-        "
-      >
-        {{ role.label }}
-      </button>
-    </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="role in roles"
+          :key="role.value"
+          @click="activeRole = role.value"
+          class="px-3 py-1"
+          :class="activeRole === role.value ? 'role-btn role-btn--active' : 'role-btn'"
+        >
+          {{ role.label }}
+        </button>
+      </div>
 
-    <p v-if="loadError" class="text-xs text-center text-red-400/70">{{ loadError }}</p>
+      <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
+    </div>
 
     <!-- ── Champion Grid ── -->
-    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
+    <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid">
       <div
         v-if="filteredChampions.length === 0"
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
-        <div
-          class="flex items-center justify-center border border-dashed w-14 h-14 rounded-2xl border-white/10"
-        >
+        <div class="flex items-center justify-center empty-icon-box w-14 h-14">
           <span class="text-2xl opacity-20">🔍</span>
         </div>
-        <p class="text-sm text-white/25">Kein Champion gefunden.</p>
+        <p class="empty-label">Kein Champion gefunden.</p>
       </div>
 
       <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
         <div
           v-for="champion in filteredChampions"
           :key="champion.name"
-          class="relative overflow-hidden transition-all duration-300 border rounded-2xl group champion-card"
+          class="relative overflow-hidden champion-card group"
           :class="getCardClass(champion.name)"
           @click="handleBuy(champion.name)"
         >
@@ -65,13 +57,11 @@
 
           <!-- Gradient Overlay -->
           <div
-            class="absolute inset-0"
+            class="absolute inset-0 card-overlay"
             :class="
-              isOwned(champion.name)
-                ? 'bg-gradient-to-t from-black/85 via-black/45 to-black/15'
-                : isUnlocked(champion.name) && canAffordChampion(champion.name)
-                  ? 'bg-gradient-to-t from-black/90 via-black/35 to-transparent'
-                  : 'bg-gradient-to-t from-black/85 via-black/45 to-black/10'
+              isUnlocked(champion.name) && canAffordChampion(champion.name)
+                ? 'card-overlay--buyable'
+                : 'card-overlay--default'
             "
           />
 
@@ -82,7 +72,7 @@
               !isOwned(champion.name) &&
               canAffordChampion(champion.name)
             "
-            class="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-white/[0.07] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+            class="absolute inset-0 pointer-events-none card-shimmer translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
           />
 
           <!-- Content -->
@@ -92,7 +82,7 @@
               <span
                 v-for="role in getChampionRoles(champion.name)"
                 :key="role"
-                class="px-2 py-0.5 text-[9px] font-semibold rounded-md bg-black/50 text-white/55 border border-white/10 backdrop-blur-sm"
+                class="px-2 py-0.5 role-tag"
               >
                 {{ role }}
               </span>
@@ -102,11 +92,11 @@
             <div class="flex flex-col gap-2 mt-auto">
               <!-- Name -->
               <span
-                class="text-sm font-black leading-tight tracking-wide drop-shadow-lg"
+                class="text-sm font-black leading-tight tracking-wide champion-name"
                 :class="
                   isOwned(champion.name) || isLocked(champion.name)
-                    ? 'text-white/45'
-                    : 'text-white/95'
+                    ? 'champion-name--dim'
+                    : 'champion-name--bright'
                 "
               >
                 {{ truncate(champion.name, 12) }}
@@ -132,13 +122,15 @@
                     :alt="getMaterialName(String(matId))"
                     class="inline-block w-3.5 h-3.5 object-contain align-middle"
                   />
-                  {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{ formatNumber(qty as number) }}
+                  {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
+                    formatNumber(qty as number)
+                  }}
                 </span>
               </div>
 
               <!-- Button -->
               <button
-                class="w-full"
+                class="w-full card-btn"
                 :class="getButtonClass(champion.name)"
                 :disabled="!canClickBuy(champion.name)"
               ></button>
@@ -245,27 +237,16 @@ export default defineComponent({
     }
 
     function getCardClass(name: string): string {
-      if (isOwned(name)) {
-        return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-55 cursor-default'
-      }
-      if (isUnlocked(name) && canAffordChampion(name)) {
-        return 'bg-gradient-to-br from-cyan-900/30 via-blue-900/20 to-teal-900/10 border-cyan-500/30 shadow-[0_0_20px_rgba(0,180,255,0.15)] hover:shadow-[0_0_35px_rgba(0,180,255,0.3)] hover:scale-[1.015] hover:-translate-y-0.5 cursor-pointer'
-      }
-      if (isUnlocked(name)) {
-        return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-cyan-500/15 opacity-70 cursor-default'
-      }
-      // Locked
-      return 'bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 opacity-40 grayscale cursor-default champion-locked'
+      if (isOwned(name)) return 'card-owned'
+      if (isUnlocked(name) && canAffordChampion(name)) return 'card-buyable'
+      if (isUnlocked(name)) return 'card-unlocked'
+      return 'card-locked'
     }
 
     function getButtonClass(name: string): string {
-      if (isOwned(name)) {
-        return 'bg-gray-800/50 border-gray-600/20 text-gray-400 cursor-not-allowed'
-      }
-      if (isUnlocked(name) && canAffordChampion(name)) {
-        return 'bg-gradient-to-b from-cyan-500 to-blue-600 border-cyan-400/50 text-white shadow-lg shadow-cyan-900/50 hover:shadow-cyan-500/50 hover:from-cyan-400 active:scale-95'
-      }
-      return 'bg-gray-800/50 border-gray-600/20 text-gray-500 cursor-not-allowed'
+      if (isOwned(name)) return 'btn-owned'
+      if (isUnlocked(name) && canAffordChampion(name)) return 'btn-buyable'
+      return 'btn-locked'
     }
 
     const filteredChampions = computed(() => {
@@ -325,15 +306,170 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ── Search ── */
+.search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.875rem;
+  color: #555548;
+  pointer-events: none;
+}
+
+.shop-search {
+  font-size: 0.875rem;
+  border-radius: 4px;
+  background: #1a1008;
+  border: 1px solid var(--rpg-wood-mid);
+  color: #b0b0a0;
+  transition: border-color 0.2s;
+}
+.shop-search::placeholder {
+  color: #555548;
+}
+.shop-search:focus {
+  outline: none;
+  border-color: var(--rpg-gold-dim);
+}
+
+/* ── Role Filter ── */
+.role-btn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid var(--rpg-wood-mid);
+  background: #1a1008;
+  color: var(--rpg-text-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.role-btn:hover {
+  color: var(--rpg-gold);
+  border-color: var(--rpg-gold-dim);
+}
+.role-btn--active {
+  background: #1e1a08;
+  border-color: var(--rpg-gold);
+  color: var(--rpg-gold);
+}
+
+/* ── Load error ── */
+.load-error {
+  color: var(--rpg-red);
+}
+
+/* ── Empty state ── */
+.empty-icon-box {
+  border: 1px dashed var(--rpg-wood-mid);
+  border-radius: 4px;
+}
+.empty-label {
+  font-size: 0.875rem;
+  color: var(--rpg-text-dim);
+}
+
+/* ── Champion card base ── */
 .champion-card {
   min-height: 140px;
   height: 140px;
+  border-radius: 4px;
+  border: 1px solid var(--rpg-wood-mid);
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
 }
 
+/* Card state variants */
+.card-owned {
+  background: #111008;
+  border-color: #2a2a2a;
+  opacity: 0.55;
+  cursor: default;
+}
+.card-buyable {
+  background: #111008;
+  border-color: var(--rpg-gold-dim);
+  box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
+  cursor: pointer;
+}
+.card-buyable:hover {
+  transform: scale(1.015) translateY(-2px);
+  box-shadow: 0 0 35px rgba(232, 192, 64, 0.25);
+}
+.card-unlocked {
+  background: #111008;
+  border-color: var(--rpg-wood-mid);
+  opacity: 0.7;
+  cursor: default;
+}
+.card-locked {
+  background: #111008;
+  border-color: #2a2a2a;
+  opacity: 0.4;
+  filter: grayscale(55%);
+  cursor: default;
+}
+
+/* ── Gradient overlays ── */
+.card-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.45) 50%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+}
+.card-overlay--buyable {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.35) 50%,
+    transparent 100%
+  );
+}
+.card-overlay--default {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.45) 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+/* ── Shimmer ── */
+.card-shimmer {
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.07), transparent);
+}
+
+/* ── Role tag ── */
+.role-tag {
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--rpg-text-muted);
+  border: 1px solid #333;
+}
+
+/* ── Champion name ── */
+.champion-name {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+.champion-name--bright {
+  color: rgba(255, 255, 255, 0.95);
+}
+.champion-name--dim {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Cost badges ── */
 .cost-badge {
   font-size: 0.65rem;
   padding: 0.15rem 0.4rem;
-  border-radius: 0.35rem;
+  border-radius: 4px;
   font-weight: 700;
 }
 .cost-badge--ok {
@@ -346,25 +482,90 @@ export default defineComponent({
   border: 1px solid rgba(239, 68, 68, 0.22);
   color: rgba(252, 165, 165, 0.8);
 }
+
+/* ── Card buttons ── */
+.card-btn {
+  padding: 0.25rem 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+}
+.btn-owned {
+  background: #1c1c18;
+  border-color: #2a2a2a;
+  color: #555548;
+  cursor: not-allowed;
+}
+.btn-buyable {
+  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
+  border-color: var(--rpg-green-border);
+  color: #fff;
+}
+.btn-buyable:hover {
+  opacity: 0.9;
+}
+.btn-buyable:active {
+  transform: scale(0.97);
+}
+.btn-locked {
+  background: #1c1c18;
+  border-color: #2a2a2a;
+  color: #444;
+  cursor: not-allowed;
+}
+
+/* ── Locked tooltip ── */
 .locked-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   padding: 0.4rem 0.75rem;
-  background: rgba(5, 3, 18, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.6rem;
+  background: #16140e;
+  border: 1px solid #333;
+  border-radius: 4px;
   font-size: 0.6rem;
-  color: rgba(200, 220, 255, 0.65);
+  color: var(--rpg-text-muted);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease;
   z-index: 10;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
 }
 .champion-card:hover .locked-tooltip {
   opacity: 1;
+}
+/* ── Frame – identisch zu .shop-frame ── */
+.cs-frame {
+  background: #111008; /* war #1c1c18 – jetzt wie shop-frame */
+  border: 4px solid #7a4e20;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 4px 20px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+/* ── Header-Bar (Search + Rollen) ── */
+.cs-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #1e1006;
+  border-bottom: 2px solid #5c3310;
+  flex-shrink: 0;
+}
+
+/* ── Grid-Bereich ── */
+.cs-grid {
+  padding: 8px 10px;
 }
 </style>

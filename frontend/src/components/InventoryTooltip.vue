@@ -55,11 +55,10 @@ const tooltipMaterials = computed(() =>
   z-index: 150;
   background: linear-gradient(135deg, #020818 0%, #06152e 50%, #020c1a 100%);
   border: 1px solid rgba(251, 146, 60, 0.25);
-  border-radius: 0.75rem;
+  border-radius: 4px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.7),
     0 0 20px rgba(251, 146, 60, 0.06);
-  backdrop-filter: blur(12px);
   padding: 0.75rem 0.875rem;
   min-width: 220px;
   pointer-events: none;
