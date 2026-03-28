@@ -76,7 +76,13 @@
         <!-- ── Visual: Planet + Boss ───────────────────────────────────── -->
         <div class="visual-section">
           <div ref="planetStage" class="planet-stage-bg" />
-          <img ref="bossImgEl" :src="bossImage" class="boss-img" alt="Boss" @click="handleClick($event)" />
+          <img
+            ref="bossImgEl"
+            :src="bossImage"
+            class="boss-img"
+            alt="Boss"
+            @click="handleClick($event)"
+          />
         </div>
 
         <!-- ── Idle DPS ────────────────────────────────────────────────── -->
@@ -569,8 +575,11 @@ function handleClick(event: MouseEvent) {
   position: fixed;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--rpg-danger);
-  text-shadow: 0 0 6px rgba(255, 60, 0, 0.8);
+  color: #ffffff;
+  text-shadow:
+    0 0 4px #000,
+    0 0 8px #000,
+    0 1px 2px #000;
   pointer-events: none;
   white-space: nowrap;
   transform: translate(-50%, -50%);
