@@ -162,6 +162,25 @@ export interface PlanetRescueEvent {
   homePlanetChampion?: string
 }
 
+export interface PlanetBossEvent {
+  planetId: string
+  planetType: PlanetType
+  bossName: string
+  startTime: number
+  enrageTimerMs: number
+  maxHP: number
+  currentHP: number
+  clickDamagePerHit: number
+  passiveDPS: number
+  totalDamageDealt: number
+  reward: number
+  defeated: boolean
+  expired: boolean
+  potentialMaterialId?: string
+  assignedDropChance?: number
+  homePlanetChampion?: string
+}
+
 export interface RecruitableChampion {
   name: string
   materialCost: Record<string, number>

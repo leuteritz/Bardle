@@ -6,6 +6,7 @@ import { useInventoryStore } from '../stores/inventoryStore'
 import { useAugmentStore } from '../stores/augmentStore'
 import { useItemStore } from '../stores/itemStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
+import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useCpsStore } from '../stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
 import { logger } from '../utils/logger'
@@ -327,6 +328,8 @@ export function usePersistence() {
     missionStore.$reset()
     const planetEventStore = usePlanetEventStore()
     planetEventStore.$reset()
+    const planetBossStore = usePlanetBossStore()
+    planetBossStore.$reset()
     const itemStore = useItemStore()
     itemStore.$reset()
     cpsStore.$reset()

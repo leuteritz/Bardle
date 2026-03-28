@@ -4,6 +4,7 @@ import { useGameStore } from './gameStore'
 import { useCpsStore } from './cpsStore'
 import { useAugmentStore } from './augmentStore'
 import { useItemStore } from './itemStore'
+import { usePlanetBossStore } from './planetBossStore'
 import type { ShopUpgrade, BuildingStat, PermanentUpgrade } from '../types'
 import { logger } from '../utils/logger'
 
@@ -425,7 +426,8 @@ export const useShopStore = defineStore('shop', {
         return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * permBuildingMul
       }, 0)
       const itemStore = useItemStore()
-      const cpsMul = (mod.cpsMultiplier ?? 1) * this.permanentCPSMultiplier * augmentStore.temporaryCPSMultiplier * itemStore.totalCPSMultiplier
+      const bossStore = usePlanetBossStore()
+      const cpsMul = (mod.cpsMultiplier ?? 1) * this.permanentCPSMultiplier * augmentStore.temporaryCPSMultiplier * itemStore.totalCPSMultiplier * bossStore.cpsPenaltyMultiplier
       return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
     },
 

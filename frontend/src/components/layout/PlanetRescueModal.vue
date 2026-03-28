@@ -1,33 +1,66 @@
 <template>
   <Transition name="modal-fade">
     <div
-      v-if="planetEventStore.rescueModalOpen"
+      v-if="bossStore.bossModalOpen"
       class="modal-backdrop rpg-overlay"
       aria-modal="true"
       role="dialog"
     >
       <div class="modal-card">
-        <h3 class="modal-title">⚠ Planet in Distress</h3>
+        <h3 class="modal-title">{{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}</h3>
 
-        <div class="countdown-bar">
-          <div class="countdown-fill" :style="{ width: progressPercent + '%' }" />
+        <!-- Strength indicator -->
+        <div class="strength-row">
+          <span class="strength-label">Dein Schaden:</span>
+          <span class="strength-value">{{ formatNumber(estimatedPlayerDPS) }}/s</span>
+          <span class="strength-sep">|</span>
+          <span class="strength-label">Benötigt:</span>
+          <span class="strength-value">{{ formatNumber(requiredDPS) }}/s</span>
+          <span class="strength-icon" :class="canWin ? 'strength-icon--ok' : 'strength-icon--weak'">
+            {{ canWin ? '✓' : '✗' }}
+          </span>
         </div>
 
+        <!-- Enrage timer -->
+        <div class="enrage-bar">
+          <div class="enrage-fill" :style="{ width: enragePercent + '%' }" />
+        </div>
         <span class="timer-text">{{ secondsRemaining }}s</span>
 
-        <div ref="planetStage" class="planet-stage" @click="handleClick" />
-
-        <div v-if="planetEventStore.activePlanetEvent" class="click-progress">
-          <span
-            v-for="i in planetEventStore.activePlanetEvent.clicksRequired"
-            :key="i"
-            class="dot"
-            :class="{ 'dot--done': i <= (planetEventStore.activePlanetEvent.clicksMade ?? 0) }"
-          />
+        <!-- Boss HP bar -->
+        <div class="hp-bar-container">
+          <div class="hp-bar">
+            <div class="hp-fill" :style="{ width: bossStore.bossHPPercent + '%' }" />
+          </div>
+          <span class="hp-text">
+            {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }} /
+            {{ formatNumber(bossStore.activeBoss?.maxHP ?? 0) }}
+          </span>
         </div>
 
-        <p class="hint-text">Click the planet to rescue it!</p>
+        <!-- Planet / Click target -->
+        <div ref="planetStage" class="planet-stage" @click="handleClick" />
 
+        <!-- Floating damage numbers -->
+        <div class="damage-floats" aria-hidden="true">
+          <TransitionGroup name="dmg-float">
+            <span
+              v-for="dmg in damageFloats"
+              :key="dmg.id"
+              class="damage-number"
+              :style="{ left: dmg.x + 'px' }"
+            >
+              -{{ formatNumber(dmg.value) }}
+            </span>
+          </TransitionGroup>
+        </div>
+
+        <!-- Passive DPS info -->
+        <p class="passive-info">
+          Idle-Schaden: {{ formatNumber(bossStore.activeBoss?.passiveDPS ?? 0) }}/s
+        </p>
+
+        <!-- Drop info -->
         <div v-if="assignedMaterial" class="drop-list">
           <p class="drop-list-title">Möglicher Drop</p>
           <div class="drop-row">
@@ -35,7 +68,7 @@
               {{ assignedMaterial.name }}
             </span>
             <span class="drop-chance">
-              {{ Math.round((planetEventStore.activePlanetEvent?.assignedDropChance ?? 0) * 100) }}%
+              {{ Math.round((bossStore.activeBoss?.assignedDropChance ?? 0) * 100) }}%
             </span>
           </div>
         </div>
@@ -45,7 +78,7 @@
           <div class="drop-row">
             <span class="home-planet-champion-name">{{ homePlanetChampion }}</span>
           </div>
-          <p class="home-planet-hint">Rette den Planeten, um diesen Champion freizuschalten!</p>
+          <p class="home-planet-hint">Besiege den Boss, um diesen Champion freizuschalten!</p>
         </div>
       </div>
     </div>
@@ -53,19 +86,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { usePlanetEventStore } from '../../stores/planetEventStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
-import { useBattleStore } from '../../stores/battleStore'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, reactive } from 'vue'
+import { usePlanetBossStore } from '../../stores/planetBossStore'
+import { formatNumber } from '../../config/numberFormat'
 import { NS, drawPlanet } from '../../utils/planetDraw'
 import { MATERIALS } from '../../config/materials'
-import { CHAMPION_HOME_PLANETS } from '../../config/championHomePlanets'
 
-const planetEventStore = usePlanetEventStore()
-const gameStore = useGameStore()
-const inventoryStore = useInventoryStore()
-const battleStore = useBattleStore()
+const bossStore = usePlanetBossStore()
 
 const planetStage = ref<HTMLDivElement | null>(null)
 
@@ -83,87 +110,84 @@ onUnmounted(() => {
 })
 
 const secondsRemaining = computed(() => {
-  const ev = planetEventStore.activePlanetEvent
-  if (!ev || !planetEventStore.isEventActive) return 0
-  return Math.max(0, Math.ceil((ev.durationMs - (now.value - ev.startTime)) / 1000))
+  const boss = bossStore.activeBoss
+  if (!boss || !bossStore.isBossActive) return 0
+  return Math.max(0, Math.ceil((boss.enrageTimerMs - (now.value - boss.startTime)) / 1000))
 })
 
-const progressPercent = computed(() => {
-  const ev = planetEventStore.activePlanetEvent
-  if (!ev || !planetEventStore.isEventActive) return 0
-  const remaining = Math.max(0, ev.durationMs - (now.value - ev.startTime))
-  return (remaining / ev.durationMs) * 100
+const enragePercent = computed(() => {
+  const boss = bossStore.activeBoss
+  if (!boss || !bossStore.isBossActive) return 0
+  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+  return (remaining / boss.enrageTimerMs) * 100
 })
+
+// Strength indicator
+const estimatedPlayerDPS = computed(() => bossStore.playerDPS)
+const requiredDPS = computed(() => bossStore.requiredDPS)
+const canWin = computed(() => estimatedPlayerDPS.value >= requiredDPS.value * 0.7)
+
+// Material + Champion
+const assignedMaterial = computed(() => {
+  const id = bossStore.activeBoss?.potentialMaterialId
+  return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
+})
+
+const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampion ?? null)
+
+// Floating damage numbers
+let dmgIdCounter = 0
+const damageFloats = reactive<Array<{ id: number; value: number; x: number }>>([])
 
 function renderPlanet() {
   if (!planetStage.value) return
-  const ev = planetEventStore.activePlanetEvent
-  if (!ev) return
+  const boss = bossStore.activeBoss
+  if (!boss) return
 
   planetStage.value.innerHTML = ''
   const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-  svg.setAttribute('width', '320')
-  svg.setAttribute('height', '320')
-  svg.setAttribute('viewBox', '0 0 320 320')
+  svg.setAttribute('width', '280')
+  svg.setAttribute('height', '280')
+  svg.setAttribute('viewBox', '0 0 280 280')
   svg.style.width = '100%'
   svg.style.height = '100%'
   svg.style.animation = 'planetDistress 2s ease-in-out infinite'
-  drawPlanet(svg, `modal-${Date.now()}`, ev.planetType, 160, 160, 140, 320)
+  drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, 120, 280)
   planetStage.value.appendChild(svg)
 }
 
 watch(
-  () => planetEventStore.rescueModalOpen,
+  () => bossStore.bossModalOpen,
   (open) => {
     if (open) nextTick(renderPlanet)
   },
 )
 
-// Close modal when event ends (saved or expired)
+// Close modal when boss fight ends
 watch(
-  () => planetEventStore.isEventActive,
+  () => bossStore.isBossActive,
   (active) => {
-    if (!active) planetEventStore.closeRescueModal()
+    if (!active) bossStore.closeBossModal()
   },
 )
 
-const assignedMaterial = computed(() => {
-  const id = planetEventStore.activePlanetEvent?.potentialMaterialId
-  return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
-})
-
-const homePlanetChampion = computed(
-  () => planetEventStore.activePlanetEvent?.homePlanetChampion ?? null,
-)
-
 function handleClick() {
-  const reward = planetEventStore.activePlanetEvent?.reward ?? 0
-  const completed = planetEventStore.registerClick()
+  const boss = bossStore.activeBoss
+  if (!boss) return
 
-  if (completed) {
-    if (reward > 0) {
-      gameStore.chimes += reward
-      gameStore.chimesForNextUniverse += Math.floor(reward * 0.3)
-      gameStore.calculateLevel()
-    }
-    const ev = planetEventStore.activePlanetEvent
-    if (ev?.potentialMaterialId && ev.assignedDropChance != null) {
-      const dropped = inventoryStore.tryDropSpecificMaterial(
-        ev.potentialMaterialId,
-        ev.assignedDropChance,
-      )
-      planetEventStore.lastDroppedMaterialId = dropped ? ev.potentialMaterialId : null
-    }
+  const defeated = bossStore.dealClickDamage()
 
-    // Champion recruitment from home planet
-    if (ev?.homePlanetChampion) {
-      const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === ev.homePlanetChampion)
-      if (config) {
-        battleStore.addRecruitableChampion(ev.homePlanetChampion, config.materialCost)
-      }
-    }
-  } else {
-    // Pulse feedback on intermediate clicks
+  // Floating damage number
+  const id = ++dmgIdCounter
+  const x = 100 + Math.random() * 80
+  damageFloats.push({ id, value: boss.clickDamagePerHit, x })
+  setTimeout(() => {
+    const idx = damageFloats.findIndex((d) => d.id === id)
+    if (idx !== -1) damageFloats.splice(idx, 1)
+  }, 800)
+
+  if (!defeated) {
+    // Pulse feedback
     const svg = planetStage.value?.querySelector('svg') as SVGSVGElement | null
     if (svg) {
       svg.style.filter = 'brightness(2.2) saturate(2)'
@@ -191,7 +215,7 @@ function handleClick() {
 .modal-card {
   position: relative;
   pointer-events: auto;
-  width: clamp(360px, 45vw, 560px);
+  width: clamp(380px, 45vw, 560px);
 
   background: var(--rpg-bg-deep);
   border: 4px solid var(--rpg-wood);
@@ -201,11 +225,11 @@ function handleClick() {
     inset 0 0 0 4px var(--rpg-wood-mid),
     0 20px 50px rgba(0, 0, 0, 0.8);
 
-  padding: 1.75rem 2rem;
+  padding: 1.5rem 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.65rem;
 }
 
 /* Eckakzent oben-links */
@@ -238,17 +262,62 @@ function handleClick() {
 
 /* ─── Title ────────────────────────────────────────────────────────────────── */
 .modal-title {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin: 0;
-  color: var(--rpg-gold);
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+  color: var(--rpg-danger);
+  text-shadow: 0 0 12px rgba(255, 60, 0, 0.6);
 }
 
-/* ─── Countdown bar ────────────────────────────────────────────────────────── */
-.countdown-bar {
+/* ─── Strength Indicator ──────────────────────────────────────────────────── */
+.strength-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.strength-label {
+  color: var(--rpg-text-dim);
+  letter-spacing: 0.03em;
+}
+
+.strength-value {
+  color: var(--rpg-gold);
+  font-weight: 700;
+}
+
+.strength-sep {
+  color: var(--rpg-wood-mid);
+  margin: 0 0.15rem;
+}
+
+.strength-icon {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-left: 0.3rem;
+}
+
+.strength-icon--ok {
+  color: #52b830;
+  text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
+}
+
+.strength-icon--weak {
+  color: var(--rpg-danger);
+  text-shadow: 0 0 6px rgba(255, 60, 0, 0.6);
+}
+
+/* ─── Enrage Timer Bar ────────────────────────────────────────────────────── */
+.enrage-bar {
   width: 100%;
   height: 4px;
   border-radius: 4px;
@@ -257,7 +326,7 @@ function handleClick() {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-.countdown-fill {
+.enrage-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
   box-shadow:
@@ -269,17 +338,53 @@ function handleClick() {
 
 /* ─── Timer ────────────────────────────────────────────────────────────────── */
 .timer-text {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--rpg-gold);
   text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
 }
 
+/* ─── HP Bar ──────────────────────────────────────────────────────────────── */
+.hp-bar-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.hp-bar {
+  width: 100%;
+  height: 14px;
+  border-radius: 4px;
+  background: #1a1008;
+  overflow: hidden;
+  border: 1px solid var(--rpg-wood-mid);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border-right: 1px solid #6ec040;
+  box-shadow:
+    0 0 8px rgba(82, 184, 48, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: width 0.15s ease-out;
+}
+
+.hp-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  letter-spacing: 0.04em;
+}
+
 /* ─── Planet Stage ─────────────────────────────────────────────────────────── */
 .planet-stage {
-  width: 320px;
-  height: 320px;
+  width: 280px;
+  height: 280px;
   cursor: pointer;
   border-radius: 50%;
   display: flex;
@@ -289,6 +394,7 @@ function handleClick() {
     transform 0.1s ease,
     filter 0.1s ease;
   filter: drop-shadow(0 0 18px rgba(255, 100, 20, 0.25));
+  position: relative;
 }
 
 .planet-stage:hover {
@@ -300,38 +406,46 @@ function handleClick() {
   transform: scale(0.96);
 }
 
-/* ─── Click-Progress Dots ──────────────────────────────────────────────────── */
-.click-progress {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-  justify-content: center;
+/* ─── Floating Damage Numbers ─────────────────────────────────────────────── */
+.damage-floats {
+  position: relative;
+  width: 280px;
+  height: 0;
+  pointer-events: none;
+  overflow: visible;
 }
 
-.dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: rgba(255, 100, 0, 0.12);
-  border: 1.5px solid rgba(255, 120, 30, 0.4);
-  transition:
-    background 0.12s,
-    box-shadow 0.12s,
-    border-color 0.12s;
+.damage-number {
+  position: absolute;
+  top: -30px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rpg-danger);
+  text-shadow: 0 0 6px rgba(255, 60, 0, 0.8);
+  pointer-events: none;
 }
 
-.dot--done {
-  background: rgba(255, 170, 50, 0.95);
-  border-color: var(--rpg-gold-dim);
-  box-shadow:
-    0 0 6px rgba(255, 140, 20, 0.9),
-    0 0 12px rgba(255, 100, 0, 0.5);
+.dmg-float-enter-active {
+  animation: dmgUp 0.8s ease-out forwards;
+}
+.dmg-float-leave-active {
+  display: none;
 }
 
-/* ─── Hint ─────────────────────────────────────────────────────────────────── */
-.hint-text {
-  font-size: 0.7rem;
+@keyframes dmgUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.8);
+  }
+}
+
+/* ─── Passive Info ─────────────────────────────────────────────────────────── */
+.passive-info {
+  font-size: 0.62rem;
   color: var(--rpg-text-dim);
   margin: 0;
   letter-spacing: 0.04em;

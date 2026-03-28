@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
+import { usePlanetBossStore } from './planetBossStore'
 import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
 import { AUGMENTS, RARITY_WEIGHTS } from '../config/augments'
@@ -360,6 +361,13 @@ export const useGameStore = defineStore('game', {
       this.checkPrestigeAvailability()
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
+      const planetBossStore = usePlanetBossStore()
+      if (planetBossStore.isBossActive) {
+        planetBossStore.applyPassiveDamage()
+      }
+      if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
+        planetBossStore.clearPenalty()
+      }
       const missionStore = useMissionStore()
       missionStore.checkMissions()
       const augmentStore = useAugmentStore()

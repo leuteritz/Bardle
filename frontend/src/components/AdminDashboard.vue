@@ -4,6 +4,7 @@ import { useGameStore } from '../stores/gameStore'
 import { useBattleStore } from '../stores/battleStore'
 import { useShopStore } from '../stores/shopStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
+import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useInventoryStore } from '../stores/inventoryStore'
 import { MATERIALS, pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -14,6 +15,7 @@ const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const shopStore = useShopStore()
 const planetEventStore = usePlanetEventStore()
+const planetBossStore = usePlanetBossStore()
 const inventoryStore = useInventoryStore()
 
 const isOpen = ref(false)
@@ -44,20 +46,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 async function spawnPlanet() {
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetEventStore.activePlanetEvent) {
-    planetEventStore.activePlanetEvent.potentialMaterialId = undefined
-    planetEventStore.activePlanetEvent.assignedDropChance = undefined
-    planetEventStore.activePlanetEvent.homePlanetChampion = undefined
+  if (planetBossStore.activeBoss) {
+    planetBossStore.activeBoss.potentialMaterialId = undefined
+    planetBossStore.activeBoss.assignedDropChance = undefined
+    planetBossStore.activeBoss.homePlanetChampion = undefined
   }
 }
 
 async function spawnPlanetWithMaterial() {
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetEventStore.activePlanetEvent) {
-    planetEventStore.activePlanetEvent.potentialMaterialId = pickMaterial().id
-    planetEventStore.activePlanetEvent.assignedDropChance = 1.0
-    planetEventStore.activePlanetEvent.homePlanetChampion = undefined
+  if (planetBossStore.activeBoss) {
+    planetBossStore.activeBoss.potentialMaterialId = pickMaterial().id
+    planetBossStore.activeBoss.assignedDropChance = 1.0
+    planetBossStore.activeBoss.homePlanetChampion = undefined
   }
 }
 
@@ -71,10 +73,10 @@ async function spawnPlanetWithChampion() {
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetEventStore.activePlanetEvent) {
-    planetEventStore.activePlanetEvent.homePlanetChampion = pick.championName
-    planetEventStore.activePlanetEvent.potentialMaterialId = undefined
-    planetEventStore.activePlanetEvent.assignedDropChance = undefined
+  if (planetBossStore.activeBoss) {
+    planetBossStore.activeBoss.homePlanetChampion = pick.championName
+    planetBossStore.activeBoss.potentialMaterialId = undefined
+    planetBossStore.activeBoss.assignedDropChance = undefined
   }
 }
 

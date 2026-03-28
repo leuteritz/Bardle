@@ -61,6 +61,32 @@ export const PLANET_MATERIAL_CHANCE = 0.6
 // Champion home planet discovery chance
 export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
+// Planet Boss Fight
+export const BOSS_BASE_HP = 200
+export const BOSS_HP_LEVEL_SCALE = 10
+export const BOSS_HP_CPS_SCALE = 50
+export const BOSS_HP_POWER_SCALE = 5000
+export const BOSS_ENRAGE_BASE_SECONDS = 30
+export const BOSS_ENRAGE_LEVEL_STEP = 5
+export const BOSS_ENRAGE_MAX_SECONDS = 60
+export const BOSS_PASSIVE_DPS_FRACTION = 0.1
+export const BOSS_BASE_REWARD = 500
+export const BOSS_REWARD_DIFFICULTY_SCALE = 4
+export const BOSS_CPS_PENALTY_FRACTION = 0.05
+export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
+export const BOSS_NAMES = [
+  'Void Leviathan',
+  'Cosmic Devourer',
+  'Star Eater',
+  'Nebula Wraith',
+  'Plasma Titan',
+  'Gravity Colossus',
+  'Dark Nebula',
+  'Solar Reaper',
+  'Quasar Behemoth',
+  'Astral Horror',
+] as const
+
 // Planet type display names (German)
 export const PLANET_TYPE_NAMES: Record<string, string> = {
   rocky: 'Felsplanet',

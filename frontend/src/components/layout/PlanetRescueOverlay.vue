@@ -7,18 +7,15 @@
   <!-- Countdown bar + label -->
   <div v-if="planetEventStore.isEventActive" class="planet-countdown-bar" aria-hidden="true">
     <div class="planet-countdown-fill" :style="{ width: progressPercent + '%' }" />
-    <span class="planet-countdown-label">⚠ Planet in Distress — Click to Save!</span>
+    <span class="planet-countdown-label">
+      ⚠ {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }} — Click to Fight!
+    </span>
   </div>
 
-  <!-- Planet Lost toast -->
+  <!-- Boss Defeated toast -->
   <Transition name="toast-slide">
-    <div v-if="showLostToast" class="planet-toast planet-toast--lost">💥 Planet Lost!</div>
-  </Transition>
-
-  <!-- Planet Saved toast -->
-  <Transition name="toast-slide">
-    <div v-if="showSavedToast" class="planet-toast planet-toast--saved">
-      ✨ Planet Saved! +{{ formatNumber(savedReward) }} Chimes
+    <div v-if="showVictoryToast" class="planet-toast planet-toast--saved">
+      ✨ Boss Defeated! +{{ formatNumber(savedReward) }} Chimes
       <template v-if="droppedMaterial">
         <br />
         <span class="toast-material">
@@ -38,15 +35,24 @@
       </template>
     </div>
   </Transition>
+
+  <!-- Boss Enraged toast -->
+  <Transition name="toast-slide">
+    <div v-if="showDefeatToast" class="planet-toast planet-toast--lost">
+      💥 Boss Enraged! -5% CPS für 30s
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
+import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { formatNumber } from '../../config/numberFormat'
 import { MATERIALS } from '../../config/materials'
 
 const planetEventStore = usePlanetEventStore()
+const bossStore = usePlanetBossStore()
 
 // Drive countdown reactivity at 200ms resolution
 const now = ref(Date.now())
@@ -62,10 +68,10 @@ onUnmounted(() => {
 })
 
 const progressPercent = computed(() => {
-  const ev = planetEventStore.activePlanetEvent
-  if (!ev || !planetEventStore.isEventActive) return 0
-  const remaining = Math.max(0, ev.durationMs - (now.value - ev.startTime))
-  return (remaining / ev.durationMs) * 100
+  const boss = bossStore.activeBoss
+  if (!boss || !bossStore.isBossActive) return 0
+  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+  return (remaining / boss.enrageTimerMs) * 100
 })
 
 // Flash on event spawn
@@ -84,47 +90,52 @@ watch(
   },
 )
 
-// Lost toast
-const showLostToast = ref(false)
-watch(
-  () => planetEventStore.activePlanetEvent?.expired,
-  (expired) => {
-    if (!expired) return
-    showLostToast.value = true
-    setTimeout(() => {
-      showLostToast.value = false
-    }, 2500)
-  },
-)
-
+// Dropped material
 const droppedMaterial = computed(() =>
-  planetEventStore.lastDroppedMaterialId
-    ? (MATERIALS.find((m) => m.id === planetEventStore.lastDroppedMaterialId) ?? null)
+  bossStore.lastDroppedMaterialId
+    ? (MATERIALS.find((m) => m.id === bossStore.lastDroppedMaterialId) ?? null)
     : null,
 )
 
-// Saved toast
-const showSavedToast = ref(false)
+// Victory toast
+const showVictoryToast = ref(false)
 const savedReward = ref(0)
 const savedHadMaterial = ref(false)
 const savedChampionName = ref<string | null>(null)
+
 watch(
-  () => planetEventStore.activePlanetEvent?.saved,
-  (saved) => {
-    if (!saved || !planetEventStore.activePlanetEvent) return
-    savedReward.value = planetEventStore.activePlanetEvent.reward
-    savedHadMaterial.value = !!planetEventStore.activePlanetEvent.potentialMaterialId
-    savedChampionName.value = planetEventStore.activePlanetEvent.homePlanetChampion ?? null
-    showSavedToast.value = true
-    setTimeout(() => {
-      showSavedToast.value = false
-    }, 2500)
+  () => bossStore.lastBossResult,
+  (result) => {
+    if (result === 'victory') {
+      savedReward.value = bossStore.activeBoss?.reward ?? 0
+      savedHadMaterial.value = !!bossStore.activeBoss?.potentialMaterialId
+      savedChampionName.value = bossStore.activeBoss?.homePlanetChampion ?? null
+      showVictoryToast.value = true
+      setTimeout(() => {
+        showVictoryToast.value = false
+      }, 3000)
+    }
+  },
+)
+
+// Defeat toast
+const showDefeatToast = ref(false)
+
+watch(
+  () => bossStore.lastBossResult,
+  (result) => {
+    if (result === 'defeat') {
+      showDefeatToast.value = true
+      setTimeout(() => {
+        showDefeatToast.value = false
+      }, 3000)
+    }
   },
 )
 </script>
 
 <style scoped>
-/* ─── Vignette Flash (atmospheric FX — kept as-is) ─────────────────────────── */
+/* ─── Vignette Flash ─────────────────────────────────────────────────────── */
 .planet-vignette {
   position: fixed;
   inset: 0;

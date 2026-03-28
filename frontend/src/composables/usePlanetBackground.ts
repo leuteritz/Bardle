@@ -1,6 +1,7 @@
 import { watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetEventStore } from '../stores/planetEventStore'
+import { usePlanetBossStore } from '../stores/planetBossStore'
 import {
   PLANET_MAX_COUNT,
   PLANET_SPAWN_INTERVAL_MIN,
@@ -16,6 +17,7 @@ import {
 } from '../utils/planetDraw'
 import { MATERIALS } from '../config/materials'
 import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
+import { formatNumber } from '../config/numberFormat'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ let planetIdCounter = 0
 
 export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
   const planetEventStore = usePlanetEventStore()
+  const bossStore = usePlanetBossStore()
 
   const planets: PlanetItem[] = []
   const timeouts: ReturnType<typeof setTimeout>[] = []
@@ -182,7 +185,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     return { id, type: config.type }
   }
 
-  function markPlanetAsRescue(id: string, materialIcon?: string, materialImage?: string): void {
+  function markPlanetAsRescue(id: string): void {
     const item = planets.find((p) => p.id === id)
     if (!item) return
 
@@ -197,41 +200,40 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     item.el.style.pointerEvents = 'auto'
     item.el.style.cursor = 'pointer'
 
-    const size = parseFloat(item.el.getAttribute('width') ?? '80')
-
-    // Click opens the rescue modal
+    // Click opens the boss modal
     item.el.addEventListener('click', () => {
-      planetEventStore.openRescueModal()
+      bossStore.openBossModal()
     })
 
     // Label-DIV erstellen
-    const event = planetEventStore.activePlanetEvent
-    const materialId = event?.potentialMaterialId
+    const boss = bossStore.activeBoss
+    const materialId = boss?.potentialMaterialId
     const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
-    const reward = event?.reward ?? 0
+    const reward = boss?.reward ?? 0
     const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
-    const champion = event?.homePlanetChampion ?? null
+    const champion = boss?.homePlanetChampion ?? null
     const championImg = champion
       ? champion === 'Bard'
         ? '/img/BardAbilities/Bard.png'
         : `/img/champion/${champion}.jpg`
       : null
 
+    const bossName = boss?.bossName ?? 'Planet Boss'
+    const bossHP = boss ? formatNumber(boss.maxHP) : '???'
+
     const label = document.createElement('div')
     label.className = 'planet-label'
     label.innerHTML = `
-      <span class="planet-label__name">${item.name ?? ''}</span>
-      <span class="planet-label__material">
-        ${material?.image ? `<img src="${material.image}" alt="">` : (material?.icon ?? '')}
-        ${material?.name ?? ''}
-      </span>
+      <span class="planet-label__name">${bossName}</span>
+      <span class="planet-label__reward">HP: ${bossHP}</span>
       <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>
+      ${material?.image ? `<span class="planet-label__material"><img src="${material.image}" alt="">${material.name}</span>` : material?.name ? `<span class="planet-label__material">${material.icon ?? ''} ${material.name}</span>` : ''}
       ${champion && championImg ? `<span class="planet-label__champion"><img src="${championImg}" alt="${champion}" onerror="this.style.display='none'">${champion}</span>` : ''}
     `
     const labelX = item.x + pSize + 10
     const labelY = item.y + pSize / 2
     label.style.transform = `translate(${labelX}px, ${labelY}px) translateY(-50%)`
-    container.value.appendChild(label)
+    container.value!.appendChild(label)
     item.labelEl = label
   }
 
@@ -334,46 +336,42 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
   // ─── Store watchers ─────────────────────────────────────────────────────────
 
-  // 1. Rescue spawnen
+  // 1. Rescue spawnen — delegates to boss store via planetEventStore
   watch(
     () => planetEventStore.pendingRescue,
     async (pending) => {
       if (!pending || !container.value) return
       const { id: targetId, type: targetType } = spawnOrbitPlanet()
       planetEventStore.activatePlanetRescue(targetId, targetType)
-      // Wait one tick so admin overrides (material/champion clear/set) are applied
-      // before we build the label. For normal spawns this has no visible effect.
+      // Wait one tick so admin overrides are applied before building the label
       await nextTick()
-      const event = planetEventStore.activePlanetEvent
-      if (!event || !container.value) return
-      const materialId = event.potentialMaterialId
-      const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
-      markPlanetAsRescue(targetId, material?.icon, material?.image)
+      if (!bossStore.activeBoss || !container.value) return
+      markPlanetAsRescue(targetId)
       container.value.classList.add('stars--rescue-active')
     },
   )
 
-  // 2. Event expired → Explosion
+  // 2. Boss expired → Explosion
   watch(
-    () => planetEventStore.activePlanetEvent?.expired,
+    () => bossStore.activeBoss?.expired,
     (expired) => {
-      if (expired && planetEventStore.activePlanetEvent) {
-        triggerExplosion(planetEventStore.activePlanetEvent.planetId)
+      if (expired && bossStore.activeBoss) {
+        triggerExplosion(bossStore.activeBoss.planetId)
       }
     },
   )
 
-  // 3. Planet saved → Saved-Animation
+  // 3. Boss defeated → Saved-Animation
   watch(
-    () => planetEventStore.activePlanetEvent?.saved,
-    (saved) => {
-      if (saved && planetEventStore.activePlanetEvent) {
-        triggerSaved(planetEventStore.activePlanetEvent.planetId)
+    () => bossStore.activeBoss?.defeated,
+    (defeated) => {
+      if (defeated && bossStore.activeBoss) {
+        triggerSaved(bossStore.activeBoss.planetId)
       }
     },
   )
 
-  // 4. isEventActive → Klasse togglen (NUR dieser, den alten löschen)
+  // 4. isEventActive → Klasse togglen
   watch(
     () => planetEventStore.isEventActive,
     (active) => {
@@ -384,11 +382,10 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
-  // Nach den bestehenden Watch-Blöcken hinzufügen:
   function handleVisibilityChange() {
     if (document.visibilityState !== 'visible') return
 
-    // Prüfe ob Event während Hintergrund abgelaufen ist
+    // Prüfe ob Boss während Hintergrund abgelaufen ist
     planetEventStore.forceCheckExpiry()
 
     // DOM und Klasse aufräumen falls Event bereits vorbei
