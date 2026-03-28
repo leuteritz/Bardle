@@ -147,7 +147,7 @@ function onImgError(e: Event) {
       @click.self="emit('close')"
     >
       <div
-        class="rpg-frame modal-container relative w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[85vh]"
+        class="rpg-frame modal-container relative w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[78vh]"
       >
         <!-- Gold accent bar -->
         <div class="rpg-accent-bar" />
@@ -158,7 +158,6 @@ function onImgError(e: Event) {
             <h2 class="modal-title text-lg font-black">
               Slot {{ slotIndex + 1 }}
             </h2>
-            <p class="modal-subtitle mt-0.5 text-xs">Champion auswählen oder Slot leeren</p>
           </div>
           <button
             @click="emit('close')"
@@ -171,9 +170,9 @@ function onImgError(e: Event) {
         <!-- Section 1 + 2: Hero & Items (only when occupied) -->
         <div v-if="currentChampion" class="hero-section flex-shrink-0">
           <!-- Hero area -->
-          <div class="flex items-end gap-5 px-5 pt-5 pb-4">
+          <div class="flex flex-col items-center px-5 pt-5 pb-4 gap-2">
             <!-- Champion image -->
-            <div class="champion-portrait relative flex-shrink-0 w-28 h-32 overflow-hidden">
+            <div class="champion-portrait relative flex-shrink-0 w-36 h-40 overflow-hidden">
               <img
                 :src="battleStore.getChampionImage(currentChampion)"
                 :alt="currentChampion"
@@ -183,33 +182,31 @@ function onImgError(e: Event) {
               <div class="portrait-overlay absolute inset-0" />
             </div>
 
-            <!-- Name + Remove -->
-            <div class="flex flex-col gap-2 pb-1">
-              <p class="champion-name text-base font-black leading-tight">
-                {{ currentChampion }}
-              </p>
-              <div class="flex flex-wrap gap-0.5">
-                <span
-                  v-for="role in (CHAMPION_ROLES[currentChampion] ?? []).slice(0, 3)"
-                  :key="role"
-                  class="role-badge inline-block px-1.5 py-0.5 text-[9px] font-bold"
-                >
-                  {{ role }}
-                </span>
-              </div>
-              <button
-                @click="clearSlot"
-                class="btn-remove mt-1 px-3 py-1 text-[10px] font-black w-fit"
+            <!-- Name, roles, remove -->
+            <p class="champion-name text-base font-black leading-tight text-center">
+              {{ currentChampion }}
+            </p>
+            <div class="flex flex-wrap gap-0.5 justify-center">
+              <span
+                v-for="role in (CHAMPION_ROLES[currentChampion] ?? []).slice(0, 3)"
+                :key="role"
+                class="role-badge inline-block px-1.5 py-0.5 text-[9px] font-bold"
               >
-                Entfernen
-              </button>
+                {{ role }}
+              </span>
             </div>
+            <button
+              @click="clearSlot"
+              class="btn-remove px-3 py-1 text-[10px] font-black"
+            >
+              Entfernen
+            </button>
           </div>
 
           <!-- Item Slots -->
           <div class="relative px-5 pb-4">
-            <p class="equip-label mb-2 text-[9px] font-bold tracking-widest uppercase">Ausrüstung</p>
-            <div class="flex items-center gap-3">
+            <p class="equip-label mb-2 text-[9px] font-bold tracking-widest uppercase text-center">Ausrüstung</p>
+            <div class="flex items-center gap-3 justify-center">
               <div
                 v-for="cat in equipCategories"
                 :key="cat.key"
@@ -310,7 +307,7 @@ function onImgError(e: Event) {
 
         <!-- Section 3: Champion selection -->
         <!-- Section header -->
-        <div class="flex items-center gap-2 px-5 pt-4 pb-2 flex-shrink-0">
+        <div class="flex items-center gap-2 px-5 pt-2 pb-1 flex-shrink-0">
           <div class="section-divider flex-1 h-px" />
           <span class="section-label text-[9px] font-bold tracking-widest uppercase">
             {{ currentChampion ? 'Champion wechseln' : 'Champion auswählen' }}
@@ -319,7 +316,7 @@ function onImgError(e: Event) {
         </div>
 
         <!-- Role Filter -->
-        <div class="role-filter-row flex gap-1.5 px-5 pb-2 flex-wrap flex-shrink-0">
+        <div class="role-filter-row flex gap-1.5 px-4 pb-1 flex-wrap flex-shrink-0">
           <button
             v-for="role in roles"
             :key="role"
@@ -334,7 +331,7 @@ function onImgError(e: Event) {
         </div>
 
         <!-- Search -->
-        <div class="search-row px-5 py-2.5 flex-shrink-0">
+        <div class="search-row px-4 py-1.5 flex-shrink-0">
           <input
             ref="searchInput"
             v-model="searchQuery"
@@ -451,10 +448,6 @@ function onImgError(e: Event) {
 
 .modal-title {
   color: var(--rpg-gold);
-}
-
-.modal-subtitle {
-  color: var(--rpg-text-dim);
 }
 
 /* ── Hero section ── */
