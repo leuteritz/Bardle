@@ -6,79 +6,116 @@
       aria-modal="true"
       role="dialog"
     >
-      <div class="modal-card">
-        <h3 class="modal-title">{{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}</h3>
+      <div class="boss-modal rpg-frame">
+        <!-- ── Header ──────────────────────────────────────────────────── -->
+        <div class="boss-header rpg-header">
+          <span class="boss-title">
+            {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
+          </span>
+          <div class="timer-chip" :class="{ 'timer-chip--urgent': secondsRemaining < 10 }">
+            <svg class="timer-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4" />
+              <path
+                d="M8 4.5V8l2.5 1.5"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              />
+            </svg>
+            {{ secondsRemaining }}s
+          </div>
+        </div>
 
-        <!-- Strength indicator -->
-        <div class="strength-row">
-          <span class="strength-label">Dein Schaden:</span>
-          <span class="strength-value">{{ formatNumber(estimatedPlayerDPS) }}/s</span>
-          <span class="strength-sep">|</span>
-          <span class="strength-label">Benötigt:</span>
-          <span class="strength-value">{{ formatNumber(requiredDPS) }}/s</span>
-          <span class="strength-icon" :class="canWin ? 'strength-icon--ok' : 'strength-icon--weak'">
+        <div class="rpg-accent-bar" />
+
+        <!-- ── Bars ────────────────────────────────────────────────────── -->
+        <div class="bars-section">
+          <!-- Enrage Timer -->
+          <div class="bar-row">
+            <span class="bar-label">Zeit</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-fill--enrage" :style="{ width: enragePercent + '%' }" />
+            </div>
+          </div>
+          <!-- HP -->
+          <div class="bar-row">
+            <span class="bar-label">HP</span>
+            <div class="bar-track">
+              <div
+                class="bar-fill bar-fill--hp"
+                :style="{ width: bossStore.bossHPPercent + '%' }"
+              />
+            </div>
+            <span class="hp-text">
+              {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }}
+              <span class="hp-sep">/</span>
+              {{ formatNumber(bossStore.activeBoss?.maxHP ?? 0) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- ── DPS Indicator ───────────────────────────────────────────── -->
+        <div class="dps-row">
+          <div class="dps-chip">
+            <span class="dps-label">Dein DPS</span>
+            <span class="dps-val">{{ formatNumber(estimatedPlayerDPS) }}/s</span>
+          </div>
+          <span
+            class="dps-verdict"
+            :class="canWin ? 'dps-verdict--ok' : 'dps-verdict--weak'"
+            :title="canWin ? 'Sieg möglich' : 'DPS zu niedrig'"
+          >
             {{ canWin ? '✓' : '✗' }}
           </span>
-        </div>
-
-        <!-- Enrage timer -->
-        <div class="enrage-bar">
-          <div class="enrage-fill" :style="{ width: enragePercent + '%' }" />
-        </div>
-        <span class="timer-text">{{ secondsRemaining }}s</span>
-
-        <!-- Boss HP bar -->
-        <div class="hp-bar-container">
-          <div class="hp-bar">
-            <div class="hp-fill" :style="{ width: bossStore.bossHPPercent + '%' }" />
+          <div class="dps-chip">
+            <span class="dps-label">Benötigt</span>
+            <span class="dps-val">{{ formatNumber(requiredDPS) }}/s</span>
           </div>
-          <span class="hp-text">
-            {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }} /
-            {{ formatNumber(bossStore.activeBoss?.maxHP ?? 0) }}
-          </span>
         </div>
 
-        <!-- Planet / Click target -->
-        <div ref="planetStage" class="planet-stage" @click="handleClick" />
-
-        <!-- Floating damage numbers -->
-        <div class="damage-floats" aria-hidden="true">
-          <TransitionGroup name="dmg-float">
-            <span
-              v-for="dmg in damageFloats"
-              :key="dmg.id"
-              class="damage-number"
-              :style="{ left: dmg.x + 'px' }"
-            >
-              -{{ formatNumber(dmg.value) }}
-            </span>
-          </TransitionGroup>
+        <!-- ── Visual: Planet + Boss ───────────────────────────────────── -->
+        <div class="visual-section">
+          <div ref="planetStage" class="planet-stage-bg" />
+          <img ref="bossImgEl" :src="bossImage" class="boss-img" alt="Boss" @click="handleClick" />
+          <!-- Floating Damage Numbers -->
+          <div class="damage-floats" aria-hidden="true">
+            <TransitionGroup name="dmg-float">
+              <span
+                v-for="dmg in damageFloats"
+                :key="dmg.id"
+                class="damage-number"
+                :style="{ left: dmg.x + 'px' }"
+              >
+                -{{ formatNumber(dmg.value) }}
+              </span>
+            </TransitionGroup>
+          </div>
         </div>
 
-        <!-- Passive DPS info -->
+        <!-- ── Idle DPS ────────────────────────────────────────────────── -->
         <p class="passive-info">
           Idle-Schaden: {{ formatNumber(bossStore.activeBoss?.passiveDPS ?? 0) }}/s
         </p>
 
-        <!-- Drop info -->
-        <div v-if="assignedMaterial" class="drop-list">
-          <p class="drop-list-title">Möglicher Drop</p>
-          <div class="drop-row">
-            <span class="drop-name" :class="`rarity--${assignedMaterial.rarity}`">
-              {{ assignedMaterial.name }}
-            </span>
-            <span class="drop-chance">
-              {{ Math.round((bossStore.activeBoss?.assignedDropChance ?? 0) * 100) }}%
-            </span>
+        <!-- ── Rewards ─────────────────────────────────────────────────── -->
+        <div v-if="assignedMaterial || homePlanetChampion" class="rewards-block">
+          <p class="rewards-title">Belohnung</p>
+          <div class="rewards-list">
+            <div v-if="assignedMaterial" class="reward-row">
+              <span class="reward-label">Material</span>
+              <span class="reward-name" :class="`rarity--${assignedMaterial.rarity}`">
+                {{ assignedMaterial.name }}
+              </span>
+              <span class="reward-chance">
+                {{ Math.round((bossStore.activeBoss?.assignedDropChance ?? 0) * 100) }}%
+              </span>
+            </div>
+            <div v-if="homePlanetChampion" class="reward-row reward-row--champion">
+              <span class="reward-label">Champion</span>
+              <span class="reward-champion-name">{{ homePlanetChampion }}</span>
+              <span class="reward-hint">freischaltbar</span>
+            </div>
           </div>
-        </div>
-
-        <div v-if="homePlanetChampion" class="drop-list home-planet-info">
-          <p class="drop-list-title">Heimatplanet</p>
-          <div class="drop-row">
-            <span class="home-planet-champion-name">{{ homePlanetChampion }}</span>
-          </div>
-          <p class="home-planet-hint">Besiege den Boss, um diesen Champion freizuschalten!</p>
         </div>
       </div>
     </div>
@@ -92,23 +129,75 @@ import { formatNumber } from '../../config/numberFormat'
 import { NS, drawPlanet } from '../../utils/planetDraw'
 import { MATERIALS } from '../../config/materials'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Boss-Image Discovery (Runtime Probing — public/img/Boss/Boss1.png … BossN.png)
+// Neue Bilder einfach ablegen, kein Code-Änderung nötig.
+// ─────────────────────────────────────────────────────────────────────────────
+const bossImageList = ref<string[]>([])
+let discoveryDone = false
+let discoveryPromise: Promise<void> | null = null
+
+function discoverBossImages(): Promise<void> {
+  if (discoveryDone) return Promise.resolve()
+  if (discoveryPromise) return discoveryPromise
+
+  discoveryPromise = (async () => {
+    const found: string[] = []
+    let i = 1
+    while (true) {
+      const path = `/img/Boss/Boss${i}.png`
+      const exists = await new Promise<boolean>((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        img.src = path
+      })
+      if (!exists) break
+      found.push(path)
+      i++
+    }
+    bossImageList.value = found.length > 0 ? found : ['/img/Boss/Boss1.png']
+    discoveryDone = true
+  })()
+
+  return discoveryPromise
+}
+
+function pickRandomBossImage(): string {
+  const list = bossImageList.value
+  if (list.length === 0) return '/img/Boss/Boss1.png'
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Store & Refs
+// ─────────────────────────────────────────────────────────────────────────────
 const bossStore = usePlanetBossStore()
-
 const planetStage = ref<HTMLDivElement | null>(null)
+const bossImgEl = ref<HTMLImageElement | null>(null)
+const bossImage = ref('/img/Boss/Boss1.png')
 
-// Countdown reactivity at 200ms resolution
+// ─────────────────────────────────────────────────────────────────────────────
+// Countdown-Ticker (200ms)
+// ─────────────────────────────────────────────────────────────────────────────
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
-onMounted(() => {
+onMounted(async () => {
   tickInterval = setInterval(() => {
     now.value = Date.now()
   }, 200)
+  // Probing beim Mount anstoßen, damit beim ersten Modal-Öffnen alles bereit ist
+  await discoverBossImages()
 })
+
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Computed
+// ─────────────────────────────────────────────────────────────────────────────
 const secondsRemaining = computed(() => {
   const boss = bossStore.activeBoss
   if (!boss || !bossStore.isBossActive) return 0
@@ -122,12 +211,10 @@ const enragePercent = computed(() => {
   return (remaining / boss.enrageTimerMs) * 100
 })
 
-// Strength indicator
 const estimatedPlayerDPS = computed(() => bossStore.playerDPS)
 const requiredDPS = computed(() => bossStore.requiredDPS)
 const canWin = computed(() => estimatedPlayerDPS.value >= requiredDPS.value * 0.7)
 
-// Material + Champion
 const assignedMaterial = computed(() => {
   const id = bossStore.activeBoss?.potentialMaterialId
   return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
@@ -135,10 +222,9 @@ const assignedMaterial = computed(() => {
 
 const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampion ?? null)
 
-// Floating damage numbers
-let dmgIdCounter = 0
-const damageFloats = reactive<Array<{ id: number; value: number; x: number }>>([])
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Planet rendern
+// ─────────────────────────────────────────────────────────────────────────────
 function renderPlanet() {
   if (!planetStage.value) return
   const boss = bossStore.activeBoss
@@ -146,30 +232,41 @@ function renderPlanet() {
 
   planetStage.value.innerHTML = ''
   const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-  svg.setAttribute('width', '280')
-  svg.setAttribute('height', '280')
+  svg.setAttribute('width', '260')
+  svg.setAttribute('height', '260')
   svg.setAttribute('viewBox', '0 0 280 280')
   svg.style.width = '100%'
   svg.style.height = '100%'
-  svg.style.animation = 'planetDistress 2s ease-in-out infinite'
   drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, 120, 280)
   planetStage.value.appendChild(svg)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Watchers
+// ─────────────────────────────────────────────────────────────────────────────
 watch(
   () => bossStore.bossModalOpen,
-  (open) => {
-    if (open) nextTick(renderPlanet)
+  async (open) => {
+    if (open) {
+      await discoverBossImages() // no-op wenn bereits fertig
+      bossImage.value = pickRandomBossImage()
+      nextTick(renderPlanet)
+    }
   },
 )
 
-// Close modal when boss fight ends
 watch(
   () => bossStore.isBossActive,
   (active) => {
     if (!active) bossStore.closeBossModal()
   },
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Click / Floating Damage Numbers
+// ─────────────────────────────────────────────────────────────────────────────
+let dmgIdCounter = 0
+const damageFloats = reactive<Array<{ id: number; value: number; x: number }>>([])
 
 function handleClick() {
   const boss = bossStore.activeBoss
@@ -179,7 +276,7 @@ function handleClick() {
 
   // Floating damage number
   const id = ++dmgIdCounter
-  const x = 100 + Math.random() * 80
+  const x = 60 + Math.random() * 80
   damageFloats.push({ id, value: boss.clickDamagePerHit, x })
   setTimeout(() => {
     const idx = damageFloats.findIndex((d) => d.id === id)
@@ -187,12 +284,11 @@ function handleClick() {
   }, 800)
 
   if (!defeated) {
-    // Pulse feedback
-    const svg = planetStage.value?.querySelector('svg') as SVGSVGElement | null
-    if (svg) {
-      svg.style.filter = 'brightness(2.2) saturate(2)'
+    const img = bossImgEl.value
+    if (img) {
+      img.style.filter = 'drop-shadow(0 0 30px rgba(255,100,0,0.95))'
       setTimeout(() => {
-        svg.style.filter = ''
+        img.style.filter = ''
       }, 150)
     }
   }
@@ -200,7 +296,7 @@ function handleClick() {
 </script>
 
 <style scoped>
-/* ─── Backdrop ─────────────────────────────────────────────────────────────── */
+/* ─── Backdrop ───────────────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -211,218 +307,254 @@ function handleClick() {
   pointer-events: auto;
 }
 
-/* ─── Card ─────────────────────────────────────────────────────────────────── */
-.modal-card {
+/* ─── Modal-Card ─────────────────────────────────────────────────────────── */
+.boss-modal {
   position: relative;
   pointer-events: auto;
-  width: clamp(380px, 45vw, 560px);
-
-  background: var(--rpg-bg-deep);
-  border: 4px solid var(--rpg-wood);
-  border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 2px var(--rpg-wood-inner),
-    inset 0 0 0 4px var(--rpg-wood-mid),
-    0 20px 50px rgba(0, 0, 0, 0.8);
-
-  padding: 1.5rem 2rem;
+  width: clamp(340px, 42vw, 500px);
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.boss-header {
+  display: flex;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
 }
 
-/* Eckakzent oben-links */
-.modal-card::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 16px;
-  height: 16px;
-  border-top: 2px solid var(--rpg-gold-dim);
-  border-left: 2px solid var(--rpg-gold-dim);
-  border-radius: 4px 0 0 0;
-  pointer-events: none;
-}
-
-/* Eckakzent unten-rechts */
-.modal-card::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 16px;
-  height: 16px;
-  border-bottom: 2px solid var(--rpg-orange);
-  border-right: 2px solid var(--rpg-orange);
-  border-radius: 0 0 4px 0;
-  pointer-events: none;
-}
-
-/* ─── Title ────────────────────────────────────────────────────────────────── */
-.modal-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+.boss-title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin: 0;
   color: var(--rpg-danger);
-  text-shadow: 0 0 12px rgba(255, 60, 0, 0.6);
+  text-shadow: 0 0 10px rgba(255, 60, 0, 0.55);
 }
 
-/* ─── Strength Indicator ──────────────────────────────────────────────────── */
-.strength-row {
+.timer-chip {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.68rem;
-  padding: 0.35rem 0.7rem;
-  background: var(--rpg-bg-row);
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  background: var(--rpg-bg-deep);
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
-  width: 100%;
-  justify-content: center;
-}
-
-.strength-label {
-  color: var(--rpg-text-dim);
-  letter-spacing: 0.03em;
-}
-
-.strength-value {
-  color: var(--rpg-gold);
-  font-weight: 700;
-}
-
-.strength-sep {
-  color: var(--rpg-wood-mid);
-  margin: 0 0.15rem;
-}
-
-.strength-icon {
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-left: 0.3rem;
-}
-
-.strength-icon--ok {
-  color: #52b830;
-  text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
-}
-
-.strength-icon--weak {
-  color: var(--rpg-danger);
-  text-shadow: 0 0 6px rgba(255, 60, 0, 0.6);
-}
-
-/* ─── Enrage Timer Bar ────────────────────────────────────────────────────── */
-.enrage-bar {
-  width: 100%;
-  height: 4px;
-  border-radius: 4px;
-  background: #1a1a16;
-  overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-.enrage-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
-  box-shadow:
-    0 0 10px rgba(255, 60, 0, 0.9),
-    0 0 20px rgba(255, 40, 0, 0.4);
-  transition: width 0.2s linear;
-  border-radius: 4px;
-}
-
-/* ─── Timer ────────────────────────────────────────────────────────────────── */
-.timer-text {
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--rpg-gold);
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
-}
-
-/* ─── HP Bar ──────────────────────────────────────────────────────────────── */
-.hp-bar-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.hp-bar {
-  width: 100%;
-  height: 14px;
-  border-radius: 4px;
-  background: #1a1008;
-  overflow: hidden;
-  border: 1px solid var(--rpg-wood-mid);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.hp-fill {
-  height: 100%;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border-right: 1px solid #6ec040;
-  box-shadow:
-    0 0 8px rgba(82, 184, 48, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: width 0.15s ease-out;
-}
-
-.hp-text {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--rpg-gold);
   letter-spacing: 0.04em;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 
-/* ─── Planet Stage ─────────────────────────────────────────────────────────── */
-.planet-stage {
-  width: 280px;
-  height: 280px;
-  cursor: pointer;
-  border-radius: 50%;
+.timer-chip--urgent {
+  border-color: var(--rpg-danger);
+  color: var(--rpg-danger);
+  animation: pulse-urgent 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-urgent {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+.timer-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* ─── Bars ───────────────────────────────────────────────────────────────── */
+.bars-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.7rem 1rem 0.55rem;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.bar-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--rpg-text-dim);
+  min-width: 2rem;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 7px;
+  background: #1a1a16;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--rpg-wood-inner);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s linear;
+}
+
+.bar-fill--enrage {
+  background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
+  box-shadow: 0 0 6px rgba(255, 60, 0, 0.65);
+}
+
+.bar-fill--hp {
+  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
+  box-shadow: 0 0 5px rgba(82, 184, 48, 0.4);
+}
+
+.hp-text {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  min-width: 7.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.hp-sep {
+  color: var(--rpg-text-dim);
+  margin: 0 0.1rem;
+}
+
+/* ─── DPS Row ─────────────────────────────────────────────────────────────── */
+.dps-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    transform 0.1s ease,
-    filter 0.1s ease;
-  filter: drop-shadow(0 0 18px rgba(255, 100, 20, 0.25));
+  gap: 0.75rem;
+  padding: 0.4rem 1rem;
+  background: var(--rpg-bg-row);
+  border-top: 1px solid var(--rpg-wood-inner);
+  border-bottom: 1px solid var(--rpg-wood-inner);
+}
+
+.dps-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 6rem;
+}
+
+.dps-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--rpg-text-dim);
+}
+
+.dps-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--rpg-gold);
+}
+
+.dps-verdict {
+  font-size: 1rem;
+  font-weight: 900;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.dps-verdict--ok {
+  color: var(--rpg-green-top);
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.7);
+}
+
+.dps-verdict--weak {
+  color: var(--rpg-danger);
+  text-shadow: 0 0 8px rgba(255, 60, 0, 0.7);
+}
+
+/* ─── Visual Section ─────────────────────────────────────────────────────── */
+.visual-section {
   position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.planet-stage:hover {
+.planet-stage-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.boss-img {
+  position: relative;
+  z-index: 1;
+  height: 80%;
+  width: auto;
+  max-width: 56%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 14px rgba(255, 80, 0, 0.4));
+  cursor: pointer;
+  transition:
+    filter 0.1s ease,
+    transform 0.1s ease;
+  display: block;
+}
+
+.boss-img:hover {
   transform: scale(1.04);
-  filter: drop-shadow(0 0 28px rgba(255, 120, 30, 0.45));
+  filter: drop-shadow(0 0 24px rgba(255, 110, 20, 0.65));
 }
 
-.planet-stage:active {
+.boss-img:active {
   transform: scale(0.96);
 }
 
-/* ─── Floating Damage Numbers ─────────────────────────────────────────────── */
+/* ─── Floating Damage Numbers ────────────────────────────────────────────── */
 .damage-floats {
-  position: relative;
-  width: 280px;
-  height: 0;
+  position: absolute;
+  inset: 0;
   pointer-events: none;
   overflow: visible;
+  z-index: 2;
 }
 
 .damage-number {
   position: absolute;
-  top: -30px;
-  font-size: 1rem;
+  top: 30px;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--rpg-danger);
   text-shadow: 0 0 6px rgba(255, 60, 0, 0.8);
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .dmg-float-enter-active {
@@ -439,81 +571,94 @@ function handleClick() {
   }
   100% {
     opacity: 0;
-    transform: translateY(-60px) scale(0.8);
+    transform: translateY(-55px) scale(0.8);
   }
 }
 
-/* ─── Passive Info ─────────────────────────────────────────────────────────── */
+/* ─── Passive Info ───────────────────────────────────────────────────────── */
 .passive-info {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   color: var(--rpg-text-dim);
+  text-align: center;
   margin: 0;
+  padding: 0.3rem 0;
   letter-spacing: 0.04em;
+  border-top: 1px solid var(--rpg-wood-inner);
+  background: var(--rpg-bg-row);
 }
 
-/* ─── Drop List ────────────────────────────────────────────────────────────── */
-.drop-list {
-  width: 100%;
+/* ─── Rewards ────────────────────────────────────────────────────────────── */
+.rewards-block {
+  border-top: 1px solid var(--rpg-wood-mid);
+  padding: 0.55rem 1rem 0.65rem;
   background: var(--rpg-bg-row);
-  border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
-  padding: 0.55rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  gap: 0.3rem;
 }
 
-.drop-list-title {
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+.rewards-title {
+  font-size: 0.55rem;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.09em;
   color: var(--rpg-gold-dim);
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.1rem;
 }
 
-.drop-row {
+.rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.reward-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   font-size: 0.72rem;
 }
 
-.drop-name {
-  flex: 1;
+.reward-row--champion {
+  border-top: 1px solid var(--rpg-wood-inner);
+  padding-top: 0.3rem;
 }
 
-.drop-chance {
+.reward-label {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rpg-text-dim);
+  min-width: 3.5rem;
+  flex-shrink: 0;
+}
+
+.reward-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.reward-chance {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--rpg-gold);
   min-width: 2.2rem;
   text-align: right;
-  letter-spacing: 0.02em;
 }
 
-/* ─── Home Planet ──────────────────────────────────────────────────────────── */
-.home-planet-info {
-  border-color: var(--rpg-blue);
-  background: rgba(40, 90, 255, 0.04);
-}
-
-.home-planet-champion-name {
+.reward-champion-name {
+  flex: 1;
   color: var(--rpg-blue);
   font-weight: 700;
-  font-size: 0.82rem;
-  letter-spacing: 0.03em;
+  font-size: 0.78rem;
 }
 
-.home-planet-hint {
-  font-size: 0.55rem;
+.reward-hint {
+  font-size: 0.58rem;
   color: var(--rpg-text-dim);
-  margin: 0.15rem 0 0;
-  letter-spacing: 0.02em;
 }
 
-/* ─── Rarity ───────────────────────────────────────────────────────────────── */
+/* ─── Rarity Colors (via globale Klassen falls vorhanden, sonst hier) ──────── */
 .rarity--common {
   color: var(--rpg-rarity-common);
 }
@@ -527,18 +672,18 @@ function handleClick() {
   color: var(--rpg-rarity-epic);
 }
 
-/* ─── Transition ───────────────────────────────────────────────────────────── */
+/* ─── Modal Transition ───────────────────────────────────────────────────── */
 .modal-fade-enter-active {
-  animation: modalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: modalIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .modal-fade-leave-active {
-  animation: modalOut 0.22s ease-in forwards;
+  animation: modalOut 0.2s ease-in forwards;
 }
 
 @keyframes modalIn {
   from {
     opacity: 0;
-    transform: scale(0.88);
+    transform: scale(0.9);
     filter: blur(4px);
   }
   to {
@@ -555,7 +700,7 @@ function handleClick() {
   }
   to {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.92);
     filter: blur(3px);
   }
 }
