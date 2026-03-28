@@ -140,11 +140,19 @@
         <div class="flex flex-col min-h-0 p-3 overflow-hidden tt-panel" style="flex: 3">
           <!-- Header -->
           <div class="flex items-center justify-between flex-shrink-0 mb-3">
-            <div class="flex items-center gap-1.5 px-3 py-1 tt-team-counter">
-              <span class="text-sm font-bold tt-team-counter-value">{{
-                battleStore.selectedChampions.length
-              }}</span>
-              <span class="text-sm font-bold tt-text-dim">/4</span>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5 px-3 py-1 tt-team-counter">
+                <span class="text-sm font-bold tt-team-counter-value">{{
+                  battleStore.selectedChampions.length
+                }}</span>
+                <span class="text-sm font-bold tt-text-dim">/4</span>
+              </div>
+              <div class="flex items-center gap-1.5 px-3 py-1 tt-unlock-counter">
+                <span class="text-sm font-bold tt-unlock-counter-value">{{
+                  battleStore.ownedChampions.length
+                }}</span>
+                <span class="text-sm font-bold tt-text-dim">/{{ totalChampionCount || '…' }}</span>
+              </div>
             </div>
           </div>
 
@@ -373,6 +381,7 @@ import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
 import { MISSION_CONFIGS } from '../../config/missions'
 import { SHOP_ITEMS, getItemById } from '../../config/items'
 import { truncate } from '../../config/numberFormat'
+import { fetchChampionNames } from '../../utils/champions'
 import MissionCreateComponent from './MissionCreateComponent.vue'
 import ChampionShopComponent from '../gameCenter/champion/ChampionShopComponent.vue'
 import ItemShopComponent from '../gameCenter/ItemShopComponent.vue'
@@ -393,6 +402,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const itemStore = useItemStore()
     const now = ref(Date.now())
+    const totalChampionCount = ref(0)
     const openSlotIndex = ref<number | null>(null)
     const showTooltip = ref(false)
     const equipPicker = ref<{ slotIndex: number; category: ItemCategory } | null>(null)
@@ -402,6 +412,11 @@ export default defineComponent({
       timer = setInterval(() => {
         now.value = Date.now()
       }, 1000)
+      fetchChampionNames()
+        .then((names) => {
+          totalChampionCount.value = names.length
+        })
+        .catch(() => {})
     })
     onUnmounted(() => {
       if (timer) clearInterval(timer)
@@ -527,6 +542,7 @@ export default defineComponent({
       missionStore,
       gameStore,
       itemStore,
+      totalChampionCount,
       openSlotIndex,
       showTooltip,
       equipPicker,
@@ -675,6 +691,17 @@ export default defineComponent({
 
 .tt-team-counter-value {
   color: var(--rpg-blue);
+}
+
+/* ── Unlock counter ── */
+.tt-unlock-counter {
+  border-radius: 4px;
+  background: #1c1408;
+  border: 1px solid #4a3010;
+}
+
+.tt-unlock-counter-value {
+  color: #e8c040;
 }
 
 /* ── Slot card (filled) ── */
