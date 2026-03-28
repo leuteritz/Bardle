@@ -30,6 +30,12 @@
       <template v-if="savedChampionName">
         <br />
         <span class="toast-material toast-material--champion">
+          <img
+            v-if="savedChampionImage"
+            :src="savedChampionImage"
+            :alt="savedChampionName"
+            class="toast-material-img toast-material-img--champion"
+          />
           {{ savedChampionName }} entdeckt! Sieh im Champion Shop nach.
         </span>
       </template>
@@ -102,6 +108,12 @@ const showVictoryToast = ref(false)
 const savedReward = ref(0)
 const savedHadMaterial = ref(false)
 const savedChampionName = ref<string | null>(null)
+const savedChampionImage = computed(() => {
+  if (!savedChampionName.value) return null
+  return savedChampionName.value === 'Bard'
+    ? '/img/BardAbilities/Bard.png'
+    : `/img/champion/${savedChampionName.value}.jpg`
+})
 
 watch(
   () => bossStore.lastBossResult,
@@ -273,6 +285,11 @@ watch(
 .toast-material--champion {
   color: var(--rpg-blue);
   font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.toast-material-img--champion {
+  filter: drop-shadow(0 0 4px rgba(80, 160, 255, 0.65));
 }
 
 .toast-material-img {
