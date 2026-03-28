@@ -76,20 +76,7 @@
         <!-- ── Visual: Planet + Boss ───────────────────────────────────── -->
         <div class="visual-section">
           <div ref="planetStage" class="planet-stage-bg" />
-          <img ref="bossImgEl" :src="bossImage" class="boss-img" alt="Boss" @click="handleClick" />
-          <!-- Floating Damage Numbers -->
-          <div class="damage-floats" aria-hidden="true">
-            <TransitionGroup name="dmg-float">
-              <span
-                v-for="dmg in damageFloats"
-                :key="dmg.id"
-                class="damage-number"
-                :style="{ left: dmg.x + 'px' }"
-              >
-                -{{ formatNumber(dmg.value) }}
-              </span>
-            </TransitionGroup>
-          </div>
+          <img ref="bossImgEl" :src="bossImage" class="boss-img" alt="Boss" @click="handleClick($event)" />
         </div>
 
         <!-- ── Idle DPS ────────────────────────────────────────────────── -->
@@ -129,6 +116,22 @@
       </div>
     </div>
   </Transition>
+
+  <!-- Floating Damage Numbers – globally positioned via Teleport -->
+  <Teleport to="body">
+    <div class="dmg-overlay" aria-hidden="true">
+      <TransitionGroup name="dmg-float">
+        <span
+          v-for="dmg in damageFloats"
+          :key="dmg.id"
+          class="damage-number"
+          :style="{ left: dmg.x + 'px', top: dmg.y + 'px' }"
+        >
+          -{{ formatNumber(dmg.value) }}
+        </span>
+      </TransitionGroup>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -281,18 +284,19 @@ watch(
 // Click / Floating Damage Numbers
 // ─────────────────────────────────────────────────────────────────────────────
 let dmgIdCounter = 0
-const damageFloats = reactive<Array<{ id: number; value: number; x: number }>>([])
+const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
 
-function handleClick() {
+function handleClick(event: MouseEvent) {
   const boss = bossStore.activeBoss
   if (!boss) return
 
   const defeated = bossStore.dealClickDamage()
 
-  // Floating damage number
+  // Floating damage number at exact click position
   const id = ++dmgIdCounter
-  const x = 60 + Math.random() * 80
-  damageFloats.push({ id, value: boss.clickDamagePerHit, x })
+  const x = event.clientX
+  const y = event.clientY
+  damageFloats.push({ id, value: boss.clickDamagePerHit, x, y })
   setTimeout(() => {
     const idx = damageFloats.findIndex((d) => d.id === id)
     if (idx !== -1) damageFloats.splice(idx, 1)
@@ -552,24 +556,24 @@ function handleClick() {
   transform: scale(0.96);
 }
 
-/* ─── Floating Damage Numbers ────────────────────────────────────────────── */
-.damage-floats {
-  position: absolute;
+/* ─── Floating Damage Numbers (Teleport → body) ──────────────────────────── */
+.dmg-overlay {
+  position: fixed;
   inset: 0;
   pointer-events: none;
   overflow: visible;
-  z-index: 2;
+  z-index: 9999;
 }
 
 .damage-number {
-  position: absolute;
-  top: 30px;
+  position: fixed;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--rpg-danger);
   text-shadow: 0 0 6px rgba(255, 60, 0, 0.8);
   pointer-events: none;
   white-space: nowrap;
+  transform: translate(-50%, -50%);
 }
 
 .dmg-float-enter-active {
