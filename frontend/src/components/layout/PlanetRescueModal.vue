@@ -112,7 +112,16 @@
             </div>
             <div v-if="homePlanetChampion" class="reward-row reward-row--champion">
               <span class="reward-label">Champion</span>
-              <span class="reward-champion-name">{{ homePlanetChampion }}</span>
+              <div class="reward-champion-inner">
+                <img
+                  v-if="homePlanetChampionImage"
+                  :src="homePlanetChampionImage"
+                  :alt="homePlanetChampion"
+                  class="reward-champion-img"
+                  @error="($event.target as HTMLImageElement).style.display = 'none'"
+                />
+                <span class="reward-champion-name">{{ homePlanetChampion }}</span>
+              </div>
               <span class="reward-hint">freischaltbar</span>
             </div>
           </div>
@@ -221,6 +230,12 @@ const assignedMaterial = computed(() => {
 })
 
 const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampion ?? null)
+
+const homePlanetChampionImage = computed(() => {
+  const name = homePlanetChampion.value
+  if (!name) return null
+  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Planet rendern
@@ -646,8 +661,24 @@ function handleClick() {
   text-align: right;
 }
 
-.reward-champion-name {
+.reward-champion-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   flex: 1;
+  min-width: 0;
+}
+
+.reward-champion-img {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: 1px solid #5c3310;
+}
+
+.reward-champion-name {
   color: var(--rpg-blue);
   font-weight: 700;
   font-size: 0.78rem;
