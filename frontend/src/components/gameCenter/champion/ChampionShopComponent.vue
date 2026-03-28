@@ -1,5 +1,5 @@
 <template>
-  <div class="rpg-frame cs-frame">
+  <div class="rpg-frame flex flex-col h-full">
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
       <div class="relative">
@@ -17,7 +17,7 @@
           v-for="role in roles"
           :key="role.value"
           @click="activeRole = role.value"
-          class="rpg-tab px-3 py-1"
+          class="px-3 py-1 rpg-tab"
           :class="activeRole === role.value ? 'rpg-tab--active' : ''"
         >
           {{ role.label }}
@@ -51,7 +51,7 @@
           <img
             :src="battleStore.getChampionImage(champion.name)"
             :alt="champion.name"
-            class="rpg-img absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-105"
+            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 rpg-img group-hover:scale-105"
             :class="isLocked(champion.name) ? 'grayscale' : ''"
           />
 

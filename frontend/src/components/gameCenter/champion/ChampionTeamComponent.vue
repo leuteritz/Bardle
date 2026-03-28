@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col w-full h-full p-4 space-y-4">
+  <div class="flex flex-col w-full p-4 space-y-4">
     <!-- ─── Bard Leader Card ─── -->
     <div class="bard-leader-card relative overflow-hidden">
       <div class="flex items-center gap-4 p-4">
@@ -91,7 +91,7 @@
       </span>
     </div>
 
-    <div class="flex-1 min-h-0 space-y-3 overflow-y-auto rpg-scrollbar">
+    <div class="space-y-3">
       <!-- No Champions State -->
       <div
         v-if="selectableChampions.length === 0"
