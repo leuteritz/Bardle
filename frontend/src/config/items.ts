@@ -3,29 +3,6 @@ import type { ShopItem } from '../types'
 export const SHOP_ITEMS: ShopItem[] = [
   // ── Waffen: Schwerter ─────────────────────────────────────────────────────────
   {
-    id: 'holzschwert',
-    name: 'Holzschwert',
-    description: '+8% Kampfkraft',
-    icon: '/img/sword.png',
-    price: 500,
-    rarity: 'common',
-    category: 'weapon',
-    effects: { powerMultiplier: 1.08 },
-  },
-  {
-    id: 'arkanschwert',
-    name: 'Arkan-Schwert',
-    description: '+35% Kampfkraft, +5% CPS',
-    icon: '/img/sword.png',
-    price: 20000,
-    materialCost: { nebula_quartz: 2 },
-    rarity: 'rare',
-    category: 'weapon',
-    effects: { powerMultiplier: 1.35, cpsMultiplier: 1.05 },
-    setId: 'arcane',
-  },
-
-  {
     id: 'ancient_bone_sword',
     name: 'Ancient Bone Sword',
     description: '+12% Kampfkraft (Knochen-Crit-Verstärkung)',
@@ -43,7 +20,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     price: 1800,
     rarity: 'common',
     category: 'weapon',
-    effects: { cpsMultiplier: 1.10, powerMultiplier: 1.05 },
+    effects: { cpsMultiplier: 1.1, powerMultiplier: 1.05 },
   },
   {
     id: 'coral_cutlass',
@@ -64,7 +41,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     materialCost: { solar_essence: 1 },
     rarity: 'rare',
     category: 'weapon',
-    effects: { powerMultiplier: 1.20, cpsMultiplier: 1.15 },
+    effects: { powerMultiplier: 1.2, cpsMultiplier: 1.15 },
   },
   {
     id: 'mechanical_gear_sword',
@@ -86,7 +63,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     materialCost: { solar_essence: 1 },
     rarity: 'rare',
     category: 'weapon',
-    effects: { cpsMultiplier: 1.20, powerMultiplier: 1.18 },
+    effects: { cpsMultiplier: 1.2, powerMultiplier: 1.18 },
   },
   {
     id: 'lava_forge_blade',
@@ -108,7 +85,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     materialCost: { void_shard: 1 },
     rarity: 'epic',
     category: 'weapon',
-    effects: { powerMultiplier: 1.40, cpsMultiplier: 1.12 },
+    effects: { powerMultiplier: 1.4, cpsMultiplier: 1.12 },
   },
   {
     id: 'frozen_tundra_sword',
