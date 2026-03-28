@@ -20,15 +20,15 @@
             :alt="champ.name"
             class="w-6 h-6 rounded-full object-cover flex-shrink-0 champ-img--blue"
           />
-          <span class="text-xs font-bold text-blue-200 flex-1">
+          <span class="text-xs font-bold flex-1 champ-name--blue">
             {{ champ.name }}
           </span>
           <div class="flex items-center gap-0.5 text-[10px] flex-shrink-0">
-            <span class="font-bold text-emerald-300">{{ champ.kills }}</span>
-            <span class="text-white/30">/</span>
-            <span class="font-bold text-red-300">{{ champ.deaths }}</span>
-            <span class="text-white/30">/</span>
-            <span class="font-bold text-blue-300">{{ champ.assists }}</span>
+            <span class="font-bold kda-kills">{{ champ.kills }}</span>
+            <span class="kda-sep">/</span>
+            <span class="font-bold kda-deaths">{{ champ.deaths }}</span>
+            <span class="kda-sep">/</span>
+            <span class="font-bold kda-assists">{{ champ.assists }}</span>
           </div>
         </div>
       </div>
@@ -52,15 +52,15 @@
             :alt="champ.name"
             class="w-6 h-6 rounded-full object-cover flex-shrink-0 champ-img--red"
           />
-          <span class="text-xs font-bold text-red-200 flex-1">
+          <span class="text-xs font-bold flex-1 champ-name--red">
             {{ champ.name }}
           </span>
           <div class="flex items-center gap-0.5 text-[10px] flex-shrink-0">
-            <span class="font-bold text-emerald-300">{{ champ.kills }}</span>
-            <span class="text-white/30">/</span>
-            <span class="font-bold text-red-300">{{ champ.deaths }}</span>
-            <span class="text-white/30">/</span>
-            <span class="font-bold text-blue-300">{{ champ.assists }}</span>
+            <span class="font-bold kda-kills">{{ champ.kills }}</span>
+            <span class="kda-sep">/</span>
+            <span class="font-bold kda-deaths">{{ champ.deaths }}</span>
+            <span class="kda-sep">/</span>
+            <span class="font-bold kda-assists">{{ champ.assists }}</span>
           </div>
         </div>
       </div>
@@ -93,13 +93,13 @@ export default defineComponent({
   border: 1px solid;
 }
 .team-badge--blue {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: #3b82f626;
+  border-color: #3b82f64d;
   color: #93c5fd;
 }
 .team-badge--red {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: #ef444426;
+  border-color: #ef44444d;
   color: #fca5a5;
 }
 
@@ -108,14 +108,22 @@ export default defineComponent({
   border: 1px solid;
 }
 .champ-row--blue {
-  background: rgba(59, 130, 246, 0.08);
-  border-color: rgba(59, 130, 246, 0.15);
+  background: #3b82f614;
+  border-color: #3b82f626;
 }
 .champ-row--red {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.15);
+  background: #ef444414;
+  border-color: #ef444426;
 }
 
-.champ-img--blue { border: 1px solid rgba(59, 130, 246, 0.4); }
-.champ-img--red { border: 1px solid rgba(239, 68, 68, 0.4); }
+.champ-img--blue { border: 1px solid #3b82f666; }
+.champ-img--red { border: 1px solid #ef444466; }
+
+.champ-name--blue { color: #bfdbfe; }
+.champ-name--red { color: #fecaca; }
+
+.kda-kills { color: #6ee7b7; }
+.kda-deaths { color: #fca5a5; }
+.kda-assists { color: #93c5fd; }
+.kda-sep { color: #ffffff4d; }
 </style>

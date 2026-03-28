@@ -177,7 +177,7 @@ function onImgError(e: Event) {
               <img
                 :src="battleStore.getChampionImage(currentChampion)"
                 :alt="currentChampion"
-                class="w-full h-full object-cover object-top"
+                class="rpg-img w-full h-full object-cover object-top"
                 @error="onImgError"
               />
               <div class="portrait-overlay absolute inset-0" />
@@ -384,7 +384,7 @@ function onImgError(e: Event) {
                 <img
                   :src="battleStore.getChampionImage(champion)"
                   :alt="champion"
-                  class="w-full h-full object-cover"
+                  class="rpg-img w-full h-full object-cover"
                   @error="onImgError"
                 />
                 <div
@@ -459,7 +459,7 @@ function onImgError(e: Event) {
 
 /* ── Hero section ── */
 .hero-section {
-  border-bottom: 1px solid #2a2a20;
+  border-bottom: 1px solid var(--rpg-border-row);
   background: var(--rpg-bg-dark);
 }
 
@@ -480,7 +480,7 @@ function onImgError(e: Event) {
 /* ── Role badges ── */
 .role-badge {
   border-radius: 4px;
-  background: #1a1a10;
+  background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-wood-mid);
   color: var(--rpg-gold-dim);
 }
@@ -488,14 +488,14 @@ function onImgError(e: Event) {
 /* ── Remove button ── */
 .btn-remove {
   border-radius: 4px;
-  background: #3a1a18;
+  background: var(--rpg-bg-red-subtle);
   border: 1px solid var(--rpg-red);
   color: var(--rpg-red);
   transition: background 0.15s ease;
 }
 
 .btn-remove:hover {
-  background: #4a2220;
+  background: var(--rpg-bg-red-hover);
 }
 
 /* ── Equipment slots ── */
@@ -509,17 +509,17 @@ function onImgError(e: Event) {
 }
 
 .equip-slot--filled {
-  background: #1a1a10;
+  background: var(--rpg-bg-dark);
   border: 1px solid #3a3a28;
   box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .equip-slot--filled:hover {
-  background: #222218;
+  background: var(--rpg-bg-hover);
 }
 
 .equip-slot--active {
-  background: #1a2010;
+  background: var(--rpg-bg-green-subtle);
   border: 1px solid var(--rpg-gold-dim);
   box-shadow: 0 0 8px rgba(200, 144, 64, 0.2);
 }
@@ -530,7 +530,7 @@ function onImgError(e: Event) {
 
 .equip-slot--empty:hover {
   border-color: var(--rpg-gold-dim);
-  background: #18180e;
+  background: var(--rpg-bg-dark);
 }
 
 .equip-slot-label {
@@ -561,7 +561,7 @@ function onImgError(e: Event) {
 /* ── Equipped row ── */
 .equipped-row {
   border-radius: 4px;
-  background: #162010;
+  background: var(--rpg-bg-green-subtle);
   border: 1px solid #2e5a1a;
 }
 
@@ -571,26 +571,26 @@ function onImgError(e: Event) {
 
 .btn-unequip {
   border-radius: 4px;
-  background: #3a1a18;
+  background: var(--rpg-bg-red-subtle);
   border: 1px solid #884040;
   color: var(--rpg-red);
   transition: background 0.15s ease;
 }
 
 .btn-unequip:hover {
-  background: #4a2220;
+  background: var(--rpg-bg-red-hover);
 }
 
 /* ── Picker item rows ── */
 .picker-item {
   border-radius: 4px;
-  border: 1px solid #222218;
+  border: 1px solid var(--rpg-border-row);
   background: var(--rpg-bg-row);
   transition: background 0.15s ease;
 }
 
 .picker-item:hover {
-  background: #262620;
+  background: var(--rpg-bg-hover);
 }
 
 .picker-item-name {
@@ -607,7 +607,7 @@ function onImgError(e: Event) {
 
 /* ── Section divider ── */
 .section-divider {
-  background: #2a2a20;
+  background: var(--rpg-border-row);
 }
 
 .section-label {
@@ -616,12 +616,12 @@ function onImgError(e: Event) {
 
 /* ── Role filter ── */
 .role-filter-row {
-  border-bottom: 1px solid #2a2a20;
+  border-bottom: 1px solid var(--rpg-border-row);
 }
 
 .role-filter-btn {
   border-radius: 4px;
-  border: 1px solid #2a2a20;
+  border: 1px solid var(--rpg-border-row);
   background: var(--rpg-bg-row);
   color: var(--rpg-text-dim);
   transition: all 0.15s ease;
@@ -633,20 +633,20 @@ function onImgError(e: Event) {
 }
 
 .role-filter-btn--active {
-  background: #2a2010;
+  background: var(--rpg-bg-selected);
   border-color: var(--rpg-gold-dim);
   color: var(--rpg-gold);
 }
 
 /* ── Search ── */
 .search-row {
-  border-bottom: 1px solid #2a2a20;
+  border-bottom: 1px solid var(--rpg-border-row);
 }
 
 .search-input {
   border-radius: 4px;
   background: var(--rpg-bg-row);
-  border: 1px solid #2a2a20;
+  border: 1px solid var(--rpg-border-row);
   color: var(--rpg-text);
   outline: none;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -658,7 +658,7 @@ function onImgError(e: Event) {
 
 .search-input:focus {
   border-color: var(--rpg-gold-dim);
-  background: #1a1a10;
+  background: var(--rpg-bg-dark);
 }
 
 /* ── Empty state ── */
@@ -678,17 +678,17 @@ function onImgError(e: Event) {
 
 .champ-card--available {
   background: var(--rpg-bg-row);
-  border: 1px solid #2a2a20;
+  border: 1px solid var(--rpg-border-row);
 }
 
 .champ-card--available:hover {
-  background: #222218;
+  background: var(--rpg-bg-hover);
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 10px rgba(200, 144, 64, 0.15);
 }
 
 .champ-card--current {
-  background: #162010;
+  background: var(--rpg-bg-green-subtle);
   border: 1px solid var(--rpg-green-border);
   box-shadow: 0 0 12px rgba(110, 192, 64, 0.2);
 }
@@ -697,7 +697,7 @@ function onImgError(e: Event) {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--rpg-bg-row);
-  border: 1px solid #2a2a20;
+  border: 1px solid var(--rpg-border-row);
 }
 
 /* ── Status badges ── */
@@ -707,7 +707,7 @@ function onImgError(e: Event) {
 }
 
 .status-badge--slot {
-  background: #7a4e20;
+  background: var(--rpg-wood);
   border: 1px solid var(--rpg-gold-dim);
 }
 
@@ -719,10 +719,10 @@ function onImgError(e: Event) {
 /* ── Champion thumbnails ── */
 .champ-thumb {
   border-radius: 4px;
-  border: 1px solid #2a2a20;
+  border: 1px solid var(--rpg-border-row);
 }
 
 .champ-check {
-  background: rgba(22, 32, 16, 0.8);
+  background: rgba(26, 46, 20, 0.8);
 }
 </style>

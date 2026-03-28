@@ -83,8 +83,13 @@ const edgeDefs = [
 const edges = computed(() =>
   edgeDefs.map(({ source, target, targetIdx }) => {
     const s = skillState(targetIdx)
+    // ── Farben im RPG-Wood-Schema ──────────────────────────
     const color =
-      s === 'bought' ? '#f59e0b' : s === 'buyable' ? '#a78bfa' : 'rgba(255,255,255,0.09)'
+      s === 'bought'
+        ? '#e8c040' // --rpg-gold
+        : s === 'buyable'
+          ? '#6ec040' // --rpg-green-border
+          : 'rgba(92, 51, 16, 0.45)' // --rpg-wood-mid gedimmt
     return {
       id: `${source}-${target}`,
       source,
@@ -93,11 +98,11 @@ const edges = computed(() =>
       animated: s === 'buyable',
       label: `${SKILL_MEEP_COSTS[targetIdx]} Meeps`,
       labelStyle: {
-        fill: s === 'bought' ? '#fcd34d' : s === 'buyable' ? '#ddd6fe' : 'rgba(255,255,255,0.18)',
-        fontWeight: '600',
-        fontSize: '18px',
+        fill: s === 'bought' ? '#e8c040' : s === 'buyable' ? '#6ec040' : 'rgba(136, 88, 40, 0.7)',
+        fontWeight: '700',
+        fontSize: '16px',
       },
-      labelBgStyle: { fill: 'rgba(8,4,26,0.88)', rx: 6, ry: 6 },
+      labelBgStyle: { fill: 'rgba(17, 16, 8, 0.92)', rx: 4, ry: 4 },
       labelBgPadding: [6, 4] as [number, number],
       style: { stroke: color, strokeWidth: s === 'bought' ? 2.5 : 1.5 },
       markerEnd: { type: MarkerType.ArrowClosed, color },
@@ -109,8 +114,8 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 </script>
 
 <template>
-  <div class="st-wrapper">
-    <!-- Canvas -->
+  <div class="st-wrapper rpg-frame">
+    <div class="rpg-accent-bar" />
     <div class="st-canvas">
       <VueFlow
         :nodes="nodes"
@@ -125,7 +130,7 @@ const nodeTypes = { skill: markRaw(SkillNode) }
         :fit-view-on-init="false"
         class="!bg-transparent"
       >
-        <Background variant="dots" :gap="24" pattern-color="rgba(255,255,255,0.05)" :size="1" />
+        <Background variant="dots" :gap="24" pattern-color="#2a2a2a" :size="1" />
         <Controls position="bottom-right" />
       </VueFlow>
     </div>
@@ -133,60 +138,38 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 </template>
 
 <style scoped>
-/* ── Wrapper ─────────────────────────────────────────── */
+/* ── Wrapper: nutzt .rpg-frame aus globalem Theme ──────── */
 .st-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(155deg, rgba(15, 8, 42, 0.94) 0%, rgba(8, 4, 26, 0.97) 100%);
-  box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.07),
-    0 8px 40px rgba(0, 0, 0, 0.55);
+  /* rpg-frame liefert: bg-deep, wood-border, inset-shadows */
 }
 
-/* ── Header ──────────────────────────────────────────── */
-.st-header {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(139, 92, 246, 0.05);
-}
-
-.st-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(196, 181, 253, 0.65);
-}
-
-/* ── Canvas ──────────────────────────────────────────── */
+/* ── Canvas ──────────────────────────────────────────────── */
 .st-canvas {
   width: 100%;
   flex: 1;
   min-height: 0;
   position: relative;
+  background: var(--rpg-bg-deep);
 }
 
-/* ── Controls ────────────────────────────────────────── */
+/* ── Vue-Flow Controls → RPG-Holzrahmen-Stil ─────────────── */
 :deep(.vue-flow__controls) {
-  background: rgba(8, 4, 26, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: var(--rpg-bg-icon);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
   gap: 0;
 }
 
 :deep(.vue-flow__controls-button) {
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid var(--rpg-border-row);
+  color: var(--rpg-text-dim);
   width: 28px;
   height: 28px;
   display: flex;
@@ -202,8 +185,8 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 }
 
 :deep(.vue-flow__controls-button:hover) {
-  background: rgba(139, 92, 246, 0.14);
-  color: rgba(196, 181, 253, 0.9);
+  background: var(--rpg-bg-hover);
+  color: var(--rpg-gold);
 }
 
 :deep(.vue-flow__controls-button svg) {

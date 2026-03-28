@@ -11,7 +11,7 @@
     </div>
 
     <!-- ─── Primary Content: Team ─── -->
-    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+    <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar">
       <ChampionTeamComponent />
     </div>
 
@@ -44,7 +44,7 @@
           </div>
 
           <!-- Modal Body -->
-          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar">
             <ChampionShopComponent />
           </div>
         </div>

@@ -23,9 +23,9 @@
           <div
             class="absolute z-20 top-1 right-1 px-1.5 py-0.5 minimap-overlay-badge"
           >
-            <span class="text-xs font-black text-blue-300">{{ score.team1Kills }}</span>
-            <span class="text-xs text-white/40"> vs </span>
-            <span class="text-xs font-black text-red-300">{{ score.team2Kills }}</span>
+            <span class="text-xs font-black score-blue">{{ score.team1Kills }}</span>
+            <span class="text-xs score-sep"> vs </span>
+            <span class="text-xs font-black score-red">{{ score.team2Kills }}</span>
           </div>
 
           <img
@@ -44,9 +44,8 @@
               v-if="battleStore.team1[i]"
               :src="battleStore.getChampionImage(battleStore.team1[i].name)"
               :alt="battleStore.team1[i].name"
-              class="w-[26px] h-[26px] rounded-full object-cover border-2 border-blue-400"
+              class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--blue"
               :class="{ 'opacity-30 grayscale': champ.dead }"
-              :style="{ boxShadow: '0 0 6px rgba(59,130,246,0.8)' }"
             />
           </div>
 
@@ -61,9 +60,8 @@
               v-if="battleStore.team2[i]"
               :src="battleStore.getChampionImage(battleStore.team2[i].name)"
               :alt="battleStore.team2[i].name"
-              class="w-[26px] h-[26px] rounded-full object-cover border-2 border-red-400"
+              class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--red"
               :class="{ 'opacity-30 grayscale': champ.dead }"
-              :style="{ boxShadow: '0 0 6px rgba(239,68,68,0.6)' }"
             />
           </div>
 
@@ -321,7 +319,7 @@ export default defineComponent({
 }
 
 .minimap-shimmer {
-  background: linear-gradient(to right, transparent, rgba(92, 51, 16, 0.08), transparent);
+  background: linear-gradient(to right, transparent, #5c331014, transparent);
 }
 
 .minimap-field {
@@ -331,13 +329,27 @@ export default defineComponent({
 }
 
 .minimap-overlay-badge {
-  background: rgba(0, 0, 0, 0.7);
+  background: #000000b3;
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
 }
 
 .minimap-inner-border {
-  border: 1px solid rgba(92, 51, 16, 0.3);
+  border: 1px solid #5c33104d;
   border-radius: 4px;
 }
+
+.minimap-champ--blue {
+  border: 2px solid #60a5fa;
+  box-shadow: 0 0 6px #3b82f6cc;
+}
+
+.minimap-champ--red {
+  border: 2px solid #f87171;
+  box-shadow: 0 0 6px #ef444499;
+}
+
+.score-blue { color: #93c5fd; }
+.score-red { color: #fca5a5; }
+.score-sep { color: #ffffff66; }
 </style>

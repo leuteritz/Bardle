@@ -101,7 +101,7 @@
                           </span>
                           <button
                             @click="missionStore.collectMission(mission.id)"
-                            class="text-[11px] font-bold px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+                            class="text-[11px] font-bold px-2 py-0.5 transition-colors cursor-pointer tt-collect-btn"
                             :class="
                               mission.status === 'success'
                                 ? 'tt-collect-btn--success'
@@ -169,7 +169,7 @@
                   <img
                     :src="battleStore.getChampionImage(assignment)"
                     :alt="assignment"
-                    class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover/card:scale-105"
+                    class="rpg-img absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover/card:scale-105"
                     :class="isOnExpedition(assignment) ? 'grayscale' : ''"
                     @error="onImgError"
                   />
@@ -579,26 +579,26 @@ export default defineComponent({
 }
 
 .tt-expedition-badge--active {
-  background: #2a2010;
+  background: var(--rpg-bg-selected);
   border-color: #5c4420;
   color: var(--rpg-gold-dim);
 }
 
 .tt-expedition-badge--completed {
-  background: #1a2e14;
+  background: var(--rpg-bg-green-subtle);
   border-color: #2e5a1a;
-  color: #7ac060;
+  color: var(--rpg-green-light);
 }
 
 .tt-expedition-badge--empty {
-  background: #1c1c18;
+  background: var(--rpg-bg-row);
   border-color: #333;
   color: #666;
 }
 
 /* ── Pulse dot (intentionally round) ── */
 .tt-pulse-dot {
-  background: #52b830;
+  background: var(--rpg-green-top);
 }
 
 /* ── Tooltip (extends global rpg-tooltip) ── */
@@ -629,7 +629,7 @@ export default defineComponent({
 
 /* ── Progress bar ── */
 .tt-progress-track {
-  background: #2a2a22;
+  background: var(--rpg-border-row);
   border-radius: 4px;
 }
 
@@ -640,13 +640,17 @@ export default defineComponent({
 
 /* ── Divider ── */
 .tt-divider-top {
-  border-top: 1px solid #2a2a22;
+  border-top: 1px solid var(--rpg-border-row);
 }
 
 /* ── Collect buttons in tooltip ── */
+.tt-collect-btn {
+  border-radius: 4px;
+}
+
 .tt-collect-btn--success {
-  background: #1a2e14;
-  color: #7ac060;
+  background: var(--rpg-bg-green-subtle);
+  color: var(--rpg-green-light);
 }
 
 .tt-collect-btn--success:hover {
@@ -670,7 +674,7 @@ export default defineComponent({
 }
 
 .tt-team-counter-value {
-  color: #6080cc;
+  color: var(--rpg-blue);
 }
 
 /* ── Slot card (filled) ── */
@@ -684,12 +688,12 @@ export default defineComponent({
 }
 
 .tt-slot-card--active:hover {
-  border-color: #5a6a88;
+  border-color: var(--rpg-blue);
   box-shadow: 0 4px 12px rgba(40, 60, 100, 0.15);
 }
 
 .tt-slot-card--expedition {
-  border-color: #2a2a22;
+  border-color: var(--rpg-border-row);
   opacity: 0.5;
 }
 
@@ -725,7 +729,7 @@ export default defineComponent({
 }
 
 .tt-remove-btn:hover {
-  background: #3a1818;
+  background: var(--rpg-bg-red-subtle);
   border-color: #8a4040;
   color: var(--rpg-red);
 }
@@ -733,7 +737,7 @@ export default defineComponent({
 /* ── Equipment row ── */
 .tt-equip-row {
   background: rgba(0, 0, 0, 0.8);
-  border-top: 1px solid #2a2a22;
+  border-top: 1px solid var(--rpg-border-row);
 }
 
 /* ── Equipment slot ── */
@@ -742,12 +746,12 @@ export default defineComponent({
 }
 
 .tt-equip-slot--filled {
-  background: #2a2a22;
+  background: var(--rpg-border-row);
   border: 1px solid #444;
 }
 
 .tt-equip-slot--filled:hover {
-  background: #3a3a30;
+  background: var(--rpg-bg-hover);
 }
 
 .tt-equip-slot--empty {
@@ -755,7 +759,7 @@ export default defineComponent({
 }
 
 .tt-equip-slot--empty:hover {
-  border-color: #5a6a88;
+  border-color: var(--rpg-blue);
   background: #141828;
 }
 
@@ -763,12 +767,12 @@ export default defineComponent({
 .tt-slot-empty {
   border-radius: 4px;
   border: 1px dashed #333;
-  background: #141410;
+  background: var(--rpg-bg-icon);
 }
 
 .tt-slot-empty:hover,
 .group\/slot:hover .tt-slot-empty {
-  border-color: #5a6a88;
+  border-color: var(--rpg-blue);
   background: #141828;
 }
 
@@ -778,11 +782,11 @@ export default defineComponent({
 }
 
 .group\/slot:hover .border-color-hover {
-  border-color: #5a6a88;
+  border-color: var(--rpg-blue);
 }
 
 .group\/slot:hover .text-hover {
-  color: #6080cc;
+  color: var(--rpg-blue);
 }
 
 .group\/slot:hover .text-hover-light {
@@ -796,7 +800,7 @@ export default defineComponent({
 }
 
 .tt-equip-slot-mini:hover {
-  border-color: #5a6a88;
+  border-color: var(--rpg-blue);
   background: #141828;
 }
 
@@ -816,32 +820,32 @@ export default defineComponent({
 /* ── Equipped item row ── */
 .tt-equipped-item {
   border-radius: 4px;
-  background: #1a2e14;
+  background: var(--rpg-bg-green-subtle);
   border: 1px solid #2e5a1a;
 }
 
 /* ── Unequip button ── */
 .tt-unequip-btn {
   border-radius: 4px;
-  background: #2e1414;
+  background: var(--rpg-bg-red-subtle);
   border: 1px solid #5a2020;
   color: var(--rpg-red);
   transition: background 0.15s;
 }
 
 .tt-unequip-btn:hover {
-  background: #4a1e1e;
+  background: var(--rpg-bg-red-hover);
 }
 
 /* ── Picker item row ── */
 .tt-picker-item {
   border-radius: 4px;
-  border: 1px solid #2a2a22;
-  background: #1a1a14;
+  border: 1px solid var(--rpg-border-row);
+  background: var(--rpg-bg-dark);
 }
 
 .tt-picker-item:hover {
-  background: #2a2a22;
+  background: var(--rpg-bg-hover);
 }
 
 /* ── Transitions (kept from original) ── */

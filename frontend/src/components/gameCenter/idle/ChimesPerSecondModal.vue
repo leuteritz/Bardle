@@ -12,7 +12,7 @@
       <div class="rpg-header flex items-center justify-center p-6 relative">
         <div class="flex items-center gap-4">
           <div class="cps-icon-box p-3">
-            <img src="/img/BardAbilities/BardChime.png" class="w-8 h-8" />
+            <img src="/img/BardAbilities/BardChime.png" class="rpg-img w-8 h-8" />
           </div>
           <div>
             <h2 class="cps-title text-2xl font-bold">
@@ -54,7 +54,7 @@
             <div class="text-center">
               <h3 class="stat-card-label mb-2 text-lg font-bold">Top Produzent</h3>
               <div class="flex items-center justify-center gap-2">
-                <img :src="shopStore.topProducer.icon" class="w-6 h-6" />
+                <img :src="shopStore.topProducer.icon" class="rpg-img w-6 h-6" />
                 <p class="stat-card-value text-xl font-bold">
                   {{ shopStore.topProducer.name }}
                 </p>
@@ -76,7 +76,7 @@
             >
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
-                  <img :src="building.icon" class="w-10 h-10" />
+                  <img :src="building.icon" class="rpg-img w-10 h-10" />
                   <div>
                     <h4 class="font-bold text-white">{{ building.name }}</h4>
                     <p class="building-sublabel text-sm">Level {{ building.level }}</p>
@@ -293,7 +293,7 @@ export default defineComponent({
 }
 
 .building-row:hover {
-  background: #252520;
+  background: var(--rpg-bg-hover);
 }
 
 .building-sublabel {
@@ -306,7 +306,7 @@ export default defineComponent({
 }
 
 .progress-track {
-  background: #2a2a26;
+  background: var(--rpg-btn-disabled-bg);
   border: 1px solid var(--rpg-border-row);
   border-radius: 3px;
 }
@@ -336,7 +336,7 @@ export default defineComponent({
 }
 
 .period-btn:hover {
-  background: #252520;
+  background: var(--rpg-bg-hover);
   color: #eee;
 }
 

@@ -2,7 +2,7 @@
   <Transition name="modal-fade">
     <div
       v-if="planetEventStore.rescueModalOpen"
-      class="modal-backdrop"
+      class="modal-backdrop rpg-overlay"
       aria-modal="true"
       role="dialog"
     >
@@ -185,7 +185,6 @@ function handleClick() {
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  background: rgba(0, 0, 0, 0.7);
 }
 
 /* ─── Card ─────────────────────────────────────────────────────────────────── */
@@ -217,8 +216,8 @@ function handleClick() {
   left: -1px;
   width: 16px;
   height: 16px;
-  border-top: 2px solid rgba(255, 185, 70, 0.9);
-  border-left: 2px solid rgba(255, 185, 70, 0.9);
+  border-top: 2px solid var(--rpg-gold-dim);
+  border-left: 2px solid var(--rpg-gold-dim);
   border-radius: 4px 0 0 0;
   pointer-events: none;
 }
@@ -231,8 +230,8 @@ function handleClick() {
   right: -1px;
   width: 16px;
   height: 16px;
-  border-bottom: 2px solid rgba(255, 120, 40, 0.7);
-  border-right: 2px solid rgba(255, 120, 40, 0.7);
+  border-bottom: 2px solid var(--rpg-orange);
+  border-right: 2px solid var(--rpg-orange);
   border-radius: 0 0 4px 0;
   pointer-events: none;
 }
@@ -244,7 +243,6 @@ function handleClick() {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin: 0;
-
   color: var(--rpg-gold);
   text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
 }
@@ -254,14 +252,14 @@ function handleClick() {
   width: 100%;
   height: 4px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: #1a1a16;
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .countdown-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff6a00, #ff2200);
+  background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
   box-shadow:
     0 0 10px rgba(255, 60, 0, 0.9),
     0 0 20px rgba(255, 40, 0, 0.4);
@@ -325,7 +323,7 @@ function handleClick() {
 
 .dot--done {
   background: rgba(255, 170, 50, 0.95);
-  border-color: rgba(255, 200, 80, 0.8);
+  border-color: var(--rpg-gold-dim);
   box-shadow:
     0 0 6px rgba(255, 140, 20, 0.9),
     0 0 12px rgba(255, 100, 0, 0.5);
@@ -334,7 +332,7 @@ function handleClick() {
 /* ─── Hint ─────────────────────────────────────────────────────────────────── */
 .hint-text {
   font-size: 0.7rem;
-  color: rgba(255, 200, 130, 0.5);
+  color: var(--rpg-text-dim);
   margin: 0;
   letter-spacing: 0.04em;
 }
@@ -342,8 +340,8 @@ function handleClick() {
 /* ─── Drop List ────────────────────────────────────────────────────────────── */
 .drop-list {
   width: 100%;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 165, 50, 0.18);
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.55rem 0.85rem;
   display: flex;
@@ -357,7 +355,7 @@ function handleClick() {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 185, 80, 0.45);
+  color: var(--rpg-gold-dim);
   margin: 0 0 0.25rem;
 }
 
@@ -375,7 +373,7 @@ function handleClick() {
 .drop-chance {
   font-size: 0.72rem;
   font-weight: 700;
-  color: rgba(255, 205, 100, 0.85);
+  color: var(--rpg-gold);
   min-width: 2.2rem;
   text-align: right;
   letter-spacing: 0.02em;
@@ -383,12 +381,12 @@ function handleClick() {
 
 /* ─── Home Planet ──────────────────────────────────────────────────────────── */
 .home-planet-info {
-  border-color: rgba(100, 160, 255, 0.22);
+  border-color: var(--rpg-blue);
   background: rgba(40, 90, 255, 0.04);
 }
 
 .home-planet-champion-name {
-  color: rgba(130, 190, 255, 0.95);
+  color: var(--rpg-blue);
   font-weight: 700;
   font-size: 0.82rem;
   letter-spacing: 0.03em;
@@ -396,23 +394,23 @@ function handleClick() {
 
 .home-planet-hint {
   font-size: 0.55rem;
-  color: rgba(100, 170, 255, 0.45);
+  color: var(--rpg-text-dim);
   margin: 0.15rem 0 0;
   letter-spacing: 0.02em;
 }
 
 /* ─── Rarity ───────────────────────────────────────────────────────────────── */
 .rarity--common {
-  color: rgba(200, 200, 200, 0.75);
+  color: var(--rpg-rarity-common);
 }
 .rarity--uncommon {
-  color: rgba(100, 230, 120, 0.9);
+  color: var(--rpg-rarity-uncommon);
 }
 .rarity--rare {
-  color: rgba(90, 160, 255, 0.95);
+  color: var(--rpg-rarity-rare);
 }
 .rarity--epic {
-  color: rgba(210, 110, 255, 0.95);
+  color: var(--rpg-rarity-epic);
 }
 
 /* ─── Transition ───────────────────────────────────────────────────────────── */

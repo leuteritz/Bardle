@@ -232,7 +232,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 
 .uni-card--selectable:hover {
   border-color: var(--rpg-gold-dim);
-  background: #252520;
+  background: var(--rpg-bg-hover);
   transform: scale(1.03);
   box-shadow: 0 4px 12px rgba(200, 144, 64, 0.2);
 }

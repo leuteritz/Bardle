@@ -77,7 +77,7 @@ const rarityLabel: Record<string, string> = {
             v-for="aug in options"
             :key="aug.id"
             class="aug-card group relative flex flex-col items-center flex-1 p-4"
-            :class="[rarityBorder[aug.rarity], rarityBorderHover[aug.rarity]]"
+            :class="[`rpg-rarity-${aug.rarity}`, `rpg-glow-${aug.rarity}`, `aug-card-hover--${aug.rarity}`]"
             @click="gameStore.chooseAugment(aug.id)"
           >
             <!-- Icon -->
@@ -91,7 +91,7 @@ const rarityLabel: Record<string, string> = {
             <!-- Rarity badge -->
             <span
               class="aug-badge mb-3 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-              :class="rarityBadge[aug.rarity]"
+              :class="`rpg-badge-${aug.rarity}`"
             >
               {{ rarityLabel[aug.rarity] }}
             </span>
@@ -104,7 +104,7 @@ const rarityLabel: Record<string, string> = {
             <!-- Select button -->
             <div
               class="aug-select-btn mt-auto px-4 py-1.5 text-xs font-bold"
-              :class="rarityBadge[aug.rarity]"
+              :class="`rpg-badge-${aug.rarity}`"
             >
               Auswählen
             </div>
@@ -127,7 +127,7 @@ const rarityLabel: Record<string, string> = {
 
 .aug-title {
   color: var(--rpg-gold);
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rpg-gold) 40%, transparent);
 }
 
 .aug-subtitle {
@@ -151,7 +151,7 @@ const rarityLabel: Record<string, string> = {
   transition: all 0.2s;
 }
 .aug-card:hover {
-  background: #252520;
+  background: var(--rpg-bg-hover);
   transform: scale(1.03);
 }
 
@@ -159,81 +159,21 @@ const rarityLabel: Record<string, string> = {
   color: var(--rpg-text-muted);
 }
 
-.aug-badge {
-  border-radius: 4px;
-  border-width: 1px;
-  border-style: solid;
+/* Hover glow enhancement per rarity */
+.aug-card-hover--common:hover {
+  border-color: color-mix(in srgb, var(--rpg-rarity-common) 80%, #fff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rpg-rarity-common) 50%, transparent);
 }
-
-.aug-select-btn {
-  border-radius: 4px;
-  border-width: 1px;
-  border-style: solid;
+.aug-card-hover--rare:hover {
+  border-color: color-mix(in srgb, var(--rpg-rarity-rare) 80%, #fff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rpg-rarity-rare) 50%, transparent);
 }
-
-/* Rarity: Common (Blue) */
-.rarity-common {
-  border: 2px solid #5b8dd9;
-  box-shadow: 0 0 8px rgba(91, 141, 217, 0.3);
+.aug-card-hover--epic:hover {
+  border-color: color-mix(in srgb, var(--rpg-rarity-epic) 80%, #fff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rpg-rarity-epic) 50%, transparent);
 }
-.rarity-common-hover:hover {
-  border-color: #7eaae8;
-  box-shadow: 0 0 14px rgba(91, 141, 217, 0.5);
-}
-.badge-common {
-  background: rgba(91, 141, 217, 0.15);
-  color: #7eaae8;
-  border-color: rgba(91, 141, 217, 0.4);
-}
-
-/* Rarity: Rare (Purple) */
-.rarity-rare {
-  border: 2px solid #a87ed8;
-  box-shadow: 0 0 8px rgba(168, 126, 216, 0.3);
-}
-.rarity-rare-hover:hover {
-  border-color: #c4a0ee;
-  box-shadow: 0 0 14px rgba(168, 126, 216, 0.5);
-}
-.badge-rare {
-  background: rgba(168, 126, 216, 0.15);
-  color: #c4a0ee;
-  border-color: rgba(168, 126, 216, 0.4);
-}
-
-/* Rarity: Epic (Amber) */
-.rarity-epic {
-  border: 2px solid #d9a03e;
-  box-shadow: 0 0 8px rgba(217, 160, 62, 0.3);
-}
-.rarity-epic-hover:hover {
-  border-color: #e8c060;
-  box-shadow: 0 0 14px rgba(217, 160, 62, 0.5);
-}
-.badge-epic {
-  background: rgba(217, 160, 62, 0.15);
-  color: #e8c060;
-  border-color: rgba(217, 160, 62, 0.4);
-}
-
-/* Rarity: Legendary (Gold/Yellow) */
-.rarity-legendary {
-  border: 2px solid #e8c040;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
-  animation: legendary-pulse 2s ease-in-out infinite;
-}
-.rarity-legendary-hover:hover {
-  border-color: #f0d860;
-  box-shadow: 0 0 20px rgba(232, 192, 64, 0.6);
-}
-.badge-legendary {
-  background: rgba(232, 192, 64, 0.15);
-  color: #f0d860;
-  border-color: rgba(232, 192, 64, 0.5);
-}
-
-@keyframes legendary-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(232, 192, 64, 0.3), inset 0 0 6px rgba(232, 192, 64, 0.08); }
-  50% { box-shadow: 0 0 22px rgba(232, 192, 64, 0.6), inset 0 0 12px rgba(232, 192, 64, 0.12); }
+.aug-card-hover--legendary:hover {
+  border-color: color-mix(in srgb, var(--rpg-rarity-legendary) 80%, #fff);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--rpg-rarity-legendary) 60%, transparent);
 }
 </style>

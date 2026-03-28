@@ -34,7 +34,7 @@ const tooltipMaterials = computed(() =>
           :class="{ 'inventory-tooltip__item--empty': m.count === 0 }"
           :style="{ borderColor: rarityColor[m.rarity] }"
         >
-          <img :src="m.image" class="inventory-tooltip__img" alt="" />
+          <img :src="m.image" class="inventory-tooltip__img rpg-img" alt="" />
           <span class="inventory-tooltip__name" :style="{ color: rarityColor[m.rarity] }">
             {{ m.name }}
           </span>
@@ -53,12 +53,10 @@ const tooltipMaterials = computed(() =>
   right: calc(100% + 0.75rem);
   top: 0.5rem;
   z-index: 150;
-  background: linear-gradient(135deg, #020818 0%, #06152e 50%, #020c1a 100%);
-  border: 1px solid rgba(251, 146, 60, 0.25);
+  background: var(--rpg-bg-tooltip);
+  border: 2px solid var(--rpg-wood-mid);
   border-radius: 4px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.7),
-    0 0 20px rgba(251, 146, 60, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   padding: 0.75rem 0.875rem;
   min-width: 220px;
   pointer-events: none;
@@ -69,8 +67,8 @@ const tooltipMaterials = computed(() =>
   font-size: 1rem;
   font-weight: bold;
   letter-spacing: 0.08em;
-  color: #fbbf24;
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  color: var(--rpg-gold);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rpg-gold) 40%, transparent);
   margin-bottom: 0.5rem;
 }
 
@@ -86,9 +84,9 @@ const tooltipMaterials = computed(() =>
   align-items: center;
   gap: 0.15rem;
   padding: 0.35rem 0.25rem;
-  border-radius: 0.4rem;
+  border-radius: 4px;
   border: 1px solid;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--rpg-bg-deep);
   transition: opacity 0.15s;
 }
 

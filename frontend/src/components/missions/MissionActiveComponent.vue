@@ -56,7 +56,7 @@
             <img
               :src="getChampionImage(champ.name)"
               :alt="champ.name"
-              class="object-cover w-4 h-4 rounded-full ring-1 ring-white/10"
+              class="rpg-img object-cover w-4 h-4 rounded-full ring-1 ring-white/10"
             />
             {{ champ.name }}
             <span class="text-[10px] uppercase text-white/35 font-bold">{{ champ.role }}</span>

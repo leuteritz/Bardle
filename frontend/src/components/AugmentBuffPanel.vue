@@ -81,12 +81,12 @@ function getDisplayLine(aug: AugmentDefinition): string {
             <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative">
               <div
                 class="aug-item relative flex items-center gap-2 px-2.5 py-2 cursor-default overflow-hidden"
-                :class="[rarityBorder[aug.rarity], rarityGlow[aug.rarity]]"
+                :class="[`rpg-rarity-${aug.rarity}`, `rpg-glow-${aug.rarity}`]"
               >
                 <!-- Rarity gradient overlay -->
                 <div
-                  class="absolute inset-0 pointer-events-none opacity-60"
-                  :class="rarityAccent[aug.rarity]"
+                  class="aug-accent absolute inset-0 pointer-events-none opacity-60"
+                  :class="`aug-accent--${aug.rarity}`"
                 />
 
                 <!-- Effect line -->
@@ -150,11 +150,11 @@ function getDisplayLine(aug: AugmentDefinition): string {
 }
 
 .aug-header-line {
-  background: rgba(92, 51, 16, 0.4);
+  background: color-mix(in srgb, var(--rpg-wood-mid) 40%, transparent);
 }
 
 .aug-header-label {
-  color: rgba(232, 192, 64, 0.35);
+  color: color-mix(in srgb, var(--rpg-gold) 35%, transparent);
 }
 
 .aug-item {
@@ -176,33 +176,9 @@ function getDisplayLine(aug: AugmentDefinition): string {
   border-radius: 0 0 4px 4px;
 }
 
-/* Rarity borders */
-.border-common { border: 1px solid #5b8dd9; }
-.border-rare { border: 1px solid #a87ed8; }
-.border-epic { border: 1px solid #d9a03e; }
-.border-legendary { border: 1px solid #e8c040; }
-
-/* Rarity glows */
-.glow-common { box-shadow: 0 0 10px rgba(91, 141, 217, 0.3); }
-.glow-common:hover { box-shadow: 0 0 18px rgba(91, 141, 217, 0.5); }
-.glow-rare { box-shadow: 0 0 10px rgba(168, 126, 216, 0.3); }
-.glow-rare:hover { box-shadow: 0 0 18px rgba(168, 126, 216, 0.5); }
-.glow-epic { box-shadow: 0 0 10px rgba(217, 160, 62, 0.35); }
-.glow-epic:hover { box-shadow: 0 0 18px rgba(217, 160, 62, 0.55); }
-.glow-legendary {
-  box-shadow: 0 0 14px rgba(232, 192, 64, 0.45);
-  animation: legendary-pulse 2s ease-in-out infinite;
-}
-.glow-legendary:hover { box-shadow: 0 0 24px rgba(232, 192, 64, 0.65); }
-
 /* Rarity accent overlays */
-.accent-common { background: linear-gradient(to right, rgba(91, 141, 217, 0.2), transparent); }
-.accent-rare { background: linear-gradient(to right, rgba(168, 126, 216, 0.2), transparent); }
-.accent-epic { background: linear-gradient(to right, rgba(217, 160, 62, 0.25), transparent); }
-.accent-legendary { background: linear-gradient(to right, rgba(232, 192, 64, 0.3), transparent); }
-
-@keyframes legendary-pulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(232, 192, 64, 0.35); }
-  50% { box-shadow: 0 0 22px rgba(232, 192, 64, 0.6); }
-}
+.aug-accent--common { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-common) 20%, transparent), transparent); }
+.aug-accent--rare { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-rare) 20%, transparent), transparent); }
+.aug-accent--epic { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-epic) 25%, transparent), transparent); }
+.aug-accent--legendary { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-legendary) 30%, transparent), transparent); }
 </style>

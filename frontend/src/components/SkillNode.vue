@@ -47,12 +47,11 @@ function handleBuy() {
       :disabled="state !== 'buyable'"
       @click.stop="handleBuy"
     >
-      <!-- Bought shimmer overlay -->
       <div v-if="state === 'bought'" class="sn-shimmer" />
       <img :src="data.skill.icon" :alt="data.skill.key" class="sn-icon" />
     </button>
 
-    <!-- Labels: nur Effect, keine Description -->
+    <!-- Effect Label -->
     <div class="sn-labels">
       <span :class="['sn-effect', `sn-effect--${state}`]">
         {{ data.skill.effect }}
@@ -77,11 +76,12 @@ function handleBuy() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 116px; /* ↑ vorher 88px */
+  width: 116px;
   transition: opacity 0.2s;
 }
 .sn-root--locked {
   opacity: 0.4;
+  filter: grayscale(55%);
 }
 
 /* ── Key Badge ─────────────────────────────────────────── */
@@ -90,39 +90,39 @@ function handleBuy() {
   top: -10px;
   left: -10px;
   z-index: 10;
-  width: 24px; /* ↑ vorher 20px */
+  width: 24px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px; /* ↑ vorher 10px */
+  font-size: 14px;
   font-weight: 800;
   border-radius: 50%;
   border: 1px solid;
   line-height: 1;
 }
 .sn-badge--bought {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: rgba(253, 212, 77, 0.6);
-  color: #fcd34d;
+  background: #332008;
+  border-color: var(--rpg-gold-dim);
+  color: var(--rpg-gold);
 }
 .sn-badge--buyable {
-  background: rgba(139, 92, 246, 0.25);
-  border-color: rgba(167, 139, 250, 0.6);
-  color: #ddd6fe;
+  background: #142808;
+  border-color: var(--rpg-green-border);
+  color: var(--rpg-green-top);
 }
 .sn-badge--locked {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.35);
+  background: var(--rpg-bg-icon);
+  border-color: var(--rpg-border-row);
+  color: var(--rpg-text-dim);
 }
 
 /* ── Button ────────────────────────────────────────────── */
 .sn-btn {
   position: relative;
-  width: 96px; /* ↑ vorher 72px */
-  height: 96px; /* ↑ vorher 72px */
-  border-radius: 20px; /* ↑ vorher 16px */
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
   border: 1.5px solid;
   display: flex;
   align-items: center;
@@ -135,34 +135,39 @@ function handleBuy() {
   outline: none;
 }
 
+/* Gekauft → Gold wie Shop-Gold-Akzent */
 .sn-btn--bought {
-  border-color: rgba(251, 191, 36, 0.55);
-  background: linear-gradient(135deg, rgba(120, 53, 15, 0.35), rgba(78, 35, 10, 0.25));
+  border-color: var(--rpg-gold-dim);
+  background: linear-gradient(135deg, #2a1808, #1a1008);
   box-shadow:
-    0 0 18px rgba(234, 179, 8, 0.22),
-    inset 0 1px 0 rgba(253, 212, 77, 0.08);
+    0 0 18px rgba(232, 192, 64, 0.25),
+    inset 0 1px 0 rgba(232, 192, 64, 0.1);
   cursor: default;
+  animation: rpg-legendary-pulse 2s ease-in-out infinite;
 }
 
+/* Kaufbar → Grün wie Shop-Affordable */
 .sn-btn--buyable {
-  border-color: rgba(139, 92, 246, 0.5);
-  background: linear-gradient(135deg, rgba(76, 29, 149, 0.3), rgba(46, 16, 101, 0.2));
-  box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  border-color: var(--rpg-green-border);
+  background: linear-gradient(135deg, #1c3a10, #0e2008);
+  box-shadow: 0 0 0 transparent;
   cursor: pointer;
+  animation: perm-pulse 2s ease-in-out infinite;
 }
 .sn-btn--buyable:hover {
-  border-color: rgba(167, 139, 250, 0.75);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #264e16, #1a3410);
+  box-shadow: 0 0 16px rgba(80, 180, 40, 0.5);
+  transform: translateY(-2px);
 }
 .sn-btn--buyable:active {
-  transform: translateY(0);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+  transform: scale(0.96);
+  background: linear-gradient(135deg, #0e2008, #081408);
 }
 
+/* Gesperrt */
 .sn-btn--locked {
-  border-color: rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--rpg-border-row);
+  background: var(--rpg-bg-icon);
   cursor: not-allowed;
 }
 
@@ -170,7 +175,7 @@ function handleBuy() {
 .sn-shimmer {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(253, 212, 77, 0.06) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(232, 192, 64, 0.08) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -178,9 +183,10 @@ function handleBuy() {
 .sn-icon {
   position: relative;
   z-index: 1;
-  width: 58px; /* ↑ vorher 42px */
+  width: 58px;
   height: 58px;
   object-fit: contain;
+  image-rendering: crisp-edges;
 }
 
 /* ── Labels ────────────────────────────────────────────── */
@@ -192,19 +198,22 @@ function handleBuy() {
 }
 
 .sn-effect {
-  font-size: 18px; /* ↑ vorher 11px */
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 .sn-effect--bought {
-  color: #fcd34d;
+  color: var(--rpg-gold);
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.4);
 }
 .sn-effect--buyable {
-  color: #c4b5fd;
+  color: var(--rpg-green-top);
+  text-shadow: 0 0 6px rgba(80, 180, 40, 0.4);
 }
 .sn-effect--locked {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--rpg-text-dim);
 }
 
 /* ── Cost / Status pill ────────────────────────────────── */
@@ -227,27 +236,27 @@ function handleBuy() {
   gap: 5px;
 }
 .sn-pill--buyable {
-  background: rgba(76, 29, 149, 0.3);
-  border-color: rgba(139, 92, 246, 0.35);
-  color: #ddd6fe;
+  background: #142808;
+  border-color: var(--rpg-green-bottom);
+  color: var(--rpg-green-top);
 }
 .sn-pill--locked {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.25);
+  background: var(--rpg-bg-icon);
+  border-color: var(--rpg-border-row);
+  color: var(--rpg-text-dim);
 }
 .sn-pill--bought {
-  background: rgba(120, 53, 15, 0.25);
-  border-color: rgba(251, 191, 36, 0.35);
-  color: #fcd34d;
+  background: #1c1008;
+  border-color: var(--rpg-gold-dim);
+  color: var(--rpg-gold);
 }
 .sn-pill__cost {
-  font-size: 20px; /* ← nach Geschmack anpassen */
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
 }
 .sn-pill__meeps-icon {
-  height: 1.6em; /* mitwachsen lassen, damit Bild zur Zahl passt */
+  height: 1.6em;
   width: auto;
 }
 </style>

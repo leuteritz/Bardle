@@ -8,7 +8,7 @@
           <img
             src="/img/BardAbilities/Bard.png"
             alt="Bard"
-            class="relative z-10 object-cover w-10 h-10 rounded-full"
+            class="rpg-img relative z-10 object-cover w-10 h-10 rounded-full"
           />
           <!-- Crown -->
           <span class="absolute text-sm -translate-x-1/2 -top-3 left-1/2">👑</span>
@@ -56,7 +56,7 @@
               <img
                 :src="battleStore.getChampionImage(assignment)"
                 :alt="assignment"
-                class="w-10 h-10 rounded-full object-cover"
+                class="rpg-img w-10 h-10 rounded-full object-cover"
                 @error="onImgError"
               />
               <span class="slot-champion-name text-[11px] font-black text-center leading-tight">
@@ -118,7 +118,7 @@
             <img
               :src="battleStore.getChampionImage(champion)"
               :alt="champion"
-              class="relative z-10 w-12 h-12 rounded-full object-cover"
+              class="rpg-img relative z-10 w-12 h-12 rounded-full object-cover"
               @error="onImgError"
             />
           </div>

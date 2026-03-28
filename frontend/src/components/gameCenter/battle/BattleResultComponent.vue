@@ -145,7 +145,7 @@ export default defineComponent({
   background: var(--rpg-bg-header);
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px #00000066;
 }
 
 .battle-id-badge {
@@ -156,29 +156,29 @@ export default defineComponent({
 }
 
 .last-result--win {
-  background: rgba(82, 184, 48, 0.12);
-  border: 1px solid rgba(82, 184, 48, 0.3);
+  background: #52b8301f;
+  border: 1px solid #52b8304d;
   border-radius: 4px;
   color: var(--rpg-green-top);
 }
 
 .last-result--loss {
-  background: rgba(204, 96, 80, 0.12);
-  border: 1px solid rgba(204, 96, 80, 0.3);
+  background: #cc60501f;
+  border: 1px solid #cc60504d;
   border-radius: 4px;
   color: var(--rpg-red);
 }
 
 .countdown-badge {
-  background: rgba(91, 141, 217, 0.15);
-  border: 1px solid rgba(91, 141, 217, 0.3);
+  background: #5b8dd926;
+  border: 1px solid #5b8dd94d;
   border-radius: 4px;
   color: var(--rpg-text-muted);
 }
 
 .live-badge {
-  background: rgba(82, 184, 48, 0.1);
-  border: 1px solid rgba(82, 184, 48, 0.2);
+  background: #52b8301a;
+  border: 1px solid #52b83033;
   border-radius: 4px;
   color: var(--rpg-green-top);
 }
@@ -191,24 +191,24 @@ export default defineComponent({
   box-shadow:
     inset 0 0 0 2px var(--rpg-wood-inner),
     inset 0 0 0 4px var(--rpg-wood-mid),
-    0 0 30px rgba(82, 184, 48, 0.3);
+    0 0 30px #52b8304d;
 }
 
 .result-modal--loss {
   box-shadow:
     inset 0 0 0 2px var(--rpg-wood-inner),
     inset 0 0 0 4px var(--rpg-wood-mid),
-    0 0 30px rgba(204, 96, 80, 0.3);
+    0 0 30px #cc60504d;
 }
 
 .result-text--win {
   color: var(--rpg-green-top);
-  text-shadow: 0 0 12px rgba(82, 184, 48, 0.4);
+  text-shadow: 0 0 12px #52b83066;
 }
 
 .result-text--loss {
   color: var(--rpg-red);
-  text-shadow: 0 0 12px rgba(204, 96, 80, 0.4);
+  text-shadow: 0 0 12px #cc605066;
 }
 
 .lp-badge {
@@ -217,14 +217,14 @@ export default defineComponent({
 }
 
 .lp-badge--pos {
-  background: rgba(82, 184, 48, 0.15);
-  border-color: rgba(82, 184, 48, 0.3);
+  background: #52b83026;
+  border-color: #52b8304d;
   color: var(--rpg-green-top);
 }
 
 .lp-badge--neg {
-  background: rgba(204, 96, 80, 0.15);
-  border-color: rgba(204, 96, 80, 0.3);
+  background: #cc605026;
+  border-color: #cc60504d;
   color: var(--rpg-red);
 }
 
@@ -238,7 +238,7 @@ export default defineComponent({
 }
 
 .result-btn:hover {
-  background: #252520;
+  background: var(--rpg-bg-hover);
   border-color: var(--rpg-wood-mid);
   color: #fff;
   transform: scale(1.03);
@@ -249,8 +249,8 @@ export default defineComponent({
 }
 
 .result-btn--active {
-  background: rgba(168, 126, 216, 0.15);
-  border-color: rgba(168, 126, 216, 0.35);
+  background: #a87ed826;
+  border-color: #a87ed859;
   color: #c4a0ee;
 }
 </style>

@@ -9,11 +9,10 @@
         <div
           class="p-1 transition-transform duration-300 rounded-full meep-icon-ring group-hover:scale-110"
         >
-          <img src="/img/BardAbilities/BardMeep.png" class="w-8 h-8" />
+          <img src="/img/BardAbilities/BardMeep.png" class="rpg-img w-8 h-8" />
         </div>
         <span
-          class="text-lg font-bold"
-          style="color: #e8c040;"
+          class="text-lg font-bold meep-count"
         >
           {{ gameStore.chimesForMeep }} / {{ gameStore.meepChimeRequirement }}
         </span>
@@ -53,6 +52,9 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.meep-count {
+  color: var(--rpg-gold);
+}
 .meep-card {
   background: rgba(200, 144, 64, 0.08);
   border: 1px solid rgba(200, 144, 64, 0.25);

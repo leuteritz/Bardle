@@ -1,14 +1,14 @@
 <template>
-  <div class="cs-frame">
+  <div class="rpg-frame cs-frame">
     <!-- ── Header: Search + Role Filter ── -->
-    <div class="cs-header">
+    <div class="rpg-header cs-header">
       <div class="relative">
         <span class="search-icon">⌕</span>
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Champion suchen…"
-          class="w-full pl-9 pr-4 py-2.5 shop-search"
+          class="rpg-search w-full pl-9 pr-4 py-2.5"
         />
       </div>
 
@@ -17,8 +17,8 @@
           v-for="role in roles"
           :key="role.value"
           @click="activeRole = role.value"
-          class="px-3 py-1"
-          :class="activeRole === role.value ? 'role-btn role-btn--active' : 'role-btn'"
+          class="rpg-tab px-3 py-1"
+          :class="activeRole === role.value ? 'rpg-tab--active' : ''"
         >
           {{ role.label }}
         </button>
@@ -51,7 +51,7 @@
           <img
             :src="battleStore.getChampionImage(champion.name)"
             :alt="champion.name"
-            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-105"
+            class="rpg-img absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover:scale-105"
             :class="isLocked(champion.name) ? 'grayscale' : ''"
           />
 
@@ -120,7 +120,7 @@
                   <img
                     :src="getMaterialImage(String(matId))"
                     :alt="getMaterialName(String(matId))"
-                    class="inline-block w-3.5 h-3.5 object-contain align-middle"
+                    class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
                   />
                   {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
                     formatNumber(qty as number)
@@ -306,54 +306,15 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Search ── */
+/* ── Search icon ── */
 .search-icon {
   position: absolute;
   left: 0.875rem;
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.875rem;
-  color: #555548;
+  color: var(--rpg-text-dim);
   pointer-events: none;
-}
-
-.shop-search {
-  font-size: 0.875rem;
-  border-radius: 4px;
-  background: #1a1008;
-  border: 1px solid var(--rpg-wood-mid);
-  color: #b0b0a0;
-  transition: border-color 0.2s;
-}
-.shop-search::placeholder {
-  color: #555548;
-}
-.shop-search:focus {
-  outline: none;
-  border-color: var(--rpg-gold-dim);
-}
-
-/* ── Role Filter ── */
-.role-btn {
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 4px;
-  border: 1px solid var(--rpg-wood-mid);
-  background: #1a1008;
-  color: var(--rpg-text-muted);
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s;
-}
-.role-btn:hover {
-  color: var(--rpg-gold);
-  border-color: var(--rpg-gold-dim);
-}
-.role-btn--active {
-  background: #1e1a08;
-  border-color: var(--rpg-gold);
-  color: var(--rpg-gold);
 }
 
 /* ── Load error ── */
@@ -384,13 +345,13 @@ export default defineComponent({
 
 /* Card state variants */
 .card-owned {
-  background: #111008;
-  border-color: #2a2a2a;
+  background: var(--rpg-bg-deep);
+  border-color: var(--rpg-border-row);
   opacity: 0.55;
   cursor: default;
 }
 .card-buyable {
-  background: #111008;
+  background: var(--rpg-bg-deep);
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
   cursor: pointer;
@@ -400,14 +361,14 @@ export default defineComponent({
   box-shadow: 0 0 35px rgba(232, 192, 64, 0.25);
 }
 .card-unlocked {
-  background: #111008;
+  background: var(--rpg-bg-deep);
   border-color: var(--rpg-wood-mid);
   opacity: 0.7;
   cursor: default;
 }
 .card-locked {
-  background: #111008;
-  border-color: #2a2a2a;
+  background: var(--rpg-bg-deep);
+  border-color: var(--rpg-border-row);
   opacity: 0.4;
   filter: grayscale(55%);
   cursor: default;
@@ -473,14 +434,14 @@ export default defineComponent({
   font-weight: 700;
 }
 .cost-badge--ok {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.22);
-  color: rgba(110, 231, 183, 0.8);
+  background: var(--rpg-bg-green-subtle);
+  border: 1px solid var(--rpg-green-bottom);
+  color: var(--rpg-green-light);
 }
 .cost-badge--missing {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.22);
-  color: rgba(252, 165, 165, 0.8);
+  background: var(--rpg-bg-red-subtle);
+  border: 1px solid var(--rpg-red);
+  color: var(--rpg-red);
 }
 
 /* ── Card buttons ── */
@@ -496,8 +457,8 @@ export default defineComponent({
     transform 0.1s;
 }
 .btn-owned {
-  background: #1c1c18;
-  border-color: #2a2a2a;
+  background: var(--rpg-bg-row);
+  border-color: var(--rpg-border-row);
   color: #555548;
   cursor: not-allowed;
 }
@@ -513,9 +474,9 @@ export default defineComponent({
   transform: scale(0.97);
 }
 .btn-locked {
-  background: #1c1c18;
-  border-color: #2a2a2a;
-  color: #444;
+  background: var(--rpg-bg-row);
+  border-color: var(--rpg-border-row);
+  color: var(--rpg-btn-disabled-border);
   cursor: not-allowed;
 }
 
@@ -526,8 +487,8 @@ export default defineComponent({
   left: 50%;
   transform: translateX(-50%);
   padding: 0.4rem 0.75rem;
-  background: #16140e;
-  border: 1px solid #333;
+  background: var(--rpg-bg-tooltip);
+  border: 2px solid var(--rpg-wood-mid);
   border-radius: 4px;
   font-size: 0.6rem;
   color: var(--rpg-text-muted);
@@ -541,17 +502,6 @@ export default defineComponent({
 .champion-card:hover .locked-tooltip {
   opacity: 1;
 }
-/* ── Frame – identisch zu .shop-frame ── */
-.cs-frame {
-  background: #111008; /* war #1c1c18 – jetzt wie shop-frame */
-  border: 4px solid #7a4e20;
-  border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 4px 20px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-}
 
 /* ── Header-Bar (Search + Rollen) ── */
 .cs-header {
@@ -559,8 +509,6 @@ export default defineComponent({
   flex-direction: column;
   gap: 8px;
   padding: 8px 10px;
-  background: #1e1006;
-  border-bottom: 2px solid #5c3310;
   flex-shrink: 0;
 }
 

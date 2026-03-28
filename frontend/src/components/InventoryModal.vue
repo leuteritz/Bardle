@@ -31,7 +31,7 @@ function onBackdropClick(e: MouseEvent) {
   <Transition name="modal-fade">
     <div
       v-if="open"
-      class="modal-backdrop"
+      class="modal-backdrop rpg-overlay"
       @click="onBackdropClick"
       aria-modal="true"
       role="dialog"
@@ -74,7 +74,7 @@ function onBackdropClick(e: MouseEvent) {
                 >{{ material.count }}</span
               >
               <div class="material-card__icon-wrapper">
-                <img :src="material.image" class="material-card__img" alt="" />
+                <img :src="material.image" class="material-card__img rpg-img" alt="" />
               </div>
               <div
                 class="material-card__name"
@@ -101,7 +101,6 @@ function onBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
 }
 
 .modal-card {
@@ -117,7 +116,7 @@ function onBackdropClick(e: MouseEvent) {
   font-size: 1.1rem;
   font-weight: bold;
   color: var(--rpg-gold);
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--rpg-gold) 50%, transparent);
   letter-spacing: 0.05em;
   margin: 0;
 }

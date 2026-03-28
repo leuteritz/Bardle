@@ -25,6 +25,32 @@
   --rpg-border-row: #2a2a2a;
   --rpg-btn-disabled-bg: #2a2a26;
   --rpg-btn-disabled-border: #444;
+
+  /* Rarity system */
+  --rpg-rarity-common: #5b8dd9;
+  --rpg-rarity-rare: #a87ed8;
+  --rpg-rarity-epic: #d9a03e;
+  --rpg-rarity-legendary: #e8c040;
+  --rpg-rarity-uncommon: #64e678;
+
+  /* Skill tree (purple/amber — intentionally different from wood palette) */
+  --rpg-skill-bought: #f59e0b;
+  --rpg-skill-buyable: #8b5cf6;
+  --rpg-skill-locked: #374151;
+
+  /* Additional surfaces */
+  --rpg-bg-hover: #252520;
+  --rpg-bg-selected: #2a2010;
+  --rpg-bg-tooltip: #16140e;
+  --rpg-bg-green-subtle: #1a2e14;
+  --rpg-bg-red-subtle: #3a1a18;
+  --rpg-bg-red-hover: #4a2220;
+  --rpg-orange: #e09030;
+  --rpg-blue: #6080cc;
+  --rpg-danger: #ff6a00;
+  --rpg-danger-dark: #ff1500;
+  --rpg-green-light: #7ac060;
+  --rpg-font-mono: 'Courier New', monospace;
 }
 
 /* ── Wooden Frame (containers, modals) ── */
@@ -147,4 +173,143 @@
   color: var(--rpg-red);
   border-color: var(--rpg-red);
   background: rgba(204, 96, 80, 0.1);
+}
+
+/* ── Red / Remove Button ── */
+.rpg-btn-red {
+  background: var(--rpg-bg-red-subtle);
+  border: 1px solid var(--rpg-red);
+  color: var(--rpg-red);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rpg-btn-red:hover {
+  background: var(--rpg-bg-red-hover);
+}
+
+/* ── Tab / Filter Button ── */
+.rpg-tab {
+  border-radius: 4px;
+  border: 1px solid var(--rpg-wood-mid);
+  background: var(--rpg-bg-dark);
+  color: var(--rpg-text-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.rpg-tab:hover {
+  color: var(--rpg-gold);
+  border-color: var(--rpg-gold-dim);
+}
+.rpg-tab--active {
+  background: var(--rpg-bg-selected);
+  border-color: var(--rpg-gold);
+  color: var(--rpg-gold);
+}
+
+/* ── Search Input ── */
+.rpg-search {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  color: var(--rpg-text-muted);
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.rpg-search::placeholder {
+  color: var(--rpg-text-dim);
+}
+.rpg-search:focus {
+  border-color: var(--rpg-gold-dim);
+}
+
+/* ── Progress Bar ── */
+.rpg-progress-track {
+  background: #2a2a22;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.rpg-progress-bar {
+  border-radius: 4px;
+  background: linear-gradient(to right, var(--rpg-gold-dim), var(--rpg-gold));
+}
+
+/* ── Rarity Borders ── */
+.rpg-rarity-common {
+  border: 1px solid var(--rpg-rarity-common);
+}
+.rpg-rarity-rare {
+  border: 1px solid var(--rpg-rarity-rare);
+}
+.rpg-rarity-epic {
+  border: 1px solid var(--rpg-rarity-epic);
+}
+.rpg-rarity-legendary {
+  border: 1px solid var(--rpg-rarity-legendary);
+}
+
+/* ── Rarity Glow ── */
+.rpg-glow-common {
+  box-shadow: 0 0 10px rgba(91, 141, 217, 0.3);
+}
+.rpg-glow-rare {
+  box-shadow: 0 0 10px rgba(168, 126, 216, 0.3);
+}
+.rpg-glow-epic {
+  box-shadow: 0 0 10px rgba(217, 160, 62, 0.35);
+}
+.rpg-glow-legendary {
+  box-shadow: 0 0 12px rgba(232, 192, 64, 0.4);
+  animation: rpg-legendary-pulse 2s ease-in-out infinite;
+}
+@keyframes rpg-legendary-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(232, 192, 64, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(232, 192, 64, 0.65);
+  }
+}
+
+/* ── Rarity Text Colors ── */
+.rpg-text-common {
+  color: var(--rpg-rarity-common);
+}
+.rpg-text-rare {
+  color: var(--rpg-rarity-rare);
+}
+.rpg-text-epic {
+  color: var(--rpg-rarity-epic);
+}
+.rpg-text-legendary {
+  color: var(--rpg-rarity-legendary);
+}
+
+/* ── Rarity Badges ── */
+.rpg-badge-common {
+  background: rgba(91, 141, 217, 0.15);
+  border: 1px solid rgba(91, 141, 217, 0.4);
+  color: var(--rpg-rarity-common);
+  border-radius: 4px;
+}
+.rpg-badge-rare {
+  background: rgba(168, 126, 216, 0.15);
+  border: 1px solid rgba(168, 126, 216, 0.4);
+  color: var(--rpg-rarity-rare);
+  border-radius: 4px;
+}
+.rpg-badge-epic {
+  background: rgba(217, 160, 62, 0.15);
+  border: 1px solid rgba(217, 160, 62, 0.4);
+  color: var(--rpg-rarity-epic);
+  border-radius: 4px;
+}
+.rpg-badge-legendary {
+  background: rgba(232, 192, 64, 0.2);
+  border: 1px solid rgba(232, 192, 64, 0.5);
+  color: var(--rpg-rarity-legendary);
+  border-radius: 4px;
 }

@@ -14,11 +14,11 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-sm">{{ config.icon }}</span>
-          <span class="text-sm font-bold text-white/85">{{ config.name }}</span>
+          <span class="text-sm font-bold mc-name">{{ config.name }}</span>
         </div>
-        <div class="flex items-center gap-3 text-xs font-semibold text-white/35">
+        <div class="flex items-center gap-3 text-xs font-semibold mc-meta">
           <span>⏱ {{ formatDuration(config.durationSeconds) }}</span>
-          <span class="text-amber-300/55">🎵 {{ config.baseReward }}</span>
+          <span class="mc-reward">🎵 {{ config.baseReward }}</span>
         </div>
       </div>
 
@@ -28,14 +28,14 @@
           <!-- Role label -->
           <div class="flex items-center gap-2 mb-0.5">
             <span
-              class="px-2 py-0.5 text-[10px] font-black uppercase rounded-md tracking-widest"
+              class="px-2 py-0.5 text-[10px] font-black uppercase tracking-widest mc-role-badge"
               :class="roleColors[role]"
               >{{ role }}</span
             >
-            <span v-if="getSelection(config.id, roleIdx)" class="text-xs text-white/50">
+            <span v-if="getSelection(config.id, roleIdx)" class="text-xs mc-selected-name">
               {{ getSelection(config.id, roleIdx) }}
             </span>
-            <span v-else class="text-[10px] text-white/20">—</span>
+            <span v-else class="text-[10px] mc-placeholder">—</span>
           </div>
 
           <!-- Champion Grid -->
@@ -60,7 +60,7 @@
               <img
                 :src="getChampionImage(champ)"
                 :alt="champ"
-                class="object-cover w-8 h-8 rounded-lg"
+                class="object-cover w-8 h-8 rpg-img mc-champ-img"
                 @error="onImgError"
               />
               <!-- Checkmark -->
@@ -74,7 +74,7 @@
 
             <p
               v-if="getAvailableChampions(config.id, roleIdx, role).length === 0"
-              class="text-[11px] text-white/20 py-1"
+              class="text-[11px] py-1 mc-placeholder"
             >
               Kein {{ role }}-Champion verfügbar
             </p>
@@ -91,7 +91,7 @@
         >
           {{ Math.round(getSuccessChance(config.id) * 100) }}%
         </span>
-        <span v-else class="text-[11px] text-white/20">Rollen besetzen …</span>
+        <span v-else class="text-[11px] mc-placeholder">Rollen besetzen …</span>
 
         <button
           @click="startMission(config.id)"
@@ -235,3 +235,63 @@ export default defineComponent({
   },
 })
 </script>
+
+<style scoped>
+.mc-warning {
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-red);
+  border-radius: 4px;
+  color: var(--rpg-red);
+}
+
+.mc-card {
+  background: var(--rpg-bg-row);
+  border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
+}
+
+.mc-name { color: #ffffffd9; }
+.mc-meta { color: #ffffff59; }
+.mc-reward { color: #fcd34dcc; }
+.mc-selected-name { color: #ffffff80; }
+.mc-placeholder { color: #ffffff33; }
+
+.mc-role-badge { border-radius: 4px; }
+
+.mc-role--top { background: #ef444426; color: #fca5a5; }
+.mc-role--jungle { background: #22c55e26; color: #86efac; }
+.mc-role--mid { background: #3b82f626; color: #93c5fd; }
+.mc-role--adc { background: #f59e0b26; color: #fcd34d; }
+.mc-role--support { background: #a855f726; color: #d8b4fe; }
+
+.mc-champ-img { border-radius: 4px; }
+
+.mc-champ-pick {
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.mc-champ-pick--available {
+  background: var(--rpg-bg-icon);
+  border-color: var(--rpg-border-row);
+}
+.mc-champ-pick--available:hover {
+  border-color: var(--rpg-wood-mid);
+  background: var(--rpg-bg-hover);
+}
+
+.mc-champ-pick--selected {
+  background: var(--rpg-bg-green-subtle);
+  border-color: var(--rpg-green-top);
+}
+
+.mc-champ-pick--disabled {
+  opacity: 0.35;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+}
+
+.mc-checkmark {
+  background: var(--rpg-green-top);
+}
+</style>

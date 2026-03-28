@@ -11,13 +11,7 @@ const gameStore = useGameStore()
       <!-- Label + Prozent -->
       <div class="flex items-center justify-center px-0.5">
         <span
-          class="text-2xl font-extrabold tabular-nums"
-          style="
-            color: rgba(255, 215, 0, 0.9);
-            text-shadow:
-              0 0 10px rgba(255, 200, 0, 0.5),
-              0 1px 3px rgba(0, 0, 0, 0.85);
-          "
+          class="text-2xl font-extrabold tabular-nums portal-percent"
         >
           {{ gameStore.universeRescueProgress.toFixed(1) }}%
         </span>
@@ -61,6 +55,14 @@ const gameStore = useGameStore()
 </template>
 
 <style scoped>
+/* Portal percent text */
+.portal-percent {
+  color: var(--rpg-gold);
+  text-shadow:
+    0 0 10px rgba(255, 200, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
 /* Leere Bar: fast unsichtbar, nur ein feiner Goldrahmen */
 .tube-bg {
   background-color: rgba(10, 5, 0, 0.18);

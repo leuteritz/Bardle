@@ -40,7 +40,7 @@
           <div v-if="!gameStore.activeExpedition">
             <!-- Universe select -->
             <div class="mb-3">
-              <label class="block mb-1 text-xs text-blue-300">Ziel-Universum</label>
+              <label class="block mb-1 text-xs expedition-label-blue">Ziel-Universum</label>
               <select
                 v-model="selectedUniverseId"
                 class="w-full px-3 py-2 text-sm text-white border expedition-select focus:outline-none"
@@ -53,7 +53,7 @@
 
             <!-- Meep count -->
             <div class="mb-3">
-              <label class="block mb-1 text-xs text-orange-300">Meeps ({{ gameStore.meeps }} verfügbar)</label>
+              <label class="block mb-1 text-xs expedition-label-orange">Meeps ({{ gameStore.meeps }} verfügbar)</label>
               <div class="flex items-center gap-3">
                 <button
                   @click="decrementMeeps"
@@ -94,7 +94,7 @@
           <!-- Active expedition -->
           <div v-else>
             <div class="mb-3 text-center">
-              <div class="text-xs text-blue-300">
+              <div class="text-xs expedition-label-blue">
                 {{ gameStore.activeExpedition.meepsSent }} Meeps erkunden
               </div>
               <div class="text-sm font-bold" style="color: var(--rpg-gold);">
@@ -103,17 +103,14 @@
             </div>
 
             <!-- Progress bar -->
-            <div class="relative w-full h-3 mb-1 overflow-hidden rounded-full expedition-bar-track">
+            <div class="relative w-full h-3 mb-1 overflow-hidden expedition-bar-track">
               <div
-                class="h-full rounded-full expedition-bar-fill transition-all duration-1000"
-                :style="{
-                  width: progress + '%',
-                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.6)',
-                }"
+                class="h-full expedition-bar-fill transition-all duration-1000"
+                :style="{ width: progress + '%' }"
               ></div>
             </div>
 
-            <div class="mb-2 text-xs text-center text-slate-400">{{ countdown }}</div>
+            <div class="mb-2 text-xs text-center expedition-countdown">{{ countdown }}</div>
 
             <div class="mb-3 text-sm text-center" style="color: var(--rpg-gold);">
               {{ formatNumber(gameStore.activeExpedition.reward) }} ✨ Belohnung
@@ -253,14 +250,14 @@ export default defineComponent({
   box-shadow:
     inset 0 0 0 2px var(--rpg-wood-inner),
     inset 0 0 0 4px var(--rpg-wood-mid),
-    0 0 30px rgba(200, 144, 64, 0.2),
-    0 25px 50px rgba(0, 0, 0, 0.5);
+    0 0 30px #c8904033,
+    0 25px 50px #00000080;
   animation: borderPulse 3s ease-in-out infinite;
 }
 
 @keyframes borderPulse {
-  0%, 100% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 30px rgba(200, 144, 64, 0.2), 0 25px 50px rgba(0,0,0,0.5); }
-  50% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 50px rgba(200, 144, 64, 0.4), 0 25px 50px rgba(0,0,0,0.5); }
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 30px #c8904033, 0 25px 50px #00000080; }
+  50% { box-shadow: inset 0 0 0 2px var(--rpg-wood-inner), inset 0 0 0 4px var(--rpg-wood-mid), 0 0 50px #c8904066, 0 25px 50px #00000080; }
 }
 
 .expedition-select {
@@ -286,11 +283,18 @@ export default defineComponent({
 .expedition-bar-track {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-border-row);
+  border-radius: 4px;
 }
 
 .expedition-bar-fill {
   background: linear-gradient(to right, var(--rpg-green-bottom), var(--rpg-green-top));
+  border-radius: 4px;
+  box-shadow: 0 0 10px #3b82f699;
 }
+
+.expedition-label-blue { color: #93c5fd; }
+.expedition-label-orange { color: var(--rpg-orange); }
+.expedition-countdown { color: #94a3b8; }
 
 .star {
   position: absolute;

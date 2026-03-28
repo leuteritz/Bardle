@@ -381,7 +381,7 @@ function fillAllMaterials() {
               </div>
             </div>
           </div>
-          <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg font-mono text-sm">
+          <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg text-sm">
             No fields match "{{ search }}"
           </div>
         </div>
@@ -513,7 +513,7 @@ function fillAllMaterials() {
           </div>
         </div>
       </div>
-      <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg font-mono text-sm">
+      <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg text-sm">
         No fields match "{{ search }}"
       </div>
     </div>
@@ -547,7 +547,7 @@ function fillAllMaterials() {
   font-size: 1.125rem;
 }
 .admin-title {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--rpg-gold);
@@ -555,7 +555,7 @@ function fillAllMaterials() {
   text-transform: uppercase;
 }
 .admin-shortcut {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text-dim);
 }
@@ -568,7 +568,7 @@ function fillAllMaterials() {
 
 /* ── Section / field labels ── */
 .admin-section-label {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   font-weight: 700;
   color: var(--rpg-text-muted);
@@ -576,7 +576,7 @@ function fillAllMaterials() {
   text-transform: uppercase;
 }
 .admin-field-label {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   color: var(--rpg-text-dim);
   text-transform: uppercase;
@@ -589,7 +589,7 @@ function fillAllMaterials() {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.375rem 0.625rem;
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.875rem;
   color: var(--rpg-text);
   outline: none;
@@ -597,7 +597,7 @@ function fillAllMaterials() {
 }
 .admin-input:focus {
   border-color: var(--rpg-gold-dim);
-  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.2);
+  box-shadow: 0 0 0 2px #332810;
 }
 .admin-input--sm {
   font-size: 0.75rem;
@@ -610,7 +610,7 @@ function fillAllMaterials() {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.125rem 0.5rem;
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text);
   outline: none;
@@ -625,7 +625,7 @@ function fillAllMaterials() {
   accent-color: var(--rpg-gold);
 }
 .admin-range-value {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-gold);
 }
@@ -637,7 +637,7 @@ function fillAllMaterials() {
 
 /* ── Planet Spawn Buttons ── */
 .admin-spawn-btn {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 4px;
@@ -648,10 +648,10 @@ function fillAllMaterials() {
 }
 .admin-spawn-btn--neutral {
   color: var(--rpg-text-muted);
-  border-color: #444;
+  border-color: var(--rpg-btn-disabled-border);
 }
 .admin-spawn-btn--neutral:hover {
-  background: rgba(180, 160, 120, 0.1);
+  background: #1e1c16;
   border-color: var(--rpg-text-muted);
   color: var(--rpg-text);
 }
@@ -660,7 +660,7 @@ function fillAllMaterials() {
   border-color: var(--rpg-wood-mid);
 }
 .admin-spawn-btn--material:hover {
-  background: rgba(200, 144, 64, 0.12);
+  background: #1c1810;
   border-color: var(--rpg-gold-dim);
   color: var(--rpg-gold);
 }
@@ -669,7 +669,7 @@ function fillAllMaterials() {
   border-color: var(--rpg-wood-mid);
 }
 .admin-spawn-btn--champion:hover {
-  background: rgba(232, 192, 64, 0.12);
+  background: #1e1a10;
   border-color: var(--rpg-gold);
   color: var(--rpg-gold-bright);
 }
@@ -683,7 +683,7 @@ function fillAllMaterials() {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.375rem 0.75rem;
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.875rem;
   color: var(--rpg-text);
   outline: none;
@@ -694,7 +694,7 @@ function fillAllMaterials() {
 }
 .admin-search-input:focus {
   border-color: var(--rpg-gold-dim);
-  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.15);
+  box-shadow: 0 0 0 2px #2e2210;
 }
 
 /* ── Section containers ── */
@@ -708,7 +708,7 @@ function fillAllMaterials() {
   border-bottom: 1px solid var(--rpg-wood-mid);
 }
 .admin-section-title {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -716,11 +716,11 @@ function fillAllMaterials() {
 }
 
 /* ── Section header accent colors ── */
-.section-header--core      { background: rgba(100, 60, 160, 0.15); }
-.section-header--battle    { background: rgba(40, 80, 160, 0.15); }
-.section-header--materials { background: rgba(30, 120, 100, 0.15); }
-.section-header--buildings { background: rgba(160, 90, 30, 0.15); }
-.section-header--advanced  { background: rgba(160, 40, 60, 0.15); }
+.section-header--core      { background: #1a1228; }
+.section-header--battle    { background: #121828; }
+.section-header--materials { background: #0e1e1a; }
+.section-header--buildings { background: #201810; }
+.section-header--advanced  { background: #201014; }
 
 .section-label--core      { color: #c4a0e8; }
 .section-label--battle    { color: #80b0e8; }
@@ -730,7 +730,7 @@ function fillAllMaterials() {
 
 /* ── Action buttons (reset / fill) ── */
 .admin-action-btn {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   padding: 0.125rem 0.5rem;
   border-radius: 4px;
@@ -745,16 +745,16 @@ function fillAllMaterials() {
   border-color: var(--rpg-text-muted);
 }
 
-.section-reset--core      { color: #a070d0; border-color: rgba(160, 80, 220, 0.3); }
-.section-reset--core:hover { color: #c4a0e8; border-color: rgba(196, 160, 232, 0.6); }
-.section-reset--battle    { color: #5080c0; border-color: rgba(60, 100, 200, 0.3); }
-.section-reset--battle:hover { color: #80b0e8; border-color: rgba(128, 176, 232, 0.6); }
-.section-reset--materials { color: #30a080; border-color: rgba(40, 160, 120, 0.3); }
-.section-reset--materials:hover { color: #60d0b0; border-color: rgba(96, 208, 176, 0.6); }
-.section-reset--buildings { color: var(--rpg-wood-mid); border-color: rgba(92, 51, 16, 0.4); }
-.section-reset--buildings:hover { color: var(--rpg-gold-dim); border-color: rgba(200, 144, 64, 0.5); }
-.section-reset--advanced  { color: #c05040; border-color: rgba(180, 60, 60, 0.3); }
-.section-reset--advanced:hover { color: #e08070; border-color: rgba(220, 100, 90, 0.6); }
+.section-reset--core      { color: #a070d0; border-color: #30183c; }
+.section-reset--core:hover { color: #c4a0e8; border-color: #5c3870; }
+.section-reset--battle    { color: #5080c0; border-color: #141e3c; }
+.section-reset--battle:hover { color: #80b0e8; border-color: #304870; }
+.section-reset--materials { color: #30a080; border-color: #10302a; }
+.section-reset--materials:hover { color: #60d0b0; border-color: #285848; }
+.section-reset--buildings { color: var(--rpg-wood-mid); border-color: #241608; }
+.section-reset--buildings:hover { color: var(--rpg-gold-dim); border-color: #3c2810; }
+.section-reset--advanced  { color: #c05040; border-color: #381414; }
+.section-reset--advanced:hover { color: #e08070; border-color: #5c2820; }
 
 /* ── Field rows ── */
 .admin-fields-grid {
@@ -768,13 +768,14 @@ function fillAllMaterials() {
   background: var(--rpg-bg-row);
 }
 .admin-field-name {
-  font-family: monospace;
+  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text-muted);
 }
 
 /* ── Empty state ── */
 .admin-empty-msg {
+  font-family: var(--rpg-font-mono);
   color: var(--rpg-text-dim);
 }
 </style>

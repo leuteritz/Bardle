@@ -22,7 +22,7 @@
       <template v-if="droppedMaterial">
         <br />
         <span class="toast-material">
-          <img :src="droppedMaterial.image" class="toast-material-img" alt="" />
+          <img :src="droppedMaterial.image" class="toast-material-img rpg-img" alt="" />
           {{ droppedMaterial.name }} erhalten!
         </span>
       </template>
@@ -124,7 +124,7 @@ watch(
 </script>
 
 <style scoped>
-/* ─── Vignette Flash ───────────────────────────────────────────────────────── */
+/* ─── Vignette Flash (atmospheric FX — kept as-is) ─────────────────────────── */
 .planet-vignette {
   position: fixed;
   inset: 0;
@@ -178,7 +178,7 @@ watch(
 
 .planet-countdown-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff6a00, #ff1500);
+  background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
   box-shadow:
     0 0 10px rgba(255, 60, 0, 0.9),
     0 0 22px rgba(255, 40, 0, 0.45);
@@ -197,8 +197,7 @@ watch(
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
-
-  color: rgba(255, 180, 80, 0.95);
+  color: var(--rpg-orange);
   text-shadow: 0 0 6px rgba(255, 80, 0, 0.8);
 }
 
@@ -222,9 +221,9 @@ watch(
 
 /* ─── Lost Toast ───────────────────────────────────────────────────────────── */
 .planet-toast--lost {
-  background: linear-gradient(135deg, rgba(30, 4, 4, 0.92), rgba(20, 6, 6, 0.88));
-  border: 1px solid rgba(255, 60, 0, 0.5);
-  color: #ff6535;
+  background: var(--rpg-bg-red-subtle);
+  border: 1px solid var(--rpg-danger);
+  color: var(--rpg-danger);
   box-shadow:
     0 0 0 1px rgba(255, 60, 0, 0.08),
     0 0 20px rgba(255, 50, 0, 0.35),
@@ -235,9 +234,9 @@ watch(
 
 /* ─── Saved Toast ──────────────────────────────────────────────────────────── */
 .planet-toast--saved {
-  background: linear-gradient(135deg, rgba(4, 24, 12, 0.92), rgba(6, 20, 10, 0.88));
-  border: 1px solid rgba(70, 220, 120, 0.45);
-  color: #55ee88;
+  background: var(--rpg-bg-green-subtle);
+  border: 1px solid var(--rpg-green-border);
+  color: var(--rpg-green-light);
   box-shadow:
     0 0 0 1px rgba(70, 220, 120, 0.07),
     0 0 20px rgba(60, 200, 100, 0.3),
@@ -261,7 +260,7 @@ watch(
 }
 
 .toast-material--champion {
-  color: rgba(130, 190, 255, 0.95);
+  color: var(--rpg-blue);
   font-weight: 700;
 }
 
