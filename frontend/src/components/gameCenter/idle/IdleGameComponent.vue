@@ -15,7 +15,7 @@
       <div class="relative flex items-center justify-center w-40 h-40">
         <img
           src="/img/BardAbilities/BardChime.png"
-          class="rpg-img relative w-32 h-32 transition-all duration-300 select-none drop-shadow-2xl group-hover:scale-110 chime-icon"
+          class="relative w-32 h-32 transition-all duration-300 select-none rpg-img drop-shadow-2xl group-hover:scale-110 chime-icon"
           style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
         />
       </div>
@@ -30,14 +30,10 @@
         left: chimeGainPos.x + 'px',
       }"
     >
-      <span
-        class="text-2xl chime-gain-text"
-      >
-        +{{ gameStore.chimesPerClick }}
-      </span>
+      <span class="text-2xl chime-gain-text"> +{{ gameStore.chimesPerClick }} </span>
       <img
         src="/img/BardAbilities/BardChime.png"
-        class="rpg-img w-6 h-6"
+        class="w-6 h-6 rpg-img"
         style="filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))"
       />
     </div>
@@ -210,8 +206,14 @@ export default defineComponent({
 
 /* Chime gain popup text */
 .chime-gain-text {
-  color: var(--rpg-gold);
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.9);
+  color: #d9ff4d;
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.75);
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(200, 255, 80, 0.95);
 }
 
 /* Klassen */
