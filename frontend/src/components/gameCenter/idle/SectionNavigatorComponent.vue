@@ -1,41 +1,94 @@
 <template>
-  <div class="section-nav-bar">
+  <div class="section-nav">
+    <!-- Linker Pfeil: korrekt disabled bei Sektion 1, kein Glow nötig -->
     <button
-      class="section-nav-arrow"
+      class="nav-arrow"
       :disabled="activeSectionId <= 1"
       @click="navigate(-1)"
-      aria-label="Vorherige Sektion"
+      aria-label="Vorherige Galaxis"
     >
-      ‹
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
     </button>
 
-    <div class="section-nav-center">
-      <div class="section-nav-title-row">
-        <span class="section-nav-number">Sektion {{ activeSectionId }}</span>
-        <span class="section-nav-name">{{ activeSection?.name }}</span>
-        <span v-if="sectionStore.pendingSectionBoss" class="section-boss-badge">⚠ Boss</span>
+    <div class="nav-content">
+      <div class="nav-galaxy-row">
+        <span class="nav-galaxy-name">{{ activeSection?.name ?? '—' }}</span>
+        <span v-if="sectionStore.pendingSectionBoss" class="nav-boss-badge" role="status">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            />
+          </svg>
+          Boss
+        </span>
       </div>
 
-      <div class="section-progress-track">
-        <div
-          class="section-progress-fill"
-          :class="{ 'section-progress-fill--complete': progressPercent >= 100 }"
-          :style="{ width: progressPercent + '%' }"
+      <div class="nav-planets-row">
+        <svg
+          class="nav-planet-icon"
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-30 12 12)" />
+        </svg>
+        <span class="nav-planets-label">Gerettete Planeten</span>
+        <span class="nav-planets-count">
+          <span class="nav-count-current">{{ rescueCount }}</span>
+          <span class="nav-count-sep">/</span>
+          <span class="nav-count-total">{{ requiredRescues }}</span>
+        </span>
+      </div>
+
+      <div class="nav-dots" role="presentation" aria-hidden="true">
+        <span
+          v-for="i in requiredRescues"
+          :key="i"
+          class="nav-dot"
+          :class="{
+            'nav-dot--filled': i <= rescueCount,
+            'nav-dot--boss': sectionStore.pendingSectionBoss && i <= rescueCount,
+          }"
         />
-      </div>
-
-      <div class="section-nav-progress-label">
-        {{ rescueCount }} / {{ requiredRescues }} Gerettet
       </div>
     </div>
 
+    <!-- Rechter Pfeil: leuchtet auf wenn nächste Sektion freigeschaltet -->
     <button
-      class="section-nav-arrow"
+      class="nav-arrow"
+      :class="{ 'nav-arrow--next-ready': canAdvance }"
       :disabled="activeSectionId >= 10 || !isNextUnlocked"
       @click="navigate(1)"
-      aria-label="Nächste Sektion"
+      aria-label="Nächste Galaxis"
     >
-      ›
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
     </button>
   </div>
 </template>
@@ -54,8 +107,10 @@ export default defineComponent({
     const activeSection = computed(() => SECTIONS.find((s) => s.id === activeSectionId.value))
     const rescueCount = computed(() => sectionStore.activeSectionProgress.rescueCount)
     const requiredRescues = computed(() => sectionStore.requiredRescues)
-    const progressPercent = computed(() => sectionStore.progressPercent)
     const isNextUnlocked = computed(() => sectionStore.isSectionUnlocked(activeSectionId.value + 1))
+
+    // Leuchtet auf: nächste Sektion verfügbar UND noch nicht die letzte
+    const canAdvance = computed(() => isNextUnlocked.value && activeSectionId.value < 10)
 
     function navigate(delta: -1 | 1) {
       sectionStore.navigateToSection(activeSectionId.value + delta)
@@ -67,8 +122,8 @@ export default defineComponent({
       activeSection,
       rescueCount,
       requiredRescues,
-      progressPercent,
       isNextUnlocked,
+      canAdvance,
       navigate,
     }
   },
@@ -76,135 +131,201 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.section-nav-bar {
-  position: relative;
+/* ─── Wrapper ─── */
+.section-nav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.75rem 0.35rem;
-  background: #1c1c18;
-  border: 4px solid #7a4e20;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310;
-}
-
-.section-nav-bar::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  border-radius: 4px 4px 0 0;
-}
-
-.section-nav-arrow {
+  padding: 0.35rem 0.5rem;
+  width: 100%;
+  border: none;
   background: none;
-  border: 1px solid #7a4e20;
-  border-radius: 3px;
-  color: #e8c040;
-  font-size: 1.15rem;
-  font-weight: 900;
-  line-height: 1;
-  padding: 0.2rem 0.5rem;
-  cursor: pointer;
-  transition: background 0.15s;
+}
+
+/* ─── Pfeil-Buttons ─── */
+.nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--rpg-text-dim);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
-.section-nav-arrow:hover:not(:disabled) {
-  background: rgba(232, 192, 64, 0.12);
+.nav-arrow:hover:not(:disabled) {
+  color: var(--rpg-gold-dim);
+  border-color: rgba(200, 144, 64, 0.25);
+  background: rgba(200, 144, 64, 0.06);
 }
 
-.section-nav-arrow:disabled {
-  opacity: 0.35;
+.nav-arrow:disabled {
+  color: #333;
   cursor: not-allowed;
-  filter: grayscale(55%);
 }
 
-.section-nav-center {
+/* ─── Rechter Pfeil: Glow wenn nächste Sektion freigeschaltet ─── */
+.nav-arrow--next-ready {
+  color: var(--rpg-gold);
+  border-color: rgba(232, 192, 64, 0.45);
+  background: rgba(232, 192, 64, 0.08);
+  animation: next-ready-glow 1.6s ease-in-out infinite alternate;
+}
+
+.nav-arrow--next-ready:hover:not(:disabled) {
+  color: var(--rpg-gold-bright);
+  border-color: rgba(232, 192, 64, 0.7);
+  background: rgba(232, 192, 64, 0.15);
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.35);
+  animation: none;
+}
+
+@keyframes next-ready-glow {
+  from {
+    box-shadow: 0 0 4px rgba(232, 192, 64, 0.15);
+    border-color: rgba(232, 192, 64, 0.3);
+  }
+  to {
+    box-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
+    border-color: rgba(232, 192, 64, 0.65);
+  }
+}
+
+/* ─── Mittelteil ─── */
+.nav-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.28rem;
   min-width: 0;
 }
 
-.section-nav-title-row {
+/* ─── Galaxis-Zeile ─── */
+.nav-galaxy-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  width: 100%;
+  gap: 0.4rem;
   justify-content: center;
 }
 
-.section-nav-number {
-  font-size: 0.58rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #c89040;
-  flex-shrink: 0;
-}
-
-.section-nav-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #e8c040;
+.nav-galaxy-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--rpg-gold-dim);
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 10rem;
 }
 
-.section-boss-badge {
-  font-size: 0.58rem;
+/* ─── Boss-Badge ─── */
+.nav-boss-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #ff6040;
-  border: 1px solid #cc4020;
-  border-radius: 3px;
-  padding: 0.05rem 0.3rem;
-  animation: pulse-boss 0.8s ease-in-out infinite alternate;
-  flex-shrink: 0;
-}
-
-@keyframes pulse-boss {
-  from { opacity: 1; }
-  to   { opacity: 0.4; }
-}
-
-.section-progress-track {
-  width: 100%;
-  height: 5px;
-  background: #111008;
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid rgba(122, 78, 32, 0.6);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
-}
-
-.section-progress-fill {
-  height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  box-shadow: 0 0 5px rgba(82, 184, 48, 0.4);
-  transition: width 0.4s ease;
-}
-
-.section-progress-fill--complete {
-  background: linear-gradient(to bottom, #e8c040, #c89040);
-  box-shadow: 0 0 7px rgba(232, 192, 64, 0.6);
-}
-
-.section-nav-progress-label {
-  font-size: 0.56rem;
-  font-weight: 700;
-  color: #9a8060;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: #ff6040;
+  border: 1px solid rgba(204, 64, 32, 0.6);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  flex-shrink: 0;
+  animation: boss-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes boss-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.4;
+  }
+}
+
+/* ─── Planeten-Zeile ─── */
+.nav-planets-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: center;
+}
+
+.nav-planet-icon {
+  color: var(--rpg-text-dim);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.nav-planets-label {
+  font-size: 0.8rem;
+  color: var(--rpg-text-dim);
+  letter-spacing: 0.03em;
+}
+
+.nav-planets-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.18rem;
+  margin-left: 0.1rem;
+}
+
+.nav-count-current {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rpg-text-muted);
+  line-height: 1;
+}
+
+.nav-count-sep {
+  font-size: 1rem;
+  color: var(--rpg-text-dim);
+  line-height: 1;
+}
+
+.nav-count-total {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--rpg-text-dim);
+  line-height: 1;
+}
+
+/* ─── Punkt-Reihe ─── */
+.nav-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+  max-width: 200px;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2a2a22;
+  border: 1px solid #333;
+  transition:
+    background 0.25s,
+    border-color 0.25s;
+}
+
+.nav-dot--filled {
+  background: var(--rpg-green-bottom);
+  border-color: var(--rpg-green-top);
+}
+
+.nav-dot--boss {
+  background: var(--rpg-gold-dim);
+  border-color: var(--rpg-gold);
 }
 </style>

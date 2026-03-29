@@ -17,6 +17,7 @@ import BardProfileMenu from './components/BardProfileMenu.vue'
 import UniversePortalComponent from './components/UniversePortalComponent.vue'
 import MeepIndicatorComponent from './components/ui/MeepIndicatorComponent.vue'
 import InventoryModal from './components/InventoryModal.vue'
+import SectionNavigatorComponent from './components/gameCenter/idle/SectionNavigatorComponent.vue'
 
 const gameStore = useGameStore()
 
@@ -37,9 +38,7 @@ const activeTab = ref('idle')
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
-    <div
-      class="flex flex-col justify-between px-4 pt-4 pb-10 w-full min-h-screen"
-    >
+    <div class="flex flex-col justify-between w-full min-h-screen px-4 pt-4 pb-10">
       <!-- Oberer Bereich mit Navigation -->
       <div class="z-[100] grid w-full min-h-8 grid-cols-3 items-start">
         <!-- Links: Bard portrait toggle -->
@@ -47,6 +46,7 @@ const activeTab = ref('idle')
           <BardProfileMenu />
         </div>
 
+        <!-- Mitte: Chimes & CPS -->
         <!-- Mitte: Chimes & CPS -->
         <div
           class="relative z-[65] flex flex-col items-center justify-center col-span-1 gap-0 pointer-events-none"
@@ -74,6 +74,10 @@ const activeTab = ref('idle')
         <div
           class="relative z-[65] flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6"
         >
+          <!-- Section Navigator: mr-auto drückt ihn an die linke Kante der rechten Spalte -->
+          <div class="mr-auto z-[65] self-center" style="width: clamp(160px, 16vw, 240px)">
+            <SectionNavigatorComponent />
+          </div>
           <!-- Bag: self-center stellt sicher, dass er zur Mitte der Portal+Meep-Gruppe zeigt -->
           <div class="relative self-center">
             <button
@@ -122,8 +126,7 @@ const activeTab = ref('idle')
     <EncyclopediaPanel />
     <AdminDashboard />
 
-    <span
-      class="fixed z-50 text-xl bottom-5 right-5 text-amber-500 drop-shadow-lg"
+    <span class="fixed z-50 text-xl bottom-5 right-5 text-amber-500 drop-shadow-lg"
       >©Leuteritz</span
     >
   </div>
