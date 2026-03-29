@@ -9,10 +9,10 @@
       >
         <span class="flex-shrink-0 text-xl">{{ bonus.icon }}</span>
         <div class="flex flex-col gap-0.5 min-w-0">
-          <span class="set-bonus-name text-sm font-bold truncate">{{ bonus.setName }}</span>
-          <span class="set-bonus-desc text-xs">{{ bonus.description }}</span>
+          <span class="text-sm font-bold truncate set-bonus-name">{{ bonus.setName }}</span>
+          <span class="text-xs set-bonus-desc">{{ bonus.description }}</span>
         </div>
-        <span class="set-bonus-badge flex-shrink-0 px-2 py-1 ml-auto text-xs font-bold">
+        <span class="flex-shrink-0 px-2 py-1 ml-auto text-xs font-bold set-bonus-badge">
           AKTIV
         </span>
       </div>
@@ -36,28 +36,30 @@
       <div
         v-for="item in filteredItems"
         :key="item.id"
-        class="item-card relative flex flex-col gap-2 p-3 overflow-hidden group"
+        class="relative flex flex-col gap-2 p-3 overflow-hidden item-card group"
         :class="[
           rarityCardClass(item.rarity),
-          canAfford(item)
-            ? 'item-card--affordable'
-            : 'item-card--locked',
+          canAfford(item) ? 'item-card--affordable' : 'item-card--locked',
         ]"
         @click="buyItem(item)"
       >
         <!-- Rarity Glow -->
         <div
-          class="item-glow absolute inset-0 pointer-events-none"
+          class="absolute inset-0 pointer-events-none item-glow"
           :class="rarityGlowClass(item.rarity)"
         />
 
         <!-- Icon + Badges -->
         <div class="relative z-10 flex items-start justify-between gap-1">
           <div
-            class="item-icon-box flex items-center justify-center flex-shrink-0 w-12 h-12"
+            class="flex items-center justify-center flex-shrink-0 w-12 h-12 item-icon-box"
             :class="rarityIconBg(item.rarity)"
           >
-            <img v-if="item.icon.startsWith('/')" :src="item.icon" class="rpg-img w-10 h-10 object-contain" />
+            <img
+              v-if="item.icon.startsWith('/')"
+              :src="item.icon"
+              class="object-contain w-10 h-10 rpg-img"
+            />
             <span v-else class="text-2xl">{{ item.icon }}</span>
           </div>
           <div class="flex flex-col items-end gap-1">
@@ -78,12 +80,12 @@
         </div>
 
         <!-- Name -->
-        <span class="item-name relative z-10 text-sm font-bold leading-tight truncate">
+        <span class="relative z-10 text-sm font-bold leading-tight truncate item-name">
           {{ item.name }}
         </span>
 
         <!-- Effekt -->
-        <span class="item-effect relative z-10 text-xs leading-snug">
+        <span class="relative z-10 text-xs leading-snug item-effect">
           {{ item.description }}
         </span>
 
@@ -91,7 +93,7 @@
         <div class="item-cost-divider relative z-10 flex flex-col gap-1.5 mt-auto pt-2">
           <!-- Chime-Kosten -->
           <div class="flex items-center gap-1.5">
-            <img src="/img/BardAbilities/BardChime.png" class="rpg-img flex-shrink-0 w-4 h-4" />
+            <img src="/img/BardAbilities/BardChime.png" class="flex-shrink-0 w-4 h-4 rpg-img" />
             <span
               class="text-sm font-bold"
               :class="gameStore.chimes >= item.price ? 'price-afford' : 'price-cant'"
@@ -106,7 +108,7 @@
               :key="matId"
               class="flex items-center gap-1"
             >
-              <img :src="getMaterialImage(String(matId))" class="rpg-img flex-shrink-0 w-4 h-4" />
+              <img :src="getMaterialImage(String(matId))" class="flex-shrink-0 w-4 h-4 rpg-img" />
               <span
                 class="text-xs font-bold"
                 :class="hasMaterial(String(matId), qty) ? 'mat-have' : 'price-cant'"

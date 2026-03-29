@@ -23,21 +23,20 @@
         @click.self="showShop = false"
       >
         <!-- Backdrop -->
-        <div
-          class="absolute inset-0 rpg-overlay"
-          @click="showShop = false"
-        />
+        <div class="absolute inset-0 rpg-overlay" @click="showShop = false" />
 
         <!-- Modal Container -->
-        <div
-          class="relative z-10 w-full max-w-2xl max-h-[85vh] flex flex-col rpg-frame"
-        >
+        <div class="relative z-10 w-full max-w-2xl max-h-[85vh] flex flex-col rpg-frame">
           <!-- Modal Header -->
-          <div class="flex items-center justify-between px-5 py-3 rpg-header flex-shrink-0">
-            <span class="text-sm font-black tracking-widest uppercase" style="color: var(--rpg-gold);">Champion Shop</span>
+          <div class="flex items-center justify-between flex-shrink-0 px-5 py-3 rpg-header">
+            <span
+              class="text-sm font-black tracking-widest uppercase"
+              style="color: var(--rpg-gold)"
+              >Champion Shop</span
+            >
             <button
               @click="showShop = false"
-              class="rpg-close-btn flex items-center justify-center w-7 h-7 text-sm font-black active:scale-95"
+              class="flex items-center justify-center text-sm font-black rpg-close-btn w-7 h-7 active:scale-95"
             >
               ✕
             </button>
