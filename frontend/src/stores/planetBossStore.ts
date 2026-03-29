@@ -23,6 +23,8 @@ import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { useBattleStore } from './battleStore'
 import { useInventoryStore } from './inventoryStore'
+import { useSectionStore } from './sectionStore'
+import { SECTIONS, SECTION_BOSS_HP_MULTIPLIER, SECTION_BOSS_ENRAGE_MULTIPLIER } from '../config/sections'
 import { logger } from '../utils/logger'
 
 export const usePlanetBossStore = defineStore('planetBoss', {
@@ -71,17 +73,29 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const cpc = gameStore.chimesPerClick
       const power = gameStore.totalPower
 
-      // Boss HP scales with player progress
+      // Section scaling
+      const sectionStore = useSectionStore()
+      const sectionConfig = SECTIONS.find((s) => s.id === sectionStore.activeSectionId)
+      const isSectionBoss = sectionStore.pendingSectionBoss
+      const hpSectionMult =
+        (sectionConfig?.difficultyMultiplier ?? 1) * (isSectionBoss ? SECTION_BOSS_HP_MULTIPLIER : 1)
+      const enrageSectionMult =
+        (sectionConfig?.enrageMultiplier ?? 1) * (isSectionBoss ? SECTION_BOSS_ENRAGE_MULTIPLIER : 1)
+      const sectionRewardMult = sectionConfig?.rewardMultiplier ?? 1
+
+      // Boss HP scales with player progress + section
       const maxHP = Math.floor(
         BOSS_BASE_HP *
           (1 + level / BOSS_HP_LEVEL_SCALE) *
           (1 + cps / BOSS_HP_CPS_SCALE) *
-          (1 + power / BOSS_HP_POWER_SCALE),
+          (1 + power / BOSS_HP_POWER_SCALE) *
+          hpSectionMult,
       )
 
-      // Enrage timer scales with level
+      // Enrage timer scales with level + section
       const bonusSeconds = Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * 5
-      const enrageSec = Math.min(BOSS_ENRAGE_BASE_SECONDS + bonusSeconds, BOSS_ENRAGE_MAX_SECONDS)
+      const baseEnrageSec = Math.min(BOSS_ENRAGE_BASE_SECONDS + bonusSeconds, BOSS_ENRAGE_MAX_SECONDS)
+      const enrageSec = Math.max(10, Math.floor(baseEnrageSec * enrageSectionMult))
       const enrageTimerMs = enrageSec * 1000
 
       // Snapshot damage values
@@ -92,8 +106,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const estimatedTotalDamage = clickDamagePerHit * 3 * enrageSec + passiveDPS * enrageSec
       const difficulty = Math.min(1, Math.max(0, maxHP / Math.max(1, estimatedTotalDamage)))
 
-      // Reward scales with difficulty
-      const reward = Math.floor(BOSS_BASE_REWARD * (1 + difficulty * BOSS_REWARD_DIFFICULTY_SCALE))
+      // Reward scales with difficulty + section
+      const reward = Math.floor(
+        BOSS_BASE_REWARD * (1 + difficulty * BOSS_REWARD_DIFFICULTY_SCALE) * sectionRewardMult,
+      )
 
       // Material drop — same logic as old planetEventStore
       const hasMaterial = Math.random() < PLANET_MATERIAL_CHANCE
@@ -136,6 +152,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ...(potentialMaterialId !== undefined && { potentialMaterialId }),
         ...(assignedDropChance !== undefined && { assignedDropChance }),
         ...(homePlanetChampion && { homePlanetChampion }),
+        ...(isSectionBoss && { isSectionBoss: true }),
+        sectionId: sectionStore.activeSectionId,
       }
 
       this.lastBossResult = null
@@ -251,6 +269,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       this.lastBossResult = 'victory'
       logger.info('Planet', `Rewards granted: +${boss.reward} chimes`)
+
+      // Notify section store to update progress and unlocks
+      const sectionStore = useSectionStore()
+      sectionStore.onBossDefeated(boss.isSectionBoss ?? false)
     },
 
     openBossModal() {

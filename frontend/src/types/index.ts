@@ -179,6 +179,13 @@ export interface PlanetBossEvent {
   potentialMaterialId?: string
   assignedDropChance?: number
   homePlanetChampion?: string
+  isSectionBoss?: boolean
+  sectionId?: number
+}
+
+export interface SectionProgress {
+  rescueCount: number
+  completed: boolean
 }
 
 export interface RecruitableChampion {

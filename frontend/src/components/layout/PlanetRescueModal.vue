@@ -9,8 +9,10 @@
       <div class="boss-modal rpg-frame">
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="boss-header rpg-header">
-          <span class="boss-title">
+          <span class="boss-title" :class="{ 'boss-title--section': bossStore.activeBoss?.isSectionBoss }">
+            <span v-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-crown">★ </span>
             {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
+            <span v-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-label"> — Section Boss</span>
           </span>
           <div class="timer-chip" :class="{ 'timer-chip--urgent': secondsRemaining < 10 }">
             <svg class="timer-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -358,6 +360,22 @@ function handleClick(event: MouseEvent) {
   text-transform: uppercase;
   color: var(--rpg-danger);
   text-shadow: 0 0 10px rgba(255, 60, 0, 0.55);
+}
+
+.boss-title--section {
+  color: #e8c040;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.6);
+}
+
+.section-boss-crown {
+  margin-right: 0.1rem;
+}
+
+.section-boss-label {
+  font-size: 0.65rem;
+  color: #c89040;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
 }
 
 .timer-chip {

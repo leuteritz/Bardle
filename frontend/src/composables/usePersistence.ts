@@ -7,6 +7,7 @@ import { useAugmentStore } from '../stores/augmentStore'
 import { useItemStore } from '../stores/itemStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
+import { useSectionStore } from '../stores/sectionStore'
 import { useCpsStore } from '../stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
 import { logger } from '../utils/logger'
@@ -24,6 +25,7 @@ export function usePersistence() {
 
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
+    const sectionStore = useSectionStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -94,6 +96,12 @@ export function usePersistence() {
       items: {
         ownedItems: { ...itemStore.ownedItems },
         slotEquipment: itemStore.slotEquipment.map((s) => ({ ...s })),
+      },
+      section: {
+        activeSectionId: sectionStore.activeSectionId,
+        highestUnlockedSectionId: sectionStore.highestUnlockedSectionId,
+        sectionProgress: { ...sectionStore.sectionProgress },
+        pendingSectionBoss: sectionStore.pendingSectionBoss,
       },
     }
 
@@ -231,6 +239,26 @@ export function usePersistence() {
         }
       }
 
+      // Restore sectionStore
+      const sectionStore = useSectionStore()
+      if (saved.section) {
+        const s = saved.section
+        sectionStore.activeSectionId = s.activeSectionId ?? 1
+        sectionStore.highestUnlockedSectionId = s.highestUnlockedSectionId ?? 1
+        sectionStore.pendingSectionBoss = s.pendingSectionBoss ?? false
+        if (s.sectionProgress && typeof s.sectionProgress === 'object') {
+          for (let id = 1; id <= 10; id++) {
+            const sp = s.sectionProgress[id]
+            if (sp) {
+              sectionStore.sectionProgress[id] = {
+                rescueCount: sp.rescueCount ?? 0,
+                completed: sp.completed ?? false,
+              }
+            }
+          }
+        }
+      }
+
       logger.info('System', 'Game loaded', {
         level: gameStore.level,
         chimes: gameStore.chimes,
@@ -330,6 +358,8 @@ export function usePersistence() {
     planetEventStore.$reset()
     const planetBossStore = usePlanetBossStore()
     planetBossStore.$reset()
+    const sectionStoreReset = useSectionStore()
+    sectionStoreReset.$reset()
     const itemStore = useItemStore()
     itemStore.$reset()
     cpsStore.$reset()

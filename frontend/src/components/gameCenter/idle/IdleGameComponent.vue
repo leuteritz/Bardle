@@ -37,6 +37,11 @@
         style="filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))"
       />
     </div>
+
+    <!-- Section Navigator -->
+    <div class="fixed z-20 section-nav-wrapper">
+      <SectionNavigatorComponent />
+    </div>
   </div>
 </template>
 
@@ -50,6 +55,7 @@ import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
 import MeepProgressComponent from './MeepProgressComponent.vue'
 import ExpeditionComponent from './ExpeditionComponent.vue'
 import SunComponent from './SunComponent.vue'
+import SectionNavigatorComponent from './SectionNavigatorComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -58,6 +64,7 @@ export default defineComponent({
     MeepProgressComponent,
     ExpeditionComponent,
     SunComponent,
+    SectionNavigatorComponent,
   },
   setup() {
     const gameStore = useGameStore()
@@ -125,6 +132,13 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.section-nav-wrapper {
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(280px, 40vw, 420px);
+}
+
 /* Bestehende Animationen und Styles bleiben unverändert */
 @keyframes blob {
   0% {
