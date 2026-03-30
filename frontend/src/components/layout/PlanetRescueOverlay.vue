@@ -6,7 +6,14 @@
 
   <!-- Countdown bar + label -->
   <div v-if="planetEventStore.isEventActive" class="planet-countdown-bar" aria-hidden="true">
-    <div class="planet-countdown-fill" :style="{ width: progressPercent + '%' }" />
+    <div
+      class="planet-countdown-fill planet-countdown-fill--left"
+      :style="{ right: leftFill.right + 'px', width: (progressPercent / 100) * leftFill.width + 'px' }"
+    />
+    <div
+      class="planet-countdown-fill planet-countdown-fill--right"
+      :style="{ left: rightFill.left + 'px', width: (progressPercent / 100) * rightFill.width + 'px' }"
+    />
     <span class="planet-countdown-label">
       ⚠ {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }} — Click to Fight!
     </span>
@@ -51,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { formatNumber } from '../../config/numberFormat'
@@ -64,13 +71,38 @@ const bossStore = usePlanetBossStore()
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
+// Pixel-precise fill geometry derived from the actual .center-chimes DOM position
+const leftFill = ref({ right: 80, width: 560 })
+const rightFill = ref({ left: 80, width: 560 })
+let resizeObserver: ResizeObserver | null = null
+
+function measureChimes() {
+  const bar = document.querySelector('.planet-countdown-bar') as HTMLElement | null
+  const chimes = document.querySelector('.center-chimes') as HTMLElement | null
+  if (!bar || !chimes) return
+  const b = bar.getBoundingClientRect()
+  const c = chimes.getBoundingClientRect()
+  leftFill.value = { right: b.right - c.left, width: c.left - b.left }
+  rightFill.value = { left: c.right - b.left, width: b.right - c.right }
+}
+
+watch(
+  () => planetEventStore.isEventActive,
+  (active) => { if (active) nextTick(measureChimes) },
+)
+
 onMounted(() => {
   tickInterval = setInterval(() => {
     now.value = Date.now()
   }, 200)
+  measureChimes()
+  resizeObserver = new ResizeObserver(measureChimes)
+  const header = document.querySelector('.header-bar') as HTMLElement | null
+  if (header) resizeObserver.observe(header)
 })
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
+  resizeObserver?.disconnect()
 })
 
 const progressPercent = computed(() => {
@@ -187,6 +219,7 @@ watch(
 
 /* ─── Countdown Bar ────────────────────────────────────────────────────────── */
 .planet-countdown-bar {
+  position: relative;
   width: 100%;
   max-width: 1400px;
   height: 5px;
@@ -198,12 +231,20 @@ watch(
 }
 
 .planet-countdown-fill {
+  position: absolute;
   height: 100%;
   background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
   box-shadow:
     0 0 10px rgba(255, 60, 0, 0.9),
     0 0 22px rgba(255, 40, 0, 0.45);
   transition: width 0.2s linear;
+}
+
+.planet-countdown-fill--left {
+  border-radius: 3px 0 0 3px;
+}
+
+.planet-countdown-fill--right {
   border-radius: 0 3px 3px 0;
 }
 
