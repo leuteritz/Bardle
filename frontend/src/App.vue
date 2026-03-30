@@ -38,89 +38,121 @@ const activeTab = ref('idle')
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
-    <div class="flex flex-col justify-between w-full min-h-screen px-4 pt-4 pb-10">
+    <div class="flex flex-col justify-between w-full min-h-screen px-4 pt-10 pb-10">
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- HEADER BAR                                                     -->
+      <!-- HEADER BAR  (LoL-Scoreboard-Stil + CK3/EU4-RPG-Theme)         -->
+      <!-- Drei Ebenen: Seiten (flach) < BardProfile (mittel) < Chimes (groß) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <header class="z-[100] header-bar w-full flex items-center gap-2 px-3 py-2">
-        <!-- ① BardProfileMenu -->
-        <div class="flex-shrink-0">
-          <BardProfileMenu />
+      <header class="z-[100] header-bar w-full relative flex items-stretch">
+        <!-- Gold-Akzentlinie oben -->
+        <div class="header-accent-top" aria-hidden="true"></div>
+
+        <!-- ════════ LINKE SEITE ════════ -->
+        <div class="flex items-center gap-2 pr-3 header-side header-side--left">
+          <!-- ① BardProfileMenu — in eigenem herausragenden Panel (Ebene 2) -->
+          <div class="flex-shrink-0 header-profile-bump">
+            <BardProfileMenu />
+          </div>
+
+          <div class="header-divider" aria-hidden="true"></div>
+
+          <!-- ② SectionNavigator -->
+          <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
+            <SectionNavigatorComponent />
+          </div>
+
+          <div class="header-divider" aria-hidden="true"></div>
+
+          <!-- ③ C/Click + C/s – links für optische Balance -->
+          <div class="flex items-center flex-shrink-0 gap-3 pointer-events-none">
+            <div class="flex flex-col items-center leading-none">
+              <span class="header-label">C/Click</span>
+              <span class="stat-value chimes-text-glow">
+                {{ formatNumber(gameStore.chimesPerClick) }}
+              </span>
+            </div>
+            <span class="header-dot" aria-hidden="true">·</span>
+            <div class="flex flex-col items-center leading-none">
+              <span class="header-label">C/s</span>
+              <span class="stat-value cps-text-glow">
+                {{ formatNumber(gameStore.chimesPerSecond) }}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <!-- Trennlinie -->
-        <div class="header-divider" aria-hidden="true"></div>
+        <!-- ════════ MITTE (absolut zentriert — Ebene 3, größter Überhang) ════════ -->
+        <div class="header-center-anchor" aria-hidden="true"></div>
+        <div class="header-center">
+          <div class="center-wing center-wing--left" aria-hidden="true"></div>
 
-        <!-- ② SectionNavigator -->
-        <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
-          <SectionNavigatorComponent />
-        </div>
-
-        <!-- Trennlinie -->
-        <div class="header-divider" aria-hidden="true"></div>
-
-        <!-- ③ Chimes + CPS – zentriert im Freiraum -->
-        <div class="flex items-center justify-center flex-1 min-w-0 gap-3 pointer-events-none">
-          <!-- Chime-Icon -->
-          <img
-            src="/img/BardAbilities/BardChime.png"
-            class="flex-shrink-0 w-16 h-16 chime-glow"
-            alt="Chimes"
-          />
-
-          <!-- Chimes-Wert + Label-Stack -->
-          <div class="flex flex-col items-start min-w-0 leading-none">
-            <span class="truncate chimes-value chimes-text-glow">
+          <div class="center-chimes">
+            <img
+              src="/img/BardAbilities/BardChime.png"
+              class="header-chime-icon chime-glow"
+              alt="Chimes"
+            />
+            <span class="chimes-value chimes-text-glow">
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
 
-          <!-- Trennpunkt -->
-          <span class="header-dot" aria-hidden="true">·</span>
+          <div class="center-wing center-wing--right" aria-hidden="true"></div>
+        </div>
 
-          <!-- CPS-Stack -->
-          <div class="flex flex-col items-start min-w-0 leading-none">
-            <span class="header-label">CPS</span>
-            <span class="truncate cps-value cps-text-glow">
-              {{ gameStore.chimesPerSecond }}
-            </span>
+        <!-- ════════ RECHTE SEITE ════════ -->
+        <div class="flex items-center gap-2 px-3 header-side header-side--right">
+          <!-- ④ Power + Meeps -->
+          <div class="flex items-center flex-shrink-0 gap-3 pointer-events-none">
+            <div class="flex flex-col items-center leading-none">
+              <span class="header-label">Power</span>
+              <span class="stat-value" style="color: #c084fc">
+                {{ formatNumber(gameStore.totalPower) }}
+              </span>
+            </div>
+            <span class="header-dot" aria-hidden="true">·</span>
+            <div class="flex flex-col items-center leading-none">
+              <span class="header-label">Meeps</span>
+              <span class="stat-value" style="color: #60a5fa">
+                {{ gameStore.meeps }}
+              </span>
+            </div>
+          </div>
+
+          <div class="header-divider" aria-hidden="true"></div>
+
+          <!-- ⑤ MeepIndicator -->
+          <div class="flex-shrink-0">
+            <MeepIndicatorComponent />
+          </div>
+
+          <div class="header-divider" aria-hidden="true"></div>
+
+          <!-- ⑥ UniversePortal -->
+          <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
+            <UniversePortalComponent />
+          </div>
+
+          <div class="header-divider" aria-hidden="true"></div>
+
+          <!-- ⑦ Inventar-Tasche -->
+          <div class="relative flex-shrink-0">
+            <button
+              class="w-8 h-8 inventory-btn"
+              title="Inventar öffnen"
+              @mouseenter="isHovering = true"
+              @mouseleave="isHovering = false"
+              @click="isInventoryOpen = true"
+            >
+              <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar öffnen" />
+            </button>
+            <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
           </div>
         </div>
 
-        <!-- Trennlinie -->
-        <div class="header-divider" aria-hidden="true"></div>
-
-        <!-- ④ MeepIndicator -->
-        <div class="flex-shrink-0">
-          <MeepIndicatorComponent />
-        </div>
-
-        <!-- Trennlinie -->
-        <div class="header-divider" aria-hidden="true"></div>
-
-        <!-- ⑤ UniversePortal -->
-        <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
-          <UniversePortalComponent />
-        </div>
-
-        <!-- Trennlinie -->
-        <div class="header-divider" aria-hidden="true"></div>
-
-        <!-- ⑥ Inventar-Tasche -->
-        <div class="relative flex-shrink-0">
-          <button
-            class="w-9 h-9 inventory-btn"
-            title="Inventar öffnen"
-            @mouseenter="isHovering = true"
-            @mouseleave="isHovering = false"
-            @click="isInventoryOpen = true"
-          >
-            <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar öffnen" />
-          </button>
-          <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
-        </div>
+        <!-- Gold-Akzentlinie unten -->
+        <div class="header-accent-bottom" aria-hidden="true"></div>
       </header>
-      <!-- ↑ HEADER BAR ENDE -->
 
       <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
@@ -131,7 +163,6 @@ const activeTab = ref('idle')
         </div>
       </div>
     </div>
-    <!-- ↑ flex flex-col justify-between geschlossen -->
 
     <!-- Encyclopedia Toggle Button -->
     <button
@@ -160,16 +191,18 @@ const activeTab = ref('idle')
   --star-max-size: 6px;
   --cosmic-gradient: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
 
-  /* Header */
   --header-bg: rgba(8, 5, 18, 0.72);
   --header-border: rgba(255, 200, 80, 0.1);
   --header-divider: rgba(255, 200, 80, 0.12);
   --header-radius: 10px;
 
-  /* Typografie */
   --color-chimes: #f0c840;
   --color-cps: #74d448;
   --color-label: rgba(200, 185, 140, 0.55);
+
+  /* ── Beide Panels ragen gleich weit heraus ── */
+  --bump-profile: 12px; /* ← war 7px, jetzt gleich wie Center */
+  --bump-center: 12px;
 }
 
 /* ================================================================
@@ -180,7 +213,6 @@ const activeTab = ref('idle')
   background-size: 400% 400%;
   animation: cosmicShift 20s ease infinite;
 }
-
 .cosmic-bg.reduce-motion {
   animation: none;
   background-position: 0% 50%;
@@ -195,7 +227,6 @@ const activeTab = ref('idle')
     background-position: 100% 50%;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .cosmic-bg {
     animation: none !important;
@@ -206,40 +237,177 @@ const activeTab = ref('idle')
    HEADER BAR
    ================================================================ */
 .header-bar {
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--header-border);
-  border-radius: var(--header-radius);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
+  border: 2px solid var(--rpg-wood, #7c4f1a);
+  border-radius: 4px;
   box-shadow:
-    0 1px 0 rgba(255, 200, 80, 0.06) inset,
-    0 4px 24px rgba(0, 0, 0, 0.45);
+    inset 0 0 0 1px var(--rpg-wood-inner, rgba(255, 200, 80, 0.08)),
+    inset 0 0 0 3px var(--rpg-wood-mid, rgba(255, 200, 80, 0.04)),
+    0 6px 28px rgba(0, 0, 0, 0.75);
+  overflow: visible;
+  display: flex;
+  align-items: stretch;
+  position: relative;
 }
 
-/* Vertikale Trennlinie zwischen Header-Segmenten */
+.header-accent-top,
+.header-accent-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  pointer-events: none;
+  z-index: 2;
+}
+.header-accent-top {
+  top: 0;
+}
+.header-accent-bottom {
+  bottom: 0;
+}
+
+/* ── Linke / Rechte Seite ─────────────────────────────────────── */
+.header-side {
+  flex: 1;
+  min-width: 0;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.header-side--left {
+  justify-content: flex-start;
+}
+.header-side--right {
+  justify-content: flex-end;
+}
+
+/* ================================================================
+   EBENE 2 — BardProfile-Panel
+   Wächst aus dem linken Header-Rand heraus (Rahmen "springt" mit hoch)
+   ================================================================ */
+.header-profile-bump {
+  /*
+   * Nach oben/unten: --bump-profile (12px) + 2px Header-Border überdecken
+   * → Panel ragt über den Header-Rahmen hinaus, Border wird unsichtbar
+   */
+  margin-top: calc(-1 * var(--bump-profile) - 2px); /* -14px */
+  margin-bottom: calc(-1 * var(--bump-profile) - 2px); /* -14px */
+  padding-top: calc(var(--bump-profile) + 2px); /*  14px */
+  padding-bottom: calc(var(--bump-profile) + 2px); /*  14px */
+
+  /*
+   * Nach links: Den 2px Header-Border überdecken
+   * → Panel bündig mit dem äußersten linken Rand des Headers
+   */
+  margin-left: -2px;
+  padding-left: 12px; /* 10px Inhalt + 2px Kompensation */
+  padding-right: 10px;
+
+  background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
+
+  /*
+   * Linke Ecken = Header-Radius (4px) → nahtloser Übergang
+   * Rechte Ecken = 0 → Panel geht nahtlos in den Header-Körper über
+   */
+  border: 1px solid rgba(255, 200, 80, 0.28);
+  border-radius: 4px 0 0 4px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 80, 0.08),
+    0 6px 24px rgba(0, 0, 0, 0.7);
+
+  position: relative;
+  z-index: 10; /* liegt über dem Header-Border */
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+/* ================================================================
+   EBENE 3 — Chimes-Center-Panel (Mitte, größter Überhang)
+   ================================================================ */
+.header-center-anchor {
+  flex-shrink: 0;
+  width: 0;
+}
+
+.header-center {
+  position: absolute;
+  left: 50%;
+  top: calc(-1 * var(--bump-center));
+  bottom: calc(-1 * var(--bump-center));
+  transform: translateX(-50%);
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+  gap: 0;
+  pointer-events: none;
+}
+
+.center-wing {
+  flex-shrink: 0;
+  width: 28px;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255, 200, 80, 0.38));
+  align-self: center;
+}
+.center-wing--right {
+  background: linear-gradient(to left, transparent, rgba(255, 200, 80, 0.38));
+}
+
+.center-chimes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
+  border-left: 1px solid rgba(255, 200, 80, 0.24);
+  border-right: 1px solid rgba(255, 200, 80, 0.24);
+  border-top: 1px solid rgba(255, 200, 80, 0.28);
+  border-bottom: 1px solid rgba(255, 200, 80, 0.28);
+  border-radius: 0 0 8px 8px;
+
+  padding: 9px 26px 9px 18px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 80, 0.08),
+    0 6px 24px rgba(0, 0, 0, 0.7);
+
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.header-chime-icon {
+  width: clamp(34px, 3.8vw, 50px);
+  height: clamp(34px, 3.8vw, 50px);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* ── Trennlinien ──────────────────────────────────────────────── */
 .header-divider {
   flex-shrink: 0;
   width: 1px;
-  height: 28px;
-  background: var(--header-divider);
+  height: 18px;
+  background: var(--rpg-wood-mid, rgba(255, 200, 80, 0.15));
   border-radius: 1px;
   margin-inline: 2px;
+  align-self: center;
 }
 
-/* Trennpunkt zwischen Chimes und CPS */
 .header-dot {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   line-height: 1;
-  color: var(--header-divider);
+  color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.25));
   user-select: none;
   flex-shrink: 0;
 }
 
 /* ================================================================
-   CHIMES & CPS – Typografie
+   CHIMES & STATS – Typografie
    ================================================================ */
-
-/* Klein-Label ("Chimes" / "CPS") über dem Wert */
 .header-label {
   font-size: 0.65rem;
   font-weight: 600;
@@ -250,9 +418,8 @@ const activeTab = ref('idle')
   margin-bottom: 1px;
 }
 
-/* Chimes-Zahl */
 .chimes-value {
-  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  font-size: clamp(1.65rem, 2.1vw, 2.5rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--color-chimes);
@@ -260,9 +427,8 @@ const activeTab = ref('idle')
   font-variant-numeric: tabular-nums;
 }
 
-/* CPS-Zahl */
 .cps-value {
-  font-size: clamp(1rem, 1.5vw, 1.3rem);
+  font-size: clamp(0.9rem, 1.3vw, 1.15rem);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--color-cps);
@@ -270,23 +436,28 @@ const activeTab = ref('idle')
   font-variant-numeric: tabular-nums;
 }
 
+.stat-value {
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-label);
+}
+
 /* ================================================================
    GLOWS & FILTER
    ================================================================ */
 .chime-glow {
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65))
-    drop-shadow(0 0 18px rgba(251, 191, 36, 0.28));
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7)) drop-shadow(0 0 14px rgba(251, 191, 36, 0.3));
 }
-
 .chime-glow-green {
   filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.5))
     drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
 }
-
 .chimes-text-glow {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.45));
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
 }
-
 .cps-text-glow {
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
@@ -295,7 +466,7 @@ const activeTab = ref('idle')
    INVENTAR-BUTTON
    ================================================================ */
 .inventory-btn {
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 2px;
   transition:
     transform 0.15s ease,
@@ -313,13 +484,13 @@ const activeTab = ref('idle')
    ENCYCLOPEDIA TOGGLE
    ================================================================ */
 .encyclopedia-toggle {
-  background: var(--rpg-bg-header);
-  border-color: var(--rpg-wood-mid);
+  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
+  border-color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.15));
   border-radius: 4px 0 0 4px;
 }
 .encyclopedia-toggle:hover {
   background: #2a1a0a;
-  border-color: var(--rpg-wood);
+  border-color: var(--rpg-wood, #7c4f1a);
 }
 
 /* ================================================================
