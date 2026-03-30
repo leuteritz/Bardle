@@ -39,69 +39,90 @@ const activeTab = ref('idle')
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pt-4 pb-10">
-      <!-- Oberer Bereich mit Navigation -->
-      <div class="z-[100] grid w-full min-h-8 grid-cols-3 items-start">
-        <!-- Links: Bard portrait toggle -->
-        <div class="flex items-start justify-start col-span-1 px-4 py-4">
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- HEADER BAR                                                     -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <header class="z-[100] header-bar w-full flex items-center gap-2 px-3 py-2">
+
+        <!-- ① BardProfileMenu -->
+        <div class="flex-shrink-0">
           <BardProfileMenu />
         </div>
 
-        <!-- Mitte: Chimes & CPS -->
-        <!-- Mitte: Chimes & CPS -->
-        <div
-          class="relative z-[65] flex flex-col items-center justify-center col-span-1 gap-0 pointer-events-none"
-        >
-          <div class="flex items-center gap-1 px-4 py-1">
-            <img src="/img/BardAbilities/BardChime.png" class="w-24 h-24 chime-glow" />
-            <span
-              class="font-bold tracking-wider text-7xl whitespace-nowrap chimes-text-glow"
-              style="color: #e8c040"
-            >
+        <!-- Trennlinie -->
+        <div class="header-divider" aria-hidden="true"></div>
+
+        <!-- ② SectionNavigator -->
+        <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
+          <SectionNavigatorComponent />
+        </div>
+
+        <!-- Trennlinie -->
+        <div class="header-divider" aria-hidden="true"></div>
+
+        <!-- ③ Chimes + CPS – zentriert im Freiraum -->
+        <div class="flex-1 flex items-center justify-center gap-3 pointer-events-none min-w-0">
+          <!-- Chime-Icon -->
+          <img
+            src="/img/BardAbilities/BardChime.png"
+            class="w-9 h-9 flex-shrink-0 chime-glow"
+            alt="Chimes"
+          />
+
+          <!-- Chimes-Wert + Label-Stack -->
+          <div class="flex flex-col items-start leading-none min-w-0">
+            <span class="header-label">Chimes</span>
+            <span class="chimes-value chimes-text-glow truncate">
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
-          <div class="flex items-center gap-1 px-2 py-0.5">
-            <span
-              class="text-4xl font-semibold tracking-wide whitespace-nowrap cps-text-glow"
-              style="color: #6ec040"
-            >
-              {{ gameStore.chimesPerSecond }} CPS
+
+          <!-- Trennpunkt -->
+          <span class="header-dot" aria-hidden="true">·</span>
+
+          <!-- CPS-Stack -->
+          <div class="flex flex-col items-start leading-none min-w-0">
+            <span class="header-label">CPS</span>
+            <span class="cps-value cps-text-glow truncate">
+              {{ gameStore.chimesPerSecond }}
             </span>
           </div>
         </div>
 
-        <!-- Rechts: Inventar, Portal, Meep -->
-        <div
-          class="relative z-[65] flex items-center justify-end h-full col-span-1 px-4 py-4 gap-x-6"
-        >
-          <!-- Section Navigator: mr-auto drückt ihn an die linke Kante der rechten Spalte -->
-          <div class="mr-auto z-[65] self-center" style="width: clamp(160px, 16vw, 240px)">
-            <SectionNavigatorComponent />
-          </div>
-          <!-- Bag: self-center stellt sicher, dass er zur Mitte der Portal+Meep-Gruppe zeigt -->
-          <div class="relative self-center">
-            <button
-              class="w-32 h-32"
-              title="Inventar öffnen"
-              @mouseenter="isHovering = true"
-              @mouseleave="isHovering = false"
-              @click="isInventoryOpen = true"
-            >
-              <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar" />
-            </button>
-            <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
-          </div>
+        <!-- Trennlinie -->
+        <div class="header-divider" aria-hidden="true"></div>
 
-          <!-- Portal & Meep untereinander, zentriert -->
-          <div class="flex flex-col items-center self-center gap-1">
-            <UniversePortalComponent />
-            <MeepIndicatorComponent />
-          </div>
+        <!-- ④ MeepIndicator -->
+        <div class="flex-shrink-0">
+          <MeepIndicatorComponent />
         </div>
 
-        <!-- ↑ Rechte Spalte korrekt geschlossen -->
-      </div>
-      <!-- ↑ Grid geschlossen -->
+        <!-- Trennlinie -->
+        <div class="header-divider" aria-hidden="true"></div>
+
+        <!-- ⑤ UniversePortal -->
+        <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
+          <UniversePortalComponent />
+        </div>
+
+        <!-- Trennlinie -->
+        <div class="header-divider" aria-hidden="true"></div>
+
+        <!-- ⑥ Inventar-Tasche -->
+        <div class="relative flex-shrink-0">
+          <button
+            class="w-9 h-9 inventory-btn"
+            title="Inventar öffnen"
+            @mouseenter="isHovering = true"
+            @mouseleave="isHovering = false"
+            @click="isInventoryOpen = true"
+          >
+            <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar öffnen" />
+          </button>
+          <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
+        </div>
+      </header>
+      <!-- ↑ HEADER BAR ENDE -->
 
       <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
@@ -126,19 +147,36 @@ const activeTab = ref('idle')
     <EncyclopediaPanel />
     <AdminDashboard />
 
-    <span class="fixed z-50 text-xl bottom-5 right-5 text-amber-500 drop-shadow-lg"
-      >©Leuteritz</span
-    >
+    <span class="fixed z-50 text-xs bottom-3 right-3 text-amber-600/60 drop-shadow-sm select-none">
+      © Leuteritz
+    </span>
   </div>
 </template>
 
 <style>
+/* ================================================================
+   DESIGN TOKENS
+   ================================================================ */
 :root {
   --star-base-size: 2px;
   --star-max-size: 6px;
   --cosmic-gradient: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
+
+  /* Header */
+  --header-bg:        rgba(8, 5, 18, 0.72);
+  --header-border:    rgba(255, 200, 80, 0.10);
+  --header-divider:   rgba(255, 200, 80, 0.12);
+  --header-radius:    10px;
+
+  /* Typografie */
+  --color-chimes:     #f0c840;
+  --color-cps:        #74d448;
+  --color-label:      rgba(200, 185, 140, 0.55);
 }
 
+/* ================================================================
+   COSMIC BACKGROUND
+   ================================================================ */
 .cosmic-bg {
   background: var(--cosmic-gradient);
   background-size: 400% 400%;
@@ -151,27 +189,122 @@ const activeTab = ref('idle')
 }
 
 @keyframes cosmicShift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cosmic-bg {
-    animation: none !important;
-  }
+  .cosmic-bg { animation: none !important; }
 }
 
-.transition-opacity {
-  transition-property: opacity;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 500ms;
+/* ================================================================
+   HEADER BAR
+   ================================================================ */
+.header-bar {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  border-radius: var(--header-radius);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 1px 0 rgba(255, 200, 80, 0.06) inset,
+    0 4px 24px rgba(0, 0, 0, 0.45);
 }
 
+/* Vertikale Trennlinie zwischen Header-Segmenten */
+.header-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 28px;
+  background: var(--header-divider);
+  border-radius: 1px;
+  margin-inline: 2px;
+}
+
+/* Trennpunkt zwischen Chimes und CPS */
+.header-dot {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--header-divider);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   CHIMES & CPS – Typografie
+   ================================================================ */
+
+/* Klein-Label ("Chimes" / "CPS") über dem Wert */
+.header-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-label);
+  line-height: 1;
+  margin-bottom: 1px;
+}
+
+/* Chimes-Zahl */
+.chimes-value {
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-chimes);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* CPS-Zahl */
+.cps-value {
+  font-size: clamp(1.0rem, 1.5vw, 1.3rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-cps);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================
+   GLOWS & FILTER
+   ================================================================ */
+.chime-glow {
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65))
+          drop-shadow(0 0 18px rgba(251, 191, 36, 0.28));
+}
+
+.chime-glow-green {
+  filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.50))
+          drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
+}
+
+.chimes-text-glow {
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.45));
+}
+
+.cps-text-glow {
+  filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.40));
+}
+
+/* ================================================================
+   INVENTAR-BUTTON
+   ================================================================ */
+.inventory-btn {
+  border-radius: 6px;
+  padding: 2px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.inventory-btn:hover {
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.50));
+}
+.inventory-btn:active {
+  transform: scale(0.96);
+}
+
+/* ================================================================
+   ENCYCLOPEDIA TOGGLE
+   ================================================================ */
 .encyclopedia-toggle {
   background: var(--rpg-bg-header);
   border-color: var(--rpg-wood-mid);
@@ -182,21 +315,12 @@ const activeTab = ref('idle')
   border-color: var(--rpg-wood);
 }
 
-.chime-glow {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6))
-    drop-shadow(0 0 20px rgba(251, 191, 36, 0.3));
-}
-
-.chime-glow-green {
-  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5))
-    drop-shadow(0 0 16px rgba(52, 211, 153, 0.25));
-}
-
-.chimes-text-glow {
-  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5));
-}
-
-.cps-text-glow {
-  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.4));
+/* ================================================================
+   MISC
+   ================================================================ */
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 500ms;
 }
 </style>
