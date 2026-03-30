@@ -14,6 +14,7 @@ import {
   MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
   SKILL_MEEP_COSTS,
+  BOSS_PASSIVE_DPS_FRACTION,
 } from '../config/constants'
 import type {
   BuildingProduction,
@@ -541,6 +542,14 @@ export const useGameStore = defineStore('game', {
     // Gibt die Gesamtanzahl der Universen zurück
     totalUniverses(): number {
       return universes.length
+    },
+
+    // Boss-Schadenswerte (spiegeln exakt die Werte beim Boss-Spawn wider)
+    dmgPerClick(): number {
+      return Math.max(1, this.chimesPerClick)
+    },
+    dmgPerSecond(): number {
+      return Math.max(0, Math.floor(this.chimesPerSecond * BOSS_PASSIVE_DPS_FRACTION))
     },
 
     // Ob die aktive Expedition abgeschlossen ist

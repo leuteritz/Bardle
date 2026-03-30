@@ -83,29 +83,25 @@ onUnmounted(() => {
             <SectionNavigatorComponent />
           </div>
 
-          <div class="header-divider" aria-hidden="true"></div>
-
-          <!-- ③ C/Click + C/s – links für optische Balance -->
-          <div class="flex items-center flex-shrink-0 gap-3 pointer-events-none">
-            <div class="flex flex-col items-center leading-none">
-              <span class="header-label">C/Click</span>
-              <span class="stat-value chimes-text-glow">
-                {{ formatNumber(gameStore.chimesPerClick) }}
-              </span>
-            </div>
-            <span class="header-dot" aria-hidden="true">·</span>
-            <div class="flex flex-col items-center leading-none">
-              <span class="header-label">C/s</span>
-              <span class="stat-value cps-text-glow">
-                {{ formatNumber(gameStore.chimesPerSecond) }}
-              </span>
-            </div>
-          </div>
         </div>
 
         <!-- ════════ MITTE (absolut zentriert — Ebene 3, größter Überhang) ════════ -->
         <div class="header-center-anchor" aria-hidden="true"></div>
         <div class="header-center">
+          <!-- Linkes Stat-Panel: C/Click (oben) + C/s (unten) -->
+          <div class="center-stat-panel center-stat-panel--stacked">
+            <div class="flex flex-col items-end leading-none gap-[3px]">
+              <div class="flex items-baseline gap-[5px]">
+                <span class="header-label">C/Click</span>
+                <span class="stat-value chimes-text-glow">{{ formatNumber(gameStore.chimesPerClick) }}</span>
+              </div>
+              <div class="flex items-baseline gap-[5px]">
+                <span class="header-label">C/s</span>
+                <span class="stat-value cps-text-glow">{{ formatNumber(gameStore.chimesPerSecond) }}</span>
+              </div>
+            </div>
+          </div>
+
           <div class="center-wing center-wing--left" aria-hidden="true"></div>
 
           <div class="center-chimes">
@@ -120,29 +116,24 @@ onUnmounted(() => {
           </div>
 
           <div class="center-wing center-wing--right" aria-hidden="true"></div>
+
+          <!-- Rechtes Stat-Panel: DMG/Click (oben) + DMG/s (unten) -->
+          <div class="center-stat-panel center-stat-panel--stacked">
+            <div class="flex flex-col items-start leading-none gap-[3px]">
+              <div class="flex items-baseline gap-[5px]">
+                <span class="header-label">DMG/Click</span>
+                <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerClick) }}</span>
+              </div>
+              <div class="flex items-baseline gap-[5px]">
+                <span class="header-label">DMG/s</span>
+                <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerSecond) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ════════ RECHTE SEITE ════════ -->
         <div class="flex items-center gap-2 px-3 header-side header-side--right">
-          <!-- ④ Power + Meeps -->
-          <div class="flex items-center flex-shrink-0 gap-3 pointer-events-none">
-            <div class="flex flex-col items-center leading-none">
-              <span class="header-label">Power</span>
-              <span class="stat-value" style="color: #c084fc">
-                {{ formatNumber(gameStore.totalPower) }}
-              </span>
-            </div>
-            <span class="header-dot" aria-hidden="true">·</span>
-            <div class="flex flex-col items-center leading-none">
-              <span class="header-label">Meeps</span>
-              <span class="stat-value" style="color: #60a5fa">
-                {{ gameStore.meeps }}
-              </span>
-            </div>
-          </div>
-
-          <div class="header-divider" aria-hidden="true"></div>
-
           <!-- ⑤ MeepIndicator -->
           <div class="flex-shrink-0">
             <MeepIndicatorComponent />
@@ -340,6 +331,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
+  width: clamp(340px, 32vw, 480px);
 }
 
 .center-wing {
@@ -361,7 +353,10 @@ onUnmounted(() => {
 .center-chimes {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: clamp(160px, 16vw, 220px);
+  flex-shrink: 0;
 
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
   /* ✅ GEÄNDERT: border-top entfernt – Panel liegt nun bündig am Header-Rand */
@@ -377,8 +372,6 @@ onUnmounted(() => {
     0 6px 24px rgba(0, 0, 0, 0.7);
 
   align-self: stretch;
-  display: flex;
-  align-items: center;
 }
 
 .header-chime-icon {
@@ -462,6 +455,26 @@ onUnmounted(() => {
 }
 .cps-text-glow {
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
+}
+.dmg-text-glow {
+  color: #ff7a50;
+  filter: drop-shadow(0 0 7px rgba(255, 100, 60, 0.4));
+}
+
+/* ================================================================
+   CENTER STAT PANELS (flankieren das Chimes-Display, kein eigener Rahmen)
+   ================================================================ */
+.center-stat-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  flex-shrink: 0;
+  pointer-events: none;
+  margin-bottom: var(--bump-center);
+}
+.center-stat-panel--stacked {
+  padding: 0 10px;
 }
 
 /* ================================================================

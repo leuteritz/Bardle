@@ -215,7 +215,7 @@ watch(
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 17px;
+  top: 40px;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.07em;
