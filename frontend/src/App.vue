@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import { formatNumber } from './config/numberFormat'
 import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
@@ -23,14 +23,33 @@ const gameStore = useGameStore()
 
 const isInventoryOpen = ref(false)
 const isHovering = ref(false)
-
 const activeTab = ref('idle')
+
+// Misst die Header-Höhe dynamisch und setzt --header-total-height auf :root
+const headerRef = ref<HTMLElement | null>(null)
+let resizeObserver: ResizeObserver | null = null
+
+function updateHeaderHeight() {
+  if (headerRef.value) {
+    const rect = headerRef.value.getBoundingClientRect()
+    document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
+  }
+}
+
+onMounted(() => {
+  updateHeaderHeight()
+  resizeObserver = new ResizeObserver(updateHeaderHeight)
+  if (headerRef.value) resizeObserver.observe(headerRef.value)
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
 </script>
 
 <template>
   <div class="min-h-screen cosmic-bg">
     <StarBackgroundComponent />
-    <PlanetRescueOverlay />
     <PlanetRescueModal />
     <AugmentSelectionModal />
     <AugmentBuffPanel />
@@ -38,12 +57,12 @@ const activeTab = ref('idle')
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
-    <div class="flex flex-col justify-between w-full min-h-screen px-4 pt-10 pb-10">
+    <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <!-- HEADER BAR  (LoL-Scoreboard-Stil + CK3/EU4-RPG-Theme)         -->
       <!-- Drei Ebenen: Seiten (flach) < BardProfile (mittel) < Chimes (groß) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <header class="z-[100] header-bar w-full relative flex items-stretch">
+      <header ref="headerRef" class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch">
         <!-- Gold-Akzentlinie oben -->
         <div class="header-accent-top" aria-hidden="true"></div>
 
@@ -154,6 +173,9 @@ const activeTab = ref('idle')
         <div class="header-accent-bottom" aria-hidden="true"></div>
       </header>
 
+      <!-- Planet-Rettungs-Timer direkt unter dem Header -->
+      <PlanetRescueOverlay />
+
       <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
@@ -201,8 +223,9 @@ const activeTab = ref('idle')
   --color-label: rgba(200, 185, 140, 0.55);
 
   /* ── Beide Panels ragen gleich weit heraus ── */
-  --bump-profile: 12px; /* ← war 7px, jetzt gleich wie Center */
-  --bump-center: 12px;
+  --bump-profile: 7px;
+  --bump-center: 7px;
+  --header-total-height: 50px; /* Fallback; wird per ResizeObserver dynamisch überschrieben */
 }
 
 /* ================================================================
@@ -271,8 +294,8 @@ const activeTab = ref('idle')
 .header-side {
   flex: 1;
   min-width: 0;
-  padding-top: 3px;
-  padding-bottom: 3px;
+  padding-top: 1px;
+  padding-bottom: 1px;
 }
 .header-side--left {
   justify-content: flex-start;
@@ -286,41 +309,10 @@ const activeTab = ref('idle')
    Wächst aus dem linken Header-Rand heraus (Rahmen "springt" mit hoch)
    ================================================================ */
 .header-profile-bump {
-  /*
-   * Nach oben/unten: --bump-profile (12px) + 2px Header-Border überdecken
-   * → Panel ragt über den Header-Rahmen hinaus, Border wird unsichtbar
-   */
-  margin-top: calc(-1 * var(--bump-profile) - 2px); /* -14px */
-  margin-bottom: calc(-1 * var(--bump-profile) - 2px); /* -14px */
-  padding-top: calc(var(--bump-profile) + 2px); /*  14px */
-  padding-bottom: calc(var(--bump-profile) + 2px); /*  14px */
-
-  /*
-   * Nach links: Den 2px Header-Border überdecken
-   * → Panel bündig mit dem äußersten linken Rand des Headers
-   */
-  margin-left: -2px;
-  padding-left: 12px; /* 10px Inhalt + 2px Kompensation */
-  padding-right: 10px;
-
-  background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
-
-  /*
-   * Linke Ecken = Header-Radius (4px) → nahtloser Übergang
-   * Rechte Ecken = 0 → Panel geht nahtlos in den Header-Körper über
-   */
-  border: 1px solid rgba(255, 200, 80, 0.28);
-  border-radius: 4px 0 0 4px;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.08),
-    0 6px 24px rgba(0, 0, 0, 0.7);
-
-  position: relative;
-  z-index: 10; /* liegt über dem Header-Border */
-  align-self: stretch;
   display: flex;
   align-items: center;
+  align-self: stretch;
+  flex-shrink: 0;
 }
 
 /* ================================================================
@@ -359,7 +351,7 @@ const activeTab = ref('idle')
 .center-chimes {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
   border-left: 1px solid rgba(255, 200, 80, 0.24);
@@ -368,7 +360,7 @@ const activeTab = ref('idle')
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 8px 8px;
 
-  padding: 9px 26px 9px 18px;
+  padding: 5px 20px 5px 14px;
 
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
@@ -380,8 +372,8 @@ const activeTab = ref('idle')
 }
 
 .header-chime-icon {
-  width: clamp(34px, 3.8vw, 50px);
-  height: clamp(34px, 3.8vw, 50px);
+  width: clamp(34px, 4vw, 52px);
+  height: clamp(34px, 4vw, 52px);
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -419,7 +411,7 @@ const activeTab = ref('idle')
 }
 
 .chimes-value {
-  font-size: clamp(1.65rem, 2.1vw, 2.5rem);
+  font-size: clamp(1.3rem, 1.7vw, 2rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--color-chimes);
