@@ -161,9 +161,6 @@ onUnmounted(() => {
             <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
           </div>
         </div>
-
-        <!-- Gold-Akzentlinie unten -->
-        <div class="header-accent-bottom" aria-hidden="true"></div>
       </header>
 
       <!-- Planet-Rettungs-Timer direkt unter dem Header -->
@@ -269,18 +266,6 @@ onUnmounted(() => {
   position: relative;
 }
 
-.header-accent-bottom {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  pointer-events: none;
-  z-index: 2;
-  border-bottom-left-radius: var(--bard-avatar-radius);
-  border-bottom-right-radius: var(--bard-avatar-radius);
-}
 .header-accent-top {
   top: 0;
 }
