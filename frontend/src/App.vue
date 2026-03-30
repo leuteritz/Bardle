@@ -62,7 +62,10 @@ onUnmounted(() => {
       <!-- HEADER BAR  (LoL-Scoreboard-Stil + CK3/EU4-RPG-Theme)         -->
       <!-- Drei Ebenen: Seiten (flach) < BardProfile (mittel) < Chimes (groß) -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <header ref="headerRef" class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch">
+      <header
+        ref="headerRef"
+        class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
+      >
         <!-- Gold-Akzentlinie oben -->
         <div class="header-accent-top" aria-hidden="true"></div>
 
@@ -224,7 +227,7 @@ onUnmounted(() => {
 
   /* ── Beide Panels ragen gleich weit heraus ── */
   --bump-profile: 7px;
-  --bump-center: 7px;
+  --bump-center: 50px;
   --header-total-height: 50px; /* Fallback; wird per ResizeObserver dynamisch überschrieben */
 }
 
@@ -326,11 +329,13 @@ onUnmounted(() => {
 .header-center {
   position: absolute;
   left: 50%;
-  top: calc(-1 * var(--bump-center));
-  bottom: calc(-1 * var(--bump-center));
+
+  /* ✅ GEÄNDERT: kein negativer top mehr → oberer Header-Rahmen bleibt durchgehend */
+  top: 2px; /* vorher: calc(-1 * var(--bump-center)) */
+  bottom: calc(-1 * var(--bump-center)); /* hängt nur noch nach unten */
+
   transform: translateX(-50%);
   z-index: 20;
-
   display: flex;
   align-items: center;
   gap: 0;
@@ -354,9 +359,9 @@ onUnmounted(() => {
   gap: 8px;
 
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
+  /* ✅ GEÄNDERT: border-top entfernt – Panel liegt nun bündig am Header-Rand */
   border-left: 1px solid rgba(255, 200, 80, 0.24);
   border-right: 1px solid rgba(255, 200, 80, 0.24);
-  border-top: 1px solid rgba(255, 200, 80, 0.28);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 8px 8px;
 
