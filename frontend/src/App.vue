@@ -219,6 +219,8 @@ onUnmounted(() => {
   --bump-profile: 7px;
   --bump-center: 30px;
   --header-total-height: 50px; /* Fallback; wird per ResizeObserver dynamisch überschrieben */
+
+  --bard-avatar-radius: 72px;
 }
 
 /* ================================================================
@@ -255,7 +257,8 @@ onUnmounted(() => {
 .header-bar {
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border: 2px solid var(--rpg-wood, #7c4f1a);
-  border-radius: 4px;
+  border-top: none;
+  border-radius: 0 0 var(--bard-avatar-radius) var(--bard-avatar-radius);
   box-shadow:
     inset 0 0 0 1px var(--rpg-wood-inner, rgba(255, 200, 80, 0.08)),
     inset 0 0 0 3px var(--rpg-wood-mid, rgba(255, 200, 80, 0.04)),
@@ -266,15 +269,17 @@ onUnmounted(() => {
   position: relative;
 }
 
-.header-accent-top,
 .header-accent-bottom {
   position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 2px;
   background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
   pointer-events: none;
   z-index: 2;
+  border-bottom-left-radius: var(--bard-avatar-radius);
+  border-bottom-right-radius: var(--bard-avatar-radius);
 }
 .header-accent-top {
   top: 0;
