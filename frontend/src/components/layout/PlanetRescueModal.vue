@@ -5,6 +5,7 @@
       class="modal-backdrop rpg-overlay"
       aria-modal="true"
       role="dialog"
+      @click.self="bossStore.closeBossModal()"
     >
       <div class="boss-modal rpg-frame">
         <!-- ── Header ──────────────────────────────────────────────────── -->
