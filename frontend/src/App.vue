@@ -227,7 +227,7 @@ onUnmounted(() => {
 
   /* ── Beide Panels ragen gleich weit heraus ── */
   --bump-profile: 7px;
-  --bump-center: 50px;
+  --bump-center: 30px;
   --header-total-height: 50px; /* Fallback; wird per ResizeObserver dynamisch überschrieben */
 }
 
@@ -348,7 +348,12 @@ onUnmounted(() => {
   height: 2px;
   background: linear-gradient(to right, transparent, rgba(255, 200, 80, 0.38));
   align-self: center;
+
+  /* ✅ NEU: korrigiert den Versatz durch den nach-unten-Überhang */
+  position: relative;
+  top: calc(-1 * (var(--bump-center) + 2px) / 2);
 }
+
 .center-wing--right {
   background: linear-gradient(to left, transparent, rgba(255, 200, 80, 0.38));
 }
