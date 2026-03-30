@@ -82,7 +82,6 @@ onUnmounted(() => {
           <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
             <SectionNavigatorComponent />
           </div>
-
         </div>
 
         <!-- ════════ MITTE (absolut zentriert — Ebene 3, größter Überhang) ════════ -->
@@ -90,15 +89,15 @@ onUnmounted(() => {
         <div class="header-center">
           <!-- Linkes Stat-Panel: C/Click (oben) + C/s (unten) -->
           <div class="center-stat-panel center-stat-panel--stacked">
-            <div class="flex flex-col items-end leading-none gap-[3px]">
-              <div class="flex items-baseline gap-[5px]">
-                <span class="header-label">C/Click</span>
-                <span class="stat-value chimes-text-glow">{{ formatNumber(gameStore.chimesPerClick) }}</span>
-              </div>
-              <div class="flex items-baseline gap-[5px]">
-                <span class="header-label">C/s</span>
-                <span class="stat-value cps-text-glow">{{ formatNumber(gameStore.chimesPerSecond) }}</span>
-              </div>
+            <div class="stat-grid stat-grid--left">
+              <span class="header-label">C/Click</span>
+              <span class="stat-value chimes-text-glow">{{
+                formatNumber(gameStore.chimesPerClick)
+              }}</span>
+              <span class="header-label">C/s</span>
+              <span class="stat-value cps-text-glow">{{
+                formatNumber(gameStore.chimesPerSecond)
+              }}</span>
             </div>
           </div>
 
@@ -119,15 +118,15 @@ onUnmounted(() => {
 
           <!-- Rechtes Stat-Panel: DMG/Click (oben) + DMG/s (unten) -->
           <div class="center-stat-panel center-stat-panel--stacked">
-            <div class="flex flex-col items-start leading-none gap-[3px]">
-              <div class="flex items-baseline gap-[5px]">
-                <span class="header-label">DMG/Click</span>
-                <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerClick) }}</span>
-              </div>
-              <div class="flex items-baseline gap-[5px]">
-                <span class="header-label">DMG/s</span>
-                <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerSecond) }}</span>
-              </div>
+            <div class="stat-grid stat-grid--right">
+              <span class="header-label">DMG/Click</span>
+              <span class="stat-value dmg-text-glow">{{
+                formatNumber(gameStore.dmgPerClick)
+              }}</span>
+              <span class="header-label">DMG/s</span>
+              <span class="stat-value dmg-text-glow">{{
+                formatNumber(gameStore.dmgPerSecond)
+              }}</span>
             </div>
           </div>
         </div>
@@ -475,6 +474,26 @@ onUnmounted(() => {
 }
 .center-stat-panel--stacked {
   padding: 0 10px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 6px;
+  row-gap: 3px;
+  align-items: baseline;
+}
+.stat-grid--left .header-label {
+  text-align: left;
+}
+.stat-grid--left .stat-value {
+  text-align: left;
+}
+.stat-grid--right .header-label {
+  text-align: left;
+}
+.stat-grid--right .stat-value {
+  text-align: left;
 }
 
 /* ================================================================
