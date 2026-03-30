@@ -43,7 +43,6 @@ const activeTab = ref('idle')
       <!-- HEADER BAR                                                     -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <header class="z-[100] header-bar w-full flex items-center gap-2 px-3 py-2">
-
         <!-- ① BardProfileMenu -->
         <div class="flex-shrink-0">
           <BardProfileMenu />
@@ -61,18 +60,17 @@ const activeTab = ref('idle')
         <div class="header-divider" aria-hidden="true"></div>
 
         <!-- ③ Chimes + CPS – zentriert im Freiraum -->
-        <div class="flex-1 flex items-center justify-center gap-3 pointer-events-none min-w-0">
+        <div class="flex items-center justify-center flex-1 min-w-0 gap-3 pointer-events-none">
           <!-- Chime-Icon -->
           <img
             src="/img/BardAbilities/BardChime.png"
-            class="w-9 h-9 flex-shrink-0 chime-glow"
+            class="flex-shrink-0 w-16 h-16 chime-glow"
             alt="Chimes"
           />
 
           <!-- Chimes-Wert + Label-Stack -->
-          <div class="flex flex-col items-start leading-none min-w-0">
-            <span class="header-label">Chimes</span>
-            <span class="chimes-value chimes-text-glow truncate">
+          <div class="flex flex-col items-start min-w-0 leading-none">
+            <span class="truncate chimes-value chimes-text-glow">
               {{ formatNumber(gameStore.chimes) }}
             </span>
           </div>
@@ -81,9 +79,9 @@ const activeTab = ref('idle')
           <span class="header-dot" aria-hidden="true">·</span>
 
           <!-- CPS-Stack -->
-          <div class="flex flex-col items-start leading-none min-w-0">
+          <div class="flex flex-col items-start min-w-0 leading-none">
             <span class="header-label">CPS</span>
-            <span class="cps-value cps-text-glow truncate">
+            <span class="truncate cps-value cps-text-glow">
               {{ gameStore.chimesPerSecond }}
             </span>
           </div>
@@ -147,7 +145,7 @@ const activeTab = ref('idle')
     <EncyclopediaPanel />
     <AdminDashboard />
 
-    <span class="fixed z-50 text-xs bottom-3 right-3 text-amber-600/60 drop-shadow-sm select-none">
+    <span class="fixed z-50 text-xs select-none bottom-3 right-3 text-amber-600/60 drop-shadow-sm">
       © Leuteritz
     </span>
   </div>
@@ -163,15 +161,15 @@ const activeTab = ref('idle')
   --cosmic-gradient: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
 
   /* Header */
-  --header-bg:        rgba(8, 5, 18, 0.72);
-  --header-border:    rgba(255, 200, 80, 0.10);
-  --header-divider:   rgba(255, 200, 80, 0.12);
-  --header-radius:    10px;
+  --header-bg: rgba(8, 5, 18, 0.72);
+  --header-border: rgba(255, 200, 80, 0.1);
+  --header-divider: rgba(255, 200, 80, 0.12);
+  --header-radius: 10px;
 
   /* Typografie */
-  --color-chimes:     #f0c840;
-  --color-cps:        #74d448;
-  --color-label:      rgba(200, 185, 140, 0.55);
+  --color-chimes: #f0c840;
+  --color-cps: #74d448;
+  --color-label: rgba(200, 185, 140, 0.55);
 }
 
 /* ================================================================
@@ -189,12 +187,19 @@ const activeTab = ref('idle')
 }
 
 @keyframes cosmicShift {
-  0%, 100% { background-position: 0% 50%; }
-  50%       { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cosmic-bg { animation: none !important; }
+  .cosmic-bg {
+    animation: none !important;
+  }
 }
 
 /* ================================================================
@@ -257,7 +262,7 @@ const activeTab = ref('idle')
 
 /* CPS-Zahl */
 .cps-value {
-  font-size: clamp(1.0rem, 1.5vw, 1.3rem);
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--color-cps);
@@ -270,12 +275,12 @@ const activeTab = ref('idle')
    ================================================================ */
 .chime-glow {
   filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65))
-          drop-shadow(0 0 18px rgba(251, 191, 36, 0.28));
+    drop-shadow(0 0 18px rgba(251, 191, 36, 0.28));
 }
 
 .chime-glow-green {
-  filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.50))
-          drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
+  filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.5))
+    drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
 }
 
 .chimes-text-glow {
@@ -283,7 +288,7 @@ const activeTab = ref('idle')
 }
 
 .cps-text-glow {
-  filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.40));
+  filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
 
 /* ================================================================
@@ -292,11 +297,13 @@ const activeTab = ref('idle')
 .inventory-btn {
   border-radius: 6px;
   padding: 2px;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease;
 }
 .inventory-btn:hover {
   transform: scale(1.12);
-  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.50));
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
 }
 .inventory-btn:active {
   transform: scale(0.96);
