@@ -46,20 +46,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 async function spawnPlanet() {
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetBossStore.activeBoss) {
-    planetBossStore.activeBoss.potentialMaterialId = undefined
-    planetBossStore.activeBoss.assignedDropChance = undefined
-    planetBossStore.activeBoss.homePlanetChampion = undefined
+  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
+  if (lastBoss) {
+    lastBoss.potentialMaterialId = undefined
+    lastBoss.assignedDropChance = undefined
+    lastBoss.homePlanetChampion = undefined
   }
 }
 
 async function spawnPlanetWithMaterial() {
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetBossStore.activeBoss) {
-    planetBossStore.activeBoss.potentialMaterialId = pickMaterial().id
-    planetBossStore.activeBoss.assignedDropChance = 1.0
-    planetBossStore.activeBoss.homePlanetChampion = undefined
+  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
+  if (lastBoss) {
+    lastBoss.potentialMaterialId = pickMaterial().id
+    lastBoss.assignedDropChance = 1.0
+    lastBoss.homePlanetChampion = undefined
   }
 }
 
@@ -73,10 +75,11 @@ async function spawnPlanetWithChampion() {
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
   planetEventStore.pendingRescue = true
   await nextTick()
-  if (planetBossStore.activeBoss) {
-    planetBossStore.activeBoss.homePlanetChampion = pick.championName
-    planetBossStore.activeBoss.potentialMaterialId = undefined
-    planetBossStore.activeBoss.assignedDropChance = undefined
+  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
+  if (lastBoss) {
+    lastBoss.homePlanetChampion = pick.championName
+    lastBoss.potentialMaterialId = undefined
+    lastBoss.assignedDropChance = undefined
   }
 }
 

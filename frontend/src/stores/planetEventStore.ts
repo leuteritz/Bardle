@@ -4,6 +4,7 @@ import {
   PLANET_EVENT_BASE_CHANCE,
   PLANET_EVENT_PRESTIGE_BONUS,
   PLANET_EVENT_CHECK_INTERVAL,
+  PLANET_MAX_COUNT,
 } from '../config/constants'
 import { usePlanetBossStore } from './planetBossStore'
 import { logger } from '../utils/logger'
@@ -26,7 +27,8 @@ export const usePlanetEventStore = defineStore('planetEvent', {
 
       // Roll for new event every N in-game seconds
       if (inGameTime - this.lastEventCheckSecond < PLANET_EVENT_CHECK_INTERVAL) return
-      if (bossStore.activeBoss || this.pendingRescue) return
+      const activeBossCount = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired).length
+      if (activeBossCount >= PLANET_MAX_COUNT || this.pendingRescue) return
 
       this.lastEventCheckSecond = inGameTime
 

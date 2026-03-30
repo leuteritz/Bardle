@@ -4,20 +4,33 @@
     <div v-if="showFlash" class="planet-vignette" aria-hidden="true" />
   </Transition>
 
-  <!-- Countdown bar + label -->
-  <div v-if="planetEventStore.isEventActive" class="planet-countdown-bar" aria-hidden="true">
+  <!-- Stacked countdown bars — one per active planet boss -->
+  <TransitionGroup
+    v-if="activeBosses.length > 0"
+    name="bar-stack"
+    tag="div"
+    class="planet-bar-stack"
+    aria-hidden="true"
+  >
     <div
-      class="planet-countdown-fill planet-countdown-fill--left"
-      :style="{ right: leftFill.right + 'px', width: (progressPercent / 100) * leftFill.width + 'px' }"
-    />
-    <div
-      class="planet-countdown-fill planet-countdown-fill--right"
-      :style="{ left: rightFill.left + 'px', width: (progressPercent / 100) * rightFill.width + 'px' }"
-    />
-    <span class="planet-countdown-label">
-      ⚠ {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }} — Click to Fight!
-    </span>
-  </div>
+      v-for="(boss, idx) in activeBosses"
+      :key="boss.planetId"
+      class="planet-countdown-bar"
+      :style="{ '--bar-color': barColor(idx, activeBosses.length), '--bar-color-dark': barColorDark(idx, activeBosses.length) }"
+    >
+      <div
+        class="planet-countdown-fill planet-countdown-fill--left"
+        :style="{ right: leftFill.right + 'px', width: (progressPercent(boss) / 100) * leftFill.width + 'px' }"
+      />
+      <div
+        class="planet-countdown-fill planet-countdown-fill--right"
+        :style="{ left: rightFill.left + 'px', width: (progressPercent(boss) / 100) * rightFill.width + 'px' }"
+      />
+      <span class="planet-countdown-label">
+        ⚠ {{ boss.bossName }} — {{ formatCountdown(boss) }}
+      </span>
+    </div>
+  </TransitionGroup>
 
   <!-- Boss Defeated toast -->
   <Transition name="toast-slide">
@@ -59,6 +72,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import type { PlanetBossEvent } from '../../types'
 import { usePlanetEventStore } from '../../stores/planetEventStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { formatNumber } from '../../config/numberFormat'
@@ -105,12 +119,34 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
 })
 
-const progressPercent = computed(() => {
-  const boss = bossStore.activeBoss
-  if (!boss || !bossStore.isBossActive) return 0
+// Active bosses in LIFO order (newest on top)
+const activeBosses = computed((): PlanetBossEvent[] =>
+  [...bossStore.activeBosses].filter((b) => !b.defeated && !b.expired).reverse(),
+)
+
+function progressPercent(boss: PlanetBossEvent): number {
   const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
   return (remaining / boss.enrageTimerMs) * 100
-})
+}
+
+function formatCountdown(boss: PlanetBossEvent): string {
+  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+  const secs = Math.ceil(remaining / 1000)
+  const m = Math.floor(secs / 60).toString().padStart(2, '0')
+  const s = (secs % 60).toString().padStart(2, '0')
+  return `${m}:${s}`
+}
+
+// Distributes bar colors across warm red → orange-red spectrum
+function barColor(idx: number, total: number): string {
+  const hue = total <= 1 ? 10 : (idx / (total - 1)) * 35
+  return `hsl(${hue}, 90%, 48%)`
+}
+
+function barColorDark(idx: number, total: number): string {
+  const hue = total <= 1 ? 10 : (idx / (total - 1)) * 35
+  return `hsl(${hue}, 80%, 25%)`
+}
 
 // Flash on event spawn
 const showFlash = ref(false)
@@ -201,42 +237,45 @@ watch(
 }
 
 @keyframes vignetteIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 @keyframes vignetteOut {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+  0% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-/* ─── Countdown Bar ────────────────────────────────────────────────────────── */
-.planet-countdown-bar {
+/* ─── Bar Stack Container ─────────────────────────────────────────────────── */
+.planet-bar-stack {
   position: relative;
   width: 100%;
   max-width: 1400px;
-  height: 5px;
-  z-index: 16;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Individual Countdown Bar ────────────────────────────────────────────── */
+.planet-countdown-bar {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
+}
+
+.planet-countdown-bar + .planet-countdown-bar {
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
 }
 
 .planet-countdown-fill {
   position: absolute;
   height: 100%;
-  background: linear-gradient(90deg, var(--rpg-danger), var(--rpg-danger-dark));
+  background: linear-gradient(90deg, var(--bar-color), var(--bar-color-dark));
   box-shadow:
-    0 0 10px rgba(255, 60, 0, 0.9),
-    0 0 22px rgba(255, 40, 0, 0.45);
+    0 0 10px color-mix(in srgb, var(--bar-color) 70%, transparent),
+    0 0 22px color-mix(in srgb, var(--bar-color) 35%, transparent);
   transition: width 0.2s linear;
 }
 
@@ -251,16 +290,51 @@ watch(
 .planet-countdown-label {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  top: 40px;
-  font-size: 0.68rem;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
-  color: var(--rpg-orange);
-  text-shadow: 0 0 6px rgba(255, 80, 0, 0.8);
+  color: #fff;
+  text-shadow:
+    0 0 6px rgba(0, 0, 0, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+  z-index: 1;
+}
+
+/* ─── Bar Stack Transitions ───────────────────────────────────────────────── */
+.bar-stack-enter-active {
+  animation: barSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bar-stack-leave-active {
+  animation: barSlideOut 0.28s ease-in forwards;
+  position: absolute;
+  width: 100%;
+  top: 0;
+}
+.bar-stack-move {
+  transition: transform 0.3s ease;
+}
+
+@keyframes barSlideIn {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes barSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-stack-enter-active,
+  .bar-stack-leave-active,
+  .bar-stack-move {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ─── Toasts ───────────────────────────────────────────────────────────────── */

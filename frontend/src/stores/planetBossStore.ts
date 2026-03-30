@@ -29,7 +29,8 @@ import { logger } from '../utils/logger'
 
 export const usePlanetBossStore = defineStore('planetBoss', {
   state: () => ({
-    activeBoss: null as PlanetBossEvent | null,
+    activeBosses: [] as PlanetBossEvent[],
+    selectedBossId: null as string | null,
     bossModalOpen: false,
     lastBossResult: null as 'victory' | 'defeat' | null,
     cpsPenaltyActive: false,
@@ -38,13 +39,22 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   }),
 
   getters: {
+    // Backward-compat: resolves to selected boss (or first active)
+    activeBoss(): PlanetBossEvent | null {
+      if (this.selectedBossId) {
+        return this.activeBosses.find((b) => b.planetId === this.selectedBossId) ?? null
+      }
+      return this.activeBosses.find((b) => !b.defeated && !b.expired) ?? null
+    },
+
     isBossActive(): boolean {
-      return this.activeBoss !== null && !this.activeBoss.defeated && !this.activeBoss.expired
+      return this.activeBosses.some((b) => !b.defeated && !b.expired)
     },
 
     bossHPPercent(): number {
-      if (!this.activeBoss) return 0
-      return Math.max(0, (this.activeBoss.currentHP / this.activeBoss.maxHP) * 100)
+      const boss = this.activeBoss
+      if (!boss) return 0
+      return Math.max(0, (boss.currentHP / boss.maxHP) * 100)
     },
 
     cpsPenaltyMultiplier(): number {
@@ -52,14 +62,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     playerDPS(): number {
-      if (!this.activeBoss) return 0
-      // Estimate: ~3 clicks/s average + passive
-      return this.activeBoss.clickDamagePerHit * 3 + this.activeBoss.passiveDPS
+      const boss = this.activeBoss
+      if (!boss) return 0
+      return boss.clickDamagePerHit * 3 + boss.passiveDPS
     },
 
     requiredDPS(): number {
-      if (!this.activeBoss) return 0
-      return this.activeBoss.maxHP / (this.activeBoss.enrageTimerMs / 1000)
+      const boss = this.activeBoss
+      if (!boss) return 0
+      return boss.maxHP / (boss.enrageTimerMs / 1000)
     },
   },
 
@@ -111,7 +122,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         BOSS_BASE_REWARD * (1 + difficulty * BOSS_REWARD_DIFFICULTY_SCALE) * sectionRewardMult,
       )
 
-      // Material drop — same logic as old planetEventStore
+      // Material drop
       const hasMaterial = Math.random() < PLANET_MATERIAL_CHANCE
       const potentialMaterialId = hasMaterial ? pickMaterial().id : undefined
       const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
@@ -135,7 +146,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       // Pick boss name
       const bossName = BOSS_NAMES[Math.floor(Math.random() * BOSS_NAMES.length)]
 
-      this.activeBoss = {
+      const newBoss: PlanetBossEvent = {
         planetId,
         planetType,
         bossName,
@@ -156,6 +167,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         sectionId: sectionStore.activeSectionId,
       }
 
+      this.activeBosses.push(newBoss)
+      this.selectedBossId = planetId
       this.lastBossResult = null
       this.lastDroppedMaterialId = null
 
@@ -168,6 +181,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       })
     },
 
+    removeBoss(planetId: string) {
+      const idx = this.activeBosses.findIndex((b) => b.planetId === planetId)
+      if (idx !== -1) this.activeBosses.splice(idx, 1)
+      if (this.selectedBossId === planetId) {
+        this.selectedBossId =
+          this.activeBosses.find((b) => !b.defeated && !b.expired)?.planetId ?? null
+      }
+    },
+
     dealClickDamage(): boolean {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
@@ -178,14 +200,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       if (boss.currentHP <= 0) {
         boss.currentHP = 0
         boss.defeated = true
-        this.grantBossRewards()
+        this.grantBossRewards(boss)
         this.bossModalOpen = false
         logger.info('Planet', 'Boss defeated!', {
           totalDamage: boss.totalDamageDealt,
           timeElapsed: Math.round((Date.now() - boss.startTime) / 1000) + 's',
         })
+        const planetId = boss.planetId
         setTimeout(() => {
-          this.activeBoss = null
+          this.removeBoss(planetId)
         }, 600)
         return true
       }
@@ -193,53 +216,54 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     applyPassiveDamage() {
-      const boss = this.activeBoss
-      if (!boss || boss.defeated || boss.expired) return
+      for (const boss of this.activeBosses) {
+        if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
 
-      if (boss.passiveDPS > 0) {
         boss.currentHP -= boss.passiveDPS
         boss.totalDamageDealt += boss.passiveDPS
 
         if (boss.currentHP <= 0) {
           boss.currentHP = 0
           boss.defeated = true
-          this.grantBossRewards()
-          this.bossModalOpen = false
+          this.grantBossRewards(boss)
+          if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           logger.info('Planet', 'Boss defeated by passive damage!')
+          const planetId = boss.planetId
           setTimeout(() => {
-            this.activeBoss = null
+            this.removeBoss(planetId)
           }, 600)
         }
       }
     },
 
     checkEnrage() {
-      const boss = this.activeBoss
-      if (!boss || boss.defeated || boss.expired) return
+      for (const boss of this.activeBosses) {
+        if (boss.defeated || boss.expired) continue
 
-      const elapsed = Date.now() - boss.startTime
-      if (elapsed >= boss.enrageTimerMs) {
-        boss.expired = true
-        this.bossModalOpen = false
-        this.lastBossResult = 'defeat'
+        const elapsed = Date.now() - boss.startTime
+        if (elapsed >= boss.enrageTimerMs) {
+          boss.expired = true
+          if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
+          this.lastBossResult = 'defeat'
 
-        // Apply CPS penalty
-        this.cpsPenaltyActive = true
-        this.cpsPenaltyExpiresAt = Date.now() + BOSS_CPS_PENALTY_DURATION_MS
-        const shopStore = useShopStore()
-        const gameStore = useGameStore()
-        gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+          // Apply CPS penalty
+          this.cpsPenaltyActive = true
+          this.cpsPenaltyExpiresAt = Date.now() + BOSS_CPS_PENALTY_DURATION_MS
+          const shopStore = useShopStore()
+          const gameStore = useGameStore()
+          gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
 
-        logger.info('Planet', 'Boss enraged! CPS penalty applied.')
-        setTimeout(() => {
-          this.activeBoss = null
-        }, 900)
+          logger.info('Planet', 'Boss enraged! CPS penalty applied.')
+          const planetId = boss.planetId
+          setTimeout(() => {
+            this.removeBoss(planetId)
+          }, 900)
+        }
       }
     },
 
-    grantBossRewards() {
-      const boss = this.activeBoss
-      if (!boss || !boss.defeated) return
+    grantBossRewards(boss: PlanetBossEvent) {
+      if (!boss.defeated) return
 
       const gameStore = useGameStore()
 
@@ -275,7 +299,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       sectionStore.onBossDefeated(boss.isSectionBoss ?? false)
     },
 
-    openBossModal() {
+    openBossModal(planetId?: string) {
+      if (planetId) this.selectedBossId = planetId
       this.bossModalOpen = true
     },
 
@@ -284,17 +309,19 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     forceCheckExpiry() {
-      const boss = this.activeBoss
-      if (!boss || boss.defeated || boss.expired) return
+      for (const boss of this.activeBosses) {
+        if (boss.defeated || boss.expired) continue
 
-      const elapsed = Date.now() - boss.startTime
-      if (elapsed >= boss.enrageTimerMs) {
-        boss.expired = true
-        this.bossModalOpen = false
-        this.lastBossResult = 'defeat'
-        setTimeout(() => {
-          this.activeBoss = null
-        }, 900)
+        const elapsed = Date.now() - boss.startTime
+        if (elapsed >= boss.enrageTimerMs) {
+          boss.expired = true
+          if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
+          this.lastBossResult = 'defeat'
+          const planetId = boss.planetId
+          setTimeout(() => {
+            this.removeBoss(planetId)
+          }, 900)
+        }
       }
     },
 

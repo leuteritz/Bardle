@@ -200,13 +200,13 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     item.el.style.pointerEvents = 'auto'
     item.el.style.cursor = 'pointer'
 
-    // Click opens the boss modal
+    // Click opens the boss modal for this specific planet
     item.el.addEventListener('click', () => {
-      bossStore.openBossModal()
+      bossStore.openBossModal(id)
     })
 
     // Label-DIV erstellen
-    const boss = bossStore.activeBoss
+    const boss = bossStore.activeBosses.find((b) => b.planetId === id)
     const materialId = boss?.potentialMaterialId
     const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
     const reward = boss?.reward ?? 0
@@ -345,7 +345,8 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       planetEventStore.activatePlanetRescue(targetId, targetType)
       // Wait one tick so admin overrides are applied before building the label
       await nextTick()
-      if (!bossStore.activeBoss || !container.value) return
+      const spawnedBoss = bossStore.activeBosses.find((b) => b.planetId === targetId)
+      if (!spawnedBoss || !container.value) return
       markPlanetAsRescue(targetId)
       container.value.classList.add('stars--rescue-active')
     },
@@ -353,22 +354,32 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
   // 2. Boss expired → Explosion
   watch(
-    () => bossStore.activeBoss?.expired,
-    (expired) => {
-      if (expired && bossStore.activeBoss) {
-        triggerExplosion(bossStore.activeBoss.planetId)
+    () => bossStore.activeBosses.map((b) => ({ id: b.planetId, expired: b.expired })),
+    (cur, prev) => {
+      if (!prev) return
+      for (const curr of cur) {
+        const was = prev.find((p) => p.id === curr.id)
+        if (curr.expired && was && !was.expired) {
+          triggerExplosion(curr.id)
+        }
       }
     },
+    { deep: true },
   )
 
   // 3. Boss defeated → Saved-Animation
   watch(
-    () => bossStore.activeBoss?.defeated,
-    (defeated) => {
-      if (defeated && bossStore.activeBoss) {
-        triggerSaved(bossStore.activeBoss.planetId)
+    () => bossStore.activeBosses.map((b) => ({ id: b.planetId, defeated: b.defeated })),
+    (cur, prev) => {
+      if (!prev) return
+      for (const curr of cur) {
+        const was = prev.find((p) => p.id === curr.id)
+        if (curr.defeated && was && !was.defeated) {
+          triggerSaved(curr.id)
+        }
       }
     },
+    { deep: true },
   )
 
   // 4. isEventActive → Klasse togglen
