@@ -58,113 +58,108 @@ onUnmounted(() => {
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- HEADER BAR  (LoL-Scoreboard-Stil + CK3/EU4-RPG-Theme)         -->
-      <!-- Drei Ebenen: Seiten (flach) < BardProfile (mittel) < Chimes (groß) -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <header
-        ref="headerRef"
-        class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
-      >
-        <!-- Gold-Akzentlinie oben -->
-        <div class="header-accent-top" aria-hidden="true"></div>
+      <!-- Header + Countdown zusammen als ein Flex-Kind -->
+      <div class="w-full">
+        <header
+          ref="headerRef"
+          class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
+        >
+          <!-- ════════ LINKE SEITE ════════ -->
+          <div class="flex items-center gap-2 pr-3 header-side header-side--left">
+            <div class="flex-shrink-0 header-profile-bump">
+              <BardProfileMenu />
+            </div>
 
-        <!-- ════════ LINKE SEITE ════════ -->
-        <div class="flex items-center gap-2 pr-3 header-side header-side--left">
-          <!-- ① BardProfileMenu — in eigenem herausragenden Panel (Ebene 2) -->
-          <div class="flex-shrink-0 header-profile-bump">
-            <BardProfileMenu />
-          </div>
+            <div class="header-divider" aria-hidden="true"></div>
 
-          <div class="header-divider" aria-hidden="true"></div>
-
-          <!-- ② SectionNavigator -->
-          <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
-            <SectionNavigatorComponent />
-          </div>
-        </div>
-
-        <!-- ════════ MITTE (absolut zentriert — Ebene 3, größter Überhang) ════════ -->
-        <div class="header-center-anchor" aria-hidden="true"></div>
-        <div class="header-center">
-          <!-- Linkes Stat-Panel: C/Click (oben) + C/s (unten) -->
-          <div class="center-stat-panel center-stat-panel--stacked">
-            <div class="stat-grid stat-grid--left">
-              <span class="header-label">C/Click</span>
-              <span class="stat-value chimes-text-glow">{{
-                formatNumber(gameStore.chimesPerClick)
-              }}</span>
-              <span class="header-label">C/s</span>
-              <span class="stat-value cps-text-glow">{{
-                formatNumber(gameStore.chimesPerSecond)
-              }}</span>
+            <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
+              <SectionNavigatorComponent />
             </div>
           </div>
 
-          <div class="center-wing center-wing--left" aria-hidden="true"></div>
+          <!-- ════════ MITTE ════════ -->
+          <div class="header-center-anchor" aria-hidden="true"></div>
+          <div class="header-center">
+            <div class="center-stat-panel center-stat-panel--stacked">
+              <div class="stat-grid stat-grid--left">
+                <span class="header-label">C/Click</span>
+                <span class="stat-value chimes-text-glow">{{
+                  formatNumber(gameStore.chimesPerClick)
+                }}</span>
+                <span class="header-label">C/s</span>
+                <span class="stat-value cps-text-glow">{{
+                  formatNumber(gameStore.chimesPerSecond)
+                }}</span>
+              </div>
+            </div>
 
-          <div class="center-chimes">
-            <img
-              src="/img/BardAbilities/BardChime.png"
-              class="header-chime-icon chime-glow"
-              alt="Chimes"
-            />
-            <span class="chimes-value chimes-text-glow">
-              {{ formatNumber(gameStore.chimes) }}
-            </span>
-          </div>
+            <div class="center-wing center-wing--left" aria-hidden="true"></div>
 
-          <div class="center-wing center-wing--right" aria-hidden="true"></div>
+            <div class="center-chimes">
+              <img
+                src="/img/BardAbilities/BardChime.png"
+                class="header-chime-icon chime-glow"
+                alt="Chimes"
+              />
+              <span class="chimes-value chimes-text-glow">
+                {{ formatNumber(gameStore.chimes) }}
+              </span>
+            </div>
 
-          <!-- Rechtes Stat-Panel: DMG/Click (oben) + DMG/s (unten) -->
-          <div class="center-stat-panel center-stat-panel--stacked">
-            <div class="stat-grid stat-grid--right">
-              <span class="header-label">DMG/Click</span>
-              <span class="stat-value dmg-text-glow">{{
-                formatNumber(gameStore.dmgPerClick)
-              }}</span>
-              <span class="header-label">DMG/s</span>
-              <span class="stat-value dmg-text-glow">{{
-                formatNumber(gameStore.dmgPerSecond)
-              }}</span>
+            <div class="center-wing center-wing--right" aria-hidden="true"></div>
+
+            <div class="center-stat-panel center-stat-panel--stacked">
+              <div class="stat-grid stat-grid--right">
+                <span class="header-label">DMG/Click</span>
+                <span class="stat-value dmg-text-glow">{{
+                  formatNumber(gameStore.dmgPerClick)
+                }}</span>
+                <span class="header-label">DMG/s</span>
+                <span class="stat-value dmg-text-glow">{{
+                  formatNumber(gameStore.dmgPerSecond)
+                }}</span>
+              </div>
             </div>
           </div>
+
+          <!-- ════════ RECHTE SEITE ════════ -->
+          <div class="flex items-center gap-2 px-3 header-side header-side--right">
+            <div class="flex-shrink-0">
+              <MeepIndicatorComponent />
+            </div>
+
+            <div class="header-divider" aria-hidden="true"></div>
+
+            <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
+              <UniversePortalComponent />
+            </div>
+
+            <div class="header-divider" aria-hidden="true"></div>
+
+            <div class="relative flex-shrink-0">
+              <button
+                class="w-8 h-8 inventory-btn"
+                title="Inventar öffnen"
+                @mouseenter="isHovering = true"
+                @mouseleave="isHovering = false"
+                @click="isInventoryOpen = true"
+              >
+                <img
+                  src="/img/Bag.png"
+                  class="object-contain w-full h-full"
+                  alt="Inventar öffnen"
+                />
+              </button>
+              <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
+            </div>
+          </div>
+        </header>
+
+        <!-- Planet-Rettungs-Timer direkt unter dem Header -->
+        <div class="planet-rescue-wrapper">
+          <PlanetRescueOverlay />
         </div>
-
-        <!-- ════════ RECHTE SEITE ════════ -->
-        <div class="flex items-center gap-2 px-3 header-side header-side--right">
-          <!-- ⑤ MeepIndicator -->
-          <div class="flex-shrink-0">
-            <MeepIndicatorComponent />
-          </div>
-
-          <div class="header-divider" aria-hidden="true"></div>
-
-          <!-- ⑥ UniversePortal -->
-          <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
-            <UniversePortalComponent />
-          </div>
-
-          <div class="header-divider" aria-hidden="true"></div>
-
-          <!-- ⑦ Inventar-Tasche -->
-          <div class="relative flex-shrink-0">
-            <button
-              class="w-8 h-8 inventory-btn"
-              title="Inventar öffnen"
-              @mouseenter="isHovering = true"
-              @mouseleave="isHovering = false"
-              @click="isInventoryOpen = true"
-            >
-              <img src="/img/Bag.png" class="object-contain w-full h-full" alt="Inventar öffnen" />
-            </button>
-            <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
-          </div>
-        </div>
-      </header>
-
-      <!-- Planet-Rettungs-Timer direkt unter dem Header -->
-      <PlanetRescueOverlay />
+      </div>
 
       <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
@@ -212,10 +207,9 @@ onUnmounted(() => {
   --color-cps: #74d448;
   --color-label: rgba(200, 185, 140, 0.55);
 
-  /* ── Beide Panels ragen gleich weit heraus ── */
   --bump-profile: 7px;
   --bump-center: 30px;
-  --header-total-height: 50px; /* Fallback; wird per ResizeObserver dynamisch überschrieben */
+  --header-total-height: 50px;
 
   --bard-avatar-radius: 72px;
 }
@@ -249,6 +243,17 @@ onUnmounted(() => {
 }
 
 /* ================================================================
+   PLANET RESCUE WRAPPER
+   ================================================================ */
+.planet-rescue-wrapper {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+  /* 72px Inset = Innenkante der abgerundeten Header-Ecken */
+  padding-inline: var(--bard-avatar-radius);
+}
+
+/* ================================================================
    HEADER BAR
    ================================================================ */
 .header-bar {
@@ -264,13 +269,6 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   position: relative;
-}
-
-.header-accent-top {
-  top: 0;
-}
-.header-accent-bottom {
-  bottom: 0;
 }
 
 /* ── Linke / Rechte Seite ─────────────────────────────────────── */
@@ -289,7 +287,6 @@ onUnmounted(() => {
 
 /* ================================================================
    EBENE 2 — BardProfile-Panel
-   Wächst aus dem linken Header-Rand heraus (Rahmen "springt" mit hoch)
    ================================================================ */
 .header-profile-bump {
   display: flex;
@@ -299,7 +296,7 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   EBENE 3 — Chimes-Center-Panel (Mitte, größter Überhang)
+   EBENE 3 — Chimes-Center-Panel
    ================================================================ */
 .header-center-anchor {
   flex-shrink: 0;
@@ -309,11 +306,8 @@ onUnmounted(() => {
 .header-center {
   position: absolute;
   left: 50%;
-
-  /* ✅ GEÄNDERT: kein negativer top mehr → oberer Header-Rahmen bleibt durchgehend */
-  top: 2px; /* vorher: calc(-1 * var(--bump-center)) */
-  bottom: calc(-1 * var(--bump-center)); /* hängt nur noch nach unten */
-
+  top: 2px;
+  bottom: calc(-1 * var(--bump-center));
   transform: translateX(-50%);
   z-index: 20;
   display: flex;
@@ -329,12 +323,9 @@ onUnmounted(() => {
   height: 2px;
   background: linear-gradient(to right, transparent, rgba(255, 200, 80, 0.38));
   align-self: center;
-
-  /* ✅ NEU: korrigiert den Versatz durch den nach-unten-Überhang */
   position: relative;
   top: calc(-1 * (var(--bump-center) + 2px) / 2);
 }
-
 .center-wing--right {
   background: linear-gradient(to left, transparent, rgba(255, 200, 80, 0.38));
 }
@@ -346,20 +337,15 @@ onUnmounted(() => {
   gap: 8px;
   width: clamp(160px, 16vw, 220px);
   flex-shrink: 0;
-
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
-  /* ✅ GEÄNDERT: border-top entfernt – Panel liegt nun bündig am Header-Rand */
   border-left: 1px solid rgba(255, 200, 80, 0.24);
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 8px 8px;
-
   padding: 5px 20px 5px 14px;
-
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
-
   align-self: stretch;
 }
 
@@ -451,7 +437,7 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   CENTER STAT PANELS (flankieren das Chimes-Display, kein eigener Rahmen)
+   CENTER STAT PANELS
    ================================================================ */
 .center-stat-panel {
   display: flex;
@@ -473,15 +459,9 @@ onUnmounted(() => {
   row-gap: 3px;
   align-items: baseline;
 }
-.stat-grid--left .header-label {
-  text-align: left;
-}
-.stat-grid--left .stat-value {
-  text-align: left;
-}
-.stat-grid--right .header-label {
-  text-align: left;
-}
+.stat-grid--left .header-label,
+.stat-grid--left .stat-value,
+.stat-grid--right .header-label,
 .stat-grid--right .stat-value {
   text-align: left;
 }

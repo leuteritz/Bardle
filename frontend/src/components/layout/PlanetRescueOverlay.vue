@@ -187,10 +187,6 @@ watch(
 
 /* ─── Countdown Bar ────────────────────────────────────────────────────────── */
 .planet-countdown-bar {
-  position: fixed;
-  top: var(--header-total-height, 48px);
-  left: 50%;
-  transform: translateX(-50%);
   width: 100%;
   max-width: 1400px;
   height: 5px;
