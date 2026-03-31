@@ -93,7 +93,12 @@
                 ? 'upgrade-buy-btn--green'
                 : 'upgrade-buy-btn--disabled'
             "
+            :style="!shopStore.canAffordUpgrade(upgrade) ? { '--progress': getProgress(upgrade) + '%' } : {}"
             :disabled="!shopStore.canAffordUpgrade(upgrade)"
+            role="progressbar"
+            :aria-valuenow="Math.floor(getProgress(upgrade))"
+            aria-valuemin="0"
+            aria-valuemax="100"
           >
             <span class="buy-label">
               Buy
@@ -179,6 +184,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue'
 import { useShopStore } from '../../../stores/shopStore'
+import { useGameStore } from '../../../stores/gameStore'
 import { formatNumber } from '../../../config/numberFormat'
 import type { ShopUpgrade, PermanentUpgrade } from '../../../types'
 
@@ -191,6 +197,13 @@ export default defineComponent({
   name: 'ShopComponent',
   setup() {
     const shopStore = useShopStore()
+    const gameStore = useGameStore()
+
+    const getProgress = (upgrade: ShopUpgrade): number => {
+      const cost = shopStore.getTotalUpgradeCost(upgrade)
+      if (!cost || cost <= 0) return 100
+      return Math.min(100, (gameStore.chimes / cost) * 100)
+    }
 
     const buyOptions: BuyOption[] = [
       { value: 1, label: '1x' },
@@ -256,6 +269,7 @@ export default defineComponent({
 
     return {
       shopStore,
+      getProgress,
       handleUpgradeClick,
       isImageUrl,
       formatNumber,
@@ -384,8 +398,6 @@ export default defineComponent({
 
 .upgrade-row--locked {
   background: #141410;
-  opacity: 0.5;
-  filter: grayscale(55%);
   cursor: not-allowed;
 }
 
@@ -481,9 +493,12 @@ export default defineComponent({
   border-radius: 5px;
   cursor: pointer;
   padding: 6px 4px;
-  transition: all 0.1s;
+  overflow: hidden;
+  position: relative;
+  transition: background-size 0.45s ease, box-shadow 0.15s ease;
 }
 
+/* Grün = kaufbar – solider Farbverlauf, keine Progress-Logik nötig */
 .upgrade-buy-btn--green {
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #70d040;
@@ -505,10 +520,22 @@ export default defineComponent({
   background: linear-gradient(to bottom, #2e7a1a, #1a4e0a);
 }
 
+/* Rot = nicht kaufbar – Progress-Balken wächst von links (helleres Rot) */
 .upgrade-buy-btn--disabled {
-  background: #2a2a26;
-  border: 1px solid #444;
-  color: #555;
+  /* Dunkles Rot als Basis-Hintergrund */
+  background-color: #220808;
+  /* Hellerer Rot-Verlauf als Progress-Füllung von links */
+  background-image: linear-gradient(
+    to right,
+    #7a1610 0%,
+    #b02018 70%,
+    #cc2820 100%
+  );
+  background-size: var(--progress, 0%) 100%;
+  background-repeat: no-repeat;
+  background-position: left center;
+  border: 1px solid #5a1010;
+  color: #cc8880;
   cursor: not-allowed;
 }
 
@@ -710,4 +737,5 @@ export default defineComponent({
   color: #c89040;
   border-radius: 3px;
 }
+
 </style>
