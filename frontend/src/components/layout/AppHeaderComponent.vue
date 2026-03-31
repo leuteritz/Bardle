@@ -4,7 +4,6 @@ import { useGameStore } from '../../stores/gameStore'
 import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../BardProfileMenu.vue'
 import UniversePortalComponent from '../UniversePortalComponent.vue'
-import MeepIndicatorComponent from '../ui/MeepIndicatorComponent.vue'
 import InventoryTooltip from '../InventoryTooltip.vue'
 import SectionNavigatorComponent from '../gameCenter/idle/SectionNavigatorComponent.vue'
 
@@ -38,7 +37,7 @@ onUnmounted(() => {
 <template>
   <header
     ref="headerRef"
-    class="z-[100] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
+    class="z-[120] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
   >
     <!-- ════════ LINKE SEITE ════════ -->
     <div class="flex items-center gap-2 pr-3 header-side header-side--left">
@@ -87,29 +86,23 @@ onUnmounted(() => {
       <div class="center-stat-panel center-stat-panel--stacked">
         <div class="stat-grid stat-grid--right">
           <span class="header-label">DMG/Click</span>
-          <span class="stat-value dmg-text-glow">{{
-            formatNumber(gameStore.dmgPerClick)
-          }}</span>
+          <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerClick) }}</span>
           <span class="header-label">DMG/s</span>
-          <span class="stat-value dmg-text-glow">{{
-            formatNumber(gameStore.dmgPerSecond)
-          }}</span>
+          <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerSecond) }}</span>
         </div>
       </div>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-2 px-3 header-side header-side--right">
-
-      <!-- Universe Portal + Meep vertikal gestapelt -->
-      <div class="z-[65] flex-shrink-0 flex flex-col items-center" style="width: clamp(110px, 11vw, 170px)">
+      <!-- UniversePortal füllt jetzt die volle Höhe, Meep ist integriert -->
+      <div class="z-[65] flex-shrink-0 header-portal-wrap">
         <UniversePortalComponent />
-        <MeepIndicatorComponent />
       </div>
 
       <div class="header-divider" aria-hidden="true"></div>
 
-      <!-- Inventory-Kreis (identisch mit Bard-Portrait: w-36 h-36, runde Innenmaske) -->
+      <!-- Inventory-Kreis -->
       <div class="relative flex-shrink-0 header-inventory-bump">
         <button
           class="inventory-circle-btn"
@@ -119,11 +112,16 @@ onUnmounted(() => {
           @click="emit('open-inventory')"
         >
           <div class="relative w-36 h-36">
-            <!-- Dekorativer Goldring (statisch, kein Fortschritt) -->
             <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(160,110,15,0.45)" stroke-width="7" />
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="rgba(160,110,15,0.45)"
+                stroke-width="7"
+              />
             </svg>
-            <!-- Bag-Icon im Kreis -->
             <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
               <img
                 src="/img/Bag.png"
@@ -156,6 +154,40 @@ onUnmounted(() => {
   display: flex;
   align-items: stretch;
   position: relative;
+}
+/* ── Portal-Container: streckt sich auf volle Header-Höhe ── */
+.header-portal-wrap {
+  width: clamp(148px, 14vw, 215px);
+  align-self: stretch;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ── Rechtes Status-Panel (Universe + Meep) ───────────────── */
+.header-right-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: clamp(150px, 14vw, 210px);
+  padding: 6px 8px;
+  background: rgba(6, 4, 14, 0.55);
+  border: 1px solid rgba(255, 200, 80, 0.12);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 80, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.status-panel-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 200, 80, 0.18) 30%,
+    rgba(251, 146, 60, 0.18) 70%,
+    transparent
+  );
+  margin-inline: 2px;
 }
 
 /* ── Linke / Rechte Seite ─────────────────────────────────────── */
@@ -194,7 +226,9 @@ onUnmounted(() => {
   position: absolute;
   left: 50%;
   top: 2px;
-  bottom: calc(-1 * var(--bump-center));
+  bottom: calc(
+    -1 * (max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)) + 7px)
+  );
   transform: translateX(-50%);
   z-index: 20;
   display: flex;
@@ -202,6 +236,14 @@ onUnmounted(() => {
   gap: 0;
   pointer-events: none;
   width: clamp(340px, 32vw, 480px);
+}
+
+/* Passage effect: thicken sides to match modal frame, remove horizontal borders at junction */
+body.bard-modal-open .center-chimes {
+  border-left: 4px solid #7a4e20;
+  border-right: 4px solid #7a4e20;
+  border-bottom: none;
+  border-radius: 0;
 }
 
 .center-wing {

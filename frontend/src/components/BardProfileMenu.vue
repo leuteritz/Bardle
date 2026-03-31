@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // ── Script identisch, keine Änderungen ──
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { usePersistence } from '../composables/usePersistence'
 import ShopComponent from './gameCenter/idle/ShopComponent.vue'
@@ -48,6 +48,10 @@ const setTab = (id: ModalId) => {
 const closeModal = () => {
   activeModal.value = null
 }
+
+watch(activeModal, (val) => {
+  document.body.classList.toggle('bard-modal-open', val !== null)
+})
 
 const chimesForLevel = computed(() => {
   const progress = gameStore.levelProgress / 100
@@ -117,18 +121,19 @@ const chimesForLevel = computed(() => {
     <button class="mt-1 rp-reset-btn" title="Spielstand löschen" @click="handleReset">Reset</button>
   </div>
 
+  <Teleport to="body">
   <!-- ══ Backdrop ══ -->
   <Transition name="backdrop">
-    <div v-if="activeModal !== null" class="fixed inset-0 z-[60] bg-black/80" @click="closeModal" />
+    <div v-if="activeModal !== null" class="fixed inset-0 z-[115] bg-black/80" @click="closeModal" />
   </Transition>
 
   <!-- ══ Modal ══ -->
   <Transition name="modal-pop">
     <div
       v-if="activeModal !== null"
-      class="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
+      class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
     >
-      <div class="rp-modal flex flex-col h-[960px] max-h-[90vh]">
+      <div class="rp-modal flex flex-col h-[960px]">
         <!-- Goldene Akzentlinie oben -->
         <div class="rp-accent-bar" />
 
@@ -224,6 +229,7 @@ const chimesForLevel = computed(() => {
       </div>
     </div>
   </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -323,6 +329,7 @@ const chimesForLevel = computed(() => {
     inset 0 0 0 4px #5c3310,
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
+  max-height: 90dvh;
 }
 
 /* Gold-Shimmer oben */
