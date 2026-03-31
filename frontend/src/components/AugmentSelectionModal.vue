@@ -81,7 +81,10 @@ const rarityLabel: Record<string, string> = {
             @click="gameStore.chooseAugment(aug.id)"
           >
             <!-- Icon -->
-            <span class="text-5xl mb-2">{{ aug.icon }}</span>
+            <div class="aug-icon-box mb-2">
+              <img v-if="aug.image" :src="aug.image" class="aug-card-img" :alt="aug.name" />
+              <span v-else class="text-5xl">{{ aug.icon }}</span>
+            </div>
 
             <!-- Name -->
             <h3 class="text-base font-bold text-white mb-1 text-center leading-tight">
@@ -157,6 +160,24 @@ const rarityLabel: Record<string, string> = {
 
 .aug-effect {
   color: var(--rpg-text-muted);
+}
+
+.aug-icon-box {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #141410;
+  border: 2px solid #5c3310;
+}
+
+.aug-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Hover glow enhancement per rarity */

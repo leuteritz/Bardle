@@ -5,108 +5,62 @@ import { AUGMENTS } from '../config/augments'
 import type { AugmentDefinition } from '../types'
 
 const gameStore = useGameStore()
-const scrollEl = ref<HTMLElement | null>(null)
-const isScrollable = ref(false)
-const atBottom = ref(false)
 
-const activeAugmentDefs = computed<AugmentDefinition[]>(() =>
+// Track each slot by id+index to support stacked duplicates
+interface AugmentSlot {
+  aug: AugmentDefinition
+  key: string
+}
+
+const activeAugmentSlots = computed<AugmentSlot[]>(() =>
   gameStore.activeAugments
-    .map((id) => AUGMENTS.find((a) => a.id === id))
-    .filter((a): a is AugmentDefinition => !!a),
+    .map((id, idx) => {
+      const aug = AUGMENTS.find((a) => a.id === id)
+      return aug ? { aug, key: `${id}-${idx}` } : null
+    })
+    .filter((s): s is AugmentSlot => !!s),
 )
 
-function onScroll(e: Event) {
-  const el = e.target as HTMLElement
-  isScrollable.value = el.scrollHeight > el.clientHeight
-  atBottom.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 4
-}
+const hovering = ref<string | null>(null)
 
-function checkScrollable(el: HTMLElement) {
-  isScrollable.value = el.scrollHeight > el.clientHeight
-  atBottom.value = false
-}
-
-const rarityGlow: Record<string, string> = {
-  common: 'glow-common',
-  rare: 'glow-rare',
-  epic: 'glow-epic',
-  legendary: 'glow-legendary',
-}
-
-const rarityBorder: Record<string, string> = {
-  common: 'border-common',
-  rare: 'border-rare',
-  epic: 'border-epic',
-  legendary: 'border-legendary',
-}
-
-const rarityAccent: Record<string, string> = {
-  common: 'accent-common',
-  rare: 'accent-rare',
-  epic: 'accent-epic',
-  legendary: 'accent-legendary',
-}
-
-function getDisplayLine(aug: AugmentDefinition): string {
-  return aug.effectLine
+const rarityBorderColor: Record<string, string> = {
+  common: '#9d9d9d',
+  rare: '#4a90e2',
+  epic: '#a855f7',
+  legendary: '#e8c040',
 }
 </script>
 
 <template>
   <Transition name="augment-panel">
-    <div
-      v-if="activeAugmentDefs.length > 0"
-      class="fixed left-10 top-[200px] z-[60] flex flex-col gap-1.5 max-w-[148px]"
-    >
-      <!-- Section header -->
-      <div class="flex items-center gap-1.5 px-1 mb-0.5">
-        <div class="aug-header-line flex-1 h-px" />
-        <span class="aug-header-label text-[13px] font-bold tracking-[0.15em] uppercase"
-          >Augments</span
-        >
-        <div class="aug-header-line flex-1 h-px" />
-      </div>
-
-      <div class="relative">
-        <div
-          ref="scrollEl"
-          class="rpg-scrollbar flex flex-col gap-1.5 mt-2 overflow-x-hidden pr-0.5"
-          :class="activeAugmentDefs.length > 1 ? 'overflow-y-auto' : 'overflow-y-hidden'"
-          style="max-height: calc(100vh - 240px)"
-          @scroll="onScroll"
-          @vue:mounted="(vnode: any) => checkScrollable(vnode.el)"
-          @vue:updated="(vnode: any) => checkScrollable(vnode.el)"
-        >
-          <TransitionGroup name="aug-card" tag="div" class="flex flex-col gap-1.5">
-            <div v-for="aug in activeAugmentDefs" :key="aug.id" class="relative">
-              <div
-                class="aug-item relative flex items-center gap-2 px-2.5 py-2 cursor-default overflow-hidden"
-                :class="[`rpg-rarity-${aug.rarity}`, `rpg-glow-${aug.rarity}`]"
-              >
-                <!-- Rarity gradient overlay -->
-                <div
-                  class="aug-accent absolute inset-0 pointer-events-none opacity-60"
-                  :class="`aug-accent--${aug.rarity}`"
-                />
-
-                <!-- Effect line -->
-                <div class="relative z-10 flex flex-col gap-0.5 flex-1">
-                  <div class="flex items-center gap-1 text-[11px]">
-                    <span class="aug-arrow flex-shrink-0 text-[8px]">▲</span>
-                    <span class="aug-text leading-tight">{{ getDisplayLine(aug) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TransitionGroup>
-        </div>
-
-        <Transition name="fade">
+    <div v-if="activeAugmentSlots.length > 0" class="aug-sidebar">
+      <div class="aug-icon-list">
+        <TransitionGroup name="aug-card" tag="div" class="aug-icon-list-inner">
           <div
-            v-if="isScrollable && !atBottom"
-            class="aug-fade-bottom absolute bottom-0 left-0 right-0 h-10 pointer-events-none"
-          />
-        </Transition>
+            v-for="slot in activeAugmentSlots"
+            :key="slot.key"
+            class="aug-icon-slot"
+            :style="{ borderColor: rarityBorderColor[slot.aug.rarity] }"
+            @mouseenter="hovering = slot.key"
+            @mouseleave="hovering = null"
+          >
+            <img
+              v-if="slot.aug.image"
+              :src="slot.aug.image"
+              class="aug-icon-img"
+              :alt="slot.aug.name"
+            />
+            <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+
+            <!-- Tooltip -->
+            <Transition name="tooltip">
+              <div v-if="hovering === slot.key" class="aug-tooltip">
+                <div class="aug-tooltip-name">{{ slot.aug.name }}</div>
+                <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+              </div>
+            </Transition>
+          </div>
+        </TransitionGroup>
       </div>
     </div>
   </Transition>
@@ -140,45 +94,102 @@ function getDisplayLine(aug: AugmentDefinition): string {
   transition: transform 0.25s ease;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
+.tooltip-enter-active,
+.tooltip-leave-active {
+  transition: opacity 0.15s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
+.tooltip-enter-from,
+.tooltip-leave-to {
   opacity: 0;
 }
 
-.aug-header-line {
-  background: color-mix(in srgb, var(--rpg-wood-mid) 40%, transparent);
+.aug-sidebar {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  border-top: 4px solid #7a4e20;
+  border-right: 4px solid #7a4e20;
+  border-bottom: 4px solid #7a4e20;
+  border-left: none;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310;
+  background: #111008;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 6px 8px 0;
 }
 
-.aug-header-label {
-  color: color-mix(in srgb, var(--rpg-gold) 35%, transparent);
+.aug-icon-list {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
-.aug-item {
-  background: var(--rpg-bg-deep);
+.aug-icon-list-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aug-icon-slot {
+  position: relative;
+  width: 52px;
+  height: 52px;
   border-radius: 4px;
-  transition: all 0.3s;
+  overflow: visible;
+  border: 2px solid #5c3310;
+  background: #141410;
+  cursor: default;
+  flex-shrink: 0;
 }
 
-.aug-arrow {
-  color: var(--rpg-green-top);
+.aug-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 2px;
+  overflow: hidden;
 }
 
-.aug-text {
-  color: var(--rpg-text-muted);
+.aug-icon-emoji {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
 }
 
-.aug-fade-bottom {
-  background: linear-gradient(to top, var(--rpg-bg-deep), transparent);
-  border-radius: 0 0 4px 4px;
+.aug-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  padding: 6px 10px;
+  min-width: 140px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
 }
 
-/* Rarity accent overlays */
-.aug-accent--common { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-common) 20%, transparent), transparent); }
-.aug-accent--rare { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-rare) 20%, transparent), transparent); }
-.aug-accent--epic { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-epic) 25%, transparent), transparent); }
-.aug-accent--legendary { background: linear-gradient(to right, color-mix(in srgb, var(--rpg-rarity-legendary) 30%, transparent), transparent); }
+.aug-tooltip-name {
+  color: #e8c040;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.aug-tooltip-effect {
+  color: #b0a080;
+  font-size: 10px;
+}
 </style>

@@ -5,7 +5,7 @@ import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useMissionStore } from './missionStore'
 import { universes } from '../config/universes'
-import { AUGMENTS, RARITY_WEIGHTS } from '../config/augments'
+import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
 import {
   LEVEL_BASE,
@@ -123,10 +123,9 @@ export const useGameStore = defineStore('game', {
     },
 
     triggerAugmentSelection() {
-      const pool = AUGMENTS.filter((a) => !this.activeAugments.includes(a.id))
-      const source = pool.length >= 3 ? pool : [...AUGMENTS]
+      // Immer den vollen 10er Bild-Pool verwenden – kein Filtern nach bereits aktiven
+      const remaining = [...AUGMENT_POOL]
       const picked: AugmentDefinition[] = []
-      const remaining = [...source]
 
       for (let i = 0; i < 3 && remaining.length > 0; i++) {
         const totalWeight = remaining.reduce(

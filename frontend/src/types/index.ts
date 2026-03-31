@@ -267,6 +267,7 @@ export interface AugmentDefinition {
   description: string
   effectLine: string
   icon: string
+  image?: string
   rarity: AugmentRarity
   effects: AugmentEffects
   specialEffect?: AugmentSpecialEffect
