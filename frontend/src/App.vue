@@ -10,7 +10,6 @@ import AugmentBuffPanel from './components/AugmentBuffPanel.vue'
 import HyperspaceOverlay from './components/HyperspaceOverlay.vue'
 import UniverseSelectModal from './components/UniverseSelectModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
-import AdminDashboard from './components/AdminDashboard.vue'
 import InventoryModal from './components/InventoryModal.vue'
 import AppHeaderComponent from './components/layout/AppHeaderComponent.vue'
 
@@ -61,7 +60,6 @@ const activeTab = ref('idle')
     </button>
 
     <EncyclopediaPanel />
-    <AdminDashboard />
 
     <span class="fixed z-50 text-xs select-none bottom-3 right-3 text-amber-600/60 drop-shadow-sm">
       © Leuteritz
