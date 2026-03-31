@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useGameStore } from '../stores/gameStore'
-import { formatNumber } from '../config/numberFormat'
 
 const gameStore = useGameStore()
 </script>

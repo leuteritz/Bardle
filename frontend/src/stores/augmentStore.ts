@@ -11,7 +11,6 @@ export const useAugmentStore = defineStore('augment', {
     bigBangUsed: false,
     keyboardSmashModifiers: {} as Record<string, number>,
     gravityFlipActive: false,
-    lastChosenAugmentId: null as string | null,
   }),
 
   getters: {
@@ -112,7 +111,6 @@ export const useAugmentStore = defineStore('augment', {
     },
 
     registerAugment(id: string, activeAugments?: string[]) {
-      this.lastChosenAugmentId = id
       logger.info('Augment', `Registered: ${id}`)
 
       const aug = AUGMENTS.find((a) => a.id === id)

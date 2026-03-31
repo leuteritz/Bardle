@@ -116,11 +116,6 @@ export const useItemStore = defineStore('item', {
       this._recalculateCPS()
     },
 
-    getEquippedItems(slotIndex: number) {
-      if (slotIndex < 0 || slotIndex > 3) return emptySlotEquipment()
-      return this.slotEquipment[slotIndex]
-    },
-
     _recalculateCPS() {
       const shopStore = useShopStore()
       const gameStore = useGameStore()

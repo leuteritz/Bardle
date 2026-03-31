@@ -91,7 +91,6 @@ export function usePersistence() {
         activeTimedBuffs: augmentStore.activeTimedBuffs,
         bigBangUsed: augmentStore.bigBangUsed,
         keyboardSmashModifiers: { ...augmentStore.keyboardSmashModifiers },
-        lastChosenAugmentId: augmentStore.lastChosenAugmentId,
       },
       items: {
         ownedItems: { ...itemStore.ownedItems },
@@ -217,7 +216,6 @@ export function usePersistence() {
         if (Array.isArray(a.activeTimedBuffs)) augmentStore.activeTimedBuffs = a.activeTimedBuffs
         augmentStore.bigBangUsed = a.bigBangUsed ?? false
         if (a.keyboardSmashModifiers) augmentStore.keyboardSmashModifiers = a.keyboardSmashModifiers
-        augmentStore.lastChosenAugmentId = a.lastChosenAugmentId ?? null
         // Expire stale timed buffs
         augmentStore.onTick()
       }

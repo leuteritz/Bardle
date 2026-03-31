@@ -167,15 +167,6 @@ export const useCpsStore = defineStore('cps', {
       })
     },
 
-    // Berechnet verfügbare Tracking-Zeit für einen Zeitraum seit Start
-    getAvailableTimeForPeriod(periodKey: string): number {
-      const elapsedTime = (Date.now() - this.startTime) / 1000
-      const config = this.timePeriods.find((p) => p.key === periodKey)
-
-      if (!config) return 0
-      return Math.min(elapsedTime, config.duration)
-    },
-
     // Erstellt Startpunkt-Label für CPS-Graph-Zeitachse
     getStartTimeLabel(): string {
       const history = this.currentProductionHistory

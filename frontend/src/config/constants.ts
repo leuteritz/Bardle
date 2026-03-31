@@ -408,16 +408,3 @@ export const CHAMPION_BASE_POWER = 50
 export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_MISSIONS = 3
 
-// Rank border image paths
-export const RANK_BORDER_IMAGES: Record<string, string> = {
-  Iron: '/img/RankBorder/RankIron.png',
-  Bronze: '/img/RankBorder/RankBronze.png',
-  Silver: '/img/RankBorder/RankSilver.png',
-  Gold: '/img/RankBorder/RankGold.png',
-  Platinum: '/img/RankBorder/RankPlatin.png',
-  Emerald: '/img/RankBorder/RankEmerald.png',
-  Diamond: '/img/RankBorder/RankDiamand.png',
-  Master: '/img/RankBorder/RankMaster.png',
-  Grandmaster: '/img/RankBorder/RankGrandMaster.png',
-  Challenger: '/img/RankBorder/RankChallenger.png',
-}

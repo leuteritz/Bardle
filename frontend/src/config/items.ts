@@ -296,6 +296,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
 ]
 
+const ITEM_MAP = new Map<string, ShopItem>(SHOP_ITEMS.map((item) => [item.id, item]))
+
 export function getItemById(id: string): ShopItem | undefined {
-  return SHOP_ITEMS.find((item) => item.id === id)
+  return ITEM_MAP.get(id)
 }

@@ -201,15 +201,6 @@ export const useGameStore = defineStore('game', {
       this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
-    // Setzt das Level einer Fähigkeit direkt (Admin-Funktion)
-    setAbilityLevel(index: number, value: number) {
-      const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
-      this.abilityLevels[index] = Math.max(0, Math.min(maxLevel, value))
-      const shopStore = useShopStore()
-      this.chimesPerSecond = shopStore.calculateTotalCPS()
-      this.chimesPerClick = shopStore.calculateTotalCPC()
-    },
-
     // Schaltet eine Fähigkeit mit Meeps frei (einmalig, sequenziell)
     unlockSkillWithMeeps(index: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL

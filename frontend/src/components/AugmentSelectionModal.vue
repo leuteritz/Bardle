@@ -12,27 +12,6 @@ const options = computed<AugmentDefinition[]>(() =>
     .filter((a): a is AugmentDefinition => !!a),
 )
 
-const rarityBorder: Record<string, string> = {
-  common: 'rarity-common',
-  rare: 'rarity-rare',
-  epic: 'rarity-epic',
-  legendary: 'rarity-legendary',
-}
-
-const rarityBorderHover: Record<string, string> = {
-  common: 'rarity-common-hover',
-  rare: 'rarity-rare-hover',
-  epic: 'rarity-epic-hover',
-  legendary: 'rarity-legendary-hover',
-}
-
-const rarityBadge: Record<string, string> = {
-  common: 'badge-common',
-  rare: 'badge-rare',
-  epic: 'badge-epic',
-  legendary: 'badge-legendary',
-}
-
 const rarityLabel: Record<string, string> = {
   common: 'Common',
   rare: 'Rare',
