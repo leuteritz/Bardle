@@ -124,31 +124,38 @@ onUnmounted(() => {
 
           <!-- ════════ RECHTE SEITE ════════ -->
           <div class="flex items-center gap-2 px-3 header-side header-side--right">
-            <div class="flex-shrink-0">
+
+            <!-- Universe Portal + Meep vertikal gestapelt -->
+            <div class="z-[65] flex-shrink-0 flex flex-col items-center" style="width: clamp(110px, 11vw, 170px)">
+              <UniversePortalComponent />
               <MeepIndicatorComponent />
             </div>
 
             <div class="header-divider" aria-hidden="true"></div>
 
-            <div class="z-[65] flex-shrink-0" style="width: clamp(110px, 11vw, 170px)">
-              <UniversePortalComponent />
-            </div>
-
-            <div class="header-divider" aria-hidden="true"></div>
-
-            <div class="relative flex-shrink-0">
+            <!-- Inventory-Kreis (identisch mit Bard-Portrait: w-36 h-36, runde Innenmaske) -->
+            <div class="relative flex-shrink-0 header-inventory-bump">
               <button
-                class="w-8 h-8 inventory-btn"
+                class="inventory-circle-btn"
                 title="Inventar öffnen"
                 @mouseenter="isHovering = true"
                 @mouseleave="isHovering = false"
                 @click="isInventoryOpen = true"
               >
-                <img
-                  src="/img/Bag.png"
-                  class="object-contain w-full h-full"
-                  alt="Inventar öffnen"
-                />
+                <div class="relative w-36 h-36">
+                  <!-- Dekorativer Goldring (statisch, kein Fortschritt) -->
+                  <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(160,110,15,0.45)" stroke-width="7" />
+                  </svg>
+                  <!-- Bag-Icon im Kreis -->
+                  <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
+                    <img
+                      src="/img/Bag.png"
+                      class="object-contain w-full h-full p-4"
+                      alt="Inventar öffnen"
+                    />
+                  </div>
+                </div>
               </button>
               <InventoryTooltip :visible="isHovering && !isInventoryOpen" />
             </div>
@@ -467,20 +474,30 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   INVENTAR-BUTTON
+   INVENTAR-KREIS — spiegelt Bard-Portrait
    ================================================================ */
-.inventory-btn {
-  border-radius: 4px;
-  padding: 2px;
-  transition:
-    transform 0.15s ease,
-    filter 0.15s ease;
+.header-inventory-bump {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex-shrink: 0;
 }
-.inventory-btn:hover {
-  transform: scale(1.12);
-  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+.inventory-circle-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: block;
 }
-.inventory-btn:active {
+.inventory-portrait-inner {
+  border-radius: 50%;
+  background: #141410;
+  transition: transform 0.3s ease;
+}
+.inventory-circle-btn:hover .inventory-portrait-inner {
+  transform: scale(1.06);
+}
+.inventory-circle-btn:active .inventory-portrait-inner {
   transform: scale(0.96);
 }
 

@@ -10,14 +10,14 @@ const gameStore = useGameStore()
       <!-- Label + Prozent -->
       <div class="flex items-center justify-center px-0.5">
         <span
-          class="text-2xl font-extrabold tabular-nums portal-percent"
+          class="text-base font-bold tabular-nums portal-percent"
         >
           {{ gameStore.universeRescueProgress.toFixed(1) }}%
         </span>
       </div>
 
       <!-- Progress Bar -->
-      <div class="relative w-full h-8 overflow-hidden rounded-full">
+      <div class="relative w-full h-5 overflow-hidden rounded-full">
         <!-- Leerer Hintergrund -->
         <div class="absolute inset-0 tube-bg"></div>
 
