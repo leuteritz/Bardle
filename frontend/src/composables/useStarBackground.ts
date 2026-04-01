@@ -15,7 +15,6 @@ type StarItem = {
   b: number
   twinklePhase: number
   twinkleSpeed: number
-
 }
 
 type GalaxyItem = {
@@ -64,6 +63,7 @@ const WARP_SPEED_MAX = 70 // max px/s am Bildschirmrand
 // ─── Galaxy Transition Constants ─────────────────────────────────────────────
 
 const GALAXY_TRANS_WARP_MS = 4500
+const GALAXY_TRANS_DECEL_MS = 2200
 const GALAXY_TRANS_FADEIN_MS = 400
 
 // ─── Galaxy Constants ─────────────────────────────────────────────────────────
@@ -963,11 +963,9 @@ export function useStarBackground() {
   let wasHyperspaceActive = false
 
   // ── Galaxy-Transitions-Zustand ──────────────────────────────────────────────
-  let galaxyTransPhase: 'idle' | 'warp' | 'fadein' = 'idle'
+  let galaxyTransPhase: 'idle' | 'warp' | 'decel' = 'idle'
   let galaxyTransElapsed = 0
   let wasPendingTransition = false
-  // NEU: Flash-Overlay-Alpha (0 = unsichtbar, 1 = vollständig weiß-blau)
-  let galaxyTransFlashAlpha = 0
   let galaxyTransDir = 0
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
@@ -1120,10 +1118,6 @@ export function useStarBackground() {
         galaxyTransPhase = 'warp'
         galaxyTransElapsed = 0
         galaxyTransDir = Math.random() * Math.PI * 2
-        galaxyTransFlashAlpha = 0
-
-        // NEU: aktuelle kartesische Position jedes Sterns merken
-        const w2 = starsContainer.value?.clientWidth ?? window.innerWidth
       }
     }
     wasPendingTransition = pendingTrans
@@ -1133,42 +1127,15 @@ export function useStarBackground() {
 
       if (galaxyTransPhase === 'warp') {
         if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
-          // ── Übergangsmoment: commitAdvance + Burst-Respawn + Flash ──────────
+          // ── Ankunft: commitAdvance, nahtloser Übergang in Decel ───────────────
           galaxyStore.commitAdvance()
-
-          const maxD =
-            Math.hypot(
-              (starsContainer.value?.clientWidth ?? window.innerWidth) / 2,
-              (starsContainer.value?.clientHeight ?? window.innerHeight) / 2,
-            ) + 20
-
-          // Sterne über ganzen Raum verteilen → wie Game-Start (Sterne fliegen überall auf Spieler zu)
-          const minD = maxD * 0.1
-          for (const star of stars) {
-            star.dist = minD + Math.random() * (maxD * 0.85)
-            star.angle = Math.random() * Math.PI * 2
-            star.baseSpeed = 0.5 + Math.random() * 1.0
-          }
-
-          // Flash-Overlay triggern (wird im Fadein wieder abgebaut)
-          galaxyTransFlashAlpha = 1.0
-
-          galaxyTransPhase = 'fadein'
+          galaxyTransPhase = 'decel'
           galaxyTransElapsed -= GALAXY_TRANS_WARP_MS
         }
-      } else if (galaxyTransPhase === 'fadein') {
-        // Flash in den ersten 28 % des Fadeins abbauen
-        const flashDuration = GALAXY_TRANS_FADEIN_MS * 0.28
-        galaxyTransFlashAlpha = Math.max(0, 1 - galaxyTransElapsed / flashDuration)
-
-        if (galaxyTransElapsed >= GALAXY_TRANS_FADEIN_MS) {
+      } else if (galaxyTransPhase === 'decel') {
+        if (galaxyTransElapsed >= GALAXY_TRANS_DECEL_MS) {
           galaxyTransPhase = 'idle'
           galaxyTransElapsed = 0
-          galaxyTransFlashAlpha = 0
-          // Geschwindigkeiten auf Normal zurücksetzen
-          for (const star of stars) {
-            star.baseSpeed = 0.5 + Math.random() * 1.0
-          }
         }
       }
     }
@@ -1179,8 +1146,10 @@ export function useStarBackground() {
       // Kubisches Ease-In: sanft starten, explosiv enden → 1× bis 45×
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
       speedMultiplier = 1 + 44 * (t * t * t)
-    } else if (galaxyTransPhase === 'fadein') {
-      speedMultiplier = 1
+    } else if (galaxyTransPhase === 'decel') {
+      // Steiles Ease-Out: 45× → 1× — matcht Warp-Ende, bremst schnell auf Normal
+      const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
+      speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
     } else {
       speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : 1
     }
@@ -1201,8 +1170,7 @@ export function useStarBackground() {
       // Bewegungsgeschwindigkeit je Phase
       let speed: number
       if (galaxyTransPhase === 'warp') {
-        // Kartesische Bewegung: Stern bewegt sich von seiner aktuellen Position
-        // in die gemeinsame Richtung galaxyTransDir
+        // Kartesische Bewegung: alle Sterne fliegen in galaxyTransDir
         speed = star.baseSpeed * WARP_SPEED_MAX * speedMultiplier
 
         const sx = cx + Math.cos(star.angle) * star.dist
@@ -1212,8 +1180,9 @@ export function useStarBackground() {
         const ddx = nx - cx
         const ddy = ny - cy
         star.dist = Math.hypot(ddx, ddy)
-        star.angle = Math.atan2(ddy, ddx) // Winkel folgt der echten Position, nicht galaxyTransDir
-      } else if (galaxyTransPhase === 'fadein') {
+        star.angle = Math.atan2(ddy, ddx)
+      } else if (galaxyTransPhase === 'decel') {
+        // Normale Polarbewegung: Sterne fliegen von überall auf Spieler zu, bremsen sanft ab
         speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
         star.dist += speed * delta
       } else {
@@ -1222,7 +1191,17 @@ export function useStarBackground() {
       }
 
       if (star.dist > maxDist) {
-        if (galaxyTransPhase !== 'warp') {
+        if (galaxyTransPhase === 'warp') {
+          // Gleichmäßige Verteilung im hinteren Halbkreis → füllt den ganzen Screen
+          star.angle = galaxyTransDir + Math.PI / 2 + Math.random() * Math.PI
+          star.dist = maxDist * (0.05 + Math.random() * 0.88)
+          star.baseSpeed = 0.5 + Math.random() * 1.0
+        } else if (galaxyTransPhase === 'decel') {
+          // Sterne im sichtbaren Helligkeitsbereich (norm ≥ 0.25 → distAlpha = 1)
+          star.angle = Math.random() * Math.PI * 2
+          star.dist = maxDist * (0.25 + Math.random() * 0.65)
+          star.baseSpeed = 0.5 + Math.random() * 1.0
+        } else {
           star.angle = Math.random() * Math.PI * 2
           star.dist = hyperActive
             ? maxDist * (0.02 + Math.random() * 0.08)
@@ -1244,13 +1223,17 @@ export function useStarBackground() {
       let alpha: number
       if (hyperActive) {
         alpha = Math.min(1, distAlpha * 1.5)
+      } else if (galaxyTransPhase === 'decel') {
+        // Boost während Decel — verhindert dunkle Sterne im Übergang
+        alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
       } else {
         alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
       }
 
       if (ctx) {
         const isStreaking =
-          (hyperActive || galaxyTransPhase === 'warp') && speedMultiplier > 1.5
+          (hyperActive || galaxyTransPhase === 'warp' || galaxyTransPhase === 'decel') &&
+          speedMultiplier > 1.5
 
         const trailAngle = galaxyTransPhase === 'warp' ? galaxyTransDir : star.angle
 
@@ -1307,17 +1290,6 @@ export function useStarBackground() {
         if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
         galaxies.splice(i, 1)
       }
-    }
-
-    // ── Flash-Overlay (wird nach commitAdvance() gezeichnet) ──────────────────
-    if (ctx && galaxyTransFlashAlpha > 0) {
-      // Sanfter blau-weißer Blitz (wie Hyperraumsprung)
-      const eased = galaxyTransFlashAlpha * galaxyTransFlashAlpha // quadratischer Abfall
-      ctx.save()
-      ctx.globalCompositeOperation = 'source-over'
-      ctx.fillStyle = `rgba(190, 215, 255, ${eased.toFixed(3)})`
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-      ctx.restore()
     }
 
     animFrame = requestAnimationFrame(animateStars)
