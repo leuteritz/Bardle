@@ -24,6 +24,7 @@ import { useShopStore } from './shopStore'
 import { useBattleStore } from './battleStore'
 import { useInventoryStore } from './inventoryStore'
 import { useSectionStore } from './sectionStore'
+import { useGalaxyStore } from './galaxyStore'
 import { SECTIONS, SECTION_BOSS_HP_MULTIPLIER, SECTION_BOSS_ENRAGE_MULTIPLIER } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -297,6 +298,14 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       // Notify section store to update progress and unlocks
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated(boss.isSectionBoss ?? false)
+
+      // Galaxy progression: galaxy boss kill or regular planet rescue
+      const galaxyStore = useGalaxyStore()
+      if (galaxyStore.pendingGalaxyBoss) {
+        galaxyStore.onGalaxyBossDefeated()
+      } else {
+        galaxyStore.onPlanetRescued()
+      }
     },
 
     openBossModal(planetId?: string) {

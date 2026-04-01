@@ -8,6 +8,7 @@ import { useItemStore } from '../stores/itemStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useSectionStore } from '../stores/sectionStore'
+import { useGalaxyStore } from '../stores/galaxyStore'
 import { useCpsStore } from '../stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
 import { logger } from '../utils/logger'
@@ -26,6 +27,7 @@ export function usePersistence() {
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
     const sectionStore = useSectionStore()
+    const galaxyStore = useGalaxyStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -101,6 +103,12 @@ export function usePersistence() {
         highestUnlockedSectionId: sectionStore.highestUnlockedSectionId,
         sectionProgress: { ...sectionStore.sectionProgress },
         pendingSectionBoss: sectionStore.pendingSectionBoss,
+      },
+      galaxy: {
+        currentGalaxy: galaxyStore.currentGalaxy,
+        planetsRescued: galaxyStore.planetsRescued,
+        planetsRequired: galaxyStore.planetsRequired,
+        galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
       },
     }
 
@@ -257,6 +265,20 @@ export function usePersistence() {
         }
       }
 
+      // Restore galaxyStore
+      const galaxyStore = useGalaxyStore()
+      if (saved.galaxy) {
+        const gx = saved.galaxy
+        galaxyStore.currentGalaxy = gx.currentGalaxy ?? 1
+        galaxyStore.planetsRescued = gx.planetsRescued ?? 0
+        galaxyStore.planetsRequired = gx.planetsRequired ?? 3
+        galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
+        // Re-derive pendingGalaxyBoss: if all planets rescued but boss not yet done
+        galaxyStore.pendingGalaxyBoss =
+          galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
+          !galaxyStore.galaxyBossDefeated
+      }
+
       logger.info('System', 'Game loaded', {
         level: gameStore.level,
         chimes: gameStore.chimes,
@@ -358,6 +380,8 @@ export function usePersistence() {
     planetBossStore.$reset()
     const sectionStoreReset = useSectionStore()
     sectionStoreReset.$reset()
+    const galaxyStoreReset = useGalaxyStore()
+    galaxyStoreReset.$reset()
     const itemStore = useItemStore()
     itemStore.$reset()
     cpsStore.$reset()

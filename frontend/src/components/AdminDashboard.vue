@@ -6,6 +6,7 @@ import { useShopStore } from '../stores/shopStore'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useInventoryStore } from '../stores/inventoryStore'
+import { useGalaxyStore } from '../stores/galaxyStore'
 import { MATERIALS, pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 
@@ -17,6 +18,7 @@ const shopStore = useShopStore()
 const planetEventStore = usePlanetEventStore()
 const planetBossStore = usePlanetBossStore()
 const inventoryStore = useInventoryStore()
+const galaxyStore = useGalaxyStore()
 
 const isOpen = ref(false)
 const search = ref('')
@@ -40,6 +42,14 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+
+// ── Galaxy ───────────────────────────────────────────────────────────────────
+
+function forceCompleteGalaxy() {
+  galaxyStore.planetsRescued = galaxyStore.planetsRequired
+  galaxyStore.galaxyBossDefeated = true
+  galaxyStore.pendingGalaxyBoss = false
+}
 
 // ── Planet Spawn ─────────────────────────────────────────────────────────────
 
@@ -299,6 +309,9 @@ function fillAllMaterials() {
             <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
               <span>🏆</span> Spawn + Champion
             </button>
+            <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
+              <span>🌌</span> Complete Galaxy
+            </button>
           </div>
         </div>
 
@@ -430,6 +443,9 @@ function fillAllMaterials() {
         </button>
         <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
           <span>🏆</span> Spawn + Champion
+        </button>
+        <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
+          <span>🌌</span> Complete Galaxy
         </button>
       </div>
     </div>
@@ -677,6 +693,15 @@ function fillAllMaterials() {
   background: #1e1a10;
   border-color: var(--rpg-gold);
   color: var(--rpg-gold-bright);
+}
+.admin-spawn-btn--galaxy {
+  color: #80c0e8;
+  border-color: #1a2a3c;
+}
+.admin-spawn-btn--galaxy:hover {
+  background: #101828;
+  border-color: #4080b0;
+  color: #a8d8f8;
 }
 
 /* ── Search bar ── */

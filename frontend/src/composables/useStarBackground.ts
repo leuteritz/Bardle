@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../stores/gameStore'
+import { useGalaxyStore } from '../stores/galaxyStore'
 import { STAR_COUNT } from '../config/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,6 +15,7 @@ type StarItem = {
   b: number
   twinklePhase: number
   twinkleSpeed: number
+
 }
 
 type GalaxyItem = {
@@ -58,6 +60,11 @@ type GalaxyTypeConfig = {
 // ─── Star Constants ───────────────────────────────────────────────────────────
 
 const WARP_SPEED_MAX = 70 // max px/s am Bildschirmrand
+
+// ─── Galaxy Transition Constants ─────────────────────────────────────────────
+
+const GALAXY_TRANS_WARP_MS = 4500
+const GALAXY_TRANS_FADEIN_MS = 400
 
 // ─── Galaxy Constants ─────────────────────────────────────────────────────────
 
@@ -954,9 +961,17 @@ export function useStarBackground() {
   let lastTimestamp = 0
   let hyperspaceElapsed = 0
   let wasHyperspaceActive = false
+
+  // ── Galaxy-Transitions-Zustand ──────────────────────────────────────────────
+  let galaxyTransPhase: 'idle' | 'warp' | 'fadein' = 'idle'
+  let galaxyTransElapsed = 0
+  let wasPendingTransition = false
+  // NEU: Flash-Overlay-Alpha (0 = unsichtbar, 1 = vollständig weiß-blau)
+  let galaxyTransFlashAlpha = 0
+  let galaxyTransDir = 0
+
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
-
   const timeouts: ReturnType<typeof setTimeout>[] = []
 
   const checkReducedMotion = () => {
@@ -971,6 +986,7 @@ export function useStarBackground() {
     starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
   }
 
+  // ── Galaxy-Spawn-Logik (unverändert) ────────────────────────────────────────
   function spawnGalaxy(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     if (galaxies.length >= GALAXY_MAX_COUNT) return
@@ -992,7 +1008,6 @@ export function useStarBackground() {
 
     const lifetime = 10_000 + Math.random() * 6_000
     const maxScale = 0.75 + Math.random() * 0.6
-
     const rotDir = Math.random() > 0.5 ? 1 : -1
     const rotDeg = config.rotRange[0] + Math.random() * (config.rotRange[1] - config.rotRange[0])
     const rot = rotDir * rotDeg
@@ -1076,42 +1091,105 @@ export function useStarBackground() {
       twinklePhase: Math.random() * Math.PI * 2,
       twinkleSpeed: 0.5 + Math.random() * 1.5,
     }
-
     stars.push(item)
     return item
   }
 
+  // ── Haupt-Animationsschleife ────────────────────────────────────────────────
   function animateStars(timestamp: number): void {
     if (lastTimestamp === 0) lastTimestamp = timestamp
     const rawDelta = (timestamp - lastTimestamp) / 1000
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
-    // Hyperspace state — access store directly each frame to avoid circular dep issues
+    // Hyperspace
     const gameStore = useGameStore()
     const hyperActive = gameStore.isHyperspaceActive
-
-    if (hyperActive && !wasHyperspaceActive) {
-      hyperspaceElapsed = 0
-    }
+    if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
     wasHyperspaceActive = hyperActive
+    if (hyperActive) hyperspaceElapsed += delta
 
-    if (hyperActive) {
-      hyperspaceElapsed += delta
+    // ── Galaxy-Transitions-Phasenmaschine ────────────────────────────────────
+    const galaxyStore = useGalaxyStore()
+    const pendingTrans = galaxyStore.pendingTransition
+
+    if (pendingTrans && !wasPendingTransition) {
+      if (prefersReducedMotion.value) {
+        galaxyStore.commitAdvance()
+      } else {
+        galaxyTransPhase = 'warp'
+        galaxyTransElapsed = 0
+        galaxyTransDir = Math.random() * Math.PI * 2
+        galaxyTransFlashAlpha = 0
+
+        // NEU: aktuelle kartesische Position jedes Sterns merken
+        const w2 = starsContainer.value?.clientWidth ?? window.innerWidth
+      }
+    }
+    wasPendingTransition = pendingTrans
+
+    if (galaxyTransPhase !== 'idle') {
+      galaxyTransElapsed += delta * 1000
+
+      if (galaxyTransPhase === 'warp') {
+        if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
+          // ── Übergangsmoment: commitAdvance + Burst-Respawn + Flash ──────────
+          galaxyStore.commitAdvance()
+
+          const maxD =
+            Math.hypot(
+              (starsContainer.value?.clientWidth ?? window.innerWidth) / 2,
+              (starsContainer.value?.clientHeight ?? window.innerHeight) / 2,
+            ) + 20
+
+          // Sterne über ganzen Raum verteilen → wie Game-Start (Sterne fliegen überall auf Spieler zu)
+          const minD = maxD * 0.1
+          for (const star of stars) {
+            star.dist = minD + Math.random() * (maxD * 0.85)
+            star.angle = Math.random() * Math.PI * 2
+            star.baseSpeed = 0.5 + Math.random() * 1.0
+          }
+
+          // Flash-Overlay triggern (wird im Fadein wieder abgebaut)
+          galaxyTransFlashAlpha = 1.0
+
+          galaxyTransPhase = 'fadein'
+          galaxyTransElapsed -= GALAXY_TRANS_WARP_MS
+        }
+      } else if (galaxyTransPhase === 'fadein') {
+        // Flash in den ersten 28 % des Fadeins abbauen
+        const flashDuration = GALAXY_TRANS_FADEIN_MS * 0.28
+        galaxyTransFlashAlpha = Math.max(0, 1 - galaxyTransElapsed / flashDuration)
+
+        if (galaxyTransElapsed >= GALAXY_TRANS_FADEIN_MS) {
+          galaxyTransPhase = 'idle'
+          galaxyTransElapsed = 0
+          galaxyTransFlashAlpha = 0
+          // Geschwindigkeiten auf Normal zurücksetzen
+          for (const star of stars) {
+            star.baseSpeed = 0.5 + Math.random() * 1.0
+          }
+        }
+      }
     }
 
-    // Speed multiplier: ramps from 1× to 20× over first 2s of hyperspace
-    const speedMultiplier = hyperActive
-      ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
-      : 1
+    // ── Geschwindigkeitsmultiplikator ─────────────────────────────────────────
+    let speedMultiplier: number
+    if (galaxyTransPhase === 'warp') {
+      // Kubisches Ease-In: sanft starten, explosiv enden → 1× bis 45×
+      const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
+      speedMultiplier = 1 + 44 * (t * t * t)
+    } else if (galaxyTransPhase === 'fadein') {
+      speedMultiplier = 1
+    } else {
+      speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : 1
+    }
 
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
     const h = starsContainer.value?.clientHeight ?? window.innerHeight
-
     const ctx = starCanvas.value?.getContext('2d') ?? null
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    }
+
+    if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
     const cx = w / 2,
       cy = h / 2
@@ -1119,67 +1197,96 @@ export function useStarBackground() {
 
     for (const star of stars) {
       const norm = star.dist / maxDist // 0–1
-      const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
-      star.dist += speed * delta
+
+      // Bewegungsgeschwindigkeit je Phase
+      let speed: number
+      if (galaxyTransPhase === 'warp') {
+        // Kartesische Bewegung: Stern bewegt sich von seiner aktuellen Position
+        // in die gemeinsame Richtung galaxyTransDir
+        speed = star.baseSpeed * WARP_SPEED_MAX * speedMultiplier
+
+        const sx = cx + Math.cos(star.angle) * star.dist
+        const sy = cy + Math.sin(star.angle) * star.dist
+        const nx = sx + Math.cos(galaxyTransDir) * speed * delta
+        const ny = sy + Math.sin(galaxyTransDir) * speed * delta
+        const ddx = nx - cx
+        const ddy = ny - cy
+        star.dist = Math.hypot(ddx, ddy)
+        star.angle = Math.atan2(ddy, ddx) // Winkel folgt der echten Position, nicht galaxyTransDir
+      } else if (galaxyTransPhase === 'fadein') {
+        speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
+        star.dist += speed * delta
+      } else {
+        speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
+        star.dist += speed * delta
+      }
 
       if (star.dist > maxDist) {
-        star.angle = Math.random() * Math.PI * 2
-        // During hyperspace, respawn closer to center for "rushing past" effect
-        star.dist = hyperActive
-          ? maxDist * (0.02 + Math.random() * 0.08)
-          : maxDist * (0.1 + Math.random() * 0.35)
-        star.baseSpeed = 0.5 + Math.random() * 1.0
+        if (galaxyTransPhase !== 'warp') {
+          star.angle = Math.random() * Math.PI * 2
+          star.dist = hyperActive
+            ? maxDist * (0.02 + Math.random() * 0.08)
+            : maxDist * (0.1 + Math.random() * 0.35)
+          star.baseSpeed = 0.5 + Math.random() * 1.0
+        }
       }
 
       // Polar → Kartesisch
       const x = cx + Math.cos(star.angle) * star.dist
       const y = cy + Math.sin(star.angle) * star.dist
 
-      // Einblenden nahe Zentrum, heller weiter außen
+      // Alpha-Berechnung
       const distAlpha = Math.min(1, norm * 4)
       star.twinklePhase += star.twinkleSpeed * delta
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
-      const alpha = hyperActive
-        ? Math.min(1, distAlpha * 1.5)
-        : distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
+
+      let alpha: number
+      if (hyperActive) {
+        alpha = Math.min(1, distAlpha * 1.5)
+      } else {
+        alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
+      }
 
       if (ctx) {
-        if (hyperActive && speedMultiplier > 1.5) {
-          // Draw radial streaks instead of circles
-          const trailLength = speed * delta * 2
-          const prevX = cx + Math.cos(star.angle) * (star.dist - trailLength)
-          const prevY = cy + Math.sin(star.angle) * (star.dist - trailLength)
-          const lineWidth = 1 + speedMultiplier * 0.15
+        const isStreaking =
+          (hyperActive || galaxyTransPhase === 'warp') && speedMultiplier > 1.5
+
+        const trailAngle = galaxyTransPhase === 'warp' ? galaxyTransDir : star.angle
+
+        if (isStreaking) {
+          const trailLength = speed * delta * 2.2
+          const trailFromX = x - Math.cos(trailAngle) * trailLength
+          const trailFromY = y - Math.sin(trailAngle) * trailLength
+
+          const lineWidth = 0.8 + speedMultiplier * 0.12
           ctx.beginPath()
-          ctx.moveTo(prevX, prevY)
+          ctx.moveTo(trailFromX, trailFromY)
           ctx.lineTo(x, y)
-          ctx.strokeStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
+          ctx.strokeStyle = `rgba(${star.r},${star.g},${star.b},${alpha})`
           ctx.lineWidth = lineWidth
           ctx.lineCap = 'round'
           ctx.stroke()
         } else {
-          // Normal star rendering
+          // Normaler Stern mit Glühen
           const starSize = 0.8 + norm * norm * 5.0
-          // Core
           ctx.beginPath()
           ctx.arc(x, y, starSize, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha.toFixed(2)})`
+          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha})`
           ctx.fill()
-          // Glow
           ctx.beginPath()
           ctx.arc(x, y, starSize * 2, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${(alpha * 0.12).toFixed(2)})`
+          ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha * 0.12})`
           ctx.fill()
         }
       }
     }
 
+    // ── Galaxy-SVG-Animation ──────────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
       g.elapsed += delta * 1000
       const p = Math.min(g.elapsed / g.lifetime, 1)
-
       g.scale = 0.05 + (g.maxScale - 0.05) * (p * p)
 
       let opacity: number
@@ -1187,9 +1294,10 @@ export function useStarBackground() {
       else if (p < 0.75) opacity = 1
       else opacity = 1 - (p - 0.75) / 0.25
 
-      // Fade galaxies out during hyperspace
-      if (hyperActive) {
-        opacity *= Math.max(0, 1 - hyperspaceElapsed * 2)
+      // Galaxien bei Warp schnell ausblenden (3× schneller als bisher)
+      if (hyperActive || galaxyTransPhase === 'warp') {
+        const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
+        opacity *= Math.max(0, 1 - fadeTime * 3)
       }
 
       g.el.style.opacity = opacity.toFixed(2)
@@ -1201,9 +1309,21 @@ export function useStarBackground() {
       }
     }
 
+    // ── Flash-Overlay (wird nach commitAdvance() gezeichnet) ──────────────────
+    if (ctx && galaxyTransFlashAlpha > 0) {
+      // Sanfter blau-weißer Blitz (wie Hyperraumsprung)
+      const eased = galaxyTransFlashAlpha * galaxyTransFlashAlpha // quadratischer Abfall
+      ctx.save()
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.fillStyle = `rgba(190, 215, 255, ${eased.toFixed(3)})`
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+      ctx.restore()
+    }
+
     animFrame = requestAnimationFrame(animateStars)
   }
 
+  // ── Resize, Stars, Cleanup (unverändert) ─────────────────────────────────────
   function handleResize(): void {
     if (resizeTimeout) clearTimeout(resizeTimeout)
     resizeTimeout = setTimeout(() => {
@@ -1216,9 +1336,7 @@ export function useStarBackground() {
       const h = starsContainer.value.clientHeight || window.innerHeight
       const newMaxDist = Math.hypot(w / 2, h / 2) + 20
       const scale = newMaxDist / oldMaxDist
-      for (const star of stars) {
-        star.dist = star.dist * scale
-      }
+      for (const star of stars) star.dist = star.dist * scale
     }, 150)
   }
 
@@ -1226,9 +1344,7 @@ export function useStarBackground() {
     if (!starsContainer.value || prefersReducedMotion.value) return
     stars.length = 0
     resizeCanvas()
-    for (let i = 0; i < STAR_COUNT; i++) {
-      spawnStar(true)
-    }
+    for (let i = 0; i < STAR_COUNT; i++) spawnStar(true)
     lastTimestamp = 0
     animFrame = requestAnimationFrame(animateStars)
   }
@@ -1249,11 +1365,8 @@ export function useStarBackground() {
     window.removeEventListener('resize', handleResize)
     if (resizeTimeout) clearTimeout(resizeTimeout)
     if (starsContainer.value) {
-      // Remove galaxy SVGs; canvas is managed by Vue
       for (const galaxy of galaxies) {
-        if (starsContainer.value.contains(galaxy.el)) {
-          starsContainer.value.removeChild(galaxy.el)
-        }
+        if (starsContainer.value.contains(galaxy.el)) starsContainer.value.removeChild(galaxy.el)
       }
     }
   }

@@ -7,6 +7,7 @@ import {
   PLANET_MAX_COUNT,
 } from '../config/constants'
 import { usePlanetBossStore } from './planetBossStore'
+import { useGalaxyStore } from './galaxyStore'
 import { logger } from '../utils/logger'
 
 export const usePlanetEventStore = defineStore('planetEvent', {
@@ -25,9 +26,18 @@ export const usePlanetEventStore = defineStore('planetEvent', {
         bossStore.checkEnrage()
       }
 
+      const activeBossCount = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired).length
+
+      // Galaxy boss: bypass interval — spawn immediately when all planets are rescued
+      const galaxyStore = useGalaxyStore()
+      if (galaxyStore.pendingGalaxyBoss && !this.pendingRescue && activeBossCount === 0) {
+        this.pendingRescue = true
+        logger.info('Planet', 'Galaxy final boss triggered')
+        return
+      }
+
       // Roll for new event every N in-game seconds
       if (inGameTime - this.lastEventCheckSecond < PLANET_EVENT_CHECK_INTERVAL) return
-      const activeBossCount = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired).length
       if (activeBossCount >= PLANET_MAX_COUNT || this.pendingRescue) return
 
       this.lastEventCheckSecond = inGameTime

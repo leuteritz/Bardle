@@ -1,34 +1,19 @@
 <template>
   <div class="section-nav">
-    <!-- Linker Pfeil: korrekt disabled bei Sektion 1, kein Glow nötig -->
-    <button
-      class="nav-arrow"
-      :disabled="activeSectionId <= 1"
-      @click="navigate(-1)"
-      aria-label="Vorherige Galaxis"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <polyline points="15 18 9 12 15 6" />
-      </svg>
-    </button>
-
     <div class="nav-content">
       <div class="nav-galaxy-row">
-        <span class="nav-galaxy-name">{{ activeSection?.name ?? '—' }}</span>
-        <span v-if="sectionStore.pendingSectionBoss" class="nav-boss-badge" role="status">
+        <span class="nav-galaxy-name">Galaxie {{ galaxyStore.currentGalaxy }}</span>
+        <!-- Galaxy final boss indicator -->
+        <span v-if="galaxyStore.needsFinalBoss" class="nav-galaxy-boss-badge" role="status">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path
-              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-            />
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          Galaxie-Boss!
+        </span>
+        <!-- Regular section boss indicator -->
+        <span v-else-if="sectionStore.pendingSectionBoss" class="nav-boss-badge" role="status">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           </svg>
           Boss
         </span>
@@ -50,81 +35,59 @@
         </svg>
         <span class="nav-planets-label">Gerettete Planeten</span>
         <span class="nav-planets-count">
-          <span class="nav-count-current">{{ rescueCount }}</span>
+          <span class="nav-count-current">{{ galaxyStore.planetsRescued }}</span>
           <span class="nav-count-sep">/</span>
-          <span class="nav-count-total">{{ requiredRescues }}</span>
+          <span class="nav-count-total">{{ galaxyStore.planetsRequired }}</span>
         </span>
       </div>
 
       <div class="nav-dots" role="presentation" aria-hidden="true">
         <span
-          v-for="i in requiredRescues"
+          v-for="i in galaxyStore.planetsRequired"
           :key="i"
           class="nav-dot"
-          :class="{
-            'nav-dot--filled': i <= rescueCount,
-            'nav-dot--boss': sectionStore.pendingSectionBoss && i <= rescueCount,
-          }"
+          :class="{ 'nav-dot--filled': i <= galaxyStore.planetsRescued }"
+        />
+        <!-- Extra dot for the galaxy boss -->
+        <span
+          v-if="galaxyStore.planetsRescued >= galaxyStore.planetsRequired"
+          class="nav-dot nav-dot--boss-slot"
+          :class="{ 'nav-dot--boss-done': galaxyStore.galaxyBossDefeated }"
         />
       </div>
-    </div>
 
-    <!-- Rechter Pfeil: leuchtet auf wenn nächste Sektion freigeschaltet -->
-    <button
-      class="nav-arrow"
-      :class="{ 'nav-arrow--next-ready': canAdvance }"
-      :disabled="activeSectionId >= 10 || !isNextUnlocked"
-      @click="navigate(1)"
-      aria-label="Nächste Galaxis"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+      <!-- Galaxy boss pending hint -->
+      <div v-if="galaxyStore.needsFinalBoss" class="nav-galaxy-boss-hint">
+        Besiege den Galaxie-Boss, um fortzufahren!
+      </div>
+
+      <button
+        v-if="galaxyStore.isComplete"
+        class="nav-galaxy-advance-btn"
+        :class="{ 'nav-galaxy-advance-btn--glow': !galaxyStore.pendingTransition }"
+        :disabled="galaxyStore.pendingTransition"
+        @click="galaxyStore.requestTransition()"
       >
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    </button>
+        Nächste Galaxie →
+      </button>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent } from 'vue'
 import { useSectionStore } from '../../../stores/sectionStore'
-import { SECTIONS } from '../../../config/sections'
+import { useGalaxyStore } from '../../../stores/galaxyStore'
 
 export default defineComponent({
   name: 'SectionNavigatorComponent',
   setup() {
     const sectionStore = useSectionStore()
-
-    const activeSectionId = computed(() => sectionStore.activeSectionId)
-    const activeSection = computed(() => SECTIONS.find((s) => s.id === activeSectionId.value))
-    const rescueCount = computed(() => sectionStore.activeSectionProgress.rescueCount)
-    const requiredRescues = computed(() => sectionStore.requiredRescues)
-    const isNextUnlocked = computed(() => sectionStore.isSectionUnlocked(activeSectionId.value + 1))
-
-    // Leuchtet auf: nächste Sektion verfügbar UND noch nicht die letzte
-    const canAdvance = computed(() => isNextUnlocked.value && activeSectionId.value < 10)
-
-    function navigate(delta: -1 | 1) {
-      sectionStore.navigateToSection(activeSectionId.value + delta)
-    }
+    const galaxyStore = useGalaxyStore()
 
     return {
       sectionStore,
-      activeSectionId,
-      activeSection,
-      rescueCount,
-      requiredRescues,
-      isNextUnlocked,
-      canAdvance,
-      navigate,
+      galaxyStore,
     }
   },
 })
@@ -135,69 +98,10 @@ export default defineComponent({
 .section-nav {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   padding: 0.35rem 0.5rem;
   width: 100%;
   border: none;
   background: none;
-}
-
-/* ─── Pfeil-Buttons ─── */
-.nav-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--rpg-text-dim);
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s;
-}
-
-.nav-arrow:hover:not(:disabled) {
-  color: var(--rpg-gold-dim);
-  border-color: rgba(200, 144, 64, 0.25);
-  background: rgba(200, 144, 64, 0.06);
-}
-
-.nav-arrow:disabled {
-  color: #333;
-  cursor: not-allowed;
-}
-
-/* ─── Rechter Pfeil: Glow wenn nächste Sektion freigeschaltet ─── */
-.nav-arrow--next-ready {
-  color: var(--rpg-gold);
-  border-color: rgba(232, 192, 64, 0.45);
-  background: rgba(232, 192, 64, 0.08);
-  animation: next-ready-glow 1.6s ease-in-out infinite alternate;
-}
-
-.nav-arrow--next-ready:hover:not(:disabled) {
-  color: var(--rpg-gold-bright);
-  border-color: rgba(232, 192, 64, 0.7);
-  background: rgba(232, 192, 64, 0.15);
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.35);
-  animation: none;
-}
-
-@keyframes next-ready-glow {
-  from {
-    box-shadow: 0 0 4px rgba(232, 192, 64, 0.15);
-    border-color: rgba(232, 192, 64, 0.3);
-  }
-  to {
-    box-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
-    border-color: rgba(232, 192, 64, 0.65);
-  }
 }
 
 /* ─── Mittelteil ─── */
@@ -224,6 +128,39 @@ export default defineComponent({
   color: var(--rpg-gold-dim);
   letter-spacing: 0.01em;
   white-space: nowrap;
+}
+
+/* ─── Galaxie-Boss Badge ─── */
+.nav-galaxy-boss-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffb040;
+  border: 1px solid rgba(255, 160, 40, 0.7);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  flex-shrink: 0;
+  background: rgba(255, 120, 20, 0.08);
+  animation: galaxy-boss-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes galaxy-boss-pulse {
+  from { opacity: 1; box-shadow: 0 0 4px rgba(255, 130, 30, 0.3); }
+  to   { opacity: 0.6; box-shadow: 0 0 10px rgba(255, 150, 40, 0.7); }
+}
+
+/* ─── Galaxy Boss Hint ─── */
+.nav-galaxy-boss-hint {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 160, 60, 0.85);
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* ─── Boss-Badge ─── */
@@ -324,8 +261,78 @@ export default defineComponent({
   border-color: var(--rpg-green-top);
 }
 
-.nav-dot--boss {
-  background: var(--rpg-gold-dim);
-  border-color: var(--rpg-gold);
+/* Galaxy boss slot dot */
+.nav-dot--boss-slot {
+  background: #2a1a0a;
+  border-color: rgba(255, 120, 40, 0.5);
+  border-style: dashed;
+  animation: boss-slot-pulse 1.1s ease-in-out infinite alternate;
+}
+
+.nav-dot--boss-done {
+  background: var(--rpg-gold-dim, #c89040);
+  border-color: var(--rpg-gold, #e8c040);
+  border-style: solid;
+  animation: none;
+}
+
+@keyframes boss-slot-pulse {
+  from { border-color: rgba(255, 80, 20, 0.4); }
+  to   { border-color: rgba(255, 140, 40, 0.9); }
+}
+
+/* ─── Nächste Galaxie Button ─── */
+.nav-galaxy-advance-btn {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  transition: all 0.1s;
+  width: 100%;
+}
+
+.nav-galaxy-advance-btn--glow {
+  box-shadow:
+    0 0 8px rgba(80, 200, 40, 0.65),
+    0 0 18px rgba(80, 200, 40, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: galaxy-btn-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes galaxy-btn-pulse {
+  from {
+    box-shadow:
+      0 0 6px rgba(80, 200, 40, 0.5),
+      0 0 14px rgba(80, 200, 40, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  to {
+    box-shadow:
+      0 0 12px rgba(80, 200, 40, 0.85),
+      0 0 28px rgba(80, 200, 40, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+.nav-galaxy-advance-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  animation: none;
+}
+
+.nav-galaxy-advance-btn:not(:disabled):hover {
+  background: linear-gradient(to bottom, #60d038, #388e22);
+}
+
+.nav-galaxy-advance-btn:not(:disabled):active {
+  transform: scale(0.97);
 }
 </style>
