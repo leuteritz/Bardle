@@ -5,7 +5,7 @@ import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../BardProfileMenu.vue'
 import UniversePortalComponent from '../UniversePortalComponent.vue'
 import InventoryTooltip from '../InventoryTooltip.vue'
-import SectionNavigatorComponent from '../gameCenter/idle/SectionNavigatorComponent.vue'
+import GalaxyProgressComponent from '../gameCenter/idle/GalaxyProgressComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
 const emit = defineEmits<{ 'open-inventory': [] }>()
@@ -48,7 +48,7 @@ onUnmounted(() => {
       <div class="header-divider" aria-hidden="true"></div>
 
       <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
-        <SectionNavigatorComponent />
+        <GalaxyProgressComponent />
       </div>
     </div>
 

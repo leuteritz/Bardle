@@ -1,5 +1,5 @@
 <template>
-  <div class="section-nav">
+  <div class="galaxy-progress">
     <div class="nav-content">
       <div class="nav-galaxy-row">
         <span class="nav-galaxy-name">Galaxie {{ galaxyStore.currentGalaxy }}</span>
@@ -80,7 +80,7 @@ import { useSectionStore } from '../../../stores/sectionStore'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 
 export default defineComponent({
-  name: 'SectionNavigatorComponent',
+  name: 'GalaxyProgressComponent',
   setup() {
     const sectionStore = useSectionStore()
     const galaxyStore = useGalaxyStore()
@@ -95,7 +95,7 @@ export default defineComponent({
 
 <style scoped>
 /* ─── Wrapper ─── */
-.section-nav {
+.galaxy-progress {
   display: flex;
   align-items: center;
   padding: 0.35rem 0.5rem;
