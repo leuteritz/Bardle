@@ -201,7 +201,20 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     // Distress animation + styling
     const isGalaxyBoss = boss?.isGalaxyBoss ?? false
     item.el.classList.add('planet--rescue')
-    if (isGalaxyBoss) item.el.classList.add('planet--rescue--galaxy')
+    if (isGalaxyBoss) {
+      item.el.classList.add('planet--rescue--galaxy')
+      // Add lila border ring around the planet shape
+      const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
+      const pr = pSize / 2
+      const borderCircle = document.createElementNS(NS, 'circle')
+      borderCircle.setAttribute('cx', String(pr))
+      borderCircle.setAttribute('cy', String(pr))
+      borderCircle.setAttribute('r', String(pr - 1.5))
+      borderCircle.setAttribute('fill', 'none')
+      borderCircle.setAttribute('stroke', 'rgba(180, 60, 255, 0.85)')
+      borderCircle.setAttribute('stroke-width', '2')
+      item.el.appendChild(borderCircle)
+    }
     item.el.style.pointerEvents = 'auto'
     item.el.style.cursor = 'pointer'
 

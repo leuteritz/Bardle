@@ -97,6 +97,10 @@ async function spawnPlanetWithChampion() {
   }
 }
 
+function spawnGalaxyBoss() {
+  galaxyStore.pendingGalaxyBoss = true
+}
+
 // ── Sections ─────────────────────────────────────────────────────────────────
 
 const sections = computed(() => [
@@ -312,6 +316,9 @@ function fillAllMaterials() {
             <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
               <span>🏆</span> Spawn + Champion
             </button>
+            <button class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5" @click="spawnGalaxyBoss">
+              <span>👾</span> Spawn Galaxy Boss
+            </button>
             <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
               <span>🌌</span> Complete Galaxy
             </button>
@@ -449,6 +456,9 @@ function fillAllMaterials() {
         </button>
         <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
           <span>🏆</span> Spawn + Champion
+        </button>
+        <button class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5" @click="spawnGalaxyBoss">
+          <span>👾</span> Spawn Galaxy Boss
         </button>
         <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
           <span>🌌</span> Complete Galaxy
@@ -711,6 +721,15 @@ function fillAllMaterials() {
   background: #101828;
   border-color: #4080b0;
   color: #a8d8f8;
+}
+.admin-spawn-btn--galaxy-boss {
+  color: #d080ff;
+  border-color: #3a1060;
+}
+.admin-spawn-btn--galaxy-boss:hover {
+  background: #1a0830;
+  border-color: #a040e0;
+  color: #e8a0ff;
 }
 .admin-spawn-btn--prestige {
   background: linear-gradient(to bottom, #9060d0, #5030a0);
