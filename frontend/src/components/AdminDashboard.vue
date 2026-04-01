@@ -51,6 +51,10 @@ function forceCompleteGalaxy() {
   galaxyStore.pendingGalaxyBoss = false
 }
 
+function forcePrestige() {
+  gameStore.prestigeAvailable = true
+}
+
 // ── Planet Spawn ─────────────────────────────────────────────────────────────
 
 async function spawnPlanet() {
@@ -144,7 +148,6 @@ const sections = computed(() => [
       { key: 'chimesForNextUniverse', label: 'Chimes for Next Universe', type: 'number', min: 0 },
       { key: 'gameSpeed', label: 'Game Speed (ms)', type: 'number', min: 100 },
       { key: 'autoBattle', label: 'Auto Battle', type: 'checkbox' },
-      { key: 'prestige', label: 'Prestige Available', type: 'checkbox' },
     ],
   },
 ])
@@ -223,7 +226,7 @@ const defaultValues: Record<string, number | string | boolean> = {
   mat_stardust: 0, mat_moon_crystal: 0, mat_nebula_quartz: 0,
   mat_solar_essence: 0, mat_void_shard: 0, mat_dark_matter: 0,
   building_0: 0, building_1: 0, building_2: 0, building_3: 0, building_4: 0, building_5: 0,
-  currentUniverse: 1, chimesForNextUniverse: 0, gameSpeed: 1000, autoBattle: false, prestige: false,
+  currentUniverse: 1, chimesForNextUniverse: 0, gameSpeed: 1000, autoBattle: false,
 }
 
 function resetSection(sectionId: string) {
@@ -311,6 +314,9 @@ function fillAllMaterials() {
             </button>
             <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
               <span>🌌</span> Complete Galaxy
+            </button>
+            <button class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5" @click="forcePrestige">
+              <span>⭐</span> Force Prestige
             </button>
           </div>
         </div>
@@ -446,6 +452,9 @@ function fillAllMaterials() {
         </button>
         <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
           <span>🌌</span> Complete Galaxy
+        </button>
+        <button class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5" @click="forcePrestige">
+          <span>⭐</span> Force Prestige
         </button>
       </div>
     </div>
@@ -702,6 +711,15 @@ function fillAllMaterials() {
   background: #101828;
   border-color: #4080b0;
   color: #a8d8f8;
+}
+.admin-spawn-btn--prestige {
+  background: linear-gradient(to bottom, #9060d0, #5030a0);
+  border: 1px solid #b080e8;
+  color: #e8d0ff;
+}
+.admin-spawn-btn--prestige:hover {
+  background: linear-gradient(to bottom, #a070e0, #6040b0);
+  border-color: #c898f0;
 }
 
 /* ── Search bar ── */
