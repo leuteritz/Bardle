@@ -94,7 +94,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
-    <div class="flex items-center gap-2 px-3 header-side header-side--right">
+    <div class="flex items-center gap-2 pl-3 header-side header-side--right">
       <!-- UniversePortal füllt jetzt die volle Höhe, Meep ist integriert -->
       <div class="z-[65] flex-shrink-0 header-portal-wrap">
         <UniversePortalComponent />
