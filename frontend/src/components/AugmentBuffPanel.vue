@@ -33,7 +33,12 @@ const rarityBorderColor: Record<string, string> = {
 
 <template>
   <Transition name="augment-panel">
-    <div v-if="activeAugmentSlots.length > 0" class="aug-sidebar">
+    <div
+      v-if="activeAugmentSlots.length > 0"
+      class="aug-sidebar"
+      @mouseenter="hovering = 'sidebar'"
+      @mouseleave="hovering = null"
+    >
       <div class="aug-icon-list">
         <TransitionGroup name="aug-card" tag="div" class="aug-icon-list-inner">
           <div
@@ -41,24 +46,20 @@ const rarityBorderColor: Record<string, string> = {
             :key="slot.key"
             class="aug-icon-slot"
             :style="{ borderColor: rarityBorderColor[slot.aug.rarity] }"
-            @mouseenter="hovering = slot.key"
-            @mouseleave="hovering = null"
           >
-            <img
-              v-if="slot.aug.image"
-              :src="slot.aug.image"
-              class="aug-icon-img"
-              :alt="slot.aug.name"
-            />
-            <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
-
-            <!-- Tooltip -->
-            <Transition name="tooltip">
-              <div v-if="hovering === slot.key" class="aug-tooltip">
-                <div class="aug-tooltip-name">{{ slot.aug.name }}</div>
-                <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
-              </div>
-            </Transition>
+            <div class="aug-icon-box">
+              <img
+                v-if="slot.aug.image"
+                :src="slot.aug.image"
+                class="aug-icon-img"
+                :alt="slot.aug.name"
+              />
+              <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+            </div>
+            <div class="aug-expand-panel" :class="{ expanded: hovering !== null }">
+              <div class="aug-expand-name">{{ slot.aug.name }}</div>
+              <div class="aug-expand-effect">{{ slot.aug.effectLine }}</div>
+            </div>
           </div>
         </TransitionGroup>
       </div>
@@ -92,15 +93,6 @@ const rarityBorderColor: Record<string, string> = {
 }
 .aug-card-move {
   transition: transform 0.25s ease;
-}
-
-.tooltip-enter-active,
-.tooltip-leave-active {
-  transition: opacity 0.15s ease;
-}
-.tooltip-enter-from,
-.tooltip-leave-to {
-  opacity: 0;
 }
 
 .aug-sidebar {
@@ -137,13 +129,20 @@ const rarityBorderColor: Record<string, string> = {
 
 .aug-icon-slot {
   position: relative;
-  width: 52px;
+  display: flex;
+  align-items: center;
   height: 52px;
   border-radius: 4px;
-  overflow: visible;
+  overflow: hidden;
   border: 2px solid #5c3310;
   background: #141410;
   cursor: default;
+  flex-shrink: 0;
+}
+
+.aug-icon-box {
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
@@ -153,7 +152,6 @@ const rarityBorderColor: Record<string, string> = {
   object-fit: cover;
   display: block;
   border-radius: 2px;
-  overflow: hidden;
 }
 
 .aug-icon-emoji {
@@ -165,31 +163,29 @@ const rarityBorderColor: Record<string, string> = {
   font-size: 24px;
 }
 
-.aug-tooltip {
-  position: absolute;
-  left: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 6px 10px;
-  min-width: 140px;
-  pointer-events: none;
-  z-index: 100;
+.aug-expand-panel {
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.25s ease, padding 0.25s ease;
+  padding: 0;
   white-space: nowrap;
 }
 
-.aug-tooltip-name {
+.aug-expand-panel.expanded {
+  max-width: 180px;
+  width: 180px;
+  padding: 0 10px;
+}
+
+.aug-expand-name {
   color: #e8c040;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: bold;
   margin-bottom: 2px;
 }
 
-.aug-tooltip-effect {
+.aug-expand-effect {
   color: #b0a080;
-  font-size: 10px;
+  font-size: 12px;
 }
 </style>
