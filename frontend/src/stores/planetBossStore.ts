@@ -85,7 +85,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const cpc = gameStore.chimesPerClick
       const power = gameStore.totalPower
 
-      // Section scaling
+      // Galaxy + Section scaling
+      const galaxyStore = useGalaxyStore()
       const sectionStore = useSectionStore()
       const sectionConfig = SECTIONS.find((s) => s.id === sectionStore.activeSectionId)
       const isSectionBoss = sectionStore.pendingSectionBoss
@@ -165,6 +166,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ...(assignedDropChance !== undefined && { assignedDropChance }),
         ...(homePlanetChampion && { homePlanetChampion }),
         ...(isSectionBoss && { isSectionBoss: true }),
+        ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
         sectionId: sectionStore.activeSectionId,
       }
 

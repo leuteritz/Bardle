@@ -7,13 +7,21 @@
       role="dialog"
       @click.self="bossStore.closeBossModal()"
     >
-      <div class="boss-modal rpg-frame">
+      <div class="boss-modal rpg-frame" :class="{ 'boss-modal--galaxy': isGalaxyBoss }">
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="boss-header rpg-header">
-          <span class="boss-title" :class="{ 'boss-title--section': bossStore.activeBoss?.isSectionBoss }">
-            <span v-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-crown">★ </span>
+          <span
+            class="boss-title"
+            :class="{
+              'boss-title--section': bossStore.activeBoss?.isSectionBoss,
+              'boss-title--galaxy': isGalaxyBoss,
+            }"
+          >
+            <span v-if="isGalaxyBoss" class="galaxy-boss-crown">✦✦ </span>
+            <span v-else-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-crown">★ </span>
             {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
-            <span v-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-label"> — Section Boss</span>
+            <span v-if="isGalaxyBoss" class="galaxy-boss-label"> — Galaxie-Boss</span>
+            <span v-else-if="bossStore.activeBoss?.isSectionBoss" class="section-boss-label"> — Section Boss</span>
           </span>
           <div class="timer-chip" :class="{ 'timer-chip--urgent': secondsRemaining < 10 }">
             <svg class="timer-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -46,6 +54,7 @@
             <div class="bar-track">
               <div
                 class="bar-fill bar-fill--hp"
+                :class="{ 'bar-fill--hp-galaxy': isGalaxyBoss }"
                 :style="{ width: bossStore.bossHPPercent + '%' }"
               />
             </div>
@@ -77,8 +86,8 @@
         </div>
 
         <!-- ── Visual: Planet + Boss ───────────────────────────────────── -->
-        <div class="visual-section">
-          <div ref="planetStage" class="planet-stage-bg" />
+        <div class="visual-section" :class="{ 'visual-section--galaxy': isGalaxyBoss }">
+          <div ref="planetStage" class="planet-stage-bg" :class="{ 'planet-stage-bg--galaxy': isGalaxyBoss }" />
           <img
             ref="bossImgEl"
             :src="bossImage"
@@ -236,6 +245,8 @@ const estimatedPlayerDPS = computed(() => bossStore.playerDPS)
 const requiredDPS = computed(() => bossStore.requiredDPS)
 const canWin = computed(() => estimatedPlayerDPS.value >= requiredDPS.value * 0.7)
 
+const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
+
 const assignedMaterial = computed(() => {
   const id = bossStore.activeBoss?.potentialMaterialId
   return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
@@ -264,7 +275,8 @@ function renderPlanet() {
   svg.setAttribute('viewBox', '0 0 280 280')
   svg.style.width = '100%'
   svg.style.height = '100%'
-  drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, 120, 280)
+  const planetRadius = isGalaxyBoss.value ? 138 : 120
+  drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, planetRadius, 280)
   planetStage.value.appendChild(svg)
 }
 
@@ -765,6 +777,80 @@ function handleClick(event: MouseEvent) {
     opacity: 0;
     transform: scale(0.92);
     filter: blur(3px);
+  }
+}
+
+/* ─── Galaxy Boss Styles ─────────────────────────────────────────────────── */
+.boss-modal--galaxy {
+  border-color: #8b2080;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c1050,
+    0 0 40px rgba(180, 40, 200, 0.35),
+    0 0 80px rgba(140, 20, 160, 0.15);
+}
+
+.boss-title--galaxy {
+  color: #d060f0;
+  text-shadow:
+    0 0 14px rgba(200, 60, 255, 0.8),
+    0 0 30px rgba(200, 60, 255, 0.3);
+}
+
+.galaxy-boss-crown {
+  margin-right: 0.1rem;
+}
+
+.galaxy-boss-label {
+  font-size: 0.65rem;
+  color: #a040c0;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
+}
+
+.visual-section--galaxy {
+  background: radial-gradient(ellipse at center, #0a0312 0%, #060008 100%);
+}
+
+.visual-section--galaxy::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.7) 0%, transparent 0%),
+    radial-gradient(1px 1px at 60% 15%, rgba(255, 255, 255, 0.5) 0%, transparent 0%),
+    radial-gradient(1px 1px at 80% 60%, rgba(255, 255, 255, 0.6) 0%, transparent 0%),
+    radial-gradient(1px 1px at 40% 75%, rgba(255, 255, 255, 0.4) 0%, transparent 0%),
+    radial-gradient(1px 1px at 70% 40%, rgba(200, 150, 255, 0.6) 0%, transparent 0%),
+    radial-gradient(1px 1px at 15% 65%, rgba(150, 200, 255, 0.5) 0%, transparent 0%),
+    radial-gradient(1px 1px at 90% 25%, rgba(255, 180, 200, 0.4) 0%, transparent 0%),
+    radial-gradient(2px 2px at 50% 50%, rgba(180, 100, 255, 0.3) 0%, transparent 0%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.planet-stage-bg--galaxy {
+  opacity: 0.55;
+  animation: galaxy-aura-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes galaxy-aura-pulse {
+  from {
+    filter: drop-shadow(0 0 12px rgba(160, 40, 220, 0.6));
+  }
+  to {
+    filter: drop-shadow(0 0 28px rgba(200, 80, 255, 0.9));
+  }
+}
+
+.bar-fill--hp-galaxy {
+  background: linear-gradient(to bottom, #9b30c8, #5c1080);
+  box-shadow: 0 0 8px rgba(160, 40, 220, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-stage-bg--galaxy {
+    animation: none;
   }
 }
 </style>

@@ -195,8 +195,13 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       item.removeTimeout = null
     }
 
+    // Label-DIV erstellen
+    const boss = bossStore.activeBosses.find((b) => b.planetId === id)
+
     // Distress animation + styling
+    const isGalaxyBoss = boss?.isGalaxyBoss ?? false
     item.el.classList.add('planet--rescue')
+    if (isGalaxyBoss) item.el.classList.add('planet--rescue--galaxy')
     item.el.style.pointerEvents = 'auto'
     item.el.style.cursor = 'pointer'
 
@@ -204,9 +209,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     item.el.addEventListener('click', () => {
       bossStore.openBossModal(id)
     })
-
-    // Label-DIV erstellen
-    const boss = bossStore.activeBosses.find((b) => b.planetId === id)
     const materialId = boss?.potentialMaterialId
     const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
     const reward = boss?.reward ?? 0
@@ -222,8 +224,9 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const bossHP = boss ? formatNumber(boss.maxHP) : '???'
 
     const label = document.createElement('div')
-    label.className = 'planet-label'
+    label.className = isGalaxyBoss ? 'planet-label planet-label--galaxy' : 'planet-label'
     label.innerHTML = `
+      ${isGalaxyBoss ? '<span class="planet-label__galaxy-badge">✦✦ GALAXIE-BOSS ✦✦</span>' : ''}
       <span class="planet-label__name">${bossName}</span>
       <span class="planet-label__reward">HP: ${bossHP}</span>
       <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>

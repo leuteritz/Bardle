@@ -181,6 +181,11 @@ usePlanetBackground(starsContainer)
   filter: drop-shadow(0 0 8px rgba(255, 120, 0, 0.7)) drop-shadow(0 0 18px rgba(255, 60, 0, 0.4));
 }
 
+.planet--rescue--galaxy {
+  animation: planetDistressGalaxy 1.6s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85)) drop-shadow(0 0 24px rgba(140, 20, 220, 0.55)) !important;
+}
+
 @keyframes planetLifecycle {
   0% {
     opacity: 0;
@@ -205,6 +210,16 @@ usePlanetBackground(starsContainer)
   }
   50% {
     filter: drop-shadow(0 0 14px rgba(255, 60, 0, 1)) drop-shadow(0 0 30px rgba(255, 80, 0, 0.6));
+  }
+}
+
+@keyframes planetDistressGalaxy {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85)) drop-shadow(0 0 24px rgba(140, 20, 220, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 18px rgba(210, 80, 255, 1)) drop-shadow(0 0 40px rgba(160, 40, 255, 0.75)) drop-shadow(0 0 60px rgba(100, 0, 200, 0.35));
   }
 }
 
@@ -406,6 +421,79 @@ usePlanetBackground(starsContainer)
 @media (prefers-reduced-motion: reduce) {
   .planet-label {
     display: none;
+  }
+}
+
+/* ─── Galaxy Boss Label ────────────────────────────────────────────────────── */
+
+.planet-label--galaxy {
+  background: linear-gradient(135deg, rgba(8, 4, 28, 0.97) 0%, rgba(20, 8, 50, 0.95) 100%);
+  border: 1px solid rgba(180, 80, 255, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(160, 60, 255, 0.12),
+    0 0 18px rgba(160, 60, 255, 0.45),
+    0 0 40px rgba(120, 20, 220, 0.2),
+    0 6px 28px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(200, 150, 255, 0.1);
+  animation:
+    labelFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    galaxyLabelPulse 2s ease-in-out infinite;
+}
+
+.planet-label--galaxy::before {
+  border-top-color: rgba(200, 100, 255, 0.95);
+  border-left-color: rgba(200, 100, 255, 0.95);
+}
+
+.planet-label--galaxy::after {
+  border-bottom-color: rgba(180, 80, 255, 0.75);
+  border-right-color: rgba(180, 80, 255, 0.75);
+}
+
+@keyframes galaxyLabelPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(160, 60, 255, 0.12),
+      0 0 18px rgba(160, 60, 255, 0.45),
+      0 0 40px rgba(120, 20, 220, 0.2),
+      0 6px 28px rgba(0, 0, 0, 0.75),
+      inset 0 1px 0 rgba(200, 150, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(200, 100, 255, 0.2),
+      0 0 28px rgba(180, 80, 255, 0.7),
+      0 0 60px rgba(140, 40, 255, 0.35),
+      0 6px 28px rgba(0, 0, 0, 0.75),
+      inset 0 1px 0 rgba(220, 170, 255, 0.15);
+  }
+}
+
+.planet-label__galaxy-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c060f0;
+  text-shadow: 0 0 8px rgba(200, 80, 255, 0.8);
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(180, 80, 255, 0.3);
+  margin-bottom: 1px;
+}
+
+.planet-label--galaxy .planet-label__name {
+  color: rgba(220, 160, 255, 0.98);
+  text-shadow: 0 0 8px rgba(190, 80, 255, 0.55);
+  border-bottom-color: rgba(180, 80, 255, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-label--galaxy {
+    animation: labelFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .planet--rescue--galaxy {
+    animation: none !important;
   }
 }
 </style>

@@ -1,5 +1,17 @@
 <template>
-  <div class="galaxy-progress">
+  <div ref="wrapperEl" class="galaxy-progress" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+    <Teleport to="body">
+      <Transition name="tooltip-fade">
+        <div v-if="showTooltip" class="galaxy-tooltip-positioner" :style="tooltipStyle">
+          <GalaxyMapTooltipComponent
+            :total-planets="galaxyStore.planetsRequired"
+            :rescued-count="galaxyStore.planetsRescued"
+            :galaxy-key="galaxyStore.currentGalaxy"
+            :needs-final-boss="galaxyStore.needsFinalBoss"
+          />
+        </div>
+      </Transition>
+    </Teleport>
     <div class="nav-content">
       <div class="nav-galaxy-row">
         <span class="nav-galaxy-name">Galaxie {{ galaxyStore.currentGalaxy }}</span>
@@ -75,19 +87,39 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, ref, computed } from 'vue'
 import { useSectionStore } from '../../../stores/sectionStore'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
+import GalaxyMapTooltipComponent from './GalaxyMapTooltipComponent.vue'
 
 export default defineComponent({
   name: 'GalaxyProgressComponent',
+  components: { GalaxyMapTooltipComponent },
   setup() {
     const sectionStore = useSectionStore()
     const galaxyStore = useGalaxyStore()
+    const wrapperEl = ref<HTMLElement | null>(null)
+    const showTooltip = ref(false)
+
+    const tooltipStyle = computed(() => {
+      if (!wrapperEl.value) return {}
+      const rect = wrapperEl.value.getBoundingClientRect()
+      const center = rect.left + rect.width / 2
+      const left = Math.max(8, Math.min(center - 200, window.innerWidth - 408))
+      return {
+        position: 'fixed' as const,
+        top: `${rect.bottom + 8}px`,
+        left: `${left}px`,
+        zIndex: '9999',
+      }
+    })
 
     return {
       sectionStore,
       galaxyStore,
+      wrapperEl,
+      showTooltip,
+      tooltipStyle,
     }
   },
 })
@@ -334,5 +366,16 @@ export default defineComponent({
 
 .nav-galaxy-advance-btn:not(:disabled):active {
   transform: scale(0.97);
+}
+
+/* ─── Tooltip Transition ─── */
+.tooltip-fade-enter-active,
+.tooltip-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.tooltip-fade-enter-from,
+.tooltip-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

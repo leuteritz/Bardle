@@ -180,6 +180,7 @@ export interface PlanetBossEvent {
   assignedDropChance?: number
   homePlanetChampion?: string
   isSectionBoss?: boolean
+  isGalaxyBoss?: boolean
   sectionId?: number
 }
 
