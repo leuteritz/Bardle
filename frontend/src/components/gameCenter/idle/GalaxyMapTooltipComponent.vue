@@ -1,6 +1,5 @@
 <template>
   <div class="galaxy-map-tooltip">
-    <div class="tooltip-header">Galaxie {{ galaxyKey }} — Karte</div>
     <div class="map-container">
       <img
         ref="imgEl"
@@ -11,7 +10,6 @@
       />
       <canvas ref="canvasEl" class="map-canvas" />
     </div>
-    <div class="tooltip-footer">{{ rescuedCount }} / {{ totalPlanets }} Planeten gerettet</div>
   </div>
 </template>
 
@@ -125,7 +123,9 @@ export default defineComponent({
       }
 
       // Draw unsaved dots (hollow white)
-      for (let i = rescued; i < dots.length; i++) {
+      const rescuedSet = new Set(order.slice(0, rescued))
+      for (let i = 0; i < dots.length; i++) {
+        if (rescuedSet.has(i)) continue
         const d = dots[i]
         const px = d.x * w
         const py = d.y * h
@@ -236,21 +236,9 @@ export default defineComponent({
 
 <style scoped>
 .galaxy-map-tooltip {
-  background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 8px 24px rgba(0, 0, 0, 0.85);
-  border-radius: 4px;
   width: 400px;
+  max-width: calc(100vw - 16px);
   overflow: hidden;
-}
-
-.tooltip-header {
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
-  padding: 6px 10px;
-  color: #e8c040;
-  font-size: 13px;
-  letter-spacing: 0.04em;
 }
 
 .map-container {
@@ -271,11 +259,4 @@ export default defineComponent({
   height: 100%;
 }
 
-.tooltip-footer {
-  padding: 5px 10px;
-  color: #e8c040;
-  font-size: 12px;
-  border-top: 1px solid #3e200a;
-  letter-spacing: 0.03em;
-}
 </style>
