@@ -812,8 +812,8 @@ export default defineComponent({
 }
 
 .start-crest-img {
-  width: 72px;
-  height: 72px;
+  width: 250px;
+  height: 250px;
   object-fit: contain;
   filter: drop-shadow(0 0 16px rgba(200, 150, 30, 0.6));
 }
