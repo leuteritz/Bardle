@@ -8,6 +8,18 @@
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
         <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field">
+          <!-- Kill Announcement Banner -->
+          <Transition name="announce-fade">
+            <div
+              v-if="announcement"
+              class="absolute z-30 left-1/2 -translate-x-1/2 top-[12%] pointer-events-none announcement-banner"
+              :class="announcement.team === 1 ? 'announcement-banner--blue' : 'announcement-banner--red'"
+            >
+              <img :src="announcement.icon" class="w-[14px] h-[14px] object-cover rounded-full flex-shrink-0" />
+              <span class="announcement-text">{{ announcement.text }}</span>
+            </div>
+          </Transition>
+
           <!-- Time -->
           <div
             class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white minimap-overlay-badge"
@@ -367,7 +379,41 @@ export default defineComponent({
       if (moveInterval) clearInterval(moveInterval)
       // ── NEU: Listener aufräumen ──
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (announceTimer) clearTimeout(announceTimer)
     })
+
+    // Kill announcement banner
+    const announcement = ref<{ text: string; icon: string; team: 1 | 2 } | null>(null)
+    let announceTimer: ReturnType<typeof setTimeout> | null = null
+
+    function showAnnouncement(text: string, icon: string, team: 1 | 2) {
+      if (announceTimer) clearTimeout(announceTimer)
+      announcement.value = { text, icon, team }
+      announceTimer = setTimeout(() => {
+        announcement.value = null
+      }, 5000)
+    }
+
+    watch(
+      () => battleStore.drakeAlive,
+      (alive) => {
+        if (!alive && battleStore.drakeKilledByTeam) {
+          const team = battleStore.drakeKilledByTeam
+          const name = team === 1 ? 'Blue Team' : 'Red Team'
+          showAnnouncement(`Dragon slain by ${name}`, '/img/dragon.png', team)
+        }
+      },
+    )
+
+    watch(
+      () => battleStore.baronKilledByTeam,
+      (team) => {
+        if (team) {
+          const name = team === 1 ? 'Blue Team' : 'Red Team'
+          showAnnouncement(`Baron slain by ${name}`, '/img/baron.png', team)
+        }
+      },
+    )
 
     const baronVisible = computed(() => {
       const t = battleStore.battleTime
@@ -402,6 +448,7 @@ export default defineComponent({
       drakeVisible,
       drakeFighting,
       predeterminedWin,
+      announcement,
     }
   },
 })
@@ -509,5 +556,44 @@ export default defineComponent({
 .minimap-champ--buffed {
   border-color: #a855f7 !important;
   box-shadow: 0 0 10px #a855f7cc !important;
+}
+
+.announcement-banner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(17, 16, 8, 0.88);
+  border: 1px solid #5c3310;
+  white-space: nowrap;
+}
+
+.announcement-banner--blue {
+  border-color: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
+}
+
+.announcement-banner--red {
+  border-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.announcement-text {
+  font-size: 9px;
+  font-weight: 700;
+  color: #e8c040;
+  letter-spacing: 0.3px;
+}
+
+.announce-fade-enter-active {
+  transition: opacity 0.3s ease;
+}
+.announce-fade-leave-active {
+  transition: opacity 0.8s ease;
+}
+.announce-fade-enter-from,
+.announce-fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -17,11 +17,13 @@
           v-for="(msg, idx) in battleStore.chatMessages"
           :key="'msg-' + idx"
           class="flex items-start min-h-0 gap-1"
+          :class="{ 'chat-msg--system': msg.type === 'system' }"
         >
           <span class="flex-shrink-0 text-xs font-bold text-white/30 mt-0.5">{{
             msg.time
           }}</span>
           <span
+            v-if="msg.type !== 'system'"
             class="flex-shrink-0 text-xs font-black truncate"
             :class="{
               'text-violet-300': msg.user === 'Bard',
@@ -30,9 +32,11 @@
             }"
             >{{ msg.user }}:</span
           >
-          <span class="flex-1 min-w-0 text-xs leading-tight break-words text-white/60">{{
-            msg.text
-          }}</span>
+          <span
+            class="flex-1 min-w-0 text-xs leading-tight break-words"
+            :class="msg.type === 'system' ? 'chat-msg--system-text' : 'text-white/60'"
+            >{{ msg.text }}</span
+          >
         </div>
       </div>
     </div>
@@ -77,5 +81,17 @@ export default defineComponent({
   background: rgba(26, 16, 8, 0.35);
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
+}
+
+.chat-msg--system {
+  background: rgba(232, 192, 64, 0.04);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+.chat-msg--system-text {
+  color: #e8c040;
+  font-style: italic;
+  opacity: 0.85;
 }
 </style>

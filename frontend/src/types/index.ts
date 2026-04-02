@@ -209,6 +209,7 @@ export interface ChatMessage {
   text: string
   time: string
   team: number
+  type?: 'system' | 'player'
 }
 
 export interface CurrentRank {

@@ -100,6 +100,9 @@ export const useBattleStore = defineStore('battle', {
     drakeAlive: true,
     drakeKilledByTeam: null as (1 | 2) | null,
     drakeEventTime: 0,
+    baronAlive: true,
+    baronKilledByTeam: null as (1 | 2) | null,
+    baronEventTime: 0,
     autoSkipEnabled: true,
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
@@ -219,6 +222,21 @@ export const useBattleStore = defineStore('battle', {
             text: `${teamName} slew the Dragon!`,
             time: this.formatTime(this.battleTime),
             team: this.drakeKilledByTeam,
+            type: 'system',
+          })
+        }
+
+        // Baron kill event
+        if (this.baronAlive && this.baronEventTime > 0 && this.battleTime >= this.baronEventTime && this.battleTime < 2200) {
+          this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
+          this.baronAlive = false
+          const baronTeamName = this.baronKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
+          this.chatMessages.push({
+            user: 'System',
+            text: `${baronTeamName} slew Baron Nashor!`,
+            time: this.formatTime(this.battleTime),
+            team: this.baronKilledByTeam,
+            type: 'system',
           })
         }
 
@@ -294,6 +312,9 @@ export const useBattleStore = defineStore('battle', {
       this.drakeAlive = true
       this.drakeKilledByTeam = null
       this.drakeEventTime = 0
+      this.baronAlive = true
+      this.baronKilledByTeam = null
+      this.baronEventTime = 0
       this.battlePhase = 'playing'
       this.predeterminedWin = null
       this.showAutoBattleResult = false
@@ -380,6 +401,7 @@ export const useBattleStore = defineStore('battle', {
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.generateKillSchedule()
         this.drakeEventTime = 1200 // Drake dies exactly when Baron spawns (20 min)
+        this.baronEventTime = 1500 + Math.floor(Math.random() * 600) // Baron killed randomly 25–35 min
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
       }
