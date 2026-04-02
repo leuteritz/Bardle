@@ -46,19 +46,20 @@
           <span class="text-xs font-black"> {{ timeUntilNextBattle }}s </span>
         </div>
 
-        <!-- Live-Indikator -->
+        <!-- W/L Session Badge -->
         <div
           v-if="battleStore.battlePhase === 'playing'"
-          class="live-badge flex items-center gap-1.5 px-2 py-1"
+          class="flex items-center gap-1 px-2 py-1 wl-badge"
         >
-          <div class="live-dot w-1.5 h-1.5 rounded-full animate-pulse" />
-          <span class="text-xs font-black">LIVE</span>
+          <span class="wl-win">{{ battleStore.totalWins }}W</span>
+          <span class="wl-sep">/</span>
+          <span class="wl-loss">{{ battleStore.totalLosses }}L</span>
         </div>
       </div>
 
       <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
       <div class="flex flex-row flex-1 min-h-0 gap-3">
-        <!-- Left: MiniMap square, fills available height -->
+        <!-- Left: MiniMap -->
         <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
           <MiniMapComponent
             class="w-full max-h-full aspect-square"
@@ -66,7 +67,7 @@
             :score="score"
           />
         </div>
-        <!-- Right: Chat top + Scoreboard bottom, equal height split -->
+        <!-- Right: Chat + Scoreboard -->
         <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
           <ChatPanelComponent class="flex-1 min-h-0" />
           <ScoreboardComponent class="flex-1 min-h-0" />
@@ -138,7 +139,6 @@ export default defineComponent({
   setup() {
     const battleStore = useBattleStore()
 
-    // NEU: Loading-Flag verhindert Doppelklick, async Initialisierung
     const isStarting = ref(false)
     const startBattle = async () => {
       if (isStarting.value) return
@@ -212,15 +212,33 @@ export default defineComponent({
   color: var(--rpg-text-muted);
 }
 
-.live-badge {
-  background: #52b8301a;
-  border: 1px solid #52b83033;
+/* ═══════════════════════════════════════════
+   W/L SESSION BADGE
+   ═══════════════════════════════════════════ */
+.wl-badge {
+  background: #0a0a0a33;
+  border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
-  color: var(--rpg-green-top);
 }
 
-.live-dot {
-  background: var(--rpg-green-top);
+.wl-win {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--rpg-green-top);
+  text-shadow: 0 0 8px #52b83066;
+}
+
+.wl-sep {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.wl-loss {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--rpg-red);
+  text-shadow: 0 0 8px #cc605066;
 }
 
 /* ═══════════════════════════════════════════
