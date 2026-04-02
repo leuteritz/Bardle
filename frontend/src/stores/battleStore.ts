@@ -97,6 +97,9 @@ export const useBattleStore = defineStore('battle', {
     battleSimIntervalId: null as ReturnType<typeof setInterval> | null,
     killEventSchedule: [] as Array<{ gameTime: number; team: 1 | 2 }>,
     battlePhase: 'playing' as 'playing' | 'result',
+    drakeAlive: true,
+    drakeKilledByTeam: null as (1 | 2) | null,
+    drakeEventTime: 0,
     autoSkipEnabled: true,
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
@@ -206,6 +209,19 @@ export const useBattleStore = defineStore('battle', {
           }
         }
 
+        // Drake kill event
+        if (this.drakeAlive && this.drakeEventTime > 0 && this.battleTime >= this.drakeEventTime) {
+          this.drakeKilledByTeam = Math.random() < 0.5 ? 1 : 2
+          this.drakeAlive = false
+          const teamName = this.drakeKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
+          this.chatMessages.push({
+            user: 'System',
+            text: `${teamName} slew the Dragon!`,
+            time: this.formatTime(this.battleTime),
+            team: this.drakeKilledByTeam,
+          })
+        }
+
         // Simulation beenden nach 30 Spielminuten
         if (this.battleTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
           clearInterval(this.battleSimIntervalId!)
@@ -275,6 +291,9 @@ export const useBattleStore = defineStore('battle', {
       this.resetTeamStats(this.team2)
       this.chatMessages = []
       this.battleTime = 0
+      this.drakeAlive = true
+      this.drakeKilledByTeam = null
+      this.drakeEventTime = 0
       this.battlePhase = 'playing'
       this.predeterminedWin = null
       this.showAutoBattleResult = false
@@ -360,6 +379,7 @@ export const useBattleStore = defineStore('battle', {
       this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.generateKillSchedule()
+        this.drakeEventTime = 1200 // Drake dies exactly when Baron spawns (20 min)
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
       }

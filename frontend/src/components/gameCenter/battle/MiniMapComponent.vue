@@ -67,6 +67,20 @@
             />
           </div>
 
+          <!-- Drake Dot -->
+          <div
+            v-if="drakeVisible"
+            class="absolute -translate-x-1/2 -translate-y-1/2"
+            :style="{ left: '66%', top: '69%', zIndex: 4 }"
+          >
+            <div class="drake-dot" :class="{ 'drake-fighting': drakeFighting }">
+              <img
+                src="/img/dragon.png"
+                class="w-[28px] h-[28px] rounded-full object-cover drake-icon"
+              />
+            </div>
+          </div>
+
           <!-- Baron Dot -->
           <div
             v-if="baronVisible"
@@ -365,6 +379,15 @@ export default defineComponent({
       return t >= 1500 && t < 2200
     })
 
+    const drakeVisible = computed(() => {
+      return battleStore.battleTime >= 300 && battleStore.drakeAlive
+    })
+
+    const drakeFighting = computed(() => {
+      const t = battleStore.battleTime
+      return t >= 700 && t < 1200 && battleStore.drakeAlive
+    })
+
     const predeterminedWin = computed(() => battleStore.predeterminedWin)
 
     return {
@@ -376,6 +399,8 @@ export default defineComponent({
       phase,
       baronVisible,
       baronFighting,
+      drakeVisible,
+      drakeFighting,
       predeterminedWin,
     }
   },
@@ -417,6 +442,37 @@ export default defineComponent({
 }
 .score-sep {
   color: #ffffff66;
+}
+
+.drake-dot {
+  position: relative;
+}
+
+.drake-icon {
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 8px #22c55eaa;
+}
+
+.drake-dot.drake-fighting::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #22c55e;
+  animation: drake-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes drake-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.1;
+    transform: scale(1.5);
+  }
 }
 
 .baron-dot {
