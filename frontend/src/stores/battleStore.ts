@@ -101,6 +101,7 @@ export const useBattleStore = defineStore('battle', {
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
     predeterminedWin: null as boolean | null,
+    currentWinProbability: 0 as number,
   }),
 
   getters: {
@@ -347,6 +348,7 @@ export const useBattleStore = defineStore('battle', {
         playerPower *= 5
       }
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
+      this.currentWinProbability = winProbability
       this.predeterminedWin = Math.random() < winProbability
     },
 

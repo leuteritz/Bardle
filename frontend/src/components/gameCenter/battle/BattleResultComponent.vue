@@ -60,46 +60,43 @@
         <div class="planet-halo" :class="`halo-v${planetVariant}`" />
       </div>
 
-      <!-- Battle Header Bar -->
-      <div class="relative z-10 flex items-center justify-between flex-shrink-0 p-3 battle-header">
-        <span class="battle-id-badge px-2 py-0.5 text-xs font-black tracking-wider">
-          Battle #{{ currentBattleId }}
-        </span>
-
-        <!-- Letztes Ergebnis kompakt -->
-        <div
-          v-if="battleStore.battlePhase === 'playing' && battleStore.lastAutoBattleResult"
-          class="flex items-center gap-1.5 px-2 py-1 text-xs font-black"
-          :class="lastResult.won ? 'last-result--win' : 'last-result--loss'"
-        >
-          <span>{{ lastResult.won ? '🏆' : '💀' }}</span>
-          <span>{{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP</span>
-        </div>
-
-        <!-- Countdown -->
-        <div
-          v-if="isAutoBattleActive && battleStore.battlePhase === 'playing'"
-          class="flex items-center gap-2 px-3 py-1 countdown-badge"
-        >
-          <span class="text-xs animate-spin">⏱️</span>
-          <span class="text-xs font-black"> {{ timeUntilNextBattle }}s </span>
-        </div>
-
-        <!-- W/L Session Badge -->
-        <div
-          v-if="battleStore.battlePhase === 'playing'"
-          class="flex items-center gap-1 px-2 py-1 wl-badge"
-        >
-          <span class="wl-win">{{ battleStore.totalWins }}W</span>
-          <span class="wl-sep">/</span>
-          <span class="wl-loss">{{ battleStore.totalLosses }}L</span>
-        </div>
-      </div>
-
       <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
       <div class="relative z-10 flex flex-row flex-1 min-h-0 gap-3">
         <!-- Left: MiniMap -->
-        <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
+        <div class="flex flex-col items-center justify-center flex-1 min-w-0 min-h-0">
+          <!-- Status Bar above MiniMap -->
+          <div class="status-bar">
+            <div class="status-chip">
+              <span class="status-chip-icon">{{ rankIcon }}</span>
+              <div class="status-chip-body">
+                <span class="status-chip-label">RANG</span>
+                <span class="status-chip-rank-row">
+                  <span class="status-chip-value" :class="`rank-tier--${battleStore.currentRank.tier.toLowerCase()}`">
+                    {{ battleStore.currentRank.tier }} {{ battleStore.currentRank.division }}
+                  </span>
+                  <span class="status-lp-badge">{{ battleStore.currentRank.lp }} LP</span>
+                </span>
+              </div>
+            </div>
+            <div class="status-divider" />
+            <div class="status-chip">
+              <div class="status-chip-body">
+                <span class="status-chip-label">SAISON</span>
+                <span class="status-chip-wl">
+                  <span class="status-val-win">{{ battleStore.totalWins }}W</span>
+                  <span class="status-wl-slash">/</span>
+                  <span class="status-val-loss">{{ battleStore.totalLosses }}L</span>
+                </span>
+              </div>
+            </div>
+            <div class="status-divider" />
+            <div class="status-chip">
+              <div class="status-chip-body">
+                <span class="status-chip-label">WIN CHANCE</span>
+                <span class="status-chip-value status-chip-chance">{{ Math.round(battleStore.currentWinProbability * 100) }}%</span>
+              </div>
+            </div>
+          </div>
           <MiniMapComponent
             class="w-full max-h-full aspect-square"
             :battle-id="currentBattleId"
@@ -486,13 +483,20 @@ export default defineComponent({
       isStarting.value = false
     }
 
+    const rankIcon = computed(() => {
+      const icons: Record<string, string> = {
+        Iron: '🔩', Bronze: '🥉', Silver: '🥈', Gold: '🥇',
+        Platinum: '💎', Emerald: '🌿', Diamond: '💠',
+        Master: '👑', Grandmaster: '🔱', Challenger: '⚡',
+      }
+      return icons[battleStore.currentRank.tier] ?? '🎯'
+    })
+
     const score = computed(() => ({
       team1Kills: battleStore.team1.reduce((sum, c) => sum + c.kills, 0),
       team2Kills: battleStore.team2.reduce((sum, c) => sum + c.kills, 0),
     }))
 
-    const isAutoBattleActive = computed(() => battleStore.autoBattleEnabled)
-    const timeUntilNextBattle = computed(() => battleStore.timeUntilNextBattle)
     const currentBattleId = computed(() => battleStore.currentBattleId)
     const lastResult = computed(() => battleStore.lastAutoBattleResult ?? { won: false })
     const lpChange = computed(() => battleStore.lastLpChange ?? 0)
@@ -506,11 +510,10 @@ export default defineComponent({
       planetVariant,
       startBattle,
       score,
-      isAutoBattleActive,
-      timeUntilNextBattle,
       currentBattleId,
       lastResult,
       lpChange,
+      rankIcon,
     }
   },
 })
@@ -863,64 +866,99 @@ export default defineComponent({
 }
 
 /* ═══════════════════════════════════════════
-   BATTLE HEADER
+   STATUS BAR (above MiniMap)
    ═══════════════════════════════════════════ */
-.battle-header {
-  background: var(--rpg-bg-header);
-  border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px #00000066;
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 0 6px;
+  width: 100%;
+  flex-shrink: 0;
 }
-.battle-id-badge {
-  background: var(--rpg-bg-dark);
-  border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
-  color: var(--rpg-text-muted);
+.status-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
 }
-.last-result--win {
-  background: #52b8301f;
-  border: 1px solid #52b8304d;
-  border-radius: 4px;
-  color: var(--rpg-green-top);
+.status-chip-icon {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }
-.last-result--loss {
-  background: #cc60501f;
-  border: 1px solid #cc60504d;
-  border-radius: 4px;
-  color: var(--rpg-red);
+.status-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
-.countdown-badge {
-  background: #5b8dd926;
-  border: 1px solid #5b8dd94d;
-  border-radius: 4px;
-  color: var(--rpg-text-muted);
+.status-chip-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #5a4a2a;
+  text-transform: uppercase;
 }
-
-/* ═══════════════════════════════════════════
-   W/L SESSION BADGE
-   ═══════════════════════════════════════════ */
-.wl-badge {
-  background: #0a0a0a33;
-  border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+.status-chip-rank-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
-.wl-win {
-  font-size: 11px;
+.status-chip-value {
+  font-size: 14px;
   font-weight: 900;
-  color: var(--rpg-green-top);
-  text-shadow: 0 0 8px #52b83066;
+  letter-spacing: 0.5px;
+  color: #c8a060;
 }
-.wl-sep {
-  font-size: 11px;
+.status-lp-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8a7040;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+.status-chip-chance {
+  color: #e8c040;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+}
+.status-chip-wl {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 900;
+}
+.status-wl-slash {
+  color: #3e2a10;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.2);
+  font-size: 12px;
 }
-.wl-loss {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--rpg-red);
-  text-shadow: 0 0 8px #cc605066;
+.status-val-win {
+  color: #52b830;
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.45);
 }
+.status-val-loss {
+  color: #cc6050;
+  text-shadow: 0 0 8px rgba(204, 96, 80, 0.45);
+}
+.status-divider {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(to bottom, transparent, #5c3310, transparent);
+  flex-shrink: 0;
+}
+/* Rank tier accent colors */
+.rank-tier--iron     { color: #8a8a96; text-shadow: 0 0 8px rgba(138,138,150,0.4); }
+.rank-tier--bronze   { color: #c87840; text-shadow: 0 0 8px rgba(200,120,64,0.4); }
+.rank-tier--silver   { color: #b0b8c8; text-shadow: 0 0 8px rgba(176,184,200,0.4); }
+.rank-tier--gold     { color: #e8c040; text-shadow: 0 0 10px rgba(232,192,64,0.55); }
+.rank-tier--platinum { color: #50d0c8; text-shadow: 0 0 10px rgba(80,208,200,0.5); }
+.rank-tier--emerald  { color: #40c870; text-shadow: 0 0 10px rgba(64,200,112,0.5); }
+.rank-tier--diamond  { color: #70a8f8; text-shadow: 0 0 12px rgba(112,168,248,0.55); }
+.rank-tier--master   { color: #c878f0; text-shadow: 0 0 12px rgba(200,120,240,0.55); }
+.rank-tier--grandmaster { color: #f87060; text-shadow: 0 0 12px rgba(248,112,96,0.55); }
+.rank-tier--challenger  { color: #f8e060; text-shadow: 0 0 14px rgba(248,224,96,0.7); }
 
 /* ═══════════════════════════════════════════
    RESULT MODAL
