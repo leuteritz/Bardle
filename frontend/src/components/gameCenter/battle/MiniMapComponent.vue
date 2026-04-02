@@ -40,7 +40,10 @@
               :src="battleStore.getChampionImage(battleStore.team1[i].name)"
               :alt="battleStore.team1[i].name"
               class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--blue"
-              :class="{ 'opacity-30 grayscale': champ.dead }"
+              :class="{
+                'opacity-30 grayscale': champ.dead,
+                'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === true,
+              }"
             />
           </div>
 
@@ -57,8 +60,25 @@
               :src="battleStore.getChampionImage(battleStore.team2[i].name)"
               :alt="battleStore.team2[i].name"
               class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--red"
-              :class="{ 'opacity-30 grayscale': champ.dead }"
+              :class="{
+                'opacity-30 grayscale': champ.dead,
+                'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === false,
+              }"
             />
+          </div>
+
+          <!-- Baron Dot -->
+          <div
+            v-if="baronVisible"
+            class="absolute -translate-x-1/2 -translate-y-1/2"
+            :style="{ left: '33%', top: '33%', zIndex: 4 }"
+          >
+            <div class="baron-dot" :class="{ 'baron-fighting': baronFighting }">
+              <img
+                src="/img/baron.png"
+                class="w-[28px] h-[28px] rounded-full object-cover baron-icon"
+              />
+            </div>
           </div>
 
           <div class="absolute inset-0 pointer-events-none minimap-inner-border" />
@@ -335,7 +355,29 @@ export default defineComponent({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     })
 
-    return { blueChampions, redChampions, formatTime, battleStore, isSnapping }
+    const baronVisible = computed(() => {
+      const t = battleStore.battleTime
+      return t >= 1200 && t < 2200
+    })
+
+    const baronFighting = computed(() => {
+      const t = battleStore.battleTime
+      return t >= 1500 && t < 2200
+    })
+
+    const predeterminedWin = computed(() => battleStore.predeterminedWin)
+
+    return {
+      blueChampions,
+      redChampions,
+      formatTime,
+      battleStore,
+      isSnapping,
+      phase,
+      baronVisible,
+      baronFighting,
+      predeterminedWin,
+    }
   },
 })
 </script>
@@ -375,5 +417,41 @@ export default defineComponent({
 }
 .score-sep {
   color: #ffffff66;
+}
+
+.baron-dot {
+  position: relative;
+}
+
+.baron-icon {
+  border: 2px solid #a855f7;
+  box-shadow: 0 0 8px #a855f7aa;
+}
+
+.baron-dot.baron-fighting::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #a855f7;
+  animation: baron-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes baron-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.1;
+    transform: scale(1.5);
+  }
+}
+
+.minimap-champ--buffed {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 10px #a855f7cc !important;
 }
 </style>
