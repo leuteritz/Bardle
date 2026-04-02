@@ -21,14 +21,19 @@
         v-if="!battleStore.isAutoBattleInitialized && universePhase !== 'animating' && !isStarting"
         class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 start-screen"
       >
-        <div class="start-crest">⚔️</div>
+        <div class="start-crest">
+          <img src="/img/menu/BATTLE.png" class="start-crest-img" alt="Battle" />
+        </div>
         <div class="start-title">RANKED QUEUE</div>
         <p class="start-desc">
           Bard betritt die Arena. Der Auto-Battle läuft im Hintergrund weiter –<br />
           auch wenn du den Tab schließt.
         </p>
         <button class="start-btn" :disabled="isStarting" @click="startBattle">
-          <span class="start-btn-icon">{{ isStarting ? '⏳' : '⚔️' }}</span>
+          <span class="start-btn-icon">
+            <template v-if="isStarting">⏳</template>
+            <img v-else src="/img/menu/BATTLE.png" class="start-btn-img" alt="Battle" />
+          </span>
           {{ isStarting ? 'WIRD GESTARTET...' : 'KAMPF STARTEN' }}
         </button>
       </div>
@@ -804,6 +809,20 @@ export default defineComponent({
 
 .start-btn-icon {
   font-size: 18px;
+}
+
+.start-crest-img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(200, 150, 30, 0.6));
+}
+
+.start-btn-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: brightness(1.2);
 }
 
 /* ═══════════════════════════════════════════
