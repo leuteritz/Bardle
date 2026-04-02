@@ -1,69 +1,91 @@
 <template>
-  <div class="flex flex-col w-full h-full p-4 space-y-3 overflow-hidden">
-    <!-- Battle Header Bar -->
-    <div class="battle-header flex items-center justify-between p-3 flex-shrink-0">
-      <span class="battle-id-badge px-2 py-0.5 text-xs font-black tracking-wider">
-        Battle #{{ currentBattleId }}
-      </span>
-
-      <!-- Letztes Ergebnis kompakt -->
+  <div class="relative flex flex-col w-full h-full p-4 space-y-3 overflow-hidden">
+    <!-- ══ START SCREEN ══ -->
+    <Transition name="start-fade">
       <div
-        v-if="battleStore.battlePhase === 'playing' && battleStore.lastAutoBattleResult"
-        class="flex items-center gap-1.5 px-2 py-1 text-xs font-black"
-        :class="lastResult.won ? 'last-result--win' : 'last-result--loss'"
+        v-if="!battleStore.isAutoBattleInitialized"
+        class="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 start-screen"
       >
-        <span>{{ lastResult.won ? '🏆' : '💀' }}</span>
-        <span>{{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP</span>
+        <div class="start-crest">⚔️</div>
+        <div class="start-title">RANKED QUEUE</div>
+        <p class="start-desc">
+          Bard betritt die Arena. Der Auto-Battle läuft im Hintergrund weiter –<br />
+          auch wenn du den Tab schließt.
+        </p>
+        <button class="start-btn" :disabled="isStarting" @click="startBattle">
+          <span class="start-btn-icon">{{ isStarting ? '⏳' : '⚔️' }}</span>
+          {{ isStarting ? 'WIRD GESTARTET...' : 'KAMPF STARTEN' }}
+        </button>
+      </div>
+    </Transition>
+
+    <!-- ══ BATTLE UI ══ -->
+    <template v-if="battleStore.isAutoBattleInitialized">
+      <!-- Battle Header Bar -->
+      <div class="flex items-center justify-between flex-shrink-0 p-3 battle-header">
+        <span class="battle-id-badge px-2 py-0.5 text-xs font-black tracking-wider">
+          Battle #{{ currentBattleId }}
+        </span>
+
+        <!-- Letztes Ergebnis kompakt -->
+        <div
+          v-if="battleStore.battlePhase === 'playing' && battleStore.lastAutoBattleResult"
+          class="flex items-center gap-1.5 px-2 py-1 text-xs font-black"
+          :class="lastResult.won ? 'last-result--win' : 'last-result--loss'"
+        >
+          <span>{{ lastResult.won ? '🏆' : '💀' }}</span>
+          <span>{{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP</span>
+        </div>
+
+        <!-- Countdown -->
+        <div
+          v-if="isAutoBattleActive && battleStore.battlePhase === 'playing'"
+          class="flex items-center gap-2 px-3 py-1 countdown-badge"
+        >
+          <span class="text-xs animate-spin">⏱️</span>
+          <span class="text-xs font-black"> {{ timeUntilNextBattle }}s </span>
+        </div>
+
+        <!-- Live-Indikator -->
+        <div
+          v-if="battleStore.battlePhase === 'playing'"
+          class="live-badge flex items-center gap-1.5 px-2 py-1"
+        >
+          <div class="live-dot w-1.5 h-1.5 rounded-full animate-pulse" />
+          <span class="text-xs font-black">LIVE</span>
+        </div>
       </div>
 
-      <!-- Countdown -->
-      <div
-        v-if="isAutoBattleActive && battleStore.battlePhase === 'playing'"
-        class="countdown-badge flex items-center gap-2 px-3 py-1"
-      >
-        <span class="text-xs animate-spin">⏱️</span>
-        <span class="text-xs font-black"> {{ timeUntilNextBattle }}s </span>
+      <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
+      <div class="flex flex-row flex-1 min-h-0 gap-3">
+        <!-- Left: MiniMap square, fills available height -->
+        <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
+          <MiniMapComponent
+            class="w-full max-h-full aspect-square"
+            :battle-id="currentBattleId"
+            :score="score"
+          />
+        </div>
+        <!-- Right: Chat top + Scoreboard bottom, equal height split -->
+        <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
+          <ChatPanelComponent class="flex-1 min-h-0" />
+          <ScoreboardComponent class="flex-1 min-h-0" />
+        </div>
       </div>
-
-      <!-- Live-Indikator -->
-      <div
-        v-if="battleStore.battlePhase === 'playing'"
-        class="live-badge flex items-center gap-1.5 px-2 py-1"
-      >
-        <div class="live-dot w-1.5 h-1.5 rounded-full animate-pulse" />
-        <span class="text-xs font-black">LIVE</span>
-      </div>
-    </div>
-
-    <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
-    <div class="flex flex-row flex-1 min-h-0 gap-3">
-      <!-- Left: MiniMap square, fills available height -->
-      <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
-        <MiniMapComponent
-          class="w-full max-h-full aspect-square"
-          :battle-id="currentBattleId"
-          :score="score"
-        />
-      </div>
-      <!-- Right: Chat top + Scoreboard bottom, equal height split -->
-      <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
-        <ChatPanelComponent class="flex-1 min-h-0" />
-        <ScoreboardComponent class="flex-1 min-h-0" />
-      </div>
-    </div>
+    </template>
   </div>
 
   <!-- Result Modal (Teleport) -->
   <Teleport to="body">
     <div
-      v-if="battleStore.battlePhase === 'result'"
+      v-if="battleStore.battlePhase === 'result' && battleStore.showAutoBattleResult"
       class="fixed inset-0 z-[9999] flex items-center justify-center rpg-overlay"
     >
       <div
-        class="result-modal relative w-full max-w-sm p-6 mx-4 text-center rpg-frame"
+        class="relative w-full max-w-sm p-6 mx-4 text-center result-modal rpg-frame"
         :class="lastResult.won ? 'result-modal--win' : 'result-modal--loss'"
       >
-        <div class="rpg-accent-bar mb-4" />
+        <div class="mb-4 rpg-accent-bar" />
         <div class="mb-2 text-5xl">{{ lastResult.won ? '🏆' : '💀' }}</div>
         <div
           class="mb-3 text-3xl font-black tracking-widest"
@@ -80,13 +102,13 @@
         <div class="flex items-center justify-center gap-3">
           <button
             @click="battleStore.manualDismissResult()"
-            class="result-btn px-5 py-2 text-sm font-black"
+            class="px-5 py-2 text-sm font-black result-btn"
           >
             Weiter →
           </button>
           <button
             @click="battleStore.toggleAutoSkip()"
-            class="result-btn px-4 py-2 text-sm font-black"
+            class="px-4 py-2 text-sm font-black result-btn"
             :class="battleStore.autoSkipEnabled ? 'result-btn--active' : ''"
           >
             {{ battleStore.autoSkipEnabled ? '⏭️ Auto-Skip AN' : '⏸️ Auto-Skip AUS' }}
@@ -104,7 +126,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref } from 'vue'
 import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import ScoreboardComponent from './ScoreboardComponent.vue'
@@ -115,6 +137,15 @@ export default defineComponent({
   components: { MiniMapComponent, ChatPanelComponent, ScoreboardComponent },
   setup() {
     const battleStore = useBattleStore()
+
+    // NEU: Loading-Flag verhindert Doppelklick, async Initialisierung
+    const isStarting = ref(false)
+    const startBattle = async () => {
+      if (isStarting.value) return
+      isStarting.value = true
+      await battleStore.initializePersistentAutoBattle()
+      isStarting.value = false
+    }
 
     const score = computed(() => ({
       team1Kills: battleStore.team1.reduce((sum, c) => sum + c.kills, 0),
@@ -135,12 +166,17 @@ export default defineComponent({
       currentBattleId,
       battleStore,
       score,
+      startBattle,
+      isStarting,
     }
   },
 })
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   BATTLE HEADER
+   ═══════════════════════════════════════════ */
 .battle-header {
   background: var(--rpg-bg-header);
   border: 1px solid var(--rpg-border-row);
@@ -187,6 +223,9 @@ export default defineComponent({
   background: var(--rpg-green-top);
 }
 
+/* ═══════════════════════════════════════════
+   RESULT MODAL
+   ═══════════════════════════════════════════ */
 .result-modal--win {
   box-shadow:
     inset 0 0 0 2px var(--rpg-wood-inner),
@@ -252,5 +291,109 @@ export default defineComponent({
   background: #a87ed826;
   border-color: #a87ed859;
   color: #c4a0ee;
+}
+
+/* ═══════════════════════════════════════════
+   START SCREEN
+   ═══════════════════════════════════════════ */
+.start-screen {
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
+
+.start-crest {
+  font-size: 72px;
+  filter: drop-shadow(0 0 16px rgba(200, 150, 30, 0.6));
+  animation: crestPulse 3s ease-in-out infinite;
+}
+
+.start-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #d4a020;
+  text-shadow: 0 0 16px rgba(210, 160, 20, 0.5);
+}
+
+.start-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  line-height: 1.7;
+  max-width: 340px;
+}
+
+.start-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 36px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(to bottom, #1e2e12, #131e0c);
+  border: 2px solid #4a8a28;
+  border-radius: 4px;
+  color: #6ec040;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow:
+    0 0 16px rgba(74, 138, 40, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.start-btn:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #28401a, #1a2a10);
+  border-color: #6ec040;
+  color: #8ee060;
+  box-shadow:
+    0 0 28px rgba(82, 184, 48, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: scale(1.04);
+}
+
+.start-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.start-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-color: #3a6a20;
+  color: #4a8028;
+}
+
+.start-btn-icon {
+  font-size: 18px;
+}
+
+/* ═══════════════════════════════════════════
+   TRANSITIONS
+   ═══════════════════════════════════════════ */
+.start-fade-leave-active {
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.start-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* ═══════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════ */
+@keyframes crestPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(200, 150, 30, 0.4));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(210, 160, 20, 0.75));
+    transform: scale(1.06);
+  }
 }
 </style>

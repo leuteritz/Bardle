@@ -276,6 +276,7 @@ export const useBattleStore = defineStore('battle', {
       this.battleTime = 0
       this.battlePhase = 'playing'
       this.predeterminedWin = null
+      this.showAutoBattleResult = false
     },
 
     // Zeigt zeitgestaffelte Chat-Nachrichten mit phasenbezogenem Inhalt über 30 real-Sekunden

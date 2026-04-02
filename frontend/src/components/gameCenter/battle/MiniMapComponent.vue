@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="group relative overflow-hidden flex flex-col minimap-panel"
-  >
+  <div class="relative flex flex-col overflow-hidden group minimap-panel">
     <div
       class="absolute inset-0 pointer-events-none minimap-shimmer translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
     />
@@ -9,9 +7,7 @@
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
-        <div
-          class="relative h-full max-w-full overflow-hidden aspect-square minimap-field"
-        >
+        <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field">
           <!-- Time -->
           <div
             class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white minimap-overlay-badge"
@@ -20,9 +16,7 @@
           </div>
 
           <!-- Score -->
-          <div
-            class="absolute z-20 top-1 right-1 px-1.5 py-0.5 minimap-overlay-badge"
-          >
+          <div class="absolute z-20 top-1 right-1 px-1.5 py-0.5 minimap-overlay-badge">
             <span class="text-xs font-black score-blue">{{ score.team1Kills }}</span>
             <span class="text-xs score-sep"> vs </span>
             <span class="text-xs font-black score-red">{{ score.team2Kills }}</span>
@@ -37,7 +31,8 @@
           <div
             v-for="(champ, i) in blueChampions"
             :key="'blue-' + i"
-            class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
+            class="absolute -translate-x-1/2 -translate-y-1/2"
+            :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
@@ -53,7 +48,8 @@
           <div
             v-for="(champ, i) in redChampions"
             :key="'red-' + i"
-            class="absolute transition-all duration-500 -translate-x-1/2 -translate-y-1/2"
+            class="absolute -translate-x-1/2 -translate-y-1/2"
+            :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
@@ -73,7 +69,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import {
   MINIMAP_PHASE_LANING_END,
@@ -97,20 +93,19 @@ interface ChampPos {
 
 type MapPhase = 'laning' | 'drake' | 'midFight' | 'baron' | 'nexusPush'
 
-// Lane targets per role (index 0=Top, 1=Jungle, 2=Mid, 3=Bot ADC, 4=Bot Support)
 const BLUE_LANE_TARGETS = [
-  { cx: 16, cy: 28 }, // Top — Mitte Top-Lane
-  { cx: 24, cy: 70 }, // Jungle — Blue Buff Position
-  { cx: 44, cy: 56 }, // Mid — Mitte Mid-Lane, leicht blue-side
-  { cx: 85, cy: 84 }, // Bot ADC — Mitte Bot-Lane
-  { cx: 85, cy: 88 }, // Bot Support — knapp hinter ADC
+  { cx: 16, cy: 28 },
+  { cx: 24, cy: 70 },
+  { cx: 44, cy: 56 },
+  { cx: 85, cy: 84 },
+  { cx: 85, cy: 88 },
 ]
 const RED_LANE_TARGETS = [
-  { cx: 20, cy: 24 }, // Top — Mitte Top-Lane
-  { cx: 76, cy: 30 }, // Jungle — Red Blue Buff Position
-  { cx: 56, cy: 44 }, // Mid — Mitte Mid-Lane, leicht red-side
-  { cx: 85, cy: 78 }, // Bot ADC — Mitte Bot-Lane
-  { cx: 85, cy: 74 }, // Bot Support — knapp hinter ADC
+  { cx: 20, cy: 24 },
+  { cx: 76, cy: 30 },
+  { cx: 56, cy: 44 },
+  { cx: 85, cy: 78 },
+  { cx: 85, cy: 74 },
 ]
 
 function getPhaseTarget(
@@ -127,27 +122,16 @@ function getPhaseTarget(
       return { ...t, spread: 4, lerpFactor: 0.35 }
     }
     case 'drake': {
-      // Both teams converge on drake — blue slightly south-west, red slightly north-east
       const offset = isBlue ? -3 : 3
       return { cx: DRAKE_POS.x + offset, cy: DRAKE_POS.y + offset, spread: 6, lerpFactor: 0.12 }
     }
     case 'midFight': {
       const offset = isBlue ? -3 : 3
-      return {
-        cx: MID_CENTER.x + offset,
-        cy: MID_CENTER.y + offset,
-        spread: 6,
-        lerpFactor: 0.12,
-      }
+      return { cx: MID_CENTER.x + offset, cy: MID_CENTER.y + offset, spread: 6, lerpFactor: 0.12 }
     }
     case 'baron': {
       const offset = isBlue ? -3 : 3
-      return {
-        cx: BARON_POS.x + offset,
-        cy: BARON_POS.y + offset,
-        spread: 6,
-        lerpFactor: 0.12,
-      }
+      return { cx: BARON_POS.x + offset, cy: BARON_POS.y + offset, spread: 6, lerpFactor: 0.12 }
     }
     case 'nexusPush': {
       const isWinning = isBlue === isBlueWinning
@@ -175,6 +159,9 @@ export default defineComponent({
     const blueChampions = ref<ChampPos[]>([])
     const redChampions = ref<ChampPos[]>([])
 
+    // Wenn true: CSS transition-all deaktiviert → kein sichtbares Teleportieren beim Snap
+    const isSnapping = ref(false)
+
     const phase = computed((): MapPhase => {
       const t = battleStore.battleTime
       if (t < MINIMAP_PHASE_LANING_END) return 'laning'
@@ -190,6 +177,40 @@ export default defineComponent({
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     }
 
+    function lerp(a: number, b: number, t: number) {
+      return a + (b - a) * t
+    }
+
+    function clamp(v: number, min: number, max: number) {
+      return Math.max(min, Math.min(max, v))
+    }
+
+    // ── NEU: Setzt alle Dots sofort auf die korrekte Phase-Position (kein Lerp) ──
+    async function snapChampionsToPhase() {
+      isSnapping.value = true // CSS-Transition deaktivieren
+
+      const currentPhase = phase.value
+      const isBlueWinning = battleStore.predeterminedWin === true
+
+      blueChampions.value.forEach((champ, i) => {
+        if (champ.dead) return
+        const target = getPhaseTarget(true, i, currentPhase, isBlueWinning)
+        champ.x = clamp(target.cx + (Math.random() - 0.5) * target.spread * 2, 2, 98)
+        champ.y = clamp(target.cy + (Math.random() - 0.5) * target.spread * 2, 2, 98)
+      })
+
+      redChampions.value.forEach((champ, i) => {
+        if (champ.dead) return
+        const target = getPhaseTarget(false, i, currentPhase, isBlueWinning)
+        champ.x = clamp(target.cx + (Math.random() - 0.5) * target.spread * 2, 2, 98)
+        champ.y = clamp(target.cy + (Math.random() - 0.5) * target.spread * 2, 2, 98)
+      })
+
+      // Nach dem nächsten DOM-Frame Transition wieder einschalten
+      await nextTick()
+      isSnapping.value = false
+    }
+
     function resetChampions() {
       const blueCount = battleStore.team1.length || 5
       const redCount = battleStore.team2.length || 5
@@ -203,14 +224,11 @@ export default defineComponent({
         y: RED_FOUNTAIN.y,
         dead: false,
       }))
-    }
 
-    function lerp(a: number, b: number, t: number) {
-      return a + (b - a) * t
-    }
-
-    function clamp(v: number, min: number, max: number) {
-      return Math.max(min, Math.min(max, v))
+      // ── NEU: Wenn die Battle schon läuft, sofort zur richtigen Position springen ──
+      if (battleStore.battleTime > 0) {
+        snapChampionsToPhase()
+      }
     }
 
     function moveChampions() {
@@ -235,7 +253,6 @@ export default defineComponent({
         champ.y = clamp(lerp(champ.y, ty, target.lerpFactor), 2, 98)
       })
 
-      // During nexus push, progressively mark losing team as dead in last stretch
       if (currentPhase === 'nexusPush' && battleStore.battleTime >= 2520) {
         const losingTeam = isBlueWinning ? redChampions : blueChampions
         const alive = losingTeam.value.filter((c) => !c.dead)
@@ -250,7 +267,15 @@ export default defineComponent({
       moveInterval = setInterval(moveChampions, 500)
     }
 
-    // Kill event reaction
+    // ── NEU: Tab-Wechsel abfangen ──
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        // Tab ist wieder aktiv → Dots sofort an die korrekte Position springen
+        snapChampionsToPhase()
+      }
+    }
+
+    // Kill event reaction (unverändert)
     let lastScore = { team1Kills: 0, team2Kills: 0 }
     watch(
       () => props.score,
@@ -300,13 +325,17 @@ export default defineComponent({
     onMounted(() => {
       resetChampions()
       startMovement()
+      // ── NEU: Listener registrieren ──
+      document.addEventListener('visibilitychange', handleVisibilityChange)
     })
 
     onUnmounted(() => {
       if (moveInterval) clearInterval(moveInterval)
+      // ── NEU: Listener aufräumen ──
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     })
 
-    return { blueChampions, redChampions, formatTime, battleStore }
+    return { blueChampions, redChampions, formatTime, battleStore, isSnapping }
   },
 })
 </script>
@@ -349,7 +378,13 @@ export default defineComponent({
   box-shadow: 0 0 6px #ef444499;
 }
 
-.score-blue { color: #93c5fd; }
-.score-red { color: #fca5a5; }
-.score-sep { color: #ffffff66; }
+.score-blue {
+  color: #93c5fd;
+}
+.score-red {
+  color: #fca5a5;
+}
+.score-sep {
+  color: #ffffff66;
+}
 </style>
