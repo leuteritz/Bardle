@@ -24,7 +24,7 @@
 
           <img
             src="/img/minimap.png"
-            class="absolute w-full h-full pointer-events-none select-none opacity-80"
+            class="absolute w-full h-full pointer-events-none select-none opacity-30"
           />
 
           <!-- Blue Champions -->
@@ -341,12 +341,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.minimap-panel {
-  background: var(--rpg-bg-deep);
-  border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
-}
-
 .minimap-shimmer {
   background: linear-gradient(to right, transparent, #5c331014, transparent);
 }
@@ -354,17 +348,12 @@ export default defineComponent({
 .minimap-field {
   border: 2px solid var(--rpg-wood-mid);
   border-radius: 4px;
-  background: linear-gradient(to bottom right, #a8d8a0, #6ab860);
+  background: transparent;
 }
 
 .minimap-overlay-badge {
   background: #000000b3;
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
-}
-
-.minimap-inner-border {
-  border: 1px solid #5c33104d;
   border-radius: 4px;
 }
 

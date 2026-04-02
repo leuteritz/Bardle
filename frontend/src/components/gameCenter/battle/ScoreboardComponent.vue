@@ -83,7 +83,7 @@ export default defineComponent({
 
 <style scoped>
 .scoreboard-panel {
-  background: var(--rpg-bg-deep);
+  background: rgba(17, 16, 8, 0.45);
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
 }
