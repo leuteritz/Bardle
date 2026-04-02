@@ -41,8 +41,48 @@
 
     <!-- ══ BATTLE UI ══ -->
     <template v-if="battleStore.isAutoBattleInitialized">
+      <!-- ── PLANET BATTLE BACKGROUND ────────────────────────────────────── -->
+      <div class="absolute inset-0 z-0 pointer-events-none planet-battle-bg" aria-hidden="true">
+        <!-- Planet sphere -->
+        <div class="planet-sphere" :class="`planet-v${planetVariant}`">
+          <div class="planet-atmo" />
+          <div class="planet-terrain" :class="`terrain-v${planetVariant}`" />
+          <div class="planet-cloud" />
+          <div class="planet-highlight" />
+          <div class="planet-rim" :class="`rim-v${planetVariant}`" />
+
+          <!-- LoL-Battle Zone Marker -->
+          <div class="battle-zone-marker">
+            <!-- Rotating outer dashed ring -->
+            <div class="bzm-ring bzm-ring--outer" />
+            <!-- Static inner border ring -->
+            <div class="bzm-ring bzm-ring--inner" />
+            <!-- Pulsing glow core -->
+            <div class="bzm-pulse" />
+            <!-- Crosshair lines -->
+            <div class="bzm-crosshair bzm-crosshair--h" />
+            <div class="bzm-crosshair bzm-crosshair--v" />
+            <!-- RPG corner brackets -->
+            <span class="bzm-corner bzm-corner--tl" />
+            <span class="bzm-corner bzm-corner--tr" />
+            <span class="bzm-corner bzm-corner--bl" />
+            <span class="bzm-corner bzm-corner--br" />
+            <!-- Center dot -->
+            <div class="bzm-dot" />
+            <!-- Label below -->
+            <div class="bzm-label">
+              <span class="bzm-label-icon">⚔</span>
+              <span class="bzm-label-text">BATTLE ZONE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Atmospheric glow halo (outside sphere, in background) -->
+        <div class="planet-halo" :class="`halo-v${planetVariant}`" />
+      </div>
+
       <!-- Battle Header Bar -->
-      <div class="flex items-center justify-between flex-shrink-0 p-3 battle-header">
+      <div class="relative z-10 flex items-center justify-between flex-shrink-0 p-3 battle-header">
         <span class="battle-id-badge px-2 py-0.5 text-xs font-black tracking-wider">
           Battle #{{ currentBattleId }}
         </span>
@@ -78,7 +118,7 @@
       </div>
 
       <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
-      <div class="flex flex-row flex-1 min-h-0 gap-3">
+      <div class="relative z-10 flex flex-row flex-1 min-h-0 gap-3">
         <!-- Left: MiniMap -->
         <div class="flex items-center justify-center flex-1 min-w-0 min-h-0">
           <MiniMapComponent
@@ -173,17 +213,17 @@ function darken(hex: string, amt: number): string {
   return `rgb(${Math.max(0, r - amt)},${Math.max(0, g - amt)},${Math.max(0, b - amt)})`
 }
 
-const ANIM_DURATION = 5000 // total ms
-const SLOW_AT = 3500 // ms when warp begins to decelerate
-const PLANET_TEXT_MS = 3600 // ms to show "Planet gefunden!" text
+const ANIM_DURATION = 5000
+const SLOW_AT = 3500
+const PLANET_TEXT_MS = 3600
 const STAR_COUNT = 300
 
 const PLANET_PALETTES: Array<[string, string]> = [
-  ['#e06030', '#ff5500'], // orange
-  ['#3070d8', '#2255ff'], // blue
-  ['#c03038', '#ff2020'], // red
-  ['#30b060', '#20d060'], // green
-  ['#9040c0', '#8000ff'], // purple
+  ['#3060c8', '#2255ff'], // 0 blue
+  ['#c85020', '#ff5500'], // 1 orange
+  ['#c02828', '#ff2020'], // 2 red
+  ['#28a050', '#20d060'], // 3 green
+  ['#8030b8', '#8000ff'], // 4 purple
 ]
 
 interface Star {
@@ -192,7 +232,6 @@ interface Star {
   z: number
   pz: number
 }
-
 interface PlanetDef {
   startDelay: number
   ix: number
@@ -226,6 +265,9 @@ export default defineComponent({
     let rafId: number | null = null
     let planetFoundTimer: ReturnType<typeof setTimeout> | null = null
 
+    // ── Planet background variant (0-4, changes each battle) ───────────────
+    const planetVariant = computed(() => battleStore.currentBattleId % 5)
+
     // ── Canvas animation core ───────────────────────────────────────────────
 
     function buildStars(W: number, H: number): Star[] {
@@ -238,10 +280,10 @@ export default defineComponent({
     }
 
     function buildPlanets(W: number, H: number): PlanetDef[] {
-      const count = 2 + Math.floor(Math.random() * 2) // 2 or 3
+      const count = 2 + Math.floor(Math.random() * 2)
       return Array.from({ length: count }, (_, i) => {
         const [color, glow] = PLANET_PALETTES[Math.floor(Math.random() * PLANET_PALETTES.length)]
-        const goRight = Math.random() < 0.5 // entry direction
+        const goRight = Math.random() < 0.5
         const size = 32 + Math.random() * 56
         return {
           startDelay: 200 + i * 700 + Math.random() * 300,
@@ -279,17 +321,14 @@ export default defineComponent({
             return
           }
 
-          // warp factor: 1.0 → 0.05 in last 1.5 s
           const warp =
             elapsed < SLOW_AT ? 1.0 : 1.0 - ((elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT)) * 0.95
-
           const speed = warp * 20 + 0.4
 
-          // ── background ────────────────────────────────────────────────
           ctx.fillStyle = '#0a0a0f'
           ctx.fillRect(0, 0, W, H)
 
-          // ── stars (warp streaks / dots) ───────────────────────────────
+          // Stars
           for (const s of stars) {
             s.pz = s.z
             s.z -= speed
@@ -300,21 +339,16 @@ export default defineComponent({
               s.pz = MAXZ
               continue
             }
-
             const sx = (s.x / s.z) * W + CX
             const sy = (s.y / s.z) * H + CY
             const px = (s.x / s.pz) * W + CX
             const py = (s.y / s.pz) * H + CY
-
             if (sx < 0 || sx > W || sy < 0 || sy > H) continue
-
             const bright = 1 - s.z / MAXZ
             const alpha = 0.12 + bright * 0.88
             const rv = Math.floor(185 + bright * 70)
             const gv = Math.floor(205 + bright * 50)
-
             if (warp > 0.22) {
-              // warp streak
               ctx.strokeStyle = `rgba(${rv},${gv},255,${alpha})`
               ctx.lineWidth = Math.max(0.4, bright * 2.2)
               ctx.beginPath()
@@ -322,7 +356,6 @@ export default defineComponent({
               ctx.lineTo(sx, sy)
               ctx.stroke()
             } else {
-              // dot when nearly stopped
               ctx.fillStyle = `rgba(${rv},${gv},255,${alpha})`
               ctx.beginPath()
               ctx.arc(sx, sy, Math.max(0.5, bright * 1.8), 0, Math.PI * 2)
@@ -330,29 +363,23 @@ export default defineComponent({
             }
           }
 
-          // ── planets ───────────────────────────────────────────────────
+          // Planets
           for (const p of planets) {
             if (elapsed < p.startDelay) continue
             const pe = elapsed - p.startDelay
             const px = p.ix + p.vx * pe * warp
             const py = p.iy + p.vy * pe * warp
             p.rot += p.rotSpeed
-
             if (px < -p.size * 3 || px > W + p.size * 3) continue
-
             const [gr, gg, gb] = hexToRgb(p.glow)
-
-            // outer glow
-            const outerGlow = ctx.createRadialGradient(px, py, p.size * 0.6, px, py, p.size * 2.6)
-            outerGlow.addColorStop(0, `rgba(${gr},${gg},${gb},0.35)`)
-            outerGlow.addColorStop(1, `rgba(${gr},${gg},${gb},0)`)
-            ctx.fillStyle = outerGlow
+            const og = ctx.createRadialGradient(px, py, p.size * 0.6, px, py, p.size * 2.6)
+            og.addColorStop(0, `rgba(${gr},${gg},${gb},0.35)`)
+            og.addColorStop(1, `rgba(${gr},${gg},${gb},0)`)
+            ctx.fillStyle = og
             ctx.beginPath()
             ctx.arc(px, py, p.size * 2.6, 0, Math.PI * 2)
             ctx.fill()
-
-            // planet body
-            const bodyGrad = ctx.createRadialGradient(
+            const bg = ctx.createRadialGradient(
               px - p.size * 0.32,
               py - p.size * 0.38,
               0,
@@ -360,15 +387,13 @@ export default defineComponent({
               py,
               p.size,
             )
-            bodyGrad.addColorStop(0, lighten(p.color, 55))
-            bodyGrad.addColorStop(0.5, p.color)
-            bodyGrad.addColorStop(1, darken(p.color, 65))
-            ctx.fillStyle = bodyGrad
+            bg.addColorStop(0, lighten(p.color, 55))
+            bg.addColorStop(0.5, p.color)
+            bg.addColorStop(1, darken(p.color, 65))
+            ctx.fillStyle = bg
             ctx.beginPath()
             ctx.arc(px, py, p.size, 0, Math.PI * 2)
             ctx.fill()
-
-            // atmosphere band (rotates)
             ctx.save()
             ctx.translate(px, py)
             ctx.rotate(p.rot)
@@ -377,8 +402,6 @@ export default defineComponent({
             ctx.ellipse(0, p.size * 0.16, p.size * 0.94, p.size * 0.13, 0, 0, Math.PI * 2)
             ctx.fill()
             ctx.restore()
-
-            // rim glow
             ctx.strokeStyle = `rgba(${gr},${gg},${gb},0.55)`
             ctx.lineWidth = 1.8
             ctx.beginPath()
@@ -386,12 +409,10 @@ export default defineComponent({
             ctx.stroke()
           }
 
-          // ── slow-down vignette + zoom-in target planet ────────────────
+          // Slow-down vignette + zoom target
           if (elapsed > SLOW_AT) {
-            const t = (elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT) // 0→1
-
-            // dark vignette from edges
-            const vign = ctx.createRadialGradient(
+            const t = (elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT)
+            const vg = ctx.createRadialGradient(
               CX,
               CY,
               Math.min(W, H) * 0.18,
@@ -399,34 +420,28 @@ export default defineComponent({
               CY,
               Math.max(W, H) * 0.78,
             )
-            vign.addColorStop(0, 'rgba(10,10,15,0)')
-            vign.addColorStop(1, `rgba(10,10,15,${t * 0.7})`)
-            ctx.fillStyle = vign
+            vg.addColorStop(0, 'rgba(10,10,15,0)')
+            vg.addColorStop(1, `rgba(10,10,15,${t * 0.7})`)
+            ctx.fillStyle = vg
             ctx.fillRect(0, 0, W, H)
-
-            // central zoom planet
-            const zR = 38 + t * 96 // radius grows 38 → 134
-            const zAlpha = t * 0.92
-
-            const zGlow = ctx.createRadialGradient(CX, CY, zR * 0.4, CX, CY, zR * 2.4)
-            zGlow.addColorStop(0, `rgba(90,150,255,${zAlpha * 0.45})`)
-            zGlow.addColorStop(1, `rgba(90,150,255,0)`)
-            ctx.fillStyle = zGlow
+            const zR = 38 + t * 96
+            const za = t * 0.92
+            const zg = ctx.createRadialGradient(CX, CY, zR * 0.4, CX, CY, zR * 2.4)
+            zg.addColorStop(0, `rgba(90,150,255,${za * 0.45})`)
+            zg.addColorStop(1, 'rgba(90,150,255,0)')
+            ctx.fillStyle = zg
             ctx.beginPath()
             ctx.arc(CX, CY, zR * 2.4, 0, Math.PI * 2)
             ctx.fill()
-
-            const zBody = ctx.createRadialGradient(CX - zR * 0.3, CY - zR * 0.35, 0, CX, CY, zR)
-            zBody.addColorStop(0, `rgba(135,185,255,${zAlpha})`)
-            zBody.addColorStop(0.5, `rgba(55,100,205,${zAlpha})`)
-            zBody.addColorStop(1, `rgba(18,38,100,${zAlpha})`)
-            ctx.fillStyle = zBody
+            const zb = ctx.createRadialGradient(CX - zR * 0.3, CY - zR * 0.35, 0, CX, CY, zR)
+            zb.addColorStop(0, `rgba(135,185,255,${za})`)
+            zb.addColorStop(0.5, `rgba(55,100,205,${za})`)
+            zb.addColorStop(1, `rgba(18,38,100,${za})`)
+            ctx.fillStyle = zb
             ctx.beginPath()
             ctx.arc(CX, CY, zR, 0, Math.PI * 2)
             ctx.fill()
-
-            // rim
-            ctx.strokeStyle = `rgba(100,165,255,${zAlpha * 0.75})`
+            ctx.strokeStyle = `rgba(100,165,255,${za * 0.75})`
             ctx.lineWidth = 2
             ctx.beginPath()
             ctx.arc(CX, CY, zR + 2, 0, Math.PI * 2)
@@ -440,18 +455,15 @@ export default defineComponent({
       })
     }
 
-    // ── Trigger the 5-second animation ─────────────────────────────────────
+    // ── Universe animation trigger ──────────────────────────────────────────
 
     async function triggerUniverseAnimation(): Promise<void> {
-      // Respect prefers-reduced-motion
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-      // Guard: don't start a second animation while one is running
       if (universePhase.value === 'animating') return
 
       universePhase.value = 'animating'
       showPlanetFound.value = false
-
-      await nextTick() // wait for <canvas> to mount
+      await nextTick()
 
       const canvas = universeCanvas.value
       if (!canvas) {
@@ -459,20 +471,14 @@ export default defineComponent({
         return
       }
 
-      // Set canvas pixel resolution to match its CSS size
       const parent = canvas.parentElement as HTMLElement
       canvas.width = parent.offsetWidth || 420
       canvas.height = parent.offsetHeight || 320
 
-      // Schedule "Planet gefunden!" overlay text
       planetFoundTimer = setTimeout(() => {
         showPlanetFound.value = true
       }, PLANET_TEXT_MS)
-
-      // Run animation (Promise resolves after ANIM_DURATION)
       await runCanvasAnimation(canvas)
-
-      // Cleanup
       if (planetFoundTimer) {
         clearTimeout(planetFoundTimer)
         planetFoundTimer = null
@@ -492,11 +498,10 @@ export default defineComponent({
       }
     }
 
-    // ── Watch: result dismissed (both manual and auto-skip) ────────────────
+    // ── Watch: result dismissed → trigger next universe anim ───────────────
     watch(
       () => battleStore.showAutoBattleResult,
       (newVal, oldVal) => {
-        // Fire whenever the result panel disappears while battle is running
         if (oldVal === true && newVal === false && battleStore.isAutoBattleInitialized) {
           triggerUniverseAnimation()
         }
@@ -505,12 +510,12 @@ export default defineComponent({
 
     onUnmounted(stopAnimation)
 
-    // ── Start battle flow (existing, extended with animation) ───────────────
+    // ── Start battle flow ───────────────────────────────────────────────────
     const startBattle = async () => {
       if (isStarting.value) return
       isStarting.value = true
-      await triggerUniverseAnimation() // 5 s universe anim
-      await battleStore.initializePersistentAutoBattle() // init battle loop
+      await triggerUniverseAnimation()
+      await battleStore.initializePersistentAutoBattle()
       isStarting.value = false
     }
 
@@ -532,6 +537,7 @@ export default defineComponent({
       universePhase,
       showPlanetFound,
       universeCanvas,
+      planetVariant,
       startBattle,
       score,
       isAutoBattleActive,
@@ -546,6 +552,337 @@ export default defineComponent({
 
 <style scoped>
 /* ═══════════════════════════════════════════
+   PLANET BATTLE BACKGROUND
+   ═══════════════════════════════════════════ */
+.planet-battle-bg {
+  overflow: hidden;
+}
+
+/* Large sphere – partially cut off bottom-left behind the minimap */
+.planet-sphere {
+  position: absolute;
+  width: 66%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  bottom: -18%;
+  left: -8%;
+  /* fallback base */
+  background: radial-gradient(circle at 36% 30%, #2a4878, #0e1a3a, #060c1e);
+}
+
+/* ── 5 planet color variants (change each battle) ── */
+.planet-v0 {
+  /* blue – ocean/ice */
+  background: radial-gradient(circle at 36% 30%, #2a4878 0%, #0e1a3a 45%, #060c1e 100%);
+}
+.planet-v1 {
+  /* orange – desert/lava */
+  background: radial-gradient(circle at 36% 30%, #78340a 0%, #3a1404 45%, #160700 100%);
+}
+.planet-v2 {
+  /* red – volcanic */
+  background: radial-gradient(circle at 36% 30%, #6e1010 0%, #2e0606 45%, #120202 100%);
+}
+.planet-v3 {
+  /* green – jungle */
+  background: radial-gradient(circle at 36% 30%, #0e4a1c 0%, #041e08 45%, #010a02 100%);
+}
+.planet-v4 {
+  /* purple – arcane */
+  background: radial-gradient(circle at 36% 30%, #3c1260 0%, #180528 45%, #080010 100%);
+}
+
+/* Atmospheric haze layer (top-lit) */
+.planet-atmo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% -5%, rgba(100, 160, 255, 0.14) 0%, transparent 55%);
+  mix-blend-mode: screen;
+}
+
+/* Terrain / landmass patches */
+.planet-terrain {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.terrain-v0 {
+  background:
+    radial-gradient(ellipse 20% 13% at 44% 44%, rgba(15, 55, 110, 0.65) 0%, transparent 100%),
+    radial-gradient(ellipse 14% 20% at 60% 54%, rgba(20, 70, 130, 0.55) 0%, transparent 100%),
+    radial-gradient(ellipse 24% 11% at 34% 63%, rgba(10, 45, 90, 0.5) 0%, transparent 100%),
+    radial-gradient(ellipse 11% 16% at 65% 36%, rgba(20, 40, 80, 0.45) 0%, transparent 100%);
+}
+.terrain-v1 {
+  background:
+    radial-gradient(ellipse 22% 12% at 42% 46%, rgba(120, 60, 10, 0.6) 0%, transparent 100%),
+    radial-gradient(ellipse 13% 19% at 61% 52%, rgba(100, 40, 5, 0.5) 0%, transparent 100%),
+    radial-gradient(ellipse 18% 10% at 35% 61%, rgba(80, 30, 8, 0.5) 0%, transparent 100%);
+}
+.terrain-v2 {
+  background:
+    radial-gradient(ellipse 18% 14% at 45% 45%, rgba(150, 20, 10, 0.6) 0%, transparent 100%),
+    radial-gradient(ellipse 14% 18% at 62% 55%, rgba(120, 10, 5, 0.5) 0%, transparent 100%),
+    radial-gradient(ellipse 20% 10% at 33% 62%, rgba(90, 15, 10, 0.5) 0%, transparent 100%);
+}
+.terrain-v3 {
+  background:
+    radial-gradient(ellipse 20% 13% at 44% 44%, rgba(15, 80, 25, 0.7) 0%, transparent 100%),
+    radial-gradient(ellipse 14% 20% at 60% 54%, rgba(10, 65, 20, 0.6) 0%, transparent 100%),
+    radial-gradient(ellipse 23% 11% at 34% 63%, rgba(20, 70, 15, 0.5) 0%, transparent 100%),
+    radial-gradient(ellipse 11% 16% at 64% 37%, rgba(15, 55, 10, 0.5) 0%, transparent 100%);
+}
+.terrain-v4 {
+  background:
+    radial-gradient(ellipse 20% 13% at 44% 44%, rgba(70, 15, 110, 0.65) 0%, transparent 100%),
+    radial-gradient(ellipse 14% 20% at 60% 54%, rgba(55, 10, 90, 0.55) 0%, transparent 100%),
+    radial-gradient(ellipse 22% 11% at 34% 63%, rgba(80, 20, 100, 0.5) 0%, transparent 100%);
+}
+
+/* Wispy cloud streaks */
+.planet-cloud {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 35% 5% at 55% 38%, rgba(255, 255, 255, 0.06) 0%, transparent 100%),
+    radial-gradient(ellipse 25% 4% at 38% 56%, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
+  animation: cloudDrift 22s linear infinite;
+}
+
+/* Specular highlight (top-left bright spot) */
+.planet-highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 26%, rgba(200, 230, 255, 0.1) 0%, transparent 42%);
+}
+
+/* Rim glow (atmosphere edge) */
+.planet-rim {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 28px rgba(60, 130, 255, 0.18),
+    0 0 60px rgba(40, 100, 220, 0.16),
+    0 0 120px rgba(30, 70, 180, 0.08);
+  border: 1px solid rgba(80, 150, 255, 0.12);
+}
+.rim-v0 {
+  box-shadow:
+    inset 0 0 28px rgba(60, 130, 255, 0.18),
+    0 0 60px rgba(40, 100, 220, 0.16),
+    0 0 120px rgba(30, 70, 180, 0.08);
+  border-color: rgba(80, 150, 255, 0.12);
+}
+.rim-v1 {
+  box-shadow:
+    inset 0 0 28px rgba(255, 130, 40, 0.18),
+    0 0 60px rgba(220, 90, 20, 0.16),
+    0 0 120px rgba(180, 60, 10, 0.08);
+  border-color: rgba(255, 130, 60, 0.12);
+}
+.rim-v2 {
+  box-shadow:
+    inset 0 0 28px rgba(255, 60, 40, 0.2),
+    0 0 60px rgba(220, 30, 20, 0.18),
+    0 0 120px rgba(180, 10, 10, 0.1);
+  border-color: rgba(255, 80, 60, 0.14);
+}
+.rim-v3 {
+  box-shadow:
+    inset 0 0 28px rgba(40, 200, 80, 0.18),
+    0 0 60px rgba(20, 160, 50, 0.16),
+    0 0 120px rgba(10, 120, 30, 0.08);
+  border-color: rgba(60, 200, 80, 0.12);
+}
+.rim-v4 {
+  box-shadow:
+    inset 0 0 28px rgba(160, 60, 255, 0.2),
+    0 0 60px rgba(120, 20, 220, 0.18),
+    0 0 120px rgba(80, 0, 180, 0.1);
+  border-color: rgba(160, 80, 255, 0.14);
+}
+
+/* Large atmospheric halo behind the sphere */
+.planet-halo {
+  position: absolute;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  bottom: -28%;
+  left: -16%;
+  pointer-events: none;
+  background: transparent;
+}
+.halo-v0 {
+  box-shadow:
+    0 0 80px 40px rgba(30, 80, 200, 0.07),
+    0 0 160px 80px rgba(20, 60, 180, 0.04);
+}
+.halo-v1 {
+  box-shadow:
+    0 0 80px 40px rgba(200, 80, 20, 0.07),
+    0 0 160px 80px rgba(180, 60, 10, 0.04);
+}
+.halo-v2 {
+  box-shadow:
+    0 0 80px 40px rgba(200, 20, 20, 0.08),
+    0 0 160px 80px rgba(180, 10, 10, 0.05);
+}
+.halo-v3 {
+  box-shadow:
+    0 0 80px 40px rgba(20, 160, 50, 0.07),
+    0 0 160px 80px rgba(10, 140, 30, 0.04);
+}
+.halo-v4 {
+  box-shadow:
+    0 0 80px 40px rgba(120, 30, 220, 0.08),
+    0 0 160px 80px rgba(80, 0, 180, 0.05);
+}
+
+/* ═══════════════════════════════════════════
+   BATTLE ZONE MARKER  (placed on planet surface)
+   ═══════════════════════════════════════════ */
+
+/* Position within .planet-sphere: upper-right visible quadrant */
+.battle-zone-marker {
+  position: absolute;
+  top: 17%;
+  right: 17%;
+  width: 82px;
+  height: 82px;
+  transform: translate(50%, -50%);
+}
+
+/* Outer dashed ring – rotates slowly */
+.bzm-ring {
+  position: absolute;
+  border-radius: 50%;
+  border-style: dashed;
+}
+.bzm-ring--outer {
+  inset: 0;
+  border-width: 1.5px;
+  border-color: rgba(212, 160, 30, 0.55);
+  animation: bzmSpin 10s linear infinite;
+}
+.bzm-ring--inner {
+  inset: 10px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(220, 175, 50, 0.8);
+  box-shadow:
+    0 0 10px rgba(220, 160, 40, 0.35),
+    inset 0 0 10px rgba(220, 160, 40, 0.12);
+}
+
+/* Pulsing glow fill */
+.bzm-pulse {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: rgba(200, 140, 30, 0.1);
+  box-shadow: 0 0 18px 4px rgba(210, 150, 35, 0.3);
+  animation: bzmPulse 2.2s ease-in-out infinite;
+}
+
+/* Crosshair lines */
+.bzm-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(210, 165, 45, 0.45);
+}
+.bzm-crosshair--h {
+  width: 52%;
+  height: 1px;
+}
+.bzm-crosshair--v {
+  width: 1px;
+  height: 52%;
+}
+
+/* Center dot */
+.bzm-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(230, 185, 60, 0.9);
+  box-shadow: 0 0 6px rgba(230, 185, 60, 0.6);
+}
+
+/* RPG corner brackets */
+.bzm-corner {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-color: rgba(212, 160, 30, 0.85);
+  border-style: solid;
+  border-width: 0;
+}
+.bzm-corner--tl {
+  top: 3px;
+  left: 3px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.bzm-corner--tr {
+  top: 3px;
+  right: 3px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+.bzm-corner--bl {
+  bottom: 3px;
+  left: 3px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+.bzm-corner--br {
+  bottom: 3px;
+  right: 3px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+/* Label beneath the marker */
+.bzm-label {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  white-space: nowrap;
+}
+.bzm-label-icon {
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(212, 160, 30, 0.7));
+}
+.bzm-label-text {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
+  color: rgba(210, 165, 50, 0.72);
+  text-shadow:
+    0 0 6px rgba(212, 160, 30, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* ═══════════════════════════════════════════
    UNIVERSE ANIMATION OVERLAY
    ═══════════════════════════════════════════ */
 .universe-overlay {
@@ -553,14 +890,11 @@ export default defineComponent({
   border-radius: 4px;
   overflow: hidden;
 }
-
 .universe-canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
-
-/* "Planet gefunden!" text overlay */
 .planet-found-overlay {
   position: absolute;
   inset: 0;
@@ -571,13 +905,11 @@ export default defineComponent({
   gap: 10px;
   pointer-events: none;
 }
-
 .planet-found-icon {
   font-size: 52px;
   filter: drop-shadow(0 0 20px rgba(100, 165, 255, 0.8));
   animation: planetBob 1.2s ease-in-out infinite;
 }
-
 .planet-found-text {
   font-size: 20px;
   font-weight: 900;
@@ -587,8 +919,6 @@ export default defineComponent({
     0 0 16px rgba(100, 165, 255, 0.9),
     0 0 32px rgba(100, 165, 255, 0.5);
 }
-
-/* Transition for "Planet gefunden!" appearance */
 .planet-found-fade-enter-active {
   transition:
     opacity 0.5s ease,
@@ -608,28 +938,24 @@ export default defineComponent({
   border-radius: 4px;
   box-shadow: 0 4px 12px #00000066;
 }
-
 .battle-id-badge {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   color: var(--rpg-text-muted);
 }
-
 .last-result--win {
   background: #52b8301f;
   border: 1px solid #52b8304d;
   border-radius: 4px;
   color: var(--rpg-green-top);
 }
-
 .last-result--loss {
   background: #cc60501f;
   border: 1px solid #cc60504d;
   border-radius: 4px;
   color: var(--rpg-red);
 }
-
 .countdown-badge {
   background: #5b8dd926;
   border: 1px solid #5b8dd94d;
@@ -645,20 +971,17 @@ export default defineComponent({
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
 }
-
 .wl-win {
   font-size: 11px;
   font-weight: 900;
   color: var(--rpg-green-top);
   text-shadow: 0 0 8px #52b83066;
 }
-
 .wl-sep {
   font-size: 11px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.2);
 }
-
 .wl-loss {
   font-size: 11px;
   font-weight: 900;
@@ -675,41 +998,34 @@ export default defineComponent({
     inset 0 0 0 4px var(--rpg-wood-mid),
     0 0 30px #52b8304d;
 }
-
 .result-modal--loss {
   box-shadow:
     inset 0 0 0 2px var(--rpg-wood-inner),
     inset 0 0 0 4px var(--rpg-wood-mid),
     0 0 30px #cc60504d;
 }
-
 .result-text--win {
   color: var(--rpg-green-top);
   text-shadow: 0 0 12px #52b83066;
 }
-
 .result-text--loss {
   color: var(--rpg-red);
   text-shadow: 0 0 12px #cc605066;
 }
-
 .lp-badge {
   border-radius: 4px;
   border: 1px solid;
 }
-
 .lp-badge--pos {
   background: #52b83026;
   border-color: #52b8304d;
   color: var(--rpg-green-top);
 }
-
 .lp-badge--neg {
   background: #cc605026;
   border-color: #cc60504d;
   color: var(--rpg-red);
 }
-
 .result-btn {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-border-row);
@@ -718,18 +1034,15 @@ export default defineComponent({
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .result-btn:hover {
   background: var(--rpg-bg-hover);
   border-color: var(--rpg-wood-mid);
   color: #fff;
   transform: scale(1.03);
 }
-
 .result-btn:active {
   transform: scale(0.96);
 }
-
 .result-btn--active {
   background: #a87ed826;
   border-color: #a87ed859;
@@ -744,13 +1057,11 @@ export default defineComponent({
   border: 1px solid #3e200a;
   border-radius: 4px;
 }
-
 .start-crest {
   font-size: 72px;
   filter: drop-shadow(0 0 16px rgba(200, 150, 30, 0.6));
   animation: crestPulse 3s ease-in-out infinite;
 }
-
 .start-title {
   font-size: 28px;
   font-weight: 900;
@@ -758,7 +1069,6 @@ export default defineComponent({
   color: #d4a020;
   text-shadow: 0 0 16px rgba(210, 160, 20, 0.5);
 }
-
 .start-desc {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.35);
@@ -766,7 +1076,6 @@ export default defineComponent({
   line-height: 1.7;
   max-width: 340px;
 }
-
 .start-btn {
   display: flex;
   align-items: center;
@@ -785,7 +1094,6 @@ export default defineComponent({
     0 0 16px rgba(74, 138, 40, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
-
 .start-btn:hover:not(:disabled) {
   background: linear-gradient(to bottom, #28401a, #1a2a10);
   border-color: #6ec040;
@@ -795,18 +1103,15 @@ export default defineComponent({
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: scale(1.04);
 }
-
 .start-btn:active:not(:disabled) {
   transform: scale(0.97);
 }
-
 .start-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   border-color: #3a6a20;
   color: #4a8028;
 }
-
 .start-btn-icon {
   font-size: 18px;
 }
@@ -833,7 +1138,6 @@ export default defineComponent({
     opacity 0.4s ease,
     transform 0.4s ease;
 }
-
 .start-fade-leave-to {
   opacity: 0;
   transform: scale(0.96);
@@ -853,7 +1157,6 @@ export default defineComponent({
     transform: scale(1.06);
   }
 }
-
 @keyframes planetBob {
   0%,
   100% {
@@ -863,12 +1166,42 @@ export default defineComponent({
     transform: translateY(-6px);
   }
 }
+@keyframes bzmSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bzmPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes cloudDrift {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ─── prefers-reduced-motion ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .universe-overlay,
   .planet-found-icon,
-  .start-crest {
+  .start-crest,
+  .bzm-ring--outer,
+  .bzm-pulse,
+  .planet-cloud {
     animation: none !important;
   }
   .planet-found-fade-enter-active {
