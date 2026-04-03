@@ -46,17 +46,11 @@ import { useGameStore } from '../../../stores/gameStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useAugmentStore } from '../../../stores/augmentStore'
 import { formatNumber } from '../../../config/numberFormat'
-import ChimesPerSecondModal from './ChimesPerSecondModal.vue'
-import MeepProgressComponent from './MeepProgressComponent.vue'
-import ExpeditionComponent from './ExpeditionComponent.vue'
 import SunComponent from './SunComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
   components: {
-    ChimesPerSecondModal,
-    MeepProgressComponent,
-    ExpeditionComponent,
     SunComponent,
   },
   setup() {

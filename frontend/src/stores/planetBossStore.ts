@@ -78,7 +78,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   actions: {
     spawnBoss(planetId: string, planetType: PlanetType) {
       const gameStore = useGameStore()
-      const shopStore = useShopStore()
 
       const level = gameStore.level
       const cps = gameStore.chimesPerSecond

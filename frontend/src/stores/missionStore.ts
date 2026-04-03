@@ -8,7 +8,7 @@ import {
   CHAMPION_POWER_PER_LEVEL,
   MAX_ACTIVE_MISSIONS,
 } from '../config/constants'
-import type { Mission, MissionStatus, ChampionRole } from '../types'
+import type { Mission, ChampionRole } from '../types'
 import { logger } from '../utils/logger'
 
 export const useMissionStore = defineStore('mission', {

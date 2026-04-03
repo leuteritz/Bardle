@@ -405,7 +405,6 @@ export function drawGasGiant(
   cx: number,
   cy: number,
   r: number,
-  _size: number,
 ): void {
   const pal = GAS_GIANT_PALETTES[Math.floor(Math.random() * GAS_GIANT_PALETTES.length)]
   const defs = svgEl('defs')
@@ -1137,7 +1136,6 @@ export function drawPlanet(
   cx: number,
   cy: number,
   r: number,
-  size: number,
 ): void {
   switch (type) {
     case 'rocky':
@@ -1147,7 +1145,7 @@ export function drawPlanet(
       drawIce(svg, id, cx, cy, r)
       break
     case 'gas-giant':
-      drawGasGiant(svg, id, cx, cy, r, size)
+      drawGasGiant(svg, id, cx, cy, r)
       break
     case 'lava':
       drawLava(svg, id, cx, cy, r)

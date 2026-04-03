@@ -276,7 +276,7 @@ function renderPlanet() {
   svg.style.width = '100%'
   svg.style.height = '100%'
   const planetRadius = isGalaxyBoss.value ? 138 : 120
-  drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, planetRadius, 280)
+  drawPlanet(svg, `boss-${Date.now()}`, boss.planetType, 140, 140, planetRadius)
   planetStage.value.appendChild(svg)
 }
 

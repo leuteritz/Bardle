@@ -110,7 +110,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     svg.dataset.planetId = id
     svg.style.opacity = '0'
 
-    drawPlanet(svg, id, config.type, r, r, r, size)
+    drawPlanet(svg, id, config.type, r, r, r)
 
     svg.style.transform = `translate(${x}px,${y}px) scale(0.05)`
     container.value.appendChild(svg)
@@ -156,7 +156,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     svg.style.opacity = '0'
     svg.style.transition = 'opacity 0.5s ease'
 
-    drawPlanet(svg, id, config.type, r, r, r, size)
+    drawPlanet(svg, id, config.type, r, r, r)
     svg.style.transform = `translate(${x}px, ${y}px)`
     container.value.appendChild(svg)
     requestAnimationFrame(() => {
@@ -310,9 +310,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const rawDelta = (timestamp - lastTimestamp) / 1000
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
-
-    const w = container.value?.clientWidth ?? window.innerWidth
-    const h = container.value?.clientHeight ?? window.innerHeight
 
     for (let i = planets.length - 1; i >= 0; i--) {
       const planet = planets[i]

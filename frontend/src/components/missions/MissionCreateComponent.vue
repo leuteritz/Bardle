@@ -45,7 +45,7 @@
               :key="champ"
               @click="
                 !isSelectedElsewhere(config.id, roleIdx, champ) && missionStore.canStartMission
-                  ? toggleSelection(config.id, roleIdx, champ, role)
+                  ? toggleSelection(config.id, roleIdx, champ)
                   : undefined
               "
               class="relative flex flex-col items-center gap-1 p-1.5 transition-all duration-150 cursor-pointer mc-champ-pick"
@@ -137,7 +137,7 @@ export default defineComponent({
     function getSelection(configId: string, roleIdx: number): string {
       return selections[configId]?.[roleIdx] ?? ''
     }
-    function setSelection(configId: string, roleIdx: number, value: string, _role: ChampionRole) {
+    function setSelection(configId: string, roleIdx: number, value: string) {
       if (!selections[configId]) selections[configId] = {}
       selections[configId][roleIdx] = value
     }
@@ -186,10 +186,12 @@ export default defineComponent({
       if (sec === 0) return `${min}m`
       return `${min}m ${sec}s`
     }
-    function toggleSelection(configId: string, roleIdx: number, champ: string, role: ChampionRole) {
-      getSelection(configId, roleIdx) === champ
-        ? setSelection(configId, roleIdx, '', role)
-        : setSelection(configId, roleIdx, champ, role)
+    function toggleSelection(configId: string, roleIdx: number, champ: string) {
+      if (getSelection(configId, roleIdx) === champ) {
+        setSelection(configId, roleIdx, '')
+      } else {
+        setSelection(configId, roleIdx, champ)
+      }
     }
     function isSelectedElsewhere(configId: string, roleIdx: number, champ: string): boolean {
       return Object.entries(selections[configId] ?? {})
