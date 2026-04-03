@@ -81,6 +81,7 @@ export const useBattleStore = defineStore('battle', {
 
     // Live-Battle Interface - Chat, Teams und Timer für laufende Kämpfe
     isAutoBattleInitialized: false,
+    battleEverStarted: false,
     currentBattleId: 0,
     timeUntilNextBattle: 0,
     countdownTimer: null as ReturnType<typeof setInterval> | null,
@@ -694,10 +695,19 @@ export const useBattleStore = defineStore('battle', {
       this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
+    // Hält die laufende Kampfsimulation an, ohne battleTime zurückzusetzen
+    pauseBattleSimulation() {
+      if (this.battleSimIntervalId) {
+        clearInterval(this.battleSimIntervalId)
+        this.battleSimIntervalId = null
+      }
+    },
+
     // Initialisiert den dauerhaften Auto-Battle Modus nur einmal pro Session
     async initializePersistentAutoBattle() {
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
+      this.battleEverStarted = true
       this.autoBattleEnabled = false // reset: verhindert early-return in startAutoBattle() nach Page-Reload
       await this.startAutoBattle()
     },

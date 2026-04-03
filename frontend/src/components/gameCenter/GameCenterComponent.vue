@@ -38,7 +38,9 @@ export default defineComponent({
     })
 
     onMounted(async () => {
-      await battleStore.initializePersistentAutoBattle()
+      if (battleStore.battleEverStarted) {
+        await battleStore.initializePersistentAutoBattle()
+      }
     })
 
     return {

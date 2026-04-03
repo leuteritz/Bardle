@@ -79,6 +79,7 @@ export function usePersistence() {
         battleHistory: battleStore.battleHistory.slice(-20),
         recruitableChampions: battleStore.recruitableChampions,
         recruitedChampions: [...battleStore.recruitedChampions],
+        battleEverStarted: battleStore.battleEverStarted,
       },
       missions: {
         activeMissions: missionStore.activeMissions,
@@ -200,6 +201,7 @@ export function usePersistence() {
         battleStore.autoBattleEnabled = b.autoBattleEnabled ?? false
         if (Array.isArray(b.recruitableChampions)) battleStore.recruitableChampions = b.recruitableChampions
         if (Array.isArray(b.recruitedChampions)) battleStore.recruitedChampions = b.recruitedChampions
+        battleStore.battleEverStarted = b.battleEverStarted ?? false
       }
 
       // Restore missionStore

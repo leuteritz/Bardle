@@ -40,7 +40,7 @@
     </Transition>
 
     <!-- ══ BATTLE UI ══ -->
-    <template v-if="battleStore.isAutoBattleInitialized">
+    <template v-if="battleStore.isAutoBattleInitialized && universePhase !== 'animating'">
       <!-- ── PLANET BATTLE BACKGROUND ────────────────────────────────────── -->
       <div class="absolute inset-0 z-0 pointer-events-none planet-battle-bg" aria-hidden="true">
         <!-- Starfield -->
@@ -466,9 +466,11 @@ export default defineComponent({
 
     watch(
       () => battleStore.showAutoBattleResult,
-      (newVal, oldVal) => {
+      async (newVal, oldVal) => {
         if (oldVal === true && newVal === false && battleStore.isAutoBattleInitialized) {
-          triggerUniverseAnimation()
+          battleStore.pauseBattleSimulation()
+          await triggerUniverseAnimation()
+          battleStore.startBattleSimulation()
         }
       },
     )
