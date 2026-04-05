@@ -104,9 +104,9 @@
 <script lang="ts">
 // Script bleibt identisch – keine Änderungen nötig
 import { defineComponent, onMounted, onUnmounted, ref } from 'vue'
-import { useMissionStore } from '@/stores/missionStore'
+import { useMissionStore } from '@/stores/expedtion'
 import { useBattleStore } from '@/stores/battleStore'
-import { MISSION_CONFIGS } from '@/config/missions'
+import { MISSION_CONFIGS } from '@/config/expedition'
 import type { Mission } from '@/types'
 
 export default defineComponent({

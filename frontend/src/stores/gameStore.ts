@@ -3,7 +3,7 @@ import { useShopStore } from './shopStore'
 import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
-import { useMissionStore } from './missionStore'
+import { useMissionStore } from './expedtion'
 import { universes } from '../config/universes'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
@@ -116,7 +116,9 @@ export const useGameStore = defineStore('game', {
         }
         const augmentStore = useAugmentStore()
         augmentStore.onLevelUp(this.activeAugments)
-        logger.info('Game', `Level up: ${oldLevel} -> ${this.level}`, { skillPoints: this.skillPoints })
+        logger.info('Game', `Level up: ${oldLevel} -> ${this.level}`, {
+          skillPoints: this.skillPoints,
+        })
         this.triggerAugmentSelection()
         break
       }
@@ -417,7 +419,10 @@ export const useGameStore = defineStore('game', {
     // Merged augment effects from all active augments
     combinedAugmentEffects(): AugmentEffects {
       const result: AugmentEffects = {}
-      const additiveKeys: (keyof AugmentEffects)[] = ['abilityPowerPerLevel', 'enemyMaxHPDrainPerSecond']
+      const additiveKeys: (keyof AugmentEffects)[] = [
+        'abilityPowerPerLevel',
+        'enemyMaxHPDrainPerSecond',
+      ]
       for (const id of this.activeAugments) {
         const aug = AUGMENTS.find((a) => a.id === id)
         if (!aug) continue
@@ -503,7 +508,9 @@ export const useGameStore = defineStore('game', {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
-      return Math.floor((this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul)
+      return Math.floor(
+        (this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul,
+      )
     },
 
     // Ability-Multiplikatoren für Q/W/E/R-Effekte

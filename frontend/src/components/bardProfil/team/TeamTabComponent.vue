@@ -125,7 +125,7 @@
 
           <!-- Mission-Komponenten -->
           <div class="flex flex-col flex-1 min-h-0 gap-3 overflow-y-auto rpg-scrollbar">
-            <MissionCreateComponent />
+            <ExpeditionCreateComponent />
           </div>
         </div>
       </div>
@@ -374,15 +374,15 @@
 <script lang="ts">
 import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { useMissionStore } from '@/stores/missionStore'
+import { useMissionStore } from '@/stores/expedtion'
 import { useGameStore } from '@/stores/gameStore'
 import { useItemStore } from '@/stores/itemStore'
 import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
-import { MISSION_CONFIGS } from '@/config/missions'
+import { MISSION_CONFIGS } from '@/config/expedition'
 import { SHOP_ITEMS, getItemById } from '@/config/items'
 import { truncate } from '@/config/numberFormat'
 import { fetchChampionNames } from '@/utils/champions'
-import MissionCreateComponent from '../team/missions/MissionCreateComponent.vue'
+import ExpeditionCreateComponent from './expedition/expeditionCreateComponent.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 import ChampionSlotModal from './ChampionSlotModal.vue'
@@ -391,7 +391,7 @@ import type { Mission, ItemCategory } from '@/types'
 export default defineComponent({
   name: 'TeamTabComponent',
   components: {
-    MissionCreateComponent,
+    ExpeditionCreateComponent,
     ChampionShopComponent,
     ItemShopComponent,
     ChampionSlotModal,

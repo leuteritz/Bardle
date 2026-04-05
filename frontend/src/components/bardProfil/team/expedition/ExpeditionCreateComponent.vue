@@ -110,9 +110,9 @@
 
 <script lang="ts">
 import { defineComponent, reactive } from 'vue'
-import { useMissionStore } from '@/stores/missionStore'
+import { useMissionStore } from '@/stores/expedtion'
 import { useBattleStore } from '@/stores/battleStore'
-import { MISSION_CONFIGS } from '@/config/missions'
+import { MISSION_CONFIGS } from '@/config/expedition'
 import { getChampionRoles } from '@/config/championRoles'
 import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
 import { truncate as truncateName } from '@/config/numberFormat'

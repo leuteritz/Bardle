@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useBattleStore } from './battleStore'
-import { MISSION_CONFIGS } from '../config/missions'
+import { MISSION_CONFIGS } from '../config/expedition'
 import { getChampionRoles } from '../config/championRoles'
 import {
   CHAMPION_BASE_POWER,
@@ -60,7 +60,8 @@ export const useMissionStore = defineStore('mission', {
     },
 
     startMission(configId: string, assignedChampions: { name: string; role: ChampionRole }[]) {
-      if (this.activeMissions.filter((m) => m.status === 'active').length >= MAX_ACTIVE_MISSIONS) return false
+      if (this.activeMissions.filter((m) => m.status === 'active').length >= MAX_ACTIVE_MISSIONS)
+        return false
 
       const config = MISSION_CONFIGS.find((m) => m.id === configId)
       if (!config) return false
@@ -79,6 +80,7 @@ export const useMissionStore = defineStore('mission', {
         configId,
         name: config.name,
         description: config.description,
+        icon: config.icon, // ✅ aus MissionConfig
         requiredRoles: config.requiredRoles,
         assignedChampions,
         durationSeconds: config.durationSeconds,
@@ -87,6 +89,9 @@ export const useMissionStore = defineStore('mission', {
         successChance,
         status: 'active',
         reward: 0,
+        condition: null, // ✅ oder passender Defaultwert
+        rewardUpgrade: null, // ✅ oder passender Defaultwert
+        claimed: false, // ✅ logischer Default
       }
 
       this.activeMissions.push(mission)
@@ -112,7 +117,9 @@ export const useMissionStore = defineStore('mission', {
           const success = Math.random() < mission.successChance
           mission.status = success ? 'success' : 'failure'
           mission.reward = success ? mission.baseReward : Math.floor(mission.baseReward * 0.1)
-          logger.info('Mission', `Resolved: ${mission.name} - ${mission.status.toUpperCase()}`, { reward: mission.reward })
+          logger.info('Mission', `Resolved: ${mission.name} - ${mission.status.toUpperCase()}`, {
+            reward: mission.reward,
+          })
         }
       }
     },

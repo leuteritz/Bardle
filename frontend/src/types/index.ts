@@ -134,7 +134,15 @@ export interface Expedition {
 }
 
 // Planet event types
-export type PlanetType = 'rocky' | 'ice' | 'gas-giant' | 'lava' | 'ocean' | 'desert' | 'jungle' | 'ringed'
+export type PlanetType =
+  | 'rocky'
+  | 'ice'
+  | 'gas-giant'
+  | 'lava'
+  | 'ocean'
+  | 'desert'
+  | 'jungle'
+  | 'ringed'
 
 export interface PlanetItem {
   id: string
@@ -329,4 +337,29 @@ export interface Material {
   description: string
   rarity: MaterialRarity
   dropChance: number
+}
+
+// ── Mission-System ──────────────────────────────────────
+export type MissionConditionType =
+  | 'totalChimes'
+  | 'totalClicks'
+  | 'singleBuildingLevel'
+  | 'totalBuildingLevels'
+  | 'ownedBuildingTypes'
+  | 'permanentUpgradeCount'
+
+export interface MissionCondition {
+  type: MissionConditionType
+  target: number
+  buildingId?: string // optional: nur für singleBuildingLevel
+}
+
+export interface Mission {
+  id: string
+  name: string
+  icon: string
+  description: string
+  condition: MissionCondition
+  rewardUpgrade: Omit<PermanentUpgrade, 'purchased'>
+  claimed: boolean
 }

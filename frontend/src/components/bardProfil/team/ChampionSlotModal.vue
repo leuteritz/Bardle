@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { useMissionStore } from '@/stores/missionStore'
+import { useMissionStore } from '@/stores/expedtion'
 import { useItemStore } from '@/stores/itemStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import { SHOP_ITEMS, getItemById } from '@/config/items'

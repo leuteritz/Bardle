@@ -1,7 +1,7 @@
 import { useGameStore } from '../stores/gameStore'
 import { useShopStore } from '../stores/shopStore'
 import { useBattleStore } from '../stores/battleStore'
-import { useMissionStore } from '../stores/missionStore'
+import { useMissionStore } from '../stores/expedtion'
 import { useInventoryStore } from '../stores/inventoryStore'
 import { useAugmentStore } from '../stores/augmentStore'
 import { useItemStore } from '../stores/itemStore'
@@ -58,7 +58,10 @@ export function usePersistence() {
       shop: {
         buyAmount: shopStore.buyAmount,
         shopUpgrades: shopStore.shopUpgrades.map((u) => ({ id: u.id, level: u.level })),
-        permanentUpgrades: shopStore.permanentUpgrades.map((u) => ({ id: u.id, purchased: u.purchased })),
+        permanentUpgrades: shopStore.permanentUpgrades.map((u) => ({
+          id: u.id,
+          purchased: u.purchased,
+        })),
       },
       battle: {
         mmr: battleStore.mmr,
@@ -137,11 +140,14 @@ export function usePersistence() {
         gameStore.chimes = g.chimes ?? gameStore.chimes
         // Always recalculate from current formula so balance changes take effect immediately
         const restoredLevel = g.level ?? gameStore.level
-        gameStore.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(restoredLevel, LEVEL_EXPONENT))
+        gameStore.chimesForNextLevel = Math.ceil(
+          LEVEL_BASE * Math.pow(restoredLevel, LEVEL_EXPONENT),
+        )
         gameStore.baseChimesPerClick = g.baseChimesPerClick ?? gameStore.baseChimesPerClick
         gameStore.chimesForMeep = g.chimesForMeep ?? gameStore.chimesForMeep
         gameStore.chimesForNextUniverse = g.chimesForNextUniverse ?? gameStore.chimesForNextUniverse
-        gameStore.chimesToUniverseRescue = g.chimesToUniverseRescue ?? gameStore.chimesToUniverseRescue
+        gameStore.chimesToUniverseRescue =
+          g.chimesToUniverseRescue ?? gameStore.chimesToUniverseRescue
         gameStore.meeps = g.meeps ?? gameStore.meeps
         gameStore.meepChimeRequirement = g.meepChimeRequirement ?? gameStore.meepChimeRequirement
         gameStore.level = g.level ?? gameStore.level
@@ -150,11 +156,13 @@ export function usePersistence() {
         gameStore.currentUniverse = g.currentUniverse ?? gameStore.currentUniverse
         gameStore.prestigeAvailable = g.prestigeAvailable ?? gameStore.prestigeAvailable
         gameStore.activeExpedition = g.activeExpedition ?? null
-        if (g.buildingProductionHistory) gameStore.buildingProductionHistory = g.buildingProductionHistory
+        if (g.buildingProductionHistory)
+          gameStore.buildingProductionHistory = g.buildingProductionHistory
         if (g.totalBuildingProduction) gameStore.totalBuildingProduction = g.totalBuildingProduction
         if (Array.isArray(g.activeAugments)) gameStore.activeAugments = g.activeAugments
         gameStore.pendingAugmentChoice = g.pendingAugmentChoice ?? false
-        if (Array.isArray(g.pendingAugmentOptions)) gameStore.pendingAugmentOptions = g.pendingAugmentOptions
+        if (Array.isArray(g.pendingAugmentOptions))
+          gameStore.pendingAugmentOptions = g.pendingAugmentOptions
       }
 
       // Restore shopStore
@@ -184,7 +192,8 @@ export function usePersistence() {
         battleStore.mmr = b.mmr ?? battleStore.mmr
         if (b.currentRank) battleStore.currentRank = { ...b.currentRank }
         if (Array.isArray(b.ownedChampions)) battleStore.ownedChampions = b.ownedChampions
-        if (Array.isArray(b.teamSlotAssignments)) battleStore.teamSlotAssignments = b.teamSlotAssignments
+        if (Array.isArray(b.teamSlotAssignments))
+          battleStore.teamSlotAssignments = b.teamSlotAssignments
         battleStore.totalBattles = b.totalBattles ?? battleStore.totalBattles
         battleStore.totalWins = b.totalWins ?? battleStore.totalWins
         battleStore.totalLosses = b.totalLosses ?? battleStore.totalLosses
@@ -199,8 +208,10 @@ export function usePersistence() {
         // autoBattleEnabled is restored so the UI shows the correct toggle state,
         // but the actual battle loop is started by the UI component on mount.
         battleStore.autoBattleEnabled = b.autoBattleEnabled ?? false
-        if (Array.isArray(b.recruitableChampions)) battleStore.recruitableChampions = b.recruitableChampions
-        if (Array.isArray(b.recruitedChampions)) battleStore.recruitedChampions = b.recruitedChampions
+        if (Array.isArray(b.recruitableChampions))
+          battleStore.recruitableChampions = b.recruitableChampions
+        if (Array.isArray(b.recruitedChampions))
+          battleStore.recruitedChampions = b.recruitedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
       }
 
@@ -334,8 +345,12 @@ export function usePersistence() {
 
     // 3. Reset shopStore
     const shopStore = useShopStore()
-    shopStore.shopUpgrades.forEach((u) => { u.level = 0 })
-    shopStore.permanentUpgrades.forEach((u) => { u.purchased = false })
+    shopStore.shopUpgrades.forEach((u) => {
+      u.level = 0
+    })
+    shopStore.permanentUpgrades.forEach((u) => {
+      u.purchased = false
+    })
     shopStore.buyAmount = 1
 
     // 4. Reset augmentStore
