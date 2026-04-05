@@ -107,7 +107,14 @@ function buildPlanets(W: number, H: number): PlanetDef[] {
 export default defineComponent({
   name: 'PlanetSearchComponent',
 
-  setup(_, { expose }) {
+  props: {
+    variant: {
+      type: Number,
+      default: 0, // 0–4, passend zu planetVariant in BattleResultComponent
+    },
+  },
+
+  setup(props, { expose }) {
     const isAnimating = ref(false)
     const showPlanetFound = ref(false)
     const universeCanvas = ref<HTMLCanvasElement | null>(null)
@@ -118,7 +125,7 @@ export default defineComponent({
 
     // ── Canvas render loop ────────────────────────────────────────────────────
 
-    function runCanvasAnimation(canvas: HTMLCanvasElement): Promise<void> {
+    function runCanvasAnimation(canvas: HTMLCanvasElement, variant: number): Promise<void> {
       return new Promise<void>((resolve) => {
         const ctx = canvas.getContext('2d')!
         const W = canvas.width
@@ -240,6 +247,7 @@ export default defineComponent({
           if (elapsed > SLOW_AT) {
             const t = (elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT)
 
+            // Vignette (unverändert)
             const vg = ctx.createRadialGradient(
               CX,
               CY,
@@ -256,24 +264,32 @@ export default defineComponent({
             const zR = 38 + t * 96
             const za = t * 0.92
 
+            // ── Zielplanet in der richtigen Varianten-Farbe ────────────────────
+            const pColor = PLANET_PALETTES[variant][0]
+            const pGlow = PLANET_PALETTES[variant][1]
+            const [gr, gg, gb] = hexToRgb(pGlow)
+
+            // Äußerer Glow-Halo
             const zg = ctx.createRadialGradient(CX, CY, zR * 0.4, CX, CY, zR * 2.4)
-            zg.addColorStop(0, `rgba(90,150,255,${za * 0.45})`)
-            zg.addColorStop(1, 'rgba(90,150,255,0)')
+            zg.addColorStop(0, `rgba(${gr},${gg},${gb},${za * 0.45})`)
+            zg.addColorStop(1, `rgba(${gr},${gg},${gb},0)`)
             ctx.fillStyle = zg
             ctx.beginPath()
             ctx.arc(CX, CY, zR * 2.4, 0, Math.PI * 2)
             ctx.fill()
 
+            // Planetenkörper (gleiche Logik wie Flyby-Planeten)
             const zb = ctx.createRadialGradient(CX - zR * 0.3, CY - zR * 0.35, 0, CX, CY, zR)
-            zb.addColorStop(0, `rgba(135,185,255,${za})`)
-            zb.addColorStop(0.5, `rgba(55,100,205,${za})`)
-            zb.addColorStop(1, `rgba(18,38,100,${za})`)
+            zb.addColorStop(0, lighten(pColor, 55))
+            zb.addColorStop(0.5, pColor)
+            zb.addColorStop(1, darken(pColor, 65))
             ctx.fillStyle = zb
             ctx.beginPath()
             ctx.arc(CX, CY, zR, 0, Math.PI * 2)
             ctx.fill()
 
-            ctx.strokeStyle = `rgba(100,165,255,${za * 0.75})`
+            // Rim
+            ctx.strokeStyle = `rgba(${gr},${gg},${gb},${za * 0.75})`
             ctx.lineWidth = 2
             ctx.beginPath()
             ctx.arc(CX, CY, zR + 2, 0, Math.PI * 2)
@@ -324,7 +340,7 @@ export default defineComponent({
         showPlanetFound.value = true
       }, PLANET_TEXT_MS)
 
-      await runCanvasAnimation(canvas)
+      await runCanvasAnimation(canvas, props.variant) // ← variant übergeben
 
       if (planetFoundTimer) {
         clearTimeout(planetFoundTimer)

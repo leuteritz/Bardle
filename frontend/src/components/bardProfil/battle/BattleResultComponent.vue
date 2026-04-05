@@ -1,7 +1,7 @@
 <template>
   <div class="relative flex flex-col w-full h-full p-4 space-y-3 overflow-hidden">
     <!-- ══ UNIVERSE ANIMATION (eigene Komponente) ══ -->
-    <PlanetSearchComponent ref="universeAnim" />
+    <PlanetSearchComponent ref="universeAnim" :variant="planetVariant" />
 
     <!-- ══ START SCREEN ══ -->
     <Transition name="start-fade">
