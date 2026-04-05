@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { useMissionStore } from '@/stores/expedtion'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useItemStore } from '@/stores/itemStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import { SHOP_ITEMS, getItemById } from '@/config/items'
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 }>()
 
 const battleStore = useBattleStore()
-const missionStore = useMissionStore()
+const expeditionStore = useExpeditionStore() // ← Tippfehler + Name gefixt
 const itemStore = useItemStore()
 
 const selectedRole = ref<string>('all')
@@ -65,7 +65,7 @@ const championsInOtherSlots = computed(() => {
   return map
 })
 
-const onMissionSet = computed(() => new Set(missionStore.championsOnMission))
+const onExpeditionSet = computed(() => new Set(expeditionStore.championsOnExpedition))
 
 const filteredChampions = computed(() =>
   allChampions.value.filter((c) => {
@@ -117,16 +117,16 @@ function unequipCurrent() {
 
 function getChampionStatus(
   champion: string,
-): 'current' | 'other-slot' | 'on-mission' | 'available' {
+): 'current' | 'other-slot' | 'on-expedition' | 'available' {
   if (currentChampion.value === champion) return 'current'
   if (championsInOtherSlots.value[champion] !== undefined) return 'other-slot'
-  if (onMissionSet.value.has(champion)) return 'on-mission'
+  if (onExpeditionSet.value.has(champion)) return 'on-expedition'
   return 'available'
 }
 
 function selectChampion(champion: string) {
   const status = getChampionStatus(champion)
-  if (status === 'other-slot' || status === 'on-mission') return
+  if (status === 'other-slot' || status === 'on-expedition') return
   battleStore.assignToSlot(props.slotIndex, champion)
   emit('close')
 }
@@ -383,7 +383,7 @@ function onImgError(e: Event) {
                 'champ-card--current': getChampionStatus(champion) === 'current',
                 'champ-card--locked':
                   getChampionStatus(champion) === 'other-slot' ||
-                  getChampionStatus(champion) === 'on-mission',
+                  getChampionStatus(champion) === 'on-expedition',
                 'champ-card--available': getChampionStatus(champion) === 'available',
               }"
             >
@@ -394,8 +394,8 @@ function onImgError(e: Event) {
                 Slot {{ championsInOtherSlots[champion] }}
               </div>
               <div
-                v-else-if="getChampionStatus(champion) === 'on-mission'"
-                class="status-badge status-badge--mission absolute top-1 right-1 px-1.5 py-0.5 text-[8px] font-bold z-10 pointer-events-none"
+                v-else-if="getChampionStatus(champion) === 'on-expedition'"
+                class="status-badge status-badge--expedition absolute top-1 right-1 px-1.5 py-0.5 text-[8px] font-bold z-10 pointer-events-none"
               >
                 Auf Expedition
               </div>
@@ -733,7 +733,7 @@ function onImgError(e: Event) {
   border: 1px solid var(--rpg-gold-dim);
 }
 
-.status-badge--mission {
+.status-badge--expedition {
   background: #4a2060;
   border: 1px solid #8050a0;
 }

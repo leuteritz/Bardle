@@ -1,15 +1,15 @@
 <template>
   <div class="flex flex-col w-full gap-3">
-    <!-- Max missions warning -->
+    <!-- Max expeditions warning -->
     <div
-      v-if="!missionStore.canStartMission"
+      v-if="!expeditionStore.canStartExpedition"
       class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold mc-warning"
     >
-      ⚠️ Maximum erreicht ({{ MAX_ACTIVE_MISSIONS }})
+      ⚠️ Maximum erreicht ({{ MAX_ACTIVE_EXPEDITIONS }})
     </div>
 
-    <!-- Mission Cards -->
-    <div v-for="config in missionConfigs" :key="config.id" class="p-2 space-y-1.5 mc-card">
+    <!-- Expedition Cards -->
+    <div v-for="config in expeditionConfigs" :key="config.id" class="p-2 space-y-1.5 mc-card">
       <!-- Header: Icon + Name + Meta -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -44,7 +44,8 @@
               v-for="champ in getAvailableChampions(config.id, roleIdx, role)"
               :key="champ"
               @click="
-                !isSelectedElsewhere(config.id, roleIdx, champ) && missionStore.canStartMission
+                !isSelectedElsewhere(config.id, roleIdx, champ) &&
+                expeditionStore.canStartExpedition
                   ? toggleSelection(config.id, roleIdx, champ)
                   : undefined
               "
@@ -52,7 +53,8 @@
               :class="
                 getSelection(config.id, roleIdx) === champ
                   ? 'mc-champ-pick--selected'
-                  : isSelectedElsewhere(config.id, roleIdx, champ) || !missionStore.canStartMission
+                  : isSelectedElsewhere(config.id, roleIdx, champ) ||
+                      !expeditionStore.canStartExpedition
                     ? 'mc-champ-pick--disabled'
                     : 'mc-champ-pick--available'
               "
@@ -94,7 +96,7 @@
         <span v-else class="text-[11px] mc-placeholder">Rollen besetzen …</span>
 
         <button
-          @click="startMission(config.id)"
+          @click="startExpedition(config.id)"
           :disabled="!canStart(config.id, config.requiredRoles.length)"
           class="px-4 py-1.5 text-sm font-bold transition-all duration-150 active:scale-95"
           :class="
@@ -110,18 +112,18 @@
 
 <script lang="ts">
 import { defineComponent, reactive } from 'vue'
-import { useMissionStore } from '@/stores/expedtion'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { MISSION_CONFIGS } from '@/config/expedition'
+import { EXPEDITION_CONFIGS } from '@/config/expedition'
 import { getChampionRoles } from '@/config/championRoles'
-import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
+import { MAX_ACTIVE_EXPEDITIONS } from '@/config/constants'
 import { truncate as truncateName } from '@/config/numberFormat'
 import type { ChampionRole } from '@/types'
 
 export default defineComponent({
-  name: 'MissionCreateComponent',
+  name: 'ExpeditionCreateComponent',
   setup() {
-    const missionStore = useMissionStore()
+    const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
     const selections = reactive<Record<string, Record<number, string>>>({})
 
@@ -145,8 +147,10 @@ export default defineComponent({
       roleIdx: number,
       role: ChampionRole,
     ): string[] {
-      const onMission = missionStore.championsOnMission
-      const owned = battleStore.ownedChampions.filter((c) => c !== 'Bard' && !onMission.includes(c))
+      const onExpedition = expeditionStore.championsOnExpedition
+      const owned = battleStore.ownedChampions.filter(
+        (c) => c !== 'Bard' && !onExpedition.includes(c),
+      )
       const withRole = owned.filter((c) => getChampionRoles(c).includes(role))
       const selectedElsewhere = Object.entries(selections[configId] ?? {})
         .filter(([idx]) => Number(idx) !== roleIdx)
@@ -163,15 +167,15 @@ export default defineComponent({
       return true
     }
     function canStart(configId: string, roleCount: number): boolean {
-      return missionStore.canStartMission && isFullyAssigned(configId, roleCount)
+      return expeditionStore.canStartExpedition && isFullyAssigned(configId, roleCount)
     }
     function getSuccessChance(configId: string): number {
-      const config = MISSION_CONFIGS.find((m) => m.id === configId)
+      const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
       if (!config) return 0
       const sel = selections[configId] ?? {}
       const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx] ?? '', role }))
       if (assigned.some((a) => !a.name)) return 0
-      return missionStore.calculateSuccessChance(assigned, configId)
+      return expeditionStore.calculateSuccessChance(assigned, configId)
     }
     function getSuccessChanceColor(chance: number): string {
       if (chance >= 0.7) return 'text-emerald-400'
@@ -203,18 +207,18 @@ export default defineComponent({
     function onImgError(e: Event) {
       ;(e.target as HTMLImageElement).style.display = 'none'
     }
-    function startMission(configId: string) {
-      const config = MISSION_CONFIGS.find((m) => m.id === configId)
+    function startExpedition(configId: string) {
+      const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
       if (!config) return
       const sel = selections[configId] ?? {}
       const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx], role }))
       if (assigned.some((a) => !a.name)) return
-      if (missionStore.startMission(configId, assigned)) delete selections[configId]
+      if (expeditionStore.startExpedition(configId, assigned)) delete selections[configId]
     }
 
     return {
-      missionStore,
-      missionConfigs: MISSION_CONFIGS,
+      expeditionStore,
+      expeditionConfigs: EXPEDITION_CONFIGS,
       selections,
       roleColors,
       getSelection,
@@ -230,27 +234,26 @@ export default defineComponent({
       getSuccessChance,
       getSuccessChanceColor,
       formatDuration,
-      startMission,
-      MAX_ACTIVE_MISSIONS,
+      startExpedition,
+      MAX_ACTIVE_EXPEDITIONS,
     }
   },
 })
 </script>
 
 <style scoped>
+/* unverändert */
 .mc-warning {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-red);
   border-radius: 4px;
   color: var(--rpg-red);
 }
-
 .mc-card {
   background: var(--rpg-bg-row);
   border: 1px solid var(--rpg-border-row);
   border-radius: 4px;
 }
-
 .mc-name {
   color: #ffffffd9;
 }
@@ -266,11 +269,9 @@ export default defineComponent({
 .mc-placeholder {
   color: #ffffff33;
 }
-
 .mc-role-badge {
   border-radius: 4px;
 }
-
 .mc-role--top {
   background: #ef444426;
   color: #fca5a5;
@@ -291,16 +292,13 @@ export default defineComponent({
   background: #a855f726;
   color: #d8b4fe;
 }
-
 .mc-champ-img {
   border-radius: 4px;
 }
-
 .mc-champ-pick {
   border: 1px solid transparent;
   border-radius: 4px;
 }
-
 .mc-champ-pick--available {
   background: var(--rpg-bg-icon);
   border-color: var(--rpg-border-row);
@@ -309,18 +307,15 @@ export default defineComponent({
   border-color: var(--rpg-wood-mid);
   background: var(--rpg-bg-hover);
 }
-
 .mc-champ-pick--selected {
   background: var(--rpg-bg-green-subtle);
   border-color: var(--rpg-green-top);
 }
-
 .mc-champ-pick--disabled {
   opacity: 0.35;
   filter: grayscale(55%);
   cursor: not-allowed;
 }
-
 .mc-checkmark {
   background: var(--rpg-green-top);
 }

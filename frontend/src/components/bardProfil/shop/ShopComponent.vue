@@ -1,8 +1,14 @@
 <template>
   <div class="shop-frame">
-    <div class="shop-body">
+    <!-- BuildingsComponent + UpgradesComponent nebeneinander oben -->
+    <div class="shop-top">
       <BuildingsComponent />
       <UpgradesComponent />
+    </div>
+
+    <!-- MissionsComponent unten, 42% Höhe -->
+    <div class="shop-bottom">
+      <MissionsComponent />
     </div>
   </div>
 </template>
@@ -11,10 +17,11 @@
 import { defineComponent } from 'vue'
 import BuildingsComponent from './BuildingsComponent.vue'
 import UpgradesComponent from './UpgradesComponent.vue'
+import MissionsComponent from './MissionsComponent.vue'
 
 export default defineComponent({
   name: 'ShopComponent',
-  components: { BuildingsComponent, UpgradesComponent },
+  components: { BuildingsComponent, UpgradesComponent, MissionsComponent },
 })
 </script>
 
@@ -33,10 +40,17 @@ export default defineComponent({
   overflow: hidden;
 }
 
-.shop-body {
+.shop-top {
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.shop-bottom {
+  flex-shrink: 0;
+  height: 42%;
+  border-top: 2px solid #5c3310;
   overflow: hidden;
 }
 </style>

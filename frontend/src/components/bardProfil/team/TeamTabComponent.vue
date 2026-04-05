@@ -1,24 +1,19 @@
 <template>
   <!-- 2×2 Grid: Shop | Team / Expedition | ItemShop -->
   <div class="w-full h-full p-4 overflow-hidden">
-    <!-- 2 Flex-Spalten: Links 3fr (ChampionShop + Expedition), Rechts 2fr (Team + ItemShop 50/50) -->
     <div class="flex h-full gap-3">
       <!-- ╔══════════════════════════╗
            ║  Linke Spalte (3fr)       ║
            ╚══════════════════════════╝ -->
       <div class="flex flex-col min-h-0 gap-3" style="flex: 3">
-        <!-- ╔══════════════════════════╗
-             ║  Oben links: Champion Shop ║
-             ╚══════════════════════════╝ -->
+        <!-- Champion Shop -->
         <div class="flex flex-col min-h-0 tt-panel" style="flex: 2">
           <div class="flex-1 min-h-0 overflow-hidden">
             <ChampionShopComponent />
           </div>
         </div>
 
-        <!-- ╔══════════════════════════╗
-             ║  Unten links: Expedition  ║
-             ╚══════════════════════════╝ -->
+        <!-- Expedition -->
         <div
           class="flex flex-col min-h-0 px-4 pt-3 pb-3 overflow-hidden tt-panel-expedition"
           style="flex: 3"
@@ -33,7 +28,7 @@
               <div
                 class="flex items-center gap-2 px-3 py-1.5 cursor-default transition-all duration-200 tt-expedition-badge"
                 :class="
-                  missionStore.activeMissions.length > 0
+                  expeditionStore.activeExpeditions.length > 0
                     ? completedExpeditionCount > 0
                       ? 'tt-expedition-badge--completed'
                       : 'tt-expedition-badge--active'
@@ -42,7 +37,7 @@
               >
                 <span class="text-sm">🧭</span>
                 <span class="text-xs font-bold tracking-wide">
-                  {{ activeExpeditionCount }}/{{ MAX_ACTIVE_MISSIONS }}
+                  {{ activeExpeditionCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}
                 </span>
               </div>
               <span
@@ -53,31 +48,31 @@
               <!-- Tooltip -->
               <Transition name="expedition-tooltip">
                 <div
-                  v-show="showTooltip && missionStore.activeMissions.length > 0"
+                  v-show="showTooltip && expeditionStore.activeExpeditions.length > 0"
                   class="absolute left-0 z-50 p-4 mt-2 top-full w-72 rpg-tooltip tt-tooltip-wide"
                 >
                   <template v-if="activeExpeditionCount > 0">
                     <span class="block mb-3 tt-tooltip-label"> Aktive Expeditionen </span>
                     <div class="space-y-4">
                       <div
-                        v-for="mission in missionStore.activeMissions.filter(
-                          (m) => m.status === 'active',
+                        v-for="expedition in expeditionStore.activeExpeditions.filter(
+                          (e) => e.status === 'active',
                         )"
-                        :key="mission.id"
+                        :key="expedition.id"
                         class="space-y-2"
                       >
                         <div class="flex items-center justify-between">
                           <span class="text-xs font-semibold tt-text-muted">
-                            {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                            {{ getExpeditionIcon(expedition.configId) }} {{ expedition.name }}
                           </span>
                           <span class="font-mono text-xs tt-text-dim">{{
-                            getTimeRemaining(mission)
+                            getTimeRemaining(expedition)
                           }}</span>
                         </div>
                         <div class="w-full h-1 overflow-hidden tt-progress-track">
                           <div
                             class="h-full transition-all duration-1000 tt-progress-bar"
-                            :style="{ width: getProgress(mission) + '%' }"
+                            :style="{ width: getProgress(expedition) + '%' }"
                           />
                         </div>
                       </div>
@@ -90,27 +85,27 @@
                       </span>
                       <div class="space-y-2">
                         <div
-                          v-for="mission in missionStore.activeMissions.filter(
-                            (m) => m.status !== 'active',
+                          v-for="expedition in expeditionStore.activeExpeditions.filter(
+                            (e) => e.status !== 'active',
                           )"
-                          :key="mission.id"
+                          :key="expedition.id"
                           class="flex items-center justify-between"
                         >
                           <span class="text-xs font-semibold tt-text-muted">
-                            {{ getMissionIcon(mission.configId) }} {{ mission.name }}
+                            {{ getExpeditionIcon(expedition.configId) }} {{ expedition.name }}
                           </span>
                           <button
-                            @click="missionStore.collectMission(mission.id)"
+                            @click="expeditionStore.collectExpedition(expedition.id)"
                             class="text-[11px] font-bold px-2 py-0.5 transition-colors cursor-pointer tt-collect-btn"
                             :class="
-                              mission.status === 'success'
+                              expedition.status === 'success'
                                 ? 'tt-collect-btn--success'
                                 : 'tt-collect-btn--fail'
                             "
                           >
                             {{
-                              mission.status === 'success'
-                                ? `+${mission.reward} Einsammeln`
+                              expedition.status === 'success'
+                                ? `+${expedition.reward} Einsammeln`
                                 : '✕ Entfernen'
                             }}
                           </button>
@@ -123,7 +118,7 @@
             </div>
           </div>
 
-          <!-- Mission-Komponenten -->
+          <!-- Expedition-Komponenten -->
           <div class="flex flex-col flex-1 min-h-0 gap-3 overflow-y-auto rpg-scrollbar">
             <ExpeditionCreateComponent />
           </div>
@@ -134,9 +129,7 @@
            ║  Rechte Spalte (2fr)      ║
            ╚══════════════════════════╝ -->
       <div class="flex flex-col min-h-0 gap-3" style="flex: 2">
-        <!-- ╔══════════════════════════╗
-             ║  Oben rechts: Team        ║
-             ╚══════════════════════════╝ -->
+        <!-- Team -->
         <div class="flex flex-col min-h-0 p-3 overflow-hidden tt-panel" style="flex: 3">
           <!-- Header -->
           <div class="flex items-center justify-between flex-shrink-0 mb-3">
@@ -360,9 +353,7 @@
           />
         </div>
 
-        <!-- ╔══════════════════════════╗
-             ║  Unten rechts: Item Shop  ║
-             ╚══════════════════════════╝ -->
+        <!-- Item Shop -->
         <div class="min-h-0 p-3 overflow-y-auto rpg-scrollbar tt-panel" style="flex: 2">
           <ItemShopComponent />
         </div>
@@ -374,11 +365,11 @@
 <script lang="ts">
 import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { useMissionStore } from '@/stores/expedtion'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useItemStore } from '@/stores/itemStore'
-import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
-import { MISSION_CONFIGS } from '@/config/expedition'
+import { MAX_ACTIVE_EXPEDITIONS } from '@/config/constants'
+import { EXPEDITION_CONFIGS } from '@/config/expedition'
 import { SHOP_ITEMS, getItemById } from '@/config/items'
 import { truncate } from '@/config/numberFormat'
 import { fetchChampionNames } from '@/utils/champions'
@@ -386,7 +377,7 @@ import ExpeditionCreateComponent from './expedition/expeditionCreateComponent.vu
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 import ChampionSlotModal from './ChampionSlotModal.vue'
-import type { Mission, ItemCategory } from '@/types'
+import type { ExpeditionMission, ItemCategory } from '@/types'
 
 export default defineComponent({
   name: 'TeamTabComponent',
@@ -398,7 +389,7 @@ export default defineComponent({
   },
   setup() {
     const battleStore = useBattleStore()
-    const missionStore = useMissionStore()
+    const expeditionStore = useExpeditionStore()
     const gameStore = useGameStore()
     const itemStore = useItemStore()
     const now = ref(Date.now())
@@ -429,17 +420,18 @@ export default defineComponent({
     ]
 
     const selectableChampions = computed(() => {
-      const onMission = missionStore.championsOnMission
+      const onExpedition = expeditionStore.championsOnExpedition
       return battleStore.ownedChampions.filter(
-        (c) => c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onMission.includes(c),
+        (c) =>
+          c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onExpedition.includes(c),
       )
     })
 
     const activeExpeditionCount = computed(
-      () => missionStore.activeMissions.filter((m) => m.status === 'active').length,
+      () => expeditionStore.activeExpeditions.filter((e) => e.status === 'active').length,
     )
     const completedExpeditionCount = computed(
-      () => missionStore.activeMissions.filter((m) => m.status !== 'active').length,
+      () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
     )
 
     const equipPickerLabel = computed(() => {
@@ -468,7 +460,7 @@ export default defineComponent({
     })
 
     function isOnExpedition(champion: string): boolean {
-      return missionStore.championsOnMission.includes(champion)
+      return expeditionStore.championsOnExpedition.includes(champion)
     }
     function addChampion(champion: string) {
       if (battleStore.selectedChampions.length < 4) {
@@ -481,24 +473,24 @@ export default defineComponent({
     function removeChampion(champion: string) {
       battleStore.removeChampionFromSlots(champion)
     }
-    function getProgress(mission: Mission): number {
+    function getProgress(expedition: ExpeditionMission): number {
       return Math.min(
         100,
-        ((now.value - mission.startTime) / (mission.durationSeconds * 1000)) * 100,
+        ((now.value - expedition.startTime) / (expedition.durationSeconds * 1000)) * 100,
       )
     }
-    function getTimeRemaining(mission: Mission): string {
+    function getTimeRemaining(expedition: ExpeditionMission): string {
       const remaining = Math.max(
         0,
-        mission.durationSeconds * 1000 - (now.value - mission.startTime),
+        expedition.durationSeconds * 1000 - (now.value - expedition.startTime),
       )
       const secs = Math.ceil(remaining / 1000)
       const min = Math.floor(secs / 60)
       const sec = secs % 60
       return `${min}:${sec.toString().padStart(2, '0')}`
     }
-    function getMissionIcon(configId: string): string {
-      return MISSION_CONFIGS.find((m) => m.id === configId)?.icon ?? '📜'
+    function getExpeditionIcon(configId: string): string {
+      return EXPEDITION_CONFIGS.find((e) => e.id === configId)?.icon ?? '📜'
     }
     function onImgError(e: Event) {
       const img = e.target as HTMLImageElement
@@ -539,7 +531,7 @@ export default defineComponent({
 
     return {
       battleStore,
-      missionStore,
+      expeditionStore,
       gameStore,
       itemStore,
       totalChampionCount,
@@ -558,14 +550,14 @@ export default defineComponent({
       removeChampion,
       getProgress,
       getTimeRemaining,
-      getMissionIcon,
+      getExpeditionIcon,
       truncate,
       onImgError,
       getEquipIcon,
       toggleEquipPicker,
       equipItemFromPicker,
       unequipCurrent,
-      MAX_ACTIVE_MISSIONS,
+      MAX_ACTIVE_EXPEDITIONS,
     }
   },
 })
@@ -612,12 +604,10 @@ export default defineComponent({
   color: #666;
 }
 
-/* ── Pulse dot (intentionally round) ── */
 .tt-pulse-dot {
   background: var(--rpg-green-top);
 }
 
-/* ── Tooltip (extends global rpg-tooltip) ── */
 .tt-tooltip-wide {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
 }
@@ -634,7 +624,6 @@ export default defineComponent({
   color: #4a8a30;
 }
 
-/* ── Text helpers ── */
 .tt-text-muted {
   color: var(--rpg-text-muted);
 }
@@ -643,7 +632,6 @@ export default defineComponent({
   color: var(--rpg-text-dim);
 }
 
-/* ── Progress bar ── */
 .tt-progress-track {
   background: var(--rpg-border-row);
   border-radius: 4px;
@@ -654,12 +642,10 @@ export default defineComponent({
   background: linear-gradient(to right, var(--rpg-gold-dim), var(--rpg-gold));
 }
 
-/* ── Divider ── */
 .tt-divider-top {
   border-top: 1px solid var(--rpg-border-row);
 }
 
-/* ── Collect buttons in tooltip ── */
 .tt-collect-btn {
   border-radius: 4px;
 }
@@ -682,7 +668,6 @@ export default defineComponent({
   background: #4a1e1e;
 }
 
-/* ── Team counter ── */
 .tt-team-counter {
   border-radius: 4px;
   background: #141828;
@@ -693,7 +678,6 @@ export default defineComponent({
   color: var(--rpg-blue);
 }
 
-/* ── Unlock counter ── */
 .tt-unlock-counter {
   border-radius: 4px;
   background: #1c1408;
@@ -704,7 +688,6 @@ export default defineComponent({
   color: #e8c040;
 }
 
-/* ── Slot card (filled) ── */
 .tt-slot-card {
   border-radius: 4px;
   border: 1px solid #333;
@@ -724,12 +707,10 @@ export default defineComponent({
   opacity: 0.5;
 }
 
-/* ── Image overlay (gradient kept as CSS) ── */
 .tt-image-overlay {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.2), transparent);
 }
 
-/* ── Slot number badge ── */
 .tt-slot-number {
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
@@ -737,17 +718,14 @@ export default defineComponent({
   border: 1px solid #333;
 }
 
-/* ── Champion name ── */
 .tt-champ-name {
   color: #ffffff;
 }
 
-/* ── Expedition label ── */
 .tt-expedition-label {
   color: var(--rpg-gold);
 }
 
-/* ── Remove button ── */
 .tt-remove-btn {
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
@@ -761,13 +739,11 @@ export default defineComponent({
   color: var(--rpg-red);
 }
 
-/* ── Equipment row ── */
 .tt-equip-row {
   background: rgba(0, 0, 0, 0.8);
   border-top: 1px solid var(--rpg-border-row);
 }
 
-/* ── Equipment slot ── */
 .tt-equip-slot {
   border-radius: 4px;
 }
@@ -790,7 +766,6 @@ export default defineComponent({
   background: #141828;
 }
 
-/* ── Empty slot ── */
 .tt-slot-empty {
   border-radius: 4px;
   border: 1px dashed #333;
@@ -820,7 +795,6 @@ export default defineComponent({
   color: #999;
 }
 
-/* ── Equipment slot (mini, in empty card) ── */
 .tt-equip-slot-mini {
   border: 1px dashed #333;
   border-radius: 4px;
@@ -831,7 +805,6 @@ export default defineComponent({
   background: #141828;
 }
 
-/* ── Equipment picker popup ── */
 .tt-equip-picker {
   border-radius: 4px;
 }
@@ -844,14 +817,12 @@ export default defineComponent({
   color: var(--rpg-text-muted);
 }
 
-/* ── Equipped item row ── */
 .tt-equipped-item {
   border-radius: 4px;
   background: var(--rpg-bg-green-subtle);
   border: 1px solid #2e5a1a;
 }
 
-/* ── Unequip button ── */
 .tt-unequip-btn {
   border-radius: 4px;
   background: var(--rpg-bg-red-subtle);
@@ -864,7 +835,6 @@ export default defineComponent({
   background: var(--rpg-bg-red-hover);
 }
 
-/* ── Picker item row ── */
 .tt-picker-item {
   border-radius: 4px;
   border: 1px solid var(--rpg-border-row);
@@ -875,7 +845,6 @@ export default defineComponent({
   background: var(--rpg-bg-hover);
 }
 
-/* ── Transitions (kept from original) ── */
 .team-slot-card {
   height: 100%;
 }

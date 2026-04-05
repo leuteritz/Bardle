@@ -3,21 +3,22 @@
 // Champion role types
 export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
-// Mission types
-export type MissionStatus = 'active' | 'success' | 'failure'
+// Expedition types
+export type ExpeditionStatus = 'active' | 'success' | 'failure'
 
-export interface Mission {
+export interface ExpeditionMission {
   id: string
   configId: string
   name: string
   description: string
+  icon: string
   requiredRoles: ChampionRole[]
   assignedChampions: { name: string; role: ChampionRole }[]
   durationSeconds: number
   startTime: number
   baseReward: number
   successChance: number
-  status: MissionStatus
+  status: ExpeditionStatus
   reward: number
 }
 
@@ -339,7 +340,7 @@ export interface Material {
   dropChance: number
 }
 
-// ── Mission-System ──────────────────────────────────────
+// ── Idle-Game Mission-System ─────────────────────────────
 export type MissionConditionType =
   | 'totalChimes'
   | 'totalClicks'
@@ -351,7 +352,7 @@ export type MissionConditionType =
 export interface MissionCondition {
   type: MissionConditionType
   target: number
-  buildingId?: string // optional: nur für singleBuildingLevel
+  buildingId?: string
 }
 
 export interface Mission {

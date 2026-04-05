@@ -3,7 +3,7 @@ import { useShopStore } from './shopStore'
 import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
-import { useMissionStore } from './expedtion'
+import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
 import { universes } from '../config/universes'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
@@ -72,6 +72,10 @@ export const useGameStore = defineStore('game', {
 
     isHyperspaceActive: false,
     showUniverseSelectModal: false,
+
+    // ── Expedetion-Tracking ──────────────────────
+    totalChimesEarned: 0,
+    totalClicks: 0,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -97,6 +101,9 @@ export const useGameStore = defineStore('game', {
       this.chimes += this.chimesPerClick
       this.chimesForMeep += this.chimesPerClick
       this.chimesForNextUniverse += this.chimesPerClick
+      // ── Expedetion-Tracking ──
+      this.totalChimesEarned += this.chimesPerClick
+      this.totalClicks += 1
       this.calculateLevel()
       this.addMeep()
       this.checkPrestigeAvailability()
@@ -125,7 +132,6 @@ export const useGameStore = defineStore('game', {
     },
 
     triggerAugmentSelection() {
-      // Immer den vollen 10er Bild-Pool verwenden – kein Filtern nach bereits aktiven
       const remaining = [...AUGMENT_POOL]
       const picked: AugmentDefinition[] = []
 
@@ -165,7 +171,6 @@ export const useGameStore = defineStore('game', {
     },
 
     skipAllAugments() {
-      // Aktuell ausstehende Auswahl: erstes Augment nehmen
       if (this.pendingAugmentOptions.length > 0) {
         const firstId = this.pendingAugmentOptions[0]
         if (!this.activeAugments.includes(firstId)) {
@@ -179,7 +184,6 @@ export const useGameStore = defineStore('game', {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
 
-      // Alle verbleibenden Level-Ups abarbeiten, jeweils erstes Augment auto-wählen
       while (this.chimes >= this.chimesForNextLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
@@ -223,7 +227,6 @@ export const useGameStore = defineStore('game', {
       if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
         this.abilityLevels[index]++
         this.skillPoints--
-        // Recalculate CPS and CPC after ability upgrade
         const shopStore = useShopStore()
         this.chimesPerSecond = shopStore.calculateTotalCPS()
         this.chimesPerClick = shopStore.calculateTotalCPC()
@@ -237,17 +240,14 @@ export const useGameStore = defineStore('game', {
         if (upgrade.baseCPS && upgrade.level > 0) {
           const production = (upgrade.baseCPS || 0) * upgrade.level
 
-          // Initialisiere Arrays falls nicht vorhanden
           if (!this.buildingProductionHistory[upgrade.id]) {
             this.buildingProductionHistory[upgrade.id] = []
             this.totalBuildingProduction[upgrade.id] = 0
           }
 
-          // Füge aktuelle Produktion zur Historie hinzu
           this.buildingProductionHistory[upgrade.id].push(production)
           this.totalBuildingProduction[upgrade.id] += production
 
-          // Begrenze Historie auf letzte 60 Einträge
           if (this.buildingProductionHistory[upgrade.id].length > 60) {
             this.buildingProductionHistory[upgrade.id].shift()
           }
@@ -274,7 +274,6 @@ export const useGameStore = defineStore('game', {
       this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
       this.chimesForNextUniverse = 0
       this.prestigeAvailable = false
-      // Reset resources
       this.chimes = 0
       this.chimesForMeep = 0
       this.level = 1
@@ -288,10 +287,9 @@ export const useGameStore = defineStore('game', {
       this.pendingAugmentOptions = []
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
-      // Reset augment store
+      // totalChimesEarned & totalClicks bleiben erhalten (prestige-übergreifend)
       const augmentStore = useAugmentStore()
       augmentStore.$reset()
-      // Reset shop buildings and recalculate
       const shopStore = useShopStore()
       shopStore.shopUpgrades.forEach((u) => {
         u.level = 0
@@ -319,7 +317,6 @@ export const useGameStore = defineStore('game', {
 
       this.showUniverseSelectModal = false
 
-      // Skip animation for reduced motion
       if (
         typeof window !== 'undefined' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -329,11 +326,9 @@ export const useGameStore = defineStore('game', {
       }
 
       this.isHyperspaceActive = true
-      // Execute reset during white flash (at 2.5s)
       setTimeout(() => {
         this.executePrestigeReset(targetUniverse)
       }, 2500)
-      // End animation after flash fades (at 3.5s)
       setTimeout(() => {
         this.isHyperspaceActive = false
       }, 3500)
@@ -347,6 +342,8 @@ export const useGameStore = defineStore('game', {
         this.chimes += cps
         this.chimesForMeep += cps
         this.chimesForNextUniverse += cps
+        // ── Expdetion-Tracking ──
+        this.totalChimesEarned += cps
         this.calculateLevel()
         this.addMeep()
         this.trackBuildingProduction()
@@ -361,8 +358,8 @@ export const useGameStore = defineStore('game', {
       if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
         planetBossStore.clearPenalty()
       }
-      const missionStore = useMissionStore()
-      missionStore.checkMissions()
+      const expeditionStore = useExpeditionStore()
+      expeditionStore.checkExpeditions()
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
     },
@@ -416,7 +413,6 @@ export const useGameStore = defineStore('game', {
   },
 
   getters: {
-    // Merged augment effects from all active augments
     combinedAugmentEffects(): AugmentEffects {
       const result: AugmentEffects = {}
       const additiveKeys: (keyof AugmentEffects)[] = [
@@ -437,7 +433,6 @@ export const useGameStore = defineStore('game', {
           }
         }
       }
-      // Apply keyboard smash modifiers from augmentStore
       const augmentStore = useAugmentStore()
       const ksm = augmentStore.keyboardSmashModifiers
       for (const [key, val] of Object.entries(ksm)) {
@@ -448,7 +443,6 @@ export const useGameStore = defineStore('game', {
       return result
     },
 
-    // Aktiver Universe-Modifier (leer wenn Universe 1), merged mit Augment-Effekten
     activeModifier(): ModifierEffects {
       const base = universes[this.currentUniverse - 1]?.modifier?.effects ?? {}
       const aug = this.combinedAugmentEffects
@@ -477,33 +471,27 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Berechnet die verbleibenden Chimes bis zum nächsten Level
     chimesToNextLevel(): number {
       return this.chimesForNextLevel - this.chimes
     },
 
-    // Schwellenwert am Anfang des aktuellen Levels (gemeinsame Basis)
     chimesAtLevelStart(): number {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       return chimeThresholdForLevel(this.level - 1, exponent)
     },
 
-    // Berechnet die Chimes die im aktuellen Level gesammelt wurden
     currentLevelChimes(): number {
       return this.chimes - this.chimesAtLevelStart
     },
 
-    // Berechnet die Gesamtanzahl der Chimes die für das aktuelle Level benötigt werden
     totalChimesThisLevel(): number {
       return this.chimesForNextLevel - this.chimesAtLevelStart
     },
 
-    // Berechnet den Fortschritt im aktuellen Level als Prozent
     levelProgress(): number {
       return Math.min(100, Math.max(0, (this.currentLevelChimes / this.totalChimesThisLevel) * 100))
     },
 
-    // Berechnet die Gesamtkampfkraft des Spielers
     totalPower(): number {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
@@ -513,7 +501,6 @@ export const useGameStore = defineStore('game', {
       )
     },
 
-    // Ability-Multiplikatoren für Q/W/E/R-Effekte
     abilityCPSMultiplier(): number {
       const perLevel = this.activeModifier.abilityCPSPerLevel ?? 0.15
       return 1 + this.abilityLevels[0] * perLevel
@@ -531,17 +518,14 @@ export const useGameStore = defineStore('game', {
       return 1 + this.abilityLevels[3] * perLevel
     },
 
-    // Berechnet den Fortschritt zur Universumsrettung als Prozent
     universeRescueProgress(): number {
       return Math.min(100, (this.chimesForNextUniverse / this.chimesToUniverseRescue) * 100)
     },
 
-    // Gibt die Gesamtanzahl der Universen zurück
     totalUniverses(): number {
       return universes.length
     },
 
-    // Boss-Schadenswerte (spiegeln exakt die Werte beim Boss-Spawn wider)
     dmgPerClick(): number {
       return Math.max(1, this.chimesPerClick)
     },
@@ -549,13 +533,11 @@ export const useGameStore = defineStore('game', {
       return Math.max(0, Math.floor(this.chimesPerSecond * BOSS_PASSIVE_DPS_FRACTION))
     },
 
-    // Ob die aktive Expedition abgeschlossen ist
     isExpeditionComplete(): boolean {
       if (!this.activeExpedition) return false
       return Date.now() >= this.activeExpedition.startTime + this.activeExpedition.durationMs
     },
 
-    // Fortschritt der aktiven Expedition in Prozent (0–100)
     expeditionProgress(): number {
       if (!this.activeExpedition) return 0
       const elapsed = Date.now() - this.activeExpedition.startTime

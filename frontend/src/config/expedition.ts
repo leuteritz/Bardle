@@ -1,6 +1,6 @@
 import type { ChampionRole } from '../types'
 
-export interface MissionConfig {
+export interface ExpeditionConfig {
   id: string
   name: string
   description: string
@@ -11,7 +11,7 @@ export interface MissionConfig {
   icon: string
 }
 
-export const MISSION_CONFIGS: MissionConfig[] = [
+export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'solo-invade',
     name: 'Solo Invade',

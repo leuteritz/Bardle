@@ -1,9 +1,11 @@
 type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
+
 type LogCategory =
   | 'Game'
   | 'Battle'
   | 'Shop'
   | 'Mission'
+  | 'Expedition'
   | 'Planet'
   | 'Inventory'
   | 'Augment'
@@ -23,6 +25,7 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
   Game: '#22c55e',
   Battle: '#22c55e',
   Mission: '#22c55e',
+  Expedition: '#22c55e',
   Planet: '#22c55e',
   Shop: '#3b82f6',
   Inventory: '#3b82f6',

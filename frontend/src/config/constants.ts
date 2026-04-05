@@ -403,8 +403,7 @@ export const MMR_RANK_THRESHOLDS = [
   { tier: 'Challenger', division: 'I', minMMR: 4000 },
 ] as const
 
-// Mission system
+// Expedition system
 export const CHAMPION_BASE_POWER = 50
 export const CHAMPION_POWER_PER_LEVEL = 10
-export const MAX_ACTIVE_MISSIONS = 3
-
+export const MAX_ACTIVE_EXPEDITIONS = 3

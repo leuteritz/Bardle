@@ -1,17 +1,17 @@
-import { useGameStore } from '../stores/gameStore'
-import { useShopStore } from '../stores/shopStore'
-import { useBattleStore } from '../stores/battleStore'
-import { useMissionStore } from '../stores/expedtion'
-import { useInventoryStore } from '../stores/inventoryStore'
-import { useAugmentStore } from '../stores/augmentStore'
-import { useItemStore } from '../stores/itemStore'
-import { usePlanetEventStore } from '../stores/planetEventStore'
-import { usePlanetBossStore } from '../stores/planetBossStore'
-import { useSectionStore } from '../stores/sectionStore'
-import { useGalaxyStore } from '../stores/galaxyStore'
-import { useCpsStore } from '../stores/cpsStore'
-import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '../config/constants'
-import { logger } from '../utils/logger'
+import { useGameStore } from '@/stores/gameStore'
+import { useShopStore } from '@/stores/shopStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { useExpeditionStore } from '@/stores/expedetionStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useAugmentStore } from '@/stores/augmentStore'
+import { useItemStore } from '@/stores/itemStore'
+import { usePlanetEventStore } from '@/stores/planetEventStore'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useSectionStore } from '@/stores/sectionStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useCpsStore } from '@/stores/cpsStore'
+import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '@/config/constants'
+import { logger } from '@/utils/logger'
 
 const SAVE_KEY = 'bard-idle-save'
 const SAVE_VERSION = 1
@@ -21,9 +21,8 @@ export function usePersistence() {
     const gameStore = useGameStore()
     const shopStore = useShopStore()
     const battleStore = useBattleStore()
-    const missionStore = useMissionStore()
+    const expeditionStore = useExpeditionStore()
     const inventoryStore = useInventoryStore()
-
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
     const sectionStore = useSectionStore()
@@ -54,6 +53,8 @@ export function usePersistence() {
         activeAugments: [...gameStore.activeAugments],
         pendingAugmentChoice: gameStore.pendingAugmentChoice,
         pendingAugmentOptions: [...gameStore.pendingAugmentOptions],
+        totalChimesEarned: gameStore.totalChimesEarned,
+        totalClicks: gameStore.totalClicks,
       },
       shop: {
         buyAmount: shopStore.buyAmount,
@@ -84,9 +85,9 @@ export function usePersistence() {
         recruitedChampions: [...battleStore.recruitedChampions],
         battleEverStarted: battleStore.battleEverStarted,
       },
-      missions: {
-        activeMissions: missionStore.activeMissions,
-        completedMissions: missionStore.completedMissions,
+      expeditions: {
+        activeExpeditions: expeditionStore.activeExpeditions,
+        completedExpeditions: expeditionStore.completedExpeditions,
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
@@ -130,7 +131,7 @@ export function usePersistence() {
       const gameStore = useGameStore()
       const shopStore = useShopStore()
       const battleStore = useBattleStore()
-      const missionStore = useMissionStore()
+      const expeditionStore = useExpeditionStore()
       const inventoryStore = useInventoryStore()
 
       // Restore gameStore
@@ -138,7 +139,6 @@ export function usePersistence() {
         const g = saved.game
         gameStore.inGameTime = g.inGameTime ?? gameStore.inGameTime
         gameStore.chimes = g.chimes ?? gameStore.chimes
-        // Always recalculate from current formula so balance changes take effect immediately
         const restoredLevel = g.level ?? gameStore.level
         gameStore.chimesForNextLevel = Math.ceil(
           LEVEL_BASE * Math.pow(restoredLevel, LEVEL_EXPONENT),
@@ -163,6 +163,8 @@ export function usePersistence() {
         gameStore.pendingAugmentChoice = g.pendingAugmentChoice ?? false
         if (Array.isArray(g.pendingAugmentOptions))
           gameStore.pendingAugmentOptions = g.pendingAugmentOptions
+        gameStore.totalChimesEarned = g.totalChimesEarned ?? 0
+        gameStore.totalClicks = g.totalClicks ?? 0
       }
 
       // Restore shopStore
@@ -205,8 +207,6 @@ export function usePersistence() {
         battleStore.bestWinStreak = b.bestWinStreak ?? battleStore.bestWinStreak
         battleStore.currentWinStreak = b.currentWinStreak ?? battleStore.currentWinStreak
         if (Array.isArray(b.battleHistory)) battleStore.battleHistory = b.battleHistory
-        // autoBattleEnabled is restored so the UI shows the correct toggle state,
-        // but the actual battle loop is started by the UI component on mount.
         battleStore.autoBattleEnabled = b.autoBattleEnabled ?? false
         if (Array.isArray(b.recruitableChampions))
           battleStore.recruitableChampions = b.recruitableChampions
@@ -215,12 +215,12 @@ export function usePersistence() {
         battleStore.battleEverStarted = b.battleEverStarted ?? false
       }
 
-      // Restore missionStore
-      if (saved.missions) {
-        if (Array.isArray(saved.missions.activeMissions))
-          missionStore.activeMissions = saved.missions.activeMissions
-        if (Array.isArray(saved.missions.completedMissions))
-          missionStore.completedMissions = saved.missions.completedMissions
+      // Restore expeditionStore
+      if (saved.expeditions) {
+        if (Array.isArray(saved.expeditions.activeExpeditions))
+          expeditionStore.activeExpeditions = saved.expeditions.activeExpeditions
+        if (Array.isArray(saved.expeditions.completedExpeditions))
+          expeditionStore.completedExpeditions = saved.expeditions.completedExpeditions
       }
 
       // Restore inventoryStore
@@ -237,7 +237,6 @@ export function usePersistence() {
         if (Array.isArray(a.activeTimedBuffs)) augmentStore.activeTimedBuffs = a.activeTimedBuffs
         augmentStore.bigBangUsed = a.bigBangUsed ?? false
         if (a.keyboardSmashModifiers) augmentStore.keyboardSmashModifiers = a.keyboardSmashModifiers
-        // Expire stale timed buffs
         augmentStore.onTick()
       }
 
@@ -286,7 +285,6 @@ export function usePersistence() {
         galaxyStore.planetsRescued = gx.planetsRescued ?? 0
         galaxyStore.planetsRequired = gx.planetsRequired ?? 3
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
-        // Re-derive pendingGalaxyBoss: if all planets rescued but boss not yet done
         galaxyStore.pendingGalaxyBoss =
           galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
           !galaxyStore.galaxyBossDefeated
@@ -306,6 +304,7 @@ export function usePersistence() {
   function resetGame() {
     console.clear()
     logger.warn('System', 'Game reset initiated')
+
     // 1. Stop all timers
     const battleStore = useBattleStore()
     battleStore.stopAutoBattle()
@@ -342,6 +341,8 @@ export function usePersistence() {
     gameStore.isCPSModalOpen = false
     gameStore.isExpeditionModalOpen = false
     gameStore.isEncyclopediaOpen = false
+    gameStore.totalChimesEarned = 0
+    gameStore.totalClicks = 0
 
     // 3. Reset shopStore
     const shopStore = useShopStore()
@@ -389,8 +390,8 @@ export function usePersistence() {
     // 6. Reset remaining stores
     const inventoryStore = useInventoryStore()
     inventoryStore.$reset()
-    const missionStore = useMissionStore()
-    missionStore.$reset()
+    const expeditionStore = useExpeditionStore()
+    expeditionStore.$reset()
     const planetEventStore = usePlanetEventStore()
     planetEventStore.$reset()
     const planetBossStore = usePlanetBossStore()
