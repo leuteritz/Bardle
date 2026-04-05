@@ -183,7 +183,8 @@ usePlanetBackground(starsContainer)
 
 .planet--rescue--galaxy {
   animation: planetDistressGalaxy 1.6s ease-in-out infinite !important;
-  filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85)) drop-shadow(0 0 24px rgba(140, 20, 220, 0.55)) !important;
+  filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85))
+    drop-shadow(0 0 24px rgba(140, 20, 220, 0.55)) !important;
 }
 
 @keyframes planetLifecycle {
@@ -216,10 +217,12 @@ usePlanetBackground(starsContainer)
 @keyframes planetDistressGalaxy {
   0%,
   100% {
-    filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85)) drop-shadow(0 0 24px rgba(140, 20, 220, 0.55));
+    filter: drop-shadow(0 0 10px rgba(180, 60, 255, 0.85))
+      drop-shadow(0 0 24px rgba(140, 20, 220, 0.55));
   }
   50% {
-    filter: drop-shadow(0 0 18px rgba(210, 80, 255, 1)) drop-shadow(0 0 40px rgba(160, 40, 255, 0.75)) drop-shadow(0 0 60px rgba(100, 0, 200, 0.35));
+    filter: drop-shadow(0 0 18px rgba(210, 80, 255, 1))
+      drop-shadow(0 0 40px rgba(160, 40, 255, 0.75)) drop-shadow(0 0 60px rgba(100, 0, 200, 0.35));
   }
 }
 

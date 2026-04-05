@@ -109,15 +109,14 @@
 </template>
 
 <script lang="ts">
-// Script bleibt vollständig unverändert
 import { defineComponent, reactive } from 'vue'
-import { useMissionStore } from '../../stores/missionStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { MISSION_CONFIGS } from '../../config/missions'
-import { getChampionRoles } from '../../config/championRoles'
-import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
-import { truncate as truncateName } from '../../config/numberFormat'
-import type { ChampionRole } from '../../types'
+import { useMissionStore } from '@/stores/missionStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { MISSION_CONFIGS } from '@/config/missions'
+import { getChampionRoles } from '@/config/championRoles'
+import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
+import { truncate as truncateName } from '@/config/numberFormat'
+import type { ChampionRole } from '@/types'
 
 export default defineComponent({
   name: 'MissionCreateComponent',
@@ -252,21 +251,50 @@ export default defineComponent({
   border-radius: 4px;
 }
 
-.mc-name { color: #ffffffd9; }
-.mc-meta { color: #ffffff59; }
-.mc-reward { color: #fcd34dcc; }
-.mc-selected-name { color: #ffffff80; }
-.mc-placeholder { color: #ffffff33; }
+.mc-name {
+  color: #ffffffd9;
+}
+.mc-meta {
+  color: #ffffff59;
+}
+.mc-reward {
+  color: #fcd34dcc;
+}
+.mc-selected-name {
+  color: #ffffff80;
+}
+.mc-placeholder {
+  color: #ffffff33;
+}
 
-.mc-role-badge { border-radius: 4px; }
+.mc-role-badge {
+  border-radius: 4px;
+}
 
-.mc-role--top { background: #ef444426; color: #fca5a5; }
-.mc-role--jungle { background: #22c55e26; color: #86efac; }
-.mc-role--mid { background: #3b82f626; color: #93c5fd; }
-.mc-role--adc { background: #f59e0b26; color: #fcd34d; }
-.mc-role--support { background: #a855f726; color: #d8b4fe; }
+.mc-role--top {
+  background: #ef444426;
+  color: #fca5a5;
+}
+.mc-role--jungle {
+  background: #22c55e26;
+  color: #86efac;
+}
+.mc-role--mid {
+  background: #3b82f626;
+  color: #93c5fd;
+}
+.mc-role--adc {
+  background: #f59e0b26;
+  color: #fcd34d;
+}
+.mc-role--support {
+  background: #a855f726;
+  color: #d8b4fe;
+}
 
-.mc-champ-img { border-radius: 4px; }
+.mc-champ-img {
+  border-radius: 4px;
+}
 
 .mc-champ-pick {
   border: 1px solid transparent;

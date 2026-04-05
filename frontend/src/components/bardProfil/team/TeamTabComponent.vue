@@ -177,7 +177,7 @@
                   <img
                     :src="battleStore.getChampionImage(assignment)"
                     :alt="assignment"
-                    class="rpg-img absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 group-hover/card:scale-105"
+                    class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 rpg-img group-hover/card:scale-105"
                     :class="isOnExpedition(assignment) ? 'grayscale' : ''"
                     @error="onImgError"
                   />
@@ -373,20 +373,20 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
-import { useBattleStore } from '../../stores/battleStore'
-import { useMissionStore } from '../../stores/missionStore'
-import { useGameStore } from '../../stores/gameStore'
-import { useItemStore } from '../../stores/itemStore'
-import { MAX_ACTIVE_MISSIONS } from '../../config/constants'
-import { MISSION_CONFIGS } from '../../config/missions'
-import { SHOP_ITEMS, getItemById } from '../../config/items'
-import { truncate } from '../../config/numberFormat'
-import { fetchChampionNames } from '../../utils/champions'
-import MissionCreateComponent from './MissionCreateComponent.vue'
-import ChampionShopComponent from '../gameCenter/champion/ChampionShopComponent.vue'
-import ItemShopComponent from '../gameCenter/ItemShopComponent.vue'
-import ChampionSlotModal from '../ChampionSlotModal.vue'
-import type { Mission, ItemCategory } from '../../types'
+import { useBattleStore } from '@/stores/battleStore'
+import { useMissionStore } from '@/stores/missionStore'
+import { useGameStore } from '@/stores/gameStore'
+import { useItemStore } from '@/stores/itemStore'
+import { MAX_ACTIVE_MISSIONS } from '@/config/constants'
+import { MISSION_CONFIGS } from '@/config/missions'
+import { SHOP_ITEMS, getItemById } from '@/config/items'
+import { truncate } from '@/config/numberFormat'
+import { fetchChampionNames } from '@/utils/champions'
+import MissionCreateComponent from '../team/missions/MissionCreateComponent.vue'
+import ChampionShopComponent from './ChampionShopComponent.vue'
+import ItemShopComponent from './ItemShopComponent.vue'
+import ChampionSlotModal from './ChampionSlotModal.vue'
+import type { Mission, ItemCategory } from '@/types'
 
 export default defineComponent({
   name: 'TeamTabComponent',

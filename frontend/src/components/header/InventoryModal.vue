@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useInventoryStore } from '../stores/inventoryStore'
-import { MATERIALS } from '../config/materials'
+import { useInventoryStore } from '../../stores/inventoryStore'
+import { MATERIALS } from '../../config/materials'
 
 const inventoryStore = useInventoryStore()
 
@@ -41,9 +41,9 @@ function onBackdropClick(e: MouseEvent) {
         <div class="rpg-accent-bar" style="width: 100%" />
 
         <!-- Header -->
-        <div class="flex items-center justify-between w-full mb-1 px-6 pt-4">
+        <div class="flex items-center justify-between w-full px-6 pt-4 mb-1">
           <h2 class="modal-title">🎒 Inventar</h2>
-          <button class="rpg-close-btn px-2 py-1" @click="emit('close')" aria-label="Schließen">✕</button>
+          <button class="px-2 py-1 rpg-close-btn" @click="emit('close')" aria-label="Schließen">✕</button>
         </div>
 
         <div class="divider" />

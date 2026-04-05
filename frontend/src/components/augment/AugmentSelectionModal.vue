@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { AUGMENTS } from '../config/augments'
-import type { AugmentDefinition } from '../types'
+import { useGameStore } from '@/stores/gameStore'
+import { AUGMENTS } from '@/config/augments'
+import type { AugmentDefinition } from '@/types'
 
 const gameStore = useGameStore()
 
@@ -31,21 +31,16 @@ const rarityLabel: Record<string, string> = {
         <div class="rpg-accent-bar"></div>
 
         <!-- Header -->
-        <div class="rpg-header flex items-center justify-center p-5">
+        <div class="flex items-center justify-center p-5 rpg-header">
           <div class="text-center">
-            <h2 class="aug-title text-2xl font-bold">
-              Level {{ gameStore.level }}
-            </h2>
-            <p class="aug-subtitle mt-1 text-xs">Wähle ein Augment</p>
+            <h2 class="text-2xl font-bold aug-title">Level {{ gameStore.level }}</h2>
+            <p class="mt-1 text-xs aug-subtitle">Wähle ein Augment</p>
           </div>
         </div>
 
         <!-- Skip -->
-        <div class="flex justify-center pt-3 px-6">
-          <button
-            class="skip-btn text-xs underline"
-            @click="gameStore.skipAllAugments()"
-          >
+        <div class="flex justify-center px-6 pt-3">
+          <button class="text-xs underline skip-btn" @click="gameStore.skipAllAugments()">
             Überspringen
           </button>
         </div>
@@ -55,18 +50,22 @@ const rarityLabel: Record<string, string> = {
           <button
             v-for="aug in options"
             :key="aug.id"
-            class="aug-card group relative flex flex-col items-center flex-1 p-4"
-            :class="[`rpg-rarity-${aug.rarity}`, `rpg-glow-${aug.rarity}`, `aug-card-hover--${aug.rarity}`]"
+            class="relative flex flex-col items-center flex-1 p-4 aug-card group"
+            :class="[
+              `rpg-rarity-${aug.rarity}`,
+              `rpg-glow-${aug.rarity}`,
+              `aug-card-hover--${aug.rarity}`,
+            ]"
             @click="gameStore.chooseAugment(aug.id)"
           >
             <!-- Icon -->
-            <div class="aug-icon-box mb-2">
+            <div class="mb-2 aug-icon-box">
               <img v-if="aug.image" :src="aug.image" class="aug-card-img" :alt="aug.name" />
               <span v-else class="text-5xl">{{ aug.icon }}</span>
             </div>
 
             <!-- Name -->
-            <h3 class="text-base font-bold text-white mb-1 text-center leading-tight">
+            <h3 class="mb-1 text-base font-bold leading-tight text-center text-white">
               {{ aug.name }}
             </h3>
 
@@ -79,7 +78,7 @@ const rarityLabel: Record<string, string> = {
             </span>
 
             <!-- Effect line -->
-            <p class="aug-effect text-sm text-center font-medium mb-3">
+            <p class="mb-3 text-sm font-medium text-center aug-effect">
               {{ aug.effectLine }}
             </p>
 

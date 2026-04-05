@@ -2,10 +2,10 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { formatNumber } from '../../config/numberFormat'
-import BardProfileMenu from '../BardProfileMenu.vue'
-import UniversePortalComponent from '../UniversePortalComponent.vue'
-import InventoryTooltip from '../InventoryTooltip.vue'
-import GalaxyProgressComponent from '../gameCenter/idle/GalaxyProgressComponent.vue'
+import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
+import UniverseRescueComponent from './UniverseRescueComponent.vue'
+import InventoryTooltip from './InventoryTooltip.vue'
+import GalaxyProgressComponent from './GalaxyProgressComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
 const emit = defineEmits<{ 'open-inventory': [] }>()
@@ -97,7 +97,7 @@ onUnmounted(() => {
     <div class="flex items-center gap-2 pl-3 header-side header-side--right">
       <!-- UniversePortal füllt jetzt die volle Höhe, Meep ist integriert -->
       <div class="z-[65] flex-shrink-0 header-portal-wrap">
-        <UniversePortalComponent />
+        <UniverseRescueComponent />
       </div>
 
       <div class="header-divider" aria-hidden="true"></div>

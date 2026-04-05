@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '../stores/gameStore'
+import { useGameStore } from '@/stores/gameStore'
 
 type HyperStar = {
   angle: number

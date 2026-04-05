@@ -42,10 +42,10 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
-import { useGameStore } from '../../../stores/gameStore'
-import { useBattleStore } from '../../../stores/battleStore'
-import { useAugmentStore } from '../../../stores/augmentStore'
-import { formatNumber } from '../../../config/numberFormat'
+import { useGameStore } from '../../stores/gameStore'
+import { useBattleStore } from '../../stores/battleStore'
+import { useAugmentStore } from '../../stores/augmentStore'
+import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './SunComponent.vue'
 
 export default defineComponent({

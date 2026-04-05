@@ -3,7 +3,7 @@ import { computed, markRaw, onMounted, nextTick } from 'vue'
 import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { useGameStore } from '../stores/gameStore'
+import { useGameStore } from '@/stores/gameStore'
 import SkillNode from './SkillNode.vue'
 
 import '@vue-flow/core/dist/style.css'

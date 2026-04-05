@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // ── Script identisch, keine Änderungen ──
 import { ref, computed, watch } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { usePersistence } from '../composables/usePersistence'
-import ShopComponent from './gameCenter/idle/ShopComponent.vue'
-import SkillTreeComponent from './SkillTreeComponent.vue'
-import AdminDashboard from './AdminDashboard.vue'
-import BattleResultComponent from './gameCenter/battle/BattleResultComponent.vue'
-import TeamTabComponent from './missions/TeamTabComponent.vue'
+import { useGameStore } from '@/stores/gameStore'
+import { usePersistence } from '@/composables/usePersistence'
+import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
+import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
+import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
+import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
+import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue' // ←
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -122,113 +122,117 @@ const chimesForLevel = computed(() => {
   </div>
 
   <Teleport to="body">
-  <!-- ══ Backdrop ══ -->
-  <Transition name="backdrop">
-    <div v-if="activeModal !== null" class="fixed inset-0 z-[115] bg-black/80" @click="closeModal" />
-  </Transition>
+    <!-- ══ Backdrop ══ -->
+    <Transition name="backdrop">
+      <div
+        v-if="activeModal !== null"
+        class="fixed inset-0 z-[115] bg-black/80"
+        @click="closeModal"
+      />
+    </Transition>
 
-  <!-- ══ Modal ══ -->
-  <Transition name="modal-pop">
-    <div
-      v-if="activeModal !== null"
-      class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
-    >
-      <div class="rp-modal flex flex-col h-[960px]">
-        <!-- Goldene Akzentlinie oben -->
-        <div class="rp-accent-bar" />
+    <!-- ══ Modal ══ -->
+    <Transition name="modal-pop">
+      <div
+        v-if="activeModal !== null"
+        class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
+      >
+        <div class="rp-modal flex flex-col h-[960px]">
+          <!-- Goldene Akzentlinie oben -->
+          <div class="rp-accent-bar" />
 
-        <!-- ── Header ── -->
-        <div class="flex items-center flex-shrink-0 rp-modal-header">
-          <!-- Portal Links -->
-          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
-            <img
-              src="/img/BardPortalRichtig.png"
-              alt="Portal"
-              class="relative z-10 object-contain w-[72px] h-[72px]"
-            />
-            <div class="absolute inset-0 portal-effect">
-              <div class="portal-glow" />
-              <div class="portal-vortex" />
-              <div class="portal-ring" />
-            </div>
-          </div>
-
-          <!-- Tabs -->
-          <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
-            <button
-              v-for="item in menuItems"
-              :key="item.id"
-              @click="setTab(item.id)"
-              class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
-              :class="activeModal === item.id ? 'rp-tab--active' : ''"
-            >
+          <!-- ── Header ── -->
+          <div class="flex items-center flex-shrink-0 rp-modal-header">
+            <!-- Portal Links -->
+            <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
               <img
-                v-if="item.src"
-                :src="item.src"
-                :alt="item.label"
-                class="relative z-10 object-contain w-14 h-14"
-                :class="activeModal === item.id ? 'rp-tab-img-glow' : ''"
+                src="/img/BardPortalRichtig.png"
+                alt="Portal"
+                class="relative z-10 object-contain w-[72px] h-[72px]"
               />
-              <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
-              <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
-              <!-- Aktiv-Indikator -->
-              <span
-                v-if="activeModal === item.id"
-                class="absolute bottom-0 rp-tab-indicator left-2 right-2"
+              <div class="absolute inset-0 portal-effect">
+                <div class="portal-glow" />
+                <div class="portal-vortex" />
+                <div class="portal-ring" />
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
+              <button
+                v-for="item in menuItems"
+                :key="item.id"
+                @click="setTab(item.id)"
+                class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
+                :class="activeModal === item.id ? 'rp-tab--active' : ''"
+              >
+                <img
+                  v-if="item.src"
+                  :src="item.src"
+                  :alt="item.label"
+                  class="relative z-10 object-contain w-14 h-14"
+                  :class="activeModal === item.id ? 'rp-tab-img-glow' : ''"
+                />
+                <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
+                <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
+                <!-- Aktiv-Indikator -->
+                <span
+                  v-if="activeModal === item.id"
+                  class="absolute bottom-0 rp-tab-indicator left-2 right-2"
+                />
+              </button>
+            </div>
+
+            <!-- Portal Rechts -->
+            <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
+              <img
+                src="/img/PortalEndeRichtig.png"
+                alt="Portal Ende"
+                class="relative z-10 object-contain w-[72px] h-[72px]"
               />
-            </button>
+              <div class="absolute inset-0 portal-effect">
+                <div class="portal-glow" />
+                <div class="portal-vortex" />
+                <div class="portal-ring" />
+              </div>
+            </div>
           </div>
 
-          <!-- Portal Rechts -->
-          <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
-            <img
-              src="/img/PortalEndeRichtig.png"
-              alt="Portal Ende"
-              class="relative z-10 object-contain w-[72px] h-[72px]"
-            />
-            <div class="absolute inset-0 portal-effect">
-              <div class="portal-glow" />
-              <div class="portal-vortex" />
-              <div class="portal-ring" />
-            </div>
+          <!-- ── Content ── -->
+          <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
+            <Transition name="tab-fade" mode="out-in">
+              <div
+                v-if="activeModal === 'shop'"
+                key="shop"
+                class="h-full overflow-y-auto rp-scrollbar"
+              >
+                <ShopComponent />
+              </div>
+              <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
+                <SkillTreeComponent />
+              </div>
+              <div v-else-if="activeModal === 'team'" key="team" class="h-full">
+                <TeamTabComponent />
+              </div>
+              <div
+                v-else-if="activeModal === 'kampf'"
+                key="kampf"
+                class="h-full overflow-y-auto rp-scrollbar"
+              >
+                <BattleResultComponent />
+              </div>
+              <div
+                v-else-if="activeModal === 'admin'"
+                key="admin"
+                class="h-full overflow-y-auto rp-scrollbar"
+              >
+                <AdminDashboard :inline="true" />
+              </div>
+            </Transition>
           </div>
-        </div>
-
-        <!-- ── Content ── -->
-        <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
-          <Transition name="tab-fade" mode="out-in">
-            <div
-              v-if="activeModal === 'shop'"
-              key="shop"
-              class="h-full overflow-y-auto rp-scrollbar"
-            >
-              <ShopComponent />
-            </div>
-            <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
-              <SkillTreeComponent />
-            </div>
-            <div v-else-if="activeModal === 'team'" key="team" class="h-full">
-              <TeamTabComponent />
-            </div>
-            <div
-              v-else-if="activeModal === 'kampf'"
-              key="kampf"
-              class="h-full overflow-y-auto rp-scrollbar"
-            >
-              <BattleResultComponent />
-            </div>
-            <div
-              v-else-if="activeModal === 'admin'"
-              key="admin"
-              class="h-full overflow-y-auto rp-scrollbar"
-            >
-              <AdminDashboard :inline="true" />
-            </div>
-          </Transition>
         </div>
       </div>
-    </div>
-  </Transition>
+    </Transition>
   </Teleport>
 </template>
 

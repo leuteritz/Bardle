@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { useBattleStore } from '../stores/battleStore'
-import { useShopStore } from '../stores/shopStore'
-import { usePlanetEventStore } from '../stores/planetEventStore'
-import { usePlanetBossStore } from '../stores/planetBossStore'
-import { useInventoryStore } from '../stores/inventoryStore'
-import { useGalaxyStore } from '../stores/galaxyStore'
-import { MATERIALS, pickMaterial } from '../config/materials'
-import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { useGameStore } from '@/stores/gameStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { useShopStore } from '@/stores/shopStore'
+import { usePlanetEventStore } from '@/stores/planetEventStore'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
+import { MATERIALS, pickMaterial } from '@/config/materials'
+import { CHAMPION_HOME_PLANETS } from '@/config/championHomePlanets'
 
 const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
 
@@ -101,6 +101,11 @@ function spawnGalaxyBoss() {
   galaxyStore.pendingGalaxyBoss = true
 }
 
+function startEditing(key: string) {
+  editingKey.value = `qa_${key}`
+  editingValue.value = String(getValue(key))
+}
+
 // ── Sections ─────────────────────────────────────────────────────────────────
 
 const sections = computed(() => [
@@ -169,15 +174,40 @@ const filteredSections = computed(() => {
 
 // Section header accent colors
 const sectionColors: Record<string, { header: string; label: string; reset: string }> = {
-  core:      { header: 'section-header--core',      label: 'section-label--core',      reset: 'section-reset--core' },
-  battle:    { header: 'section-header--battle',    label: 'section-label--battle',    reset: 'section-reset--battle' },
-  materials: { header: 'section-header--materials', label: 'section-label--materials', reset: 'section-reset--materials' },
-  buildings: { header: 'section-header--buildings', label: 'section-label--buildings', reset: 'section-reset--buildings' },
-  advanced:  { header: 'section-header--advanced',  label: 'section-label--advanced',  reset: 'section-reset--advanced' },
+  core: {
+    header: 'section-header--core',
+    label: 'section-label--core',
+    reset: 'section-reset--core',
+  },
+  battle: {
+    header: 'section-header--battle',
+    label: 'section-label--battle',
+    reset: 'section-reset--battle',
+  },
+  materials: {
+    header: 'section-header--materials',
+    label: 'section-label--materials',
+    reset: 'section-reset--materials',
+  },
+  buildings: {
+    header: 'section-header--buildings',
+    label: 'section-label--buildings',
+    reset: 'section-reset--buildings',
+  },
+  advanced: {
+    header: 'section-header--advanced',
+    label: 'section-label--advanced',
+    reset: 'section-reset--advanced',
+  },
 }
 
 function getSectionColor(id: string) {
   return sectionColors[id] ?? sectionColors['core']
+}
+
+function commitEdit(key: string) {
+  setValue(key, editingValue.value)
+  editingKey.value = null
 }
 
 // ── getValue / setValue ───────────────────────────────────────────────────────
@@ -213,7 +243,8 @@ function setValue(key: string, raw: string | boolean) {
   else if (key === 'rankTier' && typeof raw === 'string') battleStore.currentRank.tier = raw
   else if (key === 'rankDivision' && typeof raw === 'string') battleStore.currentRank.division = raw
   else if (key === 'rankLp' && !isNaN(int)) battleStore.currentRank.lp = int
-  else if (key.startsWith('mat_') && !isNaN(int)) inventoryStore.collectedMaterials[key.slice(4)] = int
+  else if (key.startsWith('mat_') && !isNaN(int))
+    inventoryStore.collectedMaterials[key.slice(4)] = int
   else if (key.startsWith('building_') && !isNaN(int)) {
     const i = parseInt(key.split('_')[1])
     shopStore.setBuildingLevel(i, int)
@@ -225,12 +256,30 @@ function setValue(key: string, raw: string | boolean) {
 }
 
 const defaultValues: Record<string, number | string | boolean> = {
-  chimes: 0, meeps: 0, level: 1, skillPoints: 0,
-  mmr: 1000, rankTier: 'Iron', rankDivision: 'IV', rankLp: 0,
-  mat_stardust: 0, mat_moon_crystal: 0, mat_nebula_quartz: 0,
-  mat_solar_essence: 0, mat_void_shard: 0, mat_dark_matter: 0,
-  building_0: 0, building_1: 0, building_2: 0, building_3: 0, building_4: 0, building_5: 0,
-  currentUniverse: 1, chimesForNextUniverse: 0, gameSpeed: 1000, autoBattle: false,
+  chimes: 0,
+  meeps: 0,
+  level: 1,
+  skillPoints: 0,
+  mmr: 1000,
+  rankTier: 'Iron',
+  rankDivision: 'IV',
+  rankLp: 0,
+  mat_stardust: 0,
+  mat_moon_crystal: 0,
+  mat_nebula_quartz: 0,
+  mat_solar_essence: 0,
+  mat_void_shard: 0,
+  mat_dark_matter: 0,
+  building_0: 0,
+  building_1: 0,
+  building_2: 0,
+  building_3: 0,
+  building_4: 0,
+  building_5: 0,
+  currentUniverse: 1,
+  chimesForNextUniverse: 0,
+  gameSpeed: 1000,
+  autoBattle: false,
 }
 
 function resetSection(sectionId: string) {
@@ -253,11 +302,7 @@ function fillAllMaterials() {
   <template v-if="!inline">
     <!-- Backdrop -->
     <Transition name="fade">
-      <div
-        v-if="isOpen"
-        class="fixed inset-0 z-[110] rpg-overlay"
-        @click.self="isOpen = false"
-      />
+      <div v-if="isOpen" class="fixed inset-0 z-[110] rpg-overlay" @click.self="isOpen = false" />
     </Transition>
 
     <!-- Modal -->
@@ -277,52 +322,79 @@ function fillAllMaterials() {
           </div>
           <div class="flex items-center gap-2">
             <span class="admin-shortcut">Ctrl+Shift+A</span>
-            <button class="w-6 h-6 flex items-center justify-center rpg-close-btn" @click="isOpen = false">✕</button>
+            <button
+              class="flex items-center justify-center w-6 h-6 rpg-close-btn"
+              @click="isOpen = false"
+            >
+              ✕
+            </button>
           </div>
         </div>
 
         <!-- Quick Actions -->
         <div class="px-5 py-3 admin-quick-actions">
-          <div class="admin-section-label mb-2">Quick Actions</div>
+          <div class="mb-2 admin-section-label">Quick Actions</div>
           <!-- Inline Editable Values -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            <div v-for="qf in [
-              { key: 'chimes', label: 'Chimes' },
-              { key: 'meeps', label: 'Meeps' },
-              { key: 'level', label: 'Level' },
-              { key: 'skillPoints', label: 'Skill Points' },
-            ]" :key="qf.key" class="flex flex-col gap-0.5">
+          <div class="grid grid-cols-2 gap-2 mb-3 sm:grid-cols-4">
+            <div
+              v-for="qf in [
+                { key: 'chimes', label: 'Chimes' },
+                { key: 'meeps', label: 'Meeps' },
+                { key: 'level', label: 'Level' },
+                { key: 'skillPoints', label: 'Skill Points' },
+              ]"
+              :key="qf.key"
+              class="flex flex-col gap-0.5"
+            >
               <label class="admin-field-label">{{ qf.label }}</label>
               <input
                 type="number"
                 :min="qf.key === 'level' ? 1 : 0"
                 :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
-                class="admin-input text-right"
-                @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
+                class="text-right admin-input"
+                @focus="startEditing(qf.key)"
                 @input="editingValue = ($event.target as HTMLInputElement).value"
-                @change="setValue(qf.key, editingValue); editingKey = null"
-                @blur="setValue(qf.key, editingValue); editingKey = null"
+                @change="commitEdit(qf.key)"
+                @blur="commitEdit(qf.key)"
               />
             </div>
           </div>
           <!-- Planet Spawn Buttons -->
           <div class="flex flex-wrap gap-2">
-            <button class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanet">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+              @click="spawnPlanet"
+            >
               <span>🌍</span> Spawn Planet
             </button>
-            <button class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithMaterial">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
+              @click="spawnPlanetWithMaterial"
+            >
               <span>💎</span> Spawn + Material
             </button>
-            <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
+              @click="spawnPlanetWithChampion"
+            >
               <span>🏆</span> Spawn + Champion
             </button>
-            <button class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5" @click="spawnGalaxyBoss">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
+              @click="spawnGalaxyBoss"
+            >
               <span>👾</span> Spawn Galaxy Boss
             </button>
-            <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5"
+              @click="forceCompleteGalaxy"
+            >
               <span>🌌</span> Complete Galaxy
             </button>
-            <button class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5" @click="forcePrestige">
+            <button
+              class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
+              @click="forcePrestige"
+            >
               <span>⭐</span> Force Prestige
             </button>
           </div>
@@ -339,37 +411,45 @@ function fillAllMaterials() {
         </div>
 
         <!-- Sections -->
-        <div class="overflow-y-auto flex-1 px-5 py-3 space-y-3 rpg-scrollbar">
+        <div class="flex-1 px-5 py-3 space-y-3 overflow-y-auto rpg-scrollbar">
           <div
             v-for="section in filteredSections"
             :key="section.id"
-            class="admin-section overflow-hidden"
+            class="overflow-hidden admin-section"
           >
             <div
               class="flex items-center justify-between px-4 py-2 admin-section-header"
               :class="getSectionColor(section.id).header"
             >
-              <span class="admin-section-title" :class="getSectionColor(section.id).label">{{ section.label }}</span>
+              <span class="admin-section-title" :class="getSectionColor(section.id).label">{{
+                section.label
+              }}</span>
               <div class="flex items-center gap-1">
                 <button
                   v-if="section.id === 'materials'"
                   class="admin-action-btn section-reset--materials"
                   @click="fillAllMaterials()"
-                >💎 +9999 all</button>
+                >
+                  💎 +9999 all
+                </button>
                 <button
                   class="admin-action-btn"
                   :class="getSectionColor(section.id).reset"
                   @click="resetSection(section.id)"
-                >reset</button>
+                >
+                  reset
+                </button>
               </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-px admin-fields-grid p-0">
+            <div class="grid grid-cols-1 gap-px p-0 sm:grid-cols-2 admin-fields-grid">
               <div
                 v-for="field in section.fields"
                 :key="field.key"
                 class="flex items-center justify-between gap-3 px-4 py-2 admin-field-row"
               >
-                <label class="admin-field-name whitespace-nowrap min-w-[90px]">{{ field.label }}</label>
+                <label class="admin-field-name whitespace-nowrap min-w-[90px]">{{
+                  field.label
+                }}</label>
                 <input
                   v-if="field.type === 'number'"
                   type="number"
@@ -377,12 +457,12 @@ function fillAllMaterials() {
                   :max="(field as any).max"
                   :value="editingKey === field.key ? editingValue : getValue(field.key)"
                   class="w-full max-w-[140px] admin-input admin-input--sm text-right"
-                  @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
+                  @focus="startEditing(field.key)"
                   @input="editingValue = ($event.target as HTMLInputElement).value"
-                  @change="setValue(field.key, editingValue); editingKey = null"
-                  @blur="setValue(field.key, editingValue); editingKey = null"
+                  @change="commitEdit(field.key)"
+                  @blur="commitEdit(field.key)"
                 />
-                <div v-else-if="field.type === 'range'" class="flex items-center gap-2 flex-1">
+                <div v-else-if="field.type === 'range'" class="flex items-center flex-1 gap-2">
                   <input
                     type="range"
                     :min="field.min"
@@ -391,7 +471,7 @@ function fillAllMaterials() {
                     class="flex-1 admin-range cursor-pointer h-1.5"
                     @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
                   />
-                  <span class="admin-range-value w-4 text-right">{{ getValue(field.key) }}</span>
+                  <span class="w-4 text-right admin-range-value">{{ getValue(field.key) }}</span>
                 </div>
                 <select
                   v-else-if="field.type === 'select'"
@@ -399,20 +479,25 @@ function fillAllMaterials() {
                   class="w-full max-w-[140px] admin-select"
                   @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
                 >
-                  <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
+                  <option v-for="opt in (field as any).options" :key="opt" :value="opt">
+                    {{ opt }}
+                  </option>
                 </select>
                 <div v-else-if="field.type === 'checkbox'" class="flex items-center">
                   <input
                     type="checkbox"
                     :checked="getValue(field.key) as boolean"
-                    class="w-4 h-4 admin-checkbox cursor-pointer"
+                    class="w-4 h-4 cursor-pointer admin-checkbox"
                     @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
                   />
                 </div>
               </div>
             </div>
           </div>
-          <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg text-sm">
+          <div
+            v-if="filteredSections.length === 0"
+            class="py-8 text-sm text-center admin-empty-msg"
+          >
             No fields match "{{ search }}"
           </div>
         </div>
@@ -424,46 +509,68 @@ function fillAllMaterials() {
   <template v-else>
     <!-- Quick Actions -->
     <div class="px-5 py-3 admin-quick-actions">
-      <div class="admin-section-label mb-2">Quick Actions</div>
+      <div class="mb-2 admin-section-label">Quick Actions</div>
       <!-- Inline Editable Values -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-        <div v-for="qf in [
-          { key: 'chimes', label: 'Chimes' },
-          { key: 'meeps', label: 'Meeps' },
-          { key: 'level', label: 'Level' },
-          { key: 'skillPoints', label: 'Skill Points' },
-        ]" :key="qf.key" class="flex flex-col gap-0.5">
+      <div class="grid grid-cols-2 gap-2 mb-3 sm:grid-cols-4">
+        <div
+          v-for="qf in [
+            { key: 'chimes', label: 'Chimes' },
+            { key: 'meeps', label: 'Meeps' },
+            { key: 'level', label: 'Level' },
+            { key: 'skillPoints', label: 'Skill Points' },
+          ]"
+          :key="qf.key"
+          class="flex flex-col gap-0.5"
+        >
           <label class="admin-field-label">{{ qf.label }}</label>
           <input
             type="number"
             :min="qf.key === 'level' ? 1 : 0"
             :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
-            class="admin-input text-right"
-            @focus="editingKey = `qa_${qf.key}`; editingValue = String(getValue(qf.key))"
+            class="text-right admin-input"
+            @focus="startEditing(qf.key)"
             @input="editingValue = ($event.target as HTMLInputElement).value"
-            @change="setValue(qf.key, editingValue); editingKey = null"
-            @blur="setValue(qf.key, editingValue); editingKey = null"
+            @change="commitEdit(qf.key)"
+            @blur="commitEdit(qf.key)"
           />
         </div>
       </div>
       <!-- Planet Spawn Buttons -->
       <div class="flex flex-wrap gap-2">
-        <button class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanet">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+          @click="spawnPlanet"
+        >
           <span>🌍</span> Spawn Planet
         </button>
-        <button class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithMaterial">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
+          @click="spawnPlanetWithMaterial"
+        >
           <span>💎</span> Spawn + Material
         </button>
-        <button class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5" @click="spawnPlanetWithChampion">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
+          @click="spawnPlanetWithChampion"
+        >
           <span>🏆</span> Spawn + Champion
         </button>
-        <button class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5" @click="spawnGalaxyBoss">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
+          @click="spawnGalaxyBoss"
+        >
           <span>👾</span> Spawn Galaxy Boss
         </button>
-        <button class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5" @click="forceCompleteGalaxy">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5"
+          @click="forceCompleteGalaxy"
+        >
           <span>🌌</span> Complete Galaxy
         </button>
-        <button class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5" @click="forcePrestige">
+        <button
+          class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
+          @click="forcePrestige"
+        >
           <span>⭐</span> Force Prestige
         </button>
       </div>
@@ -484,27 +591,33 @@ function fillAllMaterials() {
       <div
         v-for="section in filteredSections"
         :key="section.id"
-        class="admin-section overflow-hidden"
+        class="overflow-hidden admin-section"
       >
         <div
           class="flex items-center justify-between px-4 py-2 admin-section-header"
           :class="getSectionColor(section.id).header"
         >
-          <span class="admin-section-title" :class="getSectionColor(section.id).label">{{ section.label }}</span>
+          <span class="admin-section-title" :class="getSectionColor(section.id).label">{{
+            section.label
+          }}</span>
           <div class="flex items-center gap-1">
             <button
               v-if="section.id === 'materials'"
               class="admin-action-btn section-reset--materials"
               @click="fillAllMaterials()"
-            >💎 +9999 all</button>
+            >
+              💎 +9999 all
+            </button>
             <button
               class="admin-action-btn"
               :class="getSectionColor(section.id).reset"
               @click="resetSection(section.id)"
-            >reset</button>
+            >
+              reset
+            </button>
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-px admin-fields-grid p-0">
+        <div class="grid grid-cols-1 gap-px p-0 sm:grid-cols-2 admin-fields-grid">
           <div
             v-for="field in section.fields"
             :key="field.key"
@@ -518,12 +631,12 @@ function fillAllMaterials() {
               :max="(field as any).max"
               :value="editingKey === field.key ? editingValue : getValue(field.key)"
               class="w-full max-w-[140px] admin-input admin-input--sm text-right"
-              @focus="editingKey = field.key; editingValue = String(getValue(field.key))"
+              @focus="startEditing(field.key)"
               @input="editingValue = ($event.target as HTMLInputElement).value"
-              @change="setValue(field.key, editingValue); editingKey = null"
-              @blur="setValue(field.key, editingValue); editingKey = null"
+              @change="commitEdit(field.key)"
+              @blur="commitEdit(field.key)"
             />
-            <div v-else-if="field.type === 'range'" class="flex items-center gap-2 flex-1">
+            <div v-else-if="field.type === 'range'" class="flex items-center flex-1 gap-2">
               <input
                 type="range"
                 :min="field.min"
@@ -532,7 +645,7 @@ function fillAllMaterials() {
                 class="flex-1 admin-range cursor-pointer h-1.5"
                 @input="setValue(field.key, ($event.target as HTMLInputElement).value)"
               />
-              <span class="admin-range-value w-4 text-right">{{ getValue(field.key) }}</span>
+              <span class="w-4 text-right admin-range-value">{{ getValue(field.key) }}</span>
             </div>
             <select
               v-else-if="field.type === 'select'"
@@ -540,20 +653,22 @@ function fillAllMaterials() {
               class="w-full max-w-[140px] admin-select"
               @change="setValue(field.key, ($event.target as HTMLSelectElement).value)"
             >
-              <option v-for="opt in (field as any).options" :key="opt" :value="opt">{{ opt }}</option>
+              <option v-for="opt in (field as any).options" :key="opt" :value="opt">
+                {{ opt }}
+              </option>
             </select>
             <div v-else-if="field.type === 'checkbox'" class="flex items-center">
               <input
                 type="checkbox"
                 :checked="getValue(field.key) as boolean"
-                class="w-4 h-4 admin-checkbox cursor-pointer"
+                class="w-4 h-4 cursor-pointer admin-checkbox"
                 @change="setValue(field.key, ($event.target as HTMLInputElement).checked)"
               />
             </div>
           </div>
         </div>
       </div>
-      <div v-if="filteredSections.length === 0" class="text-center py-8 admin-empty-msg text-sm">
+      <div v-if="filteredSections.length === 0" class="py-8 text-sm text-center admin-empty-msg">
         No fields match "{{ search }}"
       </div>
     </div>
@@ -573,7 +688,9 @@ function fillAllMaterials() {
 
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 .slide-up-enter-from,
 .slide-up-leave-to {
@@ -684,7 +801,10 @@ function fillAllMaterials() {
   border: 1px solid var(--rpg-wood-mid);
   background: transparent;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 .admin-spawn-btn--neutral {
   color: var(--rpg-text-muted);
@@ -783,17 +903,37 @@ function fillAllMaterials() {
 }
 
 /* ── Section header accent colors ── */
-.section-header--core      { background: #1a1228; }
-.section-header--battle    { background: #121828; }
-.section-header--materials { background: #0e1e1a; }
-.section-header--buildings { background: #201810; }
-.section-header--advanced  { background: #201014; }
+.section-header--core {
+  background: #1a1228;
+}
+.section-header--battle {
+  background: #121828;
+}
+.section-header--materials {
+  background: #0e1e1a;
+}
+.section-header--buildings {
+  background: #201810;
+}
+.section-header--advanced {
+  background: #201014;
+}
 
-.section-label--core      { color: #c4a0e8; }
-.section-label--battle    { color: #80b0e8; }
-.section-label--materials { color: #60d0b0; }
-.section-label--buildings { color: var(--rpg-gold-dim); }
-.section-label--advanced  { color: #e08070; }
+.section-label--core {
+  color: #c4a0e8;
+}
+.section-label--battle {
+  color: #80b0e8;
+}
+.section-label--materials {
+  color: #60d0b0;
+}
+.section-label--buildings {
+  color: var(--rpg-gold-dim);
+}
+.section-label--advanced {
+  color: #e08070;
+}
 
 /* ── Action buttons (reset / fill) ── */
 .admin-action-btn {
@@ -804,7 +944,10 @@ function fillAllMaterials() {
   border: 1px solid var(--rpg-wood-mid);
   background: transparent;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   color: var(--rpg-text-dim);
 }
 .admin-action-btn:hover {
@@ -812,16 +955,46 @@ function fillAllMaterials() {
   border-color: var(--rpg-text-muted);
 }
 
-.section-reset--core      { color: #a070d0; border-color: #30183c; }
-.section-reset--core:hover { color: #c4a0e8; border-color: #5c3870; }
-.section-reset--battle    { color: #5080c0; border-color: #141e3c; }
-.section-reset--battle:hover { color: #80b0e8; border-color: #304870; }
-.section-reset--materials { color: #30a080; border-color: #10302a; }
-.section-reset--materials:hover { color: #60d0b0; border-color: #285848; }
-.section-reset--buildings { color: var(--rpg-wood-mid); border-color: #241608; }
-.section-reset--buildings:hover { color: var(--rpg-gold-dim); border-color: #3c2810; }
-.section-reset--advanced  { color: #c05040; border-color: #381414; }
-.section-reset--advanced:hover { color: #e08070; border-color: #5c2820; }
+.section-reset--core {
+  color: #a070d0;
+  border-color: #30183c;
+}
+.section-reset--core:hover {
+  color: #c4a0e8;
+  border-color: #5c3870;
+}
+.section-reset--battle {
+  color: #5080c0;
+  border-color: #141e3c;
+}
+.section-reset--battle:hover {
+  color: #80b0e8;
+  border-color: #304870;
+}
+.section-reset--materials {
+  color: #30a080;
+  border-color: #10302a;
+}
+.section-reset--materials:hover {
+  color: #60d0b0;
+  border-color: #285848;
+}
+.section-reset--buildings {
+  color: var(--rpg-wood-mid);
+  border-color: #241608;
+}
+.section-reset--buildings:hover {
+  color: var(--rpg-gold-dim);
+  border-color: #3c2810;
+}
+.section-reset--advanced {
+  color: #c05040;
+  border-color: #381414;
+}
+.section-reset--advanced:hover {
+  color: #e08070;
+  border-color: #5c2820;
+}
 
 /* ── Field rows ── */
 .admin-fields-grid {

@@ -1,5 +1,10 @@
 <template>
-  <div ref="wrapperEl" class="galaxy-progress" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+  <div
+    ref="wrapperEl"
+    class="galaxy-progress"
+    @mouseenter="showTooltip = true"
+    @mouseleave="showTooltip = false"
+  >
     <Teleport to="body">
       <Transition name="tooltip-fade">
         <div v-if="showTooltip" class="galaxy-tooltip-positioner" :style="tooltipStyle">
@@ -18,13 +23,17 @@
         <!-- Galaxy final boss indicator -->
         <span v-if="galaxyStore.needsFinalBoss" class="nav-galaxy-boss-badge" role="status">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            />
           </svg>
         </span>
         <!-- Regular section boss indicator -->
         <span v-else-if="sectionStore.pendingSectionBoss" class="nav-boss-badge" role="status">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            />
           </svg>
         </span>
       </div>
@@ -86,8 +95,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue'
-import { useSectionStore } from '../../../stores/sectionStore'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useSectionStore } from '../../stores/sectionStore'
+import { useGalaxyStore } from '../../stores/galaxyStore'
 import GalaxyMapTooltipComponent from './GalaxyMapTooltipComponent.vue'
 
 export default defineComponent({
@@ -179,8 +188,14 @@ export default defineComponent({
 }
 
 @keyframes galaxy-boss-pulse {
-  from { opacity: 1; box-shadow: 0 0 4px rgba(255, 130, 30, 0.3); }
-  to   { opacity: 0.6; box-shadow: 0 0 10px rgba(255, 150, 40, 0.7); }
+  from {
+    opacity: 1;
+    box-shadow: 0 0 4px rgba(255, 130, 30, 0.3);
+  }
+  to {
+    opacity: 0.6;
+    box-shadow: 0 0 10px rgba(255, 150, 40, 0.7);
+  }
 }
 
 /* ─── Galaxy Boss Hint ─── */
@@ -307,8 +322,12 @@ export default defineComponent({
 }
 
 @keyframes boss-slot-pulse {
-  from { border-color: rgba(255, 80, 20, 0.4); }
-  to   { border-color: rgba(255, 140, 40, 0.9); }
+  from {
+    border-color: rgba(255, 80, 20, 0.4);
+  }
+  to {
+    border-color: rgba(255, 140, 40, 0.9);
+  }
 }
 
 /* ─── Nächste Galaxie Button ─── */
@@ -322,7 +341,9 @@ export default defineComponent({
   font-weight: 700;
   letter-spacing: 0.05em;
   padding: 3px 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   white-space: nowrap;
   transition: all 0.1s;
   width: 100%;
@@ -369,7 +390,9 @@ export default defineComponent({
 /* ─── Tooltip Transition ─── */
 .tooltip-fade-enter-active,
 .tooltip-fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .tooltip-fade-enter-from,
 .tooltip-fade-leave-to {

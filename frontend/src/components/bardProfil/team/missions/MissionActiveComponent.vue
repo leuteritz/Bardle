@@ -56,7 +56,7 @@
             <img
               :src="getChampionImage(champ.name)"
               :alt="champ.name"
-              class="rpg-img object-cover w-4 h-4 rounded-full ring-1 ring-white/10"
+              class="object-cover w-4 h-4 rounded-full rpg-img ring-1 ring-white/10"
             />
             {{ champ.name }}
             <span class="text-[10px] uppercase text-white/35 font-bold">{{ champ.role }}</span>
@@ -65,7 +65,7 @@
 
         <!-- Progress (aktiv) -->
         <div v-if="mission.status === 'active'" class="space-y-2">
-          <div class="w-full h-2 rounded-full overflow-hidden mission-progress-track">
+          <div class="w-full h-2 overflow-hidden rounded-full mission-progress-track">
             <div
               class="h-full transition-all duration-1000 ease-linear rounded-full mission-progress-fill"
               :style="{ width: getProgress(mission) + '%' }"
@@ -91,28 +91,23 @@
           <button
             @click="missionStore.collectMission(mission.id)"
             class="px-5 py-2 text-sm font-bold transition-all duration-200 active:scale-95"
-            :class="
-              mission.status === 'success'
-                ? 'rpg-btn-green'
-                : 'rpg-btn-disabled'
-            "
+            :class="mission.status === 'success' ? 'rpg-btn-green' : 'rpg-btn-disabled'"
           >
             Einsammeln
           </button>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script lang="ts">
 // Script bleibt identisch – keine Änderungen nötig
 import { defineComponent, onMounted, onUnmounted, ref } from 'vue'
-import { useMissionStore } from '../../stores/missionStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { MISSION_CONFIGS } from '../../config/missions'
-import type { Mission } from '../../types'
+import { useMissionStore } from '@/stores/missionStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { MISSION_CONFIGS } from '@/config/missions'
+import type { Mission } from '@/types'
 
 export default defineComponent({
   name: 'MissionActiveComponent',
@@ -176,7 +171,12 @@ export default defineComponent({
 }
 
 .mission-accent--active {
-  background: linear-gradient(to right, var(--rpg-wood-mid), var(--rpg-gold-dim), var(--rpg-wood-mid));
+  background: linear-gradient(
+    to right,
+    var(--rpg-wood-mid),
+    var(--rpg-gold-dim),
+    var(--rpg-wood-mid)
+  );
 }
 .mission-accent--success {
   background: linear-gradient(to right, var(--rpg-green-bottom), var(--rpg-green-top));

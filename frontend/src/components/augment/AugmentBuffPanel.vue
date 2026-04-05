@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { AUGMENTS } from '../config/augments'
-import type { AugmentDefinition } from '../types'
+import { useGameStore } from '../../stores/gameStore'
+import { AUGMENTS } from '../../config/augments'
+import type { AugmentDefinition } from '../../types'
 
 const gameStore = useGameStore()
 
@@ -166,7 +166,9 @@ const rarityBorderColor: Record<string, string> = {
 .aug-expand-panel {
   max-width: 0;
   overflow: hidden;
-  transition: max-width 0.25s ease, padding 0.25s ease;
+  transition:
+    max-width 0.25s ease,
+    padding 0.25s ease;
   padding: 0;
   white-space: nowrap;
 }

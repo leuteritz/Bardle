@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGameStore } from './stores/gameStore'
-import GameCenterComponent from './components/gameCenter/GameCenterComponent.vue'
-import StarBackgroundComponent from './components/layout/StarBackgroundComponent.vue'
-import PlanetRescueOverlay from './components/layout/PlanetRescueOverlay.vue'
-import PlanetRescueModal from './components/layout/PlanetRescueModal.vue'
-import AugmentSelectionModal from './components/AugmentSelectionModal.vue'
-import AugmentBuffPanel from './components/AugmentBuffPanel.vue'
-import HyperspaceOverlay from './components/HyperspaceOverlay.vue'
-import UniverseSelectModal from './components/UniverseSelectModal.vue'
+import IdleGameComponent from './components/idle/IdleGameComponent.vue'
+import StarBackgroundComponent from './components/idle/StarBackgroundComponent.vue'
+import PlanetRescueOverlay from './components/idle/PlanetRescueOverlay.vue'
+import PlanetRescueModal from './components/idle/PlanetRescueModal.vue'
+import AugmentSelectionModal from './components/augment/AugmentSelectionModal.vue'
+import AugmentBuffPanel from './components/augment/AugmentBuffPanel.vue'
+import HyperspaceOverlay from './components/idle/HyperspaceOverlay.vue'
+import UniverseSelectModal from './components/idle/UniverseSelectModal.vue'
 import EncyclopediaPanel from './components/encyclopedia/EncyclopediaPanel.vue'
-import InventoryModal from './components/InventoryModal.vue'
-import AppHeaderComponent from './components/layout/AppHeaderComponent.vue'
+import InventoryModal from './components/header/InventoryModal.vue'
+import AppHeaderComponent from './components/header/AppHeaderComponent.vue'
 
 const gameStore = useGameStore()
 
@@ -32,7 +32,10 @@ const activeTab = ref('idle')
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <!-- Header + Countdown zusammen als ein Flex-Kind -->
       <div class="w-full">
-        <AppHeaderComponent :inventory-open="isInventoryOpen" @open-inventory="isInventoryOpen = true" />
+        <AppHeaderComponent
+          :inventory-open="isInventoryOpen"
+          @open-inventory="isInventoryOpen = true"
+        />
 
         <!-- Planet-Rettungs-Timer direkt unter dem Header -->
         <div class="planet-rescue-wrapper">
@@ -44,7 +47,7 @@ const activeTab = ref('idle')
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
           <div class="w-full">
-            <GameCenterComponent :active-tab="activeTab" />
+            <IdleGameComponent :active-tab="activeTab" />
           </div>
         </div>
       </div>

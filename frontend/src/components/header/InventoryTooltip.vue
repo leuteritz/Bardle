@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useInventoryStore } from '../stores/inventoryStore'
-import { MATERIALS } from '../config/materials'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { MATERIALS } from '@/config/materials'
 
 defineProps<{ visible: boolean }>()
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { useGameStore } from '../stores/gameStore'
+import { useGameStore } from '@/stores/gameStore'
 
 const props = defineProps<{
   data: {

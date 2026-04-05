@@ -125,13 +125,13 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useItemStore } from '../../stores/itemStore'
-import { useInventoryStore } from '../../stores/inventoryStore'
-import { SHOP_ITEMS } from '../../config/items'
-import { MATERIALS } from '../../config/materials'
-import { formatNumber } from '../../config/numberFormat'
-import type { ItemRarity, ShopItem } from '../../types'
+import { useGameStore } from '@/stores/gameStore'
+import { useItemStore } from '@/stores/itemStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { SHOP_ITEMS } from '@/config/items'
+import { MATERIALS } from '@/config/materials'
+import { formatNumber } from '@/config/numberFormat'
+import type { ItemRarity, ShopItem } from '@/types'
 
 export default defineComponent({
   name: 'ItemShopComponent',

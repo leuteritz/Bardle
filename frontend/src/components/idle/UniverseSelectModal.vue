@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { universes } from '../config/universes'
-import type { ModifierEffects } from '../types'
+import { useGameStore } from '../../stores/gameStore'
+import { universes } from '../../config/universes'
+import type { ModifierEffects } from '../../types'
 
 const gameStore = useGameStore()
 
@@ -102,7 +102,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 
           <!-- Close Button -->
           <button
-            class="absolute z-10 top-4 right-4 w-8 h-8 flex items-center justify-center rpg-close-btn"
+            class="absolute z-10 flex items-center justify-center w-8 h-8 top-4 right-4 rpg-close-btn"
             @click="gameStore.closePrestigeModal()"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,8 +111,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           </button>
 
           <!-- Header -->
-          <div class="rpg-header flex items-center justify-center p-6 relative">
-            <h2 class="uni-title text-3xl font-bold">
+          <div class="relative flex items-center justify-center p-6 rpg-header">
+            <h2 class="text-3xl font-bold uni-title">
               Wähle dein nächstes Universum
             </h2>
           </div>
@@ -123,7 +123,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               v-for="universe in universes"
               :key="universe.id"
               :disabled="universe.id === gameStore.currentUniverse"
-              class="uni-card relative flex flex-col items-center p-4 text-left group"
+              class="relative flex flex-col items-center p-4 text-left uni-card group"
               :class="
                 universe.id === gameStore.currentUniverse
                   ? 'uni-card--current'
@@ -143,7 +143,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               <span class="mb-2 text-3xl">{{ universe.modifier?.icon ?? '🌍' }}</span>
 
               <!-- Name -->
-              <h3 class="uni-name mb-1 text-base font-bold text-center">
+              <h3 class="mb-1 text-base font-bold text-center uni-name">
                 {{ universe.name }}
               </h3>
 
@@ -183,9 +183,9 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           </div>
 
           <!-- Footer -->
-          <div class="uni-footer flex justify-center p-4">
+          <div class="flex justify-center p-4 uni-footer">
             <button
-              class="uni-cancel-btn px-6 py-2 text-sm"
+              class="px-6 py-2 text-sm uni-cancel-btn"
               @click="gameStore.closePrestigeModal()"
             >
               Abbrechen

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useGameStore } from '../stores/gameStore'
-import { formatNumber } from '../config/numberFormat'
+import { useGameStore } from '@/stores/gameStore'
+import { formatNumber } from '@/config/numberFormat'
 
 const gameStore = useGameStore()
 
