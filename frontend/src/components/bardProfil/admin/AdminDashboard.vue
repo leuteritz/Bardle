@@ -380,6 +380,12 @@ function fillAllMaterials() {
               <span>🏆</span> Spawn + Champion
             </button>
             <button
+              class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
+              @click="fillAllMaterials"
+            >
+              <span>💎</span> +9999 all Materials
+            </button>
+            <button
               class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
               @click="spawnGalaxyBoss"
             >
@@ -425,13 +431,6 @@ function fillAllMaterials() {
                 section.label
               }}</span>
               <div class="flex items-center gap-1">
-                <button
-                  v-if="section.id === 'materials'"
-                  class="admin-action-btn section-reset--materials"
-                  @click="fillAllMaterials()"
-                >
-                  💎 +9999 all
-                </button>
                 <button
                   class="admin-action-btn"
                   :class="getSectionColor(section.id).reset"
@@ -556,6 +555,12 @@ function fillAllMaterials() {
           <span>🏆</span> Spawn + Champion
         </button>
         <button
+          class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
+          @click="fillAllMaterials"
+        >
+          <span>💎</span> +9999 all Materials
+        </button>
+        <button
           class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
           @click="spawnGalaxyBoss"
         >
@@ -601,13 +606,6 @@ function fillAllMaterials() {
             section.label
           }}</span>
           <div class="flex items-center gap-1">
-            <button
-              v-if="section.id === 'materials'"
-              class="admin-action-btn section-reset--materials"
-              @click="fillAllMaterials()"
-            >
-              💎 +9999 all
-            </button>
             <button
               class="admin-action-btn"
               :class="getSectionColor(section.id).reset"
