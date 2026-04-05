@@ -62,11 +62,11 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useMissionStore } from '../../../stores/missionStore'
-import { useGameStore } from '../../../stores/gameStore'
-import { useShopStore } from '../../../stores/shopStore'
-import { formatNumber } from '../../../config/numberFormat'
-import type { Mission } from '../../../types'
+import { useMissionStore } from '@/stores/missionStore'
+import { useGameStore } from '@/stores/gameStore'
+import { useShopStore } from '@/stores/shopStore'
+import { formatNumber } from '@/config/numberFormat'
+import type { Mission } from '@/types'
 
 export default defineComponent({
   name: 'MissionsComponent',
