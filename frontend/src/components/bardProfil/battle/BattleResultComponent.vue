@@ -1,3 +1,4 @@
+BattleResultComponent
 <template>
   <div class="relative flex flex-col w-full h-full p-4 space-y-3 overflow-hidden">
     <!-- ══ UNIVERSE ANIMATION (eigene Komponente) ══ -->
@@ -122,13 +123,71 @@
         >
           {{ lastResult.won ? 'VICTORY!' : 'DEFEAT!' }}
         </div>
+
         <div
-          class="lp-badge inline-flex items-center gap-1 px-4 py-1.5 text-sm font-black mb-5"
+          class="lp-badge inline-flex items-center gap-1 px-4 py-1.5 text-sm font-black mb-4"
           :class="lpChange >= 0 ? 'lp-badge--pos' : 'lp-badge--neg'"
         >
           {{ lpChange >= 0 ? '+' : '' }}{{ lpChange }} LP
         </div>
-        <div class="flex items-center justify-center gap-3">
+
+        <!-- ══ HONOR SECTION ══ -->
+        <div class="honor-section">
+          <div class="honor-header">
+            <span class="honor-title">⚜️ HONOR VERGEBEN</span>
+            <span
+              class="honor-counter"
+              :class="honoredPlayers.size > 0 ? 'honor-counter--active' : ''"
+            >
+              {{ honoredPlayers.size }}/3
+            </span>
+          </div>
+
+          <!-- Allies (Bard selbst wird ausgeblendet) -->
+          <div class="honor-team-row">
+            <span class="honor-team-label honor-team-label--ally">TEAM</span>
+            <div class="honor-chips">
+              <button
+                v-for="(player, i) in honorAllies"
+                :key="`ally-${i}`"
+                class="honor-chip honor-chip--ally"
+                :class="{
+                  'honor-chip--selected': honoredPlayers.has(`ally-${i}`),
+                  'honor-chip--locked':
+                    !honoredPlayers.has(`ally-${i}`) && honoredPlayers.size >= 3,
+                }"
+                @click="toggleHonor(`ally-${i}`)"
+              >
+                <span class="honor-chip-name">{{ player.name }}</span>
+                <span v-if="honoredPlayers.has(`ally-${i}`)" class="honor-chip-check">✓</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Enemies -->
+          <div class="honor-team-row">
+            <span class="honor-team-label honor-team-label--enemy">GEGNER</span>
+            <div class="honor-chips">
+              <button
+                v-for="(player, i) in honorEnemies"
+                :key="`enemy-${i}`"
+                class="honor-chip honor-chip--enemy"
+                :class="{
+                  'honor-chip--selected': honoredPlayers.has(`enemy-${i}`),
+                  'honor-chip--locked':
+                    !honoredPlayers.has(`enemy-${i}`) && honoredPlayers.size >= 3,
+                }"
+                @click="toggleHonor(`enemy-${i}`)"
+              >
+                <span class="honor-chip-name">{{ player.name }}</span>
+                <span v-if="honoredPlayers.has(`enemy-${i}`)" class="honor-chip-check">✓</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- ══ END HONOR SECTION ══ -->
+
+        <div class="flex items-center justify-center gap-3 mt-4">
           <button
             @click="battleStore.manualDismissResult()"
             class="px-5 py-2 text-sm font-black result-btn"
@@ -160,7 +219,7 @@ import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import ScoreboardComponent from './ScoreboardComponent.vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
-import { useBattleStore } from '../../../stores/battleStore'
+import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -211,6 +270,32 @@ export default defineComponent({
       isStarting.value = false
     }
 
+    // ── Honor state ───────────────────────────────────────────────────────────
+
+    const honoredPlayers = ref<Set<string>>(new Set())
+
+    // Bard selbst (Index 0 in team1) aus der Auswahl herausnehmen
+    const honorAllies = computed(() => battleStore.team1.slice(1))
+    const honorEnemies = computed(() => battleStore.team2)
+
+    const toggleHonor = (id: string) => {
+      const next = new Set(honoredPlayers.value)
+      if (next.has(id)) {
+        next.delete(id)
+      } else if (next.size < 3) {
+        next.add(id)
+      }
+      honoredPlayers.value = next
+    }
+
+    // Honor-Auswahl bei jedem neuen Result zurücksetzen
+    watch(
+      () => battleStore.showAutoBattleResult,
+      (shown) => {
+        if (shown) honoredPlayers.value = new Set()
+      },
+    )
+
     // ── Derived display values ────────────────────────────────────────────────
 
     const rankIcon = computed(() => {
@@ -251,6 +336,11 @@ export default defineComponent({
       lastResult,
       lpChange,
       rankIcon,
+      // Honor
+      honoredPlayers,
+      honorAllies,
+      honorEnemies,
+      toggleHonor,
     }
   },
 })
@@ -732,6 +822,137 @@ export default defineComponent({
   background: #a87ed826;
   border-color: #a87ed859;
   color: #c4a0ee;
+}
+
+/* ═══════════════════════════════════════════
+   HONOR SECTION
+   ═══════════════════════════════════════════ */
+.honor-section {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(200, 160, 60, 0.18);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+.honor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.honor-title {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #c8a060;
+  text-transform: uppercase;
+}
+
+.honor-counter {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5a4a2a;
+  transition: color 0.2s;
+}
+.honor-counter--active {
+  color: #e8c040;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
+}
+
+.honor-team-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.honor-team-row:last-child {
+  margin-bottom: 0;
+}
+
+.honor-team-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.honor-team-label--ally {
+  color: #52b830;
+}
+.honor-team-label--enemy {
+  color: #cc6050;
+}
+
+.honor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.honor-chip {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.honor-chip--ally {
+  border-color: rgba(82, 184, 48, 0.3);
+  color: rgba(82, 184, 48, 0.7);
+}
+.honor-chip--ally:hover:not(.honor-chip--locked) {
+  border-color: rgba(82, 184, 48, 0.7);
+  color: #6ee040;
+  background: rgba(82, 184, 48, 0.1);
+  transform: scale(1.05);
+}
+
+.honor-chip--enemy {
+  border-color: rgba(204, 96, 80, 0.3);
+  color: rgba(204, 96, 80, 0.7);
+}
+.honor-chip--enemy:hover:not(.honor-chip--locked) {
+  border-color: rgba(204, 96, 80, 0.7);
+  color: #e07060;
+  background: rgba(204, 96, 80, 0.1);
+  transform: scale(1.05);
+}
+
+.honor-chip--selected {
+  background: rgba(232, 192, 64, 0.15) !important;
+  border-color: rgba(232, 192, 64, 0.7) !important;
+  color: #e8c040 !important;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
+  transform: scale(1.05);
+}
+
+.honor-chip--locked {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.honor-chip-name {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.honor-chip-check {
+  font-size: 9px;
+  color: #e8c040;
+  font-weight: 900;
 }
 
 /* ═══════════════════════════════════════════
