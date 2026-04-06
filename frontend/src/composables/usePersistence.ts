@@ -62,6 +62,9 @@ export function usePersistence() {
         permanentUpgrades: shopStore.permanentUpgrades.map((u) => ({
           id: u.id,
           purchased: u.purchased,
+          appliedModifier: u.appliedModifier,
+          modifierSlotUnlocked: u.modifierSlotUnlocked,
+          modifierCost: u.modifierCost,
         })),
       },
       battle: {
@@ -84,6 +87,10 @@ export function usePersistence() {
         recruitableChampions: battleStore.recruitableChampions,
         recruitedChampions: [...battleStore.recruitedChampions],
         battleEverStarted: battleStore.battleEverStarted,
+        battleCoins: battleStore.battleCoins,
+        totalCoinsEarned: battleStore.totalCoinsEarned,
+        purchasedBuffs: battleStore.purchasedBuffs,
+        permanentBattleUpgrades: { ...battleStore.permanentBattleUpgrades },
       },
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
@@ -179,7 +186,12 @@ export function usePersistence() {
         if (Array.isArray(saved.shop.permanentUpgrades)) {
           for (const savedUpgrade of saved.shop.permanentUpgrades) {
             const upgrade = shopStore.permanentUpgrades.find((u) => u.id === savedUpgrade.id)
-            if (upgrade) upgrade.purchased = savedUpgrade.purchased ?? false
+            if (upgrade) {
+              upgrade.purchased = savedUpgrade.purchased ?? false
+              upgrade.appliedModifier = savedUpgrade.appliedModifier ?? undefined
+              upgrade.modifierSlotUnlocked = savedUpgrade.modifierSlotUnlocked ?? false
+              upgrade.modifierCost = savedUpgrade.modifierCost ?? undefined
+            }
           }
         }
       }
@@ -213,6 +225,12 @@ export function usePersistence() {
         if (Array.isArray(b.recruitedChampions))
           battleStore.recruitedChampions = b.recruitedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
+        battleStore.battleCoins = b.battleCoins ?? 0
+        battleStore.totalCoinsEarned = b.totalCoinsEarned ?? 0
+        if (Array.isArray(b.purchasedBuffs)) battleStore.purchasedBuffs = b.purchasedBuffs
+        if (b.permanentBattleUpgrades && typeof b.permanentBattleUpgrades === 'object') {
+          battleStore.permanentBattleUpgrades = { ...b.permanentBattleUpgrades }
+        }
       }
 
       // Restore expeditionStore
@@ -351,6 +369,9 @@ export function usePersistence() {
     })
     shopStore.permanentUpgrades.forEach((u) => {
       u.purchased = false
+      u.appliedModifier = undefined
+      u.modifierSlotUnlocked = false
+      u.modifierCost = undefined
     })
     shopStore.buyAmount = 1
 
@@ -386,6 +407,13 @@ export function usePersistence() {
     battleStore.battleTime = 0
     battleStore.timeUntilNextBattle = 0
     battleStore.currentBattleId = 0
+    battleStore.battleCoins = 0
+    battleStore.totalCoinsEarned = 0
+    battleStore.purchasedBuffs = []
+    battleStore.permanentBattleUpgrades = {}
+    battleStore.shopPhaseActive = false
+    battleStore.activeShopItems = []
+    battleStore.freeRerollAvailable = true
 
     // 6. Reset remaining stores
     const inventoryStore = useInventoryStore()

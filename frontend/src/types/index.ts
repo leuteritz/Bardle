@@ -83,6 +83,23 @@ export interface PermanentUpgradeRequirement {
   minLevel: number
 }
 
+export type ModifierType =
+  | 'resonanceBoost'
+  | 'chimeEcho'
+  | 'synergyLink'
+  | 'cascadeEffect'
+  | 'adaptiveScaling'
+  | 'timeCrystal'
+
+export interface UpgradeModifier {
+  id: string
+  name: string
+  description: string
+  icon: string
+  type: ModifierType
+  params: Record<string, number | string>
+}
+
 export interface PermanentUpgrade {
   id: string
   name: string
@@ -92,6 +109,9 @@ export interface PermanentUpgrade {
   purchased: boolean
   effect: PermanentUpgradeEffect
   requirement?: PermanentUpgradeRequirement
+  appliedModifier?: UpgradeModifier
+  modifierSlotUnlocked?: boolean
+  modifierCost?: number
 }
 
 export interface BuildingStat {
@@ -338,6 +358,29 @@ export interface Material {
   description: string
   rarity: MaterialRarity
   dropChance: number
+}
+
+// ── Battle Shop System ───────────────────────────────────
+export interface ShopItemEffect {
+  type: 'winChanceBonus' | 'doubleLpOnWin' | 'synergyPower' | 'scoutOpponent' | 'bardBasePower' | 'coinDropBonus'
+  value: number
+}
+
+export interface BattleShopItem {
+  id: string
+  name: string
+  description: string
+  cost: number
+  category: 'temp_buff' | 'team_upgrade' | 'permanent'
+  rarity: 'common' | 'rare' | 'epic'
+  maxStacks?: number
+  effect: ShopItemEffect
+}
+
+export interface ActiveBuff {
+  id: string
+  remainingBattles: number
+  effect: ShopItemEffect
 }
 
 // ── Idle-Game Mission-System ─────────────────────────────

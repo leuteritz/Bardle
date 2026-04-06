@@ -1,35 +1,68 @@
 <template>
-  <div v-if="availableUpgrades.length > 0" class="perm-panel">
-    <button
-      class="buy-all-btn"
-      :class="hasAffordableUpgrade ? 'buy-all-btn--active' : 'buy-all-btn--disabled'"
-      :disabled="!hasAffordableUpgrade"
-      @click="buyAllAffordable"
-    >
-      Buy All
-    </button>
-
-    <div class="perm-grid">
+  <div class="perm-panel">
+    <!-- ── Available upgrades ── -->
+    <template v-if="availableUpgrades.length > 0">
       <button
-        v-for="pUpgrade in availableUpgrades"
-        :key="pUpgrade.id"
-        class="perm-btn"
-        :class="
-          shopStore.canAffordPermanentUpgrade(pUpgrade.id)
-            ? 'perm-btn--affordable'
-            : 'perm-btn--locked'
-        "
-        @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
-        @mouseenter="showTooltip($event, pUpgrade)"
-        @mouseleave="hideTooltip"
+        class="buy-all-btn"
+        :class="hasAffordableUpgrade ? 'buy-all-btn--active' : 'buy-all-btn--disabled'"
+        :disabled="!hasAffordableUpgrade"
+        @click="buyAllAffordable"
       >
-        <span class="perm-icon">{{ pUpgrade.icon }}</span>
-        <div class="perm-cost">
-          <img src="/img/BardAbilities/BardChime.png" class="coin-icon-sm" />
-          <span>{{ formatNumber(pUpgrade.cost) }}</span>
-        </div>
+        Buy All
       </button>
-    </div>
+
+      <div class="perm-grid">
+        <button
+          v-for="pUpgrade in availableUpgrades"
+          :key="pUpgrade.id"
+          class="perm-btn"
+          :class="
+            shopStore.canAffordPermanentUpgrade(pUpgrade.id)
+              ? 'perm-btn--affordable'
+              : 'perm-btn--locked'
+          "
+          @click="shopStore.buyPermanentUpgrade(pUpgrade.id)"
+          @mouseenter="showTooltip($event, pUpgrade)"
+          @mouseleave="hideTooltip"
+        >
+          <span class="perm-icon">{{ pUpgrade.icon }}</span>
+          <div class="perm-cost">
+            <img src="/img/BardAbilities/BardChime.png" class="coin-icon-sm" />
+            <span>{{ formatNumber(pUpgrade.cost) }}</span>
+          </div>
+        </button>
+      </div>
+    </template>
+
+    <!-- ── Purchased upgrades with modifier slots ── -->
+    <template v-if="purchasedUpgrades.length > 0">
+      <div class="section-divider" />
+      <div class="purchased-list">
+        <div
+          v-for="pUpgrade in purchasedUpgrades"
+          :key="pUpgrade.id"
+          class="purchased-row"
+          @mouseenter="showTooltip($event, pUpgrade)"
+          @mouseleave="hideTooltip"
+        >
+          <span class="perm-icon purchased-icon">{{ pUpgrade.icon }}</span>
+          <button
+            v-if="pUpgrade.appliedModifier"
+            class="mod-badge mod-badge--active"
+            @click="openModifierPanel(pUpgrade)"
+          >
+            {{ pUpgrade.appliedModifier.icon }}
+          </button>
+          <button
+            v-else-if="pUpgrade.modifierSlotUnlocked"
+            class="mod-badge mod-badge--empty"
+            @click="openModifierPanel(pUpgrade)"
+          >
+            ✦
+          </button>
+        </div>
+      </div>
+    </template>
   </div>
 
   <!-- ── Tooltip ── -->
@@ -37,7 +70,7 @@
     <div v-if="hoveredUpgrade" class="upgrade-tooltip" :style="tooltipStyle">
       <h4 class="tooltip-title">{{ hoveredUpgrade.name }}</h4>
       <p class="tooltip-desc">{{ hoveredUpgrade.description }}</p>
-      <div class="tooltip-cost">
+      <div v-if="!hoveredUpgrade.purchased" class="tooltip-cost">
         <img src="/img/BardAbilities/BardChime.png" class="coin-icon-sm" />
         <span
           :class="
@@ -57,7 +90,17 @@
         🔒 {{ hoveredUpgrade.requirement.minLevel }}×
         {{ getBuildingName(hoveredUpgrade.requirement.buildingId) }} benötigt
       </div>
+      <div v-if="hoveredUpgrade.purchased && hoveredUpgrade.appliedModifier" class="tooltip-mod">
+        {{ hoveredUpgrade.appliedModifier.icon }} {{ hoveredUpgrade.appliedModifier.name }}
+      </div>
     </div>
+
+    <!-- ── Modifier panel modal ── -->
+    <UpgradeModifierPanel
+      v-if="modifierPanelUpgrade"
+      :upgrade="modifierPanelUpgrade"
+      @close="modifierPanelUpgrade = null"
+    />
   </Teleport>
 </template>
 
@@ -66,14 +109,20 @@ import { defineComponent, ref, computed } from 'vue'
 import { useShopStore } from '../../../stores/shopStore'
 import { formatNumber } from '../../../config/numberFormat'
 import type { PermanentUpgrade } from '../../../types'
+import UpgradeModifierPanel from './UpgradeModifierPanel.vue'
 
 export default defineComponent({
   name: 'UpgradesComponent',
+  components: { UpgradeModifierPanel },
   setup() {
     const shopStore = useShopStore()
 
     const availableUpgrades = computed(() =>
       shopStore.permanentUpgrades.filter((u) => !u.purchased).sort((a, b) => a.cost - b.cost),
+    )
+
+    const purchasedUpgrades = computed(() =>
+      shopStore.permanentUpgrades.filter((u) => u.purchased),
     )
 
     const hasAffordableUpgrade = computed(() =>
@@ -95,6 +144,7 @@ export default defineComponent({
 
     const hoveredUpgrade = ref<PermanentUpgrade | null>(null)
     const tooltipStyle = ref<Record<string, string>>({})
+    const modifierPanelUpgrade = ref<PermanentUpgrade | null>(null)
 
     const showTooltip = (event: MouseEvent, upgrade: PermanentUpgrade) => {
       hoveredUpgrade.value = upgrade
@@ -116,10 +166,15 @@ export default defineComponent({
       hoveredUpgrade.value = null
     }
 
+    const openModifierPanel = (upgrade: PermanentUpgrade) => {
+      modifierPanelUpgrade.value = upgrade
+    }
+
     return {
       shopStore,
       formatNumber,
       availableUpgrades,
+      purchasedUpgrades,
       hasAffordableUpgrade,
       buyAllAffordable,
       getBuildingName,
@@ -127,6 +182,8 @@ export default defineComponent({
       tooltipStyle,
       showTooltip,
       hideTooltip,
+      modifierPanelUpgrade,
+      openModifierPanel,
     }
   },
 })
@@ -145,6 +202,89 @@ export default defineComponent({
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+
+.section-divider {
+  height: 1px;
+  background: #2a2a26;
+  margin: 2px 0;
+}
+
+.purchased-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.purchased-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 2px;
+  border-radius: 4px;
+  background: #1a1a16;
+  border: 1px solid #2a2a22;
+  cursor: default;
+}
+
+.purchased-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.mod-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  margin-left: auto;
+}
+
+.mod-badge--active {
+  background: #1e2a10;
+  border: 1px solid #52b830;
+  box-shadow: 0 0 6px rgba(80, 180, 40, 0.25);
+}
+
+.mod-badge--active:hover {
+  box-shadow: 0 0 10px rgba(80, 180, 40, 0.5);
+  transform: scale(1.1);
+}
+
+.mod-badge--empty {
+  background: #1c1810;
+  border: 1px solid #5c3310;
+  color: #c89040;
+  font-size: 10px;
+  animation: slot-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(200, 144, 64, 0.2); }
+  50% { box-shadow: 0 0 10px rgba(200, 144, 64, 0.5); }
+}
+
+.mod-badge--empty:hover {
+  background: #241e10;
+  transform: scale(1.1);
+}
+
+.tooltip-mod {
+  margin-top: 5px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  background: rgba(80, 180, 40, 0.1);
+  border: 1px solid rgba(80, 180, 40, 0.3);
+  color: #80d050;
+  border-radius: 3px;
 }
 
 .buy-all-btn {

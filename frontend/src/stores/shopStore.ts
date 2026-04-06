@@ -4,8 +4,9 @@ import { useCpsStore } from './cpsStore'
 import { useAugmentStore } from './augmentStore'
 import { useItemStore } from './itemStore'
 import { usePlanetBossStore } from './planetBossStore'
-import type { ShopUpgrade, BuildingStat, PermanentUpgrade } from '../types'
+import type { ShopUpgrade, BuildingStat, PermanentUpgrade, UpgradeModifier } from '../types'
 import { logger } from '../utils/logger'
+import { MODIFIER_POOL } from '../config/modifiers'
 
 const chimeClickerIcon = '/img/ChimesPerClick.png'
 const glockenturmIcon = '/img/Glockenturm.png'
@@ -191,13 +192,13 @@ export const useShopStore = defineStore('shop', {
     permanentCPSMultiplier(): number {
       return this.permanentUpgrades
         .filter((u) => u.purchased && u.effect.type === 'cpsMultiplier')
-        .reduce((product, u) => product * u.effect.value, 1)
+        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
     },
 
     permanentCPCMultiplier(): number {
       return this.permanentUpgrades
         .filter((u) => u.purchased && u.effect.type === 'cpcMultiplier')
-        .reduce((product, u) => product * u.effect.value, 1)
+        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
     },
 
     cpsProducingUpgrades(): ShopUpgrade[] {
@@ -367,7 +368,7 @@ export const useShopStore = defineStore('shop', {
           (u) =>
             u.purchased && u.effect.type === 'buildingBoost' && u.effect.buildingId === buildingId,
         )
-        .reduce((product, u) => product * u.effect.value, 1)
+        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
     },
 
     isPermanentUpgradeRequirementMet(id: string): boolean {
@@ -393,6 +394,8 @@ export const useShopStore = defineStore('shop', {
       if (gameStore.chimes < upgrade.cost) return false
       gameStore.chimes -= upgrade.cost
       upgrade.purchased = true
+      upgrade.modifierSlotUnlocked = true
+      upgrade.modifierCost = Math.floor(upgrade.cost * 0.5)
       gameStore.chimesPerSecond = this.calculateTotalCPS()
       gameStore.chimesPerClick = this.calculateTotalCPC()
       logger.info('Shop', `Permanent upgrade: ${upgrade.name}`, { cost: upgrade.cost })
@@ -409,6 +412,55 @@ export const useShopStore = defineStore('shop', {
         gameStore.chimesPerSecond = this.calculateTotalCPS()
         gameStore.chimesPerClick = this.calculateTotalCPC()
       }
+    },
+
+    getModifiedEffectValue(upgradeId: string): number {
+      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
+      if (!upgrade) return 1
+      const base = upgrade.effect.value
+      const mod = upgrade.appliedModifier
+      if (!mod) return base
+
+      switch (mod.type) {
+        case 'resonanceBoost':
+          return base * (mod.params.boostFactor as number)
+        case 'synergyLink': {
+          const linkedId = mod.params.linkedUpgradeId as string
+          const linkedPurchased = this.permanentUpgrades.find((u) => u.id === linkedId)?.purchased
+          return linkedPurchased ? base * 2 : base
+        }
+        case 'cascadeEffect':
+          return base * (1 + (mod.params.cascadeBonus as number))
+        case 'adaptiveScaling': {
+          const maxLevel = Math.max(...this.shopUpgrades.map((u) => u.level), 1)
+          return base * (1 + maxLevel * (mod.params.scaleFactor as number))
+        }
+        case 'chimeEcho':
+        case 'timeCrystal':
+          return base
+        default:
+          return base
+      }
+    },
+
+    rollModifierOptions(upgradeId: string): UpgradeModifier[] {
+      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
+      const pool = MODIFIER_POOL.filter((m) => m.id !== upgrade?.appliedModifier?.id)
+      const shuffled = [...pool].sort(() => Math.random() - 0.5)
+      return shuffled.slice(0, 3)
+    },
+
+    applyModifier(upgradeId: string, modifier: UpgradeModifier): boolean {
+      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
+      if (!upgrade || !upgrade.modifierSlotUnlocked) return false
+      const gameStore = useGameStore()
+      if (gameStore.chimes < (upgrade.modifierCost ?? 0)) return false
+      gameStore.chimes -= upgrade.modifierCost ?? 0
+      upgrade.appliedModifier = modifier
+      gameStore.chimesPerSecond = this.calculateTotalCPS()
+      gameStore.chimesPerClick = this.calculateTotalCPC()
+      logger.info('Shop', `Modifier applied: ${modifier.name} → ${upgrade.name}`)
+      return true
     },
 
     calculateTotalCPS(): number {
@@ -428,7 +480,16 @@ export const useShopStore = defineStore('shop', {
         augmentStore.temporaryCPSMultiplier *
         itemStore.totalCPSMultiplier *
         bossStore.cpsPenaltyMultiplier
-      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
+      const flatCPSBonus = this.permanentUpgrades
+        .filter((u) => u.purchased && u.appliedModifier)
+        .reduce((sum, u) => {
+          const m = u.appliedModifier!
+          if (m.type === 'chimeEcho')
+            return sum + (m.params.burstAmount as number) * (m.params.chance as number)
+          if (m.type === 'timeCrystal') return sum + (m.params.crystalCPSBonus as number)
+          return sum
+        }, 0)
+      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul + flatCPSBonus)
     },
 
     calculateTotalCPC(): number {

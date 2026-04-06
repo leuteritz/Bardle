@@ -50,8 +50,8 @@ BattleResultComponent
 
       <!-- Two-column layout: MiniMap left | Chat+Scoreboard right -->
       <div class="relative z-10 flex flex-row flex-1 min-h-0 gap-3">
-        <!-- Left: MiniMap -->
-        <div class="flex flex-col items-center justify-center flex-1 min-w-0 min-h-0">
+        <!-- Left: MiniMap + Shop -->
+        <div class="flex flex-col items-center flex-1 min-w-0 min-h-0">
           <!-- Status Bar above MiniMap -->
           <div class="status-bar">
             <div class="status-chip">
@@ -89,12 +89,23 @@ BattleResultComponent
                 </span>
               </div>
             </div>
+            <!-- ── DEV: Admin Skip Button ── -->
+            <button
+              v-if="battleStore.battlePhase === 'playing'"
+              class="admin-skip-btn"
+              title="[DEV] Zur 40s-Marke springen"
+              @click="battleStore.adminSkipToEnd()"
+            >
+              ⚡ Skip
+            </button>
           </div>
           <MiniMapComponent
             class="w-full max-h-full aspect-square"
             :battle-id="currentBattleId"
             :score="score"
           />
+          <!-- Shop Panel — inline below MiniMap, slides up on entry -->
+          <BattleShopModal class="w-full mt-2" />
         </div>
         <!-- Right: Chat + Scoreboard -->
         <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
@@ -211,6 +222,7 @@ BattleResultComponent
       </div>
     </div>
   </Teleport>
+
 </template>
 
 <script lang="ts">
@@ -219,6 +231,7 @@ import MiniMapComponent from './MiniMapComponent.vue'
 import ChatPanelComponent from './ChatPanelComponent.vue'
 import ScoreboardComponent from './ScoreboardComponent.vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
+import BattleShopModal from './BattleShopModal.vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
@@ -228,6 +241,7 @@ export default defineComponent({
     ChatPanelComponent,
     ScoreboardComponent,
     PlanetSearchComponent,
+    BattleShopModal,
   },
 
   setup() {
@@ -647,6 +661,25 @@ export default defineComponent({
   padding: 0 0 6px;
   width: 100%;
   flex-shrink: 0;
+}
+.admin-skip-btn {
+  margin-left: 8px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  background: #1a0e00;
+  border: 1px solid #7a4e20;
+  color: #c89040;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.admin-skip-btn:hover {
+  opacity: 1;
+  border-color: #c89040;
 }
 .status-chip {
   display: flex;
