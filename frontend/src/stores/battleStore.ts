@@ -31,6 +31,7 @@ import type { BattleResult, BattleShopItem, ActiveBuff, ChampionState, ChatMessa
 import { getRandomShopItems } from '../config/battleShop'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
+import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -143,6 +144,18 @@ export const useBattleStore = defineStore('battle', {
       if (this.recruitableChampions.some((c) => c.name === name)) return
       if (this.recruitedChampions.includes(name)) return
       this.recruitableChampions.push({ name, materialCost, discoveredAt: Date.now() })
+    },
+
+    unlockAllChampions() {
+      for (const config of CHAMPION_HOME_PLANETS) {
+        if (!this.ownedChampions.includes(config.championName)) {
+          this.ownedChampions.push(config.championName)
+          this.recruitedChampions.push(config.championName)
+        }
+        this.recruitableChampions = this.recruitableChampions.filter(
+          (c) => c.name !== config.championName,
+        )
+      }
     },
 
     recruitChampion(name: string): boolean {

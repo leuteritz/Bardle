@@ -187,6 +187,12 @@ function fillAllMaterials() {
       >
         <span>⭐</span> Force Prestige
       </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
+        @click="battleStore.unlockAllChampions()"
+      >
+        <span>🏆</span> Unlock All Champions
+      </button>
     </div>
   </div>
 </template>

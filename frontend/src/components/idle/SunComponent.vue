@@ -3,6 +3,23 @@
     <div class="sun-atmosphere"></div>
     <div class="sun-corona"></div>
 
+    <!-- Decorative elliptical orbit rings -->
+    <svg class="orbit-paths" viewBox="0 0 360 360">
+      <ellipse
+        v-for="orbit in championOrbits"
+        :key="'ring-' + orbit.name"
+        cx="180"
+        cy="180"
+        :rx="orbit.orbitRadiusX"
+        :ry="orbit.orbitRadiusY"
+        fill="none"
+        stroke="rgba(255, 190, 50, 0.08)"
+        stroke-width="0.7"
+        stroke-dasharray="3 10"
+        :transform="`rotate(${orbit.tiltDeg}, 180, 180)`"
+      />
+    </svg>
+
     <svg class="sun-rays-dynamic" viewBox="-180 -180 360 360">
       <line
         v-for="ray in dynamicRays"
@@ -17,14 +34,103 @@
       />
     </svg>
 
-    <div class="sun-chromosphere"></div>
+    <!-- Differential-rotation surface bands (equator faster than poles) -->
+    <div class="sun-surface-wrap">
+      <div class="s-band s-band--eq"></div>
+      <div class="s-band s-band--n1"></div>
+      <div class="s-band s-band--s1"></div>
+    </div>
+
+    <!-- Outer chromosphere ring (counter-rotation) -->
+    <div class="sun-chromosphere sun-chromosphere--outer"></div>
+    <!-- Inner chromosphere ring (faster forward rotation) -->
+    <div class="sun-chromosphere sun-chromosphere--inner"></div>
+
     <div class="sun-core"></div>
     <div class="sun-flare"></div>
+
+    <!-- 3-D projected sunspots — the primary rotation indicator -->
+    <svg class="sun-spots-svg" viewBox="0 0 360 360">
+      <defs>
+        <clipPath id="sun-sphere-clip">
+          <circle cx="180" cy="180" r="108" />
+        </clipPath>
+        <filter id="sf-blur-penumbra" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="2.8" />
+        </filter>
+        <filter id="sf-blur-umbra" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="1.2" />
+        </filter>
+      </defs>
+
+      <g clip-path="url(#sun-sphere-clip)">
+        <!-- Penumbra (outer, diffuse) -->
+        <circle
+          v-for="s in sunspotPositions"
+          :key="'pen-' + s.id"
+          :cx="s.x"
+          :cy="s.y"
+          :r="s.size * s.scale"
+          :fill="`rgba(115, 48, 0, ${s.depth * 0.7})`"
+          filter="url(#sf-blur-penumbra)"
+        />
+        <!-- Umbra (inner, dark core) -->
+        <circle
+          v-for="s in sunspotPositions"
+          :key="'umb-' + s.id"
+          :cx="s.x"
+          :cy="s.y"
+          :r="s.size * s.scale * 0.5"
+          :fill="`rgba(38, 8, 0, ${s.depth * 0.92})`"
+          filter="url(#sf-blur-umbra)"
+        />
+      </g>
+    </svg>
+
+    <!-- Champions BEHIND the sun (z-index 2, below core) -->
+    <template v-for="pos in championPositions" :key="'b-' + pos.name">
+      <div
+        v-if="!pos.isFront"
+        class="champion-avatar champion-behind"
+        :style="{
+          left: pos.x + 'px',
+          top: pos.y + 'px',
+          width: pos.size + 'px',
+          height: pos.size + 'px',
+          opacity: pos.opacity,
+          transform: `scale(${pos.scale})`,
+          zIndex: 2,
+        }"
+      >
+        <img :src="pos.img" :alt="pos.name" />
+      </div>
+    </template>
+
+    <!-- Champions IN FRONT of the sun (z-index 10, above everything) -->
+    <template v-for="pos in championPositions" :key="'f-' + pos.name">
+      <div
+        v-if="pos.isFront"
+        class="champion-avatar"
+        :class="{ 'champion-burst': pos.isBurst }"
+        :style="{
+          left: pos.x + 'px',
+          top: pos.y + 'px',
+          width: pos.size + 'px',
+          height: pos.size + 'px',
+          opacity: pos.opacity,
+          transform: `scale(${pos.scale})`,
+          zIndex: 10,
+        }"
+      >
+        <img :src="pos.img" :alt="pos.name" />
+      </div>
+    </template>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useBattleStore } from '@/stores/battleStore'
 
 interface DynamicRay {
   id: number
@@ -37,12 +143,56 @@ interface DynamicRay {
   innerRadius: number
 }
 
+interface ChampionOrbit {
+  name: string
+  angle: number
+  baseSpeed: number
+  orbitRadiusX: number
+  orbitRadiusY: number
+  tiltDeg: number
+  tiltRad: number
+  isBurst: boolean
+  burstTimer: number
+}
+
+interface SunspotDef {
+  lat: number
+  lonOffset: number
+  size: number
+}
+
+interface SunspotPos {
+  id: number
+  x: number
+  y: number
+  size: number
+  scale: number
+  depth: number
+}
+
 export default defineComponent({
   name: 'SunComponent',
   setup() {
+    const battleStore = useBattleStore()
+
+    const EXCLUDED = new Set(['Bard'])
     const RAY_COUNT = 15
     const MIN_LENGTH = 70
     const MAX_LENGTH = 250
+    const CENTER = 180
+    const SOLAR_RADIUS = 92
+    const SOLAR_ROT_SPEED = 0.000088
+
+    const SOLAR_SPOTS: SunspotDef[] = [
+      { lat: 0.3, lonOffset: 0.0, size: 8.5 },
+      { lat: -0.24, lonOffset: 1.3, size: 6 },
+      { lat: 0.4, lonOffset: 2.55, size: 5 },
+      { lat: -0.33, lonOffset: 3.8, size: 7.5 },
+      { lat: 0.16, lonOffset: 5.05, size: 9 },
+      { lat: -0.13, lonOffset: 0.75, size: 4 },
+      { lat: 0.27, lonOffset: 4.35, size: 5 },
+      { lat: -0.2, lonOffset: 2.0, size: 6 },
+    ]
 
     const dynamicRays = ref<DynamicRay[]>(
       Array.from({ length: RAY_COUNT }, (_, i) => {
@@ -61,8 +211,95 @@ export default defineComponent({
       }),
     )
 
+    const sunRotation = ref(0)
+
+    const sunspotPositions = computed<SunspotPos[]>(() => {
+      const result: SunspotPos[] = []
+      SOLAR_SPOTS.forEach((s, i) => {
+        const lon = sunRotation.value + s.lonOffset
+        const cosLat = Math.cos(s.lat)
+        const depth = cosLat * Math.cos(lon)
+        if (depth <= 0) return
+
+        const x = CENTER + SOLAR_RADIUS * cosLat * Math.sin(lon)
+        const y = CENTER - SOLAR_RADIUS * Math.sin(s.lat)
+        const scale = 0.3 + 0.7 * depth
+
+        result.push({ id: i, x, y, size: s.size, scale, depth })
+      })
+      return result
+    })
+
+    const championOrbits = ref<ChampionOrbit[]>([])
+
+    function buildOrbit(name: string, index: number, total: number): ChampionOrbit {
+      const tier = index % 3
+      const orbitRadiusX = 155 + tier * 12
+      const orbitRadiusY = orbitRadiusX * (0.48 + (index % 2) * 0.09)
+      const tiltDeg = (index * 43 + 17) % 180
+      return {
+        name,
+        angle: (index / Math.max(total, 1)) * Math.PI * 2,
+        baseSpeed: 0.00022 + index * 0.000028,
+        orbitRadiusX,
+        orbitRadiusY,
+        tiltDeg,
+        tiltRad: (tiltDeg * Math.PI) / 180,
+        isBurst: false,
+        burstTimer: 0,
+      }
+    }
+
+    watch(
+      () => battleStore.ownedChampions,
+      (champions) => {
+        const filtered = champions.filter((n) => !EXCLUDED.has(n))
+        const N = filtered.length
+        const existing = new Map(championOrbits.value.map((c) => [c.name, c]))
+        championOrbits.value = filtered.map((name, i) =>
+          existing.has(name) ? existing.get(name)! : buildOrbit(name, i, N),
+        )
+      },
+      { immediate: true, deep: true },
+    )
+
+    const avatarSize = computed(() => (championOrbits.value.length <= 4 ? 40 : 32))
+
+    const championPositions = computed(() =>
+      championOrbits.value.map((c) => {
+        const cosT = Math.cos(c.tiltRad),
+          sinT = Math.sin(c.tiltRad)
+        const cosA = Math.cos(c.angle),
+          sinA = Math.sin(c.angle)
+
+        const px = CENTER + c.orbitRadiusX * cosA * cosT - c.orbitRadiusY * sinA * sinT
+        const py = CENTER + c.orbitRadiusX * cosA * sinT + c.orbitRadiusY * sinA * cosT
+
+        const relY = (py - CENTER) / Math.max(c.orbitRadiusY, 1)
+        const isFront = relY > -0.05
+        const depth = (relY + 1) / 2
+
+        const scale = 0.68 + depth * 0.52
+        const opacity = isFront ? 0.55 + depth * 0.45 : 0.18 + depth * 0.2
+        const size = avatarSize.value
+
+        return {
+          name: c.name,
+          img: battleStore.getChampionImage(c.name),
+          x: px - size / 2,
+          y: py - size / 2,
+          scale,
+          opacity,
+          isFront,
+          isBurst: c.isBurst,
+          size,
+        }
+      }),
+    )
+
     let animFrame: number
     let lastTargetUpdate = 0
+    let lastTimestamp = 0
     const TARGET_INTERVAL = 1500
 
     function animateRays(timestamp: number) {
@@ -77,19 +314,41 @@ export default defineComponent({
         ray.opacity = 0.8 - ((ray.currentLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.65
       })
 
+      const dt = lastTimestamp === 0 ? 0 : timestamp - lastTimestamp
+      lastTimestamp = timestamp
+
+      sunRotation.value += SOLAR_ROT_SPEED * dt
+
+      championOrbits.value.forEach((c) => {
+        const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(c.angle)))
+
+        if (c.isBurst) {
+          c.burstTimer -= dt
+          if (c.burstTimer <= 0) c.isBurst = false
+        } else if (Math.random() < 0.00012 * dt) {
+          c.isBurst = true
+          c.burstTimer = 500 + Math.random() * 900
+        }
+
+        c.angle += c.baseSpeed * keplerBoost * (c.isBurst ? 3.8 : 1.0) * dt
+      })
+
       animFrame = requestAnimationFrame(animateRays)
     }
 
     onMounted(() => {
       animFrame = requestAnimationFrame(animateRays)
     })
-
     onUnmounted(() => {
       cancelAnimationFrame(animFrame)
     })
 
     return {
       dynamicRays,
+      sunspotPositions,
+      championPositions,
+      championOrbits,
+      avatarSize,
       Math,
     }
   },
@@ -104,8 +363,19 @@ export default defineComponent({
   transform: translate(-50%, -50%);
   width: 360px;
   height: 360px;
-  z-index: 5; /* ← liegt über den Orbit-Planeten */
-  pointer-events: none; /* ← ausgeschaltet, aber... */
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.orbit-paths {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
 }
 
 .sun-atmosphere {
@@ -122,6 +392,7 @@ export default defineComponent({
   );
   animation: corona-breathe 7s ease-in-out infinite;
   filter: blur(4px);
+  z-index: 1;
 }
 
 .sun-corona {
@@ -138,6 +409,7 @@ export default defineComponent({
     transparent 100%
   );
   animation: corona-breathe 5s ease-in-out infinite;
+  z-index: 1;
 }
 
 @keyframes corona-breathe {
@@ -168,6 +440,131 @@ export default defineComponent({
   z-index: 3;
 }
 
+.sun-surface-wrap {
+  position: absolute;
+  inset: 62px;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.s-band {
+  position: absolute;
+  left: -100%;
+  width: 300%;
+}
+
+.s-band--eq {
+  top: 42%;
+  height: 16%;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    rgba(195, 78, 0, 0.16) 20%,
+    rgba(215, 88, 0, 0.22) 38%,
+    rgba(210, 84, 0, 0.2) 55%,
+    rgba(190, 74, 0, 0.15) 75%,
+    transparent 95%
+  );
+  animation: s-drift 19s linear infinite;
+}
+
+.s-band--n1 {
+  top: 25%;
+  height: 11%;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    rgba(165, 58, 0, 0.11) 20%,
+    rgba(178, 64, 0, 0.16) 38%,
+    rgba(170, 60, 0, 0.13) 60%,
+    rgba(160, 54, 0, 0.09) 80%,
+    transparent 95%
+  );
+  animation: s-drift 24s linear infinite;
+  animation-delay: -9s;
+}
+
+.s-band--s1 {
+  top: 62%;
+  height: 11%;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    rgba(165, 58, 0, 0.11) 20%,
+    rgba(178, 64, 0, 0.16) 38%,
+    rgba(170, 60, 0, 0.13) 60%,
+    rgba(160, 54, 0, 0.09) 80%,
+    transparent 95%
+  );
+  animation: s-drift 24s linear infinite;
+  animation-delay: -18s;
+}
+
+@keyframes s-drift {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(33.33%);
+  }
+}
+
+.sun-chromosphere {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.sun-chromosphere--outer {
+  inset: 48px;
+  background: radial-gradient(
+    circle,
+    transparent 55%,
+    rgba(255, 110, 25, 0.5) 65%,
+    rgba(220, 70, 10, 0.6) 72%,
+    rgba(170, 40, 0, 0.3) 80%,
+    transparent 90%
+  );
+  animation: chrom-spin-rev 60s linear infinite reverse;
+  filter: blur(1.5px);
+  z-index: 4;
+}
+
+.sun-chromosphere--inner {
+  inset: 54px;
+  background: radial-gradient(
+    circle,
+    transparent 60%,
+    rgba(255, 130, 20, 0.3) 70%,
+    rgba(200, 60, 5, 0.42) 76%,
+    rgba(150, 30, 0, 0.22) 84%,
+    transparent 93%
+  );
+  animation: chrom-spin-fwd 34s linear infinite;
+  filter: blur(1px);
+  z-index: 4;
+}
+
+@keyframes chrom-spin-rev {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes chrom-spin-fwd {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sun-core {
   position: absolute;
   inset: 60px;
@@ -183,6 +580,7 @@ export default defineComponent({
   );
   animation: core-pulse 3s ease-in-out infinite;
   filter: blur(2px);
+  z-index: 5;
 }
 
 @keyframes core-pulse {
@@ -205,6 +603,15 @@ export default defineComponent({
   }
 }
 
+.sun-spots-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
 .sun-flare {
   position: absolute;
   top: 30%;
@@ -215,6 +622,7 @@ export default defineComponent({
   background: radial-gradient(circle, rgba(255, 255, 210, 0.7) 0%, transparent 70%);
   animation: flare-drift 6s ease-in-out infinite;
   filter: blur(1px);
+  z-index: 7;
 }
 
 @keyframes flare-drift {
@@ -240,28 +648,58 @@ export default defineComponent({
   }
 }
 
-.sun-chromosphere {
+.champion-avatar {
   position: absolute;
-  inset: 48px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    transparent 55%,
-    rgba(255, 110, 25, 0.5) 65%,
-    rgba(220, 70, 10, 0.6) 72%,
-    rgba(170, 40, 0, 0.3) 80%,
-    transparent 90%
-  );
-  animation: chromosphere-spin 60s linear infinite reverse;
-  filter: blur(1.5px);
+  overflow: hidden;
+  border: 2px solid #c89040;
+  box-shadow:
+    0 0 8px rgba(232, 192, 64, 0.55),
+    0 0 16px rgba(232, 192, 64, 0.2);
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: transform, opacity;
 }
 
-@keyframes chromosphere-spin {
+.champion-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  border-radius: 50%;
+}
+
+.champion-behind {
+  border-color: rgba(140, 90, 15, 0.4);
+  box-shadow:
+    0 0 4px rgba(160, 120, 30, 0.15),
+    0 0 8px rgba(160, 120, 30, 0.08);
+  filter: brightness(0.48) saturate(0.6);
+}
+
+.champion-burst {
+  border-color: #ffe87a;
+  box-shadow:
+    0 0 14px rgba(255, 230, 80, 1),
+    0 0 32px rgba(255, 190, 40, 0.85),
+    0 0 60px rgba(255, 140, 0, 0.5);
+  animation: burst-glow 0.22s ease-in-out infinite alternate;
+}
+
+@keyframes burst-glow {
   from {
-    transform: rotate(0deg);
+    box-shadow:
+      0 0 14px rgba(255, 230, 80, 1),
+      0 0 32px rgba(255, 190, 40, 0.85),
+      0 0 60px rgba(255, 140, 0, 0.5);
   }
   to {
-    transform: rotate(360deg);
+    box-shadow:
+      0 0 24px rgba(255, 248, 120, 1),
+      0 0 58px rgba(255, 210, 60, 0.95),
+      0 0 110px rgba(255, 160, 0, 0.65);
+    filter: brightness(1.45);
   }
 }
 </style>

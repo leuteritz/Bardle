@@ -142,7 +142,7 @@
               </div>
               <div class="flex items-center gap-1.5 px-3 py-1 tt-unlock-counter">
                 <span class="text-sm font-bold tt-unlock-counter-value">{{
-                  battleStore.ownedChampions.length
+                  battleStore.ownedChampions.filter((c) => c !== 'Bard').length
                 }}</span>
                 <span class="text-sm font-bold tt-text-dim">/{{ totalChampionCount || '…' }}</span>
               </div>
