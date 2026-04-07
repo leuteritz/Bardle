@@ -15,7 +15,6 @@
       <div
         class="battle-modal"
         :class="{
-          'battle-modal--section': bossStore.activeBoss?.isSectionBoss,
           'battle-modal--galaxy': isGalaxyBoss,
         }"
       >
@@ -29,23 +28,15 @@
           class="name-banner"
           :class="{
             'name-banner--galaxy': isGalaxyBoss,
-            'name-banner--section': bossStore.activeBoss?.isSectionBoss,
           }"
         >
           <div v-if="isGalaxyBoss" class="boss-type-badge boss-type-badge--galaxy">
             ✦ GALAXIE-BOSS ✦
           </div>
-          <div
-            v-else-if="bossStore.activeBoss?.isSectionBoss"
-            class="boss-type-badge boss-type-badge--section"
-          >
-            ★ SECTION BOSS ★
-          </div>
           <h2
             class="boss-name"
             :class="{
               'boss-name--galaxy': isGalaxyBoss,
-              'boss-name--section': bossStore.activeBoss?.isSectionBoss,
             }"
           >
             {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
@@ -55,7 +46,6 @@
         <!-- ── Battle Arena ──────────────────────────────────────────────── -->
         <BossArenaSection
           :is-galaxy-boss="isGalaxyBoss"
-          :is-section-boss="bossStore.activeBoss?.isSectionBoss ?? false"
           :boss-h-p-percent="bossStore.bossHPPercent"
           :seconds-remaining="secondsRemaining"
           :enrage-percent="enragePercent"
@@ -318,14 +308,6 @@ function handleShake(ms: number) {
     0 20px 60px rgba(0, 0, 0, 0.9);
 }
 
-.battle-modal--section {
-  border-color: #8a6a10;
-  box-shadow:
-    inset 0 0 0 1px #4a3a06,
-    0 0 30px rgba(220, 180, 0, 0.2),
-    0 20px 60px rgba(0, 0, 0, 0.9);
-}
-
 .battle-modal--galaxy {
   border-color: #7a1888;
   box-shadow:
@@ -372,9 +354,6 @@ function handleShake(ms: number) {
 .battle-modal--galaxy .corner {
   border-color: #cc44ff;
 }
-.battle-modal--section .corner {
-  border-color: #e8c040;
-}
 
 /* ══════════════════════════════════════════════════════════════════════════════
    BOSS NAME BANNER
@@ -406,10 +385,6 @@ function handleShake(ms: number) {
   background: linear-gradient(180deg, rgba(40, 0, 60, 0.95) 0%, rgba(10, 0, 20, 0.5) 100%);
   border-bottom-color: #4a0860;
 }
-.name-banner--section {
-  background: linear-gradient(180deg, rgba(50, 35, 0, 0.95) 0%, rgba(20, 12, 0, 0.5) 100%);
-  border-bottom-color: #5a4010;
-}
 
 .boss-type-badge {
   font-size: 0.65rem;
@@ -424,9 +399,6 @@ function handleShake(ms: number) {
 
 .boss-type-badge--galaxy {
   color: #cc44ff;
-}
-.boss-type-badge--section {
-  color: #e8c040;
 }
 
 @keyframes badge-pulse {
@@ -450,14 +422,6 @@ function handleShake(ms: number) {
     0 0 20px rgba(255, 60, 0, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.9);
   animation: name-flicker 4s ease-in-out infinite;
-}
-
-.boss-name--section {
-  color: #e8c040;
-  text-shadow:
-    0 0 10px rgba(232, 192, 64, 0.7),
-    0 2px 4px rgba(0, 0, 0, 0.9);
-  animation: none;
 }
 
 .boss-name--galaxy {

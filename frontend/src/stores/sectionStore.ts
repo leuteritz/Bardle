@@ -9,7 +9,6 @@ export const useSectionStore = defineStore('section', {
     sectionProgress: Object.fromEntries(
       Array.from({ length: 10 }, (_, i) => [i + 1, { rescueCount: 0, completed: false }]),
     ) as Record<number, SectionProgress>,
-    pendingSectionBoss: false,
   }),
 
   getters: {
@@ -37,22 +36,17 @@ export const useSectionStore = defineStore('section', {
   },
 
   actions: {
-    onBossDefeated(isSectionBoss: boolean) {
+    onBossDefeated() {
       const progress = this.sectionProgress[this.activeSectionId]
       if (!progress) return
 
-      if (isSectionBoss) {
+      progress.rescueCount++
+      const config = SECTIONS.find((s) => s.id === this.activeSectionId)
+      if (config && progress.rescueCount >= config.requiredRescues && !progress.completed) {
         progress.completed = true
-        this.pendingSectionBoss = false
         const nextId = this.activeSectionId + 1
         if (nextId <= 10 && nextId > this.highestUnlockedSectionId) {
           this.highestUnlockedSectionId = nextId
-        }
-      } else {
-        progress.rescueCount++
-        const config = SECTIONS.find((s) => s.id === this.activeSectionId)
-        if (config && progress.rescueCount >= config.requiredRescues && !progress.completed) {
-          this.pendingSectionBoss = true
         }
       }
     },
@@ -60,10 +54,6 @@ export const useSectionStore = defineStore('section', {
     navigateToSection(id: number) {
       if (id < 1 || id > 10 || id > this.highestUnlockedSectionId) return
       this.activeSectionId = id
-      const progress = this.sectionProgress[id]
-      const config = SECTIONS.find((s) => s.id === id)
-      this.pendingSectionBoss =
-        !!config && !!progress && progress.rescueCount >= config.requiredRescues && !progress.completed
     },
   },
 })

@@ -15,8 +15,6 @@ import {
   BOSS_CPS_PENALTY_DURATION_MS,
   BOSS_NAMES,
   PLANET_MATERIAL_CHANCE,
-  SECTION_BOSS_HP_MULTIPLIER,
-  SECTION_BOSS_ENRAGE_MULTIPLIER,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -89,11 +87,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const galaxyStore = useGalaxyStore()
       const sectionStore = useSectionStore()
       const sectionConfig = SECTIONS.find((s) => s.id === sectionStore.activeSectionId)
-      const isSectionBoss = sectionStore.pendingSectionBoss
-      const hpSectionMult =
-        (sectionConfig?.difficultyMultiplier ?? 1) * (isSectionBoss ? SECTION_BOSS_HP_MULTIPLIER : 1)
-      const enrageSectionMult =
-        (sectionConfig?.enrageMultiplier ?? 1) * (isSectionBoss ? SECTION_BOSS_ENRAGE_MULTIPLIER : 1)
+      const hpSectionMult = sectionConfig?.difficultyMultiplier ?? 1
+      const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
       const sectionRewardMult = sectionConfig?.rewardMultiplier ?? 1
 
       // Boss HP scales with player progress + section
@@ -171,7 +166,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ...(potentialMaterialId !== undefined && { potentialMaterialId }),
         ...(assignedDropChance !== undefined && { assignedDropChance }),
         ...(homePlanetChampion && { homePlanetChampion }),
-        ...(isSectionBoss && { isSectionBoss: true }),
         ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
         ...(isChampionPlanet && { isChampionPlanet: true }),
         sectionId: sectionStore.activeSectionId,
@@ -334,7 +328,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       // Notify section store to update progress and unlocks
       const sectionStore = useSectionStore()
-      sectionStore.onBossDefeated(boss.isSectionBoss ?? false)
+      sectionStore.onBossDefeated()
 
       // Galaxy progression: galaxy boss kill or champion planet rescue
       const galaxyStore = useGalaxyStore()

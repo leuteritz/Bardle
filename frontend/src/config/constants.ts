@@ -413,9 +413,6 @@ export const CHAMPION_BASE_POWER = 50
 // Battle shop
 export const REROLL_COST = 3
 
-// Section bosses
-export const SECTION_BOSS_HP_MULTIPLIER = 2.0
-export const SECTION_BOSS_ENRAGE_MULTIPLIER = 0.75
 
 // Save / load
 export const SAVE_KEY = 'bard-idle-save'

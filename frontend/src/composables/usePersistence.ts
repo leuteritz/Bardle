@@ -112,7 +112,6 @@ export function usePersistence() {
         activeSectionId: sectionStore.activeSectionId,
         highestUnlockedSectionId: sectionStore.highestUnlockedSectionId,
         sectionProgress: { ...sectionStore.sectionProgress },
-        pendingSectionBoss: sectionStore.pendingSectionBoss,
       },
       galaxy: {
         currentGalaxy: galaxyStore.currentGalaxy,
@@ -283,7 +282,6 @@ export function usePersistence() {
         const s = saved.section
         sectionStore.activeSectionId = s.activeSectionId ?? 1
         sectionStore.highestUnlockedSectionId = s.highestUnlockedSectionId ?? 1
-        sectionStore.pendingSectionBoss = s.pendingSectionBoss ?? false
         if (s.sectionProgress && typeof s.sectionProgress === 'object') {
           for (let id = 1; id <= 10; id++) {
             const sp = s.sectionProgress[id]

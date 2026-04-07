@@ -13,7 +13,6 @@
         class="boss-aura"
         :class="{
           'boss-aura--galaxy': isGalaxyBoss,
-          'boss-aura--section': isSectionBoss,
           'boss-aura--critical': bossHPPercent < 25,
         }"
       />
@@ -108,7 +107,6 @@ const STAGGER_MS = 650
 
 const props = defineProps<{
   isGalaxyBoss: boolean
-  isSectionBoss: boolean
   bossHPPercent: number
   secondsRemaining: number
   enragePercent: number
@@ -428,7 +426,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   z-index: 0;
 }
 
-.boss-aura--section { background: radial-gradient(ellipse at center, rgba(220, 180, 0, 0.15) 0%, transparent 70%); }
 .boss-aura--galaxy {
   background: radial-gradient(ellipse at center, rgba(180, 40, 255, 0.2) 0%, transparent 70%);
   animation: aura-pulse-galaxy 1.8s ease-in-out infinite alternate;

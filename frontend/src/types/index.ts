@@ -208,7 +208,6 @@ export interface PlanetBossEvent {
   potentialMaterialId?: string
   assignedDropChance?: number
   homePlanetChampion?: string
-  isSectionBoss?: boolean
   isGalaxyBoss?: boolean
   isChampionPlanet?: boolean
   sectionId?: number
