@@ -21,15 +21,8 @@
       </div>
     </div>
 
-    <!-- Champion Travel Indicator — floats below the sun/chime -->
-    <Transition name="travel-fade">
-      <div v-if="showTravel" class="champion-travel-indicator">
-        <span class="travel-countdown">{{ travelCountdown }}</span>
-        <div class="travel-bar-track">
-          <div class="travel-bar-fill" :style="{ width: galaxyStore.travelProgressPercent + '%' }" />
-        </div>
-      </div>
-    </Transition>
+    <!-- Planet Travel HUD -->
+    <TravelHud />
 
     <!-- Click Popup Animation -->
     <div
@@ -58,11 +51,13 @@ import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './SunComponent.vue'
+import TravelHud from './TravelHud.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     SunComponent,
+    TravelHud,
   },
   setup() {
     const gameStore = useGameStore()
@@ -83,9 +78,17 @@ export default defineComponent({
     const travelCountdown = computed(() => {
       const ms = galaxyStore.travelRemainingMs
       const s = Math.ceil(ms / 1000)
-      const m = Math.floor(s / 60)
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
       const sec = s % 60
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
       return `${m}:${String(sec).padStart(2, '0')}`
+    })
+
+    const TRAVEL_MAX_LY = 42.0
+    const travelLightYears = computed(() => {
+      const remaining = ((100 - galaxyStore.travelProgressPercent) / 100) * TRAVEL_MAX_LY
+      return remaining.toFixed(1)
     })
     let gameTimer: ReturnType<typeof setInterval> | null = null
 
@@ -144,6 +147,7 @@ export default defineComponent({
       chimeGainKey,
       showTravel,
       travelCountdown,
+      travelLightYears,
     }
   },
 })
@@ -325,47 +329,115 @@ export default defineComponent({
   }
 }
 
-/* ─── Champion Travel Indicator ─── */
-.champion-travel-indicator {
+/* ─── Champion Travel HUD ─── */
+@keyframes hud-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(232, 192, 64, 0.3),
+      inset 0 0 12px rgba(232, 192, 64, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(232, 192, 64, 0.6),
+      inset 0 0 20px rgba(232, 192, 64, 0.12);
+  }
+}
+
+@keyframes bar-scan {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.travel-hud {
   position: fixed;
-  top: calc(50% + 128px);
+  top: calc(50% + 120px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 9;
   pointer-events: none;
+  width: 280px;
+  background: rgba(10, 8, 4, 0.9);
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  border-radius: 4px;
+  overflow: hidden;
+  animation: hud-pulse 3s ease-in-out infinite;
+}
+
+.travel-hud-bar-track {
+  width: 100%;
+  height: 3px;
+  background: #1c1c18;
+}
+
+.travel-hud-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a06820, #e8c040, #ffd060, #e8c040, #a06820);
+  background-size: 200% auto;
+  animation: bar-scan 2.5s linear infinite;
+  transition: width 0.9s linear;
+}
+
+.travel-hud-header {
+  text-align: center;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: #a07030;
+  padding: 5px 0 3px;
+  border-bottom: 1px solid #3e200a;
+}
+
+.travel-hud-metrics {
+  display: flex;
+  align-items: stretch;
+  padding: 10px 12px;
+}
+
+.travel-metric {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 220px;
+  gap: 3px;
 }
 
-.travel-countdown {
-  font-size: 2rem;
+.travel-metric-divider {
+  width: 1px;
+  background: #3e200a;
+  margin: 0 10px;
+  flex-shrink: 0;
+}
+
+.travel-metric-icon {
+  color: #c89040;
+}
+
+.travel-metric-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #8a6830;
+  text-transform: uppercase;
+}
+
+.travel-metric-value {
+  font-size: 1.4rem;
   font-weight: 700;
   color: #e8c040;
-  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.6),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-  line-height: 1;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.55);
+  line-height: 1.1;
 }
 
-.travel-bar-track {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.travel-bar-fill {
-  height: 100%;
-  background: linear-gradient(to right, #a06820, #e8c040, #ffd060);
-  border-radius: 2px;
-  transition: width 0.9s linear;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.5);
+.travel-unit {
+  font-size: 0.7rem;
+  color: #a07030;
+  letter-spacing: 0.05em;
 }
 
 /* Transition */
@@ -375,9 +447,10 @@ export default defineComponent({
     opacity 0.4s ease,
     transform 0.4s ease;
 }
+
 .travel-fade-enter-from,
 .travel-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
+  transform: translateX(-50%) translateY(10px);
 }
 </style>

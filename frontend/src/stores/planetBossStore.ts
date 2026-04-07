@@ -15,7 +15,6 @@ import {
   BOSS_CPS_PENALTY_DURATION_MS,
   BOSS_NAMES,
   PLANET_MATERIAL_CHANCE,
-  CHAMPION_HOME_PLANET_CHANCE,
   SECTION_BOSS_HP_MULTIPLIER,
   SECTION_BOSS_ENRAGE_MULTIPLIER,
 } from '../config/constants'
@@ -130,11 +129,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const potentialMaterialId = hasMaterial ? pickMaterial().id : undefined
       const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
 
-      // Champion home planet
-      // Champion planets always guarantee a champion discovery (if any available)
-      // Normal planets use the base random chance
+      // Champion home planet — only champion planets can have a champion discovery
       let homePlanetChampion: string | undefined = undefined
-      if (isChampionPlanet || Math.random() < CHAMPION_HOME_PLANET_CHANCE) {
+      if (isChampionPlanet) {
         const battleStore = useBattleStore()
         const isUnrecruitedUnowned = (name: string) =>
           !battleStore.ownedChampions.includes(name) &&
