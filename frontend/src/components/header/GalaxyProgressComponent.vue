@@ -110,12 +110,26 @@ export default defineComponent({
 
     const tooltipStyle = computed(() => {
       if (!wrapperEl.value) return {}
-      const rect = wrapperEl.value.getBoundingClientRect()
-      const center = rect.left + rect.width / 2
-      const left = Math.max(8, Math.min(center - 200, window.innerWidth - 408))
+
+      // Vertical: header bottom via CSS var, fallback to direct DOM query
+      const cssVarRaw = getComputedStyle(document.documentElement).getPropertyValue(
+        '--header-total-height',
+      )
+      const headerBottom =
+        parseFloat(cssVarRaw) ||
+        document.querySelector('.header-bar')?.getBoundingClientRect().bottom ||
+        wrapperEl.value.getBoundingClientRect().bottom
+
+      // Horizontal: right edge of tooltip flush with left edge of .header-center
+      const tooltipWidth = 400
+      const headerCenterRect = document.querySelector('.header-center')?.getBoundingClientRect()
+      const left = headerCenterRect
+        ? Math.max(8, headerCenterRect.left - tooltipWidth)
+        : Math.max(8, window.innerWidth / 2 - 240 - tooltipWidth)
+
       return {
         position: 'fixed' as const,
-        top: `${rect.bottom + 8}px`,
+        top: `${headerBottom}px`,
         left: `${left}px`,
         zIndex: '9999',
       }
