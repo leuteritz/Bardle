@@ -164,15 +164,35 @@ export const useBattleStore = defineStore('battle', {
       const existing = this.teamSlotAssignments.indexOf(championName)
       if (existing !== -1) this.teamSlotAssignments[existing] = null
       this.teamSlotAssignments[slotIndex] = championName
+      this.syncTeam1ToSlots()
     },
 
     removeFromSlot(slotIndex: number) {
       this.teamSlotAssignments[slotIndex] = null
+      this.syncTeam1ToSlots()
     },
 
     removeChampionFromSlots(championName: string) {
       const idx = this.teamSlotAssignments.indexOf(championName)
       if (idx !== -1) this.teamSlotAssignments[idx] = null
+      this.syncTeam1ToSlots()
+    },
+
+    syncTeam1ToSlots() {
+      const bardEntry = this.team1.find((c) => c.name === 'Bard') ?? {
+        name: 'Bard',
+        rank: this.currentRank.tier,
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+      }
+      this.team1 = [
+        bardEntry,
+        ...this.selectedChampions.map((name) => {
+          const existing = this.team1.find((c) => c.name === name)
+          return existing ?? { name, rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
+        }),
+      ]
     },
 
     getAvgBattleTime(): string {
