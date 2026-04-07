@@ -8,7 +8,6 @@
       role="dialog"
       @click.self="bossStore.closeBossModal()"
     >
-      <!-- ── Atmospheric Embers ─────────────────────────────────────────── -->
       <div class="atmosphere" :class="{ 'atmosphere--galaxy': isGalaxyBoss }">
         <span v-for="i in 24" :key="i" class="ember" :style="emberStyle(i)" />
       </div>
@@ -20,7 +19,6 @@
           'battle-modal--galaxy': isGalaxyBoss,
         }"
       >
-        <!-- Corner rune decorations -->
         <div class="corner corner--tl" />
         <div class="corner corner--tr" />
         <div class="corner corner--bl" />
@@ -58,7 +56,6 @@
         <div class="arena" :class="{ 'arena--galaxy': isGalaxyBoss }">
           <div ref="planetStage" class="planet-bg" :class="{ 'planet-bg--galaxy': isGalaxyBoss }" />
 
-          <!-- Boss aura + image -->
           <div
             class="boss-wrapper"
             :class="{
@@ -138,31 +135,6 @@
           </div>
         </div>
 
-        <!-- ── DPS Combat Stats ──────────────────────────────────────────── -->
-        <div class="combat-row">
-          <div class="stat-block">
-            <span class="stat-label">⚔ DEIN DPS</span>
-            <span class="stat-val">{{ formatNumber(estimatedPlayerDPS) }}/s</span>
-          </div>
-          <div class="verdict-badge" :class="canWin ? 'verdict--win' : 'verdict--lose'">
-            {{ canWin ? '✓ SIEG' : '✗ NIEDERLAGE' }}
-          </div>
-          <div class="stat-block stat-block--right">
-            <span class="stat-label">🛡 BENÖTIGT</span>
-            <span class="stat-val">{{ formatNumber(requiredDPS) }}/s</span>
-          </div>
-        </div>
-
-        <!-- Idle DPS -->
-        <div class="passive-row">
-          <span class="stat-label"
-            >💤 Idle-Schaden:
-            <span class="stat-val stat-val--dim"
-              >{{ formatNumber(bossStore.activeBoss?.passiveDPS ?? 0) }}/s</span
-            ></span
-          >
-        </div>
-
         <!-- ── Rewards ───────────────────────────────────────────────────── -->
         <div v-if="assignedMaterial || homePlanetChampion" class="loot-panel">
           <div class="loot-title">⚡ BELOHNUNG</div>
@@ -196,13 +168,11 @@
           </div>
         </div>
 
-        <!-- Atmospheric scanlines -->
         <div class="scanlines" aria-hidden="true" />
       </div>
     </div>
   </Transition>
 
-  <!-- Floating Damage Numbers -->
   <Teleport to="body">
     <div class="dmg-overlay" aria-hidden="true">
       <TransitionGroup name="dmg-float">
@@ -226,7 +196,6 @@ import { formatNumber } from '../../config/numberFormat'
 import { NS, drawPlanet } from '../../utils/planetDraw'
 import { MATERIALS } from '../../config/materials'
 
-// ── Boss Image Discovery ──────────────────────────────────────────────────────
 const bossImageList = ref<string[]>([])
 let discoveryDone = false
 let discoveryPromise: Promise<void> | null = null
@@ -261,7 +230,6 @@ function pickRandomBossImage(): string {
   return list[Math.floor(Math.random() * list.length)]
 }
 
-// ── Store & Refs ──────────────────────────────────────────────────────────────
 const bossStore = usePlanetBossStore()
 const planetStage = ref<HTMLDivElement | null>(null)
 const bossImgEl = ref<HTMLImageElement | null>(null)
@@ -269,7 +237,6 @@ const bossImage = ref('/img/Boss/Boss1.png')
 const isShaking = ref(false)
 const isHit = ref(false)
 
-// ── Ticker ────────────────────────────────────────────────────────────────────
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
@@ -283,7 +250,6 @@ onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
 })
 
-// ── Computed ──────────────────────────────────────────────────────────────────
 const secondsRemaining = computed(() => {
   const boss = bossStore.activeBoss
   if (!boss || !bossStore.isBossActive) return 0
@@ -297,9 +263,6 @@ const enragePercent = computed(() => {
   return (remaining / boss.enrageTimerMs) * 100
 })
 
-const estimatedPlayerDPS = computed(() => bossStore.playerDPS)
-const requiredDPS = computed(() => bossStore.requiredDPS)
-const canWin = computed(() => estimatedPlayerDPS.value >= requiredDPS.value * 0.7)
 const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
 
 const assignedMaterial = computed(() => {
@@ -314,7 +277,6 @@ const homePlanetChampionImage = computed(() => {
   return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
 })
 
-// ── Ember particle styles ─────────────────────────────────────────────────────
 function emberStyle(i: number): Record<string, string> {
   const duration = 1.8 + (i % 6) * 0.7
   const delay = (i % 11) * -0.35
@@ -330,7 +292,6 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-// ── Planet rendering ──────────────────────────────────────────────────────────
 function renderPlanet() {
   if (!planetStage.value) return
   const boss = bossStore.activeBoss
@@ -347,7 +308,6 @@ function renderPlanet() {
   planetStage.value.appendChild(svg)
 }
 
-// ── Watchers ──────────────────────────────────────────────────────────────────
 watch(
   () => bossStore.bossModalOpen,
   async (open) => {
@@ -365,7 +325,6 @@ watch(
   },
 )
 
-// ── Click / Floating Damage ───────────────────────────────────────────────────
 let dmgIdCounter = 0
 const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
 
@@ -375,7 +334,6 @@ function handleClick(event: MouseEvent) {
 
   bossStore.dealClickDamage()
 
-  // Floating damage number
   const id = ++dmgIdCounter
   damageFloats.push({ id, value: boss.clickDamagePerHit, x: event.clientX, y: event.clientY })
   setTimeout(() => {
@@ -383,7 +341,6 @@ function handleClick(event: MouseEvent) {
     if (idx !== -1) damageFloats.splice(idx, 1)
   }, 900)
 
-  // Hit flash + shake
   isHit.value = true
   isShaking.value = true
   setTimeout(() => {
@@ -478,7 +435,7 @@ function handleClick(event: MouseEvent) {
 .battle-modal {
   position: relative;
   pointer-events: auto;
-  width: clamp(340px, 44vw, 510px);
+  width: clamp(360px, 44vw, 520px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -520,7 +477,6 @@ function handleClick(event: MouseEvent) {
   z-index: 10;
   pointer-events: none;
 }
-
 .corner--tl {
   top: 0;
   left: 0;
@@ -589,7 +545,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .boss-type-badge {
-  font-size: 0.5rem;
+  font-size: 0.65rem;
   font-weight: 900;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -617,7 +573,7 @@ function handleClick(event: MouseEvent) {
 
 .boss-name {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -703,7 +659,6 @@ function handleClick(event: MouseEvent) {
   );
 }
 
-/* Starfield for galaxy */
 .arena--galaxy::before {
   content: '';
   position: absolute;
@@ -721,7 +676,6 @@ function handleClick(event: MouseEvent) {
   pointer-events: none;
 }
 
-/* Dramatic ground line */
 .arena::after {
   content: '';
   position: absolute;
@@ -769,7 +723,6 @@ function handleClick(event: MouseEvent) {
 .boss-wrapper--hit {
   animation: boss-hit 0.16s ease-out both;
 }
-
 .boss-wrapper--critical {
   animation: boss-idle-critical 1.2s ease-in-out infinite;
 }
@@ -827,12 +780,10 @@ function handleClick(event: MouseEvent) {
 .boss-aura--section {
   background: radial-gradient(ellipse at center, rgba(220, 180, 0, 0.15) 0%, transparent 70%);
 }
-
 .boss-aura--galaxy {
   background: radial-gradient(ellipse at center, rgba(180, 40, 255, 0.2) 0%, transparent 70%);
   animation: aura-pulse-galaxy 1.8s ease-in-out infinite alternate;
 }
-
 .boss-aura--critical {
   background: radial-gradient(ellipse at center, rgba(255, 0, 0, 0.3) 0%, transparent 65%);
   animation: aura-pulse-critical 0.6s ease-in-out infinite alternate;
@@ -848,7 +799,6 @@ function handleClick(event: MouseEvent) {
     transform: scale(1.05);
   }
 }
-
 @keyframes aura-pulse-galaxy {
   from {
     opacity: 0.7;
@@ -861,7 +811,6 @@ function handleClick(event: MouseEvent) {
     filter: blur(8px);
   }
 }
-
 @keyframes aura-pulse-critical {
   from {
     opacity: 0.8;
@@ -894,7 +843,6 @@ function handleClick(event: MouseEvent) {
   transform: scale(1.05);
   filter: drop-shadow(0 0 28px rgba(255, 110, 20, 0.7)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
 }
-
 .boss-img:active {
   transform: scale(0.95);
 }
@@ -911,13 +859,13 @@ function handleClick(event: MouseEvent) {
   z-index: 0;
 }
 
-/* ── Enrage Ring (circular countdown) ────────────────────────────────────── */
+/* ── Enrage Ring ─────────────────────────────────────────────────────────── */
 .enrage-ring {
   position: absolute;
   top: 8px;
   right: 10px;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -965,7 +913,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .enrage-seconds {
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 900;
   color: var(--rpg-gold, #c8922a);
   letter-spacing: 0.02em;
@@ -981,7 +929,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .enrage-label {
-  font-size: 0.38rem;
+  font-size: 0.48rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: rgba(200, 146, 42, 0.6);
@@ -1007,7 +955,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .stat-label {
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1015,7 +963,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .hp-numbers {
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--rpg-gold, #c8922a);
   letter-spacing: 0.03em;
@@ -1090,7 +1038,6 @@ function handleClick(event: MouseEvent) {
     0 0 8px rgba(200, 160, 40, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
-
 .hp-fill--critical {
   background: linear-gradient(to bottom, #ff4020 0%, #cc1a00 50%, #a01000 100%);
   box-shadow:
@@ -1098,7 +1045,6 @@ function handleClick(event: MouseEvent) {
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   animation: hp-critical-flash 0.45s ease-in-out infinite alternate;
 }
-
 .hp-fill--galaxy {
   background: linear-gradient(to bottom, #b840e8 0%, #7a10b0 50%, #5a0888 100%);
   box-shadow:
@@ -1131,87 +1077,6 @@ function handleClick(event: MouseEvent) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   COMBAT STATS ROW
-══════════════════════════════════════════════════════════════════════════════ */
-.combat-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.45rem 0.9rem;
-  background: rgba(0, 0, 0, 0.25);
-  border-top: 1px solid rgba(100, 50, 0, 0.3);
-  border-bottom: 1px solid rgba(100, 50, 0, 0.3);
-  gap: 0.5rem;
-}
-
-.stat-block {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  min-width: 5.5rem;
-}
-
-.stat-block--right {
-  align-items: flex-end;
-}
-
-.stat-val {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--rpg-gold, #c8922a);
-  letter-spacing: 0.02em;
-}
-
-.stat-val--dim {
-  color: rgba(200, 180, 140, 0.5);
-  font-size: 0.7rem;
-}
-
-.verdict-badge {
-  padding: 0.25rem 0.7rem;
-  border-radius: 3px;
-  font-size: 0.65rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-
-.verdict--win {
-  color: #52c830;
-  background: rgba(50, 180, 30, 0.12);
-  text-shadow: 0 0 8px rgba(80, 200, 48, 0.7);
-  border-color: rgba(80, 200, 48, 0.4);
-}
-
-.verdict--lose {
-  color: #ff4020;
-  background: rgba(200, 40, 0, 0.12);
-  text-shadow: 0 0 8px rgba(255, 60, 0, 0.7);
-  border-color: rgba(255, 60, 0, 0.4);
-  animation: verdict-pulse 0.8s ease-in-out infinite alternate;
-}
-
-@keyframes verdict-pulse {
-  from {
-    opacity: 0.7;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ── Passive Row ─────────────────────────────────────────────────────────── */
-.passive-row {
-  display: flex;
-  justify-content: center;
-  padding: 0.28rem 0.9rem;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-/* ══════════════════════════════════════════════════════════════════════════════
    LOOT PANEL
 ══════════════════════════════════════════════════════════════════════════════ */
 .loot-panel {
@@ -1221,7 +1086,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .loot-title {
-  font-size: 0.5rem;
+  font-size: 0.65rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -1240,8 +1105,7 @@ function handleClick(event: MouseEvent) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.72rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.28rem 0.5rem;
   background: rgba(255, 200, 100, 0.04);
   border: 1px solid rgba(100, 60, 0, 0.3);
   border-radius: 3px;
@@ -1266,7 +1130,7 @@ function handleClick(event: MouseEvent) {
 }
 
 .loot-label {
-  font-size: 0.48rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: rgba(200, 180, 140, 0.55);
@@ -1274,11 +1138,11 @@ function handleClick(event: MouseEvent) {
 
 .loot-name {
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
 }
 
 .loot-chance {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--rpg-gold, #c8922a);
   min-width: 2rem;
@@ -1297,11 +1161,11 @@ function handleClick(event: MouseEvent) {
 .champion-name {
   color: var(--rpg-blue, #4a90d9);
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.92rem;
 }
 
 .loot-hint {
-  font-size: 0.52rem;
+  font-size: 0.65rem;
   color: rgba(200, 180, 140, 0.45);
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -1351,7 +1215,7 @@ function handleClick(event: MouseEvent) {
 
 .damage-number {
   position: fixed;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #ffe040;
   text-shadow:
@@ -1431,18 +1295,10 @@ function handleClick(event: MouseEvent) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .boss-wrapper {
-    animation: none;
-  }
-  .boss-wrapper--critical {
-    animation: none;
-  }
-  .planet-bg--galaxy {
-    animation: none;
-  }
-  .boss-aura {
-    animation: none;
-  }
+  .boss-wrapper,
+  .boss-wrapper--critical,
+  .planet-bg--galaxy,
+  .boss-aura,
   .ember {
     animation: none;
   }
