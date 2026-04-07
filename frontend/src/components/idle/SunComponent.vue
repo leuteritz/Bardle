@@ -147,6 +147,7 @@ interface ChampionOrbit {
   name: string
   angle: number
   baseSpeed: number
+  direction: number
   orbitRadiusX: number
   orbitRadiusY: number
   tiltDeg: number
@@ -233,14 +234,16 @@ export default defineComponent({
     const championOrbits = ref<ChampionOrbit[]>([])
 
     function buildOrbit(name: string, index: number, total: number): ChampionOrbit {
-      const tier = index % 3
-      const orbitRadiusX = 155 + tier * 12
-      const orbitRadiusY = orbitRadiusX * (0.48 + (index % 2) * 0.09)
-      const tiltDeg = (index * 43 + 17) % 180
+      const orbitRadiusX = 130 + Math.random() * 65
+      const orbitRadiusY = orbitRadiusX * (0.28 + Math.random() * 0.62)
+      const tiltDeg = Math.random() * 180
+      const baseSpeed = 0.00015 + Math.random() * 0.00038
+      const direction = Math.random() < 0.5 ? 1 : -1
       return {
         name,
         angle: (index / Math.max(total, 1)) * Math.PI * 2,
-        baseSpeed: 0.00022 + index * 0.000028,
+        baseSpeed,
+        direction,
         orbitRadiusX,
         orbitRadiusY,
         tiltDeg,
@@ -330,7 +333,7 @@ export default defineComponent({
           c.burstTimer = 500 + Math.random() * 900
         }
 
-        c.angle += c.baseSpeed * keplerBoost * (c.isBurst ? 3.8 : 1.0) * dt
+        c.angle += c.direction * c.baseSpeed * keplerBoost * (c.isBurst ? 3.8 : 1.0) * dt
       })
 
       animFrame = requestAnimationFrame(animateRays)
