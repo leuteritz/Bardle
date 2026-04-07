@@ -60,7 +60,7 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useGalaxyStore } from '../../stores/galaxyStore'
+import { useGalaxyStore } from '../../../stores/galaxyStore'
 
 const TRAVEL_MAX_LY = 42.0
 

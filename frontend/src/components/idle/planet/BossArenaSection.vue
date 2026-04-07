@@ -95,10 +95,10 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue'
-import { NS, drawPlanet } from '../../utils/planetDraw'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { formatNumber } from '../../config/numberFormat'
-import type { PlanetBossEvent } from '../../types'
+import { NS, drawPlanet } from '../../../utils/planetDraw'
+import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { formatNumber } from '../../../config/numberFormat'
+import type { PlanetBossEvent } from '../../../types'
 
 // Attack timing constants (aligned with CSS animation: 2.6s cycle, impact at 36%)
 const CYCLE_MS = 2600
@@ -182,20 +182,25 @@ function spawnFloat(value: number, x?: number, y?: number) {
   let fy = y ?? window.innerHeight / 2
   if (!x && arenaEl.value) {
     const r = arenaEl.value.getBoundingClientRect()
-    fx = r.left + r.width * (0.40 + Math.random() * 0.20)
-    fy = r.top + r.height * (0.20 + Math.random() * 0.30)
+    fx = r.left + r.width * (0.4 + Math.random() * 0.2)
+    fy = r.top + r.height * (0.2 + Math.random() * 0.3)
   }
   damageFloats.push({ id, value, x: fx, y: fy })
-  setTimeout(() => {
-    const idx = damageFloats.findIndex((d) => d.id === id)
-    if (idx !== -1) damageFloats.splice(idx, 1)
-  }, value > 1 ? 1100 : 900)
+  setTimeout(
+    () => {
+      const idx = damageFloats.findIndex((d) => d.id === id)
+      if (idx !== -1) damageFloats.splice(idx, 1)
+    },
+    value > 1 ? 1100 : 900,
+  )
 }
 
 function triggerHit(hitMs: number, shakeMs: number) {
   isHit.value = true
   emit('shake', shakeMs)
-  setTimeout(() => { isHit.value = false }, hitMs)
+  setTimeout(() => {
+    isHit.value = false
+  }, hitMs)
 }
 
 function handleClick(event: MouseEvent) {
@@ -227,7 +232,7 @@ const _hitTimeouts: number[] = []
 const _hitIntervals: number[] = []
 const _ultTimeouts: number[] = []
 
-const ULT_EVERY = 5      // ult on every Nth attack
+const ULT_EVERY = 5 // ult on every Nth attack
 const ULT_ANIM_MS = 3400 // matches champ-ult keyframe duration
 
 function fireAttack(i: number) {
@@ -239,7 +244,11 @@ function fireAttack(i: number) {
   if (count % ULT_EVERY === 0) {
     ultActives[i] = true
     handleChampionUlt()
-    _ultTimeouts.push(window.setTimeout(() => { ultActives[i] = false }, ULT_ANIM_MS))
+    _ultTimeouts.push(
+      window.setTimeout(() => {
+        ultActives[i] = false
+      }, ULT_ANIM_MS),
+    )
   } else if (!ultActives[i]) {
     handleChampionHit()
   }
@@ -291,7 +300,10 @@ watch(
     }
   },
 )
-watch(() => [props.teamChampions.length, props.activeBoss?.planetId] as const, () => startAttackCycles())
+watch(
+  () => [props.teamChampions.length, props.activeBoss?.planetId] as const,
+  () => startAttackCycles(),
+)
 
 function champArcStyle(i: number, total: number): Record<string, string> {
   // Distribute champions in a wider semicircle below/around the boss center
@@ -335,7 +347,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 .arena--galaxy {
-  background: radial-gradient(ellipse at 50% 60%, rgba(60, 0, 90, 0.5) 0%, rgba(5, 0, 15, 0.95) 100%);
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(60, 0, 90, 0.5) 0%,
+    rgba(5, 0, 15, 0.95) 100%
+  );
 }
 
 .arena--galaxy::before {
@@ -381,8 +397,12 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes planet-glow-pulse {
-  from { filter: drop-shadow(0 0 10px rgba(140, 40, 200, 0.5)); }
-  to { filter: drop-shadow(0 0 28px rgba(200, 80, 255, 0.9)); }
+  from {
+    filter: drop-shadow(0 0 10px rgba(140, 40, 200, 0.5));
+  }
+  to {
+    filter: drop-shadow(0 0 28px rgba(200, 80, 255, 0.9));
+  }
 }
 
 /* ── Boss Wrapper ─────────────────────────────────────────────────────────── */
@@ -395,24 +415,50 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   animation: boss-idle 3s ease-in-out infinite;
 }
 
-.boss-wrapper--hit { animation: boss-hit 0.16s ease-out both; }
-.boss-wrapper--critical { animation: boss-idle-critical 1.2s ease-in-out infinite; }
+.boss-wrapper--hit {
+  animation: boss-hit 0.16s ease-out both;
+}
+.boss-wrapper--critical {
+  animation: boss-idle-critical 1.2s ease-in-out infinite;
+}
 
 @keyframes boss-idle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes boss-hit {
-  0% { transform: translateX(0) scale(1); filter: brightness(1); }
-  25% { transform: translateX(-6px) scale(0.97); filter: brightness(3) saturate(0); }
-  75% { transform: translateX(6px) scale(1.02); filter: brightness(2.5) saturate(0); }
-  100% { transform: translateX(0) scale(1); filter: brightness(1); }
+  0% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: translateX(-6px) scale(0.97);
+    filter: brightness(3) saturate(0);
+  }
+  75% {
+    transform: translateX(6px) scale(1.02);
+    filter: brightness(2.5) saturate(0);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
 }
 
 @keyframes boss-idle-critical {
-  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
-  50% { transform: translateY(-5px) rotate(0.5deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.5deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.5deg);
+  }
 }
 
 /* ── Boss Aura ────────────────────────────────────────────────────────────── */
@@ -436,16 +482,36 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes aura-pulse {
-  from { opacity: 0.6; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1.05); }
+  from {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 @keyframes aura-pulse-galaxy {
-  from { opacity: 0.7; transform: scale(0.93); filter: blur(4px); }
-  to { opacity: 1; transform: scale(1.08); filter: blur(8px); }
+  from {
+    opacity: 0.7;
+    transform: scale(0.93);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+    filter: blur(8px);
+  }
 }
 @keyframes aura-pulse-critical {
-  from { opacity: 0.8; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1.04); }
+  from {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.04);
+  }
 }
 
 /* ── Boss Image ───────────────────────────────────────────────────────────── */
@@ -459,7 +525,9 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   image-rendering: pixelated;
   filter: drop-shadow(0 0 18px rgba(255, 80, 0, 0.45)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.8));
   cursor: pointer;
-  transition: filter 0.12s ease, transform 0.1s ease;
+  transition:
+    filter 0.12s ease,
+    transform 0.1s ease;
   display: block;
 }
 
@@ -467,7 +535,9 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   transform: scale(1.05);
   filter: drop-shadow(0 0 28px rgba(255, 110, 20, 0.7)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
 }
-.boss-img:active { transform: scale(0.95); }
+.boss-img:active {
+  transform: scale(0.95);
+}
 
 .boss-ground-shadow {
   position: absolute;
@@ -501,7 +571,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   overflow: visible;
 }
 
-.enrage-track { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 3; }
+.enrage-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 3;
+}
 
 .enrage-arc {
   fill: none;
@@ -509,7 +583,9 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   stroke-width: 3.5;
   stroke-linecap: round;
   stroke-dashoffset: 0;
-  transition: stroke-dasharray 0.22s linear, stroke 0.3s;
+  transition:
+    stroke-dasharray 0.22s linear,
+    stroke 0.3s;
   filter: drop-shadow(0 0 4px rgba(200, 146, 42, 0.8));
 }
 
@@ -520,8 +596,12 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes arc-flash {
-  from { opacity: 1; }
-  to { opacity: 0.4; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.4;
+  }
 }
 
 .enrage-seconds {
@@ -585,7 +665,9 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   flex-shrink: 0;
   border-radius: 3px;
   border: 2px solid rgba(200, 146, 42, 0.55);
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 200, 80, 0.1);
+  box-shadow:
+    0 0 8px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 200, 80, 0.1);
   overflow: hidden;
 }
 
@@ -632,7 +714,9 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   border-radius: 2px;
   background: rgba(20, 12, 0, 0.85);
   border: 1px solid rgba(80, 50, 0, 0.6);
-  transition: background 0.18s, box-shadow 0.18s;
+  transition:
+    background 0.18s,
+    box-shadow 0.18s;
 }
 
 .champ-pip--active {
@@ -646,8 +730,13 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes pip-pulse {
-  from { box-shadow: 0 0 4px rgba(232, 192, 64, 0.7); }
-  to { box-shadow: 0 0 10px rgba(255, 220, 60, 1); filter: brightness(1.4); }
+  from {
+    box-shadow: 0 0 4px rgba(232, 192, 64, 0.7);
+  }
+  to {
+    box-shadow: 0 0 10px rgba(255, 220, 60, 1);
+    filter: brightness(1.4);
+  }
 }
 
 /* ── Portrait ult state ───────────────────────────────────────────────────── */
@@ -706,7 +795,8 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 
 @keyframes champ-strike {
   /* ── Idle rest ──────────────────── */
-  0%, 18% {
+  0%,
+  18% {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
   }
@@ -731,7 +821,8 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     filter: brightness(1);
   }
   /* ── Settle ─────────────────────── */
-  70%, 100% {
+  70%,
+  100% {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
   }
@@ -770,12 +861,23 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 .dmg-float-enter-active {
   animation: dmgUp 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
 }
-.dmg-float-leave-active { display: none; }
+.dmg-float-leave-active {
+  display: none;
+}
 
 @keyframes dmgUp {
-  0% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
-  20% { opacity: 1; transform: translate(-50%, -70%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -130%) scale(0.7); }
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -70%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -130%) scale(0.7);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

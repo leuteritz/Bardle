@@ -124,16 +124,15 @@
       </div>
     </div>
   </Transition>
-
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { useBattleStore } from '../../stores/battleStore'
-import { formatNumber } from '../../config/numberFormat'
-import { MATERIALS } from '../../config/materials'
-import BossArenaSection from './BossArenaSection.vue'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { formatNumber } from '@/config/numberFormat'
+import { MATERIALS } from '@/config/materials'
+import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
@@ -205,7 +204,9 @@ watch(
 
 function handleShake(ms: number) {
   isShaking.value = true
-  setTimeout(() => { isShaking.value = false }, ms)
+  setTimeout(() => {
+    isShaking.value = false
+  }, ms)
 }
 </script>
 
@@ -777,5 +778,4 @@ function handleShake(ms: number) {
     animation: none;
   }
 }
-
 </style>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { universes } from '../../config/universes'
-import type { ModifierEffects } from '../../types'
+import { useGameStore } from '../../../stores/gameStore'
+import { universes } from '../../../config/universes'
+import type { ModifierEffects } from '../../../types'
 
 const gameStore = useGameStore()
 
@@ -106,19 +106,24 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
             @click="gameStore.closePrestigeModal()"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
 
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">
-            <h2 class="text-3xl font-bold uni-title">
-              Wähle dein nächstes Universum
-            </h2>
+            <h2 class="text-3xl font-bold uni-title">Wähle dein nächstes Universum</h2>
           </div>
 
           <!-- Universe Cards Grid -->
-          <div class="grid grid-cols-2 gap-4 p-6 overflow-y-auto rpg-scrollbar lg:grid-cols-3 max-h-[65vh]">
+          <div
+            class="grid grid-cols-2 gap-4 p-6 overflow-y-auto rpg-scrollbar lg:grid-cols-3 max-h-[65vh]"
+          >
             <button
               v-for="universe in universes"
               :key="universe.id"
@@ -153,10 +158,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               </p>
 
               <!-- Modifier Effects -->
-              <div
-                v-if="universe.modifier"
-                class="uni-effects w-full space-y-1 p-2.5"
-              >
+              <div v-if="universe.modifier" class="uni-effects w-full space-y-1 p-2.5">
                 <div class="uni-modifier-name mb-1.5 text-[10px] font-bold text-center">
                   {{ universe.modifier.name }}
                 </div>
@@ -173,10 +175,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               </div>
 
               <!-- No modifier hint -->
-              <div
-                v-else
-                class="uni-no-mod w-full p-2.5 text-center text-[10px]"
-              >
+              <div v-else class="uni-no-mod w-full p-2.5 text-center text-[10px]">
                 Keine Modifikatoren
               </div>
             </button>

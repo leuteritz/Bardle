@@ -50,8 +50,8 @@ import { useBattleStore } from '../../stores/battleStore'
 import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
-import SunComponent from './SunComponent.vue'
-import TravelHud from './TravelHud.vue'
+import SunComponent from './sun/SunComponent.vue'
+import TravelHud from './sun/TravelHud.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',

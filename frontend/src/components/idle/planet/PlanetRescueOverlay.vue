@@ -16,15 +16,24 @@
       v-for="(boss, idx) in activeBosses"
       :key="boss.planetId"
       class="planet-countdown-bar"
-      :style="{ '--bar-color': barColor(idx, activeBosses.length), '--bar-color-dark': barColorDark(idx, activeBosses.length) }"
+      :style="{
+        '--bar-color': barColor(idx, activeBosses.length),
+        '--bar-color-dark': barColorDark(idx, activeBosses.length),
+      }"
     >
       <div
         class="planet-countdown-fill planet-countdown-fill--left"
-        :style="{ right: leftFill.right + 'px', width: (progressPercent(boss) / 100) * leftFill.width + 'px' }"
+        :style="{
+          right: leftFill.right + 'px',
+          width: (progressPercent(boss) / 100) * leftFill.width + 'px',
+        }"
       />
       <div
         class="planet-countdown-fill planet-countdown-fill--right"
-        :style="{ left: rightFill.left + 'px', width: (progressPercent(boss) / 100) * rightFill.width + 'px' }"
+        :style="{
+          left: rightFill.left + 'px',
+          width: (progressPercent(boss) / 100) * rightFill.width + 'px',
+        }"
       />
       <span class="planet-countdown-label">
         ⚠ {{ boss.bossName }} — {{ formatCountdown(boss) }}
@@ -72,11 +81,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import type { PlanetBossEvent } from '../../types'
-import { usePlanetEventStore } from '../../stores/planetEventStore'
-import { usePlanetBossStore } from '../../stores/planetBossStore'
-import { formatNumber } from '../../config/numberFormat'
-import { MATERIALS } from '../../config/materials'
+import type { PlanetBossEvent } from '@/types'
+import { usePlanetEventStore } from '@/stores/planetEventStore'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { formatNumber } from '@/config/numberFormat'
+import { MATERIALS } from '@/config/materials'
 
 const planetEventStore = usePlanetEventStore()
 const bossStore = usePlanetBossStore()
@@ -102,7 +111,9 @@ function measureChimes() {
 
 watch(
   () => planetEventStore.isEventActive,
-  (active) => { if (active) nextTick(measureChimes) },
+  (active) => {
+    if (active) nextTick(measureChimes)
+  },
 )
 
 onMounted(() => {
@@ -132,7 +143,9 @@ function progressPercent(boss: PlanetBossEvent): number {
 function formatCountdown(boss: PlanetBossEvent): string {
   const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
   const secs = Math.ceil(remaining / 1000)
-  const m = Math.floor(secs / 60).toString().padStart(2, '0')
+  const m = Math.floor(secs / 60)
+    .toString()
+    .padStart(2, '0')
   const s = (secs % 60).toString().padStart(2, '0')
   return `${m}:${s}`
 }
@@ -237,12 +250,20 @@ watch(
 }
 
 @keyframes vignetteIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes vignetteOut {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ─── Bar Stack Container ─────────────────────────────────────────────────── */
@@ -320,12 +341,24 @@ watch(
 }
 
 @keyframes barSlideIn {
-  from { opacity: 0; transform: translateY(-100%); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes barSlideOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-100%); }
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
