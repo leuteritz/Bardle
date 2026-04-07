@@ -90,10 +90,12 @@ async function spawnPlanetWithChampion() {
   if (candidates.length === 0) return
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
   planetEventStore.pendingRescue = true
+  planetEventStore.pendingRescueIsChampion = true
   await nextTick()
   const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
   if (lastBoss) {
     lastBoss.homePlanetChampion = pick.championName
+    lastBoss.isChampionPlanet = true
     lastBoss.potentialMaterialId = undefined
     lastBoss.assignedDropChance = undefined
   }

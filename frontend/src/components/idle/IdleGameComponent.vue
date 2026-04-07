@@ -21,6 +21,16 @@
       </div>
     </div>
 
+    <!-- Champion Travel Indicator — floats below the sun/chime -->
+    <Transition name="travel-fade">
+      <div v-if="showTravel" class="champion-travel-indicator">
+        <span class="travel-countdown">{{ travelCountdown }}</span>
+        <div class="travel-bar-track">
+          <div class="travel-bar-fill" :style="{ width: galaxyStore.travelProgressPercent + '%' }" />
+        </div>
+      </div>
+    </Transition>
+
     <!-- Click Popup Animation -->
     <div
       :key="chimeGainKey"
@@ -41,10 +51,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useBattleStore } from '../../stores/battleStore'
 import { useAugmentStore } from '../../stores/augmentStore'
+import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './SunComponent.vue'
 
@@ -56,9 +67,26 @@ export default defineComponent({
   setup() {
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
+    const galaxyStore = useGalaxyStore()
 
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
+
+    // Champion travel indicator
+    const showTravel = computed(
+      () =>
+        galaxyStore.championTravelState === 'traveling' &&
+        !galaxyStore.pendingGalaxyBoss &&
+        !galaxyStore.isComplete,
+    )
+
+    const travelCountdown = computed(() => {
+      const ms = galaxyStore.travelRemainingMs
+      const s = Math.ceil(ms / 1000)
+      const m = Math.floor(s / 60)
+      const sec = s % 60
+      return `${m}:${String(sec).padStart(2, '0')}`
+    })
     let gameTimer: ReturnType<typeof setInterval> | null = null
 
     function handleChimeClick(event: MouseEvent) {
@@ -109,10 +137,13 @@ export default defineComponent({
     return {
       gameStore,
       battleStore,
+      galaxyStore,
       formatNumber,
       handleChimeClick,
       chimeGainPos,
       chimeGainKey,
+      showTravel,
+      travelCountdown,
     }
   },
 })
@@ -292,5 +323,61 @@ export default defineComponent({
   .h-40 {
     height: 8rem;
   }
+}
+
+/* ─── Champion Travel Indicator ─── */
+.champion-travel-indicator {
+  position: fixed;
+  top: calc(50% + 128px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+}
+
+.travel-countdown {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e8c040;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+}
+
+.travel-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.travel-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #a06820, #e8c040, #ffd060);
+  border-radius: 2px;
+  transition: width 0.9s linear;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.5);
+}
+
+/* Transition */
+.travel-fade-enter-active,
+.travel-fade-leave-active {
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+.travel-fade-enter-from,
+.travel-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 </style>

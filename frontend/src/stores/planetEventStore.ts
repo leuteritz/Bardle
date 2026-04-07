@@ -13,6 +13,7 @@ import { logger } from '../utils/logger'
 export const usePlanetEventStore = defineStore('planetEvent', {
   state: () => ({
     pendingRescue: false,
+    pendingRescueIsChampion: false,
     lastEventCheckSecond: 0,
   }),
 
@@ -20,21 +21,36 @@ export const usePlanetEventStore = defineStore('planetEvent', {
     // Called every second from gameStore.tick()
     checkAndMaybeSpawnEvent(inGameTime: number, universeProgress: number) {
       const bossStore = usePlanetBossStore()
+      const galaxyStore = useGalaxyStore()
 
       // Check if current boss has expired (enrage timer)
       if (bossStore.isBossActive) {
         bossStore.checkEnrage()
       }
 
+      // Advance champion travel timer (real-time based)
+      galaxyStore.tickChampionTravel()
+
       const activeBossCount = bossStore.activeBosses.filter((b) => !b.defeated && !b.expired).length
 
-      // Galaxy boss: bypass interval — spawn immediately when all planets are rescued
-      const galaxyStore = useGalaxyStore()
+      // Priority 1: Galaxy final boss — bypass interval, spawn immediately
       if (galaxyStore.pendingGalaxyBoss && !this.pendingRescue && activeBossCount === 0) {
         this.pendingRescue = true
+        this.pendingRescueIsChampion = false
         logger.info('Planet', 'Galaxy final boss triggered')
         return
       }
+
+      // Priority 2: Champion planet — travel complete, spawn immediately
+      if (galaxyStore.championTravelState === 'champion_available' && !this.pendingRescue) {
+        this.pendingRescue = true
+        this.pendingRescueIsChampion = true
+        logger.info('Planet', 'Champion planet spawning — travel complete')
+        return
+      }
+
+      // Priority 3: Normal planet — only during active travel
+      if (galaxyStore.championTravelState !== 'traveling') return
 
       // Roll for new event every N in-game seconds
       if (inGameTime - this.lastEventCheckSecond < PLANET_EVENT_CHECK_INTERVAL) return
@@ -47,7 +63,8 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       if (Math.random() > chance) return
 
       this.pendingRescue = true
-      logger.info('Planet', 'Planet boss event spawned')
+      this.pendingRescueIsChampion = false
+      logger.info('Planet', 'Normal planet spawned during champion travel')
     },
 
     forceCheckExpiry() {
@@ -60,8 +77,16 @@ export const usePlanetEventStore = defineStore('planetEvent', {
       if (!this.pendingRescue) return
 
       const bossStore = usePlanetBossStore()
-      bossStore.spawnBoss(planetId, planetType)
+      bossStore.spawnBoss(planetId, planetType, this.pendingRescueIsChampion)
+
+      // Mark travel state so no second champion spawns until fight resolves
+      if (this.pendingRescueIsChampion) {
+        const galaxyStore = useGalaxyStore()
+        galaxyStore.championTravelState = 'champion_spawned'
+      }
+
       this.pendingRescue = false
+      this.pendingRescueIsChampion = false
     },
   },
 

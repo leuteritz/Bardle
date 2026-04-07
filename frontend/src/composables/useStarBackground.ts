@@ -62,8 +62,8 @@ const WARP_SPEED_MAX = 70 // max px/s am Bildschirmrand
 
 // ─── Galaxy Transition Constants ─────────────────────────────────────────────
 
-const GALAXY_TRANS_WARP_MS = 4500
-const GALAXY_TRANS_DECEL_MS = 2200
+const GALAXY_TRANS_WARP_MS = 8400
+const GALAXY_TRANS_DECEL_MS = 3600
 
 // ─── Galaxy Constants ─────────────────────────────────────────────────────────
 

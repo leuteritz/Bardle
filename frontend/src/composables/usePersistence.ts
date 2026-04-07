@@ -122,6 +122,9 @@ export function usePersistence() {
         planetsRequired: galaxyStore.planetsRequired,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
+        championTravelState: galaxyStore.championTravelState,
+        championTravelStartTime: galaxyStore.championTravelStartTime,
+        championTravelDurationMs: galaxyStore.championTravelDurationMs,
       },
     }
 
@@ -308,6 +311,16 @@ export function usePersistence() {
         galaxyStore.pendingGalaxyBoss =
           galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
           !galaxyStore.galaxyBossDefeated
+        // Restore champion travel state (backwards compatible with old saves)
+        if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
+          // 'champion_spawned' is invalid on reload (boss fights don't persist)
+          galaxyStore.championTravelState = gx.championTravelState
+          galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
+          galaxyStore.championTravelDurationMs = gx.championTravelDurationMs ?? galaxyStore.championTravelDurationMs
+        } else {
+          // Old save or in-progress champion fight: start a fresh travel cycle
+          galaxyStore.startChampionTravel()
+        }
       }
 
       logger.info('System', 'Game loaded', {

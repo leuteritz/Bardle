@@ -210,6 +210,7 @@ export interface PlanetBossEvent {
   homePlanetChampion?: string
   isSectionBoss?: boolean
   isGalaxyBoss?: boolean
+  isChampionPlanet?: boolean
   sectionId?: number
 }
 

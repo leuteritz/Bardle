@@ -76,7 +76,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   },
 
   actions: {
-    spawnBoss(planetId: string, planetType: PlanetType) {
+    spawnBoss(planetId: string, planetType: PlanetType, isChampionPlanet = false) {
       const gameStore = useGameStore()
 
       const level = gameStore.level
@@ -129,15 +129,23 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
 
       // Champion home planet
+      // Champion planets always guarantee a champion discovery (if any available)
+      // Normal planets use the base random chance
       let homePlanetChampion: string | undefined = undefined
-      if (Math.random() < CHAMPION_HOME_PLANET_CHANCE) {
+      if (isChampionPlanet || Math.random() < CHAMPION_HOME_PLANET_CHANCE) {
         const battleStore = useBattleStore()
-        const candidates = CHAMPION_HOME_PLANETS.filter(
-          (c) =>
-            c.planetType === planetType &&
-            !battleStore.ownedChampions.includes(c.championName) &&
-            !battleStore.recruitableChampions.some((r) => r.name === c.championName),
+        const isUnrecruitedUnowned = (name: string) =>
+          !battleStore.ownedChampions.includes(name) &&
+          !battleStore.recruitableChampions.some((r) => r.name === name)
+
+        // First: try matching the planet type exactly
+        let candidates = CHAMPION_HOME_PLANETS.filter(
+          (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
         )
+        // Champion planets: fall back to any planet type if none available for this type
+        if (candidates.length === 0 && isChampionPlanet) {
+          candidates = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
+        }
         if (candidates.length > 0) {
           homePlanetChampion =
             candidates[Math.floor(Math.random() * candidates.length)].championName
@@ -166,6 +174,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ...(homePlanetChampion && { homePlanetChampion }),
         ...(isSectionBoss && { isSectionBoss: true }),
         ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
+        ...(isChampionPlanet && { isChampionPlanet: true }),
         sectionId: sectionStore.activeSectionId,
       }
 
@@ -256,6 +265,14 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
 
           logger.info('Planet', 'Boss enraged! CPS penalty applied.')
+
+          // Champion planet lost — start next travel cycle
+          if (boss.isChampionPlanet) {
+            const galaxyStore = useGalaxyStore()
+            galaxyStore.startChampionTravel()
+            logger.info('Planet', 'Champion planet lost — starting next travel')
+          }
+
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
@@ -300,13 +317,14 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated(boss.isSectionBoss ?? false)
 
-      // Galaxy progression: galaxy boss kill or regular planet rescue
+      // Galaxy progression: galaxy boss kill or champion planet rescue
       const galaxyStore = useGalaxyStore()
       if (galaxyStore.pendingGalaxyBoss) {
         galaxyStore.onGalaxyBossDefeated()
-      } else {
+      } else if (boss.isChampionPlanet) {
         galaxyStore.onPlanetRescued()
       }
+      // Normal planets during travel: no galaxy progression
     },
 
     openBossModal(planetId?: string) {
@@ -327,6 +345,12 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           this.lastBossResult = 'defeat'
+
+          if (boss.isChampionPlanet) {
+            const galaxyStore = useGalaxyStore()
+            galaxyStore.startChampionTravel()
+          }
+
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)

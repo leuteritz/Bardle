@@ -61,6 +61,10 @@ export const PLANET_MATERIAL_CHANCE = 0.6
 // Champion home planet discovery chance
 export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
+// Champion travel timing
+export const CHAMPION_TRAVEL_BASE_MS = 60_000   // 60s base travel time
+export const CHAMPION_TRAVEL_SCALE_MS = 30_000  // +30s per galaxy
+
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
 export const BOSS_HP_LEVEL_SCALE = 10
