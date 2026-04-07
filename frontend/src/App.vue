@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGameStore } from './stores/gameStore'
+import { useGalaxyTheme } from './composables/useGalaxyTheme'
 import IdleGameComponent from './components/idle/IdleGameComponent.vue'
 import StarBackgroundComponent from './components/idle/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from './components/idle/PlanetRescueOverlay.vue'
@@ -14,6 +15,7 @@ import InventoryModal from './components/header/InventoryModal.vue'
 import AppHeaderComponent from './components/header/AppHeaderComponent.vue'
 
 const gameStore = useGameStore()
+useGalaxyTheme()
 
 const isInventoryOpen = ref(false)
 const activeTab = ref('idle')
@@ -21,6 +23,7 @@ const activeTab = ref('idle')
 
 <template>
   <div class="min-h-screen cosmic-bg">
+    <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <PlanetRescueModal />
     <AugmentSelectionModal />
@@ -75,6 +78,7 @@ const activeTab = ref('idle')
    DESIGN TOKENS
    ================================================================ */
 :root {
+  --galaxy-accent: #0a1a3e;
   --star-base-size: 2px;
   --star-max-size: 6px;
   --cosmic-gradient: linear-gradient(45deg, #0a0620, #110b3d, #160e4a, #0d0830);
@@ -93,6 +97,19 @@ const activeTab = ref('idle')
   --header-total-height: 50px;
 
   --bard-avatar-radius: 72px;
+}
+
+/* ================================================================
+   GALAXY TINT OVERLAY
+   ================================================================ */
+.galaxy-tint-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--galaxy-accent);
+  opacity: 0.18;
+  transition: background-color 3s ease;
 }
 
 /* ================================================================

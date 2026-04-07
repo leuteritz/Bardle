@@ -84,7 +84,7 @@ usePlanetBackground(starsContainer)
   height: 500px;
   top: -10%;
   left: 5%;
-  background: radial-gradient(ellipse, rgba(88, 28, 135, 0.07) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--nebula-1-color, rgba(88, 28, 135, 0.07)) 0%, transparent 70%);
   animation: nebulaFloat1 90s ease-in-out infinite;
 }
 .nebula-2 {
@@ -92,7 +92,7 @@ usePlanetBackground(starsContainer)
   height: 550px;
   top: 40%;
   right: -5%;
-  background: radial-gradient(ellipse, rgba(6, 78, 130, 0.06) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--nebula-2-color, rgba(6, 78, 130, 0.06)) 0%, transparent 70%);
   animation: nebulaFloat2 110s ease-in-out infinite;
 }
 .nebula-3 {
@@ -100,7 +100,7 @@ usePlanetBackground(starsContainer)
   height: 600px;
   bottom: -5%;
   left: 30%;
-  background: radial-gradient(ellipse, rgba(14, 116, 144, 0.055) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--nebula-3-color, rgba(14, 116, 144, 0.055)) 0%, transparent 70%);
   animation: nebulaFloat3 80s ease-in-out infinite;
 }
 .nebula-4 {
@@ -108,7 +108,7 @@ usePlanetBackground(starsContainer)
   height: 450px;
   top: 20%;
   left: 45%;
-  background: radial-gradient(ellipse, rgba(131, 24, 67, 0.05) 0%, transparent 70%);
+  background: radial-gradient(ellipse, var(--nebula-4-color, rgba(131, 24, 67, 0.05)) 0%, transparent 70%);
   animation: nebulaFloat4 125s ease-in-out infinite;
 }
 

@@ -121,6 +121,7 @@ export function usePersistence() {
         planetsRescued: galaxyStore.planetsRescued,
         planetsRequired: galaxyStore.planetsRequired,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
+        currentThemeIndex: galaxyStore.currentThemeIndex,
       },
     }
 
@@ -303,6 +304,7 @@ export function usePersistence() {
         galaxyStore.planetsRescued = gx.planetsRescued ?? 0
         galaxyStore.planetsRequired = gx.planetsRequired ?? 3
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
+        galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
         galaxyStore.pendingGalaxyBoss =
           galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
           !galaxyStore.galaxyBossDefeated
