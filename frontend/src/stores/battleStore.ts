@@ -25,9 +25,10 @@ import {
   BATTLE_REAL_DURATION_SECONDS,
   KILL_EVENTS_PER_TEAM_MIN,
   KILL_EVENTS_PER_TEAM_MAX,
+  REROLL_COST,
 } from '../config/constants'
 import type { BattleResult, BattleShopItem, ActiveBuff, ChampionState, ChatMessage, RecruitableChampion } from '../types'
-import { getRandomShopItems, REROLL_COST } from '../config/battleShop'
+import { getRandomShopItems } from '../config/battleShop'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 

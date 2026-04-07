@@ -90,5 +90,3 @@ export const SECTIONS: SectionConfig[] = [
   },
 ]
 
-export const SECTION_BOSS_HP_MULTIPLIER = 2.0
-export const SECTION_BOSS_ENRAGE_MULTIPLIER = 0.75

@@ -409,5 +409,24 @@ export const MMR_RANK_THRESHOLDS = [
 
 // Expedition system
 export const CHAMPION_BASE_POWER = 50
+
+// Battle shop
+export const REROLL_COST = 3
+
+// Section bosses
+export const SECTION_BOSS_HP_MULTIPLIER = 2.0
+export const SECTION_BOSS_ENRAGE_MULTIPLIER = 0.75
+
+// Save / load
+export const SAVE_KEY = 'bard-idle-save'
+export const SAVE_VERSION = 1
+
+// Star background — warp / galaxy animation
+export const WARP_SPEED_MAX = 70
+export const GALAXY_TRANS_WARP_MS = 8_400
+export const GALAXY_TRANS_DECEL_MS = 3_600
+export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
+export const GALAXY_SPAWN_INTERVAL_MAX = 12_000
+export const GALAXY_MAX_COUNT = 4
 export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_EXPEDITIONS = 3

@@ -10,11 +10,9 @@ import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useSectionStore } from '@/stores/sectionStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useCpsStore } from '@/stores/cpsStore'
-import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST } from '@/config/constants'
+import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, SAVE_KEY, SAVE_VERSION } from '@/config/constants'
 import { logger } from '@/utils/logger'
 
-const SAVE_KEY = 'bard-idle-save'
-const SAVE_VERSION = 1
 
 export function usePersistence() {
   function saveGame() {

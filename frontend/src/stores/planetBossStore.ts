@@ -16,6 +16,8 @@ import {
   BOSS_NAMES,
   PLANET_MATERIAL_CHANCE,
   CHAMPION_HOME_PLANET_CHANCE,
+  SECTION_BOSS_HP_MULTIPLIER,
+  SECTION_BOSS_ENRAGE_MULTIPLIER,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -25,7 +27,7 @@ import { useBattleStore } from './battleStore'
 import { useInventoryStore } from './inventoryStore'
 import { useSectionStore } from './sectionStore'
 import { useGalaxyStore } from './galaxyStore'
-import { SECTIONS, SECTION_BOSS_HP_MULTIPLIER, SECTION_BOSS_ENRAGE_MULTIPLIER } from '../config/sections'
+import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
 export const usePlanetBossStore = defineStore('planetBoss', {

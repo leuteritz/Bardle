@@ -1,7 +1,15 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
-import { STAR_COUNT } from '../config/constants'
+import {
+  STAR_COUNT,
+  WARP_SPEED_MAX,
+  GALAXY_TRANS_WARP_MS,
+  GALAXY_TRANS_DECEL_MS,
+  GALAXY_SPAWN_INTERVAL_MIN,
+  GALAXY_SPAWN_INTERVAL_MAX,
+  GALAXY_MAX_COUNT,
+} from '../config/constants'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,20 +64,6 @@ type GalaxyTypeConfig = {
   weight: number
 }
 
-// ─── Star Constants ───────────────────────────────────────────────────────────
-
-const WARP_SPEED_MAX = 70 // max px/s am Bildschirmrand
-
-// ─── Galaxy Transition Constants ─────────────────────────────────────────────
-
-const GALAXY_TRANS_WARP_MS = 8400
-const GALAXY_TRANS_DECEL_MS = 3600
-
-// ─── Galaxy Constants ─────────────────────────────────────────────────────────
-
-const GALAXY_SPAWN_INTERVAL_MIN = 5_000
-const GALAXY_SPAWN_INTERVAL_MAX = 12_000
-const GALAXY_MAX_COUNT = 4
 
 const GALAXY_TYPE_CONFIGS: GalaxyTypeConfig[] = [
   {

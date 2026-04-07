@@ -64,8 +64,6 @@ export const BATTLE_SHOP_ITEMS: BattleShopItem[] = [
   },
 ]
 
-export const REROLL_COST = 3
-
 /**
  * Returns `count` random items from the pool, excluding permanently maxed-out items.
  */

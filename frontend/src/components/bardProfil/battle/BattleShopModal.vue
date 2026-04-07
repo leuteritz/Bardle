@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
-import { REROLL_COST } from '../../../config/battleShop'
+import { REROLL_COST } from '../../../config/constants'
 
 const battleStore = useBattleStore()
 
