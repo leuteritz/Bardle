@@ -40,6 +40,13 @@ interface PlanetItem {
   labelEl?: HTMLDivElement
   name?: string
   clickHandler?: () => void
+  approaching?: boolean
+  approachFromX?: number
+  approachFromY?: number
+  approachToX?: number
+  approachToY?: number
+  approachDuration?: number
+  approachElapsed?: number
 }
 
 // Re-export for consumers (avoids unused import warnings)
@@ -47,6 +54,26 @@ export type { PlanetType, PlanetTypeConfig }
 export { PLANET_TYPE_CONFIGS }
 
 let planetIdCounter = 0
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getViewportEdgePoint(
+  cx: number,
+  cy: number,
+  angle: number,
+  w: number,
+  h: number,
+): [number, number] {
+  const dx = Math.cos(angle)
+  const dy = Math.sin(angle)
+  const candidates: number[] = []
+  if (dx > 0) candidates.push((w - cx) / dx)
+  else if (dx < 0) candidates.push(-cx / dx)
+  if (dy > 0) candidates.push((h - cy) / dy)
+  else if (dy < 0) candidates.push(-cy / dy)
+  const t = Math.min(...candidates.filter((v) => v > 0))
+  return [cx + dx * t, cy + dy * t]
+}
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
@@ -143,8 +170,12 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const config = pickConfig()
     const size = Math.max(config.sizeMin, Math.min(config.sizeMax, 60))
     const r = size / 2
-    const x = cx + orbitRadius * Math.cos(startAngle) - r
-    const y = cy + orbitRadius * Math.sin(startAngle) - r
+    const orbitEntryX = cx + orbitRadius * Math.cos(startAngle) - r
+    const orbitEntryY = cy + orbitRadius * Math.sin(startAngle) - r
+
+    const [edgeCx, edgeCy] = getViewportEdgePoint(cx, cy, startAngle, w, h)
+    const spawnX = edgeCx - r
+    const spawnY = edgeCy - r
 
     const id = `planet-${++planetIdCounter}`
     const svg = document.createElementNS(NS, 'svg')
@@ -157,7 +188,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     svg.style.transition = 'opacity 0.5s ease'
 
     drawPlanet(svg, id, config.type, r, r, r)
-    svg.style.transform = `translate(${x}px, ${y}px)`
+    svg.style.transform = `translate(${spawnX}px, ${spawnY}px)`
     container.value.appendChild(svg)
     requestAnimationFrame(() => {
       svg.style.opacity = '0.92'
@@ -166,14 +197,21 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const item: PlanetItem = {
       id,
       el: svg,
-      x,
-      y,
+      x: spawnX,
+      y: spawnY,
       scale: 1,
       scaleEnd: 1,
       lifetime: Infinity,
       elapsed: 0,
       removeTimeout: null,
-      orbiting: true,
+      orbiting: false,
+      approaching: true,
+      approachFromX: spawnX,
+      approachFromY: spawnY,
+      approachToX: orbitEntryX,
+      approachToY: orbitEntryY,
+      approachDuration: 7000 + Math.random() * 3000,
+      approachElapsed: 0,
       orbitAngle: startAngle,
       orbitRadius,
       orbitSpeed,
@@ -313,7 +351,24 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
     for (let i = planets.length - 1; i >= 0; i--) {
       const planet = planets[i]
-      if (planet.orbiting) {
+      if (planet.approaching) {
+        planet.approachElapsed! += delta * 1000
+        const t = Math.min(planet.approachElapsed! / planet.approachDuration!, 1)
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        planet.x = planet.approachFromX! + (planet.approachToX! - planet.approachFromX!) * e
+        planet.y = planet.approachFromY! + (planet.approachToY! - planet.approachFromY!) * e
+        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
+
+        if (planet.labelEl) {
+          const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
+          planet.labelEl.style.transform = `translate(${planet.x + pSize + 10}px, ${planet.y + pSize / 2}px) translateY(-50%)`
+        }
+
+        if (t >= 1) {
+          planet.approaching = false
+          planet.orbiting = true
+        }
+      } else if (planet.orbiting) {
         planet.orbitAngle! += planet.orbitSpeed! * delta
         const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
         planet.x = planet.orbitCx! + planet.orbitRadius! * Math.cos(planet.orbitAngle!) - pSize / 2
