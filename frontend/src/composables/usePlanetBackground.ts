@@ -1,4 +1,4 @@
-import { watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
@@ -17,7 +17,6 @@ import {
   PLANET_TYPE_CONFIGS,
 } from '../utils/planetDraw'
 import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
-import { formatNumber } from '../config/numberFormat'
 import { MATERIALS } from '../config/materials'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,7 +37,6 @@ interface PlanetItem {
   orbitSpeed?: number
   orbitCx?: number
   orbitCy?: number
-  labelEl?: HTMLDivElement
   name?: string
   clickHandler?: () => void
   approaching?: boolean
@@ -48,6 +46,20 @@ interface PlanetItem {
   approachToY?: number
   approachDuration?: number
   approachElapsed?: number
+}
+
+interface LabelData {
+  planetId: string
+  bossName: string
+  currentHP: number
+  maxHP: number
+  reward: number | null
+  materialImage?: string
+  materialName?: string
+  championImage?: string
+  championName?: string
+  isGalaxyBoss: boolean
+  transform: string
 }
 
 // Re-export for consumers (avoids unused import warnings)
@@ -78,10 +90,13 @@ function getViewportEdgePoint(
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
-export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
+export function usePlanetBackground(
+  container: Ref<HTMLElement | null>,
+): { planetLabels: Ref<Map<string, LabelData>> } {
   const planetEventStore = usePlanetEventStore()
   const bossStore = usePlanetBossStore()
 
+  const planetLabels = ref<Map<string, LabelData>>(new Map())
   const planets: PlanetItem[] = []
   const timeouts: ReturnType<typeof setTimeout>[] = []
   let spawnTimeout: ReturnType<typeof setTimeout> | null = null
@@ -94,10 +109,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const item = planets[idx]
     if (item.removeTimeout !== null) clearTimeout(item.removeTimeout)
     if (container.value?.contains(item.el)) container.value.removeChild(item.el)
-    if (item.labelEl) {
-      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
-      item.labelEl = undefined
-    }
+    planetLabels.value.delete(id)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
@@ -267,7 +279,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const material = boss?.potentialMaterialId
       ? MATERIALS.find((m) => m.id === boss.potentialMaterialId)
       : null
-    const hpPct = boss ? Math.max(0, (boss.currentHP / boss.maxHP) * 100) : 100
 
     const championName = boss?.homePlanetChampion ?? null
     const championImg = championName
@@ -276,21 +287,19 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         : `/img/champion/${championName}.jpg`
       : null
 
-    const label = document.createElement('div')
-    label.className = isGalaxyBoss ? 'planet-label planet-label--galaxy' : 'planet-label'
-    label.innerHTML = `
-      <span class="planet-label__name">${boss?.bossName ?? '???'}</span>
-      <span class="planet-label__hp">♥ ${formatNumber(boss?.currentHP ?? 0)} / ${formatNumber(boss?.maxHP ?? 0)}</span>
-      <div class="planet-label__hp-bar-track">
-        <div class="planet-label__hp-bar-fill" style="width:${hpPct}%"></div>
-      </div>
-      ${boss?.reward ? `<span class="planet-label__reward">${formatNumber(boss.reward)} Chimes</span>` : ''}
-      ${material ? `<div class="planet-label__material"><img src="${material.image}" alt="${material.name}" />${material.name}</div>` : ''}
-      ${championImg ? `<div class="planet-label__champion"><img src="${championImg}" alt="${championName}" /><span>${championName}</span></div>` : ''}
-    `
-    label.style.transform = getLabelTransform(item, pSize)
-    container.value!.appendChild(label)
-    item.labelEl = label
+    planetLabels.value.set(id, {
+      planetId: id,
+      bossName: boss?.bossName ?? '???',
+      currentHP: boss?.currentHP ?? 0,
+      maxHP: boss?.maxHP ?? 1,
+      reward: boss?.reward ?? null,
+      materialImage: material?.image,
+      materialName: material?.name,
+      championImage: championImg ?? undefined,
+      championName: championName ?? undefined,
+      isGalaxyBoss,
+      transform: getLabelTransform(item, pSize),
+    })
   }
 
   function triggerExplosion(planetId: string): void {
@@ -299,10 +308,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const item = planets[idx]
     planets.splice(idx, 1)
     activePlanetPositions.delete(planetId)
-    if (item.labelEl) {
-      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
-      item.labelEl = undefined
-    }
+    planetLabels.value.delete(planetId)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
@@ -320,10 +326,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     const item = planets[idx]
     planets.splice(idx, 1)
     activePlanetPositions.delete(planetId)
-    if (item.labelEl) {
-      if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
-      item.labelEl = undefined
-    }
+    planetLabels.value.delete(planetId)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
@@ -391,9 +394,10 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         planet.y = planet.approachFromY! + (planet.approachToY! - planet.approachFromY!) * e
         planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
 
-        if (planet.labelEl) {
+        const approachLd = planetLabels.value.get(planet.id)
+        if (approachLd) {
           const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
-          planet.labelEl.style.transform = getLabelTransform(planet, pSize)
+          approachLd.transform = getLabelTransform(planet, pSize)
         }
 
         if (t >= 1) {
@@ -413,8 +417,9 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
           cy: planet.y + pSize / 2,
         })
 
-        if (planet.labelEl) {
-          planet.labelEl.style.transform = getLabelTransform(planet, pSize)
+        const orbitLd = planetLabels.value.get(planet.id)
+        if (orbitLd) {
+          orbitLd.transform = getLabelTransform(planet, pSize)
         }
       } else {
         planet.elapsed += delta * 1000
@@ -495,25 +500,15 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     },
   )
 
-  // 5. Boss HP → label text + bar live aktualisieren
+  // 5. Boss HP → label reaktiv aktualisieren
   watch(
     () => bossStore.activeBosses.map((b) => ({ id: b.planetId, hp: b.currentHP, maxHP: b.maxHP })),
     (cur) => {
       for (const info of cur) {
-        const planet = planets.find((p) => p.id === info.id)
-        if (!planet?.labelEl) continue
-        const pct = Math.max(0, (info.hp / info.maxHP) * 100)
-
-        const hpEl = planet.labelEl.querySelector('.planet-label__hp') as HTMLElement | null
-        if (hpEl) {
-          hpEl.textContent = `♥ ${formatNumber(info.hp)} / ${formatNumber(info.maxHP)}`
-          hpEl.classList.toggle('planet-label__hp--critical', pct < 25)
-        }
-        const barFill = planet.labelEl.querySelector('.planet-label__hp-bar-fill') as HTMLElement | null
-        if (barFill) {
-          barFill.style.width = pct + '%'
-          barFill.classList.toggle('planet-label__hp-bar-fill--critical', pct < 25)
-        }
+        const ld = planetLabels.value.get(info.id)
+        if (!ld) continue
+        ld.currentHP = info.hp
+        ld.maxHP = info.maxHP
       }
     },
     { deep: true },
@@ -537,10 +532,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         if (container.value?.contains(el)) container.value.removeChild(el)
       })
       // Veraltete Labels entfernen
-      const staleLabels = container.value.querySelectorAll('.planet-label')
-      staleLabels.forEach((el) => {
-        if (container.value?.contains(el)) container.value.removeChild(el)
-      })
+      planetLabels.value.clear()
       // Auch aus planets-Array entfernen
       for (let i = planets.length - 1; i >= 0; i--) {
         if (planets[i].el.classList.contains('planet--rescue')) {
@@ -565,11 +557,11 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     timeouts.forEach(clearTimeout)
     for (const planet of planets) {
       if (container.value?.contains(planet.el)) container.value.removeChild(planet.el)
-      if (planet.labelEl && container.value?.contains(planet.labelEl)) {
-        container.value.removeChild(planet.labelEl)
-      }
       if (planet.name) releasePlanetName(planet.name)
     }
     planets.length = 0
+    planetLabels.value.clear()
   })
+
+  return { planetLabels }
 }
