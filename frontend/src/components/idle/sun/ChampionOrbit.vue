@@ -1,13 +1,29 @@
 <template>
-  <div class="champion-orbit-layer" aria-hidden="true">
-    <!-- Champion avatars -->
+  <!-- ① Back-Layer: Champions HINTER der Sonne (z-index 4, unter der Sonne) -->
+  <div class="champion-orbit-layer champion-orbit-back" aria-hidden="true">
     <div
-      v-for="pos in championRenderPositions"
+      v-for="pos in backChampions"
+      :key="pos.name"
+      class="champion-orbit-avatar champion-orbit-avatar--behind"
+      :style="{
+        width: pos.size + 'px',
+        height: pos.size + 'px',
+        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
+        opacity: pos.opacity,
+      }"
+    >
+      <img :src="pos.img" :alt="pos.name" />
+    </div>
+  </div>
+
+  <!-- ② Front-Layer: Champions VOR der Sonne + UI (z-index 6, über der Sonne) -->
+  <div class="champion-orbit-layer champion-orbit-front" aria-hidden="true">
+    <div
+      v-for="pos in frontChampions"
       :key="pos.name"
       class="champion-orbit-avatar"
       :class="{
         'champion-orbit-avatar--attacking': pos.isAttacking,
-        'champion-orbit-avatar--behind': pos.isBehind,
         'champion-orbit-avatar--foreground': pos.isForeground,
       }"
       :style="{
@@ -96,9 +112,7 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { formatNumber } from '../../../config/numberFormat'
 import { MATERIALS } from '../../../config/materials'
-
-const AVATAR_SIZE_LARGE = 40
-const AVATAR_SIZE_SMALL = 32
+import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
 
 interface ChampionRenderPos {
   name: string
@@ -113,13 +127,10 @@ interface ChampionRenderPos {
   zIndex: number
 }
 
-// Per-champion local animation state (not in Pinia — updated every rAF frame)
 interface LocalChampState {
   name: string
-  // current screen position
   x: number
   y: number
-  // orbit angle (advances over time)
   orbitAngle: number
   initialised: boolean
 }
@@ -132,12 +143,12 @@ export default defineComponent({
     const bossStore = usePlanetBossStore()
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    // Local per-champion animation state (non-reactive, mutated imperatively)
     const localStates = new Map<string, LocalChampState>()
-
-    // Reactive render positions — updated from rAF loop via a ref swap
     const championRenderPositions = ref<ChampionRenderPos[]>([])
+
+    // Trennung in zwei Listen für die zwei Render-Layer
+    const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
+    const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
 
     function getAvatarSize(count: number): number {
       return count <= 4 ? AVATAR_SIZE_LARGE : AVATAR_SIZE_SMALL
@@ -155,9 +166,10 @@ export default defineComponent({
       const sinT = Math.sin(tiltRad)
       const cosA = Math.cos(angle)
       const sinA = Math.sin(angle)
-      const x = screenCx + orbitRadiusX * cosA * cosT - orbitRadiusY * sinA * sinT
-      const y = screenCy + orbitRadiusX * cosA * sinT + orbitRadiusY * sinA * cosT
-      return { x, y }
+      return {
+        x: screenCx + orbitRadiusX * cosA * cosT - orbitRadiusY * sinA * sinT,
+        y: screenCy + orbitRadiusX * cosA * sinT + orbitRadiusY * sinA * cosT,
+      }
     }
 
     let animFrame = 0
@@ -169,20 +181,17 @@ export default defineComponent({
 
       const screenCx = window.innerWidth / 2
       const screenCy = window.innerHeight / 2
-
       const champions = combatStore.champions
       const baseSize = getAvatarSize(champions.length)
-
       const newPositions: ChampionRenderPos[] = []
 
       for (const c of champions) {
-        // Ensure local state exists
         let ls = localStates.get(c.name)
         if (!ls) {
           const orbitPos = getOrbitPos(
             c.angle,
-            c.orbitRadiusX,
-            c.orbitRadiusY,
+            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
+            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
             c.tiltRad,
             screenCx,
             screenCy,
@@ -198,14 +207,12 @@ export default defineComponent({
         }
 
         if (!reducedMotion) {
-          // Champions always orbit — advance angle with Kepler-ish boost
           const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
           ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * dt
-
           const targetOrbit = getOrbitPos(
             ls.orbitAngle,
-            c.orbitRadiusX,
-            c.orbitRadiusY,
+            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
+            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
             c.tiltRad,
             screenCx,
             screenCy,
@@ -213,11 +220,10 @@ export default defineComponent({
           ls.x += (targetOrbit.x - ls.x) * 0.15
           ls.y += (targetOrbit.y - ls.y) * 0.15
         } else {
-          // Reduced motion: snap to orbit position
           const orbitPos = getOrbitPos(
             c.angle,
-            c.orbitRadiusX,
-            c.orbitRadiusY,
+            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
+            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
             c.tiltRad,
             screenCx,
             screenCy,
@@ -226,29 +232,24 @@ export default defineComponent({
           ls.y = orbitPos.y
         }
 
-        // Update combatStore screen pos (for damage number positioning)
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
-        // ── Depth / layering ────────────────────────────────────────────────
-        // relY: -1 = top of orbit (behind sun), +1 = bottom of orbit (in front)
-        const relY = (ls.y - screenCy) / Math.max(c.orbitRadiusY, 1)
+        // relY: -1 = Orbit-Top (hinter Sonne), +1 = Orbit-Bottom (vor Sonne)
+        const relY = (ls.y - screenCy) / Math.max(c.orbitRadiusY * ORBIT_RADIUS_SCALE, 1)
         const isBehind = relY < -0.05
+        const depth = (relY + 1) / 2 // 0 = ganz hinten, 1 = ganz vorne
 
-        // depth: 0 = furthest behind, 1 = furthest in front
-        const depth = (relY + 1) / 2
-
-        // Parallax size: champions grow as they come forward (0.72× → 1.28×)
-        // This is the key visual cue that sells the 3D orbit.
+        // Parallax-Größe: 0.72× (hinten) → 1.0× (Äquator) → 1.28× (vorne)
         const parallaxScale = 0.72 + depth * 0.56
         const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
 
-        // Sharp opacity contrast: dim behind (≈0.12–0.27), bright in front (≈0.85–1.0)
+        // Opazität: klarer Kontrast hinten (0.12–0.27) vs. vorne (0.80–1.0)
         const opacity = c.isAttacking ? 1 : isBehind ? 0.12 + depth * 0.3 : 0.8 + depth * 0.2
 
-        // Granular z-index so nearer champions always render above farther ones
-        const zIndex = c.isAttacking ? 20 : isBehind ? 3 : Math.floor(8 + depth * 7)
+        // z-index nur innerhalb des jeweiligen Layers (für Überlappung mehrerer Champions)
+        const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
 
-        // isForeground: lower third of orbit → enhanced glow via CSS class
+        // CSS-Foreground-Glow: unteres Drittel der Umlaufbahn
         const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
         newPositions.push({
@@ -265,18 +266,14 @@ export default defineComponent({
         })
       }
 
-      // Remove stale local states
       for (const key of localStates.keys()) {
-        if (!champions.some((c) => c.name === key)) {
-          localStates.delete(key)
-        }
+        if (!champions.some((c) => c.name === key)) localStates.delete(key)
       }
 
       championRenderPositions.value = newPositions
       animFrame = requestAnimationFrame(animate)
     }
 
-    // Planet aura
     const planetPos = computed(() => {
       const boss = bossStore.activeBoss
       if (!boss) return null
@@ -293,7 +290,6 @@ export default defineComponent({
 
     const auraSize = 120
 
-    // Sync champions when ownedChampions changes
     watch(
       () => battleStore.ownedChampions,
       (owned) => combatStore.syncChampions(owned),
@@ -303,7 +299,6 @@ export default defineComponent({
     onMounted(() => {
       animFrame = requestAnimationFrame(animate)
     })
-
     onUnmounted(() => {
       cancelAnimationFrame(animFrame)
     })
@@ -311,7 +306,8 @@ export default defineComponent({
     return {
       combatStore,
       bossStore,
-      championRenderPositions,
+      backChampions,
+      frontChampions,
       planetPos,
       showAura,
       auraSize,
@@ -323,14 +319,26 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ── Layer-Container ──────────────────────────────────────────────────────── */
 .champion-orbit-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 4;
 }
 
-/* ── Champion Avatars ─────────────────────────────────────────────────────── */
+/*
+ * Sonne hat z-index: 5 (SunComponent.vue → .sun-container)
+ * back  = 4  → unter der Sonne
+ * front = 6  → über der Sonne
+ */
+.champion-orbit-back {
+  z-index: 4;
+}
+.champion-orbit-front {
+  z-index: 6;
+}
+
+/* ── Champion-Avatare ─────────────────────────────────────────────────────── */
 .champion-orbit-avatar {
   position: absolute;
   top: 0;
@@ -356,7 +364,7 @@ export default defineComponent({
   border-radius: 50%;
 }
 
-/* Behind the sun: heavily dimmed, desaturated, no glow */
+/* Hinter der Sonne: gedimmt, entsättigt, kein Glow */
 .champion-orbit-avatar--behind {
   border-color: rgba(140, 90, 15, 0.35);
   box-shadow:
@@ -365,7 +373,7 @@ export default defineComponent({
   filter: brightness(0.42) saturate(0.45);
 }
 
-/* Clearly in front of the sun: brighter border, stronger glow, slight brightness boost */
+/* Klar vor der Sonne: hellerer Rand, starkes Glow */
 .champion-orbit-avatar--foreground {
   border-color: #ffe080;
   box-shadow:
@@ -375,7 +383,7 @@ export default defineComponent({
   filter: brightness(1.08) saturate(1.12);
 }
 
-/* Attacking overrides everything */
+/* Angriff überschreibt alles */
 .champion-orbit-avatar--attacking {
   border-color: #ff6040;
   box-shadow:
@@ -399,7 +407,7 @@ export default defineComponent({
   }
 }
 
-/* ── Planet Detect Aura ───────────────────────────────────────────────────── */
+/* ── Planet-Detect-Aura ───────────────────────────────────────────────────── */
 .detect-aura {
   position: absolute;
   top: 0;
@@ -422,7 +430,7 @@ export default defineComponent({
   }
 }
 
-/* ── Damage Numbers ───────────────────────────────────────────────────────── */
+/* ── Schadenszahlen ───────────────────────────────────────────────────────── */
 .champion-dmg-overlay {
   position: fixed;
   inset: 0;
@@ -451,7 +459,7 @@ export default defineComponent({
     0 0 32px rgba(255, 160, 0, 0.7);
 }
 
-/* ── Planet HP Overlay ────────────────────────────────────────────────────── */
+/* ── Planet-HP-Overlay ────────────────────────────────────────────────────── */
 .planet-hp-overlay {
   position: absolute;
   top: 0;
@@ -545,6 +553,7 @@ export default defineComponent({
   image-rendering: pixelated;
 }
 
+/* ── Schaden-Transitions ──────────────────────────────────────────────────── */
 .champion-dmg-enter-active {
   transition:
     opacity 0.85s ease-out,

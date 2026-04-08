@@ -62,8 +62,8 @@ export const PLANET_MATERIAL_CHANCE = 0.6
 export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
 // Champion travel timing
-export const CHAMPION_TRAVEL_BASE_MS = 60_000   // 60s base travel time
-export const CHAMPION_TRAVEL_SCALE_MS = 30_000  // +30s per galaxy
+export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
+export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
@@ -153,7 +153,6 @@ export const CHAMPION_BASE_POWER = 50
 // Battle shop
 export const REROLL_COST = 3
 
-
 // Save / load
 export const SAVE_KEY = 'bard-idle-save'
 export const SAVE_VERSION = 1
@@ -169,10 +168,15 @@ export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_EXPEDITIONS = 3
 
 // Champion Combat System
-export const CHAMPION_DETECT_RADIUS = 350   // px from screen center; planet within this range → champions can hit it
-export const ATTACK_RANGE = 110             // px from planet center; kept for reference (unused in orbit mode)
-export const CHAMPION_ORBIT_HIT_RANGE = 180  // px: champion orbit position must be within this of planet to deal damage
-export const CHAMPION_DPS_BASE = 40         // damage per champion per second
+export const CHAMPION_DETECT_RADIUS = 350 // px from screen center; planet within this range → champions can hit it
+export const ATTACK_RANGE = 110 // px from planet center; kept for reference (unused in orbit mode)
+export const CHAMPION_ORBIT_HIT_RANGE = 180 // px: champion orbit position must be within this of planet to deal damage
+export const CHAMPION_DPS_BASE = 40 // damage per champion per second
 export const PLAYER_MAX_HP_BASE = 100
 export const PLAYER_HP_REGEN_PER_SEC = 1
 export const PLAYER_HP_LOSS_ON_ENRAGE = 25
+
+// Champion Orbit
+export const AVATAR_SIZE_LARGE = 40
+export const AVATAR_SIZE_SMALL = 32
+export const ORBIT_RADIUS_SCALE = 1.0
