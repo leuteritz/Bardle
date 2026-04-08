@@ -284,9 +284,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       ${material?.image ? `<span class="planet-label__material"><img src="${material.image}" alt="">${material.name}</span>` : material?.name ? `<span class="planet-label__material">${material.icon ?? ''} ${material.name}</span>` : ''}
       ${champion && championImg ? `<span class="planet-label__champion"><img src="${championImg}" alt="${champion}" onerror="this.style.display='none'">${champion}</span>` : ''}
     `
-    const labelX = item.x + pSize + 10
-    const labelY = item.y + pSize / 2
-    label.style.transform = `translate(${labelX}px, ${labelY}px) translateY(-50%)`
+    label.style.transform = getLabelTransform(item, pSize)
     container.value!.appendChild(label)
     item.labelEl = label
   }
@@ -343,6 +341,34 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     }, delay)
   }
 
+  function getLabelTransform(planet: PlanetItem, pSize: number): string {
+    const pRadius = pSize / 2
+    const gap = 10
+
+    // Planet center in screen space (planet.x/y is the top-left corner of the SVG)
+    const pcx = planet.x + pRadius
+    const pcy = planet.y + pRadius
+
+    // Direction from sun center → planet center
+    const cx = planet.orbitCx ?? window.innerWidth / 2
+    const cy = planet.orbitCy ?? window.innerHeight / 2
+    const angle = Math.atan2(pcy - cy, pcx - cx)
+    const dx = Math.cos(angle)
+    const dy = Math.sin(angle)
+
+    // Y anchor follows the radial angle so the label appears near the outer side of the planet.
+    // X anchor uses the planet's leftmost/rightmost edge (not the diagonal point) so the label
+    // never overlaps the planet circle regardless of angle.
+    const anchorY = pcy + dy * (pRadius + gap)
+
+    // Right half → label extends right; left half → label extends left
+    if (dx >= 0) {
+      return `translate(${pcx + pRadius + gap}px, ${anchorY}px) translateY(-50%)`
+    } else {
+      return `translate(${pcx - pRadius - gap}px, ${anchorY}px) translateX(-100%) translateY(-50%)`
+    }
+  }
+
   function animatePlanets(timestamp: number): void {
     if (lastTimestamp === 0) lastTimestamp = timestamp
     const rawDelta = (timestamp - lastTimestamp) / 1000
@@ -361,7 +387,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
 
         if (planet.labelEl) {
           const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
-          planet.labelEl.style.transform = `translate(${planet.x + pSize + 10}px, ${planet.y + pSize / 2}px) translateY(-50%)`
+          planet.labelEl.style.transform = getLabelTransform(planet, pSize)
         }
 
         if (t >= 1) {
@@ -376,9 +402,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
 
         if (planet.labelEl) {
-          const labelX = planet.x + pSize + 10
-          const labelY = planet.y + pSize / 2
-          planet.labelEl.style.transform = `translate(${labelX}px, ${labelY}px) translateY(-50%)`
+          planet.labelEl.style.transform = getLabelTransform(planet, pSize)
         }
       } else {
         planet.elapsed += delta * 1000
