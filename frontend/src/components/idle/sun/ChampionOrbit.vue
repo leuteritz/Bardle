@@ -85,9 +85,16 @@
       </div>
     </div>
 
-    <!-- Floating damage numbers -->
+    <!-- Floating damage numbers + projectiles -->
     <Teleport to="body">
       <div class="champion-dmg-overlay" aria-hidden="true">
+        <!-- Attack projectiles -->
+        <div
+          v-for="proj in projectiles"
+          :key="proj.id"
+          class="champion-projectile"
+          :style="{ left: proj.renderX + 'px', top: proj.renderY + 'px', opacity: proj.renderOpacity }"
+        />
         <TransitionGroup name="champion-dmg">
           <span
             v-for="f in combatStore.damageFloats"
@@ -135,6 +142,20 @@ interface LocalChampState {
   initialised: boolean
 }
 
+interface Projectile {
+  id: number
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+  startedAt: number
+  duration: number
+  renderX: number
+  renderY: number
+  renderOpacity: number
+  done: boolean
+}
+
 export default defineComponent({
   name: 'ChampionOrbit',
   setup() {
@@ -145,6 +166,13 @@ export default defineComponent({
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
     const championRenderPositions = ref<ChampionRenderPos[]>([])
+
+    const projectiles = ref<Projectile[]>([])
+    const _projId = { v: 0 }
+    const lastFiredAt = new Map<string, number>()
+    const MAX_PROJECTILES = 4
+    const PROJECTILE_COOLDOWN_MS = 700
+    const PROJECTILE_DURATION_MS = 420
 
     // Trennung in zwei Listen für die zwei Render-Layer
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
@@ -270,6 +298,61 @@ export default defineComponent({
         if (!champions.some((c) => c.name === key)) localStates.delete(key)
       }
 
+      // ── Projectile update ─────────────────────────────────────────────────────
+      // Read planet position directly from Map (not computed) so we get the
+      // current frame position, not the stale one from when activeBoss changed.
+      const activeBoss = bossStore.activeBoss
+      const pPos = activeBoss ? (activePlanetPositions.get(activeBoss.planetId) ?? null) : null
+
+      // Build new projectile render positions (plain array → swap whole ref at end)
+      const nextProjectiles: Projectile[] = []
+      for (const p of projectiles.value) {
+        const t = Math.min((ts - p.startedAt) / p.duration, 1)
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+        const x = p.fromX + (p.toX - p.fromX) * ease
+        const y = p.fromY + (p.toY - p.fromY) * ease
+        const dx = p.toX - p.fromX
+        const dy = p.toY - p.fromY
+        const arc = Math.sin(t * Math.PI) * 18
+        const len = Math.hypot(dx, dy) || 1
+        const renderX = x + (dy / len) * arc
+        const renderY = y - (dx / len) * arc
+        const renderOpacity = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1
+        if (t < 1) {
+          nextProjectiles.push({ ...p, renderX, renderY, renderOpacity, done: false })
+        }
+      }
+
+      // Spawn new projectiles for attacking champions
+      if (pPos) {
+        let spawnedCount = nextProjectiles.length
+        for (const pos of newPositions) {
+          if (!pos.isAttacking) continue
+          if (spawnedCount >= MAX_PROJECTILES) break
+          const last = lastFiredAt.get(pos.name) ?? 0
+          if (ts - last < PROJECTILE_COOLDOWN_MS) continue
+          lastFiredAt.set(pos.name, ts)
+          nextProjectiles.push({
+            id: ++_projId.v,
+            fromX: pos.x,
+            fromY: pos.y,
+            toX: pPos.cx,
+            toY: pPos.cy,
+            startedAt: ts,
+            duration: PROJECTILE_DURATION_MS,
+            renderX: pos.x,
+            renderY: pos.y,
+            renderOpacity: 1,
+            done: false,
+          })
+          spawnedCount++
+        }
+      }
+
+      // Swap the whole array once → single Vue reactive trigger per frame
+      projectiles.value = nextProjectiles
+      // ──────────────────────────────────────────────────────────────────────────
+
       championRenderPositions.value = newPositions
       animFrame = requestAnimationFrame(animate)
     }
@@ -313,6 +396,7 @@ export default defineComponent({
       auraSize,
       formatNumber,
       potentialMaterial,
+      projectiles,
     }
   },
 })
@@ -571,6 +655,23 @@ export default defineComponent({
 .champion-dmg-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(-54px) scale(0.8);
+}
+
+/* ── Angriffs-Projektile ──────────────────────────────────────────────────── */
+.champion-projectile {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 59;
+  will-change: left, top;
+  background: radial-gradient(circle, #ffe080 0%, #ff8020 55%, #cc3000 100%);
+  box-shadow:
+    0 0 6px 2px rgba(255, 160, 20, 0.9),
+    0 0 14px 4px rgba(255, 80, 0, 0.6),
+    0 0 28px 8px rgba(200, 40, 0, 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {

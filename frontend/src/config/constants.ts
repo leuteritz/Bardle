@@ -170,7 +170,7 @@ export const MAX_ACTIVE_EXPEDITIONS = 3
 // Champion Combat System
 export const CHAMPION_DETECT_RADIUS = 350 // px from screen center; planet within this range → champions can hit it
 export const ATTACK_RANGE = 110 // px from planet center; kept for reference (unused in orbit mode)
-export const CHAMPION_ORBIT_HIT_RANGE = 180 // px: champion orbit position must be within this of planet to deal damage
+export const CHAMPION_ORBIT_HIT_RANGE = 220 // px: champion orbit position must be within this of planet to deal damage
 export const CHAMPION_DPS_BASE = 40 // damage per champion per second
 export const PLAYER_MAX_HP_BASE = 100
 export const PLAYER_HP_REGEN_PER_SEC = 1
