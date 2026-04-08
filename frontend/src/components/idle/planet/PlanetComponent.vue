@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { drawPlanet } from '@/utils/planetDraw'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import PlanetLabelComponent from './PlanetLabelComponent.vue'
@@ -65,6 +65,10 @@ const svgClasses = computed(() => ({
 }))
 
 const svgStyle = computed(() => ({
+  position: 'absolute' as const,
+  top: '0',
+  left: '0',
+  transformOrigin: '0px 0px', // ← neu: Scale-Pivot auf den Ursprung setzen
   transform: props.transform,
   opacity: props.opacity,
   pointerEvents: (props.isRescue ? 'auto' : 'none') as 'auto' | 'none',
@@ -75,11 +79,35 @@ function handleClick() {
   if (props.isRescue) bossStore.openBossModal(props.id)
 }
 
-onMounted(() => {
+function redrawPlanet() {
   if (!svgEl.value) return
   const r = props.size / 2
   drawPlanet(svgEl.value, props.id, props.planetType, r, r, r)
+}
+
+onMounted(() => {
+  redrawPlanet()
 })
+
+// Hauptfix: isGalaxyBoss false → true bedeutet Vue patcht den SVG-Inhalt
+// (fügt den <circle> ein) und überschreibt dabei die drawPlanet-Elemente.
+// Nach dem nächsten Render-Tick neu zeichnen.
+watch(
+  () => props.isGalaxyBoss,
+  async () => {
+    await nextTick()
+    redrawPlanet()
+  },
+)
+
+// Absicherung für zukünftige Fälle wo der Typ sich ändert
+watch(
+  () => props.planetType,
+  async () => {
+    await nextTick()
+    redrawPlanet()
+  },
+)
 </script>
 
 <style scoped>
@@ -120,7 +148,8 @@ onMounted(() => {
   50% {
     opacity: 0.9;
     scale: 1.25;
-    filter: drop-shadow(0 0 28px rgba(100, 255, 150, 1)) drop-shadow(0 0 55px rgba(200, 255, 210, 0.7));
+    filter: drop-shadow(0 0 28px rgba(100, 255, 150, 1))
+      drop-shadow(0 0 55px rgba(200, 255, 210, 0.7));
   }
   100% {
     opacity: 0;

@@ -11,29 +11,62 @@
     <div class="nebula nebula-3"></div>
     <div class="nebula nebula-4"></div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
-    <PlanetComponent
-      v-for="planet in planets"
-      :key="planet.id"
-      :id="planet.id"
-      :size="planet.size"
-      :planetType="planet.type"
-      :transform="planet.transform"
-      :opacity="planet.opacity"
-      :isRescue="planet.isRescue"
-      :isGalaxyBoss="planet.isGalaxyBoss"
-      :labelData="planet.labelData"
-      :animState="planet.animState"
-    />
+    <!-- Planeten NICHT mehr hier – sie würden immer bei z-index 1 bleiben -->
   </div>
+
+  <!-- ① Back-Layer: Planeten HINTER der Sonne (z-index 3, unter Sonne z-5) -->
+  <Teleport to="body">
+    <div class="planet-orbit-layer planet-orbit-back" aria-hidden="true">
+      <PlanetComponent
+        v-for="planet in backPlanets"
+        :key="planet.id"
+        :id="planet.id"
+        :size="planet.size"
+        :planetType="planet.type"
+        :transform="planet.transform"
+        :opacity="planet.opacity"
+        :isRescue="planet.isRescue"
+        :isGalaxyBoss="planet.isGalaxyBoss"
+        :labelData="null"
+        :animState="planet.animState"
+      />
+    </div>
+  </Teleport>
+
+  <!-- ② Front-Layer: Planeten VOR der Sonne (z-index 7, über Sonne z-5, unter Champion-Front z-6... -->
+  <!-- Hinweis: Front-Planeten bei z-7 → über ChampionOrbit-Front (z-6) anpassen falls nötig -->
+  <Teleport to="body">
+    <div class="planet-orbit-layer planet-orbit-front" aria-hidden="true">
+      <PlanetComponent
+        v-for="planet in frontPlanets"
+        :key="planet.id"
+        :id="planet.id"
+        :size="planet.size"
+        :planetType="planet.type"
+        :transform="planet.transform"
+        :opacity="planet.opacity"
+        :isRescue="planet.isRescue"
+        :isGalaxyBoss="planet.isGalaxyBoss"
+        :labelData="planet.labelData"
+        :animState="planet.animState"
+      />
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useStarBackground } from '../../composables/useStarBackground'
 import { usePlanetBackground } from '../../composables/usePlanetBackground'
 import PlanetComponent from './planet/PlanetComponent.vue'
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
 const { planets } = usePlanetBackground(starsContainer)
+
+// Tiefe bestimmen: planetY relativ zur Bildschirmmitte
+// isBehind = Planet ist im oberen Orbit-Bereich (hinter Sonne)
+const backPlanets = computed(() => planets.value.filter((p) => p.isBehind === true))
+const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== true))
 </script>
 
 <style>
@@ -83,6 +116,20 @@ const { planets } = usePlanetBackground(starsContainer)
   }
 }
 
+/* Planet-Orbit Layer – außerhalb des .stars-Containers via Teleport */
+.planet-orbit-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+/* Sonne hat z-index: 5 → Planeten darunter/darüber */
+.planet-orbit-back {
+  z-index: 3;
+}
+.planet-orbit-front {
+  z-index: 7;
+}
+
 /* ─── Nebula ──────────────────────────────────────────────────────────────── */
 
 .nebula {
@@ -98,7 +145,11 @@ const { planets } = usePlanetBackground(starsContainer)
   height: 500px;
   top: -10%;
   left: 5%;
-  background: radial-gradient(ellipse, var(--nebula-1-color, rgba(88, 28, 135, 0.07)) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-1-color, rgba(88, 28, 135, 0.07)) 0%,
+    transparent 70%
+  );
   animation: nebulaFloat1 90s ease-in-out infinite;
 }
 .nebula-2 {
@@ -106,7 +157,11 @@ const { planets } = usePlanetBackground(starsContainer)
   height: 550px;
   top: 40%;
   right: -5%;
-  background: radial-gradient(ellipse, var(--nebula-2-color, rgba(6, 78, 130, 0.06)) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-2-color, rgba(6, 78, 130, 0.06)) 0%,
+    transparent 70%
+  );
   animation: nebulaFloat2 110s ease-in-out infinite;
 }
 .nebula-3 {
@@ -114,7 +169,11 @@ const { planets } = usePlanetBackground(starsContainer)
   height: 600px;
   bottom: -5%;
   left: 30%;
-  background: radial-gradient(ellipse, var(--nebula-3-color, rgba(14, 116, 144, 0.055)) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-3-color, rgba(14, 116, 144, 0.055)) 0%,
+    transparent 70%
+  );
   animation: nebulaFloat3 80s ease-in-out infinite;
 }
 .nebula-4 {
@@ -122,7 +181,11 @@ const { planets } = usePlanetBackground(starsContainer)
   height: 450px;
   top: 20%;
   left: 45%;
-  background: radial-gradient(ellipse, var(--nebula-4-color, rgba(131, 24, 67, 0.05)) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-4-color, rgba(131, 24, 67, 0.05)) 0%,
+    transparent 70%
+  );
   animation: nebulaFloat4 125s ease-in-out infinite;
 }
 

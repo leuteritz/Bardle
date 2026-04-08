@@ -179,4 +179,4 @@ export const PLAYER_HP_LOSS_ON_ENRAGE = 25
 // Champion Orbit
 export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32
-export const ORBIT_RADIUS_SCALE = 1.0
+export const ORBIT_RADIUS_SCALE = 1.8

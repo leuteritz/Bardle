@@ -193,13 +193,26 @@ export interface PlanetItem {
   elapsed: number
   removeTimeout: ReturnType<typeof setTimeout> | null
 
+  // Orbit state
   orbiting?: boolean
   approaching?: boolean
   orbitAngle?: number
-  orbitRadius?: number
-  orbitSpeed?: number
   orbitCx?: number
   orbitCy?: number
+
+  // ── NEU: 3D-Ellipsen-Orbit (ersetzt orbitRadius + orbitSpeed) ──
+  orbitRadiusX?: number
+  orbitRadiusY?: number
+  tiltRad?: number
+  baseSpeed?: number
+  direction?: 1 | -1
+  currentRadiusX?: number // für Fly-in-Spirale
+  currentRadiusY?: number
+  isBehind?: boolean // für Back/Front-Layer-Aufteilung
+
+  // Alte Felder die nicht mehr gebraucht werden – optional behalten
+  orbitRadius?: number
+  orbitSpeed?: number
   approachFromX?: number
   approachFromY?: number
   approachToX?: number
@@ -211,7 +224,6 @@ export interface PlanetItem {
   isRescue: boolean
   isGalaxyBoss: boolean
   labelData: LabelData | null
-
   animState: 'normal' | 'exploding' | 'saved'
 }
 
@@ -401,7 +413,13 @@ export interface Material {
 
 // ── Battle Shop System ───────────────────────────────────
 export interface ShopItemEffect {
-  type: 'winChanceBonus' | 'doubleLpOnWin' | 'synergyPower' | 'scoutOpponent' | 'bardBasePower' | 'coinDropBonus'
+  type:
+    | 'winChanceBonus'
+    | 'doubleLpOnWin'
+    | 'synergyPower'
+    | 'scoutOpponent'
+    | 'bardBasePower'
+    | 'coinDropBonus'
   value: number
 }
 

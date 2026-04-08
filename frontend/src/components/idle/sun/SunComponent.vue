@@ -3,7 +3,7 @@
     <div class="sun-atmosphere"></div>
     <div class="sun-corona"></div>
 
-    <!-- Decorative elliptical orbit rings (from combatStore champions) -->
+    <!-- Orbit-Ringe der Champions -->
     <svg class="orbit-paths" viewBox="0 0 360 360">
       <ellipse
         v-for="c in combatStore.champions"
@@ -20,73 +20,114 @@
       />
     </svg>
 
+    <!-- Dynamische Strahlen -->
     <svg class="sun-rays-dynamic" viewBox="-180 -180 360 360">
       <line
         v-for="ray in dynamicRays"
         :key="ray.id"
-        :x1="Math.cos(ray.angle) * 68"
-        :y1="Math.sin(ray.angle) * 68"
+        :x1="Math.cos(ray.angle) * 72"
+        :y1="Math.sin(ray.angle) * 72"
         :x2="Math.cos(ray.angle) * ray.currentLength"
         :y2="Math.sin(ray.angle) * ray.currentLength"
-        :stroke="`rgba(255, 230, 150, ${ray.opacity})`"
+        :stroke="`rgba(255, 232, 155, ${ray.opacity})`"
         :stroke-width="ray.width"
         stroke-linecap="round"
       />
     </svg>
 
-    <!-- Differential-rotation surface bands (equator faster than poles) -->
+    <!-- Kugel / Volumen -->
+    <div class="sun-core"></div>
+    <div class="sun-volume sun-volume--light"></div>
+    <div class="sun-volume sun-volume--shade"></div>
+    <div class="sun-rim-glow"></div>
+
+    <!-- Oberfläche -->
     <div class="sun-surface-wrap">
       <div class="s-band s-band--eq"></div>
       <div class="s-band s-band--n1"></div>
       <div class="s-band s-band--s1"></div>
+      <div class="s-band s-band--n2"></div>
+      <div class="s-band s-band--s2"></div>
     </div>
 
-    <!-- Outer chromosphere ring (counter-rotation) -->
+    <!-- Chromosphäre -->
     <div class="sun-chromosphere sun-chromosphere--outer"></div>
-    <!-- Inner chromosphere ring (faster forward rotation) -->
     <div class="sun-chromosphere sun-chromosphere--inner"></div>
 
-    <div class="sun-core"></div>
-    <div class="sun-flare"></div>
-
-    <!-- 3-D projected sunspots — the primary rotation indicator -->
+    <!-- Flecken / Faculae mit 3D-Projektion -->
     <svg class="sun-spots-svg" viewBox="0 0 360 360">
       <defs>
         <clipPath id="sun-sphere-clip">
           <circle cx="180" cy="180" r="108" />
         </clipPath>
-        <filter id="sf-blur-penumbra" x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="2.8" />
+
+        <filter id="sf-blur-facula" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="4.2" />
         </filter>
+
+        <filter id="sf-blur-penumbra" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="2.6" />
+        </filter>
+
         <filter id="sf-blur-umbra" x="-60%" y="-60%" width="220%" height="220%">
-          <feGaussianBlur stdDeviation="1.2" />
+          <feGaussianBlur stdDeviation="1.1" />
+        </filter>
+
+        <filter id="sf-terminator-blur" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="8" />
         </filter>
       </defs>
 
       <g clip-path="url(#sun-sphere-clip)">
-        <!-- Penumbra (outer, diffuse) -->
-        <circle
+        <!-- Helle Faculae, besonders gut nahe Rand -->
+        <ellipse
+          v-for="s in sunspotPositions"
+          :key="'fac-' + s.id"
+          :cx="s.x - (1 - s.depth) * 7"
+          :cy="s.y - 2"
+          :rx="s.faculaRx"
+          :ry="s.faculaRy"
+          :fill="`rgba(255, 240, 180, ${s.faculaOpacity})`"
+          filter="url(#sf-blur-facula)"
+        />
+
+        <!-- Penumbra -->
+        <ellipse
           v-for="s in sunspotPositions"
           :key="'pen-' + s.id"
           :cx="s.x"
           :cy="s.y"
-          :r="s.size * s.scale"
-          :fill="`rgba(115, 48, 0, ${s.depth * 0.7})`"
+          :rx="s.rx"
+          :ry="s.ry"
+          :fill="`rgba(120, 50, 0, ${s.penumbraOpacity})`"
           filter="url(#sf-blur-penumbra)"
         />
-        <!-- Umbra (inner, dark core) -->
-        <circle
+
+        <!-- Umbra -->
+        <ellipse
           v-for="s in sunspotPositions"
           :key="'umb-' + s.id"
           :cx="s.x"
           :cy="s.y"
-          :r="s.size * s.scale * 0.5"
-          :fill="`rgba(38, 8, 0, ${s.depth * 0.92})`"
+          :rx="s.rx * 0.46"
+          :ry="s.ry * 0.5"
+          :fill="`rgba(34, 7, 0, ${s.umbraOpacity})`"
           filter="url(#sf-blur-umbra)"
+        />
+
+        <!-- Terminator / leichte Volumenschattierung -->
+        <ellipse
+          cx="195"
+          cy="184"
+          rx="78"
+          ry="98"
+          fill="rgba(70, 15, 0, 0.10)"
+          filter="url(#sf-terminator-blur)"
         />
       </g>
     </svg>
 
+    <div class="sun-flare"></div>
   </div>
 </template>
 
@@ -102,7 +143,6 @@ interface DynamicRay {
   speed: number
   opacity: number
   width: number
-  innerRadius: number
 }
 
 interface SunspotDef {
@@ -115,9 +155,14 @@ interface SunspotPos {
   id: number
   x: number
   y: number
-  size: number
-  scale: number
+  rx: number
+  ry: number
   depth: number
+  penumbraOpacity: number
+  umbraOpacity: number
+  faculaRx: number
+  faculaRy: number
+  faculaOpacity: number
 }
 
 export default defineComponent({
@@ -125,75 +170,116 @@ export default defineComponent({
   setup() {
     const combatStore = useCombatStore()
 
-    const RAY_COUNT = 15
-    const MIN_LENGTH = 70
-    const MAX_LENGTH = 250
     const CENTER = 180
-    const SOLAR_RADIUS = 92
-    const SOLAR_ROT_SPEED = 0.000088
+    const DISC_RADIUS = 108
+
+    const RAY_COUNT = 18
+    const MIN_LENGTH = 78
+    const MAX_LENGTH = 238
+    const TARGET_INTERVAL = 1500
+
+    // Etwas langsamer und ruhiger, dafür räumlicher
+    const SOLAR_ROT_SPEED = 0.000082
+
+    // Blick auf die Kugel: leichte Neigung
+    const AXIAL_TILT = -0.42
+    const Y_FLATTENING = 0.9
 
     const SOLAR_SPOTS: SunspotDef[] = [
-      { lat: 0.3, lonOffset: 0.0, size: 8.5 },
-      { lat: -0.24, lonOffset: 1.3, size: 6 },
-      { lat: 0.4, lonOffset: 2.55, size: 5 },
-      { lat: -0.33, lonOffset: 3.8, size: 7.5 },
-      { lat: 0.16, lonOffset: 5.05, size: 9 },
-      { lat: -0.13, lonOffset: 0.75, size: 4 },
-      { lat: 0.27, lonOffset: 4.35, size: 5 },
-      { lat: -0.2, lonOffset: 2.0, size: 6 },
+      { lat: 0.32, lonOffset: 0.0, size: 10.5 },
+      { lat: -0.28, lonOffset: 0.88, size: 6.2 },
+      { lat: 0.44, lonOffset: 1.75, size: 5.6 },
+      { lat: -0.38, lonOffset: 2.7, size: 8.2 },
+      { lat: 0.12, lonOffset: 3.82, size: 10.8 },
+      { lat: -0.1, lonOffset: 4.68, size: 4.4 },
+      { lat: 0.26, lonOffset: 5.26, size: 6.1 },
+      { lat: -0.22, lonOffset: 5.95, size: 7.0 },
     ]
 
     const dynamicRays = ref<DynamicRay[]>(
       Array.from({ length: RAY_COUNT }, (_, i) => {
         const angle = (i / RAY_COUNT) * Math.PI * 2
         const len = MIN_LENGTH + Math.random() * (MAX_LENGTH - MIN_LENGTH)
+
         return {
           id: i,
           angle,
           currentLength: len,
           targetLength: len,
           speed: 0.008 + Math.random() * 0.012,
-          opacity: 0.8 - ((len - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.65,
-          width: 1.5 + Math.random() * 1.5,
-          innerRadius: 68,
+          opacity: 0.78 - ((len - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.62,
+          width: 1.3 + Math.random() * 1.6,
         }
       }),
     )
 
     const sunRotation = ref(0)
 
-    const sunspotPositions = computed<SunspotPos[]>(() => {
-      const result: SunspotPos[] = []
-      SOLAR_SPOTS.forEach((s, i) => {
-        const lon = sunRotation.value + s.lonOffset
-        const cosLat = Math.cos(s.lat)
-        const depth = cosLat * Math.cos(lon)
-        if (depth <= 0) return
+    function projectSunspot(spot: SunspotDef, id: number): SunspotPos | null {
+      const latSpeedFactor = 1.14 - Math.min(Math.abs(spot.lat) / 0.5, 1) * 0.34
+      const lon = sunRotation.value * latSpeedFactor + spot.lonOffset
 
-        const x = CENTER + SOLAR_RADIUS * cosLat * Math.sin(lon)
-        const y = CENTER - SOLAR_RADIUS * Math.sin(s.lat)
-        const scale = 0.3 + 0.7 * depth
+      const sinLat = Math.sin(spot.lat)
+      const cosLat = Math.cos(spot.lat)
 
-        result.push({ id: i, x, y, size: s.size, scale, depth })
-      })
-      return result
-    })
+      // Kugelkoordinaten
+      const x3 = cosLat * Math.sin(lon)
+      const y3 = sinLat
+      const z3 = cosLat * Math.cos(lon)
 
-    let animFrame: number
+      // Neigung der Sonnenachse
+      const cosT = Math.cos(AXIAL_TILT)
+      const sinT = Math.sin(AXIAL_TILT)
+
+      const yTilt = y3 * cosT - z3 * sinT
+      const zTilt = y3 * sinT + z3 * cosT
+
+      if (zTilt <= 0) return null
+
+      const x = CENTER + DISC_RADIUS * x3
+      const y = CENTER - DISC_RADIUS * yTilt * Y_FLATTENING
+
+      // Stärkeres Foreshortening an den Rändern
+      const rx = spot.size * (0.34 + 0.9 * zTilt)
+      const ry = spot.size * (0.56 + 0.66 * zTilt)
+
+      const depth = Math.max(0, Math.min(1, zTilt))
+      const limbBoost = 1 - depth
+
+      return {
+        id,
+        x,
+        y,
+        rx,
+        ry,
+        depth,
+        penumbraOpacity: 0.16 + depth * 0.38,
+        umbraOpacity: 0.28 + depth * 0.62,
+        faculaRx: spot.size * (1.55 - depth * 0.32),
+        faculaRy: spot.size * (0.9 - depth * 0.12),
+        faculaOpacity: 0.04 + limbBoost * 0.17,
+      }
+    }
+
+    const sunspotPositions = computed<SunspotPos[]>(
+      () => SOLAR_SPOTS.map((spot, i) => projectSunspot(spot, i)).filter(Boolean) as SunspotPos[],
+    )
+
+    let animFrame = 0
     let lastTargetUpdate = 0
     let lastTimestamp = 0
-    const TARGET_INTERVAL = 1500
 
-    function animateRays(timestamp: number) {
+    function animate(timestamp: number) {
       if (timestamp - lastTargetUpdate > TARGET_INTERVAL) {
         dynamicRays.value.forEach((ray) => {
           ray.targetLength = MIN_LENGTH + Math.random() * (MAX_LENGTH - MIN_LENGTH)
         })
         lastTargetUpdate = timestamp
       }
+
       dynamicRays.value.forEach((ray) => {
         ray.currentLength += (ray.targetLength - ray.currentLength) * ray.speed
-        ray.opacity = 0.8 - ((ray.currentLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.65
+        ray.opacity = 0.78 - ((ray.currentLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.62
       })
 
       const dt = lastTimestamp === 0 ? 0 : timestamp - lastTimestamp
@@ -201,20 +287,21 @@ export default defineComponent({
 
       sunRotation.value += SOLAR_ROT_SPEED * dt
 
-      animFrame = requestAnimationFrame(animateRays)
+      animFrame = requestAnimationFrame(animate)
     }
 
     onMounted(() => {
-      animFrame = requestAnimationFrame(animateRays)
+      animFrame = requestAnimationFrame(animate)
     })
+
     onUnmounted(() => {
       cancelAnimationFrame(animFrame)
     })
 
     return {
+      combatStore,
       dynamicRays,
       sunspotPositions,
-      combatStore,
       Math,
     }
   },
@@ -246,52 +333,52 @@ export default defineComponent({
 
 .sun-atmosphere {
   position: absolute;
-  inset: -120px;
+  inset: -122px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    transparent 30%,
-    rgba(255, 140, 20, 0.04) 50%,
-    rgba(255, 110, 0, 0.03) 65%,
+    transparent 28%,
+    rgba(255, 138, 18, 0.04) 48%,
+    rgba(255, 110, 0, 0.03) 64%,
     rgba(200, 80, 0, 0.015) 80%,
     transparent 100%
   );
-  animation: corona-breathe 7s ease-in-out infinite;
-  filter: blur(4px);
+  animation: corona-breathe 8s ease-in-out infinite;
+  filter: blur(5px);
   z-index: 1;
 }
 
 .sun-corona {
   position: absolute;
-  inset: -90px;
+  inset: -92px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    transparent 20%,
-    rgba(255, 180, 60, 0.06) 35%,
-    rgba(255, 200, 80, 0.1) 48%,
-    rgba(255, 150, 30, 0.04) 62%,
-    rgba(200, 100, 0, 0.02) 78%,
+    transparent 18%,
+    rgba(255, 182, 60, 0.05) 34%,
+    rgba(255, 205, 92, 0.11) 47%,
+    rgba(255, 152, 30, 0.045) 63%,
+    rgba(200, 100, 0, 0.02) 79%,
     transparent 100%
   );
-  animation: corona-breathe 5s ease-in-out infinite;
-  z-index: 1;
+  animation: corona-breathe 5.5s ease-in-out infinite;
+  z-index: 2;
 }
 
 @keyframes corona-breathe {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.7;
+    opacity: 0.72;
     filter: hue-rotate(0deg);
   }
-  33% {
-    transform: scale(1.1);
-    opacity: 0.9;
-    filter: hue-rotate(-10deg);
+  35% {
+    transform: scale(1.09);
+    opacity: 0.92;
+    filter: hue-rotate(-9deg);
   }
-  66% {
-    transform: scale(1.2);
+  68% {
+    transform: scale(1.18);
     opacity: 1;
     filter: hue-rotate(10deg);
   }
@@ -306,50 +393,137 @@ export default defineComponent({
   z-index: 3;
 }
 
+.sun-core {
+  position: absolute;
+  inset: 60px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 42% 36%,
+      /* ← war 38% 32%, näher an Mitte */ rgba(255, 255, 236, 0.92) 0%,
+      rgba(255, 247, 190, 0.78) 13%,
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 235, 120, 0.95) 0%,
+      rgba(255, 198, 50, 0.82) 38%,
+      rgba(230, 125, 12, 0.56) 68%,
+      rgba(150, 48, 0, 0.28) 88%,
+      transparent 100%
+    );
+  animation: core-pulse 3.6s ease-in-out infinite;
+  filter: blur(1.6px);
+  z-index: 5;
+}
+
+.sun-volume {
+  position: absolute;
+  inset: 60px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.sun-volume--light {
+  background: radial-gradient(
+    circle at 34% 28%,
+    rgba(255, 255, 230, 0.22) 0%,
+    rgba(255, 250, 220, 0.12) 18%,
+    rgba(255, 240, 180, 0.04) 34%,
+    transparent 52%
+  );
+  z-index: 6;
+}
+
+.sun-volume--shade {
+  background: radial-gradient(
+    circle at 60% 54%,
+    /* ← war 68% 58%, näher an Mitte */ transparent 0%,
+    transparent 52%,
+    rgba(100, 25, 0, 0.08) 72%,
+    /* ← schwächer */ rgba(50, 5, 0, 0.16) 100% /* ← schwächer */
+  );
+  z-index: 6;
+}
+
+.sun-rim-glow {
+  position: absolute;
+  inset: 58px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 22px rgba(255, 220, 130, 0.14),
+    inset 0 0 18px rgba(80, 12, 0, 0.1),
+    /* ← kein -10px -12px offset mehr */ 0 0 14px rgba(255, 190, 70, 0.18);
+  z-index: 6;
+}
+
+@keyframes core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: blur(1.6px) brightness(1);
+  }
+  25% {
+    transform: scale(1.05);
+    filter: blur(1.8px) brightness(1.1) saturate(1.15);
+  }
+  50% {
+    transform: scale(1.12);
+    filter: blur(2.6px) brightness(1.24);
+  }
+  75% {
+    transform: scale(1.03);
+    filter: blur(1.9px) brightness(1.08) saturate(0.95);
+  }
+}
+
 .sun-surface-wrap {
   position: absolute;
   inset: 62px;
   border-radius: 50%;
   overflow: hidden;
-  z-index: 4;
+  z-index: 6;
   pointer-events: none;
+  mix-blend-mode: soft-light;
 }
 
 .s-band {
   position: absolute;
-  left: -100%;
-  width: 300%;
+  left: -120%;
+  width: 340%;
+  border-radius: 999px;
+  filter: blur(2.2px);
 }
 
 .s-band--eq {
-  top: 42%;
-  height: 16%;
+  top: 40%;
+  height: 18%;
   background: linear-gradient(
     to right,
-    transparent 5%,
-    rgba(195, 78, 0, 0.16) 20%,
-    rgba(215, 88, 0, 0.22) 38%,
-    rgba(210, 84, 0, 0.2) 55%,
-    rgba(190, 74, 0, 0.15) 75%,
-    transparent 95%
+    transparent 4%,
+    rgba(195, 78, 0, 0.14) 18%,
+    rgba(220, 92, 0, 0.25) 36%,
+    rgba(214, 84, 0, 0.21) 56%,
+    rgba(188, 72, 0, 0.15) 78%,
+    transparent 96%
   );
-  animation: s-drift 19s linear infinite;
+  animation: s-drift 17s linear infinite;
 }
 
 .s-band--n1 {
-  top: 25%;
+  top: 24%;
   height: 11%;
   background: linear-gradient(
     to right,
     transparent 5%,
-    rgba(165, 58, 0, 0.11) 20%,
-    rgba(178, 64, 0, 0.16) 38%,
-    rgba(170, 60, 0, 0.13) 60%,
-    rgba(160, 54, 0, 0.09) 80%,
+    rgba(165, 58, 0, 0.09) 20%,
+    rgba(180, 64, 0, 0.15) 40%,
+    rgba(168, 58, 0, 0.12) 63%,
+    rgba(150, 48, 0, 0.08) 82%,
     transparent 95%
   );
-  animation: s-drift 24s linear infinite;
-  animation-delay: -9s;
+  animation: s-drift 23s linear infinite;
+  animation-delay: -8s;
 }
 
 .s-band--s1 {
@@ -358,14 +532,43 @@ export default defineComponent({
   background: linear-gradient(
     to right,
     transparent 5%,
-    rgba(165, 58, 0, 0.11) 20%,
-    rgba(178, 64, 0, 0.16) 38%,
-    rgba(170, 60, 0, 0.13) 60%,
-    rgba(160, 54, 0, 0.09) 80%,
+    rgba(165, 58, 0, 0.09) 20%,
+    rgba(180, 64, 0, 0.15) 40%,
+    rgba(168, 58, 0, 0.12) 63%,
+    rgba(150, 48, 0, 0.08) 82%,
     transparent 95%
   );
-  animation: s-drift 24s linear infinite;
-  animation-delay: -18s;
+  animation: s-drift 23s linear infinite;
+  animation-delay: -17s;
+}
+
+.s-band--n2 {
+  top: 14%;
+  height: 8%;
+  background: linear-gradient(
+    to right,
+    transparent 8%,
+    rgba(140, 45, 0, 0.06) 28%,
+    rgba(165, 56, 0, 0.11) 50%,
+    rgba(135, 44, 0, 0.05) 72%,
+    transparent 94%
+  );
+  animation: s-drift 29s linear infinite reverse;
+}
+
+.s-band--s2 {
+  top: 77%;
+  height: 8%;
+  background: linear-gradient(
+    to right,
+    transparent 8%,
+    rgba(140, 45, 0, 0.06) 28%,
+    rgba(165, 56, 0, 0.11) 50%,
+    rgba(135, 44, 0, 0.05) 72%,
+    transparent 94%
+  );
+  animation: s-drift 29s linear infinite reverse;
+  animation-delay: -11s;
 }
 
 @keyframes s-drift {
@@ -387,15 +590,15 @@ export default defineComponent({
   inset: 48px;
   background: radial-gradient(
     circle,
-    transparent 55%,
-    rgba(255, 110, 25, 0.5) 65%,
-    rgba(220, 70, 10, 0.6) 72%,
-    rgba(170, 40, 0, 0.3) 80%,
-    transparent 90%
+    transparent 56%,
+    rgba(255, 115, 25, 0.52) 65%,
+    rgba(220, 68, 10, 0.62) 72%,
+    rgba(170, 40, 0, 0.3) 81%,
+    transparent 91%
   );
-  animation: chrom-spin-rev 60s linear infinite reverse;
-  filter: blur(1.5px);
-  z-index: 4;
+  animation: chrom-spin-rev 64s linear infinite reverse;
+  filter: blur(1.4px);
+  z-index: 7;
 }
 
 .sun-chromosphere--inner {
@@ -403,14 +606,15 @@ export default defineComponent({
   background: radial-gradient(
     circle,
     transparent 60%,
-    rgba(255, 130, 20, 0.3) 70%,
-    rgba(200, 60, 5, 0.42) 76%,
-    rgba(150, 30, 0, 0.22) 84%,
+    rgba(255, 132, 20, 0.28) 70%,
+    rgba(200, 60, 5, 0.4) 76%,
+    rgba(150, 30, 0, 0.2) 84%,
     transparent 93%
   );
   animation: chrom-spin-fwd 34s linear infinite;
   filter: blur(1px);
-  z-index: 4;
+  z-index: 7;
+  transform-origin: 50% 50%;
 }
 
 @keyframes chrom-spin-rev {
@@ -431,87 +635,48 @@ export default defineComponent({
   }
 }
 
-.sun-core {
-  position: absolute;
-  inset: 60px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(255, 255, 230, 0.97) 0%,
-    rgba(255, 245, 160, 0.88) 22%,
-    rgba(255, 210, 70, 0.75) 45%,
-    rgba(230, 130, 15, 0.5) 68%,
-    rgba(160, 55, 0, 0.25) 85%,
-    transparent 100%
-  );
-  animation: core-pulse 3s ease-in-out infinite;
-  filter: blur(2px);
-  z-index: 5;
-}
-
-@keyframes core-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    filter: blur(2px) brightness(1);
-  }
-  25% {
-    transform: scale(1.08);
-    filter: blur(2px) brightness(1.15) saturate(1.2);
-  }
-  50% {
-    transform: scale(1.18);
-    filter: blur(3px) brightness(1.35);
-  }
-  75% {
-    transform: scale(1.05);
-    filter: blur(2px) brightness(1.1) saturate(0.9);
-  }
-}
-
 .sun-spots-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 6;
+  z-index: 8;
 }
 
 .sun-flare {
   position: absolute;
-  top: 30%;
-  left: 35%;
-  width: 40px;
-  height: 40px;
+  top: 29%;
+  left: 34%;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 210, 0.7) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 215, 0.66) 0%, transparent 72%);
   animation: flare-drift 6s ease-in-out infinite;
-  filter: blur(1px);
-  z-index: 7;
+  filter: blur(1.1px);
+  z-index: 9;
 }
 
 @keyframes flare-drift {
   0% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.5;
+    opacity: 0.46;
   }
   25% {
-    transform: translate(8px, -5px) scale(1.3);
-    opacity: 0.8;
+    transform: translate(9px, -6px) scale(1.28);
+    opacity: 0.82;
   }
   50% {
-    transform: translate(12px, 3px) scale(1.1);
-    opacity: 0.6;
+    transform: translate(13px, 2px) scale(1.08);
+    opacity: 0.62;
   }
   75% {
-    transform: translate(-5px, 5px) scale(0.9);
+    transform: translate(-5px, 6px) scale(0.92);
     opacity: 0.4;
   }
   100% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.5;
+    opacity: 0.46;
   }
 }
-
 </style>
