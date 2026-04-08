@@ -165,15 +165,54 @@ export type PlanetType =
   | 'jungle'
   | 'ringed'
 
+export interface LabelData {
+  planetId: string
+  bossName: string
+  currentHP: number
+  maxHP: number
+  reward: number | null
+  materialImage?: string
+  materialName?: string
+  championImage?: string
+  championName?: string
+  isGalaxyBoss: boolean
+  transform: string
+}
+
 export interface PlanetItem {
   id: string
-  el: SVGSVGElement
+  type: PlanetType
+  size: number
   x: number
   y: number
-  vx: number
-  vy: number
-  type: PlanetType
-  isRescueTarget: boolean
+  scale: number
+  scaleEnd: number
+  opacity: number
+  transform: string
+  lifetime: number
+  elapsed: number
+  removeTimeout: ReturnType<typeof setTimeout> | null
+
+  orbiting?: boolean
+  approaching?: boolean
+  orbitAngle?: number
+  orbitRadius?: number
+  orbitSpeed?: number
+  orbitCx?: number
+  orbitCy?: number
+  approachFromX?: number
+  approachFromY?: number
+  approachToX?: number
+  approachToY?: number
+  approachDuration?: number
+  approachElapsed?: number
+
+  name?: string
+  isRescue: boolean
+  isGalaxyBoss: boolean
+  labelData: LabelData | null
+
+  animState: 'normal' | 'exploding' | 'saved'
 }
 
 export interface PlanetRescueEvent {

@@ -11,19 +11,18 @@
     <div class="nebula nebula-3"></div>
     <div class="nebula nebula-4"></div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
-    <PlanetLabelComponent
-      v-for="[id, label] in planetLabels"
-      :key="id"
-      :style="{ transform: label.transform }"
-      :bossName="label.bossName"
-      :currentHP="label.currentHP"
-      :maxHP="label.maxHP"
-      :reward="label.reward"
-      :materialImage="label.materialImage"
-      :materialName="label.materialName"
-      :championImage="label.championImage"
-      :championName="label.championName"
-      :isGalaxyBoss="label.isGalaxyBoss"
+    <PlanetComponent
+      v-for="planet in planets"
+      :key="planet.id"
+      :id="planet.id"
+      :size="planet.size"
+      :planetType="planet.type"
+      :transform="planet.transform"
+      :opacity="planet.opacity"
+      :isRescue="planet.isRescue"
+      :isGalaxyBoss="planet.isGalaxyBoss"
+      :labelData="planet.labelData"
+      :animState="planet.animState"
     />
   </div>
 </template>
@@ -31,10 +30,10 @@
 <script setup lang="ts">
 import { useStarBackground } from '../../composables/useStarBackground'
 import { usePlanetBackground } from '../../composables/usePlanetBackground'
-import PlanetLabelComponent from './planet/PlanetLabelComponent.vue'
+import PlanetComponent from './planet/PlanetComponent.vue'
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
-const { planetLabels } = usePlanetBackground(starsContainer)
+const { planets } = usePlanetBackground(starsContainer)
 </script>
 
 <style>
@@ -238,43 +237,6 @@ const { planetLabels } = usePlanetBackground(starsContainer)
   50% {
     filter: drop-shadow(0 0 18px rgba(210, 80, 255, 1))
       drop-shadow(0 0 40px rgba(160, 40, 255, 0.75)) drop-shadow(0 0 60px rgba(100, 0, 200, 0.35));
-  }
-}
-
-@keyframes planetExplode {
-  0% {
-    opacity: 1;
-    scale: 1;
-    filter: none;
-  }
-  30% {
-    opacity: 0.85;
-    scale: 1.5;
-    filter: brightness(3) saturate(3);
-  }
-  100% {
-    opacity: 0;
-    scale: 2.2;
-    filter: brightness(0.5);
-  }
-}
-
-@keyframes planetSaved {
-  0% {
-    opacity: 1;
-    scale: 1;
-    filter: drop-shadow(0 0 8px rgba(100, 255, 150, 0.9));
-  }
-  50% {
-    opacity: 0.9;
-    scale: 1.25;
-    filter: drop-shadow(0 0 28px rgba(100, 255, 150, 1))
-      drop-shadow(0 0 55px rgba(200, 255, 210, 0.7));
-  }
-  100% {
-    opacity: 0;
-    scale: 1.6;
-    filter: drop-shadow(0 0 4px rgba(100, 255, 150, 0.3));
   }
 }
 

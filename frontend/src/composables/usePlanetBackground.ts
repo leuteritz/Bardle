@@ -9,7 +9,6 @@ import {
   PLANET_SPAWN_INTERVAL_MAX,
 } from '../config/constants'
 import {
-  NS,
   drawPlanet,
   pickConfig,
   type PlanetType,
@@ -18,49 +17,7 @@ import {
 } from '../utils/planetDraw'
 import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
 import { MATERIALS } from '../config/materials'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface PlanetItem {
-  id: string
-  el: SVGSVGElement
-  x: number
-  y: number
-  scale: number
-  scaleEnd: number
-  lifetime: number
-  elapsed: number
-  removeTimeout: ReturnType<typeof setTimeout> | null
-  orbiting?: boolean
-  orbitAngle?: number
-  orbitRadius?: number
-  orbitSpeed?: number
-  orbitCx?: number
-  orbitCy?: number
-  name?: string
-  clickHandler?: () => void
-  approaching?: boolean
-  approachFromX?: number
-  approachFromY?: number
-  approachToX?: number
-  approachToY?: number
-  approachDuration?: number
-  approachElapsed?: number
-}
-
-interface LabelData {
-  planetId: string
-  bossName: string
-  currentHP: number
-  maxHP: number
-  reward: number | null
-  materialImage?: string
-  materialName?: string
-  championImage?: string
-  championName?: string
-  isGalaxyBoss: boolean
-  transform: string
-}
+import type { PlanetItem, LabelData } from '../types'
 
 // Re-export for consumers (avoids unused import warnings)
 export type { PlanetType, PlanetTypeConfig }
@@ -92,30 +49,27 @@ function getViewportEdgePoint(
 
 export function usePlanetBackground(
   container: Ref<HTMLElement | null>,
-): { planetLabels: Ref<Map<string, LabelData>> } {
+): { planets: Ref<PlanetItem[]> } {
   const planetEventStore = usePlanetEventStore()
   const bossStore = usePlanetBossStore()
 
-  const planetLabels = ref<Map<string, LabelData>>(new Map())
-  const planets: PlanetItem[] = []
+  const planets = ref<PlanetItem[]>([])
   const timeouts: ReturnType<typeof setTimeout>[] = []
   let spawnTimeout: ReturnType<typeof setTimeout> | null = null
   let animFrame = 0
   let lastTimestamp = 0
 
   function removePlanet(id: string): void {
-    const idx = planets.findIndex((p) => p.id === id)
+    const idx = planets.value.findIndex((p) => p.id === id)
     if (idx === -1) return
-    const item = planets[idx]
+    const item = planets.value[idx]
     if (item.removeTimeout !== null) clearTimeout(item.removeTimeout)
-    if (container.value?.contains(item.el)) container.value.removeChild(item.el)
-    planetLabels.value.delete(id)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
     }
     activePlanetPositions.delete(id)
-    planets.splice(idx, 1)
+    planets.value.splice(idx, 1)
   }
 
   function spawnPlanet(): string {
@@ -143,31 +97,26 @@ export function usePlanetBackground(
     const scaleEnd = 0.85 + Math.random() * 0.75
 
     const id = `planet-${++planetIdCounter}`
-    const svg = document.createElementNS(NS, 'svg')
-    svg.setAttribute('width', String(size))
-    svg.setAttribute('height', String(size))
-    svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
-    svg.classList.add('planet')
-    svg.dataset.planetId = id
-    svg.style.opacity = '0'
-
-    drawPlanet(svg, id, config.type, r, r, r)
-
-    svg.style.transform = `translate(${x}px,${y}px) scale(0.05)`
-    container.value.appendChild(svg)
 
     const item: PlanetItem = {
       id,
-      el: svg,
+      type: config.type,
+      size,
       x,
       y,
       scale: 0.05,
       scaleEnd,
+      opacity: 0,
+      transform: `translate(${x}px,${y}px) scale(0.05)`,
       lifetime,
       elapsed: 0,
       removeTimeout: null,
+      isRescue: false,
+      isGalaxyBoss: false,
+      labelData: null,
+      animState: 'normal',
     }
-    planets.push(item)
+    planets.value.push(item)
     return id
   }
 
@@ -192,29 +141,17 @@ export function usePlanetBackground(
     const spawnY = edgeCy - r
 
     const id = `planet-${++planetIdCounter}`
-    const svg = document.createElementNS(NS, 'svg')
-    svg.setAttribute('width', String(size))
-    svg.setAttribute('height', String(size))
-    svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
-    svg.classList.add('planet')
-    svg.dataset.planetId = id
-    svg.style.opacity = '0'
-    svg.style.transition = 'opacity 0.5s ease'
-
-    drawPlanet(svg, id, config.type, r, r, r)
-    svg.style.transform = `translate(${spawnX}px, ${spawnY}px)`
-    container.value.appendChild(svg)
-    requestAnimationFrame(() => {
-      svg.style.opacity = '0.92'
-    })
 
     const item: PlanetItem = {
       id,
-      el: svg,
+      type: config.type,
+      size,
       x: spawnX,
       y: spawnY,
       scale: 1,
       scaleEnd: 1,
+      opacity: 0,
+      transform: `translate(${spawnX}px,${spawnY}px)`,
       lifetime: Infinity,
       elapsed: 0,
       removeTimeout: null,
@@ -232,49 +169,35 @@ export function usePlanetBackground(
       orbitCx: cx,
       orbitCy: cy,
       name: generateUniquePlanetName(),
+      isRescue: false,
+      isGalaxyBoss: false,
+      labelData: null,
+      animState: 'normal',
     }
-    planets.push(item)
+    planets.value.push(item)
+
+    // Fade in via CSS transition (applied in PlanetComponent)
+    nextTick(() => {
+      item.opacity = 0.92
+    })
+
     return { id, type: config.type }
   }
 
   function markPlanetAsRescue(id: string): void {
-    const item = planets.find((p) => p.id === id)
+    const item = planets.value.find((p) => p.id === id)
     if (!item) return
 
-    // Cancel lifecycle auto-remove — event controls removal now
     if (item.removeTimeout !== null) {
       clearTimeout(item.removeTimeout)
       item.removeTimeout = null
     }
 
-    // Label-DIV erstellen
     const boss = bossStore.activeBosses.find((b) => b.planetId === id)
-
-    // Distress animation + styling
     const isGalaxyBoss = boss?.isGalaxyBoss ?? false
-    item.el.classList.add('planet--rescue')
-    if (isGalaxyBoss) {
-      item.el.classList.add('planet--rescue--galaxy')
-      // Add lila border ring around the planet shape
-      const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
-      const pr = pSize / 2
-      const borderCircle = document.createElementNS(NS, 'circle')
-      borderCircle.setAttribute('cx', String(pr))
-      borderCircle.setAttribute('cy', String(pr))
-      borderCircle.setAttribute('r', String(pr - 1.5))
-      borderCircle.setAttribute('fill', 'none')
-      borderCircle.setAttribute('stroke', 'rgba(180, 60, 255, 0.85)')
-      borderCircle.setAttribute('stroke-width', '2')
-      item.el.appendChild(borderCircle)
-    }
-    item.el.style.pointerEvents = 'auto'
-    item.el.style.cursor = 'pointer'
 
-    // Click opens the boss modal for this specific planet
-    item.el.addEventListener('click', () => {
-      bossStore.openBossModal(id)
-    })
-    const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
+    item.isRescue = true
+    item.isGalaxyBoss = isGalaxyBoss
 
     const material = boss?.potentialMaterialId
       ? MATERIALS.find((m) => m.id === boss.potentialMaterialId)
@@ -287,7 +210,7 @@ export function usePlanetBackground(
         : `/img/champion/${championName}.jpg`
       : null
 
-    planetLabels.value.set(id, {
+    item.labelData = {
       planetId: id,
       bossName: boss?.bossName ?? '???',
       currentHP: boss?.currentHP ?? 0,
@@ -298,43 +221,43 @@ export function usePlanetBackground(
       championImage: championImg ?? undefined,
       championName: championName ?? undefined,
       isGalaxyBoss,
-      transform: getLabelTransform(item, pSize),
-    })
+      transform: getLabelTransform(item, item.size),
+    }
   }
 
   function triggerExplosion(planetId: string): void {
-    const idx = planets.findIndex((p) => p.id === planetId)
-    if (idx === -1) return
-    const item = planets[idx]
-    planets.splice(idx, 1)
+    const item = planets.value.find((p) => p.id === planetId)
+    if (!item) return
+
     activePlanetPositions.delete(planetId)
-    planetLabels.value.delete(planetId)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
     }
-    item.el.style.animation = 'planetExplode 0.7s ease-out forwards'
-    item.el.style.pointerEvents = 'none'
+    item.labelData = null
+    item.animState = 'exploding'
+
     setTimeout(() => {
-      if (container.value?.contains(item.el)) container.value.removeChild(item.el)
+      const idx = planets.value.findIndex((p) => p.id === planetId)
+      if (idx !== -1) planets.value.splice(idx, 1)
     }, 750)
   }
 
   function triggerSaved(planetId: string): void {
-    const idx = planets.findIndex((p) => p.id === planetId)
-    if (idx === -1) return
-    const item = planets[idx]
-    planets.splice(idx, 1)
+    const item = planets.value.find((p) => p.id === planetId)
+    if (!item) return
+
     activePlanetPositions.delete(planetId)
-    planetLabels.value.delete(planetId)
     if (item.name) {
       releasePlanetName(item.name)
       item.name = undefined
     }
-    item.el.style.animation = 'planetSaved 0.55s ease-out forwards'
-    item.el.style.pointerEvents = 'none'
+    item.labelData = null
+    item.animState = 'saved'
+
     setTimeout(() => {
-      if (container.value?.contains(item.el)) container.value.removeChild(item.el)
+      const idx = planets.value.findIndex((p) => p.id === planetId)
+      if (idx !== -1) planets.value.splice(idx, 1)
     }, 600)
   }
 
@@ -343,7 +266,7 @@ export function usePlanetBackground(
       PLANET_SPAWN_INTERVAL_MIN +
       Math.random() * (PLANET_SPAWN_INTERVAL_MAX - PLANET_SPAWN_INTERVAL_MIN)
     spawnTimeout = setTimeout(() => {
-      if (container.value && planets.length < PLANET_MAX_COUNT) {
+      if (container.value && planets.value.length < PLANET_MAX_COUNT) {
         spawnPlanet()
       }
       scheduleNextPlanet()
@@ -354,23 +277,17 @@ export function usePlanetBackground(
     const pRadius = pSize / 2
     const gap = 10
 
-    // Planet center in screen space (planet.x/y is the top-left corner of the SVG)
     const pcx = planet.x + pRadius
     const pcy = planet.y + pRadius
 
-    // Direction from sun center → planet center
     const cx = planet.orbitCx ?? window.innerWidth / 2
     const cy = planet.orbitCy ?? window.innerHeight / 2
     const angle = Math.atan2(pcy - cy, pcx - cx)
     const dx = Math.cos(angle)
     const dy = Math.sin(angle)
 
-    // Y anchor follows the radial angle so the label appears near the outer side of the planet.
-    // X anchor uses the planet's leftmost/rightmost edge (not the diagonal point) so the label
-    // never overlaps the planet circle regardless of angle.
     const anchorY = pcy + dy * (pRadius + gap)
 
-    // Right half → label extends right; left half → label extends left
     if (dx >= 0) {
       return `translate(${pcx + pRadius + gap}px, ${anchorY}px) translateY(-50%)`
     } else {
@@ -384,20 +301,22 @@ export function usePlanetBackground(
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
-    for (let i = planets.length - 1; i >= 0; i--) {
-      const planet = planets[i]
+    for (let i = planets.value.length - 1; i >= 0; i--) {
+      const planet = planets.value[i]
+
+      // Skip planets in exit animations — their CSS animation handles visuals
+      if (planet.animState !== 'normal') continue
+
       if (planet.approaching) {
         planet.approachElapsed! += delta * 1000
         const t = Math.min(planet.approachElapsed! / planet.approachDuration!, 1)
         const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
         planet.x = planet.approachFromX! + (planet.approachToX! - planet.approachFromX!) * e
         planet.y = planet.approachFromY! + (planet.approachToY! - planet.approachFromY!) * e
-        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
+        planet.transform = `translate(${planet.x}px,${planet.y}px)`
 
-        const approachLd = planetLabels.value.get(planet.id)
-        if (approachLd) {
-          const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
-          approachLd.transform = getLabelTransform(planet, pSize)
+        if (planet.labelData) {
+          planet.labelData.transform = getLabelTransform(planet, planet.size)
         }
 
         if (t >= 1) {
@@ -406,20 +325,17 @@ export function usePlanetBackground(
         }
       } else if (planet.orbiting) {
         planet.orbitAngle! += planet.orbitSpeed! * delta
-        const pSize = parseFloat(planet.el.getAttribute('width') ?? '60')
-        planet.x = planet.orbitCx! + planet.orbitRadius! * Math.cos(planet.orbitAngle!) - pSize / 2
-        planet.y = planet.orbitCy! + planet.orbitRadius! * Math.sin(planet.orbitAngle!) - pSize / 2
-        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
+        planet.x = planet.orbitCx! + planet.orbitRadius! * Math.cos(planet.orbitAngle!) - planet.size / 2
+        planet.y = planet.orbitCy! + planet.orbitRadius! * Math.sin(planet.orbitAngle!) - planet.size / 2
+        planet.transform = `translate(${planet.x}px,${planet.y}px)`
 
-        // Track planet center for champion combat system
         activePlanetPositions.set(planet.id, {
-          cx: planet.x + pSize / 2,
-          cy: planet.y + pSize / 2,
+          cx: planet.x + planet.size / 2,
+          cy: planet.y + planet.size / 2,
         })
 
-        const orbitLd = planetLabels.value.get(planet.id)
-        if (orbitLd) {
-          orbitLd.transform = getLabelTransform(planet, pSize)
+        if (planet.labelData) {
+          planet.labelData.transform = getLabelTransform(planet, planet.size)
         }
       } else {
         planet.elapsed += delta * 1000
@@ -431,8 +347,8 @@ export function usePlanetBackground(
         else if (p < 0.8) opacity = 1
         else opacity = 1 - (p - 0.8) / 0.2
 
-        planet.el.style.opacity = opacity.toFixed(2)
-        planet.el.style.transform = `translate(${planet.x}px,${planet.y}px) scale(${planet.scale.toFixed(3)})`
+        planet.opacity = opacity
+        planet.transform = `translate(${planet.x}px,${planet.y}px) scale(${planet.scale.toFixed(3)})`
 
         if (p >= 1) {
           removePlanet(planet.id)
@@ -445,14 +361,12 @@ export function usePlanetBackground(
 
   // ─── Store watchers ─────────────────────────────────────────────────────────
 
-  // 1. Rescue spawnen — delegates to boss store via planetEventStore
   watch(
     () => planetEventStore.pendingRescue,
     async (pending) => {
       if (!pending || !container.value) return
       const { id: targetId, type: targetType } = spawnOrbitPlanet()
       planetEventStore.activatePlanetRescue(targetId, targetType)
-      // Wait one tick so admin overrides are applied before building the label
       await nextTick()
       const spawnedBoss = bossStore.activeBosses.find((b) => b.planetId === targetId)
       if (!spawnedBoss || !container.value) return
@@ -461,7 +375,6 @@ export function usePlanetBackground(
     },
   )
 
-  // 2. Boss expired → Explosion
   watch(
     () => bossStore.activeBosses.map((b) => ({ id: b.planetId, expired: b.expired })),
     (cur, prev) => {
@@ -476,7 +389,6 @@ export function usePlanetBackground(
     { deep: true },
   )
 
-  // 3. Boss defeated → Saved-Animation
   watch(
     () => bossStore.activeBosses.map((b) => ({ id: b.planetId, defeated: b.defeated })),
     (cur, prev) => {
@@ -491,7 +403,6 @@ export function usePlanetBackground(
     { deep: true },
   )
 
-  // 4. isEventActive → Klasse togglen
   watch(
     () => planetEventStore.isEventActive,
     (active) => {
@@ -500,15 +411,15 @@ export function usePlanetBackground(
     },
   )
 
-  // 5. Boss HP → label reaktiv aktualisieren
   watch(
     () => bossStore.activeBosses.map((b) => ({ id: b.planetId, hp: b.currentHP, maxHP: b.maxHP })),
     (cur) => {
       for (const info of cur) {
-        const ld = planetLabels.value.get(info.id)
-        if (!ld) continue
-        ld.currentHP = info.hp
-        ld.maxHP = info.maxHP
+        const planet = planets.value.find((p) => p.id === info.id)
+        if (planet?.labelData) {
+          planet.labelData.currentHP = info.hp
+          planet.labelData.maxHP = info.maxHP
+        }
       }
     },
     { deep: true },
@@ -519,25 +430,15 @@ export function usePlanetBackground(
   function handleVisibilityChange() {
     if (document.visibilityState !== 'visible') return
 
-    // Prüfe ob Boss während Hintergrund abgelaufen ist
     planetEventStore.forceCheckExpiry()
 
-    // DOM und Klasse aufräumen falls Event bereits vorbei
     if (!planetEventStore.isEventActive && container.value) {
       container.value.classList.remove('stars--rescue-active')
 
-      // Veraltete Rescue-Planeten aus dem DOM entfernen
-      const stalePlanets = container.value.querySelectorAll('.planet--rescue')
-      stalePlanets.forEach((el) => {
-        if (container.value?.contains(el)) container.value.removeChild(el)
-      })
-      // Veraltete Labels entfernen
-      planetLabels.value.clear()
-      // Auch aus planets-Array entfernen
-      for (let i = planets.length - 1; i >= 0; i--) {
-        if (planets[i].el.classList.contains('planet--rescue')) {
-          if (planets[i].name) releasePlanetName(planets[i].name!)
-          planets.splice(i, 1)
+      for (let i = planets.value.length - 1; i >= 0; i--) {
+        if (planets.value[i].isRescue) {
+          if (planets.value[i].name) releasePlanetName(planets.value[i].name!)
+          planets.value.splice(i, 1)
         }
       }
     }
@@ -555,13 +456,11 @@ export function usePlanetBackground(
     cancelAnimationFrame(animFrame)
     if (spawnTimeout) clearTimeout(spawnTimeout)
     timeouts.forEach(clearTimeout)
-    for (const planet of planets) {
-      if (container.value?.contains(planet.el)) container.value.removeChild(planet.el)
+    for (const planet of planets.value) {
       if (planet.name) releasePlanetName(planet.name)
     }
-    planets.length = 0
-    planetLabels.value.clear()
+    planets.value = []
   })
 
-  return { planetLabels }
+  return { planets }
 }

@@ -8,13 +8,14 @@
       :class="{
         'champion-orbit-avatar--attacking': pos.isAttacking,
         'champion-orbit-avatar--behind': pos.isBehind,
+        'champion-orbit-avatar--foreground': pos.isForeground,
       }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
         opacity: pos.opacity,
-        zIndex: pos.isBehind ? 4 : 11,
+        zIndex: pos.zIndex,
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
@@ -44,7 +45,8 @@
         class="planet-hp-numbers"
         :class="{ 'planet-hp-numbers--critical': bossStore.bossHPPercent < 25 }"
       >
-        ♥ {{ formatNumber(bossStore.activeBoss.currentHP) }} / {{ formatNumber(bossStore.activeBoss.maxHP) }}
+        ♥ {{ formatNumber(bossStore.activeBoss.currentHP) }} /
+        {{ formatNumber(bossStore.activeBoss.maxHP) }}
       </div>
       <div class="planet-hp-bar-track">
         <div
@@ -53,8 +55,16 @@
           :style="{ width: bossStore.bossHPPercent + '%' }"
         />
       </div>
-      <div v-if="potentialMaterial" class="planet-hp-material" :class="`planet-hp-material--${potentialMaterial.rarity}`">
-        <img :src="potentialMaterial.image" :alt="potentialMaterial.name" class="planet-hp-material-icon" />
+      <div
+        v-if="potentialMaterial"
+        class="planet-hp-material"
+        :class="`planet-hp-material--${potentialMaterial.rarity}`"
+      >
+        <img
+          :src="potentialMaterial.image"
+          :alt="potentialMaterial.name"
+          class="planet-hp-material-icon"
+        />
         <span>{{ potentialMaterial.name }}</span>
       </div>
     </div>
@@ -99,6 +109,8 @@ interface ChampionRenderPos {
   opacity: number
   isAttacking: boolean
   isBehind: boolean
+  isForeground: boolean
+  zIndex: number
 }
 
 // Per-champion local animation state (not in Pinia — updated every rAF frame)
@@ -159,7 +171,7 @@ export default defineComponent({
       const screenCy = window.innerHeight / 2
 
       const champions = combatStore.champions
-      const size = getAvatarSize(champions.length)
+      const baseSize = getAvatarSize(champions.length)
 
       const newPositions: ChampionRenderPos[] = []
 
@@ -167,8 +179,21 @@ export default defineComponent({
         // Ensure local state exists
         let ls = localStates.get(c.name)
         if (!ls) {
-          const orbitPos = getOrbitPos(c.angle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
-          ls = { name: c.name, x: orbitPos.x, y: orbitPos.y, orbitAngle: c.angle, initialised: false }
+          const orbitPos = getOrbitPos(
+            c.angle,
+            c.orbitRadiusX,
+            c.orbitRadiusY,
+            c.tiltRad,
+            screenCx,
+            screenCy,
+          )
+          ls = {
+            name: c.name,
+            x: orbitPos.x,
+            y: orbitPos.y,
+            orbitAngle: c.angle,
+            initialised: false,
+          }
           localStates.set(c.name, ls)
         }
 
@@ -177,12 +202,26 @@ export default defineComponent({
           const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
           ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * dt
 
-          const targetOrbit = getOrbitPos(ls.orbitAngle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
+          const targetOrbit = getOrbitPos(
+            ls.orbitAngle,
+            c.orbitRadiusX,
+            c.orbitRadiusY,
+            c.tiltRad,
+            screenCx,
+            screenCy,
+          )
           ls.x += (targetOrbit.x - ls.x) * 0.15
           ls.y += (targetOrbit.y - ls.y) * 0.15
         } else {
           // Reduced motion: snap to orbit position
-          const orbitPos = getOrbitPos(c.angle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
+          const orbitPos = getOrbitPos(
+            c.angle,
+            c.orbitRadiusX,
+            c.orbitRadiusY,
+            c.tiltRad,
+            screenCx,
+            screenCy,
+          )
           ls.x = orbitPos.x
           ls.y = orbitPos.y
         }
@@ -190,11 +229,27 @@ export default defineComponent({
         // Update combatStore screen pos (for damage number positioning)
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
-        // Compute depth for behind-sun layering
+        // ── Depth / layering ────────────────────────────────────────────────
+        // relY: -1 = top of orbit (behind sun), +1 = bottom of orbit (in front)
         const relY = (ls.y - screenCy) / Math.max(c.orbitRadiusY, 1)
         const isBehind = relY < -0.05
+
+        // depth: 0 = furthest behind, 1 = furthest in front
         const depth = (relY + 1) / 2
-        const opacity = isBehind ? 0.18 + depth * 0.2 : 0.55 + depth * 0.45
+
+        // Parallax size: champions grow as they come forward (0.72× → 1.28×)
+        // This is the key visual cue that sells the 3D orbit.
+        const parallaxScale = 0.72 + depth * 0.56
+        const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
+
+        // Sharp opacity contrast: dim behind (≈0.12–0.27), bright in front (≈0.85–1.0)
+        const opacity = c.isAttacking ? 1 : isBehind ? 0.12 + depth * 0.3 : 0.8 + depth * 0.2
+
+        // Granular z-index so nearer champions always render above farther ones
+        const zIndex = c.isAttacking ? 20 : isBehind ? 3 : Math.floor(8 + depth * 7)
+
+        // isForeground: lower third of orbit → enhanced glow via CSS class
+        const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
         newPositions.push({
           name: c.name,
@@ -202,9 +257,11 @@ export default defineComponent({
           x: ls.x,
           y: ls.y,
           size,
-          opacity: c.isAttacking ? 1 : opacity,
+          opacity,
           isAttacking: c.isAttacking,
           isBehind: isBehind && !c.isAttacking,
+          isForeground,
+          zIndex,
         })
       }
 
@@ -285,7 +342,9 @@ export default defineComponent({
     0 0 8px rgba(232, 192, 64, 0.55),
     0 0 16px rgba(232, 192, 64, 0.2);
   will-change: transform;
-  transition: box-shadow 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    filter 0.3s ease;
 }
 
 .champion-orbit-avatar img {
@@ -297,20 +356,33 @@ export default defineComponent({
   border-radius: 50%;
 }
 
+/* Behind the sun: heavily dimmed, desaturated, no glow */
 .champion-orbit-avatar--behind {
-  border-color: rgba(140, 90, 15, 0.4);
+  border-color: rgba(140, 90, 15, 0.35);
   box-shadow:
-    0 0 4px rgba(160, 120, 30, 0.15),
-    0 0 8px rgba(160, 120, 30, 0.08);
-  filter: brightness(0.48) saturate(0.6);
+    0 0 3px rgba(160, 120, 30, 0.1),
+    0 0 6px rgba(160, 120, 30, 0.06);
+  filter: brightness(0.42) saturate(0.45);
 }
 
+/* Clearly in front of the sun: brighter border, stronger glow, slight brightness boost */
+.champion-orbit-avatar--foreground {
+  border-color: #ffe080;
+  box-shadow:
+    0 0 14px rgba(255, 220, 80, 0.8),
+    0 0 28px rgba(255, 180, 40, 0.5),
+    0 3px 10px rgba(0, 0, 0, 0.65);
+  filter: brightness(1.08) saturate(1.12);
+}
+
+/* Attacking overrides everything */
 .champion-orbit-avatar--attacking {
   border-color: #ff6040;
   box-shadow:
     0 0 12px rgba(255, 80, 20, 0.8),
     0 0 24px rgba(255, 60, 0, 0.5);
   animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
+  filter: none;
 }
 
 @keyframes champion-attack-pulse {
@@ -342,11 +414,11 @@ export default defineComponent({
   0%,
   100% {
     opacity: 0.35;
-    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1);
+    scale: 1;
   }
   50% {
     opacity: 0.75;
-    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.1);
+    scale: 1.1;
   }
 }
 
@@ -435,7 +507,9 @@ export default defineComponent({
   height: 100%;
   background: linear-gradient(to right, #52b830, #2e7a1a);
   border-radius: 2px;
-  transition: width 0.4s ease-out, background 0.3s;
+  transition:
+    width 0.4s ease-out,
+    background 0.3s;
 }
 
 .planet-hp-bar-fill--critical {
@@ -451,10 +525,18 @@ export default defineComponent({
   margin-top: 1px;
 }
 
-.planet-hp-material--common { color: #c0c0b0; }
-.planet-hp-material--uncommon { color: #52b830; }
-.planet-hp-material--rare { color: #4080e0; }
-.planet-hp-material--epic { color: #c060e0; }
+.planet-hp-material--common {
+  color: #c0c0b0;
+}
+.planet-hp-material--uncommon {
+  color: #52b830;
+}
+.planet-hp-material--rare {
+  color: #4080e0;
+}
+.planet-hp-material--epic {
+  color: #c060e0;
+}
 
 .planet-hp-material-icon {
   width: 16px;
