@@ -4,6 +4,8 @@ import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
+import { useCombatStore } from './combatStore'
+import { usePlayerStore } from './playerStore'
 import { universes } from '../config/universes'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
@@ -354,6 +356,7 @@ export const useGameStore = defineStore('game', {
       const planetBossStore = usePlanetBossStore()
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()
+        planetBossStore.applyOrbitDamage()
       }
       if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
         planetBossStore.clearPenalty()
@@ -362,6 +365,10 @@ export const useGameStore = defineStore('game', {
       expeditionStore.checkExpeditions()
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
+      const combatStore = useCombatStore()
+      combatStore.tick()
+      const playerStore = usePlayerStore()
+      playerStore.regenTick()
     },
 
     // Setzt den Modal-Status für UI-Effekte

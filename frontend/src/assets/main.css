@@ -60,3 +60,10 @@
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
+
+*,
+*::before,
+*::after {
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+}

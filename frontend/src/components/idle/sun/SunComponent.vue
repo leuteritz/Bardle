@@ -3,20 +3,20 @@
     <div class="sun-atmosphere"></div>
     <div class="sun-corona"></div>
 
-    <!-- Decorative elliptical orbit rings -->
+    <!-- Decorative elliptical orbit rings (from combatStore champions) -->
     <svg class="orbit-paths" viewBox="0 0 360 360">
       <ellipse
-        v-for="orbit in championOrbits"
-        :key="'ring-' + orbit.name"
+        v-for="c in combatStore.champions"
+        :key="'ring-' + c.name"
         cx="180"
         cy="180"
-        :rx="orbit.orbitRadiusX"
-        :ry="orbit.orbitRadiusY"
+        :rx="c.orbitRadiusX"
+        :ry="c.orbitRadiusY"
         fill="none"
         stroke="rgba(255, 190, 50, 0.08)"
         stroke-width="0.7"
         stroke-dasharray="3 10"
-        :transform="`rotate(${orbit.tiltDeg}, 180, 180)`"
+        :transform="`rotate(${c.tiltDeg}, 180, 180)`"
       />
     </svg>
 
@@ -87,50 +87,12 @@
       </g>
     </svg>
 
-    <!-- Champions BEHIND the sun (z-index 2, below core) -->
-    <template v-for="pos in championPositions" :key="'b-' + pos.name">
-      <div
-        v-if="!pos.isFront"
-        class="champion-avatar champion-behind"
-        :style="{
-          left: pos.x + 'px',
-          top: pos.y + 'px',
-          width: pos.size + 'px',
-          height: pos.size + 'px',
-          opacity: pos.opacity,
-          transform: `scale(${pos.scale})`,
-          zIndex: 2,
-        }"
-      >
-        <img :src="pos.img" :alt="pos.name" />
-      </div>
-    </template>
-
-    <!-- Champions IN FRONT of the sun (z-index 10, above everything) -->
-    <template v-for="pos in championPositions" :key="'f-' + pos.name">
-      <div
-        v-if="pos.isFront"
-        class="champion-avatar"
-        :class="{ 'champion-burst': pos.isBurst }"
-        :style="{
-          left: pos.x + 'px',
-          top: pos.y + 'px',
-          width: pos.size + 'px',
-          height: pos.size + 'px',
-          opacity: pos.opacity,
-          transform: `scale(${pos.scale})`,
-          zIndex: 10,
-        }"
-      >
-        <img :src="pos.img" :alt="pos.name" />
-      </div>
-    </template>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
+import { useCombatStore } from '@/stores/combatStore'
 
 interface DynamicRay {
   id: number
@@ -141,19 +103,6 @@ interface DynamicRay {
   opacity: number
   width: number
   innerRadius: number
-}
-
-interface ChampionOrbit {
-  name: string
-  angle: number
-  baseSpeed: number
-  direction: number
-  orbitRadiusX: number
-  orbitRadiusY: number
-  tiltDeg: number
-  tiltRad: number
-  isBurst: boolean
-  burstTimer: number
 }
 
 interface SunspotDef {
@@ -174,9 +123,8 @@ interface SunspotPos {
 export default defineComponent({
   name: 'SunComponent',
   setup() {
-    const battleStore = useBattleStore()
+    const combatStore = useCombatStore()
 
-    const EXCLUDED = new Set(['Bard'])
     const RAY_COUNT = 15
     const MIN_LENGTH = 70
     const MAX_LENGTH = 250
@@ -231,75 +179,6 @@ export default defineComponent({
       return result
     })
 
-    const championOrbits = ref<ChampionOrbit[]>([])
-
-    function buildOrbit(name: string, index: number, total: number): ChampionOrbit {
-      const orbitRadiusX = 130 + Math.random() * 65
-      const orbitRadiusY = orbitRadiusX * (0.28 + Math.random() * 0.62)
-      const tiltDeg = Math.random() * 180
-      const baseSpeed = 0.00015 + Math.random() * 0.00038
-      const direction = Math.random() < 0.5 ? 1 : -1
-      return {
-        name,
-        angle: (index / Math.max(total, 1)) * Math.PI * 2,
-        baseSpeed,
-        direction,
-        orbitRadiusX,
-        orbitRadiusY,
-        tiltDeg,
-        tiltRad: (tiltDeg * Math.PI) / 180,
-        isBurst: false,
-        burstTimer: 0,
-      }
-    }
-
-    watch(
-      () => battleStore.ownedChampions,
-      (champions) => {
-        const filtered = champions.filter((n) => !EXCLUDED.has(n))
-        const N = filtered.length
-        const existing = new Map(championOrbits.value.map((c) => [c.name, c]))
-        championOrbits.value = filtered.map((name, i) =>
-          existing.has(name) ? existing.get(name)! : buildOrbit(name, i, N),
-        )
-      },
-      { immediate: true, deep: true },
-    )
-
-    const avatarSize = computed(() => (championOrbits.value.length <= 4 ? 40 : 32))
-
-    const championPositions = computed(() =>
-      championOrbits.value.map((c) => {
-        const cosT = Math.cos(c.tiltRad),
-          sinT = Math.sin(c.tiltRad)
-        const cosA = Math.cos(c.angle),
-          sinA = Math.sin(c.angle)
-
-        const px = CENTER + c.orbitRadiusX * cosA * cosT - c.orbitRadiusY * sinA * sinT
-        const py = CENTER + c.orbitRadiusX * cosA * sinT + c.orbitRadiusY * sinA * cosT
-
-        const relY = (py - CENTER) / Math.max(c.orbitRadiusY, 1)
-        const isFront = relY > -0.05
-        const depth = (relY + 1) / 2
-
-        const scale = 0.68 + depth * 0.52
-        const opacity = isFront ? 0.55 + depth * 0.45 : 0.18 + depth * 0.2
-        const size = avatarSize.value
-
-        return {
-          name: c.name,
-          img: battleStore.getChampionImage(c.name),
-          x: px - size / 2,
-          y: py - size / 2,
-          scale,
-          opacity,
-          isFront,
-          isBurst: c.isBurst,
-          size,
-        }
-      }),
-    )
-
     let animFrame: number
     let lastTargetUpdate = 0
     let lastTimestamp = 0
@@ -322,20 +201,6 @@ export default defineComponent({
 
       sunRotation.value += SOLAR_ROT_SPEED * dt
 
-      championOrbits.value.forEach((c) => {
-        const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(c.angle)))
-
-        if (c.isBurst) {
-          c.burstTimer -= dt
-          if (c.burstTimer <= 0) c.isBurst = false
-        } else if (Math.random() < 0.00012 * dt) {
-          c.isBurst = true
-          c.burstTimer = 500 + Math.random() * 900
-        }
-
-        c.angle += c.direction * c.baseSpeed * keplerBoost * (c.isBurst ? 3.8 : 1.0) * dt
-      })
-
       animFrame = requestAnimationFrame(animateRays)
     }
 
@@ -349,9 +214,7 @@ export default defineComponent({
     return {
       dynamicRays,
       sunspotPositions,
-      championPositions,
-      championOrbits,
-      avatarSize,
+      combatStore,
       Math,
     }
   },
@@ -651,58 +514,4 @@ export default defineComponent({
   }
 }
 
-.champion-avatar {
-  position: absolute;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #c89040;
-  box-shadow:
-    0 0 8px rgba(232, 192, 64, 0.55),
-    0 0 16px rgba(232, 192, 64, 0.2);
-  pointer-events: none;
-  transform-origin: center center;
-  will-change: transform, opacity;
-}
-
-.champion-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
-  border-radius: 50%;
-}
-
-.champion-behind {
-  border-color: rgba(140, 90, 15, 0.4);
-  box-shadow:
-    0 0 4px rgba(160, 120, 30, 0.15),
-    0 0 8px rgba(160, 120, 30, 0.08);
-  filter: brightness(0.48) saturate(0.6);
-}
-
-.champion-burst {
-  border-color: #ffe87a;
-  box-shadow:
-    0 0 14px rgba(255, 230, 80, 1),
-    0 0 32px rgba(255, 190, 40, 0.85),
-    0 0 60px rgba(255, 140, 0, 0.5);
-  animation: burst-glow 0.22s ease-in-out infinite alternate;
-}
-
-@keyframes burst-glow {
-  from {
-    box-shadow:
-      0 0 14px rgba(255, 230, 80, 1),
-      0 0 32px rgba(255, 190, 40, 0.85),
-      0 0 60px rgba(255, 140, 0, 0.5);
-  }
-  to {
-    box-shadow:
-      0 0 24px rgba(255, 248, 120, 1),
-      0 0 58px rgba(255, 210, 60, 0.95),
-      0 0 110px rgba(255, 160, 0, 0.65);
-    filter: brightness(1.45);
-  }
-}
 </style>

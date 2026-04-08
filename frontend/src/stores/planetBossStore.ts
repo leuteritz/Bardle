@@ -18,12 +18,14 @@ import {
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { useBattleStore } from './battleStore'
 import { useInventoryStore } from './inventoryStore'
 import { useSectionStore } from './sectionStore'
 import { useGalaxyStore } from './galaxyStore'
+import { usePlayerStore } from './playerStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -239,6 +241,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       return false
     },
 
+    applyOrbitDamage() {
+      const playerStore = usePlayerStore()
+      for (const boss of this.activeBosses) {
+        if (!boss.defeated && !boss.expired && activePlanetPositions.has(boss.planetId)) {
+          playerStore.takeDamage(1)
+        }
+      }
+    },
+
     applyPassiveDamage() {
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
@@ -276,6 +287,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           const shopStore = useShopStore()
           const gameStore = useGameStore()
           gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+
+          // Player takes damage on enrage
+          const playerStore = usePlayerStore()
+          playerStore.takeDamage()
 
           logger.info('Planet', 'Boss enraged! CPS penalty applied.')
 

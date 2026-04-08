@@ -2,6 +2,7 @@ import { watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
+import { activePlanetPositions } from '../utils/activePlanetPositions'
 import {
   PLANET_MAX_COUNT,
   PLANET_SPAWN_INTERVAL_MIN,
@@ -15,9 +16,9 @@ import {
   type PlanetTypeConfig,
   PLANET_TYPE_CONFIGS,
 } from '../utils/planetDraw'
-import { MATERIALS } from '../config/materials'
 import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
 import { formatNumber } from '../config/numberFormat'
+import { MATERIALS } from '../config/materials'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       releasePlanetName(item.name)
       item.name = undefined
     }
+    activePlanetPositions.delete(id)
     planets.splice(idx, 1)
   }
 
@@ -260,29 +262,31 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     item.el.addEventListener('click', () => {
       bossStore.openBossModal(id)
     })
-    const materialId = boss?.potentialMaterialId
-    const material = materialId ? MATERIALS.find((m) => m.id === materialId) : undefined
-    const reward = boss?.reward ?? 0
     const pSize = parseFloat(item.el.getAttribute('width') ?? '60')
-    const champion = boss?.homePlanetChampion ?? null
-    const championImg = champion
-      ? champion === 'Bard'
-        ? '/img/BardAbilities/Bard.png'
-        : `/img/champion/${champion}.jpg`
-      : null
 
-    const bossName = boss?.bossName ?? 'Planet Boss'
-    const bossHP = boss ? formatNumber(boss.maxHP) : '???'
+    const material = boss?.potentialMaterialId
+      ? MATERIALS.find((m) => m.id === boss.potentialMaterialId)
+      : null
+    const hpPct = boss ? Math.max(0, (boss.currentHP / boss.maxHP) * 100) : 100
+
+    const championName = boss?.homePlanetChampion ?? null
+    const championImg = championName
+      ? championName === 'Bard'
+        ? '/img/BardAbilities/Bard.png'
+        : `/img/champion/${championName}.jpg`
+      : null
 
     const label = document.createElement('div')
     label.className = isGalaxyBoss ? 'planet-label planet-label--galaxy' : 'planet-label'
     label.innerHTML = `
-      ${isGalaxyBoss ? '<span class="planet-label__galaxy-badge">✦✦ GALAXIE-BOSS ✦✦</span>' : ''}
-      <span class="planet-label__name">${bossName}</span>
-      <span class="planet-label__reward">HP: ${bossHP}</span>
-      <span class="planet-label__reward">+${reward.toLocaleString()} Chimes</span>
-      ${material?.image ? `<span class="planet-label__material"><img src="${material.image}" alt="">${material.name}</span>` : material?.name ? `<span class="planet-label__material">${material.icon ?? ''} ${material.name}</span>` : ''}
-      ${champion && championImg ? `<span class="planet-label__champion"><img src="${championImg}" alt="${champion}" onerror="this.style.display='none'">${champion}</span>` : ''}
+      <span class="planet-label__name">${boss?.bossName ?? '???'}</span>
+      <span class="planet-label__hp">♥ ${formatNumber(boss?.currentHP ?? 0)} / ${formatNumber(boss?.maxHP ?? 0)}</span>
+      <div class="planet-label__hp-bar-track">
+        <div class="planet-label__hp-bar-fill" style="width:${hpPct}%"></div>
+      </div>
+      ${boss?.reward ? `<span class="planet-label__reward">${formatNumber(boss.reward)} Chimes</span>` : ''}
+      ${material ? `<div class="planet-label__material"><img src="${material.image}" alt="${material.name}" />${material.name}</div>` : ''}
+      ${championImg ? `<div class="planet-label__champion"><img src="${championImg}" alt="${championName}" /><span>${championName}</span></div>` : ''}
     `
     label.style.transform = getLabelTransform(item, pSize)
     container.value!.appendChild(label)
@@ -294,6 +298,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     if (idx === -1) return
     const item = planets[idx]
     planets.splice(idx, 1)
+    activePlanetPositions.delete(planetId)
     if (item.labelEl) {
       if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
       item.labelEl = undefined
@@ -314,6 +319,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
     if (idx === -1) return
     const item = planets[idx]
     planets.splice(idx, 1)
+    activePlanetPositions.delete(planetId)
     if (item.labelEl) {
       if (container.value?.contains(item.labelEl)) container.value.removeChild(item.labelEl)
       item.labelEl = undefined
@@ -401,6 +407,12 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
         planet.y = planet.orbitCy! + planet.orbitRadius! * Math.sin(planet.orbitAngle!) - pSize / 2
         planet.el.style.transform = `translate(${planet.x}px,${planet.y}px)`
 
+        // Track planet center for champion combat system
+        activePlanetPositions.set(planet.id, {
+          cx: planet.x + pSize / 2,
+          cy: planet.y + pSize / 2,
+        })
+
         if (planet.labelEl) {
           planet.labelEl.style.transform = getLabelTransform(planet, pSize)
         }
@@ -481,6 +493,30 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): void {
       if (!container.value) return
       container.value.classList.toggle('stars--rescue-active', active)
     },
+  )
+
+  // 5. Boss HP → label text + bar live aktualisieren
+  watch(
+    () => bossStore.activeBosses.map((b) => ({ id: b.planetId, hp: b.currentHP, maxHP: b.maxHP })),
+    (cur) => {
+      for (const info of cur) {
+        const planet = planets.find((p) => p.id === info.id)
+        if (!planet?.labelEl) continue
+        const pct = Math.max(0, (info.hp / info.maxHP) * 100)
+
+        const hpEl = planet.labelEl.querySelector('.planet-label__hp') as HTMLElement | null
+        if (hpEl) {
+          hpEl.textContent = `♥ ${formatNumber(info.hp)} / ${formatNumber(info.maxHP)}`
+          hpEl.classList.toggle('planet-label__hp--critical', pct < 25)
+        }
+        const barFill = planet.labelEl.querySelector('.planet-label__hp-bar-fill') as HTMLElement | null
+        if (barFill) {
+          barFill.style.width = pct + '%'
+          barFill.classList.toggle('planet-label__hp-bar-fill--critical', pct < 25)
+        }
+      }
+    },
+    { deep: true },
   )
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────

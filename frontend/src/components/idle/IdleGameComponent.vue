@@ -24,6 +24,12 @@
     <!-- Planet Travel HUD -->
     <TravelHud />
 
+    <!-- Champion Orbit + Combat Visuals -->
+    <ChampionOrbit />
+
+    <!-- Player HP Bar -->
+    <PlayerHPBar />
+
     <!-- Click Popup Animation -->
     <div
       :key="chimeGainKey"
@@ -52,12 +58,16 @@ import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
 import TravelHud from './sun/TravelHud.vue'
+import ChampionOrbit from './sun/ChampionOrbit.vue'
+import PlayerHPBar from './sun/PlayerHPBar.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     SunComponent,
     TravelHud,
+    ChampionOrbit,
+    PlayerHPBar,
   },
   setup() {
     const gameStore = useGameStore()

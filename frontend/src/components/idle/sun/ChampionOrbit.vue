@@ -1,0 +1,493 @@
+<template>
+  <div class="champion-orbit-layer" aria-hidden="true">
+    <!-- Champion avatars -->
+    <div
+      v-for="pos in championRenderPositions"
+      :key="pos.name"
+      class="champion-orbit-avatar"
+      :class="{
+        'champion-orbit-avatar--attacking': pos.isAttacking,
+        'champion-orbit-avatar--behind': pos.isBehind,
+      }"
+      :style="{
+        width: pos.size + 'px',
+        height: pos.size + 'px',
+        transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
+        opacity: pos.opacity,
+        zIndex: pos.isBehind ? 4 : 11,
+      }"
+    >
+      <img :src="pos.img" :alt="pos.name" />
+    </div>
+
+    <!-- Planet detect aura (shown while champions approach or attack) -->
+    <div
+      v-if="showAura && planetPos"
+      class="detect-aura"
+      :style="{
+        width: auraSize + 'px',
+        height: auraSize + 'px',
+        transform: `translate(${planetPos.cx - auraSize / 2}px, ${planetPos.cy - auraSize / 2}px)`,
+      }"
+    />
+
+    <!-- Planet HP overlay (shown while boss is active) -->
+    <div
+      v-if="showAura && planetPos && bossStore.activeBoss"
+      class="planet-hp-overlay"
+      :style="{
+        transform: `translate(calc(${planetPos.cx}px - 50%), ${planetPos.cy + auraSize / 2 + 8}px)`,
+      }"
+    >
+      <div class="planet-hp-name">{{ bossStore.activeBoss.bossName }}</div>
+      <div
+        class="planet-hp-numbers"
+        :class="{ 'planet-hp-numbers--critical': bossStore.bossHPPercent < 25 }"
+      >
+        ♥ {{ formatNumber(bossStore.activeBoss.currentHP) }} / {{ formatNumber(bossStore.activeBoss.maxHP) }}
+      </div>
+      <div class="planet-hp-bar-track">
+        <div
+          class="planet-hp-bar-fill"
+          :class="{ 'planet-hp-bar-fill--critical': bossStore.bossHPPercent < 25 }"
+          :style="{ width: bossStore.bossHPPercent + '%' }"
+        />
+      </div>
+      <div v-if="potentialMaterial" class="planet-hp-material" :class="`planet-hp-material--${potentialMaterial.rarity}`">
+        <img :src="potentialMaterial.image" :alt="potentialMaterial.name" class="planet-hp-material-icon" />
+        <span>{{ potentialMaterial.name }}</span>
+      </div>
+    </div>
+
+    <!-- Floating damage numbers -->
+    <Teleport to="body">
+      <div class="champion-dmg-overlay" aria-hidden="true">
+        <TransitionGroup name="champion-dmg">
+          <span
+            v-for="f in combatStore.damageFloats"
+            :key="f.id"
+            class="champion-dmg-float"
+            :class="{ 'champion-dmg-float--planet': f.planetFloat }"
+            :style="{ left: f.x + 'px', top: f.y + 'px' }"
+          >
+            -{{ f.value }}
+          </span>
+        </TransitionGroup>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useCombatStore } from '../../../stores/combatStore'
+import { useBattleStore } from '../../../stores/battleStore'
+import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { activePlanetPositions } from '../../../utils/activePlanetPositions'
+import { formatNumber } from '../../../config/numberFormat'
+import { MATERIALS } from '../../../config/materials'
+
+const AVATAR_SIZE_LARGE = 40
+const AVATAR_SIZE_SMALL = 32
+
+interface ChampionRenderPos {
+  name: string
+  img: string
+  x: number
+  y: number
+  size: number
+  opacity: number
+  isAttacking: boolean
+  isBehind: boolean
+}
+
+// Per-champion local animation state (not in Pinia — updated every rAF frame)
+interface LocalChampState {
+  name: string
+  // current screen position
+  x: number
+  y: number
+  // orbit angle (advances over time)
+  orbitAngle: number
+  initialised: boolean
+}
+
+export default defineComponent({
+  name: 'ChampionOrbit',
+  setup() {
+    const combatStore = useCombatStore()
+    const battleStore = useBattleStore()
+    const bossStore = usePlanetBossStore()
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // Local per-champion animation state (non-reactive, mutated imperatively)
+    const localStates = new Map<string, LocalChampState>()
+
+    // Reactive render positions — updated from rAF loop via a ref swap
+    const championRenderPositions = ref<ChampionRenderPos[]>([])
+
+    function getAvatarSize(count: number): number {
+      return count <= 4 ? AVATAR_SIZE_LARGE : AVATAR_SIZE_SMALL
+    }
+
+    function getOrbitPos(
+      angle: number,
+      orbitRadiusX: number,
+      orbitRadiusY: number,
+      tiltRad: number,
+      screenCx: number,
+      screenCy: number,
+    ): { x: number; y: number } {
+      const cosT = Math.cos(tiltRad)
+      const sinT = Math.sin(tiltRad)
+      const cosA = Math.cos(angle)
+      const sinA = Math.sin(angle)
+      const x = screenCx + orbitRadiusX * cosA * cosT - orbitRadiusY * sinA * sinT
+      const y = screenCy + orbitRadiusX * cosA * sinT + orbitRadiusY * sinA * cosT
+      return { x, y }
+    }
+
+    let animFrame = 0
+    let lastTs = 0
+
+    function animate(ts: number) {
+      const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
+      lastTs = ts
+
+      const screenCx = window.innerWidth / 2
+      const screenCy = window.innerHeight / 2
+
+      const champions = combatStore.champions
+      const size = getAvatarSize(champions.length)
+
+      const newPositions: ChampionRenderPos[] = []
+
+      for (const c of champions) {
+        // Ensure local state exists
+        let ls = localStates.get(c.name)
+        if (!ls) {
+          const orbitPos = getOrbitPos(c.angle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
+          ls = { name: c.name, x: orbitPos.x, y: orbitPos.y, orbitAngle: c.angle, initialised: false }
+          localStates.set(c.name, ls)
+        }
+
+        if (!reducedMotion) {
+          // Champions always orbit — advance angle with Kepler-ish boost
+          const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
+          ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * dt
+
+          const targetOrbit = getOrbitPos(ls.orbitAngle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
+          ls.x += (targetOrbit.x - ls.x) * 0.15
+          ls.y += (targetOrbit.y - ls.y) * 0.15
+        } else {
+          // Reduced motion: snap to orbit position
+          const orbitPos = getOrbitPos(c.angle, c.orbitRadiusX, c.orbitRadiusY, c.tiltRad, screenCx, screenCy)
+          ls.x = orbitPos.x
+          ls.y = orbitPos.y
+        }
+
+        // Update combatStore screen pos (for damage number positioning)
+        combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
+
+        // Compute depth for behind-sun layering
+        const relY = (ls.y - screenCy) / Math.max(c.orbitRadiusY, 1)
+        const isBehind = relY < -0.05
+        const depth = (relY + 1) / 2
+        const opacity = isBehind ? 0.18 + depth * 0.2 : 0.55 + depth * 0.45
+
+        newPositions.push({
+          name: c.name,
+          img: battleStore.getChampionImage(c.name),
+          x: ls.x,
+          y: ls.y,
+          size,
+          opacity: c.isAttacking ? 1 : opacity,
+          isAttacking: c.isAttacking,
+          isBehind: isBehind && !c.isAttacking,
+        })
+      }
+
+      // Remove stale local states
+      for (const key of localStates.keys()) {
+        if (!champions.some((c) => c.name === key)) {
+          localStates.delete(key)
+        }
+      }
+
+      championRenderPositions.value = newPositions
+      animFrame = requestAnimationFrame(animate)
+    }
+
+    // Planet aura
+    const planetPos = computed(() => {
+      const boss = bossStore.activeBoss
+      if (!boss) return null
+      return activePlanetPositions.get(boss.planetId) ?? null
+    })
+
+    const showAura = computed(() => bossStore.activeBoss !== null)
+
+    const potentialMaterial = computed(() => {
+      const boss = bossStore.activeBoss
+      if (!boss?.potentialMaterialId) return null
+      return MATERIALS.find((m) => m.id === boss.potentialMaterialId) ?? null
+    })
+
+    const auraSize = 120
+
+    // Sync champions when ownedChampions changes
+    watch(
+      () => battleStore.ownedChampions,
+      (owned) => combatStore.syncChampions(owned),
+      { immediate: true, deep: true },
+    )
+
+    onMounted(() => {
+      animFrame = requestAnimationFrame(animate)
+    })
+
+    onUnmounted(() => {
+      cancelAnimationFrame(animFrame)
+    })
+
+    return {
+      combatStore,
+      bossStore,
+      championRenderPositions,
+      planetPos,
+      showAura,
+      auraSize,
+      formatNumber,
+      potentialMaterial,
+    }
+  },
+})
+</script>
+
+<style scoped>
+.champion-orbit-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ── Champion Avatars ─────────────────────────────────────────────────────── */
+.champion-orbit-avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #c89040;
+  box-shadow:
+    0 0 8px rgba(232, 192, 64, 0.55),
+    0 0 16px rgba(232, 192, 64, 0.2);
+  will-change: transform;
+  transition: box-shadow 0.3s ease;
+}
+
+.champion-orbit-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  border-radius: 50%;
+}
+
+.champion-orbit-avatar--behind {
+  border-color: rgba(140, 90, 15, 0.4);
+  box-shadow:
+    0 0 4px rgba(160, 120, 30, 0.15),
+    0 0 8px rgba(160, 120, 30, 0.08);
+  filter: brightness(0.48) saturate(0.6);
+}
+
+.champion-orbit-avatar--attacking {
+  border-color: #ff6040;
+  box-shadow:
+    0 0 12px rgba(255, 80, 20, 0.8),
+    0 0 24px rgba(255, 60, 0, 0.5);
+  animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes champion-attack-pulse {
+  from {
+    box-shadow:
+      0 0 10px rgba(255, 80, 20, 0.7),
+      0 0 20px rgba(255, 60, 0, 0.4);
+  }
+  to {
+    box-shadow:
+      0 0 20px rgba(255, 100, 30, 1),
+      0 0 40px rgba(255, 80, 0, 0.7);
+    filter: brightness(1.2);
+  }
+}
+
+/* ── Planet Detect Aura ───────────────────────────────────────────────────── */
+.detect-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 160, 40, 0.5);
+  animation: aura-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes aura-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1.1);
+  }
+}
+
+/* ── Damage Numbers ───────────────────────────────────────────────────────── */
+.champion-dmg-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.champion-dmg-float {
+  position: absolute;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ff6040;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 0 10px rgba(255, 80, 0, 0.9);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.champion-dmg-float--planet {
+  font-size: 2.2rem;
+  color: #ffe040;
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 0 16px rgba(255, 200, 0, 1),
+    0 0 32px rgba(255, 160, 0, 0.7);
+}
+
+/* ── Planet HP Overlay ────────────────────────────────────────────────────── */
+.planet-hp-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 140px;
+  background: rgba(17, 16, 8, 0.75);
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.planet-hp-name {
+  font-size: 0.65rem;
+  color: #c89040;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.planet-hp-numbers {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e8c040;
+  text-shadow:
+    0 0 8px rgba(232, 192, 64, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+.planet-hp-numbers--critical {
+  color: #cc6050;
+  text-shadow:
+    0 0 8px rgba(204, 96, 80, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.planet-hp-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #1c1c18;
+  border: 1px solid #7a4e20;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.planet-hp-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #52b830, #2e7a1a);
+  border-radius: 2px;
+  transition: width 0.4s ease-out, background 0.3s;
+}
+
+.planet-hp-bar-fill--critical {
+  background: linear-gradient(to right, #cc6050, #8b2020);
+}
+
+.planet-hp-material {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.planet-hp-material--common { color: #c0c0b0; }
+.planet-hp-material--uncommon { color: #52b830; }
+.planet-hp-material--rare { color: #4080e0; }
+.planet-hp-material--epic { color: #c060e0; }
+
+.planet-hp-material-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.champion-dmg-enter-active {
+  transition:
+    opacity 0.85s ease-out,
+    transform 0.85s ease-out;
+}
+.champion-dmg-leave-active {
+  transition:
+    opacity 0.85s ease-in,
+    transform 0.85s ease-in;
+}
+.champion-dmg-enter-from {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1.2);
+}
+.champion-dmg-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-54px) scale(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .champion-orbit-avatar--attacking {
+    animation: none;
+  }
+  .detect-aura {
+    animation: none;
+  }
+}
+</style>

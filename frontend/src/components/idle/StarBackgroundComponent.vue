@@ -382,6 +382,40 @@ usePlanetBackground(starsContainer)
   filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.65));
 }
 
+/* ── HP Numbers ── */
+.planet-label__hp {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e8c040;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.5);
+}
+
+.planet-label__hp--critical {
+  color: #cc6050;
+  text-shadow: 0 0 6px rgba(204, 96, 80, 0.6);
+}
+
+/* ── HP Bar ── */
+.planet-label__hp-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #1c1c18;
+  border: 1px solid #7a4e20;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.planet-label__hp-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #52b830, #2e7a1a);
+  border-radius: 2px;
+  transition: width 0.4s ease-out, background 0.3s;
+}
+
+.planet-label__hp-bar-fill--critical {
+  background: linear-gradient(to right, #cc6050, #8b2020);
+}
+
 /* ── Reward ── */
 .planet-label__reward {
   color: rgba(120, 255, 185, 0.92);
@@ -401,24 +435,30 @@ usePlanetBackground(starsContainer)
 
 /* ── Champion ── */
 .planet-label__champion {
-  color: rgba(195, 160, 255, 0.95);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 500;
-  padding-top: 4px;
-  border-top: 1px solid rgba(180, 140, 255, 0.18);
-  margin-top: 2px;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(195, 160, 255, 0.25);
 }
 
 .planet-label__champion img {
-  width: 20px;
-  height: 20px;
+  width: 44px;
+  height: 44px;
   object-fit: cover;
-  border-radius: 50%;
-  border: 1px solid rgba(190, 150, 255, 0.65);
-  box-shadow: 0 0 7px rgba(160, 120, 255, 0.45);
+  object-position: top;
+  border-radius: 3px;
+  border: 2px solid rgba(195, 160, 255, 0.7);
+  box-shadow: 0 0 8px rgba(180, 80, 255, 0.5);
+}
+
+.planet-label__champion span {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(195, 160, 255, 0.95);
+  letter-spacing: 0.06em;
 }
 
 @media (prefers-reduced-motion: reduce) {
