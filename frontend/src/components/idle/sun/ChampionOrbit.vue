@@ -37,54 +37,6 @@
       <img :src="pos.img" :alt="pos.name" />
     </div>
 
-    <!-- Planet detect aura (shown while champions approach or attack) -->
-    <div
-      v-if="showAura && planetPos"
-      class="detect-aura"
-      :style="{
-        width: auraSize + 'px',
-        height: auraSize + 'px',
-        transform: `translate(${planetPos.cx - auraSize / 2}px, ${planetPos.cy - auraSize / 2}px)`,
-      }"
-    />
-
-    <!-- Planet HP overlay (shown while boss is active) -->
-    <div
-      v-if="showAura && planetPos && bossStore.activeBoss"
-      class="planet-hp-overlay"
-      :style="{
-        transform: `translate(calc(${planetPos.cx}px - 50%), ${planetPos.cy + auraSize / 2 + 8}px)`,
-      }"
-    >
-      <div class="planet-hp-name">{{ bossStore.activeBoss.bossName }}</div>
-      <div
-        class="planet-hp-numbers"
-        :class="{ 'planet-hp-numbers--critical': bossStore.bossHPPercent < 25 }"
-      >
-        ♥ {{ formatNumber(bossStore.activeBoss.currentHP) }} /
-        {{ formatNumber(bossStore.activeBoss.maxHP) }}
-      </div>
-      <div class="planet-hp-bar-track">
-        <div
-          class="planet-hp-bar-fill"
-          :class="{ 'planet-hp-bar-fill--critical': bossStore.bossHPPercent < 25 }"
-          :style="{ width: bossStore.bossHPPercent + '%' }"
-        />
-      </div>
-      <div
-        v-if="potentialMaterial"
-        class="planet-hp-material"
-        :class="`planet-hp-material--${potentialMaterial.rarity}`"
-      >
-        <img
-          :src="potentialMaterial.image"
-          :alt="potentialMaterial.name"
-          class="planet-hp-material-icon"
-        />
-        <span>{{ potentialMaterial.name }}</span>
-      </div>
-    </div>
-
     <!-- Floating damage numbers + projectiles -->
     <Teleport to="body">
       <div class="champion-dmg-overlay" aria-hidden="true">
@@ -117,8 +69,6 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { formatNumber } from '../../../config/numberFormat'
-import { MATERIALS } from '../../../config/materials'
 import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
 
 interface ChampionRenderPos {
@@ -357,22 +307,6 @@ export default defineComponent({
       animFrame = requestAnimationFrame(animate)
     }
 
-    const planetPos = computed(() => {
-      const boss = bossStore.activeBoss
-      if (!boss) return null
-      return activePlanetPositions.get(boss.planetId) ?? null
-    })
-
-    const showAura = computed(() => bossStore.activeBoss !== null)
-
-    const potentialMaterial = computed(() => {
-      const boss = bossStore.activeBoss
-      if (!boss?.potentialMaterialId) return null
-      return MATERIALS.find((m) => m.id === boss.potentialMaterialId) ?? null
-    })
-
-    const auraSize = 120
-
     watch(
       () => battleStore.ownedChampions,
       (owned) => combatStore.syncChampions(owned),
@@ -388,14 +322,8 @@ export default defineComponent({
 
     return {
       combatStore,
-      bossStore,
       backChampions,
       frontChampions,
-      planetPos,
-      showAura,
-      auraSize,
-      formatNumber,
-      potentialMaterial,
       projectiles,
     }
   },
@@ -491,29 +419,6 @@ export default defineComponent({
   }
 }
 
-/* ── Planet-Detect-Aura ───────────────────────────────────────────────────── */
-.detect-aura {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 160, 40, 0.5);
-  animation: aura-pulse 1.2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes aura-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-    scale: 1;
-  }
-  50% {
-    opacity: 0.75;
-    scale: 1.1;
-  }
-}
-
 /* ── Schadenszahlen ───────────────────────────────────────────────────────── */
 .champion-dmg-overlay {
   position: fixed;
@@ -541,100 +446,6 @@ export default defineComponent({
   text-shadow:
     0 0 16px rgba(255, 200, 0, 1),
     0 0 32px rgba(255, 160, 0, 0.7);
-}
-
-/* ── Planet-HP-Overlay ────────────────────────────────────────────────────── */
-.planet-hp-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 140px;
-  background: rgba(17, 16, 8, 0.75);
-  border: 2px solid #7a4e20;
-  box-shadow: inset 0 0 0 1px #3e200a;
-  border-radius: 4px;
-  padding: 5px 8px;
-}
-
-.planet-hp-name {
-  font-size: 0.65rem;
-  color: #c89040;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.planet-hp-numbers {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #e8c040;
-  text-shadow:
-    0 0 8px rgba(232, 192, 64, 0.6),
-    0 1px 3px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
-}
-
-.planet-hp-numbers--critical {
-  color: #cc6050;
-  text-shadow:
-    0 0 8px rgba(204, 96, 80, 0.7),
-    0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.planet-hp-bar-track {
-  width: 100%;
-  height: 8px;
-  background: #1c1c18;
-  border: 1px solid #7a4e20;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.planet-hp-bar-fill {
-  height: 100%;
-  background: linear-gradient(to right, #52b830, #2e7a1a);
-  border-radius: 2px;
-  transition:
-    width 0.4s ease-out,
-    background 0.3s;
-}
-
-.planet-hp-bar-fill--critical {
-  background: linear-gradient(to right, #cc6050, #8b2020);
-}
-
-.planet-hp-material {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.6rem;
-  white-space: nowrap;
-  margin-top: 1px;
-}
-
-.planet-hp-material--common {
-  color: #c0c0b0;
-}
-.planet-hp-material--uncommon {
-  color: #52b830;
-}
-.planet-hp-material--rare {
-  color: #4080e0;
-}
-.planet-hp-material--epic {
-  color: #c060e0;
-}
-
-.planet-hp-material-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  image-rendering: pixelated;
 }
 
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */
@@ -676,9 +487,6 @@ export default defineComponent({
 
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking {
-    animation: none;
-  }
-  .detect-aura {
     animation: none;
   }
 }

@@ -235,7 +235,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
       championImage: championImg ?? undefined,
       championName: championName ?? undefined,
       isGalaxyBoss,
-      transform: getLabelTransform(item, item.size),
+      transform: 'translate(-9999px, -9999px)',
     }
   }
 
@@ -386,7 +386,9 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
         activePlanetPositions.set(planet.id, { cx: curCx, cy: curCy })
 
         if (planet.labelData) {
-          planet.labelData.transform = getLabelTransform(planet, planet.size)
+          planet.labelData.transform = planet.orbiting
+            ? getLabelTransform(planet, planet.size)
+            : 'translate(-9999px, -9999px)'
         }
       } else {
         // ── Schwebende Hintergrund-Planeten (spawnPlanet) ────────────────────

@@ -8,6 +8,7 @@
     :style="svgStyle"
     @click="handleClick"
   >
+    <g ref="drawGroup" />
     <circle
       v-if="isGalaxyBoss"
       :cx="size / 2"
@@ -55,6 +56,7 @@ interface Props {
 const props = defineProps<Props>()
 const bossStore = usePlanetBossStore()
 const svgEl = ref<SVGSVGElement | null>(null)
+const drawGroup = ref<SVGGElement | null>(null)
 
 const svgClasses = computed(() => ({
   planet: true,
@@ -80,12 +82,14 @@ function handleClick() {
 }
 
 function redrawPlanet() {
-  if (!svgEl.value) return
+  if (!drawGroup.value) return
+  drawGroup.value.innerHTML = ''
   const r = props.size / 2
-  drawPlanet(svgEl.value, props.id, props.planetType, r, r, r)
+  drawPlanet(drawGroup.value as unknown as SVGSVGElement, props.id, props.planetType, r, r, r)
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   redrawPlanet()
 })
 
