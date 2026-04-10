@@ -28,6 +28,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
     pendingTransition: false,
+    isGalaxyTransitioning: false,
     currentThemeIndex: 0,
     // Champion travel state machine
     championTravelState: 'traveling' as ChampionTravelState,
@@ -105,6 +106,10 @@ export const useGalaxyStore = defineStore('galaxy', {
     onGalaxyBossDefeated() {
       this.galaxyBossDefeated = true
       this.pendingGalaxyBoss = false
+    },
+
+    setGalaxyTransitioning(val: boolean) {
+      this.isGalaxyTransitioning = val
     },
 
     requestTransition() {

@@ -151,7 +151,9 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useGameStore } from '../../../stores/gameStore'
 import { GALAXY_THEMES } from '../../../config/galaxyThemes'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../config/constants'
 
 const MAP_WORLD_VISIBLE = 0.22
 
@@ -168,10 +170,19 @@ interface DotPos {
   y: number
 }
 
+interface WarpParticle {
+  angle: number
+  dist: number
+  speed: number
+}
+
+type HyperspacePhase = 'idle' | 'streaks' | 'flash' | 'fadeout'
+
 export default defineComponent({
   name: 'MiniMap',
   setup() {
     const galaxyStore = useGalaxyStore()
+    const gameStore = useGameStore()
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
     const imgEl = ref<HTMLImageElement | null>(null)
@@ -188,13 +199,110 @@ export default defineComponent({
     let playerTrail: Array<{ wx: number; wy: number }> = []
     let trailLastPos = { wx: -1, wy: -1 }
 
+    // ── Hyperspace warp state ──────────────────────────────────────────────
+    let hyperspacePhase: HyperspacePhase = 'idle'
+    let hyperspacePhaseStart = 0
+    let hyperspaceTimeouts: number[] = []
+    let warpLastFrameMs = 0
+    let warpParticles: WarpParticle[] = []
+
+    function initWarpParticles(w: number, h: number) {
+      const cx = w / 2
+      const cy = h / 2
+      const maxR = Math.sqrt(cx * cx + cy * cy)
+      warpParticles = []
+      for (let i = 0; i < 90; i++) {
+        warpParticles.push({
+          angle: Math.random() * Math.PI * 2,
+          dist: 1 + Math.random() * maxR * 0.15,
+          speed: 25 + Math.random() * 70,
+        })
+      }
+      warpLastFrameMs = performance.now()
+    }
+
+    function drawStreaksPhase(
+      ctx: CanvasRenderingContext2D,
+      w: number,
+      h: number,
+      timestamp: number,
+    ) {
+      const dt = Math.min((timestamp - warpLastFrameMs) / 1000, 0.05)
+      warpLastFrameMs = timestamp
+
+      const t = Math.min((Date.now() - hyperspacePhaseStart) / 2000, 1)
+      const accel = 1 + t * t * t * 17
+
+      const cx = w / 2
+      const cy = h / 2
+      const maxR = Math.sqrt(cx * cx + cy * cy)
+
+      // Motion-blur background (semi-transparent so old streaks ghost)
+      ctx.fillStyle = 'rgba(6, 4, 22, 0.75)'
+      ctx.fillRect(0, 0, w, h)
+
+      for (const p of warpParticles) {
+        const tailLen = (4 + p.speed * 0.08) * accel
+        const sx = cx + Math.cos(p.angle) * p.dist
+        const sy = cy + Math.sin(p.angle) * p.dist
+        const ex = cx + Math.cos(p.angle) * (p.dist + tailLen)
+        const ey = cy + Math.sin(p.angle) * (p.dist + tailLen)
+
+        const grad = ctx.createLinearGradient(sx, sy, ex, ey)
+        grad.addColorStop(0, 'rgba(60, 100, 255, 0)')
+        grad.addColorStop(0.4, 'rgba(200, 220, 255, 0.55)')
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0.92)')
+
+        ctx.beginPath()
+        ctx.strokeStyle = grad
+        ctx.lineWidth = 0.6 + accel * 0.25
+        ctx.lineCap = 'round'
+        ctx.moveTo(sx, sy)
+        ctx.lineTo(ex, ey)
+        ctx.stroke()
+
+        p.dist += p.speed * accel * dt
+
+        if (p.dist > maxR + 10) {
+          p.dist = 1 + Math.random() * maxR * 0.08
+          p.angle = Math.random() * Math.PI * 2
+        }
+      }
+    }
+
+    function drawFlashPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      ctx.fillStyle = 'rgba(6, 4, 22, 1)'
+      ctx.fillRect(0, 0, w, h)
+
+      const t = Math.min((Date.now() - hyperspacePhaseStart) / 450, 1)
+      ctx.fillStyle = `rgba(255, 255, 255, ${t * 0.85})`
+      ctx.fillRect(0, 0, w, h)
+    }
+
+    function drawFadeoutPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const t = Math.min((Date.now() - hyperspacePhaseStart) / 1000, 1)
+
+      ctx.save()
+      ctx.globalAlpha = t
+      drawNormalMap(ctx, w, h)
+      ctx.restore()
+
+      const flashAlpha = (1 - t) * 0.85
+      if (flashAlpha > 0.001) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`
+        ctx.fillRect(0, 0, w, h)
+      }
+    }
+    // ── End hyperspace helpers ─────────────────────────────────────────────
+
     const show = computed(
       () =>
-        (galaxyStore.championTravelState === 'traveling' ||
+        ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
-        !galaxyStore.pendingGalaxyBoss &&
-        !galaxyStore.isComplete,
+          !galaxyStore.pendingGalaxyBoss &&
+          !galaxyStore.isComplete) ||
+        galaxyStore.isGalaxyTransitioning,
     )
 
     const isRescuing = computed(
@@ -303,24 +411,9 @@ export default defineComponent({
       return spawnPos.value
     }
 
-    function drawCanvas() {
-      const canvas = canvasEl.value
-      if (!canvas) return
+    function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const img = imgEl.value
       if (!img || !img.complete) return
-
-      const w = canvas.offsetWidth
-      const h = canvas.offsetHeight
-      if (w === 0 || h === 0) return
-
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w
-        canvas.height = h
-      }
-
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.clearRect(0, 0, w, h)
 
       const dots = dotPositions.value
       const order = rescueOrder.value
@@ -535,12 +628,47 @@ export default defineComponent({
       }
     }
 
+    function drawCanvas(timestamp = performance.now()) {
+      const canvas = canvasEl.value
+      if (!canvas) return
+
+      const w = canvas.offsetWidth
+      const h = canvas.offsetHeight
+      if (w === 0 || h === 0) return
+
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w
+        canvas.height = h
+      }
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.clearRect(0, 0, w, h)
+
+      if (hyperspacePhase === 'streaks') {
+        drawStreaksPhase(ctx, w, h, timestamp)
+        return
+      }
+      if (hyperspacePhase === 'flash') {
+        drawFlashPhase(ctx, w, h)
+        return
+      }
+      if (hyperspacePhase === 'fadeout') {
+        drawFadeoutPhase(ctx, w, h)
+        return
+      }
+
+      const img = imgEl.value
+      if (!img || !img.complete) return
+      drawNormalMap(ctx, w, h)
+    }
+
     function rafTick(timestamp: number) {
       if (timestamp - rafLastPulseMs > 600) {
         pulseFrame = pulseFrame === 0 ? 1 : 0
         rafLastPulseMs = timestamp
       }
-      drawCanvas()
+      drawCanvas(timestamp)
       if (show.value) {
         rafId = requestAnimationFrame(rafTick)
       } else {
@@ -575,6 +703,62 @@ export default defineComponent({
       { immediate: true },
     )
 
+    watch(() => galaxyStore.isGalaxyTransitioning, (active) => {
+      if (!active) return
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+      const canvas = canvasEl.value
+      const w = canvas?.offsetWidth ?? 180
+      const h = canvas?.offsetHeight ?? 180
+
+      for (const id of hyperspaceTimeouts) window.clearTimeout(id)
+      hyperspaceTimeouts = []
+
+      initWarpParticles(w, h)
+      hyperspacePhase = 'streaks'
+      hyperspacePhaseStart = Date.now()
+
+      hyperspaceTimeouts.push(
+        window.setTimeout(() => { hyperspacePhase = 'flash'; hyperspacePhaseStart = Date.now() }, GALAXY_TRANS_WARP_MS),
+        window.setTimeout(() => { hyperspacePhase = 'fadeout'; hyperspacePhaseStart = Date.now() }, GALAXY_TRANS_WARP_MS + 500),
+        window.setTimeout(() => { hyperspacePhase = 'idle'; warpParticles = [] }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
+      )
+    })
+
+    watch(() => gameStore.isHyperspaceActive, (active) => {
+      if (!active) return
+
+      // Respect prefers-reduced-motion
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+      const canvas = canvasEl.value
+      const w = canvas?.offsetWidth ?? 180
+      const h = canvas?.offsetHeight ?? 180
+
+      // Cancel any pending phase timers
+      for (const id of hyperspaceTimeouts) window.clearTimeout(id)
+      hyperspaceTimeouts = []
+
+      initWarpParticles(w, h)
+      hyperspacePhase = 'streaks'
+      hyperspacePhaseStart = Date.now()
+
+      hyperspaceTimeouts.push(
+        window.setTimeout(() => {
+          hyperspacePhase = 'flash'
+          hyperspacePhaseStart = Date.now()
+        }, 2000),
+        window.setTimeout(() => {
+          hyperspacePhase = 'fadeout'
+          hyperspacePhaseStart = Date.now()
+        }, 2500),
+        window.setTimeout(() => {
+          hyperspacePhase = 'idle'
+          warpParticles = []
+        }, 3500),
+      )
+    })
+
     onMounted(() => {
       nextTick(() => {
         if (imgEl.value?.complete) drawCanvas()
@@ -586,6 +770,8 @@ export default defineComponent({
         cancelAnimationFrame(rafId)
         rafId = null
       }
+      for (const id of hyperspaceTimeouts) window.clearTimeout(id)
+      hyperspaceTimeouts = []
     })
 
     return { show, isRescuing, countdown, canvasEl, imgEl, onImageLoad }

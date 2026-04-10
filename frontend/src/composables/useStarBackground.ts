@@ -1478,6 +1478,7 @@ export function useStarBackground() {
         galaxyTransPhase = 'warp'
         galaxyTransElapsed = 0
         galaxyTransDir = Math.random() * Math.PI * 2
+        galaxyStore.setGalaxyTransitioning(true)
       }
     }
     wasPendingTransition = pendingTrans
@@ -1496,6 +1497,7 @@ export function useStarBackground() {
         if (galaxyTransElapsed >= GALAXY_TRANS_DECEL_MS) {
           galaxyTransPhase = 'idle'
           galaxyTransElapsed = 0
+          galaxyStore.setGalaxyTransitioning(false)
         }
       }
     }
