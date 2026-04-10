@@ -64,6 +64,79 @@ type GalaxyTypeConfig = {
   weight: number
 }
 
+type DustPatch = {
+  angle: number // polar angle from screen center
+  dist: number // current distance from center
+  baseSpeed: number
+  rx: number // half-width in px (base size)
+  ry: number
+  rotation: number
+  opacity: number
+  r: number
+  g: number
+  b: number
+}
+
+type StarCluster = {
+  angle: number // polar angle from screen center
+  dist: number // current distance from center
+  baseSpeed: number
+  stars: Array<{ dx: number; dy: number; r: number; g: number; b: number; brightness: number }>
+  twinklePhase: number
+}
+
+type NebulaMovingItem = {
+  el: SVGSVGElement
+  angle: number // polar angle from screen center
+  dist: number // current distance from center
+  baseSpeed: number
+  scale: number
+  maxScale: number
+  size: number // SVG element size in px
+}
+
+// ─── Emission Nebula / Ion Cloud constants ───────────────────────────────────
+
+const EMISSION_MAX_COUNT = 4
+const EMISSION_SPAWN_MIN = 8_000
+const EMISSION_SPAWN_MAX = 18_000
+const CLUSTER_COUNT = 10
+const DUST_PATCH_COUNT = 7
+
+// ─── Emission Nebula palettes ─────────────────────────────────────────────────
+
+type EmissionType = 'emission-nebula' | 'ion-cloud'
+
+type EmissionPalette = {
+  core: string
+  mid: string
+  outer: string
+  glow: string
+}
+
+const EMISSION_NEBULA_PALETTES: EmissionPalette[] = [
+  // Orion-style: blue-white
+  { core: '#c8e8ff', mid: '#5599dd', outer: '#1a3a7a', glow: '#aaccff' },
+  // Lagoon-style: red-pink
+  { core: '#ffcccc', mid: '#dd4466', outer: '#7a1a2a', glow: '#ffaacc' },
+  // Crab-style: blue-green
+  { core: '#ccffee', mid: '#22aa88', outer: '#0a4a30', glow: '#88ffcc' },
+  // Trifid-style: red-blue
+  { core: '#eeccff', mid: '#8844cc', outer: '#2a0a5a', glow: '#ddaaff' },
+  // Eagle-style: warm gold
+  { core: '#fff0cc', mid: '#dd9922', outer: '#6a3a00', glow: '#ffdd88' },
+  // Rosette-style: pink-red
+  { core: '#ffddee', mid: '#ee4488', outer: '#660022', glow: '#ffaabb' },
+]
+
+const ION_CLOUD_PALETTES: EmissionPalette[] = [
+  { core: '#88eeff', mid: '#0088cc', outer: '#002244', glow: '#44ccff' },
+  { core: '#cc88ff', mid: '#8822cc', outer: '#220044', glow: '#aa55ff' },
+  { core: '#88ffcc', mid: '#00aa66', outer: '#002211', glow: '#55ffaa' },
+  { core: '#ffaa88', mid: '#cc5500', outer: '#441100', glow: '#ff8844' },
+  { core: '#aaffee', mid: '#00ccaa', outer: '#004433', glow: '#55ffdd' },
+  { core: '#ffccff', mid: '#cc44cc', outer: '#440044', glow: '#ff88ff' },
+]
 
 const GALAXY_TYPE_CONFIGS: GalaxyTypeConfig[] = [
   {
@@ -931,6 +1004,171 @@ function drawStarburst(
   svg.appendChild(point)
 }
 
+// ─── Emission Nebula Draw Functions ──────────────────────────────────────────
+
+function drawEmissionNebula(
+  svg: SVGSVGElement,
+  id: string,
+  cx: number,
+  cy: number,
+  r: number,
+  palette: EmissionPalette,
+): void {
+  const defs = svgEl('defs')
+
+  // Outer glow (large, very soft)
+  const outerGrad = svgEl('radialGradient')
+  outerGrad.id = `${id}o`
+  outerGrad.setAttribute('cx', '50%')
+  outerGrad.setAttribute('cy', '50%')
+  outerGrad.setAttribute('r', '50%')
+  addStop(outerGrad, '0%', palette.glow, 0.25)
+  addStop(outerGrad, '50%', palette.outer, 0.12)
+  addStop(outerGrad, '100%', palette.outer, 0)
+
+  // Mid cloud layer
+  const midGrad = svgEl('radialGradient')
+  midGrad.id = `${id}m`
+  midGrad.setAttribute('cx', '48%')
+  midGrad.setAttribute('cy', '52%')
+  midGrad.setAttribute('r', '50%')
+  addStop(midGrad, '0%', palette.mid, 0.55)
+  addStop(midGrad, '40%', palette.mid, 0.3)
+  addStop(midGrad, '100%', palette.outer, 0)
+
+  // Core glow
+  const coreGrad = svgEl('radialGradient')
+  coreGrad.id = `${id}c`
+  coreGrad.setAttribute('cx', '50%')
+  coreGrad.setAttribute('cy', '50%')
+  coreGrad.setAttribute('r', '50%')
+  addStop(coreGrad, '0%', '#ffffff', 0.9)
+  addStop(coreGrad, '20%', palette.core, 0.75)
+  addStop(coreGrad, '60%', palette.mid, 0.35)
+  addStop(coreGrad, '100%', palette.outer, 0)
+
+  // Soft blur filter for glow
+  const blurFilter = svgEl('filter')
+  blurFilter.id = `${id}f`
+  blurFilter.setAttribute('x', '-30%')
+  blurFilter.setAttribute('y', '-30%')
+  blurFilter.setAttribute('width', '160%')
+  blurFilter.setAttribute('height', '160%')
+  const blur = svgEl('feGaussianBlur')
+  blur.setAttribute('stdDeviation', '10')
+  blurFilter.appendChild(blur)
+
+  defs.appendChild(outerGrad)
+  defs.appendChild(midGrad)
+  defs.appendChild(coreGrad)
+  defs.appendChild(blurFilter)
+  svg.appendChild(defs)
+
+  // Outer halo (large ellipse, random tilt for organic feel)
+  const tilt = Math.random() * 60 - 30
+  const axisY = 0.55 + Math.random() * 0.35
+  const outer = svgEl('ellipse')
+  outer.setAttribute('cx', String(cx))
+  outer.setAttribute('cy', String(cy))
+  outer.setAttribute('rx', String(r))
+  outer.setAttribute('ry', String(r * axisY))
+  outer.setAttribute('fill', `url(#${id}o)`)
+  outer.setAttribute('transform', `rotate(${tilt}, ${cx}, ${cy})`)
+  svg.appendChild(outer)
+
+  // Mid cloud (offset slightly for irregular feel)
+  const offX = (Math.random() - 0.5) * r * 0.25
+  const offY = (Math.random() - 0.5) * r * 0.25
+  const mid = svgEl('ellipse')
+  mid.setAttribute('cx', String(cx + offX))
+  mid.setAttribute('cy', String(cy + offY))
+  mid.setAttribute('rx', String(r * 0.65))
+  mid.setAttribute('ry', String(r * 0.65 * (0.6 + Math.random() * 0.3)))
+  mid.setAttribute('fill', `url(#${id}m)`)
+  mid.setAttribute('filter', `url(#${id}f)`)
+  svg.appendChild(mid)
+
+  // Bright core
+  const core = svgEl('circle')
+  core.setAttribute('cx', String(cx))
+  core.setAttribute('cy', String(cy))
+  core.setAttribute('r', String(r * 0.3))
+  core.setAttribute('fill', `url(#${id}c)`)
+  svg.appendChild(core)
+}
+
+function drawIonCloud(
+  svg: SVGSVGElement,
+  id: string,
+  cx: number,
+  cy: number,
+  r: number,
+  palette: EmissionPalette,
+): void {
+  const defs = svgEl('defs')
+
+  // Primary diffuse layer
+  const g1 = svgEl('radialGradient')
+  g1.id = `${id}a`
+  g1.setAttribute('cx', '50%')
+  g1.setAttribute('cy', '50%')
+  g1.setAttribute('r', '50%')
+  addStop(g1, '0%', palette.glow, 0.3)
+  addStop(g1, '45%', palette.mid, 0.15)
+  addStop(g1, '100%', palette.outer, 0)
+
+  // Secondary layer, offset for wispy feel
+  const g2 = svgEl('radialGradient')
+  g2.id = `${id}b`
+  g2.setAttribute('cx', '38%')
+  g2.setAttribute('cy', '60%')
+  g2.setAttribute('r', '50%')
+  addStop(g2, '0%', palette.core, 0.22)
+  addStop(g2, '60%', palette.mid, 0.08)
+  addStop(g2, '100%', palette.outer, 0)
+
+  // Very soft outer blur
+  const blurFilter = svgEl('filter')
+  blurFilter.id = `${id}f`
+  blurFilter.setAttribute('x', '-40%')
+  blurFilter.setAttribute('y', '-40%')
+  blurFilter.setAttribute('width', '180%')
+  blurFilter.setAttribute('height', '180%')
+  const blur = svgEl('feGaussianBlur')
+  blur.setAttribute('stdDeviation', '18')
+  blurFilter.appendChild(blur)
+
+  defs.appendChild(g1)
+  defs.appendChild(g2)
+  defs.appendChild(blurFilter)
+  svg.appendChild(defs)
+
+  // Main blob (large, rotated ellipse)
+  const tilt = Math.random() * 180
+  const ry = 0.45 + Math.random() * 0.45
+  const main = svgEl('ellipse')
+  main.setAttribute('cx', String(cx))
+  main.setAttribute('cy', String(cy))
+  main.setAttribute('rx', String(r))
+  main.setAttribute('ry', String(r * ry))
+  main.setAttribute('fill', `url(#${id}a)`)
+  main.setAttribute('filter', `url(#${id}f)`)
+  main.setAttribute('transform', `rotate(${tilt}, ${cx}, ${cy})`)
+  svg.appendChild(main)
+
+  // Secondary wispy lobe
+  const sx = cx + (Math.random() - 0.5) * r * 0.5
+  const sy = cy + (Math.random() - 0.5) * r * 0.5
+  const secondary = svgEl('ellipse')
+  secondary.setAttribute('cx', String(sx))
+  secondary.setAttribute('cy', String(sy))
+  secondary.setAttribute('rx', String(r * 0.7))
+  secondary.setAttribute('ry', String(r * 0.7 * (0.4 + Math.random() * 0.4)))
+  secondary.setAttribute('fill', `url(#${id}b)`)
+  secondary.setAttribute('filter', `url(#${id}f)`)
+  svg.appendChild(secondary)
+}
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 // Star color palette as [r, g, b] tuples
@@ -949,6 +1187,9 @@ export function useStarBackground() {
   const prefersReducedMotion = ref(false)
   const stars: StarItem[] = []
   const galaxies: GalaxyItem[] = []
+  const emissionNebulas: NebulaMovingItem[] = []
+  const dustPatches: DustPatch[] = []
+  const starClusters: StarCluster[] = []
   let nextStarId = 1
   let animFrame = 0
   let lastTimestamp = 0
@@ -963,6 +1204,7 @@ export function useStarBackground() {
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
+  let emissionSpawnTimeout: ReturnType<typeof setTimeout> | null = null
   const timeouts: ReturnType<typeof setTimeout>[] = []
 
   const checkReducedMotion = () => {
@@ -1056,6 +1298,131 @@ export function useStarBackground() {
       spawnGalaxy()
       scheduleNextGalaxy()
     }, delay)
+  }
+
+  // ── Emission Nebula Spawn ────────────────────────────────────────────────────
+  // randomDist=true → spread across screen at start; false → spawn near center
+  function spawnEmissionNebula(randomDist = false): void {
+    if (!starsContainer.value || prefersReducedMotion.value) return
+    if (emissionNebulas.length >= EMISSION_MAX_COUNT) return
+
+    const type: EmissionType = Math.random() < 0.55 ? 'emission-nebula' : 'ion-cloud'
+    const palettes = type === 'emission-nebula' ? EMISSION_NEBULA_PALETTES : ION_CLOUD_PALETTES
+    const palette = palettes[Math.floor(Math.random() * palettes.length)]
+
+    const sizeMin = type === 'emission-nebula' ? 220 : 320
+    const sizeMax = type === 'emission-nebula' ? 420 : 620
+    const size = sizeMin + Math.random() * (sizeMax - sizeMin)
+
+    const w = starsContainer.value.clientWidth || window.innerWidth
+    const h = starsContainer.value.clientHeight || window.innerHeight
+    const maxDist = Math.hypot(w / 2, h / 2) + 20
+
+    const angle = Math.random() * Math.PI * 2
+    const dist = randomDist
+      ? maxDist * (0.08 + Math.random() * 0.75)
+      : maxDist * (0.02 + Math.random() * 0.06)
+    // Emission nebulae are very distant → move ~5–8% of star speed (parallax layer)
+    const baseSpeed = 0.44 + Math.random() * 0.32
+    const maxScale = 1.4 + Math.random() * 1.2
+
+    const svg = document.createElementNS(NS, 'svg')
+    svg.setAttribute('width', String(size))
+    svg.setAttribute('height', String(size))
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
+    svg.classList.add(type)
+    svg.style.opacity = '0'
+
+    const id = `e${++galaxyIdCounter}`
+    const half = size / 2
+
+    if (type === 'emission-nebula') {
+      drawEmissionNebula(svg, id, half, half, half, palette)
+    } else {
+      drawIonCloud(svg, id, half, half, half, palette)
+    }
+
+    // Initial transform: centered on screen center, nearly invisible
+    svg.style.transform = `translate(0px,0px) scale(0.02) translate(${-half}px,${-half}px)`
+    starsContainer.value.appendChild(svg)
+    emissionNebulas.push({ el: svg, angle, dist, baseSpeed, scale: 0.02, maxScale, size })
+  }
+
+  function scheduleNextEmission(): void {
+    const delay = EMISSION_SPAWN_MIN + Math.random() * (EMISSION_SPAWN_MAX - EMISSION_SPAWN_MIN)
+    emissionSpawnTimeout = setTimeout(() => {
+      spawnEmissionNebula()
+      scheduleNextEmission()
+    }, delay)
+  }
+
+  // ── Dust Patches Init ────────────────────────────────────────────────────────
+  function initDust(): void {
+    dustPatches.length = 0
+    const w = starsContainer.value?.clientWidth || window.innerWidth
+    const h = starsContainer.value?.clientHeight || window.innerHeight
+    const maxDist = Math.hypot(w / 2, h / 2) + 20
+    const dustConfigs: [number, number, number, number][] = [
+      [10, 8, 5, 0.22], // warm dark brown
+      [5, 5, 12, 0.18], // cold dark blue-grey
+      [12, 5, 3, 0.2], // reddish dark
+      [8, 4, 8, 0.16], // dark purple-brown
+      [6, 7, 4, 0.19], // neutral dark
+      [9, 6, 6, 0.21], // muted red-brown
+      [4, 6, 10, 0.17], // deep blue
+    ]
+    for (let i = 0; i < DUST_PATCH_COUNT; i++) {
+      const [r, g, b, opacity] = dustConfigs[i]
+      dustPatches.push({
+        angle: Math.random() * Math.PI * 2,
+        // Spread across screen initially, like spawnStar(randomDist=true)
+        dist: maxDist * (0.1 + Math.random() * 0.8),
+        // Dust is the deepest layer: moves at ~2–3% of star speed
+        baseSpeed: 0.2 + Math.random() * 0.16,
+        rx: 180 + Math.random() * 200,
+        ry: 100 + Math.random() * 150,
+        rotation: Math.random() * Math.PI,
+        opacity: opacity * (0.8 + Math.random() * 0.4),
+        r,
+        g,
+        b,
+      })
+    }
+  }
+
+  // ── Star Clusters Init ───────────────────────────────────────────────────────
+  function initClusters(): void {
+    starClusters.length = 0
+    const w = starsContainer.value?.clientWidth || window.innerWidth
+    const h = starsContainer.value?.clientHeight || window.innerHeight
+    const maxDist = Math.hypot(w / 2, h / 2) + 20
+    for (let i = 0; i < CLUSTER_COUNT; i++) {
+      const count = 15 + Math.floor(Math.random() * 12)
+      const radius = 18 + Math.random() * 32
+      const clusterStars = []
+      for (let j = 0; j < count; j++) {
+        const a = Math.random() * Math.PI * 2
+        const d = Math.random() * radius
+        const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
+        clusterStars.push({
+          dx: Math.cos(a) * d,
+          dy: Math.sin(a) * d,
+          r,
+          g,
+          b,
+          brightness: 0.4 + Math.random() * 0.6,
+        })
+      }
+      starClusters.push({
+        angle: Math.random() * Math.PI * 2,
+        // Spread across screen initially
+        dist: maxDist * (0.08 + Math.random() * 0.8),
+        // Clusters move at ~8–12% of star speed (midground parallax layer)
+        baseSpeed: 0.56 + Math.random() * 0.36,
+        stars: clusterStars,
+        twinklePhase: Math.random() * Math.PI * 2,
+      })
+    }
   }
 
   function spawnStar(randomDist = false): StarItem {
@@ -1156,6 +1523,105 @@ export function useStarBackground() {
     const cx = w / 2,
       cy = h / 2
     const maxDist = Math.hypot(cx, cy) + 20
+
+    // ── Kosmischer Staub (Canvas, tiefste Hintergrundschicht, bewegt sich auf Spieler zu) ──
+    if (ctx) {
+      ctx.save()
+      ctx.globalCompositeOperation = 'multiply'
+      for (const d of dustPatches) {
+        const dNorm = d.dist / maxDist
+
+        // Move outward, very slow (deepest parallax layer)
+        const dSpeed = d.baseSpeed * dNorm * dNorm * WARP_SPEED_MAX * speedMultiplier
+        if (galaxyTransPhase === 'warp') {
+          const sx = cx + Math.cos(d.angle) * d.dist
+          const sy = cy + Math.sin(d.angle) * d.dist
+          const nx = sx + Math.cos(galaxyTransDir) * dSpeed * delta
+          const ny = sy + Math.sin(galaxyTransDir) * dSpeed * delta
+          d.dist = Math.hypot(nx - cx, ny - cy)
+          d.angle = Math.atan2(ny - cy, nx - cx)
+        } else {
+          d.dist += dSpeed * delta
+        }
+
+        if (d.dist > maxDist) {
+          d.angle = Math.random() * Math.PI * 2
+          d.dist = maxDist * (0.02 + Math.random() * 0.06)
+          d.baseSpeed = 0.1 + Math.random() * 0.08
+        }
+
+        const px = cx + Math.cos(d.angle) * d.dist
+        const py = cy + Math.sin(d.angle) * d.dist
+        // Scale dust with distance (grows as it approaches)
+        const dScale = 0.3 + dNorm * 1.4
+        const rx = d.rx * dScale
+        const ry = d.ry * dScale
+        const fadeEdge = dNorm > 0.85 ? 1 - (dNorm - 0.85) / 0.15 : 1
+        const finalOpacity = d.opacity * Math.min(1, dNorm * 2.5) * fadeEdge
+
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, rx)
+        grad.addColorStop(0, `rgba(${d.r},${d.g},${d.b},${finalOpacity.toFixed(3)})`)
+        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.save()
+        ctx.translate(px, py)
+        ctx.rotate(d.rotation)
+        ctx.scale(1, ry / rx)
+        ctx.translate(-px, -py)
+        ctx.beginPath()
+        ctx.arc(px, py, rx, 0, Math.PI * 2)
+        ctx.fillStyle = grad
+        ctx.fill()
+        ctx.restore()
+      }
+      ctx.restore()
+    }
+
+    // ── Sternenhaufen (Canvas, Mittelgrund-Parallax, bewegt sich auf Spieler zu) ──
+    if (ctx) {
+      for (const cluster of starClusters) {
+        const cNorm = cluster.dist / maxDist
+
+        // Move outward at cluster's own baseSpeed (midground layer, ~8–12% of star speed)
+        const cSpeed = cluster.baseSpeed * cNorm * cNorm * WARP_SPEED_MAX * speedMultiplier
+        if (galaxyTransPhase === 'warp') {
+          const sx = cx + Math.cos(cluster.angle) * cluster.dist
+          const sy = cy + Math.sin(cluster.angle) * cluster.dist
+          const nx = sx + Math.cos(galaxyTransDir) * cSpeed * delta
+          const ny = sy + Math.sin(galaxyTransDir) * cSpeed * delta
+          cluster.dist = Math.hypot(nx - cx, ny - cy)
+          cluster.angle = Math.atan2(ny - cy, nx - cx)
+        } else {
+          cluster.dist += cSpeed * delta
+        }
+
+        if (cluster.dist > maxDist) {
+          cluster.angle = Math.random() * Math.PI * 2
+          cluster.dist = maxDist * (0.02 + Math.random() * 0.06)
+          cluster.baseSpeed = 0.56 + Math.random() * 0.32
+        }
+
+        const pcx = cx + Math.cos(cluster.angle) * cluster.dist
+        const pcy = cy + Math.sin(cluster.angle) * cluster.dist
+
+        cluster.twinklePhase += 0.5 * delta
+        const distAlpha = Math.min(1, cNorm * 3)
+        const fadeEdge = cNorm > 0.85 ? 1 - (cNorm - 0.85) / 0.15 : 1
+        const baseAlpha = distAlpha * fadeEdge * (0.3 + 0.1 * Math.sin(cluster.twinklePhase))
+
+        // Scale cluster spread with distance → expands as it approaches (perspective)
+        const spreadScale = 0.25 + cNorm * 1.6
+
+        for (const s of cluster.stars) {
+          const a = baseAlpha * s.brightness
+          if (a < 0.02) continue
+          const dotSize = s.brightness * spreadScale * 1.2
+          ctx.beginPath()
+          ctx.arc(pcx + s.dx * spreadScale, pcy + s.dy * spreadScale, dotSize, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(${s.r},${s.g},${s.b},${a.toFixed(3)})`
+          ctx.fill()
+        }
+      }
+    }
 
     for (const star of stars) {
       const norm = star.dist / maxDist // 0–1
@@ -1285,6 +1751,56 @@ export function useStarBackground() {
       }
     }
 
+    // ── Emission Nebula / Ion Cloud – Parallax-Flug auf Spieler zu ───────────
+    for (let i = emissionNebulas.length - 1; i >= 0; i--) {
+      const n = emissionNebulas[i]
+      const nNorm = n.dist / maxDist
+
+      // Move outward at nebula's own baseSpeed (~5–9% of star speed → deep background)
+      const nSpeed = n.baseSpeed * nNorm * nNorm * WARP_SPEED_MAX * speedMultiplier
+      if (galaxyTransPhase === 'warp') {
+        const sx = cx + Math.cos(n.angle) * n.dist
+        const sy = cy + Math.sin(n.angle) * n.dist
+        const nx2 = sx + Math.cos(galaxyTransDir) * nSpeed * delta
+        const ny2 = sy + Math.sin(galaxyTransDir) * nSpeed * delta
+        n.dist = Math.hypot(nx2 - cx, ny2 - cy)
+        n.angle = Math.atan2(ny2 - cy, nx2 - cx)
+      } else {
+        n.dist += nSpeed * delta
+      }
+
+      // Scale grows with distance (perspective: small far away, large close up)
+      n.scale = 0.02 + (n.maxScale - 0.02) * nNorm
+
+      // World position of the nebula center
+      const wx = cx + Math.cos(n.angle) * n.dist
+      const wy = cy + Math.sin(n.angle) * n.dist
+      const hw = n.size / 2
+
+      // Opacity: fade in from center, fade out at edge
+      const distAlpha = Math.min(1, nNorm * 3)
+      const fadeEdge = nNorm > 0.85 ? 1 - (nNorm - 0.85) / 0.15 : 1
+      let opacity = distAlpha * fadeEdge * 0.65
+
+      if (hyperActive || galaxyTransPhase === 'warp') {
+        const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
+        opacity *= Math.max(0, 1 - fadeTime * 2)
+      }
+
+      n.el.style.opacity = opacity.toFixed(3)
+      // Scale from SVG center: translate to world pos → scale → re-center SVG
+      n.el.style.transform = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
+
+      if (n.dist > maxDist) {
+        if (starsContainer.value?.contains(n.el)) starsContainer.value.removeChild(n.el)
+        emissionNebulas.splice(i, 1)
+        // Immediately respawn near center so the pool stays full
+        if (!prefersReducedMotion.value) {
+          setTimeout(() => spawnEmissionNebula(), 200 + Math.random() * 1500)
+        }
+      }
+    }
+
     animFrame = requestAnimationFrame(animateStars)
   }
 
@@ -1309,6 +1825,10 @@ export function useStarBackground() {
     if (!starsContainer.value || prefersReducedMotion.value) return
     stars.length = 0
     resizeCanvas()
+    initDust()
+    initClusters()
+    // Seed emission nebulae spread across screen at startup
+    for (let i = 0; i < EMISSION_MAX_COUNT; i++) spawnEmissionNebula(true)
     for (let i = 0; i < STAR_COUNT; i++) spawnStar(true)
     lastTimestamp = 0
     animFrame = requestAnimationFrame(animateStars)
@@ -1323,17 +1843,27 @@ export function useStarBackground() {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
     }
+    if (emissionSpawnTimeout) {
+      clearTimeout(emissionSpawnTimeout)
+      emissionSpawnTimeout = null
+    }
     timeouts.forEach((id) => clearTimeout(id))
     timeouts.length = 0
     stars.length = 0
-    galaxies.length = 0
-    window.removeEventListener('resize', handleResize)
-    if (resizeTimeout) clearTimeout(resizeTimeout)
     if (starsContainer.value) {
       for (const galaxy of galaxies) {
         if (starsContainer.value.contains(galaxy.el)) starsContainer.value.removeChild(galaxy.el)
       }
+      for (const nebula of emissionNebulas) {
+        if (starsContainer.value.contains(nebula.el)) starsContainer.value.removeChild(nebula.el)
+      }
     }
+    galaxies.length = 0
+    emissionNebulas.length = 0
+    dustPatches.length = 0
+    starClusters.length = 0
+    window.removeEventListener('resize', handleResize)
+    if (resizeTimeout) clearTimeout(resizeTimeout)
   }
 
   function handleVisibilityChange(): void {
@@ -1346,11 +1876,16 @@ export function useStarBackground() {
         clearTimeout(galaxySpawnTimeout)
         galaxySpawnTimeout = null
       }
+      if (emissionSpawnTimeout) {
+        clearTimeout(emissionSpawnTimeout)
+        emissionSpawnTimeout = null
+      }
     } else {
       if (!prefersReducedMotion.value && stars.length > 0) {
         lastTimestamp = 0
         animFrame = requestAnimationFrame(animateStars)
         scheduleNextGalaxy()
+        scheduleNextEmission()
       }
     }
   }
@@ -1362,6 +1897,7 @@ export function useStarBackground() {
       setTimeout(createStars, 100)
       window.addEventListener('resize', handleResize)
       scheduleNextGalaxy()
+      scheduleNextEmission()
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
   })

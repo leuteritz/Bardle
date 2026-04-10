@@ -10,6 +10,8 @@
     <div class="nebula nebula-2"></div>
     <div class="nebula nebula-3"></div>
     <div class="nebula nebula-4"></div>
+    <div class="nebula nebula-5"></div>
+    <div class="nebula nebula-6"></div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
     <!-- Planeten NICHT mehr hier – sie würden immer bei z-index 1 bleiben -->
   </div>
@@ -97,6 +99,24 @@ const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== t
   filter: blur(0.5px) brightness(1.1) saturate(1.3);
 }
 
+.emission-nebula {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+  filter: blur(2px) brightness(1.2) saturate(1.5);
+}
+
+.ion-cloud {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+  filter: blur(5px) brightness(1.1) saturate(1.3);
+}
+
 @keyframes galaxyEnter {
   0% {
     opacity: 0;
@@ -141,52 +161,76 @@ const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== t
 }
 
 .nebula-1 {
-  width: 600px;
-  height: 500px;
+  width: 700px;
+  height: 580px;
   top: -10%;
   left: 5%;
   background: radial-gradient(
     ellipse,
-    var(--nebula-1-color, rgba(88, 28, 135, 0.07)) 0%,
+    var(--nebula-1-color, rgba(88, 28, 135, 0.18)) 0%,
     transparent 70%
   );
   animation: nebulaFloat1 90s ease-in-out infinite;
 }
 .nebula-2 {
-  width: 700px;
-  height: 550px;
+  width: 800px;
+  height: 620px;
   top: 40%;
   right: -5%;
   background: radial-gradient(
     ellipse,
-    var(--nebula-2-color, rgba(6, 78, 130, 0.06)) 0%,
+    var(--nebula-2-color, rgba(6, 78, 130, 0.16)) 0%,
     transparent 70%
   );
   animation: nebulaFloat2 110s ease-in-out infinite;
 }
 .nebula-3 {
-  width: 500px;
-  height: 600px;
+  width: 600px;
+  height: 700px;
   bottom: -5%;
   left: 30%;
   background: radial-gradient(
     ellipse,
-    var(--nebula-3-color, rgba(14, 116, 144, 0.055)) 0%,
+    var(--nebula-3-color, rgba(14, 116, 144, 0.15)) 0%,
     transparent 70%
   );
   animation: nebulaFloat3 80s ease-in-out infinite;
 }
 .nebula-4 {
-  width: 450px;
-  height: 450px;
+  width: 550px;
+  height: 520px;
   top: 20%;
   left: 45%;
   background: radial-gradient(
     ellipse,
-    var(--nebula-4-color, rgba(131, 24, 67, 0.05)) 0%,
+    var(--nebula-4-color, rgba(131, 24, 67, 0.14)) 0%,
     transparent 70%
   );
   animation: nebulaFloat4 125s ease-in-out infinite;
+}
+.nebula-5 {
+  width: 650px;
+  height: 500px;
+  top: -5%;
+  right: 10%;
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-5-color, rgba(6, 130, 150, 0.15)) 0%,
+    transparent 70%
+  );
+  animation: nebulaFloat5 105s ease-in-out infinite;
+}
+.nebula-6 {
+  width: 550px;
+  height: 480px;
+  bottom: 5%;
+  left: -5%;
+  background: radial-gradient(
+    ellipse,
+    var(--nebula-6-color, rgba(180, 80, 20, 0.13)) 0%,
+    transparent 70%
+  );
+  animation: nebulaFloat6 95s ease-in-out infinite;
 }
 
 @keyframes nebulaFloat1 {
@@ -234,9 +278,35 @@ const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== t
     transform: translate(5%, 2%) scale(1.05);
   }
 }
+@keyframes nebulaFloat5 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  35% {
+    transform: translate(-5%, 4%) scale(1.07);
+  }
+  70% {
+    transform: translate(3%, -3%) scale(0.96);
+  }
+}
+@keyframes nebulaFloat6 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  40% {
+    transform: translate(6%, -5%) scale(1.09);
+  }
+  75% {
+    transform: translate(-3%, 4%) scale(0.94);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .nebula {
+  .nebula,
+  .emission-nebula,
+  .ion-cloud {
     animation: none !important;
   }
 }

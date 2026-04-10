@@ -67,7 +67,7 @@ const activeTab = ref('idle')
 
     <EncyclopediaPanel />
 
-    <span class="fixed z-50 text-xs select-none bottom-3 right-3 text-amber-600/60 drop-shadow-sm">
+    <span class="fixed z-50 text-xl select-none bottom-3 right-3 text-amber-600/60 drop-shadow-xl">
       © Leuteritz
     </span>
   </div>
