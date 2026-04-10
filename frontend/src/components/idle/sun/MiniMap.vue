@@ -151,6 +151,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { GALAXY_THEMES } from '../../../config/galaxyThemes'
 
 const MAP_WORLD_VISIBLE = 0.22
 
@@ -176,6 +177,7 @@ export default defineComponent({
     const imgEl = ref<HTMLImageElement | null>(null)
     const dotPositions = ref<DotPos[]>([])
     const rescueOrder = ref<number[]>([])
+    const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
 
     let rafId: number | null = null
     let pulseFrame = 0
@@ -223,8 +225,25 @@ export default defineComponent({
       }
       dotPositions.value = dots
 
-      const originRng = seededRng(galaxyKey * 99991 + totalPlanets * 7)
-      const originIdx = Math.floor(originRng() * totalPlanets)
+      const spawnRng = seededRng(galaxyKey * 99997 + totalPlanets * 13)
+      const angle = spawnRng() * Math.PI * 2
+      const r = Math.sqrt(spawnRng()) * 0.30
+      spawnPos.value = {
+        x: 0.5 + r * Math.cos(angle),
+        y: 0.5 + r * Math.sin(angle),
+      }
+
+      let originIdx = 0
+      let nearestToSpawn = Infinity
+      for (let i = 0; i < dots.length; i++) {
+        const dx = dots[i].x - spawnPos.value.x
+        const dy = dots[i].y - spawnPos.value.y
+        const dist = dx * dx + dy * dy
+        if (dist < nearestToSpawn) {
+          nearestToSpawn = dist
+          originIdx = i
+        }
+      }
       const order: number[] = [originIdx]
       const visited = new Set<number>([originIdx])
       while (order.length < totalPlanets) {
@@ -272,13 +291,16 @@ export default defineComponent({
             y: from.y + (to.y - from.y) * progress,
           }
         }
-        return { x: 0.5 + (to.x - 0.5) * progress, y: 0.5 + (to.y - 0.5) * progress }
+        return {
+          x: spawnPos.value.x + (to.x - spawnPos.value.x) * progress,
+          y: spawnPos.value.y + (to.y - spawnPos.value.y) * progress,
+        }
       }
 
       const targetIdx = rescued < dots.length ? order[rescued] : -1
       if (targetIdx >= 0) return dots[targetIdx]
       if (rescued > 0) return dots[order[rescued - 1]]
-      return { x: 0.5, y: 0.5 }
+      return spawnPos.value
     }
 
     function drawCanvas() {
@@ -331,6 +353,16 @@ export default defineComponent({
       const imgX = w / 2 - player.x * imgW
       const imgY = h / 2 - player.y * imgH
       ctx.drawImage(img, imgX, imgY, imgW, imgH)
+
+      const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.fillStyle = theme.nebulaColors[0].replace(/,\s*[\d.]+\)/, ', 0.28)')
+      ctx.fillRect(0, 0, w, h)
+      ctx.restore()
 
       if (playerTrail.length >= 2) {
         for (let i = 1; i < playerTrail.length; i++) {
@@ -523,10 +555,14 @@ export default defineComponent({
     watch(
       () => [galaxyStore.currentGalaxy, galaxyStore.planetsRequired],
       () => {
+        playerTrail = []
+        trailLastPos = { wx: -1, wy: -1 }
         generateDots()
       },
       { immediate: true },
     )
+
+    watch(() => galaxyStore.currentThemeIndex, () => drawCanvas())
 
     watch(
       show,

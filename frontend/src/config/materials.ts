@@ -8,6 +8,7 @@ export const MATERIALS: Material[] = [
     description: 'Feiner Staub von fernen Sternen.',
     rarity: 'common',
     dropChance: 0.35,
+    dropCount: 3,
   },
   {
     id: 'moon_crystal',
@@ -16,6 +17,7 @@ export const MATERIALS: Material[] = [
     description: 'Ein Kristall, der im Mondlicht schimmert.',
     rarity: 'common',
     dropChance: 0.25,
+    dropCount: 3,
   },
   {
     id: 'nebula_quartz',
@@ -23,7 +25,8 @@ export const MATERIALS: Material[] = [
     image: '/img/Nebelquarz.png',
     description: 'Quarz aus den Tiefen eines Nebels.',
     rarity: 'uncommon',
-    dropChance: 0.20,
+    dropChance: 0.2,
+    dropCount: 3,
   },
   {
     id: 'solar_essence',
@@ -32,6 +35,7 @@ export const MATERIALS: Material[] = [
     description: 'Konzentrierte Energie eines Sterns.',
     rarity: 'rare',
     dropChance: 0.12,
+    dropCount: 3,
   },
   {
     id: 'void_shard',
@@ -40,6 +44,7 @@ export const MATERIALS: Material[] = [
     description: 'Ein Splitter aus dem Nichts.',
     rarity: 'rare',
     dropChance: 0.06,
+    dropCount: 3,
   },
   {
     id: 'dark_matter',
@@ -48,6 +53,7 @@ export const MATERIALS: Material[] = [
     description: 'Unfassbare Materie jenseits des Sichtbaren.',
     rarity: 'epic',
     dropChance: 0.02,
+    dropCount: 3,
   },
 ]
 

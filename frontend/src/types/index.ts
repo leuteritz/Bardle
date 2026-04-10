@@ -171,8 +171,10 @@ export interface LabelData {
   currentHP: number
   maxHP: number
   reward: number | null
+  chimesImage?: string // ← NEU: Pfad zum Chimes-Icon
   materialImage?: string
   materialName?: string
+  materialCount?: number // ← NEU: Anzahl des Materials (z. B. 500)
   championImage?: string
   championName?: string
   isGalaxyBoss: boolean
@@ -409,6 +411,7 @@ export interface Material {
   description: string
   rarity: MaterialRarity
   dropChance: number
+  dropCount?: number
 }
 
 // ── Battle Shop System ───────────────────────────────────
