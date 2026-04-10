@@ -1,16 +1,144 @@
 <template>
   <Transition name="travel-fade">
     <div v-if="show" class="travel-hud">
-      <!-- Kreisförmige Minimap: nur das runde Canvas, kein Rahmen, kein BG -->
-      <div class="minimap-ring" :class="{ 'minimap-ring--rescuing': isRescuing }">
-        <img ref="imgEl" src="/img/galaxie.png" style="display: none" alt="" @load="onImageLoad" />
-        <canvas ref="canvasEl" class="map-canvas" />
+      <!-- RPG-Frame-Wrapper (übernimmt Hover, Blur, Scale) -->
+      <div class="minimap-frame" :class="{ 'minimap-frame--rescuing': isRescuing }">
+        <!-- N-Kompass-Label -->
+        <span class="minimap-n-label">N</span>
 
-        <!-- Vignette-Overlay für Tiefe -->
-        <div class="minimap-vignette" />
+        <!-- Dekorativer SVG-Kompassring (nur visuell) -->
+        <svg
+          class="minimap-compass-svg"
+          viewBox="0 0 220 220"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <defs>
+            <mask id="bezelMask">
+              <circle cx="110" cy="110" r="107" fill="white" />
+              <circle cx="110" cy="110" r="91" fill="black" />
+            </mask>
+            <radialGradient id="bezelGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="83%" stop-color="#0b0703" />
+              <stop offset="100%" stop-color="#1c1108" />
+            </radialGradient>
+            <filter id="goldGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="1.2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- Dunkler Bezel-Hintergrund -->
+          <circle cx="110" cy="110" r="107" fill="url(#bezelGrad)" mask="url(#bezelMask)" />
+
+          <!-- Rahmenringe -->
+          <circle
+            cx="110"
+            cy="110"
+            r="109"
+            stroke="rgba(60,38,10,0.7)"
+            stroke-width="1"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="107"
+            stroke="rgba(210,160,40,0.95)"
+            stroke-width="1.8"
+            fill="none"
+            filter="url(#softGlow)"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="104"
+            stroke="rgba(100,68,15,0.6)"
+            stroke-width="0.8"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="101"
+            stroke="rgba(160,115,30,0.35)"
+            stroke-width="0.6"
+            fill="none"
+          />
+
+          <!-- Feine Kompassstriche (36×, alle 10°) -->
+          <circle
+            cx="110"
+            cy="110"
+            r="99.5"
+            stroke="rgba(175,130,38,0.6)"
+            stroke-dasharray="2.2 15.16"
+            stroke-width="2"
+            fill="none"
+            transform="rotate(-90 110 110)"
+          />
+          <!-- Ordinalstriche (NE/SE/SW/NW) -->
+          <circle
+            cx="110"
+            cy="110"
+            r="99.5"
+            stroke="rgba(210,165,48,0.8)"
+            stroke-dasharray="5 151.27"
+            stroke-width="2.5"
+            fill="none"
+            transform="rotate(-45 110 110)"
+          />
+
+          <!-- Innere Bezel-Kanten -->
+          <circle
+            cx="110"
+            cy="110"
+            r="92.5"
+            stroke="rgba(205,158,42,0.55)"
+            stroke-width="1"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="91"
+            stroke="rgba(50,32,8,0.9)"
+            stroke-width="1.2"
+            fill="none"
+          />
+
+          <!-- Ordinal-Nieten -->
+          <circle cx="185" cy="35" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
+          <circle cx="185" cy="185" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
+          <circle cx="35" cy="185" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
+          <circle cx="35" cy="35" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
+        </svg>
+
+        <!-- Kreisförmige Minimap (Logik unverändert) -->
+        <div class="minimap-ring">
+          <img
+            ref="imgEl"
+            src="/img/galaxie.png"
+            style="display: none"
+            alt=""
+            @load="onImageLoad"
+          />
+          <canvas ref="canvasEl" class="map-canvas" />
+          <div class="minimap-vignette" />
+        </div>
       </div>
 
-      <!-- Ankunfts-Countdown: nur während der Reise, kein Container-BG -->
+      <!-- Ankunfts-Countdown -->
       <div v-if="!isRescuing" class="hud-eta">
         <span class="hud-eta-label">ETA</span>
         <span class="hud-eta-separator">·</span>
@@ -40,7 +168,7 @@ interface DotPos {
 }
 
 export default defineComponent({
-  name: 'TravelHud',
+  name: 'MiniMap',
   setup() {
     const galaxyStore = useGalaxyStore()
 
@@ -53,13 +181,11 @@ export default defineComponent({
     let pulseFrame = 0
     let rafLastPulseMs = 0
 
-    // ── Trail (distanzbasiert) ────────────────────────────────────────────────
     const TRAIL_MIN_DIST = 0.0008
     const TRAIL_MAX_PTS = 60
     let playerTrail: Array<{ wx: number; wy: number }> = []
     let trailLastPos = { wx: -1, wy: -1 }
 
-    // ── Computed ──────────────────────────────────────────────────────────────
     const show = computed(
       () =>
         (galaxyStore.championTravelState === 'traveling' ||
@@ -85,7 +211,6 @@ export default defineComponent({
       return `${m}:${String(sec).padStart(2, '0')}`
     })
 
-    // ── Dot-Generierung ───────────────────────────────────────────────────────
     function generateDots() {
       const galaxyKey = galaxyStore.currentGalaxy
       const totalPlanets = galaxyStore.planetsRequired
@@ -156,7 +281,6 @@ export default defineComponent({
       return { x: 0.5, y: 0.5 }
     }
 
-    // ── Canvas-Zeichnung ──────────────────────────────────────────────────────
     function drawCanvas() {
       const canvas = canvasEl.value
       if (!canvas) return
@@ -188,7 +312,6 @@ export default defineComponent({
         return [w / 2 + (wx - player.x) * scale, h / 2 + (wy - player.y) * scale]
       }
 
-      // Trail aktualisieren (distanzbasiert)
       if (isTraveling) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
@@ -203,17 +326,15 @@ export default defineComponent({
         trailLastPos = { wx: -1, wy: -1 }
       }
 
-      // Galaxienbild zeichnen
       const imgW = scale
       const imgH = scale
       const imgX = w / 2 - player.x * imgW
       const imgY = h / 2 - player.y * imgH
       ctx.drawImage(img, imgX, imgY, imgW, imgH)
 
-      // ── Spieler-Trail ──────────────────────────────────────────────────────
       if (playerTrail.length >= 2) {
         for (let i = 1; i < playerTrail.length; i++) {
-          const ratio = i / (playerTrail.length - 1) // 0 = ältester, 1 = neuester Punkt
+          const ratio = i / (playerTrail.length - 1)
           const alpha = ratio * 0.8
           const lw = ratio * 3.5 + 0.4
           const [x1, y1] = wToC(playerTrail[i - 1].wx, playerTrail[i - 1].wy)
@@ -231,7 +352,6 @@ export default defineComponent({
         ctx.shadowBlur = 0
       }
 
-      // Verbindungslinien zwischen geretteten Planeten
       if (rescued >= 2) {
         ctx.beginPath()
         ctx.strokeStyle = 'rgba(232, 192, 64, 0.55)'
@@ -246,7 +366,6 @@ export default defineComponent({
         ctx.stroke()
       }
 
-      // Gestrichelte Linie vom letzten geretteten Planeten zum Ziel
       const targetIdx = rescued < dots.length ? order[rescued] : -1
       if (targetIdx >= 0 && isTraveling && rescued > 0) {
         const [lx, ly] = wToC(dots[order[rescued - 1]].x, dots[order[rescued - 1]].y)
@@ -261,7 +380,6 @@ export default defineComponent({
         ctx.setLineDash([])
       }
 
-      // Ungerettete Dots (hollow white)
       const rescuedSet = new Set(order.slice(0, rescued))
       for (let i = 0; i < dots.length; i++) {
         if (rescuedSet.has(i)) continue
@@ -276,7 +394,6 @@ export default defineComponent({
         ctx.stroke()
       }
 
-      // Gerettete Dots (gold)
       for (let i = 0; i < rescued; i++) {
         const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
         ctx.beginPath()
@@ -288,7 +405,6 @@ export default defineComponent({
         ctx.stroke()
       }
 
-      // Galaxy-Boss-Marker
       if (galaxyStore.needsFinalBoss) {
         const [bx, by] = wToC(0.5, 0.5)
         if (rescued > 0) {
@@ -331,16 +447,13 @@ export default defineComponent({
         ctx.fillText('☠', bx, by)
       }
 
-      // Zielplanet: pulsierender weißer Marker
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const pulse = pulseFrame === 1
-        // Äußerer Pulsring
         ctx.beginPath()
         ctx.arc(tx, ty, pulse ? 16 : 12, 0, Math.PI * 2)
         ctx.fillStyle = pulse ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'
         ctx.fill()
-        // Innerer Dot
         ctx.shadowColor = 'rgba(255,255,255,0.9)'
         ctx.shadowBlur = pulse ? 18 : 10
         ctx.beginPath()
@@ -348,7 +461,6 @@ export default defineComponent({
         ctx.fillStyle = pulse ? 'rgba(255,255,255,0.98)' : 'rgba(220,220,240,0.8)'
         ctx.fill()
         ctx.shadowBlur = 0
-        // Fadenkreuz-Marker
         ctx.strokeStyle = 'rgba(255,255,255,0.6)'
         ctx.lineWidth = 1
         ctx.beginPath()
@@ -359,7 +471,6 @@ export default defineComponent({
         ctx.stroke()
       }
 
-      // Spieler-Dot: immer in der Mitte
       ctx.shadowColor = 'rgba(232,192,64,0.95)'
       ctx.shadowBlur = 16
       ctx.beginPath()
@@ -371,7 +482,6 @@ export default defineComponent({
       ctx.stroke()
       ctx.shadowBlur = 0
 
-      // Richtungspfeil vom Spieler zum Ziel
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const dx = tx - w / 2
@@ -393,7 +503,6 @@ export default defineComponent({
       }
     }
 
-    // ── rAF-Loop ──────────────────────────────────────────────────────────────
     function rafTick(timestamp: number) {
       if (timestamp - rafLastPulseMs > 600) {
         pulseFrame = pulseFrame === 0 ? 1 : 0
@@ -411,7 +520,6 @@ export default defineComponent({
       drawCanvas()
     }
 
-    // ── Watches ───────────────────────────────────────────────────────────────
     watch(
       () => [galaxyStore.currentGalaxy, galaxyStore.planetsRequired],
       () => {
@@ -463,6 +571,7 @@ export default defineComponent({
   transform: translateX(-50%) translateY(12px);
 }
 
+/* ── HUD-Container ── */
 .travel-hud {
   position: fixed;
   bottom: 10vh;
@@ -473,23 +582,23 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: none;
   border: none;
 }
 
-/* Z-Index hochsetzen wenn Map gehovert */
-.travel-hud:has(.minimap-ring:hover) {
+.travel-hud:has(.minimap-frame:hover) {
   z-index: 20;
 }
 
-/* ── Kreis ── */
-.minimap-ring {
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  overflow: hidden;
+/* ── RPG-Frame-Wrapper ── */
+.minimap-frame {
   position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: auto;
   cursor: crosshair;
   transform-origin: center bottom;
@@ -497,36 +606,91 @@ export default defineComponent({
     transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
     filter 0.4s ease,
     opacity 0.4s ease;
+  filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45)) drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
+  animation: minimap-pulse-glow 3.5s ease-in-out infinite;
 }
 
-.minimap-ring:hover {
+.minimap-frame:hover {
   transform: scale(1.85);
+  filter: drop-shadow(0 0 22px rgba(232, 192, 64, 0.75))
+    drop-shadow(0 0 8px rgba(160, 110, 20, 0.9));
+  animation: none;
 }
 
-.minimap-ring--rescuing {
-  filter: blur(2.5px);
+.minimap-frame--rescuing {
+  filter: blur(2.5px) drop-shadow(0 0 8px rgba(180, 130, 28, 0.3));
   opacity: 0.45;
+  animation: none;
 }
 
-.minimap-ring--rescuing:hover {
-  filter: blur(0.5px);
+.minimap-frame--rescuing:hover {
+  filter: blur(0.5px) drop-shadow(0 0 16px rgba(232, 192, 64, 0.55));
   opacity: 0.9;
 }
 
-/* Canvas füllt den gesamten Kreis */
+@keyframes minimap-pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45))
+      drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(210, 160, 40, 0.65))
+      drop-shadow(0 0 6px rgba(120, 82, 15, 0.75));
+  }
+}
+
+/* ── Kompass-SVG ── */
+.minimap-compass-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── N-Label ── */
+.minimap-n-label {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 2px;
+  color: #ffe080;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.95),
+    0 0 4px rgba(150, 100, 20, 0.8);
+  z-index: 3;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Minimap-Kreis ── */
+.minimap-ring {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
 .map-canvas {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-/* Innere Vignette */
 .minimap-vignette {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, 0.65) 100%);
 }
 
 /* ── ETA-Anzeige ── */
@@ -534,6 +698,8 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 6px;
+  border-top: 1px solid rgba(180, 130, 35, 0.35);
+  padding-top: 5px;
 }
 
 .hud-eta-label {

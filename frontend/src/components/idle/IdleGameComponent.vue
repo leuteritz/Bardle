@@ -21,8 +21,8 @@
       </div>
     </div>
 
-    <!-- Planet Travel HUD -->
-    <TravelHud />
+    <!-- MiniMap -->
+    <MiniMap />
 
     <!-- Champion Orbit + Combat Visuals -->
     <ChampionOrbit />
@@ -57,7 +57,7 @@ import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
-import TravelHud from './sun/TravelHud.vue'
+import MiniMap from './sun/MiniMap.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
 
@@ -65,7 +65,7 @@ export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     SunComponent,
-    TravelHud,
+    MiniMap,
     ChampionOrbit,
     PlayerHPBar,
   },
