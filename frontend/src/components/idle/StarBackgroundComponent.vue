@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useStarBackground } from '../../composables/useStarBackground'
+import { useStarBackground } from '../../composables/starBackground'
 import { usePlanetBackground } from '../../composables/usePlanetBackground'
 import PlanetComponent from './planet/PlanetComponent.vue'
 

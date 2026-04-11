@@ -17,32 +17,13 @@ import {
 import { generateUniquePlanetName, releasePlanetName } from './usePlanetNames'
 import { MATERIALS } from '../config/materials'
 import type { PlanetItem } from '../types'
+import { getOrbitPos } from '../utils/orbitMath'
 
 // Re-export for consumers (avoids unused import warnings)
 export type { PlanetType, PlanetTypeConfig }
 export { PLANET_TYPE_CONFIGS }
 
 let planetIdCounter = 0
-
-// ─── 3D-Ellipsen-Orbit (identisch mit ChampionOrbit) ──────────────────────
-
-function getOrbitPos(
-  angle: number,
-  rx: number,
-  ry: number,
-  tilt: number,
-  cx: number,
-  cy: number,
-): { x: number; y: number } {
-  const cosT = Math.cos(tilt),
-    sinT = Math.sin(tilt)
-  const cosA = Math.cos(angle),
-    sinA = Math.sin(angle)
-  return {
-    x: cx + rx * cosA * cosT - ry * sinA * sinT,
-    y: cy + rx * cosA * sinT + ry * sinA * cosT,
-  }
-}
 
 const FLY_IN_START_SCALE = 3.5
 

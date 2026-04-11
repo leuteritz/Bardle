@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
-import { encyclopediaData } from '../../config/encyclopediaData'
+import { encyclopediaData } from '../../config/encyclopedia'
 
 const gameStore = useGameStore()
 const searchQuery = ref('')
