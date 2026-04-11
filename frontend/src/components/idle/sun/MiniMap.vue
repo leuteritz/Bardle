@@ -138,8 +138,19 @@
         </div>
 
         <!-- Planeten-Zähler -->
-        <div class="minimap-planet-count">
+        <div v-if="!galaxyStore.isComplete" class="minimap-planet-count">
           {{ galaxyStore.planetsRescued }} / {{ galaxyStore.planetsRequired }}
+        </div>
+
+        <!-- Galaxy Complete Overlay -->
+        <div
+          v-if="galaxyStore.isComplete && !galaxyStore.isGalaxyTransitioning && !galaxyStore.pendingTransition"
+          class="complete-overlay"
+        >
+          <span class="complete-badge">✦ Galaxie Befreit ✦</span>
+          <button class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
+            » Nächste Galaxie «
+          </button>
         </div>
       </div>
 
@@ -307,7 +318,8 @@ export default defineComponent({
           galaxyStore.championTravelState === 'champion_spawned') &&
           !galaxyStore.pendingGalaxyBoss &&
           !galaxyStore.isComplete) ||
-        galaxyStore.isGalaxyTransitioning,
+        galaxyStore.isGalaxyTransitioning ||
+        galaxyStore.isComplete,
     )
 
     const isRescuing = computed(
@@ -995,5 +1007,71 @@ export default defineComponent({
   text-shadow:
     0 0 14px rgba(220, 175, 40, 0.8),
     0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* ── Galaxy Complete Overlay ── */
+.complete-overlay {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(10, 6, 2, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.complete-badge {
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  color: #e8c040;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.95),
+    0 0 5px rgba(255, 210, 60, 0.7);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.next-galaxy-btn {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  padding: 7px 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 2px 10px rgba(46, 122, 26, 0.55);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.next-galaxy-btn:hover {
+  background: linear-gradient(to bottom, #66d040, #3a9a22);
+  box-shadow: 0 0 16px rgba(82, 184, 48, 0.75);
+  transform: translateY(-1px);
+}
+
+.next-galaxy-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
 }
 </style>
