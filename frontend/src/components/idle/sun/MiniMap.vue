@@ -136,6 +136,11 @@
           <canvas ref="canvasEl" class="map-canvas" />
           <div class="minimap-vignette" />
         </div>
+
+        <!-- Planeten-Zähler -->
+        <div class="minimap-planet-count">
+          {{ galaxyStore.planetsRescued }} / {{ galaxyStore.planetsRequired }}
+        </div>
       </div>
 
       <!-- Ankunfts-Countdown -->
@@ -335,7 +340,7 @@ export default defineComponent({
 
       const spawnRng = seededRng(galaxyKey * 99997 + totalPlanets * 13)
       const angle = spawnRng() * Math.PI * 2
-      const r = Math.sqrt(spawnRng()) * 0.30
+      const r = Math.sqrt(spawnRng()) * 0.3
       spawnPos.value = {
         x: 0.5 + r * Math.cos(angle),
         y: 0.5 + r * Math.sin(angle),
@@ -690,7 +695,10 @@ export default defineComponent({
       { immediate: true },
     )
 
-    watch(() => galaxyStore.currentThemeIndex, () => drawCanvas())
+    watch(
+      () => galaxyStore.currentThemeIndex,
+      () => drawCanvas(),
+    )
 
     watch(
       show,
@@ -703,61 +711,76 @@ export default defineComponent({
       { immediate: true },
     )
 
-    watch(() => galaxyStore.isGalaxyTransitioning, (active) => {
-      if (!active) return
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    watch(
+      () => galaxyStore.isGalaxyTransitioning,
+      (active) => {
+        if (!active) return
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-      const canvas = canvasEl.value
-      const w = canvas?.offsetWidth ?? 180
-      const h = canvas?.offsetHeight ?? 180
+        const canvas = canvasEl.value
+        const w = canvas?.offsetWidth ?? 180
+        const h = canvas?.offsetHeight ?? 180
 
-      for (const id of hyperspaceTimeouts) window.clearTimeout(id)
-      hyperspaceTimeouts = []
+        for (const id of hyperspaceTimeouts) window.clearTimeout(id)
+        hyperspaceTimeouts = []
 
-      initWarpParticles(w, h)
-      hyperspacePhase = 'streaks'
-      hyperspacePhaseStart = Date.now()
+        initWarpParticles(w, h)
+        hyperspacePhase = 'streaks'
+        hyperspacePhaseStart = Date.now()
 
-      hyperspaceTimeouts.push(
-        window.setTimeout(() => { hyperspacePhase = 'flash'; hyperspacePhaseStart = Date.now() }, GALAXY_TRANS_WARP_MS),
-        window.setTimeout(() => { hyperspacePhase = 'fadeout'; hyperspacePhaseStart = Date.now() }, GALAXY_TRANS_WARP_MS + 500),
-        window.setTimeout(() => { hyperspacePhase = 'idle'; warpParticles = [] }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
-      )
-    })
+        hyperspaceTimeouts.push(
+          window.setTimeout(() => {
+            hyperspacePhase = 'flash'
+            hyperspacePhaseStart = Date.now()
+          }, GALAXY_TRANS_WARP_MS),
+          window.setTimeout(() => {
+            hyperspacePhase = 'fadeout'
+            hyperspacePhaseStart = Date.now()
+          }, GALAXY_TRANS_WARP_MS + 500),
+          window.setTimeout(() => {
+            hyperspacePhase = 'idle'
+            warpParticles = []
+          }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
+        )
+      },
+    )
 
-    watch(() => gameStore.isHyperspaceActive, (active) => {
-      if (!active) return
+    watch(
+      () => gameStore.isHyperspaceActive,
+      (active) => {
+        if (!active) return
 
-      // Respect prefers-reduced-motion
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+        // Respect prefers-reduced-motion
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-      const canvas = canvasEl.value
-      const w = canvas?.offsetWidth ?? 180
-      const h = canvas?.offsetHeight ?? 180
+        const canvas = canvasEl.value
+        const w = canvas?.offsetWidth ?? 180
+        const h = canvas?.offsetHeight ?? 180
 
-      // Cancel any pending phase timers
-      for (const id of hyperspaceTimeouts) window.clearTimeout(id)
-      hyperspaceTimeouts = []
+        // Cancel any pending phase timers
+        for (const id of hyperspaceTimeouts) window.clearTimeout(id)
+        hyperspaceTimeouts = []
 
-      initWarpParticles(w, h)
-      hyperspacePhase = 'streaks'
-      hyperspacePhaseStart = Date.now()
+        initWarpParticles(w, h)
+        hyperspacePhase = 'streaks'
+        hyperspacePhaseStart = Date.now()
 
-      hyperspaceTimeouts.push(
-        window.setTimeout(() => {
-          hyperspacePhase = 'flash'
-          hyperspacePhaseStart = Date.now()
-        }, 2000),
-        window.setTimeout(() => {
-          hyperspacePhase = 'fadeout'
-          hyperspacePhaseStart = Date.now()
-        }, 2500),
-        window.setTimeout(() => {
-          hyperspacePhase = 'idle'
-          warpParticles = []
-        }, 3500),
-      )
-    })
+        hyperspaceTimeouts.push(
+          window.setTimeout(() => {
+            hyperspacePhase = 'flash'
+            hyperspacePhaseStart = Date.now()
+          }, 2000),
+          window.setTimeout(() => {
+            hyperspacePhase = 'fadeout'
+            hyperspacePhaseStart = Date.now()
+          }, 2500),
+          window.setTimeout(() => {
+            hyperspacePhase = 'idle'
+            warpParticles = []
+          }, 3500),
+        )
+      },
+    )
 
     onMounted(() => {
       nextTick(() => {
@@ -774,7 +797,7 @@ export default defineComponent({
       hyperspaceTimeouts = []
     })
 
-    return { show, isRescuing, countdown, canvasEl, imgEl, onImageLoad }
+    return { show, isRescuing, countdown, canvasEl, imgEl, onImageLoad, galaxyStore }
   },
 })
 </script>
@@ -913,6 +936,29 @@ export default defineComponent({
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+/* ── Planeten-Zähler (RPG-Stil) ── */
+.minimap-planet-count {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.05rem;
+  font-weight: 700;
+
+  color: #ffe484;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.95),
+    0 0 6px rgba(255, 210, 60, 0.75),
+    0 0 2px rgba(255, 240, 140, 0.5),
+    0 1px 4px rgba(0, 0, 0, 0.98),
+    0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 /* ── ETA-Anzeige ── */
