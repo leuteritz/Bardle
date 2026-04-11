@@ -13,6 +13,7 @@ import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
+import FpsOverlay from './components/idle/FpsOverlay.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -31,6 +32,7 @@ const activeTab = ref('idle')
     <HyperspaceOverlay />
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
+    <FpsOverlay />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <!-- Header + Countdown zusammen als ein Flex-Kind -->
@@ -116,26 +118,38 @@ const activeTab = ref('idle')
    COSMIC BACKGROUND
    ================================================================ */
 .cosmic-bg {
-  background: var(--cosmic-gradient);
-  background-size: 400% 400%;
-  animation: cosmicShift 20s ease infinite;
+  background: #0a0620;
+  position: relative;
 }
-.cosmic-bg.reduce-motion {
-  animation: none;
-  background-position: 0% 50%;
+
+/* Animated background layer uses transform (composited) instead of
+   background-position (paint) to avoid per-frame repaint work. */
+.cosmic-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  background: var(--cosmic-gradient);
+  background-size: 50% 100%;
+  animation: cosmicShift 20s ease infinite;
+  will-change: transform;
+  z-index: -1;
+  pointer-events: none;
 }
 
 @keyframes cosmicShift {
   0%,
   100% {
-    background-position: 0% 50%;
+    transform: translateX(0%);
   }
   50% {
-    background-position: 100% 50%;
+    transform: translateX(-50%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cosmic-bg {
+  .cosmic-bg::before {
     animation: none !important;
   }
 }

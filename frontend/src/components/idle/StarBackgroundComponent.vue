@@ -6,12 +6,14 @@
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
-    <div class="nebula nebula-1"></div>
-    <div class="nebula nebula-2"></div>
-    <div class="nebula nebula-3"></div>
-    <div class="nebula nebula-4"></div>
-    <div class="nebula nebula-5"></div>
-    <div class="nebula nebula-6"></div>
+    <div :class="{ 'nebulas-paused': nebulasPaused }">
+      <div class="nebula nebula-1"></div>
+      <div class="nebula nebula-2"></div>
+      <div class="nebula nebula-3"></div>
+      <div class="nebula nebula-4"></div>
+      <div class="nebula nebula-5"></div>
+      <div class="nebula nebula-6"></div>
+    </div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
     <!-- Planeten NICHT mehr hier – sie würden immer bei z-index 1 bleiben -->
   </div>
@@ -57,13 +59,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
 import { usePlanetBackground } from '../../composables/usePlanetBackground'
 import PlanetComponent from './planet/PlanetComponent.vue'
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
 const { planets } = usePlanetBackground(starsContainer)
+
+// Pause nebula CSS animations after 30 s of no user interaction
+const NEBULA_IDLE_TIMEOUT = 30_000
+const nebulasPaused = ref(false)
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+function resetIdleTimer() {
+  nebulasPaused.value = false
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    nebulasPaused.value = true
+  }, NEBULA_IDLE_TIMEOUT)
+}
+
+onMounted(() => {
+  resetIdleTimer()
+  window.addEventListener('pointermove', resetIdleTimer, { passive: true })
+  window.addEventListener('keydown', resetIdleTimer, { passive: true })
+  window.addEventListener('pointerdown', resetIdleTimer, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', resetIdleTimer)
+  window.removeEventListener('keydown', resetIdleTimer)
+  window.removeEventListener('pointerdown', resetIdleTimer)
+  if (idleTimer) clearTimeout(idleTimer)
+})
 
 // Tiefe bestimmen: planetY relativ zur Bildschirmmitte
 // isBehind = Planet ist im oberen Orbit-Bereich (hinter Sonne)
@@ -309,6 +338,10 @@ const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== t
   .ion-cloud {
     animation: none !important;
   }
+}
+
+.nebulas-paused .nebula {
+  animation-play-state: paused;
 }
 
 /* ─── Planets ─────────────────────────────────────────────────────────────── */

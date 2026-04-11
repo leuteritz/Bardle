@@ -55,6 +55,9 @@ const STAR_COLORS: [number, number, number][] = [
 // Module-level counter so galaxyIdCounter stays in sync across modules
 let galaxyIdCounter = 0
 
+// Idle frame-throttle: cap render rate at 30 FPS when no active animation is running
+const IDLE_FRAME_INTERVAL = 1000 / 30
+
 export function useStarBackground() {
   const starsContainer = ref<HTMLElement>()
   const starCanvas = ref<HTMLCanvasElement>()
@@ -67,6 +70,7 @@ export function useStarBackground() {
   let nextStarId = 1
   let animFrame = 0
   let lastTimestamp = 0
+  let lastIdleFrameTime = 0
   let hyperspaceElapsed = 0
   let wasHyperspaceActive = false
 
@@ -345,6 +349,16 @@ export function useStarBackground() {
     const galaxyStore = useGalaxyStore()
     const pendingTrans = galaxyStore.pendingTransition
 
+    // ── Frame-Throttle: 30 FPS im Idle-Zustand ───────────────────────────────
+    const isActiveAnimation = hyperActive || galaxyTransPhase !== 'idle' || pendingTrans
+    if (!isActiveAnimation) {
+      if (timestamp - lastIdleFrameTime < IDLE_FRAME_INTERVAL) {
+        animFrame = requestAnimationFrame(animateStars)
+        return
+      }
+      lastIdleFrameTime = timestamp
+    }
+
     if (pendingTrans && !wasPendingTransition) {
       if (prefersReducedMotion.value) {
         galaxyStore.commitAdvance()
@@ -435,17 +449,21 @@ export function useStarBackground() {
         const fadeEdge = dNorm > 0.85 ? 1 - (dNorm - 0.85) / 0.15 : 1
         const finalOpacity = d.opacity * Math.min(1, dNorm * 2.5) * fadeEdge
 
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, rx)
-        grad.addColorStop(0, `rgba(${d.r},${d.g},${d.b},${finalOpacity.toFixed(3)})`)
-        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        // Cache gradient in normalised coords (0,0)→r=1 so it's created once per patch
+        if (!d.cachedGradient) {
+          const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
+          g.addColorStop(0, `rgba(${d.r},${d.g},${d.b},1)`)
+          g.addColorStop(1, 'rgba(0,0,0,0)')
+          d.cachedGradient = g
+        }
         ctx.save()
+        ctx.globalAlpha = finalOpacity
         ctx.translate(px, py)
         ctx.rotate(d.rotation)
-        ctx.scale(1, ry / rx)
-        ctx.translate(-px, -py)
+        ctx.scale(rx, ry)
         ctx.beginPath()
-        ctx.arc(px, py, rx, 0, Math.PI * 2)
-        ctx.fillStyle = grad
+        ctx.arc(0, 0, 1, 0, Math.PI * 2)
+        ctx.fillStyle = d.cachedGradient
         ctx.fill()
         ctx.restore()
       }
@@ -618,8 +636,10 @@ export function useStarBackground() {
         opacity *= Math.max(0, 1 - fadeTime * 3)
       }
 
-      g.el.style.opacity = opacity.toFixed(2)
-      g.el.style.transform = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+      const gOpStr = opacity.toFixed(2)
+      const gTrStr = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+      if (g._lastOpacity !== gOpStr) { g.el.style.opacity = gOpStr; g._lastOpacity = gOpStr }
+      if (g._lastTransform !== gTrStr) { g.el.style.transform = gTrStr; g._lastTransform = gTrStr }
 
       if (p >= 1) {
         if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
@@ -663,9 +683,11 @@ export function useStarBackground() {
         opacity *= Math.max(0, 1 - fadeTime * 2)
       }
 
-      n.el.style.opacity = opacity.toFixed(3)
+      const nOpStr = opacity.toFixed(3)
+      const nTrStr = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
+      if (n._lastOpacity !== nOpStr) { n.el.style.opacity = nOpStr; n._lastOpacity = nOpStr }
       // Scale from SVG center: translate to world pos → scale → re-center SVG
-      n.el.style.transform = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
+      if (n._lastTransform !== nTrStr) { n.el.style.transform = nTrStr; n._lastTransform = nTrStr }
 
       if (n.dist > maxDist) {
         if (starsContainer.value?.contains(n.el)) starsContainer.value.removeChild(n.el)
@@ -715,6 +737,7 @@ export function useStarBackground() {
       cancelAnimationFrame(animFrame)
       animFrame = 0
     }
+    lastIdleFrameTime = 0
     if (galaxySpawnTimeout) {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
