@@ -66,6 +66,7 @@ export const useBattleStore = defineStore('battle', {
     battleTime: 0,
     ownedChampions: ['Bard'],
     teamSlotAssignments: [null, null, null, null] as (string | null)[],
+    headerSlots: [null, null, null, null, null] as (string | null)[],
     battleFormula: {
       luckFactor: ELO_LUCK_FACTOR,
     },
@@ -190,6 +191,16 @@ export const useBattleStore = defineStore('battle', {
       const idx = this.teamSlotAssignments.indexOf(championName)
       if (idx !== -1) this.teamSlotAssignments[idx] = null
       this.syncTeam1ToSlots()
+    },
+
+    setHeaderSlot(slotIndex: number, champion: string) {
+      const existing = this.headerSlots.indexOf(champion)
+      if (existing !== -1 && existing !== slotIndex) this.headerSlots[existing] = null
+      this.headerSlots[slotIndex] = champion
+    },
+
+    clearHeaderSlot(slotIndex: number) {
+      this.headerSlots[slotIndex] = null
     },
 
     syncTeam1ToSlots() {

@@ -5,6 +5,8 @@ import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import InventoryTooltip from './InventoryTooltip.vue'
+import ChampionSelectorComponent from './ChampionSelectorComponent.vue'
+import HeaderStatsComponent from './HeaderStatsComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
 const emit = defineEmits<{ 'open-inventory': [] }>()
@@ -34,39 +36,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header
-    ref="headerRef"
-    class="z-[120] header-bar w-full max-w-[1400px] mx-auto relative flex items-stretch"
-  >
+  <header ref="headerRef" class="z-[120] header-bar w-full max-w-[1400px] mx-auto relative">
     <!-- ════════ LINKE SEITE ════════ -->
-    <div class="flex items-center gap-2 pr-3 header-side header-side--left">
+    <div class="flex items-center gap-2 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
 
       <div class="header-divider" aria-hidden="true"></div>
 
-      <div class="z-[65] flex-shrink-0" style="width: clamp(130px, 13vw, 210px)">
-        <!-- <GalaxyProgressComponent /> -->
+      <div
+        class="z-[65] flex-1 min-w-0"
+        style="align-self: stretch; display: flex; align-items: stretch"
+      >
+        <ChampionSelectorComponent />
       </div>
     </div>
 
-    <!-- ════════ MITTE ════════ -->
+    <!-- ════════ MITTE – Platzhalter für Grid-Spalte 2 ════════ -->
     <div class="header-center-anchor" aria-hidden="true"></div>
-    <div class="header-center">
-      <div class="center-stat-panel center-stat-panel--stacked">
-        <div class="stat-grid stat-grid--left">
-          <span class="header-label">C/Click</span>
-          <span class="stat-value chimes-text-glow">{{
-            formatNumber(gameStore.chimesPerClick)
-          }}</span>
-          <span class="header-label">C/s</span>
-          <span class="stat-value cps-text-glow">{{
-            formatNumber(gameStore.chimesPerSecond)
-          }}</span>
-        </div>
-      </div>
 
+    <!-- ════════ MITTE (absolut zentriert, überlagert Spalte 2) ════════ -->
+    <div class="header-center">
       <div class="center-wing center-wing--left" aria-hidden="true"></div>
 
       <div class="center-chimes">
@@ -81,20 +72,16 @@ onUnmounted(() => {
       </div>
 
       <div class="center-wing center-wing--right" aria-hidden="true"></div>
-
-      <div class="center-stat-panel center-stat-panel--stacked">
-        <div class="stat-grid stat-grid--right">
-          <span class="header-label">DMG/Click</span>
-          <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerClick) }}</span>
-          <span class="header-label">DMG/s</span>
-          <span class="stat-value dmg-text-glow">{{ formatNumber(gameStore.dmgPerSecond) }}</span>
-        </div>
-      </div>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
-    <div class="flex items-center gap-2 pl-3 header-side header-side--right">
-      <!-- UniversePortal füllt jetzt die volle Höhe, Meep ist integriert -->
+    <div class="flex items-center gap-2 header-side header-side--right">
+      <!-- Stats-Komponente -->
+      <HeaderStatsComponent />
+
+      <div class="header-divider" aria-hidden="true"></div>
+
+      <!-- UniversePortal -->
       <div class="z-[65] flex-shrink-0 header-portal-wrap">
         <UniverseRescueComponent />
       </div>
@@ -150,11 +137,14 @@ onUnmounted(() => {
     inset 0 0 0 3px var(--rpg-wood-mid, rgba(255, 200, 80, 0.04)),
     0 6px 28px rgba(0, 0, 0, 0.75);
   overflow: visible;
-  display: flex;
-  align-items: stretch;
   position: relative;
+  /* ── Grid-Layout: Links | Mitte | Rechts ── */
+  display: grid;
+  grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
+  align-items: stretch;
 }
-/* ── Portal-Container: streckt sich auf volle Header-Höhe ── */
+
+/* ── Portal-Container ── */
 .header-portal-wrap {
   width: clamp(148px, 14vw, 215px);
   align-self: stretch;
@@ -162,39 +152,12 @@ onUnmounted(() => {
   align-items: stretch;
 }
 
-/* ── Rechtes Status-Panel (Universe + Meep) ───────────────── */
-.header-right-status-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: clamp(150px, 14vw, 210px);
-  padding: 6px 8px;
-  background: rgba(6, 4, 14, 0.55);
-  border: 1px solid rgba(255, 200, 80, 0.12);
-  border-radius: 8px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 200, 80, 0.04),
-    0 4px 16px rgba(0, 0, 0, 0.45);
-}
-
-.status-panel-divider {
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 200, 80, 0.18) 30%,
-    rgba(251, 146, 60, 0.18) 70%,
-    transparent
-  );
-  margin-inline: 2px;
-}
-
-/* ── Linke / Rechte Seite ─────────────────────────────────────── */
+/* ── Linke / Rechte Seite ── */
 .header-side {
-  flex: 1;
   min-width: 0;
   padding-top: 1px;
   padding-bottom: 1px;
+  overflow: hidden;
 }
 .header-side--left {
   justify-content: flex-start;
@@ -204,7 +167,7 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   EBENE 2 — BardProfile-Panel
+   BARD-PROFILE
    ================================================================ */
 .header-profile-bump {
   display: flex;
@@ -214,11 +177,11 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   EBENE 3 — Chimes-Center-Panel
+   MITTE — Grid-Spalte 2 Platzhalter + absolut zentriertes Panel
    ================================================================ */
 .header-center-anchor {
+  /* Hält Grid-Spalte 2 besetzt; kein sichtbarer Inhalt */
   flex-shrink: 0;
-  width: 0;
 }
 
 .header-center {
@@ -234,10 +197,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
-  width: clamp(340px, 32vw, 480px);
+  width: clamp(200px, 20vw, 280px);
 }
 
-/* Passage effect: thicken sides to match modal frame, remove horizontal borders at junction */
 body.bard-modal-open .center-chimes {
   border-left: 4px solid #7a4e20;
   border-right: 4px solid #7a4e20;
@@ -247,7 +209,7 @@ body.bard-modal-open .center-chimes {
 
 .center-wing {
   flex-shrink: 0;
-  width: 28px;
+  width: 20px;
   height: 2px;
   background: linear-gradient(to right, transparent, rgba(255, 200, 80, 0.38));
   align-self: center;
@@ -263,14 +225,14 @@ body.bard-modal-open .center-chimes {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: clamp(160px, 16vw, 220px);
+  flex: 1;
   flex-shrink: 0;
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
   border-left: 1px solid rgba(255, 200, 80, 0.24);
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 8px 8px;
-  padding: 5px 20px 5px 14px;
+  padding: 5px 18px 5px 12px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
@@ -278,13 +240,15 @@ body.bard-modal-open .center-chimes {
 }
 
 .header-chime-icon {
-  width: clamp(34px, 4vw, 52px);
-  height: clamp(34px, 4vw, 52px);
+  width: clamp(30px, 3.5vw, 46px);
+  height: clamp(30px, 3.5vw, 46px);
   object-fit: contain;
   flex-shrink: 0;
 }
 
-/* ── Trennlinien ──────────────────────────────────────────────── */
+/* ================================================================
+   TRENNLINIEN
+   ================================================================ */
 .header-divider {
   flex-shrink: 0;
   width: 1px;
@@ -295,16 +259,8 @@ body.bard-modal-open .center-chimes {
   align-self: center;
 }
 
-.header-dot {
-  font-size: 1.2rem;
-  line-height: 1;
-  color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.25));
-  user-select: none;
-  flex-shrink: 0;
-}
-
 /* ================================================================
-   CHIMES & STATS – Typografie
+   TYPOGRAFIE (globale Fallback-Klassen)
    ================================================================ */
 .header-label {
   font-size: 0.65rem;
@@ -357,6 +313,7 @@ body.bard-modal-open .center-chimes {
   filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
 }
 .cps-text-glow {
+  color: #74d448;
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
 .dmg-text-glow {
@@ -365,7 +322,7 @@ body.bard-modal-open .center-chimes {
 }
 
 /* ================================================================
-   CENTER STAT PANELS
+   CENTER STAT PANELS (Fallback)
    ================================================================ */
 .center-stat-panel {
   display: flex;
@@ -395,7 +352,7 @@ body.bard-modal-open .center-chimes {
 }
 
 /* ================================================================
-   INVENTAR-KREIS — spiegelt Bard-Portrait
+   INVENTAR-KREIS
    ================================================================ */
 .header-inventory-bump {
   display: flex;
@@ -420,5 +377,40 @@ body.bard-modal-open .center-chimes {
 }
 .inventory-circle-btn:active .inventory-portrait-inner {
   transform: scale(0.96);
+}
+
+/* ================================================================
+   LEGACY
+   ================================================================ */
+.header-right-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: clamp(150px, 14vw, 210px);
+  padding: 6px 8px;
+  background: rgba(6, 4, 14, 0.55);
+  border: 1px solid rgba(255, 200, 80, 0.12);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 80, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.45);
+}
+.status-panel-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 200, 80, 0.18) 30%,
+    rgba(251, 146, 60, 0.18) 70%,
+    transparent
+  );
+  margin-inline: 2px;
+}
+.header-dot {
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.25));
+  user-select: none;
+  flex-shrink: 0;
 }
 </style>

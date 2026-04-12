@@ -308,8 +308,8 @@ export default defineComponent({
     }
 
     watch(
-      () => battleStore.ownedChampions,
-      (owned) => combatStore.syncChampions(owned),
+      () => battleStore.headerSlots,
+      (slots) => combatStore.syncChampions(slots.filter((s): s is string => s !== null)),
       { immediate: true, deep: true },
     )
 

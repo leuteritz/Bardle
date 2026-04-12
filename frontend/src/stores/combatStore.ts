@@ -154,7 +154,7 @@ export const useCombatStore = defineStore('combat', {
     /** Initialize champions from battleStore on first load */
     init() {
       const battleStore = useBattleStore()
-      this.syncChampions(battleStore.ownedChampions)
+      this.syncChampions(battleStore.headerSlots.filter((s): s is string => s !== null))
     },
   },
 })

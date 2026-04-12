@@ -70,6 +70,7 @@ export function usePersistence() {
         currentRank: { ...battleStore.currentRank },
         ownedChampions: [...battleStore.ownedChampions],
         teamSlotAssignments: [...battleStore.teamSlotAssignments],
+        headerSlots: [...battleStore.headerSlots],
         totalBattles: battleStore.totalBattles,
         totalWins: battleStore.totalWins,
         totalLosses: battleStore.totalLosses,
@@ -209,6 +210,7 @@ export function usePersistence() {
         if (Array.isArray(b.ownedChampions)) battleStore.ownedChampions = b.ownedChampions
         if (Array.isArray(b.teamSlotAssignments))
           battleStore.teamSlotAssignments = b.teamSlotAssignments
+        if (Array.isArray(b.headerSlots)) battleStore.headerSlots = b.headerSlots
         battleStore.totalBattles = b.totalBattles ?? battleStore.totalBattles
         battleStore.totalWins = b.totalWins ?? battleStore.totalWins
         battleStore.totalLosses = b.totalLosses ?? battleStore.totalLosses
@@ -395,6 +397,7 @@ export function usePersistence() {
     battleStore.currentRank = { tier: 'Iron', division: 'IV', lp: 0 }
     battleStore.ownedChampions = ['Bard']
     battleStore.teamSlotAssignments = [null, null, null, null]
+    battleStore.headerSlots = [null, null, null, null, null]
     battleStore.totalBattles = 0
     battleStore.totalWins = 0
     battleStore.totalLosses = 0

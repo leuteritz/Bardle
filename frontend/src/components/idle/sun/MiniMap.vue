@@ -144,7 +144,11 @@
 
         <!-- Galaxy Complete Overlay -->
         <div
-          v-if="galaxyStore.isComplete && !galaxyStore.isGalaxyTransitioning && !galaxyStore.pendingTransition"
+          v-if="
+            galaxyStore.isComplete &&
+            !galaxyStore.isGalaxyTransitioning &&
+            !galaxyStore.pendingTransition
+          "
           class="complete-overlay"
         >
           <span class="complete-badge">✦ Galaxie Befreit ✦</span>
@@ -193,6 +197,257 @@ interface WarpParticle {
 }
 
 type HyperspacePhase = 'idle' | 'streaks' | 'flash' | 'fadeout'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RPG Planet Renderer
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PLANET_PALETTES = [
+  {
+    base: '#d4723a',
+    shadow: '#5a1a04',
+    highlight: '#f4a870',
+    atmo: 'rgba(220,100,40,0.5)',
+    ring: false,
+  }, // Mars/Wüste
+  {
+    base: '#5090d8',
+    shadow: '#102860',
+    highlight: '#90c8ff',
+    atmo: 'rgba(70,140,240,0.45)',
+    ring: false,
+  }, // Eiswelt
+  {
+    base: '#42b850',
+    shadow: '#0e3a14',
+    highlight: '#80e888',
+    atmo: 'rgba(50,200,70,0.4)',
+    ring: false,
+  }, // Dschungel
+  {
+    base: '#9050d0',
+    shadow: '#200850',
+    highlight: '#c080ff',
+    atmo: 'rgba(150,70,220,0.45)',
+    ring: true,
+  }, // Gasriese lila
+  {
+    base: '#d04a14',
+    shadow: '#480802',
+    highlight: '#ff8040',
+    atmo: 'rgba(220,80,20,0.5)',
+    ring: false,
+  }, // Lava
+  {
+    base: '#38a8cc',
+    shadow: '#0a2840',
+    highlight: '#70d8ff',
+    atmo: 'rgba(50,180,220,0.4)',
+    ring: false,
+  }, // Ozean
+  {
+    base: '#98cc3a',
+    shadow: '#203808',
+    highlight: '#ccff60',
+    atmo: 'rgba(160,220,50,0.4)',
+    ring: false,
+  }, // Gift/Sumpf
+  {
+    base: '#c89040',
+    shadow: '#3a2004',
+    highlight: '#ffcc70',
+    atmo: 'rgba(210,160,50,0.4)',
+    ring: true,
+  }, // Gasriese gold
+  {
+    base: '#e05888',
+    shadow: '#500820',
+    highlight: '#ff90c0',
+    atmo: 'rgba(220,80,130,0.45)',
+    ring: false,
+  }, // Kristall/Pink
+  {
+    base: '#40c8a8',
+    shadow: '#0a2c20',
+    highlight: '#80ffe0',
+    atmo: 'rgba(50,200,170,0.4)',
+    ring: false,
+  }, // Tundra/Eis-Türkis
+]
+
+function drawPlanet(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  seed: number,
+  state: 'unrescued' | 'rescued' | 'target',
+  pulse = false,
+) {
+  const rng = seededRng(seed >>> 0)
+  const pal = PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
+
+  // ── Atmosphärischer Glow (hinter allem) ──
+  const glowMult = state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : 1.55
+  const glowR = r * glowMult
+  const atmoGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, glowR)
+  if (state === 'rescued') {
+    atmoGrad.addColorStop(0, 'rgba(255,210,50,0.55)')
+    atmoGrad.addColorStop(0.55, 'rgba(255,170,20,0.18)')
+    atmoGrad.addColorStop(1, 'rgba(255,140,0,0)')
+  } else if (state === 'target') {
+    // Farbe der Atmosphäre + extra helles Flackern
+    const baseAtmo = pal.atmo
+    const dimAtmo = baseAtmo.replace(/[\d.]+\)$/, '0.12)')
+    atmoGrad.addColorStop(0, baseAtmo)
+    atmoGrad.addColorStop(0.55, dimAtmo)
+    atmoGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  } else {
+    const dimAtmo = pal.atmo.replace(/[\d.]+\)$/, '0.28)')
+    atmoGrad.addColorStop(0, dimAtmo)
+    atmoGrad.addColorStop(1, 'rgba(0,0,0,0)')
+  }
+  ctx.beginPath()
+  ctx.arc(x, y, glowR, 0, Math.PI * 2)
+  ctx.fillStyle = atmoGrad
+  ctx.fill()
+
+  // ── Planetenkugel mit Radial-Gradient (Beleuchtung oben-links) ──
+  const lx = x - r * 0.3
+  const ly = y - r * 0.32
+  const bodyGrad = ctx.createRadialGradient(lx, ly, r * 0.05, x, y, r)
+  if (state === 'rescued') {
+    bodyGrad.addColorStop(0, '#ffffc8')
+    bodyGrad.addColorStop(0.35, '#e8c040')
+    bodyGrad.addColorStop(0.72, '#8a5810')
+    bodyGrad.addColorStop(1, '#1e0e02')
+  } else {
+    bodyGrad.addColorStop(0, pal.highlight)
+    bodyGrad.addColorStop(0.45, pal.base)
+    bodyGrad.addColorStop(1, pal.shadow)
+  }
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fillStyle = bodyGrad
+  ctx.fill()
+
+  // ── Oberflächendetail: horizontale Bänder ──
+  if (r >= 7) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(x, y, r - 0.5, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.globalAlpha = state === 'rescued' ? 0.07 : 0.14
+    ctx.beginPath()
+    ctx.ellipse(x, y - r * 0.28, r * 0.88, r * 0.12, 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(x, y + r * 0.24, r * 0.82, r * 0.1, 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // ── Planetenring (Gasriesen) ──
+  if (pal.ring && state !== 'rescued') {
+    ctx.save()
+    ctx.globalAlpha = state === 'target' ? (pulse ? 0.78 : 0.62) : 0.48
+    // Äußerer Ring
+    ctx.beginPath()
+    ctx.ellipse(x, y, r * 1.75, r * 0.38, -0.28, 0, Math.PI * 2)
+    ctx.strokeStyle = pal.highlight
+    ctx.lineWidth = state === 'target' ? 2 : 1.3
+    ctx.stroke()
+    // Innerer Ring
+    ctx.globalAlpha *= 0.5
+    ctx.beginPath()
+    ctx.ellipse(x, y, r * 1.42, r * 0.3, -0.28, 0, Math.PI * 2)
+    ctx.lineWidth = 0.7
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // ── Rand-Stroke ──
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  if (state === 'target') {
+    ctx.strokeStyle = pulse ? '#ffffff' : 'rgba(255,255,255,0.78)'
+    ctx.lineWidth = pulse ? 2 : 1.5
+    ctx.shadowColor = 'rgba(255,255,255,0.9)'
+    ctx.shadowBlur = pulse ? 16 : 8
+  } else if (state === 'rescued') {
+    ctx.strokeStyle = '#fff8c0'
+    ctx.lineWidth = 1.5
+    ctx.shadowColor = 'rgba(255,210,60,0.85)'
+    ctx.shadowBlur = 9
+  } else {
+    ctx.strokeStyle = 'rgba(200,210,235,0.62)'
+    ctx.lineWidth = 1
+    ctx.shadowBlur = 0
+  }
+  ctx.stroke()
+  ctx.shadowBlur = 0
+
+  // ── Ziel-Fadenkreuz & Ecken-Brackets ──
+  if (state === 'target') {
+    const gap = r + 3.5
+    const arm = r * 0.7
+    ctx.strokeStyle = pulse ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.55)'
+    ctx.lineWidth = 1
+    ctx.shadowColor = 'rgba(255,255,255,0.75)'
+    ctx.shadowBlur = pulse ? 9 : 4
+    ctx.beginPath()
+    ctx.moveTo(x, y - gap - arm)
+    ctx.lineTo(x, y - gap)
+    ctx.moveTo(x, y + gap)
+    ctx.lineTo(x, y + gap + arm)
+    ctx.moveTo(x - gap - arm, y)
+    ctx.lineTo(x - gap, y)
+    ctx.moveTo(x + gap, y)
+    ctx.lineTo(x + gap + arm, y)
+    ctx.stroke()
+
+    const bs = r * 0.55
+    const bd = r + 3
+    ctx.strokeStyle = pulse ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.45)'
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    // oben-links
+    ctx.moveTo(x - bd, y - bd + bs)
+    ctx.lineTo(x - bd, y - bd)
+    ctx.lineTo(x - bd + bs, y - bd)
+    // oben-rechts
+    ctx.moveTo(x + bd - bs, y - bd)
+    ctx.lineTo(x + bd, y - bd)
+    ctx.lineTo(x + bd, y - bd + bs)
+    // unten-rechts
+    ctx.moveTo(x + bd, y + bd - bs)
+    ctx.lineTo(x + bd, y + bd)
+    ctx.lineTo(x + bd - bs, y + bd)
+    // unten-links
+    ctx.moveTo(x - bd + bs, y + bd)
+    ctx.lineTo(x - bd, y + bd)
+    ctx.lineTo(x - bd, y + bd - bs)
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+
+  // ── Befreit-Stern ──
+  if (state === 'rescued') {
+    const fSize = Math.max(7, Math.round(r * 0.88))
+    ctx.font = `bold ${fSize}px serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = 'rgba(255,255,255,0.94)'
+    ctx.shadowColor = 'rgba(255,240,100,1)'
+    ctx.shadowBlur = 6
+    ctx.fillText('✦', x, y + 0.5)
+    ctx.shadowBlur = 0
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default defineComponent({
   name: 'MiniMap',
@@ -245,15 +500,12 @@ export default defineComponent({
     ) {
       const dt = Math.min((timestamp - warpLastFrameMs) / 1000, 0.05)
       warpLastFrameMs = timestamp
-
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 2000, 1)
       const accel = 1 + t * t * t * 17
-
       const cx = w / 2
       const cy = h / 2
       const maxR = Math.sqrt(cx * cx + cy * cy)
 
-      // Motion-blur background (semi-transparent so old streaks ghost)
       ctx.fillStyle = 'rgba(6, 4, 22, 0.75)'
       ctx.fillRect(0, 0, w, h)
 
@@ -278,7 +530,6 @@ export default defineComponent({
         ctx.stroke()
 
         p.dist += p.speed * accel * dt
-
         if (p.dist > maxR + 10) {
           p.dist = 1 + Math.random() * maxR * 0.08
           p.angle = Math.random() * Math.PI * 2
@@ -289,7 +540,6 @@ export default defineComponent({
     function drawFlashPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
       ctx.fillStyle = 'rgba(6, 4, 22, 1)'
       ctx.fillRect(0, 0, w, h)
-
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 450, 1)
       ctx.fillStyle = `rgba(255, 255, 255, ${t * 0.85})`
       ctx.fillRect(0, 0, w, h)
@@ -297,12 +547,10 @@ export default defineComponent({
 
     function drawFadeoutPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 1000, 1)
-
       ctx.save()
       ctx.globalAlpha = t
       drawNormalMap(ctx, w, h)
       ctx.restore()
-
       const flashAlpha = (1 - t) * 0.85
       if (flashAlpha > 0.001) {
         ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`
@@ -399,29 +647,22 @@ export default defineComponent({
       rescued: number,
     ): { x: number; y: number } {
       const state = galaxyStore.championTravelState
-
       if (state === 'traveling') {
         const startTime = galaxyStore.championTravelStartTime
         const duration = galaxyStore.championTravelDurationMs
         const progress =
           startTime > 0 && duration > 0 ? Math.min((Date.now() - startTime) / duration, 1) : 0
-
         const toIdx = rescued < dots.length ? order[rescued] : -1
         const to = toIdx >= 0 ? dots[toIdx] : { x: 0.5, y: 0.5 }
-
         if (rescued > 0) {
           const from = dots[order[rescued - 1]]
-          return {
-            x: from.x + (to.x - from.x) * progress,
-            y: from.y + (to.y - from.y) * progress,
-          }
+          return { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress }
         }
         return {
           x: spawnPos.value.x + (to.x - spawnPos.value.x) * progress,
           y: spawnPos.value.y + (to.y - spawnPos.value.y) * progress,
         }
       }
-
       const targetIdx = rescued < dots.length ? order[rescued] : -1
       if (targetIdx >= 0) return dots[targetIdx]
       if (rescued > 0) return dots[order[rescued - 1]]
@@ -444,6 +685,7 @@ export default defineComponent({
         return [w / 2 + (wx - player.x) * scale, h / 2 + (wy - player.y) * scale]
       }
 
+      // Trail-Tracking
       if (isTraveling) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
@@ -458,12 +700,14 @@ export default defineComponent({
         trailLastPos = { wx: -1, wy: -1 }
       }
 
+      // Hintergrundbild
       const imgW = scale
       const imgH = scale
       const imgX = w / 2 - player.x * imgW
       const imgY = h / 2 - player.y * imgH
       ctx.drawImage(img, imgX, imgY, imgW, imgH)
 
+      // Nebula-Farbtönung
       const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
       ctx.save()
       ctx.beginPath()
@@ -474,6 +718,7 @@ export default defineComponent({
       ctx.fillRect(0, 0, w, h)
       ctx.restore()
 
+      // Spieler-Spur
       if (playerTrail.length >= 2) {
         for (let i = 1; i < playerTrail.length; i++) {
           const ratio = i / (playerTrail.length - 1)
@@ -494,6 +739,7 @@ export default defineComponent({
         ctx.shadowBlur = 0
       }
 
+      // Verbindungspfad der befrieten Planeten
       if (rescued >= 2) {
         ctx.beginPath()
         ctx.strokeStyle = 'rgba(232, 192, 64, 0.55)'
@@ -508,6 +754,7 @@ export default defineComponent({
         ctx.stroke()
       }
 
+      // Gestrichelte Linie zum Ziel
       const targetIdx = rescued < dots.length ? order[rescued] : -1
       if (targetIdx >= 0 && isTraveling && rescued > 0) {
         const [lx, ly] = wToC(dots[order[rescued - 1]].x, dots[order[rescued - 1]].y)
@@ -522,31 +769,23 @@ export default defineComponent({
         ctx.setLineDash([])
       }
 
+      // ── Unbefreite Planeten ──────────────────────────────────────────────
       const rescuedSet = new Set(order.slice(0, rescued))
+      const galaxySeed = galaxyStore.currentGalaxy * 10007
       for (let i = 0; i < dots.length; i++) {
         if (rescuedSet.has(i)) continue
         if (targetIdx === i) continue
         const [sx, sy] = wToC(dots[i].x, dots[i].y)
-        ctx.beginPath()
-        ctx.arc(sx, sy, 6, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(0,0,0,0.45)'
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(200,200,220,0.75)'
-        ctx.lineWidth = 1.2
-        ctx.stroke()
+        drawPlanet(ctx, sx, sy, 8, galaxySeed + i, 'unrescued')
       }
 
+      // ── Befreite Planeten ────────────────────────────────────────────────
       for (let i = 0; i < rescued; i++) {
         const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-        ctx.beginPath()
-        ctx.arc(sx, sy, 9, 0, Math.PI * 2)
-        ctx.fillStyle = '#e8c040'
-        ctx.fill()
-        ctx.strokeStyle = '#fff8c0'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
+        drawPlanet(ctx, sx, sy, 10, galaxySeed + order[i], 'rescued')
       }
 
+      // ── Final-Boss ──────────────────────────────────────────────────────
       if (galaxyStore.needsFinalBoss) {
         const [bx, by] = wToC(0.5, 0.5)
         if (rescued > 0) {
@@ -589,30 +828,13 @@ export default defineComponent({
         ctx.fillText('☠', bx, by)
       }
 
+      // ── Ziel-Planet (pulsierend, mit RPG-Fadenkreuz) ────────────────────
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        const pulse = pulseFrame === 1
-        ctx.beginPath()
-        ctx.arc(tx, ty, pulse ? 16 : 12, 0, Math.PI * 2)
-        ctx.fillStyle = pulse ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'
-        ctx.fill()
-        ctx.shadowColor = 'rgba(255,255,255,0.9)'
-        ctx.shadowBlur = pulse ? 18 : 10
-        ctx.beginPath()
-        ctx.arc(tx, ty, 8, 0, Math.PI * 2)
-        ctx.fillStyle = pulse ? 'rgba(255,255,255,0.98)' : 'rgba(220,220,240,0.8)'
-        ctx.fill()
-        ctx.shadowBlur = 0
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)'
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(tx, ty - 18)
-        ctx.lineTo(tx, ty - 11)
-        ctx.moveTo(tx - 4, ty - 14)
-        ctx.lineTo(tx + 4, ty - 14)
-        ctx.stroke()
+        drawPlanet(ctx, tx, ty, 11, galaxySeed + targetIdx, 'target', pulseFrame === 1)
       }
 
+      // ── Spieler-Dot ─────────────────────────────────────────────────────
       ctx.shadowColor = 'rgba(232,192,64,0.95)'
       ctx.shadowBlur = 16
       ctx.beginPath()
@@ -624,6 +846,7 @@ export default defineComponent({
       ctx.stroke()
       ctx.shadowBlur = 0
 
+      // ── Richtungspfeil zum Ziel ──────────────────────────────────────────
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const dx = tx - w / 2
@@ -648,16 +871,13 @@ export default defineComponent({
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
-
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
       if (w === 0 || h === 0) return
-
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w
         canvas.height = h
       }
-
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, w, h)
@@ -728,18 +948,14 @@ export default defineComponent({
       (active) => {
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
         const canvas = canvasEl.value
         const w = canvas?.offsetWidth ?? 180
         const h = canvas?.offsetHeight ?? 180
-
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
-
         initWarpParticles(w, h)
         hyperspacePhase = 'streaks'
         hyperspacePhaseStart = Date.now()
-
         hyperspaceTimeouts.push(
           window.setTimeout(() => {
             hyperspacePhase = 'flash'
@@ -761,22 +977,15 @@ export default defineComponent({
       () => gameStore.isHyperspaceActive,
       (active) => {
         if (!active) return
-
-        // Respect prefers-reduced-motion
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
         const canvas = canvasEl.value
         const w = canvas?.offsetWidth ?? 180
         const h = canvas?.offsetHeight ?? 180
-
-        // Cancel any pending phase timers
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
-
         initWarpParticles(w, h)
         hyperspacePhase = 'streaks'
         hyperspacePhaseStart = Date.now()
-
         hyperspaceTimeouts.push(
           window.setTimeout(() => {
             hyperspacePhase = 'flash'
@@ -857,7 +1066,6 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  cursor: crosshair;
   transform-origin: center bottom;
   transition:
     transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -958,7 +1166,6 @@ export default defineComponent({
   transform: translateX(-50%);
   font-size: 1.05rem;
   font-weight: 700;
-
   color: #ffe484;
   letter-spacing: 0.18em;
   white-space: nowrap;
