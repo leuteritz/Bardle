@@ -3,7 +3,7 @@
     <!-- ── Mission List ── -->
     <div class="mission-list">
       <div
-        v-for="item in missionItems"
+        v-for="item in visibleMissions"
         :key="item.id"
         class="mission-row"
         :class="{
@@ -53,8 +53,6 @@
           <span v-if="item.isCompleted" class="claim-label">🎁 Claim!</span>
           <span v-else class="claim-pct">{{ Math.floor(item.progress * 100) }}%</span>
         </button>
-
-        <div v-else class="mission-done-badge">✓ Fertig</div>
       </div>
     </div>
   </div>
@@ -107,9 +105,11 @@ export default defineComponent({
       }),
     )
 
+    const visibleMissions = computed(() => missionItems.value.filter((m) => !m.claimed))
+
     const claimedCount = computed(() => missionItems.value.filter((m) => m.claimed).length)
 
-    return { missionStore, missionItems, claimedCount, formatNumber }
+    return { missionStore, missionItems, claimedCount, visibleMissions, formatNumber }
   },
 })
 </script>
