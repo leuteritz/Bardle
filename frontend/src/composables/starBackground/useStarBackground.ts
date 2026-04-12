@@ -42,15 +42,38 @@ import {
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
-// Star color palette as [r, g, b] tuples
-const STAR_COLORS: [number, number, number][] = [
-  [255, 255, 255],
-  [235, 240, 255],
-  [255, 248, 235],
-  [220, 225, 255],
-  [255, 240, 250],
-  [245, 245, 255],
+// ─── Spektralklassen O B A F G K M ───────────────────────────────────────────
+// RGB-Werte nach echten Schwarzkörpertemperaturen (Planck-Approximation).
+// Gewichte orientieren sich an der visuellen Häufigkeit beim Flug durch die
+// Milchstraße – mehr orangerote K/M-Sterne als blaue O/B-Sterne.
+const SPECTRAL_CLASSES: { rgb: [number, number, number]; weight: number }[] = [
+  { rgb: [155, 176, 255], weight: 2 }, // O  – Blau-violett   > 30 000 K
+  { rgb: [170, 191, 255], weight: 6 }, // B  – Blau-weiß      10 000–30 000 K
+  { rgb: [202, 215, 255], weight: 10 }, // A  – Weiß-bläulich   7 500–10 000 K
+  { rgb: [248, 247, 255], weight: 14 }, // F  – Gelb-weiß       6 000– 7 500 K
+  { rgb: [255, 244, 234], weight: 22 }, // G  – Gelb (Sonne)    5 200– 6 000 K
+  { rgb: [255, 210, 161], weight: 28 }, // K  – Orange          3 700– 5 200 K
+  { rgb: [255, 167, 118], weight: 18 }, // M  – Rot-orange      2 400– 3 700 K
 ]
+
+const _spectralTotal = SPECTRAL_CLASSES.reduce((s, c) => s + c.weight, 0)
+const _spectralCumulative = SPECTRAL_CLASSES.reduce<number[]>((acc, c) => {
+  acc.push((acc.at(-1) ?? 0) + c.weight)
+  return acc
+}, [])
+
+/** Gibt eine realistisch gewichtete Sternfarbe als RGB-Tupel zurück. */
+function pickStarColor(): [number, number, number] {
+  const rand = Math.random() * _spectralTotal
+  const idx = _spectralCumulative.findIndex((w) => rand <= w)
+  const [r, g, b] = SPECTRAL_CLASSES[idx].rgb
+  // Subtile Variation innerhalb der Klasse → kein Copy-Paste-Aussehen
+  return [
+    Math.min(255, Math.max(0, r + Math.round((Math.random() - 0.5) * 14))),
+    Math.min(255, Math.max(0, g + Math.round((Math.random() - 0.5) * 10))),
+    Math.min(255, Math.max(0, b + Math.round((Math.random() - 0.5) * 8))),
+  ]
+}
 
 // Module-level counter so galaxyIdCounter stays in sync across modules
 let galaxyIdCounter = 0
@@ -281,7 +304,7 @@ export function useStarBackground() {
       for (let j = 0; j < count; j++) {
         const a = Math.random() * Math.PI * 2
         const d = Math.random() * radius
-        const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
+        const [r, g, b] = pickStarColor() // ← Spektralklassen
         clusterStars.push({
           dx: Math.cos(a) * d,
           dy: Math.sin(a) * d,
@@ -314,7 +337,7 @@ export function useStarBackground() {
     const minDist = maxDist * 0.1
     const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
     const baseSpeed = 0.5 + Math.random() * 1.0
-    const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
+    const [r, g, b] = pickStarColor() // ← Spektralklassen
 
     const item: StarItem = {
       id: nextStarId++,
@@ -638,8 +661,14 @@ export function useStarBackground() {
 
       const gOpStr = opacity.toFixed(2)
       const gTrStr = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
-      if (g._lastOpacity !== gOpStr) { g.el.style.opacity = gOpStr; g._lastOpacity = gOpStr }
-      if (g._lastTransform !== gTrStr) { g.el.style.transform = gTrStr; g._lastTransform = gTrStr }
+      if (g._lastOpacity !== gOpStr) {
+        g.el.style.opacity = gOpStr
+        g._lastOpacity = gOpStr
+      }
+      if (g._lastTransform !== gTrStr) {
+        g.el.style.transform = gTrStr
+        g._lastTransform = gTrStr
+      }
 
       if (p >= 1) {
         if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
@@ -685,9 +714,15 @@ export function useStarBackground() {
 
       const nOpStr = opacity.toFixed(3)
       const nTrStr = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
-      if (n._lastOpacity !== nOpStr) { n.el.style.opacity = nOpStr; n._lastOpacity = nOpStr }
+      if (n._lastOpacity !== nOpStr) {
+        n.el.style.opacity = nOpStr
+        n._lastOpacity = nOpStr
+      }
       // Scale from SVG center: translate to world pos → scale → re-center SVG
-      if (n._lastTransform !== nTrStr) { n.el.style.transform = nTrStr; n._lastTransform = nTrStr }
+      if (n._lastTransform !== nTrStr) {
+        n.el.style.transform = nTrStr
+        n._lastTransform = nTrStr
+      }
 
       if (n.dist > maxDist) {
         if (starsContainer.value?.contains(n.el)) starsContainer.value.removeChild(n.el)
