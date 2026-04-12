@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// ── Script identisch, keine Änderungen ──
 import { ref, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { usePersistence } from '@/composables/usePersistence'
@@ -7,7 +6,7 @@ import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
-import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue' // ←
+import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -60,14 +59,40 @@ const chimesForLevel = computed(() => {
   const current = total - gameStore.chimesToNextLevel
   return { current, total }
 })
+
+// ── XP-Tooltip via Teleport + position:fixed ──────────────────────
+const portraitRef = ref<HTMLElement | null>(null)
+const showXpTooltip = ref(false)
+const xpTooltipStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
+
+function onPortraitEnter() {
+  if (portraitRef.value) {
+    const rect = portraitRef.value.getBoundingClientRect()
+    xpTooltipStyle.value = {
+      left: `${rect.left + rect.width / 2}px`,
+      top: `${rect.bottom + 10}px`,
+    }
+  }
+  showXpTooltip.value = true
+}
+
+function onPortraitLeave() {
+  showXpTooltip.value = false
+}
 </script>
 
 <template>
   <div class="relative flex items-start gap-2">
     <!-- ══ Bard Portrait ══ -->
-    <div class="bard-portrait-wrapper group" @click="openBardModal">
+    <div
+      ref="portraitRef"
+      class="bard-portrait-wrapper group"
+      @click="openBardModal"
+      @mouseenter="onPortraitEnter"
+      @mouseleave="onPortraitLeave"
+    >
       <div class="relative w-36 h-36">
-        <!-- XP-Ring (Gold statt Blau) -->
+        <!-- XP-Ring (Gold) -->
         <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle
             cx="50"
@@ -98,19 +123,10 @@ const chimesForLevel = computed(() => {
           />
         </div>
 
-        <!-- Level Badge + Hover XP Tooltip -->
+        <!-- Level Badge -->
         <div class="absolute flex items-center -bottom-1 -right-1">
           <div class="z-10 flex items-center justify-center bard-level-badge h-9 w-9">
             <span class="bard-level-text">{{ gameStore.level }}</span>
-          </div>
-
-          <div
-            class="absolute ml-2 transition-all duration-200 scale-95 opacity-0 pointer-events-none bard-xp-tooltip left-full group-hover:opacity-100 group-hover:scale-100 whitespace-nowrap"
-          >
-            <span class="xp-current">{{ chimesForLevel.current.toLocaleString() }}</span>
-            <span class="xp-sep">/</span>
-            <span class="xp-total">{{ chimesForLevel.total.toLocaleString() }}</span>
-            <span class="xp-label">Chimes</span>
           </div>
         </div>
       </div>
@@ -120,8 +136,27 @@ const chimesForLevel = computed(() => {
     <button class="mt-1 rp-reset-btn" title="Spielstand löschen" @click="handleReset">Reset</button>
   </div>
 
+  <!-- ══ XP-Tooltip (Teleport → body, position:fixed, kein Clipping) ══ -->
   <Teleport to="body">
-    <!-- ══ Backdrop ══ -->
+    <Transition name="xp-tt">
+      <div v-if="showXpTooltip" class="xp-tt" :style="xpTooltipStyle" aria-hidden="true">
+        <div class="xp-tt__caret" />
+        <span class="xp-tt__label">Nächstes Level</span>
+        <div class="xp-tt__row">
+          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__sep">/</span>
+          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__unit">Chimes</span>
+        </div>
+        <div class="xp-tt__bar-track">
+          <div class="xp-tt__bar-fill" :style="{ width: `${xpProgress * 100}%` }" />
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ══ Backdrop + Modal ══ -->
+  <Teleport to="body">
     <Transition name="backdrop">
       <div
         v-if="activeModal !== null"
@@ -130,19 +165,15 @@ const chimesForLevel = computed(() => {
       />
     </Transition>
 
-    <!-- ══ Modal ══ -->
     <Transition name="modal-pop">
       <div
         v-if="activeModal !== null"
         class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
       >
         <div class="rp-modal flex flex-col h-[960px]">
-          <!-- Goldene Akzentlinie oben -->
           <div class="rp-accent-bar" />
 
-          <!-- ── Header ── -->
           <div class="flex items-center flex-shrink-0 rp-modal-header">
-            <!-- Portal Links -->
             <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
               <img
                 src="/img/BardPortalRichtig.png"
@@ -156,7 +187,6 @@ const chimesForLevel = computed(() => {
               </div>
             </div>
 
-            <!-- Tabs -->
             <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
               <button
                 v-for="item in menuItems"
@@ -174,7 +204,6 @@ const chimesForLevel = computed(() => {
                 />
                 <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                 <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
-                <!-- Aktiv-Indikator -->
                 <span
                   v-if="activeModal === item.id"
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
@@ -182,7 +211,6 @@ const chimesForLevel = computed(() => {
               </button>
             </div>
 
-            <!-- Portal Rechts -->
             <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
               <img
                 src="/img/PortalEndeRichtig.png"
@@ -197,7 +225,6 @@ const chimesForLevel = computed(() => {
             </div>
           </div>
 
-          <!-- ── Content ── -->
           <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
             <Transition name="tab-fade" mode="out-in">
               <div
@@ -235,6 +262,120 @@ const chimesForLevel = computed(() => {
   </Teleport>
 </template>
 
+<!-- Globale Styles für teleportierte Elemente (kein scoped!) -->
+<style>
+.xp-tt {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 16px;
+  background: linear-gradient(to bottom, #1e1a0e, #130f09);
+  border: 2px solid #7a4e20;
+  border-radius: 4px;
+  white-space: nowrap;
+  min-width: 158px;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.92),
+    inset 0 0 0 1px rgba(255, 200, 80, 0.09),
+    inset 0 1px 0 rgba(255, 200, 80, 0.06);
+}
+
+.xp-tt__caret {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 8px solid #7a4e20;
+}
+.xp-tt__caret::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 6px solid #1e1a0e;
+}
+
+.xp-tt__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 200, 80, 0.38);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.xp-tt__row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.xp-tt__current {
+  font-size: 14px;
+  font-weight: 900;
+  color: #e8c040;
+}
+.xp-tt__sep {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.22);
+}
+.xp-tt__total {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.52);
+}
+.xp-tt__unit {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.2);
+  margin-left: 3px;
+}
+
+.xp-tt__bar-track {
+  height: 3px;
+  background: rgba(255, 200, 80, 0.1);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.xp-tt__bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #c89040, #f0d060);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(240, 208, 96, 0.5);
+  transition: width 0.8s ease;
+}
+
+.xp-tt-enter-active,
+.xp-tt-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.xp-tt-enter-from,
+.xp-tt-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-5px);
+}
+.xp-tt-enter-to,
+.xp-tt-leave-from {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+
 <style scoped>
 /* ═══════════════════════════════════════════
    BARD PORTRAIT
@@ -263,39 +404,6 @@ const chimesForLevel = computed(() => {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* XP Tooltip */
-.bard-xp-tooltip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: #16140e;
-  border: 2px solid #7a4e20;
-  border-radius: 3px;
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.8),
-    inset 0 0 0 1px #2a1a08;
-}
-.xp-current {
-  font-size: 13px;
-  font-weight: 900;
-  color: #e8c040;
-}
-.xp-sep {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.25);
-}
-.xp-total {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
-}
-.xp-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.25);
-  margin-left: 2px;
-}
-
 /* ═══════════════════════════════════════════
    RESET BUTTON
    ═══════════════════════════════════════════ */
@@ -319,7 +427,7 @@ const chimesForLevel = computed(() => {
 }
 
 /* ═══════════════════════════════════════════
-   MODAL RAHMEN (gleicher Holz-Stil wie Shop)
+   MODAL RAHMEN
    ═══════════════════════════════════════════ */
 .rp-modal {
   position: relative;
@@ -335,7 +443,6 @@ const chimesForLevel = computed(() => {
   max-height: 90dvh;
 }
 
-/* Gold-Shimmer oben */
 .rp-accent-bar {
   height: 3px;
   flex-shrink: 0;
@@ -426,7 +533,7 @@ const chimesForLevel = computed(() => {
 }
 
 /* ═══════════════════════════════════════════
-   PORTAL EFFECTS (unverändert)
+   PORTAL EFFECTS
    ═══════════════════════════════════════════ */
 .portal-effect {
   border-radius: 50%;

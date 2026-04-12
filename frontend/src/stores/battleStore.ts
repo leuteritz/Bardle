@@ -197,27 +197,20 @@ export const useBattleStore = defineStore('battle', {
       const existing = this.headerSlots.indexOf(champion)
       if (existing !== -1 && existing !== slotIndex) this.headerSlots[existing] = null
       this.headerSlots[slotIndex] = champion
+      this.syncTeam1ToSlots()
     },
 
     clearHeaderSlot(slotIndex: number) {
       this.headerSlots[slotIndex] = null
+      this.syncTeam1ToSlots()
     },
 
     syncTeam1ToSlots() {
-      const bardEntry = this.team1.find((c) => c.name === 'Bard') ?? {
-        name: 'Bard',
-        rank: this.currentRank.tier,
-        kills: 0,
-        deaths: 0,
-        assists: 0,
-      }
-      this.team1 = [
-        bardEntry,
-        ...this.selectedChampions.map((name) => {
-          const existing = this.team1.find((c) => c.name === name)
-          return existing ?? { name, rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
-        }),
-      ]
+      this.team1 = this.headerSlots.map((slot) => {
+        if (!slot) return { name: '', rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
+        const existing = this.team1.find((c) => c.name === slot)
+        return existing ?? { name: slot, rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
+      })
     },
 
     getAvgBattleTime(): string {
@@ -250,8 +243,8 @@ export const useBattleStore = defineStore('battle', {
         const pending = this.killEventSchedule.filter((e) => e.gameTime <= this.battleTime)
         this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > this.battleTime)
         for (const event of pending) {
-          const attackingTeam = event.team === 1 ? this.team1 : this.team2
-          const defendingTeam = event.team === 1 ? this.team2 : this.team1
+          const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
+          const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
           if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
           // Kill auf zufälligen Angreifer
           const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
@@ -310,15 +303,16 @@ export const useBattleStore = defineStore('battle', {
       return fetchChampionNames()
     },
 
-    // Erstellt neue zufällige Teams für den nächsten Kampf mit Bard als Spieler-Champion
+    // Erstellt neue zufällige Teams für den nächsten Kampf mit den Header-Slots als Spieler-Team
     async refreshTeams() {
       const champions = await this.loadChampions()
       const selected = this.getRandomChampions(champions, 5)
 
-      this.team1 = [
-        { name: 'Bard', rank: this.currentRank.tier, ...this.getStats() },
-        ...this.selectedChampions.map((name) => ({ name, rank: 'Silver', ...this.getStats() })),
-      ]
+      this.team1 = this.headerSlots.map((slot) => ({
+        name: slot ?? '',
+        rank: slot ? this.currentRank.tier : 'Silver',
+        ...this.getStats(),
+      }))
       this.team2 = selected.map((name) => ({ name, rank: 'Silver', ...this.getStats() }))
     },
 
@@ -380,8 +374,8 @@ export const useBattleStore = defineStore('battle', {
     showRandomChatMessagesSequentially() {
       const MESSAGE_COUNT = 14
       const allChampions = [
-        ...this.team1.map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
-        ...this.team2.map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
+        ...this.team1.filter((c) => c.name).map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
+        ...this.team2.filter((c) => c.name).map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
       ]
       if (allChampions.length === 0) return
 

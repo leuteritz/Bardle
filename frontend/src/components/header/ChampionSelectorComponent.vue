@@ -11,6 +11,8 @@ const pickerOpen = ref(false)
 const pickerSlotIndex = ref<number | null>(null)
 const searchQuery = ref('')
 
+const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
+
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
 const filteredChampions = computed(() => {
@@ -57,7 +59,7 @@ function onImgError(e: Event) {
         :key="i"
         class="slot-tile"
         :class="{ 'slot-tile--filled': slot !== null }"
-        :title="slot ? `${slot} – klicken zum Ändern` : `Slot ${i + 1} – Champion wählen`"
+        :title="slot ? `${slot} (${ROLES[i]}) – klicken zum Ändern` : `${ROLES[i]} – Champion wählen`"
         @click="openPicker(i)"
       >
         <!-- Eckornament oben-links -->
@@ -82,7 +84,7 @@ function onImgError(e: Event) {
 
         <!-- Name-Badge als Overlay am unteren Rand -->
         <div class="slot-name-badge">
-          <span class="slot-name-text">{{ slot ? slot.slice(0, 9) : `Slot ${i + 1}` }}</span>
+          <span class="slot-name-text">{{ ROLES[i] }}</span>
         </div>
 
         <!-- Clear-Button -->
@@ -105,7 +107,7 @@ function onImgError(e: Event) {
               <img src="/img/BardAbilities/BardChime.png" class="picker-header-icon" alt="" />
               <span class="picker-title">Champion wählen</span>
               <span class="picker-subtitle">
-                Slot {{ pickerSlotIndex !== null ? pickerSlotIndex + 1 : '' }} / 5
+                Rolle: {{ pickerSlotIndex !== null ? ROLES[pickerSlotIndex] : '' }}
               </span>
             </div>
             <button class="picker-close" @click="closePicker" title="Schließen">✕</button>

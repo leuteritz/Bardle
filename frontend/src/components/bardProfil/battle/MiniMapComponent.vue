@@ -48,7 +48,7 @@
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
-              v-if="battleStore.team1[i]"
+              v-if="battleStore.team1[i]?.name"
               :src="battleStore.getChampionImage(battleStore.team1[i].name)"
               :alt="battleStore.team1[i].name"
               class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--blue"
@@ -68,7 +68,7 @@
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
             <img
-              v-if="battleStore.team2[i]"
+              v-if="battleStore.team2[i]?.name"
               :src="battleStore.getChampionImage(battleStore.team2[i].name)"
               :alt="battleStore.team2[i].name"
               class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--red"

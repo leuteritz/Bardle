@@ -11,7 +11,7 @@
       </span>
       <div class="space-y-1">
         <div
-          v-for="(champ, i) in battleStore.team1"
+          v-for="(champ, i) in battleStore.team1.filter((c) => c.name)"
           :key="'t1-' + i"
           class="flex items-center gap-2 px-2 py-1 champ-row champ-row--blue"
         >

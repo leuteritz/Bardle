@@ -9,8 +9,6 @@ import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { usePlanetBossStore } from './planetBossStore'
 import { useBattleStore } from './battleStore'
 
-const EXCLUDED = new Set(['Bard'])
-
 let _damageFloatId = 0
 
 function buildChampionState(name: string, index: number, total: number): ChampionCombatState {
@@ -61,10 +59,9 @@ export const useCombatStore = defineStore('combat', {
   actions: {
     /** Sync champion list from battleStore (called from ChampionOrbit.vue on mount + watch) */
     syncChampions(ownedChampions: string[]) {
-      const filtered = ownedChampions.filter((n) => !EXCLUDED.has(n))
-      const N = filtered.length
+      const N = ownedChampions.length
       const existing = new Map(this.champions.map((c) => [c.name, c]))
-      this.champions = filtered.map((name, i) =>
+      this.champions = ownedChampions.map((name, i) =>
         existing.has(name) ? existing.get(name)! : buildChampionState(name, i, N),
       )
     },

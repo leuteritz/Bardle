@@ -143,8 +143,7 @@ export default defineComponent({
 
     const honoredPlayers = ref<Set<string>>(new Set())
 
-    // Bard selbst (Index 0 in team1) aus der Auswahl herausnehmen
-    const honorAllies = computed(() => battleStore.team1.slice(1))
+    const honorAllies = computed(() => battleStore.team1.filter((c) => c.name !== ''))
     const honorEnemies = computed(() => battleStore.team2)
 
     const toggleHonor = (id: string) => {
