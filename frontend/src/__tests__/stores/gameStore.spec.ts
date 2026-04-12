@@ -17,22 +17,22 @@ describe('gameStore', () => {
       expect(store.chimesAtLevelStart).toBe(0)
     })
 
-    it('level=2 → 500 (ceil(500 * 1^1.8))', () => {
+    it('level=2 → 2000 (ceil(2000 * 1^2.2))', () => {
       const store = useGameStore()
       store.level = 2
-      expect(store.chimesAtLevelStart).toBe(500)
+      expect(store.chimesAtLevelStart).toBe(2000)
     })
 
-    it('level=3 → 1742 (ceil(500 * 2^1.8))', () => {
+    it('level=3 → 9190 (ceil(2000 * 2^2.2))', () => {
       const store = useGameStore()
       store.level = 3
-      expect(store.chimesAtLevelStart).toBe(1742)
+      expect(store.chimesAtLevelStart).toBe(9190)
     })
 
-    it('level=11 → 31548 (ceil(500 * 10^1.8))', () => {
+    it('level=11 → 316979 (ceil(2000 * 10^2.2))', () => {
       const store = useGameStore()
       store.level = 11
-      expect(store.chimesAtLevelStart).toBe(31548)
+      expect(store.chimesAtLevelStart).toBe(316979)
     })
   })
 
@@ -57,8 +57,8 @@ describe('gameStore', () => {
       const store = useGameStore()
       store.chimes = LEVEL_BASE
       store.calculateLevel()
-      // chimesForNextLevel = ceil(500 * 2^1.8) = 1742
-      expect(store.chimesForNextLevel).toBe(1742)
+      // chimesForNextLevel = ceil(2000 * 2^2.2) = 9190
+      expect(store.chimesForNextLevel).toBe(9190)
     })
   })
 
@@ -73,7 +73,7 @@ describe('gameStore', () => {
 
     it('halfway through level 1 → 50%', () => {
       const store = useGameStore()
-      store.chimes = 250 // chimesForNextLevel = 500, atLevelStart = 0
+      store.chimes = 1000 // chimesForNextLevel = 2000, atLevelStart = 0
       expect(store.levelProgress).toBe(50)
     })
 

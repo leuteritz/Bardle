@@ -62,9 +62,9 @@ export const levelingCategory: EncyclopediaCategory = {
         'Bei jedem Level-Up erscheint die Augment-Auswahl (3 zufällige Augmente).',
       lore: 'Wachstum durch Erfahrung. Jedes neue Level öffnet Türen zu unbekannten Kräften.',
       formula:
-        'Schwelle für Level N = ceil(500 × N^1.8)\n' +
-        'LEVEL_BASE = 500 | LEVEL_EXPONENT = 1.8\n' +
-        'Beispiel: Level 5 → ceil(500 × 5^1.8) = ceil(500 × 15.63) ≈ 7 814 Chimes\n' +
+        'Schwelle für Level N = ceil(2000 × N^2.2)\n' +
+        'LEVEL_BASE = 2000 | LEVEL_EXPONENT = 2.2\n' +
+        'Beispiel: Level 5 → ceil(2000 × 5^2.2) = ceil(2000 × 21.11) ≈ 42 220 Chimes\n' +
         'Skillpunkt alle 2 Level (default, kann durch Modifier verändert werden)',
     },
     {

@@ -3,9 +3,9 @@ export const ELO_K_FACTOR = 32
 export const ELO_RATING_SCALE = 400
 export const ELO_LUCK_FACTOR = 0.15
 
-// Leveling formula: 500 * level^1.8
-export const LEVEL_BASE = 500
-export const LEVEL_EXPONENT = 1.8
+// Leveling formula: 2000 * level^2.2
+export const LEVEL_BASE = 2000
+export const LEVEL_EXPONENT = 2.2
 
 // Meep cost formula: 20 * meeps^1.2
 export const MEEP_BASE_COST = 20
