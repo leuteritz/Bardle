@@ -60,7 +60,6 @@ const chimesForLevel = computed(() => {
   return { current, total }
 })
 
-// ── XP-Tooltip via Teleport + position:fixed ──────────────────────
 const portraitRef = ref<HTMLElement | null>(null)
 const showXpTooltip = ref(false)
 const xpTooltipStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
@@ -82,7 +81,8 @@ function onPortraitLeave() {
 </script>
 
 <template>
-  <div class="relative flex items-start gap-2">
+  <!-- Kein flex-gap mehr – Portrait allein, kein Layoutplatz für Reset -->
+  <div class="relative">
     <!-- ══ Bard Portrait ══ -->
     <div
       ref="portraitRef"
@@ -129,14 +129,16 @@ function onPortraitLeave() {
             <span class="bard-level-text">{{ gameStore.level }}</span>
           </div>
         </div>
+
+        <!-- ══ Reset: absolut unten-links, erscheint nur bei Hover, 0px Layoutbreite ══ -->
+        <button class="rp-reset-overlay" title="Spielstand löschen" @click.stop="handleReset">
+          ✕
+        </button>
       </div>
     </div>
-
-    <!-- Reset Button -->
-    <button class="mt-1 rp-reset-btn" title="Spielstand löschen" @click="handleReset">Reset</button>
   </div>
 
-  <!-- ══ XP-Tooltip (Teleport → body, position:fixed, kein Clipping) ══ -->
+  <!-- ══ XP-Tooltip (Teleport → body, position:fixed) ══ -->
   <Teleport to="body">
     <Transition name="xp-tt">
       <div v-if="showXpTooltip" class="xp-tt" :style="xpTooltipStyle" aria-hidden="true">
@@ -262,14 +264,13 @@ function onPortraitLeave() {
   </Teleport>
 </template>
 
-<!-- Globale Styles für teleportierte Elemente (kein scoped!) -->
+<!-- Globale Styles für teleportierte Elemente -->
 <style>
 .xp-tt {
   position: fixed;
   transform: translateX(-50%);
   z-index: 9999;
   pointer-events: none;
-
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -405,25 +406,51 @@ function onPortraitLeave() {
 }
 
 /* ═══════════════════════════════════════════
-   RESET BUTTON
+   RESET OVERLAY – nimmt keinen Layoutplatz ein
    ═══════════════════════════════════════════ */
-.rp-reset-btn {
-  padding: 5px 12px;
-  font-size: 11px;
+.rp-reset-overlay {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
   background: linear-gradient(to bottom, #4a1010, #2e0808);
-  border: 2px solid #8a3020;
-  border-radius: 3px;
+  border: 1.5px solid #8a3020;
+  border-radius: 50%;
   color: #cc6050;
   cursor: pointer;
-  transition: all 0.1s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  z-index: 20;
+
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
-.rp-reset-btn:hover {
-  background: linear-gradient(to bottom, #5a1515, #3e0c0c);
-  color: #e08070;
-  border-color: #aa4030;
+
+.group:hover .rp-reset-overlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.rp-reset-overlay:hover {
+  background: linear-gradient(to bottom, #6a1818, #4a0e0e);
+  color: #ff9080;
+  border-color: #cc4830;
+}
+
+.rp-reset-overlay:active {
+  transform: scale(0.88);
 }
 
 /* ═══════════════════════════════════════════
