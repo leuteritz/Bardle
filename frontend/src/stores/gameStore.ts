@@ -49,6 +49,7 @@ export const useGameStore = defineStore('game', {
     chimesToUniverseRescue: 100000,
     meeps: 0,
     meepChimeRequirement: MEEP_BASE_COST,
+    chimesEarnedForLevel: 0,
 
     level: 1,
 
@@ -108,8 +109,8 @@ export const useGameStore = defineStore('game', {
       this.chimes += this.chimesPerClick
       this.chimesForMeep += this.chimesPerClick
       this.chimesForNextUniverse += this.chimesPerClick
-      // ── Expedetion-Tracking ──
       this.totalChimesEarned += this.chimesPerClick
+      this.chimesEarnedForLevel += this.chimesPerClick
       this.totalClicks += 1
       this.calculateLevel()
       this.addMeep()
@@ -122,9 +123,16 @@ export const useGameStore = defineStore('game', {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
       const oldLevel = this.level
-      while (this.chimes >= this.chimesForNextLevel) {
+
+      // Relative Schwelle: wie viele Chimes für DIESES Level nötig sind
+      const chimesNeededThisLevel =
+        this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
+
+      if (this.chimesEarnedForLevel >= chimesNeededThisLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        // Überschuss in den neuen Level übertragen (nicht hart auf 0 setzen!)
+        this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
         if (this.level % spInterval === 0) {
           this.skillPoints++
         }
@@ -134,7 +142,6 @@ export const useGameStore = defineStore('game', {
           skillPoints: this.skillPoints,
         })
         this.triggerAugmentSelection()
-        break
       }
     },
 
@@ -191,9 +198,17 @@ export const useGameStore = defineStore('game', {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       const spInterval = this.activeModifier.skillPointInterval ?? 2
 
-      while (this.chimes >= this.chimesForNextLevel) {
+      let chimesNeededThisLevel =
+        this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
+
+      while (this.chimesEarnedForLevel >= chimesNeededThisLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
+        this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
+        // Neue Schwelle für das nächste Level berechnen
+        chimesNeededThisLevel =
+          this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
+
         if (this.level % spInterval === 0) {
           this.skillPoints++
         }
@@ -285,6 +300,7 @@ export const useGameStore = defineStore('game', {
       this.chimesForMeep = 0
       this.level = 1
       this.chimesForNextLevel = LEVEL_BASE
+      this.chimesEarnedForLevel = 0
       this.meeps = 0
       this.meepChimeRequirement = MEEP_BASE_COST
       this.skillPoints = 0
@@ -349,8 +365,8 @@ export const useGameStore = defineStore('game', {
         this.chimes += cps
         this.chimesForMeep += cps
         this.chimesForNextUniverse += cps
-        // ── Expdetion-Tracking ──
         this.totalChimesEarned += cps
+        this.chimesEarnedForLevel += cps
         this.calculateLevel()
         this.addMeep()
         this.trackBuildingProduction()
@@ -380,9 +396,11 @@ export const useGameStore = defineStore('game', {
     claimOfflineReward() {
       this.chimes += this.offlineChimes
       this.totalChimesEarned += this.offlineChimes
+      this.chimesEarnedForLevel += this.offlineChimes
       this.offlineChimes = 0
       this.offlineSeconds = 0
       this.showOfflineModal = false
+      this.calculateLevel()
     },
 
     // Setzt den Modal-Status für UI-Effekte
@@ -426,6 +444,7 @@ export const useGameStore = defineStore('game', {
       if (Date.now() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
       const { reward, meepsSent } = this.activeExpedition
       this.chimes += reward
+      this.chimesEarnedForLevel += reward
       this.meeps += meepsSent
       logger.info('Game', `Expedition collected: +${reward} chimes, ${meepsSent} meeps returned`)
       this.activeExpedition = null
@@ -502,7 +521,7 @@ export const useGameStore = defineStore('game', {
     },
 
     currentLevelChimes(): number {
-      return this.chimes - this.chimesAtLevelStart
+      return this.chimesEarnedForLevel
     },
 
     totalChimesThisLevel(): number {
