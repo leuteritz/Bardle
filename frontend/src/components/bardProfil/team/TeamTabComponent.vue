@@ -1,5 +1,5 @@
 <template>
-  <!-- 2×2 Grid: Shop | Team / Expedition | ItemShop -->
+  <!-- 2×1 Grid (links: Shop+Expedition | rechts: ItemShop) -->
   <div class="w-full h-full p-4 overflow-hidden">
     <div class="flex h-full gap-3">
       <!-- ╔══════════════════════════╗
@@ -127,234 +127,10 @@
 
       <!-- ╔══════════════════════════╗
            ║  Rechte Spalte (2fr)      ║
+           ║  Item Shop – volle Höhe   ║
            ╚══════════════════════════╝ -->
-      <div class="flex flex-col min-h-0 gap-3" style="flex: 2">
-        <!-- Team -->
-        <div class="flex flex-col min-h-0 p-3 overflow-hidden tt-panel" style="flex: 3">
-          <!-- Header -->
-          <div class="flex items-center justify-between flex-shrink-0 mb-3">
-            <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1.5 px-3 py-1 tt-team-counter">
-                <span class="text-sm font-bold tt-team-counter-value">{{
-                  battleStore.selectedChampions.length
-                }}</span>
-                <span class="text-sm font-bold tt-text-dim">/4</span>
-              </div>
-              <div class="flex items-center gap-1.5 px-3 py-1 tt-unlock-counter">
-                <span class="text-sm font-bold tt-unlock-counter-value">{{
-                  battleStore.ownedChampions.filter((c) => c !== 'Bard').length
-                }}</span>
-                <span class="text-sm font-bold tt-text-dim">/{{ totalChampionCount || '…' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Team-Slots -->
-          <div class="grid flex-1 min-h-0 grid-cols-2 grid-rows-2 gap-2">
-            <div
-              v-for="(assignment, index) in battleStore.teamSlotAssignments"
-              :key="'slot-' + index"
-              class="h-full group/slot"
-            >
-              <!-- Gefuellter Slot -->
-              <div
-                v-if="assignment"
-                class="relative flex flex-col overflow-hidden transition-all duration-200 cursor-pointer group/card tt-slot-card"
-                :class="
-                  isOnExpedition(assignment) ? 'tt-slot-card--expedition' : 'tt-slot-card--active'
-                "
-                style="height: 100%"
-              >
-                <!-- Champion Image -->
-                <div class="relative flex-1 min-h-0 overflow-hidden" @click="openSlotIndex = index">
-                  <img
-                    :src="battleStore.getChampionImage(assignment)"
-                    :alt="assignment"
-                    class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 rpg-img group-hover/card:scale-105"
-                    :class="isOnExpedition(assignment) ? 'grayscale' : ''"
-                    @error="onImgError"
-                  />
-                  <div class="absolute inset-0 tt-image-overlay" />
-
-                  <!-- Slot-Nummer -->
-                  <div class="absolute z-10 top-2 left-2">
-                    <span
-                      class="text-[9px] font-black tracking-[0.2em] uppercase px-1.5 py-0.5 tt-slot-number"
-                    >
-                      #{{ index + 1 }}
-                    </span>
-                  </div>
-
-                  <!-- Name + Status/Button -->
-                  <div class="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-1 p-2">
-                    <span
-                      class="text-[13px] font-bold leading-tight drop-shadow-lg tracking-wide tt-champ-name"
-                    >
-                      {{ truncate(assignment, 10) }}
-                    </span>
-                    <span
-                      v-if="isOnExpedition(assignment)"
-                      class="text-[10px] font-semibold flex items-center gap-1 tt-expedition-label"
-                    >
-                      <span>⏳</span> Expedition
-                    </span>
-                    <button
-                      v-else
-                      @click.stop="removeChampion(assignment)"
-                      class="w-full py-1 text-[10px] font-bold transition-all duration-200 opacity-0 group-hover/card:opacity-100 translate-y-1 group-hover/card:translate-y-0 tt-remove-btn"
-                    >
-                      Entfernen
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Equipment Row -->
-                <div
-                  class="flex-shrink-0 flex items-center justify-center gap-1.5 px-2 py-1.5 tt-equip-row"
-                >
-                  <div
-                    v-for="cat in equipCategories"
-                    :key="cat.key"
-                    class="relative flex items-center justify-center transition-all duration-150 cursor-pointer w-9 h-9 tt-equip-slot"
-                    :class="
-                      getEquipIcon(index, cat.key)
-                        ? 'tt-equip-slot--filled'
-                        : 'tt-equip-slot--empty'
-                    "
-                    @click.stop="toggleEquipPicker(index, cat.key)"
-                  >
-                    <img
-                      v-if="getEquipIcon(index, cat.key)?.startsWith('/')"
-                      :src="getEquipIcon(index, cat.key)!"
-                      class="object-contain w-10 h-10"
-                    />
-                    <span v-else class="text-sm leading-none">{{
-                      getEquipIcon(index, cat.key) || cat.icon
-                    }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Leerer Slot -->
-              <div
-                v-else
-                class="flex flex-col items-center justify-center gap-1.5 p-2 transition-all duration-200 cursor-pointer tt-slot-empty group-hover/slot:border-color-hover"
-                style="height: 100%"
-                @click="openSlotIndex = index"
-              >
-                <div
-                  class="flex items-center justify-center w-8 h-8 transition-colors duration-200 tt-slot-empty-icon group-hover/slot:border-color-hover"
-                >
-                  <span
-                    class="text-lg transition-colors duration-200 tt-text-dim group-hover/slot:text-hover"
-                    >+</span
-                  >
-                </div>
-                <span
-                  class="text-[10px] font-bold tracking-wider uppercase tt-text-dim group-hover/slot:text-hover-light transition-colors duration-200"
-                >
-                  Slot {{ index + 1 }}
-                </span>
-                <div class="flex items-center gap-1 mt-1">
-                  <div
-                    v-for="cat in equipCategories"
-                    :key="cat.key"
-                    class="relative flex items-center justify-center w-8 h-8 transition-all duration-150 cursor-pointer tt-equip-slot-mini"
-                    @click.stop="toggleEquipPicker(index, cat.key)"
-                  >
-                    <img
-                      v-if="getEquipIcon(index, cat.key)?.startsWith('/')"
-                      :src="getEquipIcon(index, cat.key)!"
-                      class="object-contain w-5 h-5"
-                    />
-                    <span v-else class="text-xs">{{
-                      getEquipIcon(index, cat.key) || cat.icon
-                    }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Equipment Picker Popup -->
-          <Transition name="equip-picker">
-            <div
-              v-if="equipPicker"
-              class="absolute z-50 p-2 rpg-tooltip tt-equip-picker"
-              :style="{ bottom: '10px', right: '10px', width: '200px' }"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-[10px] font-bold tracking-widest uppercase tt-text-dim">
-                  {{ equipPickerLabel }}
-                </span>
-                <button @click="equipPicker = null" class="text-[10px] tt-text-dim tt-close-btn">
-                  X
-                </button>
-              </div>
-              <!-- Ausgeruestetes Item -->
-              <div
-                v-if="equippedItemInPicker"
-                class="flex items-center justify-between p-1.5 mb-1 tt-equipped-item"
-              >
-                <div class="flex items-center gap-1.5">
-                  <img
-                    v-if="equippedItemInPicker.icon.startsWith('/')"
-                    :src="equippedItemInPicker.icon"
-                    class="object-contain w-6 h-6"
-                  />
-                  <span v-else class="text-base">{{ equippedItemInPicker.icon }}</span>
-                  <span class="text-[10px] font-bold tt-text-muted">{{
-                    equippedItemInPicker.name
-                  }}</span>
-                </div>
-                <button
-                  @click="unequipCurrent"
-                  class="text-[9px] font-bold px-1.5 py-0.5 tt-unequip-btn"
-                >
-                  Ablegen
-                </button>
-              </div>
-              <!-- Verfuegbare Items -->
-              <div class="space-y-1 overflow-y-auto max-h-32 rpg-scrollbar">
-                <div
-                  v-for="item in availableItemsForPicker"
-                  :key="item.id"
-                  class="flex items-center justify-between p-1.5 cursor-pointer transition-colors duration-150 tt-picker-item"
-                  @click="equipItemFromPicker(item.id)"
-                >
-                  <div class="flex items-center gap-1.5">
-                    <img
-                      v-if="item.icon.startsWith('/')"
-                      :src="item.icon"
-                      class="object-contain w-6 h-6"
-                    />
-                    <span v-else class="text-base">{{ item.icon }}</span>
-                    <span class="text-[10px] font-bold tt-text-muted">{{ item.name }}</span>
-                  </div>
-                  <span class="text-[9px] tt-text-dim"
-                    >x{{ itemStore.availableCount(item.id) }}</span
-                  >
-                </div>
-                <div
-                  v-if="availableItemsForPicker.length === 0 && !equippedItemInPicker"
-                  class="py-2 text-center"
-                >
-                  <span class="text-[9px] tt-text-dim">Keine Items verfuegbar</span>
-                </div>
-              </div>
-            </div>
-          </Transition>
-
-          <!-- Champion Slot Modal -->
-          <ChampionSlotModal
-            :show="openSlotIndex !== null"
-            :slotIndex="openSlotIndex ?? 0"
-            @close="openSlotIndex = null"
-          />
-        </div>
-
-        <!-- Item Shop -->
-        <div class="min-h-0 p-3 overflow-y-auto rpg-scrollbar tt-panel" style="flex: 2">
+      <div class="flex flex-col min-h-0" style="flex: 2">
+        <div class="flex flex-col flex-1 min-h-0 p-3 overflow-y-auto rpg-scrollbar tt-panel">
           <ItemShopComponent />
         </div>
       </div>
@@ -364,20 +140,13 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
-import { useBattleStore } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
-import { useGameStore } from '@/stores/gameStore'
-import { useItemStore } from '@/stores/itemStore'
 import { MAX_ACTIVE_EXPEDITIONS } from '@/config/constants'
 import { EXPEDITION_CONFIGS } from '@/config/expedition'
-import { SHOP_ITEMS, getItemById } from '@/config/items'
-import { truncate } from '@/config/numberFormat'
-import { fetchChampionNames } from '@/utils/champions'
 import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
-import ChampionSlotModal from './ChampionSlotModal.vue'
-import type { ExpeditionMission, ItemCategory } from '@/types'
+import type { ExpeditionMission } from '@/types'
 
 export default defineComponent({
   name: 'TeamTabComponent',
@@ -385,46 +154,20 @@ export default defineComponent({
     ExpeditionCreateComponent,
     ChampionShopComponent,
     ItemShopComponent,
-    ChampionSlotModal,
   },
   setup() {
-    const battleStore = useBattleStore()
     const expeditionStore = useExpeditionStore()
-    const gameStore = useGameStore()
-    const itemStore = useItemStore()
     const now = ref(Date.now())
-    const totalChampionCount = ref(0)
-    const openSlotIndex = ref<number | null>(null)
     const showTooltip = ref(false)
-    const equipPicker = ref<{ slotIndex: number; category: ItemCategory } | null>(null)
     let timer: ReturnType<typeof setInterval> | null = null
 
     onMounted(() => {
       timer = setInterval(() => {
         now.value = Date.now()
       }, 1000)
-      fetchChampionNames()
-        .then((names) => {
-          totalChampionCount.value = names.length
-        })
-        .catch(() => {})
     })
     onUnmounted(() => {
       if (timer) clearInterval(timer)
-    })
-
-    const equipCategories = [
-      { key: 'weapon' as ItemCategory, icon: '⚔️' },
-      { key: 'armor' as ItemCategory, icon: '🛡️' },
-      { key: 'misc' as ItemCategory, icon: '📿' },
-    ]
-
-    const selectableChampions = computed(() => {
-      const onExpedition = expeditionStore.championsOnExpedition
-      return battleStore.ownedChampions.filter(
-        (c) =>
-          c !== 'Bard' && !battleStore.selectedChampions.includes(c) && !onExpedition.includes(c),
-      )
     })
 
     const activeExpeditionCount = computed(
@@ -434,45 +177,6 @@ export default defineComponent({
       () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
     )
 
-    const equipPickerLabel = computed(() => {
-      if (!equipPicker.value) return ''
-      const labels: Record<ItemCategory, string> = {
-        weapon: 'Waffe',
-        armor: 'Ruestung',
-        misc: 'Misc',
-      }
-      return labels[equipPicker.value.category]
-    })
-
-    const equippedItemInPicker = computed(() => {
-      if (!equipPicker.value) return null
-      const eq = itemStore.slotEquipment[equipPicker.value.slotIndex]
-      const itemId = eq[equipPicker.value.category]
-      return itemId ? (getItemById(itemId) ?? null) : null
-    })
-
-    const availableItemsForPicker = computed(() => {
-      if (!equipPicker.value) return []
-      const cat = equipPicker.value.category
-      return SHOP_ITEMS.filter(
-        (item) => item.category === cat && itemStore.availableCount(item.id) > 0,
-      )
-    })
-
-    function isOnExpedition(champion: string): boolean {
-      return expeditionStore.championsOnExpedition.includes(champion)
-    }
-    function addChampion(champion: string) {
-      if (battleStore.selectedChampions.length < 4) {
-        const emptySlot = battleStore.teamSlotAssignments.indexOf(null)
-        if (emptySlot !== -1) {
-          battleStore.assignToSlot(emptySlot, champion)
-        }
-      }
-    }
-    function removeChampion(champion: string) {
-      battleStore.removeChampionFromSlots(champion)
-    }
     function getProgress(expedition: ExpeditionMission): number {
       return Math.min(
         100,
@@ -492,71 +196,15 @@ export default defineComponent({
     function getExpeditionIcon(configId: string): string {
       return EXPEDITION_CONFIGS.find((e) => e.id === configId)?.icon ?? '📜'
     }
-    function onImgError(e: Event) {
-      const img = e.target as HTMLImageElement
-      img.style.display = 'none'
-    }
-
-    function getEquipIcon(slotIndex: number, category: ItemCategory): string | null {
-      const eq = itemStore.slotEquipment[slotIndex]
-      const itemId = eq[category]
-      if (!itemId) return null
-      const item = getItemById(itemId)
-      return item?.icon ?? null
-    }
-
-    function toggleEquipPicker(slotIndex: number, category: ItemCategory) {
-      if (
-        equipPicker.value &&
-        equipPicker.value.slotIndex === slotIndex &&
-        equipPicker.value.category === category
-      ) {
-        equipPicker.value = null
-      } else {
-        equipPicker.value = { slotIndex, category }
-      }
-    }
-
-    function equipItemFromPicker(itemId: string) {
-      if (!equipPicker.value) return
-      itemStore.equipItem(equipPicker.value.slotIndex, itemId)
-      equipPicker.value = null
-    }
-
-    function unequipCurrent() {
-      if (!equipPicker.value) return
-      itemStore.unequipItem(equipPicker.value.slotIndex, equipPicker.value.category)
-      equipPicker.value = null
-    }
 
     return {
-      battleStore,
       expeditionStore,
-      gameStore,
-      itemStore,
-      totalChampionCount,
-      openSlotIndex,
       showTooltip,
-      equipPicker,
-      equipCategories,
-      selectableChampions,
       activeExpeditionCount,
       completedExpeditionCount,
-      equipPickerLabel,
-      equippedItemInPicker,
-      availableItemsForPicker,
-      isOnExpedition,
-      addChampion,
-      removeChampion,
       getProgress,
       getTimeRemaining,
       getExpeditionIcon,
-      truncate,
-      onImgError,
-      getEquipIcon,
-      toggleEquipPicker,
-      equipItemFromPicker,
-      unequipCurrent,
       MAX_ACTIVE_EXPEDITIONS,
     }
   },
@@ -668,192 +316,7 @@ export default defineComponent({
   background: #4a1e1e;
 }
 
-.tt-team-counter {
-  border-radius: 4px;
-  background: #141828;
-  border: 1px solid #2a3050;
-}
-
-.tt-team-counter-value {
-  color: var(--rpg-blue);
-}
-
-.tt-unlock-counter {
-  border-radius: 4px;
-  background: #1c1408;
-  border: 1px solid #4a3010;
-}
-
-.tt-unlock-counter-value {
-  color: #e8c040;
-}
-
-.tt-slot-card {
-  border-radius: 4px;
-  border: 1px solid #333;
-}
-
-.tt-slot-card--active {
-  border-color: #444;
-}
-
-.tt-slot-card--active:hover {
-  border-color: var(--rpg-blue);
-  box-shadow: 0 4px 12px rgba(40, 60, 100, 0.15);
-}
-
-.tt-slot-card--expedition {
-  border-color: var(--rpg-border-row);
-  opacity: 0.5;
-}
-
-.tt-image-overlay {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.2), transparent);
-}
-
-.tt-slot-number {
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #777;
-  border: 1px solid #333;
-}
-
-.tt-champ-name {
-  color: #ffffff;
-}
-
-.tt-expedition-label {
-  color: var(--rpg-gold);
-}
-
-.tt-remove-btn {
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid #333;
-  color: #777;
-}
-
-.tt-remove-btn:hover {
-  background: var(--rpg-bg-red-subtle);
-  border-color: #8a4040;
-  color: var(--rpg-red);
-}
-
-.tt-equip-row {
-  background: rgba(0, 0, 0, 0.8);
-  border-top: 1px solid var(--rpg-border-row);
-}
-
-.tt-equip-slot {
-  border-radius: 4px;
-}
-
-.tt-equip-slot--filled {
-  background: var(--rpg-border-row);
-  border: 1px solid #444;
-}
-
-.tt-equip-slot--filled:hover {
-  background: var(--rpg-bg-hover);
-}
-
-.tt-equip-slot--empty {
-  border: 1px dashed #333;
-}
-
-.tt-equip-slot--empty:hover {
-  border-color: var(--rpg-blue);
-  background: #141828;
-}
-
-.tt-slot-empty {
-  border-radius: 4px;
-  border: 1px dashed #333;
-  background: var(--rpg-bg-icon);
-}
-
-.tt-slot-empty:hover,
-.group\/slot:hover .tt-slot-empty {
-  border-color: var(--rpg-blue);
-  background: #141828;
-}
-
-.tt-slot-empty-icon {
-  border: 1px dashed #333;
-  border-radius: 4px;
-}
-
-.group\/slot:hover .border-color-hover {
-  border-color: var(--rpg-blue);
-}
-
-.group\/slot:hover .text-hover {
-  color: var(--rpg-blue);
-}
-
-.group\/slot:hover .text-hover-light {
-  color: #999;
-}
-
-.tt-equip-slot-mini {
-  border: 1px dashed #333;
-  border-radius: 4px;
-}
-
-.tt-equip-slot-mini:hover {
-  border-color: var(--rpg-blue);
-  background: #141828;
-}
-
-.tt-equip-picker {
-  border-radius: 4px;
-}
-
-.tt-close-btn {
-  transition: color 0.15s;
-}
-
-.tt-close-btn:hover {
-  color: var(--rpg-text-muted);
-}
-
-.tt-equipped-item {
-  border-radius: 4px;
-  background: var(--rpg-bg-green-subtle);
-  border: 1px solid #2e5a1a;
-}
-
-.tt-unequip-btn {
-  border-radius: 4px;
-  background: var(--rpg-bg-red-subtle);
-  border: 1px solid #5a2020;
-  color: var(--rpg-red);
-  transition: background 0.15s;
-}
-
-.tt-unequip-btn:hover {
-  background: var(--rpg-bg-red-hover);
-}
-
-.tt-picker-item {
-  border-radius: 4px;
-  border: 1px solid var(--rpg-border-row);
-  background: var(--rpg-bg-dark);
-}
-
-.tt-picker-item:hover {
-  background: var(--rpg-bg-hover);
-}
-
-.team-slot-card {
-  height: 100%;
-}
-
-.available-card {
-  min-height: 90px;
-  height: 90px;
-}
-
+/* ── Expedition tooltip transitions ── */
 .expedition-tooltip-enter-active {
   transition:
     opacity 0.12s ease,
@@ -870,23 +333,5 @@ export default defineComponent({
 .expedition-tooltip-leave-to {
   opacity: 0;
   transform: scale(0.95) translateY(-2px);
-}
-
-.equip-picker-enter-active {
-  transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
-}
-
-.equip-picker-leave-active {
-  transition:
-    opacity 0.08s ease,
-    transform 0.08s ease;
-}
-
-.equip-picker-enter-from,
-.equip-picker-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(4px);
 }
 </style>
