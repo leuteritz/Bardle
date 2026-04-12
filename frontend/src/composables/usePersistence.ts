@@ -13,6 +13,10 @@ import { useCpsStore } from '@/stores/cpsStore'
 import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, SAVE_KEY, SAVE_VERSION } from '@/config/constants'
 import { logger } from '@/utils/logger'
 
+// ── Offline Progress Balance ──────────────────────────────────────────────────
+const OFFLINE_RATE_MULTIPLIER = 0.6 // 60 % of online CPS — prevents pure offline farming
+const MAX_OFFLINE_HOURS = 10        // cap at 10 h (36 000 s) — one full night's sleep
+const MIN_OFFLINE_SECONDS = 60      // skip modal for reloads shorter than 1 minute
 
 export function usePersistence() {
   function saveGame() {
@@ -318,6 +322,24 @@ export function usePersistence() {
         } else {
           // Old save or in-progress champion fight: start a fresh travel cycle
           galaxyStore.startChampionTravel()
+        }
+      }
+
+      // ── Offline Progress ─────────────────────────────────────────────────────
+      const now = Date.now()
+      const savedAt = saved.savedAt as number | undefined
+      if (savedAt && typeof savedAt === 'number') {
+        const rawSeconds = Math.floor((now - savedAt) / 1000)
+        const cappedSeconds = Math.min(rawSeconds, MAX_OFFLINE_HOURS * 3600)
+        if (cappedSeconds >= MIN_OFFLINE_SECONDS) {
+          const earned = Math.floor(
+            gameStore.chimesPerSecond * OFFLINE_RATE_MULTIPLIER * cappedSeconds,
+          )
+          // Show the modal whenever offline time exceeded the threshold —
+          // even with 0 CPS so players can see the system is working.
+          gameStore.offlineChimes = earned
+          gameStore.offlineSeconds = cappedSeconds
+          gameStore.showOfflineModal = true
         }
       }
 

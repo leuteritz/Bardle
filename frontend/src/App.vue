@@ -14,6 +14,7 @@ import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
+import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -33,6 +34,7 @@ const activeTab = ref('idle')
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
     <FpsOverlay />
+    <OfflineProgressModal />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <!-- Header + Countdown zusammen als ein Flex-Kind -->

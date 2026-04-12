@@ -78,6 +78,11 @@ export const useGameStore = defineStore('game', {
     // ── Expedetion-Tracking ──────────────────────
     totalChimesEarned: 0,
     totalClicks: 0,
+
+    // ── Offline Progress ──────────────────────────
+    offlineChimes: 0,
+    offlineSeconds: 0,
+    showOfflineModal: false,
   }),
   actions: {
     // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
@@ -369,6 +374,15 @@ export const useGameStore = defineStore('game', {
       combatStore.tick()
       const playerStore = usePlayerStore()
       playerStore.regenTick()
+    },
+
+    // Schreibt Offline-Chimes gut und schließt das Modal
+    claimOfflineReward() {
+      this.chimes += this.offlineChimes
+      this.totalChimesEarned += this.offlineChimes
+      this.offlineChimes = 0
+      this.offlineSeconds = 0
+      this.showOfflineModal = false
     },
 
     // Setzt den Modal-Status für UI-Effekte
