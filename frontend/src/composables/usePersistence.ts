@@ -7,16 +7,22 @@ import { useAugmentStore } from '@/stores/augmentStore'
 import { useItemStore } from '@/stores/itemStore'
 import { usePlanetEventStore } from '@/stores/planetEventStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useSectionStore } from '@/stores/sectionStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useCpsStore } from '@/stores/cpsStore'
-import { LEVEL_BASE, LEVEL_EXPONENT, MEEP_BASE_COST, SAVE_KEY, SAVE_VERSION } from '@/config/constants'
+import { usePlayerStore } from '@/stores/playerStore' // ← NEU
+import {
+  LEVEL_BASE,
+  LEVEL_EXPONENT,
+  MEEP_BASE_COST,
+  SAVE_KEY,
+  SAVE_VERSION,
+} from '@/config/constants'
 import { logger } from '@/utils/logger'
 
 // ── Offline Progress Balance ──────────────────────────────────────────────────
-const OFFLINE_RATE_MULTIPLIER = 0.6 // 60 % of online CPS — prevents pure offline farming
-const MAX_OFFLINE_HOURS = 10        // cap at 10 h (36 000 s) — one full night's sleep
-const MIN_OFFLINE_SECONDS = 60      // skip modal for reloads shorter than 1 minute
+const OFFLINE_RATE_MULTIPLIER = 0.6
+const MAX_OFFLINE_HOURS = 10
+const MIN_OFFLINE_SECONDS = 60
 
 export function usePersistence() {
   function saveGame() {
@@ -27,8 +33,8 @@ export function usePersistence() {
     const inventoryStore = useInventoryStore()
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
-    const sectionStore = useSectionStore()
     const galaxyStore = useGalaxyStore()
+    const playerStore = usePlayerStore() // ← NEU
 
     const saveData = {
       version: SAVE_VERSION,
@@ -113,11 +119,6 @@ export function usePersistence() {
         ownedItems: { ...itemStore.ownedItems },
         slotEquipment: itemStore.slotEquipment.map((s) => ({ ...s })),
       },
-      section: {
-        activeSectionId: sectionStore.activeSectionId,
-        highestUnlockedSectionId: sectionStore.highestUnlockedSectionId,
-        sectionProgress: { ...sectionStore.sectionProgress },
-      },
       galaxy: {
         currentGalaxy: galaxyStore.currentGalaxy,
         planetsRescued: galaxyStore.planetsRescued,
@@ -127,6 +128,11 @@ export function usePersistence() {
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
+      },
+      // ← NEU: Spieler-HP persistieren
+      player: {
+        currentHP: playerStore.currentHP,
+        maxHP: playerStore.maxHP,
       },
     }
 
@@ -282,25 +288,6 @@ export function usePersistence() {
         }
       }
 
-      // Restore sectionStore
-      const sectionStore = useSectionStore()
-      if (saved.section) {
-        const s = saved.section
-        sectionStore.activeSectionId = s.activeSectionId ?? 1
-        sectionStore.highestUnlockedSectionId = s.highestUnlockedSectionId ?? 1
-        if (s.sectionProgress && typeof s.sectionProgress === 'object') {
-          for (let id = 1; id <= 10; id++) {
-            const sp = s.sectionProgress[id]
-            if (sp) {
-              sectionStore.sectionProgress[id] = {
-                rescueCount: sp.rescueCount ?? 0,
-                completed: sp.completed ?? false,
-              }
-            }
-          }
-        }
-      }
-
       // Restore galaxyStore
       const galaxyStore = useGalaxyStore()
       if (saved.galaxy) {
@@ -313,16 +300,21 @@ export function usePersistence() {
         galaxyStore.pendingGalaxyBoss =
           galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
           !galaxyStore.galaxyBossDefeated
-        // Restore champion travel state (backwards compatible with old saves)
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
-          // 'champion_spawned' is invalid on reload (boss fights don't persist)
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
-          galaxyStore.championTravelDurationMs = gx.championTravelDurationMs ?? galaxyStore.championTravelDurationMs
+          galaxyStore.championTravelDurationMs =
+            gx.championTravelDurationMs ?? galaxyStore.championTravelDurationMs
         } else {
-          // Old save or in-progress champion fight: start a fresh travel cycle
           galaxyStore.startChampionTravel()
         }
+      }
+
+      // ← NEU: Restore playerStore (HP/Leben)
+      const playerStore = usePlayerStore()
+      if (saved.player) {
+        playerStore.currentHP = saved.player.currentHP ?? playerStore.maxHP
+        playerStore.maxHP = saved.player.maxHP ?? playerStore.maxHP
       }
 
       // ── Offline Progress ─────────────────────────────────────────────────────
@@ -335,8 +327,6 @@ export function usePersistence() {
           const earned = Math.floor(
             gameStore.chimesPerSecond * OFFLINE_RATE_MULTIPLIER * cappedSeconds,
           )
-          // Show the modal whenever offline time exceeded the threshold —
-          // even with 0 CPS so players can see the system is working.
           gameStore.offlineChimes = earned
           gameStore.offlineSeconds = cappedSeconds
           gameStore.showOfflineModal = true
@@ -379,6 +369,7 @@ export function usePersistence() {
     gameStore.chimesToUniverseRescue = 100000
     gameStore.meeps = 0
     gameStore.meepChimeRequirement = MEEP_BASE_COST
+    gameStore.chimesEarnedForLevel = 0
     gameStore.level = 1
     gameStore.skillPoints = 0
     gameStore.abilityLevels = [0, 0, 0, 0]
@@ -391,11 +382,15 @@ export function usePersistence() {
     gameStore.totalBuildingProduction = {}
     gameStore.activeExpedition = null
     gameStore.isHyperspaceActive = false
+    gameStore.showUniverseSelectModal = false
     gameStore.isCPSModalOpen = false
     gameStore.isExpeditionModalOpen = false
     gameStore.isEncyclopediaOpen = false
     gameStore.totalChimesEarned = 0
     gameStore.totalClicks = 0
+    gameStore.offlineChimes = 0
+    gameStore.offlineSeconds = 0
+    gameStore.showOfflineModal = false
 
     // 3. Reset shopStore
     const shopStore = useShopStore()
@@ -460,22 +455,24 @@ export function usePersistence() {
     planetEventStore.$reset()
     const planetBossStore = usePlanetBossStore()
     planetBossStore.$reset()
-    const sectionStoreReset = useSectionStore()
-    sectionStoreReset.$reset()
     const galaxyStoreReset = useGalaxyStore()
     galaxyStoreReset.$reset()
     const itemStore = useItemStore()
     itemStore.$reset()
     cpsStore.$reset()
 
-    // 7. Recalculate CPS/CPC from clean state
+    // 7. Reset playerStore – HP/Leben auf Startwert zurücksetzen  ← NEU
+    const playerStore = usePlayerStore()
+    playerStore.$reset()
+
+    // 8. Recalculate CPS/CPC from clean state
     gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
     gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
-    // 8. Re-start CPS tracking
+    // 9. Re-start CPS tracking
     cpsStore.startProductionTracking()
 
-    // 9. Clear localStorage
+    // 10. Clear localStorage
     localStorage.removeItem(SAVE_KEY)
   }
 

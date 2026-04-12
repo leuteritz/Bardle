@@ -593,7 +593,6 @@ function onImgError(e: Event) {
   line-height: 1.2;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   transition: color 0.15s ease;
   pointer-events: none;

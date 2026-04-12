@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
+import { usePersistence } from '@/composables/usePersistence'
 import { AUGMENTS } from '@/config/augments'
 import type { AugmentDefinition } from '@/types'
 
 const gameStore = useGameStore()
+
+const { resetGame } = usePersistence()
+const handleReset = () => {
+  if (
+    window.confirm(
+      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    )
+  ) {
+    resetGame()
+  }
+}
 
 const options = computed<AugmentDefinition[]>(() =>
   gameStore.pendingAugmentOptions
@@ -31,11 +43,16 @@ const rarityLabel: Record<string, string> = {
         <div class="rpg-accent-bar"></div>
 
         <!-- Header -->
-        <div class="flex items-center justify-center p-5 rpg-header">
+        <div class="relative flex items-center justify-center p-5 rpg-header">
           <div class="text-center">
             <h2 class="text-2xl font-bold aug-title">Level {{ gameStore.level }}</h2>
             <p class="mt-1 text-xs aug-subtitle">Wähle ein Augment</p>
           </div>
+
+          <!-- Reset Button -->
+          <button class="aug-reset-btn" title="Spielstand löschen" @click.stop="handleReset">
+            ✕
+          </button>
         </div>
 
         <!-- Skip -->
@@ -174,5 +191,51 @@ const rarityLabel: Record<string, string> = {
 .aug-card-hover--legendary:hover {
   border-color: color-mix(in srgb, var(--rpg-rarity-legendary) 80%, #fff);
   box-shadow: 0 0 20px color-mix(in srgb, var(--rpg-rarity-legendary) 60%, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   RESET BUTTON
+   ═══════════════════════════════════════════ */
+.aug-reset-btn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  background: linear-gradient(to bottom, #4a1010, #2e0808);
+  border: 1.5px solid #8a3020;
+  border-radius: 50%;
+  color: #cc6050;
+  cursor: pointer;
+  z-index: 10;
+
+  opacity: 0.35;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.aug-reset-btn:hover {
+  opacity: 1;
+  background: linear-gradient(to bottom, #6a1818, #4a0e0e);
+  color: #ff9080;
+  border-color: #cc4830;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.aug-reset-btn:active {
+  transform: translateY(-50%) scale(0.88);
 }
 </style>

@@ -3,7 +3,7 @@ import {
   PLAYER_MAX_HP_BASE,
   PLAYER_HP_REGEN_PER_SEC,
   PLAYER_HP_LOSS_ON_ENRAGE,
-} from '../config/constants'
+} from '@/config/constants'
 
 export const usePlayerStore = defineStore('player', {
   state: () => ({
@@ -28,7 +28,11 @@ export const usePlayerStore = defineStore('player', {
     },
     takeDamage(amount: number = PLAYER_HP_LOSS_ON_ENRAGE) {
       this.currentHP = Math.max(0, this.currentHP - amount)
-      this.damageFloats.push({ id: this._nextFloatId++, value: amount, expiresAt: Date.now() + 1400 })
+      this.damageFloats.push({
+        id: this._nextFloatId++,
+        value: amount,
+        expiresAt: Date.now() + 1400,
+      })
     },
     pruneFloats() {
       const now = Date.now()
