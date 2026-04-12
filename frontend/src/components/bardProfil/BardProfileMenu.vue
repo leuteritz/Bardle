@@ -52,13 +52,10 @@ watch(activeModal, (val) => {
   document.body.classList.toggle('bard-modal-open', val !== null)
 })
 
-const chimesForLevel = computed(() => {
-  const progress = gameStore.levelProgress / 100
-  if (progress <= 0) return { current: 0, total: gameStore.chimesToNextLevel }
-  const total = Math.round(gameStore.chimesToNextLevel / (1 - progress))
-  const current = total - gameStore.chimesToNextLevel
-  return { current, total }
-})
+const chimesForLevel = computed(() => ({
+  current: gameStore.currentLevelChimes,
+  total: gameStore.totalChimesThisLevel,
+}))
 
 const portraitRef = ref<HTMLElement | null>(null)
 const showXpTooltip = ref(false)
