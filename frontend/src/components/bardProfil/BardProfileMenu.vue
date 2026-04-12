@@ -87,7 +87,6 @@ const chimesForLevel = computed(() => {
             stroke-linecap="butt"
             :stroke-dasharray="`${xpProgress * 283} 283`"
             class="transition-all duration-1000 ease-out"
-            style="filter: drop-shadow(0 0 6px rgba(210, 160, 20, 0.8))"
           />
         </svg>
 
