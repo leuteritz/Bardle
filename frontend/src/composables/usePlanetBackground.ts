@@ -2,6 +2,7 @@ import { watch, onMounted, onUnmounted, nextTick, ref } from 'vue'
 import type { Ref } from 'vue'
 import { usePlanetEventStore } from '../stores/planetEventStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
+import { useGalaxyStore } from '../stores/galaxyStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import {
   PLANET_MAX_COUNT,
@@ -34,6 +35,7 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
 } {
   const planetEventStore = usePlanetEventStore()
   const bossStore = usePlanetBossStore()
+  const galaxyStore = useGalaxyStore()
 
   const planets = ref<PlanetItem[]>([])
   const timeouts: ReturnType<typeof setTimeout>[] = []
@@ -120,7 +122,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
     const cx = w / 2
     const cy = h / 2
 
-    // Elliptische 3D-Orbit-Parameter
     const orbitRadiusX = 320 + Math.random() * 80
     const orbitRadiusY = 145 + Math.random() * 40
     const tiltRad = 0.15 + Math.random() * 0.2
@@ -132,7 +133,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
     const size = Math.max(config.sizeMin, Math.min(config.sizeMax, 60))
     const r = size / 2
 
-    // Fly-In: Planet startet 3.5× weiter draußen auf derselben Ellipse
     const startRx = orbitRadiusX * FLY_IN_START_SCALE
     const startRy = orbitRadiusY * FLY_IN_START_SCALE
     const startPos = getOrbitPos(startAngle, startRx, startRy, tiltRad, cx, cy)
@@ -262,6 +262,23 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
     }, 600)
   }
 
+  // ── NEU: Champion-Planet-Ankunft auf alle isGalaxyBoss-Planeten anwenden ──
+  function triggerChampionArriving(): void {
+    for (const planet of planets.value) {
+      if (planet.isGalaxyBoss && planet.animState === 'normal') {
+        planet.animState = 'champion_arriving'
+        // Nach Abschluss der Animation (3.2 s) zurück auf normal setzen,
+        // damit Clicks und weitere States wieder greifen
+        setTimeout(() => {
+          const p = planets.value.find((p) => p.id === planet.id)
+          if (p && p.animState === 'champion_arriving') {
+            p.animState = 'normal'
+          }
+        }, 3300)
+      }
+    }
+  }
+
   function scheduleNextPlanet(): void {
     const delay =
       PLANET_SPAWN_INTERVAL_MIN +
@@ -308,32 +325,28 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
     for (let i = planets.value.length - 1; i >= 0; i--) {
       const planet = planets.value[i]
 
+      // champion_arriving läuft als reine CSS-Animation — kein JS-Update nötig
       if (planet.animState !== 'normal') continue
 
       if (planet.approaching || planet.orbiting) {
-        // ── 3D-Ellipsen-Orbit-System ─────────────────────────────────────────
         const targetRx = planet.orbitRadiusX!
         const targetRy = planet.orbitRadiusY!
         const tilt = planet.tiltRad ?? 0.18
         const oCx = planet.orbitCx!
         const oCy = planet.orbitCy!
 
-        // Fly-In-Spirale: Radius lerpt langsam auf Zielorbit zu
         planet.currentRadiusX! += (targetRx - planet.currentRadiusX!) * 0.018
         planet.currentRadiusY! += (targetRy - planet.currentRadiusY!) * 0.018
 
-        // Sobald Radius nah genug am Ziel → stabiler Orbit
         if (planet.approaching && Math.abs(planet.currentRadiusX! - targetRx) < targetRx * 0.08) {
           planet.approaching = false
           planet.orbiting = true
         }
 
-        // Kepler-Boost: schneller am Äquator (wie Champions)
         const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(planet.orbitAngle!)))
         planet.orbitAngle! +=
           (planet.direction ?? 1) * planet.baseSpeed! * keplerBoost * (delta * 1000)
 
-        // Zielposition auf aktueller (noch schrumpfender) Ellipse
         const tp = getOrbitPos(
           planet.orbitAngle!,
           planet.currentRadiusX!,
@@ -343,24 +356,20 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
           oCy,
         )
 
-        // Smooth-Lerp der Planetenmitte
         let curCx = planet.x + planet.size / 2
         let curCy = planet.y + planet.size / 2
         curCx += (tp.x - curCx) * 0.12
         curCy += (tp.y - curCy) * 0.12
 
-        // Top-left speichern (für getLabelTransform)
         planet.x = curCx - planet.size / 2
         planet.y = curCy - planet.size / 2
 
-        // Tiefe & Parallax-Skala (identisch mit Champions)
         const relY = (curCy - oCy) / Math.max(targetRy, 1)
         planet.isBehind = relY < -0.05
         const depth = Math.max(0, Math.min(1, (relY + 1) / 2))
         const pScale = 0.72 + depth * 0.56
         planet.opacity = planet.isBehind ? 0.22 + depth * 0.35 : 0.8 + depth * 0.2
 
-        // 3D-Transform: skaliert um den Mittelpunkt
         planet.transform =
           `translate(${curCx}px, ${curCy}px) ` +
           `scale(${pScale.toFixed(4)}) ` +
@@ -374,7 +383,6 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
             : 'translate(-9999px, -9999px)'
         }
       } else {
-        // ── Schwebende Hintergrund-Planeten (spawnPlanet) ────────────────────
         planet.elapsed += delta * 1000
         const p = Math.min(planet.elapsed / planet.lifetime, 1)
         planet.scale = 0.05 + (planet.scaleEnd - 0.05) * (p * p)
@@ -466,6 +474,14 @@ export function usePlanetBackground(container: Ref<HTMLElement | null>): {
       }
     },
     { deep: true },
+  )
+
+  // ── NEU: Champion-Planet-Ankunft beobachten ────────────────────────────────
+  watch(
+    () => galaxyStore.championJustArrived,
+    (arrived) => {
+      if (arrived) triggerChampionArriving()
+    },
   )
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────────

@@ -1,5 +1,3 @@
-// Shared TypeScript interfaces
-
 // Champion role types
 export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
@@ -22,7 +20,6 @@ export interface ExpeditionMission {
   reward: number
 }
 
-// Universe modifier types
 export interface ModifierEffects {
   cpsMultiplier?: number
   cpcMultiplier?: number
@@ -60,7 +57,6 @@ export interface UniverseConfig {
   modifier: UniverseModifier | null
 }
 
-// Shop types (extracted from shopStore.ts)
 export interface ShopUpgrade {
   id: string
   name: string
@@ -134,7 +130,6 @@ export interface TimePeriod {
   dataPoints: number
 }
 
-// Game store types (extracted from gameStore.ts)
 export interface BuildingProduction {
   [key: string]: number[]
 }
@@ -143,7 +138,6 @@ export interface TotalBuildingProduction {
   [key: string]: number
 }
 
-// Expedition types
 export interface Expedition {
   universeId: number
   universeName: string
@@ -154,7 +148,6 @@ export interface Expedition {
   collected: boolean
 }
 
-// Planet event types
 export type PlanetType =
   | 'rocky'
   | 'ice'
@@ -171,10 +164,10 @@ export interface LabelData {
   currentHP: number
   maxHP: number
   reward: number | null
-  chimesImage?: string // ← NEU: Pfad zum Chimes-Icon
+  chimesImage?: string
   materialImage?: string
   materialName?: string
-  materialCount?: number // ← NEU: Anzahl des Materials (z. B. 500)
+  materialCount?: number
   championImage?: string
   championName?: string
   isGalaxyBoss: boolean
@@ -202,17 +195,15 @@ export interface PlanetItem {
   orbitCx?: number
   orbitCy?: number
 
-  // ── NEU: 3D-Ellipsen-Orbit (ersetzt orbitRadius + orbitSpeed) ──
   orbitRadiusX?: number
   orbitRadiusY?: number
   tiltRad?: number
   baseSpeed?: number
   direction?: 1 | -1
-  currentRadiusX?: number // für Fly-in-Spirale
+  currentRadiusX?: number
   currentRadiusY?: number
-  isBehind?: boolean // für Back/Front-Layer-Aufteilung
+  isBehind?: boolean
 
-  // Alte Felder die nicht mehr gebraucht werden – optional behalten
   orbitRadius?: number
   orbitSpeed?: number
   approachFromX?: number
@@ -226,7 +217,8 @@ export interface PlanetItem {
   isRescue: boolean
   isGalaxyBoss: boolean
   labelData: LabelData | null
-  animState: 'normal' | 'exploding' | 'saved'
+  // ── GEÄNDERT: 'champion_arriving' ergänzt ──────────────────────────────
+  animState: 'normal' | 'exploding' | 'saved' | 'champion_arriving'
 }
 
 export interface PlanetRescueEvent {
@@ -277,7 +269,6 @@ export interface RecruitableChampion {
   discoveredAt: number
 }
 
-// Battle types
 export interface ChampionState {
   name: string
   rank: string
@@ -312,7 +303,6 @@ export interface BattleResult {
   winProbability: number
 }
 
-// Augment types
 export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export interface AugmentEffects {
@@ -364,7 +354,6 @@ export interface TimedBuff {
   expiresAt: number
 }
 
-// Item types
 export type ItemCategory = 'weapon' | 'armor' | 'misc'
 export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
@@ -400,7 +389,6 @@ export interface SlotEquipment {
   misc: string | null
 }
 
-// Material types
 export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 
 export interface Material {
@@ -414,7 +402,6 @@ export interface Material {
   dropCount?: number
 }
 
-// ── Battle Shop System ───────────────────────────────────
 export interface ShopItemEffect {
   type:
     | 'winChanceBonus'
@@ -443,7 +430,6 @@ export interface ActiveBuff {
   effect: ShopItemEffect
 }
 
-// ── Idle-Game Mission-System ─────────────────────────────
 export type MissionConditionType =
   | 'totalChimes'
   | 'totalClicks'
@@ -468,7 +454,6 @@ export interface Mission {
   claimed: boolean
 }
 
-// ── Champion Combat System ───────────────────────────────────────────────────
 export type ChampionCombatPhase = 'orbit' | 'approach' | 'attack' | 'retreat'
 
 export interface ChampionOrbitParams {

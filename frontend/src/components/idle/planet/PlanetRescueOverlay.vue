@@ -4,6 +4,11 @@
     <div v-if="showFlash" class="planet-vignette" aria-hidden="true" />
   </Transition>
 
+  <!-- Champion-Ankunft Vignette (feuerrot) -->
+  <Transition name="champion-vignette-fade">
+    <div v-if="showChampionFlash" class="planet-vignette--champion" aria-hidden="true" />
+  </Transition>
+
   <!-- Stacked countdown bars — one per active planet boss -->
   <TransitionGroup
     v-if="activeBosses.length > 0"
@@ -77,6 +82,13 @@
       💥 Boss Enraged! -5% CPS für 30s
     </div>
   </Transition>
+
+  <!-- Champion-Ankunft Toast (feuerrot) -->
+  <Transition name="toast-slide">
+    <div v-if="showChampionArrivedToast" class="planet-toast planet-toast--champion-arrived">
+      🔥 Champion-Planet eingetroffen!
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -84,11 +96,13 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import type { PlanetBossEvent } from '@/types'
 import { usePlanetEventStore } from '@/stores/planetEventStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
 
 const planetEventStore = usePlanetEventStore()
 const bossStore = usePlanetBossStore()
+const galaxyStore = useGalaxyStore()
 
 // Drive countdown reactivity at 200ms resolution
 const now = ref(Date.now())
@@ -150,7 +164,6 @@ function formatCountdown(boss: PlanetBossEvent): string {
   return `${m}:${s}`
 }
 
-// Distributes bar colors across warm red → orange-red spectrum
 function barColor(idx: number, total: number): string {
   const hue = total <= 1 ? 10 : (idx / (total - 1)) * 35
   return `hsl(${hue}, 90%, 48%)`
@@ -161,7 +174,7 @@ function barColorDark(idx: number, total: number): string {
   return `hsl(${hue}, 80%, 25%)`
 }
 
-// Flash on event spawn
+// Flash on rescue event spawn
 const showFlash = ref(false)
 let flashTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -174,6 +187,59 @@ watch(
     flashTimeout = setTimeout(() => {
       showFlash.value = false
     }, 1500)
+  },
+)
+
+// ── Champion-Ankunft Flash + Toast + Sound ────────────────────────────────
+const showChampionFlash = ref(false)
+const showChampionArrivedToast = ref(false)
+let championFlashTimeout: ReturnType<typeof setTimeout> | null = null
+let championToastTimeout: ReturnType<typeof setTimeout> | null = null
+
+function playChampionChimes() {
+  const chimePaths = [
+    '/sounds/chime_high.wav',
+    '/sounds/chime_mid.wav',
+    '/sounds/chime_high.wav',
+    '/sounds/chime_low.wav',
+  ]
+  const delays = [0, 220, 500, 920]
+  const volumes = [0.55, 0.9, 0.75, 0.5]
+
+  chimePaths.forEach((path, i) => {
+    setTimeout(() => {
+      try {
+        const audio = new Audio(path)
+        audio.volume = volumes[i]
+        audio.play().catch(() => {})
+      } catch {
+        // Audio nicht verfügbar
+      }
+    }, delays[i])
+  })
+}
+
+watch(
+  () => galaxyStore.championJustArrived,
+  (arrived) => {
+    if (!arrived) return
+
+    // Rote Vignette
+    showChampionFlash.value = true
+    if (championFlashTimeout) clearTimeout(championFlashTimeout)
+    championFlashTimeout = setTimeout(() => {
+      showChampionFlash.value = false
+    }, 2800)
+
+    // Toast
+    showChampionArrivedToast.value = true
+    if (championToastTimeout) clearTimeout(championToastTimeout)
+    championToastTimeout = setTimeout(() => {
+      showChampionArrivedToast.value = false
+    }, 3500)
+
+    // Sound
+    playChampionChimes()
   },
 )
 
@@ -228,7 +294,7 @@ watch(
 </script>
 
 <style scoped>
-/* ─── Vignette Flash ─────────────────────────────────────────────────────── */
+/* ─── Vignette Flash (normaler Rescue-Spawn) ─────────────────────────────── */
 .planet-vignette {
   position: fixed;
   inset: 0;
@@ -263,6 +329,66 @@ watch(
   }
   100% {
     opacity: 0;
+  }
+}
+
+/* ─── Champion-Ankunft Vignette — FEUERROT mit Doppelpuls ────────────────── */
+.planet-vignette--champion {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 60, 0, 0.08) 0%,
+    rgba(220, 20, 0, 0.12) 30%,
+    rgba(180, 0, 0, 0.32) 60%,
+    rgba(140, 0, 0, 0.55) 80%,
+    rgba(80, 0, 0, 0.72) 100%
+  );
+}
+
+.champion-vignette-fade-enter-active {
+  animation: championVignetteIn 0.12s ease-out;
+}
+.champion-vignette-fade-leave-active {
+  animation: championVignetteOut 2.8s ease-in forwards;
+}
+
+@keyframes championVignetteIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Pulsiert zweimal synchron mit dem Herz-Rhythmus der Planeten-Animation */
+@keyframes championVignetteOut {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  12% {
+    opacity: 0.5;
+    filter: brightness(0.7);
+  }
+  22% {
+    opacity: 0.92;
+    filter: brightness(1.35);
+  }
+  35% {
+    opacity: 0.45;
+    filter: brightness(0.6);
+  }
+  48% {
+    opacity: 0.78;
+    filter: brightness(1.2);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(1);
   }
 }
 
@@ -370,7 +496,7 @@ watch(
   }
 }
 
-/* ─── Toasts ───────────────────────────────────────────────────────────────── */
+/* ─── Toasts (Basis) ───────────────────────────────────────────────────────── */
 .planet-toast {
   position: fixed;
   top: 15vh;
@@ -412,6 +538,23 @@ watch(
     0 12px 40px rgba(0, 0, 0, 0.75),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   text-shadow: 0 0 10px rgba(60, 220, 100, 0.55);
+}
+
+/* ─── Champion-Ankunft Toast — FEUERROT ──────────────────────────────────── */
+.planet-toast--champion-arrived {
+  background: rgba(60, 0, 0, 0.94);
+  border: 1px solid rgba(255, 40, 0, 0.8);
+  color: rgba(255, 160, 120, 1);
+  letter-spacing: 0.06em;
+  box-shadow:
+    0 0 0 1px rgba(255, 30, 0, 0.15),
+    0 0 20px rgba(255, 30, 0, 0.55),
+    0 0 50px rgba(200, 0, 0, 0.35),
+    0 12px 40px rgba(0, 0, 0, 0.88),
+    inset 0 1px 0 rgba(255, 100, 60, 0.08);
+  text-shadow:
+    0 0 12px rgba(255, 60, 0, 0.95),
+    0 0 28px rgba(200, 0, 0, 0.7);
 }
 
 /* ─── Toast sub-content ────────────────────────────────────────────────────── */
