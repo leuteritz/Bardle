@@ -18,7 +18,8 @@ export const useItemStore = defineStore('item', {
       emptySlotEquipment(),
       emptySlotEquipment(),
       emptySlotEquipment(),
-    ] as [SlotEquipment, SlotEquipment, SlotEquipment, SlotEquipment],
+      emptySlotEquipment(),
+    ] as [SlotEquipment, SlotEquipment, SlotEquipment, SlotEquipment, SlotEquipment],
   }),
 
   getters: {
@@ -97,7 +98,7 @@ export const useItemStore = defineStore('item', {
     },
 
     equipItem(slotIndex: number, itemId: string): boolean {
-      if (slotIndex < 0 || slotIndex > 3) return false
+      if (slotIndex < 0 || slotIndex > 4) return false
 
       const item = getItemById(itemId)
       if (!item) return false
@@ -111,7 +112,7 @@ export const useItemStore = defineStore('item', {
     },
 
     unequipItem(slotIndex: number, category: ItemCategory) {
-      if (slotIndex < 0 || slotIndex > 3) return
+      if (slotIndex < 0 || slotIndex > 4) return
       this.slotEquipment[slotIndex][category] = null
       this._recalculateCPS()
     },
