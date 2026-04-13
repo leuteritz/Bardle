@@ -1,6 +1,6 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { useGameStore } from '../../stores/gameStore'
-import { useGalaxyStore } from '../../stores/galaxyStore'
+import { useGameStore } from '@/stores/gameStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
 import {
   STAR_COUNT,
   WARP_SPEED_MAX,
@@ -9,7 +9,8 @@ import {
   GALAXY_SPAWN_INTERVAL_MIN,
   GALAXY_SPAWN_INTERVAL_MAX,
   GALAXY_MAX_COUNT,
-} from '../../config/constants'
+  IDLE_CRUISE_MULTIPLIER,
+} from '@/config/constants'
 import {
   NS,
   pickGalaxyTypeConfig,
@@ -424,7 +425,9 @@ export function useStarBackground() {
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
       speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
     } else {
-      speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : 1
+      speedMultiplier = hyperActive
+        ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
+        : IDLE_CRUISE_MULTIPLIER
     }
 
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
