@@ -122,6 +122,11 @@ function fillAllMaterials() {
     inventoryStore.collectedMaterials[m.id] = 9999
   })
 }
+
+function teleportNearPlanet() {
+  if (galaxyStore.championTravelState !== 'traveling') return
+  galaxyStore.championTravelStartTime = Date.now() - (galaxyStore.championTravelDurationMs - 5000)
+}
 </script>
 
 <template>
@@ -200,6 +205,13 @@ function fillAllMaterials() {
         @click="triggerNebula()"
       >
         <span>🌌</span> Trigger Nebula
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--travel flex items-center gap-1.5 px-3 py-1.5"
+        :disabled="galaxyStore.championTravelState !== 'traveling'"
+        @click="teleportNearPlanet"
+      >
+        <span>⚡</span> Skip to -5s
       </button>
     </div>
   </div>
@@ -320,5 +332,19 @@ function fillAllMaterials() {
   background: linear-gradient(to bottom, #2a1048, #180828);
   border-color: #9944dd;
   color: #ee99ff;
+}
+.admin-spawn-btn--travel {
+  color: #40d8c0;
+  border-color: #0a3028;
+  background: linear-gradient(to bottom, #0a1e1a, #061410);
+}
+.admin-spawn-btn--travel:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #102e28, #0a1c18);
+  border-color: #20a888;
+  color: #60f0d8;
+}
+.admin-spawn-btn--travel:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 </style>

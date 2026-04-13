@@ -25,6 +25,7 @@ import {
   drawStarburst,
 } from './galaxyRenderers'
 import { drawEmissionNebula, drawIonCloud } from './nebulaRenderers'
+import { computeTravelAngleDeg } from '../useTravelDirection'
 import {
   EMISSION_MAX_COUNT,
   EMISSION_SPAWN_MIN,
@@ -103,6 +104,19 @@ export function useStarBackground() {
   let galaxyTransElapsed = 0
   let wasPendingTransition = false
   let galaxyTransDir = 0
+
+  // ── Champion-Reise-Dreh-Animation ──────────────────────────────────────────
+  // Wenn Champion an Planet ankommt: Sterne einfrieren (speedMultiplier = 0).
+  // Wenn Reise startet: Sternfeld dreht sich auf der Stelle in Minimap-Richtung
+  // (Parallax-Rotation aller Objekte um die Bildschirmmitte).
+  const TRAVEL_WARP_MS = 2000
+  const PEAK_ROT_SPEED = 0.52   // rad/s bei maximaler Drehgeschwindigkeit
+  let travelWarpPhase: 'idle' | 'boost' = 'idle'
+  let travelWarpElapsed = 0
+  let travelWarpDir = 0         // Reise-Zielwinkel (Radiant) – für prevTravelDir-Tracking
+  let travelRotateDir = 0       // +1 = CCW (links), -1 = CW (rechts), 0 = kein Drehen
+  let prevTravelDir: number | null = null  // Richtung der letzten abgeschlossenen Etappe
+  let prevChampState = ''
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
@@ -373,8 +387,57 @@ export function useStarBackground() {
     const galaxyStore = useGalaxyStore()
     const pendingTrans = galaxyStore.pendingTransition
 
+    // ── Champion-Reise-Boost: Freeze & Richtungs-Boost ───────────────────────
+    const champState = galaxyStore.championTravelState
+    const isChampStopped =
+      (champState === 'champion_available' || champState === 'champion_spawned') &&
+      !hyperActive &&
+      galaxyTransPhase === 'idle' &&
+      !pendingTrans
+
+    // Transition: champion hält an → reist weiter → Dreh-Animation starten
+    if (
+      (prevChampState === 'champion_available' || prevChampState === 'champion_spawned') &&
+      champState === 'traveling' &&
+      galaxyTransPhase === 'idle' &&
+      !hyperActive
+    ) {
+      const angleDeg = computeTravelAngleDeg(
+        galaxyStore.currentGalaxy,
+        galaxyStore.planetsRequired,
+        galaxyStore.planetsRescued,
+      )
+      const newAngleRad = angleDeg * (Math.PI / 180)
+
+      // Drehrichtung: kürzester Winkel von letzter Etappe zur neuen Etappe
+      if (prevTravelDir !== null) {
+        let diff = newAngleRad - prevTravelDir
+        // Normalisieren auf [-π, π]
+        while (diff > Math.PI) diff -= Math.PI * 2
+        while (diff < -Math.PI) diff += Math.PI * 2
+        travelRotateDir = diff >= 0 ? 1 : -1
+      } else {
+        travelRotateDir = 0  // Erste Reise: kein Drehen, sofort los
+      }
+
+      travelWarpDir = newAngleRad
+      prevTravelDir = newAngleRad
+      travelWarpPhase = 'boost'
+      travelWarpElapsed = 0
+    }
+    prevChampState = champState
+
+    if (travelWarpPhase === 'boost') {
+      travelWarpElapsed += delta * 1000
+      if (travelWarpElapsed >= TRAVEL_WARP_MS) {
+        travelWarpPhase = 'idle'
+        travelWarpElapsed = 0
+      }
+    }
+
     // ── Frame-Throttle: 30 FPS im Idle-Zustand ───────────────────────────────
-    const isActiveAnimation = hyperActive || galaxyTransPhase !== 'idle' || pendingTrans
+    const isActiveAnimation =
+      hyperActive || galaxyTransPhase !== 'idle' || pendingTrans || travelWarpPhase !== 'idle'
     if (!isActiveAnimation) {
       if (timestamp - lastIdleFrameTime < IDLE_FRAME_INTERVAL) {
         animFrame = requestAnimationFrame(animateStars)
@@ -424,6 +487,12 @@ export function useStarBackground() {
       // Steiles Ease-Out: 45× → 1× — matcht Warp-Ende, bremst schnell auf Normal
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
       speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
+    } else if (isChampStopped) {
+      // Champion ist angekommen – Sterne einfrieren
+      speedMultiplier = 0
+    } else if (travelWarpPhase === 'boost') {
+      // Während der Dreh-Animation: sehr langsamer Drift (kein Ruckeln beim Übergang)
+      speedMultiplier = IDLE_CRUISE_MULTIPLIER * 0.18
     } else {
       speedMultiplier = hyperActive
         ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
@@ -439,6 +508,19 @@ export function useStarBackground() {
     const cx = w / 2,
       cy = h / 2
     const maxDist = Math.hypot(cx, cy) + 20
+
+    // ── Parallax-Rotation: Sternfeld dreht sich beim Abflug ──────────────────
+    // Ease-in (0–30%) → Peak (30–70%) → Ease-out (70–100%)
+    // Jede Tiefenschicht dreht etwas langsamer → echter Parallax-Effekt
+    if (travelWarpPhase === 'boost' && travelRotateDir !== 0) {
+      const t = Math.min(travelWarpElapsed / TRAVEL_WARP_MS, 1)
+      const bF = t < 0.3 ? t / 0.3 : t < 0.7 ? 1.0 : 1 - (t - 0.7) / 0.3
+      const rotAmt = travelRotateDir * PEAK_ROT_SPEED * bF * delta
+      for (const s of stars) s.angle += rotAmt
+      for (const cl of starClusters) cl.angle += rotAmt * 0.94
+      for (const d of dustPatches) d.angle += rotAmt * 0.86
+      for (const n of emissionNebulas) n.angle += rotAmt * 0.78
+    }
 
     // ── Kosmischer Staub (Canvas, tiefste Hintergrundschicht) ──
     if (ctx) {
