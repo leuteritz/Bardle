@@ -14,6 +14,7 @@ import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
+import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 
 const gameStore = useGameStore()
@@ -27,6 +28,7 @@ const activeTab = ref('idle')
   <div class="min-h-screen cosmic-bg">
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
+    <NebulaFlythroughComponent />
     <PlanetRescueModal />
     <AugmentSelectionModal />
     <AugmentBuffPanel />

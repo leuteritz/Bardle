@@ -8,6 +8,7 @@ import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { MATERIALS, pickMaterial } from '@/config/materials'
 import { CHAMPION_HOME_PLANETS } from '@/config/championHomePlanets'
+import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -15,6 +16,7 @@ const planetEventStore = usePlanetEventStore()
 const planetBossStore = usePlanetBossStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
+const { triggerNow: triggerNebula } = useNebulaTrigger()
 
 // suppress unused warning – imported for fillAllMaterials
 void inventoryStore
@@ -193,6 +195,12 @@ function fillAllMaterials() {
       >
         <span>🏆</span> Unlock All Champions
       </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--nebula flex items-center gap-1.5 px-3 py-1.5"
+        @click="triggerNebula()"
+      >
+        <span>🌌</span> Trigger Nebula
+      </button>
     </div>
   </div>
 </template>
@@ -302,5 +310,15 @@ function fillAllMaterials() {
 .admin-spawn-btn--prestige:hover {
   background: linear-gradient(to bottom, #a070e0, #6040b0);
   border-color: #c898f0;
+}
+.admin-spawn-btn--nebula {
+  color: #cc88ff;
+  border-color: #3d1060;
+  background: linear-gradient(to bottom, #1a0830, #0f0518);
+}
+.admin-spawn-btn--nebula:hover {
+  background: linear-gradient(to bottom, #2a1048, #180828);
+  border-color: #9944dd;
+  color: #ee99ff;
 }
 </style>
