@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { formatNumber } from '@/config/numberFormat'
+import OfflineMinigame from './OfflineMinigame.vue'
 
 const gameStore = useGameStore()
 
@@ -16,6 +17,11 @@ const FLAVOUR_TEXTS = [
 const flavourText = ref(FLAVOUR_TEXTS[Math.floor(Math.random() * FLAVOUR_TEXTS.length)])
 const displayCount = ref(0)
 let animationId = 0
+let minigameTimer = 0
+
+type MinigamePhase = 'waiting' | 'playing' | 'won' | 'lost'
+const minigamePhase = ref<MinigamePhase>('waiting')
+const rewardMultiplier = ref<1 | 2>(1)
 
 function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600)
@@ -60,17 +66,38 @@ watch(
     if (visible) {
       flavourText.value = FLAVOUR_TEXTS[Math.floor(Math.random() * FLAVOUR_TEXTS.length)]
       startCounterAnimation(gameStore.offlineChimes)
+      minigamePhase.value = 'waiting'
+      rewardMultiplier.value = 1
+      if (gameStore.offlineChimes > 0) {
+        minigameTimer = window.setTimeout(() => {
+          minigamePhase.value = 'playing'
+        }, 2100)
+      }
     } else {
       cancelAnimationFrame(animationId)
+      clearTimeout(minigameTimer)
       displayCount.value = 0
+      minigamePhase.value = 'waiting'
+      rewardMultiplier.value = 1
     }
   },
   { immediate: true },
 )
 
+function onWin() {
+  rewardMultiplier.value = 2
+  minigamePhase.value = 'won'
+}
+
+function onSkip() {
+  rewardMultiplier.value = 1
+  minigamePhase.value = 'lost'
+}
+
 function claim() {
   cancelAnimationFrame(animationId)
-  gameStore.claimOfflineReward()
+  clearTimeout(minigameTimer)
+  gameStore.claimOfflineReward(rewardMultiplier.value)
 }
 </script>
 
@@ -99,10 +126,29 @@ function claim() {
               <span v-if="gameStore.offlineChimes > 0" class="chime-label">Chimes gesammelt</span>
               <span v-else class="chime-label chime-label--hint">Kauf Gebäude für passives Einkommen</span>
             </div>
+
+            <Transition name="mg-fade">
+              <div v-if="minigamePhase === 'playing'" class="minigame-section">
+                <OfflineMinigame @win="onWin" @skip="onSkip" />
+              </div>
+              <div v-else-if="minigamePhase === 'won'" class="mg-result mg-result--win">
+                Perfekter Treffer! Doppelte Beute wartet auf dich!
+              </div>
+              <div v-else-if="minigamePhase === 'lost'" class="mg-result mg-result--lose">
+                Knapp vorbei. Einfache Belohnung.
+              </div>
+            </Transition>
           </div>
 
           <div class="modal-footer">
-            <button class="claim-btn" @click="claim">⚔ Beute einsammeln!</button>
+            <button
+              class="claim-btn"
+              :class="{ 'claim-btn--double': minigamePhase === 'won', 'claim-btn--disabled': minigamePhase === 'playing' }"
+              :disabled="minigamePhase === 'playing'"
+              @click="claim"
+            >
+              {{ minigamePhase === 'won' ? '⚔ Doppelte Beute einsammeln! ×2' : '⚔ Beute einsammeln!' }}
+            </button>
           </div>
         </div>
       </div>
@@ -226,6 +272,29 @@ function claim() {
   font-style: italic;
 }
 
+.minigame-section {
+  width: 100%;
+  padding-top: 8px;
+}
+
+.mg-result {
+  width: 100%;
+  text-align: center;
+  padding: 10px 0 2px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mg-result--win {
+  color: #6ec040;
+  text-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
+}
+
+.mg-result--lose {
+  color: rgba(200, 185, 140, 0.5);
+}
+
 .modal-footer {
   padding: 0 28px 24px;
   display: flex;
@@ -246,14 +315,40 @@ function claim() {
   transition: filter 0.15s ease, transform 0.1s ease;
 }
 
-.claim-btn:hover {
+.claim-btn:hover:not(:disabled) {
   filter: brightness(1.15);
   transform: translateY(-1px);
 }
 
-.claim-btn:active {
+.claim-btn:active:not(:disabled) {
   filter: brightness(0.9);
   transform: translateY(0);
+}
+
+.claim-btn--double {
+  background: linear-gradient(to bottom, #70d840, #3a9a20);
+  border-color: #90e850;
+  box-shadow: 0 2px 12px rgba(80, 200, 40, 0.6), 0 0 20px rgba(110, 192, 64, 0.3);
+}
+
+.claim-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Minigame transition */
+.mg-fade-enter-active {
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mg-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.mg-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.mg-fade-leave-to {
+  opacity: 0;
 }
 
 @keyframes glow-pulse {
@@ -281,5 +376,7 @@ function claim() {
   .chime-value { animation: none; }
   .offline-fade-enter-active,
   .offline-fade-leave-active { transition: opacity 0.15s; }
+  .mg-fade-enter-active,
+  .mg-fade-leave-active { transition: opacity 0.15s; }
 }
 </style>

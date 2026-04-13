@@ -393,10 +393,11 @@ export const useGameStore = defineStore('game', {
     },
 
     // Schreibt Offline-Chimes gut und schließt das Modal
-    claimOfflineReward() {
-      this.chimes += this.offlineChimes
-      this.totalChimesEarned += this.offlineChimes
-      this.chimesEarnedForLevel += this.offlineChimes
+    claimOfflineReward(multiplier: 1 | 2 = 1) {
+      const earned = this.offlineChimes * multiplier
+      this.chimes += earned
+      this.totalChimesEarned += earned
+      this.chimesEarnedForLevel += earned
       this.offlineChimes = 0
       this.offlineSeconds = 0
       this.showOfflineModal = false
