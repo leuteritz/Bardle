@@ -67,7 +67,7 @@
               ⚡ Skip
             </button>
           </div>
-          <MiniMapComponent
+          <BattleMapComponent
             class="w-full max-h-full aspect-square"
             :battle-id="currentBattleId"
             :score="score"
@@ -77,7 +77,7 @@
 
         <!-- Right: Chat + Scoreboard -->
         <div class="flex flex-col flex-shrink-0 h-full gap-3 w-72">
-          <ChatPanelComponent class="flex-1 min-h-0" />
+          <BattleChatComponent class="flex-1 min-h-0" />
           <ScoreboardComponent class="flex-1 min-h-0" />
         </div>
       </div>
@@ -90,8 +90,8 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, watch } from 'vue'
-import MiniMapComponent from './MiniMapComponent.vue'
-import ChatPanelComponent from './ChatPanelComponent.vue'
+import BattleMapComponent from './BattleMapComponent.vue'
+import BattleChatComponent from './BattleChatComponent.vue'
 import ScoreboardComponent from './ScoreboardComponent.vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
@@ -103,8 +103,8 @@ import { useBattleStore } from '@/stores/battleStore'
 export default defineComponent({
   name: 'BattleResultComponent',
   components: {
-    MiniMapComponent,
-    ChatPanelComponent,
+    BattleMapComponent,
+    BattleChatComponent,
     ScoreboardComponent,
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,

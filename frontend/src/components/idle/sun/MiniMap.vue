@@ -183,7 +183,12 @@ import { useGameStore } from '../../../stores/gameStore'
 import { GALAXY_THEMES } from '../../../config/galaxyThemes'
 import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../config/constants'
 
-const MAP_WORLD_VISIBLE = 0.22
+// ── Zoom-Konfiguration ────────────────────────────────────────────────────
+const MAP_WORLD_DEFAULT = 0.22 // Standard-Zoom (kleiner = weiter rein)
+const MAP_WORLD_ZOOMED = 0.08 // Max-Zoom beim Planetanflug
+const ZOOM_TRIGGER_MS = 20_000 // ab hier startet Zoom (20s vor Ankunft)
+const ZOOM_FULL_MS = 1_000 // vollständig gezoomt (1s vor Ankunft)
+const ZOOM_LERP_SPEED = 0.04 // Smooth-Faktor pro Frame (~60fps)
 
 function seededRng(seed: number) {
   let s = seed >>> 0
@@ -468,6 +473,7 @@ export default defineComponent({
     const dotPositions = ref<DotPos[]>([])
     const rescueOrder = ref<number[]>([])
     const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
+    const currentMapVisible = ref(MAP_WORLD_DEFAULT)
 
     let rafId: number | null = null
     let pulseFrame = 0
@@ -692,7 +698,7 @@ export default defineComponent({
       const isTraveling = galaxyStore.championTravelState === 'traveling'
 
       const player = getPlayerWorldPos(dots, order, rescued)
-      const scale = w / MAP_WORLD_VISIBLE
+      const scale = w / currentMapVisible.value
 
       function wToC(wx: number, wy: number): [number, number] {
         return [w / 2 + (wx - player.x) * scale, h / 2 + (wy - player.y) * scale]
@@ -949,11 +955,34 @@ export default defineComponent({
       drawNormalMap(ctx, w, h)
     }
 
+    function updateZoom() {
+      const isBossPhase =
+        galaxyStore.searchingForGalaxyBoss ||
+        galaxyStore.needsFinalBoss ||
+        galaxyStore.pendingGalaxyBoss
+
+      let desired = MAP_WORLD_DEFAULT
+
+      if (galaxyStore.championTravelState === 'traveling' && !isBossPhase) {
+        const remaining = galaxyStore.travelRemainingMs
+        if (remaining <= ZOOM_TRIGGER_MS) {
+          const t = Math.max(
+            0,
+            Math.min(1, (ZOOM_TRIGGER_MS - remaining) / (ZOOM_TRIGGER_MS - ZOOM_FULL_MS)),
+          )
+          desired = MAP_WORLD_DEFAULT + (MAP_WORLD_ZOOMED - MAP_WORLD_DEFAULT) * t
+        }
+      }
+
+      currentMapVisible.value += (desired - currentMapVisible.value) * ZOOM_LERP_SPEED
+    }
+
     function rafTick(timestamp: number) {
       if (timestamp - rafLastPulseMs > 600) {
         pulseFrame = pulseFrame === 0 ? 1 : 0
         rafLastPulseMs = timestamp
       }
+      updateZoom()
       drawCanvas(timestamp)
       if (show.value) {
         rafId = requestAnimationFrame(rafTick)
@@ -1017,6 +1046,7 @@ export default defineComponent({
           window.setTimeout(() => {
             hyperspacePhase = 'idle'
             warpParticles = []
+            currentMapVisible.value = MAP_WORLD_DEFAULT
           }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
         )
       },
@@ -1047,6 +1077,7 @@ export default defineComponent({
           window.setTimeout(() => {
             hyperspacePhase = 'idle'
             warpParticles = []
+            currentMapVisible.value = MAP_WORLD_DEFAULT
           }, 3500),
         )
       },
