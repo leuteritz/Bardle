@@ -128,6 +128,7 @@ export function usePersistence() {
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
+        searchingForGalaxyBoss: galaxyStore.searchingForGalaxyBoss,
       },
       // ← NEU: Spieler-HP persistieren
       player: {
@@ -297,9 +298,15 @@ export function usePersistence() {
         galaxyStore.planetsRequired = gx.planetsRequired ?? 3
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
-        galaxyStore.pendingGalaxyBoss =
-          galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
-          !galaxyStore.galaxyBossDefeated
+        // Wenn Suchphase beim Speichern aktiv war → Boss sofort spawnen nach Reload
+        if (gx.searchingForGalaxyBoss && !gx.galaxyBossDefeated) {
+          galaxyStore.searchingForGalaxyBoss = false
+          galaxyStore.pendingGalaxyBoss = true
+        } else {
+          galaxyStore.pendingGalaxyBoss =
+            galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
+            !galaxyStore.galaxyBossDefeated
+        }
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0

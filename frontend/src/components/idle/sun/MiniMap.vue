@@ -137,9 +137,17 @@
           <div class="minimap-vignette" />
         </div>
 
-        <!-- Planeten-Zähler -->
-        <div v-if="!galaxyStore.isComplete" class="minimap-planet-count">
+        <!-- Planeten-Zähler (nicht während Suchphase) -->
+        <div
+          v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
+          class="minimap-planet-count"
+        >
           {{ galaxyStore.planetsRescued }} / {{ galaxyStore.planetsRequired }}
+        </div>
+
+        <!-- Suchphase-Label -->
+        <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">
+          ???
         </div>
 
         <!-- Galaxy Complete Overlay -->
@@ -566,6 +574,7 @@ export default defineComponent({
           galaxyStore.championTravelState === 'champion_spawned') &&
           !galaxyStore.pendingGalaxyBoss &&
           !galaxyStore.isComplete) ||
+        galaxyStore.isBossSearchActive ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
     )
@@ -646,6 +655,10 @@ export default defineComponent({
       order: number[],
       rescued: number,
     ): { x: number; y: number } {
+      // Suchphase: Echtzeit-Interpolation zwischen Segment-Checkpoints
+      if (galaxyStore.isBossSearchActive) {
+        return galaxyStore.bossSearchInterpolatedPos
+      }
       const state = galaxyStore.championTravelState
       if (state === 'traveling') {
         const startTime = galaxyStore.championTravelStartTime
@@ -686,7 +699,8 @@ export default defineComponent({
       }
 
       // Trail-Tracking
-      if (isTraveling) {
+      const isMoving = isTraveling || galaxyStore.isBossSearchActive
+      if (isMoving) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
         const moved = Math.sqrt(dx * dx + dy * dy)
@@ -785,8 +799,11 @@ export default defineComponent({
         drawPlanet(ctx, sx, sy, 10, galaxySeed + order[i], 'rescued')
       }
 
+      // ── Suchphase: Spieler-Dot wird als pulsierender ?-Kreis dargestellt ──
+      // (normaler Spieler-Dot weiter unten wird in diesem Fall übersprungen)
+
       // ── Final-Boss ──────────────────────────────────────────────────────
-      if (galaxyStore.needsFinalBoss) {
+      if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive) {
         const [bx, by] = wToC(0.5, 0.5)
         if (rescued > 0) {
           const last = dots[order[rescued - 1]]
@@ -834,17 +851,49 @@ export default defineComponent({
         drawPlanet(ctx, tx, ty, 11, galaxySeed + targetIdx, 'target', pulseFrame === 1)
       }
 
-      // ── Spieler-Dot ─────────────────────────────────────────────────────
-      ctx.shadowColor = 'rgba(232,192,64,0.95)'
-      ctx.shadowBlur = 16
-      ctx.beginPath()
-      ctx.arc(w / 2, h / 2, 7, 0, Math.PI * 2)
-      ctx.fillStyle = '#ffe060'
-      ctx.fill()
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 1.5
-      ctx.stroke()
-      ctx.shadowBlur = 0
+      // ── Spieler-Dot (normal) oder ?-Indikator (Suchphase) ───────────────
+      if (galaxyStore.isBossSearchActive) {
+        const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 400)
+        // Äußere Ringe
+        for (const [r, a] of [
+          [20, 0.08 * pulse],
+          [14, 0.18 * pulse],
+          [10, 0.28 * pulse],
+        ] as [number, number][]) {
+          ctx.beginPath()
+          ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(120,80,255,${a})`
+          ctx.fill()
+        }
+        // Kern
+        ctx.beginPath()
+        ctx.arc(w / 2, h / 2, 8, 0, Math.PI * 2)
+        ctx.fillStyle = '#2a0f6a'
+        ctx.fill()
+        ctx.strokeStyle = `rgba(160,110,255,${0.8 + 0.2 * pulse})`
+        ctx.lineWidth = 1.8
+        ctx.stroke()
+        // ?-Symbol
+        ctx.font = 'bold 10px serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = `rgba(200,160,255,${0.75 + 0.25 * pulse})`
+        ctx.shadowColor = 'rgba(140,80,255,0.9)'
+        ctx.shadowBlur = 8
+        ctx.fillText('?', w / 2, h / 2)
+        ctx.shadowBlur = 0
+      } else {
+        ctx.shadowColor = 'rgba(232,192,64,0.95)'
+        ctx.shadowBlur = 16
+        ctx.beginPath()
+        ctx.arc(w / 2, h / 2, 7, 0, Math.PI * 2)
+        ctx.fillStyle = '#ffe060'
+        ctx.fill()
+        ctx.strokeStyle = '#ffffff'
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+        ctx.shadowBlur = 0
+      }
 
       // ── Richtungspfeil zum Ziel ──────────────────────────────────────────
       if (targetIdx >= 0 && isTraveling) {
@@ -1178,6 +1227,32 @@ export default defineComponent({
     0 0 2px rgba(255, 240, 140, 0.5),
     0 1px 4px rgba(0, 0, 0, 0.98),
     0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+/* ── Suchphase-Label ── */
+.minimap-search-label {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #b090ff;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+  animation: search-label-pulse 1s ease-in-out infinite alternate;
+  text-shadow:
+    0 0 14px rgba(150, 80, 255, 0.95),
+    0 0 6px rgba(120, 60, 255, 0.75),
+    0 1px 4px rgba(0, 0, 0, 0.98);
+}
+
+@keyframes search-label-pulse {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
 }
 
 /* ── ETA-Anzeige ── */

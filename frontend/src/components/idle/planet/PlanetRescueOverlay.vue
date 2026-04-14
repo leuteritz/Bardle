@@ -1,4 +1,19 @@
 <template>
+  <!-- Galaxy Boss Spawn — Episches cinematisches Overlay -->
+  <Transition name="galaxy-boss-fade">
+    <div v-if="showGalaxyBossFlash" class="galaxy-boss-overlay" aria-hidden="true">
+      <div class="galaxy-boss-rings">
+        <div class="boss-ring boss-ring--1" />
+        <div class="boss-ring boss-ring--2" />
+        <div class="boss-ring boss-ring--3" />
+      </div>
+      <div class="galaxy-boss-text">
+        <span class="boss-alert-line">⚠ SIGNALQUELLE GEORTET ⚠</span>
+        <span class="boss-title-line">☠ GALAXIS-BOSS ☠</span>
+      </div>
+    </div>
+  </Transition>
+
   <!-- Alert vignette flash when rescue event spawns -->
   <Transition name="vignette-fade">
     <div v-if="showFlash" class="planet-vignette" aria-hidden="true" />
@@ -291,6 +306,22 @@ watch(
     }
   },
 )
+
+// ── Galaxy-Boss-Spawn: Episches cinematisches Overlay ────────────────────────
+const showGalaxyBossFlash = ref(false)
+let bossFlashTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => galaxyStore.galaxyBossJustSpawned,
+  (spawned) => {
+    if (!spawned) return
+    showGalaxyBossFlash.value = true
+    if (bossFlashTimeout) clearTimeout(bossFlashTimeout)
+    bossFlashTimeout = setTimeout(() => {
+      showGalaxyBossFlash.value = false
+    }, 4500)
+  },
+)
 </script>
 
 <style scoped>
@@ -332,7 +363,199 @@ watch(
   }
 }
 
-/* ─── Champion-Ankunft Vignette — FEUERROT mit Doppelpuls ────────────────── */
+/* ─── Galaxy-Boss Cinematic Overlay ──────────────────────────────────────── */
+.galaxy-boss-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(80, 0, 120, 0.92) 0%,
+    rgba(40, 0, 60, 0.88) 40%,
+    rgba(150, 10, 10, 0.75) 70%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+  animation: boss-screen-shake 0.5s ease-in-out 0.3s, boss-pulse-bg 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes boss-screen-shake {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  10% {
+    transform: translateX(-8px) translateY(-4px);
+  }
+  30% {
+    transform: translateX(8px) translateY(3px);
+  }
+  50% {
+    transform: translateX(-6px) translateY(-2px);
+  }
+  70% {
+    transform: translateX(6px) translateY(4px);
+  }
+  90% {
+    transform: translateX(-3px) translateY(-1px);
+  }
+}
+
+@keyframes boss-pulse-bg {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.35);
+  }
+}
+
+.galaxy-boss-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.boss-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: boss-ring-expand 2s ease-out forwards;
+}
+
+.boss-ring--1 {
+  width: 200px;
+  height: 200px;
+  border-color: rgba(200, 30, 10, 0.8);
+  animation-delay: 0.1s;
+}
+
+.boss-ring--2 {
+  width: 400px;
+  height: 400px;
+  border-color: rgba(160, 0, 200, 0.6);
+  animation-delay: 0.4s;
+}
+
+.boss-ring--3 {
+  width: 650px;
+  height: 650px;
+  border-color: rgba(255, 60, 20, 0.35);
+  animation-delay: 0.7s;
+}
+
+@keyframes boss-ring-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+.galaxy-boss-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: boss-text-appear 0.6s cubic-bezier(0.22, 1.5, 0.4, 1) 0.2s both;
+}
+
+@keyframes boss-text-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.boss-alert-line {
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: #ff6040;
+  text-shadow:
+    0 0 12px rgba(255, 80, 20, 0.9),
+    0 0 24px rgba(255, 60, 0, 0.6);
+  animation: boss-text-flicker 0.15s steps(1) 0.8s 4;
+}
+
+.boss-title-line {
+  font-size: 28px;
+  letter-spacing: 6px;
+  color: #e8c040;
+  text-shadow:
+    0 0 20px rgba(232, 192, 64, 0.95),
+    0 0 40px rgba(200, 80, 0, 0.7),
+    0 0 60px rgba(150, 20, 200, 0.5);
+  animation: boss-title-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes boss-text-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes boss-title-glow {
+  from {
+    text-shadow:
+      0 0 20px rgba(232, 192, 64, 0.95),
+      0 0 40px rgba(200, 80, 0, 0.7);
+  }
+  to {
+    text-shadow:
+      0 0 30px rgba(255, 220, 80, 1),
+      0 0 60px rgba(255, 100, 0, 0.9),
+      0 0 90px rgba(180, 40, 255, 0.6);
+  }
+}
+
+.galaxy-boss-fade-enter-active {
+  animation: boss-fade-in 0.4s ease-out forwards;
+}
+.galaxy-boss-fade-leave-active {
+  animation: boss-fade-out 0.8s ease-in forwards;
+}
+
+@keyframes boss-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes boss-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ─── Champion-Ankunft Vignette — FEUERROT mit Doppelpuls (abgeschwächt) ───── */
 .planet-vignette--champion {
   position: fixed;
   inset: 0;
@@ -340,11 +563,11 @@ watch(
   z-index: 15;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 60, 0, 0.08) 0%,
-    rgba(220, 20, 0, 0.12) 30%,
-    rgba(180, 0, 0, 0.32) 60%,
-    rgba(140, 0, 0, 0.55) 80%,
-    rgba(80, 0, 0, 0.72) 100%
+    rgba(255, 60, 0, 0.04) 0%,
+    rgba(220, 20, 0, 0.07) 30%,
+    rgba(180, 0, 0, 0.18) 60%,
+    rgba(140, 0, 0, 0.32) 80%,
+    rgba(80, 0, 0, 0.44) 100%
   );
 }
 
@@ -371,20 +594,20 @@ watch(
     filter: brightness(1);
   }
   12% {
-    opacity: 0.5;
-    filter: brightness(0.7);
+    opacity: 0.35;
+    filter: brightness(0.8);
   }
   22% {
-    opacity: 0.92;
-    filter: brightness(1.35);
+    opacity: 0.62;
+    filter: brightness(1.15);
   }
   35% {
-    opacity: 0.45;
-    filter: brightness(0.6);
+    opacity: 0.28;
+    filter: brightness(0.75);
   }
   48% {
-    opacity: 0.78;
-    filter: brightness(1.2);
+    opacity: 0.5;
+    filter: brightness(1.08);
   }
   100% {
     opacity: 0;

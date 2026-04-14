@@ -3,6 +3,7 @@ import { useShopStore } from './shopStore'
 import { useItemStore } from './itemStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
+import { useGalaxyStore } from './galaxyStore'
 import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
@@ -374,6 +375,8 @@ export const useGameStore = defineStore('game', {
       this.checkPrestigeAvailability()
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
+      const galaxyStore = useGalaxyStore()
+      galaxyStore.tickBossSearch(1000)
       const planetBossStore = usePlanetBossStore()
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()

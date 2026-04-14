@@ -117,6 +117,8 @@ export function useStarBackground() {
   let travelRotateDir = 0       // +1 = CCW (links), -1 = CW (rechts), 0 = kein Drehen
   let prevTravelDir: number | null = null  // Richtung der letzten abgeschlossenen Etappe
   let prevChampState = ''
+  let wasSearchingForBoss = false
+  let prevBossSearchAngle = -1
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let galaxySpawnTimeout: ReturnType<typeof setTimeout> | null = null
@@ -426,6 +428,42 @@ export function useStarBackground() {
       travelWarpElapsed = 0
     }
     prevChampState = champState
+
+    // ── Boss-Such-Drift: Richtungswechsel triggert Kamera-Rotation ──────────
+    const isSearching = galaxyStore.searchingForGalaxyBoss
+    const currentBossAngle = galaxyStore.bossSearchSegmentAngle
+    const currentBossAngleRad = currentBossAngle * (Math.PI / 180)
+    if (isSearching) {
+      const angleChanged = prevBossSearchAngle < 0 || currentBossAngle !== prevBossSearchAngle
+      if (angleChanged && !hyperActive && galaxyTransPhase === 'idle') {
+        // Richtungswechsel → Kamera dreht sich zum neuen Winkel (kürzester Weg)
+        if (prevBossSearchAngle >= 0) {
+          const prevRad = prevBossSearchAngle * (Math.PI / 180)
+          let diff = currentBossAngleRad - prevRad
+          while (diff > Math.PI) diff -= Math.PI * 2
+          while (diff < -Math.PI) diff += Math.PI * 2
+          travelRotateDir = diff >= 0 ? 1 : -1
+        } else {
+          travelRotateDir = Math.random() > 0.5 ? 1 : -1
+        }
+        travelWarpDir = currentBossAngleRad
+        prevTravelDir = currentBossAngleRad
+        travelWarpPhase = 'boost'
+        travelWarpElapsed = 0
+        prevBossSearchAngle = currentBossAngle
+      }
+      // Boost kontinuierlich erneuern (ohne Rotation) damit Drift nicht stoppt
+      if (travelWarpPhase === 'idle' && !hyperActive && galaxyTransPhase === 'idle') {
+        travelWarpDir = currentBossAngleRad
+        travelRotateDir = 0
+        travelWarpPhase = 'boost'
+        travelWarpElapsed = 0
+      }
+    }
+    if (!isSearching && wasSearchingForBoss) {
+      prevBossSearchAngle = -1
+    }
+    wasSearchingForBoss = isSearching
 
     if (travelWarpPhase === 'boost') {
       travelWarpElapsed += delta * 1000
