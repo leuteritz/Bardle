@@ -27,6 +27,9 @@
     <!-- Champion Orbit + Combat Visuals -->
     <ChampionOrbit />
 
+    <!-- Star System (Champion-Stern, Ressourcen-Stern, Galaxy-Boss-Stern) -->
+    <StarSystemComponent />
+
     <!-- Player HP Bar -->
     <PlayerHPBar />
 
@@ -60,6 +63,7 @@ import SunComponent from './sun/SunComponent.vue'
 import MiniMap from './sun/MiniMap.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
+import StarSystemComponent from './sun/StarSystemComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -68,6 +72,7 @@ export default defineComponent({
     MiniMap,
     ChampionOrbit,
     PlayerHPBar,
+    StarSystemComponent,
   },
   setup() {
     const gameStore = useGameStore()

@@ -7,6 +7,7 @@ import { useGalaxyStore } from './galaxyStore'
 import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
+import { useRoleBehaviorStore } from './roleBehaviorStore'
 import { universes } from '../config/universes'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
@@ -377,10 +378,16 @@ export const useGameStore = defineStore('game', {
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
       const galaxyStore = useGalaxyStore()
       galaxyStore.tickBossSearch(1000)
+      galaxyStore.tickResourceStar(1000)
+      const roleBehaviorStore = useRoleBehaviorStore()
+      roleBehaviorStore.tick()
       const planetBossStore = usePlanetBossStore()
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()
-        planetBossStore.applyOrbitDamage()
+        // Top laner shield blocks orbit damage during active shield window
+        if (!roleBehaviorStore.tankShieldActive) {
+          planetBossStore.applyOrbitDamage()
+        }
       }
       if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
         planetBossStore.clearPenalty()

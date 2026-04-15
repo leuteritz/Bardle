@@ -350,7 +350,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       if (galaxyStore.pendingGalaxyBoss) {
         galaxyStore.onGalaxyBossDefeated()
       } else if (boss.isChampionPlanet) {
-        galaxyStore.onPlanetRescued()
+        galaxyStore.onChampionStarRescued()
       }
       // Normal planets during travel: no galaxy progression
     },

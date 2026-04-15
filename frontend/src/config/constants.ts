@@ -65,6 +65,11 @@ export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
 
+// Resource star flyby
+export const RESOURCE_STAR_INTERVAL_MS = 120_000  // alle 2 min ein Flyby
+export const RESOURCE_STAR_DURATION_MS = 45_000   // Flyby dauert 45 s
+export const RESOURCE_STAR_PLANET_COUNT = 3       // max. Planeten pro Flyby
+
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
 export const BOSS_HP_LEVEL_SCALE = 10
@@ -181,3 +186,17 @@ export const PLAYER_HP_LOSS_ON_ENRAGE = 25
 export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
+
+// Role Behavior — orbit abilities per role
+export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000   // heal player every 8s
+export const ROLE_SUPPORT_HEAL_AMOUNT = 5            // +5 HP per heal
+export const ROLE_TOP_SHIELD_DURATION_MS = 5000      // shield lasts 5s
+export const ROLE_TOP_SHIELD_INTERVAL_MS = 12000     // re-activates every 12s
+export const ROLE_MID_DOT_DPS = 15                   // extra DoT damage per second
+export const ROLE_MID_DOT_DURATION_MS = 6000         // DoT lasts 6s
+export const ROLE_MID_DOT_INTERVAL_MS = 10000        // reapplied every 10s
+export const ROLE_ADC_BURST_DAMAGE = 80              // bonus burst hit on boss
+export const ROLE_ADC_BURST_INTERVAL_MS = 5000       // every 5s
+export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000   // gain 1 stack every 6s
+export const ROLE_JUNGLER_MAX_STACKS = 5
+export const ROLE_JUNGLER_CHIMES_PER_STACK = 50      // chimes per stack on dump

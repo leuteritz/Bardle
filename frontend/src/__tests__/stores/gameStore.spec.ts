@@ -41,21 +41,21 @@ describe('gameStore', () => {
   describe('calculateLevel', () => {
     it('chimes below threshold: level stays at 1', () => {
       const store = useGameStore()
-      store.chimes = LEVEL_BASE - 1
+      store.chimesEarnedForLevel = LEVEL_BASE - 1
       store.calculateLevel()
       expect(store.level).toBe(1)
     })
 
     it('chimes at threshold: level increments to 2', () => {
       const store = useGameStore()
-      store.chimes = LEVEL_BASE // 500
+      store.chimesEarnedForLevel = LEVEL_BASE
       store.calculateLevel()
       expect(store.level).toBe(2)
     })
 
     it('after level-up, chimesForNextLevel is updated correctly', () => {
       const store = useGameStore()
-      store.chimes = LEVEL_BASE
+      store.chimesEarnedForLevel = LEVEL_BASE
       store.calculateLevel()
       // chimesForNextLevel = ceil(2000 * 2^2.2) = 9190
       expect(store.chimesForNextLevel).toBe(9190)
@@ -67,19 +67,19 @@ describe('gameStore', () => {
   describe('levelProgress', () => {
     it('0 chimes at level 1 → 0%', () => {
       const store = useGameStore()
-      store.chimes = 0
+      store.chimesEarnedForLevel = 0
       expect(store.levelProgress).toBe(0)
     })
 
     it('halfway through level 1 → 50%', () => {
       const store = useGameStore()
-      store.chimes = 1000 // chimesForNextLevel = 2000, atLevelStart = 0
+      store.chimesEarnedForLevel = 1000 // chimesForNextLevel = 2000, atLevelStart = 0
       expect(store.levelProgress).toBe(50)
     })
 
     it('progress capped at 100%', () => {
       const store = useGameStore()
-      store.chimes = 99999
+      store.chimesEarnedForLevel = 99999
       store.chimesForNextLevel = 500
       expect(store.levelProgress).toBe(100)
     })

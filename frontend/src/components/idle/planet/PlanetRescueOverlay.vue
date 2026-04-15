@@ -194,9 +194,9 @@ const showFlash = ref(false)
 let flashTimeout: ReturnType<typeof setTimeout> | null = null
 
 watch(
-  () => planetEventStore.pendingRescue,
-  (pending) => {
-    if (!pending) return
+  () => bossStore.activeBosses.length,
+  (newLen, oldLen) => {
+    if (newLen <= oldLen) return
     showFlash.value = true
     if (flashTimeout) clearTimeout(flashTimeout)
     flashTimeout = setTimeout(() => {

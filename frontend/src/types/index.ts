@@ -158,6 +158,8 @@ export type PlanetType =
   | 'jungle'
   | 'ringed'
 
+export type StarType = 'champion' | 'resource' | 'galaxy_boss'
+
 export interface LabelData {
   planetId: string
   bossName: string
@@ -485,4 +487,24 @@ export interface DamageFloat {
   y: number
   expiresAt: number
   planetFloat?: boolean
+  dotFloat?: boolean
+  adcFloat?: boolean
+  healFloat?: boolean
+}
+
+export interface RoleBehaviorState {
+  // Support
+  supportHealCooldownMs: number
+  // Top Laner
+  tankShieldActive: boolean
+  tankShieldCooldownMs: number
+  tankShieldRemainingMs: number
+  // Mid Laner
+  dotCooldownMs: number
+  dotRemainingMs: number
+  // ADC
+  adcBurstCooldownMs: number
+  // Jungler
+  junglerStackCooldownMs: number
+  junglerStackCount: number
 }

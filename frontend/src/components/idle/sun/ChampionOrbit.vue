@@ -25,6 +25,9 @@
       :class="{
         'champion-orbit-avatar--attacking': pos.isAttacking,
         'champion-orbit-avatar--foreground': pos.isForeground,
+        [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
+        'champion-orbit-avatar--shield': pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
+        'champion-orbit-avatar--dot': pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
       }"
       :style="{
         width: pos.size + 'px',
@@ -35,6 +38,14 @@
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
+      <span v-if="pos.primaryRole" class="champion-role-badge" :class="`champion-role-badge--${pos.primaryRole}`">
+        {{ roleIcons[pos.primaryRole] }}
+      </span>
+      <!-- Jungler stack indicator -->
+      <span
+        v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
+        class="champion-jungler-stacks"
+      >{{ roleBehaviorStore.junglerStackCount }}</span>
     </div>
 
     <!-- Floating damage numbers + projectiles -->
@@ -52,10 +63,16 @@
             v-for="f in combatStore.damageFloats"
             :key="f.id"
             class="champion-dmg-float"
-            :class="{ 'champion-dmg-float--planet': f.planetFloat }"
+            :class="{
+              'champion-dmg-float--planet': f.planetFloat,
+              'champion-dmg-float--dot': f.dotFloat,
+              'champion-dmg-float--adc': f.adcFloat,
+              'champion-dmg-float--heal': f.healFloat,
+            }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
-            -{{ f.value }}
+            <template v-if="f.healFloat">+{{ f.value }}</template>
+            <template v-else>-{{ f.value }}</template>
           </span>
         </TransitionGroup>
       </div>
@@ -68,8 +85,11 @@ import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'v
 import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { getChampionRoles } from '../../../config/championRoles'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
+import type { ChampionRole } from '../../../types'
 
 interface ChampionRenderPos {
   name: string
@@ -82,6 +102,7 @@ interface ChampionRenderPos {
   isBehind: boolean
   isForeground: boolean
   zIndex: number
+  primaryRole: ChampionRole | null
 }
 
 interface LocalChampState {
@@ -112,6 +133,15 @@ export default defineComponent({
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
+    const roleBehaviorStore = useRoleBehaviorStore()
+
+    const roleIcons: Record<ChampionRole, string> = {
+      adc: '🏹',
+      support: '💚',
+      top: '🛡',
+      mid: '🔮',
+      jungle: '🌿',
+    }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
@@ -230,6 +260,9 @@ export default defineComponent({
         // CSS-Foreground-Glow: unteres Drittel der Umlaufbahn
         const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
+        const roles = getChampionRoles(c.name)
+        const primaryRole: ChampionRole | null = roles[0] ?? null
+
         newPositions.push({
           name: c.name,
           img: battleStore.getChampionImage(c.name),
@@ -241,6 +274,7 @@ export default defineComponent({
           isBehind: isBehind && !c.isAttacking,
           isForeground,
           zIndex,
+          primaryRole,
         })
       }
 
@@ -322,6 +356,8 @@ export default defineComponent({
 
     return {
       combatStore,
+      roleBehaviorStore,
+      roleIcons,
       backChampions,
       frontChampions,
       projectiles,
@@ -419,6 +455,75 @@ export default defineComponent({
   }
 }
 
+/* ── Rollen-Badge ─────────────────────────────────────────────────────────── */
+.champion-role-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 8px;
+  line-height: 14px;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.champion-role-badge--adc    { background: #a0440a; }
+.champion-role-badge--support { background: #0a5a3a; }
+.champion-role-badge--top    { background: #6a1010; }
+.champion-role-badge--mid    { background: #3a0a6a; }
+.champion-role-badge--jungle  { background: #0a4020; }
+
+/* Role-specific glow when ability is active */
+.champion-orbit-avatar--shield {
+  border-color: #60c0ff !important;
+  box-shadow:
+    0 0 14px rgba(80, 180, 255, 0.9),
+    0 0 28px rgba(60, 140, 255, 0.5) !important;
+  animation: shield-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes shield-pulse {
+  from { box-shadow: 0 0 10px rgba(80, 180, 255, 0.7), 0 0 20px rgba(60, 140, 255, 0.4); }
+  to   { box-shadow: 0 0 22px rgba(100, 200, 255, 1), 0 0 44px rgba(80, 160, 255, 0.7); }
+}
+
+.champion-orbit-avatar--dot {
+  border-color: #c060ff !important;
+  box-shadow:
+    0 0 14px rgba(180, 80, 255, 0.9),
+    0 0 28px rgba(140, 60, 255, 0.5) !important;
+  animation: dot-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes dot-pulse {
+  from { box-shadow: 0 0 10px rgba(180, 80, 255, 0.7), 0 0 20px rgba(140, 60, 255, 0.4); }
+  to   { box-shadow: 0 0 22px rgba(200, 100, 255, 1), 0 0 44px rgba(160, 80, 255, 0.7); }
+}
+
+/* Jungler stack counter */
+.champion-jungler-stacks {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: #1a5a10;
+  border: 1px solid #60c040;
+  color: #a0ff80;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* ── Schadenszahlen ───────────────────────────────────────────────────────── */
 .champion-dmg-overlay {
   position: fixed;
@@ -446,6 +551,30 @@ export default defineComponent({
   text-shadow:
     0 0 16px rgba(255, 200, 0, 1),
     0 0 32px rgba(255, 160, 0, 0.7);
+}
+
+/* ADC burst — orange */
+.champion-dmg-float--adc {
+  font-size: 1.3rem;
+  color: #ff8020;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 0 12px rgba(255, 120, 0, 1), 0 0 24px rgba(255, 80, 0, 0.6);
+}
+
+/* Mid DoT — purple */
+.champion-dmg-float--dot {
+  font-size: 0.95rem;
+  color: #d060ff;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 10px rgba(200, 80, 255, 0.9);
+}
+
+/* Support heal — green */
+.champion-dmg-float--heal {
+  font-size: 1.1rem;
+  color: #60ff80;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.75);
+  text-shadow: 0 0 12px rgba(80, 255, 100, 0.9), 0 0 24px rgba(40, 200, 60, 0.5);
 }
 
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */

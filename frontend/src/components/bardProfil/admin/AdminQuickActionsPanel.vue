@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { usePlanetEventStore } from '@/stores/planetEventStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { MATERIALS, pickMaterial } from '@/config/materials'
-import { CHAMPION_HOME_PLANETS } from '@/config/championHomePlanets'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
-const planetEventStore = usePlanetEventStore()
 const planetBossStore = usePlanetBossStore()
+const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
@@ -59,56 +58,33 @@ function commitEdit(key: QuickKey) {
   editingKey.value = null
 }
 
-// ── Planet Spawn ──────────────────────────────────────────────────────────────
+// ── Star Spawn ────────────────────────────────────────────────────────────────
 
-async function spawnPlanet() {
-  planetEventStore.pendingRescue = true
-  await nextTick()
-  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
-  if (lastBoss) {
-    lastBoss.potentialMaterialId = undefined
-    lastBoss.assignedDropChance = undefined
-    lastBoss.homePlanetChampion = undefined
-  }
+function spawnPlanet() {
+  starGroupStore.spawnResourceStar()
 }
 
-async function spawnPlanetWithMaterial() {
-  planetEventStore.pendingRescue = true
-  await nextTick()
+function spawnPlanetWithMaterial() {
+  // Force a resource star — after spawn, override last boss with material
+  starGroupStore.spawnResourceStar()
   const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
   if (lastBoss) {
     lastBoss.potentialMaterialId = pickMaterial().id
     lastBoss.assignedDropChance = 1.0
-    lastBoss.homePlanetChampion = undefined
   }
 }
 
-async function spawnPlanetWithChampion() {
-  const candidates = CHAMPION_HOME_PLANETS.filter(
-    (c) =>
-      !battleStore.ownedChampions.includes(c.championName) &&
-      !battleStore.recruitableChampions.some((r) => r.name === c.championName),
-  )
-  if (candidates.length === 0) return
-  const pick = candidates[Math.floor(Math.random() * candidates.length)]
-  planetEventStore.pendingRescue = true
-  planetEventStore.pendingRescueIsChampion = true
-  await nextTick()
-  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
-  if (lastBoss) {
-    lastBoss.homePlanetChampion = pick.championName
-    lastBoss.isChampionPlanet = true
-    lastBoss.potentialMaterialId = undefined
-    lastBoss.assignedDropChance = undefined
-  }
+function spawnPlanetWithChampion() {
+  starGroupStore.spawnChampionStar()
 }
 
 function spawnGalaxyBoss() {
   galaxyStore.pendingGalaxyBoss = true
+  starGroupStore.spawnGalaxyBossStar()
 }
 
 function forceCompleteGalaxy() {
-  galaxyStore.planetsRescued = galaxyStore.planetsRequired
+  galaxyStore.starsRescued = galaxyStore.starsRequired
   galaxyStore.galaxyBossDefeated = true
   galaxyStore.pendingGalaxyBoss = false
 }

@@ -15,57 +15,14 @@
       <div class="nebula nebula-6"></div>
     </div>
     <canvas ref="starCanvas" class="star-canvas"></canvas>
-    <!-- Planeten NICHT mehr hier – sie würden immer bei z-index 1 bleiben -->
   </div>
-
-  <!-- ① Back-Layer: Planeten HINTER der Sonne (z-index 3, unter Sonne z-5) -->
-  <Teleport to="body">
-    <div class="planet-orbit-layer planet-orbit-back" aria-hidden="true">
-      <PlanetComponent
-        v-for="planet in backPlanets"
-        :key="planet.id"
-        :id="planet.id"
-        :size="planet.size"
-        :planetType="planet.type"
-        :transform="planet.transform"
-        :opacity="planet.opacity"
-        :isRescue="planet.isRescue"
-        :isGalaxyBoss="planet.isGalaxyBoss"
-        :labelData="null"
-        :animState="planet.animState"
-      />
-    </div>
-  </Teleport>
-
-  <!-- ② Front-Layer: Planeten VOR der Sonne (z-index 7, über Sonne z-5, unter Champion-Front z-6... -->
-  <!-- Hinweis: Front-Planeten bei z-7 → über ChampionOrbit-Front (z-6) anpassen falls nötig -->
-  <Teleport to="body">
-    <div class="planet-orbit-layer planet-orbit-front" aria-hidden="true">
-      <PlanetComponent
-        v-for="planet in frontPlanets"
-        :key="planet.id"
-        :id="planet.id"
-        :size="planet.size"
-        :planetType="planet.type"
-        :transform="planet.transform"
-        :opacity="planet.opacity"
-        :isRescue="planet.isRescue"
-        :isGalaxyBoss="planet.isGalaxyBoss"
-        :labelData="planet.labelData"
-        :animState="planet.animState"
-      />
-    </div>
-  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
-import { usePlanetBackground } from '../../composables/usePlanetBackground'
-import PlanetComponent from './planet/PlanetComponent.vue'
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
-const { planets } = usePlanetBackground(starsContainer)
 
 // Pause nebula CSS animations after 30 s of no user interaction
 const NEBULA_IDLE_TIMEOUT = 30_000
@@ -94,10 +51,6 @@ onBeforeUnmount(() => {
   if (idleTimer) clearTimeout(idleTimer)
 })
 
-// Tiefe bestimmen: planetY relativ zur Bildschirmmitte
-// isBehind = Planet ist im oberen Orbit-Bereich (hinter Sonne)
-const backPlanets = computed(() => planets.value.filter((p) => p.isBehind === true))
-const frontPlanets = computed(() => planets.value.filter((p) => p.isBehind !== true))
 </script>
 
 <style>

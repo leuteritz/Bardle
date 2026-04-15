@@ -8,6 +8,7 @@ import { useItemStore } from '@/stores/itemStore'
 import { usePlanetEventStore } from '@/stores/planetEventStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useCpsStore } from '@/stores/cpsStore'
 import { usePlayerStore } from '@/stores/playerStore' // ← NEU
 import {
@@ -121,14 +122,16 @@ export function usePersistence() {
       },
       galaxy: {
         currentGalaxy: galaxyStore.currentGalaxy,
-        planetsRescued: galaxyStore.planetsRescued,
-        planetsRequired: galaxyStore.planetsRequired,
+        starsRescued: galaxyStore.starsRescued,
+        starsRequired: galaxyStore.starsRequired,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
         searchingForGalaxyBoss: galaxyStore.searchingForGalaxyBoss,
+        resourceStarActive: galaxyStore.resourceStarActive,
+        resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
       },
       // ← NEU: Spieler-HP persistieren
       player: {
@@ -294,17 +297,19 @@ export function usePersistence() {
       if (saved.galaxy) {
         const gx = saved.galaxy
         galaxyStore.currentGalaxy = gx.currentGalaxy ?? 1
-        galaxyStore.planetsRescued = gx.planetsRescued ?? 0
-        galaxyStore.planetsRequired = gx.planetsRequired ?? 3
+        galaxyStore.starsRescued = gx.starsRescued ?? 0
+        galaxyStore.starsRequired = gx.starsRequired ?? 3
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
+        galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
+        galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0
         // Wenn Suchphase beim Speichern aktiv war → Boss sofort spawnen nach Reload
         if (gx.searchingForGalaxyBoss && !gx.galaxyBossDefeated) {
           galaxyStore.searchingForGalaxyBoss = false
           galaxyStore.pendingGalaxyBoss = true
         } else {
           galaxyStore.pendingGalaxyBoss =
-            galaxyStore.planetsRescued >= galaxyStore.planetsRequired &&
+            galaxyStore.starsRescued >= galaxyStore.starsRequired &&
             !galaxyStore.galaxyBossDefeated
         }
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
@@ -464,6 +469,8 @@ export function usePersistence() {
     planetBossStore.$reset()
     const galaxyStoreReset = useGalaxyStore()
     galaxyStoreReset.$reset()
+    const starGroupStore = useStarGroupStore()
+    starGroupStore.$reset()
     const itemStore = useItemStore()
     itemStore.$reset()
     cpsStore.$reset()

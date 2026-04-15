@@ -137,12 +137,17 @@
           <div class="minimap-vignette" />
         </div>
 
-        <!-- Planeten-Zähler (nicht während Suchphase) -->
+        <!-- Stern-Zähler (nicht während Suchphase) -->
         <div
           v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
           class="minimap-planet-count"
         >
-          {{ galaxyStore.planetsRescued }} / {{ galaxyStore.planetsRequired }}
+          ★ {{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}
+        </div>
+
+        <!-- Ressourcen-Stern Indikator -->
+        <div v-if="starGroupStore.hasActiveResourceStar" class="minimap-resource-star">
+          ✦ Ressourcen-Stern
         </div>
 
         <!-- Suchphase-Label -->
@@ -180,6 +185,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useGameStore } from '../../../stores/gameStore'
+import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { GALAXY_THEMES } from '../../../config/galaxyThemes'
 import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../config/constants'
 
@@ -467,6 +473,7 @@ export default defineComponent({
   setup() {
     const galaxyStore = useGalaxyStore()
     const gameStore = useGameStore()
+    const starGroupStore = useStarGroupStore()
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
     const imgEl = ref<HTMLImageElement | null>(null)
@@ -603,7 +610,7 @@ export default defineComponent({
 
     function generateDots() {
       const galaxyKey = galaxyStore.currentGalaxy
-      const totalPlanets = galaxyStore.planetsRequired
+      const totalPlanets = galaxyStore.starsRequired
       const rng = seededRng(galaxyKey * 31337 + totalPlanets)
       const dots: DotPos[] = []
       for (let i = 0; i < totalPlanets; i++) {
@@ -694,7 +701,7 @@ export default defineComponent({
 
       const dots = dotPositions.value
       const order = rescueOrder.value
-      const rescued = Math.min(galaxyStore.planetsRescued, dots.length)
+      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
       const isTraveling = galaxyStore.championTravelState === 'traveling'
 
       const player = getPlayerWorldPos(dots, order, rescued)
@@ -996,7 +1003,7 @@ export default defineComponent({
     }
 
     watch(
-      () => [galaxyStore.currentGalaxy, galaxyStore.planetsRequired],
+      () => [galaxyStore.currentGalaxy, galaxyStore.starsRequired],
       () => {
         playerTrail = []
         trailLastPos = { wx: -1, wy: -1 }
@@ -1098,7 +1105,7 @@ export default defineComponent({
       hyperspaceTimeouts = []
     })
 
-    return { show, isRescuing, countdown, canvasEl, imgEl, onImageLoad, galaxyStore }
+    return { show, isRescuing, countdown, canvasEl, imgEl, onImageLoad, galaxyStore, starGroupStore }
   },
 })
 </script>
@@ -1258,6 +1265,30 @@ export default defineComponent({
     0 0 2px rgba(255, 240, 140, 0.5),
     0 1px 4px rgba(0, 0, 0, 0.98),
     0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
+.minimap-resource-star {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffd060;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+  animation: resource-star-pulse 1.4s ease-in-out infinite;
+  text-shadow:
+    0 0 10px rgba(255, 200, 50, 0.9),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+@keyframes resource-star-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* ── Suchphase-Label ── */

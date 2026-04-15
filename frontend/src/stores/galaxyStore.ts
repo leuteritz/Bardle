@@ -1,11 +1,17 @@
 import { defineStore } from 'pinia'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
-import { CHAMPION_TRAVEL_BASE_MS, CHAMPION_TRAVEL_SCALE_MS } from '../config/constants'
+import {
+  CHAMPION_TRAVEL_BASE_MS,
+  CHAMPION_TRAVEL_SCALE_MS,
+  RESOURCE_STAR_INTERVAL_MS,
+  RESOURCE_STAR_DURATION_MS,
+  RESOURCE_STAR_PLANET_COUNT,
+} from '../config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
 
 function computeRequired(galaxy: number): number {
-  return 3 + (galaxy - 1) * 2
+  return 3 + (galaxy - 1) * 1
 }
 
 function pickRandomThemeIndex(current: number): number {
@@ -20,8 +26,8 @@ function pickRandomThemeIndex(current: number): number {
 export const useGalaxyStore = defineStore('galaxy', {
   state: () => ({
     currentGalaxy: 1,
-    planetsRescued: 0,
-    planetsRequired: 3,
+    starsRescued: 0,
+    starsRequired: 3,
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
     pendingTransition: false,
@@ -32,9 +38,9 @@ export const useGalaxyStore = defineStore('galaxy', {
     championTravelStartTime: 0,
     championTravelDurationMs: CHAMPION_TRAVEL_BASE_MS,
     _travelTickMs: 0,
-    // ── NEU: Champion-Ankunfts-Signal ──────────────────────────────────────
+    // Champion-Ankunfts-Signal
     championJustArrived: false,
-    // ── NEU: Galaxy-Boss-Suchphase (Multi-Segment) ────────────────────────
+    // Galaxy-Boss-Suchphase (Multi-Segment)
     searchingForGalaxyBoss: false,
     galaxyBossJustSpawned: false,
     // Gesamtfortschritt
@@ -47,16 +53,21 @@ export const useGalaxyStore = defineStore('galaxy', {
     bossSearchTargetY: 0.5,
     bossSearchSegmentStart: 0,
     bossSearchSegmentEnd: 0,
-    bossSearchSegmentAngle: 0, // aktuelle Flugrichtung in Grad (für Sternfeld)
+    bossSearchSegmentAngle: 0,
+    // Ressourcen-Stern Flyby
+    resourceStarActive: false,
+    resourceStarElapsedMs: 0,
+    resourceStarDurationMs: 0,
+    resourceStarPlanetsSpawned: 0,
   }),
 
   getters: {
     isComplete(): boolean {
-      return this.planetsRescued >= this.planetsRequired && this.galaxyBossDefeated
+      return this.starsRescued >= this.starsRequired && this.galaxyBossDefeated
     },
 
     needsFinalBoss(): boolean {
-      return this.planetsRescued >= this.planetsRequired && !this.galaxyBossDefeated
+      return this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated
     },
 
     isBossSearchActive(): boolean {
@@ -89,6 +100,14 @@ export const useGalaxyStore = defineStore('galaxy', {
       const elapsed = Date.now() - this.championTravelStartTime
       return Math.max(0, this.championTravelDurationMs - elapsed)
     },
+
+    resourceStarRemainingMs(): number {
+      return this.resourceStarActive ? Math.max(0, this.resourceStarDurationMs) : 0
+    },
+
+    canSpawnResourceStarPlanet(): boolean {
+      return this.resourceStarActive && this.resourceStarPlanetsSpawned < RESOURCE_STAR_PLANET_COUNT
+    },
   },
 
   actions: {
@@ -110,12 +129,35 @@ export const useGalaxyStore = defineStore('galaxy', {
       const elapsed = now - this.championTravelStartTime
       if (elapsed >= this.championTravelDurationMs) {
         this.championTravelState = 'champion_available'
-        // ── NEU: Ankunfts-Signal setzen, nach 4 s automatisch zurücksetzen ──
         this.championJustArrived = true
         setTimeout(() => {
           this.championJustArrived = false
         }, 4000)
       }
+    },
+
+    tickResourceStar(deltaMs: number) {
+      if (this.championTravelState !== 'traveling') return
+      if (this.resourceStarActive) {
+        this.resourceStarDurationMs -= deltaMs
+        if (this.resourceStarDurationMs <= 0) {
+          this.resourceStarActive = false
+          this.resourceStarElapsedMs = 0
+          this.resourceStarPlanetsSpawned = 0
+        }
+      } else {
+        this.resourceStarElapsedMs += deltaMs
+        if (this.resourceStarElapsedMs >= RESOURCE_STAR_INTERVAL_MS) {
+          this.resourceStarActive = true
+          this.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
+          this.resourceStarElapsedMs = 0
+          this.resourceStarPlanetsSpawned = 0
+        }
+      }
+    },
+
+    onResourceStarPlanetSpawned() {
+      this.resourceStarPlanetsSpawned++
     },
 
     _startBossSearchSegment(fromX: number, fromY: number, angle: number) {
@@ -132,10 +174,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.bossSearchSegmentAngle = angle
     },
 
-    onPlanetRescued() {
-      if (this.planetsRescued >= this.planetsRequired) return
-      this.planetsRescued++
-      if (this.planetsRescued >= this.planetsRequired && !this.galaxyBossDefeated) {
+    onChampionStarRescued() {
+      if (this.starsRescued >= this.starsRequired) return
+      this.starsRescued++
+      if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         this.championTravelState = 'idle'
         // Starte Suchphase mit erstem zufälligen Segment
         this.searchingForGalaxyBoss = true
@@ -186,8 +228,8 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     commitAdvance() {
       this.currentGalaxy++
-      this.planetsRescued = 0
-      this.planetsRequired = computeRequired(this.currentGalaxy)
+      this.starsRescued = 0
+      this.starsRequired = computeRequired(this.currentGalaxy)
       this.galaxyBossDefeated = false
       this.pendingGalaxyBoss = false
       this.pendingTransition = false
@@ -195,6 +237,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.bossSearchTotalElapsed = 0
       this.bossSearchTotalDuration = 0
       this.galaxyBossJustSpawned = false
+      this.resourceStarActive = false
+      this.resourceStarElapsedMs = 0
+      this.resourceStarDurationMs = 0
+      this.resourceStarPlanetsSpawned = 0
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
       this.startChampionTravel()
     },

@@ -17,20 +17,20 @@ interface DotPos {
   y: number
 }
 
-function buildDotOrder(galaxy: number, planetsRequired: number): {
+function buildDotOrder(galaxy: number, starsRequired: number): {
   dots: DotPos[]
   spawnPos: DotPos
   order: number[]
 } {
-  const rng = seededRng(galaxy * 31337 + planetsRequired)
+  const rng = seededRng(galaxy * 31337 + starsRequired)
   const dots: DotPos[] = []
-  for (let i = 0; i < planetsRequired; i++) {
+  for (let i = 0; i < starsRequired; i++) {
     const angle = rng() * Math.PI * 2
     const r = Math.sqrt(rng()) * 0.32
     dots.push({ x: 0.5 + r * Math.cos(angle), y: 0.5 + r * Math.sin(angle) * 0.75 })
   }
 
-  const spawnRng = seededRng(galaxy * 99997 + planetsRequired * 13)
+  const spawnRng = seededRng(galaxy * 99997 + starsRequired * 13)
   const sa = spawnRng() * Math.PI * 2
   const sr = Math.sqrt(spawnRng()) * 0.3
   const spawnPos: DotPos = { x: 0.5 + sr * Math.cos(sa), y: 0.5 + sr * Math.sin(sa) }
@@ -49,7 +49,7 @@ function buildDotOrder(galaxy: number, planetsRequired: number): {
   }
   const order: number[] = [originIdx]
   const visited = new Set<number>([originIdx])
-  while (order.length < planetsRequired) {
+  while (order.length < starsRequired) {
     const last = dots[order[order.length - 1]]
     let nearest = -1
     let nearestDist = Infinity
@@ -74,17 +74,17 @@ function buildDotOrder(galaxy: number, planetsRequired: number): {
 // ── Angle computation ─────────────────────────────────────────────────────────
 export function computeTravelAngleDeg(
   galaxy: number,
-  planetsRequired: number,
-  planetsRescued: number,
+  starsRequired: number,
+  starsRescued: number,
 ): number {
-  if (planetsRequired <= 0) return 0
-  const { dots, spawnPos, order } = buildDotOrder(galaxy, planetsRequired)
+  if (starsRequired <= 0) return 0
+  const { dots, spawnPos, order } = buildDotOrder(galaxy, starsRequired)
 
   const from: DotPos =
-    planetsRescued === 0 ? spawnPos : dots[order[planetsRescued - 1]] ?? spawnPos
+    starsRescued === 0 ? spawnPos : dots[order[starsRescued - 1]] ?? spawnPos
   const to: DotPos =
-    planetsRescued < dots.length
-      ? dots[order[planetsRescued]] ?? dots[order[dots.length - 1]]
+    starsRescued < dots.length
+      ? dots[order[starsRescued]] ?? dots[order[dots.length - 1]]
       : dots[order[dots.length - 1]] ?? spawnPos
 
   return Math.atan2(to.y - from.y, to.x - from.x) * (180 / Math.PI)
@@ -107,8 +107,8 @@ export function useTravelDirection(): {
   function triggerTravel(): void {
     travelAngleDeg.value = computeTravelAngleDeg(
       galaxyStore.currentGalaxy,
-      galaxyStore.planetsRequired,
-      galaxyStore.planetsRescued,
+      galaxyStore.starsRequired,
+      galaxyStore.starsRescued,
     )
     travelActive.value = true
   }

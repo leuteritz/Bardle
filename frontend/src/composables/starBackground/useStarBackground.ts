@@ -406,8 +406,8 @@ export function useStarBackground() {
     ) {
       const angleDeg = computeTravelAngleDeg(
         galaxyStore.currentGalaxy,
-        galaxyStore.planetsRequired,
-        galaxyStore.planetsRescued,
+        galaxyStore.starsRequired,
+        galaxyStore.starsRescued,
       )
       const newAngleRad = angleDeg * (Math.PI / 180)
 
