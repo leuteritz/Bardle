@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
+// useFps nicht mehr nötig – FPS via window.__bardleFrameCount
 import {
   STAR_COUNT,
   WARP_SPEED_MAX,
@@ -103,10 +104,9 @@ const EMISSION_SPAWN_MAX = 18_000
 const CLUSTER_COUNT = 10
 const DUST_PATCH_COUNT = 7
 
-// ─── FIX 1: FPS-Limit ────────────────────────────────────────────────────────
-// 60 FPS reichen für die Sternanimation vollkommen aus.
-// Wenn das Fenster den Fokus verliert (z. B. YouTube auf dem anderen Monitor),
-// wird auf 10 FPS gedrosselt, damit der Browser-Mainthread freigegeben wird.
+// ─── FPS-Einstellungen ────────────────────────────────────────────────────────
+// Aktiv (Fenster hat Fokus):   60 FPS
+// Inaktiv (Fokus woanders):   10 FPS  → gibt Browser-Mainthread für YouTube frei
 const ACTIVE_FPS = 60
 const INACTIVE_FPS = 10
 
@@ -1151,17 +1151,13 @@ export function useStarBackground() {
   const starClusters: StarCluster[] = []
   let nextStarId = 1
   let animFrame = 0
+  let animationTimeout: ReturnType<typeof setTimeout> | null = null
+  let targetFPS = ACTIVE_FPS
+
   let lastTimestamp = 0
   let hyperspaceElapsed = 0
   let wasHyperspaceActive = false
 
-  // ── FIX 1: FPS-Throttling ──────────────────────────────────────────────────
-  // lastFrameTime: wann wurde der letzte Frame tatsächlich gezeichnet
-  // targetFPS: wird bei Fokusverlust (anderes Fenster aktiv) auf 10 reduziert
-  let lastFrameTime = 0
-  let targetFPS = ACTIVE_FPS
-
-  // ── Galaxy-Transitions-Zustand ──────────────────────────────────────────────
   let galaxyTransPhase: 'idle' | 'warp' | 'decel' = 'idle'
   let galaxyTransElapsed = 0
   let wasPendingTransition = false
@@ -1184,10 +1180,25 @@ export function useStarBackground() {
     starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
   }
 
-  // ── FIX 2: Fokus-Handler – drosselt FPS wenn Bardle nicht aktiv ist ─────────
-  // Wichtig für Dual-Monitor-Setup: wenn YouTube auf Monitor 1 aktiv ist und
-  // Bardle auf Monitor 2 im Hintergrund läuft, verliert das Bardle-Fenster den
-  // Fokus → FPS auf 10 reduzieren, um den Browser-Mainthread freizugeben.
+  // ── setTimeout-Scheduler ──────────────────────────────────────────────────
+  function scheduleNextFrame(): void {
+    animationTimeout = setTimeout(() => {
+      animFrame = requestAnimationFrame(animateStars)
+    }, 1000 / targetFPS)
+  }
+
+  function stopAnimation(): void {
+    if (animFrame) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    }
+    if (animationTimeout) {
+      clearTimeout(animationTimeout)
+      animationTimeout = null
+    }
+  }
+
+  // ── Fokus-Handler ─────────────────────────────────────────────────────────
   function handleWindowBlur(): void {
     targetFPS = INACTIVE_FPS
   }
@@ -1196,7 +1207,7 @@ export function useStarBackground() {
     targetFPS = ACTIVE_FPS
   }
 
-  // ── Galaxy-Spawn-Logik ──────────────────────────────────────────────────────
+  // ── Galaxy-Spawn ──────────────────────────────────────────────────────────
   function spawnGalaxy(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     if (galaxies.length >= GALAXY_MAX_COUNT) return
@@ -1228,8 +1239,6 @@ export function useStarBackground() {
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
     svg.classList.add('galaxy')
     svg.style.opacity = '0'
-    // FIX 3: GPU-Compositing – transform/opacity werden auf die Grafikkarte ausgelagert,
-    // damit diese Änderungen den CPU-Mainthread nicht blockieren.
     svg.style.willChange = 'transform, opacity'
 
     const cx = size / 2
@@ -1266,8 +1275,7 @@ export function useStarBackground() {
 
     svg.style.transform = `translate(${x}px,${y}px) scale(0.05) rotate(${rot}deg)`
     starsContainer.value.appendChild(svg)
-    const item: GalaxyItem = { el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot }
-    galaxies.push(item)
+    galaxies.push({ el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot })
   }
 
   function scheduleNextGalaxy(): void {
@@ -1309,7 +1317,6 @@ export function useStarBackground() {
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
     svg.classList.add(type)
     svg.style.opacity = '0'
-    // FIX 3: GPU-Compositing für Nebel-SVGs
     svg.style.willChange = 'transform, opacity'
 
     const id = `e${++galaxyIdCounter}`
@@ -1425,29 +1432,22 @@ export function useStarBackground() {
     return item
   }
 
-  // ── Haupt-Animationsschleife ────────────────────────────────────────────────
+  // ── Haupt-Animationsschleife ───────────────────────────────────────────────
   function animateStars(timestamp: number): void {
-    // FIX 1: rAF sofort wieder einplanen, dann per FPS-Cap frühzeitig abbrechen.
-    // So bleibt die Schleife registriert, zeichnet aber nur so oft wie targetFPS vorgibt.
-    animFrame = requestAnimationFrame(animateStars)
-
-    const frameInterval = 1000 / targetFPS
-    if (lastFrameTime > 0 && timestamp - lastFrameTime < frameInterval) return
-    lastFrameTime = timestamp
+    // Globaler Frame-Zähler – FpsOverlay liest diesen via window.__bardleFrameCount
+    ;(window as any).__bardleFrameCount = (((window as any).__bardleFrameCount as number) ?? 0) + 1
 
     if (lastTimestamp === 0) lastTimestamp = timestamp
     const rawDelta = (timestamp - lastTimestamp) / 1000
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
-    // Hyperspace
     const gameStore = useGameStore()
     const hyperActive = gameStore.isHyperspaceActive
     if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
     wasHyperspaceActive = hyperActive
     if (hyperActive) hyperspaceElapsed += delta
 
-    // ── Galaxy-Transitions-Phasenmaschine ────────────────────────────────────
     const galaxyStore = useGalaxyStore()
     const pendingTrans = galaxyStore.pendingTransition
 
@@ -1465,7 +1465,6 @@ export function useStarBackground() {
 
     if (galaxyTransPhase !== 'idle') {
       galaxyTransElapsed += delta * 1000
-
       if (galaxyTransPhase === 'warp') {
         if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
           galaxyStore.commitAdvance()
@@ -1481,7 +1480,6 @@ export function useStarBackground() {
       }
     }
 
-    // ── Geschwindigkeitsmultiplikator ─────────────────────────────────────────
     let speedMultiplier: number
     if (galaxyTransPhase === 'warp') {
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
@@ -1503,13 +1501,12 @@ export function useStarBackground() {
       cy = h / 2
     const maxDist = Math.hypot(cx, cy) + 20
 
-    // ── Kosmischer Staub ──────────────────────────────────────────────────────
+    // ── Kosmischer Staub ────────────────────────────────────────────────────
     if (ctx) {
       ctx.save()
       ctx.globalCompositeOperation = 'multiply'
       for (const d of dustPatches) {
         const dNorm = d.dist / maxDist
-
         const dSpeed = d.baseSpeed * dNorm * dNorm * WARP_SPEED_MAX * speedMultiplier
         if (galaxyTransPhase === 'warp') {
           const sx = cx + Math.cos(d.angle) * d.dist
@@ -1521,13 +1518,11 @@ export function useStarBackground() {
         } else {
           d.dist += dSpeed * delta
         }
-
         if (d.dist > maxDist) {
           d.angle = Math.random() * Math.PI * 2
           d.dist = maxDist * (0.02 + Math.random() * 0.06)
           d.baseSpeed = 0.1 + Math.random() * 0.08
         }
-
         const px = cx + Math.cos(d.angle) * d.dist
         const py = cy + Math.sin(d.angle) * d.dist
         const dScale = 0.3 + dNorm * 1.4
@@ -1535,7 +1530,6 @@ export function useStarBackground() {
         const ry = d.ry * dScale
         const fadeEdge = dNorm > 0.85 ? 1 - (dNorm - 0.85) / 0.15 : 1
         const finalOpacity = d.opacity * Math.min(1, dNorm * 2.5) * fadeEdge
-
         const grad = ctx.createRadialGradient(px, py, 0, px, py, rx)
         grad.addColorStop(0, `rgba(${d.r},${d.g},${d.b},${finalOpacity.toFixed(3)})`)
         grad.addColorStop(1, 'rgba(0,0,0,0)')
@@ -1553,11 +1547,10 @@ export function useStarBackground() {
       ctx.restore()
     }
 
-    // ── Sternenhaufen ─────────────────────────────────────────────────────────
+    // ── Sternenhaufen ──────────────────────────────────────────────────────
     if (ctx) {
       for (const cluster of starClusters) {
         const cNorm = cluster.dist / maxDist
-
         const cSpeed = cluster.baseSpeed * cNorm * cNorm * WARP_SPEED_MAX * speedMultiplier
         if (galaxyTransPhase === 'warp') {
           const sx = cx + Math.cos(cluster.angle) * cluster.dist
@@ -1569,23 +1562,18 @@ export function useStarBackground() {
         } else {
           cluster.dist += cSpeed * delta
         }
-
         if (cluster.dist > maxDist) {
           cluster.angle = Math.random() * Math.PI * 2
           cluster.dist = maxDist * (0.02 + Math.random() * 0.06)
           cluster.baseSpeed = 0.56 + Math.random() * 0.32
         }
-
         const pcx = cx + Math.cos(cluster.angle) * cluster.dist
         const pcy = cy + Math.sin(cluster.angle) * cluster.dist
-
         cluster.twinklePhase += 0.5 * delta
         const distAlpha = Math.min(1, cNorm * 3)
         const fadeEdge = cNorm > 0.85 ? 1 - (cNorm - 0.85) / 0.15 : 1
         const baseAlpha = distAlpha * fadeEdge * (0.3 + 0.1 * Math.sin(cluster.twinklePhase))
-
         const spreadScale = 0.25 + cNorm * 1.6
-
         for (const s of cluster.stars) {
           const a = baseAlpha * s.brightness
           if (a < 0.02) continue
@@ -1598,24 +1586,18 @@ export function useStarBackground() {
       }
     }
 
+    // ── Sterne ─────────────────────────────────────────────────────────────
     for (const star of stars) {
       const norm = star.dist / maxDist
-
       let speed: number
       if (galaxyTransPhase === 'warp') {
         speed = star.baseSpeed * WARP_SPEED_MAX * speedMultiplier
-
         const sx = cx + Math.cos(star.angle) * star.dist
         const sy = cy + Math.sin(star.angle) * star.dist
         const nx = sx + Math.cos(galaxyTransDir) * speed * delta
         const ny = sy + Math.sin(galaxyTransDir) * speed * delta
-        const ddx = nx - cx
-        const ddy = ny - cy
-        star.dist = Math.hypot(ddx, ddy)
-        star.angle = Math.atan2(ddy, ddx)
-      } else if (galaxyTransPhase === 'decel') {
-        speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
-        star.dist += speed * delta
+        star.dist = Math.hypot(nx - cx, ny - cy)
+        star.angle = Math.atan2(ny - cy, nx - cx)
       } else {
         speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
         star.dist += speed * delta
@@ -1641,7 +1623,6 @@ export function useStarBackground() {
 
       const x = cx + Math.cos(star.angle) * star.dist
       const y = cy + Math.sin(star.angle) * star.dist
-
       const distAlpha = Math.min(1, norm * 4)
       star.twinklePhase += star.twinkleSpeed * delta
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
@@ -1660,20 +1641,14 @@ export function useStarBackground() {
         const isStreaking =
           (hyperActive || galaxyTransPhase === 'warp' || galaxyTransPhase === 'decel') &&
           speedMultiplier > 1.5
-
         const trailAngle = galaxyTransPhase === 'warp' ? galaxyTransDir : star.angle
-
         if (isStreaking) {
           const trailLength = speed * delta * 2.2
-          const trailFromX = x - Math.cos(trailAngle) * trailLength
-          const trailFromY = y - Math.sin(trailAngle) * trailLength
-
-          const lineWidth = 0.8 + speedMultiplier * 0.12
           ctx.beginPath()
-          ctx.moveTo(trailFromX, trailFromY)
+          ctx.moveTo(x - Math.cos(trailAngle) * trailLength, y - Math.sin(trailAngle) * trailLength)
           ctx.lineTo(x, y)
           ctx.strokeStyle = `rgba(${star.r},${star.g},${star.b},${alpha})`
-          ctx.lineWidth = lineWidth
+          ctx.lineWidth = 0.8 + speedMultiplier * 0.12
           ctx.lineCap = 'round'
           ctx.stroke()
         } else {
@@ -1690,37 +1665,32 @@ export function useStarBackground() {
       }
     }
 
-    // ── Galaxy-SVG-Animation ──────────────────────────────────────────────────
+    // ── Galaxy-SVG-Animation ───────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
       g.elapsed += delta * 1000
       const p = Math.min(g.elapsed / g.lifetime, 1)
       g.scale = 0.05 + (g.maxScale - 0.05) * (p * p)
-
       let opacity: number
       if (p < 0.15) opacity = p / 0.15
       else if (p < 0.75) opacity = 1
       else opacity = 1 - (p - 0.75) / 0.25
-
       if (hyperActive || galaxyTransPhase === 'warp') {
         const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
         opacity *= Math.max(0, 1 - fadeTime * 3)
       }
-
       g.el.style.opacity = opacity.toFixed(2)
       g.el.style.transform = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
-
       if (p >= 1) {
         if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
         galaxies.splice(i, 1)
       }
     }
 
-    // ── Emission Nebula / Ion Cloud ───────────────────────────────────────────
+    // ── Emission Nebula / Ion Cloud ────────────────────────────────────────
     for (let i = emissionNebulas.length - 1; i >= 0; i--) {
       const n = emissionNebulas[i]
       const nNorm = n.dist / maxDist
-
       const nSpeed = n.baseSpeed * nNorm * nNorm * WARP_SPEED_MAX * speedMultiplier
       if (galaxyTransPhase === 'warp') {
         const sx = cx + Math.cos(n.angle) * n.dist
@@ -1732,25 +1702,19 @@ export function useStarBackground() {
       } else {
         n.dist += nSpeed * delta
       }
-
       n.scale = 0.02 + (n.maxScale - 0.02) * nNorm
-
       const wx = cx + Math.cos(n.angle) * n.dist
       const wy = cy + Math.sin(n.angle) * n.dist
       const hw = n.size / 2
-
       const distAlpha = Math.min(1, nNorm * 3)
       const fadeEdge = nNorm > 0.85 ? 1 - (nNorm - 0.85) / 0.15 : 1
       let opacity = distAlpha * fadeEdge * 0.65
-
       if (hyperActive || galaxyTransPhase === 'warp') {
         const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
         opacity *= Math.max(0, 1 - fadeTime * 2)
       }
-
       n.el.style.opacity = opacity.toFixed(3)
       n.el.style.transform = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
-
       if (n.dist > maxDist) {
         if (starsContainer.value?.contains(n.el)) starsContainer.value.removeChild(n.el)
         emissionNebulas.splice(i, 1)
@@ -1760,7 +1724,8 @@ export function useStarBackground() {
       }
     }
 
-    // KEIN requestAnimationFrame hier – wurde an den Anfang der Funktion verschoben
+    // Nächsten Frame über Scheduler einplanen
+    scheduleNextFrame()
   }
 
   // ── Resize, Stars, Cleanup ────────────────────────────────────────────────
@@ -1789,15 +1754,32 @@ export function useStarBackground() {
     for (let i = 0; i < EMISSION_MAX_COUNT; i++) spawnEmissionNebula(true)
     for (let i = 0; i < STAR_COUNT; i++) spawnStar(true)
     lastTimestamp = 0
-    lastFrameTime = 0
-    animFrame = requestAnimationFrame(animateStars)
+    scheduleNextFrame()
+  }
+
+  function handleVisibilityChange(): void {
+    if (document.hidden) {
+      stopAnimation()
+      if (galaxySpawnTimeout) {
+        clearTimeout(galaxySpawnTimeout)
+        galaxySpawnTimeout = null
+      }
+      if (emissionSpawnTimeout) {
+        clearTimeout(emissionSpawnTimeout)
+        emissionSpawnTimeout = null
+      }
+    } else {
+      if (!prefersReducedMotion.value && stars.length > 0) {
+        lastTimestamp = 0
+        scheduleNextFrame()
+        scheduleNextGalaxy()
+        scheduleNextEmission()
+      }
+    }
   }
 
   function cleanup(): void {
-    if (animFrame) {
-      cancelAnimationFrame(animFrame)
-      animFrame = 0
-    }
+    stopAnimation()
     if (galaxySpawnTimeout) {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
@@ -1822,35 +1804,9 @@ export function useStarBackground() {
     dustPatches.length = 0
     starClusters.length = 0
     window.removeEventListener('resize', handleResize)
-    // FIX 2: Fokus-Listener aufräumen
     window.removeEventListener('blur', handleWindowBlur)
     window.removeEventListener('focus', handleWindowFocus)
     if (resizeTimeout) clearTimeout(resizeTimeout)
-  }
-
-  function handleVisibilityChange(): void {
-    if (document.hidden) {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame)
-        animFrame = 0
-      }
-      if (galaxySpawnTimeout) {
-        clearTimeout(galaxySpawnTimeout)
-        galaxySpawnTimeout = null
-      }
-      if (emissionSpawnTimeout) {
-        clearTimeout(emissionSpawnTimeout)
-        emissionSpawnTimeout = null
-      }
-    } else {
-      if (!prefersReducedMotion.value && stars.length > 0) {
-        lastTimestamp = 0
-        lastFrameTime = 0
-        animFrame = requestAnimationFrame(animateStars)
-        scheduleNextGalaxy()
-        scheduleNextEmission()
-      }
-    }
   }
 
   onMounted(async () => {
@@ -1859,7 +1815,6 @@ export function useStarBackground() {
       await nextTick()
       setTimeout(createStars, 100)
       window.addEventListener('resize', handleResize)
-      // FIX 2: Fokus-Listener registrieren
       window.addEventListener('blur', handleWindowBlur)
       window.addEventListener('focus', handleWindowFocus)
       scheduleNextGalaxy()
