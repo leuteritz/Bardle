@@ -112,12 +112,14 @@ import type { PlanetBossEvent } from '@/types'
 import { usePlanetEventStore } from '@/stores/planetEventStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
 
 const planetEventStore = usePlanetEventStore()
 const bossStore = usePlanetBossStore()
 const galaxyStore = useGalaxyStore()
+const starGroupStore = useStarGroupStore()
 
 // Drive countdown reactivity at 200ms resolution
 const now = ref(Date.now())
@@ -159,10 +161,59 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
 })
 
-// Active bosses in LIFO order (newest on top)
-const activeBosses = computed((): PlanetBossEvent[] =>
-  [...bossStore.activeBosses].filter((b) => !b.defeated && !b.expired).reverse(),
-)
+// ── Genau 1 Timer-Bar pro aktivem Stern ─────────────────────────────────────
+//
+// Strategie: Wir iterieren über activeStars und wählen pro Stern
+// genau den einen repräsentativen Boss aus:
+//   - Champion-Stern  → isChampionPlanet=true (der Champion-Planet)
+//   - Resource-Stern  → erster nicht-cleared Slot (alle haben denselben Timer)
+//   - Galaxy-Boss     → einziger Planet
+//
+// Fallback (kein starGroupStore-Eintrag vorhanden): alle aktiven Bosses
+// ohne noEnrage, dedupliziert auf einen.
+const activeBosses = computed((): PlanetBossEvent[] => {
+  const bossMap = new Map<string, PlanetBossEvent>()
+  for (const b of bossStore.activeBosses) {
+    if (!b.defeated && !b.expired) bossMap.set(b.planetId, b)
+  }
+
+  if (bossMap.size === 0) return []
+
+  const result: PlanetBossEvent[] = []
+
+  for (const star of starGroupStore.activeStars) {
+    let representative: PlanetBossEvent | undefined
+
+    if (star.starType === 'champion') {
+      // Champion-Stern: nur der Champion-Planet bekommt einen Bar
+      const champSlot = star.planetSlots.find((s) => s.isChampionPlanet && !s.cleared)
+      if (champSlot) representative = bossMap.get(champSlot.planetId)
+    } else {
+      // Resource-Stern und Galaxy-Boss: erster noch nicht gecleared Slot
+      for (const slot of star.planetSlots) {
+        if (!slot.cleared) {
+          const boss = bossMap.get(slot.planetId)
+          if (boss) {
+            representative = boss
+            break
+          }
+        }
+      }
+    }
+
+    if (representative) result.push(representative)
+  }
+
+  // Fallback: Bosses ohne zugehörigen Stern (sollte nicht vorkommen)
+  if (result.length === 0) {
+    const enrageable = [...bossMap.values()].filter((b) => !b.noEnrage)
+    if (enrageable.length > 0) return [enrageable[0]]
+    const first = [...bossMap.values()][0]
+    return first ? [first] : []
+  }
+
+  return result
+})
 
 function progressPercent(boss: PlanetBossEvent): number {
   const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
@@ -239,21 +290,18 @@ watch(
   (arrived) => {
     if (!arrived) return
 
-    // Rote Vignette
     showChampionFlash.value = true
     if (championFlashTimeout) clearTimeout(championFlashTimeout)
     championFlashTimeout = setTimeout(() => {
       showChampionFlash.value = false
     }, 2800)
 
-    // Toast
     showChampionArrivedToast.value = true
     if (championToastTimeout) clearTimeout(championToastTimeout)
     championToastTimeout = setTimeout(() => {
       showChampionArrivedToast.value = false
     }, 3500)
 
-    // Sound
     playChampionChimes()
   },
 )
@@ -380,7 +428,9 @@ watch(
     rgba(150, 10, 10, 0.75) 70%,
     rgba(0, 0, 0, 0.95) 100%
   );
-  animation: boss-screen-shake 0.5s ease-in-out 0.3s, boss-pulse-bg 1.2s ease-in-out infinite alternate;
+  animation:
+    boss-screen-shake 0.5s ease-in-out 0.3s,
+    boss-pulse-bg 1.2s ease-in-out infinite alternate;
 }
 
 @keyframes boss-screen-shake {
