@@ -77,7 +77,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   },
 
   actions: {
-    spawnBoss(planetId: string, planetType: PlanetType, isChampionPlanet = false) {
+    spawnBoss(planetId: string, planetType: PlanetType, isChampionPlanet = false, noEnrage = false) {
       const gameStore = useGameStore()
 
       const level = gameStore.level
@@ -165,6 +165,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         reward,
         defeated: false,
         expired: false,
+        ...(noEnrage && { noEnrage: true }),
         ...(potentialMaterialId !== undefined && { potentialMaterialId }),
         ...(assignedDropChance !== undefined && { assignedDropChance }),
         ...(homePlanetChampion && { homePlanetChampion }),
@@ -273,7 +274,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     checkEnrage() {
       for (const boss of this.activeBosses) {
-        if (boss.defeated || boss.expired) continue
+        if (boss.defeated || boss.expired || boss.noEnrage) continue
 
         const elapsed = Date.now() - boss.startTime
         if (elapsed >= boss.enrageTimerMs) {
@@ -366,7 +367,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     forceCheckExpiry() {
       for (const boss of this.activeBosses) {
-        if (boss.defeated || boss.expired) continue
+        if (boss.defeated || boss.expired || boss.noEnrage) continue
 
         const elapsed = Date.now() - boss.startTime
         if (elapsed >= boss.enrageTimerMs) {

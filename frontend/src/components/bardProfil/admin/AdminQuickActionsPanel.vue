@@ -60,7 +60,7 @@ function commitEdit(key: QuickKey) {
 
 // ── Star Spawn ────────────────────────────────────────────────────────────────
 
-function spawnPlanet() {
+function spawnStar() {
   starGroupStore.spawnResourceStar()
 }
 
@@ -130,9 +130,9 @@ function teleportNearPlanet() {
     <div class="flex flex-wrap gap-2">
       <button
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
-        @click="spawnPlanet"
+        @click="spawnStar"
       >
-        <span>🌍</span> Spawn Planet
+        <span>⭐</span> Spawn Star
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"

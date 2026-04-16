@@ -126,9 +126,11 @@ export function useStarSystem() {
 
   watch(
     () => galaxyStore.resourceStarActive,
-    (active) => {
+    (active, wasActive) => {
       if (active) {
         starGroupStore.spawnResourceStar()
+      } else if (wasActive) {
+        starGroupStore.clearResourceStar()
       }
     },
   )

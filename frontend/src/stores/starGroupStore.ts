@@ -72,7 +72,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           orbitTilt: Math.random() * 0.35,
           cleared: false,
         })
-        bossStore.spawnBoss(planetId, config.type, false)
+        bossStore.spawnBoss(planetId, config.type, false, true) // noEnrage — star timer controls expiry
       }
 
       const star: StarGroup = {
@@ -203,6 +203,23 @@ export const useStarGroupStore = defineStore('starGroup', {
         }
         return
       }
+    },
+
+    clearResourceStar() {
+      const bossStore = usePlanetBossStore()
+      const idx = this.activeStars.findIndex((s) => s.starType === 'resource')
+      if (idx === -1) return
+      const star = this.activeStars[idx]
+      for (const slot of star.planetSlots) {
+        if (!slot.cleared) {
+          slot.cleared = true
+          bossStore.removeBoss(slot.planetId)
+        }
+      }
+      setTimeout(() => {
+        const currentIdx = this.activeStars.indexOf(star)
+        if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+      }, 600)
     },
 
     clearAll() {

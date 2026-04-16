@@ -252,6 +252,7 @@ export interface PlanetBossEvent {
   reward: number
   defeated: boolean
   expired: boolean
+  noEnrage?: boolean
   potentialMaterialId?: string
   assignedDropChance?: number
   homePlanetChampion?: string

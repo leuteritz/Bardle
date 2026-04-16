@@ -5,7 +5,6 @@ import {
   CHAMPION_TRAVEL_SCALE_MS,
   RESOURCE_STAR_INTERVAL_MS,
   RESOURCE_STAR_DURATION_MS,
-  RESOURCE_STAR_PLANET_COUNT,
 } from '../config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
@@ -58,7 +57,6 @@ export const useGalaxyStore = defineStore('galaxy', {
     resourceStarActive: false,
     resourceStarElapsedMs: 0,
     resourceStarDurationMs: 0,
-    resourceStarPlanetsSpawned: 0,
   }),
 
   getters: {
@@ -104,10 +102,6 @@ export const useGalaxyStore = defineStore('galaxy', {
     resourceStarRemainingMs(): number {
       return this.resourceStarActive ? Math.max(0, this.resourceStarDurationMs) : 0
     },
-
-    canSpawnResourceStarPlanet(): boolean {
-      return this.resourceStarActive && this.resourceStarPlanetsSpawned < RESOURCE_STAR_PLANET_COUNT
-    },
   },
 
   actions: {
@@ -143,7 +137,6 @@ export const useGalaxyStore = defineStore('galaxy', {
         if (this.resourceStarDurationMs <= 0) {
           this.resourceStarActive = false
           this.resourceStarElapsedMs = 0
-          this.resourceStarPlanetsSpawned = 0
         }
       } else {
         this.resourceStarElapsedMs += deltaMs
@@ -151,13 +144,8 @@ export const useGalaxyStore = defineStore('galaxy', {
           this.resourceStarActive = true
           this.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
           this.resourceStarElapsedMs = 0
-          this.resourceStarPlanetsSpawned = 0
         }
       }
-    },
-
-    onResourceStarPlanetSpawned() {
-      this.resourceStarPlanetsSpawned++
     },
 
     _startBossSearchSegment(fromX: number, fromY: number, angle: number) {
@@ -240,7 +228,6 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.resourceStarActive = false
       this.resourceStarElapsedMs = 0
       this.resourceStarDurationMs = 0
-      this.resourceStarPlanetsSpawned = 0
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
       this.startChampionTravel()
     },
