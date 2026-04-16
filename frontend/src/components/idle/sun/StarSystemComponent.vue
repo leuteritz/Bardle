@@ -142,6 +142,7 @@ function getStarRewardSummary(star: StarRenderEntry) {
   const materialMap = new Map<string, { image: string; name: string; count: number }>()
 
   for (const planet of star.planets) {
+    if (planet.animState === 'saved') continue
     const boss = bossStore.activeBosses.find(
       (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
     )

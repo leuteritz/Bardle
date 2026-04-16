@@ -98,6 +98,8 @@ export function useStarSystem() {
   const planetAngles = new Map<string, number>()
   const planetCurRx = new Map<string, number>()
   const planetCurRy = new Map<string, number>()
+  // Tracks when each planet entered the 'saved' state so we can remove it after the animation
+  const planetSavedAt = new Map<string, number>()
 
   let animFrame = 0
   let lastTs = 0
@@ -245,6 +247,12 @@ export function useStarSystem() {
         else if (boss?.defeated) animState = 'saved'
         else if (slot.cleared) animState = 'saved'
 
+        // Once saved animation has finished (~600 ms), stop rendering the planet entirely
+        if (animState === 'saved') {
+          if (!planetSavedAt.has(slot.planetId)) planetSavedAt.set(slot.planetId, ts)
+          if (ts - planetSavedAt.get(slot.planetId)! > 600) continue
+        }
+
         // Label only for active (not cleared, not isBehind) planets
         const labelData =
           !slot.cleared && !pIsBehind
@@ -277,7 +285,7 @@ export function useStarSystem() {
       })
     }
 
-    // Clean up position map for removed/cleared planets
+    // Clean up position map and savedAt map for removed/cleared planets
     const allActiveSlots = new Set(
       starGroupStore.activeStars
         .flatMap((s) => s.planetSlots)
@@ -287,6 +295,11 @@ export function useStarSystem() {
     for (const id of activePlanetPositions.keys()) {
       if (!allActiveSlots.has(id)) {
         activePlanetPositions.delete(id)
+      }
+    }
+    for (const id of planetSavedAt.keys()) {
+      if (!starGroupStore.activeStars.some((s) => s.planetSlots.some((p) => p.planetId === id))) {
+        planetSavedAt.delete(id)
       }
     }
 
