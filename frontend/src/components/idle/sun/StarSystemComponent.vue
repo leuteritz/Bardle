@@ -80,6 +80,27 @@
           :animState="p.animState"
         />
       </template>
+      <!-- Reward-Zusammenfassung unterhalb jeder Sonne -->
+      <template v-for="star in allStars" :key="'summary-' + star.id">
+        <div
+          v-if="getStarRewardSummary(star).totalChimes > 0 || getStarRewardSummary(star).materials.length > 0"
+          class="star-reward-summary"
+          :style="rewardSummaryStyle(star)"
+        >
+          <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
+            <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
+            <span class="summary-count">×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span>
+          </div>
+          <div
+            v-for="mat in getStarRewardSummary(star).materials"
+            :key="mat.name"
+            class="summary-item"
+          >
+            <img :src="mat.image" :alt="mat.name" class="summary-icon" />
+            <span class="summary-count">×{{ mat.count }}</span>
+          </div>
+        </div>
+      </template>
     </div>
   </Teleport>
 </template>
@@ -89,11 +110,16 @@ import { computed } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import type { StarRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
+import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { MATERIALS } from '../../../config/materials'
+import { formatNumber } from '../../../config/numberFormat'
 
 const { starRenders } = useStarSystem()
+const bossStore = usePlanetBossStore()
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
+const allStars = computed(() => starRenders.value)
 
 function starBodyStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
@@ -109,6 +135,45 @@ function starSize(type: string): number {
   if (type === 'galaxy_boss') return 82
   if (type === 'champion') return 72
   return 62
+}
+
+function getStarRewardSummary(star: StarRenderEntry) {
+  let totalChimes = 0
+  const materialMap = new Map<string, { image: string; name: string; count: number }>()
+
+  for (const planet of star.planets) {
+    const boss = bossStore.activeBosses.find(
+      (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
+    )
+    if (!boss) continue
+
+    totalChimes += boss.reward ?? 0
+
+    if (boss.potentialMaterialId) {
+      const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
+      if (mat) {
+        const existing = materialMap.get(boss.potentialMaterialId)
+        if (existing) {
+          existing.count += mat.dropCount ?? 1
+        } else {
+          materialMap.set(boss.potentialMaterialId, {
+            image: mat.image ?? '',
+            name: mat.name,
+            count: mat.dropCount ?? 1,
+          })
+        }
+      }
+    }
+  }
+
+  return { totalChimes, materials: [...materialMap.values()] }
+}
+
+function rewardSummaryStyle(star: StarRenderEntry) {
+  const s = starSize(star.starType)
+  return {
+    transform: `translate(${star.x}px, ${star.y + s / 2 + 14}px) translateX(-50%)`,
+  }
 }
 </script>
 
@@ -195,5 +260,42 @@ function starSize(type: string): number {
 @keyframes corona-spin {
   from { transform: rotate(0deg);   }
   to   { transform: rotate(360deg); }
+}
+
+/* ── Reward Summary ────────────────────────────────────────────────────────── */
+.star-reward-summary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #111008;
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.summary-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(255, 200, 80, 0.6));
+}
+
+.summary-count {
+  font-size: 11px;
+  color: #e8c040;
+  letter-spacing: 0.04em;
 }
 </style>

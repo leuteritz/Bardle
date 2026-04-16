@@ -19,29 +19,31 @@
       stroke-width="2"
       :class="{ 'galaxy-boss-ring--arriving': animState === 'champion_arriving' }"
     />
+    <!-- Reward-Icon: Material hat Priorität, sonst Chimes -->
+    <template v-if="labelData && (labelData.materialImage || (labelData.chimesImage && labelData.reward))">
+      <circle
+        :cx="size / 2"
+        :cy="size - 14"
+        r="11"
+        fill="rgba(0,0,0,0.6)"
+        stroke="rgba(255,200,80,0.35)"
+        stroke-width="1"
+      />
+      <image
+        :href="labelData.materialImage ?? labelData.chimesImage"
+        :x="size / 2 - 9"
+        :y="size - 25"
+        width="18"
+        height="18"
+      />
+    </template>
   </svg>
-  <PlanetLabelComponent
-    v-if="labelData"
-    :style="{ transform: labelData.transform }"
-    :bossName="labelData.bossName"
-    :currentHP="labelData.currentHP"
-    :maxHP="labelData.maxHP"
-    :reward="labelData.reward"
-    :chimesImage="labelData.chimesImage"
-    :materialImage="labelData.materialImage"
-    :materialName="labelData.materialName"
-    :materialCount="labelData.materialCount"
-    :championImage="labelData.championImage"
-    :championName="labelData.championName"
-    :isGalaxyBoss="labelData.isGalaxyBoss"
-  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { drawPlanet } from '@/utils/planetDraw'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import PlanetLabelComponent from './PlanetLabelComponent.vue'
 import type { PlanetType, LabelData } from '@/types'
 
 interface Props {
