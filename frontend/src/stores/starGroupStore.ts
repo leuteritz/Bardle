@@ -72,7 +72,46 @@ export const useStarGroupStore = defineStore('starGroup', {
           orbitTilt: Math.random() * 0.35,
           cleared: false,
         })
-        bossStore.spawnBoss(planetId, config.type, false, true) // noEnrage — star timer controls expiry
+        bossStore.spawnBoss(planetId, config.type, false, true)
+      }
+
+      const star: StarGroup = {
+        id: `star-${++starIdCounter}`,
+        starType: 'resource',
+        starAngle: Math.random() * Math.PI * 2,
+        starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
+        orbitRx: 430,
+        orbitRy: 188,
+        orbitTilt: 0.27,
+        orbitSpeed: 0.000042,
+        planetSlots,
+      }
+
+      this.activeStars.push(star)
+    },
+
+    // Admin: spawnt immer einen neuen Stern – kein Guard, zufällige Planetenanzahl 1–4
+    forceSpawnResourceStar() {
+      const bossStore = usePlanetBossStore()
+      const count = 1 + Math.floor(Math.random() * 4) // 1–4 Planeten
+      const planetSlots: StarPlanetSlot[] = []
+
+      for (let i = 0; i < count; i++) {
+        const config = pickConfig()
+        const planetId = `star-planet-${++planetIdCounter}`
+        planetSlots.push({
+          planetId,
+          type: config.type,
+          isChampionPlanet: false,
+          orbitAngle: (i / count) * Math.PI * 2,
+          orbitSpeed: 0.00095 + Math.random() * 0.0005,
+          orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
+          orbitRx: 85 + Math.random() * 25,
+          orbitRy: 44 + Math.random() * 18,
+          orbitTilt: Math.random() * 0.35,
+          cleared: false,
+        })
+        bossStore.spawnBoss(planetId, config.type, false, true)
       }
 
       const star: StarGroup = {
@@ -99,7 +138,6 @@ export const useStarGroupStore = defineStore('starGroup', {
       const totalCount = 1 + extraCount
       const planetSlots: StarPlanetSlot[] = []
 
-      // Champion planet at index 0
       const champConfig = pickConfig()
       const champId = `star-planet-${++planetIdCounter}`
       planetSlots.push({
@@ -116,7 +154,6 @@ export const useStarGroupStore = defineStore('starGroup', {
       })
       bossStore.spawnBoss(champId, champConfig.type, true)
 
-      // Regular planets
       for (let i = 1; i < totalCount; i++) {
         const config = pickConfig()
         const planetId = `star-planet-${++planetIdCounter}`

@@ -6,7 +6,7 @@ import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
-import { MATERIALS, pickMaterial } from '@/config/materials'
+import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 
 const gameStore = useGameStore()
@@ -17,8 +17,9 @@ const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
 
-// suppress unused warning – imported for fillAllMaterials
+// suppress unused warning
 void inventoryStore
+void planetBossStore
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -60,22 +61,9 @@ function commitEdit(key: QuickKey) {
 
 // ── Star Spawn ────────────────────────────────────────────────────────────────
 
+// Spawnt immer einen neuen Stern mit zufälliger Planetenanzahl (kein Guard)
 function spawnStar() {
-  starGroupStore.spawnResourceStar()
-}
-
-function spawnPlanetWithMaterial() {
-  // Force a resource star — after spawn, override last boss with material
-  starGroupStore.spawnResourceStar()
-  const lastBoss = planetBossStore.activeBosses[planetBossStore.activeBosses.length - 1]
-  if (lastBoss) {
-    lastBoss.potentialMaterialId = pickMaterial().id
-    lastBoss.assignedDropChance = 1.0
-  }
-}
-
-function spawnPlanetWithChampion() {
-  starGroupStore.spawnChampionStar()
+  starGroupStore.forceSpawnResourceStar()
 }
 
 function spawnGalaxyBoss() {
@@ -133,18 +121,6 @@ function teleportNearPlanet() {
         @click="spawnStar"
       >
         <span>⭐</span> Spawn Star
-      </button>
-      <button
-        class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
-        @click="spawnPlanetWithMaterial"
-      >
-        <span>💎</span> Spawn + Material
-      </button>
-      <button
-        class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
-        @click="spawnPlanetWithChampion"
-      >
-        <span>🏆</span> Spawn + Champion
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
