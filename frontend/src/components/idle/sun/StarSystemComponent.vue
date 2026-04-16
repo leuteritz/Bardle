@@ -106,9 +106,9 @@ function starBodyStyle(star: StarRenderEntry) {
 }
 
 function starSize(type: string): number {
-  if (type === 'galaxy_boss') return 40
-  if (type === 'champion') return 34
-  return 28
+  if (type === 'galaxy_boss') return 82
+  if (type === 'champion') return 72
+  return 62
 }
 </script>
 
@@ -143,7 +143,7 @@ function starSize(type: string): number {
 .star-body--champion::after {
   content: '';
   position: absolute;
-  inset: -9px;
+  inset: -11px;
   border-radius: 50%;
   border: 1px solid rgba(255, 200, 60, 0.35);
   animation: corona-spin 18s linear infinite;
@@ -160,7 +160,7 @@ function starSize(type: string): number {
 .star-body--resource::after {
   content: '';
   position: absolute;
-  inset: -8px;
+  inset: -10px;
   border-radius: 50%;
   border: 1px solid rgba(40, 220, 190, 0.32);
   animation: corona-spin 24s linear infinite;
@@ -178,7 +178,7 @@ function starSize(type: string): number {
 .star-body--galaxy_boss::after {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -13px;
   border-radius: 50%;
   border: 1.5px solid rgba(220, 80, 220, 0.55);
   box-shadow:
