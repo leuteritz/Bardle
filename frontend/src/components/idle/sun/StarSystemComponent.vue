@@ -60,7 +60,7 @@
           :opacity="p.opacity"
           :isRescue="true"
           :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="p.labelData"
+          :labelData="null"
           :animState="p.animState"
         />
       </template>
@@ -76,20 +76,48 @@
           :opacity="p.opacity"
           :isRescue="true"
           :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="p.labelData"
+          :labelData="null"
           :animState="p.animState"
         />
       </template>
-      <!-- Reward-Zusammenfassung unterhalb jeder Sonne -->
+
+      <!-- ③ Reward-Icons PRO PLANET: oben am Planeten, KEIN Hintergrund -->
+      <template v-for="star in allStars" :key="'reward-star-' + star.id">
+        <template
+          v-for="planet in star.planets.filter((p) => !p.isBehind)"
+          :key="'reward-planet-' + planet.planetId"
+        >
+          <template
+            v-for="item in getPlanetRewardItems(planet)"
+            :key="'ri-' + planet.planetId + '-' + item.key"
+          >
+            <div
+              class="planet-reward-icon"
+              :style="
+                planetRewardIconStyle(planet, item.index, getPlanetRewardItems(planet).length)
+              "
+            >
+              <img :src="item.image" :alt="item.name" class="reward-icon-img" />
+            </div>
+          </template>
+        </template>
+      </template>
+
+      <!-- ④ Reward-Zusammenfassung UNTER dem Stern: Summe aller Planeten, MIT Hintergrund -->
       <template v-for="star in allStars" :key="'summary-' + star.id">
         <div
-          v-if="getStarRewardSummary(star).totalChimes > 0 || getStarRewardSummary(star).materials.length > 0"
+          v-if="
+            getStarRewardSummary(star).totalChimes > 0 ||
+            getStarRewardSummary(star).materials.length > 0
+          "
           class="star-reward-summary"
           :style="rewardSummaryStyle(star)"
         >
           <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
             <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
-            <span class="summary-count">×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span>
+            <span class="summary-count"
+              >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
+            >
           </div>
           <div
             v-for="mat in getStarRewardSummary(star).materials"
@@ -108,7 +136,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
-import type { StarRenderEntry } from '../../../composables/useStarSystem'
+import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { MATERIALS } from '../../../config/materials'
@@ -136,6 +164,71 @@ function starSize(type: string): number {
   if (type === 'champion') return 72
   return 62
 }
+
+// ── Pro-Planet-Reward: einzelne Items für das Icon über dem Planeten ──────────
+
+function getPlanetRewardItems(planet: PlanetRenderEntry) {
+  if (planet.animState === 'saved') return []
+
+  const boss = bossStore.activeBosses.find(
+    (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
+  )
+  if (!boss) return []
+
+  const items: { key: string; image: string; name: string; count: number; index: number }[] = []
+
+  if (boss.reward && boss.reward > 0) {
+    items.push({
+      key: 'chimes',
+      image: '/img/BardAbilities/BardChime.png',
+      name: 'Chimes',
+      count: boss.reward,
+      index: 0,
+    })
+  }
+
+  if (boss.potentialMaterialId) {
+    const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
+    if (mat) {
+      items.push({
+        key: mat.id,
+        image: mat.image ?? '',
+        name: mat.name,
+        count: mat.dropCount ?? 1,
+        index: items.length,
+      })
+    }
+  }
+
+  return items
+}
+
+// Positioniert das Icon zentriert über dem Planeten
+// ICON_SIZE muss mit .reward-icon-img width/height übereinstimmen (36px)
+const PLANET_ICON_SIZE = 36
+const PLANET_ICON_GAP = 6 // Abstand zwischen mehreren Icons
+
+function planetRewardIconStyle(planet: PlanetRenderEntry, itemIndex: number, totalItems: number) {
+  const match = planet.transform?.match(/translate\(([^,]+)px,\s*([^)]+)px\)/)
+  const px = match ? parseFloat(match[1]) : 0
+  const py = match ? parseFloat(match[2]) : 0
+
+  const halfPlanet = (planet.size ?? 20) / 2
+
+  // Mehrere Icons nebeneinander zentriert über dem Planeten
+  const itemSlot = PLANET_ICON_SIZE + PLANET_ICON_GAP
+  const totalW = totalItems * itemSlot - PLANET_ICON_GAP
+  const offsetX = itemIndex * itemSlot - totalW / 2 + PLANET_ICON_SIZE / 2
+
+  // Vertikaler Abstand: halbe Planetengröße + kleiner Luft-Puffer (8px) + halbes Icon
+  const offsetY = -(halfPlanet + 8 + PLANET_ICON_SIZE)
+
+  return {
+    transform: `translate(${px + offsetX}px, ${py + offsetY}px) translateX(-50%)`,
+  }
+}
+
+// ── Stern-Gesamt-Belohnung: Summe aller Planeten dieses Sterns ────────────────
 
 function getStarRewardSummary(star: StarRenderEntry) {
   let totalChimes = 0
@@ -185,8 +278,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   inset: 0;
   pointer-events: none;
 }
-.star-sys-back  { z-index: 3; }
-.star-sys-front { z-index: 7; }
+.star-sys-back {
+  z-index: 3;
+}
+.star-sys-front {
+  z-index: 7;
+}
 
 /* ── Star body ─────────────────────────────────────────────────────────────── */
 .star-body {
@@ -254,16 +351,25 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 }
 
 @keyframes star-pulse {
-  0%, 100% { filter: brightness(1) saturate(1);    }
-  50%       { filter: brightness(1.18) saturate(1.2); }
+  0%,
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.18) saturate(1.2);
+  }
 }
 
 @keyframes corona-spin {
-  from { transform: rotate(0deg);   }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* ── Reward Summary ────────────────────────────────────────────────────────── */
+/* ── Stern-Gesamt-Belohnung (unter dem Stern, MIT Hintergrund) ─────────────── */
 .star-reward-summary {
   position: absolute;
   top: 0;
@@ -298,5 +404,27 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   font-size: 11px;
   color: #e8c040;
   letter-spacing: 0.04em;
+}
+
+/* ── Planet Reward Icon (über dem Planeten, KEIN Hintergrund) ──────────────── */
+.planet-reward-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Icon-Größe: 36px (war 28px) ──────────────────────────────────────────── */
+.reward-icon-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 80, 0.95))
+    drop-shadow(0 0 12px rgba(255, 160, 40, 0.55));
 }
 </style>
