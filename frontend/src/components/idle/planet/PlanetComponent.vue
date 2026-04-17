@@ -19,8 +19,33 @@
       stroke-width="2"
       :class="{ 'galaxy-boss-ring--arriving': animState === 'champion_arriving' }"
     />
+    <!-- Champion portrait overlay -->
+    <template v-if="championImage">
+      <defs>
+        <clipPath :id="`champ-clip-${id}`">
+          <circle :cx="size / 2" :cy="size / 2" :r="size * 0.36" />
+        </clipPath>
+      </defs>
+      <circle
+        :cx="size / 2"
+        :cy="size / 2"
+        :r="size * 0.38"
+        fill="rgba(0,0,0,0.55)"
+        stroke="rgba(195,160,255,0.85)"
+        stroke-width="1.5"
+      />
+      <image
+        :href="championImage"
+        :x="size * 0.14"
+        :y="size * 0.14"
+        :width="size * 0.72"
+        :height="size * 0.72"
+        :clip-path="`url(#champ-clip-${id})`"
+        preserveAspectRatio="xMidYMin slice"
+      />
+    </template>
     <!-- Reward-Icon: Material hat Priorität, sonst Chimes -->
-    <template v-if="labelData && (labelData.materialImage || (labelData.chimesImage && labelData.reward))">
+    <template v-else-if="labelData && (labelData.materialImage || (labelData.chimesImage && labelData.reward))">
       <circle
         :cx="size / 2"
         :cy="size - 14"
@@ -56,6 +81,7 @@ interface Props {
   isGalaxyBoss: boolean
   labelData: LabelData | null
   animState: 'normal' | 'exploding' | 'saved' | 'champion_arriving'
+  championImage?: string
 }
 
 const props = defineProps<Props>()

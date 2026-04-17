@@ -20,6 +20,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
+          :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
       <template v-for="star in frontStars" :key="'fb-' + star.id">
@@ -35,6 +36,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
+          :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
     </div>
@@ -61,6 +63,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
+          :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
       <template v-for="star in backStars" :key="'ff-' + star.id">
@@ -76,6 +79,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
+          :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
 
@@ -106,24 +110,40 @@
         <div
           v-if="
             getStarRewardSummary(star).totalChimes > 0 ||
-            getStarRewardSummary(star).materials.length > 0
+            getStarRewardSummary(star).materials.length > 0 ||
+            getStarRewardSummary(star).champion
           "
           class="star-reward-summary"
           :style="rewardSummaryStyle(star)"
         >
-          <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
-            <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
-            <span class="summary-count"
-              >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
-            >
+          <!-- Champion section (dominant, on top) -->
+          <div v-if="getStarRewardSummary(star).champion" class="summary-champion">
+            <span class="summary-champion__crown">♛</span>
+            <div class="summary-champion__icon-wrap">
+              <img
+                :src="getStarRewardSummary(star).champion!.image"
+                :alt="getStarRewardSummary(star).champion!.name"
+                class="summary-champion__icon"
+              />
+            </div>
+            <span class="summary-champion__name">{{ getStarRewardSummary(star).champion!.name }}</span>
           </div>
-          <div
-            v-for="mat in getStarRewardSummary(star).materials"
-            :key="mat.name"
-            class="summary-item"
-          >
-            <img :src="mat.image" :alt="mat.name" class="summary-icon" />
-            <span class="summary-count">×{{ mat.count }}</span>
+          <!-- Divider between champion and loot row -->
+          <div v-if="getStarRewardSummary(star).champion && (getStarRewardSummary(star).totalChimes > 0 || getStarRewardSummary(star).materials.length > 0)" class="summary-divider" />
+          <!-- Chimes + Materials row -->
+          <div class="summary-loot-row">
+            <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
+              <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
+              <span class="summary-count">×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span>
+            </div>
+            <div
+              v-for="mat in getStarRewardSummary(star).materials"
+              :key="mat.name"
+              class="summary-item"
+            >
+              <img :src="mat.image" :alt="mat.name" class="summary-icon" />
+              <span class="summary-count">×{{ mat.count }}</span>
+            </div>
           </div>
         </div>
       </template>
@@ -214,6 +234,7 @@ function planetRewardIconStyle(planet: PlanetRenderEntry, itemIndex: number, tot
 function getStarRewardSummary(star: StarRenderEntry) {
   let totalChimes = 0
   const materialMap = new Map<string, { image: string; name: string; count: number }>()
+  let champion: { name: string; image: string } | null = null
   for (const planet of star.planets) {
     if (planet.animState === 'saved') continue
     const boss = bossStore.activeBosses.find(
@@ -236,8 +257,23 @@ function getStarRewardSummary(star: StarRenderEntry) {
         }
       }
     }
+    if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
+      champion = {
+        name: boss.homePlanetChampion,
+        image: `/img/champion/${boss.homePlanetChampion}.jpg`,
+      }
+    }
   }
-  return { totalChimes, materials: [...materialMap.values()] }
+  return { totalChimes, materials: [...materialMap.values()], champion }
+}
+
+function getChampionImageForPlanet(planet: PlanetRenderEntry): string | null {
+  if (planet.animState === 'saved') return null
+  const boss = bossStore.activeBosses.find(
+    (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
+  )
+  if (!boss || !boss.isChampionPlanet || !boss.homePlanetChampion) return null
+  return `/img/champion/${boss.homePlanetChampion}.jpg`
 }
 
 function rewardSummaryStyle(star: StarRenderEntry) {
@@ -363,32 +399,94 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   top: 0;
   left: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 6px 10px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 5, 20, 0.82);
+  border: 1px solid rgba(232, 192, 64, 0.4);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   z-index: 8;
+}
+
+.summary-loot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary-item {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .summary-icon {
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.6));
 }
 
 .summary-count {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: #e8c040;
   white-space: nowrap;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.55);
+}
+
+.summary-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(195, 160, 255, 0.35) 40%, rgba(195, 160, 255, 0.35) 60%, transparent);
+}
+
+.summary-champion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-champion__crown {
+  font-size: 13px;
+  color: #c8a0ff;
+  text-shadow: 0 0 8px rgba(195, 100, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.summary-champion__icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(195, 160, 255, 0.8);
+  box-shadow: 0 0 10px rgba(180, 80, 255, 0.5), 0 0 20px rgba(140, 40, 220, 0.25);
+  flex-shrink: 0;
+  animation: champIconPulse 2.2s ease-in-out infinite;
+}
+
+.summary-champion__icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.summary-champion__name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(200, 165, 255, 0.97);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(190, 80, 255, 0.5);
+  white-space: nowrap;
+}
+
+@keyframes champIconPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(180, 80, 255, 0.5), 0 0 20px rgba(140, 40, 220, 0.25); }
+  50% { box-shadow: 0 0 16px rgba(195, 100, 255, 0.8), 0 0 32px rgba(160, 60, 240, 0.45); }
 }
 </style>
