@@ -3,7 +3,7 @@ import type { PlanetType, StarType } from '../types'
 import { pickConfig } from '../utils/planetDraw'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
-import { RESOURCE_STAR_PLANET_COUNT } from '../config/constants'
+import { RESOURCE_STAR_PLANET_COUNT, RESOURCE_STAR_DURATION_MS } from '../config/constants'
 
 let starIdCounter = 0
 let planetIdCounter = 0
@@ -32,6 +32,9 @@ export interface StarGroup {
   orbitSpeed: number
   planetSlots: StarPlanetSlot[]
 }
+
+// Hält laufende Admin-Spawn-Timeouts pro Star-ID
+const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 export const useStarGroupStore = defineStore('starGroup', {
   state: () => ({
@@ -90,10 +93,13 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.activeStars.push(star)
     },
 
-    // Admin: spawnt immer einen neuen Stern – kein Guard, zufällige Planetenanzahl 1–4
+    // Admin: spawnt immer einen neuen Stern – kein Guard, zufällige Planetenanzahl 1–4.
+    // Nutzt direkten setTimeout, da tickResourceStar() nur bei
+    // championTravelState === 'traveling' läuft.
     forceSpawnResourceStar() {
       const bossStore = usePlanetBossStore()
-      const count = 1 + Math.floor(Math.random() * 4) // 1–4 Planeten
+      const galaxyStore = useGalaxyStore()
+      const count = 1 + Math.floor(Math.random() * 4)
       const planetSlots: StarPlanetSlot[] = []
 
       for (let i = 0; i < count; i++) {
@@ -114,8 +120,9 @@ export const useStarGroupStore = defineStore('starGroup', {
         bossStore.spawnBoss(planetId, config.type, false, true)
       }
 
+      const starId = `star-${++starIdCounter}`
       const star: StarGroup = {
-        id: `star-${++starIdCounter}`,
+        id: starId,
         starType: 'resource',
         starAngle: Math.random() * Math.PI * 2,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
@@ -127,6 +134,38 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
 
       this.activeStars.push(star)
+
+      // Header-Timer anzeigen
+      galaxyStore.resourceStarActive = true
+      galaxyStore.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
+      galaxyStore.resourceStarElapsedMs = 0
+
+      // Direkter Fallback-Timeout unabhängig von championTravelState
+      const timeout = setTimeout(() => {
+        adminStarTimeouts.delete(starId)
+        galaxyStore.resourceStarActive = false
+        galaxyStore.resourceStarElapsedMs = 0
+        this._removeAdminResourceStar(starId)
+      }, RESOURCE_STAR_DURATION_MS)
+
+      adminStarTimeouts.set(starId, timeout)
+    },
+
+    _removeAdminResourceStar(starId: string) {
+      const bossStore = usePlanetBossStore()
+      const idx = this.activeStars.findIndex((s) => s.id === starId)
+      if (idx === -1) return
+      const star = this.activeStars[idx]
+      for (const slot of star.planetSlots) {
+        if (!slot.cleared) {
+          slot.cleared = true
+          bossStore.removeBoss(slot.planetId)
+        }
+      }
+      setTimeout(() => {
+        const currentIdx = this.activeStars.findIndex((s) => s.id === starId)
+        if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+      }, 600)
     },
 
     spawnChampionStar() {
@@ -230,7 +269,13 @@ export const useStarGroupStore = defineStore('starGroup', {
         const slot = star.planetSlots.find((p) => p.planetId === planetId)
         if (!slot) continue
         slot.cleared = true
+
         if (star.planetSlots.every((p) => p.cleared)) {
+          // Admin-Timeout canceln falls vorhanden
+          if (adminStarTimeouts.has(star.id)) {
+            clearTimeout(adminStarTimeouts.get(star.id))
+            adminStarTimeouts.delete(star.id)
+          }
           const idx = this.activeStars.indexOf(star)
           if (idx !== -1) {
             setTimeout(() => {
@@ -242,24 +287,37 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
     },
 
+    // Entfernt ALLE Resource-Sterne (nicht nur den ersten)
     clearResourceStar() {
       const bossStore = usePlanetBossStore()
-      const idx = this.activeStars.findIndex((s) => s.starType === 'resource')
-      if (idx === -1) return
-      const star = this.activeStars[idx]
-      for (const slot of star.planetSlots) {
-        if (!slot.cleared) {
-          slot.cleared = true
-          bossStore.removeBoss(slot.planetId)
+      const toRemove = this.activeStars.filter((s) => s.starType === 'resource')
+      if (toRemove.length === 0) return
+
+      for (const star of toRemove) {
+        // Admin-Timeout canceln falls vorhanden
+        if (adminStarTimeouts.has(star.id)) {
+          clearTimeout(adminStarTimeouts.get(star.id))
+          adminStarTimeouts.delete(star.id)
         }
+        for (const slot of star.planetSlots) {
+          if (!slot.cleared) {
+            slot.cleared = true
+            bossStore.removeBoss(slot.planetId)
+          }
+        }
+        const starRef = star
+        setTimeout(() => {
+          const currentIdx = this.activeStars.indexOf(starRef)
+          if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+        }, 600)
       }
-      setTimeout(() => {
-        const currentIdx = this.activeStars.indexOf(star)
-        if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-      }, 600)
     },
 
     clearAll() {
+      for (const timeout of adminStarTimeouts.values()) {
+        clearTimeout(timeout)
+      }
+      adminStarTimeouts.clear()
       this.activeStars = []
     },
   },

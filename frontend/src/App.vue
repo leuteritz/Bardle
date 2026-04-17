@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import IdleGameComponent from '@/components/idle/IdleGameComponent.vue'
@@ -16,16 +16,32 @@ import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
+import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
 
 const isInventoryOpen = ref(false)
 const activeTab = ref('idle')
+const effectsPaused = ref(false)
+
+const handleVisibilityChange = () => {
+  effectsPaused.value = document.hidden
+  document.documentElement.classList.toggle('effects-paused', document.hidden)
+}
+
+onMounted(() => {
+  handleVisibilityChange()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
 </script>
 
 <template>
-  <div class="min-h-screen cosmic-bg">
+  <div class="min-h-screen cosmic-bg" :class="{ 'effects-paused': effectsPaused }">
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
@@ -37,22 +53,20 @@ const activeTab = ref('idle')
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
     <FpsOverlay />
     <OfflineProgressModal />
+    <PauseOverlay />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
-      <!-- Header + Countdown zusammen als ein Flex-Kind -->
       <div class="w-full">
         <AppHeaderComponent
           :inventory-open="isInventoryOpen"
           @open-inventory="isInventoryOpen = true"
         />
 
-        <!-- Planet-Rettungs-Timer direkt unter dem Header -->
         <div class="planet-rescue-wrapper">
           <PlanetRescueOverlay />
         </div>
       </div>
 
-      <!-- Hauptbereich -->
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
           <div class="w-full">
@@ -62,7 +76,6 @@ const activeTab = ref('idle')
       </div>
     </div>
 
-    <!-- Encyclopedia Toggle Button -->
     <button
       v-show="!gameStore.isEncyclopediaOpen"
       class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
@@ -80,9 +93,6 @@ const activeTab = ref('idle')
 </template>
 
 <style>
-/* ================================================================
-   DESIGN TOKENS
-   ================================================================ */
 :root {
   --galaxy-accent: #0a1a3e;
   --star-base-size: 2px;
@@ -105,9 +115,6 @@ const activeTab = ref('idle')
   --bard-avatar-radius: 72px;
 }
 
-/* ================================================================
-   GALAXY TINT OVERLAY
-   ================================================================ */
 .galaxy-tint-overlay {
   position: fixed;
   inset: 0;
@@ -118,16 +125,11 @@ const activeTab = ref('idle')
   transition: background-color 3s ease;
 }
 
-/* ================================================================
-   COSMIC BACKGROUND
-   ================================================================ */
 .cosmic-bg {
   background: #0a0620;
   position: relative;
 }
 
-/* Animated background layer uses transform (composited) instead of
-   background-position (paint) to avoid per-frame repaint work. */
 .cosmic-bg::before {
   content: '';
   position: fixed;
@@ -143,6 +145,11 @@ const activeTab = ref('idle')
   pointer-events: none;
 }
 
+.effects-paused .cosmic-bg::before,
+.cosmic-bg.effects-paused::before {
+  animation-play-state: paused;
+}
+
 @keyframes cosmicShift {
   0%,
   100% {
@@ -152,39 +159,31 @@ const activeTab = ref('idle')
     transform: translateX(-50%);
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .cosmic-bg::before {
     animation: none !important;
   }
 }
 
-/* ================================================================
-   PLANET RESCUE WRAPPER
-   ================================================================ */
 .planet-rescue-wrapper {
   width: 100%;
   max-width: 1400px;
   margin-inline: auto;
-  /* 72px Inset = Innenkante der abgerundeten Header-Ecken */
   padding-inline: var(--bard-avatar-radius);
 }
 
-/* ================================================================
-   ENCYCLOPEDIA TOGGLE
-   ================================================================ */
 .encyclopedia-toggle {
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border-color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.15));
   border-radius: 4px 0 0 4px;
 }
+
 .encyclopedia-toggle:hover {
   background: #2a1a0a;
   border-color: var(--rpg-wood, #7c4f1a);
 }
 
-/* ================================================================
-   MISC
-   ================================================================ */
 .transition-opacity {
   transition-property: opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

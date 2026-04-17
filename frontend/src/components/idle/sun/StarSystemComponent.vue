@@ -1,5 +1,5 @@
 <template>
-  <!-- ① Back-Layer: Sterne + Planeten HINTER der Sonne (z-index 3) -->
+  <!-- ① Back-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-back" aria-hidden="true">
       <template v-for="star in backStars" :key="star.id">
@@ -22,7 +22,6 @@
           :animState="p.animState"
         />
       </template>
-      <!-- Front-Stars' behind-planets also go in back layer -->
       <template v-for="star in frontStars" :key="'fb-' + star.id">
         <PlanetComponent
           v-for="p in star.planets.filter((p) => p.isBehind)"
@@ -41,7 +40,7 @@
     </div>
   </Teleport>
 
-  <!-- ② Front-Layer: Sterne + Planeten VOR der Sonne (z-index 7) -->
+  <!-- ② Front-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-front" aria-hidden="true">
       <template v-for="star in frontStars" :key="star.id">
@@ -64,7 +63,6 @@
           :animState="p.animState"
         />
       </template>
-      <!-- Back-Stars' front-positioned planets go here for correct depth -->
       <template v-for="star in backStars" :key="'ff-' + star.id">
         <PlanetComponent
           v-for="p in star.planets.filter((p) => !p.isBehind)"
@@ -81,7 +79,7 @@
         />
       </template>
 
-      <!-- ③ Reward-Icons PRO PLANET: oben am Planeten, KEIN Hintergrund -->
+      <!-- ③ Reward-Icons PRO PLANET -->
       <template v-for="star in allStars" :key="'reward-star-' + star.id">
         <template
           v-for="planet in star.planets.filter((p) => !p.isBehind)"
@@ -103,7 +101,7 @@
         </template>
       </template>
 
-      <!-- ④ Reward-Zusammenfassung UNTER dem Stern: Summe aller Planeten, MIT Hintergrund -->
+      <!-- ④ Stern-Gesamt-Belohnung -->
       <template v-for="star in allStars" :key="'summary-' + star.id">
         <div
           v-if="
@@ -165,18 +163,13 @@ function starSize(type: string): number {
   return 62
 }
 
-// ── Pro-Planet-Reward: einzelne Items für das Icon über dem Planeten ──────────
-
 function getPlanetRewardItems(planet: PlanetRenderEntry) {
   if (planet.animState === 'saved') return []
-
   const boss = bossStore.activeBosses.find(
     (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
   )
   if (!boss) return []
-
   const items: { key: string; image: string; name: string; count: number; index: number }[] = []
-
   if (boss.reward && boss.reward > 0) {
     items.push({
       key: 'chimes',
@@ -186,7 +179,6 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
       index: 0,
     })
   }
-
   if (boss.potentialMaterialId) {
     const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
     if (mat) {
@@ -199,50 +191,36 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
       })
     }
   }
-
   return items
 }
 
-// Positioniert das Icon zentriert über dem Planeten
-// ICON_SIZE muss mit .reward-icon-img width/height übereinstimmen (36px)
 const PLANET_ICON_SIZE = 36
-const PLANET_ICON_GAP = 6 // Abstand zwischen mehreren Icons
+const PLANET_ICON_GAP = 6
 
 function planetRewardIconStyle(planet: PlanetRenderEntry, itemIndex: number, totalItems: number) {
   const match = planet.transform?.match(/translate\(([^,]+)px,\s*([^)]+)px\)/)
   const px = match ? parseFloat(match[1]) : 0
   const py = match ? parseFloat(match[2]) : 0
-
   const halfPlanet = (planet.size ?? 20) / 2
-
-  // Mehrere Icons nebeneinander zentriert über dem Planeten
   const itemSlot = PLANET_ICON_SIZE + PLANET_ICON_GAP
   const totalW = totalItems * itemSlot - PLANET_ICON_GAP
   const offsetX = itemIndex * itemSlot - totalW / 2 + PLANET_ICON_SIZE / 2
-
-  // Vertikaler Abstand: halbe Planetengröße + kleiner Luft-Puffer (8px) + halbes Icon
   const offsetY = -(halfPlanet + 8 + PLANET_ICON_SIZE)
-
   return {
     transform: `translate(${px + offsetX}px, ${py + offsetY}px) translateX(-50%)`,
   }
 }
 
-// ── Stern-Gesamt-Belohnung: Summe aller Planeten dieses Sterns ────────────────
-
 function getStarRewardSummary(star: StarRenderEntry) {
   let totalChimes = 0
   const materialMap = new Map<string, { image: string; name: string; count: number }>()
-
   for (const planet of star.planets) {
     if (planet.animState === 'saved') continue
     const boss = bossStore.activeBosses.find(
       (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
     )
     if (!boss) continue
-
     totalChimes += boss.reward ?? 0
-
     if (boss.potentialMaterialId) {
       const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
       if (mat) {
@@ -259,7 +237,6 @@ function getStarRewardSummary(star: StarRenderEntry) {
       }
     }
   }
-
   return { totalChimes, materials: [...materialMap.values()] }
 }
 
@@ -272,7 +249,6 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 </script>
 
 <style scoped>
-/* ── Layer containers ──────────────────────────────────────────────────────── */
 .star-sys-layer {
   position: fixed;
   inset: 0;
@@ -285,7 +261,6 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   z-index: 7;
 }
 
-/* ── Star body ─────────────────────────────────────────────────────────────── */
 .star-body {
   position: absolute;
   top: 0;
@@ -295,7 +270,6 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   animation: star-pulse 2.8s ease-in-out infinite;
 }
 
-/* Champion star — gold */
 .star-body--champion {
   background: radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%);
   box-shadow:
@@ -309,82 +283,94 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   inset: -11px;
   border-radius: 50%;
   border: 1px solid rgba(255, 200, 60, 0.35);
-  animation: corona-spin 18s linear infinite;
+  animation: star-ring-pulse 2.8s ease-in-out infinite;
 }
 
-/* Resource star — teal */
 .star-body--resource {
-  background: radial-gradient(circle, #a0ffe8 0%, #18c0a8 45%, #085848 100%);
+  background: radial-gradient(circle, #ffffff 0%, #a8d4ff 35%, #2060c8 75%, #0a1a5c 100%);
   box-shadow:
-    0 0 12px rgba(40, 220, 190, 0.9),
-    0 0 26px rgba(20, 180, 150, 0.55),
-    0 0 46px rgba(10, 130, 110, 0.28);
+    0 0 12px rgba(160, 210, 255, 0.95),
+    0 0 28px rgba(80, 160, 255, 0.65),
+    0 0 52px rgba(30, 80, 200, 0.35);
 }
 .star-body--resource::after {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -11px;
   border-radius: 50%;
-  border: 1px solid rgba(40, 220, 190, 0.32);
-  animation: corona-spin 24s linear infinite;
+  border: 1px solid rgba(120, 190, 255, 0.3);
+  animation: star-ring-pulse 2.8s ease-in-out infinite;
 }
 
-/* Galaxy boss star — purple / ominous */
 .star-body--galaxy_boss {
-  background: radial-gradient(circle, #ffa0e8 0%, #c030b0 45%, #4a0838 100%);
+  background: radial-gradient(circle, #ff9060 0%, #c01818 45%, #4a0000 100%);
   box-shadow:
-    0 0 18px rgba(220, 60, 200, 0.95),
-    0 0 38px rgba(180, 40, 160, 0.65),
-    0 0 70px rgba(120, 20, 100, 0.35);
-  animation: star-pulse 1.6s ease-in-out infinite;
+    0 0 18px rgba(255, 80, 30, 0.95),
+    0 0 38px rgba(200, 20, 20, 0.7),
+    0 0 65px rgba(120, 0, 0, 0.4);
 }
 .star-body--galaxy_boss::after {
   content: '';
   position: absolute;
-  inset: -13px;
+  inset: -14px;
   border-radius: 50%;
-  border: 1.5px solid rgba(220, 80, 220, 0.55);
-  box-shadow:
-    0 0 10px rgba(200, 60, 200, 0.3),
-    inset 0 0 10px rgba(200, 60, 200, 0.15);
-  animation: corona-spin 12s linear infinite;
+  border: 1.5px solid rgba(255, 80, 30, 0.4);
+  animation: star-ring-pulse 2.2s ease-in-out infinite;
 }
 
 @keyframes star-pulse {
   0%,
   100% {
-    filter: brightness(1) saturate(1);
+    filter: brightness(1);
   }
   50% {
-    filter: brightness(1.18) saturate(1.2);
+    filter: brightness(1.25);
   }
 }
 
-@keyframes corona-spin {
-  from {
-    transform: rotate(0deg);
+@keyframes star-ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
   }
-  to {
-    transform: rotate(360deg);
+  50% {
+    transform: scale(1.08);
+    opacity: 0.6;
   }
 }
 
-/* ── Stern-Gesamt-Belohnung (unter dem Stern, MIT Hintergrund) ─────────────── */
+.planet-reward-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-icon-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 4px rgba(255, 200, 80, 0.7));
+}
+
 .star-reward-summary {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  background: #111008;
-  border: 2px solid #7a4e20;
-  box-shadow: inset 0 0 0 1px #3e200a;
+  gap: 6px;
+  padding: 3px 8px;
   border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   pointer-events: none;
-  white-space: nowrap;
+  z-index: 8;
 }
 
 .summary-item {
@@ -397,34 +383,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: drop-shadow(0 0 4px rgba(255, 200, 80, 0.6));
 }
 
 .summary-count {
-  font-size: 11px;
-  color: #e8c040;
-  letter-spacing: 0.04em;
-}
-
-/* ── Planet Reward Icon (über dem Planeten, KEIN Hintergrund) ──────────────── */
-.planet-reward-icon {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  pointer-events: none;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
-}
-
-/* ── Icon-Größe: 36px (war 28px) ──────────────────────────────────────────── */
-.reward-icon-img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(255, 200, 80, 0.95))
-    drop-shadow(0 0 12px rgba(255, 160, 40, 0.55));
 }
 </style>

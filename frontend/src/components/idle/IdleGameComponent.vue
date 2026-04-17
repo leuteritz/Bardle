@@ -1,17 +1,12 @@
 <template>
   <div class="relative flex items-center justify-center w-full h-full">
-    <!-- Animated Sun behind chime -->
     <SunComponent />
 
-    <!-- Chime Button - zentriert, nur das -->
     <div
       @click="handleChimeClick"
       class="fixed z-10 flex flex-col items-center justify-center w-48 h-48 cursor-pointer group chime-main-button"
       style="top: 50%; left: 50%; transform: translate(-50%, -50%)"
     >
-      <!-- Outer Glow Ring -->
-
-      <!-- Inner Button -->
       <div class="relative flex items-center justify-center w-40 h-40">
         <img
           src="/img/BardAbilities/BardChime.png"
@@ -21,19 +16,11 @@
       </div>
     </div>
 
-    <!-- MiniMap -->
     <MiniMap />
-
-    <!-- Champion Orbit + Combat Visuals -->
     <ChampionOrbit />
-
-    <!-- Star System (Champion-Stern, Ressourcen-Stern, Galaxy-Boss-Stern) -->
     <StarSystemComponent />
-
-    <!-- Player HP Bar -->
     <PlayerHPBar />
 
-    <!-- Click Popup Animation -->
     <div
       :key="chimeGainKey"
       class="fixed z-50 flex items-center gap-1 font-bold pointer-events-none chime-popup"
@@ -53,7 +40,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useBattleStore } from '../../stores/battleStore'
 import { useAugmentStore } from '../../stores/augmentStore'
@@ -86,19 +73,21 @@ export default defineComponent({
 
     function handleChimeClick(event: MouseEvent) {
       gameStore.addChime()
-      // Apply special augment click effects (Double Tap, Chain Reaction, etc.)
       const augmentStore = useAugmentStore()
       const bonus = augmentStore.onClick(gameStore.chimesPerClick, gameStore.activeAugments)
+
       if (bonus > 0) {
         gameStore.chimes += bonus
         gameStore.chimesForMeep += bonus
         gameStore.chimesForNextUniverse += bonus
       }
+
       chimeGainPos.value = { x: event.clientX, y: event.clientY }
       chimeGainKey.value++
     }
 
     const startGameTimer = () => {
+      if (gameTimer) return
       gameTimer = setInterval(() => {
         gameStore.tick()
       }, 1000)
@@ -111,21 +100,11 @@ export default defineComponent({
       }
     }
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopGameTimer()
-      } else {
-        if (!gameTimer) startGameTimer()
-      }
-    }
-
     onMounted(() => {
       startGameTimer()
-      document.addEventListener('visibilitychange', handleVisibilityChange)
     })
 
     onUnmounted(() => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
       stopGameTimer()
     })
 
@@ -143,7 +122,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Bestehende Animationen und Styles bleiben unverändert */
 @keyframes blob {
   0% {
     transform: translate(0px, 0px) scale(1);
@@ -222,7 +200,6 @@ export default defineComponent({
   }
 }
 
-/* Chime gain popup text */
 .chime-gain-text {
   color: #d9ff4d;
   -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.75);
@@ -234,7 +211,6 @@ export default defineComponent({
     0 0 14px rgba(200, 255, 80, 0.95);
 }
 
-/* Klassen */
 .animate-blob {
   animation: blob 7s infinite;
 }
@@ -259,7 +235,6 @@ export default defineComponent({
   animation-delay: 4s;
 }
 
-/* Chime Button Styles */
 .chime-main-button {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -280,12 +255,10 @@ export default defineComponent({
   animation-duration: 2s;
 }
 
-/* Popup Animation */
 .chime-popup {
   animation: fadeUpEnhanced 1s ease-out forwards;
 }
 
-/* Responsive - Stats ausblenden bei kleineren Bildschirmen */
 @media (max-width: 1024px) {
   .grid-cols-3 {
     grid-template-columns: 1fr;

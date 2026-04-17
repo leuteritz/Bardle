@@ -41,7 +41,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   }),
 
   getters: {
-    // Backward-compat: resolves to selected boss (or first active)
     activeBoss(): PlanetBossEvent | null {
       if (this.selectedBossId) {
         return this.activeBosses.find((b) => b.planetId === this.selectedBossId) ?? null
@@ -77,7 +76,12 @@ export const usePlanetBossStore = defineStore('planetBoss', {
   },
 
   actions: {
-    spawnBoss(planetId: string, planetType: PlanetType, isChampionPlanet = false, noEnrage = false) {
+    spawnBoss(
+      planetId: string,
+      planetType: PlanetType,
+      isChampionPlanet = false,
+      noEnrage = false,
+    ) {
       const gameStore = useGameStore()
 
       const level = gameStore.level
@@ -85,7 +89,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const cpc = gameStore.chimesPerClick
       const power = gameStore.totalPower
 
-      // Galaxy + Section scaling
       const galaxyStore = useGalaxyStore()
       const sectionStore = useSectionStore()
       const sectionConfig = SECTIONS.find((s) => s.id === sectionStore.activeSectionId)
@@ -93,7 +96,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
       const sectionRewardMult = sectionConfig?.rewardMultiplier ?? 1
 
-      // Boss HP scales with player progress + section
       const maxHP = Math.floor(
         BOSS_BASE_HP *
           (1 + level / BOSS_HP_LEVEL_SCALE) *
@@ -102,31 +104,28 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           hpSectionMult,
       )
 
-      // Enrage timer scales with level + section
       const bonusSeconds = Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * 5
-      const baseEnrageSec = Math.min(BOSS_ENRAGE_BASE_SECONDS + bonusSeconds, BOSS_ENRAGE_MAX_SECONDS)
+      const baseEnrageSec = Math.min(
+        BOSS_ENRAGE_BASE_SECONDS + bonusSeconds,
+        BOSS_ENRAGE_MAX_SECONDS,
+      )
       const enrageSec = Math.max(10, Math.floor(baseEnrageSec * enrageSectionMult))
       const enrageTimerMs = enrageSec * 1000
 
-      // Snapshot damage values
       const clickDamagePerHit = Math.max(1, cpc)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
-      // Difficulty for reward scaling (0-1 based on HP relative to damage potential)
       const estimatedTotalDamage = clickDamagePerHit * 3 * enrageSec + passiveDPS * enrageSec
       const difficulty = Math.min(1, Math.max(0, maxHP / Math.max(1, estimatedTotalDamage)))
 
-      // Reward scales with difficulty + section
       const reward = Math.floor(
         BOSS_BASE_REWARD * (1 + difficulty * BOSS_REWARD_DIFFICULTY_SCALE) * sectionRewardMult,
       )
 
-      // Material drop
       const hasMaterial = Math.random() < PLANET_MATERIAL_CHANCE
       const potentialMaterialId = hasMaterial ? pickMaterial().id : undefined
       const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
 
-      // Champion home planet — only champion planets can have a champion discovery
       let homePlanetChampion: string | undefined = undefined
       if (isChampionPlanet) {
         const battleStore = useBattleStore()
@@ -134,11 +133,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           !battleStore.ownedChampions.includes(name) &&
           !battleStore.recruitableChampions.some((r) => r.name === name)
 
-        // First: try matching the planet type exactly
         let candidates = CHAMPION_HOME_PLANETS.filter(
           (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
         )
-        // Champion planets: fall back to any planet type if none available for this type
         if (candidates.length === 0 && isChampionPlanet) {
           candidates = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
         }
@@ -148,7 +145,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
       }
 
-      // Pick boss name
       const bossName = BOSS_NAMES[Math.floor(Math.random() * BOSS_NAMES.length)]
 
       const newBoss: PlanetBossEvent = {
@@ -211,7 +207,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         this.bossModalOpen = false
         logger.info('Planet', 'Boss defeated!', { totalDamage: boss.totalDamageDealt })
         const planetId = boss.planetId
-        setTimeout(() => { this.removeBoss(planetId) }, 600)
+        setTimeout(() => {
+          this.removeBoss(planetId)
+        }, 600)
         return true
       }
       return false
@@ -274,39 +272,49 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     checkEnrage() {
       for (const boss of this.activeBosses) {
-        if (boss.defeated || boss.expired || boss.noEnrage) continue
+        if (boss.defeated || boss.expired) continue
 
         const elapsed = Date.now() - boss.startTime
-        if (elapsed >= boss.enrageTimerMs) {
+        if (elapsed < boss.enrageTimerMs) continue
+
+        if (boss.noEnrage) {
+          // noEnrage-Bosse (Resource-Sterne): still ablaufen lassen ohne Penalty/Damage
+          // expired = true triggert onBossResult → Stern wird entfernt
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
-          this.lastBossResult = 'defeat'
-
-          // Apply CPS penalty
-          this.cpsPenaltyActive = true
-          this.cpsPenaltyExpiresAt = Date.now() + BOSS_CPS_PENALTY_DURATION_MS
-          const shopStore = useShopStore()
-          const gameStore = useGameStore()
-          gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
-
-          // Player takes damage on enrage
-          const playerStore = usePlayerStore()
-          playerStore.takeDamage()
-
-          logger.info('Planet', 'Boss enraged! CPS penalty applied.')
-
-          // Champion planet lost — start next travel cycle
-          if (boss.isChampionPlanet) {
-            const galaxyStore = useGalaxyStore()
-            galaxyStore.startChampionTravel()
-            logger.info('Planet', 'Champion planet lost — starting next travel')
-          }
-
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
           }, 900)
+          continue
         }
+
+        // Normaler Enrage
+        boss.expired = true
+        if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
+        this.lastBossResult = 'defeat'
+
+        this.cpsPenaltyActive = true
+        this.cpsPenaltyExpiresAt = Date.now() + BOSS_CPS_PENALTY_DURATION_MS
+        const shopStore = useShopStore()
+        const gameStore = useGameStore()
+        gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+
+        const playerStore = usePlayerStore()
+        playerStore.takeDamage()
+
+        logger.info('Planet', 'Boss enraged! CPS penalty applied.')
+
+        if (boss.isChampionPlanet) {
+          const galaxyStore = useGalaxyStore()
+          galaxyStore.startChampionTravel()
+          logger.info('Planet', 'Champion planet lost — starting next travel')
+        }
+
+        const planetId = boss.planetId
+        setTimeout(() => {
+          this.removeBoss(planetId)
+        }, 900)
       }
     },
 
@@ -315,12 +323,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       const gameStore = useGameStore()
 
-      // Chimes reward
       gameStore.chimes += boss.reward
       gameStore.chimesForNextUniverse += Math.floor(boss.reward * 0.3)
       gameStore.calculateLevel()
 
-      // Material drop
       if (boss.potentialMaterialId && boss.assignedDropChance != null) {
         const inventoryStore = useInventoryStore()
         const dropped = inventoryStore.tryDropSpecificMaterial(
@@ -330,7 +336,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         this.lastDroppedMaterialId = dropped ? boss.potentialMaterialId : null
       }
 
-      // Champion recruitment
       if (boss.homePlanetChampion) {
         const battleStore = useBattleStore()
         const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === boss.homePlanetChampion)
@@ -342,18 +347,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       this.lastBossResult = 'victory'
       logger.info('Planet', `Rewards granted: +${boss.reward} chimes`)
 
-      // Notify section store to update progress and unlocks
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated()
 
-      // Galaxy progression: galaxy boss kill or champion planet rescue
       const galaxyStore = useGalaxyStore()
       if (galaxyStore.pendingGalaxyBoss) {
         galaxyStore.onGalaxyBossDefeated()
       } else if (boss.isChampionPlanet) {
         galaxyStore.onChampionStarRescued()
       }
-      // Normal planets during travel: no galaxy progression
     },
 
     openBossModal(planetId?: string) {
@@ -367,24 +369,36 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     forceCheckExpiry() {
       for (const boss of this.activeBosses) {
-        if (boss.defeated || boss.expired || boss.noEnrage) continue
+        if (boss.defeated || boss.expired) continue
 
         const elapsed = Date.now() - boss.startTime
-        if (elapsed >= boss.enrageTimerMs) {
+        if (elapsed < boss.enrageTimerMs) continue
+
+        if (boss.noEnrage) {
+          // noEnrage-Bosse still ablaufen lassen ohne Penalty/Damage
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
-          this.lastBossResult = 'defeat'
-
-          if (boss.isChampionPlanet) {
-            const galaxyStore = useGalaxyStore()
-            galaxyStore.startChampionTravel()
-          }
-
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
           }, 900)
+          continue
         }
+
+        // Normaler Enrage
+        boss.expired = true
+        if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
+        this.lastBossResult = 'defeat'
+
+        if (boss.isChampionPlanet) {
+          const galaxyStore = useGalaxyStore()
+          galaxyStore.startChampionTravel()
+        }
+
+        const planetId = boss.planetId
+        setTimeout(() => {
+          this.removeBoss(planetId)
+        }, 900)
       }
     },
 

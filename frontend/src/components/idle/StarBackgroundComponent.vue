@@ -6,7 +6,7 @@
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
-    <div :class="{ 'nebulas-paused': nebulasPaused }">
+    <div :class="{ 'nebulas-paused': !windowFocused || nebulasPaused }">
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
       <div class="nebula nebula-3"></div>
@@ -14,43 +14,76 @@
       <div class="nebula nebula-5"></div>
       <div class="nebula nebula-6"></div>
     </div>
-    <canvas ref="starCanvas" class="star-canvas"></canvas>
+
+    <canvas
+      ref="starCanvas"
+      class="star-canvas"
+      :class="{ 'star-canvas-hidden': !windowFocused }"
+    ></canvas>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
+import { useWindowFocus } from '../../composables/useWindowFocus'
 
 const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
+const { windowFocused, onFocusChange } = useWindowFocus()
 
-// Pause nebula CSS animations after 30 s of no user interaction
 const NEBULA_IDLE_TIMEOUT = 30_000
 const nebulasPaused = ref(false)
 let idleTimer: ReturnType<typeof setTimeout> | null = null
 
-function resetIdleTimer() {
-  nebulasPaused.value = false
-  if (idleTimer) clearTimeout(idleTimer)
+function clearIdleTimer() {
+  if (idleTimer) {
+    clearTimeout(idleTimer)
+    idleTimer = null
+  }
+}
+
+function startIdleTimer() {
+  clearIdleTimer()
   idleTimer = setTimeout(() => {
     nebulasPaused.value = true
   }, NEBULA_IDLE_TIMEOUT)
 }
 
+function resetIdleTimer() {
+  if (!windowFocused.value) return
+  nebulasPaused.value = false
+  startIdleTimer()
+}
+
+let removeFocusListener: (() => void) | null = null
+
 onMounted(() => {
-  resetIdleTimer()
+  if (windowFocused.value) {
+    startIdleTimer()
+  }
+
+  removeFocusListener = onFocusChange((focused) => {
+    if (focused) {
+      nebulasPaused.value = false
+      startIdleTimer()
+    } else {
+      clearIdleTimer()
+      nebulasPaused.value = true
+    }
+  })
+
   window.addEventListener('pointermove', resetIdleTimer, { passive: true })
-  window.addEventListener('keydown', resetIdleTimer, { passive: true })
+  window.addEventListener('keydown', resetIdleTimer)
   window.addEventListener('pointerdown', resetIdleTimer, { passive: true })
 })
 
 onBeforeUnmount(() => {
+  removeFocusListener?.()
   window.removeEventListener('pointermove', resetIdleTimer)
   window.removeEventListener('keydown', resetIdleTimer)
   window.removeEventListener('pointerdown', resetIdleTimer)
-  if (idleTimer) clearTimeout(idleTimer)
+  clearIdleTimer()
 })
-
 </script>
 
 <style>
@@ -70,6 +103,13 @@ onBeforeUnmount(() => {
   top: 0;
   left: 0;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.star-canvas-hidden {
+  opacity: 0 !important;
+  transition: none !important;
 }
 
 .galaxy {
@@ -118,13 +158,11 @@ onBeforeUnmount(() => {
   }
 }
 
-/* Planet-Orbit Layer – außerhalb des .stars-Containers via Teleport */
 .planet-orbit-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
-/* Sonne hat z-index: 5 → Planeten darunter/darüber */
 .planet-orbit-back {
   z-index: 3;
 }
@@ -293,8 +331,10 @@ onBeforeUnmount(() => {
   }
 }
 
-.nebulas-paused .nebula {
-  animation-play-state: paused;
+.nebulas-paused .nebula,
+.nebulas-paused .emission-nebula,
+.nebulas-paused .ion-cloud {
+  animation-play-state: paused !important;
 }
 
 /* ─── Planets ─────────────────────────────────────────────────────────────── */
@@ -363,7 +403,6 @@ onBeforeUnmount(() => {
   z-index: 100 !important;
   pointer-events: none !important;
 }
-
 .stars--rescue-active .planet--rescue {
   pointer-events: auto !important;
   cursor: pointer !important;
@@ -371,12 +410,7 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .planet,
-  .planet--rescue {
-    animation: none !important;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
+  .planet--rescue,
   .planet--rescue--galaxy {
     animation: none !important;
   }

@@ -10,6 +10,7 @@ import type { LabelData, PlanetType, StarType } from '../types'
 const PLANET_SIZE_CHAMPION = 64
 const PLANET_SIZE_GALAXY_BOSS = 72
 const PLANET_SIZE_NORMAL = 52
+const VANISH_DURATION_MS = 800
 
 export interface PlanetRenderEntry {
   planetId: string
@@ -35,6 +36,84 @@ export interface StarRenderEntry {
   planets: PlanetRenderEntry[]
 }
 
+// ── Programmatische Vanish-Animation ──────────────────────────────────────────
+// Erstellt einmalig ein DOM-Element an der eingefrorenen Sternposition,
+// animiert die Implosion komplett in JS/CSS und entfernt sich danach selbst.
+// Kein Vue-Reaktivitätsproblem, kein Re-Mount, kein Ghost-Element.
+function spawnVanishEffect(x: number, y: number, starType: StarType, size: number) {
+  const gradients: Record<string, string> = {
+    champion: 'radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%)',
+    resource: 'radial-gradient(circle, #ffffff 0%, #a8d4ff 35%, #2060c8 75%, #0a1a5c 100%)',
+    galaxy_boss: 'radial-gradient(circle, #ff9060 0%, #c01818 45%, #4a0000 100%)',
+  }
+  const shadows: Record<string, string> = {
+    champion:
+      '0 0 14px rgba(255,200,60,0.9), 0 0 32px rgba(220,140,20,0.6), 0 0 56px rgba(180,100,10,0.3)',
+    resource:
+      '0 0 12px rgba(160,210,255,0.95), 0 0 28px rgba(80,160,255,0.65), 0 0 52px rgba(30,80,200,0.35)',
+    galaxy_boss:
+      '0 0 18px rgba(255,80,30,0.95), 0 0 38px rgba(200,20,20,0.7), 0 0 65px rgba(120,0,0,0.4)',
+  }
+
+  // Container — positioniert an der eingefrorenen Sternmitte
+  const container = document.createElement('div')
+  container.style.cssText = `
+    position: fixed;
+    left: ${x - size / 2}px;
+    top:  ${y - size / 2}px;
+    width: ${size}px;
+    height: ${size}px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: visible;
+    background: ${gradients[starType] ?? gradients.resource};
+    box-shadow: ${shadows[starType] ?? shadows.resource};
+  `
+
+  // Shockwave-Ring
+  const shockwave = document.createElement('div')
+  shockwave.style.cssText = `
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.85);
+    pointer-events: none;
+  `
+  container.appendChild(shockwave)
+  document.body.appendChild(container)
+
+  // Web Animations API — kein CSS-Klassen-Toggle, kein Re-Mount-Problem
+  const easing = 'cubic-bezier(0.4, 0, 0.6, 1)'
+
+  container.animate(
+    [
+      { transform: 'scale(1)', opacity: '1', filter: 'brightness(1)' },
+      { transform: 'scale(0.7)', opacity: '1', filter: 'brightness(1.3)', offset: 0.15 },
+      { transform: 'scale(1.6)', opacity: '1', filter: 'brightness(6) saturate(0)', offset: 0.4 },
+      { transform: 'scale(0.4)', opacity: '0.8', filter: 'brightness(3)', offset: 0.55 },
+      { transform: 'scale(0.1)', opacity: '0.3', filter: 'brightness(1)', offset: 0.8 },
+      { transform: 'scale(0)', opacity: '0', filter: 'brightness(1)' },
+    ],
+    { duration: VANISH_DURATION_MS, easing, fill: 'forwards' },
+  )
+
+  shockwave.animate(
+    [
+      { transform: 'scale(1)', opacity: '0.9' },
+      { transform: 'scale(1.5)', opacity: '0.6', offset: 0.3 },
+      { transform: 'scale(3.2)', opacity: '0.25', offset: 0.65 },
+      { transform: 'scale(5)', opacity: '0' },
+    ],
+    { duration: VANISH_DURATION_MS, easing: 'ease-out', fill: 'forwards' },
+  )
+
+  // Element nach Animation sauber aus dem DOM entfernen
+  setTimeout(() => {
+    container.remove()
+  }, VANISH_DURATION_MS + 50)
+}
+
 function buildLabelData(
   planetId: string,
   cx: number,
@@ -58,7 +137,6 @@ function buildLabelData(
       : `/img/champion/${championName}.jpg`
     : null
 
-  // Place label outward from star center, left or right of planet
   const angle = Math.atan2(cy - starY, cx - starX)
   const dx = Math.cos(angle)
   const dy = Math.sin(angle)
@@ -93,18 +171,16 @@ export function useStarSystem() {
 
   const starRenders = ref<StarRenderEntry[]>([])
 
-  // Per-star and per-planet local animation state (not reactive — updated by rAF)
   const starAngles = new Map<string, number>()
   const planetAngles = new Map<string, number>()
   const planetCurRx = new Map<string, number>()
   const planetCurRy = new Map<string, number>()
-  // Tracks when each planet entered the 'saved' state so we can remove it after the animation
   const planetSavedAt = new Map<string, number>()
+  // Statt isVanishing im Render: Set der IDs für die bereits gespawnt wurde
+  const vanishFired = new Set<string>()
 
   let animFrame = 0
   let lastTs = 0
-
-  // ── Watchers: trigger star spawns from galaxy state ────────────────────────
 
   watch(
     () => galaxyStore.championTravelState,
@@ -135,8 +211,6 @@ export function useStarSystem() {
     },
   )
 
-  // ── Watcher: detect boss defeat / expiry → mark star planet as cleared ─────
-
   watch(
     () =>
       bossStore.activeBosses.map((b) => ({
@@ -157,8 +231,6 @@ export function useStarSystem() {
     { deep: true },
   )
 
-  // ── rAF animation loop ─────────────────────────────────────────────────────
-
   function animate(ts: number) {
     const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
     lastTs = ts
@@ -169,7 +241,6 @@ export function useStarSystem() {
     const newRenders: StarRenderEntry[] = []
 
     for (const star of starGroupStore.activeStars) {
-      // Advance star orbit angle
       let sAngle = starAngles.get(star.id) ?? star.starAngle
       sAngle += star.starDirection * star.orbitSpeed * dt
       starAngles.set(star.id, sAngle)
@@ -183,22 +254,32 @@ export function useStarSystem() {
         screenCy,
       )
 
-      // Depth calc for star
       const sRelY = (sy - screenCy) / Math.max(star.orbitRy, 1)
       const sIsBehind = sRelY < -0.05
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
       const sScale = 0.72 + sDepth * 0.56
       const sOpacity = sIsBehind ? 0.22 + sDepth * 0.38 : 0.78 + sDepth * 0.22
 
+      const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
+
+      if (allSlotsCleared) {
+        // Einmalig die Vanish-Animation spawnen — danach nie wieder
+        if (!vanishFired.has(star.id)) {
+          vanishFired.add(star.id)
+          const size = star.starType === 'galaxy_boss' ? 82 : star.starType === 'champion' ? 72 : 62
+          spawnVanishEffect(sx, sy, star.starType, size)
+        }
+        // Stern nicht in newRenders — Vue rendert ihn nicht mehr
+        continue
+      }
+
       const planetEntries: PlanetRenderEntry[] = []
 
       for (const slot of star.planetSlots) {
-        // Advance angle even for cleared planets (so removal animation stays in orbit)
         let pAngle = planetAngles.get(slot.planetId) ?? slot.orbitAngle
         pAngle += slot.orbitDirection * slot.orbitSpeed * dt
         planetAngles.set(slot.planetId, pAngle)
 
-        // Fly-in: start at 2.5× target radius, lerp inward
         const FLY = 2.5
         let curRx = planetCurRx.get(slot.planetId) ?? slot.orbitRx * FLY
         let curRy = planetCurRy.get(slot.planetId) ?? slot.orbitRy * FLY
@@ -207,17 +288,9 @@ export function useStarSystem() {
         planetCurRx.set(slot.planetId, curRx)
         planetCurRy.set(slot.planetId, curRy)
 
-        const { x: px, y: py } = getOrbitPos(
-          pAngle,
-          curRx,
-          curRy,
-          slot.orbitTilt,
-          sx,
-          sy,
-        )
+        const { x: px, y: py } = getOrbitPos(pAngle, curRx, curRy, slot.orbitTilt, sx, sy)
 
         const boss = bossStore.activeBosses.find((b) => b.planetId === slot.planetId)
-
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
         const pSize = isGalaxyBoss
           ? PLANET_SIZE_GALAXY_BOSS
@@ -226,7 +299,6 @@ export function useStarSystem() {
             : PLANET_SIZE_NORMAL
         const pR = pSize / 2
 
-        // Depth relative to screen center for proper sun occlusion
         const pRelY = (py - screenCy) / Math.max(star.orbitRy + slot.orbitRy, 1)
         const pIsBehind = pRelY < -0.05
         const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
@@ -238,28 +310,22 @@ export function useStarSystem() {
           `scale(${pScale.toFixed(4)}) ` +
           `translate(${-pR}px, ${-pR}px)`
 
-        // Update champion combat targeting map
         if (!slot.cleared) {
           activePlanetPositions.set(slot.planetId, { cx: px, cy: py })
         }
 
-        // Determine anim state
         let animState: PlanetRenderEntry['animState'] = 'normal'
         if (boss?.expired) animState = 'exploding'
         else if (boss?.defeated) animState = 'saved'
         else if (slot.cleared) animState = 'saved'
 
-        // Once saved animation has finished (~600 ms), stop rendering the planet entirely
         if (animState === 'saved') {
           if (!planetSavedAt.has(slot.planetId)) planetSavedAt.set(slot.planetId, ts)
           if (ts - planetSavedAt.get(slot.planetId)! > 600) continue
         }
 
-        // Label only for active (not cleared, not isBehind) planets
         const labelData =
-          !slot.cleared && !pIsBehind
-            ? buildLabelData(slot.planetId, px, py, pR, sx, sy)
-            : null
+          !slot.cleared && !pIsBehind ? buildLabelData(slot.planetId, px, py, pR, sx, sy) : null
 
         planetEntries.push({
           planetId: slot.planetId,
@@ -287,7 +353,13 @@ export function useStarSystem() {
       })
     }
 
-    // Clean up position map and savedAt map for removed/cleared planets
+    // Cleanup vanishFired für Stars die nicht mehr in activeStars sind
+    for (const id of vanishFired) {
+      if (!starGroupStore.activeStars.some((s) => s.id === id)) {
+        vanishFired.delete(id)
+      }
+    }
+
     const allActiveSlots = new Set(
       starGroupStore.activeStars
         .flatMap((s) => s.planetSlots)
@@ -295,9 +367,7 @@ export function useStarSystem() {
         .map((p) => p.planetId),
     )
     for (const id of activePlanetPositions.keys()) {
-      if (!allActiveSlots.has(id)) {
-        activePlanetPositions.delete(id)
-      }
+      if (!allActiveSlots.has(id)) activePlanetPositions.delete(id)
     }
     for (const id of planetSavedAt.keys()) {
       if (!starGroupStore.activeStars.some((s) => s.planetSlots.some((p) => p.planetId === id))) {
