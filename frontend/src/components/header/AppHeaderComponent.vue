@@ -232,7 +232,7 @@ body.bard-modal-open .center-chimes {
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 8px 8px;
-  padding: 5px 18px 5px 12px;
+  padding: 6px 20px 6px 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
@@ -240,8 +240,8 @@ body.bard-modal-open .center-chimes {
 }
 
 .header-chime-icon {
-  width: clamp(30px, 3.5vw, 46px);
-  height: clamp(30px, 3.5vw, 46px);
+  width: clamp(38px, 4.5vw, 58px);
+  height: clamp(38px, 4.5vw, 58px);
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -273,9 +273,9 @@ body.bard-modal-open .center-chimes {
 }
 
 .chimes-value {
-  font-size: clamp(1.3rem, 1.7vw, 2rem);
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-size: clamp(1.6rem, 2.2vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
   color: var(--color-chimes);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
