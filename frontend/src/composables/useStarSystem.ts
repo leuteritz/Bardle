@@ -324,11 +324,11 @@ export function useStarSystem() {
             : PLANET_SIZE_NORMAL
         const pR = pSize / 2
 
-        const pRelY = (py - screenCy) / Math.max(star.orbitRy + slot.orbitRy, 1)
+        const pRelY = (py - sy) / Math.max(slot.orbitRy, 1)
         const pIsBehind = pRelY < -0.05
         const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
         const pScale = 0.72 + pDepth * 0.56
-        const pOpacity = pIsBehind ? 0.22 + pDepth * 0.35 : 0.8 + pDepth * 0.2
+        const pOpacity = 0.2 + pDepth * 0.8
 
         const transform =
           `translate(${px}px, ${py}px) ` +
