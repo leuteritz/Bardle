@@ -42,16 +42,135 @@
             </svg>
             <span>Chimes werden weiter gesammelt</span>
           </div>
+
+          <!-- Bonus-Sternsystem wartet -->
+          <div v-if="pendingStars > 0" class="pause-info pause-info--bonus">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span>{{
+              pendingStars === 1
+                ? 'Ein Bonus-Sternsystem wartet auf dich!'
+                : `${pendingStars} Bonus-Sternsysteme warten auf dich!`
+            }}</span>
+          </div>
+
+          <!-- Champion ETA / Ready -->
+          <div v-if="isChampionTraveling || isChampionReady" class="pause-info pause-info--eta" :class="{ 'pause-info--ready': isChampionReady }">
+            <svg
+              v-if="isChampionTraveling"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <svg
+              v-else
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span v-if="isChampionTraveling">Champion erreicht Stern in <strong>{{ pauseEtaStr }}</strong></span>
+            <span v-else>Champion-Stern wartet — kehre ins Spiel zurück!</span>
+          </div>
         </div>
+      </div>
+    </Transition>
+
+    <!-- ETA-Badge: nur sichtbar wenn nicht pausiert und Champion reist -->
+    <Transition name="eta-fade">
+      <div v-if="windowFocused && isChampionTraveling" class="eta-badge">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="eta-icon"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span class="eta-label">Champion</span>
+        <span class="eta-sep">·</span>
+        <span class="eta-value">{{ etaStr }}</span>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
+import { useGalaxyStore } from '@/stores/galaxyStore'
 
 const { windowFocused } = useWindowFocus()
+const galaxyStore = useGalaxyStore()
+
+const pendingStars = computed(() => galaxyStore.pendingResourceStars)
+const isChampionTraveling = computed(() => galaxyStore.championTravelState === 'traveling')
+const isChampionReady = computed(() => galaxyStore.pendingChampionStar)
+
+const etaStr = computed(() => {
+  const ms = galaxyStore.travelRemainingMs
+  const s = Math.ceil(Math.max(0, ms) / 1000)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`
+})
+
+const pauseTick = ref(0)
+let pauseInterval: ReturnType<typeof setInterval> | null = null
+
+watch(
+  windowFocused,
+  (focused) => {
+    if (!focused) {
+      pauseInterval = setInterval(() => {
+        pauseTick.value++
+      }, 1000)
+    } else {
+      if (pauseInterval !== null) {
+        clearInterval(pauseInterval)
+        pauseInterval = null
+      }
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  if (pauseInterval !== null) clearInterval(pauseInterval)
+})
+
+const pauseEtaStr = computed(() => {
+  void pauseTick.value
+  if (!isChampionTraveling.value) return ''
+  const elapsed = Date.now() - galaxyStore.championTravelStartTime
+  const remaining = Math.max(0, galaxyStore.championTravelDurationMs - elapsed)
+  const s = Math.ceil(remaining / 1000)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`
+})
 </script>
 
 <style scoped>
@@ -116,7 +235,65 @@ const { windowFocused } = useWindowFocus()
   font-size: 0.82rem;
 }
 
-/* Transition */
+.pause-info--bonus {
+  background: rgba(30, 140, 80, 0.1);
+  border-color: rgba(82, 184, 48, 0.25);
+  color: #52b830;
+}
+
+.pause-info--eta {
+  background: rgba(232, 192, 64, 0.08);
+  border-color: rgba(232, 192, 64, 0.2);
+  color: #e8c040;
+}
+
+.pause-info--ready {
+  background: rgba(232, 192, 64, 0.14);
+  border-color: rgba(232, 192, 64, 0.4);
+  color: #f0d060;
+}
+
+/* ETA Badge */
+.eta-badge {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #1e1006;
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  border-radius: 4px;
+  color: #e8c040;
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.eta-icon {
+  color: #c89040;
+  flex-shrink: 0;
+}
+
+.eta-label {
+  color: rgba(232, 192, 64, 0.7);
+}
+
+.eta-sep {
+  color: rgba(232, 192, 64, 0.35);
+}
+
+.eta-value {
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Transitions */
 .pause-fade-enter-active {
   transition:
     opacity 200ms ease,
@@ -131,5 +308,21 @@ const { windowFocused } = useWindowFocus()
 .pause-fade-leave-to {
   opacity: 0;
   transform: scale(0.97);
+}
+
+.eta-fade-enter-active {
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+.eta-fade-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+.eta-fade-enter-from,
+.eta-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
 }
 </style>

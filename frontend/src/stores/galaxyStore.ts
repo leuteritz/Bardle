@@ -57,6 +57,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     resourceStarActive: false,
     resourceStarElapsedMs: 0,
     resourceStarDurationMs: 0,
+    pendingResourceStars: 0,
+    pendingChampionStar: false,
   }),
 
   getters: {
@@ -228,6 +230,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.resourceStarActive = false
       this.resourceStarElapsedMs = 0
       this.resourceStarDurationMs = 0
+      this.pendingResourceStars = 0
+      this.pendingChampionStar = false
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
       this.startChampionTravel()
     },

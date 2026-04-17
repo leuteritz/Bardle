@@ -2,6 +2,8 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '../stores/starGroupStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
+import { useWindowFocus } from './useWindowFocus'
+import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
@@ -168,6 +170,8 @@ export function useStarSystem() {
   const starGroupStore = useStarGroupStore()
   const bossStore = usePlanetBossStore()
   const galaxyStore = useGalaxyStore()
+  const { windowFocused } = useWindowFocus()
+  const { isRenderingPaused } = useRenderingPaused()
 
   const starRenders = ref<StarRenderEntry[]>([])
 
@@ -186,7 +190,11 @@ export function useStarSystem() {
     () => galaxyStore.championTravelState,
     (state) => {
       if (state === 'champion_available') {
-        starGroupStore.spawnChampionStar()
+        if (isRenderingPaused.value) {
+          galaxyStore.pendingChampionStar = true
+        } else {
+          starGroupStore.spawnChampionStar()
+        }
       }
     },
   )
@@ -204,12 +212,29 @@ export function useStarSystem() {
     () => galaxyStore.resourceStarActive,
     (active, wasActive) => {
       if (active) {
-        starGroupStore.spawnResourceStar()
-      } else if (wasActive) {
+        if (isRenderingPaused.value) {
+          galaxyStore.pendingResourceStars++
+        } else {
+          starGroupStore.spawnResourceStar()
+        }
+      } else if (wasActive && starGroupStore.hasActiveResourceStar) {
         starGroupStore.clearResourceStar()
       }
     },
   )
+
+  watch(windowFocused, (focused) => {
+    if (focused) {
+      if (galaxyStore.pendingResourceStars > 0) {
+        starGroupStore.spawnResourceStar()
+        galaxyStore.pendingResourceStars = 0
+      }
+      if (galaxyStore.pendingChampionStar) {
+        starGroupStore.spawnChampionStar()
+        galaxyStore.pendingChampionStar = false
+      }
+    }
+  })
 
   watch(
     () =>
