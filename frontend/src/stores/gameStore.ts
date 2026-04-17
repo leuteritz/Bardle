@@ -61,6 +61,8 @@ export const useGameStore = defineStore('game', {
     activeAugments: [] as string[],
     pendingAugmentChoice: false,
     pendingAugmentOptions: [] as string[],
+    pendingAugmentSelections: [] as Array<{ options: string[] }>,
+    isGamePaused: false,
 
     currentUniverse: 1,
     prestigeAvailable: false,
@@ -169,8 +171,27 @@ export const useGameStore = defineStore('game', {
         remaining.splice(remaining.indexOf(chosen), 1)
       }
 
-      this.pendingAugmentOptions = picked.map((a) => a.id)
-      this.pendingAugmentChoice = true
+      if (this.isGamePaused) {
+        this.pendingAugmentSelections.push({ options: picked.map((a) => a.id) })
+      } else {
+        this.pendingAugmentOptions = picked.map((a) => a.id)
+        this.pendingAugmentChoice = true
+      }
+    },
+
+    _activateNextPendingSelection() {
+      const next = this.pendingAugmentSelections.shift()
+      if (next) {
+        this.pendingAugmentOptions = next.options
+        this.pendingAugmentChoice = true
+      }
+    },
+
+    setPauseState(paused: boolean) {
+      this.isGamePaused = paused
+      if (!paused) {
+        this._activateNextPendingSelection()
+      }
     },
 
     chooseAugment(id: string) {
@@ -184,6 +205,7 @@ export const useGameStore = defineStore('game', {
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
+      this._activateNextPendingSelection()
     },
 
     skipAllAugments() {
@@ -225,6 +247,14 @@ export const useGameStore = defineStore('game', {
         this.pendingAugmentChoice = false
         this.pendingAugmentOptions = []
       }
+
+      for (const pending of this.pendingAugmentSelections) {
+        const id = pending.options[0]
+        if (id && !this.activeAugments.includes(id)) {
+          this.activeAugments.push(id)
+        }
+      }
+      this.pendingAugmentSelections = []
 
       const shopStore = useShopStore()
       this.chimesPerSecond = shopStore.calculateTotalCPS()
@@ -310,6 +340,8 @@ export const useGameStore = defineStore('game', {
       this.activeAugments = []
       this.pendingAugmentChoice = false
       this.pendingAugmentOptions = []
+      this.pendingAugmentSelections = []
+      this.isGamePaused = false
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
       // totalChimesEarned & totalClicks bleiben erhalten (prestige-übergreifend)

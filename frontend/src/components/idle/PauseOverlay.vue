@@ -44,6 +44,18 @@
               </div>
             </div>
 
+            <!-- Pending level-ups -->
+            <div v-if="gameStore.pendingAugmentSelections.length > 0" class="pause-info pause-info--levelup">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              <span>{{
+                gameStore.pendingAugmentSelections.length === 1
+                  ? 'Level-Up wartet — wähle dein Augment!'
+                  : `${gameStore.pendingAugmentSelections.length} Level-Ups warten auf dich!`
+              }}</span>
+            </div>
+
             <!-- Bonus stars -->
             <div v-if="pendingStars > 0" class="pause-info pause-info--bonus">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -104,11 +116,13 @@ watch(
   windowFocused,
   (focused) => {
     if (!focused) {
+      gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
       pauseInterval = setInterval(() => {
         pauseTick.value++
       }, 1000)
     } else {
+      gameStore.setPauseState(false)
       if (pauseInterval !== null) {
         clearInterval(pauseInterval)
         pauseInterval = null
@@ -274,6 +288,12 @@ const pauseEtaStr = computed(() => {
   border: 1px solid #5c3310;
   color: rgba(232, 192, 64, 0.55);
   font-size: 0.8rem;
+}
+
+.pause-info--levelup {
+  background: rgba(232, 192, 64, 0.08);
+  border-color: rgba(232, 192, 64, 0.4);
+  color: #e8c040;
 }
 
 .pause-info--bonus {
