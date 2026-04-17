@@ -238,6 +238,12 @@ export interface PlanetRescueEvent {
   homePlanetChampion?: string
 }
 
+export interface PlanetBossRewardSlot {
+  type: 'chimes' | 'material'
+  amount?: number
+  materialId?: string
+}
+
 export interface PlanetBossEvent {
   planetId: string
   planetType: PlanetType
@@ -249,12 +255,10 @@ export interface PlanetBossEvent {
   clickDamagePerHit: number
   passiveDPS: number
   totalDamageDealt: number
-  reward: number
+  rewardSlots: PlanetBossRewardSlot[]
   defeated: boolean
   expired: boolean
   noEnrage?: boolean
-  potentialMaterialId?: string
-  assignedDropChance?: number
   homePlanetChampion?: string
   isGalaxyBoss?: boolean
   isChampionPlanet?: boolean

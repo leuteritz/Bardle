@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { PlanetBossEvent, PlanetType } from '../types'
+import type { PlanetBossEvent, PlanetBossRewardSlot, PlanetType } from '../types'
 import {
   BOSS_BASE_HP,
   BOSS_HP_LEVEL_SCALE,
@@ -9,12 +9,9 @@ import {
   BOSS_ENRAGE_LEVEL_STEP,
   BOSS_ENRAGE_MAX_SECONDS,
   BOSS_PASSIVE_DPS_FRACTION,
-  BOSS_BASE_REWARD,
-  BOSS_REWARD_DIFFICULTY_SCALE,
   BOSS_CPS_PENALTY_FRACTION,
   BOSS_CPS_PENALTY_DURATION_MS,
   BOSS_NAMES,
-  PLANET_MATERIAL_CHANCE,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -94,7 +91,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const sectionConfig = SECTIONS.find((s) => s.id === sectionStore.activeSectionId)
       const hpSectionMult = sectionConfig?.difficultyMultiplier ?? 1
       const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
-      const sectionRewardMult = sectionConfig?.rewardMultiplier ?? 1
 
       const maxHP = Math.floor(
         BOSS_BASE_HP *
@@ -115,16 +111,17 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const clickDamagePerHit = Math.max(1, cpc)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
-      const estimatedTotalDamage = clickDamagePerHit * 3 * enrageSec + passiveDPS * enrageSec
-      const difficulty = Math.min(1, Math.max(0, maxHP / Math.max(1, estimatedTotalDamage)))
+      const randomChimes = () => Math.floor(Math.random() * 5) + 1
+      const randomSlot = (): PlanetBossRewardSlot =>
+        Math.random() < 0.5
+          ? { type: 'material', materialId: pickMaterial().id }
+          : { type: 'chimes', amount: randomChimes() }
 
-      const reward = Math.floor(
-        BOSS_BASE_REWARD * (1 + difficulty * BOSS_REWARD_DIFFICULTY_SCALE) * sectionRewardMult,
-      )
-
-      const hasMaterial = Math.random() < PLANET_MATERIAL_CHANCE
-      const potentialMaterialId = hasMaterial ? pickMaterial().id : undefined
-      const assignedDropChance = hasMaterial ? 0.2 + Math.random() * 0.4 : undefined
+      const rewardSlots: PlanetBossRewardSlot[] = [
+        { type: 'chimes', amount: randomChimes() },
+        randomSlot(),
+        randomSlot(),
+      ]
 
       let homePlanetChampion: string | undefined = undefined
       if (isChampionPlanet) {
@@ -158,12 +155,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         clickDamagePerHit,
         passiveDPS,
         totalDamageDealt: 0,
-        reward,
+        rewardSlots,
         defeated: false,
         expired: false,
         ...(noEnrage && { noEnrage: true }),
-        ...(potentialMaterialId !== undefined && { potentialMaterialId }),
-        ...(assignedDropChance !== undefined && { assignedDropChance }),
         ...(homePlanetChampion && { homePlanetChampion }),
         ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
         ...(isChampionPlanet && { isChampionPlanet: true }),
@@ -180,7 +175,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         enrageSec,
         clickDamage: clickDamagePerHit,
         passiveDPS,
-        reward,
+        slots: rewardSlots.length,
       })
     },
 
@@ -323,18 +318,19 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       const gameStore = useGameStore()
 
-      gameStore.chimes += boss.reward
-      gameStore.chimesForNextUniverse += Math.floor(boss.reward * 0.3)
-      gameStore.calculateLevel()
-
-      if (boss.potentialMaterialId && boss.assignedDropChance != null) {
-        const inventoryStore = useInventoryStore()
-        const dropped = inventoryStore.tryDropSpecificMaterial(
-          boss.potentialMaterialId,
-          boss.assignedDropChance,
-        )
-        this.lastDroppedMaterialId = dropped ? boss.potentialMaterialId : null
+      const inventoryStore = useInventoryStore()
+      let totalChimes = 0
+      for (const slot of boss.rewardSlots) {
+        if (slot.type === 'chimes') {
+          totalChimes += slot.amount ?? 0
+        } else if (slot.type === 'material' && slot.materialId) {
+          inventoryStore.addMaterial(slot.materialId)
+          this.lastDroppedMaterialId = slot.materialId
+        }
       }
+      gameStore.chimes += totalChimes
+      gameStore.chimesForNextUniverse += Math.floor(totalChimes * 0.3)
+      gameStore.calculateLevel()
 
       if (boss.homePlanetChampion) {
         const battleStore = useBattleStore()
@@ -345,7 +341,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       }
 
       this.lastBossResult = 'victory'
-      logger.info('Planet', `Rewards granted: +${boss.reward} chimes`)
+      logger.info('Planet', `Rewards granted: +${totalChimes} chimes`)
 
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated()

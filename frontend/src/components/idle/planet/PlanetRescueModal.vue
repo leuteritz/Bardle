@@ -43,6 +43,71 @@
           </h2>
         </div>
 
+        <!-- ── Rewards Preview ───────────────────────────────────────────── -->
+        <div class="reward-preview" :class="{ 'reward-preview--galaxy': isGalaxyBoss }">
+          <div class="reward-header">
+            <span class="reward-header-line" />
+            <span class="reward-header-text">✦ Besiege den Champion und erhalte ✦</span>
+            <span class="reward-header-line" />
+          </div>
+          <div class="reward-slots">
+            <div
+              v-for="(slot, i) in rewardSlots"
+              :key="i"
+              class="reward-slot"
+              :class="{
+                'reward-slot--material': slot.type === 'material',
+                'reward-slot--galaxy': isGalaxyBoss,
+              }"
+            >
+              <div class="slot-icon-wrap">
+                <img
+                  v-if="slot.type === 'material' && slotMaterial(slot)"
+                  :src="slotMaterial(slot)!.image"
+                  :alt="slotMaterial(slot)!.name"
+                  class="slot-mat-img"
+                />
+                <img
+                  v-else
+                  src="/img/BardAbilities/BardChime.png"
+                  alt="Chimes"
+                  class="slot-chimes-img"
+                />
+              </div>
+              <div class="slot-body">
+                <span class="slot-type-label">{{
+                  slot.type === 'material' ? 'Material' : 'Chimes'
+                }}</span>
+                <span
+                  class="slot-name"
+                  :class="
+                    slot.type === 'material'
+                      ? `rarity--${slotMaterial(slot)?.rarity}`
+                      : 'slot-chimes-val'
+                  "
+                >
+                  {{ slot.type === 'material' ? slotMaterial(slot)?.name : `${slot.amount}` }}
+                </span>
+              </div>
+              <span class="slot-guaranteed">✓</span>
+            </div>
+          </div>
+          <div v-if="homePlanetChampion" class="champion-unlock-row">
+            <img
+              v-if="homePlanetChampionImage"
+              :src="homePlanetChampionImage"
+              :alt="homePlanetChampion"
+              class="champion-portrait"
+              @error="($event.target as HTMLImageElement).style.display = 'none'"
+            />
+            <div class="loot-info">
+              <span class="loot-label">Champion</span>
+              <span class="champion-name">{{ homePlanetChampion }}</span>
+            </div>
+            <span class="loot-hint">freischaltbar</span>
+          </div>
+        </div>
+
         <!-- ── Battle Arena ──────────────────────────────────────────────── -->
         <BossArenaSection
           :is-galaxy-boss="isGalaxyBoss"
@@ -87,39 +152,6 @@
           </div>
         </div>
 
-        <!-- ── Rewards ───────────────────────────────────────────────────── -->
-        <div v-if="assignedMaterial || homePlanetChampion" class="loot-panel">
-          <div class="loot-title">⚡ BELOHNUNG</div>
-          <div class="loot-grid">
-            <div v-if="assignedMaterial" class="loot-item">
-              <span class="loot-icon">💎</span>
-              <div class="loot-info">
-                <span class="loot-label">Material</span>
-                <span class="loot-name" :class="`rarity--${assignedMaterial.rarity}`">{{
-                  assignedMaterial.name
-                }}</span>
-              </div>
-              <span class="loot-chance"
-                >{{ Math.round((bossStore.activeBoss?.assignedDropChance ?? 0) * 100) }}%</span
-              >
-            </div>
-            <div v-if="homePlanetChampion" class="loot-item loot-item--champion">
-              <img
-                v-if="homePlanetChampionImage"
-                :src="homePlanetChampionImage"
-                :alt="homePlanetChampion"
-                class="champion-portrait"
-                @error="($event.target as HTMLImageElement).style.display = 'none'"
-              />
-              <div class="loot-info">
-                <span class="loot-label">Champion</span>
-                <span class="champion-name">{{ homePlanetChampion }}</span>
-              </div>
-              <span class="loot-hint">freischaltbar</span>
-            </div>
-          </div>
-        </div>
-
         <div class="scanlines" aria-hidden="true" />
       </div>
     </div>
@@ -133,6 +165,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
+import type { PlanetBossRewardSlot } from '@/types'
 
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
@@ -168,10 +201,11 @@ const enragePercent = computed(() => {
 
 const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
 
-const assignedMaterial = computed(() => {
-  const id = bossStore.activeBoss?.potentialMaterialId
-  return id ? (MATERIALS.find((m) => m.id === id) ?? null) : null
-})
+const rewardSlots = computed(() => bossStore.activeBoss?.rewardSlots ?? [])
+
+function slotMaterial(slot: PlanetBossRewardSlot) {
+  return slot.materialId ? (MATERIALS.find((m) => m.id === slot.materialId) ?? null) : null
+}
 
 const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampion ?? null)
 const homePlanetChampionImage = computed(() => {
@@ -608,80 +642,160 @@ function handleShake(ms: number) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   LOOT PANEL
+   REWARD PREVIEW
 ══════════════════════════════════════════════════════════════════════════════ */
-.loot-panel {
-  border-top: 1px solid rgba(100, 60, 10, 0.5);
-  padding: 0.5rem 0.9rem 0.65rem;
-  background: rgba(0, 0, 0, 0.3);
+.reward-preview {
+  border-bottom: 1px solid rgba(100, 60, 10, 0.5);
+  padding: 0.75rem 0.9rem 0.8rem;
+  background: rgba(0, 0, 0, 0.35);
+  animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
-.loot-title {
-  font-size: 0.65rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--rpg-gold, #c8922a);
-  opacity: 0.7;
-  margin-bottom: 0.3rem;
+.reward-preview--galaxy {
+  border-bottom-color: rgba(120, 40, 160, 0.5);
 }
 
-.loot-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
+@keyframes rewardReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.loot-item {
+.reward-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.28rem 0.5rem;
-  background: rgba(255, 200, 100, 0.04);
-  border: 1px solid rgba(100, 60, 0, 0.3);
-  border-radius: 3px;
+  margin-bottom: 0.6rem;
 }
 
-.loot-item--champion {
-  border-color: rgba(60, 100, 160, 0.4);
-  background: rgba(60, 100, 200, 0.06);
+.reward-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.5));
 }
 
-.loot-icon {
-  font-size: 0.9rem;
-  flex-shrink: 0;
+.reward-header-line:last-child {
+  background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.5));
 }
 
-.loot-info {
+.reward-header-text {
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rpg-gold, #c8922a);
+  white-space: nowrap;
+}
+
+.reward-slots {
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
+  gap: 0.4rem;
+}
+
+.reward-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(200, 146, 42, 0.05);
+  border: 1px solid rgba(120, 78, 32, 0.55);
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(200, 146, 42, 0.06);
+}
+
+.reward-slot--material {
+  background: rgba(120, 40, 180, 0.07);
+  border-color: rgba(140, 60, 200, 0.45);
+  box-shadow: inset 0 1px 0 rgba(160, 80, 220, 0.08);
+}
+
+.reward-slot--galaxy.reward-slot--material {
+  border-color: rgba(180, 60, 255, 0.5);
+}
+
+.slot-icon-wrap {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141410;
+  border: 1px solid rgba(120, 78, 32, 0.6);
+  border-radius: 4px;
+}
+
+.reward-slot--material .slot-icon-wrap {
+  border-color: rgba(140, 60, 200, 0.5);
+}
+
+.slot-mat-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.slot-chimes-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.7));
+}
+
+.slot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
   flex: 1;
   min-width: 0;
 }
 
-.loot-label {
-  font-size: 0.6rem;
+.slot-type-label {
+  font-size: 0.58rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(200, 180, 140, 0.55);
+  letter-spacing: 0.08em;
+  color: rgba(200, 180, 140, 0.5);
 }
 
-.loot-name {
+.slot-name {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 
-.loot-chance {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--rpg-gold, #c8922a);
-  min-width: 2rem;
-  text-align: right;
+.slot-chimes-val {
+  color: #e8c040;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
+}
+
+.slot-guaranteed {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #52b830;
+  flex-shrink: 0;
+  text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
+}
+
+/* Champion Unlock Row */
+.champion-unlock-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  margin-top: 0.4rem;
+  background: rgba(60, 100, 200, 0.07);
+  border: 1px solid rgba(60, 100, 160, 0.4);
+  border-radius: 4px;
 }
 
 .champion-portrait {
-  height: 48px;
+  height: 40px;
   width: auto;
   object-fit: contain;
   border-radius: 3px;
@@ -692,7 +806,23 @@ function handleShake(ms: number) {
 .champion-name {
   color: var(--rpg-blue, #4a90d9);
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+}
+
+/* Shared info/label/hint helpers */
+.loot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.loot-label {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 180, 140, 0.5);
 }
 
 .loot-hint {

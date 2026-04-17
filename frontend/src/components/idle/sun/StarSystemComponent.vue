@@ -190,25 +190,30 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
   )
   if (!boss) return []
   const items: { key: string; image: string; name: string; count: number; index: number }[] = []
-  if (boss.reward && boss.reward > 0) {
+  const totalChimes = boss.rewardSlots
+    .filter((s) => s.type === 'chimes')
+    .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+  if (totalChimes > 0) {
     items.push({
       key: 'chimes',
       image: '/img/BardAbilities/BardChime.png',
       name: 'Chimes',
-      count: boss.reward,
+      count: totalChimes,
       index: 0,
     })
   }
-  if (boss.potentialMaterialId) {
-    const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
-    if (mat) {
-      items.push({
-        key: mat.id,
-        image: mat.image ?? '',
-        name: mat.name,
-        count: mat.dropCount ?? 1,
-        index: items.length,
-      })
+  for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
+    if (slot.materialId) {
+      const mat = MATERIALS.find((m) => m.id === slot.materialId)
+      if (mat) {
+        items.push({
+          key: mat.id,
+          image: mat.image ?? '',
+          name: mat.name,
+          count: 1,
+          index: items.length,
+        })
+      }
     }
   }
   return items
@@ -241,19 +246,23 @@ function getStarRewardSummary(star: StarRenderEntry) {
       (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
     )
     if (!boss) continue
-    totalChimes += boss.reward ?? 0
-    if (boss.potentialMaterialId) {
-      const mat = MATERIALS.find((m) => m.id === boss.potentialMaterialId)
-      if (mat) {
-        const existing = materialMap.get(boss.potentialMaterialId)
-        if (existing) {
-          existing.count += mat.dropCount ?? 1
-        } else {
-          materialMap.set(boss.potentialMaterialId, {
-            image: mat.image ?? '',
-            name: mat.name,
-            count: mat.dropCount ?? 1,
-          })
+    totalChimes += boss.rewardSlots
+      .filter((s) => s.type === 'chimes')
+      .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+    for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
+      if (slot.materialId) {
+        const mat = MATERIALS.find((m) => m.id === slot.materialId)
+        if (mat) {
+          const existing = materialMap.get(slot.materialId)
+          if (existing) {
+            existing.count += 1
+          } else {
+            materialMap.set(slot.materialId, {
+              image: mat.image ?? '',
+              name: mat.name,
+              count: 1,
+            })
+          }
         }
       }
     }

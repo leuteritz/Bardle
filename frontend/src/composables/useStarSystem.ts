@@ -128,8 +128,9 @@ function buildLabelData(
   const boss = bossStore.activeBosses.find((b) => b.planetId === planetId)
   if (!boss || boss.defeated || boss.expired) return null
 
-  const material = boss.potentialMaterialId
-    ? MATERIALS.find((m) => m.id === boss.potentialMaterialId)
+  const firstMaterialSlot = boss.rewardSlots.find((s) => s.type === 'material')
+  const material = firstMaterialSlot?.materialId
+    ? MATERIALS.find((m) => m.id === firstMaterialSlot.materialId)
     : null
 
   const championName = boss.homePlanetChampion ?? null
@@ -154,7 +155,9 @@ function buildLabelData(
     bossName: boss.bossName,
     currentHP: boss.currentHP,
     maxHP: boss.maxHP,
-    reward: boss.reward,
+    reward: boss.rewardSlots
+      .filter((s) => s.type === 'chimes')
+      .reduce((sum, s) => sum + (s.amount ?? 0), 0),
     chimesImage: '/img/BardAbilities/BardChime.png',
     materialImage: material?.image,
     materialName: material?.name,

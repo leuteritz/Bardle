@@ -329,8 +329,12 @@ watch(
   () => bossStore.lastBossResult,
   (result) => {
     if (result === 'victory') {
-      savedReward.value = bossStore.activeBoss?.reward ?? 0
-      savedHadMaterial.value = !!bossStore.activeBoss?.potentialMaterialId
+      savedReward.value =
+        bossStore.activeBoss?.rewardSlots
+          .filter((s) => s.type === 'chimes')
+          .reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
+      savedHadMaterial.value =
+        !!bossStore.activeBoss?.rewardSlots.some((s) => s.type === 'material')
       savedChampionName.value = bossStore.activeBoss?.homePlanetChampion ?? null
       showVictoryToast.value = true
       setTimeout(() => {
