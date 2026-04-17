@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
-import { useWindowFocus } from '@/composables/useWindowFocus'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
 // ─── Palettes ──────────────────────────────────────────────────────────────────
 
@@ -99,8 +99,7 @@ let prefersReducedMotion = false
 let parallaxTime = 0
 let lastRafTs = 0
 
-const { onFocusChange } = useWindowFocus()
-let removeFocusListener: (() => void) | null = null
+const { isRenderingPaused } = useRenderingPaused()
 
 // ─── Wolkenlücken ─────────────────────────────────────────────────────────────
 
@@ -314,7 +313,7 @@ function startEvent() {
   active.value = true
   requestAnimationFrame(() => {
     applyPalette(currentPalette)
-    if (document.hasFocus()) {
+    if (!isRenderingPaused.value) {
       rafHandle = requestAnimationFrame(animate)
     }
   })
@@ -337,7 +336,7 @@ function scheduleNext() {
   timerHandle = setTimeout(startEvent, delay)
 }
 
-// ─── Focus-Handling via useWindowFocus ────────────────────────────────────────
+// ─── Rendering-Pause-Handling ─────────────────────────────────────────────────
 
 function handleBlur() {
   if (rafHandle !== null) {
@@ -394,19 +393,19 @@ watch(triggerRequested, (requested) => {
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
+watch(isRenderingPaused, (paused) => {
+  if (paused) handleBlur()
+  else handleFocus()
+})
+
 onMounted(() => {
   prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  removeFocusListener = onFocusChange((focused) => {
-    if (focused) handleFocus()
-    else handleBlur()
-  })
   scheduleNext()
 })
 
 onBeforeUnmount(() => {
   if (timerHandle !== null) clearTimeout(timerHandle)
   if (rafHandle !== null) cancelAnimationFrame(rafHandle)
-  removeFocusListener?.()
 })
 </script>
 

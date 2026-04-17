@@ -183,6 +183,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
@@ -1027,6 +1028,20 @@ export default defineComponent({
       },
       { immediate: true },
     )
+
+    const { isRenderingPaused } = useRenderingPaused()
+
+    watch(isRenderingPaused, (paused) => {
+      if (paused) {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId)
+          rafId = null
+        }
+      } else if (show.value && rafId === null) {
+        rafLastPulseMs = 0
+        rafId = requestAnimationFrame(rafTick)
+      }
+    })
 
     watch(
       () => galaxyStore.isGalaxyTransitioning,

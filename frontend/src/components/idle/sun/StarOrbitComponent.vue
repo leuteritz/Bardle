@@ -95,7 +95,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { getOrbitPos } from '../../../utils/orbitMath'
 
@@ -339,6 +340,17 @@ const resEntityStyle = computed(() => {
 })
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
+
+const { isRenderingPaused } = useRenderingPaused()
+
+watch(isRenderingPaused, (paused) => {
+  if (paused) {
+    cancelAnimationFrame(animFrame)
+    animFrame = 0
+  } else if (!animFrame) {
+    animFrame = requestAnimationFrame(animate)
+  }
+})
 
 onMounted(() => {
   champProfile.value = pickRandomProfile()

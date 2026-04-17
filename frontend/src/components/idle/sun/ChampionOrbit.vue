@@ -82,6 +82,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
@@ -346,6 +347,17 @@ export default defineComponent({
       (slots) => combatStore.syncChampions(slots.filter((s): s is string => s !== null)),
       { immediate: true, deep: true },
     )
+
+    const { isRenderingPaused } = useRenderingPaused()
+
+    watch(isRenderingPaused, (paused) => {
+      if (paused) {
+        cancelAnimationFrame(animFrame)
+        animFrame = 0
+      } else if (!animFrame) {
+        animFrame = requestAnimationFrame(animate)
+      }
+    })
 
     onMounted(() => {
       animFrame = requestAnimationFrame(animate)

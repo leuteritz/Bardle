@@ -1,4 +1,5 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { activePlanetPositions } from '@/utils/activePlanetPositions'
 import { ORBIT_RADIUS_SCALE } from '@/config/constants'
 import { getOrbitPos } from '@/utils/orbitMath'
@@ -144,6 +145,17 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
     renderPositions.value = newPositions
     animFrame = requestAnimationFrame(animate)
   }
+
+  const { isRenderingPaused } = useRenderingPaused()
+
+  watch(isRenderingPaused, (paused) => {
+    if (paused) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    } else if (!animFrame) {
+      animFrame = requestAnimationFrame(animate)
+    }
+  })
 
   onMounted(() => {
     animFrame = requestAnimationFrame(animate)

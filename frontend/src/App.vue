@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import IdleGameComponent from '@/components/idle/IdleGameComponent.vue'
 import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vue'
@@ -23,25 +24,20 @@ useGalaxyTheme()
 
 const isInventoryOpen = ref(false)
 const activeTab = ref('idle')
-const effectsPaused = ref(false)
 
-const handleVisibilityChange = () => {
-  effectsPaused.value = document.hidden
-  document.documentElement.classList.toggle('effects-paused', document.hidden)
-}
+const { isRenderingPaused } = useRenderingPaused()
 
-onMounted(() => {
-  handleVisibilityChange()
-  document.addEventListener('visibilitychange', handleVisibilityChange)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
-})
+watch(
+  isRenderingPaused,
+  (paused) => {
+    document.documentElement.classList.toggle('rendering-paused', paused)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
-  <div class="min-h-screen cosmic-bg" :class="{ 'effects-paused': effectsPaused }">
+  <div class="min-h-screen cosmic-bg">
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
@@ -145,9 +141,11 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.effects-paused .cosmic-bg::before,
-.cosmic-bg.effects-paused::before {
-  animation-play-state: paused;
+.rendering-paused *,
+.rendering-paused *::before,
+.rendering-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
 }
 
 @keyframes cosmicShift {

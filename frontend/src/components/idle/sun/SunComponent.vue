@@ -132,7 +132,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
 
 interface DynamicRay {
@@ -289,6 +290,18 @@ export default defineComponent({
 
       animFrame = requestAnimationFrame(animate)
     }
+
+    const { isRenderingPaused } = useRenderingPaused()
+
+    watch(isRenderingPaused, (paused) => {
+      if (paused) {
+        cancelAnimationFrame(animFrame)
+        animFrame = 0
+      } else if (!animFrame) {
+        lastTimestamp = 0
+        animFrame = requestAnimationFrame(animate)
+      }
+    })
 
     onMounted(() => {
       animFrame = requestAnimationFrame(animate)
