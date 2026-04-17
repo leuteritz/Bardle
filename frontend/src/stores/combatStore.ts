@@ -8,6 +8,7 @@ import {
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { usePlanetBossStore } from './planetBossStore'
 import { useBattleStore } from './battleStore'
+import { useGameStore } from './gameStore'
 
 let _damageFloatId = 0
 
@@ -117,6 +118,8 @@ export const useCombatStore = defineStore('combat', {
       }
 
       if (attackingCount > 0) {
+        const gameStore = useGameStore()
+        if (gameStore.isGamePaused && activeBoss.isChampionPlanet) return
         const totalDPS = attackingCount * CHAMPION_DPS_BASE
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {

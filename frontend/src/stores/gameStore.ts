@@ -64,6 +64,11 @@ export const useGameStore = defineStore('game', {
     pendingAugmentSelections: [] as Array<{ options: string[] }>,
     isGamePaused: false,
 
+    pauseStats: {
+      kills: 0,
+      materialsEarned: {} as Record<string, number>,
+    },
+
     currentUniverse: 1,
     prestigeAvailable: false,
 
@@ -187,9 +192,16 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    resetPauseStats() {
+      this.pauseStats.kills = 0
+      this.pauseStats.materialsEarned = {}
+    },
+
     setPauseState(paused: boolean) {
       this.isGamePaused = paused
-      if (!paused) {
+      if (paused) {
+        this.resetPauseStats()
+      } else {
         this._activateNextPendingSelection()
       }
     },

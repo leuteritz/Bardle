@@ -245,8 +245,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     applyPassiveDamage() {
+      const gameStore = useGameStore()
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
+        if (gameStore.isGamePaused && boss.isChampionPlanet) continue
 
         boss.currentHP -= boss.passiveDPS
         boss.totalDamageDealt += boss.passiveDPS
@@ -337,6 +339,16 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === boss.homePlanetChampion)
         if (config) {
           battleStore.addRecruitableChampion(boss.homePlanetChampion, config.materialCost)
+        }
+      }
+
+      if (gameStore.isGamePaused) {
+        gameStore.pauseStats.kills++
+        for (const slot of boss.rewardSlots) {
+          if (slot.type === 'material' && slot.materialId) {
+            gameStore.pauseStats.materialsEarned[slot.materialId] =
+              (gameStore.pauseStats.materialsEarned[slot.materialId] ?? 0) + 1
+          }
         }
       }
 

@@ -133,6 +133,50 @@
               <div class="info-badge info-badge--green">{{ pendingStars }}</div>
             </div>
 
+            <!-- Pause kill stats -->
+            <div v-if="pauseKills > 0" class="pause-info pause-info--kills">
+              <div class="info-icon-wrap info-icon-wrap--red">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z" />
+                  <path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+                  <path d="M9.5 14.5v-5c0-.83-.67-1.5-1.5-1.5S6.5 8.67 6.5 9.5v5" />
+                  <path d="M3.5 10H5v-1.5C5 7.67 4.33 7 3.5 7S2 7.67 2 8.5 2.67 10 3.5 10z" />
+                  <path d="M11.5 15h1a2 2 0 012 2v2.5a2 2 0 01-2 2h-3a2 2 0 01-2-2V17a2 2 0 012-2h.5" />
+                </svg>
+              </div>
+              <span><strong>{{ pauseKills }}</strong> {{ pauseKills === 1 ? 'Boss besiegt' : 'Bosse besiegt' }} während der Pause</span>
+            </div>
+
+            <!-- Pause material drops -->
+            <div v-if="pauseMaterialEntries.length > 0" class="pause-info pause-info--mats">
+              <div class="info-icon-wrap info-icon-wrap--teal">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
+              <div class="mats-list">
+                <span v-for="entry in pauseMaterialEntries" :key="entry.id" class="mat-entry">
+                  <img v-if="entry.image" :src="entry.image" :alt="entry.name" class="mat-icon" />
+                  <span>{{ entry.name }}</span>
+                  <span class="mat-amount">×{{ entry.amount }}</span>
+                </span>
+              </div>
+            </div>
+
             <!-- Champion ETA / Ready -->
             <div
               v-if="isChampionTraveling || isChampionReady"
@@ -172,7 +216,7 @@
               <span v-if="isChampionTraveling"
                 >Champion erreicht Stern in <strong>{{ pauseEtaStr }}</strong></span
               >
-              <span v-else>Champion-Stern wartet — kehre ins Spiel zurück!</span>
+              <span v-else>Champion-System wartet auf dich — Pause aufheben!</span>
             </div>
 
             <!-- Bottom divider -->
@@ -214,7 +258,8 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
-import { formatNumber } from '@/config/numberFormat' // ← Pfad ggf. anpassen
+import { formatNumber } from '@/config/numberFormat'
+import { MATERIALS } from '@/config/materials'
 
 const { windowFocused } = useWindowFocus()
 const galaxyStore = useGalaxyStore()
@@ -255,6 +300,15 @@ onUnmounted(() => {
 const accumulatedChimes = computed(() => {
   void pauseTick.value
   return Math.max(0, gameStore.chimes - pauseStartChimes.value)
+})
+
+const pauseKills = computed(() => gameStore.pauseStats.kills)
+
+const pauseMaterialEntries = computed(() => {
+  return Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
+    const mat = MATERIALS.find((m) => m.id === id)
+    return { id, amount, name: mat?.name ?? id, image: mat?.image ?? null }
+  })
 })
 
 const pauseEtaStr = computed(() => {
@@ -648,6 +702,58 @@ function particleStyle(i: number): Record<string, string> {
   border-color: rgba(232, 192, 64, 0.5);
   color: #f0d060;
   box-shadow: 0 0 12px rgba(240, 208, 96, 0.12);
+}
+
+.pause-info--kills {
+  background: rgba(204, 96, 80, 0.07);
+  border-color: rgba(204, 96, 80, 0.35);
+  color: #e87060;
+}
+
+.info-icon-wrap--red {
+  color: #cc6050;
+  background: rgba(204, 96, 80, 0.1);
+}
+
+.pause-info--mats {
+  background: rgba(64, 192, 180, 0.06);
+  border-color: rgba(64, 192, 180, 0.28);
+  color: rgba(64, 210, 200, 0.85);
+  align-items: flex-start;
+}
+
+.info-icon-wrap--teal {
+  color: #40c0b4;
+  background: rgba(64, 192, 180, 0.1);
+}
+
+.mats-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mat-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(64, 192, 180, 0.08);
+  border: 1px solid rgba(64, 192, 180, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.82rem;
+}
+
+.mat-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.mat-amount {
+  color: #40c0b4;
+  font-weight: 700;
 }
 
 /* ─── Button ───────────────────────────────────────────────────────────── */
