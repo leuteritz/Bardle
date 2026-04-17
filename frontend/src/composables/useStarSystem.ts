@@ -14,6 +14,12 @@ const PLANET_SIZE_GALAXY_BOSS = 72
 const PLANET_SIZE_NORMAL = 52
 const VANISH_DURATION_MS = 800
 
+const SPAWN_DURATION_MS = 1000
+const BEHIND_FADE_BAND = 0.12
+const BEHIND_THRESHOLD = -0.05
+const BEHIND_SPEED_MULT = 4.5
+const SPEED_LERP = 0.04
+
 export interface PlanetRenderEntry {
   planetId: string
   type: PlanetType
@@ -35,6 +41,10 @@ export interface StarRenderEntry {
   scale: number
   opacity: number
   isBehind: boolean
+  orbitRx: number
+  orbitRy: number
+  orbitTilt: number
+  hintOpacity: number
   planets: PlanetRenderEntry[]
 }
 
@@ -178,11 +188,15 @@ export function useStarSystem() {
 
   const starRenders = ref<StarRenderEntry[]>([])
 
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   const starAngles = new Map<string, number>()
   const planetAngles = new Map<string, number>()
   const planetCurRx = new Map<string, number>()
   const planetCurRy = new Map<string, number>()
   const planetSavedAt = new Map<string, number>()
+  const starSpawnedAt = new Map<string, number>()
+  const starSpeedMul = new Map<string, number>()
   // Statt isVanishing im Render: Set der IDs für die bereits gespawnt wurde
   const vanishFired = new Set<string>()
 
@@ -269,8 +283,9 @@ export function useStarSystem() {
     const newRenders: StarRenderEntry[] = []
 
     for (const star of starGroupStore.activeStars) {
+      let speedMul = starSpeedMul.get(star.id) ?? 1.0
       let sAngle = starAngles.get(star.id) ?? star.starAngle
-      sAngle += star.starDirection * star.orbitSpeed * dt
+      sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)
 
       const { x: sx, y: sy } = getOrbitPos(
@@ -283,10 +298,23 @@ export function useStarSystem() {
       )
 
       const sRelY = (sy - screenCy) / Math.max(star.orbitRy, 1)
-      const sIsBehind = sRelY < -0.05
+      const sIsBehind = sRelY < BEHIND_THRESHOLD
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
-      const sScale = 0.72 + sDepth * 0.56
-      const sOpacity = sIsBehind ? 0.22 + sDepth * 0.38 : 0.78 + sDepth * 0.22
+
+      const visibleFactor = Math.max(0, Math.min(1,
+        (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND,
+      ))
+
+      if (!starSpawnedAt.has(star.id)) starSpawnedAt.set(star.id, ts)
+      const spawnT = Math.min(1, (ts - starSpawnedAt.get(star.id)!) / SPAWN_DURATION_MS)
+      const spawnFactor = reducedMotion ? 1 : 1 - Math.pow(1 - spawnT, 3)
+
+      const targetMul = sIsBehind ? BEHIND_SPEED_MULT : 1.0
+      starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * SPEED_LERP)
+
+      const baseScale = 0.72 + sDepth * 0.56
+      const sScale = baseScale * (reducedMotion ? 1 : Math.max(0.05, spawnFactor))
+      const sOpacity = visibleFactor * (0.78 + sDepth * 0.22) * spawnFactor
 
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 
@@ -331,7 +359,7 @@ export function useStarSystem() {
         const pIsBehind = pRelY < -0.05
         const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
         const pScale = 0.72 + pDepth * 0.56
-        const pOpacity = 0.2 + pDepth * 0.8
+        const pOpacity = (0.2 + pDepth * 0.8) * visibleFactor * spawnFactor
 
         const transform =
           `translate(${px}px, ${py}px) ` +
@@ -353,7 +381,9 @@ export function useStarSystem() {
         }
 
         const labelData =
-          !slot.cleared && !pIsBehind ? buildLabelData(slot.planetId, px, py, pR, sx, sy) : null
+          !slot.cleared && !pIsBehind && !sIsBehind
+            ? buildLabelData(slot.planetId, px, py, pR, sx, sy)
+            : null
 
         planetEntries.push({
           planetId: slot.planetId,
@@ -377,6 +407,10 @@ export function useStarSystem() {
         scale: sScale,
         opacity: sOpacity,
         isBehind: sIsBehind,
+        orbitRx: star.orbitRx,
+        orbitRy: star.orbitRy,
+        orbitTilt: star.orbitTilt,
+        hintOpacity: (1 - visibleFactor) * spawnFactor,
         planets: planetEntries,
       })
     }
@@ -386,6 +420,12 @@ export function useStarSystem() {
       if (!starGroupStore.activeStars.some((s) => s.id === id)) {
         vanishFired.delete(id)
       }
+    }
+    for (const id of starSpawnedAt.keys()) {
+      if (!starGroupStore.activeStars.some((s) => s.id === id)) starSpawnedAt.delete(id)
+    }
+    for (const id of starSpeedMul.keys()) {
+      if (!starGroupStore.activeStars.some((s) => s.id === id)) starSpeedMul.delete(id)
     }
 
     const allActiveSlots = new Set(

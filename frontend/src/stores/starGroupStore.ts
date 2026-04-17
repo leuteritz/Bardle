@@ -81,7 +81,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
-        starAngle: Math.random() * Math.PI * 2,
+        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: 430,
         orbitRy: 188,
@@ -124,7 +124,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: starId,
         starType: 'resource',
-        starAngle: Math.random() * Math.PI * 2,
+        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: 430,
         orbitRy: 188,
@@ -239,7 +239,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'galaxy_boss',
-        starAngle: Math.random() * Math.PI * 2,
+        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
         starDirection: 1,
         orbitRx: 320,
         orbitRy: 138,

@@ -1,899 +1,953 @@
 <template>
-  <!-- Galaxy Boss Spawn — Episches cinematisches Overlay -->
-  <Transition name="galaxy-boss-fade">
-    <div v-if="showGalaxyBossFlash" class="galaxy-boss-overlay" aria-hidden="true">
-      <div class="galaxy-boss-rings">
-        <div class="boss-ring boss-ring--1" />
-        <div class="boss-ring boss-ring--2" />
-        <div class="boss-ring boss-ring--3" />
-      </div>
-      <div class="galaxy-boss-text">
-        <span class="boss-alert-line">⚠ SIGNALQUELLE GEORTET ⚠</span>
-        <span class="boss-title-line">☠ GALAXIS-BOSS ☠</span>
-      </div>
-    </div>
-  </Transition>
-
-  <!-- Alert vignette flash when rescue event spawns -->
-  <Transition name="vignette-fade">
-    <div v-if="showFlash" class="planet-vignette" aria-hidden="true" />
-  </Transition>
-
-  <!-- Champion-Ankunft Vignette (feuerrot) -->
-  <Transition name="champion-vignette-fade">
-    <div v-if="showChampionFlash" class="planet-vignette--champion" aria-hidden="true" />
-  </Transition>
-
-  <!-- Stacked countdown bars — one per active planet boss -->
-  <TransitionGroup
-    v-if="activeBosses.length > 0"
-    name="bar-stack"
-    tag="div"
-    class="planet-bar-stack"
-    aria-hidden="true"
-  >
+  <Transition name="boss-entrance">
     <div
-      v-for="(boss, idx) in activeBosses"
-      :key="boss.planetId"
-      class="planet-countdown-bar"
-      :style="{
-        '--bar-color': barColor(idx, activeBosses.length),
-        '--bar-color-dark': barColorDark(idx, activeBosses.length),
-      }"
+      v-if="bossStore.bossModalOpen"
+      class="battle-backdrop"
+      :class="{ 'battle-backdrop--shaking': isShaking }"
+      aria-modal="true"
+      role="dialog"
+      @click.self="bossStore.closeBossModal()"
     >
-      <div
-        class="planet-countdown-fill planet-countdown-fill--left"
-        :style="{
-          right: leftFill.right + 'px',
-          width: (progressPercent(boss) / 100) * leftFill.width + 'px',
-        }"
-      />
-      <div
-        class="planet-countdown-fill planet-countdown-fill--right"
-        :style="{
-          left: rightFill.left + 'px',
-          width: (progressPercent(boss) / 100) * rightFill.width + 'px',
-        }"
-      />
-      <span class="planet-countdown-label">
-        ⚠ {{ boss.bossName }} — {{ formatCountdown(boss) }}
-      </span>
-    </div>
-  </TransitionGroup>
+      <div class="atmosphere" :class="{ 'atmosphere--galaxy': isGalaxyBoss }">
+        <span v-for="i in 24" :key="i" class="ember" :style="emberStyle(i)" />
+      </div>
 
-  <!-- Boss Defeated toast -->
-  <Transition name="toast-slide">
-    <div v-if="showVictoryToast" class="planet-toast planet-toast--saved">
-      ✨ Boss Defeated! +{{ formatNumber(savedReward) }} Chimes
-      <template v-if="droppedMaterial">
-        <br />
-        <span class="toast-material">
-          <img :src="droppedMaterial.image" class="toast-material-img rpg-img" alt="" />
-          {{ droppedMaterial.name }} erhalten!
-        </span>
-      </template>
-      <template v-else-if="savedHadMaterial">
-        <br />
-        <span class="toast-material toast-material--none">Kein Material gedroppt</span>
-      </template>
-      <template v-if="savedChampionName">
-        <br />
-        <span class="toast-material toast-material--champion">
-          <img
-            v-if="savedChampionImage"
-            :src="savedChampionImage"
-            :alt="savedChampionName"
-            class="toast-material-img toast-material-img--champion"
-          />
-          {{ savedChampionName }} entdeckt! Sieh im Champion Shop nach.
-        </span>
-      </template>
-    </div>
-  </Transition>
+      <div class="battle-modal" :class="{ 'battle-modal--galaxy': isGalaxyBoss }">
+        <div class="corner corner--tl" />
+        <div class="corner corner--tr" />
+        <div class="corner corner--bl" />
+        <div class="corner corner--br" />
 
-  <!-- Boss Enraged toast -->
-  <Transition name="toast-slide">
-    <div v-if="showDefeatToast" class="planet-toast planet-toast--lost">
-      💥 Boss Enraged! -5% CPS für 30s
-    </div>
-  </Transition>
+        <!-- ── Boss Name Banner ──────────────────────────────────────────── -->
+        <div class="name-banner" :class="{ 'name-banner--galaxy': isGalaxyBoss }">
+          <div v-if="isGalaxyBoss" class="boss-type-badge boss-type-badge--galaxy">
+            ✦ GALAXIE-BOSS ✦
+          </div>
+          <h2 class="boss-name" :class="{ 'boss-name--galaxy': isGalaxyBoss }">
+            {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
+          </h2>
+        </div>
 
-  <!-- Champion-Ankunft Toast (feuerrot) -->
-  <Transition name="toast-slide">
-    <div v-if="showChampionArrivedToast" class="planet-toast planet-toast--champion-arrived">
-      🔥 Champion-Planet eingetroffen!
+        <!-- ── Battle Arena ──────────────────────────────────────────────── -->
+        <BossArenaSection
+          :is-galaxy-boss="isGalaxyBoss"
+          :boss-h-p-percent="bossStore.bossHPPercent"
+          :seconds-remaining="secondsRemaining"
+          :enrage-percent="enragePercent"
+          :team-champions="teamChampions"
+          :get-champion-image="battleStore.getChampionImage"
+          :active-boss="bossStore.activeBoss"
+          @shake="handleShake"
+        />
+
+        <!-- ── HP Bar ────────────────────────────────────────────────────── -->
+        <div class="hp-section">
+          <div class="hp-header">
+            <span class="stat-label">❤ LEBEN</span>
+            <span class="hp-numbers">
+              {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }}
+              <span class="hp-sep">／</span>
+              {{ formatNumber(bossStore.activeBoss?.maxHP ?? 0) }}
+            </span>
+          </div>
+          <div
+            class="hp-track"
+            :class="{
+              'hp-track--critical': bossStore.bossHPPercent < 25,
+              'hp-track--galaxy': isGalaxyBoss,
+            }"
+          >
+            <div
+              class="hp-fill"
+              :class="{
+                'hp-fill--galaxy': isGalaxyBoss,
+                'hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
+                'hp-fill--critical': bossStore.bossHPPercent < 25,
+              }"
+              :style="{ width: bossStore.bossHPPercent + '%' }"
+            />
+            <div class="hp-segments">
+              <div v-for="i in 9" :key="i" class="hp-seg-line" :style="{ left: i * 10 + '%' }" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Rewards ───────────────────────────────────────────────────── -->
+        <div class="reward-block" :class="{ 'reward-block--galaxy': isGalaxyBoss }">
+          <div class="reward-block-header">
+            <span class="reward-header-line" />
+            <span class="reward-header-text">✦ Besiege den Champion und erhalte ✦</span>
+            <span class="reward-header-line" />
+          </div>
+
+          <div class="reward-row">
+            <!-- Materialien (zusammengefasst, je einmal) -->
+            <div v-for="(entry, i) in groupedMaterials" :key="'mat-' + i" class="reward-item">
+              <img :src="entry.material.image" :alt="entry.material.name" class="reward-item-img" />
+              <div class="reward-item-info">
+                <span class="reward-item-label">Material</span>
+                <span class="reward-item-name" :class="`rarity--${entry.material.rarity}`">
+                  {{ entry.material.name }}
+                </span>
+                <span v-if="entry.amount > 1" class="reward-item-amount">× {{ entry.amount }}</span>
+              </div>
+              <span class="reward-check">✓</span>
+            </div>
+
+            <!-- Trennlinie wenn beides vorhanden -->
+            <div v-if="groupedMaterials.length && chimesTotal > 0" class="reward-divider" />
+
+            <!-- Chimes -->
+            <div
+              v-if="chimesTotal > 0"
+              class="reward-item reward-item--chimes"
+              :class="{ 'reward-item--chimes-galaxy': isGalaxyBoss }"
+            >
+              <img
+                src="/img/BardAbilities/BardChime.png"
+                alt="Chimes"
+                class="reward-item-img reward-item-img--chimes"
+              />
+              <div class="reward-item-info">
+                <span class="reward-item-label">Chimes</span>
+                <span
+                  class="reward-chimes-value"
+                  :class="{ 'reward-chimes-value--galaxy': isGalaxyBoss }"
+                >
+                  {{ chimesTotal }}
+                </span>
+              </div>
+              <span class="reward-check">✓</span>
+            </div>
+          </div>
+
+          <!-- Champion -->
+          <div v-if="homePlanetChampion" class="champion-row">
+            <div class="champion-row-divider" />
+            <div class="champion-row-inner">
+              <img
+                v-if="homePlanetChampionImage"
+                :src="homePlanetChampionImage"
+                :alt="homePlanetChampion"
+                class="champion-portrait"
+                @error="($event.target as HTMLImageElement).style.display = 'none'"
+              />
+              <div class="champion-info">
+                <span class="reward-item-label">Champion</span>
+                <span class="champion-name">{{ homePlanetChampion }}</span>
+              </div>
+              <span class="champion-hint">freischaltbar</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scanlines" aria-hidden="true" />
+      </div>
     </div>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import type { PlanetBossEvent } from '@/types'
-import { usePlanetEventStore } from '@/stores/planetEventStore'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useBattleStore } from '@/stores/battleStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
+import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
+import type { PlanetBossRewardSlot } from '@/types'
 
-const planetEventStore = usePlanetEventStore()
 const bossStore = usePlanetBossStore()
-const galaxyStore = useGalaxyStore()
-const starGroupStore = useStarGroupStore()
+const battleStore = useBattleStore()
 
-// Drive countdown reactivity at 200ms resolution
+const teamChampions = computed<string[]>(() => battleStore.selectedChampions.slice(0, 4))
+
+const isShaking = ref(false)
+
 const now = ref(Date.now())
 let tickInterval: ReturnType<typeof setInterval> | null = null
-
-// Pixel-precise fill geometry derived from the actual .center-chimes DOM position
-const leftFill = ref({ right: 80, width: 560 })
-const rightFill = ref({ left: 80, width: 560 })
-let resizeObserver: ResizeObserver | null = null
-
-function measureChimes() {
-  const bar = document.querySelector('.planet-countdown-bar') as HTMLElement | null
-  const chimes = document.querySelector('.center-chimes') as HTMLElement | null
-  if (!bar || !chimes) return
-  const b = bar.getBoundingClientRect()
-  const c = chimes.getBoundingClientRect()
-  leftFill.value = { right: b.right - c.left, width: c.left - b.left }
-  rightFill.value = { left: c.right - b.left, width: b.right - c.right }
-}
-
-watch(
-  () => planetEventStore.isEventActive,
-  (active) => {
-    if (active) nextTick(measureChimes)
-  },
-)
 
 onMounted(() => {
   tickInterval = setInterval(() => {
     now.value = Date.now()
   }, 200)
-  measureChimes()
-  resizeObserver = new ResizeObserver(measureChimes)
-  const header = document.querySelector('.header-bar') as HTMLElement | null
-  if (header) resizeObserver.observe(header)
 })
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
-  resizeObserver?.disconnect()
 })
 
-// ── Genau 1 Timer-Bar pro aktivem Stern ─────────────────────────────────────
-//
-// Strategie: Wir iterieren über activeStars und wählen pro Stern
-// genau den einen repräsentativen Boss aus:
-//   - Champion-Stern  → isChampionPlanet=true (der Champion-Planet)
-//   - Resource-Stern  → erster nicht-cleared Slot (alle haben denselben Timer)
-//   - Galaxy-Boss     → einziger Planet
-//
-// Fallback (kein starGroupStore-Eintrag vorhanden): alle aktiven Bosses
-// ohne noEnrage, dedupliziert auf einen.
-const activeBosses = computed((): PlanetBossEvent[] => {
-  const bossMap = new Map<string, PlanetBossEvent>()
-  for (const b of bossStore.activeBosses) {
-    if (!b.defeated && !b.expired) bossMap.set(b.planetId, b)
-  }
-
-  if (bossMap.size === 0) return []
-
-  const result: PlanetBossEvent[] = []
-
-  for (const star of starGroupStore.activeStars) {
-    let representative: PlanetBossEvent | undefined
-
-    if (star.starType === 'champion') {
-      // Champion-Stern: nur der Champion-Planet bekommt einen Bar
-      const champSlot = star.planetSlots.find((s) => s.isChampionPlanet && !s.cleared)
-      if (champSlot) representative = bossMap.get(champSlot.planetId)
-    } else {
-      // Resource-Stern und Galaxy-Boss: erster noch nicht gecleared Slot
-      for (const slot of star.planetSlots) {
-        if (!slot.cleared) {
-          const boss = bossMap.get(slot.planetId)
-          if (boss) {
-            representative = boss
-            break
-          }
-        }
-      }
-    }
-
-    if (representative) result.push(representative)
-  }
-
-  // Fallback: Bosses ohne zugehörigen Stern (sollte nicht vorkommen)
-  if (result.length === 0) {
-    const enrageable = [...bossMap.values()].filter((b) => !b.noEnrage)
-    if (enrageable.length > 0) return [enrageable[0]]
-    const first = [...bossMap.values()][0]
-    return first ? [first] : []
-  }
-
-  return result
+const secondsRemaining = computed(() => {
+  const boss = bossStore.activeBoss
+  if (!boss || !bossStore.isBossActive) return 0
+  return Math.max(0, Math.ceil((boss.enrageTimerMs - (now.value - boss.startTime)) / 1000))
 })
 
-function progressPercent(boss: PlanetBossEvent): number {
+const enragePercent = computed(() => {
+  const boss = bossStore.activeBoss
+  if (!boss || !bossStore.isBossActive) return 0
   const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
   return (remaining / boss.enrageTimerMs) * 100
-}
-
-function formatCountdown(boss: PlanetBossEvent): string {
-  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
-  const secs = Math.ceil(remaining / 1000)
-  const m = Math.floor(secs / 60)
-    .toString()
-    .padStart(2, '0')
-  const s = (secs % 60).toString().padStart(2, '0')
-  return `${m}:${s}`
-}
-
-function barColor(idx: number, total: number): string {
-  const hue = total <= 1 ? 10 : (idx / (total - 1)) * 35
-  return `hsl(${hue}, 90%, 48%)`
-}
-
-function barColorDark(idx: number, total: number): string {
-  const hue = total <= 1 ? 10 : (idx / (total - 1)) * 35
-  return `hsl(${hue}, 80%, 25%)`
-}
-
-// Flash on rescue event spawn
-const showFlash = ref(false)
-let flashTimeout: ReturnType<typeof setTimeout> | null = null
-
-watch(
-  () => bossStore.activeBosses.length,
-  (newLen, oldLen) => {
-    if (newLen <= oldLen) return
-    showFlash.value = true
-    if (flashTimeout) clearTimeout(flashTimeout)
-    flashTimeout = setTimeout(() => {
-      showFlash.value = false
-    }, 1500)
-  },
-)
-
-// ── Champion-Ankunft Flash + Toast + Sound ────────────────────────────────
-const showChampionFlash = ref(false)
-const showChampionArrivedToast = ref(false)
-let championFlashTimeout: ReturnType<typeof setTimeout> | null = null
-let championToastTimeout: ReturnType<typeof setTimeout> | null = null
-
-function playChampionChimes() {
-  const chimePaths = [
-    '/sounds/chime_high.wav',
-    '/sounds/chime_mid.wav',
-    '/sounds/chime_high.wav',
-    '/sounds/chime_low.wav',
-  ]
-  const delays = [0, 220, 500, 920]
-  const volumes = [0.55, 0.9, 0.75, 0.5]
-
-  chimePaths.forEach((path, i) => {
-    setTimeout(() => {
-      try {
-        const audio = new Audio(path)
-        audio.volume = volumes[i]
-        audio.play().catch(() => {})
-      } catch {
-        // Audio nicht verfügbar
-      }
-    }, delays[i])
-  })
-}
-
-watch(
-  () => galaxyStore.championJustArrived,
-  (arrived) => {
-    if (!arrived) return
-
-    showChampionFlash.value = true
-    if (championFlashTimeout) clearTimeout(championFlashTimeout)
-    championFlashTimeout = setTimeout(() => {
-      showChampionFlash.value = false
-    }, 2800)
-
-    showChampionArrivedToast.value = true
-    if (championToastTimeout) clearTimeout(championToastTimeout)
-    championToastTimeout = setTimeout(() => {
-      showChampionArrivedToast.value = false
-    }, 3500)
-
-    playChampionChimes()
-  },
-)
-
-// Dropped material
-const droppedMaterial = computed(() =>
-  bossStore.lastDroppedMaterialId
-    ? (MATERIALS.find((m) => m.id === bossStore.lastDroppedMaterialId) ?? null)
-    : null,
-)
-
-// Victory toast
-const showVictoryToast = ref(false)
-const savedReward = ref(0)
-const savedHadMaterial = ref(false)
-const savedChampionName = ref<string | null>(null)
-const savedChampionImage = computed(() => {
-  if (!savedChampionName.value) return null
-  return savedChampionName.value === 'Bard'
-    ? '/img/BardAbilities/Bard.png'
-    : `/img/champion/${savedChampionName.value}.jpg`
 })
 
-watch(
-  () => bossStore.lastBossResult,
-  (result) => {
-    if (result === 'victory') {
-      savedReward.value =
-        bossStore.activeBoss?.rewardSlots
-          .filter((s) => s.type === 'chimes')
-          .reduce((sum, s) => sum + (s.amount ?? 0), 0) ?? 0
-      savedHadMaterial.value =
-        !!bossStore.activeBoss?.rewardSlots.some((s) => s.type === 'material')
-      savedChampionName.value = bossStore.activeBoss?.homePlanetChampion ?? null
-      showVictoryToast.value = true
-      setTimeout(() => {
-        showVictoryToast.value = false
-      }, 3000)
+const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
+const rewardSlots = computed(() => bossStore.activeBoss?.rewardSlots ?? [])
+
+// Materialien zusammenfassen: gleiche materialId → einmal anzeigen, Anzahl summieren
+const groupedMaterials = computed(() => {
+  const map = new Map<
+    string,
+    { material: NonNullable<ReturnType<typeof slotMaterial>>; amount: number }
+  >()
+  for (const slot of rewardSlots.value.filter((s: PlanetBossRewardSlot) => s.type === 'material')) {
+    const mat = slotMaterial(slot)
+    if (!mat) continue
+    const existing = map.get(mat.id)
+    if (existing) {
+      existing.amount += slot.amount ?? 1
+    } else {
+      map.set(mat.id, { material: mat, amount: slot.amount ?? 1 })
     }
-  },
+  }
+  return Array.from(map.values())
+})
+
+const chimesTotal = computed(() =>
+  rewardSlots.value
+    .filter((s: PlanetBossRewardSlot) => s.type === 'chimes')
+    .reduce((sum: number, s: PlanetBossRewardSlot) => sum + (s.amount ?? 0), 0),
 )
 
-// Defeat toast
-const showDefeatToast = ref(false)
+function slotMaterial(slot: PlanetBossRewardSlot) {
+  return slot.materialId ? (MATERIALS.find((m) => m.id === slot.materialId) ?? null) : null
+}
+
+const homePlanetChampion = computed(() => bossStore.activeBoss?.homePlanetChampion ?? null)
+const homePlanetChampionImage = computed(() => {
+  const name = homePlanetChampion.value
+  if (!name) return null
+  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
+})
+
+function emberStyle(i: number): Record<string, string> {
+  const duration = 1.8 + (i % 6) * 0.7
+  const delay = (i % 11) * -0.35
+  const left = (i * 4.17) % 100
+  const size = 1.5 + (i % 3)
+  return {
+    left: `${left}%`,
+    width: `${size}px`,
+    height: `${size}px`,
+    animationDuration: `${duration}s`,
+    animationDelay: `${delay}s`,
+    opacity: `${0.4 + (i % 4) * 0.15}`,
+  }
+}
 
 watch(
-  () => bossStore.lastBossResult,
-  (result) => {
-    if (result === 'defeat') {
-      showDefeatToast.value = true
-      setTimeout(() => {
-        showDefeatToast.value = false
-      }, 3000)
-    }
+  () => bossStore.isBossActive,
+  (active) => {
+    if (!active) bossStore.closeBossModal()
   },
 )
 
-// ── Galaxy-Boss-Spawn: Episches cinematisches Overlay ────────────────────────
-const showGalaxyBossFlash = ref(false)
-let bossFlashTimeout: ReturnType<typeof setTimeout> | null = null
-
-watch(
-  () => galaxyStore.galaxyBossJustSpawned,
-  (spawned) => {
-    if (!spawned) return
-    showGalaxyBossFlash.value = true
-    if (bossFlashTimeout) clearTimeout(bossFlashTimeout)
-    bossFlashTimeout = setTimeout(() => {
-      showGalaxyBossFlash.value = false
-    }, 4500)
-  },
-)
+function handleShake(ms: number) {
+  isShaking.value = true
+  setTimeout(() => {
+    isShaking.value = false
+  }, ms)
+}
 </script>
 
 <style scoped>
-/* ─── Vignette Flash (normaler Rescue-Spawn) ─────────────────────────────── */
-.planet-vignette {
+/* ══════════════════════════════════════════════════════════════════════════════
+   BACKDROP
+══════════════════════════════════════════════════════════════════════════════ */
+.battle-backdrop {
   position: fixed;
   inset: 0;
-  pointer-events: none;
-  z-index: 15;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 35%,
-    rgba(255, 55, 0, 0.28) 75%,
-    rgba(255, 30, 0, 0.45) 100%
-  );
-}
-
-.vignette-fade-enter-active {
-  animation: vignetteIn 0.25s ease-out;
-}
-.vignette-fade-leave-active {
-  animation: vignetteOut 1.3s ease-in forwards;
-}
-
-@keyframes vignetteIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes vignetteOut {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* ─── Galaxy-Boss Cinematic Overlay ──────────────────────────────────────── */
-.galaxy-boss-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
+  z-index: 110;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(80, 0, 120, 0.92) 0%,
-    rgba(40, 0, 60, 0.88) 40%,
-    rgba(150, 10, 10, 0.75) 70%,
-    rgba(0, 0, 0, 0.95) 100%
-  );
-  animation:
-    boss-screen-shake 0.5s ease-in-out 0.3s,
-    boss-pulse-bg 1.2s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse at center, rgba(20, 4, 0, 0.92) 0%, rgba(0, 0, 0, 0.97) 100%);
+  pointer-events: auto;
 }
 
-@keyframes boss-screen-shake {
-  0%,
-  100% {
-    transform: translateX(0) translateY(0);
+.battle-backdrop--shaking {
+  animation: screen-shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes screen-shake {
+  10%,
+  90% {
+    transform: translate(-2px, 0);
   }
-  10% {
-    transform: translateX(-8px) translateY(-4px);
+  20%,
+  80% {
+    transform: translate(3px, 1px);
   }
-  30% {
-    transform: translateX(8px) translateY(3px);
+  30%,
+  50%,
+  70% {
+    transform: translate(-3px, -1px);
+  }
+  40%,
+  60% {
+    transform: translate(3px, 1px);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ATMOSPHERIC EMBERS
+══════════════════════════════════════════════════════════════════════════════ */
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ember {
+  position: absolute;
+  bottom: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff8800 0%, #ff3300 60%, transparent 100%);
+  animation: ember-rise linear infinite;
+  filter: blur(0.5px);
+}
+
+.atmosphere--galaxy .ember {
+  background: radial-gradient(circle, #cc55ff 0%, #8800cc 60%, transparent 100%);
+}
+
+@keyframes ember-rise {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.9;
   }
   50% {
-    transform: translateX(-6px) translateY(-2px);
+    transform: translateY(-40vh) translateX(12px) scale(0.8);
+    opacity: 0.6;
   }
-  70% {
-    transform: translateX(6px) translateY(4px);
-  }
-  90% {
-    transform: translateX(-3px) translateY(-1px);
+  100% {
+    transform: translateY(-90vh) translateX(-8px) scale(0.3);
+    opacity: 0;
   }
 }
 
-@keyframes boss-pulse-bg {
+/* ══════════════════════════════════════════════════════════════════════════════
+   MODAL CARD
+══════════════════════════════════════════════════════════════════════════════ */
+.battle-modal {
+  position: relative;
+  pointer-events: auto;
+  width: clamp(360px, 44vw, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0e0800 0%, #140c04 40%, #0a0600 100%);
+  border: 2px solid #6b3a10;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1px #3a1e06,
+    inset 0 0 40px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(200, 80, 0, 0.25),
+    0 0 70px rgba(150, 40, 0, 0.12),
+    0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.battle-modal--galaxy {
+  border-color: #7a1888;
+  box-shadow:
+    inset 0 0 0 1px #3a0848,
+    inset 0 0 40px rgba(80, 0, 100, 0.4),
+    0 0 40px rgba(180, 40, 220, 0.3),
+    0 0 80px rgba(120, 20, 160, 0.15),
+    0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  z-index: 10;
+  pointer-events: none;
+}
+.corner--tl {
+  top: 0;
+  left: 0;
+  border-top: 2px solid var(--rpg-gold, #c8922a);
+  border-left: 2px solid var(--rpg-gold, #c8922a);
+}
+.corner--tr {
+  top: 0;
+  right: 0;
+  border-top: 2px solid var(--rpg-gold, #c8922a);
+  border-right: 2px solid var(--rpg-gold, #c8922a);
+}
+.corner--bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 2px solid var(--rpg-gold, #c8922a);
+  border-left: 2px solid var(--rpg-gold, #c8922a);
+}
+.corner--br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid var(--rpg-gold, #c8922a);
+  border-right: 2px solid var(--rpg-gold, #c8922a);
+}
+.battle-modal--galaxy .corner {
+  border-color: #cc44ff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BOSS NAME BANNER
+══════════════════════════════════════════════════════════════════════════════ */
+.name-banner {
+  position: relative;
+  text-align: center;
+  padding: 0.7rem 1.2rem 0.5rem;
+  background: linear-gradient(180deg, rgba(60, 20, 0, 0.9) 0%, rgba(20, 6, 0, 0.5) 100%);
+  border-bottom: 1px solid #4a2508;
+  overflow: hidden;
+}
+
+.name-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 40px,
+    rgba(200, 100, 0, 0.04) 40px,
+    rgba(200, 100, 0, 0.04) 41px
+  );
+  pointer-events: none;
+}
+
+.name-banner--galaxy {
+  background: linear-gradient(180deg, rgba(40, 0, 60, 0.95) 0%, rgba(10, 0, 20, 0.5) 100%);
+  border-bottom-color: #4a0860;
+}
+
+.boss-type-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--rpg-gold, #c8922a);
+  opacity: 0.75;
+  margin-bottom: 0.2rem;
+  animation: badge-pulse 2s ease-in-out infinite alternate;
+}
+.boss-type-badge--galaxy {
+  color: #cc44ff;
+}
+
+@keyframes badge-pulse {
   from {
-    filter: brightness(1);
+    opacity: 0.6;
   }
   to {
-    filter: brightness(1.35);
+    opacity: 1;
   }
 }
 
-.galaxy-boss-rings {
+.boss-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rpg-danger, #ff3c00);
+  text-shadow:
+    0 0 8px rgba(255, 60, 0, 0.7),
+    0 0 20px rgba(255, 60, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  animation: name-flicker 4s ease-in-out infinite;
+}
+
+.boss-name--galaxy {
+  color: #d060f8;
+  text-shadow:
+    0 0 12px rgba(200, 60, 255, 0.9),
+    0 0 30px rgba(200, 60, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  animation: galaxy-name-pulse 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes name-flicker {
+  0%,
+  95%,
+  100% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.7;
+  }
+  97% {
+    opacity: 1;
+  }
+  98% {
+    opacity: 0.6;
+  }
+  99% {
+    opacity: 1;
+  }
+}
+
+@keyframes galaxy-name-pulse {
+  from {
+    text-shadow:
+      0 0 12px rgba(200, 60, 255, 0.9),
+      0 0 30px rgba(200, 60, 255, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+  to {
+    text-shadow:
+      0 0 20px rgba(220, 100, 255, 1),
+      0 0 50px rgba(200, 60, 255, 0.6),
+      0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   HP BAR
+══════════════════════════════════════════════════════════════════════════════ */
+.hp-section {
+  padding: 0.55rem 0.9rem 0.4rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 100, 0, 0.15);
+}
+
+.hp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 180, 140, 0.65);
+}
+
+.hp-numbers {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--rpg-gold, #c8922a);
+  letter-spacing: 0.03em;
+}
+
+.hp-sep {
+  color: rgba(200, 180, 140, 0.4);
+  margin: 0 0.12rem;
+}
+
+.hp-track {
+  position: relative;
+  height: 12px;
+  background: #0d0804;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(100, 50, 10, 0.6);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 6px rgba(255, 80, 0, 0.1);
+}
+
+.hp-track--critical {
+  border-color: rgba(255, 40, 0, 0.5);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(255, 40, 0, 0.3);
+  animation: track-critical-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.hp-track--galaxy {
+  border-color: rgba(160, 40, 200, 0.5);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.7),
+    0 0 8px rgba(160, 40, 200, 0.2);
+}
+
+@keyframes track-critical-pulse {
+  from {
+    border-color: rgba(255, 40, 0, 0.3);
+  }
+  to {
+    border-color: rgba(255, 40, 0, 0.8);
+  }
+}
+
+.hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #6de030 0%, #3aaa10 50%, #2a8808 100%);
+  box-shadow:
+    0 0 8px rgba(80, 200, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: width 0.25s linear;
+  position: relative;
+}
+
+.hp-fill::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+}
+
+.hp-fill--low {
+  background: linear-gradient(to bottom, #f0c030 0%, #c08010 50%, #906010 100%);
+  box-shadow:
+    0 0 8px rgba(200, 160, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.hp-fill--critical {
+  background: linear-gradient(to bottom, #ff4020 0%, #cc1a00 50%, #a01000 100%);
+  box-shadow:
+    0 0 12px rgba(255, 60, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: hp-critical-flash 0.45s ease-in-out infinite alternate;
+}
+.hp-fill--galaxy {
+  background: linear-gradient(to bottom, #b840e8 0%, #7a10b0 50%, #5a0888 100%);
+  box-shadow:
+    0 0 10px rgba(160, 40, 220, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@keyframes hp-critical-flash {
+  from {
+    box-shadow: 0 0 8px rgba(255, 60, 0, 0.5);
+  }
+  to {
+    box-shadow: 0 0 16px rgba(255, 60, 0, 0.9);
+  }
+}
+
+.hp-segments {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-
-.boss-ring {
+.hp-seg-line {
   position: absolute;
-  border-radius: 50%;
-  border: 3px solid;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  animation: boss-ring-expand 2s ease-out forwards;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.4);
+  transform: translateX(-50%);
 }
 
-.boss-ring--1 {
-  width: 200px;
-  height: 200px;
-  border-color: rgba(200, 30, 10, 0.8);
-  animation-delay: 0.1s;
+/* ══════════════════════════════════════════════════════════════════════════════
+   REWARD BLOCK — ein einziger Rahmen
+══════════════════════════════════════════════════════════════════════════════ */
+.reward-block {
+  margin: 0.7rem 0.8rem 0.8rem;
+  border: 1px solid rgba(180, 120, 30, 0.45);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.3),
+    0 0 12px rgba(180, 120, 30, 0.08);
 }
 
-.boss-ring--2 {
-  width: 400px;
-  height: 400px;
-  border-color: rgba(160, 0, 200, 0.6);
-  animation-delay: 0.4s;
+.reward-block--galaxy {
+  border-color: rgba(160, 60, 220, 0.5);
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(160, 40, 220, 0.12);
 }
 
-.boss-ring--3 {
-  width: 650px;
-  height: 650px;
-  border-color: rgba(255, 60, 20, 0.35);
-  animation-delay: 0.7s;
-}
-
-@keyframes boss-ring-expand {
+@keyframes rewardReveal {
   0% {
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 1;
-  }
-  60% {
-    opacity: 0.8;
+    opacity: 0;
+    transform: translateY(8px);
   }
   100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.galaxy-boss-text {
+/* Header */
+.reward-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem 0.45rem;
+  border-bottom: 1px solid rgba(180, 120, 30, 0.2);
+}
+
+.reward-block--galaxy .reward-block-header {
+  border-bottom-color: rgba(160, 60, 220, 0.2);
+}
+
+.reward-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.4));
+}
+.reward-header-line:last-child {
+  background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.4));
+}
+
+.reward-header-text {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rpg-gold, #c8922a);
+  white-space: nowrap;
+}
+
+/* ── Reward Row (nebeneinander) ──────────────────────────────────────────── */
+.reward-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0.7rem 0.6rem;
+}
+
+/* Vertikaler Trenner zwischen Belohnungen */
+.reward-divider {
+  width: 1px;
+  height: 52px;
+  background: rgba(180, 120, 30, 0.25);
+  margin: 0 0.6rem;
+  flex-shrink: 0;
+}
+
+/* ── Einzelne Belohnungseinheit ──────────────────────────────────────────── */
+.reward-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  justify-content: center;
   position: relative;
-  z-index: 1;
+}
+
+.reward-item-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 4px rgba(160, 100, 220, 0.4));
+}
+
+.reward-item-info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  animation: boss-text-appear 0.6s cubic-bezier(0.22, 1.5, 0.4, 1) 0.2s both;
+  gap: 0.05rem;
 }
 
-@keyframes boss-text-appear {
-  from {
+.reward-item-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(200, 180, 140, 0.45);
+  font-weight: 700;
+}
+
+.reward-item-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.reward-item-amount {
+  font-size: 0.75rem;
+  color: rgba(200, 180, 140, 0.55);
+  font-weight: 600;
+}
+
+.reward-check {
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #52b830;
+  text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
+  position: absolute;
+  top: -0.1rem;
+  right: 0.1rem;
+}
+
+/* ── Chimes (größer) ─────────────────────────────────────────────────────── */
+.reward-item--chimes {
+  flex: 1.2;
+}
+
+.reward-item-img--chimes {
+  width: 52px;
+  height: 52px;
+  filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.85));
+}
+
+.reward-item--chimes-galaxy .reward-item-img--chimes {
+  filter: drop-shadow(0 0 12px rgba(200, 100, 255, 0.9));
+}
+
+.reward-chimes-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #e8c040;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.8),
+    0 0 24px rgba(232, 192, 64, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.reward-chimes-value--galaxy {
+  color: #cc66ff;
+  text-shadow:
+    0 0 12px rgba(200, 80, 255, 0.9),
+    0 0 28px rgba(160, 40, 220, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Rarity ──────────────────────────────────────────────────────────────── */
+.rarity--common {
+  color: var(--rpg-rarity-common, #aaaaaa);
+}
+.rarity--uncommon {
+  color: var(--rpg-rarity-uncommon, #1eff00);
+}
+.rarity--rare {
+  color: var(--rpg-rarity-rare, #0070dd);
+}
+.rarity--epic {
+  color: var(--rpg-rarity-epic, #a335ee);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CHAMPION ROW
+══════════════════════════════════════════════════════════════════════════════ */
+.champion-row {
+  border-top: 1px solid rgba(60, 100, 200, 0.25);
+}
+
+.champion-row-divider {
+  display: none; /* Rahmen reicht als Trenner */
+}
+
+.champion-row-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.9rem 0.65rem;
+  background: rgba(30, 60, 160, 0.08);
+}
+
+.champion-portrait {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid rgba(80, 130, 220, 0.5);
+  box-shadow: 0 0 12px rgba(60, 100, 200, 0.25);
+  flex-shrink: 0;
+}
+
+.champion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.champion-name {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--rpg-blue, #4a90d9);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 10px rgba(74, 144, 217, 0.5);
+}
+
+.champion-hint {
+  font-size: 0.58rem;
+  color: rgba(200, 180, 140, 0.38);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SCANLINES
+══════════════════════════════════════════════════════════════════════════════ */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  z-index: 50;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ENTRANCE / EXIT
+══════════════════════════════════════════════════════════════════════════════ */
+.boss-entrance-enter-active {
+  animation: epicEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.boss-entrance-leave-active {
+  animation: epicExit 0.28s ease-in forwards;
+}
+
+@keyframes epicEntrance {
+  0% {
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(1.12) translateY(-12px);
+    filter: blur(8px) brightness(2);
   }
-  to {
+  40% {
+    opacity: 1;
+    filter: blur(0) brightness(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0) brightness(1);
+  }
+}
+
+@keyframes epicExit {
+  0% {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-.boss-alert-line {
-  font-size: 14px;
-  letter-spacing: 4px;
-  color: #ff6040;
-  text-shadow:
-    0 0 12px rgba(255, 80, 20, 0.9),
-    0 0 24px rgba(255, 60, 0, 0.6);
-  animation: boss-text-flicker 0.15s steps(1) 0.8s 4;
-}
-
-.boss-title-line {
-  font-size: 28px;
-  letter-spacing: 6px;
-  color: #e8c040;
-  text-shadow:
-    0 0 20px rgba(232, 192, 64, 0.95),
-    0 0 40px rgba(200, 80, 0, 0.7),
-    0 0 60px rgba(150, 20, 200, 0.5);
-  animation: boss-title-glow 1.5s ease-in-out infinite alternate;
-}
-
-@keyframes boss-text-flicker {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
-}
-
-@keyframes boss-title-glow {
-  from {
-    text-shadow:
-      0 0 20px rgba(232, 192, 64, 0.95),
-      0 0 40px rgba(200, 80, 0, 0.7);
-  }
-  to {
-    text-shadow:
-      0 0 30px rgba(255, 220, 80, 1),
-      0 0 60px rgba(255, 100, 0, 0.9),
-      0 0 90px rgba(180, 40, 255, 0.6);
-  }
-}
-
-.galaxy-boss-fade-enter-active {
-  animation: boss-fade-in 0.4s ease-out forwards;
-}
-.galaxy-boss-fade-leave-active {
-  animation: boss-fade-out 0.8s ease-in forwards;
-}
-
-@keyframes boss-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes boss-fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-/* ─── Champion-Ankunft Vignette — FEUERROT mit Doppelpuls (abgeschwächt) ───── */
-.planet-vignette--champion {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 15;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 60, 0, 0.04) 0%,
-    rgba(220, 20, 0, 0.07) 30%,
-    rgba(180, 0, 0, 0.18) 60%,
-    rgba(140, 0, 0, 0.32) 80%,
-    rgba(80, 0, 0, 0.44) 100%
-  );
-}
-
-.champion-vignette-fade-enter-active {
-  animation: championVignetteIn 0.12s ease-out;
-}
-.champion-vignette-fade-leave-active {
-  animation: championVignetteOut 2.8s ease-in forwards;
-}
-
-@keyframes championVignetteIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Pulsiert zweimal synchron mit dem Herz-Rhythmus der Planeten-Animation */
-@keyframes championVignetteOut {
-  0% {
-    opacity: 1;
-    filter: brightness(1);
-  }
-  12% {
-    opacity: 0.35;
-    filter: brightness(0.8);
-  }
-  22% {
-    opacity: 0.62;
-    filter: brightness(1.15);
-  }
-  35% {
-    opacity: 0.28;
-    filter: brightness(0.75);
-  }
-  48% {
-    opacity: 0.5;
-    filter: brightness(1.08);
+    filter: blur(0);
   }
   100% {
     opacity: 0;
-    filter: brightness(1);
-  }
-}
-
-/* ─── Bar Stack Container ─────────────────────────────────────────────────── */
-.planet-bar-stack {
-  position: relative;
-  width: 100%;
-  max-width: 1400px;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Individual Countdown Bar ────────────────────────────────────────────── */
-.planet-countdown-bar {
-  position: relative;
-  width: 100%;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-}
-
-.planet-countdown-bar + .planet-countdown-bar {
-  border-top: 1px solid rgba(0, 0, 0, 0.35);
-}
-
-.planet-countdown-fill {
-  position: absolute;
-  height: 100%;
-  background: linear-gradient(90deg, var(--bar-color), var(--bar-color-dark));
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--bar-color) 70%, transparent),
-    0 0 22px color-mix(in srgb, var(--bar-color) 35%, transparent);
-  transition: width 0.2s linear;
-}
-
-.planet-countdown-fill--left {
-  border-radius: 3px 0 0 3px;
-}
-
-.planet-countdown-fill--right {
-  border-radius: 0 3px 3px 0;
-}
-
-.planet-countdown-label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  pointer-events: none;
-  color: #fff;
-  text-shadow:
-    0 0 6px rgba(0, 0, 0, 0.95),
-    0 1px 3px rgba(0, 0, 0, 0.85);
-  z-index: 1;
-}
-
-/* ─── Bar Stack Transitions ───────────────────────────────────────────────── */
-.bar-stack-enter-active {
-  animation: barSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.bar-stack-leave-active {
-  animation: barSlideOut 0.28s ease-in forwards;
-  position: absolute;
-  width: 100%;
-  top: 0;
-}
-.bar-stack-move {
-  transition: transform 0.3s ease;
-}
-
-@keyframes barSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes barSlideOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-100%);
+    transform: scale(0.88);
+    filter: blur(6px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bar-stack-enter-active,
-  .bar-stack-leave-active,
-  .bar-stack-move {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* ─── Toasts (Basis) ───────────────────────────────────────────────────────── */
-.planet-toast {
-  position: fixed;
-  top: 15vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 60;
-  padding: 0.65rem 1.5rem;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-align: center;
-  pointer-events: none;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-/* ─── Lost Toast ───────────────────────────────────────────────────────────── */
-.planet-toast--lost {
-  background: var(--rpg-bg-red-subtle);
-  border: 1px solid var(--rpg-danger);
-  color: var(--rpg-danger);
-  box-shadow:
-    0 0 0 1px rgba(255, 60, 0, 0.08),
-    0 0 20px rgba(255, 50, 0, 0.35),
-    0 12px 40px rgba(0, 0, 0, 0.75),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  text-shadow: 0 0 12px rgba(255, 60, 0, 0.6);
-}
-
-/* ─── Saved Toast ──────────────────────────────────────────────────────────── */
-.planet-toast--saved {
-  background: var(--rpg-bg-green-subtle);
-  border: 1px solid var(--rpg-green-border);
-  color: var(--rpg-green-light);
-  box-shadow:
-    0 0 0 1px rgba(70, 220, 120, 0.07),
-    0 0 20px rgba(60, 200, 100, 0.3),
-    0 12px 40px rgba(0, 0, 0, 0.75),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  text-shadow: 0 0 10px rgba(60, 220, 100, 0.55);
-}
-
-/* ─── Champion-Ankunft Toast — FEUERROT ──────────────────────────────────── */
-.planet-toast--champion-arrived {
-  background: rgba(60, 0, 0, 0.94);
-  border: 1px solid rgba(255, 40, 0, 0.8);
-  color: rgba(255, 160, 120, 1);
-  letter-spacing: 0.06em;
-  box-shadow:
-    0 0 0 1px rgba(255, 30, 0, 0.15),
-    0 0 20px rgba(255, 30, 0, 0.55),
-    0 0 50px rgba(200, 0, 0, 0.35),
-    0 12px 40px rgba(0, 0, 0, 0.88),
-    inset 0 1px 0 rgba(255, 100, 60, 0.08);
-  text-shadow:
-    0 0 12px rgba(255, 60, 0, 0.95),
-    0 0 28px rgba(200, 0, 0, 0.7);
-}
-
-/* ─── Toast sub-content ────────────────────────────────────────────────────── */
-.toast-material {
-  font-size: 0.74rem;
-  font-weight: 500;
-  opacity: 0.88;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.toast-material--none {
-  opacity: 0.45;
-}
-
-.toast-material--champion {
-  color: var(--rpg-blue);
-  font-weight: 700;
-  flex-wrap: wrap;
-}
-
-.toast-material-img--champion {
-  filter: drop-shadow(0 0 4px rgba(80, 160, 255, 0.65));
-}
-
-.toast-material-img {
-  width: 1.4rem;
-  height: 1.4rem;
-  object-fit: contain;
-  vertical-align: middle;
-  filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.55));
-}
-
-/* ─── Toast Transition ─────────────────────────────────────────────────────── */
-.toast-slide-enter-active {
-  animation: toastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.toast-slide-leave-active {
-  animation: toastOut 0.4s ease-in forwards;
-}
-
-@keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-14px) scale(0.95);
-    filter: blur(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-@keyframes toastOut {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.96);
+  .ember {
+    animation: none;
   }
 }
 </style>
