@@ -81,7 +81,7 @@
           </div>
 
           <div class="reward-row">
-            <!-- Materialien (zusammengefasst, je einmal) -->
+            <!-- Materialien -->
             <div v-for="(entry, i) in groupedMaterials" :key="'mat-' + i" class="reward-item">
               <img :src="entry.material.image" :alt="entry.material.name" class="reward-item-img" />
               <div class="reward-item-info">
@@ -121,23 +121,16 @@
             </div>
           </div>
 
-          <!-- Champion -->
+          <!-- ── Champion ──────────────────────────────────────────────── -->
           <div v-if="homePlanetChampion" class="champion-row">
-            <div class="champion-row-divider" />
-            <div class="champion-row-inner">
-              <img
-                v-if="homePlanetChampionImage"
-                :src="homePlanetChampionImage"
-                :alt="homePlanetChampion"
-                class="champion-portrait"
-                @error="($event.target as HTMLImageElement).style.display = 'none'"
-              />
-              <div class="champion-info">
-                <span class="reward-item-label">Champion</span>
-                <span class="champion-name">{{ homePlanetChampion }}</span>
-              </div>
-              <span class="champion-hint">freischaltbar</span>
-            </div>
+            <img
+              v-if="homePlanetChampionImage"
+              :src="homePlanetChampionImage"
+              :alt="homePlanetChampion"
+              class="champion-portrait"
+              @error="($event.target as HTMLImageElement).style.display = 'none'"
+            />
+            <span class="champion-name">{{ homePlanetChampion }}</span>
           </div>
         </div>
 
@@ -191,7 +184,6 @@ const enragePercent = computed(() => {
 const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
 const rewardSlots = computed(() => bossStore.activeBoss?.rewardSlots ?? [])
 
-// Materialien zusammenfassen: gleiche materialId → einmal anzeigen, Anzahl summieren
 const groupedMaterials = computed(() => {
   const map = new Map<
     string,
@@ -651,7 +643,7 @@ function handleShake(ms: number) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   REWARD BLOCK — ein einziger Rahmen
+   REWARD BLOCK
 ══════════════════════════════════════════════════════════════════════════════ */
 .reward-block {
   margin: 0.7rem 0.8rem 0.8rem;
@@ -683,7 +675,6 @@ function handleShake(ms: number) {
   }
 }
 
-/* Header */
 .reward-block-header {
   display: flex;
   align-items: center;
@@ -714,7 +705,6 @@ function handleShake(ms: number) {
   white-space: nowrap;
 }
 
-/* ── Reward Row (nebeneinander) ──────────────────────────────────────────── */
 .reward-row {
   display: flex;
   align-items: center;
@@ -723,7 +713,6 @@ function handleShake(ms: number) {
   padding: 0.7rem 0.6rem;
 }
 
-/* Vertikaler Trenner zwischen Belohnungen */
 .reward-divider {
   width: 1px;
   height: 52px;
@@ -732,7 +721,6 @@ function handleShake(ms: number) {
   flex-shrink: 0;
 }
 
-/* ── Einzelne Belohnungseinheit ──────────────────────────────────────────── */
 .reward-item {
   display: flex;
   align-items: center;
@@ -786,7 +774,6 @@ function handleShake(ms: number) {
   right: 0.1rem;
 }
 
-/* ── Chimes (größer) ─────────────────────────────────────────────────────── */
 .reward-item--chimes {
   flex: 1.2;
 }
@@ -836,56 +823,32 @@ function handleShake(ms: number) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   CHAMPION ROW
+   CHAMPION ROW — groß, zentriert, kein Label, kein Rahmen, kein Hint
 ══════════════════════════════════════════════════════════════════════════════ */
 .champion-row {
-  border-top: 1px solid rgba(60, 100, 200, 0.25);
-}
-
-.champion-row-divider {
-  display: none; /* Rahmen reicht als Trenner */
-}
-
-.champion-row-inner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
-  padding: 0.6rem 0.9rem 0.65rem;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem 0.85rem;
+  border-top: 1px solid rgba(60, 100, 200, 0.25);
   background: rgba(30, 60, 160, 0.08);
 }
 
 .champion-portrait {
-  height: 52px;
+  height: 72px;
   width: auto;
   object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid rgba(80, 130, 220, 0.5);
-  box-shadow: 0 0 12px rgba(60, 100, 200, 0.25);
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
-.champion-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-}
-
 .champion-name {
-  font-size: 1.1rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: var(--rpg-blue, #4a90d9);
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 10px rgba(74, 144, 217, 0.5);
-}
-
-.champion-hint {
-  font-size: 0.58rem;
-  color: rgba(200, 180, 140, 0.38);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  align-self: flex-end;
-  margin-left: auto;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 14px rgba(74, 144, 217, 0.55);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

@@ -12,33 +12,18 @@
         <span v-for="i in 24" :key="i" class="ember" :style="emberStyle(i)" />
       </div>
 
-      <div
-        class="battle-modal"
-        :class="{
-          'battle-modal--galaxy': isGalaxyBoss,
-        }"
-      >
+      <div class="battle-modal" :class="{ 'battle-modal--galaxy': isGalaxyBoss }">
         <div class="corner corner--tl" />
         <div class="corner corner--tr" />
         <div class="corner corner--bl" />
         <div class="corner corner--br" />
 
         <!-- ── Boss Name Banner ──────────────────────────────────────────── -->
-        <div
-          class="name-banner"
-          :class="{
-            'name-banner--galaxy': isGalaxyBoss,
-          }"
-        >
+        <div class="name-banner" :class="{ 'name-banner--galaxy': isGalaxyBoss }">
           <div v-if="isGalaxyBoss" class="boss-type-badge boss-type-badge--galaxy">
             ✦ GALAXIE-BOSS ✦
           </div>
-          <h2
-            class="boss-name"
-            :class="{
-              'boss-name--galaxy': isGalaxyBoss,
-            }"
-          >
+          <h2 class="boss-name" :class="{ 'boss-name--galaxy': isGalaxyBoss }">
             {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
           </h2>
         </div>
@@ -50,6 +35,7 @@
             <span class="reward-header-text">✦ Besiege den Champion und erhalte ✦</span>
             <span class="reward-header-line" />
           </div>
+
           <div class="reward-slots">
             <div
               v-for="(slot, i) in rewardSlots"
@@ -75,9 +61,9 @@
                 />
               </div>
               <div class="slot-body">
-                <span class="slot-type-label">{{
-                  slot.type === 'material' ? 'Material' : 'Chimes'
-                }}</span>
+                <span class="slot-type-label">
+                  {{ slot.type === 'material' ? 'Material' : 'Chimes' }}
+                </span>
                 <span
                   class="slot-name"
                   :class="
@@ -92,7 +78,9 @@
               <span class="slot-guaranteed">✓</span>
             </div>
           </div>
-          <div v-if="homePlanetChampion" class="champion-unlock-row">
+
+          <!-- ── Champion ──────────────────────────────────────────────── -->
+          <div v-if="homePlanetChampion" class="champion-row">
             <img
               v-if="homePlanetChampionImage"
               :src="homePlanetChampionImage"
@@ -100,11 +88,7 @@
               class="champion-portrait"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
-            <div class="loot-info">
-              <span class="loot-label">Champion</span>
-              <span class="champion-name">{{ homePlanetChampion }}</span>
-            </div>
-            <span class="loot-hint">freischaltbar</span>
+            <span class="champion-name">{{ homePlanetChampion }}</span>
           </div>
         </div>
 
@@ -385,7 +369,6 @@ function handleShake(ms: number) {
   border-bottom: 2px solid var(--rpg-gold, #c8922a);
   border-right: 2px solid var(--rpg-gold, #c8922a);
 }
-
 .battle-modal--galaxy .corner {
   border-color: #cc44ff;
 }
@@ -431,7 +414,6 @@ function handleShake(ms: number) {
   margin-bottom: 0.2rem;
   animation: badge-pulse 2s ease-in-out infinite alternate;
 }
-
 .boss-type-badge--galaxy {
   color: #cc44ff;
 }
@@ -631,7 +613,6 @@ function handleShake(ms: number) {
   inset: 0;
   pointer-events: none;
 }
-
 .hp-seg-line {
   position: absolute;
   top: 0;
@@ -646,7 +627,7 @@ function handleShake(ms: number) {
 ══════════════════════════════════════════════════════════════════════════════ */
 .reward-preview {
   border-bottom: 1px solid rgba(100, 60, 10, 0.5);
-  padding: 0.75rem 0.9rem 0.8rem;
+  padding: 0.75rem 0.9rem 0rem;
   background: rgba(0, 0, 0, 0.35);
   animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
@@ -678,7 +659,6 @@ function handleShake(ms: number) {
   height: 1px;
   background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.5));
 }
-
 .reward-header-line:last-child {
   background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.5));
 }
@@ -694,14 +674,15 @@ function handleShake(ms: number) {
 
 .reward-slots {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.4rem;
 }
 
 .reward-slot {
   display: flex;
+  flex: 1;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
   padding: 0.5rem 0.65rem;
   background: rgba(200, 146, 42, 0.05);
   border: 1px solid rgba(120, 78, 32, 0.55);
@@ -782,56 +763,6 @@ function handleShake(ms: number) {
   text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
 }
 
-/* Champion Unlock Row */
-.champion-unlock-row {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.5rem 0.65rem;
-  margin-top: 0.4rem;
-  background: rgba(60, 100, 200, 0.07);
-  border: 1px solid rgba(60, 100, 160, 0.4);
-  border-radius: 4px;
-}
-
-.champion-portrait {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-  border-radius: 3px;
-  border: 1px solid rgba(60, 100, 160, 0.5);
-  flex-shrink: 0;
-}
-
-.champion-name {
-  color: var(--rpg-blue, #4a90d9);
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-/* Shared info/label/hint helpers */
-.loot-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.loot-label {
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(200, 180, 140, 0.5);
-}
-
-.loot-hint {
-  font-size: 0.65rem;
-  color: rgba(200, 180, 140, 0.45);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
 /* ── Rarity Colors ───────────────────────────────────────────────────────── */
 .rarity--common {
   color: var(--rpg-rarity-common, #aaaaaa);
@@ -844,6 +775,36 @@ function handleShake(ms: number) {
 }
 .rarity--epic {
   color: var(--rpg-rarity-epic, #a335ee);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CHAMPION ROW
+══════════════════════════════════════════════════════════════════════════════ */
+.champion-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.6rem;
+  padding: 0.8rem 0.9rem 0.85rem;
+  border-top: 1px solid rgba(60, 100, 200, 0.2);
+  background: rgba(30, 60, 160, 0.07);
+}
+
+.champion-portrait {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.champion-name {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--rpg-blue, #4a90d9);
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 14px rgba(74, 144, 217, 0.55);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
