@@ -94,26 +94,6 @@
       </div>
     </Transition>
 
-    <!-- ETA-Badge: nur sichtbar wenn nicht pausiert und Champion reist -->
-    <Transition name="eta-fade">
-      <div v-if="windowFocused && isChampionTraveling" class="eta-badge">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          class="eta-icon"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-        <span class="eta-label">Champion</span>
-        <span class="eta-sep">·</span>
-        <span class="eta-value">{{ etaStr }}</span>
-      </div>
-    </Transition>
   </Teleport>
 </template>
 
@@ -129,13 +109,6 @@ const pendingStars = computed(() => galaxyStore.pendingResourceStars)
 const isChampionTraveling = computed(() => galaxyStore.championTravelState === 'traveling')
 const isChampionReady = computed(() => galaxyStore.pendingChampionStar)
 
-const etaStr = computed(() => {
-  const ms = galaxyStore.travelRemainingMs
-  const s = Math.ceil(Math.max(0, ms) / 1000)
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`
-})
 
 const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
@@ -253,46 +226,6 @@ const pauseEtaStr = computed(() => {
   color: #f0d060;
 }
 
-/* ETA Badge */
-.eta-badge {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9998;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: #1e1006;
-  border: 2px solid #7a4e20;
-  box-shadow: inset 0 0 0 1px #3e200a;
-  border-radius: 4px;
-  color: #e8c040;
-  font-size: 0.82rem;
-  pointer-events: none;
-}
-
-.eta-icon {
-  color: #c89040;
-  flex-shrink: 0;
-}
-
-.eta-label {
-  color: rgba(232, 192, 64, 0.7);
-}
-
-.eta-sep {
-  color: rgba(232, 192, 64, 0.35);
-}
-
-.eta-value {
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  min-width: 36px;
-  text-align: right;
-}
-
 /* Transitions */
 .pause-fade-enter-active {
   transition:
@@ -310,19 +243,5 @@ const pauseEtaStr = computed(() => {
   transform: scale(0.97);
 }
 
-.eta-fade-enter-active {
-  transition:
-    opacity 200ms ease,
-    transform 200ms ease;
-}
-.eta-fade-leave-active {
-  transition:
-    opacity 150ms ease,
-    transform 150ms ease;
-}
-.eta-fade-enter-from,
-.eta-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(6px);
-}
+
 </style>
