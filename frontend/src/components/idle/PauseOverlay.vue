@@ -9,11 +9,14 @@
         aria-label="Spiel pausiert"
       >
         <div class="pause-card">
-          <!-- Icon -->
-          <div class="pause-icon">
+          <!-- Gold top line -->
+          <div class="pause-gold-line"></div>
+
+          <!-- Header -->
+          <div class="pause-header">
             <svg
-              width="48"
-              height="48"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -22,78 +25,60 @@
               <rect x="6" y="4" width="4" height="16" rx="1" />
               <rect x="14" y="4" width="4" height="16" rx="1" />
             </svg>
+            <h2 class="pause-title">Pausiert</h2>
           </div>
 
-          <h2 class="pause-title">Pausiert</h2>
-          <p class="pause-subtitle">Klicke ins Spielfenster um fortzufahren</p>
+          <!-- Body -->
+          <div class="pause-body">
+            <p class="pause-subtitle">Klicke ins Spielfenster um fortzufahren</p>
 
-          <!-- Chime-Logik läuft weiter Info -->
-          <div class="pause-info">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-            <span>Chimes werden weiter gesammelt</span>
-          </div>
+            <!-- Accumulated chimes -->
+            <div class="chime-reward">
+              <div class="chime-reward-icon">
+                <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
+              </div>
+              <div class="chime-reward-text">
+                <span class="chime-label">Gesammelte Chimes</span>
+                <span class="chime-value">+{{ $formatNumber(accumulatedChimes) }}</span>
+                <span class="chime-sublabel">werden beim Weiterspielen gutgeschrieben</span>
+              </div>
+            </div>
 
-          <!-- Bonus-Sternsystem wartet -->
-          <div v-if="pendingStars > 0" class="pause-info pause-info--bonus">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <span>{{
-              pendingStars === 1
-                ? 'Ein Bonus-Sternsystem wartet auf dich!'
-                : `${pendingStars} Bonus-Sternsysteme warten auf dich!`
-            }}</span>
-          </div>
+            <!-- Bonus stars -->
+            <div v-if="pendingStars > 0" class="pause-info pause-info--bonus">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>{{
+                pendingStars === 1
+                  ? 'Ein Bonus-Sternsystem wartet auf dich!'
+                  : `${pendingStars} Bonus-Sternsysteme warten auf dich!`
+              }}</span>
+            </div>
 
-          <!-- Champion ETA / Ready -->
-          <div v-if="isChampionTraveling || isChampionReady" class="pause-info pause-info--eta" :class="{ 'pause-info--ready': isChampionReady }">
-            <svg
-              v-if="isChampionTraveling"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+            <!-- Champion ETA / Ready -->
+            <div
+              v-if="isChampionTraveling || isChampionReady"
+              class="pause-info pause-info--eta"
+              :class="{ 'pause-info--ready': isChampionReady }"
             >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <svg
-              v-else
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <span v-if="isChampionTraveling">Champion erreicht Stern in <strong>{{ pauseEtaStr }}</strong></span>
-            <span v-else>Champion-Stern wartet — kehre ins Spiel zurück!</span>
+              <svg v-if="isChampionTraveling" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span v-if="isChampionTraveling">Champion erreicht Stern in <strong>{{ pauseEtaStr }}</strong></span>
+              <span v-else>Champion-Stern wartet — kehre ins Spiel zurück!</span>
+            </div>
+
+            <!-- Unpause button -->
+            <button class="pause-btn" @click="() => window.focus()">Weiterspielen</button>
           </div>
         </div>
       </div>
     </Transition>
-
   </Teleport>
 </template>
 
@@ -101,15 +86,17 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useGameStore } from '@/stores/gameStore'
 
 const { windowFocused } = useWindowFocus()
 const galaxyStore = useGalaxyStore()
+const gameStore = useGameStore()
 
 const pendingStars = computed(() => galaxyStore.pendingResourceStars)
 const isChampionTraveling = computed(() => galaxyStore.championTravelState === 'traveling')
 const isChampionReady = computed(() => galaxyStore.pendingChampionStar)
 
-
+const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 
@@ -117,6 +104,7 @@ watch(
   windowFocused,
   (focused) => {
     if (!focused) {
+      pauseStartChimes.value = gameStore.chimes
       pauseInterval = setInterval(() => {
         pauseTick.value++
       }, 1000)
@@ -132,6 +120,11 @@ watch(
 
 onUnmounted(() => {
   if (pauseInterval !== null) clearInterval(pauseInterval)
+})
+
+const accumulatedChimes = computed(() => {
+  void pauseTick.value
+  return Math.max(0, gameStore.chimes - pauseStartChimes.value)
 })
 
 const pauseEtaStr = computed(() => {
@@ -154,76 +147,169 @@ const pauseEtaStr = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.78);
 }
 
 .pause-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 40px 56px;
-  background: rgba(14, 10, 28, 0.92);
-  border: 1px solid rgba(251, 191, 36, 0.18);
-  border-radius: 16px;
+  min-width: 340px;
+  max-width: 440px;
+  background: #111008;
+  border: 4px solid #7a4e20;
   box-shadow:
-    0 0 0 1px rgba(251, 191, 36, 0.06),
-    0 24px 64px rgba(0, 0, 0, 0.6),
-    0 0 80px rgba(251, 191, 36, 0.04);
-  text-align: center;
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 24px 64px rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.pause-icon {
-  color: rgba(251, 191, 36, 0.7);
-  margin-bottom: 4px;
+.pause-gold-line {
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  flex-shrink: 0;
+}
+
+.pause-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px 12px;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+  color: #e8c040;
 }
 
 .pause-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #f0c840;
-  letter-spacing: 0.04em;
+  font-size: 1.3rem;
+  color: #e8c040;
   margin: 0;
-  text-shadow: 0 0 24px rgba(251, 191, 36, 0.4);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 16px rgba(232, 192, 64, 0.4);
+}
+
+.pause-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px 22px;
 }
 
 .pause-subtitle {
-  font-size: 0.95rem;
-  color: rgba(200, 185, 140, 0.7);
+  font-size: 0.82rem;
+  color: rgba(200, 185, 140, 0.6);
   margin: 0;
+  text-align: center;
 }
 
+/* Chime reward box */
+.chime-reward {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  background: #1a1008;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #3e200a;
+}
+
+.chime-reward-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #141410;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+}
+
+.chime-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.chime-reward-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chime-label {
+  font-size: 0.72rem;
+  color: rgba(200, 185, 140, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chime-value {
+  font-size: 1.4rem;
+  color: #e8c040;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
+  line-height: 1;
+}
+
+.chime-sublabel {
+  font-size: 0.7rem;
+  color: rgba(200, 185, 140, 0.45);
+}
+
+/* Info badges */
 .pause-info {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: rgba(251, 191, 36, 0.06);
-  border: 1px solid rgba(251, 191, 36, 0.1);
-  color: rgba(251, 191, 36, 0.55);
-  font-size: 0.82rem;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: rgba(232, 192, 64, 0.05);
+  border: 1px solid #5c3310;
+  color: rgba(232, 192, 64, 0.55);
+  font-size: 0.8rem;
 }
 
 .pause-info--bonus {
-  background: rgba(30, 140, 80, 0.1);
-  border-color: rgba(82, 184, 48, 0.25);
+  background: rgba(30, 140, 80, 0.08);
+  border-color: rgba(82, 184, 48, 0.3);
   color: #52b830;
 }
 
 .pause-info--eta {
-  background: rgba(232, 192, 64, 0.08);
-  border-color: rgba(232, 192, 64, 0.2);
+  background: rgba(232, 192, 64, 0.07);
+  border-color: rgba(232, 192, 64, 0.25);
   color: #e8c040;
 }
 
 .pause-info--ready {
-  background: rgba(232, 192, 64, 0.14);
-  border-color: rgba(232, 192, 64, 0.4);
+  background: rgba(232, 192, 64, 0.12);
+  border-color: rgba(232, 192, 64, 0.45);
   color: #f0d060;
+}
+
+/* Unpause button */
+.pause-btn {
+  margin-top: 4px;
+  padding: 9px 28px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.88rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: filter 100ms;
+}
+
+.pause-btn:hover {
+  filter: brightness(1.12);
 }
 
 /* Transitions */
@@ -242,6 +328,4 @@ const pauseEtaStr = computed(() => {
   opacity: 0;
   transform: scale(0.97);
 }
-
-
 </style>
