@@ -9,6 +9,8 @@ import {
   GALAXY_SPAWN_INTERVAL_MIN,
   GALAXY_SPAWN_INTERVAL_MAX,
   GALAXY_MAX_COUNT,
+  STAR_BG_BASE_SPEED_MIN,
+  STAR_BG_BASE_SPEED_RANGE,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
 
@@ -1344,7 +1346,7 @@ export function useStarBackground() {
     const angle = Math.random() * Math.PI * 2
     const minDist = maxDist * 0.1
     const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
-    const baseSpeed = 0.5 + Math.random() * 1.0
+    const baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
     const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
     const item: StarItem = {
       id: nextStarId++,
@@ -1538,17 +1540,17 @@ export function useStarBackground() {
         if (galaxyTransPhase === 'warp') {
           star.angle = galaxyTransDir + Math.PI / 2 + Math.random() * Math.PI
           star.dist = maxDist * (0.05 + Math.random() * 0.88)
-          star.baseSpeed = 0.5 + Math.random() * 1.0
+          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         } else if (galaxyTransPhase === 'decel') {
           star.angle = Math.random() * Math.PI * 2
           star.dist = maxDist * (0.25 + Math.random() * 0.65)
-          star.baseSpeed = 0.5 + Math.random() * 1.0
+          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         } else {
           star.angle = Math.random() * Math.PI * 2
           star.dist = hyperActive
             ? maxDist * (0.02 + Math.random() * 0.08)
             : maxDist * (0.1 + Math.random() * 0.35)
-          star.baseSpeed = 0.5 + Math.random() * 1.0
+          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         }
       }
       const x = cx + Math.cos(star.angle) * star.dist

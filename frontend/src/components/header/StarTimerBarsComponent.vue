@@ -79,36 +79,11 @@ interface BarEntry {
 }
 
 const palettes: Palette[] = [
-  {
-    outer: '#b86a22',
-    mid: '#d9923b',
-    inner: '#f0c98b',
-    glow: 'rgba(217, 146, 59, 0.28)',
-  },
-  {
-    outer: '#b55b1f',
-    mid: '#d67f37',
-    inner: '#ebb77d',
-    glow: 'rgba(214, 127, 55, 0.27)',
-  },
-  {
-    outer: '#ae4f1d',
-    mid: '#cc7234',
-    inner: '#e8a976',
-    glow: 'rgba(204, 114, 52, 0.26)',
-  },
-  {
-    outer: '#a6471b',
-    mid: '#c86831',
-    inner: '#e39b6d',
-    glow: 'rgba(200, 104, 49, 0.25)',
-  },
-  {
-    outer: '#9d4019',
-    mid: '#bd5e2d',
-    inner: '#dc8f67',
-    glow: 'rgba(189, 94, 45, 0.24)',
-  },
+  { outer: '#b86a22', mid: '#d9923b', inner: '#f0c98b', glow: 'rgba(217,146,59,0.28)' },
+  { outer: '#b55b1f', mid: '#d67f37', inner: '#ebb77d', glow: 'rgba(214,127,55,0.27)' },
+  { outer: '#ae4f1d', mid: '#cc7234', inner: '#e8a976', glow: 'rgba(204,114,52,0.26)' },
+  { outer: '#a6471b', mid: '#c86831', inner: '#e39b6d', glow: 'rgba(200,104,49,0.25)' },
+  { outer: '#9d4019', mid: '#bd5e2d', inner: '#dc8f67', glow: 'rgba(189,94,45,0.24)' },
 ]
 
 function fmtMs(ms: number): string {
@@ -174,28 +149,32 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
       const fillRatio = durationFromBoss > 0 ? remaining / durationFromBoss : 0
 
-      raw.push({
-        starId: star.id,
-        starType: 'resource',
-        valueStr: fmtMs(remaining),
-        fillRatio: clamp01(fillRatio),
-        sortKey: remaining,
-      })
+      // Zeile erst dann in der Liste lassen wenn der Star wirklich noch aktiv ist
+      if (!allCleared || remaining > 0) {
+        raw.push({
+          starId: star.id,
+          starType: 'resource',
+          valueStr: fmtMs(remaining),
+          fillRatio: clamp01(fillRatio),
+          sortKey: remaining,
+        })
+      }
     } else if (star.starType === 'champion') {
       const ratio = allCleared || total <= 0 ? 0 : 1 - cleared / total
 
-      raw.push({
-        starId: star.id,
-        starType: 'champion',
-        valueStr: `${cleared}/${total}`,
-        fillRatio: clamp01(ratio),
-        sortKey: Number.MAX_SAFE_INTEGER,
-      })
+      if (!allCleared) {
+        raw.push({
+          starId: star.id,
+          starType: 'champion',
+          valueStr: `${cleared}/${total}`,
+          fillRatio: clamp01(ratio),
+          sortKey: Number.MAX_SAFE_INTEGER,
+        })
+      }
     }
   }
 
   raw.sort((a, b) => a.sortKey - b.sortKey)
-
   return raw.map((entry, index) => ({
     ...entry,
     palette: palettes[index % palettes.length],
@@ -220,6 +199,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 .star-timer-bars {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -231,6 +211,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
   grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
   align-items: center;
   height: 18px;
+  width: 100%;
+  /* Verhindert, dass leaving-Elemente Platz belegen */
+  overflow: hidden;
 }
 
 .bar-side {
@@ -295,25 +278,41 @@ const sortedEntries = computed<BarEntry[]>(() => {
   filter: drop-shadow(0 0 3px var(--icon-color));
 }
 
+/* ── Transition: leaving-Element nimmt keinen Platz mehr ein ── */
 .bar-slide-enter-active {
   transition:
     opacity 0.22s ease,
-    transform 0.22s ease;
+    transform 0.22s ease,
+    max-height 0.22s ease;
+  overflow: hidden;
 }
 
 .bar-slide-leave-active {
   transition:
     opacity 0.18s ease,
-    transform 0.18s ease;
+    transform 0.18s ease,
+    max-height 0.18s ease;
+  /* Absolut aus dem Flow herausnehmen → belegt keinen Platz mehr */
+  position: absolute;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .bar-slide-enter-from {
   opacity: 0;
   transform: translateY(-4px);
+  max-height: 0;
 }
 
 .bar-slide-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+  max-height: 0;
+}
+
+.bar-slide-enter-to,
+.bar-slide-leave-from {
+  max-height: 24px;
 }
 </style>

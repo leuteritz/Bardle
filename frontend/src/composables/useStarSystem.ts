@@ -18,6 +18,7 @@ const SPAWN_DURATION_MS = 1000
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
 const BEHIND_SPEED_MULT = 4.5
+const STAR_BEHIND_OPACITY = 0.2
 const SPEED_LERP = 0.04
 
 export interface PlanetRenderEntry {
@@ -304,6 +305,7 @@ export function useStarSystem() {
       const visibleFactor = Math.max(0, Math.min(1,
         (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND,
       ))
+      const starFactor = Math.max(STAR_BEHIND_OPACITY, visibleFactor)
 
       if (!starSpawnedAt.has(star.id)) starSpawnedAt.set(star.id, ts)
       const spawnT = Math.min(1, (ts - starSpawnedAt.get(star.id)!) / SPAWN_DURATION_MS)
@@ -314,7 +316,7 @@ export function useStarSystem() {
 
       const baseScale = 0.72 + sDepth * 0.56
       const sScale = baseScale * (reducedMotion ? 1 : Math.max(0.05, spawnFactor))
-      const sOpacity = visibleFactor * (0.78 + sDepth * 0.22) * spawnFactor
+      const sOpacity = starFactor * (0.78 + sDepth * 0.22) * spawnFactor
 
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 

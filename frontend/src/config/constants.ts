@@ -162,6 +162,22 @@ export const REROLL_COST = 3
 export const SAVE_KEY = 'bard-idle-save'
 export const SAVE_VERSION = 1
 
+// Star system — foreground orbiting stars & planets
+export const STAR_ORBIT_SPEED_RESOURCE = 0.000084      // resource star around sun
+export const STAR_ORBIT_SPEED_CHAMPION = 0.000044      // champion star around sun
+export const STAR_ORBIT_SPEED_GALAXY_BOSS = 0.000024   // galaxy boss star around sun
+export const PLANET_ORBIT_SPEED_MIN = 0.0019           // resource/extra planet min speed
+export const PLANET_ORBIT_SPEED_RANGE = 0.001          // resource/extra planet random range
+export const PLANET_ORBIT_SPEED_CHAMP_MIN = 0.0018     // champion planet min speed
+export const PLANET_ORBIT_SPEED_CHAMP_RANGE = 0.0008   // champion planet random range
+export const PLANET_ORBIT_SPEED_EXTRA_MIN = 0.002      // extra planets in champion star min
+export const PLANET_ORBIT_SPEED_EXTRA_RANGE = 0.001    // extra planets in champion star range
+export const PLANET_ORBIT_SPEED_BOSS = 0.0016          // galaxy boss planet speed
+
+// Background canvas star speeds
+export const STAR_BG_BASE_SPEED_MIN = 1.0              // base speed minimum (doubled from 0.5)
+export const STAR_BG_BASE_SPEED_RANGE = 2.0            // base speed random range (doubled from 1.0)
+
 // Star background — warp / galaxy animation
 export const WARP_SPEED_MAX = 70
 export const GALAXY_TRANS_WARP_MS = 8_400

@@ -3,7 +3,20 @@ import type { PlanetType, StarType } from '../types'
 import { pickConfig } from '../utils/planetDraw'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
-import { RESOURCE_STAR_PLANET_COUNT, RESOURCE_STAR_DURATION_MS } from '../config/constants'
+import {
+  RESOURCE_STAR_PLANET_COUNT,
+  RESOURCE_STAR_DURATION_MS,
+  STAR_ORBIT_SPEED_RESOURCE,
+  STAR_ORBIT_SPEED_CHAMPION,
+  STAR_ORBIT_SPEED_GALAXY_BOSS,
+  PLANET_ORBIT_SPEED_MIN,
+  PLANET_ORBIT_SPEED_RANGE,
+  PLANET_ORBIT_SPEED_CHAMP_MIN,
+  PLANET_ORBIT_SPEED_CHAMP_RANGE,
+  PLANET_ORBIT_SPEED_EXTRA_MIN,
+  PLANET_ORBIT_SPEED_EXTRA_RANGE,
+  PLANET_ORBIT_SPEED_BOSS,
+} from '../config/constants'
 
 let starIdCounter = 0
 let planetIdCounter = 0
@@ -70,7 +83,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           type: config.type,
           isChampionPlanet: false,
           orbitAngle: (i / count) * Math.PI * 2,
-          orbitSpeed: 0.00095 + Math.random() * 0.0005,
+          orbitSpeed: PLANET_ORBIT_SPEED_MIN + Math.random() * PLANET_ORBIT_SPEED_RANGE,
           orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
           orbitRx: 85 + Math.random() * 25,
           orbitRy: 44 + Math.random() * 18,
@@ -88,7 +101,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRx: 430,
         orbitRy: 188,
         orbitTilt: 0.27,
-        orbitSpeed: 0.000042,
+        orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots,
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
@@ -114,7 +127,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           type: config.type,
           isChampionPlanet: false,
           orbitAngle: (i / count) * Math.PI * 2,
-          orbitSpeed: 0.00095 + Math.random() * 0.0005,
+          orbitSpeed: PLANET_ORBIT_SPEED_MIN + Math.random() * PLANET_ORBIT_SPEED_RANGE,
           orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
           orbitRx: 85 + Math.random() * 25,
           orbitRy: 44 + Math.random() * 18,
@@ -133,7 +146,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRx: 430,
         orbitRy: 188,
         orbitTilt: 0.27,
-        orbitSpeed: 0.000042,
+        orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots,
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
@@ -190,7 +203,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         type: champConfig.type,
         isChampionPlanet: true,
         orbitAngle: 0,
-        orbitSpeed: 0.0009 + Math.random() * 0.0004,
+        orbitSpeed: PLANET_ORBIT_SPEED_CHAMP_MIN + Math.random() * PLANET_ORBIT_SPEED_CHAMP_RANGE,
         orbitDirection: 1,
         orbitRx: 92 + Math.random() * 22,
         orbitRy: 48 + Math.random() * 18,
@@ -207,7 +220,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           type: config.type,
           isChampionPlanet: false,
           orbitAngle: (i / totalCount) * Math.PI * 2,
-          orbitSpeed: 0.001 + Math.random() * 0.0005,
+          orbitSpeed: PLANET_ORBIT_SPEED_EXTRA_MIN + Math.random() * PLANET_ORBIT_SPEED_EXTRA_RANGE,
           orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
           orbitRx: 80 + Math.random() * 30,
           orbitRy: 42 + Math.random() * 18,
@@ -227,7 +240,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRx: 370,
         orbitRy: 160,
         orbitTilt: 0.18,
-        orbitSpeed: 0.000022,
+        orbitSpeed: STAR_ORBIT_SPEED_CHAMPION,
         planetSlots,
       }
 
@@ -250,14 +263,14 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRx: 320,
         orbitRy: 138,
         orbitTilt: 0.14,
-        orbitSpeed: 0.000012,
+        orbitSpeed: STAR_ORBIT_SPEED_GALAXY_BOSS,
         planetSlots: [
           {
             planetId,
             type: config.type,
             isChampionPlanet: false,
             orbitAngle: 0,
-            orbitSpeed: 0.0008,
+            orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
             orbitDirection: 1,
             orbitRx: 38,
             orbitRy: 22,
