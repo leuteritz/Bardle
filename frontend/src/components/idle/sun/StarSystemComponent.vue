@@ -51,13 +51,6 @@
           :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
-      <template v-for="star in backStars" :key="'badge-back-' + star.id">
-        <div
-          v-if="star.starType === 'resource'"
-          class="star-timer-badge"
-          :style="resourceBadgeStyle(star, true)"
-        >✦ Ressource · {{ resTimerStr }}</div>
-      </template>
       <template v-for="star in frontStars" :key="'fb-' + star.id">
         <PlanetComponent
           v-for="p in star.planets.filter((p) => p.isBehind)"
@@ -116,15 +109,6 @@
           :animState="p.animState"
           :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
-      </template>
-
-      <!-- Timer-Badge für Resource-Sterne (vor Sonne) -->
-      <template v-for="star in frontStars" :key="'badge-front-' + star.id">
-        <div
-          v-if="star.starType === 'resource'"
-          class="star-timer-badge"
-          :style="resourceBadgeStyle(star, false)"
-        >✦ Ressource · {{ resTimerStr }}</div>
       </template>
 
       <!-- ③ Reward-Icons PRO PLANET -->
@@ -201,28 +185,11 @@ import { useStarSystem } from '../../../composables/useStarSystem'
 import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
-const galaxyStore = useGalaxyStore()
-
-const resTimerStr = computed(() => {
-  const s = Math.ceil(Math.max(0, galaxyStore.resourceStarDurationMs) / 1000)
-  const m = Math.floor(s / 60)
-  const sec = s % 60
-  return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`
-})
-
-function resourceBadgeStyle(star: StarRenderEntry, behind: boolean) {
-  const s = starSize(star.starType)
-  return {
-    transform: `translate(${star.x}px, ${star.y - s / 2 - 24}px) translateX(-50%)`,
-    opacity: behind ? '0.5' : '1',
-  }
-}
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
@@ -467,25 +434,6 @@ function rewardSummaryStyle(star: StarRenderEntry) {
     transform: scale(1.08);
     opacity: 0.6;
   }
-}
-
-.star-timer-badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  white-space: nowrap;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 6px;
-  border-radius: 3px;
-  pointer-events: none;
-  user-select: none;
-  z-index: 8;
-  color: #60eed8;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(20, 180, 150, 0.5);
-  text-shadow: 0 0 8px rgba(40, 210, 180, 0.8);
 }
 
 .planet-reward-icon {

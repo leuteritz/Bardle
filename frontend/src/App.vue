@@ -14,6 +14,7 @@ import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
+import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
@@ -50,6 +51,7 @@ watch(
     <FpsOverlay />
     <OfflineProgressModal />
     <PauseOverlay />
+    <StarTimerBarsComponent />
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <div class="w-full">

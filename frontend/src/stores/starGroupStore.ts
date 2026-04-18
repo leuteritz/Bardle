@@ -31,6 +31,8 @@ export interface StarGroup {
   orbitTilt: number
   orbitSpeed: number
   planetSlots: StarPlanetSlot[]
+  spawnedAt?: number
+  durationMs?: number
 }
 
 // Hält laufende Admin-Spawn-Timeouts pro Star-ID
@@ -88,6 +90,8 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: 0.27,
         orbitSpeed: 0.000042,
         planetSlots,
+        spawnedAt: Date.now(),
+        durationMs: RESOURCE_STAR_DURATION_MS,
       }
 
       this.activeStars.push(star)
@@ -131,6 +135,8 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: 0.27,
         orbitSpeed: 0.000042,
         planetSlots,
+        spawnedAt: Date.now(),
+        durationMs: RESOURCE_STAR_DURATION_MS,
       }
 
       this.activeStars.push(star)
