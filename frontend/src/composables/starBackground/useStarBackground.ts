@@ -1400,9 +1400,10 @@ export function useStarBackground() {
           (RESCUE_ROTATION_TOTAL_RAD / RESCUE_ROTATION_DURATION_MS) *
           (delta * 1000) *
           Math.sin(t * Math.PI)
-        for (const star of stars) star.angle += angularDelta
-        for (const d of dustPatches) d.angle += angularDelta
-        for (const c of starClusters) c.angle += angularDelta
+        const dir = galaxyStore.rescueRotationDirection
+        for (const star of stars) star.angle += angularDelta * dir
+        for (const d of dustPatches) d.angle += angularDelta * dir
+        for (const c of starClusters) c.angle += angularDelta * dir
         if (t >= 1) galaxyStore.endRescueRotation()
       }
     }

@@ -301,6 +301,10 @@ export const useStarGroupStore = defineStore('starGroup', {
               this.activeStars.splice(idx, 1)
             }, 1500)
           }
+          if (star.starType === 'champion') {
+            const galaxyStore = useGalaxyStore()
+            galaxyStore.onChampionStarRescued()
+          }
         }
         return
       }

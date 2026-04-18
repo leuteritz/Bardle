@@ -359,9 +359,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const galaxyStore = useGalaxyStore()
       if (galaxyStore.pendingGalaxyBoss) {
         galaxyStore.onGalaxyBossDefeated()
-      } else if (boss.isChampionPlanet) {
-        galaxyStore.onChampionStarRescued()
       }
+      // champion star rescue is triggered by starGroupStore.onBossResult
+      // once ALL planets on the star are cleared
     },
 
     openBossModal(planetId?: string) {

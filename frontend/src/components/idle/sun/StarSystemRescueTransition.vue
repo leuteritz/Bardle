@@ -24,6 +24,7 @@ const burstCanvas = ref<HTMLCanvasElement | null>(null)
 
 let burstRaf: number | null = null
 let burstStart = 0
+let burstAngleOffset = 0
 
 function drawBurst(timestamp: number) {
   const canvas = burstCanvas.value
@@ -58,7 +59,7 @@ function drawBurst(timestamp: number) {
   const maxLen = Math.hypot(cx, cy)
 
   for (let i = 0; i < BURST_RAY_COUNT; i++) {
-    const angle = (i / BURST_RAY_COUNT) * Math.PI * 2
+    const angle = (i / BURST_RAY_COUNT) * Math.PI * 2 + burstAngleOffset
     const lenFrac = BURST_RAY_MIN_LEN + (i % 3) * ((BURST_RAY_MAX_LEN - BURST_RAY_MIN_LEN) / 2)
     const len = maxLen * lenFrac * (0.7 + t * 0.5)
     const ex = cx + Math.cos(angle) * len
@@ -105,6 +106,7 @@ function startBurst() {
     cancelAnimationFrame(burstRaf)
     burstRaf = null
   }
+  burstAngleOffset = (galaxyStore.rescueBurstAngleDeg * Math.PI) / 180
   burstStart = performance.now()
   burstRaf = requestAnimationFrame(drawBurst)
 }

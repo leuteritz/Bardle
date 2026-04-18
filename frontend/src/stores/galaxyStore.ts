@@ -62,6 +62,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     // Champion-Rettungs-Rotationsanimation
     rescueRotationPhase: 'idle' as 'idle' | 'rotating',
     rescueRotationStartTime: 0,
+    rescueRotationDirection: 1 as 1 | -1,
+    rescueBurstAngleDeg: 0,
   }),
 
   getters: {
@@ -174,6 +176,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     startRescueRotation() {
       this.rescueRotationPhase = 'rotating'
       this.rescueRotationStartTime = Date.now()
+      this.rescueRotationDirection = Math.random() < 0.5 ? 1 : -1
+      this.rescueBurstAngleDeg = Math.random() * 360
     },
 
     endRescueRotation() {
