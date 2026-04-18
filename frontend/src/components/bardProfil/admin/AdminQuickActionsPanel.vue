@@ -8,6 +8,8 @@ import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
+import { CHAMPION_ROLES } from '@/config/championRoles'
+import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
@@ -87,6 +89,34 @@ function fillAllMaterials() {
   })
 }
 
+function fillTeamWithRandomChampions() {
+  // Unlock all champions first so there's always a pool to pick from
+  battleStore.unlockAllChampions()
+
+  const roles: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
+  const used = new Set<string>()
+  const pool = [...battleStore.ownedChampions]
+    .filter((c) => c !== 'Bard')
+    .sort(() => Math.random() - 0.5)
+
+  battleStore.headerSlots.splice(0, 5, null, null, null, null, null)
+  battleStore.syncTeam1ToSlots()
+
+  roles.forEach((role, slotIndex) => {
+    const roleMatch = pool.filter(
+      (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
+    )
+    const fallback = pool.filter((name) => !used.has(name))
+    const pick =
+      roleMatch.length > 0
+        ? roleMatch[Math.floor(Math.random() * roleMatch.length)]
+        : fallback[0]
+    if (!pick) return
+    used.add(pick)
+    battleStore.setHeaderSlot(slotIndex, pick)
+  })
+}
+
 function teleportNearPlanet() {
   if (galaxyStore.championTravelState !== 'traveling') return
   galaxyStore.championTravelStartTime = Date.now() - (galaxyStore.championTravelDurationMs - 5000)
@@ -157,6 +187,12 @@ function teleportNearPlanet() {
         @click="triggerNebula()"
       >
         <span>🌌</span> Trigger Nebula
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--team-fill flex items-center gap-1.5 px-3 py-1.5"
+        @click="fillTeamWithRandomChampions"
+      >
+        <span>🎲</span> Random Team Fill
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--travel flex items-center gap-1.5 px-3 py-1.5"
@@ -294,6 +330,16 @@ function teleportNearPlanet() {
   background: linear-gradient(to bottom, #102e28, #0a1c18);
   border-color: #20a888;
   color: #60f0d8;
+}
+.admin-spawn-btn--team-fill {
+  color: #60d8a0;
+  border-color: #0a3020;
+  background: linear-gradient(to bottom, #0a1e16, #061410);
+}
+.admin-spawn-btn--team-fill:hover {
+  background: linear-gradient(to bottom, #102e22, #0a1c18);
+  border-color: #20a870;
+  color: #80f0c0;
 }
 .admin-spawn-btn--travel:disabled {
   opacity: 0.35;
