@@ -329,7 +329,7 @@ function getChampionImageForPlanet(planet: PlanetRenderEntry): string | null {
 function rewardSummaryStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
-    transform: `translate(${star.x}px, ${star.y + s / 2 + 14}px) translateX(-50%)`,
+    transform: `translate(${star.x}px, ${star.y + s / 2 + 58}px) translateX(-50%)`,
   }
 }
 </script>
@@ -462,19 +462,30 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 4px;
-  background: rgba(8, 5, 20, 0.82);
-  border: 1px solid rgba(232, 192, 64, 0.4);
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  background: rgba(8, 5, 18, 0.82);
+  border: 1px solid rgba(232, 192, 64, 0.5);
   pointer-events: none;
   z-index: 8;
 }
 
+.star-reward-summary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  width: 1px;
+  height: 52px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(232, 192, 64, 0.25) 40%, rgba(232, 192, 64, 0.5) 100%);
+}
+
 .summary-loot-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .summary-item {
