@@ -248,6 +248,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const gameStore = useGameStore()
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
+        // Champion-Planeten erhalten keinen passiven Schaden wenn Spiel pausiert
         if (gameStore.isGamePaused && boss.isChampionPlanet) continue
 
         boss.currentHP -= boss.passiveDPS
@@ -258,7 +259,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           boss.defeated = true
           this.grantBossRewards(boss)
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
-          logger.info('Planet', 'Boss defeated by passive damage!')
+          logger.info('Planet', 'Boss defeated by passive DPS!')
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
@@ -271,12 +272,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
+        // ── Champion-Planeten enragen NICHT ──────────────────────────────
+        // Sie können nur durch Besiegen entfernt werden, nie durch Zeitablauf.
+        if (boss.isChampionPlanet) continue
+
         const elapsed = Date.now() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
 
         if (boss.noEnrage) {
-          // noEnrage-Bosse (Resource-Sterne): still ablaufen lassen ohne Penalty/Damage
-          // expired = true triggert onBossResult → Stern wird entfernt
+          // noEnrage-Bosse (Resource-Sterne): still ablaufen lassen
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
@@ -301,12 +305,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         playerStore.takeDamage()
 
         logger.info('Planet', 'Boss enraged! CPS penalty applied.')
-
-        if (boss.isChampionPlanet) {
-          const galaxyStore = useGalaxyStore()
-          galaxyStore.startChampionTravel()
-          logger.info('Planet', 'Champion planet lost — starting next travel')
-        }
 
         const planetId = boss.planetId
         setTimeout(() => {
@@ -379,11 +377,13 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
+        // ── Champion-Planeten enragen NICHT ──────────────────────────────
+        if (boss.isChampionPlanet) continue
+
         const elapsed = Date.now() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
 
         if (boss.noEnrage) {
-          // noEnrage-Bosse still ablaufen lassen ohne Penalty/Damage
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId

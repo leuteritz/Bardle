@@ -29,7 +29,6 @@
         :style="champArcStyle(i, teamChampions.length)"
       >
         <div class="champ-striker" :class="{ 'champ-striker--ult': ultActives[i] }">
-          <!-- Charge pips -->
           <div class="champ-charge">
             <span
               v-for="p in 4"
@@ -70,10 +69,11 @@
       </div>
     </Teleport>
 
-    <!-- Enrage Timer -->
+    <!-- Enrage Timer: komplett ausblenden wenn Champion-Planet (kein Ablauftimer) -->
     <div
+      v-if="showEnrageTimer"
       class="enrage-ring"
-      :class="{ 'enrage-ring--urgent': secondsRemaining < 10 }"
+      :class="{ 'enrage-ring--urgent': effectiveSecondsRemaining < 10 }"
       title="Enrage-Timer"
     >
       <svg viewBox="0 0 60 60" class="enrage-svg" aria-hidden="true">
@@ -83,26 +83,26 @@
           cy="30"
           r="24"
           class="enrage-arc"
-          :class="{ 'enrage-arc--urgent': secondsRemaining < 10 }"
-          :style="{ strokeDasharray: `${enragePercent * 1.508} 150.8` }"
+          :class="{ 'enrage-arc--urgent': effectiveSecondsRemaining < 10 }"
+          :style="{ strokeDasharray: `${effectiveEnragePercent * 1.508} 150.8` }"
         />
       </svg>
-      <span class="enrage-seconds">{{ secondsRemaining }}</span>
+      <span class="enrage-seconds">{{ effectiveSecondsRemaining }}</span>
       <span class="enrage-label">SEK</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, reactive, nextTick, computed } from 'vue'
 import { NS, drawPlanet } from '../../../utils/planetDraw'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { formatNumber } from '../../../config/numberFormat'
 import type { PlanetBossEvent } from '../../../types'
 
-// Attack timing constants (aligned with CSS animation: 2.6s cycle, impact at 36%)
 const CYCLE_MS = 2600
-const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS) // 936ms
+const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
 const STAGGER_MS = 650
 
 const props = defineProps<{
@@ -119,10 +119,36 @@ const props = defineProps<{
 const emit = defineEmits<{ shake: [ms: number] }>()
 
 const bossStore = usePlanetBossStore()
-const arenaEl = ref<HTMLDivElement | null>(null)
-const planetStageRef = ref<HTMLDivElement | null>(null)
+const starGroupStore = useStarGroupStore()
+
+// Prüft ob der aktive Boss zu einem Champion-Stern gehört.
+// Greift sowohl auf isChampionPlanet als auch auf den starGroupStore zurück,
+// damit auch Planeten erfasst werden die nicht direkt als isChampionPlanet markiert sind.
+const isChampionStarPlanet = computed<boolean>(() => {
+  if (!props.activeBoss) return false
+  if (props.activeBoss.isChampionPlanet) return true
+  // Zusätzlich: prüfe ob die planetId zu einem champion-Stern im starGroupStore gehört
+  const planetId = props.activeBoss.planetId
+  return starGroupStore.activeStars.some(
+    (star) =>
+      star.starType === 'champion' && star.planetSlots.some((slot) => slot.planetId === planetId),
+  )
+})
+
+// Timer nur anzeigen wenn kein Champion-Stern-Planet
+const showEnrageTimer = computed<boolean>(() => !isChampionStarPlanet.value)
+
+// Effektive Werte: bei Champion-Planeten auf 0 fixieren (Fallback-Schutz)
+const effectiveSecondsRemaining = computed<number>(() =>
+  isChampionStarPlanet.value ? 0 : props.secondsRemaining,
+)
+const effectiveEnragePercent = computed<number>(() =>
+  isChampionStarPlanet.value ? 0 : props.enragePercent,
+)
 
 // ── Boss image discovery ──────────────────────────────────────────────────
+const arenaEl = ref<HTMLDivElement | null>(null)
+const planetStageRef = ref<HTMLDivElement | null>(null)
 const bossImage = ref('/img/Boss/Boss1.png')
 const bossImageList = ref<string[]>([])
 let discoveryDone = false
@@ -232,15 +258,13 @@ const _hitTimeouts: number[] = []
 const _hitIntervals: number[] = []
 const _ultTimeouts: number[] = []
 
-const ULT_EVERY = 5 // ult on every Nth attack
-const ULT_ANIM_MS = 3400 // matches champ-ult keyframe duration
+const ULT_EVERY = 5
+const ULT_ANIM_MS = 3400
 
 function fireAttack(i: number) {
   if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
-
   attackCounts[i] = (attackCounts[i] ?? 0) + 1
   const count = attackCounts[i]
-
   if (count % ULT_EVERY === 0) {
     ultActives[i] = true
     handleChampionUlt()
@@ -257,7 +281,6 @@ function fireAttack(i: number) {
 function startAttackCycles() {
   stopAttackCycles()
   if (!props.activeBoss) return
-  // Reset per-champion state
   props.teamChampions.forEach((_, i) => {
     attackCounts[i] = 0
     ultActives[i] = false
@@ -290,6 +313,7 @@ onMounted(async () => {
   startAttackCycles()
 })
 onUnmounted(() => stopAttackCycles())
+
 watch(
   () => props.activeBoss?.planetId,
   async (newId) => {
@@ -306,21 +330,17 @@ watch(
 )
 
 function champArcStyle(i: number, total: number): Record<string, string> {
-  // Distribute champions in a wider semicircle below/around the boss center
   const span = total > 1 ? Math.min(160, 70 + (total - 1) * 45) : 0
   const startAngle = -span / 2
   const step = total > 1 ? span / (total - 1) : 0
   const angleDeg = startAngle + i * step
   const angleRad = (angleDeg * Math.PI) / 180
   const radius = 115
-  // (angleDeg=0 → straight below boss, positive = clockwise)
   const tx = Math.sin(angleRad) * radius
   const ty = Math.cos(angleRad) * radius
-  // Strike direction: normalized vector FROM champion TOWARD boss center (0,0)
   const mag = Math.sqrt(tx * tx + ty * ty) || 1
   const strikeX = ((-tx / mag) * 62).toFixed(1)
   const strikeY = ((-ty / mag) * 62).toFixed(1)
-  // Stagger attacks so champions strike in sequence
   const stagger = (i * 0.65).toFixed(2)
   return {
     transform: `translate(calc(${tx.toFixed(1)}px - 50%), calc(${ty.toFixed(1)}px - 50%))`,
@@ -754,7 +774,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes champ-ult {
-  /* ── Power charge: pull back + glow ── */
   0% {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
@@ -767,22 +786,18 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     transform: translate(calc(var(--strike-x) * -0.08), calc(var(--strike-y) * -0.08)) scale(1.22);
     filter: brightness(2.8) saturate(2.2) hue-rotate(-5deg);
   }
-  /* ── Massive lunge ─────────────────── */
   32% {
     transform: translate(calc(var(--strike-x) * 1.55), calc(var(--strike-y) * 1.55)) scale(1.55);
     filter: brightness(5) saturate(3);
   }
-  /* ── Impact explosion ──────────────── */
   38% {
     transform: translate(calc(var(--strike-x) * 1.35), calc(var(--strike-y) * 1.35)) scale(1.3);
     filter: brightness(9) saturate(0.1);
   }
-  /* ── Recoil with afterglow ─────────── */
   52% {
     transform: translate(calc(var(--strike-x) * -0.14), calc(var(--strike-y) * -0.14)) scale(1.06);
     filter: brightness(2) saturate(1.8);
   }
-  /* ── Settle with fade ──────────────── */
   68% {
     transform: translate(0, 0) scale(1.04);
     filter: brightness(1.4) saturate(1.2);
@@ -794,33 +809,27 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 
 @keyframes champ-strike {
-  /* ── Idle rest ──────────────────── */
   0%,
   18% {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
   }
-  /* ── Wind-up: pull back ─────────── */
   22% {
     transform: translate(calc(var(--strike-x) * -0.18), calc(var(--strike-y) * -0.18)) scale(0.92);
     filter: brightness(0.85);
   }
-  /* ── Strike: lunge at boss ──────── */
   36% {
     transform: translate(var(--strike-x), var(--strike-y)) scale(1.18);
     filter: brightness(2.2) saturate(1.4);
   }
-  /* ── Impact flash ───────────────── */
   40% {
     transform: translate(calc(var(--strike-x) * 0.85), calc(var(--strike-y) * 0.85)) scale(1.08);
     filter: brightness(3) saturate(0.2);
   }
-  /* ── Recoil back ────────────────── */
   56% {
     transform: translate(calc(var(--strike-x) * -0.08), calc(var(--strike-y) * -0.08)) scale(1.02);
     filter: brightness(1);
   }
-  /* ── Settle ─────────────────────── */
   70%,
   100% {
     transform: translate(0, 0) scale(1);
