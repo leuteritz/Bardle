@@ -11,6 +11,7 @@ const pickerOpen = ref(false)
 const pickerSlotIndex = ref<number | null>(null)
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
+const ROLE_KEYS = ['top', 'jungle', 'mid', 'adc', 'support']
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
@@ -47,7 +48,7 @@ function onImgError(e: Event) {
         v-for="(slot, i) in headerSlots"
         :key="i"
         class="slot-tile"
-        :class="{ 'slot-tile--filled': slot !== null }"
+        :class="{ 'slot-tile--filled': slot !== null, [`slot-tile--role-${ROLE_KEYS[i]}`]: true }"
         :title="
           slot ? `${slot} (${ROLES[i]}) – klicken zum Ändern` : `${ROLES[i]} – Champion wählen`
         "
@@ -300,4 +301,23 @@ function onImgError(e: Event) {
   background: rgba(160, 40, 20, 0.7) !important;
   border-color: #cc6050;
 }
+
+/* ── Rollen-Akzentfarben ── */
+.slot-tile--role-top     { border-color: rgba(224, 80, 80, 0.45); }
+.slot-tile--role-jungle  { border-color: rgba(80, 192, 96, 0.45); }
+.slot-tile--role-mid     { border-color: rgba(80, 144, 232, 0.45); }
+.slot-tile--role-adc     { border-color: rgba(232, 152, 64, 0.45); }
+.slot-tile--role-support { border-color: rgba(184, 200, 216, 0.45); }
+
+.slot-tile--role-top.slot-tile--filled     { border-color: rgba(224, 80, 80, 0.75); box-shadow: inset 0 1px 0 rgba(224, 80, 80, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+.slot-tile--role-jungle.slot-tile--filled  { border-color: rgba(80, 192, 96, 0.75); box-shadow: inset 0 1px 0 rgba(80, 192, 96, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+.slot-tile--role-mid.slot-tile--filled     { border-color: rgba(80, 144, 232, 0.75); box-shadow: inset 0 1px 0 rgba(80, 144, 232, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+.slot-tile--role-adc.slot-tile--filled     { border-color: rgba(232, 152, 64, 0.75); box-shadow: inset 0 1px 0 rgba(232, 152, 64, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+.slot-tile--role-support.slot-tile--filled { border-color: rgba(184, 200, 216, 0.75); box-shadow: inset 0 1px 0 rgba(184, 200, 216, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+
+.slot-tile--role-top:hover     { border-color: #e05050; box-shadow: inset 0 1px 0 rgba(224, 80, 80, 0.12), 0 0 10px rgba(224, 80, 80, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
+.slot-tile--role-jungle:hover  { border-color: #50c060; box-shadow: inset 0 1px 0 rgba(80, 192, 96, 0.12), 0 0 10px rgba(80, 192, 96, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
+.slot-tile--role-mid:hover     { border-color: #5090e8; box-shadow: inset 0 1px 0 rgba(80, 144, 232, 0.12), 0 0 10px rgba(80, 144, 232, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
+.slot-tile--role-adc:hover     { border-color: #e89840; box-shadow: inset 0 1px 0 rgba(232, 152, 64, 0.12), 0 0 10px rgba(232, 152, 64, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
+.slot-tile--role-support:hover { border-color: #b8c8d8; box-shadow: inset 0 1px 0 rgba(184, 200, 216, 0.12), 0 0 10px rgba(184, 200, 216, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
 </style>

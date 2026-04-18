@@ -424,6 +424,28 @@ export default defineComponent({
   border-radius: 50%;
 }
 
+/* ── Rollen-Farben ──────────────────────────────────────────────────────── */
+.champion-orbit-avatar--role-top {
+  border-color: #e05050;
+  box-shadow: 0 0 8px rgba(220, 60, 60, 0.55), 0 0 16px rgba(220, 60, 60, 0.2);
+}
+.champion-orbit-avatar--role-jungle {
+  border-color: #50c060;
+  box-shadow: 0 0 8px rgba(60, 200, 80, 0.55), 0 0 16px rgba(60, 200, 80, 0.2);
+}
+.champion-orbit-avatar--role-mid {
+  border-color: #5090e8;
+  box-shadow: 0 0 8px rgba(60, 130, 240, 0.55), 0 0 16px rgba(60, 130, 240, 0.2);
+}
+.champion-orbit-avatar--role-adc {
+  border-color: #e89840;
+  box-shadow: 0 0 8px rgba(240, 150, 40, 0.55), 0 0 16px rgba(240, 150, 40, 0.2);
+}
+.champion-orbit-avatar--role-support {
+  border-color: #b8c8d8;
+  box-shadow: 0 0 8px rgba(180, 200, 210, 0.55), 0 0 16px rgba(180, 200, 210, 0.2);
+}
+
 /* Hinter der Sonne: gedimmt, entsättigt, kein Glow */
 .champion-orbit-avatar--behind {
   border-color: rgba(140, 90, 15, 0.35);
@@ -433,38 +455,19 @@ export default defineComponent({
   filter: brightness(0.42) saturate(0.45);
 }
 
-/* Klar vor der Sonne: hellerer Rand, starkes Glow */
+/* Klar vor der Sonne: Helligkeit erhöhen, Rollenfarbe bleibt erhalten */
 .champion-orbit-avatar--foreground {
-  border-color: #ffe080;
-  box-shadow:
-    0 0 14px rgba(255, 220, 80, 0.8),
-    0 0 28px rgba(255, 180, 40, 0.5),
-    0 3px 10px rgba(0, 0, 0, 0.65);
-  filter: brightness(1.08) saturate(1.12);
+  filter: brightness(1.18) saturate(1.2);
 }
 
-/* Angriff überschreibt alles */
+/* Angriff: Rollenfarbe bleibt, nur Helligkeit pulsiert */
 .champion-orbit-avatar--attacking {
-  border-color: #ff6040;
-  box-shadow:
-    0 0 12px rgba(255, 80, 20, 0.8),
-    0 0 24px rgba(255, 60, 0, 0.5);
   animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
-  filter: none;
 }
 
 @keyframes champion-attack-pulse {
-  from {
-    box-shadow:
-      0 0 10px rgba(255, 80, 20, 0.7),
-      0 0 20px rgba(255, 60, 0, 0.4);
-  }
-  to {
-    box-shadow:
-      0 0 20px rgba(255, 100, 30, 1),
-      0 0 40px rgba(255, 80, 0, 0.7);
-    filter: brightness(1.2);
-  }
+  from { filter: brightness(1.0) saturate(1.0); }
+  to   { filter: brightness(1.4) saturate(1.25); }
 }
 
 /* ── Rollen-Badge ─────────────────────────────────────────────────────────── */
@@ -483,11 +486,11 @@ export default defineComponent({
   z-index: 2;
 }
 
-.champion-role-badge--adc    { background: #a0440a; }
-.champion-role-badge--support { background: #0a5a3a; }
-.champion-role-badge--top    { background: #6a1010; }
-.champion-role-badge--mid    { background: #3a0a6a; }
-.champion-role-badge--jungle  { background: #0a4020; }
+.champion-role-badge--adc     { background: #804010; }
+.champion-role-badge--support { background: #3a5060; }
+.champion-role-badge--top     { background: #7a1818; }
+.champion-role-badge--mid     { background: #1a3880; }
+.champion-role-badge--jungle  { background: #1a6028; }
 
 /* Role-specific glow when ability is active */
 .champion-orbit-avatar--shield {
