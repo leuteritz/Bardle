@@ -59,6 +59,9 @@ export const useGalaxyStore = defineStore('galaxy', {
     resourceStarDurationMs: 0,
     pendingResourceStars: 0,
     pendingChampionStar: false,
+    // Champion-Rettungs-Rotationsanimation
+    rescueRotationPhase: 'idle' as 'idle' | 'rotating',
+    rescueRotationStartTime: 0,
   }),
 
   getters: {
@@ -68,6 +71,10 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     needsFinalBoss(): boolean {
       return this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated
+    },
+
+    isRescueRotating(): boolean {
+      return this.rescueRotationPhase === 'rotating'
     },
 
     isBossSearchActive(): boolean {
@@ -164,8 +171,19 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.bossSearchSegmentAngle = angle
     },
 
+    startRescueRotation() {
+      this.rescueRotationPhase = 'rotating'
+      this.rescueRotationStartTime = Date.now()
+    },
+
+    endRescueRotation() {
+      this.rescueRotationPhase = 'idle'
+      this.rescueRotationStartTime = 0
+    },
+
     onChampionStarRescued() {
       if (this.starsRescued >= this.starsRequired) return
+      this.startRescueRotation()
       this.starsRescued++
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         this.championTravelState = 'idle'

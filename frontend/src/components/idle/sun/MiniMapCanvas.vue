@@ -425,7 +425,9 @@ export default defineComponent({
       }
 
       const isMoving = isTraveling || galaxyStore.isBossSearchActive
-      if (isMoving) {
+      if (galaxyStore.isRescueRotating) {
+        // Trail während Kameraschwenk einfrieren
+      } else if (isMoving) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
         const moved = Math.sqrt(dx * dx + dy * dy)

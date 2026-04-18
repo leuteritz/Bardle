@@ -106,6 +106,10 @@ const EMISSION_SPAWN_MAX = 18_000
 const CLUSTER_COUNT = 10
 const DUST_PATCH_COUNT = 7
 
+// ─── Champion-Rettungs-Rotation ───────────────────────────────────────────────
+const RESCUE_ROTATION_DURATION_MS = 2_000
+const RESCUE_ROTATION_TOTAL_RAD = Math.PI * 1.5
+
 // ─── Emission Nebula palettes ─────────────────────────────────────────────────
 
 type EmissionType = 'emission-nebula' | 'ion-cloud'
@@ -1383,6 +1387,26 @@ export function useStarBackground() {
     if (hyperActive) hyperspaceElapsed += delta
 
     const galaxyStore = useGalaxyStore()
+
+    // ── Champion-Rettungs-Kameraschwenk ────────────────────────────────────
+    if (galaxyStore.isRescueRotating) {
+      if (prefersReducedMotion.value) {
+        galaxyStore.endRescueRotation()
+      } else {
+        const elapsed = Date.now() - galaxyStore.rescueRotationStartTime
+        const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
+        // sin-Kurve: langsam starten, in der Mitte peak, wieder langsam enden
+        const angularDelta =
+          (RESCUE_ROTATION_TOTAL_RAD / RESCUE_ROTATION_DURATION_MS) *
+          (delta * 1000) *
+          Math.sin(t * Math.PI)
+        for (const star of stars) star.angle += angularDelta
+        for (const d of dustPatches) d.angle += angularDelta
+        for (const c of starClusters) c.angle += angularDelta
+        if (t >= 1) galaxyStore.endRescueRotation()
+      }
+    }
+
     const pendingTrans = galaxyStore.pendingTransition
 
     if (pendingTrans && !wasPendingTransition) {
@@ -1415,7 +1439,9 @@ export function useStarBackground() {
     }
 
     let speedMultiplier: number
-    if (galaxyTransPhase === 'warp') {
+    if (galaxyStore.isRescueRotating) {
+      speedMultiplier = 0
+    } else if (galaxyTransPhase === 'warp') {
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
       speedMultiplier = 1 + 44 * (t * t * t)
     } else if (galaxyTransPhase === 'decel') {

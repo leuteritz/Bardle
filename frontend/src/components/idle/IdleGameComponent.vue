@@ -20,6 +20,7 @@
     <ChampionOrbit />
     <StarSystemComponent />
     <PlayerHPBar />
+    <StarSystemRescueTransition />
 
     <div
       :key="chimeGainKey"
@@ -51,6 +52,7 @@ import MiniMap from './sun/MiniMap.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
+import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -60,6 +62,7 @@ export default defineComponent({
     ChampionOrbit,
     PlayerHPBar,
     StarSystemComponent,
+    StarSystemRescueTransition,
   },
   setup() {
     const gameStore = useGameStore()
