@@ -7,14 +7,13 @@ import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
+import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING } from '../config/constants'
 import type { LabelData, PlanetType, StarType } from '../types'
 
 const PLANET_SIZE_CHAMPION = 64
 const PLANET_SIZE_GALAXY_BOSS = 72
 const PLANET_SIZE_NORMAL = 52
 const VANISH_DURATION_MS = 800
-
-const SPAWN_DURATION_MS = 1000
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
 const BEHIND_SPEED_MULT = 4.5
@@ -198,6 +197,7 @@ export function useStarSystem() {
   const planetSavedAt = new Map<string, number>()
   const starSpawnedAt = new Map<string, number>()
   const starSpeedMul = new Map<string, number>()
+  const starFlyStart = new Map<string, { x: number; y: number }>()
   // Statt isVanishing im Render: Set der IDs für die bereits gespawnt wurde
   const vanishFired = new Set<string>()
 
@@ -307,9 +307,25 @@ export function useStarSystem() {
       ))
       const starFactor = Math.max(STAR_BEHIND_OPACITY, visibleFactor)
 
-      if (!starSpawnedAt.has(star.id)) starSpawnedAt.set(star.id, ts)
-      const spawnT = Math.min(1, (ts - starSpawnedAt.get(star.id)!) / SPAWN_DURATION_MS)
-      const spawnFactor = reducedMotion ? 1 : 1 - Math.pow(1 - spawnT, 3)
+      if (!starSpawnedAt.has(star.id)) {
+        starFlyStart.set(star.id, {
+          x: Math.random() * window.innerWidth,
+          y: window.innerHeight * (0.5 + Math.random() * 0.5),
+        })
+        starSpawnedAt.set(star.id, ts)
+      }
+      const spawnT = Math.min(1, (ts - starSpawnedAt.get(star.id)!) / STAR_SPAWN_DURATION_MS)
+      const spawnFactor = reducedMotion ? 1 : 1 - Math.pow(1 - spawnT, STAR_SPAWN_FLY_EASING)
+
+      let displayX = sx
+      let displayY = sy
+      if (!reducedMotion && spawnT < 1) {
+        const fly = starFlyStart.get(star.id)
+        if (fly) {
+          displayX = fly.x + (sx - fly.x) * spawnFactor
+          displayY = fly.y + (sy - fly.y) * spawnFactor
+        }
+      }
 
       const targetMul = sIsBehind ? BEHIND_SPEED_MULT : 1.0
       starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * SPEED_LERP)
@@ -346,7 +362,7 @@ export function useStarSystem() {
         planetCurRx.set(slot.planetId, curRx)
         planetCurRy.set(slot.planetId, curRy)
 
-        const { x: px, y: py } = getOrbitPos(pAngle, curRx, curRy, slot.orbitTilt, sx, sy)
+        const { x: px, y: py } = getOrbitPos(pAngle, curRx, curRy, slot.orbitTilt, displayX, displayY)
 
         const boss = bossStore.activeBosses.find((b) => b.planetId === slot.planetId)
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
@@ -384,7 +400,7 @@ export function useStarSystem() {
 
         const labelData =
           !slot.cleared && !pIsBehind && !sIsBehind
-            ? buildLabelData(slot.planetId, px, py, pR, sx, sy)
+            ? buildLabelData(slot.planetId, px, py, pR, displayX, displayY)
             : null
 
         planetEntries.push({
@@ -404,8 +420,8 @@ export function useStarSystem() {
       newRenders.push({
         id: star.id,
         starType: star.starType,
-        x: sx,
-        y: sy,
+        x: displayX,
+        y: displayY,
         scale: sScale,
         opacity: sOpacity,
         isBehind: sIsBehind,
@@ -428,6 +444,9 @@ export function useStarSystem() {
     }
     for (const id of starSpeedMul.keys()) {
       if (!starGroupStore.activeStars.some((s) => s.id === id)) starSpeedMul.delete(id)
+    }
+    for (const id of starFlyStart.keys()) {
+      if (!starGroupStore.activeStars.some((s) => s.id === id)) starFlyStart.delete(id)
     }
 
     const allActiveSlots = new Set(

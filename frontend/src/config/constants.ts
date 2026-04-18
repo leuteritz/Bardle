@@ -66,9 +66,9 @@ export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
 
 // Resource star flyby
-export const RESOURCE_STAR_INTERVAL_MS = 120_000  // alle 2 min ein Flyby
-export const RESOURCE_STAR_DURATION_MS = 45_000   // Flyby dauert 45 s
-export const RESOURCE_STAR_PLANET_COUNT = 3       // max. Planeten pro Flyby
+export const RESOURCE_STAR_INTERVAL_MS = 120_000 // alle 2 min ein Flyby
+export const RESOURCE_STAR_DURATION_MS = 45_000 // Flyby dauert 45 s
+export const RESOURCE_STAR_PLANET_COUNT = 3 // max. Planeten pro Flyby
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
@@ -162,21 +162,25 @@ export const REROLL_COST = 3
 export const SAVE_KEY = 'bard-idle-save'
 export const SAVE_VERSION = 1
 
+// Star system — fly-in spawn animation
+export const STAR_SPAWN_DURATION_MS = 8_000 // fly-in animation duration
+export const STAR_SPAWN_FLY_EASING = 5 // cubic ease-out exponent (higher = more aggressive deceleration)
+
 // Star system — foreground orbiting stars & planets
-export const STAR_ORBIT_SPEED_RESOURCE = 0.000084      // resource star around sun
-export const STAR_ORBIT_SPEED_CHAMPION = 0.000044      // champion star around sun
-export const STAR_ORBIT_SPEED_GALAXY_BOSS = 0.000024   // galaxy boss star around sun
-export const PLANET_ORBIT_SPEED_MIN = 0.0019           // resource/extra planet min speed
-export const PLANET_ORBIT_SPEED_RANGE = 0.001          // resource/extra planet random range
-export const PLANET_ORBIT_SPEED_CHAMP_MIN = 0.0018     // champion planet min speed
-export const PLANET_ORBIT_SPEED_CHAMP_RANGE = 0.0008   // champion planet random range
-export const PLANET_ORBIT_SPEED_EXTRA_MIN = 0.002      // extra planets in champion star min
-export const PLANET_ORBIT_SPEED_EXTRA_RANGE = 0.001    // extra planets in champion star range
-export const PLANET_ORBIT_SPEED_BOSS = 0.0016          // galaxy boss planet speed
+export const STAR_ORBIT_SPEED_RESOURCE = 0.000084 // resource star around sun
+export const STAR_ORBIT_SPEED_CHAMPION = 0.000044 // champion star around sun
+export const STAR_ORBIT_SPEED_GALAXY_BOSS = 0.000024 // galaxy boss star around sun
+export const PLANET_ORBIT_SPEED_MIN = 0.0019 // resource/extra planet min speed
+export const PLANET_ORBIT_SPEED_RANGE = 0.001 // resource/extra planet random range
+export const PLANET_ORBIT_SPEED_CHAMP_MIN = 0.0018 // champion planet min speed
+export const PLANET_ORBIT_SPEED_CHAMP_RANGE = 0.0008 // champion planet random range
+export const PLANET_ORBIT_SPEED_EXTRA_MIN = 0.002 // extra planets in champion star min
+export const PLANET_ORBIT_SPEED_EXTRA_RANGE = 0.001 // extra planets in champion star range
+export const PLANET_ORBIT_SPEED_BOSS = 0.0016 // galaxy boss planet speed
 
 // Background canvas star speeds
-export const STAR_BG_BASE_SPEED_MIN = 1.0              // base speed minimum (doubled from 0.5)
-export const STAR_BG_BASE_SPEED_RANGE = 2.0            // base speed random range (doubled from 1.0)
+export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.5)
+export const STAR_BG_BASE_SPEED_RANGE = 2.0 // base speed random range (doubled from 1.0)
 
 // Star background — warp / galaxy animation
 export const WARP_SPEED_MAX = 70
@@ -204,15 +208,15 @@ export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8
 
 // Role Behavior — orbit abilities per role
-export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000   // heal player every 8s
-export const ROLE_SUPPORT_HEAL_AMOUNT = 5            // +5 HP per heal
-export const ROLE_TOP_SHIELD_DURATION_MS = 5000      // shield lasts 5s
-export const ROLE_TOP_SHIELD_INTERVAL_MS = 12000     // re-activates every 12s
-export const ROLE_MID_DOT_DPS = 15                   // extra DoT damage per second
-export const ROLE_MID_DOT_DURATION_MS = 6000         // DoT lasts 6s
-export const ROLE_MID_DOT_INTERVAL_MS = 10000        // reapplied every 10s
-export const ROLE_ADC_BURST_DAMAGE = 80              // bonus burst hit on boss
-export const ROLE_ADC_BURST_INTERVAL_MS = 5000       // every 5s
-export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000   // gain 1 stack every 6s
+export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000 // heal player every 8s
+export const ROLE_SUPPORT_HEAL_AMOUNT = 5 // +5 HP per heal
+export const ROLE_TOP_SHIELD_DURATION_MS = 5000 // shield lasts 5s
+export const ROLE_TOP_SHIELD_INTERVAL_MS = 12000 // re-activates every 12s
+export const ROLE_MID_DOT_DPS = 15 // extra DoT damage per second
+export const ROLE_MID_DOT_DURATION_MS = 6000 // DoT lasts 6s
+export const ROLE_MID_DOT_INTERVAL_MS = 10000 // reapplied every 10s
+export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
+export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
+export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000 // gain 1 stack every 6s
 export const ROLE_JUNGLER_MAX_STACKS = 5
-export const ROLE_JUNGLER_CHIMES_PER_STACK = 50      // chimes per stack on dump
+export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
