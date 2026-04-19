@@ -19,6 +19,7 @@ import FpsOverlay from './components/idle/FpsOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
+import ChatWidget from '@/components/idle/chat/ChatWidget.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -83,8 +84,9 @@ watch(
     </button>
 
     <EncyclopediaPanel />
+    <ChatWidget />
 
-    <span class="fixed z-50 text-xl select-none bottom-3 right-3 text-amber-600/60 drop-shadow-xl">
+    <span class="fixed z-50 text-xl select-none top-3 left-3 text-amber-600/60 drop-shadow-xl">
       © Leuteritz
     </span>
   </div>
