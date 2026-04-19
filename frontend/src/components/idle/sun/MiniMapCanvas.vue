@@ -495,6 +495,7 @@ export default defineComponent({
 
       const isMoving = isTraveling || galaxyStore.isBossSearchActive
       if (galaxyStore.isRescueRotating) {
+        // nichts
       } else if (isMoving) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
@@ -512,26 +513,18 @@ export default defineComponent({
       ctx.fillStyle = '#1a0c02'
       ctx.fillRect(0, 0, w, h)
 
-      ctx.save()
-      ctx.beginPath()
-      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2)
-      ctx.clip()
+      // Hintergrundbild – kein Kreis-Clip, füllt das gesamte Rechteck
       const imgW = scale
       const imgH = scale
       const imgX = w / 2 - player.x * imgW
       const imgY = h / 2 - player.y * imgH
       ctx.drawImage(img, imgX, imgY, imgW, imgH)
-      ctx.restore()
 
       const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
-      ctx.save()
-      ctx.beginPath()
-      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2)
-      ctx.clip()
       ctx.globalCompositeOperation = 'source-over'
       ctx.fillStyle = theme.nebulaColors[0].replace(/,\s*[\d.]+\)/, ', 0.28)')
       ctx.fillRect(0, 0, w, h)
-      ctx.restore()
+      ctx.globalCompositeOperation = 'source-over'
 
       if (playerTrail.length >= 2) {
         for (let i = 1; i < playerTrail.length; i++) {
@@ -742,7 +735,6 @@ export default defineComponent({
         galaxyStore.pendingGalaxyBoss
 
       let desired = MAP_WORLD_DEFAULT
-
       if (galaxyStore.championTravelState === 'traveling' && !isBossPhase) {
         const remaining = galaxyStore.travelRemainingMs
         if (remaining <= ZOOM_TRIGGER_MS) {
@@ -753,7 +745,6 @@ export default defineComponent({
           desired = MAP_WORLD_DEFAULT + (MAP_WORLD_ZOOMED - MAP_WORLD_DEFAULT) * t
         }
       }
-
       currentMapVisible.value += (desired - currentMapVisible.value) * ZOOM_LERP_SPEED
     }
 
@@ -821,8 +812,8 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 180
-        const h = canvas?.offsetHeight ?? 180
+        const w = canvas?.offsetWidth ?? 380
+        const h = canvas?.offsetHeight ?? 310
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         initWarpParticles(w, h)
@@ -852,8 +843,8 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 180
-        const h = canvas?.offsetHeight ?? 180
+        const w = canvas?.offsetWidth ?? 380
+        const h = canvas?.offsetHeight ?? 310
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         initWarpParticles(w, h)
@@ -902,13 +893,14 @@ export default defineComponent({
   display: block;
   width: 100%;
   height: 100%;
+  /* Kein border-radius – rechteckige Karte, kein filter */
 }
 
 .minimap-vignette {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 52%, rgba(0, 0, 0, 0.65) 100%);
+  /* Rechteckige Vignette – kein border-radius: 50%, kein filter */
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
 }
 </style>
