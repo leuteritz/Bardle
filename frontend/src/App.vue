@@ -19,7 +19,7 @@ import FpsOverlay from './components/idle/FpsOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
-import ChatWidget from '@/components/idle/chat/ChatWidget.vue'
+import BottomBarComponent from '@/components/idle/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -84,8 +84,7 @@ watch(
     </button>
 
     <EncyclopediaPanel />
-    <div class="bottom-connector" />
-    <ChatWidget />
+    <BottomBarComponent />
 
     <span class="fixed z-50 text-xl select-none top-3 left-3 text-amber-600/60 drop-shadow-xl">
       © Leuteritz
@@ -93,33 +92,6 @@ watch(
   </div>
 </template>
 
-<style scoped>
-.bottom-connector {
-  position: fixed;
-  bottom: 0;
-  left: 440px;
-  right: 440px;
-  height: 60px;
-  background: #1e1006;
-  z-index: 9999;
-  border-top: 3px solid #7a4e20;
-  box-shadow:
-    0 -1px 0 rgba(210, 160, 40, 0.85),
-    0 -4px 6px rgba(30, 12, 0, 0.95);
-}
-
-@keyframes connector-pulse-glow {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45))
-      drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(210, 160, 40, 0.65))
-      drop-shadow(0 0 6px rgba(120, 82, 15, 0.75));
-  }
-}
-</style>
 
 <style>
 :root {
