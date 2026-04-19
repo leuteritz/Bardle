@@ -1,23 +1,11 @@
 <template>
   <Transition name="travel-fade">
     <div v-if="show" class="travel-hud">
-      <!-- ETA Timer: außerhalb des Panels damit clip-path ihn nicht wegschneidet -->
-      <div v-if="!isRescuing" class="hud-eta">
-        <span class="hud-eta-value">{{ countdown }}</span>
-      </div>
-
       <div class="minimap-panel">
-        <!-- Ornament-Bar oben (Pause-Stil, nur linke Hälfte sichtbar dank clip-path) -->
-        <div class="minimap-ornament-top" />
-
-        <!-- Corner Gems links -->
-
-        <!-- RPG-Frame -->
         <div class="minimap-frame">
-          <!-- N-Label -->
           <span class="minimap-n-label">N</span>
 
-          <!-- Kompass-SVG Ring (vollständig 360°) -->
+          <!-- Kompass-SVG Ring -->
           <svg
             class="minimap-compass-svg"
             viewBox="0 0 220 220"
@@ -41,7 +29,6 @@
                 </feMerge>
               </filter>
             </defs>
-
             <circle cx="110" cy="110" r="107" fill="url(#bezelGrad)" mask="url(#bezelMask)" />
             <circle
               cx="110"
@@ -123,6 +110,11 @@
             <MiniMapCanvas />
           </div>
 
+          <!-- ETA Timer: direkt auf dem Canvas, oben rechts -->
+          <div v-if="!isRescuing" class="hud-eta">
+            <span class="hud-eta-value">{{ countdown }}</span>
+          </div>
+
           <div
             v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
             class="minimap-planet-count"
@@ -150,15 +142,20 @@
             </button>
           </div>
         </div>
-
-        <!-- Ornament-Bar unten -->
-        <div class="minimap-ornament-bottom" />
       </div>
 
-      <!-- Rahmen-SVG: außerhalb des geclippten Panels, damit er nicht weggeschnitten wird -->
+      <!--
+        Rahmen-SVG: nur der eine Strich der die Ecke abschließt.
+        Panel: 440 × 440px (nur frame, kein ornament mehr)
+        Kompass-Mitte: (220, 220), äußerster Ring r=109×2=218px
+        → Top des Kreises: (220, 2)
+        → Rechter Punkt:   (438, 220)
+
+        Pfad: Waagerecht von links (0,0) → Mitte (220,0) → Arc oben-rechts-Viertel → senkrecht nach unten
+      -->
       <svg
         class="panel-frame-svg"
-        viewBox="0 0 440 450"
+        viewBox="0 0 440 440"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
         preserveAspectRatio="none"
@@ -172,27 +169,27 @@
             </feMerge>
           </filter>
         </defs>
-        <!-- Schatten-Linie -->
+        <!-- Schatten -->
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,440"
           fill="none"
           stroke="rgba(30,12,0,0.95)"
           stroke-width="5"
           stroke-linecap="square"
           stroke-linejoin="miter"
         />
-        <!-- Haupt braune Linie -->
+        <!-- Braun -->
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,440"
           fill="none"
           stroke="#7a4e20"
           stroke-width="3"
           stroke-linecap="square"
           stroke-linejoin="miter"
         />
-        <!-- Goldene Glanz-Linie mit Glow -->
+        <!-- Gold mit Glow -->
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,440"
           fill="none"
           stroke="rgba(210,160,40,0.85)"
           stroke-width="1.5"
@@ -200,9 +197,9 @@
           stroke-linejoin="miter"
           filter="url(#goldGlow)"
         />
-        <!-- Heller Highlight -->
+        <!-- Highlight -->
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,440"
           fill="none"
           stroke="rgba(255,220,80,0.25)"
           stroke-width="1"
@@ -293,71 +290,24 @@ export default defineComponent({
   position: relative;
   pointer-events: auto;
   width: 440px;
-  /* Hintergrund dunkelbraun, oben-rechts-Ecke außerhalb Kreis ausgeschnitten */
   background: #1e1006;
   border: none;
   border-radius: 0;
-  /* clip-path schneidet oben-rechts-Ecke außerhalb Kompasskreis weg
-     Panel: 440 x 450px (5 top ornament + 440 frame + 5 bottom ornament)
-     Kreis-Mitte: (220, 225), Radius: 180
-     Oberer Kreispunkt: (220, 45), Rechter Kreispunkt: (400, 225) */
+  /*
+    clip-path: Rechteck minus das oben-rechts-Viertel außerhalb des Kompasskreises.
+    Panel = 440×440, Kompass-Mitte = (220,220), r=218
+    Top:   (220, 2)    [220-218=2]
+    Right: (438, 220)  [220+218=438]
+  */
   clip-path: path(
-    'M 0,0 L 440,0 L 440,450 L 0,450 Z M 220,0 L 220,7 A 218,218 0 0,1 438,225 L 440,225 L 440,0 Z'
+    'M 0,0 L 440,0 L 440,440 L 0,440 Z M 220,0 L 220,2 A 218,218 0 0,1 438,220 L 440,220 L 440,0 Z'
   );
   overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
-/* ── Ornament-Bars (Pause-Stil) ── */
-.minimap-ornament-top {
-  height: 5px;
-  flex-shrink: 0;
-  background: linear-gradient(
-    to right,
-    #2a0e00,
-    #7a3a10,
-    #c89040,
-    #f0d060,
-    #f8e070,
-    #f0d060,
-    #c89040,
-    #7a3a10,
-    #2a0e00
-  );
-  /* clip-path des Panels macht die rechte Hälfte transparent */
-}
-
-.minimap-ornament-bottom {
-  height: 5px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #2a0e00, #5c2a0a, #7a4e20, #5c2a0a, #2a0e00);
-  opacity: 0.7;
-}
-
-/* ── Corner Gems (nur links) ── */
-.corner {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border-color: #c89040;
-  border-style: solid;
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-.corner-gem {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #c89040;
-  box-shadow: 0 0 6px #e8c040;
-}
-
-/* ── Frame (440x440) ── */
+/* ── Frame (440×440) ── */
 .minimap-frame {
   position: relative;
   z-index: 20;
@@ -413,25 +363,27 @@ export default defineComponent({
   user-select: none;
 }
 
-/* ── ETA Timer ── */
+/* ── ETA Timer — zentriert oben auf dem Canvas ── */
 .hud-eta {
   position: absolute;
-  right: 14px;
-  bottom: 390px;
-  z-index: 200;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   pointer-events: none;
   user-select: none;
 }
 .hud-eta-value {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   line-height: 1;
   text-shadow:
-    0 0 14px rgba(220, 175, 40, 0.8),
-    0 1px 3px rgba(0, 0, 0, 0.95);
+    0 0 18px rgba(220, 175, 40, 0.95),
+    0 0 8px rgba(180, 130, 20, 0.75),
+    0 1px 4px rgba(0, 0, 0, 0.98);
 }
 
 /* ── Canvas-Ring ── */
@@ -467,7 +419,7 @@ export default defineComponent({
 
 .minimap-resource-star {
   position: absolute;
-  bottom: 8px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 1.1rem;
@@ -589,7 +541,7 @@ export default defineComponent({
   top: 0;
   left: 0;
   width: 440px;
-  height: 450px;
+  height: 440px;
   pointer-events: none;
   z-index: 100;
   overflow: visible;
