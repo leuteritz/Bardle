@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, computed } from 'vue'
 
+const CORNER_R = 20
+const framePath = `M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,1 ${2 - CORNER_R},380`
+
 type TabId = 'all' | 'clan' | 'region'
 
 interface ChatMessage {
@@ -198,36 +201,36 @@ onUnmounted(() => {
         </filter>
       </defs>
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
+        :d="framePath"
         fill="none"
         stroke="rgba(30,12,0,0.95)"
         stroke-width="5"
-        stroke-linecap="square"
-        stroke-linejoin="miter"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
+        :d="framePath"
         fill="none"
         stroke="#7a4e20"
         stroke-width="3"
-        stroke-linecap="square"
-        stroke-linejoin="miter"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
+        :d="framePath"
         fill="none"
         stroke="rgba(210,160,40,0.85)"
         stroke-width="1.5"
-        stroke-linecap="square"
-        stroke-linejoin="miter"
+        stroke-linecap="round"
+        stroke-linejoin="round"
         filter="url(#chatGoldGlow)"
       />
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
+        :d="framePath"
         fill="none"
         stroke="rgba(255,220,80,0.25)"
         stroke-width="1"
-        stroke-linecap="square"
+        stroke-linecap="round"
       />
     </svg>
   </div>

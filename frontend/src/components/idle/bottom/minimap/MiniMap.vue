@@ -105,36 +105,36 @@
           </filter>
         </defs>
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,352 A 14,14 0 0,1 440,380"
+          :d="framePath"
           fill="none"
           stroke="rgba(30,12,0,0.95)"
           stroke-width="5"
-          stroke-linecap="square"
-          stroke-linejoin="miter"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,352 A 14,14 0 0,1 440,380"
+          :d="framePath"
           fill="none"
           stroke="#7a4e20"
           stroke-width="3"
-          stroke-linecap="square"
-          stroke-linejoin="miter"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,352 A 14,14 0 0,1 440,380"
+          :d="framePath"
           fill="none"
           stroke="rgba(210,160,40,0.85)"
           stroke-width="1.5"
-          stroke-linecap="square"
-          stroke-linejoin="miter"
+          stroke-linecap="round"
+          stroke-linejoin="round"
           filter="url(#goldGlow)"
         />
         <path
-          d="M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,352 A 14,14 0 0,1 440,380"
+          :d="framePath"
           fill="none"
           stroke="rgba(255,220,80,0.25)"
           stroke-width="1"
-          stroke-linecap="square"
+          stroke-linecap="round"
         />
       </svg>
     </div>
@@ -143,9 +143,11 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { useStarGroupStore } from '../../../stores/starGroupStore'
+import { useGalaxyStore } from '../../../../stores/galaxyStore'
+import { useStarGroupStore } from '../../../../stores/starGroupStore'
 import MiniMapCanvas from './MiniMapCanvas.vue'
+
+const CORNER_R = 20
 
 export default defineComponent({
   name: 'MiniMap',
@@ -184,7 +186,9 @@ export default defineComponent({
 
     const currentGalaxyName = computed(() => `GALAXIE ${galaxyStore.currentGalaxy}`)
 
-    return { show, isRescuing, countdown, currentGalaxyName, galaxyStore, starGroupStore }
+    const framePath = `M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
+
+    return { show, isRescuing, countdown, currentGalaxyName, galaxyStore, starGroupStore, framePath }
   },
 })
 </script>

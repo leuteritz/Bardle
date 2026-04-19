@@ -7,10 +7,10 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { useGameStore } from '../../../stores/gameStore'
-import { GALAXY_THEMES } from '../../../config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../config/constants'
+import { useGalaxyStore } from '../../../../stores/galaxyStore'
+import { useGameStore } from '../../../../stores/gameStore'
+import { GALAXY_THEMES } from '../../../../config/galaxyThemes'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../../config/constants'
 
 const MAP_WORLD_DEFAULT = 0.22
 const MAP_WORLD_ZOOMED = 0.08
