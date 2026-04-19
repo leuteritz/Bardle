@@ -1,60 +1,23 @@
 <template>
   <Transition name="travel-fade">
     <div v-if="show" class="travel-hud">
-      <div class="minimap-panel">
-        <!-- SVG-Rahmen: folgt exakt dem Kompassring -->
-        <svg class="panel-border-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <filter id="borderGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <path
-            d="M 0,6 L 220,6 A 214,214 0 0,1 434,220 L 434,452"
-            fill="none"
-            stroke="rgba(60,38,10,0.9)"
-            stroke-width="6"
-            stroke-linecap="square"
-          />
-          <path
-            d="M 0,6 L 220,6 A 214,214 0 0,1 434,220 L 434,452"
-            fill="none"
-            stroke="#3e200a"
-            stroke-width="4"
-            stroke-linecap="square"
-          />
-          <path
-            d="M 0,6 L 220,6 A 214,214 0 0,1 434,220 L 434,452"
-            fill="none"
-            stroke="#7a4e20"
-            stroke-width="3.5"
-            stroke-linecap="square"
-          />
-          <path
-            d="M 0,6 L 220,6 A 214,214 0 0,1 434,220 L 434,452"
-            fill="none"
-            stroke="rgba(210,160,40,0.55)"
-            stroke-width="1.5"
-            stroke-linecap="square"
-            filter="url(#borderGlow)"
-          />
-        </svg>
+      <!-- ETA Timer: außerhalb des Panels damit clip-path ihn nicht wegschneidet -->
+      <div v-if="!isRescuing" class="hud-eta">
+        <span class="hud-eta-value">{{ countdown }}</span>
+      </div>
 
-        <!-- RPG-Frame-Wrapper -->
+      <div class="minimap-panel">
+        <!-- Ornament-Bar oben (Pause-Stil, nur linke Hälfte sichtbar dank clip-path) -->
+        <div class="minimap-ornament-top" />
+
+        <!-- Corner Gems links -->
+
+        <!-- RPG-Frame -->
         <div class="minimap-frame">
+          <!-- N-Label -->
           <span class="minimap-n-label">N</span>
 
-          <!-- ETA: rechts oben im Bezel-Ring -->
-          <div v-if="!isRescuing" class="hud-eta">
-            <span class="hud-eta-label">ETA</span>
-            <span class="hud-eta-separator">·</span>
-            <span class="hud-eta-value">{{ countdown }}</span>
-          </div>
-
+          <!-- Kompass-SVG Ring (vollständig 360°) -->
           <svg
             class="minimap-compass-svg"
             viewBox="0 0 220 220"
@@ -67,8 +30,8 @@
                 <circle cx="110" cy="110" r="91" fill="black" />
               </mask>
               <radialGradient id="bezelGrad" cx="50%" cy="50%" r="50%">
-                <stop offset="83%" stop-color="#0b0703" />
-                <stop offset="100%" stop-color="#1c1108" />
+                <stop offset="83%" stop-color="#2a1204" />
+                <stop offset="100%" stop-color="#3e1e08" />
               </radialGradient>
               <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="1.2" result="blur" />
@@ -155,6 +118,7 @@
             <circle cx="35" cy="35" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
           </svg>
 
+          <!-- Canvas -->
           <div class="minimap-ring">
             <MiniMapCanvas />
           </div>
@@ -186,6 +150,64 @@
             </button>
           </div>
         </div>
+
+        <!-- Goldener Außenrahmen: läuft exakt am Kompassrand entlang -->
+        <svg
+          class="panel-frame-svg"
+          viewBox="0 0 440 450"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <filter id="goldGlow" x="-8%" y="-8%" width="116%" height="116%">
+              <feGaussianBlur stdDeviation="1.8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <!-- Schatten-Linie -->
+          <path
+            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
+            fill="none"
+            stroke="rgba(30,12,0,0.95)"
+            stroke-width="5"
+            stroke-linecap="square"
+            stroke-linejoin="miter"
+          />
+          <!-- Haupt braune Linie -->
+          <path
+            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
+            fill="none"
+            stroke="#7a4e20"
+            stroke-width="3"
+            stroke-linecap="square"
+            stroke-linejoin="miter"
+          />
+          <!-- Goldene Glanz-Linie mit Glow -->
+          <path
+            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
+            fill="none"
+            stroke="rgba(210,160,40,0.85)"
+            stroke-width="1.5"
+            stroke-linecap="square"
+            stroke-linejoin="miter"
+            filter="url(#goldGlow)"
+          />
+          <!-- Heller Highlight -->
+          <path
+            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
+            fill="none"
+            stroke="rgba(255,220,80,0.25)"
+            stroke-width="1"
+            stroke-linecap="square"
+          />
+        </svg>
+
+        <!-- Ornament-Bar unten -->
+        <div class="minimap-ornament-bottom" />
       </div>
     </div>
   </Transition>
@@ -238,7 +260,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Einblend-Animation ── */
+/* ── Transitions ── */
 .travel-fade-enter-active,
 .travel-fade-leave-active {
   transition:
@@ -251,51 +273,102 @@ export default defineComponent({
   transform: translateY(12px);
 }
 
-/* ── HUD-Container ── */
+.travel-hud,
+.travel-hud *,
+.travel-hud *::before,
+.travel-hud *::after {
+  animation-play-state: running !important;
+}
+
 .travel-hud {
   position: fixed;
   bottom: 0;
   left: 0;
-  z-index: 9;
+  z-index: 10000;
   pointer-events: none;
 }
 
-/* ── RPG-Panel ── */
+/* ── Panel ── */
 .minimap-panel {
-  background: transparent;
+  position: relative;
+  pointer-events: auto;
+  width: 440px;
+  /* Hintergrund dunkelbraun, oben-rechts-Ecke außerhalb Kreis ausgeschnitten */
+  background: radial-gradient(ellipse at 30% 70%, #261508 0%, #0b0704 60%), #0b0704;
   border: none;
-  box-shadow: none;
   border-radius: 0;
-  padding: 0;
+  /* clip-path schneidet oben-rechts-Ecke außerhalb Kompasskreis weg
+     Panel: 440 x 450px (5 top ornament + 440 frame + 5 bottom ornament)
+     Kreis-Mitte: (220, 225), Radius: 180
+     Oberer Kreispunkt: (220, 45), Rechter Kreispunkt: (400, 225) */
+  clip-path: path(
+    'M 0,0 L 440,0 L 440,450 L 0,450 Z M 220,0 L 220,7 A 218,218 0 0,1 438,225 L 440,225 L 440,0 Z'
+  );
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  pointer-events: auto;
-  position: relative;
 }
 
-/* ── SVG-Rahmen ── */
-.panel-border-svg {
+/* ── Ornament-Bars (Pause-Stil) ── */
+.minimap-ornament-top {
+  height: 5px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    to right,
+    #2a0e00,
+    #7a3a10,
+    #c89040,
+    #f0d060,
+    #f8e070,
+    #f0d060,
+    #c89040,
+    #7a3a10,
+    #2a0e00
+  );
+  /* clip-path des Panels macht die rechte Hälfte transparent */
+}
+
+.minimap-ornament-bottom {
+  height: 5px;
+  flex-shrink: 0;
+  background: linear-gradient(to right, #2a0e00, #5c2a0a, #7a4e20, #5c2a0a, #2a0e00);
+  opacity: 0.7;
+}
+
+/* ── Corner Gems (nur links) ── */
+.corner {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 440px;
-  height: 440px;
+  width: 20px;
+  height: 20px;
+  border-color: #c89040;
+  border-style: solid;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  z-index: 10;
-  overflow: visible;
+}
+.corner-gem {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c89040;
+  box-shadow: 0 0 6px #e8c040;
 }
 
-/* ── RPG-Frame-Wrapper ── */
+/* ── Frame (440x440) ── */
 .minimap-frame {
   position: relative;
+  z-index: 20;
   width: 440px;
   height: 440px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45)) drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
+  background: transparent;
   animation: minimap-pulse-glow 3.5s ease-in-out infinite;
 }
 
@@ -340,35 +413,15 @@ export default defineComponent({
   user-select: none;
 }
 
-/* ── ETA ── */
+/* ── ETA Timer ── */
 .hud-eta {
   position: absolute;
-  right: 44px;
-  top: 44px;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
+  right: 14px;
+  bottom: 390px;
+  z-index: 200;
   pointer-events: none;
-  z-index: 15;
   user-select: none;
 }
-
-.hud-eta-label {
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #9a6e28;
-  filter: drop-shadow(0 0 5px rgba(160, 100, 30, 0.7));
-  align-self: center;
-}
-
-.hud-eta-separator {
-  color: #5a3a10;
-  font-size: 0.75rem;
-  line-height: 1;
-}
-
 .hud-eta-value {
   font-size: 1.4rem;
   font-weight: 700;
@@ -381,7 +434,7 @@ export default defineComponent({
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Minimap-Kreis ── */
+/* ── Canvas-Ring ── */
 .minimap-ring {
   width: 360px;
   height: 360px;
@@ -389,9 +442,10 @@ export default defineComponent({
   overflow: hidden;
   position: relative;
   z-index: 1;
+  background: transparent;
 }
 
-/* ── Planeten-Zähler ── */
+/* ── Stern-Zähler ── */
 .minimap-planet-count {
   position: absolute;
   bottom: 40px;
@@ -408,12 +462,9 @@ export default defineComponent({
   text-shadow:
     0 0 14px rgba(232, 192, 64, 0.95),
     0 0 6px rgba(255, 210, 60, 0.75),
-    0 0 2px rgba(255, 240, 140, 0.5),
-    0 1px 4px rgba(0, 0, 0, 0.98),
-    0 2px 8px rgba(0, 0, 0, 0.85);
+    0 1px 4px rgba(0, 0, 0, 0.98);
 }
 
-/* ── Ressourcen-Stern ── */
 .minimap-resource-star {
   position: absolute;
   bottom: 8px;
@@ -432,7 +483,6 @@ export default defineComponent({
     0 0 10px rgba(255, 200, 50, 0.9),
     0 1px 3px rgba(0, 0, 0, 0.95);
 }
-
 @keyframes resource-star-pulse {
   0%,
   100% {
@@ -443,7 +493,6 @@ export default defineComponent({
   }
 }
 
-/* ── Suchphase-Label ── */
 .minimap-search-label {
   position: absolute;
   bottom: 40px;
@@ -463,7 +512,6 @@ export default defineComponent({
     0 0 6px rgba(120, 60, 255, 0.75),
     0 1px 4px rgba(0, 0, 0, 0.98);
 }
-
 @keyframes search-label-pulse {
   from {
     opacity: 0.6;
@@ -473,7 +521,7 @@ export default defineComponent({
   }
 }
 
-/* ── Galaxy Complete Overlay ── */
+/* ── Complete-Overlay ── */
 .complete-overlay {
   position: absolute;
   width: 360px;
@@ -488,7 +536,6 @@ export default defineComponent({
   z-index: 5;
   pointer-events: auto;
 }
-
 .complete-badge {
   font-size: 0.5rem;
   letter-spacing: 0.22em;
@@ -499,7 +546,6 @@ export default defineComponent({
     0 0 5px rgba(255, 210, 60, 0.7);
   animation: badge-pulse 2s ease-in-out infinite;
 }
-
 @keyframes badge-pulse {
   0%,
   100% {
@@ -527,15 +573,25 @@ export default defineComponent({
     box-shadow 0.2s ease,
     transform 0.15s ease;
 }
-
 .next-galaxy-btn:hover {
   background: linear-gradient(to bottom, #66d040, #3a9a22);
   box-shadow: 0 0 16px rgba(82, 184, 48, 0.75);
   transform: translateY(-1px);
 }
-
 .next-galaxy-btn:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
+}
+
+/* ── Goldener Außenrahmen SVG ── */
+.panel-frame-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 440px;
+  height: 450px;
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
 }
 </style>

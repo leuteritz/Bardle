@@ -40,16 +40,76 @@ interface WarpParticle {
 type HyperspacePhase = 'idle' | 'streaks' | 'flash' | 'fadeout'
 
 const PLANET_PALETTES = [
-  { base: '#d4723a', shadow: '#5a1a04', highlight: '#f4a870', atmo: 'rgba(220,100,40,0.5)', ring: false },
-  { base: '#5090d8', shadow: '#102860', highlight: '#90c8ff', atmo: 'rgba(70,140,240,0.45)', ring: false },
-  { base: '#42b850', shadow: '#0e3a14', highlight: '#80e888', atmo: 'rgba(50,200,70,0.4)', ring: false },
-  { base: '#9050d0', shadow: '#200850', highlight: '#c080ff', atmo: 'rgba(150,70,220,0.45)', ring: true },
-  { base: '#d04a14', shadow: '#480802', highlight: '#ff8040', atmo: 'rgba(220,80,20,0.5)', ring: false },
-  { base: '#38a8cc', shadow: '#0a2840', highlight: '#70d8ff', atmo: 'rgba(50,180,220,0.4)', ring: false },
-  { base: '#98cc3a', shadow: '#203808', highlight: '#ccff60', atmo: 'rgba(160,220,50,0.4)', ring: false },
-  { base: '#c89040', shadow: '#3a2004', highlight: '#ffcc70', atmo: 'rgba(210,160,50,0.4)', ring: true },
-  { base: '#e05888', shadow: '#500820', highlight: '#ff90c0', atmo: 'rgba(220,80,130,0.45)', ring: false },
-  { base: '#40c8a8', shadow: '#0a2c20', highlight: '#80ffe0', atmo: 'rgba(50,200,170,0.4)', ring: false },
+  {
+    base: '#d4723a',
+    shadow: '#5a1a04',
+    highlight: '#f4a870',
+    atmo: 'rgba(220,100,40,0.5)',
+    ring: false,
+  },
+  {
+    base: '#5090d8',
+    shadow: '#102860',
+    highlight: '#90c8ff',
+    atmo: 'rgba(70,140,240,0.45)',
+    ring: false,
+  },
+  {
+    base: '#42b850',
+    shadow: '#0e3a14',
+    highlight: '#80e888',
+    atmo: 'rgba(50,200,70,0.4)',
+    ring: false,
+  },
+  {
+    base: '#9050d0',
+    shadow: '#200850',
+    highlight: '#c080ff',
+    atmo: 'rgba(150,70,220,0.45)',
+    ring: true,
+  },
+  {
+    base: '#d04a14',
+    shadow: '#480802',
+    highlight: '#ff8040',
+    atmo: 'rgba(220,80,20,0.5)',
+    ring: false,
+  },
+  {
+    base: '#38a8cc',
+    shadow: '#0a2840',
+    highlight: '#70d8ff',
+    atmo: 'rgba(50,180,220,0.4)',
+    ring: false,
+  },
+  {
+    base: '#98cc3a',
+    shadow: '#203808',
+    highlight: '#ccff60',
+    atmo: 'rgba(160,220,50,0.4)',
+    ring: false,
+  },
+  {
+    base: '#c89040',
+    shadow: '#3a2004',
+    highlight: '#ffcc70',
+    atmo: 'rgba(210,160,50,0.4)',
+    ring: true,
+  },
+  {
+    base: '#e05888',
+    shadow: '#500820',
+    highlight: '#ff90c0',
+    atmo: 'rgba(220,80,130,0.45)',
+    ring: false,
+  },
+  {
+    base: '#40c8a8',
+    shadow: '#0a2c20',
+    highlight: '#80ffe0',
+    atmo: 'rgba(50,200,170,0.4)',
+    ring: false,
+  },
 ]
 
 function drawPlanet(
@@ -265,7 +325,12 @@ export default defineComponent({
       warpLastFrameMs = performance.now()
     }
 
-    function drawStreaksPhase(ctx: CanvasRenderingContext2D, w: number, h: number, timestamp: number) {
+    function drawStreaksPhase(
+      ctx: CanvasRenderingContext2D,
+      w: number,
+      h: number,
+      timestamp: number,
+    ) {
       const dt = Math.min((timestamp - warpLastFrameMs) / 1000, 0.05)
       warpLastFrameMs = timestamp
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 2000, 1)
@@ -381,7 +446,11 @@ export default defineComponent({
       rescueOrder.value = order
     }
 
-    function getPlayerWorldPos(dots: DotPos[], order: number[], rescued: number): { x: number; y: number } {
+    function getPlayerWorldPos(
+      dots: DotPos[],
+      order: number[],
+      rescued: number,
+    ): { x: number; y: number } {
       if (galaxyStore.isBossSearchActive) {
         return galaxyStore.bossSearchInterpolatedPos
       }
@@ -426,7 +495,6 @@ export default defineComponent({
 
       const isMoving = isTraveling || galaxyStore.isBossSearchActive
       if (galaxyStore.isRescueRotating) {
-        // Trail während Kameraschwenk einfrieren
       } else if (isMoving) {
         const dx = player.x - trailLastPos.wx
         const dy = player.y - trailLastPos.wy
@@ -441,11 +509,19 @@ export default defineComponent({
         trailLastPos = { wx: -1, wy: -1 }
       }
 
+      ctx.fillStyle = '#1a0c02'
+      ctx.fillRect(0, 0, w, h)
+
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(w / 2, h / 2, w / 2, 0, Math.PI * 2)
+      ctx.clip()
       const imgW = scale
       const imgH = scale
       const imgX = w / 2 - player.x * imgW
       const imgY = h / 2 - player.y * imgH
       ctx.drawImage(img, imgX, imgY, imgW, imgH)
+      ctx.restore()
 
       const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
       ctx.save()
@@ -533,7 +609,11 @@ export default defineComponent({
           ctx.stroke()
           ctx.setLineDash([])
         }
-        for (const [r, a] of [[22, 0.08], [16, 0.18], [12, 0.32]] as [number, number][]) {
+        for (const [r, a] of [
+          [22, 0.08],
+          [16, 0.18],
+          [12, 0.32],
+        ] as [number, number][]) {
           ctx.beginPath()
           ctx.arc(bx, by, r, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(200,30,10,${a})`
@@ -564,7 +644,11 @@ export default defineComponent({
 
       if (galaxyStore.isBossSearchActive) {
         const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 400)
-        for (const [r, a] of [[20, 0.08 * pulse], [14, 0.18 * pulse], [10, 0.28 * pulse]] as [number, number][]) {
+        for (const [r, a] of [
+          [20, 0.08 * pulse],
+          [14, 0.18 * pulse],
+          [10, 0.28 * pulse],
+        ] as [number, number][]) {
           ctx.beginPath()
           ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(120,80,255,${a})`
