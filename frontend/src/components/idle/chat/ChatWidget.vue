@@ -289,7 +289,7 @@ onUnmounted(() => {
       </defs>
       <!-- Schatten -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
         fill="none"
         stroke="rgba(30,12,0,0.95)"
         stroke-width="5"
@@ -298,7 +298,7 @@ onUnmounted(() => {
       />
       <!-- Braun -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
         fill="none"
         stroke="#7a4e20"
         stroke-width="3"
@@ -307,7 +307,7 @@ onUnmounted(() => {
       />
       <!-- Gold + Glow -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
         fill="none"
         stroke="rgba(210,160,40,0.85)"
         stroke-width="1.5"
@@ -317,7 +317,7 @@ onUnmounted(() => {
       />
       <!-- Highlight -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,352 A 14,14 0 0,0 0,380"
         fill="none"
         stroke="rgba(255,220,80,0.25)"
         stroke-width="1"
