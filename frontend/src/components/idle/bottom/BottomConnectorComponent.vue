@@ -12,44 +12,22 @@
   right: 458px;
   height: 60px;
   background: #1e1006;
-  z-index: 9999;
-  border-top: 3px solid #7a4e20;
+  z-index: 10000;
+
+  /* exakt dieselben Rahmenfarben wie die Minimap */
+  border-top: 5px solid rgba(30, 12, 0, 0.95);
   box-shadow:
-    0 -1px 0 rgba(210, 160, 40, 0.85),
-    0 -4px 6px rgba(30, 12, 0, 0.95);
+    0 -1px 0 #7a4e20,
+    0 -2px 0 rgba(210, 160, 40, 0.85),
+    0 -3px 0 rgba(255, 220, 80, 0.25);
+
+  /* kein Glow */
+  animation: none;
+  filter: none;
 }
 
-/* fills gap between minimap right edge and arc start (CORNER_R - 2 = 18px) */
-.bottom-connector::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -18px;
-  width: 18px;
-  height: 100%;
-  background: #1e1006;
-}
-
-/* fills gap between arc end and chat left edge (mirrored) */
+.bottom-connector::before,
 .bottom-connector::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -18px;
-  width: 18px;
-  height: 100%;
-  background: #1e1006;
-}
-
-@keyframes connector-pulse-glow {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45))
-      drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(210, 160, 40, 0.65))
-      drop-shadow(0 0 6px rgba(120, 82, 15, 0.75));
-  }
+  content: none;
 }
 </style>

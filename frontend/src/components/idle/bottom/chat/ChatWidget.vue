@@ -242,7 +242,7 @@ onUnmounted(() => {
   position: fixed;
   bottom: 0;
   right: 0;
-  z-index: 9998;
+  z-index: 10000;
   pointer-events: none;
   width: 440px;
   height: 440px;
@@ -554,6 +554,19 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 100;
   overflow: visible;
+  animation: chat-pulse-glow 3.5s ease-in-out infinite;
+}
+
+@keyframes chat-pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45))
+      drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(210, 160, 40, 0.65))
+      drop-shadow(0 0 6px rgba(120, 82, 15, 0.75));
+  }
 }
 
 @media (max-width: 600px) {
