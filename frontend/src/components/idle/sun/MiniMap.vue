@@ -151,64 +151,64 @@
           </div>
         </div>
 
-        <!-- Goldener Außenrahmen: läuft exakt am Kompassrand entlang -->
-        <svg
-          class="panel-frame-svg"
-          viewBox="0 0 440 450"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <filter id="goldGlow" x="-8%" y="-8%" width="116%" height="116%">
-              <feGaussianBlur stdDeviation="1.8" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <!-- Schatten-Linie -->
-          <path
-            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
-            fill="none"
-            stroke="rgba(30,12,0,0.95)"
-            stroke-width="5"
-            stroke-linecap="square"
-            stroke-linejoin="miter"
-          />
-          <!-- Haupt braune Linie -->
-          <path
-            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
-            fill="none"
-            stroke="#7a4e20"
-            stroke-width="3"
-            stroke-linecap="square"
-            stroke-linejoin="miter"
-          />
-          <!-- Goldene Glanz-Linie mit Glow -->
-          <path
-            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
-            fill="none"
-            stroke="rgba(210,160,40,0.85)"
-            stroke-width="1.5"
-            stroke-linecap="square"
-            stroke-linejoin="miter"
-            filter="url(#goldGlow)"
-          />
-          <!-- Heller Highlight -->
-          <path
-            d="M 0,0 L 220,0 A 218,218 0 0,1 438,225"
-            fill="none"
-            stroke="rgba(255,220,80,0.25)"
-            stroke-width="1"
-            stroke-linecap="square"
-          />
-        </svg>
-
         <!-- Ornament-Bar unten -->
         <div class="minimap-ornament-bottom" />
       </div>
+
+      <!-- Rahmen-SVG: außerhalb des geclippten Panels, damit er nicht weggeschnitten wird -->
+      <svg
+        class="panel-frame-svg"
+        viewBox="0 0 440 450"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <filter id="goldGlow" x="-8%" y="-8%" width="116%" height="116%">
+            <feGaussianBlur stdDeviation="1.8" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <!-- Schatten-Linie -->
+        <path
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          fill="none"
+          stroke="rgba(30,12,0,0.95)"
+          stroke-width="5"
+          stroke-linecap="square"
+          stroke-linejoin="miter"
+        />
+        <!-- Haupt braune Linie -->
+        <path
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          fill="none"
+          stroke="#7a4e20"
+          stroke-width="3"
+          stroke-linecap="square"
+          stroke-linejoin="miter"
+        />
+        <!-- Goldene Glanz-Linie mit Glow -->
+        <path
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          fill="none"
+          stroke="rgba(210,160,40,0.85)"
+          stroke-width="1.5"
+          stroke-linecap="square"
+          stroke-linejoin="miter"
+          filter="url(#goldGlow)"
+        />
+        <!-- Heller Highlight -->
+        <path
+          d="M 0,0 L 220,0 A 218,218 0 0,1 438,225 L 440,225 L 440,450"
+          fill="none"
+          stroke="rgba(255,220,80,0.25)"
+          stroke-width="1"
+          stroke-linecap="square"
+        />
+      </svg>
     </div>
   </Transition>
 </template>
@@ -294,7 +294,7 @@ export default defineComponent({
   pointer-events: auto;
   width: 440px;
   /* Hintergrund dunkelbraun, oben-rechts-Ecke außerhalb Kreis ausgeschnitten */
-  background: radial-gradient(ellipse at 30% 70%, #261508 0%, #0b0704 60%), #0b0704;
+  background: #1e1006;
   border: none;
   border-radius: 0;
   /* clip-path schneidet oben-rechts-Ecke außerhalb Kompasskreis weg
