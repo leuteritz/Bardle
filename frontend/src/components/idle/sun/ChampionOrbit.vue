@@ -5,6 +5,7 @@
       v-for="pos in backChampions"
       :key="pos.name"
       class="champion-orbit-avatar champion-orbit-avatar--behind"
+      :class="{ [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -87,7 +88,6 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
-import { getChampionRoles } from '../../../config/championRoles'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
 import type { ChampionRole } from '../../../types'
@@ -135,6 +135,8 @@ export default defineComponent({
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
     const roleBehaviorStore = useRoleBehaviorStore()
+
+    const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
     const roleIcons: Record<ChampionRole, string> = {
       adc: '🏹',
@@ -261,8 +263,8 @@ export default defineComponent({
         // CSS-Foreground-Glow: unteres Drittel der Umlaufbahn
         const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
-        const roles = getChampionRoles(c.name)
-        const primaryRole: ChampionRole | null = roles[0] ?? null
+        const slotIndex = battleStore.headerSlots.indexOf(c.name)
+        const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
 
         newPositions.push({
           name: c.name,
@@ -405,10 +407,10 @@ export default defineComponent({
   left: 0;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #c89040;
+  border: 3px solid #c89040;
   box-shadow:
-    0 0 8px rgba(232, 192, 64, 0.55),
-    0 0 16px rgba(232, 192, 64, 0.2);
+    0 0 10px rgba(232, 192, 64, 0.55),
+    0 0 20px rgba(232, 192, 64, 0.2);
   will-change: transform;
   transition:
     box-shadow 0.3s ease,
@@ -425,33 +427,30 @@ export default defineComponent({
 }
 
 /* ── Rollen-Farben ──────────────────────────────────────────────────────── */
+/* border-color !important → nie überschreibbar; box-shadow ohne → Animationen können überschreiben */
 .champion-orbit-avatar--role-top {
-  border-color: #e05050;
-  box-shadow: 0 0 8px rgba(220, 60, 60, 0.55), 0 0 16px rgba(220, 60, 60, 0.2);
+  border-color: #e05050 !important;
+  box-shadow: 0 0 10px rgba(220, 60, 60, 0.7), 0 0 20px rgba(220, 60, 60, 0.3);
 }
 .champion-orbit-avatar--role-jungle {
-  border-color: #50c060;
-  box-shadow: 0 0 8px rgba(60, 200, 80, 0.55), 0 0 16px rgba(60, 200, 80, 0.2);
+  border-color: #50c060 !important;
+  box-shadow: 0 0 10px rgba(60, 200, 80, 0.7), 0 0 20px rgba(60, 200, 80, 0.3);
 }
 .champion-orbit-avatar--role-mid {
-  border-color: #5090e8;
-  box-shadow: 0 0 8px rgba(60, 130, 240, 0.55), 0 0 16px rgba(60, 130, 240, 0.2);
+  border-color: #5090e8 !important;
+  box-shadow: 0 0 10px rgba(60, 130, 240, 0.7), 0 0 20px rgba(60, 130, 240, 0.3);
 }
 .champion-orbit-avatar--role-adc {
-  border-color: #e89840;
-  box-shadow: 0 0 8px rgba(240, 150, 40, 0.55), 0 0 16px rgba(240, 150, 40, 0.2);
+  border-color: #e89840 !important;
+  box-shadow: 0 0 10px rgba(240, 150, 40, 0.7), 0 0 20px rgba(240, 150, 40, 0.3);
 }
 .champion-orbit-avatar--role-support {
-  border-color: #b8c8d8;
-  box-shadow: 0 0 8px rgba(180, 200, 210, 0.55), 0 0 16px rgba(180, 200, 210, 0.2);
+  border-color: #b8c8d8 !important;
+  box-shadow: 0 0 10px rgba(180, 200, 210, 0.7), 0 0 20px rgba(180, 200, 210, 0.3);
 }
 
-/* Hinter der Sonne: gedimmt, entsättigt, kein Glow */
+/* Hinter der Sonne: gedimmt, entsättigt – Rollenfarbe bleibt via !important erhalten */
 .champion-orbit-avatar--behind {
-  border-color: rgba(140, 90, 15, 0.35);
-  box-shadow:
-    0 0 3px rgba(160, 120, 30, 0.1),
-    0 0 6px rgba(160, 120, 30, 0.06);
   filter: brightness(0.42) saturate(0.45);
 }
 
@@ -492,31 +491,25 @@ export default defineComponent({
 .champion-role-badge--mid     { background: #1a3880; }
 .champion-role-badge--jungle  { background: #1a6028; }
 
-/* Role-specific glow when ability is active */
+/* Ability glows — only animate box-shadow, border-color stays as role color */
 .champion-orbit-avatar--shield {
-  border-color: #60c0ff !important;
-  box-shadow:
-    0 0 14px rgba(80, 180, 255, 0.9),
-    0 0 28px rgba(60, 140, 255, 0.5) !important;
+  box-shadow: 0 0 14px rgba(80, 180, 255, 0.9), 0 0 28px rgba(60, 140, 255, 0.5);
   animation: shield-pulse 1s ease-in-out infinite alternate;
 }
 
 @keyframes shield-pulse {
-  from { box-shadow: 0 0 10px rgba(80, 180, 255, 0.7), 0 0 20px rgba(60, 140, 255, 0.4); }
-  to   { box-shadow: 0 0 22px rgba(100, 200, 255, 1), 0 0 44px rgba(80, 160, 255, 0.7); }
+  from { box-shadow: 0 0 12px rgba(80, 180, 255, 0.8), 0 0 24px rgba(60, 140, 255, 0.5); }
+  to   { box-shadow: 0 0 24px rgba(100, 200, 255, 1), 0 0 48px rgba(80, 160, 255, 0.7); }
 }
 
 .champion-orbit-avatar--dot {
-  border-color: #c060ff !important;
-  box-shadow:
-    0 0 14px rgba(180, 80, 255, 0.9),
-    0 0 28px rgba(140, 60, 255, 0.5) !important;
+  box-shadow: 0 0 14px rgba(180, 80, 255, 0.9), 0 0 28px rgba(140, 60, 255, 0.5);
   animation: dot-pulse 0.8s ease-in-out infinite alternate;
 }
 
 @keyframes dot-pulse {
-  from { box-shadow: 0 0 10px rgba(180, 80, 255, 0.7), 0 0 20px rgba(140, 60, 255, 0.4); }
-  to   { box-shadow: 0 0 22px rgba(200, 100, 255, 1), 0 0 44px rgba(160, 80, 255, 0.7); }
+  from { box-shadow: 0 0 12px rgba(180, 80, 255, 0.8), 0 0 24px rgba(140, 60, 255, 0.5); }
+  to   { box-shadow: 0 0 24px rgba(200, 100, 255, 1), 0 0 48px rgba(160, 80, 255, 0.7); }
 }
 
 /* Jungler stack counter */
