@@ -115,12 +115,8 @@ onUnmounted(() => {
 <template>
   <div class="chat-hud">
     <div class="chat-panel">
-      <!-- Ornament-Bar oben -->
-      <div class="chat-ornament-top" />
-
-      <!-- RPG-Frame -->
       <div class="chat-frame">
-        <!-- Kompass-SVG Ring (dekorativ, identisch mit MiniMap) -->
+        <!-- Kompass-Bezel SVG -->
         <svg
           class="chat-compass-svg"
           viewBox="0 0 220 220"
@@ -145,26 +141,86 @@ onUnmounted(() => {
             </filter>
           </defs>
           <circle cx="110" cy="110" r="107" fill="url(#chatBezelGrad)" mask="url(#chatBezelMask)" />
-          <circle cx="110" cy="110" r="109" stroke="rgba(60,38,10,0.7)" stroke-width="1" fill="none" />
-          <circle cx="110" cy="110" r="107" stroke="rgba(210,160,40,0.95)" stroke-width="1.8" fill="none" filter="url(#chatSoftGlow)" />
-          <circle cx="110" cy="110" r="104" stroke="rgba(100,68,15,0.6)" stroke-width="0.8" fill="none" />
-          <circle cx="110" cy="110" r="101" stroke="rgba(160,115,30,0.35)" stroke-width="0.6" fill="none" />
-          <circle cx="110" cy="110" r="99.5" stroke="rgba(175,130,38,0.6)" stroke-dasharray="2.2 15.16" stroke-width="2" fill="none" transform="rotate(-90 110 110)" />
-          <circle cx="110" cy="110" r="99.5" stroke="rgba(210,165,48,0.8)" stroke-dasharray="5 151.27" stroke-width="2.5" fill="none" transform="rotate(-45 110 110)" />
-          <circle cx="110" cy="110" r="92.5" stroke="rgba(205,158,42,0.55)" stroke-width="1" fill="none" />
-          <circle cx="110" cy="110" r="91" stroke="rgba(50,32,8,0.9)" stroke-width="1.2" fill="none" />
+          <circle
+            cx="110"
+            cy="110"
+            r="109"
+            stroke="rgba(60,38,10,0.7)"
+            stroke-width="1"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="107"
+            stroke="rgba(210,160,40,0.95)"
+            stroke-width="1.8"
+            fill="none"
+            filter="url(#chatSoftGlow)"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="104"
+            stroke="rgba(100,68,15,0.6)"
+            stroke-width="0.8"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="101"
+            stroke="rgba(160,115,30,0.35)"
+            stroke-width="0.6"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="99.5"
+            stroke="rgba(175,130,38,0.6)"
+            stroke-dasharray="2.2 15.16"
+            stroke-width="2"
+            fill="none"
+            transform="rotate(-90 110 110)"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="99.5"
+            stroke="rgba(210,165,48,0.8)"
+            stroke-dasharray="5 151.27"
+            stroke-width="2.5"
+            fill="none"
+            transform="rotate(-45 110 110)"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="92.5"
+            stroke="rgba(205,158,42,0.55)"
+            stroke-width="1"
+            fill="none"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r="91"
+            stroke="rgba(50,32,8,0.9)"
+            stroke-width="1.2"
+            fill="none"
+          />
           <circle cx="185" cy="35" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
           <circle cx="185" cy="185" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
           <circle cx="35" cy="185" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
           <circle cx="35" cy="35" r="3.5" fill="#120b02" stroke="#c8a030" stroke-width="1.5" />
         </svg>
 
-        <!-- Titel-Label -->
+        <!-- Titel oben -->
         <span class="chat-title-label">⚔ Chat</span>
 
-        <!-- Kreisförmiger Chat-Bereich -->
+        <!-- Chat-Inhalt im Kreis -->
         <div class="chat-ring">
-          <!-- Tab-Leiste -->
           <div class="chat-tabs">
             <button
               :class="['chat-tab', { active: activeTab === 'all' }]"
@@ -186,7 +242,6 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- Nachrichten -->
           <div ref="messagesEl" class="chat-messages">
             <div v-for="msg in filteredMessages" :key="msg.id" class="chat-row">
               <span class="chat-time">{{ msg.time }}</span>
@@ -195,7 +250,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Eingabefeld -->
           <div class="chat-input-row">
             <input
               v-model="inputValue"
@@ -208,15 +262,18 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-
-      <!-- Ornament-Bar unten -->
-      <div class="chat-ornament-bottom" />
     </div>
 
-    <!-- Rahmen-SVG (gespiegelt von MiniMap: linke Seite statt rechte) -->
+    <!--
+      Gespiegelter Rahmen: MiniMap ist unten-links (Rahmen oben-rechts).
+      Chat ist unten-rechts → Rahmen oben-links gespiegelt.
+      Panel 440×440, Kompass-Mitte (220,220), r=218
+      Top-links des Kreises: (220, 2) → gespiegelt: Arc von (220,0) sweep=0 nach (2,220)
+      Senkrecht nach unten: (2,220) → (2,440) → (0,440)
+    -->
     <svg
       class="chat-frame-svg"
-      viewBox="0 0 440 450"
+      viewBox="0 0 440 440"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       preserveAspectRatio="none"
@@ -230,24 +287,27 @@ onUnmounted(() => {
           </feMerge>
         </filter>
       </defs>
+      <!-- Schatten -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,225 L 0,225 L 0,450"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
         fill="none"
         stroke="rgba(30,12,0,0.95)"
         stroke-width="5"
         stroke-linecap="square"
         stroke-linejoin="miter"
       />
+      <!-- Braun -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,225 L 0,225 L 0,450"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
         fill="none"
         stroke="#7a4e20"
         stroke-width="3"
         stroke-linecap="square"
         stroke-linejoin="miter"
       />
+      <!-- Gold + Glow -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,225 L 0,225 L 0,450"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
         fill="none"
         stroke="rgba(210,160,40,0.85)"
         stroke-width="1.5"
@@ -255,8 +315,9 @@ onUnmounted(() => {
         stroke-linejoin="miter"
         filter="url(#chatGoldGlow)"
       />
+      <!-- Highlight -->
       <path
-        d="M 440,0 L 220,0 A 218,218 0 0,0 2,225 L 0,225 L 0,450"
+        d="M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440"
         fill="none"
         stroke="rgba(255,220,80,0.25)"
         stroke-width="1"
@@ -275,6 +336,7 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/* ── Panel: nur dunkelbraun, kein Ornament ── */
 .chat-panel {
   position: relative;
   pointer-events: auto;
@@ -282,38 +344,20 @@ onUnmounted(() => {
   background: #1e1006;
   border: none;
   border-radius: 0;
+  /*
+    Gespiegelter clip-path zur MiniMap.
+    MiniMap schneidet oben-RECHTS weg → Chat schneidet oben-LINKS weg.
+    Kompass-Mitte (220,220), r=218 → Top: (220,2), Left: (2,220)
+  */
   clip-path: path(
-    'M 440,0 L 0,0 L 0,450 L 440,450 Z M 220,0 L 220,7 A 218,218 0 0,0 2,225 L 0,225 L 0,0 Z'
+    'M 440,0 L 0,0 L 0,440 L 440,440 Z M 220,0 L 220,2 A 218,218 0 0,0 2,220 L 0,220 L 0,0 Z'
   );
   overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
-.chat-ornament-top {
-  height: 5px;
-  flex-shrink: 0;
-  background: linear-gradient(
-    to right,
-    #2a0e00,
-    #7a3a10,
-    #c89040,
-    #f0d060,
-    #f8e070,
-    #f0d060,
-    #c89040,
-    #7a3a10,
-    #2a0e00
-  );
-}
-
-.chat-ornament-bottom {
-  height: 5px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #2a0e00, #5c2a0a, #7a4e20, #5c2a0a, #2a0e00);
-  opacity: 0.7;
-}
-
+/* ── Frame (440×440) ── */
 .chat-frame {
   position: relative;
   z-index: 20;
@@ -340,6 +384,7 @@ onUnmounted(() => {
   }
 }
 
+/* ── Kompass-SVG ── */
 .chat-compass-svg {
   position: absolute;
   inset: 0;
@@ -349,6 +394,7 @@ onUnmounted(() => {
   z-index: 2;
 }
 
+/* ── Titel oben (wie N-Label in MiniMap) ── */
 .chat-title-label {
   position: absolute;
   top: 6px;
@@ -368,6 +414,7 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* ── Kreisförmiger Chat-Bereich ── */
 .chat-ring {
   width: 360px;
   height: 360px;
@@ -382,6 +429,7 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
+/* ── Tabs ── */
 .chat-tabs {
   display: flex;
   gap: 4px;
@@ -419,6 +467,7 @@ onUnmounted(() => {
   text-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
 }
 
+/* ── Nachrichten ── */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -441,28 +490,24 @@ onUnmounted(() => {
   color: #5c3310;
   flex-shrink: 0;
 }
-
 .chat-name {
   flex-shrink: 0;
   font-weight: 700;
 }
-
 .chat-name--all {
   color: #e8c040;
 }
-
 .chat-name--clan {
   color: #52b830;
 }
-
 .chat-name--region {
   color: #6080cc;
 }
-
 .chat-text {
   color: #b0b0a0;
 }
 
+/* ── Eingabe ── */
 .chat-input-row {
   flex-shrink: 0;
   margin-top: 6px;
@@ -501,12 +546,13 @@ onUnmounted(() => {
   background: linear-gradient(to bottom, #66d040, #3a9a22);
 }
 
+/* ── Goldener Rahmen SVG ── */
 .chat-frame-svg {
   position: absolute;
   top: 0;
   left: 0;
   width: 440px;
-  height: 450px;
+  height: 440px;
   pointer-events: none;
   z-index: 100;
   overflow: visible;
