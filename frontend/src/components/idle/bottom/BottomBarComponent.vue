@@ -17,8 +17,9 @@ import ChatWidget from '@/components/idle/bottom/chat/ChatWidget.vue'
   bottom: 0;
   left: 440px;
   right: 440px;
-  height: 80px;
-  background: linear-gradient(to bottom, #140900 0%, #1e1006 14px, #1e1006 100%);
+  /* height: 48px – endet genau an der Connector-Linie */
+  height: 48px;
+  background: #1e1006;
   z-index: 9999;
 }
 </style>
