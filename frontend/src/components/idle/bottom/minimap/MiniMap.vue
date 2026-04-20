@@ -60,15 +60,6 @@
             >
           </div>
 
-          <!-- Ressourcen-Stern nur noch als leuchtendes Icon, kein Text -->
-          <div
-            v-if="starGroupStore.hasActiveResourceStar"
-            class="minimap-resource-star"
-            aria-hidden="true"
-          >
-            ✦
-          </div>
-
           <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
 
           <div
@@ -87,7 +78,6 @@
           </div>
         </div>
       </div>
-
       <svg
         class="panel-frame-svg"
         viewBox="0 0 440 440"
@@ -188,7 +178,15 @@ export default defineComponent({
 
     const framePath = `M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
-    return { show, isRescuing, countdown, currentGalaxyName, galaxyStore, starGroupStore, framePath }
+    return {
+      show,
+      isRescuing,
+      countdown,
+      currentGalaxyName,
+      galaxyStore,
+      starGroupStore,
+      framePath,
+    }
   },
 })
 </script>
@@ -372,28 +370,6 @@ export default defineComponent({
   text-shadow:
     0 0 12px rgba(232, 192, 64, 0.9),
     0 1px 3px rgba(0, 0, 0, 0.98);
-}
-
-.minimap-resource-star {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #ffd060;
-  pointer-events: none;
-  z-index: 10;
-  user-select: none;
-  animation: resource-star-pulse 1.4s ease-in-out infinite;
-  text-shadow:
-    0 0 8px rgba(255, 200, 50, 0.9),
-    0 0 14px rgba(255, 210, 80, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 @keyframes resource-star-pulse {
