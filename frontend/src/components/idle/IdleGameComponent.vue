@@ -16,7 +16,6 @@
       </div>
     </div>
 
-    <MiniMap />
     <ChampionOrbit />
     <StarSystemComponent />
     <PlayerHPBar />
@@ -48,7 +47,6 @@ import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
-import MiniMap from './bottom/minimap/MiniMap.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
@@ -58,7 +56,6 @@ export default defineComponent({
   name: 'IdleGameComponent',
   components: {
     SunComponent,
-    MiniMap,
     ChampionOrbit,
     PlayerHPBar,
     StarSystemComponent,
