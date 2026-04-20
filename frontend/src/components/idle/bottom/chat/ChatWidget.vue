@@ -118,15 +118,6 @@ onUnmounted(() => {
 <template>
   <div class="chat-hud">
     <div class="chat-panel">
-      <!-- BARDLE-Titel -->
-      <div class="chat-header">
-        <span class="chat-header-deco">✦</span>
-        <span class="chat-header-title">BARDLE</span>
-        <span class="chat-header-deco">✦</span>
-      </div>
-
-      <div class="chat-divider" />
-
       <!-- Tabs -->
       <div class="chat-tabs">
         <button
@@ -265,37 +256,6 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 52px 28px 20px 52px;
   box-sizing: border-box;
-}
-
-/* ── BARDLE-Header ── */
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  flex-shrink: 0;
-  margin-bottom: 8px;
-}
-
-.chat-header-title {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  color: #ffe080;
-  text-shadow:
-    0 0 18px rgba(232, 192, 64, 0.95),
-    0 0 8px rgba(200, 140, 20, 0.8),
-    0 0 2px rgba(255, 240, 160, 0.6);
-  text-transform: uppercase;
-  user-select: none;
-}
-
-.chat-header-deco {
-  font-size: 12px;
-  color: rgba(210, 160, 40, 0.6);
-  user-select: none;
-  margin-top: 2px;
 }
 
 /* ── Trennlinie ── */

@@ -10,7 +10,7 @@
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <filter id="bottomConnectorGoldGlow" x="-2%" y="-300%" width="104%" height="700%">
+        <filter id="bottomConnectorGoldGlow" x="-8%" y="-300%" width="116%" height="700%">
           <feGaussianBlur stdDeviation="1.8" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
@@ -26,7 +26,7 @@
         x2="1200"
         y2="12"
         stroke="rgba(30,12,0,0.95)"
-        stroke-width="6"
+        stroke-width="5"
         stroke-linecap="round"
       />
       <!-- Schicht 2: Braun-Basis -->
@@ -86,7 +86,7 @@
   /* Nur unterhalb der Linie abdunkeln (y=12 ist Linienmitte, also ab y=9) */
   top: 9px;
   bottom: -80px; /* reicht bis unter den sichtbaren Bereich */
-  background: #1e1006;
+  background: #1a0d04;
   z-index: 0;
 }
 
