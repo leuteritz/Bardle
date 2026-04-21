@@ -2,17 +2,11 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { MATERIALS } from '@/config/materials'
+import { MATERIAL_RARITY_COLOR } from '@/composables/useRarityColors'
 
 defineProps<{ visible: boolean }>()
 
 const inventoryStore = useInventoryStore()
-
-const rarityColor: Record<string, string> = {
-  common: '#fbbf24',
-  uncommon: '#34d399',
-  rare: '#60a5fa',
-  epic: '#c084fc',
-}
 
 const tooltipMaterials = computed(() =>
   MATERIALS.map((m) => ({
@@ -32,13 +26,13 @@ const tooltipMaterials = computed(() =>
           :key="m.id"
           class="inventory-tooltip__item"
           :class="{ 'inventory-tooltip__item--empty': m.count === 0 }"
-          :style="{ borderColor: rarityColor[m.rarity] }"
+          :style="{ borderColor: MATERIAL_RARITY_COLOR[m.rarity] }"
         >
           <img :src="m.image" class="inventory-tooltip__img rpg-img" alt="" />
-          <span class="inventory-tooltip__name" :style="{ color: rarityColor[m.rarity] }">
+          <span class="inventory-tooltip__name" :style="{ color: MATERIAL_RARITY_COLOR[m.rarity] }">
             {{ m.name }}
           </span>
-          <span class="inventory-tooltip__count" :style="{ color: rarityColor[m.rarity] }">
+          <span class="inventory-tooltip__count" :style="{ color: MATERIAL_RARITY_COLOR[m.rarity] }">
             {{ m.count }}
           </span>
         </div>

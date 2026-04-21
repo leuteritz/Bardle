@@ -22,6 +22,24 @@ import { activePlanetPositions } from '../utils/activePlanetPositions'
 
 let _floatId = 900_000
 
+function spawnFloat(
+  value: number,
+  x: number,
+  y: number,
+  durationMs: number,
+  extra: Record<string, boolean> = {},
+) {
+  const combatStore = useCombatStore()
+  combatStore.damageFloats.push({
+    id: _floatId++,
+    value,
+    x,
+    y,
+    expiresAt: Date.now() + durationMs,
+    ...extra,
+  } as (typeof combatStore.damageFloats)[number])
+}
+
 export const useRoleBehaviorStore = defineStore('roleBehavior', {
   state: () => ({
     // Support
@@ -61,16 +79,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         if (playerStore.currentHP < playerStore.maxHP) {
           const healed = Math.min(ROLE_SUPPORT_HEAL_AMOUNT, playerStore.maxHP - playerStore.currentHP)
           playerStore.currentHP += healed
-          // Show a heal float near screen center (sun area)
-          const combatStore = useCombatStore()
-          combatStore.damageFloats.push({
-            id: _floatId++,
-            value: healed,
-            x: window.innerWidth / 2 + (Math.random() - 0.5) * 60,
-            y: window.innerHeight / 2 - 80,
-            expiresAt: Date.now() + 1200,
-            healFloat: true,
-          })
+          spawnFloat(
+            healed,
+            window.innerWidth / 2 + (Math.random() - 0.5) * 60,
+            window.innerHeight / 2 - 80,
+            1200,
+            { healFloat: true },
+          )
         }
       }
     },
@@ -114,15 +129,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (!defeated) {
             const pos = activePlanetPositions.get(activeBoss.planetId)
             if (pos) {
-              const combatStore = useCombatStore()
-              combatStore.damageFloats.push({
-                id: _floatId++,
-                value: ROLE_MID_DOT_DPS,
-                x: pos.cx + (Math.random() - 0.5) * 50,
-                y: pos.cy - 55,
-                expiresAt: Date.now() + 1000,
-                dotFloat: true,
-              })
+              spawnFloat(
+                ROLE_MID_DOT_DPS,
+                pos.cx + (Math.random() - 0.5) * 50,
+                pos.cy - 55,
+                1000,
+                { dotFloat: true },
+              )
             }
           }
         }
@@ -152,15 +165,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (!defeated) {
             const pos = activePlanetPositions.get(activeBoss.planetId)
             if (pos) {
-              const combatStore = useCombatStore()
-              combatStore.damageFloats.push({
-                id: _floatId++,
-                value: ROLE_ADC_BURST_DAMAGE,
-                x: pos.cx + (Math.random() - 0.5) * 30,
-                y: pos.cy - 45,
-                expiresAt: Date.now() + 1200,
-                adcFloat: true,
-              })
+              spawnFloat(
+                ROLE_ADC_BURST_DAMAGE,
+                pos.cx + (Math.random() - 0.5) * 30,
+                pos.cy - 45,
+                1200,
+                { adcFloat: true },
+              )
             }
           }
         }
@@ -183,15 +194,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           gameStore.chimesEarnedForLevel += reward
           gameStore.calculateLevel()
           this.junglerStackCount = 0
-          // Show a chimes float at sun center
-          const combatStore = useCombatStore()
-          combatStore.damageFloats.push({
-            id: _floatId++,
-            value: reward,
-            x: window.innerWidth / 2 + (Math.random() - 0.5) * 40,
-            y: window.innerHeight / 2 + 40,
-            expiresAt: Date.now() + 1500,
-          })
+          spawnFloat(
+            reward,
+            window.innerWidth / 2 + (Math.random() - 0.5) * 40,
+            window.innerHeight / 2 + 40,
+            1500,
+          )
         }
       }
     },

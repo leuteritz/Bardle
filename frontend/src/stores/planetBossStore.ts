@@ -213,26 +213,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     dealClickDamage(): boolean {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
-
-      boss.currentHP -= boss.clickDamagePerHit
-      boss.totalDamageDealt += boss.clickDamagePerHit
-
-      if (boss.currentHP <= 0) {
-        boss.currentHP = 0
-        boss.defeated = true
-        this.grantBossRewards(boss)
-        this.bossModalOpen = false
-        logger.info('Planet', 'Boss defeated!', {
-          totalDamage: boss.totalDamageDealt,
-          timeElapsed: Math.round((Date.now() - boss.startTime) / 1000) + 's',
-        })
-        const planetId = boss.planetId
-        setTimeout(() => {
-          this.removeBoss(planetId)
-        }, 600)
-        return true
-      }
-      return false
+      return this.dealDamage(boss.clickDamagePerHit)
     },
 
     applyOrbitDamage() {

@@ -43,27 +43,20 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, watch, nextTick, ref } from 'vue'
+<script setup lang="ts">
+import { watch, nextTick, ref } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 
-export default defineComponent({
-  name: 'ChatPanelComponent',
-  setup() {
-    const battleStore = useBattleStore()
-    const chatBoxRef = ref<HTMLElement | null>(null)
+const battleStore = useBattleStore()
+const chatBoxRef = ref<HTMLElement | null>(null)
 
-    watch(
-      () => battleStore.chatMessages.length,
-      async () => {
-        await nextTick()
-        if (chatBoxRef.value) chatBoxRef.value.scrollTop = chatBoxRef.value.scrollHeight
-      },
-    )
-
-    return { battleStore, chatBoxRef }
+watch(
+  () => battleStore.chatMessages.length,
+  async () => {
+    await nextTick()
+    if (chatBoxRef.value) chatBoxRef.value.scrollTop = chatBoxRef.value.scrollHeight
   },
-})
+)
 </script>
 
 <style scoped>

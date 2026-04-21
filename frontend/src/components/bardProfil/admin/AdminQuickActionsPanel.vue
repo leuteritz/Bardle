@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
@@ -13,15 +12,10 @@ import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
-const planetBossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
-
-// suppress unused warning
-void inventoryStore
-void planetBossStore
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')

@@ -69,16 +69,13 @@ export const useStarGroupStore = defineStore('starGroup', {
   },
 
   actions: {
-    spawnResourceStar() {
-      if (this.hasActiveResourceStar) return
+    _buildResourcePlanetSlots(count: number): StarPlanetSlot[] {
       const bossStore = usePlanetBossStore()
-      const count = RESOURCE_STAR_PLANET_COUNT
-      const planetSlots: StarPlanetSlot[] = []
-
+      const slots: StarPlanetSlot[] = []
       for (let i = 0; i < count; i++) {
         const config = pickConfig()
         const planetId = `star-planet-${++planetIdCounter}`
-        planetSlots.push({
+        slots.push({
           planetId,
           type: config.type,
           isChampionPlanet: false,
@@ -92,7 +89,11 @@ export const useStarGroupStore = defineStore('starGroup', {
         })
         bossStore.spawnBoss(planetId, config.type, false, true)
       }
+      return slots
+    },
 
+    spawnResourceStar() {
+      if (this.hasActiveResourceStar) return
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
@@ -102,11 +103,10 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRy: 188,
         orbitTilt: 0.27,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
-        planetSlots,
+        planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
       }
-
       this.activeStars.push(star)
     },
 
@@ -114,29 +114,7 @@ export const useStarGroupStore = defineStore('starGroup', {
     // Nutzt direkten setTimeout, da tickResourceStar() nur bei
     // championTravelState === 'traveling' läuft.
     forceSpawnResourceStar() {
-      const bossStore = usePlanetBossStore()
       const galaxyStore = useGalaxyStore()
-      const count = 1 + Math.floor(Math.random() * 4)
-      const planetSlots: StarPlanetSlot[] = []
-
-      for (let i = 0; i < count; i++) {
-        const config = pickConfig()
-        const planetId = `star-planet-${++planetIdCounter}`
-        planetSlots.push({
-          planetId,
-          type: config.type,
-          isChampionPlanet: false,
-          orbitAngle: (i / count) * Math.PI * 2,
-          orbitSpeed: PLANET_ORBIT_SPEED_MIN + Math.random() * PLANET_ORBIT_SPEED_RANGE,
-          orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-          orbitRx: 85 + Math.random() * 25,
-          orbitRy: 44 + Math.random() * 18,
-          orbitTilt: Math.random() * 0.35,
-          cleared: false,
-        })
-        bossStore.spawnBoss(planetId, config.type, false, true)
-      }
-
       const starId = `star-${++starIdCounter}`
       const star: StarGroup = {
         id: starId,
@@ -147,11 +125,10 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRy: 188,
         orbitTilt: 0.27,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
-        planetSlots,
+        planetSlots: this._buildResourcePlanetSlots(1 + Math.floor(Math.random() * 4)),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
       }
-
       this.activeStars.push(star)
 
       // Header-Timer anzeigen
@@ -166,7 +143,6 @@ export const useStarGroupStore = defineStore('starGroup', {
         galaxyStore.resourceStarElapsedMs = 0
         this._removeAdminResourceStar(starId)
       }, RESOURCE_STAR_DURATION_MS)
-
       adminStarTimeouts.set(starId, timeout)
     },
 

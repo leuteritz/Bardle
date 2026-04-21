@@ -167,39 +167,28 @@ export const useCpsStore = defineStore('cps', {
       })
     },
 
+    _formatTimeSpan(seconds: number): string {
+      if (seconds < 60) return `${Math.floor(seconds + 1)}s`
+      if (seconds < 3600) return `${Math.floor(seconds / 60 + 1)}min`
+      return `${Math.floor(seconds / 3600 + 1)}h`
+    },
+
     // Erstellt Startpunkt-Label für CPS-Graph-Zeitachse
     getStartTimeLabel(): string {
       const history = this.currentProductionHistory
       if (history.length <= 1) return 'Start'
-
       const config = this.currentPeriodConfig
       const dataTimeSpan = (history.length - 1) * (config.interval / 1000)
-
-      if (dataTimeSpan < 60) {
-        return `${Math.floor(dataTimeSpan + 1)}s`
-      } else if (dataTimeSpan < 3600) {
-        return `${Math.floor(dataTimeSpan / 60 + 1)}min`
-      } else {
-        return `${Math.floor(dataTimeSpan / 3600 + 1)}h`
-      }
+      return this._formatTimeSpan(dataTimeSpan)
     },
 
     // Generiert Mittelpunkt-Label für CPS-Graph-Zeitachse
     getMidTimeLabel(): string {
       const history = this.currentProductionHistory
       if (history.length <= 1) return ''
-
       const config = this.currentPeriodConfig
       const dataTimeSpan = (history.length - 1) * (config.interval / 1000)
-      const midTime = dataTimeSpan / 2
-
-      if (midTime < 60) {
-        return `${Math.floor(midTime + 1)}s`
-      } else if (midTime < 3600) {
-        return `${Math.floor(midTime / 60 + 1)}min`
-      } else {
-        return `${Math.floor(midTime / 3600 + 1)}h`
-      }
+      return this._formatTimeSpan(dataTimeSpan / 2)
     },
 
     // Erstellt detaillierte Tooltip-Texte für CPS-Graph-Datenpunkte mit Zeitangaben

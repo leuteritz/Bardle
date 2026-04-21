@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '../../stores/inventoryStore'
 import { MATERIALS } from '../../config/materials'
+import { MATERIAL_RARITY_COLOR } from '../../composables/useRarityColors'
 
 const inventoryStore = useInventoryStore()
 
@@ -11,13 +12,6 @@ const allMaterials = computed(() =>
     count: inventoryStore.collectedMaterials[m.id] ?? 0,
   })),
 )
-
-const rarityColor: Record<string, string> = {
-  common: '#fbbf24',
-  uncommon: '#34d399',
-  rare: '#60a5fa',
-  epic: '#c084fc',
-}
 
 defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -58,18 +52,18 @@ function onBackdropClick(e: MouseEvent) {
               class="material-card"
               :class="{ 'material-card--empty': material.count === 0 }"
               :style="{
-                borderColor: rarityColor[material.rarity],
+                borderColor: MATERIAL_RARITY_COLOR[material.rarity],
                 boxShadow:
                   material.count > 0
-                    ? `0 0 10px ${rarityColor[material.rarity]}55, inset 0 0 8px ${rarityColor[material.rarity]}15`
-                    : `0 0 4px ${rarityColor[material.rarity]}22`,
+                    ? `0 0 10px ${MATERIAL_RARITY_COLOR[material.rarity]}55, inset 0 0 8px ${MATERIAL_RARITY_COLOR[material.rarity]}15`
+                    : `0 0 4px ${MATERIAL_RARITY_COLOR[material.rarity]}22`,
               }"
             >
               <span
                 class="material-card__count"
                 :style="{
                   color:
-                    material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.45)',
+                    material.count > 0 ? MATERIAL_RARITY_COLOR[material.rarity] : 'rgba(180,180,180,0.45)',
                 }"
                 >{{ material.count }}</span
               >
@@ -80,7 +74,7 @@ function onBackdropClick(e: MouseEvent) {
                 class="material-card__name"
                 :style="{
                   color:
-                    material.count > 0 ? rarityColor[material.rarity] : 'rgba(180,180,180,0.4)',
+                    material.count > 0 ? MATERIAL_RARITY_COLOR[material.rarity] : 'rgba(180,180,180,0.4)',
                 }"
               >
                 {{ material.name }}

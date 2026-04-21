@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { AUGMENTS } from '../../config/augments'
+import { AUGMENT_RARITY_COLOR } from '../../composables/useRarityColors'
 import type { AugmentDefinition } from '../../types'
 
 const gameStore = useGameStore()
@@ -22,13 +23,6 @@ const activeAugmentSlots = computed<AugmentSlot[]>(() =>
 )
 
 const hovering = ref<string | null>(null)
-
-const rarityBorderColor: Record<string, string> = {
-  common: '#9d9d9d',
-  rare: '#4a90e2',
-  epic: '#a855f7',
-  legendary: '#e8c040',
-}
 </script>
 
 <template>
@@ -45,7 +39,7 @@ const rarityBorderColor: Record<string, string> = {
             v-for="slot in activeAugmentSlots"
             :key="slot.key"
             class="aug-icon-slot"
-            :style="{ borderColor: rarityBorderColor[slot.aug.rarity] }"
+            :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
           >
             <div class="aug-icon-box">
               <img

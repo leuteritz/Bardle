@@ -3,9 +3,7 @@ import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
 
 export const usePlanetEventStore = defineStore('planetEvent', {
-  state: () => ({
-    lastEventCheckSecond: 0, // kept for save-compat
-  }),
+  state: () => ({}),
 
   actions: {
     // Called every second from gameStore.tick()
