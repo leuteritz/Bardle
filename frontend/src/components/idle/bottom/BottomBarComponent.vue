@@ -1,11 +1,11 @@
 <template>
   <MiniMap />
-  <BottomConnectorComponent />
+  <BottomStatusComponent />
   <ChatWidget />
 </template>
 
 <script setup lang="ts">
 import MiniMap from '@/components/idle/bottom/minimap/MiniMap.vue'
-import BottomConnectorComponent from './BottomConnectorComponent.vue'
+import BottomStatusComponent from './BottomStatusComponent.vue'
 import ChatWidget from '@/components/idle/bottom/chat/ChatWidget.vue'
 </script>
