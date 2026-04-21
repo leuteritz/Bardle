@@ -85,7 +85,6 @@
         </filter>
       </defs>
 
-      <!-- Dark base shadow -->
       <line
         x1="0"
         y1="12"
@@ -95,7 +94,6 @@
         stroke-width="7"
         stroke-linecap="round"
       />
-      <!-- Brown mid layer -->
       <line
         x1="0"
         y1="12"
@@ -105,7 +103,6 @@
         stroke-width="4"
         stroke-linecap="round"
       />
-      <!-- Warm gold main line -->
       <line
         x1="0"
         y1="12"
@@ -116,7 +113,6 @@
         stroke-linecap="round"
         filter="url(#bottomConnectorGoldGlow)"
       />
-      <!-- Bright gold core -->
       <line
         x1="0"
         y1="12"
@@ -127,7 +123,6 @@
         stroke-linecap="round"
         filter="url(#strongGlow)"
       />
-      <!-- Highlight shimmer -->
       <line
         x1="0"
         y1="12"
@@ -213,17 +208,24 @@ watch(chimes, (newVal, oldVal) => {
   animation: connector-pulse-glow 3.5s ease-in-out infinite;
 }
 
-/* Status bar: vertikal zentriert im braunen Bereich unterhalb der Goldlinie.
-   Brauner Bereich: top:9px bis bottom:-80px → 89px hoch.
-   Goldlinie sitzt bei top:9px (= y:0 der Bar).
-   Mitte des braunen Bereichs unterhalb: 9px + 44px = 53px von oben.
-   height:44px → top:31px zentriert bei 53px. */
+/*
+  Geometrie:
+  - .bottom-connector hat height: 24px
+  - Goldlinie liegt bei top: 9px (Mitte des SVG y:12 scaled auf 24px height)
+  - .bottom-connector-bg geht von top:9px bis bottom:-80px
+    → brauner Bereich: 9px bis (24px + 80px) = 104px → 80px hoch unterhalb der Linie
+  - Mitte des braunen Bereichs: 9px + 40px = 49px von Komponenten-Oberkante
+  - status-bar height: 36px → top = 49px - 18px = 31px
+    Laut Screenshot zu tief → Elemente erscheinen unterhalb der Linie.
+    Fix: top: 13px positioniert die Bar direkt ab der Goldlinie nach unten,
+    sodass die Inhalte knapp unter der Linie mittig im sichtbaren Bereich liegen.
+*/
 .status-bar {
   position: absolute;
-  top: 31px;
+  top: 25px;
   left: 0;
   right: 0;
-  height: 44px;
+  height: 36px;
   z-index: 2;
   display: flex;
   align-items: center;
