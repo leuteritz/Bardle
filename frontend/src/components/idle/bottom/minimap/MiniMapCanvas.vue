@@ -10,6 +10,7 @@ import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '../../../../stores/galaxyStore'
 import { useGameStore } from '../../../../stores/gameStore'
+import { useStarGroupStore } from '../../../../stores/starGroupStore'
 import { GALAXY_THEMES } from '../../../../config/galaxyThemes'
 import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../../config/constants'
 
@@ -274,6 +275,7 @@ export default defineComponent({
   setup() {
     const galaxyStore = useGalaxyStore()
     const gameStore = useGameStore()
+    const starGroupStore = useStarGroupStore()
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
     const imgEl = ref<HTMLImageElement | null>(null)
@@ -567,11 +569,29 @@ export default defineComponent({
         if (rescuedSet.has(i)) continue
         if (targetIdx === i) continue
         const [sx, sy] = wToC(dots[i].x, dots[i].y)
-        drawPlanet(ctx, sx, sy, 8, galaxySeed + i, 'unrescued')
+        drawPlanet(ctx, sx, sy, 11, galaxySeed + i, 'unrescued')
       }
       for (let i = 0; i < rescued; i++) {
         const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-        drawPlanet(ctx, sx, sy, 10, galaxySeed + order[i], 'rescued')
+        drawPlanet(ctx, sx, sy, 13, galaxySeed + order[i], 'rescued')
+      }
+
+      // Planeten des aktiven Champion-Sterns orbitieren um ihren Stern
+      const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
+      if (championStar && targetIdx >= 0) {
+        const [csx, csy] = wToC(dots[targetIdx].x, dots[targetIdx].y)
+        const nowSec = Date.now() / 1000
+        const STAR_R = 14
+        championStar.planetSlots.forEach((slot, idx) => {
+          if (slot.cleared) return
+          const planetR = Math.min(3 + idx * 0.8, STAR_R - 3)
+          const orbitR = Math.max(STAR_R + planetR + 4, 22 + idx * 7)
+          const speed = (0.35 + idx * 0.18) * slot.orbitDirection
+          const angle = nowSec * speed + idx * Math.PI * 0.67
+          const px = csx + Math.cos(angle) * orbitR
+          const py = csy + Math.sin(angle) * orbitR * 0.55
+          drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+        })
       }
 
       if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive) {
@@ -618,7 +638,32 @@ export default defineComponent({
 
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        drawPlanet(ctx, tx, ty, 11, galaxySeed + targetIdx, 'target', pulseFrame === 1)
+        drawPlanet(ctx, tx, ty, 14, galaxySeed + targetIdx, 'target', pulseFrame === 1)
+      }
+
+      // Planetenanzahl-Label: nur wenn Champion-Stern aktiv (Anzahl bekannt)
+      const showCountLabel =
+        targetIdx >= 0 &&
+        (galaxyStore.championTravelState === 'champion_spawned' ||
+          (isTraveling && galaxyStore.travelRemainingMs <= 5_000))
+      if (showCountLabel) {
+        const [lx, ly] = wToC(dots[targetIdx].x, dots[targetIdx].y)
+        const activeStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
+        const planetCount = activeStar
+          ? activeStar.planetSlots.filter((p) => !p.cleared).length
+          : null
+        if (planetCount !== null) {
+          ctx.save()
+          ctx.font = 'bold 9px serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.fillStyle = 'rgba(255,220,80,0.95)'
+          ctx.shadowColor = 'rgba(0,0,0,0.9)'
+          ctx.shadowBlur = 4
+          ctx.fillText(`⬡ ${planetCount}`, lx, ly - 20)
+          ctx.shadowBlur = 0
+          ctx.restore()
+        }
       }
 
       if (galaxyStore.isBossSearchActive) {
@@ -652,7 +697,7 @@ export default defineComponent({
         ctx.shadowColor = 'rgba(232,192,64,0.95)'
         ctx.shadowBlur = 16
         ctx.beginPath()
-        ctx.arc(w / 2, h / 2, 7, 0, Math.PI * 2)
+        ctx.arc(w / 2, h / 2, 9, 0, Math.PI * 2)
         ctx.fillStyle = '#ffe060'
         ctx.fill()
         ctx.strokeStyle = '#ffffff'
