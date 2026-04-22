@@ -5,6 +5,7 @@
 </template>
 
 <script lang="ts">
+/* ── SCRIPT UNVERÄNDERT – identisch zur aktuellen Version ── */
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '../../../../stores/galaxyStore'
@@ -123,7 +124,6 @@ function drawPlanet(
 ) {
   const rng = seededRng(seed >>> 0)
   const pal = PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
-
   const glowMult = state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : 1.55
   const glowR = r * glowMult
   const atmoGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, glowR)
@@ -235,7 +235,6 @@ function drawPlanet(
     ctx.moveTo(x + gap, y)
     ctx.lineTo(x + gap + arm, y)
     ctx.stroke()
-
     const bs = r * 0.55
     const bd = r + 3
     ctx.strokeStyle = pulse ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.45)'
@@ -338,22 +337,18 @@ export default defineComponent({
       const cx = w / 2
       const cy = h / 2
       const maxR = Math.sqrt(cx * cx + cy * cy)
-
       ctx.fillStyle = 'rgba(6, 4, 22, 0.75)'
       ctx.fillRect(0, 0, w, h)
-
       for (const p of warpParticles) {
         const tailLen = (4 + p.speed * 0.08) * accel
         const sx = cx + Math.cos(p.angle) * p.dist
         const sy = cy + Math.sin(p.angle) * p.dist
         const ex = cx + Math.cos(p.angle) * (p.dist + tailLen)
         const ey = cy + Math.sin(p.angle) * (p.dist + tailLen)
-
         const grad = ctx.createLinearGradient(sx, sy, ex, ey)
         grad.addColorStop(0, 'rgba(60, 100, 255, 0)')
         grad.addColorStop(0.4, 'rgba(200, 220, 255, 0.55)')
         grad.addColorStop(1, 'rgba(255, 255, 255, 0.92)')
-
         ctx.beginPath()
         ctx.strokeStyle = grad
         ctx.lineWidth = 0.6 + accel * 0.25
@@ -361,7 +356,6 @@ export default defineComponent({
         ctx.moveTo(sx, sy)
         ctx.lineTo(ex, ey)
         ctx.stroke()
-
         p.dist += p.speed * accel * dt
         if (p.dist > maxR + 10) {
           p.dist = 1 + Math.random() * maxR * 0.08
@@ -402,7 +396,6 @@ export default defineComponent({
         dots.push({ x: 0.5 + r * Math.cos(angle), y: 0.5 + r * Math.sin(angle) * 0.75 })
       }
       dotPositions.value = dots
-
       const spawnRng = seededRng(galaxyKey * 99997 + totalPlanets * 13)
       const angle = spawnRng() * Math.PI * 2
       const r = Math.sqrt(spawnRng()) * 0.3
@@ -410,7 +403,6 @@ export default defineComponent({
         x: 0.5 + r * Math.cos(angle),
         y: 0.5 + r * Math.sin(angle),
       }
-
       let originIdx = 0
       let nearestToSpawn = Infinity
       for (let i = 0; i < dots.length; i++) {
@@ -451,9 +443,7 @@ export default defineComponent({
       order: number[],
       rescued: number,
     ): { x: number; y: number } {
-      if (galaxyStore.isBossSearchActive) {
-        return galaxyStore.bossSearchInterpolatedPos
-      }
+      if (galaxyStore.isBossSearchActive) return galaxyStore.bossSearchInterpolatedPos
       const state = galaxyStore.championTravelState
       if (state === 'traveling') {
         const startTime = galaxyStore.championTravelStartTime
@@ -480,12 +470,10 @@ export default defineComponent({
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const img = imgEl.value
       if (!img || !img.complete) return
-
       const dots = dotPositions.value
       const order = rescueOrder.value
       const rescued = Math.min(galaxyStore.starsRescued, dots.length)
       const isTraveling = galaxyStore.championTravelState === 'traveling'
-
       const player = getPlayerWorldPos(dots, order, rescued)
       const scale = w / currentMapVisible.value
 
@@ -513,7 +501,6 @@ export default defineComponent({
       ctx.fillStyle = '#1a0c02'
       ctx.fillRect(0, 0, w, h)
 
-      // Hintergrundbild – kein Kreis-Clip, füllt das gesamte Rechteck
       const imgW = scale
       const imgH = scale
       const imgX = w / 2 - player.x * imgW
@@ -582,7 +569,6 @@ export default defineComponent({
         const [sx, sy] = wToC(dots[i].x, dots[i].y)
         drawPlanet(ctx, sx, sy, 8, galaxySeed + i, 'unrescued')
       }
-
       for (let i = 0; i < rescued; i++) {
         const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
         drawPlanet(ctx, sx, sy, 10, galaxySeed + order[i], 'rescued')
@@ -709,7 +695,6 @@ export default defineComponent({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, w, h)
-
       if (hyperspacePhase === 'streaks') {
         drawStreaksPhase(ctx, w, h, timestamp)
         return
@@ -722,7 +707,6 @@ export default defineComponent({
         drawFadeoutPhase(ctx, w, h)
         return
       }
-
       const img = imgEl.value
       if (!img || !img.complete) return
       drawNormalMap(ctx, w, h)
@@ -733,7 +717,6 @@ export default defineComponent({
         galaxyStore.searchingForGalaxyBoss ||
         galaxyStore.needsFinalBoss ||
         galaxyStore.pendingGalaxyBoss
-
       let desired = MAP_WORLD_DEFAULT
       if (galaxyStore.championTravelState === 'traveling' && !isBossPhase) {
         const remaining = galaxyStore.travelRemainingMs
@@ -812,8 +795,8 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 380
-        const h = canvas?.offsetHeight ?? 310
+        const w = canvas?.offsetWidth ?? 440
+        const h = canvas?.offsetHeight ?? 440
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         initWarpParticles(w, h)
@@ -843,8 +826,8 @@ export default defineComponent({
         if (!active) return
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const canvas = canvasEl.value
-        const w = canvas?.offsetWidth ?? 380
-        const h = canvas?.offsetHeight ?? 310
+        const w = canvas?.offsetWidth ?? 440
+        const h = canvas?.offsetHeight ?? 440
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
         initWarpParticles(w, h)
@@ -893,14 +876,21 @@ export default defineComponent({
   display: block;
   width: 100%;
   height: 100%;
-  /* Kein border-radius – rechteckige Karte, kein filter */
+  /* Canvas erbt den clip-path des Wrappers – keine eigene Rundung nötig */
 }
 
 .minimap-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Rechteckige Vignette – kein border-radius: 50%, kein filter */
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+  /* Vignette folgt der Kreisform: stärker oben-rechts, sanft ausblendend */
+  background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgba(0, 0, 0, 0) 30%,
+      rgba(0, 0, 0, 0.45) 75%,
+      rgba(0, 0, 0, 0.7) 100%
+    ),
+    radial-gradient(ellipse at center, transparent 48%, rgba(0, 0, 0, 0.45) 100%);
 }
 </style>

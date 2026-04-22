@@ -2,21 +2,13 @@
   <Transition name="travel-fade">
     <div v-if="show" class="travel-hud">
       <div class="minimap-panel">
-        <!-- ── Kopfzeile mit aktuellem Galaxienamen ── -->
-        <div class="map-header">
-          <div class="map-header-inner">
-            <span class="map-header-title">{{ currentGalaxyName }}</span>
-          </div>
-          <div class="map-header-divider" />
-        </div>
-
-        <!-- ── Haupt-Canvas-Bereich ── -->
+        <!-- ── Canvas füllt die gesamte Fläche ── -->
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
           <svg
             class="map-grid-overlay"
-            viewBox="0 0 380 280"
+            viewBox="0 0 440 440"
             preserveAspectRatio="none"
             aria-hidden="true"
           >
@@ -25,14 +17,14 @@
                 id="gridPat"
                 x="0"
                 y="0"
-                width="38"
-                height="28"
+                width="44"
+                height="44"
                 patternUnits="userSpaceOnUse"
               >
                 <path
-                  d="M 38 0 L 0 0 0 28"
+                  d="M 44 0 L 0 0 0 44"
                   fill="none"
-                  stroke="rgba(210,160,40,0.06)"
+                  stroke="rgba(210,160,40,0.05)"
                   stroke-width="0.5"
                 />
               </pattern>
@@ -41,15 +33,11 @@
                 <stop offset="100%" stop-color="rgba(10,6,2,0.55)" />
               </radialGradient>
             </defs>
-            <rect width="380" height="280" fill="url(#gridPat)" />
-            <rect width="380" height="280" fill="url(#gridFade)" />
+            <rect width="440" height="440" fill="url(#gridPat)" />
+            <rect width="440" height="440" fill="url(#gridFade)" />
           </svg>
 
-          <div v-if="!isRescuing" class="hud-eta">
-            <span class="hud-eta-label">ANKUNFT</span>
-            <span class="hud-eta-value">{{ countdown }}</span>
-          </div>
-
+          <!-- ── Sterne-Zähler oben links ── -->
           <div
             v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
             class="minimap-planet-count"
@@ -60,8 +48,16 @@
             >
           </div>
 
+          <!-- ── Zeit oben rechts – gebogen in der Rundungsecke ── -->
+          <div v-if="!isRescuing" class="hud-corner-time">
+            <span class="hud-eta-label">ANKUNFT</span>
+            <span class="hud-eta-value">{{ countdown }}</span>
+          </div>
+
+          <!-- ── Boss-Suche Label ── -->
           <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
 
+          <!-- ── Galaxie abgeschlossen ── -->
           <div
             v-if="
               galaxyStore.isComplete &&
@@ -78,6 +74,8 @@
           </div>
         </div>
       </div>
+
+      <!-- ── Dekorativer Rahmen mit goldener Linie ── -->
       <svg
         class="panel-frame-svg"
         viewBox="0 0 440 440"
@@ -174,15 +172,12 @@ export default defineComponent({
       return `${m}:${String(sec).padStart(2, '0')}`
     })
 
-    const currentGalaxyName = computed(() => `GALAXIE ${galaxyStore.currentGalaxy}`)
-
     const framePath = `M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
     return {
       show,
       isRescuing,
       countdown,
-      currentGalaxyName,
       galaxyStore,
       starGroupStore,
       framePath,
@@ -219,14 +214,14 @@ export default defineComponent({
   pointer-events: none;
 }
 
+/* Panel füllt nun die gesamte 440×440-Fläche ohne map-header */
 .minimap-panel {
   position: relative;
   pointer-events: auto;
   width: 440px;
   height: 440px;
-  clip-path: path(
-    'M 0,0 L 440,0 L 440,440 L 0,440 Z M 220,0 L 220,2 A 218,218 0 0,1 438,220 L 440,220 L 440,0 Z'
-  );
+  /* Clip: linke untere Ecke = rechteckig, oben-rechts = großer Kreis-Bogen */
+  clip-path: path('M 0,0 L 220,0 A 220,220 0 0,1 440,220 L 440,440 L 0,440 Z');
   background:
     radial-gradient(ellipse at 20% 80%, rgba(60, 38, 8, 0.3) 0%, transparent 55%),
     linear-gradient(160deg, #1a0d04 0%, #120900 60%, #0e0700 100%);
@@ -234,62 +229,18 @@ export default defineComponent({
   flex-direction: column;
 }
 
-.map-header {
-  flex-shrink: 0;
-  padding: 14px 28px 0 20px;
-}
-
-.map-header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.map-header-title {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: #ffe080;
-  text-shadow:
-    0 0 14px rgba(232, 192, 64, 0.9),
-    0 0 5px rgba(180, 130, 20, 0.7);
-  text-transform: uppercase;
-  user-select: none;
-  text-align: center;
-}
-
-.map-header-divider {
-  height: 1px;
-  margin-top: 8px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(210, 160, 40, 0.45),
-    rgba(210, 160, 40, 0.15),
-    transparent
-  );
-}
-
+/* Canvas-Wrapper füllt nun die gesamte Panel-Fläche */
 .map-canvas-wrapper {
   flex: 1;
   position: relative;
-  margin: 8px 8px 8px 8px;
-  border-radius: 4px;
-  overflow: visible;
-  border: 1px solid rgba(210, 160, 40, 0.18);
+  overflow: hidden;
   background: #050302;
+  /* Gleiches clip-path wie das Panel, damit Canvas sauber abschneidet */
+  clip-path: path('M 0,0 L 220,0 A 220,220 0 0,1 440,220 L 440,440 L 0,440 Z');
 }
 
 .map-canvas-wrapper :deep(canvas),
-.map-canvas-wrapper :deep(.minimap-canvas),
-.map-canvas-wrapper
-  :deep(
-    > *:not(.map-grid-overlay):not(.hud-eta):not(.minimap-planet-count):not(
-        .minimap-resource-star
-      ):not(.minimap-search-label):not(.complete-overlay)
-  ) {
+.map-canvas-wrapper :deep(.minimap-canvas) {
   width: 100% !important;
   height: 100% !important;
   display: block;
@@ -304,47 +255,10 @@ export default defineComponent({
   z-index: 2;
 }
 
-.hud-eta {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 10;
-  pointer-events: none;
-  user-select: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  background: rgba(10, 6, 2, 0.82);
-  border: 1px solid rgba(210, 160, 40, 0.22);
-  border-radius: 4px;
-  padding: 4px 8px 5px;
-}
-
-.hud-eta-label {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: rgba(232, 192, 64, 0.55);
-  font-family: Georgia, serif;
-  text-transform: uppercase;
-}
-
-.hud-eta-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  text-shadow:
-    0 0 16px rgba(220, 175, 40, 0.95),
-    0 0 6px rgba(180, 130, 20, 0.7),
-    0 1px 3px rgba(0, 0, 0, 0.98);
-}
-
+/* ── Sterne-Zähler: unten-mittig ── */
 .minimap-planet-count {
   position: absolute;
-  bottom: 10px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -354,6 +268,10 @@ export default defineComponent({
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
+  background: rgba(10, 6, 2, 0.72);
+  border: 1px solid rgba(210, 160, 40, 0.22);
+  border-radius: 20px;
+  padding: 4px 14px 5px;
 }
 
 .planet-count-icon {
@@ -372,21 +290,57 @@ export default defineComponent({
     0 1px 3px rgba(0, 0, 0, 0.98);
 }
 
-@keyframes resource-star-pulse {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
+/* ── Zeit-Anzeige: nutzt die oben-rechts-Rundung visuell ──
+   Positioniert entlang des Kreisbogens, oben rechts im Canvas */
+/* ── Zeit-Anzeige: oben links, schön freigestellt ── */
+.hud-corner-time {
+  position: absolute;
+  top: 14px;
+  left: 14px; /* ← von right:22px auf left:14px */
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* ← linksbündig statt flex-end */
+  gap: 1px;
+  background: rgba(10, 6, 2, 0.82);
+  border: 1px solid rgba(210, 160, 40, 0.22);
+  /* Abgerundete Ecken: oben-links rund (greift die Panel-Ecke auf), Rest sanft */
+  border-radius: 8px 8px 8px 0;
+  padding: 7px 14px 7px 10px;
+  box-shadow:
+    inset 0 0 14px rgba(210, 160, 40, 0.07),
+    0 2px 10px rgba(0, 0, 0, 0.65);
+  /* Dezenter Goldschimmer links-oben */
+  background: linear-gradient(135deg, rgba(210, 160, 40, 0.12) 0%, rgba(10, 6, 2, 0.88) 40%);
+}
+
+.hud-eta-label {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: rgba(232, 192, 64, 0.55);
+  font-family: Georgia, serif;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.hud-eta-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-shadow:
+    0 0 16px rgba(220, 175, 40, 0.95),
+    0 0 6px rgba(180, 130, 20, 0.7),
+    0 1px 3px rgba(0, 0, 0, 0.98);
 }
 
 .minimap-search-label {
   position: absolute;
-  bottom: 10px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 1.6rem;
