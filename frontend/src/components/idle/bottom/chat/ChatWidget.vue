@@ -249,10 +249,7 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(circle at 20% 16%, rgba(255, 206, 104, 0.08), transparent 28%),
-    radial-gradient(circle at 70% 78%, rgba(120, 52, 14, 0.18), transparent 34%),
-    linear-gradient(180deg, #2a1409 0%, #1d0d05 52%, #160802 100%);
+  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
 }
 
 .chat-surface-glow {

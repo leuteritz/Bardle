@@ -194,7 +194,7 @@ watch(chimes, (newVal, oldVal) => {
   bottom: -80px;
   left: -50vw;
   right: -50vw;
-  background: #1a0d04;
+  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   z-index: 0;
 }
 
