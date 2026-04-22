@@ -1,6 +1,6 @@
 <template>
   <div class="bottom-connector" aria-hidden="true">
-    <div class="bottom-connector-bg" />
+    <div class="status-bar-bg-wide" />
 
     <div class="status-bar">
       <div class="stats-left">
@@ -183,17 +183,17 @@ watch(chimes, (newVal, oldVal) => {
   right: 458px;
   bottom: 48px;
   height: 24px;
-  z-index: 10001;
+  z-index: 9999;
   pointer-events: none;
   overflow: visible;
 }
 
-.bottom-connector-bg {
+.status-bar-bg-wide {
   position: absolute;
-  left: 0;
-  right: 0;
   top: 9px;
   bottom: -80px;
+  left: -50vw;
+  right: -50vw;
   background: #1a0d04;
   z-index: 0;
 }
@@ -262,8 +262,8 @@ watch(chimes, (newVal, oldVal) => {
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 18px;
+  gap: 7px;
+  padding: 0 24px;
 }
 
 .stat-divider {
@@ -281,14 +281,14 @@ watch(chimes, (newVal, oldVal) => {
 }
 
 .stat-icon {
-  font-size: 13px;
+  font-size: 15px;
   color: #9a6830;
   line-height: 1;
   filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
 }
 
 .stat-label {
-  font-size: 9px;
+  font-size: 10px;
   color: #6a4418;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -297,7 +297,7 @@ watch(chimes, (newVal, oldVal) => {
 }
 
 .stat-value {
-  font-size: 15px;
+  font-size: 17px;
   color: #d4a838;
   line-height: 1;
   font-weight: 600;
