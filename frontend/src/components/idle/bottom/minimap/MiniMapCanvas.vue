@@ -41,6 +41,14 @@ interface WarpParticle {
 
 type HyperspacePhase = 'idle' | 'streaks' | 'flash' | 'fadeout'
 
+const STAR_PALETTE = {
+  base: '#e87820',
+  shadow: '#5a1802',
+  highlight: '#ffb860',
+  atmo: 'rgba(240,140,30,0.6)',
+  ring: false,
+}
+
 const PLANET_PALETTES = [
   {
     base: '#d4723a',
@@ -122,9 +130,10 @@ function drawPlanet(
   seed: number,
   state: 'unrescued' | 'rescued' | 'target',
   pulse = false,
+  palOverride?: typeof STAR_PALETTE,
 ) {
   const rng = seededRng(seed >>> 0)
-  const pal = PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
+  const pal = palOverride ?? PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
   const glowMult = state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : 1.55
   const glowR = r * glowMult
   const atmoGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, glowR)
@@ -569,29 +578,48 @@ export default defineComponent({
         if (rescuedSet.has(i)) continue
         if (targetIdx === i) continue
         const [sx, sy] = wToC(dots[i].x, dots[i].y)
-        drawPlanet(ctx, sx, sy, 11, galaxySeed + i, 'unrescued')
+        drawPlanet(ctx, sx, sy, 16, galaxySeed + i, 'unrescued', false, STAR_PALETTE)
       }
       for (let i = 0; i < rescued; i++) {
         const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-        drawPlanet(ctx, sx, sy, 13, galaxySeed + order[i], 'rescued')
+        drawPlanet(ctx, sx, sy, 19, galaxySeed + order[i], 'rescued')
       }
 
       // Planeten des aktiven Champion-Sterns orbitieren um ihren Stern
       const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
-      if (championStar && targetIdx >= 0) {
+      const shouldPreviewOrbits = isTraveling && galaxyStore.travelRemainingMs <= 5_000
+      const STAR_R = 22
+
+      if ((championStar || shouldPreviewOrbits) && targetIdx >= 0) {
         const [csx, csy] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const nowSec = Date.now() / 1000
-        const STAR_R = 14
-        championStar.planetSlots.forEach((slot, idx) => {
-          if (slot.cleared) return
-          const planetR = Math.min(3 + idx * 0.8, STAR_R - 3)
-          const orbitR = Math.max(STAR_R + planetR + 4, 22 + idx * 7)
-          const speed = (0.35 + idx * 0.18) * slot.orbitDirection
-          const angle = nowSec * speed + idx * Math.PI * 0.67
-          const px = csx + Math.cos(angle) * orbitR
-          const py = csy + Math.sin(angle) * orbitR * 0.55
-          drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
-        })
+
+        if (championStar) {
+          championStar.planetSlots.forEach((slot, idx) => {
+            if (slot.cleared) return
+            const planetR = Math.min(7 + idx * 2, STAR_R - 2)
+            const orbitR = Math.max(STAR_R + planetR + 4, 26 + idx * 9)
+            const speed = (0.35 + idx * 0.18) * slot.orbitDirection
+            const angle = nowSec * speed + idx * Math.PI * 0.67
+            const px = csx + Math.cos(angle) * orbitR
+            const py = csy + Math.sin(angle) * orbitR * 0.55
+            drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+          })
+        } else {
+          // Vorschau-Planeten während letzter 5s (Stern noch nicht gespawnt)
+          const previewRng = seededRng(galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31)
+          const previewCount = 3 + Math.floor(previewRng() * 2)
+          for (let idx = 0; idx < previewCount; idx++) {
+            const dir = (previewRng() < 0.5 ? 1 : -1) as 1 | -1
+            const planetR = Math.min(7 + idx * 2, STAR_R - 2)
+            const orbitR = Math.max(STAR_R + planetR + 4, 26 + idx * 9)
+            const speed = (0.35 + idx * 0.18) * dir
+            const angle = nowSec * speed + idx * Math.PI * 0.67
+            const px = csx + Math.cos(angle) * orbitR
+            const py = csy + Math.sin(angle) * orbitR * 0.55
+            drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+          }
+        }
       }
 
       if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive) {
@@ -638,7 +666,7 @@ export default defineComponent({
 
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        drawPlanet(ctx, tx, ty, 14, galaxySeed + targetIdx, 'target', pulseFrame === 1)
+        drawPlanet(ctx, tx, ty, 22, galaxySeed + targetIdx, 'target', pulseFrame === 1, STAR_PALETTE)
       }
 
       // Planetenanzahl-Label: nur wenn Champion-Stern aktiv (Anzahl bekannt)
@@ -697,7 +725,7 @@ export default defineComponent({
         ctx.shadowColor = 'rgba(232,192,64,0.95)'
         ctx.shadowBlur = 16
         ctx.beginPath()
-        ctx.arc(w / 2, h / 2, 9, 0, Math.PI * 2)
+        ctx.arc(w / 2, h / 2, 13, 0, Math.PI * 2)
         ctx.fillStyle = '#ffe060'
         ctx.fill()
         ctx.strokeStyle = '#ffffff'
