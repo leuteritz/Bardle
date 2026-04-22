@@ -13,8 +13,8 @@ import { useGameStore } from '../../../../stores/gameStore'
 import { GALAXY_THEMES } from '../../../../config/galaxyThemes'
 import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../../config/constants'
 
-const MAP_WORLD_DEFAULT = 0.22
-const MAP_WORLD_ZOOMED = 0.08
+const MAP_WORLD_DEFAULT = 0.3
+const MAP_WORLD_ZOOMED = 0.14
 const ZOOM_TRIGGER_MS = 20_000
 const ZOOM_FULL_MS = 1_000
 const ZOOM_LERP_SPEED = 0.04
