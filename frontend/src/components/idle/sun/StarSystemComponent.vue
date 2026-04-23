@@ -154,15 +154,26 @@
                 class="summary-champion__icon"
               />
             </div>
-            <span class="summary-champion__name">{{ getStarRewardSummary(star).champion!.name }}</span>
+            <span class="summary-champion__name">{{
+              getStarRewardSummary(star).champion!.name
+            }}</span>
           </div>
           <!-- Divider between champion and loot row -->
-          <div v-if="getStarRewardSummary(star).champion && (getStarRewardSummary(star).totalChimes > 0 || getStarRewardSummary(star).materials.length > 0)" class="summary-divider" />
+          <div
+            v-if="
+              getStarRewardSummary(star).champion &&
+              (getStarRewardSummary(star).totalChimes > 0 ||
+                getStarRewardSummary(star).materials.length > 0)
+            "
+            class="summary-divider"
+          />
           <!-- Chimes + Materials row -->
           <div class="summary-loot-row">
             <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
               <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
-              <span class="summary-count">×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span>
+              <span class="summary-count"
+                >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
+              >
             </div>
             <div
               v-for="mat in getStarRewardSummary(star).materials"
@@ -187,6 +198,7 @@ import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
+import PlanetOrbit from './PlanetOrbit.vue'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
@@ -478,7 +490,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   transform: translate(-50%, -100%);
   width: 1px;
   height: 52px;
-  background: linear-gradient(to bottom, transparent 0%, rgba(232, 192, 64, 0.25) 40%, rgba(232, 192, 64, 0.5) 100%);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(232, 192, 64, 0.25) 40%,
+    rgba(232, 192, 64, 0.5) 100%
+  );
 }
 
 .summary-loot-row {
@@ -512,7 +529,13 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 .summary-divider {
   width: 100%;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(195, 160, 255, 0.35) 40%, rgba(195, 160, 255, 0.35) 60%, transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(195, 160, 255, 0.35) 40%,
+    rgba(195, 160, 255, 0.35) 60%,
+    transparent
+  );
 }
 
 .summary-champion {
@@ -534,7 +557,9 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid rgba(195, 160, 255, 0.8);
-  box-shadow: 0 0 10px rgba(180, 80, 255, 0.5), 0 0 20px rgba(140, 40, 220, 0.25);
+  box-shadow:
+    0 0 10px rgba(180, 80, 255, 0.5),
+    0 0 20px rgba(140, 40, 220, 0.25);
   flex-shrink: 0;
   animation: champIconPulse 2.2s ease-in-out infinite;
 }
@@ -557,7 +582,16 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 }
 
 @keyframes champIconPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(180, 80, 255, 0.5), 0 0 20px rgba(140, 40, 220, 0.25); }
-  50% { box-shadow: 0 0 16px rgba(195, 100, 255, 0.8), 0 0 32px rgba(160, 60, 240, 0.45); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(180, 80, 255, 0.5),
+      0 0 20px rgba(140, 40, 220, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(195, 100, 255, 0.8),
+      0 0 32px rgba(160, 60, 240, 0.45);
+  }
 }
 </style>

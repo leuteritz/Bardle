@@ -7,6 +7,7 @@ import { usePlanetBossStore } from './planetBossStore'
 import type { ShopUpgrade, BuildingStat, PermanentUpgrade, UpgradeModifier } from '../types'
 import { logger } from '../utils/logger'
 import { MODIFIER_POOL } from '../config/modifiers'
+import { usePlanetShopStore } from './planetShopStore'
 
 const chimeClickerIcon = '/img/ChimesPerClick.png'
 const glockenturmIcon = '/img/Glockenturm.png'
@@ -466,6 +467,7 @@ export const useShopStore = defineStore('shop', {
     calculateTotalCPS(): number {
       const gameStore = useGameStore()
       const augmentStore = useAugmentStore()
+      const planetShopStore = usePlanetShopStore()
       const mod = gameStore.activeModifier
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
@@ -479,7 +481,8 @@ export const useShopStore = defineStore('shop', {
         this.permanentCPSMultiplier *
         augmentStore.temporaryCPSMultiplier *
         itemStore.totalCPSMultiplier *
-        bossStore.cpsPenaltyMultiplier
+        bossStore.cpsPenaltyMultiplier *
+        planetShopStore.planetCPSMultiplier // ← NEU
       const flatCPSBonus = this.permanentUpgrades
         .filter((u) => u.purchased && u.appliedModifier)
         .reduce((sum, u) => {
@@ -489,7 +492,12 @@ export const useShopStore = defineStore('shop', {
           if (m.type === 'timeCrystal') return sum + (m.params.crystalCPSBonus as number)
           return sum
         }, 0)
-      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul + flatCPSBonus)
+      return Math.floor(
+        (baseCPS + planetShopStore.totalPlanetFlatCPS) * // ← NEU: flatCPS
+          gameStore.abilityCPSMultiplier *
+          cpsMul +
+          flatCPSBonus,
+      )
     },
 
     calculateTotalCPC(): number {

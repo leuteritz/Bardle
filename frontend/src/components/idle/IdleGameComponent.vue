@@ -17,6 +17,7 @@
     </div>
 
     <ChampionOrbit />
+    <PlanetOrbit />
     <StarSystemComponent />
     <PlayerHPBar />
     <StarSystemRescueTransition />
@@ -51,6 +52,7 @@ import ChampionOrbit from './sun/ChampionOrbit.vue'
 import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
+import PlanetOrbit from './sun/PlanetOrbit.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -60,6 +62,7 @@ export default defineComponent({
     PlayerHPBar,
     StarSystemComponent,
     StarSystemRescueTransition,
+    PlanetOrbit,
   },
   setup() {
     const gameStore = useGameStore()
