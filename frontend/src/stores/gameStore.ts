@@ -8,6 +8,7 @@ import { useExpeditionStore } from './expedetionStore' // ← useStore → useEx
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
 import { useRoleBehaviorStore } from './roleBehaviorStore'
+import { usePlanetShopStore } from './planetShopStore'
 import { universes } from '../config/universes'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
@@ -440,6 +441,15 @@ export const useGameStore = defineStore('game', {
       expeditionStore.checkExpeditions()
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
+      const planetShopStore = usePlanetShopStore()
+      const shrineCount = planetShopStore.wandererShrineCount
+      if (shrineCount > 0 && Math.random() < shrineCount * 0.08) {
+        const burst = Math.floor(this.chimesPerSecond * 2)
+        if (burst > 0) {
+          this.chimes += burst
+          this.totalChimesEarned += burst
+        }
+      }
       const combatStore = useCombatStore()
       combatStore.tick()
       const playerStore = usePlayerStore()

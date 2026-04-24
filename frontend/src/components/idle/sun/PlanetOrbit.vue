@@ -1,6 +1,23 @@
 <!-- frontend/src/components/idle/sun/PlanetOrbit.vue -->
 <template>
-  <!-- Back-Layer: Planeten HINTER der Sonne (z-index 3, unter Champions und Sonne) -->
+  <!-- Orbit-Ring Layer: faint ellipses for all defined slots (z-index 2) -->
+  <svg class="planet-orbit-rings" aria-hidden="true">
+    <g v-for="slot in allSlots" :key="slot.id + '-ring'">
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="slot.orbitRadiusX * ORBIT_RADIUS_SCALE"
+        :ry="slot.orbitRadiusY * ORBIT_RADIUS_SCALE"
+        :transform="`rotate(${slot.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        stroke="rgba(255,255,255,0.04)"
+        stroke-width="1"
+        stroke-dasharray="4 8"
+      />
+    </g>
+  </svg>
+
+  <!-- Back-Layer: planets behind the sun -->
   <div class="planet-orbit-layer planet-orbit-back" aria-hidden="true">
     <div
       v-for="pos in backPlanets"
@@ -14,17 +31,17 @@
         '--planet-color': pos.color,
       }"
     >
-      <img :src="pos.icon" :alt="pos.name" draggable="false" />
+      <img src="/img/planets/planet.png" :alt="pos.name" draggable="false" />
     </div>
   </div>
 
-  <!-- Front-Layer: Planeten VOR der Sonne (z-index 5.5 → wir nutzen 7, über Champions) -->
-  <div class="planet-orbit-layer planet-orbit-front" aria-hidden="true">
+  <!-- Front-Layer: planets in front of the sun -->
+  <div class="planet-orbit-layer planet-orbit-front">
     <div
       v-for="pos in frontPlanets"
       :key="pos.id"
       class="planet-orbit-item"
-      :class="{ 'planet-orbit-item--foreground': pos.isForeground }"
+      :class="{ 'planet-orbit-item--foreground': pos.isForeground, 'planet-orbit-item--clickable': true }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -33,25 +50,28 @@
         zIndex: pos.zIndex,
         '--planet-color': pos.color,
       }"
+      :title="pos.roleLabel"
+      @click="planetShopStore.openRoleModal(pos.id)"
     >
-      <img :src="pos.icon" :alt="pos.name" draggable="false" />
-      <!-- Bonus-Indikator Badge -->
-      <span class="planet-bonus-badge" :title="pos.bonusLabel">{{ pos.bonusIcon }}</span>
+      <img src="/img/planets/planet.png" :alt="pos.name" draggable="false" />
+      <span class="planet-bonus-badge" :title="pos.roleLabel">{{ pos.roleIcon }}</span>
     </div>
   </div>
+
+  <PlanetRoleModal />
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { usePlanetShopStore } from '../../../stores/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
+import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_RADIUS_SCALE } from '@/config/constants'
-import type { ShopPlanet, PlanetBonus } from '../../../stores/planetShopStore'
+import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
 interface PlanetRenderPos {
   id: string
   name: string
-  icon: string
   x: number
   y: number
   size: number
@@ -60,8 +80,8 @@ interface PlanetRenderPos {
   isForeground: boolean
   zIndex: number
   color: string
-  bonusLabel: string
-  bonusIcon: string
+  roleLabel: string
+  roleIcon: string
 }
 
 interface LocalPlanetState {
@@ -69,26 +89,6 @@ interface LocalPlanetState {
   orbitAngle: number
   x: number
   y: number
-}
-
-const BONUS_ICONS: Record<PlanetBonus, string> = {
-  chimes_per_second: '🎵',
-  chimes_per_click: '👆',
-  meep_cost_reduction: '💰',
-  cps_multiplier: '✨',
-}
-
-function bonusLabel(planet: ShopPlanet): string {
-  switch (planet.bonusType) {
-    case 'chimes_per_second':
-      return `+${planet.bonusPerLevel * planet.level} CPS`
-    case 'chimes_per_click':
-      return `+${planet.bonusPerLevel * planet.level} CPC`
-    case 'meep_cost_reduction':
-      return `-${Math.round(planet.bonusPerLevel * planet.level * 100)}% Meep-Kosten`
-    case 'cps_multiplier':
-      return `×${(1 + planet.bonusPerLevel * planet.level).toFixed(2)} CPS`
-  }
 }
 
 function getOrbitPos(
@@ -109,15 +109,45 @@ function getOrbitPos(
   }
 }
 
+function slotRoleLabel(slot: PlanetSlot): string {
+  if (!slot.role) return 'Keine Rolle — klicken zum Zuweisen'
+  const r = PLANET_ROLES[slot.role]
+  switch (r.bonusType) {
+    case 'chimes_per_second':
+      return `${r.name}: +${r.bonusPerSlot} CPS`
+    case 'chimes_per_click':
+      return `${r.name}: +${r.bonusPerSlot} CPC`
+    case 'meep_cost_reduction':
+      return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Meep-Kosten`
+    case 'cps_multiplier':
+      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% CPS`
+    case 'offline_boost':
+      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Offline`
+    case 'periodic_chimes':
+      return `${r.name}: ${Math.round(r.bonusPerSlot * 100)}% Schub-Chance/s`
+  }
+}
+
 export default defineComponent({
   name: 'PlanetOrbit',
+  components: { PlanetRoleModal },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const localStates = new Map<string, LocalPlanetState>()
     const renderPositions = ref<PlanetRenderPos[]>([])
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const PLANET_BASE_SIZE = 36 // px – etwas größer als Champions bei wenigen
+    const screenCx = ref(window.innerWidth / 2)
+    const screenCy = ref(window.innerHeight / 2)
+
+    function updateScreenCenter() {
+      screenCx.value = window.innerWidth / 2
+      screenCy.value = window.innerHeight / 2
+    }
+
+    const PLANET_BASE_SIZE = 36
+
+    const allSlots = computed(() => planetShopStore.slots)
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
 
@@ -128,47 +158,45 @@ export default defineComponent({
       const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
       lastTs = ts
 
-      const screenCx = window.innerWidth / 2
-      const screenCy = window.innerHeight / 2
-      const owned = planetShopStore.ownedPlanets
+      const cx = window.innerWidth / 2
+      const cy = window.innerHeight / 2
+      const purchased = planetShopStore.purchasedSlots
       const newPositions: PlanetRenderPos[] = []
 
-      for (const planet of owned) {
-        let ls = localStates.get(planet.id)
+      for (const slot of purchased) {
+        let ls = localStates.get(slot.id)
         if (!ls) {
-          // Spread Startwinkel gleichmäßig
-          const idx = owned.indexOf(planet)
-          const startAngle = (idx / Math.max(owned.length, 1)) * Math.PI * 2
+          const idx = purchased.indexOf(slot)
+          const startAngle = (idx / Math.max(purchased.length, 1)) * Math.PI * 2
           const initPos = getOrbitPos(
             startAngle,
-            planet.orbitRadiusX * ORBIT_RADIUS_SCALE,
-            planet.orbitRadiusY * ORBIT_RADIUS_SCALE,
-            (planet.tiltDeg * Math.PI) / 180,
-            screenCx,
-            screenCy,
+            slot.orbitRadiusX * ORBIT_RADIUS_SCALE,
+            slot.orbitRadiusY * ORBIT_RADIUS_SCALE,
+            (slot.tiltDeg * Math.PI) / 180,
+            cx,
+            cy,
           )
-          ls = { id: planet.id, orbitAngle: startAngle, x: initPos.x, y: initPos.y }
-          localStates.set(planet.id, ls)
+          ls = { id: slot.id, orbitAngle: startAngle, x: initPos.x, y: initPos.y }
+          localStates.set(slot.id, ls)
         }
 
-        const tiltRad = (planet.tiltDeg * Math.PI) / 180
-        const rx = planet.orbitRadiusX * ORBIT_RADIUS_SCALE
-        const ry = planet.orbitRadiusY * ORBIT_RADIUS_SCALE
+        const tiltRad = (slot.tiltDeg * Math.PI) / 180
+        const rx = slot.orbitRadiusX * ORBIT_RADIUS_SCALE
+        const ry = slot.orbitRadiusY * ORBIT_RADIUS_SCALE
 
         if (!reducedMotion) {
-          // Kepler-Boost: schneller an Sonne vorbei, langsamer am Apogäum
           const keplerBoost = 1.0 + 0.5 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
-          ls.orbitAngle += planet.direction * planet.baseSpeed * keplerBoost * dt
-          const target = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
+          ls.orbitAngle += slot.direction * slot.baseSpeed * keplerBoost * dt
+          const target = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
           ls.x += (target.x - ls.x) * 0.12
           ls.y += (target.y - ls.y) * 0.12
         } else {
-          const pos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
+          const pos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
           ls.x = pos.x
           ls.y = pos.y
         }
 
-        const relY = (ls.y - screenCy) / Math.max(ry, 1)
+        const relY = (ls.y - cy) / Math.max(ry, 1)
         const isBehind = relY < -0.05
         const depth = (relY + 1) / 2
 
@@ -178,26 +206,27 @@ export default defineComponent({
         const zIndex = Math.floor(9 + depth * 6)
         const isForeground = !isBehind && depth > 0.65
 
+        const color = slot.role ? PLANET_ROLES[slot.role].color : '#888888'
+        const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
+
         newPositions.push({
-          id: planet.id,
-          name: planet.name,
-          icon: planet.icon,
+          id: slot.id,
+          name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
           x: ls.x,
           y: ls.y,
           size,
           opacity,
-          isBehind: isBehind,
+          isBehind,
           isForeground,
           zIndex,
-          color: planet.color,
-          bonusLabel: bonusLabel(planet),
-          bonusIcon: BONUS_ICONS[planet.bonusType],
+          color,
+          roleLabel: slotRoleLabel(slot),
+          roleIcon,
         })
       }
 
-      // Alte States entfernen
       for (const key of localStates.keys()) {
-        if (!owned.some((p) => p.id === key)) localStates.delete(key)
+        if (!purchased.some((s) => s.id === key)) localStates.delete(key)
       }
 
       renderPositions.value = newPositions
@@ -217,33 +246,55 @@ export default defineComponent({
     })
 
     onMounted(() => {
+      window.addEventListener('resize', updateScreenCenter)
       animFrame = requestAnimationFrame(animate)
     })
     onUnmounted(() => {
+      window.removeEventListener('resize', updateScreenCenter)
       cancelAnimationFrame(animFrame)
     })
 
-    return { backPlanets, frontPlanets }
+    return {
+      planetShopStore,
+      allSlots,
+      backPlanets,
+      frontPlanets,
+      screenCx,
+      screenCy,
+      ORBIT_RADIUS_SCALE,
+    }
   },
 })
 </script>
 
 <style scoped>
+/* ── Orbit ring SVG ────────────────────────────────────────────────────────── */
+.planet-orbit-rings {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* ── Planet layers ─────────────────────────────────────────────────────────── */
 .planet-orbit-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
 
-/* Planeten unter Champions (4) und Sonne (5), aber über dem Hintergrund */
 .planet-orbit-back {
   z-index: 3;
 }
+
 .planet-orbit-front {
   z-index: 7;
 }
 
-/* ── Planet-Avatar ──────────────────────────────────────────────────────── */
+/* ── Planet item ───────────────────────────────────────────────────────────── */
 .planet-orbit-item {
   position: absolute;
   top: 0;
@@ -256,6 +307,18 @@ export default defineComponent({
     0 0 18px color-mix(in oklch, var(--planet-color, #aaa) 40%, transparent);
   will-change: transform, opacity;
   transition: box-shadow 0.4s ease;
+  pointer-events: none;
+}
+
+.planet-orbit-item--clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.planet-orbit-item--clickable:hover {
+  box-shadow:
+    0 0 14px color-mix(in oklch, var(--planet-color, #aaa) 90%, transparent),
+    0 0 28px color-mix(in oklch, var(--planet-color, #aaa) 60%, transparent);
 }
 
 .planet-orbit-item img {
@@ -268,6 +331,7 @@ export default defineComponent({
 
 .planet-orbit-item--behind {
   filter: brightness(0.38) saturate(0.4);
+  pointer-events: none;
 }
 
 .planet-orbit-item--foreground {
@@ -278,7 +342,7 @@ export default defineComponent({
     0 0 48px color-mix(in oklch, var(--planet-color, #aaa) 20%, transparent);
 }
 
-/* ── Bonus-Badge ────────────────────────────────────────────────────────── */
+/* ── Bonus badge ───────────────────────────────────────────────────────────── */
 .planet-bonus-badge {
   position: absolute;
   bottom: -3px;
@@ -293,7 +357,6 @@ export default defineComponent({
   border: 1px solid var(--planet-color, #aaa);
   pointer-events: none;
   z-index: 2;
-  cursor: default;
 }
 
 @media (prefers-reduced-motion: reduce) {

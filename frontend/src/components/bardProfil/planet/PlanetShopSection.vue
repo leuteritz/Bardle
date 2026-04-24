@@ -1,55 +1,71 @@
-<!-- frontend/src/components/idle/bottom/PlanetShopSection.vue -->
+<!-- frontend/src/components/bardProfil/planet/PlanetShopSection.vue -->
 <template>
   <section class="planet-shop-section">
-    <h3 class="planet-shop-title">🪐 Planeten</h3>
+    <div class="planet-shop-header">
+      <span class="planet-shop-title">🪐 Orbit-Slots</span>
+      <span class="planet-shop-subtitle">{{ store.purchasedSlots.length }}/{{ store.slots.length }} gekauft</span>
+    </div>
 
-    <div class="planet-shop-grid">
+    <div class="planet-slot-list">
       <div
-        v-for="planet in planetShopStore.planets"
-        :key="planet.id"
-        class="planet-shop-card"
+        v-for="(slot, idx) in store.slots"
+        :key="slot.id"
+        class="planet-slot-row"
         :class="{
-          'planet-shop-card--owned': planet.level > 0,
-          'planet-shop-card--locked': !planetShopStore.canAfford(planet.id) && planet.level === 0,
+          'planet-slot-row--purchased': slot.purchased,
+          'planet-slot-row--locked': !slot.purchased && !store.canAffordSlot(slot.id),
         }"
-        :style="{ '--card-accent': planet.color }"
       >
-        <!-- Planeten-Bild -->
-        <div class="planet-shop-img-wrap">
-          <img :src="planet.icon" :alt="planet.name" class="planet-shop-img" loading="lazy" />
-          <span v-if="planet.level > 0" class="planet-level-badge">Lv.{{ planet.level }}</span>
+        <!-- Orbit indicator -->
+        <div class="slot-orbit-icon">
+          <div
+            class="slot-orbit-dot"
+            :style="{ background: slot.purchased && slot.role ? roleColor(slot.role) : '#444' }"
+          />
+          <span class="slot-orbit-num">{{ idx + 1 }}</span>
         </div>
 
         <!-- Info -->
-        <div class="planet-shop-info">
-          <div class="planet-shop-name">{{ planet.name }}</div>
-          <div class="planet-shop-desc">{{ planet.description }}</div>
-
-          <!-- Bonus-Anzeige -->
-          <div class="planet-shop-bonus">
-            <span class="planet-bonus-icon">{{ bonusIcons[planet.bonusType] }}</span>
-            <span v-if="planet.level > 0" class="planet-bonus-value">
-              {{ currentBonusLabel(planet) }}
-            </span>
-            <span v-else class="planet-bonus-preview">
-              {{ previewBonusLabel(planet) }} pro Stufe
-            </span>
-          </div>
+        <div class="slot-info">
+          <template v-if="!slot.purchased">
+            <div class="slot-name">Orbit-Slot {{ idx + 1 }}</div>
+            <div class="slot-desc">Neue Umlaufbahn freischalten</div>
+          </template>
+          <template v-else-if="!slot.role">
+            <div class="slot-name slot-name--bought">Slot {{ idx + 1 }} – Bereit</div>
+            <div class="slot-desc slot-desc--warn">Keine Rolle zugewiesen</div>
+          </template>
+          <template v-else>
+            <div class="slot-name" :style="{ color: roleColor(slot.role) }">
+              {{ roleIcon(slot.role) }} {{ roleName(slot.role) }}
+            </div>
+            <div class="slot-desc slot-desc--bonus">{{ roleBonusShort(slot.role) }}</div>
+          </template>
         </div>
 
-        <!-- Kauf-Button -->
-        <button
-          class="planet-buy-btn"
-          :disabled="!planetShopStore.canAfford(planet.id)"
-          @click="buy(planet.id)"
-        >
-          <span class="planet-buy-cost">
-            🔔 {{ formatNumber(planetShopStore.getCost(planet.id)) }}
-          </span>
-          <span class="planet-buy-label">
-            {{ planet.level === 0 ? 'Kaufen' : 'Aufwerten' }}
-          </span>
-        </button>
+        <!-- Action button -->
+        <div class="slot-action">
+          <template v-if="!slot.purchased">
+            <button
+              class="slot-btn slot-btn--buy"
+              :disabled="!store.canAffordSlot(slot.id)"
+              @click="store.buySlot(slot.id)"
+            >
+              <span class="slot-btn-cost">🔔 {{ formatNumber(store.getSlotCost(slot.id)) }}</span>
+              <span class="slot-btn-label">Kaufen</span>
+            </button>
+          </template>
+          <template v-else-if="!slot.role">
+            <button class="slot-btn slot-btn--assign" @click="store.openRoleModal(slot.id)">
+              <span class="slot-btn-label">Rolle wählen</span>
+            </button>
+          </template>
+          <template v-else>
+            <button class="slot-btn slot-btn--reprogram" @click="store.openRoleModal(slot.id)">
+              <span class="slot-btn-label">Umprogr.</span>
+            </button>
+          </template>
+        </div>
       </div>
     </div>
   </section>
@@ -57,19 +73,24 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { usePlanetShopStore } from '../../../stores/planetShopStore'
-import type { ShopPlanet, PlanetBonus } from '../../../stores/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
+import type { PlanetRoleType } from '../../../stores/planetShopStore'
 
 export default defineComponent({
   name: 'PlanetShopSection',
   setup() {
-    const planetShopStore = usePlanetShopStore()
+    const store = usePlanetShopStore()
 
-    const bonusIcons: Record<PlanetBonus, string> = {
-      chimes_per_second: '🎵',
-      chimes_per_click: '👆',
-      meep_cost_reduction: '💰',
-      cps_multiplier: '✨',
+    function roleColor(role: PlanetRoleType): string {
+      return PLANET_ROLES[role].color
+    }
+
+    function roleIcon(role: PlanetRoleType): string {
+      return PLANET_ROLES[role].icon
+    }
+
+    function roleName(role: PlanetRoleType): string {
+      return PLANET_ROLES[role].name
     }
 
     function formatNumber(n: number): string {
@@ -78,201 +99,205 @@ export default defineComponent({
       return n.toString()
     }
 
-    function currentBonusLabel(planet: ShopPlanet): string {
-      switch (planet.bonusType) {
+    function roleBonusShort(role: PlanetRoleType): string {
+      const r = PLANET_ROLES[role]
+      switch (r.bonusType) {
         case 'chimes_per_second':
-          return `+${planet.bonusPerLevel * planet.level} CPS`
+          return `+${r.bonusPerSlot} CPS`
         case 'chimes_per_click':
-          return `+${planet.bonusPerLevel * planet.level} CPC`
+          return `+${r.bonusPerSlot} CPC`
         case 'meep_cost_reduction':
-          return `-${Math.round(planet.bonusPerLevel * planet.level * 100)} % Meep-Kosten`
+          return `-${Math.round(r.bonusPerSlot * 100)}% Meep-Kosten`
         case 'cps_multiplier':
-          return `×${(1 + planet.bonusPerLevel * planet.level).toFixed(2)} CPS`
+          return `+${Math.round(r.bonusPerSlot * 100)}% CPS ×`
+        case 'offline_boost':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Offline`
+        case 'periodic_chimes':
+          return `${Math.round(r.bonusPerSlot * 100)}% Schub/s`
       }
     }
 
-    function previewBonusLabel(planet: ShopPlanet): string {
-      switch (planet.bonusType) {
-        case 'chimes_per_second':
-          return `+${planet.bonusPerLevel} CPS`
-        case 'chimes_per_click':
-          return `+${planet.bonusPerLevel} CPC`
-        case 'meep_cost_reduction':
-          return `-${Math.round(planet.bonusPerLevel * 100)} % Meep`
-        case 'cps_multiplier':
-          return `+${Math.round(planet.bonusPerLevel * 100)} % CPS`
-      }
-    }
-
-    function buy(planetId: string) {
-      planetShopStore.buyPlanet(planetId)
-    }
-
-    return { planetShopStore, bonusIcons, formatNumber, currentBonusLabel, previewBonusLabel, buy }
+    return { store, formatNumber, roleColor, roleIcon, roleName, roleBonusShort }
   },
 })
 </script>
 
 <style scoped>
 .planet-shop-section {
-  padding: 0.75rem 0.5rem;
+  padding: 0;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.planet-shop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  background: #1e1006;
+  border-bottom: 2px solid #5c3310;
 }
 
 .planet-shop-title {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #e8c040;
-  margin-bottom: 0.6rem;
   letter-spacing: 0.04em;
 }
 
-.planet-shop-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.planet-shop-subtitle {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 
-/* ── Card ─────────────────────────────────────────────────────────────────── */
-.planet-shop-card {
+/* ── Slot list ─────────────────────────────────────────────────────────────── */
+.planet-slot-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.planet-slot-row {
   display: grid;
-  grid-template-columns: 52px 1fr auto;
+  grid-template-columns: 36px 1fr auto;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid oklch(from var(--card-accent, #888) l c h / 0.3);
-  border-radius: 8px;
   padding: 0.45rem 0.6rem;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
+  background: #1a1008;
+  border-bottom: 1px solid #2a1a08;
+  transition: background 0.15s;
 }
 
-.planet-shop-card--owned {
-  background: oklch(from var(--card-accent, #888) 0.15 0.03 h / 0.15);
-  border-color: oklch(from var(--card-accent, #888) l c h / 0.55);
+.planet-slot-row:last-child {
+  border-bottom: none;
 }
 
-.planet-shop-card--locked {
-  opacity: 0.55;
+.planet-slot-row--purchased {
+  background: #1c1a10;
 }
 
-/* ── Bild ─────────────────────────────────────────────────────────────────── */
-.planet-shop-img-wrap {
-  position: relative;
-  width: 48px;
-  height: 48px;
+.planet-slot-row--locked {
+  opacity: 0.5;
 }
 
-.planet-shop-img {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--card-accent, #888);
-  box-shadow: 0 0 8px oklch(from var(--card-accent, #888) l c h / 0.5);
-  display: block;
-}
-
-.planet-level-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid var(--card-accent, #888);
-  border-radius: 10px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 1px 4px;
-  color: var(--card-accent, #ccc);
-  white-space: nowrap;
-}
-
-/* ── Info ─────────────────────────────────────────────────────────────────── */
-.planet-shop-info {
+/* ── Orbit icon ────────────────────────────────────────────────────────────── */
+.slot-orbit-icon {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  gap: 2px;
+}
+
+.slot-orbit-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #5c3310;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.slot-orbit-num {
+  font-size: 0.58rem;
+  color: rgba(255, 255, 255, 0.3);
+  line-height: 1;
+}
+
+/* ── Slot info ─────────────────────────────────────────────────────────────── */
+.slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
   min-width: 0;
 }
 
-.planet-shop-name {
-  font-size: 0.82rem;
+.slot-name {
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #f0f0f0;
+  color: #c8c0a0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.planet-shop-desc {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.5);
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.slot-name--bought {
+  color: #a8e060;
 }
 
-.planet-shop-bonus {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.72rem;
-  margin-top: 0.1rem;
+.slot-desc {
+  font-size: 0.64rem;
+  color: rgba(255, 255, 255, 0.35);
 }
 
-.planet-bonus-icon {
-  font-size: 0.75rem;
+.slot-desc--warn {
+  color: #c89040;
 }
 
-.planet-bonus-value {
-  color: var(--card-accent, #e8c040);
+.slot-desc--bonus {
+  color: #e8c040;
   font-weight: 600;
 }
 
-.planet-bonus-preview {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* ── Kauf-Button ──────────────────────────────────────────────────────────── */
-.planet-buy-btn {
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.slot-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.1rem;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid oklch(from var(--card-accent, #888) l c h / 0.4);
-  border-radius: 6px;
-  padding: 0.35rem 0.55rem;
+  gap: 1px;
+  padding: 0.3rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid #5c3310;
   cursor: pointer;
-  min-width: 70px;
+  min-width: 62px;
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    opacity 0.15s ease;
+    background 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
   color: inherit;
 }
 
-.planet-buy-btn:hover:not(:disabled) {
-  background: oklch(from var(--card-accent, #888) 0.2 0.04 h / 0.25);
-  border-color: var(--card-accent, #888);
+.slot-btn--buy {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border-color: #6ec040;
 }
 
-.planet-buy-btn:disabled {
-  opacity: 0.35;
+.slot-btn--buy:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #60cc38, #3a9020);
+}
+
+.slot-btn--buy:disabled {
+  background: #1a1a14;
+  border-color: #3a2a10;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-.planet-buy-cost {
-  font-size: 0.72rem;
+.slot-btn--assign {
+  background: linear-gradient(to bottom, #4a7ec0, #2a4e90);
+  border-color: #5a8ee0;
+}
+
+.slot-btn--assign:hover {
+  background: linear-gradient(to bottom, #5a8ed0, #3a5ea0);
+}
+
+.slot-btn--reprogram {
+  background: #1c1c18;
+  border-color: #5c3310;
+}
+
+.slot-btn--reprogram:hover {
+  background: #282418;
+  border-color: #7a4e20;
+}
+
+.slot-btn-cost {
+  font-size: 0.68rem;
   font-weight: 700;
   color: #e8c040;
   white-space: nowrap;
 }
 
-.planet-buy-label {
-  font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.55);
+.slot-btn-label {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
 }
 </style>

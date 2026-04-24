@@ -11,6 +11,7 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useCpsStore } from '@/stores/cpsStore'
 import { usePlayerStore } from '@/stores/playerStore' // ← NEU
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -36,6 +37,7 @@ export function usePersistence() {
     const itemStore = useItemStore()
     const galaxyStore = useGalaxyStore()
     const playerStore = usePlayerStore() // ← NEU
+    const planetShopStore = usePlanetShopStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -137,6 +139,13 @@ export function usePersistence() {
       player: {
         currentHP: playerStore.currentHP,
         maxHP: playerStore.maxHP,
+      },
+      planetShop: {
+        slots: planetShopStore.slots.map((s) => ({
+          id: s.id,
+          purchased: s.purchased,
+          role: s.role,
+        })),
       },
     }
 
@@ -329,6 +338,18 @@ export function usePersistence() {
         playerStore.maxHP = saved.player.maxHP ?? playerStore.maxHP
       }
 
+      // Restore planetShopStore (slots)
+      const planetShopStore = usePlanetShopStore()
+      if (saved.planetShop?.slots) {
+        for (const sv of saved.planetShop.slots) {
+          const slot = planetShopStore.slots.find((s) => s.id === sv.id)
+          if (slot) {
+            slot.purchased = sv.purchased ?? false
+            slot.role = sv.role ?? null
+          }
+        }
+      }
+
       // ── Offline Progress ─────────────────────────────────────────────────────
       const now = Date.now()
       const savedAt = saved.savedAt as number | undefined
@@ -336,8 +357,9 @@ export function usePersistence() {
         const rawSeconds = Math.floor((now - savedAt) / 1000)
         const cappedSeconds = Math.min(rawSeconds, MAX_OFFLINE_HOURS * 3600)
         if (cappedSeconds >= MIN_OFFLINE_SECONDS) {
+          const offlineMul = planetShopStore.planetOfflineBoostMultiplier
           const earned = Math.floor(
-            gameStore.chimesPerSecond * OFFLINE_RATE_MULTIPLIER * cappedSeconds,
+            gameStore.chimesPerSecond * OFFLINE_RATE_MULTIPLIER * offlineMul * cappedSeconds,
           )
           gameStore.offlineChimes = earned
           gameStore.offlineSeconds = cappedSeconds
@@ -478,6 +500,14 @@ export function usePersistence() {
     // 7. Reset playerStore – HP/Leben auf Startwert zurücksetzen  ← NEU
     const playerStore = usePlayerStore()
     playerStore.$reset()
+
+    // 7b. Reset planetShopStore – alle Slots zurücksetzen
+    const planetShopStoreR = usePlanetShopStore()
+    planetShopStoreR.slots.forEach((s) => {
+      s.purchased = false
+      s.role = null
+    })
+    planetShopStoreR.activeRoleModalSlotId = null
 
     // 8. Recalculate CPS/CPC from clean state
     gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
