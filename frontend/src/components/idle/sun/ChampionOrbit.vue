@@ -1,4 +1,33 @@
 <template>
+  <!-- Champion Orbit-Arc Layer (über Sonne, z-index 6) -->
+  <Teleport to="body">
+    <svg
+      class="champion-orbit-arcs"
+      :viewBox="`0 0 ${screenW} ${screenH}`"
+      aria-hidden="true"
+    >
+      <defs>
+        <filter id="orbit-blur-champ-arc" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="12" />
+        </filter>
+      </defs>
+      <ellipse
+        v-for="pos in championRenderPositions"
+        :key="'arc-champ-' + pos.name"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="pos.orbitRx"
+        :ry="pos.orbitRy"
+        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+        stroke="#40a0ff"
+        :stroke-opacity="pos.hintOpacity * 0.65"
+        filter="url(#orbit-blur-champ-arc)"
+        fill="none"
+        stroke-width="4"
+      />
+    </svg>
+  </Teleport>
+
   <!-- ① Back-Layer: Champions HINTER der Sonne (z-index 4, unter der Sonne) -->
   <div class="champion-orbit-layer champion-orbit-back" aria-hidden="true">
     <div
@@ -92,6 +121,9 @@ import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
 import type { ChampionRole } from '../../../types'
 
+const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
+const BEHIND_SPEED_LERP = 0.04
+
 interface ChampionRenderPos {
   name: string
   img: string
@@ -104,6 +136,10 @@ interface ChampionRenderPos {
   isForeground: boolean
   zIndex: number
   primaryRole: ChampionRole | null
+  hintOpacity: number
+  orbitRx: number
+  orbitRy: number
+  tiltDeg: number
 }
 
 interface LocalChampState {
@@ -148,6 +184,7 @@ export default defineComponent({
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
+    const champSpeedMuls = new Map<string, number>()
     const championRenderPositions = ref<ChampionRenderPos[]>([])
 
     const projectiles = ref<Projectile[]>([])
@@ -217,9 +254,17 @@ export default defineComponent({
           localStates.set(c.name, ls)
         }
 
+        // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
+        const prevRelY = (ls.y - screenCy) / Math.max(c.orbitRadiusY * ORBIT_RADIUS_SCALE, 1)
+        const prevIsBehind = prevRelY < -0.05
+        const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
+        const curMul = champSpeedMuls.get(c.name) ?? 1.0
+        const newMul = curMul + (targetMul - curMul) * BEHIND_SPEED_LERP
+        champSpeedMuls.set(c.name, newMul)
+
         if (!reducedMotion) {
           const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
-          ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * dt
+          ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * newMul * dt
           const targetOrbit = getOrbitPos(
             ls.orbitAngle,
             c.orbitRadiusX * ORBIT_RADIUS_SCALE,
@@ -263,6 +308,10 @@ export default defineComponent({
         // CSS-Foreground-Glow: unteres Drittel der Umlaufbahn
         const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
+        // Orbit-Arc Opacity (hoch wenn hinter Sonne)
+        const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
+        const hintOpacity = Math.max(0, 1 - visibleFactor)
+
         const slotIndex = battleStore.headerSlots.indexOf(c.name)
         const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
 
@@ -278,11 +327,18 @@ export default defineComponent({
           isForeground,
           zIndex,
           primaryRole,
+          hintOpacity,
+          orbitRx: c.orbitRadiusX * ORBIT_RADIUS_SCALE,
+          orbitRy: c.orbitRadiusY * ORBIT_RADIUS_SCALE,
+          tiltDeg: c.tiltDeg,
         })
       }
 
       for (const key of localStates.keys()) {
-        if (!champions.some((c) => c.name === key)) localStates.delete(key)
+        if (!champions.some((c) => c.name === key)) {
+          localStates.delete(key)
+          champSpeedMuls.delete(key)
+        }
       }
 
       // ── Projectile update ─────────────────────────────────────────────────────
@@ -368,19 +424,40 @@ export default defineComponent({
       cancelAnimationFrame(animFrame)
     })
 
+    const screenCx = window.innerWidth / 2
+    const screenCy = window.innerHeight / 2
+    const screenW = window.innerWidth
+    const screenH = window.innerHeight
+
     return {
       combatStore,
       roleBehaviorStore,
       roleIcons,
       backChampions,
       frontChampions,
+      championRenderPositions,
       projectiles,
+      screenCx,
+      screenCy,
+      screenW,
+      screenH,
     }
   },
 })
 </script>
 
 <style scoped>
+/* ── Orbit-Arc SVG ────────────────────────────────────────────────────────── */
+.champion-orbit-arcs {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+  overflow: visible;
+}
+
 /* ── Layer-Container ──────────────────────────────────────────────────────── */
 .champion-orbit-layer {
   position: fixed;

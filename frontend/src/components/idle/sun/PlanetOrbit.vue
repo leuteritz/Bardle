@@ -1,5 +1,34 @@
 <!-- frontend/src/components/idle/sun/PlanetOrbit.vue -->
 <template>
+  <!-- Planet Orbit-Arc Layer (über Sonne, z-index 6) -->
+  <Teleport to="body">
+    <svg
+      class="planet-orbit-arcs"
+      :viewBox="`0 0 ${screenW} ${screenH}`"
+      aria-hidden="true"
+    >
+      <defs>
+        <filter id="orbit-blur-planet-arc" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+      </defs>
+      <ellipse
+        v-for="pos in renderPositions"
+        :key="'arc-planet-' + pos.id"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="pos.orbitRx"
+        :ry="pos.orbitRy"
+        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+        stroke="#40c890"
+        :stroke-opacity="pos.hintOpacity * 0.6"
+        filter="url(#orbit-blur-planet-arc)"
+        fill="none"
+        stroke-width="3"
+      />
+    </svg>
+  </Teleport>
+
   <!-- Orbit-Ring Layer: faint ellipses for all defined slots (z-index 2) -->
   <svg class="planet-orbit-rings" aria-hidden="true">
     <g v-for="slot in allSlots" :key="slot.id + '-ring'">
@@ -69,6 +98,9 @@ import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_RADIUS_SCALE } from '@/config/constants'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
+const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
+const BEHIND_SPEED_LERP = 0.04
+
 interface PlanetRenderPos {
   id: string
   name: string
@@ -82,6 +114,10 @@ interface PlanetRenderPos {
   color: string
   roleLabel: string
   roleIcon: string
+  hintOpacity: number
+  orbitRx: number
+  orbitRy: number
+  tiltDeg: number
 }
 
 interface LocalPlanetState {
@@ -134,6 +170,7 @@ export default defineComponent({
   setup() {
     const planetShopStore = usePlanetShopStore()
     const localStates = new Map<string, LocalPlanetState>()
+    const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -184,9 +221,17 @@ export default defineComponent({
         const rx = slot.orbitRadiusX * ORBIT_RADIUS_SCALE
         const ry = slot.orbitRadiusY * ORBIT_RADIUS_SCALE
 
+        // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
+        const prevRelY = (ls.y - cy) / Math.max(ry, 1)
+        const prevIsBehind = prevRelY < -0.05
+        const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
+        const curMul = planetSpeedMuls.get(slot.id) ?? 1.0
+        const newMul = curMul + (targetMul - curMul) * BEHIND_SPEED_LERP
+        planetSpeedMuls.set(slot.id, newMul)
+
         if (!reducedMotion) {
           const keplerBoost = 1.0 + 0.5 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
-          ls.orbitAngle += slot.direction * slot.baseSpeed * keplerBoost * dt
+          ls.orbitAngle += slot.direction * slot.baseSpeed * keplerBoost * newMul * dt
           const target = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
           ls.x += (target.x - ls.x) * 0.12
           ls.y += (target.y - ls.y) * 0.12
@@ -206,6 +251,10 @@ export default defineComponent({
         const zIndex = Math.floor(9 + depth * 6)
         const isForeground = !isBehind && depth > 0.65
 
+        // Orbit-Arc Opacity (hoch wenn hinter Sonne)
+        const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
+        const hintOpacity = Math.max(0, 1 - visibleFactor)
+
         const color = slot.role ? PLANET_ROLES[slot.role].color : '#888888'
         const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
 
@@ -222,11 +271,18 @@ export default defineComponent({
           color,
           roleLabel: slotRoleLabel(slot),
           roleIcon,
+          hintOpacity,
+          orbitRx: rx,
+          orbitRy: ry,
+          tiltDeg: slot.tiltDeg,
         })
       }
 
       for (const key of localStates.keys()) {
-        if (!purchased.some((s) => s.id === key)) localStates.delete(key)
+        if (!purchased.some((s) => s.id === key)) {
+          localStates.delete(key)
+          planetSpeedMuls.delete(key)
+        }
       }
 
       renderPositions.value = newPositions
@@ -254,13 +310,19 @@ export default defineComponent({
       cancelAnimationFrame(animFrame)
     })
 
+    const screenW = window.innerWidth
+    const screenH = window.innerHeight
+
     return {
       planetShopStore,
       allSlots,
       backPlanets,
       frontPlanets,
+      renderPositions,
       screenCx,
       screenCy,
+      screenW,
+      screenH,
       ORBIT_RADIUS_SCALE,
     }
   },
@@ -268,6 +330,17 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ── Planet Orbit-Arc SVG (über Sonne) ─────────────────────────────────────── */
+.planet-orbit-arcs {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+  overflow: visible;
+}
+
 /* ── Orbit ring SVG ────────────────────────────────────────────────────────── */
 .planet-orbit-rings {
   position: fixed;

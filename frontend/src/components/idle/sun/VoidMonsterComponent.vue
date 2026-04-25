@@ -1,15 +1,52 @@
 <template>
+  <!-- Orbit-Arc Layer (über Sonne, z-index 6) -->
+  <Teleport to="body">
+    <svg class="void-orbit-arcs" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
+      <defs>
+        <filter id="orbit-blur-void" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="12" />
+        </filter>
+      </defs>
+      <ellipse
+        v-for="m in monsterRenders"
+        :key="'arc-' + m.id"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="m.orbitRx"
+        :ry="m.orbitRy"
+        :transform="`rotate(${(m.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
+        stroke="#9922ff"
+        :stroke-opacity="m.hintOpacity * 0.7"
+        filter="url(#orbit-blur-void)"
+        fill="none"
+        stroke-width="4"
+      />
+    </svg>
+  </Teleport>
+
+  <!-- Monster-Bodies -->
   <Teleport to="body">
     <div class="void-monster-layer" aria-hidden="true">
+      <!--
+        WICHTIG: Wrapper übernimmt transform + opacity (keine CSS-Animation hier).
+        Inneres .void-monster hat die CSS-Animation mit transform: scale(1.05).
+        Ohne Trennung überschreibt die Animation den Inline-transform (CSS Cascade: Animations > Author Styles)
+        → Monster springt alle 0.9s zu (0,0) und zurück ("hin und her"-Bug).
+      -->
       <div
         v-for="m in monsterRenders"
         :key="m.id"
-        class="void-monster"
+        class="void-monster-pos"
         :style="{
           transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%) scale(${m.scale})`,
           opacity: m.opacity,
         }"
-      />
+      >
+        <div
+          class="void-monster"
+          :class="{ 'void-monster--behind': m.isBehind }"
+        />
+      </div>
     </div>
   </Teleport>
 </template>
@@ -22,17 +59,63 @@ export default defineComponent({
   name: 'VoidMonsterComponent',
   setup() {
     const { monsterRenders } = useVoidMonster()
-    return { monsterRenders }
+
+    const screenW = window.innerWidth
+    const screenH = window.innerHeight
+    const screenCx = screenW / 2
+    const screenCy = screenH / 2
+
+    return { monsterRenders, screenW, screenH, screenCx, screenCy }
   },
 })
 </script>
 
 <style scoped>
+.void-orbit-arcs {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+  overflow: visible;
+}
+
 .void-monster-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 8;
+}
+
+/* Wrapper: nur Positionierung – KEINE Animation, kein transform außer inline */
+.void-monster-pos {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Inneres Div: rein visuell – Animation mit transform: scale() ist hier sicher,
+   da der Wrapper die Position hält und nicht animiert wird */
+.void-monster {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a0080 0%, #180038 45%, #07000f 100%);
+  box-shadow:
+    0 0 12px #7700ff,
+    0 0 28px #5500cc,
+    0 0 52px #330099,
+    inset 0 0 8px #aa55ff;
+  animation: void-pulse 1.8s ease-in-out infinite;
+}
+
+.void-monster--behind {
+  filter: brightness(0.45) saturate(0.5);
 }
 
 @keyframes void-pulse {
@@ -42,6 +125,7 @@ export default defineComponent({
       0 0 28px #5500cc,
       0 0 52px #330099,
       inset 0 0 8px #aa55ff;
+    transform: scale(1);
   }
   50% {
     box-shadow:
@@ -66,23 +150,6 @@ export default defineComponent({
     border-radius: 52% 48% 44% 56% / 56% 52% 48% 44%;
     transform: rotate(120deg) scale(0.58) translate(10px, -14px);
   }
-}
-
-.void-monster {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #3a0080 0%, #180038 45%, #07000f 100%);
-  box-shadow:
-    0 0 12px #7700ff,
-    0 0 28px #5500cc,
-    0 0 52px #330099,
-    inset 0 0 8px #aa55ff;
-  animation: void-pulse 1.8s ease-in-out infinite;
-  will-change: transform, opacity;
 }
 
 .void-monster::before {

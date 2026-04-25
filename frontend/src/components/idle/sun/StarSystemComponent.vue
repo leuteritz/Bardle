@@ -73,6 +73,29 @@
   <!-- ② Front-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-front" aria-hidden="true">
+      <!-- Orbit-Arc über der Sonne (gold, sichtbar wenn Stern dahinter) -->
+      <svg class="orbit-hints-front-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
+        <defs>
+          <filter id="orbit-blur-star-front" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="16" />
+          </filter>
+        </defs>
+        <ellipse
+          v-for="star in backStars"
+          :key="'front-hint-' + star.id"
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="star.orbitRx"
+          :ry="star.orbitRy"
+          :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
+          stroke="#e8c040"
+          :stroke-opacity="star.hintOpacity * 0.8"
+          filter="url(#orbit-blur-star-front)"
+          fill="none"
+          stroke-width="5"
+        />
+      </svg>
+
       <template v-for="star in frontStars" :key="star.id">
         <div
           class="star-body"
@@ -360,6 +383,16 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 }
 
 .orbit-hints-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.orbit-hints-front-svg {
   position: absolute;
   top: 0;
   left: 0;

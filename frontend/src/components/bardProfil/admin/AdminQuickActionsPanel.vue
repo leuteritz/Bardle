@@ -5,6 +5,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useVoidMonsterStore } from '@/stores/voidMonsterStore'
 import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 import { CHAMPION_ROLES } from '@/config/championRoles'
@@ -15,6 +16,7 @@ const battleStore = useBattleStore()
 const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
+const voidMonsterStore = useVoidMonsterStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
 
 const editingKey = ref<string | null>(null)
@@ -115,6 +117,10 @@ function teleportNearPlanet() {
   if (galaxyStore.championTravelState !== 'traveling') return
   galaxyStore.championTravelStartTime = Date.now() - (galaxyStore.championTravelDurationMs - 5000)
 }
+
+function spawnVoidMonster() {
+  voidMonsterStore.spawnMonster()
+}
 </script>
 
 <template>
@@ -194,6 +200,12 @@ function teleportNearPlanet() {
         @click="teleportNearPlanet"
       >
         <span>⚡</span> Skip to -5s
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--void flex items-center gap-1.5 px-3 py-1.5"
+        @click="spawnVoidMonster"
+      >
+        <span>🌑</span> Spawn Void Monster
       </button>
     </div>
   </div>
@@ -338,5 +350,15 @@ function teleportNearPlanet() {
 .admin-spawn-btn--travel:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+.admin-spawn-btn--void {
+  color: #cc77ff;
+  border-color: #440088;
+  background: linear-gradient(to bottom, #0e0020, #06000f);
+}
+.admin-spawn-btn--void:hover {
+  background: linear-gradient(to bottom, #1a0038, #0e0022);
+  border-color: #8822dd;
+  color: #ee99ff;
 }
 </style>
