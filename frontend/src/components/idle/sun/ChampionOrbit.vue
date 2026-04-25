@@ -118,7 +118,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_RADIUS_SCALE } from '@/config/constants'
+import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_TIERS } from '@/config/constants'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -233,17 +233,18 @@ export default defineComponent({
       const baseSize = getAvatarSize(champions.length)
       const newPositions: ChampionRenderPos[] = []
 
-      for (const c of champions) {
+      for (let ci = 0; ci < champions.length; ci++) {
+        const c = champions[ci]
+        // Assign champion to one of 2 canonical orbit tiers (alternating by index)
+        const tier = ORBIT_TIERS.champion[ci % 2]
+        const rx = tier.rx
+        const ry = tier.ry
+        const tiltRad = tier.tiltRad
+        const tiltDeg = tier.tiltDeg
+
         let ls = localStates.get(c.name)
         if (!ls) {
-          const orbitPos = getOrbitPos(
-            c.angle,
-            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
-            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
-            c.tiltRad,
-            screenCx,
-            screenCy,
-          )
+          const orbitPos = getOrbitPos(c.angle, rx, ry, tiltRad, screenCx, screenCy)
           ls = {
             name: c.name,
             x: orbitPos.x,
@@ -255,7 +256,7 @@ export default defineComponent({
         }
 
         // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
-        const prevRelY = (ls.y - screenCy) / Math.max(c.orbitRadiusY * ORBIT_RADIUS_SCALE, 1)
+        const prevRelY = (ls.y - screenCy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
         const curMul = champSpeedMuls.get(c.name) ?? 1.0
@@ -265,25 +266,11 @@ export default defineComponent({
         if (!reducedMotion) {
           const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
           ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * newMul * dt
-          const targetOrbit = getOrbitPos(
-            ls.orbitAngle,
-            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
-            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
-            c.tiltRad,
-            screenCx,
-            screenCy,
-          )
+          const targetOrbit = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
           ls.x += (targetOrbit.x - ls.x) * 0.15
           ls.y += (targetOrbit.y - ls.y) * 0.15
         } else {
-          const orbitPos = getOrbitPos(
-            c.angle,
-            c.orbitRadiusX * ORBIT_RADIUS_SCALE,
-            c.orbitRadiusY * ORBIT_RADIUS_SCALE,
-            c.tiltRad,
-            screenCx,
-            screenCy,
-          )
+          const orbitPos = getOrbitPos(c.angle, rx, ry, tiltRad, screenCx, screenCy)
           ls.x = orbitPos.x
           ls.y = orbitPos.y
         }
@@ -291,21 +278,18 @@ export default defineComponent({
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
         // relY: -1 = Orbit-Top (hinter Sonne), +1 = Orbit-Bottom (vor Sonne)
-        const relY = (ls.y - screenCy) / Math.max(c.orbitRadiusY * ORBIT_RADIUS_SCALE, 1)
+        const relY = (ls.y - screenCy) / Math.max(ry, 1)
         const isBehind = relY < -0.05
-        const depth = (relY + 1) / 2 // 0 = ganz hinten, 1 = ganz vorne
+        const depth = (relY + 1) / 2
 
-        // Parallax-Größe: 0.72× (hinten) → 1.0× (Äquator) → 1.28× (vorne)
+        // Parallax-Größe: 0.72× (hinten) → 1.28× (vorne)
         const parallaxScale = 0.72 + depth * 0.56
         const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
 
-        // Opazität: klarer Kontrast hinten (0.12–0.27) vs. vorne (0.80–1.0)
-        const opacity = c.isAttacking ? 1 : isBehind ? 0.12 + depth * 0.3 : 0.8 + depth * 0.2
+        // Opacity: voll sichtbar in beiden Zonen, Blur übernimmt die Tiefenwirkung
+        const opacity = c.isAttacking ? 1 : isBehind ? 0.82 + depth * 0.18 : 0.9 + depth * 0.1
 
-        // z-index nur innerhalb des jeweiligen Layers (für Überlappung mehrerer Champions)
         const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
-
-        // CSS-Foreground-Glow: unteres Drittel der Umlaufbahn
         const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
         // Orbit-Arc Opacity (hoch wenn hinter Sonne)
@@ -328,14 +312,14 @@ export default defineComponent({
           zIndex,
           primaryRole,
           hintOpacity,
-          orbitRx: c.orbitRadiusX * ORBIT_RADIUS_SCALE,
-          orbitRy: c.orbitRadiusY * ORBIT_RADIUS_SCALE,
-          tiltDeg: c.tiltDeg,
+          orbitRx: rx,
+          orbitRy: ry,
+          tiltDeg,
         })
       }
 
       for (const key of localStates.keys()) {
-        if (!champions.some((c) => c.name === key)) {
+        if (!champions.some((ch) => ch.name === key)) {
           localStates.delete(key)
           champSpeedMuls.delete(key)
         }
@@ -491,7 +475,7 @@ export default defineComponent({
   will-change: transform;
   transition:
     box-shadow 0.3s ease,
-    filter 0.3s ease;
+    filter 0.25s ease;
 }
 
 .champion-orbit-avatar img {
@@ -526,9 +510,10 @@ export default defineComponent({
   box-shadow: 0 0 10px rgba(180, 200, 210, 0.7), 0 0 20px rgba(180, 200, 210, 0.3);
 }
 
-/* Hinter der Sonne: gedimmt, entsättigt – Rollenfarbe bleibt via !important erhalten */
+/* Hinter der Sonne: leicht geblurrt + gedimmt – Rollenfarbe bleibt via !important erhalten */
 .champion-orbit-avatar--behind {
-  filter: brightness(0.42) saturate(0.45);
+  filter: blur(2px) brightness(0.75) saturate(0.65);
+  transition: filter 0.25s ease;
 }
 
 /* Klar vor der Sonne: Helligkeit erhöhen, Rollenfarbe bleibt erhalten */

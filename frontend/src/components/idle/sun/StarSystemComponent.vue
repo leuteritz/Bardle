@@ -1,4 +1,55 @@
 <template>
+  <!-- ⓪ Permanent Orbit Tracks (always visible, colored rings per category) -->
+  <Teleport to="body">
+    <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
+      <!-- Star orbit tracks (gold) -->
+      <ellipse
+        v-for="(tier, i) in ORBIT_TIERS.star"
+        :key="'track-star-' + i"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+        :stroke="ORBIT_COLORS.star"
+        stroke-opacity="0.18"
+        fill="none"
+        stroke-width="1"
+        stroke-dasharray="5 8"
+      />
+      <!-- Champion orbit tracks (green) -->
+      <ellipse
+        v-for="(tier, i) in ORBIT_TIERS.champion"
+        :key="'track-champ-' + i"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+        :stroke="ORBIT_COLORS.champion"
+        stroke-opacity="0.18"
+        fill="none"
+        stroke-width="1"
+        stroke-dasharray="5 8"
+      />
+      <!-- Void monster orbit tracks (purple) -->
+      <ellipse
+        v-for="(tier, i) in ORBIT_TIERS.void_monster"
+        :key="'track-void-' + i"
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+        :stroke="ORBIT_COLORS.void_monster"
+        stroke-opacity="0.18"
+        fill="none"
+        stroke-width="1"
+        stroke-dasharray="5 8"
+      />
+    </svg>
+  </Teleport>
+
   <!-- ① Back-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-back" aria-hidden="true">
@@ -222,6 +273,7 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import PlanetOrbit from './PlanetOrbit.vue'
+import { ORBIT_COLORS, ORBIT_TIERS } from '../../../config/constants'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
@@ -250,6 +302,8 @@ function starBodyStyle(star: StarRenderEntry) {
     opacity: String(star.opacity.toFixed(3)),
     width: `${s}px`,
     height: `${s}px`,
+    filter: star.filterStyle || undefined,
+    transition: 'filter 0.3s ease',
   }
 }
 
@@ -370,6 +424,16 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 </script>
 
 <style scoped>
+.orbit-tracks-svg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
 .star-sys-layer {
   position: fixed;
   inset: 0;

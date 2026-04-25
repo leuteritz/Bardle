@@ -29,7 +29,7 @@
     </svg>
   </Teleport>
 
-  <!-- Orbit-Ring Layer: faint ellipses for all defined slots (z-index 2) -->
+  <!-- Orbit-Ring Layer: colored planet orbit rings (z-index 2) -->
   <svg class="planet-orbit-rings" aria-hidden="true">
     <g v-for="slot in allSlots" :key="slot.id + '-ring'">
       <ellipse
@@ -39,9 +39,10 @@
         :ry="slot.orbitRadiusY * ORBIT_RADIUS_SCALE"
         :transform="`rotate(${slot.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
-        stroke="rgba(255,255,255,0.04)"
+        :stroke="ORBIT_COLORS.planet"
+        stroke-opacity="0.18"
         stroke-width="1"
-        stroke-dasharray="4 8"
+        stroke-dasharray="5 8"
       />
     </g>
   </svg>
@@ -95,7 +96,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_RADIUS_SCALE } from '@/config/constants'
+import { ORBIT_RADIUS_SCALE, ORBIT_COLORS } from '@/config/constants'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -324,6 +325,7 @@ export default defineComponent({
       screenW,
       screenH,
       ORBIT_RADIUS_SCALE,
+      ORBIT_COLORS,
     }
   },
 })
@@ -403,7 +405,8 @@ export default defineComponent({
 }
 
 .planet-orbit-item--behind {
-  filter: brightness(0.38) saturate(0.4);
+  filter: blur(2px) brightness(0.7) saturate(0.5);
+  transition: filter 0.25s ease;
   pointer-events: none;
 }
 

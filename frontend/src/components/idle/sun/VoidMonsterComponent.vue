@@ -115,7 +115,8 @@ export default defineComponent({
 }
 
 .void-monster--behind {
-  filter: brightness(0.45) saturate(0.5);
+  filter: blur(2.5px) brightness(0.7) saturate(0.55);
+  transition: filter 0.25s ease;
 }
 
 @keyframes void-pulse {

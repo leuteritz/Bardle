@@ -5,6 +5,7 @@ import {
   VOID_MONSTER_FLY_DURATION_MS,
   VOID_MONSTER_SPAWN_INTERVAL_MIN_MS,
   VOID_MONSTER_SPAWN_INTERVAL_MAX_MS,
+  ORBIT_TIERS,
 } from '../config/constants'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -13,11 +14,7 @@ const BEHIND_FADE_BAND = 0.12
 const SPEED_LERP = 0.04
 const VOID_BEHIND_OPACITY = 0.2
 const VOID_ORBIT_SPEED = 0.00007
-const VOID_ORBIT_RX_MIN = 280
-const VOID_ORBIT_RX_MAX = 380
-const VOID_ORBIT_RY_RATIO = 0.44
 const VOID_ORBIT_LIFETIME_MS = 50_000
-// Wie schnell der Orbit-Radius nach dem Fly-in expandiert (0–1, höher = schneller)
 const ORBIT_EXPAND_LERP = 0.018
 
 export interface VoidMonsterRenderEntry {
@@ -79,20 +76,20 @@ export function useVoidMonster() {
     for (const monster of store.activeMonsters) {
       // ── Initialisierung beim ersten Frame ──────────────────────────────────
       if (!orbitStates.has(monster.id)) {
-        const targetRx = VOID_ORBIT_RX_MIN + Math.random() * (VOID_ORBIT_RX_MAX - VOID_ORBIT_RX_MIN)
-        const targetRy = targetRx * VOID_ORBIT_RY_RATIO
+        // Deterministisch: Tier 0 oder 1 anhand erster Stelle der ID
+        const tierIndex = monster.id.charCodeAt(0) % 2
+        const tier = ORBIT_TIERS.void_monster[tierIndex]
 
         // Startwinkel = Richtung vom Spawn-Punkt zur Sonne
-        // Monster verlässt die Sonne nach dem Fly-in auf der Seite, von der es kam
         const approachAngle = Math.atan2(monster.spawnY - screenCy, monster.spawnX - screenCx)
 
         orbitStates.set(monster.id, {
           angle: approachAngle,
-          rx: 0,        // Orbit startet mit Radius 0, expandiert danach
+          rx: 0,
           ry: 0,
-          targetRx,
-          targetRy,
-          tilt: (Math.random() - 0.5) * 0.6,
+          targetRx: tier.rx,
+          targetRy: tier.ry,
+          tilt: tier.tiltRad,
           direction: Math.random() < 0.5 ? 1 : -1,
           speedMul: 1.0,
         })

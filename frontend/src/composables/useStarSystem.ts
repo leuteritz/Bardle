@@ -41,6 +41,7 @@ export interface StarRenderEntry {
   scale: number
   opacity: number
   isBehind: boolean
+  filterStyle: string
   orbitRx: number
   orbitRy: number
   orbitTilt: number
@@ -333,6 +334,8 @@ export function useStarSystem() {
       const baseScale = 0.72 + sDepth * 0.56
       const sScale = baseScale * (reducedMotion ? 1 : Math.max(0.05, spawnFactor))
       const sOpacity = starFactor * (0.78 + sDepth * 0.22) * spawnFactor
+      const blurPx = sIsBehind ? ((1 - sDepth) * 2.5).toFixed(1) : '0'
+      const starFilterStyle = parseFloat(blurPx) > 0.1 ? `blur(${blurPx}px)` : ''
 
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 
@@ -425,6 +428,7 @@ export function useStarSystem() {
         scale: sScale,
         opacity: sOpacity,
         isBehind: sIsBehind,
+        filterStyle: starFilterStyle,
         orbitRx: star.orbitRx,
         orbitRy: star.orbitRy,
         orbitTilt: star.orbitTilt,

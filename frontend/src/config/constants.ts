@@ -227,3 +227,27 @@ export const VOID_MONSTER_SPAWN_INTERVAL_MIN_MS = 18_000
 export const VOID_MONSTER_SPAWN_INTERVAL_MAX_MS = 45_000
 export const VOID_MONSTER_FLY_DURATION_MS = 14_000
 export const VOID_MONSTER_SIZE = 44
+
+// Orbit category colors — one unique color per object type
+export const ORBIT_COLORS = {
+  star: '#FFD700',
+  planet: '#4AADFF',
+  champion: '#52C85E',
+  void_monster: '#9B44FF',
+} as const
+
+// Canonical orbit tiers — 2 distinct orbit paths per category
+export const ORBIT_TIERS = {
+  champion: [
+    { rx: 252, ry: 108, tiltDeg: 12, tiltRad: 0.2094 },
+    { rx: 324, ry: 139, tiltDeg: -15, tiltRad: -0.2618 },
+  ],
+  star: [
+    { rx: 370, ry: 162, tiltDeg: 10.3, tiltRad: 0.18 },
+    { rx: 430, ry: 188, tiltDeg: 15.5, tiltRad: 0.27 },
+  ],
+  void_monster: [
+    { rx: 295, ry: 130, tiltDeg: -6.9, tiltRad: -0.12 },
+    { rx: 370, ry: 163, tiltDeg: 10.3, tiltRad: 0.18 },
+  ],
+} as const
