@@ -220,3 +220,10 @@ export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000 // gain 1 stack every 6s
 export const ROLE_JUNGLER_MAX_STACKS = 5
 export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
+
+// Void Monster System
+export const VOID_MONSTER_MAX_COUNT = 6
+export const VOID_MONSTER_SPAWN_INTERVAL_MIN_MS = 18_000
+export const VOID_MONSTER_SPAWN_INTERVAL_MAX_MS = 45_000
+export const VOID_MONSTER_FLY_DURATION_MS = 14_000
+export const VOID_MONSTER_SIZE = 44

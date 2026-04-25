@@ -1,6 +1,13 @@
 // Champion role types
 export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
+export interface VoidMonster {
+  id: string
+  spawnX: number
+  spawnY: number
+  spawnedAt: number
+}
+
 // Expedition types
 export type ExpeditionStatus = 'active' | 'success' | 'failure'
 
