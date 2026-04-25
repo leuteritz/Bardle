@@ -25,21 +25,21 @@
     </svg>
   </Teleport>
 
-  <!-- Orbit-Ring Layer: colored planet orbit rings – driven by ORBIT_TIERS.planet -->
+  <!-- Orbit-Ring Layer: gestrichelte Ringe exakt auf der Planeten-Umlaufbahn -->
   <svg class="planet-orbit-rings" aria-hidden="true">
-    <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
+    <template v-for="(slot, i) in planetShopStore.slots" :key="'track-planet-' + i">
       <ellipse
-        v-if="planetShopStore.slots[i]?.purchased"
+        v-if="slot.purchased"
         :cx="screenCx"
         :cy="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :rx="slot.orbitRadiusX * ORBIT_RADIUS_SCALE"
+        :ry="slot.orbitRadiusY * ORBIT_RADIUS_SCALE"
+        :transform="`rotate(${slot.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
-        :stroke="tier.color"
-        stroke-opacity="0.18"
-        stroke-width="1"
-        stroke-dasharray="5 8"
+        :stroke="slot.role ? PLANET_ROLES[slot.role].color : '#4AADFF'"
+        stroke-opacity="0.55"
+        stroke-width="1.5"
+        stroke-dasharray="6 10"
       />
     </template>
   </svg>
@@ -119,7 +119,7 @@ interface PlanetRenderPos {
   orbitRx: number
   orbitRy: number
   tiltDeg: number
-  orbitColor: string // ← NEU
+  orbitColor: string
 }
 
 interface LocalPlanetState {
@@ -204,7 +204,7 @@ export default defineComponent({
 
       for (const slot of purchased) {
         const slotIdx = purchased.indexOf(slot)
-        const orbitColor = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length].color // ← NEU
+        const orbitColor = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length].color
         let ls = localStates.get(slot.id)
         if (!ls) {
           const idx = purchased.indexOf(slot)
@@ -225,7 +225,6 @@ export default defineComponent({
         const rx = slot.orbitRadiusX * ORBIT_RADIUS_SCALE
         const ry = slot.orbitRadiusY * ORBIT_RADIUS_SCALE
 
-        // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
@@ -255,7 +254,6 @@ export default defineComponent({
         const zIndex = Math.floor(9 + depth * 6)
         const isForeground = !isBehind && depth > 0.65
 
-        // Orbit-Arc Opacity (hoch wenn hinter Sonne)
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
@@ -279,7 +277,7 @@ export default defineComponent({
           orbitRx: rx,
           orbitRy: ry,
           tiltDeg: slot.tiltDeg,
-          orbitColor, // ← NEU
+          orbitColor,
         })
       }
 
@@ -331,6 +329,7 @@ export default defineComponent({
       ORBIT_RADIUS_SCALE,
       ORBIT_COLORS,
       ORBIT_TIERS,
+      PLANET_ROLES,
     }
   },
 })
