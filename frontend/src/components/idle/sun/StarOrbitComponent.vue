@@ -99,18 +99,21 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { getOrbitPos } from '../../../utils/orbitMath'
+import { ORBIT_TIERS } from '@/config/constants.ts'
 
 // ── Orbit-Parameter ───────────────────────────────────────────────────────────
 
-const CHAMP_RX = 370
-const CHAMP_RY = 160
-const CHAMP_TILT = 0.18
+// Champion-Stern → star[0]
+const CHAMP_RX = ORBIT_TIERS.star[0].rx
+const CHAMP_RY = ORBIT_TIERS.star[0].ry
+const CHAMP_TILT = ORBIT_TIERS.star[0].tiltRad
 const CHAMP_SPEED = 0.000022
 const CHAMP_SIZE = 34
 
-const RES_RX = 430
-const RES_RY = 188
-const RES_TILT = 0.27
+// Ressourcen-Stern → star[1]
+const RES_RX = ORBIT_TIERS.star[1].rx
+const RES_RY = ORBIT_TIERS.star[1].ry
+const RES_TILT = ORBIT_TIERS.star[1].tiltRad
 const RES_SPEED = 0.000042
 const RES_SIZE = 28
 

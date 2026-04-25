@@ -16,6 +16,7 @@ import {
   PLANET_ORBIT_SPEED_EXTRA_MIN,
   PLANET_ORBIT_SPEED_EXTRA_RANGE,
   PLANET_ORBIT_SPEED_BOSS,
+  ORBIT_TIERS,
 } from '../config/constants'
 
 let starIdCounter = 0
@@ -48,7 +49,6 @@ export interface StarGroup {
   durationMs?: number
 }
 
-// Hält laufende Admin-Spawn-Timeouts pro Star-ID
 const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 export const useStarGroupStore = defineStore('starGroup', {
@@ -94,14 +94,15 @@ export const useStarGroupStore = defineStore('starGroup', {
 
     spawnResourceStar() {
       if (this.hasActiveResourceStar) return
+      const tier = ORBIT_TIERS.star[1]
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
         starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-        orbitRx: 575,
-        orbitRy: 247,
-        orbitTilt: 0.27,
+        orbitRx: tier.rx,
+        orbitRy: tier.ry,
+        orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
         spawnedAt: Date.now(),
@@ -110,20 +111,18 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.activeStars.push(star)
     },
 
-    // Admin: spawnt immer einen neuen Stern – kein Guard, zufällige Planetenanzahl 1–4.
-    // Nutzt direkten setTimeout, da tickResourceStar() nur bei
-    // championTravelState === 'traveling' läuft.
     forceSpawnResourceStar() {
       const galaxyStore = useGalaxyStore()
+      const tier = ORBIT_TIERS.star[1]
       const starId = `star-${++starIdCounter}`
       const star: StarGroup = {
         id: starId,
         starType: 'resource',
         starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-        orbitRx: 575,
-        orbitRy: 247,
-        orbitTilt: 0.27,
+        orbitRx: tier.rx,
+        orbitRy: tier.ry,
+        orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
         planetSlots: this._buildResourcePlanetSlots(1 + Math.floor(Math.random() * 4)),
         spawnedAt: Date.now(),
@@ -131,12 +130,10 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
       this.activeStars.push(star)
 
-      // Header-Timer anzeigen
       galaxyStore.resourceStarActive = true
       galaxyStore.resourceStarDurationMs = RESOURCE_STAR_DURATION_MS
       galaxyStore.resourceStarElapsedMs = 0
 
-      // Direkter Fallback-Timeout unabhängig von championTravelState
       const timeout = setTimeout(() => {
         adminStarTimeouts.delete(starId)
         galaxyStore.resourceStarActive = false
@@ -208,14 +205,15 @@ export const useStarGroupStore = defineStore('starGroup', {
 
       galaxyStore.championTravelState = 'champion_spawned'
 
+      const tier = ORBIT_TIERS.star[0]
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'champion',
         starAngle: Math.PI * 0.6,
         starDirection: 1,
-        orbitRx: 525,
-        orbitRy: 225,
-        orbitTilt: 0.18,
+        orbitRx: tier.rx,
+        orbitRy: tier.ry,
+        orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_CHAMPION,
         planetSlots,
       }
@@ -266,7 +264,6 @@ export const useStarGroupStore = defineStore('starGroup', {
         slot.cleared = true
 
         if (star.planetSlots.every((p) => p.cleared)) {
-          // Admin-Timeout canceln falls vorhanden
           if (adminStarTimeouts.has(star.id)) {
             clearTimeout(adminStarTimeouts.get(star.id))
             adminStarTimeouts.delete(star.id)
@@ -286,14 +283,12 @@ export const useStarGroupStore = defineStore('starGroup', {
       }
     },
 
-    // Entfernt ALLE Resource-Sterne (nicht nur den ersten)
     clearResourceStar() {
       const bossStore = usePlanetBossStore()
       const toRemove = this.activeStars.filter((s) => s.starType === 'resource')
       if (toRemove.length === 0) return
 
       for (const star of toRemove) {
-        // Admin-Timeout canceln falls vorhanden
         if (adminStarTimeouts.has(star.id)) {
           clearTimeout(adminStarTimeouts.get(star.id))
           adminStarTimeouts.delete(star.id)

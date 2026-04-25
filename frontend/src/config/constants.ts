@@ -238,22 +238,24 @@ export const ORBIT_COLORS = {
 
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 // Sorted effective rx: champ0=225 · void0=275 · planet0=324 · champ1=375 · planet1=425 · void1=475 · star0=525 · star1=575
+// Sorted effective rx: champ0=200 · void0=280 · planet0=360 · champ1=440 · planet1=520 · void1=600 · star0=680 · star1=760
+// Sorted effective rx: champ0=200 · void0=290 · planet0=380 · champ1=470 · planet1=560 · void1=650 · star0=740 · star1=830
 export const ORBIT_TIERS = {
   champion: [
-    { rx: 225, ry: 97, tiltDeg: 12, tiltRad: 0.2094 },
-    { rx: 375, ry: 161, tiltDeg: -15, tiltRad: -0.2618 },
+    { rx: 200, ry: 86, tiltDeg: 12, tiltRad: 0.2094 },
+    { rx: 470, ry: 202, tiltDeg: -15, tiltRad: -0.2618 },
   ],
   planet: [
-    { rx: 324, ry: 90, tiltDeg: 18, tiltRad: 0.3142 },
-    { rx: 425, ry: 103, tiltDeg: -12, tiltRad: -0.2094 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142 },
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094 },
   ],
   star: [
-    { rx: 525, ry: 225, tiltDeg: 10.3, tiltRad: 0.18 },
-    { rx: 575, ry: 247, tiltDeg: 15.5, tiltRad: 0.27 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18 },
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27 },
   ],
   void_monster: [
-    { rx: 275, ry: 118, tiltDeg: -6.9, tiltRad: -0.12 },
-    { rx: 475, ry: 204, tiltDeg: 10.3, tiltRad: 0.18 },
+    { rx: 290, ry: 124, tiltDeg: -6.9, tiltRad: -0.12 },
+    { rx: 650, ry: 279, tiltDeg: 10.3, tiltRad: 0.18 },
   ],
 } as const
 
