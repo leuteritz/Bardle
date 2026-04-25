@@ -13,10 +13,10 @@
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
           :stroke="ORBIT_COLORS.star"
-          stroke-opacity="0.18"
+          stroke-opacity="0.35"
           fill="none"
-          stroke-width="1"
-          stroke-dasharray="5 8"
+          stroke-width="1.5"
+          stroke-dasharray="6 5"
         />
       </g>
       <!-- Champion orbit tracks (green) – only when champions are active -->
@@ -30,10 +30,10 @@
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
           :stroke="ORBIT_COLORS.champion"
-          stroke-opacity="0.18"
+          stroke-opacity="0.35"
           fill="none"
-          stroke-width="1"
-          stroke-dasharray="5 8"
+          stroke-width="1.5"
+          stroke-dasharray="6 5"
         />
       </g>
       <!-- Void monster orbit tracks (purple) – only when void monsters are active -->
@@ -47,10 +47,10 @@
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
           :stroke="ORBIT_COLORS.void_monster"
-          stroke-opacity="0.18"
+          stroke-opacity="0.35"
           fill="none"
-          stroke-width="1"
-          stroke-dasharray="5 8"
+          stroke-width="1.5"
+          stroke-dasharray="6 5"
         />
       </g>
     </svg>
@@ -271,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
@@ -293,10 +293,17 @@ const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 const hasActiveVoidMonsters = computed(() => voidMonsterStore.activeMonsters.length > 0)
-const screenW = window.innerWidth
-const screenH = window.innerHeight
-const screenCx = screenW / 2
-const screenCy = screenH / 2
+const screenW = ref(window.innerWidth)
+const screenH = ref(window.innerHeight)
+const screenCx = computed(() => screenW.value / 2)
+const screenCy = computed(() => screenH.value / 2)
+
+function onResize() {
+  screenW.value = window.innerWidth
+  screenH.value = window.innerHeight
+}
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const HINT_COLORS: Record<string, string> = {
   champion: '#e8c040',

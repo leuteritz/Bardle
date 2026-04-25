@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { logger } from '../utils/logger'
+import { PLANET_SLOT_ORBITS } from '@/config/constants'
 
 export type PlanetRoleType =
   | 'materie_source'
@@ -106,74 +107,23 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
 
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
 
-const INITIAL_SLOTS: PlanetSlot[] = [
-  {
-    id: 'slot_1',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 180,
-    orbitRadiusY: 50,
-    tiltDeg: 18,
-    baseSpeed: 0.00018,
-    direction: 1,
-    baseCost: 500,
-  },
-  {
-    id: 'slot_2',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 236,
-    orbitRadiusY: 57,
-    tiltDeg: -12,
-    baseSpeed: 0.00014,
-    direction: -1,
-    baseCost: 2000,
-  },
-  {
-    id: 'slot_3',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 370,
-    orbitRadiusY: 85,
-    tiltDeg: 28,
-    baseSpeed: 0.0001,
-    direction: 1,
-    baseCost: 8000,
-  },
-  {
-    id: 'slot_4',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 460,
-    orbitRadiusY: 100,
-    tiltDeg: -8,
-    baseSpeed: 0.00007,
-    direction: -1,
-    baseCost: 35000,
-  },
-  {
-    id: 'slot_5',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 550,
-    orbitRadiusY: 115,
-    tiltDeg: 22,
-    baseSpeed: 0.00005,
-    direction: 1,
-    baseCost: 150000,
-  },
-  {
-    id: 'slot_6',
-    purchased: false,
-    role: null,
-    orbitRadiusX: 640,
-    orbitRadiusY: 130,
-    tiltDeg: -18,
-    baseSpeed: 0.000035,
-    direction: -1,
-    baseCost: 600000,
-  },
-]
+const SLOT_CONFIG = [
+  { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 500 },
+  { id: 'slot_2', direction: -1 as const, baseSpeed: 0.00014, baseCost: 2000 },
+  { id: 'slot_3', direction: 1 as const, baseSpeed: 0.0001, baseCost: 8000 },
+  { id: 'slot_4', direction: -1 as const, baseSpeed: 0.00007, baseCost: 35000 },
+  { id: 'slot_5', direction: 1 as const, baseSpeed: 0.00005, baseCost: 150000 },
+  { id: 'slot_6', direction: -1 as const, baseSpeed: 0.000035, baseCost: 600000 },
+] as const
+
+const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
+  ...SLOT_CONFIG[i],
+  purchased: false,
+  role: null,
+  orbitRadiusX: orbit.rx,
+  orbitRadiusY: orbit.ry,
+  tiltDeg: orbit.tiltDeg,
+}))
 
 export const usePlanetShopStore = defineStore('planetShop', {
   state: () => ({

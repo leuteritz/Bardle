@@ -256,3 +256,13 @@ export const ORBIT_TIERS = {
     { rx: 475, ry: 204, tiltDeg: 10.3, tiltRad: 0.18 },
   ],
 } as const
+
+/** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px). */
+export const PLANET_SLOT_ORBITS = [
+  { rx: 180, ry: 50, tiltDeg: 18 },
+  { rx: 236, ry: 57, tiltDeg: -12 },
+  { rx: 370, ry: 85, tiltDeg: 28 },
+  { rx: 460, ry: 100, tiltDeg: -8 },
+  { rx: 550, ry: 115, tiltDeg: 22 },
+  { rx: 640, ry: 130, tiltDeg: -18 },
+] as const

@@ -312,8 +312,8 @@ export default defineComponent({
       cancelAnimationFrame(animFrame)
     })
 
-    const screenW = window.innerWidth
-    const screenH = window.innerHeight
+    const screenW = computed(() => screenCx.value * 2)
+    const screenH = computed(() => screenCy.value * 2)
 
     return {
       planetShopStore,
