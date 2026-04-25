@@ -13,6 +13,16 @@
               '--glow': entry.palette.glow,
             }"
           />
+          <span
+            v-if="entry.starType === 'resource' && entry.fillRatio > 0"
+            class="bar-seconds-label bar-seconds-label--left"
+            :style="{
+              '--fill': entry.fillRatio,
+              '--label-color': entry.palette.mid,
+              '--label-glow': entry.palette.glow,
+            }"
+            >{{ entry.secondsInt }}</span
+          >
         </div>
 
         <div
@@ -37,6 +47,16 @@
               '--glow': entry.palette.glow,
             }"
           />
+          <span
+            v-if="entry.starType === 'resource' && entry.fillRatio > 0"
+            class="bar-seconds-label bar-seconds-label--right"
+            :style="{
+              '--fill': entry.fillRatio,
+              '--label-color': entry.palette.mid,
+              '--label-glow': entry.palette.glow,
+            }"
+            >{{ entry.secondsInt }}</span
+          >
         </div>
       </div>
     </TransitionGroup>
@@ -73,6 +93,7 @@ interface BarEntry {
   starId: string
   starType: 'resource' | 'champion' | 'galaxy_boss'
   valueStr: string
+  secondsInt: number
   fillRatio: number
   sortKey: number
   palette: Palette
@@ -155,6 +176,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           starId: star.id,
           starType: 'resource',
           valueStr: fmtMs(remaining),
+          secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
           fillRatio: clamp01(fillRatio),
           sortKey: remaining,
         })
@@ -167,6 +189,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           starId: star.id,
           starType: 'champion',
           valueStr: `${cleared}/${total}`,
+          secondsInt: 0,
           fillRatio: clamp01(ratio),
           sortKey: Number.MAX_SAFE_INTEGER,
         })
@@ -276,6 +299,32 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .bar-value {
   color: var(--text-color);
   filter: drop-shadow(0 0 3px var(--icon-color));
+}
+
+.bar-seconds-label {
+  position: absolute;
+  top: 50%;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  white-space: nowrap;
+  color: var(--label-color);
+  filter: drop-shadow(0 0 6px var(--label-glow)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+  z-index: 1;
+}
+
+.bar-seconds-label--left {
+  left: calc((1 - var(--fill)) * 100%);
+  transform: translateX(calc(-50% - 10px)) translateY(-50%);
+  transition: left 0.2s linear;
+}
+
+.bar-seconds-label--right {
+  right: calc((1 - var(--fill)) * 100%);
+  transform: translateX(calc(50% + 10px)) translateY(-50%);
+  transition: right 0.2s linear;
 }
 
 /* ── Transition: leaving-Element nimmt keinen Platz mehr ein ── */
