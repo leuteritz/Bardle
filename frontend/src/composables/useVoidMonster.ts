@@ -17,6 +17,21 @@ const VOID_ORBIT_SPEED = 0.00007
 const VOID_ORBIT_LIFETIME_MS = 50_000
 const ORBIT_EXPAND_LERP = 0.018
 
+const BOSS_IMAGES = [
+  '/img/Boss/Boss1.png',
+  '/img/Boss/Boss2.png',
+  '/img/Boss/Boss3.png',
+  '/img/Boss/Boss4.png',
+  '/img/Boss/Boss5.png',
+  '/img/Boss/Boss6.png',
+  '/img/Boss/Boss7.png',
+  '/img/Boss/Boss8.png',
+  '/img/Boss/Boss9.png',
+  '/img/Boss/Boss10.png',
+  '/img/Boss/boss11.png',
+  '/img/Boss/boss12.png',
+]
+
 export interface VoidMonsterRenderEntry {
   id: string
   x: number
@@ -28,17 +43,19 @@ export interface VoidMonsterRenderEntry {
   orbitRx: number
   orbitRy: number
   orbitTilt: number
+  bossImage: string
 }
 
 interface OrbitState {
   angle: number
-  rx: number        // aktueller Radius (startet bei 0, expandiert zu targetRx)
+  rx: number
   ry: number
-  targetRx: number  // Ziel-Orbit-Radius
+  targetRx: number
   targetRy: number
   tilt: number
   direction: 1 | -1
   speedMul: number
+  bossImage: string
 }
 
 export function useVoidMonster() {
@@ -92,6 +109,7 @@ export function useVoidMonster() {
           tilt: tier.tiltRad,
           direction: Math.random() < 0.5 ? 1 : -1,
           speedMul: 1.0,
+          bossImage: BOSS_IMAGES[Math.floor(Math.random() * BOSS_IMAGES.length)],
         })
         flyStartPos.set(monster.id, { x: monster.spawnX, y: monster.spawnY })
       }
@@ -186,6 +204,7 @@ export function useVoidMonster() {
         orbitRx: state.targetRx,
         orbitRy: state.targetRy,
         orbitTilt: state.tilt,
+        bossImage: state.bossImage,
       })
     }
 

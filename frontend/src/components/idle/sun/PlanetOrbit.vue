@@ -29,9 +29,9 @@
     </svg>
   </Teleport>
 
-  <!-- Orbit-Ring Layer: colored planet orbit rings (z-index 2) -->
+  <!-- Orbit-Ring Layer: colored planet orbit rings – only for purchased slots -->
   <svg class="planet-orbit-rings" aria-hidden="true">
-    <g v-for="slot in allSlots" :key="slot.id + '-ring'">
+    <g v-for="slot in planetShopStore.purchasedSlots" :key="slot.id + '-ring'">
       <ellipse
         :cx="screenCx"
         :cy="screenCy"

@@ -2,51 +2,57 @@
   <!-- ⓪ Permanent Orbit Tracks (always visible, colored rings per category) -->
   <Teleport to="body">
     <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <!-- Star orbit tracks (gold) -->
-      <ellipse
-        v-for="(tier, i) in ORBIT_TIERS.star"
-        :key="'track-star-' + i"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-        :stroke="ORBIT_COLORS.star"
-        stroke-opacity="0.18"
-        fill="none"
-        stroke-width="1"
-        stroke-dasharray="5 8"
-      />
-      <!-- Champion orbit tracks (green) -->
-      <ellipse
-        v-for="(tier, i) in ORBIT_TIERS.champion"
-        :key="'track-champ-' + i"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-        :stroke="ORBIT_COLORS.champion"
-        stroke-opacity="0.18"
-        fill="none"
-        stroke-width="1"
-        stroke-dasharray="5 8"
-      />
-      <!-- Void monster orbit tracks (purple) -->
-      <ellipse
-        v-for="(tier, i) in ORBIT_TIERS.void_monster"
-        :key="'track-void-' + i"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-        :stroke="ORBIT_COLORS.void_monster"
-        stroke-opacity="0.18"
-        fill="none"
-        stroke-width="1"
-        stroke-dasharray="5 8"
-      />
+      <!-- Star orbit tracks (gold) – only when stars are active -->
+      <g v-if="hasActiveStars">
+        <ellipse
+          v-for="(tier, i) in ORBIT_TIERS.star"
+          :key="'track-star-' + i"
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+          :stroke="ORBIT_COLORS.star"
+          stroke-opacity="0.18"
+          fill="none"
+          stroke-width="1"
+          stroke-dasharray="5 8"
+        />
+      </g>
+      <!-- Champion orbit tracks (green) – only when champions are active -->
+      <g v-if="hasActiveChampions">
+        <ellipse
+          v-for="(tier, i) in ORBIT_TIERS.champion"
+          :key="'track-champ-' + i"
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+          :stroke="ORBIT_COLORS.champion"
+          stroke-opacity="0.18"
+          fill="none"
+          stroke-width="1"
+          stroke-dasharray="5 8"
+        />
+      </g>
+      <!-- Void monster orbit tracks (purple) – only when void monsters are active -->
+      <g v-if="hasActiveVoidMonsters">
+        <ellipse
+          v-for="(tier, i) in ORBIT_TIERS.void_monster"
+          :key="'track-void-' + i"
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
+          :stroke="ORBIT_COLORS.void_monster"
+          stroke-opacity="0.18"
+          fill="none"
+          stroke-width="1"
+          stroke-dasharray="5 8"
+        />
+      </g>
     </svg>
   </Teleport>
 
@@ -270,6 +276,8 @@ import { useStarSystem } from '../../../composables/useStarSystem'
 import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { useCombatStore } from '../../../stores/combatStore'
+import { useVoidMonsterStore } from '../../../stores/voidMonsterStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import PlanetOrbit from './PlanetOrbit.vue'
@@ -277,9 +285,14 @@ import { ORBIT_COLORS, ORBIT_TIERS } from '../../../config/constants'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
+const combatStore = useCombatStore()
+const voidMonsterStore = useVoidMonsterStore()
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
+const hasActiveStars = computed(() => starRenders.value.length > 0)
+const hasActiveChampions = computed(() => combatStore.champions.length > 0)
+const hasActiveVoidMonsters = computed(() => voidMonsterStore.activeMonsters.length > 0)
 const screenW = window.innerWidth
 const screenH = window.innerHeight
 const screenCx = screenW / 2
