@@ -2,11 +2,7 @@
 <template>
   <!-- Planet Orbit-Arc Layer (über Sonne, z-index 6) -->
   <Teleport to="body">
-    <svg
-      class="planet-orbit-arcs"
-      :viewBox="`0 0 ${screenW} ${screenH}`"
-      aria-hidden="true"
-    >
+    <svg class="planet-orbit-arcs" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
       <defs>
         <filter id="orbit-blur-planet-arc" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="10" />
@@ -20,7 +16,7 @@
         :rx="pos.orbitRx"
         :ry="pos.orbitRy"
         :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-        stroke="#40c890"
+        :stroke="pos.orbitColor"
         :stroke-opacity="pos.hintOpacity * 0.6"
         filter="url(#orbit-blur-planet-arc)"
         fill="none"
@@ -40,7 +36,7 @@
         :ry="tier.ry"
         :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
-        :stroke="ORBIT_COLORS.planet"
+        :stroke="tier.color"
         stroke-opacity="0.18"
         stroke-width="1"
         stroke-dasharray="5 8"
@@ -72,7 +68,10 @@
       v-for="pos in frontPlanets"
       :key="pos.id"
       class="planet-orbit-item"
-      :class="{ 'planet-orbit-item--foreground': pos.isForeground, 'planet-orbit-item--clickable': true }"
+      :class="{
+        'planet-orbit-item--foreground': pos.isForeground,
+        'planet-orbit-item--clickable': true,
+      }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -120,6 +119,7 @@ interface PlanetRenderPos {
   orbitRx: number
   orbitRy: number
   tiltDeg: number
+  orbitColor: string // ← NEU
 }
 
 interface LocalPlanetState {
@@ -203,6 +203,8 @@ export default defineComponent({
       const newPositions: PlanetRenderPos[] = []
 
       for (const slot of purchased) {
+        const slotIdx = purchased.indexOf(slot)
+        const orbitColor = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length].color // ← NEU
         let ls = localStates.get(slot.id)
         if (!ls) {
           const idx = purchased.indexOf(slot)
@@ -277,6 +279,7 @@ export default defineComponent({
           orbitRx: rx,
           orbitRy: ry,
           tiltDeg: slot.tiltDeg,
+          orbitColor, // ← NEU
         })
       }
 

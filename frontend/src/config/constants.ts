@@ -242,20 +242,20 @@ export const ORBIT_COLORS = {
 // Sorted effective rx: champ0=200 · void0=290 · planet0=380 · champ1=470 · planet1=560 · void1=650 · star0=740 · star1=830
 export const ORBIT_TIERS = {
   champion: [
-    { rx: 200, ry: 86, tiltDeg: 12, tiltRad: 0.2094 },
-    { rx: 470, ry: 202, tiltDeg: -15, tiltRad: -0.2618 },
+    { rx: 200, ry: 86, tiltDeg: 12, tiltRad: 0.2094, color: '#39D353' }, // kräftiges Grün (inner)
+    { rx: 470, ry: 202, tiltDeg: -15, tiltRad: -0.2618, color: '#00FFC8' }, // Cyan-Grün (outer)
   ],
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#4AADFF' }, // Hellblau (inner)
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#005FCC' }, // Dunkelblau (outer)
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FFD700' }, // Gold (inner)
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FF8C00' }, // Orange (outer)
   ],
   void_monster: [
-    { rx: 290, ry: 124, tiltDeg: -6.9, tiltRad: -0.12 },
-    { rx: 650, ry: 279, tiltDeg: 10.3, tiltRad: 0.18 },
+    { rx: 290, ry: 124, tiltDeg: -6.9, tiltRad: -0.12, color: '#9B44FF' }, // Violett (inner)
+    { rx: 650, ry: 279, tiltDeg: 10.3, tiltRad: 0.18, color: '#FF44CC' }, // Magenta-Pink (outer)
   ],
 } as const
 

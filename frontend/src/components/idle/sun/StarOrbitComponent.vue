@@ -107,6 +107,7 @@ import { ORBIT_TIERS } from '@/config/constants.ts'
 const CHAMP_RX = ORBIT_TIERS.star[0].rx
 const CHAMP_RY = ORBIT_TIERS.star[0].ry
 const CHAMP_TILT = ORBIT_TIERS.star[0].tiltRad
+const CHAMP_COLOR = ORBIT_TIERS.star[0].color // ← NEU: '#FFD700'
 const CHAMP_SPEED = 0.000022
 const CHAMP_SIZE = 34
 
@@ -114,6 +115,7 @@ const CHAMP_SIZE = 34
 const RES_RX = ORBIT_TIERS.star[1].rx
 const RES_RY = ORBIT_TIERS.star[1].ry
 const RES_TILT = ORBIT_TIERS.star[1].tiltRad
+const RES_COLOR = ORBIT_TIERS.star[1].color // ← NEU: '#FF8C00'
 const RES_SPEED = 0.000042
 const RES_SIZE = 28
 
@@ -501,18 +503,18 @@ onUnmounted(() => {
   user-select: none;
 }
 
+/* Vorher: hardcoded rgba(200, 140, 20, 0.55) */
 .star-badge--champion {
-  color: #ffe070;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(200, 140, 20, 0.55);
-  text-shadow: 0 0 8px rgba(255, 200, 50, 0.85);
+  color: v-bind(CHAMP_COLOR);
+  border: 1px solid color-mix(in srgb, v-bind(CHAMP_COLOR) 55%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, v-bind(CHAMP_COLOR) 85%, transparent);
 }
 
+/* Vorher: hardcoded rgba(20, 180, 150, 0.5) */
 .star-badge--resource {
-  color: #60eed8;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(20, 180, 150, 0.5);
-  text-shadow: 0 0 8px rgba(40, 210, 180, 0.8);
+  color: v-bind(RES_COLOR);
+  border: 1px solid color-mix(in srgb, v-bind(RES_COLOR) 50%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, v-bind(RES_COLOR) 80%, transparent);
 }
 
 /* ── Behind-Dämpfung ─────────────────────────────────────────────────────────── */

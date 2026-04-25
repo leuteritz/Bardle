@@ -1,11 +1,7 @@
 <template>
   <!-- Champion Orbit-Arc Layer (über Sonne, z-index 6) -->
   <Teleport to="body">
-    <svg
-      class="champion-orbit-arcs"
-      :viewBox="`0 0 ${screenW} ${screenH}`"
-      aria-hidden="true"
-    >
+    <svg class="champion-orbit-arcs" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
       <defs>
         <filter id="orbit-blur-champ-arc" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="12" />
@@ -19,7 +15,7 @@
         :rx="pos.orbitRx"
         :ry="pos.orbitRy"
         :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-        stroke="#40a0ff"
+        :stroke="pos.orbitColor"
         :stroke-opacity="pos.hintOpacity * 0.65"
         filter="url(#orbit-blur-champ-arc)"
         fill="none"
@@ -56,8 +52,10 @@
         'champion-orbit-avatar--attacking': pos.isAttacking,
         'champion-orbit-avatar--foreground': pos.isForeground,
         [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
-        'champion-orbit-avatar--shield': pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
-        'champion-orbit-avatar--dot': pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
+        'champion-orbit-avatar--shield':
+          pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
+        'champion-orbit-avatar--dot':
+          pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
       }"
       :style="{
         width: pos.size + 'px',
@@ -68,14 +66,19 @@
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
-      <span v-if="pos.primaryRole" class="champion-role-badge" :class="`champion-role-badge--${pos.primaryRole}`">
+      <span
+        v-if="pos.primaryRole"
+        class="champion-role-badge"
+        :class="`champion-role-badge--${pos.primaryRole}`"
+      >
         {{ roleIcons[pos.primaryRole] }}
       </span>
       <!-- Jungler stack indicator -->
       <span
         v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
         class="champion-jungler-stacks"
-      >{{ roleBehaviorStore.junglerStackCount }}</span>
+        >{{ roleBehaviorStore.junglerStackCount }}</span
+      >
     </div>
 
     <!-- Floating damage numbers + projectiles -->
@@ -86,7 +89,11 @@
           v-for="proj in projectiles"
           :key="proj.id"
           class="champion-projectile"
-          :style="{ left: proj.renderX + 'px', top: proj.renderY + 'px', opacity: proj.renderOpacity }"
+          :style="{
+            left: proj.renderX + 'px',
+            top: proj.renderY + 'px',
+            opacity: proj.renderOpacity,
+          }"
         />
         <TransitionGroup name="champion-dmg">
           <span
@@ -140,6 +147,7 @@ interface ChampionRenderPos {
   orbitRx: number
   orbitRy: number
   tiltDeg: number
+  orbitColor: string // ← NEU
 }
 
 interface LocalChampState {
@@ -241,6 +249,7 @@ export default defineComponent({
         const ry = tier.ry
         const tiltRad = tier.tiltRad
         const tiltDeg = tier.tiltDeg
+        const orbitColor = tier.color // ← NEU
 
         let ls = localStates.get(c.name)
         if (!ls) {
@@ -315,6 +324,7 @@ export default defineComponent({
           orbitRx: rx,
           orbitRy: ry,
           tiltDeg,
+          orbitColor, // ← NEU
         })
       }
 
@@ -491,23 +501,33 @@ export default defineComponent({
 /* border-color !important → nie überschreibbar; box-shadow ohne → Animationen können überschreiben */
 .champion-orbit-avatar--role-top {
   border-color: #e05050 !important;
-  box-shadow: 0 0 10px rgba(220, 60, 60, 0.7), 0 0 20px rgba(220, 60, 60, 0.3);
+  box-shadow:
+    0 0 10px rgba(220, 60, 60, 0.7),
+    0 0 20px rgba(220, 60, 60, 0.3);
 }
 .champion-orbit-avatar--role-jungle {
   border-color: #50c060 !important;
-  box-shadow: 0 0 10px rgba(60, 200, 80, 0.7), 0 0 20px rgba(60, 200, 80, 0.3);
+  box-shadow:
+    0 0 10px rgba(60, 200, 80, 0.7),
+    0 0 20px rgba(60, 200, 80, 0.3);
 }
 .champion-orbit-avatar--role-mid {
   border-color: #5090e8 !important;
-  box-shadow: 0 0 10px rgba(60, 130, 240, 0.7), 0 0 20px rgba(60, 130, 240, 0.3);
+  box-shadow:
+    0 0 10px rgba(60, 130, 240, 0.7),
+    0 0 20px rgba(60, 130, 240, 0.3);
 }
 .champion-orbit-avatar--role-adc {
   border-color: #e89840 !important;
-  box-shadow: 0 0 10px rgba(240, 150, 40, 0.7), 0 0 20px rgba(240, 150, 40, 0.3);
+  box-shadow:
+    0 0 10px rgba(240, 150, 40, 0.7),
+    0 0 20px rgba(240, 150, 40, 0.3);
 }
 .champion-orbit-avatar--role-support {
   border-color: #b8c8d8 !important;
-  box-shadow: 0 0 10px rgba(180, 200, 210, 0.7), 0 0 20px rgba(180, 200, 210, 0.3);
+  box-shadow:
+    0 0 10px rgba(180, 200, 210, 0.7),
+    0 0 20px rgba(180, 200, 210, 0.3);
 }
 
 /* Hinter der Sonne: leicht geblurrt + gedimmt – Rollenfarbe bleibt via !important erhalten */
@@ -527,8 +547,12 @@ export default defineComponent({
 }
 
 @keyframes champion-attack-pulse {
-  from { filter: brightness(1.0) saturate(1.0); }
-  to   { filter: brightness(1.4) saturate(1.25); }
+  from {
+    filter: brightness(1) saturate(1);
+  }
+  to {
+    filter: brightness(1.4) saturate(1.25);
+  }
 }
 
 /* ── Rollen-Badge ─────────────────────────────────────────────────────────── */
@@ -547,31 +571,61 @@ export default defineComponent({
   z-index: 2;
 }
 
-.champion-role-badge--adc     { background: #804010; }
-.champion-role-badge--support { background: #3a5060; }
-.champion-role-badge--top     { background: #7a1818; }
-.champion-role-badge--mid     { background: #1a3880; }
-.champion-role-badge--jungle  { background: #1a6028; }
+.champion-role-badge--adc {
+  background: #804010;
+}
+.champion-role-badge--support {
+  background: #3a5060;
+}
+.champion-role-badge--top {
+  background: #7a1818;
+}
+.champion-role-badge--mid {
+  background: #1a3880;
+}
+.champion-role-badge--jungle {
+  background: #1a6028;
+}
 
 /* Ability glows — only animate box-shadow, border-color stays as role color */
 .champion-orbit-avatar--shield {
-  box-shadow: 0 0 14px rgba(80, 180, 255, 0.9), 0 0 28px rgba(60, 140, 255, 0.5);
+  box-shadow:
+    0 0 14px rgba(80, 180, 255, 0.9),
+    0 0 28px rgba(60, 140, 255, 0.5);
   animation: shield-pulse 1s ease-in-out infinite alternate;
 }
 
 @keyframes shield-pulse {
-  from { box-shadow: 0 0 12px rgba(80, 180, 255, 0.8), 0 0 24px rgba(60, 140, 255, 0.5); }
-  to   { box-shadow: 0 0 24px rgba(100, 200, 255, 1), 0 0 48px rgba(80, 160, 255, 0.7); }
+  from {
+    box-shadow:
+      0 0 12px rgba(80, 180, 255, 0.8),
+      0 0 24px rgba(60, 140, 255, 0.5);
+  }
+  to {
+    box-shadow:
+      0 0 24px rgba(100, 200, 255, 1),
+      0 0 48px rgba(80, 160, 255, 0.7);
+  }
 }
 
 .champion-orbit-avatar--dot {
-  box-shadow: 0 0 14px rgba(180, 80, 255, 0.9), 0 0 28px rgba(140, 60, 255, 0.5);
+  box-shadow:
+    0 0 14px rgba(180, 80, 255, 0.9),
+    0 0 28px rgba(140, 60, 255, 0.5);
   animation: dot-pulse 0.8s ease-in-out infinite alternate;
 }
 
 @keyframes dot-pulse {
-  from { box-shadow: 0 0 12px rgba(180, 80, 255, 0.8), 0 0 24px rgba(140, 60, 255, 0.5); }
-  to   { box-shadow: 0 0 24px rgba(200, 100, 255, 1), 0 0 48px rgba(160, 80, 255, 0.7); }
+  from {
+    box-shadow:
+      0 0 12px rgba(180, 80, 255, 0.8),
+      0 0 24px rgba(140, 60, 255, 0.5);
+  }
+  to {
+    box-shadow:
+      0 0 24px rgba(200, 100, 255, 1),
+      0 0 48px rgba(160, 80, 255, 0.7);
+  }
 }
 
 /* Jungler stack counter */
@@ -628,7 +682,9 @@ export default defineComponent({
   font-size: 1.3rem;
   color: #ff8020;
   -webkit-text-stroke: 1px rgba(0, 0, 0, 0.85);
-  text-shadow: 0 0 12px rgba(255, 120, 0, 1), 0 0 24px rgba(255, 80, 0, 0.6);
+  text-shadow:
+    0 0 12px rgba(255, 120, 0, 1),
+    0 0 24px rgba(255, 80, 0, 0.6);
 }
 
 /* Mid DoT — purple */
@@ -644,7 +700,9 @@ export default defineComponent({
   font-size: 1.1rem;
   color: #60ff80;
   -webkit-text-stroke: 1px rgba(0, 0, 0, 0.75);
-  text-shadow: 0 0 12px rgba(80, 255, 100, 0.9), 0 0 24px rgba(40, 200, 60, 0.5);
+  text-shadow:
+    0 0 12px rgba(80, 255, 100, 0.9),
+    0 0 24px rgba(40, 200, 60, 0.5);
 }
 
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */

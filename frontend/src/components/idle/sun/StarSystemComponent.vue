@@ -2,7 +2,7 @@
   <!-- ⓪ Permanent Orbit Tracks (always visible, colored rings per category) -->
   <Teleport to="body">
     <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <!-- Star orbit tracks (gold) – only when stars are active -->
+      <!-- Star orbit tracks – only when stars are active -->
       <g v-if="hasActiveStars">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.star"
@@ -12,14 +12,14 @@
           :rx="tier.rx"
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="ORBIT_COLORS.star"
+          :stroke="tier.color"
           stroke-opacity="0.35"
           fill="none"
           stroke-width="1.5"
           stroke-dasharray="6 5"
         />
       </g>
-      <!-- Champion orbit tracks (green) – only when champions are active -->
+      <!-- Champion orbit tracks – only when champions are active -->
       <g v-if="hasActiveChampions">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.champion"
@@ -29,14 +29,14 @@
           :rx="tier.rx"
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="ORBIT_COLORS.champion"
+          :stroke="tier.color"
           stroke-opacity="0.35"
           fill="none"
           stroke-width="1.5"
           stroke-dasharray="6 5"
         />
       </g>
-      <!-- Void monster orbit tracks (purple) – only when void monsters are active -->
+      <!-- Void monster orbit tracks – only when void monsters are active -->
       <g v-if="hasActiveVoidMonsters">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.void_monster"
@@ -46,7 +46,7 @@
           :rx="tier.rx"
           :ry="tier.ry"
           :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="ORBIT_COLORS.void_monster"
+          :stroke="tier.color"
           stroke-opacity="0.35"
           fill="none"
           stroke-width="1.5"
@@ -130,7 +130,7 @@
   <!-- ② Front-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-front" aria-hidden="true">
-      <!-- Orbit-Arc über der Sonne (gold, sichtbar wenn Stern dahinter) -->
+      <!-- Orbit-Arc über der Sonne (sichtbar wenn Stern dahinter) -->
       <svg class="orbit-hints-front-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
         <defs>
           <filter id="orbit-blur-star-front" x="-50%" y="-50%" width="200%" height="200%">
@@ -145,7 +145,7 @@
           :rx="star.orbitRx"
           :ry="star.orbitRy"
           :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-          stroke="#e8c040"
+          :stroke="orbitHintColor(star.starType)"
           :stroke-opacity="star.hintOpacity * 0.8"
           filter="url(#orbit-blur-star-front)"
           fill="none"
@@ -280,8 +280,7 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useVoidMonsterStore } from '../../../stores/voidMonsterStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
-import PlanetOrbit from './PlanetOrbit.vue'
-import { ORBIT_COLORS, ORBIT_TIERS } from '../../../config/constants'
+import { ORBIT_TIERS } from '../../../config/constants'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
@@ -305,14 +304,11 @@ function onResize() {
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
-const HINT_COLORS: Record<string, string> = {
-  champion: '#e8c040',
-  resource: '#60b8ff',
-  galaxy_boss: '#ff5030',
-}
-
 function orbitHintColor(starType: string): string {
-  return HINT_COLORS[starType] ?? '#ffffff'
+  if (starType === 'champion') return ORBIT_TIERS.star[0].color // '#FFD700'
+  if (starType === 'resource') return ORBIT_TIERS.star[1].color // '#FF8C00'
+  if (starType === 'galaxy_boss') return '#ff5030'
+  return '#ffffff'
 }
 
 function starBodyStyle(star: StarRenderEntry) {
