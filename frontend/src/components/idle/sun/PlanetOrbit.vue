@@ -29,22 +29,23 @@
     </svg>
   </Teleport>
 
-  <!-- Orbit-Ring Layer: colored planet orbit rings – only for purchased slots -->
+  <!-- Orbit-Ring Layer: colored planet orbit rings – driven by ORBIT_TIERS.planet -->
   <svg class="planet-orbit-rings" aria-hidden="true">
-    <g v-for="slot in planetShopStore.purchasedSlots" :key="slot.id + '-ring'">
+    <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
       <ellipse
+        v-if="planetShopStore.slots[i]?.purchased"
         :cx="screenCx"
         :cy="screenCy"
-        :rx="slot.orbitRadiusX * ORBIT_RADIUS_SCALE"
-        :ry="slot.orbitRadiusY * ORBIT_RADIUS_SCALE"
-        :transform="`rotate(${slot.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="ORBIT_COLORS.planet"
         stroke-opacity="0.18"
         stroke-width="1"
         stroke-dasharray="5 8"
       />
-    </g>
+    </template>
   </svg>
 
   <!-- Back-Layer: planets behind the sun -->
@@ -96,7 +97,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_RADIUS_SCALE, ORBIT_COLORS } from '@/config/constants'
+import { ORBIT_RADIUS_SCALE, ORBIT_COLORS, ORBIT_TIERS } from '@/config/constants'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -326,6 +327,7 @@ export default defineComponent({
       screenH,
       ORBIT_RADIUS_SCALE,
       ORBIT_COLORS,
+      ORBIT_TIERS,
     }
   },
 })
