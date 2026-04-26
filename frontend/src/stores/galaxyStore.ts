@@ -5,12 +5,25 @@ import {
   CHAMPION_TRAVEL_SCALE_MS,
   RESOURCE_STAR_INTERVAL_MS,
   RESOURCE_STAR_DURATION_MS,
+  GALAXY_STARS_BASE_REQUIRED,
+  GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
+  GALAXY_BOSS_SEARCH_SEG_MIN_MS,
+  GALAXY_BOSS_SEARCH_SEG_RANGE_MS,
+  GALAXY_BOSS_SEARCH_STEP_MIN,
+  GALAXY_BOSS_SEARCH_STEP_RANGE,
+  GALAXY_BOSS_SEARCH_BOUNDARY_MIN,
+  GALAXY_BOSS_SEARCH_BOUNDARY_MAX,
+  GALAXY_BOSS_TOTAL_SEARCH_MIN_MS,
+  GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS,
+  GALAXY_BOSS_SPAWN_ANIM_MS,
+  GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG,
+  GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG,
 } from '../config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
 
 function computeRequired(galaxy: number): number {
-  return 3 + (galaxy - 1) * 1
+  return GALAXY_STARS_BASE_REQUIRED + (galaxy - 1)
 }
 
 function pickRandomThemeIndex(current: number): number {
@@ -26,7 +39,7 @@ export const useGalaxyStore = defineStore('galaxy', {
   state: () => ({
     currentGalaxy: 1,
     starsRescued: 0,
-    starsRequired: 3,
+    starsRequired: GALAXY_STARS_BASE_REQUIRED,
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
     pendingTransition: false,
@@ -137,7 +150,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         this.championJustArrived = true
         setTimeout(() => {
           this.championJustArrived = false
-        }, 4000)
+        }, GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS)
       }
     },
 
@@ -160,14 +173,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     _startBossSearchSegment(fromX: number, fromY: number, angle: number) {
-      const segDuration = 3500 + Math.random() * 4500
-      const step = 0.07 + Math.random() * 0.09
+      const segDuration = GALAXY_BOSS_SEARCH_SEG_MIN_MS + Math.random() * GALAXY_BOSS_SEARCH_SEG_RANGE_MS
+      const step = GALAXY_BOSS_SEARCH_STEP_MIN + Math.random() * GALAXY_BOSS_SEARCH_STEP_RANGE
       const rad = angle * (Math.PI / 180)
       const now = Date.now()
       this.bossSearchCurrentX = fromX
       this.bossSearchCurrentY = fromY
-      this.bossSearchTargetX = Math.max(0.15, Math.min(0.85, fromX + Math.cos(rad) * step))
-      this.bossSearchTargetY = Math.max(0.15, Math.min(0.85, fromY + Math.sin(rad) * step))
+      this.bossSearchTargetX = Math.max(GALAXY_BOSS_SEARCH_BOUNDARY_MIN, Math.min(GALAXY_BOSS_SEARCH_BOUNDARY_MAX, fromX + Math.cos(rad) * step))
+      this.bossSearchTargetY = Math.max(GALAXY_BOSS_SEARCH_BOUNDARY_MIN, Math.min(GALAXY_BOSS_SEARCH_BOUNDARY_MAX, fromY + Math.sin(rad) * step))
       this.bossSearchSegmentStart = now
       this.bossSearchSegmentEnd = now + segDuration
       this.bossSearchSegmentAngle = angle
@@ -194,7 +207,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         // Starte Suchphase mit erstem zufälligen Segment
         this.searchingForGalaxyBoss = true
         this.bossSearchTotalElapsed = 0
-        this.bossSearchTotalDuration = 15000 + Math.random() * 45000
+        this.bossSearchTotalDuration = GALAXY_BOSS_TOTAL_SEARCH_MIN_MS + Math.random() * GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS
         this._startBossSearchSegment(0.5, 0.5, Math.random() * 360)
       } else {
         this.startChampionTravel()
@@ -210,7 +223,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         this.galaxyBossJustSpawned = true
         setTimeout(() => {
           this.galaxyBossJustSpawned = false
-        }, 5000)
+        }, GALAXY_BOSS_SPAWN_ANIM_MS)
         return
       }
       // Prüfe ob aktuelles Segment abgelaufen ist
@@ -219,7 +232,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         const curX = this.bossSearchTargetX
         const curY = this.bossSearchTargetY
         // Neue Richtung: 60–300° Abweichung von aktueller (kein sofortiges Umkehren)
-        const newAngle = (this.bossSearchSegmentAngle + 60 + Math.random() * 240) % 360
+        const newAngle = (this.bossSearchSegmentAngle + GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG + Math.random() * GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG) % 360
         this._startBossSearchSegment(curX, curY, newAngle)
       }
     },

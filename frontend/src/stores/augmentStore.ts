@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { AUGMENTS } from '../config/augments'
 import type { TimedBuff } from '../types'
 import { logger } from '../utils/logger'
+import { AUGMENT_CLICK_HISTORY_SIZE, AUGMENT_GRAVITY_FLIP_DURATION_MS } from '../config/constants'
 
 export const useAugmentStore = defineStore('augment', {
   state: () => ({
@@ -42,7 +43,7 @@ export const useAugmentStore = defineStore('augment', {
 
       // Store click value in ring buffer for Infinite Loop
       this.lastClickValues.push(baseClickValue)
-      if (this.lastClickValues.length > 5) {
+      if (this.lastClickValues.length > AUGMENT_CLICK_HISTORY_SIZE) {
         this.lastClickValues.shift()
       }
 
@@ -133,7 +134,7 @@ export const useAugmentStore = defineStore('augment', {
         this.gravityFlipActive = true
         setTimeout(() => {
           this.gravityFlipActive = false
-        }, 3000)
+        }, AUGMENT_GRAVITY_FLIP_DURATION_MS)
       }
 
       // Echo Chamber: re-activate last augment's effects as timed buff

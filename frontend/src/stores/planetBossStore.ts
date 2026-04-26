@@ -12,6 +12,13 @@ import {
   BOSS_CPS_PENALTY_FRACTION,
   BOSS_CPS_PENALTY_DURATION_MS,
   BOSS_NAMES,
+  BOSS_ENRAGE_BONUS_SECONDS_PER_STEP,
+  BOSS_ENRAGE_MIN_SECONDS,
+  BOSS_REWARD_CHIMES_MAX,
+  BOSS_REWARD_MATERIAL_CHANCE,
+  BOSS_REMOVAL_DELAY_MS,
+  BOSS_REMOVAL_LONG_DELAY_MS,
+  BOSS_UNIVERSE_PROGRESS_FRACTION,
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -100,20 +107,20 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           hpSectionMult,
       )
 
-      const bonusSeconds = Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * 5
+      const bonusSeconds = Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * BOSS_ENRAGE_BONUS_SECONDS_PER_STEP
       const baseEnrageSec = Math.min(
         BOSS_ENRAGE_BASE_SECONDS + bonusSeconds,
         BOSS_ENRAGE_MAX_SECONDS,
       )
-      const enrageSec = Math.max(10, Math.floor(baseEnrageSec * enrageSectionMult))
+      const enrageSec = Math.max(BOSS_ENRAGE_MIN_SECONDS, Math.floor(baseEnrageSec * enrageSectionMult))
       const enrageTimerMs = enrageSec * 1000
 
       const clickDamagePerHit = Math.max(1, cpc)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
-      const randomChimes = () => Math.floor(Math.random() * 5) + 1
+      const randomChimes = () => Math.floor(Math.random() * BOSS_REWARD_CHIMES_MAX) + 1
       const randomSlot = (): PlanetBossRewardSlot =>
-        Math.random() < 0.5
+        Math.random() < BOSS_REWARD_MATERIAL_CHANCE
           ? { type: 'material', materialId: pickMaterial().id }
           : { type: 'chimes', amount: randomChimes() }
 
@@ -204,7 +211,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const planetId = boss.planetId
         setTimeout(() => {
           this.removeBoss(planetId)
-        }, 600)
+        }, BOSS_REMOVAL_DELAY_MS)
         return true
       }
       return false
@@ -244,7 +251,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
-          }, 600)
+          }, BOSS_REMOVAL_DELAY_MS)
         }
       }
     },
@@ -267,7 +274,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
-          }, 900)
+          }, BOSS_REMOVAL_LONG_DELAY_MS)
           continue
         }
 
@@ -310,7 +317,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
       }
       gameStore.chimes += totalChimes
-      gameStore.chimesForNextUniverse += Math.floor(totalChimes * 0.3)
+      gameStore.chimesForNextUniverse += Math.floor(totalChimes * BOSS_UNIVERSE_PROGRESS_FRACTION)
       gameStore.calculateLevel()
 
       if (boss.homePlanetChampion) {
@@ -370,7 +377,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           const planetId = boss.planetId
           setTimeout(() => {
             this.removeBoss(planetId)
-          }, 900)
+          }, BOSS_REMOVAL_LONG_DELAY_MS)
           continue
         }
 

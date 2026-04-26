@@ -20,6 +20,23 @@ import {
   MAX_ABILITY_LEVEL,
   SKILL_MEEP_COSTS,
   BOSS_PASSIVE_DPS_FRACTION,
+  GAME_TICK_INTERVAL_MS,
+  MEEP_ADD_DELAY_MS,
+  AUGMENT_CHOICE_COUNT,
+  RARITY_WEIGHT_FALLBACK,
+  BUILDING_HISTORY_BUFFER_SIZE,
+  HYPERSPACE_ANIM_START_MS,
+  HYPERSPACE_ANIM_END_MS,
+  UNIVERSE_RESCUE_INITIAL_COST,
+  UNIVERSE_RESCUE_COST_MULTIPLIER,
+  SHRINE_TRIGGER_CHANCE_PER_SHRINE,
+  SHRINE_BURST_CPS_MULTIPLIER,
+  MEEP_POWER_MULTIPLIER,
+  ABILITY_CPS_PER_LEVEL_DEFAULT,
+  ABILITY_POWER_PER_LEVEL_DEFAULT,
+  ABILITY_MEEP_COST_PER_LEVEL_DEFAULT,
+  ABILITY_MEEP_COST_MIN_MULTIPLIER,
+  ABILITY_CPC_PER_LEVEL_DEFAULT,
 } from '../config/constants'
 import type {
   BuildingProduction,
@@ -49,7 +66,7 @@ export const useGameStore = defineStore('game', {
     baseChimesPerClick: 20,
     chimesForMeep: 0,
     chimesForNextUniverse: 0,
-    chimesToUniverseRescue: 100000,
+    chimesToUniverseRescue: UNIVERSE_RESCUE_INITIAL_COST,
     meeps: 0,
     meepChimeRequirement: MEEP_BASE_COST,
     chimesEarnedForLevel: 0,
@@ -110,7 +127,7 @@ export const useGameStore = defineStore('game', {
             baseCost * this.abilityMeepCostMultiplier * meepCostMod,
           )
           this.chimesForMeep = 0
-        }, 100)
+        }, MEEP_ADD_DELAY_MS)
       }
     },
 
@@ -159,15 +176,15 @@ export const useGameStore = defineStore('game', {
       const remaining = [...AUGMENT_POOL]
       const picked: AugmentDefinition[] = []
 
-      for (let i = 0; i < 3 && remaining.length > 0; i++) {
+      for (let i = 0; i < AUGMENT_CHOICE_COUNT && remaining.length > 0; i++) {
         const totalWeight = remaining.reduce(
-          (sum, a) => sum + (RARITY_WEIGHTS[a.rarity as AugmentRarity] ?? 60),
+          (sum, a) => sum + (RARITY_WEIGHTS[a.rarity as AugmentRarity] ?? RARITY_WEIGHT_FALLBACK),
           0,
         )
         let roll = Math.random() * totalWeight
         let chosen = remaining[remaining.length - 1]
         for (const aug of remaining) {
-          roll -= RARITY_WEIGHTS[aug.rarity as AugmentRarity] ?? 60
+          roll -= RARITY_WEIGHTS[aug.rarity as AugmentRarity] ?? RARITY_WEIGHT_FALLBACK
           if (roll <= 0) {
             chosen = aug
             break
@@ -315,7 +332,7 @@ export const useGameStore = defineStore('game', {
           this.buildingProductionHistory[upgrade.id].push(production)
           this.totalBuildingProduction[upgrade.id] += production
 
-          if (this.buildingProductionHistory[upgrade.id].length > 60) {
+          if (this.buildingProductionHistory[upgrade.id].length > BUILDING_HISTORY_BUFFER_SIZE) {
             this.buildingProductionHistory[upgrade.id].shift()
           }
         }
@@ -338,7 +355,7 @@ export const useGameStore = defineStore('game', {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
       this.currentUniverse = nextUniverse
-      this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * 2)
+      this.chimesToUniverseRescue = Math.ceil(this.chimesToUniverseRescue * UNIVERSE_RESCUE_COST_MULTIPLIER)
       this.chimesForNextUniverse = 0
       this.prestigeAvailable = false
       this.chimes = 0
@@ -398,10 +415,10 @@ export const useGameStore = defineStore('game', {
       this.isHyperspaceActive = true
       setTimeout(() => {
         this.executePrestigeReset(targetUniverse)
-      }, 2500)
+      }, HYPERSPACE_ANIM_START_MS)
       setTimeout(() => {
         this.isHyperspaceActive = false
-      }, 3500)
+      }, HYPERSPACE_ANIM_END_MS)
     },
 
     // Verarbeitet passive Einnahmen pro Sekunde
@@ -422,8 +439,8 @@ export const useGameStore = defineStore('game', {
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent(this.inGameTime, this.universeRescueProgress)
       const galaxyStore = useGalaxyStore()
-      galaxyStore.tickBossSearch(1000)
-      galaxyStore.tickResourceStar(1000)
+      galaxyStore.tickBossSearch(GAME_TICK_INTERVAL_MS)
+      galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)
       const roleBehaviorStore = useRoleBehaviorStore()
       roleBehaviorStore.tick()
       const planetBossStore = usePlanetBossStore()
@@ -443,8 +460,8 @@ export const useGameStore = defineStore('game', {
       augmentStore.onTick()
       const planetShopStore = usePlanetShopStore()
       const shrineCount = planetShopStore.wandererShrineCount
-      if (shrineCount > 0 && Math.random() < shrineCount * 0.08) {
-        const burst = Math.floor(this.chimesPerSecond * 2)
+      if (shrineCount > 0 && Math.random() < shrineCount * SHRINE_TRIGGER_CHANCE_PER_SHRINE) {
+        const burst = Math.floor(this.chimesPerSecond * SHRINE_BURST_CPS_MULTIPLIER)
         if (burst > 0) {
           this.chimes += burst
           this.totalChimesEarned += burst
@@ -569,7 +586,7 @@ export const useGameStore = defineStore('game', {
         abilityCPSPerLevel: base.abilityCPSPerLevel,
         abilityCPCPerLevel: base.abilityCPCPerLevel,
         abilityMeepCostPerLevel: base.abilityMeepCostPerLevel,
-        abilityPowerPerLevel: (base.abilityPowerPerLevel ?? 300) + (aug.abilityPowerPerLevel ?? 0),
+        abilityPowerPerLevel: (base.abilityPowerPerLevel ?? ABILITY_POWER_PER_LEVEL_DEFAULT) + (aug.abilityPowerPerLevel ?? 0),
         cooldownMultiplier: aug.cooldownMultiplier,
         enemySpeedMultiplier: aug.enemySpeedMultiplier,
         enemyMaxHPDrainPerSecond: aug.enemyMaxHPDrainPerSecond,
@@ -602,24 +619,24 @@ export const useGameStore = defineStore('game', {
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
       return Math.floor(
-        (this.meeps * 100 * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul,
+        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul,
       )
     },
 
     abilityCPSMultiplier(): number {
-      const perLevel = this.activeModifier.abilityCPSPerLevel ?? 0.15
+      const perLevel = this.activeModifier.abilityCPSPerLevel ?? ABILITY_CPS_PER_LEVEL_DEFAULT
       return 1 + this.abilityLevels[0] * perLevel
     },
     abilityPowerBonus(): number {
-      const perLevel = this.activeModifier.abilityPowerPerLevel ?? 300
+      const perLevel = this.activeModifier.abilityPowerPerLevel ?? ABILITY_POWER_PER_LEVEL_DEFAULT
       return this.abilityLevels[1] * perLevel
     },
     abilityMeepCostMultiplier(): number {
-      const perLevel = this.activeModifier.abilityMeepCostPerLevel ?? 0.1
-      return Math.max(0.5, 1 - this.abilityLevels[2] * perLevel)
+      const perLevel = this.activeModifier.abilityMeepCostPerLevel ?? ABILITY_MEEP_COST_PER_LEVEL_DEFAULT
+      return Math.max(ABILITY_MEEP_COST_MIN_MULTIPLIER, 1 - this.abilityLevels[2] * perLevel)
     },
     abilityCPCMultiplier(): number {
-      const perLevel = this.activeModifier.abilityCPCPerLevel ?? 0.25
+      const perLevel = this.activeModifier.abilityCPCPerLevel ?? ABILITY_CPC_PER_LEVEL_DEFAULT
       return 1 + this.abilityLevels[3] * perLevel
     },
 

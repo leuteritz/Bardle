@@ -8,6 +8,14 @@ import type { ShopUpgrade, BuildingStat, PermanentUpgrade, UpgradeModifier } fro
 import { logger } from '../utils/logger'
 import { MODIFIER_POOL } from '../config/modifiers'
 import { usePlanetShopStore } from './planetShopStore'
+import {
+  SECONDS_PER_HOUR,
+  EFFICIENCY_STARS_DIVISOR,
+  EFFICIENCY_STARS_MAX,
+  EFFICIENCY_STARS_MIN,
+  MODIFIER_COST_FRACTION,
+  MODIFIER_ROLL_COUNT,
+} from '../config/constants'
 
 const chimeClickerIcon = '/img/ChimesPerClick.png'
 const glockenturmIcon = '/img/Glockenturm.png'
@@ -212,7 +220,7 @@ export const useShopStore = defineStore('shop', {
       const upgrades = this.cpsProducingUpgrades.map((upgrade) => {
         const currentCPS = (upgrade.baseCPS || 0) * upgrade.level
         const lifetimeProduction =
-          gameStore.totalBuildingProduction[upgrade.id] || currentCPS * 3600
+          gameStore.totalBuildingProduction[upgrade.id] || currentCPS * SECONDS_PER_HOUR
 
         return {
           id: upgrade.id,
@@ -234,8 +242,8 @@ export const useShopStore = defineStore('shop', {
           const productionPercentage =
             totalLifetime > 0 ? (building.lifetimeProduction / totalLifetime) * 100 : 0
 
-          const rawStars = productionPercentage / 20
-          const efficiencyStars = Math.min(5, Math.max(0.5, Math.round(rawStars * 2) / 2))
+          const rawStars = productionPercentage / EFFICIENCY_STARS_DIVISOR
+          const efficiencyStars = Math.min(EFFICIENCY_STARS_MAX, Math.max(EFFICIENCY_STARS_MIN, Math.round(rawStars * 2) / 2))
 
           return {
             ...building,
@@ -252,7 +260,7 @@ export const useShopStore = defineStore('shop', {
       return this.cpsProducingUpgrades.reduce((total, upgrade) => {
         const lifetimeProduction =
           gameStore.totalBuildingProduction[upgrade.id] ||
-          (upgrade.baseCPS || 0) * upgrade.level * 3600
+          (upgrade.baseCPS || 0) * upgrade.level * SECONDS_PER_HOUR
         return total + lifetimeProduction
       }, 0)
     },
@@ -396,7 +404,7 @@ export const useShopStore = defineStore('shop', {
       gameStore.chimes -= upgrade.cost
       upgrade.purchased = true
       upgrade.modifierSlotUnlocked = true
-      upgrade.modifierCost = Math.floor(upgrade.cost * 0.5)
+      upgrade.modifierCost = Math.floor(upgrade.cost * MODIFIER_COST_FRACTION)
       gameStore.chimesPerSecond = this.calculateTotalCPS()
       gameStore.chimesPerClick = this.calculateTotalCPC()
       logger.info('Shop', `Permanent upgrade: ${upgrade.name}`, { cost: upgrade.cost })
@@ -448,7 +456,7 @@ export const useShopStore = defineStore('shop', {
       const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
       const pool = MODIFIER_POOL.filter((m) => m.id !== upgrade?.appliedModifier?.id)
       const shuffled = [...pool].sort(() => Math.random() - 0.5)
-      return shuffled.slice(0, 3)
+      return shuffled.slice(0, MODIFIER_ROLL_COUNT)
     },
 
     applyModifier(upgradeId: string, modifier: UpgradeModifier): boolean {

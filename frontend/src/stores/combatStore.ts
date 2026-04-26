@@ -4,6 +4,17 @@ import {
   CHAMPION_DETECT_RADIUS,
   CHAMPION_ORBIT_HIT_RANGE,
   CHAMPION_DPS_BASE,
+  COMBAT_ORBIT_RADIUS_X_MIN,
+  COMBAT_ORBIT_RADIUS_X_RANGE,
+  COMBAT_ORBIT_Y_SCALE_MIN,
+  COMBAT_ORBIT_Y_SCALE_RANGE,
+  COMBAT_ORBIT_TILT_MAX_DEG,
+  COMBAT_ORBIT_SPEED_MIN,
+  COMBAT_ORBIT_SPEED_RANGE,
+  COMBAT_ORBIT_SAFE_Y,
+  COMBAT_FLOAT_DURATION_MS,
+  COMBAT_FLOAT_OFFSET_Y,
+  COMBAT_FLOAT_OFFSET_X_SPREAD,
 } from '../config/constants'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { usePlanetBossStore } from './planetBossStore'
@@ -13,15 +24,15 @@ import { useGameStore } from './gameStore'
 let _damageFloatId = 0
 
 function buildChampionState(name: string, index: number, total: number): ChampionCombatState {
-  let orbitRadiusX = 130 + Math.random() * 65
-  let orbitRadiusY = orbitRadiusX * (0.28 + Math.random() * 0.62)
-  const tiltDeg = Math.random() * 180
+  let orbitRadiusX = COMBAT_ORBIT_RADIUS_X_MIN + Math.random() * COMBAT_ORBIT_RADIUS_X_RANGE
+  let orbitRadiusY = orbitRadiusX * (COMBAT_ORBIT_Y_SCALE_MIN + Math.random() * COMBAT_ORBIT_Y_SCALE_RANGE)
+  const tiltDeg = Math.random() * COMBAT_ORBIT_TILT_MAX_DEG
   const tiltRad = (tiltDeg * Math.PI) / 180
-  const baseSpeed = 0.00015 + Math.random() * 0.00038
+  const baseSpeed = COMBAT_ORBIT_SPEED_MIN + Math.random() * COMBAT_ORBIT_SPEED_RANGE
   const direction = Math.random() < 0.5 ? 1 : -1
 
   // Clamp vertical orbit extent to stay clear of HP bar / Travel HUD (±116px from center)
-  const SAFE_Y = 90
+  const SAFE_Y = COMBAT_ORBIT_SAFE_Y
   const maxYExtent = Math.sqrt(
     (orbitRadiusX * Math.sin(tiltRad)) ** 2 + (orbitRadiusY * Math.cos(tiltRad)) ** 2,
   )
@@ -127,9 +138,9 @@ export const useCombatStore = defineStore('combat', {
           this.damageFloats.push({
             id: ++_damageFloatId,
             value: totalDPS,
-            x: pos.cx + (Math.random() - 0.5) * 10,
-            y: pos.cy - 30,
-            expiresAt: now + 1000,
+            x: pos.cx + (Math.random() - 0.5) * COMBAT_FLOAT_OFFSET_X_SPREAD,
+            y: pos.cy - COMBAT_FLOAT_OFFSET_Y,
+            expiresAt: now + COMBAT_FLOAT_DURATION_MS,
             planetFloat: true,
           })
         }

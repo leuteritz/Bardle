@@ -262,3 +262,106 @@ export const PLANET_SLOT_ORBITS = [
   { rx: 550, ry: 115, tiltDeg: 22 },
   { rx: 640, ry: 130, tiltDeg: -18 },
 ] as const
+
+// Game Loop
+export const GAME_TICK_INTERVAL_MS = 1000
+export const MEEP_ADD_DELAY_MS = 100
+export const AUGMENT_CHOICE_COUNT = 3
+export const RARITY_WEIGHT_FALLBACK = 60
+export const BUILDING_HISTORY_BUFFER_SIZE = 60
+export const HYPERSPACE_ANIM_START_MS = 2500
+export const HYPERSPACE_ANIM_END_MS = 3500
+export const UNIVERSE_RESCUE_INITIAL_COST = 100_000
+export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
+
+// Shrine & Meep
+export const SHRINE_TRIGGER_CHANCE_PER_SHRINE = 0.08
+export const SHRINE_BURST_CPS_MULTIPLIER = 2
+export const MEEP_POWER_MULTIPLIER = 100
+
+// Ability defaults (??-operator fallbacks)
+export const ABILITY_CPS_PER_LEVEL_DEFAULT = 0.15
+export const ABILITY_POWER_PER_LEVEL_DEFAULT = 300
+export const ABILITY_MEEP_COST_PER_LEVEL_DEFAULT = 0.1
+export const ABILITY_MEEP_COST_MIN_MULTIPLIER = 0.5
+export const ABILITY_CPC_PER_LEVEL_DEFAULT = 0.25
+
+// Shop / Production efficiency
+export const SECONDS_PER_HOUR = 3600
+export const EFFICIENCY_STARS_DIVISOR = 20
+export const EFFICIENCY_STARS_MAX = 5
+export const EFFICIENCY_STARS_MIN = 0.5
+export const MODIFIER_COST_FRACTION = 0.5
+export const MODIFIER_ROLL_COUNT = 3
+
+// Augments
+export const AUGMENT_CLICK_HISTORY_SIZE = 5
+export const AUGMENT_GRAVITY_FLIP_DURATION_MS = 3000
+
+// Combat / Damage floats
+export const COMBAT_ORBIT_RADIUS_X_MIN = 130
+export const COMBAT_ORBIT_RADIUS_X_RANGE = 65
+export const COMBAT_ORBIT_Y_SCALE_MIN = 0.28
+export const COMBAT_ORBIT_Y_SCALE_RANGE = 0.62
+export const COMBAT_ORBIT_TILT_MAX_DEG = 180
+export const COMBAT_ORBIT_SPEED_MIN = 0.00015
+export const COMBAT_ORBIT_SPEED_RANGE = 0.00038
+export const COMBAT_ORBIT_SAFE_Y = 90
+export const COMBAT_FLOAT_DURATION_MS = 1000
+export const COMBAT_FLOAT_OFFSET_Y = 30
+export const COMBAT_FLOAT_OFFSET_X_SPREAD = 10
+
+// Galaxy boss search
+export const GALAXY_STARS_BASE_REQUIRED = 3
+export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
+export const GALAXY_BOSS_SEARCH_SEG_MIN_MS = 3500
+export const GALAXY_BOSS_SEARCH_SEG_RANGE_MS = 4500
+export const GALAXY_BOSS_SEARCH_STEP_MIN = 0.07
+export const GALAXY_BOSS_SEARCH_STEP_RANGE = 0.09
+export const GALAXY_BOSS_SEARCH_BOUNDARY_MIN = 0.15
+export const GALAXY_BOSS_SEARCH_BOUNDARY_MAX = 0.85
+export const GALAXY_BOSS_TOTAL_SEARCH_MIN_MS = 15_000
+export const GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS = 45_000
+export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000
+export const GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG = 60
+export const GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG = 240
+
+// Planet boss (extended)
+export const BOSS_ENRAGE_BONUS_SECONDS_PER_STEP = 5
+export const BOSS_ENRAGE_MIN_SECONDS = 10
+export const BOSS_REWARD_CHIMES_MAX = 5
+export const BOSS_REWARD_MATERIAL_CHANCE = 0.5
+export const BOSS_REMOVAL_DELAY_MS = 600
+export const BOSS_REMOVAL_LONG_DELAY_MS = 900
+export const BOSS_UNIVERSE_PROGRESS_FRACTION = 0.3
+
+// Star group / orbit randomization
+export const STAR_PLANET_ORBIT_RX_MIN = 85
+export const STAR_PLANET_ORBIT_RX_RANGE = 25
+export const STAR_PLANET_ORBIT_RY_MIN = 44
+export const STAR_PLANET_ORBIT_RY_RANGE = 18
+export const STAR_PLANET_ORBIT_TILT_MAX = 0.35
+export const STAR_SPAWN_ANGLE_MIN_PI = 0.15
+export const STAR_SPAWN_ANGLE_RANGE_PI = 0.70
+export const STAR_FORCED_PLANET_MIN = 1
+export const STAR_FORCED_PLANET_RANGE = 4
+export const STAR_REMOVAL_DELAY_MS = 1500
+export const STAR_EXTRA_PLANET_MIN = 2
+export const STAR_EXTRA_PLANET_RANGE = 2
+export const CHAMPION_STAR_FIXED_ANGLE_FRAC_PI = 0.6
+export const CHAMP_PLANET_ORBIT_RX_MIN = 92
+export const CHAMP_PLANET_ORBIT_RX_RANGE = 22
+export const CHAMP_PLANET_ORBIT_RY_MIN = 48
+export const CHAMP_PLANET_ORBIT_RY_RANGE = 18
+export const CHAMP_PLANET_ORBIT_TILT_MAX = 0.3
+export const EXTRA_PLANET_ORBIT_RX_MIN = 80
+export const EXTRA_PLANET_ORBIT_RX_RANGE = 30
+export const EXTRA_PLANET_ORBIT_RY_MIN = 42
+export const EXTRA_PLANET_ORBIT_RY_RANGE = 18
+export const EXTRA_PLANET_ORBIT_TILT_MAX = 0.35
+export const GALAXY_BOSS_STAR_ORBIT_RX = 300
+export const GALAXY_BOSS_STAR_ORBIT_RY = 129
+export const GALAXY_BOSS_STAR_ORBIT_TILT = 0.14
+export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
+export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
+export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1

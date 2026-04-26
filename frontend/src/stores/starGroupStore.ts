@@ -17,6 +17,35 @@ import {
   PLANET_ORBIT_SPEED_EXTRA_RANGE,
   PLANET_ORBIT_SPEED_BOSS,
   ORBIT_TIERS,
+  STAR_PLANET_ORBIT_RX_MIN,
+  STAR_PLANET_ORBIT_RX_RANGE,
+  STAR_PLANET_ORBIT_RY_MIN,
+  STAR_PLANET_ORBIT_RY_RANGE,
+  STAR_PLANET_ORBIT_TILT_MAX,
+  STAR_SPAWN_ANGLE_MIN_PI,
+  STAR_SPAWN_ANGLE_RANGE_PI,
+  STAR_FORCED_PLANET_MIN,
+  STAR_FORCED_PLANET_RANGE,
+  STAR_REMOVAL_DELAY_MS,
+  STAR_EXTRA_PLANET_MIN,
+  STAR_EXTRA_PLANET_RANGE,
+  CHAMPION_STAR_FIXED_ANGLE_FRAC_PI,
+  CHAMP_PLANET_ORBIT_RX_MIN,
+  CHAMP_PLANET_ORBIT_RX_RANGE,
+  CHAMP_PLANET_ORBIT_RY_MIN,
+  CHAMP_PLANET_ORBIT_RY_RANGE,
+  CHAMP_PLANET_ORBIT_TILT_MAX,
+  EXTRA_PLANET_ORBIT_RX_MIN,
+  EXTRA_PLANET_ORBIT_RX_RANGE,
+  EXTRA_PLANET_ORBIT_RY_MIN,
+  EXTRA_PLANET_ORBIT_RY_RANGE,
+  EXTRA_PLANET_ORBIT_TILT_MAX,
+  GALAXY_BOSS_STAR_ORBIT_RX,
+  GALAXY_BOSS_STAR_ORBIT_RY,
+  GALAXY_BOSS_STAR_ORBIT_TILT,
+  GALAXY_BOSS_PLANET_ORBIT_RX,
+  GALAXY_BOSS_PLANET_ORBIT_RY,
+  GALAXY_BOSS_PLANET_ORBIT_TILT,
 } from '../config/constants'
 
 let starIdCounter = 0
@@ -82,9 +111,9 @@ export const useStarGroupStore = defineStore('starGroup', {
           orbitAngle: (i / count) * Math.PI * 2,
           orbitSpeed: PLANET_ORBIT_SPEED_MIN + Math.random() * PLANET_ORBIT_SPEED_RANGE,
           orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-          orbitRx: 85 + Math.random() * 25,
-          orbitRy: 44 + Math.random() * 18,
-          orbitTilt: Math.random() * 0.35,
+          orbitRx: STAR_PLANET_ORBIT_RX_MIN + Math.random() * STAR_PLANET_ORBIT_RX_RANGE,
+          orbitRy: STAR_PLANET_ORBIT_RY_MIN + Math.random() * STAR_PLANET_ORBIT_RY_RANGE,
+          orbitTilt: Math.random() * STAR_PLANET_ORBIT_TILT_MAX,
           cleared: false,
         })
         bossStore.spawnBoss(planetId, config.type, false, true)
@@ -98,7 +127,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
-        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
+        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: tier.rx,
         orbitRy: tier.ry,
@@ -118,13 +147,13 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: starId,
         starType: 'resource',
-        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
+        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
         orbitRx: tier.rx,
         orbitRy: tier.ry,
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_RESOURCE,
-        planetSlots: this._buildResourcePlanetSlots(1 + Math.floor(Math.random() * 4)),
+        planetSlots: this._buildResourcePlanetSlots(STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE)),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
       }
@@ -165,7 +194,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const bossStore = usePlanetBossStore()
       const galaxyStore = useGalaxyStore()
 
-      const extraCount = 2 + Math.floor(Math.random() * 2)
+      const extraCount = STAR_EXTRA_PLANET_MIN + Math.floor(Math.random() * STAR_EXTRA_PLANET_RANGE)
       const totalCount = 1 + extraCount
       const planetSlots: StarPlanetSlot[] = []
 
@@ -178,9 +207,9 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitAngle: 0,
         orbitSpeed: PLANET_ORBIT_SPEED_CHAMP_MIN + Math.random() * PLANET_ORBIT_SPEED_CHAMP_RANGE,
         orbitDirection: 1,
-        orbitRx: 92 + Math.random() * 22,
-        orbitRy: 48 + Math.random() * 18,
-        orbitTilt: Math.random() * 0.3,
+        orbitRx: CHAMP_PLANET_ORBIT_RX_MIN + Math.random() * CHAMP_PLANET_ORBIT_RX_RANGE,
+        orbitRy: CHAMP_PLANET_ORBIT_RY_MIN + Math.random() * CHAMP_PLANET_ORBIT_RY_RANGE,
+        orbitTilt: Math.random() * CHAMP_PLANET_ORBIT_TILT_MAX,
         cleared: false,
       })
       bossStore.spawnBoss(champId, champConfig.type, true)
@@ -195,9 +224,9 @@ export const useStarGroupStore = defineStore('starGroup', {
           orbitAngle: (i / totalCount) * Math.PI * 2,
           orbitSpeed: PLANET_ORBIT_SPEED_EXTRA_MIN + Math.random() * PLANET_ORBIT_SPEED_EXTRA_RANGE,
           orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-          orbitRx: 80 + Math.random() * 30,
-          orbitRy: 42 + Math.random() * 18,
-          orbitTilt: Math.random() * 0.35,
+          orbitRx: EXTRA_PLANET_ORBIT_RX_MIN + Math.random() * EXTRA_PLANET_ORBIT_RX_RANGE,
+          orbitRy: EXTRA_PLANET_ORBIT_RY_MIN + Math.random() * EXTRA_PLANET_ORBIT_RY_RANGE,
+          orbitTilt: Math.random() * EXTRA_PLANET_ORBIT_TILT_MAX,
           cleared: false,
         })
         bossStore.spawnBoss(planetId, config.type, false)
@@ -209,7 +238,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'champion',
-        starAngle: Math.PI * 0.6,
+        starAngle: Math.PI * CHAMPION_STAR_FIXED_ANGLE_FRAC_PI,
         starDirection: 1,
         orbitRx: tier.rx,
         orbitRy: tier.ry,
@@ -232,11 +261,11 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'galaxy_boss',
-        starAngle: Math.PI * 0.15 + Math.random() * Math.PI * 0.7,
+        starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: 1,
-        orbitRx: 300,
-        orbitRy: 129,
-        orbitTilt: 0.14,
+        orbitRx: GALAXY_BOSS_STAR_ORBIT_RX,
+        orbitRy: GALAXY_BOSS_STAR_ORBIT_RY,
+        orbitTilt: GALAXY_BOSS_STAR_ORBIT_TILT,
         orbitSpeed: STAR_ORBIT_SPEED_GALAXY_BOSS,
         planetSlots: [
           {
@@ -246,9 +275,9 @@ export const useStarGroupStore = defineStore('starGroup', {
             orbitAngle: 0,
             orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
             orbitDirection: 1,
-            orbitRx: 38,
-            orbitRy: 22,
-            orbitTilt: 0.1,
+            orbitRx: GALAXY_BOSS_PLANET_ORBIT_RX,
+            orbitRy: GALAXY_BOSS_PLANET_ORBIT_RY,
+            orbitTilt: GALAXY_BOSS_PLANET_ORBIT_TILT,
             cleared: false,
           },
         ],
@@ -272,7 +301,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           if (idx !== -1) {
             setTimeout(() => {
               this.activeStars.splice(idx, 1)
-            }, 1500)
+            }, STAR_REMOVAL_DELAY_MS)
           }
           if (star.starType === 'champion') {
             const galaxyStore = useGalaxyStore()
