@@ -96,7 +96,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_RADIUS_SCALE, ORBIT_COLORS, ORBIT_TIERS } from '@/config/constants'
+import { ORBIT_RADIUS_SCALE, ORBIT_TIERS } from '@/config/constants'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -330,7 +330,6 @@ export default defineComponent({
       screenW,
       screenH,
       ORBIT_RADIUS_SCALE,
-      ORBIT_COLORS,
       ORBIT_TIERS,
       PLANET_ROLES,
     }

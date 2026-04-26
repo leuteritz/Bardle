@@ -19,7 +19,6 @@
     <ChampionOrbit />
     <PlanetOrbit />
     <StarSystemComponent />
-    <VoidMonsterComponent />
     <PlayerHPBar />
     <StarSystemRescueTransition />
 
@@ -54,7 +53,6 @@ import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
 import PlanetOrbit from './sun/PlanetOrbit.vue'
-import VoidMonsterComponent from './sun/VoidMonsterComponent.vue'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -65,7 +63,6 @@ export default defineComponent({
     StarSystemComponent,
     StarSystemRescueTransition,
     PlanetOrbit,
-    VoidMonsterComponent,
   },
   setup() {
     const gameStore = useGameStore()

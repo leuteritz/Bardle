@@ -36,22 +36,6 @@
         />
       </g>
 
-      <g v-if="hasActiveVoidMonsters">
-        <ellipse
-          v-for="(tier, i) in ORBIT_TIERS.void_monster"
-          :key="'track-void-' + i"
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="tier.rx"
-          :ry="tier.ry"
-          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="tier.color"
-          stroke-opacity="0.35"
-          fill="none"
-          stroke-width="1.5"
-          stroke-dasharray="6 5"
-        />
-      </g>
     </svg>
   </Teleport>
 
@@ -276,7 +260,6 @@ import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/us
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useCombatStore } from '../../../stores/combatStore'
-import { useVoidMonsterStore } from '../../../stores/voidMonsterStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import { ORBIT_TIERS } from '../../../config/constants'
@@ -284,13 +267,11 @@ import { ORBIT_TIERS } from '../../../config/constants'
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
 const combatStore = useCombatStore()
-const voidMonsterStore = useVoidMonsterStore()
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
-const hasActiveVoidMonsters = computed(() => voidMonsterStore.activeMonsters.length > 0)
 const screenW = ref(window.innerWidth)
 const screenH = ref(window.innerHeight)
 const screenCx = computed(() => screenW.value / 2)

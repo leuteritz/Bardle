@@ -221,25 +221,7 @@ export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000 // gain 1 stack every 6s
 export const ROLE_JUNGLER_MAX_STACKS = 5
 export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 
-// Void Monster System
-export const VOID_MONSTER_MAX_COUNT = 6
-export const VOID_MONSTER_SPAWN_INTERVAL_MIN_MS = 18_000
-export const VOID_MONSTER_SPAWN_INTERVAL_MAX_MS = 45_000
-export const VOID_MONSTER_FLY_DURATION_MS = 14_000
-export const VOID_MONSTER_SIZE = 44
-
-// Orbit category colors — one unique color per object type
-export const ORBIT_COLORS = {
-  star: '#FFD700',
-  planet: '#4AADFF',
-  champion: '#52C85E',
-  void_monster: '#9B44FF',
-} as const
-
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
-// Sorted effective rx: champ0=225 · void0=275 · planet0=324 · champ1=375 · planet1=425 · void1=475 · star0=525 · star1=575
-// Sorted effective rx: champ0=200 · void0=280 · planet0=360 · champ1=440 · planet1=520 · void1=600 · star0=680 · star1=760
-// Sorted effective rx: champ0=200 · void0=290 · planet0=380 · champ1=470 · planet1=560 · void1=650 · star0=740 · star1=830
 export const ORBIT_TIERS = {
   champion: [
     { rx: 200, ry: 86, tiltDeg: 12, tiltRad: 0.2094, color: '#39D353', size: 40 }, // inner → klein
@@ -250,12 +232,8 @@ export const ORBIT_TIERS = {
     { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#005FCC', size: 40 },
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FFD700', size: 500 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FF8C00', size: 56 },
-  ],
-  void_monster: [
-    { rx: 290, ry: 124, tiltDeg: -6.9, tiltRad: -0.12, color: '#9B44FF', size: 70 },
-    { rx: 650, ry: 279, tiltDeg: 10.3, tiltRad: 0.18, color: '#FF44CC', size: 70 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FFD700', size: 80 },
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FF8C00', size: 80 },
   ],
 } as const
 
