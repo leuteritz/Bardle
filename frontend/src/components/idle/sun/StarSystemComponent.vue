@@ -21,14 +21,14 @@
 
       <g v-if="hasActiveChampions">
         <ellipse
-          v-for="(tier, i) in ORBIT_TIERS.champion"
-          :key="'track-champ-' + i"
+          v-for="entry in activeRoleOrbits"
+          :key="'track-role-' + entry.role"
           :cx="screenCx"
           :cy="screenCy"
-          :rx="tier.rx"
-          :ry="tier.ry"
-          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="tier.color"
+          :rx="entry.rx"
+          :ry="entry.ry"
+          :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`"
+          :stroke="entry.color"
           stroke-opacity="0.35"
           fill="none"
           stroke-width="1.5"
@@ -260,13 +260,25 @@ import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/us
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useCombatStore } from '../../../stores/combatStore'
+import { useBattleStore } from '../../../stores/battleStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import { ORBIT_TIERS } from '../../../config/constants'
+import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
 const combatStore = useCombatStore()
+const battleStore = useBattleStore()
+
+const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
+
+const activeRoleOrbits = computed(() =>
+  battleStore.headerSlots
+    .map((slot, i) => (slot != null ? SLOT_ROLES[i] : null))
+    .filter((r): r is ChampionRole => r != null)
+    .map((role) => ({ role, ...ORBIT_TIERS.role[role] })),
+)
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))

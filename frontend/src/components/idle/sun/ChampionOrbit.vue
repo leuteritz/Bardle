@@ -56,6 +56,7 @@
           pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
         'champion-orbit-avatar--dot':
           pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
+        'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
       }"
       :style="{
         width: pos.size + 'px',
@@ -125,7 +126,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { ORBIT_TIERS } from '@/config/constants'
+import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET } from '@/config/constants'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -193,6 +194,20 @@ export default defineComponent({
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
     const champSpeedMuls = new Map<string, number>()
+
+    // Top hit effect — fires periodically to simulate incoming hits on the tank
+    const topHitActive = ref(false)
+    let topHitTimer = 0
+    function scheduleTopHit() {
+      const TOP_TIER = ORBIT_TIERS.role.top
+      topHitTimer = window.setTimeout(() => {
+        topHitActive.value = true
+        window.setTimeout(() => {
+          topHitActive.value = false
+          scheduleTopHit()
+        }, TOP_TIER.hitDurationMs)
+      }, TOP_TIER.hitIntervalMs)
+    }
     const championRenderPositions = ref<ChampionRenderPos[]>([])
 
     const projectiles = ref<Projectile[]>([])
@@ -236,17 +251,29 @@ export default defineComponent({
       const champions = combatStore.champions
       const newPositions: ChampionRenderPos[] = []
 
+      // ADC localState from previous frame — used by Support to follow at fixed offset
+      const adcName = battleStore.headerSlots[3]
+      const adcState = adcName ? localStates.get(adcName) : null
+      // ADC orbit direction — offset must match motion direction so Support trails BEHIND ADC
+      const adcChampion = adcName ? champions.find((ch) => ch.name === adcName) : null
+      const adcDir = adcChampion?.direction ?? 1
+
       for (let ci = 0; ci < champions.length; ci++) {
         const c = champions[ci]
-        // Assign champion to one of 2 canonical orbit tiers (alternating by index)
-        const tier = ORBIT_TIERS.champion[ci % 2]
+
+        // Determine role first so tier selection can use it
+        const slotIndex = battleStore.headerSlots.indexOf(c.name)
+        const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
+
+        // Role-specific orbit tier when available, else generic alternating fallback
+        const tier = primaryRole ? ORBIT_TIERS.role[primaryRole] : ORBIT_TIERS.planet[ci % 2]
         const rx = tier.rx
         const ry = tier.ry
         const tiltRad = tier.tiltRad
         const tiltDeg = tier.tiltDeg
         const orbitColor = tier.color
-        // Basisgröße kommt direkt aus dem Orbit-Tier
-        const baseSize = tier.size
+        const baseSize = ORBIT_TIERS.planet[0].size
+        const orbitSpeed = 'speed' in tier ? (tier as { speed: number }).speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
         if (!ls) {
@@ -261,6 +288,11 @@ export default defineComponent({
           localStates.set(c.name, ls)
         }
 
+        // Support trails behind ADC — offset is in the ADC's direction of motion
+        if (primaryRole === 'support' && adcState) {
+          ls.orbitAngle = adcState.orbitAngle - adcDir * SUPPORT_ANGLE_OFFSET
+        }
+
         // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
         const prevRelY = (ls.y - screenCy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
@@ -270,8 +302,10 @@ export default defineComponent({
         champSpeedMuls.set(c.name, newMul)
 
         if (!reducedMotion) {
-          const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
-          ls.orbitAngle += c.direction * c.baseSpeed * keplerBoost * newMul * dt
+          if (primaryRole !== 'support' || !adcState) {
+            const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
+            ls.orbitAngle += c.direction * orbitSpeed * keplerBoost * newMul * dt
+          }
           const targetOrbit = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
           ls.x += (targetOrbit.x - ls.x) * 0.15
           ls.y += (targetOrbit.y - ls.y) * 0.15
@@ -301,9 +335,6 @@ export default defineComponent({
         // Orbit-Arc Opacity (hoch wenn hinter Sonne)
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
         const hintOpacity = Math.max(0, 1 - visibleFactor)
-
-        const slotIndex = battleStore.headerSlots.indexOf(c.name)
-        const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
 
         newPositions.push({
           name: c.name,
@@ -406,9 +437,11 @@ export default defineComponent({
 
     onMounted(() => {
       animFrame = requestAnimationFrame(animate)
+      scheduleTopHit()
     })
     onUnmounted(() => {
       cancelAnimationFrame(animFrame)
+      clearTimeout(topHitTimer)
     })
 
     const screenCx = window.innerWidth / 2
@@ -424,6 +457,7 @@ export default defineComponent({
       frontChampions,
       championRenderPositions,
       projectiles,
+      topHitActive,
       screenCx,
       screenCy,
       screenW,
@@ -731,8 +765,31 @@ export default defineComponent({
     0 0 28px 8px rgba(200, 40, 0, 0.3);
 }
 
+/* ── Top-Lane Treffer-Effekt ──────────────────────────────────────────────── */
+.champion-orbit-avatar--top-hit {
+  animation: top-hit-flash 0.35s ease-out forwards;
+}
+
+@keyframes top-hit-flash {
+  0% {
+    filter: brightness(2) saturate(1.4);
+    box-shadow:
+      0 0 18px rgba(255, 80, 80, 1),
+      0 0 36px rgba(220, 40, 40, 0.7);
+  }
+  40% {
+    filter: brightness(1.4) saturate(1.15);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking {
+    animation: none;
+  }
+  .champion-orbit-avatar--top-hit {
     animation: none;
   }
 }

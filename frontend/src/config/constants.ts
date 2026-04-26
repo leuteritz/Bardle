@@ -223,10 +223,6 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
-  champion: [
-    { rx: 200, ry: 86, tiltDeg: 12, tiltRad: 0.2094, color: '#39D353', size: 40 }, // inner → klein
-    { rx: 470, ry: 202, tiltDeg: -15, tiltRad: -0.2618, color: '#00FFC8', size: 40 }, // outer → groß
-  ],
   planet: [
     { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#4AADFF', size: 40 },
     { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#005FCC', size: 40 },
@@ -235,7 +231,27 @@ export const ORBIT_TIERS = {
     { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FFD700', size: 80 },
     { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FF8C00', size: 80 },
   ],
+  // Role-specific champion orbits — one fixed path per LoL role
+  role: {
+    top: {
+      rx: 155,
+      ry: 68,
+      tiltDeg: 14,
+      tiltRad: 0.2443,
+      color: '#e05050',
+      speed: 0.00032,
+      hitIntervalMs: 4000,
+      hitDurationMs: 350,
+    },
+    jungle: { rx: 468, ry: 201, tiltDeg: -15, tiltRad: -0.2618, color: '#50c060', speed: 0.00022 },
+    mid: { rx: 645, ry: 277, tiltDeg: 12, tiltRad: 0.2094, color: '#5090e8', speed: 0.00017 },
+    adc: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#e89840', speed: 0.00014 },
+    support: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#b8c8d8', speed: 0.00014 },
+  },
 } as const
+
+// Support orbits the same path as ADC, offset by this angle (radians) behind
+export const SUPPORT_ANGLE_OFFSET = Math.PI / 5
 
 /** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px). */
 export const PLANET_SLOT_ORBITS = [
