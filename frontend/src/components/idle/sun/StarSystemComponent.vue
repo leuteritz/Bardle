@@ -2,7 +2,6 @@
   <!-- ⓪ Permanent Orbit Tracks (always visible, colored rings per category) -->
   <Teleport to="body">
     <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <!-- Star orbit tracks – only when stars are active -->
       <g v-if="hasActiveStars">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.star"
@@ -19,7 +18,7 @@
           stroke-dasharray="6 5"
         />
       </g>
-      <!-- Champion orbit tracks – only when champions are active -->
+
       <g v-if="hasActiveChampions">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.champion"
@@ -36,7 +35,7 @@
           stroke-dasharray="6 5"
         />
       </g>
-      <!-- Void monster orbit tracks – only when void monsters are active -->
+
       <g v-if="hasActiveVoidMonsters">
         <ellipse
           v-for="(tier, i) in ORBIT_TIERS.void_monster"
@@ -59,7 +58,6 @@
   <!-- ① Back-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-back" aria-hidden="true">
-      <!-- Orbit hints for hidden stars -->
       <svg class="orbit-hints-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
         <defs>
           <filter id="orbit-blur-champion" x="-50%" y="-50%" width="200%" height="200%">
@@ -87,6 +85,7 @@
           stroke-width="5"
         />
       </svg>
+
       <template v-for="star in backStars" :key="star.id">
         <div
           class="star-body"
@@ -108,6 +107,7 @@
           :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
+
       <template v-for="star in frontStars" :key="'fb-' + star.id">
         <PlanetComponent
           v-for="p in star.planets.filter((p) => p.isBehind)"
@@ -130,7 +130,6 @@
   <!-- ② Front-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-front" aria-hidden="true">
-      <!-- Orbit-Arc über der Sonne (sichtbar wenn Stern dahinter) -->
       <svg class="orbit-hints-front-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
         <defs>
           <filter id="orbit-blur-star-front" x="-50%" y="-50%" width="200%" height="200%">
@@ -174,6 +173,7 @@
           :championImage="getChampionImageForPlanet(p) ?? undefined"
         />
       </template>
+
       <template v-for="star in backStars" :key="'ff-' + star.id">
         <PlanetComponent
           v-for="p in star.planets.filter((p) => !p.isBehind)"
@@ -224,7 +224,6 @@
           class="star-reward-summary"
           :style="rewardSummaryStyle(star)"
         >
-          <!-- Champion section (dominant, on top) -->
           <div v-if="getStarRewardSummary(star).champion" class="summary-champion">
             <span class="summary-champion__crown">♛</span>
             <div class="summary-champion__icon-wrap">
@@ -238,7 +237,7 @@
               getStarRewardSummary(star).champion!.name
             }}</span>
           </div>
-          <!-- Divider between champion and loot row -->
+
           <div
             v-if="
               getStarRewardSummary(star).champion &&
@@ -247,7 +246,7 @@
             "
             class="summary-divider"
           />
-          <!-- Chimes + Materials row -->
+
           <div class="summary-loot-row">
             <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
               <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
@@ -301,32 +300,67 @@ function onResize() {
   screenW.value = window.innerWidth
   screenH.value = window.innerHeight
 }
+
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
 function orbitHintColor(starType: string): string {
-  if (starType === 'champion') return ORBIT_TIERS.star[0].color // '#FFD700'
-  if (starType === 'resource') return ORBIT_TIERS.star[1].color // '#FF8C00'
+  if (starType === 'champion') return ORBIT_TIERS.star[0].color
+  if (starType === 'resource') return ORBIT_TIERS.star[1].color
   if (starType === 'galaxy_boss') return '#ff5030'
   return '#ffffff'
 }
 
+function starSize(type: string): number {
+  if (type === 'champion') return ORBIT_TIERS.star[0].size
+  if (type === 'resource') return ORBIT_TIERS.star[1].size
+  return 82
+}
+
+function starBoxShadow(type: string, s: number): string {
+  const r = (n: number) => Math.round(s * n)
+
+  if (type === 'champion') {
+    return [
+      `0 0 ${r(0.19)}px rgba(255, 200, 60, 0.9)`,
+      `0 0 ${r(0.44)}px rgba(220, 140, 20, 0.6)`,
+      `0 0 ${r(0.78)}px rgba(180, 100, 10, 0.3)`,
+    ].join(', ')
+  }
+
+  if (type === 'resource') {
+    return [
+      `0 0 ${r(0.19)}px rgba(160, 210, 255, 0.95)`,
+      `0 0 ${r(0.45)}px rgba(80, 160, 255, 0.65)`,
+      `0 0 ${r(0.84)}px rgba(30, 80, 200, 0.35)`,
+    ].join(', ')
+  }
+
+  if (type === 'galaxy_boss') {
+    return [
+      `0 0 ${r(0.22)}px rgba(255, 80, 30, 0.95)`,
+      `0 0 ${r(0.46)}px rgba(200, 20, 20, 0.7)`,
+      `0 0 ${r(0.79)}px rgba(120, 0, 0, 0.4)`,
+    ].join(', ')
+  }
+
+  return ''
+}
+
 function starBodyStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
+  const ringInset = Math.round(s * 0.16)
+
   return {
     transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
     opacity: String(star.opacity.toFixed(3)),
     width: `${s}px`,
     height: `${s}px`,
+    boxShadow: starBoxShadow(star.starType, s),
+    '--ring-inset': `-${ringInset}px`,
     filter: star.filterStyle || undefined,
     transition: 'filter 0.3s ease',
   }
-}
-
-function starSize(type: string): number {
-  if (type === 'galaxy_boss') return 82
-  if (type === 'champion') return 72
-  return 62
 }
 
 function getPlanetRewardItems(planet: PlanetRenderEntry) {
@@ -335,10 +369,12 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
     (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
   )
   if (!boss) return []
+
   const items: { key: string; image: string; name: string; count: number; index: number }[] = []
   const totalChimes = boss.rewardSlots
     .filter((s) => s.type === 'chimes')
     .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+
   if (totalChimes > 0) {
     items.push({
       key: 'chimes',
@@ -348,6 +384,7 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
       index: 0,
     })
   }
+
   for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
     if (slot.materialId) {
       const mat = MATERIALS.find((m) => m.id === slot.materialId)
@@ -362,6 +399,7 @@ function getPlanetRewardItems(planet: PlanetRenderEntry) {
       }
     }
   }
+
   return items
 }
 
@@ -377,6 +415,7 @@ function planetRewardIconStyle(planet: PlanetRenderEntry, itemIndex: number, tot
   const totalW = totalItems * itemSlot - PLANET_ICON_GAP
   const offsetX = itemIndex * itemSlot - totalW / 2 + PLANET_ICON_SIZE / 2
   const offsetY = -(halfPlanet + 8 + PLANET_ICON_SIZE)
+
   return {
     transform: `translate(${px + offsetX}px, ${py + offsetY}px) translateX(-50%)`,
   }
@@ -386,15 +425,18 @@ function getStarRewardSummary(star: StarRenderEntry) {
   let totalChimes = 0
   const materialMap = new Map<string, { image: string; name: string; count: number }>()
   let champion: { name: string; image: string } | null = null
+
   for (const planet of star.planets) {
     if (planet.animState === 'saved') continue
     const boss = bossStore.activeBosses.find(
       (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
     )
     if (!boss) continue
+
     totalChimes += boss.rewardSlots
       .filter((s) => s.type === 'chimes')
       .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+
     for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
       if (slot.materialId) {
         const mat = MATERIALS.find((m) => m.id === slot.materialId)
@@ -412,6 +454,7 @@ function getStarRewardSummary(star: StarRenderEntry) {
         }
       }
     }
+
     if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
       champion = {
         name: boss.homePlanetChampion,
@@ -419,6 +462,7 @@ function getStarRewardSummary(star: StarRenderEntry) {
       }
     }
   }
+
   return { totalChimes, materials: [...materialMap.values()], champion }
 }
 
@@ -455,9 +499,11 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   inset: 0;
   pointer-events: none;
 }
+
 .star-sys-back {
   z-index: 3;
 }
+
 .star-sys-front {
   z-index: 7;
 }
@@ -493,15 +539,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 
 .star-body--champion {
   background: radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%);
-  box-shadow:
-    0 0 14px rgba(255, 200, 60, 0.9),
-    0 0 32px rgba(220, 140, 20, 0.6),
-    0 0 56px rgba(180, 100, 10, 0.3);
 }
+
 .star-body--champion::after {
   content: '';
   position: absolute;
-  inset: -11px;
+  inset: var(--ring-inset, -11px);
   border-radius: 50%;
   border: 1px solid rgba(255, 200, 60, 0.35);
   animation: star-ring-pulse 2.8s ease-in-out infinite;
@@ -509,15 +552,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 
 .star-body--resource {
   background: radial-gradient(circle, #ffffff 0%, #a8d4ff 35%, #2060c8 75%, #0a1a5c 100%);
-  box-shadow:
-    0 0 12px rgba(160, 210, 255, 0.95),
-    0 0 28px rgba(80, 160, 255, 0.65),
-    0 0 52px rgba(30, 80, 200, 0.35);
 }
+
 .star-body--resource::after {
   content: '';
   position: absolute;
-  inset: -11px;
+  inset: var(--ring-inset, -11px);
   border-radius: 50%;
   border: 1px solid rgba(120, 190, 255, 0.3);
   animation: star-ring-pulse 2.8s ease-in-out infinite;
@@ -525,15 +565,12 @@ function rewardSummaryStyle(star: StarRenderEntry) {
 
 .star-body--galaxy_boss {
   background: radial-gradient(circle, #ff9060 0%, #c01818 45%, #4a0000 100%);
-  box-shadow:
-    0 0 18px rgba(255, 80, 30, 0.95),
-    0 0 38px rgba(200, 20, 20, 0.7),
-    0 0 65px rgba(120, 0, 0, 0.4);
 }
+
 .star-body--galaxy_boss::after {
   content: '';
   position: absolute;
-  inset: -14px;
+  inset: var(--ring-inset, -14px);
   border-radius: 50%;
   border: 1.5px solid rgba(255, 80, 30, 0.4);
   animation: star-ring-pulse 2.2s ease-in-out infinite;

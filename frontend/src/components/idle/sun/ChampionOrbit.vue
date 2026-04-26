@@ -125,7 +125,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { AVATAR_SIZE_LARGE, AVATAR_SIZE_SMALL, ORBIT_TIERS } from '@/config/constants'
+import { ORBIT_TIERS } from '@/config/constants'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -147,7 +147,7 @@ interface ChampionRenderPos {
   orbitRx: number
   orbitRy: number
   tiltDeg: number
-  orbitColor: string // ← NEU
+  orbitColor: string
 }
 
 interface LocalChampState {
@@ -206,10 +206,6 @@ export default defineComponent({
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
 
-    function getAvatarSize(count: number): number {
-      return count <= 4 ? AVATAR_SIZE_LARGE : AVATAR_SIZE_SMALL
-    }
-
     function getOrbitPos(
       angle: number,
       orbitRadiusX: number,
@@ -238,7 +234,6 @@ export default defineComponent({
       const screenCx = window.innerWidth / 2
       const screenCy = window.innerHeight / 2
       const champions = combatStore.champions
-      const baseSize = getAvatarSize(champions.length)
       const newPositions: ChampionRenderPos[] = []
 
       for (let ci = 0; ci < champions.length; ci++) {
@@ -249,7 +244,9 @@ export default defineComponent({
         const ry = tier.ry
         const tiltRad = tier.tiltRad
         const tiltDeg = tier.tiltDeg
-        const orbitColor = tier.color // ← NEU
+        const orbitColor = tier.color
+        // Basisgröße kommt direkt aus dem Orbit-Tier
+        const baseSize = tier.size
 
         let ls = localStates.get(c.name)
         if (!ls) {
@@ -324,7 +321,7 @@ export default defineComponent({
           orbitRx: rx,
           orbitRy: ry,
           tiltDeg,
-          orbitColor, // ← NEU
+          orbitColor,
         })
       }
 
@@ -336,12 +333,9 @@ export default defineComponent({
       }
 
       // ── Projectile update ─────────────────────────────────────────────────────
-      // Read planet position directly from Map (not computed) so we get the
-      // current frame position, not the stale one from when activeBoss changed.
       const activeBoss = bossStore.activeBoss
       const pPos = activeBoss ? (activePlanetPositions.get(activeBoss.planetId) ?? null) : null
 
-      // Build new projectile render positions (plain array → swap whole ref at end)
       const nextProjectiles: Projectile[] = []
       for (const p of projectiles.value) {
         const t = Math.min((ts - p.startedAt) / p.duration, 1)
@@ -386,7 +380,6 @@ export default defineComponent({
         }
       }
 
-      // Swap the whole array once → single Vue reactive trigger per frame
       projectiles.value = nextProjectiles
       // ──────────────────────────────────────────────────────────────────────────
 
@@ -498,7 +491,6 @@ export default defineComponent({
 }
 
 /* ── Rollen-Farben ──────────────────────────────────────────────────────── */
-/* border-color !important → nie überschreibbar; box-shadow ohne → Animationen können überschreiben */
 .champion-orbit-avatar--role-top {
   border-color: #e05050 !important;
   box-shadow:
@@ -530,18 +522,18 @@ export default defineComponent({
     0 0 20px rgba(180, 200, 210, 0.3);
 }
 
-/* Hinter der Sonne: leicht geblurrt + gedimmt – Rollenfarbe bleibt via !important erhalten */
+/* Hinter der Sonne: leicht geblurrt + gedimmt */
 .champion-orbit-avatar--behind {
   filter: blur(2px) brightness(0.75) saturate(0.65);
   transition: filter 0.25s ease;
 }
 
-/* Klar vor der Sonne: Helligkeit erhöhen, Rollenfarbe bleibt erhalten */
+/* Klar vor der Sonne */
 .champion-orbit-avatar--foreground {
   filter: brightness(1.18) saturate(1.2);
 }
 
-/* Angriff: Rollenfarbe bleibt, nur Helligkeit pulsiert */
+/* Angriff */
 .champion-orbit-avatar--attacking {
   animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
 }
@@ -587,7 +579,7 @@ export default defineComponent({
   background: #1a6028;
 }
 
-/* Ability glows — only animate box-shadow, border-color stays as role color */
+/* Ability glows */
 .champion-orbit-avatar--shield {
   box-shadow:
     0 0 14px rgba(80, 180, 255, 0.9),
@@ -677,7 +669,6 @@ export default defineComponent({
     0 0 32px rgba(255, 160, 0, 0.7);
 }
 
-/* ADC burst — orange */
 .champion-dmg-float--adc {
   font-size: 1.3rem;
   color: #ff8020;
@@ -687,7 +678,6 @@ export default defineComponent({
     0 0 24px rgba(255, 80, 0, 0.6);
 }
 
-/* Mid DoT — purple */
 .champion-dmg-float--dot {
   font-size: 0.95rem;
   color: #d060ff;
@@ -695,7 +685,6 @@ export default defineComponent({
   text-shadow: 0 0 10px rgba(200, 80, 255, 0.9);
 }
 
-/* Support heal — green */
 .champion-dmg-float--heal {
   font-size: 1.1rem;
   color: #60ff80;

@@ -36,6 +36,7 @@ export interface VoidMonsterRenderEntry {
   id: string
   x: number
   y: number
+  size: number // ← NEU: berechnete Pixelgröße (baseSize × scale)
   opacity: number
   scale: number
   isBehind: boolean
@@ -56,6 +57,7 @@ interface OrbitState {
   direction: 1 | -1
   speedMul: number
   bossImage: string
+  baseSize: number // ← NEU: Basisgröße aus ORBIT_TIERS
 }
 
 export function useVoidMonster() {
@@ -93,11 +95,9 @@ export function useVoidMonster() {
     for (const monster of store.activeMonsters) {
       // ── Initialisierung beim ersten Frame ──────────────────────────────────
       if (!orbitStates.has(monster.id)) {
-        // Deterministisch: Tier 0 oder 1 anhand erster Stelle der ID
         const tierIndex = monster.id.charCodeAt(0) % 2
         const tier = ORBIT_TIERS.void_monster[tierIndex]
 
-        // Startwinkel = Richtung vom Spawn-Punkt zur Sonne
         const approachAngle = Math.atan2(monster.spawnY - screenCy, monster.spawnX - screenCx)
 
         orbitStates.set(monster.id, {
@@ -110,6 +110,7 @@ export function useVoidMonster() {
           direction: Math.random() < 0.5 ? 1 : -1,
           speedMul: 1.0,
           bossImage: BOSS_IMAGES[Math.floor(Math.random() * BOSS_IMAGES.length)],
+          baseSize: tier.size, // ← Basisgröße aus Tier
         })
         flyStartPos.set(monster.id, { x: monster.spawnX, y: monster.spawnY })
       }
@@ -131,11 +132,10 @@ export function useVoidMonster() {
       let hintOpacity: number
 
       if (spawnT < 1) {
-        // ── Phase 1: Fly-in zur SONNENMITTE ───────────────────────────────────
+        // ── Phase 1: Fly-in zur Sonnenmitte ───────────────────────────────────
         displayX = fly.x + (screenCx - fly.x) * spawnFactor
         displayY = fly.y + (screenCy - fly.y) * spawnFactor
 
-        // Während Fly-in: am Sonnenzentrum → keine Behind-Berechnung nötig
         relY = 0
         isBehind = false
         visibleFactor = 1
@@ -143,45 +143,56 @@ export function useVoidMonster() {
         scale = 0.6 + spawnFactor * 0.5
         hintOpacity = 0
       } else {
-        // ── Phase 2: Orbit – Radius expandiert von 0 auf Zielgröße ───────────
+        // ── Phase 2: Orbit ─────────────────────────────────────────────────────
         if (!orbitStartedAt.has(monster.id)) {
           orbitStartedAt.set(monster.id, ts)
         }
         const orbitAge = ts - orbitStartedAt.get(monster.id)!
 
-        // Orbit-Radius expandiert sanft
         state.rx += (state.targetRx - state.rx) * ORBIT_EXPAND_LERP
         state.ry += (state.targetRy - state.ry) * ORBIT_EXPAND_LERP
 
-        // Speed-Multiplikator (aus letztem Frame)
-        const { y: prevOy } = getOrbitPos(state.angle, state.rx, state.ry, state.tilt, screenCx, screenCy)
+        const { y: prevOy } = getOrbitPos(
+          state.angle,
+          state.rx,
+          state.ry,
+          state.tilt,
+          screenCx,
+          screenCy,
+        )
         const prevRelY = (prevOy - screenCy) / Math.max(state.targetRy, 1)
         const prevIsBehind = prevRelY < BEHIND_THRESHOLD
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
         state.speedMul += (targetMul - state.speedMul) * SPEED_LERP
 
-        // Winkel vorantreiben
         const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(state.angle)))
         state.angle += state.direction * VOID_ORBIT_SPEED * keplerBoost * state.speedMul * dt
 
-        const { x: ox, y: oy } = getOrbitPos(state.angle, state.rx, state.ry, state.tilt, screenCx, screenCy)
+        const { x: ox, y: oy } = getOrbitPos(
+          state.angle,
+          state.rx,
+          state.ry,
+          state.tilt,
+          screenCx,
+          screenCy,
+        )
         displayX = ox
         displayY = oy
 
-        // Behind-sun Berechnung
         relY = (oy - screenCy) / Math.max(state.targetRy, 1)
         isBehind = relY < BEHIND_THRESHOLD
-        visibleFactor = Math.max(0, Math.min(1, (relY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND))
+        visibleFactor = Math.max(
+          0,
+          Math.min(1, (relY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND),
+        )
 
         const depth = (relY + 1) / 2
         opacity = Math.max(VOID_BEHIND_OPACITY, visibleFactor * 0.9 + 0.1)
         scale = 0.85 + depth * 0.3
 
-        // Hint: skaliert auch mit wie weit der Orbit expandiert ist
         const expandFactor = Math.min(state.rx / state.targetRx, 1)
         hintOpacity = (1 - visibleFactor) * expandFactor
 
-        // Orbit-Lifetime: letzte 3s ausblenden, dann entfernen
         if (orbitAge > VOID_ORBIT_LIFETIME_MS) {
           toRemove.push(monster.id)
           continue
@@ -197,6 +208,7 @@ export function useVoidMonster() {
         id: monster.id,
         x: displayX,
         y: displayY,
+        size: Math.round(state.baseSize * scale), // ← NEU: Pixelgröße aus tier.size × scale
         opacity,
         scale,
         isBehind,

@@ -32,7 +32,9 @@
         :key="m.id"
         class="void-monster-pos"
         :style="{
-          transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%) scale(${m.scale})`,
+          width: m.size + 'px',
+          height: m.size + 'px',
+          transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%)`,
           opacity: m.opacity,
         }"
       >
@@ -51,7 +53,9 @@
         :key="m.id"
         class="void-monster-pos"
         :style="{
-          transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%) scale(${m.scale})`,
+          width: m.size + 'px',
+          height: m.size + 'px',
+          transform: `translate(${m.x}px, ${m.y}px) translate(-50%, -50%)`,
           opacity: m.opacity,
         }"
       >
@@ -100,28 +104,30 @@ export default defineComponent({
 }
 
 /* Back = unter Sonne (z-index 4), Front = über Sonne (z-index 8) */
-.void-monster-back  { z-index: 4; }
-.void-monster-front { z-index: 8; }
+.void-monster-back {
+  z-index: 4;
+}
+.void-monster-front {
+  z-index: 8;
+}
 
-/* Wrapper: nur Positionierung – KEINE Animation */
+/* Wrapper: Größe kommt vollständig per Inline-Style aus m.size */
 .void-monster-pos {
   position: fixed;
   left: 0;
   top: 0;
-  width: 44px;
-  height: 44px;
   pointer-events: none;
   will-change: transform, opacity;
 }
 
-/* Inneres Div: scale-Animation */
+/* Inneres Div: scale-Animations-Puls (keine Größe hier) */
 .void-monster {
   width: 100%;
   height: 100%;
   animation: void-pulse 1.8s ease-in-out infinite;
 }
 
-/* Bild: kein Rahmen, kein runder Ausschnitt, Glow via drop-shadow */
+/* Bild: füllt den Container */
 .void-monster-img {
   width: 100%;
   height: 100%;
@@ -136,12 +142,18 @@ export default defineComponent({
 }
 
 @keyframes void-pulse {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.05); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 @keyframes void-glow {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 6px #7700ff) drop-shadow(0 0 14px #5500cc);
   }
   50% {

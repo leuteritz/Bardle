@@ -184,8 +184,6 @@ export default defineComponent({
       screenCy.value = window.innerHeight / 2
     }
 
-    const PLANET_BASE_SIZE = 36
-
     const allSlots = computed(() => planetShopStore.slots)
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
@@ -204,7 +202,11 @@ export default defineComponent({
 
       for (const slot of purchased) {
         const slotIdx = purchased.indexOf(slot)
-        const orbitColor = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length].color
+        // Tier bestimmt Farbe UND Basisgröße des Planeten-Avatars
+        const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
+        const orbitColor = tier.color
+        const baseSize = tier.size
+
         let ls = localStates.get(slot.id)
         if (!ls) {
           const idx = purchased.indexOf(slot)
@@ -248,8 +250,9 @@ export default defineComponent({
         const isBehind = relY < -0.05
         const depth = (relY + 1) / 2
 
+        // Parallax-Größe basiert jetzt auf tier.size statt PLANET_BASE_SIZE
         const parallaxScale = 0.75 + depth * 0.5
-        const size = Math.round(PLANET_BASE_SIZE * parallaxScale)
+        const size = Math.round(baseSize * parallaxScale)
         const opacity = isBehind ? 0.15 + depth * 0.28 : 0.82 + depth * 0.18
         const zIndex = Math.floor(9 + depth * 6)
         const isForeground = !isBehind && depth > 0.65

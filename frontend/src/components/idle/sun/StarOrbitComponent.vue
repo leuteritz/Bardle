@@ -1,7 +1,6 @@
 <template>
   <!-- ① Back-Layer: Sterne HINTER der Sonne (z-index 3) -->
   <div class="star-orbit-layer star-orbit-back" aria-hidden="true">
-    <!-- Champion-Stern (hinter Sonne) -->
     <div
       v-if="showChampionStar && champState.isBehind"
       class="star-entity star-entity--champion star-entity--behind"
@@ -10,22 +9,10 @@
     >
       <div class="star-core star-core--champion" :style="champCoreStyle" />
       <div class="star-corona star-corona--champion" :style="champCoronaStyle" />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 38px; --dur: 9s; --delay: 0s; --pcol: #b87030; --psize: 7px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 52px; --dur: 15s; --delay: -6s; --pcol: #3070b0; --psize: 6px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 26px; --dur: 6s; --delay: -2s; --pcol: #50a028; --psize: 5px"
-      />
-      <div class="star-badge star-badge--champion">★ Champion</div>
+      <div v-for="(ds, i) in champDecoStyles" :key="i" class="deco-orbit" :style="ds" />
+      <div class="star-badge star-badge--champion" :style="champBadgeStyle">★ Champion</div>
     </div>
 
-    <!-- Ressourcen-Stern (hinter Sonne) -->
     <div
       v-if="showResourceStar && resState.isBehind"
       class="star-entity star-entity--resource star-entity--behind"
@@ -34,21 +21,15 @@
     >
       <div class="star-core star-core--resource" :style="resCoreStyle" />
       <div class="star-corona star-corona--resource" :style="resCoronaStyle" />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 34px; --dur: 8s; --delay: 0s; --pcol: #18b0a0; --psize: 7px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 48px; --dur: 13s; --delay: -4s; --pcol: #9028b8; --psize: 5px"
-      />
-      <div class="star-badge star-badge--resource">✦ Ressource · {{ resTimerStr }}</div>
+      <div v-for="(ds, i) in resDecoStyles" :key="i" class="deco-orbit" :style="ds" />
+      <div class="star-badge star-badge--resource" :style="resBadgeStyle">
+        ✦ Ressource · {{ resTimerStr }}
+      </div>
     </div>
   </div>
 
   <!-- ② Front-Layer: Sterne VOR der Sonne (z-index 7) -->
   <div class="star-orbit-layer star-orbit-front" aria-hidden="true">
-    <!-- Champion-Stern (vor Sonne) -->
     <div
       v-if="showChampionStar && !champState.isBehind"
       class="star-entity star-entity--champion"
@@ -57,22 +38,10 @@
     >
       <div class="star-core star-core--champion" :style="champCoreStyle" />
       <div class="star-corona star-corona--champion" :style="champCoronaStyle" />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 38px; --dur: 9s; --delay: 0s; --pcol: #b87030; --psize: 7px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 52px; --dur: 15s; --delay: -6s; --pcol: #3070b0; --psize: 6px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 26px; --dur: 6s; --delay: -2s; --pcol: #50a028; --psize: 5px"
-      />
-      <div class="star-badge star-badge--champion">★ Champion</div>
+      <div v-for="(ds, i) in champDecoStyles" :key="i" class="deco-orbit" :style="ds" />
+      <div class="star-badge star-badge--champion" :style="champBadgeStyle">★ Champion</div>
     </div>
 
-    <!-- Ressourcen-Stern (vor Sonne) -->
     <div
       v-if="showResourceStar && !resState.isBehind"
       class="star-entity star-entity--resource"
@@ -81,15 +50,10 @@
     >
       <div class="star-core star-core--resource" :style="resCoreStyle" />
       <div class="star-corona star-corona--resource" :style="resCoronaStyle" />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 34px; --dur: 8s; --delay: 0s; --pcol: #18b0a0; --psize: 7px"
-      />
-      <div
-        class="deco-orbit"
-        style="--orbit-r: 48px; --dur: 13s; --delay: -4s; --pcol: #9028b8; --psize: 5px"
-      />
-      <div class="star-badge star-badge--resource">✦ Ressource · {{ resTimerStr }}</div>
+      <div v-for="(ds, i) in resDecoStyles" :key="i" class="deco-orbit" :style="ds" />
+      <div class="star-badge star-badge--resource" :style="resBadgeStyle">
+        ✦ Ressource · {{ resTimerStr }}
+      </div>
     </div>
   </div>
 </template>
@@ -101,28 +65,58 @@ import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { getOrbitPos } from '../../../utils/orbitMath'
 import { ORBIT_TIERS } from '@/config/constants.ts'
 
-// ── Orbit-Parameter ───────────────────────────────────────────────────────────
+// ── Orbit-Parameter aus ORBIT_TIERS ──────────────────────────────────────────
 
-// Champion-Stern → star[0]
-const CHAMP_RX = ORBIT_TIERS.star[0].rx
-const CHAMP_RY = ORBIT_TIERS.star[0].ry
-const CHAMP_TILT = ORBIT_TIERS.star[0].tiltRad
-const CHAMP_COLOR = ORBIT_TIERS.star[0].color // ← NEU: '#FFD700'
+const CHAMP_STAR = ORBIT_TIERS.star[0]
+const RES_STAR = ORBIT_TIERS.star[1]
+
+const CHAMP_RX = CHAMP_STAR.rx
+const CHAMP_RY = CHAMP_STAR.ry
+const CHAMP_TILT = CHAMP_STAR.tiltRad
+const CHAMP_COLOR = CHAMP_STAR.color
 const CHAMP_SPEED = 0.000022
-const CHAMP_SIZE = 34
+const CHAMP_SIZE = CHAMP_STAR.size
 
-// Ressourcen-Stern → star[1]
-const RES_RX = ORBIT_TIERS.star[1].rx
-const RES_RY = ORBIT_TIERS.star[1].ry
-const RES_TILT = ORBIT_TIERS.star[1].tiltRad
-const RES_COLOR = ORBIT_TIERS.star[1].color // ← NEU: '#FF8C00'
+const RES_RX = RES_STAR.rx
+const RES_RY = RES_STAR.ry
+const RES_TILT = RES_STAR.tiltRad
+const RES_COLOR = RES_STAR.color
 const RES_SPEED = 0.000042
-const RES_SIZE = 28
+const RES_SIZE = RES_STAR.size
 
-// ── Sonnenfarb-Typen (realistisch: gelb, orange, rot, weißblau, weiß) ────────
+// ── Visuelle Verhältniswerte ──────────────────────────────────────────────────
+
+const CHAMP_VISUAL = {
+  coronaRatio: 52 / 34,
+  badgeGapPx: 12,
+  glow1Ratio: 14 / 34,
+  glow2Ratio: 32 / 34,
+  glow3Ratio: 56 / 34,
+  coronaGlowRatio: 8 / 34,
+  deco: [
+    { orbitRatio: 38 / 34, sizeRatio: 7 / 34, color: '#b87030', dur: '9s', delay: '0s' },
+    { orbitRatio: 52 / 34, sizeRatio: 6 / 34, color: '#3070b0', dur: '15s', delay: '-6s' },
+    { orbitRatio: 26 / 34, sizeRatio: 5 / 34, color: '#50a028', dur: '6s', delay: '-2s' },
+  ],
+} as const
+
+const RES_VISUAL = {
+  coronaRatio: 46 / 28,
+  badgeGapPx: 12,
+  glow1Ratio: 12 / 28,
+  glow2Ratio: 26 / 28,
+  glow3Ratio: 46 / 28,
+  coronaGlowRatio: 7 / 28,
+  deco: [
+    { orbitRatio: 34 / 28, sizeRatio: 7 / 28, color: '#18b0a0', dur: '8s', delay: '0s' },
+    { orbitRatio: 48 / 28, sizeRatio: 5 / 28, color: '#9028b8', dur: '13s', delay: '-4s' },
+  ],
+} as const
+
+// ── Sonnenfarb-Profile ────────────────────────────────────────────────────────
 
 interface SunColorProfile {
-  core: [string, string, string] // [innen, mitte, außen]
+  core: [string, string, string]
   glow1: string
   glow2: string
   glow3: string
@@ -132,7 +126,6 @@ interface SunColorProfile {
 }
 
 const SUN_PROFILES: SunColorProfile[] = [
-  // Gelbe Sonne (G-Typ, wie unsere Sonne)
   {
     core: ['#fffde0', '#ffe050', '#c87010'],
     glow1: 'rgba(255, 220, 60, 0.95)',
@@ -142,7 +135,6 @@ const SUN_PROFILES: SunColorProfile[] = [
     coronaGlow: 'rgba(255, 210, 60, 0.28)',
     pulseSpeed: '2.8s',
   },
-  // Orange Sonne (K-Typ)
   {
     core: ['#ffe8c0', '#ff9020', '#8a3800'],
     glow1: 'rgba(255, 140, 40, 0.95)',
@@ -152,7 +144,6 @@ const SUN_PROFILES: SunColorProfile[] = [
     coronaGlow: 'rgba(255, 120, 30, 0.28)',
     pulseSpeed: '3.2s',
   },
-  // Roter Riese (M-Typ)
   {
     core: ['#ffc0a0', '#e84010', '#6a1808'],
     glow1: 'rgba(240, 80, 30, 0.95)',
@@ -162,7 +153,6 @@ const SUN_PROFILES: SunColorProfile[] = [
     coronaGlow: 'rgba(220, 60, 20, 0.28)',
     pulseSpeed: '4s',
   },
-  // Weißblauer Stern (A/F-Typ)
   {
     core: ['#ffffff', '#d0e8ff', '#4880d0'],
     glow1: 'rgba(160, 210, 255, 0.95)',
@@ -172,7 +162,6 @@ const SUN_PROFILES: SunColorProfile[] = [
     coronaGlow: 'rgba(120, 180, 255, 0.3)',
     pulseSpeed: '2.2s',
   },
-  // Weißer Stern (F-Typ)
   {
     core: ['#ffffff', '#f8f0d8', '#b09050'],
     glow1: 'rgba(255, 245, 210, 0.95)',
@@ -186,6 +175,27 @@ const SUN_PROFILES: SunColorProfile[] = [
 
 function pickRandomProfile(): SunColorProfile {
   return SUN_PROFILES[Math.floor(Math.random() * SUN_PROFILES.length)]
+}
+
+function px(n: number): string {
+  return `${Math.round(n)}px`
+}
+
+function makeGlow(
+  size: number,
+  profile: SunColorProfile,
+  ratios: { glow1Ratio: number; glow2Ratio: number; glow3Ratio: number },
+) {
+  return [
+    `0 0 ${px(size * ratios.glow1Ratio)} ${profile.glow1}`,
+    `0 0 ${px(size * ratios.glow2Ratio)} ${profile.glow2}`,
+    `0 0 ${px(size * ratios.glow3Ratio)} ${profile.glow3}`,
+  ].join(', ')
+}
+
+function makeCoronaGlow(size: number, profile: SunColorProfile, ratio: number) {
+  const v = px(size * ratio)
+  return `0 0 ${v} ${profile.coronaGlow}, inset 0 0 ${v} ${profile.coronaGlow}`
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -218,7 +228,6 @@ const resState = ref<StarRenderState>({
   zIndex: 6,
 })
 
-// Zufällige Farbprofile beim Mount festlegen
 const champProfile = ref<SunColorProfile>(SUN_PROFILES[0])
 const resProfile = ref<SunColorProfile>(SUN_PROFILES[0])
 
@@ -246,45 +255,115 @@ const resTimerStr = computed(() => {
   return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`
 })
 
-// ── Dynamische Farb-Styles aus Profilen ───────────────────────────────────────
+// ── Entity Styles (Position + Größe direkt als px – keine CSS-Variablen) ─────
+
+const champEntityStyle = computed(() => {
+  const { x, y, scale, opacity, zIndex } = champState.value
+  const s = CHAMP_SIZE
+  return {
+    transform: `translate(${x - s / 2}px, ${y - s / 2}px) scale(${scale.toFixed(4)})`,
+    opacity: String(opacity.toFixed(3)),
+    zIndex: String(zIndex),
+    width: `${s}px`,
+    height: `${s}px`,
+  }
+})
+
+const resEntityStyle = computed(() => {
+  const { x, y, scale, opacity, zIndex } = resState.value
+  const s = RES_SIZE
+  return {
+    transform: `translate(${x - s / 2}px, ${y - s / 2}px) scale(${scale.toFixed(4)})`,
+    opacity: String(opacity.toFixed(3)),
+    zIndex: String(zIndex),
+    width: `${s}px`,
+    height: `${s}px`,
+  }
+})
+
+// ── Core Styles (width + height direkt in px, kein var()) ─────────────────────
 
 const champCoreStyle = computed(() => {
   const p = champProfile.value
   return {
+    width: `${CHAMP_SIZE}px`,
+    height: `${CHAMP_SIZE}px`,
     background: `radial-gradient(circle, ${p.core[0]} 0%, ${p.core[1]} 45%, ${p.core[2]} 100%)`,
-    boxShadow: `0 0 14px ${p.glow1}, 0 0 32px ${p.glow2}, 0 0 56px ${p.glow3}`,
+    boxShadow: makeGlow(CHAMP_SIZE, p, CHAMP_VISUAL),
     animationDuration: p.pulseSpeed,
-  }
-})
-
-const champCoronaStyle = computed(() => {
-  const p = champProfile.value
-  return {
-    borderColor: p.corona,
-    boxShadow: `0 0 8px ${p.coronaGlow}, inset 0 0 8px ${p.coronaGlow}`,
   }
 })
 
 const resCoreStyle = computed(() => {
   const p = resProfile.value
   return {
+    width: `${RES_SIZE}px`,
+    height: `${RES_SIZE}px`,
     background: `radial-gradient(circle, ${p.core[0]} 0%, ${p.core[1]} 45%, ${p.core[2]} 100%)`,
-    boxShadow: `0 0 12px ${p.glow1}, 0 0 26px ${p.glow2}, 0 0 46px ${p.glow3}`,
+    boxShadow: makeGlow(RES_SIZE, p, RES_VISUAL),
     animationDuration: p.pulseSpeed,
+  }
+})
+
+// ── Corona Styles (width + height direkt in px, kein var()) ───────────────────
+
+const champCoronaStyle = computed(() => {
+  const p = champProfile.value
+  const s = Math.round(CHAMP_SIZE * CHAMP_VISUAL.coronaRatio)
+  return {
+    width: `${s}px`,
+    height: `${s}px`,
+    borderColor: p.corona,
+    boxShadow: makeCoronaGlow(CHAMP_SIZE, p, CHAMP_VISUAL.coronaGlowRatio),
   }
 })
 
 const resCoronaStyle = computed(() => {
   const p = resProfile.value
+  const s = Math.round(RES_SIZE * RES_VISUAL.coronaRatio)
   return {
+    width: `${s}px`,
+    height: `${s}px`,
     borderColor: p.corona,
-    boxShadow: `0 0 7px ${p.coronaGlow}, inset 0 0 7px ${p.coronaGlow}`,
+    boxShadow: makeCoronaGlow(RES_SIZE, p, RES_VISUAL.coronaGlowRatio),
   }
 })
 
+// ── Deco-Orbit Styles (direkt berechnet, kein CSS-Variablen-Cascade) ─────────
+
+const champDecoStyles = computed(() =>
+  CHAMP_VISUAL.deco.map((d) => ({
+    '--orbit-r': px(CHAMP_SIZE * d.orbitRatio),
+    '--psize': px(CHAMP_SIZE * d.sizeRatio),
+    '--pcol': d.color,
+    '--dur': d.dur,
+    '--delay': d.delay,
+  })),
+)
+
+const resDecoStyles = computed(() =>
+  RES_VISUAL.deco.map((d) => ({
+    '--orbit-r': px(RES_SIZE * d.orbitRatio),
+    '--psize': px(RES_SIZE * d.sizeRatio),
+    '--pcol': d.color,
+    '--dur': d.dur,
+    '--delay': d.delay,
+  })),
+)
+
+// ── Badge Styles (top direkt in px, kein var()) ───────────────────────────────
+
+const champBadgeStyle = computed(() => ({
+  top: `${CHAMP_SIZE + CHAMP_VISUAL.badgeGapPx}px`,
+}))
+
+const resBadgeStyle = computed(() => ({
+  top: `${RES_SIZE + RES_VISUAL.badgeGapPx}px`,
+}))
+
 // ── Orbit-Berechnung ──────────────────────────────────────────────────────────
 
-function computeStarState(x: number, y: number, ry: number, size: number): StarRenderState {
+function computeStarState(x: number, y: number, ry: number): StarRenderState {
   const screenCy = window.innerHeight / 2
   const relY = (y - screenCy) / Math.max(ry, 1)
   const isBehind = relY < -0.05
@@ -292,57 +371,29 @@ function computeStarState(x: number, y: number, ry: number, size: number): StarR
   const scale = 0.72 + depth * 0.56
   const opacity = isBehind ? 0.22 + depth * 0.38 : 0.78 + depth * 0.22
   const zIndex = isBehind ? Math.floor(3 + depth * 2) : Math.floor(6 + depth * 2)
-  void size
   return { x, y, isBehind, opacity, scale, zIndex }
 }
 
 function animate(ts: number) {
   const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
   lastTs = ts
-
   const cx = window.innerWidth / 2
   const cy = window.innerHeight / 2
 
   if (showChampionStar.value) {
     champAngle += CHAMP_SPEED * dt
     const { x, y } = getOrbitPos(champAngle, CHAMP_RX, CHAMP_RY, CHAMP_TILT, cx, cy)
-    champState.value = computeStarState(x, y, CHAMP_RY, CHAMP_SIZE)
+    champState.value = computeStarState(x, y, CHAMP_RY)
   }
 
   if (showResourceStar.value) {
     resAngle += RES_SPEED * dt
     const { x, y } = getOrbitPos(resAngle, RES_RX, RES_RY, RES_TILT, cx, cy)
-    resState.value = computeStarState(x, y, RES_RY, RES_SIZE)
+    resState.value = computeStarState(x, y, RES_RY)
   }
 
   animFrame = requestAnimationFrame(animate)
 }
-
-// ── Computed Styles ───────────────────────────────────────────────────────────
-
-const champEntityStyle = computed(() => {
-  const { x, y, scale, opacity } = champState.value
-  const s = CHAMP_SIZE
-  return {
-    transform: `translate(${x - s / 2}px, ${y - s / 2}px) scale(${scale.toFixed(4)})`,
-    opacity: String(opacity.toFixed(3)),
-    zIndex: String(champState.value.zIndex),
-    width: `${s}px`,
-    height: `${s}px`,
-  }
-})
-
-const resEntityStyle = computed(() => {
-  const { x, y, scale, opacity } = resState.value
-  const s = RES_SIZE
-  return {
-    transform: `translate(${x - s / 2}px, ${y - s / 2}px) scale(${scale.toFixed(4)})`,
-    opacity: String(opacity.toFixed(3)),
-    zIndex: String(resState.value.zIndex),
-    width: `${s}px`,
-    height: `${s}px`,
-  }
-})
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -382,7 +433,7 @@ onUnmounted(() => {
   z-index: 7;
 }
 
-/* ── Star Entity ─────────────────────────────────────────────────────────────── */
+/* ── Star Entity ───────────────────────────────────────────────────────────── */
 .star-entity {
   position: absolute;
   top: 0;
@@ -391,7 +442,11 @@ onUnmounted(() => {
   will-change: transform, opacity;
 }
 
-/* ── Star Core (Farbe kommt via :style aus dem Profil) ───────────────────────── */
+/* ── Star Core ─────────────────────────────────────────────────────────────── */
+/*
+ * width + height kommen AUSSCHLIESSLICH aus dem Inline-Style (champCoreStyle /
+ * resCoreStyle). Kein var(), kein hardcodiertes px – Größe = ORBIT_TIERS.star[n].size.
+ */
 .star-core {
   position: absolute;
   top: 50%;
@@ -399,16 +454,6 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   border-radius: 50%;
   animation: star-pulse 2.8s ease-in-out infinite;
-}
-
-.star-core--champion {
-  width: 34px;
-  height: 34px;
-}
-
-.star-core--resource {
-  width: 28px;
-  height: 28px;
 }
 
 @keyframes star-pulse {
@@ -421,27 +466,25 @@ onUnmounted(() => {
   }
 }
 
-/* ── Corona ──────────────────────────────────────────────────────────────────── */
+/* ── Corona ────────────────────────────────────────────────────────────────── */
+/*
+ * width + height kommen aus champCoronaStyle / resCoronaStyle (= size × coronaRatio).
+ */
 .star-corona {
   position: absolute;
   top: 50%;
   left: 50%;
-  border-radius: 50%;
-  border: 1px solid transparent; /* Farbe kommt via :style */
   transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid transparent;
   animation: corona-spin 20s linear infinite;
   pointer-events: none;
 }
 
 .star-corona--champion {
-  width: 52px;
-  height: 52px;
   animation-duration: 18s;
 }
-
 .star-corona--resource {
-  width: 46px;
-  height: 46px;
   animation-duration: 24s;
 }
 
@@ -454,7 +497,11 @@ onUnmounted(() => {
   }
 }
 
-/* ── Deco-Orbit (kleinere Punkte) ────────────────────────────────────────────── */
+/* ── Deco-Orbit ────────────────────────────────────────────────────────────── */
+/*
+ * --orbit-r und --psize werden direkt per :style auf dem deco-orbit-Element
+ * gesetzt (champDecoStyles / resDecoStyles) – kein Eltern-Cascade nötig.
+ */
 .deco-orbit {
   position: absolute;
   top: 50%;
@@ -487,10 +534,13 @@ onUnmounted(() => {
   }
 }
 
-/* ── Star Badge ──────────────────────────────────────────────────────────────── */
+/* ── Star Badge ────────────────────────────────────────────────────────────── */
+/*
+ * `top` kommt aus champBadgeStyle / resBadgeStyle (= size + badgeGapPx).
+ * Kein var() mehr nötig.
+ */
 .star-badge {
   position: absolute;
-  top: calc(100% + 60px);
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -503,21 +553,19 @@ onUnmounted(() => {
   user-select: none;
 }
 
-/* Vorher: hardcoded rgba(200, 140, 20, 0.55) */
 .star-badge--champion {
   color: v-bind(CHAMP_COLOR);
   border: 1px solid color-mix(in srgb, v-bind(CHAMP_COLOR) 55%, transparent);
   text-shadow: 0 0 8px color-mix(in srgb, v-bind(CHAMP_COLOR) 85%, transparent);
 }
 
-/* Vorher: hardcoded rgba(20, 180, 150, 0.5) */
 .star-badge--resource {
   color: v-bind(RES_COLOR);
   border: 1px solid color-mix(in srgb, v-bind(RES_COLOR) 50%, transparent);
   text-shadow: 0 0 8px color-mix(in srgb, v-bind(RES_COLOR) 80%, transparent);
 }
 
-/* ── Behind-Dämpfung ─────────────────────────────────────────────────────────── */
+/* ── Behind-Dämpfung ───────────────────────────────────────────────────────── */
 .star-entity--behind .star-corona {
   opacity: 0.4;
 }
