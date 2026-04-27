@@ -477,10 +477,12 @@ export const useShopStore = defineStore('shop', {
       const augmentStore = useAugmentStore()
       const planetShopStore = usePlanetShopStore()
       const mod = gameStore.activeModifier
+      const resonanceMuls = planetShopStore.resonanceTowerBuildingMultipliers
       const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
         const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
         const permBuildingMul = this.getPermanentBuildingMultiplier(upgrade.id)
-        return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * permBuildingMul
+        const resonanceMul = resonanceMuls[upgrade.id] ?? 1
+        return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * permBuildingMul * resonanceMul
       }, 0)
       const itemStore = useItemStore()
       const bossStore = usePlanetBossStore()

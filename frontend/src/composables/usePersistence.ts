@@ -145,6 +145,7 @@ export function usePersistence() {
           id: s.id,
           purchased: s.purchased,
           role: s.role,
+          slotConfig: s.slotConfig,
         })),
       },
     }
@@ -346,6 +347,7 @@ export function usePersistence() {
           if (slot) {
             slot.purchased = sv.purchased ?? false
             slot.role = sv.role ?? null
+            slot.slotConfig = sv.slotConfig ?? undefined
           }
         }
       }

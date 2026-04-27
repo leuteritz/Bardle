@@ -467,6 +467,13 @@ export const useGameStore = defineStore('game', {
           this.totalChimesEarned += burst
         }
       }
+      // turret_planet: automatischer Schaden an aktivem Boss
+      const autoAttackDPS = planetShopStore.autoAttackDPS
+      if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
+        planetBossStore.dealDamage(autoAttackDPS)
+      }
+      // harvest_node: periodische Material-Ernte
+      planetShopStore.tickHarvest(this.inGameTime)
       const combatStore = useCombatStore()
       combatStore.tick()
       const playerStore = usePlayerStore()
@@ -618,8 +625,14 @@ export const useGameStore = defineStore('game', {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
+      const planetShopStore = usePlanetShopStore()
+      const planetMeepMul = planetShopStore.planetMeepPowerMultiplier
+      const planetChampMul = planetShopStore.planetChampionDamageMultiplier
       return Math.floor(
-        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod + this.abilityPowerBonus) * eloPowerMod * itemPowerMul,
+        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod * planetMeepMul + this.abilityPowerBonus) *
+          eloPowerMod *
+          itemPowerMul *
+          planetChampMul,
       )
     },
 

@@ -2,8 +2,9 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
+import { useInventoryStore } from './inventoryStore'
 import { logger } from '../utils/logger'
-import { PLANET_SLOT_ORBITS } from '@/config/constants'
+import { PLANET_SLOT_ORBITS, PLANET_HARVEST_INTERVAL_TICKS } from '@/config/constants'
 
 export type PlanetRoleType =
   | 'materie_source'
@@ -12,6 +13,14 @@ export type PlanetRoleType =
   | 'aether_core'
   | 'time_capsule'
   | 'wanderer_shrine'
+  | 'turret_planet'
+  | 'harvest_node'
+  | 'expedition_relay'
+  | 'shield_barrier'
+  | 'meep_amplifier'
+  | 'champion_beacon'
+  | 'loot_magnet'
+  | 'resonance_tower'
 
 export interface PlanetRole {
   id: PlanetRoleType
@@ -25,6 +34,14 @@ export interface PlanetRole {
     | 'cps_multiplier'
     | 'offline_boost'
     | 'periodic_chimes'
+    | 'auto_attack_dps'
+    | 'material_harvest_rate'
+    | 'expedition_reward_multiplier'
+    | 'boss_damage_reduction'
+    | 'meep_power_multiplier'
+    | 'champion_damage_multiplier'
+    | 'drop_chance_bonus'
+    | 'building_cps_multiplier'
   bonusPerSlot: number
   icon: string
   color: string
@@ -40,6 +57,7 @@ export interface PlanetSlot {
   baseSpeed: number
   direction: 1 | -1
   baseCost: number
+  slotConfig?: { materialId?: string; buildingId?: string }
 }
 
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
@@ -103,6 +121,86 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     icon: '🎲',
     color: '#e0c040',
   },
+  turret_planet: {
+    id: 'turret_planet',
+    name: 'Geschütz-Planet',
+    description: 'Feuert automatisch auf den aktiven Boss.',
+    flavorText: '„Bards Melodie hat die Materie selbst zur Waffe geformt."',
+    bonusType: 'auto_attack_dps',
+    bonusPerSlot: 2,
+    icon: '🎯',
+    color: '#cc4444',
+  },
+  harvest_node: {
+    id: 'harvest_node',
+    name: 'Ernte-Knoten',
+    description: 'Farmt periodisch ein wählbares Material.',
+    flavorText: '„Der Wanderer hinterließ Samen aus fernen Galaxien."',
+    bonusType: 'material_harvest_rate',
+    bonusPerSlot: 1,
+    icon: '🌾',
+    color: '#80c840',
+  },
+  expedition_relay: {
+    id: 'expedition_relay',
+    name: 'Expeditions-Relais',
+    description: 'Erhöht den Belohnungs-Multiplikator aller Expeditionen.',
+    flavorText: '„Durch diesen Knotenpunkt klingen Bards Signale weiter."',
+    bonusType: 'expedition_reward_multiplier',
+    bonusPerSlot: 0.3,
+    icon: '🚀',
+    color: '#40a0e0',
+  },
+  shield_barrier: {
+    id: 'shield_barrier',
+    name: 'Schild-Barriere',
+    description: 'Reduziert eingehenden Orbit-Schaden durch Bosse.',
+    flavorText: '„Ein kosmischer Klang bildet eine Mauer aus reiner Harmonie."',
+    bonusType: 'boss_damage_reduction',
+    bonusPerSlot: 0.15,
+    icon: '🛡️',
+    color: '#60a0ff',
+  },
+  meep_amplifier: {
+    id: 'meep_amplifier',
+    name: 'Meep-Verstärker',
+    description: 'Erhöht die Kraft aller Meep-Zauber.',
+    flavorText: '„Die Meeps klingen lauter — und gefährlicher."',
+    bonusType: 'meep_power_multiplier',
+    bonusPerSlot: 0.1,
+    icon: '🔮',
+    color: '#c040e0',
+  },
+  champion_beacon: {
+    id: 'champion_beacon',
+    name: 'Champion-Leuchtfeuer',
+    description: 'Steigert die Kampfkraft aller Champions.',
+    flavorText: '„Das Licht dieses Planeten ruft die Helden der Galaxie."',
+    bonusType: 'champion_damage_multiplier',
+    bonusPerSlot: 0.1,
+    icon: '⚔️',
+    color: '#e8a040',
+  },
+  loot_magnet: {
+    id: 'loot_magnet',
+    name: 'Beute-Magnet',
+    description: 'Erhöht die Material-Drop-Chance bei Boss-Niederlagen.',
+    flavorText: '„Was verloren geht, findet hier seinen Weg zurück."',
+    bonusType: 'drop_chance_bonus',
+    bonusPerSlot: 0.1,
+    icon: '💎',
+    color: '#c0c0ff',
+  },
+  resonance_tower: {
+    id: 'resonance_tower',
+    name: 'Resonanz-Turm',
+    description: 'Verstärkt den CPS-Output eines gewählten Gebäudes.',
+    flavorText: '„Bards Töne schwingen zwischen den Türmen der Zeit."',
+    bonusType: 'building_cps_multiplier',
+    bonusPerSlot: 0.25,
+    icon: '🏗️',
+    color: '#c09040',
+  },
 }
 
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
@@ -125,6 +223,8 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   tiltDeg: orbit.tiltDeg,
 }))
 
+const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
+
 export const usePlanetShopStore = defineStore('planetShop', {
   state: () => ({
     slots: INITIAL_SLOTS.map((s) => ({ ...s })) as PlanetSlot[],
@@ -139,6 +239,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
     activeSlots(state): PlanetSlot[] {
       return state.slots.filter((s) => s.purchased && s.role !== null)
     },
+
+    // ── Bestehende Getter ──────────────────────────────────────────────────────
 
     totalPlanetFlatCPS(state): number {
       return state.slots.filter((s) => s.purchased && s.role === 'materie_source').length * 5
@@ -165,6 +267,65 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     wandererShrineCount(state): number {
       return state.slots.filter((s) => s.purchased && s.role === 'wanderer_shrine').length
+    },
+
+    // ── Neue Getter ────────────────────────────────────────────────────────────
+
+    // turret_planet: DPS-Wert pro Tick (Anzahl × bonusPerSlot)
+    autoAttackDPS(state): number {
+      return (
+        state.slots.filter((s) => s.purchased && s.role === 'turret_planet').length *
+        PLANET_ROLES.turret_planet.bonusPerSlot
+      )
+    },
+
+    // harvest_node: Liste aktiver Harvest-Slots mit materialId
+    activeHarvestSlots(state): { materialId: string }[] {
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'harvest_node' && s.slotConfig?.materialId)
+        .map((s) => ({ materialId: s.slotConfig!.materialId! }))
+    },
+
+    // expedition_relay: (1 + 0.3)^count
+    planetExpeditionRewardMultiplier(state): number {
+      const count = state.slots.filter((s) => s.purchased && s.role === 'expedition_relay').length
+      return Math.pow(1 + PLANET_ROLES.expedition_relay.bonusPerSlot, count)
+    },
+
+    // shield_barrier: min(0.80, count × 0.15)
+    planetBossDamageReduction(state): number {
+      const count = state.slots.filter((s) => s.purchased && s.role === 'shield_barrier').length
+      return Math.min(0.8, count * PLANET_ROLES.shield_barrier.bonusPerSlot)
+    },
+
+    // meep_amplifier: (1 + 0.1)^count
+    planetMeepPowerMultiplier(state): number {
+      const count = state.slots.filter((s) => s.purchased && s.role === 'meep_amplifier').length
+      return Math.pow(1 + PLANET_ROLES.meep_amplifier.bonusPerSlot, count)
+    },
+
+    // champion_beacon: (1 + 0.1)^count
+    planetChampionDamageMultiplier(state): number {
+      const count = state.slots.filter((s) => s.purchased && s.role === 'champion_beacon').length
+      return Math.pow(1 + PLANET_ROLES.champion_beacon.bonusPerSlot, count)
+    },
+
+    // loot_magnet: min(0.50, count × 0.1)
+    planetDropChanceBonus(state): number {
+      const count = state.slots.filter((s) => s.purchased && s.role === 'loot_magnet').length
+      return Math.min(0.5, count * PLANET_ROLES.loot_magnet.bonusPerSlot)
+    },
+
+    // resonance_tower: { buildingId → Multiplikator } = (1 + 0.25)^slotCount per building
+    resonanceTowerBuildingMultipliers(state): Record<string, number> {
+      const result: Record<string, number> = {}
+      for (const slot of state.slots) {
+        if (slot.purchased && slot.role === 'resonance_tower' && slot.slotConfig?.buildingId) {
+          const bId = slot.slotConfig.buildingId
+          result[bId] = (result[bId] ?? 1) * (1 + PLANET_ROLES.resonance_tower.bonusPerSlot)
+        }
+      }
+      return result
     },
   },
 
@@ -213,6 +374,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
       const prev = slot.role
       slot.role = role
+      // Konfiguration zurücksetzen wenn Rolle wechselt
+      slot.slotConfig = undefined
 
       const gameStore = useGameStore()
       const shopStore = useShopStore()
@@ -220,7 +383,43 @@ export const usePlanetShopStore = defineStore('planetShop', {
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
       logger.info('Planet', `Rolle von ${slotId} geändert: ${prev ?? 'keine'} → ${role ?? 'keine'}`)
+
+      // Konfigurierbare Rollen: Modal offen lassen für Config-Step
+      if (role !== null && CONFIGURABLE_ROLES.includes(role)) return
+
       this.closeRoleModal()
+    },
+
+    setSlotConfig(
+      slotId: string,
+      config: { materialId?: string; buildingId?: string },
+    ): void {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return
+
+      slot.slotConfig = { ...config }
+
+      // resonance_tower beeinflusst CPS → neu berechnen
+      if (slot.role === 'resonance_tower') {
+        const gameStore = useGameStore()
+        const shopStore = useShopStore()
+        gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+      }
+
+      logger.info('Planet', `Slot-Config für ${slotId} gesetzt`, config)
+      this.closeRoleModal()
+    },
+
+    tickHarvest(inGameTime: number): void {
+      if (inGameTime % PLANET_HARVEST_INTERVAL_TICKS !== 0) return
+      const harvestSlots = this.activeHarvestSlots
+      if (harvestSlots.length === 0) return
+
+      const inventoryStore = useInventoryStore()
+      for (const { materialId } of harvestSlots) {
+        inventoryStore.addMaterial(materialId)
+      }
+      logger.info('Planet', `Harvest-Tick: ${harvestSlots.length} Materialien geerntet`)
     },
 
     openRoleModal(slotId: string): void {

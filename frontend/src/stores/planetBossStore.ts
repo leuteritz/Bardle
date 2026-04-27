@@ -30,6 +30,7 @@ import { useInventoryStore } from './inventoryStore'
 import { useSectionStore } from './sectionStore'
 import { useGalaxyStore } from './galaxyStore'
 import { usePlayerStore } from './playerStore'
+import { usePlanetShopStore } from './planetShopStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -119,8 +120,11 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
       const randomChimes = () => Math.floor(Math.random() * BOSS_REWARD_CHIMES_MAX) + 1
+      // loot_magnet: erhöht Material-Drop-Chance
+      const lootBonus = usePlanetShopStore().planetDropChanceBonus
+      const adjustedMaterialChance = Math.min(0.9, BOSS_REWARD_MATERIAL_CHANCE + lootBonus)
       const randomSlot = (): PlanetBossRewardSlot =>
-        Math.random() < BOSS_REWARD_MATERIAL_CHANCE
+        Math.random() < adjustedMaterialChance
           ? { type: 'material', materialId: pickMaterial().id }
           : { type: 'chimes', amount: randomChimes() }
 
@@ -225,22 +229,30 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     applyOrbitDamage() {
       const playerStore = usePlayerStore()
+      const dmgReduction = usePlanetShopStore().planetBossDamageReduction
       for (const boss of this.activeBosses) {
         if (!boss.defeated && !boss.expired && activePlanetPositions.has(boss.planetId)) {
-          playerStore.takeDamage(1)
+          // shield_barrier: Orbit-Schaden mit Wahrscheinlichkeit blockieren
+          if (Math.random() > dmgReduction) {
+            playerStore.takeDamage(1)
+          }
         }
       }
     },
 
     applyPassiveDamage() {
       const gameStore = useGameStore()
+      const planetShopStore = usePlanetShopStore()
+      // champion_beacon: verstärkt unseren passiven Schaden am Boss
+      const beaconMul = planetShopStore.planetChampionDamageMultiplier
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
         // Champion-Planeten erhalten keinen passiven Schaden wenn Spiel pausiert
         if (gameStore.isGamePaused && boss.isChampionPlanet) continue
 
-        boss.currentHP -= boss.passiveDPS
-        boss.totalDamageDealt += boss.passiveDPS
+        const effectiveDPS = Math.max(1, Math.floor(boss.passiveDPS * beaconMul))
+        boss.currentHP -= effectiveDPS
+        boss.totalDamageDealt += effectiveDPS
 
         if (boss.currentHP <= 0) {
           boss.currentHP = 0

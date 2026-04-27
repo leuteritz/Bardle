@@ -114,6 +114,22 @@ export default defineComponent({
           return `+${Math.round(r.bonusPerSlot * 100)}% Offline`
         case 'periodic_chimes':
           return `${Math.round(r.bonusPerSlot * 100)}% Schub/s`
+        case 'auto_attack_dps':
+          return `+${r.bonusPerSlot} DPS/s`
+        case 'material_harvest_rate':
+          return `Ernte alle 30s`
+        case 'expedition_reward_multiplier':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Exped.`
+        case 'boss_damage_reduction':
+          return `-${Math.round(r.bonusPerSlot * 100)}% Orbit-Dmg`
+        case 'meep_power_multiplier':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Meep-Pow`
+        case 'champion_damage_multiplier':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Champ.-Pow`
+        case 'drop_chance_bonus':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Drop`
+        case 'building_cps_multiplier':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Gebäude-CPS`
       }
     }
 

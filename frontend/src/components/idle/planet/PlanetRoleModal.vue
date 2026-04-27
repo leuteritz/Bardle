@@ -23,6 +23,7 @@
             </span>
           </div>
 
+          <!-- Rollen-Grid -->
           <div class="role-modal-grid">
             <button
               v-for="role in roles"
@@ -43,6 +44,54 @@
               </div>
             </button>
           </div>
+
+          <!-- Config-Step: harvest_node → Material wählen -->
+          <div v-if="activeSlot.role === 'harvest_node'" class="role-config-section">
+            <div class="role-config-header">🌾 Material wählen</div>
+            <div class="role-config-grid">
+              <button
+                v-for="mat in MATERIALS"
+                :key="mat.id"
+                class="config-btn"
+                :class="{ 'config-btn--active': activeSlot.slotConfig?.materialId === mat.id }"
+                @click="store.setSlotConfig(activeSlot.id, { materialId: mat.id })"
+              >
+                <img v-if="mat.image" :src="mat.image" class="config-btn-img" alt="" />
+                <span class="config-btn-label">{{ mat.name }}</span>
+              </button>
+            </div>
+            <button
+              v-if="activeSlot.slotConfig?.materialId"
+              class="config-skip-btn"
+              @click="store.closeRoleModal()"
+            >
+              Schließen
+            </button>
+          </div>
+
+          <!-- Config-Step: resonance_tower → Gebäude wählen -->
+          <div v-if="activeSlot.role === 'resonance_tower'" class="role-config-section">
+            <div class="role-config-header">🏗️ Gebäude wählen</div>
+            <div class="role-config-grid">
+              <button
+                v-for="bld in CPS_BUILDINGS"
+                :key="bld.id"
+                class="config-btn"
+                :class="{ 'config-btn--active': activeSlot.slotConfig?.buildingId === bld.id }"
+                @click="store.setSlotConfig(activeSlot.id, { buildingId: bld.id })"
+              >
+                <img v-if="bld.icon" :src="bld.icon" class="config-btn-img" alt="" />
+                <span class="config-btn-label">{{ bld.name }}</span>
+              </button>
+            </div>
+            <button
+              v-if="activeSlot.slotConfig?.buildingId"
+              class="config-skip-btn"
+              @click="store.closeRoleModal()"
+            >
+              Schließen
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -53,6 +102,15 @@
 import { defineComponent, computed } from 'vue'
 import { usePlanetShopStore, PLANET_ROLES_LIST } from '../../../stores/planetShopStore'
 import type { PlanetRole } from '../../../stores/planetShopStore'
+import { MATERIALS } from '../../../config/materials'
+
+const CPS_BUILDINGS = [
+  { id: 'glockenturm', name: 'Glockenturm', icon: '/img/Glockenturm.png' },
+  { id: 'klanggenerator', name: 'Klang Generator', icon: '/img/KlangGenerator.png' },
+  { id: 'harmoniewerk', name: 'Harmonie Werk', icon: '/img/HarmonieWerk.png' },
+  { id: 'sphaerenMusik', name: 'Sphären Musik', icon: '/img/SphaerenMusik.png' },
+  { id: 'zeitEcho', name: 'Zeit Echo', icon: '/img/ZeitEcho.png' },
+]
 
 export default defineComponent({
   name: 'PlanetRoleModal',
@@ -90,10 +148,26 @@ export default defineComponent({
           return `+${Math.round(role.bonusPerSlot * 100)}% Offline-Ertrag`
         case 'periodic_chimes':
           return `${Math.round(role.bonusPerSlot * 100)}% Schub-Chance/s`
+        case 'auto_attack_dps':
+          return `+${role.bonusPerSlot} DPS/s auf Boss`
+        case 'material_harvest_rate':
+          return `1 Material alle 30s`
+        case 'expedition_reward_multiplier':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Expeditions-Belohnung`
+        case 'boss_damage_reduction':
+          return `-${Math.round(role.bonusPerSlot * 100)}% Boss-Orbit-Schaden`
+        case 'meep_power_multiplier':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Meep-Stärke`
+        case 'champion_damage_multiplier':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Champion-Power`
+        case 'drop_chance_bonus':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Material-Drop`
+        case 'building_cps_multiplier':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Gebäude-CPS`
       }
     }
 
-    return { store, activeSlot, slotNumber, currentRole, roles, bonusText }
+    return { store, activeSlot, slotNumber, currentRole, roles, bonusText, MATERIALS, CPS_BUILDINGS }
   },
 })
 </script>
@@ -112,7 +186,7 @@ export default defineComponent({
 
 /* ── Card ──────────────────────────────────────────────────────────────────── */
 .role-modal-card {
-  width: clamp(340px, 90vw, 580px);
+  width: clamp(340px, 90vw, 620px);
   max-height: 90vh;
   overflow-y: auto;
   background: #111008;
@@ -288,6 +362,90 @@ export default defineComponent({
 
 .role-card--active .role-card-bonus-text {
   color: #a8e060;
+}
+
+/* ── Config Section ────────────────────────────────────────────────────────── */
+.role-config-section {
+  padding: 0.75rem;
+  border-top: 2px solid #3a2a10;
+  background: #14120a;
+}
+
+.role-config-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e8c040;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.03em;
+}
+
+.role-config-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.config-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.45rem 0.3rem;
+  background: #1c1c18;
+  border: 1px solid #3a2a10;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.config-btn:hover {
+  background: #222018;
+  border-color: #7a4e20;
+}
+
+.config-btn--active {
+  background: #1a2a14;
+  border: 1px solid #6ec040;
+  box-shadow: 0 0 4px rgba(110, 192, 64, 0.25);
+}
+
+.config-btn-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.config-btn-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #c8c0a0;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.config-btn--active .config-btn-label {
+  color: #a8e060;
+}
+
+.config-skip-btn {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  background: #1c1c18;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.config-skip-btn:hover {
+  border-color: #7a4e20;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* ── Transition ────────────────────────────────────────────────────────────── */

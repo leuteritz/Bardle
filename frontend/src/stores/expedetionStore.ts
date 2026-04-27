@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useBattleStore } from './battleStore'
+import { usePlanetShopStore } from './planetShopStore'
 import { EXPEDITION_CONFIGS } from '../config/expedition' // ← war: MISSION_CONFIGS
 import { getChampionRoles } from '../config/championRoles'
 import {
@@ -112,8 +113,10 @@ export const useExpeditionStore = defineStore('expedition', {
         if (elapsed >= expedition.durationSeconds * 1000) {
           const success = Math.random() < expedition.successChance
           expedition.status = success ? 'success' : 'failure'
+          // expedition_relay: multipliziert Belohnung bei Erfolg
+          const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
           expedition.reward = success
-            ? expedition.baseReward
+            ? Math.floor(expedition.baseReward * relayMul)
             : Math.floor(expedition.baseReward * 0.1)
           logger.info(
             'Expedition',
