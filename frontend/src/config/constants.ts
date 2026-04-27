@@ -224,12 +224,12 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#A070D8', size: 40 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#A070D8', size: 40 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 40 },
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 40 },
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#F0D040', size: 80 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#F0D040', size: 80 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FAD842', size: 80 },
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FAD842', size: 80 },
   ],
   // Role-specific champion orbits — one fixed path per LoL role
   role: {
@@ -238,15 +238,15 @@ export const ORBIT_TIERS = {
       ry: 68,
       tiltDeg: 14,
       tiltRad: 0.2443,
-      color: '#e05050',
+      color: '#F54747',
       speed: 0.00032,
       hitIntervalMs: 4000,
       hitDurationMs: 350,
     },
-    jungle: { rx: 468, ry: 201, tiltDeg: -15, tiltRad: -0.2618, color: '#50c060', speed: 0.00022 },
-    mid: { rx: 645, ry: 277, tiltDeg: 12, tiltRad: 0.2094, color: '#5090e8', speed: 0.00017 },
-    adc: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#e89840', speed: 0.00014 },
-    support: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#b8c8d8', speed: 0.00014 },
+    jungle: { rx: 468, ry: 201, tiltDeg: -15, tiltRad: -0.2618, color: '#3EEA58', speed: 0.00022 },
+    mid: { rx: 645, ry: 277, tiltDeg: 12, tiltRad: 0.2094, color: '#5598F6', speed: 0.00017 },
+    adc: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#F7A145', speed: 0.00014 },
+    support: { rx: 760, ry: 326, tiltDeg: -8, tiltRad: -0.1396, color: '#89B8E6', speed: 0.00014 },
   },
 } as const
 

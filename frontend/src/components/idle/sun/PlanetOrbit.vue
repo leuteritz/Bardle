@@ -1,30 +1,5 @@
 <!-- frontend/src/components/idle/sun/PlanetOrbit.vue -->
 <template>
-  <!-- Planet Orbit-Arc Layer (über Sonne, z-index 6) -->
-  <Teleport to="body">
-    <svg class="planet-orbit-arcs" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <defs>
-        <filter id="orbit-blur-planet-arc" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="10" />
-        </filter>
-      </defs>
-      <ellipse
-        v-for="pos in renderPositions"
-        :key="'arc-planet-' + pos.id"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="pos.orbitRx"
-        :ry="pos.orbitRy"
-        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-        :stroke="pos.orbitColor"
-        :stroke-opacity="pos.hintOpacity * 0.6"
-        filter="url(#orbit-blur-planet-arc)"
-        fill="none"
-        stroke-width="3"
-      />
-    </svg>
-  </Teleport>
-
   <!-- Orbit-Ring Layer: gestrichelte Ringe exakt auf der Planeten-Umlaufbahn -->
   <svg class="planet-orbit-rings" aria-hidden="true">
     <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
@@ -39,7 +14,7 @@
         :stroke="tier.color"
         stroke-opacity="0.55"
         stroke-width="1.5"
-        stroke-dasharray="6 10"
+        stroke-dasharray="5 8"
       />
     </template>
   </svg>
@@ -337,17 +312,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Planet Orbit-Arc SVG (über Sonne) ─────────────────────────────────────── */
-.planet-orbit-arcs {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 6;
-  pointer-events: none;
-  overflow: visible;
-}
-
 /* ── Orbit ring SVG ────────────────────────────────────────────────────────── */
 .planet-orbit-rings {
   position: fixed;

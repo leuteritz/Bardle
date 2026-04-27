@@ -1,28 +1,21 @@
 <template>
-  <!-- Champion Orbit-Arc Layer (über Sonne, z-index 6) -->
-  <Teleport to="body">
-    <svg class="champion-orbit-arcs" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <defs>
-        <filter id="orbit-blur-champ-arc" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="12" />
-        </filter>
-      </defs>
-      <ellipse
-        v-for="pos in championRenderPositions"
-        :key="'arc-champ-' + pos.name"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="pos.orbitRx"
-        :ry="pos.orbitRy"
-        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-        :stroke="pos.orbitColor"
-        :stroke-opacity="pos.hintOpacity * 0.65"
-        filter="url(#orbit-blur-champ-arc)"
-        fill="none"
-        stroke-width="4"
-      />
-    </svg>
-  </Teleport>
+  <!-- Champion Orbit-Ring Layer (crisp dashed guide rings) -->
+  <svg class="champion-orbit-rings" aria-hidden="true">
+    <ellipse
+      v-for="pos in championRenderPositions"
+      :key="'ring-champ-' + pos.name"
+      :cx="screenCx"
+      :cy="screenCy"
+      :rx="pos.orbitRx"
+      :ry="pos.orbitRy"
+      :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+      :stroke="pos.orbitColor"
+      stroke-opacity="0.55"
+      stroke-width="1.5"
+      stroke-dasharray="5 8"
+      fill="none"
+    />
+  </svg>
 
   <!-- ① Back-Layer: Champions HINTER der Sonne (z-index 4, unter der Sonne) -->
   <div class="champion-orbit-layer champion-orbit-back" aria-hidden="true">
@@ -468,13 +461,13 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Orbit-Arc SVG ────────────────────────────────────────────────────────── */
-.champion-orbit-arcs {
+/* ── Orbit-Ring SVG ───────────────────────────────────────────────────────── */
+.champion-orbit-rings {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 6;
+  z-index: 2;
   pointer-events: none;
   overflow: visible;
 }
@@ -526,34 +519,34 @@ export default defineComponent({
 
 /* ── Rollen-Farben ──────────────────────────────────────────────────────── */
 .champion-orbit-avatar--role-top {
-  border-color: #e05050 !important;
+  border-color: #F54747 !important;
   box-shadow:
-    0 0 10px rgba(220, 60, 60, 0.7),
-    0 0 20px rgba(220, 60, 60, 0.3);
+    0 0 10px rgba(245, 71, 71, 0.7),
+    0 0 20px rgba(245, 71, 71, 0.3);
 }
 .champion-orbit-avatar--role-jungle {
-  border-color: #50c060 !important;
+  border-color: #3EEA58 !important;
   box-shadow:
-    0 0 10px rgba(60, 200, 80, 0.7),
-    0 0 20px rgba(60, 200, 80, 0.3);
+    0 0 10px rgba(62, 234, 88, 0.7),
+    0 0 20px rgba(62, 234, 88, 0.3);
 }
 .champion-orbit-avatar--role-mid {
-  border-color: #5090e8 !important;
+  border-color: #5598F6 !important;
   box-shadow:
-    0 0 10px rgba(60, 130, 240, 0.7),
-    0 0 20px rgba(60, 130, 240, 0.3);
+    0 0 10px rgba(85, 152, 246, 0.7),
+    0 0 20px rgba(85, 152, 246, 0.3);
 }
 .champion-orbit-avatar--role-adc {
-  border-color: #e89840 !important;
+  border-color: #F7A145 !important;
   box-shadow:
-    0 0 10px rgba(240, 150, 40, 0.7),
-    0 0 20px rgba(240, 150, 40, 0.3);
+    0 0 10px rgba(247, 161, 69, 0.7),
+    0 0 20px rgba(247, 161, 69, 0.3);
 }
 .champion-orbit-avatar--role-support {
-  border-color: #b8c8d8 !important;
+  border-color: #89B8E6 !important;
   box-shadow:
-    0 0 10px rgba(180, 200, 210, 0.7),
-    0 0 20px rgba(180, 200, 210, 0.3);
+    0 0 10px rgba(137, 184, 230, 0.7),
+    0 0 20px rgba(137, 184, 230, 0.3);
 }
 
 /* Hinter der Sonne: leicht geblurrt + gedimmt */

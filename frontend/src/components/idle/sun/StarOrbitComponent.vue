@@ -1,4 +1,34 @@
 <template>
+  <!-- Star Orbit-Ring Layer (crisp dashed guide rings) -->
+  <svg class="star-orbit-rings" aria-hidden="true">
+    <ellipse
+      v-if="showChampionStar"
+      :cx="screenCx"
+      :cy="screenCy"
+      :rx="CHAMP_RX"
+      :ry="CHAMP_RY"
+      :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+      fill="none"
+      :stroke="CHAMP_COLOR"
+      stroke-opacity="0.55"
+      stroke-width="1.5"
+      stroke-dasharray="5 8"
+    />
+    <ellipse
+      v-if="showResourceStar"
+      :cx="screenCx"
+      :cy="screenCy"
+      :rx="RES_RX"
+      :ry="RES_RY"
+      :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+      fill="none"
+      :stroke="RES_COLOR"
+      stroke-opacity="0.55"
+      stroke-width="1.5"
+      stroke-dasharray="5 8"
+    />
+  </svg>
+
   <!-- ① Back-Layer: Sterne HINTER der Sonne (z-index 3) -->
   <div class="star-orbit-layer star-orbit-back" aria-hidden="true">
     <div
@@ -200,6 +230,11 @@ function makeCoronaGlow(size: number, profile: SunColorProfile, ratio: number) {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
+const screenCx = window.innerWidth / 2
+const screenCy = window.innerHeight / 2
+const screenW = window.innerWidth
+const screenH = window.innerHeight
+
 const galaxyStore = useGalaxyStore()
 
 interface StarRenderState {
@@ -231,8 +266,13 @@ const resState = ref<StarRenderState>({
 const champProfile = ref<SunColorProfile>(SUN_PROFILES[0])
 const resProfile = ref<SunColorProfile>(SUN_PROFILES[0])
 
+const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
+const BEHIND_SPEED_LERP = 0.04
+
 let champAngle = Math.PI * 0.6
 let resAngle = Math.PI * 1.3
+let champSpeedMul = 1.0
+let resSpeedMul = 1.0
 let animFrame = 0
 let lastTs = 0
 
@@ -381,13 +421,17 @@ function animate(ts: number) {
   const cy = window.innerHeight / 2
 
   if (showChampionStar.value) {
-    champAngle += CHAMP_SPEED * dt
+    const champTargetMul = champState.value.isBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
+    champSpeedMul += (champTargetMul - champSpeedMul) * BEHIND_SPEED_LERP
+    champAngle += CHAMP_SPEED * champSpeedMul * dt
     const { x, y } = getOrbitPos(champAngle, CHAMP_RX, CHAMP_RY, CHAMP_TILT, cx, cy)
     champState.value = computeStarState(x, y, CHAMP_RY)
   }
 
   if (showResourceStar.value) {
-    resAngle += RES_SPEED * dt
+    const resTargetMul = resState.value.isBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
+    resSpeedMul += (resTargetMul - resSpeedMul) * BEHIND_SPEED_LERP
+    resAngle += RES_SPEED * resSpeedMul * dt
     const { x, y } = getOrbitPos(resAngle, RES_RX, RES_RY, RES_TILT, cx, cy)
     resState.value = computeStarState(x, y, RES_RY)
   }
@@ -420,6 +464,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ── Orbit SVGs ─────────────────────────────────────────────────────────────── */
+.star-orbit-rings {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}
+
 /* ── Layer ──────────────────────────────────────────────────────────────────── */
 .star-orbit-layer {
   position: fixed;
@@ -566,6 +621,10 @@ onUnmounted(() => {
 }
 
 /* ── Behind-Dämpfung ───────────────────────────────────────────────────────── */
+.star-entity--behind {
+  filter: blur(2px) brightness(0.75) saturate(0.65);
+  transition: filter 0.25s ease;
+}
 .star-entity--behind .star-corona {
   opacity: 0.4;
 }
