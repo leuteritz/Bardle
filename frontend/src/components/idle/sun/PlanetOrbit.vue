@@ -27,16 +27,16 @@
 
   <!-- Orbit-Ring Layer: gestrichelte Ringe exakt auf der Planeten-Umlaufbahn -->
   <svg class="planet-orbit-rings" aria-hidden="true">
-    <template v-for="(slot, i) in planetShopStore.slots" :key="'track-planet-' + i">
+    <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
       <ellipse
-        v-if="slot.purchased"
+        v-if="planetShopStore.purchasedSlots.length > i"
         :cx="screenCx"
         :cy="screenCy"
-        :rx="slot.orbitRadiusX * ORBIT_RADIUS_SCALE"
-        :ry="slot.orbitRadiusY * ORBIT_RADIUS_SCALE"
-        :transform="`rotate(${slot.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
-        :stroke="slot.role ? PLANET_ROLES[slot.role].color : '#4AADFF'"
+        :stroke="tier.color"
         stroke-opacity="0.55"
         stroke-width="1.5"
         stroke-dasharray="6 10"
@@ -96,7 +96,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_RADIUS_SCALE, ORBIT_TIERS } from '@/config/constants'
+import { ORBIT_TIERS } from '@/config/constants'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -213,9 +213,9 @@ export default defineComponent({
           const startAngle = (idx / Math.max(purchased.length, 1)) * Math.PI * 2
           const initPos = getOrbitPos(
             startAngle,
-            slot.orbitRadiusX * ORBIT_RADIUS_SCALE,
-            slot.orbitRadiusY * ORBIT_RADIUS_SCALE,
-            (slot.tiltDeg * Math.PI) / 180,
+            tier.rx,
+            tier.ry,
+            tier.tiltRad,
             cx,
             cy,
           )
@@ -223,9 +223,9 @@ export default defineComponent({
           localStates.set(slot.id, ls)
         }
 
-        const tiltRad = (slot.tiltDeg * Math.PI) / 180
-        const rx = slot.orbitRadiusX * ORBIT_RADIUS_SCALE
-        const ry = slot.orbitRadiusY * ORBIT_RADIUS_SCALE
+        const tiltRad = tier.tiltRad
+        const rx = tier.rx
+        const ry = tier.ry
 
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
@@ -329,7 +329,6 @@ export default defineComponent({
       screenCy,
       screenW,
       screenH,
-      ORBIT_RADIUS_SCALE,
       ORBIT_TIERS,
       PLANET_ROLES,
     }

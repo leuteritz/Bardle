@@ -224,12 +224,12 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#4AADFF', size: 40 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#005FCC', size: 40 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#A070D8', size: 40 },
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#A070D8', size: 40 },
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FFD700', size: 80 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FF8C00', size: 80 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#F0D040', size: 80 },
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#F0D040', size: 80 },
   ],
   // Role-specific champion orbits — one fixed path per LoL role
   role: {
@@ -342,7 +342,7 @@ export const STAR_PLANET_ORBIT_RY_MIN = 44
 export const STAR_PLANET_ORBIT_RY_RANGE = 18
 export const STAR_PLANET_ORBIT_TILT_MAX = 0.35
 export const STAR_SPAWN_ANGLE_MIN_PI = 0.15
-export const STAR_SPAWN_ANGLE_RANGE_PI = 0.70
+export const STAR_SPAWN_ANGLE_RANGE_PI = 0.7
 export const STAR_FORCED_PLANET_MIN = 1
 export const STAR_FORCED_PLANET_RANGE = 4
 export const STAR_REMOVAL_DELAY_MS = 1500
