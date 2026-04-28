@@ -1,3 +1,4 @@
+<!-- frontend/src/components/idle/sun/ChampionOrbit.vue -->
 <template>
   <!-- Champion Orbit-Ring Layer (crisp dashed guide rings) -->
   <svg class="champion-orbit-rings" aria-hidden="true">
@@ -17,7 +18,10 @@
     />
   </svg>
 
-  <!-- ① Back-Layer: Champions HINTER der Sonne (z-index 4, unter der Sonne) -->
+  <!-- Projektile: teleportiert sich selbst nach body -->
+  <AttackProjectileLayer :shots="shots" />
+
+  <!-- ① Back-Layer: Champions HINTER der Sonne -->
   <div class="champion-orbit-layer champion-orbit-back" aria-hidden="true">
     <div
       v-for="pos in backChampions"
@@ -35,7 +39,7 @@
     </div>
   </div>
 
-  <!-- ② Front-Layer: Champions VOR der Sonne + UI (z-index 6, über der Sonne) -->
+  <!-- ② Front-Layer: Champions VOR der Sonne -->
   <div class="champion-orbit-layer champion-orbit-front" aria-hidden="true">
     <div
       v-for="pos in frontChampions"
@@ -67,7 +71,6 @@
       >
         {{ roleIcons[pos.primaryRole] }}
       </span>
-      <!-- Jungler stack indicator -->
       <span
         v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
         class="champion-jungler-stacks"
@@ -75,20 +78,9 @@
       >
     </div>
 
-    <!-- Floating damage numbers + projectiles -->
+    <!-- Floating damage numbers -->
     <Teleport to="body">
       <div class="champion-dmg-overlay" aria-hidden="true">
-        <!-- Attack projectiles -->
-        <div
-          v-for="proj in projectiles"
-          :key="proj.id"
-          class="champion-projectile"
-          :style="{
-            left: proj.renderX + 'px',
-            top: proj.renderY + 'px',
-            opacity: proj.renderOpacity,
-          }"
-        />
         <TransitionGroup name="champion-dmg">
           <span
             v-for="f in combatStore.damageFloats"
@@ -120,10 +112,13 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET } from '@/config/constants'
+import AttackProjectileLayer from './AttackProjectileLayer.vue'
+import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
+const PROJECTILE_COOLDOWN_MS = 700
 
 interface ChampionRenderPos {
   name: string
@@ -152,27 +147,16 @@ interface LocalChampState {
   initialised: boolean
 }
 
-interface Projectile {
-  id: number
-  fromX: number
-  fromY: number
-  toX: number
-  toY: number
-  startedAt: number
-  duration: number
-  renderX: number
-  renderY: number
-  renderOpacity: number
-  done: boolean
-}
-
 export default defineComponent({
   name: 'ChampionOrbit',
+  components: { AttackProjectileLayer },
   setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
     const roleBehaviorStore = useRoleBehaviorStore()
+
+    const { shots, spawnShot, tickShots } = useProjectileSystem()
 
     const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -187,10 +171,11 @@ export default defineComponent({
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
     const champSpeedMuls = new Map<string, number>()
+    const lastFiredAt = new Map<string, number>()
 
-    // Top hit effect — fires periodically to simulate incoming hits on the tank
     const topHitActive = ref(false)
     let topHitTimer = 0
+
     function scheduleTopHit() {
       const TOP_TIER = ORBIT_TIERS.role.top
       topHitTimer = window.setTimeout(() => {
@@ -201,16 +186,9 @@ export default defineComponent({
         }, TOP_TIER.hitDurationMs)
       }, TOP_TIER.hitIntervalMs)
     }
+
     const championRenderPositions = ref<ChampionRenderPos[]>([])
 
-    const projectiles = ref<Projectile[]>([])
-    const _projId = { v: 0 }
-    const lastFiredAt = new Map<string, number>()
-    const MAX_PROJECTILES = 4
-    const PROJECTILE_COOLDOWN_MS = 700
-    const PROJECTILE_DURATION_MS = 420
-
-    // Trennung in zwei Listen für die zwei Render-Layer
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
 
@@ -244,21 +222,17 @@ export default defineComponent({
       const champions = combatStore.champions
       const newPositions: ChampionRenderPos[] = []
 
-      // ADC localState from previous frame — used by Support to follow at fixed offset
       const adcName = battleStore.headerSlots[3]
       const adcState = adcName ? localStates.get(adcName) : null
-      // ADC orbit direction — offset must match motion direction so Support trails BEHIND ADC
       const adcChampion = adcName ? champions.find((ch) => ch.name === adcName) : null
       const adcDir = adcChampion?.direction ?? 1
 
       for (let ci = 0; ci < champions.length; ci++) {
         const c = champions[ci]
 
-        // Determine role first so tier selection can use it
         const slotIndex = battleStore.headerSlots.indexOf(c.name)
         const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
 
-        // Role-specific orbit tier when available, else generic alternating fallback
         const tier = primaryRole ? ORBIT_TIERS.role[primaryRole] : ORBIT_TIERS.planet[ci % 2]
         const rx = tier.rx
         const ry = tier.ry
@@ -281,12 +255,10 @@ export default defineComponent({
           localStates.set(c.name, ls)
         }
 
-        // Support trails behind ADC — offset is in the ADC's direction of motion
         if (primaryRole === 'support' && adcState) {
           ls.orbitAngle = adcState.orbitAngle - adcDir * SUPPORT_ANGLE_OFFSET
         }
 
-        // Speed-Multiplikator hinter der Sonne (aus letztem Frame)
         const prevRelY = (ls.y - screenCy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
         const targetMul = prevIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
@@ -310,22 +282,19 @@ export default defineComponent({
 
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
-        // relY: -1 = Orbit-Top (hinter Sonne), +1 = Orbit-Bottom (vor Sonne)
         const relY = (ls.y - screenCy) / Math.max(ry, 1)
         const isBehind = relY < -0.05
         const depth = (relY + 1) / 2
 
-        // Parallax-Größe: 0.72× (hinten) → 1.28× (vorne)
         const parallaxScale = 0.72 + depth * 0.56
         const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
-
-        // Opacity: voll sichtbar in beiden Zonen, Blur übernimmt die Tiefenwirkung
         const opacity = c.isAttacking ? 1 : isBehind ? 0.82 + depth * 0.18 : 0.9 + depth * 0.1
-
         const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
-        const isForeground = !isBehind && !c.isAttacking && depth > 0.65
 
-        // Orbit-Arc Opacity (hoch wenn hinter Sonne)
+        // isForeground bewusst OHNE !c.isAttacking – sonst kann ein
+        // angreifender Champion nie schießen
+        const isForeground = !isBehind && depth > 0.65
+
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
@@ -353,59 +322,32 @@ export default defineComponent({
         if (!champions.some((ch) => ch.name === key)) {
           localStates.delete(key)
           champSpeedMuls.delete(key)
+          lastFiredAt.delete(key)
         }
       }
 
-      // ── Projectile update ─────────────────────────────────────────────────────
-      const activeBoss = bossStore.activeBoss
-      const pPos = activeBoss ? (activePlanetPositions.get(activeBoss.planetId) ?? null) : null
+      // ── Projektil-System ──────────────────────────────────────────────────────
+      if (!reducedMotion) {
+        tickShots(dt)
 
-      const nextProjectiles: Projectile[] = []
-      for (const p of projectiles.value) {
-        const t = Math.min((ts - p.startedAt) / p.duration, 1)
-        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-        const x = p.fromX + (p.toX - p.fromX) * ease
-        const y = p.fromY + (p.toY - p.fromY) * ease
-        const dx = p.toX - p.fromX
-        const dy = p.toY - p.fromY
-        const arc = Math.sin(t * Math.PI) * 18
-        const len = Math.hypot(dx, dy) || 1
-        const renderX = x + (dy / len) * arc
-        const renderY = y - (dx / len) * arc
-        const renderOpacity = t > 0.85 ? 1 - (t - 0.85) / 0.15 : 1
-        if (t < 1) {
-          nextProjectiles.push({ ...p, renderX, renderY, renderOpacity, done: false })
+        const activeBoss = bossStore.activeBoss
+        const pPos = activeBoss ? (activePlanetPositions.get(activeBoss.planetId) ?? null) : null
+
+        if (pPos?.isForeground) {
+          for (const pos of newPositions) {
+            if (!pos.isAttacking) continue
+            if (!pos.isForeground) continue
+
+            const last = lastFiredAt.get(pos.name) ?? 0
+            if (ts - last < PROJECTILE_COOLDOWN_MS) continue
+
+            lastFiredAt.set(pos.name, ts)
+            // Beide Flags sind bereits geprüft – spawnShot wird sicher feuern
+            spawnShot(pos.x, pos.y, pPos.cx, pPos.cy, true, true)
+          }
         }
       }
-
-      // Spawn new projectiles for attacking champions
-      if (pPos) {
-        let spawnedCount = nextProjectiles.length
-        for (const pos of newPositions) {
-          if (!pos.isAttacking) continue
-          if (spawnedCount >= MAX_PROJECTILES) break
-          const last = lastFiredAt.get(pos.name) ?? 0
-          if (ts - last < PROJECTILE_COOLDOWN_MS) continue
-          lastFiredAt.set(pos.name, ts)
-          nextProjectiles.push({
-            id: ++_projId.v,
-            fromX: pos.x,
-            fromY: pos.y,
-            toX: pPos.cx,
-            toY: pPos.cy,
-            startedAt: ts,
-            duration: PROJECTILE_DURATION_MS,
-            renderX: pos.x,
-            renderY: pos.y,
-            renderOpacity: 1,
-            done: false,
-          })
-          spawnedCount++
-        }
-      }
-
-      projectiles.value = nextProjectiles
-      // ──────────────────────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────────────
 
       championRenderPositions.value = newPositions
       animFrame = requestAnimationFrame(animate)
@@ -424,6 +366,7 @@ export default defineComponent({
         cancelAnimationFrame(animFrame)
         animFrame = 0
       } else if (!animFrame) {
+        lastTs = 0
         animFrame = requestAnimationFrame(animate)
       }
     })
@@ -439,8 +382,6 @@ export default defineComponent({
 
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
-    const screenW = window.innerWidth
-    const screenH = window.innerHeight
 
     return {
       combatStore,
@@ -449,12 +390,10 @@ export default defineComponent({
       backChampions,
       frontChampions,
       championRenderPositions,
-      projectiles,
+      shots,
       topHitActive,
       screenCx,
       screenCy,
-      screenW,
-      screenH,
     }
   },
 })
@@ -479,11 +418,6 @@ export default defineComponent({
   pointer-events: none;
 }
 
-/*
- * Sonne hat z-index: 5 (SunComponent.vue → .sun-container)
- * back  = 4  → unter der Sonne
- * front = 6  → über der Sonne
- */
 .champion-orbit-back {
   z-index: 4;
 }
@@ -519,48 +453,45 @@ export default defineComponent({
 
 /* ── Rollen-Farben ──────────────────────────────────────────────────────── */
 .champion-orbit-avatar--role-top {
-  border-color: #F54747 !important;
+  border-color: #f54747 !important;
   box-shadow:
     0 0 10px rgba(245, 71, 71, 0.7),
     0 0 20px rgba(245, 71, 71, 0.3);
 }
 .champion-orbit-avatar--role-jungle {
-  border-color: #3EEA58 !important;
+  border-color: #3eea58 !important;
   box-shadow:
     0 0 10px rgba(62, 234, 88, 0.7),
     0 0 20px rgba(62, 234, 88, 0.3);
 }
 .champion-orbit-avatar--role-mid {
-  border-color: #5598F6 !important;
+  border-color: #5598f6 !important;
   box-shadow:
     0 0 10px rgba(85, 152, 246, 0.7),
     0 0 20px rgba(85, 152, 246, 0.3);
 }
 .champion-orbit-avatar--role-adc {
-  border-color: #F7A145 !important;
+  border-color: #f7a145 !important;
   box-shadow:
     0 0 10px rgba(247, 161, 69, 0.7),
     0 0 20px rgba(247, 161, 69, 0.3);
 }
 .champion-orbit-avatar--role-support {
-  border-color: #89B8E6 !important;
+  border-color: #89b8e6 !important;
   box-shadow:
     0 0 10px rgba(137, 184, 230, 0.7),
     0 0 20px rgba(137, 184, 230, 0.3);
 }
 
-/* Hinter der Sonne: leicht geblurrt + gedimmt */
 .champion-orbit-avatar--behind {
   filter: blur(2px) brightness(0.75) saturate(0.65);
   transition: filter 0.25s ease;
 }
 
-/* Klar vor der Sonne */
 .champion-orbit-avatar--foreground {
   filter: brightness(1.18) saturate(1.2);
 }
 
-/* Angriff */
 .champion-orbit-avatar--attacking {
   animation: champion-attack-pulse 0.5s ease-in-out infinite alternate;
 }
@@ -606,7 +537,7 @@ export default defineComponent({
   background: #1a6028;
 }
 
-/* Ability glows */
+/* ── Ability-Glows ────────────────────────────────────────────────────────── */
 .champion-orbit-avatar--shield {
   box-shadow:
     0 0 14px rgba(80, 180, 255, 0.9),
@@ -647,7 +578,7 @@ export default defineComponent({
   }
 }
 
-/* Jungler stack counter */
+/* ── Jungler-Stacks ───────────────────────────────────────────────────────── */
 .champion-jungler-stacks {
   position: absolute;
   top: -4px;
@@ -741,23 +672,6 @@ export default defineComponent({
   transform: translateX(-50%) translateY(-54px) scale(0.8);
 }
 
-/* ── Angriffs-Projektile ──────────────────────────────────────────────────── */
-.champion-projectile {
-  position: fixed;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 59;
-  will-change: left, top;
-  background: radial-gradient(circle, #ffe080 0%, #ff8020 55%, #cc3000 100%);
-  box-shadow:
-    0 0 6px 2px rgba(255, 160, 20, 0.9),
-    0 0 14px 4px rgba(255, 80, 0, 0.6),
-    0 0 28px 8px rgba(200, 40, 0, 0.3);
-}
-
 /* ── Top-Lane Treffer-Effekt ──────────────────────────────────────────────── */
 .champion-orbit-avatar--top-hit {
   animation: top-hit-flash 0.35s ease-out forwards;
@@ -779,9 +693,7 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .champion-orbit-avatar--attacking {
-    animation: none;
-  }
+  .champion-orbit-avatar--attacking,
   .champion-orbit-avatar--top-hit {
     animation: none;
   }

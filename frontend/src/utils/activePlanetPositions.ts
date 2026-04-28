@@ -1,3 +1,6 @@
-// Non-reactive Map updated at 60fps from usePlanetBackground.ts animation loop.
-// combatStore reads this to determine planet proximity for champion approach logic.
-export const activePlanetPositions = new Map<string, { cx: number; cy: number }>()
+// Non-reactive Map updated at 60fps from useStarSystem / usePlanetOrbit.
+// ChampionOrbit und PlanetOrbit (Turret) lesen daraus Ziel-Koordinaten für Projektile.
+export const activePlanetPositions = new Map<
+  string,
+  { cx: number; cy: number; isForeground: boolean }
+>()

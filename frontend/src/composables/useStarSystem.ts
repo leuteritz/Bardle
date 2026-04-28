@@ -49,10 +49,6 @@ export interface StarRenderEntry {
   planets: PlanetRenderEntry[]
 }
 
-// ── Programmatische Vanish-Animation ──────────────────────────────────────────
-// Erstellt einmalig ein DOM-Element an der eingefrorenen Sternposition,
-// animiert die Implosion komplett in JS/CSS und entfernt sich danach selbst.
-// Kein Vue-Reaktivitätsproblem, kein Re-Mount, kein Ghost-Element.
 function spawnVanishEffect(x: number, y: number, starType: StarType, size: number) {
   const gradients: Record<string, string> = {
     champion: 'radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%)',
@@ -68,7 +64,6 @@ function spawnVanishEffect(x: number, y: number, starType: StarType, size: numbe
       '0 0 18px rgba(255,80,30,0.95), 0 0 38px rgba(200,20,20,0.7), 0 0 65px rgba(120,0,0,0.4)',
   }
 
-  // Container — positioniert an der eingefrorenen Sternmitte
   const container = document.createElement('div')
   container.style.cssText = `
     position: fixed;
@@ -84,7 +79,6 @@ function spawnVanishEffect(x: number, y: number, starType: StarType, size: numbe
     box-shadow: ${shadows[starType] ?? shadows.resource};
   `
 
-  // Shockwave-Ring
   const shockwave = document.createElement('div')
   shockwave.style.cssText = `
     position: absolute;
@@ -96,7 +90,6 @@ function spawnVanishEffect(x: number, y: number, starType: StarType, size: numbe
   container.appendChild(shockwave)
   document.body.appendChild(container)
 
-  // Web Animations API — kein CSS-Klassen-Toggle, kein Re-Mount-Problem
   const easing = 'cubic-bezier(0.4, 0, 0.6, 1)'
 
   container.animate(
@@ -121,7 +114,6 @@ function spawnVanishEffect(x: number, y: number, starType: StarType, size: numbe
     { duration: VANISH_DURATION_MS, easing: 'ease-out', fill: 'forwards' },
   )
 
-  // Element nach Animation sauber aus dem DOM entfernen
   setTimeout(() => {
     container.remove()
   }, VANISH_DURATION_MS + 50)
@@ -199,7 +191,6 @@ export function useStarSystem() {
   const starSpawnedAt = new Map<string, number>()
   const starSpeedMul = new Map<string, number>()
   const starFlyStart = new Map<string, { x: number; y: number }>()
-  // Statt isVanishing im Render: Set der IDs für die bereits gespawnt wurde
   const vanishFired = new Set<string>()
 
   let animFrame = 0
@@ -303,9 +294,10 @@ export function useStarSystem() {
       const sIsBehind = sRelY < BEHIND_THRESHOLD
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
 
-      const visibleFactor = Math.max(0, Math.min(1,
-        (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND,
-      ))
+      const visibleFactor = Math.max(
+        0,
+        Math.min(1, (sRelY - BEHIND_THRESHOLD + BEHIND_FADE_BAND) / BEHIND_FADE_BAND),
+      )
       const starFactor = Math.max(STAR_BEHIND_OPACITY, visibleFactor)
 
       if (!starSpawnedAt.has(star.id)) {
@@ -340,13 +332,11 @@ export function useStarSystem() {
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 
       if (allSlotsCleared) {
-        // Einmalig die Vanish-Animation spawnen — danach nie wieder
         if (!vanishFired.has(star.id)) {
           vanishFired.add(star.id)
           const size = star.starType === 'galaxy_boss' ? 82 : star.starType === 'champion' ? 72 : 62
           spawnVanishEffect(sx, sy, star.starType, size)
         }
-        // Stern nicht in newRenders — Vue rendert ihn nicht mehr
         continue
       }
 
@@ -365,7 +355,14 @@ export function useStarSystem() {
         planetCurRx.set(slot.planetId, curRx)
         planetCurRy.set(slot.planetId, curRy)
 
-        const { x: px, y: py } = getOrbitPos(pAngle, curRx, curRy, slot.orbitTilt, displayX, displayY)
+        const { x: px, y: py } = getOrbitPos(
+          pAngle,
+          curRx,
+          curRy,
+          slot.orbitTilt,
+          displayX,
+          displayY,
+        )
 
         const boss = bossStore.activeBosses.find((b) => b.planetId === slot.planetId)
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
@@ -388,7 +385,9 @@ export function useStarSystem() {
           `translate(${-pR}px, ${-pR}px)`
 
         if (!slot.cleared) {
-          activePlanetPositions.set(slot.planetId, { cx: px, cy: py })
+          // ── isForeground mitschreiben damit Turret + ChampionOrbit es prüfen können ──
+          const isForeground = !pIsBehind && pDepth > 0.65
+          activePlanetPositions.set(slot.planetId, { cx: px, cy: py, isForeground })
         }
 
         let animState: PlanetRenderEntry['animState'] = 'normal'
@@ -437,7 +436,6 @@ export function useStarSystem() {
       })
     }
 
-    // Cleanup vanishFired für Stars die nicht mehr in activeStars sind
     for (const id of vanishFired) {
       if (!starGroupStore.activeStars.some((s) => s.id === id)) {
         vanishFired.delete(id)

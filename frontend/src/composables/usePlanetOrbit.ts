@@ -60,7 +60,6 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
 
       let ls = localStates.get(p.id)
       if (!ls) {
-        // Fly-In: Startposition weit außen
         const startRx = targetRx * FLY_IN_START_SCALE
         const startRy = targetRy * FLY_IN_START_SCALE
         const sp = getOrbitPos(p.initialAngle, startRx, startRy, p.tiltRad, screenCx, screenCy)
@@ -75,11 +74,9 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
       }
 
       if (!reducedMotion) {
-        // Radius langsam zum Zielorbit lerpen (erzeugt Spiralflug)
         ls.currentRadiusX += (targetRx - ls.currentRadiusX) * 0.018
         ls.currentRadiusY += (targetRy - ls.currentRadiusY) * 0.018
 
-        // Gleicher Kepler-Boost wie bei Champions
         const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
         ls.orbitAngle += p.direction * p.baseSpeed * keplerBoost * dt
 
@@ -101,25 +98,21 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
         ls.y = tp.y
       }
 
-      // Tiefe: -1 = Orbit-Spitze (hinter Sonne), +1 = Orbit-Boden (vor Sonne)
       const relY = (ls.y - screenCy) / Math.max(targetRy, 1)
       const isBehind = relY < -0.05
-      const depth = (relY + 1) / 2 // 0 = ganz hinten, 1 = ganz vorne
+      const depth = (relY + 1) / 2
 
-      // Gleiche Parallax-Formel wie Champions
       const parallaxScale = 0.72 + depth * 0.56
       const opacity = isBehind ? 0.22 + depth * 0.35 : 0.8 + depth * 0.2
       const zIndex = isBehind ? Math.floor(3 + depth * 2) : Math.floor(5 + depth * 2)
+      const isForeground = !isBehind && depth > 0.65
 
-      // Zentriert den Planeten an (ls.x, ls.y), skaliert um diesen Mittelpunkt:
-      // translate(cx, cy) scale(s) translate(-size/2, -size/2)
       const transform =
         `translate(${ls.x}px, ${ls.y}px) ` +
         `scale(${parallaxScale}) ` +
         `translate(${-baseSize / 2}px, ${-baseSize / 2}px)`
 
-      // activePlanetPositions aktualisieren (wird von ChampionOrbit für Projektile genutzt)
-      activePlanetPositions.set(p.id, { cx: ls.x, cy: ls.y })
+      activePlanetPositions.set(p.id, { cx: ls.x, cy: ls.y, isForeground })
 
       newPositions.push({
         id: p.id,
@@ -134,7 +127,6 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
       })
     }
 
-    // Entfernte Planeten aufräumen
     for (const key of localStates.keys()) {
       if (!planets.some((p) => p.id === key)) {
         localStates.delete(key)

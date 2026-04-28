@@ -1,6 +1,4 @@
-<!-- frontend/src/components/idle/sun/PlanetOrbit.vue -->
 <template>
-  <!-- Orbit-Ring Layer: gestrichelte Ringe exakt auf der Planeten-Umlaufbahn -->
   <svg class="planet-orbit-rings" aria-hidden="true">
     <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
       <ellipse
@@ -19,41 +17,8 @@
     </template>
   </svg>
 
-  <!-- Turret Shot Layer -->
-  <svg class="turret-shots-svg" aria-hidden="true">
-    <defs>
-      <filter id="turret-shot-glow" x="-100%" y="-100%" width="300%" height="300%">
-        <feGaussianBlur stdDeviation="2.5" result="blur" />
-        <feMerge>
-          <feMergeNode in="blur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-    </defs>
-    <g v-for="shot in turretShots" :key="shot.id">
-      <line
-        :x1="shot.tailX"
-        :y1="shot.tailY"
-        :x2="shot.headX"
-        :y2="shot.headY"
-        stroke="#cc4444"
-        stroke-width="2"
-        :stroke-opacity="shot.opacity * 0.7"
-        stroke-linecap="round"
-        filter="url(#turret-shot-glow)"
-      />
-      <circle
-        :cx="shot.headX"
-        :cy="shot.headY"
-        r="4.5"
-        fill="#ff7777"
-        :opacity="shot.opacity"
-        filter="url(#turret-shot-glow)"
-      />
-    </g>
-  </svg>
+  <AttackProjectileLayer :shots="shots" />
 
-  <!-- Back-Layer: planets behind the sun -->
   <div class="planet-orbit-layer planet-orbit-back" aria-hidden="true">
     <div
       v-for="pos in backPlanets"
@@ -71,7 +36,6 @@
     </div>
   </div>
 
-  <!-- Front-Layer: planets in front of the sun -->
   <div class="planet-orbit-layer planet-orbit-front">
     <div
       v-for="pos in frontPlanets"
@@ -110,11 +74,13 @@ import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_TIERS } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
+import AttackProjectileLayer from './AttackProjectileLayer.vue'
+import { useProjectileSystem } from '@/composables/useProjectileSystem'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
 const TURRET_FIRE_INTERVAL_MS = 1000
-const SHOT_DURATION_MS = 550
+const MIN_SHOT_DISTANCE = 32
 
 interface PlanetRenderPos {
   id: string
@@ -142,21 +108,6 @@ interface LocalPlanetState {
   orbitAngle: number
   x: number
   y: number
-}
-
-interface TurretShot {
-  id: number
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-  elapsed: number
-  duration: number
-  headX: number
-  headY: number
-  tailX: number
-  tailY: number
-  opacity: number
 }
 
 function getOrbitPos(
@@ -214,15 +165,16 @@ function slotRoleLabel(slot: PlanetSlot): string {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { PlanetRoleModal },
+  components: { PlanetRoleModal, AttackProjectileLayer },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
-    const turretShots = ref<TurretShot[]>([])
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const { shots, spawnShot, tickShots } = useProjectileSystem()
 
     const screenCx = ref(window.innerWidth / 2)
     const screenCy = ref(window.innerHeight / 2)
@@ -239,7 +191,6 @@ export default defineComponent({
     let animFrame = 0
     let lastTs = 0
     let turretAccumMs = 0
-    let nextShotId = 0
 
     function animate(ts: number) {
       const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
@@ -305,6 +256,9 @@ export default defineComponent({
         const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
         const isTurret = slot.role === 'turret_planet'
 
+        // KEIN activePlanetPositions.set() hier – diese Map gehört ausschließlich
+        // den Gegner-/Boss-Planeten, die useStarSystem beschreibt.
+
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
@@ -336,69 +290,47 @@ export default defineComponent({
 
       renderPositions.value = newPositions
 
-      // ── Turret shot system ───────────────────────────────────────────────────
+      // ── Turret-Schuss-System ──────────────────────────────────────────────────
       if (!reducedMotion) {
+        tickShots(dt)
         turretAccumMs += dt
 
         if (turretAccumMs >= TURRET_FIRE_INTERVAL_MS) {
           turretAccumMs -= TURRET_FIRE_INTERVAL_MS
 
-          // Only fire when a boss is actually active
-          if (planetBossStore.isBossActive && activePlanetPositions.size > 0) {
-            const turretPlanets = newPositions.filter((p) => p.isTurret && !p.isBehind)
+          // Nur Turret-Planeten im Vordergrund dürfen feuern
+          const turretPlanets = newPositions.filter((p) => p.isTurret && p.isForeground)
 
-            if (turretPlanets.length > 0) {
-              // Find nearest target position for each turret
-              for (const turret of turretPlanets) {
-                let nearestDist = Infinity
-                let target: { cx: number; cy: number } | null = null
+          if (turretPlanets.length > 0 && planetBossStore.activeBosses.length > 0) {
+            // Ziel-Planetpositionen: nur echte Boss-Planeten (aus useStarSystem),
+            // die nicht besiegt/abgelaufen sind und im Vordergrund stehen
+            const bossPlanetIds = planetBossStore.activeBosses
+              .filter((b) => !b.defeated && !b.expired)
+              .map((b) => b.planetId)
 
-                for (const pos of activePlanetPositions.values()) {
-                  const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
-                  if (dist < nearestDist) {
-                    nearestDist = dist
-                    target = pos
-                  }
+            for (const turret of turretPlanets) {
+              let nearestDist = Infinity
+              let targetPos: { cx: number; cy: number; isForeground: boolean } | null = null
+
+              for (const planetId of bossPlanetIds) {
+                const pos = activePlanetPositions.get(planetId)
+                if (!pos || !pos.isForeground) continue
+                const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
+                if (dist < MIN_SHOT_DISTANCE) continue
+                if (dist < nearestDist) {
+                  nearestDist = dist
+                  targetPos = pos
                 }
+              }
 
-                if (target) {
-                  const shot: TurretShot = {
-                    id: nextShotId++,
-                    x1: turret.x,
-                    y1: turret.y,
-                    x2: target.cx,
-                    y2: target.cy,
-                    elapsed: 0,
-                    duration: SHOT_DURATION_MS,
-                    headX: turret.x,
-                    headY: turret.y,
-                    tailX: turret.x,
-                    tailY: turret.y,
-                    opacity: 1,
-                  }
-                  turretShots.value.push(shot)
-                }
+              if (targetPos) {
+                spawnShot(turret.x, turret.y, targetPos.cx, targetPos.cy, true, true)
               }
             }
           }
         }
-
-        // Update existing shots
-        const alive: TurretShot[] = []
-        for (const shot of turretShots.value) {
-          shot.elapsed += dt
-          const t = Math.min(1, shot.elapsed / shot.duration)
-          shot.headX = shot.x1 + (shot.x2 - shot.x1) * t
-          shot.headY = shot.y1 + (shot.y2 - shot.y1) * t
-          const tailT = Math.max(0, t - 0.22)
-          shot.tailX = shot.x1 + (shot.x2 - shot.x1) * tailT
-          shot.tailY = shot.y1 + (shot.y2 - shot.y1) * tailT
-          // Fade: ramp in over first 20%, ramp out over last 30%
-          shot.opacity = t < 0.2 ? t / 0.2 : t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1
-          if (t < 1) alive.push(shot)
-        }
-        turretShots.value = alive
       }
+      // ─────────────────────────────────────────────────────────────────────────
 
       animFrame = requestAnimationFrame(animate)
     }
@@ -419,6 +351,7 @@ export default defineComponent({
       window.addEventListener('resize', updateScreenCenter)
       animFrame = requestAnimationFrame(animate)
     })
+
     onUnmounted(() => {
       window.removeEventListener('resize', updateScreenCenter)
       cancelAnimationFrame(animFrame)
@@ -433,7 +366,7 @@ export default defineComponent({
       backPlanets,
       frontPlanets,
       renderPositions,
-      turretShots,
+      shots,
       screenCx,
       screenCy,
       screenW,
@@ -446,7 +379,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Orbit ring SVG ────────────────────────────────────────────────────────── */
 .planet-orbit-rings {
   position: fixed;
   inset: 0;
@@ -457,18 +389,6 @@ export default defineComponent({
   overflow: visible;
 }
 
-/* ── Turret shot SVG ───────────────────────────────────────────────────────── */
-.turret-shots-svg {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 8;
-  pointer-events: none;
-  overflow: visible;
-}
-
-/* ── Planet layers ─────────────────────────────────────────────────────────── */
 .planet-orbit-layer {
   position: fixed;
   inset: 0;
@@ -478,12 +398,10 @@ export default defineComponent({
 .planet-orbit-back {
   z-index: 3;
 }
-
 .planet-orbit-front {
   z-index: 7;
 }
 
-/* ── Planet item ───────────────────────────────────────────────────────────── */
 .planet-orbit-item {
   position: absolute;
   top: 0;
@@ -510,13 +428,13 @@ export default defineComponent({
     0 0 28px color-mix(in oklch, var(--planet-color, #aaa) 60%, transparent);
 }
 
-/* turret_planet: animated ring pulsing to show it's armed */
 .planet-orbit-item--turret {
   animation: turret-pulse 1s ease-in-out infinite;
 }
 
 @keyframes turret-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 8px color-mix(in oklch, var(--planet-color, #cc4444) 80%, transparent),
       0 0 18px color-mix(in oklch, var(--planet-color, #cc4444) 40%, transparent);
@@ -551,7 +469,6 @@ export default defineComponent({
     0 0 48px color-mix(in oklch, var(--planet-color, #aaa) 20%, transparent);
 }
 
-/* ── Bonus badge ───────────────────────────────────────────────────────────── */
 .planet-bonus-badge {
   position: absolute;
   bottom: -3px;
