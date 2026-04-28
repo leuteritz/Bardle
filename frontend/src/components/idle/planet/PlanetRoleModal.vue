@@ -30,18 +30,12 @@
               :key="role.id"
               class="role-card"
               :class="{ 'role-card--active': activeSlot.role === role.id }"
+              :style="{ '--role-color': role.color }"
               @click="store.assignRole(activeSlot.id, role.id)"
             >
-              <div class="role-card-header">
-                <span class="role-card-dot" :style="{ background: role.color }" />
-                <span class="role-card-icon">{{ role.icon }}</span>
-                <span class="role-card-name">{{ role.name }}</span>
-              </div>
-              <div class="role-card-flavor">{{ role.flavorText }}</div>
-              <div class="role-card-bonus">
-                <span class="role-card-bonus-icon">{{ role.icon }}</span>
-                <span class="role-card-bonus-text">{{ bonusText(role) }}</span>
-              </div>
+              <div class="role-card-icon">{{ role.icon }}</div>
+              <div class="role-card-name">{{ role.name }}</div>
+              <div class="role-card-effect">{{ bonusText(role) }}</div>
             </button>
           </div>
 
@@ -136,18 +130,6 @@ export default defineComponent({
 
     function bonusText(role: PlanetRole): string {
       switch (role.bonusType) {
-        case 'chimes_per_second':
-          return `+${role.bonusPerSlot} CPS pro Slot`
-        case 'chimes_per_click':
-          return `+${role.bonusPerSlot} CPC pro Slot`
-        case 'meep_cost_reduction':
-          return `-${Math.round(role.bonusPerSlot * 100)}% Meep-Kosten pro Slot`
-        case 'cps_multiplier':
-          return `+${Math.round(role.bonusPerSlot * 100)}% CPS-Multiplikator`
-        case 'offline_boost':
-          return `+${Math.round(role.bonusPerSlot * 100)}% Offline-Ertrag`
-        case 'periodic_chimes':
-          return `${Math.round(role.bonusPerSlot * 100)}% Schub-Chance/s`
         case 'auto_attack_dps':
           return `+${role.bonusPerSlot} DPS/s auf Boss`
         case 'material_harvest_rate':
@@ -156,18 +138,23 @@ export default defineComponent({
           return `+${Math.round(role.bonusPerSlot * 100)}% Expeditions-Belohnung`
         case 'boss_damage_reduction':
           return `-${Math.round(role.bonusPerSlot * 100)}% Boss-Orbit-Schaden`
-        case 'meep_power_multiplier':
-          return `+${Math.round(role.bonusPerSlot * 100)}% Meep-Stärke`
-        case 'champion_damage_multiplier':
-          return `+${Math.round(role.bonusPerSlot * 100)}% Champion-Power`
-        case 'drop_chance_bonus':
-          return `+${Math.round(role.bonusPerSlot * 100)}% Material-Drop`
+        case 'offline_boost':
+          return `+${Math.round(role.bonusPerSlot * 100)}% Offline-Ertrag`
         case 'building_cps_multiplier':
           return `+${Math.round(role.bonusPerSlot * 100)}% Gebäude-CPS`
       }
     }
 
-    return { store, activeSlot, slotNumber, currentRole, roles, bonusText, MATERIALS, CPS_BUILDINGS }
+    return {
+      store,
+      activeSlot,
+      slotNumber,
+      currentRole,
+      roles,
+      bonusText,
+      MATERIALS,
+      CPS_BUILDINGS,
+    }
   },
 })
 </script>
@@ -186,7 +173,7 @@ export default defineComponent({
 
 /* ── Card ──────────────────────────────────────────────────────────────────── */
 .role-modal-card {
-  width: clamp(340px, 90vw, 620px);
+  width: clamp(340px, 90vw, 640px);
   max-height: 90vh;
   overflow-y: auto;
   background: #111008;
@@ -267,101 +254,106 @@ export default defineComponent({
 /* ── Grid ──────────────────────────────────────────────────────────────────── */
 .role-modal-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.85rem;
 }
 
 /* ── Role Card ─────────────────────────────────────────────────────────────── */
 .role-card {
+  --role-color: #aaaaaa;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.6rem 0.7rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.6rem 0.85rem;
   background: #1c1c18;
   border: 1px solid #3a2a10;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   transition:
     border-color 0.15s,
-    background 0.15s;
+    background 0.15s,
+    box-shadow 0.15s;
   color: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    color-mix(in oklch, var(--role-color) 12%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
 .role-card:hover {
   background: #222018;
-  border-color: #7a4e20;
+  border-color: var(--role-color);
+  box-shadow: 0 0 10px color-mix(in oklch, var(--role-color) 25%, transparent);
+}
+
+.role-card:hover::before {
+  opacity: 1;
 }
 
 .role-card--active {
-  background: #1a2a14;
-  border: 1px solid #6ec040;
-  box-shadow: 0 0 6px rgba(110, 192, 64, 0.3);
+  background: #181f12;
+  border: 2px solid var(--role-color);
+  box-shadow:
+    0 0 12px color-mix(in oklch, var(--role-color) 40%, transparent),
+    inset 0 0 20px color-mix(in oklch, var(--role-color) 8%, transparent);
 }
 
-.role-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+.role-card--active::before {
+  opacity: 1;
 }
 
-.role-card-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
+/* ── Icon ──────────────────────────────────────────────────────────────────── */
 .role-card-icon {
-  font-size: 0.85rem;
+  font-size: 2rem;
   line-height: 1;
+  filter: drop-shadow(0 0 6px color-mix(in oklch, var(--role-color) 70%, transparent));
 }
 
+.role-card--active .role-card-icon {
+  filter: drop-shadow(0 0 10px color-mix(in oklch, var(--role-color) 90%, transparent));
+}
+
+/* ── Name ──────────────────────────────────────────────────────────────────── */
 .role-card-name {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #f0e8d0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #d0c8a8;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
 }
 
 .role-card--active .role-card-name {
-  color: #a8e060;
+  color: var(--role-color);
 }
 
-.role-card-flavor {
-  font-size: 0.64rem;
-  color: rgba(255, 255, 255, 0.35);
-  font-style: italic;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* ── Effect ────────────────────────────────────────────────────────────────── */
+.role-card-effect {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--role-color);
+  line-height: 1.25;
+  text-shadow: 0 0 8px color-mix(in oklch, var(--role-color) 50%, transparent);
+  letter-spacing: 0.01em;
 }
 
-.role-card-bonus {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.1rem;
-}
-
-.role-card-bonus-icon {
-  font-size: 0.7rem;
-  line-height: 1;
-}
-
-.role-card-bonus-text {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #e8c040;
-}
-
-.role-card--active .role-card-bonus-text {
-  color: #a8e060;
+.role-card--active .role-card-effect {
+  font-size: 0.88rem;
+  text-shadow: 0 0 12px color-mix(in oklch, var(--role-color) 70%, transparent);
 }
 
 /* ── Config Section ────────────────────────────────────────────────────────── */

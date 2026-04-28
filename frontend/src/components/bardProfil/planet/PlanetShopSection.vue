@@ -3,7 +3,9 @@
   <section class="planet-shop-section">
     <div class="planet-shop-header">
       <span class="planet-shop-title">🪐 Orbit-Slots</span>
-      <span class="planet-shop-subtitle">{{ store.purchasedSlots.length }}/{{ store.slots.length }} gekauft</span>
+      <span class="planet-shop-subtitle"
+        >{{ store.purchasedSlots.length }}/{{ store.slots.length }} gekauft</span
+      >
     </div>
 
     <div class="planet-slot-list">
@@ -102,18 +104,6 @@ export default defineComponent({
     function roleBonusShort(role: PlanetRoleType): string {
       const r = PLANET_ROLES[role]
       switch (r.bonusType) {
-        case 'chimes_per_second':
-          return `+${r.bonusPerSlot} CPS`
-        case 'chimes_per_click':
-          return `+${r.bonusPerSlot} CPC`
-        case 'meep_cost_reduction':
-          return `-${Math.round(r.bonusPerSlot * 100)}% Meep-Kosten`
-        case 'cps_multiplier':
-          return `+${Math.round(r.bonusPerSlot * 100)}% CPS ×`
-        case 'offline_boost':
-          return `+${Math.round(r.bonusPerSlot * 100)}% Offline`
-        case 'periodic_chimes':
-          return `${Math.round(r.bonusPerSlot * 100)}% Schub/s`
         case 'auto_attack_dps':
           return `+${r.bonusPerSlot} DPS/s`
         case 'material_harvest_rate':
@@ -122,12 +112,8 @@ export default defineComponent({
           return `+${Math.round(r.bonusPerSlot * 100)}% Exped.`
         case 'boss_damage_reduction':
           return `-${Math.round(r.bonusPerSlot * 100)}% Orbit-Dmg`
-        case 'meep_power_multiplier':
-          return `+${Math.round(r.bonusPerSlot * 100)}% Meep-Pow`
-        case 'champion_damage_multiplier':
-          return `+${Math.round(r.bonusPerSlot * 100)}% Champ.-Pow`
-        case 'drop_chance_bonus':
-          return `+${Math.round(r.bonusPerSlot * 100)}% Drop`
+        case 'offline_boost':
+          return `+${Math.round(r.bonusPerSlot * 100)}% Offline`
         case 'building_cps_multiplier':
           return `+${Math.round(r.bonusPerSlot * 100)}% Gebäude-CPS`
       }

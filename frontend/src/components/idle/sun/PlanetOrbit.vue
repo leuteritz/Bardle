@@ -132,18 +132,6 @@ function slotRoleLabel(slot: PlanetSlot): string {
   if (!slot.role) return 'Keine Rolle — klicken zum Zuweisen'
   const r = PLANET_ROLES[slot.role]
   switch (r.bonusType) {
-    case 'chimes_per_second':
-      return `${r.name}: +${r.bonusPerSlot} CPS`
-    case 'chimes_per_click':
-      return `${r.name}: +${r.bonusPerSlot} CPC`
-    case 'meep_cost_reduction':
-      return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Meep-Kosten`
-    case 'cps_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% CPS`
-    case 'offline_boost':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Offline`
-    case 'periodic_chimes':
-      return `${r.name}: ${Math.round(r.bonusPerSlot * 100)}% Schub-Chance/s`
     case 'auto_attack_dps':
       return `${r.name}: +${r.bonusPerSlot} DPS/s`
     case 'material_harvest_rate':
@@ -152,12 +140,8 @@ function slotRoleLabel(slot: PlanetSlot): string {
       return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Exped.-Belohnung`
     case 'boss_damage_reduction':
       return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Orbit-Schaden`
-    case 'meep_power_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Meep-Stärke`
-    case 'champion_damage_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Champion-Power`
-    case 'drop_chance_bonus':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Drop-Chance`
+    case 'offline_boost':
+      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Offline`
     case 'building_cps_multiplier':
       return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Gebäude-CPS`
   }
@@ -256,9 +240,6 @@ export default defineComponent({
         const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
         const isTurret = slot.role === 'turret_planet'
 
-        // KEIN activePlanetPositions.set() hier – diese Map gehört ausschließlich
-        // den Gegner-/Boss-Planeten, die useStarSystem beschreibt.
-
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
@@ -298,12 +279,9 @@ export default defineComponent({
         if (turretAccumMs >= TURRET_FIRE_INTERVAL_MS) {
           turretAccumMs -= TURRET_FIRE_INTERVAL_MS
 
-          // Nur Turret-Planeten im Vordergrund dürfen feuern
           const turretPlanets = newPositions.filter((p) => p.isTurret && p.isForeground)
 
           if (turretPlanets.length > 0 && planetBossStore.activeBosses.length > 0) {
-            // Ziel-Planetpositionen: nur echte Boss-Planeten (aus useStarSystem),
-            // die nicht besiegt/abgelaufen sind und im Vordergrund stehen
             const bossPlanetIds = planetBossStore.activeBosses
               .filter((b) => !b.defeated && !b.expired)
               .map((b) => b.planetId)
@@ -379,6 +357,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* ── Orbit Rings ───────────────────────────────────────────────────────────── */
 .planet-orbit-rings {
   position: fixed;
   inset: 0;
