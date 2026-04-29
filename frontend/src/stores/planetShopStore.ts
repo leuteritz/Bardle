@@ -27,6 +27,7 @@ export interface PlanetRole {
   bonusPerSlot: number
   icon: string
   color: string
+  image: string // ← NEU
 }
 
 export interface PlanetSlot {
@@ -50,6 +51,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 2,
     icon: '🎯',
     color: '#cc4444',
+    image: '/img/planets/planet1.png', // ← NEU
   },
   harvest_node: {
     id: 'harvest_node',
@@ -58,6 +60,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 1,
     icon: '🌾',
     color: '#80c840',
+    image: '/img/planets/planet2.png', // ← NEU
   },
   expedition_relay: {
     id: 'expedition_relay',
@@ -66,6 +69,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 0.3,
     icon: '🚀',
     color: '#40a0e0',
+    image: '/img/planets/planet3.png', // ← NEU
   },
   shield_barrier: {
     id: 'shield_barrier',
@@ -74,6 +78,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 0.15,
     icon: '🛡️',
     color: '#60a0ff',
+    image: '/img/planets/planet4.png', // ← NEU
   },
   time_capsule: {
     id: 'time_capsule',
@@ -82,6 +87,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 0.25,
     icon: '⏳',
     color: '#40c080',
+    image: '/img/planets/planet5.png', // ← NEU
   },
   resonance_tower: {
     id: 'resonance_tower',
@@ -90,6 +96,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     bonusPerSlot: 0.25,
     icon: '🏗️',
     color: '#c09040',
+    image: '/img/planets/planet6.png', // ← NEU
   },
 }
 

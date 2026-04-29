@@ -108,23 +108,24 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           hpSectionMult,
       )
 
-      const bonusSeconds = Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * BOSS_ENRAGE_BONUS_SECONDS_PER_STEP
+      const bonusSeconds =
+        Math.floor(level / BOSS_ENRAGE_LEVEL_STEP) * BOSS_ENRAGE_BONUS_SECONDS_PER_STEP
       const baseEnrageSec = Math.min(
         BOSS_ENRAGE_BASE_SECONDS + bonusSeconds,
         BOSS_ENRAGE_MAX_SECONDS,
       )
-      const enrageSec = Math.max(BOSS_ENRAGE_MIN_SECONDS, Math.floor(baseEnrageSec * enrageSectionMult))
+      const enrageSec = Math.max(
+        BOSS_ENRAGE_MIN_SECONDS,
+        Math.floor(baseEnrageSec * enrageSectionMult),
+      )
       const enrageTimerMs = enrageSec * 1000
 
       const clickDamagePerHit = Math.max(1, cpc)
       const passiveDPS = Math.max(0, Math.floor(cps * BOSS_PASSIVE_DPS_FRACTION))
 
       const randomChimes = () => Math.floor(Math.random() * BOSS_REWARD_CHIMES_MAX) + 1
-      // loot_magnet: erhöht Material-Drop-Chance
-      const lootBonus = usePlanetShopStore().planetDropChanceBonus
-      const adjustedMaterialChance = Math.min(0.9, BOSS_REWARD_MATERIAL_CHANCE + lootBonus)
       const randomSlot = (): PlanetBossRewardSlot =>
-        Math.random() < adjustedMaterialChance
+        Math.random() < BOSS_REWARD_MATERIAL_CHANCE
           ? { type: 'material', materialId: pickMaterial().id }
           : { type: 'chimes', amount: randomChimes() }
 
@@ -232,7 +233,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const dmgReduction = usePlanetShopStore().planetBossDamageReduction
       for (const boss of this.activeBosses) {
         if (!boss.defeated && !boss.expired && activePlanetPositions.has(boss.planetId)) {
-          // shield_barrier: Orbit-Schaden mit Wahrscheinlichkeit blockieren
           if (Math.random() > dmgReduction) {
             playerStore.takeDamage(1)
           }
@@ -242,15 +242,11 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     applyPassiveDamage() {
       const gameStore = useGameStore()
-      const planetShopStore = usePlanetShopStore()
-      // champion_beacon: verstärkt unseren passiven Schaden am Boss
-      const beaconMul = planetShopStore.planetChampionDamageMultiplier
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
-        // Champion-Planeten erhalten keinen passiven Schaden wenn Spiel pausiert
         if (gameStore.isGamePaused && boss.isChampionPlanet) continue
 
-        const effectiveDPS = Math.max(1, Math.floor(boss.passiveDPS * beaconMul))
+        const effectiveDPS = Math.max(1, boss.passiveDPS)
         boss.currentHP -= effectiveDPS
         boss.totalDamageDealt += effectiveDPS
 
@@ -272,15 +268,12 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
-        // ── Champion-Planeten enragen NICHT ──────────────────────────────
-        // Sie können nur durch Besiegen entfernt werden, nie durch Zeitablauf.
         if (boss.isChampionPlanet) continue
 
         const elapsed = Date.now() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
 
         if (boss.noEnrage) {
-          // noEnrage-Bosse (Resource-Sterne): still ablaufen lassen
           boss.expired = true
           if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
           const planetId = boss.planetId
@@ -290,7 +283,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           continue
         }
 
-        // Normaler Enrage
         boss.expired = true
         if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
         this.lastBossResult = 'defeat'
@@ -360,8 +352,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       if (galaxyStore.pendingGalaxyBoss) {
         galaxyStore.onGalaxyBossDefeated()
       }
-      // champion star rescue is triggered by starGroupStore.onBossResult
-      // once ALL planets on the star are cleared
     },
 
     openBossModal(planetId?: string) {
@@ -377,7 +367,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
-        // ── Champion-Planeten enragen NICHT ──────────────────────────────
         if (boss.isChampionPlanet) continue
 
         const elapsed = Date.now() - boss.startTime
@@ -393,7 +382,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           continue
         }
 
-        // Normaler Enrage
         boss.expired = true
         if (this.selectedBossId === boss.planetId) this.bossModalOpen = false
         this.lastBossResult = 'defeat'

@@ -224,8 +224,8 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 40 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 40 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 100 },
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 100 },
   ],
   star: [
     { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FAD842', size: 80 },

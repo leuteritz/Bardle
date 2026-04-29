@@ -32,7 +32,8 @@
         '--planet-color': pos.color,
       }"
     >
-      <img src="/img/planets/planet.png" :alt="pos.name" draggable="false" />
+      <!-- ✅ ÄNDERUNG: :src statt src, rollenspezifisches Bild -->
+      <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
     </div>
   </div>
 
@@ -57,7 +58,8 @@
       :title="pos.roleLabel"
       @click="planetShopStore.openRoleModal(pos.id)"
     >
-      <img src="/img/planets/planet.png" :alt="pos.name" draggable="false" />
+      <!-- ✅ ÄNDERUNG: :src statt src, rollenspezifisches Bild -->
+      <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
       <span class="planet-bonus-badge" :title="pos.roleLabel">{{ pos.roleIcon }}</span>
     </div>
   </div>
@@ -101,6 +103,7 @@ interface PlanetRenderPos {
   orbitRy: number
   tiltDeg: number
   orbitColor: string
+  planetImage: string // ✅ ÄNDERUNG: neues Feld hinzugefügt
 }
 
 interface LocalPlanetState {
@@ -240,6 +243,9 @@ export default defineComponent({
         const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
         const isTurret = slot.role === 'turret_planet'
 
+        // ✅ ÄNDERUNG: Planetenbild aus der Rolle lesen, Fallback auf planet.png
+        const planetImage = slot.role ? PLANET_ROLES[slot.role].image : '/img/planets/planet.png'
+
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
@@ -259,6 +265,7 @@ export default defineComponent({
           orbitRy: ry,
           tiltDeg: slot.tiltDeg,
           orbitColor,
+          planetImage, // ✅ ÄNDERUNG: neues Feld befüllt
         })
       }
 
