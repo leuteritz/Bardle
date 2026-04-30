@@ -2,20 +2,41 @@
 <template>
   <!-- Champion Orbit-Ring Layer (crisp dashed guide rings) -->
   <svg class="champion-orbit-rings" aria-hidden="true">
-    <ellipse
-      v-for="pos in championRenderPositions"
-      :key="'ring-champ-' + pos.name"
-      :cx="screenCx"
-      :cy="screenCy"
-      :rx="pos.orbitRx"
-      :ry="pos.orbitRy"
-      :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-      :stroke="pos.orbitColor"
-      stroke-opacity="0.55"
-      stroke-width="1.5"
-      stroke-dasharray="5 8"
-      fill="none"
-    />
+    <template v-for="pos in championRenderPositions" :key="'ring-champ-' + pos.name">
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="pos.orbitRx"
+        :ry="pos.orbitRy"
+        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :stroke="pos.orbitColor"
+        stroke-opacity="0.06"
+        stroke-width="18"
+        fill="none"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="pos.orbitRx"
+        :ry="pos.orbitRy"
+        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :stroke="pos.orbitColor"
+        stroke-opacity="0.17"
+        stroke-width="6"
+        fill="none"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="pos.orbitRx"
+        :ry="pos.orbitRy"
+        :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
+        :stroke="pos.orbitColor"
+        stroke-opacity="0.40"
+        stroke-width="1.5"
+        fill="none"
+      />
+    </template>
   </svg>
 
   <!-- Projektile: teleportiert sich selbst nach body -->
@@ -411,6 +432,7 @@ export default defineComponent({
   z-index: 2;
   pointer-events: none;
   overflow: visible;
+  filter: blur(2px);
 }
 
 /* ── Layer-Container ──────────────────────────────────────────────────────── */

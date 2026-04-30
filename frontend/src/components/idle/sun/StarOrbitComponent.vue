@@ -1,32 +1,76 @@
 <template>
   <!-- Star Orbit-Ring Layer (crisp dashed guide rings) -->
   <svg class="star-orbit-rings" aria-hidden="true">
-    <ellipse
-      v-if="showChampionStar"
-      :cx="screenCx"
-      :cy="screenCy"
-      :rx="CHAMP_RX"
-      :ry="CHAMP_RY"
-      :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-      fill="none"
-      :stroke="CHAMP_COLOR"
-      stroke-opacity="0.55"
-      stroke-width="1.5"
-      stroke-dasharray="5 8"
-    />
-    <ellipse
-      v-if="showResourceStar"
-      :cx="screenCx"
-      :cy="screenCy"
-      :rx="RES_RX"
-      :ry="RES_RY"
-      :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-      fill="none"
-      :stroke="RES_COLOR"
-      stroke-opacity="0.55"
-      stroke-width="1.5"
-      stroke-dasharray="5 8"
-    />
+    <template v-if="showChampionStar">
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="CHAMP_RX"
+        :ry="CHAMP_RY"
+        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="CHAMP_COLOR"
+        stroke-opacity="0.06"
+        stroke-width="18"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="CHAMP_RX"
+        :ry="CHAMP_RY"
+        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="CHAMP_COLOR"
+        stroke-opacity="0.17"
+        stroke-width="6"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="CHAMP_RX"
+        :ry="CHAMP_RY"
+        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="CHAMP_COLOR"
+        stroke-opacity="0.40"
+        stroke-width="1.5"
+      />
+    </template>
+    <template v-if="showResourceStar">
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="RES_RX"
+        :ry="RES_RY"
+        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="RES_COLOR"
+        stroke-opacity="0.06"
+        stroke-width="18"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="RES_RX"
+        :ry="RES_RY"
+        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="RES_COLOR"
+        stroke-opacity="0.17"
+        stroke-width="6"
+      />
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="RES_RX"
+        :ry="RES_RY"
+        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="RES_COLOR"
+        stroke-opacity="0.40"
+        stroke-width="1.5"
+      />
+    </template>
   </svg>
 
   <!-- ① Back-Layer: Sterne HINTER der Sonne (z-index 3) -->
@@ -473,6 +517,7 @@ onUnmounted(() => {
   z-index: 5;
   pointer-events: none;
   overflow: visible;
+  filter: blur(2px);
 }
 
 /* ── Layer ──────────────────────────────────────────────────────────────────── */

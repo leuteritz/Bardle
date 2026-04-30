@@ -1,19 +1,41 @@
 <template>
   <svg class="planet-orbit-rings" aria-hidden="true">
     <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
-      <ellipse
-        v-if="planetShopStore.purchasedSlots.length > i"
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="tier.color"
-        stroke-opacity="0.55"
-        stroke-width="1.5"
-        stroke-dasharray="5 8"
-      />
+      <template v-if="planetShopStore.purchasedSlots.length > i">
+        <ellipse
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
+          fill="none"
+          :stroke="tier.color"
+          stroke-opacity="0.06"
+          stroke-width="18"
+        />
+        <ellipse
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
+          fill="none"
+          :stroke="tier.color"
+          stroke-opacity="0.17"
+          stroke-width="6"
+        />
+        <ellipse
+          :cx="screenCx"
+          :cy="screenCy"
+          :rx="tier.rx"
+          :ry="tier.ry"
+          :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
+          fill="none"
+          :stroke="tier.color"
+          stroke-opacity="0.40"
+          stroke-width="1.5"
+        />
+      </template>
     </template>
   </svg>
 
@@ -373,6 +395,7 @@ export default defineComponent({
   z-index: 2;
   pointer-events: none;
   overflow: visible;
+  filter: blur(2px);
 }
 
 .planet-orbit-layer {
