@@ -394,11 +394,7 @@ export default defineComponent({
   left: 0;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow:
-    0 0 8px color-mix(in oklch, var(--planet-color, #aaa) 80%, transparent),
-    0 0 18px color-mix(in oklch, var(--planet-color, #aaa) 40%, transparent);
   will-change: transform, opacity;
-  transition: box-shadow 0.4s ease;
   pointer-events: none;
 }
 
@@ -407,30 +403,6 @@ export default defineComponent({
   cursor: pointer;
 }
 
-.planet-orbit-item--clickable:hover {
-  box-shadow:
-    0 0 14px color-mix(in oklch, var(--planet-color, #aaa) 90%, transparent),
-    0 0 28px color-mix(in oklch, var(--planet-color, #aaa) 60%, transparent);
-}
-
-.planet-orbit-item--turret {
-  animation: turret-pulse 1s ease-in-out infinite;
-}
-
-@keyframes turret-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 8px color-mix(in oklch, var(--planet-color, #cc4444) 80%, transparent),
-      0 0 18px color-mix(in oklch, var(--planet-color, #cc4444) 40%, transparent);
-  }
-  50% {
-    box-shadow:
-      0 0 16px color-mix(in oklch, var(--planet-color, #cc4444) 95%, transparent),
-      0 0 34px color-mix(in oklch, var(--planet-color, #cc4444) 60%, transparent),
-      0 0 52px color-mix(in oklch, var(--planet-color, #cc4444) 20%, transparent);
-  }
-}
 
 .planet-orbit-item img {
   width: 100%;
@@ -448,10 +420,6 @@ export default defineComponent({
 
 .planet-orbit-item--foreground {
   filter: brightness(1.15) saturate(1.15);
-  box-shadow:
-    0 0 14px color-mix(in oklch, var(--planet-color, #aaa) 90%, transparent),
-    0 0 28px color-mix(in oklch, var(--planet-color, #aaa) 50%, transparent),
-    0 0 48px color-mix(in oklch, var(--planet-color, #aaa) 20%, transparent);
 }
 
 .planet-bonus-badge {
