@@ -435,9 +435,9 @@ export default defineComponent({
 .planet-orbit-item img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+  object-fit: contain;
   display: block;
+  image-rendering: high-quality;
 }
 
 .planet-orbit-item--behind {
