@@ -152,6 +152,7 @@ export default defineComponent({
           !galaxyStore.pendingGalaxyBoss &&
           !galaxyStore.isComplete) ||
         galaxyStore.isBossSearchActive ||
+        galaxyStore.pendingGalaxyBoss ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
     )
