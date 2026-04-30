@@ -491,8 +491,7 @@ export const useShopStore = defineStore('shop', {
         this.permanentCPSMultiplier *
         augmentStore.temporaryCPSMultiplier *
         itemStore.totalCPSMultiplier *
-        bossStore.cpsPenaltyMultiplier *
-        planetShopStore.planetCPSMultiplier // ← NEU
+        bossStore.cpsPenaltyMultiplier
       const flatCPSBonus = this.permanentUpgrades
         .filter((u) => u.purchased && u.appliedModifier)
         .reduce((sum, u) => {
@@ -503,7 +502,7 @@ export const useShopStore = defineStore('shop', {
           return sum
         }, 0)
       return Math.floor(
-        (baseCPS + planetShopStore.totalPlanetFlatCPS) * // ← NEU: flatCPS
+        baseCPS *
           gameStore.abilityCPSMultiplier *
           cpsMul +
           flatCPSBonus,

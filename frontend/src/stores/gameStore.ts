@@ -29,8 +29,6 @@ import {
   HYPERSPACE_ANIM_END_MS,
   UNIVERSE_RESCUE_INITIAL_COST,
   UNIVERSE_RESCUE_COST_MULTIPLIER,
-  SHRINE_TRIGGER_CHANCE_PER_SHRINE,
-  SHRINE_BURST_CPS_MULTIPLIER,
   MEEP_POWER_MULTIPLIER,
   ABILITY_CPS_PER_LEVEL_DEFAULT,
   ABILITY_POWER_PER_LEVEL_DEFAULT,
@@ -459,14 +457,6 @@ export const useGameStore = defineStore('game', {
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
       const planetShopStore = usePlanetShopStore()
-      const shrineCount = planetShopStore.wandererShrineCount
-      if (shrineCount > 0 && Math.random() < shrineCount * SHRINE_TRIGGER_CHANCE_PER_SHRINE) {
-        const burst = Math.floor(this.chimesPerSecond * SHRINE_BURST_CPS_MULTIPLIER)
-        if (burst > 0) {
-          this.chimes += burst
-          this.totalChimesEarned += burst
-        }
-      }
       // turret_planet: automatischer Schaden an aktivem Boss
       const autoAttackDPS = planetShopStore.autoAttackDPS
       if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
@@ -625,14 +615,10 @@ export const useGameStore = defineStore('game', {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
-      const planetShopStore = usePlanetShopStore()
-      const planetMeepMul = planetShopStore.planetMeepPowerMultiplier
-      const planetChampMul = planetShopStore.planetChampionDamageMultiplier
       return Math.floor(
-        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod * planetMeepMul + this.abilityPowerBonus) *
+        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod + this.abilityPowerBonus) *
           eloPowerMod *
-          itemPowerMul *
-          planetChampMul,
+          itemPowerMul,
       )
     },
 

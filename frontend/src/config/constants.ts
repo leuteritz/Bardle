@@ -310,9 +310,6 @@ export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
 // Planet Shop Roles
 export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material alle 30 Ticks
 
-// Shrine & Meep
-export const SHRINE_TRIGGER_CHANCE_PER_SHRINE = 0.08
-export const SHRINE_BURST_CPS_MULTIPLIER = 2
 export const MEEP_POWER_MULTIPLIER = 100
 
 // Ability defaults (??-operator fallbacks)
