@@ -1,40 +1,44 @@
 <template>
-  <!-- ⓪ Permanent Orbit Tracks (always visible, colored rings per category) -->
+  <!-- ⓪ Permanent Orbit Tracks (nebula glow rings) -->
   <Teleport to="body">
     <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
-      <g v-if="hasActiveStars">
-        <ellipse
+      <defs>
+        <filter id="nebula-glow-tracks" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1"/>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
+          <feMerge>
+            <feMergeNode in="blur2"/>
+            <feMergeNode in="blur1"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <template v-if="hasActiveStars">
+        <g
           v-for="(tier, i) in ORBIT_TIERS.star"
           :key="'track-star-' + i"
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="tier.rx"
-          :ry="tier.ry"
-          :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="tier.color"
-          stroke-opacity="0.35"
-          fill="none"
-          stroke-width="1.5"
-          stroke-dasharray="6 5"
-        />
-      </g>
+          filter="url(#nebula-glow-tracks)"
+        >
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="tier.rx" :ry="tier.ry" :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`" :stroke="tier.color" stroke-opacity="0.04" stroke-width="36" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="tier.rx" :ry="tier.ry" :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`" :stroke="tier.color" stroke-opacity="0.10" stroke-width="16" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="tier.rx" :ry="tier.ry" :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`" :stroke="tier.color" stroke-opacity="0.22" stroke-width="7" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="tier.rx" :ry="tier.ry" :transform="`rotate(${tier.tiltDeg} ${screenCx} ${screenCy})`" :stroke="tier.color" stroke-opacity="0.28" stroke-width="2.5" fill="none" />
+        </g>
+      </template>
 
-      <g v-if="hasActiveChampions">
-        <ellipse
+      <template v-if="hasActiveChampions">
+        <g
           v-for="entry in activeRoleOrbits"
           :key="'track-role-' + entry.role"
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="entry.rx"
-          :ry="entry.ry"
-          :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`"
-          :stroke="entry.color"
-          stroke-opacity="0.35"
-          fill="none"
-          stroke-width="1.5"
-          stroke-dasharray="6 5"
-        />
-      </g>
+          filter="url(#nebula-glow-tracks)"
+        >
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="entry.rx" :ry="entry.ry" :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`" :stroke="entry.color" stroke-opacity="0.04" stroke-width="36" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="entry.rx" :ry="entry.ry" :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`" :stroke="entry.color" stroke-opacity="0.10" stroke-width="16" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="entry.rx" :ry="entry.ry" :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`" :stroke="entry.color" stroke-opacity="0.22" stroke-width="7" fill="none" />
+          <ellipse :cx="screenCx" :cy="screenCy" :rx="entry.rx" :ry="entry.ry" :transform="`rotate(${entry.tiltDeg} ${screenCx} ${screenCy})`" :stroke="entry.color" stroke-opacity="0.28" stroke-width="2.5" fill="none" />
+        </g>
+      </template>
 
     </svg>
   </Teleport>

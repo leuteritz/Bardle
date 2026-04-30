@@ -1,7 +1,18 @@
 <template>
-  <!-- Star Orbit-Ring Layer (crisp dashed guide rings) -->
+  <!-- Star Orbit-Ring Layer (nebula glow rings) -->
   <svg class="star-orbit-rings" aria-hidden="true">
-    <template v-if="showChampionStar">
+    <defs>
+      <filter id="nebula-glow-star" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
+        <feMerge>
+          <feMergeNode in="blur2"/>
+          <feMergeNode in="blur1"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <g v-if="showChampionStar" filter="url(#nebula-glow-star)">
       <ellipse
         :cx="screenCx"
         :cy="screenCy"
@@ -10,8 +21,8 @@
         :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="CHAMP_COLOR"
-        stroke-opacity="0.06"
-        stroke-width="18"
+        stroke-opacity="0.04"
+        stroke-width="36"
       />
       <ellipse
         :cx="screenCx"
@@ -21,8 +32,8 @@
         :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="CHAMP_COLOR"
-        stroke-opacity="0.17"
-        stroke-width="6"
+        stroke-opacity="0.10"
+        stroke-width="16"
       />
       <ellipse
         :cx="screenCx"
@@ -32,11 +43,22 @@
         :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="CHAMP_COLOR"
-        stroke-opacity="0.40"
-        stroke-width="1.5"
+        stroke-opacity="0.22"
+        stroke-width="7"
       />
-    </template>
-    <template v-if="showResourceStar">
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="CHAMP_RX"
+        :ry="CHAMP_RY"
+        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="CHAMP_COLOR"
+        stroke-opacity="0.28"
+        stroke-width="2.5"
+      />
+    </g>
+    <g v-if="showResourceStar" filter="url(#nebula-glow-star)">
       <ellipse
         :cx="screenCx"
         :cy="screenCy"
@@ -45,8 +67,8 @@
         :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="RES_COLOR"
-        stroke-opacity="0.06"
-        stroke-width="18"
+        stroke-opacity="0.04"
+        stroke-width="36"
       />
       <ellipse
         :cx="screenCx"
@@ -56,8 +78,8 @@
         :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="RES_COLOR"
-        stroke-opacity="0.17"
-        stroke-width="6"
+        stroke-opacity="0.10"
+        stroke-width="16"
       />
       <ellipse
         :cx="screenCx"
@@ -67,10 +89,21 @@
         :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
         fill="none"
         :stroke="RES_COLOR"
-        stroke-opacity="0.40"
-        stroke-width="1.5"
+        stroke-opacity="0.22"
+        stroke-width="7"
       />
-    </template>
+      <ellipse
+        :cx="screenCx"
+        :cy="screenCy"
+        :rx="RES_RX"
+        :ry="RES_RY"
+        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
+        fill="none"
+        :stroke="RES_COLOR"
+        stroke-opacity="0.28"
+        stroke-width="2.5"
+      />
+    </g>
   </svg>
 
   <!-- ① Back-Layer: Sterne HINTER der Sonne (z-index 3) -->
@@ -517,7 +550,6 @@ onUnmounted(() => {
   z-index: 5;
   pointer-events: none;
   overflow: visible;
-  filter: blur(2px);
 }
 
 /* ── Layer ──────────────────────────────────────────────────────────────────── */
