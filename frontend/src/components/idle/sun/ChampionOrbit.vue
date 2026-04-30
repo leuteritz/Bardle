@@ -2,65 +2,16 @@
 <template>
   <!-- Champion Orbit-Ring Layer (nebula glow rings) -->
   <svg class="champion-orbit-rings" aria-hidden="true">
-    <defs>
-      <filter id="nebula-glow-champion" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1"/>
-        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
-        <feMerge>
-          <feMergeNode in="blur2"/>
-          <feMergeNode in="blur1"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
-    <template v-for="pos in championRenderPositions" :key="'ring-champ-' + pos.name">
-      <g filter="url(#nebula-glow-champion)">
-        <ellipse
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="pos.orbitRx"
-          :ry="pos.orbitRy"
-          :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-          :stroke="pos.orbitColor"
-          stroke-opacity="0.04"
-          stroke-width="36"
-          fill="none"
-        />
-        <ellipse
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="pos.orbitRx"
-          :ry="pos.orbitRy"
-          :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-          :stroke="pos.orbitColor"
-          stroke-opacity="0.10"
-          stroke-width="16"
-          fill="none"
-        />
-        <ellipse
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="pos.orbitRx"
-          :ry="pos.orbitRy"
-          :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-          :stroke="pos.orbitColor"
-          stroke-opacity="0.22"
-          stroke-width="7"
-          fill="none"
-        />
-        <ellipse
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="pos.orbitRx"
-          :ry="pos.orbitRy"
-          :transform="`rotate(${pos.tiltDeg}, ${screenCx}, ${screenCy})`"
-          :stroke="pos.orbitColor"
-          stroke-opacity="0.28"
-          stroke-width="2.5"
-          fill="none"
-        />
-      </g>
-    </template>
+    <OrbitPath
+      v-for="pos in championRenderPositions"
+      :key="'ring-champ-' + pos.name"
+      :color="pos.orbitColor"
+      :x="screenCx"
+      :y="screenCy"
+      :rx="pos.orbitRx"
+      :ry="pos.orbitRy"
+      :tiltDeg="pos.tiltDeg"
+    />
   </svg>
 
   <!-- Projektile: teleportiert sich selbst nach body -->
@@ -158,6 +109,7 @@ import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
+import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import type { ChampionRole } from '../../../types'
 
@@ -194,7 +146,7 @@ interface LocalChampState {
 
 export default defineComponent({
   name: 'ChampionOrbit',
-  components: { AttackProjectileLayer },
+  components: { AttackProjectileLayer, OrbitPath },
   setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()

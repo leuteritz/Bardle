@@ -1,65 +1,15 @@
 <template>
   <svg class="planet-orbit-rings" aria-hidden="true">
-    <defs>
-      <filter id="nebula-glow-planet" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1"/>
-        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
-        <feMerge>
-          <feMergeNode in="blur2"/>
-          <feMergeNode in="blur1"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
     <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
-      <template v-if="planetShopStore.purchasedSlots.length > i">
-        <g filter="url(#nebula-glow-planet)">
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="tier.rx"
-            :ry="tier.ry"
-            :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
-            fill="none"
-            :stroke="tier.color"
-            stroke-opacity="0.04"
-            stroke-width="36"
-          />
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="tier.rx"
-            :ry="tier.ry"
-            :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
-            fill="none"
-            :stroke="tier.color"
-            stroke-opacity="0.10"
-            stroke-width="16"
-          />
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="tier.rx"
-            :ry="tier.ry"
-            :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
-            fill="none"
-            :stroke="tier.color"
-            stroke-opacity="0.22"
-            stroke-width="7"
-          />
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="tier.rx"
-            :ry="tier.ry"
-            :transform="`rotate(${tier.tiltDeg}, ${screenCx}, ${screenCy})`"
-            fill="none"
-            :stroke="tier.color"
-            stroke-opacity="0.28"
-            stroke-width="2.5"
-          />
-        </g>
-      </template>
+      <OrbitPath
+        v-if="planetShopStore.purchasedSlots.length > i"
+        :color="tier.color"
+        :x="screenCx"
+        :y="screenCy"
+        :rx="tier.rx"
+        :ry="tier.ry"
+        :tiltDeg="tier.tiltDeg"
+      />
     </template>
   </svg>
 
@@ -123,6 +73,7 @@ import { ORBIT_TIERS } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
+import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -198,7 +149,7 @@ function slotRoleLabel(slot: PlanetSlot): string {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { PlanetRoleModal, AttackProjectileLayer },
+  components: { PlanetRoleModal, AttackProjectileLayer, OrbitPath },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()

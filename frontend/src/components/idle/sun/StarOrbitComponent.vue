@@ -1,109 +1,24 @@
 <template>
   <!-- Star Orbit-Ring Layer (nebula glow rings) -->
   <svg class="star-orbit-rings" aria-hidden="true">
-    <defs>
-      <filter id="nebula-glow-star" x="-60%" y="-60%" width="220%" height="220%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur1"/>
-        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
-        <feMerge>
-          <feMergeNode in="blur2"/>
-          <feMergeNode in="blur1"/>
-          <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-      </filter>
-    </defs>
-    <g v-if="showChampionStar" filter="url(#nebula-glow-star)">
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="CHAMP_RX"
-        :ry="CHAMP_RY"
-        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="CHAMP_COLOR"
-        stroke-opacity="0.04"
-        stroke-width="36"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="CHAMP_RX"
-        :ry="CHAMP_RY"
-        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="CHAMP_COLOR"
-        stroke-opacity="0.10"
-        stroke-width="16"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="CHAMP_RX"
-        :ry="CHAMP_RY"
-        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="CHAMP_COLOR"
-        stroke-opacity="0.22"
-        stroke-width="7"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="CHAMP_RX"
-        :ry="CHAMP_RY"
-        :transform="`rotate(${CHAMP_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="CHAMP_COLOR"
-        stroke-opacity="0.28"
-        stroke-width="2.5"
-      />
-    </g>
-    <g v-if="showResourceStar" filter="url(#nebula-glow-star)">
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="RES_RX"
-        :ry="RES_RY"
-        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="RES_COLOR"
-        stroke-opacity="0.04"
-        stroke-width="36"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="RES_RX"
-        :ry="RES_RY"
-        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="RES_COLOR"
-        stroke-opacity="0.10"
-        stroke-width="16"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="RES_RX"
-        :ry="RES_RY"
-        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="RES_COLOR"
-        stroke-opacity="0.22"
-        stroke-width="7"
-      />
-      <ellipse
-        :cx="screenCx"
-        :cy="screenCy"
-        :rx="RES_RX"
-        :ry="RES_RY"
-        :transform="`rotate(${RES_STAR.tiltDeg}, ${screenCx}, ${screenCy})`"
-        fill="none"
-        :stroke="RES_COLOR"
-        stroke-opacity="0.28"
-        stroke-width="2.5"
-      />
-    </g>
+    <OrbitPath
+      v-if="showChampionStar"
+      :color="CHAMP_COLOR"
+      :x="screenCx"
+      :y="screenCy"
+      :rx="CHAMP_RX"
+      :ry="CHAMP_RY"
+      :tiltDeg="CHAMP_STAR.tiltDeg"
+    />
+    <OrbitPath
+      v-if="showResourceStar"
+      :color="RES_COLOR"
+      :x="screenCx"
+      :y="screenCy"
+      :rx="RES_RX"
+      :ry="RES_RY"
+      :tiltDeg="RES_STAR.tiltDeg"
+    />
   </svg>
 
   <!-- ① Back-Layer: Sterne HINTER der Sonne (z-index 3) -->
@@ -168,6 +83,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import OrbitPath from './OrbitPath.vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { getOrbitPos } from '../../../utils/orbitMath'
 import { ORBIT_TIERS } from '@/config/constants.ts'
