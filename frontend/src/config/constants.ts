@@ -224,12 +224,12 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 100 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 100 },
+    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 80 },
+    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 80 },
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FAD842', size: 80 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FAD842', size: 80 },
+    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FAD842', size: 100 },
+    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FAD842', size: 100 },
   ],
   // Role-specific champion orbits — one fixed path per LoL role
   role: {
@@ -251,7 +251,7 @@ export const ORBIT_TIERS = {
       tiltRad: -0.2618,
       color: '#3EEA58',
       speed: 0.00022,
-      championSize: 56,
+      championSize: 60,
     },
     mid: {
       rx: 645,
@@ -260,7 +260,7 @@ export const ORBIT_TIERS = {
       tiltRad: 0.2094,
       color: '#5598F6',
       speed: 0.00017,
-      championSize: 52,
+      championSize: 60,
     },
     adc: {
       rx: 760,
@@ -269,7 +269,7 @@ export const ORBIT_TIERS = {
       tiltRad: -0.1396,
       color: '#F7A145',
       speed: 0.00014,
-      championSize: 48,
+      championSize: 60,
     },
     support: {
       rx: 760,
@@ -278,7 +278,7 @@ export const ORBIT_TIERS = {
       tiltRad: -0.1396,
       color: '#89B8E6',
       speed: 0.00014,
-      championSize: 70,
+      championSize: 60,
     },
   },
 } as const

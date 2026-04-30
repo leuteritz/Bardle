@@ -271,5 +271,17 @@ export const usePlanetShopStore = defineStore('planetShop', {
     closeRoleModal(): void {
       this.activeRoleModalSlotId = null
     },
+
+    adminFillRandomRoles(): void {
+      const roleTypes = Object.keys(PLANET_ROLES) as PlanetRoleType[]
+      for (const slot of this.slots) {
+        slot.purchased = true
+        slot.role = roleTypes[Math.floor(Math.random() * roleTypes.length)]
+      }
+      const gameStore = useGameStore()
+      const shopStore = useShopStore()
+      gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+    },
   },
 })

@@ -8,10 +8,12 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 import { CHAMPION_ROLES } from '@/config/championRoles'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
+const planetShopStore = usePlanetShopStore()
 const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
@@ -109,6 +111,8 @@ function fillTeamWithRandomChampions() {
     used.add(pick)
     battleStore.setHeaderSlot(slotIndex, pick)
   })
+
+  planetShopStore.adminFillRandomRoles()
 }
 
 function teleportNearPlanet() {

@@ -394,7 +394,6 @@ export default defineComponent({
   left: 0;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--planet-color, #aaaaaa);
   box-shadow:
     0 0 8px color-mix(in oklch, var(--planet-color, #aaa) 80%, transparent),
     0 0 18px color-mix(in oklch, var(--planet-color, #aaa) 40%, transparent);
