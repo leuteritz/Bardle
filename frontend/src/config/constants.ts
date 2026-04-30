@@ -64,6 +64,8 @@ export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
+export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LJ für Galaxie 1
+export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LJ pro Galaxie
 
 // Resource star flyby
 export const RESOURCE_STAR_INTERVAL_MS = 120_000 // alle 2 min ein Flyby
