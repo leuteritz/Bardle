@@ -239,7 +239,9 @@ export default defineComponent({
         const tiltRad = tier.tiltRad
         const tiltDeg = tier.tiltDeg
         const orbitColor = tier.color
-        const baseSize = ORBIT_TIERS.planet[0].size
+        const baseSize = primaryRole
+          ? ORBIT_TIERS.role[primaryRole].championSize
+          : ORBIT_TIERS.planet[ci % 2].size
         const orbitSpeed = 'speed' in tier ? (tier as { speed: number }).speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
