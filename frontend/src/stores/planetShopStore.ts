@@ -232,8 +232,6 @@ export const usePlanetShopStore = defineStore('planetShop', {
       logger.info('Planet', `Rolle von ${slotId} geändert: ${prev ?? 'keine'} → ${role ?? 'keine'}`)
 
       if (role !== null && CONFIGURABLE_ROLES.includes(role)) return
-
-      this.closeRoleModal()
     },
 
     setSlotConfig(slotId: string, config: { materialId?: string; buildingId?: string }): void {

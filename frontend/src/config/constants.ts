@@ -194,7 +194,8 @@ export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_EXPEDITIONS = 3
 
 // Champion Combat System
-export const CHAMPION_DETECT_RADIUS = 350 // px from screen center; planet within this range → champions can hit it
+/** Detection radius from screen center in px. Planet within this range → champions can hit it. Not sun-relative. */
+export const CHAMPION_DETECT_RADIUS = 350
 export const ATTACK_RANGE = 110 // px from planet center; kept for reference (unused in orbit mode)
 export const CHAMPION_ORBIT_HIT_RANGE = 220 // px: champion orbit position must be within this of planet to deal damage
 export const CHAMPION_DPS_BASE = 40 // damage per champion per second
@@ -221,64 +222,95 @@ export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000 // gain 1 stack every 6s
 export const ROLE_JUNGLER_MAX_STACKS = 5
 export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 
+/** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
+export const SUN_RADIUS = 80
+
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {
   planet: [
-    { rx: 380, ry: 106, tiltDeg: 18, tiltRad: 0.3142, color: '#9E55F1', size: 80 },
-    { rx: 560, ry: 136, tiltDeg: -12, tiltRad: -0.2094, color: '#9E55F1', size: 80 },
+    {
+      rx: SUN_RADIUS * 6.33,
+      ry: SUN_RADIUS * 1.77,
+      tiltDeg: 18,
+      tiltRad: 0.3142,
+      color: '#9E55F1',
+      size: SUN_RADIUS * 1.33,
+    },
+    {
+      rx: SUN_RADIUS * 9.33,
+      ry: SUN_RADIUS * 2.27,
+      tiltDeg: -12,
+      tiltRad: -0.2094,
+      color: '#9E55F1',
+      size: SUN_RADIUS * 1.33,
+    },
   ],
   star: [
-    { rx: 740, ry: 317, tiltDeg: 10.3, tiltRad: 0.18, color: '#FAD842', size: 100 },
-    { rx: 830, ry: 357, tiltDeg: 15.5, tiltRad: 0.27, color: '#FAD842', size: 100 },
+    {
+      rx: SUN_RADIUS * 12.33,
+      ry: SUN_RADIUS * 5.28,
+      tiltDeg: 10.3,
+      tiltRad: 0.18,
+      color: '#FAD842',
+      size: SUN_RADIUS * 1.67,
+    },
+    {
+      rx: SUN_RADIUS * 13.83,
+      ry: SUN_RADIUS * 5.95,
+      tiltDeg: 15.5,
+      tiltRad: 0.27,
+      color: '#FAD842',
+      size: SUN_RADIUS * 1.67,
+    },
   ],
   // Role-specific champion orbits — one fixed path per LoL role
   role: {
     top: {
-      rx: 155,
-      ry: 68,
+      rx: SUN_RADIUS * 2.58,
+      ry: SUN_RADIUS * 1.13,
       tiltDeg: 14,
       tiltRad: 0.2443,
       color: '#F54747',
       speed: 0.00032,
       hitIntervalMs: 4000,
       hitDurationMs: 350,
-      championSize: 60,
+      championSize: SUN_RADIUS * 1.0,
     },
     jungle: {
-      rx: 468,
-      ry: 201,
+      rx: SUN_RADIUS * 7.8,
+      ry: SUN_RADIUS * 3.35,
       tiltDeg: -15,
       tiltRad: -0.2618,
       color: '#3EEA58',
       speed: 0.00022,
-      championSize: 60,
+      championSize: SUN_RADIUS * 1.0,
     },
     mid: {
-      rx: 645,
-      ry: 277,
+      rx: SUN_RADIUS * 10.75,
+      ry: SUN_RADIUS * 4.62,
       tiltDeg: 12,
       tiltRad: 0.2094,
       color: '#5598F6',
       speed: 0.00017,
-      championSize: 60,
+      championSize: SUN_RADIUS * 1.0,
     },
     adc: {
-      rx: 760,
-      ry: 326,
+      rx: SUN_RADIUS * 12.67,
+      ry: SUN_RADIUS * 5.43,
       tiltDeg: -8,
       tiltRad: -0.1396,
       color: '#F7A145',
       speed: 0.00014,
-      championSize: 60,
+      championSize: SUN_RADIUS * 1.0,
     },
     support: {
-      rx: 760,
-      ry: 326,
+      rx: SUN_RADIUS * 12.67,
+      ry: SUN_RADIUS * 5.43,
       tiltDeg: -8,
       tiltRad: -0.1396,
       color: '#89B8E6',
       speed: 0.00014,
-      championSize: 60,
+      championSize: SUN_RADIUS * 1.0,
     },
   },
 } as const
@@ -286,7 +318,8 @@ export const ORBIT_TIERS = {
 // Support orbits the same path as ADC, offset by this angle (radians) behind
 export const SUPPORT_ANGLE_OFFSET = Math.PI / 5
 
-/** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px). */
+/** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px).
+ *  These orbit planets around *stars*, not the sun — not scaled via SUN_RADIUS. */
 export const PLANET_SLOT_ORBITS = [
   { rx: 180, ry: 50, tiltDeg: 18 },
   { rx: 236, ry: 57, tiltDeg: -12 },
@@ -331,7 +364,7 @@ export const MODIFIER_ROLL_COUNT = 3
 export const AUGMENT_CLICK_HISTORY_SIZE = 5
 export const AUGMENT_GRAVITY_FLIP_DURATION_MS = 3000
 
-// Combat / Damage floats
+// Combat / Damage floats — orbit radii for visual damage effects, not sun-relative
 export const COMBAT_ORBIT_RADIUS_X_MIN = 130
 export const COMBAT_ORBIT_RADIUS_X_RANGE = 65
 export const COMBAT_ORBIT_Y_SCALE_MIN = 0.28

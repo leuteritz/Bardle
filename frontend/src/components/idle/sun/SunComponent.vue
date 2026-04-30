@@ -1,5 +1,5 @@
 <template>
-  <div class="sun-container">
+  <div class="sun-container" :style="sunContainerVars">
     <div class="sun-atmosphere"></div>
     <div class="sun-corona"></div>
 
@@ -135,6 +135,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
+import { SUN_RADIUS } from '@/config/constants'
 
 interface DynamicRay {
   id: number
@@ -316,6 +317,7 @@ export default defineComponent({
       dynamicRays,
       sunspotPositions,
       Math,
+      sunContainerVars: { '--sun-r': `${SUN_RADIUS}px` } as Record<string, string>,
     }
   },
 })
@@ -327,8 +329,8 @@ export default defineComponent({
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 360px;
-  height: 360px;
+  width: calc(var(--sun-r) * 6);
+  height: calc(var(--sun-r) * 6);
   z-index: 5;
   pointer-events: none;
   overflow: visible;
@@ -346,7 +348,7 @@ export default defineComponent({
 
 .sun-atmosphere {
   position: absolute;
-  inset: -122px;
+  inset: calc(var(--sun-r) * -2.03);
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -363,7 +365,7 @@ export default defineComponent({
 
 .sun-corona {
   position: absolute;
-  inset: -92px;
+  inset: calc(var(--sun-r) * -1.53);
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -408,7 +410,7 @@ export default defineComponent({
 
 .sun-core {
   position: absolute;
-  inset: 60px;
+  inset: var(--sun-r);
   border-radius: 50%;
   background:
     radial-gradient(
@@ -432,7 +434,7 @@ export default defineComponent({
 
 .sun-volume {
   position: absolute;
-  inset: 60px;
+  inset: var(--sun-r);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -461,7 +463,7 @@ export default defineComponent({
 
 .sun-rim-glow {
   position: absolute;
-  inset: 58px;
+  inset: calc(var(--sun-r) * 0.97);
   border-radius: 50%;
   box-shadow:
     inset 0 0 22px rgba(255, 220, 130, 0.14),
@@ -492,7 +494,7 @@ export default defineComponent({
 
 .sun-surface-wrap {
   position: absolute;
-  inset: 62px;
+  inset: calc(var(--sun-r) * 1.03);
   border-radius: 50%;
   overflow: hidden;
   z-index: 6;
@@ -600,7 +602,7 @@ export default defineComponent({
 }
 
 .sun-chromosphere--outer {
-  inset: 48px;
+  inset: calc(var(--sun-r) * 0.8);
   background: radial-gradient(
     circle,
     transparent 56%,
@@ -615,7 +617,7 @@ export default defineComponent({
 }
 
 .sun-chromosphere--inner {
-  inset: 54px;
+  inset: calc(var(--sun-r) * 0.9);
   background: radial-gradient(
     circle,
     transparent 60%,
@@ -661,8 +663,8 @@ export default defineComponent({
   position: absolute;
   top: 29%;
   left: 34%;
-  width: 48px;
-  height: 48px;
+  width: calc(var(--sun-r) * 0.8);
+  height: calc(var(--sun-r) * 0.8);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 215, 0.66) 0%, transparent 72%);
   animation: flare-drift 6s ease-in-out infinite;
