@@ -1,5 +1,5 @@
 <template>
-  <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }">
+  <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="{ '--sun-r': SUN_RADIUS + 'px' }">
     <div class="hp-header">
       <span class="hp-icon">♥</span>
       <span class="hp-value">
@@ -17,7 +17,7 @@
 
     <Teleport to="body">
       <div v-if="playerStore.isLow" class="hp-vignette" aria-hidden="true" />
-      <div class="dmg-float-layer" aria-hidden="true">
+      <div class="dmg-float-layer" :style="{ '--sun-r': SUN_RADIUS + 'px' }" aria-hidden="true">
         <span v-for="f in playerStore.damageFloats" :key="f.id" class="dmg-float"
           >-{{ f.value }}</span
         >
@@ -29,6 +29,7 @@
 <script lang="ts">
 import { defineComponent, ref, watch, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../../stores/playerStore'
+import { SUN_RADIUS } from '../../../config/constants'
 
 export default defineComponent({
   name: 'PlayerHPBar',
@@ -60,7 +61,7 @@ export default defineComponent({
       if (hitTimer) clearTimeout(hitTimer)
     })
 
-    return { playerStore, wasHit, Math }
+    return { playerStore, wasHit, Math, SUN_RADIUS }
   },
 })
 </script>
@@ -69,12 +70,12 @@ export default defineComponent({
 /* ── Container – kein Background, kein Border ── */
 .hp-bar-container {
   position: fixed;
-  top: calc(50% - 116px);
+  top: calc(50% - calc(var(--sun-r) * 1.75));
   left: 50%;
   transform: translate(-50%, -100%);
   z-index: 20;
   pointer-events: none;
-  width: 220px;
+  width: calc(var(--sun-r) * 3);
 }
 
 /* ── Header ── */
@@ -117,7 +118,7 @@ export default defineComponent({
 .hp-track {
   position: relative;
   width: 100%;
-  height: 7px;
+  height: calc(var(--sun-r) * 0.15);
   background: rgba(0, 0, 0, 0.55);
   border-radius: 1px;
   box-shadow:
@@ -216,7 +217,7 @@ export default defineComponent({
 /* ── Damage Floats ── */
 .dmg-float-layer {
   position: fixed;
-  top: calc(50% - 116px);
+  top: calc(50% - calc(var(--sun-r) * 1.75));
   left: 50%;
   transform: translate(-50%, -100%);
   pointer-events: none;
