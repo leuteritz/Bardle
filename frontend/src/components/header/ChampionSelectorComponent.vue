@@ -79,14 +79,16 @@ function onImgError(e: Event) {
       </button>
     </div>
 
-    <<ChampionPickerModal
-      :open="pickerOpen"
-      :slot-index="pickerSlotIndex"
-      :header-slots="headerSlots"
-      :available-champions="availableChampions"
-      @close="closePicker"
-      @select="handleSelect"
-    />
+    <Teleport to="body">
+      <ChampionPickerModal
+        :open="pickerOpen"
+        :slot-index="pickerSlotIndex"
+        :header-slots="headerSlots"
+        :available-champions="availableChampions"
+        @close="closePicker"
+        @select="handleSelect"
+      />
+    </Teleport>
   </div>
 </template>
 

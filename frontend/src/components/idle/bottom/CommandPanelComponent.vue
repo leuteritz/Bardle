@@ -19,6 +19,9 @@ function roleColor(role: PlanetRoleType): string {
 function roleIcon(role: PlanetRoleType): string {
   return PLANET_ROLES[role].icon
 }
+function roleImage(role: PlanetRoleType): string {
+  return PLANET_ROLES[role].image
+}
 function roleBonusShort(role: PlanetRoleType): string {
   const r = PLANET_ROLES[role]
   switch (r.bonusType) {
@@ -73,6 +76,7 @@ function formatNumber(n: number): string {
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
             'cmd-planet-tile--buy': !slot.purchased,
           }"
+          :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="
             slot.purchased ? planetStore.openRoleModal(slot.id) : planetStore.buySlot(slot.id)
           "
@@ -80,12 +84,11 @@ function formatNumber(n: number): string {
           <div class="cmd-tile-num">{{ idx + 1 }}</div>
 
           <template v-if="slot.purchased && slot.role">
-            <div
-              class="cmd-tile-icon"
-              :style="{ color: roleColor(slot.role), '--role-color': roleColor(slot.role) }"
-            >
-              {{ roleIcon(slot.role) }}
-            </div>
+            <img
+              :src="roleImage(slot.role)"
+              class="cmd-tile-planet-img"
+              alt=""
+            />
             <div class="cmd-tile-bonus" :style="{ color: roleColor(slot.role) }">
               {{ roleBonusShort(slot.role) }}
             </div>
@@ -366,6 +369,18 @@ function formatNumber(n: number): string {
   font-weight: 900;
   color: rgba(200, 144, 64, 0.45);
   line-height: 1;
+}
+
+.cmd-tile-planet-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.cmd-planet-tile:hover .cmd-tile-planet-img {
+  transform: scale(1.1);
 }
 
 .cmd-tile-icon {
