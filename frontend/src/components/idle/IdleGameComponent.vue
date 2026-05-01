@@ -10,7 +10,7 @@
       <div class="relative flex items-center justify-center w-40 h-40">
         <img
           src="/img/BardAbilities/BardChime.png"
-          class="relative w-32 h-32 transition-all duration-300 select-none rpg-img drop-shadow-2xl group-hover:scale-110 chime-icon"
+          class="relative transition-all duration-300 select-none w-44 h-44 rpg-img drop-shadow-2xl group-hover:scale-110 chime-icon"
           style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
         />
       </div>
@@ -30,10 +30,10 @@
         left: chimeGainPos.x + 'px',
       }"
     >
-      <span class="text-2xl chime-gain-text"> +{{ gameStore.chimesPerClick }} </span>
+      <span class="text-5xl chime-gain-text"> +{{ gameStore.chimesPerClick }} </span>
       <img
         src="/img/BardAbilities/BardChime.png"
-        class="w-6 h-6 rpg-img"
+        class="w-16 h-16 rpg-img"
         style="filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))"
       />
     </div>
@@ -204,14 +204,16 @@ export default defineComponent({
 }
 
 .chime-gain-text {
-  color: #d9ff4d;
-  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.75);
+  color: #ff8c00;
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.9);
   text-shadow:
-    -1px -1px 0 rgba(0, 0, 0, 0.9),
-    1px -1px 0 rgba(0, 0, 0, 0.9),
-    -1px 1px 0 rgba(0, 0, 0, 0.9),
-    1px 1px 0 rgba(0, 0, 0, 0.9),
-    0 0 14px rgba(200, 255, 80, 0.95);
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 14px rgba(255, 140, 0, 0.95),
+    0 0 30px rgba(255, 140, 0, 0.6),
+    0 0 50px rgba(255, 100, 0, 0.3);
 }
 
 .animate-blob {
