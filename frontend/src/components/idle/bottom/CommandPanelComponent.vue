@@ -48,7 +48,7 @@ function formatNumber(n: number): string {
       <!-- ── Planet Grid ── -->
       <div class="cmd-planet-grid">
         <div
-          v-for="slot in slots"
+          v-for="(slot, index) in slots"
           :key="slot.id"
           class="cmd-planet-tile"
           :class="{
@@ -69,7 +69,6 @@ function formatNumber(n: number): string {
 
           <template v-else-if="slot.purchased">
             <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
-            <div class="cmd-tile-label cmd-tile-label--warn">Wählen</div>
           </template>
 
           <template v-else>
@@ -84,6 +83,11 @@ function formatNumber(n: number): string {
             class="cmd-tile-afford-dot"
             :class="{ 'cmd-tile-afford-dot--yes': planetStore.canAffordSlot(slot.id) }"
           />
+
+          <!-- ── Slot-Nummer Badge ── -->
+          <div class="cmd-slot-number-badge">
+            <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -207,7 +211,6 @@ function formatNumber(n: number): string {
   pointer-events: none;
 }
 
-/* Wrapper für den Team-Bereich – kein Border, kein Outline */
 .cmd-team-slots-wrapper {
   position: absolute;
   top: 8px;
@@ -221,7 +224,6 @@ function formatNumber(n: number): string {
   box-shadow: none !important;
 }
 
-/* Champion Slots – kein Border, kein Outline */
 .cmd-team-slots {
   width: 100%;
   height: 100%;
@@ -233,7 +235,6 @@ function formatNumber(n: number): string {
   box-shadow: none !important;
 }
 
-/* Separator */
 .cmd-sep {
   position: absolute;
   top: 190px;
@@ -259,7 +260,7 @@ function formatNumber(n: number): string {
   border-radius: 999px;
 }
 
-/* Planet Grid */
+/* Planet Grid - 3×2 */
 .cmd-planet-grid {
   position: absolute;
   top: 214px;
@@ -268,24 +269,11 @@ function formatNumber(n: number): string {
   bottom: 8px;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 1fr;
-  gap: 5px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(120, 78, 24, 0.9) rgba(20, 10, 4, 0.2);
-}
-
-.cmd-planet-grid::-webkit-scrollbar {
-  width: 3px;
-}
-.cmd-planet-grid::-webkit-scrollbar-track {
-  background: rgba(20, 10, 4, 0.2);
-  border-radius: 999px;
-}
-.cmd-planet-grid::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #8c5d1b, #5d3810);
-  border-radius: 999px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  overflow: hidden;
+  padding: 4px;
 }
 
 /* Planet Tile Basis */
@@ -295,10 +283,10 @@ function formatNumber(n: number): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 6px 4px 5px;
+  gap: 4px;
+  padding: 8px 6px;
   border: 2px solid rgba(200, 144, 64, 0.14);
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
   cursor: pointer;
   transition:
@@ -307,6 +295,7 @@ function formatNumber(n: number): string {
     transform 0.12s,
     box-shadow 0.15s;
   overflow: hidden;
+  min-height: 0;
 }
 
 .cmd-planet-tile:hover {
@@ -320,7 +309,6 @@ function formatNumber(n: number): string {
   transform: scale(0.95);
 }
 
-/* Gefüllter Slot */
 .cmd-planet-tile--filled {
   padding: 0;
   background: rgba(8, 6, 16, 0.95);
@@ -335,7 +323,6 @@ function formatNumber(n: number): string {
   transform: translateY(-2px) scale(1.03);
 }
 
-/* Leerer gekaufter Slot */
 .cmd-planet-tile--empty-slot {
   border: 2px solid rgba(90, 142, 224, 0.22);
 }
@@ -344,7 +331,6 @@ function formatNumber(n: number): string {
   border-color: rgba(90, 142, 224, 0.52);
 }
 
-/* Gesperrter Slot */
 .cmd-planet-tile--locked {
   opacity: 0.38;
   cursor: not-allowed;
@@ -358,7 +344,6 @@ function formatNumber(n: number): string {
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
 }
 
-/* Kaufbarer Slot */
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
   border: 2px solid rgba(82, 184, 48, 0.18);
 }
@@ -370,7 +355,6 @@ function formatNumber(n: number): string {
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Planet-Bild */
 .cmd-tile-planet-img {
   position: absolute;
   inset: 0;
@@ -379,18 +363,17 @@ function formatNumber(n: number): string {
   object-fit: cover;
   display: block;
   transition: transform 0.18s ease;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .cmd-planet-tile:hover .cmd-tile-planet-img {
   transform: scale(1.07);
 }
 
-/* Rollenfarb-Schimmer */
 .cmd-tile-role-glow {
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: radial-gradient(
     ellipse at 50% 110%,
     var(--role-color, rgba(200, 144, 64, 0.2)) 0%,
@@ -400,11 +383,10 @@ function formatNumber(n: number): string {
   z-index: 1;
 }
 
-/* Icons */
 .cmd-tile-icon {
   position: relative;
   z-index: 1;
-  font-size: 22px;
+  font-size: 26px;
   line-height: 1;
   text-align: center;
   transition: transform 0.15s;
@@ -416,19 +398,18 @@ function formatNumber(n: number): string {
 
 .cmd-tile-icon--empty {
   color: rgba(90, 142, 224, 0.35);
-  font-size: 20px;
+  font-size: 24px;
 }
 
 .cmd-tile-icon--locked {
   color: rgba(255, 255, 255, 0.15);
-  font-size: 17px;
+  font-size: 20px;
 }
 
-/* Labels */
 .cmd-tile-label {
   position: relative;
   z-index: 1;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-align: center;
@@ -440,23 +421,17 @@ function formatNumber(n: number): string {
   opacity: 0.88;
 }
 
-.cmd-tile-label--warn {
-  color: rgba(90, 142, 224, 0.9);
-  text-shadow: 0 0 8px rgba(90, 142, 224, 0.5);
-}
-
 .cmd-tile-label--cost {
   color: rgba(200, 144, 64, 0.6);
-  font-size: 7.5px;
+  font-size: 8.5px;
 }
 
-/* Afford-Dot */
 .cmd-tile-afford-dot {
   position: absolute;
-  top: 4px;
-  right: 5px;
-  width: 5px;
-  height: 5px;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: rgba(200, 144, 64, 0.2);
   border: 1px solid rgba(200, 144, 64, 0.3);
@@ -467,6 +442,43 @@ function formatNumber(n: number): string {
   background: rgba(82, 184, 48, 0.7);
   border-color: rgba(110, 210, 64, 0.5);
   box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
+}
+
+/* ── Slot-Nummer Badge – 1:1 Stil wie .slot-name-badge / .slot-name-text ── */
+.cmd-slot-number-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 4px 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0) 100%);
+  pointer-events: none;
+}
+
+.cmd-slot-number-text {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(180, 130, 50, 0.6);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.cmd-planet-tile--filled .cmd-slot-number-text {
+  color: rgba(220, 170, 60, 0.95);
+}
+
+.cmd-planet-tile:hover .cmd-slot-number-text {
+  color: #e8c040;
 }
 
 /* SVG Frame */
