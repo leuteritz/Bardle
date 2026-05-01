@@ -7,8 +7,11 @@ import ChampionSelectorComponent from '@/components/header/ChampionSelectorCompo
 const planetStore = usePlanetShopStore()
 const { slots } = storeToRefs(planetStore)
 
+// ── Neuer kleinerer Arc-Radius: 60px statt 218px ──
+// Bogen startet bei (380, 0), kurve bis (2, 60), dann gerade nach unten
+const ARC_R = 60
 const CORNER_R = 20
-const framePath = `M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,1 ${2 - CORNER_R},380`
+const framePath = `M 440,0 L ${ARC_R + 2},0 A ${ARC_R},${ARC_R} 0 0,0 2,${ARC_R} L 2,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,1 ${2 - CORNER_R},380`
 
 function roleColor(role: PlanetRoleType): string {
   return PLANET_ROLES[role].color
@@ -16,24 +19,21 @@ function roleColor(role: PlanetRoleType): string {
 function roleIcon(role: PlanetRoleType): string {
   return PLANET_ROLES[role].icon
 }
-function roleName(role: PlanetRoleType): string {
-  return PLANET_ROLES[role].name
-}
 function roleBonusShort(role: PlanetRoleType): string {
   const r = PLANET_ROLES[role]
   switch (r.bonusType) {
     case 'auto_attack_dps':
-      return `+${r.bonusPerSlot} DPS/s`
+      return `+${r.bonusPerSlot} DPS`
     case 'material_harvest_rate':
-      return `Ernte alle 30s`
+      return `⏱30s`
     case 'expedition_reward_multiplier':
-      return `+${Math.round(r.bonusPerSlot * 100)}% Exped.`
+      return `+${Math.round(r.bonusPerSlot * 100)}%`
     case 'boss_damage_reduction':
-      return `-${Math.round(r.bonusPerSlot * 100)}% Orbit-Dmg`
+      return `-${Math.round(r.bonusPerSlot * 100)}%`
     case 'offline_boost':
-      return `+${Math.round(r.bonusPerSlot * 100)}% Offline`
+      return `+${Math.round(r.bonusPerSlot * 100)}%`
     case 'building_cps_multiplier':
-      return `+${Math.round(r.bonusPerSlot * 100)}% Gebäude-CPS`
+      return `+${Math.round(r.bonusPerSlot * 100)}%`
   }
 }
 function formatNumber(n: number): string {
@@ -50,84 +50,69 @@ function formatNumber(n: number): string {
       <div class="cmd-surface-glow" />
       <div class="cmd-surface-floor" />
 
-      <!-- ── Body ── -->
-      <div class="cmd-body">
-        <!-- Champion Slots -->
-        <div class="cmd-team-slots">
-          <ChampionSelectorComponent />
-        </div>
+      <!-- ── Champion Slots: volle Breite ab y=70 ── -->
+      <div class="cmd-team-slots">
+        <ChampionSelectorComponent />
+      </div>
 
-        <!-- Section separator -->
-        <div class="cmd-sep">
-          <div class="cmd-sep-line" />
-          <span class="cmd-sep-label">🪐 Orbit-Slots</span>
-          <div class="cmd-sep-line" />
-        </div>
+      <!-- ── Separator ── -->
+      <div class="cmd-sep">
+        <div class="cmd-sep-line" />
+        <span class="cmd-sep-dot">🪐</span>
+        <div class="cmd-sep-line" />
+      </div>
 
-        <!-- Planet Grid -->
-        <div class="cmd-planet-grid">
+      <!-- ── Planet Grid ── -->
+      <div class="cmd-planet-grid">
+        <div
+          v-for="(slot, idx) in slots"
+          :key="slot.id"
+          class="cmd-planet-tile"
+          :class="{
+            'cmd-planet-tile--purchased': slot.purchased,
+            'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
+            'cmd-planet-tile--buy': !slot.purchased,
+          }"
+          @click="
+            slot.purchased ? planetStore.openRoleModal(slot.id) : planetStore.buySlot(slot.id)
+          "
+        >
+          <div class="cmd-tile-num">{{ idx + 1 }}</div>
+
+          <template v-if="slot.purchased && slot.role">
+            <div
+              class="cmd-tile-icon"
+              :style="{ color: roleColor(slot.role), '--role-color': roleColor(slot.role) }"
+            >
+              {{ roleIcon(slot.role) }}
+            </div>
+            <div class="cmd-tile-bonus" :style="{ color: roleColor(slot.role) }">
+              {{ roleBonusShort(slot.role) }}
+            </div>
+          </template>
+
+          <template v-else-if="slot.purchased">
+            <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
+            <div class="cmd-tile-bonus cmd-tile-bonus--warn">Wählen</div>
+          </template>
+
+          <template v-else>
+            <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
+            <div class="cmd-tile-bonus cmd-tile-bonus--cost">
+              🔔 {{ formatNumber(planetStore.getSlotCost(slot.id)) }}
+            </div>
+          </template>
+
           <div
-            v-for="(slot, idx) in slots"
-            :key="slot.id"
-            class="cmd-planet-tile"
-            :class="{
-              'cmd-planet-tile--purchased': slot.purchased,
-              'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
-              'cmd-planet-tile--buy': !slot.purchased,
-            }"
-            @click="
-              slot.purchased ? planetStore.openRoleModal(slot.id) : planetStore.buySlot(slot.id)
-            "
-          >
-            <div class="cmd-tile-num">{{ idx + 1 }}</div>
-
-            <template v-if="slot.purchased && slot.role">
-              <div class="cmd-tile-icon" :style="{ color: roleColor(slot.role) }">
-                {{ roleIcon(slot.role) }}
-              </div>
-              <div class="cmd-tile-info">
-                <span class="cmd-tile-name" :style="{ color: roleColor(slot.role) }">{{
-                  roleName(slot.role)
-                }}</span>
-                <span class="cmd-tile-bonus">{{ roleBonusShort(slot.role) }}</span>
-              </div>
-              <div class="cmd-tile-action">Ändern</div>
-            </template>
-
-            <template v-else-if="slot.purchased">
-              <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
-              <div class="cmd-tile-info">
-                <span class="cmd-tile-name cmd-tile-name--empty">Bereit</span>
-                <span class="cmd-tile-bonus cmd-tile-bonus--warn">Keine Rolle</span>
-              </div>
-              <div class="cmd-tile-action cmd-tile-action--assign">Wählen</div>
-            </template>
-
-            <template v-else>
-              <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
-              <div class="cmd-tile-info">
-                <span class="cmd-tile-name cmd-tile-name--locked">Gesperrt</span>
-                <span class="cmd-tile-bonus"
-                  >🔔 {{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span
-                >
-              </div>
-              <div
-                class="cmd-tile-action"
-                :class="
-                  planetStore.canAffordSlot(slot.id)
-                    ? 'cmd-tile-action--buy'
-                    : 'cmd-tile-action--poor'
-                "
-              >
-                Kaufen
-              </div>
-            </template>
-          </div>
+            v-if="!slot.purchased"
+            class="cmd-tile-afford-dot"
+            :class="{ 'cmd-tile-afford-dot--yes': planetStore.canAffordSlot(slot.id) }"
+          />
         </div>
       </div>
     </div>
 
-    <!-- SVG frame — same as ChatWidget -->
+    <!-- SVG frame mit neuem kleinen Arc -->
     <svg
       class="cmd-frame-svg"
       viewBox="0 0 440 440"
@@ -181,7 +166,6 @@ function formatNumber(n: number): string {
 </template>
 
 <style scoped>
-/* ── Outer HUD wrapper ── */
 .cmd-hud {
   position: fixed;
   right: 0;
@@ -191,14 +175,14 @@ function formatNumber(n: number): string {
   height: 440px;
   pointer-events: none;
 }
-
 @media (max-width: 600px) {
   .cmd-hud {
     display: none;
   }
 }
 
-/* ── Panel (clipped to same arc shape as ChatWidget) ── */
+/* ── Panel: clip-path passt zum neuen ARC_R=60 ──
+   Bogen von (62, 0) → links oben mit Radius 60 → (2, 60) → gerade runter */
 .cmd-panel {
   position: absolute;
   right: 0;
@@ -207,14 +191,11 @@ function formatNumber(n: number): string {
   height: 440px;
   pointer-events: auto;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
   box-sizing: border-box;
-  clip-path: path('M 440,0 L 220,0 A 218,218 0 0,0 2,220 L 2,440 L 440,440 Z');
+  clip-path: path('M 440,0 L 62,0 A 60,60 0 0,0 2,60 L 2,440 L 440,440 Z');
   background: transparent;
 }
 
-/* ── Background layers (same as ChatWidget) ── */
 .cmd-surface-fill {
   position: absolute;
   inset: 0;
@@ -224,7 +205,7 @@ function formatNumber(n: number): string {
 .cmd-surface-glow {
   position: absolute;
   inset: auto 0 0 0;
-  height: 140px;
+  height: 180px;
   z-index: 0;
   background:
     linear-gradient(
@@ -241,123 +222,73 @@ function formatNumber(n: number): string {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 120px;
+  height: 140px;
   z-index: 0;
   background: linear-gradient(180deg, rgba(30, 12, 4, 0.72) 0%, rgba(22, 8, 2, 0.98) 100%), #160802;
   pointer-events: none;
 }
 
-/* ── Header arc area ── */
-.cmd-header-arc {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 92px;
-  padding: 18px 16px 0 56px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 5px;
-  z-index: 2;
-}
-.cmd-header-arc::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 20% 115%, rgba(255, 205, 96, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(92, 50, 18, 0.24), rgba(46, 22, 8, 0.08));
-  pointer-events: none;
-}
-.cmd-header-title {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.cmd-header-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-.cmd-header-label {
-  font-size: 15px;
-  font-weight: 900;
-  color: #e8c040;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.35));
-}
-.cmd-header-sub {
-  position: relative;
-  z-index: 2;
-  font-size: 10px;
-  color: rgba(200, 144, 64, 0.4);
-  letter-spacing: 0.04em;
-  line-height: 1;
-  padding-left: 1px;
-}
-
-/* ── Body ── */
-.cmd-body {
-  position: absolute;
-  inset: 92px 14px 0 14px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Champion slots ── */
+/* ── Champion Slots ──
+   Mit ARC_R=60: Ab y=60 ist die volle Breite frei (x=2).
+   Slots starten bei top: 8px, left: 10px, right: 8px
+   → volle Breite minus kleiner Rand.
+   Höhe: 180px — großzügig für die Champion-Karten. */
 .cmd-team-slots {
-  height: 130px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 8px;
+  height: 180px;
+  z-index: 2;
   display: flex;
   align-items: stretch;
-  padding: 6px 0 4px;
 }
 
-/* ── Section separator ── */
+/* ── Separator ── */
 .cmd-sep {
+  position: absolute;
+  top: 194px;
+  left: 10px;
+  right: 10px;
+  height: 14px;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0 4px;
-  flex-shrink: 0;
+  gap: 6px;
 }
 .cmd-sep-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 144, 64, 0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(200, 144, 64, 0.22), transparent);
 }
-.cmd-sep-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.45);
-  white-space: nowrap;
+.cmd-sep-dot {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.5;
 }
 
-/* ── Planet grid ── */
+/* ── Planet Grid ──
+   top: 212, bottom: 8 → ca. 220px für das Grid */
 .cmd-planet-grid {
-  flex: 1;
+  position: absolute;
+  top: 212px;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  z-index: 2;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 5px;
   overflow-y: auto;
-  padding-bottom: 6px;
-  min-height: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(120, 78, 24, 0.95) rgba(20, 10, 4, 0.28);
+  scrollbar-color: rgba(120, 78, 24, 0.9) rgba(20, 10, 4, 0.2);
 }
 .cmd-planet-grid::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 .cmd-planet-grid::-webkit-scrollbar-track {
-  background: rgba(20, 10, 4, 0.24);
+  background: rgba(20, 10, 4, 0.2);
   border-radius: 999px;
 }
 .cmd-planet-grid::-webkit-scrollbar-thumb {
@@ -365,177 +296,141 @@ function formatNumber(n: number): string {
   border-radius: 999px;
 }
 
-/* ── Planet tile ── */
+/* ── Planet Tile ── */
 .cmd-planet-tile {
   position: relative;
-  display: grid;
-  grid-template-columns: 18px 1fr auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 7px 8px;
-  background: linear-gradient(180deg, rgba(58, 29, 11, 0.56), rgba(33, 16, 7, 0.72));
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 4px 5px;
+  background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
   border: 1px solid rgba(200, 144, 64, 0.08);
   border-radius: 10px;
   cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 238, 190, 0.03),
-    0 4px 10px rgba(0, 0, 0, 0.14);
   transition:
     border-color 0.15s,
     background 0.15s,
-    transform 0.12s;
-  min-height: 52px;
+    transform 0.12s,
+    box-shadow 0.15s;
+  overflow: hidden;
 }
 .cmd-planet-tile:hover {
-  border-color: rgba(200, 144, 64, 0.3);
-  background: linear-gradient(180deg, rgba(78, 40, 14, 0.68), rgba(44, 22, 8, 0.82));
-  transform: translateY(-1px);
+  border-color: rgba(200, 144, 64, 0.32);
+  background: linear-gradient(180deg, rgba(72, 36, 12, 0.7), rgba(40, 18, 6, 0.82));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 .cmd-planet-tile:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
+.cmd-planet-tile--purchased:not(:has(.cmd-tile-icon--empty)):hover {
+  box-shadow:
+    0 0 14px -2px var(--role-color, rgba(200, 144, 64, 0.4)),
+    0 6px 16px rgba(0, 0, 0, 0.25);
+  border-color: var(--role-color, rgba(200, 144, 64, 0.3));
+}
 .cmd-planet-tile--locked {
-  opacity: 0.5;
+  opacity: 0.42;
   cursor: not-allowed;
-  pointer-events: auto;
 }
 .cmd-planet-tile--locked:hover {
   transform: none;
+  box-shadow: none;
 }
-
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
   border-color: rgba(82, 184, 48, 0.12);
 }
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
-  border-color: rgba(82, 184, 48, 0.35);
+  border-color: rgba(82, 184, 48, 0.38);
+  box-shadow:
+    0 0 10px -2px rgba(82, 184, 48, 0.28),
+    0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.cmd-planet-tile--purchased {
-  border-color: rgba(200, 144, 64, 0.12);
-}
-
-/* ── Tile number badge ── */
 .cmd-tile-num {
-  width: 16px;
-  height: 16px;
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  background: rgba(200, 144, 64, 0.1);
-  border: 1px solid rgba(200, 144, 64, 0.25);
+  background: rgba(200, 144, 64, 0.08);
+  border: 1px solid rgba(200, 144, 64, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
-  font-weight: 800;
-  color: rgba(200, 144, 64, 0.55);
-  flex-shrink: 0;
-  align-self: center;
+  font-size: 6.5px;
+  font-weight: 900;
+  color: rgba(200, 144, 64, 0.45);
+  line-height: 1;
 }
 
-/* ── Tile icon ── */
 .cmd-tile-icon {
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   text-align: center;
-  align-self: center;
-  filter: drop-shadow(0 0 5px currentColor);
-  grid-column: unset;
+  filter: drop-shadow(0 0 6px var(--role-color, currentColor));
+  transition:
+    filter 0.2s,
+    transform 0.15s;
+}
+.cmd-planet-tile:hover .cmd-tile-icon {
+  filter: drop-shadow(0 0 10px var(--role-color, currentColor))
+    drop-shadow(0 0 3px var(--role-color, currentColor));
+  transform: scale(1.12);
 }
 .cmd-tile-icon--empty {
-  color: rgba(200, 144, 64, 0.25);
+  color: rgba(200, 144, 64, 0.2);
   filter: none;
-  font-size: 16px;
+  font-size: 20px;
 }
 .cmd-tile-icon--locked {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.15);
   filter: none;
-  font-size: 14px;
+  font-size: 18px;
 }
 
-/* ── Tile info ── */
-.cmd-tile-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.cmd-tile-name {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1;
-}
-.cmd-tile-name--empty {
-  color: #a8e060;
-}
-.cmd-tile-name--locked {
-  color: rgba(200, 144, 64, 0.35);
-}
 .cmd-tile-bonus {
-  font-size: 9px;
-  color: rgba(200, 144, 64, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1;
-}
-.cmd-tile-bonus--warn {
-  color: rgba(200, 144, 64, 0.9);
-}
-
-/* ── Tile action button ── */
-.cmd-tile-action {
   font-size: 8px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 3px 6px;
-  border-radius: 4px;
-  border: 1px solid #5c3310;
-  background: rgba(60, 30, 10, 0.6);
-  color: rgba(200, 144, 64, 0.6);
+  letter-spacing: 0.04em;
+  text-align: center;
+  line-height: 1;
   white-space: nowrap;
-  align-self: center;
-  flex-shrink: 0;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  opacity: 0.88;
+  text-shadow: 0 0 8px currentColor;
 }
-.cmd-planet-tile:hover .cmd-tile-action {
-  color: #e8c040;
-  border-color: #7a4e20;
-  background: rgba(80, 40, 10, 0.7);
+.cmd-tile-bonus--warn {
+  color: rgba(90, 142, 224, 0.9);
+  text-shadow: 0 0 8px rgba(90, 142, 224, 0.5);
 }
-.cmd-tile-action--assign {
-  border-color: rgba(90, 142, 224, 0.5);
-  background: rgba(42, 78, 144, 0.3);
-  color: rgba(90, 142, 224, 0.8);
-}
-.cmd-planet-tile:hover .cmd-tile-action--assign {
-  border-color: #5a8ee0;
-  color: #7ab0f8;
-  background: rgba(42, 78, 144, 0.55);
-}
-.cmd-tile-action--buy {
-  border-color: rgba(82, 184, 48, 0.5);
-  background: rgba(46, 122, 26, 0.3);
-  color: rgba(110, 192, 64, 0.9);
-}
-.cmd-planet-tile:hover .cmd-tile-action--buy {
-  border-color: #6ec040;
-  color: #a8e060;
-  background: rgba(46, 122, 26, 0.55);
-}
-.cmd-tile-action--poor {
-  opacity: 0.4;
-  cursor: not-allowed;
+.cmd-tile-bonus--cost {
+  color: rgba(200, 144, 64, 0.6);
+  font-size: 7.5px;
 }
 
-/* ── SVG frame (same animation as ChatWidget) ── */
+.cmd-tile-afford-dot {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(200, 144, 64, 0.2);
+  border: 1px solid rgba(200, 144, 64, 0.3);
+}
+.cmd-tile-afford-dot--yes {
+  background: rgba(82, 184, 48, 0.7);
+  border-color: rgba(110, 210, 64, 0.5);
+  box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
+}
+
 .cmd-frame-svg {
   position: absolute;
   top: 0;
