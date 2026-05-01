@@ -31,9 +31,9 @@
                 v-for="role in rolesLeft"
                 :key="role.id"
                 class="role-option"
-                :class="{ 'role-option--selected': previewRole === role.id }"
+                :class="{ 'role-option--selected': activeSlot.role === role.id }"
                 :style="{ '--rc': role.color }"
-                @click="selectPreview(role.id)"
+                @click="assignRole(role.id)"
               >
                 <span class="role-option-icon">{{ role.icon }}</span>
                 <span class="role-option-name">{{ role.name }}</span>
@@ -60,8 +60,8 @@
               <div class="planet-preview-wrap">
                 <Transition name="planet-swap" mode="out-in">
                   <img
-                    :key="previewImage"
-                    :src="previewImage"
+                    :key="activeImage"
+                    :src="activeImage"
                     class="planet-preview-img"
                     alt="Planet"
                   />
@@ -69,8 +69,8 @@
               </div>
 
               <!-- Rollenname unter dem Bild -->
-              <div class="planet-role-label" :style="{ color: previewRoleColor }">
-                {{ previewRoleName }}
+              <div class="planet-role-label" :style="{ color: activeRoleColor }">
+                {{ activeRoleName }}
               </div>
             </div>
 
@@ -80,9 +80,9 @@
                 v-for="role in rolesRight"
                 :key="role.id"
                 class="role-option"
-                :class="{ 'role-option--selected': previewRole === role.id }"
+                :class="{ 'role-option--selected': activeSlot.role === role.id }"
                 :style="{ '--rc': role.color }"
-                @click="selectPreview(role.id)"
+                @click="assignRole(role.id)"
               >
                 <span class="role-option-icon">{{ role.icon }}</span>
                 <span class="role-option-name">{{ role.name }}</span>
@@ -95,7 +95,7 @@
 
           <!-- Config-Sektion: harvest_node → Material wählen -->
           <Transition name="config-slide">
-            <div v-if="showConfig && activeSlot.role === 'harvest_node'" class="role-config-section">
+            <div v-if="activeSlot.role === 'harvest_node'" class="role-config-section">
               <div class="role-config-header">
                 <span class="role-config-header-icon">🌾</span>
                 <span>Material auswählen</span>
@@ -114,7 +114,9 @@
                     <div v-else class="config-btn-img-placeholder">?</div>
                   </div>
                   <span class="config-btn-label">{{ mat.name }}</span>
-                  <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="config-btn-check">✓</div>
+                  <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="config-btn-check">
+                    ✓
+                  </div>
                 </button>
               </div>
             </div>
@@ -122,7 +124,7 @@
 
           <!-- Config-Sektion: resonance_tower → Gebäude wählen -->
           <Transition name="config-slide">
-            <div v-if="showConfig && activeSlot.role === 'resonance_tower'" class="role-config-section">
+            <div v-if="activeSlot.role === 'resonance_tower'" class="role-config-section">
               <div class="role-config-header">
                 <span class="role-config-header-icon">🏗️</span>
                 <span>Gebäude auswählen</span>
@@ -141,22 +143,13 @@
                     <div v-else class="config-btn-img-placeholder">🏗</div>
                   </div>
                   <span class="config-btn-label">{{ bld.name }}</span>
-                  <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="config-btn-check">✓</div>
+                  <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="config-btn-check">
+                    ✓
+                  </div>
                 </button>
               </div>
             </div>
           </Transition>
-
-          <!-- Footer: Bestätigen-Button -->
-          <div v-if="!showConfig" class="role-modal-footer">
-            <button
-              class="confirm-btn"
-              :disabled="previewRole === null || previewRole === activeSlot.role"
-              @click="confirmRole()"
-            >
-              ✔ Auswählen
-            </button>
-          </div>
 
           <!-- Goldlinie unten -->
           <div class="role-modal-goldline role-modal-goldline--bottom" />
@@ -167,7 +160,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, watch } from 'vue'
+import { defineComponent, computed } from 'vue'
 import {
   usePlanetShopStore,
   PLANET_ROLES_LIST,
@@ -175,8 +168,6 @@ import {
 } from '../../../stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType } from '../../../stores/planetShopStore'
 import { MATERIALS } from '../../../config/materials'
-
-const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
 
 const CPS_BUILDINGS = [
   { id: 'glockenturm', name: 'Glockenturm', icon: '/img/Glockenturm.png' },
@@ -201,49 +192,27 @@ export default defineComponent({
       return activeSlot.value.id.replace('slot_', '')
     })
 
-    // Lokaler Preview-State – erst beim Bestätigen wird assignRole aufgerufen
-    const previewRole = ref<PlanetRoleType | null>(null)
-    // Ob config-Sektion sichtbar ist (nach Bestätigen einer konfigurierbaren Rolle)
-    const showConfig = ref(false)
-
-    // Reset wenn Modal für neuen Slot öffnet
-    watch(
-      () => store.activeRoleModalSlotId,
-      () => {
-        previewRole.value = activeSlot.value?.role ?? null
-        showConfig.value = activeSlot.value?.role !== null &&
-          CONFIGURABLE_ROLES.includes(activeSlot.value!.role!)
-      },
-    )
-
-    function selectPreview(roleId: PlanetRoleType) {
-      previewRole.value = roleId
-      showConfig.value = false
+    // Sofort zuweisen + ggf. Config-Bereich zeigt sich automatisch via v-if auf activeSlot.role
+    function assignRole(roleId: PlanetRoleType) {
+      if (!activeSlot.value) return
+      // Gleiche Rolle nochmal geklickt → nichts tun
+      if (activeSlot.value.role === roleId) return
+      store.assignRole(activeSlot.value.id, roleId)
     }
 
-    function confirmRole() {
-      if (!activeSlot.value || previewRole.value === null) return
-      store.assignRole(activeSlot.value.id, previewRole.value)
-      if (CONFIGURABLE_ROLES.includes(previewRole.value)) {
-        showConfig.value = true
-      } else {
-        store.closeRoleModal()
-      }
-    }
-
-    // Berechnete Werte für das Planetenbild im Zentrum
-    const previewImage = computed(() => {
-      const role = previewRole.value ?? activeSlot.value?.role
+    // Berechnete Werte für das Planetenbild im Zentrum – direkt von der aktiven Rolle
+    const activeImage = computed(() => {
+      const role = activeSlot.value?.role
       return role ? PLANET_ROLES[role].image : '/img/planets/planet1.png'
     })
 
-    const previewRoleName = computed(() => {
-      const role = previewRole.value ?? activeSlot.value?.role
+    const activeRoleName = computed(() => {
+      const role = activeSlot.value?.role
       return role ? PLANET_ROLES[role].name : '—'
     })
 
-    const previewRoleColor = computed(() => {
-      const role = previewRole.value ?? activeSlot.value?.role
+    const activeRoleColor = computed(() => {
+      const role = activeSlot.value?.role
       return role ? PLANET_ROLES[role].color : '#aaaaaa'
     })
 
@@ -276,16 +245,13 @@ export default defineComponent({
       store,
       activeSlot,
       slotNumber,
-      previewRole,
-      previewImage,
-      previewRoleName,
-      previewRoleColor,
+      activeImage,
+      activeRoleName,
+      activeRoleColor,
       hpPercent,
       rolesLeft,
       rolesRight,
-      showConfig,
-      selectPreview,
-      confirmRole,
+      assignRole,
       bonusText,
       MATERIALS,
       CPS_BUILDINGS,
@@ -308,7 +274,7 @@ export default defineComponent({
 
 /* ── Card ──────────────────────────────────────────────────────────────────── */
 .role-modal-card {
-  width: clamp(520px, 92vw, 860px);
+  width: clamp(520px, 92vw, 980px);
   max-height: 92vh;
   overflow-y: auto;
   background: #0d0c07;
@@ -409,8 +375,8 @@ export default defineComponent({
 /* ── 3-Spalten-Body ────────────────────────────────────────────────────────── */
 .role-modal-body {
   display: grid;
-  grid-template-columns: 1fr 190px 1fr;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) 280px minmax(0, 1fr);
+  gap: 1rem;
   padding: 1rem 1rem 0.5rem;
   align-items: start;
 }
@@ -465,7 +431,9 @@ export default defineComponent({
   font-size: 1.8rem;
   line-height: 1;
   filter: drop-shadow(0 0 6px color-mix(in oklch, var(--rc) 55%, transparent));
-  transition: transform 0.15s, filter 0.15s;
+  transition:
+    transform 0.15s,
+    filter 0.15s;
 }
 
 .role-option:hover .role-option-icon,
@@ -522,11 +490,14 @@ export default defineComponent({
 
 /* ── Mittlere Spalte ───────────────────────────────────────────────────────── */
 .role-col--center {
+  width: 280px;
+  justify-self: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.85rem;
   padding-top: 0.25rem;
+  text-align: center;
 }
 
 /* ── HP-Anzeige ────────────────────────────────────────────────────────────── */
@@ -576,28 +547,32 @@ export default defineComponent({
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
 .planet-preview-wrap {
   position: relative;
-  width: 150px;
-  height: 150px;
+  width: 240px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 auto;
 }
 
 .planet-preview-img {
-  width: 140px;
-  height: 140px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
-  filter: drop-shadow(0 0 24px rgba(180, 140, 60, 0.35));
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 34px rgba(180, 140, 60, 0.45));
 }
 
 .planet-role-label {
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-align: center;
   text-transform: uppercase;
   text-shadow: 0 0 10px currentColor;
   min-height: 1.2em;
+  width: 100%;
 }
 
 /* ── Planet-Bild Transition ────────────────────────────────────────────────── */
@@ -620,47 +595,9 @@ export default defineComponent({
   opacity: 0;
 }
 
-/* ── Footer: Bestätigen ────────────────────────────────────────────────────── */
-.role-modal-footer {
-  display: flex;
-  justify-content: center;
-  padding: 0.6rem 1rem 0.75rem;
-}
-
-.confirm-btn {
-  padding: 0.6rem 2.5rem;
-  background: linear-gradient(180deg, #52b830 0%, #2e7a1a 100%);
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  color: #e8ffe0;
-  font-size: 0.82rem;
-  font-weight: 800;
-  cursor: pointer;
-  letter-spacing: 0.05em;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.1s;
-  box-shadow: 0 0 10px rgba(82, 184, 48, 0.2);
-}
-
-.confirm-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #64d840 0%, #3a9020 100%);
-  border-color: #80e040;
-  box-shadow: 0 0 18px rgba(100, 216, 64, 0.35);
-  transform: translateY(-1px);
-}
-
-.confirm-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  filter: grayscale(55%);
-}
-
 /* ── Config-Sektion ────────────────────────────────────────────────────────── */
 .role-config-section {
-  margin: 0 0.75rem 0.75rem;
+  margin: 0.5rem 0.75rem 0.75rem;
   padding: 1rem;
   border: 1px solid #3a2a10;
   border-radius: 4px;
@@ -836,5 +773,37 @@ export default defineComponent({
 .role-modal-leave-to {
   opacity: 0;
   transform: scale(0.92) translateY(8px);
+}
+
+@media (max-width: 900px) {
+  .role-modal-card {
+    width: min(96vw, 860px);
+  }
+
+  .role-modal-body {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .role-col--center {
+    order: -1;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .planet-preview-wrap {
+    width: 210px;
+    height: 210px;
+  }
+
+  .planet-preview-img {
+    width: 190px;
+    height: 190px;
+  }
+
+  .role-config-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

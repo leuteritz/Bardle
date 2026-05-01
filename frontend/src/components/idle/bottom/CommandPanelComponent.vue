@@ -7,8 +7,6 @@ import ChampionSelectorComponent from '@/components/header/ChampionSelectorCompo
 const planetStore = usePlanetShopStore()
 const { slots } = storeToRefs(planetStore)
 
-// ── Neuer kleinerer Arc-Radius: 60px statt 218px ──
-// Bogen startet bei (380, 0), kurve bis (2, 60), dann gerade nach unten
 const ARC_R = 60
 const CORNER_R = 20
 const framePath = `M 440,0 L ${ARC_R + 2},0 A ${ARC_R},${ARC_R} 0 0,0 2,${ARC_R} L 2,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,1 ${2 - CORNER_R},380`
@@ -16,29 +14,11 @@ const framePath = `M 440,0 L ${ARC_R + 2},0 A ${ARC_R},${ARC_R} 0 0,0 2,${ARC_R}
 function roleColor(role: PlanetRoleType): string {
   return PLANET_ROLES[role].color
 }
-function roleIcon(role: PlanetRoleType): string {
-  return PLANET_ROLES[role].icon
-}
+
 function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image
 }
-function roleBonusShort(role: PlanetRoleType): string {
-  const r = PLANET_ROLES[role]
-  switch (r.bonusType) {
-    case 'auto_attack_dps':
-      return `+${r.bonusPerSlot} DPS`
-    case 'material_harvest_rate':
-      return `⏱30s`
-    case 'expedition_reward_multiplier':
-      return `+${Math.round(r.bonusPerSlot * 100)}%`
-    case 'boss_damage_reduction':
-      return `-${Math.round(r.bonusPerSlot * 100)}%`
-    case 'offline_boost':
-      return `+${Math.round(r.bonusPerSlot * 100)}%`
-    case 'building_cps_multiplier':
-      return `+${Math.round(r.bonusPerSlot * 100)}%`
-  }
-}
+
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
@@ -53,7 +33,7 @@ function formatNumber(n: number): string {
       <div class="cmd-surface-glow" />
       <div class="cmd-surface-floor" />
 
-      <!-- ── Champion Slots: volle Breite ab y=70 ── -->
+      <!-- ── Champion Slots ── -->
       <div class="cmd-team-slots">
         <ChampionSelectorComponent />
       </div>
@@ -68,11 +48,12 @@ function formatNumber(n: number): string {
       <!-- ── Planet Grid ── -->
       <div class="cmd-planet-grid">
         <div
-          v-for="(slot, idx) in slots"
+          v-for="slot in slots"
           :key="slot.id"
           class="cmd-planet-tile"
           :class="{
-            'cmd-planet-tile--purchased': slot.purchased,
+            'cmd-planet-tile--filled': slot.purchased && !!slot.role,
+            'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
             'cmd-planet-tile--buy': !slot.purchased,
           }"
@@ -81,27 +62,19 @@ function formatNumber(n: number): string {
             slot.purchased ? planetStore.openRoleModal(slot.id) : planetStore.buySlot(slot.id)
           "
         >
-          <div class="cmd-tile-num">{{ idx + 1 }}</div>
-
           <template v-if="slot.purchased && slot.role">
-            <img
-              :src="roleImage(slot.role)"
-              class="cmd-tile-planet-img"
-              alt=""
-            />
-            <div class="cmd-tile-bonus" :style="{ color: roleColor(slot.role) }">
-              {{ roleBonusShort(slot.role) }}
-            </div>
+            <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" />
+            <div class="cmd-tile-role-glow" />
           </template>
 
           <template v-else-if="slot.purchased">
             <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
-            <div class="cmd-tile-bonus cmd-tile-bonus--warn">Wählen</div>
+            <div class="cmd-tile-label cmd-tile-label--warn">Wählen</div>
           </template>
 
           <template v-else>
             <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
-            <div class="cmd-tile-bonus cmd-tile-bonus--cost">
+            <div class="cmd-tile-label cmd-tile-label--cost">
               🔔 {{ formatNumber(planetStore.getSlotCost(slot.id)) }}
             </div>
           </template>
@@ -115,7 +88,7 @@ function formatNumber(n: number): string {
       </div>
     </div>
 
-    <!-- SVG frame mit neuem kleinen Arc -->
+    <!-- SVG frame -->
     <svg
       class="cmd-frame-svg"
       viewBox="0 0 440 440"
@@ -178,14 +151,13 @@ function formatNumber(n: number): string {
   height: 440px;
   pointer-events: none;
 }
+
 @media (max-width: 600px) {
   .cmd-hud {
     display: none;
   }
 }
 
-/* ── Panel: clip-path passt zum neuen ARC_R=60 ──
-   Bogen von (62, 0) → links oben mit Radius 60 → (2, 60) → gerade runter */
 .cmd-panel {
   position: absolute;
   right: 0;
@@ -205,6 +177,7 @@ function formatNumber(n: number): string {
   z-index: 0;
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.92));
 }
+
 .cmd-surface-glow {
   position: absolute;
   inset: auto 0 0 0;
@@ -220,6 +193,7 @@ function formatNumber(n: number): string {
     linear-gradient(180deg, rgba(103, 47, 10, 0.08), rgba(43, 16, 5, 0.2));
   pointer-events: none;
 }
+
 .cmd-surface-floor {
   position: absolute;
   left: 0;
@@ -231,52 +205,60 @@ function formatNumber(n: number): string {
   pointer-events: none;
 }
 
-/* ── Champion Slots ──
-   Mit ARC_R=60: Ab y=60 ist die volle Breite frei (x=2).
-   Slots starten bei top: 8px, left: 10px, right: 8px
-   → volle Breite minus kleiner Rand.
-   Höhe: 180px — großzügig für die Champion-Karten. */
+/* Champion Slots: clip-path folgt der Panel-Rundung oben links (ARC_R=60, Offset left=10/top=8) */
 .cmd-team-slots {
   position: absolute;
   top: 8px;
   left: 10px;
   right: 8px;
-  height: 180px;
+  height: 178px;
   z-index: 2;
   display: flex;
   align-items: stretch;
+  background: transparent;
+  clip-path: path('M 422,0 L 52,0 A 60,60 0 0,0 -8,52 L -8,178 L 422,178 Z');
 }
 
-/* ── Separator ── */
+/* Separator */
 .cmd-sep {
   position: absolute;
-  top: 194px;
-  left: 10px;
-  right: 10px;
-  height: 14px;
+  top: 190px;
+  left: 8px;
+  right: 8px;
+  height: 20px;
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.cmd-sep-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 144, 64, 0.22), transparent);
-}
-.cmd-sep-dot {
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.5;
+  gap: 8px;
 }
 
-/* ── Planet Grid ──
-   top: 212, bottom: 8 → ca. 220px für das Grid */
+.cmd-sep-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 144, 64, 0.18) 15%,
+    rgba(210, 160, 40, 0.55) 50%,
+    rgba(200, 144, 64, 0.18) 85%,
+    transparent 100%
+  );
+  border-radius: 999px;
+}
+
+.cmd-sep-dot {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 6px rgba(210, 160, 40, 0.6));
+}
+
+/* Planet Grid */
 .cmd-planet-grid {
   position: absolute;
-  top: 212px;
-  left: 10px;
-  right: 10px;
+  top: 214px;
+  left: 8px;
+  right: 8px;
   bottom: 8px;
   z-index: 2;
   display: grid;
@@ -287,6 +269,7 @@ function formatNumber(n: number): string {
   scrollbar-width: thin;
   scrollbar-color: rgba(120, 78, 24, 0.9) rgba(20, 10, 4, 0.2);
 }
+
 .cmd-planet-grid::-webkit-scrollbar {
   width: 3px;
 }
@@ -299,7 +282,7 @@ function formatNumber(n: number): string {
   border-radius: 999px;
 }
 
-/* ── Planet Tile ── */
+/* Planet Tile Basis */
 .cmd-planet-tile {
   position: relative;
   display: flex;
@@ -308,9 +291,9 @@ function formatNumber(n: number): string {
   justify-content: center;
   gap: 3px;
   padding: 6px 4px 5px;
-  background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
-  border: 1px solid rgba(200, 144, 64, 0.08);
+  border: 2px solid rgba(200, 144, 64, 0.14);
   border-radius: 10px;
+  background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
   cursor: pointer;
   transition:
     border-color 0.15s,
@@ -319,96 +302,126 @@ function formatNumber(n: number): string {
     box-shadow 0.15s;
   overflow: hidden;
 }
+
 .cmd-planet-tile:hover {
-  border-color: rgba(200, 144, 64, 0.32);
+  border-color: rgba(200, 144, 64, 0.42);
   background: linear-gradient(180deg, rgba(72, 36, 12, 0.7), rgba(40, 18, 6, 0.82));
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
+
 .cmd-planet-tile:active {
   transform: scale(0.95);
 }
 
-.cmd-planet-tile--purchased:not(:has(.cmd-tile-icon--empty)):hover {
+/* Gefüllter Slot */
+.cmd-planet-tile--filled {
+  padding: 0;
+  background: rgba(8, 6, 16, 0.95);
+  border: 2px solid color-mix(in srgb, var(--role-color, rgba(200, 144, 64, 1)) 40%, transparent);
+}
+
+.cmd-planet-tile--filled:hover {
+  border-color: var(--role-color, rgba(200, 144, 64, 0.8));
   box-shadow:
-    0 0 14px -2px var(--role-color, rgba(200, 144, 64, 0.4)),
-    0 6px 16px rgba(0, 0, 0, 0.25);
-  border-color: var(--role-color, rgba(200, 144, 64, 0.3));
+    0 0 16px -2px var(--role-color, rgba(200, 144, 64, 0.4)),
+    0 6px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px) scale(1.03);
 }
+
+/* Leerer gekaufter Slot */
+.cmd-planet-tile--empty-slot {
+  border: 2px solid rgba(90, 142, 224, 0.22);
+}
+
+.cmd-planet-tile--empty-slot:hover {
+  border-color: rgba(90, 142, 224, 0.52);
+}
+
+/* Gesperrter Slot */
 .cmd-planet-tile--locked {
-  opacity: 0.42;
+  opacity: 0.38;
   cursor: not-allowed;
+  border: 2px solid rgba(200, 144, 64, 0.08);
 }
+
 .cmd-planet-tile--locked:hover {
   transform: none;
   box-shadow: none;
+  border-color: rgba(200, 144, 64, 0.08);
+  background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
 }
+
+/* Kaufbarer Slot */
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
-  border-color: rgba(82, 184, 48, 0.12);
+  border: 2px solid rgba(82, 184, 48, 0.18);
 }
+
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
-  border-color: rgba(82, 184, 48, 0.38);
+  border-color: rgba(82, 184, 48, 0.55);
   box-shadow:
-    0 0 10px -2px rgba(82, 184, 48, 0.28),
+    0 0 12px -2px rgba(82, 184, 48, 0.3),
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.cmd-tile-num {
-  position: absolute;
-  top: 3px;
-  left: 4px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: rgba(200, 144, 64, 0.08);
-  border: 1px solid rgba(200, 144, 64, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 6.5px;
-  font-weight: 900;
-  color: rgba(200, 144, 64, 0.45);
-  line-height: 1;
-}
-
+/* Planet-Bild füllt den Slot komplett */
 .cmd-tile-planet-img {
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
-  flex-shrink: 0;
-  transition: transform 0.15s;
-}
-.cmd-planet-tile:hover .cmd-tile-planet-img {
-  transform: scale(1.1);
+  transition: transform 0.18s ease;
+  border-radius: 8px;
 }
 
+.cmd-planet-tile:hover .cmd-tile-planet-img {
+  transform: scale(1.07);
+}
+
+/* Rollenfarb-Schimmer */
+.cmd-tile-role-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: radial-gradient(
+    ellipse at 50% 110%,
+    var(--role-color, rgba(200, 144, 64, 0.2)) 0%,
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Icons */
 .cmd-tile-icon {
-  font-size: 24px;
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
   line-height: 1;
   text-align: center;
-  filter: drop-shadow(0 0 6px var(--role-color, currentColor));
-  transition:
-    filter 0.2s,
-    transform 0.15s;
-}
-.cmd-planet-tile:hover .cmd-tile-icon {
-  filter: drop-shadow(0 0 10px var(--role-color, currentColor))
-    drop-shadow(0 0 3px var(--role-color, currentColor));
-  transform: scale(1.12);
-}
-.cmd-tile-icon--empty {
-  color: rgba(200, 144, 64, 0.2);
-  filter: none;
-  font-size: 20px;
-}
-.cmd-tile-icon--locked {
-  color: rgba(255, 255, 255, 0.15);
-  filter: none;
-  font-size: 18px;
+  transition: transform 0.15s;
 }
 
-.cmd-tile-bonus {
+.cmd-planet-tile:hover .cmd-tile-icon {
+  transform: scale(1.15);
+}
+
+.cmd-tile-icon--empty {
+  color: rgba(90, 142, 224, 0.35);
+  font-size: 20px;
+}
+
+.cmd-tile-icon--locked {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 17px;
+}
+
+/* Labels */
+.cmd-tile-label {
+  position: relative;
+  z-index: 1;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -419,33 +432,38 @@ function formatNumber(n: number): string {
   text-overflow: ellipsis;
   max-width: 100%;
   opacity: 0.88;
-  text-shadow: 0 0 8px currentColor;
 }
-.cmd-tile-bonus--warn {
+
+.cmd-tile-label--warn {
   color: rgba(90, 142, 224, 0.9);
   text-shadow: 0 0 8px rgba(90, 142, 224, 0.5);
 }
-.cmd-tile-bonus--cost {
+
+.cmd-tile-label--cost {
   color: rgba(200, 144, 64, 0.6);
   font-size: 7.5px;
 }
 
+/* Afford-Dot */
 .cmd-tile-afford-dot {
   position: absolute;
-  top: 3px;
-  right: 4px;
+  top: 4px;
+  right: 5px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: rgba(200, 144, 64, 0.2);
   border: 1px solid rgba(200, 144, 64, 0.3);
+  z-index: 2;
 }
+
 .cmd-tile-afford-dot--yes {
   background: rgba(82, 184, 48, 0.7);
   border-color: rgba(110, 210, 64, 0.5);
   box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
 }
 
+/* SVG Frame */
 .cmd-frame-svg {
   position: absolute;
   top: 0;
@@ -457,6 +475,7 @@ function formatNumber(n: number): string {
   overflow: visible;
   animation: cmd-pulse-glow 3.5s ease-in-out infinite;
 }
+
 @keyframes cmd-pulse-glow {
   0%,
   100% {
