@@ -11,6 +11,7 @@
       :rx="pos.orbitRx"
       :ry="pos.orbitRy"
       :tiltDeg="pos.tiltDeg"
+      :visible="pos.isBehind"
     />
   </svg>
 
@@ -111,6 +112,7 @@ import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
+import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import type { ChampionRole } from '../../../types'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
@@ -289,6 +291,8 @@ export default defineComponent({
         const size = c.isAttacking ? baseSize : Math.round(baseSize * parallaxScale)
         const opacity = c.isAttacking ? 1 : isBehind ? 0.82 + depth * 0.18 : 0.9 + depth * 0.1
         const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
+
+        activeChampionBehindState[c.name] = isBehind
 
         // isForeground bewusst OHNE !c.isAttacking – sonst kann ein
         // angreifender Champion nie schießen

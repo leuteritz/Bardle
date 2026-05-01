@@ -9,6 +9,7 @@
         :rx="tier.rx"
         :ry="tier.ry"
         :tiltDeg="tier.tiltDeg"
+        :visible="tierIsBehind[i]"
       />
     </template>
   </svg>
@@ -156,6 +157,7 @@ export default defineComponent({
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
+    const tierIsBehind = ref<boolean[]>(ORBIT_TIERS.planet.map(() => false))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
@@ -275,6 +277,12 @@ export default defineComponent({
 
       renderPositions.value = newPositions
 
+      const tierCount = ORBIT_TIERS.planet.length
+      for (let i = 0; i < tierCount; i++) {
+        const behind = newPositions.some((_, si) => si % tierCount === i && newPositions[si].isBehind)
+        if (tierIsBehind.value[i] !== behind) tierIsBehind.value[i] = behind
+      }
+
       // ── Turret-Schuss-System ──────────────────────────────────────────────────
       if (!reducedMotion) {
         tickShots(dt)
@@ -348,6 +356,7 @@ export default defineComponent({
       backPlanets,
       frontPlanets,
       renderPositions,
+      tierIsBehind,
       shots,
       screenCx,
       screenCy,

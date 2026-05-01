@@ -10,7 +10,7 @@
       </feMerge>
     </filter>
   </defs>
-  <g :filter="`url(#${uid})`">
+  <g :filter="`url(#${uid})`" :style="{ opacity: visible ? 1 : 0, transition: 'opacity 0.5s ease' }">
     <ellipse
       :cx="x"
       :cy="y"
@@ -38,8 +38,9 @@ const props = withDefaults(
     tiltDeg: number
     strokeWidth?: number
     opacity?: number
+    visible?: boolean
   }>(),
-  { strokeWidth: 0.3, opacity: 0.2 },
+  { strokeWidth: 0.3, opacity: 0.2, visible: true },
 )
 
 const uid = `orbit-glow-${getCurrentInstance()!.uid}`

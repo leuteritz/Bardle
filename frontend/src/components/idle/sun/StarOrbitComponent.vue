@@ -9,6 +9,7 @@
       :rx="CHAMP_RX"
       :ry="CHAMP_RY"
       :tiltDeg="CHAMP_STAR.tiltDeg"
+      :visible="champState.isBehind"
     />
     <OrbitPath
       v-if="showResourceStar"
@@ -18,6 +19,7 @@
       :rx="RES_RX"
       :ry="RES_RY"
       :tiltDeg="RES_STAR.tiltDeg"
+      :visible="resState.isBehind"
     />
   </svg>
 

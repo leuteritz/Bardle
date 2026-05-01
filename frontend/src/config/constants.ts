@@ -225,7 +225,7 @@ export const ROLE_JUNGLER_MAX_STACKS = 5
 export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
-export const SUN_RADIUS = 70
+export const SUN_RADIUS = 80
 
 // Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
 export const ORBIT_TIERS = {

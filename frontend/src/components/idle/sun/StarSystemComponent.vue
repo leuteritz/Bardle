@@ -12,12 +12,13 @@
           :rx="tier.rx"
           :ry="tier.ry"
           :tiltDeg="tier.tiltDeg"
+          :visible="starOrbitVisible[i]"
         />
       </template>
 
       <template v-if="hasActiveChampions">
         <OrbitPath
-          v-for="entry in activeRoleOrbits"
+          v-for="(entry, i) in activeRoleOrbits"
           :key="'track-role-' + entry.role"
           :color="entry.color"
           :x="screenCx"
@@ -25,6 +26,7 @@
           :rx="entry.rx"
           :ry="entry.ry"
           :tiltDeg="entry.tiltDeg"
+          :visible="roleOrbitVisibility[i]"
         />
       </template>
     </svg>
@@ -256,6 +258,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import { ORBIT_TIERS } from '../../../config/constants'
+import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
@@ -276,6 +279,21 @@ const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
+
+// Star orbit visibility: index 0 = champion star, index 1 = resource star
+const starOrbitVisible = computed(() => [
+  starRenders.value.some((s) => s.starType === 'champion' && s.isBehind),
+  starRenders.value.some((s) => s.starType === 'resource' && s.isBehind),
+])
+
+// Role orbit visibility: derived from reactive activeChampionBehindState (updated by ChampionOrbit each frame)
+const roleOrbitVisibility = computed(() =>
+  activeRoleOrbits.value.map((entry) => {
+    const slotIdx = SLOT_ROLES.indexOf(entry.role)
+    const champName = battleStore.headerSlots[slotIdx]
+    return champName ? (activeChampionBehindState[champName] ?? false) : false
+  }),
+)
 const screenW = ref(window.innerWidth)
 const screenH = ref(window.innerHeight)
 const screenCx = computed(() => screenW.value / 2)
