@@ -508,6 +508,7 @@ export function usePersistence() {
     planetShopStoreR.slots.forEach((s) => {
       s.purchased = false
       s.role = null
+      s.currentHp = s.maxHp
     })
     planetShopStoreR.activeRoleModalSlotId = null
 
