@@ -48,7 +48,11 @@ function onImgError(e: Event) {
         v-for="(slot, i) in headerSlots"
         :key="i"
         class="slot-tile"
-        :class="{ 'slot-tile--filled': slot !== null, [`slot-tile--role-${ROLE_KEYS[i]}`]: true }"
+        :class="{
+          'slot-tile--filled': slot !== null,
+          [`slot-tile--role-${ROLE_KEYS[i]}`]: true,
+          'slot-tile--first': i === 0,
+        }"
         :title="
           slot ? `${slot} (${ROLES[i]}) – klicken zum Ändern` : `${ROLES[i]} – Champion wählen`
         "
@@ -124,7 +128,7 @@ function onImgError(e: Event) {
   min-width: 0;
   padding: 0;
   background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
-  border: 1px solid rgba(122, 78, 32, 0.45);
+  border: 2px solid rgba(122, 78, 32, 0.45);
   border-radius: 5px;
   cursor: pointer;
   overflow: hidden;
@@ -134,6 +138,11 @@ function onImgError(e: Event) {
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.15s ease;
+}
+
+/* ── Erster Slot (TOP): große Rundung oben links passend zum Panel-Arc ── */
+.slot-tile--first {
+  border-top-left-radius: 48px;
 }
 
 .slot-tile:hover {
@@ -188,6 +197,12 @@ function onImgError(e: Event) {
   bottom: 3px;
   right: 3px;
   border-width: 0 1px 1px 0;
+}
+
+/* Beim ersten Slot: TL-Ornament weiter einrücken wegen großer Rundung */
+.slot-tile--first .slot-corner--tl {
+  top: 18px;
+  left: 10px;
 }
 
 /* ── Portrait füllt den gesamten Slot ── */
@@ -250,14 +265,14 @@ function onImgError(e: Event) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 3px 3px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0) 100%);
+  padding: 5px 4px 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0) 100%);
 }
 .slot-name-text {
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 800;
-  color: rgba(180, 130, 50, 0.55);
-  letter-spacing: 0.05em;
+  color: rgba(180, 130, 50, 0.6);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -267,7 +282,7 @@ function onImgError(e: Event) {
   transition: color 0.2s ease;
 }
 .slot-tile--filled .slot-name-text {
-  color: rgba(220, 170, 60, 0.9);
+  color: rgba(220, 170, 60, 0.95);
 }
 .slot-tile:hover .slot-name-text {
   color: #e8c040;
@@ -304,22 +319,98 @@ function onImgError(e: Event) {
   border-color: #cc6050;
 }
 
-/* ── Rollen-Akzentfarben ── */
-.slot-tile--role-top     { border-color: rgba(224, 80, 80, 0.45); }
-.slot-tile--role-jungle  { border-color: rgba(80, 192, 96, 0.45); }
-.slot-tile--role-mid     { border-color: rgba(80, 144, 232, 0.45); }
-.slot-tile--role-adc     { border-color: rgba(232, 152, 64, 0.45); }
-.slot-tile--role-support { border-color: rgba(184, 200, 216, 0.45); }
+/* ════════════════════════════════════════════════
+   ROLLEN-AKZENTFARBEN — dickere, leuchtendere Rahmen
+   ════════════════════════════════════════════════ */
 
-.slot-tile--role-top.slot-tile--filled     { border-color: rgba(224, 80, 80, 0.75); box-shadow: inset 0 1px 0 rgba(224, 80, 80, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
-.slot-tile--role-jungle.slot-tile--filled  { border-color: rgba(80, 192, 96, 0.75); box-shadow: inset 0 1px 0 rgba(80, 192, 96, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
-.slot-tile--role-mid.slot-tile--filled     { border-color: rgba(80, 144, 232, 0.75); box-shadow: inset 0 1px 0 rgba(80, 144, 232, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
-.slot-tile--role-adc.slot-tile--filled     { border-color: rgba(232, 152, 64, 0.75); box-shadow: inset 0 1px 0 rgba(232, 152, 64, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
-.slot-tile--role-support.slot-tile--filled { border-color: rgba(184, 200, 216, 0.75); box-shadow: inset 0 1px 0 rgba(184, 200, 216, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.4); }
+/* Leere Slots: klar sichtbarer Rollenrahmen */
+.slot-tile--role-top {
+  border: 3px solid rgba(224, 80, 80, 0.65);
+}
+.slot-tile--role-jungle {
+  border: 3px solid rgba(80, 192, 96, 0.65);
+}
+.slot-tile--role-mid {
+  border: 3px solid rgba(80, 144, 232, 0.65);
+}
+.slot-tile--role-adc {
+  border: 3px solid rgba(232, 152, 64, 0.65);
+}
+.slot-tile--role-support {
+  border: 3px solid rgba(184, 200, 216, 0.65);
+}
 
-.slot-tile--role-top:hover     { border-color: #e05050; box-shadow: inset 0 1px 0 rgba(224, 80, 80, 0.12), 0 0 10px rgba(224, 80, 80, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
-.slot-tile--role-jungle:hover  { border-color: #50c060; box-shadow: inset 0 1px 0 rgba(80, 192, 96, 0.12), 0 0 10px rgba(80, 192, 96, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
-.slot-tile--role-mid:hover     { border-color: #5090e8; box-shadow: inset 0 1px 0 rgba(80, 144, 232, 0.12), 0 0 10px rgba(80, 144, 232, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
-.slot-tile--role-adc:hover     { border-color: #e89840; box-shadow: inset 0 1px 0 rgba(232, 152, 64, 0.12), 0 0 10px rgba(232, 152, 64, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
-.slot-tile--role-support:hover { border-color: #b8c8d8; box-shadow: inset 0 1px 0 rgba(184, 200, 216, 0.12), 0 0 10px rgba(184, 200, 216, 0.2), 0 2px 8px rgba(0, 0, 0, 0.5); }
+/* Belegte Slots: volle Sättigung + Glow */
+.slot-tile--role-top.slot-tile--filled {
+  border: 3px solid rgba(224, 80, 80, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(224, 80, 80, 0.45),
+    inset 0 1px 0 rgba(224, 80, 80, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.slot-tile--role-jungle.slot-tile--filled {
+  border: 3px solid rgba(80, 192, 96, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(80, 192, 96, 0.45),
+    inset 0 1px 0 rgba(80, 192, 96, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.slot-tile--role-mid.slot-tile--filled {
+  border: 3px solid rgba(80, 144, 232, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(80, 144, 232, 0.45),
+    inset 0 1px 0 rgba(80, 144, 232, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.slot-tile--role-adc.slot-tile--filled {
+  border: 3px solid rgba(232, 152, 64, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(232, 152, 64, 0.45),
+    inset 0 1px 0 rgba(232, 152, 64, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+.slot-tile--role-support.slot-tile--filled {
+  border: 3px solid rgba(184, 200, 216, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(184, 200, 216, 0.45),
+    inset 0 1px 0 rgba(184, 200, 216, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Hover: stärkerer Glow in Rollenfarbe */
+.slot-tile--role-top:hover {
+  border-color: #e05050;
+  box-shadow:
+    0 0 14px -1px rgba(224, 80, 80, 0.65),
+    inset 0 1px 0 rgba(224, 80, 80, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.slot-tile--role-jungle:hover {
+  border-color: #50c060;
+  box-shadow:
+    0 0 14px -1px rgba(80, 192, 96, 0.65),
+    inset 0 1px 0 rgba(80, 192, 96, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.slot-tile--role-mid:hover {
+  border-color: #5090e8;
+  box-shadow:
+    0 0 14px -1px rgba(80, 144, 232, 0.65),
+    inset 0 1px 0 rgba(80, 144, 232, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.slot-tile--role-adc:hover {
+  border-color: #e89840;
+  box-shadow:
+    0 0 14px -1px rgba(232, 152, 64, 0.65),
+    inset 0 1px 0 rgba(232, 152, 64, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.slot-tile--role-support:hover {
+  border-color: #b8c8d8;
+  box-shadow:
+    0 0 14px -1px rgba(184, 200, 216, 0.65),
+    inset 0 1px 0 rgba(184, 200, 216, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
 </style>

@@ -34,14 +34,14 @@ function formatNumber(n: number): string {
       <div class="cmd-surface-floor" />
 
       <!-- ── Champion Slots ── -->
-      <div class="cmd-team-slots">
-        <ChampionSelectorComponent />
+      <div class="cmd-team-slots-wrapper">
+        <div class="cmd-team-slots">
+          <ChampionSelectorComponent />
+        </div>
       </div>
 
       <!-- ── Separator ── -->
       <div class="cmd-sep">
-        <div class="cmd-sep-line" />
-        <span class="cmd-sep-dot">🪐</span>
         <div class="cmd-sep-line" />
       </div>
 
@@ -105,6 +105,8 @@ function formatNumber(n: number): string {
           </feMerge>
         </filter>
       </defs>
+
+      <!-- ── Haupt-Frame ── -->
       <path
         :d="framePath"
         fill="none"
@@ -205,18 +207,30 @@ function formatNumber(n: number): string {
   pointer-events: none;
 }
 
-/* Champion Slots: clip-path folgt der Panel-Rundung oben links (ARC_R=60, Offset left=10/top=8) */
-.cmd-team-slots {
+/* Wrapper für den Team-Bereich – kein Border, kein Outline */
+.cmd-team-slots-wrapper {
   position: absolute;
   top: 8px;
   left: 10px;
   right: 8px;
   height: 178px;
   z-index: 2;
+  border: none !important;
+  outline: none !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+/* Champion Slots – kein Border, kein Outline */
+.cmd-team-slots {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: stretch;
+  border: none !important;
+  outline: none !important;
   background: transparent;
-  clip-path: path('M 422,0 L 52,0 A 60,60 0 0,0 -8,52 L -8,178 L 422,178 Z');
+  box-shadow: none !important;
 }
 
 /* Separator */
@@ -229,7 +243,6 @@ function formatNumber(n: number): string {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .cmd-sep-line {
@@ -244,13 +257,6 @@ function formatNumber(n: number): string {
     transparent 100%
   );
   border-radius: 999px;
-}
-
-.cmd-sep-dot {
-  font-size: 14px;
-  line-height: 1;
-  opacity: 0.7;
-  filter: drop-shadow(0 0 6px rgba(210, 160, 40, 0.6));
 }
 
 /* Planet Grid */
@@ -364,7 +370,7 @@ function formatNumber(n: number): string {
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Planet-Bild füllt den Slot komplett */
+/* Planet-Bild */
 .cmd-tile-planet-img {
   position: absolute;
   inset: 0;
