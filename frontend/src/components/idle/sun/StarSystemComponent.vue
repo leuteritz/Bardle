@@ -168,7 +168,10 @@
         />
       </template>
 
-      <!-- ③ Reward-Icons PRO PLANET -->
+      <!-- ③ Enemy Projectiles -->
+      <AttackProjectileLayer :shots="enemyShots" />
+
+      <!-- ④ Reward-Icons PRO PLANET -->
       <template v-for="star in frontStars" :key="'reward-star-' + star.id">
         <template
           v-for="planet in star.planets.filter((p) => !p.isBehind)"
@@ -247,24 +250,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
+import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
+import { usePlanetShopStore } from '../../../stores/planetShopStore'
+import { usePlayerStore } from '../../../stores/playerStore'
+import { useRenderingPaused } from '../../../composables/useRenderingPaused'
+import { useProjectileSystem } from '../../../composables/useProjectileSystem'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
-import { ORBIT_TIERS } from '../../../config/constants'
+import {
+  ORBIT_TIERS,
+  ENEMY_ATTACK_INTERVAL_MIN_MS,
+  ENEMY_ATTACK_INTERVAL_MAX_MS,
+  ENEMY_PROJECTILE_DAMAGE,
+} from '../../../config/constants'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
+import { activePlanetPositions } from '../../../utils/activePlanetPositions'
+import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
 const combatStore = useCombatStore()
 const battleStore = useBattleStore()
+const planetShopStore = usePlanetShopStore()
+const playerStore = usePlayerStore()
+const { isRenderingPaused } = useRenderingPaused()
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -304,8 +322,112 @@ function onResize() {
   screenH.value = window.innerHeight
 }
 
-onMounted(() => window.addEventListener('resize', onResize))
-onUnmounted(() => window.removeEventListener('resize', onResize))
+// ── Enemy Planet Attack System ────────────────────────────────────────────────
+const { shots: enemyShots, spawnShot: spawnEnemyShot, tickShots: tickEnemyShots } =
+  useProjectileSystem()
+
+const ENEMY_TRAIL_COLOR = '#cc5500'
+const ENEMY_HEAD_COLOR = '#ff8800'
+
+const enemyAttackTimers = new Map<string, number>()
+let enemyAnimFrame = 0
+let enemyLastTs = 0
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function randomAttackInterval(): number {
+  return (
+    ENEMY_ATTACK_INTERVAL_MIN_MS +
+    Math.random() * (ENEMY_ATTACK_INTERVAL_MAX_MS - ENEMY_ATTACK_INTERVAL_MIN_MS)
+  )
+}
+
+function enemyAttackLoop(ts: number) {
+  const dt = enemyLastTs === 0 ? 16 : Math.min(ts - enemyLastTs, 50)
+  enemyLastTs = ts
+
+  if (!reducedMotion) {
+    tickEnemyShots(dt)
+
+    for (const star of starRenders.value) {
+      for (const planet of star.planets) {
+        if (planet.isBehind || planet.animState !== 'normal') continue
+
+        const pos = activePlanetPositions.get(planet.planetId)
+        if (!pos) continue
+
+        let timer = enemyAttackTimers.get(planet.planetId) ?? randomAttackInterval()
+        timer -= dt
+
+        if (timer <= 0) {
+          timer = randomAttackInterval()
+
+          const foregroundSlots = [...activePlayerPlanetPositions.entries()].filter(
+            ([, p]) => p.isForeground,
+          )
+
+          let targetX: number
+          let targetY: number
+          let targetSlotId: string | null = null
+
+          if (foregroundSlots.length > 0) {
+            const [slotId, slotPos] =
+              foregroundSlots[Math.floor(Math.random() * foregroundSlots.length)]
+            targetX = slotPos.cx
+            targetY = slotPos.cy
+            targetSlotId = slotId
+          } else {
+            targetX = window.innerWidth / 2
+            targetY = window.innerHeight / 2
+          }
+
+          const capturedSlotId = targetSlotId
+          spawnEnemyShot(pos.cx, pos.cy, targetX, targetY, true, true, {
+            trailColor: ENEMY_TRAIL_COLOR,
+            headColor: ENEMY_HEAD_COLOR,
+            onHit() {
+              if (capturedSlotId) {
+                planetShopStore.takeDamage(capturedSlotId, ENEMY_PROJECTILE_DAMAGE)
+              } else {
+                playerStore.takeDamage(ENEMY_PROJECTILE_DAMAGE)
+              }
+            },
+          })
+        }
+
+        enemyAttackTimers.set(planet.planetId, timer)
+      }
+    }
+
+    const activePlanetIds = new Set(
+      starRenders.value.flatMap((s) => s.planets.map((p) => p.planetId)),
+    )
+    for (const id of enemyAttackTimers.keys()) {
+      if (!activePlanetIds.has(id)) enemyAttackTimers.delete(id)
+    }
+  }
+
+  enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
+}
+
+watch(isRenderingPaused, (paused) => {
+  if (paused) {
+    cancelAnimationFrame(enemyAnimFrame)
+    enemyAnimFrame = 0
+  } else if (!enemyAnimFrame) {
+    enemyLastTs = 0
+    enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
+  }
+})
+// ─────────────────────────────────────────────────────────────────────────────
+
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+  enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
+  cancelAnimationFrame(enemyAnimFrame)
+})
 
 function orbitHintColor(starType: string): string {
   if (starType === 'champion') return ORBIT_TIERS.star[0].color

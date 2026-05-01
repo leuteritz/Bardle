@@ -125,7 +125,7 @@ const hovering = ref<string | null>(null)
   position: relative;
   display: flex;
   align-items: center;
-  height: 52px;
+  height: 64px;
   border-radius: 4px;
   overflow: hidden;
   border: 2px solid #5c3310;
@@ -135,8 +135,8 @@ const hovering = ref<string | null>(null)
 }
 
 .aug-icon-box {
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
 }
 
@@ -154,7 +154,7 @@ const hovering = ref<string | null>(null)
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 30px;
 }
 
 .aug-expand-panel {
@@ -168,20 +168,20 @@ const hovering = ref<string | null>(null)
 }
 
 .aug-expand-panel.expanded {
-  max-width: 180px;
-  width: 180px;
-  padding: 0 10px;
+  max-width: 300px;
+  width: 300px;
+  padding: 0 14px;
 }
 
 .aug-expand-name {
   color: #e8c040;
-  font-size: 13px;
+  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .aug-expand-effect {
   color: #b0a080;
-  font-size: 12px;
+  font-size: 17px;
 }
 </style>

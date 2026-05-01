@@ -205,6 +205,12 @@ export const PLAYER_MAX_HP_BASE = 100
 export const PLAYER_HP_REGEN_PER_SEC = 1
 export const PLAYER_HP_LOSS_ON_ENRAGE = 25
 
+// Enemy planet attacks
+export const PLANET_SLOT_MAX_HP = 100
+export const ENEMY_ATTACK_INTERVAL_MIN_MS = 1000
+export const ENEMY_ATTACK_INTERVAL_MAX_MS = 3000
+export const ENEMY_PROJECTILE_DAMAGE = 8
+
 // Champion Orbit
 export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32

@@ -4,7 +4,7 @@ import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { useInventoryStore } from './inventoryStore'
 import { logger } from '../utils/logger'
-import { PLANET_SLOT_ORBITS, PLANET_HARVEST_INTERVAL_TICKS } from '@/config/constants'
+import { PLANET_SLOT_ORBITS, PLANET_HARVEST_INTERVAL_TICKS, PLANET_SLOT_MAX_HP } from '@/config/constants'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -41,6 +41,8 @@ export interface PlanetSlot {
   direction: 1 | -1
   baseCost: number
   slotConfig?: { materialId?: string; buildingId?: string }
+  currentHp: number
+  maxHp: number
 }
 
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
@@ -118,6 +120,8 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   orbitRadiusX: orbit.rx,
   orbitRadiusY: orbit.ry,
   tiltDeg: orbit.tiltDeg,
+  currentHp: PLANET_SLOT_MAX_HP,
+  maxHp: PLANET_SLOT_MAX_HP,
 }))
 
 const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
@@ -268,6 +272,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
     closeRoleModal(): void {
       this.activeRoleModalSlotId = null
+    },
+
+    takeDamage(slotId: string, amount: number): void {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return
+      slot.currentHp = Math.max(0, slot.currentHp - amount)
     },
 
     adminFillRandomRoles(): void {

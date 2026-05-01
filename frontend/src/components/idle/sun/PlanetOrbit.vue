@@ -29,7 +29,6 @@
         '--planet-color': pos.color,
       }"
     >
-      <!-- ✅ ÄNDERUNG: :src statt src, rollenspezifisches Bild -->
       <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
     </div>
   </div>
@@ -55,9 +54,33 @@
       :title="pos.roleLabel"
       @click="planetShopStore.openRoleModal(pos.id)"
     >
-      <!-- ✅ ÄNDERUNG: :src statt src, rollenspezifisches Bild -->
       <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
       <span class="planet-bonus-badge" :title="pos.roleLabel">{{ pos.roleIcon }}</span>
+    </div>
+
+    <!-- HP Bars -->
+    <div
+      v-for="pos in frontPlanets"
+      :key="'hp-' + pos.id"
+      class="planet-hp-wrap"
+      :style="{
+        transform: `translate(${pos.x - Math.max(pos.size, 60) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
+        width: Math.max(pos.size, 60) + 'px',
+        zIndex: pos.zIndex,
+      }"
+    >
+      <div class="planet-hp-bar-track">
+        <div
+          class="planet-hp-bar-fill"
+          :class="{
+            'planet-hp-bar-fill--low': pos.hpPercent < 25,
+            'planet-hp-bar-fill--mid': pos.hpPercent >= 25 && pos.hpPercent < 60,
+          }"
+          :style="{ width: pos.hpPercent + '%' }"
+        />
+        <div class="planet-hp-bar-shine" />
+      </div>
+      <span class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
     </div>
   </div>
 
@@ -70,8 +93,9 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
+import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import PlanetRoleModal from '../planet/PlanetRoleModal.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
@@ -101,7 +125,10 @@ interface PlanetRenderPos {
   orbitRy: number
   tiltDeg: number
   orbitColor: string
-  planetImage: string // ✅ ÄNDERUNG: neues Feld hinzugefügt
+  planetImage: string
+  currentHp: number
+  maxHp: number
+  hpPercent: number
 }
 
 interface LocalPlanetState {
@@ -242,8 +269,11 @@ export default defineComponent({
         const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
         const isTurret = slot.role === 'turret_planet'
 
-        // ✅ ÄNDERUNG: Planetenbild aus der Rolle lesen, Fallback auf planet.png
         const planetImage = slot.role ? PLANET_ROLES[slot.role].image : '/img/planets/planet.png'
+
+        const currentHp = slot.currentHp ?? PLANET_SLOT_MAX_HP
+        const maxHp = slot.maxHp ?? PLANET_SLOT_MAX_HP
+        const hpPercent = (currentHp / Math.max(maxHp, 1)) * 100
 
         newPositions.push({
           id: slot.id,
@@ -264,7 +294,10 @@ export default defineComponent({
           orbitRy: ry,
           tiltDeg: slot.tiltDeg,
           orbitColor,
-          planetImage, // ✅ ÄNDERUNG: neues Feld befüllt
+          planetImage,
+          currentHp,
+          maxHp,
+          hpPercent,
         })
       }
 
@@ -277,9 +310,22 @@ export default defineComponent({
 
       renderPositions.value = newPositions
 
+      for (const pos of newPositions) {
+        activePlayerPlanetPositions.set(pos.id, {
+          cx: pos.x,
+          cy: pos.y,
+          isForeground: pos.isForeground,
+        })
+      }
+      for (const key of activePlayerPlanetPositions.keys()) {
+        if (!newPositions.some((p) => p.id === key)) activePlayerPlanetPositions.delete(key)
+      }
+
       const tierCount = ORBIT_TIERS.planet.length
       for (let i = 0; i < tierCount; i++) {
-        const behind = newPositions.some((_, si) => si % tierCount === i && newPositions[si].isBehind)
+        const behind = newPositions.some(
+          (_, si) => si % tierCount === i && newPositions[si].isBehind,
+        )
         if (tierIsBehind.value[i] !== behind) tierIsBehind.value[i] = behind
       }
 
@@ -409,7 +455,6 @@ export default defineComponent({
   cursor: pointer;
 }
 
-
 .planet-orbit-item img {
   width: 100%;
   height: 100%;
@@ -449,5 +494,93 @@ export default defineComponent({
     transition: none;
     animation: none;
   }
+}
+
+/* ── Planet HP Bars – RPG-Stil ─────────────────────────────────────────────── */
+.planet-hp-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Äußerer Rahmen – graviertes Metall */
+.planet-hp-bar-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #0a0806;
+  border: 1px solid #6b4a1e;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px #1a0f04,
+    inset 0 1px 3px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 200, 80, 0.08);
+  overflow: hidden;
+}
+
+/* Füllbalken – Basis grün */
+.planet-hp-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #5de84a 0%, #2eaa1e 45%, #1d7a12 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(120, 255, 100, 0.45),
+    0 0 6px rgba(60, 200, 40, 0.5);
+  transition: width 0.25s linear;
+  position: relative;
+}
+
+/* Mittlerer HP-Bereich (25–60 %) – gelb-orange */
+.planet-hp-bar-fill--mid {
+  background: linear-gradient(to bottom, #f5d84a 0%, #d4960e 45%, #9a6508 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 120, 0.45),
+    0 0 6px rgba(220, 160, 20, 0.55);
+}
+
+/* Niedriger HP-Bereich (< 25 %) – rot, pulsierend */
+.planet-hp-bar-fill--low {
+  background: linear-gradient(to bottom, #ff5f5f 0%, #cc1e1e 45%, #8a0d0d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 140, 140, 0.45),
+    0 0 8px rgba(220, 30, 30, 0.7);
+  animation: hp-pulse 1.1s ease-in-out infinite;
+}
+
+/* Glanz-Overlay auf dem Track */
+.planet-hp-bar-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+@keyframes hp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.planet-hp-text {
+  font-size: 14px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-weight: 700;
+  color: #e8c040;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow:
+    0 0 4px rgba(232, 160, 20, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1;
 }
 </style>

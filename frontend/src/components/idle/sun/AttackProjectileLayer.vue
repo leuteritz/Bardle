@@ -18,7 +18,7 @@
           :y1="shot.tailY"
           :x2="shot.headX"
           :y2="shot.headY"
-          stroke="#cc4444"
+          :stroke="shot.trailColor ?? '#cc4444'"
           stroke-width="2"
           :stroke-opacity="shot.opacity * 0.7"
           stroke-linecap="round"
@@ -29,7 +29,7 @@
           :cx="shot.headX"
           :cy="shot.headY"
           r="4.5"
-          fill="#ff7777"
+          :fill="shot.headColor ?? '#ff7777'"
           :opacity="shot.opacity"
           :filter="`url(#${filterId})`"
         />
