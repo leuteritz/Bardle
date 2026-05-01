@@ -5,7 +5,6 @@ import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import InventoryTooltip from './InventoryTooltip.vue'
-import ChampionSelectorComponent from './ChampionSelectorComponent.vue'
 import HeaderStatsComponent from './HeaderStatsComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
@@ -43,14 +42,6 @@ onUnmounted(() => {
         <BardProfileMenu />
       </div>
 
-      <div class="header-divider" aria-hidden="true"></div>
-
-      <div
-        class="z-[65] flex-1 min-w-0"
-        style="align-self: stretch; display: flex; align-items: stretch"
-      >
-        <ChampionSelectorComponent />
-      </div>
     </div>
 
     <!-- ════════ MITTE – Platzhalter für Grid-Spalte 2 ════════ -->
