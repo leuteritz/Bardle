@@ -396,7 +396,6 @@ export default defineComponent({
   font-size: 9px;
   letter-spacing: 1.8px;
   color: rgba(232, 192, 64, 0.55);
-  font-family: Georgia, serif;
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
@@ -480,7 +479,6 @@ export default defineComponent({
 }
 
 .complete-badge {
-  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1rem;
   letter-spacing: 0.2em;
   color: #e8c040;
@@ -511,7 +509,6 @@ export default defineComponent({
   padding: 9px 20px;
   cursor: pointer;
   text-transform: uppercase;
-  font-family: Georgia, serif;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
   box-shadow: 0 2px 10px rgba(46, 122, 26, 0.55);
   transition:

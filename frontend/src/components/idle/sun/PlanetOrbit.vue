@@ -573,7 +573,6 @@ export default defineComponent({
 
 .planet-hp-text {
   font-size: 14px;
-  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 0.04em;

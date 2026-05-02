@@ -57,7 +57,6 @@ onBeforeUnmount(() => {
   border: none;
   box-shadow: none;
 
-  font-family: 'Trebuchet MS', 'Arial Black', system-ui, sans-serif;
   font-size: clamp(1.4rem, 2vw, 2.4rem);
   font-weight: 900;
   line-height: 1;

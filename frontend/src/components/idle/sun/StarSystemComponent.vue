@@ -926,7 +926,6 @@ function starCountStyle(star: StarRenderEntry) {
 
 .star-planet-count__current {
   font-size: clamp(1.1rem, 1.7vw, 1.7rem);
-  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 0.04em;
@@ -938,7 +937,6 @@ function starCountStyle(star: StarRenderEntry) {
 
 .star-planet-count__sep {
   font-size: clamp(0.85rem, 1.3vw, 1.3rem);
-  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
   color: #e8c040;
   opacity: 0.45;
@@ -951,7 +949,6 @@ function starCountStyle(star: StarRenderEntry) {
 
 .star-planet-count__total {
   font-size: clamp(0.85rem, 1.3vw, 1.3rem);
-  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
   color: #e8c040;
   opacity: 0.4;
