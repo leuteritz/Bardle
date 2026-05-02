@@ -56,6 +56,7 @@ function formatNumber(n: number): string {
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
             'cmd-planet-tile--buy': !slot.purchased,
+            [`cmd-planet-tile--role-${slot.role}`]: slot.purchased && !!slot.role,
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="
@@ -285,42 +286,39 @@ function formatNumber(n: number): string {
   justify-content: center;
   gap: 4px;
   padding: 8px 6px;
-  border: 2px solid rgba(200, 144, 64, 0.14);
-  border-radius: 12px;
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
+  border: 2px solid rgba(122, 78, 32, 0.45);
+  border-radius: 12px;
   cursor: pointer;
   transition:
-    border-color 0.15s,
-    background 0.15s,
-    transform 0.12s,
-    box-shadow 0.15s;
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
   overflow: hidden;
   min-height: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 200, 80, 0.05);
 }
 
 .cmd-planet-tile:hover {
-  border-color: rgba(200, 144, 64, 0.42);
   background: linear-gradient(180deg, rgba(72, 36, 12, 0.7), rgba(40, 18, 6, 0.82));
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  border-color: rgba(200, 144, 64, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 80, 0.1),
+    0 0 12px rgba(200, 144, 64, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
 }
 
 .cmd-planet-tile:active {
-  transform: scale(0.95);
+  transform: translateY(0px) scale(0.97);
 }
 
+/* Gefüllter Slot */
 .cmd-planet-tile--filled {
   padding: 0;
-  background: rgba(8, 6, 16, 0.95);
-  border: 2px solid color-mix(in srgb, var(--role-color, rgba(200, 144, 64, 1)) 40%, transparent);
-}
-
-.cmd-planet-tile--filled:hover {
-  border-color: var(--role-color, rgba(200, 144, 64, 0.8));
-  box-shadow:
-    0 0 16px -2px var(--role-color, rgba(200, 144, 64, 0.4)),
-    0 6px 16px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px) scale(1.03);
+  background: linear-gradient(170deg, #1e1208 0%, #150f04 100%);
+  border-width: 3px;
 }
 
 .cmd-planet-tile--empty-slot {
@@ -331,6 +329,7 @@ function formatNumber(n: number): string {
   border-color: rgba(90, 142, 224, 0.52);
 }
 
+/* Gesperrter Slot */
 .cmd-planet-tile--locked {
   opacity: 0.38;
   cursor: not-allowed;
@@ -344,6 +343,7 @@ function formatNumber(n: number): string {
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
 }
 
+/* Kaufbarer Slot */
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
   border: 2px solid rgba(82, 184, 48, 0.18);
 }
@@ -355,6 +355,88 @@ function formatNumber(n: number): string {
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
+/* Rollenfarbige Rahmen wie beim Champion Selector */
+.cmd-planet-tile--role-harvest.cmd-planet-tile--filled {
+  border: 3px solid rgba(80, 192, 96, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(80, 192, 96, 0.45),
+    inset 0 1px 0 rgba(80, 192, 96, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.cmd-planet-tile--role-research.cmd-planet-tile--filled {
+  border: 3px solid rgba(80, 144, 232, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(80, 144, 232, 0.45),
+    inset 0 1px 0 rgba(80, 144, 232, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.cmd-planet-tile--role-trade.cmd-planet-tile--filled {
+  border: 3px solid rgba(232, 152, 64, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(232, 152, 64, 0.45),
+    inset 0 1px 0 rgba(232, 152, 64, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.cmd-planet-tile--role-defense.cmd-planet-tile--filled {
+  border: 3px solid rgba(224, 80, 80, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(224, 80, 80, 0.45),
+    inset 0 1px 0 rgba(224, 80, 80, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.cmd-planet-tile--role-support.cmd-planet-tile--filled {
+  border: 3px solid rgba(184, 200, 216, 0.92);
+  box-shadow:
+    0 0 10px -1px rgba(184, 200, 216, 0.45),
+    inset 0 1px 0 rgba(184, 200, 216, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Hover: stärkerer Glow je Rollenfarbe */
+.cmd-planet-tile--role-harvest.cmd-planet-tile--filled:hover {
+  border-color: #50c060;
+  box-shadow:
+    0 0 14px -1px rgba(80, 192, 96, 0.65),
+    inset 0 1px 0 rgba(80, 192, 96, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cmd-planet-tile--role-research.cmd-planet-tile--filled:hover {
+  border-color: #5090e8;
+  box-shadow:
+    0 0 14px -1px rgba(80, 144, 232, 0.65),
+    inset 0 1px 0 rgba(80, 144, 232, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cmd-planet-tile--role-trade.cmd-planet-tile--filled:hover {
+  border-color: #e89840;
+  box-shadow:
+    0 0 14px -1px rgba(232, 152, 64, 0.65),
+    inset 0 1px 0 rgba(232, 152, 64, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cmd-planet-tile--role-defense.cmd-planet-tile--filled:hover {
+  border-color: #e05050;
+  box-shadow:
+    0 0 14px -1px rgba(224, 80, 80, 0.65),
+    inset 0 1px 0 rgba(224, 80, 80, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.cmd-planet-tile--role-support.cmd-planet-tile--filled:hover {
+  border-color: #b8c8d8;
+  box-shadow:
+    0 0 14px -1px rgba(184, 200, 216, 0.65),
+    inset 0 1px 0 rgba(184, 200, 216, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
 .cmd-tile-planet-img {
   position: absolute;
   inset: 0;
@@ -363,17 +445,17 @@ function formatNumber(n: number): string {
   object-fit: cover;
   display: block;
   transition: transform 0.18s ease;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .cmd-planet-tile:hover .cmd-tile-planet-img {
-  transform: scale(1.07);
+  transform: scale(1.06);
 }
 
 .cmd-tile-role-glow {
   position: absolute;
   inset: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: radial-gradient(
     ellipse at 50% 110%,
     var(--role-color, rgba(200, 144, 64, 0.2)) 0%,
@@ -444,7 +526,7 @@ function formatNumber(n: number): string {
   box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
 }
 
-/* ── Slot-Nummer Badge – 1:1 Stil wie .slot-name-badge / .slot-name-text ── */
+/* Slot-Nummer Badge */
 .cmd-slot-number-badge {
   position: absolute;
   bottom: 0;
