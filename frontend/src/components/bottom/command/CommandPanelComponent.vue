@@ -2,7 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRoleType } from '@/stores/planetShopStore'
-import ChampionSelectorComponent from '@/components/header/ChampionSelectorComponent.vue'
+import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 import { HUD_PANEL_ARC_R } from '@/config/constants'
 
 const planetStore = usePlanetShopStore()

@@ -8,11 +8,11 @@
 /* ── SCRIPT UNVERÄNDERT – identisch zur aktuellen Version ── */
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { useGalaxyStore } from '../../../../stores/galaxyStore'
-import { useGameStore } from '../../../../stores/gameStore'
-import { useStarGroupStore } from '../../../../stores/starGroupStore'
-import { GALAXY_THEMES } from '../../../../config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '../../../../config/constants'
+import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useGameStore } from '@/stores/gameStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
+import { GALAXY_THEMES } from '@/config/galaxyThemes'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '@/config/constants'
 
 const MAP_WORLD_DEFAULT = 0.3
 const MAP_WORLD_ZOOMED = 0.14
@@ -608,7 +608,9 @@ export default defineComponent({
           })
         } else {
           // Vorschau-Planeten während letzter 5s (Stern noch nicht gespawnt)
-          const previewRng = seededRng(galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31)
+          const previewRng = seededRng(
+            galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31,
+          )
           const previewCount = 3 + Math.floor(previewRng() * 2)
           for (let idx = 0; idx < previewCount; idx++) {
             const dir = (previewRng() < 0.5 ? 1 : -1) as 1 | -1
@@ -667,7 +669,16 @@ export default defineComponent({
 
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        drawPlanet(ctx, tx, ty, 22, galaxySeed + targetIdx, 'target', pulseFrame === 1, STAR_PALETTE)
+        drawPlanet(
+          ctx,
+          tx,
+          ty,
+          22,
+          galaxySeed + targetIdx,
+          'target',
+          pulseFrame === 1,
+          STAR_PALETTE,
+        )
       }
 
       // Planetenanzahl-Label: nur wenn Champion-Stern aktiv (Anzahl bekannt)

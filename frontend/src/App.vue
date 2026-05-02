@@ -19,7 +19,7 @@ import FpsOverlay from './components/idle/FpsOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
-import BottomBarComponent from '@/components/idle/bottom/BottomBarComponent.vue'
+import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
@@ -91,7 +91,6 @@ watch(
     </span>
   </div>
 </template>
-
 
 <style>
 :root {

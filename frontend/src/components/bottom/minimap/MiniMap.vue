@@ -143,13 +143,13 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { useGalaxyStore } from '../../../../stores/galaxyStore'
-import { useStarGroupStore } from '../../../../stores/starGroupStore'
+import { useGalaxyStore } from '../../../stores/galaxyStore'
+import { useStarGroupStore } from '../../../stores/starGroupStore'
 import {
   CHAMPION_TRAVEL_BASE_LY,
   CHAMPION_TRAVEL_LY_PER_GALAXY,
   HUD_PANEL_ARC_R,
-} from '../../../../config/constants'
+} from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 
 const CORNER_R = 20
