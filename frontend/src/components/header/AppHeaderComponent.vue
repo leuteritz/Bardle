@@ -5,7 +5,6 @@ import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import InventoryTooltip from './InventoryTooltip.vue'
-import HeaderStatsComponent from './HeaderStatsComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
@@ -71,13 +70,8 @@ onUnmounted(() => {
 
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--right">
-      <!-- Stats-Komponente -->
-      <HeaderStatsComponent />
-
-      <div class="header-divider" aria-hidden="true"></div>
-
       <!-- UniversePortal -->
-      <div class="z-[65] flex-shrink-0 header-portal-wrap">
+      <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0;">
         <UniverseRescueComponent />
       </div>
 

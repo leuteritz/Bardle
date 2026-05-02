@@ -3,31 +3,7 @@
     <div class="status-bar-bg-wide" />
 
     <div class="status-bar">
-      <div class="stats-left">
-        <div class="stat-item">
-          <span class="stat-icon">♪</span>
-          <span class="stat-label">CHIMES</span>
-          <span class="stat-value" :class="{ flash: chimesFlash }">{{ fmtChimes }}</span>
-        </div>
-        <div class="stat-divider" />
-        <div class="stat-item">
-          <span class="stat-icon">⚡</span>
-          <span class="stat-label">CPS</span>
-          <span class="stat-value">{{ fmtCPS }}/s</span>
-        </div>
-        <div class="stat-divider" />
-        <div class="stat-item">
-          <span class="stat-icon">★</span>
-          <span class="stat-label">LEVEL</span>
-          <span class="stat-value">{{ level }}</span>
-        </div>
-        <div class="stat-divider" />
-        <div class="stat-item">
-          <span class="stat-icon">∞</span>
-          <span class="stat-label">UNIVERSE</span>
-          <span class="stat-value">U{{ currentUniverse }}</span>
-        </div>
-      </div>
+      <BottomBarStatsComponent />
 
       <div class="title-center">BARDLE</div>
 
@@ -137,27 +113,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, getCurrentInstance } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useGameStore } from '@/stores/gameStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { useBattleStore } from '@/stores/battleStore'
+import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
 
-const gameStore = useGameStore()
 const playerStore = usePlayerStore()
 const battleStore = useBattleStore()
 
-const { chimes, chimesPerSecond, level, currentUniverse } = storeToRefs(gameStore)
 const { currentHP, maxHP } = storeToRefs(playerStore)
 const { currentRank, currentWinStreak, totalWins, totalLosses } = storeToRefs(battleStore)
-
-const instance = getCurrentInstance()
-const fmt = instance?.appContext.config.globalProperties.$formatNumber as
-  | ((n: number) => string)
-  | undefined
-
-const fmtChimes = computed(() => (fmt ? fmt(chimes.value) : Math.floor(chimes.value).toString()))
-const fmtCPS = computed(() => (fmt ? fmt(chimesPerSecond.value) : chimesPerSecond.value.toFixed(1)))
 
 const rankLabel = computed(() => {
   const { tier, division } = currentRank.value
@@ -166,14 +132,6 @@ const rankLabel = computed(() => {
 })
 
 const isLowHP = computed(() => currentHP.value / maxHP.value < 0.25)
-
-const chimesFlash = ref(false)
-watch(chimes, (newVal, oldVal) => {
-  if (newVal > oldVal) {
-    chimesFlash.value = true
-    setTimeout(() => (chimesFlash.value = false), 600)
-  }
-})
 </script>
 
 <style scoped>
@@ -252,7 +210,6 @@ watch(chimes, (newVal, oldVal) => {
   animation: title-flicker 6s ease-in-out infinite;
 }
 
-.stats-left,
 .stats-right {
   display: flex;
   align-items: center;
@@ -314,13 +271,6 @@ watch(chimes, (newVal, oldVal) => {
   font-size: 12px;
   color: #5c3a14;
   line-height: 1;
-}
-
-.stat-value.flash {
-  color: #60d838;
-  text-shadow:
-    0 0 6px rgba(80, 220, 50, 0.9),
-    0 0 14px rgba(60, 200, 40, 0.6);
 }
 
 .stat-value.hp-low {
