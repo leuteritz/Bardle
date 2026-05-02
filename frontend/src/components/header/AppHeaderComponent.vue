@@ -42,6 +42,9 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
+
+      <div class="header-divider" aria-hidden="true"></div>
+
       <HeaderMaterialsComponent />
     </div>
 
@@ -172,7 +175,6 @@ onUnmounted(() => {
    MITTE — Grid-Spalte 2 Platzhalter + absolut zentriertes Panel
    ================================================================ */
 .header-center-anchor {
-  /* Hält Grid-Spalte 2 besetzt; kein sichtbarer Inhalt */
   flex-shrink: 0;
 }
 
