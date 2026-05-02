@@ -71,7 +71,7 @@ onUnmounted(() => {
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--right">
       <!-- UniversePortal -->
-      <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0;">
+      <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
         <UniverseRescueComponent />
       </div>
 
@@ -239,12 +239,24 @@ body.bard-modal-open .center-chimes {
    ================================================================ */
 .header-divider {
   flex-shrink: 0;
-  width: 1px;
-  height: 18px;
-  background: var(--rpg-wood-mid, rgba(255, 200, 80, 0.15));
-  border-radius: 1px;
-  margin-inline: 2px;
+  width: 2px;
+  height: 80px;
+  margin-inline: 4px;
   align-self: center;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(124, 79, 26, 0.12) 8%,
+    rgba(160, 110, 15, 0.38) 20%,
+    rgba(180, 125, 35, 0.52) 50%,
+    rgba(160, 110, 15, 0.38) 80%,
+    rgba(124, 79, 26, 0.12) 92%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 80, 0.08),
+    0 0 8px rgba(160, 110, 15, 0.06);
 }
 
 /* ================================================================
