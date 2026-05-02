@@ -148,6 +148,7 @@ import { useStarGroupStore } from '../../../../stores/starGroupStore'
 import {
   CHAMPION_TRAVEL_BASE_LY,
   CHAMPION_TRAVEL_LY_PER_GALAXY,
+  HUD_PANEL_ARC_R,
 } from '../../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 
@@ -215,7 +216,8 @@ export default defineComponent({
     // Nur die Zahl – Einheit steht im Label
     const speedDisplay = computed(() => speedLJperS.value.toFixed(1))
 
-    const framePath = `M 0,0 L 220,0 A 218,218 0 0,1 438,220 L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
+    const ARC_R = HUD_PANEL_ARC_R
+    const framePath = `M 0,0 L ${438 - ARC_R},0 A ${ARC_R},${ARC_R} 0 0,1 438,${ARC_R} L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
     return {
       show,
@@ -265,7 +267,7 @@ export default defineComponent({
   pointer-events: auto;
   width: 440px;
   height: 440px;
-  clip-path: path('M 0,0 L 220,0 A 220,220 0 0,1 440,220 L 440,440 L 0,440 Z');
+  clip-path: path('M 0,0 L 380,0 A 60,60 0 0,1 440,60 L 440,440 L 0,440 Z');
   background:
     radial-gradient(ellipse at 20% 80%, rgba(60, 38, 8, 0.3) 0%, transparent 55%),
     linear-gradient(160deg, #1a0d04 0%, #120900 60%, #0e0700 100%);
@@ -278,7 +280,7 @@ export default defineComponent({
   position: relative;
   overflow: hidden;
   background: #050302;
-  clip-path: path('M 0,0 L 220,0 A 220,220 0 0,1 440,220 L 440,440 L 0,440 Z');
+  clip-path: path('M 0,0 L 380,0 A 60,60 0 0,1 440,60 L 440,440 L 0,440 Z');
 }
 
 .map-canvas-wrapper :deep(canvas),

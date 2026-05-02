@@ -337,6 +337,9 @@ export const PLANET_SLOT_ORBITS = [
   { rx: 640, ry: 130, tiltDeg: -18 },
 ] as const
 
+// HUD panel corner arc radius (shared by CommandPanel and MiniMap)
+export const HUD_PANEL_ARC_R = 60
+
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
 export const MEEP_ADD_DELAY_MS = 100

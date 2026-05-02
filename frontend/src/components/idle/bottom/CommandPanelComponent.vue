@@ -3,11 +3,12 @@ import { storeToRefs } from 'pinia'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRoleType } from '@/stores/planetShopStore'
 import ChampionSelectorComponent from '@/components/header/ChampionSelectorComponent.vue'
+import { HUD_PANEL_ARC_R } from '@/config/constants'
 
 const planetStore = usePlanetShopStore()
 const { slots } = storeToRefs(planetStore)
 
-const ARC_R = 60
+const ARC_R = HUD_PANEL_ARC_R
 const CORNER_R = 20
 const framePath = `M 440,0 L ${ARC_R + 2},0 A ${ARC_R},${ARC_R} 0 0,0 2,${ARC_R} L 2,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,1 ${2 - CORNER_R},380`
 
