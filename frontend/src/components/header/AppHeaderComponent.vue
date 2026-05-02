@@ -6,6 +6,7 @@ import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import InventoryTooltip from './InventoryTooltip.vue'
 import HeaderStatsComponent from './HeaderStatsComponent.vue'
+import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const props = defineProps<{ inventoryOpen?: boolean }>()
 const emit = defineEmits<{ 'open-inventory': [] }>()
@@ -41,7 +42,7 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
-
+      <HeaderMaterialsComponent />
     </div>
 
     <!-- ════════ MITTE – Platzhalter für Grid-Spalte 2 ════════ -->

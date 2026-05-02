@@ -257,12 +257,11 @@
             v-if="remainingPlanetCount(star) > 0"
             :key="remainingPlanetCount(star)"
             class="star-planet-count"
-            :class="`star-planet-count--${star.starType}`"
             :style="starCountStyle(star)"
           >
             <span class="star-planet-count__current">{{ remainingPlanetCount(star) }}</span>
             <span class="star-planet-count__sep">/</span>
-            <span class="star-planet-count__total">{{ star.totalPlanets }}</span>
+            <span class="star-planet-count__total">{{ star.planets.length }}</span>
           </div>
         </Transition>
       </template>
@@ -920,52 +919,47 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
   gap: 1px;
-  font-weight: 900;
-  line-height: 1;
 }
 
 .star-planet-count__current {
   font-size: clamp(1.1rem, 1.7vw, 1.7rem);
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-weight: 700;
+  color: #e8c040;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 0 4px rgba(232, 160, 20, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1;
 }
 
 .star-planet-count__sep {
   font-size: clamp(0.85rem, 1.3vw, 1.3rem);
-  opacity: 0.6;
+  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
+  color: #e8c040;
+  opacity: 0.45;
   margin-inline: 1px;
+  text-shadow:
+    0 0 4px rgba(232, 160, 20, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1;
 }
 
 .star-planet-count__total {
   font-size: clamp(0.85rem, 1.3vw, 1.3rem);
-  opacity: 0.55;
+  font-family: 'Courier New', 'Consolas', monospace;
   font-weight: 700;
-}
-
-.star-planet-count--champion {
-  color: #ffd700;
+  color: #e8c040;
+  opacity: 0.4;
+  letter-spacing: 0.04em;
   text-shadow:
-    0 0 8px #ffd700,
-    0 0 18px rgba(255, 215, 0, 0.65),
-    0 0 3px rgba(0, 0, 0, 0.9);
-}
-
-.star-planet-count--resource {
-  color: #a0e8ff;
-  text-shadow:
-    0 0 8px #a0e8ff,
-    0 0 18px rgba(160, 232, 255, 0.6),
-    0 0 3px rgba(0, 0, 0, 0.9);
-}
-
-.star-planet-count--galaxy_boss {
-  color: #ff8060;
-  text-shadow:
-    0 0 8px #ff8060,
-    0 0 18px rgba(255, 128, 96, 0.6),
-    0 0 3px rgba(0, 0, 0, 0.9);
+    0 0 4px rgba(232, 160, 20, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1;
 }
 
 .star-cnt-enter-active {
