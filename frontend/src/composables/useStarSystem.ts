@@ -46,6 +46,7 @@ export interface StarRenderEntry {
   orbitRy: number
   orbitTilt: number
   hintOpacity: number
+  totalPlanets: number
   planets: PlanetRenderEntry[]
 }
 
@@ -385,7 +386,6 @@ export function useStarSystem() {
           `translate(${-pR}px, ${-pR}px)`
 
         if (!slot.cleared) {
-          // ── isForeground mitschreiben damit Turret + ChampionOrbit es prüfen können ──
           const isForeground = !pIsBehind && pDepth > 0.65
           activePlanetPositions.set(slot.planetId, { cx: px, cy: py, isForeground })
         }
@@ -432,6 +432,7 @@ export function useStarSystem() {
         orbitRy: star.orbitRy,
         orbitTilt: star.orbitTilt,
         hintOpacity: (1 - visibleFactor) * spawnFactor,
+        totalPlanets: star.planetSlots.length,
         planets: planetEntries,
       })
     }

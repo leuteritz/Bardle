@@ -247,6 +247,27 @@
       </template>
     </div>
   </Teleport>
+
+  <!-- ③ Planet-Zähler über jedem Stern -->
+  <Teleport to="body">
+    <div class="star-count-layer">
+      <template v-for="star in starRenders" :key="'cnt-' + star.id">
+        <Transition name="star-cnt">
+          <div
+            v-if="remainingPlanetCount(star) > 0"
+            :key="remainingPlanetCount(star)"
+            class="star-planet-count"
+            :class="`star-planet-count--${star.starType}`"
+            :style="starCountStyle(star)"
+          >
+            <span class="star-planet-count__current">{{ remainingPlanetCount(star) }}</span>
+            <span class="star-planet-count__sep">/</span>
+            <span class="star-planet-count__total">{{ star.totalPlanets }}</span>
+          </div>
+        </Transition>
+      </template>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -298,13 +319,11 @@ const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 
-// Star orbit visibility: index 0 = champion star, index 1 = resource star
 const starOrbitVisible = computed(() => [
   starRenders.value.some((s) => s.starType === 'champion' && s.isBehind),
   starRenders.value.some((s) => s.starType === 'resource' && s.isBehind),
 ])
 
-// Role orbit visibility: derived from reactive activeChampionBehindState (updated by ChampionOrbit each frame)
 const roleOrbitVisibility = computed(() =>
   activeRoleOrbits.value.map((entry) => {
     const slotIdx = SLOT_ROLES.indexOf(entry.role)
@@ -312,6 +331,7 @@ const roleOrbitVisibility = computed(() =>
     return champName ? (activeChampionBehindState[champName] ?? false) : false
   }),
 )
+
 const screenW = ref(window.innerWidth)
 const screenH = ref(window.innerHeight)
 const screenCx = computed(() => screenW.value / 2)
@@ -323,8 +343,11 @@ function onResize() {
 }
 
 // ── Enemy Planet Attack System ────────────────────────────────────────────────
-const { shots: enemyShots, spawnShot: spawnEnemyShot, tickShots: tickEnemyShots } =
-  useProjectileSystem()
+const {
+  shots: enemyShots,
+  spawnShot: spawnEnemyShot,
+  tickShots: tickEnemyShots,
+} = useProjectileSystem()
 
 const ENEMY_TRAIL_COLOR = '#cc5500'
 const ENEMY_HEAD_COLOR = '#ff8800'
@@ -606,6 +629,18 @@ function rewardSummaryStyle(star: StarRenderEntry) {
     transform: `translate(${star.x}px, ${star.y + s / 2 + 58}px) translateX(-50%)`,
   }
 }
+
+function remainingPlanetCount(star: StarRenderEntry): number {
+  return star.planets.filter((p) => p.animState !== 'saved').length
+}
+
+function starCountStyle(star: StarRenderEntry) {
+  const s = starSize(star.starType)
+  return {
+    transform: `translate(${star.x}px, ${star.y - s / 2 - 16}px) translateX(-50%) translateY(-100%)`,
+    opacity: String(star.opacity.toFixed(3)),
+  }
+}
 </script>
 
 <style scoped>
@@ -868,5 +903,90 @@ function rewardSummaryStyle(star: StarRenderEntry) {
       0 0 16px rgba(195, 100, 255, 0.8),
       0 0 32px rgba(160, 60, 240, 0.45);
   }
+}
+
+/* ── Planet-Zähler über Sternen ─────────────────────────────────────────────── */
+.star-count-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+}
+
+.star-planet-count {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.star-planet-count__current {
+  font-size: clamp(1.1rem, 1.7vw, 1.7rem);
+}
+
+.star-planet-count__sep {
+  font-size: clamp(0.85rem, 1.3vw, 1.3rem);
+  opacity: 0.6;
+  font-weight: 700;
+  margin-inline: 1px;
+}
+
+.star-planet-count__total {
+  font-size: clamp(0.85rem, 1.3vw, 1.3rem);
+  opacity: 0.55;
+  font-weight: 700;
+}
+
+.star-planet-count--champion {
+  color: #ffd700;
+  text-shadow:
+    0 0 8px #ffd700,
+    0 0 18px rgba(255, 215, 0, 0.65),
+    0 0 3px rgba(0, 0, 0, 0.9);
+}
+
+.star-planet-count--resource {
+  color: #a0e8ff;
+  text-shadow:
+    0 0 8px #a0e8ff,
+    0 0 18px rgba(160, 232, 255, 0.6),
+    0 0 3px rgba(0, 0, 0, 0.9);
+}
+
+.star-planet-count--galaxy_boss {
+  color: #ff8060;
+  text-shadow:
+    0 0 8px #ff8060,
+    0 0 18px rgba(255, 128, 96, 0.6),
+    0 0 3px rgba(0, 0, 0, 0.9);
+}
+
+.star-cnt-enter-active {
+  transition:
+    opacity 0.22s ease,
+    scale 0.22s ease;
+}
+
+.star-cnt-leave-active {
+  transition:
+    opacity 0.15s ease,
+    scale 0.15s ease;
+}
+
+.star-cnt-enter-from {
+  opacity: 0;
+  scale: 0.7;
+}
+
+.star-cnt-leave-to {
+  opacity: 0;
+  scale: 0.7;
 }
 </style>
