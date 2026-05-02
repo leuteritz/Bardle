@@ -1,3 +1,4 @@
+// frontend/src/stores/roleBehaviorStore.ts
 import { defineStore } from 'pinia'
 import {
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
@@ -12,13 +13,20 @@ import {
   ROLE_JUNGLER_STACK_INTERVAL_MS,
   ROLE_JUNGLER_MAX_STACKS,
   ROLE_JUNGLER_CHIMES_PER_STACK,
+  SUPPORT_HEAL_RANGE,
+  SUPPORT_PLANET_HEAL_AMOUNT,
+  SUPPORT_PLANET_HEAL_INTERVAL_MS,
+  SUPPORT_MAX_HEAL_TARGETS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
+import { getChampionRoles } from '../config/championRoles'
 import { usePlayerStore } from './playerStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGameStore } from './gameStore'
 import { useCombatStore } from './combatStore'
+import { usePlanetShopStore } from './planetShopStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
+import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
 
 let _floatId = 900_000
 
@@ -44,6 +52,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
   state: () => ({
     // Support
     supportHealCooldownMs: ROLE_SUPPORT_HEAL_INTERVAL_MS,
+    supportPlanetHealActive: false,
+    supportPlanetHealCooldownMs: 0,
     // Top Laner
     tankShieldActive: false,
     tankShieldCooldownMs: ROLE_TOP_SHIELD_INTERVAL_MS,
@@ -71,22 +81,78 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     },
 
     _tickSupport(roles: Set<string>, tickMs: number) {
+      this.supportPlanetHealActive = false
       if (!roles.has('support')) return
+
       this.supportHealCooldownMs -= tickMs
+      this.supportPlanetHealCooldownMs -= tickMs
+
+      const combatStore = useCombatStore()
+      const supportChampion = combatStore.champions.find((c) =>
+        getChampionRoles(c.name).some((r) => r === 'support'),
+      )
+
+      if (!supportChampion || (supportChampion.screenX === 0 && supportChampion.screenY === 0)) {
+        return
+      }
+
       if (this.supportHealCooldownMs <= 0) {
         this.supportHealCooldownMs = ROLE_SUPPORT_HEAL_INTERVAL_MS
-        const playerStore = usePlayerStore()
-        if (playerStore.currentHP < playerStore.maxHP) {
-          const healed = Math.min(ROLE_SUPPORT_HEAL_AMOUNT, playerStore.maxHP - playerStore.currentHP)
-          playerStore.currentHP += healed
-          spawnFloat(
-            healed,
-            window.innerWidth / 2 + (Math.random() - 0.5) * 60,
-            window.innerHeight / 2 - 80,
-            1200,
-            { healFloat: true },
+      }
+
+      if (this.supportPlanetHealCooldownMs > 0) return
+      this.supportPlanetHealCooldownMs = SUPPORT_PLANET_HEAL_INTERVAL_MS
+
+      const planetShopStore = usePlanetShopStore()
+
+      const damagedCandidates = planetShopStore.purchasedSlots
+        .map((slot) => {
+          const pos = activePlayerPlanetPositions.get(slot.id)
+          if (!pos) return null
+          return { slot, pos }
+        })
+        .filter((entry) => entry !== null)
+        .filter((entry) => entry.slot.currentHp < entry.slot.maxHp)
+
+      const healablePlanets = damagedCandidates
+        .map(({ slot, pos }) => {
+          const dist = Math.hypot(
+            supportChampion.screenX - pos.cx,
+            supportChampion.screenY - pos.cy,
           )
+          return { slot, pos, dist }
+        })
+        .filter(({ dist }) => dist <= SUPPORT_HEAL_RANGE)
+
+      healablePlanets.sort((a, b) => a.dist - b.dist)
+
+      if (healablePlanets.length > 0) {
+        const targets = healablePlanets.slice(0, SUPPORT_MAX_HEAL_TARGETS)
+
+        for (const { slot, pos } of targets) {
+          const healAmount = Math.min(SUPPORT_PLANET_HEAL_AMOUNT, slot.maxHp - slot.currentHp)
+
+          if (healAmount <= 0) continue
+
+          planetShopStore.healSlot(slot.id, healAmount)
+          spawnFloat(healAmount, pos.cx, pos.cy - 35, 1200, { healFloat: true })
         }
+
+        this.supportPlanetHealActive = targets.length > 0
+        return
+      }
+
+      const playerStore = usePlayerStore()
+      if (playerStore.currentHP < playerStore.maxHP) {
+        const healed = Math.min(ROLE_SUPPORT_HEAL_AMOUNT, playerStore.maxHP - playerStore.currentHP)
+        playerStore.currentHP += healed
+        spawnFloat(
+          healed,
+          window.innerWidth / 2 + (Math.random() - 0.5) * 60,
+          window.innerHeight / 2 - 80,
+          1200,
+          { healFloat: true },
+        )
       }
     },
 
@@ -121,7 +187,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
 
-      // Tick active DoT
       if (this.dotRemainingMs > 0) {
         this.dotRemainingMs -= tickMs
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
@@ -129,13 +194,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (!defeated) {
             const pos = activePlanetPositions.get(activeBoss.planetId)
             if (pos) {
-              spawnFloat(
-                ROLE_MID_DOT_DPS,
-                pos.cx + (Math.random() - 0.5) * 50,
-                pos.cy - 55,
-                1000,
-                { dotFloat: true },
-              )
+              spawnFloat(ROLE_MID_DOT_DPS, pos.cx + (Math.random() - 0.5) * 50, pos.cy - 55, 1000, {
+                dotFloat: true,
+              })
             }
           }
         }
@@ -143,7 +204,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
-      // No active DoT — count down cooldown
       this.dotCooldownMs -= tickMs
       if (this.dotCooldownMs <= 0) {
         this.dotCooldownMs = ROLE_MID_DOT_INTERVAL_MS

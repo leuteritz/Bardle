@@ -219,6 +219,10 @@ export const ORBIT_RADIUS_SCALE = 1.8
 // Role Behavior — orbit abilities per role
 export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000 // heal player every 8s
 export const ROLE_SUPPORT_HEAL_AMOUNT = 5 // +5 HP per heal
+export const SUPPORT_HEAL_RANGE = 1000 // px: max. Abstand Support-Champion → Player-Planet-Mittelpunkt
+export const SUPPORT_PLANET_HEAL_AMOUNT = 20 // HP pro Heal-Tick auf Player-Planeten
+export const SUPPORT_PLANET_HEAL_INTERVAL_MS = 2000 // Intervall zwischen zwei Planet-Heals in ms
+export const SUPPORT_MAX_HEAL_TARGETS = 1 // max. Planeten die gleichzeitig pro Heal-Tick geheilt werden
 export const ROLE_TOP_SHIELD_DURATION_MS = 5000 // shield lasts 5s
 export const ROLE_TOP_SHIELD_INTERVAL_MS = 12000 // re-activates every 12s
 export const ROLE_MID_DOT_DPS = 15 // extra DoT damage per second

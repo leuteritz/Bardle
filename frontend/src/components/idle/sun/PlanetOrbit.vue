@@ -21,6 +21,7 @@
       v-for="pos in backPlanets"
       :key="pos.id"
       class="planet-orbit-item planet-orbit-item--behind"
+      :class="{ 'planet-orbit-item--healing': pos.isHealing }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -42,6 +43,7 @@
         'planet-orbit-item--foreground': pos.isForeground,
         'planet-orbit-item--clickable': true,
         'planet-orbit-item--turret': pos.isTurret,
+        'planet-orbit-item--healing': pos.isHealing,
       }"
       :style="{
         width: pos.size + 'px',
@@ -129,6 +131,7 @@ interface PlanetRenderPos {
   currentHp: number
   maxHp: number
   hpPercent: number
+  isHealing: boolean
 }
 
 interface LocalPlanetState {
@@ -274,6 +277,7 @@ export default defineComponent({
         const currentHp = slot.currentHp ?? PLANET_SLOT_MAX_HP
         const maxHp = slot.maxHp ?? PLANET_SLOT_MAX_HP
         const hpPercent = (currentHp / Math.max(maxHp, 1)) * 100
+        const isHealing = Date.now() < (slot.healingUntilMs ?? 0)
 
         newPositions.push({
           id: slot.id,
@@ -298,6 +302,7 @@ export default defineComponent({
           currentHp,
           maxHp,
           hpPercent,
+          isHealing,
         })
       }
 
@@ -467,6 +472,16 @@ export default defineComponent({
   filter: blur(2px) brightness(0.7) saturate(0.5);
   transition: filter 0.25s ease;
   pointer-events: none;
+}
+
+.planet-orbit-item--healing {
+  animation: slotHeal 0.9s ease-out;
+}
+
+@keyframes slotHeal {
+  0%   { filter: drop-shadow(0 0 0px #52b830); }
+  40%  { filter: drop-shadow(0 0 14px #52b830) drop-shadow(0 0 28px #2e7a1a); }
+  100% { filter: drop-shadow(0 0 5px #52b830); }
 }
 
 .planet-orbit-item--foreground {

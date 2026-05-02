@@ -51,6 +51,8 @@
         'champion-orbit-avatar--dot':
           pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
         'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
+        'champion-orbit-avatar--healing':
+          pos.primaryRole === 'support' && roleBehaviorStore.supportPlanetHealActive,
       }"
       :style="{
         width: pos.size + 'px',
@@ -579,6 +581,34 @@ export default defineComponent({
       0 0 24px rgba(200, 100, 255, 1),
       0 0 48px rgba(160, 80, 255, 0.7);
   }
+}
+
+/* Heal-Farbe: Teal-Mint (#00e5a0) — klar verschieden von Jungler-Grün (#3eea58) */
+.champion-orbit-avatar--healing {
+  animation: support-heal-burst 0.9s ease-out forwards;
+}
+
+.champion-orbit-avatar--healing::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 229, 160, 0.75) 0%, rgba(0, 229, 160, 0.3) 40%, transparent 70%);
+  pointer-events: none;
+  animation: support-heal-aura 0.9s ease-out forwards;
+}
+
+@keyframes support-heal-burst {
+  0%   { filter: brightness(1)   drop-shadow(0 0  0px rgba(0, 229, 160, 0)); }
+  20%  { filter: brightness(1.9) drop-shadow(0 0 14px rgba(0, 229, 160, 1)); }
+  65%  { filter: brightness(1.3) drop-shadow(0 0  8px rgba(0, 229, 160, 0.6)); }
+  100% { filter: brightness(1)   drop-shadow(0 0  0px rgba(0, 229, 160, 0)); }
+}
+
+@keyframes support-heal-aura {
+  0%   { opacity: 0; transform: scale(0.6); }
+  25%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.7); }
 }
 
 /* ── Jungler-Stacks ───────────────────────────────────────────────────────── */

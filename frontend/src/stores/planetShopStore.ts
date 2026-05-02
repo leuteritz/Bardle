@@ -43,6 +43,7 @@ export interface PlanetSlot {
   slotConfig?: { materialId?: string; buildingId?: string }
   currentHp: number
   maxHp: number
+  healingUntilMs: number
 }
 
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
@@ -122,6 +123,7 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   tiltDeg: orbit.tiltDeg,
   currentHp: PLANET_SLOT_MAX_HP,
   maxHp: PLANET_SLOT_MAX_HP,
+  healingUntilMs: 0,
 }))
 
 const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
@@ -278,6 +280,13 @@ export const usePlanetShopStore = defineStore('planetShop', {
       const slot = this.getSlot(slotId)
       if (!slot || !slot.purchased) return
       slot.currentHp = Math.max(0, slot.currentHp - amount)
+    },
+
+    healSlot(slotId: string, amount: number): void {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return
+      slot.currentHp = Math.min(slot.maxHp, slot.currentHp + amount)
+      slot.healingUntilMs = Date.now() + 1000
     },
 
     adminFillRandomRoles(): void {
