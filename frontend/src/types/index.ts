@@ -495,6 +495,7 @@ export interface DamageFloat {
   dotFloat?: boolean
   adcFloat?: boolean
   healFloat?: boolean
+  shieldFloat?: boolean
 }
 
 export interface RoleBehaviorState {
@@ -502,8 +503,7 @@ export interface RoleBehaviorState {
   supportHealCooldownMs: number
   // Top Laner
   tankShieldActive: boolean
-  tankShieldCooldownMs: number
-  tankShieldRemainingMs: number
+  tankShieldBrokenMs: number
   // Mid Laner
   dotCooldownMs: number
   dotRemainingMs: number

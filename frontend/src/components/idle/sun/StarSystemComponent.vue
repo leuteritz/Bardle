@@ -281,6 +281,7 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { usePlayerStore } from '../../../stores/playerStore'
+import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useRenderingPaused } from '../../../composables/useRenderingPaused'
 import { useProjectileSystem } from '../../../composables/useProjectileSystem'
 import { MATERIALS } from '../../../config/materials'
@@ -302,6 +303,7 @@ const combatStore = useCombatStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
 const playerStore = usePlayerStore()
+const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -350,6 +352,7 @@ const {
 
 const ENEMY_TRAIL_COLOR = '#cc5500'
 const ENEMY_HEAD_COLOR = '#ff8800'
+const TOP_INTERCEPT_RADIUS = 50
 
 const enemyAttackTimers = new Map<string, number>()
 let enemyAnimFrame = 0
@@ -403,9 +406,38 @@ function enemyAttackLoop(ts: number) {
           }
 
           const capturedSlotId = targetSlotId
+          const capturedTopLaneName = battleStore.headerSlots[0]
           spawnEnemyShot(pos.cx, pos.cy, targetX, targetY, true, true, {
             trailColor: ENEMY_TRAIL_COLOR,
             headColor: ENEMY_HEAD_COLOR,
+            interceptCheck:
+              capturedSlotId === null && capturedTopLaneName
+                ? (headX: number, headY: number) => {
+                    if (!roleBehaviorStore.tankShieldActive) return false
+                    if (activeChampionBehindState[capturedTopLaneName]) return false
+                    const topChamp = combatStore.champions.find(
+                      (c) => c.name === capturedTopLaneName,
+                    )
+                    if (!topChamp) return false
+                    return (
+                      Math.hypot(headX - topChamp.screenX, headY - topChamp.screenY) <
+                      TOP_INTERCEPT_RADIUS
+                    )
+                  }
+                : undefined,
+            onIntercept:
+              capturedSlotId === null && capturedTopLaneName
+                ? (headX: number, headY: number) => {
+                    const topChamp = combatStore.champions.find(
+                      (c) => c.name === capturedTopLaneName,
+                    )
+                    if (!topChamp) return
+                    const dx = headX - topChamp.screenX
+                    const dy = headY - topChamp.screenY
+                    const len = Math.hypot(dx, dy) || 1
+                    roleBehaviorStore.triggerIntercept(dx / len, dy / len, topChamp.screenX, topChamp.screenY)
+                  }
+                : undefined,
             onHit() {
               if (capturedSlotId) {
                 planetShopStore.takeDamage(capturedSlotId, ENEMY_PROJECTILE_DAMAGE)

@@ -17,6 +17,8 @@ export interface ProjectileShot {
   trailColor?: string
   headColor?: string
   onHit?: () => void
+  interceptCheck?: (headX: number, headY: number) => boolean
+  onIntercept?: (headX: number, headY: number) => void
 }
 
 const SHOT_DURATION_MS = 520
@@ -35,7 +37,13 @@ export function useProjectileSystem() {
     toY: number,
     shooterIsForeground: boolean,
     targetIsForeground: boolean,
-    options?: { trailColor?: string; headColor?: string; onHit?: () => void },
+    options?: {
+      trailColor?: string
+      headColor?: string
+      onHit?: () => void
+      interceptCheck?: (headX: number, headY: number) => boolean
+      onIntercept?: (headX: number, headY: number) => void
+    },
   ) {
     if (!shooterIsForeground || !targetIsForeground) return
     shots.value.push({
@@ -54,6 +62,8 @@ export function useProjectileSystem() {
       trailColor: options?.trailColor,
       headColor: options?.headColor,
       onHit: options?.onHit,
+      interceptCheck: options?.interceptCheck,
+      onIntercept: options?.onIntercept,
     })
   }
 
@@ -72,7 +82,9 @@ export function useProjectileSystem() {
       shot.tailY = shot.y1 + (shot.y2 - shot.y1) * tailT
       // Fade: 0–20% einblenden, 20–70% voll, 70–100% ausblenden
       shot.opacity = t < 0.2 ? t / 0.2 : t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1
-      if (t < 1) {
+      if (shot.interceptCheck?.(shot.headX, shot.headY)) {
+        shot.onIntercept?.(shot.headX, shot.headY)
+      } else if (t < 1) {
         alive.push(shot)
       } else {
         shot.onHit?.()

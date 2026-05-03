@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import {
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
   ROLE_SUPPORT_HEAL_AMOUNT,
-  ROLE_TOP_SHIELD_DURATION_MS,
-  ROLE_TOP_SHIELD_INTERVAL_MS,
+  ROLE_TOP_SHIELD_REBUILD_MS,
   ROLE_MID_DOT_DPS,
   ROLE_MID_DOT_DURATION_MS,
   ROLE_MID_DOT_INTERVAL_MS,
@@ -88,8 +87,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     supportPlanetHealCooldownMs: 0,
 
     tankShieldActive: false,
-    tankShieldCooldownMs: ROLE_TOP_SHIELD_INTERVAL_MS,
-    tankShieldRemainingMs: 0,
+    tankShieldBrokenMs: 0,
+
+    tankInterceptActive: false,
+    tankInterceptStartMs: 0,
+    tankInterceptDirX: 0,
+    tankInterceptDirY: 0,
 
     dotCooldownMs: ROLE_MID_DOT_INTERVAL_MS,
     dotRemainingMs: 0,
@@ -208,34 +211,22 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _tickTop(roles: Set<string>, tickMs: number) {
       if (!roles.has('top')) {
         this.tankShieldActive = false
-        this.tankShieldRemainingMs = 0
+        this.tankShieldBrokenMs = 0
         return
       }
 
-      const { addEvent } = useEventLog()
-      const championName = getChampionNameByRole('top')
-
-      if (this.tankShieldActive) {
-        this.tankShieldRemainingMs -= tickMs
-
-        if (this.tankShieldRemainingMs <= 0) {
-          this.tankShieldActive = false
-          this.tankShieldRemainingMs = 0
-          this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
-
-          addEvent(`${championName}'s shield fades.`, 'top')
-        }
-      } else {
-        this.tankShieldCooldownMs -= tickMs
-
-        if (this.tankShieldCooldownMs <= 0) {
+      if (this.tankShieldBrokenMs > 0) {
+        this.tankShieldBrokenMs = Math.max(0, this.tankShieldBrokenMs - tickMs)
+        if (this.tankShieldBrokenMs === 0) {
           this.tankShieldActive = true
-          this.tankShieldRemainingMs = ROLE_TOP_SHIELD_DURATION_MS
-          this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
-
-          addEvent(`${championName} raises a shield.`, 'top')
+          const { addEvent } = useEventLog()
+          const championName = getChampionNameByRole('top')
+          addEvent(`${championName}'s shield is restored.`, 'top')
         }
+        return
       }
+
+      this.tankShieldActive = true
     },
 
     _tickMid(roles: Set<string>, tickMs: number) {
@@ -323,6 +314,26 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           }
         }
       }
+    },
+
+    triggerIntercept(dirX: number, dirY: number, topX: number, topY: number) {
+      this.tankInterceptActive = true
+      this.tankInterceptStartMs = Date.now()
+      this.tankInterceptDirX = dirX
+      this.tankInterceptDirY = dirY
+
+      this.tankShieldActive = false
+      this.tankShieldBrokenMs = ROLE_TOP_SHIELD_REBUILD_MS
+
+      spawnFloat(0, topX, topY - 45, 1000, { shieldFloat: true })
+
+      const { addEvent } = useEventLog()
+      const championName = getChampionNameByRole('top')
+      addEvent(`${championName}'s shield absorbs a shot! (${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild)`, 'top')
+
+      setTimeout(() => {
+        this.tankInterceptActive = false
+      }, 500)
     },
 
     _tickJungler(roles: Set<string>, tickMs: number) {

@@ -51,6 +51,8 @@
         'champion-orbit-avatar--dot':
           pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
         'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
+        'champion-orbit-avatar--intercept':
+          pos.primaryRole === 'top' && roleBehaviorStore.tankInterceptActive,
         'champion-orbit-avatar--healing':
           pos.primaryRole === 'support' && roleBehaviorStore.supportPlanetHealActive,
       }"
@@ -90,10 +92,12 @@
               'champion-dmg-float--dot': f.dotFloat,
               'champion-dmg-float--adc': f.adcFloat,
               'champion-dmg-float--heal': f.healFloat,
+              'champion-dmg-float--shield': f.shieldFloat,
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
-            <template v-if="f.healFloat">+{{ f.value }}</template>
+            <template v-if="f.shieldFloat">🛡</template>
+            <template v-else-if="f.healFloat">+{{ f.value }}</template>
             <template v-else>-{{ f.value }}</template>
           </span>
         </TransitionGroup>
@@ -120,6 +124,8 @@ import type { ChampionRole } from '../../../types'
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
 const PROJECTILE_COOLDOWN_MS = 700
+const INTERCEPT_MAX_OFFSET = 25
+const INTERCEPT_DURATION_MS = 500
 
 interface ChampionRenderPos {
   name: string
@@ -303,11 +309,21 @@ export default defineComponent({
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
+        let renderX = ls.x
+        let renderY = ls.y
+        if (primaryRole === 'top' && roleBehaviorStore.tankInterceptActive) {
+          const elapsed = Date.now() - roleBehaviorStore.tankInterceptStartMs
+          const t = Math.min(1, elapsed / INTERCEPT_DURATION_MS)
+          const progress = t < 0.3 ? t / 0.3 : 1 - (t - 0.3) / 0.7
+          renderX += roleBehaviorStore.tankInterceptDirX * INTERCEPT_MAX_OFFSET * progress
+          renderY += roleBehaviorStore.tankInterceptDirY * INTERCEPT_MAX_OFFSET * progress
+        }
+
         newPositions.push({
           name: c.name,
           img: battleStore.getChampionImage(c.name),
-          x: ls.x,
-          y: ls.y,
+          x: renderX,
+          y: renderY,
           size,
           opacity,
           isAttacking: c.isAttacking,
@@ -685,6 +701,15 @@ export default defineComponent({
     0 0 24px rgba(40, 200, 60, 0.5);
 }
 
+.champion-dmg-float--shield {
+  font-size: 1.6rem;
+  color: #80ccff;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 0 14px rgba(80, 180, 255, 0.95),
+    0 0 28px rgba(60, 140, 255, 0.6);
+}
+
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */
 .champion-dmg-enter-active {
   transition:
@@ -725,9 +750,27 @@ export default defineComponent({
   }
 }
 
+/* ── Top-Lane Intercept-Effekt ────────────────────────────────────────────── */
+.champion-orbit-avatar--intercept {
+  animation: top-intercept-flash 0.5s ease-out forwards;
+}
+
+@keyframes top-intercept-flash {
+  0% {
+    filter: brightness(2.8) saturate(2) drop-shadow(0 0 18px rgba(80, 180, 255, 1));
+  }
+  45% {
+    filter: brightness(1.6) saturate(1.4) drop-shadow(0 0 8px rgba(80, 180, 255, 0.5));
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking,
-  .champion-orbit-avatar--top-hit {
+  .champion-orbit-avatar--top-hit,
+  .champion-orbit-avatar--intercept {
     animation: none;
   }
 }
