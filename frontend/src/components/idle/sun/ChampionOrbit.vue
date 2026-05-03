@@ -65,8 +65,10 @@
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
+      <!-- Rollen-Badge: Top wird ausgeblendet, wenn Shield aktiv ist,
+           damit nur EIN großes 🛡 sichtbar ist -->
       <span
-        v-if="pos.primaryRole"
+        v-if="pos.primaryRole && !(pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive)"
         class="champion-role-badge"
         :class="`champion-role-badge--${pos.primaryRole}`"
       >
@@ -452,7 +454,6 @@ export default defineComponent({
   top: 0;
   left: 0;
   border-radius: 50%;
-  overflow: hidden;
   border: 3px solid #c89040;
   box-shadow:
     0 0 10px rgba(232, 192, 64, 0.55),
@@ -560,22 +561,83 @@ export default defineComponent({
 
 /* ── Ability-Glows ────────────────────────────────────────────────────────── */
 .champion-orbit-avatar--shield {
+  border-width: 5px !important;
+  border-color: #f54747 !important;
   box-shadow:
-    0 0 14px rgba(80, 180, 255, 0.9),
-    0 0 28px rgba(60, 140, 255, 0.5);
-  animation: shield-pulse 1s ease-in-out infinite alternate;
+    0 0 18px rgba(245, 71, 71, 1),
+    0 0 40px rgba(245, 71, 71, 0.7),
+    0 0 70px rgba(245, 71, 71, 0.35),
+    inset 0 0 14px rgba(245, 71, 71, 0.25);
+  animation: shield-pulse 0.7s ease-in-out infinite alternate;
+}
+
+.champion-orbit-avatar--shield::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 71, 71, 0.65);
+  animation: shield-ring-spin 2.2s linear infinite;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--shield::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 140, 140, 0.35);
+  animation: shield-ring-spin 3.5s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes shield-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes shield-pulse {
   from {
+    border-width: 4px;
     box-shadow:
-      0 0 12px rgba(80, 180, 255, 0.8),
-      0 0 24px rgba(60, 140, 255, 0.5);
+      0 0 14px rgba(245, 71, 71, 0.9),
+      0 0 32px rgba(245, 71, 71, 0.55),
+      0 0 58px rgba(245, 71, 71, 0.28);
   }
   to {
+    border-width: 8px;
     box-shadow:
-      0 0 24px rgba(100, 200, 255, 1),
-      0 0 48px rgba(80, 160, 255, 0.7);
+      0 0 28px rgba(255, 80, 80, 1),
+      0 0 60px rgba(245, 71, 71, 0.85),
+      0 0 100px rgba(245, 71, 71, 0.5),
+      inset 0 0 20px rgba(245, 71, 71, 0.4);
+  }
+}
+
+/* ── Top-Lane Shield-Badge ────────────────────────────────────────────────── */
+.champion-shield-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  font-size: 17px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 3;
+  animation: shield-badge-throb 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes shield-badge-throb {
+  from {
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(245, 71, 71, 1)) drop-shadow(0 0 10px rgba(255, 100, 100, 0.7));
+  }
+  to {
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 12px rgba(255, 60, 60, 1)) drop-shadow(0 0 24px rgba(255, 120, 120, 1));
   }
 }
 
@@ -609,22 +671,44 @@ export default defineComponent({
   position: absolute;
   inset: -14px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 229, 160, 0.75) 0%, rgba(0, 229, 160, 0.3) 40%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(0, 229, 160, 0.75) 0%,
+    rgba(0, 229, 160, 0.3) 40%,
+    transparent 70%
+  );
   pointer-events: none;
   animation: support-heal-aura 0.9s ease-out forwards;
 }
 
 @keyframes support-heal-burst {
-  0%   { filter: brightness(1)   drop-shadow(0 0  0px rgba(0, 229, 160, 0)); }
-  20%  { filter: brightness(1.9) drop-shadow(0 0 14px rgba(0, 229, 160, 1)); }
-  65%  { filter: brightness(1.3) drop-shadow(0 0  8px rgba(0, 229, 160, 0.6)); }
-  100% { filter: brightness(1)   drop-shadow(0 0  0px rgba(0, 229, 160, 0)); }
+  0% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(0, 229, 160, 0));
+  }
+  20% {
+    filter: brightness(1.9) drop-shadow(0 0 14px rgba(0, 229, 160, 1));
+  }
+  65% {
+    filter: brightness(1.3) drop-shadow(0 0 8px rgba(0, 229, 160, 0.6));
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(0, 229, 160, 0));
+  }
 }
 
 @keyframes support-heal-aura {
-  0%   { opacity: 0; transform: scale(0.6); }
-  25%  { opacity: 1; transform: scale(1.0); }
-  100% { opacity: 0; transform: scale(1.7); }
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
 }
 
 /* ── Jungler-Stacks ───────────────────────────────────────────────────────── */
