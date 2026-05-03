@@ -16,6 +16,7 @@ import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
+import EventLogOverlay from '@/components/idle/EventLogOverlay.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
@@ -50,6 +51,7 @@ watch(
     <UniverseSelectModal />
     <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
     <FpsOverlay />
+    <EventLogOverlay />
     <OfflineProgressModal />
     <PauseOverlay />
     <StarTimerBarsComponent />

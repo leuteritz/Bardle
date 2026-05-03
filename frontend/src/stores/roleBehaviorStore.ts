@@ -1,4 +1,3 @@
-// frontend/src/stores/roleBehaviorStore.ts
 import { defineStore } from 'pinia'
 import {
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
@@ -24,11 +23,22 @@ import { usePlayerStore } from './playerStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGameStore } from './gameStore'
 import { useCombatStore } from './combatStore'
-import { usePlanetShopStore } from './planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES, type PlanetSlot } from './planetShopStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
+import { useEventLog } from '@/composables/useEventLog'
 
 let _floatId = 900_000
+const _throttleMap = new Map<string, number>()
+
+function throttledEvent(key: string, intervalMs: number, fn: () => void) {
+  const now = Date.now()
+  const last = _throttleMap.get(key) ?? 0
+  if (now - last >= intervalMs) {
+    _throttleMap.set(key, now)
+    fn()
+  }
+}
 
 function spawnFloat(
   value: number,
@@ -48,28 +58,37 @@ function spawnFloat(
   } as (typeof combatStore.damageFloats)[number])
 }
 
+function getPlanetLabel(slot: PlanetSlot): string {
+  if (slot.role && PLANET_ROLES[slot.role]) {
+    return `${PLANET_ROLES[slot.role].name} (${slot.id})`
+  }
+  return `Planet ${slot.id}`
+}
+
+function getChampionNameByRole(role: 'support' | 'top' | 'mid' | 'adc' | 'jungle'): string {
+  const combatStore = useCombatStore()
+  const champion = combatStore.champions.find((c) =>
+    getChampionRoles(c.name).some((r) => r === role),
+  )
+  return champion?.name ?? role.toUpperCase()
+}
+
 export const useRoleBehaviorStore = defineStore('roleBehavior', {
   state: () => ({
-    // Support
     supportHealCooldownMs: ROLE_SUPPORT_HEAL_INTERVAL_MS,
     supportPlanetHealActive: false,
     supportPlanetHealCooldownMs: 0,
-    // Top Laner
     tankShieldActive: false,
     tankShieldCooldownMs: ROLE_TOP_SHIELD_INTERVAL_MS,
     tankShieldRemainingMs: 0,
-    // Mid Laner
     dotCooldownMs: ROLE_MID_DOT_INTERVAL_MS,
     dotRemainingMs: 0,
-    // ADC
     adcBurstCooldownMs: ROLE_ADC_BURST_INTERVAL_MS,
-    // Jungler
     junglerStackCooldownMs: ROLE_JUNGLER_STACK_INTERVAL_MS,
     junglerStackCount: 0,
   }),
 
   actions: {
-    /** Called every second from gameStore.tick() */
     tick() {
       const TICK_MS = 1000
       const roles = getOrbitingRoles()
@@ -104,6 +123,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.supportPlanetHealCooldownMs = SUPPORT_PLANET_HEAL_INTERVAL_MS
 
       const planetShopStore = usePlanetShopStore()
+      const { addEvent } = useEventLog()
 
       const damagedCandidates = planetShopStore.purchasedSlots
         .map((slot) => {
@@ -112,15 +132,15 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           return { slot, pos }
         })
         .filter((entry) => entry !== null)
-        .filter((entry) => entry.slot.currentHp < entry.slot.maxHp)
 
       const healablePlanets = damagedCandidates
-        .map(({ slot, pos }) => {
+        .filter((entry) => entry.slot.currentHp < entry.slot.maxHp)
+        .map((entry) => {
           const dist = Math.hypot(
-            supportChampion.screenX - pos.cx,
-            supportChampion.screenY - pos.cy,
+            supportChampion.screenX - entry.pos.cx,
+            supportChampion.screenY - entry.pos.cy,
           )
-          return { slot, pos, dist }
+          return { slot: entry.slot, pos: entry.pos, dist }
         })
         .filter(({ dist }) => dist <= SUPPORT_HEAL_RANGE)
 
@@ -131,11 +151,17 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         for (const { slot, pos } of targets) {
           const healAmount = Math.min(SUPPORT_PLANET_HEAL_AMOUNT, slot.maxHp - slot.currentHp)
-
           if (healAmount <= 0) continue
 
           planetShopStore.healSlot(slot.id, healAmount)
           spawnFloat(healAmount, pos.cx, pos.cy - 35, 1200, { healFloat: true })
+
+          throttledEvent(`support-heal-${slot.id}`, 4000, () => {
+            addEvent(
+              `${supportChampion.name} heals ${getPlanetLabel(slot)} for ${Math.round(healAmount)} HP`,
+              'support',
+            )
+          })
         }
 
         this.supportPlanetHealActive = targets.length > 0
@@ -153,6 +179,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           1200,
           { healFloat: true },
         )
+
+        throttledEvent('support-heal-player', 5000, () => {
+          addEvent(`${supportChampion.name} heals Bard for ${Math.round(healed)} HP`, 'support')
+        })
       }
     },
 
@@ -162,12 +192,17 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.tankShieldRemainingMs = 0
         return
       }
+
+      const { addEvent } = useEventLog()
+      const championName = getChampionNameByRole('top')
+
       if (this.tankShieldActive) {
         this.tankShieldRemainingMs -= tickMs
         if (this.tankShieldRemainingMs <= 0) {
           this.tankShieldActive = false
           this.tankShieldRemainingMs = 0
           this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
+          addEvent(`${championName}'s shield fades`, 'top')
         }
       } else {
         this.tankShieldCooldownMs -= tickMs
@@ -175,6 +210,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           this.tankShieldActive = true
           this.tankShieldRemainingMs = ROLE_TOP_SHIELD_DURATION_MS
           this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
+          addEvent(`${championName} activates a shield`, 'top')
         }
       }
     },
@@ -184,13 +220,21 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.dotRemainingMs = 0
         return
       }
+
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
+      const { addEvent } = useEventLog()
+      const championName = getChampionNameByRole('mid')
 
       if (this.dotRemainingMs > 0) {
         this.dotRemainingMs -= tickMs
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           const defeated = bossStore.dealDamage(ROLE_MID_DOT_DPS)
+
+          throttledEvent(`mid-dot-${activeBoss.planetId}`, 3000, () => {
+            addEvent(`${championName} burns the boss for ${ROLE_MID_DOT_DPS} DoT damage`, 'mid')
+          })
+
           if (!defeated) {
             const pos = activePlanetPositions.get(activeBoss.planetId)
             if (pos) {
@@ -198,6 +242,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
                 dotFloat: true,
               })
             }
+          } else {
+            addEvent(`${championName} defeats the boss on Planet ${activeBoss.planetId}`, 'mid')
           }
         }
         if (this.dotRemainingMs < 0) this.dotRemainingMs = 0
@@ -209,19 +255,30 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.dotCooldownMs = ROLE_MID_DOT_INTERVAL_MS
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           this.dotRemainingMs = ROLE_MID_DOT_DURATION_MS
+          addEvent(`${championName} casts a damage-over-time effect on the boss`, 'mid')
         }
       }
     },
 
     _tickAdc(roles: Set<string>, tickMs: number) {
       if (!roles.has('adc')) return
+
       this.adcBurstCooldownMs -= tickMs
       if (this.adcBurstCooldownMs <= 0) {
         this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
+
         const bossStore = usePlanetBossStore()
         const activeBoss = bossStore.activeBoss
+        const { addEvent } = useEventLog()
+        const championName = getChampionNameByRole('adc')
+
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           const defeated = bossStore.dealDamage(ROLE_ADC_BURST_DAMAGE)
+
+          throttledEvent(`adc-burst-${activeBoss.planetId}`, 2500, () => {
+            addEvent(`${championName} fires a burst for ${ROLE_ADC_BURST_DAMAGE} damage`, 'adc')
+          })
+
           if (!defeated) {
             const pos = activePlanetPositions.get(activeBoss.planetId)
             if (pos) {
@@ -233,6 +290,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
                 { adcFloat: true },
               )
             }
+          } else {
+            addEvent(`${championName} destroys the boss on Planet ${activeBoss.planetId}`, 'adc')
           }
         }
       }
@@ -240,10 +299,22 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
     _tickJungler(roles: Set<string>, tickMs: number) {
       if (!roles.has('jungle')) return
+
       this.junglerStackCooldownMs -= tickMs
       if (this.junglerStackCooldownMs <= 0) {
         this.junglerStackCooldownMs = ROLE_JUNGLER_STACK_INTERVAL_MS
         this.junglerStackCount = Math.min(this.junglerStackCount + 1, ROLE_JUNGLER_MAX_STACKS)
+
+        const { addEvent } = useEventLog()
+        const championName = getChampionNameByRole('jungle')
+
+        throttledEvent('jungler-stack-build', 2500, () => {
+          addEvent(
+            `${championName} gains stack ${this.junglerStackCount}/${ROLE_JUNGLER_MAX_STACKS}`,
+            'jungle',
+          )
+        })
+
         if (this.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS) {
           const reward = ROLE_JUNGLER_MAX_STACKS * ROLE_JUNGLER_CHIMES_PER_STACK
           const gameStore = useGameStore()
@@ -254,12 +325,15 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           gameStore.chimesEarnedForLevel += reward
           gameStore.calculateLevel()
           this.junglerStackCount = 0
+
           spawnFloat(
             reward,
             window.innerWidth / 2 + (Math.random() - 0.5) * 40,
             window.innerHeight / 2 + 40,
             1500,
           )
+
+          addEvent(`${championName} cashes in stacks for +${reward} Chimes`, 'jungle')
         }
       }
     },
