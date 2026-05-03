@@ -60,12 +60,16 @@ function spawnFloat(
   } as (typeof combatStore.damageFloats)[number])
 }
 
+function formatSlotId(id: string): string {
+  return id.replace('slot_', 'Slot ')
+}
+
 function getPlanetLabel(slot: PlanetSlot): string {
   if (slot.role && PLANET_ROLES[slot.role]) {
-    return `${PLANET_ROLES[slot.role].name} (${slot.id})`
+    return `${PLANET_ROLES[slot.role].name} (${formatSlotId(slot.id)})`
   }
 
-  return `Planet ${slot.id}`
+  return formatSlotId(slot.id)
 }
 
 const SLOT_ROLES = ['top', 'jungle', 'mid', 'adc', 'support'] as const
@@ -172,7 +176,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
           throttledEvent(`support-heal-${slot.id}`, 4000, () => {
             addEvent(
-              `✦ ${supportChampion.name} flüstert Heilzauber auf ${getPlanetLabel(slot)} (+${Math.round(healAmount)} HP)`,
+              `${supportChampion.name} heals ${getPlanetLabel(slot)} +${Math.round(healAmount)} HP.`,
               'support',
             )
           })
@@ -196,7 +200,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         )
 
         throttledEvent('support-heal-player', 5000, () => {
-          addEvent(`💚 ${supportChampion.name} stärkt Bard mit heilender Kraft (+${Math.round(healed)} HP)`, 'support')
+          addEvent(`${supportChampion.name} heals Bard +${Math.round(healed)} HP.`, 'support')
         })
       }
     },
@@ -219,7 +223,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           this.tankShieldRemainingMs = 0
           this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
 
-          addEvent(`${championName}'s shield fades`, 'top')
+          addEvent(`${championName}'s shield fades.`, 'top')
         }
       } else {
         this.tankShieldCooldownMs -= tickMs
@@ -229,7 +233,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           this.tankShieldRemainingMs = ROLE_TOP_SHIELD_DURATION_MS
           this.tankShieldCooldownMs = ROLE_TOP_SHIELD_INTERVAL_MS
 
-          addEvent(`${championName} activates a shield`, 'top')
+          addEvent(`${championName} raises a shield.`, 'top')
         }
       }
     },
@@ -252,7 +256,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           const defeated = bossStore.dealDamage(ROLE_MID_DOT_DPS)
 
           throttledEvent(`mid-dot-${activeBoss.planetId}`, 3000, () => {
-            addEvent(`${championName} burns the boss for ${ROLE_MID_DOT_DPS} DoT damage`, 'mid')
+            addEvent(`${championName} DoT: ${ROLE_MID_DOT_DPS} dmg.`, 'mid')
           })
 
           if (!defeated) {
@@ -263,7 +267,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
               })
             }
           } else {
-            addEvent(`${championName} defeats the boss on Planet ${activeBoss.planetId}`, 'mid')
+            addEvent(`${championName} slays boss (${formatSlotId(activeBoss.planetId)}).`, 'mid')
           }
         }
 
@@ -278,7 +282,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           this.dotRemainingMs = ROLE_MID_DOT_DURATION_MS
-          addEvent(`${championName} casts a damage-over-time effect on the boss`, 'mid')
+          addEvent(`${championName} applies DoT.`, 'mid')
         }
       }
     },
@@ -300,7 +304,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           const defeated = bossStore.dealDamage(ROLE_ADC_BURST_DAMAGE)
 
           throttledEvent(`adc-burst-${activeBoss.planetId}`, 2500, () => {
-            addEvent(`${championName} fires a burst for ${ROLE_ADC_BURST_DAMAGE} damage`, 'adc')
+            addEvent(`${championName} burst: ${ROLE_ADC_BURST_DAMAGE} dmg.`, 'adc')
           })
 
           if (!defeated) {
@@ -315,7 +319,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
               )
             }
           } else {
-            addEvent(`${championName} destroys the boss on Planet ${activeBoss.planetId}`, 'adc')
+            addEvent(`${championName} slays boss (${formatSlotId(activeBoss.planetId)}).`, 'adc')
           }
         }
       }
@@ -335,7 +339,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         throttledEvent('jungler-stack-build', 2500, () => {
           addEvent(
-            `${championName} gains stack ${this.junglerStackCount}/${ROLE_JUNGLER_MAX_STACKS}`,
+            `${championName} stack ${this.junglerStackCount}/${ROLE_JUNGLER_MAX_STACKS}.`,
             'jungle',
           )
         })
@@ -360,7 +364,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             1500,
           )
 
-          addEvent(`${championName} cashes in stacks for +${reward} Chimes`, 'jungle')
+          addEvent(`${championName} +${reward} Chimes.`, 'jungle')
         }
       }
     },

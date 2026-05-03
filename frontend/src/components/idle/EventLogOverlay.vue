@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useEventLog } from '@/composables/useEventLog'
-import { typeIcon, typeColor } from '@/config/eventLogTypes'
+import { typeColor } from '@/config/eventLogTypes'
 
 const { events } = useEventLog()
 const isLogVisible = ref(true)
@@ -9,8 +9,28 @@ const isLogVisible = ref(true)
 
 <template>
   <div class="event-log-overlay" aria-live="polite" aria-label="Spielereignisse">
-    <button class="log-toggle-btn" @click="isLogVisible = !isLogVisible">
-      📜 {{ isLogVisible ? 'Log verbergen' : 'Log anzeigen' }}
+    <button
+      class="log-toggle-btn"
+      @click="isLogVisible = !isLogVisible"
+      :aria-label="isLogVisible ? 'Collapse log' : 'Expand log'"
+    >
+      <svg
+        class="chevron-icon"
+        :class="{ 'is-expanded': isLogVisible }"
+        width="14"
+        height="14"
+        viewBox="0 0 14 14"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <polyline
+          points="2,4 7,10 12,4"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
     </button>
     <TransitionGroup v-show="isLogVisible" name="log-entry" tag="div" class="event-log-inner">
       <div
@@ -20,7 +40,6 @@ const isLogVisible = ref(true)
         :style="{ '--entry-color': typeColor[evt.type] }"
       >
         <span class="log-time">[{{ evt.timeString }}]</span>
-        <span class="log-icon">{{ typeIcon[evt.type] ?? '📜' }}</span>
         <span class="log-msg">{{ evt.message }}</span>
       </div>
     </TransitionGroup>
@@ -45,12 +64,12 @@ const isLogVisible = ref(true)
 
 .log-toggle-btn {
   pointer-events: auto;
-  padding: 3px 10px;
+  padding: 5px 8px;
+  line-height: 0;
   background: rgba(10, 7, 2, 0.9);
   border: 1px solid #5c3310;
   border-radius: 4px;
   color: rgba(200, 160, 80, 0.75);
-  font-size: 0.78rem;
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
@@ -58,6 +77,14 @@ const isLogVisible = ref(true)
 .log-toggle-btn:hover {
   border-color: #c89040;
   color: #e8c040;
+}
+
+.chevron-icon {
+  display: block;
+  transition: transform 0.2s ease;
+}
+.chevron-icon.is-expanded {
+  transform: rotate(180deg);
 }
 
 .event-log-inner {
@@ -94,14 +121,6 @@ const isLogVisible = ref(true)
   letter-spacing: 0.03em;
   margin-top: 0.12rem;
   white-space: nowrap;
-}
-
-.log-icon {
-  font-size: clamp(0.95rem, 1vw, 1.08rem);
-  flex-shrink: 0;
-  line-height: 1.1;
-  margin-top: 0.08rem;
-  filter: drop-shadow(0 0 3px var(--entry-color, #c8b89a));
 }
 
 .log-msg {

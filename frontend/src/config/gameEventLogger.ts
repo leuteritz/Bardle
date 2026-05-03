@@ -7,8 +7,8 @@ function safeNumber(value: number) {
 export function logPlanetHealed(planetName: string, amount: number, source?: string) {
   const { addEvent } = useEventLog()
   const msg = source
-    ? `✦ ${source} flüstert Heilzauber auf ${planetName} (+${safeNumber(amount)} HP)`
-    : `✦ ${planetName} wird mit Heilzauber gesegnet (+${safeNumber(amount)} HP)`
+    ? `${source} heals ${planetName} +${safeNumber(amount)} HP.`
+    : `+${safeNumber(amount)} HP to ${planetName}.`
 
   addEvent(msg, 'support')
 }
@@ -16,21 +16,21 @@ export function logPlanetHealed(planetName: string, amount: number, source?: str
 export function logPlanetDamaged(planetName: string, amount: number, source?: string) {
   const { addEvent } = useEventLog()
   const msg = source
-    ? `${planetName} erleidet ${safeNumber(amount)} Schaden durch ${source}`
-    : `${planetName} erleidet ${safeNumber(amount)} Schaden`
+    ? `${source} hits ${planetName} for ${safeNumber(amount)}.`
+    : `${planetName} -${safeNumber(amount)} HP.`
 
   addEvent(msg, 'combat')
 }
 
 export function logSupportSalary(roleName: string, planetName: string, amount: number) {
   const { addEvent } = useEventLog()
-  addEvent(`${roleName} erhält auf ${planetName} Gehalt ${safeNumber(amount)}`, 'support')
+  addEvent(`${roleName} +${safeNumber(amount)} on ${planetName}.`, 'support')
 }
 
 export function logPlanetSaved(planetName: string, source?: string) {
   const { addEvent } = useEventLog()
   addEvent(
-    source ? `${source} hat ${planetName} gerettet` : `${planetName} wurde gerettet`,
+    source ? `${source} saves ${planetName}.` : `${planetName} saved.`,
     'planet',
   )
 }
@@ -39,20 +39,20 @@ export function logChimeGain(amount: number, source?: string) {
   const { addEvent } = useEventLog()
   addEvent(
     source
-      ? `${source} bringt ${safeNumber(amount)} Chimes`
-      : `+${safeNumber(amount)} Chimes gesammelt`,
+      ? `+${safeNumber(amount)} Chimes from ${source}.`
+      : `+${safeNumber(amount)} Chimes.`,
     'chime',
   )
 }
 
 export function logAugmentPicked(name: string) {
   const { addEvent } = useEventLog()
-  addEvent(`Augment erhalten: ${name}`, 'augment')
+  addEvent(`Augment: ${name}.`, 'augment')
 }
 
 export function logPrestige(name: string) {
   const { addEvent } = useEventLog()
-  addEvent(`Hyperspace aktiviert: ${name}`, 'prestige')
+  addEvent(`Prestige: ${name}.`, 'prestige')
 }
 
 export function logInfo(message: string) {
@@ -62,20 +62,15 @@ export function logInfo(message: string) {
 
 export function logBattleStarted(opponentLabel: string) {
   const { addEvent } = useEventLog()
-  addEvent(`⚔️ Die Schlachtfelder öffnen sich – ${opponentLabel} tritt entgegen`, 'combat')
+  addEvent(`Battle vs ${opponentLabel}.`, 'combat')
 }
 
 export function logBattleEnded(won: boolean) {
   const { addEvent } = useEventLog()
-  addEvent(
-    won
-      ? '🏆 Sieg! Der Feind fällt vor den Klingen der Tapferen'
-      : '💀 Niederlage... Die Mächte der Dunkelheit überwiegen',
-    'combat',
-  )
+  addEvent(won ? 'Victory.' : 'Defeat.', 'combat')
 }
 
 export function logChampionDefeated(killerName: string, victimName: string) {
   const { addEvent } = useEventLog()
-  addEvent(`💀 ${killerName} schlägt ${victimName} in die Knie`, 'combat')
+  addEvent(`${killerName} slays ${victimName}.`, 'combat')
 }

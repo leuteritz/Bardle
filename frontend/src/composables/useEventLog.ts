@@ -34,7 +34,7 @@ export function useEventLog() {
 
     const id = nextId++
     const d = new Date()
-    const timeString = [d.getHours(), d.getMinutes(), d.getSeconds()]
+    const timeString = [d.getHours(), d.getMinutes()]
       .map((n) => String(n).padStart(2, '0'))
       .join(':')
 
