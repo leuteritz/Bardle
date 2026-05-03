@@ -18,8 +18,8 @@ import {
   SUPPORT_MAX_HEAL_TARGETS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
-import { getChampionRoles } from '../config/championRoles'
 import { usePlayerStore } from './playerStore'
+import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGameStore } from './gameStore'
 import { useCombatStore } from './combatStore'
@@ -68,13 +68,13 @@ function getPlanetLabel(slot: PlanetSlot): string {
   return `Planet ${slot.id}`
 }
 
-function getChampionNameByRole(role: 'support' | 'top' | 'mid' | 'adc' | 'jungle'): string {
-  const combatStore = useCombatStore()
-  const champion = combatStore.champions.find((c) =>
-    getChampionRoles(c.name).some((r) => r === role),
-  )
+const SLOT_ROLES = ['top', 'jungle', 'mid', 'adc', 'support'] as const
+type SlotRole = (typeof SLOT_ROLES)[number]
 
-  return champion?.name ?? role.toUpperCase()
+function getChampionNameByRole(role: SlotRole): string {
+  const battleStore = useBattleStore()
+  const idx = SLOT_ROLES.indexOf(role)
+  return (idx >= 0 ? battleStore.headerSlots[idx] : null) ?? role.toUpperCase()
 }
 
 export const useRoleBehaviorStore = defineStore('roleBehavior', {
@@ -119,9 +119,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.supportPlanetHealCooldownMs -= tickMs
 
       const combatStore = useCombatStore()
-      const supportChampion = combatStore.champions.find((c) =>
-        getChampionRoles(c.name).some((r) => r === 'support'),
-      )
+      const battleStore = useBattleStore()
+      const supportName = battleStore.headerSlots[4]
+      if (!supportName) return
+      const supportChampion = combatStore.champions.find((c) => c.name === supportName)
 
       if (!supportChampion || (supportChampion.screenX === 0 && supportChampion.screenY === 0)) {
         return
@@ -171,7 +172,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
           throttledEvent(`support-heal-${slot.id}`, 4000, () => {
             addEvent(
-              `${supportChampion.name} heals ${getPlanetLabel(slot)} for ${Math.round(healAmount)} HP`,
+              `✦ ${supportChampion.name} flüstert Heilzauber auf ${getPlanetLabel(slot)} (+${Math.round(healAmount)} HP)`,
               'support',
             )
           })
@@ -195,7 +196,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         )
 
         throttledEvent('support-heal-player', 5000, () => {
-          addEvent(`${supportChampion.name} heals Bard for ${Math.round(healed)} HP`, 'support')
+          addEvent(`💚 ${supportChampion.name} stärkt Bard mit heilender Kraft (+${Math.round(healed)} HP)`, 'support')
         })
       }
     },

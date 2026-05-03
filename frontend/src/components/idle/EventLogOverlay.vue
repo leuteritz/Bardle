@@ -1,19 +1,25 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useEventLog } from '@/composables/useEventLog'
 import { typeIcon, typeColor } from '@/config/eventLogTypes'
 
 const { events } = useEventLog()
+const isLogVisible = ref(true)
 </script>
 
 <template>
   <div class="event-log-overlay" aria-live="polite" aria-label="Spielereignisse">
-    <TransitionGroup name="log-entry" tag="div" class="event-log-inner">
+    <button class="log-toggle-btn" @click="isLogVisible = !isLogVisible">
+      📜 {{ isLogVisible ? 'Log verbergen' : 'Log anzeigen' }}
+    </button>
+    <TransitionGroup v-show="isLogVisible" name="log-entry" tag="div" class="event-log-inner">
       <div
         v-for="evt in events"
         :key="evt.id"
         class="log-entry"
         :style="{ '--entry-color': typeColor[evt.type] }"
       >
+        <span class="log-time">[{{ evt.timeString }}]</span>
         <span class="log-icon">{{ typeIcon[evt.type] ?? '📜' }}</span>
         <span class="log-msg">{{ evt.message }}</span>
       </div>
@@ -23,28 +29,35 @@ const { events } = useEventLog()
 
 <style scoped>
 .event-log-overlay {
-  --log-color-support: #f4c55a;
-  --log-color-planet: #7ec8e3;
-  --log-color-augment: #c084fc;
-  --log-color-meep: #6ee7b7;
-  --log-color-chime: #fde68a;
-  --log-color-combat: #fb923c;
-  --log-color-prestige: #818cf8;
-  --log-color-info: #c8b89a;
-}
-
-.event-log-overlay {
   position: fixed;
   top: 0.45rem;
   right: 0.75rem;
   z-index: 9998;
   width: clamp(300px, 26vw, 420px);
-  max-height: 300px;
+  max-height: 320px;
   overflow: hidden;
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.log-toggle-btn {
+  pointer-events: auto;
+  padding: 3px 10px;
+  background: rgba(10, 7, 2, 0.9);
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: rgba(200, 160, 80, 0.75);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.log-toggle-btn:hover {
+  border-color: #c89040;
+  color: #e8c040;
 }
 
 .event-log-inner {
@@ -53,13 +66,14 @@ const { events } = useEventLog()
   gap: 6px;
   padding: 2px 0;
   overflow: hidden;
+  width: 100%;
 }
 
 .log-entry {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
-  padding: 8px 14px 8px 10px;
+  gap: 7px;
+  padding: 7px 12px 7px 10px;
   background: linear-gradient(90deg, rgba(6, 4, 14, 0.92) 0%, rgba(10, 6, 2, 0.86) 100%);
   border-left: 3px solid var(--entry-color, #c8b89a);
   border-top: 1px solid rgba(255, 200, 80, 0.08);
@@ -70,6 +84,16 @@ const { events } = useEventLog()
     0 2px 10px rgba(0, 0, 0, 0.6);
   font-family: 'Cinzel', 'Palatino Linotype', serif;
   line-height: 1.32;
+}
+
+.log-time {
+  font-size: clamp(0.7rem, 0.76vw, 0.8rem);
+  color: rgba(200, 160, 80, 0.45);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  margin-top: 0.12rem;
+  white-space: nowrap;
 }
 
 .log-icon {
@@ -127,12 +151,12 @@ const { events } = useEventLog()
     top: 0.6rem;
     right: 0.5rem;
     width: min(320px, calc(100vw - 1rem));
-    max-height: 260px;
+    max-height: 280px;
   }
 
   .log-entry {
-    padding: 7px 12px 7px 9px;
-    gap: 8px;
+    padding: 6px 10px 6px 8px;
+    gap: 6px;
   }
 
   .log-msg {

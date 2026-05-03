@@ -1,15 +1,14 @@
-import { useCombatStore } from '../stores/combatStore'
-import { getChampionRoles } from '../config/championRoles'
+import { useBattleStore } from '../stores/battleStore'
 import type { ChampionRole } from '../types'
 
-/** Returns the set of all roles represented by champions currently in orbit. */
+const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
+
+/** Returns the set of roles for slots that are currently filled in headerSlots. */
 export function getOrbitingRoles(): Set<ChampionRole> {
-  const combat = useCombatStore()
+  const battleStore = useBattleStore()
   const roles = new Set<ChampionRole>()
-  for (const c of combat.champions) {
-    for (const r of getChampionRoles(c.name)) {
-      roles.add(r)
-    }
-  }
+  battleStore.headerSlots.forEach((slot, i) => {
+    if (slot !== null) roles.add(SLOT_ROLES[i])
+  })
   return roles
 }

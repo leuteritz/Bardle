@@ -32,6 +32,9 @@ import { getRandomShopItems } from '../config/battleShop'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { logBattleStarted, logBattleEnded, logChampionDefeated } from '../config/gameEventLogger'
+
+let _lastKillLogMs = 0
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -113,6 +116,7 @@ export const useBattleStore = defineStore('battle', {
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
     predeterminedWin: null as boolean | null,
     currentWinProbability: 0 as number,
+    currentOpponentLabel: '',
 
     // Battle Shop System
     battleCoins: 0,
@@ -256,8 +260,15 @@ export const useBattleStore = defineStore('battle', {
             others[Math.floor(Math.random() * others.length)].assists += 1
           }
           // Death auf zufälligen Verteidiger
+          const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
           if (Math.random() < 0.85) {
-            defendingTeam[Math.floor(Math.random() * defendingTeam.length)].deaths += 1
+            victim.deaths += 1
+          }
+          // Throttled kill event — max 1 per 3s to avoid log spam
+          const now = Date.now()
+          if (now - _lastKillLogMs >= 3000 && killer.name && victim.name) {
+            _lastKillLogMs = now
+            logChampionDefeated(killer.name, victim.name)
           }
         }
 
@@ -294,6 +305,7 @@ export const useBattleStore = defineStore('battle', {
           clearInterval(this.battleSimIntervalId!)
           this.battleSimIntervalId = null
           this.battlePhase = 'result'
+          logBattleEnded(this.predeterminedWin ?? false)
         }
       }, 1000)
     },
@@ -440,6 +452,7 @@ export const useBattleStore = defineStore('battle', {
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
       this.currentWinProbability = winProbability
       this.predeterminedWin = Math.random() < winProbability
+      this.currentOpponentLabel = `${opponent.rank.tier} ${opponent.rank.division}`
     },
 
     // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Simulation starten
@@ -454,6 +467,7 @@ export const useBattleStore = defineStore('battle', {
         this.baronEventTime = 1500 + Math.floor(Math.random() * 600) // Baron killed randomly 25–35 min
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
+        logBattleStarted(this.currentOpponentLabel)
       }
       logger.group('Battle Init', () => {
         logger.info('Battle', `Team 1: ${this.team1.map((c) => c.name).join(', ')}`)

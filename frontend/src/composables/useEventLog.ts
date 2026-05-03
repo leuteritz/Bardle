@@ -20,6 +20,7 @@ export interface GameEvent {
   message: string
   type: GameEventType
   timestamp: number
+  timeString: string
 }
 
 const events = ref<GameEvent[]>([])
@@ -32,12 +33,17 @@ export function useEventLog() {
     if (isRenderingPaused.value) return
 
     const id = nextId++
+    const d = new Date()
+    const timeString = [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map((n) => String(n).padStart(2, '0'))
+      .join(':')
 
     events.value.unshift({
       id,
       message,
       type,
       timestamp: Date.now(),
+      timeString,
     })
 
     if (events.value.length > 12) {

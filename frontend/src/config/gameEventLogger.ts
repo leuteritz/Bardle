@@ -7,8 +7,8 @@ function safeNumber(value: number) {
 export function logPlanetHealed(planetName: string, amount: number, source?: string) {
   const { addEvent } = useEventLog()
   const msg = source
-    ? `${source} heilt ${planetName} um ${safeNumber(amount)}`
-    : `${planetName} wird um ${safeNumber(amount)} geheilt`
+    ? `✦ ${source} flüstert Heilzauber auf ${planetName} (+${safeNumber(amount)} HP)`
+    : `✦ ${planetName} wird mit Heilzauber gesegnet (+${safeNumber(amount)} HP)`
 
   addEvent(msg, 'support')
 }
@@ -58,4 +58,24 @@ export function logPrestige(name: string) {
 export function logInfo(message: string) {
   const { addEvent } = useEventLog()
   addEvent(message, 'info')
+}
+
+export function logBattleStarted(opponentLabel: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`⚔️ Die Schlachtfelder öffnen sich – ${opponentLabel} tritt entgegen`, 'combat')
+}
+
+export function logBattleEnded(won: boolean) {
+  const { addEvent } = useEventLog()
+  addEvent(
+    won
+      ? '🏆 Sieg! Der Feind fällt vor den Klingen der Tapferen'
+      : '💀 Niederlage... Die Mächte der Dunkelheit überwiegen',
+    'combat',
+  )
+}
+
+export function logChampionDefeated(killerName: string, victimName: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`💀 ${killerName} schlägt ${victimName} in die Knie`, 'combat')
 }

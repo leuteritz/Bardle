@@ -446,3 +446,12 @@ export const GALAXY_BOSS_STAR_ORBIT_TILT = 0.14
 export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
+
+// Role UI colors — single source of truth for ChampionSelector and Event Log
+export const ROLE_COLORS = {
+  top:     '#e05050',
+  jungle:  '#50c060',
+  mid:     '#5090e8',
+  adc:     '#e89840',
+  support: '#b8c8d8',
+} as const
