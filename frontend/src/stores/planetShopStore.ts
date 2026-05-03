@@ -4,7 +4,11 @@ import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { useInventoryStore } from './inventoryStore'
 import { logger } from '../utils/logger'
-import { PLANET_SLOT_ORBITS, PLANET_HARVEST_INTERVAL_TICKS, PLANET_SLOT_MAX_HP } from '@/config/constants'
+import {
+  PLANET_SLOT_ORBITS,
+  PLANET_HARVEST_INTERVAL_TICKS,
+  PLANET_SLOT_MAX_HP,
+} from '@/config/constants'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -27,7 +31,7 @@ export interface PlanetRole {
   bonusPerSlot: number
   icon: string
   color: string
-  image: string // ← NEU
+  image: string
 }
 
 export interface PlanetSlot {
@@ -49,57 +53,57 @@ export interface PlanetSlot {
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
   turret_planet: {
     id: 'turret_planet',
-    name: 'Geschütz-Planet',
+    name: 'Turret',
     bonusType: 'auto_attack_dps',
     bonusPerSlot: 2,
     icon: '🎯',
     color: '#cc4444',
-    image: '/img/planets/planet1.png', // ← NEU
+    image: '/img/planets/planet1.png',
   },
   harvest_node: {
     id: 'harvest_node',
-    name: 'Ernte-Knoten',
+    name: 'Harvester',
     bonusType: 'material_harvest_rate',
     bonusPerSlot: 1,
     icon: '🌾',
     color: '#80c840',
-    image: '/img/planets/planet2.png', // ← NEU
+    image: '/img/planets/planet2.png',
   },
   expedition_relay: {
     id: 'expedition_relay',
-    name: 'Expeditions-Relais',
+    name: 'Relay',
     bonusType: 'expedition_reward_multiplier',
     bonusPerSlot: 0.3,
     icon: '🚀',
     color: '#40a0e0',
-    image: '/img/planets/planet3.png', // ← NEU
+    image: '/img/planets/planet3.png',
   },
   shield_barrier: {
     id: 'shield_barrier',
-    name: 'Schild-Barriere',
+    name: 'Aegis',
     bonusType: 'boss_damage_reduction',
     bonusPerSlot: 0.15,
     icon: '🛡️',
     color: '#60a0ff',
-    image: '/img/planets/planet4.png', // ← NEU
+    image: '/img/planets/planet4.png',
   },
   time_capsule: {
     id: 'time_capsule',
-    name: 'Zeitkapsel',
+    name: 'Timewarp',
     bonusType: 'offline_boost',
     bonusPerSlot: 0.25,
     icon: '⏳',
     color: '#40c080',
-    image: '/img/planets/planet5.png', // ← NEU
+    image: '/img/planets/planet5.png',
   },
   resonance_tower: {
     id: 'resonance_tower',
-    name: 'Resonanz-Turm',
+    name: 'Resonator',
     bonusType: 'building_cps_multiplier',
     bonusPerSlot: 0.25,
     icon: '🏗️',
     color: '#c09040',
-    image: '/img/planets/planet6.png', // ← NEU
+    image: '/img/planets/planet6.png',
   },
 }
 
