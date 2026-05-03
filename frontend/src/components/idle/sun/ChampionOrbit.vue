@@ -65,15 +65,7 @@
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
-      <!-- Rollen-Badge: Top wird ausgeblendet, wenn Shield aktiv ist,
-           damit nur EIN großes 🛡 sichtbar ist -->
-      <span
-        v-if="pos.primaryRole && !(pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive)"
-        class="champion-role-badge"
-        :class="`champion-role-badge--${pos.primaryRole}`"
-      >
-        {{ ROLE_BY_KEY[pos.primaryRole].icon }}
-      </span>
+      <!-- Jungler-Stack-Zähler -->
       <span
         v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
         class="champion-jungler-stacks"
@@ -84,7 +76,8 @@
           v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
           class="champion-ability-icon"
           :class="`champion-ability-icon--${pos.primaryRole}`"
-        >{{ ROLE_BY_KEY[pos.primaryRole].icon }}</span>
+          >{{ ROLE_BY_KEY[pos.primaryRole].icon }}</span
+        >
       </Transition>
     </div>
 
@@ -123,7 +116,13 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET, ROLES, ROLE_BY_KEY, ROLE_JUNGLER_MAX_STACKS } from '@/config/constants'
+import {
+  ORBIT_TIERS,
+  SUPPORT_ANGLE_OFFSET,
+  ROLES,
+  ROLE_BY_KEY,
+  ROLE_JUNGLER_MAX_STACKS,
+} from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -181,6 +180,7 @@ export default defineComponent({
     const champSpeedMuls = new Map<string, number>()
     const lastFiredAt = new Map<string, number>()
 
+    // topHitActive bleibt für den --top-hit CSS-Flash-Effekt am Avatar erhalten
     const topHitActive = ref(false)
     let topHitTimer = 0
 
@@ -302,8 +302,6 @@ export default defineComponent({
 
         activeChampionBehindState[c.name] = isBehind
 
-        // isForeground bewusst OHNE !c.isAttacking – sonst kann ein
-        // angreifender Champion nie schießen
         const isForeground = !isBehind && depth > 0.65
 
         const visibleFactor = Math.max(0, Math.min(1, (relY + 0.05 + 0.12) / 0.12))
@@ -363,7 +361,6 @@ export default defineComponent({
             if (ts - last < PROJECTILE_COOLDOWN_MS) continue
 
             lastFiredAt.set(pos.name, ts)
-            // Beide Flags sind bereits geprüft – spawnShot wird sicher feuern
             spawnShot(pos.x, pos.y, pPos.cx, pPos.cy, true, true)
           }
         }
@@ -403,11 +400,16 @@ export default defineComponent({
 
     function isAbilityActive(role: ChampionRole): boolean {
       switch (role) {
-        case 'top':     return topHitActive.value
-        case 'support': return roleBehaviorStore.supportPlanetHealActive
-        case 'mid':     return roleBehaviorStore.dotRemainingMs > 0
-        case 'jungle':  return roleBehaviorStore.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS
-        case 'adc':     return roleBehaviorStore.adcBurstActive
+        case 'top':
+          return roleBehaviorStore.tankShieldActive // ← geändert
+        case 'support':
+          return roleBehaviorStore.supportPlanetHealActive
+        case 'mid':
+          return roleBehaviorStore.dotRemainingMs > 0
+        case 'jungle':
+          return roleBehaviorStore.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS
+        case 'adc':
+          return roleBehaviorStore.adcBurstActive
       }
     }
 
@@ -536,36 +538,24 @@ export default defineComponent({
   }
 }
 
-/* ── Rollen-Badge ─────────────────────────────────────────────────────────── */
-.champion-role-badge {
+/* ── Jungler-Stacks ───────────────────────────────────────────────────────── */
+.champion-jungler-stacks {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 14px;
+  top: -4px;
+  left: -4px;
+  min-width: 14px;
   height: 14px;
-  border-radius: 50%;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: #1a5a10;
+  border: 1px solid #60c040;
+  color: #a0ff80;
   font-size: 8px;
+  font-weight: 700;
   line-height: 14px;
   text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.6);
   pointer-events: none;
   z-index: 2;
-}
-
-.champion-role-badge--adc {
-  background: #804010;
-}
-.champion-role-badge--support {
-  background: #3a5060;
-}
-.champion-role-badge--top {
-  background: #7a1818;
-}
-.champion-role-badge--mid {
-  background: #1a3880;
-}
-.champion-role-badge--jungle {
-  background: #1a6028;
 }
 
 /* ── Ability-Glows ────────────────────────────────────────────────────────── */
@@ -627,29 +617,6 @@ export default defineComponent({
   }
 }
 
-/* ── Top-Lane Shield-Badge ────────────────────────────────────────────────── */
-.champion-shield-badge {
-  position: absolute;
-  top: -12px;
-  right: -12px;
-  font-size: 17px;
-  line-height: 1;
-  pointer-events: none;
-  z-index: 3;
-  animation: shield-badge-throb 0.7s ease-in-out infinite alternate;
-}
-
-@keyframes shield-badge-throb {
-  from {
-    transform: scale(1);
-    filter: drop-shadow(0 0 5px rgba(245, 71, 71, 1)) drop-shadow(0 0 10px rgba(255, 100, 100, 0.7));
-  }
-  to {
-    transform: scale(1.35);
-    filter: drop-shadow(0 0 12px rgba(255, 60, 60, 1)) drop-shadow(0 0 24px rgba(255, 120, 120, 1));
-  }
-}
-
 .champion-orbit-avatar--dot {
   box-shadow:
     0 0 14px rgba(180, 80, 255, 0.9),
@@ -670,7 +637,7 @@ export default defineComponent({
   }
 }
 
-/* Heal-Farbe: Teal-Mint (#00e5a0) — klar verschieden von Jungler-Grün (#3eea58) */
+/* Heal-Farbe: Teal-Mint (#00e5a0) */
 .champion-orbit-avatar--healing {
   animation: support-heal-burst 0.9s ease-out forwards;
 }
@@ -718,26 +685,6 @@ export default defineComponent({
     opacity: 0;
     transform: scale(1.7);
   }
-}
-
-/* ── Jungler-Stacks ───────────────────────────────────────────────────────── */
-.champion-jungler-stacks {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 2px;
-  border-radius: 7px;
-  background: #1a5a10;
-  border: 1px solid #60c040;
-  color: #a0ff80;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-  pointer-events: none;
-  z-index: 2;
 }
 
 /* ── Schadenszahlen ───────────────────────────────────────────────────────── */
@@ -871,7 +818,7 @@ export default defineComponent({
 /* ── Ability-Icon ──────────────────────────────────────────────────────────── */
 .champion-ability-icon {
   position: absolute;
-  top: -24px;
+  top: -36px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 22px;
@@ -880,11 +827,21 @@ export default defineComponent({
   z-index: 4;
 }
 
-.champion-ability-icon--top     { filter: drop-shadow(0 0 7px rgba(245, 71, 71, 1)); }
-.champion-ability-icon--jungle  { filter: drop-shadow(0 0 7px rgba(62, 234, 88, 1)); }
-.champion-ability-icon--mid     { filter: drop-shadow(0 0 7px rgba(85, 152, 246, 1)); }
-.champion-ability-icon--adc     { filter: drop-shadow(0 0 7px rgba(247, 161, 69, 1)); }
-.champion-ability-icon--support { filter: drop-shadow(0 0 7px rgba(0, 229, 160, 1)); }
+.champion-ability-icon--top {
+  filter: drop-shadow(0 0 7px rgba(245, 71, 71, 1));
+}
+.champion-ability-icon--jungle {
+  filter: drop-shadow(0 0 7px rgba(62, 234, 88, 1));
+}
+.champion-ability-icon--mid {
+  filter: drop-shadow(0 0 7px rgba(85, 152, 246, 1));
+}
+.champion-ability-icon--adc {
+  filter: drop-shadow(0 0 7px rgba(247, 161, 69, 1));
+}
+.champion-ability-icon--support {
+  filter: drop-shadow(0 0 7px rgba(0, 229, 160, 1));
+}
 
 .ability-icon-enter-active,
 .ability-icon-leave-active {
