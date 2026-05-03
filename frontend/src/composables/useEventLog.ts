@@ -1,5 +1,5 @@
-// frontend/src/composables/useEventLog.ts
 import { ref } from 'vue'
+import { useRenderingPaused } from './useRenderingPaused'
 
 export type GameEventType =
   | 'support'
@@ -26,7 +26,11 @@ const events = ref<GameEvent[]>([])
 let nextId = 1
 
 export function useEventLog() {
+  const { isRenderingPaused } = useRenderingPaused()
+
   function addEvent(message: string, type: GameEventType = 'info') {
+    if (isRenderingPaused.value) return
+
     const id = nextId++
 
     events.value.unshift({
@@ -45,8 +49,13 @@ export function useEventLog() {
     }, 7000)
   }
 
+  function clearEvents() {
+    events.value = []
+  }
+
   return {
     events,
     addEvent,
+    clearEvents,
   }
 }
