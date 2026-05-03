@@ -1,3 +1,5 @@
+import type { ChampionRole } from '../types'
+
 // ELO rating system
 export const ELO_K_FACTOR = 32
 export const ELO_RATING_SCALE = 400
@@ -236,7 +238,73 @@ export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
-// Canonical orbit tiers — 2 distinct orbit paths per category (8 total)
+/** Central role registry — single source of truth for key, label, icon and orbit parameters. */
+export const ROLES = [
+  {
+    key: 'top' as ChampionRole,
+    label: 'Top',
+    icon: '🛡',
+    orbit: {
+      rx: SUN_RADIUS * 2.58, ry: SUN_RADIUS * 1.13,
+      tiltDeg: 14, tiltRad: 0.2443,
+      color: '#F34B49', speed: 0.00032,
+      hitIntervalMs: 4000, hitDurationMs: 350,
+      championSize: SUN_RADIUS * 1.0,
+    },
+  },
+  {
+    key: 'jungle' as ChampionRole,
+    label: 'Jungle',
+    icon: '🌿',
+    orbit: {
+      rx: SUN_RADIUS * 7.8, ry: SUN_RADIUS * 3.35,
+      tiltDeg: -15, tiltRad: -0.2618,
+      color: '#5CE66A', speed: 0.00022,
+      championSize: SUN_RADIUS * 1.0,
+    },
+  },
+  {
+    key: 'mid' as ChampionRole,
+    label: 'Mid',
+    icon: '🔮',
+    orbit: {
+      rx: SUN_RADIUS * 10.75, ry: SUN_RADIUS * 4.62,
+      tiltDeg: 12, tiltRad: 0.2094,
+      color: '#3694FF', speed: 0.00017,
+      championSize: SUN_RADIUS * 1.0,
+    },
+  },
+  {
+    key: 'adc' as ChampionRole,
+    label: 'ADC',
+    icon: '🏹',
+    orbit: {
+      rx: SUN_RADIUS * 12.67, ry: SUN_RADIUS * 5.43,
+      tiltDeg: -8, tiltRad: -0.1396,
+      color: '#FF9300', speed: 0.00014,
+      championSize: SUN_RADIUS * 1.0,
+    },
+  },
+  {
+    key: 'support' as ChampionRole,
+    label: 'Supp',
+    icon: '💚',
+    orbit: {
+      rx: SUN_RADIUS * 12.67, ry: SUN_RADIUS * 5.43,
+      tiltDeg: -8, tiltRad: -0.1396,
+      color: '#12B8FF', speed: 0.00014,
+      championSize: SUN_RADIUS * 1.0,
+    },
+  },
+] as const
+
+/** O(1) lookup from ChampionRole key to the full role entry. */
+export const ROLE_BY_KEY = Object.fromEntries(ROLES.map((r) => [r.key, r])) as Record<
+  ChampionRole,
+  (typeof ROLES)[number]
+>
+
+// Canonical orbit tiers — 2 distinct orbit paths per category
 export const ORBIT_TIERS = {
   planet: [
     {
@@ -274,56 +342,6 @@ export const ORBIT_TIERS = {
       size: SUN_RADIUS * 1.67,
     },
   ],
-  // Role-specific champion orbits — one fixed path per LoL role
-  role: {
-    top: {
-      rx: SUN_RADIUS * 2.58,
-      ry: SUN_RADIUS * 1.13,
-      tiltDeg: 14,
-      tiltRad: 0.2443,
-      color: '#F34B49',
-      speed: 0.00032,
-      hitIntervalMs: 4000,
-      hitDurationMs: 350,
-      championSize: SUN_RADIUS * 1.0,
-    },
-    jungle: {
-      rx: SUN_RADIUS * 7.8,
-      ry: SUN_RADIUS * 3.35,
-      tiltDeg: -15,
-      tiltRad: -0.2618,
-      color: '#5CE66A',
-      speed: 0.00022,
-      championSize: SUN_RADIUS * 1.0,
-    },
-    mid: {
-      rx: SUN_RADIUS * 10.75,
-      ry: SUN_RADIUS * 4.62,
-      tiltDeg: 12,
-      tiltRad: 0.2094,
-      color: '#3694FF',
-      speed: 0.00017,
-      championSize: SUN_RADIUS * 1.0,
-    },
-    adc: {
-      rx: SUN_RADIUS * 12.67,
-      ry: SUN_RADIUS * 5.43,
-      tiltDeg: -8,
-      tiltRad: -0.1396,
-      color: '#FF9300',
-      speed: 0.00014,
-      championSize: SUN_RADIUS * 1.0,
-    },
-    support: {
-      rx: SUN_RADIUS * 12.67,
-      ry: SUN_RADIUS * 5.43,
-      tiltDeg: -8,
-      tiltRad: -0.1396,
-      color: '#12B8FF',
-      speed: 0.00014,
-      championSize: SUN_RADIUS * 1.0,
-    },
-  },
 } as const
 
 // Support orbits the same path as ADC, offset by this angle (radians) behind

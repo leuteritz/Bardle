@@ -98,6 +98,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     dotRemainingMs: 0,
 
     adcBurstCooldownMs: ROLE_ADC_BURST_INTERVAL_MS,
+    adcBurstActive: false,
 
     junglerStackCooldownMs: ROLE_JUNGLER_STACK_INTERVAL_MS,
     junglerStackCount: 0,
@@ -285,6 +286,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       if (this.adcBurstCooldownMs <= 0) {
         this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
+        this.adcBurstActive = true
+        window.setTimeout(() => { this.adcBurstActive = false }, 350)
 
         const bossStore = usePlanetBossStore()
         const activeBoss = bossStore.activeBoss

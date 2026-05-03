@@ -72,13 +72,20 @@
         class="champion-role-badge"
         :class="`champion-role-badge--${pos.primaryRole}`"
       >
-        {{ roleIcons[pos.primaryRole] }}
+        {{ ROLE_BY_KEY[pos.primaryRole].icon }}
       </span>
       <span
         v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
         class="champion-jungler-stacks"
         >{{ roleBehaviorStore.junglerStackCount }}</span
       >
+      <Transition name="ability-icon">
+        <span
+          v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
+          class="champion-ability-icon"
+          :class="`champion-ability-icon--${pos.primaryRole}`"
+        >{{ ROLE_BY_KEY[pos.primaryRole].icon }}</span>
+      </Transition>
     </div>
 
     <!-- Floating damage numbers -->
@@ -116,7 +123,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET } from '@/config/constants'
+import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET, ROLES, ROLE_BY_KEY, ROLE_JUNGLER_MAX_STACKS } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -169,14 +176,6 @@ export default defineComponent({
 
     const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
-    const roleIcons: Record<ChampionRole, string> = {
-      adc: '🏹',
-      support: '💚',
-      top: '🛡',
-      mid: '🔮',
-      jungle: '🌿',
-    }
-
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
     const champSpeedMuls = new Map<string, number>()
@@ -186,7 +185,7 @@ export default defineComponent({
     let topHitTimer = 0
 
     function scheduleTopHit() {
-      const TOP_TIER = ORBIT_TIERS.role.top
+      const TOP_TIER = ROLES[0].orbit
       topHitTimer = window.setTimeout(() => {
         topHitActive.value = true
         window.setTimeout(() => {
@@ -242,16 +241,15 @@ export default defineComponent({
         const slotIndex = battleStore.headerSlots.indexOf(c.name)
         const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
 
-        const tier = primaryRole ? ORBIT_TIERS.role[primaryRole] : ORBIT_TIERS.planet[ci % 2]
-        const rx = tier.rx
-        const ry = tier.ry
-        const tiltRad = tier.tiltRad
-        const tiltDeg = tier.tiltDeg
-        const orbitColor = tier.color
-        const baseSize = primaryRole
-          ? ORBIT_TIERS.role[primaryRole].championSize
-          : ORBIT_TIERS.planet[ci % 2].size
-        const orbitSpeed = 'speed' in tier ? (tier as { speed: number }).speed : c.baseSpeed
+        const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
+        const planetTier = ORBIT_TIERS.planet[ci % 2]
+        const rx = roleTier ? roleTier.rx : planetTier.rx
+        const ry = roleTier ? roleTier.ry : planetTier.ry
+        const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
+        const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
+        const orbitColor = roleTier ? roleTier.color : planetTier.color
+        const baseSize = roleTier ? roleTier.championSize : planetTier.size
+        const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
         if (!ls) {
@@ -403,18 +401,29 @@ export default defineComponent({
       clearTimeout(topHitTimer)
     })
 
+    function isAbilityActive(role: ChampionRole): boolean {
+      switch (role) {
+        case 'top':     return topHitActive.value
+        case 'support': return roleBehaviorStore.supportPlanetHealActive
+        case 'mid':     return roleBehaviorStore.dotRemainingMs > 0
+        case 'jungle':  return roleBehaviorStore.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS
+        case 'adc':     return roleBehaviorStore.adcBurstActive
+      }
+    }
+
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
 
     return {
       combatStore,
       roleBehaviorStore,
-      roleIcons,
+      ROLE_BY_KEY,
       backChampions,
       frontChampions,
       championRenderPositions,
       shots,
       topHitActive,
+      isAbilityActive,
       screenCx,
       screenCy,
     }
@@ -857,5 +866,38 @@ export default defineComponent({
   .champion-orbit-avatar--intercept {
     animation: none;
   }
+}
+
+/* ── Ability-Icon ──────────────────────────────────────────────────────────── */
+.champion-ability-icon {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.champion-ability-icon--top     { filter: drop-shadow(0 0 7px rgba(245, 71, 71, 1)); }
+.champion-ability-icon--jungle  { filter: drop-shadow(0 0 7px rgba(62, 234, 88, 1)); }
+.champion-ability-icon--mid     { filter: drop-shadow(0 0 7px rgba(85, 152, 246, 1)); }
+.champion-ability-icon--adc     { filter: drop-shadow(0 0 7px rgba(247, 161, 69, 1)); }
+.champion-ability-icon--support { filter: drop-shadow(0 0 7px rgba(0, 229, 160, 1)); }
+
+.ability-icon-enter-active,
+.ability-icon-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.ability-icon-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.5);
+}
+.ability-icon-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.5);
 }
 </style>

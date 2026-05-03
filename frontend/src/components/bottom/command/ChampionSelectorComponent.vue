@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import { ROLES } from '@/config/constants'
 import ChampionPickerModal from './ChampionPickerModal.vue'
 
 const battleStore = useBattleStore()
@@ -9,9 +10,6 @@ const { headerSlots } = storeToRefs(battleStore)
 
 const pickerOpen = ref(false)
 const pickerSlotIndex = ref<number | null>(null)
-
-const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
-const ROLE_KEYS = ['top', 'jungle', 'mid', 'adc', 'support']
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
@@ -50,11 +48,11 @@ function onImgError(e: Event) {
         class="slot-tile"
         :class="{
           'slot-tile--filled': slot !== null,
-          [`slot-tile--role-${ROLE_KEYS[i]}`]: true,
+          [`slot-tile--role-${ROLES[i].key}`]: true,
           'slot-tile--first': i === 0,
         }"
         :title="
-          slot ? `${slot} (${ROLES[i]}) – klicken zum Ändern` : `${ROLES[i]} – Champion wählen`
+          slot ? `${slot} (${ROLES[i].label}) – klicken zum Ändern` : `${ROLES[i].label} – Champion wählen`
         "
         @click="openPicker(i)"
       >
@@ -74,7 +72,7 @@ function onImgError(e: Event) {
         </div>
 
         <div class="slot-name-badge">
-          <span class="slot-name-text">{{ ROLES[i] }}</span>
+          <span class="slot-name-text">{{ ROLES[i].label }}</span>
         </div>
 
         <button v-if="slot" class="slot-clear" title="Entfernen" @click.stop="clearSlot(i, $event)">

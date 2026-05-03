@@ -288,6 +288,7 @@ import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
 import {
   ORBIT_TIERS,
+  ROLE_BY_KEY,
   ENEMY_ATTACK_INTERVAL_MIN_MS,
   ENEMY_ATTACK_INTERVAL_MAX_MS,
   ENEMY_PROJECTILE_DAMAGE,
@@ -312,7 +313,7 @@ const activeRoleOrbits = computed(() =>
   battleStore.headerSlots
     .map((slot, i) => (slot != null ? SLOT_ROLES[i] : null))
     .filter((r): r is ChampionRole => r != null)
-    .map((role) => ({ role, ...ORBIT_TIERS.role[role] })),
+    .map((role) => ({ role, ...ROLE_BY_KEY[role].orbit })),
 )
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
