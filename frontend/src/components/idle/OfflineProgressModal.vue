@@ -7,11 +7,11 @@ import OfflineMinigame from './OfflineMinigame.vue'
 const gameStore = useGameStore()
 
 const FLAVOUR_TEXTS = [
-  'Während du fort warst, sammelten die Glöckchen in aller Stille ihre Kräfte...',
-  'Bard wanderte durch ferne Galaxien — und die Chimes folgten ihm in den Schlaf.',
-  'In deiner Abwesenheit webte das Universum seinen magischen Klang weiter.',
-  'Die Sphären haben nicht gerastet. Dein Lohn wartet, Abenteurer.',
-  'Zeit ist die seltenste Ressource — und die Glöckchen wissen es zu schätzen.',
+  'While you were away, the chimes kept ringing.',
+  'Bard wandered on. The chimes followed.',
+  'The universe kept working for you.',
+  'Time passed. Your reward is here.',
+  'Even offline, the chimes never sleep.',
 ]
 
 const flavourText = ref(FLAVOUR_TEXTS[Math.floor(Math.random() * FLAVOUR_TEXTS.length)])
@@ -28,9 +28,9 @@ function formatDuration(totalSeconds: number): string {
   const m = Math.floor((totalSeconds % 3600) / 60)
   const s = totalSeconds % 60
   const parts: string[] = []
-  if (h > 0) parts.push(`${h} ${h === 1 ? 'Stunde' : 'Stunden'}`)
-  if (m > 0) parts.push(`${m} ${m === 1 ? 'Minute' : 'Minuten'}`)
-  if (parts.length === 0) parts.push(`${s} ${s === 1 ? 'Sekunde' : 'Sekunden'}`)
+  if (h > 0) parts.push(`${h} ${h === 1 ? 'hour' : 'hours'}`)
+  if (m > 0) parts.push(`${m} ${m === 1 ? 'minute' : 'minutes'}`)
+  if (parts.length === 0) parts.push(`${s} ${s === 1 ? 'second' : 'seconds'}`)
   return parts.join(', ')
 }
 
@@ -109,11 +109,11 @@ function claim() {
           <div class="gold-bar" />
 
           <div class="modal-header">
-            <span class="header-title">Willkommen zurück, Abenteurer!</span>
+            <span class="header-title">Welcome back!</span>
           </div>
 
           <div class="modal-body">
-            <p class="duration-label">Du warst abwesend für:</p>
+            <p class="duration-label">Away for</p>
             <p class="duration-value">{{ formattedDuration }}</p>
 
             <p class="flavour">{{ flavourText }}</p>
@@ -123,8 +123,10 @@ function claim() {
                 <span class="chime-icon">🔔</span>
               </div>
               <span class="chime-value">{{ formatNumber(displayCount) }}</span>
-              <span v-if="gameStore.offlineChimes > 0" class="chime-label">Chimes gesammelt</span>
-              <span v-else class="chime-label chime-label--hint">Kauf Gebäude für passives Einkommen</span>
+              <span v-if="gameStore.offlineChimes > 0" class="chime-label">Chimes earned</span>
+              <span v-else class="chime-label chime-label--hint"
+                >Buy buildings for idle income</span
+              >
             </div>
 
             <Transition name="mg-fade">
@@ -132,10 +134,10 @@ function claim() {
                 <OfflineMinigame @win="onWin" @skip="onSkip" />
               </div>
               <div v-else-if="minigamePhase === 'won'" class="mg-result mg-result--win">
-                Perfekter Treffer! Doppelte Beute wartet auf dich!
+                Perfect! Double reward!
               </div>
               <div v-else-if="minigamePhase === 'lost'" class="mg-result mg-result--lose">
-                Knapp vorbei. Einfache Belohnung.
+                Close. Normal reward.
               </div>
             </Transition>
           </div>
@@ -143,11 +145,14 @@ function claim() {
           <div class="modal-footer">
             <button
               class="claim-btn"
-              :class="{ 'claim-btn--double': minigamePhase === 'won', 'claim-btn--disabled': minigamePhase === 'playing' }"
+              :class="{
+                'claim-btn--double': minigamePhase === 'won',
+                'claim-btn--disabled': minigamePhase === 'playing',
+              }"
               :disabled="minigamePhase === 'playing'"
               @click="claim"
             >
-              {{ minigamePhase === 'won' ? '⚔ Doppelte Beute einsammeln! ×2' : '⚔ Beute einsammeln!' }}
+              {{ minigamePhase === 'won' ? 'Claim ×2' : 'Claim' }}
             </button>
           </div>
         </div>
@@ -312,7 +317,9 @@ function claim() {
   letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(46, 122, 26, 0.45);
-  transition: filter 0.15s ease, transform 0.1s ease;
+  transition:
+    filter 0.15s ease,
+    transform 0.1s ease;
 }
 
 .claim-btn:hover:not(:disabled) {
@@ -328,7 +335,9 @@ function claim() {
 .claim-btn--double {
   background: linear-gradient(to bottom, #70d840, #3a9a20);
   border-color: #90e850;
-  box-shadow: 0 2px 12px rgba(80, 200, 40, 0.6), 0 0 20px rgba(110, 192, 64, 0.3);
+  box-shadow:
+    0 2px 12px rgba(80, 200, 40, 0.6),
+    0 0 20px rgba(110, 192, 64, 0.3);
 }
 
 .claim-btn--disabled {
@@ -338,7 +347,9 @@ function claim() {
 
 /* Minigame transition */
 .mg-fade-enter-active {
-  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .mg-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -352,13 +363,22 @@ function claim() {
 }
 
 @keyframes glow-pulse {
-  0%, 100% { text-shadow: 0 0 6px rgba(232, 192, 64, 0.5); }
-  50%       { text-shadow: 0 0 18px rgba(232, 192, 64, 0.9), 0 0 32px rgba(232, 192, 64, 0.35); }
+  0%,
+  100% {
+    text-shadow: 0 0 6px rgba(232, 192, 64, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 18px rgba(232, 192, 64, 0.9),
+      0 0 32px rgba(232, 192, 64, 0.35);
+  }
 }
 
 /* Transition */
 .offline-fade-enter-active {
-  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .offline-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -372,11 +392,19 @@ function claim() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .claim-btn { transition: none; }
-  .chime-value { animation: none; }
+  .claim-btn {
+    transition: none;
+  }
+  .chime-value {
+    animation: none;
+  }
   .offline-fade-enter-active,
-  .offline-fade-leave-active { transition: opacity 0.15s; }
+  .offline-fade-leave-active {
+    transition: opacity 0.15s;
+  }
   .mg-fade-enter-active,
-  .mg-fade-leave-active { transition: opacity 0.15s; }
+  .mg-fade-leave-active {
+    transition: opacity 0.15s;
+  }
 }
 </style>
