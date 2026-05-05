@@ -44,6 +44,7 @@
         'planet-orbit-item--clickable': true,
         'planet-orbit-item--turret': pos.isTurret,
         'planet-orbit-item--healing': pos.isHealing,
+        'planet-orbit-item--jungle-buffed': pos.isJungleBuffed,
       }"
       :style="{
         width: pos.size + 'px',
@@ -84,6 +85,29 @@
       </div>
       <span class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
     </div>
+
+    <!-- Jungle Buff Particle Aura -->
+    <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
+      <div
+        v-show="pos.isJungleBuffed"
+        class="jungle-buff-overlay"
+        :title="pos.jungleBuffType"
+        :style="{
+          width: pos.size + 18 + 'px',
+          height: pos.size + 18 + 'px',
+          transform: `translate(${pos.x - (pos.size + 18) / 2}px, ${pos.y - (pos.size + 18) / 2}px)`,
+          zIndex: pos.zIndex,
+        }"
+      />
+      <span
+        v-if="pos.isJungleBuffed"
+        class="jungle-buff-label"
+        :style="{
+          transform: `translate(${pos.x}px, ${pos.y - pos.size / 2 - 14}px)`,
+          zIndex: pos.zIndex + 1,
+        }"
+      >🌿 {{ pos.jungleBuffSecsLeft }}s</span>
+    </template>
   </div>
 
   <PlanetRoleModal />
@@ -132,6 +156,9 @@ interface PlanetRenderPos {
   maxHp: number
   hpPercent: number
   isHealing: boolean
+  isJungleBuffed: boolean
+  jungleBuffSecsLeft: number
+  jungleBuffType: string
 }
 
 interface LocalPlanetState {
@@ -279,6 +306,11 @@ export default defineComponent({
         const hpPercent = (currentHp / Math.max(maxHp, 1)) * 100
         const isHealing = Date.now() < (slot.healingUntilMs ?? 0)
 
+        const jb = slot.jungleBuff
+        const isJungleBuffed = !!(jb?.active)
+        const jungleBuffSecsLeft = isJungleBuffed ? Math.ceil((jb!.activeUntil - Date.now()) / 1000) : 0
+        const jungleBuffType = jb?.buffType ?? ''
+
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
@@ -303,6 +335,9 @@ export default defineComponent({
           maxHp,
           hpPercent,
           isHealing,
+          isJungleBuffed,
+          jungleBuffSecsLeft,
+          jungleBuffType,
         })
       }
 
@@ -596,5 +631,72 @@ export default defineComponent({
     0 0 4px rgba(232, 160, 20, 0.8),
     0 1px 3px rgba(0, 0, 0, 0.95);
   line-height: 1;
+}
+
+/* ── Jungle Buff — Planet Glow (applied to the item itself, not clipped) ─── */
+.planet-orbit-item--jungle-buffed {
+  animation: jungle-planet-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes jungle-planet-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px #5ce66a99); }
+  50%       { filter: drop-shadow(0 0 14px #5ce66acc) drop-shadow(0 0 28px #5ce66a55); }
+}
+
+/* ── Jungle Buff Particle Aura (external overlay, not clipped) ─────────────── */
+.jungle-buff-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Outer spinning arc */
+.jungle-buff-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #5ce66a;
+  border-right-color: #5ce66a66;
+  animation: jungle-spin 2.4s linear infinite;
+}
+
+/* Inner counter-spin dotted arc */
+.jungle-buff-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px dashed #5ce66a55;
+  animation: jungle-spin-rev 3.6s linear infinite;
+}
+
+@keyframes jungle-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jungle-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+
+.jungle-buff-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5ce66a;
+  background: #0c1209cc;
+  border: 1px solid #3a8040;
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 14px;
+  pointer-events: none;
+  white-space: nowrap;
+  translate: -50% -100%;
+  text-shadow: 0 0 6px #5ce66a88;
 }
 </style>

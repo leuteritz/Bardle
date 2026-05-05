@@ -8,21 +8,19 @@ import {
   ROLE_MID_DOT_INTERVAL_MS,
   ROLE_ADC_BURST_DAMAGE,
   ROLE_ADC_BURST_INTERVAL_MS,
-  ROLE_JUNGLER_STACK_INTERVAL_MS,
-  ROLE_JUNGLER_MAX_STACKS,
-  ROLE_JUNGLER_CHIMES_PER_STACK,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
   SUPPORT_MAX_HEAL_TARGETS,
+  JUNGLE_BUFF_RANGE,
+  JUNGLE_BUFF_COOLDOWN_MS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
 import { usePlayerStore } from './playerStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
-import { useGameStore } from './gameStore'
 import { useCombatStore } from './combatStore'
-import { usePlanetShopStore, PLANET_ROLES, type PlanetSlot } from './planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS, type PlanetSlot } from './planetShopStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
 import { useEventLog } from '@/composables/useEventLog'
@@ -100,8 +98,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     adcBurstCooldownMs: ROLE_ADC_BURST_INTERVAL_MS,
     adcBurstActive: false,
 
-    junglerStackCooldownMs: ROLE_JUNGLER_STACK_INTERVAL_MS,
-    junglerStackCount: 0,
+    jungleBuffCooldownMs: 0,
+    jungleBuffFlashActive: false,
   }),
 
   actions: {
@@ -112,11 +110,28 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const TICK_MS = 1000
       const roles = getOrbitingRoles()
 
+      this._expireJungleBuffs()
       this._tickSupport(roles, TICK_MS)
       this._tickTop(roles, TICK_MS)
       this._tickMid(roles, TICK_MS)
       this._tickAdc(roles, TICK_MS)
       this._tickJungler(roles, TICK_MS)
+    },
+
+    _expireJungleBuffs() {
+      const planetShopStore = usePlanetShopStore()
+      const { addEvent } = useEventLog()
+      const now = Date.now()
+      for (const slot of planetShopStore.purchasedSlots) {
+        if (slot.jungleBuff?.active && slot.jungleBuff.activeUntil <= now) {
+          const label = getPlanetLabel(slot)
+          const buffType = slot.jungleBuff.buffType
+          planetShopStore.clearJungleBuff(slot.id)
+          throttledEvent(`jungle-buff-expire-${slot.id}`, 500, () => {
+            addEvent(`${buffType} expired on ${label}.`, 'jungle')
+          })
+        }
+      }
     },
 
     _tickSupport(roles: Set<string>, tickMs: number) {
@@ -340,46 +355,51 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     },
 
     _tickJungler(roles: Set<string>, tickMs: number) {
-      if (!roles.has('jungle')) return
+      if (!roles.has('jungle')) {
+        this.jungleBuffCooldownMs = 0
+        return
+      }
 
-      this.junglerStackCooldownMs -= tickMs
+      if (this.jungleBuffCooldownMs > 0) {
+        this.jungleBuffCooldownMs = Math.max(0, this.jungleBuffCooldownMs - tickMs)
+        return
+      }
 
-      if (this.junglerStackCooldownMs <= 0) {
-        this.junglerStackCooldownMs = ROLE_JUNGLER_STACK_INTERVAL_MS
-        this.junglerStackCount = Math.min(this.junglerStackCount + 1, ROLE_JUNGLER_MAX_STACKS)
+      // Jungle buff proximity check — only when cooldown is expired
+      const combatStore = useCombatStore()
+      const jungleName = getChampionNameByRole('jungle')
+      const jungleChamp = combatStore.champions.find((c) => c.name === jungleName)
 
-        const { addEvent } = useEventLog()
-        const championName = getChampionNameByRole('jungle')
+      if (!jungleChamp || (jungleChamp.screenX === 0 && jungleChamp.screenY === 0)) return
 
-        throttledEvent('jungler-stack-build', 2500, () => {
-          addEvent(
-            `${championName} stack ${this.junglerStackCount}/${ROLE_JUNGLER_MAX_STACKS}.`,
+      const planetShopStore = usePlanetShopStore()
+      const { addEvent: logEvent } = useEventLog()
+      let triggered = false
+
+      for (const slot of planetShopStore.purchasedSlots) {
+        if (!slot.role) continue
+        if (slot.jungleBuff?.active) continue
+        const pos = activePlayerPlanetPositions.get(slot.id)
+        if (!pos) continue
+        const dist = Math.hypot(jungleChamp.screenX - pos.cx, jungleChamp.screenY - pos.cy)
+        if (dist <= JUNGLE_BUFF_RANGE) {
+          const def = JUNGLE_BUFF_DEFS[slot.role]
+          planetShopStore.applyJungleBuff(slot.id, def)
+          triggered = true
+          const durSec = Math.round(def.durationMs / 1000)
+          logEvent(
+            `${jungleName}: ${def.name} on ${getPlanetLabel(slot)} (×${def.multiplier}, ${durSec}s)!`,
             'jungle',
           )
-        })
-
-        if (this.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS) {
-          const reward = ROLE_JUNGLER_MAX_STACKS * ROLE_JUNGLER_CHIMES_PER_STACK
-          const gameStore = useGameStore()
-
-          gameStore.chimes += reward
-          gameStore.chimesForMeep += reward
-          gameStore.chimesForNextUniverse += reward
-          gameStore.totalChimesEarned += reward
-          gameStore.chimesEarnedForLevel += reward
-          gameStore.calculateLevel()
-
-          this.junglerStackCount = 0
-
-          spawnFloat(
-            reward,
-            window.innerWidth / 2 + (Math.random() - 0.5) * 40,
-            window.innerHeight / 2 + 40,
-            1500,
-          )
-
-          addEvent(`${championName} +${reward} Chimes.`, 'jungle')
         }
+      }
+
+      if (triggered) {
+        this.jungleBuffCooldownMs = JUNGLE_BUFF_COOLDOWN_MS
+        this.jungleBuffFlashActive = true
+        window.setTimeout(() => {
+          this.jungleBuffFlashActive = false
+        }, 450)
       }
     },
   },

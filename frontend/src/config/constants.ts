@@ -231,9 +231,6 @@ export const ROLE_MID_DOT_DURATION_MS = 6000 // DoT lasts 6s
 export const ROLE_MID_DOT_INTERVAL_MS = 10000 // reapplied every 10s
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
-export const ROLE_JUNGLER_STACK_INTERVAL_MS = 6000 // gain 1 stack every 6s
-export const ROLE_JUNGLER_MAX_STACKS = 5
-export const ROLE_JUNGLER_CHIMES_PER_STACK = 50 // chimes per stack on dump
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
@@ -390,6 +387,8 @@ export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
 
 // Planet Shop Roles
 export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material alle 30 Ticks
+export const JUNGLE_BUFF_RANGE = 120 // px, screen-space proximity radius for jungle buff trigger
+export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buff triggers
 
 export const MEEP_POWER_MULTIPLIER = 100
 

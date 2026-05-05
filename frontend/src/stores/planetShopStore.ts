@@ -34,6 +34,19 @@ export interface PlanetRole {
   image: string
 }
 
+export interface JungleBuff {
+  active: boolean
+  buffType: string
+  multiplier: number
+  activeUntil: number
+}
+
+export interface JungleBuffDef {
+  name: string
+  multiplier: number
+  durationMs: number
+}
+
 export interface PlanetSlot {
   id: string
   purchased: boolean
@@ -48,6 +61,7 @@ export interface PlanetSlot {
   currentHp: number
   maxHp: number
   healingUntilMs: number
+  jungleBuff: JungleBuff | null
 }
 
 export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
@@ -109,6 +123,15 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
 
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
 
+export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
+  turret_planet:    { name: 'Mark of the Hunter',   multiplier: 2.5, durationMs: 15_000 },
+  harvest_node:     { name: "Scavenger's Blessing",  multiplier: 3.0, durationMs: 12_000 },
+  expedition_relay: { name: 'Warp Trail',            multiplier: 2.0, durationMs: 20_000 },
+  shield_barrier:   { name: 'Aegis Pulse',           multiplier: 1.5, durationMs: 15_000 },
+  time_capsule:     { name: 'Temporal Rift',         multiplier: 2.0, durationMs: 30_000 },
+  resonance_tower:  { name: 'Resonant Smite',        multiplier: 2.0, durationMs: 18_000 },
+}
+
 const SLOT_CONFIG = [
   { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 500 },
   { id: 'slot_2', direction: -1 as const, baseSpeed: 0.00014, baseCost: 2000 },
@@ -128,6 +151,7 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   currentHp: PLANET_SLOT_MAX_HP,
   maxHp: PLANET_SLOT_MAX_HP,
   healingUntilMs: 0,
+  jungleBuff: null,
 }))
 
 const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
@@ -148,10 +172,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     autoAttackDPS(state): number {
-      return (
-        state.slots.filter((s) => s.purchased && s.role === 'turret_planet').length *
-        PLANET_ROLES.turret_planet.bonusPerSlot
-      )
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'turret_planet')
+        .reduce((sum, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return sum + PLANET_ROLES.turret_planet.bonusPerSlot * mul
+        }, 0)
     },
 
     activeHarvestSlots(state): { materialId: string }[] {
@@ -161,18 +187,31 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     planetExpeditionRewardMultiplier(state): number {
-      const count = state.slots.filter((s) => s.purchased && s.role === 'expedition_relay').length
-      return Math.pow(1 + PLANET_ROLES.expedition_relay.bonusPerSlot, count)
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'expedition_relay')
+        .reduce((prod, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return prod * (1 + PLANET_ROLES.expedition_relay.bonusPerSlot * mul)
+        }, 1)
     },
 
     planetBossDamageReduction(state): number {
-      const count = state.slots.filter((s) => s.purchased && s.role === 'shield_barrier').length
-      return Math.min(0.8, count * PLANET_ROLES.shield_barrier.bonusPerSlot)
+      const total = state.slots
+        .filter((s) => s.purchased && s.role === 'shield_barrier')
+        .reduce((sum, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return sum + PLANET_ROLES.shield_barrier.bonusPerSlot * mul
+        }, 0)
+      return Math.min(0.8, total)
     },
 
     planetOfflineBoostMultiplier(state): number {
-      const count = state.slots.filter((s) => s.purchased && s.role === 'time_capsule').length
-      return Math.pow(1 + PLANET_ROLES.time_capsule.bonusPerSlot, count)
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'time_capsule')
+        .reduce((prod, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return prod * (1 + PLANET_ROLES.time_capsule.bonusPerSlot * mul)
+        }, 1)
     },
 
     resonanceTowerBuildingMultipliers(state): Record<string, number> {
@@ -180,7 +219,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
       for (const slot of state.slots) {
         if (slot.purchased && slot.role === 'resonance_tower' && slot.slotConfig?.buildingId) {
           const bId = slot.slotConfig.buildingId
-          result[bId] = (result[bId] ?? 1) * (1 + PLANET_ROLES.resonance_tower.bonusPerSlot)
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          result[bId] = (result[bId] ?? 1) * (1 + PLANET_ROLES.resonance_tower.bonusPerSlot * mul)
         }
       }
       return result
@@ -291,6 +331,22 @@ export const usePlanetShopStore = defineStore('planetShop', {
       if (!slot || !slot.purchased) return
       slot.currentHp = Math.min(slot.maxHp, slot.currentHp + amount)
       slot.healingUntilMs = Date.now() + 1000
+    },
+
+    applyJungleBuff(slotId: string, def: JungleBuffDef): void {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return
+      slot.jungleBuff = {
+        active: true,
+        buffType: def.name,
+        multiplier: def.multiplier,
+        activeUntil: Date.now() + def.durationMs,
+      }
+    },
+
+    clearJungleBuff(slotId: string): void {
+      const slot = this.getSlot(slotId)
+      if (slot) slot.jungleBuff = null
     },
 
     adminFillRandomRoles(): void {

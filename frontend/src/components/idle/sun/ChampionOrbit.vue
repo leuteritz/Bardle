@@ -65,12 +65,6 @@
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
-      <!-- Jungler-Stack-Zähler -->
-      <span
-        v-if="pos.primaryRole === 'jungle' && roleBehaviorStore.junglerStackCount > 0"
-        class="champion-jungler-stacks"
-        >{{ roleBehaviorStore.junglerStackCount }}</span
-      >
       <Transition name="ability-icon">
         <span
           v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
@@ -121,7 +115,6 @@ import {
   SUPPORT_ANGLE_OFFSET,
   ROLES,
   ROLE_BY_KEY,
-  ROLE_JUNGLER_MAX_STACKS,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
@@ -407,7 +400,7 @@ export default defineComponent({
         case 'mid':
           return roleBehaviorStore.dotRemainingMs > 0
         case 'jungle':
-          return roleBehaviorStore.junglerStackCount >= ROLE_JUNGLER_MAX_STACKS
+          return roleBehaviorStore.jungleBuffFlashActive
         case 'adc':
           return roleBehaviorStore.adcBurstActive
       }
@@ -538,25 +531,6 @@ export default defineComponent({
   }
 }
 
-/* ── Jungler-Stacks ───────────────────────────────────────────────────────── */
-.champion-jungler-stacks {
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 2px;
-  border-radius: 7px;
-  background: #1a5a10;
-  border: 1px solid #60c040;
-  color: #a0ff80;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-  pointer-events: none;
-  z-index: 2;
-}
 
 /* ── Ability-Glows ────────────────────────────────────────────────────────── */
 .champion-orbit-avatar--shield {

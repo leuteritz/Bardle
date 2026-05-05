@@ -509,7 +509,4 @@ export interface RoleBehaviorState {
   dotRemainingMs: number
   // ADC
   adcBurstCooldownMs: number
-  // Jungler
-  junglerStackCooldownMs: number
-  junglerStackCount: number
 }

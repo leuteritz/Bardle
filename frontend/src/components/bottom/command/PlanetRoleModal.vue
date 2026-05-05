@@ -72,6 +72,24 @@
               <div class="planet-role-label" :style="{ color: activeRoleColor }">
                 {{ activeRoleName }}
               </div>
+
+              <!-- Aktiver Jungle-Buff -->
+              <Transition name="config-slide">
+                <div v-if="activeSlot.jungleBuff?.active" class="jungle-buff-panel">
+                  <div class="jungle-buff-panel-header">
+                    <span class="jungle-buff-panel-leaf">🌿</span>
+                    <span class="jungle-buff-panel-title">Jungle Buff</span>
+                    <span class="jungle-buff-panel-timer">{{ jungleBuffSecsLeft }}s</span>
+                  </div>
+                  <div class="jungle-buff-panel-row">
+                    <span class="jungle-buff-panel-name">{{ activeSlot.jungleBuff.buffType }}</span>
+                  </div>
+                  <div class="jungle-buff-panel-row">
+                    <span class="jungle-buff-panel-label">Multiplikator</span>
+                    <span class="jungle-buff-panel-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
+                  </div>
+                </div>
+              </Transition>
             </div>
 
             <!-- Rechte Säule: Rollen 4–6 -->
@@ -160,7 +178,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, ref, onMounted, onUnmounted } from 'vue'
 import {
   usePlanetShopStore,
   PLANET_ROLES_LIST,
@@ -221,6 +239,17 @@ export default defineComponent({
       return Math.max(0, Math.min(100, (activeSlot.value.currentHp / activeSlot.value.maxHp) * 100))
     })
 
+    const now = ref(Date.now())
+    let nowInterval = 0
+    onMounted(() => { nowInterval = window.setInterval(() => { now.value = Date.now() }, 500) })
+    onUnmounted(() => { window.clearInterval(nowInterval) })
+
+    const jungleBuffSecsLeft = computed(() => {
+      const jb = activeSlot.value?.jungleBuff
+      if (!jb?.active) return 0
+      return Math.max(0, Math.ceil((jb.activeUntil - now.value) / 1000))
+    })
+
     const rolesLeft = PLANET_ROLES_LIST.slice(0, 3)
     const rolesRight = PLANET_ROLES_LIST.slice(3, 6)
 
@@ -253,6 +282,7 @@ export default defineComponent({
       rolesRight,
       assignRole,
       bonusText,
+      jungleBuffSecsLeft,
       MATERIALS,
       CPS_BUILDINGS,
     }
@@ -773,6 +803,84 @@ export default defineComponent({
 .role-modal-leave-to {
   opacity: 0;
   transform: scale(0.92) translateY(8px);
+}
+
+/* ── Jungle Buff Panel ─────────────────────────────────────────────────────── */
+.jungle-buff-panel {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #0c1209;
+  border: 1px solid #3a8040;
+  border-radius: 4px;
+  box-shadow: 0 0 12px #5ce66a22, inset 0 0 8px #5ce66a0a;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.jungle-buff-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid #2a5030;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.1rem;
+}
+
+.jungle-buff-panel-leaf {
+  font-size: 0.9rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px #5ce66a88);
+}
+
+.jungle-buff-panel-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #5ce66a;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.jungle-buff-panel-timer {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #5ce66a;
+  background: #162a1a;
+  border: 1px solid #3a8040;
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+}
+
+.jungle-buff-panel-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a0e880;
+  text-align: center;
+  width: 100%;
+  display: block;
+}
+
+.jungle-buff-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.jungle-buff-panel-label {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.jungle-buff-panel-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #5ce66a;
+  text-shadow: 0 0 8px #5ce66a66;
 }
 
 @media (max-width: 900px) {
