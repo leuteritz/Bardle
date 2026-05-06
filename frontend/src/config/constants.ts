@@ -229,6 +229,16 @@ export const ROLE_TOP_SHIELD_REBUILD_MS = 5000 // seconds to rebuild shield afte
 export const ROLE_MID_DOT_DPS = 15 // extra DoT damage per second
 export const ROLE_MID_DOT_DURATION_MS = 6000 // DoT lasts 6s
 export const ROLE_MID_DOT_INTERVAL_MS = 10000 // reapplied every 10s
+export const ROLE_MID_NOVA_FLASH_MS = 400 // nova burst flash duration when DoT triggers
+export const ROLE_MID_CURSE_INTERVAL_MS = 15000 // curse: 15s cooldown between casts
+export const ROLE_MID_CURSE_DURATION_MS = 10000 // curse lasts 10s
+export const ROLE_MID_CURSE_RANGE = 350 // px screen-space range from midlaner to boss planet
+export const ROLE_MID_CURSE_CAST_MS = 600 // cast flash animation duration
+export const ROLE_MID_CURSE_DOT_DPS = 8 // Verderbnis: 8 dmg/s × 10 ticks = 80 total
+export const ROLE_MID_CURSE_ATTACK_DEBUFF = 0.4 // Schwächung: enemy deals only 40% damage
+export const ROLE_MID_CURSE_DAMAGE_AMP = 1.8 // Bannfluch: all player damage ×1.8
+export const ROLE_MID_CURSE_ATTACK_SLOW = 3.0 // Erstarrung: enemy attack interval ×3
+export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.20 // Verdammnis: instant 20% of boss maxHP
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 

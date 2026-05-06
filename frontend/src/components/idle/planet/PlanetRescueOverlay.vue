@@ -72,6 +72,28 @@
           </div>
         </div>
 
+        <!-- ── Active Curse ──────────────────────────────────────────────── -->
+        <Transition name="curse-reveal">
+          <div v-if="activeCurse" class="curse-block">
+            <div class="curse-header">
+              <span class="curse-header-line" />
+              <span class="curse-header-text">☠ AKTIVER FLUCH ☠</span>
+              <span class="curse-header-line" />
+            </div>
+            <div class="curse-row">
+              <span class="curse-icon">{{ CURSE_DEFS[activeCurse.type].icon }}</span>
+              <div class="curse-info">
+                <span class="curse-name">{{ CURSE_DEFS[activeCurse.type].name }}</span>
+                <span class="curse-desc">{{ CURSE_DESC[activeCurse.type] }}</span>
+              </div>
+              <div class="curse-timer">
+                <span class="curse-timer-val">{{ curseSecsLeft }}</span>
+                <span class="curse-timer-label">SEK</span>
+              </div>
+            </div>
+          </div>
+        </Transition>
+
         <!-- ── Rewards ───────────────────────────────────────────────────── -->
         <div class="reward-block" :class="{ 'reward-block--galaxy': isGalaxyBoss }">
           <div class="reward-block-header">
@@ -144,6 +166,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useBattleStore } from '@/stores/battleStore'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
@@ -151,6 +175,25 @@ import type { PlanetBossRewardSlot } from '@/types'
 
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
+const roleBehaviorStore = useRoleBehaviorStore()
+
+const CURSE_DESC: Record<string, string> = {
+  corruption: 'Vergiftet den Boss — 8 Schaden/Sek. für 10 Sekunden',
+  weakness: 'Feindliche Angriffe richten nur 40 % Schaden an',
+  banishment: 'Alle Angriffe verursachen ×1.8 Schaden',
+  glaciation: 'Feindliche Angriffe werden 3× langsamer',
+  damnation: 'Hat dem Boss sofort 20 % seiner max. HP entzogen',
+}
+
+const activeCurse = computed(() => {
+  const c = roleBehaviorStore.activeCurse
+  return c && Date.now() < c.activeUntil ? c : null
+})
+
+const curseSecsLeft = computed(() => {
+  if (!activeCurse.value) return 0
+  return Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / 1000))
+})
 
 const teamChampions = computed<string[]>(() => battleStore.selectedChampions.slice(0, 4))
 
@@ -912,5 +955,142 @@ function handleShake(ms: number) {
   .ember {
     animation: none;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   FLUCH-ABSCHNITT
+══════════════════════════════════════════════════════════════════════════════ */
+.curse-block {
+  margin: 0 0.8rem 0.7rem;
+  border: 1px solid rgba(160, 40, 255, 0.5);
+  border-radius: 4px;
+  background: rgba(18, 0, 36, 0.6);
+  overflow: hidden;
+  box-shadow:
+    0 0 14px rgba(140, 20, 240, 0.25),
+    inset 0 0 20px rgba(80, 0, 140, 0.15);
+}
+
+.curse-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem 0.35rem;
+  border-bottom: 1px solid rgba(160, 40, 255, 0.22);
+  background: rgba(30, 0, 55, 0.5);
+}
+
+.curse-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(160, 40, 255, 0.45));
+}
+
+.curse-header-line:last-child {
+  background: linear-gradient(to left, transparent, rgba(160, 40, 255, 0.45));
+}
+
+.curse-header-text {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #c060ff;
+  white-space: nowrap;
+  text-shadow:
+    0 0 8px rgba(180, 50, 255, 0.8),
+    0 0 18px rgba(140, 20, 240, 0.4);
+  animation: curse-title-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes curse-title-pulse {
+  from { opacity: 0.8; }
+  to   { opacity: 1;   }
+}
+
+.curse-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.9rem;
+}
+
+.curse-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 10px rgba(180, 50, 255, 0.85));
+  animation: curse-icon-float 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes curse-icon-float {
+  from { transform: translateY(0); filter: drop-shadow(0 0 8px rgba(160, 40, 255, 0.7)); }
+  to   { transform: translateY(-2px); filter: drop-shadow(0 0 14px rgba(200, 80, 255, 1)); }
+}
+
+.curse-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.curse-name {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #c060ff;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(180, 50, 255, 0.65);
+}
+
+.curse-desc {
+  font-size: 0.7rem;
+  color: rgba(200, 160, 255, 0.72);
+  line-height: 1.4;
+}
+
+.curse-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  background: rgba(60, 0, 100, 0.5);
+  border: 1px solid rgba(160, 40, 255, 0.45);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  min-width: 44px;
+  box-shadow: inset 0 0 10px rgba(100, 0, 160, 0.3);
+}
+
+.curse-timer-val {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #d080ff;
+  line-height: 1;
+  text-shadow:
+    0 0 8px rgba(200, 80, 255, 1),
+    0 0 22px rgba(160, 40, 240, 0.55);
+}
+
+.curse-timer-label {
+  font-size: 0.48rem;
+  font-weight: 700;
+  color: rgba(180, 100, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 0.1rem;
+}
+
+.curse-reveal-enter-active {
+  animation: curse-reveal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.curse-reveal-leave-active {
+  animation: curse-reveal-in 0.2s ease-in reverse both;
+}
+
+@keyframes curse-reveal-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 </style>

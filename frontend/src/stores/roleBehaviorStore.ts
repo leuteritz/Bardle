@@ -6,6 +6,13 @@ import {
   ROLE_MID_DOT_DPS,
   ROLE_MID_DOT_DURATION_MS,
   ROLE_MID_DOT_INTERVAL_MS,
+  ROLE_MID_NOVA_FLASH_MS,
+  ROLE_MID_CURSE_INTERVAL_MS,
+  ROLE_MID_CURSE_DURATION_MS,
+  ROLE_MID_CURSE_RANGE,
+  ROLE_MID_CURSE_CAST_MS,
+  ROLE_MID_CURSE_DOT_DPS,
+  ROLE_MID_CURSE_DAMNATION_FRAC,
   ROLE_ADC_BURST_DAMAGE,
   ROLE_ADC_BURST_INTERVAL_MS,
   SUPPORT_HEAL_RANGE,
@@ -23,8 +30,20 @@ import { useCombatStore } from './combatStore'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS, type PlanetSlot } from './planetShopStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
+import { activeMidCurse } from '../utils/activeMidCurse'
+import type { MidCurseType, ActiveCurse } from '../types'
 import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+
+export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string }> = {
+  corruption: { name: 'Verderbnis', icon: '☠️' },
+  weakness: { name: 'Schwächung', icon: '⚔️' },
+  banishment: { name: 'Bannfluch', icon: '🌑' },
+  glaciation: { name: 'Erstarrung', icon: '❄️' },
+  damnation: { name: 'Verdammnis', icon: '💫' },
+}
+
+const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]
 
 let _floatId = 900_000
 const _throttleMap = new Map<string, number>()
@@ -94,6 +113,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
     dotCooldownMs: ROLE_MID_DOT_INTERVAL_MS,
     dotRemainingMs: 0,
+    midNovaActive: false,
+    midCurseCooldownMs: ROLE_MID_CURSE_INTERVAL_MS,
+    midCurseFlashActive: false,
+    activeCurse: null as ActiveCurse | null,
 
     adcBurstCooldownMs: ROLE_ADC_BURST_INTERVAL_MS,
     adcBurstActive: false,
@@ -248,6 +271,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _tickMid(roles: Set<string>, tickMs: number) {
       if (!roles.has('mid')) {
         this.dotRemainingMs = 0
+        this.activeCurse = null
+        activeMidCurse.type = null
+        activeMidCurse.activeUntil = 0
         return
       }
 
@@ -255,7 +281,20 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const activeBoss = bossStore.activeBoss
       const { addEvent } = useEventLog()
       const championName = getChampionNameByRole('mid')
+      const now = Date.now()
 
+      // ── Curse expiry ────────────────────────────────────────────────────────
+      if (this.activeCurse && now >= this.activeCurse.activeUntil) {
+        const expiredName = CURSE_DEFS[this.activeCurse.type].name
+        throttledEvent('mid-curse-expire', 500, () => {
+          addEvent(`${expiredName} ist abgeklungen.`, 'mid')
+        })
+        this.activeCurse = null
+        activeMidCurse.type = null
+        activeMidCurse.activeUntil = 0
+      }
+
+      // ── Ability 1: Void Singularity (DoT) ──────────────────────────────────
       if (this.dotRemainingMs > 0) {
         this.dotRemainingMs -= tickMs
 
@@ -279,18 +318,78 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         }
 
         if (this.dotRemainingMs < 0) this.dotRemainingMs = 0
+      } else {
+        this.dotCooldownMs -= tickMs
+
+        if (this.dotCooldownMs <= 0) {
+          this.dotCooldownMs = ROLE_MID_DOT_INTERVAL_MS
+
+          if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
+            this.dotRemainingMs = ROLE_MID_DOT_DURATION_MS
+            this.midNovaActive = true
+            window.setTimeout(() => { this.midNovaActive = false }, ROLE_MID_NOVA_FLASH_MS)
+            addEvent(`${championName} Void Singularity erupts!`, 'mid')
+          }
+        }
+      }
+
+      // ── Active Curse: Verderbnis DoT ────────────────────────────────────────
+      if (this.activeCurse?.type === 'corruption' && activeBoss && !activeBoss.defeated && !activeBoss.expired) {
+        const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
+        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 3000, () => {
+          addEvent(`${championName} Verderbnis: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
+        })
+        if (!defeated) {
+          const pos = activePlanetPositions.get(activeBoss.planetId)
+          if (pos) {
+            spawnFloat(ROLE_MID_CURSE_DOT_DPS, pos.cx + (Math.random() - 0.5) * 40, pos.cy - 50, 1000, {
+              curseFloat: true,
+            })
+          }
+        }
+      }
+
+      // ── Ability 2: Fluch (curse cast) ──────────────────────────────────────
+      if (this.midCurseCooldownMs > 0) {
+        this.midCurseCooldownMs = Math.max(0, this.midCurseCooldownMs - tickMs)
         return
       }
 
-      this.dotCooldownMs -= tickMs
+      // Cooldown abgelaufen — prüfe ob Boss existiert und in Reichweite
+      if (!activeBoss || activeBoss.defeated || activeBoss.expired) return
 
-      if (this.dotCooldownMs <= 0) {
-        this.dotCooldownMs = ROLE_MID_DOT_INTERVAL_MS
+      const combatStore = useCombatStore()
+      const midName = getChampionNameByRole('mid')
+      const midChamp = combatStore.champions.find((c) => c.name === midName)
+      if (!midChamp || (midChamp.screenX === 0 && midChamp.screenY === 0)) return
 
-        if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
-          this.dotRemainingMs = ROLE_MID_DOT_DURATION_MS
-          addEvent(`${championName} applies DoT.`, 'mid')
+      const bossPos = activePlanetPositions.get(activeBoss.planetId)
+      if (!bossPos) return
+
+      const dist = Math.hypot(midChamp.screenX - bossPos.cx, midChamp.screenY - bossPos.cy)
+      if (dist > ROLE_MID_CURSE_RANGE) return
+
+      // Fluch wirken
+      const type = CURSE_TYPES[Math.floor(Math.random() * CURSE_TYPES.length)]
+      const curse: ActiveCurse = { type, activeUntil: now + ROLE_MID_CURSE_DURATION_MS }
+      this.activeCurse = curse
+      activeMidCurse.type = type
+      activeMidCurse.activeUntil = curse.activeUntil
+
+      this.midCurseFlashActive = true
+      window.setTimeout(() => { this.midCurseFlashActive = false }, ROLE_MID_CURSE_CAST_MS)
+      this.midCurseCooldownMs = ROLE_MID_CURSE_INTERVAL_MS
+
+      if (type === 'damnation') {
+        const dmg = Math.floor(activeBoss.maxHP * ROLE_MID_CURSE_DAMNATION_FRAC)
+        bossStore.dealDamage(dmg)
+        const pos2 = activePlanetPositions.get(activeBoss.planetId)
+        if (pos2) {
+          spawnFloat(dmg, pos2.cx, pos2.cy - 65, 1500, { curseFloat: true })
         }
+        addEvent(`${championName} wirkt Verdammnis: −${dmg} HP (20%)!`, 'mid')
+      } else {
+        addEvent(`${championName} verflucht den Boss mit ${CURSE_DEFS[type].name}! (10s)`, 'mid')
       }
     },
 

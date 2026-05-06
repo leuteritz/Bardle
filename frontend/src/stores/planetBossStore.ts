@@ -23,6 +23,8 @@ import {
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
+import { activeMidCurse } from '../utils/activeMidCurse'
+import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
 import { useGameStore } from './gameStore'
 import { useShopStore } from './shopStore'
 import { useBattleStore } from './battleStore'
@@ -204,8 +206,12 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
 
-      boss.currentHP = Math.max(0, boss.currentHP - amount)
-      boss.totalDamageDealt += amount
+      const banished =
+        activeMidCurse.type === 'banishment' && Date.now() < activeMidCurse.activeUntil
+      const effective = banished ? Math.round(amount * ROLE_MID_CURSE_DAMAGE_AMP) : amount
+
+      boss.currentHP = Math.max(0, boss.currentHP - effective)
+      boss.totalDamageDealt += effective
 
       if (boss.currentHP <= 0) {
         boss.currentHP = 0

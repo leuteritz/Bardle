@@ -485,6 +485,13 @@ export interface ChampionCombatState extends ChampionOrbitParams {
   isAttacking: boolean
 }
 
+export type MidCurseType = 'corruption' | 'weakness' | 'banishment' | 'glaciation' | 'damnation'
+
+export interface ActiveCurse {
+  type: MidCurseType
+  activeUntil: number
+}
+
 export interface DamageFloat {
   id: number
   value: number
@@ -496,6 +503,7 @@ export interface DamageFloat {
   adcFloat?: boolean
   healFloat?: boolean
   shieldFloat?: boolean
+  curseFloat?: boolean
 }
 
 export interface RoleBehaviorState {
@@ -507,6 +515,10 @@ export interface RoleBehaviorState {
   // Mid Laner
   dotCooldownMs: number
   dotRemainingMs: number
+  midNovaActive: boolean
+  midCurseCooldownMs: number
+  midCurseFlashActive: boolean
+  activeCurse: ActiveCurse | null
   // ADC
   adcBurstCooldownMs: number
 }

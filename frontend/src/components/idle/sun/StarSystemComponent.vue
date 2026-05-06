@@ -171,7 +171,25 @@
       <!-- ③ Enemy Projectiles -->
       <AttackProjectileLayer :shots="enemyShots" />
 
-      <!-- ④ Reward-Icons PRO PLANET -->
+      <!-- ④ Midlaner Fluch-Overlay -->
+      <template v-if="cursedPlanetVisible">
+        <div
+          class="mid-curse-overlay"
+          :style="{
+            width: cursedPlanetSize + 24 + 'px',
+            height: cursedPlanetSize + 24 + 'px',
+            transform: `translate(${cursedPlanetCx - (cursedPlanetSize + 24) / 2}px, ${cursedPlanetCy - (cursedPlanetSize + 24) / 2}px)`,
+          }"
+        />
+        <span
+          class="mid-curse-label"
+          :style="{
+            transform: `translate(${cursedPlanetCx}px, ${cursedPlanetCy - cursedPlanetSize / 2 - 20}px) translateX(-50%)`,
+          }"
+        >{{ curseIcon }} {{ curseSecsLeft }}s</span>
+      </template>
+
+      <!-- ⑤ Reward-Icons PRO PLANET -->
       <template v-for="star in frontStars" :key="'reward-star-' + star.id">
         <template
           v-for="planet in star.planets.filter((p) => !p.isBehind)"
@@ -292,10 +310,13 @@ import {
   ENEMY_ATTACK_INTERVAL_MIN_MS,
   ENEMY_ATTACK_INTERVAL_MAX_MS,
   ENEMY_PROJECTILE_DAMAGE,
+  ROLE_MID_CURSE_ATTACK_DEBUFF,
+  ROLE_MID_CURSE_ATTACK_SLOW,
 } from '../../../config/constants'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
+import { CURSE_DEFS } from '../../../stores/roleBehaviorStore'
 import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
@@ -306,6 +327,19 @@ const planetShopStore = usePlanetShopStore()
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()
+
+// ── Midlaner Fluch-Overlay (reaktive Position/Timer) ──────────────────────────
+const cursedPlanetCx = ref(0)
+const cursedPlanetCy = ref(0)
+const cursedPlanetSize = ref(60)
+const curseSecsLeft = ref(0)
+const cursedPlanetVisible = ref(false)
+
+const curseIcon = computed(() => {
+  const type = roleBehaviorStore.activeCurse?.type
+  return type ? CURSE_DEFS[type].icon : ''
+})
+// ──────────────────────────────────────────────────────────────────────────────
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -361,10 +395,12 @@ let enemyLastTs = 0
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function randomAttackInterval(): number {
-  return (
+  const base =
     ENEMY_ATTACK_INTERVAL_MIN_MS +
     Math.random() * (ENEMY_ATTACK_INTERVAL_MAX_MS - ENEMY_ATTACK_INTERVAL_MIN_MS)
-  )
+  const curse = roleBehaviorStore.activeCurse
+  const glaciated = curse?.type === 'glaciation' && Date.now() < curse.activeUntil
+  return glaciated ? base * ROLE_MID_CURSE_ATTACK_SLOW : base
 }
 
 function enemyAttackLoop(ts: number) {
@@ -440,10 +476,15 @@ function enemyAttackLoop(ts: number) {
                   }
                 : undefined,
             onHit() {
+              const curse = roleBehaviorStore.activeCurse
+              const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
+              const dmg = weakened
+                ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
+                : ENEMY_PROJECTILE_DAMAGE
               if (capturedSlotId) {
-                planetShopStore.takeDamage(capturedSlotId, ENEMY_PROJECTILE_DAMAGE)
+                planetShopStore.takeDamage(capturedSlotId, dmg)
               } else {
-                playerStore.takeDamage(ENEMY_PROJECTILE_DAMAGE)
+                playerStore.takeDamage(dmg)
               }
             },
           })
@@ -459,6 +500,35 @@ function enemyAttackLoop(ts: number) {
     for (const id of enemyAttackTimers.keys()) {
       if (!activePlanetIds.has(id)) enemyAttackTimers.delete(id)
     }
+
+    // ── Curse-Overlay Position aktualisieren ──────────────────────────────────
+    const curse = roleBehaviorStore.activeCurse
+    if (curse && Date.now() < curse.activeUntil) {
+      const boss = bossStore.activeBoss
+      if (boss && !boss.defeated && !boss.expired) {
+        const bossPos = activePlanetPositions.get(boss.planetId)
+        if (bossPos && bossPos.isForeground) {
+          let pSize = 60
+          outer: for (const star of starRenders.value) {
+            for (const p of star.planets) {
+              if (p.planetId === boss.planetId) { pSize = p.size; break outer }
+            }
+          }
+          cursedPlanetCx.value = bossPos.cx
+          cursedPlanetCy.value = bossPos.cy
+          cursedPlanetSize.value = pSize
+          curseSecsLeft.value = Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
+          cursedPlanetVisible.value = true
+        } else {
+          cursedPlanetVisible.value = false
+        }
+      } else {
+        cursedPlanetVisible.value = false
+      }
+    } else {
+      cursedPlanetVisible.value = false
+    }
+    // ─────────────────────────────────────────────────────────────────────────
   }
 
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
@@ -1012,5 +1082,73 @@ function starCountStyle(star: StarRenderEntry) {
 .star-cnt-leave-to {
   opacity: 0;
   scale: 0.7;
+}
+
+/* ── Midlaner Fluch-Overlay ──────────────────────────────────────────────── */
+.mid-curse-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 15;
+  border: 2px solid rgba(160, 40, 255, 0.75);
+  box-shadow:
+    0 0 18px rgba(140, 30, 255, 0.85),
+    0 0 38px rgba(100, 0, 200, 0.45),
+    inset 0 0 14px rgba(160, 40, 255, 0.3);
+  animation: curse-aura-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.mid-curse-overlay::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px dashed rgba(180, 80, 255, 0.55);
+  animation: curse-ring-spin 3s linear infinite;
+}
+
+.mid-curse-overlay::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(130, 20, 240, 0.3);
+  animation: curse-ring-spin 5s linear infinite reverse;
+}
+
+@keyframes curse-aura-pulse {
+  from {
+    box-shadow:
+      0 0 14px rgba(140, 30, 255, 0.7),
+      0 0 28px rgba(100, 0, 200, 0.35),
+      inset 0 0 10px rgba(160, 40, 255, 0.2);
+  }
+  to {
+    box-shadow:
+      0 0 30px rgba(190, 70, 255, 0.95),
+      0 0 65px rgba(140, 20, 240, 0.55),
+      inset 0 0 22px rgba(190, 70, 255, 0.38);
+  }
+}
+
+@keyframes curse-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.mid-curse-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cc80ff;
+  text-shadow:
+    0 0 8px rgba(180, 60, 255, 0.95),
+    0 0 16px rgba(140, 30, 255, 0.6);
+  pointer-events: none;
+  white-space: nowrap;
 }
 </style>

@@ -50,6 +50,10 @@
           pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
         'champion-orbit-avatar--dot':
           pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
+        'champion-orbit-avatar--nova':
+          pos.primaryRole === 'mid' && roleBehaviorStore.midNovaActive,
+        'champion-orbit-avatar--cursing':
+          pos.primaryRole === 'mid' && roleBehaviorStore.midCurseFlashActive,
         'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
         'champion-orbit-avatar--intercept':
           pos.primaryRole === 'top' && roleBehaviorStore.tankInterceptActive,
@@ -89,6 +93,7 @@
               'champion-dmg-float--adc': f.adcFloat,
               'champion-dmg-float--heal': f.healFloat,
               'champion-dmg-float--shield': f.shieldFloat,
+              'champion-dmg-float--curse': f.curseFloat,
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
@@ -398,7 +403,12 @@ export default defineComponent({
         case 'support':
           return roleBehaviorStore.supportPlanetHealActive
         case 'mid':
-          return roleBehaviorStore.dotRemainingMs > 0
+          return (
+            roleBehaviorStore.dotRemainingMs > 0 ||
+            roleBehaviorStore.midNovaActive ||
+            roleBehaviorStore.midCurseFlashActive ||
+            roleBehaviorStore.midCurseCooldownMs === 0
+          )
         case 'jungle':
           return roleBehaviorStore.jungleBuffFlashActive
         case 'adc':
@@ -611,6 +621,71 @@ export default defineComponent({
   }
 }
 
+/* Void Singularity Nova-Burst (beim DoT-Trigger) */
+.champion-orbit-avatar--nova {
+  animation: mid-nova-burst 0.4s ease-out forwards;
+}
+
+@keyframes mid-nova-burst {
+  0% {
+    filter: brightness(1.5) drop-shadow(0 0 0px rgba(180, 80, 255, 0));
+  }
+  20% {
+    filter: brightness(4) drop-shadow(0 0 30px rgba(220, 120, 255, 1));
+    box-shadow:
+      0 0 40px rgba(200, 100, 255, 1),
+      0 0 80px rgba(160, 80, 255, 0.8);
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(180, 80, 255, 0));
+  }
+}
+
+/* Fluch-Cast Burst */
+.champion-orbit-avatar--cursing {
+  animation: mid-curse-cast 0.6s ease-out forwards;
+}
+
+.champion-orbit-avatar--cursing::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(180, 60, 255, 0.85);
+  animation: curse-cast-ring-expand 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--cursing::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 1px solid rgba(140, 30, 240, 0.45);
+  animation: curse-cast-ring-expand 0.6s ease-out forwards 0.1s;
+  pointer-events: none;
+}
+
+@keyframes mid-curse-cast {
+  0% {
+    filter: brightness(1.2) drop-shadow(0 0 0px rgba(180, 60, 255, 0));
+  }
+  20% {
+    filter: brightness(4) drop-shadow(0 0 24px rgba(210, 90, 255, 1));
+    box-shadow:
+      0 0 36px rgba(190, 70, 255, 1),
+      0 0 72px rgba(150, 30, 240, 0.7);
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0px rgba(180, 60, 255, 0));
+  }
+}
+
+@keyframes curse-cast-ring-expand {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.8); }
+}
+
 /* Heal-Farbe: Teal-Mint (#00e5a0) */
 .champion-orbit-avatar--healing {
   animation: support-heal-burst 0.9s ease-out forwards;
@@ -722,6 +797,24 @@ export default defineComponent({
   text-shadow:
     0 0 14px rgba(80, 180, 255, 0.95),
     0 0 28px rgba(60, 140, 255, 0.6);
+}
+
+.champion-dmg-float--orb {
+  font-size: 1.2rem;
+  color: #40d8ff;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.8);
+  text-shadow:
+    0 0 12px rgba(80, 200, 255, 1),
+    0 0 24px rgba(60, 160, 255, 0.6);
+}
+
+.champion-dmg-float--curse {
+  font-size: 1.05rem;
+  color: #c060ff;
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.8);
+  text-shadow:
+    0 0 10px rgba(180, 50, 255, 0.95),
+    0 0 22px rgba(140, 20, 240, 0.55);
 }
 
 /* ── Schaden-Transitions ──────────────────────────────────────────────────── */
