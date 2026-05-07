@@ -171,22 +171,43 @@
       <!-- ③ Enemy Projectiles -->
       <AttackProjectileLayer :shots="enemyShots" />
 
-      <!-- ④ Midlaner Fluch-Overlay -->
-      <template v-if="cursedPlanetVisible">
+      <!-- Curse-Aura auf dem Stern mit dem verfluchten Planeten -->
+      <template v-if="cursedStarId !== null">
+        <div
+          v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
+          :key="'curse-star-ring-' + star.id"
+          class="star-curse-ring"
+          :style="{
+            width: starSize(star.starType) + 32 + 'px',
+            height: starSize(star.starType) + 32 + 'px',
+            transform: `translate(${star.x - (starSize(star.starType) + 32) / 2}px, ${star.y - (starSize(star.starType) + 32) / 2}px) scale(${star.scale})`,
+            opacity: String(star.opacity),
+          }"
+        />
+      </template>
+
+      <!-- ④ Midlaner Fluch-Overlay (alle Planeten des verfluchten Sterns) -->
+      <template v-for="(p, idx) in cursedPlanetPositions" :key="'curse-planet-' + idx">
         <div
           class="mid-curse-overlay"
           :style="{
-            width: cursedPlanetSize + 24 + 'px',
-            height: cursedPlanetSize + 24 + 'px',
-            transform: `translate(${cursedPlanetCx - (cursedPlanetSize + 24) / 2}px, ${cursedPlanetCy - (cursedPlanetSize + 24) / 2}px)`,
+            width: p.size + 24 + 'px',
+            height: p.size + 24 + 'px',
+            transform: `translate(${p.cx - (p.size + 24) / 2}px, ${p.cy - (p.size + 24) / 2}px)`,
           }"
         />
-        <span
-          class="mid-curse-label"
+      </template>
+
+      <!-- ⑤ Fluch-Timer über dem Stern -->
+      <template v-if="cursedStarId !== null && curseSecsLeft > 0">
+        <div
+          v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
+          :key="'curse-star-timer-' + star.id"
+          class="star-curse-timer"
           :style="{
-            transform: `translate(${cursedPlanetCx}px, ${cursedPlanetCy - cursedPlanetSize / 2 - 20}px) translateX(-50%)`,
+            transform: `translate(${star.x}px, ${star.y - starSize(star.starType) / 2 - 20}px)`,
           }"
-        >{{ curseIcon }} {{ curseSecsLeft }}s</span>
+        >{{ curseIcon }} {{ curseSecsLeft }}s</div>
       </template>
 
       <!-- ⑤ Reward-Icons PRO PLANET -->
@@ -328,18 +349,16 @@ const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()
 
-// ── Midlaner Fluch-Overlay (reaktive Position/Timer) ──────────────────────────
-const cursedPlanetCx = ref(0)
-const cursedPlanetCy = ref(0)
-const cursedPlanetSize = ref(60)
+// ── Midlaner Fluch-Overlay (reaktive Positionen/Timer) ───────────────────────
+interface CursedPlanetPos { cx: number; cy: number; size: number }
+const cursedPlanetPositions = ref<CursedPlanetPos[]>([])
 const curseSecsLeft = ref(0)
-const cursedPlanetVisible = ref(false)
 
 const curseIcon = computed(() => {
   const type = roleBehaviorStore.activeCurse?.type
   return type ? CURSE_DEFS[type].icon : ''
 })
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -352,6 +371,14 @@ const activeRoleOrbits = computed(() =>
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))
+
+const cursedStarId = computed(() => {
+  const curse = roleBehaviorStore.activeCurse
+  if (!curse) return null
+  const boss = bossStore.activeBoss
+  if (!boss || boss.defeated || boss.expired) return null
+  return starRenders.value.find((s) => s.planets.some((p) => p.planetId === boss.planetId))?.id ?? null
+})
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 
@@ -501,32 +528,34 @@ function enemyAttackLoop(ts: number) {
       if (!activePlanetIds.has(id)) enemyAttackTimers.delete(id)
     }
 
-    // ── Curse-Overlay Position aktualisieren ──────────────────────────────────
+    // ── Curse-Overlay Positionen aktualisieren (alle Planeten des verfluchten Sterns) ──
     const curse = roleBehaviorStore.activeCurse
     if (curse && Date.now() < curse.activeUntil) {
       const boss = bossStore.activeBoss
       if (boss && !boss.defeated && !boss.expired) {
-        const bossPos = activePlanetPositions.get(boss.planetId)
-        if (bossPos && bossPos.isForeground) {
-          let pSize = 60
-          outer: for (const star of starRenders.value) {
-            for (const p of star.planets) {
-              if (p.planetId === boss.planetId) { pSize = p.size; break outer }
+        const cursedStar = starRenders.value.find((s) =>
+          s.planets.some((p) => p.planetId === boss.planetId),
+        )
+        if (cursedStar) {
+          const positions: CursedPlanetPos[] = []
+          for (const planet of cursedStar.planets) {
+            if (!planet.isBehind && planet.animState === 'normal') {
+              const pos = activePlanetPositions.get(planet.planetId)
+              if (pos && pos.isForeground) {
+                positions.push({ cx: pos.cx, cy: pos.cy, size: planet.size })
+              }
             }
           }
-          cursedPlanetCx.value = bossPos.cx
-          cursedPlanetCy.value = bossPos.cy
-          cursedPlanetSize.value = pSize
+          cursedPlanetPositions.value = positions
           curseSecsLeft.value = Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
-          cursedPlanetVisible.value = true
         } else {
-          cursedPlanetVisible.value = false
+          cursedPlanetPositions.value = []
         }
       } else {
-        cursedPlanetVisible.value = false
+        cursedPlanetPositions.value = []
       }
     } else {
-      cursedPlanetVisible.value = false
+      cursedPlanetPositions.value = []
     }
     // ─────────────────────────────────────────────────────────────────────────
   }
@@ -1138,17 +1167,65 @@ function starCountStyle(star: StarRenderEntry) {
   to { transform: rotate(360deg); }
 }
 
-.mid-curse-label {
+/* ── Fluch-Timer über dem Stern ─────────────────────────────────────────────── */
+.star-curse-timer {
   position: absolute;
   top: 0;
   left: 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  color: #cc80ff;
-  text-shadow:
-    0 0 8px rgba(180, 60, 255, 0.95),
-    0 0 16px rgba(140, 30, 255, 0.6);
+  color: #c060ff;
+  background: rgba(20, 10, 32, 0.82);
+  border: 1px solid #7a2db0;
+  border-radius: 3px;
+  padding: 1px 6px;
+  line-height: 14px;
   pointer-events: none;
   white-space: nowrap;
+  translate: -50% -100%;
+  text-shadow: 0 0 6px rgba(190, 70, 255, 0.85);
+  z-index: 15;
+}
+
+/* ── Curse-Aura auf dem Stern ────────────────────────────────────────────── */
+.star-curse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 2px solid rgba(180, 50, 255, 0.7);
+  box-shadow:
+    0 0 20px rgba(180, 50, 255, 0.6),
+    0 0 42px rgba(130, 10, 230, 0.35),
+    inset 0 0 12px rgba(180, 50, 255, 0.2);
+  animation:
+    curse-star-ring-pulse 1.8s ease-in-out infinite alternate,
+    curse-ring-spin 4s linear infinite;
+}
+
+.star-curse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 1px dashed rgba(210, 100, 255, 0.4);
+  animation: curse-ring-spin 6s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes curse-star-ring-pulse {
+  from {
+    box-shadow:
+      0 0 14px rgba(170, 40, 255, 0.5),
+      0 0 28px rgba(120, 0, 220, 0.25),
+      inset 0 0 8px rgba(170, 40, 255, 0.15);
+  }
+  to {
+    box-shadow:
+      0 0 32px rgba(200, 80, 255, 0.85),
+      0 0 66px rgba(155, 30, 240, 0.48),
+      inset 0 0 20px rgba(200, 80, 255, 0.32);
+  }
 }
 </style>

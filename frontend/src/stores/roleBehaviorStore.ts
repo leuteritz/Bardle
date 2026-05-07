@@ -3,10 +3,6 @@ import {
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
   ROLE_SUPPORT_HEAL_AMOUNT,
   ROLE_TOP_SHIELD_REBUILD_MS,
-  ROLE_MID_DOT_DPS,
-  ROLE_MID_DOT_DURATION_MS,
-  ROLE_MID_DOT_INTERVAL_MS,
-  ROLE_MID_NOVA_FLASH_MS,
   ROLE_MID_CURSE_INTERVAL_MS,
   ROLE_MID_CURSE_DURATION_MS,
   ROLE_MID_CURSE_RANGE,
@@ -111,9 +107,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     tankInterceptDirX: 0,
     tankInterceptDirY: 0,
 
-    dotCooldownMs: ROLE_MID_DOT_INTERVAL_MS,
-    dotRemainingMs: 0,
-    midNovaActive: false,
     midCurseCooldownMs: ROLE_MID_CURSE_INTERVAL_MS,
     midCurseFlashActive: false,
     activeCurse: null as ActiveCurse | null,
@@ -270,7 +263,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
     _tickMid(roles: Set<string>, tickMs: number) {
       if (!roles.has('mid')) {
-        this.dotRemainingMs = 0
         this.activeCurse = null
         activeMidCurse.type = null
         activeMidCurse.activeUntil = 0
@@ -294,45 +286,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         activeMidCurse.activeUntil = 0
       }
 
-      // ── Ability 1: Void Singularity (DoT) ──────────────────────────────────
-      if (this.dotRemainingMs > 0) {
-        this.dotRemainingMs -= tickMs
-
-        if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
-          const defeated = bossStore.dealDamage(ROLE_MID_DOT_DPS)
-
-          throttledEvent(`mid-dot-${activeBoss.planetId}`, 3000, () => {
-            addEvent(`${championName} DoT: ${ROLE_MID_DOT_DPS} dmg.`, 'mid')
-          })
-
-          if (!defeated) {
-            const pos = activePlanetPositions.get(activeBoss.planetId)
-            if (pos) {
-              spawnFloat(ROLE_MID_DOT_DPS, pos.cx + (Math.random() - 0.5) * 50, pos.cy - 55, 1000, {
-                dotFloat: true,
-              })
-            }
-          } else {
-            addEvent(`${championName} slays boss (${formatSlotId(activeBoss.planetId)}).`, 'mid')
-          }
-        }
-
-        if (this.dotRemainingMs < 0) this.dotRemainingMs = 0
-      } else {
-        this.dotCooldownMs -= tickMs
-
-        if (this.dotCooldownMs <= 0) {
-          this.dotCooldownMs = ROLE_MID_DOT_INTERVAL_MS
-
-          if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
-            this.dotRemainingMs = ROLE_MID_DOT_DURATION_MS
-            this.midNovaActive = true
-            window.setTimeout(() => { this.midNovaActive = false }, ROLE_MID_NOVA_FLASH_MS)
-            addEvent(`${championName} Void Singularity erupts!`, 'mid')
-          }
-        }
-      }
-
       // ── Active Curse: Verderbnis DoT ────────────────────────────────────────
       if (this.activeCurse?.type === 'corruption' && activeBoss && !activeBoss.defeated && !activeBoss.expired) {
         const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
@@ -349,7 +302,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         }
       }
 
-      // ── Ability 2: Fluch (curse cast) ──────────────────────────────────────
+      // ── Fluch (curse cast) ─────────────────────────────────────────────────
       if (this.midCurseCooldownMs > 0) {
         this.midCurseCooldownMs = Math.max(0, this.midCurseCooldownMs - tickMs)
         return

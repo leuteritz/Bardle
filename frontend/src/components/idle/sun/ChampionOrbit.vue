@@ -48,10 +48,6 @@
         [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
         'champion-orbit-avatar--shield':
           pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
-        'champion-orbit-avatar--dot':
-          pos.primaryRole === 'mid' && roleBehaviorStore.dotRemainingMs > 0,
-        'champion-orbit-avatar--nova':
-          pos.primaryRole === 'mid' && roleBehaviorStore.midNovaActive,
         'champion-orbit-avatar--cursing':
           pos.primaryRole === 'mid' && roleBehaviorStore.midCurseFlashActive,
         'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
@@ -403,12 +399,7 @@ export default defineComponent({
         case 'support':
           return roleBehaviorStore.supportPlanetHealActive
         case 'mid':
-          return (
-            roleBehaviorStore.dotRemainingMs > 0 ||
-            roleBehaviorStore.midNovaActive ||
-            roleBehaviorStore.midCurseFlashActive ||
-            roleBehaviorStore.midCurseCooldownMs === 0
-          )
+          return roleBehaviorStore.midCurseCooldownMs === 0
         case 'jungle':
           return roleBehaviorStore.jungleBuffFlashActive
         case 'adc':
@@ -598,46 +589,6 @@ export default defineComponent({
       0 0 60px rgba(245, 71, 71, 0.85),
       0 0 100px rgba(245, 71, 71, 0.5),
       inset 0 0 20px rgba(245, 71, 71, 0.4);
-  }
-}
-
-.champion-orbit-avatar--dot {
-  box-shadow:
-    0 0 14px rgba(180, 80, 255, 0.9),
-    0 0 28px rgba(140, 60, 255, 0.5);
-  animation: dot-pulse 0.8s ease-in-out infinite alternate;
-}
-
-@keyframes dot-pulse {
-  from {
-    box-shadow:
-      0 0 12px rgba(180, 80, 255, 0.8),
-      0 0 24px rgba(140, 60, 255, 0.5);
-  }
-  to {
-    box-shadow:
-      0 0 24px rgba(200, 100, 255, 1),
-      0 0 48px rgba(160, 80, 255, 0.7);
-  }
-}
-
-/* Void Singularity Nova-Burst (beim DoT-Trigger) */
-.champion-orbit-avatar--nova {
-  animation: mid-nova-burst 0.4s ease-out forwards;
-}
-
-@keyframes mid-nova-burst {
-  0% {
-    filter: brightness(1.5) drop-shadow(0 0 0px rgba(180, 80, 255, 0));
-  }
-  20% {
-    filter: brightness(4) drop-shadow(0 0 30px rgba(220, 120, 255, 1));
-    box-shadow:
-      0 0 40px rgba(200, 100, 255, 1),
-      0 0 80px rgba(160, 80, 255, 0.8);
-  }
-  100% {
-    filter: brightness(1) drop-shadow(0 0 0px rgba(180, 80, 255, 0));
   }
 }
 

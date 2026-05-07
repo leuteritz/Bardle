@@ -108,6 +108,7 @@
         }"
       >🌿 {{ pos.jungleBuffSecsLeft }}s</span>
     </template>
+
   </div>
 
   <PlanetRoleModal />
@@ -699,4 +700,5 @@ export default defineComponent({
   translate: -50% -100%;
   text-shadow: 0 0 6px #5ce66a88;
 }
+
 </style>
