@@ -246,6 +246,7 @@ export const ROLES = [
   {
     key: 'top' as ChampionRole,
     label: 'Top',
+    short: 'TOP',
     icon: '🛡️',
     orbit: {
       rx: SUN_RADIUS * 2.58,
@@ -262,6 +263,7 @@ export const ROLES = [
   {
     key: 'jungle' as ChampionRole,
     label: 'Jungle',
+    short: 'JGL',
     icon: '🌿',
     orbit: {
       rx: SUN_RADIUS * 7.8,
@@ -276,6 +278,7 @@ export const ROLES = [
   {
     key: 'mid' as ChampionRole,
     label: 'Mid',
+    short: 'MID',
     icon: '🔮',
     orbit: {
       rx: SUN_RADIUS * 10.75,
@@ -290,6 +293,7 @@ export const ROLES = [
   {
     key: 'adc' as ChampionRole,
     label: 'ADC',
+    short: 'ADC',
     icon: '🏹',
     orbit: {
       rx: SUN_RADIUS * 12.67,
@@ -304,6 +308,7 @@ export const ROLES = [
   {
     key: 'support' as ChampionRole,
     label: 'Supp',
+    short: 'SUP',
     icon: '💚',
     orbit: {
       rx: SUN_RADIUS * 12.67,

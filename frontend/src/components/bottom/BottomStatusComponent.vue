@@ -89,8 +89,8 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
 <style scoped>
 .bottom-connector {
   position: fixed;
-  left: 458px;
-  right: 458px;
+  left: 440px;
+  right: 440px;
   bottom: 48px;
   height: 24px;
   z-index: 9999;
@@ -140,7 +140,7 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0;
   pointer-events: none;
 }
 
