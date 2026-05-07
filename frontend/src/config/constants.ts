@@ -228,7 +228,7 @@ export const SUPPORT_MAX_HEAL_TARGETS = 1 // max. Planeten die gleichzeitig pro 
 export const ROLE_TOP_SHIELD_REBUILD_MS = 5000 // seconds to rebuild shield after absorbing a shot
 export const ROLE_MID_CURSE_INTERVAL_MS = 15000 // curse: 15s cooldown between casts
 export const ROLE_MID_CURSE_DURATION_MS = 10000 // curse lasts 10s
-export const ROLE_MID_CURSE_RANGE = 500 // px screen-space range from midlaner to boss planet
+export const ROLE_MID_CURSE_RANGE = 1500 // px screen-space range from midlaner to boss planet
 export const ROLE_MID_CURSE_CAST_MS = 600 // cast flash animation duration
 export const ROLE_MID_CURSE_DOT_DPS = 8 // Verderbnis: 8 dmg/s × 10 ticks = 80 total
 export const ROLE_MID_CURSE_ATTACK_DEBUFF = 0.4 // Schwächung: enemy deals only 40% damage
