@@ -77,7 +77,7 @@
           :planetType="p.type"
           :transform="p.transform"
           :opacity="p.opacity"
-          :isRescue="true"
+          :isRescue="false"
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
@@ -94,7 +94,7 @@
           :planetType="p.type"
           :transform="p.transform"
           :opacity="p.opacity"
-          :isRescue="true"
+          :isRescue="false"
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
@@ -134,6 +134,7 @@
           class="star-body"
           :class="`star-body--${star.starType}`"
           :style="starBodyStyle(star)"
+          @click="handleStarClick(star)"
         />
         <PlanetComponent
           v-for="p in star.planets.filter((p) => !p.isBehind)"
@@ -143,7 +144,7 @@
           :planetType="p.type"
           :transform="p.transform"
           :opacity="p.opacity"
-          :isRescue="true"
+          :isRescue="false"
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
@@ -160,7 +161,7 @@
           :planetType="p.type"
           :transform="p.transform"
           :opacity="p.opacity"
-          :isRescue="true"
+          :isRescue="false"
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
@@ -316,6 +317,7 @@ import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/us
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
@@ -342,6 +344,12 @@ import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
 const bossStore = usePlanetBossStore()
+const starGroupStore = useStarGroupStore()
+
+function handleStarClick(star: StarRenderEntry) {
+  if (starGroupStore.starFightModalOpen) return
+  starGroupStore.openStarFightModal(star.id)
+}
 const combatStore = useCombatStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
@@ -826,6 +834,8 @@ function starCountStyle(star: StarRenderEntry) {
   border-radius: 50%;
   will-change: transform, opacity;
   animation: star-pulse 2.8s ease-in-out infinite;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .star-body--champion {

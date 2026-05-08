@@ -83,6 +83,10 @@ const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 export const useStarGroupStore = defineStore('starGroup', {
   state: () => ({
     activeStars: [] as StarGroup[],
+    starFightModalOpen: false,
+    activeFightStarId: null as string | null,
+    starFightPlanetQueue: [] as string[],
+    starFightCurrentIndex: 0,
   }),
 
   getters: {
@@ -95,9 +99,44 @@ export const useStarGroupStore = defineStore('starGroup', {
     hasActiveGalaxyBossStar(): boolean {
       return this.activeStars.some((s) => s.starType === 'galaxy_boss')
     },
+    currentFightPlanetId(): string | null {
+      if (!this.starFightModalOpen || !this.starFightPlanetQueue.length) return null
+      return this.starFightPlanetQueue[this.starFightCurrentIndex] ?? null
+    },
   },
 
   actions: {
+    openStarFightModal(starId: string) {
+      const star = this.activeStars.find((s) => s.id === starId)
+      if (!star) return
+      const queue = star.planetSlots.filter((s) => !s.cleared).map((s) => s.planetId)
+      if (!queue.length) return
+      const bossStore = usePlanetBossStore()
+      this.starFightModalOpen = true
+      this.activeFightStarId = starId
+      this.starFightPlanetQueue = queue
+      this.starFightCurrentIndex = 0
+      bossStore.selectedBossId = queue[0]
+    },
+
+    closeStarFightModal() {
+      this.starFightModalOpen = false
+      this.activeFightStarId = null
+      this.starFightPlanetQueue = []
+      this.starFightCurrentIndex = 0
+    },
+
+    advanceStarFight() {
+      const bossStore = usePlanetBossStore()
+      const nextIdx = this.starFightCurrentIndex + 1
+      if (nextIdx >= this.starFightPlanetQueue.length) {
+        this.closeStarFightModal()
+        return
+      }
+      this.starFightCurrentIndex = nextIdx
+      bossStore.selectedBossId = this.starFightPlanetQueue[nextIdx]
+    },
+
     _buildResourcePlanetSlots(count: number): StarPlanetSlot[] {
       const bossStore = usePlanetBossStore()
       const slots: StarPlanetSlot[] = []
@@ -177,6 +216,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const idx = this.activeStars.findIndex((s) => s.id === starId)
       if (idx === -1) return
       const star = this.activeStars[idx]
+      if (this.activeFightStarId === starId) this.closeStarFightModal()
       for (const slot of star.planetSlots) {
         if (!slot.cleared) {
           slot.cleared = true
@@ -292,6 +332,10 @@ export const useStarGroupStore = defineStore('starGroup', {
         if (!slot) continue
         slot.cleared = true
 
+        if (this.starFightModalOpen && this.activeFightStarId === star.id) {
+          this.advanceStarFight()
+        }
+
         if (star.planetSlots.every((p) => p.cleared)) {
           if (adminStarTimeouts.has(star.id)) {
             clearTimeout(adminStarTimeouts.get(star.id))
@@ -322,6 +366,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           clearTimeout(adminStarTimeouts.get(star.id))
           adminStarTimeouts.delete(star.id)
         }
+        if (this.activeFightStarId === star.id) this.closeStarFightModal()
         for (const slot of star.planetSlots) {
           if (!slot.cleared) {
             slot.cleared = true

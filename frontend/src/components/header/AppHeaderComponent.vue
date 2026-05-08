@@ -53,14 +53,43 @@ onUnmounted(() => {
     <!-- ════════ MITTE (absolut zentriert, überlagert Spalte 2) ════════ -->
     <div class="header-center">
       <div class="center-chimes">
-        <img
-          src="/img/BardAbilities/BardChime.png"
-          class="header-chime-icon chime-glow"
-          alt="Chimes"
-        />
+        <!-- Hauptzeile: nur Chimes-Zahl, kein Icon -->
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
         </span>
+
+        <!-- Unterzeile: CPS links · Click rechts -->
+        <div class="chimes-sub-row">
+          <!-- Chimes/s -->
+          <div class="chimes-sub-stat">
+            <img
+              src="/img/BardAbilities/BardChime.png"
+              class="sub-chime-icon chime-glow-green"
+              alt=""
+              aria-hidden="true"
+            />
+            <span class="sub-stat-value cps-text-glow">
+              {{ formatNumber(gameStore.chimesPerSecond) }}
+            </span>
+            <span class="sub-stat-label cps-text-glow">/sec</span>
+          </div>
+
+          <div class="chimes-sub-divider" aria-hidden="true"></div>
+
+          <!-- Chimes/click -->
+          <div class="chimes-sub-stat">
+            <img
+              src="/img/BardAbilities/BardChime.png"
+              class="sub-chime-icon chime-glow-click"
+              alt=""
+              aria-hidden="true"
+            />
+            <span class="sub-stat-value click-text-glow">
+              {{ formatNumber(gameStore.chimesPerClick) }}
+            </span>
+            <span class="sub-stat-label click-text-glow">/click</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -123,7 +152,6 @@ onUnmounted(() => {
     0 6px 28px rgba(0, 0, 0, 0.75);
   overflow: visible;
   position: relative;
-  /* ── Grid-Layout: Links | Mitte | Rechts ── */
   display: grid;
   grid-template-columns: 1fr clamp(300px, 30vw, 400px) 1fr;
   align-items: stretch;
@@ -162,7 +190,7 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   MITTE — Grid-Spalte 2 Platzhalter + absolut zentriertes Panel
+   MITTE — Platzhalter + absolut zentriertes Panel
    ================================================================ */
 .header-center-anchor {
   flex-shrink: 0;
@@ -191,24 +219,15 @@ body.bard-modal-open .center-chimes {
   border-radius: 0;
 }
 
-.center-wing {
-  flex-shrink: 0;
-  width: 20px;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(255, 200, 80, 0.38));
-  align-self: center;
-  position: relative;
-  top: calc(-1 * (var(--bump-center) + 2px) / 2);
-}
-.center-wing--right {
-  background: linear-gradient(to left, transparent, rgba(255, 200, 80, 0.38));
-}
-
+/* ================================================================
+   CENTER-CHIMES – Tropfen-Panel
+   ================================================================ */
 .center-chimes {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0;
   flex: 1;
   flex-shrink: 0;
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
@@ -216,18 +235,68 @@ body.bard-modal-open .center-chimes {
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
-  padding: 0 20px calc(var(--bump-center) + 7px) 14px;
+  padding: 4px 20px calc(var(--bump-center) + 10px) 20px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
   align-self: stretch;
 }
 
-.header-chime-icon {
-  width: clamp(56px, 7vw, 84px);
-  height: clamp(56px, 7vw, 84px);
+/* ── Unterzeile: CPS + Click nebeneinander ── */
+.chimes-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Einzelne Stat-Gruppe (Icon + Zahl + Label) */
+.chimes-sub-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Vertikale Trennlinie zwischen CPS und Click */
+.chimes-sub-divider {
+  width: 1px;
+  height: 18px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 200, 80, 0.3) 30%,
+    rgba(255, 200, 80, 0.3) 70%,
+    transparent
+  );
+  flex-shrink: 0;
+  margin-inline: 2px;
+}
+
+.sub-chime-icon {
+  width: clamp(16px, 2vw, 22px);
+  height: clamp(16px, 2vw, 22px);
   object-fit: contain;
   flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.sub-stat-value {
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sub-stat-label {
+  font-size: clamp(0.78rem, 1.1vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  line-height: 1;
+  margin-left: 1px;
 }
 
 /* ================================================================
@@ -256,7 +325,7 @@ body.bard-modal-open .center-chimes {
 }
 
 /* ================================================================
-   TYPOGRAFIE (globale Fallback-Klassen)
+   TYPOGRAFIE
    ================================================================ */
 .header-label {
   font-size: 0.65rem;
@@ -275,13 +344,14 @@ body.bard-modal-open .center-chimes {
   color: var(--color-chimes);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .cps-value {
   font-size: clamp(0.9rem, 1.3vw, 1.15rem);
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--color-cps);
+  color: #74d448;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
@@ -305,12 +375,20 @@ body.bard-modal-open .center-chimes {
   filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.5))
     drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
 }
+.chime-glow-click {
+  filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.55))
+    drop-shadow(0 0 12px rgba(251, 191, 36, 0.22));
+}
 .chimes-text-glow {
   filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
 }
 .cps-text-glow {
   color: #74d448;
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
+}
+.click-text-glow {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.45));
 }
 .dmg-text-glow {
   color: #ff7a50;

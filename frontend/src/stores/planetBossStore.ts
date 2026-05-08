@@ -33,6 +33,7 @@ import { useSectionStore } from './sectionStore'
 import { useGalaxyStore } from './galaxyStore'
 import { usePlayerStore } from './playerStore'
 import { usePlanetShopStore } from './planetShopStore'
+import { useStarGroupStore } from './starGroupStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -248,9 +249,11 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
     applyPassiveDamage() {
       const gameStore = useGameStore()
+      const starGroupStore = useStarGroupStore()
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired || boss.passiveDPS <= 0) continue
         if (gameStore.isGamePaused && boss.isChampionPlanet) continue
+        if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
         const effectiveDPS = Math.max(1, boss.passiveDPS)
         boss.currentHP -= effectiveDPS
@@ -271,10 +274,13 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     checkEnrage() {
+      const starGroupStore = useStarGroupStore()
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
         if (boss.isChampionPlanet) continue
+
+        if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
         const elapsed = Date.now() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue
@@ -370,10 +376,13 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     },
 
     forceCheckExpiry() {
+      const starGroupStore = useStarGroupStore()
       for (const boss of this.activeBosses) {
         if (boss.defeated || boss.expired) continue
 
         if (boss.isChampionPlanet) continue
+
+        if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
         const elapsed = Date.now() - boss.startTime
         if (elapsed < boss.enrageTimerMs) continue

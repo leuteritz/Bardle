@@ -7,6 +7,7 @@ import IdleGameComponent from '@/components/idle/IdleGameComponent.vue'
 import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vue'
 import PlanetRescueModal from '@/components/idle/planet/PlanetRescueModal.vue'
+import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
 import AugmentBuffPanel from '@/components/augment/AugmentBuffPanel.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
@@ -45,6 +46,7 @@ watch(
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
     <PlanetRescueModal />
+    <StarFightModal />
     <AugmentSelectionModal />
     <AugmentBuffPanel />
     <HyperspaceOverlay />
