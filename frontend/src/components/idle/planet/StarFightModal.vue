@@ -8,116 +8,143 @@
       aria-modal="true"
       @click.self="handleClose"
     >
+      <!-- ── Embers Atmosphäre ──────────────────────────────────────────── -->
       <div class="sf-atmosphere" :class="{ 'sf-atmosphere--galaxy': isGalaxyBoss }">
-        <span v-for="i in 18" :key="i" class="sf-ember" :style="emberStyle(i)" />
+        <span v-for="i in 22" :key="i" class="sf-ember" :style="emberStyle(i)" />
       </div>
 
+      <!-- ── Modal ─────────────────────────────────────────────────────── -->
       <div class="sf-modal" :class="{ 'sf-modal--galaxy': isGalaxyBoss }">
-        <div class="corner corner--tl" />
-        <div class="corner corner--tr" />
-        <div class="corner corner--bl" />
-        <div class="corner corner--br" />
+        <!-- ── Planet Background (gesamtes Modal) ──────────────────────── -->
+        <div
+          ref="modalPlanetBgRef"
+          class="sf-modal-planet-bg"
+          :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
+        />
 
-        <!-- ── Header ──────────────────────────────────────────────────────── -->
+        <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="sf-header" :class="{ 'sf-header--galaxy': isGalaxyBoss }">
           <span class="sf-star-type">{{ starTypeLabel }}</span>
-          <span class="sf-progress">Boss {{ currentIndex + 1 }} / {{ totalPlanets }}</span>
           <button class="sf-close" @click="handleClose">✕</button>
         </div>
 
-        <!-- ── Wave List ───────────────────────────────────────────────────── -->
-        <div class="sf-waves">
-          <div
-            v-for="(planetId, i) in starGroupStore.starFightPlanetQueue"
-            :key="planetId"
-            class="sf-wave"
-            :class="{
-              'sf-wave--done': isCleared(planetId),
-              'sf-wave--active': i === currentIndex && !isCleared(planetId),
-              'sf-wave--pending': i > currentIndex && !isCleared(planetId),
-            }"
-          >
-            <span class="sf-wave-num">{{ i + 1 }}</span>
-            <span class="sf-wave-status">{{ waveStatusIcon(i, planetId) }}</span>
-            <span class="sf-wave-label">{{ waveLabel(planetId, i) }}</span>
-          </div>
-        </div>
-
-        <!-- ── Boss Name Banner ────────────────────────────────────────────── -->
-        <div
-          v-if="activeBoss"
-          class="sf-boss-banner"
-          :class="{ 'sf-boss-banner--galaxy': isGalaxyBoss }"
-        >
-          <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
-          <h2 class="sf-boss-name" :class="{ 'sf-boss-name--galaxy': isGalaxyBoss }">
-            {{ activeBoss.bossName }}
-          </h2>
-        </div>
-
-        <!-- ── Curse Banner ────────────────────────────────────────────────── -->
-        <div v-if="activeCurse" class="sf-curse-banner">
-          <span class="sf-curse-icon">{{ curseDef?.icon }}</span>
-          <div class="sf-curse-body">
-            <span class="sf-curse-name">{{ curseDef?.name }}</span>
-            <span class="sf-curse-effect">{{ curseDef?.effect }}</span>
-            <span class="sf-curse-dur">{{ curseSecsLeft }}s</span>
-          </div>
-        </div>
-
-        <!-- ── Rewards Preview ─────────────────────────────────────────────── -->
-        <BossRewardSection
-          v-if="activeBoss"
-          :is-galaxy-boss="isGalaxyBoss"
-          :reward-slots="rewardSlots"
-          :home-planet-champion="homePlanetChampion"
-          :home-planet-champion-image="homePlanetChampionImage"
-        />
-
-        <!-- ── Fight Arena ─────────────────────────────────────────────────── -->
-        <BossArenaSection
-          v-if="activeBoss"
-          :is-galaxy-boss="isGalaxyBoss"
-          :boss-h-p-percent="bossStore.bossHPPercent"
-          :seconds-remaining="secondsRemaining"
-          :enrage-percent="enragePercent"
-          :team-champions="teamChampions"
-          :get-champion-image="battleStore.getChampionImage"
-          :active-boss="activeBoss"
-          @shake="handleShake"
-        />
-
-        <!-- ── HP Bar ──────────────────────────────────────────────────────── -->
-        <div v-if="activeBoss" class="sf-hp-section">
-          <div class="sf-hp-header">
-            <span class="sf-stat-label">❤ LEBEN</span>
-            <span class="sf-hp-numbers">
-              {{ formatNumber(activeBoss.currentHP) }}
-              <span class="sf-hp-sep">／</span>
-              {{ formatNumber(activeBoss.maxHP) }}
-            </span>
-          </div>
-          <div
-            class="sf-hp-track"
-            :class="{
-              'sf-hp-track--critical': bossStore.bossHPPercent < 25,
-              'sf-hp-track--galaxy': isGalaxyBoss,
-            }"
-          >
-            <div
-              class="sf-hp-fill"
-              :class="{
-                'sf-hp-fill--galaxy': isGalaxyBoss,
-                'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
-                'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
-              }"
-              :style="{ width: bossStore.bossHPPercent + '%' }"
+        <!-- ── Haupt-Layout ─────────────────────────────────────────────── -->
+        <div class="sf-main">
+          <!-- Linke Spalte: Rewards -->
+          <div class="sf-side sf-side--left">
+            <BossRewardSection
+              v-if="activeBoss"
+              :is-galaxy-boss="isGalaxyBoss"
+              :reward-slots="rewardSlots"
+              :home-planet-champion="homePlanetChampion"
+              :home-planet-champion-image="homePlanetChampionImage"
             />
-            <div class="sf-hp-segments">
-              <div v-for="seg in 9" :key="seg" class="sf-hp-seg" :style="{ left: seg * 10 + '%' }" />
+          </div>
+
+          <!-- Mittlere Spalte: Arena + HP -->
+          <div class="sf-center">
+            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
+
+            <BossArenaSection
+              v-if="activeBoss"
+              :is-galaxy-boss="isGalaxyBoss"
+              :boss-h-p-percent="bossStore.bossHPPercent"
+              :seconds-remaining="secondsRemaining"
+              :enrage-percent="enragePercent"
+              :team-champions="teamChampions"
+              :get-champion-image="battleStore.getChampionImage"
+              :active-boss="activeBoss"
+              @shake="handleShake"
+            />
+
+            <!-- ── HP Bar ────────────────────────────────────────────── -->
+            <div v-if="activeBoss" class="sf-hp-section">
+              <div class="sf-hp-header">
+                <span class="sf-stat-label">❤ LEBEN</span>
+                <span class="sf-hp-numbers">
+                  {{ formatNumber(activeBoss.currentHP) }}
+                  <span class="sf-hp-sep">／</span>
+                  {{ formatNumber(activeBoss.maxHP) }}
+                </span>
+              </div>
+              <div
+                class="sf-hp-track"
+                :class="{
+                  'sf-hp-track--critical': bossStore.bossHPPercent < 25,
+                  'sf-hp-track--galaxy': isGalaxyBoss,
+                }"
+              >
+                <div
+                  class="sf-hp-fill"
+                  :class="{
+                    'sf-hp-fill--galaxy': isGalaxyBoss,
+                    'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
+                    'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
+                  }"
+                  :style="{ width: bossStore.bossHPPercent + '%' }"
+                />
+                <div class="sf-hp-segments">
+                  <div
+                    v-for="seg in 9"
+                    :key="seg"
+                    class="sf-hp-seg"
+                    :style="{ left: seg * 10 + '%' }"
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- Rechte Spalte: Planetenliste -->
+          <div class="sf-side sf-side--right">
+            <BossPlanetList
+              :planet-queue="starGroupStore.starFightPlanetQueue"
+              :active-index="currentIndex"
+              :is-galaxy-boss="isGalaxyBoss"
+            />
+          </div>
         </div>
+
+        <!-- ── Curse Overlay ────────────────────────────────────────────── -->
+        <Transition name="curse-fade">
+          <div
+            v-if="activeCurse"
+            class="sf-curse-overlay"
+            :class="{ 'sf-curse-overlay--galaxy': isGalaxyBoss }"
+          >
+            <div class="sf-curse-inner">
+              <span class="sf-curse-icon">{{ curseDef?.icon }}</span>
+              <div class="sf-curse-text">
+                <span class="sf-curse-name">{{ curseDef?.name }}</span>
+                <span class="sf-curse-effect">{{ curseDef?.effect }}</span>
+              </div>
+              <div class="sf-curse-timer">
+                <svg class="sf-curse-ring" viewBox="0 0 36 36">
+                  <circle class="sf-curse-ring-bg" cx="18" cy="18" r="15" />
+                  <circle
+                    class="sf-curse-ring-fill"
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    :stroke-dashoffset="
+                      94.2 -
+                      (curseSecsLeft /
+                        (activeCurse?.activeUntil
+                          ? Math.ceil(
+                              (activeCurse.activeUntil -
+                                (activeCurse.activeUntil - curseSecsLeft * 1000)) /
+                                1000,
+                            )
+                          : 1)) *
+                        94.2
+                    "
+                  />
+                </svg>
+                <span class="sf-curse-secs">{{ curseSecsLeft }}s</span>
+              </div>
+            </div>
+          </div>
+        </Transition>
 
         <div class="sf-scanlines" aria-hidden="true" />
       </div>
@@ -126,22 +153,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
+import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
+import BossPlanetList from '@/components/idle/planet/BossPlanetList.vue'
 
+// ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
+// ── Reaktive Grundwerte ───────────────────────────────────────────────────
 const isShaking = ref(false)
 const now = ref(Date.now())
+const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
@@ -153,24 +185,10 @@ onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
 })
 
-const activeCurse = computed(() => {
-  const c = roleBehaviorStore.activeCurse
-  if (!c || now.value >= c.activeUntil) return null
-  return c
-})
-const curseSecsLeft = computed(() =>
-  activeCurse.value
-    ? Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / 1000))
-    : 0,
-)
-const curseDef = computed(() =>
-  activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null,
-)
-
+// ── Computed (MÜSSEN vor allen watch-Aufrufen stehen) ─────────────────────
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
 const currentIndex = computed(() => starGroupStore.starFightCurrentIndex)
-const totalPlanets = computed(() => starGroupStore.starFightPlanetQueue.length)
 const teamChampions = computed<string[]>(() => battleStore.selectedChampions.slice(0, 4))
 const rewardSlots = computed(() => activeBoss.value?.rewardSlots ?? [])
 
@@ -202,27 +220,59 @@ const starTypeLabel = computed(() => {
   return '⭐ RESSOURCE-STERN'
 })
 
-function isCleared(planetId: string): boolean {
-  const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
-  return star?.planetSlots.find((p) => p.planetId === planetId)?.cleared ?? false
+// ── Curse ─────────────────────────────────────────────────────────────────
+const activeCurse = computed(() => {
+  const c = roleBehaviorStore.activeCurse
+  if (!c || now.value >= c.activeUntil) return null
+  return c
+})
+const curseSecsLeft = computed(() =>
+  activeCurse.value
+    ? Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / 1000))
+    : 0,
+)
+const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
+
+// ── Planet Background ─────────────────────────────────────────────────────
+// WICHTIG: watch erst NACH allen computed-Deklarationen!
+function renderModalPlanet() {
+  if (!modalPlanetBgRef.value || !activeBoss.value) return
+  modalPlanetBgRef.value.innerHTML = ''
+  const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
+  svg.setAttribute('width', '600')
+  svg.setAttribute('height', '600')
+  svg.setAttribute('viewBox', '0 0 600 600')
+  svg.style.width = '100%'
+  svg.style.height = '100%'
+  const radius = isGalaxyBoss.value ? 290 : 260
+  drawPlanet(svg, `modal-bg-${Date.now()}`, activeBoss.value.planetType, 300, 300, radius)
+  modalPlanetBgRef.value.appendChild(svg)
 }
 
-function waveStatusIcon(index: number, planetId: string): string {
-  if (isCleared(planetId)) return '✓'
-  if (index === currentIndex.value) return '▶'
-  return '◦'
-}
+watch(
+  () => activeBoss.value?.planetId,
+  async (newId) => {
+    if (newId) {
+      await nextTick()
+      renderModalPlanet()
+    }
+  },
+  { immediate: true },
+)
 
-function waveLabel(planetId: string, index: number): string {
-  const boss = bossStore.activeBosses.find((b) => b.planetId === planetId)
-  if (boss?.bossName) return boss.bossName
-  const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
-  const slot = star?.planetSlots.find((p) => p.planetId === planetId)
-  if (slot?.isChampionPlanet) return '♛ Champion'
-  if (slot?.type) return slot.type.charAt(0).toUpperCase() + slot.type.slice(1)
-  return `Welle ${index + 1}`
-}
+// ── Star-Watcher ──────────────────────────────────────────────────────────
+watch(
+  () => starGroupStore.activeStars.map((s) => s.id),
+  (ids) => {
+    if (starGroupStore.starFightModalOpen && starGroupStore.activeFightStarId) {
+      if (!ids.includes(starGroupStore.activeFightStarId)) {
+        starGroupStore.closeStarFightModal()
+      }
+    }
+  },
+)
 
+// ── Methoden ──────────────────────────────────────────────────────────────
 function handleClose() {
   starGroupStore.closeStarFightModal()
 }
@@ -237,7 +287,7 @@ function handleShake(ms: number) {
 function emberStyle(i: number): Record<string, string> {
   const duration = 1.8 + (i % 6) * 0.7
   const delay = (i % 11) * -0.35
-  const left = (i * 5.56) % 100
+  const left = (i * 4.55) % 100
   const size = 1.5 + (i % 3)
   return {
     left: `${left}%`,
@@ -248,18 +298,6 @@ function emberStyle(i: number): Record<string, string> {
     opacity: `${0.4 + (i % 4) * 0.15}`,
   }
 }
-
-// Close modal if the active star disappears (e.g. timer expired externally)
-watch(
-  () => starGroupStore.activeStars.map((s) => s.id),
-  (ids) => {
-    if (starGroupStore.starFightModalOpen && starGroupStore.activeFightStarId) {
-      if (!ids.includes(starGroupStore.activeFightStarId)) {
-        starGroupStore.closeStarFightModal()
-      }
-    }
-  },
-)
 </script>
 
 <style scoped>
@@ -271,7 +309,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at center, rgba(20, 4, 0, 0.92) 0%, rgba(0, 0, 0, 0.97) 100%);
+  background: radial-gradient(ellipse at center, rgba(18, 4, 0, 0.94) 0%, rgba(0, 0, 0, 0.98) 100%);
   pointer-events: auto;
 }
 
@@ -280,10 +318,23 @@ watch(
 }
 
 @keyframes sf-shake {
-  10%, 90% { transform: translate(-2px, 0); }
-  20%, 80% { transform: translate(3px, 1px); }
-  30%, 50%, 70% { transform: translate(-3px, -1px); }
-  40%, 60% { transform: translate(3px, 1px); }
+  10%,
+  90% {
+    transform: translate(-2px, 0);
+  }
+  20%,
+  80% {
+    transform: translate(3px, 1px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate(-3px, -1px);
+  }
+  40%,
+  60% {
+    transform: translate(3px, 1px);
+  }
 }
 
 /* ── Embers ───────────────────────────────────────────────────────────────── */
@@ -308,242 +359,174 @@ watch(
 }
 
 @keyframes sf-ember-rise {
-  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.9; }
-  50%  { transform: translateY(-40vh) translateX(12px) scale(0.8); opacity: 0.6; }
-  100% { transform: translateY(-90vh) translateX(-8px) scale(0.3); opacity: 0; }
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-40vh) translateX(12px) scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-90vh) translateX(-8px) scale(0.3);
+    opacity: 0;
+  }
 }
 
-/* ── Modal Card ───────────────────────────────────────────────────────────── */
+/* ── Modal ────────────────────────────────────────────────────────────────── */
 .sf-modal {
   position: relative;
   pointer-events: auto;
-  width: clamp(360px, 44vw, 580px);
+  width: clamp(520px, 72vw, 960px);
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  overflow: hidden;
-  background: linear-gradient(180deg, #0e0800 0%, #140c04 40%, #0a0600 100%);
-  border: 2px solid #6b3a10;
-  border-radius: 5px;
+  background: linear-gradient(160deg, #100900 0%, #0a0600 60%, #070400 100%);
+  border: 1px solid rgba(120, 60, 10, 0.45);
+  border-radius: 8px;
   box-shadow:
-    inset 0 0 0 1px #3a1e06,
-    inset 0 0 40px rgba(0, 0, 0, 0.8),
-    0 0 30px rgba(200, 80, 0, 0.25),
-    0 0 70px rgba(150, 40, 0, 0.12),
-    0 20px 60px rgba(0, 0, 0, 0.9);
+    0 0 40px rgba(200, 80, 0, 0.18),
+    0 0 90px rgba(140, 40, 0, 0.1),
+    0 24px 70px rgba(0, 0, 0, 0.95);
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
 
 .sf-modal--galaxy {
-  border-color: #7a1888;
+  border-color: rgba(120, 20, 160, 0.45);
   box-shadow:
-    inset 0 0 0 1px #3a0848,
-    inset 0 0 40px rgba(80, 0, 100, 0.4),
-    0 0 40px rgba(180, 40, 220, 0.3),
-    0 0 80px rgba(120, 20, 160, 0.15),
-    0 20px 60px rgba(0, 0, 0, 0.9);
+    0 0 50px rgba(160, 40, 220, 0.22),
+    0 0 100px rgba(100, 10, 140, 0.12),
+    0 24px 70px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Corners ──────────────────────────────────────────────────────────────── */
-.corner {
+/* ── Modal Planet Background ──────────────────────────────────────────────── */
+.sf-modal-planet-bg {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  z-index: 10;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.07;
   pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 8px;
 }
-.corner--tl { top: 0; left: 0; border-top: 2px solid #c8922a; border-left: 2px solid #c8922a; }
-.corner--tr { top: 0; right: 0; border-top: 2px solid #c8922a; border-right: 2px solid #c8922a; }
-.corner--bl { bottom: 0; left: 0; border-bottom: 2px solid #c8922a; border-left: 2px solid #c8922a; }
-.corner--br { bottom: 0; right: 0; border-bottom: 2px solid #c8922a; border-right: 2px solid #c8922a; }
-.sf-modal--galaxy .corner { border-color: #cc44ff; }
+
+.sf-modal-planet-bg--galaxy {
+  opacity: 0.13;
+  animation: modal-planet-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes modal-planet-glow {
+  from {
+    filter: drop-shadow(0 0 20px rgba(140, 40, 200, 0.3));
+  }
+  to {
+    filter: drop-shadow(0 0 50px rgba(200, 80, 255, 0.6));
+  }
+}
+
+/* Alle Modal-Kinder über dem Planet-Hintergrund ─────────────────────────── */
+.sf-header,
+.sf-main,
+.sf-curse-overlay {
+  position: relative;
+  z-index: 1;
+}
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .sf-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.55rem 1rem;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 8, 0, 0.88);
+  border-bottom: 1px solid rgba(90, 45, 10, 0.5);
   gap: 0.5rem;
 }
 
 .sf-header--galaxy {
-  background: linear-gradient(180deg, rgba(40, 0, 60, 0.95) 0%, rgba(10, 0, 20, 0.5) 100%);
-  border-bottom-color: #4a0860;
+  background: rgba(20, 0, 35, 0.88);
+  border-bottom-color: rgba(80, 10, 110, 0.6);
 }
 
 .sf-star-type {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
   text-transform: uppercase;
   flex: 1;
 }
 
-.sf-progress {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #c8922a;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
 .sf-close {
   background: none;
-  border: 1px solid #5c3310;
-  color: #e8c040;
+  border: 1px solid rgba(90, 45, 10, 0.6);
+  color: #c8a040;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   line-height: 1;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 3px;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 .sf-close:hover {
-  background: rgba(200, 80, 0, 0.2);
+  background: rgba(200, 80, 0, 0.15);
   border-color: #c8922a;
+  color: #e8c040;
 }
 
-/* ── Wave List ────────────────────────────────────────────────────────────── */
-.sf-waves {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px 10px;
-  background: rgba(10, 6, 0, 0.6);
-  border-bottom: 1px solid #3a1e06;
+/* ── Haupt-Layout ─────────────────────────────────────────────────────────── */
+.sf-main {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 0;
+  align-items: start;
+  padding: 0.6rem 0.8rem 0.8rem;
+  min-height: 0;
 }
 
-.sf-wave {
+.sf-side {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px 3px 6px;
-  border-radius: 3px;
-  border: 1px solid #3a1e06;
-  background: #1a1008;
-  transition: border-color 0.2s, opacity 0.2s;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 0.4rem;
   min-width: 0;
 }
 
-.sf-wave--active {
-  border-color: #e8c040;
-  background: #241808;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.25);
-}
-
-.sf-wave--done {
-  opacity: 0.45;
-  border-color: #2e5218;
-  background: #0e1a08;
-}
-
-.sf-wave--pending {
-  opacity: 0.55;
-}
-
-.sf-wave-num {
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: #7a6030;
-  min-width: 10px;
-  text-align: center;
-}
-
-.sf-wave--active .sf-wave-num {
-  color: #e8c040;
-}
-
-.sf-wave-status {
-  font-size: 0.7rem;
-  width: 14px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.sf-wave--done .sf-wave-status {
-  color: #52b830;
-}
-
-.sf-wave--active .sf-wave-status {
-  color: #e8c040;
-  animation: sf-wave-blink 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes sf-wave-blink {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
-}
-
-.sf-wave-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #b09060;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 90px;
-}
-
-.sf-wave--active .sf-wave-label {
-  color: #e8c040;
-}
-
-.sf-wave--done .sf-wave-label {
-  color: #52b830;
-  text-decoration: line-through;
-}
-
-/* ── Boss Name Banner ─────────────────────────────────────────────────────── */
-.sf-boss-banner {
-  text-align: center;
-  padding: 0.55rem 1.2rem 0.4rem;
-  background: linear-gradient(180deg, rgba(60, 20, 0, 0.9) 0%, rgba(20, 6, 0, 0.5) 100%);
-  border-bottom: 1px solid #4a2508;
-}
-
-.sf-boss-banner--galaxy {
-  background: linear-gradient(180deg, rgba(40, 0, 60, 0.95) 0%, rgba(10, 0, 20, 0.5) 100%);
-  border-bottom-color: #4a0860;
+.sf-center {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
 }
 
 .sf-galaxy-badge {
-  font-size: 0.62rem;
+  text-align: center;
+  font-size: 0.6rem;
   font-weight: 900;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  letter-spacing: 0.22em;
   color: #cc44ff;
+  text-shadow: 0 0 10px rgba(190, 60, 255, 0.6);
   opacity: 0.85;
-  margin-bottom: 0.15rem;
-}
-
-.sf-boss-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #e8c040;
-  text-shadow: 0 0 16px rgba(232, 192, 64, 0.5), 0 1px 3px rgba(0, 0, 0, 0.9);
-  margin: 0;
+  padding-bottom: 0.15rem;
   text-transform: uppercase;
-}
-
-.sf-boss-name--galaxy {
-  color: #dd99ff;
-  text-shadow: 0 0 16px rgba(200, 100, 255, 0.6), 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── HP Bar ───────────────────────────────────────────────────────────────── */
 .sf-hp-section {
-  padding: 0.5rem 0.9rem 0.6rem;
-  background: rgba(8, 4, 0, 0.5);
-  border-top: 1px solid #3a1e06;
+  padding: 0.35rem 0.6rem 0.4rem;
+  background: rgba(6, 3, 0, 0.72);
+  border-radius: 5px;
+  border: 1px solid rgba(50, 25, 5, 0.5);
 }
 
 .sf-hp-header {
@@ -554,65 +537,64 @@ watch(
 }
 
 .sf-stat-label {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: #cc6050;
+  color: #cc5040;
   text-transform: uppercase;
 }
 
 .sf-hp-numbers {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  color: #c8a060;
+  color: #b09050;
 }
 
 .sf-hp-sep {
-  opacity: 0.45;
+  opacity: 0.4;
   margin: 0 2px;
 }
 
 .sf-hp-track {
   position: relative;
-  height: 14px;
+  height: 12px;
   border-radius: 3px;
-  background: #0e0a04;
-  border: 1px solid #3a1e06;
+  background: rgba(8, 6, 2, 0.7);
+  border: 1px solid rgba(50, 25, 5, 0.6);
   overflow: hidden;
 }
 
 .sf-hp-track--critical {
-  border-color: #6b1010;
-  box-shadow: 0 0 8px rgba(180, 20, 20, 0.4);
+  border-color: rgba(140, 20, 20, 0.7);
   animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
 }
-
 .sf-hp-track--galaxy {
-  border-color: #5a1268;
+  border-color: rgba(90, 18, 104, 0.7);
 }
 
 @keyframes sf-hp-crit-pulse {
-  from { box-shadow: 0 0 6px rgba(180, 20, 20, 0.3); }
-  to   { box-shadow: 0 0 14px rgba(220, 40, 40, 0.7); }
+  from {
+    box-shadow: 0 0 6px rgba(180, 20, 20, 0.3);
+  }
+  to {
+    box-shadow: 0 0 16px rgba(220, 40, 40, 0.65);
+  }
 }
 
 .sf-hp-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(to right, #2e7a1a, #52b830);
+  background: linear-gradient(to right, #2a7018, #50b430);
   transition: width 0.25s ease-out;
 }
-
 .sf-hp-fill--low {
-  background: linear-gradient(to right, #8a5010, #c87820);
+  background: linear-gradient(to right, #7a4808, #c07018);
 }
-
 .sf-hp-fill--critical {
-  background: linear-gradient(to right, #6b0808, #cc2020);
+  background: linear-gradient(to right, #620606, #c01818);
 }
-
 .sf-hp-fill--galaxy {
-  background: linear-gradient(to right, #5a0880, #aa20cc);
+  background: linear-gradient(to right, #520870, #a01acc);
 }
 
 .sf-hp-segments {
@@ -620,13 +602,156 @@ watch(
   inset: 0;
   pointer-events: none;
 }
-
 .sf-hp-seg {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* ── Curse Overlay ────────────────────────────────────────────────────────── */
+.sf-curse-overlay {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(40, 0, 65, 0.92) 20%,
+    rgba(55, 0, 85, 0.96) 50%,
+    rgba(40, 0, 65, 0.92) 80%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(140, 30, 200, 0.45);
+  border-bottom: 1px solid rgba(140, 30, 200, 0.45);
+  animation: sf-curse-glow 1.6s ease-in-out infinite alternate;
+}
+
+.sf-curse-overlay--galaxy {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(60, 0, 90, 0.95) 20%,
+    rgba(80, 0, 120, 0.98) 50%,
+    rgba(60, 0, 90, 0.95) 80%,
+    transparent 100%
+  );
+}
+
+.sf-curse-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 520px;
+}
+
+.sf-curse-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 12px rgba(200, 60, 255, 0.8));
+  animation: sf-curse-icon-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes sf-curse-icon-pulse {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+.sf-curse-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sf-curse-name {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #e060ff;
+  text-shadow:
+    0 0 12px rgba(210, 70, 255, 0.8),
+    0 0 30px rgba(180, 40, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.sf-curse-effect {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #c050e8;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.sf-curse-timer {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+.sf-curse-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.sf-curse-ring-bg {
+  fill: none;
+  stroke: rgba(100, 20, 140, 0.4);
+  stroke-width: 3;
+}
+.sf-curse-ring-fill {
+  fill: none;
+  stroke: #cc44ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 94.2;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.25s linear;
+  filter: drop-shadow(0 0 4px rgba(200, 60, 255, 0.8));
+}
+
+.sf-curse-secs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #dd88ff;
+  letter-spacing: 0.02em;
+}
+
+@keyframes sf-curse-glow {
+  from {
+    box-shadow: inset 0 0 14px rgba(140, 20, 255, 0.12);
+  }
+  to {
+    box-shadow: inset 0 0 30px rgba(190, 60, 255, 0.28);
+  }
+}
+
+.curse-fade-enter-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.curse-fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.curse-fade-enter-from,
+.curse-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* ── Scanlines ────────────────────────────────────────────────────────────── */
@@ -638,74 +763,22 @@ watch(
     to bottom,
     transparent,
     transparent 3px,
-    rgba(0, 0, 0, 0.06) 3px,
-    rgba(0, 0, 0, 0.06) 4px
+    rgba(0, 0, 0, 0.05) 3px,
+    rgba(0, 0, 0, 0.05) 4px
   );
   z-index: 5;
 }
 
-/* ── Curse Banner ─────────────────────────────────────────────────────────── */
-.sf-curse-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 5px 14px;
-  background: rgba(30, 0, 50, 0.88);
-  border-bottom: 1px solid #7a20b0;
-  animation: sf-curse-pulse 1.4s ease-in-out infinite alternate;
-}
-
-.sf-curse-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.sf-curse-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sf-curse-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #d060ff;
-  text-shadow: 0 0 8px rgba(200, 60, 255, 0.7);
-  text-transform: uppercase;
-}
-
-.sf-curse-effect {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #b040e0;
-  letter-spacing: 0.04em;
-}
-
-.sf-curse-dur {
-  font-size: 0.62rem;
-  color: #a030cc;
-  opacity: 0.8;
-  letter-spacing: 0.06em;
-}
-
-@keyframes sf-curse-pulse {
-  from {
-    box-shadow: inset 0 0 10px rgba(150, 20, 255, 0.15);
-  }
-  to {
-    box-shadow: inset 0 0 22px rgba(190, 60, 255, 0.35);
-  }
-}
-
-/* ── Transition ───────────────────────────────────────────────────────────── */
+/* ── Entrance Transition ──────────────────────────────────────────────────── */
 .sf-entrance-enter-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 .sf-entrance-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 .sf-entrance-enter-from,
 .sf-entrance-leave-to {

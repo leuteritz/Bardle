@@ -1,14 +1,14 @@
 <template>
   <div class="reward-preview" :class="{ 'reward-preview--galaxy': isGalaxyBoss }">
-    <!-- 1. Header -->
+    <!-- Header -->
     <div class="reward-header">
       <span class="reward-header-line" />
-      <span class="reward-header-text">✦ Besiege den Champion und erhalte ✦</span>
+      <span class="reward-header-text">Belohnungen</span>
       <span class="reward-header-line" />
     </div>
 
-    <!-- 2. Champion ZUERST (oben) -->
-    <div v-if="homePlanetChampion" class="champion-row">
+    <!-- Champion -->
+    <div v-if="homePlanetChampion" class="champion-block">
       <img
         v-if="homePlanetChampionImage"
         :src="homePlanetChampionImage"
@@ -17,9 +17,10 @@
         @error="($event.target as HTMLImageElement).style.display = 'none'"
       />
       <span class="champion-name">{{ homePlanetChampion }}</span>
+      <span class="champion-badge">✦ Champion</span>
     </div>
 
-    <!-- 3. Slots DANACH (unten) -->
+    <!-- Slots -->
     <div class="reward-slots">
       <div
         v-for="(slot, i) in orderedRewardSlots"
@@ -35,14 +36,19 @@
             v-if="slot.type === 'material' && slotMaterial(slot)"
             :src="slotMaterial(slot)!.image"
             :alt="slotMaterial(slot)!.name"
-            class="slot-mat-img"
+            class="slot-img"
           />
-          <img v-else src="/img/BardAbilities/BardChime.png" alt="Chimes" class="slot-chimes-img" />
+          <img
+            v-else
+            src="/img/BardAbilities/BardChime.png"
+            alt="Chimes"
+            class="slot-img slot-img--chimes"
+          />
         </div>
         <div class="slot-body">
-          <span class="slot-type-label">
-            {{ slot.type === 'material' ? 'Material' : 'Chimes' }}
-          </span>
+          <span class="slot-type-label">{{
+            slot.type === 'material' ? 'Material' : 'Chimes'
+          }}</span>
           <span
             class="slot-name"
             :class="
@@ -83,161 +89,165 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
 
 <style scoped>
 .reward-preview {
-  border-bottom: 1px solid rgba(100, 60, 10, 0.5);
-  padding: 0.75rem 0.9rem 0.75rem;
-  background: rgba(0, 0, 0, 0.35);
-  animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  padding: 0.6rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-.reward-preview--galaxy {
-  border-bottom-color: rgba(120, 40, 160, 0.5);
+  gap: 0.55rem;
+  animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
 @keyframes rewardReveal {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateX(-8px);
   }
-  100% {
+  to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────────────────────────── */
 .reward-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .reward-header-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.5));
+  background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.35));
 }
 .reward-header-line:last-child {
-  background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.5));
+  background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.35));
 }
 
 .reward-header-text {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--rpg-gold, #c8922a);
+  letter-spacing: 0.14em;
+  color: rgba(200, 146, 42, 0.7);
   white-space: nowrap;
 }
 
-/* ── Champion (oben, mittig, groß) ───────────────────────────────────────── */
-.champion-row {
+/* ── Champion Block ──────────────────────────────────────────────────────── */
+.champion-block {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.6rem 0.9rem 0.7rem;
-  background: rgba(30, 60, 160, 0.09);
-  border: 1px solid rgba(60, 100, 200, 0.22);
-  border-radius: 6px;
+  gap: 0.3rem;
+  padding: 0.55rem 0.4rem 0.5rem;
+  background: rgba(20, 40, 100, 0.12);
+  border-radius: 5px;
+  border: 1px solid rgba(60, 100, 200, 0.2);
 }
 
 .champion-portrait {
-  height: 88px;
-  width: auto;
-  object-fit: contain;
-  border-radius: 5px;
-  flex-shrink: 0;
-  box-shadow: 0 0 16px rgba(74, 144, 217, 0.25);
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 4px;
+  box-shadow:
+    0 0 14px rgba(74, 144, 217, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .champion-name {
-  font-size: 1.9rem;
-  font-weight: 900;
-  color: var(--rpg-blue, #4a90d9);
-  letter-spacing: 0.05em;
-  text-shadow: 0 0 18px rgba(74, 144, 217, 0.6);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #4a90d9;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(74, 144, 217, 0.55);
+  text-align: center;
   line-height: 1;
 }
 
-/* ── Slots (unten, nebeneinander) ────────────────────────────────────────── */
+.champion-badge {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(74, 144, 217, 0.55);
+  text-transform: uppercase;
+}
+
+/* ── Slots ───────────────────────────────────────────────────────────────── */
 .reward-slots {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .reward-slot {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.65rem;
-  background: rgba(200, 146, 42, 0.05);
-  border: 1px solid rgba(120, 78, 32, 0.55);
+  gap: 0.45rem;
+  padding: 0.4rem 0.5rem;
+  background: rgba(200, 146, 42, 0.04);
+  border: 1px solid rgba(100, 60, 10, 0.35);
   border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(200, 146, 42, 0.06);
+  transition: border-color 0.2s;
 }
 
 .reward-slot--material {
-  background: rgba(120, 40, 180, 0.07);
-  border-color: rgba(140, 60, 200, 0.45);
-  box-shadow: inset 0 1px 0 rgba(160, 80, 220, 0.08);
+  background: rgba(120, 40, 180, 0.06);
+  border-color: rgba(130, 50, 190, 0.35);
 }
 
 .reward-slot--galaxy.reward-slot--material {
-  border-color: rgba(180, 60, 255, 0.5);
+  border-color: rgba(170, 50, 240, 0.4);
 }
 
 .slot-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #141410;
-  border: 1px solid rgba(120, 78, 32, 0.6);
-  border-radius: 4px;
+  background: rgba(8, 5, 0, 0.7);
+  border-radius: 3px;
+  border: 1px solid rgba(80, 50, 10, 0.4);
 }
 
 .reward-slot--material .slot-icon-wrap {
-  border-color: rgba(140, 60, 200, 0.5);
+  border-color: rgba(120, 50, 180, 0.4);
 }
 
-.slot-mat-img {
-  width: 30px;
-  height: 30px;
+.slot-img {
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
-.slot-chimes-img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
+.slot-img--chimes {
   filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.7));
 }
 
 .slot-body {
   display: flex;
   flex-direction: column;
-  gap: 0.08rem;
+  gap: 0.05rem;
   flex: 1;
   min-width: 0;
 }
 
 .slot-type-label {
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(200, 180, 140, 0.5);
+  color: rgba(180, 160, 120, 0.45);
 }
 
 .slot-name {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.82rem;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .slot-chimes-val {
@@ -246,24 +256,24 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
 }
 
 .slot-guaranteed {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 900;
   color: #52b830;
   flex-shrink: 0;
-  text-shadow: 0 0 6px rgba(82, 184, 48, 0.6);
+  text-shadow: 0 0 5px rgba(82, 184, 48, 0.5);
 }
 
 /* ── Rarity ──────────────────────────────────────────────────────────────── */
 .rarity--common {
-  color: var(--rpg-rarity-common, #aaaaaa);
+  color: #aaaaaa;
 }
 .rarity--uncommon {
-  color: var(--rpg-rarity-uncommon, #1eff00);
+  color: #1eff00;
 }
 .rarity--rare {
-  color: var(--rpg-rarity-rare, #0070dd);
+  color: #0070dd;
 }
 .rarity--epic {
-  color: var(--rpg-rarity-epic, #a335ee);
+  color: #a335ee;
 }
 </style>

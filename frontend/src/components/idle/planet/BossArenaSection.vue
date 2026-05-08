@@ -20,6 +20,18 @@
       <div class="boss-ground-shadow" />
     </div>
 
+    <!-- ── Boss Name Overlay ─────────────────────────────────────────────── -->
+    <div
+      v-if="props.activeBoss"
+      class="boss-name-overlay"
+      :class="{ 'boss-name-overlay--galaxy': isGalaxyBoss }"
+    >
+      <span v-if="isGalaxyBoss" class="boss-name-galaxy-badge">✦ GALAXIE-BOSS ✦</span>
+      <span class="boss-name-text" :class="{ 'boss-name-text--galaxy': isGalaxyBoss }">
+        {{ props.activeBoss.bossName }}
+      </span>
+    </div>
+
     <!-- Champion Semicircle Arc -->
     <div v-if="teamChampions.length" class="champ-arc">
       <div
@@ -53,23 +65,25 @@
       </div>
     </div>
 
-    <!-- Floating Damage Numbers -->
-    <Teleport to="body">
-      <div class="dmg-overlay" aria-hidden="true">
-        <TransitionGroup name="dmg-float">
-          <span
-            v-for="dmg in damageFloats"
-            :key="dmg.id"
-            class="damage-number"
-            :style="{ left: dmg.x + 'px', top: dmg.y + 'px' }"
-          >
-            -{{ formatNumber(dmg.value) }}
-          </span>
-        </TransitionGroup>
-      </div>
-    </Teleport>
+    <!-- Floating Damage Numbers — nur rendern wenn mounted -->
+    <template v-if="isMountedRef">
+      <Teleport to="body">
+        <div class="dmg-overlay" aria-hidden="true">
+          <TransitionGroup name="dmg-float">
+            <span
+              v-for="dmg in damageFloats"
+              :key="dmg.id"
+              class="damage-number"
+              :style="{ left: dmg.x + 'px', top: dmg.y + 'px' }"
+            >
+              -{{ formatNumber(dmg.value) }}
+            </span>
+          </TransitionGroup>
+        </div>
+      </Teleport>
+    </template>
 
-    <!-- Enrage Timer: komplett ausblenden wenn Champion-Planet (kein Ablauftimer) -->
+    <!-- Enrage Ring -->
     <div
       v-if="showEnrageTimer"
       class="enrage-ring"
@@ -118,16 +132,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{ shake: [ms: number] }>()
 
+// Stores normal importieren — kein require()
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 
-// Prüft ob der aktive Boss zu einem Champion-Stern gehört.
-// Greift sowohl auf isChampionPlanet als auch auf den starGroupStore zurück,
-// damit auch Planeten erfasst werden die nicht direkt als isChampionPlanet markiert sind.
+// Reaktives Flag für Template-Guard bei Teleport
+const isMountedRef = ref(false)
+let isMounted = false
+
+// ── Champion-Stern-Erkennung ──────────────────────────────────────────────
 const isChampionStarPlanet = computed<boolean>(() => {
   if (!props.activeBoss) return false
   if (props.activeBoss.isChampionPlanet) return true
-  // Zusätzlich: prüfe ob die planetId zu einem champion-Stern im starGroupStore gehört
   const planetId = props.activeBoss.planetId
   return starGroupStore.activeStars.some(
     (star) =>
@@ -135,10 +151,7 @@ const isChampionStarPlanet = computed<boolean>(() => {
   )
 })
 
-// Timer nur anzeigen wenn kein Champion-Stern-Planet
 const showEnrageTimer = computed<boolean>(() => !isChampionStarPlanet.value)
-
-// Effektive Werte: bei Champion-Planeten auf 0 fixieren (Fallback-Schutz)
 const effectiveSecondsRemaining = computed<number>(() =>
   isChampionStarPlanet.value ? 0 : props.secondsRemaining,
 )
@@ -184,7 +197,7 @@ function pickRandomBossImage(): string {
 }
 
 function renderPlanet() {
-  if (!planetStageRef.value || !props.activeBoss) return
+  if (!isMounted || !planetStageRef.value || !props.activeBoss) return
   planetStageRef.value.innerHTML = ''
   const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
   svg.setAttribute('width', '280')
@@ -203,6 +216,7 @@ let dmgIdCounter = 0
 const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
 
 function spawnFloat(value: number, x?: number, y?: number) {
+  if (!isMounted) return
   const id = ++dmgIdCounter
   let fx = x ?? window.innerWidth / 2
   let fy = y ?? window.innerHeight / 2
@@ -214,6 +228,7 @@ function spawnFloat(value: number, x?: number, y?: number) {
   damageFloats.push({ id, value, x: fx, y: fy })
   setTimeout(
     () => {
+      if (!isMounted) return
       const idx = damageFloats.findIndex((d) => d.id === id)
       if (idx !== -1) damageFloats.splice(idx, 1)
     },
@@ -222,36 +237,40 @@ function spawnFloat(value: number, x?: number, y?: number) {
 }
 
 function triggerHit(hitMs: number, shakeMs: number) {
+  if (!isMounted) return
   isHit.value = true
   emit('shake', shakeMs)
   setTimeout(() => {
+    if (!isMounted) return
     isHit.value = false
   }, hitMs)
 }
 
 function handleClick(event: MouseEvent) {
-  const boss = props.activeBoss
-  if (!boss || boss.defeated || boss.expired) return
+  if (!isMounted) return
+  if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
   bossStore.dealClickDamage()
-  spawnFloat(boss.clickDamagePerHit, event.clientX, event.clientY)
+  spawnFloat(props.activeBoss.clickDamagePerHit ?? 1, event.clientX, event.clientY)
   triggerHit(160, 320)
 }
 
 function handleChampionHit() {
-  if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
+  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+    return
   bossStore.dealDamage(1)
   triggerHit(140, 280)
   spawnFloat(1)
 }
 
 function handleChampionUlt() {
-  if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
+  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+    return
   bossStore.dealDamage(5)
   triggerHit(280, 520)
   spawnFloat(5)
 }
 
-// ── Champion attack state & timers ───────────────────────────────────────
+// ── Champion attack state & timers ────────────────────────────────────────
 const attackCounts = reactive<number[]>([])
 const ultActives = reactive<boolean[]>([])
 const _hitTimeouts: number[] = []
@@ -262,7 +281,8 @@ const ULT_EVERY = 5
 const ULT_ANIM_MS = 3400
 
 function fireAttack(i: number) {
-  if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
+  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+    return
   attackCounts[i] = (attackCounts[i] ?? 0) + 1
   const count = attackCounts[i]
   if (count % ULT_EVERY === 0) {
@@ -270,6 +290,7 @@ function fireAttack(i: number) {
     handleChampionUlt()
     _ultTimeouts.push(
       window.setTimeout(() => {
+        if (!isMounted) return
         ultActives[i] = false
       }, ULT_ANIM_MS),
     )
@@ -289,6 +310,7 @@ function startAttackCycles() {
     const initialDelay = i * STAGGER_MS + IMPACT_OFFSET_MS
     _hitTimeouts.push(
       window.setTimeout(() => {
+        if (!isMounted) return
         fireAttack(i)
         _hitIntervals.push(window.setInterval(() => fireAttack(i), CYCLE_MS))
       }, initialDelay),
@@ -306,27 +328,41 @@ function stopAttackCycles() {
 }
 
 onMounted(async () => {
+  isMounted = true
+  isMountedRef.value = true
   await discoverBossImages()
+  if (!isMounted) return
   bossImage.value = pickRandomBossImage()
   await nextTick()
+  if (!isMounted) return
   renderPlanet()
   startAttackCycles()
 })
-onUnmounted(() => stopAttackCycles())
+
+onUnmounted(() => {
+  isMounted = false
+  isMountedRef.value = false
+  stopAttackCycles()
+  damageFloats.splice(0, damageFloats.length)
+})
 
 watch(
   () => props.activeBoss?.planetId,
   async (newId) => {
-    if (newId) {
-      bossImage.value = pickRandomBossImage()
-      await nextTick()
-      renderPlanet()
-    }
+    if (!newId || !isMounted) return
+    bossImage.value = pickRandomBossImage()
+    await nextTick()
+    if (!isMounted) return
+    renderPlanet()
   },
 )
+
 watch(
   () => [props.teamChampions.length, props.activeBoss?.planetId] as const,
-  () => startAttackCycles(),
+  () => {
+    if (!isMounted) return
+    startAttackCycles()
+  },
 )
 
 function champArcStyle(i: number, total: number): Record<string, string> {
@@ -363,6 +399,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border-radius: 6px;
   background: radial-gradient(ellipse at 50% 100%, rgba(80, 30, 0, 0.4) 0%, transparent 70%);
 }
 
@@ -398,7 +435,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 100, 0, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(200, 100, 0, 0.4), transparent);
 }
 
 .planet-bg {
@@ -407,12 +444,12 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.22;
+  opacity: 0.14;
   pointer-events: none;
 }
 
 .planet-bg--galaxy {
-  opacity: 0.5;
+  opacity: 0.32;
   animation: planet-glow-pulse 2.5s ease-in-out infinite alternate;
 }
 
@@ -423,6 +460,66 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   to {
     filter: drop-shadow(0 0 28px rgba(200, 80, 255, 0.9));
   }
+}
+
+/* ── Boss Name Overlay ───────────────────────────────────────────────────── */
+.boss-name-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.8rem 1rem 0.55rem;
+  background: linear-gradient(
+    to top,
+    rgba(5, 2, 0, 0.88) 0%,
+    rgba(10, 4, 0, 0.6) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 4;
+  gap: 0.1rem;
+}
+
+.boss-name-overlay--galaxy {
+  background: linear-gradient(
+    to top,
+    rgba(10, 0, 20, 0.92) 0%,
+    rgba(20, 0, 40, 0.55) 50%,
+    transparent 100%
+  );
+}
+
+.boss-name-galaxy-badge {
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: rgba(200, 60, 255, 0.75);
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(180, 40, 255, 0.5);
+}
+
+.boss-name-text {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #e8c040;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 18px rgba(232, 192, 64, 0.6),
+    0 0 40px rgba(200, 130, 20, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.boss-name-text--galaxy {
+  color: #dd99ff;
+  text-shadow:
+    0 0 18px rgba(200, 100, 255, 0.65),
+    0 0 40px rgba(160, 50, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Boss Wrapper ─────────────────────────────────────────────────────────── */
@@ -451,7 +548,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     transform: translateY(-8px);
   }
 }
-
 @keyframes boss-hit {
   0% {
     transform: translateX(0) scale(1);
@@ -470,7 +566,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     filter: brightness(1);
   }
 }
-
 @keyframes boss-idle-critical {
   0%,
   100% {
@@ -491,7 +586,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   pointer-events: none;
   z-index: 0;
 }
-
 .boss-aura--galaxy {
   background: radial-gradient(ellipse at center, rgba(180, 40, 255, 0.2) 0%, transparent 70%);
   animation: aura-pulse-galaxy 1.8s ease-in-out infinite alternate;
@@ -550,7 +644,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     transform 0.1s ease;
   display: block;
 }
-
 .boss-img:hover {
   transform: scale(1.05);
   filter: drop-shadow(0 0 28px rgba(255, 110, 20, 0.7)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
@@ -582,21 +675,19 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  z-index: 5;
 }
-
 .enrage-svg {
   position: absolute;
   inset: 0;
   transform: rotate(-90deg);
   overflow: visible;
 }
-
 .enrage-track {
   fill: none;
   stroke: rgba(255, 255, 255, 0.1);
   stroke-width: 3;
 }
-
 .enrage-arc {
   fill: none;
   stroke: var(--rpg-gold, #c8922a);
@@ -608,13 +699,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     stroke 0.3s;
   filter: drop-shadow(0 0 4px rgba(200, 146, 42, 0.8));
 }
-
 .enrage-arc--urgent {
   stroke: #ff3300;
   filter: drop-shadow(0 0 6px rgba(255, 50, 0, 1));
   animation: arc-flash 0.5s ease-in-out infinite alternate;
 }
-
 @keyframes arc-flash {
   from {
     opacity: 1;
@@ -623,7 +712,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     opacity: 0.4;
   }
 }
-
 .enrage-seconds {
   font-size: 1rem;
   font-weight: 900;
@@ -633,13 +721,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   text-shadow: 0 0 6px rgba(200, 146, 42, 0.8);
   z-index: 1;
 }
-
 .enrage-ring--urgent .enrage-seconds {
   color: #ff3300;
   text-shadow: 0 0 8px rgba(255, 50, 0, 1);
   animation: arc-flash 0.5s ease-in-out infinite alternate;
 }
-
 .enrage-label {
   font-size: 0.48rem;
   font-weight: 700;
@@ -662,13 +748,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   z-index: 3;
   pointer-events: none;
 }
-
 .champ-arc-item {
   position: absolute;
   left: 0;
   top: 0;
 }
-
 .champ-striker {
   display: flex;
   flex-direction: column;
@@ -677,7 +761,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   animation: champ-strike 2.6s ease-in-out infinite;
   animation-delay: var(--strike-delay, 0s);
 }
-
 .champ-portrait {
   position: relative;
   width: 72px;
@@ -690,7 +773,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     inset 0 0 0 1px rgba(255, 200, 80, 0.1);
   overflow: hidden;
 }
-
 .champ-avatar {
   position: absolute;
   inset: 0;
@@ -701,7 +783,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   object-position: center top;
   image-rendering: pixelated;
 }
-
 .champ-dmg {
   position: absolute;
   bottom: 0;
@@ -719,15 +800,12 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   pointer-events: none;
   line-height: 1.2;
 }
-
-/* ── Charge Pips ─────────────────────────────────────────────────────────── */
 .champ-charge {
   display: flex;
   gap: 3px;
   justify-content: center;
   margin-bottom: 3px;
 }
-
 .champ-pip {
   width: 10px;
   height: 4px;
@@ -738,17 +816,14 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     background 0.18s,
     box-shadow 0.18s;
 }
-
 .champ-pip--active {
   background: linear-gradient(to right, #c8922a, #e8c040);
   border-color: rgba(232, 192, 64, 0.7);
   box-shadow: 0 0 4px rgba(232, 192, 64, 0.6);
 }
-
 .champ-pip--ready {
   animation: pip-pulse 0.45s ease-in-out infinite alternate;
 }
-
 @keyframes pip-pulse {
   from {
     box-shadow: 0 0 4px rgba(232, 192, 64, 0.7);
@@ -758,8 +833,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     filter: brightness(1.4);
   }
 }
-
-/* ── Portrait ult state ───────────────────────────────────────────────────── */
 .champ-portrait--ulting {
   border-color: #e8c040;
   box-shadow:
@@ -767,8 +840,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     0 0 32px rgba(255, 210, 60, 0.5),
     inset 0 0 0 1px rgba(255, 220, 80, 0.35);
 }
-
-/* ── Ultimate Strike Animation ───────────────────────────────────────────── */
 .champ-striker--ult {
   animation: champ-ult 3.4s ease-in-out forwards !important;
 }
@@ -847,7 +918,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   overflow: visible;
   z-index: 9999;
 }
-
 .damage-number {
   position: fixed;
   font-size: 1.4rem;
@@ -866,7 +936,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   transform: translate(-50%, -50%);
   letter-spacing: 0.04em;
 }
-
 .dmg-float-enter-active {
   animation: dmgUp 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
 }
