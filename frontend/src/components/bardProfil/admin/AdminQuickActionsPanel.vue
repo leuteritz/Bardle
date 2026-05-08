@@ -9,6 +9,7 @@ import { MATERIALS } from '@/config/materials'
 import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
@@ -18,6 +19,7 @@ const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
+const roleBehaviorStore = useRoleBehaviorStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -120,6 +122,15 @@ function teleportNearPlanet() {
   galaxyStore.championTravelStartTime = Date.now() - (galaxyStore.championTravelDurationMs - 5000)
 }
 
+function resetAllCooldowns() {
+  roleBehaviorStore.supportHealCooldownMs = 0
+  roleBehaviorStore.supportPlanetHealCooldownMs = 0
+  roleBehaviorStore.tankShieldBrokenMs = 0
+  roleBehaviorStore.midCurseCooldownMs = 0
+  roleBehaviorStore.adcBurstCooldownMs = 0
+  roleBehaviorStore.jungleBuffCooldownMs = 0
+}
+
 </script>
 
 <template>
@@ -199,6 +210,12 @@ function teleportNearPlanet() {
         @click="teleportNearPlanet"
       >
         <span>⚡</span> Skip to -5s
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--cooldown flex items-center gap-1.5 px-3 py-1.5"
+        @click="resetAllCooldowns"
+      >
+        <span>⏱️</span> Reset Cooldowns
       </button>
     </div>
   </div>
@@ -343,5 +360,14 @@ function teleportNearPlanet() {
 .admin-spawn-btn--travel:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+.admin-spawn-btn--cooldown {
+  color: #60c8e8;
+  border-color: #1a4a5a;
+}
+.admin-spawn-btn--cooldown:hover {
+  background: #0d2a35;
+  border-color: #60c8e8;
+  color: #a0e8f8;
 }
 </style>
