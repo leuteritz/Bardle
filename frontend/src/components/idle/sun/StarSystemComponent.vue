@@ -279,7 +279,7 @@
           >
             <span class="star-planet-count__current">{{ remainingPlanetCount(star) }}</span>
             <span class="star-planet-count__sep">/</span>
-            <span class="star-planet-count__total">{{ star.planets.length }}</span>
+            <span class="star-planet-count__total">{{ star.totalPlanets }}</span>
           </div>
         </Transition>
       </template>
