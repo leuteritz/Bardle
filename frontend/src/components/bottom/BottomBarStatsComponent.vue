@@ -205,6 +205,7 @@ const lpValue = computed(() => currentRank.value.lp)
     #5c3210 70%,
     transparent
   );
+  z-index: 9999;
 }
 
 .bbstat-icon {
