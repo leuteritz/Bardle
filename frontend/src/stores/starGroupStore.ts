@@ -76,6 +76,26 @@ export interface StarGroup {
   planetSlots: StarPlanetSlot[]
   spawnedAt?: number
   durationMs?: number
+  starColor: [number, number, number]
+}
+
+const SPECTRAL_STAR_PALETTE: { weight: number; colors: [number, number, number][] }[] = [
+  { weight: 0.30, colors: [[255, 96, 48], [255, 69, 0]] },
+  { weight: 0.30, colors: [[255, 179, 71], [255, 160, 64]] },
+  { weight: 0.20, colors: [[255, 244, 163], [255, 233, 122]] },
+  { weight: 0.12, colors: [[245, 245, 255], [255, 255, 255]] },
+  { weight: 0.08, colors: [[176, 200, 255], [202, 216, 255]] },
+]
+
+function pickStarColor(): [number, number, number] {
+  const rand = Math.random()
+  let cumulative = 0
+  for (const category of SPECTRAL_STAR_PALETTE) {
+    cumulative += category.weight
+    if (rand < cumulative)
+      return category.colors[Math.floor(Math.random() * category.colors.length)]
+  }
+  return SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1].colors[0]
 }
 
 const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -175,6 +195,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
+        starColor: pickStarColor(),
       }
       this.activeStars.push(star)
     },
@@ -195,6 +216,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots: this._buildResourcePlanetSlots(STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE)),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
+        starColor: pickStarColor(),
       }
       this.activeStars.push(star)
 
@@ -285,6 +307,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_CHAMPION,
         planetSlots,
+        starColor: pickStarColor(),
       }
 
       this.activeStars.push(star)
@@ -321,6 +344,7 @@ export const useStarGroupStore = defineStore('starGroup', {
             cleared: false,
           },
         ],
+        starColor: pickStarColor(),
       }
 
       this.activeStars.push(star)

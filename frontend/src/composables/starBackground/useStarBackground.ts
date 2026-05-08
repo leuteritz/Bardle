@@ -1026,14 +1026,27 @@ function drawIonCloud(
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
-const STAR_COLORS: [number, number, number][] = [
-  [255, 255, 255],
-  [235, 240, 255],
-  [255, 248, 235],
-  [220, 225, 255],
-  [255, 240, 250],
-  [245, 245, 255],
+// Spectral star color palette with weighted random selection.
+// Weights: Red 30%, Orange 30%, Yellow 20%, White 12%, Blue-White 8%
+const SPECTRAL_STAR_PALETTE: { weight: number; colors: [number, number, number][] }[] = [
+  { weight: 0.30, colors: [[255, 96, 48], [255, 69, 0]] },
+  { weight: 0.30, colors: [[255, 179, 71], [255, 160, 64]] },
+  { weight: 0.20, colors: [[255, 244, 163], [255, 233, 122]] },
+  { weight: 0.12, colors: [[245, 245, 255], [255, 255, 255]] },
+  { weight: 0.08, colors: [[176, 200, 255], [202, 216, 255]] },
 ]
+
+function pickStarColor(): [number, number, number] {
+  const rand = Math.random()
+  let cumulative = 0
+  for (const category of SPECTRAL_STAR_PALETTE) {
+    cumulative += category.weight
+    if (rand < cumulative) {
+      return category.colors[Math.floor(Math.random() * category.colors.length)]
+    }
+  }
+  return SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1].colors[0]
+}
 
 export function useStarBackground() {
   const starsContainer = ref<HTMLElement>()
@@ -1321,7 +1334,7 @@ export function useStarBackground() {
       for (let j = 0; j < count; j++) {
         const a = Math.random() * Math.PI * 2
         const d = Math.random() * radius
-        const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
+        const [r, g, b] = pickStarColor()
         clusterStars.push({
           dx: Math.cos(a) * d,
           dy: Math.sin(a) * d,
@@ -1351,7 +1364,7 @@ export function useStarBackground() {
     const minDist = maxDist * 0.1
     const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
     const baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-    const [r, g, b] = STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
+    const [r, g, b] = pickStarColor()
     const item: StarItem = {
       id: nextStarId++,
       angle,

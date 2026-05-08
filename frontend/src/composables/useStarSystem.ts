@@ -36,6 +36,7 @@ export interface PlanetRenderEntry {
 export interface StarRenderEntry {
   id: string
   starType: StarType
+  starColor: [number, number, number]
   x: number
   y: number
   scale: number
@@ -50,20 +51,15 @@ export interface StarRenderEntry {
   planets: PlanetRenderEntry[]
 }
 
-function spawnVanishEffect(x: number, y: number, starType: StarType, size: number) {
-  const gradients: Record<string, string> = {
-    champion: 'radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%)',
-    resource: 'radial-gradient(circle, #ffffff 0%, #a8d4ff 35%, #2060c8 75%, #0a1a5c 100%)',
-    galaxy_boss: 'radial-gradient(circle, #ff9060 0%, #c01818 45%, #4a0000 100%)',
-  }
-  const shadows: Record<string, string> = {
-    champion:
-      '0 0 14px rgba(255,200,60,0.9), 0 0 32px rgba(220,140,20,0.6), 0 0 56px rgba(180,100,10,0.3)',
-    resource:
-      '0 0 12px rgba(160,210,255,0.95), 0 0 28px rgba(80,160,255,0.65), 0 0 52px rgba(30,80,200,0.35)',
-    galaxy_boss:
-      '0 0 18px rgba(255,80,30,0.95), 0 0 38px rgba(200,20,20,0.7), 0 0 65px rgba(120,0,0,0.4)',
-  }
+function spawnVanishEffect(x: number, y: number, starColor: [number, number, number], size: number) {
+  const [r, g, b] = starColor
+  const r2 = Math.round(r * 0.55), g2 = Math.round(g * 0.55), b2 = Math.round(b * 0.55)
+  const gradient = `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(0,0,0) 100%)`
+  const shadow = [
+    `0 0 14px rgba(${r},${g},${b},0.9)`,
+    `0 0 32px rgba(${r},${g},${b},0.6)`,
+    `0 0 56px rgba(${r},${g},${b},0.3)`,
+  ].join(', ')
 
   const container = document.createElement('div')
   container.style.cssText = `
@@ -76,8 +72,8 @@ function spawnVanishEffect(x: number, y: number, starType: StarType, size: numbe
     pointer-events: none;
     z-index: 9999;
     overflow: visible;
-    background: ${gradients[starType] ?? gradients.resource};
-    box-shadow: ${shadows[starType] ?? shadows.resource};
+    background: ${gradient};
+    box-shadow: ${shadow};
   `
 
   const shockwave = document.createElement('div')
@@ -336,7 +332,7 @@ export function useStarSystem() {
         if (!vanishFired.has(star.id)) {
           vanishFired.add(star.id)
           const size = star.starType === 'galaxy_boss' ? 82 : star.starType === 'champion' ? 72 : 62
-          spawnVanishEffect(sx, sy, star.starType, size)
+          spawnVanishEffect(sx, sy, star.starColor, size)
         }
         continue
       }
@@ -422,6 +418,7 @@ export function useStarSystem() {
       newRenders.push({
         id: star.id,
         starType: star.starType,
+        starColor: star.starColor,
         x: displayX,
         y: displayY,
         scale: sScale,

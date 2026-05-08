@@ -55,7 +55,7 @@
           :rx="star.orbitRx"
           :ry="star.orbitRy"
           :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-          :stroke="orbitHintColor(star.starType)"
+          :stroke="orbitHintColor(star)"
           :stroke-opacity="star.hintOpacity * 0.65"
           :filter="`url(#orbit-blur-${star.starType})`"
           fill="none"
@@ -121,7 +121,7 @@
           :rx="star.orbitRx"
           :ry="star.orbitRy"
           :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-          :stroke="orbitHintColor(star.starType)"
+          :stroke="orbitHintColor(star)"
           :stroke-opacity="star.hintOpacity * 0.8"
           filter="url(#orbit-blur-star-front)"
           fill="none"
@@ -544,11 +544,9 @@ onUnmounted(() => {
   cancelAnimationFrame(enemyAnimFrame)
 })
 
-function orbitHintColor(starType: string): string {
-  if (starType === 'champion') return ORBIT_TIERS.star[0].color
-  if (starType === 'resource') return ORBIT_TIERS.star[1].color
-  if (starType === 'galaxy_boss') return '#ff5030'
-  return '#ffffff'
+function orbitHintColor(star: StarRenderEntry): string {
+  const [r, g, b] = star.starColor
+  return `rgb(${r},${g},${b})`
 }
 
 function starSize(type: string): number {
@@ -557,46 +555,31 @@ function starSize(type: string): number {
   return 82
 }
 
-function starBoxShadow(type: string, s: number): string {
-  const r = (n: number) => Math.round(s * n)
-
-  if (type === 'champion') {
-    return [
-      `0 0 ${r(0.19)}px rgba(255, 200, 60, 0.9)`,
-      `0 0 ${r(0.44)}px rgba(220, 140, 20, 0.6)`,
-      `0 0 ${r(0.78)}px rgba(180, 100, 10, 0.3)`,
-    ].join(', ')
-  }
-
-  if (type === 'resource') {
-    return [
-      `0 0 ${r(0.19)}px rgba(160, 210, 255, 0.95)`,
-      `0 0 ${r(0.45)}px rgba(80, 160, 255, 0.65)`,
-      `0 0 ${r(0.84)}px rgba(30, 80, 200, 0.35)`,
-    ].join(', ')
-  }
-
-  if (type === 'galaxy_boss') {
-    return [
-      `0 0 ${r(0.22)}px rgba(255, 80, 30, 0.95)`,
-      `0 0 ${r(0.46)}px rgba(200, 20, 20, 0.7)`,
-      `0 0 ${r(0.79)}px rgba(120, 0, 0, 0.4)`,
-    ].join(', ')
-  }
-
-  return ''
+function starBoxShadow(starColor: [number, number, number], s: number): string {
+  const rn = (n: number) => Math.round(s * n)
+  const [r, g, b] = starColor
+  return [
+    `0 0 ${rn(0.19)}px rgba(${r},${g},${b},0.95)`,
+    `0 0 ${rn(0.44)}px rgba(${r},${g},${b},0.65)`,
+    `0 0 ${rn(0.80)}px rgba(${r},${g},${b},0.35)`,
+  ].join(', ')
 }
 
 function starBodyStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   const ringInset = Math.round(s * 0.16)
+  const [r, g, b] = star.starColor
+  const r2 = Math.round(r * 0.55), g2 = Math.round(g * 0.55), b2 = Math.round(b * 0.55)
+  const r3 = Math.round(r * 0.22), g3 = Math.round(g * 0.22), b3 = Math.round(b * 0.22)
 
   return {
     transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
     opacity: String(star.opacity.toFixed(3)),
     width: `${s}px`,
     height: `${s}px`,
-    boxShadow: starBoxShadow(star.starType, s),
+    background: `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(${r3},${g3},${b3}) 100%)`,
+    boxShadow: starBoxShadow(star.starColor, s),
+    '--star-rgb': `${r}, ${g}, ${b}`,
     '--ring-inset': `-${ringInset}px`,
     filter: star.filterStyle || undefined,
     transition: 'filter 0.3s ease',
@@ -735,56 +718,31 @@ function starCountStyle(star: StarRenderEntry) {
   cursor: pointer;
 }
 
-.star-body--champion {
-  background: radial-gradient(circle, #ffe8a0 0%, #d4a020 45%, #7a4808 100%);
-}
-
-.star-body--champion::after {
-  content: '';
-  position: absolute;
-  inset: var(--ring-inset, -11px);
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 200, 60, 0.45);
-  animation: star-ring-pulse 2.8s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.star-body--champion::before {
-  content: '';
-  position: absolute;
-  inset: -28px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 200, 60, 0.2);
-  animation: star-outer-ring-spin 9s linear infinite;
-  pointer-events: none;
-}
-
-.star-body--resource {
-  background: radial-gradient(circle, #ffffff 0%, #a8d4ff 35%, #2060c8 75%, #0a1a5c 100%);
-}
-
+.star-body--champion::after,
 .star-body--resource::after {
   content: '';
   position: absolute;
   inset: var(--ring-inset, -11px);
   border-radius: 50%;
-  border: 1.5px solid rgba(120, 190, 255, 0.45);
+  border: 1.5px solid rgba(var(--star-rgb), 0.45);
   animation: star-ring-pulse 2.8s ease-in-out infinite;
   pointer-events: none;
 }
 
+.star-body--champion::before,
 .star-body--resource::before {
   content: '';
   position: absolute;
   inset: -28px;
   border-radius: 50%;
-  border: 1px dashed rgba(120, 190, 255, 0.2);
-  animation: star-outer-ring-spin 11s linear infinite reverse;
+  border: 1px dashed rgba(var(--star-rgb), 0.2);
+  animation: star-outer-ring-spin 9s linear infinite;
   pointer-events: none;
 }
 
-.star-body--galaxy_boss {
-  background: radial-gradient(circle, #ff9060 0%, #c01818 45%, #4a0000 100%);
+.star-body--resource::before {
+  animation-direction: reverse;
+  animation-duration: 11s;
 }
 
 .star-body--galaxy_boss::after {
@@ -792,7 +750,7 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   inset: var(--ring-inset, -14px);
   border-radius: 50%;
-  border: 2px solid rgba(255, 80, 30, 0.55);
+  border: 2px solid rgba(var(--star-rgb), 0.55);
   animation: star-ring-pulse 2.2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -802,7 +760,7 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   inset: -36px;
   border-radius: 50%;
-  border: 1px dashed rgba(255, 80, 30, 0.22);
+  border: 1px dashed rgba(var(--star-rgb), 0.22);
   animation: star-outer-ring-spin 7s linear infinite;
   pointer-events: none;
 }
