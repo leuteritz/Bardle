@@ -52,8 +52,6 @@ onUnmounted(() => {
 
     <!-- ════════ MITTE (absolut zentriert, überlagert Spalte 2) ════════ -->
     <div class="header-center">
-      <div class="center-wing center-wing--left" aria-hidden="true"></div>
-
       <div class="center-chimes">
         <img
           src="/img/BardAbilities/BardChime.png"
@@ -64,8 +62,6 @@ onUnmounted(() => {
           {{ formatNumber(gameStore.chimes) }}
         </span>
       </div>
-
-      <div class="center-wing center-wing--right" aria-hidden="true"></div>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -129,7 +125,7 @@ onUnmounted(() => {
   position: relative;
   /* ── Grid-Layout: Links | Mitte | Rechts ── */
   display: grid;
-  grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
+  grid-template-columns: 1fr clamp(300px, 30vw, 400px) 1fr;
   align-items: stretch;
 }
 
@@ -185,7 +181,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
-  width: clamp(200px, 20vw, 280px);
+  width: clamp(300px, 30vw, 400px);
 }
 
 body.bard-modal-open .center-chimes {
@@ -219,8 +215,8 @@ body.bard-modal-open .center-chimes {
   border-left: 1px solid rgba(255, 200, 80, 0.24);
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
-  border-radius: 0 0 8px 8px;
-  padding: 6px 20px 6px 14px;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  padding: 0 20px calc(var(--bump-center) + 7px) 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
@@ -228,8 +224,8 @@ body.bard-modal-open .center-chimes {
 }
 
 .header-chime-icon {
-  width: clamp(38px, 4.5vw, 58px);
-  height: clamp(38px, 4.5vw, 58px);
+  width: clamp(56px, 7vw, 84px);
+  height: clamp(56px, 7vw, 84px);
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -273,7 +269,7 @@ body.bard-modal-open .center-chimes {
 }
 
 .chimes-value {
-  font-size: clamp(1.6rem, 2.2vw, 2.6rem);
+  font-size: clamp(3rem, 5vw, 5.5rem);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-chimes);

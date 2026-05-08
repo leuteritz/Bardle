@@ -96,9 +96,13 @@ const lpValue = computed(() => currentRank.value.lp)
         >
           <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
           <span class="bbstat-label ability-label">{{ ab.short }}</span>
-          <!-- Immer im DOM → reserviert Platz, kein Layout-Shift -->
-          <span class="ability-cd-val" aria-hidden="true">
-            {{ ab.hasChampion ? ab.timer || ' ' : ' ' }}
+          <!-- Wrapper reserviert immer den Platz des breitesten Timerwerts -->
+          <span class="ability-cd-wrap">
+            <span class="ability-cd-val" aria-hidden="true">
+              {{ ab.hasChampion ? ab.timer || '' : '' }}
+            </span>
+            <!-- Ghost: unsichtbar, hält den Platz für "59s" (breitester 1-Zahl-Wert) -->
+            <span class="ability-cd-ghost" aria-hidden="true">59s</span>
           </span>
         </div>
       </template>
@@ -159,13 +163,8 @@ const lpValue = computed(() => currentRank.value.lp)
 </template>
 
 <style scoped>
-/* ── Einheitliche Textgröße als Variable ────────────────────────────────
-   Einmal ändern → überall gleich.                                        */
-:root {
-  --stat-val-size: 15px;
-}
-
 .stats-grid {
+  --stat-val-size: 15px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -176,25 +175,23 @@ const lpValue = computed(() => currentRank.value.lp)
 .stats-right {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
-  /* Wichtig: overflow sichtbar lassen, sonst werden Divider abgeschnitten */
   overflow: visible;
 }
 
 .bbstat-item {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  /* KEIN overflow:hidden – das hat den MID→ADC-Divider versteckt */
+  gap: 3px;
+  padding: 0 2px;
 }
 
-/* ── Divider ────────────────────────────────────────────────────────────
-   flex: 0 0 1px → weder wachsen noch schrumpfen, immer exakt 1px breit.  */
 .bbstat-divider {
   flex: 0 0 1px;
+  min-width: 1px;
   width: 1px;
   height: 18px;
   background: linear-gradient(
@@ -205,7 +202,6 @@ const lpValue = computed(() => currentRank.value.lp)
     #5c3210 70%,
     transparent
   );
-  z-index: 9999;
 }
 
 .bbstat-icon {
@@ -242,7 +238,6 @@ const lpValue = computed(() => currentRank.value.lp)
   white-space: nowrap;
 }
 
-/* ── Einheitliche Wert-Größe für ALLE Stats (links + rechts) ────────── */
 .bbstat-val {
   font-size: var(--stat-val-size);
   color: #d4a838;
@@ -314,25 +309,53 @@ const lpValue = computed(() => currentRank.value.lp)
     text-shadow 0.2s;
 }
 
-/* Timer: gleiche Größe wie alle anderen Werte, per --stat-val-size */
+/* ── Timer-Wrapper: position:relative, Breite vom Ghost bestimmt ────────
+   Ghost und Val liegen übereinander (absolute/relative Stapelung).
+   Ghost ist immer sichtbar (unsichtbar per color:transparent) und hält
+   die Breite des Wrappers konstant auf "59s"-Breite.
+   Val liegt darüber und zeigt den echten Wert – oder ist visibility:hidden. */
+.ability-cd-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Echter Timer-Wert: liegt über dem Ghost */
 .ability-cd-val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--stat-val-size);
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  flex-shrink: 0;
   color: #d4a838;
   text-shadow:
     0 0 4px rgba(220, 170, 50, 0.8),
     0 0 10px rgba(200, 140, 30, 0.5);
-  /* Ready-State: unsichtbar aber Platz reserviert */
-  opacity: 0;
+  visibility: hidden;
   transition:
     color 0.2s,
-    text-shadow 0.2s,
-    opacity 0.2s;
+    text-shadow 0.2s;
+}
+
+/* Ghost: transparent, gleiche Schrift → bestimmt die Breite des Wrappers */
+.ability-cd-ghost {
+  font-size: var(--stat-val-size);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ── Cooldown ───────────────────────────────────────────────────────── */
@@ -345,7 +368,7 @@ const lpValue = computed(() => currentRank.value.lp)
   text-shadow: none;
 }
 .ability-slot--cooldown .ability-cd-val {
-  opacity: 1;
+  visibility: visible;
   color: #7a5810;
   text-shadow: none;
 }
@@ -362,7 +385,7 @@ const lpValue = computed(() => currentRank.value.lp)
   animation: ability-val-flash 0.45s ease-out;
 }
 .ability-slot--flash .ability-cd-val {
-  opacity: 0;
+  visibility: hidden;
 }
 
 /* ── Inactive ───────────────────────────────────────────────────────── */
