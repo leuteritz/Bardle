@@ -70,18 +70,21 @@ const lpValue = computed(() => currentRank.value.lp)
 
 <template>
   <div class="stats-grid">
-    <!-- Left: C/Click · C/Sec · DMG/Click · DPS · Rank · LP · W/L -->
     <div class="bbstats">
       <div class="bbstat-item">
         <span class="bbstat-icon">♪</span>
         <span class="bbstat-label">C/CLICK</span>
-        <span class="bbstat-val bbstat-val--gold">{{ formatNumber(gameStore.chimesPerClick) }}</span>
+        <span class="bbstat-val bbstat-val--gold">{{
+          formatNumber(gameStore.chimesPerClick)
+        }}</span>
       </div>
       <div class="bbstat-divider" />
       <div class="bbstat-item">
         <span class="bbstat-icon bbstat-icon--green">⚡</span>
         <span class="bbstat-label">C/SEC</span>
-        <span class="bbstat-val bbstat-val--green">{{ formatNumber(gameStore.chimesPerSecond) }}</span>
+        <span class="bbstat-val bbstat-val--green">{{
+          formatNumber(gameStore.chimesPerSecond)
+        }}</span>
       </div>
       <div class="bbstat-divider" />
       <div class="bbstat-item">
@@ -119,8 +122,12 @@ const lpValue = computed(() => currentRank.value.lp)
 
     <div class="title-center">BARDLE</div>
 
-    <!-- Right: TOP · JGL · MID · ADC · SUP · MEEPS · UNIV -->
     <div class="stats-right">
+      <!--
+        Divider-Fix: Der v-for-Loop erzeugt abwechselnd Divider + Slot als
+        direkte Flex-Kinder. overflow:hidden auf .bbstat-item wurde entfernt,
+        damit der Divider nicht überdeckt wird.
+      -->
       <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
         <div v-if="idx > 0" class="bbstat-divider" />
         <div
@@ -133,8 +140,11 @@ const lpValue = computed(() => currentRank.value.lp)
           :style="{ '--role-color': ab.color }"
         >
           <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
-          <span class="bbstat-label">{{ ab.short }}</span>
-          <span class="bbstat-val ability-cd-val">{{ ab.hasChampion ? ab.timer : '—' }}</span>
+          <span class="bbstat-label ability-label">{{ ab.short }}</span>
+          <!-- Immer im DOM → reserviert Platz, kein Layout-Shift -->
+          <span class="ability-cd-val" aria-hidden="true">
+            {{ ab.hasChampion ? ab.timer || '\u00A0' : '\u00A0' }}
+          </span>
         </div>
       </template>
       <div class="bbstat-divider" />
@@ -154,6 +164,12 @@ const lpValue = computed(() => currentRank.value.lp)
 </template>
 
 <style scoped>
+/* ── Einheitliche Textgröße als Variable ────────────────────────────────
+   Einmal ändern → überall gleich.                                        */
+:root {
+  --stat-val-size: 15px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -161,28 +177,29 @@ const lpValue = computed(() => currentRank.value.lp)
   width: 100%;
 }
 
-.bbstats {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
+.bbstats,
 .stats-right {
   display: flex;
   align-items: center;
   width: 100%;
+  /* Wichtig: overflow sichtbar lassen, sonst werden Divider abgeschnitten */
+  overflow: visible;
 }
 
 .bbstat-item {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  flex: 1;
-  min-width: 0;
+  gap: 4px;
+  /* KEIN overflow:hidden – das hat den MID→ADC-Divider versteckt */
 }
 
+/* ── Divider ────────────────────────────────────────────────────────────
+   flex: 0 0 1px → weder wachsen noch schrumpfen, immer exakt 1px breit.  */
 .bbstat-divider {
+  flex: 0 0 1px;
   width: 1px;
   height: 18px;
   background: linear-gradient(
@@ -193,13 +210,13 @@ const lpValue = computed(() => currentRank.value.lp)
     #5c3210 70%,
     transparent
   );
-  flex-shrink: 0;
 }
 
 .bbstat-icon {
-  font-size: 15px;
+  font-size: 14px;
   color: #9a6830;
   line-height: 1;
+  flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
 }
 .bbstat-icon--green {
@@ -220,21 +237,24 @@ const lpValue = computed(() => currentRank.value.lp)
 }
 
 .bbstat-label {
-  font-size: 10px;
+  font-size: 12px;
   color: #6a4418;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   line-height: 1;
-  margin-right: 1px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
+/* ── Einheitliche Wert-Größe für ALLE Stats (links + rechts) ────────── */
 .bbstat-val {
-  font-size: 17px;
+  font-size: var(--stat-val-size);
   color: #d4a838;
   line-height: 1;
   font-weight: 600;
   letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   text-shadow:
     0 0 4px rgba(220, 170, 50, 0.8),
     0 0 10px rgba(200, 140, 30, 0.5);
@@ -275,76 +295,94 @@ const lpValue = computed(() => currentRank.value.lp)
 }
 
 .bbstat-sep {
-  font-size: 12px;
+  font-size: 11px;
   color: #5c3a14;
   line-height: 1;
 }
 
-/* ── Ability Cooldown Slots ───────────────────────────────────────────── */
+/* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  font-size: 16px;
+  font-size: 14px;
+  flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 160, 60, 0.7));
+  transition:
+    filter 0.2s,
+    opacity 0.2s;
 }
 
-.ability-cd-val {
-  font-size: 17px;
-  color: #d4a838;
-  line-height: 1;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 4px rgba(220, 170, 50, 0.8),
-    0 0 10px rgba(200, 140, 30, 0.5);
+.ability-label {
+  flex-shrink: 0;
+  white-space: nowrap;
   transition:
     color 0.2s,
     text-shadow 0.2s;
-  min-width: 52px;
-  text-align: right;
 }
 
+/* Timer: gleiche Größe wie alle anderen Werte, per --stat-val-size */
+.ability-cd-val {
+  font-size: var(--stat-val-size);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: #d4a838;
+  text-shadow:
+    0 0 4px rgba(220, 170, 50, 0.8),
+    0 0 10px rgba(200, 140, 30, 0.5);
+  /* Ready-State: unsichtbar aber Platz reserviert */
+  opacity: 0;
+  transition:
+    color 0.2s,
+    text-shadow 0.2s,
+    opacity 0.2s;
+}
+
+/* ── Cooldown ───────────────────────────────────────────────────────── */
 .ability-slot--cooldown .ability-role-icon {
   filter: grayscale(55%) brightness(0.55) drop-shadow(0 0 2px rgba(100, 80, 20, 0.4));
   opacity: 0.7;
 }
-
+.ability-slot--cooldown .ability-label {
+  color: #6a4418;
+  text-shadow: none;
+}
 .ability-slot--cooldown .ability-cd-val {
+  opacity: 1;
   color: #7a5810;
   text-shadow: none;
 }
 
+/* ── Flash ──────────────────────────────────────────────────────────── */
 .ability-slot--flash .ability-role-icon {
   filter: drop-shadow(0 0 6px var(--role-color, #e8c040))
     drop-shadow(0 0 12px var(--role-color, #e8c040));
   animation: ability-icon-flash 0.45s ease-out;
 }
-
-.ability-slot--flash .ability-cd-val {
+.ability-slot--flash .ability-label {
   color: var(--role-color, #e8c040);
   text-shadow: 0 0 8px var(--role-color, #e8c040);
   animation: ability-val-flash 0.45s ease-out;
 }
+.ability-slot--flash .ability-cd-val {
+  opacity: 0;
+}
 
+/* ── Inactive ───────────────────────────────────────────────────────── */
 .ability-slot--inactive {
   opacity: 0.3;
   filter: grayscale(80%);
 }
 
-.ability-slot:not(.ability-slot--cooldown):not(.ability-slot--inactive):not(.ability-slot--flash)
-  .bbstat-label {
+/* ── Ready ──────────────────────────────────────────────────────────── */
+.ability-slot:not(.ability-slot--cooldown):not(.ability-slot--flash):not(.ability-slot--inactive)
+  .ability-label {
   color: var(--role-color, #e8c040);
   text-shadow: 0 0 5px var(--role-color, #e8c040);
-  transition:
-    color 0.2s,
-    text-shadow 0.2s;
 }
 
-.ability-slot--flash .bbstat-label {
-  color: var(--role-color, #e8c040);
-  text-shadow: 0 0 8px var(--role-color, #e8c040);
-  animation: ability-val-flash 0.45s ease-out;
-}
-
+/* ── Animationen ────────────────────────────────────────────────────── */
 @keyframes ability-icon-flash {
   0% {
     filter: drop-shadow(0 0 14px var(--role-color, #e8c040)) brightness(1.4);
@@ -365,7 +403,7 @@ const lpValue = computed(() => currentRank.value.lp)
   }
 }
 
-/* ── Title ────────────────────────────────────────────────────────────── */
+/* ── Title ──────────────────────────────────────────────────────────── */
 .title-center {
   text-align: center;
   color: #e8c040;
