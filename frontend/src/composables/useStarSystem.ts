@@ -10,9 +10,9 @@ import { MATERIALS } from '../config/materials'
 import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING } from '../config/constants'
 import type { LabelData, PlanetType, StarType } from '../types'
 
-const PLANET_SIZE_CHAMPION = 64
-const PLANET_SIZE_GALAXY_BOSS = 72
-const PLANET_SIZE_NORMAL = 52
+const PLANET_SIZE_CHAMPION = 44
+const PLANET_SIZE_GALAXY_BOSS = 52
+const PLANET_SIZE_NORMAL = 36
 const VANISH_DURATION_MS = 800
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
