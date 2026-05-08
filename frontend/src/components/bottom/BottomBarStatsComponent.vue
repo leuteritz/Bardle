@@ -1,17 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
 import { ROLES } from '@/config/constants'
 
-const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
-const galaxyStore = useGalaxyStore()
 
 function fmtCd(ms: number): string {
   const s = Math.ceil(ms / 1000)
@@ -57,7 +53,8 @@ const roleAbilities = computed(() =>
   }),
 )
 
-const { currentRank, totalWins, totalLosses } = storeToRefs(battleStore)
+const { currentRank, totalWins, totalLosses, totalKills, totalDeaths, totalAssists, totalCoinsEarned } =
+  storeToRefs(battleStore)
 
 const rankLabel = computed(() => {
   const { tier, division } = currentRank.value
@@ -66,23 +63,17 @@ const rankLabel = computed(() => {
 })
 
 const lpValue = computed(() => currentRank.value.lp)
+
+const kdaRatio = computed(() => {
+  if (totalDeaths.value === 0)
+    return totalKills.value + totalAssists.value > 0 ? 'Perfect' : '—'
+  return ((totalKills.value + totalAssists.value) / totalDeaths.value).toFixed(2)
+})
 </script>
 
 <template>
   <div class="stats-grid">
     <div class="bbstats">
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--teal">🌌</span>
-        <span class="bbstat-label">GAL</span>
-        <span class="bbstat-val bbstat-val--gold">{{ galaxyStore.currentGalaxy }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--gold">✦</span>
-        <span class="bbstat-label">UNIV</span>
-        <span class="bbstat-val bbstat-val--teal">{{ gameStore.currentUniverse }}</span>
-      </div>
-      <div class="bbstat-divider" />
       <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
         <div v-if="idx > 0" class="bbstat-divider" />
         <div
@@ -110,35 +101,7 @@ const lpValue = computed(() => currentRank.value.lp)
 
     <div class="stats-right">
       <div class="bbstat-item">
-        <span class="bbstat-icon">♪</span>
-        <span class="bbstat-label">C/CLICK</span>
-        <span class="bbstat-val bbstat-val--gold">{{
-          formatNumber(gameStore.chimesPerClick)
-        }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--green">⚡</span>
-        <span class="bbstat-label">C/SEC</span>
-        <span class="bbstat-val bbstat-val--green">{{
-          formatNumber(gameStore.chimesPerSecond)
-        }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
         <span class="bbstat-icon bbstat-icon--red">⚔</span>
-        <span class="bbstat-label">DMG/CLICK</span>
-        <span class="bbstat-val bbstat-val--red">{{ formatNumber(gameStore.dmgPerClick) }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--red">🔥</span>
-        <span class="bbstat-label">DPS</span>
-        <span class="bbstat-val bbstat-val--red">{{ formatNumber(gameStore.dmgPerSecond) }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon">⚔</span>
         <span class="bbstat-label">RANK</span>
         <span class="bbstat-val">{{ rankLabel }}</span>
       </div>
@@ -156,6 +119,18 @@ const lpValue = computed(() => currentRank.value.lp)
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
       </div>
+      <div class="bbstat-divider" />
+      <div class="bbstat-item">
+        <span class="bbstat-icon bbstat-icon--gold">🪙</span>
+        <span class="bbstat-label">GOLD</span>
+        <span class="bbstat-val bbstat-val--gold">{{ formatNumber(totalCoinsEarned) }}</span>
+      </div>
+      <div class="bbstat-divider" />
+      <div class="bbstat-item">
+        <span class="bbstat-icon bbstat-icon--green">⬡</span>
+        <span class="bbstat-label">KDA</span>
+        <span class="bbstat-val bbstat-val--green">{{ kdaRatio }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -171,9 +146,9 @@ const lpValue = computed(() => currentRank.value.lp)
 
 .bbstats,
 .stats-right {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   width: 100%;
   overflow: visible;
 }
@@ -185,23 +160,18 @@ const lpValue = computed(() => currentRank.value.lp)
   padding-inline-start: 10px;
 }
 
-/* Padding auf 0, gap auf 2px – minimaler Abstand innerhalb eines Stats,
-   der Divider (1px, flex: 0 0 1px) schafft den Abstand zwischen Stats  */
 .bbstat-item {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
+  overflow: hidden;
 }
 
-/* Divider schrumpft nie, bleibt immer sichtbar */
 .bbstat-divider {
-  flex: 0 0 1px;
-  min-width: 1px;
   width: 1px;
   height: 18px;
-  margin-inline: 3px; /* <-- Abstand links+rechts vom Divider, nicht vom Item */
+  margin-inline: 3px;
   background: linear-gradient(
     to bottom,
     transparent,
@@ -230,10 +200,6 @@ const lpValue = computed(() => currentRank.value.lp)
 .bbstat-icon--gold {
   color: #fbbf24;
   filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
-}
-.bbstat-icon--teal {
-  color: #40c8d8;
-  filter: drop-shadow(0 0 3px rgba(64, 200, 216, 0.7));
 }
 
 .bbstat-label {
@@ -269,18 +235,6 @@ const lpValue = computed(() => currentRank.value.lp)
   text-shadow:
     0 0 4px rgba(116, 212, 72, 0.8),
     0 0 10px rgba(116, 212, 72, 0.5);
-}
-.bbstat-val--red {
-  color: #ff7a50;
-  text-shadow:
-    0 0 4px rgba(255, 100, 60, 0.8),
-    0 0 10px rgba(255, 100, 60, 0.5);
-}
-.bbstat-val--teal {
-  color: #40c8d8;
-  text-shadow:
-    0 0 4px rgba(64, 200, 216, 0.8),
-    0 0 10px rgba(64, 200, 216, 0.5);
 }
 .bbstat-val--win {
   color: #74d448;

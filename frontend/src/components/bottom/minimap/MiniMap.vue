@@ -66,6 +66,12 @@
             </template>
           </div>
 
+          <!-- ── Galaxie-Nummer unten links · gleicher Stil wie HUD-Metriken ── -->
+          <div class="minimap-galaxy-display">
+            <span class="hud-metric-label">GAL</span>
+            <span class="hud-metric-value">{{ galaxyStore.currentGalaxy }}</span>
+          </div>
+
           <!-- ── Boss-Suche Label ── -->
           <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
 
@@ -207,13 +213,11 @@ export default defineComponent({
       return remainingDistanceLY.value / remainingSec
     })
 
-    // Nur die Zahl – Einheit steht im Label
     const remainingDistDisplay = computed(() => {
       const v = remainingDistanceLY.value
       return v >= 100 ? `${Math.round(v)}` : `${v.toFixed(1)}`
     })
 
-    // Nur die Zahl – Einheit steht im Label
     const speedDisplay = computed(() => speedLJperS.value.toFixed(1))
 
     const ARC_R = HUD_PANEL_ARC_R
@@ -348,7 +352,7 @@ export default defineComponent({
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 24px; /* gleichmäßiger Abstand zwischen allen drei Metriken */
+  gap: 24px;
 
   padding: 4px 0;
 
@@ -366,7 +370,7 @@ export default defineComponent({
   }
 }
 
-/* Basis-Metrik */
+/* Basis-Metrik (geteilt mit Galaxy-Display) */
 .hud-metric {
   display: flex;
   flex-direction: column;
@@ -375,23 +379,17 @@ export default defineComponent({
   overflow: hidden;
 }
 
-/* Feste Breiten je nach maximalem Wert (ohne Einheit) */
-/* ANKUNFT: max "9:59:59" */
 .hud-metric--arrival {
   width: 60px;
 }
-
-/* ENTF.: max "9999" (Einheit im Label) */
 .hud-metric--dist {
   width: 60px;
 }
-
-/* TEMPO: max "99.9" (Einheit im Label) */
 .hud-metric--speed {
   width: 80px;
 }
 
-/* Label – Einheit direkt im Label-Text */
+/* Label – wird auch von .minimap-galaxy-display genutzt */
 .hud-metric-label {
   font-size: 9px;
   letter-spacing: 1.8px;
@@ -401,7 +399,7 @@ export default defineComponent({
   white-space: nowrap;
 }
 
-/* Alle drei Werte identisch groß */
+/* Wert – wird auch von .minimap-galaxy-display genutzt */
 .hud-metric-value {
   font-size: 1.4rem;
   font-weight: 700;
@@ -410,6 +408,21 @@ export default defineComponent({
   letter-spacing: 0.05em;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+/* ── Galaxie-Nummer · unten links · kein Hintergrund ── */
+.minimap-galaxy-display {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
 }
 
 /* ── Boss-Suche ── */
