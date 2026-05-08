@@ -84,7 +84,6 @@
             "
             class="complete-overlay"
           >
-            <div class="complete-glow-ring" />
             <span class="complete-badge">✦ Galaxie Befreit ✦</span>
             <button class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
               » Nächste Galaxie «
@@ -467,28 +466,6 @@ export default defineComponent({
   gap: 14px;
   z-index: 5;
   pointer-events: auto;
-}
-
-.complete-glow-ring {
-  position: absolute;
-  inset: 16px;
-  border-radius: 4px;
-  border: 1px solid rgba(232, 192, 64, 0.15);
-  box-shadow:
-    inset 0 0 40px rgba(232, 192, 64, 0.08),
-    0 0 30px rgba(232, 192, 64, 0.06);
-  pointer-events: none;
-  animation: complete-ring-pulse 2.5s ease-in-out infinite;
-}
-
-@keyframes complete-ring-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
 }
 
 .complete-badge {
