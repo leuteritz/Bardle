@@ -58,9 +58,11 @@
         <!-- ── Curse Banner ────────────────────────────────────────────────── -->
         <div v-if="activeCurse" class="sf-curse-banner">
           <span class="sf-curse-icon">{{ curseDef?.icon }}</span>
-          <span class="sf-curse-text">
-            ALLE BOSSKÄMPFE VERFLUCHT &mdash; {{ curseSecsLeft }}s
-          </span>
+          <div class="sf-curse-body">
+            <span class="sf-curse-name">{{ curseDef?.name }}</span>
+            <span class="sf-curse-effect">{{ curseDef?.effect }}</span>
+            <span class="sf-curse-dur">{{ curseSecsLeft }}s</span>
+          </div>
         </div>
 
         <!-- ── Rewards Preview ─────────────────────────────────────────────── -->
@@ -647,25 +649,46 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 8px;
+  padding: 5px 14px;
   background: rgba(30, 0, 50, 0.88);
   border-bottom: 1px solid #7a20b0;
   animation: sf-curse-pulse 1.4s ease-in-out infinite alternate;
 }
 
 .sf-curse-icon {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
-.sf-curse-text {
-  font-size: 0.68rem;
+.sf-curse-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sf-curse-name {
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: #d060ff;
   text-shadow: 0 0 8px rgba(200, 60, 255, 0.7);
   text-transform: uppercase;
+}
+
+.sf-curse-effect {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #b040e0;
+  letter-spacing: 0.04em;
+}
+
+.sf-curse-dur {
+  font-size: 0.62rem;
+  color: #a030cc;
+  opacity: 0.8;
+  letter-spacing: 0.06em;
 }
 
 @keyframes sf-curse-pulse {

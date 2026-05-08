@@ -31,12 +31,12 @@ import type { MidCurseType, ActiveCurse } from '../types'
 import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
-export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string }> = {
-  corruption: { name: 'Verderbnis', icon: '☠️' },
-  weakness: { name: 'Schwächung', icon: '⚔️' },
-  banishment: { name: 'Bannfluch', icon: '🌑' },
-  glaciation: { name: 'Erstarrung', icon: '❄️' },
-  damnation: { name: 'Verdammnis', icon: '💫' },
+export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effect: string }> = {
+  corruption: { name: 'Verderbnis',  icon: '☠️', effect: '8 Schaden/Sek.' },
+  weakness:   { name: 'Schwächung',  icon: '⚔️', effect: 'Feindangriff −60%' },
+  banishment: { name: 'Bannfluch',   icon: '🌑', effect: 'Spielerschaden ×1.8' },
+  glaciation: { name: 'Erstarrung', icon: '❄️', effect: 'Feindangriff 3× langsamer' },
+  damnation:  { name: 'Verdammnis', icon: '💫', effect: 'Sofort 20% MaxHP Schaden' },
 }
 
 const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]

@@ -176,15 +176,17 @@
       <template v-if="cursedStarId !== null">
         <div
           v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
-          :key="'curse-star-ring-' + star.id"
-          class="star-curse-ring"
+          :key="'curse-star-ring-wrap-' + star.id"
+          class="star-curse-ring-wrap"
           :style="{
             width: starSize(star.starType) + 32 + 'px',
             height: starSize(star.starType) + 32 + 'px',
             transform: `translate(${star.x - (starSize(star.starType) + 32) / 2}px, ${star.y - (starSize(star.starType) + 32) / 2}px) scale(${star.scale})`,
             opacity: String(star.opacity),
           }"
-        />
+        >
+          <div class="star-curse-ring" />
+        </div>
       </template>
 
       <!-- ⑤ Fluch-Timer unter dem Stern -->
@@ -1098,10 +1100,16 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 /* ── Curse-Aura auf dem Stern ────────────────────────────────────────────── */
-.star-curse-ring {
+.star-curse-ring-wrap {
   position: absolute;
   top: 0;
   left: 0;
+  pointer-events: none;
+}
+
+.star-curse-ring {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   pointer-events: none;
   border: 2px solid rgba(180, 50, 255, 0.75);
