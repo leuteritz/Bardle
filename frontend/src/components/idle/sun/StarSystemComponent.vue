@@ -753,7 +753,7 @@ function starCountStyle(star: StarRenderEntry) {
   left: 0;
   border-radius: 50%;
   will-change: transform, opacity;
-  animation: star-pulse 2.8s ease-in-out infinite;
+  animation: star-spawn 0.7s ease-out, star-pulse 2.8s ease-in-out 0.7s infinite;
   pointer-events: auto;
   cursor: pointer;
 }
@@ -767,8 +767,19 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   inset: var(--ring-inset, -11px);
   border-radius: 50%;
-  border: 1px solid rgba(255, 200, 60, 0.35);
+  border: 1.5px solid rgba(255, 200, 60, 0.45);
   animation: star-ring-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.star-body--champion::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 200, 60, 0.2);
+  animation: star-outer-ring-spin 9s linear infinite;
+  pointer-events: none;
 }
 
 .star-body--resource {
@@ -780,8 +791,19 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   inset: var(--ring-inset, -11px);
   border-radius: 50%;
-  border: 1px solid rgba(120, 190, 255, 0.3);
+  border: 1.5px solid rgba(120, 190, 255, 0.45);
   animation: star-ring-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.star-body--resource::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  border-radius: 50%;
+  border: 1px dashed rgba(120, 190, 255, 0.2);
+  animation: star-outer-ring-spin 11s linear infinite reverse;
+  pointer-events: none;
 }
 
 .star-body--galaxy_boss {
@@ -793,17 +815,28 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   inset: var(--ring-inset, -14px);
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 80, 30, 0.4);
+  border: 2px solid rgba(255, 80, 30, 0.55);
   animation: star-ring-pulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.star-body--galaxy_boss::before {
+  content: '';
+  position: absolute;
+  inset: -36px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 80, 30, 0.22);
+  animation: star-outer-ring-spin 7s linear infinite;
+  pointer-events: none;
 }
 
 @keyframes star-pulse {
   0%,
   100% {
-    filter: brightness(1);
+    filter: brightness(1) saturate(1);
   }
   50% {
-    filter: brightness(1.25);
+    filter: brightness(1.45) saturate(1.15);
   }
 }
 
@@ -811,12 +844,23 @@ function starCountStyle(star: StarRenderEntry) {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.35;
+    opacity: 0.45;
   }
   50% {
-    transform: scale(1.08);
-    opacity: 0.6;
+    transform: scale(1.1);
+    opacity: 0.82;
   }
+}
+
+@keyframes star-spawn {
+  0%   { filter: brightness(3.5) saturate(1.8); }
+  50%  { filter: brightness(2) saturate(1.3); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+@keyframes star-outer-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .star-reward-summary {
@@ -966,10 +1010,15 @@ function starCountStyle(star: StarRenderEntry) {
   display: inline-flex;
   align-items: baseline;
   gap: 1px;
+  background: rgba(8, 5, 18, 0.82);
+  border: 1px solid rgba(232, 192, 64, 0.55);
+  border-radius: 4px;
+  padding: 2px 7px;
+  animation: star-count-pulse 2.2s ease-in-out infinite;
 }
 
 .star-planet-count__current {
-  font-size: clamp(1.1rem, 1.7vw, 1.7rem);
+  font-size: clamp(1.2rem, 1.9vw, 1.9rem);
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 0.04em;
@@ -1023,6 +1072,11 @@ function starCountStyle(star: StarRenderEntry) {
 .star-cnt-leave-to {
   opacity: 0;
   scale: 0.7;
+}
+
+@keyframes star-count-pulse {
+  0%, 100% { border-color: rgba(232, 192, 64, 0.55); }
+  50%       { border-color: rgba(232, 192, 64, 0.95); }
 }
 
 /* ── Midlaner Fluch-Overlay ──────────────────────────────────────────────── */
