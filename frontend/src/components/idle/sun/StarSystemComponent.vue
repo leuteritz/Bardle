@@ -211,28 +211,6 @@
         >{{ curseIcon }} {{ curseSecsLeft }}s</div>
       </template>
 
-      <!-- ⑤ Reward-Icons PRO PLANET -->
-      <template v-for="star in frontStars" :key="'reward-star-' + star.id">
-        <template
-          v-for="planet in star.planets.filter((p) => !p.isBehind)"
-          :key="'reward-planet-' + planet.planetId"
-        >
-          <template
-            v-for="item in getPlanetRewardItems(planet)"
-            :key="'ri-' + planet.planetId + '-' + item.key"
-          >
-            <div
-              class="planet-reward-icon"
-              :style="
-                planetRewardIconStyle(planet, item.index, getPlanetRewardItems(planet).length)
-              "
-            >
-              <img :src="item.image" :alt="item.name" class="reward-icon-img" />
-            </div>
-          </template>
-        </template>
-      </template>
-
       <!-- ④ Stern-Gesamt-Belohnung -->
       <template v-for="star in frontStars" :key="'summary-' + star.id">
         <div
@@ -650,64 +628,6 @@ function starBodyStyle(star: StarRenderEntry) {
   }
 }
 
-function getPlanetRewardItems(planet: PlanetRenderEntry) {
-  if (planet.animState === 'saved') return []
-  const boss = bossStore.activeBosses.find(
-    (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
-  )
-  if (!boss) return []
-
-  const items: { key: string; image: string; name: string; count: number; index: number }[] = []
-  const totalChimes = boss.rewardSlots
-    .filter((s) => s.type === 'chimes')
-    .reduce((sum, s) => sum + (s.amount ?? 0), 0)
-
-  if (totalChimes > 0) {
-    items.push({
-      key: 'chimes',
-      image: '/img/BardAbilities/BardChime.png',
-      name: 'Chimes',
-      count: totalChimes,
-      index: 0,
-    })
-  }
-
-  for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
-    if (slot.materialId) {
-      const mat = MATERIALS.find((m) => m.id === slot.materialId)
-      if (mat) {
-        items.push({
-          key: mat.id,
-          image: mat.image ?? '',
-          name: mat.name,
-          count: 1,
-          index: items.length,
-        })
-      }
-    }
-  }
-
-  return items
-}
-
-const PLANET_ICON_SIZE = 36
-const PLANET_ICON_GAP = 6
-
-function planetRewardIconStyle(planet: PlanetRenderEntry, itemIndex: number, totalItems: number) {
-  const match = planet.transform?.match(/translate\(([^,]+)px,\s*([^)]+)px\)/)
-  const px = match ? parseFloat(match[1]) : 0
-  const py = match ? parseFloat(match[2]) : 0
-  const halfPlanet = (planet.size ?? 20) / 2
-  const itemSlot = PLANET_ICON_SIZE + PLANET_ICON_GAP
-  const totalW = totalItems * itemSlot - PLANET_ICON_GAP
-  const offsetX = itemIndex * itemSlot - totalW / 2 + PLANET_ICON_SIZE / 2
-  const offsetY = -(halfPlanet + 8 + PLANET_ICON_SIZE)
-
-  return {
-    transform: `translate(${px + offsetX}px, ${py + offsetY}px) translateX(-50%)`,
-  }
-}
-
 function getStarRewardSummary(star: StarRenderEntry) {
   let totalChimes = 0
   const materialMap = new Map<string, { image: string; name: string; count: number }>()
@@ -897,24 +817,6 @@ function starCountStyle(star: StarRenderEntry) {
     transform: scale(1.08);
     opacity: 0.6;
   }
-}
-
-.planet-reward-icon {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reward-icon-img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 4px rgba(255, 200, 80, 0.7));
 }
 
 .star-reward-summary {
