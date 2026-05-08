@@ -55,6 +55,14 @@
           </h2>
         </div>
 
+        <!-- ── Curse Banner ────────────────────────────────────────────────── -->
+        <div v-if="activeCurse" class="sf-curse-banner">
+          <span class="sf-curse-icon">{{ curseDef?.icon }}</span>
+          <span class="sf-curse-text">
+            ALLE BOSSKÄMPFE VERFLUCHT &mdash; {{ curseSecsLeft }}s
+          </span>
+        </div>
+
         <!-- ── Rewards Preview ─────────────────────────────────────────────── -->
         <BossRewardSection
           v-if="activeBoss"
@@ -120,6 +128,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useBattleStore } from '@/stores/battleStore'
+import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
@@ -127,6 +136,7 @@ import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
+const roleBehaviorStore = useRoleBehaviorStore()
 
 const isShaking = ref(false)
 const now = ref(Date.now())
@@ -140,6 +150,20 @@ onMounted(() => {
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
 })
+
+const activeCurse = computed(() => {
+  const c = roleBehaviorStore.activeCurse
+  if (!c || now.value >= c.activeUntil) return null
+  return c
+})
+const curseSecsLeft = computed(() =>
+  activeCurse.value
+    ? Math.max(0, Math.ceil((activeCurse.value.activeUntil - now.value) / 1000))
+    : 0,
+)
+const curseDef = computed(() =>
+  activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null,
+)
 
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
@@ -616,6 +640,41 @@ watch(
     rgba(0, 0, 0, 0.06) 4px
   );
   z-index: 5;
+}
+
+/* ── Curse Banner ─────────────────────────────────────────────────────────── */
+.sf-curse-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(30, 0, 50, 0.88);
+  border-bottom: 1px solid #7a20b0;
+  animation: sf-curse-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.sf-curse-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.sf-curse-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #d060ff;
+  text-shadow: 0 0 8px rgba(200, 60, 255, 0.7);
+  text-transform: uppercase;
+}
+
+@keyframes sf-curse-pulse {
+  from {
+    box-shadow: inset 0 0 10px rgba(150, 20, 255, 0.15);
+  }
+  to {
+    box-shadow: inset 0 0 22px rgba(190, 60, 255, 0.35);
+  }
 }
 
 /* ── Transition ───────────────────────────────────────────────────────────── */

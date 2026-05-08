@@ -187,26 +187,14 @@
         />
       </template>
 
-      <!-- ④ Midlaner Fluch-Overlay (alle Planeten des verfluchten Sterns) -->
-      <template v-for="(p, idx) in cursedPlanetPositions" :key="'curse-planet-' + idx">
-        <div
-          class="mid-curse-overlay"
-          :style="{
-            width: p.size + 24 + 'px',
-            height: p.size + 24 + 'px',
-            transform: `translate(${p.cx - (p.size + 24) / 2}px, ${p.cy - (p.size + 24) / 2}px)`,
-          }"
-        />
-      </template>
-
-      <!-- ⑤ Fluch-Timer über dem Stern -->
+      <!-- ⑤ Fluch-Timer unter dem Stern -->
       <template v-if="cursedStarId !== null && curseSecsLeft > 0">
         <div
           v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
           :key="'curse-star-timer-' + star.id"
           class="star-curse-timer"
           :style="{
-            transform: `translate(${star.x}px, ${star.y - starSize(star.starType) / 2 - 20}px)`,
+            transform: `translate(${star.x}px, ${star.y + starSize(star.starType) / 2 + 8}px) translateX(-50%)`,
           }"
         >
           {{ curseIcon }} {{ curseSecsLeft }}s
@@ -337,13 +325,7 @@ const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()
 
-// ── Midlaner Fluch-Overlay (reaktive Positionen/Timer) ───────────────────────
-interface CursedPlanetPos {
-  cx: number
-  cy: number
-  size: number
-}
-const cursedPlanetPositions = ref<CursedPlanetPos[]>([])
+// ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
 const curseSecsLeft = ref(0)
 
 const curseIcon = computed(() => {
@@ -527,34 +509,12 @@ function enemyAttackLoop(ts: number) {
       if (!activePlanetIds.has(id)) enemyAttackTimers.delete(id)
     }
 
-    // ── Curse-Overlay Positionen aktualisieren (alle Planeten des verfluchten Sterns) ──
+    // ── Fluch-Timer aktualisieren ─────────────────────────────────────────────
     const curse = roleBehaviorStore.activeCurse
     if (curse && Date.now() < curse.activeUntil) {
-      const boss = bossStore.activeBoss
-      if (boss && !boss.defeated && !boss.expired) {
-        const cursedStar = starRenders.value.find((s) =>
-          s.planets.some((p) => p.planetId === boss.planetId),
-        )
-        if (cursedStar) {
-          const positions: CursedPlanetPos[] = []
-          for (const planet of cursedStar.planets) {
-            if (!planet.isBehind && planet.animState === 'normal') {
-              const pos = activePlanetPositions.get(planet.planetId)
-              if (pos && pos.isForeground) {
-                positions.push({ cx: pos.cx, cy: pos.cy, size: planet.size })
-              }
-            }
-          }
-          cursedPlanetPositions.value = positions
-          curseSecsLeft.value = Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
-        } else {
-          cursedPlanetPositions.value = []
-        }
-      } else {
-        cursedPlanetPositions.value = []
-      }
+      curseSecsLeft.value = Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
     } else {
-      cursedPlanetPositions.value = []
+      curseSecsLeft.value = 0
     }
     // ─────────────────────────────────────────────────────────────────────────
   }
@@ -1109,55 +1069,6 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* ── Midlaner Fluch-Overlay ──────────────────────────────────────────────── */
-.mid-curse-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 15;
-  border: 2px solid rgba(160, 40, 255, 0.75);
-  box-shadow:
-    0 0 18px rgba(140, 30, 255, 0.85),
-    0 0 38px rgba(100, 0, 200, 0.45),
-    inset 0 0 14px rgba(160, 40, 255, 0.3);
-  animation: curse-aura-pulse 1.4s ease-in-out infinite alternate;
-}
-
-.mid-curse-overlay::before {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 1px dashed rgba(180, 80, 255, 0.55);
-  animation: curse-ring-spin 3s linear infinite;
-}
-
-.mid-curse-overlay::after {
-  content: '';
-  position: absolute;
-  inset: -16px;
-  border-radius: 50%;
-  border: 1px solid rgba(130, 20, 240, 0.3);
-  animation: curse-ring-spin 5s linear infinite reverse;
-}
-
-@keyframes curse-aura-pulse {
-  from {
-    box-shadow:
-      0 0 14px rgba(140, 30, 255, 0.7),
-      0 0 28px rgba(100, 0, 200, 0.35),
-      inset 0 0 10px rgba(160, 40, 255, 0.2);
-  }
-  to {
-    box-shadow:
-      0 0 30px rgba(190, 70, 255, 0.95),
-      0 0 65px rgba(140, 20, 240, 0.55),
-      inset 0 0 22px rgba(190, 70, 255, 0.38);
-  }
-}
-
 @keyframes curse-ring-spin {
   from {
     transform: rotate(0deg);
@@ -1167,7 +1078,7 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* ── Fluch-Timer über dem Stern ─────────────────────────────────────────────── */
+/* ── Fluch-Timer unter dem Stern ─────────────────────────────────────────────── */
 .star-curse-timer {
   position: absolute;
   top: 0;
@@ -1175,14 +1086,13 @@ function starCountStyle(star: StarRenderEntry) {
   font-size: 0.82rem;
   font-weight: 700;
   color: #c060ff;
-  background: rgba(20, 10, 32, 0.82);
+  background: rgba(20, 10, 32, 0.85);
   border: 1px solid #7a2db0;
   border-radius: 3px;
-  padding: 1px 6px;
-  line-height: 14px;
+  padding: 1px 8px;
+  line-height: 16px;
   pointer-events: none;
   white-space: nowrap;
-  translate: -50% -100%;
   text-shadow: 0 0 6px rgba(190, 70, 255, 0.85);
   z-index: 15;
 }
@@ -1194,11 +1104,11 @@ function starCountStyle(star: StarRenderEntry) {
   left: 0;
   border-radius: 50%;
   pointer-events: none;
-  border: 2px solid rgba(180, 50, 255, 0.7);
+  border: 2px solid rgba(180, 50, 255, 0.75);
   box-shadow:
-    0 0 20px rgba(180, 50, 255, 0.6),
-    0 0 42px rgba(130, 10, 230, 0.35),
-    inset 0 0 12px rgba(180, 50, 255, 0.2);
+    0 0 28px rgba(180, 50, 255, 0.7),
+    0 0 70px rgba(130, 10, 230, 0.45),
+    inset 0 0 16px rgba(180, 50, 255, 0.3);
   animation:
     curse-star-ring-pulse 1.8s ease-in-out infinite alternate,
     curse-ring-spin 4s linear infinite;
@@ -1207,25 +1117,35 @@ function starCountStyle(star: StarRenderEntry) {
 .star-curse-ring::before {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -12px;
   border-radius: 50%;
-  border: 1px dashed rgba(210, 100, 255, 0.4);
+  border: 1px dashed rgba(210, 100, 255, 0.5);
   animation: curse-ring-spin 6s linear infinite reverse;
+  pointer-events: none;
+}
+
+.star-curse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -24px;
+  border-radius: 50%;
+  border: 1px solid rgba(160, 40, 255, 0.25);
+  animation: curse-ring-spin 10s linear infinite;
   pointer-events: none;
 }
 
 @keyframes curse-star-ring-pulse {
   from {
     box-shadow:
-      0 0 14px rgba(170, 40, 255, 0.5),
-      0 0 28px rgba(120, 0, 220, 0.25),
-      inset 0 0 8px rgba(170, 40, 255, 0.15);
+      0 0 18px rgba(170, 40, 255, 0.55),
+      0 0 40px rgba(120, 0, 220, 0.3),
+      inset 0 0 10px rgba(170, 40, 255, 0.18);
   }
   to {
     box-shadow:
-      0 0 32px rgba(200, 80, 255, 0.85),
-      0 0 66px rgba(155, 30, 240, 0.48),
-      inset 0 0 20px rgba(200, 80, 255, 0.32);
+      0 0 42px rgba(210, 90, 255, 0.92),
+      0 0 90px rgba(165, 40, 250, 0.55),
+      inset 0 0 28px rgba(210, 90, 255, 0.4);
   }
 }
 </style>
