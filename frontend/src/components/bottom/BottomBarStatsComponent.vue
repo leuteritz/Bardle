@@ -53,8 +53,15 @@ const roleAbilities = computed(() =>
   }),
 )
 
-const { currentRank, totalWins, totalLosses, totalKills, totalDeaths, totalAssists, totalCoinsEarned } =
-  storeToRefs(battleStore)
+const {
+  currentRank,
+  totalWins,
+  totalLosses,
+  totalKills,
+  totalDeaths,
+  totalAssists,
+  totalCoinsEarned,
+} = storeToRefs(battleStore)
 
 const rankLabel = computed(() => {
   const { tier, division } = currentRank.value
@@ -65,14 +72,14 @@ const rankLabel = computed(() => {
 const lpValue = computed(() => currentRank.value.lp)
 
 const kdaRatio = computed(() => {
-  if (totalDeaths.value === 0)
-    return totalKills.value + totalAssists.value > 0 ? 'Perfect' : '—'
+  if (totalDeaths.value === 0) return totalKills.value + totalAssists.value > 0 ? 'Perfect' : '—'
   return ((totalKills.value + totalAssists.value) / totalDeaths.value).toFixed(2)
 })
 </script>
 
 <template>
   <div class="stats-grid">
+    <!-- LEFT: Role Abilities -->
     <div class="bbstats">
       <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
         <div v-if="idx > 0" class="bbstat-divider" />
@@ -97,8 +104,10 @@ const kdaRatio = computed(() => {
       </template>
     </div>
 
+    <!-- CENTER: Title -->
     <div class="title-center">BARDLE</div>
 
+    <!-- RIGHT: Stats – kein führender Divider, RANK startet direkt -->
     <div class="stats-right">
       <div class="bbstat-item">
         <span class="bbstat-icon bbstat-icon--red">⚔</span>
@@ -137,40 +146,46 @@ const kdaRatio = computed(() => {
 
 <style scoped>
 .stats-grid {
-  --stat-val-size: 15px;
+  --stat-val-size: 17px;
+  --label-size: 13px;
+  --icon-size: 15px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
 }
 
-.bbstats,
+/* LEFT side: 5 slots + 4 dividers = 9 columns */
+.bbstats {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  overflow: visible;
+  padding-inline-end: 6px;
+}
+
+/* RIGHT side: 5 slots + 4 dividers = 9 columns (kein führendes auto mehr) */
 .stats-right {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
   align-items: center;
   width: 100%;
   overflow: visible;
-}
-
-.bbstats {
-  padding-inline-end: 10px;
-}
-.stats-right {
-  padding-inline-start: 10px;
+  padding-inline-start: 6px;
 }
 
 .bbstat-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  overflow: hidden;
+  gap: 4px;
+  min-width: 0;
 }
 
 .bbstat-divider {
   width: 1px;
-  height: 18px;
+  height: 20px;
   margin-inline: 3px;
   background: linear-gradient(
     to bottom,
@@ -180,10 +195,13 @@ const kdaRatio = computed(() => {
     #5c3210 70%,
     transparent
   );
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .bbstat-icon {
-  font-size: 13px;
+  font-size: var(--icon-size);
   color: #9a6830;
   line-height: 1;
   flex-shrink: 0;
@@ -203,7 +221,7 @@ const kdaRatio = computed(() => {
 }
 
 .bbstat-label {
-  font-size: 11px;
+  font-size: var(--label-size);
   color: #6a4418;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -248,14 +266,14 @@ const kdaRatio = computed(() => {
 }
 
 .bbstat-sep {
-  font-size: 11px;
+  font-size: var(--label-size);
   color: #5c3a14;
   line-height: 1;
 }
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  font-size: 13px;
+  font-size: var(--icon-size);
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 160, 60, 0.7));
   transition:
