@@ -96,12 +96,10 @@ const lpValue = computed(() => currentRank.value.lp)
         >
           <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
           <span class="bbstat-label ability-label">{{ ab.short }}</span>
-          <!-- Wrapper reserviert immer den Platz des breitesten Timerwerts -->
           <span class="ability-cd-wrap">
             <span class="ability-cd-val" aria-hidden="true">
               {{ ab.hasChampion ? ab.timer || '' : '' }}
             </span>
-            <!-- Ghost: unsichtbar, hält den Platz für "59s" (breitester 1-Zahl-Wert) -->
             <span class="ability-cd-ghost" aria-hidden="true">59s</span>
           </span>
         </div>
@@ -180,20 +178,30 @@ const lpValue = computed(() => currentRank.value.lp)
   overflow: visible;
 }
 
+.bbstats {
+  padding-inline-end: 10px;
+}
+.stats-right {
+  padding-inline-start: 10px;
+}
+
+/* Padding auf 0, gap auf 2px – minimaler Abstand innerhalb eines Stats,
+   der Divider (1px, flex: 0 0 1px) schafft den Abstand zwischen Stats  */
 .bbstat-item {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 0 2px;
 }
 
+/* Divider schrumpft nie, bleibt immer sichtbar */
 .bbstat-divider {
   flex: 0 0 1px;
   min-width: 1px;
   width: 1px;
   height: 18px;
+  margin-inline: 3px; /* <-- Abstand links+rechts vom Divider, nicht vom Item */
   background: linear-gradient(
     to bottom,
     transparent,
@@ -205,7 +213,7 @@ const lpValue = computed(() => currentRank.value.lp)
 }
 
 .bbstat-icon {
-  font-size: 14px;
+  font-size: 13px;
   color: #9a6830;
   line-height: 1;
   flex-shrink: 0;
@@ -229,9 +237,9 @@ const lpValue = computed(() => currentRank.value.lp)
 }
 
 .bbstat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #6a4418;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   line-height: 1;
   flex-shrink: 0;
@@ -293,7 +301,7 @@ const lpValue = computed(() => currentRank.value.lp)
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  font-size: 14px;
+  font-size: 13px;
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 160, 60, 0.7));
   transition:
@@ -309,11 +317,6 @@ const lpValue = computed(() => currentRank.value.lp)
     text-shadow 0.2s;
 }
 
-/* ── Timer-Wrapper: position:relative, Breite vom Ghost bestimmt ────────
-   Ghost und Val liegen übereinander (absolute/relative Stapelung).
-   Ghost ist immer sichtbar (unsichtbar per color:transparent) und hält
-   die Breite des Wrappers konstant auf "59s"-Breite.
-   Val liegt darüber und zeigt den echten Wert – oder ist visibility:hidden. */
 .ability-cd-wrap {
   position: relative;
   flex-shrink: 0;
@@ -322,7 +325,6 @@ const lpValue = computed(() => currentRank.value.lp)
   justify-content: center;
 }
 
-/* Echter Timer-Wert: liegt über dem Ghost */
 .ability-cd-val {
   position: absolute;
   inset: 0;
@@ -345,7 +347,6 @@ const lpValue = computed(() => currentRank.value.lp)
     text-shadow 0.2s;
 }
 
-/* Ghost: transparent, gleiche Schrift → bestimmt die Breite des Wrappers */
 .ability-cd-ghost {
   font-size: var(--stat-val-size);
   font-weight: 600;
@@ -429,6 +430,7 @@ const lpValue = computed(() => currentRank.value.lp)
   font-size: 30px;
   letter-spacing: 10px;
   white-space: nowrap;
+  padding-inline: 16px;
   text-shadow:
     0 0 2px #fffbe8,
     0 0 5px #ffe060,
