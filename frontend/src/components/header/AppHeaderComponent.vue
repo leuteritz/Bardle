@@ -209,6 +209,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
+  /* Feste Breite: passt exakt zum Grid-Track, verhindert Layoutverschiebungen */
   width: clamp(300px, 30vw, 400px);
 }
 
@@ -228,8 +229,11 @@ body.bard-modal-open .center-chimes {
   align-items: center;
   justify-content: center;
   gap: 0;
-  flex: 1;
+  /* Exakt so breit wie der übergeordnete .header-center Container –
+     niemals mehr, niemals weniger. So bleibt der Header stabil. */
+  width: 100%;
   flex-shrink: 0;
+  flex-grow: 0;
   background: linear-gradient(to bottom, rgba(30, 16, 6, 0.97), rgba(10, 6, 2, 0.99));
   border-left: 1px solid rgba(255, 200, 80, 0.24);
   border-right: 1px solid rgba(255, 200, 80, 0.24);
@@ -240,6 +244,7 @@ body.bard-modal-open .center-chimes {
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
   align-self: stretch;
+  overflow: hidden;
 }
 
 /* ── Unterzeile: CPS + Click nebeneinander ── */
@@ -345,6 +350,12 @@ body.bard-modal-open .center-chimes {
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   text-align: center;
+  /* Feste Mindestbreite für den längsten möglichen formatierten String.
+     "999.99 Qa" o.ä. hat ca. 9 Zeichen – mit tabular-nums und dem gewählten
+     Font entspricht das ~9ch. Ein kleiner Puffer von 0.5ch schützt vor
+     Rundungsfehlern einzelner Glyphen. Adjust diesen Wert falls nötig. */
+  min-width: 9.5ch;
+  white-space: nowrap;
 }
 
 .cps-value {

@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { MATERIALS } from '@/config/materials'
-import { MATERIAL_RARITY_COLOR } from '@/composables/useRarityColors'
 
 defineProps<{ visible: boolean }>()
 
@@ -20,23 +19,6 @@ const tooltipMaterials = computed(() =>
   <Transition name="tooltip-fade">
     <div v-if="visible" class="inventory-tooltip">
       <div class="inventory-tooltip__title">Materialien</div>
-      <div class="inventory-tooltip__grid">
-        <div
-          v-for="m in tooltipMaterials"
-          :key="m.id"
-          class="inventory-tooltip__item"
-          :class="{ 'inventory-tooltip__item--empty': m.count === 0 }"
-          :style="{ borderColor: MATERIAL_RARITY_COLOR[m.rarity] }"
-        >
-          <img :src="m.image" class="inventory-tooltip__img rpg-img" alt="" />
-          <span class="inventory-tooltip__name" :style="{ color: MATERIAL_RARITY_COLOR[m.rarity] }">
-            {{ m.name }}
-          </span>
-          <span class="inventory-tooltip__count" :style="{ color: MATERIAL_RARITY_COLOR[m.rarity] }">
-            {{ m.count }}
-          </span>
-        </div>
-      </div>
     </div>
   </Transition>
 </template>

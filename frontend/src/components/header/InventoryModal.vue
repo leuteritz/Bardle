@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '../../stores/inventoryStore'
 import { MATERIALS } from '../../config/materials'
-import { MATERIAL_RARITY_COLOR } from '../../composables/useRarityColors'
 
 const inventoryStore = useInventoryStore()
 
@@ -37,7 +36,9 @@ function onBackdropClick(e: MouseEvent) {
         <!-- Header -->
         <div class="flex items-center justify-between w-full px-6 pt-4 mb-1">
           <h2 class="modal-title">🎒 Inventar</h2>
-          <button class="px-2 py-1 rpg-close-btn" @click="emit('close')" aria-label="Schließen">✕</button>
+          <button class="px-2 py-1 rpg-close-btn" @click="emit('close')" aria-label="Schließen">
+            ✕
+          </button>
         </div>
 
         <div class="divider" />
@@ -45,42 +46,7 @@ function onBackdropClick(e: MouseEvent) {
         <!-- Materialien -->
         <section class="w-full px-6 pb-5">
           <h3 class="section-label">Materialien</h3>
-          <div class="material-grid">
-            <div
-              v-for="material in allMaterials"
-              :key="material.id"
-              class="material-card"
-              :class="{ 'material-card--empty': material.count === 0 }"
-              :style="{
-                borderColor: MATERIAL_RARITY_COLOR[material.rarity],
-                boxShadow:
-                  material.count > 0
-                    ? `0 0 10px ${MATERIAL_RARITY_COLOR[material.rarity]}55, inset 0 0 8px ${MATERIAL_RARITY_COLOR[material.rarity]}15`
-                    : `0 0 4px ${MATERIAL_RARITY_COLOR[material.rarity]}22`,
-              }"
-            >
-              <span
-                class="material-card__count"
-                :style="{
-                  color:
-                    material.count > 0 ? MATERIAL_RARITY_COLOR[material.rarity] : 'rgba(180,180,180,0.45)',
-                }"
-                >{{ material.count }}</span
-              >
-              <div class="material-card__icon-wrapper">
-                <img :src="material.image" class="material-card__img rpg-img" alt="" />
-              </div>
-              <div
-                class="material-card__name"
-                :style="{
-                  color:
-                    material.count > 0 ? MATERIAL_RARITY_COLOR[material.rarity] : 'rgba(180,180,180,0.4)',
-                }"
-              >
-                {{ material.name }}
-              </div>
-            </div>
-          </div>
+          <div class="material-grid"></div>
         </section>
       </div>
     </div>
