@@ -208,7 +208,9 @@
           :style="{
             transform: `translate(${star.x}px, ${star.y - starSize(star.starType) / 2 - 20}px)`,
           }"
-        >{{ curseIcon }} {{ curseSecsLeft }}s</div>
+        >
+          {{ curseIcon }} {{ curseSecsLeft }}s
+        </div>
       </template>
 
       <!-- ④ Stern-Gesamt-Belohnung -->
@@ -336,7 +338,11 @@ const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()
 
 // ── Midlaner Fluch-Overlay (reaktive Positionen/Timer) ───────────────────────
-interface CursedPlanetPos { cx: number; cy: number; size: number }
+interface CursedPlanetPos {
+  cx: number
+  cy: number
+  size: number
+}
 const cursedPlanetPositions = ref<CursedPlanetPos[]>([])
 const curseSecsLeft = ref(0)
 
@@ -363,7 +369,9 @@ const cursedStarId = computed(() => {
   if (!curse) return null
   const boss = bossStore.activeBoss
   if (!boss || boss.defeated || boss.expired) return null
-  return starRenders.value.find((s) => s.planets.some((p) => p.planetId === boss.planetId))?.id ?? null
+  return (
+    starRenders.value.find((s) => s.planets.some((p) => p.planetId === boss.planetId))?.id ?? null
+  )
 })
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
@@ -485,7 +493,12 @@ function enemyAttackLoop(ts: number) {
                     const dx = headX - topChamp.screenX
                     const dy = headY - topChamp.screenY
                     const len = Math.hypot(dx, dy) || 1
-                    roleBehaviorStore.triggerIntercept(dx / len, dy / len, topChamp.screenX, topChamp.screenY)
+                    roleBehaviorStore.triggerIntercept(
+                      dx / len,
+                      dy / len,
+                      topChamp.screenX,
+                      topChamp.screenY,
+                    )
                   }
                 : undefined,
             onHit() {
@@ -696,7 +709,7 @@ function remainingPlanetCount(star: StarRenderEntry): number {
 function starCountStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
-    transform: `translate(${star.x}px, ${star.y - s / 2 - 16}px) translateX(-50%) translateY(-100%)`,
+    transform: `translate(${star.x}px, ${star.y - s / 2 - 25}px) translateX(-50%) translateY(-100%)`,
     opacity: String(star.opacity.toFixed(3)),
   }
 }
@@ -753,7 +766,9 @@ function starCountStyle(star: StarRenderEntry) {
   left: 0;
   border-radius: 50%;
   will-change: transform, opacity;
-  animation: star-spawn 0.7s ease-out, star-pulse 2.8s ease-in-out 0.7s infinite;
+  animation:
+    star-spawn 0.7s ease-out,
+    star-pulse 2.8s ease-in-out 0.7s infinite;
   pointer-events: auto;
   cursor: pointer;
 }
@@ -853,14 +868,24 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 @keyframes star-spawn {
-  0%   { filter: brightness(3.5) saturate(1.8); }
-  50%  { filter: brightness(2) saturate(1.3); }
-  100% { filter: brightness(1) saturate(1); }
+  0% {
+    filter: brightness(3.5) saturate(1.8);
+  }
+  50% {
+    filter: brightness(2) saturate(1.3);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
 }
 
 @keyframes star-outer-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .star-reward-summary {
@@ -1075,8 +1100,13 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 @keyframes star-count-pulse {
-  0%, 100% { border-color: rgba(232, 192, 64, 0.55); }
-  50%       { border-color: rgba(232, 192, 64, 0.95); }
+  0%,
+  100% {
+    border-color: rgba(232, 192, 64, 0.55);
+  }
+  50% {
+    border-color: rgba(232, 192, 64, 0.95);
+  }
 }
 
 /* ── Midlaner Fluch-Overlay ──────────────────────────────────────────────── */
@@ -1129,8 +1159,12 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 @keyframes curse-ring-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Fluch-Timer über dem Stern ─────────────────────────────────────────────── */
