@@ -72,6 +72,42 @@ const lpValue = computed(() => currentRank.value.lp)
   <div class="stats-grid">
     <div class="bbstats">
       <div class="bbstat-item">
+        <span class="bbstat-icon bbstat-icon--teal">🌌</span>
+        <span class="bbstat-label">GAL</span>
+        <span class="bbstat-val bbstat-val--gold">{{ galaxyStore.currentGalaxy }}</span>
+      </div>
+      <div class="bbstat-divider" />
+      <div class="bbstat-item">
+        <span class="bbstat-icon bbstat-icon--gold">✦</span>
+        <span class="bbstat-label">UNIV</span>
+        <span class="bbstat-val bbstat-val--teal">{{ gameStore.currentUniverse }}</span>
+      </div>
+      <div class="bbstat-divider" />
+      <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
+        <div v-if="idx > 0" class="bbstat-divider" />
+        <div
+          class="bbstat-item ability-slot"
+          :class="{
+            'ability-slot--cooldown': ab.onCooldown && ab.hasChampion,
+            'ability-slot--flash': ab.isFlashing,
+            'ability-slot--inactive': !ab.hasChampion,
+          }"
+          :style="{ '--role-color': ab.color }"
+        >
+          <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
+          <span class="bbstat-label ability-label">{{ ab.short }}</span>
+          <!-- Immer im DOM → reserviert Platz, kein Layout-Shift -->
+          <span class="ability-cd-val" aria-hidden="true">
+            {{ ab.hasChampion ? ab.timer || ' ' : ' ' }}
+          </span>
+        </div>
+      </template>
+    </div>
+
+    <div class="title-center">BARDLE</div>
+
+    <div class="stats-right">
+      <div class="bbstat-item">
         <span class="bbstat-icon">♪</span>
         <span class="bbstat-label">C/CLICK</span>
         <span class="bbstat-val bbstat-val--gold">{{
@@ -117,47 +153,6 @@ const lpValue = computed(() => currentRank.value.lp)
         <span class="bbstat-val bbstat-val--win">{{ totalWins }}</span>
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
-      </div>
-    </div>
-
-    <div class="title-center">BARDLE</div>
-
-    <div class="stats-right">
-      <!--
-        Divider-Fix: Der v-for-Loop erzeugt abwechselnd Divider + Slot als
-        direkte Flex-Kinder. overflow:hidden auf .bbstat-item wurde entfernt,
-        damit der Divider nicht überdeckt wird.
-      -->
-      <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
-        <div v-if="idx > 0" class="bbstat-divider" />
-        <div
-          class="bbstat-item ability-slot"
-          :class="{
-            'ability-slot--cooldown': ab.onCooldown && ab.hasChampion,
-            'ability-slot--flash': ab.isFlashing,
-            'ability-slot--inactive': !ab.hasChampion,
-          }"
-          :style="{ '--role-color': ab.color }"
-        >
-          <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
-          <span class="bbstat-label ability-label">{{ ab.short }}</span>
-          <!-- Immer im DOM → reserviert Platz, kein Layout-Shift -->
-          <span class="ability-cd-val" aria-hidden="true">
-            {{ ab.hasChampion ? ab.timer || '\u00A0' : '\u00A0' }}
-          </span>
-        </div>
-      </template>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--teal">🌌</span>
-        <span class="bbstat-label">UNIV</span>
-        <span class="bbstat-val bbstat-val--teal">{{ gameStore.currentUniverse }}</span>
-      </div>
-      <div class="bbstat-divider" />
-      <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--gold">✦</span>
-        <span class="bbstat-label">GAL</span>
-        <span class="bbstat-val bbstat-val--gold">{{ galaxyStore.currentGalaxy }}</span>
       </div>
     </div>
   </div>
