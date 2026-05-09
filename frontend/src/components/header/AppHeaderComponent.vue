@@ -44,7 +44,7 @@ onUnmounted(() => {
 
       <div class="header-divider" aria-hidden="true"></div>
 
-      <HeaderMaterialsComponent />
+      <HeaderMaterialsComponent style="flex: 1; min-width: 0" />
     </div>
 
     <!-- ════════ MITTE – Platzhalter für Grid-Spalte 2 ════════ -->

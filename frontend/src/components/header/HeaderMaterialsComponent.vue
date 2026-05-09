@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { MATERIALS } from '@/config/materials'
+import { formatNumber } from '@/config/numberFormat'
 
 const inventoryStore = useInventoryStore()
 
@@ -31,7 +32,7 @@ const MATERIAL_COLOR: Record<string, string> = {
     >
       <img :src="m.image" class="mat-icon rpg-img" :alt="m.name" />
       <span class="mat-count" :style="{ color: MATERIAL_COLOR[m.id] }">
-        {{ m.count }}
+        {{ formatNumber(m.count) }}
       </span>
     </div>
   </div>
@@ -40,10 +41,11 @@ const MATERIAL_COLOR: Record<string, string> = {
 <style scoped>
 .mat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px 8px;
   padding: 6px 10px;
   width: 100%;
+  min-width: 0;
   height: 100%;
   align-content: center;
   box-sizing: border-box;
@@ -53,6 +55,9 @@ const MATERIAL_COLOR: Record<string, string> = {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
   transition: opacity 0.15s;
 }
 
@@ -62,16 +67,18 @@ const MATERIAL_COLOR: Record<string, string> = {
 }
 
 .mat-icon {
-  width: clamp(25px, 4vw, 40px);
-  height: clamp(25px, 4vw, 40px);
+  width: clamp(18px, 3vw, 32px);
+  height: clamp(18px, 3vw, 32px);
+  min-width: 18px;
+  min-height: 18px;
   object-fit: contain;
-  flex-shrink: 0;
+  flex-shrink: 1;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
   user-select: none;
 }
 
 .mat-count {
-  font-size: clamp(1rem, 1.4vw, 1.4rem);
+  font-size: clamp(0.75rem, 1.2vw, 1.2rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
