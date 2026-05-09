@@ -185,7 +185,7 @@ onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)
 })
 
-// ── Computed (MÜSSEN vor allen watch-Aufrufen stehen) ─────────────────────
+// ── Computed ──────────────────────────────────────────────────────────────
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
 const currentIndex = computed(() => starGroupStore.starFightCurrentIndex)
@@ -234,7 +234,6 @@ const curseSecsLeft = computed(() =>
 const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
 
 // ── Planet Background ─────────────────────────────────────────────────────
-// WICHTIG: watch erst NACH allen computed-Deklarationen!
 function renderModalPlanet() {
   if (!modalPlanetBgRef.value || !activeBoss.value) return
   modalPlanetBgRef.value.innerHTML = ''
@@ -447,6 +446,7 @@ function emberStyle(i: number): Record<string, string> {
   background: rgba(16, 8, 0, 0.88);
   border-bottom: 1px solid rgba(90, 45, 10, 0.5);
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .sf-header--galaxy {
@@ -489,7 +489,7 @@ function emberStyle(i: number): Record<string, string> {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   gap: 0;
-  align-items: start;
+  align-items: stretch;
   padding: 0.6rem 0.8rem 0.8rem;
   min-height: 0;
 }
@@ -500,6 +500,7 @@ function emberStyle(i: number): Record<string, string> {
   align-items: stretch;
   padding: 0 0.4rem;
   min-width: 0;
+  align-self: stretch;
 }
 
 .sf-center {
@@ -626,6 +627,8 @@ function emberStyle(i: number): Record<string, string> {
   border-top: 1px solid rgba(140, 30, 200, 0.45);
   border-bottom: 1px solid rgba(140, 30, 200, 0.45);
   animation: sf-curse-glow 1.6s ease-in-out infinite alternate;
+  position: relative;
+  z-index: 1;
 }
 
 .sf-curse-overlay--galaxy {

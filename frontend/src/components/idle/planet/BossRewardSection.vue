@@ -17,48 +17,33 @@
         @error="($event.target as HTMLImageElement).style.display = 'none'"
       />
       <span class="champion-name">{{ homePlanetChampion }}</span>
-      <span class="champion-badge">✦ Champion</span>
     </div>
+
+    <div v-if="homePlanetChampion" class="reward-divider" />
 
     <!-- Slots -->
     <div class="reward-slots">
-      <div
-        v-for="(slot, i) in orderedRewardSlots"
-        :key="i"
-        class="reward-slot"
-        :class="{
-          'reward-slot--material': slot.type === 'material',
-          'reward-slot--galaxy': isGalaxyBoss,
-        }"
-      >
+      <!-- Chimes zusammengefasst -->
+      <div v-if="totalChimes > 0" class="reward-slot">
         <div class="slot-icon-wrap">
           <img
-            v-if="slot.type === 'material' && slotMaterial(slot)"
-            :src="slotMaterial(slot)!.image"
-            :alt="slotMaterial(slot)!.name"
-            class="slot-img"
-          />
-          <img
-            v-else
             src="/img/BardAbilities/BardChime.png"
             alt="Chimes"
             class="slot-img slot-img--chimes"
           />
         </div>
-        <div class="slot-body">
-          <span class="slot-type-label">{{
-            slot.type === 'material' ? 'Material' : 'Chimes'
-          }}</span>
-          <span
-            class="slot-name"
-            :class="
-              slot.type === 'material' ? `rarity--${slotMaterial(slot)?.rarity}` : 'slot-chimes-val'
-            "
-          >
-            {{ slot.type === 'material' ? slotMaterial(slot)?.name : `${slot.amount}` }}
-          </span>
+        <span class="slot-label slot-chimes-val">{{ totalChimes }}</span>
+      </div>
+
+      <!-- Materials gestackt (gleiche materialId zusammengefasst) -->
+      <div v-for="entry in stackedMaterials" :key="entry.material.id" class="reward-slot">
+        <div class="slot-icon-wrap slot-icon-wrap--material">
+          <img :src="entry.material.image" :alt="entry.material.name" class="slot-img" />
         </div>
-        <span class="slot-guaranteed">✓</span>
+        <span class="slot-label" :class="`rarity--${entry.material.rarity}`">
+          {{ entry.material.name }}
+        </span>
+        <span v-if="entry.count > 1" class="slot-count">×{{ entry.count }}</span>
       </div>
     </div>
   </div>
@@ -76,24 +61,47 @@ const props = defineProps<{
   homePlanetChampionImage: string | null
 }>()
 
-const orderedRewardSlots = computed(() => {
-  const chimes = props.rewardSlots.filter((s) => s.type !== 'material')
-  const materials = props.rewardSlots.filter((s) => s.type === 'material')
-  return [...chimes, ...materials]
-})
+const totalChimes = computed(() =>
+  props.rewardSlots.filter((s) => s.type === 'chimes').reduce((sum, s) => sum + (s.amount ?? 0), 0),
+)
 
-function slotMaterial(slot: PlanetBossRewardSlot) {
-  return slot.materialId ? (MATERIALS.find((m) => m.id === slot.materialId) ?? null) : null
-}
+const stackedMaterials = computed(() => {
+  const map = new Map<string, { material: (typeof MATERIALS)[number]; count: number }>()
+
+  for (const slot of props.rewardSlots) {
+    if (slot.type !== 'material' || !slot.materialId) continue
+    const mat = MATERIALS.find((m) => m.id === slot.materialId)
+    if (!mat) continue
+    const existing = map.get(slot.materialId)
+    if (existing) {
+      existing.count += slot.amount ?? 1
+    } else {
+      map.set(slot.materialId, { material: mat, count: slot.amount ?? 1 })
+    }
+  }
+
+  return Array.from(map.values())
+})
 </script>
 
 <style scoped>
+/* ── Root ─────────────────────────────────────────────────────────────────── */
 .reward-preview {
-  padding: 0.6rem 0.5rem;
+  padding: 0.75rem 0.65rem;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.6rem;
+  background: rgba(5, 2, 0, 0.88);
+  border-radius: 6px;
   animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.reward-preview--galaxy {
+  background: rgba(10, 0, 20, 0.92);
 }
 
 @keyframes rewardReveal {
@@ -107,11 +115,12 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
   }
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .reward-header {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .reward-header-line {
@@ -124,7 +133,7 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
 }
 
 .reward-header-text {
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -132,21 +141,19 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
   white-space: nowrap;
 }
 
-/* ── Champion Block ──────────────────────────────────────────────────────── */
+/* ── Champion ─────────────────────────────────────────────────────────────── */
 .champion-block {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.55rem 0.4rem 0.5rem;
-  background: rgba(20, 40, 100, 0.12);
-  border-radius: 5px;
-  border: 1px solid rgba(60, 100, 200, 0.2);
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0 0.1rem;
 }
 
 .champion-portrait {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
   border-radius: 4px;
@@ -156,94 +163,74 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
 }
 
 .champion-name {
-  font-size: 0.82rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #4a90d9;
   letter-spacing: 0.04em;
   text-shadow: 0 0 12px rgba(74, 144, 217, 0.55);
-  text-align: center;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.champion-badge {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(74, 144, 217, 0.55);
-  text-transform: uppercase;
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+.reward-divider {
+  height: 1px;
+  background: rgba(200, 146, 42, 0.15);
+  flex-shrink: 0;
 }
 
-/* ── Slots ───────────────────────────────────────────────────────────────── */
+/* ── Slots ────────────────────────────────────────────────────────────────── */
 .reward-slots {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .reward-slot {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.5rem;
-  background: rgba(200, 146, 42, 0.04);
-  border: 1px solid rgba(100, 60, 10, 0.35);
-  border-radius: 4px;
-  transition: border-color 0.2s;
+  gap: 0.6rem;
+  padding: 0.3rem 0.1rem;
+  background: transparent;
+  border: none;
 }
 
-.reward-slot--material {
-  background: rgba(120, 40, 180, 0.06);
-  border-color: rgba(130, 50, 190, 0.35);
-}
-
-.reward-slot--galaxy.reward-slot--material {
-  border-color: rgba(170, 50, 240, 0.4);
-}
-
+/* ── Icon ─────────────────────────────────────────────────────────────────── */
 .slot-icon-wrap {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(8, 5, 0, 0.7);
-  border-radius: 3px;
-  border: 1px solid rgba(80, 50, 10, 0.4);
+  background: rgba(8, 5, 0, 0.5);
+  border-radius: 4px;
 }
 
-.reward-slot--material .slot-icon-wrap {
-  border-color: rgba(120, 50, 180, 0.4);
+.slot-icon-wrap--material {
+  background: rgba(20, 5, 35, 0.5);
 }
 
 .slot-img {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
 .slot-img--chimes {
-  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.7));
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.8));
 }
 
-.slot-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
+/* ── Label ────────────────────────────────────────────────────────────────── */
+.slot-label {
   flex: 1;
-  min-width: 0;
-}
-
-.slot-type-label {
-  font-size: 0.52rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(180, 160, 120, 0.45);
-}
-
-.slot-name {
-  font-weight: 700;
-  font-size: 0.82rem;
+  font-weight: 800;
+  font-size: 1.05rem;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -252,18 +239,19 @@ function slotMaterial(slot: PlanetBossRewardSlot) {
 
 .slot-chimes-val {
   color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.6);
 }
 
-.slot-guaranteed {
-  font-size: 0.75rem;
-  font-weight: 900;
-  color: #52b830;
+/* ── Count Badge (×2, ×3 …) ──────────────────────────────────────────────── */
+.slot-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(200, 180, 120, 0.65);
   flex-shrink: 0;
-  text-shadow: 0 0 5px rgba(82, 184, 48, 0.5);
+  letter-spacing: 0.03em;
 }
 
-/* ── Rarity ──────────────────────────────────────────────────────────────── */
+/* ── Rarities ─────────────────────────────────────────────────────────────── */
 .rarity--common {
   color: #aaaaaa;
 }

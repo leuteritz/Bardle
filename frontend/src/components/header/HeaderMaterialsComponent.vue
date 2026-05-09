@@ -62,8 +62,8 @@ const MATERIAL_COLOR: Record<string, string> = {
 }
 
 .mat-icon {
-  width: clamp(32px, 4vw, 52px);
-  height: clamp(32px, 4vw, 52px);
+  width: clamp(25px, 4vw, 40px);
+  height: clamp(25px, 4vw, 40px);
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));

@@ -1,7 +1,9 @@
 <template>
   <div class="bpl-root">
     <div class="bpl-title">
+      <span class="bpl-title-line" />
       <span class="bpl-title-text">⭐ Planeten</span>
+      <span class="bpl-title-line" />
     </div>
 
     <div class="bpl-list">
@@ -15,6 +17,9 @@
           'bpl-item--galaxy': entry.boss?.isGalaxyBoss,
         }"
       >
+        <!-- Aktiv-Indikator links -->
+        <div v-if="i === activeIndex && !entry.cleared" class="bpl-active-bar" />
+
         <!-- Planet SVG -->
         <div :ref="(el) => registerPlanetEl(el as HTMLDivElement | null, i)" class="bpl-planet" />
 
@@ -42,9 +47,6 @@
           <!-- Cleared Badge -->
           <span v-else-if="entry.cleared" class="bpl-cleared-badge">✓ Besiegt</span>
         </div>
-
-        <!-- Aktiv-Indikator -->
-        <div v-if="i === activeIndex && !entry.cleared" class="bpl-active-dot" />
       </div>
     </div>
   </div>
@@ -66,7 +68,6 @@ const props = defineProps<{
 
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
-
 const planetEls = ref<(HTMLDivElement | null)[]>([])
 
 function registerPlanetEl(el: HTMLDivElement | null, i: number) {
@@ -99,10 +100,7 @@ const planetEntries = computed<PlanetEntry[]>(() =>
         : slot?.type
           ? slot.type.charAt(0).toUpperCase() + slot.type.slice(1)
           : planetId)
-
-    // boss.planetType und slot.type sind beide PlanetType — Fallback ist 'rocky'
     const planetType: PlanetType = boss?.planetType ?? slot?.type ?? FALLBACK_PLANET_TYPE
-
     return { planetId, label, planetType, cleared, boss }
   }),
 )
@@ -120,11 +118,11 @@ function renderAllPlanets() {
     if (!el || !isMounted) return
     el.innerHTML = ''
     const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-    svg.setAttribute('width', '56')
-    svg.setAttribute('height', '56')
-    svg.setAttribute('viewBox', '0 0 56 56')
+    svg.setAttribute('width', '64')
+    svg.setAttribute('height', '64')
+    svg.setAttribute('viewBox', '0 0 64 64')
     svg.style.display = 'block'
-    drawPlanet(svg, `list-planet-${entry.planetId}-${i}`, entry.planetType, 28, 28, 26)
+    drawPlanet(svg, `list-planet-${entry.planetId}-${i}`, entry.planetType, 32, 32, 30)
     el.appendChild(svg)
   })
 }
@@ -150,82 +148,129 @@ watch(
 </script>
 
 <style scoped>
+/* ── Root ─────────────────────────────────────────────────────────────────── */
 .bpl-root {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0 0.2rem;
+  padding: 0 0.1rem;
+  background: rgba(5, 2, 0, 0.88);
+  border-radius: 6px;
+  height: 100%;
 }
 
+/* ── Titel ────────────────────────────────────────────────────────────────── */
 .bpl-title {
-  padding: 0.2rem 0.4rem 0.3rem;
-  border-bottom: 1px solid rgba(90, 45, 10, 0.4);
-  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.65rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.bpl-title-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 146, 42, 0.35));
+}
+.bpl-title-line:last-child {
+  background: linear-gradient(to left, transparent, rgba(200, 146, 42, 0.35));
 }
 
 .bpl-title-text {
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: #8a6020;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: rgba(200, 146, 42, 0.7);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-/* ── Liste ───────────────────────────────────────────────────────────────── */
+/* ── Liste ────────────────────────────────────────────────────────────────── */
 .bpl-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  max-height: 340px;
+  gap: 0.4rem;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding: 0 0.65rem 0.65rem;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 transparent;
-  padding-right: 2px;
+  justify-content: center;
 }
 
+/* ── Item ─────────────────────────────────────────────────────────────────── */
 .bpl-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.4rem;
+  gap: 0.65rem;
+  padding: 0.55rem 0.6rem 0.55rem 0.75rem;
   border-radius: 5px;
-  border: 1px solid rgba(50, 25, 5, 0.4);
-  background: rgba(12, 7, 0, 0.65);
+  /* kein eigener border — nur subtile Trennung via Hintergrund */
+  background: rgba(255, 255, 255, 0.03);
   transition:
-    border-color 0.2s,
     background 0.2s,
     opacity 0.2s;
+  overflow: hidden;
+}
+
+/* Horizontaler Trenner zwischen Items */
+.bpl-item + .bpl-item {
+  border-top: 1px solid rgba(200, 146, 42, 0.08);
 }
 
 .bpl-item--active {
-  border-color: rgba(232, 192, 64, 0.55);
-  background: rgba(28, 16, 2, 0.85);
-  box-shadow:
-    0 0 12px rgba(232, 192, 64, 0.12),
-    inset 0 0 0 1px rgba(232, 192, 64, 0.08);
+  background: rgba(232, 192, 64, 0.06);
 }
 
 .bpl-item--cleared {
-  opacity: 0.38;
-  filter: grayscale(0.6);
+  opacity: 0.35;
+  filter: grayscale(0.65);
 }
 
 .bpl-item--galaxy {
-  border-color: rgba(140, 30, 180, 0.4);
-  background: rgba(14, 2, 22, 0.8);
+  background: rgba(180, 40, 255, 0.04);
 }
-
 .bpl-item--galaxy.bpl-item--active {
-  border-color: rgba(200, 60, 255, 0.55);
-  box-shadow: 0 0 14px rgba(180, 40, 255, 0.15);
+  background: rgba(200, 60, 255, 0.08);
 }
 
-/* ── Planet-Bild ─────────────────────────────────────────────────────────── */
+/* ── Aktiv-Bar links ──────────────────────────────────────────────────────── */
+.bpl-active-bar {
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #e8c040;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.9);
+  animation: bar-pulse 1s ease-in-out infinite alternate;
+}
+
+.bpl-item--galaxy .bpl-active-bar {
+  background: #cc44ff;
+  box-shadow: 0 0 8px rgba(200, 60, 255, 0.9);
+}
+
+@keyframes bar-pulse {
+  from {
+    opacity: 0.6;
+    box-shadow: 0 0 5px rgba(232, 192, 64, 0.6);
+  }
+  to {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(232, 192, 64, 1);
+  }
+}
+
+/* ── Planet ───────────────────────────────────────────────────────────────── */
 .bpl-planet {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -234,33 +279,33 @@ watch(
   overflow: hidden;
   background: rgba(0, 0, 0, 0.4);
   box-shadow:
-    0 0 8px rgba(0, 0, 0, 0.6),
-    inset 0 0 4px rgba(0, 0, 0, 0.4);
+    0 0 10px rgba(0, 0, 0, 0.7),
+    inset 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .bpl-item--active .bpl-planet {
   box-shadow:
-    0 0 12px rgba(232, 192, 64, 0.35),
-    inset 0 0 4px rgba(0, 0, 0, 0.4);
+    0 0 14px rgba(232, 192, 64, 0.4),
+    inset 0 0 5px rgba(0, 0, 0, 0.4);
 }
 
 .bpl-item--galaxy .bpl-planet {
   box-shadow:
-    0 0 12px rgba(180, 40, 255, 0.35),
-    inset 0 0 4px rgba(0, 0, 0, 0.4);
+    0 0 14px rgba(180, 40, 255, 0.4),
+    inset 0 0 5px rgba(0, 0, 0, 0.4);
 }
 
-/* ── Info ────────────────────────────────────────────────────────────────── */
+/* ── Info ─────────────────────────────────────────────────────────────────── */
 .bpl-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
 
 .bpl-boss-name {
-  font-size: 0.67rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #d4b060;
   letter-spacing: 0.04em;
@@ -268,47 +313,50 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+  text-shadow: 0 0 8px rgba(200, 146, 42, 0.3);
 }
 .bpl-item--active .bpl-boss-name {
   color: #e8c040;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
 }
 .bpl-item--galaxy .bpl-boss-name {
   color: #dd88ff;
+  text-shadow: 0 0 10px rgba(200, 80, 255, 0.45);
 }
 
 .bpl-planet-name {
-  font-size: 0.52rem;
+  font-size: 0.58rem;
   font-weight: 600;
-  color: #6a5828;
-  letter-spacing: 0.06em;
+  color: rgba(150, 120, 60, 0.6);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .bpl-item--active .bpl-planet-name {
-  color: #9a7e38;
+  color: rgba(200, 160, 60, 0.75);
 }
 
-/* ── HP ──────────────────────────────────────────────────────────────────── */
+/* ── HP ───────────────────────────────────────────────────────────────────── */
 .bpl-hp-wrap {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 1px;
+  gap: 5px;
+  margin-top: 2px;
 }
 
 .bpl-hp-track {
   flex: 1;
-  height: 4px;
-  border-radius: 2px;
+  height: 5px;
+  border-radius: 3px;
   background: rgba(8, 6, 2, 0.7);
   overflow: hidden;
 }
 
 .bpl-hp-fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   background: linear-gradient(to right, #2a7018, #50b430);
   transition: width 0.3s ease-out;
 }
@@ -323,52 +371,24 @@ watch(
 }
 
 .bpl-hp-label {
-  font-size: 0.46rem;
+  font-size: 0.52rem;
   font-weight: 700;
-  color: #7a6030;
+  color: rgba(160, 120, 50, 0.7);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .bpl-item--active .bpl-hp-label {
-  color: #a08040;
+  color: rgba(200, 160, 60, 0.85);
 }
 
-/* ── Cleared Badge ───────────────────────────────────────────────────────── */
+/* ── Cleared Badge ────────────────────────────────────────────────────────── */
 .bpl-cleared-badge {
-  font-size: 0.5rem;
+  font-size: 0.56rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: #52b830;
   text-transform: uppercase;
-  margin-top: 1px;
-}
-
-/* ── Aktiv-Indikator ─────────────────────────────────────────────────────── */
-.bpl-active-dot {
-  position: absolute;
-  left: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 0 2px 2px 0;
-  background: #e8c040;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.8);
-  animation: bpl-dot-pulse 1s ease-in-out infinite alternate;
-}
-
-.bpl-item--galaxy .bpl-active-dot {
-  background: #cc44ff;
-  box-shadow: 0 0 6px rgba(200, 60, 255, 0.8);
-}
-
-@keyframes bpl-dot-pulse {
-  from {
-    opacity: 0.6;
-  }
-  to {
-    opacity: 1;
-    box-shadow: 0 0 10px rgba(232, 192, 64, 1);
-  }
+  margin-top: 2px;
+  text-shadow: 0 0 6px rgba(82, 184, 48, 0.5);
 }
 </style>

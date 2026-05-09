@@ -65,7 +65,7 @@
       </div>
     </div>
 
-    <!-- Floating Damage Numbers — nur rendern wenn mounted -->
+    <!-- Floating Damage Numbers -->
     <template v-if="isMountedRef">
       <Teleport to="body">
         <div class="dmg-overlay" aria-hidden="true">
@@ -132,15 +132,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ shake: [ms: number] }>()
 
-// Stores normal importieren — kein require()
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 
-// Reaktives Flag für Template-Guard bei Teleport
 const isMountedRef = ref(false)
 let isMounted = false
 
-// ── Champion-Stern-Erkennung ──────────────────────────────────────────────
 const isChampionStarPlanet = computed<boolean>(() => {
   if (!props.activeBoss) return false
   if (props.activeBoss.isChampionPlanet) return true
@@ -159,7 +156,6 @@ const effectiveEnragePercent = computed<number>(() =>
   isChampionStarPlanet.value ? 0 : props.enragePercent,
 )
 
-// ── Boss image discovery ──────────────────────────────────────────────────
 const arenaEl = ref<HTMLDivElement | null>(null)
 const planetStageRef = ref<HTMLDivElement | null>(null)
 const bossImage = ref('/img/Boss/Boss1.png')
@@ -210,7 +206,6 @@ function renderPlanet() {
   planetStageRef.value.appendChild(svg)
 }
 
-// ── Damage floats ─────────────────────────────────────────────────────────
 const isHit = ref(false)
 let dmgIdCounter = 0
 const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
@@ -270,7 +265,6 @@ function handleChampionUlt() {
   spawnFloat(5)
 }
 
-// ── Champion attack state & timers ────────────────────────────────────────
 const attackCounts = reactive<number[]>([])
 const ultActives = reactive<boolean[]>([])
 const _hitTimeouts: number[] = []
@@ -389,7 +383,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 
 <style scoped>
 /* ══════════════════════════════════════════════════════════════════════════════
-   BATTLE ARENA
+   BATTLE ARENA — kein eigener Hintergrund, Modal-Planet-BG scheint durch
 ══════════════════════════════════════════════════════════════════════════════ */
 .arena {
   position: relative;
@@ -400,17 +394,11 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   justify-content: center;
   overflow: hidden;
   border-radius: 6px;
-  background: radial-gradient(ellipse at 50% 100%, rgba(80, 30, 0, 0.4) 0%, transparent 70%);
+  /* transparent — Modal-Planet-BG ist der Hintergrund */
+  background: transparent;
 }
 
-.arena--galaxy {
-  background: radial-gradient(
-    ellipse at 50% 60%,
-    rgba(60, 0, 90, 0.5) 0%,
-    rgba(5, 0, 15, 0.95) 100%
-  );
-}
-
+/* Galaxy-Sterne-Overlay bleibt als ::before — nur das Basis-bg weg */
 .arena--galaxy::before {
   content: '';
   position: absolute;
@@ -438,18 +426,19 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   background: linear-gradient(90deg, transparent, rgba(200, 100, 0, 0.4), transparent);
 }
 
+/* Lokaler Planet-BG in der Arena (Fokus-Verstärkung, leicht stärker als Modal-BG) */
 .planet-bg {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.14;
+  opacity: 0.22;
   pointer-events: none;
 }
 
 .planet-bg--galaxy {
-  opacity: 0.32;
+  opacity: 0.45;
   animation: planet-glow-pulse 2.5s ease-in-out infinite alternate;
 }
 
@@ -476,7 +465,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   background: linear-gradient(
     to top,
     rgba(5, 2, 0, 0.88) 0%,
-    rgba(10, 4, 0, 0.6) 50%,
+    rgba(10, 4, 0, 0.55) 50%,
     transparent 100%
   );
   pointer-events: none;
@@ -488,7 +477,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   background: linear-gradient(
     to top,
     rgba(10, 0, 20, 0.92) 0%,
-    rgba(20, 0, 40, 0.55) 50%,
+    rgba(20, 0, 40, 0.5) 50%,
     transparent 100%
   );
 }
@@ -712,6 +701,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     opacity: 0.4;
   }
 }
+
 .enrage-seconds {
   font-size: 1rem;
   font-weight: 900;
@@ -753,6 +743,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   left: 0;
   top: 0;
 }
+
 .champ-striker {
   display: flex;
   flex-direction: column;
@@ -761,6 +752,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   animation: champ-strike 2.6s ease-in-out infinite;
   animation-delay: var(--strike-delay, 0s);
 }
+
 .champ-portrait {
   position: relative;
   width: 72px;
@@ -806,6 +798,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   justify-content: center;
   margin-bottom: 3px;
 }
+
 .champ-pip {
   width: 10px;
   height: 4px;
@@ -833,6 +826,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
     filter: brightness(1.4);
   }
 }
+
 .champ-portrait--ulting {
   border-color: #e8c040;
   box-shadow:
