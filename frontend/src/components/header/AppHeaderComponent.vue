@@ -213,13 +213,6 @@ onUnmounted(() => {
   width: clamp(300px, 30vw, 400px);
 }
 
-body.bard-modal-open .center-chimes {
-  border-left: 4px solid #7a4e20;
-  border-right: 4px solid #7a4e20;
-  border-bottom: none;
-  border-radius: 0;
-}
-
 /* ================================================================
    CENTER-CHIMES – Tropfen-Panel
    ================================================================ */
