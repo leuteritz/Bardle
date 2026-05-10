@@ -846,6 +846,9 @@ export const useBattleStore = defineStore('battle', {
       this.showAutoBattleResult = false
       this.battlePhase = 'playing'
       this.battleTime = 0
+      this.chatMessages = []
+      this.resetTeamStats(this.team1)
+      this.resetTeamStats(this.team2)
       this.activeShopItems = getRandomShopItems(this.permanentBattleUpgrades)
       this.freeRerollAvailable = true
       this.shopPhaseActive = true

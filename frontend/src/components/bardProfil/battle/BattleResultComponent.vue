@@ -130,9 +130,7 @@ export default defineComponent({
       () => battleStore.showAutoBattleResult,
       async (newVal, oldVal) => {
         if (oldVal === true && newVal === false && battleStore.isAutoBattleInitialized) {
-          battleStore.pauseBattleSimulation()
           await runUniverseAnimation()
-          battleStore.startBattleSimulation()
         }
       },
     )
