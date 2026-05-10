@@ -122,11 +122,13 @@ export default defineComponent({
 
     let rafId: number | null = null
     let planetFoundTimer: ReturnType<typeof setTimeout> | null = null
+    let pendingResolve: (() => void) | null = null
 
     // ── Canvas render loop ────────────────────────────────────────────────────
 
     function runCanvasAnimation(canvas: HTMLCanvasElement, variant: number): Promise<void> {
       return new Promise<void>((resolve) => {
+        pendingResolve = resolve
         const ctx = canvas.getContext('2d')!
         const W = canvas.width
         const H = canvas.height
@@ -141,6 +143,7 @@ export default defineComponent({
         function frame(now: number) {
           const elapsed = now - t0
           if (elapsed >= ANIM_DURATION) {
+            pendingResolve = null
             ctx.clearRect(0, 0, W, H)
             resolve()
             return
@@ -306,6 +309,9 @@ export default defineComponent({
     // ── Stop helper ───────────────────────────────────────────────────────────
 
     function stopAnimation(): void {
+      // Resolve any pending Promise so awaiting callers (startBattle, inter-battle watch) continue
+      pendingResolve?.()
+      pendingResolve = null
       if (rafId !== null) {
         cancelAnimationFrame(rafId)
         rafId = null

@@ -241,8 +241,11 @@ export const useBattleStore = defineStore('battle', {
     },
 
     // Startet die 30-Sekunden-Battle-Simulation: Game-Timer + Kill-Events pro Tick
-    startBattleSimulation() {
-      this.battlePhaseStartTimestamp = Date.now()
+    // resume=true: behält battlePhaseStartTimestamp (für Wiederaufnahme nach Page-Reload)
+    startBattleSimulation(resume = false) {
+      if (!resume) {
+        this.battlePhaseStartTimestamp = Date.now()
+      }
       if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
       this.battleSimIntervalId = setInterval(() => {
         // Timestamp-basiert: funktioniert korrekt auch bei Tab-Throttling
@@ -951,6 +954,10 @@ export const useBattleStore = defineStore('battle', {
           this.runBattleCycle()
           return
         }
+        // Battle still in progress — restart interval if it's not running (e.g. after page reload)
+        if (!this.battleSimIntervalId) {
+          this.startBattleSimulation(true)
+        }
       }
       if (
         this.autoBattleEnabled &&
@@ -965,6 +972,18 @@ export const useBattleStore = defineStore('battle', {
           this.autoBattleTimer = null
         }
         this.runBattleCycle()
+      }
+    },
+
+    // Stellt nach Page-Reload den Visibility-Listener wieder her und synchronisiert den State
+    resumeBattleAfterLoad() {
+      if (!this.isAutoBattleInitialized) return
+      if (!_visibilityHandler) {
+        _visibilityHandler = () => { if (!document.hidden) this.syncFromTimestamps() }
+        document.addEventListener('visibilitychange', _visibilityHandler)
+      }
+      if (this.autoBattleEnabled) {
+        this.syncFromTimestamps()
       }
     },
 

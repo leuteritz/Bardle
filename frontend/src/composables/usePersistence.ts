@@ -99,6 +99,7 @@ export function usePersistence() {
         recruitableChampions: battleStore.recruitableChampions,
         recruitedChampions: [...battleStore.recruitedChampions],
         battleEverStarted: battleStore.battleEverStarted,
+        isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
         battleCoins: battleStore.battleCoins,
         totalCoinsEarned: battleStore.totalCoinsEarned,
         purchasedBuffs: battleStore.purchasedBuffs,
@@ -252,6 +253,7 @@ export function usePersistence() {
         if (Array.isArray(b.recruitedChampions))
           battleStore.recruitedChampions = b.recruitedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
+        battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
         battleStore.battleCoins = b.battleCoins ?? 0
         battleStore.totalCoinsEarned = b.totalCoinsEarned ?? 0
         if (Array.isArray(b.purchasedBuffs)) battleStore.purchasedBuffs = b.purchasedBuffs
@@ -368,6 +370,9 @@ export function usePersistence() {
           gameStore.showOfflineModal = true
         }
       }
+
+      // Nach Page-Reload: Visibility-Listener und Simulation für laufenden Kampf wiederherstellen
+      battleStore.resumeBattleAfterLoad()
 
       logger.info('System', 'Game loaded', {
         level: gameStore.level,
