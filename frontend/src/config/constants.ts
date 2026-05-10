@@ -16,6 +16,15 @@ export const MEEP_COST_EXPONENT = 1.2
 // Auto-battle
 export const AUTO_BATTLE_INTERVAL_MS = 45000
 export const BATTLE_REAL_DURATION_SECONDS = 45
+
+// Game State display phases (bottom stats bar)
+export const GAME_STATE = {
+  SEARCHING: { key: 'searching', icon: '🔍', label: 'Planetensuche', color: '#9a6830' },
+  BATTLE: { key: 'battle', icon: '⚔️', label: 'Battle', color: '#e8c040' },
+  HONOR: { key: 'honor', icon: '🏆', label: 'Honor Phase', color: '#74d448' },
+} as const
+
+export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
 export const KILL_EVENTS_PER_TEAM_MIN = 20
 export const KILL_EVENTS_PER_TEAM_MAX = 40
 export const MMR_TO_POWER_MULTIPLIER = 1.5

@@ -466,14 +466,19 @@ export const useBattleStore = defineStore('battle', {
         this.generateKillSchedule()
         this.drakeEventTime = 1200
         this.baronEventTime = 1500 + Math.floor(Math.random() * 600)
-        this.startBattleSimulation()
-        this.showRandomChatMessagesSequentially()
-        logBattleStarted(this.currentOpponentLabel)
       }
       logger.group('Battle Init', () => {
         logger.info('Battle', `Team 1: ${this.team1.map((c) => c.name).join(', ')}`)
         logger.info('Battle', `Team 2: ${this.team2.map((c) => c.name).join(', ')}`)
       })
+    },
+
+    beginSimulation() {
+      if (this.team1.length > 0 && this.team2.length > 0) {
+        this.startBattleSimulation()
+        this.showRandomChatMessagesSequentially()
+        logBattleStarted(this.currentOpponentLabel)
+      }
     },
 
     async simulateBattle(opponentMMR: number) {

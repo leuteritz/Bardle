@@ -3,8 +3,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
-import { formatNumber } from '@/config/numberFormat'
-import { ROLES } from '@/config/constants'
+import { ROLES, GAME_STATE } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -57,10 +56,32 @@ const {
   currentRank,
   totalWins,
   totalLosses,
-  totalCoinsEarned,
   isAutoBattleInitialized,
   currentWinProbability,
+  battlePhase,
+  battleTime,
+  showAutoBattleResult,
+  battlePhaseStartTimestamp,
 } = storeToRefs(battleStore)
+
+const gameStateDisplay = computed(() => {
+  if (!isAutoBattleInitialized.value) {
+    return { icon: '—', text: '', color: '#6a4418' }
+  }
+  if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
+    const min = Math.floor(battleTime.value / 60)
+      .toString()
+      .padStart(2, '0')
+    const sec = (battleTime.value % 60).toString().padStart(2, '0')
+    const { icon, label, color } = GAME_STATE.BATTLE
+    return { icon, text: `${label} ${min}:${sec}`, color }
+  }
+  if (showAutoBattleResult.value) {
+    const { icon, label, color } = GAME_STATE.HONOR
+    return { icon, text: label, color }
+  }
+  return { icon: GAME_STATE.SEARCHING.icon, text: '', color: GAME_STATE.SEARCHING.color }
+})
 
 const rankLabel = computed(() => {
   const { tier, division } = currentRank.value
@@ -156,13 +177,18 @@ const winChanceColor = computed(() => {
       </div>
       <div class="bbstat-divider" />
       <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--gold">🪙</span>
-        <span class="bbstat-label">GOLD</span>
-        <span class="bbstat-val bbstat-val--gold">{{ formatNumber(totalCoinsEarned) }}</span>
+        <span class="bbstat-icon">{{ gameStateDisplay.icon }}</span>
+        <span
+          class="bbstat-val"
+          :style="{ color: gameStateDisplay.color, fontSize: '13px', whiteSpace: 'nowrap' }"
+          >{{ gameStateDisplay.text }}</span
+        >
       </div>
       <div class="bbstat-divider" />
       <div class="bbstat-item">
-        <span class="bbstat-icon" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">◎</span>
+        <span class="bbstat-icon" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }"
+          >◎</span
+        >
         <span class="bbstat-label">WIN%</span>
         <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
           {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}

@@ -131,6 +131,7 @@ export default defineComponent({
       async (newVal, oldVal) => {
         if (oldVal === true && newVal === false && battleStore.isAutoBattleInitialized) {
           await runUniverseAnimation()
+          battleStore.beginSimulation()
         }
       },
     )
@@ -140,6 +141,7 @@ export default defineComponent({
       isStarting.value = true
       await runUniverseAnimation()
       await battleStore.initializePersistentAutoBattle()
+      battleStore.beginSimulation()
       isStarting.value = false
     }
 
