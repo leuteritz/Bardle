@@ -75,9 +75,9 @@
                 !shopStore.canAffordUpgrade(upgrade) ? { '--prog': getProgress(upgrade) + '%' } : {}
               "
             >
-              <span class="buy-cost"
-                >{{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} 🪙</span
-              >
+              <span class="buy-cost">
+                {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} 🪙
+              </span>
               <span class="buy-qty">×{{ shopStore.getActualBuyAmount(upgrade) || 1 }}</span>
             </div>
 
@@ -110,10 +110,9 @@ import { useGameStore } from '@/stores/gameStore'
 import { formatNumber } from '@/config/numberFormat'
 import type { ShopUpgrade } from '@/types'
 
-const ORBIT_RADIUS = 148
+const ORBIT_RADIUS = 240
 const START_ANGLE_DEG = 270
 
-// Seeded starfield – stable across renders
 const stars = Array.from({ length: 62 }, (_, i) => {
   let s = (i * 1664525 + 1013904223) & 0x7fffffff
   s = (s * 1664525 + 1013904223) & 0x7fffffff
@@ -169,18 +168,18 @@ export default defineComponent({
 
 <style scoped>
 /* ══════════════════════════════════════════════════
-   RAHMEN (CLAUDE.md Holz-Frame)
+   RAHMEN
 ══════════════════════════════════════════════════ */
 .shop-frame {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0818;
-  border: 4px solid #7a4e20;
+  background: var(--rpg-bg-deep);
+  border: 4px solid var(--rpg-wood);
   border-radius: 4px;
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
+    inset 0 0 0 2px var(--rpg-wood-inner),
+    inset 0 0 0 4px var(--rpg-wood-mid),
     0 4px 20px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
@@ -190,21 +189,21 @@ export default defineComponent({
 ══════════════════════════════════════════════════ */
 .selector-bar {
   display: flex;
-  gap: 4px;
-  padding: 6px 8px;
-  background: #0d0b20;
-  border-bottom: 2px solid #2a1f5a;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--rpg-bg-dark);
+  border-bottom: 2px solid var(--rpg-wood-mid);
   flex-shrink: 0;
 }
 
 .selector-btn {
   flex: 1;
-  padding: 4px 2px;
-  font-size: 10px;
+  padding: 7px 2px;
+  font-size: 13px;
   font-weight: 900;
-  color: #6058a0;
-  background: #12102a;
-  border: 1px solid #2a2050;
+  color: var(--rpg-gold-dim);
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-inner);
   border-radius: 4px;
   cursor: pointer;
   transition:
@@ -215,16 +214,16 @@ export default defineComponent({
 }
 
 .selector-btn:hover {
-  background: #1c1840;
-  color: #9080d0;
-  border-color: #4a3880;
+  background: var(--rpg-bg-hover);
+  color: var(--rpg-gold);
+  border-color: var(--rpg-wood-mid);
 }
 
 .selector-btn--active {
-  background: linear-gradient(to bottom, #3a2e80, #241e60);
-  border-color: #6050c0;
-  color: #c0b0ff;
-  box-shadow: 0 0 8px rgba(100, 70, 220, 0.4);
+  background: var(--rpg-bg-selected);
+  border-color: var(--rpg-gold-dim);
+  color: var(--rpg-gold-bright);
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.35);
 }
 
 /* ══════════════════════════════════════════════════
@@ -239,7 +238,6 @@ export default defineComponent({
   justify-content: center;
 }
 
-/* Sternenhimmel */
 .star {
   position: absolute;
   border-radius: 50%;
@@ -247,11 +245,10 @@ export default defineComponent({
   pointer-events: none;
 }
 
-/* Bühnenfläche */
 .arena-stage {
   position: relative;
-  width: 420px;
-  height: 420px;
+  width: 640px;
+  height: 640px;
   flex-shrink: 0;
 }
 
@@ -262,8 +259,8 @@ export default defineComponent({
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 100px;
-  height: 100px;
+  width: 200px;
+  height: 200px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
@@ -275,9 +272,10 @@ export default defineComponent({
     #8b2800 100%
   );
   box-shadow:
-    0 0 30px 10px rgba(245, 160, 30, 0.55),
-    0 0 70px 25px rgba(200, 80, 10, 0.3),
-    0 0 120px 50px rgba(150, 40, 0, 0.15);
+    0 0 55px 22px rgba(245, 160, 30, 0.8),
+    0 0 120px 50px rgba(200, 80, 10, 0.55),
+    0 0 200px 90px rgba(150, 40, 0, 0.32),
+    0 0 300px 130px rgba(120, 30, 0, 0.16);
   animation: sun-pulse 3.2s ease-in-out infinite;
 }
 
@@ -285,15 +283,17 @@ export default defineComponent({
   0%,
   100% {
     box-shadow:
-      0 0 30px 10px rgba(245, 160, 30, 0.55),
-      0 0 70px 25px rgba(200, 80, 10, 0.3),
-      0 0 120px 50px rgba(150, 40, 0, 0.15);
+      0 0 55px 22px rgba(245, 160, 30, 0.8),
+      0 0 120px 50px rgba(200, 80, 10, 0.55),
+      0 0 200px 90px rgba(150, 40, 0, 0.32),
+      0 0 300px 130px rgba(120, 30, 0, 0.16);
   }
   50% {
     box-shadow:
-      0 0 45px 18px rgba(245, 160, 30, 0.75),
-      0 0 95px 38px rgba(200, 80, 10, 0.45),
-      0 0 150px 65px rgba(150, 40, 0, 0.22);
+      0 0 80px 36px rgba(255, 210, 50, 1),
+      0 0 170px 75px rgba(230, 100, 10, 0.78),
+      0 0 280px 125px rgba(180, 60, 0, 0.48),
+      0 0 400px 175px rgba(140, 40, 0, 0.22);
   }
 }
 
@@ -309,17 +309,17 @@ export default defineComponent({
    ORBIT-KARTE
 ══════════════════════════════════════════════════ */
 .orbit-card {
-  width: 84px;
+  width: 128px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 6px 6px;
-  background: #100e26;
-  border: 1.5px solid #2e2860;
-  border-radius: 5px;
+  gap: 5px;
+  padding: 13px 10px 10px;
+  background: var(--rpg-bg-dark);
+  border: 2px solid var(--rpg-wood-inner);
+  border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
@@ -335,43 +335,45 @@ export default defineComponent({
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-7px);
+    transform: translateY(-8px);
   }
 }
 
+/* Grüner Rand = kaufbar */
 .orbit-card--can {
-  border-color: #504898;
+  border-color: var(--rpg-green-border);
   box-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.7),
-    0 0 10px rgba(100, 80, 200, 0.2);
+    0 2px 14px rgba(0, 0, 0, 0.7),
+    0 0 18px rgba(78, 192, 64, 0.35);
 }
 
+/* Hover — Gold statt Lila */
 .orbit-card:hover,
 .orbit-card--hovered {
-  border-color: #8860ff;
+  border-color: var(--rpg-gold);
   box-shadow:
-    0 4px 18px rgba(0, 0, 0, 0.8),
-    0 0 18px rgba(140, 90, 255, 0.45);
-  transform: translateY(-5px) scale(1.04);
+    0 4px 22px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(200, 144, 64, 0.45);
+  transform: translateY(-6px) scale(1.05);
   animation-play-state: paused;
-  background: #14103a;
+  background: var(--rpg-bg-hover);
   z-index: 10;
 }
 
-/* Icon */
+/* Icon — kein pixelated, kein lila Drop-Shadow */
 .card-icon {
-  width: 32px;
-  height: 32px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 1px 4px rgba(140, 90, 255, 0.4));
+  image-rendering: auto;
+  filter: drop-shadow(0 2px 5px rgba(200, 144, 64, 0.4));
 }
 
 /* Name */
 .card-name {
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 900;
-  color: #c8bef8;
+  color: var(--rpg-text);
   text-align: center;
   letter-spacing: 0.2px;
   line-height: 1.2;
@@ -379,73 +381,92 @@ export default defineComponent({
 
 /* Level */
 .card-level {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
-  color: #e8c040;
+  color: var(--rpg-gold);
 }
 
 /* Stats */
 .card-stat {
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
   text-align: center;
 }
 
 .card-stat--cps {
-  color: #50d8ff;
+  color: var(--rpg-orange);
 }
 
 .card-stat--cpc {
-  color: #90e880;
+  color: var(--rpg-green-light);
 }
 
-/* Kaufbutton */
+/* ══════════════════════════════════════════════════
+   KAUFBUTTON
+══════════════════════════════════════════════════ */
 .card-buy {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 5px;
-  border-radius: 3px;
-  margin-top: 2px;
-  gap: 3px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  margin-top: 3px;
+  gap: 4px;
   position: relative;
   overflow: hidden;
 }
 
+/* GRÜN: genug Chimes */
 .card-buy--can {
-  background: linear-gradient(to bottom, #2c5a20, #1e4018);
-  border: 1px solid #5ea040;
-  box-shadow: 0 0 6px rgba(80, 200, 40, 0.3);
+  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
+  border: 2px solid var(--rpg-green-border);
+  box-shadow:
+    0 0 10px rgba(60, 220, 40, 0.45),
+    inset 0 1px 0 rgba(100, 255, 60, 0.15);
 }
 
+.card-buy--can .buy-cost {
+  color: #a0ffa0;
+  font-weight: 900;
+}
+
+.card-buy--can .buy-qty {
+  color: var(--rpg-green-light);
+  font-weight: 700;
+}
+
+/* ROT: zu wenig Chimes (mit Fortschrittsbalken) */
 .card-buy--cant {
-  background-color: #0e0c1e;
-  background-image: linear-gradient(to right, #2a1a50, #4a2880);
+  background-color: var(--rpg-bg-red-subtle);
+  background-image: linear-gradient(to right, #502010, #803020);
   background-size: var(--prog, 0%) 100%;
   background-repeat: no-repeat;
   background-position: left center;
-  border: 1px solid #2a2050;
+  border: 2px solid var(--rpg-red);
+  box-shadow: 0 0 8px rgba(180, 40, 40, 0.3);
+}
+
+.card-buy--cant .buy-cost {
+  color: var(--rpg-red);
+  font-weight: 900;
+}
+
+.card-buy--cant .buy-qty {
+  color: #904040;
+  font-weight: 700;
 }
 
 .buy-cost {
-  font-size: 8px;
-  font-weight: 900;
-  color: #d0c8f8;
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
 }
 
-.card-buy--cant .buy-cost {
-  color: #6050a0;
-}
-
 .buy-qty {
-  font-size: 8px;
-  font-weight: 700;
-  color: #8878d0;
+  font-size: 11px;
   flex-shrink: 0;
 }
 
@@ -454,37 +475,37 @@ export default defineComponent({
 ══════════════════════════════════════════════════ */
 .card-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  width: 140px;
-  background: #0c0a1e;
-  border: 2px solid #4a3880;
-  border-radius: 4px;
-  padding: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9);
+  width: 170px;
+  background: var(--rpg-bg-tooltip);
+  border: 2px solid var(--rpg-wood-mid);
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.9);
   z-index: 100;
   pointer-events: none;
 }
 
 .tooltip-title {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 900;
-  color: #c0b0ff;
-  margin-bottom: 5px;
+  color: var(--rpg-gold-bright);
+  margin-bottom: 6px;
   letter-spacing: 0.3px;
 }
 
 .tooltip-line {
-  font-size: 9px;
-  color: #8878c0;
-  margin-bottom: 2px;
+  font-size: 11px;
+  color: var(--rpg-text-muted);
+  margin-bottom: 3px;
 }
 
 .tooltip-cost {
-  font-size: 9px;
-  color: #e8c040;
-  margin-top: 4px;
+  font-size: 11px;
+  color: var(--rpg-gold);
+  margin-top: 6px;
   font-weight: 700;
 }
 
@@ -496,16 +517,6 @@ export default defineComponent({
 .tooltip-fade-enter-from,
 .tooltip-fade-leave-to {
   opacity: 0;
-}
-
-/* ══════════════════════════════════════════════════
-   MISSIONEN (unterer Bereich)
-══════════════════════════════════════════════════ */
-.shop-missions {
-  flex-shrink: 0;
-  height: 38%;
-  border-top: 2px solid #2a1f5a;
-  overflow: hidden;
 }
 
 /* ══════════════════════════════════════════════════
@@ -533,7 +544,7 @@ export default defineComponent({
     height: auto;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 10px;
   }
 
   .cosmic-sun {
