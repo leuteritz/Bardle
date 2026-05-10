@@ -1,5 +1,19 @@
 <template>
   <div class="shop-frame">
+    <!-- Sternenhimmel über gesamte Komponente -->
+    <span
+      v-for="star in stars"
+      :key="star.id"
+      class="star"
+      :style="{
+        left: star.x + '%',
+        top: star.y + '%',
+        width: star.size + 'px',
+        height: star.size + 'px',
+        opacity: star.opacity,
+      }"
+    />
+
     <!-- ── Kaufmengen-Selector ── -->
     <div class="selector-bar">
       <button
@@ -15,26 +29,9 @@
 
     <!-- ── Kosmische Arena ── -->
     <div class="cosmic-arena">
-      <!-- Sternenhimmel -->
-      <span
-        v-for="star in stars"
-        :key="star.id"
-        class="star"
-        :style="{
-          left: star.x + '%',
-          top: star.y + '%',
-          width: star.size + 'px',
-          height: star.size + 'px',
-          opacity: star.opacity,
-        }"
-      />
-
-      <!-- Bühnenfläche: Sonne + Orbit-Karten -->
       <div class="arena-stage">
-        <!-- Sonne -->
         <div class="cosmic-sun" />
 
-        <!-- Orbit-Positionen -->
         <div
           v-for="(upgrade, index) in shopStore.shopUpgrades"
           :key="upgrade.id"
@@ -45,6 +42,7 @@
             class="orbit-card"
             :class="{
               'orbit-card--can': shopStore.canAffordUpgrade(upgrade),
+              'orbit-card--locked': !shopStore.canAffordUpgrade(upgrade),
               'orbit-card--hovered': hoveredId === upgrade.id,
             }"
             :style="{ '--idx': index }"
@@ -52,14 +50,10 @@
             @mouseleave="hoveredId = null"
             @click="shopStore.buyUpgrade(upgrade.id)"
           >
-            <!-- Icon -->
             <img :src="upgrade.icon" :alt="upgrade.name" class="card-icon" />
-
-            <!-- Name + Level -->
             <div class="card-name">{{ upgrade.name }}</div>
             <div class="card-level">Lv. {{ upgrade.level }}</div>
 
-            <!-- CPS/CPC wenn aktiv -->
             <div v-if="upgrade.baseCPS && upgrade.level > 0" class="card-stat card-stat--cps">
               +{{ formatNumber(upgrade.baseCPS * upgrade.level) }} CpS
             </div>
@@ -67,7 +61,6 @@
               +{{ formatNumber(upgrade.baseCPC * upgrade.level) }} CpC
             </div>
 
-            <!-- Kaufbutton -->
             <div
               class="card-buy"
               :class="shopStore.canAffordUpgrade(upgrade) ? 'card-buy--can' : 'card-buy--cant'"
@@ -81,7 +74,6 @@
               <span class="buy-qty">×{{ shopStore.getActualBuyAmount(upgrade) || 1 }}</span>
             </div>
 
-            <!-- Tooltip -->
             <Transition name="tooltip-fade">
               <div v-if="hoveredId === upgrade.id" class="card-tooltip">
                 <div class="tooltip-title">{{ upgrade.name }}</div>
@@ -168,7 +160,7 @@ export default defineComponent({
 
 <style scoped>
 /* ══════════════════════════════════════════════════
-   RAHMEN
+   SHOP-RAHMEN
 ══════════════════════════════════════════════════ */
 .shop-frame {
   display: flex;
@@ -182,18 +174,29 @@ export default defineComponent({
     inset 0 0 0 4px var(--rpg-wood-mid),
     0 4px 20px rgba(0, 0, 0, 0.8);
   overflow: hidden;
+  position: relative;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* ══════════════════════════════════════════════════
-   KAUFMENGEN-SELECTOR
+   SELECTOR
 ══════════════════════════════════════════════════ */
 .selector-bar {
   display: flex;
   gap: 5px;
   padding: 8px 10px;
-  background: var(--rpg-bg-dark);
-  border-bottom: 2px solid var(--rpg-wood-mid);
+  background: transparent;
+  border-bottom: none;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .selector-btn {
@@ -202,7 +205,7 @@ export default defineComponent({
   font-size: 13px;
   font-weight: 900;
   color: var(--rpg-gold-dim);
-  background: var(--rpg-bg-dark);
+  background: transparent;
   border: 1px solid var(--rpg-wood-inner);
   border-radius: 4px;
   cursor: pointer;
@@ -214,20 +217,20 @@ export default defineComponent({
 }
 
 .selector-btn:hover {
-  background: var(--rpg-bg-hover);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--rpg-gold);
   border-color: var(--rpg-wood-mid);
 }
 
 .selector-btn--active {
-  background: var(--rpg-bg-selected);
+  background: rgba(122, 78, 32, 0.25);
   border-color: var(--rpg-gold-dim);
   color: var(--rpg-gold-bright);
   box-shadow: 0 0 8px rgba(200, 144, 64, 0.35);
 }
 
 /* ══════════════════════════════════════════════════
-   KOSMISCHE ARENA
+   ARENA
 ══════════════════════════════════════════════════ */
 .cosmic-arena {
   flex: 1;
@@ -236,13 +239,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.star {
-  position: absolute;
-  border-radius: 50%;
-  background: #ffffff;
-  pointer-events: none;
+  z-index: 1;
 }
 
 .arena-stage {
@@ -315,15 +312,15 @@ export default defineComponent({
   align-items: center;
   gap: 5px;
   padding: 13px 10px 10px;
-  background: var(--rpg-bg-dark);
-  border: 2px solid var(--rpg-wood-inner);
+  background: transparent;
+  border: none;
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+  box-shadow: none;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+    transform 0.15s,
+    filter 0.15s,
+    opacity 0.15s;
   animation: float 3.8s ease-in-out infinite;
   animation-delay: calc(var(--idx, 0) * 0.55s);
   position: relative;
@@ -339,34 +336,53 @@ export default defineComponent({
   }
 }
 
-/* Grüner Rand = kaufbar */
-.orbit-card--can {
-  border-color: var(--rpg-green-border);
-  box-shadow:
-    0 2px 14px rgba(0, 0, 0, 0.7),
-    0 0 18px rgba(78, 192, 64, 0.35);
+/* ── NICHT LEISTBAR: ausgegraut ── */
+.orbit-card--locked {
+  opacity: 0.45;
+  filter: grayscale(80%);
 }
 
-/* Hover — Gold statt Lila */
-.orbit-card:hover,
-.orbit-card--hovered {
-  border-color: var(--rpg-gold);
-  box-shadow:
-    0 4px 22px rgba(0, 0, 0, 0.8),
-    0 0 20px rgba(200, 144, 64, 0.45);
-  transform: translateY(-6px) scale(1.05);
+/* Beim Hover kurz aufhellen damit Tooltip lesbar bleibt */
+.orbit-card--locked:hover,
+.orbit-card--locked.orbit-card--hovered {
+  opacity: 0.75;
+  filter: grayscale(50%);
+}
+
+/* ── KAUFBAR: Icon grün leuchten ── */
+.orbit-card--can .card-icon {
+  filter: drop-shadow(0 0 8px rgba(78, 192, 64, 0.7)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+
+/* ── HOVER (kaufbar): gold leuchten + skalieren ── */
+.orbit-card--can:hover,
+.orbit-card--can.orbit-card--hovered {
+  transform: translateY(-6px) scale(1.08);
   animation-play-state: paused;
-  background: var(--rpg-bg-hover);
   z-index: 10;
 }
 
-/* Icon — kein pixelated, kein lila Drop-Shadow */
+.orbit-card--can:hover .card-icon,
+.orbit-card--can.orbit-card--hovered .card-icon {
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.85)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+
+/* Hover bei locked: ebenfalls leicht skalieren für Tooltip */
+.orbit-card--locked:hover,
+.orbit-card--locked.orbit-card--hovered {
+  transform: translateY(-4px) scale(1.04);
+  animation-play-state: paused;
+  z-index: 10;
+}
+
+/* Icon */
 .card-icon {
   width: 52px;
   height: 52px;
   object-fit: contain;
   image-rendering: auto;
-  filter: drop-shadow(0 2px 5px rgba(200, 144, 64, 0.4));
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
+  transition: filter 0.15s;
 }
 
 /* Name */
@@ -377,6 +393,7 @@ export default defineComponent({
   text-align: center;
   letter-spacing: 0.2px;
   line-height: 1.2;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
 }
 
 /* Level */
@@ -384,6 +401,7 @@ export default defineComponent({
   font-size: 12px;
   font-weight: 700;
   color: var(--rpg-gold);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
 }
 
 /* Stats */
@@ -391,12 +409,12 @@ export default defineComponent({
   font-size: 11px;
   font-weight: 700;
   text-align: center;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
 }
 
 .card-stat--cps {
   color: var(--rpg-orange);
 }
-
 .card-stat--cpc {
   color: var(--rpg-green-light);
 }
@@ -417,7 +435,6 @@ export default defineComponent({
   overflow: hidden;
 }
 
-/* GRÜN: genug Chimes */
 .card-buy--can {
   background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
   border: 2px solid var(--rpg-green-border);
@@ -436,7 +453,6 @@ export default defineComponent({
   font-weight: 700;
 }
 
-/* ROT: zu wenig Chimes (mit Fortschrittsbalken) */
 .card-buy--cant {
   background-color: var(--rpg-bg-red-subtle);
   background-image: linear-gradient(to right, #502010, #803020);
@@ -486,6 +502,9 @@ export default defineComponent({
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.9);
   z-index: 100;
   pointer-events: none;
+  /* Tooltip immer voll sichtbar, auch wenn Karte ausgegraut */
+  filter: none;
+  opacity: 1;
 }
 
 .tooltip-title {
@@ -530,7 +549,7 @@ export default defineComponent({
 }
 
 /* ══════════════════════════════════════════════════
-   MOBILE: Karten untereinander statt Kreis
+   MOBILE
 ══════════════════════════════════════════════════ */
 @media (max-width: 560px) {
   .cosmic-arena {
