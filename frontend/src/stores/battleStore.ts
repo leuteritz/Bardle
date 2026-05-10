@@ -35,6 +35,7 @@ import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { logBattleStarted, logBattleEnded, logChampionDefeated } from '../config/gameEventLogger'
 
 let _lastKillLogMs = 0
+let _visibilityHandler: (() => void) | null = null
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -111,6 +112,8 @@ export const useBattleStore = defineStore('battle', {
     baronAlive: true,
     baronKilledByTeam: null as (1 | 2) | null,
     baronEventTime: 0,
+    battlePhaseStartTimestamp: 0,
+    autoBattleTimerEndTimestamp: 0,
     autoSkipEnabled: true,
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
@@ -239,13 +242,19 @@ export const useBattleStore = defineStore('battle', {
 
     // Startet die 30-Sekunden-Battle-Simulation: Game-Timer + Kill-Events pro Tick
     startBattleSimulation() {
+      this.battlePhaseStartTimestamp = Date.now()
       if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
       this.battleSimIntervalId = setInterval(() => {
-        this.battleTime += 60 // 1 Spielminute pro Sekunde
+        // Timestamp-basiert: funktioniert korrekt auch bei Tab-Throttling
+        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+        const newBattleTime = Math.floor(realElapsedS * 60)
 
-        // Kill-Events abarbeiten, die bis zur aktuellen Spielzeit eingetreten sind
-        const pending = this.killEventSchedule.filter((e) => e.gameTime <= this.battleTime)
-        this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > this.battleTime)
+        // Kill-Events zwischen altem und neuem battleTime abarbeiten
+        const pending = this.killEventSchedule.filter(
+          (e) => e.gameTime > this.battleTime && e.gameTime <= newBattleTime,
+        )
+        this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > newBattleTime)
+        this.battleTime = newBattleTime
         for (const event of pending) {
           const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
           const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
@@ -380,6 +389,7 @@ export const useBattleStore = defineStore('battle', {
       this.battlePhase = 'playing'
       this.predeterminedWin = null
       this.showAutoBattleResult = false
+      this.battlePhaseStartTimestamp = 0
     },
 
     // Zeigt zeitgestaffelte Chat-Nachrichten mit phasenbezogenem Inhalt über 30 real-Sekunden
@@ -744,6 +754,7 @@ export const useBattleStore = defineStore('battle', {
     async proceedToNextBattle() {
       await this.initializeBattle()
       this.startCountdown()
+      this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
       this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
@@ -777,8 +788,13 @@ export const useBattleStore = defineStore('battle', {
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
+      if (!_visibilityHandler) {
+        _visibilityHandler = () => { if (!document.hidden) this.syncFromTimestamps() }
+        document.addEventListener('visibilitychange', _visibilityHandler)
+      }
       await this.initializeBattle()
       this.startCountdown()
+      this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
       this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
@@ -804,13 +820,13 @@ export const useBattleStore = defineStore('battle', {
       this.timeUntilNextBattle = this.autoBattleInterval / 1000
       if (this.countdownTimer) clearInterval(this.countdownTimer)
       this.countdownTimer = setInterval(() => {
-        if (document.hidden) return
-        this.timeUntilNextBattle--
+        const remaining = this.autoBattleTimerEndTimestamp - Date.now()
+        this.timeUntilNextBattle = Math.max(0, Math.ceil(remaining / 1000))
         if (this.timeUntilNextBattle <= 0) {
-          clearInterval(this.countdownTimer)
+          clearInterval(this.countdownTimer!)
           this.countdownTimer = null
         }
-      }, 1000)
+      }, 500)
     },
 
     // Markiert einen Kampf als vom UI verarbeitet für saubere Anzeige
@@ -914,11 +930,53 @@ export const useBattleStore = defineStore('battle', {
       await this.runBattleCycle()
     },
 
+    // Gleicht abgelaufene Phasen nach Tab-Rückkehr ab (aufgerufen via visibilitychange)
+    syncFromTimestamps() {
+      if (
+        this.battlePhase === 'playing' &&
+        this.battlePhaseStartTimestamp > 0 &&
+        !this.shopPhaseActive &&
+        !this.showAutoBattleResult
+      ) {
+        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+        const gameTime = Math.floor(realElapsedS * 60)
+        if (gameTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
+          if (this.battleSimIntervalId) {
+            clearInterval(this.battleSimIntervalId)
+            this.battleSimIntervalId = null
+          }
+          this.battleTime = BATTLE_REAL_DURATION_SECONDS * 60
+          this.battlePhase = 'result'
+          logBattleEnded(this.predeterminedWin ?? false)
+          this.runBattleCycle()
+          return
+        }
+      }
+      if (
+        this.autoBattleEnabled &&
+        this.autoBattleTimerEndTimestamp > 0 &&
+        !this.shopPhaseActive &&
+        this.battlePhase !== 'result' &&
+        !this.showAutoBattleResult &&
+        Date.now() >= this.autoBattleTimerEndTimestamp
+      ) {
+        if (this.autoBattleTimer) {
+          clearTimeout(this.autoBattleTimer)
+          this.autoBattleTimer = null
+        }
+        this.runBattleCycle()
+      }
+    },
+
     // Stoppt den automatischen Kampfmodus und alle laufenden Timer
     stopAutoBattle() {
       this.autoBattleEnabled = false
       if (this.autoBattleTimer) clearTimeout(this.autoBattleTimer)
       if (this.countdownTimer) clearInterval(this.countdownTimer)
+      if (_visibilityHandler) {
+        document.removeEventListener('visibilitychange', _visibilityHandler)
+        _visibilityHandler = null
+      }
     },
   },
 })

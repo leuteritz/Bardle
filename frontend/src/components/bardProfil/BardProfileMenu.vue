@@ -227,6 +227,11 @@ function onPortraitLeave() {
           </div>
 
           <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
+            <!-- Battle-Tab: immer gemountet (v-show), Watch + Simulation bleiben aktiv -->
+            <div v-show="activeModal === 'kampf'" class="battle-tab-layer">
+              <BattleResultComponent />
+            </div>
+
             <Transition name="tab-fade" mode="out-in">
               <div
                 v-if="activeModal === 'shop'"
@@ -241,14 +246,6 @@ function onPortraitLeave() {
               <div v-else-if="activeModal === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
               </div>
-              <div
-                v-else-if="activeModal === 'kampf'"
-                key="kampf"
-                class="h-full overflow-y-auto rp-scrollbar"
-              >
-                <BattleResultComponent />
-              </div>
-              <!-- ← NEU: Planeten-Tab -->
               <div
                 v-else-if="activeModal === 'planets'"
                 key="planets"
@@ -546,6 +543,15 @@ function onPortraitLeave() {
    ═══════════════════════════════════════════ */
 .rp-modal-content {
   background: #1a1008;
+}
+
+.battle-tab-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
 /* ═══════════════════════════════════════════
