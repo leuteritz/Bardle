@@ -113,6 +113,7 @@ export const useBattleStore = defineStore('battle', {
     baronKilledByTeam: null as (1 | 2) | null,
     baronEventTime: 0,
     battlePhaseStartTimestamp: 0,
+    resultPhaseStartTimestamp: 0,
     autoBattleTimerEndTimestamp: 0,
     autoSkipEnabled: true,
     resultCountdown: 0,
@@ -731,6 +732,7 @@ export const useBattleStore = defineStore('battle', {
       const result = await this.simulateBattle(this.mmr)
       this.lastAutoBattleResult = result
       this.showAutoBattleResult = true
+      this.resultPhaseStartTimestamp = Date.now()
 
       if (this.autoSkipEnabled) {
         // Countdown von 4 bis 0 anzeigen
@@ -935,6 +937,12 @@ export const useBattleStore = defineStore('battle', {
 
     // Gleicht abgelaufene Phasen nach Tab-Rückkehr ab (aufgerufen via visibilitychange)
     syncFromTimestamps() {
+      // Wenn Ergebnis-/Honor-Phase beim Tab-Wechsel offen war: automatisch weitermachen
+      if (this.showAutoBattleResult && this.isAutoBattleInitialized) {
+        this.autoSimulateHonorAndProceed()
+        return
+      }
+
       if (
         this.battlePhase === 'playing' &&
         this.battlePhaseStartTimestamp > 0 &&
@@ -973,6 +981,19 @@ export const useBattleStore = defineStore('battle', {
         }
         this.runBattleCycle()
       }
+    },
+
+    // Simuliert Honor-Vergabe im Hintergrund und fährt mit dem nächsten Kampfzyklus fort
+    autoSimulateHonorAndProceed() {
+      this.timerIds.forEach((id) => clearTimeout(id))
+      this.timerIds = []
+      if (this.resultCountdownTimer) {
+        clearInterval(this.resultCountdownTimer)
+        this.resultCountdownTimer = null
+      }
+      this.resultCountdown = 0
+      this.resultPhaseStartTimestamp = 0
+      this.openShop()
     },
 
     // Stellt nach Page-Reload den Visibility-Listener wieder her und synchronisiert den State

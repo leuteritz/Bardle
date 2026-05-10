@@ -100,6 +100,7 @@ export function usePersistence() {
         recruitedChampions: [...battleStore.recruitedChampions],
         battleEverStarted: battleStore.battleEverStarted,
         isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
+        resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
         battleCoins: battleStore.battleCoins,
         totalCoinsEarned: battleStore.totalCoinsEarned,
         purchasedBuffs: battleStore.purchasedBuffs,
@@ -254,6 +255,7 @@ export function usePersistence() {
           battleStore.recruitedChampions = b.recruitedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
         battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
+        battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
         battleStore.battleCoins = b.battleCoins ?? 0
         battleStore.totalCoinsEarned = b.totalCoinsEarned ?? 0
         if (Array.isArray(b.purchasedBuffs)) battleStore.purchasedBuffs = b.purchasedBuffs
