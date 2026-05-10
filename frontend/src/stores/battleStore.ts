@@ -27,7 +27,14 @@ import {
   KILL_EVENTS_PER_TEAM_MAX,
   REROLL_COST,
 } from '../config/constants'
-import type { BattleResult, BattleShopItem, ActiveBuff, ChampionState, ChatMessage, RecruitableChampion } from '../types'
+import type {
+  BattleResult,
+  BattleShopItem,
+  ActiveBuff,
+  ChampionState,
+  ChatMessage,
+  RecruitableChampion,
+} from '../types'
 import { getRandomShopItems } from '../config/battleShop'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
@@ -39,7 +46,6 @@ let _visibilityHandler: (() => void) | null = null
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
-    // MMR und Rang-System - speichert die aktuelle Spielstärke und Liga des Spielers
     mmr: 1000,
     currentRank: {
       tier: 'Iron',
@@ -47,18 +53,15 @@ export const useBattleStore = defineStore('battle', {
       lp: 0,
     },
 
-    // Kampf-Historie und Rang-Hierarchie - Listen für Kampfverlauf und die Reihenfolge der Ränge
     battleHistory: [] as BattleResult[],
     rankOrder: [...RANK_DIVISIONS] as string[],
     tierOrder: [...RANK_TIERS] as string[],
 
-    // Auto-Battle System - steuert automatische Kämpfe
     autoBattleEnabled: false,
     autoBattleInterval: AUTO_BATTLE_INTERVAL_MS,
     autoBattleTimer: null as ReturnType<typeof setTimeout> | null,
     lastAutoBattleResult: null as BattleResult | null,
 
-    // UI-Anzeige Variablen - zeigt Änderungen von MMR und LP nach Kämpfen an
     lastMmrChange: 0,
     lastLpChange: 0,
     showAutoBattleResult: false,
@@ -66,7 +69,6 @@ export const useBattleStore = defineStore('battle', {
     autoBattleOldLP: 0,
     autoBattleReady: true,
 
-    // Spiel-Logik - Champions, Teams und Kampfstatistiken
     battleTime: 0,
     ownedChampions: ['Bard'],
     teamSlotAssignments: [null, null, null, null] as (string | null)[],
@@ -75,7 +77,6 @@ export const useBattleStore = defineStore('battle', {
       luckFactor: ELO_LUCK_FACTOR,
     },
 
-    // Statistiken - verfolgt Gesamtstatistiken aller Kämpfe
     totalBattles: 0,
     totalWins: 0,
     totalLosses: 0,
@@ -87,7 +88,6 @@ export const useBattleStore = defineStore('battle', {
     bestWinStreak: 0,
     currentWinStreak: 0,
 
-    // Live-Battle Interface - Chat, Teams und Timer für laufende Kämpfe
     isAutoBattleInitialized: false,
     battleEverStarted: false,
     currentBattleId: 0,
@@ -98,11 +98,9 @@ export const useBattleStore = defineStore('battle', {
     team2: [] as ChampionState[],
     timerIds: [] as ReturnType<typeof setTimeout>[],
 
-    // Champion recruitment via planet rescue
     recruitableChampions: [] as RecruitableChampion[],
     recruitedChampions: [] as string[],
 
-    // Battle simulation
     battleSimIntervalId: null as ReturnType<typeof setInterval> | null,
     killEventSchedule: [] as Array<{ gameTime: number; team: 1 | 2 }>,
     battlePhase: 'playing' as 'playing' | 'result',
@@ -122,7 +120,6 @@ export const useBattleStore = defineStore('battle', {
     currentWinProbability: 0 as number,
     currentOpponentLabel: '',
 
-    // Battle Shop System
     battleCoins: 0,
     totalCoinsEarned: 0,
     shopPhaseActive: false,
@@ -133,12 +130,10 @@ export const useBattleStore = defineStore('battle', {
   }),
 
   getters: {
-    selectedChampions: (state) =>
-      state.teamSlotAssignments.filter((s): s is string => s !== null),
+    selectedChampions: (state) => state.teamSlotAssignments.filter((s): s is string => s !== null),
   },
 
   actions: {
-    // Gibt den Bildpfad für einen Champion zurück basierend auf seinem Namen
     getChampionImage(name: string) {
       switch (name) {
         case 'Bard':
@@ -170,12 +165,9 @@ export const useBattleStore = defineStore('battle', {
     recruitChampion(name: string): boolean {
       const recruit = this.recruitableChampions.find((c) => c.name === name)
       if (!recruit) return false
-
       const inventoryStore = useInventoryStore()
-
       if (!inventoryStore.hasMaterials(recruit.materialCost)) return false
       inventoryStore.removeMaterials(recruit.materialCost)
-
       this.ownedChampions.push(name)
       this.recruitedChampions.push(name)
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
@@ -225,14 +217,12 @@ export const useBattleStore = defineStore('battle', {
       return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
     },
 
-    // Generiert einen Kill-Schedule: pro Team zufällig viele Kill-Events verteilt über die Spielzeit
     generateKillSchedule() {
       const events: Array<{ gameTime: number; team: 1 | 2 }> = []
       const totalEvents =
         KILL_EVENTS_PER_TEAM_MIN +
         Math.floor(Math.random() * (KILL_EVENTS_PER_TEAM_MAX - KILL_EVENTS_PER_TEAM_MIN + 1))
       for (let i = 0; i < totalEvents; i++) {
-        // Kill-Events erst ab Spielminute 2 (120s), gleichmäßig bis Ende
         const gameTime = 120 + Math.floor(Math.random() * (1800 - 120))
         const team = (Math.random() < 0.5 ? 1 : 2) as 1 | 2
         events.push({ gameTime, team })
@@ -241,43 +231,34 @@ export const useBattleStore = defineStore('battle', {
       this.killEventSchedule = events
     },
 
-    // Startet die 30-Sekunden-Battle-Simulation: Game-Timer + Kill-Events pro Tick
-    // resume=true: behält battlePhaseStartTimestamp (für Wiederaufnahme nach Page-Reload)
     startBattleSimulation(resume = false) {
       if (!resume) {
         this.battlePhaseStartTimestamp = Date.now()
       }
       if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
       this.battleSimIntervalId = setInterval(() => {
-        // Timestamp-basiert: funktioniert korrekt auch bei Tab-Throttling
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
         const newBattleTime = Math.floor(realElapsedS * 60)
 
-        // Kill-Events zwischen altem und neuem battleTime abarbeiten
         const pending = this.killEventSchedule.filter(
           (e) => e.gameTime > this.battleTime && e.gameTime <= newBattleTime,
         )
         this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > newBattleTime)
         this.battleTime = newBattleTime
+
         for (const event of pending) {
           const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
           const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
           if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
-          // Kill auf zufälligen Angreifer
           const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
           killer.kills += 1
-          // 1-2 Assists
           const assistCount = Math.random() < 0.6 ? 1 : 2
           const others = attackingTeam.filter((c) => c !== killer)
           for (let i = 0; i < Math.min(assistCount, others.length); i++) {
             others[Math.floor(Math.random() * others.length)].assists += 1
           }
-          // Death auf zufälligen Verteidiger
           const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
-          if (Math.random() < 0.85) {
-            victim.deaths += 1
-          }
-          // Throttled kill event — max 1 per 3s to avoid log spam
+          if (Math.random() < 0.85) victim.deaths += 1
           const now = Date.now()
           if (now - _lastKillLogMs >= 3000 && killer.name && victim.name) {
             _lastKillLogMs = now
@@ -285,7 +266,6 @@ export const useBattleStore = defineStore('battle', {
           }
         }
 
-        // Drake kill event
         if (this.drakeAlive && this.drakeEventTime > 0 && this.battleTime >= this.drakeEventTime) {
           this.drakeKilledByTeam = Math.random() < 0.5 ? 1 : 2
           this.drakeAlive = false
@@ -299,8 +279,12 @@ export const useBattleStore = defineStore('battle', {
           })
         }
 
-        // Baron kill event
-        if (this.baronAlive && this.baronEventTime > 0 && this.battleTime >= this.baronEventTime && this.battleTime < 2200) {
+        if (
+          this.baronAlive &&
+          this.baronEventTime > 0 &&
+          this.battleTime >= this.baronEventTime &&
+          this.battleTime < 2200
+        ) {
           this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
           this.baronAlive = false
           const baronTeamName = this.baronKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
@@ -313,26 +297,29 @@ export const useBattleStore = defineStore('battle', {
           })
         }
 
-        // Simulation beenden nach 30 Spielminuten
         if (this.battleTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
           clearInterval(this.battleSimIntervalId!)
           this.battleSimIntervalId = null
           this.battlePhase = 'result'
           logBattleEnded(this.predeterminedWin ?? false)
+          // Simulation fertig → direkt runBattleCycle auslösen.
+          // autoBattleTimer canceln falls er noch läuft (verhindert Doppel-Aufruf).
+          if (this.autoBattleTimer) {
+            clearTimeout(this.autoBattleTimer)
+            this.autoBattleTimer = null
+          }
+          this.runBattleCycle()
         }
       }, 1000)
     },
 
-    // Lädt die Champion-Liste aus einer CSV-Datei und gibt sie als Array zurück
     async loadChampions() {
       return fetchChampionNames()
     },
 
-    // Erstellt neue zufällige Teams für den nächsten Kampf mit den Header-Slots als Spieler-Team
     async refreshTeams() {
       const champions = await this.loadChampions()
       const selected = this.getRandomChampions(champions, 5)
-
       this.team1 = this.headerSlots.map((slot) => ({
         name: slot ?? '',
         rank: slot ? this.currentRank.tier : 'Silver',
@@ -341,12 +328,10 @@ export const useBattleStore = defineStore('battle', {
       this.team2 = selected.map((name) => ({ name, rank: 'Silver', ...this.getStats() }))
     },
 
-    // Erstellt ein leeres Statistik-Objekt mit 0 Kills, Deaths und Assists
     getStats() {
       return { kills: 0, deaths: 0, assists: 0 }
     },
 
-    // Wählt zufällig eine bestimmte Anzahl Champions aus der Champion-Liste aus
     getRandomChampions(champions: string[], count: number) {
       const arr = [...champions]
       const result = []
@@ -357,7 +342,6 @@ export const useBattleStore = defineStore('battle', {
       return result
     },
 
-    // Setzt die Statistiken aller Champions eines Teams auf 0 zurück
     resetTeamStats(team: ChampionState[]) {
       team.forEach((champ) => {
         champ.kills = 0
@@ -366,13 +350,16 @@ export const useBattleStore = defineStore('battle', {
       })
     },
 
-    // Setzt alle Kampfstatistiken zurück und stoppt laufende Timer für einen neuen Kampf
     clearBattle() {
       this.timerIds.forEach((interval) => clearTimeout(interval))
       this.timerIds = []
       if (this.battleSimIntervalId) {
         clearInterval(this.battleSimIntervalId)
         this.battleSimIntervalId = null
+      }
+      if (this.autoBattleTimer) {
+        clearTimeout(this.autoBattleTimer)
+        this.autoBattleTimer = null
       }
       if (this.resultCountdownTimer) {
         clearInterval(this.resultCountdownTimer)
@@ -396,21 +383,25 @@ export const useBattleStore = defineStore('battle', {
       this.battlePhaseStartTimestamp = 0
     },
 
-    // Zeigt zeitgestaffelte Chat-Nachrichten mit phasenbezogenem Inhalt über 30 real-Sekunden
     showRandomChatMessagesSequentially() {
       const MESSAGE_COUNT = 14
       const allChampions = [
-        ...this.team1.filter((c) => c.name).map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
-        ...this.team2.filter((c) => c.name).map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
+        ...this.team1
+          .filter((c) => c.name)
+          .map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
+        ...this.team2
+          .filter((c) => c.name)
+          .map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
       ]
       if (allChampions.length === 0) return
 
+      const battleIdAtStart = this.currentBattleId
+
       for (let i = 0; i < MESSAGE_COUNT; i++) {
-        // Zufälliger Delay zwischen 0 und 29000ms, leicht gegen Ende gewichtet
         const delay = Math.floor(Math.random() * (BATTLE_REAL_DURATION_SECONDS - 1) * 1000)
         const timeoutId = setTimeout(() => {
+          if (this.currentBattleId !== battleIdAtStart) return
           const currentGameTime = this.battleTime
-          // Phasenbasierte Nachrichtenauswahl
           let pool: string[]
           if (currentGameTime < 600) {
             pool = earlyGameMessages
@@ -432,19 +423,16 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Formatiert Sekunden in MM:SS Format für die Chat-Zeitanzeige
     formatTime(seconds: number) {
       const min = Math.floor(seconds / 60)
       const sec = seconds % 60
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     },
 
-    // Generiert eine zufällige Zeitspanne zwischen 30 und 500 Sekunden für Chat-Messages
     getRandomTimeIncrement() {
       return Math.floor(Math.random() * BATTLE_TIME_RANGE_SECONDS) + BATTLE_TIME_MIN_SECONDS
     },
 
-    // Bestimmt den Kampfausgang vorab, damit die Minimap den Nexus-Push animieren kann
     predetermineOutcome() {
       const gameStore = useGameStore()
       const augmentStore = useAugmentStore()
@@ -469,7 +457,6 @@ export const useBattleStore = defineStore('battle', {
       this.currentOpponentLabel = `${opponent.rank.tier} ${opponent.rank.division}`
     },
 
-    // Initialisiert einen neuen Kampf: Teams aufräumen, neu erstellen und Simulation starten
     async initializeBattle() {
       this.clearBattle()
       this.currentBattleId++
@@ -477,8 +464,8 @@ export const useBattleStore = defineStore('battle', {
       this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.generateKillSchedule()
-        this.drakeEventTime = 1200 // Drake dies exactly when Baron spawns (20 min)
-        this.baronEventTime = 1500 + Math.floor(Math.random() * 600) // Baron killed randomly 25–35 min
+        this.drakeEventTime = 1200
+        this.baronEventTime = 1500 + Math.floor(Math.random() * 600)
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
         logBattleStarted(this.currentOpponentLabel)
@@ -489,20 +476,15 @@ export const useBattleStore = defineStore('battle', {
       })
     },
 
-    // Hauptfunktion die einen kompletten Kampf simuliert und MMR/LP basierend auf Sieg/Niederlage aktualisiert
     async simulateBattle(opponentMMR: number) {
       const gameStore = useGameStore()
 
-      // Speichert alte Werte für Vergleich
       this.autoBattleOldMMR = this.mmr
       this.autoBattleOldLP = this.currentRank.lp
 
       let playerPower = gameStore.totalPower
-
-      // Erstellt Gegner und berechnet Gewinnchancen
       const opponent = this.generateOpponent(opponentMMR)
 
-      // Augment battle modifiers
       const augmentStore = useAugmentStore()
       const battleMods = augmentStore.getActiveBattleModifiers(
         gameStore.activeAugments,
@@ -522,10 +504,8 @@ export const useBattleStore = defineStore('battle', {
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
       const battleResult = this.predeterminedWin ?? Math.random() < winProbability
 
-      // Aktualisiert Rang basierend auf Kampfergebnis
       this.updateRanking(battleResult, opponentMMR)
 
-      // Berechnet tatsächliche Änderungen für UI-Anzeige
       const actualMmrChange = this.mmr - this.autoBattleOldMMR
       const actualLpChange = this.currentRank.lp - this.autoBattleOldLP
 
@@ -539,7 +519,6 @@ export const useBattleStore = defineStore('battle', {
         this.currentWinStreak = 0
       }
 
-      // Award Battle Coins
       const baseCoins = battleResult
         ? Math.floor(Math.random() * 5) + 8
         : Math.floor(Math.random() * 3) + 4
@@ -562,16 +541,13 @@ export const useBattleStore = defineStore('battle', {
         opponent,
         winProbability,
       }
-
       return this.lastAutoBattleResult
     },
 
-    // Befördert den Spieler in den nächsthöheren Rang oder Division basierend auf genügend LP
     promoteRank() {
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
-      // Spezielle Logik für höchste Ränge
       if (currentTier === 'Master') {
         if (this.currentRank.lp >= LP_MASTER_PROMOTION_THRESHOLD) {
           this.currentRank.tier = 'Grandmaster'
@@ -588,7 +564,6 @@ export const useBattleStore = defineStore('battle', {
       }
       if (currentTier === 'Challenger') return
 
-      // Normale Beförderungslogik durch Divisionen und Tiers
       const currentDivisionIndex = this.rankOrder.indexOf(this.currentRank.division)
       if (currentDivisionIndex < this.rankOrder.length - 1) {
         this.currentRank.division = this.rankOrder[currentDivisionIndex + 1]
@@ -602,18 +577,14 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Degradiert den Spieler in den nächstniedrigeren Rang bei zu wenig LP
     demoteRank() {
       const currentTier = this.currentRank.tier
       const currentTierIndex = this.tierOrder.indexOf(currentTier)
 
-      // Verhindert Abstieg unter Iron IV - setzt LP auf 0 da dies der niedrigste Rang ist
       if (currentTier === 'Iron' && this.currentRank.division === 'IV') {
         this.currentRank.lp = Math.max(0, this.currentRank.lp)
         return
       }
-
-      // Spezielle Abstiegslogik für höchste Ränge
       if (currentTier === 'Challenger') {
         this.currentRank.tier = 'Grandmaster'
         this.currentRank.lp = LP_GRANDMASTER_DEMOTION_VALUE
@@ -633,7 +604,6 @@ export const useBattleStore = defineStore('battle', {
         return
       }
 
-      // Normale Abstiegslogik
       this.currentRank.lp = LP_DEMOTION_VALUE
       const currentDivisionIndex = this.rankOrder.indexOf(this.currentRank.division)
       if (currentDivisionIndex > 0) {
@@ -646,40 +616,32 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Berechnet LP-Gewinn/Verlust basierend auf MMR-Änderung
     calculateLPChange(mmrChange: number, won: boolean) {
       const lpChange = won ? LP_BASE_CHANGE : -LP_BASE_CHANGE
       const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
       return Math.round(lpChange * mmrFactor)
     },
 
-    // Konvertiert MMR-Wert in Kampfstärke für Kampfsimulationen
     mmrToPower(mmr: number) {
       return Math.max(100, Math.floor(mmr * MMR_TO_POWER_MULTIPLIER))
     },
 
-    // Berechnet Gewinnwahrscheinlichkeit basierend auf Kampfkraft-Unterschied zwischen Spieler und Gegner
     calculateWinProbability(playerPower: number, opponentPower: number) {
-      // Apply veteran_bard permanent upgrade (stacks multiplicatively)
       const bardBonus = 1 + (this.permanentBattleUpgrades['veteran_bard'] ?? 0) * 0.05
       const adjustedPlayerPower = playerPower * bardBonus
-
       const powerDifference = adjustedPlayerPower - opponentPower
       const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / ELO_RATING_SCALE))
       const luckModifier = (Math.random() - 0.5) * this.battleFormula.luckFactor
 
-      // Apply winChanceBonus buffs from purchased shop items
       let winBonus = 0
       for (const buff of this.purchasedBuffs) {
         if (buff.effect.type === 'winChanceBonus') {
           winBonus += buff.effect.value
         }
       }
-
       return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier + winBonus))
     },
 
-    // Erstellt einen zufälligen Gegner mit ähnlichem MMR (±200 Variation)
     generateOpponent(targetMMR: number) {
       const opponentMMR = targetMMR + (Math.random() - 0.5) * OPPONENT_MMR_VARIANCE
       return {
@@ -689,7 +651,6 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Konvertiert MMR-Wert in entsprechenden Rang und Division basierend auf festen Schwellenwerten
     mmrToRank(mmr: number) {
       for (let i = MMR_RANK_THRESHOLDS.length - 1; i >= 0; i--) {
         if (mmr >= MMR_RANK_THRESHOLDS[i].minMMR) return MMR_RANK_THRESHOLDS[i]
@@ -697,7 +658,6 @@ export const useBattleStore = defineStore('battle', {
       return MMR_RANK_THRESHOLDS[0]
     },
 
-    // Aktualisiert MMR nach Kampf mit ELO-Rating System
     updateRanking(won: boolean, opponentMMR: number) {
       const currentMMR = this.mmr
       const oldRank = `${this.currentRank.tier} ${this.currentRank.division}`
@@ -713,7 +673,6 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Aktualisiert LP und prüft automatisch auf Beförderung oder Abstieg
     updateLP(lpChange: number) {
       const currentTier = this.currentRank.tier
       this.currentRank.lp += lpChange
@@ -725,7 +684,6 @@ export const useBattleStore = defineStore('battle', {
       if (this.currentRank.lp < 0) this.demoteRank()
     },
 
-    // Ein Battle-Zyklus: Ergebnis berechnen, anzeigen, Shop öffnen, dann weiterfahren
     async runBattleCycle() {
       if (!this.autoBattleEnabled) return
 
@@ -735,7 +693,6 @@ export const useBattleStore = defineStore('battle', {
       this.resultPhaseStartTimestamp = Date.now()
 
       if (this.autoSkipEnabled) {
-        // Countdown von 4 bis 0 anzeigen
         this.resultCountdown = 4
         if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
         this.resultCountdownTimer = setInterval(() => {
@@ -745,25 +702,25 @@ export const useBattleStore = defineStore('battle', {
             this.resultCountdownTimer = null
           }
         }, 1000)
-        // Nach 4s Shop öffnen (autoSkip überspringt Shop automatisch)
+        // FIX: Nach 4s Ergebnis-Anzeige den Shop öffnen UND sofort automatisch
+        // überspringen (skipShop), wenn autoSkipEnabled aktiv ist.
+        // Vorher wurde nur openShop() aufgerufen – der Shop blieb offen und
+        // niemand hat skipShop() aufgerufen, daher startete kein neues Battle.
         const pauseId = setTimeout(() => {
-          this.openShop()
+          this.skipShop()
         }, 4000)
         this.timerIds.push(pauseId)
-      } else {
-        // Manueller Modus: Shop wird durch manualDismissResult() geöffnet
       }
+      // Manueller Modus: shopPhaseActive bleibt false, User öffnet Shop manuell
+      // via manualDismissResult() → openShop() → skipShop()
     },
 
-    // Startet die nächste Battle: Reset, neue Teams, neuer Countdown
     async proceedToNextBattle() {
       await this.initializeBattle()
       this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
-      this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
-    // Manuelles Weiterklicken: laufende Pause-Timer abbrechen und Shop öffnen
     manualDismissResult() {
       this.timerIds.forEach((id) => clearTimeout(id))
       this.timerIds = []
@@ -775,7 +732,6 @@ export const useBattleStore = defineStore('battle', {
       this.openShop()
     },
 
-    // Wechselt Auto-Skip an/aus
     toggleAutoSkip() {
       this.autoSkipEnabled = !this.autoSkipEnabled
       if (!this.autoSkipEnabled) {
@@ -789,21 +745,20 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Startet den automatischen Kampfmodus
     async startAutoBattle() {
       if (this.autoBattleEnabled) return
       this.autoBattleEnabled = true
       if (!_visibilityHandler) {
-        _visibilityHandler = () => { if (!document.hidden) this.syncFromTimestamps() }
+        _visibilityHandler = () => {
+          if (!document.hidden) this.syncFromTimestamps()
+        }
         document.addEventListener('visibilitychange', _visibilityHandler)
       }
       await this.initializeBattle()
       this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
-      this.autoBattleTimer = setTimeout(() => this.runBattleCycle(), this.autoBattleInterval)
     },
 
-    // Hält die laufende Kampfsimulation an, ohne battleTime zurückzusetzen
     pauseBattleSimulation() {
       if (this.battleSimIntervalId) {
         clearInterval(this.battleSimIntervalId)
@@ -811,16 +766,14 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Initialisiert den dauerhaften Auto-Battle Modus nur einmal pro Session
     async initializePersistentAutoBattle() {
       if (this.isAutoBattleInitialized) return
       this.isAutoBattleInitialized = true
       this.battleEverStarted = true
-      this.autoBattleEnabled = false // reset: verhindert early-return in startAutoBattle() nach Page-Reload
+      this.autoBattleEnabled = false
       await this.startAutoBattle()
     },
 
-    // Startet einen Countdown-Timer der die Sekunden bis zum nächsten Kampf anzeigt
     startCountdown() {
       this.timeUntilNextBattle = this.autoBattleInterval / 1000
       if (this.countdownTimer) clearInterval(this.countdownTimer)
@@ -834,34 +787,24 @@ export const useBattleStore = defineStore('battle', {
       }, 500)
     },
 
-    // Markiert einen Kampf als vom UI verarbeitet für saubere Anzeige
     markBattleProcessed() {
       this.autoBattleReady = true
     },
 
     // ── Battle Shop Actions ───────────────────────────────────
 
-    // Öffnet den Shop: generiert 3 zufällige Items und zeigt das Modal
     openShop() {
       this.showAutoBattleResult = false
-      this.battlePhase = 'playing'
-      this.battleTime = 0
-      this.chatMessages = []
-      this.resetTeamStats(this.team1)
-      this.resetTeamStats(this.team2)
       this.activeShopItems = getRandomShopItems(this.permanentBattleUpgrades)
       this.freeRerollAvailable = true
       this.shopPhaseActive = true
     },
 
-    // Kauft ein Shop-Item: zieht Coins ab und wendet Effekt an
     purchaseShopItem(itemId: string) {
       const item = this.activeShopItems.find((i) => i.id === itemId)
       if (!item) return
       if (this.battleCoins < item.cost) return
-
       this.battleCoins -= item.cost
-
       if (item.category === 'temp_buff') {
         this.purchasedBuffs.push({ id: item.id, remainingBattles: 1, effect: item.effect })
       } else if (item.category === 'team_upgrade') {
@@ -875,7 +818,6 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Rerollt die Shop-Items: einmal kostenlos pro Runde, danach REROLL_COST Coins
     rerollShop() {
       if (this.freeRerollAvailable) {
         this.freeRerollAvailable = false
@@ -886,7 +828,6 @@ export const useBattleStore = defineStore('battle', {
       this.activeShopItems = getRandomShopItems(this.permanentBattleUpgrades)
     },
 
-    // Schließt den Shop und startet die nächste Battle (decrements buff durations)
     async skipShop() {
       this.purchasedBuffs = this.purchasedBuffs
         .map((b) => ({ ...b, remainingBattles: b.remainingBattles - 1 }))
@@ -896,17 +837,13 @@ export const useBattleStore = defineStore('battle', {
       await this.proceedToNextBattle()
     },
 
-    // ── DEV/ADMIN: Beendet die laufende Simulation sofort und zeigt das Ergebnis
     async adminSkipToEnd() {
       if (this.battlePhase !== 'playing') return
 
-      // 1. Simulation stoppen
       if (this.battleSimIntervalId) {
         clearInterval(this.battleSimIntervalId)
         this.battleSimIntervalId = null
       }
-
-      // 2. Pending chat messages und den original autoBattle-Timer abbrechen
       this.timerIds.forEach((id) => clearTimeout(id))
       this.timerIds = []
       if (this.autoBattleTimer) {
@@ -914,7 +851,6 @@ export const useBattleStore = defineStore('battle', {
         this.autoBattleTimer = null
       }
 
-      // 3. Alle verbleibenden Kill-Events abarbeiten (für Scoreboard-Stats)
       const endGameTime = BATTLE_REAL_DURATION_SECONDS * 60
       for (const event of this.killEventSchedule) {
         const attackingTeam = event.team === 1 ? this.team1 : this.team2
@@ -929,18 +865,12 @@ export const useBattleStore = defineStore('battle', {
         }
       }
       this.killEventSchedule = []
-
-      // 4. battleTime ans Ende setzen und Phase auf result
       this.battleTime = endGameTime
       this.battlePhase = 'result'
-
-      // 5. Sofort runBattleCycle ausführen (zeigt Ergebnis-Modal)
       await this.runBattleCycle()
     },
 
-    // Gleicht abgelaufene Phasen nach Tab-Rückkehr ab (aufgerufen via visibilitychange)
     syncFromTimestamps() {
-      // Wenn Ergebnis-/Honor-Phase beim Tab-Wechsel offen war: automatisch weitermachen
       if (this.showAutoBattleResult && this.isAutoBattleInitialized) {
         this.autoSimulateHonorAndProceed()
         return
@@ -965,7 +895,6 @@ export const useBattleStore = defineStore('battle', {
           this.runBattleCycle()
           return
         }
-        // Battle still in progress — restart interval if it's not running (e.g. after page reload)
         if (!this.battleSimIntervalId) {
           this.startBattleSimulation(true)
         }
@@ -986,7 +915,6 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Simuliert Honor-Vergabe im Hintergrund und fährt mit dem nächsten Kampfzyklus fort
     autoSimulateHonorAndProceed() {
       this.timerIds.forEach((id) => clearTimeout(id))
       this.timerIds = []
@@ -996,14 +924,17 @@ export const useBattleStore = defineStore('battle', {
       }
       this.resultCountdown = 0
       this.resultPhaseStartTimestamp = 0
-      this.openShop()
+      // FIX: autoSimulateHonorAndProceed ebenfalls direkt skipShop aufrufen
+      // statt openShop, damit der Loop nach Tab-Rückkehr weiterlaufen kann.
+      this.skipShop()
     },
 
-    // Stellt nach Page-Reload den Visibility-Listener wieder her und synchronisiert den State
     resumeBattleAfterLoad() {
       if (!this.isAutoBattleInitialized) return
       if (!_visibilityHandler) {
-        _visibilityHandler = () => { if (!document.hidden) this.syncFromTimestamps() }
+        _visibilityHandler = () => {
+          if (!document.hidden) this.syncFromTimestamps()
+        }
         document.addEventListener('visibilitychange', _visibilityHandler)
       }
       if (this.autoBattleEnabled) {
@@ -1011,7 +942,6 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    // Stoppt den automatischen Kampfmodus und alle laufenden Timer
     stopAutoBattle() {
       this.autoBattleEnabled = false
       if (this.autoBattleTimer) clearTimeout(this.autoBattleTimer)
