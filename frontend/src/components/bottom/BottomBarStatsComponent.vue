@@ -57,10 +57,9 @@ const {
   currentRank,
   totalWins,
   totalLosses,
-  totalKills,
-  totalDeaths,
-  totalAssists,
   totalCoinsEarned,
+  isAutoBattleInitialized,
+  currentWinProbability,
 } = storeToRefs(battleStore)
 
 const rankLabel = computed(() => {
@@ -71,9 +70,36 @@ const rankLabel = computed(() => {
 
 const lpValue = computed(() => currentRank.value.lp)
 
-const kdaRatio = computed(() => {
-  if (totalDeaths.value === 0) return totalKills.value + totalAssists.value > 0 ? 'Perfect' : '—'
-  return ((totalKills.value + totalAssists.value) / totalDeaths.value).toFixed(2)
+const liveWinChance = computed<number | null>(() => {
+  if (!isAutoBattleInitialized.value) return null
+
+  if (battleStore.battlePhase === 'result') {
+    return battleStore.predeterminedWin ? 100 : 0
+  }
+
+  const base = currentWinProbability.value
+  const t1Kills = battleStore.team1.reduce((s, c) => s + c.kills, 0)
+  const t2Kills = battleStore.team2.reduce((s, c) => s + c.kills, 0)
+  const totalK = t1Kills + t2Kills
+  const killAdj = totalK > 0 ? ((t1Kills - t2Kills) / totalK) * 0.25 : 0
+
+  let objAdj = 0
+  if (battleStore.drakeKilledByTeam === 1) objAdj += 0.05
+  else if (battleStore.drakeKilledByTeam === 2) objAdj -= 0.05
+  if (battleStore.baronKilledByTeam === 1) objAdj += 0.08
+  else if (battleStore.baronKilledByTeam === 2) objAdj -= 0.08
+
+  return Math.round(Math.max(0.05, Math.min(0.95, base + killAdj + objAdj)) * 100)
+})
+
+const winChanceColor = computed(() => {
+  const v = liveWinChance.value
+  if (v === null) return '#888888'
+  if (v <= 0) return '#cc6050'
+  if (v >= 100) return '#74d448'
+  if (v >= 60) return '#74d448'
+  if (v >= 40) return '#e8c040'
+  return '#cc6050'
 })
 </script>
 
@@ -136,9 +162,11 @@ const kdaRatio = computed(() => {
       </div>
       <div class="bbstat-divider" />
       <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--green">⬡</span>
-        <span class="bbstat-label">KDA</span>
-        <span class="bbstat-val bbstat-val--green">{{ kdaRatio }}</span>
+        <span class="bbstat-icon" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">◎</span>
+        <span class="bbstat-label">WIN%</span>
+        <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
+          {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
+        </span>
       </div>
     </div>
   </div>
