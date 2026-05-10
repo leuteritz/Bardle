@@ -30,8 +30,19 @@
     <!-- ── Kosmische Arena ── -->
     <div class="cosmic-arena">
       <div class="arena-stage">
-        <div class="cosmic-sun" />
+        <!-- Sonne + HP-Text -->
+        <div class="sun-wrapper">
+          <div class="cosmic-sun" />
+          <div class="sun-hp-text">
+            <span class="hp-label">HP</span>
+            <span class="hp-value" :class="{ 'hp-value--low': playerStore.isLow }">
+              {{ Math.ceil(playerStore.currentHP) }}
+            </span>
+            <span class="hp-max">/ {{ playerStore.maxHP }}</span>
+          </div>
+        </div>
 
+        <!-- Orbit-Positionen -->
         <div
           v-for="(upgrade, index) in shopStore.shopUpgrades"
           :key="upgrade.id"
@@ -99,6 +110,7 @@
 import { defineComponent, ref } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useGameStore } from '@/stores/gameStore'
+import { usePlayerStore } from '@/stores/playerStore'
 import { formatNumber } from '@/config/numberFormat'
 import type { ShopUpgrade } from '@/types'
 
@@ -125,6 +137,7 @@ export default defineComponent({
   setup() {
     const shopStore = useShopStore()
     const gameStore = useGameStore()
+    const playerStore = usePlayerStore()
     const hoveredId = ref<string | null>(null)
 
     const buyOptions: { label: string; value: number | 'max' }[] = [
@@ -153,7 +166,17 @@ export default defineComponent({
       return Math.min(100, Math.floor((gameStore.chimes / cost) * 100))
     }
 
-    return { shopStore, hoveredId, stars, buyOptions, getOrbitPos, getProgress, formatNumber }
+    return {
+      shopStore,
+      gameStore,
+      playerStore,
+      hoveredId,
+      stars,
+      buyOptions,
+      getOrbitPos,
+      getProgress,
+      formatNumber,
+    }
   },
 })
 </script>
@@ -250,15 +273,23 @@ export default defineComponent({
 }
 
 /* ══════════════════════════════════════════════════
-   SONNE
+   SONNE + HP-TEXT
 ══════════════════════════════════════════════════ */
-.cosmic-sun {
+.sun-wrapper {
   position: absolute;
   top: 50%;
   left: 50%;
+  transform: translate(-50%, -50%);
   width: 200px;
   height: 200px;
-  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cosmic-sun {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 35%,
@@ -292,6 +323,50 @@ export default defineComponent({
       0 0 280px 125px rgba(180, 60, 0, 0.48),
       0 0 400px 175px rgba(140, 40, 0, 0.22);
   }
+}
+
+/* HP-Text zentriert über der Sonne */
+.sun-hp-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.hp-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
+}
+
+.hp-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow:
+    0 0 10px rgba(255, 200, 80, 0.7),
+    0 2px 6px rgba(0, 0, 0, 1);
+}
+
+.hp-value--low {
+  color: var(--rpg-red);
+  text-shadow:
+    0 0 10px rgba(204, 96, 80, 0.8),
+    0 2px 6px rgba(0, 0, 0, 1);
+}
+
+.hp-max {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
 }
 
 /* ══════════════════════════════════════════════════
@@ -336,25 +411,24 @@ export default defineComponent({
   }
 }
 
-/* ── NICHT LEISTBAR: ausgegraut ── */
 .orbit-card--locked {
   opacity: 0.45;
   filter: grayscale(80%);
 }
 
-/* Beim Hover kurz aufhellen damit Tooltip lesbar bleibt */
 .orbit-card--locked:hover,
 .orbit-card--locked.orbit-card--hovered {
   opacity: 0.75;
   filter: grayscale(50%);
+  transform: translateY(-4px) scale(1.04);
+  animation-play-state: paused;
+  z-index: 10;
 }
 
-/* ── KAUFBAR: Icon grün leuchten ── */
 .orbit-card--can .card-icon {
   filter: drop-shadow(0 0 8px rgba(78, 192, 64, 0.7)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
 
-/* ── HOVER (kaufbar): gold leuchten + skalieren ── */
 .orbit-card--can:hover,
 .orbit-card--can.orbit-card--hovered {
   transform: translateY(-6px) scale(1.08);
@@ -367,15 +441,6 @@ export default defineComponent({
   filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.85)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
 
-/* Hover bei locked: ebenfalls leicht skalieren für Tooltip */
-.orbit-card--locked:hover,
-.orbit-card--locked.orbit-card--hovered {
-  transform: translateY(-4px) scale(1.04);
-  animation-play-state: paused;
-  z-index: 10;
-}
-
-/* Icon */
 .card-icon {
   width: 52px;
   height: 52px;
@@ -385,7 +450,6 @@ export default defineComponent({
   transition: filter 0.15s;
 }
 
-/* Name */
 .card-name {
   font-size: 13px;
   font-weight: 900;
@@ -396,7 +460,6 @@ export default defineComponent({
   text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
 }
 
-/* Level */
 .card-level {
   font-size: 12px;
   font-weight: 700;
@@ -404,7 +467,6 @@ export default defineComponent({
   text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
 }
 
-/* Stats */
 .card-stat {
   font-size: 11px;
   font-weight: 700;
@@ -502,7 +564,6 @@ export default defineComponent({
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.9);
   z-index: 100;
   pointer-events: none;
-  /* Tooltip immer voll sichtbar, auch wenn Karte ausgegraut */
   filter: none;
   opacity: 1;
 }
@@ -566,7 +627,7 @@ export default defineComponent({
     gap: 10px;
   }
 
-  .cosmic-sun {
+  .sun-wrapper {
     display: none;
   }
 
