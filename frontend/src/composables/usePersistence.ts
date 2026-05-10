@@ -70,13 +70,6 @@ export function usePersistence() {
       shop: {
         buyAmount: shopStore.buyAmount,
         shopUpgrades: shopStore.shopUpgrades.map((u) => ({ id: u.id, level: u.level })),
-        permanentUpgrades: shopStore.permanentUpgrades.map((u) => ({
-          id: u.id,
-          purchased: u.purchased,
-          appliedModifier: u.appliedModifier,
-          modifierSlotUnlocked: u.modifierSlotUnlocked,
-          modifierCost: u.modifierCost,
-        })),
       },
       battle: {
         mmr: battleStore.mmr,
@@ -209,17 +202,6 @@ export function usePersistence() {
           for (const savedUpgrade of saved.shop.shopUpgrades) {
             const upgrade = shopStore.shopUpgrades.find((u) => u.id === savedUpgrade.id)
             if (upgrade) upgrade.level = savedUpgrade.level ?? 0
-          }
-        }
-        if (Array.isArray(saved.shop.permanentUpgrades)) {
-          for (const savedUpgrade of saved.shop.permanentUpgrades) {
-            const upgrade = shopStore.permanentUpgrades.find((u) => u.id === savedUpgrade.id)
-            if (upgrade) {
-              upgrade.purchased = savedUpgrade.purchased ?? false
-              upgrade.appliedModifier = savedUpgrade.appliedModifier ?? undefined
-              upgrade.modifierSlotUnlocked = savedUpgrade.modifierSlotUnlocked ?? false
-              upgrade.modifierCost = savedUpgrade.modifierCost ?? undefined
-            }
           }
         }
       }
@@ -439,12 +421,6 @@ export function usePersistence() {
     const shopStore = useShopStore()
     shopStore.shopUpgrades.forEach((u) => {
       u.level = 0
-    })
-    shopStore.permanentUpgrades.forEach((u) => {
-      u.purchased = false
-      u.appliedModifier = undefined
-      u.modifierSlotUnlocked = false
-      u.modifierCost = undefined
     })
     shopStore.buyAmount = 1
 

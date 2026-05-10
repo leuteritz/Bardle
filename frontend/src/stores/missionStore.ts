@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useShopStore } from './shopStore'
 import type { Mission } from '../types'
 
 const MISSIONS: Mission[] = [
@@ -117,22 +116,6 @@ const MISSIONS: Mission[] = [
     claimed: false,
   },
   {
-    id: 'upgrade_master',
-    name: 'Aufgestiegener Barde',
-    icon: '✨',
-    description: 'Kaufe 5 permanente Upgrades.',
-    condition: { type: 'permanentUpgradeCount', target: 5 },
-    rewardUpgrade: {
-      id: 'reward_transcendent_melody',
-      name: 'Transzendente Melodie',
-      description: 'Jenseits aller Grenzen. +50% CpS.',
-      icon: '🔮',
-      cost: 0,
-      effect: { type: 'cpsMultiplier', value: 1.5 },
-    },
-    claimed: false,
-  },
-  {
     id: 'click_legend',
     name: 'Klick-Legende',
     icon: '👆',
@@ -167,16 +150,7 @@ const MISSIONS: Mission[] = [
 ]
 
 export const useMissionStore = defineStore('mission', () => {
-  const missions = ref<Mission[]>(JSON.parse(JSON.stringify(MISSIONS))) // ← war: Mission[]
+  const missions = ref<Mission[]>(JSON.parse(JSON.stringify(MISSIONS)))
 
-  const claimReward = (missionId: string) => {
-    const mission = missions.value.find((m) => m.id === missionId)
-    if (!mission || mission.claimed) return
-    mission.claimed = true
-
-    const shopStore = useShopStore()
-    shopStore.addMissionReward({ ...mission.rewardUpgrade, purchased: false })
-  }
-
-  return { missions, claimReward }
+  return { missions }
 })

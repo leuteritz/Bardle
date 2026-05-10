@@ -68,46 +68,13 @@ export interface ShopUpgrade {
   icon: string
 }
 
-export interface PermanentUpgradeEffect {
-  type: 'cpsMultiplier' | 'cpcMultiplier' | 'buildingBoost'
-  value: number
-  buildingId?: string
-}
-
-export interface PermanentUpgradeRequirement {
-  buildingId: string
-  minLevel: number
-}
-
-export type ModifierType =
-  | 'resonanceBoost'
-  | 'chimeEcho'
-  | 'synergyLink'
-  | 'cascadeEffect'
-  | 'adaptiveScaling'
-  | 'timeCrystal'
-
-export interface UpgradeModifier {
-  id: string
-  name: string
-  description: string
-  icon: string
-  type: ModifierType
-  params: Record<string, number | string>
-}
-
-export interface PermanentUpgrade {
+export interface MissionReward {
   id: string
   name: string
   description: string
   icon: string
   cost: number
-  purchased: boolean
-  effect: PermanentUpgradeEffect
-  requirement?: PermanentUpgradeRequirement
-  appliedModifier?: UpgradeModifier
-  modifierSlotUnlocked?: boolean
-  modifierCost?: number
+  effect: { type: string; value: number; buildingId?: string }
 }
 
 export interface BuildingStat {
@@ -443,7 +410,6 @@ export type MissionConditionType =
   | 'singleBuildingLevel'
   | 'totalBuildingLevels'
   | 'ownedBuildingTypes'
-  | 'permanentUpgradeCount'
 
 export interface MissionCondition {
   type: MissionConditionType
@@ -457,7 +423,7 @@ export interface Mission {
   icon: string
   description: string
   condition: MissionCondition
-  rewardUpgrade: Omit<PermanentUpgrade, 'purchased'>
+  rewardUpgrade: MissionReward
   claimed: boolean
 }
 

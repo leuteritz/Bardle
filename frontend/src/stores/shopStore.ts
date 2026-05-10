@@ -4,17 +4,14 @@ import { useCpsStore } from './cpsStore'
 import { useAugmentStore } from './augmentStore'
 import { useItemStore } from './itemStore'
 import { usePlanetBossStore } from './planetBossStore'
-import type { ShopUpgrade, BuildingStat, PermanentUpgrade, UpgradeModifier } from '../types'
+import type { ShopUpgrade, BuildingStat } from '../types'
 import { logger } from '../utils/logger'
-import { MODIFIER_POOL } from '../config/modifiers'
 import { usePlanetShopStore } from './planetShopStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
   EFFICIENCY_STARS_MAX,
   EFFICIENCY_STARS_MIN,
-  MODIFIER_COST_FRACTION,
-  MODIFIER_ROLL_COUNT,
 } from '../config/constants'
 
 const chimeClickerIcon = '/img/ChimesPerClick.png'
@@ -84,132 +81,9 @@ export const useShopStore = defineStore('shop', {
         icon: zeitEchoIcon,
       } as ShopUpgrade,
     ],
-
-    permanentUpgrades: [
-      {
-        id: 'klick-training',
-        name: 'Klick Training',
-        description: 'Grundlegende Klick-Technik — erhöht Chimes pro Klick um 10 %.',
-        icon: '👆',
-        cost: 200,
-        purchased: false,
-        effect: { type: 'cpcMultiplier', value: 1.1 },
-      },
-      {
-        id: 'goldener-rhythmus',
-        name: 'Goldener Rhythmus',
-        description: 'Jeder Klick bringt 50 % mehr Chimes durch goldene Harmonie.',
-        icon: '✨',
-        cost: 1500,
-        purchased: false,
-        effect: { type: 'cpcMultiplier', value: 1.5 },
-      },
-      {
-        id: 'meister-klick',
-        name: 'Meister Klick',
-        description: 'Meisterhafter Klick-Stil — verdoppelt dauerhaft die Chimes pro Klick.',
-        icon: '💥',
-        cost: 8000,
-        purchased: false,
-        effect: { type: 'cpcMultiplier', value: 2 },
-      },
-      {
-        id: 'rhythmus-boost',
-        name: 'Rhythmus Boost',
-        description: 'Erhöht die Gesamtproduktion aller Gebäude um 15 %.',
-        icon: '🎵',
-        cost: 500,
-        purchased: false,
-        effect: { type: 'cpsMultiplier', value: 1.15 },
-      },
-      {
-        id: 'chime-resonanz',
-        name: 'Chime Resonanz',
-        description: 'Resonante Schwingungen verstärken die Chime-Produktion um 25 %.',
-        icon: '🔔',
-        cost: 3000,
-        purchased: false,
-        effect: { type: 'cpsMultiplier', value: 1.25 },
-      },
-      {
-        id: 'bardischer-nachhall',
-        name: 'Bardischer Nachhall',
-        description: 'Bards Musik hallt durch die Dimensionen — verdoppelt dauerhaft alle CPS.',
-        icon: '🎶',
-        cost: 75000,
-        purchased: false,
-        effect: { type: 'cpsMultiplier', value: 2 },
-      },
-      {
-        id: 'glockenturm-resonanz',
-        name: 'Glockenturm Resonanz',
-        description: 'Glockentürme resonieren synchron und verdoppeln ihre Produktion.',
-        icon: '🏰',
-        cost: 2000,
-        purchased: false,
-        effect: { type: 'buildingBoost', value: 2, buildingId: 'glockenturm' },
-        requirement: { buildingId: 'glockenturm', minLevel: 10 },
-      },
-      {
-        id: 'klang-synchro',
-        name: 'Klang Synchro',
-        description:
-          'Klang Generatoren arbeiten in perfekter Synchronisation und erzeugen doppelt so viele Chimes.',
-        icon: '🔊',
-        cost: 8000,
-        purchased: false,
-        effect: { type: 'buildingBoost', value: 2, buildingId: 'klanggenerator' },
-        requirement: { buildingId: 'klanggenerator', minLevel: 5 },
-      },
-      {
-        id: 'harmonisches-gleichgewicht',
-        name: 'Harmonisches Gleichgewicht',
-        description:
-          'Harmonie Werke erreichen perfektes Gleichgewicht und produzieren doppelt so viele Chimes.',
-        icon: '⚖️',
-        cost: 30000,
-        purchased: false,
-        effect: { type: 'buildingBoost', value: 2, buildingId: 'harmoniewerk' },
-        requirement: { buildingId: 'harmoniewerk', minLevel: 5 },
-      },
-      {
-        id: 'sphären-resonanz',
-        name: 'Sphären Resonanz',
-        description:
-          'Sphären Musiken schwingen im kosmischen Einklang und verdoppeln ihre Ausgabe.',
-        icon: '🌠',
-        cost: 150000,
-        purchased: false,
-        effect: { type: 'buildingBoost', value: 2, buildingId: 'sphaerenMusik' },
-        requirement: { buildingId: 'sphaerenMusik', minLevel: 3 },
-      },
-      {
-        id: 'zeitkompression',
-        name: 'Zeitkompression',
-        description:
-          'Zeit Echos komprimieren die Zeitlinie und verdoppeln dauerhaft ihre Chime-Produktion.',
-        icon: '⏳',
-        cost: 800000,
-        purchased: false,
-        effect: { type: 'buildingBoost', value: 2, buildingId: 'zeitEcho' },
-        requirement: { buildingId: 'zeitEcho', minLevel: 3 },
-      },
-    ] as PermanentUpgrade[],
   }),
 
   getters: {
-    permanentCPSMultiplier(): number {
-      return this.permanentUpgrades
-        .filter((u) => u.purchased && u.effect.type === 'cpsMultiplier')
-        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
-    },
-
-    permanentCPCMultiplier(): number {
-      return this.permanentUpgrades
-        .filter((u) => u.purchased && u.effect.type === 'cpcMultiplier')
-        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
-    },
-
     cpsProducingUpgrades(): ShopUpgrade[] {
       return this.shopUpgrades.filter((upgrade) => upgrade.baseCPS && upgrade.level > 0)
     },
@@ -243,7 +117,10 @@ export const useShopStore = defineStore('shop', {
             totalLifetime > 0 ? (building.lifetimeProduction / totalLifetime) * 100 : 0
 
           const rawStars = productionPercentage / EFFICIENCY_STARS_DIVISOR
-          const efficiencyStars = Math.min(EFFICIENCY_STARS_MAX, Math.max(EFFICIENCY_STARS_MIN, Math.round(rawStars * 2) / 2))
+          const efficiencyStars = Math.min(
+            EFFICIENCY_STARS_MAX,
+            Math.max(EFFICIENCY_STARS_MIN, Math.round(rawStars * 2) / 2),
+          )
 
           return {
             ...building,
@@ -371,157 +248,6 @@ export const useShopStore = defineStore('shop', {
       return 0
     },
 
-    getPermanentBuildingMultiplier(buildingId: string): number {
-      return this.permanentUpgrades
-        .filter(
-          (u) =>
-            u.purchased && u.effect.type === 'buildingBoost' && u.effect.buildingId === buildingId,
-        )
-        .reduce((product, u) => product * this.getModifiedEffectValue(u.id), 1)
-    },
-
-    isPermanentUpgradeRequirementMet(id: string): boolean {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === id)
-      if (!upgrade?.requirement) return true
-      const building = this.shopUpgrades.find((u) => u.id === upgrade.requirement!.buildingId)
-      return !!building && building.level >= upgrade.requirement.minLevel
-    },
-
-    canAffordPermanentUpgrade(id: string): boolean {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === id)
-      if (!upgrade || upgrade.purchased) return false
-      if (!this.isPermanentUpgradeRequirementMet(id)) return false
-      const gameStore = useGameStore()
-      return gameStore.chimes >= upgrade.cost
-    },
-
-    buyPermanentUpgrade(id: string): boolean {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === id)
-      if (!upgrade || upgrade.purchased) return false
-      if (!this.isPermanentUpgradeRequirementMet(id)) return false
-      const gameStore = useGameStore()
-      if (gameStore.chimes < upgrade.cost) return false
-      gameStore.chimes -= upgrade.cost
-      upgrade.purchased = true
-      upgrade.modifierSlotUnlocked = true
-      upgrade.modifierCost = Math.floor(upgrade.cost * MODIFIER_COST_FRACTION)
-      gameStore.chimesPerSecond = this.calculateTotalCPS()
-      gameStore.chimesPerClick = this.calculateTotalCPC()
-      logger.info('Shop', `Permanent upgrade: ${upgrade.name}`, { cost: upgrade.cost })
-      return true
-    },
-
-    // ── NEU: Mission-Belohnung als permanentUpgrade hinzufügen ──
-    addMissionReward(upgrade: PermanentUpgrade): void {
-      if (this.permanentUpgrades.some((u) => u.id === upgrade.id)) return
-      this.permanentUpgrades.push(upgrade)
-      // CPS/CPC direkt neu berechnen, falls bereits purchased
-      if (upgrade.purchased) {
-        const gameStore = useGameStore()
-        gameStore.chimesPerSecond = this.calculateTotalCPS()
-        gameStore.chimesPerClick = this.calculateTotalCPC()
-      }
-    },
-
-    getModifiedEffectValue(upgradeId: string): number {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
-      if (!upgrade) return 1
-      const base = upgrade.effect.value
-      const mod = upgrade.appliedModifier
-      if (!mod) return base
-
-      switch (mod.type) {
-        case 'resonanceBoost':
-          return base * (mod.params.boostFactor as number)
-        case 'synergyLink': {
-          const linkedId = mod.params.linkedUpgradeId as string
-          const linkedPurchased = this.permanentUpgrades.find((u) => u.id === linkedId)?.purchased
-          return linkedPurchased ? base * 2 : base
-        }
-        case 'cascadeEffect':
-          return base * (1 + (mod.params.cascadeBonus as number))
-        case 'adaptiveScaling': {
-          const maxLevel = Math.max(...this.shopUpgrades.map((u) => u.level), 1)
-          return base * (1 + maxLevel * (mod.params.scaleFactor as number))
-        }
-        case 'chimeEcho':
-        case 'timeCrystal':
-          return base
-        default:
-          return base
-      }
-    },
-
-    rollModifierOptions(upgradeId: string): UpgradeModifier[] {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
-      const pool = MODIFIER_POOL.filter((m) => m.id !== upgrade?.appliedModifier?.id)
-      const shuffled = [...pool].sort(() => Math.random() - 0.5)
-      return shuffled.slice(0, MODIFIER_ROLL_COUNT)
-    },
-
-    applyModifier(upgradeId: string, modifier: UpgradeModifier): boolean {
-      const upgrade = this.permanentUpgrades.find((u) => u.id === upgradeId)
-      if (!upgrade || !upgrade.modifierSlotUnlocked) return false
-      const gameStore = useGameStore()
-      if (gameStore.chimes < (upgrade.modifierCost ?? 0)) return false
-      gameStore.chimes -= upgrade.modifierCost ?? 0
-      upgrade.appliedModifier = modifier
-      gameStore.chimesPerSecond = this.calculateTotalCPS()
-      gameStore.chimesPerClick = this.calculateTotalCPC()
-      logger.info('Shop', `Modifier applied: ${modifier.name} → ${upgrade.name}`)
-      return true
-    },
-
-    calculateTotalCPS(): number {
-      const gameStore = useGameStore()
-      const augmentStore = useAugmentStore()
-      const planetShopStore = usePlanetShopStore()
-      const mod = gameStore.activeModifier
-      const resonanceMuls = planetShopStore.resonanceTowerBuildingMultipliers
-      const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
-        const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
-        const permBuildingMul = this.getPermanentBuildingMultiplier(upgrade.id)
-        const resonanceMul = resonanceMuls[upgrade.id] ?? 1
-        return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * permBuildingMul * resonanceMul
-      }, 0)
-      const itemStore = useItemStore()
-      const bossStore = usePlanetBossStore()
-      const cpsMul =
-        (mod.cpsMultiplier ?? 1) *
-        this.permanentCPSMultiplier *
-        augmentStore.temporaryCPSMultiplier *
-        itemStore.totalCPSMultiplier *
-        bossStore.cpsPenaltyMultiplier
-      const flatCPSBonus = this.permanentUpgrades
-        .filter((u) => u.purchased && u.appliedModifier)
-        .reduce((sum, u) => {
-          const m = u.appliedModifier!
-          if (m.type === 'chimeEcho')
-            return sum + (m.params.burstAmount as number) * (m.params.chance as number)
-          if (m.type === 'timeCrystal') return sum + (m.params.crystalCPSBonus as number)
-          return sum
-        }, 0)
-      return Math.floor(
-        baseCPS *
-          gameStore.abilityCPSMultiplier *
-          cpsMul +
-          flatCPSBonus,
-      )
-    },
-
-    calculateTotalCPC(): number {
-      const gameStore = useGameStore()
-      const mod = gameStore.activeModifier
-
-      const upgradeBonus = this.shopUpgrades.reduce((total, upgrade) => {
-        return total + (upgrade.baseCPC || 0) * upgrade.level
-      }, 0)
-
-      const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
-      const cpcMul = (mod.cpcMultiplier ?? 1) * this.permanentCPCMultiplier
-      return Math.floor((baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul)
-    },
-
     getUpgradeCost(upgrade: ShopUpgrade): number {
       const gameStore = useGameStore()
       const costMul = gameStore.activeModifier.buildingCostMultiplier ?? 1
@@ -540,6 +266,40 @@ export const useShopStore = defineStore('shop', {
         amount = this.getMaxAffordableAmount(upgrade)
       }
       return typeof amount === 'number' ? Math.max(0, amount) : 0
+    },
+
+    calculateTotalCPS(): number {
+      const gameStore = useGameStore()
+      const augmentStore = useAugmentStore()
+      const planetShopStore = usePlanetShopStore()
+      const mod = gameStore.activeModifier
+      const resonanceMuls = planetShopStore.resonanceTowerBuildingMultipliers
+      const baseCPS = this.shopUpgrades.reduce((total, upgrade) => {
+        const universeMul = mod.buildingMultipliers?.[upgrade.id] ?? 1
+        const resonanceMul = resonanceMuls[upgrade.id] ?? 1
+        return total + (upgrade.baseCPS || 0) * upgrade.level * universeMul * resonanceMul
+      }, 0)
+      const itemStore = useItemStore()
+      const bossStore = usePlanetBossStore()
+      const cpsMul =
+        (mod.cpsMultiplier ?? 1) *
+        augmentStore.temporaryCPSMultiplier *
+        itemStore.totalCPSMultiplier *
+        bossStore.cpsPenaltyMultiplier
+      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
+    },
+
+    calculateTotalCPC(): number {
+      const gameStore = useGameStore()
+      const mod = gameStore.activeModifier
+
+      const upgradeBonus = this.shopUpgrades.reduce((total, upgrade) => {
+        return total + (upgrade.baseCPC || 0) * upgrade.level
+      }, 0)
+
+      const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
+      const cpcMul = mod.cpcMultiplier ?? 1
+      return Math.floor((baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul)
     },
   },
 })
