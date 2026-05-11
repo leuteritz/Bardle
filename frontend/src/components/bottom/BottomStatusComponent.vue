@@ -94,7 +94,7 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
   bottom: 48px;
   height: 24px;
   z-index: 9999;
-  pointer-events: none;
+  pointer-events: none; /* Overlay blockt keine Klicks */
   overflow: visible;
 }
 
@@ -118,18 +118,6 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
   animation: connector-pulse-glow 3.5s ease-in-out infinite;
 }
 
-/*
-  Geometrie:
-  - .bottom-connector hat height: 24px
-  - Goldlinie liegt bei top: 9px (Mitte des SVG y:12 scaled auf 24px height)
-  - .bottom-connector-bg geht von top:9px bis bottom:-80px
-    → brauner Bereich: 9px bis (24px + 80px) = 104px → 80px hoch unterhalb der Linie
-  - Mitte des braunen Bereichs: 9px + 40px = 49px von Komponenten-Oberkante
-  - status-bar height: 36px → top = 49px - 18px = 31px
-    Laut Screenshot zu tief → Elemente erscheinen unterhalb der Linie.
-    Fix: top: 13px positioniert die Bar direkt ab der Goldlinie nach unten,
-    sodass die Inhalte knapp unter der Linie mittig im sichtbaren Bereich liegen.
-*/
 .status-bar {
   position: absolute;
   top: 25px;
@@ -141,7 +129,7 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
   align-items: center;
   justify-content: space-between;
   padding: 0;
-  pointer-events: none;
+  pointer-events: auto; /* ← FIX: Hover wieder erlauben */
 }
 
 @keyframes connector-pulse-glow {

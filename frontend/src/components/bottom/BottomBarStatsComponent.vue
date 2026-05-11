@@ -8,8 +8,6 @@ import { ROLES, GAME_STATE } from '@/config/constants'
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
-const isHovering = ref(false)
-
 function fmtCd(ms: number): string {
   const s = Math.ceil(ms / 1000)
   if (s <= 0) return ''
@@ -161,7 +159,8 @@ const winChanceColor = computed(() => {
 </script>
 
 <template>
-  <div class="stats-grid" @mouseenter="isHovering = true" @mouseleave="isHovering = false">
+  <!-- kein @mouseenter/@mouseleave mehr nötig -->
+  <div class="stats-grid">
     <!-- LEFT: Role Abilities -->
     <div class="bbstats">
       <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
@@ -176,9 +175,8 @@ const winChanceColor = computed(() => {
           :style="{ '--role-color': ab.color }"
         >
           <img :src="ab.image" :alt="ab.short" class="ability-role-icon" />
-          <Transition name="label-slide">
-            <span v-if="isHovering" class="bbstat-label ability-label">{{ ab.short }}</span>
-          </Transition>
+          <!-- immer im DOM, CSS-hover blendet ein/aus -->
+          <span class="bbstat-label ability-label">{{ ab.short }}</span>
           <span class="ability-cd-wrap">
             <span class="ability-cd-val" aria-hidden="true">
               {{ ab.hasChampion ? ab.timer || '' : '' }}
@@ -192,14 +190,12 @@ const winChanceColor = computed(() => {
     <!-- CENTER: Title -->
     <div class="title-center">BARDLE</div>
 
-    <!-- RIGHT: Stats – kein führender Divider, RANK startet direkt -->
+    <!-- RIGHT: Stats -->
     <div class="stats-right">
       <!-- RANK -->
       <div class="bbstat-item">
         <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
-        <Transition name="label-slide">
-          <span v-if="isHovering" class="bbstat-label">RANK</span>
-        </Transition>
+        <span class="bbstat-label">RANK</span>
         <span class="bbstat-val">{{ rankLabel }}</span>
       </div>
       <div class="bbstat-divider" />
@@ -207,9 +203,7 @@ const winChanceColor = computed(() => {
       <!-- LP -->
       <div class="bbstat-item">
         <img src="/img/stats/lp.png" alt="lp" class="bbstat-stat-icon" />
-        <Transition name="label-slide">
-          <span v-if="isHovering" class="bbstat-label">LP</span>
-        </Transition>
+        <span class="bbstat-label">LP</span>
         <span class="bbstat-val bbstat-val--gold">{{ lpValue }}</span>
       </div>
       <div class="bbstat-divider" />
@@ -217,9 +211,7 @@ const winChanceColor = computed(() => {
       <!-- W/L -->
       <div class="bbstat-item">
         <img src="/img/stats/winloose.png" alt="w/l" class="bbstat-stat-icon" />
-        <Transition name="label-slide">
-          <span v-if="isHovering" class="bbstat-label">W/L</span>
-        </Transition>
+        <span class="bbstat-label">W/L</span>
         <span class="bbstat-val bbstat-val--win">{{ totalWins }}</span>
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
@@ -229,7 +221,6 @@ const winChanceColor = computed(() => {
       <!-- Game State -->
       <div class="bbstat-item">
         <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
-        <!-- vorher: <span class="bbstat-icon">{{ gameStateDisplay.icon }}</span> -->
         <span
           class="bbstat-val"
           :style="{ color: gameStateDisplay.color, fontSize: '13px', whiteSpace: 'nowrap' }"
@@ -246,10 +237,7 @@ const winChanceColor = computed(() => {
           class="bbstat-stat-icon"
           :style="{ filter: `drop-shadow(0 0 3px ${winChanceColor})` }"
         />
-        <!-- vorher: <span class="bbstat-icon" :style="...">◎</span> -->
-        <Transition name="label-slide">
-          <span v-if="isHovering" class="bbstat-label">WIN%</span>
-        </Transition>
+        <span class="bbstat-label">WIN%</span>
         <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
           {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
         </span>
@@ -260,8 +248,8 @@ const winChanceColor = computed(() => {
 
 <style scoped>
 .stats-grid {
-  --stat-val-size: 22px; /* Werte: RANK-Text, LP-Zahl, Kills usw. */
-  --label-size: 22px; /* ← war 25px, jetzt gleich wie --stat-val-size */
+  --stat-val-size: 22px;
+  --label-size: 22px;
   --icon-size: 15px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -269,7 +257,6 @@ const winChanceColor = computed(() => {
   width: 100%;
 }
 
-/* LEFT side: 5 slots + 4 dividers = 9 columns */
 .bbstats {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
@@ -279,7 +266,6 @@ const winChanceColor = computed(() => {
   padding-inline-end: 6px;
 }
 
-/* RIGHT side: 5 slots + 4 dividers = 9 columns (kein führendes auto mehr) */
 .stats-right {
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
@@ -298,7 +284,7 @@ const winChanceColor = computed(() => {
 }
 
 .bbstat-stat-icon {
-  width: 35px; /* bleibt 35px — jetzt beide gleich */
+  width: 35px;
   height: 35px;
   object-fit: contain;
   flex-shrink: 0;
@@ -343,6 +329,7 @@ const winChanceColor = computed(() => {
   filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
 }
 
+/* ── Label: standardmäßig versteckt, beim Hover des stats-grid einblenden ── */
 .bbstat-label {
   font-size: var(--label-size);
   color: #6a4418;
@@ -351,25 +338,32 @@ const winChanceColor = computed(() => {
   line-height: 1;
   flex-shrink: 0;
   white-space: nowrap;
-}
-
-.label-slide-enter-active,
-.label-slide-leave-active {
+  display: inline-block;
+  max-width: 0;
   overflow: hidden;
+  opacity: 0;
   transition:
     max-width 0.22s ease,
     opacity 0.18s ease;
-  white-space: nowrap;
 }
-.label-slide-enter-from,
-.label-slide-leave-to {
-  max-width: 0;
-  opacity: 0;
-}
-.label-slide-enter-to,
-.label-slide-leave-from {
-  max-width: 100px;
+
+/* Hover auf dem gesamten Grid → alle Labels einblenden */
+.stats-grid:hover .bbstat-label {
+  max-width: 120px;
   opacity: 1;
+}
+
+/* ── Ability Label Farben beim Hover ────────────────────────────────── */
+.stats-grid:hover
+  .ability-slot:not(.ability-slot--cooldown):not(.ability-slot--flash):not(.ability-slot--inactive)
+  .ability-label {
+  color: var(--role-color, #e8c040);
+  text-shadow: 0 0 5px var(--role-color, #e8c040);
+}
+
+.stats-grid:hover .ability-slot--cooldown .ability-label {
+  color: #6a4418;
+  text-shadow: none;
 }
 
 .bbstat-val {
@@ -415,7 +409,7 @@ const winChanceColor = computed(() => {
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  width: 35px; /* ← war 40px, jetzt gleich wie stat-icon */
+  width: 35px;
   height: 35px;
   object-fit: contain;
   flex-shrink: 0;
@@ -429,6 +423,8 @@ const winChanceColor = computed(() => {
   flex-shrink: 0;
   white-space: nowrap;
   transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease,
     color 0.2s,
     text-shadow 0.2s;
 }
@@ -480,10 +476,6 @@ const winChanceColor = computed(() => {
   filter: grayscale(55%) brightness(0.55) drop-shadow(0 0 2px rgba(100, 80, 20, 0.4));
   opacity: 0.7;
 }
-.ability-slot--cooldown .ability-label {
-  color: #6a4418;
-  text-shadow: none;
-}
 .ability-slot--cooldown .ability-cd-val {
   visibility: visible;
   color: #7a5810;
@@ -509,13 +501,6 @@ const winChanceColor = computed(() => {
 .ability-slot--inactive {
   opacity: 0.3;
   filter: grayscale(80%);
-}
-
-/* ── Ready ──────────────────────────────────────────────────────────── */
-.ability-slot:not(.ability-slot--cooldown):not(.ability-slot--flash):not(.ability-slot--inactive)
-  .ability-label {
-  color: var(--role-color, #e8c040);
-  text-shadow: 0 0 5px var(--role-color, #e8c040);
 }
 
 /* ── Animationen ────────────────────────────────────────────────────── */
