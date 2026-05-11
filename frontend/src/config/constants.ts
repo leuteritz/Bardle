@@ -168,9 +168,6 @@ export const MMR_RANK_THRESHOLDS = [
 // Expedition system
 export const CHAMPION_BASE_POWER = 50
 
-// Battle shop
-export const REROLL_COST = 3
-
 // Save / load
 export const SAVE_KEY = 'bard-idle-save'
 export const SAVE_VERSION = 1

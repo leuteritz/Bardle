@@ -376,33 +376,6 @@ export interface Material {
   dropCount?: number
 }
 
-export interface ShopItemEffect {
-  type:
-    | 'winChanceBonus'
-    | 'doubleLpOnWin'
-    | 'synergyPower'
-    | 'scoutOpponent'
-    | 'bardBasePower'
-    | 'coinDropBonus'
-  value: number
-}
-
-export interface BattleShopItem {
-  id: string
-  name: string
-  description: string
-  cost: number
-  category: 'temp_buff' | 'team_upgrade' | 'permanent'
-  rarity: 'common' | 'rare' | 'epic'
-  maxStacks?: number
-  effect: ShopItemEffect
-}
-
-export interface ActiveBuff {
-  id: string
-  remainingBattles: number
-  effect: ShopItemEffect
-}
 
 export type MissionConditionType =
   | 'totalChimes'

@@ -76,28 +76,6 @@
         <div class="stat-foot">Ø&thinsp;{{ avgBattleTime }}</div>
       </div>
 
-      <div class="stat-divider" />
-
-      <div class="stat-col">
-        <div class="stat-eyebrow">KASSE</div>
-        <div class="coins-main">
-          <span class="coin-icon">🪙</span>
-          <span class="coin-num">{{ battleStore.battleCoins }}</span>
-        </div>
-        <div class="stat-foot">{{ battleStore.totalCoinsEarned }}&thinsp;verdient</div>
-        <div v-if="activePermanentCount > 0" class="perm-upgrades">
-          <span class="perm-badge">{{ activePermanentCount }}&thinsp;Upgrades</span>
-        </div>
-        <div v-if="battleStore.purchasedBuffs.length > 0" class="buffs-row">
-          <span
-            v-for="buff in battleStore.purchasedBuffs"
-            :key="buff.id"
-            class="buff-pip"
-            :title="buff.id"
-            >{{ buff.remainingBattles }}×</span
-          >
-        </div>
-      </div>
     </div>
 
     <!-- ── SIEGCHANCE ── -->
@@ -265,9 +243,6 @@ export default defineComponent({
       if (p >= 0.45) return 'prob--mid'
       return 'prob--low'
     })
-    const activePermanentCount = computed(
-      () => Object.keys(battleStore.permanentBattleUpgrades).length,
-    )
     return {
       battleStore,
       ROLES,
@@ -283,7 +258,6 @@ export default defineComponent({
       showWinProb,
       winProbPercent,
       winProbClass,
-      activePermanentCount,
     }
   },
 })
@@ -546,49 +520,6 @@ export default defineComponent({
   margin: 0 2px;
 }
 
-/* ── Kasse ── */
-.coins-main {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.coin-icon {
-  font-size: 22px;
-}
-.coin-num {
-  font-size: 32px;
-  font-weight: 900;
-  color: #d4a020;
-  line-height: 1;
-}
-.perm-upgrades {
-  margin-top: 2px;
-}
-.perm-badge {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #b070f8;
-  background: rgba(160, 96, 240, 0.14);
-  border: 1px solid rgba(160, 96, 240, 0.28);
-  border-radius: 4px;
-  padding: 2px 7px;
-}
-.buffs-row {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.buff-pip {
-  font-size: 11px;
-  font-weight: 800;
-  color: #d4a020;
-  background: rgba(212, 160, 32, 0.12);
-  border: 1px solid rgba(212, 160, 32, 0.25);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
 
 /* ═══════════════════════════════════════════
    SIEGCHANCE

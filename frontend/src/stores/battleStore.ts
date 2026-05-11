@@ -25,17 +25,13 @@ import {
   BATTLE_REAL_DURATION_SECONDS,
   KILL_EVENTS_PER_TEAM_MIN,
   KILL_EVENTS_PER_TEAM_MAX,
-  REROLL_COST,
 } from '../config/constants'
 import type {
   BattleResult,
-  BattleShopItem,
-  ActiveBuff,
   ChampionState,
   ChatMessage,
   RecruitableChampion,
 } from '../types'
-import { getRandomShopItems } from '../config/battleShop'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -113,20 +109,13 @@ export const useBattleStore = defineStore('battle', {
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     autoBattleTimerEndTimestamp: 0,
-    autoSkipEnabled: true,
+    simulationReadyToStart: false,
     resultCountdown: 0,
     resultCountdownTimer: null as ReturnType<typeof setInterval> | null,
     predeterminedWin: null as boolean | null,
     currentWinProbability: 0 as number,
     currentOpponentLabel: '',
 
-    battleCoins: 0,
-    totalCoinsEarned: 0,
-    shopPhaseActive: false,
-    activeShopItems: [] as BattleShopItem[],
-    freeRerollAvailable: true,
-    purchasedBuffs: [] as ActiveBuff[],
-    permanentBattleUpgrades: {} as Record<string, number>,
   }),
 
   getters: {
@@ -474,6 +463,7 @@ export const useBattleStore = defineStore('battle', {
     },
 
     beginSimulation() {
+      if (this.battleSimIntervalId) return
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
@@ -523,15 +513,6 @@ export const useBattleStore = defineStore('battle', {
         this.totalLosses++
         this.currentWinStreak = 0
       }
-
-      const baseCoins = battleResult
-        ? Math.floor(Math.random() * 5) + 8
-        : Math.floor(Math.random() * 3) + 4
-      const streakBonus = battleResult ? Math.min(this.currentWinStreak, 3) * 2 : 0
-      const luckyBonus = this.permanentBattleUpgrades['lucky_coin'] ?? 0
-      const coinsEarned = baseCoins + streakBonus + luckyBonus
-      this.battleCoins += coinsEarned
-      this.totalCoinsEarned += coinsEarned
 
       this.totalBattleTime += this.battleTime
       this.lastMmrChange = actualMmrChange
@@ -632,19 +613,10 @@ export const useBattleStore = defineStore('battle', {
     },
 
     calculateWinProbability(playerPower: number, opponentPower: number) {
-      const bardBonus = 1 + (this.permanentBattleUpgrades['veteran_bard'] ?? 0) * 0.05
-      const adjustedPlayerPower = playerPower * bardBonus
-      const powerDifference = adjustedPlayerPower - opponentPower
+      const powerDifference = playerPower - opponentPower
       const expectedScore = 1 / (1 + Math.pow(10, -powerDifference / ELO_RATING_SCALE))
       const luckModifier = (Math.random() - 0.5) * this.battleFormula.luckFactor
-
-      let winBonus = 0
-      for (const buff of this.purchasedBuffs) {
-        if (buff.effect.type === 'winChanceBonus') {
-          winBonus += buff.effect.value
-        }
-      }
-      return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier + winBonus))
+      return Math.max(0.1, Math.min(0.9, expectedScore + luckModifier))
     },
 
     generateOpponent(targetMMR: number) {
@@ -697,36 +669,30 @@ export const useBattleStore = defineStore('battle', {
       this.showAutoBattleResult = true
       this.resultPhaseStartTimestamp = Date.now()
 
-      if (this.autoSkipEnabled) {
-        this.resultCountdown = 4
-        if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
-        this.resultCountdownTimer = setInterval(() => {
-          this.resultCountdown--
-          if (this.resultCountdown <= 0) {
-            clearInterval(this.resultCountdownTimer!)
-            this.resultCountdownTimer = null
-          }
-        }, 1000)
-        // FIX: Nach 4s Ergebnis-Anzeige den Shop öffnen UND sofort automatisch
-        // überspringen (skipShop), wenn autoSkipEnabled aktiv ist.
-        // Vorher wurde nur openShop() aufgerufen – der Shop blieb offen und
-        // niemand hat skipShop() aufgerufen, daher startete kein neues Battle.
-        const pauseId = setTimeout(() => {
-          this.skipShop()
-        }, 4000)
-        this.timerIds.push(pauseId)
-      }
-      // Manueller Modus: shopPhaseActive bleibt false, User öffnet Shop manuell
-      // via manualDismissResult() → openShop() → skipShop()
+      this.resultCountdown = 4
+      if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
+      this.resultCountdownTimer = setInterval(() => {
+        this.resultCountdown--
+        if (this.resultCountdown <= 0) {
+          clearInterval(this.resultCountdownTimer!)
+          this.resultCountdownTimer = null
+        }
+      }, 1000)
+      const pauseId = setTimeout(() => {
+        this.dismissResult()
+      }, 4000)
+      this.timerIds.push(pauseId)
     },
 
     async proceedToNextBattle() {
       await this.initializeBattle()
       this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
+      this.simulationReadyToStart = true
+      this.beginSimulation()
     },
 
-    manualDismissResult() {
+    dismissResult() {
       this.timerIds.forEach((id) => clearTimeout(id))
       this.timerIds = []
       if (this.resultCountdownTimer) {
@@ -734,20 +700,7 @@ export const useBattleStore = defineStore('battle', {
         this.resultCountdownTimer = null
       }
       this.resultCountdown = 0
-      this.openShop()
-    },
-
-    toggleAutoSkip() {
-      this.autoSkipEnabled = !this.autoSkipEnabled
-      if (!this.autoSkipEnabled) {
-        this.timerIds.forEach((id) => clearTimeout(id))
-        this.timerIds = []
-        if (this.resultCountdownTimer) {
-          clearInterval(this.resultCountdownTimer)
-          this.resultCountdownTimer = null
-        }
-        this.resultCountdown = 0
-      }
+      void this.proceedToNextBattle()
     },
 
     async startAutoBattle() {
@@ -796,51 +749,6 @@ export const useBattleStore = defineStore('battle', {
       this.autoBattleReady = true
     },
 
-    // ── Battle Shop Actions ───────────────────────────────────
-
-    openShop() {
-      this.showAutoBattleResult = false
-      this.activeShopItems = getRandomShopItems(this.permanentBattleUpgrades)
-      this.freeRerollAvailable = true
-      this.shopPhaseActive = true
-    },
-
-    purchaseShopItem(itemId: string) {
-      const item = this.activeShopItems.find((i) => i.id === itemId)
-      if (!item) return
-      if (this.battleCoins < item.cost) return
-      this.battleCoins -= item.cost
-      if (item.category === 'temp_buff') {
-        this.purchasedBuffs.push({ id: item.id, remainingBattles: 1, effect: item.effect })
-      } else if (item.category === 'team_upgrade') {
-        this.purchasedBuffs.push({ id: item.id, remainingBattles: 3, effect: item.effect })
-      } else if (item.category === 'permanent') {
-        const current = this.permanentBattleUpgrades[item.id] ?? 0
-        const max = item.maxStacks ?? Infinity
-        if (current < max) {
-          this.permanentBattleUpgrades[item.id] = current + 1
-        }
-      }
-    },
-
-    rerollShop() {
-      if (this.freeRerollAvailable) {
-        this.freeRerollAvailable = false
-      } else {
-        if (this.battleCoins < REROLL_COST) return
-        this.battleCoins -= REROLL_COST
-      }
-      this.activeShopItems = getRandomShopItems(this.permanentBattleUpgrades)
-    },
-
-    async skipShop() {
-      this.purchasedBuffs = this.purchasedBuffs
-        .map((b) => ({ ...b, remainingBattles: b.remainingBattles - 1 }))
-        .filter((b) => b.remainingBattles > 0)
-      this.shopPhaseActive = false
-      this.activeShopItems = []
-      await this.proceedToNextBattle()
-    },
 
     async adminSkipToEnd() {
       if (this.battlePhase !== 'playing') return
@@ -884,7 +792,6 @@ export const useBattleStore = defineStore('battle', {
       if (
         this.battlePhase === 'playing' &&
         this.battlePhaseStartTimestamp > 0 &&
-        !this.shopPhaseActive &&
         !this.showAutoBattleResult
       ) {
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
@@ -903,11 +810,11 @@ export const useBattleStore = defineStore('battle', {
         if (!this.battleSimIntervalId) {
           this.startBattleSimulation(true)
         }
+        return
       }
       if (
         this.autoBattleEnabled &&
         this.autoBattleTimerEndTimestamp > 0 &&
-        !this.shopPhaseActive &&
         this.battlePhase !== 'result' &&
         !this.showAutoBattleResult &&
         Date.now() >= this.autoBattleTimerEndTimestamp
@@ -921,20 +828,11 @@ export const useBattleStore = defineStore('battle', {
     },
 
     autoSimulateHonorAndProceed() {
-      this.timerIds.forEach((id) => clearTimeout(id))
-      this.timerIds = []
-      if (this.resultCountdownTimer) {
-        clearInterval(this.resultCountdownTimer)
-        this.resultCountdownTimer = null
-      }
-      this.resultCountdown = 0
-      this.resultPhaseStartTimestamp = 0
-      // FIX: autoSimulateHonorAndProceed ebenfalls direkt skipShop aufrufen
-      // statt openShop, damit der Loop nach Tab-Rückkehr weiterlaufen kann.
-      this.skipShop()
+      this.dismissResult()
     },
 
     resumeBattleAfterLoad() {
+      this.simulationReadyToStart = false
       if (!this.isAutoBattleInitialized) return
       if (!_visibilityHandler) {
         _visibilityHandler = () => {

@@ -94,10 +94,6 @@ export function usePersistence() {
         battleEverStarted: battleStore.battleEverStarted,
         isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
         resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
-        battleCoins: battleStore.battleCoins,
-        totalCoinsEarned: battleStore.totalCoinsEarned,
-        purchasedBuffs: battleStore.purchasedBuffs,
-        permanentBattleUpgrades: { ...battleStore.permanentBattleUpgrades },
       },
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
@@ -238,12 +234,6 @@ export function usePersistence() {
         battleStore.battleEverStarted = b.battleEverStarted ?? false
         battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
         battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
-        battleStore.battleCoins = b.battleCoins ?? 0
-        battleStore.totalCoinsEarned = b.totalCoinsEarned ?? 0
-        if (Array.isArray(b.purchasedBuffs)) battleStore.purchasedBuffs = b.purchasedBuffs
-        if (b.permanentBattleUpgrades && typeof b.permanentBattleUpgrades === 'object') {
-          battleStore.permanentBattleUpgrades = { ...b.permanentBattleUpgrades }
-        }
       }
 
       // Restore expeditionStore
@@ -457,14 +447,6 @@ export function usePersistence() {
     battleStore.battleTime = 0
     battleStore.timeUntilNextBattle = 0
     battleStore.currentBattleId = 0
-    battleStore.battleCoins = 0
-    battleStore.totalCoinsEarned = 0
-    battleStore.purchasedBuffs = []
-    battleStore.permanentBattleUpgrades = {}
-    battleStore.shopPhaseActive = false
-    battleStore.activeShopItems = []
-    battleStore.freeRerollAvailable = true
-
     // 6. Reset remaining stores
     const inventoryStore = useInventoryStore()
     inventoryStore.$reset()

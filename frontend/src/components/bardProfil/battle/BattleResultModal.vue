@@ -102,19 +102,12 @@
 
         <div class="flex items-center justify-center gap-3 mt-4">
           <button
-            @click="battleStore.manualDismissResult()"
+            @click="battleStore.dismissResult()"
             class="px-5 py-2 text-sm font-black result-btn"
           >
             Weiter →
-          </button>
-          <button
-            @click="battleStore.toggleAutoSkip()"
-            class="px-4 py-2 text-sm font-black result-btn"
-            :class="battleStore.autoSkipEnabled ? 'result-btn--active' : ''"
-          >
-            {{ battleStore.autoSkipEnabled ? '⏭️ Auto-Skip AN' : '⏸️ Auto-Skip AUS' }}
             <span
-              v-if="battleStore.autoSkipEnabled && battleStore.resultCountdown > 0"
+              v-if="battleStore.resultCountdown > 0"
               class="ml-1 text-xs opacity-70"
             >
               ({{ battleStore.resultCountdown }}s)

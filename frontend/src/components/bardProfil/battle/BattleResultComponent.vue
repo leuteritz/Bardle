@@ -72,7 +72,6 @@
             :battle-id="currentBattleId"
             :score="score"
           />
-          <BattleShopModal class="w-full mt-2" />
         </div>
 
         <!-- Right: Chat + Scoreboard -->
@@ -96,7 +95,6 @@ import ScoreboardComponent from './ScoreboardComponent.vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
 import BattleStartScreenComponent from './BattleStartScreenComponent.vue'
-import BattleShopModal from './BattleShopModal.vue'
 import BattleResultModal from './BattleResultModal.vue'
 import { useBattleStore } from '@/stores/battleStore'
 
@@ -109,7 +107,6 @@ export default defineComponent({
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,
     BattleStartScreenComponent,
-    BattleShopModal,
     BattleResultModal,
   },
 
@@ -127,9 +124,10 @@ export default defineComponent({
     }
 
     watch(
-      () => battleStore.showAutoBattleResult,
-      async (newVal, oldVal) => {
-        if (oldVal === true && newVal === false && battleStore.isAutoBattleInitialized) {
+      () => battleStore.simulationReadyToStart,
+      async (newVal) => {
+        if (newVal && battleStore.isAutoBattleInitialized) {
+          battleStore.simulationReadyToStart = false
           await runUniverseAnimation()
           battleStore.beginSimulation()
         }
