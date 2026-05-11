@@ -261,7 +261,7 @@ const winChanceColor = computed(() => {
   align-items: center;
   width: 100%;
   overflow: visible;
-  padding-inline-end: 6px;
+  padding-inline-end: 16px; /* ← war 6px, gleich wie title padding-inline */
 }
 
 .stats-right {
@@ -270,7 +270,7 @@ const winChanceColor = computed(() => {
   align-items: center;
   width: 100%;
   overflow: visible;
-  padding-inline-start: 6px;
+  padding-inline-start: 16px; /* ← war 6px, gleich wie title padding-inline */
 }
 
 .bbstat-item {
@@ -327,7 +327,7 @@ const winChanceColor = computed(() => {
   filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
 }
 
-/* ── Label: standardmäßig versteckt, beim Hover des stats-grid einblenden ── */
+/* ── Label: standardmäßig versteckt, beim Hover einblenden ────────────── */
 .bbstat-label {
   font-size: var(--label-size);
   color: #6a4418;
@@ -345,7 +345,6 @@ const winChanceColor = computed(() => {
     opacity 0.18s ease;
 }
 
-/* Hover auf dem gesamten Grid → alle Labels einblenden */
 .stats-grid:hover .bbstat-label {
   max-width: 120px;
   opacity: 1;
