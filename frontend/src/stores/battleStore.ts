@@ -216,6 +216,9 @@ export const useBattleStore = defineStore('battle', {
     },
 
     startBattleSimulation(resume = false) {
+      // Timestamp immer frisch setzen – egal ob resume oder nicht.
+      // Bei resume wird die bereits verstrichene echte Zeit korrekt
+      // durch battlePhaseStartTimestamp abgebildet (gesetzt in beginSimulation).
       if (!resume) {
         this.battlePhaseStartTimestamp = Date.now()
       }
@@ -286,8 +289,6 @@ export const useBattleStore = defineStore('battle', {
           this.battleSimIntervalId = null
           this.battlePhase = 'result'
           logBattleEnded(this.predeterminedWin ?? false)
-          // Simulation fertig → direkt runBattleCycle auslösen.
-          // autoBattleTimer canceln falls er noch läuft (verhindert Doppel-Aufruf).
           if (this.autoBattleTimer) {
             clearTimeout(this.autoBattleTimer)
             this.autoBattleTimer = null
@@ -364,6 +365,8 @@ export const useBattleStore = defineStore('battle', {
       this.battlePhase = 'playing'
       this.predeterminedWin = null
       this.showAutoBattleResult = false
+      // battlePhaseStartTimestamp wird erst in beginSimulation() gesetzt,
+      // nicht hier – so verhindert man den "sofort-fertig"-Bug.
       this.battlePhaseStartTimestamp = 0
       this.searchingPhaseStartTimestamp = 0
     },
@@ -461,6 +464,8 @@ export const useBattleStore = defineStore('battle', {
     beginSimulation() {
       if (this.battleSimIntervalId) return
       if (this.team1.length > 0 && this.team2.length > 0) {
+        // Timestamp hier setzen – erst jetzt beginnt die echte Spielzeit.
+        this.battlePhaseStartTimestamp = Date.now()
         this.startBattleSimulation()
         this.showRandomChatMessagesSequentially()
         logBattleStarted(this.currentOpponentLabel)
@@ -682,11 +687,12 @@ export const useBattleStore = defineStore('battle', {
 
     async proceedToNextBattle() {
       await this.initializeBattle()
-      this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
       this.searchingPhaseStartTimestamp = Date.now()
       this.simulationReadyToStart = true
-      this.beginSimulation()
+      this.startCountdown()
+      // beginSimulation() wird NICHT sofort aufgerufen –
+      // startCountdown() startet sie erst nach Ablauf des Suchphasen-Countdowns.
     },
 
     dismissResult() {
@@ -710,8 +716,10 @@ export const useBattleStore = defineStore('battle', {
         document.addEventListener('visibilitychange', _visibilityHandler)
       }
       await this.initializeBattle()
-      this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
+      this.searchingPhaseStartTimestamp = Date.now()
+      this.simulationReadyToStart = true
+      this.startCountdown()
     },
 
     pauseBattleSimulation() {
@@ -738,6 +746,11 @@ export const useBattleStore = defineStore('battle', {
         if (this.timeUntilNextBattle <= 0) {
           clearInterval(this.countdownTimer!)
           this.countdownTimer = null
+          // Suchphase abgelaufen → Simulation starten
+          if (this.simulationReadyToStart && this.autoBattleEnabled) {
+            this.simulationReadyToStart = false
+            this.beginSimulation()
+          }
         }
       }, 500)
     },
@@ -819,7 +832,12 @@ export const useBattleStore = defineStore('battle', {
           clearTimeout(this.autoBattleTimer)
           this.autoBattleTimer = null
         }
-        this.runBattleCycle()
+        // Simulation starten falls simulationReadyToStart noch gesetzt ist
+        // (z.B. nach Tab-Wechsel während der Suchphase)
+        if (this.simulationReadyToStart) {
+          this.simulationReadyToStart = false
+          this.beginSimulation()
+        }
       }
     },
 
