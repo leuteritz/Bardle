@@ -8,6 +8,8 @@ import { ROLES, GAME_STATE } from '@/config/constants'
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
+const isHovering = ref(false)
+
 function fmtCd(ms: number): string {
   const s = Math.ceil(ms / 1000)
   if (s <= 0) return ''
@@ -159,7 +161,7 @@ const winChanceColor = computed(() => {
 </script>
 
 <template>
-  <div class="stats-grid">
+  <div class="stats-grid" @mouseenter="isHovering = true" @mouseleave="isHovering = false">
     <!-- LEFT: Role Abilities -->
     <div class="bbstats">
       <template v-for="(ab, idx) in roleAbilities" :key="ab.role">
@@ -174,7 +176,9 @@ const winChanceColor = computed(() => {
           :style="{ '--role-color': ab.color }"
         >
           <img :src="ab.image" :alt="ab.short" class="ability-role-icon" />
-          <span class="bbstat-label ability-label">{{ ab.short }}</span>
+          <Transition name="label-slide">
+            <span v-if="isHovering" class="bbstat-label ability-label">{{ ab.short }}</span>
+          </Transition>
           <span class="ability-cd-wrap">
             <span class="ability-cd-val" aria-hidden="true">
               {{ ab.hasChampion ? ab.timer || '' : '' }}
@@ -193,8 +197,9 @@ const winChanceColor = computed(() => {
       <!-- RANK -->
       <div class="bbstat-item">
         <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
-        <!-- vorher: <span class="bbstat-icon bbstat-icon--red">⚔</span> -->
-        <span class="bbstat-label">RANK</span>
+        <Transition name="label-slide">
+          <span v-if="isHovering" class="bbstat-label">RANK</span>
+        </Transition>
         <span class="bbstat-val">{{ rankLabel }}</span>
       </div>
       <div class="bbstat-divider" />
@@ -202,8 +207,9 @@ const winChanceColor = computed(() => {
       <!-- LP -->
       <div class="bbstat-item">
         <img src="/img/stats/lp.png" alt="lp" class="bbstat-stat-icon" />
-        <!-- vorher: <span class="bbstat-icon bbstat-icon--gold">▲</span> -->
-        <span class="bbstat-label">LP</span>
+        <Transition name="label-slide">
+          <span v-if="isHovering" class="bbstat-label">LP</span>
+        </Transition>
         <span class="bbstat-val bbstat-val--gold">{{ lpValue }}</span>
       </div>
       <div class="bbstat-divider" />
@@ -211,8 +217,9 @@ const winChanceColor = computed(() => {
       <!-- W/L -->
       <div class="bbstat-item">
         <img src="/img/stats/winloose.png" alt="w/l" class="bbstat-stat-icon" />
-        <!-- vorher: <span class="bbstat-icon">⚖</span> -->
-        <span class="bbstat-label">W/L</span>
+        <Transition name="label-slide">
+          <span v-if="isHovering" class="bbstat-label">W/L</span>
+        </Transition>
         <span class="bbstat-val bbstat-val--win">{{ totalWins }}</span>
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
@@ -240,7 +247,9 @@ const winChanceColor = computed(() => {
           :style="{ filter: `drop-shadow(0 0 3px ${winChanceColor})` }"
         />
         <!-- vorher: <span class="bbstat-icon" :style="...">◎</span> -->
-        <span class="bbstat-label">WIN%</span>
+        <Transition name="label-slide">
+          <span v-if="isHovering" class="bbstat-label">WIN%</span>
+        </Transition>
         <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
           {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
         </span>
@@ -342,6 +351,25 @@ const winChanceColor = computed(() => {
   line-height: 1;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+.label-slide-enter-active,
+.label-slide-leave-active {
+  overflow: hidden;
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease;
+  white-space: nowrap;
+}
+.label-slide-enter-from,
+.label-slide-leave-to {
+  max-width: 0;
+  opacity: 0;
+}
+.label-slide-enter-to,
+.label-slide-leave-from {
+  max-width: 100px;
+  opacity: 1;
 }
 
 .bbstat-val {
