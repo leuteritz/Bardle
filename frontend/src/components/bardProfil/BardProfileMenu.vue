@@ -50,6 +50,12 @@ const closeModal = () => {
   activeModal.value = null
 }
 
+function openToTab(id: ModalId) {
+  activeModal.value = id
+}
+
+defineExpose({ openToTab })
+
 watch(activeModal, (val) => {
   document.body.classList.toggle('bard-modal-open', val !== null)
 })

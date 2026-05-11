@@ -12,7 +12,6 @@ import AugmentBuffPanel from '@/components/augment/AugmentBuffPanel.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
 import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.vue'
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
-import InventoryModal from '@/components/header/InventoryModal.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
@@ -25,7 +24,6 @@ import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 const gameStore = useGameStore()
 useGalaxyTheme()
 
-const isInventoryOpen = ref(false)
 const activeTab = ref('idle')
 
 const { isRenderingPaused } = useRenderingPaused()
@@ -49,7 +47,6 @@ watch(
     <AugmentBuffPanel />
     <HyperspaceOverlay />
     <UniverseSelectModal />
-    <InventoryModal :open="isInventoryOpen" @close="isInventoryOpen = false" />
     <FpsOverlay />
     <EventLogOverlay />
     <OfflineProgressModal />
@@ -58,10 +55,7 @@ watch(
 
     <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
       <div class="w-full">
-        <AppHeaderComponent
-          :inventory-open="isInventoryOpen"
-          @open-inventory="isInventoryOpen = true"
-        />
+        <AppHeaderComponent />
 
         <div class="planet-rescue-wrapper">
           <PlanetRescueOverlay />

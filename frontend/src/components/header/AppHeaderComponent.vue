@@ -4,15 +4,11 @@ import { useGameStore } from '../../stores/gameStore'
 import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
-import InventoryTooltip from './InventoryTooltip.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
-
-const props = defineProps<{ inventoryOpen?: boolean }>()
-const emit = defineEmits<{ 'open-inventory': [] }>()
 
 const gameStore = useGameStore()
 
-const isHovering = ref(false)
+const bardProfileRef = ref<InstanceType<typeof BardProfileMenu> | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
@@ -39,7 +35,7 @@ onUnmounted(() => {
     <!-- ════════ LINKE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
-        <BardProfileMenu />
+        <BardProfileMenu ref="bardProfileRef" />
       </div>
 
       <div class="header-divider" aria-hidden="true"></div>
@@ -102,14 +98,12 @@ onUnmounted(() => {
 
       <div class="header-divider" aria-hidden="true"></div>
 
-      <!-- Inventory-Kreis -->
-      <div class="relative flex-shrink-0 header-inventory-bump">
+      <!-- SkillTree-Shortcut -->
+      <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="inventory-circle-btn"
-          title="Inventar öffnen"
-          @mouseenter="isHovering = true"
-          @mouseleave="isHovering = false"
-          @click="emit('open-inventory')"
+          title="Skilltree öffnen"
+          @click="bardProfileRef?.openToTab('tree')"
         >
           <div class="relative w-36 h-36">
             <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
@@ -124,14 +118,13 @@ onUnmounted(() => {
             </svg>
             <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
               <img
-                src="/img/Bag.png"
-                class="object-contain w-full h-full p-4"
-                alt="Inventar öffnen"
+                src="/img/menu/TREE.png"
+                class="object-contain w-full h-full p-3"
+                alt="Skilltree öffnen"
               />
             </div>
           </div>
         </button>
-        <InventoryTooltip :visible="isHovering && !props.inventoryOpen" />
       </div>
     </div>
   </header>
