@@ -102,7 +102,7 @@ const gameStateDisplay = computed(() => {
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
     const min = Math.floor(elapsed / 60)
       .toString()
-      .padStart(2, '0')
+      .padStart(2, '00')
     const sec = (elapsed % 60).toString().padStart(2, '0')
     return { icon: '⭐', text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
   }
@@ -124,6 +124,50 @@ const rankLabel = computed(() => {
 })
 
 const lpValue = computed(() => currentRank.value.lp)
+
+// ── Rank Border Image ──────────────────────────────────────────────────────
+const RANK_IMAGE_MAP: Record<string, string> = {
+  Iron: '/img/RankBorder/RankIron.png',
+  Bronze: '/img/RankBorder/RankBronze.png',
+  Silver: '/img/RankBorder/RankSilver.png',
+  Gold: '/img/RankBorder/RankGold.png',
+  Platinum: '/img/RankBorder/RankPlatin.png',
+  Emerald: '/img/RankBorder/RankEmerald.png',
+  Diamond: '/img/RankBorder/RankDiamand.png',
+  Master: '/img/RankBorder/RankMaster.png',
+  Grandmaster: '/img/RankBorder/RankGrandMaster.png',
+  Challenger: '/img/RankBorder/RankChallenger.png',
+}
+
+// Rang-spezifische Leuchtfarben passend zur jeweiligen LoL-Rank-Ästhetik
+const RANK_GLOW_MAP: Record<string, string> = {
+  Iron: '#a8a09a', // Graubraun / verwittertes Metall
+  Bronze: '#cd7f4f', // Kupfer-Orange
+  Silver: '#b8cdd6', // Kühles Silbergrau
+  Gold: '#f0b429', // Sattes Gold
+  Platinum: '#4dd0b8', // Türkis-Teal
+  Emerald: '#4caf76', // Smaragdgrün
+  Diamond: '#6ec6f0', // Eisblau
+  Master: '#b566e8', // Violett
+  Grandmaster: '#e84040', // Tiefrot
+  Challenger: '#a8d8f0', // Helles Cyan
+}
+
+const rankImage = computed(() => {
+  const tier = currentRank.value.tier
+  return RANK_IMAGE_MAP[tier] ?? '/img/RankBorder/RankIron.png'
+})
+
+const rankGlowColor = computed(() => {
+  const tier = currentRank.value.tier
+  return RANK_GLOW_MAP[tier] ?? '#a8a09a'
+})
+
+const rankIconFilter = computed(() => {
+  const c = rankGlowColor.value
+  return `drop-shadow(0 0 4px ${c}) drop-shadow(0 0 8px ${c}80)`
+})
+// ──────────────────────────────────────────────────────────────────────────
 
 const liveWinChance = computed<number | null>(() => {
   if (!isAutoBattleInitialized.value) return null
@@ -194,7 +238,12 @@ const winChanceColor = computed(() => {
       <div class="bbstat-item">
         <span class="bbstat-val">{{ rankLabel }}</span>
         <span class="bbstat-label">RANK</span>
-        <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
+        <img
+          :src="rankImage"
+          :alt="currentRank.tier"
+          class="bbstat-stat-icon bbstat-rank-icon"
+          :style="{ filter: rankIconFilter }"
+        />
       </div>
       <div class="bbstat-divider" />
 
@@ -261,7 +310,7 @@ const winChanceColor = computed(() => {
   align-items: center;
   width: 100%;
   overflow: visible;
-  padding-inline-end: 16px; /* ← war 6px, gleich wie title padding-inline */
+  padding-inline-end: 16px;
 }
 
 .stats-right {
@@ -270,7 +319,7 @@ const winChanceColor = computed(() => {
   align-items: center;
   width: 100%;
   overflow: visible;
-  padding-inline-start: 16px; /* ← war 6px, gleich wie title padding-inline */
+  padding-inline-start: 16px;
 }
 
 .bbstat-item {
@@ -288,6 +337,14 @@ const winChanceColor = computed(() => {
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
   transition: filter 0.4s ease;
+}
+
+/* Rank Icon: größer + kein statischer filter (wird per :style gesetzt) */
+.bbstat-rank-icon {
+  width: 42px;
+  height: 42px;
+  /* filter wird vollständig via :style="{ filter: rankIconFilter }" gesetzt */
+  transition: filter 0.5s ease;
 }
 
 .bbstat-divider {
