@@ -254,6 +254,7 @@ export const ROLES = [
     label: 'Top',
     short: 'TOP',
     icon: '🛡️',
+    image: '/img/roles/top.png',
     orbit: {
       rx: SUN_RADIUS * 2.58,
       ry: SUN_RADIUS * 1.13,
@@ -271,6 +272,7 @@ export const ROLES = [
     label: 'Jungle',
     short: 'JGL',
     icon: '🌿',
+    image: '/img/roles/jungle.png',
     orbit: {
       rx: SUN_RADIUS * 7.8,
       ry: SUN_RADIUS * 3.35,
@@ -286,6 +288,7 @@ export const ROLES = [
     label: 'Mid',
     short: 'MID',
     icon: '🔮',
+    image: '/img/roles/mid.png',
     orbit: {
       rx: SUN_RADIUS * 10.75,
       ry: SUN_RADIUS * 4.62,
@@ -301,6 +304,7 @@ export const ROLES = [
     label: 'ADC',
     short: 'ADC',
     icon: '🏹',
+    image: '/img/roles/adc.png',
     orbit: {
       rx: SUN_RADIUS * 12.67,
       ry: SUN_RADIUS * 5.43,
@@ -316,6 +320,7 @@ export const ROLES = [
     label: 'Supp',
     short: 'SUP',
     icon: '💚',
+    image: '/img/roles/supp.png',
     orbit: {
       rx: SUN_RADIUS * 12.67,
       ry: SUN_RADIUS * 5.43,

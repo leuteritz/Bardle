@@ -41,7 +41,7 @@ const roleAbilities = computed(() =>
 
     return {
       role,
-      icon: roleData.icon,
+      image: roleData.image,
       short: roleData.short,
       color: roleData.orbit.color,
       hasChampion,
@@ -68,8 +68,14 @@ const {
 
 const now = ref(Date.now())
 let _nowTicker: ReturnType<typeof setInterval> | null = null
-onMounted(() => { _nowTicker = setInterval(() => { now.value = Date.now() }, 500) })
-onUnmounted(() => { if (_nowTicker) clearInterval(_nowTicker) })
+onMounted(() => {
+  _nowTicker = setInterval(() => {
+    now.value = Date.now()
+  }, 500)
+})
+onUnmounted(() => {
+  if (_nowTicker) clearInterval(_nowTicker)
+})
 
 const gameStateDisplay = computed(() => {
   const _now = now.value
@@ -79,21 +85,31 @@ const gameStateDisplay = computed(() => {
     battlePhaseStartTimestamp.value === 0
   ) {
     const elapsed = Math.min(5, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000))
-    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
+    const min = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
-    return { icon: GAME_STATE.SEARCHING.icon, text: `${min}:${sec}`, color: GAME_STATE.SEARCHING.color }
+    return {
+      icon: GAME_STATE.SEARCHING.icon,
+      text: `${min}:${sec}`,
+      color: GAME_STATE.SEARCHING.color,
+    }
   }
   if (!isAutoBattleInitialized.value) {
     return { icon: '—', text: '', color: '#6a4418' }
   }
   if (showAutoBattleResult.value) {
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
-    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
+    const min = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
     return { icon: '⭐', text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
   }
   if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
-    const min = Math.floor(battleTime.value / 60).toString().padStart(2, '0')
+    const min = Math.floor(battleTime.value / 60)
+      .toString()
+      .padStart(2, '0')
     const sec = (battleTime.value % 60).toString().padStart(2, '0')
     const { icon, label, color } = GAME_STATE.BATTLE
     return { icon, text: `${label} ${min}:${sec}`, color }
@@ -157,7 +173,7 @@ const winChanceColor = computed(() => {
           }"
           :style="{ '--role-color': ab.color }"
         >
-          <span class="bbstat-icon ability-role-icon">{{ ab.icon }}</span>
+          <img :src="ab.image" :alt="ab.short" class="ability-role-icon" />
           <span class="bbstat-label ability-label">{{ ab.short }}</span>
           <span class="ability-cd-wrap">
             <span class="ability-cd-val" aria-hidden="true">
@@ -345,7 +361,9 @@ const winChanceColor = computed(() => {
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  font-size: var(--icon-size);
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 160, 60, 0.7));
   transition:
