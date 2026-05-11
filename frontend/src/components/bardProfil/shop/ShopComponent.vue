@@ -411,20 +411,29 @@ export default defineComponent({
   }
 }
 
-.orbit-card--locked {
-  opacity: 0.45;
-  filter: grayscale(80%);
+/* ── Locked: nur das Icon ausgrauen ── */
+.orbit-card--locked .card-icon {
+  opacity: 0.35;
+  filter: grayscale(85%);
+  transition:
+    opacity 0.15s,
+    filter 0.15s;
+}
+
+.orbit-card--locked:hover .card-icon,
+.orbit-card--locked.orbit-card--hovered .card-icon {
+  opacity: 0.6;
+  filter: grayscale(50%);
 }
 
 .orbit-card--locked:hover,
 .orbit-card--locked.orbit-card--hovered {
-  opacity: 0.75;
-  filter: grayscale(50%);
   transform: translateY(-4px) scale(1.04);
   animation-play-state: paused;
   z-index: 10;
 }
 
+/* ── Can-Afford ── */
 .orbit-card--can .card-icon {
   filter: drop-shadow(0 0 8px rgba(78, 192, 64, 0.7)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
