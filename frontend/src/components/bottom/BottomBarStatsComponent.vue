@@ -159,7 +159,6 @@ const winChanceColor = computed(() => {
 </script>
 
 <template>
-  <!-- kein @mouseenter/@mouseleave mehr nötig -->
   <div class="stats-grid">
     <!-- LEFT: Role Abilities -->
     <div class="bbstats">
@@ -175,7 +174,6 @@ const winChanceColor = computed(() => {
           :style="{ '--role-color': ab.color }"
         >
           <img :src="ab.image" :alt="ab.short" class="ability-role-icon" />
-          <!-- immer im DOM, CSS-hover blendet ein/aus -->
           <span class="bbstat-label ability-label">{{ ab.short }}</span>
           <span class="ability-cd-wrap">
             <span class="ability-cd-val" aria-hidden="true">
@@ -190,57 +188,57 @@ const winChanceColor = computed(() => {
     <!-- CENTER: Title -->
     <div class="title-center">BARDLE</div>
 
-    <!-- RIGHT: Stats -->
+    <!-- RIGHT: Stats – spiegelverkehrt: value | label | image -->
     <div class="stats-right">
       <!-- RANK -->
       <div class="bbstat-item">
-        <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
-        <span class="bbstat-label">RANK</span>
         <span class="bbstat-val">{{ rankLabel }}</span>
+        <span class="bbstat-label">RANK</span>
+        <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
       </div>
       <div class="bbstat-divider" />
 
       <!-- LP -->
       <div class="bbstat-item">
-        <img src="/img/stats/lp.png" alt="lp" class="bbstat-stat-icon" />
-        <span class="bbstat-label">LP</span>
         <span class="bbstat-val bbstat-val--gold">{{ lpValue }}</span>
+        <span class="bbstat-label">LP</span>
+        <img src="/img/stats/lp.png" alt="lp" class="bbstat-stat-icon" />
       </div>
       <div class="bbstat-divider" />
 
       <!-- W/L -->
       <div class="bbstat-item">
-        <img src="/img/stats/winloose.png" alt="w/l" class="bbstat-stat-icon" />
-        <span class="bbstat-label">W/L</span>
         <span class="bbstat-val bbstat-val--win">{{ totalWins }}</span>
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
+        <span class="bbstat-label">W/L</span>
+        <img src="/img/stats/winloose.png" alt="w/l" class="bbstat-stat-icon" />
       </div>
       <div class="bbstat-divider" />
 
       <!-- Game State -->
       <div class="bbstat-item">
-        <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
         <span
           class="bbstat-val"
           :style="{ color: gameStateDisplay.color, fontSize: '13px', whiteSpace: 'nowrap' }"
           >{{ gameStateDisplay.text }}</span
         >
+        <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
       </div>
       <div class="bbstat-divider" />
 
       <!-- WIN% -->
       <div class="bbstat-item">
+        <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
+          {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
+        </span>
+        <span class="bbstat-label">WIN%</span>
         <img
           src="/img/stats/winchance.png"
           alt="win%"
           class="bbstat-stat-icon"
           :style="{ filter: `drop-shadow(0 0 3px ${winChanceColor})` }"
         />
-        <span class="bbstat-label">WIN%</span>
-        <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
-          {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
-        </span>
       </div>
     </div>
   </div>
