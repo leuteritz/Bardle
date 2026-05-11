@@ -190,28 +190,39 @@ const winChanceColor = computed(() => {
 
     <!-- RIGHT: Stats – kein führender Divider, RANK startet direkt -->
     <div class="stats-right">
+      <!-- RANK -->
       <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--red">⚔</span>
+        <img src="/img/stats/rank.png" alt="rank" class="bbstat-stat-icon" />
+        <!-- vorher: <span class="bbstat-icon bbstat-icon--red">⚔</span> -->
         <span class="bbstat-label">RANK</span>
         <span class="bbstat-val">{{ rankLabel }}</span>
       </div>
       <div class="bbstat-divider" />
+
+      <!-- LP -->
       <div class="bbstat-item">
-        <span class="bbstat-icon bbstat-icon--gold">▲</span>
+        <img src="/img/stats/lp.png" alt="lp" class="bbstat-stat-icon" />
+        <!-- vorher: <span class="bbstat-icon bbstat-icon--gold">▲</span> -->
         <span class="bbstat-label">LP</span>
         <span class="bbstat-val bbstat-val--gold">{{ lpValue }}</span>
       </div>
       <div class="bbstat-divider" />
+
+      <!-- W/L -->
       <div class="bbstat-item">
-        <span class="bbstat-icon">⚖</span>
+        <img src="/img/stats/winloose.png" alt="w/l" class="bbstat-stat-icon" />
+        <!-- vorher: <span class="bbstat-icon">⚖</span> -->
         <span class="bbstat-label">W/L</span>
         <span class="bbstat-val bbstat-val--win">{{ totalWins }}</span>
         <span class="bbstat-sep">/</span>
         <span class="bbstat-val bbstat-val--loss">{{ totalLosses }}</span>
       </div>
       <div class="bbstat-divider" />
+
+      <!-- Game State -->
       <div class="bbstat-item">
-        <span class="bbstat-icon">{{ gameStateDisplay.icon }}</span>
+        <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
+        <!-- vorher: <span class="bbstat-icon">{{ gameStateDisplay.icon }}</span> -->
         <span
           class="bbstat-val"
           :style="{ color: gameStateDisplay.color, fontSize: '13px', whiteSpace: 'nowrap' }"
@@ -219,10 +230,16 @@ const winChanceColor = computed(() => {
         >
       </div>
       <div class="bbstat-divider" />
+
+      <!-- WIN% -->
       <div class="bbstat-item">
-        <span class="bbstat-icon" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }"
-          >◎</span
-        >
+        <img
+          src="/img/stats/winchance.png"
+          alt="win%"
+          class="bbstat-stat-icon"
+          :style="{ filter: `drop-shadow(0 0 3px ${winChanceColor})` }"
+        />
+        <!-- vorher: <span class="bbstat-icon" :style="...">◎</span> -->
         <span class="bbstat-label">WIN%</span>
         <span class="bbstat-val" :style="{ color: winChanceColor, transition: 'color 0.4s ease' }">
           {{ liveWinChance !== null ? liveWinChance + '%' : '—' }}
@@ -234,8 +251,8 @@ const winChanceColor = computed(() => {
 
 <style scoped>
 .stats-grid {
-  --stat-val-size: 17px;
-  --label-size: 13px;
+  --stat-val-size: 22px; /* Werte: RANK-Text, LP-Zahl, Kills usw. */
+  --label-size: 22px; /* ← war 25px, jetzt gleich wie --stat-val-size */
   --icon-size: 15px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -269,6 +286,15 @@ const winChanceColor = computed(() => {
   justify-content: center;
   gap: 4px;
   min-width: 0;
+}
+
+.bbstat-stat-icon {
+  width: 35px; /* bleibt 35px — jetzt beide gleich */
+  height: 35px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
+  transition: filter 0.4s ease;
 }
 
 .bbstat-divider {
@@ -361,8 +387,8 @@ const winChanceColor = computed(() => {
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
 .ability-role-icon {
-  width: 40px;
-  height: 40px;
+  width: 35px; /* ← war 40px, jetzt gleich wie stat-icon */
+  height: 35px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 160, 60, 0.7));

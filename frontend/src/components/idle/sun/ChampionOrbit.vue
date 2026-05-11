@@ -66,12 +66,16 @@
     >
       <img :src="pos.img" :alt="pos.name" />
       <Transition name="ability-icon">
-        <span
+        <img
           v-if="pos.primaryRole"
+          :src="ROLE_BY_KEY[pos.primaryRole].image"
+          :alt="pos.primaryRole"
           class="champion-ability-icon"
-          :class="[`champion-ability-icon--${pos.primaryRole}`, { 'champion-ability-icon--on-cooldown': !isAbilityActive(pos.primaryRole) }]"
-          >{{ ROLE_BY_KEY[pos.primaryRole].icon }}</span
-        >
+          :class="[
+            `champion-ability-icon--${pos.primaryRole}`,
+            { 'champion-ability-icon--on-cooldown': !isAbilityActive(pos.primaryRole) },
+          ]"
+        />
       </Transition>
     </div>
 
@@ -111,12 +115,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import {
-  ORBIT_TIERS,
-  SUPPORT_ANGLE_OFFSET,
-  ROLES,
-  ROLE_BY_KEY,
-} from '@/config/constants'
+import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET, ROLES, ROLE_BY_KEY } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -469,7 +468,7 @@ export default defineComponent({
     filter 0.25s ease;
 }
 
-.champion-orbit-avatar img {
+.champion-orbit-avatar img:first-child {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -531,7 +530,6 @@ export default defineComponent({
     filter: brightness(1.4) saturate(1.25);
   }
 }
-
 
 /* ── Ability-Glows ────────────────────────────────────────────────────────── */
 .champion-orbit-avatar--shield {
@@ -633,8 +631,14 @@ export default defineComponent({
 }
 
 @keyframes curse-cast-ring-expand {
-  0%   { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(2.8); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
 }
 
 /* Heal-Farbe: Teal-Mint (#00e5a0) */
@@ -839,8 +843,10 @@ export default defineComponent({
   top: -36px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 22px;
-  line-height: 1;
+  width: 50px; /* ← feste Breite */
+  height: 50px; /* ← feste Höhe */
+  object-fit: contain;
+  display: block;
   pointer-events: none;
   z-index: 4;
 }
