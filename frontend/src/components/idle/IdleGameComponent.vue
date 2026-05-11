@@ -4,16 +4,15 @@
 
     <div
       @click="handleChimeClick"
-      class="fixed z-10 flex flex-col items-center justify-center w-48 h-48 cursor-pointer group chime-main-button"
-      style="top: 50%; left: 50%; transform: translate(-50%, -50%)"
+      class="fixed z-10 flex items-center justify-center cursor-pointer chime-main-button"
     >
-      <div class="relative flex items-center justify-center w-40 h-40">
-        <img
-          src="/img/BardAbilities/BardChime.png"
-          class="relative transition-all duration-300 select-none w-44 h-44 rpg-img drop-shadow-2xl group-hover:scale-110 chime-icon"
-          style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
-        />
-      </div>
+      <img
+        src="/img/BardAbilities/BardChime.png"
+        class="rpg-img chime-icon"
+        style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
+        draggable="false"
+        @dragstart.prevent
+      />
     </div>
 
     <ChampionOrbit />
@@ -241,18 +240,27 @@ export default defineComponent({
 }
 
 .chime-main-button {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -50%);
+  user-select: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chime-main-button:hover {
-  transform: scale(1.08);
+  transform: translate(-50%, -50%) scale(1.04);
 }
 
 .chime-main-button:active {
-  transform: scale(0.95);
+  transform: translate(-50%, -50%) scale(0.95);
 }
 
 .chime-icon {
+  width: 88px;
+  height: 88px;
+  user-select: none;
   animation: float-enhanced 4s ease-in-out infinite;
 }
 
