@@ -137,6 +137,7 @@ export default defineComponent({
     const startBattle = async () => {
       if (isStarting.value) return
       isStarting.value = true
+      battleStore.searchingPhaseStartTimestamp = Date.now()
       await runUniverseAnimation()
       await battleStore.initializePersistentAutoBattle()
       battleStore.beginSimulation()

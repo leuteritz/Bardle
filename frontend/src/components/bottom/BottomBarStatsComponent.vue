@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
@@ -62,25 +62,43 @@ const {
   battleTime,
   showAutoBattleResult,
   battlePhaseStartTimestamp,
+  resultPhaseStartTimestamp,
+  searchingPhaseStartTimestamp,
 } = storeToRefs(battleStore)
 
+const now = ref(Date.now())
+let _nowTicker: ReturnType<typeof setInterval> | null = null
+onMounted(() => { _nowTicker = setInterval(() => { now.value = Date.now() }, 500) })
+onUnmounted(() => { if (_nowTicker) clearInterval(_nowTicker) })
+
 const gameStateDisplay = computed(() => {
+  const _now = now.value
+  if (
+    searchingPhaseStartTimestamp.value > 0 &&
+    !showAutoBattleResult.value &&
+    battlePhaseStartTimestamp.value === 0
+  ) {
+    const elapsed = Math.min(5, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000))
+    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
+    const sec = (elapsed % 60).toString().padStart(2, '0')
+    return { icon: GAME_STATE.SEARCHING.icon, text: `${min}:${sec}`, color: GAME_STATE.SEARCHING.color }
+  }
   if (!isAutoBattleInitialized.value) {
     return { icon: '—', text: '', color: '#6a4418' }
   }
+  if (showAutoBattleResult.value) {
+    const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
+    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
+    const sec = (elapsed % 60).toString().padStart(2, '0')
+    return { icon: '⭐', text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
+  }
   if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
-    const min = Math.floor(battleTime.value / 60)
-      .toString()
-      .padStart(2, '0')
+    const min = Math.floor(battleTime.value / 60).toString().padStart(2, '0')
     const sec = (battleTime.value % 60).toString().padStart(2, '0')
     const { icon, label, color } = GAME_STATE.BATTLE
     return { icon, text: `${label} ${min}:${sec}`, color }
   }
-  if (showAutoBattleResult.value) {
-    const { icon, label, color } = GAME_STATE.HONOR
-    return { icon, text: label, color }
-  }
-  return { icon: GAME_STATE.SEARCHING.icon, text: '', color: GAME_STATE.SEARCHING.color }
+  return { icon: '—', text: '', color: '#6a4418' }
 })
 
 const rankLabel = computed(() => {

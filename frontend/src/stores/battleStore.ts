@@ -26,12 +26,7 @@ import {
   KILL_EVENTS_PER_TEAM_MIN,
   KILL_EVENTS_PER_TEAM_MAX,
 } from '../config/constants'
-import type {
-  BattleResult,
-  ChampionState,
-  ChatMessage,
-  RecruitableChampion,
-} from '../types'
+import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -108,6 +103,7 @@ export const useBattleStore = defineStore('battle', {
     baronEventTime: 0,
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
+    searchingPhaseStartTimestamp: 0,
     autoBattleTimerEndTimestamp: 0,
     simulationReadyToStart: false,
     resultCountdown: 0,
@@ -115,7 +111,6 @@ export const useBattleStore = defineStore('battle', {
     predeterminedWin: null as boolean | null,
     currentWinProbability: 0 as number,
     currentOpponentLabel: '',
-
   }),
 
   getters: {
@@ -370,6 +365,7 @@ export const useBattleStore = defineStore('battle', {
       this.predeterminedWin = null
       this.showAutoBattleResult = false
       this.battlePhaseStartTimestamp = 0
+      this.searchingPhaseStartTimestamp = 0
     },
 
     showRandomChatMessagesSequentially() {
@@ -688,6 +684,7 @@ export const useBattleStore = defineStore('battle', {
       await this.initializeBattle()
       this.startCountdown()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
+      this.searchingPhaseStartTimestamp = Date.now()
       this.simulationReadyToStart = true
       this.beginSimulation()
     },
@@ -748,7 +745,6 @@ export const useBattleStore = defineStore('battle', {
     markBattleProcessed() {
       this.autoBattleReady = true
     },
-
 
     async adminSkipToEnd() {
       if (this.battlePhase !== 'playing') return
