@@ -258,8 +258,8 @@ export default defineComponent({
 }
 
 .chime-icon {
-  width: 88px;
-  height: 88px;
+  width: 90px;
+  height: 90px;
   user-select: none;
   animation: float-enhanced 4s ease-in-out infinite;
 }
