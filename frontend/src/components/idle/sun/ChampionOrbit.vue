@@ -67,14 +67,11 @@
       <img :src="pos.img" :alt="pos.name" />
       <Transition name="ability-icon">
         <img
-          v-if="pos.primaryRole"
+          v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
           :src="ROLE_BY_KEY[pos.primaryRole].image"
           :alt="pos.primaryRole"
           class="champion-ability-icon"
-          :class="[
-            `champion-ability-icon--${pos.primaryRole}`,
-            { 'champion-ability-icon--on-cooldown': !isAbilityActive(pos.primaryRole) },
-          ]"
+          :class="`champion-ability-icon--${pos.primaryRole}`"
         />
       </Transition>
     </div>
@@ -865,11 +862,6 @@ export default defineComponent({
 }
 .champion-ability-icon--support {
   filter: drop-shadow(0 0 7px rgba(0, 229, 160, 1));
-}
-
-.champion-ability-icon--on-cooldown {
-  filter: grayscale(55%) brightness(0.55) drop-shadow(0 0 2px rgba(100, 80, 20, 0.4));
-  opacity: 0.7;
 }
 
 .ability-icon-enter-active,
