@@ -34,6 +34,18 @@ const GROUP_SHORT: Record<string, string> = {
   Spezial: 'S:',
 }
 
+const slotRefs = new Map<string, HTMLElement>()
+
+function tooltipStyle(key: string): Record<string, string> {
+  const el = slotRefs.get(key)
+  if (!el) return {}
+  const r = el.getBoundingClientRect()
+  return {
+    top: `${r.top}px`,
+    left: `${r.right + 6}px`,
+  }
+}
+
 function getGroupKey(slot: AugmentSlot): GroupKey {
   const e = slot.aug.effects
   if (e.cpsMultiplier || e.cpcMultiplier || e.expeditionRewardMultiplier) return 'Chimes'
@@ -222,34 +234,49 @@ const iconGroups = computed<IconGroup[]>(() => {
       <div class="aug-icon-section">
         <div v-for="(group, gi) in iconGroups" :key="group.key" class="aug-icon-group">
           <div class="aug-icon-group-label">{{ group.key }}</div>
-          <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
-            <div
-              v-for="slot in group.slots"
-              :key="slot.key"
-              class="aug-icon-slot"
-              :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-              @mouseenter="hoveredKey = slot.key"
-              @mouseleave="hoveredKey = null"
-            >
-              <img
-                v-if="slot.aug.image"
-                :src="slot.aug.image"
-                class="aug-icon-img"
-                :alt="slot.aug.name"
-              />
-              <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+          <div class="aug-icon-grid-wrapper">
+            <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
+              <div
+                v-for="slot in group.slots"
+                :key="slot.key"
+                :ref="
+                  (el) => {
+                    if (el) slotRefs.set(slot.key, el as HTMLElement)
+                  }
+                "
+                class="aug-icon-slot"
+                :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                @mouseenter="hoveredKey = slot.key"
+                @mouseleave="hoveredKey = null"
+              >
+                <img
+                  v-if="slot.aug.image"
+                  :src="slot.aug.image"
+                  class="aug-icon-img"
+                  :alt="slot.aug.name"
+                />
+                <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
 
-              <div v-if="hoveredKey === slot.key" class="aug-tooltip">
-                <div
-                  class="aug-tooltip-name"
-                  :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-                >
-                  {{ slot.aug.name }}
-                </div>
-                <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+                <Teleport to="body">
+                  <Transition name="aug-tooltip-fade">
+                    <div
+                      v-if="hoveredKey === slot.key"
+                      class="aug-tooltip"
+                      :style="tooltipStyle(slot.key)"
+                    >
+                      <div
+                        class="aug-tooltip-name"
+                        :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                      >
+                        {{ slot.aug.name }}
+                      </div>
+                      <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+                    </div>
+                  </Transition>
+                </Teleport>
               </div>
-            </div>
-          </TransitionGroup>
+            </TransitionGroup>
+          </div>
           <div v-if="gi < iconGroups.length - 1" class="aug-icon-group-sep"></div>
         </div>
       </div>
@@ -317,16 +344,12 @@ const iconGroups = computed<IconGroup[]>(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #c89040;
-  /* kein min-width im Normalzustand – Label so schmal wie der Text */
   flex-shrink: 0;
   cursor: default;
-  transition:
-    color 0.15s ease,
-    min-width 0.15s ease;
+  transition: color 0.15s ease;
   white-space: nowrap;
 }
 
-/* beim Hover über die gesamte Summary: Label-Breite auf "RESSOURCEN:" fixieren */
 .aug-summary-group-label.is-expanded {
   min-width: 76px;
   color: #e8c040;
@@ -399,6 +422,10 @@ const iconGroups = computed<IconGroup[]>(() => {
   margin: 6px 2px;
 }
 
+.aug-icon-grid-wrapper {
+  position: relative;
+}
+
 .aug-icon-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -415,15 +442,14 @@ const iconGroups = computed<IconGroup[]>(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .aug-icon-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  border-radius: 2px;
 }
 
 .aug-icon-emoji {
@@ -431,11 +457,10 @@ const iconGroups = computed<IconGroup[]>(() => {
   line-height: 1;
 }
 
+/* ── Tooltip (via Teleport zu body) ──────── */
 .aug-tooltip {
-  position: absolute;
-  left: calc(100% + 6px);
-  top: 0;
-  z-index: 70;
+  position: fixed;
+  z-index: 9999;
   background: #16140e;
   border: 2px solid #5c3310;
   border-radius: 4px;
@@ -458,7 +483,16 @@ const iconGroups = computed<IconGroup[]>(() => {
   white-space: normal;
 }
 
-/* ── Transitions ─────────────────────────── */
+.aug-tooltip-fade-enter-active,
+.aug-tooltip-fade-leave-active {
+  transition: opacity 0.12s ease;
+}
+.aug-tooltip-fade-enter-from,
+.aug-tooltip-fade-leave-to {
+  opacity: 0;
+}
+
+/* ── Card-Transitions ────────────────────── */
 .aug-card-enter-active,
 .aug-card-leave-active {
   transition:
