@@ -35,7 +35,7 @@ const summaryParts = computed<string[]>(() => {
   let cooldown = 0,
     enemySpeed = 0,
     hpDrain = 0
-  const uniqueLines: string[] = []
+  const specialLineCounts = new Map<string, number>()
 
   for (const slot of activeAugmentSlots.value) {
     const e = slot.aug.effects
@@ -56,7 +56,9 @@ const summaryParts = computed<string[]>(() => {
         e.abilityPowerPerLevel || e.cooldownMultiplier || e.enemySpeedMultiplier ||
         e.enemyMaxHPDrainPerSecond
       )
-      if (!hasNumeric) uniqueLines.push(slot.aug.effectLine)
+      if (!hasNumeric) {
+        specialLineCounts.set(slot.aug.effectLine, (specialLineCounts.get(slot.aug.effectLine) ?? 0) + 1)
+      }
     }
   }
 
@@ -72,79 +74,81 @@ const summaryParts = computed<string[]>(() => {
   if (cooldown > 0) parts.push(`-${Math.round(cooldown)}% CD`)
   if (enemySpeed > 0) parts.push(`-${Math.round(enemySpeed)}% Feindspeed`)
   if (hpDrain > 0) parts.push(`-${hpDrain.toFixed(1)}% HP/s`)
-  for (const line of uniqueLines) parts.push(line)
+  for (const [line, count] of specialLineCounts) {
+    parts.push(count > 1 ? `${count}x ${line}` : line)
+  }
   return parts
 })
 </script>
 
 <template>
   <div v-if="activeAugmentSlots.length > 0" class="aug-panel">
-    <div class="aug-gold-topbar"></div>
-
-    <div class="aug-header">
-      <button
-        class="aug-toggle-btn"
-        @click="isExpanded = !isExpanded"
-        :aria-label="isExpanded ? 'Collapse augments' : 'Expand augments'"
+    <button
+      class="aug-toggle-btn"
+      @click="isExpanded = !isExpanded"
+      :aria-label="isExpanded ? 'Collapse augments' : 'Expand augments'"
+    >
+      <svg
+        class="aug-chevron"
+        :class="{ 'is-expanded': isExpanded }"
+        width="14"
+        height="14"
+        viewBox="0 0 14 14"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        <svg
-          class="aug-chevron"
-          :class="{ 'is-expanded': isExpanded }"
-          width="14"
-          height="14"
-          viewBox="0 0 14 14"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <polyline
-            points="2,4 7,10 12,4"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
-    </div>
-
-    <div class="aug-buff-summary" :class="{ 'is-expanded': isExpanded }">
-      <div class="aug-summary-line">
-        <template v-for="(part, i) in summaryParts" :key="i">
-          <span v-if="i > 0" class="aug-summary-sep"> | </span>
-          <span>{{ part }}</span>
-        </template>
-      </div>
-      <div class="aug-divider"></div>
-    </div>
-
-    <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
-      <div
-        v-for="slot in activeAugmentSlots"
-        :key="slot.key"
-        class="aug-icon-slot"
-        :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-        @mouseenter="hoveredKey = slot.key"
-        @mouseleave="hoveredKey = null"
-      >
-        <img
-          v-if="slot.aug.image"
-          :src="slot.aug.image"
-          class="aug-icon-img"
-          :alt="slot.aug.name"
+        <polyline
+          points="2,4 7,10 12,4"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         />
-        <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+      </svg>
+    </button>
 
-        <div v-if="hoveredKey === slot.key" class="aug-tooltip">
-          <div
-            class="aug-tooltip-name"
-            :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-          >
-            {{ slot.aug.name }}
-          </div>
-          <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+    <div v-show="isExpanded" class="aug-body">
+      <div class="aug-gold-topbar"></div>
+
+      <div class="aug-buff-summary">
+        <div class="aug-summary-line">
+          <template v-for="(part, i) in summaryParts" :key="i">
+            <span v-if="i > 0" class="aug-summary-sep"> | </span>
+            <span>{{ part }}</span>
+          </template>
         </div>
+        <div class="aug-divider"></div>
       </div>
-    </TransitionGroup>
+
+      <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
+        <div
+          v-for="slot in activeAugmentSlots"
+          :key="slot.key"
+          class="aug-icon-slot"
+          :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+          @mouseenter="hoveredKey = slot.key"
+          @mouseleave="hoveredKey = null"
+        >
+          <img
+            v-if="slot.aug.image"
+            :src="slot.aug.image"
+            class="aug-icon-img"
+            :alt="slot.aug.name"
+          />
+          <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+
+          <div v-if="hoveredKey === slot.key" class="aug-tooltip">
+            <div
+              class="aug-tooltip-name"
+              :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+            >
+              {{ slot.aug.name }}
+            </div>
+            <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+          </div>
+        </div>
+      </TransitionGroup>
+    </div>
   </div>
 </template>
 
@@ -155,23 +159,10 @@ const summaryParts = computed<string[]>(() => {
   top: 0.45rem;
   z-index: 60;
   width: 260px;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310;
-  background: #111008;
-  border-radius: 4px;
-}
-
-.aug-gold-topbar {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
-}
-
-.aug-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 5px 6px 3px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .aug-toggle-btn {
@@ -199,13 +190,16 @@ const summaryParts = computed<string[]>(() => {
   transform: rotate(180deg);
 }
 
-.aug-buff-summary {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
+.aug-body {
+  width: 100%;
+  border: 2px solid #5c3310;
+  background: #111008;
+  border-radius: 4px;
 }
-.aug-buff-summary.is-expanded {
-  max-height: 200px;
+
+.aug-gold-topbar {
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
 }
 
 .aug-summary-line {
