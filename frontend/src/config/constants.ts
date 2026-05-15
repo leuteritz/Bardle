@@ -5,12 +5,12 @@ export const ELO_K_FACTOR = 32
 export const ELO_RATING_SCALE = 400
 export const ELO_LUCK_FACTOR = 0.15
 
-// Leveling formula: 2000 * level^2.2
-export const LEVEL_BASE = 2000
+// Leveling formula: 2500 * level^2.2
+export const LEVEL_BASE = 2500
 export const LEVEL_EXPONENT = 2.2
 // Above LEVEL_SCALING_THRESHOLD: cost *= LEVEL_SCALING_FACTOR^(level - threshold)
-// This prevents the augment-choice loop caused by CPS-multiplying augments stacking too high.
-export const LEVEL_SCALING_THRESHOLD = 200
+// Threshold at 30 (not 200) so exponential braking keeps up with multiplicative augment CPS stacking.
+export const LEVEL_SCALING_THRESHOLD = 30
 export const LEVEL_SCALING_FACTOR = 1.1
 
 // Meep cost formula: 20 * meeps^1.2
