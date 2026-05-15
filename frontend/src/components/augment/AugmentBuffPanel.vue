@@ -23,8 +23,16 @@ const activeAugmentSlots = computed<AugmentSlot[]>(() =>
 
 const isExpanded = ref(true)
 const hoveredKey = ref<string | null>(null)
+const isSummaryHovered = ref(false)
 
 type GroupKey = 'Chimes' | 'Ressourcen' | 'Kampf' | 'Spezial'
+
+const GROUP_SHORT: Record<string, string> = {
+  Chimes: 'C:',
+  Ressourcen: 'R:',
+  Kampf: 'K:',
+  Spezial: 'S:',
+}
 
 function getGroupKey(slot: AugmentSlot): GroupKey {
   const e = slot.aug.effects
@@ -139,7 +147,6 @@ const summaryGroups = computed<SummaryGroup[]>(() => {
   return groups
 })
 
-// Icons nach Kategorie gruppiert
 interface IconGroup {
   key: GroupKey
   slots: AugmentSlot[]
@@ -187,12 +194,16 @@ const iconGroups = computed<IconGroup[]>(() => {
     </button>
 
     <div v-show="isExpanded" class="aug-body">
-      <div class="aug-gold-topbar"></div>
-
-      <!-- ── Summary (unverändert) ── -->
-      <div class="aug-buff-summary">
+      <!-- ── Summary ── -->
+      <div
+        class="aug-buff-summary"
+        @mouseenter="isSummaryHovered = true"
+        @mouseleave="isSummaryHovered = false"
+      >
         <div v-for="group in summaryGroups" :key="group.label" class="aug-summary-group">
-          <span class="aug-summary-group-label">{{ group.label }}</span>
+          <span class="aug-summary-group-label" :class="{ 'is-expanded': isSummaryHovered }">
+            {{ isSummaryHovered ? group.label.toUpperCase() + ':' : GROUP_SHORT[group.label] }}
+          </span>
           <div class="aug-summary-entries">
             <div v-for="(entry, i) in group.entries" :key="i" class="aug-summary-entry">
               <span class="aug-entry-label">{{ entry.label }}</span>
@@ -239,7 +250,6 @@ const iconGroups = computed<IconGroup[]>(() => {
               </div>
             </div>
           </TransitionGroup>
-          <!-- Trennlinie zwischen Gruppen, außer nach der letzten -->
           <div v-if="gi < iconGroups.length - 1" class="aug-icon-group-sep"></div>
         </div>
       </div>
@@ -287,14 +297,6 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 .aug-body {
   width: 100%;
-  border: 2px solid #5c3310;
-  background: #111008;
-  border-radius: 4px;
-}
-
-.aug-gold-topbar {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Summary ─────────────────────────────── */
@@ -314,9 +316,20 @@ const iconGroups = computed<IconGroup[]>(() => {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #5c3310;
-  min-width: 60px;
+  color: #c89040;
+  /* kein min-width im Normalzustand – Label so schmal wie der Text */
   flex-shrink: 0;
+  cursor: default;
+  transition:
+    color 0.15s ease,
+    min-width 0.15s ease;
+  white-space: nowrap;
+}
+
+/* beim Hover über die gesamte Summary: Label-Breite auf "RESSOURCEN:" fixieren */
+.aug-summary-group-label.is-expanded {
+  min-width: 76px;
+  color: #e8c040;
 }
 
 .aug-summary-entries {
@@ -375,8 +388,9 @@ const iconGroups = computed<IconGroup[]>(() => {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #5c3310;
+  color: #c89040;
   padding: 4px 2px 0;
+  min-width: 76px;
 }
 
 .aug-icon-group-sep {
