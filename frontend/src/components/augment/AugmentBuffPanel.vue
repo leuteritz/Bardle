@@ -24,7 +24,28 @@ const activeAugmentSlots = computed<AugmentSlot[]>(() =>
 const isExpanded = ref(true)
 const hoveredKey = ref<string | null>(null)
 
-const summaryParts = computed<string[]>(() => {
+type GroupKey = 'Chimes' | 'Ressourcen' | 'Kampf' | 'Spezial'
+
+function getGroupKey(slot: AugmentSlot): GroupKey {
+  const e = slot.aug.effects
+  if (e.cpsMultiplier || e.cpcMultiplier || e.expeditionRewardMultiplier) return 'Chimes'
+  if (
+    e.buildingCostMultiplier ||
+    e.meepCostMultiplier ||
+    e.meepPowerMultiplier ||
+    e.abilityPowerPerLevel
+  )
+    return 'Ressourcen'
+  if (e.cooldownMultiplier || e.enemySpeedMultiplier || e.enemyMaxHPDrainPerSecond) return 'Kampf'
+  return 'Spezial'
+}
+
+interface SummaryGroup {
+  label: string
+  entries: { label: string; value: string; positive: boolean }[]
+}
+
+const summaryGroups = computed<SummaryGroup[]>(() => {
   let cps = 0,
     cpc = 0,
     building = 0,
@@ -51,33 +72,91 @@ const summaryParts = computed<string[]>(() => {
     if (e.enemyMaxHPDrainPerSecond) hpDrain += e.enemyMaxHPDrainPerSecond * 100
     if (slot.aug.specialEffect) {
       const hasNumeric = !!(
-        e.cpsMultiplier || e.cpcMultiplier || e.buildingCostMultiplier ||
-        e.meepCostMultiplier || e.meepPowerMultiplier || e.expeditionRewardMultiplier ||
-        e.abilityPowerPerLevel || e.cooldownMultiplier || e.enemySpeedMultiplier ||
+        e.cpsMultiplier ||
+        e.cpcMultiplier ||
+        e.buildingCostMultiplier ||
+        e.meepCostMultiplier ||
+        e.meepPowerMultiplier ||
+        e.expeditionRewardMultiplier ||
+        e.abilityPowerPerLevel ||
+        e.cooldownMultiplier ||
+        e.enemySpeedMultiplier ||
         e.enemyMaxHPDrainPerSecond
       )
       if (!hasNumeric) {
-        specialLineCounts.set(slot.aug.effectLine, (specialLineCounts.get(slot.aug.effectLine) ?? 0) + 1)
+        specialLineCounts.set(
+          slot.aug.effectLine,
+          (specialLineCounts.get(slot.aug.effectLine) ?? 0) + 1,
+        )
       }
     }
   }
 
-  const parts: string[] = []
-  const fmt = (v: number) => (v > 0 ? '+' : '') + Math.round(v)
-  if (cps !== 0) parts.push(`${fmt(cps)}% CPS`)
-  if (cpc !== 0) parts.push(`${fmt(cpc)}% CPC`)
-  if (building > 0) parts.push(`-${Math.round(building)}% Gebäude`)
-  if (meepCost > 0) parts.push(`-${Math.round(meepCost)}% Meep-Kosten`)
-  if (meepPower !== 0) parts.push(`${fmt(meepPower)}% Meep-Power`)
-  if (expedition !== 0) parts.push(`${fmt(expedition)}% Expedition`)
-  if (abilityPower > 0) parts.push(`+${abilityPower} Power/Lv`)
-  if (cooldown > 0) parts.push(`-${Math.round(cooldown)}% CD`)
-  if (enemySpeed > 0) parts.push(`-${Math.round(enemySpeed)}% Feindspeed`)
-  if (hpDrain > 0) parts.push(`-${hpDrain.toFixed(1)}% HP/s`)
+  const fmt = (v: number) => (v > 0 ? '+' : '') + Math.round(v) + '%'
+
+  const chimeEntries: SummaryGroup['entries'] = []
+  if (cps !== 0) chimeEntries.push({ label: 'CPS', value: fmt(cps), positive: cps > 0 })
+  if (cpc !== 0) chimeEntries.push({ label: 'CPC', value: fmt(cpc), positive: cpc > 0 })
+  if (expedition !== 0)
+    chimeEntries.push({ label: 'Expedition', value: fmt(expedition), positive: expedition > 0 })
+
+  const resourceEntries: SummaryGroup['entries'] = []
+  if (building > 0)
+    resourceEntries.push({ label: 'Gebäude', value: `-${Math.round(building)}%`, positive: true })
+  if (meepCost > 0)
+    resourceEntries.push({
+      label: 'Meep-Kosten',
+      value: `-${Math.round(meepCost)}%`,
+      positive: true,
+    })
+  if (meepPower !== 0)
+    resourceEntries.push({ label: 'Meep-Stärke', value: fmt(meepPower), positive: meepPower > 0 })
+  if (abilityPower > 0)
+    resourceEntries.push({ label: 'Power/Lv', value: `+${abilityPower}`, positive: true })
+
+  const combatEntries: SummaryGroup['entries'] = []
+  if (cooldown > 0)
+    combatEntries.push({ label: 'Cooldown', value: `-${Math.round(cooldown)}%`, positive: true })
+  if (enemySpeed > 0)
+    combatEntries.push({
+      label: 'Feindspeed',
+      value: `-${Math.round(enemySpeed)}%`,
+      positive: true,
+    })
+  if (hpDrain > 0)
+    combatEntries.push({ label: 'HP/s-Drain', value: `+${hpDrain.toFixed(1)}%`, positive: true })
+
+  const specialEntries: SummaryGroup['entries'] = []
   for (const [line, count] of specialLineCounts) {
-    parts.push(count > 1 ? `${count}x ${line}` : line)
+    specialEntries.push({ label: count > 1 ? `${count}×` : '', value: line, positive: true })
   }
-  return parts
+
+  const groups: SummaryGroup[] = []
+  if (chimeEntries.length) groups.push({ label: 'Chimes', entries: chimeEntries })
+  if (resourceEntries.length) groups.push({ label: 'Ressourcen', entries: resourceEntries })
+  if (combatEntries.length) groups.push({ label: 'Kampf', entries: combatEntries })
+  if (specialEntries.length) groups.push({ label: 'Spezial', entries: specialEntries })
+  return groups
+})
+
+// Icons nach Kategorie gruppiert
+interface IconGroup {
+  key: GroupKey
+  slots: AugmentSlot[]
+}
+
+const iconGroups = computed<IconGroup[]>(() => {
+  const map = new Map<GroupKey, AugmentSlot[]>([
+    ['Chimes', []],
+    ['Ressourcen', []],
+    ['Kampf', []],
+    ['Spezial', []],
+  ])
+  for (const slot of activeAugmentSlots.value) {
+    map.get(getGroupKey(slot))!.push(slot)
+  }
+  const order: GroupKey[] = ['Chimes', 'Ressourcen', 'Kampf', 'Spezial']
+  return order.filter((k) => map.get(k)!.length > 0).map((k) => ({ key: k, slots: map.get(k)! }))
 })
 </script>
 
@@ -110,44 +189,60 @@ const summaryParts = computed<string[]>(() => {
     <div v-show="isExpanded" class="aug-body">
       <div class="aug-gold-topbar"></div>
 
+      <!-- ── Summary (unverändert) ── -->
       <div class="aug-buff-summary">
-        <div class="aug-summary-line">
-          <template v-for="(part, i) in summaryParts" :key="i">
-            <span v-if="i > 0" class="aug-summary-sep"> | </span>
-            <span>{{ part }}</span>
-          </template>
+        <div v-for="group in summaryGroups" :key="group.label" class="aug-summary-group">
+          <span class="aug-summary-group-label">{{ group.label }}</span>
+          <div class="aug-summary-entries">
+            <div v-for="(entry, i) in group.entries" :key="i" class="aug-summary-entry">
+              <span class="aug-entry-label">{{ entry.label }}</span>
+              <span
+                class="aug-entry-value"
+                :class="entry.positive ? 'is-positive' : 'is-negative'"
+                >{{ entry.value }}</span
+              >
+            </div>
+          </div>
         </div>
         <div class="aug-divider"></div>
       </div>
 
-      <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
-        <div
-          v-for="slot in activeAugmentSlots"
-          :key="slot.key"
-          class="aug-icon-slot"
-          :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-          @mouseenter="hoveredKey = slot.key"
-          @mouseleave="hoveredKey = null"
-        >
-          <img
-            v-if="slot.aug.image"
-            :src="slot.aug.image"
-            class="aug-icon-img"
-            :alt="slot.aug.name"
-          />
-          <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
-
-          <div v-if="hoveredKey === slot.key" class="aug-tooltip">
+      <!-- ── Icons gruppiert ── -->
+      <div class="aug-icon-section">
+        <div v-for="(group, gi) in iconGroups" :key="group.key" class="aug-icon-group">
+          <div class="aug-icon-group-label">{{ group.key }}</div>
+          <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
             <div
-              class="aug-tooltip-name"
-              :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+              v-for="slot in group.slots"
+              :key="slot.key"
+              class="aug-icon-slot"
+              :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+              @mouseenter="hoveredKey = slot.key"
+              @mouseleave="hoveredKey = null"
             >
-              {{ slot.aug.name }}
+              <img
+                v-if="slot.aug.image"
+                :src="slot.aug.image"
+                class="aug-icon-img"
+                :alt="slot.aug.name"
+              />
+              <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+
+              <div v-if="hoveredKey === slot.key" class="aug-tooltip">
+                <div
+                  class="aug-tooltip-name"
+                  :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                >
+                  {{ slot.aug.name }}
+                </div>
+                <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
+              </div>
             </div>
-            <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
-          </div>
+          </TransitionGroup>
+          <!-- Trennlinie zwischen Gruppen, außer nach der letzten -->
+          <div v-if="gi < iconGroups.length - 1" class="aug-icon-group-sep"></div>
         </div>
-      </TransitionGroup>
+      </div>
     </div>
   </div>
 </template>
@@ -202,31 +297,98 @@ const summaryParts = computed<string[]>(() => {
   background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
 }
 
-.aug-summary-line {
-  padding: 5px 10px 6px;
-  font-size: 12px;
-  color: #e8c040;
-  line-height: 1.5;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
+/* ── Summary ─────────────────────────────── */
+.aug-buff-summary {
+  padding: 6px 10px 0;
 }
 
-.aug-summary-sep {
+.aug-summary-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.aug-summary-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: #5c3310;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.aug-summary-entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.aug-summary-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.aug-entry-label {
+  color: #8a7050;
+}
+
+.aug-entry-value {
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aug-entry-value.is-positive {
+  color: #7ecf5a;
+}
+
+.aug-entry-value.is-negative {
+  color: #e05050;
 }
 
 .aug-divider {
   height: 2px;
-  margin: 4px 6px 0;
+  margin: 6px 0 0;
   background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
+}
+
+/* ── Icon-Bereich ────────────────────────── */
+.aug-icon-section {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.aug-icon-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aug-icon-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5c3310;
+  padding: 4px 2px 0;
+}
+
+.aug-icon-group-sep {
+  height: 1px;
+  background: #2a2010;
+  margin: 6px 2px;
 }
 
 .aug-icon-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  padding: 8px;
 }
 
 .aug-icon-slot {
@@ -282,6 +444,7 @@ const summaryParts = computed<string[]>(() => {
   white-space: normal;
 }
 
+/* ── Transitions ─────────────────────────── */
 .aug-card-enter-active,
 .aug-card-leave-active {
   transition:
