@@ -101,7 +101,6 @@
         class="jungle-buff-indicator"
         :style="{
           transform: `translate(calc(${pos.x}px - 50%), calc(${pos.y - pos.size / 2 - 4}px - 100%))`,
-          '--icon-size': Math.round(pos.size * 1.4) + 'px',
           zIndex: pos.zIndex + 1,
         }"
       >
@@ -702,20 +701,20 @@ export default defineComponent({
   top: 0;
   left: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   pointer-events: none;
 }
 .jungle-role-icon {
-  width: var(--icon-size, 48px);
-  height: var(--icon-size, 48px);
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   image-rendering: crisp-edges;
   filter: drop-shadow(0 0 8px rgba(92, 230, 106, 0.9));
 }
 .jungle-buff-timer {
-  font-size: 11px;
+  font-size: 20px;
   font-weight: 800;
   color: #5ce66a;
   text-shadow: 0 0 8px rgba(92, 230, 106, 0.9), 0 1px 3px rgba(0, 0, 0, 0.95);

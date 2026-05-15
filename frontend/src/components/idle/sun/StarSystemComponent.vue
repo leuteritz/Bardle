@@ -1052,13 +1052,13 @@ function starCountStyle(star: StarRenderEntry) {
   height: 22px;
   object-fit: contain;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 0 10px rgba(54, 148, 255, 0.95));
+  filter: drop-shadow(0 0 10px rgba(180, 50, 255, 0.95));
 }
 .star-curse-countdown {
   font-size: 20px;
   font-weight: 800;
-  color: #3694ff;
-  text-shadow: 0 0 10px rgba(54, 148, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.98);
+  color: #b432ff;
+  text-shadow: 0 0 10px rgba(180, 50, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.98);
   line-height: 1;
   letter-spacing: 0.04em;
 }

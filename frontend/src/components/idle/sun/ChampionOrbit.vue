@@ -400,7 +400,7 @@ export default defineComponent({
         case 'mid':
           return roleBehaviorStore.midCurseCooldownMs === 0
         case 'jungle':
-          return roleBehaviorStore.jungleBuffFlashActive
+          return roleBehaviorStore.jungleBuffCooldownMs === 0
         case 'adc':
           return roleBehaviorStore.adcBurstActive
       }
