@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
-import {
-  usePlanetShopStore,
-  PLANET_ROLES_LIST,
-  PLANET_ROLES,
-} from '@/stores/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES_LIST, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
 import { MATERIALS } from '@/config/materials'
 
@@ -22,7 +18,6 @@ const store = usePlanetShopStore()
 
 const purchasedSlots = computed(() => store.slots.filter((s) => s.purchased))
 
-// Local selection state — synced with uiStore when opened from Command Panel
 const selectedSlotId = ref<string | null>(null)
 
 function initSlot() {
@@ -47,8 +42,6 @@ const activeSlot = computed(() => {
   if (!selectedSlotId.value) return null
   return store.slots.find((s) => s.id === selectedSlotId.value) ?? null
 })
-
-const slotNumber = computed(() => activeSlot.value?.id.replace('slot_', '') ?? '')
 
 function assignRole(roleId: PlanetRoleType) {
   if (!activeSlot.value) return
@@ -116,7 +109,7 @@ function bonusText(role: PlanetRole): string {
 
 <template>
   <div class="ps-tab">
-    <!-- Leerstate: noch keine Slots gekauft -->
+    <!-- Leerstate -->
     <div v-if="purchasedSlots.length === 0" class="ps-empty">
       <span class="ps-empty-icon">🪐</span>
       <span class="ps-empty-text">Kaufe deinen ersten Planeten-Slot im Command Panel.</span>
@@ -126,18 +119,7 @@ function bonusText(role: PlanetRole): string {
       <!-- Goldlinie oben -->
       <div class="ps-goldline" />
 
-      <!-- Header -->
-      <div class="ps-header">
-        <div class="ps-header-left">
-          <span class="ps-header-icon">🪐</span>
-          <div class="ps-header-text">
-            <span class="ps-title">Planeten-Rolle wählen</span>
-            <span class="ps-slot-label">Orbit {{ slotNumber }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Slot-Leiste -->
+      <!-- Slot-Leiste horizontal, volle Breite -->
       <div class="ps-slot-bar">
         <button
           v-for="slot in purchasedSlots"
@@ -158,7 +140,7 @@ function bonusText(role: PlanetRole): string {
         </button>
       </div>
 
-      <!-- Kein Slot ausgewählt (Fallback) -->
+      <!-- Kein Slot ausgewählt -->
       <div v-if="!activeSlot" class="ps-empty ps-empty--small">
         <span class="ps-empty-text">Wähle einen Slot oben aus.</span>
       </div>
@@ -166,7 +148,7 @@ function bonusText(role: PlanetRole): string {
       <template v-else>
         <!-- 3-Spalten-Body -->
         <div class="ps-body">
-          <!-- Linke Säule: Rollen 1–3 -->
+          <!-- Linke Rollenspalte -->
           <div class="ps-role-col">
             <button
               v-for="role in rolesLeft"
@@ -184,13 +166,15 @@ function bonusText(role: PlanetRole): string {
             </button>
           </div>
 
-          <!-- Mittlere Säule -->
-          <div class="ps-role-col ps-role-col--center">
-            <!-- HP-Anzeige -->
+          <!-- Mittlere Spalte: Planet -->
+          <div class="ps-center-col">
+            <!-- HP -->
             <div class="ps-planet-hp">
               <div class="ps-planet-hp-text">
                 <span class="ps-hp-heart">❤</span>
-                <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+                <span class="ps-hp-values"
+                  >{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span
+                >
               </div>
               <div class="ps-hp-bar-track">
                 <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
@@ -233,7 +217,7 @@ function bonusText(role: PlanetRole): string {
             </Transition>
           </div>
 
-          <!-- Rechte Säule: Rollen 4–6 -->
+          <!-- Rechte Rollenspalte -->
           <div class="ps-role-col">
             <button
               v-for="role in rolesRight"
@@ -273,7 +257,12 @@ function bonusText(role: PlanetRole): string {
                   <div v-else class="ps-config-btn-img-placeholder">?</div>
                 </div>
                 <span class="ps-config-btn-label">{{ mat.name }}</span>
-                <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="ps-config-btn-check">✓</div>
+                <div
+                  v-if="activeSlot.slotConfig?.materialId === mat.id"
+                  class="ps-config-btn-check"
+                >
+                  ✓
+                </div>
               </button>
             </div>
           </div>
@@ -300,7 +289,12 @@ function bonusText(role: PlanetRole): string {
                   <div v-else class="ps-config-btn-img-placeholder">🏗</div>
                 </div>
                 <span class="ps-config-btn-label">{{ bld.name }}</span>
-                <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="ps-config-btn-check">✓</div>
+                <div
+                  v-if="activeSlot.slotConfig?.buildingId === bld.id"
+                  class="ps-config-btn-check"
+                >
+                  ✓
+                </div>
               </button>
             </div>
           </div>
@@ -314,12 +308,15 @@ function bonusText(role: PlanetRole): string {
 </template>
 
 <style scoped>
+/* ── Root ──────────────────────────────────────────────────────────────────── */
 .ps-tab {
   height: 100%;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
   background: #111008;
+  display: flex;
+  flex-direction: column;
 }
 
 .ps-tab::-webkit-scrollbar {
@@ -340,13 +337,14 @@ function bonusText(role: PlanetRole): string {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  height: 100%;
+  flex: 1;
   min-height: 300px;
 }
 
 .ps-empty--small {
   min-height: 80px;
   padding: 1rem;
+  flex: unset;
 }
 
 .ps-empty-icon {
@@ -368,6 +366,7 @@ function bonusText(role: PlanetRole): string {
 /* ── Goldlinie ─────────────────────────────────────────────────────────────── */
 .ps-goldline {
   height: 3px;
+  flex-shrink: 0;
   background: linear-gradient(
     to right,
     transparent,
@@ -378,55 +377,11 @@ function bonusText(role: PlanetRole): string {
     #5c3310 92%,
     transparent
   );
-  flex-shrink: 0;
 }
 
 .ps-goldline--bottom {
-  margin-top: 0.25rem;
-}
-
-/* ── Header ────────────────────────────────────────────────────────────────── */
-.ps-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.9rem 1.1rem;
-  background: linear-gradient(180deg, #1e1208 0%, #14100a 100%);
-  border-bottom: 2px solid #3a200a;
-}
-
-.ps-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.ps-header-icon {
-  font-size: 2rem;
-  filter: drop-shadow(0 0 10px rgba(200, 140, 60, 0.6));
-  line-height: 1;
-}
-
-.ps-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.ps-title {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #f0d060;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-shadow: 0 0 16px rgba(240, 200, 80, 0.4);
-}
-
-.ps-slot-label {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin-top: auto;
+  padding-top: 0.25rem;
 }
 
 /* ── Slot-Leiste ───────────────────────────────────────────────────────────── */
@@ -458,8 +413,8 @@ function bonusText(role: PlanetRole): string {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 6px 10px;
-  min-width: 64px;
+  padding: 6px 14px;
+  min-width: 72px;
   background: #131210;
   border: 1px solid #2e1e0a;
   border-radius: 4px;
@@ -515,17 +470,22 @@ function bonusText(role: PlanetRole): string {
 /* ── 3-Spalten-Body ────────────────────────────────────────────────────────── */
 .ps-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px minmax(0, 1fr);
-  gap: 1rem;
-  padding: 1rem 1rem 0.5rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px) minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 0.85rem 0.5rem;
+  /* Nimmt den verbleibenden Platz ein */
+  flex: 1;
+  /* Alle 3 Spalten gleich hoch strecken */
+  align-items: stretch;
 }
 
 /* ── Rollen-Spalten ────────────────────────────────────────────────────────── */
 .ps-role-col {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  /* Karten verteilen sich gleichmäßig über die volle Höhe */
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .ps-role-option {
@@ -533,8 +493,8 @@ function bonusText(role: PlanetRole): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.8rem 0.5rem 0.7rem;
+  gap: 0.3rem;
+  padding: 0.85rem 0.5rem 0.75rem;
   background: #131210;
   border: 1px solid #2e1e0a;
   border-radius: 4px;
@@ -548,6 +508,10 @@ function bonusText(role: PlanetRole): string {
     box-shadow 0.18s,
     transform 0.12s;
   width: 100%;
+  /* Jede Karte wächst gleich */
+  flex: 1;
+  /* Inhalt vertikal zentriert innerhalb der Karte */
+  justify-content: center;
 }
 
 .ps-role-option:hover {
@@ -567,7 +531,7 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-role-icon {
-  font-size: 1.8rem;
+  font-size: 2rem;
   line-height: 1;
   filter: drop-shadow(0 0 6px color-mix(in oklch, var(--rc) 55%, transparent));
   transition:
@@ -582,7 +546,7 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-role-name {
-  font-size: 0.72rem;
+  font-size: 0.73rem;
   font-weight: 700;
   color: #d4c89a;
   letter-spacing: 0.03em;
@@ -605,7 +569,7 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-role-effect {
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 800;
   color: var(--rc);
   line-height: 1.3;
@@ -627,19 +591,17 @@ function bonusText(role: PlanetRole): string {
   text-transform: uppercase;
 }
 
-/* ── Mittlere Spalte ───────────────────────────────────────────────────────── */
-.ps-role-col--center {
-  width: 280px;
-  justify-self: center;
+/* ── Mittlere Planet-Spalte ────────────────────────────────────────────────── */
+.ps-center-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  padding-top: 0.25rem;
-  text-align: center;
+  /* Planet-Inhalt vertikal zentriert in der vollen Spalthöhe */
+  justify-content: center;
+  gap: 0.7rem;
 }
 
-/* ── HP-Anzeige ────────────────────────────────────────────────────────────── */
+/* ── HP ────────────────────────────────────────────────────────────────────── */
 .ps-planet-hp {
   width: 100%;
   display: flex;
@@ -686,62 +648,121 @@ function bonusText(role: PlanetRole): string {
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
 .ps-planet-preview-wrap {
   position: relative;
-  width: 240px;
-  height: 240px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto;
 }
 
 .ps-planet-preview-img {
-  width: 220px;
-  height: 220px;
+  width: 260px;
+  height: 260px;
   object-fit: contain;
   display: block;
-  margin: 0 auto;
-  filter: drop-shadow(0 0 34px rgba(180, 140, 60, 0.45));
+  filter: drop-shadow(0 0 40px rgba(180, 140, 60, 0.5));
 }
 
+/* ── Rollenname ────────────────────────────────────────────────────────────── */
 .ps-planet-role-label {
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-align: center;
   text-transform: uppercase;
-  text-shadow: 0 0 10px currentColor;
+  text-shadow: 0 0 12px currentColor;
   min-height: 1.2em;
   width: 100%;
 }
 
-/* ── Planet-Bild Transition ────────────────────────────────────────────────── */
-.ps-planet-swap-enter-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+/* ── Jungle Buff Panel ─────────────────────────────────────────────────────── */
+.ps-jungle-buff-panel {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #0c1209;
+  border: 1px solid #3a8040;
+  border-radius: 4px;
+  box-shadow:
+    0 0 12px #5ce66a22,
+    inset 0 0 8px #5ce66a0a;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.ps-planet-swap-leave-active {
-  transition: opacity 0.15s ease;
+.ps-jungle-buff-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 1px solid #2a5030;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.1rem;
 }
 
-.ps-planet-swap-enter-from {
-  opacity: 0;
-  transform: scale(0.82);
+.ps-jungle-buff-leaf {
+  font-size: 0.9rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px #5ce66a88);
 }
 
-.ps-planet-swap-leave-to {
-  opacity: 0;
+.ps-jungle-buff-title {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #5ce66a;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.ps-jungle-buff-timer {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #5ce66a;
+  background: #162a1a;
+  border: 1px solid #3a8040;
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 16px;
+}
+
+.ps-jungle-buff-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a0e880;
+  text-align: center;
+  width: 100%;
+  display: block;
+}
+
+.ps-jungle-buff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ps-jungle-buff-label {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ps-jungle-buff-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #5ce66a;
+  text-shadow: 0 0 8px #5ce66a66;
 }
 
 /* ── Config-Sektion ────────────────────────────────────────────────────────── */
 .ps-config-section {
-  margin: 0.5rem 0.75rem 0.75rem;
+  margin: 0 0.85rem 0.75rem;
   padding: 1rem;
   border: 1px solid #3a2a10;
   border-radius: 4px;
   background: linear-gradient(180deg, #100f0a 0%, #0c0b07 100%);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
 }
 
 .ps-config-header {
@@ -777,9 +798,8 @@ function bonusText(role: PlanetRole): string {
 
 .ps-config-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 0.55rem;
-  margin-bottom: 0.5rem;
 }
 
 .ps-config-btn {
@@ -869,107 +889,44 @@ function bonusText(role: PlanetRole): string {
   font-weight: 900;
 }
 
+/* ── Planet-Bild Transition ────────────────────────────────────────────────── */
+.ps-planet-swap-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.ps-planet-swap-leave-active {
+  transition: opacity 0.15s ease;
+}
+.ps-planet-swap-enter-from {
+  opacity: 0;
+  transform: scale(0.82);
+}
+.ps-planet-swap-leave-to {
+  opacity: 0;
+}
+
 /* ── Config Slide Transition ───────────────────────────────────────────────── */
 .ps-config-slide-enter-active {
   transition:
     opacity 0.22s ease,
     transform 0.22s ease,
     max-height 0.25s ease;
-  max-height: 400px;
+  max-height: 500px;
   overflow: hidden;
 }
-
 .ps-config-slide-leave-active {
   transition:
     opacity 0.15s ease,
     transform 0.15s ease,
     max-height 0.2s ease;
-  max-height: 400px;
+  max-height: 500px;
   overflow: hidden;
 }
-
 .ps-config-slide-enter-from,
 .ps-config-slide-leave-to {
   opacity: 0;
   transform: translateY(-6px);
   max-height: 0;
-}
-
-/* ── Jungle Buff Panel ─────────────────────────────────────────────────────── */
-.ps-jungle-buff-panel {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  background: #0c1209;
-  border: 1px solid #3a8040;
-  border-radius: 4px;
-  box-shadow: 0 0 12px #5ce66a22, inset 0 0 8px #5ce66a0a;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.ps-jungle-buff-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  border-bottom: 1px solid #2a5030;
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.1rem;
-}
-
-.ps-jungle-buff-leaf {
-  font-size: 0.9rem;
-  line-height: 1;
-  filter: drop-shadow(0 0 4px #5ce66a88);
-}
-
-.ps-jungle-buff-title {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #5ce66a;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  flex: 1;
-}
-
-.ps-jungle-buff-timer {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #5ce66a;
-  background: #162a1a;
-  border: 1px solid #3a8040;
-  border-radius: 3px;
-  padding: 0 4px;
-  line-height: 16px;
-}
-
-.ps-jungle-buff-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #a0e880;
-  text-align: center;
-  width: 100%;
-  display: block;
-}
-
-.ps-jungle-buff-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.ps-jungle-buff-label {
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ps-jungle-buff-value {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #5ce66a;
-  text-shadow: 0 0 8px #5ce66a66;
 }
 </style>
