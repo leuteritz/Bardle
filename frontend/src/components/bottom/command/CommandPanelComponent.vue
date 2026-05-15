@@ -2,10 +2,12 @@
 import { storeToRefs } from 'pinia'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRoleType } from '@/stores/planetShopStore'
+import { useUiStore } from '@/stores/uiStore'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 import { HUD_PANEL_ARC_R } from '@/config/constants'
 
 const planetStore = usePlanetShopStore()
+const uiStore = useUiStore()
 const { slots } = storeToRefs(planetStore)
 
 const ARC_R = HUD_PANEL_ARC_R
@@ -61,7 +63,7 @@ function formatNumber(n: number): string {
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="
-            slot.purchased ? planetStore.openRoleModal(slot.id) : planetStore.buySlot(slot.id)
+            slot.purchased ? uiStore.requestOpenPlanetsTab(slot.id) : planetStore.buySlot(slot.id)
           "
         >
           <template v-if="slot.purchased && slot.role">

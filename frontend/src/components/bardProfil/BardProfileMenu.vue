@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useUiStore } from '@/stores/uiStore'
+import type { BardTabId } from '@/stores/uiStore'
 import { usePersistence } from '@/composables/usePersistence'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -9,6 +10,7 @@ import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import RolesTabComponent from '@/components/bardProfil/roles/RolesTabComponent.vue'
+import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
@@ -25,11 +27,8 @@ const handleReset = () => {
   }
 }
 
-type ModalId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
-const activeModal = ref<ModalId | null>(null)
-
 const menuItems: {
-  id: ModalId
+  id: BardTabId
   label: string
   icon: string
   src: string
@@ -39,36 +38,14 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'roles', label: 'Rollen', icon: '⚔️', src: '' },
+  { id: 'planets', label: 'Planeten', icon: '🪐', src: '' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
-const openBardModal = () => {
-  activeModal.value = activeModal.value !== null ? null : 'shop'
-}
-const setTab = (id: ModalId) => {
-  activeModal.value = id
-}
-const closeModal = () => {
-  activeModal.value = null
-}
-
-function openToTab(id: ModalId) {
-  activeModal.value = id
-}
-
-defineExpose({ openToTab })
-
-watch(activeModal, (val) => {
-  document.body.classList.toggle('bard-modal-open', val !== null)
-})
-
 watch(
-  () => uiStore.pendingBardTab,
-  (tab) => {
-    if (tab) {
-      activeModal.value = tab as ModalId
-      uiStore.clearPendingBardTab()
-    }
+  () => uiStore.bardActiveTab,
+  (val) => {
+    document.body.classList.toggle('bard-modal-open', val !== null)
   },
 )
 
@@ -104,7 +81,7 @@ function onPortraitLeave() {
     <div
       ref="portraitRef"
       class="bard-portrait-wrapper group"
-      @click="openBardModal"
+      @click="uiStore.openBardModal()"
       @mouseenter="onPortraitEnter"
       @mouseleave="onPortraitLeave"
     >
@@ -178,15 +155,15 @@ function onPortraitLeave() {
   <Teleport to="body">
     <Transition name="backdrop">
       <div
-        v-if="activeModal !== null"
+        v-if="uiStore.bardActiveTab !== null"
         class="fixed inset-0 z-[115] bg-black/80"
-        @click="closeModal"
+        @click="uiStore.closeBardModal()"
       />
     </Transition>
 
     <Transition name="modal-pop">
       <div
-        v-if="activeModal !== null"
+        v-if="uiStore.bardActiveTab !== null"
         class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
       >
         <div class="rp-modal flex flex-col h-[960px]">
@@ -210,21 +187,21 @@ function onPortraitLeave() {
               <button
                 v-for="item in menuItems"
                 :key="item.id"
-                @click="setTab(item.id)"
+                @click="uiStore.setBardTab(item.id)"
                 class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
-                :class="activeModal === item.id ? 'rp-tab--active' : ''"
+                :class="uiStore.bardActiveTab === item.id ? 'rp-tab--active' : ''"
               >
                 <img
                   v-if="item.src"
                   :src="item.src"
                   :alt="item.label"
                   class="relative z-10 object-contain w-14 h-14"
-                  :class="activeModal === item.id ? 'rp-tab-img-glow' : ''"
+                  :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
                 />
                 <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                 <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                 <span
-                  v-if="activeModal === item.id"
+                  v-if="uiStore.bardActiveTab === item.id"
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                 />
               </button>
@@ -246,30 +223,33 @@ function onPortraitLeave() {
 
           <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
             <!-- Battle-Tab: immer gemountet (v-show), Watch + Simulation bleiben aktiv -->
-            <div v-show="activeModal === 'kampf'" class="battle-tab-layer">
+            <div v-show="uiStore.bardActiveTab === 'kampf'" class="battle-tab-layer">
               <BattleResultComponent />
             </div>
 
             <Transition name="tab-fade" mode="out-in">
               <div
-                v-if="activeModal === 'shop'"
+                v-if="uiStore.bardActiveTab === 'shop'"
                 key="shop"
                 class="h-full overflow-y-auto rp-scrollbar"
               >
                 <ShopComponent />
               </div>
-              <div v-else-if="activeModal === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
+              <div v-else-if="uiStore.bardActiveTab === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
                 <SkillTreeComponent />
               </div>
-              <div v-else-if="activeModal === 'team'" key="team" class="h-full">
+              <div v-else-if="uiStore.bardActiveTab === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
               </div>
-              <div v-else-if="activeModal === 'roles'" key="roles" class="h-full overflow-hidden">
+              <div v-else-if="uiStore.bardActiveTab === 'roles'" key="roles" class="h-full overflow-hidden">
                 <RolesTabComponent />
+              </div>
+              <div v-else-if="uiStore.bardActiveTab === 'planets'" key="planets" class="h-full overflow-hidden">
+                <PlanetSelectTabComponent />
               </div>
 
               <div
-                v-else-if="activeModal === 'admin'"
+                v-else-if="uiStore.bardActiveTab === 'admin'"
                 key="admin"
                 class="h-full overflow-y-auto rp-scrollbar"
               >

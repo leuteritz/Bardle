@@ -1,18 +1,43 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+export type BardTabId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
+
 export const useUiStore = defineStore('ui', () => {
-  const pendingBardTab = ref<string | null>(null)
+  const bardActiveTab = ref<BardTabId | null>(null)
   const rolesActiveSlot = ref(0)
+  const planetActiveSlotId = ref<string | null>(null)
+
+  function openBardModal() {
+    bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
+  }
+
+  function setBardTab(id: BardTabId) {
+    bardActiveTab.value = id
+  }
+
+  function closeBardModal() {
+    bardActiveTab.value = null
+  }
 
   function requestOpenRolesTab(slotIndex: number) {
     rolesActiveSlot.value = slotIndex
-    pendingBardTab.value = 'roles'
+    bardActiveTab.value = 'roles'
   }
 
-  function clearPendingBardTab() {
-    pendingBardTab.value = null
+  function requestOpenPlanetsTab(slotId: string) {
+    planetActiveSlotId.value = slotId
+    bardActiveTab.value = 'planets'
   }
 
-  return { pendingBardTab, rolesActiveSlot, requestOpenRolesTab, clearPendingBardTab }
+  return {
+    bardActiveTab,
+    rolesActiveSlot,
+    planetActiveSlotId,
+    openBardModal,
+    setBardTab,
+    closeBardModal,
+    requestOpenRolesTab,
+    requestOpenPlanetsTab,
+  }
 })

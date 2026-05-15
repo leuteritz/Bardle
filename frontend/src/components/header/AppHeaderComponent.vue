@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
+import { useUiStore } from '../../stores/uiStore'
 import { formatNumber } from '../../config/numberFormat'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const gameStore = useGameStore()
+const uiStore = useUiStore()
 
-const bardProfileRef = ref<InstanceType<typeof BardProfileMenu> | null>(null)
 const headerRef = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
@@ -35,7 +36,7 @@ onUnmounted(() => {
     <!-- ════════ LINKE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
-        <BardProfileMenu ref="bardProfileRef" />
+        <BardProfileMenu />
       </div>
 
       <div class="header-divider" aria-hidden="true"></div>
@@ -103,7 +104,7 @@ onUnmounted(() => {
         <button
           class="inventory-circle-btn"
           title="Skilltree öffnen"
-          @click="bardProfileRef?.openToTab('tree')"
+          @click="uiStore.setBardTab('tree')"
         >
           <div class="relative w-36 h-36">
             <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
