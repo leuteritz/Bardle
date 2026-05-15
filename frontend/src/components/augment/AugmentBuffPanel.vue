@@ -235,7 +235,6 @@ const iconGroups = computed<IconGroup[]>(() => {
         <div v-for="(group, gi) in iconGroups" :key="group.key" class="aug-icon-group">
           <div class="aug-icon-group-label">{{ group.key }}</div>
           <div class="aug-icon-grid-wrapper">
-            <!-- Scrollbarer Bereich, max 4 Reihen -->
             <div class="aug-icon-scroll">
               <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
                 <div
@@ -342,7 +341,7 @@ const iconGroups = computed<IconGroup[]>(() => {
 }
 
 .aug-summary-group-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -354,7 +353,7 @@ const iconGroups = computed<IconGroup[]>(() => {
 }
 
 .aug-summary-group-label.is-expanded {
-  min-width: 76px;
+  min-width: 82px;
   color: #e8c040;
 }
 
@@ -368,7 +367,7 @@ const iconGroups = computed<IconGroup[]>(() => {
   display: flex;
   align-items: baseline;
   gap: 3px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .aug-entry-label {
@@ -377,7 +376,7 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 .aug-entry-value {
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -429,9 +428,9 @@ const iconGroups = computed<IconGroup[]>(() => {
   position: relative;
 }
 
-/* Scrollbereich: max 4 Reihen (4 × 56px Slot + 3 × 6px Gap = 242px) */
+/* 3 sichtbare Reihen: 3 × 56px + 2 × 6px Gap = 180px */
 .aug-icon-scroll {
-  max-height: 242px;
+  max-height: 180px;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
@@ -454,7 +453,6 @@ const iconGroups = computed<IconGroup[]>(() => {
 .aug-icon-scroll::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(to bottom, #7a4418, #e8c040, #7a4418);
 }
-/* Firefox */
 .aug-icon-scroll {
   scrollbar-width: thin;
   scrollbar-color: #c89040 #0e0c08;
