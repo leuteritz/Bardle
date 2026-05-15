@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUiStore } from '../../stores/uiStore'
 import { formatNumber } from '../../config/numberFormat'
@@ -9,8 +9,14 @@ import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
+const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 const headerRef = ref<HTMLElement | null>(null)
+const chimesRef = ref<HTMLElement | null>(null)
+const xpFillRef = ref<SVGPathElement | null>(null)
+const arcTotalLength = ref(485)
+const arcViewBox = ref('0 0 400 135')
+const arcPath = ref('M 0,0 A 200,135 0 1 1 400,0')
 let resizeObserver: ResizeObserver | null = null
 
 function updateHeaderHeight() {
@@ -24,6 +30,15 @@ onMounted(() => {
   updateHeaderHeight()
   resizeObserver = new ResizeObserver(updateHeaderHeight)
   if (headerRef.value) resizeObserver.observe(headerRef.value)
+
+  if (chimesRef.value) {
+    const { width, height } = chimesRef.value.getBoundingClientRect()
+    arcViewBox.value = `0 0 ${width} ${height}`
+    arcPath.value = `M 0,0 A ${width / 2},${height} 0 1 1 ${width},0`
+    nextTick(() => {
+      if (xpFillRef.value) arcTotalLength.value = xpFillRef.value.getTotalLength()
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -49,7 +64,7 @@ onUnmounted(() => {
 
     <!-- ════════ MITTE (absolut zentriert, überlagert Spalte 2) ════════ -->
     <div class="header-center">
-      <div class="center-chimes">
+      <div ref="chimesRef" class="center-chimes">
         <!-- Hauptzeile: nur Chimes-Zahl, kein Icon -->
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
@@ -87,7 +102,40 @@ onUnmounted(() => {
             <span class="sub-stat-label click-text-glow">/click</span>
           </div>
         </div>
+
       </div>
+
+      <!-- XP-Bogen: Geschwister von .center-chimes, da overflow:hidden dort alles abschneiden würde -->
+      <svg
+        class="xp-arc-svg"
+        :viewBox="arcViewBox"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="xp-arc-grad" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#c89040" />
+            <stop offset="100%" stop-color="#f0d060" />
+          </linearGradient>
+        </defs>
+        <path
+          :d="arcPath"
+          fill="none"
+          stroke="rgba(160,110,15,0.22)"
+          stroke-width="3"
+        />
+        <path
+          ref="xpFillRef"
+          :d="arcPath"
+          fill="none"
+          stroke="url(#xp-arc-grad)"
+          stroke-width="3"
+          stroke-linecap="round"
+          :stroke-dasharray="arcTotalLength"
+          :stroke-dashoffset="arcTotalLength * (1 - xpProgress)"
+          class="xp-arc-fill-path"
+        />
+      </svg>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -233,6 +281,24 @@ onUnmounted(() => {
     0 6px 24px rgba(0, 0, 0, 0.7);
   align-self: stretch;
   overflow: hidden;
+}
+
+/* ================================================================
+   XP-BOGEN (SVG, außen entlang Tropfenrahmen)
+   ================================================================ */
+.xp-arc-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.xp-arc-fill-path {
+  filter: drop-shadow(0 0 4px rgba(240, 208, 96, 0.55));
+  transition: stroke-dashoffset 1s ease-out;
 }
 
 /* ── Unterzeile: CPS + Click nebeneinander ── */
