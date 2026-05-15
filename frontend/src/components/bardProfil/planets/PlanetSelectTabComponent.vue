@@ -120,7 +120,7 @@ function bonusText(role: PlanetRole): string {
       <div class="ps-goldline" />
 
       <!-- Slot-Leiste horizontal, volle Breite -->
-      <div class="ps-slot-bar">
+      <div class="ps-slot-bar" :style="{ '--cols': purchasedSlots.length }">
         <button
           v-for="slot in purchasedSlots"
           :key="slot.id"
@@ -137,6 +137,15 @@ function bonusText(role: PlanetRole): string {
           />
           <span v-else class="ps-slot-btn-placeholder">＋</span>
           <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
+          <template v-if="slot.maxHp > 0">
+            <span class="ps-slot-btn-hp-text">❤ {{ slot.currentHp }} / {{ slot.maxHp }}</span>
+            <div class="ps-slot-btn-hp-track">
+              <div
+                class="ps-slot-btn-hp-fill"
+                :style="{ width: Math.max(0, Math.min(100, (slot.currentHp / slot.maxHp) * 100)) + '%' }"
+              />
+            </div>
+          </template>
         </button>
       </div>
 
@@ -386,26 +395,13 @@ function bonusText(role: PlanetRole): string {
 
 /* ── Slot-Leiste ───────────────────────────────────────────────────────────── */
 .ps-slot-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), 1fr);
   gap: 6px;
   padding: 8px 1rem;
   border-bottom: 2px solid #2a1a08;
   background: #16120a;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
   flex-shrink: 0;
-}
-
-.ps-slot-bar::-webkit-scrollbar {
-  height: 4px;
-}
-.ps-slot-bar::-webkit-scrollbar-track {
-  background: #111;
-}
-.ps-slot-bar::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
 }
 
 .ps-slot-btn {
@@ -413,14 +409,13 @@ function bonusText(role: PlanetRole): string {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 6px 14px;
-  min-width: 72px;
+  padding: 6px 8px;
+  min-width: 0;
   background: #131210;
   border: 1px solid #2e1e0a;
   border-radius: 4px;
   cursor: pointer;
   color: inherit;
-  flex-shrink: 0;
   transition:
     border-color 0.15s,
     background 0.15s,
@@ -465,6 +460,30 @@ function bonusText(role: PlanetRole): string {
 
 .ps-slot-btn--active .ps-slot-btn-label {
   color: var(--rc, #52b830);
+}
+
+.ps-slot-btn-hp-text {
+  font-size: 0.55rem;
+  color: #c05050;
+  line-height: 1.2;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+}
+
+.ps-slot-btn-hp-track {
+  width: 100%;
+  height: 3px;
+  background: #2a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ps-slot-btn-hp-fill {
+  height: 100%;
+  background: linear-gradient(to right, #cc3030, #e84040);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 /* ── 3-Spalten-Body ────────────────────────────────────────────────────────── */
