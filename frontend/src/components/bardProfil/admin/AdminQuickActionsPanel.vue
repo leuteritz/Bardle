@@ -10,6 +10,7 @@ import { useNebulaTrigger } from '@/composables/useNebulaTrigger'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { useItemStore } from '@/stores/itemStore'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
@@ -20,6 +21,7 @@ const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
 const roleBehaviorStore = useRoleBehaviorStore()
+const itemStore = useItemStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -161,6 +163,7 @@ function fillTeamWithRandomChampions() {
   })
 
   planetShopStore.adminFillRandomRoles()
+  itemStore.adminFillRandomEquipment()
 }
 
 function teleportNearPlanet() {

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useShopStore } from './shopStore'
-import { getItemById } from '../config/items'
+import { SHOP_ITEMS, getItemById } from '../config/items'
 import { ITEM_SETS } from '../config/sets'
 import type { SlotEquipment, ItemCategory, ItemSetBonus } from '../types'
 
@@ -114,6 +114,19 @@ export const useItemStore = defineStore('item', {
     unequipItem(slotIndex: number, category: ItemCategory) {
       if (slotIndex < 0 || slotIndex > 4) return
       this.slotEquipment[slotIndex][category] = null
+      this._recalculateCPS()
+    },
+
+    adminFillRandomEquipment(): void {
+      const categories: ItemCategory[] = ['weapon', 'armor', 'misc']
+      for (let i = 0; i < 5; i++) {
+        for (const cat of categories) {
+          const pool = SHOP_ITEMS.filter((item) => item.category === cat)
+          if (!pool.length) continue
+          const pick = pool[Math.floor(Math.random() * pool.length)]
+          this.slotEquipment[i][cat] = pick.id
+        }
+      }
       this._recalculateCPS()
     },
 
