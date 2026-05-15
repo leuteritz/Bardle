@@ -27,6 +27,20 @@ function formatNumber(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
   return n.toString()
 }
+
+function hpFillColor(ratio: number): string {
+  if (ratio > 0.5) return 'linear-gradient(to right, #2e7a1a, #52b830)'
+  if (ratio > 0.25) return 'linear-gradient(to right, #9a6010, #d4a030)'
+  return 'linear-gradient(to right, #7a1a10, #cc3020)'
+}
+
+function hpGlowColor(ratio: number): string {
+  if (ratio > 0.5) return 'rgba(82,184,48,0.6)'
+  if (ratio > 0.25) return 'rgba(212,160,48,0.6)'
+  return 'rgba(204,48,32,0.6)'
+}
+
+const HP_SEGMENTS = 8
 </script>
 
 <template>
@@ -67,18 +81,64 @@ function formatNumber(n: number): string {
           "
         >
           <template v-if="slot.purchased && slot.role">
-            <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" />
+            <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />
             <div class="cmd-tile-role-glow" />
+            <div class="cmd-tile-img-vignette" />
+
+            <!-- ── HP-Bereich unten ── -->
+            <div
+              class="cmd-tile-hp-area"
+              :style="{
+                '--hp-pct': slot.currentHp / slot.maxHp,
+                '--hp-glow': hpGlowColor(slot.currentHp / slot.maxHp),
+              }"
+            >
+              <!-- HP Wert Label -->
+              <div class="cmd-tile-hp-label-row">
+                <span class="cmd-tile-hp-icon">♥</span>
+                <span class="cmd-tile-hp-value">
+                  {{ formatNumber(slot.currentHp) }}<span class="cmd-tile-hp-sep">/</span
+                  >{{ formatNumber(slot.maxHp) }}
+                </span>
+              </div>
+
+              <!-- RPG Leiste -->
+              <div class="cmd-tile-hp-frame">
+                <div class="cmd-tile-hp-cap cmd-tile-hp-cap--left" />
+                <div class="cmd-tile-hp-track">
+                  <div
+                    class="cmd-tile-hp-fill"
+                    :style="{ background: hpFillColor(slot.currentHp / slot.maxHp) }"
+                  />
+                  <div class="cmd-tile-hp-shine" />
+                  <div class="cmd-tile-hp-notches">
+                    <div
+                      v-for="i in HP_SEGMENTS - 1"
+                      :key="i"
+                      class="cmd-tile-hp-notch"
+                      :style="{ left: `${(i / HP_SEGMENTS) * 100}%` }"
+                    />
+                  </div>
+                </div>
+                <div class="cmd-tile-hp-cap cmd-tile-hp-cap--right" />
+              </div>
+            </div>
           </template>
 
           <template v-else-if="slot.purchased">
             <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
+            <div class="cmd-slot-number-badge">
+              <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
+            </div>
           </template>
 
           <template v-else>
             <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
             <div class="cmd-tile-label cmd-tile-label--cost">
               🔔 {{ formatNumber(planetStore.getSlotCost(slot.id)) }}
+            </div>
+            <div class="cmd-slot-number-badge">
+              <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
             </div>
           </template>
 
@@ -87,11 +147,6 @@ function formatNumber(n: number): string {
             class="cmd-tile-afford-dot"
             :class="{ 'cmd-tile-afford-dot--yes': planetStore.canAffordSlot(slot.id) }"
           />
-
-          <!-- ── Slot-Nummer Badge ── -->
-          <div class="cmd-slot-number-badge">
-            <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
-          </div>
         </div>
       </div>
     </div>
@@ -114,7 +169,6 @@ function formatNumber(n: number): string {
         </filter>
       </defs>
 
-      <!-- ── Haupt-Frame ── -->
       <path
         :d="framePath"
         fill="none"
@@ -264,7 +318,6 @@ function formatNumber(n: number): string {
   border-radius: 999px;
 }
 
-/* Planet Grid - 3×2 */
 .cmd-planet-grid {
   position: absolute;
   top: 214px;
@@ -280,7 +333,6 @@ function formatNumber(n: number): string {
   padding: 4px;
 }
 
-/* Planet Tile Basis */
 .cmd-planet-tile {
   position: relative;
   display: flex;
@@ -317,7 +369,6 @@ function formatNumber(n: number): string {
   transform: translateY(0px) scale(0.97);
 }
 
-/* Gefüllter Slot */
 .cmd-planet-tile--filled {
   padding: 0;
   background: linear-gradient(170deg, #1e1208 0%, #150f04 100%);
@@ -327,18 +378,15 @@ function formatNumber(n: number): string {
 .cmd-planet-tile--empty-slot {
   border: 2px solid rgba(90, 142, 224, 0.22);
 }
-
 .cmd-planet-tile--empty-slot:hover {
   border-color: rgba(90, 142, 224, 0.52);
 }
 
-/* Gesperrter Slot */
 .cmd-planet-tile--locked {
   opacity: 0.38;
   cursor: not-allowed;
   border: 2px solid rgba(200, 144, 64, 0.08);
 }
-
 .cmd-planet-tile--locked:hover {
   transform: none;
   box-shadow: none;
@@ -346,11 +394,9 @@ function formatNumber(n: number): string {
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
 }
 
-/* Kaufbarer Slot */
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
   border: 2px solid rgba(82, 184, 48, 0.18);
 }
-
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
   border-color: rgba(82, 184, 48, 0.55);
   box-shadow:
@@ -358,7 +404,7 @@ function formatNumber(n: number): string {
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Rollenfarbige Rahmen wie beim Champion Selector */
+/* Rollenfarbige Rahmen */
 .cmd-planet-tile--role-harvest.cmd-planet-tile--filled {
   border: 3px solid rgba(80, 192, 96, 0.92);
   box-shadow:
@@ -366,7 +412,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(80, 192, 96, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
-
 .cmd-planet-tile--role-research.cmd-planet-tile--filled {
   border: 3px solid rgba(80, 144, 232, 0.92);
   box-shadow:
@@ -374,7 +419,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(80, 144, 232, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
-
 .cmd-planet-tile--role-trade.cmd-planet-tile--filled {
   border: 3px solid rgba(232, 152, 64, 0.92);
   box-shadow:
@@ -382,7 +426,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(232, 152, 64, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
-
 .cmd-planet-tile--role-defense.cmd-planet-tile--filled {
   border: 3px solid rgba(224, 80, 80, 0.92);
   box-shadow:
@@ -390,7 +433,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(224, 80, 80, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
-
 .cmd-planet-tile--role-support.cmd-planet-tile--filled {
   border: 3px solid rgba(184, 200, 216, 0.92);
   box-shadow:
@@ -399,7 +441,6 @@ function formatNumber(n: number): string {
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
-/* Hover: stärkerer Glow je Rollenfarbe */
 .cmd-planet-tile--role-harvest.cmd-planet-tile--filled:hover {
   border-color: #50c060;
   box-shadow:
@@ -407,7 +448,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(80, 192, 96, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
-
 .cmd-planet-tile--role-research.cmd-planet-tile--filled:hover {
   border-color: #5090e8;
   box-shadow:
@@ -415,7 +455,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(80, 144, 232, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
-
 .cmd-planet-tile--role-trade.cmd-planet-tile--filled:hover {
   border-color: #e89840;
   box-shadow:
@@ -423,7 +462,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(232, 152, 64, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
-
 .cmd-planet-tile--role-defense.cmd-planet-tile--filled:hover {
   border-color: #e05050;
   box-shadow:
@@ -431,7 +469,6 @@ function formatNumber(n: number): string {
     inset 0 1px 0 rgba(224, 80, 80, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
-
 .cmd-planet-tile--role-support.cmd-planet-tile--filled:hover {
   border-color: #b8c8d8;
   box-shadow:
@@ -440,6 +477,7 @@ function formatNumber(n: number): string {
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* ── Planet Bild – scharf ── */
 .cmd-tile-planet-img {
   position: absolute;
   inset: 0;
@@ -447,12 +485,25 @@ function formatNumber(n: number): string {
   height: 100%;
   object-fit: cover;
   display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0);
+  will-change: transform;
   transition: transform 0.18s ease;
   border-radius: 8px;
+  backface-visibility: hidden;
+}
+.cmd-planet-tile:hover .cmd-tile-planet-img {
+  transform: translateZ(0) scale(1.06);
 }
 
-.cmd-planet-tile:hover .cmd-tile-planet-img {
-  transform: scale(1.06);
+.cmd-tile-img-vignette {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(6, 3, 1, 0.65) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .cmd-tile-role-glow {
@@ -465,9 +516,142 @@ function formatNumber(n: number): string {
     transparent 65%
   );
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
+/* ── HP-BEREICH ── */
+.cmd-tile-hp-area {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 6px 5px 5px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.55) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px var(--hp-glow, rgba(82, 184, 48, 0.5)));
+}
+
+.cmd-tile-hp-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.cmd-tile-hp-icon {
+  font-size: 10px;
+  color: #e05050;
+  text-shadow: 0 0 5px rgba(220, 60, 60, 0.8);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cmd-tile-hp-value {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(230, 200, 130, 0.95);
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.98),
+    0 0 8px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.cmd-tile-hp-sep {
+  color: rgba(200, 144, 64, 0.65);
+  margin: 0 1px;
+  font-weight: 600;
+}
+
+.cmd-tile-hp-frame {
+  position: relative;
+  height: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.cmd-tile-hp-cap--left {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 7px;
+  border-color: transparent transparent transparent rgba(200, 144, 64, 0.75);
+  flex-shrink: 0;
+}
+.cmd-tile-hp-cap--right {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 7px 6px 0;
+  border-color: transparent rgba(200, 144, 64, 0.75) transparent transparent;
+  flex-shrink: 0;
+}
+
+.cmd-tile-hp-track {
+  flex: 1;
+  position: relative;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 8, 4, 0.95) 100%);
+  border-top: 1px solid rgba(200, 144, 64, 0.6);
+  border-bottom: 1px solid rgba(200, 144, 64, 0.6);
+  overflow: hidden;
+}
+
+.cmd-tile-hp-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--hp-pct, 1) * 100%);
+  transition:
+    width 0.4s cubic-bezier(0.25, 1, 0.4, 1),
+    background 0.4s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.cmd-tile-hp-shine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+  clip-path: inset(0 calc((1 - var(--hp-pct, 1)) * 100%) 0 0);
+  transition: clip-path 0.4s cubic-bezier(0.25, 1, 0.4, 1);
+}
+
+.cmd-tile-hp-notches {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cmd-tile-hp-notch {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.7);
+  transform: translateX(-50%);
+}
+
+/* ── Tile Icons & Labels ── */
 .cmd-tile-icon {
   position: relative;
   z-index: 1;
@@ -476,7 +660,6 @@ function formatNumber(n: number): string {
   text-align: center;
   transition: transform 0.15s;
 }
-
 .cmd-planet-tile:hover .cmd-tile-icon {
   transform: scale(1.15);
 }
@@ -485,7 +668,6 @@ function formatNumber(n: number): string {
   color: rgba(90, 142, 224, 0.35);
   font-size: 24px;
 }
-
 .cmd-tile-icon--locked {
   color: rgba(255, 255, 255, 0.15);
   font-size: 20px;
@@ -505,7 +687,6 @@ function formatNumber(n: number): string {
   max-width: 100%;
   opacity: 0.88;
 }
-
 .cmd-tile-label--cost {
   color: rgba(200, 144, 64, 0.6);
   font-size: 8.5px;
@@ -522,14 +703,13 @@ function formatNumber(n: number): string {
   border: 1px solid rgba(200, 144, 64, 0.3);
   z-index: 2;
 }
-
 .cmd-tile-afford-dot--yes {
   background: rgba(82, 184, 48, 0.7);
   border-color: rgba(110, 210, 64, 0.5);
   box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
 }
 
-/* Slot-Nummer Badge */
+/* Slot-Nummer Badge (nur leere / gesperrte Slots) */
 .cmd-slot-number-badge {
   position: absolute;
   bottom: 0;
@@ -543,7 +723,6 @@ function formatNumber(n: number): string {
   background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0) 100%);
   pointer-events: none;
 }
-
 .cmd-slot-number-text {
   font-size: 11px;
   font-weight: 800;
@@ -557,11 +736,6 @@ function formatNumber(n: number): string {
   line-height: 1;
   transition: color 0.2s ease;
 }
-
-.cmd-planet-tile--filled .cmd-slot-number-text {
-  color: rgba(220, 170, 60, 0.95);
-}
-
 .cmd-planet-tile:hover .cmd-slot-number-text {
   color: #e8c040;
 }
