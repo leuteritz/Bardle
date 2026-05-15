@@ -70,6 +70,7 @@ const HP_SEGMENTS = 8
           class="cmd-planet-tile"
           :class="{
             'cmd-planet-tile--filled': slot.purchased && !!slot.role,
+            'cmd-planet-tile--buffed': !!(slot.jungleBuff?.active),
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
             'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
             'cmd-planet-tile--buy': !slot.purchased,
@@ -84,6 +85,15 @@ const HP_SEGMENTS = 8
             <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />
             <div class="cmd-tile-role-glow" />
             <div class="cmd-tile-img-vignette" />
+
+            <!-- Jungle Buff: Overlay Schimmer -->
+            <div v-if="slot.jungleBuff?.active" class="cmd-buff-overlay" />
+
+            <!-- Jungle Buff: Badge oben rechts -->
+            <div v-if="slot.jungleBuff?.active" class="cmd-buff-badge">
+              <span class="cmd-buff-badge-icon">⚡</span>
+              <span class="cmd-buff-badge-mul">×{{ slot.jungleBuff!.multiplier.toFixed(1) }}</span>
+            </div>
 
             <!-- ── HP-Bereich unten ── -->
             <div
@@ -738,6 +748,79 @@ const HP_SEGMENTS = 8
 }
 .cmd-planet-tile:hover .cmd-slot-number-text {
   color: #e8c040;
+}
+
+/* ── Jungle Buff: Tile-Modifier ── */
+.cmd-planet-tile--buffed {
+  border-color: #e8c040 !important;
+  animation: cmd-buff-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cmd-buff-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(232, 192, 64, 0.55),
+      inset 0 1px 0 rgba(255, 220, 80, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(232, 192, 64, 0.9),
+      0 0 6px rgba(255, 240, 100, 0.5),
+      inset 0 1px 0 rgba(255, 220, 80, 0.2);
+  }
+}
+
+/* ── Jungle Buff: Overlay Schimmer ── */
+.cmd-buff-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(232, 192, 64, 0.18) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 3;
+  animation: cmd-buff-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes cmd-buff-shimmer {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Jungle Buff: Badge oben rechts ── */
+.cmd-buff-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 4px 1px 2px;
+  background: rgba(14, 10, 2, 0.88);
+  border: 1px solid rgba(232, 192, 64, 0.7);
+  border-radius: 3px;
+  box-shadow: 0 0 5px rgba(232, 192, 64, 0.4);
+  pointer-events: none;
+}
+
+.cmd-buff-badge-icon {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.cmd-buff-badge-mul {
+  font-size: 8px;
+  font-weight: 800;
+  color: #e8c040;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(232, 192, 64, 0.7);
 }
 
 /* SVG Frame */
