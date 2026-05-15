@@ -235,47 +235,50 @@ const iconGroups = computed<IconGroup[]>(() => {
         <div v-for="(group, gi) in iconGroups" :key="group.key" class="aug-icon-group">
           <div class="aug-icon-group-label">{{ group.key }}</div>
           <div class="aug-icon-grid-wrapper">
-            <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
-              <div
-                v-for="slot in group.slots"
-                :key="slot.key"
-                :ref="
-                  (el) => {
-                    if (el) slotRefs.set(slot.key, el as HTMLElement)
-                  }
-                "
-                class="aug-icon-slot"
-                :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
-                @mouseenter="hoveredKey = slot.key"
-                @mouseleave="hoveredKey = null"
-              >
-                <img
-                  v-if="slot.aug.image"
-                  :src="slot.aug.image"
-                  class="aug-icon-img"
-                  :alt="slot.aug.name"
-                />
-                <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
+            <!-- Scrollbarer Bereich, max 4 Reihen -->
+            <div class="aug-icon-scroll">
+              <TransitionGroup name="aug-card" tag="div" class="aug-icon-grid">
+                <div
+                  v-for="slot in group.slots"
+                  :key="slot.key"
+                  :ref="
+                    (el) => {
+                      if (el) slotRefs.set(slot.key, el as HTMLElement)
+                    }
+                  "
+                  class="aug-icon-slot"
+                  :style="{ borderColor: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                  @mouseenter="hoveredKey = slot.key"
+                  @mouseleave="hoveredKey = null"
+                >
+                  <img
+                    v-if="slot.aug.image"
+                    :src="slot.aug.image"
+                    class="aug-icon-img"
+                    :alt="slot.aug.name"
+                  />
+                  <span v-else class="aug-icon-emoji">{{ slot.aug.icon }}</span>
 
-                <Teleport to="body">
-                  <Transition name="aug-tooltip-fade">
-                    <div
-                      v-if="hoveredKey === slot.key"
-                      class="aug-tooltip"
-                      :style="tooltipStyle(slot.key)"
-                    >
+                  <Teleport to="body">
+                    <Transition name="aug-tooltip-fade">
                       <div
-                        class="aug-tooltip-name"
-                        :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                        v-if="hoveredKey === slot.key"
+                        class="aug-tooltip"
+                        :style="tooltipStyle(slot.key)"
                       >
-                        {{ slot.aug.name }}
+                        <div
+                          class="aug-tooltip-name"
+                          :style="{ color: AUGMENT_RARITY_COLOR[slot.aug.rarity] }"
+                        >
+                          {{ slot.aug.name }}
+                        </div>
+                        <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
                       </div>
-                      <div class="aug-tooltip-effect">{{ slot.aug.effectLine }}</div>
-                    </div>
-                  </Transition>
-                </Teleport>
-              </div>
-            </TransitionGroup>
+                    </Transition>
+                  </Teleport>
+                </div>
+              </TransitionGroup>
+            </div>
           </div>
           <div v-if="gi < iconGroups.length - 1" class="aug-icon-group-sep"></div>
         </div>
@@ -424,6 +427,37 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 .aug-icon-grid-wrapper {
   position: relative;
+}
+
+/* Scrollbereich: max 4 Reihen (4 × 56px Slot + 3 × 6px Gap = 242px) */
+.aug-icon-scroll {
+  max-height: 242px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* RPG-Scrollbar */
+.aug-icon-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.aug-icon-scroll::-webkit-scrollbar-track {
+  background: #0e0c08;
+  border-radius: 3px;
+  border: 1px solid #2a1a08;
+}
+.aug-icon-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #5c3310, #c89040, #5c3310);
+  border-radius: 3px;
+  border: 1px solid #3a2008;
+}
+.aug-icon-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7a4418, #e8c040, #7a4418);
+}
+/* Firefox */
+.aug-icon-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c89040 #0e0c08;
 }
 
 .aug-icon-grid {
