@@ -15,6 +15,8 @@ import { useAugmentStore } from './augmentStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
+  LEVEL_SCALING_THRESHOLD,
+  LEVEL_SCALING_FACTOR,
   MEEP_BASE_COST,
   MEEP_COST_EXPONENT,
   MAX_ABILITY_LEVEL,
@@ -49,7 +51,11 @@ import type {
 import { logger } from '../utils/logger'
 
 function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT): number {
-  return level > 0 ? Math.ceil(LEVEL_BASE * Math.pow(level, exponent)) : 0
+  if (level <= 0) return 0
+  const base = Math.ceil(LEVEL_BASE * Math.pow(level, exponent))
+  if (level <= LEVEL_SCALING_THRESHOLD) return base
+  // Above threshold: exponential braking prevents augment-choice loop at high levels
+  return Math.ceil(base * Math.pow(LEVEL_SCALING_FACTOR, level - LEVEL_SCALING_THRESHOLD))
 }
 
 export const useGameStore = defineStore('game', {
@@ -146,6 +152,8 @@ export const useGameStore = defineStore('game', {
     calculateLevel() {
       if (this.pendingAugmentChoice) return
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
+      // Resync chimesForNextLevel from formula — handles saves made before exponential scaling was added
+      this.chimesForNextLevel = chimeThresholdForLevel(this.level, exponent)
       const spInterval = this.activeModifier.skillPointInterval ?? 2
       const oldLevel = this.level
 
