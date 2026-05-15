@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -23,15 +23,28 @@ const roleBehaviorStore = useRoleBehaviorStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
+const flashKey = ref<string | null>(null)
 
 const quickFields = [
-  { key: 'chimes', label: 'Chimes' },
-  { key: 'meeps', label: 'Meeps' },
-  { key: 'level', label: 'Level' },
-  { key: 'skillPoints', label: 'Skill Points' },
+  { key: 'chimes', label: 'Chimes', icon: '🎐', defaultStep: 100, min: 0, float: true },
+  { key: 'meeps', label: 'Meeps', icon: '👾', defaultStep: 1, min: 0, float: false },
+  { key: 'level', label: 'Level', icon: '⭐', defaultStep: 1, min: 1, float: false },
+  { key: 'skillPoints', label: 'Skill Points', icon: '✨', defaultStep: 1, min: 0, float: false },
 ] as const
 
 type QuickKey = (typeof quickFields)[number]['key']
+
+// Konfigurierbare Schrittweiten – pro Feld individuell
+const steps = reactive<Record<QuickKey, number>>({
+  chimes: 100,
+  meeps: 1,
+  level: 1,
+  skillPoints: 1,
+})
+
+function getFieldMeta(key: QuickKey) {
+  return quickFields.find((f) => f.key === key)!
+}
 
 function getValue(key: QuickKey): number {
   if (key === 'chimes') return gameStore.chimes
@@ -40,13 +53,15 @@ function getValue(key: QuickKey): number {
   return gameStore.skillPoints
 }
 
-function setValue(key: QuickKey, raw: string) {
-  const num = parseFloat(raw)
-  const int = parseInt(raw)
-  if (key === 'chimes' && !isNaN(num)) gameStore.chimes = num
-  else if (key === 'meeps' && !isNaN(int)) gameStore.meeps = int
-  else if (key === 'level' && !isNaN(int)) gameStore.level = int
-  else if (key === 'skillPoints' && !isNaN(int)) gameStore.skillPoints = int
+function setValue(key: QuickKey, raw: string | number) {
+  const meta = getFieldMeta(key)
+  const parsed = meta.float ? parseFloat(String(raw)) : parseInt(String(raw))
+  if (isNaN(parsed)) return
+  const clamped = Math.max(meta.min, parsed)
+  if (key === 'chimes') gameStore.chimes = clamped
+  else if (key === 'meeps') gameStore.meeps = clamped
+  else if (key === 'level') gameStore.level = clamped
+  else if (key === 'skillPoints') gameStore.skillPoints = clamped
 }
 
 function startEditing(key: QuickKey) {
@@ -57,11 +72,46 @@ function startEditing(key: QuickKey) {
 function commitEdit(key: QuickKey) {
   setValue(key, editingValue.value)
   editingKey.value = null
+  triggerFlash(key)
+}
+
+function cancelEdit() {
+  editingKey.value = null
+}
+
+function onKeydown(e: KeyboardEvent, key: QuickKey) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    commitEdit(key)
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    cancelEdit()
+  }
+}
+
+function stepValue(key: QuickKey, direction: 1 | -1) {
+  const meta = getFieldMeta(key)
+  const current = getValue(key)
+  const next = Math.max(meta.min, current + direction * steps[key])
+  setValue(key, next)
+  triggerFlash(key)
+}
+
+function onStepInput(key: QuickKey, raw: string) {
+  const parsed = parseFloat(raw)
+  if (!isNaN(parsed) && parsed > 0) steps[key] = parsed
+}
+
+function triggerFlash(key: string) {
+  flashKey.value = key
+  setTimeout(() => {
+    flashKey.value = null
+  }, 280)
 }
 
 // ── Star Spawn ────────────────────────────────────────────────────────────────
 
-// Spawnt immer einen neuen Stern mit zufälliger Planetenanzahl (kein Guard)
 function spawnStar() {
   starGroupStore.forceSpawnResourceStar()
 }
@@ -88,9 +138,7 @@ function fillAllMaterials() {
 }
 
 function fillTeamWithRandomChampions() {
-  // Unlock all champions first so there's always a pool to pick from
   battleStore.unlockAllChampions()
-
   const roles: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
   const used = new Set<string>()
   const pool = [...battleStore.ownedChampions]
@@ -106,9 +154,7 @@ function fillTeamWithRandomChampions() {
     )
     const fallback = pool.filter((name) => !used.has(name))
     const pick =
-      roleMatch.length > 0
-        ? roleMatch[Math.floor(Math.random() * roleMatch.length)]
-        : fallback[0]
+      roleMatch.length > 0 ? roleMatch[Math.floor(Math.random() * roleMatch.length)] : fallback[0]
     if (!pick) return
     used.add(pick)
     battleStore.setHeaderSlot(slotIndex, pick)
@@ -130,27 +176,61 @@ function resetAllCooldowns() {
   roleBehaviorStore.adcBurstCooldownMs = 0
   roleBehaviorStore.jungleBuffCooldownMs = 0
 }
-
 </script>
 
 <template>
   <div class="px-5 py-3 admin-quick-actions">
     <div class="mb-2 admin-section-label">Quick Actions</div>
 
-    <!-- Inline Editable Values -->
-    <div class="grid grid-cols-2 gap-2 mb-3 sm:grid-cols-4">
-      <div v-for="qf in quickFields" :key="qf.key" class="flex flex-col gap-0.5">
-        <label class="admin-field-label">{{ qf.label }}</label>
-        <input
-          type="number"
-          :min="qf.key === 'level' ? 1 : 0"
-          :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
-          class="text-right admin-input"
-          @focus="startEditing(qf.key)"
-          @input="editingValue = ($event.target as HTMLInputElement).value"
-          @change="commitEdit(qf.key)"
-          @blur="commitEdit(qf.key)"
-        />
+    <!-- Inline Editable Values + Stepper -->
+    <div class="grid grid-cols-2 gap-x-3 gap-y-3 mb-3 sm:grid-cols-4">
+      <div
+        v-for="qf in quickFields"
+        :key="qf.key"
+        class="admin-field-col"
+        :class="{ 'admin-field-col--flash': flashKey === qf.key }"
+      >
+        <!-- Label -->
+        <label class="admin-field-label">
+          <span>{{ qf.icon }}</span> {{ qf.label }}
+        </label>
+
+        <!-- Value Stepper -->
+        <div class="admin-stepper">
+          <button
+            class="admin-stepper-btn"
+            :disabled="getValue(qf.key) <= qf.min"
+            tabindex="-1"
+            @click="stepValue(qf.key, -1)"
+          >
+            −
+          </button>
+          <input
+            type="number"
+            :min="qf.min"
+            :value="editingKey === `qa_${qf.key}` ? editingValue : getValue(qf.key)"
+            class="admin-stepper-input"
+            @focus="startEditing(qf.key)"
+            @input="editingValue = ($event.target as HTMLInputElement).value"
+            @blur="commitEdit(qf.key)"
+            @keydown="onKeydown($event, qf.key)"
+          />
+          <button class="admin-stepper-btn" tabindex="-1" @click="stepValue(qf.key, 1)">+</button>
+        </div>
+
+        <!-- Step Size Config -->
+        <div class="admin-step-config">
+          <span class="admin-step-label">±</span>
+          <input
+            type="number"
+            :min="qf.float ? 0.01 : 1"
+            :step="qf.float ? 0.01 : 1"
+            :value="steps[qf.key]"
+            class="admin-step-input"
+            @change="onStepInput(qf.key, ($event.target as HTMLInputElement).value)"
+            @blur="onStepInput(qf.key, ($event.target as HTMLInputElement).value)"
+          />
+        </div>
       </div>
     </div>
 
@@ -236,29 +316,161 @@ function resetAllCooldowns() {
   text-transform: uppercase;
 }
 
+/* ── Field Column ─────────────────────────────────────────────────────────────── */
+
+.admin-field-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: opacity 0.15s;
+}
+
+@keyframes admin-flash {
+  0% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.admin-field-col--flash {
+  animation: admin-flash 0.28s ease-out forwards;
+}
+
+/* ── Label ───────────────────────────────────────────────────────────────────── */
+
 .admin-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   color: var(--rpg-text-dim);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  user-select: none;
 }
 
-.admin-input {
-  background: var(--rpg-bg-deep);
+/* ── Value Stepper ───────────────────────────────────────────────────────────── */
+
+.admin-stepper {
+  display: flex;
+  align-items: center;
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
-  padding: 0.375rem 0.625rem;
-  font-family: var(--rpg-font-mono);
-  font-size: 0.875rem;
-  color: var(--rpg-text);
-  outline: none;
-  transition: border-color 0.15s;
+  overflow: hidden;
 }
-.admin-input:focus {
+
+.admin-stepper:focus-within {
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 0 2px #332810;
 }
+
+.admin-stepper-btn {
+  flex: 0 0 1.625rem;
+  height: 1.875rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--rpg-font-mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--rpg-text-muted);
+  line-height: 1;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  user-select: none;
+}
+.admin-stepper-btn:first-child {
+  border-right: 1px solid var(--rpg-wood-mid);
+}
+.admin-stepper-btn:last-child {
+  border-left: 1px solid var(--rpg-wood-mid);
+}
+.admin-stepper-btn:hover:not(:disabled) {
+  background: #1e1a0e;
+  color: var(--rpg-gold);
+}
+.admin-stepper-btn:active:not(:disabled) {
+  background: #2a2410;
+}
+.admin-stepper-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.admin-stepper-input {
+  flex: 1;
+  min-width: 0;
+  height: 1.875rem;
+  background: var(--rpg-bg-deep);
+  border: none;
+  outline: none;
+  padding: 0 0.25rem;
+  font-family: var(--rpg-font-mono);
+  font-size: 0.875rem;
+  color: var(--rpg-text);
+  text-align: center;
+}
+.admin-stepper-input::-webkit-inner-spin-button,
+.admin-stepper-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.admin-stepper-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ── Step Size Config ────────────────────────────────────────────────────────── */
+
+.admin-step-config {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.admin-step-label {
+  font-family: var(--rpg-font-mono);
+  font-size: 0.625rem;
+  color: var(--rpg-text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.admin-step-input {
+  flex: 1;
+  min-width: 0;
+  height: 1.375rem;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--rpg-wood-mid) 60%, transparent);
+  border-radius: 3px;
+  outline: none;
+  padding: 0 0.3rem;
+  font-family: var(--rpg-font-mono);
+  font-size: 0.6875rem;
+  color: var(--rpg-text-muted);
+  text-align: right;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+.admin-step-input:focus {
+  border-color: var(--rpg-gold-dim);
+  color: var(--rpg-text);
+}
+.admin-step-input::-webkit-inner-spin-button,
+.admin-step-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.admin-step-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ── Spawn Buttons ───────────────────────────────────────────────────────────── */
 
 .admin-spawn-btn {
   font-family: var(--rpg-font-mono);

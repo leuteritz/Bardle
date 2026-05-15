@@ -7,7 +7,6 @@ import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
-import PlanetShopSection from '@/components/bardProfil/planet/PlanetShopSection.vue'
 
 const gameStore = useGameStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
@@ -36,7 +35,6 @@ const menuItems: {
   { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
-  { id: 'planets', label: '', icon: '⚙️', src: '' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
@@ -252,13 +250,7 @@ function onPortraitLeave() {
               <div v-else-if="activeModal === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
               </div>
-              <div
-                v-else-if="activeModal === 'planets'"
-                key="planets"
-                class="h-full overflow-y-auto rp-scrollbar"
-              >
-                <PlanetShopSection />
-              </div>
+
               <div
                 v-else-if="activeModal === 'admin'"
                 key="admin"
