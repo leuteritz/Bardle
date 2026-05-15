@@ -82,9 +82,7 @@ watch(
     <EncyclopediaPanel />
     <BottomBarComponent />
 
-    <span class="fixed z-50 text-xl select-none top-3 left-3 text-amber-600/60 drop-shadow-xl">
-      © Leuteritz
-    </span>
+    <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
   </div>
 </template>
 
@@ -109,6 +107,32 @@ watch(
   --header-total-height: 50px;
 
   --bard-avatar-radius: 72px;
+}
+
+.copyright-overlay {
+  position: fixed;
+  top: 0.5rem;
+  left: calc(50% - min(700px, 50vw - 0.5rem) - 8px);
+  transform: translateX(-100%);
+  z-index: 9999;
+  pointer-events: none;
+  font-size: clamp(1rem, 1vw, 1rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f8e7a6;
+  white-space: nowrap;
+  user-select: none;
+}
+
+@media (max-width: 1200px) {
+  .copyright-overlay {
+    left: 0.75rem;
+    transform: none;
+    top: 0.75rem;
+    font-size: 1.5rem;
+  }
 }
 
 .galaxy-tint-overlay {
