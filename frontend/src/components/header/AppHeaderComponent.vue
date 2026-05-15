@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUiStore } from '../../stores/uiStore'
 import { formatNumber } from '../../config/numberFormat'
@@ -9,41 +9,80 @@ import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
-const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
-const xpFillRef = ref<SVGPathElement | null>(null)
-const arcTotalLength = ref(485)
-const arcViewBox = ref('0 0 400 135')
-const arcPath = ref('M 0,0 A 200,135 0 1 1 400,0')
 let resizeObserver: ResizeObserver | null = null
 
-function updateHeaderHeight() {
-  if (headerRef.value) {
-    const rect = headerRef.value.getBoundingClientRect()
-    document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
-  }
+const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgress ?? 0) / 100)))
+
+// SVG mit position:fixed, Koordinaten aus getBoundingClientRect()
+const svgLeft = ref(0)
+const svgTop = ref(0)
+const svgW = ref(360)
+const svgH = ref(120)
+
+// Pfad: Start (0, svgH) → Bogen nach oben → Ende (svgW, svgH)
+// rx = svgW/2, ry = svgH → Scheitelpunkt bei (svgW/2, 0)
+// sweep=0 → gegen Uhrzeigersinn → wölbt sich nach oben
+const arcD = computed(
+  () => `M 0,${svgH.value} A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},${svgH.value}`,
+)
+
+const arcLen = computed(() => {
+  const a = svgW.value / 2
+  const b = svgH.value
+  const h = Math.pow(a - b, 2) / Math.pow(a + b, 2)
+  return Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)))
+})
+
+const arcDashoffset = computed(() => arcLen.value * (1 - xpProgress.value))
+
+async function measure() {
+  await nextTick()
+  if (!chimesRef.value || !headerRef.value) return
+  const panelRect = chimesRef.value.getBoundingClientRect()
+  const headerRect = headerRef.value.getBoundingClientRect()
+  if (!panelRect.width || !panelRect.height) return
+
+  // Breite = Panel-Breite
+  svgW.value = panelRect.width
+
+  // Höhe = sichtbare Panel-Höhe (nur der Teil innerhalb des Headers)
+  // = Abstand von Panel-Oberkante bis Header-Unterkante
+
+  const visiblePanelHeight = headerRect.bottom - 400 - panelRect.top
+  svgH.value = visiblePanelHeight
+
+  // SVG linke Kante = Panel-Linke
+  svgLeft.value = panelRect.left
+
+  // SVG obere Kante = Panel-Oberkante - visiblePanelHeight
+  // = Panel-Oberkante - (headerBottom - panelTop)
+  // = panelTop - headerBottom + panelTop
+  // Nein: SVG-Top so dass SVG-Unterkante = Panel-Oberkante
+  // SVG-Unterkante = svgTop + svgH → soll = panelRect.top sein
+  // → svgTop = panelRect.top - svgH
+  svgTop.value = panelRect.top - visiblePanelHeight
 }
 
-onMounted(() => {
+function updateHeaderHeight() {
+  if (!headerRef.value) return
+  const rect = headerRef.value.getBoundingClientRect()
+  document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
+}
+
+onMounted(async () => {
   updateHeaderHeight()
-  resizeObserver = new ResizeObserver(updateHeaderHeight)
+  await measure()
+  resizeObserver = new ResizeObserver(async () => {
+    updateHeaderHeight()
+    await measure()
+  })
   if (headerRef.value) resizeObserver.observe(headerRef.value)
-
-  if (chimesRef.value) {
-    const { width, height } = chimesRef.value.getBoundingClientRect()
-    arcViewBox.value = `0 0 ${width} ${height}`
-    arcPath.value = `M 0,0 A ${width / 2},${height} 0 1 1 ${width},0`
-    nextTick(() => {
-      if (xpFillRef.value) arcTotalLength.value = xpFillRef.value.getTotalLength()
-    })
-  }
 })
 
-onUnmounted(() => {
-  resizeObserver?.disconnect()
-})
+onUnmounted(() => resizeObserver?.disconnect())
 </script>
 
 <template>
@@ -53,26 +92,20 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
-
       <div class="header-divider" aria-hidden="true"></div>
-
       <HeaderMaterialsComponent style="flex: 1; min-width: 0" />
     </div>
 
-    <!-- ════════ MITTE – Platzhalter für Grid-Spalte 2 ════════ -->
+    <!-- ════════ MITTE – Platzhalter ════════ -->
     <div class="header-center-anchor" aria-hidden="true"></div>
 
-    <!-- ════════ MITTE (absolut zentriert, überlagert Spalte 2) ════════ -->
+    <!-- ════════ MITTE (absolut zentriert) ════════ -->
     <div class="header-center">
       <div ref="chimesRef" class="center-chimes">
-        <!-- Hauptzeile: nur Chimes-Zahl, kein Icon -->
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
         </span>
-
-        <!-- Unterzeile: CPS links · Click rechts -->
         <div class="chimes-sub-row">
-          <!-- Chimes/s -->
           <div class="chimes-sub-stat">
             <img
               src="/img/BardAbilities/BardChime.png"
@@ -80,15 +113,12 @@ onUnmounted(() => {
               alt=""
               aria-hidden="true"
             />
-            <span class="sub-stat-value cps-text-glow">
-              {{ formatNumber(gameStore.chimesPerSecond) }}
-            </span>
+            <span class="sub-stat-value cps-text-glow">{{
+              formatNumber(gameStore.chimesPerSecond)
+            }}</span>
             <span class="sub-stat-label cps-text-glow">/sec</span>
           </div>
-
           <div class="chimes-sub-divider" aria-hidden="true"></div>
-
-          <!-- Chimes/click -->
           <div class="chimes-sub-stat">
             <img
               src="/img/BardAbilities/BardChime.png"
@@ -96,58 +126,21 @@ onUnmounted(() => {
               alt=""
               aria-hidden="true"
             />
-            <span class="sub-stat-value click-text-glow">
-              {{ formatNumber(gameStore.chimesPerClick) }}
-            </span>
+            <span class="sub-stat-value click-text-glow">{{
+              formatNumber(gameStore.chimesPerClick)
+            }}</span>
             <span class="sub-stat-label click-text-glow">/click</span>
           </div>
         </div>
-
       </div>
-
-      <!-- XP-Bogen: Geschwister von .center-chimes, da overflow:hidden dort alles abschneiden würde -->
-      <svg
-        class="xp-arc-svg"
-        :viewBox="arcViewBox"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id="xp-arc-grad" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#c89040" />
-            <stop offset="100%" stop-color="#f0d060" />
-          </linearGradient>
-        </defs>
-        <path
-          :d="arcPath"
-          fill="none"
-          stroke="rgba(160,110,15,0.22)"
-          stroke-width="3"
-        />
-        <path
-          ref="xpFillRef"
-          :d="arcPath"
-          fill="none"
-          stroke="url(#xp-arc-grad)"
-          stroke-width="3"
-          stroke-linecap="round"
-          :stroke-dasharray="arcTotalLength"
-          :stroke-dashoffset="arcTotalLength * (1 - xpProgress)"
-          class="xp-arc-fill-path"
-        />
-      </svg>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--right">
-      <!-- UniversePortal -->
       <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
         <UniverseRescueComponent />
       </div>
-
       <div class="header-divider" aria-hidden="true"></div>
-
-      <!-- SkillTree-Shortcut -->
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="inventory-circle-btn"
@@ -175,9 +168,68 @@ onUnmounted(() => {
           </div>
         </button>
       </div>
-
     </div>
   </header>
+
+  <!--
+    XP-BOGEN SVG – position:fixed, außerhalb aller overflow-Fallen.
+
+    Geometrie:
+    ┌─── svgTop ──────────────────────────────────────┐  ← Header-Oberkante
+    │          Scheitelpunkt (svgW/2, 0)               │
+    │         /                         \              │
+    │        /   Bogen wölbt sich oben   \             │
+    │       /                             \            │
+    │(0,svgH)                         (svgW,svgH)      │
+    └─── panelRect.top ───────────────────────────────┘  ← Panel-Oberkante
+
+    svgTop   = panelRect.top - visiblePanelHeight
+    svgH     = headerRect.bottom - panelRect.top (sichtbare Panel-Höhe im Header)
+    svgW     = panelRect.width
+    svgLeft  = panelRect.left
+  -->
+  <svg
+    class="xp-arc-svg-fixed"
+    :style="{
+      left: svgLeft + 'px',
+      top: svgTop + 'px',
+      width: svgW + 'px',
+      height: svgH + 'px',
+    }"
+    :viewBox="`0 0 ${svgW} ${svgH}`"
+    aria-hidden="true"
+  >
+    <defs>
+      <linearGradient id="xp-grad-fixed" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c89040" />
+        <stop offset="50%" stop-color="#f0d060" />
+        <stop offset="100%" stop-color="#c89040" />
+      </linearGradient>
+    </defs>
+
+    <!-- Hintergrund-Bogen -->
+    <path
+      :d="arcD"
+      fill="none"
+      stroke="rgba(160,110,15,0.30)"
+      stroke-width="3"
+      stroke-linecap="round"
+      :pathLength="arcLen"
+    />
+
+    <!-- Fortschritts-Bogen -->
+    <path
+      :d="arcD"
+      fill="none"
+      stroke="url(#xp-grad-fixed)"
+      stroke-width="3"
+      stroke-linecap="round"
+      :pathLength="arcLen"
+      :stroke-dasharray="arcLen"
+      :stroke-dashoffset="arcDashoffset"
+      class="xp-arc-fill"
+    />
+  </svg>
 </template>
 
 <style>
@@ -200,7 +252,6 @@ onUnmounted(() => {
   align-items: stretch;
 }
 
-/* ── Portal-Container ── */
 .header-portal-wrap {
   width: clamp(148px, 14vw, 215px);
   align-self: stretch;
@@ -208,7 +259,6 @@ onUnmounted(() => {
   align-items: stretch;
 }
 
-/* ── Linke / Rechte Seite ── */
 .header-side {
   min-width: 0;
   padding-top: 1px;
@@ -222,9 +272,6 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-/* ================================================================
-   BARD-PROFILE
-   ================================================================ */
 .header-profile-bump {
   display: flex;
   align-items: center;
@@ -233,7 +280,7 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   MITTE — Platzhalter + absolut zentriertes Panel
+   MITTE
    ================================================================ */
 .header-center-anchor {
   flex-shrink: 0;
@@ -252,12 +299,12 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
-  /* Feste Breite: passt exakt zum Grid-Track, verhindert Layoutverschiebungen */
   width: clamp(300px, 30vw, 400px);
+  overflow: visible;
 }
 
 /* ================================================================
-   CENTER-CHIMES – Tropfen-Panel
+   CENTER-CHIMES – EXAKT WIE ORIGINAL
    ================================================================ */
 .center-chimes {
   display: flex;
@@ -265,8 +312,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0;
-  /* Exakt so breit wie der übergeordnete .header-center Container –
-     niemals mehr, niemals weniger. So bleibt der Header stabil. */
   width: 100%;
   flex-shrink: 0;
   flex-grow: 0;
@@ -284,24 +329,22 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   XP-BOGEN (SVG, außen entlang Tropfenrahmen)
+   XP-BOGEN (position:fixed)
    ================================================================ */
-.xp-arc-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.xp-arc-svg-fixed {
+  position: fixed;
   pointer-events: none;
-  z-index: 5;
+  z-index: 130;
+  overflow: visible;
 }
 
-.xp-arc-fill-path {
-  filter: drop-shadow(0 0 4px rgba(240, 208, 96, 0.55));
-  transition: stroke-dashoffset 1s ease-out;
+.xp-arc-fill {
+  filter: drop-shadow(0 0 4px rgba(240, 208, 96, 0.65))
+    drop-shadow(0 0 10px rgba(240, 208, 96, 0.28));
+  transition: stroke-dashoffset 0.8s ease-out;
 }
 
-/* ── Unterzeile: CPS + Click nebeneinander ── */
+/* ── Unterzeile ── */
 .chimes-sub-row {
   display: flex;
   align-items: center;
@@ -309,15 +352,11 @@ onUnmounted(() => {
   gap: 8px;
   margin-top: 4px;
 }
-
-/* Einzelne Stat-Gruppe (Icon + Zahl + Label) */
 .chimes-sub-stat {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-
-/* Vertikale Trennlinie zwischen CPS und Click */
 .chimes-sub-divider {
   width: 1px;
   height: 18px;
@@ -332,7 +371,6 @@ onUnmounted(() => {
   flex-shrink: 0;
   margin-inline: 2px;
 }
-
 .sub-chime-icon {
   width: clamp(16px, 2vw, 22px);
   height: clamp(16px, 2vw, 22px);
@@ -340,7 +378,6 @@ onUnmounted(() => {
   flex-shrink: 0;
   opacity: 0.9;
 }
-
 .sub-stat-value {
   font-size: clamp(1rem, 1.6vw, 1.4rem);
   font-weight: 700;
@@ -348,7 +385,6 @@ onUnmounted(() => {
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-
 .sub-stat-label {
   font-size: clamp(0.78rem, 1.1vw, 1rem);
   font-weight: 600;
@@ -395,7 +431,6 @@ onUnmounted(() => {
   line-height: 1;
   margin-bottom: 1px;
 }
-
 .chimes-value {
   font-size: clamp(3rem, 5vw, 5.5rem);
   font-weight: 800;
@@ -404,14 +439,9 @@ onUnmounted(() => {
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  /* Feste Mindestbreite für den längsten möglichen formatierten String.
-     "999.99 Qa" o.ä. hat ca. 9 Zeichen – mit tabular-nums und dem gewählten
-     Font entspricht das ~9ch. Ein kleiner Puffer von 0.5ch schützt vor
-     Rundungsfehlern einzelner Glyphen. Adjust diesen Wert falls nötig. */
   min-width: 9.5ch;
   white-space: nowrap;
 }
-
 .cps-value {
   font-size: clamp(0.9rem, 1.3vw, 1.15rem);
   font-weight: 600;
@@ -420,7 +450,6 @@ onUnmounted(() => {
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
-
 .stat-value {
   font-size: clamp(0.8rem, 1.1vw, 1rem);
   font-weight: 600;
