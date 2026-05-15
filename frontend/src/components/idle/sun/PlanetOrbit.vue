@@ -41,7 +41,6 @@
       class="planet-orbit-item"
       :class="{
         'planet-orbit-item--foreground': pos.isForeground,
-        'planet-orbit-item--clickable': true,
         'planet-orbit-item--turret': pos.isTurret,
         'planet-orbit-item--healing': pos.isHealing,
         'planet-orbit-item--jungle-buffed': pos.isJungleBuffed,
@@ -54,8 +53,6 @@
         zIndex: pos.zIndex,
         '--planet-color': pos.color,
       }"
-      :title="pos.roleLabel"
-      @click="planetShopStore.openRoleModal(pos.id)"
     >
       <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
       <span class="planet-bonus-badge" :title="pos.roleLabel">{{ pos.roleIcon }}</span>
@@ -106,12 +103,10 @@
           transform: `translate(${pos.x}px, ${pos.y - pos.size / 2 - 14}px)`,
           zIndex: pos.zIndex + 1,
         }"
-      >🌿 {{ pos.jungleBuffSecsLeft }}s</span>
+        >🌿 {{ pos.jungleBuffSecsLeft }}s</span
+      >
     </template>
-
   </div>
-
-  <PlanetRoleModal />
 </template>
 
 <script lang="ts">
@@ -123,7 +118,6 @@ import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
-import PlanetRoleModal from '../../bottom/command/PlanetRoleModal.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -208,7 +202,7 @@ function slotRoleLabel(slot: PlanetSlot): string {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { PlanetRoleModal, AttackProjectileLayer, OrbitPath },
+  components: { AttackProjectileLayer, OrbitPath },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
@@ -308,8 +302,10 @@ export default defineComponent({
         const isHealing = Date.now() < (slot.healingUntilMs ?? 0)
 
         const jb = slot.jungleBuff
-        const isJungleBuffed = !!(jb?.active)
-        const jungleBuffSecsLeft = isJungleBuffed ? Math.ceil((jb!.activeUntil - Date.now()) / 1000) : 0
+        const isJungleBuffed = !!jb?.active
+        const jungleBuffSecsLeft = isJungleBuffed
+          ? Math.ceil((jb!.activeUntil - Date.now()) / 1000)
+          : 0
         const jungleBuffType = jb?.buffType ?? ''
 
         newPositions.push({
@@ -515,9 +511,15 @@ export default defineComponent({
 }
 
 @keyframes slotHeal {
-  0%   { filter: drop-shadow(0 0 0px #52b830); }
-  40%  { filter: drop-shadow(0 0 14px #52b830) drop-shadow(0 0 28px #2e7a1a); }
-  100% { filter: drop-shadow(0 0 5px #52b830); }
+  0% {
+    filter: drop-shadow(0 0 0px #52b830);
+  }
+  40% {
+    filter: drop-shadow(0 0 14px #52b830) drop-shadow(0 0 28px #2e7a1a);
+  }
+  100% {
+    filter: drop-shadow(0 0 5px #52b830);
+  }
 }
 
 .planet-orbit-item--foreground {
@@ -640,8 +642,13 @@ export default defineComponent({
 }
 
 @keyframes jungle-planet-glow {
-  0%, 100% { filter: drop-shadow(0 0 5px #5ce66a99); }
-  50%       { filter: drop-shadow(0 0 14px #5ce66acc) drop-shadow(0 0 28px #5ce66a55); }
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px #5ce66a99);
+  }
+  50% {
+    filter: drop-shadow(0 0 14px #5ce66acc) drop-shadow(0 0 28px #5ce66a55);
+  }
 }
 
 /* ── Jungle Buff Particle Aura (external overlay, not clipped) ─────────────── */
@@ -676,11 +683,15 @@ export default defineComponent({
 }
 
 @keyframes jungle-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes jungle-spin-rev {
-  to { transform: rotate(-360deg); }
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 .jungle-buff-label {
@@ -700,5 +711,4 @@ export default defineComponent({
   translate: -50% -100%;
   text-shadow: 0 0 6px #5ce66a88;
 }
-
 </style>
