@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
 import {
   usePlanetShopStore,
@@ -20,10 +20,32 @@ const CPS_BUILDINGS = [
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 
+const purchasedSlots = computed(() => store.slots.filter((s) => s.purchased))
+
+// Local selection state — synced with uiStore when opened from Command Panel
+const selectedSlotId = ref<string | null>(null)
+
+function initSlot() {
+  selectedSlotId.value =
+    uiStore.planetActiveSlotId ?? store.slots.find((s) => s.purchased)?.id ?? null
+}
+
+onMounted(initSlot)
+
+watch(
+  () => uiStore.planetActiveSlotId,
+  (id) => {
+    if (id) selectedSlotId.value = id
+  },
+)
+
+function selectSlot(id: string) {
+  selectedSlotId.value = id
+}
+
 const activeSlot = computed(() => {
-  const id = uiStore.planetActiveSlotId
-  if (id) return store.slots.find((s) => s.id === id) ?? null
-  return store.slots.find((s) => s.purchased) ?? null
+  if (!selectedSlotId.value) return null
+  return store.slots.find((s) => s.id === selectedSlotId.value) ?? null
 })
 
 const slotNumber = computed(() => activeSlot.value?.id.replace('slot_', '') ?? '')
@@ -94,10 +116,10 @@ function bonusText(role: PlanetRole): string {
 
 <template>
   <div class="ps-tab">
-    <!-- Leerstate -->
-    <div v-if="!activeSlot" class="ps-empty">
+    <!-- Leerstate: noch keine Slots gekauft -->
+    <div v-if="purchasedSlots.length === 0" class="ps-empty">
       <span class="ps-empty-icon">🪐</span>
-      <span class="ps-empty-text">Klicke einen Planeten-Slot im Command Panel an.</span>
+      <span class="ps-empty-text">Kaufe deinen ersten Planeten-Slot im Command Panel.</span>
     </div>
 
     <template v-else>
@@ -115,145 +137,178 @@ function bonusText(role: PlanetRole): string {
         </div>
       </div>
 
-      <!-- 3-Spalten-Body -->
-      <div class="ps-body">
-        <!-- Linke Säule: Rollen 1–3 -->
-        <div class="ps-role-col">
-          <button
-            v-for="role in rolesLeft"
-            :key="role.id"
-            class="ps-role-option"
-            :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
-            :style="{ '--rc': role.color }"
-            @click="assignRole(role.id)"
-          >
-            <span class="ps-role-icon">{{ role.icon }}</span>
-            <span class="ps-role-name">{{ role.name }}</span>
-            <div class="ps-role-divider" />
-            <span class="ps-role-effect">{{ bonusText(role) }}</span>
-            <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
-          </button>
-        </div>
+      <!-- Slot-Leiste -->
+      <div class="ps-slot-bar">
+        <button
+          v-for="slot in purchasedSlots"
+          :key="slot.id"
+          class="ps-slot-btn"
+          :class="{ 'ps-slot-btn--active': selectedSlotId === slot.id }"
+          :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
+          @click="selectSlot(slot.id)"
+        >
+          <img
+            v-if="slot.role"
+            :src="PLANET_ROLES[slot.role].image"
+            class="ps-slot-btn-img"
+            alt=""
+          />
+          <span v-else class="ps-slot-btn-placeholder">＋</span>
+          <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
+        </button>
+      </div>
 
-        <!-- Mittlere Säule -->
-        <div class="ps-role-col ps-role-col--center">
-          <!-- HP-Anzeige -->
-          <div class="ps-planet-hp">
-            <div class="ps-planet-hp-text">
-              <span class="ps-hp-heart">❤</span>
-              <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-            </div>
-            <div class="ps-hp-bar-track">
-              <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
-            </div>
+      <!-- Kein Slot ausgewählt (Fallback) -->
+      <div v-if="!activeSlot" class="ps-empty ps-empty--small">
+        <span class="ps-empty-text">Wähle einen Slot oben aus.</span>
+      </div>
+
+      <template v-else>
+        <!-- 3-Spalten-Body -->
+        <div class="ps-body">
+          <!-- Linke Säule: Rollen 1–3 -->
+          <div class="ps-role-col">
+            <button
+              v-for="role in rolesLeft"
+              :key="role.id"
+              class="ps-role-option"
+              :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
+              :style="{ '--rc': role.color }"
+              @click="assignRole(role.id)"
+            >
+              <span class="ps-role-icon">{{ role.icon }}</span>
+              <span class="ps-role-name">{{ role.name }}</span>
+              <div class="ps-role-divider" />
+              <span class="ps-role-effect">{{ bonusText(role) }}</span>
+              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
+            </button>
           </div>
 
-          <!-- Planetenbild -->
-          <div class="ps-planet-preview-wrap">
-            <Transition name="ps-planet-swap" mode="out-in">
-              <img :key="activeImage" :src="activeImage" class="ps-planet-preview-img" alt="Planet" />
+          <!-- Mittlere Säule -->
+          <div class="ps-role-col ps-role-col--center">
+            <!-- HP-Anzeige -->
+            <div class="ps-planet-hp">
+              <div class="ps-planet-hp-text">
+                <span class="ps-hp-heart">❤</span>
+                <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+              </div>
+              <div class="ps-hp-bar-track">
+                <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
+              </div>
+            </div>
+
+            <!-- Planetenbild -->
+            <div class="ps-planet-preview-wrap">
+              <Transition name="ps-planet-swap" mode="out-in">
+                <img
+                  :key="activeImage"
+                  :src="activeImage"
+                  class="ps-planet-preview-img"
+                  alt="Planet"
+                />
+              </Transition>
+            </div>
+
+            <!-- Rollenname -->
+            <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
+              {{ activeRoleName }}
+            </div>
+
+            <!-- Jungle-Buff -->
+            <Transition name="ps-config-slide">
+              <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
+                <div class="ps-jungle-buff-header">
+                  <span class="ps-jungle-buff-leaf">🌿</span>
+                  <span class="ps-jungle-buff-title">Jungle Buff</span>
+                  <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
+                </div>
+                <div class="ps-jungle-buff-row">
+                  <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
+                </div>
+                <div class="ps-jungle-buff-row">
+                  <span class="ps-jungle-buff-label">Multiplikator</span>
+                  <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
+                </div>
+              </div>
             </Transition>
           </div>
 
-          <!-- Rollenname -->
-          <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
-            {{ activeRoleName }}
+          <!-- Rechte Säule: Rollen 4–6 -->
+          <div class="ps-role-col">
+            <button
+              v-for="role in rolesRight"
+              :key="role.id"
+              class="ps-role-option"
+              :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
+              :style="{ '--rc': role.color }"
+              @click="assignRole(role.id)"
+            >
+              <span class="ps-role-icon">{{ role.icon }}</span>
+              <span class="ps-role-name">{{ role.name }}</span>
+              <div class="ps-role-divider" />
+              <span class="ps-role-effect">{{ bonusText(role) }}</span>
+              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
+            </button>
           </div>
+        </div>
 
-          <!-- Jungle-Buff -->
-          <Transition name="ps-config-slide">
-            <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
-              <div class="ps-jungle-buff-header">
-                <span class="ps-jungle-buff-leaf">🌿</span>
-                <span class="ps-jungle-buff-title">Jungle Buff</span>
-                <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
-              </div>
-              <div class="ps-jungle-buff-row">
-                <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
-              </div>
-              <div class="ps-jungle-buff-row">
-                <span class="ps-jungle-buff-label">Multiplikator</span>
-                <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
-              </div>
+        <!-- Config: harvest_node -->
+        <Transition name="ps-config-slide">
+          <div v-if="activeSlot.role === 'harvest_node'" class="ps-config-section">
+            <div class="ps-config-header">
+              <span class="ps-config-header-icon">🌾</span>
+              <span>Material auswählen</span>
+              <span class="ps-config-header-hint">Wähle das zu erntende Material</span>
             </div>
-          </Transition>
-        </div>
-
-        <!-- Rechte Säule: Rollen 4–6 -->
-        <div class="ps-role-col">
-          <button
-            v-for="role in rolesRight"
-            :key="role.id"
-            class="ps-role-option"
-            :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
-            :style="{ '--rc': role.color }"
-            @click="assignRole(role.id)"
-          >
-            <span class="ps-role-icon">{{ role.icon }}</span>
-            <span class="ps-role-name">{{ role.name }}</span>
-            <div class="ps-role-divider" />
-            <span class="ps-role-effect">{{ bonusText(role) }}</span>
-            <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Config: harvest_node -->
-      <Transition name="ps-config-slide">
-        <div v-if="activeSlot.role === 'harvest_node'" class="ps-config-section">
-          <div class="ps-config-header">
-            <span class="ps-config-header-icon">🌾</span>
-            <span>Material auswählen</span>
-            <span class="ps-config-header-hint">Wähle das zu erntende Material</span>
+            <div class="ps-config-grid">
+              <button
+                v-for="mat in MATERIALS"
+                :key="mat.id"
+                class="ps-config-btn"
+                :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.materialId === mat.id }"
+                @click="store.setSlotConfig(activeSlot.id, { materialId: mat.id })"
+              >
+                <div class="ps-config-btn-img-wrap">
+                  <img v-if="mat.image" :src="mat.image" class="ps-config-btn-img" alt="" />
+                  <div v-else class="ps-config-btn-img-placeholder">?</div>
+                </div>
+                <span class="ps-config-btn-label">{{ mat.name }}</span>
+                <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="ps-config-btn-check">✓</div>
+              </button>
+            </div>
           </div>
-          <div class="ps-config-grid">
-            <button
-              v-for="mat in MATERIALS"
-              :key="mat.id"
-              class="ps-config-btn"
-              :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.materialId === mat.id }"
-              @click="store.setSlotConfig(activeSlot.id, { materialId: mat.id })"
-            >
-              <div class="ps-config-btn-img-wrap">
-                <img v-if="mat.image" :src="mat.image" class="ps-config-btn-img" alt="" />
-                <div v-else class="ps-config-btn-img-placeholder">?</div>
-              </div>
-              <span class="ps-config-btn-label">{{ mat.name }}</span>
-              <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="ps-config-btn-check">✓</div>
-            </button>
-          </div>
-        </div>
-      </Transition>
+        </Transition>
 
-      <!-- Config: resonance_tower -->
-      <Transition name="ps-config-slide">
-        <div v-if="activeSlot.role === 'resonance_tower'" class="ps-config-section">
-          <div class="ps-config-header">
-            <span class="ps-config-header-icon">🏗️</span>
-            <span>Gebäude auswählen</span>
-            <span class="ps-config-header-hint">Welches Gebäude soll verstärkt werden?</span>
+        <!-- Config: resonance_tower -->
+        <Transition name="ps-config-slide">
+          <div v-if="activeSlot.role === 'resonance_tower'" class="ps-config-section">
+            <div class="ps-config-header">
+              <span class="ps-config-header-icon">🏗️</span>
+              <span>Gebäude auswählen</span>
+              <span class="ps-config-header-hint">Welches Gebäude soll verstärkt werden?</span>
+            </div>
+            <div class="ps-config-grid">
+              <button
+                v-for="bld in CPS_BUILDINGS"
+                :key="bld.id"
+                class="ps-config-btn"
+                :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.buildingId === bld.id }"
+                @click="store.setSlotConfig(activeSlot.id, { buildingId: bld.id })"
+              >
+                <div class="ps-config-btn-img-wrap">
+                  <img v-if="bld.icon" :src="bld.icon" class="ps-config-btn-img" alt="" />
+                  <div v-else class="ps-config-btn-img-placeholder">🏗</div>
+                </div>
+                <span class="ps-config-btn-label">{{ bld.name }}</span>
+                <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="ps-config-btn-check">✓</div>
+              </button>
+            </div>
           </div>
-          <div class="ps-config-grid">
-            <button
-              v-for="bld in CPS_BUILDINGS"
-              :key="bld.id"
-              class="ps-config-btn"
-              :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.buildingId === bld.id }"
-              @click="store.setSlotConfig(activeSlot.id, { buildingId: bld.id })"
-            >
-              <div class="ps-config-btn-img-wrap">
-                <img v-if="bld.icon" :src="bld.icon" class="ps-config-btn-img" alt="" />
-                <div v-else class="ps-config-btn-img-placeholder">🏗</div>
-              </div>
-              <span class="ps-config-btn-label">{{ bld.name }}</span>
-              <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="ps-config-btn-check">✓</div>
-            </button>
-          </div>
-        </div>
-      </Transition>
+        </Transition>
 
-      <!-- Goldlinie unten -->
-      <div class="ps-goldline ps-goldline--bottom" />
+        <!-- Goldlinie unten -->
+        <div class="ps-goldline ps-goldline--bottom" />
+      </template>
     </template>
   </div>
 </template>
@@ -287,6 +342,11 @@ function bonusText(role: PlanetRole): string {
   gap: 1rem;
   height: 100%;
   min-height: 300px;
+}
+
+.ps-empty--small {
+  min-height: 80px;
+  padding: 1rem;
 }
 
 .ps-empty-icon {
@@ -367,6 +427,89 @@ function bonusText(role: PlanetRole): string {
   color: rgba(255, 255, 255, 0.35);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* ── Slot-Leiste ───────────────────────────────────────────────────────────── */
+.ps-slot-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 1rem;
+  border-bottom: 2px solid #2a1a08;
+  background: #16120a;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+  flex-shrink: 0;
+}
+
+.ps-slot-bar::-webkit-scrollbar {
+  height: 4px;
+}
+.ps-slot-bar::-webkit-scrollbar-track {
+  background: #111;
+}
+.ps-slot-bar::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+
+.ps-slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  min-width: 64px;
+  background: #131210;
+  border: 1px solid #2e1e0a;
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.ps-slot-btn:hover {
+  background: #1a1812;
+  border-color: #5c3310;
+}
+
+.ps-slot-btn--active {
+  background: #1a2010;
+  border: 2px solid var(--rc, #52b830);
+  box-shadow: 0 0 10px color-mix(in oklch, var(--rc, #52b830) 30%, transparent);
+}
+
+.ps-slot-btn-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.ps-slot-btn-placeholder {
+  font-size: 1.2rem;
+  color: rgba(90, 142, 224, 0.35);
+  line-height: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.ps-slot-btn-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(200, 160, 80, 0.6);
+  white-space: nowrap;
+}
+
+.ps-slot-btn--active .ps-slot-btn-label {
+  color: var(--rc, #52b830);
 }
 
 /* ── 3-Spalten-Body ────────────────────────────────────────────────────────── */
