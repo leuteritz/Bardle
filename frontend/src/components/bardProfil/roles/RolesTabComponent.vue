@@ -1,22 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
+import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory } from '@/types'
-
-const props = defineProps<{
-  open: boolean
-  slotIndex: number | null
-  headerSlots: (string | null)[]
-  availableChampions: string[]
-}>()
-
-const emit = defineEmits<{
-  close: []
-  select: [champion: string, slotIndex: number]
-}>()
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -42,23 +32,28 @@ const CAT_ICONS: Record<ItemCategory, string> = {
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
+const uiStore = useUiStore()
+
+const { headerSlots } = storeToRefs(battleStore)
+
+const availableChampions = computed(() =>
+  battleStore.ownedChampions.filter((c) => c !== 'Bard'),
+)
+
 const searchQuery = ref('')
-const activeSlotIndex = ref<number>(props.slotIndex ?? 0)
+const activeSlotIndex = ref(uiStore.rolesActiveSlot)
 const selectedCategory = ref<ItemCategory | null>(null)
 
 watch(
-  () => props.open,
+  () => uiStore.rolesActiveSlot,
   (val) => {
-    if (val) {
-      searchQuery.value = ''
-      activeSlotIndex.value = props.slotIndex ?? 0
-      selectedCategory.value = null
-    }
+    activeSlotIndex.value = val
+    searchQuery.value = ''
+    selectedCategory.value = null
   },
 )
 
 const activeRole = computed(() => ROLES[activeSlotIndex.value])
-
 const currentEquipment = computed(() => itemStore.slotEquipment[activeSlotIndex.value])
 
 const categoryItems = computed(() => {
@@ -73,8 +68,8 @@ const categoryItems = computed(() => {
 
 const roleFilteredChampions = computed(() => {
   const internalRole = ROLE_MAP[activeRole.value]
-  if (!internalRole) return props.availableChampions
-  return props.availableChampions.filter((c) => getChampionRoles(c).includes(internalRole))
+  if (!internalRole) return availableChampions.value
+  return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
 })
 
 const filteredChampions = computed(() => {
@@ -93,7 +88,7 @@ function switchSlot(index: number) {
 }
 
 function handleSelect(champion: string) {
-  emit('select', champion, activeSlotIndex.value)
+  battleStore.setHeaderSlot(activeSlotIndex.value, champion)
 }
 
 function onImgError(e: Event) {
@@ -121,314 +116,182 @@ function getEquippedItem(cat: ItemCategory) {
 </script>
 
 <template>
-  <Transition name="picker-pop">
-    <div v-if="open" class="picker-overlay" @click.self="emit('close')">
-      <div class="picker-frame" role="dialog" aria-modal="true" aria-label="Champion wählen">
-        <div class="picker-accent-bar" />
-
-        <!-- Header -->
-        <div class="picker-header">
-          <div class="picker-header-left">
-            <img src="/img/BardAbilities/BardChime.png" class="picker-header-icon" alt="" />
-            <span class="picker-title">Champion wählen</span>
-            <span class="picker-subtitle">{{ activeRole }}</span>
-          </div>
-          <button class="picker-close" title="Schließen" @click="emit('close')">✕</button>
+  <div class="roles-tab">
+    <!-- Slot-Switcher -->
+    <div class="slot-switcher">
+      <button
+        v-for="(role, i) in ROLES"
+        :key="i"
+        class="switcher-tile"
+        :class="{
+          'switcher-tile--active': activeSlotIndex === i,
+          'switcher-tile--filled': headerSlots[i] !== null,
+        }"
+        :title="`${role}${headerSlots[i] ? ': ' + headerSlots[i] : ' – leer'}`"
+        @click="switchSlot(i)"
+      >
+        <div class="switcher-portrait-wrap">
+          <img
+            v-if="headerSlots[i]"
+            :src="battleStore.getChampionImage(headerSlots[i]!)"
+            :alt="headerSlots[i]!"
+            class="switcher-portrait"
+            @error="onImgError"
+          />
+          <span v-else class="switcher-empty-icon">＋</span>
+          <div v-if="activeSlotIndex === i" class="switcher-active-glow" />
         </div>
+        <span class="switcher-role-label">{{ role }}</span>
+        <div v-if="activeSlotIndex === i" class="switcher-active-bar" />
+      </button>
+    </div>
 
-        <!-- ── Slot-Switcher ── -->
-        <div class="slot-switcher">
-          <button
-            v-for="(role, i) in ROLES"
-            :key="i"
-            class="switcher-tile"
-            :class="{
-              'switcher-tile--active': activeSlotIndex === i,
-              'switcher-tile--filled': headerSlots[i] !== null,
-            }"
-            :title="`${role}${headerSlots[i] ? ': ' + headerSlots[i] : ' – leer'}`"
-            @click="switchSlot(i)"
-          >
-            <div class="switcher-portrait-wrap">
+    <!-- Equipment Row -->
+    <div class="equip-row">
+      <div class="equip-row-label">Ausrüstung — {{ activeRole }}</div>
+      <div class="equip-slots">
+        <button
+          v-for="cat in (['weapon', 'armor', 'misc'] as ItemCategory[])"
+          :key="cat"
+          class="equip-slot"
+          :class="{
+            'equip-slot--open': selectedCategory === cat,
+            'equip-slot--filled': currentEquipment[cat] !== null,
+          }"
+          :title="CAT_LABELS[cat]"
+          @click="toggleCategory(cat)"
+        >
+          <div class="equip-slot-icon">
+            <template v-if="getEquippedItem(cat)">
               <img
-                v-if="headerSlots[i]"
-                :src="battleStore.getChampionImage(headerSlots[i]!)"
-                :alt="headerSlots[i]!"
-                class="switcher-portrait"
-                @error="onImgError"
+                v-if="getEquippedItem(cat)!.icon.startsWith('/')"
+                :src="getEquippedItem(cat)!.icon"
+                class="equip-item-img"
+                :alt="getEquippedItem(cat)!.name"
               />
-              <span v-else class="switcher-empty-icon">＋</span>
-              <div v-if="activeSlotIndex === i" class="switcher-active-glow" />
-            </div>
-            <span class="switcher-role-label">{{ role }}</span>
-            <div v-if="activeSlotIndex === i" class="switcher-active-bar" />
-          </button>
-        </div>
-
-        <!-- ── Equipment Row ── -->
-        <div class="equip-row">
-          <div class="equip-row-label">Ausrüstung — {{ activeRole }}</div>
-          <div class="equip-slots">
-            <button
-              v-for="cat in (['weapon', 'armor', 'misc'] as ItemCategory[])"
-              :key="cat"
-              class="equip-slot"
-              :class="{
-                'equip-slot--open': selectedCategory === cat,
-                'equip-slot--filled': currentEquipment[cat] !== null,
-              }"
-              :title="CAT_LABELS[cat]"
-              @click="toggleCategory(cat)"
-            >
-              <div class="equip-slot-icon">
-                <template v-if="getEquippedItem(cat)">
-                  <img
-                    v-if="getEquippedItem(cat)!.icon.startsWith('/')"
-                    :src="getEquippedItem(cat)!.icon"
-                    class="equip-item-img"
-                    :alt="getEquippedItem(cat)!.name"
-                  />
-                  <span v-else class="equip-item-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-                </template>
-                <span v-else class="equip-empty-icon">{{ CAT_ICONS[cat] }}</span>
-              </div>
-              <div class="equip-slot-label">{{ CAT_LABELS[cat] }}</div>
-              <div v-if="getEquippedItem(cat)" class="equip-slot-name">
-                {{ getEquippedItem(cat)!.name }}
-              </div>
-            </button>
+              <span v-else class="equip-item-emoji">{{ getEquippedItem(cat)!.icon }}</span>
+            </template>
+            <span v-else class="equip-empty-icon">{{ CAT_ICONS[cat] }}</span>
           </div>
-        </div>
-
-        <!-- ── Item Picker Panel (replaces search+grid) ── -->
-        <template v-if="selectedCategory !== null">
-          <div class="item-panel-header">
-            <span class="item-panel-title">{{ CAT_LABELS[selectedCategory] }} auswählen</span>
-            <button class="item-panel-back" @click="selectedCategory = null">✕ Zurück</button>
+          <div class="equip-slot-label">{{ CAT_LABELS[cat] }}</div>
+          <div v-if="getEquippedItem(cat)" class="equip-slot-name">
+            {{ getEquippedItem(cat)!.name }}
           </div>
-          <div class="item-panel-body">
-            <div v-if="categoryItems.length === 0" class="item-panel-empty">
-              <span class="item-panel-empty-icon">🎵</span>
-              <span>Keine Items verfügbar</span>
-            </div>
-            <button
-              v-for="item in categoryItems"
-              :key="item.id"
-              class="item-row"
-              :class="{ 'item-row--active': currentEquipment[selectedCategory] === item.id }"
-              @click="handleEquip(item.id)"
-            >
-              <div class="item-row-icon">
-                <img
-                  v-if="item.icon.startsWith('/')"
-                  :src="item.icon"
-                  class="item-row-img"
-                  :alt="item.name"
-                />
-                <span v-else class="item-row-emoji">{{ item.icon }}</span>
-              </div>
-              <div class="item-row-info">
-                <span class="item-row-name">{{ item.name }}</span>
-                <span class="item-row-desc">{{ item.description }}</span>
-              </div>
-              <div class="item-rarity-dot" :class="`rarity--${item.rarity}`" />
-              <span v-if="currentEquipment[selectedCategory] === item.id" class="item-row-check"
-                >✓</span
-              >
-            </button>
-          </div>
-        </template>
-
-        <!-- ── Normal Champion Picker (shown when no category open) ── -->
-        <template v-else>
-          <!-- Suche -->
-          <div class="picker-search-row">
-            <div class="picker-search-wrap">
-              <span class="picker-search-icon">🔍</span>
-              <input
-                v-model="searchQuery"
-                type="text"
-                :placeholder="`${activeRole}-Champion suchen …`"
-                class="picker-search"
-                autofocus
-              />
-            </div>
-          </div>
-
-          <!-- Ergebnis-Info -->
-          <div class="picker-result-info">
-            <span
-              >{{ filteredChampions.length }} von {{ roleFilteredChampions.length }}
-              {{ activeRole }}-Champions</span
-            >
-          </div>
-
-          <!-- Grid -->
-          <div class="picker-body">
-            <div v-if="filteredChampions.length === 0" class="picker-empty">
-              <span class="picker-empty-icon">🎵</span>
-              <span>{{
-                roleFilteredChampions.length === 0
-                  ? `Keine ${activeRole}-Champions gekauft!`
-                  : 'Kein Champion gefunden.'
-              }}</span>
-            </div>
-
-            <div v-else class="picker-grid">
-              <button
-                v-for="champion in filteredChampions"
-                :key="champion"
-                class="picker-champ"
-                :class="{
-                  'picker-champ--active': headerSlots[activeSlotIndex] === champion,
-                  'picker-champ--taken':
-                    headerSlots.includes(champion) && headerSlots[activeSlotIndex] !== champion,
-                }"
-                @click="handleSelect(champion)"
-              >
-                <img
-                  :src="battleStore.getChampionImage(champion)"
-                  :alt="champion"
-                  class="picker-champ-img"
-                  @error="onImgError"
-                />
-                <span class="picker-champ-name">{{ champion }}</span>
-                <span class="champ-corner champ-corner--tl" />
-                <span class="champ-corner champ-corner--br" />
-                <div v-if="headerSlots[activeSlotIndex] === champion" class="picker-active-overlay">
-                  <span class="picker-check">✓</span>
-                </div>
-                <div v-else-if="headerSlots.includes(champion)" class="picker-taken-overlay">
-                  <span class="picker-taken-badge">
-                    {{ ROLES[headerSlots.indexOf(champion)] }}
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-        </template>
-
-        <div class="picker-accent-bar picker-accent-bar--bottom" />
+        </button>
       </div>
     </div>
-  </Transition>
+
+    <!-- Item Picker Panel -->
+    <template v-if="selectedCategory !== null">
+      <div class="item-panel-header">
+        <span class="item-panel-title">{{ CAT_LABELS[selectedCategory] }} auswählen</span>
+        <button class="item-panel-back" @click="selectedCategory = null">✕ Zurück</button>
+      </div>
+      <div class="item-panel-body">
+        <div v-if="categoryItems.length === 0" class="item-panel-empty">
+          <span class="item-panel-empty-icon">🎵</span>
+          <span>Keine Items verfügbar</span>
+        </div>
+        <button
+          v-for="item in categoryItems"
+          :key="item.id"
+          class="item-row"
+          :class="{ 'item-row--active': currentEquipment[selectedCategory] === item.id }"
+          @click="handleEquip(item.id)"
+        >
+          <div class="item-row-icon">
+            <img
+              v-if="item.icon.startsWith('/')"
+              :src="item.icon"
+              class="item-row-img"
+              :alt="item.name"
+            />
+            <span v-else class="item-row-emoji">{{ item.icon }}</span>
+          </div>
+          <div class="item-row-info">
+            <span class="item-row-name">{{ item.name }}</span>
+            <span class="item-row-desc">{{ item.description }}</span>
+          </div>
+          <div class="item-rarity-dot" :class="`rarity--${item.rarity}`" />
+          <span v-if="currentEquipment[selectedCategory] === item.id" class="item-row-check">✓</span>
+        </button>
+      </div>
+    </template>
+
+    <!-- Champion Picker -->
+    <template v-else>
+      <div class="picker-search-row">
+        <div class="picker-search-wrap">
+          <span class="picker-search-icon">🔍</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="`${activeRole}-Champion suchen …`"
+            class="picker-search"
+          />
+        </div>
+      </div>
+
+      <div class="picker-result-info">
+        <span>{{ filteredChampions.length }} von {{ roleFilteredChampions.length }} {{ activeRole }}-Champions</span>
+      </div>
+
+      <div class="picker-body">
+        <div v-if="filteredChampions.length === 0" class="picker-empty">
+          <span class="picker-empty-icon">🎵</span>
+          <span>{{
+            roleFilteredChampions.length === 0
+              ? `Keine ${activeRole}-Champions gekauft!`
+              : 'Kein Champion gefunden.'
+          }}</span>
+        </div>
+
+        <div v-else class="picker-grid">
+          <button
+            v-for="champion in filteredChampions"
+            :key="champion"
+            class="picker-champ"
+            :class="{
+              'picker-champ--active': headerSlots[activeSlotIndex] === champion,
+              'picker-champ--taken':
+                headerSlots.includes(champion) && headerSlots[activeSlotIndex] !== champion,
+            }"
+            @click="handleSelect(champion)"
+          >
+            <img
+              :src="battleStore.getChampionImage(champion)"
+              :alt="champion"
+              class="picker-champ-img"
+              @error="onImgError"
+            />
+            <span class="picker-champ-name">{{ champion }}</span>
+            <span class="champ-corner champ-corner--tl" />
+            <span class="champ-corner champ-corner--br" />
+            <div v-if="headerSlots[activeSlotIndex] === champion" class="picker-active-overlay">
+              <span class="picker-check">✓</span>
+            </div>
+            <div v-else-if="headerSlots.includes(champion)" class="picker-taken-overlay">
+              <span class="picker-taken-badge">
+                {{ ROLES[headerSlots.indexOf(champion)] }}
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
 </template>
 
 <style scoped>
-/* ── Overlay ── */
-.picker-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ── Frame ── */
-.picker-frame {
-  background: linear-gradient(175deg, #130f06 0%, #0d0a04 100%);
-  border: 3px solid #7a4e20;
-  border-radius: 8px;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    inset 0 0 0 3px rgba(92, 51, 16, 0.5),
-    0 0 0 1px rgba(200, 144, 64, 0.12),
-    0 24px 80px rgba(0, 0, 0, 0.97),
-    0 0 60px rgba(200, 144, 64, 0.07);
-  width: min(720px, 96vw);
-  height: min(720px, 92vh);
+.roles-tab {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  background: #111008;
   overflow: hidden;
 }
 
-/* ── Akzentbalken ── */
-.picker-accent-bar {
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #3e1a06,
-    #7a3a10 15%,
-    #c89040 35%,
-    #f0d060 50%,
-    #c89040 65%,
-    #7a3a10 85%,
-    #3e1a06
-  );
-  flex-shrink: 0;
-}
-.picker-accent-bar--bottom {
-  opacity: 0.6;
-}
-
-/* ── Header ── */
-.picker-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px 13px;
-  background: linear-gradient(to bottom, #211408, #180f04);
-  border-bottom: 1px solid #3a2008;
-  flex-shrink: 0;
-  gap: 12px;
-}
-.picker-header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.picker-header-icon {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65));
-  flex-shrink: 0;
-}
-.picker-title {
-  font-size: 14px;
-  font-weight: 900;
-  color: #e8c040;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1;
-}
-.picker-subtitle {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.55);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-left: 1px solid rgba(200, 144, 64, 0.25);
-  padding-left: 10px;
-  line-height: 1;
-}
-.picker-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: rgba(60, 30, 10, 0.6);
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  color: rgba(200, 144, 64, 0.7);
-  cursor: pointer;
-  font-size: 12px;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-.picker-close:hover {
-  background: rgba(160, 40, 20, 0.45);
-  color: #e87060;
-  border-color: #884040;
-}
-
-/* ════════════════════════════════════════════════
-   SLOT-SWITCHER
-   ════════════════════════════════════════════════ */
+/* ── Slot-Switcher ── */
 .slot-switcher {
   display: flex;
   gap: 8px;
@@ -445,7 +308,7 @@ function getEquippedItem(cat: ItemCategory) {
   padding: 0;
   background: linear-gradient(170deg, #1c1408 0%, #130e04 100%);
   border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   overflow: hidden;
   display: flex;
@@ -467,7 +330,6 @@ function getEquippedItem(cat: ItemCategory) {
 .switcher-tile:active {
   transform: scale(0.97);
 }
-
 .switcher-tile--active {
   border-color: #c89040 !important;
   background: linear-gradient(170deg, #2e1e06 0%, #201604 100%) !important;
@@ -558,9 +420,7 @@ function getEquippedItem(cat: ItemCategory) {
   border-radius: 2px 2px 0 0;
 }
 
-/* ════════════════════════════════════════════════
-   EQUIPMENT ROW
-   ════════════════════════════════════════════════ */
+/* ── Equipment Row ── */
 .equip-row {
   display: flex;
   flex-direction: column;
@@ -681,9 +541,7 @@ function getEquippedItem(cat: ItemCategory) {
   padding: 0 4px;
 }
 
-/* ════════════════════════════════════════════════
-   ITEM PICKER PANEL
-   ════════════════════════════════════════════════ */
+/* ── Item Picker Panel ── */
 .item-panel-header {
   display: flex;
   align-items: center;
@@ -831,18 +689,10 @@ function getEquippedItem(cat: ItemCategory) {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.rarity--common {
-  background: #8aab70;
-}
-.rarity--rare {
-  background: #5090d0;
-}
-.rarity--epic {
-  background: #9060d0;
-}
-.rarity--legendary {
-  background: #e8a020;
-}
+.rarity--common { background: #8aab70; }
+.rarity--rare { background: #5090d0; }
+.rarity--epic { background: #9060d0; }
+.rarity--legendary { background: #e8a020; }
 
 .item-row-check {
   font-size: 16px;
@@ -937,14 +787,13 @@ function getEquippedItem(cat: ItemCategory) {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
-  min-height: 340px;
   align-content: start;
 }
 
 .picker-champ {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   overflow: hidden;
   border: 1px solid rgba(92, 51, 16, 0.55);
@@ -1000,9 +849,6 @@ function getEquippedItem(cat: ItemCategory) {
   text-align: center;
   line-height: 1.2;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  transition: color 0.15s ease;
   pointer-events: none;
 }
 .picker-champ:hover .picker-champ-name {
@@ -1072,25 +918,5 @@ function getEquippedItem(cat: ItemCategory) {
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
-
-/* ── Transition ── */
-.picker-pop-enter-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.22s cubic-bezier(0.22, 0.9, 0.45, 1.05);
-}
-.picker-pop-leave-active {
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-.picker-pop-enter-from {
-  opacity: 0;
-  transform: scale(0.93) translateY(10px);
-}
-.picker-pop-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(5px);
 }
 </style>

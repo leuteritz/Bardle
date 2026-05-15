@@ -1,30 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ROLES } from '@/config/constants'
-import ChampionPickerModal from './ChampionPickerModal.vue'
 
 const battleStore = useBattleStore()
+const uiStore = useUiStore()
 const { headerSlots } = storeToRefs(battleStore)
 
-const pickerOpen = ref(false)
-const pickerSlotIndex = ref<number | null>(null)
-
-const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
-
 function openPicker(slotIndex: number) {
-  pickerSlotIndex.value = slotIndex
-  pickerOpen.value = true
-}
-
-function closePicker() {
-  pickerOpen.value = false
-  pickerSlotIndex.value = null
-}
-
-function handleSelect(champion: string, slotIdx: number) {
-  battleStore.setHeaderSlot(slotIdx, champion)
+  uiStore.requestOpenRolesTab(slotIndex)
 }
 
 function clearSlot(slotIndex: number, event: Event) {
@@ -81,16 +66,6 @@ function onImgError(e: Event) {
       </button>
     </div>
 
-    <Teleport to="body">
-      <ChampionPickerModal
-        :open="pickerOpen"
-        :slot-index="pickerSlotIndex"
-        :header-slots="headerSlots"
-        :available-champions="availableChampions"
-        @close="closePicker"
-        @select="handleSelect"
-      />
-    </Teleport>
   </div>
 </template>
 

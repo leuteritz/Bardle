@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
+import { useUiStore } from '@/stores/uiStore'
 import { usePersistence } from '@/composables/usePersistence'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
+import RolesTabComponent from '@/components/bardProfil/roles/RolesTabComponent.vue'
 
 const gameStore = useGameStore()
+const uiStore = useUiStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 const { resetGame } = usePersistence()
@@ -22,7 +25,7 @@ const handleReset = () => {
   }
 }
 
-type ModalId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets'
+type ModalId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
 const activeModal = ref<ModalId | null>(null)
 
 const menuItems: {
@@ -35,6 +38,7 @@ const menuItems: {
   { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
+  { id: 'roles', label: 'Rollen', icon: '⚔️', src: '' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 
@@ -57,6 +61,16 @@ defineExpose({ openToTab })
 watch(activeModal, (val) => {
   document.body.classList.toggle('bard-modal-open', val !== null)
 })
+
+watch(
+  () => uiStore.pendingBardTab,
+  (tab) => {
+    if (tab) {
+      activeModal.value = tab as ModalId
+      uiStore.clearPendingBardTab()
+    }
+  },
+)
 
 const chimesForLevel = computed(() => ({
   current: gameStore.currentLevelChimes,
@@ -249,6 +263,9 @@ function onPortraitLeave() {
               </div>
               <div v-else-if="activeModal === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
+              </div>
+              <div v-else-if="activeModal === 'roles'" key="roles" class="h-full overflow-hidden">
+                <RolesTabComponent />
               </div>
 
               <div
