@@ -557,7 +557,7 @@ function starBoxShadow(starColor: [number, number, number], s: number): string {
   return [
     `0 0 ${rn(0.19)}px rgba(${r},${g},${b},0.95)`,
     `0 0 ${rn(0.44)}px rgba(${r},${g},${b},0.65)`,
-    `0 0 ${rn(0.80)}px rgba(${r},${g},${b},0.35)`,
+    `0 0 ${rn(0.8)}px rgba(${r},${g},${b},0.35)`,
   ].join(', ')
 }
 
@@ -565,8 +565,12 @@ function starBodyStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   const ringInset = Math.round(s * 0.16)
   const [r, g, b] = star.starColor
-  const r2 = Math.round(r * 0.55), g2 = Math.round(g * 0.55), b2 = Math.round(b * 0.55)
-  const r3 = Math.round(r * 0.22), g3 = Math.round(g * 0.22), b3 = Math.round(b * 0.22)
+  const r2 = Math.round(r * 0.55),
+    g2 = Math.round(g * 0.55),
+    b2 = Math.round(b * 0.55)
+  const r3 = Math.round(r * 0.22),
+    g3 = Math.round(g * 0.22),
+    b3 = Math.round(b * 0.22)
 
   return {
     transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
@@ -1048,8 +1052,8 @@ function starCountStyle(star: StarRenderEntry) {
   z-index: 15;
 }
 .star-curse-role-icon {
-  width: 22px;
-  height: 22px;
+  width: 35px;
+  height: 35px;
   object-fit: contain;
   image-rendering: crisp-edges;
   filter: drop-shadow(0 0 10px rgba(180, 50, 255, 0.95));
@@ -1058,7 +1062,9 @@ function starCountStyle(star: StarRenderEntry) {
   font-size: 20px;
   font-weight: 800;
   color: #b432ff;
-  text-shadow: 0 0 10px rgba(180, 50, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.98);
+  text-shadow:
+    0 0 10px rgba(180, 50, 255, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.98);
   line-height: 1;
   letter-spacing: 0.04em;
 }
