@@ -96,15 +96,18 @@
           zIndex: pos.zIndex,
         }"
       />
-      <span
+      <div
         v-if="pos.isJungleBuffed"
-        class="jungle-buff-label"
+        class="jungle-buff-indicator"
         :style="{
-          transform: `translate(${pos.x}px, ${pos.y - pos.size / 2 - 14}px)`,
+          transform: `translate(calc(${pos.x}px - 50%), calc(${pos.y - pos.size / 2 - 4}px - 100%))`,
+          '--icon-size': Math.round(pos.size * 1.4) + 'px',
           zIndex: pos.zIndex + 1,
         }"
-        >🌿 {{ pos.jungleBuffSecsLeft }}s</span
       >
+        <img src="/img/roles/jungle.png" class="jungle-role-icon" alt="" draggable="false" />
+        <span class="jungle-buff-timer">{{ pos.jungleBuffSecsLeft.toFixed(1) }}s</span>
+      </div>
     </template>
   </div>
 </template>
@@ -304,7 +307,7 @@ export default defineComponent({
         const jb = slot.jungleBuff
         const isJungleBuffed = !!jb?.active
         const jungleBuffSecsLeft = isJungleBuffed
-          ? Math.ceil((jb!.activeUntil - Date.now()) / 1000)
+          ? Math.max(0, (jb!.activeUntil - Date.now()) / 1000)
           : 0
         const jungleBuffType = jb?.buffType ?? ''
 
@@ -694,21 +697,30 @@ export default defineComponent({
   }
 }
 
-.jungle-buff-label {
+.jungle-buff-indicator {
   position: absolute;
   top: 0;
   left: 0;
-  font-size: 10px;
-  font-weight: 700;
-  color: #5ce66a;
-  background: #0c1209cc;
-  border: 1px solid #3a8040;
-  border-radius: 3px;
-  padding: 1px 5px;
-  line-height: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   pointer-events: none;
+}
+.jungle-role-icon {
+  width: var(--icon-size, 48px);
+  height: var(--icon-size, 48px);
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 0 8px rgba(92, 230, 106, 0.9));
+}
+.jungle-buff-timer {
+  font-size: 11px;
+  font-weight: 800;
+  color: #5ce66a;
+  text-shadow: 0 0 8px rgba(92, 230, 106, 0.9), 0 1px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  translate: -50% -100%;
-  text-shadow: 0 0 6px #5ce66a88;
 }
 </style>

@@ -199,7 +199,8 @@
             transform: `translate(${star.x}px, ${star.y + starSize(star.starType) / 2 + 8}px) translateX(-50%)`,
           }"
         >
-          {{ curseIcon }} {{ curseSecsLeft }}s
+          <img :src="midRoleImage" class="star-curse-role-icon" alt="" draggable="false" />
+          <span class="star-curse-countdown">{{ curseSecsLeft.toFixed(1) }}s</span>
         </div>
       </template>
 
@@ -309,7 +310,6 @@ import {
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
-import { CURSE_DEFS } from '../../../stores/roleBehaviorStore'
 import type { ChampionRole } from '../../../types'
 
 const { starRenders } = useStarSystem()
@@ -329,11 +329,7 @@ const { isRenderingPaused } = useRenderingPaused()
 
 // ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
 const curseSecsLeft = ref(0)
-
-const curseIcon = computed(() => {
-  const type = roleBehaviorStore.activeCurse?.type
-  return type ? CURSE_DEFS[type].icon : ''
-})
+const midRoleImage = ROLE_BY_KEY['mid'].image
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -514,7 +510,7 @@ function enemyAttackLoop(ts: number) {
     // ── Fluch-Timer aktualisieren ─────────────────────────────────────────────
     const curse = roleBehaviorStore.activeCurse
     if (curse && Date.now() < curse.activeUntil) {
-      curseSecsLeft.value = Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
+      curseSecsLeft.value = Math.max(0, (curse.activeUntil - Date.now()) / 1000)
     } else {
       curseSecsLeft.value = 0
     }
@@ -1043,18 +1039,28 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   top: 0;
   left: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #c060ff;
-  background: rgba(20, 10, 32, 0.85);
-  border: 1px solid #7a2db0;
-  border-radius: 3px;
-  padding: 1px 8px;
-  line-height: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
   white-space: nowrap;
-  text-shadow: 0 0 6px rgba(190, 70, 255, 0.85);
   z-index: 15;
+}
+.star-curse-role-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 0 10px rgba(54, 148, 255, 0.95));
+}
+.star-curse-countdown {
+  font-size: 20px;
+  font-weight: 800;
+  color: #3694ff;
+  text-shadow: 0 0 10px rgba(54, 148, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.98);
+  line-height: 1;
+  letter-spacing: 0.04em;
 }
 
 /* ── Curse-Aura auf dem Stern ────────────────────────────────────────────── */

@@ -104,6 +104,14 @@
       <span class="enrage-seconds">{{ effectiveSecondsRemaining }}</span>
       <span class="enrage-label">SEK</span>
     </div>
+
+    <!-- ── Mid Curse Indikator ── -->
+    <Transition name="curse-badge">
+      <div v-if="roleBehaviorStore.activeCurse" class="arena-curse-badge">
+        <img :src="midRoleImage" class="arena-curse-icon" alt="" draggable="false" />
+        <span class="arena-curse-timer">{{ curseCountdown }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -112,6 +120,8 @@ import { ref, watch, onMounted, onUnmounted, reactive, nextTick, computed } from
 import { NS, drawPlanet } from '../../../utils/planetDraw'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
+import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { ROLE_BY_KEY } from '../../../config/constants'
 import { formatNumber } from '../../../config/numberFormat'
 import type { PlanetBossEvent } from '../../../types'
 
@@ -134,9 +144,20 @@ const emit = defineEmits<{ shake: [ms: number] }>()
 
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
+const roleBehaviorStore = useRoleBehaviorStore()
+const midRoleImage = ROLE_BY_KEY['mid'].image
 
 const isMountedRef = ref(false)
 let isMounted = false
+
+const now = ref(Date.now())
+let nowTimer: number
+
+const curseCountdown = computed(() => {
+  const curse = roleBehaviorStore.activeCurse
+  if (!curse) return ''
+  return Math.max(0, (curse.activeUntil - now.value) / 1000).toFixed(1) + 's'
+})
 
 const isChampionStarPlanet = computed<boolean>(() => {
   if (!props.activeBoss) return false
@@ -324,6 +345,7 @@ function stopAttackCycles() {
 onMounted(async () => {
   isMounted = true
   isMountedRef.value = true
+  nowTimer = window.setInterval(() => { now.value = Date.now() }, 100)
   await discoverBossImages()
   if (!isMounted) return
   bossImage.value = pickRandomBossImage()
@@ -336,6 +358,7 @@ onMounted(async () => {
 onUnmounted(() => {
   isMounted = false
   isMountedRef.value = false
+  window.clearInterval(nowTimer)
   stopAttackCycles()
   damageFloats.splice(0, damageFloats.length)
 })
@@ -962,5 +985,46 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   .champ-pip--ready {
     animation: none !important;
   }
+}
+
+/* ── Mid Curse Badge ─────────────────────────────────────────────────────── */
+.arena-curse-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.arena-curse-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 0 10px rgba(54, 148, 255, 0.95));
+}
+.arena-curse-timer {
+  font-size: 20px;
+  font-weight: 800;
+  color: #3694ff;
+  text-shadow: 0 0 10px rgba(54, 148, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.98);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.curse-badge-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.curse-badge-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.curse-badge-enter-from,
+.curse-badge-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px) scale(0.8);
 }
 </style>
