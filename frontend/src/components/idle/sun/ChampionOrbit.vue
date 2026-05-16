@@ -11,7 +11,8 @@
       :rx="pos.orbitRx"
       :ry="pos.orbitRy"
       :tiltDeg="pos.tiltDeg"
-      :visible="pos.isBehind"
+      :visible="pos.isBehind || (!!pos.primaryRole && isAbilityActive(pos.primaryRole))"
+      :abilityActive="!!pos.primaryRole && isAbilityActive(pos.primaryRole)"
     />
   </svg>
 
@@ -50,11 +51,17 @@
           pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
         'champion-orbit-avatar--cursing':
           pos.primaryRole === 'mid' && roleBehaviorStore.midCurseFlashActive,
+        'champion-orbit-avatar--ability-mid':
+          pos.primaryRole === 'mid' && roleBehaviorStore.midCurseCooldownMs === 0,
         'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
         'champion-orbit-avatar--intercept':
           pos.primaryRole === 'top' && roleBehaviorStore.tankInterceptActive,
         'champion-orbit-avatar--healing':
           pos.primaryRole === 'support' && roleBehaviorStore.supportPlanetHealActive,
+        'champion-orbit-avatar--ability-jungle':
+          pos.primaryRole === 'jungle' && roleBehaviorStore.jungleBuffCooldownMs === 0,
+        'champion-orbit-avatar--ability-adc':
+          pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
       }"
       :style="{
         width: pos.size + 'px',
@@ -639,6 +646,61 @@ export default defineComponent({
   }
 }
 
+/* ── Mid Ability Ready (curse charged — sustained glow) ─────────────────── */
+.champion-orbit-avatar--ability-mid {
+  border-width: 5px !important;
+  border-color: #5598f6 !important;
+  box-shadow:
+    0 0 18px rgba(85, 152, 246, 1),
+    0 0 42px rgba(85, 152, 246, 0.7),
+    0 0 80px rgba(85, 152, 246, 0.35),
+    inset 0 0 14px rgba(85, 152, 246, 0.25);
+  animation: mid-ability-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.champion-orbit-avatar--ability-mid::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(85, 152, 246, 0.65);
+  animation: mid-ring-spin 2.8s linear infinite;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--ability-mid::after {
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 1px dashed rgba(120, 180, 255, 0.35);
+  animation: mid-ring-spin 4.5s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes mid-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes mid-ability-pulse {
+  from {
+    border-width: 4px;
+    box-shadow:
+      0 0 14px rgba(85, 152, 246, 0.9),
+      0 0 32px rgba(85, 152, 246, 0.55),
+      0 0 60px rgba(85, 152, 246, 0.28);
+  }
+  to {
+    border-width: 8px;
+    box-shadow:
+      0 0 28px rgba(110, 170, 255, 1),
+      0 0 60px rgba(85, 152, 246, 0.85),
+      0 0 100px rgba(85, 152, 246, 0.5),
+      inset 0 0 20px rgba(85, 152, 246, 0.4);
+  }
+}
+
 /* Heal-Farbe: Teal-Mint (#00e5a0) */
 .champion-orbit-avatar--healing {
   animation: support-heal-burst 0.9s ease-out forwards;
@@ -687,6 +749,110 @@ export default defineComponent({
     opacity: 0;
     transform: scale(1.7);
   }
+}
+
+/* ── Jungle Ability Active (buff ready — sustained glow) ─────────────────── */
+.champion-orbit-avatar--ability-jungle {
+  border-width: 5px !important;
+  border-color: #3eea58 !important;
+  box-shadow:
+    0 0 18px rgba(62, 234, 88, 1),
+    0 0 42px rgba(62, 234, 88, 0.7),
+    0 0 80px rgba(62, 234, 88, 0.35),
+    inset 0 0 14px rgba(62, 234, 88, 0.25);
+  animation: jungle-ability-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.champion-orbit-avatar--ability-jungle::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(62, 234, 88, 0.6);
+  animation: jungle-ring-spin 2.8s linear infinite;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--ability-jungle::after {
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 1px dashed rgba(92, 230, 106, 0.35);
+  animation: jungle-ring-spin 4.5s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes jungle-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes jungle-ability-pulse {
+  from {
+    border-width: 4px;
+    box-shadow:
+      0 0 14px rgba(62, 234, 88, 0.9),
+      0 0 32px rgba(62, 234, 88, 0.55),
+      0 0 60px rgba(62, 234, 88, 0.28);
+  }
+  to {
+    border-width: 8px;
+    box-shadow:
+      0 0 28px rgba(92, 230, 106, 1),
+      0 0 60px rgba(62, 234, 88, 0.85),
+      0 0 100px rgba(62, 234, 88, 0.5),
+      inset 0 0 20px rgba(62, 234, 88, 0.4);
+  }
+}
+
+/* ── ADC Burst Active (short-lived snap flash) ────────────────────────────── */
+.champion-orbit-avatar--ability-adc {
+  border-width: 5px !important;
+  border-color: #f7a145 !important;
+  box-shadow:
+    0 0 20px rgba(247, 161, 69, 1),
+    0 0 50px rgba(247, 161, 69, 0.75),
+    0 0 90px rgba(247, 161, 69, 0.4),
+    inset 0 0 16px rgba(247, 161, 69, 0.3);
+  animation: adc-burst-flare 0.35s ease-out forwards;
+}
+
+.champion-orbit-avatar--ability-adc::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 161, 69, 0.8);
+  animation: adc-ring-expand 0.35s ease-out forwards;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--ability-adc::after {
+  content: '';
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 200, 100, 0.4);
+  animation: adc-ring-expand 0.35s ease-out forwards 0.05s;
+  pointer-events: none;
+}
+
+@keyframes adc-burst-flare {
+  0%  {
+    filter: brightness(2.5) saturate(1.5) drop-shadow(0 0 20px rgba(255, 160, 60, 1));
+  }
+  40% {
+    filter: brightness(1.6) saturate(1.25) drop-shadow(0 0 10px rgba(247, 161, 69, 0.7));
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes adc-ring-expand {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(2.5); }
 }
 
 /* ── Schadenszahlen ───────────────────────────────────────────────────────── */
@@ -830,7 +996,18 @@ export default defineComponent({
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking,
   .champion-orbit-avatar--top-hit,
-  .champion-orbit-avatar--intercept {
+  .champion-orbit-avatar--intercept,
+  .champion-orbit-avatar--ability-jungle,
+  .champion-orbit-avatar--ability-mid,
+  .champion-orbit-avatar--ability-adc {
+    animation: none;
+  }
+  .champion-orbit-avatar--ability-jungle::before,
+  .champion-orbit-avatar--ability-jungle::after,
+  .champion-orbit-avatar--ability-mid::before,
+  .champion-orbit-avatar--ability-mid::after,
+  .champion-orbit-avatar--ability-adc::before,
+  .champion-orbit-avatar--ability-adc::after {
     animation: none;
   }
 }
