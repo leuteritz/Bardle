@@ -154,9 +154,9 @@ watch(
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
-  padding: 0 0.1rem;
-  background: rgba(5, 2, 0, 0.88);
-  border-radius: 6px;
+  padding: 0 0.25rem 0 0.5rem;
+  background: transparent;
+  border-left: 1px solid rgba(90, 45, 10, 0.25);
   height: 100%;
 }
 
@@ -165,7 +165,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.75rem 0.65rem 0.5rem;
+  padding: 1rem 0.9rem 0.6rem;
   flex-shrink: 0;
 }
 
@@ -179,10 +179,10 @@ watch(
 }
 
 .bpl-title-text {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.14em;
-  color: rgba(200, 146, 42, 0.7);
+  color: rgba(200, 146, 42, 0.8);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -195,7 +195,7 @@ watch(
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 0.65rem 0.65rem;
+  padding: 0 0.9rem 0.9rem;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 transparent;
   justify-content: center;
@@ -207,9 +207,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.55rem 0.6rem 0.55rem 0.75rem;
+  padding: 0.7rem 0.75rem 0.7rem 0.9rem;
   border-radius: 5px;
-  /* kein eigener border — nur subtile Trennung via Hintergrund */
   background: rgba(255, 255, 255, 0.03);
   transition:
     background 0.2s,
@@ -269,8 +268,8 @@ watch(
 
 /* ── Planet ───────────────────────────────────────────────────────────────── */
 .bpl-planet {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -305,7 +304,7 @@ watch(
 }
 
 .bpl-boss-name {
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #d4b060;
   letter-spacing: 0.04em;
@@ -313,7 +312,7 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
-  text-shadow: 0 0 8px rgba(200, 146, 42, 0.3);
+  text-shadow: 0 0 8px rgba(200, 146, 42, 0.35);
 }
 .bpl-item--active .bpl-boss-name {
   color: #e8c040;
@@ -325,9 +324,9 @@ watch(
 }
 
 .bpl-planet-name {
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  color: rgba(150, 120, 60, 0.6);
+  color: rgba(150, 120, 60, 0.65);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -348,7 +347,7 @@ watch(
 
 .bpl-hp-track {
   flex: 1;
-  height: 5px;
+  height: 7px;
   border-radius: 3px;
   background: rgba(8, 6, 2, 0.7);
   overflow: hidden;

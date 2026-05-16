@@ -15,12 +15,23 @@
 
       <!-- ── Modal ─────────────────────────────────────────────────────── -->
       <div class="sf-modal" :class="{ 'sf-modal--galaxy': isGalaxyBoss }">
+        <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
+        <div class="sf-topbar" />
+
         <!-- ── Planet Background (gesamtes Modal) ──────────────────────── -->
         <div
           ref="modalPlanetBgRef"
           class="sf-modal-planet-bg"
           :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
         />
+
+        <!-- ── Planet Overlay (Lesbarkeits-Dimmer) ─────────────────────── -->
+        <div class="sf-planet-overlay" />
+
+        <!-- ── Sternenfeld ─────────────────────────────────────────────── -->
+        <div class="sf-starfield" aria-hidden="true">
+          <span v-for="i in 40" :key="i" class="sf-star" :style="starStyle(i)" />
+        </div>
 
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="sf-header" :class="{ 'sf-header--galaxy': isGalaxyBoss }">
@@ -30,72 +41,75 @@
 
         <!-- ── Haupt-Layout ─────────────────────────────────────────────── -->
         <div class="sf-main">
-          <!-- Linke Spalte: Rewards -->
-          <div class="sf-side sf-side--left">
-            <BossRewardSection
-              v-if="activeBoss"
-              :is-galaxy-boss="isGalaxyBoss"
-              :reward-slots="rewardSlots"
-              :home-planet-champion="homePlanetChampion"
-              :home-planet-champion-image="homePlanetChampionImage"
-            />
-          </div>
+          <!-- Haupt-Spalte: Arena oben + Rewards unten -->
+          <div class="sf-main-col">
+            <!-- Arena + HP -->
+            <div class="sf-arena-wrap">
+              <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
 
-          <!-- Mittlere Spalte: Arena + HP -->
-          <div class="sf-center">
-            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
+              <BossArenaSection
+                v-if="activeBoss"
+                :is-galaxy-boss="isGalaxyBoss"
+                :boss-h-p-percent="bossStore.bossHPPercent"
+                :seconds-remaining="secondsRemaining"
+                :enrage-percent="enragePercent"
+                :team-champions="teamChampions"
+                :get-champion-image="battleStore.getChampionImage"
+                :active-boss="activeBoss"
+                @shake="handleShake"
+              />
 
-            <BossArenaSection
-              v-if="activeBoss"
-              :is-galaxy-boss="isGalaxyBoss"
-              :boss-h-p-percent="bossStore.bossHPPercent"
-              :seconds-remaining="secondsRemaining"
-              :enrage-percent="enragePercent"
-              :team-champions="teamChampions"
-              :get-champion-image="battleStore.getChampionImage"
-              :active-boss="activeBoss"
-              @shake="handleShake"
-            />
-
-            <!-- ── HP Bar ────────────────────────────────────────────── -->
-            <div v-if="activeBoss" class="sf-hp-section">
-              <div class="sf-hp-header">
-                <span class="sf-stat-label">❤ LEBEN</span>
-                <span class="sf-hp-numbers">
-                  {{ formatNumber(activeBoss.currentHP) }}
-                  <span class="sf-hp-sep">／</span>
-                  {{ formatNumber(activeBoss.maxHP) }}
-                </span>
-              </div>
-              <div
-                class="sf-hp-track"
-                :class="{
-                  'sf-hp-track--critical': bossStore.bossHPPercent < 25,
-                  'sf-hp-track--galaxy': isGalaxyBoss,
-                }"
-              >
+              <!-- ── HP Bar ──────────────────────────────────────────── -->
+              <div v-if="activeBoss" class="sf-hp-section">
+                <div class="sf-hp-header">
+                  <span class="sf-stat-label">❤ LEBEN</span>
+                  <span class="sf-hp-numbers">
+                    {{ formatNumber(activeBoss.currentHP) }}
+                    <span class="sf-hp-sep">／</span>
+                    {{ formatNumber(activeBoss.maxHP) }}
+                  </span>
+                </div>
                 <div
-                  class="sf-hp-fill"
+                  class="sf-hp-track"
                   :class="{
-                    'sf-hp-fill--galaxy': isGalaxyBoss,
-                    'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
-                    'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
+                    'sf-hp-track--critical': bossStore.bossHPPercent < 25,
+                    'sf-hp-track--galaxy': isGalaxyBoss,
                   }"
-                  :style="{ width: bossStore.bossHPPercent + '%' }"
-                />
-                <div class="sf-hp-segments">
+                >
                   <div
-                    v-for="seg in 9"
-                    :key="seg"
-                    class="sf-hp-seg"
-                    :style="{ left: seg * 10 + '%' }"
+                    class="sf-hp-fill"
+                    :class="{
+                      'sf-hp-fill--galaxy': isGalaxyBoss,
+                      'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
+                      'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
+                    }"
+                    :style="{ width: bossStore.bossHPPercent + '%' }"
                   />
+                  <div class="sf-hp-segments">
+                    <div
+                      v-for="seg in 9"
+                      :key="seg"
+                      class="sf-hp-seg"
+                      :style="{ left: seg * 10 + '%' }"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+
+            <!-- Belohnungen unten -->
+            <div class="sf-rewards-wrap">
+              <BossRewardSection
+                v-if="activeBoss"
+                :is-galaxy-boss="isGalaxyBoss"
+                :reward-slots="rewardSlots"
+                :home-planet-champion="homePlanetChampion"
+                :home-planet-champion-image="homePlanetChampionImage"
+              />
+            </div>
           </div>
 
-          <!-- Rechte Spalte: Planetenliste -->
+          <!-- Rechte Spalte: Planetenliste (kein Background) -->
           <div class="sf-side sf-side--right">
             <BossPlanetList
               :planet-queue="starGroupStore.starFightPlanetQueue"
@@ -298,6 +312,22 @@ function emberStyle(i: number): Record<string, string> {
     opacity: `${0.4 + (i % 4) * 0.15}`,
   }
 }
+
+function starStyle(i: number): Record<string, string> {
+  const top = (i * 7.3 + 13) % 100
+  const left = (i * 11.7 + 5) % 100
+  const size = 1 + (i % 3)
+  const duration = 2 + (i % 9) * 0.5
+  const delay = (i % 13) * -0.4
+  return {
+    top: `${top}%`,
+    left: `${left}%`,
+    width: `${size}px`,
+    height: `${size}px`,
+    animationDuration: `${duration}s`,
+    animationDelay: `${delay}s`,
+  }
+}
 </script>
 
 <style scoped>
@@ -377,17 +407,18 @@ function emberStyle(i: number): Record<string, string> {
 .sf-modal {
   position: relative;
   pointer-events: auto;
-  width: clamp(520px, 72vw, 960px);
+  width: min(960px, 95vw);
+  height: min(960px, 90dvh);
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #100900 0%, #0a0600 60%, #070400 100%);
-  border: 1px solid rgba(120, 60, 10, 0.45);
-  border-radius: 8px;
+  border: 1px solid rgba(120, 60, 10, 0.55);
+  border-radius: 5px;
   box-shadow:
-    0 0 40px rgba(200, 80, 0, 0.18),
-    0 0 90px rgba(140, 40, 0, 0.1),
-    0 24px 70px rgba(0, 0, 0, 0.95);
-  max-height: 90vh;
+    0 0 60px rgba(200, 80, 0, 0.22),
+    0 0 120px rgba(140, 40, 0, 0.12),
+    0 24px 80px rgba(0, 0, 0, 0.97);
+  max-height: 90dvh;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -395,11 +426,20 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-modal--galaxy {
-  border-color: rgba(120, 20, 160, 0.45);
+  border-color: rgba(120, 20, 160, 0.55);
   box-shadow:
-    0 0 50px rgba(160, 40, 220, 0.22),
-    0 0 100px rgba(100, 10, 140, 0.12),
-    0 24px 70px rgba(0, 0, 0, 0.95);
+    0 0 70px rgba(160, 40, 220, 0.26),
+    0 0 130px rgba(100, 10, 140, 0.14),
+    0 24px 80px rgba(0, 0, 0, 0.97);
+}
+
+/* ── Gold Topbar ──────────────────────────────────────────────────────────── */
+.sf-topbar {
+  height: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  position: relative;
+  z-index: 2;
 }
 
 /* ── Modal Planet Background ──────────────────────────────────────────────── */
@@ -409,15 +449,15 @@ function emberStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.07;
+  opacity: 0.18;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 .sf-modal-planet-bg--galaxy {
-  opacity: 0.13;
+  opacity: 0.26;
   animation: modal-planet-glow 3s ease-in-out infinite alternate;
 }
 
@@ -430,7 +470,44 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
+/* ── Planet Overlay (Lesbarkeits-Dimmer) ──────────────────────────────────── */
+.sf-planet-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Sternenfeld ──────────────────────────────────────────────────────────── */
+.sf-starfield {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.sf-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: sf-star-twinkle ease-in-out infinite alternate;
+}
+
+@keyframes sf-star-twinkle {
+  from {
+    opacity: 0.04;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0.55;
+    transform: scale(1.2);
+  }
+}
+
 /* Alle Modal-Kinder über dem Planet-Hintergrund ─────────────────────────── */
+.sf-topbar,
 .sf-header,
 .sf-main,
 .sf-curse-overlay {
@@ -438,61 +515,95 @@ function emberStyle(i: number): Record<string, string> {
   z-index: 1;
 }
 
+/* ── prefers-reduced-motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .sf-star,
+  .sf-ember,
+  .sf-modal-planet-bg--galaxy,
+  .sf-hp-track--critical,
+  .sf-curse-icon,
+  .sf-curse-overlay,
+  .bpl-active-bar {
+    animation: none;
+  }
+}
+
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .sf-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
-  background: rgba(16, 8, 0, 0.88);
-  border-bottom: 1px solid rgba(90, 45, 10, 0.5);
-  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(16, 8, 0, 0.92);
+  border-bottom: 2px solid rgba(90, 45, 10, 0.6);
+  gap: 0.75rem;
   flex-shrink: 0;
 }
 
 .sf-header--galaxy {
-  background: rgba(20, 0, 35, 0.88);
-  border-bottom-color: rgba(80, 10, 110, 0.6);
+  background: rgba(20, 0, 35, 0.92);
+  border-bottom-color: rgba(80, 10, 110, 0.7);
 }
 
 .sf-star-type {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.55);
   text-transform: uppercase;
   flex: 1;
 }
 
 .sf-close {
   background: none;
-  border: 1px solid rgba(90, 45, 10, 0.6);
+  border: 2px solid rgba(120, 60, 10, 0.7);
   color: #c8a040;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   line-height: 1;
-  padding: 3px 8px;
-  border-radius: 3px;
+  padding: 5px 12px;
+  border-radius: 4px;
   transition:
     background 0.15s,
     border-color 0.15s,
-    color 0.15s;
+    color 0.15s,
+    box-shadow 0.15s;
 }
 .sf-close:hover {
-  background: rgba(200, 80, 0, 0.15);
-  border-color: #c8922a;
+  background: rgba(200, 80, 0, 0.18);
+  border-color: #e8c040;
   color: #e8c040;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.4);
 }
 
 /* ── Haupt-Layout ─────────────────────────────────────────────────────────── */
 .sf-main {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 1fr 210px;
   gap: 0;
-  align-items: stretch;
-  padding: 0.6rem 0.8rem 0.8rem;
+  padding: 1rem 1.25rem 1.25rem;
   min-height: 0;
+  flex: 1;
+}
+
+.sf-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.sf-arena-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.sf-rewards-wrap {
+  flex-shrink: 0;
 }
 
 .sf-side {
@@ -502,13 +613,6 @@ function emberStyle(i: number): Record<string, string> {
   padding: 0 0.4rem;
   min-width: 0;
   align-self: stretch;
-}
-
-.sf-center {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.55rem;
 }
 
 .sf-galaxy-badge {
@@ -525,21 +629,21 @@ function emberStyle(i: number): Record<string, string> {
 
 /* ── HP Bar ───────────────────────────────────────────────────────────────── */
 .sf-hp-section {
-  padding: 0.35rem 0.6rem 0.4rem;
-  background: rgba(6, 3, 0, 0.72);
+  padding: 0.6rem 0.9rem 0.65rem;
+  background: rgba(6, 3, 0, 0.78);
   border-radius: 5px;
-  border: 1px solid rgba(50, 25, 5, 0.5);
+  border: 1px solid rgba(80, 40, 8, 0.6);
 }
 
 .sf-hp-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 7px;
 }
 
 .sf-stat-label {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: #cc5040;
@@ -547,7 +651,7 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-hp-numbers {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #b09050;
 }
@@ -559,8 +663,8 @@ function emberStyle(i: number): Record<string, string> {
 
 .sf-hp-track {
   position: relative;
-  height: 12px;
-  border-radius: 3px;
+  height: 16px;
+  border-radius: 4px;
   background: rgba(8, 6, 2, 0.7);
   border: 1px solid rgba(50, 25, 5, 0.6);
   overflow: hidden;

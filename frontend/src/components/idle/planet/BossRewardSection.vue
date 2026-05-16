@@ -87,21 +87,20 @@ const stackedMaterials = computed(() => {
 <style scoped>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
 .reward-preview {
-  padding: 0.75rem 0.65rem;
+  padding: 0.65rem 1rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  background: rgba(5, 2, 0, 0.88);
-  border-radius: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  background: rgba(5, 2, 0, 0.55);
+  border-radius: 5px;
+  border-top: 1px solid rgba(90, 45, 10, 0.35);
   animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
   width: 100%;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
 }
 
 .reward-preview--galaxy {
-  background: rgba(10, 0, 20, 0.92);
+  background: rgba(10, 0, 20, 0.58);
 }
 
 @keyframes rewardReveal {
@@ -117,10 +116,7 @@ const stackedMaterials = computed(() => {
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .reward-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  display: none;
 }
 
 .reward-header-line {
@@ -133,41 +129,42 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-header-text {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: rgba(200, 146, 42, 0.7);
+  color: rgba(200, 146, 42, 0.8);
   white-space: nowrap;
 }
 
 /* ── Champion ─────────────────────────────────────────────────────────────── */
 .champion-block {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.3rem;
   flex-shrink: 0;
-  padding: 0 0.1rem;
+  min-width: 70px;
 }
 
 .champion-portrait {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
   border-radius: 4px;
   box-shadow:
-    0 0 14px rgba(74, 144, 217, 0.3),
-    0 2px 8px rgba(0, 0, 0, 0.6);
+    0 0 18px rgba(74, 144, 217, 0.4),
+    0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 .champion-name {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #4a90d9;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 12px rgba(74, 144, 217, 0.55);
+  text-shadow: 0 0 14px rgba(74, 144, 217, 0.6);
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -176,34 +173,35 @@ const stackedMaterials = computed(() => {
 
 /* ── Divider ──────────────────────────────────────────────────────────────── */
 .reward-divider {
-  height: 1px;
-  background: rgba(200, 146, 42, 0.15);
+  width: 1px;
+  height: 48px;
+  background: rgba(200, 146, 42, 0.2);
   flex-shrink: 0;
 }
 
 /* ── Slots ────────────────────────────────────────────────────────────────── */
 .reward-slots {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex: 1;
-  min-height: 0;
-  justify-content: center;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .reward-slot {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.3rem 0.1rem;
+  gap: 4px;
   background: transparent;
   border: none;
 }
 
 /* ── Icon ─────────────────────────────────────────────────────────────────── */
 .slot-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -217,8 +215,8 @@ const stackedMaterials = computed(() => {
 }
 
 .slot-img {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
 }
 
@@ -228,13 +226,13 @@ const stackedMaterials = computed(() => {
 
 /* ── Label ────────────────────────────────────────────────────────────────── */
 .slot-label {
-  flex: 1;
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: 0.85rem;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
 .slot-chimes-val {
