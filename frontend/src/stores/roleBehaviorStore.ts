@@ -330,7 +330,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const type = CURSE_TYPES[Math.floor(Math.random() * CURSE_TYPES.length)]
       const curse: ActiveCurse = { type, activeUntil: now + ROLE_MID_CURSE_DURATION_MS }
       this.activeCurse = curse
-      this.cursedStarId = useStarGroupStore().activeFightStarId
+      const starGroupStore = useStarGroupStore()
+      this.cursedStarId =
+        starGroupStore.activeStars.find((s) =>
+          s.planetSlots.some((p) => p.planetId === activeBoss.planetId),
+        )?.id ?? null
       activeMidCurse.type = type
       activeMidCurse.activeUntil = curse.activeUntil
 
