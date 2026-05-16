@@ -9,6 +9,7 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import RolesTabComponent from '@/components/bardProfil/roles/RolesTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
+import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 
 const uiStore = useUiStore()
 
@@ -130,9 +131,9 @@ watch(
               <div
                 v-if="uiStore.bardActiveTab === 'bard'"
                 key="bard"
-                class="h-full flex items-center justify-center"
+                class="h-full"
               >
-                <img src="/img/BardAbilities/Bard.png" class="object-contain" style="max-height: 80%" alt="Bard" />
+                <BardStatsTab />
               </div>
               <div
                 v-else-if="uiStore.bardActiveTab === 'shop'"
