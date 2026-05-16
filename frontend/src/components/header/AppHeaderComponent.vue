@@ -140,6 +140,7 @@ onUnmounted(() => resizeObserver?.disconnect())
         class="center-chimes"
         @mouseenter="onCenterEnter"
         @mouseleave="onCenterLeave"
+        @click="uiStore.setBardTab('bard')"
       >
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
@@ -338,7 +339,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-self: stretch;
   overflow: hidden;
   pointer-events: auto;
-  cursor: default;
+  cursor: pointer;
 }
 
 /* ================================================================

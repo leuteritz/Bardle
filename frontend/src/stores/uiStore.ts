@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type BardTabId = 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
+export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)

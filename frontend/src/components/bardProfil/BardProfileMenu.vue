@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useGameStore } from '@/stores/gameStore'
+import { watch } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
@@ -11,9 +10,7 @@ import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import RolesTabComponent from '@/components/bardProfil/roles/RolesTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 
-const gameStore = useGameStore()
 const uiStore = useUiStore()
-const xpProgress = computed(() => gameStore.levelProgress / 100)
 
 const menuItems: {
   id: BardTabId
@@ -21,6 +18,7 @@ const menuItems: {
   icon: string
   src: string
 }[] = [
+  { id: 'bard', label: '', icon: '', src: '/img/BardAbilities/Bard.png' },
   { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP.png' },
   { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
@@ -41,56 +39,16 @@ watch(
 </script>
 
 <template>
-  <!-- Kein flex-gap mehr – Portrait allein, kein Layoutplatz für Reset -->
-  <div class="relative">
-    <!-- ══ Bard Portrait ══ -->
-    <div
-      class="bard-portrait-wrapper"
-      @click="uiStore.openBardModal()"
-    >
-      <div class="relative w-36 h-36">
-        <!-- XP-Ring (Gold) -->
-        <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            fill="none"
-            stroke="rgba(160,110,15,0.25)"
-            stroke-width="7"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            fill="none"
-            stroke="#d4a020"
-            stroke-width="7"
-            stroke-linecap="butt"
-            :stroke-dasharray="`${xpProgress * 283} 283`"
-            class="transition-all duration-1000 ease-out"
-          />
-        </svg>
-
-        <!-- Portrait -->
-        <div class="absolute overflow-hidden inset-2 bard-portrait-inner">
-          <img
-            src="/img/BardAbilities/Bard.png"
-            class="object-cover w-full h-full"
-          />
-        </div>
-
-        <!-- Level Badge -->
-        <div class="absolute flex items-center -bottom-1 -right-1">
-          <div class="z-10 flex items-center justify-center bard-level-badge h-9 w-9">
-            <span class="bard-level-text">{{ gameStore.level }}</span>
-          </div>
-        </div>
-
-
+  <button class="inventory-circle-btn" title="Shop öffnen" @click="uiStore.setBardTab('shop')">
+    <div class="relative w-36 h-36">
+      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(160,110,15,0.45)" stroke-width="7" />
+      </svg>
+      <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
+        <img src="/img/menu/SHOP.png" class="object-contain w-full h-full p-3" alt="Shop öffnen" />
       </div>
     </div>
-  </div>
+  </button>
 
   <!-- ══ Backdrop + Modal ══ -->
   <Teleport to="body">
@@ -170,7 +128,14 @@ watch(
 
             <Transition name="tab-fade" mode="out-in">
               <div
-                v-if="uiStore.bardActiveTab === 'shop'"
+                v-if="uiStore.bardActiveTab === 'bard'"
+                key="bard"
+                class="h-full flex items-center justify-center"
+              >
+                <img src="/img/BardAbilities/Bard.png" class="object-contain" style="max-height: 80%" alt="Bard" />
+              </div>
+              <div
+                v-else-if="uiStore.bardActiveTab === 'shop'"
                 key="shop"
                 class="h-full overflow-y-auto rp-scrollbar"
               >
@@ -318,33 +283,6 @@ watch(
 </style>
 
 <style scoped>
-/* ═══════════════════════════════════════════
-   BARD PORTRAIT
-   ═══════════════════════════════════════════ */
-.bard-portrait-wrapper {
-  cursor: pointer;
-}
-
-.bard-portrait-inner {
-  border-radius: 50%;
-}
-
-.bard-level-badge {
-  border-radius: 50%;
-  background: linear-gradient(to bottom, #4a8a28, #2e6018);
-  border: 2px solid #6ec040;
-  box-shadow:
-    0 0 8px rgba(80, 180, 40, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.bard-level-text {
-  font-size: 18px;
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
 /* ═══════════════════════════════════════════
    MODAL RAHMEN
    ═══════════════════════════════════════════ */
