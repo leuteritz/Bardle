@@ -24,6 +24,7 @@ import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useCombatStore } from './combatStore'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS, type PlanetSlot } from './planetShopStore'
+import { useStarGroupStore } from './starGroupStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
 import { activeMidCurse } from '../utils/activeMidCurse'
@@ -110,6 +111,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     midCurseCooldownMs: ROLE_MID_CURSE_INTERVAL_MS,
     midCurseFlashActive: false,
     activeCurse: null as ActiveCurse | null,
+    cursedStarId: null as string | null,
 
     adcBurstCooldownMs: ROLE_ADC_BURST_INTERVAL_MS,
     adcBurstActive: false,
@@ -264,6 +266,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _tickMid(roles: Set<string>, tickMs: number) {
       if (!roles.has('mid')) {
         this.activeCurse = null
+        this.cursedStarId = null
         activeMidCurse.type = null
         activeMidCurse.activeUntil = 0
         return
@@ -282,6 +285,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           addEvent(`${expiredName} ist abgeklungen.`, 'mid')
         })
         this.activeCurse = null
+        this.cursedStarId = null
         activeMidCurse.type = null
         activeMidCurse.activeUntil = 0
       }
@@ -326,6 +330,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const type = CURSE_TYPES[Math.floor(Math.random() * CURSE_TYPES.length)]
       const curse: ActiveCurse = { type, activeUntil: now + ROLE_MID_CURSE_DURATION_MS }
       this.activeCurse = curse
+      this.cursedStarId = useStarGroupStore().activeFightStarId
       activeMidCurse.type = type
       activeMidCurse.activeUntil = curse.activeUntil
 

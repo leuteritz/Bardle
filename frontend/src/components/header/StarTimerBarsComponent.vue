@@ -1,7 +1,14 @@
 <template>
   <div class="star-timer-bars-host">
     <TransitionGroup name="bar-slide" tag="div" class="star-timer-bars">
-      <div v-for="entry in sortedEntries" :key="entry.starId" class="timer-bar-row">
+      <div
+        v-for="entry in sortedEntries"
+        :key="entry.starId"
+        class="timer-bar-row"
+        :class="{ 'timer-bar-row--cursed': entry.isCursed }"
+        :style="entry.isCursed ? { '--curse-ratio': entry.curseRatio } : {}"
+        @click="starGroupStore.openStarFightModal(entry.starId)"
+      >
         <div class="bar-side bar-side--left">
           <div
             class="bar-fill"
@@ -25,16 +32,7 @@
           >
         </div>
 
-        <div
-          class="bar-center"
-          :style="{
-            '--icon-color': entry.palette.mid,
-            '--text-color': entry.palette.inner,
-          }"
-        >
-          <span class="bar-icon">{{ entry.starType === 'champion' ? '♛' : '✦' }}</span>
-          <span class="bar-value">{{ entry.valueStr }}</span>
-        </div>
+        <div class="bar-center" />
 
         <div class="bar-side bar-side--right">
           <div
@@ -67,9 +65,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
+import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
+import { ROLE_MID_CURSE_DURATION_MS } from '../../config/constants'
 
 const starGroupStore = useStarGroupStore()
 const planetBossStore = usePlanetBossStore()
+const roleBehaviorStore = useRoleBehaviorStore()
 const now = ref(Date.now())
 
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -97,6 +98,8 @@ interface BarEntry {
   fillRatio: number
   sortKey: number
   palette: Palette
+  isCursed: boolean
+  curseRatio: number
 }
 
 const palettes: Palette[] = [
@@ -149,11 +152,16 @@ function getSharedStarRemainingMs(star: {
 
 const sortedEntries = computed<BarEntry[]>(() => {
   const raw: Omit<BarEntry, 'palette'>[] = []
+  const curse = roleBehaviorStore.activeCurse
+  const cursedStarId = roleBehaviorStore.cursedStarId
+  const nowTs = now.value
 
   for (const star of starGroupStore.activeStars) {
     const total = star.planetSlots.length
     const cleared = star.planetSlots.filter((p) => p.cleared).length
     const allCleared = total > 0 && cleared >= total
+    const isCursed = cursedStarId === star.id && !!curse && nowTs < curse.activeUntil
+    const curseRatio = isCursed ? clamp01((curse!.activeUntil - nowTs) / ROLE_MID_CURSE_DURATION_MS) : 0
 
     if (star.starType === 'resource') {
       const remaining = allCleared ? 0 : getSharedStarRemainingMs(star)
@@ -179,6 +187,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
           secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
           fillRatio: clamp01(fillRatio),
           sortKey: remaining,
+          isCursed,
+          curseRatio,
         })
       }
     } else if (star.starType === 'champion') {
@@ -192,6 +202,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
           secondsInt: 0,
           fillRatio: clamp01(ratio),
           sortKey: Number.MAX_SAFE_INTEGER,
+          isCursed,
+          curseRatio,
         })
       }
     }
@@ -233,10 +245,41 @@ const sortedEntries = computed<BarEntry[]>(() => {
   display: grid;
   grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
   align-items: center;
-  height: 18px;
+  height: 26px;
   width: 100%;
-  /* Verhindert, dass leaving-Elemente Platz belegen */
   overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.timer-bar-row:hover {
+  outline: 1px solid rgba(255, 200, 80, 0.22);
+  outline-offset: 1px;
+}
+
+.timer-bar-row:hover .bar-fill {
+  filter: brightness(1.18);
+}
+
+.timer-bar-row--cursed {
+  border-radius: 3px;
+  box-shadow:
+    0 0 calc(var(--curse-ratio) * 12px + 2px) 2px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.7)),
+    0 0 calc(var(--curse-ratio) * 24px + 4px) 4px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.4));
+  animation: curse-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes curse-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 calc(var(--curse-ratio) * 12px + 2px) 2px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.7)),
+      0 0 calc(var(--curse-ratio) * 24px + 4px) 4px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.4));
+  }
+  50% {
+    box-shadow:
+      0 0 calc(var(--curse-ratio) * 18px + 2px) 3px rgba(180, 60, 255, calc(var(--curse-ratio) * 0.9)),
+      0 0 calc(var(--curse-ratio) * 34px + 4px) 6px rgba(120, 0, 200, calc(var(--curse-ratio) * 0.55));
+  }
 }
 
 .bar-side {
@@ -362,6 +405,6 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .bar-slide-enter-to,
 .bar-slide-leave-from {
-  max-height: 24px;
+  max-height: 32px;
 }
 </style>

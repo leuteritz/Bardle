@@ -224,6 +224,7 @@ const starTypeLabel = computed(() => {
 const activeCurse = computed(() => {
   const c = roleBehaviorStore.activeCurse
   if (!c || now.value >= c.activeUntil) return null
+  if (roleBehaviorStore.cursedStarId !== starGroupStore.activeFightStarId) return null
   return c
 })
 const curseSecsLeft = computed(() =>
