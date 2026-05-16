@@ -2,34 +2,38 @@
   <div class="bpl-root">
     <div class="bpl-title">
       <span class="bpl-title-line" />
-      <span class="bpl-title-text">⭐ Planeten</span>
+      <span class="bpl-title-text">⭐ Nächste Planeten</span>
       <span class="bpl-title-line" />
     </div>
 
     <div class="bpl-list">
+      <!-- Leerstate -->
+      <div v-if="displayedEntries.length === 0" class="bpl-empty">Alle Planeten besiegt</div>
+
       <div
-        v-for="(entry, i) in planetEntries"
+        v-for="(entry, i) in displayedEntries"
         :key="entry.planetId"
         class="bpl-item"
-        :class="{
-          'bpl-item--active': i === activeIndex && !entry.cleared,
-          'bpl-item--cleared': entry.cleared,
-          'bpl-item--galaxy': entry.boss?.isGalaxyBoss,
-        }"
+        :class="{ 'bpl-item--galaxy': entry.boss?.isGalaxyBoss }"
       >
-        <!-- Aktiv-Indikator links -->
-        <div v-if="i === activeIndex && !entry.cleared" class="bpl-active-bar" />
-
         <!-- Planet SVG -->
         <div :ref="(el) => registerPlanetEl(el as HTMLDivElement | null, i)" class="bpl-planet" />
+
+        <!-- Boss Image -->
+        <div class="bpl-boss-img-wrap">
+          <img
+            :src="bossImageUrl(entry.planetId)"
+            :alt="entry.boss?.bossName ?? 'Boss'"
+            class="bpl-boss-img"
+            @error="($event.target as HTMLImageElement).style.display = 'none'"
+          />
+        </div>
 
         <!-- Info -->
         <div class="bpl-info">
           <span class="bpl-boss-name">{{ entry.boss?.bossName ?? entry.label }}</span>
           <span class="bpl-planet-name">{{ entry.label }}</span>
-
-          <!-- HP Bar -->
-          <div v-if="entry.boss && !entry.cleared" class="bpl-hp-wrap">
+          <div v-if="entry.boss" class="bpl-hp-wrap">
             <div class="bpl-hp-track">
               <div
                 class="bpl-hp-fill"
@@ -43,9 +47,7 @@
             </div>
             <span class="bpl-hp-label">{{ formatNumber(entry.boss.currentHP) }}</span>
           </div>
-
-          <!-- Cleared Badge -->
-          <span v-else-if="entry.cleared" class="bpl-cleared-badge">✓ Besiegt</span>
+          <span v-else class="bpl-pending-badge">— Ausstehend</span>
         </div>
       </div>
     </div>
@@ -105,24 +107,36 @@ const planetEntries = computed<PlanetEntry[]>(() =>
   }),
 )
 
+const displayedEntries = computed<PlanetEntry[]>(() =>
+  planetEntries.value.slice(props.activeIndex + 1),
+)
+
 function hpPercent(boss: PlanetBossEvent): number {
   if (!boss.maxHP || boss.maxHP === 0) return 100
   return Math.max(0, Math.min(100, (boss.currentHP / boss.maxHP) * 100))
 }
 
+const BOSS_IMAGE_COUNT = 12
+
+function bossImageUrl(planetId: string): string {
+  let hash = 0
+  for (let i = 0; i < planetId.length; i++) hash = (hash * 31 + planetId.charCodeAt(i)) & 0xffff
+  return `/img/Boss/Boss${(hash % BOSS_IMAGE_COUNT) + 1}.png`
+}
+
 let isMounted = false
 
 function renderAllPlanets() {
-  planetEntries.value.forEach((entry, i) => {
+  displayedEntries.value.forEach((entry, i) => {
     const el = planetEls.value[i]
     if (!el || !isMounted) return
     el.innerHTML = ''
     const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-    svg.setAttribute('width', '64')
-    svg.setAttribute('height', '64')
-    svg.setAttribute('viewBox', '0 0 64 64')
+    svg.setAttribute('width', '48')
+    svg.setAttribute('height', '48')
+    svg.setAttribute('viewBox', '0 0 48 48')
     svg.style.display = 'block'
-    drawPlanet(svg, `list-planet-${entry.planetId}-${i}`, entry.planetType, 32, 32, 30)
+    drawPlanet(svg, `list-planet-${entry.planetId}-${i}`, entry.planetType, 24, 24, 22)
     el.appendChild(svg)
   })
 }
@@ -138,7 +152,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => [props.planetQueue.join(','), bossStore.activeBosses.length],
+  () => [props.planetQueue.join(','), props.activeIndex, bossStore.activeBosses.length],
   async () => {
     if (!isMounted) return
     await nextTick()
@@ -152,11 +166,10 @@ watch(
 .bpl-root {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
   width: 100%;
-  padding: 0 0.25rem 0 0.5rem;
+  padding: 0;
   background: transparent;
-  border-left: 1px solid rgba(90, 45, 10, 0.25);
   height: 100%;
 }
 
@@ -165,7 +178,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 1rem 0.9rem 0.6rem;
+  padding: 0.4rem 0.9rem 0.3rem;
   flex-shrink: 0;
 }
 
@@ -198,7 +211,7 @@ watch(
   padding: 0 0.9rem 0.9rem;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 transparent;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 /* ── Item ─────────────────────────────────────────────────────────────────── */
@@ -268,8 +281,8 @@ watch(
 
 /* ── Planet ───────────────────────────────────────────────────────────────── */
 .bpl-planet {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -292,6 +305,45 @@ watch(
   box-shadow:
     0 0 14px rgba(180, 40, 255, 0.4),
     inset 0 0 5px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Boss Image ───────────────────────────────────────────────────────────── */
+.bpl-boss-img-wrap {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(8, 5, 0, 0.6);
+  border: 2px solid rgba(200, 146, 42, 0.3);
+  box-shadow:
+    0 0 8px rgba(0, 0, 0, 0.6),
+    inset 0 0 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bpl-item--active .bpl-boss-img-wrap {
+  border-color: rgba(232, 192, 64, 0.55);
+  box-shadow:
+    0 0 12px rgba(232, 192, 64, 0.3),
+    inset 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.bpl-item--galaxy .bpl-boss-img-wrap {
+  border-color: rgba(180, 40, 255, 0.45);
+  box-shadow:
+    0 0 12px rgba(180, 40, 255, 0.3),
+    inset 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.bpl-boss-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  image-rendering: pixelated;
 }
 
 /* ── Info ─────────────────────────────────────────────────────────────────── */
@@ -380,14 +432,24 @@ watch(
   color: rgba(200, 160, 60, 0.85);
 }
 
-/* ── Cleared Badge ────────────────────────────────────────────────────────── */
-.bpl-cleared-badge {
+/* ── Pending Badge ────────────────────────────────────────────────────────── */
+.bpl-pending-badge {
   font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #52b830;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(150, 120, 60, 0.5);
   text-transform: uppercase;
   margin-top: 2px;
-  text-shadow: 0 0 6px rgba(82, 184, 48, 0.5);
+}
+
+/* ── Leerstate ────────────────────────────────────────────────────────────── */
+.bpl-empty {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(150, 120, 60, 0.45);
+  text-transform: uppercase;
+  padding: 1rem 0;
 }
 </style>

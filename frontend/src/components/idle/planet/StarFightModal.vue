@@ -41,76 +41,73 @@
 
         <!-- ── Haupt-Layout ─────────────────────────────────────────────── -->
         <div class="sf-main">
-          <!-- Haupt-Spalte: Arena oben + Rewards unten -->
-          <div class="sf-main-col">
-            <!-- Arena + HP -->
-            <div class="sf-arena-wrap">
-              <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
+          <!-- Sektion 1: Arena + HP (~60 %) -->
+          <div class="sf-arena-wrap">
+            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
 
-              <BossArenaSection
-                v-if="activeBoss"
-                :is-galaxy-boss="isGalaxyBoss"
-                :boss-h-p-percent="bossStore.bossHPPercent"
-                :seconds-remaining="secondsRemaining"
-                :enrage-percent="enragePercent"
-                :team-champions="teamChampions"
-                :get-champion-image="battleStore.getChampionImage"
-                :active-boss="activeBoss"
-                @shake="handleShake"
-              />
+            <BossArenaSection
+              v-if="activeBoss"
+              :is-galaxy-boss="isGalaxyBoss"
+              :boss-h-p-percent="bossStore.bossHPPercent"
+              :seconds-remaining="secondsRemaining"
+              :enrage-percent="enragePercent"
+              :team-champions="teamChampions"
+              :get-champion-image="battleStore.getChampionImage"
+              :active-boss="activeBoss"
+              @shake="handleShake"
+            />
 
-              <!-- ── HP Bar ──────────────────────────────────────────── -->
-              <div v-if="activeBoss" class="sf-hp-section">
-                <div class="sf-hp-header">
-                  <span class="sf-stat-label">❤ LEBEN</span>
-                  <span class="sf-hp-numbers">
-                    {{ formatNumber(activeBoss.currentHP) }}
-                    <span class="sf-hp-sep">／</span>
-                    {{ formatNumber(activeBoss.maxHP) }}
-                  </span>
-                </div>
+            <!-- ── HP Bar ──────────────────────────────────────────── -->
+            <div v-if="activeBoss" class="sf-hp-section">
+              <div class="sf-hp-header">
+                <span class="sf-stat-label">❤ LEBEN</span>
+                <span class="sf-hp-numbers">
+                  {{ formatNumber(activeBoss.currentHP) }}
+                  <span class="sf-hp-sep">／</span>
+                  {{ formatNumber(activeBoss.maxHP) }}
+                </span>
+              </div>
+              <div
+                class="sf-hp-track"
+                :class="{
+                  'sf-hp-track--critical': bossStore.bossHPPercent < 25,
+                  'sf-hp-track--galaxy': isGalaxyBoss,
+                }"
+              >
                 <div
-                  class="sf-hp-track"
+                  class="sf-hp-fill"
                   :class="{
-                    'sf-hp-track--critical': bossStore.bossHPPercent < 25,
-                    'sf-hp-track--galaxy': isGalaxyBoss,
+                    'sf-hp-fill--galaxy': isGalaxyBoss,
+                    'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
+                    'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
                   }"
-                >
+                  :style="{ width: bossStore.bossHPPercent + '%' }"
+                />
+                <div class="sf-hp-segments">
                   <div
-                    class="sf-hp-fill"
-                    :class="{
-                      'sf-hp-fill--galaxy': isGalaxyBoss,
-                      'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
-                      'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
-                    }"
-                    :style="{ width: bossStore.bossHPPercent + '%' }"
+                    v-for="seg in 9"
+                    :key="seg"
+                    class="sf-hp-seg"
+                    :style="{ left: seg * 10 + '%' }"
                   />
-                  <div class="sf-hp-segments">
-                    <div
-                      v-for="seg in 9"
-                      :key="seg"
-                      class="sf-hp-seg"
-                      :style="{ left: seg * 10 + '%' }"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
-
-            <!-- Belohnungen unten -->
-            <div class="sf-rewards-wrap">
-              <BossRewardSection
-                v-if="activeBoss"
-                :is-galaxy-boss="isGalaxyBoss"
-                :reward-slots="rewardSlots"
-                :home-planet-champion="homePlanetChampion"
-                :home-planet-champion-image="homePlanetChampionImage"
-              />
-            </div>
           </div>
 
-          <!-- Rechte Spalte: Planetenliste (kein Background) -->
-          <div class="sf-side sf-side--right">
+          <!-- Sektion 2: Belohnungen (~20 %) -->
+          <div class="sf-rewards-wrap">
+            <BossRewardSection
+              v-if="activeBoss"
+              :is-galaxy-boss="isGalaxyBoss"
+              :reward-slots="rewardSlots"
+              :home-planet-champion="homePlanetChampion"
+              :home-planet-champion-image="homePlanetChampionImage"
+            />
+          </div>
+
+          <!-- Sektion 3: Planetenliste (~20 %, scrollbar) -->
+          <div class="sf-planet-list-wrap">
             <BossPlanetList
               :planet-queue="starGroupStore.starFightPlanetQueue"
               :active-index="currentIndex"
@@ -579,40 +576,35 @@ function starStyle(i: number): Record<string, string> {
 
 /* ── Haupt-Layout ─────────────────────────────────────────────────────────── */
 .sf-main {
-  display: grid;
-  grid-template-columns: 1fr 210px;
-  gap: 0;
-  padding: 1rem 1.25rem 1.25rem;
-  min-height: 0;
-  flex: 1;
-}
-
-.sf-main-col {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
+  gap: 0;
+  padding: 0.75rem 1.25rem 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .sf-arena-wrap {
+  flex: 0 0 58%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  flex: 1;
-  min-height: 0;
+  gap: 0.5rem;
+  overflow: hidden;
 }
 
 .sf-rewards-wrap {
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
-.sf-side {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 0 0.4rem;
-  min-width: 0;
-  align-self: stretch;
+.sf-planet-list-wrap {
+  flex: 1;
+  min-height: 120px;
+  overflow: hidden;
+  border-top: 1px solid rgba(90, 45, 10, 0.35);
+  padding-top: 0.25rem;
+  margin-top: 0.25rem;
 }
 
 .sf-galaxy-badge {
@@ -629,10 +621,9 @@ function starStyle(i: number): Record<string, string> {
 
 /* ── HP Bar ───────────────────────────────────────────────────────────────── */
 .sf-hp-section {
-  padding: 0.6rem 0.9rem 0.65rem;
-  background: rgba(6, 3, 0, 0.78);
-  border-radius: 5px;
-  border: 1px solid rgba(80, 40, 8, 0.6);
+  padding: 0.4rem 0.5rem 0.3rem;
+  background: transparent;
+  border: none;
 }
 
 .sf-hp-header {
@@ -651,9 +642,10 @@ function starStyle(i: number): Record<string, string> {
 }
 
 .sf-hp-numbers {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #b09050;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #c8a050;
+  letter-spacing: 0.04em;
 }
 
 .sf-hp-sep {
@@ -663,15 +655,17 @@ function starStyle(i: number): Record<string, string> {
 
 .sf-hp-track {
   position: relative;
-  height: 16px;
+  height: 22px;
   border-radius: 4px;
-  background: rgba(8, 6, 2, 0.7);
-  border: 1px solid rgba(50, 25, 5, 0.6);
+  background: rgba(4, 2, 0, 0.6);
+  border: 1px solid rgba(50, 25, 5, 0.4);
   overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 .sf-hp-track--critical {
-  border-color: rgba(140, 20, 20, 0.7);
+  border-color: rgba(140, 20, 20, 0.5);
+  box-shadow: 0 0 18px rgba(200, 20, 20, 0.35);
   animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
 }
 .sf-hp-track--galaxy {
@@ -690,17 +684,20 @@ function starStyle(i: number): Record<string, string> {
 .sf-hp-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(to right, #2a7018, #50b430);
+  background: linear-gradient(to right, #1a6010, #40a020, #70d040);
   transition: width 0.25s ease-out;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .sf-hp-fill--low {
   background: linear-gradient(to right, #7a4808, #c07018);
 }
 .sf-hp-fill--critical {
-  background: linear-gradient(to right, #620606, #c01818);
+  background: linear-gradient(to right, #620606, #c01818, #ff3030);
+  box-shadow: 0 0 14px rgba(220, 30, 30, 0.55), inset 0 1px 0 rgba(255, 100, 100, 0.2);
 }
 .sf-hp-fill--galaxy {
-  background: linear-gradient(to right, #520870, #a01acc);
+  background: linear-gradient(to right, #420060, #8010c0, #cc30ff);
+  box-shadow: 0 0 14px rgba(180, 40, 255, 0.5), inset 0 1px 0 rgba(220, 100, 255, 0.2);
 }
 
 .sf-hp-segments {

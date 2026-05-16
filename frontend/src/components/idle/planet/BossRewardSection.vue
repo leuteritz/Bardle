@@ -87,20 +87,21 @@ const stackedMaterials = computed(() => {
 <style scoped>
 /* ── Root ─────────────────────────────────────────────────────────────────── */
 .reward-preview {
-  padding: 0.65rem 1rem;
+  padding: 0.45rem 0.9rem;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 1.5rem;
-  background: rgba(5, 2, 0, 0.55);
-  border-radius: 5px;
-  border-top: 1px solid rgba(90, 45, 10, 0.35);
+  gap: 1rem;
+  background: transparent;
+  border-radius: 0;
+  border-top: 1px solid rgba(90, 45, 10, 0.25);
   animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .reward-preview--galaxy {
-  background: rgba(10, 0, 20, 0.58);
+  background: transparent;
 }
 
 @keyframes rewardReveal {
@@ -116,7 +117,11 @@ const stackedMaterials = computed(() => {
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .reward-header {
-  display: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .reward-header-line {
@@ -148,8 +153,8 @@ const stackedMaterials = computed(() => {
 }
 
 .champion-portrait {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
@@ -200,8 +205,8 @@ const stackedMaterials = computed(() => {
 
 /* ── Icon ─────────────────────────────────────────────────────────────────── */
 .slot-icon-wrap {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -215,8 +220,8 @@ const stackedMaterials = computed(() => {
 }
 
 .slot-img {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 

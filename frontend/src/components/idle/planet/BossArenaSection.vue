@@ -1,7 +1,5 @@
 <template>
   <div ref="arenaEl" class="arena" :class="{ 'arena--galaxy': isGalaxyBoss }">
-    <div ref="planetStageRef" class="planet-bg" :class="{ 'planet-bg--galaxy': isGalaxyBoss }" />
-
     <div
       class="boss-wrapper"
       :class="{
@@ -116,8 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, reactive, nextTick, computed } from 'vue'
-import { NS, drawPlanet } from '../../../utils/planetDraw'
+import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
@@ -178,7 +175,6 @@ const effectiveEnragePercent = computed<number>(() =>
 )
 
 const arenaEl = ref<HTMLDivElement | null>(null)
-const planetStageRef = ref<HTMLDivElement | null>(null)
 const bossImage = ref('/img/Boss/Boss1.png')
 const bossImageList = ref<string[]>([])
 let discoveryDone = false
@@ -211,20 +207,6 @@ function discoverBossImages(): Promise<void> {
 function pickRandomBossImage(): string {
   const list = bossImageList.value
   return list.length > 0 ? list[Math.floor(Math.random() * list.length)] : '/img/Boss/Boss1.png'
-}
-
-function renderPlanet() {
-  if (!isMounted || !planetStageRef.value || !props.activeBoss) return
-  planetStageRef.value.innerHTML = ''
-  const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-  svg.setAttribute('width', '280')
-  svg.setAttribute('height', '280')
-  svg.setAttribute('viewBox', '0 0 280 280')
-  svg.style.width = '100%'
-  svg.style.height = '100%'
-  const radius = props.isGalaxyBoss ? 138 : 120
-  drawPlanet(svg, `boss-${Date.now()}`, props.activeBoss.planetType, 140, 140, radius)
-  planetStageRef.value.appendChild(svg)
 }
 
 const isHit = ref(false)
@@ -349,9 +331,6 @@ onMounted(async () => {
   await discoverBossImages()
   if (!isMounted) return
   bossImage.value = pickRandomBossImage()
-  await nextTick()
-  if (!isMounted) return
-  renderPlanet()
   startAttackCycles()
 })
 
@@ -365,12 +344,9 @@ onUnmounted(() => {
 
 watch(
   () => props.activeBoss?.planetId,
-  async (newId) => {
+  (newId) => {
     if (!newId || !isMounted) return
     bossImage.value = pickRandomBossImage()
-    await nextTick()
-    if (!isMounted) return
-    renderPlanet()
   },
 )
 
@@ -447,31 +423,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(200, 100, 0, 0.4), transparent);
-}
-
-/* Lokaler Planet-BG in der Arena (Fokus-Verstärkung, leicht stärker als Modal-BG) */
-.planet-bg {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.22;
-  pointer-events: none;
-}
-
-.planet-bg--galaxy {
-  opacity: 0.45;
-  animation: planet-glow-pulse 2.5s ease-in-out infinite alternate;
-}
-
-@keyframes planet-glow-pulse {
-  from {
-    filter: drop-shadow(0 0 10px rgba(140, 40, 200, 0.5));
-  }
-  to {
-    filter: drop-shadow(0 0 28px rgba(200, 80, 255, 0.9));
-  }
 }
 
 /* ── Boss Name Overlay ───────────────────────────────────────────────────── */
@@ -978,7 +929,6 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 @media (prefers-reduced-motion: reduce) {
   .boss-wrapper,
   .boss-wrapper--critical,
-  .planet-bg--galaxy,
   .boss-aura,
   .champ-striker,
   .champ-striker--ult,
