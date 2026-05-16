@@ -9,8 +9,10 @@ const SESSION_START = Date.now()
 const gameStore = useGameStore()
 const shopStore = useShopStore()
 
-const { totalChimesEarned, chimesPerSecond, totalClicks, level, currentUniverse } =
+const { totalChimesEarned, chimesPerSecond, totalClicks, level, currentUniverse, chimesPerClick } =
   storeToRefs(gameStore)
+
+const { buildingStats } = storeToRefs(shopStore)
 
 const animated = ref(false)
 const sessionSeconds = ref(Math.floor((Date.now() - SESSION_START) / 1000))
@@ -37,40 +39,30 @@ const sessionTime = computed(() => {
   return `${sec}s`
 })
 
-const totalRawCPS = computed(() =>
-  shopStore.shopUpgrades
-    .filter((u) => (u.baseCPS ?? 0) > 0 && u.level > 0)
-    .reduce((sum, u) => sum + (u.baseCPS ?? 0) * u.level, 0),
-)
-
-interface BuildingRow {
-  id: string
-  name: string
-  icon: string
-  level: number
-  percent: number
-  value: number
-  isCPS: boolean
-}
-
-const buildingRows = computed((): BuildingRow[] => {
-  return shopStore.shopUpgrades.map((u) => {
-    const hasCPS = (u.baseCPS ?? 0) > 0
-    const rawCPS = hasCPS ? (u.baseCPS ?? 0) * u.level : 0
-    const percent = totalRawCPS.value > 0 && hasCPS ? (rawCPS / totalRawCPS.value) * 100 : 0
-    const value = hasCPS
-      ? totalRawCPS.value > 0
-        ? Math.floor((rawCPS / totalRawCPS.value) * chimesPerSecond.value)
-        : 0
-      : (u.baseCPC ?? 0) * u.level
-
-    return { id: u.id, name: u.name, icon: u.icon, level: u.level, percent, value, isCPS: hasCPS }
-  })
+const maxCPS = computed(() => {
+  const vals = buildingStats.value.map((b) => b.currentCPS)
+  return vals.length > 0 ? Math.max(...vals) : 1
 })
 
-const maxPercent = computed(() => {
-  const percents = buildingRows.value.filter((r) => r.isCPS).map((r) => r.percent)
-  return percents.length > 0 ? Math.max(...percents) : 100
+// Klicker-Upgrade (baseCPS === 0)
+const clickerUpgrade = computed(
+  () => shopStore.shopUpgrades.find((u) => (u.baseCPS ?? 0) === 0) ?? null,
+)
+
+// Basis-CPC ohne Klicker-Upgrade-Bonus (nur für Anzeige der Aufschlüsselung)
+const baseCPC = computed(() => gameStore.baseChimesPerClick)
+
+// Bonus durch Klicker-Gebäude
+const clickerBonus = computed(() => {
+  const u = clickerUpgrade.value
+  if (!u || u.level === 0) return 0
+  return (u.baseCPC ?? 0) * u.level
+})
+
+// Gesamtbonus durch Augments/Skills/Modifier = finalCPC - base - clickerBonus
+const extraBonus = computed(() => {
+  const total = chimesPerClick.value
+  return Math.max(0, total - baseCPC.value - clickerBonus.value)
 })
 </script>
 
@@ -127,41 +119,89 @@ const maxPercent = computed(() => {
         </div>
       </div>
 
+      <!-- ─ CLICK POWER ─ -->
+      <div class="sv-block">
+        <div class="sv-block-label">Click Power</div>
+
+        <div class="sv-clickpower">
+          <!-- Linke Seite: Icon + Name -->
+          <div class="sv-clickpower-hero">
+            <img
+              v-if="clickerUpgrade"
+              :src="clickerUpgrade.icon"
+              :alt="clickerUpgrade.name"
+              class="sv-clickpower-icon"
+            />
+            <div class="sv-clickpower-meta">
+              <span class="sv-clickpower-name">
+                {{ clickerUpgrade?.name ?? 'Klicker' }}
+              </span>
+              <span class="sv-clickpower-count" v-if="clickerUpgrade && clickerUpgrade.level > 0">
+                ×{{ clickerUpgrade.level }}
+              </span>
+              <span class="sv-clickpower-count sv-val-muted" v-else>nicht gekauft</span>
+            </div>
+          </div>
+
+          <!-- Rechte Seite: Aufschlüsselung -->
+          <div class="sv-clickpower-breakdown">
+            <div class="sv-cpc-row">
+              <span class="sv-cpc-lbl">Basis</span>
+              <span class="sv-cpc-val">{{ $formatNumber(baseCPC) }}</span>
+            </div>
+            <div class="sv-cpc-row" v-if="clickerBonus > 0">
+              <span class="sv-cpc-lbl">Klicker ×{{ clickerUpgrade?.level }}</span>
+              <span class="sv-cpc-val sv-val-blue">+{{ $formatNumber(clickerBonus) }}</span>
+            </div>
+            <div class="sv-cpc-row" v-if="extraBonus > 0">
+              <span class="sv-cpc-lbl">Augments / Skills</span>
+              <span class="sv-cpc-val sv-val-green">+{{ $formatNumber(extraBonus) }}</span>
+            </div>
+            <div class="sv-cpc-divider" />
+            <div class="sv-cpc-row sv-cpc-row--total">
+              <span class="sv-cpc-lbl">Gesamt / Klick</span>
+              <span class="sv-cpc-val sv-cpc-total">{{ $formatNumber(chimesPerClick) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ─ GEBÄUDE ─ -->
       <div class="sv-block">
         <div class="sv-block-label">Gebäude</div>
 
         <ul class="sv-building-list" role="list">
-          <li
-            v-for="b in buildingRows"
-            :key="b.id"
-            class="sv-building-row"
-            :class="{ 'sv-building-row--locked': b.level === 0 }"
-          >
+          <li v-for="(b, index) in buildingStats" :key="b.id" class="sv-building-row">
+            <div class="sv-rank">#{{ index + 1 }}</div>
+
             <img :src="b.icon" :alt="b.name" class="sv-building-icon" />
 
             <div class="sv-building-info">
+              <!-- Zeile 1: Name + Count + aktueller CPS -->
               <div class="sv-building-top">
                 <span class="sv-building-name">{{ b.name }}</span>
                 <span class="sv-building-count">×{{ b.level }}</span>
-                <span class="sv-building-value" :class="b.isCPS ? 'sv-val-green' : 'sv-val-blue'">
-                  {{ b.isCPS ? `${$formatNumber(b.value)}/s` : `+${b.value}/Klick` }}
+                <span class="sv-building-output sv-val-green">
+                  {{ $formatNumber(b.currentCPS) }}/s
                 </span>
               </div>
 
-              <div v-if="b.isCPS" class="rpg-progress-track sv-bar-track">
+              <!-- Zeile 2: Gesamt produziert + Anteil -->
+              <div class="sv-building-produced">
+                <span class="sv-produced-val">{{ $formatNumber(b.lifetimeProduction) }}</span>
+                <span class="sv-produced-lbl">produziert</span>
+                <span class="sv-produced-pct">{{ b.efficiency }}%</span>
+              </div>
+
+              <!-- Zeile 3: CPS-Balken -->
+              <div class="rpg-progress-track sv-bar-track">
                 <div
                   class="rpg-progress-bar sv-bar-fill"
                   :style="{
-                    width: animated && maxPercent > 0 ? `${(b.percent / maxPercent) * 100}%` : '0%',
+                    width: animated && maxCPS > 0 ? `${(b.currentCPS / maxCPS) * 100}%` : '0%',
                   }"
                 />
               </div>
-              <div v-else class="sv-click-tag">⚔ Click Power</div>
-            </div>
-
-            <div v-if="b.isCPS && b.level > 0" class="sv-pct-badge">
-              {{ Math.round(b.percent) }}%
             </div>
           </li>
         </ul>
@@ -300,6 +340,94 @@ const maxPercent = computed(() => {
   color: var(--rpg-text-dim);
 }
 
+/* ─── Click Power Panel ─────────────────────── */
+.sv-clickpower {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--rpg-bg-dark);
+}
+
+/* Linke Hero-Seite */
+.sv-clickpower-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 22px;
+  border-right: 1px solid var(--rpg-wood-inner);
+  flex-shrink: 0;
+  min-width: 110px;
+}
+.sv-clickpower-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--rpg-blue) 35%, transparent));
+}
+.sv-clickpower-meta {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sv-clickpower-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rpg-gold-dim);
+  font-family: var(--rpg-font-mono);
+  letter-spacing: 0.05em;
+}
+.sv-clickpower-count {
+  font-size: 11px;
+  color: var(--rpg-text-muted);
+  font-family: var(--rpg-font-mono);
+}
+
+/* Rechte Aufschlüsselung */
+.sv-clickpower-breakdown {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 20px;
+}
+
+.sv-cpc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sv-cpc-row--total {
+  margin-top: 2px;
+}
+.sv-cpc-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+.sv-cpc-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rpg-text-muted);
+  font-family: var(--rpg-font-mono);
+}
+.sv-cpc-total {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--rpg-gold);
+}
+.sv-cpc-divider {
+  height: 1px;
+  background: var(--rpg-wood-inner);
+  margin: 2px 0;
+}
+
 /* ─── Gebäude-Liste ─────────────────────────── */
 .sv-building-list {
   list-style: none;
@@ -312,7 +440,7 @@ const maxPercent = computed(() => {
 .sv-building-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 14px 6px;
   border-bottom: 1px solid var(--rpg-bg-row);
   transition: background 0.1s;
@@ -323,9 +451,16 @@ const maxPercent = computed(() => {
 .sv-building-row:hover {
   background: var(--rpg-bg-hover);
 }
-.sv-building-row--locked {
-  opacity: 0.35;
-  filter: grayscale(60%);
+
+/* Rang */
+.sv-rank {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rpg-text-dim);
+  font-family: var(--rpg-font-mono);
+  min-width: 22px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .sv-building-icon {
@@ -340,9 +475,10 @@ const maxPercent = computed(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* Zeile 1: Name + Count + Output */
 .sv-building-top {
   display: flex;
   align-items: center;
@@ -365,7 +501,7 @@ const maxPercent = computed(() => {
   flex-shrink: 0;
   font-family: var(--rpg-font-mono);
 }
-.sv-building-value {
+.sv-building-output {
   font-size: 14px;
   font-weight: 700;
   margin-left: auto;
@@ -373,33 +509,38 @@ const maxPercent = computed(() => {
   font-family: var(--rpg-font-mono);
 }
 
-/* Fortschritts-Bar */
+/* Zeile 2: Gesamt produziert + % */
+.sv-building-produced {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sv-produced-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rpg-gold);
+  font-family: var(--rpg-font-mono);
+}
+.sv-produced-lbl {
+  font-size: 10px;
+  color: var(--rpg-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sv-produced-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rpg-orange);
+  font-family: var(--rpg-font-mono);
+  margin-left: auto;
+}
+
+/* Zeile 3: CPS-Bar */
 .sv-bar-track {
   height: 5px;
 }
 .sv-bar-fill {
   height: 100%;
   transition: width 0.85s ease;
-}
-
-/* Click-Power-Tag */
-.sv-click-tag {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rpg-text-dim);
-  font-family: var(--rpg-font-mono);
-}
-
-/* Prozent-Abzeichen */
-.sv-pct-badge {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--rpg-gold-dim);
-  min-width: 38px;
-  text-align: right;
-  font-family: var(--rpg-font-mono);
 }
 </style>
