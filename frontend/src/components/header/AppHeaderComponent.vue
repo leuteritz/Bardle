@@ -19,9 +19,7 @@ const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgre
 const svgW = ref(360)
 const svgH = ref(100)
 
-const arcD = computed(
-  () => `M 0,0 A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},0`,
-)
+const arcD = computed(() => `M 0,0 A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},0`)
 
 const arcLen = computed(() => {
   const a = svgW.value / 2
@@ -77,11 +75,7 @@ onUnmounted(() => resizeObserver?.disconnect())
     <!-- ════════ MITTE (absolut zentriert) ════════ -->
     <div class="header-center">
       <!-- XP-Bogen entlang der Tropfen-Außenkontur -->
-      <svg
-        class="xp-arc-overlay"
-        :viewBox="`0 0 ${svgW} ${svgH}`"
-        aria-hidden="true"
-      >
+      <svg class="xp-arc-overlay" :viewBox="`0 0 ${svgW} ${svgH}`" aria-hidden="true">
         <defs>
           <linearGradient id="xp-grad-fixed" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="#c89040" />
@@ -141,6 +135,10 @@ onUnmounted(() => resizeObserver?.disconnect())
             <span class="sub-stat-label click-text-glow">/click</span>
           </div>
         </div>
+      </div>
+
+      <div class="arc-level-badge" :style="{ top: svgH - 20 + 'px' }">
+        <span class="arc-level-text">{{ gameStore.level }}</span>
       </div>
     </div>
 
@@ -534,5 +532,34 @@ onUnmounted(() => resizeObserver?.disconnect())
   color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.25));
   user-select: none;
   flex-shrink: 0;
+}
+
+/* ================================================================
+   LEVEL-BADGE (Arc-Tiefpunkt)
+   ================================================================ */
+.arc-level-badge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #4a8a28, #2e6018);
+  border: 2px solid #6ec040;
+  box-shadow:
+    0 0 8px rgba(80, 180, 40, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-level-text {
+  font-size: 25px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1;
 }
 </style>
