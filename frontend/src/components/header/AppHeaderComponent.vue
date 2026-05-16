@@ -16,54 +16,29 @@ let resizeObserver: ResizeObserver | null = null
 
 const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgress ?? 0) / 100)))
 
-// SVG mit position:fixed, Koordinaten aus getBoundingClientRect()
-const svgLeft = ref(0)
-const svgTop = ref(0)
 const svgW = ref(360)
-const svgH = ref(120)
+const svgH = ref(100)
 
-// Pfad: Start (0, svgH) → Bogen nach oben → Ende (svgW, svgH)
-// rx = svgW/2, ry = svgH → Scheitelpunkt bei (svgW/2, 0)
-// sweep=0 → gegen Uhrzeigersinn → wölbt sich nach oben
 const arcD = computed(
-  () => `M 0,${svgH.value} A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},${svgH.value}`,
+  () => `M 0,0 A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},0`,
 )
 
 const arcLen = computed(() => {
   const a = svgW.value / 2
   const b = svgH.value
   const h = Math.pow(a - b, 2) / Math.pow(a + b, 2)
-  return Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)))
+  return (Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)))) / 2
 })
 
 const arcDashoffset = computed(() => arcLen.value * (1 - xpProgress.value))
 
 async function measure() {
   await nextTick()
-  if (!chimesRef.value || !headerRef.value) return
-  const panelRect = chimesRef.value.getBoundingClientRect()
-  const headerRect = headerRef.value.getBoundingClientRect()
-  if (!panelRect.width || !panelRect.height) return
-
-  // Breite = Panel-Breite
-  svgW.value = panelRect.width
-
-  // Höhe = sichtbare Panel-Höhe (nur der Teil innerhalb des Headers)
-  // = Abstand von Panel-Oberkante bis Header-Unterkante
-
-  const visiblePanelHeight = headerRect.bottom - 400 - panelRect.top
-  svgH.value = visiblePanelHeight
-
-  // SVG linke Kante = Panel-Linke
-  svgLeft.value = panelRect.left
-
-  // SVG obere Kante = Panel-Oberkante - visiblePanelHeight
-  // = Panel-Oberkante - (headerBottom - panelTop)
-  // = panelTop - headerBottom + panelTop
-  // Nein: SVG-Top so dass SVG-Unterkante = Panel-Oberkante
-  // SVG-Unterkante = svgTop + svgH → soll = panelRect.top sein
-  // → svgTop = panelRect.top - svgH
-  svgTop.value = panelRect.top - visiblePanelHeight
+  if (!chimesRef.value) return
+  const r = chimesRef.value.getBoundingClientRect()
+  if (!r.width || !r.height) return
+  svgW.value = r.width
+  svgH.value = r.height
 }
 
 function updateHeaderHeight() {
@@ -101,6 +76,40 @@ onUnmounted(() => resizeObserver?.disconnect())
 
     <!-- ════════ MITTE (absolut zentriert) ════════ -->
     <div class="header-center">
+      <!-- XP-Bogen entlang der Tropfen-Außenkontur -->
+      <svg
+        class="xp-arc-overlay"
+        :viewBox="`0 0 ${svgW} ${svgH}`"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="xp-grad-fixed" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c89040" />
+            <stop offset="50%" stop-color="#f0d060" />
+            <stop offset="100%" stop-color="#c89040" />
+          </linearGradient>
+        </defs>
+
+        <path
+          :d="arcD"
+          fill="none"
+          stroke="rgba(160,110,15,0.55)"
+          stroke-width="6"
+          stroke-linecap="round"
+        />
+
+        <path
+          :d="arcD"
+          fill="none"
+          stroke="url(#xp-grad-fixed)"
+          stroke-width="6"
+          stroke-linecap="round"
+          :stroke-dasharray="arcLen"
+          :stroke-dashoffset="arcDashoffset"
+          class="xp-arc-fill"
+        />
+      </svg>
+
       <div ref="chimesRef" class="center-chimes">
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
@@ -170,66 +179,6 @@ onUnmounted(() => resizeObserver?.disconnect())
       </div>
     </div>
   </header>
-
-  <!--
-    XP-BOGEN SVG – position:fixed, außerhalb aller overflow-Fallen.
-
-    Geometrie:
-    ┌─── svgTop ──────────────────────────────────────┐  ← Header-Oberkante
-    │          Scheitelpunkt (svgW/2, 0)               │
-    │         /                         \              │
-    │        /   Bogen wölbt sich oben   \             │
-    │       /                             \            │
-    │(0,svgH)                         (svgW,svgH)      │
-    └─── panelRect.top ───────────────────────────────┘  ← Panel-Oberkante
-
-    svgTop   = panelRect.top - visiblePanelHeight
-    svgH     = headerRect.bottom - panelRect.top (sichtbare Panel-Höhe im Header)
-    svgW     = panelRect.width
-    svgLeft  = panelRect.left
-  -->
-  <svg
-    class="xp-arc-svg-fixed"
-    :style="{
-      left: svgLeft + 'px',
-      top: svgTop + 'px',
-      width: svgW + 'px',
-      height: svgH + 'px',
-    }"
-    :viewBox="`0 0 ${svgW} ${svgH}`"
-    aria-hidden="true"
-  >
-    <defs>
-      <linearGradient id="xp-grad-fixed" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#c89040" />
-        <stop offset="50%" stop-color="#f0d060" />
-        <stop offset="100%" stop-color="#c89040" />
-      </linearGradient>
-    </defs>
-
-    <!-- Hintergrund-Bogen -->
-    <path
-      :d="arcD"
-      fill="none"
-      stroke="rgba(160,110,15,0.30)"
-      stroke-width="3"
-      stroke-linecap="round"
-      :pathLength="arcLen"
-    />
-
-    <!-- Fortschritts-Bogen -->
-    <path
-      :d="arcD"
-      fill="none"
-      stroke="url(#xp-grad-fixed)"
-      stroke-width="3"
-      stroke-linecap="round"
-      :pathLength="arcLen"
-      :stroke-dasharray="arcLen"
-      :stroke-dashoffset="arcDashoffset"
-      class="xp-arc-fill"
-    />
-  </svg>
 </template>
 
 <style>
@@ -304,9 +253,11 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 /* ================================================================
-   CENTER-CHIMES – EXAKT WIE ORIGINAL
+   CENTER-CHIMES – Tropfen-Panel
    ================================================================ */
 .center-chimes {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -329,18 +280,21 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 /* ================================================================
-   XP-BOGEN (position:fixed)
+   XP-BOGEN (Overlay innerhalb .header-center)
    ================================================================ */
-.xp-arc-svg-fixed {
-  position: fixed;
+.xp-arc-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 130;
   overflow: visible;
+  z-index: 2;
 }
 
 .xp-arc-fill {
-  filter: drop-shadow(0 0 4px rgba(240, 208, 96, 0.65))
-    drop-shadow(0 0 10px rgba(240, 208, 96, 0.28));
+  filter: drop-shadow(0 0 5px rgba(240, 208, 96, 0.75))
+    drop-shadow(0 0 12px rgba(240, 208, 96, 0.35));
   transition: stroke-dashoffset 0.8s ease-out;
 }
 
