@@ -13,7 +13,11 @@ const uiStore = useUiStore()
 const { resetGame } = usePersistence()
 
 function handleReset() {
-  if (window.confirm('Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+  if (
+    window.confirm(
+      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    )
+  ) {
     resetGame()
   }
 }
@@ -183,7 +187,9 @@ onUnmounted(() => resizeObserver?.disconnect())
         :style="{ top: svgH - 10 + 'px' }"
         title="Spielstand löschen"
         @click.stop="handleReset"
-      >✕</button>
+      >
+        ✕
+      </button>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -234,9 +240,6 @@ onUnmounted(() => resizeObserver?.disconnect())
           <span class="xp-tt__unit">Chimes</span>
         </div>
         <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % zum nächsten Level</div>
-        <div class="xp-tt__bar-track">
-          <div class="xp-tt__bar-fill" :style="{ width: `${xpProgress * 100}%` }" />
-        </div>
       </div>
     </Transition>
   </Teleport>
@@ -649,7 +652,9 @@ onUnmounted(() => resizeObserver?.disconnect())
   border-radius: 50%;
   color: #cc6050;
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 .center-reset-btn:hover {
   background: linear-gradient(to bottom, #6a1818, #4a0e0e);
