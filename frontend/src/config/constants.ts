@@ -117,15 +117,6 @@ export const PLANET_TYPE_NAMES: Record<string, string> = {
 // Title rotation
 export const TITLE_MESSAGE_INTERVAL_MS = 5000
 
-// LP thresholds
-export const LP_NORMAL_PROMOTION_THRESHOLD = 100
-export const LP_MASTER_PROMOTION_THRESHOLD = 500
-export const LP_GRANDMASTER_PROMOTION_THRESHOLD = 1000
-export const LP_DEMOTION_VALUE = 75
-export const LP_MASTER_DEMOTION_VALUE = 400
-export const LP_GRANDMASTER_DEMOTION_VALUE = 900
-export const LP_BASE_CHANGE = 20
-
 // Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 1800)
 export const MINIMAP_PHASE_LANING_END = 700
 export const MINIMAP_PHASE_DRAKE_END = 1200
@@ -142,6 +133,15 @@ export const RED_FOUNTAIN = { x: 92, y: 8 }
 export const DRAKE_POS = { x: 72, y: 72 }
 export const BARON_POS = { x: 28, y: 28 }
 export const MID_CENTER = { x: 50, y: 50 }
+
+// LP thresholds
+export const LP_NORMAL_PROMOTION_THRESHOLD = 100
+export const LP_MASTER_PROMOTION_THRESHOLD = 500
+export const LP_GRANDMASTER_PROMOTION_THRESHOLD = 1000
+export const LP_DEMOTION_VALUE = 75
+export const LP_MASTER_DEMOTION_VALUE = 400
+export const LP_GRANDMASTER_DEMOTION_VALUE = 900
+export const LP_BASE_CHANGE = 20
 
 // Battle constants
 export const OPPONENT_MMR_VARIANCE = 200
