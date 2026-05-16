@@ -70,6 +70,7 @@
           v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
           :src="ROLE_BY_KEY[pos.primaryRole].image"
           :alt="pos.primaryRole"
+          :aria-label="pos.primaryRole + ' ability'"
           class="champion-ability-icon"
           :class="`champion-ability-icon--${pos.primaryRole}`"
         />
@@ -837,31 +838,36 @@ export default defineComponent({
 /* ── Ability-Icon ──────────────────────────────────────────────────────────── */
 .champion-ability-icon {
   position: absolute;
-  top: -36px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50px; /* ← feste Breite */
-  height: 50px; /* ← feste Höhe */
+  bottom: -8px;
+  right: -8px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   display: block;
   pointer-events: none;
   z-index: 4;
+  border-radius: 50%;
 }
 
 .champion-ability-icon--top {
-  filter: drop-shadow(0 0 7px rgba(245, 71, 71, 1));
+  border: 4px solid rgba(245, 71, 71, 0.7);
+  filter: drop-shadow(0 0 5px rgba(245, 71, 71, 0.8));
 }
 .champion-ability-icon--jungle {
-  filter: drop-shadow(0 0 7px rgba(62, 234, 88, 1));
+  border: 4px solid rgba(62, 234, 88, 0.7);
+  filter: drop-shadow(0 0 5px rgba(62, 234, 88, 0.8));
 }
 .champion-ability-icon--mid {
-  filter: drop-shadow(0 0 7px rgba(85, 152, 246, 1));
+  border: 4px solid rgba(85, 152, 246, 0.7);
+  filter: drop-shadow(0 0 5px rgba(85, 152, 246, 0.8));
 }
 .champion-ability-icon--adc {
-  filter: drop-shadow(0 0 7px rgba(247, 161, 69, 1));
+  border: 4px solid rgba(247, 161, 69, 0.7);
+  filter: drop-shadow(0 0 5px rgba(247, 161, 69, 0.8));
 }
 .champion-ability-icon--support {
-  filter: drop-shadow(0 0 7px rgba(0, 229, 160, 1));
+  border: 4px solid rgba(137, 184, 230, 0.7);
+  filter: drop-shadow(0 0 5px rgba(137, 184, 230, 0.8));
 }
 
 .ability-icon-enter-active,
@@ -872,10 +878,10 @@ export default defineComponent({
 }
 .ability-icon-enter-from {
   opacity: 0;
-  transform: translateX(-50%) scale(0.5);
+  transform: scale(0.5);
 }
 .ability-icon-leave-to {
   opacity: 0;
-  transform: translateX(-50%) scale(0.5);
+  transform: scale(0.5);
 }
 </style>
