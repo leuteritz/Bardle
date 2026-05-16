@@ -3,12 +3,20 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUiStore } from '../../stores/uiStore'
 import { formatNumber } from '../../config/numberFormat'
+import { usePersistence } from '../../composables/usePersistence'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
+const { resetGame } = usePersistence()
+
+function handleReset() {
+  if (window.confirm('Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    resetGame()
+  }
+}
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
@@ -29,6 +37,29 @@ const arcLen = computed(() => {
 })
 
 const arcDashoffset = computed(() => arcLen.value * (1 - xpProgress.value))
+
+const chimesForLevel = computed(() => ({
+  current: gameStore.currentLevelChimes,
+  total: gameStore.totalChimesThisLevel,
+}))
+
+const showCenterTooltip = ref(false)
+const centerTooltipStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
+
+function onCenterEnter() {
+  if (chimesRef.value) {
+    const rect = chimesRef.value.getBoundingClientRect()
+    centerTooltipStyle.value = {
+      left: `${rect.left + rect.width / 2}px`,
+      top: `${rect.bottom + 40}px`,
+    }
+  }
+  showCenterTooltip.value = true
+}
+
+function onCenterLeave() {
+  showCenterTooltip.value = false
+}
 
 async function measure() {
   await nextTick()
@@ -104,7 +135,12 @@ onUnmounted(() => resizeObserver?.disconnect())
         />
       </svg>
 
-      <div ref="chimesRef" class="center-chimes">
+      <div
+        ref="chimesRef"
+        class="center-chimes"
+        @mouseenter="onCenterEnter"
+        @mouseleave="onCenterLeave"
+      >
         <span class="chimes-value chimes-text-glow">
           {{ formatNumber(gameStore.chimes) }}
         </span>
@@ -140,6 +176,13 @@ onUnmounted(() => resizeObserver?.disconnect())
       <div class="arc-level-badge" :style="{ top: svgH - 20 + 'px' }">
         <span class="arc-level-text">{{ gameStore.level }}</span>
       </div>
+
+      <button
+        class="center-reset-btn"
+        :style="{ top: svgH - 10 + 'px' }"
+        title="Spielstand löschen"
+        @click.stop="handleReset"
+      >✕</button>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -177,6 +220,25 @@ onUnmounted(() => resizeObserver?.disconnect())
       </div>
     </div>
   </header>
+
+  <Teleport to="body">
+    <Transition name="xp-tt">
+      <div v-if="showCenterTooltip" class="xp-tt" :style="centerTooltipStyle" aria-hidden="true">
+        <div class="xp-tt__caret" />
+        <span class="xp-tt__label">Nächstes Level</span>
+        <div class="xp-tt__row">
+          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__sep">/</span>
+          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__unit">Chimes</span>
+        </div>
+        <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % zum nächsten Level</div>
+        <div class="xp-tt__bar-track">
+          <div class="xp-tt__bar-fill" :style="{ width: `${xpProgress * 100}%` }" />
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style>
@@ -275,6 +337,8 @@ onUnmounted(() => resizeObserver?.disconnect())
     0 6px 24px rgba(0, 0, 0, 0.7);
   align-self: stretch;
   overflow: hidden;
+  pointer-events: auto;
+  cursor: default;
 }
 
 /* ================================================================
@@ -561,5 +625,48 @@ onUnmounted(() => resizeObserver?.disconnect())
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
   line-height: 1;
+}
+
+/* ================================================================
+   RESET-BUTTON (Center, immer sichtbar)
+   ================================================================ */
+.center-reset-btn {
+  position: absolute;
+  left: calc(50% + 33px);
+  z-index: 26;
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: linear-gradient(to bottom, #4a1010, #2e0808);
+  border: 1.5px solid #8a3020;
+  border-radius: 50%;
+  color: #cc6050;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.center-reset-btn:hover {
+  background: linear-gradient(to bottom, #6a1818, #4a0e0e);
+  color: #ff9080;
+  border-color: #cc4830;
+}
+.center-reset-btn:active {
+  transform: scale(0.88);
+}
+
+/* ================================================================
+   TOOLTIP: PROZENT-ZEILE
+   ================================================================ */
+.xp-tt__percent {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 200, 80, 0.55);
+  letter-spacing: 0.04em;
+  margin-top: 1px;
 }
 </style>

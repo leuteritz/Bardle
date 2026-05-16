@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { BardTabId } from '@/stores/uiStore'
-import { usePersistence } from '@/composables/usePersistence'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
@@ -15,17 +14,6 @@ import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSele
 const gameStore = useGameStore()
 const uiStore = useUiStore()
 const xpProgress = computed(() => gameStore.levelProgress / 100)
-
-const { resetGame } = usePersistence()
-const handleReset = () => {
-  if (
-    window.confirm(
-      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
-    )
-  ) {
-    resetGame()
-  }
-}
 
 const menuItems: {
   id: BardTabId
@@ -49,29 +37,7 @@ watch(
   },
 )
 
-const chimesForLevel = computed(() => ({
-  current: gameStore.currentLevelChimes,
-  total: gameStore.totalChimesThisLevel,
-}))
 
-const portraitRef = ref<HTMLElement | null>(null)
-const showXpTooltip = ref(false)
-const xpTooltipStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
-
-function onPortraitEnter() {
-  if (portraitRef.value) {
-    const rect = portraitRef.value.getBoundingClientRect()
-    xpTooltipStyle.value = {
-      left: `${rect.left + rect.width / 2}px`,
-      top: `${rect.bottom + 10}px`,
-    }
-  }
-  showXpTooltip.value = true
-}
-
-function onPortraitLeave() {
-  showXpTooltip.value = false
-}
 </script>
 
 <template>
@@ -79,11 +45,8 @@ function onPortraitLeave() {
   <div class="relative">
     <!-- ══ Bard Portrait ══ -->
     <div
-      ref="portraitRef"
-      class="bard-portrait-wrapper group"
+      class="bard-portrait-wrapper"
       @click="uiStore.openBardModal()"
-      @mouseenter="onPortraitEnter"
-      @mouseleave="onPortraitLeave"
     >
       <div class="relative w-36 h-36">
         <!-- XP-Ring (Gold) -->
@@ -113,7 +76,7 @@ function onPortraitLeave() {
         <div class="absolute overflow-hidden inset-2 bard-portrait-inner">
           <img
             src="/img/BardAbilities/Bard.png"
-            class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+            class="object-cover w-full h-full"
           />
         </div>
 
@@ -124,32 +87,10 @@ function onPortraitLeave() {
           </div>
         </div>
 
-        <!-- ══ Reset: absolut unten-links, erscheint nur bei Hover, 0px Layoutbreite ══ -->
-        <button class="rp-reset-overlay" title="Spielstand löschen" @click.stop="handleReset">
-          ✕
-        </button>
+
       </div>
     </div>
   </div>
-
-  <!-- ══ XP-Tooltip (Teleport → body, position:fixed) ══ -->
-  <Teleport to="body">
-    <Transition name="xp-tt">
-      <div v-if="showXpTooltip" class="xp-tt" :style="xpTooltipStyle" aria-hidden="true">
-        <div class="xp-tt__caret" />
-        <span class="xp-tt__label">Nächstes Level</span>
-        <div class="xp-tt__row">
-          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('de-DE') }}</span>
-          <span class="xp-tt__sep">/</span>
-          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('de-DE') }}</span>
-          <span class="xp-tt__unit">Chimes</span>
-        </div>
-        <div class="xp-tt__bar-track">
-          <div class="xp-tt__bar-fill" :style="{ width: `${xpProgress * 100}%` }" />
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
 
   <!-- ══ Backdrop + Modal ══ -->
   <Teleport to="body">
@@ -402,54 +343,6 @@ function onPortraitLeave() {
   font-weight: 900;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-/* ═══════════════════════════════════════════
-   RESET OVERLAY – nimmt keinen Layoutplatz ein
-   ═══════════════════════════════════════════ */
-.rp-reset-overlay {
-  position: absolute;
-  bottom: 5px;
-  left: 5px;
-  width: 20px;
-  height: 20px;
-  font-size: 9px;
-  font-weight: 900;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-
-  background: linear-gradient(to bottom, #4a1010, #2e0808);
-  border: 1.5px solid #8a3020;
-  border-radius: 50%;
-  color: #cc6050;
-  cursor: pointer;
-  z-index: 20;
-
-  opacity: 0;
-  transform: scale(0.6);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.group:hover .rp-reset-overlay {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.rp-reset-overlay:hover {
-  background: linear-gradient(to bottom, #6a1818, #4a0e0e);
-  color: #ff9080;
-  border-color: #cc4830;
-}
-
-.rp-reset-overlay:active {
-  transform: scale(0.88);
 }
 
 /* ═══════════════════════════════════════════
