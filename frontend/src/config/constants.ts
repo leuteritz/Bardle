@@ -219,9 +219,13 @@ export const PLAYER_HP_LOSS_ON_ENRAGE = 25
 
 // Enemy planet attacks
 export const PLANET_SLOT_MAX_HP = 100
+/** @deprecated Replaced by STAR_BURST_COOLDOWN + STAR_BURST_DELAY_BETWEEN_SHOTS */
 export const ENEMY_ATTACK_INTERVAL_MIN_MS = 1000
+/** @deprecated Replaced by STAR_BURST_COOLDOWN + STAR_BURST_DELAY_BETWEEN_SHOTS */
 export const ENEMY_ATTACK_INTERVAL_MAX_MS = 3000
 export const ENEMY_PROJECTILE_DAMAGE = 8
+export const STAR_BURST_DELAY_BETWEEN_SHOTS = 200 // ms between individual shots within a burst
+export const STAR_BURST_COOLDOWN = 10_000 // ms cooldown after a full burst completes
 
 // Champion Orbit
 export const AVATAR_SIZE_LARGE = 40

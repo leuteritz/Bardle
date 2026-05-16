@@ -301,14 +301,13 @@ import { formatNumber } from '../../../config/numberFormat'
 import {
   ORBIT_TIERS,
   ROLE_BY_KEY,
-  ENEMY_ATTACK_INTERVAL_MIN_MS,
-  ENEMY_ATTACK_INTERVAL_MAX_MS,
   ENEMY_PROJECTILE_DAMAGE,
   ROLE_MID_CURSE_ATTACK_DEBUFF,
   ROLE_MID_CURSE_ATTACK_SLOW,
+  STAR_BURST_COOLDOWN,
+  STAR_BURST_DELAY_BETWEEN_SHOTS,
 } from '../../../config/constants'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
-import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import type { ChampionRole } from '../../../types'
 
@@ -390,18 +389,83 @@ const ENEMY_TRAIL_COLOR = '#cc5500'
 const ENEMY_HEAD_COLOR = '#ff8800'
 const TOP_INTERCEPT_RADIUS = 50
 
-const enemyAttackTimers = new Map<string, number>()
+interface StarBurstState {
+  cooldownMs: number
+  shotsLeft: number
+  shotDelayMs: number
+}
+const starBurstStates = new Map<string, StarBurstState>()
+
 let enemyAnimFrame = 0
 let enemyLastTs = 0
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-function randomAttackInterval(): number {
-  const base =
-    ENEMY_ATTACK_INTERVAL_MIN_MS +
-    Math.random() * (ENEMY_ATTACK_INTERVAL_MAX_MS - ENEMY_ATTACK_INTERVAL_MIN_MS)
+function effectiveBurstCooldown(): number {
   const curse = roleBehaviorStore.activeCurse
   const glaciated = curse?.type === 'glaciation' && Date.now() < curse.activeUntil
-  return glaciated ? base * ROLE_MID_CURSE_ATTACK_SLOW : base
+  return glaciated ? STAR_BURST_COOLDOWN * ROLE_MID_CURSE_ATTACK_SLOW : STAR_BURST_COOLDOWN
+}
+
+function fireEnemyShot(fromX: number, fromY: number) {
+  const foregroundSlots = [...activePlayerPlanetPositions.entries()].filter(
+    ([, p]) => p.isForeground,
+  )
+
+  let targetX: number
+  let targetY: number
+  let targetSlotId: string | null = null
+
+  if (foregroundSlots.length > 0) {
+    const [slotId, slotPos] = foregroundSlots[Math.floor(Math.random() * foregroundSlots.length)]
+    targetX = slotPos.cx
+    targetY = slotPos.cy
+    targetSlotId = slotId
+  } else {
+    targetX = window.innerWidth / 2
+    targetY = window.innerHeight / 2
+  }
+
+  const capturedSlotId = targetSlotId
+  const capturedTopLaneName = battleStore.headerSlots[0]
+  spawnEnemyShot(fromX, fromY, targetX, targetY, true, true, {
+    trailColor: ENEMY_TRAIL_COLOR,
+    headColor: ENEMY_HEAD_COLOR,
+    interceptCheck:
+      capturedSlotId === null && capturedTopLaneName
+        ? (headX: number, headY: number) => {
+            if (!roleBehaviorStore.tankShieldActive) return false
+            if (activeChampionBehindState[capturedTopLaneName]) return false
+            const topChamp = combatStore.champions.find((c) => c.name === capturedTopLaneName)
+            if (!topChamp) return false
+            return (
+              Math.hypot(headX - topChamp.screenX, headY - topChamp.screenY) < TOP_INTERCEPT_RADIUS
+            )
+          }
+        : undefined,
+    onIntercept:
+      capturedSlotId === null && capturedTopLaneName
+        ? (headX: number, headY: number) => {
+            const topChamp = combatStore.champions.find((c) => c.name === capturedTopLaneName)
+            if (!topChamp) return
+            const dx = headX - topChamp.screenX
+            const dy = headY - topChamp.screenY
+            const len = Math.hypot(dx, dy) || 1
+            roleBehaviorStore.triggerIntercept(dx / len, dy / len, topChamp.screenX, topChamp.screenY)
+          }
+        : undefined,
+    onHit() {
+      const curse = roleBehaviorStore.activeCurse
+      const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
+      const dmg = weakened
+        ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
+        : ENEMY_PROJECTILE_DAMAGE
+      if (capturedSlotId) {
+        planetShopStore.takeDamage(capturedSlotId, dmg)
+      } else {
+        playerStore.takeDamage(dmg)
+      }
+    },
+  })
 }
 
 function enemyAttackLoop(ts: number) {
@@ -412,99 +476,42 @@ function enemyAttackLoop(ts: number) {
     tickEnemyShots(dt)
 
     for (const star of starRenders.value) {
-      for (const planet of star.planets) {
-        if (planet.isBehind || planet.animState !== 'normal') continue
+      if (star.isBehind) continue
 
-        const pos = activePlanetPositions.get(planet.planetId)
-        if (!pos) continue
+      let state = starBurstStates.get(star.id)
+      if (!state) {
+        state = { cooldownMs: STAR_BURST_COOLDOWN, shotsLeft: 0, shotDelayMs: 0 }
+        starBurstStates.set(star.id, state)
+      }
 
-        let timer = enemyAttackTimers.get(planet.planetId) ?? randomAttackInterval()
-        timer -= dt
-
-        if (timer <= 0) {
-          timer = randomAttackInterval()
-
-          const foregroundSlots = [...activePlayerPlanetPositions.entries()].filter(
-            ([, p]) => p.isForeground,
-          )
-
-          let targetX: number
-          let targetY: number
-          let targetSlotId: string | null = null
-
-          if (foregroundSlots.length > 0) {
-            const [slotId, slotPos] =
-              foregroundSlots[Math.floor(Math.random() * foregroundSlots.length)]
-            targetX = slotPos.cx
-            targetY = slotPos.cy
-            targetSlotId = slotId
+      if (state.shotsLeft > 0) {
+        state.shotDelayMs -= dt
+        if (state.shotDelayMs <= 0) {
+          fireEnemyShot(star.x, star.y)
+          state.shotsLeft -= 1
+          if (state.shotsLeft === 0) {
+            state.cooldownMs = effectiveBurstCooldown()
           } else {
-            targetX = window.innerWidth / 2
-            targetY = window.innerHeight / 2
+            state.shotDelayMs = STAR_BURST_DELAY_BETWEEN_SHOTS
           }
-
-          const capturedSlotId = targetSlotId
-          const capturedTopLaneName = battleStore.headerSlots[0]
-          spawnEnemyShot(pos.cx, pos.cy, targetX, targetY, true, true, {
-            trailColor: ENEMY_TRAIL_COLOR,
-            headColor: ENEMY_HEAD_COLOR,
-            interceptCheck:
-              capturedSlotId === null && capturedTopLaneName
-                ? (headX: number, headY: number) => {
-                    if (!roleBehaviorStore.tankShieldActive) return false
-                    if (activeChampionBehindState[capturedTopLaneName]) return false
-                    const topChamp = combatStore.champions.find(
-                      (c) => c.name === capturedTopLaneName,
-                    )
-                    if (!topChamp) return false
-                    return (
-                      Math.hypot(headX - topChamp.screenX, headY - topChamp.screenY) <
-                      TOP_INTERCEPT_RADIUS
-                    )
-                  }
-                : undefined,
-            onIntercept:
-              capturedSlotId === null && capturedTopLaneName
-                ? (headX: number, headY: number) => {
-                    const topChamp = combatStore.champions.find(
-                      (c) => c.name === capturedTopLaneName,
-                    )
-                    if (!topChamp) return
-                    const dx = headX - topChamp.screenX
-                    const dy = headY - topChamp.screenY
-                    const len = Math.hypot(dx, dy) || 1
-                    roleBehaviorStore.triggerIntercept(
-                      dx / len,
-                      dy / len,
-                      topChamp.screenX,
-                      topChamp.screenY,
-                    )
-                  }
-                : undefined,
-            onHit() {
-              const curse = roleBehaviorStore.activeCurse
-              const weakened = curse?.type === 'weakness' && Date.now() < curse.activeUntil
-              const dmg = weakened
-                ? Math.max(1, Math.round(ENEMY_PROJECTILE_DAMAGE * ROLE_MID_CURSE_ATTACK_DEBUFF))
-                : ENEMY_PROJECTILE_DAMAGE
-              if (capturedSlotId) {
-                planetShopStore.takeDamage(capturedSlotId, dmg)
-              } else {
-                playerStore.takeDamage(dmg)
-              }
-            },
-          })
         }
-
-        enemyAttackTimers.set(planet.planetId, timer)
+      } else {
+        state.cooldownMs -= dt
+        if (state.cooldownMs <= 0) {
+          const count = star.planets.filter((p) => !p.isBehind && p.animState === 'normal').length
+          if (count > 0) {
+            state.shotsLeft = count
+            state.shotDelayMs = 0
+          } else {
+            state.cooldownMs = effectiveBurstCooldown()
+          }
+        }
       }
     }
 
-    const activePlanetIds = new Set(
-      starRenders.value.flatMap((s) => s.planets.map((p) => p.planetId)),
-    )
-    for (const id of enemyAttackTimers.keys()) {
-      if (!activePlanetIds.has(id)) enemyAttackTimers.delete(id)
+    const activeStarIds = new Set(starRenders.value.map((s) => s.id))
+    for (const id of starBurstStates.keys()) {
+      if (!activeStarIds.has(id)) starBurstStates.delete(id)
     }
 
     // ── Fluch-Timer aktualisieren ─────────────────────────────────────────────
