@@ -6,10 +6,9 @@ import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, ShopItem } from '@/types'
+import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
 import ChampionPickerPanel from './ChampionPickerPanel.vue'
 import ItemPickerPanel from './ItemPickerPanel.vue'
-import SynergyPanelComponent from '@/components/idle/synergy/SynergyPanelComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -49,18 +48,23 @@ const uiStore = useUiStore()
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
 const synergyStore = useSynergyStore()
-const { globalSynergies } = storeToRefs(synergyStore)
+const { globalSynergies, activeSynergies } = storeToRefs(synergyStore)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
 const activeSlotIndex = ref(uiStore.rolesActiveSlot)
-const activeSubSlot = ref(-1) // -1 = main, 0/1 = secondary index
+const activeSubSlot = ref(-1)
 const selectedCategory = ref<ItemCategory | null>(null)
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 
-// Parallax state
 const parallaxX = ref(0)
 const parallaxY = ref(0)
+
+const hoveredSynId = ref<string | null>(null)
+
+const hoveredSyn = computed(
+  () => activeSynergies.value.find((s) => s.id === hoveredSynId.value) ?? null,
+)
 
 watch(
   () => uiStore.rolesActiveSlot,
@@ -187,6 +191,31 @@ function formatEffects(item: ShopItem | null): string[] {
   return result
 }
 
+function formatEffect(syn: ActiveSynergy): string {
+  return syn.effects
+    .map((e) => {
+      const pct = Math.round((e.multiplier - 1) * 100)
+      const label = e.type === 'cps' ? 'CPS' : e.type === 'power' ? 'Macht' : 'DPS'
+      return `${label} +${pct}%`
+    })
+    .join(' · ')
+}
+
+function isHighlighted(champion: string | null | undefined): boolean {
+  if (!champion || !hoveredSyn.value) return false
+  return hoveredSyn.value.involvedChampions.includes(champion)
+}
+
+function highlightStyle(champion: string | null | undefined): Record<string, string> {
+  if (!isHighlighted(champion)) return {}
+  return { '--hl-color': hoveredSyn.value!.color }
+}
+
+function getSynergiesFor(champion: string | null | undefined): ActiveSynergy[] {
+  if (!champion) return []
+  return activeSynergies.value.filter((s) => s.involvedChampions.includes(champion))
+}
+
 function onSplashMouseMove(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
@@ -200,6 +229,8 @@ function onSplashMouseLeave() {
   parallaxX.value = 0
   parallaxY.value = 0
 }
+
+void championRoleLabel
 </script>
 
 <template>
@@ -208,7 +239,6 @@ function onSplashMouseLeave() {
          MAIN VIEW
          ════════════════════════════════ -->
     <template v-if="panelMode === 'main'">
-      <SynergyPanelComponent />
       <div class="main-layout">
         <!-- ══ LEFT — Dominant Splash Art ══ -->
         <div
@@ -223,9 +253,11 @@ function onSplashMouseLeave() {
                 :src="battleStore.getChampionImage(activeChampion)"
                 :alt="activeChampion"
                 class="splash-img"
-                :style="{
-                  transform: `scale(1.06) translate(${parallaxX}px, ${parallaxY}px)`,
-                }"
+                :class="{ 'splash-img--syn-glow': isHighlighted(activeChampion) }"
+                :style="[
+                  { transform: `scale(1.06) translate(${parallaxX}px, ${parallaxY}px)` },
+                  highlightStyle(activeChampion),
+                ]"
                 @error="onImgError"
               />
             </template>
@@ -243,95 +275,128 @@ function onSplashMouseLeave() {
           <!-- Champion Name — top center -->
           <div v-if="activeChampion" class="splash-name-top">{{ activeChampion }}</div>
 
-          <!-- Global synergy overlay — left side, RPG style -->
-          <div v-if="globalSynergies.length" class="splash-syn-overlay">
-            <div v-for="syn in globalSynergies" :key="syn.id" class="splash-syn-item">
-              <span class="splash-syn-icon">{{ syn.icon }}</span>
-              <div class="splash-syn-text">
-                <span class="splash-syn-name">{{ syn.name }}</span>
-                <span class="splash-syn-champs">{{ syn.involvedChampions.join(' · ') }}</span>
+          <!-- Click hint -->
+
+          <!-- Corner decorations -->
+          <div class="splash-corner splash-corner--tl" />
+          <div class="splash-corner splash-corner--br" />
+
+          <!-- ══ Bottom HUD: Secondary 1 | Equipment | Secondary 2 ══ -->
+          <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+            <!-- Secondary Champion 1 -->
+            <div class="hud-sec-col">
+              <button
+                class="hud-sec-card"
+                :class="{ 'hud-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
+                :style="highlightStyle(activeSecondaries[0])"
+                @click.stop="openChampionPicker(0)"
+              >
+                <img
+                  v-if="activeSecondaries[0]"
+                  :src="battleStore.getChampionImage(activeSecondaries[0]!)"
+                  :alt="activeSecondaries[0]!"
+                  class="hud-sec-img"
+                  @error="onImgError"
+                />
+                <span v-else class="hud-sec-plus">＋</span>
+                <span class="hud-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
+                <button
+                  v-if="activeSecondaries[0]"
+                  class="hud-sec-clear"
+                  title="Entfernen"
+                  @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
+                >
+                  ✕
+                </button>
+              </button>
+              <div v-if="activeSecondaries[0]" class="hud-syn-badges">
+                <div
+                  v-for="syn in getSynergiesFor(activeSecondaries[0])"
+                  :key="syn.id"
+                  class="hud-syn-badge"
+                  :style="{ '--sc': syn.color }"
+                  @mouseenter="hoveredSynId = syn.id"
+                  @mouseleave="hoveredSynId = null"
+                >
+                  <span class="hud-syn-icon">{{ syn.icon }}</span>
+                  <span class="hud-syn-text">{{ syn.name }}</span>
+                  <span class="hud-syn-fx">{{ formatEffect(syn) }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Bottom bar: Sec1 | Equipment | Sec2 -->
-          <div class="splash-bottom-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-            <!-- Secondary 1 (links) -->
-            <button class="splash-sec-card" @click.stop="openChampionPicker(0)">
-              <img
-                v-if="activeSecondaries[0]"
-                :src="battleStore.getChampionImage(activeSecondaries[0]!)"
-                :alt="activeSecondaries[0]!"
-                class="splash-sec-card-img"
-                @error="onImgError"
-              />
-              <span v-else class="splash-sec-plus">＋</span>
-              <span class="splash-sec-card-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
-              <button
-                v-if="activeSecondaries[0]"
-                class="splash-sec-clear"
-                title="Entfernen"
-                @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
-              >✕</button>
-            </button>
-
-            <!-- Equipment center -->
-            <div class="splash-equip-center">
+            <!-- Equipment Center -->
+            <div class="hud-equip-col">
               <button
                 v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
                 :key="cat"
-                class="splash-equip-btn"
-                :class="{ 'splash-equip-btn--filled': currentEquipment[cat] !== null }"
+                class="hud-equip-btn"
+                :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
+                :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
                 @click.stop="openItemPicker(cat)"
               >
                 <template v-if="getEquippedItem(cat)">
                   <img
                     v-if="getEquippedItem(cat)!.icon.startsWith('/')"
                     :src="getEquippedItem(cat)!.icon"
-                    class="splash-equip-img"
+                    class="hud-equip-img"
                     :alt="getEquippedItem(cat)!.name"
                   />
-                  <span v-else class="splash-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-                  <span class="splash-equip-fx">{{ formatEffects(getEquippedItem(cat)).join(' ') }}</span>
+                  <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
+                  <span class="hud-equip-fx">{{
+                    formatEffects(getEquippedItem(cat)).join(' ')
+                  }}</span>
                 </template>
-                <span v-else class="splash-equip-placeholder">{{ CAT_ICONS[cat] }}</span>
-                <span class="splash-equip-label">{{ CAT_LABELS[cat] }}</span>
+                <span v-else class="hud-equip-empty">{{ CAT_ICONS[cat] }}</span>
               </button>
             </div>
 
-            <!-- Secondary 2 (rechts) -->
-            <button class="splash-sec-card" @click.stop="openChampionPicker(1)">
-              <img
-                v-if="activeSecondaries[1]"
-                :src="battleStore.getChampionImage(activeSecondaries[1]!)"
-                :alt="activeSecondaries[1]!"
-                class="splash-sec-card-img"
-                @error="onImgError"
-              />
-              <span v-else class="splash-sec-plus">＋</span>
-              <span class="splash-sec-card-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
+            <!-- Secondary Champion 2 -->
+            <div class="hud-sec-col">
               <button
-                v-if="activeSecondaries[1]"
-                class="splash-sec-clear"
-                title="Entfernen"
-                @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
-              >✕</button>
-            </button>
+                class="hud-sec-card"
+                :class="{ 'hud-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
+                :style="highlightStyle(activeSecondaries[1])"
+                @click.stop="openChampionPicker(1)"
+              >
+                <img
+                  v-if="activeSecondaries[1]"
+                  :src="battleStore.getChampionImage(activeSecondaries[1]!)"
+                  :alt="activeSecondaries[1]!"
+                  class="hud-sec-img"
+                  @error="onImgError"
+                />
+                <span v-else class="hud-sec-plus">＋</span>
+                <span class="hud-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
+                <button
+                  v-if="activeSecondaries[1]"
+                  class="hud-sec-clear"
+                  title="Entfernen"
+                  @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
+                >
+                  ✕
+                </button>
+              </button>
+              <div v-if="activeSecondaries[1]" class="hud-syn-badges">
+                <div
+                  v-for="syn in getSynergiesFor(activeSecondaries[1])"
+                  :key="syn.id"
+                  class="hud-syn-badge"
+                  :style="{ '--sc': syn.color }"
+                  @mouseenter="hoveredSynId = syn.id"
+                  @mouseleave="hoveredSynId = null"
+                >
+                  <span class="hud-syn-icon">{{ syn.icon }}</span>
+                  <span class="hud-syn-text">{{ syn.name }}</span>
+                  <span class="hud-syn-fx">{{ formatEffect(syn) }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <!-- Click hint -->
-          <div class="splash-click-hint">
-            <span>Klicken zum Wechseln</span>
-          </div>
-
-          <!-- Corner decorations -->
-          <div class="splash-corner splash-corner--tl" />
-          <div class="splash-corner splash-corner--br" />
         </div>
 
-        <!-- ══ RIGHT — Sidebar ══ -->
+        <!-- ══ RIGHT — Sidebar (role tabs only) ══ -->
         <div class="sidebar">
-          <!-- Role Slots -->
           <div class="sidebar-section sidebar-section--roles">
             <div class="role-list">
               <button
@@ -341,8 +406,9 @@ function onSplashMouseLeave() {
                 :class="{
                   'role-btn--active': activeSlotIndex === i,
                   'role-btn--filled': headerSlots[i] !== null,
+                  'role-btn--syn-glow': isHighlighted(headerSlots[i]),
                 }"
-                :style="{ '--rc': ROLE_COLORS[role] }"
+                :style="[{ '--rc': ROLE_COLORS[role] }, highlightStyle(headerSlots[i])]"
                 @click="selectSlot(i)"
               >
                 <img
@@ -473,8 +539,14 @@ function onSplashMouseLeave() {
   object-fit: cover;
   object-position: center top;
   display: block;
-  transition: transform 0.12s ease-out;
+  transition:
+    transform 0.12s ease-out,
+    filter 0.25s ease;
   will-change: transform;
+}
+
+.splash-img--syn-glow {
+  filter: brightness(1.3) saturate(1.2) drop-shadow(0 0 24px var(--hl-color, #e8c040));
 }
 
 .splash-empty {
@@ -605,10 +677,10 @@ function onSplashMouseLeave() {
   display: block;
 }
 
-/* Click hint */
+/* Click hint — top right (below champion name) */
 .splash-click-hint {
   position: absolute;
-  bottom: 10px;
+  top: 40px;
   right: 10px;
   z-index: 5;
   font-size: 8px;
@@ -654,44 +726,10 @@ function onSplashMouseLeave() {
 }
 
 /* ══════════════════════════════
-   SIDEBAR
+   SPLASH HUD — Bottom Overlay
+   Layout: [Sec1] [Equipment] [Sec2]
    ══════════════════════════════ */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  background: #0e0b05;
-  overflow: hidden;
-}
-
-.sidebar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 8px 6px;
-}
-.sidebar-section--roles {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.sidebar-section--equip {
-  flex-shrink: 0;
-}
-
-.sidebar-label {
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.35);
-  padding: 0 2px 2px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
-  margin-bottom: 2px;
-  flex-shrink: 0;
-}
-
-/* ── Bottom bar: Sec1 | Equipment | Sec2 ── */
-.splash-bottom-bar {
+.splash-hud {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -699,76 +737,86 @@ function onSplashMouseLeave() {
   z-index: 6;
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, transparent 100%);
-  padding: 10px 12px 10px;
+  gap: 10px;
+  padding: 10px 14px 12px;
 }
 
-/* Secondary portrait cards */
-.splash-sec-card {
+/* ── Secondary champion columns ── */
+.hud-sec-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hud-sec-card {
   position: relative;
-  width: 72px;
-  height: 90px;
+  width: 86px;
+  height: 108px;
   border-radius: 4px;
   border: 2px solid color-mix(in srgb, var(--rc, #c89040) 70%, transparent);
   background: #0a0804;
   overflow: hidden;
   cursor: pointer;
   padding: 0;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.12s,
+    filter 0.2s;
 }
-.splash-sec-card:hover {
+.hud-sec-card:hover {
   border-color: var(--rc, #c89040);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--rc, #c89040) 50%, transparent);
-  transform: translateY(-2px);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
+  transform: translateY(-3px);
+}
+.hud-sec-card--syn-glow {
+  border-color: var(--hl-color, var(--rc)) !important;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--hl-color, #e8c040) 65%, transparent) !important;
+  filter: brightness(1.18);
 }
 
-.splash-sec-card-img {
+.hud-sec-img {
   width: 100%;
-  height: 78%;
+  height: 82px;
   object-fit: cover;
   object-position: top center;
   display: block;
+  flex-shrink: 0;
 }
 
-.splash-sec-card-name {
-  position: absolute;
-  bottom: 2px;
-  left: 0;
-  right: 0;
-  text-align: center;
+.hud-sec-plus {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: rgba(200, 144, 64, 0.25);
+  transition: color 0.15s;
+}
+.hud-sec-card:hover .hud-sec-plus {
+  color: rgba(200, 144, 64, 0.65);
+}
+
+.hud-sec-name {
   font-size: 7px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--rc, #c89040);
-  line-height: 1.2;
-  padding: 0 2px;
-  background: rgba(0, 0, 0, 0.65);
+  text-align: center;
+  padding: 3px 3px;
+  background: rgba(0, 0, 0, 0.75);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
-.splash-sec-plus {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 78%;
-  font-size: 22px;
-  color: rgba(200, 144, 64, 0.25);
-  transition: color 0.15s;
-}
-.splash-sec-card:hover .splash-sec-plus {
-  color: rgba(200, 144, 64, 0.65);
-}
-
-.splash-sec-clear {
+.hud-sec-clear {
   position: absolute;
   top: 2px;
   right: 2px;
@@ -790,91 +838,158 @@ function onSplashMouseLeave() {
     opacity 0.15s ease,
     background 0.15s ease;
 }
-.splash-sec-card:hover .splash-sec-clear {
+.hud-sec-card:hover .hud-sec-clear {
   opacity: 1;
 }
-.splash-sec-clear:hover {
+.hud-sec-clear:hover {
   background: rgba(160, 40, 20, 0.85);
   border-color: #cc6050;
 }
 
-/* Equipment — compact center */
-.splash-equip-center {
-  flex: 1;
+/* Synergy badges below secondary card */
+.hud-syn-badges {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  align-items: flex-end;
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 2px;
+  width: 86px;
 }
 
-.splash-equip-btn {
+.hud-syn-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(8, 5, 2, 0.78);
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
+  border-radius: 3px;
+  padding: 2px 5px;
+  cursor: default;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.hud-syn-badge:hover {
+  border-color: var(--sc, #e8c040);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
+}
+
+.hud-syn-icon {
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hud-syn-text {
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--sc, #e8c040);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-syn-fx {
+  font-size: 7px;
+  color: #e8c040;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Equipment center column ── */
+.hud-equip-col {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.hud-equip-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  background: rgba(8, 5, 2, 0.75);
-  border: 1px solid rgba(92, 51, 16, 0.6);
+  gap: 4px;
+  background: rgba(8, 5, 2, 0.7);
+  border: 1px solid rgba(92, 51, 16, 0.55);
   border-radius: 4px;
-  padding: 5px 7px;
+  padding: 7px 8px;
   cursor: pointer;
+  min-width: 56px;
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
     transform 0.12s;
 }
-.splash-equip-btn:hover {
-  border-color: rgba(200, 144, 64, 0.55);
-  box-shadow: 0 0 10px rgba(200, 144, 64, 0.25);
-  transform: translateY(-2px);
+.hud-equip-btn:hover {
+  border-color: rgba(200, 144, 64, 0.6);
+  box-shadow: 0 0 12px rgba(200, 144, 64, 0.3);
+  transform: translateY(-3px);
 }
-.splash-equip-btn--filled {
+.hud-equip-btn--filled {
   border-color: rgba(200, 144, 64, 0.4);
 }
 
-.splash-equip-img {
-  width: 40px;
-  height: 40px;
+.hud-equip-img {
+  width: 48px;
+  height: 48px;
   object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.55));
+  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.6));
+  transition: filter 0.15s;
 }
-.splash-equip-btn:hover .splash-equip-img {
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.9));
+.hud-equip-btn:hover .hud-equip-img {
+  filter: drop-shadow(0 0 14px rgba(200, 144, 64, 0.95));
 }
 
-.splash-equip-emoji {
-  font-size: 36px;
+.hud-equip-emoji {
+  font-size: 40px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
 }
 
-.splash-equip-placeholder {
-  font-size: 32px;
+.hud-equip-empty {
+  font-size: 36px;
   line-height: 1;
   opacity: 0.22;
   transition: opacity 0.15s;
 }
-.splash-equip-btn:hover .splash-equip-placeholder {
-  opacity: 0.5;
+.hud-equip-btn:hover .hud-equip-empty {
+  opacity: 0.55;
 }
 
-.splash-equip-fx {
-  font-size: 9px;
-  color: #e8c040;
-  text-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
-  white-space: nowrap;
-}
-
-.splash-equip-label {
+.hud-equip-fx {
   font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  line-height: 1;
+  color: #e8c040;
+  white-space: nowrap;
+  text-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
 }
 
-/* ── Role Buttons ── */
+/* ══════════════════════════════
+   SIDEBAR — Role tabs only
+   ══════════════════════════════ */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: #0e0b05;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 8px 6px;
+}
+
+.sidebar-section--roles {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .role-list {
   display: flex;
   flex-direction: column;
@@ -895,8 +1010,9 @@ function onSplashMouseLeave() {
   flex: 1;
   min-height: 0;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color 0.2s,
+    box-shadow 0.2s,
+    filter 0.2s;
 }
 .role-btn:hover {
   border-color: var(--rc);
@@ -905,6 +1021,11 @@ function onSplashMouseLeave() {
 .role-btn--active {
   border-color: var(--rc) !important;
   box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent) !important;
+}
+.role-btn--syn-glow {
+  filter: brightness(1.2);
+  border-color: var(--hl-color, var(--rc)) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--hl-color, var(--rc)) 55%, transparent) !important;
 }
 
 .role-btn-img {
@@ -981,10 +1102,6 @@ function onSplashMouseLeave() {
   z-index: 3;
 }
 
-
-/* ══════════════════════════════
-   SIDEBAR ROLE-BTN — Secondaries column
-   ══════════════════════════════ */
 .role-btn-secs {
   position: absolute;
   top: 4px;
