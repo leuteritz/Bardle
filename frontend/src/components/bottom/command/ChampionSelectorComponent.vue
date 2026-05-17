@@ -43,7 +43,9 @@ function onImgError(e: Event) {
         }"
         :style="{ '--role-color': ROLES[i].orbit.color }"
         :title="
-          slot ? `${slot} (${ROLES[i].label}) – klicken zum Ändern` : `${ROLES[i].label} – Champion wählen`
+          slot
+            ? `${slot} (${ROLES[i].label}) – klicken zum Ändern`
+            : `${ROLES[i].label} – Champion wählen`
         "
         @click="openPicker(i)"
       >
@@ -104,7 +106,6 @@ function onImgError(e: Event) {
         </button>
       </button>
     </div>
-
   </div>
 </template>
 
@@ -440,14 +441,14 @@ function onImgError(e: Event) {
 }
 
 .slot-tile--first .slot-secs {
-  top: 20px;
+  top: 4px;
   right: 6px;
 }
 
 .slot-sec {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 35px;
+  height: 35px;
   padding: 0;
   border-radius: 50%;
   border: 1.5px solid color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
