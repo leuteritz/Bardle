@@ -148,6 +148,10 @@ function fillTeamWithRandomChampions() {
     .sort(() => Math.random() - 0.5)
 
   battleStore.headerSlots.splice(0, 5, null, null, null, null, null)
+  for (let r = 0; r < 5; r++) {
+    battleStore.secondarySlots[r][0] = null
+    battleStore.secondarySlots[r][1] = null
+  }
   battleStore.syncTeam1ToSlots()
 
   roles.forEach((role, slotIndex) => {
@@ -160,6 +164,17 @@ function fillTeamWithRandomChampions() {
     if (!pick) return
     used.add(pick)
     battleStore.setHeaderSlot(slotIndex, pick)
+
+    const secondaryPool = pool.filter(
+      (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
+    )
+    for (let subIndex = 0; subIndex < 2; subIndex++) {
+      if (secondaryPool.length === 0) break
+      const idx = Math.floor(Math.random() * secondaryPool.length)
+      const secondary = secondaryPool.splice(idx, 1)[0]
+      used.add(secondary)
+      battleStore.setSecondarySlot(slotIndex, subIndex, secondary)
+    }
   })
 
   planetShopStore.adminFillRandomRoles()
