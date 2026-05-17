@@ -6,15 +6,20 @@ import { ROLES } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
-const { headerSlots } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
-function openPicker(slotIndex: number) {
-  uiStore.requestOpenRolesTab(slotIndex)
+function openPicker(slotIndex: number, subSlot: number = -1) {
+  uiStore.requestOpenRolesTab(slotIndex, subSlot)
 }
 
 function clearSlot(slotIndex: number, event: Event) {
   event.stopPropagation()
   battleStore.clearHeaderSlot(slotIndex)
+}
+
+function clearSecondary(slotIndex: number, subIndex: number, event: Event) {
+  event.stopPropagation()
+  battleStore.clearSecondarySlot(slotIndex, subIndex)
 }
 
 function onImgError(e: Event) {
@@ -36,6 +41,7 @@ function onImgError(e: Event) {
           [`slot-tile--role-${ROLES[i].key}`]: true,
           'slot-tile--first': i === 0,
         }"
+        :style="{ '--role-color': ROLES[i].orbit.color }"
         :title="
           slot ? `${slot} (${ROLES[i].label}) – klicken zum Ändern` : `${ROLES[i].label} – Champion wählen`
         "
@@ -58,6 +64,39 @@ function onImgError(e: Event) {
 
         <div class="slot-name-badge">
           <span class="slot-name-text">{{ ROLES[i].label }}</span>
+        </div>
+
+        <!-- Mini secondary avatars -->
+        <div class="slot-secs">
+          <button
+            v-for="s in [0, 1]"
+            :key="s"
+            class="slot-sec"
+            :class="{ 'slot-sec--filled': secondarySlots[i][s] !== null }"
+            :title="
+              secondarySlots[i][s]
+                ? `${secondarySlots[i][s]} (${ROLES[i].label} S${s + 1}) – klicken zum Ändern`
+                : `${ROLES[i].label} – Sekundär ${s + 1} hinzufügen`
+            "
+            @click.stop="openPicker(i, s)"
+          >
+            <img
+              v-if="secondarySlots[i][s]"
+              :src="battleStore.getChampionImage(secondarySlots[i][s]!)"
+              :alt="secondarySlots[i][s]!"
+              class="slot-sec-img"
+              @error="onImgError"
+            />
+            <span v-else class="slot-sec-plus">＋</span>
+            <button
+              v-if="secondarySlots[i][s]"
+              class="slot-sec-clear"
+              title="Entfernen"
+              @click.stop="clearSecondary(i, s, $event)"
+            >
+              ✕
+            </button>
+          </button>
         </div>
 
         <button v-if="slot" class="slot-clear" title="Entfernen" @click.stop="clearSlot(i, $event)">
@@ -385,5 +424,102 @@ function onImgError(e: Event) {
     0 0 14px -1px rgba(184, 200, 216, 0.65),
     inset 0 1px 0 rgba(184, 200, 216, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ══════════════════════════════
+   SECONDARY MINI AVATARS (per slot tile)
+   ══════════════════════════════ */
+.slot-secs {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.slot-tile--first .slot-secs {
+  top: 20px;
+  right: 6px;
+}
+
+.slot-sec {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--role-color, #c89040) 55%, transparent);
+  background: rgba(10, 8, 4, 0.88);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
+}
+.slot-sec:hover {
+  transform: scale(1.15);
+  border-color: var(--role-color, #c89040);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.slot-sec--filled {
+  border-color: var(--role-color, #c89040);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--role-color, #c89040) 40%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.slot-sec-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  border-radius: 50%;
+}
+
+.slot-sec-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 11px;
+  color: rgba(200, 144, 64, 0.3);
+}
+
+.slot-sec-clear {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  font-size: 7px;
+  color: #cc6050;
+  background: rgba(20, 10, 6, 0.95);
+  border: 1px solid rgba(180, 60, 40, 0.55);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 2;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+.slot-sec:hover .slot-sec-clear {
+  opacity: 1;
+}
+.slot-sec-clear:hover {
+  background: rgba(160, 40, 20, 0.85);
+  border-color: #cc6050;
 }
 </style>

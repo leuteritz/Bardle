@@ -77,6 +77,7 @@ export function usePersistence() {
         ownedChampions: [...battleStore.ownedChampions],
         teamSlotAssignments: [...battleStore.teamSlotAssignments],
         headerSlots: [...battleStore.headerSlots],
+        secondarySlots: battleStore.secondarySlots.map((row) => [...row]),
         totalBattles: battleStore.totalBattles,
         totalWins: battleStore.totalWins,
         totalLosses: battleStore.totalLosses,
@@ -215,6 +216,15 @@ export function usePersistence() {
         if (Array.isArray(b.teamSlotAssignments))
           battleStore.teamSlotAssignments = b.teamSlotAssignments
         if (Array.isArray(b.headerSlots)) battleStore.headerSlots = b.headerSlots
+        if (Array.isArray(b.secondarySlots) && b.secondarySlots.length === 5) {
+          battleStore.secondarySlots = b.secondarySlots.map((row: unknown) => {
+            const arr = Array.isArray(row) ? row : []
+            return [
+              typeof arr[0] === 'string' ? (arr[0] as string) : null,
+              typeof arr[1] === 'string' ? (arr[1] as string) : null,
+            ]
+          })
+        }
         battleStore.totalBattles = b.totalBattles ?? battleStore.totalBattles
         battleStore.totalWins = b.totalWins ?? battleStore.totalWins
         battleStore.totalLosses = b.totalLosses ?? battleStore.totalLosses
@@ -424,6 +434,13 @@ export function usePersistence() {
     battleStore.ownedChampions = ['Bard']
     battleStore.teamSlotAssignments = [null, null, null, null]
     battleStore.headerSlots = [null, null, null, null, null]
+    battleStore.secondarySlots = [
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+    ]
     battleStore.totalBattles = 0
     battleStore.totalWins = 0
     battleStore.totalLosses = 0

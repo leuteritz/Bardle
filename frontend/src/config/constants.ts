@@ -386,6 +386,11 @@ export const ORBIT_TIERS = {
 // Support orbits the same path as ADC, offset by this angle (radians) behind
 export const SUPPORT_ANGLE_OFFSET = Math.PI / 5
 
+// Secondary champions follow the main on the same role orbit ring with these angular offsets
+export const SECONDARY_ANGLE_OFFSET_1 = Math.PI / 7
+export const SECONDARY_ANGLE_OFFSET_2 = -Math.PI / 7
+export const SECONDARY_SIZE_SCALE = 0.6
+
 /** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px).
  *  These orbit planets around *stars*, not the sun — not scaled via SUN_RADIUS. */
 export const PLANET_SLOT_ORBITS = [

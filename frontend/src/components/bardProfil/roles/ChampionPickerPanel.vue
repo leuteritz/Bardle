@@ -4,12 +4,28 @@ import { useBattleStore } from '@/stores/battleStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
-const props = defineProps<{
-  activeRole: string
-  roleFilteredChampions: string[]
-  headerSlots: (string | null)[]
-  activeSlotIndex: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    activeRole: string
+    pickerTitle?: string
+    roleFilteredChampions: string[]
+    headerSlots: (string | null)[]
+    secondarySlots?: (string | null)[][]
+    activeSlotIndex: number
+    activeSubSlot?: number
+  }>(),
+  {
+    pickerTitle: '',
+    secondarySlots: () => [
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+    ],
+    activeSubSlot: -1,
+  },
+)
 
 const emit = defineEmits<{
   back: []
@@ -18,6 +34,10 @@ const emit = defineEmits<{
 
 const battleStore = useBattleStore()
 const searchQuery = ref('')
+
+const headerTitle = computed(() =>
+  props.pickerTitle ? props.pickerTitle : `${props.activeRole} — Champion wählen`,
+)
 
 const filteredChampions = computed(() => {
   const list = searchQuery.value
@@ -28,6 +48,24 @@ const filteredChampions = computed(() => {
   return [...list].sort((a, b) => a.localeCompare(b))
 })
 
+function isActiveSelection(champion: string): boolean {
+  if (props.activeSubSlot === -1) {
+    return props.headerSlots[props.activeSlotIndex] === champion
+  }
+  return props.secondarySlots[props.activeSlotIndex]?.[props.activeSubSlot] === champion
+}
+
+function takenLabel(champion: string): string | null {
+  if (isActiveSelection(champion)) return null
+  const mainIdx = props.headerSlots.indexOf(champion)
+  if (mainIdx >= 0) return ROLES[mainIdx]
+  for (let r = 0; r < props.secondarySlots.length; r++) {
+    const sub = props.secondarySlots[r].indexOf(champion)
+    if (sub >= 0) return `${ROLES[r]}·S${sub + 1}`
+  }
+  return null
+}
+
 function onImgError(e: Event) {
   ;(e.target as HTMLImageElement).style.display = 'none'
 }
@@ -36,7 +74,7 @@ function onImgError(e: Event) {
 <template>
   <div class="champion-picker-panel">
     <div class="sub-header">
-      <span class="sub-header-title">{{ activeRole }} — Champion wählen</span>
+      <span class="sub-header-title">{{ headerTitle }}</span>
       <button class="back-btn" @click="emit('back')">← Zurück</button>
     </div>
 
@@ -69,9 +107,8 @@ function onImgError(e: Event) {
           :key="champion"
           class="picker-champ"
           :class="{
-            'picker-champ--active': headerSlots[activeSlotIndex] === champion,
-            'picker-champ--taken':
-              headerSlots.includes(champion) && headerSlots[activeSlotIndex] !== champion,
+            'picker-champ--active': isActiveSelection(champion),
+            'picker-champ--taken': !!takenLabel(champion),
           }"
           @click="emit('select', champion)"
         >
@@ -85,11 +122,11 @@ function onImgError(e: Event) {
           <span class="picker-champ-name">{{ champion }}</span>
           <span class="pchamp-corner pchamp-corner--tl" />
           <span class="pchamp-corner pchamp-corner--br" />
-          <div v-if="headerSlots[activeSlotIndex] === champion" class="picker-active-overlay">
+          <div v-if="isActiveSelection(champion)" class="picker-active-overlay">
             <span class="picker-check">✓</span>
           </div>
-          <div v-else-if="headerSlots.includes(champion)" class="picker-taken-badge">
-            {{ ROLES[headerSlots.indexOf(champion)] }}
+          <div v-else-if="takenLabel(champion)" class="picker-taken-badge">
+            {{ takenLabel(champion) }}
           </div>
         </button>
       </div>

@@ -3,7 +3,7 @@
   <!-- Champion Orbit-Ring Layer (nebula glow rings) -->
   <svg class="champion-orbit-rings" aria-hidden="true">
     <OrbitPath
-      v-for="pos in championRenderPositions"
+      v-for="pos in mainRingPositions"
       :key="'ring-champ-' + pos.name"
       :color="pos.orbitColor"
       :x="screenCx"
@@ -25,7 +25,10 @@
       v-for="pos in backChampions"
       :key="pos.name"
       class="champion-orbit-avatar champion-orbit-avatar--behind"
-      :class="{ [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole }"
+      :class="{
+        [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
+        'champion-orbit-avatar--secondary': !pos.isMain,
+      }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -46,22 +49,24 @@
       :class="{
         'champion-orbit-avatar--attacking': pos.isAttacking,
         'champion-orbit-avatar--foreground': pos.isForeground,
+        'champion-orbit-avatar--secondary': !pos.isMain,
         [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
         'champion-orbit-avatar--shield':
-          pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
+          pos.isMain && pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
         'champion-orbit-avatar--cursing':
-          pos.primaryRole === 'mid' && roleBehaviorStore.midCurseFlashActive,
+          pos.isMain && pos.primaryRole === 'mid' && roleBehaviorStore.midCurseFlashActive,
         'champion-orbit-avatar--ability-mid':
-          pos.primaryRole === 'mid' && roleBehaviorStore.midCurseCooldownMs === 0,
-        'champion-orbit-avatar--top-hit': pos.primaryRole === 'top' && topHitActive,
+          pos.isMain && pos.primaryRole === 'mid' && roleBehaviorStore.midCurseCooldownMs === 0,
+        'champion-orbit-avatar--top-hit':
+          pos.isMain && pos.primaryRole === 'top' && topHitActive,
         'champion-orbit-avatar--intercept':
-          pos.primaryRole === 'top' && roleBehaviorStore.tankInterceptActive,
+          pos.isMain && pos.primaryRole === 'top' && roleBehaviorStore.tankInterceptActive,
         'champion-orbit-avatar--healing':
-          pos.primaryRole === 'support' && roleBehaviorStore.supportPlanetHealActive,
+          pos.isMain && pos.primaryRole === 'support' && roleBehaviorStore.supportPlanetHealActive,
         'champion-orbit-avatar--ability-jungle':
-          pos.primaryRole === 'jungle' && roleBehaviorStore.jungleBuffCooldownMs === 0,
+          pos.isMain && pos.primaryRole === 'jungle' && roleBehaviorStore.jungleBuffCooldownMs === 0,
         'champion-orbit-avatar--ability-adc':
-          pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
+          pos.isMain && pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
       }"
       :style="{
         width: pos.size + 'px',
@@ -74,7 +79,7 @@
       <img :src="pos.img" :alt="pos.name" />
       <Transition name="ability-icon">
         <img
-          v-if="pos.primaryRole && isAbilityActive(pos.primaryRole)"
+          v-if="pos.isMain && pos.primaryRole && isAbilityActive(pos.primaryRole)"
           :src="ROLE_BY_KEY[pos.primaryRole].image"
           :alt="pos.primaryRole"
           :aria-label="pos.primaryRole + ' ability'"
@@ -120,7 +125,15 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
-import { ORBIT_TIERS, SUPPORT_ANGLE_OFFSET, ROLES, ROLE_BY_KEY } from '@/config/constants'
+import {
+  ORBIT_TIERS,
+  SUPPORT_ANGLE_OFFSET,
+  ROLES,
+  ROLE_BY_KEY,
+  SECONDARY_ANGLE_OFFSET_1,
+  SECONDARY_ANGLE_OFFSET_2,
+  SECONDARY_SIZE_SCALE,
+} from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -145,11 +158,19 @@ interface ChampionRenderPos {
   isForeground: boolean
   zIndex: number
   primaryRole: ChampionRole | null
+  isMain: boolean
   hintOpacity: number
   orbitRx: number
   orbitRy: number
   tiltDeg: number
   orbitColor: string
+}
+
+interface Assignment {
+  role: ChampionRole | null
+  isMain: boolean
+  subIndex: number
+  roleIndex: number
 }
 
 interface LocalChampState {
@@ -197,6 +218,7 @@ export default defineComponent({
 
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
+    const mainRingPositions = computed(() => championRenderPositions.value.filter((p) => p.isMain))
 
     function getOrbitPos(
       angle: number,
@@ -219,6 +241,19 @@ export default defineComponent({
     let animFrame = 0
     let lastTs = 0
 
+    function getAssignment(name: string): Assignment {
+      const mainIdx = battleStore.headerSlots.indexOf(name)
+      if (mainIdx >= 0)
+        return { role: SLOT_ROLES[mainIdx], isMain: true, subIndex: -1, roleIndex: mainIdx }
+      const secs = battleStore.secondarySlots
+      for (let r = 0; r < secs.length; r++) {
+        const subIdx = secs[r].indexOf(name)
+        if (subIdx >= 0)
+          return { role: SLOT_ROLES[r], isMain: false, subIndex: subIdx, roleIndex: r }
+      }
+      return { role: null, isMain: false, subIndex: -1, roleIndex: -1 }
+    }
+
     function animate(ts: number) {
       const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
       lastTs = ts
@@ -233,11 +268,21 @@ export default defineComponent({
       const adcChampion = adcName ? champions.find((ch) => ch.name === adcName) : null
       const adcDir = adcChampion?.direction ?? 1
 
-      for (let ci = 0; ci < champions.length; ci++) {
-        const c = champions[ci]
+      // Compute assignments once + sort so mains process before secondaries (secondaries snap to main angle)
+      const assignments = new Map<string, Assignment>()
+      for (const c of champions) assignments.set(c.name, getAssignment(c.name))
+      const ordered = [...champions].sort((a, b) => {
+        const aIsMain = assignments.get(a.name)!.isMain
+        const bIsMain = assignments.get(b.name)!.isMain
+        if (aIsMain !== bIsMain) return aIsMain ? -1 : 1
+        return 0
+      })
 
-        const slotIndex = battleStore.headerSlots.indexOf(c.name)
-        const primaryRole: ChampionRole | null = slotIndex >= 0 ? SLOT_ROLES[slotIndex] : null
+      for (let ci = 0; ci < ordered.length; ci++) {
+        const c = ordered[ci]
+        const asn = assignments.get(c.name)!
+        const primaryRole: ChampionRole | null = asn.role
+        const isMain = asn.isMain
 
         const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
         const planetTier = ORBIT_TIERS.planet[ci % 2]
@@ -246,24 +291,42 @@ export default defineComponent({
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
-        const baseSize = roleTier ? roleTier.championSize : planetTier.size
+        const baseSizeRaw = roleTier ? roleTier.championSize : planetTier.size
+        const baseSize = isMain ? baseSizeRaw : baseSizeRaw * SECONDARY_SIZE_SCALE
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
+
+        // For secondaries: locate the main of the same role to snap our angle to its orbit
+        let mainState: LocalChampState | null = null
+        if (!isMain && asn.roleIndex >= 0) {
+          const mainName = battleStore.headerSlots[asn.roleIndex]
+          if (mainName) mainState = localStates.get(mainName) ?? null
+        }
 
         let ls = localStates.get(c.name)
         if (!ls) {
-          const orbitPos = getOrbitPos(c.angle, rx, ry, tiltRad, screenCx, screenCy)
+          const initAngle = mainState
+            ? mainState.orbitAngle +
+              (asn.subIndex === 0 ? SECONDARY_ANGLE_OFFSET_1 : SECONDARY_ANGLE_OFFSET_2)
+            : c.angle
+          const orbitPos = getOrbitPos(initAngle, rx, ry, tiltRad, screenCx, screenCy)
           ls = {
             name: c.name,
             x: orbitPos.x,
             y: orbitPos.y,
-            orbitAngle: c.angle,
+            orbitAngle: initAngle,
             initialised: false,
           }
           localStates.set(c.name, ls)
         }
 
-        if (primaryRole === 'support' && adcState) {
+        if (primaryRole === 'support' && isMain && adcState) {
           ls.orbitAngle = adcState.orbitAngle - adcDir * SUPPORT_ANGLE_OFFSET
+        }
+
+        if (!isMain && mainState) {
+          ls.orbitAngle =
+            mainState.orbitAngle +
+            (asn.subIndex === 0 ? SECONDARY_ANGLE_OFFSET_1 : SECONDARY_ANGLE_OFFSET_2)
         }
 
         const prevRelY = (ls.y - screenCy) / Math.max(ry, 1)
@@ -273,8 +336,10 @@ export default defineComponent({
         const newMul = curMul + (targetMul - curMul) * BEHIND_SPEED_LERP
         champSpeedMuls.set(c.name, newMul)
 
+        const followsAngle = (primaryRole === 'support' && isMain && adcState) || (!isMain && mainState)
+
         if (!reducedMotion) {
-          if (primaryRole !== 'support' || !adcState) {
+          if (!followsAngle) {
             const keplerBoost = 1.0 + 0.55 * (1 - Math.abs(Math.cos(ls.orbitAngle)))
             ls.orbitAngle += c.direction * orbitSpeed * keplerBoost * newMul * dt
           }
@@ -282,7 +347,7 @@ export default defineComponent({
           ls.x += (targetOrbit.x - ls.x) * 0.15
           ls.y += (targetOrbit.y - ls.y) * 0.15
         } else {
-          const orbitPos = getOrbitPos(c.angle, rx, ry, tiltRad, screenCx, screenCy)
+          const orbitPos = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, screenCx, screenCy)
           ls.x = orbitPos.x
           ls.y = orbitPos.y
         }
@@ -307,7 +372,7 @@ export default defineComponent({
 
         let renderX = ls.x
         let renderY = ls.y
-        if (primaryRole === 'top' && roleBehaviorStore.tankInterceptActive) {
+        if (isMain && primaryRole === 'top' && roleBehaviorStore.tankInterceptActive) {
           const elapsed = Date.now() - roleBehaviorStore.tankInterceptStartMs
           const t = Math.min(1, elapsed / INTERCEPT_DURATION_MS)
           const progress = t < 0.3 ? t / 0.3 : 1 - (t - 0.3) / 0.7
@@ -327,6 +392,7 @@ export default defineComponent({
           isForeground,
           zIndex,
           primaryRole,
+          isMain,
           hintOpacity,
           orbitRx: rx,
           orbitRy: ry,
@@ -370,8 +436,8 @@ export default defineComponent({
     }
 
     watch(
-      () => battleStore.headerSlots,
-      (slots) => combatStore.syncChampions(slots.filter((s): s is string => s !== null)),
+      () => [battleStore.headerSlots, battleStore.secondarySlots],
+      () => combatStore.syncChampions(battleStore.assignedChampions),
       { immediate: true, deep: true },
     )
 
@@ -420,6 +486,7 @@ export default defineComponent({
       ROLE_BY_KEY,
       backChampions,
       frontChampions,
+      mainRingPositions,
       championRenderPositions,
       shots,
       topHitActive,
@@ -517,6 +584,13 @@ export default defineComponent({
 .champion-orbit-avatar--behind {
   filter: blur(2px) brightness(0.75) saturate(0.65);
   transition: filter 0.25s ease;
+}
+
+.champion-orbit-avatar--secondary {
+  border-width: 2px !important;
+  box-shadow:
+    0 0 6px rgba(232, 192, 64, 0.4),
+    0 0 12px rgba(232, 192, 64, 0.15) !important;
 }
 
 .champion-orbit-avatar--foreground {

@@ -64,6 +64,13 @@ export const useBattleStore = defineStore('battle', {
     ownedChampions: ['Bard'],
     teamSlotAssignments: [null, null, null, null] as (string | null)[],
     headerSlots: [null, null, null, null, null] as (string | null)[],
+    secondarySlots: [
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+      [null, null],
+    ] as (string | null)[][],
     battleFormula: {
       luckFactor: ELO_LUCK_FACTOR,
     },
@@ -115,6 +122,14 @@ export const useBattleStore = defineStore('battle', {
 
   getters: {
     selectedChampions: (state) => state.teamSlotAssignments.filter((s): s is string => s !== null),
+    assignedChampions: (state): string[] => {
+      const out: string[] = []
+      for (const name of state.headerSlots) if (name) out.push(name)
+      for (const row of state.secondarySlots) {
+        for (const name of row) if (name) out.push(name)
+      }
+      return out
+    },
   },
 
   actions: {
@@ -180,12 +195,36 @@ export const useBattleStore = defineStore('battle', {
     setHeaderSlot(slotIndex: number, champion: string) {
       const existing = this.headerSlots.indexOf(champion)
       if (existing !== -1 && existing !== slotIndex) this.headerSlots[existing] = null
+      for (let r = 0; r < this.secondarySlots.length; r++) {
+        for (let s = 0; s < this.secondarySlots[r].length; s++) {
+          if (this.secondarySlots[r][s] === champion) this.secondarySlots[r][s] = null
+        }
+      }
       this.headerSlots[slotIndex] = champion
       this.syncTeam1ToSlots()
     },
 
     clearHeaderSlot(slotIndex: number) {
       this.headerSlots[slotIndex] = null
+      this.syncTeam1ToSlots()
+    },
+
+    setSecondarySlot(roleIndex: number, subIndex: number, champion: string) {
+      const mainIdx = this.headerSlots.indexOf(champion)
+      if (mainIdx !== -1) this.headerSlots[mainIdx] = null
+      for (let r = 0; r < this.secondarySlots.length; r++) {
+        for (let s = 0; s < this.secondarySlots[r].length; s++) {
+          if (this.secondarySlots[r][s] === champion && !(r === roleIndex && s === subIndex)) {
+            this.secondarySlots[r][s] = null
+          }
+        }
+      }
+      this.secondarySlots[roleIndex][subIndex] = champion
+      this.syncTeam1ToSlots()
+    },
+
+    clearSecondarySlot(roleIndex: number, subIndex: number) {
+      this.secondarySlots[roleIndex][subIndex] = null
       this.syncTeam1ToSlots()
     },
 

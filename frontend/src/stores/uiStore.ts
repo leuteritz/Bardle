@@ -6,6 +6,8 @@ export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)
   const rolesActiveSlot = ref(0)
+  const rolesActiveSubSlot = ref(-1)
+  const rolesOpenToken = ref(0)
   const planetActiveSlotId = ref<string | null>(null)
 
   function openBardModal() {
@@ -20,8 +22,10 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = null
   }
 
-  function requestOpenRolesTab(slotIndex: number) {
+  function requestOpenRolesTab(slotIndex: number, subSlot: number = -1) {
     rolesActiveSlot.value = slotIndex
+    rolesActiveSubSlot.value = subSlot
+    rolesOpenToken.value++
     bardActiveTab.value = 'roles'
   }
 
@@ -33,6 +37,8 @@ export const useUiStore = defineStore('ui', () => {
   return {
     bardActiveTab,
     rolesActiveSlot,
+    rolesActiveSubSlot,
+    rolesOpenToken,
     planetActiveSlotId,
     openBardModal,
     setBardTab,

@@ -44,11 +44,12 @@ const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
 
-const { headerSlots } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
 const activeSlotIndex = ref(uiStore.rolesActiveSlot)
+const activeSubSlot = ref(-1) // -1 = main, 0/1 = secondary index
 const selectedCategory = ref<ItemCategory | null>(null)
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 
@@ -65,9 +66,36 @@ watch(
   },
 )
 
+watch(
+  () => uiStore.rolesOpenToken,
+  () => {
+    activeSlotIndex.value = uiStore.rolesActiveSlot
+    activeSubSlot.value = uiStore.rolesActiveSubSlot
+    selectedCategory.value = null
+    panelMode.value = uiStore.rolesActiveSubSlot >= 0 ? 'champion-picker' : 'main'
+  },
+)
+
 const activeRole = computed(() => ROLES[activeSlotIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[activeSlotIndex.value])
 const activeChampion = computed(() => headerSlots.value[activeSlotIndex.value])
+const activeSecondaries = computed(
+  () => secondarySlots.value[activeSlotIndex.value] ?? [null, null],
+)
+
+const pickerTitle = computed(() => {
+  if (activeSubSlot.value === -1) return `${activeRole.value} — Main`
+  return `${activeRole.value} — Secondary ${activeSubSlot.value + 1}`
+})
+
+function championRoleLabel(name: string): string | null {
+  const mainIdx = headerSlots.value.indexOf(name)
+  if (mainIdx >= 0) return ROLES[mainIdx]
+  for (let r = 0; r < secondarySlots.value.length; r++) {
+    if (secondarySlots.value[r].includes(name)) return ROLES[r]
+  }
+  return null
+}
 
 const categoryItems = computed(() => {
   if (!selectedCategory.value) return []
@@ -87,11 +115,13 @@ const roleFilteredChampions = computed(() => {
 
 function selectSlot(index: number) {
   activeSlotIndex.value = index
+  activeSubSlot.value = -1
   selectedCategory.value = null
   panelMode.value = 'main'
 }
 
-function openChampionPicker() {
+function openChampionPicker(subSlot: number = -1) {
+  activeSubSlot.value = subSlot
   panelMode.value = 'champion-picker'
 }
 
@@ -103,11 +133,22 @@ function openItemPicker(cat: ItemCategory) {
 function closePanel() {
   panelMode.value = 'main'
   selectedCategory.value = null
+  activeSubSlot.value = -1
 }
 
 function handleSelect(champion: string) {
-  battleStore.setHeaderSlot(activeSlotIndex.value, champion)
+  if (activeSubSlot.value === -1) {
+    battleStore.setHeaderSlot(activeSlotIndex.value, champion)
+  } else {
+    battleStore.setSecondarySlot(activeSlotIndex.value, activeSubSlot.value, champion)
+  }
   panelMode.value = 'main'
+  activeSubSlot.value = -1
+}
+
+function clearSecondary(roleIndex: number, subIndex: number, event: Event) {
+  event.stopPropagation()
+  battleStore.clearSecondarySlot(roleIndex, subIndex)
 }
 
 function onImgError(e: Event) {
@@ -168,7 +209,7 @@ function onSplashMouseLeave() {
           class="splash-area"
           @mousemove="onSplashMouseMove"
           @mouseleave="onSplashMouseLeave"
-          @click="openChampionPicker"
+          @click="openChampionPicker(-1)"
         >
           <div class="splash-inner">
             <template v-if="activeChampion">
@@ -229,6 +270,42 @@ function onSplashMouseLeave() {
             {{ activeChampion }}
           </div>
 
+          <!-- Secondary champions row (bottom-right of splash) -->
+          <div class="splash-secondaries" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+            <div class="splash-sec-label">Sekundär</div>
+            <div class="splash-sec-row">
+              <button
+                v-for="i in [0, 1]"
+                :key="i"
+                class="splash-sec-slot"
+                :class="{ 'splash-sec-slot--filled': activeSecondaries[i] !== null }"
+                :title="
+                  activeSecondaries[i]
+                    ? `${activeSecondaries[i]} — klicken zum Ändern`
+                    : `Sekundär ${i + 1} hinzufügen`
+                "
+                @click.stop="openChampionPicker(i)"
+              >
+                <img
+                  v-if="activeSecondaries[i]"
+                  :src="battleStore.getChampionImage(activeSecondaries[i]!)"
+                  :alt="activeSecondaries[i]!"
+                  class="splash-sec-img"
+                  @error="onImgError"
+                />
+                <span v-else class="splash-sec-plus">＋</span>
+                <button
+                  v-if="activeSecondaries[i]"
+                  class="splash-sec-clear"
+                  title="Entfernen"
+                  @click.stop="clearSecondary(activeSlotIndex, i, $event)"
+                >
+                  ✕
+                </button>
+              </button>
+            </div>
+          </div>
+
           <!-- Click hint -->
           <div class="splash-click-hint">
             <span>Klicken zum Wechseln</span>
@@ -243,7 +320,6 @@ function onSplashMouseLeave() {
         <div class="sidebar">
           <!-- Role Slots -->
           <div class="sidebar-section sidebar-section--roles">
-            <div class="sidebar-label">Rolle</div>
             <div class="role-list">
               <button
                 v-for="(role, i) in ROLES"
@@ -266,11 +342,30 @@ function onSplashMouseLeave() {
                 <span v-else class="role-btn-plus">＋</span>
                 <div class="role-btn-gradient" />
                 <span class="role-btn-label">{{ role }}</span>
+
+                <!-- Mini secondaries column -->
+                <div class="role-btn-secs">
+                  <div
+                    v-for="s in [0, 1]"
+                    :key="s"
+                    class="role-btn-sec"
+                    :class="{ 'role-btn-sec--filled': secondarySlots[i][s] !== null }"
+                  >
+                    <img
+                      v-if="secondarySlots[i][s]"
+                      :src="battleStore.getChampionImage(secondarySlots[i][s]!)"
+                      :alt="secondarySlots[i][s]!"
+                      class="role-btn-sec-img"
+                      @error="onImgError"
+                    />
+                    <span v-else class="role-btn-sec-plus">＋</span>
+                  </div>
+                </div>
+
                 <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </template>
@@ -281,9 +376,12 @@ function onSplashMouseLeave() {
     <ChampionPickerPanel
       v-else-if="panelMode === 'champion-picker'"
       :active-role="activeRole"
+      :picker-title="pickerTitle"
       :role-filtered-champions="roleFilteredChampions"
       :header-slots="headerSlots"
+      :secondary-slots="secondarySlots"
       :active-slot-index="activeSlotIndex"
+      :active-sub-slot="activeSubSlot"
       @back="closePanel"
       @select="handleSelect"
     />
@@ -405,7 +503,12 @@ function onSplashMouseLeave() {
   right: 0;
   bottom: 0;
   height: 55%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 35%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.55) 35%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 3;
 }
@@ -431,7 +534,9 @@ function onSplashMouseLeave() {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #f0d870;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9), 0 0 30px rgba(200, 144, 64, 0.5);
+  text-shadow:
+    0 2px 16px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(200, 144, 64, 0.5);
   line-height: 1;
   pointer-events: none;
 }
@@ -675,7 +780,12 @@ function onSplashMouseLeave() {
   left: 0;
   right: 0;
   height: 65%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.5) 45%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 1;
 }
@@ -693,7 +803,9 @@ function onSplashMouseLeave() {
   color: var(--rc);
   line-height: 1;
   z-index: 2;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--rc) 70%, transparent), 0 2px 6px rgba(0,0,0,0.95);
+  text-shadow:
+    0 0 12px color-mix(in srgb, var(--rc) 70%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
 }
 
@@ -708,4 +820,164 @@ function onSplashMouseLeave() {
   z-index: 3;
 }
 
+/* ══════════════════════════════
+   SPLASH — Secondary champions panel
+   ══════════════════════════════ */
+.splash-secondaries {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 6px 8px 6px 10px;
+  background: rgba(8, 6, 2, 0.72);
+  border: 1px solid rgba(92, 51, 16, 0.65);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+}
+
+.splash-sec-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.55);
+  line-height: 1;
+}
+
+.splash-sec-row {
+  display: flex;
+  gap: 6px;
+}
+
+.splash-sec-slot {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--rc) 60%, transparent);
+  background: #0a0804;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
+}
+.splash-sec-slot:hover {
+  border-color: var(--rc);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 50%, transparent);
+  transform: scale(1.06);
+}
+.splash-sec-slot--filled {
+  border-color: var(--rc);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 35%, transparent);
+}
+
+.splash-sec-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  border-radius: 50%;
+}
+
+.splash-sec-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 20px;
+  color: rgba(200, 144, 64, 0.25);
+  transition: color 0.15s;
+}
+.splash-sec-slot:hover .splash-sec-plus {
+  color: rgba(200, 144, 64, 0.7);
+}
+
+.splash-sec-clear {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+  color: #cc6050;
+  background: rgba(20, 10, 6, 0.92);
+  border: 1px solid rgba(180, 60, 40, 0.55);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 2;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+.splash-sec-slot:hover .splash-sec-clear {
+  opacity: 1;
+}
+.splash-sec-clear:hover {
+  background: rgba(160, 40, 20, 0.85);
+  border-color: #cc6050;
+}
+
+/* ══════════════════════════════
+   SIDEBAR ROLE-BTN — Secondaries column
+   ══════════════════════════════ */
+.role-btn-secs {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.role-btn-sec {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--rc) 55%, transparent);
+  background: rgba(10, 8, 4, 0.85);
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.role-btn-sec--filled {
+  border-color: var(--rc);
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--rc) 45%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.role-btn-sec-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  border-radius: 50%;
+}
+
+.role-btn-sec-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  color: rgba(200, 144, 64, 0.3);
+}
 </style>
