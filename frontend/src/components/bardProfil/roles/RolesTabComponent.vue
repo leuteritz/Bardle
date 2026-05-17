@@ -20,6 +20,14 @@ const ROLE_MAP: Record<string, ChampionRole> = {
   Supp: 'support',
 }
 
+const ROLE_COLORS: Record<string, string> = {
+  Top: '#e05050',
+  Jungle: '#50c060',
+  Mid: '#5090e8',
+  ADC: '#e89840',
+  Supp: '#b8c8d8',
+}
+
 const CAT_LABELS: Record<ItemCategory, string> = {
   weapon: 'Waffe',
   armor: 'Rüstung',
@@ -44,6 +52,10 @@ const activeSlotIndex = ref(uiStore.rolesActiveSlot)
 const selectedCategory = ref<ItemCategory | null>(null)
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 
+// Parallax state
+const parallaxX = ref(0)
+const parallaxY = ref(0)
+
 watch(
   () => uiStore.rolesActiveSlot,
   (val) => {
@@ -55,6 +67,7 @@ watch(
 
 const activeRole = computed(() => ROLES[activeSlotIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[activeSlotIndex.value])
+const activeChampion = computed(() => headerSlots.value[activeSlotIndex.value])
 
 const categoryItems = computed(() => {
   if (!selectedCategory.value) return []
@@ -127,6 +140,20 @@ function formatEffects(item: ShopItem | null): string[] {
   }
   return result
 }
+
+function onSplashMouseMove(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const cx = rect.left + rect.width / 2
+  const cy = rect.top + rect.height / 2
+  parallaxX.value = ((e.clientX - cx) / rect.width) * 6
+  parallaxY.value = ((e.clientY - cy) / rect.height) * 4
+}
+
+function onSplashMouseLeave() {
+  parallaxX.value = 0
+  parallaxY.value = 0
+}
 </script>
 
 <template>
@@ -135,102 +162,115 @@ function formatEffects(item: ShopItem | null): string[] {
          MAIN VIEW
          ════════════════════════════════ -->
     <template v-if="panelMode === 'main'">
-      <div class="banner">
-        <div class="banner-line banner-line--l" />
-        <span class="banner-text">{{ activeRole }}</span>
-        <div class="banner-line banner-line--r" />
-      </div>
-
       <div class="main-layout">
-        <!-- LEFT — Active Champion Card -->
-        <div class="col-champ">
-          <div class="champ-card" @click="openChampionPicker">
-            <img
-              v-if="headerSlots[activeSlotIndex]"
-              :src="battleStore.getChampionImage(headerSlots[activeSlotIndex]!)"
-              :alt="headerSlots[activeSlotIndex]!"
-              class="champ-card-img"
-              @error="onImgError"
-            />
-            <div v-else class="champ-card-empty">
-              <span class="champ-card-plus">＋</span>
-              <span class="champ-card-hint">Champion<br />wählen</span>
+        <!-- ══ LEFT — Dominant Splash Art ══ -->
+        <div
+          class="splash-area"
+          @mousemove="onSplashMouseMove"
+          @mouseleave="onSplashMouseLeave"
+          @click="openChampionPicker"
+        >
+          <div class="splash-inner">
+            <template v-if="activeChampion">
+              <img
+                :src="battleStore.getChampionImage(activeChampion)"
+                :alt="activeChampion"
+                class="splash-img"
+                :style="{
+                  transform: `scale(1.06) translate(${parallaxX}px, ${parallaxY}px)`,
+                }"
+                @error="onImgError"
+              />
+            </template>
+            <div v-else class="splash-empty">
+              <span class="splash-empty-plus">＋</span>
+              <span class="splash-empty-hint">Champion wählen</span>
             </div>
-            <div class="champ-card-gradient" />
-            <span v-if="headerSlots[activeSlotIndex]" class="champ-card-name">
-              {{ headerSlots[activeSlotIndex] }}
-            </span>
-            <div class="champ-card-corner champ-card-corner--tl" />
-            <div class="champ-card-corner champ-card-corner--br" />
           </div>
-        </div>
 
-        <!-- CENTER — 5 Role Slots -->
-        <div class="col-roles">
-          <button
-            v-for="(role, i) in ROLES"
-            :key="i"
-            class="role-slot"
-            :class="{
-              'role-slot--active': activeSlotIndex === i,
-              'role-slot--filled': headerSlots[i] !== null,
-            }"
-            :title="role"
-            @click="selectSlot(i)"
-          >
-            <img
-              v-if="headerSlots[i]"
-              :src="battleStore.getChampionImage(headerSlots[i]!)"
-              :alt="headerSlots[i]!"
-              class="role-slot-img"
-              @error="onImgError"
-            />
-            <span v-else class="role-slot-plus">＋</span>
+          <!-- Vignette overlays -->
+          <div class="vignette-edge" />
+          <div class="vignette-bottom" />
+          <div class="vignette-right" />
 
-            <div class="role-slot-gradient" />
-            <span class="role-slot-label">{{ role }}</span>
-            <div v-if="activeSlotIndex === i" class="role-slot-active-bar" />
-            <div v-if="activeSlotIndex === i" class="role-slot-glow" />
-          </button>
-        </div>
-
-        <!-- RIGHT — Equipment Slots -->
-        <div class="col-equip">
-          <button
-            v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
-            :key="cat"
-            class="equip-btn"
-            :class="{ 'equip-btn--filled': currentEquipment[cat] !== null }"
-            @click="openItemPicker(cat)"
-          >
-            <template v-if="getEquippedItem(cat)">
-              <div class="equip-img-wrap">
+          <!-- Equipment bar top-right -->
+          <div class="equip-bar">
+            <button
+              v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
+              :key="cat"
+              class="equip-bar-btn"
+              :class="{ 'equip-bar-btn--filled': currentEquipment[cat] !== null }"
+              @click.stop="openItemPicker(cat)"
+            >
+              <template v-if="getEquippedItem(cat)">
                 <img
                   v-if="getEquippedItem(cat)!.icon.startsWith('/')"
                   :src="getEquippedItem(cat)!.icon"
-                  class="equip-btn-img"
+                  class="equip-bar-img"
                   :alt="getEquippedItem(cat)!.name"
                 />
-                <span v-else class="equip-emoji-lg">{{ getEquippedItem(cat)!.icon }}</span>
-              </div>
-              <div class="equip-effects">
-                <span
-                  v-for="fx in formatEffects(getEquippedItem(cat))"
-                  :key="fx"
-                  class="equip-effect-chip"
-                  >{{ fx }}</span
-                >
-              </div>
-            </template>
-            <template v-else>
-              <div class="equip-placeholder-wrap">
-                <span class="equip-btn-placeholder">{{ CAT_ICONS[cat] }}</span>
-              </div>
-            </template>
-            <span class="equip-btn-label">{{ CAT_LABELS[cat] }}</span>
-            <div class="equip-btn-corner equip-btn-corner--tl" />
-            <div class="equip-btn-corner equip-btn-corner--br" />
-          </button>
+                <span v-else class="equip-bar-emoji">{{ getEquippedItem(cat)!.icon }}</span>
+                <div class="equip-bar-effects">
+                  <span
+                    v-for="fx in formatEffects(getEquippedItem(cat))"
+                    :key="fx"
+                    class="equip-bar-fx"
+                    >{{ fx }}</span
+                  >
+                </div>
+              </template>
+              <span v-else class="equip-bar-placeholder">{{ CAT_ICONS[cat] }}</span>
+              <span class="equip-bar-label">{{ CAT_LABELS[cat] }}</span>
+            </button>
+          </div>
+
+          <!-- Champion name bottom-left -->
+          <div v-if="activeChampion" class="splash-champ-name">
+            {{ activeChampion }}
+          </div>
+
+          <!-- Click hint -->
+          <div class="splash-click-hint">
+            <span>Klicken zum Wechseln</span>
+          </div>
+
+          <!-- Corner decorations -->
+          <div class="splash-corner splash-corner--tl" />
+          <div class="splash-corner splash-corner--br" />
+        </div>
+
+        <!-- ══ RIGHT — Sidebar ══ -->
+        <div class="sidebar">
+          <!-- Role Slots -->
+          <div class="sidebar-section sidebar-section--roles">
+            <div class="sidebar-label">Rolle</div>
+            <div class="role-list">
+              <button
+                v-for="(role, i) in ROLES"
+                :key="i"
+                class="role-btn"
+                :class="{
+                  'role-btn--active': activeSlotIndex === i,
+                  'role-btn--filled': headerSlots[i] !== null,
+                }"
+                :style="{ '--rc': ROLE_COLORS[role] }"
+                @click="selectSlot(i)"
+              >
+                <img
+                  v-if="headerSlots[i]"
+                  :src="battleStore.getChampionImage(headerSlots[i]!)"
+                  :alt="headerSlots[i]!"
+                  class="role-btn-img"
+                  @error="onImgError"
+                />
+                <span v-else class="role-btn-plus">＋</span>
+                <div class="role-btn-gradient" />
+                <span class="role-btn-label">{{ role }}</span>
+                <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </template>
@@ -264,8 +304,8 @@ function formatEffects(item: ShopItem | null): string[] {
 
 <style scoped>
 /* ══════════════════════════════════════════
-   BARDLE — ROLES TAB  •  RPG Edition v3
-   Layout: Active Champ | 5 Role Slots | Equipment
+   BARDLE — ROLES TAB  •  Epic Gaming UI
+   Layout: Dominant Splash Art | Sidebar
    ══════════════════════════════════════════ */
 
 .roles-tab {
@@ -278,8 +318,7 @@ function formatEffects(item: ShopItem | null): string[] {
   --bg: #0d0a03;
   --bg-card: #181208;
   --border: rgba(92, 51, 16, 0.45);
-  --border-hover: rgba(200, 144, 64, 0.6);
-  --r: 7px;
+  --r: 5px;
 
   display: flex;
   flex-direction: column;
@@ -288,431 +327,385 @@ function formatEffects(item: ShopItem | null): string[] {
   overflow: hidden;
 }
 
-/* ── Banner ── */
-.banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 24px;
-  flex-shrink: 0;
-  padding: 0 14px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(200, 144, 64, 0.07) 40%,
-    rgba(200, 144, 64, 0.07) 60%,
-    transparent
-  );
-  border-bottom: 1px solid rgba(200, 144, 64, 0.12);
-}
-.banner-text {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--gold-bright);
-  white-space: nowrap;
-}
-.banner-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, rgba(200, 144, 64, 0.4), transparent);
-}
-.banner-line--l {
-  transform: scaleX(-1);
-}
-
-/* ── 3-column Main Layout ── */
+/* ── Main Layout: 65/35 split ── */
 .main-layout {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 62px 1fr;
-  gap: 8px;
-  padding: 10px;
-  align-items: stretch;
+  grid-template-columns: 65fr 35fr;
+  gap: 0;
 }
 
-/* ══ LEFT — Active Champion Card ══ */
-.col-champ {
-  display: flex;
-  flex-direction: column;
-}
-
-.champ-card {
+/* ══════════════════════════════
+   SPLASH ART AREA
+   ══════════════════════════════ */
+.splash-area {
   position: relative;
-  flex: 1;
-  border-radius: var(--r);
   overflow: hidden;
   cursor: pointer;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.champ-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 0 20px var(--gold-glow);
-  transform: scale(1.01);
+  background: #080604;
+  border-right: 1px solid rgba(92, 51, 16, 0.5);
 }
 
-.champ-card-img {
+.splash-area:hover .splash-click-hint {
+  opacity: 1;
+}
+
+.splash-inner {
   position: absolute;
   inset: 0;
+}
+
+.splash-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top center;
-  transition: transform 0.25s ease;
-}
-.champ-card:hover .champ-card-img {
-  transform: scale(1.05);
-}
-
-.champ-card-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 8px;
-  z-index: 1;
-}
-.champ-card-plus {
-  font-size: 28px;
-  color: rgba(200, 144, 64, 0.18);
-  line-height: 1;
-  transition:
-    color 0.15s,
-    transform 0.15s;
-}
-.champ-card:hover .champ-card-plus {
-  color: rgba(200, 144, 64, 0.55);
-  transform: scale(1.2);
-}
-.champ-card-hint {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--gold-dim);
-  text-align: center;
-  line-height: 1.4;
-}
-
-.champ-card-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 50%);
-  pointer-events: none;
-  z-index: 1;
-}
-.champ-card-name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 6px 8px 10px;
-  font-size: 10px;
-  font-weight: 900;
-  color: rgba(230, 185, 70, 0.95);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.2;
-  pointer-events: none;
-}
-
-.champ-card-corner {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-color: rgba(200, 144, 64, 0.22);
-  border-style: solid;
-  pointer-events: none;
-  z-index: 3;
-  transition: border-color 0.15s;
-}
-.champ-card:hover .champ-card-corner {
-  border-color: rgba(200, 144, 64, 0.65);
-}
-.champ-card-corner--tl {
-  top: 4px;
-  left: 4px;
-  border-width: 1px 0 0 1px;
-}
-.champ-card-corner--br {
-  bottom: 4px;
-  right: 4px;
-  border-width: 0 1px 1px 0;
-}
-
-/* ══ CENTER — 5 Role Slots ══ */
-.col-roles {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.role-slot {
-  position: relative;
-  flex: 1;
-  padding: 0;
-  border-radius: var(--r);
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.role-slot:hover {
-  border-color: var(--border-hover);
-  box-shadow: 0 0 10px var(--gold-glow);
-  transform: scale(1.04);
-}
-.role-slot:active {
-  transform: scale(0.97);
-}
-.role-slot--active {
-  border-color: var(--gold) !important;
-  box-shadow:
-    0 0 16px rgba(200, 144, 64, 0.35),
-    inset 0 1px 0 rgba(255, 200, 80, 0.08) !important;
-}
-.role-slot--filled {
-  border-color: rgba(160, 110, 30, 0.6);
-}
-
-.role-slot-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  transition: transform 0.2s ease;
+  object-position: center top;
   display: block;
-}
-.role-slot:hover .role-slot-img {
-  transform: scale(1.08);
+  transition: transform 0.12s ease-out;
+  will-change: transform;
 }
 
-.role-slot-plus {
-  font-size: 14px;
+.splash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
   color: rgba(200, 144, 64, 0.18);
+}
+.splash-empty-plus {
+  font-size: 48px;
   line-height: 1;
-  position: relative;
-  z-index: 1;
-  transition:
-    color 0.15s,
-    transform 0.15s;
-}
-.role-slot:hover .role-slot-plus {
-  color: rgba(200, 144, 64, 0.5);
-  transform: scale(1.2);
-}
-.role-slot--active .role-slot-plus {
-  color: rgba(200, 144, 64, 0.55);
-}
-
-.role-slot-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, transparent 55%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.role-slot-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding: 0 2px 3px;
-  font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  text-align: center;
-  color: rgba(180, 130, 50, 0.5);
-  line-height: 1;
-  pointer-events: none;
   transition: color 0.15s;
 }
-.role-slot:hover .role-slot-label {
-  color: rgba(230, 180, 60, 0.9);
+.splash-area:hover .splash-empty-plus {
+  color: rgba(200, 144, 64, 0.45);
 }
-.role-slot--active .role-slot-label {
-  color: var(--gold-bright);
-}
-.role-slot--filled .role-slot-label {
-  color: rgba(220, 170, 60, 0.85);
-}
-
-.role-slot-active-bar {
-  position: absolute;
-  bottom: 0;
-  left: 8%;
-  right: 8%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--gold-bright), transparent);
-  border-radius: 2px 2px 0 0;
-  z-index: 3;
+.splash-empty-hint {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.28);
 }
 
-.role-slot-glow {
+/* Vignette */
+.vignette-edge {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 60%, rgba(200, 144, 64, 0.14), transparent 70%);
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.65) 100%);
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
+}
+.vignette-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 55%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 35%, transparent 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+.vignette-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
 }
 
-/* ══ RIGHT — Equipment Buttons ══ */
-.col-equip {
+/* Champion name */
+.splash-champ-name {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 5;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f0d870;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9), 0 0 30px rgba(200, 144, 64, 0.5);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Click hint */
+.splash-click-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 5;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.splash-click-hint span {
+  background: rgba(0, 0, 0, 0.65);
+  padding: 3px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(92, 51, 16, 0.5);
+}
+
+/* Corner decorations */
+.splash-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--gold);
+  border-style: solid;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 6;
+  transition: opacity 0.2s;
+}
+.splash-area:hover .splash-corner {
+  opacity: 1;
+}
+.splash-corner--tl {
+  top: 8px;
+  left: 8px;
+  border-width: 2px 0 0 2px;
+}
+.splash-corner--br {
+  bottom: 8px;
+  right: 8px;
+  border-width: 0 2px 2px 0;
+}
+
+/* ══════════════════════════════
+   SIDEBAR
+   ══════════════════════════════ */
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  background: #0e0b05;
+  overflow: hidden;
 }
 
-.equip-btn {
-  position: relative;
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 8px 6px;
+}
+.sidebar-section--roles {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.sidebar-section--equip {
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.35);
+  padding: 0 2px 2px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Equipment Bar (inside splash art) ── */
+.equip-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  padding: 8px 0 4px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.equip-bar-btn {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-  padding: 4px;
-  background: linear-gradient(160deg, #1c1508, #130f04);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  overflow: hidden;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s,
-    background 0.15s;
+  transition: transform 0.15s;
 }
-.equip-btn:hover {
-  border-color: var(--border-hover);
-  background: linear-gradient(160deg, #251c08, #1a1305);
-  transform: scale(1.02);
-  box-shadow: 0 0 10px var(--gold-glow);
-}
-.equip-btn:active {
-  transform: scale(0.97);
-}
-.equip-btn--filled {
-  border-color: rgba(160, 110, 30, 0.6);
+.equip-bar-btn:hover {
+  transform: translateY(-2px) scale(1.08);
 }
 
-.equip-img-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.equip-btn-img {
-  width: 100%;
-  height: 100%;
-  max-height: 60px;
+.equip-bar-img {
+  width: 116px;
+  height: 116px;
   object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.4));
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.65));
+  transition: filter 0.15s;
 }
-.equip-emoji-lg {
-  font-size: 32px;
-  line-height: 1;
+.equip-bar-btn:hover .equip-bar-img {
+  filter: drop-shadow(0 0 24px rgba(200, 144, 64, 1));
 }
 
-.equip-placeholder-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-}
-.equip-btn-placeholder {
-  font-size: 20px;
+.equip-bar-emoji {
+  font-size: 108px;
   line-height: 1;
-  opacity: 0.25;
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.6));
+  transition: filter 0.15s;
+}
+.equip-bar-btn:hover .equip-bar-emoji {
+  filter: drop-shadow(0 0 24px rgba(200, 144, 64, 1));
+}
+
+.equip-bar-placeholder {
+  font-size: 96px;
+  line-height: 1;
+  opacity: 0.22;
   transition: opacity 0.15s;
 }
-.equip-btn:hover .equip-btn-placeholder {
+.equip-bar-btn:hover .equip-bar-placeholder {
   opacity: 0.55;
 }
 
-.equip-effects {
+.equip-bar-effects {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   justify-content: center;
-  padding: 0 2px;
-  flex-shrink: 0;
 }
-.equip-effect-chip {
-  font-size: 7px;
+.equip-bar-fx {
+  font-size: 13px;
   color: #e8c040;
-  background: rgba(14, 10, 4, 0.8);
-  border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 2px;
   padding: 1px 4px;
   white-space: nowrap;
   line-height: 1.3;
+  text-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
 }
 
-.equip-btn-label {
-  font-size: 7px;
+.equip-bar-label {
+  font-size: 16px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(180, 130, 50, 0.45);
+  color: rgba(200, 144, 64, 0.65);
   line-height: 1;
-  text-align: center;
-  flex-shrink: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Role Buttons ── */
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.role-btn {
+  position: relative;
+  padding: 0;
+  border-radius: var(--r);
+  overflow: hidden;
+  cursor: pointer;
+  background: #0a0804;
+  border: 1px solid rgba(92, 51, 16, 0.35);
+  flex: 1;
+  min-height: 0;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.role-btn:hover {
+  border-color: var(--rc);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 30%, transparent);
+}
+.role-btn--active {
+  border-color: var(--rc) !important;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent) !important;
+}
+
+.role-btn-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  transition: transform 0.25s ease;
+}
+.role-btn:hover .role-btn-img {
+  transform: scale(1.07);
+}
+
+.role-btn-plus {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(200, 144, 64, 0.15);
   transition: color 0.15s;
 }
-.equip-btn:hover .equip-btn-label {
-  color: rgba(220, 170, 60, 0.9);
-}
-.equip-btn--filled .equip-btn-label {
-  color: rgba(200, 160, 50, 0.75);
+.role-btn:hover .role-btn-plus {
+  color: rgba(200, 144, 64, 0.45);
 }
 
-.equip-btn-corner {
+.role-btn-gradient {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-color: rgba(200, 144, 64, 0.18);
-  border-style: solid;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%);
   pointer-events: none;
-  transition: border-color 0.15s;
+  z-index: 1;
 }
-.equip-btn:hover .equip-btn-corner {
-  border-color: rgba(200, 144, 64, 0.5);
+
+.role-btn-label {
+  position: absolute;
+  bottom: 6px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rc);
+  line-height: 1;
+  z-index: 2;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--rc) 70%, transparent), 0 2px 6px rgba(0,0,0,0.95);
+  pointer-events: none;
 }
-.equip-btn-corner--tl {
-  top: 3px;
-  left: 3px;
-  border-width: 1px 0 0 1px;
+
+.role-btn-active-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--rc);
+  box-shadow: 0 0 8px var(--rc);
+  z-index: 3;
 }
-.equip-btn-corner--br {
-  bottom: 3px;
-  right: 3px;
-  border-width: 0 1px 1px 0;
-}
+
 </style>
