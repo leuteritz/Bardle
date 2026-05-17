@@ -67,6 +67,7 @@
           pos.isMain && pos.primaryRole === 'jungle' && roleBehaviorStore.jungleBuffCooldownMs === 0,
         'champion-orbit-avatar--ability-adc':
           pos.isMain && pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
+        'champion-orbit-avatar--synergy': pos.synergyActive,
       }"
       :style="{
         width: pos.size + 'px',
@@ -124,6 +125,7 @@ import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { useSynergyStore } from '../../../stores/synergyStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import {
   ORBIT_TIERS,
@@ -164,6 +166,7 @@ interface ChampionRenderPos {
   orbitRy: number
   tiltDeg: number
   orbitColor: string
+  synergyActive: boolean
 }
 
 interface Assignment {
@@ -189,6 +192,7 @@ export default defineComponent({
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
     const roleBehaviorStore = useRoleBehaviorStore()
+    const synergyStore = useSynergyStore()
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
 
@@ -398,6 +402,7 @@ export default defineComponent({
           orbitRy: ry,
           tiltDeg,
           orbitColor,
+          synergyActive: !!synergyStore.championSynergyMap[c.name]?.length,
         })
       }
 
@@ -595,6 +600,51 @@ export default defineComponent({
 
 .champion-orbit-avatar--foreground {
   filter: brightness(1.18) saturate(1.2);
+}
+
+/* ── Synergie-Glow ──────────────────────────────────────────────────────── */
+.champion-orbit-avatar--synergy::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(232, 192, 64, 0.7);
+  animation: synergy-ring-spin 2.5s linear infinite;
+  pointer-events: none;
+}
+
+.champion-orbit-avatar--synergy::after {
+  content: '';
+  position: absolute;
+  inset: -13px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 220, 100, 0.35);
+  animation: synergy-ring-spin 4s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes synergy-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes synergy-shimmer {
+  0%, 100% {
+    box-shadow:
+      0 0 12px rgba(232, 192, 64, 0.6),
+      0 0 28px rgba(232, 192, 64, 0.25),
+      inset 0 0 8px rgba(232, 192, 64, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 20px rgba(255, 220, 120, 0.85),
+      0 0 50px rgba(232, 192, 64, 0.45),
+      inset 0 0 14px rgba(232, 192, 64, 0.2);
+  }
+}
+
+.champion-orbit-avatar--synergy {
+  animation: synergy-shimmer 2s ease-in-out infinite;
 }
 
 .champion-orbit-avatar--attacking {

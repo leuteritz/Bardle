@@ -20,6 +20,7 @@ import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { usePlanetBossStore } from './planetBossStore'
 import { useBattleStore } from './battleStore'
 import { useGameStore } from './gameStore'
+import { useSynergyStore } from './synergyStore'
 
 let _damageFloatId = 0
 
@@ -131,7 +132,7 @@ export const useCombatStore = defineStore('combat', {
       if (attackingCount > 0) {
         const gameStore = useGameStore()
         if (gameStore.isGamePaused && activeBoss.isChampionPlanet) return
-        const totalDPS = attackingCount * CHAMPION_DPS_BASE
+        const totalDPS = attackingCount * CHAMPION_DPS_BASE * useSynergyStore().dpsSynergyMultiplier
         const defeated = bossStore.dealDamage(totalDPS)
         if (!defeated) {
           // Spawn one combined float at the planet position showing total damage

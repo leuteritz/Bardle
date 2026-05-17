@@ -445,6 +445,31 @@ export interface DamageFloat {
   curseFloat?: boolean
 }
 
+export type SynergyEffectType = 'cps' | 'power' | 'dps'
+export type SynergyType = 'elemental' | 'role_echo' | 'lore_bond' | 'full_orbit' | 'rarity'
+export type SynergyTier = 'bronze' | 'silver' | 'gold'
+
+export interface SynergyEffect {
+  type: SynergyEffectType
+  multiplier: number
+}
+
+export interface SynergyDefinition {
+  id: string
+  name: string
+  description: string
+  type: SynergyType
+  icon: string
+  color: string
+  tier: SynergyTier
+  effects: SynergyEffect[]
+}
+
+export interface ActiveSynergy extends SynergyDefinition {
+  involvedChampions: string[]
+  roleIndex?: number
+}
+
 export interface RoleBehaviorState {
   // Support
   supportHealCooldownMs: number

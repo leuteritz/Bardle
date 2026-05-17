@@ -9,6 +9,8 @@ import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory, ShopItem } from '@/types'
 import ChampionPickerPanel from './ChampionPickerPanel.vue'
 import ItemPickerPanel from './ItemPickerPanel.vue'
+import SynergyPanelComponent from '@/components/idle/synergy/SynergyPanelComponent.vue'
+import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -45,6 +47,9 @@ const itemStore = useItemStore()
 const uiStore = useUiStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
+
+const synergyStore = useSynergyStore()
+const { globalSynergies } = storeToRefs(synergyStore)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
@@ -203,6 +208,7 @@ function onSplashMouseLeave() {
          MAIN VIEW
          ════════════════════════════════ -->
     <template v-if="panelMode === 'main'">
+      <SynergyPanelComponent />
       <div class="main-layout">
         <!-- ══ LEFT — Dominant Splash Art ══ -->
         <div
@@ -234,76 +240,83 @@ function onSplashMouseLeave() {
           <div class="vignette-bottom" />
           <div class="vignette-right" />
 
-          <!-- Equipment bar top-right -->
-          <div class="equip-bar">
-            <button
-              v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
-              :key="cat"
-              class="equip-bar-btn"
-              :class="{ 'equip-bar-btn--filled': currentEquipment[cat] !== null }"
-              @click.stop="openItemPicker(cat)"
-            >
-              <template v-if="getEquippedItem(cat)">
-                <img
-                  v-if="getEquippedItem(cat)!.icon.startsWith('/')"
-                  :src="getEquippedItem(cat)!.icon"
-                  class="equip-bar-img"
-                  :alt="getEquippedItem(cat)!.name"
-                />
-                <span v-else class="equip-bar-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-                <div class="equip-bar-effects">
-                  <span
-                    v-for="fx in formatEffects(getEquippedItem(cat))"
-                    :key="fx"
-                    class="equip-bar-fx"
-                    >{{ fx }}</span
-                  >
-                </div>
-              </template>
-              <span v-else class="equip-bar-placeholder">{{ CAT_ICONS[cat] }}</span>
-              <span class="equip-bar-label">{{ CAT_LABELS[cat] }}</span>
-            </button>
+          <!-- Champion Name — top center -->
+          <div v-if="activeChampion" class="splash-name-top">{{ activeChampion }}</div>
+
+          <!-- Global synergy overlay — left side, RPG style -->
+          <div v-if="globalSynergies.length" class="splash-syn-overlay">
+            <div v-for="syn in globalSynergies" :key="syn.id" class="splash-syn-item">
+              <span class="splash-syn-icon">{{ syn.icon }}</span>
+              <div class="splash-syn-text">
+                <span class="splash-syn-name">{{ syn.name }}</span>
+                <span class="splash-syn-champs">{{ syn.involvedChampions.join(' · ') }}</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Champion name bottom-left -->
-          <div v-if="activeChampion" class="splash-champ-name">
-            {{ activeChampion }}
-          </div>
-
-          <!-- Secondary champions row (bottom-right of splash) -->
-          <div class="splash-secondaries" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-            <div class="splash-sec-label">Sekundär</div>
-            <div class="splash-sec-row">
+          <!-- Bottom bar: Sec1 | Equipment | Sec2 -->
+          <div class="splash-bottom-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+            <!-- Secondary 1 (links) -->
+            <button class="splash-sec-card" @click.stop="openChampionPicker(0)">
+              <img
+                v-if="activeSecondaries[0]"
+                :src="battleStore.getChampionImage(activeSecondaries[0]!)"
+                :alt="activeSecondaries[0]!"
+                class="splash-sec-card-img"
+                @error="onImgError"
+              />
+              <span v-else class="splash-sec-plus">＋</span>
+              <span class="splash-sec-card-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
               <button
-                v-for="i in [0, 1]"
-                :key="i"
-                class="splash-sec-slot"
-                :class="{ 'splash-sec-slot--filled': activeSecondaries[i] !== null }"
-                :title="
-                  activeSecondaries[i]
-                    ? `${activeSecondaries[i]} — klicken zum Ändern`
-                    : `Sekundär ${i + 1} hinzufügen`
-                "
-                @click.stop="openChampionPicker(i)"
+                v-if="activeSecondaries[0]"
+                class="splash-sec-clear"
+                title="Entfernen"
+                @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
+              >✕</button>
+            </button>
+
+            <!-- Equipment center -->
+            <div class="splash-equip-center">
+              <button
+                v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
+                :key="cat"
+                class="splash-equip-btn"
+                :class="{ 'splash-equip-btn--filled': currentEquipment[cat] !== null }"
+                @click.stop="openItemPicker(cat)"
               >
-                <img
-                  v-if="activeSecondaries[i]"
-                  :src="battleStore.getChampionImage(activeSecondaries[i]!)"
-                  :alt="activeSecondaries[i]!"
-                  class="splash-sec-img"
-                  @error="onImgError"
-                />
-                <span v-else class="splash-sec-plus">＋</span>
-                <button
-                  v-if="activeSecondaries[i]"
-                  class="splash-sec-clear"
-                  title="Entfernen"
-                  @click.stop="clearSecondary(activeSlotIndex, i, $event)"
-                >
-                  ✕
-                </button>
+                <template v-if="getEquippedItem(cat)">
+                  <img
+                    v-if="getEquippedItem(cat)!.icon.startsWith('/')"
+                    :src="getEquippedItem(cat)!.icon"
+                    class="splash-equip-img"
+                    :alt="getEquippedItem(cat)!.name"
+                  />
+                  <span v-else class="splash-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
+                  <span class="splash-equip-fx">{{ formatEffects(getEquippedItem(cat)).join(' ') }}</span>
+                </template>
+                <span v-else class="splash-equip-placeholder">{{ CAT_ICONS[cat] }}</span>
+                <span class="splash-equip-label">{{ CAT_LABELS[cat] }}</span>
               </button>
             </div>
+
+            <!-- Secondary 2 (rechts) -->
+            <button class="splash-sec-card" @click.stop="openChampionPicker(1)">
+              <img
+                v-if="activeSecondaries[1]"
+                :src="battleStore.getChampionImage(activeSecondaries[1]!)"
+                :alt="activeSecondaries[1]!"
+                class="splash-sec-card-img"
+                @error="onImgError"
+              />
+              <span v-else class="splash-sec-plus">＋</span>
+              <span class="splash-sec-card-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
+              <button
+                v-if="activeSecondaries[1]"
+                class="splash-sec-clear"
+                title="Entfernen"
+                @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
+              >✕</button>
+            </button>
           </div>
 
           <!-- Click hint -->
@@ -523,22 +536,73 @@ function onSplashMouseLeave() {
   z-index: 2;
 }
 
-/* Champion name */
-.splash-champ-name {
+/* Champion name — top center */
+.splash-name-top {
   position: absolute;
-  bottom: 14px;
-  left: 14px;
+  top: 10px;
+  left: 0;
+  right: 0;
+  text-align: center;
   z-index: 5;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #f0d870;
   text-shadow:
-    0 2px 16px rgba(0, 0, 0, 0.9),
-    0 0 30px rgba(200, 144, 64, 0.5);
-  line-height: 1;
+    0 2px 20px rgba(0, 0, 0, 0.95),
+    0 0 40px rgba(200, 144, 64, 0.5);
   pointer-events: none;
+  line-height: 1;
+}
+
+/* Global synergy overlay — left side */
+.splash-syn-overlay {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.splash-syn-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(8, 5, 2, 0.72);
+  border: 1px solid rgba(232, 192, 64, 0.25);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.splash-syn-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.splash-syn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.splash-syn-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e8c040;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.splash-syn-champs {
+  font-size: 8px;
+  color: rgba(200, 160, 96, 0.55);
+  display: block;
 }
 
 /* Click hint */
@@ -626,91 +690,188 @@ function onSplashMouseLeave() {
   flex-shrink: 0;
 }
 
-/* ── Equipment Bar (inside splash art) ── */
-.equip-bar {
+/* ── Bottom bar: Sec1 | Equipment | Sec2 ── */
+.splash-bottom-bar {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
+  z-index: 6;
   display: flex;
-  justify-content: space-evenly;
-  align-items: flex-start;
-  padding: 8px 0 4px;
-  z-index: 5;
-  pointer-events: auto;
+  align-items: flex-end;
+  gap: 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, transparent 100%);
+  padding: 10px 12px 10px;
 }
 
-.equip-bar-btn {
+/* Secondary portrait cards */
+.splash-sec-card {
+  position: relative;
+  width: 72px;
+  height: 90px;
+  border-radius: 4px;
+  border: 2px solid color-mix(in srgb, var(--rc, #c89040) 70%, transparent);
+  background: #0a0804;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
+}
+.splash-sec-card:hover {
+  border-color: var(--rc, #c89040);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rc, #c89040) 50%, transparent);
+  transform: translateY(-2px);
+}
+
+.splash-sec-card-img {
+  width: 100%;
+  height: 78%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.splash-sec-card-name {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc, #c89040);
+  line-height: 1.2;
+  padding: 0 2px;
+  background: rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.splash-sec-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 78%;
+  font-size: 22px;
+  color: rgba(200, 144, 64, 0.25);
+  transition: color 0.15s;
+}
+.splash-sec-card:hover .splash-sec-plus {
+  color: rgba(200, 144, 64, 0.65);
+}
+
+.splash-sec-clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+  color: #cc6050;
+  background: rgba(20, 10, 6, 0.92);
+  border: 1px solid rgba(180, 60, 40, 0.55);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 2;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+.splash-sec-card:hover .splash-sec-clear {
+  opacity: 1;
+}
+.splash-sec-clear:hover {
+  background: rgba(160, 40, 20, 0.85);
+  border-color: #cc6050;
+}
+
+/* Equipment — compact center */
+.splash-equip-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: flex-end;
+  padding-bottom: 4px;
+}
+
+.splash-equip-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  background: transparent;
-  border: none;
+  gap: 3px;
+  background: rgba(8, 5, 2, 0.75);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  border-radius: 4px;
+  padding: 5px 7px;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
 }
-.equip-bar-btn:hover {
-  transform: translateY(-2px) scale(1.08);
+.splash-equip-btn:hover {
+  border-color: rgba(200, 144, 64, 0.55);
+  box-shadow: 0 0 10px rgba(200, 144, 64, 0.25);
+  transform: translateY(-2px);
+}
+.splash-equip-btn--filled {
+  border-color: rgba(200, 144, 64, 0.4);
 }
 
-.equip-bar-img {
-  width: 116px;
-  height: 116px;
+.splash-equip-img {
+  width: 40px;
+  height: 40px;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.65));
-  transition: filter 0.15s;
+  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.55));
 }
-.equip-bar-btn:hover .equip-bar-img {
-  filter: drop-shadow(0 0 24px rgba(200, 144, 64, 1));
+.splash-equip-btn:hover .splash-equip-img {
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.9));
 }
 
-.equip-bar-emoji {
-  font-size: 108px;
+.splash-equip-emoji {
+  font-size: 36px;
   line-height: 1;
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.6));
-  transition: filter 0.15s;
-}
-.equip-bar-btn:hover .equip-bar-emoji {
-  filter: drop-shadow(0 0 24px rgba(200, 144, 64, 1));
+  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
 }
 
-.equip-bar-placeholder {
-  font-size: 96px;
+.splash-equip-placeholder {
+  font-size: 32px;
   line-height: 1;
   opacity: 0.22;
   transition: opacity 0.15s;
 }
-.equip-bar-btn:hover .equip-bar-placeholder {
-  opacity: 0.55;
+.splash-equip-btn:hover .splash-equip-placeholder {
+  opacity: 0.5;
 }
 
-.equip-bar-effects {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  justify-content: center;
-}
-.equip-bar-fx {
-  font-size: 13px;
+.splash-equip-fx {
+  font-size: 9px;
   color: #e8c040;
-  background: rgba(0, 0, 0, 0.75);
-  border-radius: 2px;
-  padding: 1px 4px;
-  white-space: nowrap;
-  line-height: 1.3;
   text-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
+  white-space: nowrap;
 }
 
-.equip-bar-label {
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+.splash-equip-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.65);
+  color: rgba(200, 144, 64, 0.5);
   line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Role Buttons ── */
@@ -820,116 +981,6 @@ function onSplashMouseLeave() {
   z-index: 3;
 }
 
-/* ══════════════════════════════
-   SPLASH — Secondary champions panel
-   ══════════════════════════════ */
-.splash-secondaries {
-  position: absolute;
-  bottom: 12px;
-  right: 14px;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  padding: 6px 8px 6px 10px;
-  background: rgba(8, 6, 2, 0.72);
-  border: 1px solid rgba(92, 51, 16, 0.65);
-  border-radius: 5px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
-}
-
-.splash-sec-label {
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-  line-height: 1;
-}
-
-.splash-sec-row {
-  display: flex;
-  gap: 6px;
-}
-
-.splash-sec-slot {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--rc) 60%, transparent);
-  background: #0a0804;
-  cursor: pointer;
-  overflow: hidden;
-  padding: 0;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
-}
-.splash-sec-slot:hover {
-  border-color: var(--rc);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 50%, transparent);
-  transform: scale(1.06);
-}
-.splash-sec-slot--filled {
-  border-color: var(--rc);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 35%, transparent);
-}
-
-.splash-sec-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  border-radius: 50%;
-}
-
-.splash-sec-plus {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 20px;
-  color: rgba(200, 144, 64, 0.25);
-  transition: color 0.15s;
-}
-.splash-sec-slot:hover .splash-sec-plus {
-  color: rgba(200, 144, 64, 0.7);
-}
-
-.splash-sec-clear {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 16px;
-  height: 16px;
-  font-size: 8px;
-  color: #cc6050;
-  background: rgba(20, 10, 6, 0.92);
-  border: 1px solid rgba(180, 60, 40, 0.55);
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  z-index: 2;
-  transition:
-    opacity 0.15s ease,
-    background 0.15s ease;
-}
-.splash-sec-slot:hover .splash-sec-clear {
-  opacity: 1;
-}
-.splash-sec-clear:hover {
-  background: rgba(160, 40, 20, 0.85);
-  border-color: #cc6050;
-}
 
 /* ══════════════════════════════
    SIDEBAR ROLE-BTN — Secondaries column

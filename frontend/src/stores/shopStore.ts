@@ -7,6 +7,7 @@ import { usePlanetBossStore } from './planetBossStore'
 import type { ShopUpgrade, BuildingStat } from '../types'
 import { logger } from '../utils/logger'
 import { usePlanetShopStore } from './planetShopStore'
+import { useSynergyStore } from './synergyStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -281,10 +282,12 @@ export const useShopStore = defineStore('shop', {
       }, 0)
       const itemStore = useItemStore()
       const bossStore = usePlanetBossStore()
+      const synergyStore = useSynergyStore()
       const cpsMul =
         (mod.cpsMultiplier ?? 1) *
         augmentStore.temporaryCPSMultiplier *
         itemStore.totalCPSMultiplier *
+        synergyStore.cpsSynergyMultiplier *
         bossStore.cpsPenaltyMultiplier
       return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
     },

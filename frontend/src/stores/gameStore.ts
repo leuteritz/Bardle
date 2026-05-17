@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useShopStore } from './shopStore'
 import { useItemStore } from './itemStore'
+import { useSynergyStore } from './synergyStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
@@ -623,10 +624,12 @@ export const useGameStore = defineStore('game', {
       const meepPowerMod = this.activeModifier.meepPowerMultiplier ?? 1
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
+      const synergyPowerMul = useSynergyStore().powerSynergyMultiplier
       return Math.floor(
         (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod + this.abilityPowerBonus) *
           eloPowerMod *
-          itemPowerMul,
+          itemPowerMul *
+          synergyPowerMul,
       )
     },
 
