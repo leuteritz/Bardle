@@ -66,6 +66,14 @@ const hoveredSyn = computed(
   () => activeSynergies.value.find((s) => s.id === hoveredSynId.value) ?? null,
 )
 
+const sortedRoleSynergies = computed<ActiveSynergy[]>(() => {
+  const globals = activeSynergies.value.filter((s) => s.roleIndex === undefined)
+  const roleSpecific = activeSynergies.value.filter(
+    (s) => s.roleIndex === activeSlotIndex.value,
+  )
+  return [...globals, ...roleSpecific]
+})
+
 watch(
   () => uiStore.rolesActiveSlot,
   (val) => {
@@ -319,10 +327,11 @@ void championRoleLabel
           <!-- ══ RIGHT Overlay — Active Synergies ══ -->
           <div class="splash-syn-panel" @click.stop>
             <div
-              v-for="syn in activeSynergies"
+              v-for="syn in sortedRoleSynergies"
               :key="syn.id"
               class="splash-syn-entry"
-              :style="{ '--sc': syn.color }"
+              :class="{ 'splash-syn-entry--global': syn.roleIndex === undefined }"
+              :style="syn.roleIndex !== undefined ? { '--sc': syn.color } : {}"
               @mouseenter="hoveredSynId = syn.id"
               @mouseleave="hoveredSynId = null"
             >
@@ -330,7 +339,22 @@ void championRoleLabel
               <div class="splash-syn-entry-info">
                 <span class="splash-syn-entry-name">{{ syn.name }}</span>
                 <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
+                <div
+                  v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
+                  class="splash-syn-entry-champs"
+                >
+                  <img
+                    v-for="champ in syn.involvedChampions"
+                    :key="champ"
+                    :src="battleStore.getChampionImage(champ)"
+                    :alt="champ"
+                    :title="champ"
+                    class="splash-syn-champ-avatar"
+                    @error="onImgError"
+                  />
+                </div>
               </div>
+              <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
             </div>
           </div>
 
@@ -373,9 +397,8 @@ void championRoleLabel
                 :class="{
                   'role-btn--active': activeSlotIndex === i,
                   'role-btn--filled': headerSlots[i] !== null,
-                  'role-btn--syn-glow': isHighlighted(headerSlots[i]),
                 }"
-                :style="[{ '--rc': ROLE_COLORS[role] }, highlightStyle(headerSlots[i])]"
+                :style="{ '--rc': ROLE_COLORS[role] }"
                 @click="selectSlot(i)"
               >
                 <img
@@ -637,8 +660,10 @@ void championRoleLabel
 }
 .splash-sec-card--syn-glow {
   border-color: var(--hl-color, var(--rc)) !important;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--hl-color, #e8c040) 65%, transparent) !important;
-  filter: brightness(1.18);
+  box-shadow:
+    0 0 36px color-mix(in srgb, var(--hl-color, #e8c040) 75%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--hl-color, #e8c040) 25%, transparent) !important;
+  filter: brightness(1.32) saturate(1.2);
 }
 
 .splash-sec-img {
@@ -664,7 +689,7 @@ void championRoleLabel
 }
 
 .splash-sec-name {
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -722,12 +747,14 @@ void championRoleLabel
   align-items: stretch;
   gap: 5px;
   pointer-events: auto;
-  min-width: 110px;
+  min-width: 155px;
+  max-height: 75%;
+  overflow-y: auto;
 }
 
 .splash-syn-entry {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   background: rgba(8, 5, 2, 0.78);
   border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 38%, transparent);
@@ -744,7 +771,7 @@ void championRoleLabel
 }
 
 .splash-syn-entry-icon {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -757,7 +784,7 @@ void championRoleLabel
 }
 
 .splash-syn-entry-name {
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--sc, #e8c040);
   text-transform: uppercase;
@@ -768,7 +795,7 @@ void championRoleLabel
 }
 
 .splash-syn-entry-fx {
-  font-size: 7px;
+  font-size: 10px;
   color: rgba(232, 192, 64, 0.7);
   white-space: nowrap;
 }
@@ -853,28 +880,24 @@ void championRoleLabel
   align-items: center;
   gap: 4px;
   background: transparent;
-  border: 1px solid rgba(92, 51, 16, 0.2);
+  border: none;
   border-radius: 4px;
   padding: 7px 8px;
   cursor: pointer;
   min-width: 56px;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
+    transform 0.12s,
+    filter 0.15s;
 }
 .hud-equip-btn:hover {
-  border-color: rgba(200, 144, 64, 0.5);
-  box-shadow: 0 0 12px rgba(200, 144, 64, 0.25);
   transform: translateY(-3px);
 }
 .hud-equip-btn--filled {
-  border-color: rgba(200, 144, 64, 0.3);
 }
 
 .hud-equip-img {
-  width: 64px;
-  height: 64px;
+  width: 106px;
+  height: 106px;
   object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.6));
   transition: filter 0.15s;
@@ -884,27 +907,28 @@ void championRoleLabel
 }
 
 .hud-equip-emoji {
-  font-size: 52px;
+  font-size: 68px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
 }
 
 .hud-equip-empty {
-  font-size: 48px;
+  font-size: 68px;
   line-height: 1;
-  opacity: 0.22;
+  opacity: 0.18;
   transition: opacity 0.15s;
 }
 .hud-equip-btn:hover .hud-equip-empty {
-  opacity: 0.55;
+  opacity: 0.48;
 }
 
 .hud-equip-cat {
   font-size: 8px;
-  color: rgba(200, 144, 64, 0.55);
+  color: rgba(200, 144, 64, 0.45);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   line-height: 1;
+  pointer-events: none;
 }
 
 /* ══════════════════════════════
@@ -961,11 +985,6 @@ void championRoleLabel
 .role-btn--active {
   border-color: var(--rc) !important;
   box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent) !important;
-}
-.role-btn--syn-glow {
-  filter: brightness(1.2);
-  border-color: var(--hl-color, var(--rc)) !important;
-  box-shadow: 0 0 16px color-mix(in srgb, var(--hl-color, var(--rc)) 55%, transparent) !important;
 }
 
 .role-btn-img {
@@ -1087,6 +1106,61 @@ void championRoleLabel
   height: 100%;
   font-size: 12px;
   color: rgba(200, 144, 64, 0.3);
+}
+
+/* ── Global synergy entry variant ── */
+.splash-syn-entry--global {
+  background: rgba(92, 51, 16, 0.65);
+  border: 1px solid rgba(232, 192, 64, 0.55);
+  border-radius: 4px;
+}
+.splash-syn-entry--global .splash-syn-entry-name {
+  color: #e8c040;
+}
+.splash-syn-entry--global:hover {
+  border-color: #e8c040;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+}
+
+/* ── Global badge ── */
+.splash-syn-global-badge {
+  font-size: 9px;
+  color: #e8c040;
+  opacity: 0.75;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 1px;
+  line-height: 1;
+}
+
+/* ── Scrollbar for synergy panel ── */
+.splash-syn-panel::-webkit-scrollbar {
+  width: 3px;
+}
+.splash-syn-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.splash-syn-panel::-webkit-scrollbar-thumb {
+  background: rgba(92, 51, 16, 0.6);
+  border-radius: 2px;
+}
+
+/* ── Champion avatars in synergy hover ── */
+.splash-syn-entry-champs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+.splash-syn-champ-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
+  background: rgba(8, 5, 2, 0.9);
+  flex-shrink: 0;
 }
 
 </style>
