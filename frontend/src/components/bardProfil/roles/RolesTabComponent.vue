@@ -179,18 +179,6 @@ function getEquippedItem(cat: ItemCategory): ShopItem | null {
   return SHOP_ITEMS.find((i) => i.id === id) ?? null
 }
 
-function formatEffects(item: ShopItem | null): string[] {
-  if (!item?.effects) return []
-  const result: string[] = []
-  if (item.effects.powerMultiplier) {
-    result.push(`⚔ +${Math.round((item.effects.powerMultiplier - 1) * 100)}%`)
-  }
-  if (item.effects.cpsMultiplier) {
-    result.push(`♪ +${Math.round((item.effects.cpsMultiplier - 1) * 100)}%`)
-  }
-  return result
-}
-
 function formatEffect(syn: ActiveSynergy): string {
   return syn.effects
     .map((e) => {
@@ -209,11 +197,6 @@ function isHighlighted(champion: string | null | undefined): boolean {
 function highlightStyle(champion: string | null | undefined): Record<string, string> {
   if (!isHighlighted(champion)) return {}
   return { '--hl-color': hoveredSyn.value!.color }
-}
-
-function getSynergiesFor(champion: string | null | undefined): ActiveSynergy[] {
-  if (!champion) return []
-  return activeSynergies.value.filter((s) => s.involvedChampions.includes(champion))
 }
 
 function onSplashMouseMove(e: MouseEvent) {
@@ -281,50 +264,78 @@ void championRoleLabel
           <div class="splash-corner splash-corner--tl" />
           <div class="splash-corner splash-corner--br" />
 
-          <!-- ══ Bottom HUD: Secondary 1 | Equipment | Secondary 2 ══ -->
-          <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-            <!-- Secondary Champion 1 -->
-            <div class="hud-sec-col">
+          <!-- ══ LEFT Overlay — Secondary Champions ══ -->
+          <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+            <button
+              class="splash-sec-card"
+              :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
+              :style="highlightStyle(activeSecondaries[0])"
+              @click.stop="openChampionPicker(0)"
+            >
+              <img
+                v-if="activeSecondaries[0]"
+                :src="battleStore.getChampionImage(activeSecondaries[0]!)"
+                :alt="activeSecondaries[0]!"
+                class="splash-sec-img"
+                @error="onImgError"
+              />
+              <span v-else class="splash-sec-plus">＋</span>
+              <span class="splash-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
               <button
-                class="hud-sec-card"
-                :class="{ 'hud-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
-                :style="highlightStyle(activeSecondaries[0])"
-                @click.stop="openChampionPicker(0)"
+                v-if="activeSecondaries[0]"
+                class="splash-sec-clear"
+                title="Entfernen"
+                @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
               >
-                <img
-                  v-if="activeSecondaries[0]"
-                  :src="battleStore.getChampionImage(activeSecondaries[0]!)"
-                  :alt="activeSecondaries[0]!"
-                  class="hud-sec-img"
-                  @error="onImgError"
-                />
-                <span v-else class="hud-sec-plus">＋</span>
-                <span class="hud-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
-                <button
-                  v-if="activeSecondaries[0]"
-                  class="hud-sec-clear"
-                  title="Entfernen"
-                  @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
-                >
-                  ✕
-                </button>
+                ✕
               </button>
-              <div v-if="activeSecondaries[0]" class="hud-syn-badges">
-                <div
-                  v-for="syn in getSynergiesFor(activeSecondaries[0])"
-                  :key="syn.id"
-                  class="hud-syn-badge"
-                  :style="{ '--sc': syn.color }"
-                  @mouseenter="hoveredSynId = syn.id"
-                  @mouseleave="hoveredSynId = null"
-                >
-                  <span class="hud-syn-icon">{{ syn.icon }}</span>
-                  <span class="hud-syn-text">{{ syn.name }}</span>
-                  <span class="hud-syn-fx">{{ formatEffect(syn) }}</span>
-                </div>
+            </button>
+            <button
+              class="splash-sec-card"
+              :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
+              :style="highlightStyle(activeSecondaries[1])"
+              @click.stop="openChampionPicker(1)"
+            >
+              <img
+                v-if="activeSecondaries[1]"
+                :src="battleStore.getChampionImage(activeSecondaries[1]!)"
+                :alt="activeSecondaries[1]!"
+                class="splash-sec-img"
+                @error="onImgError"
+              />
+              <span v-else class="splash-sec-plus">＋</span>
+              <span class="splash-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
+              <button
+                v-if="activeSecondaries[1]"
+                class="splash-sec-clear"
+                title="Entfernen"
+                @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
+              >
+                ✕
+              </button>
+            </button>
+          </div>
+
+          <!-- ══ RIGHT Overlay — Active Synergies ══ -->
+          <div class="splash-syn-panel" @click.stop>
+            <div
+              v-for="syn in activeSynergies"
+              :key="syn.id"
+              class="splash-syn-entry"
+              :style="{ '--sc': syn.color }"
+              @mouseenter="hoveredSynId = syn.id"
+              @mouseleave="hoveredSynId = null"
+            >
+              <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
+              <div class="splash-syn-entry-info">
+                <span class="splash-syn-entry-name">{{ syn.name }}</span>
+                <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
               </div>
             </div>
+          </div>
 
+          <!-- ══ Bottom HUD — Equipment only ══ -->
+          <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
             <!-- Equipment Center -->
             <div class="hud-equip-col">
               <button
@@ -343,59 +354,15 @@ void championRoleLabel
                     :alt="getEquippedItem(cat)!.name"
                   />
                   <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-                  <span class="hud-equip-fx">{{
-                    formatEffects(getEquippedItem(cat)).join(' ')
-                  }}</span>
                 </template>
                 <span v-else class="hud-equip-empty">{{ CAT_ICONS[cat] }}</span>
+                <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
               </button>
-            </div>
-
-            <!-- Secondary Champion 2 -->
-            <div class="hud-sec-col">
-              <button
-                class="hud-sec-card"
-                :class="{ 'hud-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
-                :style="highlightStyle(activeSecondaries[1])"
-                @click.stop="openChampionPicker(1)"
-              >
-                <img
-                  v-if="activeSecondaries[1]"
-                  :src="battleStore.getChampionImage(activeSecondaries[1]!)"
-                  :alt="activeSecondaries[1]!"
-                  class="hud-sec-img"
-                  @error="onImgError"
-                />
-                <span v-else class="hud-sec-plus">＋</span>
-                <span class="hud-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
-                <button
-                  v-if="activeSecondaries[1]"
-                  class="hud-sec-clear"
-                  title="Entfernen"
-                  @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
-                >
-                  ✕
-                </button>
-              </button>
-              <div v-if="activeSecondaries[1]" class="hud-syn-badges">
-                <div
-                  v-for="syn in getSynergiesFor(activeSecondaries[1])"
-                  :key="syn.id"
-                  class="hud-syn-badge"
-                  :style="{ '--sc': syn.color }"
-                  @mouseenter="hoveredSynId = syn.id"
-                  @mouseleave="hoveredSynId = null"
-                >
-                  <span class="hud-syn-icon">{{ syn.icon }}</span>
-                  <span class="hud-syn-text">{{ syn.name }}</span>
-                  <span class="hud-syn-fx">{{ formatEffect(syn) }}</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        <!-- ══ RIGHT — Sidebar (role tabs only) ══ -->
+        <!-- ══ RIGHT — Sidebar (role tabs) ══ -->
         <div class="sidebar">
           <div class="sidebar-section sidebar-section--roles">
             <div class="role-list">
@@ -445,6 +412,7 @@ void championRoleLabel
               </button>
             </div>
           </div>
+
         </div>
       </div>
     </template>
@@ -628,53 +596,181 @@ void championRoleLabel
   line-height: 1;
 }
 
-/* Global synergy overlay — left side */
-.splash-syn-overlay {
+/* ══════════════════════════════
+   LEFT OVERLAY — Secondary Champions
+   ══════════════════════════════ */
+.splash-sec-panel {
   position: absolute;
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 5;
+  z-index: 6;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  pointer-events: none;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
 }
 
-.splash-syn-item {
+.splash-sec-card {
+  position: relative;
+  width: 80px;
+  height: 94px;
+  border-radius: 4px;
+  border: 2px solid color-mix(in srgb, var(--rc, #c89040) 65%, transparent);
+  background: rgba(8, 5, 2, 0.82);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.12s,
+    filter 0.2s;
+}
+.splash-sec-card:hover {
+  border-color: var(--rc, #c89040);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
+  transform: translateY(-3px);
+}
+.splash-sec-card--syn-glow {
+  border-color: var(--hl-color, var(--rc)) !important;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--hl-color, #e8c040) 65%, transparent) !important;
+  filter: brightness(1.18);
+}
+
+.splash-sec-img {
+  width: 100%;
+  height: 68px;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  flex-shrink: 0;
+}
+
+.splash-sec-plus {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: rgba(200, 144, 64, 0.25);
+  transition: color 0.15s;
+}
+.splash-sec-card:hover .splash-sec-plus {
+  color: rgba(200, 144, 64, 0.65);
+}
+
+.splash-sec-name {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rc, #c89040);
+  text-align: center;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.splash-sec-clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+  color: #cc6050;
+  background: rgba(20, 10, 6, 0.92);
+  border: 1px solid rgba(180, 60, 40, 0.55);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  z-index: 2;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+.splash-sec-card:hover .splash-sec-clear {
+  opacity: 1;
+}
+.splash-sec-clear:hover {
+  background: rgba(160, 40, 20, 0.85);
+  border-color: #cc6050;
+}
+
+/* ══════════════════════════════
+   RIGHT OVERLAY — Synergies
+   ══════════════════════════════ */
+.splash-syn-panel {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  pointer-events: auto;
+  min-width: 110px;
+}
+
+.splash-syn-entry {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(8, 5, 2, 0.72);
-  border: 1px solid rgba(232, 192, 64, 0.25);
+  background: rgba(8, 5, 2, 0.78);
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 38%, transparent);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 5px 8px;
+  cursor: default;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.splash-syn-entry:hover {
+  border-color: var(--sc, #e8c040);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
 }
 
-.splash-syn-icon {
-  font-size: 14px;
+.splash-syn-entry-icon {
+  font-size: 13px;
   line-height: 1;
   flex-shrink: 0;
 }
 
-.splash-syn-text {
+.splash-syn-entry-info {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
 }
 
-.splash-syn-name {
-  font-size: 10px;
+.splash-syn-entry-name {
+  font-size: 8px;
   font-weight: 700;
-  color: #e8c040;
+  color: var(--sc, #e8c040);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.splash-syn-champs {
-  font-size: 8px;
-  color: rgba(200, 160, 96, 0.55);
-  display: block;
+.splash-syn-entry-fx {
+  font-size: 7px;
+  color: rgba(232, 192, 64, 0.7);
+  white-space: nowrap;
 }
 
 /* Click hint — top right (below champion name) */
@@ -741,163 +837,6 @@ void championRoleLabel
   padding: 10px 14px 12px;
 }
 
-/* ── Secondary champion columns ── */
-.hud-sec-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.hud-sec-card {
-  position: relative;
-  width: 86px;
-  height: 108px;
-  border-radius: 4px;
-  border: 2px solid color-mix(in srgb, var(--rc, #c89040) 70%, transparent);
-  background: #0a0804;
-  overflow: hidden;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.12s,
-    filter 0.2s;
-}
-.hud-sec-card:hover {
-  border-color: var(--rc, #c89040);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
-  transform: translateY(-3px);
-}
-.hud-sec-card--syn-glow {
-  border-color: var(--hl-color, var(--rc)) !important;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--hl-color, #e8c040) 65%, transparent) !important;
-  filter: brightness(1.18);
-}
-
-.hud-sec-img {
-  width: 100%;
-  height: 82px;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  flex-shrink: 0;
-}
-
-.hud-sec-plus {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  color: rgba(200, 144, 64, 0.25);
-  transition: color 0.15s;
-}
-.hud-sec-card:hover .hud-sec-plus {
-  color: rgba(200, 144, 64, 0.65);
-}
-
-.hud-sec-name {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rc, #c89040);
-  text-align: center;
-  padding: 3px 3px;
-  background: rgba(0, 0, 0, 0.75);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-}
-
-.hud-sec-clear {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 16px;
-  height: 16px;
-  font-size: 8px;
-  color: #cc6050;
-  background: rgba(20, 10, 6, 0.92);
-  border: 1px solid rgba(180, 60, 40, 0.55);
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  z-index: 2;
-  transition:
-    opacity 0.15s ease,
-    background 0.15s ease;
-}
-.hud-sec-card:hover .hud-sec-clear {
-  opacity: 1;
-}
-.hud-sec-clear:hover {
-  background: rgba(160, 40, 20, 0.85);
-  border-color: #cc6050;
-}
-
-/* Synergy badges below secondary card */
-.hud-syn-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 86px;
-}
-
-.hud-syn-badge {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(8, 5, 2, 0.78);
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
-  border-radius: 3px;
-  padding: 2px 5px;
-  cursor: default;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.hud-syn-badge:hover {
-  border-color: var(--sc, #e8c040);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
-}
-
-.hud-syn-icon {
-  font-size: 10px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.hud-syn-text {
-  font-size: 7px;
-  font-weight: 700;
-  color: var(--sc, #e8c040);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hud-syn-fx {
-  font-size: 7px;
-  color: #e8c040;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 /* ── Equipment center column ── */
 .hud-equip-col {
   flex: 1;
@@ -913,8 +852,8 @@ void championRoleLabel
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: rgba(8, 5, 2, 0.7);
-  border: 1px solid rgba(92, 51, 16, 0.55);
+  background: transparent;
+  border: 1px solid rgba(92, 51, 16, 0.2);
   border-radius: 4px;
   padding: 7px 8px;
   cursor: pointer;
@@ -925,33 +864,33 @@ void championRoleLabel
     transform 0.12s;
 }
 .hud-equip-btn:hover {
-  border-color: rgba(200, 144, 64, 0.6);
-  box-shadow: 0 0 12px rgba(200, 144, 64, 0.3);
+  border-color: rgba(200, 144, 64, 0.5);
+  box-shadow: 0 0 12px rgba(200, 144, 64, 0.25);
   transform: translateY(-3px);
 }
 .hud-equip-btn--filled {
-  border-color: rgba(200, 144, 64, 0.4);
+  border-color: rgba(200, 144, 64, 0.3);
 }
 
 .hud-equip-img {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.6));
   transition: filter 0.15s;
 }
 .hud-equip-btn:hover .hud-equip-img {
-  filter: drop-shadow(0 0 14px rgba(200, 144, 64, 0.95));
+  filter: drop-shadow(0 0 18px rgba(200, 144, 64, 0.95));
 }
 
 .hud-equip-emoji {
-  font-size: 40px;
+  font-size: 52px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
 }
 
 .hud-equip-empty {
-  font-size: 36px;
+  font-size: 48px;
   line-height: 1;
   opacity: 0.22;
   transition: opacity 0.15s;
@@ -960,11 +899,12 @@ void championRoleLabel
   opacity: 0.55;
 }
 
-.hud-equip-fx {
+.hud-equip-cat {
   font-size: 8px;
-  color: #e8c040;
-  white-space: nowrap;
-  text-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
+  color: rgba(200, 144, 64, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
 /* ══════════════════════════════
@@ -1148,4 +1088,5 @@ void championRoleLabel
   font-size: 12px;
   color: rgba(200, 144, 64, 0.3);
 }
+
 </style>
