@@ -2,33 +2,20 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-// rAF läuft mit voller Monitor-Rate (240Hz), aber count wird nur erhöht
-// wenn mindestens 16.67ms seit dem letzten gezählten Frame vergangen sind.
-// Messfenster 1000ms → stabile ~60 FPS ohne setTimeout-Jitter.
-const TARGET_FPS = 60
-const FRAME_INTERVAL = 1000 / TARGET_FPS
-
 const fps = ref(0)
 let count = 0
 let lastTime = 0
-let lastFrameTime = 0
 let rafId = 0
 
 const tick = (now: number) => {
-  if (lastFrameTime === 0 || now - lastFrameTime >= FRAME_INTERVAL) {
-    count++
-    lastFrameTime = now
-
-    if (lastTime === 0) lastTime = now
-    const elapsed = now - lastTime
-
-    if (elapsed >= 1000) {
-      fps.value = Math.round((count * 1000) / elapsed)
-      count = 0
-      lastTime = now
-    }
+  count++
+  if (lastTime === 0) lastTime = now
+  const elapsed = now - lastTime
+  if (elapsed >= 1000) {
+    fps.value = Math.round((count * 1000) / elapsed)
+    count = 0
+    lastTime = now
   }
-
   rafId = requestAnimationFrame(tick)
 }
 
