@@ -87,7 +87,10 @@
                 <span class="curse-desc">{{ CURSE_DESC[activeCurse.type] }}</span>
               </div>
               <div class="curse-timer">
-                <span class="curse-timer-val">{{ curseSecsLeft }}</span>
+                <span
+                  class="curse-timer-val"
+                  :class="{ 'curse-timer-val--urgent': curseSecsLeft > 0 && curseSecsLeft <= 3 }"
+                >{{ curseSecsLeft }}</span>
                 <span class="curse-timer-label">SEK</span>
               </div>
             </div>
@@ -955,6 +958,16 @@ function handleShake(ms: number) {
   .ember {
     animation: none;
   }
+  .curse-header-text {
+    animation: none;
+  }
+  .curse-icon {
+    animation: none;
+  }
+  .curse-timer-val--urgent {
+    animation: none;
+    color: #ff4040;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -1080,6 +1093,24 @@ function handleShake(ms: number) {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   margin-top: 0.1rem;
+}
+
+.curse-timer-val--urgent {
+  color: #ff4040;
+  text-shadow:
+    0 0 8px rgba(255, 40, 40, 1),
+    0 0 22px rgba(220, 0, 0, 0.55);
+  animation: curse-urgent-blink 0.5s ease-in-out infinite;
+}
+
+@keyframes curse-urgent-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .curse-reveal-enter-active {

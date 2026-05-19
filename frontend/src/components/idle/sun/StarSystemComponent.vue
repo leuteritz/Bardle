@@ -189,18 +189,30 @@
         </div>
       </template>
 
-      <!-- ⑤ Fluch-Timer unter dem Stern -->
-      <template v-if="cursedStarId !== null && curseSecsLeft > 0">
+      <!-- ⑤ Fluch-Badge am Stern (MMO-Stil) -->
+      <template
+        v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
+        :key="'curse-badge-anchor-' + star.id"
+      >
         <div
-          v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
-          :key="'curse-star-timer-' + star.id"
-          class="star-curse-timer"
+          class="star-status-badge-anchor"
           :style="{
-            transform: `translate(${star.x}px, ${star.y + starSize(star.starType) / 2 + 8}px) translateX(-50%)`,
+            transform: `translate(${star.x + starSize(star.starType) / 2 - 30}px, ${star.y - starSize(star.starType) / 2 - 4}px)`,
+            zIndex: 16,
           }"
         >
-          <img :src="midRoleImage" class="star-curse-role-icon" alt="" draggable="false" />
-          <span class="star-curse-countdown">{{ curseSecsLeft.toFixed(1) }}s</span>
+          <Transition name="curse-badge">
+            <div
+              v-if="curseSecsLeft > 0"
+              class="star-status-badge star-status-badge--curse"
+            >
+              <img :src="midRoleImage" class="star-badge-icon" alt="" draggable="false" />
+              <span
+                class="star-badge-timer"
+                :class="{ 'star-badge-timer--urgent': curseSecsLeft < 3 }"
+              >{{ Math.ceil(curseSecsLeft) }}s</span>
+            </div>
+          </Transition>
         </div>
       </template>
 
@@ -352,6 +364,7 @@ const cursedStarId = computed(() => {
     starRenders.value.find((s) => s.planets.some((p) => p.planetId === boss.planetId))?.id ?? null
   )
 })
+
 const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 
@@ -1045,35 +1058,111 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* ── Fluch-Timer unter dem Stern ─────────────────────────────────────────────── */
-.star-curse-timer {
+/* ── Curse MMO Badge ──────────────────────────────────────────────────────── */
+.star-status-badge-anchor {
   position: absolute;
   top: 0;
   left: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
   pointer-events: none;
-  white-space: nowrap;
-  z-index: 15;
 }
-.star-curse-role-icon {
-  width: 35px;
-  height: 35px;
+
+.star-status-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 28px;
+  padding: 3px 2px 2px;
+  border-radius: 4px;
+  background: rgba(12, 4, 20, 0.92);
+}
+
+.star-status-badge--curse {
+  border: 1px solid #c060ff;
+  box-shadow:
+    0 0 8px rgba(180, 50, 255, 0.55),
+    inset 0 0 5px rgba(0, 0, 0, 0.6);
+  animation: curse-badge-pulse 2s ease-in-out infinite;
+}
+
+.star-badge-icon {
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   image-rendering: crisp-edges;
-  filter: drop-shadow(0 0 10px rgba(180, 50, 255, 0.95));
+  filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.8));
 }
-.star-curse-countdown {
-  font-size: 20px;
-  font-weight: 800;
-  color: #b432ff;
-  text-shadow:
-    0 0 10px rgba(180, 50, 255, 0.95),
-    0 1px 3px rgba(0, 0, 0, 0.98);
+
+.star-badge-timer {
+  font-size: 10px;
+  font-weight: 900;
+  color: #c060ff;
   line-height: 1;
+  margin-top: 2px;
   letter-spacing: 0.04em;
+  text-shadow:
+    0 0 5px rgba(180, 50, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.star-badge-timer--urgent {
+  color: #ff4040;
+  text-shadow:
+    0 0 6px rgba(255, 40, 40, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  animation: timer-urgent-blink 0.5s ease-in-out infinite;
+}
+
+@keyframes curse-badge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(180, 50, 255, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(210, 80, 255, 0.85),
+      0 0 4px rgba(180, 50, 255, 0.3);
+  }
+}
+
+@keyframes timer-urgent-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.curse-badge-enter-active {
+  animation: curse-badge-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.curse-badge-leave-active {
+  animation: curse-badge-in 0.18s ease-in reverse both;
+}
+
+@keyframes curse-badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-status-badge--curse {
+    animation: none;
+  }
+  .star-badge-timer--urgent {
+    animation: none;
+  }
+  .curse-badge-enter-active,
+  .curse-badge-leave-active {
+    animation: none;
+  }
 }
 
 /* ── Curse-Aura auf dem Stern ────────────────────────────────────────────── */
