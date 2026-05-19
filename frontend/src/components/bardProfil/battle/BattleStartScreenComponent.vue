@@ -125,7 +125,7 @@
             <span class="slot-champ-name">{{ battleStore.headerSlots[idx] }}</span>
           </template>
           <template v-else>
-            <span class="slot-empty-icon">{{ role.icon }}</span>
+            <img :src="role.image" :alt="role.label" class="slot-role-img-placeholder" />
             <div class="slot-pulse-ring" />
           </template>
           <span
@@ -180,11 +180,11 @@ import {
 } from '@/config/constants'
 
 const ROLES = [
-  { key: 'top', label: 'TOP', icon: '⚔️' },
-  { key: 'jungle', label: 'JGL', icon: '🌿' },
-  { key: 'mid', label: 'MID', icon: '🎯' },
-  { key: 'bot', label: 'BOT', icon: '🏹' },
-  { key: 'support', label: 'SUP', icon: '🛡️' },
+  { key: 'top',     label: 'TOP', icon: '⚔️',  image: '/img/roles/top.png'    },
+  { key: 'jungle',  label: 'JGL', icon: '🌿',  image: '/img/roles/jungle.png' },
+  { key: 'mid',     label: 'MID', icon: '🎯',  image: '/img/roles/mid.png'    },
+  { key: 'bot',     label: 'BOT', icon: '🏹',  image: '/img/roles/adc.png'    },
+  { key: 'support', label: 'SUP', icon: '🛡️',  image: '/img/roles/supp.png'   },
 ] as const
 
 const RANK_COLORS: Record<string, string> = {
@@ -753,6 +753,14 @@ export default defineComponent({
   font-size: 26px;
   opacity: 0.28;
   line-height: 1;
+}
+.slot-role-img-placeholder {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  opacity: 0.22;
+  filter: grayscale(40%);
+  pointer-events: none;
 }
 .slot-pulse-ring {
   position: absolute;

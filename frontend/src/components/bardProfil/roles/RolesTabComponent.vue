@@ -5,6 +5,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
+import { ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
 import ChampionPickerPanel from './ChampionPickerPanel.vue'
@@ -253,6 +254,11 @@ void championRoleLabel
               />
             </template>
             <div v-else class="splash-empty">
+              <img
+                :src="ROLE_BY_KEY[ROLE_MAP[activeRole]].image"
+                :alt="activeRole"
+                class="splash-empty-role-img"
+              />
               <span class="splash-empty-plus">＋</span>
               <span class="splash-empty-hint">Champion wählen</span>
             </div>
@@ -408,7 +414,13 @@ void championRoleLabel
                   class="role-btn-img"
                   @error="onImgError"
                 />
-                <span v-else class="role-btn-plus">＋</span>
+                <img
+                  v-else
+                  :src="ROLE_BY_KEY[ROLE_MAP[role]].image"
+                  :alt="role"
+                  class="role-btn-img role-btn-img--placeholder"
+                  @error="onImgError"
+                />
                 <div class="role-btn-gradient" />
                 <span class="role-btn-label">{{ role }}</span>
 
@@ -563,6 +575,23 @@ void championRoleLabel
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.28);
+}
+
+.splash-empty-role-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.12;
+  filter: grayscale(50%);
+  pointer-events: none;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+.splash-area:hover .splash-empty-role-img {
+  opacity: 0.22;
+  filter: grayscale(25%);
 }
 
 /* Vignette */
@@ -1001,18 +1030,13 @@ void championRoleLabel
   transform: scale(1.07);
 }
 
-.role-btn-plus {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: rgba(200, 144, 64, 0.15);
-  transition: color 0.15s;
+.role-btn-img--placeholder {
+  opacity: 0.18;
+  filter: grayscale(55%);
 }
-.role-btn:hover .role-btn-plus {
-  color: rgba(200, 144, 64, 0.45);
+.role-btn:hover .role-btn-img--placeholder {
+  opacity: 0.38;
+  filter: grayscale(30%);
 }
 
 .role-btn-gradient {
