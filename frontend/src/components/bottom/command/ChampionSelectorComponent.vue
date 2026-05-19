@@ -60,7 +60,13 @@ function onImgError(e: Event) {
             class="slot-portrait"
             @error="onImgError"
           />
-          <span v-else class="slot-add-icon" aria-hidden="true">＋</span>
+          <img
+            v-else
+            :src="ROLES[i].image"
+            :alt="ROLES[i].short"
+            class="slot-portrait slot-portrait--placeholder"
+            aria-hidden="true"
+          />
           <div class="slot-hover-glow" aria-hidden="true" />
         </div>
 
@@ -238,6 +244,19 @@ function onImgError(e: Event) {
 }
 .slot-tile:hover .slot-portrait {
   transform: scale(1.06);
+}
+
+.slot-portrait--placeholder {
+  opacity: 0.18;
+  filter: grayscale(50%);
+  object-fit: contain;
+  object-position: center;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.slot-tile:hover .slot-portrait--placeholder {
+  opacity: 0.38;
+  filter: grayscale(25%);
+  transform: none;
 }
 
 /* ── Plus-Icon für leere Slots ── */
