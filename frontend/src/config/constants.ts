@@ -196,7 +196,7 @@ export const PLANET_ORBIT_SPEED_BOSS = 0.0016 // galaxy boss planet speed
 export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.5)
 export const STAR_BG_BASE_SPEED_RANGE = 2.0 // base speed random range (doubled from 1.0)
 // Wahrscheinlichkeit, dass ein Hintergrundstern blau eingefärbt wird (realistischerer Sternenhimmel)
-export const BACKGROUND_STAR_BLUE_BIAS = 0.8
+export const BACKGROUND_STAR_BLUE_BIAS = 0.9
 
 // Star background — warp / galaxy animation
 export const WARP_SPEED_MAX = 70

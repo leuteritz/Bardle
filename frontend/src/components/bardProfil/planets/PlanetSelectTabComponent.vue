@@ -109,26 +109,22 @@ function bonusText(role: PlanetRole): string {
 
 <template>
   <div class="ps-tab">
-    <!-- Leerstate -->
-    <div v-if="purchasedSlots.length === 0" class="ps-empty">
-      <span class="ps-empty-icon">🪐</span>
-      <span class="ps-empty-text">Kaufe deinen ersten Planeten-Slot im Command Panel.</span>
-    </div>
-
-    <template v-else>
-      <!-- Goldlinie oben -->
-      <div class="ps-goldline" />
-
-      <!-- Slot-Leiste horizontal, volle Breite -->
-      <div class="ps-slot-bar" :style="{ '--cols': purchasedSlots.length }">
-        <button
-          v-for="slot in purchasedSlots"
-          :key="slot.id"
-          class="ps-slot-btn"
-          :class="{ 'ps-slot-btn--active': selectedSlotId === slot.id }"
-          :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
-          @click="selectSlot(slot.id)"
-        >
+    <!-- Slot-Leiste: IMMER alle 6 Slots rendern, ganz oben -->
+    <div class="ps-slot-bar" style="--cols: 6">
+      <button
+        v-for="slot in store.slots"
+        :key="slot.id"
+        class="ps-slot-btn"
+        :class="{
+          'ps-slot-btn--active': selectedSlotId === slot.id,
+          'ps-slot-btn--locked': !slot.purchased,
+        }"
+        :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
+        :disabled="!slot.purchased"
+        @click="slot.purchased && selectSlot(slot.id)"
+      >
+        <span v-if="!slot.purchased" class="ps-slot-btn-lock">🔒</span>
+        <template v-else>
           <img
             v-if="slot.role"
             :src="PLANET_ROLES[slot.role].image"
@@ -136,7 +132,6 @@ function bonusText(role: PlanetRole): string {
             alt=""
           />
           <span v-else class="ps-slot-btn-placeholder">＋</span>
-          <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
           <template v-if="slot.maxHp > 0">
             <span class="ps-slot-btn-hp-text">❤ {{ slot.currentHp }} / {{ slot.maxHp }}</span>
             <div class="ps-slot-btn-hp-track">
@@ -146,15 +141,26 @@ function bonusText(role: PlanetRole): string {
               />
             </div>
           </template>
-        </button>
-      </div>
+        </template>
+        <span class="ps-slot-btn-label">Orbit {{ slot.id.replace('slot_', '') }}</span>
+      </button>
+    </div>
 
-      <!-- Kein Slot ausgewählt -->
-      <div v-if="!activeSlot" class="ps-empty ps-empty--small">
-        <span class="ps-empty-text">Wähle einen Slot oben aus.</span>
-      </div>
+    <!-- Goldlinie – Trennlinie unter Slots -->
+    <div class="ps-goldline" />
 
-      <template v-else>
+    <!-- Hinweistext: mittig im verbleibenden Raum, nur wenn noch nichts gekauft -->
+    <div v-if="purchasedSlots.length === 0" class="ps-empty ps-empty--hint">
+      <span class="ps-empty-icon">🪐</span>
+      <span class="ps-empty-text">Kaufe deinen ersten Planeten-Slot im Command Panel.</span>
+    </div>
+
+    <!-- Kein Slot ausgewählt -->
+    <div v-if="purchasedSlots.length > 0 && !activeSlot" class="ps-empty ps-empty--small">
+      <span class="ps-empty-text">Wähle einen Slot oben aus.</span>
+    </div>
+
+    <template v-if="activeSlot">
         <!-- 3-Spalten-Body -->
         <div class="ps-body">
           <!-- Linke Rollenspalte -->
@@ -312,7 +318,6 @@ function bonusText(role: PlanetRole): string {
         <!-- Goldlinie unten -->
         <div class="ps-goldline ps-goldline--bottom" />
       </template>
-    </template>
   </div>
 </template>
 
@@ -923,6 +928,30 @@ function bonusText(role: PlanetRole): string {
 }
 .ps-planet-swap-leave-to {
   opacity: 0;
+}
+
+/* ── Locked Slot ───────────────────────────────────────────────────────────── */
+.ps-slot-btn--locked {
+  opacity: 0.4;
+  filter: grayscale(60%);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ps-slot-btn-lock {
+  font-size: 1.4rem;
+  line-height: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+/* Leerstate mittig im verbleibenden Raum */
+.ps-empty--hint {
+  flex: 1;
+  min-height: 200px;
 }
 
 /* ── Config Slide Transition ───────────────────────────────────────────────── */
