@@ -11,6 +11,7 @@ import {
   GALAXY_MAX_COUNT,
   STAR_BG_BASE_SPEED_MIN,
   STAR_BG_BASE_SPEED_RANGE,
+  BACKGROUND_STAR_BLUE_BIAS,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
 
@@ -1029,23 +1030,62 @@ function drawIonCloud(
 // Spectral star color palette with weighted random selection.
 // Weights: Red 30%, Orange 30%, Yellow 20%, White 12%, Blue-White 8%
 const SPECTRAL_STAR_PALETTE: { weight: number; colors: [number, number, number][] }[] = [
-  { weight: 0.30, colors: [[255, 96, 48], [255, 69, 0]] },
-  { weight: 0.30, colors: [[255, 179, 71], [255, 160, 64]] },
-  { weight: 0.20, colors: [[255, 244, 163], [255, 233, 122]] },
-  { weight: 0.12, colors: [[245, 245, 255], [255, 255, 255]] },
-  { weight: 0.08, colors: [[176, 200, 255], [202, 216, 255]] },
+  {
+    weight: 0.3,
+    colors: [
+      [255, 96, 48],
+      [255, 69, 0],
+    ],
+  },
+  {
+    weight: 0.3,
+    colors: [
+      [255, 179, 71],
+      [255, 160, 64],
+    ],
+  },
+  {
+    weight: 0.2,
+    colors: [
+      [255, 244, 163],
+      [255, 233, 122],
+    ],
+  },
+  {
+    weight: 0.12,
+    colors: [
+      [245, 245, 255],
+      [255, 255, 255],
+    ],
+  },
+  {
+    weight: 0.08,
+    colors: [
+      [176, 200, 255],
+      [202, 216, 255],
+    ],
+  },
 ]
 
-function pickStarColor(): [number, number, number] {
-  const rand = Math.random()
-  let cumulative = 0
-  for (const category of SPECTRAL_STAR_PALETTE) {
-    cumulative += category.weight
-    if (rand < cumulative) {
-      return category.colors[Math.floor(Math.random() * category.colors.length)]
-    }
+function pickBackgroundStarColor(): [number, number, number] {
+  if (Math.random() < BACKGROUND_STAR_BLUE_BIAS) {
+    const blue = SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1]
+    return blue.colors[Math.floor(Math.random() * blue.colors.length)]
   }
-  return SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1].colors[0]
+  const nonBlue = SPECTRAL_STAR_PALETTE.slice(0, -1)
+  const totalWeight = nonBlue.reduce((s, c) => s + c.weight, 0)
+  let rand = Math.random() * totalWeight
+  for (const cat of nonBlue) {
+    rand -= cat.weight
+    if (rand <= 0) return cat.colors[Math.floor(Math.random() * cat.colors.length)]
+  }
+  return nonBlue[nonBlue.length - 1].colors[0]
+}
+
+function pickOrbitStarColor(): [number, number, number] {
+  const idx = Math.floor(Math.random() * SPECTRAL_STAR_PALETTE.length)
+  const cat = SPECTRAL_STAR_PALETTE[idx]
+  return cat.colors[Math.floor(Math.random() * cat.colors.length)]
 }
 
 export function useStarBackground() {
@@ -1334,7 +1374,7 @@ export function useStarBackground() {
       for (let j = 0; j < count; j++) {
         const a = Math.random() * Math.PI * 2
         const d = Math.random() * radius
-        const [r, g, b] = pickStarColor()
+        const [r, g, b] = pickOrbitStarColor()
         clusterStars.push({
           dx: Math.cos(a) * d,
           dy: Math.sin(a) * d,
@@ -1364,7 +1404,7 @@ export function useStarBackground() {
     const minDist = maxDist * 0.1
     const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
     const baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-    const [r, g, b] = pickStarColor()
+    const [r, g, b] = pickBackgroundStarColor()
     const item: StarItem = {
       id: nextStarId++,
       angle,
