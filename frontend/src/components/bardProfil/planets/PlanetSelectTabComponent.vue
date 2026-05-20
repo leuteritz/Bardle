@@ -117,13 +117,20 @@ function bonusText(role: PlanetRole): string {
         class="ps-slot-btn"
         :class="{
           'ps-slot-btn--active': selectedSlotId === slot.id,
-          'ps-slot-btn--locked': !slot.purchased,
+          'ps-slot-btn--affordable': !slot.purchased && store.canAffordSlot(slot.id),
+          'ps-slot-btn--cant-afford': !slot.purchased && !store.canAffordSlot(slot.id),
         }"
         :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
-        :disabled="!slot.purchased"
-        @click="slot.purchased && selectSlot(slot.id)"
+        @click="slot.purchased ? selectSlot(slot.id) : store.buySlot(slot.id)"
       >
-        <span v-if="!slot.purchased" class="ps-slot-btn-lock">🔒</span>
+        <template v-if="!slot.purchased">
+          <span class="ps-slot-btn-lock">🔒</span>
+          <div class="ps-slot-btn-cost-row">
+            <img src="/img/BardAbilities/BardChime.png" class="ps-slot-btn-chime-img" alt="" />
+            <span class="ps-slot-btn-cost-val">{{ $formatNumber(store.getSlotCost(slot.id)) }}</span>
+          </div>
+          <span v-if="store.canAffordSlot(slot.id)" class="ps-slot-btn-buy-badge">KAUFEN</span>
+        </template>
         <template v-else>
           <img
             v-if="slot.role"
@@ -152,7 +159,7 @@ function bonusText(role: PlanetRole): string {
     <!-- Hinweistext: mittig im verbleibenden Raum, nur wenn noch nichts gekauft -->
     <div v-if="purchasedSlots.length === 0" class="ps-empty ps-empty--hint">
       <span class="ps-empty-icon">🪐</span>
-      <span class="ps-empty-text">Kaufe deinen ersten Planeten-Slot im Command Panel.</span>
+      <span class="ps-empty-text">Klicke auf einen Slot oben, um ihn freizuschalten.</span>
     </div>
 
     <!-- Kein Slot ausgewählt -->
@@ -410,6 +417,7 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-slot-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -930,22 +938,182 @@ function bonusText(role: PlanetRole): string {
   opacity: 0;
 }
 
-/* ── Locked Slot ───────────────────────────────────────────────────────────── */
-.ps-slot-btn--locked {
+/* ── Locked Slots ──────────────────────────────────────────────────────────── */
+
+/* Affordable: pulsing green glow, dark green bg tint, sweep-shine on hover */
+.ps-slot-btn--affordable {
+  opacity: 1;
+  filter: none;
+  cursor: pointer;
+  background: linear-gradient(180deg, #0d1a0a 0%, #0a140a 100%);
+  border-color: rgba(82, 184, 48, 0.55);
+  box-shadow:
+    0 0 10px rgba(82, 184, 48, 0.25),
+    inset 0 0 14px rgba(82, 184, 48, 0.05);
+  overflow: hidden;
+  animation: ps-afford-pulse 2.2s ease-in-out infinite;
+}
+
+.ps-slot-btn--affordable::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(180, 255, 120, 0.18) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+}
+
+.ps-slot-btn--affordable:hover {
+  background: linear-gradient(180deg, #101f0c 0%, #0d1a0a 100%);
+  border-color: #6de030;
+  box-shadow:
+    0 0 20px rgba(82, 184, 48, 0.65),
+    0 0 40px rgba(82, 184, 48, 0.2),
+    inset 0 0 16px rgba(82, 184, 48, 0.1);
+  transform: translateY(-2px) scale(1.04);
+  animation: none;
+}
+
+.ps-slot-btn--affordable:hover::after {
+  animation: ps-afford-shine 0.55s ease-out forwards;
+}
+
+.ps-slot-btn--affordable .ps-slot-btn-lock {
+  filter: sepia(1) saturate(4) hue-rotate(80deg) brightness(1.2);
+  animation: ps-lock-bob 1.8s ease-in-out infinite;
+}
+
+.ps-slot-btn--affordable .ps-slot-btn-chime-img {
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.9));
+  animation: ps-chime-bob 1.4s ease-in-out infinite;
+}
+
+.ps-slot-btn--affordable:hover .ps-slot-btn-chime-img {
+  transform: scale(1.25);
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 1));
+}
+
+/* Can't afford */
+.ps-slot-btn--cant-afford {
   opacity: 0.4;
   filter: grayscale(60%);
   cursor: not-allowed;
   pointer-events: none;
 }
 
+/* Lock icon */
 .ps-slot-btn-lock {
   font-size: 1.4rem;
   line-height: 1;
-  height: 36px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0.7;
+}
+
+/* Cost row */
+.ps-slot-btn-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.ps-slot-btn-chime-img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease;
+}
+
+.ps-slot-btn-cost-val {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #e8c040;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* KAUFEN badge — hidden by default, revealed on hover */
+.ps-slot-btn-buy-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 4;
+  font-size: 0.42rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0a1208;
+  background: linear-gradient(to bottom, #6de030 0%, #2e7a1a 100%);
+  border: 1px solid #6ec040;
+  border-radius: 3px;
+  padding: 1px 4px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(5px) scale(0.8);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.ps-slot-btn--affordable:hover .ps-slot-btn-buy-badge {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: ps-badge-pop 1.6s ease-in-out infinite;
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes ps-afford-pulse {
+  0%, 100% {
+    border-color: rgba(82, 184, 48, 0.45);
+    box-shadow:
+      0 0 8px rgba(82, 184, 48, 0.2),
+      inset 0 0 12px rgba(82, 184, 48, 0.04);
+  }
+  50% {
+    border-color: rgba(110, 210, 64, 0.9);
+    box-shadow:
+      0 0 20px rgba(82, 184, 48, 0.6),
+      0 0 36px rgba(82, 184, 48, 0.18),
+      inset 0 0 14px rgba(82, 184, 48, 0.1);
+  }
+}
+
+@keyframes ps-afford-shine {
+  0%   { left: -80%; opacity: 0; }
+  15%  { opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+
+@keyframes ps-lock-bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%       { transform: translateY(-3px) rotate(4deg); }
+}
+
+@keyframes ps-chime-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-3px) scale(1.12); }
+}
+
+@keyframes ps-badge-pop {
+  0%, 100% { transform: scale(1);    opacity: 0.88; }
+  50%       { transform: scale(1.08); opacity: 1;    }
 }
 
 /* Leerstate mittig im verbleibenden Raum */

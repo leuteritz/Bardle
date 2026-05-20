@@ -144,19 +144,14 @@ const HP_SEGMENTS = 8
 
           <template v-else>
             <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
-            <div class="cmd-tile-label cmd-tile-label--cost">
-              🔔 {{ formatNumber(planetStore.getSlotCost(slot.id)) }}
+            <div class="cmd-tile-cost-row">
+              <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
+              <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
             </div>
             <div class="cmd-slot-number-badge">
               <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
             </div>
           </template>
-
-          <div
-            v-if="!slot.purchased"
-            class="cmd-tile-afford-dot"
-            :class="{ 'cmd-tile-afford-dot--yes': planetStore.canAffordSlot(slot.id) }"
-          />
         </div>
       </div>
     </div>
@@ -405,13 +400,88 @@ const HP_SEGMENTS = 8
 }
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
-  border: 2px solid rgba(82, 184, 48, 0.18);
-}
-.cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
-  border-color: rgba(82, 184, 48, 0.55);
+  background: linear-gradient(180deg, rgba(14, 30, 10, 0.72), rgba(10, 22, 8, 0.82));
+  border: 2px solid rgba(82, 184, 48, 0.4);
   box-shadow:
-    0 0 12px -2px rgba(82, 184, 48, 0.3),
-    0 6px 16px rgba(0, 0, 0, 0.2);
+    0 0 8px rgba(82, 184, 48, 0.18),
+    inset 0 0 10px rgba(82, 184, 48, 0.04);
+  animation: cmd-afford-pulse 2.2s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(160, 255, 100, 0.14) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
+  background: linear-gradient(180deg, rgba(18, 36, 12, 0.8), rgba(12, 26, 10, 0.9));
+  border-color: #6de030;
+  box-shadow:
+    0 0 18px rgba(82, 184, 48, 0.6),
+    0 0 36px rgba(82, 184, 48, 0.18),
+    inset 0 0 12px rgba(82, 184, 48, 0.08);
+  transform: translateY(-1px) scale(1.03);
+  animation: none;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover::after {
+  animation: cmd-afford-shine 0.5s ease-out forwards;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-chime-img {
+  filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.8));
+  animation: cmd-chime-bob 1.5s ease-in-out infinite;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-cost-value {
+  color: #f0d060;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-icon--locked {
+  filter: sepia(1) saturate(3) hue-rotate(80deg) brightness(1.1);
+}
+
+@keyframes cmd-afford-pulse {
+  0%, 100% {
+    border-color: rgba(82, 184, 48, 0.35);
+    box-shadow:
+      0 0 6px rgba(82, 184, 48, 0.15),
+      inset 0 0 8px rgba(82, 184, 48, 0.03);
+  }
+  50% {
+    border-color: rgba(110, 210, 64, 0.85);
+    box-shadow:
+      0 0 16px rgba(82, 184, 48, 0.55),
+      0 0 28px rgba(82, 184, 48, 0.16),
+      inset 0 0 10px rgba(82, 184, 48, 0.08);
+  }
+}
+
+@keyframes cmd-afford-shine {
+  0%   { left: -80%; opacity: 0; }
+  15%  { opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+
+@keyframes cmd-chime-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-2px) scale(1.1); }
 }
 
 /* Rollenfarbige Rahmen */
@@ -697,26 +767,29 @@ const HP_SEGMENTS = 8
   max-width: 100%;
   opacity: 0.88;
 }
-.cmd-tile-label--cost {
-  color: rgba(200, 144, 64, 0.6);
-  font-size: 8.5px;
+
+.cmd-tile-cost-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
 }
 
-.cmd-tile-afford-dot {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(200, 144, 64, 0.2);
-  border: 1px solid rgba(200, 144, 64, 0.3);
-  z-index: 2;
+.cmd-tile-chime-img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
 }
-.cmd-tile-afford-dot--yes {
-  background: rgba(82, 184, 48, 0.7);
-  border-color: rgba(110, 210, 64, 0.5);
-  box-shadow: 0 0 4px rgba(82, 184, 48, 0.5);
+
+.cmd-tile-cost-value {
+  font-size: 9px;
+  font-weight: 800;
+  color: #e8c040;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 /* Slot-Nummer Badge (nur leere / gesperrte Slots) */
