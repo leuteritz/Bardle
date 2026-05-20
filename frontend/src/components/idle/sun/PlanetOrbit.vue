@@ -2,7 +2,7 @@
   <svg class="planet-orbit-rings" aria-hidden="true">
     <template v-for="(tier, i) in ORBIT_TIERS.planet" :key="'track-planet-' + i">
       <OrbitPath
-        v-if="planetShopStore.purchasedSlots.length > i"
+        v-if="slotsWithRole.length > i"
         :color="tier.color"
         :x="screenCx"
         :y="screenCy"
@@ -231,6 +231,7 @@ export default defineComponent({
     }
 
     const allSlots = computed(() => planetShopStore.slots)
+    const slotsWithRole = computed(() => planetShopStore.purchasedSlots.filter((s) => s.role !== null))
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
 
@@ -244,7 +245,7 @@ export default defineComponent({
 
       const cx = window.innerWidth / 2
       const cy = window.innerHeight / 2
-      const purchased = planetShopStore.purchasedSlots
+      const purchased = planetShopStore.purchasedSlots.filter((s) => s.role !== null)
       const newPositions: PlanetRenderPos[] = []
 
       for (const slot of purchased) {
@@ -444,6 +445,7 @@ export default defineComponent({
     return {
       planetShopStore,
       allSlots,
+      slotsWithRole,
       backPlanets,
       frontPlanets,
       renderPositions,

@@ -191,7 +191,7 @@ function bonusText(role: PlanetRole): string {
           <!-- Mittlere Spalte: Planet -->
           <div class="ps-center-col">
             <!-- HP -->
-            <div class="ps-planet-hp">
+            <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
               <div class="ps-planet-hp-text">
                 <span class="ps-hp-heart">❤</span>
                 <span class="ps-hp-values"
@@ -207,11 +207,13 @@ function bonusText(role: PlanetRole): string {
             <div class="ps-planet-preview-wrap">
               <Transition name="ps-planet-swap" mode="out-in">
                 <img
+                  v-if="activeSlot.role"
                   :key="activeImage"
                   :src="activeImage"
                   class="ps-planet-preview-img"
                   alt="Planet"
                 />
+                <div v-else key="no-role" class="ps-planet-no-role">＋</div>
               </Transition>
             </div>
 
@@ -919,6 +921,19 @@ function bonusText(role: PlanetRole): string {
   font-size: 0.6rem;
   color: #70c040;
   font-weight: 900;
+}
+
+/* ── Planet Placeholder ────────────────────────────────────────────────────── */
+.ps-planet-no-role {
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5rem;
+  color: rgba(90, 142, 224, 0.25);
+  border: 2px dashed rgba(90, 142, 224, 0.15);
+  border-radius: 50%;
 }
 
 /* ── Planet-Bild Transition ────────────────────────────────────────────────── */
