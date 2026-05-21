@@ -128,11 +128,6 @@ function bonusText(role: PlanetRole): string {
       >
         <template v-if="!slot.purchased">
           <span class="ps-slot-btn-lock">🔒</span>
-          <div class="ps-slot-btn-cost-row">
-            <img src="/img/BardAbilities/BardChime.png" class="ps-slot-btn-chime-img" alt="" />
-            <span class="ps-slot-btn-cost-val">{{ $formatNumber(store.getSlotCost(slot.id)) }}</span>
-          </div>
-          <span v-if="store.canAffordSlot(slot.id)" class="ps-slot-btn-buy-badge">KAUFEN</span>
         </template>
         <template v-else>
           <img
@@ -1022,22 +1017,11 @@ function bonusText(role: PlanetRole): string {
   animation: ps-lock-bob 1.8s ease-in-out infinite;
 }
 
-.ps-slot-btn--affordable .ps-slot-btn-chime-img {
-  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.9));
-  animation: ps-chime-bob 1.4s ease-in-out infinite;
-}
-
-.ps-slot-btn--affordable:hover .ps-slot-btn-chime-img {
-  transform: scale(1.25);
-  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 1));
-}
-
 /* Can't afford */
 .ps-slot-btn--cant-afford {
   opacity: 0.4;
   filter: grayscale(60%);
-  cursor: not-allowed;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 /* Lock icon */
@@ -1051,61 +1035,6 @@ function bonusText(role: PlanetRole): string {
   opacity: 0.7;
 }
 
-/* Cost row */
-.ps-slot-btn-cost-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  margin-top: 1px;
-}
-
-.ps-slot-btn-chime-img {
-  width: 14px;
-  height: 14px;
-  image-rendering: pixelated;
-  flex-shrink: 0;
-  transition:
-    transform 0.15s ease,
-    filter 0.15s ease;
-}
-
-.ps-slot-btn-cost-val {
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: #e8c040;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
-/* KAUFEN badge — hidden by default, revealed on hover */
-.ps-slot-btn-buy-badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  z-index: 4;
-  font-size: 0.42rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #0a1208;
-  background: linear-gradient(to bottom, #6de030 0%, #2e7a1a 100%);
-  border: 1px solid #6ec040;
-  border-radius: 3px;
-  padding: 1px 4px;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(5px) scale(0.8);
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-
-.ps-slot-btn--affordable:hover .ps-slot-btn-buy-badge {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  animation: ps-badge-pop 1.6s ease-in-out infinite;
-}
 
 /* ── Keyframes ──────────────────────────────────────────────────────────────── */
 @keyframes ps-afford-pulse {
@@ -1133,16 +1062,6 @@ function bonusText(role: PlanetRole): string {
 @keyframes ps-lock-bob {
   0%, 100% { transform: translateY(0) rotate(-4deg); }
   50%       { transform: translateY(-3px) rotate(4deg); }
-}
-
-@keyframes ps-chime-bob {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-3px) scale(1.12); }
-}
-
-@keyframes ps-badge-pop {
-  0%, 100% { transform: scale(1);    opacity: 0.88; }
-  50%       { transform: scale(1.08); opacity: 1;    }
 }
 
 /* Leerstate mittig im verbleibenden Raum */
