@@ -99,7 +99,15 @@ const filteredData = computed(() => {
               :class="{ 'enc-category-btn--active': expandedCategories.has(category.id) }"
               @click="toggleCategory(category.id)"
             >
-              <span class="text-lg">{{ category.icon }}</span>
+              <img
+                v-if="category.icon.startsWith('/')"
+                :src="category.icon"
+                alt=""
+                width="20"
+                height="20"
+                class="enc-cat-icon-img"
+              />
+              <span v-else class="text-lg">{{ category.icon }}</span>
               <span class="enc-category-title flex-1 text-sm font-bold">
                 {{ category.title }}
               </span>
@@ -239,6 +247,14 @@ const filteredData = computed(() => {
 }
 
 /* ── Category button ── */
+.enc-cat-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: auto;
+  flex-shrink: 0;
+}
+
 .enc-category-btn {
   background: var(--rpg-bg-row);
   border: 1px solid var(--rpg-wood-inner);

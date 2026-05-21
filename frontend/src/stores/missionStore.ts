@@ -102,7 +102,7 @@ const MISSIONS: Mission[] = [
   {
     id: 'ten_worlds',
     name: 'Zehn Welten',
-    icon: '🪐',
+    icon: '/img/planet.png',
     description: 'Rette alle 10 Planeten – besitze alle 10 Gebäudetypen.',
     condition: { type: 'ownedBuildingTypes', target: 10 },
     rewardUpgrade: {

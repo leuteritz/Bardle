@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const planetEventsCategory: EncyclopediaCategory = {
   id: 'planetEvents',
   title: 'Planeten-Events',
-  icon: '🪐',
+  icon: '/img/planet.png',
   entries: [
     {
       id: 'planet-spawn',

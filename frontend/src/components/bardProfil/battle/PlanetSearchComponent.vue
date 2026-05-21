@@ -3,7 +3,7 @@
     <canvas ref="universeCanvas" class="universe-canvas" />
     <Transition name="planet-found-fade">
       <div v-if="showPlanetFound" class="planet-found-overlay">
-        <span class="planet-found-icon">🪐</span>
+        <img src="/img/planet.png" alt="planet" width="52" height="52" class="planet-found-icon" />
         <span class="planet-found-text">PLANET GEFUNDEN!</span>
       </div>
     </Transition>
@@ -394,7 +394,9 @@ export default defineComponent({
 }
 
 .planet-found-icon {
-  font-size: 52px;
+  width: 52px;
+  height: 52px;
+  image-rendering: auto;
   filter: drop-shadow(0 0 20px rgba(100, 165, 255, 0.8));
   animation: planetBob 1.2s ease-in-out infinite;
 }

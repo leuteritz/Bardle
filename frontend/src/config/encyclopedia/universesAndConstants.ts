@@ -77,7 +77,7 @@ export const constantsCategory: EncyclopediaCategory = {
     {
       id: 'constants-planets',
       name: 'Planeten-Konstanten',
-      icon: '🪐',
+      icon: '/img/planet.png',
       description: 'Alle Werte für Planeten-Events und Boss-Kämpfe.',
       lore: 'Die Gesetze der kosmischen Ereignisse.',
       formula:

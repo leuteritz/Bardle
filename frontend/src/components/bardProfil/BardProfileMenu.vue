@@ -25,7 +25,7 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'roles', label: 'Rollen', icon: '⚔️', src: '' },
-  { id: 'planets', label: 'Planeten', icon: '🪐', src: '' },
+  { id: 'planets', label: 'Planeten', icon: '', src: '/img/planet.png' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
 

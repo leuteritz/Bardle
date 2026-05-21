@@ -7,7 +7,7 @@ export const typeIcon: Record<GameEventType, string> = {
   mid: '🔥',
   adc: '🏹',
   jungle: '🗡️',
-  planet: '🪐',
+  planet: '/img/planet.png',
   augment: '✦',
   meep: '👾',
   chime: '🔔',
