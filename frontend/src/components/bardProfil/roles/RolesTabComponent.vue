@@ -81,9 +81,7 @@ const hoveredSyn = computed(
 
 const sortedRoleSynergies = computed<ActiveSynergy[]>(() => {
   const globals = activeSynergies.value.filter((s) => s.roleIndex === undefined)
-  const roleSpecific = activeSynergies.value.filter(
-    (s) => s.roleIndex === activeSlotIndex.value,
-  )
+  const roleSpecific = activeSynergies.value.filter((s) => s.roleIndex === activeSlotIndex.value)
   return [...globals, ...roleSpecific]
 })
 
@@ -304,12 +302,8 @@ void championRoleLabel
 
           <!-- Click hint -->
 
-          <!-- Corner decorations -->
-          <div class="splash-corner splash-corner--tl" />
-          <div class="splash-corner splash-corner--br" />
-
           <!-- Champion Shop Button — top left -->
-          <button class="shop-open-btn" @click.stop="openShop('all')">⚔ Champion Shop</button>
+          <button class="shop-open-btn" @click.stop="openShop('all')">Shop</button>
 
           <!-- ══ LEFT Overlay — Secondary Champions ══ -->
           <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
@@ -492,7 +486,6 @@ void championRoleLabel
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </template>
@@ -632,7 +625,9 @@ void championRoleLabel
   opacity: 0.12;
   filter: grayscale(50%);
   pointer-events: none;
-  transition: opacity 0.25s ease, filter 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    filter 0.25s ease;
 }
 .splash-area:hover .splash-empty-role-img {
   opacity: 0.22;
@@ -1241,25 +1236,32 @@ void championRoleLabel
   top: 10px;
   left: 10px;
   z-index: 8;
-  padding: 5px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  padding: 10px 28px;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #e8c040;
-  background: rgba(14, 10, 4, 0.88);
-  border: 1px solid rgba(122, 78, 32, 0.75);
+  background: rgba(14, 10, 4, 0.92);
+  border: 2px solid rgba(122, 78, 32, 0.85);
   border-radius: 4px;
   cursor: pointer;
+  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
   transition:
     background 0.15s,
     border-color 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    color 0.15s;
 }
 .shop-open-btn:hover {
-  background: rgba(30, 16, 6, 0.95);
+  background: rgba(30, 16, 6, 0.97);
   border-color: #c89040;
-  box-shadow: 0 0 10px rgba(200, 144, 64, 0.35);
+  color: #f0d870;
+  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
+  box-shadow:
+    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
+    0 0 16px rgba(200, 144, 64, 0.4);
 }
 
 .shop-overlay {
@@ -1312,5 +1314,4 @@ void championRoleLabel
   opacity: 0;
   transform: translateY(10px);
 }
-
 </style>
