@@ -11,6 +11,7 @@ import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/type
 import ChampionPickerPanel from './ChampionPickerPanel.vue'
 import ItemPickerPanel from './ItemPickerPanel.vue'
 import ChampionShopComponent from '../team/ChampionShopComponent.vue'
+import ExpeditionCreateComponent from '../team/expedition/ExpeditionCreateComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -69,6 +70,7 @@ const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 
 const showShop = ref(false)
 const shopRole = ref<ChampionRole | 'all'>('all')
+const showExpedition = ref(false)
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -142,12 +144,22 @@ const roleFilteredChampions = computed(() => {
 })
 
 function openShop(role: ChampionRole | 'all' = 'all') {
+  showExpedition.value = false
   shopRole.value = role
   showShop.value = true
 }
 
 function closeShop() {
   showShop.value = false
+}
+
+function openExpedition() {
+  showShop.value = false
+  showExpedition.value = true
+}
+
+function closeExpedition() {
+  showExpedition.value = false
 }
 
 function handleShopRoleChange(role: ChampionRole | 'all') {
@@ -305,6 +317,9 @@ void championRoleLabel
           <!-- Champion Shop Button — top left -->
           <button class="shop-open-btn" @click.stop="openShop('all')">Shop</button>
 
+          <!-- Expedition Button — top right -->
+          <button class="expedition-open-btn" @click.stop="openExpedition">Expedition</button>
+
           <!-- ══ LEFT Overlay — Secondary Champions ══ -->
           <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
             <button
@@ -400,6 +415,14 @@ void championRoleLabel
                 class="shop-inner"
                 @role-change="handleShopRoleChange"
               />
+            </div>
+          </Transition>
+
+          <!-- ══ Expedition Overlay ══ -->
+          <Transition name="shop-fade">
+            <div v-if="showExpedition" class="expedition-overlay" @click.stop>
+              <button class="shop-back-btn" @click="closeExpedition">← Zurück</button>
+              <ExpeditionCreateComponent class="expedition-inner" />
             </div>
           </Transition>
 
@@ -1313,5 +1336,62 @@ void championRoleLabel
 .shop-fade-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+/* ══════════════════════════════
+   EXPEDITION BUTTON & OVERLAY
+   ══════════════════════════════ */
+
+.expedition-open-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 8;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e8c040;
+  background: rgba(14, 10, 4, 0.92);
+  border: 2px solid rgba(122, 78, 32, 0.85);
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    color 0.15s;
+}
+.expedition-open-btn:hover {
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  color: #f0d870;
+  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
+  box-shadow:
+    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
+    0 0 16px rgba(200, 144, 64, 0.4);
+}
+
+.expedition-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(11, 8, 3, 0.97);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.expedition-inner {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 44px 12px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 </style>
