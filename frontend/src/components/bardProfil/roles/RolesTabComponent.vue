@@ -175,7 +175,9 @@ function selectSlot(index: number) {
   activeSubSlot.value = -1
   selectedCategory.value = null
   panelMode.value = 'main'
-  openShop(ROLE_MAP[ROLES[index]])
+  if (showShop.value) {
+    shopRole.value = ROLE_MAP[ROLES[index]]
+  }
 }
 
 function openChampionPicker(subSlot: number = -1) {
