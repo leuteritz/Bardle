@@ -158,7 +158,9 @@
     >
       <span class="start-btn-icon">
         <template v-if="isStarting">⏳</template>
-        <template v-else-if="!hasFullTeam">🔒</template>
+        <template v-else-if="!hasFullTeam">
+          <img src="/img/lock.png" alt="Gesperrt" class="start-btn-lock-img" />
+        </template>
         <img v-else src="/img/menu/BATTLE.png" class="start-btn-img" alt="Battle" />
       </span>
       <span v-if="isStarting">WIRD GESTARTET…</span>
@@ -840,6 +842,13 @@ export default defineComponent({
   height: 20px;
   object-fit: contain;
   filter: brightness(1.2);
+}
+.start-btn-lock-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.7;
+  image-rendering: auto;
 }
 
 /* ═══════════════════════════════════════════

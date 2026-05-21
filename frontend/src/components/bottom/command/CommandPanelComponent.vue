@@ -148,7 +148,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
           </template>
 
           <template v-else>
-            <div class="cmd-tile-icon cmd-tile-icon--locked">🔒</div>
+            <div class="cmd-tile-icon cmd-tile-icon--locked">
+              <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+            </div>
             <div class="cmd-tile-cost-row">
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
               <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
@@ -754,8 +756,16 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   font-size: 24px;
 }
 .cmd-tile-icon--locked {
-  color: rgba(255, 255, 255, 0.15);
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cmd-tile-icon--locked .lock-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.5;
+  image-rendering: auto;
 }
 
 .cmd-tile-label {

@@ -127,7 +127,9 @@ function bonusText(role: PlanetRole): string {
         @click="selectSlot(slot.id)"
       >
         <template v-if="!slot.purchased">
-          <span class="ps-slot-btn-lock">🔒</span>
+          <span class="ps-slot-btn-lock">
+            <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+          </span>
         </template>
         <template v-else>
           <img
@@ -156,7 +158,9 @@ function bonusText(role: PlanetRole): string {
 
     <!-- Gesperrter Slot ausgewählt -->
     <div v-if="activeSlot && !activeSlot.purchased" class="ps-locked-panel">
-      <span class="ps-locked-panel-icon">🔒</span>
+      <span class="ps-locked-panel-icon">
+        <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+      </span>
       <span class="ps-locked-panel-title">
         Orbit {{ activeSlot.id.replace('slot_', '') }} · Gesperrt
       </span>
@@ -1026,13 +1030,17 @@ function bonusText(role: PlanetRole): string {
 
 /* Lock icon */
 .ps-slot-btn-lock {
-  font-size: 1.4rem;
-  line-height: 1;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0.7;
+}
+.ps-slot-btn-lock .lock-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: auto;
 }
 
 
@@ -1106,10 +1114,15 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-locked-panel-icon {
-  font-size: 64px;
-  line-height: 1;
+  display: flex;
   filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.35));
   animation: ps-lock-bob 3s ease-in-out infinite;
+}
+.ps-locked-panel-icon .lock-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: auto;
 }
 
 .ps-locked-panel-title {
