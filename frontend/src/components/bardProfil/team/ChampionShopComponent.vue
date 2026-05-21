@@ -12,18 +12,6 @@
         />
       </div>
 
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="role in roles"
-          :key="role.value"
-          @click="activeRole = role.value"
-          class="px-3 py-1 rpg-tab"
-          :class="activeRole === role.value ? 'rpg-tab--active' : ''"
-        >
-          {{ role.label }}
-        </button>
-      </div>
-
       <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
     </div>
 
@@ -148,7 +136,7 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, defineComponent, computed } from 'vue'
+import { ref, onMounted, defineComponent, computed, watch } from 'vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
 import { truncate, formatNumber } from '../../../config/numberFormat'
@@ -159,24 +147,32 @@ import { getHomePlanetConfig } from '../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES } from '../../../config/constants'
 import type { ChampionRole } from '../../../types'
 
-const roles = [
-  { value: 'all' as const, label: 'Alle' },
-  { value: 'top' as const, label: 'Top' },
-  { value: 'jungle' as const, label: 'Jungle' },
-  { value: 'mid' as const, label: 'Mid' },
-  { value: 'adc' as const, label: 'ADC' },
-  { value: 'support' as const, label: 'Support' },
-]
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  setup() {
+  props: {
+    initialRole: { type: String, default: 'all' },
+  },
+  emits: ['roleChange'],
+  setup(props, { emit }) {
     const championNames = ref<string[]>([])
     const battleStore = useBattleStore()
     const inventoryStore = useInventoryStore()
     const loadError = ref<string | null>(null)
-    const activeRole = ref<ChampionRole | 'all'>('all')
+    const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
+
+    watch(
+      () => props.initialRole,
+      (val) => {
+        activeRole.value = val as ChampionRole | 'all'
+      },
+    )
+
+    function setActiveRole(role: ChampionRole | 'all') {
+      activeRole.value = role
+      emit('roleChange', role)
+    }
 
     async function loadChampions() {
       try {
@@ -285,7 +281,6 @@ export default defineComponent({
       getChampionRoles,
       activeRole,
       searchQuery,
-      roles,
       isOwned,
       isUnlocked,
       isLocked,
@@ -300,6 +295,7 @@ export default defineComponent({
       getLockedTooltip,
       getCardClass,
       getButtonClass,
+      setActiveRole,
     }
   },
 })

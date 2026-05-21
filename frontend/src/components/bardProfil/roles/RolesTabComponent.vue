@@ -10,6 +10,7 @@ import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
 import ChampionPickerPanel from './ChampionPickerPanel.vue'
 import ItemPickerPanel from './ItemPickerPanel.vue'
+import ChampionShopComponent from '../team/ChampionShopComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -20,6 +21,14 @@ const ROLE_MAP: Record<string, ChampionRole> = {
   Mid: 'mid',
   ADC: 'adc',
   Supp: 'support',
+}
+
+const ROLE_INDEX: Partial<Record<ChampionRole, number>> = {
+  top: 0,
+  jungle: 1,
+  mid: 2,
+  adc: 3,
+  support: 4,
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -57,6 +66,9 @@ const activeSlotIndex = ref(uiStore.rolesActiveSlot)
 const activeSubSlot = ref(-1)
 const selectedCategory = ref<ItemCategory | null>(null)
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
+
+const showShop = ref(false)
+const shopRole = ref<ChampionRole | 'all'>('all')
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -131,11 +143,29 @@ const roleFilteredChampions = computed(() => {
   return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
 })
 
+function openShop(role: ChampionRole | 'all' = 'all') {
+  shopRole.value = role
+  showShop.value = true
+}
+
+function closeShop() {
+  showShop.value = false
+}
+
+function handleShopRoleChange(role: ChampionRole | 'all') {
+  shopRole.value = role
+  if (role !== 'all') {
+    const idx = ROLE_INDEX[role]
+    if (idx !== undefined) activeSlotIndex.value = idx
+  }
+}
+
 function selectSlot(index: number) {
   activeSlotIndex.value = index
   activeSubSlot.value = -1
   selectedCategory.value = null
   panelMode.value = 'main'
+  openShop(ROLE_MAP[ROLES[index]])
 }
 
 function openChampionPicker(subSlot: number = -1) {
@@ -237,7 +267,7 @@ void championRoleLabel
           class="splash-area"
           @mousemove="onSplashMouseMove"
           @mouseleave="onSplashMouseLeave"
-          @click="openChampionPicker(-1)"
+          @click="!showShop && openChampionPicker(-1)"
         >
           <div class="splash-inner">
             <template v-if="activeChampion">
@@ -277,6 +307,9 @@ void championRoleLabel
           <!-- Corner decorations -->
           <div class="splash-corner splash-corner--tl" />
           <div class="splash-corner splash-corner--br" />
+
+          <!-- Champion Shop Button — top left -->
+          <button class="shop-open-btn" @click.stop="openShop('all')">⚔ Champion Shop</button>
 
           <!-- ══ LEFT Overlay — Secondary Champions ══ -->
           <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
@@ -363,6 +396,18 @@ void championRoleLabel
               <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
             </div>
           </div>
+
+          <!-- ══ Shop Overlay ══ -->
+          <Transition name="shop-fade">
+            <div v-if="showShop" class="shop-overlay" @click.stop>
+              <button class="shop-back-btn" @click="closeShop">← Zurück</button>
+              <ChampionShopComponent
+                :initial-role="shopRole"
+                class="shop-inner"
+                @role-change="handleShopRoleChange"
+              />
+            </div>
+          </Transition>
 
           <!-- ══ Bottom HUD — Equipment only ══ -->
           <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
@@ -1185,6 +1230,87 @@ void championRoleLabel
   border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
   background: rgba(8, 5, 2, 0.9);
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════
+   CHAMPION SHOP OVERLAY
+   ══════════════════════════════ */
+
+.shop-open-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 8;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e8c040;
+  background: rgba(14, 10, 4, 0.88);
+  border: 1px solid rgba(122, 78, 32, 0.75);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.shop-open-btn:hover {
+  background: rgba(30, 16, 6, 0.95);
+  border-color: #c89040;
+  box-shadow: 0 0 10px rgba(200, 144, 64, 0.35);
+}
+
+.shop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(11, 8, 3, 0.97);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.shop-back-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 21;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(200, 144, 64, 0.8);
+  background: rgba(14, 10, 4, 0.9);
+  border: 1px solid rgba(92, 51, 16, 0.65);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.shop-back-btn:hover {
+  color: #e8c040;
+  border-color: #c89040;
+}
+
+.shop-inner {
+  flex: 1;
+  min-height: 0;
+}
+
+.shop-fade-enter-active,
+.shop-fade-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.shop-fade-enter-from,
+.shop-fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
 </style>
