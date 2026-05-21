@@ -113,7 +113,7 @@ export const universes: UniverseConfig[] = [
       id: 'just-order',
       name: 'Gerechte Ordnung',
       description: 'Gebäude-Kosten x0.6, CPS x0.6',
-      icon: '🛡️',
+      icon: '/img/roles/top.png',
       effects: { buildingCostMultiplier: 0.6, cpsMultiplier: 0.6 },
     },
   },

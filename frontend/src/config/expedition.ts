@@ -30,7 +30,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 120,
     durationSeconds: 120,
     baseReward: 400,
-    icon: '🏹',
+    icon: '/img/roles/adc.png',
   },
   {
     id: 'baron-steal',

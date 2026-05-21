@@ -189,7 +189,7 @@ export const battleCategory: EncyclopediaCategory = {
 export const championsCategory: EncyclopediaCategory = {
   id: 'champions',
   title: 'Champions',
-  icon: '🛡️',
+  icon: '/img/roles/top.png',
   entries: [
     {
       id: 'champion-system',

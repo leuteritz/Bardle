@@ -193,7 +193,8 @@ function bonusText(role: PlanetRole): string {
               :style="{ '--rc': role.color }"
               @click="assignRole(role.id)"
             >
-              <span class="ps-role-icon">{{ role.icon }}</span>
+              <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
+              <span v-else class="ps-role-icon">{{ role.icon }}</span>
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
               <span class="ps-role-effect">{{ bonusText(role) }}</span>
@@ -239,7 +240,7 @@ function bonusText(role: PlanetRole): string {
             <Transition name="ps-config-slide">
               <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
                 <div class="ps-jungle-buff-header">
-                  <span class="ps-jungle-buff-leaf">🌿</span>
+                  <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle" />
                   <span class="ps-jungle-buff-title">Jungle Buff</span>
                   <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
                 </div>
@@ -264,7 +265,8 @@ function bonusText(role: PlanetRole): string {
               :style="{ '--rc': role.color }"
               @click="assignRole(role.id)"
             >
-              <span class="ps-role-icon">{{ role.icon }}</span>
+              <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
+              <span v-else class="ps-role-icon">{{ role.icon }}</span>
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
               <span class="ps-role-effect">{{ bonusText(role) }}</span>
@@ -578,12 +580,22 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-role-icon {
-  font-size: 2rem;
-  line-height: 1;
   filter: drop-shadow(0 0 6px color-mix(in oklch, var(--rc) 55%, transparent));
   transition:
     transform 0.15s,
     filter 0.15s;
+}
+
+span.ps-role-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+img.ps-role-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .ps-role-option:hover .ps-role-icon,
@@ -746,8 +758,10 @@ function bonusText(role: PlanetRole): string {
 }
 
 .ps-jungle-buff-leaf {
-  font-size: 0.9rem;
-  line-height: 1;
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  image-rendering: pixelated;
   filter: drop-shadow(0 0 4px #5ce66a88);
 }
 

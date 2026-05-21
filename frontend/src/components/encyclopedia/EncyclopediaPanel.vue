@@ -171,7 +171,7 @@ const filteredData = computed(() => {
             v-if="filteredData.length === 0"
             class="enc-empty flex flex-col items-center justify-center py-12"
           >
-            <span class="text-4xl">🔮</span>
+            <img class="enc-empty-icon" src="/img/roles/mid.png" alt="Mid" />
             <p class="mt-2 text-sm">Keine Eintraege gefunden</p>
           </div>
         </div>
@@ -316,6 +316,13 @@ const filteredData = computed(() => {
 /* ── Empty state ── */
 .enc-empty {
   color: var(--rpg-text-dim);
+}
+
+.enc-empty-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 /* ── Footer ── */

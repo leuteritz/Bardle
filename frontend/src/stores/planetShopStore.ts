@@ -97,7 +97,7 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     name: 'Aegis',
     bonusType: 'boss_damage_reduction',
     bonusPerSlot: 0.15,
-    icon: '🛡️',
+    icon: '/img/roles/top.png',
     color: '#60a0ff',
     image: '/img/planets/planet4.png',
   },

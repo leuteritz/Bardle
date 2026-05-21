@@ -139,6 +139,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     description: 'Jede Fähigkeitsstufe verleiht deutlich mehr Kampfkraft.',
     effectLine: '+500 Power pro Fähigkeitsstufe',
     icon: '🛡️',
+    image: '/img/roles/top.png',
     rarity: 'rare',
     effects: { abilityPowerPerLevel: 500 },
   },

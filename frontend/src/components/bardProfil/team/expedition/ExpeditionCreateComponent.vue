@@ -13,7 +13,8 @@
       <!-- Header: Icon + Name + Meta -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="text-sm">{{ config.icon }}</span>
+          <img v-if="config.icon.startsWith('/')" class="mc-config-icon" :src="config.icon" :alt="config.name" />
+          <span v-else class="text-sm">{{ config.icon }}</span>
           <span class="text-sm font-bold mc-name">{{ config.name }}</span>
         </div>
         <div class="flex items-center gap-3 text-xs font-semibold mc-meta">
@@ -242,7 +243,14 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* unverändert */
+.mc-config-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
 .mc-warning {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-red);

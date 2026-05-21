@@ -145,7 +145,13 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               </span>
 
               <!-- Icon -->
-              <span class="mb-2 text-3xl">{{ universe.modifier?.icon ?? '🌍' }}</span>
+              <img
+                v-if="universe.modifier?.icon?.startsWith('/')"
+                class="mb-2 uni-modifier-icon"
+                :src="universe.modifier.icon"
+                :alt="universe.modifier.name"
+              />
+              <span v-else class="mb-2 text-3xl">{{ universe.modifier?.icon ?? '🌍' }}</span>
 
               <!-- Name -->
               <h3 class="mb-1 text-base font-bold text-center uni-name">
@@ -204,6 +210,13 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+.uni-modifier-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .uni-title {

@@ -16,11 +16,11 @@ const ROLE_COLORS: Record<string, string> = {
   Supp: '#b8c8d8',
 }
 const ROLE_ICONS: Record<string, string> = {
-  Top: '🛡️',
-  Jungle: '🌿',
-  Mid: '🔮',
-  ADC: '🏹',
-  Supp: '💚',
+  Top: '/img/roles/top.png',
+  Jungle: '/img/roles/jungle.png',
+  Mid: '/img/roles/mid.png',
+  ADC: '/img/roles/adc.png',
+  Supp: '/img/roles/supp.png',
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -77,7 +77,7 @@ const allSynergies = () => synergyByRole.value.flat()
         :style="{ '--rc': ROLE_COLORS[role] }"
       >
         <div class="syn-col-header">
-          <span class="syn-col-icon">{{ ROLE_ICONS[role] }}</span>
+          <img class="syn-col-icon" :src="ROLE_ICONS[role]" :alt="role" />
           <span class="syn-col-label">{{ role }}</span>
         </div>
         <div class="syn-col-body">
@@ -90,7 +90,7 @@ const allSynergies = () => synergyByRole.value.flat()
             @mouseenter="onBadgeEnter($event, syn.id)"
             @mouseleave="onBadgeLeave"
           >
-            <span class="syn-card-icon">{{ syn.icon }}</span>
+            <img class="syn-card-icon" :src="syn.icon" :alt="syn.name" />
             <span class="syn-card-name">{{ syn.name }}</span>
             <span class="syn-card-fx">{{ formatEffect(syn) }}</span>
           </button>
@@ -106,7 +106,8 @@ const allSynergies = () => synergyByRole.value.flat()
           <template v-for="syn in allSynergies()" :key="syn.id">
             <template v-if="syn.id === hoveredId">
               <div class="syn-tip-head" :style="{ color: syn.color }">
-                {{ syn.icon }} {{ syn.name }}
+                <img class="syn-tip-icon" :src="syn.icon" :alt="syn.name" />
+                {{ syn.name }}
               </div>
               <div class="syn-tip-desc">{{ syn.description }}</div>
               <div class="syn-tip-fx">{{ formatEffect(syn) }}</div>
@@ -174,8 +175,11 @@ const allSynergies = () => synergyByRole.value.flat()
 }
 
 .syn-col-icon {
-  font-size: 11px;
-  line-height: 1;
+  width: 11px;
+  height: 11px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
 }
 
 .syn-col-label {
@@ -231,8 +235,10 @@ const allSynergies = () => synergyByRole.value.flat()
 }
 
 .syn-card-icon {
-  font-size: 13px;
-  line-height: 1;
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  image-rendering: pixelated;
   flex-shrink: 0;
 }
 
@@ -278,6 +284,17 @@ const allSynergies = () => synergyByRole.value.flat()
   font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.syn-tip-icon {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
 }
 
 .syn-tip-desc {
