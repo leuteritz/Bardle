@@ -41,6 +41,13 @@ function hpGlowColor(ratio: number): string {
 }
 
 const HP_SEGMENTS = 8
+
+function handleSlotClick(slot: (typeof slots.value)[number]) {
+  uiStore.requestOpenPlanetsTab(slot.id)
+  if (!slot.purchased) {
+    planetStore.buySlot(slot.id)
+  }
+}
 </script>
 
 <template>
@@ -77,9 +84,7 @@ const HP_SEGMENTS = 8
             [`cmd-planet-tile--role-${slot.role}`]: slot.purchased && !!slot.role,
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
-          @click="
-            slot.purchased ? uiStore.requestOpenPlanetsTab(slot.id) : planetStore.buySlot(slot.id)
-          "
+          @click="handleSlotClick(slot)"
         >
           <template v-if="slot.purchased && slot.role">
             <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />
@@ -389,13 +394,13 @@ const HP_SEGMENTS = 8
 
 .cmd-planet-tile--locked {
   opacity: 0.38;
-  cursor: not-allowed;
+  cursor: pointer;
   border: 2px solid rgba(200, 144, 64, 0.08);
 }
 .cmd-planet-tile--locked:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: rgba(200, 144, 64, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.1);
+  border-color: rgba(200, 144, 64, 0.18);
   background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
 }
 

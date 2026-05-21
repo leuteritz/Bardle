@@ -22,7 +22,10 @@ const selectedSlotId = ref<string | null>(null)
 
 function initSlot() {
   selectedSlotId.value =
-    uiStore.planetActiveSlotId ?? store.slots.find((s) => s.purchased)?.id ?? null
+    uiStore.planetActiveSlotId ??
+    store.slots.find((s) => s.purchased)?.id ??
+    store.slots[0]?.id ??
+    null
 }
 
 onMounted(initSlot)
@@ -121,7 +124,7 @@ function bonusText(role: PlanetRole): string {
           'ps-slot-btn--cant-afford': !slot.purchased && !store.canAffordSlot(slot.id),
         }"
         :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
-        @click="slot.purchased ? selectSlot(slot.id) : store.buySlot(slot.id)"
+        @click="selectSlot(slot.id)"
       >
         <template v-if="!slot.purchased">
           <span class="ps-slot-btn-lock">🔒</span>
@@ -156,18 +159,29 @@ function bonusText(role: PlanetRole): string {
     <!-- Goldlinie – Trennlinie unter Slots -->
     <div class="ps-goldline" />
 
-    <!-- Hinweistext: mittig im verbleibenden Raum, nur wenn noch nichts gekauft -->
-    <div v-if="purchasedSlots.length === 0" class="ps-empty ps-empty--hint">
-      <span class="ps-empty-icon">🪐</span>
-      <span class="ps-empty-text">Klicke auf einen Slot oben, um ihn freizuschalten.</span>
+    <!-- Gesperrter Slot ausgewählt -->
+    <div v-if="activeSlot && !activeSlot.purchased" class="ps-locked-panel">
+      <span class="ps-locked-panel-icon">🔒</span>
+      <span class="ps-locked-panel-title">
+        Orbit {{ activeSlot.id.replace('slot_', '') }} · Gesperrt
+      </span>
+      <div class="ps-locked-panel-cost-row">
+        <img src="/img/BardAbilities/BardChime.png" class="ps-locked-panel-chime" alt="" />
+        <span class="ps-locked-panel-cost">{{ $formatNumber(store.getSlotCost(activeSlot.id)) }}</span>
+      </div>
+      <span class="ps-locked-panel-cost-label">C H I M E S</span>
+      <div class="ps-locked-panel-divider" />
+      <button
+        v-if="store.canAffordSlot(activeSlot.id)"
+        class="ps-locked-panel-buy-btn"
+        @click="store.buySlot(activeSlot.id)"
+      >
+        ✦ Freischalten
+      </button>
+      <span v-else class="ps-locked-panel-hint">Noch nicht genug Chimes</span>
     </div>
 
-    <!-- Kein Slot ausgewählt -->
-    <div v-if="purchasedSlots.length > 0 && !activeSlot" class="ps-empty ps-empty--small">
-      <span class="ps-empty-text">Wähle einen Slot oben aus.</span>
-    </div>
-
-    <template v-if="activeSlot">
+    <template v-if="activeSlot && activeSlot.purchased">
         <!-- 3-Spalten-Body -->
         <div class="ps-body">
           <!-- Linke Rollenspalte -->
@@ -1159,5 +1173,104 @@ function bonusText(role: PlanetRole): string {
   opacity: 0;
   transform: translateY(-6px);
   max-height: 0;
+}
+
+/* ── Locked Slot Panel ─────────────────────────────────────────────────────── */
+.ps-locked-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 16px;
+}
+
+.ps-locked-panel-icon {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.35));
+  animation: ps-lock-bob 3s ease-in-out infinite;
+}
+
+.ps-locked-panel-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(200, 160, 60, 0.5);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.ps-locked-panel-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ps-locked-panel-chime {
+  width: 52px;
+  height: 52px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.7));
+  animation: ps-chime-bob 2s ease-in-out infinite;
+}
+
+.ps-locked-panel-cost {
+  font-size: 48px;
+  font-weight: 800;
+  color: #e8c040;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.8),
+    0 0 28px rgba(232, 192, 64, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  line-height: 1;
+}
+
+.ps-locked-panel-cost-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(200, 160, 60, 0.45);
+  letter-spacing: 0.14em;
+  margin-top: -4px;
+}
+
+.ps-locked-panel-divider {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 144, 64, 0.4), transparent);
+  margin: 4px 0;
+}
+
+.ps-locked-panel-buy-btn {
+  padding: 10px 36px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    transform 0.12s ease;
+}
+
+.ps-locked-panel-buy-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.ps-locked-panel-buy-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.ps-locked-panel-hint {
+  font-size: 12px;
+  color: rgba(180, 130, 50, 0.5);
+  letter-spacing: 0.05em;
 }
 </style>
