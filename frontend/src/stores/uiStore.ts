@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets' | 'roles'
+export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets'
 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)
@@ -26,7 +26,7 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSlot.value = slotIndex
     rolesActiveSubSlot.value = subSlot
     rolesOpenToken.value++
-    bardActiveTab.value = 'roles'
+    bardActiveTab.value = 'team'
   }
 
   function requestOpenPlanetsTab(slotId: string) {

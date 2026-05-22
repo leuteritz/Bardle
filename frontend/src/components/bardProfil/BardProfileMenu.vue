@@ -7,7 +7,6 @@ import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
-import RolesTabComponent from '@/components/bardProfil/roles/RolesTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 
@@ -24,7 +23,6 @@ const menuItems: {
   { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
-  { id: 'roles', label: 'Rollen', icon: '⚔️', src: '' },
   { id: 'planets', label: '', icon: '', src: '/img/planet.png' },
   { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
 ]
@@ -35,15 +33,20 @@ watch(
     document.body.classList.toggle('bard-modal-open', val !== null)
   },
 )
-
-
 </script>
 
 <template>
   <button class="inventory-circle-btn" title="Shop öffnen" @click="uiStore.setBardTab('shop')">
     <div class="relative w-36 h-36">
       <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(160,110,15,0.45)" stroke-width="7" />
+        <circle
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke="rgba(160,110,15,0.45)"
+          stroke-width="7"
+        />
       </svg>
       <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
         <img src="/img/menu/SHOP.png" class="object-contain w-full h-full p-3" alt="Shop öffnen" />
@@ -128,11 +131,7 @@ watch(
             </div>
 
             <Transition name="tab-fade" mode="out-in">
-              <div
-                v-if="uiStore.bardActiveTab === 'bard'"
-                key="bard"
-                class="h-full"
-              >
+              <div v-if="uiStore.bardActiveTab === 'bard'" key="bard" class="h-full">
                 <BardStatsTab />
               </div>
               <div
@@ -142,16 +141,22 @@ watch(
               >
                 <ShopComponent />
               </div>
-              <div v-else-if="uiStore.bardActiveTab === 'tree'" key="tree" class="h-full p-4 overflow-hidden">
+              <div
+                v-else-if="uiStore.bardActiveTab === 'tree'"
+                key="tree"
+                class="h-full p-4 overflow-hidden"
+              >
                 <SkillTreeComponent />
               </div>
               <div v-else-if="uiStore.bardActiveTab === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
               </div>
-              <div v-else-if="uiStore.bardActiveTab === 'roles'" key="roles" class="h-full overflow-hidden">
-                <RolesTabComponent />
-              </div>
-              <div v-else-if="uiStore.bardActiveTab === 'planets'" key="planets" class="h-full overflow-hidden">
+
+              <div
+                v-else-if="uiStore.bardActiveTab === 'planets'"
+                key="planets"
+                class="h-full overflow-hidden"
+              >
                 <PlanetSelectTabComponent />
               </div>
 
