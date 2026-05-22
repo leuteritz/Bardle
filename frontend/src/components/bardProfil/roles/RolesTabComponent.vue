@@ -986,8 +986,6 @@ void championRoleLabel
 .hud-equip-btn:hover {
   transform: translateY(-3px);
 }
-.hud-equip-btn--filled {
-}
 
 .hud-equip-img {
   width: 106px;
