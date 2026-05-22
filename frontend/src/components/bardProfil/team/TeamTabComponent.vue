@@ -578,11 +578,6 @@ void globalSynergies
             </div>
           </Transition>
 
-          <!-- Champion Name — bottom center, above HUD -->
-          <Transition name="splash-name-fade">
-            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-bottom">{{ activeChampion }}</div>
-          </Transition>
-
           <!-- ══ Bottom HUD — Equipment only ══ -->
           <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
             <!-- ITEM SHOP – NEU: Item Shop Button unten links -->
@@ -611,6 +606,9 @@ void globalSynergies
                 <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
               </button>
             </div>
+
+            <!-- Invisible spacer — mirrors item-shop-open-btn width to truly center equipment -->
+            <div class="hud-spacer" aria-hidden="true">Items</div>
           </div>
         </div>
 
@@ -1587,6 +1585,17 @@ void globalSynergies
     0 0 16px rgba(200, 144, 64, 0.4);
 }
 
+.hud-spacer {
+  flex-shrink: 0;
+  align-self: flex-end;
+  padding: 8px 16px;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  border: 2px solid transparent;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .item-shop-overlay {
   position: absolute;
   inset: 0;
@@ -1643,28 +1652,6 @@ void globalSynergies
   padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-/* ══════════════════════════════
-   CHAMPION NAME — BOTTOM
-   ══════════════════════════════ */
-.splash-name-bottom {
-  position: absolute;
-  bottom: 145px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  z-index: 5;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(240, 216, 112, 0.55);
-  text-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.95),
-    0 0 24px rgba(200, 144, 64, 0.3);
-  pointer-events: none;
-  line-height: 1;
 }
 
 /* ══════════════════════════════
