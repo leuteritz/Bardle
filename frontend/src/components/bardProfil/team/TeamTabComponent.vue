@@ -8,7 +8,7 @@ import { getChampionRoles } from '@/config/championRoles'
 import { ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
-import ChampionPickerPanel from '../roles/ChampionPickerPanel.vue'
+import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
@@ -191,13 +191,18 @@ function selectSlot(index: number) {
   activeSlotIndex.value = index
   activeSubSlot.value = -1
   selectedCategory.value = null
-  panelMode.value = 'main'
+  if (panelMode.value !== 'champion-picker') {
+    panelMode.value = 'main'
+  }
   if (showShop.value) {
     shopRole.value = ROLE_MAP[ROLES[index]]
   }
 }
 
 function openChampionPicker(subSlot: number = -1) {
+  showShop.value = false
+  showExpedition.value = false
+  showItemShop.value = false
   activeSubSlot.value = subSlot
   panelMode.value = 'champion-picker'
 }
@@ -288,10 +293,21 @@ void globalSynergies
 <template>
   <div class="roles-tab">
     <!-- ════════════════════════════════
-         MAIN VIEW
+         ITEM PICKER (replaces full view)
          ════════════════════════════════ -->
-    <template v-if="panelMode === 'main'">
-      <div class="main-layout">
+    <ItemPickerPanel
+      v-if="panelMode === 'item-picker' && selectedCategory"
+      :selected-category="selectedCategory"
+      :category-items="categoryItems"
+      :current-equipment="currentEquipment"
+      @back="closePanel"
+      @equip="handleEquip"
+    />
+
+    <!-- ════════════════════════════════
+         MAIN VIEW + CHAMPION PICKER OVERLAY
+         ════════════════════════════════ -->
+    <div v-else class="main-layout">
         <!-- ══ LEFT — Dominant Splash Art ══ -->
         <div
           class="splash-area"
@@ -475,6 +491,23 @@ void globalSynergies
             </div>
           </Transition>
 
+          <!-- ══ Champion Select Overlay ══ -->
+          <Transition name="shop-fade">
+            <div v-if="panelMode === 'champion-picker'" class="champion-select-overlay" @click.stop>
+              <ChampionSelectPanel
+                :active-role="activeRole"
+                :picker-title="pickerTitle"
+                :role-filtered-champions="roleFilteredChampions"
+                :header-slots="headerSlots"
+                :secondary-slots="secondarySlots"
+                :active-slot-index="activeSlotIndex"
+                :active-sub-slot="activeSubSlot"
+                @back="closePanel"
+                @select="handleSelect"
+              />
+            </div>
+          </Transition>
+
           <!-- ══ Bottom HUD — Equipment only ══ -->
           <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
             <!-- ITEM SHOP – NEU: Item Shop Button unten links -->
@@ -562,36 +595,7 @@ void globalSynergies
             </div>
           </div>
         </div>
-      </div>
-    </template>
-
-    <!-- ════════════════════════════════
-         CHAMPION PICKER
-         ════════════════════════════════ -->
-    <ChampionPickerPanel
-      v-else-if="panelMode === 'champion-picker'"
-      :active-role="activeRole"
-      :picker-title="pickerTitle"
-      :role-filtered-champions="roleFilteredChampions"
-      :header-slots="headerSlots"
-      :secondary-slots="secondarySlots"
-      :active-slot-index="activeSlotIndex"
-      :active-sub-slot="activeSubSlot"
-      @back="closePanel"
-      @select="handleSelect"
-    />
-
-    <!-- ════════════════════════════════
-         ITEM PICKER
-         ════════════════════════════════ -->
-    <ItemPickerPanel
-      v-else-if="panelMode === 'item-picker' && selectedCategory"
-      :selected-category="selectedCategory"
-      :category-items="categoryItems"
-      :current-equipment="currentEquipment"
-      @back="closePanel"
-      @equip="handleEquip"
-    />
+    </div>
   </div>
 </template>
 
@@ -1298,6 +1302,20 @@ void globalSynergies
   border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
   background: rgba(8, 5, 2, 0.9);
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════
+   CHAMPION SELECT OVERLAY
+   ══════════════════════════════ */
+.champion-select-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(11, 8, 3, 0.97);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* ══════════════════════════════
