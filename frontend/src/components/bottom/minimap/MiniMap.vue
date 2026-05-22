@@ -50,17 +50,17 @@
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <div v-if="!isRescuing" class="hud-panel">
             <div class="hud-metric hud-metric--arrival">
-              <span class="hud-metric-label">ANKUNFT</span>
+              <span class="hud-metric-label">ARRIVAL</span>
               <span class="hud-metric-value">{{ countdown }}</span>
             </div>
 
             <template v-if="isTraveling">
               <div class="hud-metric hud-metric--dist">
-                <span class="hud-metric-label">ENTF. · LJ</span>
+                <span class="hud-metric-label">DIST. · LY</span>
                 <span class="hud-metric-value">{{ remainingDistDisplay }}</span>
               </div>
               <div class="hud-metric hud-metric--speed">
-                <span class="hud-metric-label">TEMPO · LJ/s</span>
+                <span class="hud-metric-label">SPEED · LY/s</span>
                 <span class="hud-metric-value">{{ speedDisplay }}</span>
               </div>
             </template>
@@ -84,9 +84,9 @@
             "
             class="complete-overlay"
           >
-            <span class="complete-badge">✦ Galaxie Befreit ✦</span>
+            <span class="complete-badge">✦ Galaxy Liberated ✦</span>
             <button class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
-              » Nächste Galaxie «
+              » Next Galaxy «
             </button>
           </div>
         </div>

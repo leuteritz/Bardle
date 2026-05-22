@@ -38,10 +38,10 @@
           >
             {{
               expedition.status === 'active'
-                ? 'Läuft'
+                ? 'Active'
                 : expedition.status === 'success'
-                  ? 'Erfolg'
-                  : 'Fehlgeschl.'
+                  ? 'Success'
+                  : 'Failed'
             }}
           </span>
         </div>
@@ -80,7 +80,7 @@
         <!-- Reward (abgeschlossen) -->
         <div v-else class="flex items-center justify-between pt-1">
           <div class="text-sm text-white/45">
-            Belohnung:
+            Reward:
             <span
               class="ml-1.5 font-bold"
               :class="expedition.status === 'success' ? 'text-amber-300' : 'text-red-400'"
@@ -93,7 +93,7 @@
             class="px-5 py-2 text-sm font-bold transition-all duration-200 active:scale-95"
             :class="expedition.status === 'success' ? 'rpg-btn-green' : 'rpg-btn-disabled'"
           >
-            Einsammeln
+            Collect
           </button>
         </div>
       </div>

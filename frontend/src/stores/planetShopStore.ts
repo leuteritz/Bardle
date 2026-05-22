@@ -279,7 +279,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
-      logger.info('Planet', `Rolle von ${slotId} geändert: ${prev ?? 'keine'} → ${role ?? 'keine'}`)
+      logger.info('Planet', `Role of ${slotId} changed: ${prev ?? 'none'} → ${role ?? 'none'}`)
 
       if (role !== null && CONFIGURABLE_ROLES.includes(role)) return
     },
@@ -296,7 +296,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
         gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       }
 
-      logger.info('Planet', `Slot-Config für ${slotId} gesetzt`, config)
+      logger.info('Planet', `Slot config for ${slotId} set`, config)
       this.closeRoleModal()
     },
 

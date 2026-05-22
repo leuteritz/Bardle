@@ -18,13 +18,13 @@ let stars: HyperStar[] = []
 let startTime: number | null = null
 let maxDist = 1000
 
-// ─── Spawnt einen einzelnen Stern ───────────────────────────────────────────
-// fromEdge=true → Stern startet am Rand (Respawn während Animation)
-// fromEdge=false → zufällige Startposition über den ganzen Bildschirm (Init)
+// ─── Spawns a single star ────────────────────────────────────────────────────
+// fromEdge=true → star starts at the edge (respawn during animation)
+// fromEdge=false → random start position across the entire screen (init)
 function spawnStar(fromEdge = false): HyperStar {
   const dist = fromEdge
-    ? maxDist * (0.75 + Math.random() * 0.35) // Rand bis leicht außerhalb
-    : maxDist * (0.03 + Math.random() * 0.97) // gesamter Bildschirm
+    ? maxDist * (0.75 + Math.random() * 0.35) // edge to slightly outside
+    : maxDist * (0.03 + Math.random() * 0.97) // entire screen
   return {
     angle: Math.random() * Math.PI * 2,
     dist,
@@ -35,7 +35,7 @@ function spawnStar(fromEdge = false): HyperStar {
 
 function initStars() {
   const canvas = canvasRef.value
-  // 10 % Puffer damit auch Ecken voll abgedeckt sind
+  // 10% buffer so corners are fully covered
   maxDist = canvas ? Math.sqrt((canvas.width / 2) ** 2 + (canvas.height / 2) ** 2) * 1.1 : 1000
   stars = Array.from({ length: 500 }, () => spawnStar(false))
 }
@@ -61,14 +61,14 @@ function startAnimation() {
     lastTime = now
     const dtSec = Math.min(dtMs / 1000, 0.1)
 
-    // Halbtransparentes Schwarz → natürlicher Motion-Blur-Effekt
+    // Semi-transparent black → natural motion blur effect
     ctx!.fillStyle = 'rgba(10, 6, 32, 0.18)'
     ctx!.fillRect(0, 0, canvas!.width, canvas!.height)
 
     const cx = canvas!.width / 2
     const cy = canvas!.height / 2
 
-    // Sanfte Beschleunigung: 1× → ~18× über 2 Sekunden (kubisch)
+    // Gentle acceleration: 1× → ~18× over 2 seconds (cubic)
     const t = Math.min(elapsed / 2000, 1)
     const accel = 1 + t * t * t * 17
 
@@ -76,13 +76,13 @@ function startAnimation() {
       const star = stars[i]
       star.dist -= star.speed * accel * dtSec
 
-      // Stern hat Zentrum erreicht → neu vom Rand spawnen
+      // Star reached center → respawn from edge
       if (star.dist <= 4) {
         stars[i] = spawnStar(true)
         continue
       }
 
-      // Schweif hinter dem Stern (weg vom Zentrum)
+      // Trail behind the star (away from center)
       const tailLen = Math.max(star.speed * accel * 0.22, 4)
       const tailDist = Math.min(star.dist + tailLen, maxDist)
 
@@ -91,7 +91,7 @@ function startAnimation() {
       const tailX = cx + Math.cos(star.angle) * tailDist
       const tailY = cy + Math.sin(star.angle) * tailDist
 
-      // Blau-weißer Gradient: Schweifende → transparent, Kopf → hell
+      // Blue-white gradient: tail → transparent, head → bright
       const grad = ctx!.createLinearGradient(tailX, tailY, headX, headY)
       grad.addColorStop(0, 'rgba(140, 200, 255, 0)')
       grad.addColorStop(0.55, 'rgba(190, 225, 255, 0.35)')
@@ -132,7 +132,7 @@ watch(
   async (active) => {
     if (active) {
       phase.value = 'streaks'
-      await nextTick() // ← Canvas ist jetzt im DOM, canvasRef.value ist nicht mehr null
+      await nextTick() // ← Canvas is now in the DOM, canvasRef.value is no longer null
       startAnimation()
 
       setTimeout(() => {

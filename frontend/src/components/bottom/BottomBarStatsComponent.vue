@@ -139,18 +139,18 @@ const RANK_IMAGE_MAP: Record<string, string> = {
   Challenger: '/img/RankBorder/RankChallenger.png',
 }
 
-// Rang-spezifische Leuchtfarben passend zur jeweiligen LoL-Rank-Ästhetik
+// Rank-specific glow colors matching each LoL rank aesthetic
 const RANK_GLOW_MAP: Record<string, string> = {
-  Iron: '#a8a09a', // Graubraun / verwittertes Metall
-  Bronze: '#cd7f4f', // Kupfer-Orange
-  Silver: '#b8cdd6', // Kühles Silbergrau
-  Gold: '#f0b429', // Sattes Gold
-  Platinum: '#4dd0b8', // Türkis-Teal
-  Emerald: '#4caf76', // Smaragdgrün
-  Diamond: '#6ec6f0', // Eisblau
-  Master: '#b566e8', // Violett
-  Grandmaster: '#e84040', // Tiefrot
-  Challenger: '#a8d8f0', // Helles Cyan
+  Iron: '#a8a09a', // Gray-brown / weathered metal
+  Bronze: '#cd7f4f', // Copper orange
+  Silver: '#b8cdd6', // Cool silver-gray
+  Gold: '#f0b429', // Rich gold
+  Platinum: '#4dd0b8', // Turquoise teal
+  Emerald: '#4caf76', // Emerald green
+  Diamond: '#6ec6f0', // Ice blue
+  Master: '#b566e8', // Violet
+  Grandmaster: '#e84040', // Deep red
+  Challenger: '#a8d8f0', // Light cyan
 }
 
 const rankImage = computed(() => {
@@ -232,7 +232,7 @@ const winChanceColor = computed(() => {
     <!-- CENTER: Title -->
     <div class="title-center">BARDLE</div>
 
-    <!-- RIGHT: Stats – spiegelverkehrt: value | label | image -->
+    <!-- RIGHT: Stats – mirrored: value | label | image -->
     <div class="stats-right">
       <!-- RANK -->
       <div class="bbstat-item">
@@ -339,11 +339,11 @@ const winChanceColor = computed(() => {
   transition: filter 0.4s ease;
 }
 
-/* Rank Icon: größer + kein statischer filter (wird per :style gesetzt) */
+/* Rank icon: larger + no static filter (set via :style) */
 .bbstat-rank-icon {
   width: 42px;
   height: 42px;
-  /* filter wird vollständig via :style="{ filter: rankIconFilter }" gesetzt */
+  /* filter fully set via :style="{ filter: rankIconFilter }" */
   transition: filter 0.5s ease;
 }
 
@@ -384,7 +384,7 @@ const winChanceColor = computed(() => {
   filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
 }
 
-/* ── Label: standardmäßig versteckt, beim Hover einblenden ────────────── */
+/* ── Label: hidden by default, shown on hover ────────────────────────── */
 .bbstat-label {
   font-size: var(--label-size);
   color: #6a4418;
@@ -407,7 +407,7 @@ const winChanceColor = computed(() => {
   opacity: 1;
 }
 
-/* ── Ability Label Farben beim Hover ────────────────────────────────── */
+/* ── Ability label colors on hover ──────────────────────────────────── */
 .stats-grid:hover
   .ability-slot:not(.ability-slot--cooldown):not(.ability-slot--flash):not(.ability-slot--inactive)
   .ability-label {
@@ -557,7 +557,7 @@ const winChanceColor = computed(() => {
   filter: grayscale(80%);
 }
 
-/* ── Animationen ────────────────────────────────────────────────────── */
+/* ── Animations ─────────────────────────────────────────────────────── */
 @keyframes ability-icon-flash {
   0% {
     filter: drop-shadow(0 0 14px var(--role-color, #e8c040)) brightness(1.4);

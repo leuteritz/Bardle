@@ -23,7 +23,7 @@ export const BATTLE_REAL_DURATION_SECONDS = 45
 
 // Game State display phases (bottom stats bar)
 export const GAME_STATE = {
-  SEARCHING: { key: 'searching', icon: '🔍', label: 'Planetensuche', color: '#9a6830' },
+  SEARCHING: { key: 'searching', icon: '🔍', label: 'Planet Search', color: '#9a6830' },
   BATTLE: { key: 'battle', icon: '⚔️', label: 'Battle', color: '#e8c040' },
   HONOR: { key: 'honor', icon: '🏆', label: 'Honor Phase', color: '#74d448' },
 } as const
@@ -79,13 +79,13 @@ export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 // Champion travel timing
 export const CHAMPION_TRAVEL_BASE_MS = 60_000 // 60s base travel time
 export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
-export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LJ für Galaxie 1
-export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LJ pro Galaxie
+export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
+export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 
 // Resource star flyby
-export const RESOURCE_STAR_INTERVAL_MS = 120_000 // alle 2 min ein Flyby
-export const RESOURCE_STAR_DURATION_MS = 45_000 // Flyby dauert 45 s
-export const RESOURCE_STAR_PLANET_COUNT = 3 // max. Planeten pro Flyby
+export const RESOURCE_STAR_INTERVAL_MS = 120_000 // every 2 min a flyby
+export const RESOURCE_STAR_DURATION_MS = 45_000 // flyby lasts 45s
+export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
@@ -102,16 +102,16 @@ export const BOSS_CPS_PENALTY_FRACTION = 0.05
 export const BOSS_CPS_PENALTY_DURATION_MS = 30_000
 export { BOSS_NAMES } from '../utils/bossNames'
 
-// Planet type display names (German)
+// Planet type display names
 export const PLANET_TYPE_NAMES: Record<string, string> = {
-  rocky: 'Felsplanet',
-  ice: 'Eisplanet',
-  'gas-giant': 'Gasriese',
-  lava: 'Lavaplanet',
-  ocean: 'Ozeanplanet',
-  desert: 'Wüstenplanet',
-  jungle: 'Dschungelplanet',
-  ringed: 'Ringplanet',
+  rocky: 'Rocky Planet',
+  ice: 'Ice Planet',
+  'gas-giant': 'Gas Giant',
+  lava: 'Lava Planet',
+  ocean: 'Ocean Planet',
+  desert: 'Desert Planet',
+  jungle: 'Jungle Planet',
+  ringed: 'Ringed Planet',
 }
 
 // Title rotation
@@ -195,7 +195,7 @@ export const PLANET_ORBIT_SPEED_BOSS = 0.0016 // galaxy boss planet speed
 // Background canvas star speeds
 export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.5)
 export const STAR_BG_BASE_SPEED_RANGE = 2.0 // base speed random range (doubled from 1.0)
-// Wahrscheinlichkeit, dass ein Hintergrundstern blau eingefärbt wird (realistischerer Sternenhimmel)
+// Probability that a background star gets blue-tinted (more realistic starfield)
 export const BACKGROUND_STAR_BLUE_BIAS = 0.9
 
 // Star background — warp / galaxy animation
@@ -233,20 +233,20 @@ export const ORBIT_RADIUS_SCALE = 1.8
 // Role Behavior — orbit abilities per role
 export const ROLE_SUPPORT_HEAL_INTERVAL_MS = 8000 // heal player every 8s
 export const ROLE_SUPPORT_HEAL_AMOUNT = 5 // +5 HP per heal
-export const SUPPORT_HEAL_RANGE = 1000 // px: max. Abstand Support-Champion → Player-Planet-Mittelpunkt
-export const SUPPORT_PLANET_HEAL_AMOUNT = 20 // HP pro Heal-Tick auf Player-Planeten
-export const SUPPORT_PLANET_HEAL_INTERVAL_MS = 2000 // Intervall zwischen zwei Planet-Heals in ms
-export const SUPPORT_MAX_HEAL_TARGETS = 1 // max. Planeten die gleichzeitig pro Heal-Tick geheilt werden
+export const SUPPORT_HEAL_RANGE = 1000 // px: max. distance Support Champion → Player Planet center
+export const SUPPORT_PLANET_HEAL_AMOUNT = 20 // HP per heal tick on Player Planets
+export const SUPPORT_PLANET_HEAL_INTERVAL_MS = 2000 // interval between two Planet heals in ms
+export const SUPPORT_MAX_HEAL_TARGETS = 1 // max. planets healed simultaneously per heal tick
 export const ROLE_TOP_SHIELD_REBUILD_MS = 5000 // seconds to rebuild shield after absorbing a shot
 export const ROLE_MID_CURSE_INTERVAL_MS = 15000 // curse: 15s cooldown between casts
 export const ROLE_MID_CURSE_DURATION_MS = 10000 // curse lasts 10s
 export const ROLE_MID_CURSE_RANGE = 1500 // px screen-space range from midlaner to boss planet
 export const ROLE_MID_CURSE_CAST_MS = 600 // cast flash animation duration
-export const ROLE_MID_CURSE_DOT_DPS = 8 // Verderbnis: 8 dmg/s × 10 ticks = 80 total
-export const ROLE_MID_CURSE_ATTACK_DEBUFF = 0.4 // Schwächung: enemy deals only 40% damage
-export const ROLE_MID_CURSE_DAMAGE_AMP = 1.8 // Bannfluch: all player damage ×1.8
-export const ROLE_MID_CURSE_ATTACK_SLOW = 3.0 // Erstarrung: enemy attack interval ×3
-export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.2 // Verdammnis: instant 20% of boss maxHP
+export const ROLE_MID_CURSE_DOT_DPS = 8 // Corruption: 8 dmg/s × 10 ticks = 80 total
+export const ROLE_MID_CURSE_ATTACK_DEBUFF = 0.4 // Weakness: enemy deals only 40% damage
+export const ROLE_MID_CURSE_DAMAGE_AMP = 1.8 // Hexblight: all player damage ×1.8
+export const ROLE_MID_CURSE_ATTACK_SLOW = 3.0 // Petrify: enemy attack interval ×3
+export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.2 // Damnation: instant 20% of boss maxHP
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 
@@ -419,7 +419,7 @@ export const UNIVERSE_RESCUE_INITIAL_COST = 100_000
 export const UNIVERSE_RESCUE_COST_MULTIPLIER = 2
 
 // Planet Shop Roles
-export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material alle 30 Ticks
+export const PLANET_HARVEST_INTERVAL_TICKS = 30 // harvest_node: 1 Material every 30 ticks
 export const JUNGLE_BUFF_RANGE = 120 // px, screen-space proximity radius for jungle buff trigger
 export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buff triggers
 

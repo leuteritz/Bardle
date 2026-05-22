@@ -255,9 +255,9 @@ export const useBattleStore = defineStore('battle', {
     },
 
     startBattleSimulation(resume = false) {
-      // Timestamp immer frisch setzen – egal ob resume oder nicht.
-      // Bei resume wird die bereits verstrichene echte Zeit korrekt
-      // durch battlePhaseStartTimestamp abgebildet (gesetzt in beginSimulation).
+      // Always set timestamp fresh — regardless of whether resuming or not.
+      // On resume, elapsed real time is correctly mapped
+      // by battlePhaseStartTimestamp (set in beginSimulation).
       if (!resume) {
         this.battlePhaseStartTimestamp = Date.now()
       }
@@ -871,8 +871,8 @@ export const useBattleStore = defineStore('battle', {
           clearTimeout(this.autoBattleTimer)
           this.autoBattleTimer = null
         }
-        // Simulation starten falls simulationReadyToStart noch gesetzt ist
-        // (z.B. nach Tab-Wechsel während der Suchphase)
+        // Start simulation if simulationReadyToStart is still set
+        // (e.g. after tab switch during search phase)
         if (this.simulationReadyToStart) {
           this.simulationReadyToStart = false
           this.beginSimulation()

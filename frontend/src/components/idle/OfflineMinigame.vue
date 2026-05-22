@@ -92,7 +92,7 @@ onUnmounted(() => {
     <!-- Header -->
     <div class="mg-header">
       <span class="mg-icon">⚔️</span>
-      <p class="mg-hint">Triff die goldene Zone für <strong>doppelte Beute!</strong></p>
+      <p class="mg-hint">Hit the golden zone for <strong>double loot!</strong></p>
       <span class="mg-icon">⚔️</span>
     </div>
 
@@ -107,7 +107,7 @@ onUnmounted(() => {
       }"
       tabindex="0"
       role="button"
-      aria-label="Timing-Spiel: Klicke wenn der Balken in der grünen Zone ist"
+      aria-label="Timing game: Click when the bar is in the green zone"
       @click="lock"
     >
       <!-- Scanline overlay -->
@@ -140,11 +140,11 @@ onUnmounted(() => {
       <Transition name="result-fade">
         <div v-if="phase === 'result-win'" class="result-overlay result-overlay--win">
           <span class="result-icon">✦</span>
-          Perfekter Treffer! ×2
+          Perfect Hit! ×2
           <span class="result-icon">✦</span>
         </div>
         <div v-else-if="phase === 'result-lose'" class="result-overlay result-overlay--lose">
-          Knapp vorbei…
+          Just missed…
         </div>
       </Transition>
     </div>
@@ -169,9 +169,9 @@ onUnmounted(() => {
       </div>
 
       <button v-if="phase === 'playing'" class="skip-btn" type="button" @click.stop="skip">
-        Überspringen
+        Skip
         <span class="skip-arrow">→</span>
-        <span class="skip-sub">einfache Belohnung</span>
+        <span class="skip-sub">standard reward</span>
       </button>
     </div>
   </div>

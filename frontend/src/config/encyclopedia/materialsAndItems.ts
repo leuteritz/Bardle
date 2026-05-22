@@ -2,76 +2,76 @@ import type { EncyclopediaCategory } from './types'
 
 export const materialsCategory: EncyclopediaCategory = {
   id: 'materials',
-  title: 'Materialien',
+  title: 'Materials',
   icon: '💠',
   entries: [
     {
       id: 'materials-overview',
-      name: 'Material-Übersicht',
+      name: 'Materials Overview',
       icon: '/img/Sternenstaub.png',
       description:
-        'Materialien werden bei Planeten-Rettungen (60% Chance) und Expeditionen gesammelt. ' +
-        'Sie werden als Herstellungskosten für seltene Items benötigt. ' +
-        'Insgesamt gibt es 6 Materialien mit unterschiedlichen Drop-Chancen.',
-      lore: 'Die Rohstoffe des Kosmos – in den richtigen Händen werden sie zu Wundern.',
+        'Materials are collected during planet rescues (60% chance) and expeditions. ' +
+        'They are required as crafting costs for rare items. ' +
+        'There are 6 materials in total with different drop chances.',
+      lore: 'The raw materials of the cosmos — in the right hands, they become wonders.',
       formula:
         'PLANET_MATERIAL_CHANCE = 0.6 (60%)\n' +
-        'Drop-Chancen relativ zur Gesamtmasse (1,00):\n' +
-        'Sternstaub 35% | Mondkristall 25% | Nebelquarz 20%\n' +
-        'Sonnenessenz 12% | Leerscherbe 6% | Dunkle Materie 2%',
+        'Drop chances relative to total weight (1.00):\n' +
+        'Stardust 35% | Moon Crystal 25% | Nebula Quartz 20%\n' +
+        'Solar Essence 12% | Void Shard 6% | Dark Matter 2%',
     },
     {
       id: 'material-stardust',
-      name: 'Sternstaub',
+      name: 'Stardust',
       icon: '/img/Sternenstaub.png',
       description:
-        'Häufigstes Material (35% Drop). Feiner Staub von fernen Sternen. Seltenheit: Common.',
-      lore: 'Feiner Staub von fernen Sternen.',
+        'Most common material (35% drop). Fine dust from distant stars. Rarity: Common.',
+      lore: 'Fine dust from distant stars.',
       formula: 'id = stardust | rarity = common | dropChance = 0.35 (35%)',
     },
     {
       id: 'material-moon-crystal',
-      name: 'Mondkristall',
+      name: 'Moon Crystal',
       icon: '/img/Mondkristall.png',
       description:
-        'Zweithäufigstes Material (25% Drop). Ein Kristall, der im Mondlicht schimmert. Seltenheit: Common.',
-      lore: 'Ein Kristall, der im Mondlicht schimmert.',
+        'Second most common material (25% drop). A crystal that shimmers in moonlight. Rarity: Common.',
+      lore: 'A crystal that shimmers in moonlight.',
       formula: 'id = moon_crystal | rarity = common | dropChance = 0.25 (25%)',
     },
     {
       id: 'material-nebula-quartz',
-      name: 'Nebelquarz',
+      name: 'Nebula Quartz',
       icon: '/img/Nebelquarz.png',
       description:
-        'Uncommon-Material (20% Drop). Wird für seltene Waffen als Handwerkskosten benötigt. Seltenheit: Uncommon.',
-      lore: 'Quarz aus den Tiefen eines Nebels.',
+        'Uncommon material (20% drop). Required as crafting cost for rare weapons. Rarity: Uncommon.',
+      lore: 'Quartz from the depths of a nebula.',
       formula: 'id = nebula_quartz | rarity = uncommon | dropChance = 0.20 (20%)',
     },
     {
       id: 'material-solar-essence',
-      name: 'Sonnenessenz',
+      name: 'Solar Essence',
       icon: '/img/Sonnenessenz.png',
       description:
-        'Seltenes Material (12% Drop). Konzentrierte Energie eines Sterns. Benötigt für Rare-Items. Seltenheit: Rare.',
-      lore: 'Konzentrierte Energie eines Sterns.',
+        'Rare material (12% drop). Concentrated energy of a star. Required for Rare items. Rarity: Rare.',
+      lore: 'Concentrated energy of a star.',
       formula: 'id = solar_essence | rarity = rare | dropChance = 0.12 (12%)',
     },
     {
       id: 'material-void-shard',
-      name: 'Leerscherbe',
+      name: 'Void Shard',
       icon: '/img/Leerscherbe.png',
       description:
-        'Sehr seltenes Material (6% Drop). Ein Splitter aus dem Nichts. Benötigt für Epic-Items. Seltenheit: Rare.',
-      lore: 'Ein Splitter aus dem Nichts.',
+        'Very rare material (6% drop). A splinter from the void. Required for Epic items. Rarity: Rare.',
+      lore: 'A splinter from the void.',
       formula: 'id = void_shard | rarity = rare | dropChance = 0.06 (6%)',
     },
     {
       id: 'material-dark-matter',
-      name: 'Dunkle Materie',
+      name: 'Dark Matter',
       icon: '/img/DunkleMaterie.png',
       description:
-        'Extrem seltenes Material (2% Drop). Unfassbare Materie jenseits des Sichtbaren. Benötigt für Legendary-Items. Seltenheit: Epic.',
-      lore: 'Unfassbare Materie jenseits des Sichtbaren.',
+        'Extremely rare material (2% drop). Incomprehensible matter beyond the visible. Required for Legendary items. Rarity: Epic.',
+      lore: 'Incomprehensible matter beyond the visible.',
       formula: 'id = dark_matter | rarity = epic | dropChance = 0.02 (2%)',
     },
   ],
@@ -79,32 +79,32 @@ export const materialsCategory: EncyclopediaCategory = {
 
 export const itemsCategory: EncyclopediaCategory = {
   id: 'items',
-  title: 'Item-Shop',
+  title: 'Item Shop',
   icon: '🗡️',
   entries: [
     {
       id: 'item-system',
-      name: 'Item-System',
+      name: 'Item System',
       icon: '/img/BardAbilities/BardChime.png',
       description:
-        'Items werden mit Gold (und teils mit Materialien) gekauft und geben permanente Multiplikatoren. ' +
-        'Es gibt 4 Seltenheiten: Common, Rare, Epic, Legendary. ' +
-        'Items können Kampfkraft (Power), CPS oder CPC erhöhen.',
-      lore: 'Die Ausrüstung des Meisters bestimmt die Schlagkraft.',
+        'Items are purchased with Gold (and sometimes Materials) and grant permanent multipliers. ' +
+        'There are 4 rarities: Common, Rare, Epic, Legendary. ' +
+        'Items can increase Combat Power, CPS, or CPC.',
+      lore: "The master's equipment determines their striking power.",
       formula:
-        'Effekttypen: powerMultiplier, cpsMultiplier, cpcMultiplier\n' +
-        'Preisskala: Common ≈ 1 200–2 500 Gold | Rare ≈ 15 000–28 000 Gold\n' +
-        'Epic ≈ 65 000–75 000 Gold + Materialkosten',
+        'Effect types: powerMultiplier, cpsMultiplier, cpcMultiplier\n' +
+        'Price range: Common ≈ 1,200–2,500 Gold | Rare ≈ 15,000–28,000 Gold\n' +
+        'Epic ≈ 65,000–75,000 Gold + material costs',
     },
     {
       id: 'item-swords-common',
-      name: 'Waffen: Common-Schwerter',
+      name: 'Weapons: Common Swords',
       icon: '/img/itemShop/sword/AncientBoneSword.png',
       description:
-        '• Ancient Bone Sword: 1 200 Gold → +12% Kampfkraft\n' +
-        '• Crystal Shard Sword: 1 800 Gold → +10% CPS, +5% Kampfkraft\n' +
-        '• Coral Cutlass: 2 500 Gold → +15% Kampfkraft',
-      lore: 'Einfache, aber bewährte Klingen.',
+        '• Ancient Bone Sword: 1,200 Gold → +12% Combat Power\n' +
+        '• Crystal Shard Sword: 1,800 Gold → +10% CPS, +5% Combat Power\n' +
+        '• Coral Cutlass: 2,500 Gold → +15% Combat Power',
+      lore: 'Simple but proven blades.',
       formula:
         'ancient_bone_sword: price=1200, powerMultiplier=1.12\n' +
         'crystal_shard_sword: price=1800, cpsMultiplier=1.1, powerMultiplier=1.05\n' +
@@ -112,14 +112,14 @@ export const itemsCategory: EncyclopediaCategory = {
     },
     {
       id: 'item-swords-rare',
-      name: 'Waffen: Rare-Schwerter',
+      name: 'Weapons: Rare Swords',
       icon: '/img/itemShop/sword/HolySunblade.png',
       description:
-        '• Holy Sunblade: 15 000 Gold + 1× Sonnenessenz → +20% Power, +15% CPS\n' +
-        '• Mechanical Gear Sword: 18 000 Gold + 2× Nebelquarz → +25% CPS, +12% Power\n' +
-        '• Leaf & Vine Sword: 22 000 Gold + 1× Sonnenessenz → +20% CPS, +18% Power\n' +
-        '• Lava Forge Blade: 28 000 Gold + 2× Nebelquarz → +28% Power, +8% CPS',
-      lore: 'Klingen, die mit kosmischen Materialien gefertigt wurden.',
+        '• Holy Sunblade: 15,000 Gold + 1× Solar Essence → +20% Power, +15% CPS\n' +
+        '• Mechanical Gear Sword: 18,000 Gold + 2× Nebula Quartz → +25% CPS, +12% Power\n' +
+        '• Leaf & Vine Sword: 22,000 Gold + 1× Solar Essence → +20% CPS, +18% Power\n' +
+        '• Lava Forge Blade: 28,000 Gold + 2× Nebula Quartz → +28% Power, +8% CPS',
+      lore: 'Blades forged with cosmic materials.',
       formula:
         'holy_sunblade: price=15000, solar_essence×1, powerMultiplier=1.2, cpsMultiplier=1.15\n' +
         'mechanical_gear_sword: price=18000, nebula_quartz×2, cpsMultiplier=1.25, powerMultiplier=1.12\n' +
@@ -128,12 +128,12 @@ export const itemsCategory: EncyclopediaCategory = {
     },
     {
       id: 'item-swords-epic',
-      name: 'Waffen: Epic-Schwerter',
+      name: 'Weapons: Epic Swords',
       icon: '/img/itemShop/sword/StormBlade.png',
       description:
-        '• Storm Blade: 65 000 Gold + 1× Leerscherbe → +40% Power, +12% CPS\n' +
-        '• Frozen Tundra Sword: 75 000 Gold + 1× Leerscherbe → +45% Power, +8% CPS',
-      lore: 'Waffen epischer Macht – jede Schwingung erschüttert den Kosmos.',
+        '• Storm Blade: 65,000 Gold + 1× Void Shard → +40% Power, +12% CPS\n' +
+        '• Frozen Tundra Sword: 75,000 Gold + 1× Void Shard → +45% Power, +8% CPS',
+      lore: 'Weapons of epic power — every swing shakes the cosmos.',
       formula:
         'storm_blade: price=65000, void_shard×1, powerMultiplier=1.4, cpsMultiplier=1.12\n' +
         'frozen_tundra_sword: price=75000, void_shard×1, powerMultiplier=1.45, cpsMultiplier=1.08',

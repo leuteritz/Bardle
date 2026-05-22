@@ -11,23 +11,23 @@ const visible = computed(() => gameStore.showUniverseSelectModal)
 const effectLabels: Record<keyof ModifierEffects, { label: string; neutral: number }> = {
   cpsMultiplier: { label: 'CPS', neutral: 1 },
   cpcMultiplier: { label: 'CPC', neutral: 1 },
-  buildingCostMultiplier: { label: 'Kosten', neutral: 1 },
-  meepCostMultiplier: { label: 'Meep-Kosten', neutral: 1 },
-  meepPowerMultiplier: { label: 'Meep-Power', neutral: 1 },
-  levelExponent: { label: 'Level-Exponent', neutral: 1.2 },
+  buildingCostMultiplier: { label: 'Cost', neutral: 1 },
+  meepCostMultiplier: { label: 'Meep Cost', neutral: 1 },
+  meepPowerMultiplier: { label: 'Meep Power', neutral: 1 },
+  levelExponent: { label: 'Level Exponent', neutral: 1.2 },
   maxAbilityLevel: { label: 'Max Ability Lvl', neutral: 5 },
-  skillPointInterval: { label: 'SP-Intervall', neutral: 2 },
+  skillPointInterval: { label: 'SP Interval', neutral: 2 },
   eloPowerMultiplier: { label: 'Battle-Power', neutral: 1 },
   expeditionRewardMultiplier: { label: 'Expedition-Rewards', neutral: 1 },
   abilityCPSPerLevel: { label: 'Ability CPS/Lvl', neutral: 0.15 },
   abilityCPCPerLevel: { label: 'Ability CPC/Lvl', neutral: 0.25 },
   abilityPowerPerLevel: { label: 'Ability Power/Lvl', neutral: 300 },
-  abilityMeepCostPerLevel: { label: 'Ability Meep-Kosten/Lvl', neutral: 0.1 },
-  baseChimesPerClick: { label: 'Basis-CPC', neutral: 20 },
+  abilityMeepCostPerLevel: { label: 'Ability Meep Cost/Lvl', neutral: 0.1 },
+  baseChimesPerClick: { label: 'Base CPC', neutral: 20 },
   buildingMultipliers: { label: 'Multipliers', neutral: 1 },
   cooldownMultiplier: { label: 'Cooldown', neutral: 1 },
-  enemySpeedMultiplier: { label: 'Gegner-Speed', neutral: 1 },
-  enemyMaxHPDrainPerSecond: { label: 'HP-Drain/Sek', neutral: 0 },
+  enemySpeedMultiplier: { label: 'Enemy Speed', neutral: 1 },
+  enemyMaxHPDrainPerSecond: { label: 'HP Drain/sec', neutral: 0 },
 }
 
 const higherIsBetter = new Set([
@@ -117,7 +117,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">
-            <h2 class="text-3xl font-bold uni-title">Wähle dein nächstes Universum</h2>
+            <h2 class="text-3xl font-bold uni-title">Choose Your Next Universe</h2>
           </div>
 
           <!-- Universe Cards Grid -->
@@ -141,7 +141,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
                 v-if="universe.id === gameStore.currentUniverse"
                 class="uni-active-badge absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold"
               >
-                AKTIV
+                ACTIVE
               </span>
 
               <!-- Icon -->
@@ -182,7 +182,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
 
               <!-- No modifier hint -->
               <div v-else class="uni-no-mod w-full p-2.5 text-center text-[10px]">
-                Keine Modifikatoren
+                No Modifiers
               </div>
             </button>
           </div>
@@ -193,7 +193,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
               class="px-6 py-2 text-sm uni-cancel-btn"
               @click="gameStore.closePrestigeModal()"
             >
-              Abbrechen
+              Cancel
             </button>
           </div>
         </div>

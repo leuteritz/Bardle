@@ -11,7 +11,7 @@ const { resetGame } = usePersistence()
 const handleReset = () => {
   if (
     window.confirm(
-      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'Really delete save? This action cannot be undone.',
     )
   ) {
     resetGame()
@@ -46,11 +46,11 @@ const rarityLabel: Record<string, string> = {
         <div class="relative flex items-center justify-center p-5 rpg-header">
           <div class="text-center">
             <h2 class="text-2xl font-bold aug-title">Level {{ gameStore.level }}</h2>
-            <p class="mt-1 text-xs aug-subtitle">Wähle ein Augment</p>
+            <p class="mt-1 text-xs aug-subtitle">Choose an Augment</p>
           </div>
 
           <!-- Reset Button -->
-          <button class="aug-reset-btn" title="Spielstand löschen" @click.stop="handleReset">
+          <button class="aug-reset-btn" title="Delete Save" @click.stop="handleReset">
             ✕
           </button>
         </div>
@@ -58,7 +58,7 @@ const rarityLabel: Record<string, string> = {
         <!-- Skip -->
         <div class="flex justify-center px-6 pt-3">
           <button class="text-xs underline skip-btn" @click="gameStore.skipAllAugments()">
-            Überspringen
+            Skip
           </button>
         </div>
 
@@ -104,7 +104,7 @@ const rarityLabel: Record<string, string> = {
               class="aug-select-btn mt-auto px-4 py-1.5 text-xs font-bold"
               :class="`rpg-badge-${aug.rarity}`"
             >
-              Auswählen
+              Select
             </div>
           </button>
         </div>

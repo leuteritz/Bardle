@@ -29,7 +29,7 @@
           <!-- Header -->
           <div class="honor-header">
             <span class="honor-shield">⚜️</span>
-            <span class="honor-title">HONOR VERGEBEN</span>
+            <span class="honor-title">GRANT HONOR</span>
             <div class="honor-pips">
               <span
                 v-for="n in 3"
@@ -71,7 +71,7 @@
 
           <!-- Enemies -->
           <div class="honor-group">
-            <div class="honor-group-label honor-group-label--enemy">GEGNER</div>
+            <div class="honor-group-label honor-group-label--enemy">ENEMIES</div>
             <div class="honor-cards">
               <button
                 v-for="(player, i) in honorEnemies"
@@ -105,7 +105,7 @@
             @click="battleStore.dismissResult()"
             class="px-5 py-2 text-sm font-black result-btn"
           >
-            Weiter →
+            Continue →
             <span
               v-if="battleStore.resultCountdown > 0"
               class="ml-1 text-xs opacity-70"
@@ -149,7 +149,7 @@ export default defineComponent({
       honoredPlayers.value = next
     }
 
-    // Honor-Auswahl bei jedem neuen Result zurücksetzen
+    // Reset honor selection on every new result
     watch(
       () => battleStore.showAutoBattleResult,
       (shown) => {

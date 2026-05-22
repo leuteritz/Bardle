@@ -190,21 +190,21 @@ function getOrbitPos(
 }
 
 function slotRoleLabel(slot: PlanetSlot): string {
-  if (!slot.role) return 'Keine Rolle — klicken zum Zuweisen'
+  if (!slot.role) return 'No Role — click to assign'
   const r = PLANET_ROLES[slot.role]
   switch (r.bonusType) {
     case 'auto_attack_dps':
       return `${r.name}: +${r.bonusPerSlot} DPS/s`
     case 'material_harvest_rate':
-      return `${r.name}: Ernte alle 30s`
+      return `${r.name}: Harvest every 30s`
     case 'expedition_reward_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Exped.-Belohnung`
+      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Exped. Reward`
     case 'boss_damage_reduction':
-      return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Orbit-Schaden`
+      return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Orbit Damage`
     case 'offline_boost':
       return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Offline`
     case 'building_cps_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Gebäude-CPS`
+      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Building CPS`
   }
 }
 

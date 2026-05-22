@@ -2,7 +2,7 @@ import type { EncyclopediaCategory } from './types'
 
 export const resourcesCategory: EncyclopediaCategory = {
   id: 'resources',
-  title: 'Ressourcen',
+  title: 'Resources',
   icon: '💎',
   entries: [
     {
@@ -10,77 +10,77 @@ export const resourcesCategory: EncyclopediaCategory = {
       name: 'Chimes',
       icon: '/img/BardAbilities/BardChime.png',
       description:
-        'Die primäre Währung im Spiel. Chimes werden durch Klicken (CPC) oder passive Gebäude-Produktion (CPS) verdient. ' +
-        'Sie werden für den Kauf von Gebäuden, permanenten Upgrades und das Erreichen des nächsten Universums benötigt. ' +
-        'Der Startwert für Chimes pro Klick beträgt 20 (baseChimesPerClick = 20).',
-      lore: 'Kosmische Klänge, die durch die Dimensionen hallen. Jeder Chime trägt ein Fragment der universellen Harmonie in sich.',
+        'The primary currency in the game. Chimes are earned by clicking (CPC) or through passive building production (CPS). ' +
+        'They are needed to buy buildings, permanent upgrades, and to reach the next universe. ' +
+        'The starting value for Chimes per click is 20 (baseChimesPerClick = 20).',
+      lore: 'Cosmic sounds echoing through dimensions. Every Chime carries a fragment of universal harmony.',
       formula:
-        'Manuell: Chimes += chimesPerClick pro Klick\n' +
-        'Passiv: Chimes += chimesPerSecond × Δt\n' +
-        'Startwert baseChimesPerClick = 20',
+        'Manual: Chimes += chimesPerClick per click\n' +
+        'Passive: Chimes += chimesPerSecond × Δt\n' +
+        'Starting value baseChimesPerClick = 20',
     },
     {
       id: 'meeps',
       name: 'Meeps',
       icon: '/img/BardAbilities/BardMeep.png',
       description:
-        'Kleine kosmische Begleiter, die automatisch erscheinen, wenn genug Chimes für den nächsten Meep angesammelt wurden. ' +
-        'Jeder Meep gibt +100 Kampfkraft. Meeps können auf Expeditionen geschickt werden. ' +
-        'Der erste Meep kostet 20 Chimes. Mit jedem weiteren Meep steigen die Kosten exponentiell.',
-      lore: 'Treue Geister aus dem Raum zwischen den Welten. Sie folgen dem Ruf der Chimes und sammeln sich um ihren Meister.',
+        'Small cosmic companions that automatically appear when enough Chimes have been accumulated for the next Meep. ' +
+        'Each Meep grants +100 Combat Power. Meeps can be sent on expeditions. ' +
+        'The first Meep costs 20 Chimes. Costs scale exponentially with each additional Meep.',
+      lore: 'Loyal spirits from the space between worlds. They follow the call of Chimes and gather around their master.',
       formula:
-        'Kosten = ceil(20 × meeps^1.2)\n' +
+        'Cost = ceil(20 × meeps^1.2)\n' +
         'MEEP_BASE_COST = 20 | MEEP_COST_EXPONENT = 1.2\n' +
-        'E-Ability & Augmente können die Kosten reduzieren',
+        'E ability & augments can reduce the cost',
     },
     {
       id: 'gold',
       name: 'Gold',
       icon: '/img/BardGold.png',
       description:
-        'Wird ausschließlich durch gewonnene Kämpfe verdient. ' +
-        'Gold dient zum Rekrutieren neuer Champions im Item-Shop. ' +
-        'Die Menge Gold pro Sieg skaliert mit dem MMR und dem Rang.',
-      lore: 'Die Währung der Schlachtfelder. Geschmiedet aus dem Triumph über würdige Gegner.',
-      formula: 'Goldgewinn pro Sieg = abhängig von MMR und Rang',
+        'Earned exclusively through won battles. ' +
+        'Gold is used to recruit new champions in the item shop. ' +
+        'The amount of Gold per win scales with MMR and rank.',
+      lore: 'The currency of the battlefields. Forged from triumph over worthy opponents.',
+      formula: 'Gold earned per win = depends on MMR and rank',
     },
   ],
 }
 
 export const levelingCategory: EncyclopediaCategory = {
   id: 'leveling',
-  title: 'Leveling & Skillpunkte',
+  title: 'Leveling & Skill Points',
   icon: '⬆️',
   entries: [
     {
       id: 'level-system',
-      name: 'Level-System',
+      name: 'Level System',
       icon: '/img/BardAbilities/Bard.png',
       description:
-        'Das Level steigt automatisch, wenn die kumulierten Chimes die Schwelle für das aktuelle Level überschreiten. ' +
-        'Jedes zweite Level (skillPointInterval = 2) gibt einen Skillpunkt, der zum Upgraden von Fähigkeiten genutzt wird. ' +
-        'Bei jedem Level-Up erscheint die Augment-Auswahl (3 zufällige Augmente).',
-      lore: 'Wachstum durch Erfahrung. Jedes neue Level öffnet Türen zu unbekannten Kräften.',
+        'Level increases automatically when cumulative Chimes exceed the threshold for the current level. ' +
+        'Every second level (skillPointInterval = 2) grants a skill point used to upgrade abilities. ' +
+        'At every level-up the augment selection appears (3 random augments).',
+      lore: 'Growth through experience. Every new level opens doors to unknown powers.',
       formula:
-        'Schwelle für Level N = ceil(2000 × N^2.2)\n' +
+        'Threshold for Level N = ceil(2000 × N^2.2)\n' +
         'LEVEL_BASE = 2000 | LEVEL_EXPONENT = 2.2\n' +
-        'Beispiel: Level 5 → ceil(2000 × 5^2.2) = ceil(2000 × 21.11) ≈ 42 220 Chimes\n' +
-        'Skillpunkt alle 2 Level (default, kann durch Modifier verändert werden)',
+        'Example: Level 5 → ceil(2000 × 5^2.2) = ceil(2000 × 21.11) ≈ 42,220 Chimes\n' +
+        'Skill point every 2 levels (default, can be changed by modifier)',
     },
     {
       id: 'skill-points',
-      name: 'Skillpunkte',
+      name: 'Skill Points',
       icon: '/img/BardAbilities/BardQ.png',
       description:
-        'Skillpunkte werden für das Upgraden der vier Fähigkeiten Q, W, E und R verwendet. ' +
-        'Alternativ können Fähigkeiten auch einmalig mit Meeps freigeschaltet werden (Kosten: Q=3, W=8, E=20, R=45 Meeps). ' +
-        'Maximum pro Fähigkeit: 5 Level (MAX_ABILITY_LEVEL = 5).',
-      lore: 'Wissen, kristallisiert in Energie. Jeder Punkt ist ein Versprechen an die Zukunft.',
+        'Skill points are used to upgrade the four abilities Q, W, E, and R. ' +
+        'Alternatively, abilities can be unlocked once with Meeps (costs: Q=3, W=8, E=20, R=45 Meeps). ' +
+        'Maximum per ability: 5 levels (MAX_ABILITY_LEVEL = 5).',
+      lore: 'Knowledge crystallized into energy. Every point is a promise to the future.',
       formula:
-        'Meep-Freischaltkosten (einmalig, auf Level MAX):\n' +
+        'Meep unlock costs (one-time, unlocks to MAX level):\n' +
         'Q = 3 Meeps | W = 8 Meeps | E = 20 Meeps | R = 45 Meeps\n' +
         'SKILL_MEEP_COSTS = [3, 8, 20, 45]\n' +
-        'Reihenfolge: Fähigkeiten müssen der Reihe nach freigeschaltet werden (Q → W → E → R)',
+        'Order: abilities must be unlocked in sequence (Q → W → E → R)',
     },
   ],
 }

@@ -33,11 +33,11 @@ import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
 export const CURSE_DEFS: Record<MidCurseType, { name: string; icon: string; effect: string }> = {
-  corruption: { name: 'Verderbnis',  icon: '☠️', effect: '8 Schaden/Sek.' },
-  weakness:   { name: 'Schwächung',  icon: '⚔️', effect: 'Feindangriff −60%' },
-  banishment: { name: 'Bannfluch',   icon: '🌑', effect: 'Spielerschaden ×1.8' },
-  glaciation: { name: 'Erstarrung', icon: '❄️', effect: 'Feindangriff 3× langsamer' },
-  damnation:  { name: 'Verdammnis', icon: '💫', effect: 'Sofort 20% MaxHP Schaden' },
+  corruption: { name: 'Corruption',  icon: '☠️', effect: '8 damage/sec.' },
+  weakness:   { name: 'Weakness',    icon: '⚔️', effect: 'Enemy attack −60%' },
+  banishment: { name: 'Hexblight',   icon: '🌑', effect: 'Player damage ×1.8' },
+  glaciation: { name: 'Petrify',     icon: '❄️', effect: 'Enemy attack 3× slower' },
+  damnation:  { name: 'Damnation',   icon: '💫', effect: 'Instant 20% MaxHP damage' },
 }
 
 const CURSE_TYPES = Object.keys(CURSE_DEFS) as MidCurseType[]

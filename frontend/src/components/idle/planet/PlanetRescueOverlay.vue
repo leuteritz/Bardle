@@ -21,7 +21,7 @@
         <!-- ── Boss Name Banner ──────────────────────────────────────────── -->
         <div class="name-banner" :class="{ 'name-banner--galaxy': isGalaxyBoss }">
           <div v-if="isGalaxyBoss" class="boss-type-badge boss-type-badge--galaxy">
-            ✦ GALAXIE-BOSS ✦
+            ✦ GALAXY BOSS ✦
           </div>
           <h2 class="boss-name" :class="{ 'boss-name--galaxy': isGalaxyBoss }">
             {{ bossStore.activeBoss?.bossName ?? 'Planet Boss' }}
@@ -43,7 +43,7 @@
         <!-- ── HP Bar ────────────────────────────────────────────────────── -->
         <div class="hp-section">
           <div class="hp-header">
-            <span class="stat-label">❤ LEBEN</span>
+            <span class="stat-label">❤ HP</span>
             <span class="hp-numbers">
               {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }}
               <span class="hp-sep">／</span>
@@ -77,7 +77,7 @@
           <div v-if="activeCurse" class="curse-block">
             <div class="curse-header">
               <span class="curse-header-line" />
-              <span class="curse-header-text">☠ AKTIVER FLUCH ☠</span>
+              <span class="curse-header-text">☠ ACTIVE CURSE ☠</span>
               <span class="curse-header-line" />
             </div>
             <div class="curse-row">
@@ -91,7 +91,7 @@
                   class="curse-timer-val"
                   :class="{ 'curse-timer-val--urgent': curseSecsLeft > 0 && curseSecsLeft <= 3 }"
                 >{{ curseSecsLeft }}</span>
-                <span class="curse-timer-label">SEK</span>
+                <span class="curse-timer-label">SEC</span>
               </div>
             </div>
           </div>
@@ -101,12 +101,12 @@
         <div class="reward-block" :class="{ 'reward-block--galaxy': isGalaxyBoss }">
           <div class="reward-block-header">
             <span class="reward-header-line" />
-            <span class="reward-header-text">✦ Besiege den Champion und erhalte ✦</span>
+            <span class="reward-header-text">✦ Defeat the Champion and receive ✦</span>
             <span class="reward-header-line" />
           </div>
 
           <div class="reward-row">
-            <!-- Materialien -->
+            <!-- Materials -->
             <div v-for="(entry, i) in groupedMaterials" :key="'mat-' + i" class="reward-item">
               <img :src="entry.material.image" :alt="entry.material.name" class="reward-item-img" />
               <div class="reward-item-info">
@@ -119,7 +119,7 @@
               <span class="reward-check">✓</span>
             </div>
 
-            <!-- Trennlinie wenn beides vorhanden -->
+            <!-- Divider when both are present -->
             <div v-if="groupedMaterials.length && chimesTotal > 0" class="reward-divider" />
 
             <!-- Chimes -->
@@ -181,11 +181,11 @@ const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
 const CURSE_DESC: Record<string, string> = {
-  corruption: 'Vergiftet den Boss — 8 Schaden/Sek. für 10 Sekunden',
-  weakness: 'Feindliche Angriffe richten nur 40 % Schaden an',
-  banishment: 'Alle Angriffe verursachen ×1.8 Schaden',
-  glaciation: 'Feindliche Angriffe werden 3× langsamer',
-  damnation: 'Hat dem Boss sofort 20 % seiner max. HP entzogen',
+  corruption: 'Poisons the boss — 8 damage/sec. for 10 seconds',
+  weakness: 'Enemy attacks deal only 40% damage',
+  banishment: 'All attacks deal ×1.8 damage',
+  glaciation: 'Enemy attacks are 3× slower',
+  damnation: 'Instantly removed 20% of the boss max HP',
 }
 
 const activeCurse = computed(() => {
@@ -869,7 +869,7 @@ function handleShake(ms: number) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   CHAMPION ROW — groß, zentriert, kein Label, kein Rahmen, kein Hint
+   CHAMPION ROW — large, centered, no label, no border, no hint
 ══════════════════════════════════════════════════════════════════════════════ */
 .champion-row {
   display: flex;
@@ -971,7 +971,7 @@ function handleShake(ms: number) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   FLUCH-ABSCHNITT
+   CURSE SECTION
 ══════════════════════════════════════════════════════════════════════════════ */
 .curse-block {
   margin: 0 0.8rem 0.7rem;

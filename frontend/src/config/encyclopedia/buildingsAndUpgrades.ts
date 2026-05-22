@@ -2,81 +2,81 @@ import type { EncyclopediaCategory } from './types'
 
 export const buildingsCategory: EncyclopediaCategory = {
   id: 'buildings',
-  title: 'Gebäude',
+  title: 'Buildings',
   icon: '🏗️',
   entries: [
     {
       id: 'chimeClicker',
-      name: 'Klicker',
+      name: 'Clicker',
       icon: '/img/ChimesPerClick.png',
       description:
-        'Erhöht die Chimes pro Klick (CPC). Jedes Level gibt +1 Basis-CPC. ' +
-        'Startkauf: 50 Chimes. Skaliert mit dem R-Ability-Multiplikator und allen CPC-Modifikatoren.',
-      lore: 'Ein mechanischer Verstärker, der die Resonanz jedes Klicks durch die kosmischen Frequenzen amplifiziert.',
+        'Increases Chimes per Click (CPC). Each level gives +1 base CPC. ' +
+        'Starting cost: 50 Chimes. Scales with the R-Ability multiplier and all CPC modifiers.',
+      lore: 'A mechanical amplifier that resonates every click through the cosmic frequencies.',
       formula:
-        'Kosten Stufe N = ceil(50 × 1.2^N)\n' +
+        'Cost Level N = ceil(50 × 1.2^N)\n' +
         'baseCost = 50 | baseCPC = 1 | costMultiplier = 1.2\n' +
-        'CPC-Beitrag = baseCPC × level × alle CPC-Multiplikatoren',
+        'CPC contribution = baseCPC × level × all CPC multipliers',
     },
     {
       id: 'glockenturm',
-      name: 'Glockenturm',
+      name: 'Bell Tower',
       icon: '/img/Glockenturm.png',
       description:
-        'Das günstigste CPS-Gebäude. Produziert automatisch +1 Chime pro Sekunde pro Level. ' +
-        'Kostet ab Stufe 0 nur 25 Chimes – ideal für den Einstieg.',
-      lore: 'Uralte Türme, deren Glocken in Frequenzen schwingen, die nur kosmische Wesen hören können.',
+        'The cheapest CPS building. Automatically produces +1 Chime per second per level. ' +
+        'Costs only 25 Chimes at level 0 — ideal for early game.',
+      lore: 'Ancient towers whose bells ring at frequencies only cosmic beings can hear.',
       formula:
-        'Kosten Stufe N = ceil(25 × 1.15^N)\n' +
+        'Cost Level N = ceil(25 × 1.15^N)\n' +
         'baseCost = 25 | baseCPS = 1 | costMultiplier = 1.15\n' +
-        'CPS-Beitrag = 1 × level × alle CPS-Multiplikatoren',
+        'CPS contribution = 1 × level × all CPS multipliers',
     },
     {
       id: 'klanggenerator',
-      name: 'Klang Generator',
+      name: 'Sound Generator',
       icon: '/img/KlangGenerator.png',
       description:
-        'Mittlere Produktionsstufe mit +3 CPS pro Level. ' +
-        'Gutes Preis-Leistungs-Verhältnis in der Mid-Game-Phase.',
-      lore: 'Maschinen, die die natürlichen Harmonien der Sternennebel einfangen und in reine Chime-Energie umwandeln.',
+        'Mid-tier production with +3 CPS per level. ' +
+        'Good value for the mid-game phase.',
+      lore: 'Machines that capture the natural harmonies of star nebulae and convert them into pure Chime energy.',
       formula:
-        'Kosten Stufe N = ceil(100 × 1.2^N)\n' +
+        'Cost Level N = ceil(100 × 1.2^N)\n' +
         'baseCost = 100 | baseCPS = 3 | costMultiplier = 1.2',
     },
     {
       id: 'harmoniewerk',
-      name: 'Harmonie Werk',
+      name: 'Harmony Works',
       icon: '/img/HarmonieWerk.png',
       description:
-        'Fortgeschrittene Produktionseinheit mit +5 CPS pro Level. ' +
-        'Startet bei 500 Chimes und skaliert mit ×1.25 pro Level.',
-      lore: 'Riesige Fabriken der Klangschmiede, wo rohe kosmische Energie in perfekte Harmonien geformt wird.',
+        'Advanced production unit with +5 CPS per level. ' +
+        'Starts at 500 Chimes and scales at ×1.25 per level.',
+      lore: 'Vast sound-forge factories where raw cosmic energy is shaped into perfect harmonies.',
       formula:
-        'Kosten Stufe N = ceil(500 × 1.25^N)\n' +
+        'Cost Level N = ceil(500 × 1.25^N)\n' +
         'baseCost = 500 | baseCPS = 5 | costMultiplier = 1.25',
     },
     {
       id: 'sphaerenMusik',
-      name: 'Sphären Musik',
+      name: 'Sphere Music',
       icon: '/img/SphaerenMusik.png',
       description:
-        'Hochwertige Einheit mit +10 CPS pro Level. ' +
-        'Ab 2 500 Chimes Basiskosten – für fortgeschrittene Spieler.',
-      lore: 'Die Musik der Sphären selbst, eingefangen in kristallinen Resonanzkammern jenseits von Raum und Zeit.',
+        'High-quality unit with +10 CPS per level. ' +
+        'Base cost 2,500 Chimes — for advanced players.',
+      lore: 'The music of the spheres itself, captured in crystalline resonance chambers beyond space and time.',
       formula:
-        'Kosten Stufe N = ceil(2500 × 1.3^N)\n' +
+        'Cost Level N = ceil(2500 × 1.3^N)\n' +
         'baseCost = 2 500 | baseCPS = 10 | costMultiplier = 1.3',
     },
     {
       id: 'zeitEcho',
-      name: 'Zeit Echo',
+      name: 'Time Echo',
       icon: '/img/ZeitEcho.png',
       description:
-        'Das stärkste Produktionsgebäude mit +25 CPS pro Level, aber mit den höchsten Kosten. ' +
-        'Skaliert besonders steil (×1.4 pro Level) – lohnt sich erst im Late Game.',
-      lore: 'Echos aus der Zukunft, die durch Risse in der Zeit zurückhallen und dabei Chimes aus noch ungeschriebenen Melodien formen.',
+        'The most powerful production building with +25 CPS per level, but the highest costs. ' +
+        'Scales especially steeply (×1.4 per level) — only worth it in the late game.',
+      lore: 'Echoes from the future reverberating through cracks in time, shaping Chimes from melodies not yet written.',
       formula:
-        'Kosten Stufe N = ceil(10 000 × 1.4^N)\n' +
+        'Cost Level N = ceil(10 000 × 1.4^N)\n' +
         'baseCost = 10 000 | baseCPS = 25 | costMultiplier = 1.4',
     },
   ],
@@ -84,119 +84,119 @@ export const buildingsCategory: EncyclopediaCategory = {
 
 export const permanentUpgradesCategory: EncyclopediaCategory = {
   id: 'permanentUpgrades',
-  title: 'Permanente Upgrades',
+  title: 'Permanent Upgrades',
   icon: '🔧',
   entries: [
     {
       id: 'perm-cpc',
-      name: 'CPC-Upgrades',
+      name: 'CPC Upgrades',
       icon: '/img/ChimesPerClick.png',
       description:
-        'Drei dauerhafte Upgrades, die den Chimes-pro-Klick-Multiplikator erhöhen. Werden einmalig gekauft und gelten für den Rest des Runs. ' +
-        '1) Klick Training: 200 Chimes → ×1.1 CPC (+10%) | ' +
-        '2) Goldener Rhythmus: 1 500 Chimes → ×1.5 CPC (+50%) | ' +
-        '3) Meister Klick: 8 000 Chimes → ×2.0 CPC (×2)',
-      lore: 'Wissen, das sich in die Finger eingraviert. Einmal gelernt, nie vergessen.',
+        'Three permanent upgrades that increase the Chimes-per-Click multiplier. Purchased once and active for the rest of the run. ' +
+        '1) Click Training: 200 Chimes → ×1.1 CPC (+10%) | ' +
+        '2) Golden Rhythm: 1,500 Chimes → ×1.5 CPC (+50%) | ' +
+        '3) Master Click: 8,000 Chimes → ×2.0 CPC (×2)',
+      lore: 'Knowledge engraved into the fingers. Once learned, never forgotten.',
       formula:
-        'Klick Training: cost=200, cpcMultiplier=1.1\n' +
-        'Goldener Rhythmus: cost=1 500, cpcMultiplier=1.5\n' +
-        'Meister Klick: cost=8 000, cpcMultiplier=2.0\n' +
-        'Gesamt-CPC-Multiplikator = Produkt aller aktiven cpcMultiplier',
+        'Click Training: cost=200, cpcMultiplier=1.1\n' +
+        'Golden Rhythm: cost=1 500, cpcMultiplier=1.5\n' +
+        'Master Click: cost=8 000, cpcMultiplier=2.0\n' +
+        'Total CPC multiplier = product of all active cpcMultipliers',
     },
     {
       id: 'perm-cps',
-      name: 'CPS-Upgrades',
+      name: 'CPS Upgrades',
       icon: '/img/Glockenturm.png',
       description:
-        'Drei dauerhafte Upgrades für die passive Chime-Produktion aller Gebäude. ' +
-        '1) Rhythmus Boost: 500 Chimes → ×1.15 CPS (+15%) | ' +
-        '2) Chime Resonanz: 3 000 Chimes → ×1.25 CPS (+25%) | ' +
-        '3) Bardischer Nachhall: 75 000 Chimes → ×2.0 CPS (×2)',
-      lore: 'Die Gebäude lernen von einander. Ihre Klänge vermischen sich zu einem unstoppbaren Strom.',
+        'Three permanent upgrades for the passive Chime production of all buildings. ' +
+        '1) Rhythm Boost: 500 Chimes → ×1.15 CPS (+15%) | ' +
+        '2) Chime Resonance: 3,000 Chimes → ×1.25 CPS (+25%) | ' +
+        '3) Bardic Reverberation: 75,000 Chimes → ×2.0 CPS (×2)',
+      lore: 'The buildings learn from each other. Their sounds merge into an unstoppable stream.',
       formula:
-        'Rhythmus Boost: cost=500, cpsMultiplier=1.15\n' +
-        'Chime Resonanz: cost=3 000, cpsMultiplier=1.25\n' +
-        'Bardischer Nachhall: cost=75 000, cpsMultiplier=2.0\n' +
-        'Gesamt-CPS-Multiplikator = Produkt aller aktiven cpsMultiplier',
+        'Rhythm Boost: cost=500, cpsMultiplier=1.15\n' +
+        'Chime Resonance: cost=3 000, cpsMultiplier=1.25\n' +
+        'Bardic Reverberation: cost=75 000, cpsMultiplier=2.0\n' +
+        'Total CPS multiplier = product of all active cpsMultipliers',
     },
     {
       id: 'perm-buildings',
-      name: 'Gebäude-spezifische Upgrades',
+      name: 'Building-specific Upgrades',
       icon: '/img/HarmonieWerk.png',
       description:
-        'Upgrades, die die Produktion einzelner Gebäude verdoppeln. Erfordern ein Mindest-Level des jeweiligen Gebäudes. ' +
-        'Glockenturm Resonanz: 2 000 Chimes, min. Level 10 → ×2 Glockenturm-CPS | ' +
-        'Klang Synchro: 8 000 Chimes, min. Level 10 → ×2 Klang-Generator-CPS | ' +
-        'Harmonie Verstärkung: 30 000 Chimes, min. Level 10 → ×2 Harmonie-Werk-CPS | ' +
-        'Sphären Resonanz: 100 000 Chimes, min. Level 10 → ×2 Sphären-Musik-CPS | ' +
-        'Chrono Echo: 300 000 Chimes, min. Level 10 → ×2 Zeit-Echo-CPS',
-      lore: 'Synergie – wenn Gleiches mit Gleichem resoniert, entsteht mehr als die Summe seiner Teile.',
+        'Upgrades that double the production of individual buildings. Require a minimum level of the respective building. ' +
+        'Bell Tower Resonance: 2,000 Chimes, min. Level 10 → ×2 Bell Tower CPS | ' +
+        'Sound Sync: 8,000 Chimes, min. Level 10 → ×2 Sound Generator CPS | ' +
+        'Harmony Amplification: 30,000 Chimes, min. Level 10 → ×2 Harmony Works CPS | ' +
+        'Sphere Resonance: 100,000 Chimes, min. Level 10 → ×2 Sphere Music CPS | ' +
+        'Chrono Echo: 300,000 Chimes, min. Level 10 → ×2 Time Echo CPS',
+      lore: 'Synergy — when like resonates with like, something greater than the sum of its parts emerges.',
       formula:
-        'Jedes Gebäude-Upgrade: effect = { type: buildingBoost, value: 2, buildingId: ... }\n' +
-        'Voraussetzung: requirement.minLevel = 10',
+        'Each building upgrade: effect = { type: buildingBoost, value: 2, buildingId: ... }\n' +
+        'Requirement: requirement.minLevel = 10',
     },
   ],
 }
 
 export const abilitiesCategory: EncyclopediaCategory = {
   id: 'abilities',
-  title: 'Fähigkeiten',
+  title: 'Abilities',
   icon: '⚡',
   entries: [
     {
       id: 'ability-q',
-      name: 'Q – Kosmischer Klang',
+      name: 'Q – Cosmic Sound',
       icon: '/img/BardAbilities/BardQ.png',
       description:
-        'Erhöht die gesamte CPS-Produktion um +15% pro Level. ' +
-        'Wirkt als globaler Multiplikator auf alle passiven Gebäude. ' +
-        'Meep-Freischaltkosten: 3 Meeps (schaltet sofort auf MAX_ABILITY_LEVEL=5 frei).',
-      lore: 'Der erste Ton der Schöpfung, verstärkt durch jahrhundertelange Meditation in den Sternen.',
+        'Increases total CPS production by +15% per level. ' +
+        'Acts as a global multiplier on all passive buildings. ' +
+        'Meep unlock cost: 3 Meeps (unlocks immediately to MAX_ABILITY_LEVEL=5).',
+      lore: 'The first note of creation, amplified by centuries of meditation among the stars.',
       formula:
-        'CPS-Multiplikator = 1 + (Q-Level × 0.15)\n' +
+        'CPS multiplier = 1 + (Q-Level × 0.15)\n' +
         'Level 1 = +15% | Level 5 = +75% CPS\n' +
         'MAX_ABILITY_LEVEL = 5',
     },
     {
       id: 'ability-w',
-      name: 'W – Sternenschild',
+      name: 'W – Star Shield',
       icon: '/img/BardAbilities/BardW.png',
       description:
-        'Gibt +300 Kampfkraft (Power) pro Level. Erhöht direkt die Power für Kämpfe. ' +
-        'Meep-Freischaltkosten: 8 Meeps.',
-      lore: 'Ein Schutzschild aus verdichtetem Sternenlicht, das sowohl verteidigt als auch die innere Stärke entfesselt.',
+        'Grants +300 Combat Power per level. Directly increases Power for battles. ' +
+        'Meep unlock cost: 8 Meeps.',
+      lore: 'A shield of condensed starlight that both defends and unleashes inner strength.',
       formula:
-        'Power-Bonus = W-Level × 300\n' +
-        'Level 1 = +300 | Level 5 = +1 500 Power\n' +
-        'Wird addiert zu: Power = (Meeps × 100) + W-Bonus',
+        'Power bonus = W-Level × 300\n' +
+        'Level 1 = +300 | Level 5 = +1,500 Power\n' +
+        'Added to: Power = (Meeps × 100) + W bonus',
     },
     {
       id: 'ability-e',
-      name: 'E – Portal-Resonanz',
+      name: 'E – Portal Resonance',
       icon: '/img/BardAbilities/BardE.png',
       description:
-        'Reduziert die Kosten für neue Meeps um 10% pro Level. ' +
-        'Minimum: 50% der Originalkosten (Level 5 = maximale Reduktion). ' +
-        'Meep-Freischaltkosten: 20 Meeps.',
-      lore: 'Die Portale zwischen den Welten schwingen in Resonanz und machen es leichter, Meeps aus dem Zwischenraum zu rufen.',
+        'Reduces the cost of new Meeps by 10% per level. ' +
+        'Minimum: 50% of original cost (Level 5 = maximum reduction). ' +
+        'Meep unlock cost: 20 Meeps.',
+      lore: 'The portals between worlds vibrate in resonance, making it easier to call Meeps from the in-between.',
       formula:
-        'Kosten-Multiplikator = max(0.5, 1 − E-Level × 0.1)\n' +
-        'Level 1 = −10% | Level 5 = −50% (= 50% der Originalkosten)\n' +
-        'Wird multipliziert mit dem Basiskosten-Wert des nächsten Meeps',
+        'Cost multiplier = max(0.5, 1 − E-Level × 0.1)\n' +
+        'Level 1 = −10% | Level 5 = −50% (= 50% of original cost)\n' +
+        'Multiplied with the base cost of the next Meep',
     },
     {
       id: 'ability-r',
-      name: 'R – Bardischer Einklang',
+      name: 'R – Bardic Harmony',
       icon: '/img/BardAbilities/BardR.png',
       description:
-        'Erhöht die Chimes pro Klick (CPC) um +25% pro Level. ' +
-        'Wirkt als Multiplikator auf manuelle Klicks und das Klicker-Gebäude. ' +
-        'Meep-Freischaltkosten: 45 Meeps.',
-      lore: 'Die ultimative Harmonie zwischen Bard und dem Kosmos. Jede Berührung hallt durch alle Dimensionen.',
+        'Increases Chimes per Click (CPC) by +25% per level. ' +
+        'Acts as a multiplier on manual clicks and the Clicker building. ' +
+        'Meep unlock cost: 45 Meeps.',
+      lore: 'The ultimate harmony between Bard and the cosmos. Every touch echoes through all dimensions.',
       formula:
-        'CPC-Multiplikator = 1 + (R-Level × 0.25)\n' +
+        'CPC multiplier = 1 + (R-Level × 0.25)\n' +
         'Level 1 = +25% | Level 5 = +125% CPC\n' +
-        'Wird multipliziert mit baseChimesPerClick und Klicker-Beitrag',
+        'Multiplied with baseChimesPerClick and Clicker contribution',
     },
   ],
 }

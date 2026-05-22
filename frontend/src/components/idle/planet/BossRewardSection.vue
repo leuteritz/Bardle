@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="reward-header">
       <span class="reward-header-line" />
-      <span class="reward-header-text">Belohnungen</span>
+      <span class="reward-header-text">Rewards</span>
       <span class="reward-header-line" />
     </div>
 

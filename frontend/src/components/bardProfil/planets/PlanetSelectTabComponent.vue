@@ -6,11 +6,11 @@ import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
 import { MATERIALS } from '@/config/materials'
 
 const CPS_BUILDINGS = [
-  { id: 'glockenturm', name: 'Glockenturm', icon: '/img/Glockenturm.png' },
-  { id: 'klanggenerator', name: 'Klang Generator', icon: '/img/KlangGenerator.png' },
-  { id: 'harmoniewerk', name: 'Harmonie Werk', icon: '/img/HarmonieWerk.png' },
-  { id: 'sphaerenMusik', name: 'Sphären Musik', icon: '/img/SphaerenMusik.png' },
-  { id: 'zeitEcho', name: 'Zeit Echo', icon: '/img/ZeitEcho.png' },
+  { id: 'glockenturm', name: 'Bell Tower', icon: '/img/Glockenturm.png' },
+  { id: 'klanggenerator', name: 'Sound Generator', icon: '/img/KlangGenerator.png' },
+  { id: 'harmoniewerk', name: 'Harmony Works', icon: '/img/HarmonieWerk.png' },
+  { id: 'sphaerenMusik', name: 'Sphere Music', icon: '/img/SphaerenMusik.png' },
+  { id: 'zeitEcho', name: 'Time Echo', icon: '/img/ZeitEcho.png' },
 ]
 
 const uiStore = useUiStore()
@@ -95,17 +95,17 @@ const rolesRight = PLANET_ROLES_LIST.slice(3, 6)
 function bonusText(role: PlanetRole): string {
   switch (role.bonusType) {
     case 'auto_attack_dps':
-      return `+${role.bonusPerSlot} DPS/s auf Boss`
+      return `+${role.bonusPerSlot} DPS/s on Boss`
     case 'material_harvest_rate':
-      return `1 Material alle 30s`
+      return `1 Material every 30s`
     case 'expedition_reward_multiplier':
-      return `+${Math.round(role.bonusPerSlot * 100)}% Exp.-Belohnung`
+      return `+${Math.round(role.bonusPerSlot * 100)}% Exp. Reward`
     case 'boss_damage_reduction':
-      return `-${Math.round(role.bonusPerSlot * 100)}% Boss-Schaden`
+      return `-${Math.round(role.bonusPerSlot * 100)}% Boss Damage`
     case 'offline_boost':
-      return `+${Math.round(role.bonusPerSlot * 100)}% Offline-Ertrag`
+      return `+${Math.round(role.bonusPerSlot * 100)}% Offline Yield`
     case 'building_cps_multiplier':
-      return `+${Math.round(role.bonusPerSlot * 100)}% Gebäude-CPS`
+      return `+${Math.round(role.bonusPerSlot * 100)}% Building CPS`
   }
 }
 </script>
@@ -128,7 +128,7 @@ function bonusText(role: PlanetRole): string {
       >
         <template v-if="!slot.purchased">
           <span class="ps-slot-btn-lock">
-            <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+            <img src="/img/lock.png" alt="Locked" class="lock-icon" />
           </span>
         </template>
         <template v-else>
@@ -159,10 +159,10 @@ function bonusText(role: PlanetRole): string {
     <!-- Gesperrter Slot ausgewählt -->
     <div v-if="activeSlot && !activeSlot.purchased" class="ps-locked-panel">
       <span class="ps-locked-panel-icon">
-        <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+        <img src="/img/lock.png" alt="Locked" class="lock-icon" />
       </span>
       <span class="ps-locked-panel-title">
-        Orbit {{ activeSlot.id.replace('slot_', '') }} · Gesperrt
+        Orbit {{ activeSlot.id.replace('slot_', '') }} · Locked
       </span>
       <div class="ps-locked-panel-cost-row">
         <img src="/img/BardAbilities/BardChime.png" class="ps-locked-panel-chime" alt="" />
@@ -175,9 +175,9 @@ function bonusText(role: PlanetRole): string {
         class="ps-locked-panel-buy-btn"
         @click="store.buySlot(activeSlot.id)"
       >
-        ✦ Freischalten
+        ✦ Unlock
       </button>
-      <span v-else class="ps-locked-panel-hint">Noch nicht genug Chimes</span>
+      <span v-else class="ps-locked-panel-hint">Not enough Chimes yet</span>
     </div>
 
     <template v-if="activeSlot && activeSlot.purchased">
@@ -198,7 +198,7 @@ function bonusText(role: PlanetRole): string {
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
               <span class="ps-role-effect">{{ bonusText(role) }}</span>
-              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
+              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Active</div>
             </button>
           </div>
 
@@ -248,7 +248,7 @@ function bonusText(role: PlanetRole): string {
                   <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
                 </div>
                 <div class="ps-jungle-buff-row">
-                  <span class="ps-jungle-buff-label">Multiplikator</span>
+                  <span class="ps-jungle-buff-label">Multiplier</span>
                   <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
                 </div>
               </div>
@@ -270,7 +270,7 @@ function bonusText(role: PlanetRole): string {
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
               <span class="ps-role-effect">{{ bonusText(role) }}</span>
-              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Aktiv</div>
+              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Active</div>
             </button>
           </div>
         </div>
@@ -280,8 +280,8 @@ function bonusText(role: PlanetRole): string {
           <div v-if="activeSlot.role === 'harvest_node'" class="ps-config-section">
             <div class="ps-config-header">
               <span class="ps-config-header-icon">🌾</span>
-              <span>Material auswählen</span>
-              <span class="ps-config-header-hint">Wähle das zu erntende Material</span>
+              <span>Select Material</span>
+              <span class="ps-config-header-hint">Choose the material to harvest</span>
             </div>
             <div class="ps-config-grid">
               <button
@@ -312,8 +312,8 @@ function bonusText(role: PlanetRole): string {
           <div v-if="activeSlot.role === 'resonance_tower'" class="ps-config-section">
             <div class="ps-config-header">
               <span class="ps-config-header-icon">🏗️</span>
-              <span>Gebäude auswählen</span>
-              <span class="ps-config-header-hint">Welches Gebäude soll verstärkt werden?</span>
+              <span>Select Building</span>
+              <span class="ps-config-header-hint">Which building should be boosted?</span>
             </div>
             <div class="ps-config-grid">
               <button

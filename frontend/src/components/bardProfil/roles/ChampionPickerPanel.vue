@@ -36,7 +36,7 @@ const battleStore = useBattleStore()
 const searchQuery = ref('')
 
 const headerTitle = computed(() =>
-  props.pickerTitle ? props.pickerTitle : `${props.activeRole} — Champion wählen`,
+  props.pickerTitle ? props.pickerTitle : `${props.activeRole} — Select Champion`,
 )
 
 const filteredChampions = computed(() => {
@@ -75,7 +75,7 @@ function onImgError(e: Event) {
   <div class="champion-picker-panel">
     <div class="sub-header">
       <span class="sub-header-title">{{ headerTitle }}</span>
-      <button class="back-btn" @click="emit('back')">← Zurück</button>
+      <button class="back-btn" @click="emit('back')">← Back</button>
     </div>
 
     <div class="search-row">
@@ -83,7 +83,7 @@ function onImgError(e: Event) {
       <input
         v-model="searchQuery"
         type="text"
-        :placeholder="`${activeRole}-Champion suchen …`"
+        :placeholder="`Search ${activeRole} Champion…`"
         class="search-input"
       />
       <span class="search-count">
@@ -97,8 +97,8 @@ function onImgError(e: Event) {
         <span class="picker-empty-icon">🎵</span>
         <span>{{
           roleFilteredChampions.length === 0
-            ? `Keine ${activeRole}-Champions gekauft!`
-            : 'Kein Champion gefunden.'
+            ? `No ${activeRole} champions purchased!`
+            : 'No champion found.'
         }}</span>
       </div>
       <div v-else class="picker-grid">

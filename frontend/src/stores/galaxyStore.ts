@@ -204,7 +204,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.starsRescued++
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         this.championTravelState = 'idle'
-        // Starte Suchphase mit erstem zufälligen Segment
+        // Start search phase with first random segment
         this.searchingForGalaxyBoss = true
         this.bossSearchTotalElapsed = 0
         this.bossSearchTotalDuration = GALAXY_BOSS_TOTAL_SEARCH_MIN_MS + Math.random() * GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS
@@ -226,7 +226,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         }, GALAXY_BOSS_SPAWN_ANIM_MS)
         return
       }
-      // Prüfe ob aktuelles Segment abgelaufen ist
+      // Check if current segment has expired
       const now = Date.now()
       if (now >= this.bossSearchSegmentEnd) {
         const curX = this.bossSearchTargetX

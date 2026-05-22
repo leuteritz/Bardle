@@ -1,11 +1,11 @@
 import type { ShopItem } from '../types'
 
 export const SHOP_ITEMS: ShopItem[] = [
-  // ── Waffen: Schwerter ─────────────────────────────────────────────────────────
+  // ── Weapons: Swords ──────────────────────────────────────────────────────────
   {
     id: 'ancient_bone_sword',
     name: 'Ancient Bone Sword',
-    description: '+12% Kampfkraft (Knochen-Crit-Verstärkung)',
+    description: '+12% Combat Power (Bone Crit Amplification)',
     icon: '/img/itemShop/sword/AncientBoneSword.png',
     price: 1200,
     rarity: 'common',
@@ -15,7 +15,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'crystal_shard_sword',
     name: 'Crystal Shard Sword',
-    description: '+10% CPS, +5% Kampfkraft (Magischer Splitter)',
+    description: '+10% CPS, +5% Combat Power (Magical Shard)',
     icon: '/img/itemShop/sword/CrystalShardSword.png',
     price: 1800,
     rarity: 'common',
@@ -25,7 +25,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'coral_cutlass',
     name: 'Coral Cutlass',
-    description: '+15% Kampfkraft (Verlangsamender Schlag)',
+    description: '+15% Combat Power (Slowing Strike)',
     icon: '/img/itemShop/sword/CoralCutlass.png',
     price: 2500,
     rarity: 'common',
@@ -35,7 +35,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'holy_sunblade',
     name: 'Holy Sunblade',
-    description: '+20% Kampfkraft, +15% CPS (Heiliger Lebensraub)',
+    description: '+20% Combat Power, +15% CPS (Holy Lifesteal)',
     icon: '/img/itemShop/sword/HolySunblade.png',
     price: 15000,
     materialCost: { solar_essence: 1 },
@@ -46,7 +46,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'mechanical_gear_sword',
     name: 'Mechanical Gear Sword',
-    description: '+25% CPS, +12% Kampfkraft (Erhöhtes Angriffstempo)',
+    description: '+25% CPS, +12% Combat Power (Enhanced Attack Speed)',
     icon: '/img/itemShop/sword/MechanicalGearSword.png',
     price: 18000,
     materialCost: { nebula_quartz: 2 },
@@ -57,7 +57,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'leaf_vine_sword',
     name: 'Leaf & Vine Sword',
-    description: '+20% CPS, +18% Kampfkraft (Naturregeneration)',
+    description: '+20% CPS, +18% Combat Power (Nature Regeneration)',
     icon: '/img/itemShop/sword/LeaveVinSword.png',
     price: 22000,
     materialCost: { solar_essence: 1 },
@@ -68,7 +68,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'lava_forge_blade',
     name: 'Lava Forge Blade',
-    description: '+28% Kampfkraft, +8% CPS (Lava-Brennschaden)',
+    description: '+28% Combat Power, +8% CPS (Lava Burn Damage)',
     icon: '/img/itemShop/sword/LavaForgeBlade.png',
     price: 28000,
     materialCost: { nebula_quartz: 2 },
@@ -79,7 +79,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'storm_blade',
     name: 'Storm Blade',
-    description: '+40% Kampfkraft, +12% CPS (Kettenblitz-Entladung)',
+    description: '+40% Combat Power, +12% CPS (Chain Lightning Discharge)',
     icon: '/img/itemShop/sword/StormBlade.png',
     price: 65000,
     materialCost: { void_shard: 1 },
@@ -90,7 +90,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'frozen_tundra_sword',
     name: 'Frozen Tundra Sword',
-    description: '+45% Kampfkraft, +8% CPS (Eissturm-Freeze)',
+    description: '+45% Combat Power, +8% CPS (Blizzard Freeze)',
     icon: '/img/itemShop/sword/FrozenTundraSword.png',
     price: 75000,
     materialCost: { void_shard: 1 },
@@ -101,7 +101,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'void_reaper',
     name: 'Void Reaper',
-    description: '+75% Kampfkraft, +15% CPS (Lebensraub aus der Leere)',
+    description: '+75% Combat Power, +15% CPS (Void Lifesteal)',
     icon: '/img/itemShop/sword/VoidReaper.png',
     price: 230000,
     materialCost: { dark_matter: 2 },
@@ -110,10 +110,10 @@ export const SHOP_ITEMS: ShopItem[] = [
     effects: { powerMultiplier: 1.75, cpsMultiplier: 1.15 },
   },
 
-  // ── Waffen: Zauberstäbe ───────────────────────────────────────────────────────
+  // ── Weapons: Staves ───────────────────────────────────────────────────────────
   {
     id: 'kristallstab',
-    name: 'Kristallstab',
+    name: 'Crystal Staff',
     description: '+12% CPS',
     icon: '/img/staff.png',
     price: 1500,
@@ -123,7 +123,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'kosmischerstab',
-    name: 'Kosmischer Stab',
+    name: 'Cosmic Staff',
     description: '+48% CPS',
     icon: '/img/staff.png',
     price: 50000,
@@ -134,11 +134,11 @@ export const SHOP_ITEMS: ShopItem[] = [
     setId: 'cosmic',
   },
 
-  // ── Waffen: Hämmer ────────────────────────────────────────────────────────────
+  // ── Weapons: Hammers ──────────────────────────────────────────────────────────
   {
     id: 'eisenhammer',
-    name: 'Eisenhammer',
-    description: '+15% Kampfkraft',
+    name: 'Iron Hammer',
+    description: '+15% Combat Power',
     icon: '/img/hammer.png',
     price: 2000,
     rarity: 'common',
@@ -147,8 +147,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'sternenhammer',
-    name: 'Sternen-Hammer',
-    description: '+80% Kampfkraft, +20% CPS',
+    name: 'Star Hammer',
+    description: '+80% Combat Power, +20% CPS',
     icon: '/img/hammer.png',
     price: 250000,
     materialCost: { dark_matter: 2 },
@@ -158,11 +158,11 @@ export const SHOP_ITEMS: ShopItem[] = [
     setId: 'stellar',
   },
 
-  // ── Rüstung ───────────────────────────────────────────────────────────────────
+  // ── Armor ─────────────────────────────────────────────────────────────────────
   {
     id: 'lederpanzer',
-    name: 'Lederpanzer',
-    description: '+8% Kampfkraft',
+    name: 'Leather Armor',
+    description: '+8% Combat Power',
     icon: '🥋',
     price: 400,
     rarity: 'common',
@@ -171,8 +171,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'kettenpanzer',
-    name: 'Kettenpanzer',
-    description: '+15% Kampfkraft',
+    name: 'Chain Armor',
+    description: '+15% Combat Power',
     icon: '🛡️',
     price: 1800,
     rarity: 'common',
@@ -181,8 +181,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'mythrilruestung',
-    name: 'Mythril-Rüstung',
-    description: '+25% Kampfkraft',
+    name: 'Mythril Armor',
+    description: '+25% Combat Power',
     icon: '🔵',
     price: 7000,
     rarity: 'rare',
@@ -191,8 +191,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'sternenschild',
-    name: 'Sternen-Schild',
-    description: '+35% Kampfkraft, +5% CPS',
+    name: 'Star Shield',
+    description: '+35% Combat Power, +5% CPS',
     icon: '🌠',
     price: 18000,
     materialCost: { solar_essence: 2 },
@@ -203,8 +203,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'drachenpanzer',
-    name: 'Drachenpanzer',
-    description: '+50% Kampfkraft',
+    name: 'Dragon Armor',
+    description: '+50% Combat Power',
     icon: '🐉',
     price: 55000,
     materialCost: { void_shard: 1 },
@@ -215,8 +215,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'kosmischeruestung',
-    name: 'Kosmische Rüstung',
-    description: '+80% Kampfkraft',
+    name: 'Cosmic Armor',
+    description: '+80% Combat Power',
     icon: '🌌',
     price: 220000,
     materialCost: { dark_matter: 1 },
@@ -229,7 +229,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   // ── Misc ─────────────────────────────────────────────────────────────────────
   {
     id: 'heiltrank',
-    name: 'Heiltrank',
+    name: 'Health Potion',
     description: '+5% CPS',
     icon: '🧪',
     price: 300,
@@ -239,7 +239,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'gluecksamulett',
-    name: 'Glücksamulett',
+    name: 'Lucky Amulet',
     description: '+12% CPS',
     icon: '📿',
     price: 1500,
@@ -249,7 +249,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'quarzanhaenger',
-    name: 'Quarz-Anhänger',
+    name: 'Quartz Pendant',
     description: '+22% CPS',
     icon: '💎',
     price: 5000,
@@ -260,7 +260,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'aetherkristall',
-    name: 'Äther-Kristall',
+    name: 'Aether Crystal',
     description: '+35% CPS',
     icon: '🔮',
     price: 15000,
@@ -272,7 +272,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'zeitohrring',
-    name: 'Zeit-Ohrring',
+    name: 'Time Earring',
     description: '+48% CPS',
     icon: '⏳',
     price: 50000,
@@ -284,7 +284,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: 'dunklesplitter',
-    name: 'Dunkle-Materie-Splitter',
+    name: 'Dark Matter Shard',
     description: '+65% CPS',
     icon: '🌑',
     price: 180000,

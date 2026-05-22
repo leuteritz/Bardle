@@ -40,8 +40,8 @@ function onImgError(e: Event) {
         :style="{ '--role-color': ROLES[i].orbit.color }"
         :title="
           slot
-            ? `${slot} (${ROLES[i].label}) – klicken zum Ändern`
-            : `${ROLES[i].label} – Champion wählen`
+            ? `${slot} (${ROLES[i].label}) – click to change`
+            : `${ROLES[i].label} – Select Champion`
         "
         @click="openPicker(i)"
       >

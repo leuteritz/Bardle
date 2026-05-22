@@ -3,23 +3,23 @@ import type { ItemSetBonus } from '../types'
 export const ITEM_SETS: ItemSetBonus[] = [
   {
     setId: 'arcane',
-    setName: 'Arkan-Bund',
+    setName: 'Arcane Bond',
     icon: '🔮',
-    description: '+15% CPS & +10% Kampfkraft',
+    description: '+15% CPS & +10% Combat Power',
     bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.1 },
   },
   {
     setId: 'cosmic',
-    setName: 'Kosmische Macht',
+    setName: 'Cosmic Power',
     icon: '🌌',
-    description: '+15% CPS & +20% Kampfkraft',
+    description: '+15% CPS & +20% Combat Power',
     bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.2 },
   },
   {
     setId: 'stellar',
-    setName: 'Stellarer Ursprung',
+    setName: 'Stellar Origin',
     icon: '⭐',
-    description: '+30% CPS & +25% Kampfkraft',
+    description: '+30% CPS & +25% Combat Power',
     bonusEffect: { cpsMultiplier: 1.3, powerMultiplier: 1.25 },
   },
 ]

@@ -17,7 +17,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_frozen_pact',
     name: 'Frozen Pact',
-    description: '2+ Eis-Champions im selben Orbit — CPS +10%',
+    description: '2+ Ice Champions in the same orbit — CPS +10%',
     type: 'elemental',
     icon: '❄️',
     color: '#7be8ff',
@@ -28,7 +28,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_void_surge',
     name: 'Void Surge',
-    description: '2+ Wüsten-Champions im selben Orbit — Macht +10%',
+    description: '2+ Desert Champions in the same orbit — Power +10%',
     type: 'elemental',
     icon: '🌑',
     color: '#9b48cc',
@@ -39,7 +39,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_lava_legion',
     name: 'Lava Legion',
-    description: '2+ Lava-Champions im selben Orbit — DPS +12%',
+    description: '2+ Lava Champions in the same orbit — DPS +12%',
     type: 'elemental',
     icon: '🔥',
     color: '#ff4500',
@@ -50,7 +50,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_celestial_alignment',
     name: 'Celestial Alignment',
-    description: '2+ Ringed-Champions im selben Orbit — CPS +15%',
+    description: '2+ Ringed Champions in the same orbit — CPS +15%',
     type: 'elemental',
     icon: '✨',
     color: '#e8c040',
@@ -61,7 +61,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_natures_embrace',
     name: "Nature's Embrace",
-    description: '2+ Dschungel-Champions im selben Orbit — CPS +10%',
+    description: '2+ Jungle Champions in the same orbit — CPS +10%',
     type: 'elemental',
     icon: '/img/roles/jungle.png',
     color: '#50c060',
@@ -72,7 +72,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_oceans_depth',
     name: "Ocean's Depth",
-    description: '2+ Ozean-Champions im selben Orbit — Macht +10%',
+    description: '2+ Ocean Champions in the same orbit — Power +10%',
     type: 'elemental',
     icon: '🌊',
     color: '#3090e8',
@@ -83,7 +83,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_stone_fortress',
     name: 'Stone Fortress',
-    description: '2+ Fels-Champions im selben Orbit — DPS +10%',
+    description: '2+ Rocky Champions in the same orbit — DPS +10%',
     type: 'elemental',
     icon: '⛰️',
     color: '#a08060',
@@ -94,7 +94,7 @@ export const ELEMENTAL_SYNERGIES: ElementalSynergyDef[] = [
   {
     id: 'elemental_cosmic_surge',
     name: 'Cosmic Surge',
-    description: '2+ Gas-Riesen-Champions im selben Orbit — CPS +12%',
+    description: '2+ Gas Giant Champions in the same orbit — CPS +12%',
     type: 'elemental',
     icon: '💫',
     color: '#8060d8',
@@ -108,7 +108,7 @@ export const ROLE_ECHO_DEFS: RoleEchoDef[] = [
   {
     id: 'echo_adc',
     name: 'Marksman Trio',
-    description: 'Alle 3 Champions im Orbit spielen ADC — DPS +15%',
+    description: 'All 3 Champions in orbit play ADC — DPS +15%',
     type: 'role_echo',
     icon: '/img/roles/adc.png',
     color: '#ff9300',
@@ -119,7 +119,7 @@ export const ROLE_ECHO_DEFS: RoleEchoDef[] = [
   {
     id: 'echo_support',
     name: 'Support Trinity',
-    description: 'Alle 3 Champions im Orbit spielen Support — Macht +15%',
+    description: 'All 3 Champions in orbit play Support — Power +15%',
     type: 'role_echo',
     icon: '/img/roles/supp.png',
     color: '#12b8ff',
@@ -130,7 +130,7 @@ export const ROLE_ECHO_DEFS: RoleEchoDef[] = [
   {
     id: 'echo_mid',
     name: 'Mage Trio',
-    description: 'Alle 3 Champions im Orbit spielen Mid — CPS +12%',
+    description: 'All 3 Champions in orbit play Mid — CPS +12%',
     type: 'role_echo',
     icon: '/img/roles/mid.png',
     color: '#3694ff',
@@ -141,7 +141,7 @@ export const ROLE_ECHO_DEFS: RoleEchoDef[] = [
   {
     id: 'echo_top',
     name: 'Tank Wall',
-    description: 'Alle 3 Champions im Orbit spielen Top — DPS +10%',
+    description: 'All 3 Champions in orbit play Top — DPS +10%',
     type: 'role_echo',
     icon: '/img/roles/top.png',
     color: '#f34b49',
@@ -152,7 +152,7 @@ export const ROLE_ECHO_DEFS: RoleEchoDef[] = [
   {
     id: 'echo_jungle',
     name: 'Jungle Pact',
-    description: 'Alle 3 Champions im Orbit spielen Jungle — CPS +10%',
+    description: 'All 3 Champions in orbit play Jungle — CPS +10%',
     type: 'role_echo',
     icon: '/img/roles/jungle.png',
     color: '#5ce66a',
@@ -188,7 +188,7 @@ export const LORE_BONDS: LoreBondDef[] = [
   {
     id: 'lore_brothers_wind',
     name: 'Brothers of the Wind',
-    description: 'Yasuo + Yone — Macht +15%',
+    description: 'Yasuo + Yone — Power +15%',
     type: 'lore_bond',
     icon: '🌪️',
     color: '#80ccff',
@@ -232,7 +232,7 @@ export const LORE_BONDS: LoreBondDef[] = [
   {
     id: 'lore_void_kin',
     name: 'Void Kin',
-    description: "Kai'sa + Kassadin — Macht +12%",
+    description: "Kai'sa + Kassadin — Power +12%",
     type: 'lore_bond',
     icon: '👁️',
     color: '#9b48cc',
@@ -276,7 +276,7 @@ export const LORE_BONDS: LoreBondDef[] = [
   {
     id: 'lore_eternal_rivals',
     name: 'Eternal Rivals',
-    description: 'Darius + Garen — Macht +10%',
+    description: 'Darius + Garen — Power +10%',
     type: 'lore_bond',
     icon: '⚔️',
     color: '#e04040',
@@ -298,7 +298,7 @@ export const LORE_BONDS: LoreBondDef[] = [
   {
     id: 'lore_hagakure',
     name: 'Hagakure Bond',
-    description: 'Ahri + Sett — Macht +10%',
+    description: 'Ahri + Sett — Power +10%',
     type: 'lore_bond',
     icon: '🦊',
     color: '#e060a0',
@@ -321,8 +321,8 @@ export const LORE_BONDS: LoreBondDef[] = [
 
 export const FULL_ORBIT_PER_ROLE: SynergyDefinition = {
   id: 'full_orbit_per_role',
-  name: 'Voller Orbit',
-  description: 'Alle 3 Slots im Orbit besetzt — CPS +8%',
+  name: 'Full Orbit',
+  description: 'All 3 slots in orbit filled — CPS +8%',
   type: 'full_orbit',
   icon: '🌟',
   color: '#e8c040',
@@ -333,7 +333,7 @@ export const FULL_ORBIT_PER_ROLE: SynergyDefinition = {
 export const FULL_CONSTELLATION: SynergyDefinition = {
   id: 'full_constellation',
   name: 'Complete Constellation',
-  description: 'Alle 15 Champion-Slots besetzt — CPS +25%, Macht +25%',
+  description: 'All 15 Champion slots filled — CPS +25%, Power +25%',
   type: 'full_orbit',
   icon: '💫',
   color: '#ffd700',
@@ -347,7 +347,7 @@ export const FULL_CONSTELLATION: SynergyDefinition = {
 export const RARITY_LEGENDARY: SynergyDefinition = {
   id: 'rarity_legendary_assembly',
   name: 'Legendary Assembly',
-  description: '3+ seltene Champions im Orbit — Macht +15%',
+  description: '3+ rare Champions in orbit — Power +15%',
   type: 'rarity',
   icon: '💎',
   color: '#9b48cc',
@@ -358,7 +358,7 @@ export const RARITY_LEGENDARY: SynergyDefinition = {
 export const RARITY_STAR_FORGED: SynergyDefinition = {
   id: 'rarity_star_forged',
   name: 'Star-Forged',
-  description: '5+ seltene Champions im Orbit — Macht +25%',
+  description: '5+ rare Champions in orbit — Power +25%',
   type: 'rarity',
   icon: '⭐',
   color: '#ffd700',

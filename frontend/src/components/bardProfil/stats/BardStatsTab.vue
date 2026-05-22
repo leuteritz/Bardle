@@ -49,17 +49,17 @@ const clickerUpgrade = computed(
   () => shopStore.shopUpgrades.find((u) => (u.baseCPS ?? 0) === 0) ?? null,
 )
 
-// Basis-CPC ohne Klicker-Upgrade-Bonus (nur für Anzeige der Aufschlüsselung)
+// Base CPC without Clicker upgrade bonus (display only for breakdown)
 const baseCPC = computed(() => gameStore.baseChimesPerClick)
 
-// Bonus durch Klicker-Gebäude
+// Bonus from Clicker building
 const clickerBonus = computed(() => {
   const u = clickerUpgrade.value
   if (!u || u.level === 0) return 0
   return (u.baseCPC ?? 0) * u.level
 })
 
-// Gesamtbonus durch Augments/Skills/Modifier = finalCPC - base - clickerBonus
+// Total bonus from Augments/Skills/Modifier = finalCPC - base - clickerBonus
 const extraBonus = computed(() => {
   const total = chimesPerClick.value
   return Math.max(0, total - baseCPC.value - clickerBonus.value)
@@ -68,7 +68,7 @@ const extraBonus = computed(() => {
 
 <template>
   <div class="sv-root rpg-scrollbar">
-    <!-- ══ LINKE SPALTE: Bard ══ -->
+    <!-- ══ LEFT COLUMN: Bard ══ -->
     <div class="sv-portrait-col">
       <img
         src="/img/BardAbilities/Bard.png"
@@ -81,25 +81,25 @@ const extraBonus = computed(() => {
       </div>
     </div>
 
-    <!-- ══ RECHTE SPALTE ══ -->
+    <!-- ══ RIGHT COLUMN ══ -->
     <div class="sv-content-col rpg-scrollbar">
       <!-- ─ STATISTIKEN ─ -->
       <div class="sv-block">
-        <div class="sv-block-label">Statistiken</div>
+        <div class="sv-block-label">Statistics</div>
         <div class="sv-stat-grid">
           <div class="sv-stat">
             <div class="sv-stat-val">{{ $formatNumber(totalChimesEarned) }}</div>
-            <div class="sv-stat-lbl">Gesamt-Chimes</div>
+            <div class="sv-stat-lbl">Total Chimes</div>
           </div>
 
           <div class="sv-stat">
             <div class="sv-stat-val sv-val-green">{{ $formatNumber(chimesPerSecond) }}</div>
-            <div class="sv-stat-lbl">Chimes / Sek.</div>
+            <div class="sv-stat-lbl">Chimes / Sec.</div>
           </div>
 
           <div class="sv-stat">
             <div class="sv-stat-val sv-val-blue">{{ $formatNumber(totalClicks) }}</div>
-            <div class="sv-stat-lbl">Klicks</div>
+            <div class="sv-stat-lbl">Clicks</div>
           </div>
 
           <div class="sv-stat">
@@ -109,7 +109,7 @@ const extraBonus = computed(() => {
 
           <div class="sv-stat">
             <div class="sv-stat-val sv-val-muted">{{ currentUniverse }}</div>
-            <div class="sv-stat-lbl">Universum</div>
+            <div class="sv-stat-lbl">Universe</div>
           </div>
 
           <div class="sv-stat">
@@ -134,23 +134,23 @@ const extraBonus = computed(() => {
             />
             <div class="sv-clickpower-meta">
               <span class="sv-clickpower-name">
-                {{ clickerUpgrade?.name ?? 'Klicker' }}
+                {{ clickerUpgrade?.name ?? 'Clicker' }}
               </span>
               <span class="sv-clickpower-count" v-if="clickerUpgrade && clickerUpgrade.level > 0">
                 ×{{ clickerUpgrade.level }}
               </span>
-              <span class="sv-clickpower-count sv-val-muted" v-else>nicht gekauft</span>
+              <span class="sv-clickpower-count sv-val-muted" v-else>not purchased</span>
             </div>
           </div>
 
           <!-- Rechte Seite: Aufschlüsselung -->
           <div class="sv-clickpower-breakdown">
             <div class="sv-cpc-row">
-              <span class="sv-cpc-lbl">Basis</span>
+              <span class="sv-cpc-lbl">Base</span>
               <span class="sv-cpc-val">{{ $formatNumber(baseCPC) }}</span>
             </div>
             <div class="sv-cpc-row" v-if="clickerBonus > 0">
-              <span class="sv-cpc-lbl">Klicker ×{{ clickerUpgrade?.level }}</span>
+              <span class="sv-cpc-lbl">Clicker ×{{ clickerUpgrade?.level }}</span>
               <span class="sv-cpc-val sv-val-blue">+{{ $formatNumber(clickerBonus) }}</span>
             </div>
             <div class="sv-cpc-row" v-if="extraBonus > 0">
@@ -159,7 +159,7 @@ const extraBonus = computed(() => {
             </div>
             <div class="sv-cpc-divider" />
             <div class="sv-cpc-row sv-cpc-row--total">
-              <span class="sv-cpc-lbl">Gesamt / Klick</span>
+              <span class="sv-cpc-lbl">Total / Click</span>
               <span class="sv-cpc-val sv-cpc-total">{{ $formatNumber(chimesPerClick) }}</span>
             </div>
           </div>
@@ -168,7 +168,7 @@ const extraBonus = computed(() => {
 
       <!-- ─ GEBÄUDE ─ -->
       <div class="sv-block">
-        <div class="sv-block-label">Gebäude</div>
+        <div class="sv-block-label">Buildings</div>
 
         <ul class="sv-building-list" role="list">
           <li v-for="(b, index) in buildingStats" :key="b.id" class="sv-building-row">
@@ -189,7 +189,7 @@ const extraBonus = computed(() => {
               <!-- Zeile 2: Gesamt produziert + Anteil -->
               <div class="sv-building-produced">
                 <span class="sv-produced-val">{{ $formatNumber(b.lifetimeProduction) }}</span>
-                <span class="sv-produced-lbl">produziert</span>
+                <span class="sv-produced-lbl">produced</span>
                 <span class="sv-produced-pct">{{ b.efficiency }}%</span>
               </div>
 

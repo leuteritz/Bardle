@@ -4,29 +4,29 @@ import type { TimePeriod } from '../types'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({
-    // Aktuell ausgewählter Zeitraum für Produktions-Diagramm
+    // Currently selected time period for the production chart
     selectedTimePeriod: '1min' as string,
-    // Startzeitpunkt für das CPS-Tracking-System
+    // Start time for the CPS tracking system
     startTime: Date.now(),
 
-    // Speichert CPS-Verlaufsdaten für verschiedene Zeiträume als Array
+    // Stores CPS history data for various time periods as arrays
     productionHistories: {
       '1min': Array(60).fill(0),
       '10min': Array(60).fill(0),
       '1h': Array(60).fill(0),
     } as Record<string, number[]>,
 
-    // Verfolgt letzte Update-Zeitpunkte für jeden Tracking-Zeitraum
+    // Tracks last update timestamps for each tracking period
     lastUpdateTimes: {
       '1min': 0,
       '10min': 0,
       '1h': 0,
     } as Record<string, number>,
 
-    // Referenz für den Haupt-Timer der CPS-Verfolgung
+    // Reference for the main CPS tracking timer
     mainTimer: null as ReturnType<typeof setInterval> | null,
 
-    // Konfiguration verfügbarer Zeiträume für CPS-Analyse
+    // Configuration of available time periods for CPS analysis
     timePeriods: [
       {
         key: '1min',
@@ -37,14 +37,14 @@ export const useCpsStore = defineStore('cps', {
       },
       {
         key: '10min',
-        label: '10 Minuten',
+        label: '10 Minutes',
         duration: 600,
         interval: 10000,
         dataPoints: 60,
       },
       {
         key: '1h',
-        label: '1 Stunde',
+        label: '1 Hour',
         duration: 3600,
         interval: 60000,
         dataPoints: 60,
@@ -53,29 +53,29 @@ export const useCpsStore = defineStore('cps', {
   }),
 
   getters: {
-    // Gibt die Konfiguration des aktuell gewählten Analyse-Zeitraums zurück
+    // Returns configuration for the currently selected analysis period
     currentPeriodConfig(): TimePeriod {
       return this.timePeriods.find((p) => p.key === this.selectedTimePeriod) || this.timePeriods[0]
     },
 
-    // Liefert die CPS-Verlaufsdaten für den gewählten Zeitraum
+    // Returns CPS history data for the selected period
     currentProductionHistory(): number[] {
       return this.productionHistories[this.selectedTimePeriod] || []
     },
 
-    // Findet den höchsten CPS-Wert in der aktuellen Historie für Graph-Skalierung
+    // Finds the highest CPS value in the current history for graph scaling
     currentMaxHistoryValue(): number {
       return Math.max(...this.currentProductionHistory, 1)
     },
   },
 
   actions: {
-    // Wechselt den aktiven Zeitraum für die CPS-Analyse
+    // Switches the active time period for CPS analysis
     setSelectedTimePeriod(periodKey: string) {
       this.selectedTimePeriod = periodKey
     },
 
-    // Startet das CPS-Tracking mit Initialisierung aller Zeiträume
+    // Starts CPS tracking with initialization of all periods
     startProductionTracking() {
       const gameStore = useGameStore()
       const now = Date.now()
@@ -93,12 +93,12 @@ export const useCpsStore = defineStore('cps', {
       this.startTimer()
     },
 
-    // Stoppt das CPS-Tracking durch Timer-Bereinigung
+    // Stops CPS tracking by clearing the timer
     stopProductionTracking() {
       this.stopTimer()
     },
 
-    // Aktualisiert CPS-Historien aller Zeiträume basierend auf konfigurierten Intervallen
+    // Updates CPS histories for all periods based on configured intervals
     updateAllHistories() {
       const gameStore = useGameStore()
       const now = Date.now()
@@ -120,7 +120,7 @@ export const useCpsStore = defineStore('cps', {
       })
     },
 
-    // Startet 1-Sekunden-Timer für kontinuierliche Historie-Updates
+    // Starts 1-second timer for continuous history updates
     startTimer() {
       if (this.mainTimer) {
         clearInterval(this.mainTimer)
@@ -133,7 +133,7 @@ export const useCpsStore = defineStore('cps', {
       document.addEventListener('visibilitychange', this._handleVisibilityChange)
     },
 
-    // Stoppt den Haupt-Timer und bereinigt Timer-Referenz
+    // Stops the main timer and clears the timer reference
     stopTimer() {
       if (this.mainTimer) {
         clearInterval(this.mainTimer)
@@ -157,7 +157,7 @@ export const useCpsStore = defineStore('cps', {
       }
     },
 
-    // Aktualisiert sofort den neuesten CPS-Wert in allen Historien bei Änderungen
+    // Immediately updates the latest CPS value in all histories on change
     updateCurrentCPS(newCPS: number) {
       Object.keys(this.productionHistories).forEach((key) => {
         const history = this.productionHistories[key]
@@ -173,7 +173,7 @@ export const useCpsStore = defineStore('cps', {
       return `${Math.floor(seconds / 3600 + 1)}h`
     },
 
-    // Erstellt Startpunkt-Label für CPS-Graph-Zeitachse
+    // Creates start-point label for the CPS graph time axis
     getStartTimeLabel(): string {
       const history = this.currentProductionHistory
       if (history.length <= 1) return 'Start'
@@ -182,7 +182,7 @@ export const useCpsStore = defineStore('cps', {
       return this._formatTimeSpan(dataTimeSpan)
     },
 
-    // Generiert Mittelpunkt-Label für CPS-Graph-Zeitachse
+    // Generates midpoint label for the CPS graph time axis
     getMidTimeLabel(): string {
       const history = this.currentProductionHistory
       if (history.length <= 1) return ''
@@ -191,7 +191,7 @@ export const useCpsStore = defineStore('cps', {
       return this._formatTimeSpan(dataTimeSpan / 2)
     },
 
-    // Erstellt detaillierte Tooltip-Texte für CPS-Graph-Datenpunkte mit Zeitangaben
+    // Creates detailed tooltip text for CPS graph data points with timestamps
     getTooltipText(value: number, index: number): string {
       const config = this.currentPeriodConfig
       const history = this.currentProductionHistory

@@ -6,7 +6,7 @@
         class="pause-overlay"
         role="dialog"
         aria-modal="true"
-        aria-label="Spiel pausiert"
+        aria-label="Game Paused"
       >
         <!-- Ambient particles -->
         <div class="pause-particles">
@@ -42,8 +42,8 @@
               </svg>
             </div>
             <div class="pause-title-wrap">
-              <span class="pause-eyebrow">✦ DER BARDE RUHT ✦</span>
-              <h2 class="pause-title">— Pausiert —</h2>
+              <span class="pause-eyebrow">✦ THE BARD RESTS ✦</span>
+              <h2 class="pause-title">— Paused —</h2>
             </div>
             <div class="pause-header-icon">
               <svg
@@ -73,14 +73,14 @@
 
           <!-- Body -->
           <div class="pause-body">
-            <p class="pause-subtitle">✦ Klicke ins Spielfenster um fortzufahren ✦</p>
+            <p class="pause-subtitle">✦ Click the game window to continue ✦</p>
 
             <!-- ══ HERO: Player HP ══ -->
             <div class="hp-hero">
               <div class="hp-hero-header">
                 <div class="hp-hero-title-row">
                   <span class="hp-hero-icon">❤</span>
-                  <span class="hp-hero-label">Trefferpunkte</span>
+                  <span class="hp-hero-label">Hit Points</span>
                   <span class="hp-hero-badge" :class="hpBadgeClass">{{ hpStatusText }}</span>
                 </div>
                 <span class="hp-hero-numbers">
@@ -116,10 +116,10 @@
                 />
               </div>
               <div class="hp-flavor-text">
-                <span v-if="hpPercent > 75">⚔ Der Barde ist kampfbereit!</span>
-                <span v-else-if="hpPercent > 50">🎵 Die Melodie trägt ihn noch...</span>
-                <span v-else-if="hpPercent > 25">⚠ Der Barde ist geschwächt!</span>
-                <span v-else class="text--danger">💀 In höchster Gefahr! Kehre sofort zurück!</span>
+                <span v-if="hpPercent > 75">⚔ The Bard is ready for battle!</span>
+                <span v-else-if="hpPercent > 50">🎵 The melody carries him still...</span>
+                <span v-else-if="hpPercent > 25">⚠ The Bard is weakened!</span>
+                <span v-else class="text--danger">💀 In grave danger! Return immediately!</span>
               </div>
             </div>
 
@@ -137,9 +137,9 @@
                 <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
               </div>
               <div class="chime-reward-text">
-                <span class="chime-label">⟡ Gesammelte Chimes</span>
+                <span class="chime-label">⟡ Accumulated Chimes</span>
                 <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-                <span class="chime-sublabel">werden beim Weiterspielen gutgeschrieben</span>
+                <span class="chime-sublabel">will be credited when you resume</span>
               </div>
             </div>
 
@@ -167,8 +167,8 @@
                   <span class="notif-desc">
                     {{
                       gameStore.pendingAugmentSelections.length === 1
-                        ? 'Wähle dein Augment!'
-                        : `${gameStore.pendingAugmentSelections.length}× Augment wählen!`
+                        ? 'Choose your Augment!'
+                        : `${gameStore.pendingAugmentSelections.length}× Augments to choose!`
                     }}
                   </span>
                 </div>
@@ -194,12 +194,12 @@
                   </svg>
                 </div>
                 <div class="notif-body">
-                  <span class="notif-title">Sternsysteme!</span>
+                  <span class="notif-title">Star Systems!</span>
                   <span class="notif-desc">
                     {{
                       pendingStars === 1
-                        ? 'Ein Bonus-Stern wartet'
-                        : `${pendingStars}× Bonus-Sterne warten`
+                        ? 'A bonus star awaits'
+                        : `${pendingStars}× bonus stars await`
                     }}
                   </span>
                 </div>
@@ -231,8 +231,8 @@
                   </svg>
                 </div>
                 <div class="notif-body">
-                  <span class="notif-title">Bosse besiegt!</span>
-                  <span class="notif-desc">Während der Pause</span>
+                  <span class="notif-title">Bosses Defeated!</span>
+                  <span class="notif-desc">While Paused</span>
                 </div>
                 <div class="notif-badge notif-badge--red">{{ pauseKills }}</div>
               </div>
@@ -257,7 +257,7 @@
                   </svg>
                 </div>
                 <div class="notif-body notif-body--mats">
-                  <span class="notif-title">Materialien erbeutet</span>
+                  <span class="notif-title">Materials Looted</span>
                   <div class="mats-list">
                     <span v-for="entry in pauseMaterialEntries" :key="entry.id" class="mat-entry">
                       <img
@@ -294,7 +294,7 @@
                 >
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                Weiterspielen
+                Continue
               </span>
               <div class="pause-btn-shine" />
             </button>
@@ -340,10 +340,10 @@ const hpBadgeClass = computed(() => {
 })
 
 const hpStatusText = computed(() => {
-  if (hpPercent.value > 75) return 'GUT'
-  if (hpPercent.value > 50) return 'STABIL'
-  if (hpPercent.value > 25) return 'GESCHWÄCHT'
-  return 'KRITISCH'
+  if (hpPercent.value > 75) return 'GOOD'
+  if (hpPercent.value > 50) return 'STABLE'
+  if (hpPercent.value > 25) return 'WEAKENED'
+  return 'CRITICAL'
 })
 
 const pauseStartChimes = ref(0)

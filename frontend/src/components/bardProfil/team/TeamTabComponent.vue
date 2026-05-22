@@ -12,7 +12,7 @@ import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
-import ItemShopComponent from './ItemShopComponent.vue' // ITEM SHOP – NEU
+import ItemShopComponent from './ItemShopComponent.vue' // ITEM SHOP
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -42,8 +42,8 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 const CAT_LABELS: Record<ItemCategory, string> = {
-  weapon: 'Waffe',
-  armor: 'Rüstung',
+  weapon: 'Weapon',
+  armor: 'Armor',
   misc: 'Misc',
 }
 
@@ -72,8 +72,8 @@ const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const showShop = ref(false)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const showExpedition = ref(false)
-const showItemShop = ref(false) // ITEM SHOP – NEU
-const itemShopCategory = ref<ItemCategory>('weapon') // ITEM SHOP – NEU
+const showItemShop = ref(false) // ITEM SHOP
+const itemShopCategory = ref<ItemCategory>('weapon') // ITEM SHOP
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -148,7 +148,7 @@ const roleFilteredChampions = computed(() => {
 
 function openShop(role: ChampionRole | 'all' = 'all') {
   showExpedition.value = false
-  showItemShop.value = false // ITEM SHOP – NEU
+  showItemShop.value = false // ITEM SHOP
   shopRole.value = role
   showShop.value = true
 }
@@ -159,7 +159,7 @@ function closeShop() {
 
 function openExpedition() {
   showShop.value = false
-  showItemShop.value = false // ITEM SHOP – NEU
+  showItemShop.value = false // ITEM SHOP
   showExpedition.value = true
 }
 
@@ -167,7 +167,7 @@ function closeExpedition() {
   showExpedition.value = false
 }
 
-// ITEM SHOP – NEU
+// ITEM SHOP
 function openItemShop() {
   showShop.value = false
   showExpedition.value = false
@@ -256,7 +256,7 @@ function formatEffect(syn: ActiveSynergy): string {
   return syn.effects
     .map((e) => {
       const pct = Math.round((e.multiplier - 1) * 100)
-      const label = e.type === 'cps' ? 'CPS' : e.type === 'power' ? 'Macht' : 'DPS'
+      const label = e.type === 'cps' ? 'CPS' : e.type === 'power' ? 'Power' : 'DPS'
       return `${label} +${pct}%`
     })
     .join(' · ')
@@ -336,7 +336,7 @@ void globalSynergies
                 class="splash-empty-role-img"
               />
               <span class="splash-empty-plus">＋</span>
-              <span class="splash-empty-hint">Champion wählen</span>
+              <span class="splash-empty-hint">Select Champion</span>
             </div>
           </div>
 
@@ -376,7 +376,7 @@ void globalSynergies
               <button
                 v-if="activeSecondaries[0]"
                 class="splash-sec-clear"
-                title="Entfernen"
+                title="Remove"
                 @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
               >
                 ✕
@@ -400,7 +400,7 @@ void globalSynergies
               <button
                 v-if="activeSecondaries[1]"
                 class="splash-sec-clear"
-                title="Entfernen"
+                title="Remove"
                 @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
               >
                 ✕
@@ -445,7 +445,7 @@ void globalSynergies
           <!-- ══ Shop Overlay ══ -->
           <Transition name="shop-fade">
             <div v-if="showShop" class="shop-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeShop">← Zurück</button>
+              <button class="shop-back-btn" @click="closeShop">← Back</button>
               <ChampionShopComponent
                 :initial-role="shopRole"
                 class="shop-inner"
@@ -457,7 +457,7 @@ void globalSynergies
           <!-- ══ Expedition Overlay ══ -->
           <Transition name="shop-fade">
             <div v-if="showExpedition" class="expedition-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeExpedition">← Zurück</button>
+              <button class="shop-back-btn" @click="closeExpedition">← Back</button>
               <ExpeditionCreateComponent class="expedition-inner" />
             </div>
           </Transition>
@@ -465,14 +465,14 @@ void globalSynergies
           <!-- ══ ITEM SHOP – NEU: Item Shop Overlay ══ -->
           <Transition name="shop-fade">
             <div v-if="showItemShop" class="item-shop-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeItemShop">← Zurück</button>
+              <button class="shop-back-btn" @click="closeItemShop">← Back</button>
 
               <!-- Tabs oben, fest (kein Scrollen) -->
               <div class="item-shop-tabs">
                 <button
                   v-for="cat in [
-                    { id: 'weapon', icon: '⚔️', label: 'Waffe' },
-                    { id: 'armor',  icon: '🛡️', label: 'Rüstung' },
+                    { id: 'weapon', icon: '⚔️', label: 'Weapon' },
+                    { id: 'armor',  icon: '🛡️', label: 'Armor' },
                     { id: 'misc',   icon: '✨', label: 'Misc' },
                   ]"
                   :key="cat.id"

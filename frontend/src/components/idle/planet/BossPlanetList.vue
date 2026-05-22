@@ -2,13 +2,13 @@
   <div class="bpl-root">
     <div class="bpl-title">
       <span class="bpl-title-line" />
-      <span class="bpl-title-text">⭐ Nächste Planeten</span>
+      <span class="bpl-title-text">⭐ Next Planets</span>
       <span class="bpl-title-line" />
     </div>
 
     <div class="bpl-list">
       <!-- Leerstate -->
-      <div v-if="displayedEntries.length === 0" class="bpl-empty">Alle Planeten besiegt</div>
+      <div v-if="displayedEntries.length === 0" class="bpl-empty">All Planets Defeated</div>
 
       <div
         v-for="(entry, i) in displayedEntries"
@@ -47,7 +47,7 @@
             </div>
             <span class="bpl-hp-label">{{ formatNumber(entry.boss.currentHP) }}</span>
           </div>
-          <span v-else class="bpl-pending-badge">— Ausstehend</span>
+          <span v-else class="bpl-pending-badge">— Pending</span>
         </div>
       </div>
     </div>

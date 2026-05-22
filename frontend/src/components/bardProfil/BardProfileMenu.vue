@@ -36,7 +36,7 @@ watch(
 </script>
 
 <template>
-  <button class="inventory-circle-btn" title="Shop öffnen" @click="uiStore.setBardTab('shop')">
+  <button class="inventory-circle-btn" title="Open Shop" @click="uiStore.setBardTab('shop')">
     <div class="relative w-36 h-36">
       <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
         <circle
@@ -49,7 +49,7 @@ watch(
         />
       </svg>
       <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
-        <img src="/img/menu/SHOP.png" class="object-contain w-full h-full p-3" alt="Shop öffnen" />
+        <img src="/img/menu/SHOP.png" class="object-contain w-full h-full p-3" alt="Open Shop" />
       </div>
     </div>
   </button>

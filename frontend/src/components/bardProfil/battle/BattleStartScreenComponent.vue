@@ -11,7 +11,7 @@
     <!-- ── INFO DASHBOARD ── -->
     <div class="info-dashboard">
       <div class="stat-col">
-        <div class="stat-eyebrow">RANG</div>
+        <div class="stat-eyebrow">RANK</div>
         <div class="rank-main" :style="{ color: rankColor }">
           <span class="rank-tier-text">{{ battleStore.currentRank.tier }}</span>
           <span class="rank-div-text" v-if="!isHighTier">{{
@@ -31,7 +31,7 @@
       <div class="stat-divider" />
 
       <div class="stat-col">
-        <div class="stat-eyebrow">BILANZ</div>
+        <div class="stat-eyebrow">RECORD</div>
         <div class="wl-main">
           <span class="val-win">{{ battleStore.totalWins }}<em>W</em></span>
           <span class="wl-slash">/</span>
@@ -43,21 +43,21 @@
         <div class="stat-foot" :class="winRate >= 50 ? 'foot--pos' : 'foot--neg'">
           {{ winRateStr }}%&thinsp;WR
           <span class="foot-sep">·</span>
-          {{ battleStore.totalBattles }}&thinsp;Kämpfe
+          {{ battleStore.totalBattles }}&thinsp;Battles
         </div>
       </div>
 
       <div class="stat-divider" />
 
       <div class="stat-col">
-        <div class="stat-eyebrow">SERIE</div>
+        <div class="stat-eyebrow">STREAK</div>
         <div class="streak-main" :class="{ 'streak-on-fire': battleStore.currentWinStreak >= 3 }">
           <span v-if="battleStore.currentWinStreak >= 3" class="fire-emoji">🔥</span>
           <span class="streak-num">{{ battleStore.currentWinStreak }}</span>
           <span class="streak-unit">WIN</span>
         </div>
         <div class="stat-foot">
-          Bestmarke&ensp;<strong>{{ battleStore.bestWinStreak }}</strong>
+          Best&ensp;<strong>{{ battleStore.bestWinStreak }}</strong>
         </div>
       </div>
 
@@ -81,7 +81,7 @@
     <!-- ── SIEGCHANCE ── -->
     <Transition name="prob-fade">
       <div v-if="showWinProb" class="win-prob-row">
-        <span class="win-prob-eyebrow">SIEGCHANCE</span>
+        <span class="win-prob-eyebrow">WIN CHANCE</span>
         <div class="win-prob-track">
           <div
             class="win-prob-fill"
@@ -96,7 +96,7 @@
     <!-- ── TEAM ROSTER ── -->
     <div class="roster-wrap">
       <div class="roster-header">
-        <span class="roster-label">DEIN TEAM</span>
+        <span class="roster-label">YOUR TEAM</span>
         <div class="roster-progress-bar-wrap">
           <div
             class="roster-progress-bar"
@@ -140,10 +140,10 @@
 
       <Transition name="hint-fade" mode="out-in">
         <p v-if="!hasFullTeam" key="incomplete" class="roster-hint">
-          Wähle im Header für jede Rolle einen Champion aus – erst dann öffnet sich die Queue.
+          Select a Champion for each role in the header — the Queue opens once all slots are filled.
         </p>
         <p v-else key="ready" class="roster-hint roster-hint--ready">
-          ✓ Dein Team ist vollständig – bereit für die Arena!
+          ✓ Your team is complete — ready for the Arena!
         </p>
       </Transition>
     </div>
@@ -153,21 +153,21 @@
       class="start-btn"
       :class="{ 'start-btn--locked': !hasFullTeam }"
       :disabled="isStarting || !hasFullTeam"
-      :title="!hasFullTeam ? `Noch ${5 - teamProgress} Rolle(n) offen` : ''"
+      :title="!hasFullTeam ? `${5 - teamProgress} role(s) still open` : ''"
       @click="$emit('start')"
     >
       <span class="start-btn-icon">
         <template v-if="isStarting">⏳</template>
         <template v-else-if="!hasFullTeam">
-          <img src="/img/lock.png" alt="Gesperrt" class="start-btn-lock-img" />
+          <img src="/img/lock.png" alt="Locked" class="start-btn-lock-img" />
         </template>
         <img v-else src="/img/menu/BATTLE.png" class="start-btn-img" alt="Battle" />
       </span>
-      <span v-if="isStarting">WIRD GESTARTET…</span>
+      <span v-if="isStarting">STARTING…</span>
       <span v-else-if="!hasFullTeam">
-        NOCH {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OFFEN
+        {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
       </span>
-      <span v-else>KAMPF STARTEN</span>
+      <span v-else>START BATTLE</span>
     </button>
   </div>
 </template>

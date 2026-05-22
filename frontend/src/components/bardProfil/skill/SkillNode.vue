@@ -64,7 +64,7 @@ function handleBuy() {
         <img src="/img/BardAbilities/BardMeep.png" alt="Meeps" class="sn-pill__meeps-icon" />
         <span class="sn-pill__cost">{{ data.cost }}</span>
       </div>
-      <div v-else class="sn-pill sn-pill--bought">✓ Aktiv</div>
+      <div v-else class="sn-pill sn-pill--bought">✓ Active</div>
     </div>
   </div>
 </template>

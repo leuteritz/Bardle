@@ -29,7 +29,7 @@ export const useShopStore = defineStore('shop', {
     shopUpgrades: [
       {
         id: 'chimeClicker',
-        name: 'Klicker',
+        name: 'Clicker',
         baseCost: 50,
         baseCPC: 1,
         level: 0,
@@ -38,7 +38,7 @@ export const useShopStore = defineStore('shop', {
       } as ShopUpgrade,
       {
         id: 'glockenturm',
-        name: 'Glockenturm',
+        name: 'Bell Tower',
         baseCost: 25,
         baseCPS: 1,
         level: 0,
@@ -47,7 +47,7 @@ export const useShopStore = defineStore('shop', {
       } as ShopUpgrade,
       {
         id: 'klanggenerator',
-        name: 'Klang Generator',
+        name: 'Sound Generator',
         baseCost: 100,
         baseCPS: 3,
         level: 0,
@@ -56,7 +56,7 @@ export const useShopStore = defineStore('shop', {
       } as ShopUpgrade,
       {
         id: 'harmoniewerk',
-        name: 'Harmonie Werk',
+        name: 'Harmony Works',
         baseCost: 500,
         baseCPS: 5,
         level: 0,
@@ -65,7 +65,7 @@ export const useShopStore = defineStore('shop', {
       } as ShopUpgrade,
       {
         id: 'sphaerenMusik',
-        name: 'Sphären Musik',
+        name: 'Sphere Music',
         baseCost: 2500,
         baseCPS: 10,
         level: 0,

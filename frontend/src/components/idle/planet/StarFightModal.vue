@@ -8,7 +8,7 @@
       aria-modal="true"
       @click.self="handleClose"
     >
-      <!-- ── Embers Atmosphäre ──────────────────────────────────────────── -->
+      <!-- ── Ember Atmosphere ───────────────────────────────────────────── -->
       <div class="sf-atmosphere" :class="{ 'sf-atmosphere--galaxy': isGalaxyBoss }">
         <span v-for="i in 22" :key="i" class="sf-ember" :style="emberStyle(i)" />
       </div>
@@ -18,17 +18,17 @@
         <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
         <div class="sf-topbar" />
 
-        <!-- ── Planet Background (gesamtes Modal) ──────────────────────── -->
+        <!-- ── Planet Background (entire modal) ───────────────────────── -->
         <div
           ref="modalPlanetBgRef"
           class="sf-modal-planet-bg"
           :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
         />
 
-        <!-- ── Planet Overlay (Lesbarkeits-Dimmer) ─────────────────────── -->
+        <!-- ── Planet Overlay (Readability Dimmer) ─────────────────────── -->
         <div class="sf-planet-overlay" />
 
-        <!-- ── Sternenfeld ─────────────────────────────────────────────── -->
+        <!-- ── Star Field ──────────────────────────────────────────────── -->
         <div class="sf-starfield" aria-hidden="true">
           <span v-for="i in 40" :key="i" class="sf-star" :style="starStyle(i)" />
         </div>
@@ -39,11 +39,11 @@
           <button class="sf-close" @click="handleClose">✕</button>
         </div>
 
-        <!-- ── Haupt-Layout ─────────────────────────────────────────────── -->
+        <!-- ── Main Layout ──────────────────────────────────────────────── -->
         <div class="sf-main">
-          <!-- Sektion 1: Arena + HP (~60 %) -->
+          <!-- Section 1: Arena + HP (~60%) -->
           <div class="sf-arena-wrap">
-            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXIE-BOSS ✦</div>
+            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXY BOSS ✦</div>
 
             <BossArenaSection
               v-if="activeBoss"
@@ -60,7 +60,7 @@
             <!-- ── HP Bar ──────────────────────────────────────────── -->
             <div v-if="activeBoss" class="sf-hp-section">
               <div class="sf-hp-header">
-                <span class="sf-stat-label">❤ LEBEN</span>
+                <span class="sf-stat-label">❤ HP</span>
                 <span class="sf-hp-numbers">
                   {{ formatNumber(activeBoss.currentHP) }}
                   <span class="sf-hp-sep">／</span>
@@ -95,7 +95,7 @@
             </div>
           </div>
 
-          <!-- Sektion 2: Belohnungen (~20 %) -->
+          <!-- Section 2: Rewards (~20%) -->
           <div class="sf-rewards-wrap">
             <BossRewardSection
               v-if="activeBoss"
@@ -106,7 +106,7 @@
             />
           </div>
 
-          <!-- Sektion 3: Planetenliste (~20 %, scrollbar) -->
+          <!-- Section 3: Planet list (~20%, scrollbar) -->
           <div class="sf-planet-list-wrap">
             <BossPlanetList
               :planet-queue="starGroupStore.starFightPlanetQueue"
@@ -181,7 +181,7 @@ const bossStore = usePlanetBossStore()
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
-// ── Reaktive Grundwerte ───────────────────────────────────────────────────
+// ── Reactive values ───────────────────────────────────────────────────────
 const isShaking = ref(false)
 const now = ref(Date.now())
 const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
@@ -225,10 +225,10 @@ const enragePercent = computed(() => {
 
 const starTypeLabel = computed(() => {
   const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
-  if (!star) return 'STERN'
-  if (star.starType === 'champion') return '♛ CHAMPION-STERN'
-  if (star.starType === 'galaxy_boss') return '✦ GALAXIE-BOSS-STERN'
-  return '⭐ RESSOURCE-STERN'
+  if (!star) return 'STAR'
+  if (star.starType === 'champion') return '♛ CHAMPION STAR'
+  if (star.starType === 'galaxy_boss') return '✦ GALAXY BOSS STAR'
+  return '⭐ RESOURCE STAR'
 })
 
 // ── Curse ─────────────────────────────────────────────────────────────────
@@ -283,7 +283,7 @@ watch(
   },
 )
 
-// ── Methoden ──────────────────────────────────────────────────────────────
+// ── Methods ───────────────────────────────────────────────────────────────
 function handleClose() {
   starGroupStore.closeStarFightModal()
 }
@@ -467,7 +467,7 @@ function starStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Planet Overlay (Lesbarkeits-Dimmer) ──────────────────────────────────── */
+/* ── Planet Overlay (Readability Dimmer) ─────────────────────────────────── */
 .sf-planet-overlay {
   position: absolute;
   inset: 0;
@@ -476,7 +476,7 @@ function starStyle(i: number): Record<string, string> {
   z-index: 0;
 }
 
-/* ── Sternenfeld ──────────────────────────────────────────────────────────── */
+/* ── Star Field ──────────────────────────────────────────────────────────── */
 .sf-starfield {
   position: absolute;
   inset: 0;
@@ -503,7 +503,7 @@ function starStyle(i: number): Record<string, string> {
   }
 }
 
-/* Alle Modal-Kinder über dem Planet-Hintergrund ─────────────────────────── */
+/* All modal children above the planet background ───────────────────────── */
 .sf-topbar,
 .sf-header,
 .sf-main,
@@ -574,7 +574,7 @@ function starStyle(i: number): Record<string, string> {
   box-shadow: 0 0 10px rgba(232, 192, 64, 0.4);
 }
 
-/* ── Haupt-Layout ─────────────────────────────────────────────────────────── */
+/* ── Main Layout ──────────────────────────────────────────────────────────── */
 .sf-main {
   display: flex;
   flex-direction: column;

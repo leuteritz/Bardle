@@ -79,7 +79,7 @@
               v-if="getAvailableChampions(config.id, roleIdx, role).length === 0"
               class="text-[11px] py-1 mc-placeholder"
             >
-              Kein {{ role }}-Champion verfügbar
+              No {{ role }} Champion available
             </p>
           </div>
         </div>

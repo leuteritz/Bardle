@@ -26,7 +26,7 @@
             <div class="status-chip">
               <span class="status-chip-icon">{{ rankIcon }}</span>
               <div class="status-chip-body">
-                <span class="status-chip-label">RANG</span>
+                <span class="status-chip-label">RANK</span>
                 <span class="status-chip-rank-row">
                   <span
                     class="status-chip-value"
@@ -41,7 +41,7 @@
             <div class="status-divider" />
             <div class="status-chip">
               <div class="status-chip-body">
-                <span class="status-chip-label">SAISON</span>
+                <span class="status-chip-label">SEASON</span>
                 <span class="status-chip-wl">
                   <span class="status-val-win">{{ battleStore.totalWins }}W</span>
                   <span class="status-wl-slash">/</span>
@@ -61,7 +61,7 @@
             <button
               v-if="battleStore.battlePhase === 'playing'"
               class="admin-skip-btn"
-              title="[DEV] Zur 40s-Marke springen"
+              title="[DEV] Skip to 40s mark"
               @click="battleStore.adminSkipToEnd()"
             >
               ⚡ Skip

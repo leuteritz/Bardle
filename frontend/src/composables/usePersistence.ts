@@ -10,7 +10,7 @@ import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useCpsStore } from '@/stores/cpsStore'
-import { usePlayerStore } from '@/stores/playerStore' // ← NEU
+import { usePlayerStore } from '@/stores/playerStore' // ← NEW
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import {
   LEVEL_BASE,
@@ -36,7 +36,7 @@ export function usePersistence() {
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
     const galaxyStore = useGalaxyStore()
-    const playerStore = usePlayerStore() // ← NEU
+    const playerStore = usePlayerStore() // ← NEW
     const planetShopStore = usePlanetShopStore()
 
     const saveData = {
@@ -127,7 +127,7 @@ export function usePersistence() {
         resourceStarActive: galaxyStore.resourceStarActive,
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
       },
-      // ← NEU: Spieler-HP persistieren
+      // ← NEW: Persist player HP
       player: {
         currentHP: playerStore.currentHP,
         maxHP: playerStore.maxHP,
@@ -299,7 +299,7 @@ export function usePersistence() {
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
         galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
         galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0
-        // Wenn Suchphase beim Speichern aktiv war → Boss sofort spawnen nach Reload
+        // If search phase was active when saving → spawn boss immediately after reload
         if (gx.searchingForGalaxyBoss && !gx.galaxyBossDefeated) {
           galaxyStore.searchingForGalaxyBoss = false
           galaxyStore.pendingGalaxyBoss = true
@@ -318,7 +318,7 @@ export function usePersistence() {
         }
       }
 
-      // ← NEU: Restore playerStore (HP/Leben)
+      // ← NEW: Restore playerStore (HP/Life)
       const playerStore = usePlayerStore()
       if (saved.player) {
         playerStore.currentHP = saved.player.currentHP ?? playerStore.maxHP
@@ -481,7 +481,7 @@ export function usePersistence() {
     itemStore.$reset()
     cpsStore.$reset()
 
-    // 7. Reset playerStore – HP/Leben auf Startwert zurücksetzen  ← NEU
+    // 7. Reset playerStore – reset HP/Life to initial value ← NEW
     const playerStore = usePlayerStore()
     playerStore.$reset()
 

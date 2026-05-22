@@ -2,8 +2,8 @@
 import type { ItemCategory, ShopItem, SlotEquipment } from '@/types'
 
 const CAT_LABELS: Record<ItemCategory, string> = {
-  weapon: 'Waffe',
-  armor: 'Rüstung',
+  weapon: 'Weapon',
+  armor: 'Armor',
   misc: 'Misc',
 }
 
@@ -29,15 +29,15 @@ const emit = defineEmits<{
   <div class="item-picker-panel">
     <div class="sub-header">
       <span class="sub-header-title">
-        {{ CAT_ICONS[selectedCategory] }} {{ CAT_LABELS[selectedCategory] }} wählen
+        Select {{ CAT_ICONS[selectedCategory] }} {{ CAT_LABELS[selectedCategory] }}
       </span>
-      <button class="back-btn" @click="emit('back')">← Zurück</button>
+      <button class="back-btn" @click="emit('back')">← Back</button>
     </div>
 
     <div class="item-body">
       <div v-if="categoryItems.length === 0" class="picker-empty">
         <span class="picker-empty-icon">🎵</span>
-        <span>Keine Items verfügbar</span>
+        <span>No Items Available</span>
       </div>
       <button
         v-for="item in categoryItems"

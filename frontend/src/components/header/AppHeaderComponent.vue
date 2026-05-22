@@ -15,7 +15,7 @@ const { resetGame } = usePersistence()
 function handleReset() {
   if (
     window.confirm(
-      'Spielstand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'Really delete save? This action cannot be undone.',
     )
   ) {
     resetGame()
@@ -185,7 +185,7 @@ onUnmounted(() => resizeObserver?.disconnect())
       <button
         class="center-reset-btn"
         :style="{ top: svgH - 10 + 'px' }"
-        title="Spielstand löschen"
+        title="Delete Save"
         @click.stop="handleReset"
       >
         ✕
@@ -201,7 +201,7 @@ onUnmounted(() => resizeObserver?.disconnect())
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="inventory-circle-btn"
-          title="Skilltree öffnen"
+          title="Open Skill Tree"
           @click="uiStore.setBardTab('tree')"
         >
           <div class="relative w-36 h-36">
@@ -219,7 +219,7 @@ onUnmounted(() => resizeObserver?.disconnect())
               <img
                 src="/img/menu/TREE.png"
                 class="object-contain w-full h-full p-3"
-                alt="Skilltree öffnen"
+                alt="Open Skill Tree"
               />
             </div>
           </div>
@@ -232,14 +232,14 @@ onUnmounted(() => resizeObserver?.disconnect())
     <Transition name="xp-tt">
       <div v-if="showCenterTooltip" class="xp-tt" :style="centerTooltipStyle" aria-hidden="true">
         <div class="xp-tt__caret" />
-        <span class="xp-tt__label">Nächstes Level</span>
+        <span class="xp-tt__label">Next Level</span>
         <div class="xp-tt__row">
-          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('en-US') }}</span>
           <span class="xp-tt__sep">/</span>
-          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('de-DE') }}</span>
+          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('en-US') }}</span>
           <span class="xp-tt__unit">Chimes</span>
         </div>
-        <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % zum nächsten Level</div>
+        <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % to next Level</div>
       </div>
     </Transition>
   </Teleport>

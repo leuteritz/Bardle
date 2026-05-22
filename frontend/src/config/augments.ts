@@ -12,7 +12,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_cps_30',
     name: 'Melodic Surge',
-    description: 'Deine Chimes-Produktion fließt stärker.',
+    description: 'Your Chimes production flows stronger.',
     effectLine: '+30% CPS',
     icon: '🎵',
     image: '/img/augments/augment1.png',
@@ -22,7 +22,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_cpc_50',
     name: 'Resonant Strike',
-    description: 'Jeder Klick hallt weithin nach.',
+    description: 'Every click echoes far and wide.',
     effectLine: '+50% CPC',
     icon: '🔔',
     image: '/img/augments/augment2.png',
@@ -32,8 +32,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_power_200',
     name: "Warrior's Beat",
-    description: 'Deine Kampfkraft wächst mit jeder Fähigkeitsstufe.',
-    effectLine: '+200 Power pro Fähigkeitsstufe',
+    description: 'Your combat power grows with every ability level.',
+    effectLine: '+200 Power per Ability Level',
     icon: '⚔️',
     rarity: 'common',
     effects: { abilityPowerPerLevel: 200 },
@@ -41,8 +41,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_building_cost_15',
     name: 'Frugal Harmony',
-    description: 'Gebäude kosten weniger Chimes.',
-    effectLine: '-15% Gebäudekosten',
+    description: 'Buildings cost fewer Chimes.',
+    effectLine: '-15% Building Costs',
     icon: '🏛️',
     image: '/img/augments/augment3.png',
     rarity: 'common',
@@ -51,8 +51,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_meep_cost_20',
     name: 'Meep Bargain',
-    description: 'Meeps entstehen günstiger.',
-    effectLine: '-20% Meep-Kosten',
+    description: 'Meeps are cheaper to create.',
+    effectLine: '-20% Meep Costs',
     icon: '🐾',
     rarity: 'common',
     effects: { meepCostMultiplier: 0.8 },
@@ -60,8 +60,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_expedition_25',
     name: "Wanderer's Luck",
-    description: 'Expeditionen bringen mehr zurück.',
-    effectLine: '+25% Expeditions-Belohnung',
+    description: 'Expeditions bring back more.',
+    effectLine: '+25% Expedition Reward',
     icon: '🗺️',
     rarity: 'common',
     effects: { expeditionRewardMultiplier: 1.25 },
@@ -69,7 +69,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_cps_cpc_20',
     name: 'Balanced Chord',
-    description: 'Passive und aktive Chimes-Gewinnung steigen gleichermaßen.',
+    description: 'Passive and active Chimes gain rise equally.',
     effectLine: '+20% CPS & CPC',
     icon: '🎼',
     rarity: 'common',
@@ -78,8 +78,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_meep_power_50',
     name: 'Meep Empowerment',
-    description: 'Jeder Meep leistet mehr im Kampf.',
-    effectLine: '+50% Meep-Power',
+    description: 'Every Meep performs better in combat.',
+    effectLine: '+50% Meep Power',
     icon: '💪',
     rarity: 'common',
     effects: { meepPowerMultiplier: 1.5 },
@@ -87,7 +87,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_caffeine_rush',
     name: 'Caffeine Rush',
-    description: 'Ein Koffeinschub beschleunigt die Produktion.',
+    description: 'A caffeine rush accelerates production.',
     effectLine: '+10% CPS',
     icon: '☕',
     rarity: 'common',
@@ -96,7 +96,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_steady_hands',
     name: 'Steady Hands',
-    description: 'Ruhige Hände treffen besser.',
+    description: 'Steady hands aim better.',
     effectLine: '+5% CPC',
     icon: '🤲',
     rarity: 'common',
@@ -105,8 +105,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'common_lucky_penny',
     name: 'Lucky Penny',
-    description: 'Ein Glückspfennig bringt mehr aus Expeditionen.',
-    effectLine: '+8% Expeditions-Belohnung',
+    description: 'A lucky coin brings more from expeditions.',
+    effectLine: '+8% Expedition Reward',
     icon: '🪙',
     rarity: 'common',
     effects: { expeditionRewardMultiplier: 1.08 },
@@ -116,7 +116,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_cps_70',
     name: 'Harmonic Cascade',
-    description: 'Ein mächtiger Strom von Chimes ergießt sich jede Sekunde.',
+    description: 'A mighty torrent of Chimes pours forth every second.',
     effectLine: '+70% CPS',
     icon: '🌊',
     image: '/img/augments/augment4.png',
@@ -126,7 +126,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_cpc_100',
     name: 'Thunder Chime',
-    description: 'Deine Klicks treffen wie Blitze.',
+    description: 'Your clicks strike like lightning.',
     effectLine: '+100% CPC',
     icon: '⚡',
     image: '/img/augments/augment5.png',
@@ -136,8 +136,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_power_500',
     name: 'Battle Hymn',
-    description: 'Jede Fähigkeitsstufe verleiht deutlich mehr Kampfkraft.',
-    effectLine: '+500 Power pro Fähigkeitsstufe',
+    description: 'Each ability level grants noticeably more combat power.',
+    effectLine: '+500 Power per Ability Level',
     icon: '🛡️',
     image: '/img/roles/top.png',
     rarity: 'rare',
@@ -146,8 +146,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_building_cost_30',
     name: 'Master Builder',
-    description: 'Gebäude kosten spürbar weniger Chimes.',
-    effectLine: '-30% Gebäudekosten',
+    description: 'Buildings cost noticeably fewer Chimes.',
+    effectLine: '-30% Building Costs',
     icon: '🔨',
     rarity: 'rare',
     effects: { buildingCostMultiplier: 0.7 },
@@ -155,8 +155,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_expedition_50',
     name: "Fortune's Compass",
-    description: 'Expeditionen kehren mit halber Beute mehr zurück.',
-    effectLine: '+50% Expeditions-Belohnung',
+    description: 'Expeditions return with even greater spoils.',
+    effectLine: '+50% Expedition Reward',
     icon: '🧭',
     rarity: 'rare',
     effects: { expeditionRewardMultiplier: 1.5 },
@@ -164,7 +164,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_cps_power',
     name: 'Combat Rhythm',
-    description: 'Passive Produktion und Kampfkraft steigen gemeinsam.',
+    description: 'Passive production and combat power rise together.',
     effectLine: '+40% CPS & +300 Power/Level',
     icon: '🥁',
     rarity: 'rare',
@@ -173,8 +173,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_double_tap',
     name: 'Double Tap',
-    description: 'Jeder 10. Klick zählt doppelt.',
-    effectLine: 'Jeder 10. Klick zählt doppelt',
+    description: 'Every 10th click counts twice.',
+    effectLine: 'Every 10th Click Counts Twice',
     icon: '✌️',
     image: '/img/augments/augment6.png',
     rarity: 'rare',
@@ -184,7 +184,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_coin_magnet',
     name: 'Coin Magnet',
-    description: 'Zieht automatisch Chimes aus der Nähe an.',
+    description: 'Automatically draws in nearby Chimes.',
     effectLine: '+15% CPS (Passive Income)',
     icon: '🧲',
     rarity: 'rare',
@@ -193,8 +193,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_overclock',
     name: 'Overclock',
-    description: 'CPS verdoppelt sich für 30s nach jedem Level-Aufstieg.',
-    effectLine: 'CPS x2 für 30s nach Level-Up',
+    description: 'CPS doubles for 30s after each level-up.',
+    effectLine: 'CPS x2 for 30s after Level-Up',
     icon: '⏱️',
     rarity: 'rare',
     effects: {},
@@ -205,7 +205,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_cps_150',
     name: 'Eternal Melody',
-    description: 'Die Chimes fließen ohne Ende — eine ewige Komposition.',
+    description: 'Chimes flow endlessly — an eternal composition.',
     effectLine: '+150% CPS',
     icon: '🌟',
     image: '/img/augments/augment7.png',
@@ -215,7 +215,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_cpc_200',
     name: 'Cosmic Click',
-    description: 'Jeder Klick erschüttert das Universum.',
+    description: 'Every click shakes the universe.',
     effectLine: '+200% CPC',
     icon: '💫',
     rarity: 'epic',
@@ -224,8 +224,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_power_1000',
     name: "Warlord's Anthem",
-    description: 'Deine Fähigkeiten entfalten ein gewaltiges Kampfpotenzial.',
-    effectLine: '+1000 Power pro Fähigkeitsstufe',
+    description: 'Your abilities unleash tremendous combat potential.',
+    effectLine: '+1000 Power per Ability Level',
     icon: '👑',
     rarity: 'epic',
     effects: { abilityPowerPerLevel: 1000 },
@@ -233,7 +233,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_cps_cpc_80',
     name: 'Grand Crescendo',
-    description: 'Alle Chimes-Quellen erreichen ihren absoluten Höhepunkt.',
+    description: 'All Chimes sources reach their absolute peak.',
     effectLine: '+80% CPS & CPC',
     icon: '🎆',
     rarity: 'epic',
@@ -242,8 +242,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_time_warp',
     name: 'Time Warp',
-    description: 'Die Zeit biegt sich — alle Cooldowns halbiert.',
-    effectLine: 'Alle Cooldowns halbiert',
+    description: 'Time bends — all cooldowns halved.',
+    effectLine: 'All Cooldowns Halved',
     icon: '⏳',
     rarity: 'epic',
     effects: { cooldownMultiplier: 0.5 },
@@ -251,8 +251,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_chain_reaction',
     name: 'Chain Reaction',
-    description: 'Klicks haben eine Chance, einen Kettenklick auszulösen.',
-    effectLine: '20% Chance auf Bonus-Klick',
+    description: 'Clicks have a chance to trigger a chain click.',
+    effectLine: '20% Chance for Bonus Click',
     icon: '💥',
     image: '/img/augments/augment8.png',
     rarity: 'epic',
@@ -262,8 +262,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_void_drain',
     name: 'Void Drain',
-    description: 'Die Leere zehrt an der Kraft deiner Gegner.',
-    effectLine: 'Feinde verlieren 2% HP/s im Kampf',
+    description: "The void gnaws at your enemies' power.",
+    effectLine: 'Enemies lose 2% HP/s in combat',
     icon: '🕳️',
     rarity: 'epic',
     effects: { enemyMaxHPDrainPerSecond: 0.02 },
@@ -273,8 +273,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'legendary_big_bang',
     name: 'Big Bang',
-    description: 'Einmaliger kosmischer Schlag gegen alle Feinde.',
-    effectLine: 'Einmaliger 5x Power-Boost im Kampf',
+    description: 'One-time cosmic strike against all enemies.',
+    effectLine: 'One-time 5x Power Boost in combat',
     icon: '🌌',
     image: '/img/augments/augment9.png',
     rarity: 'legendary',
@@ -284,8 +284,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'legendary_chronostasis',
     name: 'Chronostasis',
-    description: 'Die Zeit verlangsamt sich für Gegner.',
-    effectLine: 'Gegner 50% langsamer im Kampf',
+    description: 'Time slows for enemies.',
+    effectLine: 'Enemies 50% slower in combat',
     icon: '🕰️',
     rarity: 'legendary',
     effects: { enemySpeedMultiplier: 0.5 },
@@ -293,8 +293,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'legendary_infinite_loop',
     name: 'Infinite Loop',
-    description: 'Jeder 50. Klick wiederholt die letzten 5 Klicks.',
-    effectLine: 'Jeder 50. Klick wiederholt 5 Klicks',
+    description: 'Every 50th click replays the last 5 clicks.',
+    effectLine: 'Every 50th Click Replays 5 Clicks',
     icon: '♾️',
     image: '/img/augments/augment10.png',
     rarity: 'legendary',
@@ -306,8 +306,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_gravity_flip',
     name: 'Gravity Flip',
-    description: 'Die Schwerkraft dreht sich kurz um — danach fließen Chimes schneller.',
-    effectLine: '+20% CPS + visueller Gag',
+    description: 'Gravity briefly flips — Chimes flow faster afterward.',
+    effectLine: '+20% CPS + visual gag',
     icon: '🙃',
     rarity: 'epic',
     effects: { cpsMultiplier: 1.2 },
@@ -316,8 +316,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_bards_curse',
     name: "Bard's Curse",
-    description: 'Weniger passive Chimes, dafür mächtigere Klicks.',
-    effectLine: '-5% CPS, aber +50% CPC',
+    description: 'Less passive Chimes, but more powerful clicks.',
+    effectLine: '-5% CPS, but +50% CPC',
     icon: '🎭',
     rarity: 'rare',
     effects: { cpsMultiplier: 0.95, cpcMultiplier: 1.5 },
@@ -325,8 +325,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'legendary_quantum_luck',
     name: 'Quantum Luck',
-    description: 'Jeder Bonus-Effekt hat eine Chance, verdoppelt oder annulliert zu werden.',
-    effectLine: '10% Chance: Bonus x2 oder x0',
+    description: 'Every bonus effect has a chance to be doubled or nullified.',
+    effectLine: '10% Chance: Bonus x2 or x0',
     icon: '🎲',
     rarity: 'legendary',
     effects: {},
@@ -335,8 +335,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'epic_echo_chamber',
     name: 'Echo Chamber',
-    description: 'Der letzte gewählte Augment-Effekt hallt 60s nach.',
-    effectLine: 'Letztes Augment nochmal aktiv (60s)',
+    description: 'The last chosen Augment effect echoes for 60s.',
+    effectLine: 'Last Augment active again (60s)',
     icon: '🔊',
     rarity: 'epic',
     effects: {},
@@ -345,8 +345,8 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     id: 'rare_keyboard_smash',
     name: 'Keyboard Smash',
-    description: 'Zufällige Boni und Mali auf alle Stats.',
-    effectLine: 'Random -5% bis +50% auf alle Stats',
+    description: 'Random bonuses and penalties to all stats.',
+    effectLine: 'Random -5% to +50% on all stats',
     icon: '⌨️',
     rarity: 'rare',
     effects: {},
@@ -354,5 +354,5 @@ export const AUGMENTS: AugmentDefinition[] = [
   },
 ]
 
-// Die 10 Bild-Augments bilden den Pool für die Level-Up-Auswahl
+// The 10 image augments form the pool for the level-up selection
 export const AUGMENT_POOL: AugmentDefinition[] = AUGMENTS.filter((a) => !!a.image)

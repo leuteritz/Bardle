@@ -25,13 +25,13 @@ const isExpanded = ref(true)
 const hoveredKey = ref<string | null>(null)
 const isSummaryHovered = ref(false)
 
-type GroupKey = 'Chimes' | 'Ressourcen' | 'Kampf' | 'Spezial'
+type GroupKey = 'Chimes' | 'Resources' | 'Combat' | 'Special'
 
 const GROUP_SHORT: Record<string, string> = {
   Chimes: 'C:',
-  Ressourcen: 'R:',
-  Kampf: 'K:',
-  Spezial: 'S:',
+  Resources: 'R:',
+  Combat: 'K:',
+  Special: 'S:',
 }
 
 const slotRefs = new Map<string, HTMLElement>()
@@ -55,9 +55,9 @@ function getGroupKey(slot: AugmentSlot): GroupKey {
     e.meepPowerMultiplier ||
     e.abilityPowerPerLevel
   )
-    return 'Ressourcen'
-  if (e.cooldownMultiplier || e.enemySpeedMultiplier || e.enemyMaxHPDrainPerSecond) return 'Kampf'
-  return 'Spezial'
+    return 'Resources'
+  if (e.cooldownMultiplier || e.enemySpeedMultiplier || e.enemyMaxHPDrainPerSecond) return 'Combat'
+  return 'Special'
 }
 
 interface SummaryGroup {
@@ -122,15 +122,15 @@ const summaryGroups = computed<SummaryGroup[]>(() => {
 
   const resourceEntries: SummaryGroup['entries'] = []
   if (building > 0)
-    resourceEntries.push({ label: 'Gebäude', value: `-${Math.round(building)}%`, positive: true })
+    resourceEntries.push({ label: 'Building', value: `-${Math.round(building)}%`, positive: true })
   if (meepCost > 0)
     resourceEntries.push({
-      label: 'Meep-Kosten',
+      label: 'Meep Cost',
       value: `-${Math.round(meepCost)}%`,
       positive: true,
     })
   if (meepPower !== 0)
-    resourceEntries.push({ label: 'Meep-Stärke', value: fmt(meepPower), positive: meepPower > 0 })
+    resourceEntries.push({ label: 'Meep Power', value: fmt(meepPower), positive: meepPower > 0 })
   if (abilityPower > 0)
     resourceEntries.push({ label: 'Power/Lv', value: `+${abilityPower}`, positive: true })
 
@@ -139,7 +139,7 @@ const summaryGroups = computed<SummaryGroup[]>(() => {
     combatEntries.push({ label: 'Cooldown', value: `-${Math.round(cooldown)}%`, positive: true })
   if (enemySpeed > 0)
     combatEntries.push({
-      label: 'Feindspeed',
+      label: 'Enemy Speed',
       value: `-${Math.round(enemySpeed)}%`,
       positive: true,
     })
@@ -153,9 +153,9 @@ const summaryGroups = computed<SummaryGroup[]>(() => {
 
   const groups: SummaryGroup[] = []
   if (chimeEntries.length) groups.push({ label: 'Chimes', entries: chimeEntries })
-  if (resourceEntries.length) groups.push({ label: 'Ressourcen', entries: resourceEntries })
-  if (combatEntries.length) groups.push({ label: 'Kampf', entries: combatEntries })
-  if (specialEntries.length) groups.push({ label: 'Spezial', entries: specialEntries })
+  if (resourceEntries.length) groups.push({ label: 'Resources', entries: resourceEntries })
+  if (combatEntries.length) groups.push({ label: 'Combat', entries: combatEntries })
+  if (specialEntries.length) groups.push({ label: 'Special', entries: specialEntries })
   return groups
 })
 
@@ -167,14 +167,14 @@ interface IconGroup {
 const iconGroups = computed<IconGroup[]>(() => {
   const map = new Map<GroupKey, AugmentSlot[]>([
     ['Chimes', []],
-    ['Ressourcen', []],
-    ['Kampf', []],
-    ['Spezial', []],
+    ['Resources', []],
+    ['Combat', []],
+    ['Special', []],
   ])
   for (const slot of activeAugmentSlots.value) {
     map.get(getGroupKey(slot))!.push(slot)
   }
-  const order: GroupKey[] = ['Chimes', 'Ressourcen', 'Kampf', 'Spezial']
+  const order: GroupKey[] = ['Chimes', 'Resources', 'Combat', 'Special']
   return order.filter((k) => map.get(k)!.length > 0).map((k) => ({ key: k, slots: map.get(k)! }))
 })
 </script>

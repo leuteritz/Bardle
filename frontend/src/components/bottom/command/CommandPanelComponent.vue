@@ -149,7 +149,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
           <template v-else>
             <div class="cmd-tile-icon cmd-tile-icon--locked">
-              <img src="/img/lock.png" alt="Gesperrt" class="lock-icon" />
+              <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
             <div class="cmd-tile-cost-row">
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />

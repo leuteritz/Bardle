@@ -13,7 +13,7 @@
           <span class="text-xs set-bonus-desc">{{ bonus.description }}</span>
         </div>
         <span class="flex-shrink-0 px-2 py-1 ml-auto text-xs font-bold set-bonus-badge">
-          AKTIV
+          ACTIVE
         </span>
       </div>
     </div>
@@ -146,8 +146,8 @@ export default defineComponent({
     watch(() => props.category, (val) => { if (val) activeCategory.value = val })
 
     const categories = [
-      { id: 'weapon', icon: '⚔️', label: 'Waffen' },
-      { id: 'armor', icon: '🛡️', label: 'Rüstung' },
+      { id: 'weapon', icon: '⚔️', label: 'Weapons' },
+      { id: 'armor', icon: '🛡️', label: 'Armor' },
       { id: 'misc', icon: '📿', label: 'Misc' },
     ]
 

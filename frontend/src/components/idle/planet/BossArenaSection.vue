@@ -24,7 +24,7 @@
       class="boss-name-overlay"
       :class="{ 'boss-name-overlay--galaxy': isGalaxyBoss }"
     >
-      <span v-if="isGalaxyBoss" class="boss-name-galaxy-badge">✦ GALAXIE-BOSS ✦</span>
+      <span v-if="isGalaxyBoss" class="boss-name-galaxy-badge">✦ GALAXY BOSS ✦</span>
       <span class="boss-name-text" :class="{ 'boss-name-text--galaxy': isGalaxyBoss }">
         {{ props.activeBoss.bossName }}
       </span>
@@ -100,7 +100,7 @@
         />
       </svg>
       <span class="enrage-seconds">{{ effectiveSecondsRemaining }}</span>
-      <span class="enrage-label">SEK</span>
+      <span class="enrage-label">SEC</span>
     </div>
 
     <!-- ── Mid Curse Indikator ── -->

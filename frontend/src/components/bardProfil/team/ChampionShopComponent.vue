@@ -7,7 +7,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Champion suchen…"
+          placeholder="Search Champion…"
           class="rpg-search w-full pl-9 pr-4 py-2.5"
         />
       </div>
@@ -24,7 +24,7 @@
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
           <span class="text-2xl opacity-20">🔍</span>
         </div>
-        <p class="empty-label">Kein Champion gefunden.</p>
+        <p class="empty-label">No champion found.</p>
       </div>
 
       <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
@@ -47,7 +47,7 @@
           <img
             v-if="isLocked(champion.name)"
             src="/img/lock.png"
-            alt="Gesperrt"
+            alt="Locked"
             class="lock-overlay"
           />
 
@@ -130,10 +130,10 @@
                 :class="getButtonClass(champion.name)"
                 :disabled="!canClickBuy(champion.name)"
               >
-                <span v-if="isOwned(champion.name)">Im Team</span>
-                <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Rekrutieren</span>
-                <span v-else-if="isUnlocked(champion.name)">Materialien fehlen</span>
-                <span v-else>Gesperrt</span>
+                <span v-if="isOwned(champion.name)">In Team</span>
+                <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Recruit</span>
+                <span v-else-if="isUnlocked(champion.name)">Materials Missing</span>
+                <span v-else>Locked</span>
               </button>
             </div>
           </div>

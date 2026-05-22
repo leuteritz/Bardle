@@ -15,7 +15,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'solo-invade',
     name: 'Solo Invade',
-    description: 'Schicke einen Champion tief in den feindlichen Jungle.',
+    description: 'Send a champion deep into enemy jungle.',
     requiredRoles: ['jungle'],
     minPowerThreshold: 60,
     durationSeconds: 60,
@@ -25,7 +25,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'bot-lane-push',
     name: 'Bot Lane Push',
-    description: 'ADC und Support drücken die Bot Lane bis zum Inhibitor.',
+    description: 'ADC and Support push the bot lane all the way to the inhibitor.',
     requiredRoles: ['adc', 'support'],
     minPowerThreshold: 120,
     durationSeconds: 120,
@@ -35,7 +35,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'baron-steal',
     name: 'Baron Steal',
-    description: 'Ein riskanter Versuch, Baron Nashor zu stehlen.',
+    description: 'A risky attempt to steal Baron Nashor.',
     requiredRoles: ['jungle', 'mid'],
     minPowerThreshold: 200,
     durationSeconds: 180,
@@ -45,7 +45,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'split-push',
     name: 'Split Push',
-    description: 'Ein Top Laner splitpusht eine Sidelane.',
+    description: 'A Top laner splitpushes a side lane.',
     requiredRoles: ['top'],
     minPowerThreshold: 80,
     durationSeconds: 90,
@@ -55,7 +55,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'mid-roam',
     name: 'Mid Roam',
-    description: 'Der Mid Laner roamt zu anderen Lanes für Ganks.',
+    description: 'The Mid laner roams to other lanes for ganks.',
     requiredRoles: ['mid'],
     minPowerThreshold: 70,
     durationSeconds: 75,
@@ -65,7 +65,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'dragon-fight',
     name: 'Dragon Fight',
-    description: 'Sichere den Drachen mit einem koordinierten Teamkampf.',
+    description: 'Secure the dragon with a coordinated team fight.',
     requiredRoles: ['jungle', 'adc', 'support'],
     minPowerThreshold: 250,
     durationSeconds: 150,
@@ -75,7 +75,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'full-team-siege',
     name: 'Full Team Siege',
-    description: 'Das komplette Team belagert eine feindliche Basis.',
+    description: 'The full team besieges an enemy base.',
     requiredRoles: ['top', 'jungle', 'mid', 'adc', 'support'],
     minPowerThreshold: 500,
     durationSeconds: 300,
@@ -85,7 +85,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'ward-expedition',
     name: 'Ward Expedition',
-    description: 'Support platziert tiefe Wards im feindlichen Gebiet.',
+    description: 'Support places deep wards in enemy territory.',
     requiredRoles: ['support'],
     minPowerThreshold: 50,
     durationSeconds: 45,
@@ -95,7 +95,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'rift-herald',
     name: 'Rift Herald',
-    description: 'Beschwöre den Rift Herald für einen Turm-Push.',
+    description: 'Summon the Rift Herald for a tower push.',
     requiredRoles: ['jungle', 'top'],
     minPowerThreshold: 150,
     durationSeconds: 120,
@@ -105,7 +105,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
   {
     id: 'tower-dive',
     name: 'Tower Dive',
-    description: 'Ein riskanter Tower-Dive mit perfektem Timing.',
+    description: 'A risky tower dive with perfect timing.',
     requiredRoles: ['top', 'jungle'],
     minPowerThreshold: 180,
     durationSeconds: 100,

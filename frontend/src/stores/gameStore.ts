@@ -98,7 +98,7 @@ export const useGameStore = defineStore('game', {
     buildingProductionHistory: {} as BuildingProduction,
     totalBuildingProduction: {} as TotalBuildingProduction,
 
-    // Modal Status für UI-Effekte
+    // Modal state for UI effects
     isCPSModalOpen: false,
     isExpeditionModalOpen: false,
     isEncyclopediaOpen: false,
@@ -108,7 +108,7 @@ export const useGameStore = defineStore('game', {
     isHyperspaceActive: false,
     showUniverseSelectModal: false,
 
-    // ── Expedetion-Tracking ──────────────────────
+    // ── Expedition Tracking ──────────────────────
     totalChimesEarned: 0,
     totalClicks: 0,
 
@@ -118,7 +118,7 @@ export const useGameStore = defineStore('game', {
     showOfflineModal: false,
   }),
   actions: {
-    // Fügt einen Meep hinzu wenn genügend Chimes gesammelt wurden
+    // Adds a Meep when enough Chimes have been collected
     addMeep() {
       if (this.chimesForMeep >= this.meepChimeRequirement) {
         setTimeout(() => {
@@ -136,7 +136,7 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Fügt Chimes hinzu und aktualisiert alle abhängigen Werte
+    // Adds Chimes and updates all dependent values
     addChime() {
       this.chimes += this.chimesPerClick
       this.chimesForMeep += this.chimesPerClick
@@ -149,7 +149,7 @@ export const useGameStore = defineStore('game', {
       this.checkPrestigeAvailability()
     },
 
-    // Berechnet das aktuelle Level basierend auf gesammelten Chimes
+    // Calculates the current level based on collected Chimes
     calculateLevel() {
       if (this.pendingAugmentChoice) return
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
@@ -158,14 +158,14 @@ export const useGameStore = defineStore('game', {
       const spInterval = this.activeModifier.skillPointInterval ?? 2
       const oldLevel = this.level
 
-      // Relative Schwelle: wie viele Chimes für DIESES Level nötig sind
+      // Relative threshold: how many Chimes are needed for THIS level
       const chimesNeededThisLevel =
         this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
 
       if (this.chimesEarnedForLevel >= chimesNeededThisLevel) {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
-        // Überschuss in den neuen Level übertragen (nicht hart auf 0 setzen!)
+        // Transfer overflow into the new level (don't hard reset to 0!)
         this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
         if (this.level % spInterval === 0) {
           this.skillPoints++
@@ -266,7 +266,7 @@ export const useGameStore = defineStore('game', {
         this.level++
         this.chimesForNextLevel = Math.ceil(LEVEL_BASE * Math.pow(this.level, exponent))
         this.chimesEarnedForLevel = Math.max(0, this.chimesEarnedForLevel - chimesNeededThisLevel)
-        // Neue Schwelle für das nächste Level berechnen
+        // Calculate new threshold for the next level
         chimesNeededThisLevel =
           this.chimesForNextLevel - chimeThresholdForLevel(this.level - 1, exponent)
 
@@ -298,7 +298,7 @@ export const useGameStore = defineStore('game', {
       this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
-    // Schaltet eine Fähigkeit mit Meeps frei (einmalig, sequenziell)
+    // Unlocks an ability with Meeps (one-time, sequentially)
     unlockSkillWithMeeps(index: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
       if (index > 0 && this.abilityLevels[index - 1] === 0) return
@@ -312,7 +312,7 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Erhöht das Level einer Fähigkeit wenn Skillpunkte verfügbar sind
+    // Increases an ability level when skill points are available
     upgradeAbility(index: number) {
       const maxLevel = this.activeModifier.maxAbilityLevel ?? MAX_ABILITY_LEVEL
       if (this.skillPoints > 0 && this.abilityLevels[index] < maxLevel) {
@@ -346,7 +346,7 @@ export const useGameStore = defineStore('game', {
       })
     },
 
-    // Prüft ob Prestige verfügbar ist
+    // Checks if Prestige is available
     checkPrestigeAvailability() {
       if (
         !this.prestigeAvailable &&
@@ -357,7 +357,7 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Führt den eigentlichen Prestige-Reset durch
+    // Executes the actual Prestige reset
     executePrestigeReset(targetUniverse?: number) {
       const nextUniverse = targetUniverse ?? this.currentUniverse + 1
       logger.info('Game', `Prestige reset -> Universe ${nextUniverse}`)
@@ -381,7 +381,7 @@ export const useGameStore = defineStore('game', {
       this.isGamePaused = false
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
-      // totalChimesEarned & totalClicks bleiben erhalten (prestige-übergreifend)
+      // totalChimesEarned & totalClicks persist across prestiges
       const augmentStore = useAugmentStore()
       augmentStore.$reset()
       const shopStore = useShopStore()
@@ -392,19 +392,19 @@ export const useGameStore = defineStore('game', {
       this.chimesPerClick = shopStore.calculateTotalCPC()
     },
 
-    // Öffnet das Universum-Auswahl-Modal
+    // Opens the Universe selection modal
     openPrestigeModal() {
       if (!this.prestigeAvailable || this.currentUniverse >= this.totalUniverses) return
       if (this.isHyperspaceActive) return
       this.showUniverseSelectModal = true
     },
 
-    // Schließt das Universum-Auswahl-Modal
+    // Closes the Universe selection modal
     closePrestigeModal() {
       this.showUniverseSelectModal = false
     },
 
-    // Wählt ein Universum aus und startet die Hyperspace-Animation + Reset
+    // Selects a universe and starts the Hyperspace animation + reset
     selectPrestigeUniverse(targetUniverse: number) {
       if (targetUniverse === this.currentUniverse) return
       if (this.isHyperspaceActive) return
@@ -428,7 +428,7 @@ export const useGameStore = defineStore('game', {
       }, HYPERSPACE_ANIM_END_MS)
     },
 
-    // Verarbeitet passive Einnahmen pro Sekunde
+    // Processes passive income per second
     tick() {
       this.inGameTime++
       const cps = this.chimesPerSecond
@@ -466,12 +466,12 @@ export const useGameStore = defineStore('game', {
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
       const planetShopStore = usePlanetShopStore()
-      // turret_planet: automatischer Schaden an aktivem Boss
+      // turret_planet: automatic damage to active Boss
       const autoAttackDPS = planetShopStore.autoAttackDPS
       if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
         planetBossStore.dealDamage(autoAttackDPS)
       }
-      // harvest_node: periodische Material-Ernte
+      // harvest_node: periodic material harvest
       planetShopStore.tickHarvest(this.inGameTime)
       const combatStore = useCombatStore()
       combatStore.tick()
@@ -479,7 +479,7 @@ export const useGameStore = defineStore('game', {
       playerStore.regenTick()
     },
 
-    // Schreibt Offline-Chimes gut und schließt das Modal
+    // Credits offline Chimes and closes the modal
     claimOfflineReward(multiplier: 1 | 2 = 1) {
       const earned = this.offlineChimes * multiplier
       this.chimes += earned
@@ -491,7 +491,7 @@ export const useGameStore = defineStore('game', {
       this.calculateLevel()
     },
 
-    // Setzt den Modal-Status für UI-Effekte
+    // Sets the modal state for UI effects
     setCPSModalOpen(isOpen: boolean) {
       this.isCPSModalOpen = isOpen
     },
@@ -504,7 +504,7 @@ export const useGameStore = defineStore('game', {
       this.isEncyclopediaOpen = !this.isEncyclopediaOpen
     },
 
-    // Schickt Meeps auf eine Portal-Expedition
+    // Sends Meeps on a portal expedition
     startExpedition(
       universeId: number,
       universeName: string,
@@ -526,7 +526,7 @@ export const useGameStore = defineStore('game', {
       logger.info('Game', `Expedition started: ${universeName}`, { meepsSent, durationMs, reward })
     },
 
-    // Sammelt abgeschlossene Expedition ein
+    // Collects a completed expedition
     collectExpedition() {
       if (!this.activeExpedition) return
       if (Date.now() < this.activeExpedition.startTime + this.activeExpedition.durationMs) return
