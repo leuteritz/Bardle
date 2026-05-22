@@ -5,7 +5,20 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
-import { ROLE_BY_KEY } from '@/config/constants'
+import {
+  ROLE_BY_KEY,
+  ROLE_TOP_SHIELD_REBUILD_MS,
+  ROLE_MID_CURSE_INTERVAL_MS,
+  ROLE_MID_CURSE_DURATION_MS,
+  ROLE_MID_CURSE_DOT_DPS,
+  ROLE_MID_CURSE_DAMAGE_AMP,
+  ROLE_ADC_BURST_DAMAGE,
+  ROLE_ADC_BURST_INTERVAL_MS,
+  ROLE_SUPPORT_HEAL_AMOUNT,
+  ROLE_SUPPORT_HEAL_INTERVAL_MS,
+  SUPPORT_PLANET_HEAL_AMOUNT,
+  SUPPORT_PLANET_HEAL_INTERVAL_MS,
+} from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
@@ -286,6 +299,48 @@ function onSplashMouseLeave() {
   parallaxY.value = 0
 }
 
+interface RoleStat { key: string; icon: string; label: string; value: string }
+
+const activeRoleStats = computed<RoleStat[]>(() => {
+  const role = ROLE_MAP[activeRole.value]
+  switch (role) {
+    case 'top':
+      return [
+        { key: 'atk',    icon: '⚔',  label: 'Atk Interval',  value: '4.0s' },
+        { key: 'shield', icon: '🛡',  label: 'Shield Rebuild', value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s` },
+        { key: 'type',   icon: '💪',  label: 'Style',          value: 'Tank / Frontline' },
+      ]
+    case 'jungle':
+      return [
+        { key: 'style',  icon: '🗡',  label: 'Style',          value: 'Assassin / Ganker' },
+        { key: 'effect', icon: '🌀',  label: 'Effect',         value: 'Crowd Control' },
+        { key: 'range',  icon: '🔄',  label: 'Orbit',          value: 'Wide Patrol' },
+      ]
+    case 'mid':
+      return [
+        { key: 'cursecd',  icon: '💜', label: 'Curse CD',      value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s` },
+        { key: 'cursedur', icon: '⏱',  label: 'Curse Duration',value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s` },
+        { key: 'dot',      icon: '☠',  label: 'DoT DPS',       value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
+        { key: 'amp',      icon: '⚡',  label: 'Dmg Amplify',  value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
+      ]
+    case 'adc':
+      return [
+        { key: 'burst',   icon: '🎯', label: 'Burst Damage',   value: `${ROLE_ADC_BURST_DAMAGE}` },
+        { key: 'burstcd', icon: '⏱',  label: 'Burst CD',       value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s` },
+        { key: 'style',   icon: '🏹', label: 'Style',          value: 'Ranged / DPS' },
+      ]
+    case 'support':
+      return [
+        { key: 'heal',   icon: '💚', label: 'Heal / Tick',     value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
+        { key: 'healcd', icon: '⏰', label: 'Heal CD',         value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s` },
+        { key: 'pheal',  icon: '🌍', label: 'Planet Heal',     value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
+        { key: 'pcd',    icon: '⌛', label: 'Planet CD',       value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s` },
+      ]
+    default:
+      return []
+  }
+})
+
 void championRoleLabel
 void globalSynergies
 </script>
@@ -293,21 +348,9 @@ void globalSynergies
 <template>
   <div class="roles-tab">
     <!-- ════════════════════════════════
-         ITEM PICKER (replaces full view)
+         MAIN VIEW + OVERLAYS
          ════════════════════════════════ -->
-    <ItemPickerPanel
-      v-if="panelMode === 'item-picker' && selectedCategory"
-      :selected-category="selectedCategory"
-      :category-items="categoryItems"
-      :current-equipment="currentEquipment"
-      @back="closePanel"
-      @equip="handleEquip"
-    />
-
-    <!-- ════════════════════════════════
-         MAIN VIEW + CHAMPION PICKER OVERLAY
-         ════════════════════════════════ -->
-    <div v-else class="main-layout">
+    <div class="main-layout">
         <!-- ══ LEFT — Dominant Splash Art ══ -->
         <div
           class="splash-area"
@@ -346,7 +389,21 @@ void globalSynergies
           <div class="vignette-right" />
 
           <!-- Champion Name — top center -->
-          <div v-if="activeChampion" class="splash-name-top">{{ activeChampion }}</div>
+          <Transition name="splash-name-fade">
+            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-top">{{ activeChampion }}</div>
+          </Transition>
+
+          <!-- Role stats panel — below top name -->
+          <Transition name="role-fx-fade">
+            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-role-fx" @click.stop>
+              <div class="role-fx-panel">
+                <div v-for="stat in activeRoleStats" :key="stat.key" class="role-fx-row">
+                  <span class="role-fx-label">{{ stat.label }}</span>
+                  <span class="role-fx-value">{{ stat.value }}</span>
+                </div>
+              </div>
+            </div>
+          </Transition>
 
           <!-- Click hint -->
 
@@ -506,6 +563,24 @@ void globalSynergies
                 @select="handleSelect"
               />
             </div>
+          </Transition>
+
+          <!-- ══ Item Picker Overlay ══ -->
+          <Transition name="shop-fade">
+            <div v-if="panelMode === 'item-picker' && selectedCategory" class="item-picker-overlay" @click.stop>
+              <ItemPickerPanel
+                :selected-category="selectedCategory"
+                :category-items="categoryItems"
+                :current-equipment="currentEquipment"
+                @back="closePanel"
+                @equip="handleEquip"
+              />
+            </div>
+          </Transition>
+
+          <!-- Champion Name — bottom center, above HUD -->
+          <Transition name="splash-name-fade">
+            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-bottom">{{ activeChampion }}</div>
           </Transition>
 
           <!-- ══ Bottom HUD — Equipment only ══ -->
@@ -1319,6 +1394,20 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
+   ITEM PICKER OVERLAY
+   ══════════════════════════════ */
+.item-picker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(11, 8, 3, 0.97);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════
    CHAMPION SHOP OVERLAY
    ══════════════════════════════ */
 
@@ -1554,5 +1643,100 @@ void globalSynergies
   padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+
+/* ══════════════════════════════
+   CHAMPION NAME — BOTTOM
+   ══════════════════════════════ */
+.splash-name-bottom {
+  position: absolute;
+  bottom: 145px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 5;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(240, 216, 112, 0.55);
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.95),
+    0 0 24px rgba(200, 144, 64, 0.3);
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* ══════════════════════════════
+   ROLE STATS PANEL
+   ══════════════════════════════ */
+.splash-role-fx {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.role-fx-panel {
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 4px;
+  padding: 10px 22px 12px;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.role-fx-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.role-fx-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.6);
+  flex-shrink: 0;
+}
+
+.role-fx-value {
+  font-size: 16px;
+  font-weight: 900;
+  color: #e8c040;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.6);
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+/* ── Transitions ── */
+.splash-name-fade-enter-active,
+.splash-name-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.splash-name-fade-enter-from,
+.splash-name-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.role-fx-fade-enter-active {
+  transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s;
+}
+.role-fx-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.role-fx-fade-enter-from,
+.role-fx-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>
