@@ -12,6 +12,7 @@ import ChampionPickerPanel from './ChampionPickerPanel.vue'
 import ItemPickerPanel from './ItemPickerPanel.vue'
 import ChampionShopComponent from '../team/ChampionShopComponent.vue'
 import ExpeditionCreateComponent from '../team/expedition/ExpeditionCreateComponent.vue'
+import ItemShopComponent from '../team/ItemShopComponent.vue' // ITEM SHOP – NEU
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -71,6 +72,8 @@ const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const showShop = ref(false)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const showExpedition = ref(false)
+const showItemShop = ref(false) // ITEM SHOP – NEU
+const itemShopCategory = ref<ItemCategory>('weapon') // ITEM SHOP – NEU
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -145,6 +148,7 @@ const roleFilteredChampions = computed(() => {
 
 function openShop(role: ChampionRole | 'all' = 'all') {
   showExpedition.value = false
+  showItemShop.value = false // ITEM SHOP – NEU
   shopRole.value = role
   showShop.value = true
 }
@@ -155,11 +159,24 @@ function closeShop() {
 
 function openExpedition() {
   showShop.value = false
+  showItemShop.value = false // ITEM SHOP – NEU
   showExpedition.value = true
 }
 
 function closeExpedition() {
   showExpedition.value = false
+}
+
+// ITEM SHOP – NEU
+function openItemShop() {
+  showShop.value = false
+  showExpedition.value = false
+  itemShopCategory.value = 'weapon'
+  showItemShop.value = true
+}
+
+function closeItemShop() {
+  showItemShop.value = false
 }
 
 function handleShopRoleChange(role: ChampionRole | 'all') {
@@ -428,8 +445,40 @@ void championRoleLabel
             </div>
           </Transition>
 
+          <!-- ══ ITEM SHOP – NEU: Item Shop Overlay ══ -->
+          <Transition name="shop-fade">
+            <div v-if="showItemShop" class="item-shop-overlay" @click.stop>
+              <button class="shop-back-btn" @click="closeItemShop">← Zurück</button>
+
+              <!-- Tabs oben, fest (kein Scrollen) -->
+              <div class="item-shop-tabs">
+                <button
+                  v-for="cat in [
+                    { id: 'weapon', icon: '⚔️', label: 'Waffe' },
+                    { id: 'armor',  icon: '🛡️', label: 'Rüstung' },
+                    { id: 'misc',   icon: '✨', label: 'Misc' },
+                  ]"
+                  :key="cat.id"
+                  class="item-shop-tab"
+                  :class="{ 'item-shop-tab--active': itemShopCategory === cat.id }"
+                  @click.stop="itemShopCategory = cat.id as ItemCategory"
+                >
+                  {{ cat.icon }} {{ cat.label }}
+                </button>
+              </div>
+
+              <!-- Volle Breite für Items -->
+              <div class="item-shop-list">
+                <ItemShopComponent :category="itemShopCategory" />
+              </div>
+            </div>
+          </Transition>
+
           <!-- ══ Bottom HUD — Equipment only ══ -->
           <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+            <!-- ITEM SHOP – NEU: Item Shop Button unten links -->
+            <button class="item-shop-open-btn" @click.stop="openItemShop">Items</button>
+
             <!-- Equipment Center -->
             <div class="hud-equip-col">
               <button
@@ -1391,6 +1440,99 @@ void championRoleLabel
   min-height: 0;
   overflow-y: auto;
   padding: 44px 12px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+/* ══════════════════════════════
+   ITEM SHOP – NEU
+   ══════════════════════════════ */
+
+.item-shop-open-btn {
+  flex-shrink: 0;
+  align-self: flex-end;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e8c040;
+  background: rgba(14, 10, 4, 0.92);
+  border: 2px solid rgba(122, 78, 32, 0.85);
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    color 0.15s;
+}
+.item-shop-open-btn:hover {
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  color: #f0d870;
+  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
+  box-shadow:
+    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
+    0 0 16px rgba(200, 144, 64, 0.4);
+}
+
+.item-shop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(11, 8, 3, 0.97);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 36px;
+}
+
+.item-shop-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
+  background: rgba(11, 8, 3, 0.97);
+  flex-shrink: 0;
+}
+
+.item-shop-tab {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.6);
+  background: rgba(14, 10, 4, 0.85);
+  border: 1px solid rgba(92, 51, 16, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.item-shop-tab:hover {
+  color: #e8c040;
+  border-color: rgba(122, 78, 32, 0.8);
+}
+.item-shop-tab--active {
+  color: #f0d870;
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.6);
+}
+
+.item-shop-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }

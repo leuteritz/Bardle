@@ -18,8 +18,8 @@
       </div>
     </div>
 
-    <!-- Kategorie-Tabs -->
-    <div class="flex gap-1.5">
+    <!-- Kategorie-Tabs (nur sichtbar wenn keine externe Kontrolle via Prop) -->
+    <div v-if="!$props.category" class="flex gap-1.5">
       <button
         v-for="cat in categories"
         :key="cat.id"
@@ -124,7 +124,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from 'vue'
+import { defineComponent, ref, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
@@ -135,11 +135,15 @@ import type { ItemRarity, ShopItem } from '@/types'
 
 export default defineComponent({
   name: 'ItemShopComponent',
-  setup() {
+  props: {
+    category: { type: String, default: undefined },
+  },
+  setup(props) {
     const gameStore = useGameStore()
     const itemStore = useItemStore()
     const inventoryStore = useInventoryStore()
-    const activeCategory = ref('weapon')
+    const activeCategory = ref(props.category ?? 'weapon')
+    watch(() => props.category, (val) => { if (val) activeCategory.value = val })
 
     const categories = [
       { id: 'weapon', icon: '⚔️', label: 'Waffen' },
