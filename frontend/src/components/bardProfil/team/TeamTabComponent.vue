@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
@@ -25,7 +25,8 @@ import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
-import ItemShopComponent from './ItemShopComponent.vue' // ITEM SHOP
+import ExpeditionActiveComponent from './expedition/ExpeditionActiveComponent.vue'
+import ItemShopComponent from './ItemShopComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -85,8 +86,9 @@ const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const showShop = ref(false)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const showExpedition = ref(false)
-const showItemShop = ref(false) // ITEM SHOP
-const itemShopCategory = ref<ItemCategory>('weapon') // ITEM SHOP
+const expeditionTab = ref<'create' | 'active'>('create')
+const showItemShop = ref(false)
+const itemShopCategory = ref<ItemCategory>('weapon')
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -159,9 +161,28 @@ const roleFilteredChampions = computed(() => {
   return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
 })
 
+function closeActiveModal() {
+  showShop.value = false
+  showExpedition.value = false
+  showItemShop.value = false
+  if (panelMode.value !== 'main') {
+    panelMode.value = 'main'
+    selectedCategory.value = null
+    activeSubSlot.value = -1
+  }
+}
+
+function onEsc(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeActiveModal()
+}
+
+onMounted(() => window.addEventListener('keydown', onEsc))
+onUnmounted(() => window.removeEventListener('keydown', onEsc))
+
 function openShop(role: ChampionRole | 'all' = 'all') {
   showExpedition.value = false
-  showItemShop.value = false // ITEM SHOP
+  showItemShop.value = false
+  panelMode.value = 'main'
   shopRole.value = role
   showShop.value = true
 }
@@ -172,7 +193,9 @@ function closeShop() {
 
 function openExpedition() {
   showShop.value = false
-  showItemShop.value = false // ITEM SHOP
+  showItemShop.value = false
+  panelMode.value = 'main'
+  expeditionTab.value = 'create'
   showExpedition.value = true
 }
 
@@ -180,10 +203,10 @@ function closeExpedition() {
   showExpedition.value = false
 }
 
-// ITEM SHOP
 function openItemShop() {
   showShop.value = false
   showExpedition.value = false
+  panelMode.value = 'main'
   itemShopCategory.value = 'weapon'
   showItemShop.value = true
 }
@@ -347,211 +370,274 @@ void globalSynergies
 
 <template>
   <div class="roles-tab">
-    <!-- ════════════════════════════════
-         MAIN VIEW + OVERLAYS
-         ════════════════════════════════ -->
     <div class="main-layout">
-        <!-- ══ LEFT — Dominant Splash Art ══ -->
-        <div
-          class="splash-area"
-          @mousemove="onSplashMouseMove"
-          @mouseleave="onSplashMouseLeave"
-          @click="!showShop && openChampionPicker(-1)"
-        >
-          <div class="splash-inner">
-            <template v-if="activeChampion">
-              <img
-                :src="battleStore.getChampionImage(activeChampion)"
-                :alt="activeChampion"
-                class="splash-img"
-                :class="{ 'splash-img--syn-glow': isHighlighted(activeChampion) }"
-                :style="[
-                  { transform: `scale(1.06) translate(${parallaxX}px, ${parallaxY}px)` },
-                  highlightStyle(activeChampion),
-                ]"
-                @error="onImgError"
-              />
-            </template>
-            <div v-else class="splash-empty">
-              <img
-                :src="ROLE_BY_KEY[ROLE_MAP[activeRole]].image"
-                :alt="activeRole"
-                class="splash-empty-role-img"
-              />
-              <span class="splash-empty-plus">＋</span>
-              <span class="splash-empty-hint">Select Champion</span>
-            </div>
+      <!-- ══ LEFT — Dominant Splash Art ══ -->
+      <div
+        class="splash-area"
+        @mousemove="onSplashMouseMove"
+        @mouseleave="onSplashMouseLeave"
+        @click="!showShop && !showExpedition && !showItemShop && panelMode === 'main' && openChampionPicker(-1)"
+      >
+        <div class="splash-inner">
+          <template v-if="activeChampion">
+            <img
+              :src="battleStore.getChampionImage(activeChampion)"
+              :alt="activeChampion"
+              class="splash-img"
+              :class="{ 'splash-img--syn-glow': isHighlighted(activeChampion) }"
+              :style="[
+                { transform: `scale(1.06) translate(${parallaxX}px, ${parallaxY}px)` },
+                highlightStyle(activeChampion),
+              ]"
+              @error="onImgError"
+            />
+          </template>
+          <div v-else class="splash-empty">
+            <img
+              :src="ROLE_BY_KEY[ROLE_MAP[activeRole]].image"
+              :alt="activeRole"
+              class="splash-empty-role-img"
+            />
+            <span class="splash-empty-plus">＋</span>
+            <span class="splash-empty-hint">Select Champion</span>
           </div>
+        </div>
 
-          <!-- Vignette overlays -->
-          <div class="vignette-edge" />
-          <div class="vignette-bottom" />
-          <div class="vignette-right" />
+        <!-- Vignettes -->
+        <div class="vignette-edge" />
+        <div class="vignette-bottom" />
+        <div class="vignette-right" />
 
-          <!-- Champion Name — top center -->
-          <Transition name="splash-name-fade">
-            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-top">{{ activeChampion }}</div>
-          </Transition>
+        <!-- Champion Name -->
+        <Transition name="splash-name-fade">
+          <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-top">{{ activeChampion }}</div>
+        </Transition>
 
-          <!-- Role stats panel — below top name -->
-          <Transition name="role-fx-fade">
-            <div v-if="activeChampion" :key="activeSlotIndex" class="splash-role-fx" @click.stop>
-              <div class="role-fx-panel">
-                <div v-for="stat in activeRoleStats" :key="stat.key" class="role-fx-row">
-                  <span class="role-fx-label">{{ stat.label }}</span>
-                  <span class="role-fx-value">{{ stat.value }}</span>
-                </div>
+        <!-- Role stats panel -->
+        <Transition name="role-fx-fade">
+          <div v-if="activeChampion" :key="activeSlotIndex" class="splash-role-fx" @click.stop>
+            <div class="role-fx-panel">
+              <div v-for="stat in activeRoleStats" :key="stat.key" class="role-fx-row">
+                <span class="role-fx-label">{{ stat.label }}</span>
+                <span class="role-fx-value">{{ stat.value }}</span>
               </div>
             </div>
-          </Transition>
-
-          <!-- Click hint -->
-
-          <!-- Champion Shop Button — top left -->
-          <button class="shop-open-btn" @click.stop="openShop('all')">Shop</button>
-
-          <!-- Expedition Button — top right -->
-          <button class="expedition-open-btn" @click.stop="openExpedition">Expedition</button>
-
-          <!-- ══ LEFT Overlay — Secondary Champions ══ -->
-          <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-            <button
-              class="splash-sec-card"
-              :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
-              :style="highlightStyle(activeSecondaries[0])"
-              @click.stop="openChampionPicker(0)"
-            >
-              <img
-                v-if="activeSecondaries[0]"
-                :src="battleStore.getChampionImage(activeSecondaries[0]!)"
-                :alt="activeSecondaries[0]!"
-                class="splash-sec-img"
-                @error="onImgError"
-              />
-              <span v-else class="splash-sec-plus">＋</span>
-              <span class="splash-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
-              <button
-                v-if="activeSecondaries[0]"
-                class="splash-sec-clear"
-                title="Remove"
-                @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
-              >
-                ✕
-              </button>
-            </button>
-            <button
-              class="splash-sec-card"
-              :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
-              :style="highlightStyle(activeSecondaries[1])"
-              @click.stop="openChampionPicker(1)"
-            >
-              <img
-                v-if="activeSecondaries[1]"
-                :src="battleStore.getChampionImage(activeSecondaries[1]!)"
-                :alt="activeSecondaries[1]!"
-                class="splash-sec-img"
-                @error="onImgError"
-              />
-              <span v-else class="splash-sec-plus">＋</span>
-              <span class="splash-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
-              <button
-                v-if="activeSecondaries[1]"
-                class="splash-sec-clear"
-                title="Remove"
-                @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
-              >
-                ✕
-              </button>
-            </button>
           </div>
+        </Transition>
 
-          <!-- ══ RIGHT Overlay — Active Synergies ══ -->
-          <div class="splash-syn-panel" @click.stop>
-            <div
-              v-for="syn in sortedRoleSynergies"
-              :key="syn.id"
-              class="splash-syn-entry"
-              :class="{ 'splash-syn-entry--global': syn.roleIndex === undefined }"
-              :style="syn.roleIndex !== undefined ? { '--sc': syn.color } : {}"
-              @mouseenter="hoveredSynId = syn.id"
-              @mouseleave="hoveredSynId = null"
-            >
-              <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
-              <div class="splash-syn-entry-info">
-                <span class="splash-syn-entry-name">{{ syn.name }}</span>
-                <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
-                <div
-                  v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
-                  class="splash-syn-entry-champs"
-                >
-                  <img
-                    v-for="champ in syn.involvedChampions"
-                    :key="champ"
-                    :src="battleStore.getChampionImage(champ)"
-                    :alt="champ"
-                    :title="champ"
-                    class="splash-syn-champ-avatar"
-                    @error="onImgError"
-                  />
-                </div>
+        <!-- ══ Secondary Champions Panel (left) ══ -->
+        <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+          <button
+            class="splash-sec-card"
+            :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
+            :style="highlightStyle(activeSecondaries[0])"
+            @click.stop="openChampionPicker(0)"
+          >
+            <img
+              v-if="activeSecondaries[0]"
+              :src="battleStore.getChampionImage(activeSecondaries[0]!)"
+              :alt="activeSecondaries[0]!"
+              class="splash-sec-img"
+              @error="onImgError"
+            />
+            <span v-else class="splash-sec-plus">＋</span>
+            <span class="splash-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
+            <button
+              v-if="activeSecondaries[0]"
+              class="splash-sec-clear"
+              title="Remove"
+              @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
+            >✕</button>
+          </button>
+          <button
+            class="splash-sec-card"
+            :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
+            :style="highlightStyle(activeSecondaries[1])"
+            @click.stop="openChampionPicker(1)"
+          >
+            <img
+              v-if="activeSecondaries[1]"
+              :src="battleStore.getChampionImage(activeSecondaries[1]!)"
+              :alt="activeSecondaries[1]!"
+              class="splash-sec-img"
+              @error="onImgError"
+            />
+            <span v-else class="splash-sec-plus">＋</span>
+            <span class="splash-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
+            <button
+              v-if="activeSecondaries[1]"
+              class="splash-sec-clear"
+              title="Remove"
+              @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
+            >✕</button>
+          </button>
+        </div>
+
+        <!-- ══ Synergy Panel (right) ══ -->
+        <div class="splash-syn-panel" @click.stop>
+          <div
+            v-for="syn in sortedRoleSynergies"
+            :key="syn.id"
+            class="splash-syn-entry"
+            :class="{ 'splash-syn-entry--global': syn.roleIndex === undefined }"
+            :style="syn.roleIndex !== undefined ? { '--sc': syn.color } : {}"
+            @mouseenter="hoveredSynId = syn.id"
+            @mouseleave="hoveredSynId = null"
+          >
+            <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
+            <div class="splash-syn-entry-info">
+              <span class="splash-syn-entry-name">{{ syn.name }}</span>
+              <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
+              <div
+                v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
+                class="splash-syn-entry-champs"
+              >
+                <img
+                  v-for="champ in syn.involvedChampions"
+                  :key="champ"
+                  :src="battleStore.getChampionImage(champ)"
+                  :alt="champ"
+                  :title="champ"
+                  class="splash-syn-champ-avatar"
+                  @error="onImgError"
+                />
               </div>
-              <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
+            </div>
+            <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
+          </div>
+        </div>
+
+        <!-- ══ Bottom Zone — Action Bar + Equipment ══ -->
+        <div class="splash-bottom-zone" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+          <div class="splash-action-row">
+            <button
+              class="splash-action-btn"
+              data-tip="Champion Shop"
+              @click.stop="openShop('all')"
+            >
+              <span class="splash-action-icon">⚔</span>
+              <span class="splash-action-label">Shop</span>
+            </button>
+            <button
+              class="splash-action-btn"
+              data-tip="Send on Expedition"
+              @click.stop="openExpedition"
+            >
+              <span class="splash-action-icon">🗺</span>
+              <span class="splash-action-label">Expedition</span>
+            </button>
+            <button
+              class="splash-action-btn"
+              data-tip="Item Shop"
+              @click.stop="openItemShop"
+            >
+              <span class="splash-action-icon">💼</span>
+              <span class="splash-action-label">Items</span>
+            </button>
+          </div>
+          <div class="hud-equip-col">
+            <button
+              v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
+              :key="cat"
+              class="hud-equip-btn"
+              :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
+              :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
+              @click.stop="openItemPicker(cat)"
+            >
+              <template v-if="getEquippedItem(cat)">
+                <img
+                  v-if="getEquippedItem(cat)!.icon.startsWith('/')"
+                  :src="getEquippedItem(cat)!.icon"
+                  class="hud-equip-img"
+                  :alt="getEquippedItem(cat)!.name"
+                />
+                <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
+              </template>
+              <span v-else class="hud-equip-empty">{{ CAT_ICONS[cat] }}</span>
+              <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════
+             MODALS
+             ══════════════════════════ -->
+
+        <!-- Shop Modal -->
+        <Transition name="modal-pop">
+          <div v-if="showShop" class="modal-backdrop" @click.self="closeShop">
+            <div class="modal-panel modal-panel--md" @click.stop>
+              <div class="modal-gold-line" />
+              <button class="modal-close-btn" @click="closeShop">✕</button>
+              <div class="modal-content">
+                <ChampionShopComponent
+                  :initial-role="shopRole"
+                  @role-change="handleShopRoleChange"
+                />
+              </div>
             </div>
           </div>
+        </Transition>
 
-          <!-- ══ Shop Overlay ══ -->
-          <Transition name="shop-fade">
-            <div v-if="showShop" class="shop-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeShop">← Back</button>
-              <ChampionShopComponent
-                :initial-role="shopRole"
-                class="shop-inner"
-                @role-change="handleShopRoleChange"
-              />
+        <!-- Expedition Modal -->
+        <Transition name="modal-pop">
+          <div v-if="showExpedition" class="modal-backdrop" @click.self="closeExpedition">
+            <div class="modal-panel modal-panel--md" @click.stop>
+              <div class="modal-gold-line" />
+              <button class="modal-close-btn" @click="closeExpedition">✕</button>
+              <div class="modal-tab-bar">
+                <button
+                  class="modal-tab"
+                  :class="{ 'modal-tab--active': expeditionTab === 'create' }"
+                  @click="expeditionTab = 'create'"
+                >🗺 Start</button>
+                <button
+                  class="modal-tab"
+                  :class="{ 'modal-tab--active': expeditionTab === 'active' }"
+                  @click="expeditionTab = 'active'"
+                >⚡ Active</button>
+              </div>
+              <div class="modal-content modal-content--scroll">
+                <ExpeditionCreateComponent v-if="expeditionTab === 'create'" />
+                <ExpeditionActiveComponent v-else />
+              </div>
             </div>
-          </Transition>
+          </div>
+        </Transition>
 
-          <!-- ══ Expedition Overlay ══ -->
-          <Transition name="shop-fade">
-            <div v-if="showExpedition" class="expedition-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeExpedition">← Back</button>
-              <ExpeditionCreateComponent class="expedition-inner" />
-            </div>
-          </Transition>
-
-          <!-- ══ ITEM SHOP – NEU: Item Shop Overlay ══ -->
-          <Transition name="shop-fade">
-            <div v-if="showItemShop" class="item-shop-overlay" @click.stop>
-              <button class="shop-back-btn" @click="closeItemShop">← Back</button>
-
-              <!-- Tabs oben, fest (kein Scrollen) -->
-              <div class="item-shop-tabs">
+        <!-- Item Shop Modal -->
+        <Transition name="modal-pop">
+          <div v-if="showItemShop" class="modal-backdrop" @click.self="closeItemShop">
+            <div class="modal-panel modal-panel--md" @click.stop>
+              <div class="modal-gold-line" />
+              <button class="modal-close-btn" @click="closeItemShop">✕</button>
+              <div class="modal-tab-bar">
                 <button
                   v-for="cat in [
                     { id: 'weapon', icon: '⚔️', label: 'Weapon' },
                     { id: 'armor',  icon: '🛡️', label: 'Armor' },
-                    { id: 'misc',   icon: '✨', label: 'Misc' },
+                    { id: 'misc',   icon: '✨',  label: 'Misc' },
                   ]"
                   :key="cat.id"
-                  class="item-shop-tab"
-                  :class="{ 'item-shop-tab--active': itemShopCategory === cat.id }"
-                  @click.stop="itemShopCategory = cat.id as ItemCategory"
-                >
-                  {{ cat.icon }} {{ cat.label }}
-                </button>
+                  class="modal-tab"
+                  :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
+                  @click="itemShopCategory = cat.id as ItemCategory"
+                >{{ cat.icon }} {{ cat.label }}</button>
               </div>
-
-              <!-- Volle Breite für Items -->
-              <div class="item-shop-list">
+              <div class="modal-content modal-content--scroll">
                 <ItemShopComponent :category="itemShopCategory" />
               </div>
             </div>
-          </Transition>
+          </div>
+        </Transition>
 
-          <!-- ══ Champion Select Overlay ══ -->
-          <Transition name="shop-fade">
-            <div v-if="panelMode === 'champion-picker'" class="champion-select-overlay" @click.stop>
+        <!-- Champion Picker Modal -->
+        <Transition name="modal-pop">
+          <div v-if="panelMode === 'champion-picker'" class="modal-backdrop" @click.self="closePanel">
+            <div class="modal-panel modal-panel--lg" @click.stop>
+              <div class="modal-gold-line" />
               <ChampionSelectPanel
+                class="modal-content"
                 :active-role="activeRole"
                 :picker-title="pickerTitle"
                 :role-filtered-champions="roleFilteredChampions"
@@ -563,12 +649,16 @@ void globalSynergies
                 @select="handleSelect"
               />
             </div>
-          </Transition>
+          </div>
+        </Transition>
 
-          <!-- ══ Item Picker Overlay ══ -->
-          <Transition name="shop-fade">
-            <div v-if="panelMode === 'item-picker' && selectedCategory" class="item-picker-overlay" @click.stop>
+        <!-- Item Picker Modal -->
+        <Transition name="modal-pop">
+          <div v-if="panelMode === 'item-picker' && selectedCategory" class="modal-backdrop" @click.self="closePanel">
+            <div class="modal-panel modal-panel--sm" @click.stop>
+              <div class="modal-gold-line" />
               <ItemPickerPanel
+                class="modal-content"
                 :selected-category="selectedCategory"
                 :category-items="categoryItems"
                 :current-equipment="currentEquipment"
@@ -576,106 +666,72 @@ void globalSynergies
                 @equip="handleEquip"
               />
             </div>
-          </Transition>
+          </div>
+        </Transition>
+      </div>
 
-          <!-- ══ Bottom HUD — Equipment only ══ -->
-          <div class="splash-hud" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-            <!-- ITEM SHOP – NEU: Item Shop Button unten links -->
-            <button class="item-shop-open-btn" @click.stop="openItemShop">Items</button>
+      <!-- ══ RIGHT — Sidebar (role tabs) ══ -->
+      <div class="sidebar">
+        <div class="sidebar-section sidebar-section--roles">
+          <div class="role-list">
+            <button
+              v-for="(role, i) in ROLES"
+              :key="i"
+              class="role-btn"
+              :class="{
+                'role-btn--active': activeSlotIndex === i,
+                'role-btn--filled': headerSlots[i] !== null,
+              }"
+              :style="{ '--rc': ROLE_COLORS[role] }"
+              @click="selectSlot(i)"
+            >
+              <img
+                v-if="headerSlots[i]"
+                :src="battleStore.getChampionImage(headerSlots[i]!)"
+                :alt="headerSlots[i]!"
+                class="role-btn-img"
+                @error="onImgError"
+              />
+              <img
+                v-else
+                :src="ROLE_BY_KEY[ROLE_MAP[role]].image"
+                :alt="role"
+                class="role-btn-img role-btn-img--placeholder"
+                @error="onImgError"
+              />
+              <div class="role-btn-gradient" />
+              <span class="role-btn-label">{{ role }}</span>
 
-            <!-- Equipment Center -->
-            <div class="hud-equip-col">
-              <button
-                v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
-                :key="cat"
-                class="hud-equip-btn"
-                :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
-                :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
-                @click.stop="openItemPicker(cat)"
-              >
-                <template v-if="getEquippedItem(cat)">
+              <div class="role-btn-secs">
+                <div
+                  v-for="s in [0, 1]"
+                  :key="s"
+                  class="role-btn-sec"
+                  :class="{ 'role-btn-sec--filled': secondarySlots[i][s] !== null }"
+                >
                   <img
-                    v-if="getEquippedItem(cat)!.icon.startsWith('/')"
-                    :src="getEquippedItem(cat)!.icon"
-                    class="hud-equip-img"
-                    :alt="getEquippedItem(cat)!.name"
+                    v-if="secondarySlots[i][s]"
+                    :src="battleStore.getChampionImage(secondarySlots[i][s]!)"
+                    :alt="secondarySlots[i][s]!"
+                    class="role-btn-sec-img"
+                    @error="onImgError"
                   />
-                  <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-                </template>
-                <span v-else class="hud-equip-empty">{{ CAT_ICONS[cat] }}</span>
-                <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
-              </button>
-            </div>
-
-            <!-- Invisible spacer — mirrors item-shop-open-btn width to truly center equipment -->
-            <div class="hud-spacer" aria-hidden="true">Items</div>
-          </div>
-        </div>
-
-        <!-- ══ RIGHT — Sidebar (role tabs) ══ -->
-        <div class="sidebar">
-          <div class="sidebar-section sidebar-section--roles">
-            <div class="role-list">
-              <button
-                v-for="(role, i) in ROLES"
-                :key="i"
-                class="role-btn"
-                :class="{
-                  'role-btn--active': activeSlotIndex === i,
-                  'role-btn--filled': headerSlots[i] !== null,
-                }"
-                :style="{ '--rc': ROLE_COLORS[role] }"
-                @click="selectSlot(i)"
-              >
-                <img
-                  v-if="headerSlots[i]"
-                  :src="battleStore.getChampionImage(headerSlots[i]!)"
-                  :alt="headerSlots[i]!"
-                  class="role-btn-img"
-                  @error="onImgError"
-                />
-                <img
-                  v-else
-                  :src="ROLE_BY_KEY[ROLE_MAP[role]].image"
-                  :alt="role"
-                  class="role-btn-img role-btn-img--placeholder"
-                  @error="onImgError"
-                />
-                <div class="role-btn-gradient" />
-                <span class="role-btn-label">{{ role }}</span>
-
-                <!-- Mini secondaries column -->
-                <div class="role-btn-secs">
-                  <div
-                    v-for="s in [0, 1]"
-                    :key="s"
-                    class="role-btn-sec"
-                    :class="{ 'role-btn-sec--filled': secondarySlots[i][s] !== null }"
-                  >
-                    <img
-                      v-if="secondarySlots[i][s]"
-                      :src="battleStore.getChampionImage(secondarySlots[i][s]!)"
-                      :alt="secondarySlots[i][s]!"
-                      class="role-btn-sec-img"
-                      @error="onImgError"
-                    />
-                    <span v-else class="role-btn-sec-plus">＋</span>
-                  </div>
+                  <span v-else class="role-btn-sec-plus">＋</span>
                 </div>
+              </div>
 
-                <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
-              </button>
-            </div>
+              <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
+            </button>
           </div>
         </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 /* ══════════════════════════════════════════
-   BARDLE — ROLES TAB  •  Epic Gaming UI
-   Layout: Dominant Splash Art | Sidebar
+   BARDLE — ROLES TAB
    ══════════════════════════════════════════ */
 
 .roles-tab {
@@ -697,7 +753,6 @@ void globalSynergies
   overflow: hidden;
 }
 
-/* ── Main Layout: 65/35 split ── */
 .main-layout {
   flex: 1;
   min-height: 0;
@@ -715,10 +770,6 @@ void globalSynergies
   cursor: pointer;
   background: #080604;
   border-right: 1px solid rgba(92, 51, 16, 0.5);
-}
-
-.splash-area:hover .splash-click-hint {
-  opacity: 1;
 }
 
 .splash-inner {
@@ -766,7 +817,6 @@ void globalSynergies
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.28);
 }
-
 .splash-empty-role-img {
   position: absolute;
   inset: 0;
@@ -786,7 +836,7 @@ void globalSynergies
   filter: grayscale(25%);
 }
 
-/* Vignette */
+/* Vignettes */
 .vignette-edge {
   position: absolute;
   inset: 0;
@@ -820,7 +870,7 @@ void globalSynergies
   z-index: 2;
 }
 
-/* Champion name — top center */
+/* Champion name */
 .splash-name-top {
   position: absolute;
   top: 10px;
@@ -841,7 +891,7 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   LEFT OVERLAY — Secondary Champions
+   SECONDARY CHAMPIONS
    ══════════════════════════════ */
 .splash-sec-panel {
   position: absolute;
@@ -886,7 +936,6 @@ void globalSynergies
     inset 0 0 14px color-mix(in srgb, var(--hl-color, #e8c040) 25%, transparent) !important;
   filter: brightness(1.32) saturate(1.2);
 }
-
 .splash-sec-img {
   width: 100%;
   height: 68px;
@@ -895,7 +944,6 @@ void globalSynergies
   display: block;
   flex-shrink: 0;
 }
-
 .splash-sec-plus {
   flex: 1;
   display: flex;
@@ -908,7 +956,6 @@ void globalSynergies
 .splash-sec-card:hover .splash-sec-plus {
   color: rgba(200, 144, 64, 0.65);
 }
-
 .splash-sec-name {
   font-size: 9px;
   font-weight: 700;
@@ -923,7 +970,6 @@ void globalSynergies
   text-overflow: ellipsis;
   flex-shrink: 0;
 }
-
 .splash-sec-clear {
   position: absolute;
   top: 2px;
@@ -955,7 +1001,7 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   RIGHT OVERLAY — Synergies
+   SYNERGY PANEL
    ══════════════════════════════ */
 .splash-syn-panel {
   position: absolute;
@@ -972,6 +1018,9 @@ void globalSynergies
   max-height: 75%;
   overflow-y: auto;
 }
+.splash-syn-panel::-webkit-scrollbar { width: 3px; }
+.splash-syn-panel::-webkit-scrollbar-track { background: transparent; }
+.splash-syn-panel::-webkit-scrollbar-thumb { background: rgba(92, 51, 16, 0.6); border-radius: 2px; }
 
 .splash-syn-entry {
   display: flex;
@@ -990,20 +1039,17 @@ void globalSynergies
   border-color: var(--sc, #e8c040);
   box-shadow: 0 0 8px color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
 }
-
-.splash-syn-entry-icon {
-  font-size: 16px;
-  line-height: 1;
-  flex-shrink: 0;
+.splash-syn-entry--global {
+  background: rgba(92, 51, 16, 0.65);
+  border: 1px solid rgba(232, 192, 64, 0.55);
 }
-
-.splash-syn-entry-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+.splash-syn-entry--global .splash-syn-entry-name { color: #e8c040; }
+.splash-syn-entry--global:hover {
+  border-color: #e8c040;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
 }
-
+.splash-syn-entry-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.splash-syn-entry-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .splash-syn-entry-name {
   font-size: 11px;
   font-weight: 700;
@@ -1014,80 +1060,122 @@ void globalSynergies
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.splash-syn-entry-fx {
-  font-size: 10px;
-  color: rgba(232, 192, 64, 0.7);
-  white-space: nowrap;
+.splash-syn-entry-fx { font-size: 10px; color: rgba(232, 192, 64, 0.7); white-space: nowrap; }
+.splash-syn-global-badge {
+  font-size: 9px;
+  color: #e8c040;
+  opacity: 0.75;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 1px;
+  line-height: 1;
 }
-
-/* Click hint — top right (below champion name) */
-.splash-click-hint {
-  position: absolute;
-  top: 40px;
-  right: 10px;
-  z-index: 5;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-.splash-click-hint span {
-  background: rgba(0, 0, 0, 0.65);
-  padding: 3px 7px;
-  border-radius: 3px;
-  border: 1px solid rgba(92, 51, 16, 0.5);
-}
-
-/* Corner decorations */
-.splash-corner {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: var(--gold);
-  border-style: solid;
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 6;
-  transition: opacity 0.2s;
-}
-.splash-area:hover .splash-corner {
-  opacity: 1;
-}
-.splash-corner--tl {
-  top: 8px;
-  left: 8px;
-  border-width: 2px 0 0 2px;
-}
-.splash-corner--br {
-  bottom: 8px;
-  right: 8px;
-  border-width: 0 2px 2px 0;
+.splash-syn-entry-champs { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.splash-syn-champ-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
+  background: rgba(8, 5, 2, 0.9);
+  flex-shrink: 0;
 }
 
 /* ══════════════════════════════
-   SPLASH HUD — Bottom Overlay
-   Layout: [Sec1] [Equipment] [Sec2]
+   BOTTOM ZONE — Action + Equipment
    ══════════════════════════════ */
-.splash-hud {
+.splash-bottom-zone {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 6;
+  z-index: 7;
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: 10px 14px 12px;
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 5, 2, 0.38) 0%,
+    rgba(8, 5, 2, 0.78) 100%
+  );
+  pointer-events: auto;
 }
 
-/* ── Equipment center column ── */
+.splash-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.splash-action-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  color: rgba(200, 144, 64, 0.78);
+  background: rgba(14, 10, 4, 0.88);
+  border: 1px solid rgba(92, 51, 16, 0.65);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+}
+.splash-action-btn:hover {
+  color: #e8c040;
+  border-color: #c89040;
+  background: rgba(22, 14, 6, 0.96);
+  box-shadow: 0 0 14px rgba(200, 144, 64, 0.28);
+  transform: translateY(-2px);
+}
+.splash-action-btn:active {
+  transform: translateY(0);
+}
+
+/* Tooltip */
+.splash-action-btn::before {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  background: #16140e;
+  border: 1px solid rgba(92, 51, 16, 0.75);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(200, 144, 64, 0.85);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+}
+.splash-action-btn:hover::before {
+  opacity: 1;
+}
+
+.splash-action-icon { font-size: 15px; line-height: 1; }
+.splash-action-label { font-size: 11px; }
+
+/* ══════════════════════════════
+   EQUIPMENT ROW
+   ══════════════════════════════ */
 .hud-equip-col {
-  flex: 1;
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -1110,9 +1198,7 @@ void globalSynergies
     transform 0.12s,
     filter 0.15s;
 }
-.hud-equip-btn:hover {
-  transform: translateY(-3px);
-}
+.hud-equip-btn:hover { transform: translateY(-3px); }
 
 .hud-equip-img {
   width: 106px;
@@ -1124,23 +1210,18 @@ void globalSynergies
 .hud-equip-btn:hover .hud-equip-img {
   filter: drop-shadow(0 0 18px rgba(200, 144, 64, 0.95));
 }
-
 .hud-equip-emoji {
   font-size: 68px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
 }
-
 .hud-equip-empty {
   font-size: 68px;
   line-height: 1;
   opacity: 0.18;
   transition: opacity 0.15s;
 }
-.hud-equip-btn:hover .hud-equip-empty {
-  opacity: 0.48;
-}
-
+.hud-equip-btn:hover .hud-equip-empty { opacity: 0.48; }
 .hud-equip-cat {
   font-size: 8px;
   color: rgba(200, 144, 64, 0.45);
@@ -1151,7 +1232,53 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   SIDEBAR — Role tabs only
+   ROLE STATS PANEL
+   ══════════════════════════════ */
+.splash-role-fx {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.role-fx-panel {
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 4px;
+  padding: 10px 22px 12px;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.role-fx-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.role-fx-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.6);
+  flex-shrink: 0;
+}
+.role-fx-value {
+  font-size: 16px;
+  font-weight: 900;
+  color: #e8c040;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.6);
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+/* ══════════════════════════════
+   SIDEBAR
    ══════════════════════════════ */
 .sidebar {
   display: flex;
@@ -1159,20 +1286,17 @@ void globalSynergies
   background: #0e0b05;
   overflow: hidden;
 }
-
 .sidebar-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 8px 8px 6px;
 }
-
 .sidebar-section--roles {
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
-
 .role-list {
   display: flex;
   flex-direction: column;
@@ -1181,7 +1305,6 @@ void globalSynergies
   min-height: 0;
   overflow: hidden;
 }
-
 .role-btn {
   position: relative;
   padding: 0;
@@ -1205,7 +1328,6 @@ void globalSynergies
   border-color: var(--rc) !important;
   box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent) !important;
 }
-
 .role-btn-img {
   position: absolute;
   inset: 0;
@@ -1216,19 +1338,9 @@ void globalSynergies
   display: block;
   transition: transform 0.25s ease;
 }
-.role-btn:hover .role-btn-img {
-  transform: scale(1.07);
-}
-
-.role-btn-img--placeholder {
-  opacity: 0.18;
-  filter: grayscale(55%);
-}
-.role-btn:hover .role-btn-img--placeholder {
-  opacity: 0.38;
-  filter: grayscale(30%);
-}
-
+.role-btn:hover .role-btn-img { transform: scale(1.07); }
+.role-btn-img--placeholder { opacity: 0.18; filter: grayscale(55%); }
+.role-btn:hover .role-btn-img--placeholder { opacity: 0.38; filter: grayscale(30%); }
 .role-btn-gradient {
   position: absolute;
   bottom: 0;
@@ -1244,7 +1356,6 @@ void globalSynergies
   pointer-events: none;
   z-index: 1;
 }
-
 .role-btn-label {
   position: absolute;
   bottom: 6px;
@@ -1263,7 +1374,6 @@ void globalSynergies
     0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
 }
-
 .role-btn-active-bar {
   position: absolute;
   left: 0;
@@ -1274,7 +1384,6 @@ void globalSynergies
   box-shadow: 0 0 8px var(--rc);
   z-index: 3;
 }
-
 .role-btn-secs {
   position: absolute;
   top: 4px;
@@ -1285,7 +1394,6 @@ void globalSynergies
   gap: 3px;
   pointer-events: none;
 }
-
 .role-btn-sec {
   position: relative;
   width: 26px;
@@ -1302,7 +1410,6 @@ void globalSynergies
     0 0 6px color-mix(in srgb, var(--rc) 45%, transparent),
     0 1px 3px rgba(0, 0, 0, 0.8);
 }
-
 .role-btn-sec-img {
   width: 100%;
   height: 100%;
@@ -1311,7 +1418,6 @@ void globalSynergies
   display: block;
   border-radius: 50%;
 }
-
 .role-btn-sec-plus {
   display: flex;
   align-items: center;
@@ -1322,311 +1428,102 @@ void globalSynergies
   color: rgba(200, 144, 64, 0.3);
 }
 
-/* ── Global synergy entry variant ── */
-.splash-syn-entry--global {
-  background: rgba(92, 51, 16, 0.65);
-  border: 1px solid rgba(232, 192, 64, 0.55);
-  border-radius: 4px;
-}
-.splash-syn-entry--global .splash-syn-entry-name {
-  color: #e8c040;
-}
-.splash-syn-entry--global:hover {
-  border-color: #e8c040;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
-}
-
-/* ── Global badge ── */
-.splash-syn-global-badge {
-  font-size: 9px;
-  color: #e8c040;
-  opacity: 0.75;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 1px;
-  line-height: 1;
-}
-
-/* ── Scrollbar for synergy panel ── */
-.splash-syn-panel::-webkit-scrollbar {
-  width: 3px;
-}
-.splash-syn-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-.splash-syn-panel::-webkit-scrollbar-thumb {
-  background: rgba(92, 51, 16, 0.6);
-  border-radius: 2px;
-}
-
-/* ── Champion avatars in synergy hover ── */
-.splash-syn-entry-champs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  margin-top: 4px;
-}
-.splash-syn-champ-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: top center;
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
-  background: rgba(8, 5, 2, 0.9);
-  flex-shrink: 0;
-}
-
 /* ══════════════════════════════
-   CHAMPION SELECT OVERLAY
+   UNIFIED MODAL SYSTEM
    ══════════════════════════════ */
-.champion-select-overlay {
+.modal-backdrop {
   position: absolute;
   inset: 0;
   z-index: 20;
-  background: rgba(11, 8, 3, 0.97);
-  border: 1px solid rgba(92, 51, 16, 0.6);
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-}
-
-/* ══════════════════════════════
-   ITEM PICKER OVERLAY
-   ══════════════════════════════ */
-.item-picker-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(11, 8, 3, 0.97);
-  border: 1px solid rgba(92, 51, 16, 0.6);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ══════════════════════════════
-   CHAMPION SHOP OVERLAY
-   ══════════════════════════════ */
-
-.shop-open-btn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 8;
-  padding: 10px 28px;
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #e8c040;
-  background: rgba(14, 10, 4, 0.92);
-  border: 2px solid rgba(122, 78, 32, 0.85);
-  border-radius: 4px;
-  cursor: pointer;
-  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s,
-    color 0.15s;
-}
-.shop-open-btn:hover {
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  color: #f0d870;
-  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
+  border: 4px solid #7a4e20;
   box-shadow:
-    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
-    0 0 16px rgba(200, 144, 64, 0.4);
-}
-
-.shop-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(11, 8, 3, 0.97);
-  border: 1px solid rgba(92, 51, 16, 0.6);
-  display: flex;
-  flex-direction: column;
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 32px 80px rgba(0, 0, 0, 0.92);
+  background: #111008;
+  border-radius: 4px;
   overflow: hidden;
 }
 
-.shop-back-btn {
+.modal-panel--sm {
+  width: min(360px, 90%);
+  height: min(85%, 680px);
+}
+.modal-panel--md {
+  width: min(460px, 90%);
+  height: min(88%, 720px);
+}
+.modal-panel--lg {
+  width: min(660px, 94%);
+  height: min(90%, 750px);
+}
+
+/* Gold accent line at top */
+.modal-gold-line {
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+  flex-shrink: 0;
+}
+
+/* Close button */
+.modal-close-btn {
   position: absolute;
   top: 8px;
-  right: 10px;
-  z-index: 21;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: rgba(200, 144, 64, 0.8);
-  background: rgba(14, 10, 4, 0.9);
+  right: 8px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: rgba(200, 144, 64, 0.55);
+  background: rgba(14, 10, 4, 0.92);
   border: 1px solid rgba(92, 51, 16, 0.65);
   border-radius: 4px;
   cursor: pointer;
+  padding: 0;
+  line-height: 1;
   transition:
     color 0.15s,
-    border-color 0.15s;
-}
-.shop-back-btn:hover {
-  color: #e8c040;
-  border-color: #c89040;
-}
-
-.shop-inner {
-  flex: 1;
-  min-height: 0;
-}
-
-.shop-fade-enter-active,
-.shop-fade-leave-active {
-  transition:
-    opacity 0.22s ease,
-    transform 0.22s ease;
-}
-.shop-fade-enter-from,
-.shop-fade-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-/* ══════════════════════════════
-   EXPEDITION BUTTON & OVERLAY
-   ══════════════════════════════ */
-
-.expedition-open-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 8;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #e8c040;
-  background: rgba(14, 10, 4, 0.92);
-  border: 2px solid rgba(122, 78, 32, 0.85);
-  border-radius: 4px;
-  cursor: pointer;
-  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
-  transition:
-    background 0.15s,
     border-color 0.15s,
-    box-shadow 0.15s,
-    color 0.15s;
+    background 0.15s;
 }
-.expedition-open-btn:hover {
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  color: #f0d870;
-  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
-  box-shadow:
-    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
-    0 0 16px rgba(200, 144, 64, 0.4);
-}
-
-.expedition-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(11, 8, 3, 0.97);
-  border: 1px solid rgba(92, 51, 16, 0.6);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.expedition-inner {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 44px 12px 12px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-
-/* ══════════════════════════════
-   ITEM SHOP – NEU
-   ══════════════════════════════ */
-
-.item-shop-open-btn {
-  flex-shrink: 0;
-  align-self: flex-end;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.modal-close-btn:hover {
   color: #e8c040;
-  background: rgba(14, 10, 4, 0.92);
-  border: 2px solid rgba(122, 78, 32, 0.85);
-  border-radius: 4px;
-  cursor: pointer;
-  text-shadow: 0 0 14px rgba(200, 144, 64, 0.6);
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s,
-    color 0.15s;
-}
-.item-shop-open-btn:hover {
-  background: rgba(30, 16, 6, 0.97);
   border-color: #c89040;
-  color: #f0d870;
-  text-shadow: 0 0 22px rgba(232, 192, 64, 0.85);
-  box-shadow:
-    inset 0 0 0 1px rgba(92, 51, 16, 0.7),
-    0 0 16px rgba(200, 144, 64, 0.4);
+  background: rgba(30, 16, 6, 0.97);
 }
 
-.hud-spacer {
-  flex-shrink: 0;
-  align-self: flex-end;
-  padding: 8px 16px;
-  font-size: 14px;
-  letter-spacing: 0.14em;
-  border: 2px solid transparent;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.item-shop-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(11, 8, 3, 0.97);
-  border: 1px solid rgba(92, 51, 16, 0.6);
+/* Tab bar */
+.modal-tab-bar {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding-top: 36px;
-}
-
-.item-shop-tabs {
-  display: flex;
-  gap: 6px;
+  gap: 4px;
   padding: 8px 12px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.5);
-  background: rgba(11, 8, 3, 0.97);
+  background: #1e1006;
   flex-shrink: 0;
 }
-
-.item-shop-tab {
+.modal-tab {
   flex: 1;
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.6);
+  color: rgba(200, 144, 64, 0.55);
   background: rgba(14, 10, 4, 0.85);
-  border: 1px solid rgba(92, 51, 16, 0.5);
+  border: 1px solid rgba(92, 51, 16, 0.4);
   border-radius: 4px;
   cursor: pointer;
   transition:
@@ -1634,77 +1531,64 @@ void globalSynergies
     border-color 0.15s,
     background 0.15s;
 }
-.item-shop-tab:hover {
+.modal-tab:hover {
   color: #e8c040;
   border-color: rgba(122, 78, 32, 0.8);
 }
-.item-shop-tab--active {
+.modal-tab--active {
   color: #f0d870;
   background: rgba(30, 16, 6, 0.97);
   border-color: #c89040;
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
 }
 
-.item-shop-list {
+/* Content area */
+.modal-content {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.modal-content--scroll {
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+  display: block;
+}
+.modal-content--scroll::-webkit-scrollbar { width: 4px; }
+.modal-content--scroll::-webkit-scrollbar-track { background: #111; }
+.modal-content--scroll::-webkit-scrollbar-thumb { background: #5c3310; border-radius: 2px; }
+
+/* ══════════════════════════════
+   MODAL TRANSITIONS
+   ══════════════════════════════ */
+.modal-pop-enter-active {
+  transition: opacity 0.22s ease;
+}
+.modal-pop-leave-active {
+  transition: opacity 0.18s ease;
+}
+.modal-pop-enter-from,
+.modal-pop-leave-to {
+  opacity: 0;
+}
+.modal-pop-enter-active .modal-panel {
+  transition: transform 0.22s ease;
+}
+.modal-pop-leave-active .modal-panel {
+  transition: transform 0.18s ease;
+}
+.modal-pop-enter-from .modal-panel,
+.modal-pop-leave-to .modal-panel {
+  transform: scale(0.95) translateY(10px);
 }
 
 /* ══════════════════════════════
-   ROLE STATS PANEL
+   SPLASH TRANSITIONS
    ══════════════════════════════ */
-.splash-role-fx {
-  position: absolute;
-  top: 46px;
-  left: 0;
-  right: 0;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-}
-
-.role-fx-panel {
-  background: rgba(0, 0, 0, 0.65);
-  border-radius: 4px;
-  padding: 10px 22px 12px;
-  min-width: 210px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.role-fx-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.role-fx-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.6);
-  flex-shrink: 0;
-}
-
-.role-fx-value {
-  font-size: 16px;
-  font-weight: 900;
-  color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.6);
-  letter-spacing: 0.04em;
-  text-align: right;
-}
-
-/* ── Transitions ── */
 .splash-name-fade-enter-active,
 .splash-name-fade-leave-active {
   transition: opacity 0.25s ease, transform 0.25s ease;
@@ -1714,7 +1598,6 @@ void globalSynergies
   opacity: 0;
   transform: translateY(-4px);
 }
-
 .role-fx-fade-enter-active {
   transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s;
 }
