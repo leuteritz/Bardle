@@ -43,6 +43,14 @@
             :class="isLocked(champion.name) ? 'grayscale' : ''"
           />
 
+          <!-- Lock-Overlay -->
+          <img
+            v-if="isLocked(champion.name)"
+            src="/img/lock.png"
+            alt="Gesperrt"
+            class="lock-overlay"
+          />
+
           <!-- Gradient Overlay -->
           <div
             class="absolute inset-0 card-overlay"
@@ -121,7 +129,12 @@
                 class="w-full card-btn"
                 :class="getButtonClass(champion.name)"
                 :disabled="!canClickBuy(champion.name)"
-              ></button>
+              >
+                <span v-if="isOwned(champion.name)">Im Team</span>
+                <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Rekrutieren</span>
+                <span v-else-if="isUnlocked(champion.name)">Materialien fehlen</span>
+                <span v-else>Gesperrt</span>
+              </button>
             </div>
           </div>
 
@@ -249,7 +262,6 @@ export default defineComponent({
       return championNames.value
         .map((name) => ({ name }))
         .filter((c) => {
-          if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
           if (searchQuery.value.trim()) {
@@ -344,7 +356,9 @@ export default defineComponent({
   background: var(--rpg-bg-deep);
   border-color: var(--rpg-border-row);
   opacity: 0.55;
+  filter: grayscale(30%);
   cursor: default;
+  pointer-events: none;
 }
 .card-buyable {
   background: var(--rpg-bg-deep);
@@ -367,7 +381,23 @@ export default defineComponent({
   border-color: var(--rpg-border-row);
   opacity: 0.4;
   filter: grayscale(55%);
-  cursor: default;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Lock-Icon Overlay ── */
+.lock-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  z-index: 12;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
+  pointer-events: none;
 }
 
 /* ── Gradient overlays ── */
