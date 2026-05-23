@@ -72,7 +72,6 @@ const itemStore = useItemStore()
 const uiStore = useUiStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
-
 const synergyStore = useSynergyStore()
 const { globalSynergies, activeSynergies } = storeToRefs(synergyStore)
 
@@ -92,7 +91,6 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
-
 const hoveredSynId = ref<string | null>(null)
 
 const hoveredSyn = computed(
@@ -186,7 +184,6 @@ function openShop(role: ChampionRole | 'all' = 'all') {
   shopRole.value = role
   showShop.value = true
 }
-
 function closeShop() {
   showShop.value = false
 }
@@ -198,7 +195,6 @@ function openExpedition() {
   expeditionTab.value = 'create'
   showExpedition.value = true
 }
-
 function closeExpedition() {
   showExpedition.value = false
 }
@@ -210,7 +206,6 @@ function openItemShop() {
   itemShopCategory.value = 'weapon'
   showItemShop.value = true
 }
-
 function closeItemShop() {
   showItemShop.value = false
 }
@@ -224,15 +219,8 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
 }
 
 function selectSlot(index: number) {
+  closeActiveModal()
   activeSlotIndex.value = index
-  activeSubSlot.value = -1
-  selectedCategory.value = null
-  if (panelMode.value !== 'champion-picker') {
-    panelMode.value = 'main'
-  }
-  if (showShop.value) {
-    shopRole.value = ROLE_MAP[ROLES[index]]
-  }
 }
 
 function openChampionPicker(subSlot: number = -1) {
@@ -322,42 +310,82 @@ function onSplashMouseLeave() {
   parallaxY.value = 0
 }
 
-interface RoleStat { key: string; icon: string; label: string; value: string }
+interface RoleStat {
+  key: string
+  icon: string
+  label: string
+  value: string
+}
 
 const activeRoleStats = computed<RoleStat[]>(() => {
   const role = ROLE_MAP[activeRole.value]
   switch (role) {
     case 'top':
       return [
-        { key: 'atk',    icon: '⚔',  label: 'Atk Interval',  value: '4.0s' },
-        { key: 'shield', icon: '🛡',  label: 'Shield Rebuild', value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s` },
-        { key: 'type',   icon: '💪',  label: 'Style',          value: 'Tank / Frontline' },
+        { key: 'atk', icon: '⚔', label: 'Atk Interval', value: '4.0s' },
+        {
+          key: 'shield',
+          icon: '🛡',
+          label: 'Shield Rebuild',
+          value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`,
+        },
+        { key: 'type', icon: '💪', label: 'Style', value: 'Tank / Frontline' },
       ]
     case 'jungle':
       return [
-        { key: 'style',  icon: '🗡',  label: 'Style',          value: 'Assassin / Ganker' },
-        { key: 'effect', icon: '🌀',  label: 'Effect',         value: 'Crowd Control' },
-        { key: 'range',  icon: '🔄',  label: 'Orbit',          value: 'Wide Patrol' },
+        { key: 'style', icon: '🗡', label: 'Style', value: 'Assassin / Ganker' },
+        { key: 'effect', icon: '🌀', label: 'Effect', value: 'Crowd Control' },
+        { key: 'range', icon: '🔄', label: 'Orbit', value: 'Wide Patrol' },
       ]
     case 'mid':
       return [
-        { key: 'cursecd',  icon: '💜', label: 'Curse CD',      value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s` },
-        { key: 'cursedur', icon: '⏱',  label: 'Curse Duration',value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s` },
-        { key: 'dot',      icon: '☠',  label: 'DoT DPS',       value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
-        { key: 'amp',      icon: '⚡',  label: 'Dmg Amplify',  value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
+        {
+          key: 'cursecd',
+          icon: '💜',
+          label: 'Curse CD',
+          value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`,
+        },
+        {
+          key: 'cursedur',
+          icon: '⏱',
+          label: 'Curse Duration',
+          value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s`,
+        },
+        { key: 'dot', icon: '☠', label: 'DoT DPS', value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
+        { key: 'amp', icon: '⚡', label: 'Dmg Amplify', value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
       ]
     case 'adc':
       return [
-        { key: 'burst',   icon: '🎯', label: 'Burst Damage',   value: `${ROLE_ADC_BURST_DAMAGE}` },
-        { key: 'burstcd', icon: '⏱',  label: 'Burst CD',       value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s` },
-        { key: 'style',   icon: '🏹', label: 'Style',          value: 'Ranged / DPS' },
+        { key: 'burst', icon: '🎯', label: 'Burst Damage', value: `${ROLE_ADC_BURST_DAMAGE}` },
+        {
+          key: 'burstcd',
+          icon: '⏱',
+          label: 'Burst CD',
+          value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`,
+        },
+        { key: 'style', icon: '🏹', label: 'Style', value: 'Ranged / DPS' },
       ]
     case 'support':
       return [
-        { key: 'heal',   icon: '💚', label: 'Heal / Tick',     value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
-        { key: 'healcd', icon: '⏰', label: 'Heal CD',         value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s` },
-        { key: 'pheal',  icon: '🌍', label: 'Planet Heal',     value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
-        { key: 'pcd',    icon: '⌛', label: 'Planet CD',       value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s` },
+        { key: 'heal', icon: '💚', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
+        {
+          key: 'healcd',
+          icon: '⏰',
+          label: 'Heal CD',
+          value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`,
+        },
+        {
+          key: 'pheal',
+          icon: '🌍',
+          label: 'Planet Heal',
+          value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`,
+        },
+        {
+          key: 'pcd',
+          icon: '⌛',
+          label: 'Planet CD',
+          value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`,
+        },
       ]
     default:
       return []
@@ -371,12 +399,18 @@ void globalSynergies
 <template>
   <div class="roles-tab">
     <div class="main-layout">
-      <!-- ══ LEFT — Dominant Splash Art ══ -->
+      <!-- ══ LEFT — Splash Art ══ -->
       <div
         class="splash-area"
         @mousemove="onSplashMouseMove"
         @mouseleave="onSplashMouseLeave"
-        @click="!showShop && !showExpedition && !showItemShop && panelMode === 'main' && openChampionPicker(-1)"
+        @click="
+          !showShop &&
+          !showExpedition &&
+          !showItemShop &&
+          panelMode === 'main' &&
+          openChampionPicker(-1)
+        "
       >
         <div class="splash-inner">
           <template v-if="activeChampion">
@@ -408,73 +442,88 @@ void globalSynergies
         <div class="vignette-bottom" />
         <div class="vignette-right" />
 
-        <!-- Champion Name -->
-        <Transition name="splash-name-fade">
-          <div v-if="activeChampion" :key="activeSlotIndex" class="splash-name-top">{{ activeChampion }}</div>
-        </Transition>
+        <!-- ══ ACTION BAR — oben, volle Breite ══ -->
+        <div class="splash-action-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+          <button class="action-bar-btn" @click.stop="openShop('all')">
+            <span class="action-bar-icon">⚔</span>
+            <span class="action-bar-label">Shop</span>
+          </button>
+          <div class="action-bar-sep" />
+          <button class="action-bar-btn action-bar-btn--featured" @click.stop="openExpedition">
+            <span class="action-bar-icon">🗺</span>
+            <span class="action-bar-label">Expedition</span>
+          </button>
+          <div class="action-bar-sep" />
+          <button class="action-bar-btn" @click.stop="openItemShop">
+            <span class="action-bar-icon">💼</span>
+            <span class="action-bar-label">Items</span>
+          </button>
+        </div>
 
-        <!-- Role stats panel -->
-        <Transition name="role-fx-fade">
-          <div v-if="activeChampion" :key="activeSlotIndex" class="splash-role-fx" @click.stop>
-            <div class="role-fx-panel">
+        <!-- ══ Top Info Box — Name + Stats (unverändert, nur Größen) ══ -->
+        <div v-if="activeChampion" class="splash-info-box" @click.stop>
+          <Transition name="splash-name-fade">
+            <div :key="activeSlotIndex" class="splash-name-in-box">{{ activeChampion }}</div>
+          </Transition>
+          <Transition name="role-fx-fade">
+            <div :key="'fx-' + activeSlotIndex" class="splash-role-fx-in-box">
               <div v-for="stat in activeRoleStats" :key="stat.key" class="role-fx-row">
+                <span class="role-fx-icon">{{ stat.icon }}</span>
                 <span class="role-fx-label">{{ stat.label }}</span>
                 <span class="role-fx-value">{{ stat.value }}</span>
               </div>
             </div>
-          </div>
-        </Transition>
+          </Transition>
+        </div>
 
-        <!-- ══ Secondary Champions Panel (left) ══ -->
+        <!-- ══ Secondary Panel (links) ══ -->
         <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+          <div class="sec-panel-label">Allies</div>
           <button
-            class="splash-sec-card"
-            :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[0]) }"
-            :style="highlightStyle(activeSecondaries[0])"
-            @click.stop="openChampionPicker(0)"
+            v-for="(slotIdx, i) in [0, 1]"
+            :key="i"
+            class="sec-slot"
+            :class="{
+              'sec-slot--filled': !!activeSecondaries[slotIdx],
+              'sec-slot--syn-glow': isHighlighted(activeSecondaries[slotIdx]),
+            }"
+            :style="highlightStyle(activeSecondaries[slotIdx])"
+            @click.stop="openChampionPicker(slotIdx)"
           >
-            <img
-              v-if="activeSecondaries[0]"
-              :src="battleStore.getChampionImage(activeSecondaries[0]!)"
-              :alt="activeSecondaries[0]!"
-              class="splash-sec-img"
-              @error="onImgError"
-            />
-            <span v-else class="splash-sec-plus">＋</span>
-            <span class="splash-sec-name">{{ activeSecondaries[0] ?? 'Slot 1' }}</span>
-            <button
-              v-if="activeSecondaries[0]"
-              class="splash-sec-clear"
-              title="Remove"
-              @click.stop="clearSecondary(activeSlotIndex, 0, $event)"
-            >✕</button>
-          </button>
-          <button
-            class="splash-sec-card"
-            :class="{ 'splash-sec-card--syn-glow': isHighlighted(activeSecondaries[1]) }"
-            :style="highlightStyle(activeSecondaries[1])"
-            @click.stop="openChampionPicker(1)"
-          >
-            <img
-              v-if="activeSecondaries[1]"
-              :src="battleStore.getChampionImage(activeSecondaries[1]!)"
-              :alt="activeSecondaries[1]!"
-              class="splash-sec-img"
-              @error="onImgError"
-            />
-            <span v-else class="splash-sec-plus">＋</span>
-            <span class="splash-sec-name">{{ activeSecondaries[1] ?? 'Slot 2' }}</span>
-            <button
-              v-if="activeSecondaries[1]"
-              class="splash-sec-clear"
-              title="Remove"
-              @click.stop="clearSecondary(activeSlotIndex, 1, $event)"
-            >✕</button>
+            <span class="sec-slot-num">{{ i + 1 }}</span>
+            <template v-if="activeSecondaries[slotIdx]">
+              <div class="sec-slot-portrait">
+                <img
+                  :src="battleStore.getChampionImage(activeSecondaries[slotIdx]!)"
+                  :alt="activeSecondaries[slotIdx]!"
+                  class="sec-slot-img"
+                  @error="onImgError"
+                />
+                <div class="sec-slot-img-overlay" />
+              </div>
+              <div class="sec-slot-footer">
+                <span class="sec-slot-name">{{ activeSecondaries[slotIdx] }}</span>
+              </div>
+              <button
+                class="sec-slot-remove"
+                title="Remove"
+                @click.stop="clearSecondary(activeSlotIndex, slotIdx, $event)"
+              >
+                ✕
+              </button>
+            </template>
+            <template v-else>
+              <div class="sec-slot-empty-body">
+                <span class="sec-slot-empty-icon">＋</span>
+                <span class="sec-slot-empty-hint">Add Ally</span>
+              </div>
+            </template>
           </button>
         </div>
 
-        <!-- ══ Synergy Panel (right) ══ -->
+        <!-- ══ Synergy Panel (rechts) ══ -->
         <div class="splash-syn-panel" @click.stop>
+          <div class="syn-panel-label">Synergies</div>
           <div
             v-for="syn in sortedRoleSynergies"
             :key="syn.id"
@@ -484,66 +533,55 @@ void globalSynergies
             @mouseenter="hoveredSynId = syn.id"
             @mouseleave="hoveredSynId = null"
           >
-            <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
-            <div class="splash-syn-entry-info">
-              <span class="splash-syn-entry-name">{{ syn.name }}</span>
-              <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
-              <div
-                v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
-                class="splash-syn-entry-champs"
-              >
-                <img
-                  v-for="champ in syn.involvedChampions"
-                  :key="champ"
-                  :src="battleStore.getChampionImage(champ)"
-                  :alt="champ"
-                  :title="champ"
-                  class="splash-syn-champ-avatar"
-                  @error="onImgError"
-                />
-              </div>
+            <div class="syn-entry-icon-wrap">
+              <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
             </div>
-            <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
+            <div class="splash-syn-entry-info">
+              <div class="syn-entry-header">
+                <span class="splash-syn-entry-name">{{ syn.name }}</span>
+                <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
+              </div>
+              <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
+              <Transition name="syn-champs-fade">
+                <div
+                  v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
+                  class="splash-syn-entry-champs"
+                >
+                  <div
+                    v-for="champ in syn.involvedChampions"
+                    :key="champ"
+                    class="syn-champ-wrap"
+                    :title="champ"
+                  >
+                    <img
+                      :src="battleStore.getChampionImage(champ)"
+                      :alt="champ"
+                      class="splash-syn-champ-avatar"
+                      @error="onImgError"
+                    />
+                    <span class="syn-champ-name">{{ champ }}</span>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </div>
+          <div v-if="sortedRoleSynergies.length === 0" class="syn-empty">
+            <span class="syn-empty-icon">🔗</span>
+            <span class="syn-empty-hint">No active synergies</span>
           </div>
         </div>
 
-        <!-- ══ Bottom Zone — Action Bar + Equipment ══ -->
-        <div class="splash-bottom-zone" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
-          <div class="splash-action-row">
-            <button
-              class="splash-action-btn"
-              data-tip="Champion Shop"
-              @click.stop="openShop('all')"
-            >
-              <span class="splash-action-icon">⚔</span>
-              <span class="splash-action-label">Shop</span>
-            </button>
-            <button
-              class="splash-action-btn"
-              data-tip="Send on Expedition"
-              @click.stop="openExpedition"
-            >
-              <span class="splash-action-icon">🗺</span>
-              <span class="splash-action-label">Expedition</span>
-            </button>
-            <button
-              class="splash-action-btn"
-              data-tip="Item Shop"
-              @click.stop="openItemShop"
-            >
-              <span class="splash-action-icon">💼</span>
-              <span class="splash-action-label">Items</span>
-            </button>
-          </div>
-          <div class="hud-equip-col">
-            <button
-              v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
-              :key="cat"
-              class="hud-equip-btn"
-              :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
-              :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
-              @click.stop="openItemPicker(cat)"
-            >
+        <!-- ══ EQUIP BAR — zentriert unten ══ -->
+        <div class="splash-equip-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+          <button
+            v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
+            :key="cat"
+            class="hud-equip-btn"
+            :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
+            :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
+            @click.stop="openItemPicker(cat)"
+          >
+            <div class="hud-equip-art">
               <template v-if="getEquippedItem(cat)">
                 <img
                   v-if="getEquippedItem(cat)!.icon.startsWith('/')"
@@ -553,19 +591,19 @@ void globalSynergies
                 />
                 <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
               </template>
-              <span v-else class="hud-equip-empty">{{ CAT_ICONS[cat] }}</span>
+              <span v-else class="hud-equip-empty-icon">{{ CAT_ICONS[cat] }}</span>
+            </div>
+            <div class="hud-equip-meta">
+              <span class="hud-equip-name">{{ getEquippedItem(cat)?.name ?? '— empty —' }}</span>
               <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
-            </button>
-          </div>
+            </div>
+            <div v-if="currentEquipment[cat]" class="hud-equip-filled-dot" />
+          </button>
         </div>
 
-        <!-- ══════════════════════════
-             MODALS
-             ══════════════════════════ -->
-
-        <!-- Shop Modal -->
+        <!-- ══ MODALS ══ -->
         <Transition name="modal-pop">
-          <div v-if="showShop" class="modal-backdrop" @click.self="closeShop">
+          <div v-if="showShop" class="modal-backdrop" @click.stop @click.self="closeShop">
             <div class="modal-panel modal-panel--md" @click.stop>
               <div class="modal-gold-line" />
               <button class="modal-close-btn" @click="closeShop">✕</button>
@@ -579,9 +617,13 @@ void globalSynergies
           </div>
         </Transition>
 
-        <!-- Expedition Modal -->
         <Transition name="modal-pop">
-          <div v-if="showExpedition" class="modal-backdrop" @click.self="closeExpedition">
+          <div
+            v-if="showExpedition"
+            class="modal-backdrop"
+            @click.stop
+            @click.self="closeExpedition"
+          >
             <div class="modal-panel modal-panel--md" @click.stop>
               <div class="modal-gold-line" />
               <button class="modal-close-btn" @click="closeExpedition">✕</button>
@@ -590,12 +632,16 @@ void globalSynergies
                   class="modal-tab"
                   :class="{ 'modal-tab--active': expeditionTab === 'create' }"
                   @click="expeditionTab = 'create'"
-                >🗺 Start</button>
+                >
+                  🗺 Start
+                </button>
                 <button
                   class="modal-tab"
                   :class="{ 'modal-tab--active': expeditionTab === 'active' }"
                   @click="expeditionTab = 'active'"
-                >⚡ Active</button>
+                >
+                  ⚡ Active
+                </button>
               </div>
               <div class="modal-content modal-content--scroll">
                 <ExpeditionCreateComponent v-if="expeditionTab === 'create'" />
@@ -605,9 +651,8 @@ void globalSynergies
           </div>
         </Transition>
 
-        <!-- Item Shop Modal -->
         <Transition name="modal-pop">
-          <div v-if="showItemShop" class="modal-backdrop" @click.self="closeItemShop">
+          <div v-if="showItemShop" class="modal-backdrop" @click.stop @click.self="closeItemShop">
             <div class="modal-panel modal-panel--md" @click.stop>
               <div class="modal-gold-line" />
               <button class="modal-close-btn" @click="closeItemShop">✕</button>
@@ -615,14 +660,16 @@ void globalSynergies
                 <button
                   v-for="cat in [
                     { id: 'weapon', icon: '⚔️', label: 'Weapon' },
-                    { id: 'armor',  icon: '🛡️', label: 'Armor' },
-                    { id: 'misc',   icon: '✨',  label: 'Misc' },
+                    { id: 'armor', icon: '🛡️', label: 'Armor' },
+                    { id: 'misc', icon: '✨', label: 'Misc' },
                   ]"
                   :key="cat.id"
                   class="modal-tab"
                   :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
                   @click="itemShopCategory = cat.id as ItemCategory"
-                >{{ cat.icon }} {{ cat.label }}</button>
+                >
+                  {{ cat.icon }} {{ cat.label }}
+                </button>
               </div>
               <div class="modal-content modal-content--scroll">
                 <ItemShopComponent :category="itemShopCategory" />
@@ -631,9 +678,13 @@ void globalSynergies
           </div>
         </Transition>
 
-        <!-- Champion Picker Modal -->
         <Transition name="modal-pop">
-          <div v-if="panelMode === 'champion-picker'" class="modal-backdrop" @click.self="closePanel">
+          <div
+            v-if="panelMode === 'champion-picker'"
+            class="modal-backdrop"
+            @click.stop
+            @click.self="closePanel"
+          >
             <div class="modal-panel modal-panel--lg" @click.stop>
               <div class="modal-gold-line" />
               <ChampionSelectPanel
@@ -652,9 +703,13 @@ void globalSynergies
           </div>
         </Transition>
 
-        <!-- Item Picker Modal -->
         <Transition name="modal-pop">
-          <div v-if="panelMode === 'item-picker' && selectedCategory" class="modal-backdrop" @click.self="closePanel">
+          <div
+            v-if="panelMode === 'item-picker' && selectedCategory"
+            class="modal-backdrop"
+            @click.stop
+            @click.self="closePanel"
+          >
             <div class="modal-panel modal-panel--sm" @click.stop>
               <div class="modal-gold-line" />
               <ItemPickerPanel
@@ -670,7 +725,7 @@ void globalSynergies
         </Transition>
       </div>
 
-      <!-- ══ RIGHT — Sidebar (role tabs) ══ -->
+      <!-- ══ RIGHT — Sidebar ══ -->
       <div class="sidebar">
         <div class="sidebar-section sidebar-section--roles">
           <div class="role-list">
@@ -701,7 +756,6 @@ void globalSynergies
               />
               <div class="role-btn-gradient" />
               <span class="role-btn-label">{{ role }}</span>
-
               <div class="role-btn-secs">
                 <div
                   v-for="s in [0, 1]"
@@ -719,7 +773,6 @@ void globalSynergies
                   <span v-else class="role-btn-sec-plus">＋</span>
                 </div>
               </div>
-
               <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
             </button>
           </div>
@@ -733,26 +786,21 @@ void globalSynergies
 /* ══════════════════════════════════════════
    BARDLE — ROLES TAB
    ══════════════════════════════════════════ */
-
 .roles-tab {
   --gold: #c89040;
   --gold-bright: #e8c060;
   --gold-dim: rgba(200, 144, 64, 0.32);
   --gold-glow: rgba(200, 144, 64, 0.2);
-  --green: #6ec040;
-  --green-glow: rgba(110, 192, 64, 0.32);
   --bg: #0d0a03;
   --bg-card: #181208;
   --border: rgba(92, 51, 16, 0.45);
   --r: 5px;
-
   display: flex;
   flex-direction: column;
   height: 100%;
   background: var(--bg);
   overflow: hidden;
 }
-
 .main-layout {
   flex: 1;
   min-height: 0;
@@ -761,9 +809,7 @@ void globalSynergies
   gap: 0;
 }
 
-/* ══════════════════════════════
-   SPLASH ART AREA
-   ══════════════════════════════ */
+/* ══ SPLASH ══ */
 .splash-area {
   position: relative;
   overflow: hidden;
@@ -771,12 +817,10 @@ void globalSynergies
   background: #080604;
   border-right: 1px solid rgba(92, 51, 16, 0.5);
 }
-
 .splash-inner {
   position: absolute;
   inset: 0;
 }
-
 .splash-img {
   width: 100%;
   height: 100%;
@@ -788,11 +832,9 @@ void globalSynergies
     filter 0.25s ease;
   will-change: transform;
 }
-
 .splash-img--syn-glow {
   filter: brightness(1.3) saturate(1.2) drop-shadow(0 0 24px var(--hl-color, #e8c040));
 }
-
 .splash-empty {
   display: flex;
   flex-direction: column;
@@ -800,11 +842,11 @@ void globalSynergies
   justify-content: center;
   gap: 12px;
   height: 100%;
-  color: rgba(200, 144, 64, 0.18);
 }
 .splash-empty-plus {
   font-size: 48px;
   line-height: 1;
+  color: rgba(200, 144, 64, 0.18);
   transition: color 0.15s;
 }
 .splash-area:hover .splash-empty-plus {
@@ -828,15 +870,14 @@ void globalSynergies
   filter: grayscale(50%);
   pointer-events: none;
   transition:
-    opacity 0.25s ease,
-    filter 0.25s ease;
+    opacity 0.25s,
+    filter 0.25s;
 }
 .splash-area:hover .splash-empty-role-img {
   opacity: 0.22;
   filter: grayscale(25%);
 }
 
-/* Vignettes */
 .vignette-edge {
   position: absolute;
   inset: 0;
@@ -870,49 +911,206 @@ void globalSynergies
   z-index: 2;
 }
 
-/* Champion name */
-.splash-name-top {
+/* ══════════════════════════════════════
+   ACTION BAR — oben, volle Breite
+   ══════════════════════════════════════ */
+.splash-action-bar {
   position: absolute;
-  top: 10px;
+  top: 0;
   left: 0;
   right: 0;
-  text-align: center;
-  z-index: 5;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  z-index: 7;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: rgba(6, 4, 1, 0.88);
+  border-bottom: 1px solid rgba(122, 78, 32, 0.6);
+  box-shadow:
+    inset 0 -1px 0 rgba(92, 51, 16, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.5);
+  /* goldene untere Linie */
+  background-image: linear-gradient(
+    to bottom,
+    rgba(200, 144, 64, 0) calc(100% - 2px),
+    rgba(200, 144, 64, 0.15) 100%
+  );
+}
+
+.action-bar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(200, 144, 64, 0.55);
+  position: relative;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.action-bar-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: rgba(200, 144, 64, 0);
+  border-radius: 2px 2px 0 0;
+  transition: background 0.2s;
+}
+.action-bar-btn:hover {
   color: #f0d870;
-  text-shadow:
-    0 2px 20px rgba(0, 0, 0, 0.95),
-    0 0 40px rgba(200, 144, 64, 0.5);
-  pointer-events: none;
+  background: rgba(200, 144, 64, 0.07);
+}
+.action-bar-btn:hover::after {
+  background: rgba(200, 144, 64, 0.65);
+}
+.action-bar-btn:active {
+  background: rgba(200, 144, 64, 0.12);
+}
+
+/* Expedition als leicht hervorgehobener Haupt-Button */
+.action-bar-btn--featured {
+  color: rgba(200, 144, 64, 0.8);
+}
+.action-bar-btn--featured .action-bar-icon {
+  filter: drop-shadow(0 0 5px rgba(200, 144, 64, 0.5));
+}
+.action-bar-btn--featured:hover {
+  background: rgba(200, 144, 64, 0.1);
+}
+
+.action-bar-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.action-bar-label {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   line-height: 1;
 }
 
+.action-bar-sep {
+  width: 1px;
+  margin: 8px 0;
+  background: rgba(92, 51, 16, 0.55);
+  flex-shrink: 0;
+}
+
 /* ══════════════════════════════
-   SECONDARY CHAMPIONS
+   TOP INFO BOX (Name + Stats)
+   Struktur unverändert, nur Größen
    ══════════════════════════════ */
-.splash-sec-panel {
+.splash-info-box {
   position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 6;
-  display: flex;
+  /* Sitzt direkt unter der Action Bar */
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  background: rgba(8, 5, 2, 0.88);
+  border: 1px solid rgba(122, 78, 32, 0.75);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 10px 24px 13px;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   pointer-events: auto;
 }
+.splash-name-in-box {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #f0d870;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow:
+    0 2px 14px rgba(0, 0, 0, 0.95),
+    0 0 32px rgba(200, 144, 64, 0.45);
+}
+.splash-role-fx-in-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 230px;
+}
+.role-fx-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.role-fx-icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.75;
+  width: 16px;
+  text-align: center;
+}
+.role-fx-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.55);
+  flex: 1;
+}
+.role-fx-value {
+  font-size: 14px;
+  font-weight: 900;
+  color: #e8c040;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+  letter-spacing: 0.03em;
+  text-align: right;
+  white-space: nowrap;
+}
 
-.splash-sec-card {
+/* ══════════════════════════════
+   SECONDARY PANEL — etwas größer
+   ══════════════════════════════ */
+.splash-sec-panel {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  pointer-events: auto;
+  width: 100px;
+}
+.sec-panel-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--rc, #c89040) 70%, transparent);
+  text-align: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--rc, #c89040) 22%, transparent);
+}
+.sec-slot {
   position: relative;
-  width: 80px;
-  height: 94px;
-  border-radius: 4px;
-  border: 2px solid color-mix(in srgb, var(--rc, #c89040) 65%, transparent);
-  background: rgba(8, 5, 2, 0.82);
+  width: 100px;
+  height: 128px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--rc, #c89040) 30%, transparent);
+  background: rgba(6, 4, 1, 0.82);
   overflow: hidden;
   cursor: pointer;
   padding: 0;
@@ -921,360 +1119,543 @@ void globalSynergies
   transition:
     border-color 0.2s,
     box-shadow 0.2s,
-    transform 0.12s,
-    filter 0.2s;
+    transform 0.15s ease;
 }
-.splash-sec-card:hover {
+.sec-slot:hover {
+  border-color: color-mix(in srgb, var(--rc, #c89040) 80%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rc, #c89040) 25%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.02);
+}
+.sec-slot:active {
+  transform: translateY(-1px) scale(1.01);
+}
+.sec-slot--filled {
+  border-color: color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
+}
+.sec-slot--filled:hover {
   border-color: var(--rc, #c89040);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
-  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--rc, #c89040) 35%, transparent),
+    0 0 20px color-mix(in srgb, var(--rc, #c89040) 30%, transparent),
+    0 10px 28px rgba(0, 0, 0, 0.7);
 }
-.splash-sec-card--syn-glow {
+.sec-slot--syn-glow {
   border-color: var(--hl-color, var(--rc)) !important;
   box-shadow:
-    0 0 36px color-mix(in srgb, var(--hl-color, #e8c040) 75%, transparent),
-    inset 0 0 14px color-mix(in srgb, var(--hl-color, #e8c040) 25%, transparent) !important;
-  filter: brightness(1.32) saturate(1.2);
+    0 0 0 1px color-mix(in srgb, var(--hl-color, #e8c040) 40%, transparent),
+    0 0 28px color-mix(in srgb, var(--hl-color, #e8c040) 55%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--hl-color, #e8c040) 15%, transparent) !important;
+  filter: brightness(1.25) saturate(1.15);
 }
-.splash-sec-img {
+.sec-slot-num {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 4;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  color: var(--rc, #c89040);
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid color-mix(in srgb, var(--rc, #c89040) 45%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.sec-slot-portrait {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.sec-slot-img {
   width: 100%;
-  height: 68px;
+  height: 100%;
   object-fit: cover;
   object-position: top center;
   display: block;
+  transition: transform 0.25s ease;
+}
+.sec-slot:hover .sec-slot-img {
+  transform: scale(1.07);
+}
+.sec-slot-img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 45%,
+    rgba(0, 0, 0, 0.55) 75%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+  pointer-events: none;
+}
+.sec-slot-footer {
   flex-shrink: 0;
+  padding: 5px 7px;
+  background: rgba(0, 0, 0, 0.78);
+  border-top: 1px solid color-mix(in srgb, var(--rc, #c89040) 20%, transparent);
 }
-.splash-sec-plus {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: rgba(200, 144, 64, 0.25);
-  transition: color 0.15s;
-}
-.splash-sec-card:hover .splash-sec-plus {
-  color: rgba(200, 144, 64, 0.65);
-}
-.splash-sec-name {
-  font-size: 9px;
+.sec-slot-name {
+  display: block;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--rc, #c89040);
   text-align: center;
-  padding: 3px;
-  background: rgba(0, 0, 0, 0.75);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 0;
+  line-height: 1.2;
 }
-.splash-sec-clear {
+.sec-slot-remove {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 16px;
-  height: 16px;
-  font-size: 8px;
-  color: #cc6050;
-  background: rgba(20, 10, 6, 0.92);
-  border: 1px solid rgba(180, 60, 40, 0.55);
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
+  top: 4px;
+  right: 4px;
+  z-index: 5;
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(220, 80, 60, 0.9);
+  background: rgba(10, 5, 2, 0.9);
+  border: 1px solid rgba(180, 50, 30, 0.5);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  z-index: 2;
+  cursor: pointer;
+  padding: 0;
   transition:
-    opacity 0.15s ease,
-    background 0.15s ease;
+    opacity 0.15s,
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s;
 }
-.splash-sec-card:hover .splash-sec-clear {
+.sec-slot:hover .sec-slot-remove {
   opacity: 1;
 }
-.splash-sec-clear:hover {
-  background: rgba(160, 40, 20, 0.85);
-  border-color: #cc6050;
+.sec-slot-remove:hover {
+  background: rgba(160, 30, 15, 0.88);
+  border-color: rgba(220, 70, 50, 0.9);
+  transform: scale(1.1);
+}
+.sec-slot-empty-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.sec-slot-empty-icon {
+  font-size: 26px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rc, #c89040) 22%, transparent);
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.sec-slot:hover .sec-slot-empty-icon {
+  color: color-mix(in srgb, var(--rc, #c89040) 60%, transparent);
+  transform: scale(1.15);
+}
+.sec-slot-empty-hint {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--rc, #c89040) 28%, transparent);
+  transition: color 0.2s;
+}
+.sec-slot:hover .sec-slot-empty-hint {
+  color: color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
 }
 
 /* ══════════════════════════════
-   SYNERGY PANEL
+   SYNERGY PANEL — größerer Text
    ══════════════════════════════ */
 .splash-syn-panel {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 5px;
+  gap: 6px;
   pointer-events: auto;
-  min-width: 155px;
+  width: 182px;
   max-height: 75%;
   overflow-y: auto;
 }
-.splash-syn-panel::-webkit-scrollbar { width: 3px; }
-.splash-syn-panel::-webkit-scrollbar-track { background: transparent; }
-.splash-syn-panel::-webkit-scrollbar-thumb { background: rgba(92, 51, 16, 0.6); border-radius: 2px; }
-
+.splash-syn-panel::-webkit-scrollbar {
+  width: 3px;
+}
+.splash-syn-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.splash-syn-panel::-webkit-scrollbar-thumb {
+  background: rgba(92, 51, 16, 0.6);
+  border-radius: 2px;
+}
+.syn-panel-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 192, 64, 0.55);
+  text-align: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.45);
+  flex-shrink: 0;
+}
 .splash-syn-entry {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  background: rgba(8, 5, 2, 0.78);
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 38%, transparent);
-  border-radius: 4px;
-  padding: 5px 8px;
+  gap: 8px;
+  background: rgba(8, 5, 2, 0.82);
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 28%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
   cursor: default;
+  position: relative;
+  overflow: hidden;
   transition:
     border-color 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.splash-syn-entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: color-mix(in srgb, var(--sc, #e8c040) 70%, transparent);
+  border-radius: 6px 0 0 6px;
 }
 .splash-syn-entry:hover {
-  border-color: var(--sc, #e8c040);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--sc, #e8c040) 40%, transparent);
+  border-color: color-mix(in srgb, var(--sc, #e8c040) 70%, transparent);
+  background: rgba(12, 8, 2, 0.92);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--sc, #e8c040) 22%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--sc, #e8c040) 6%, transparent);
 }
 .splash-syn-entry--global {
-  background: rgba(92, 51, 16, 0.65);
-  border: 1px solid rgba(232, 192, 64, 0.55);
+  background: rgba(92, 51, 16, 0.55);
+  border: 1px solid rgba(232, 192, 64, 0.45);
 }
-.splash-syn-entry--global .splash-syn-entry-name { color: #e8c040; }
+.splash-syn-entry--global::before {
+  background: linear-gradient(to bottom, #e8c040, #c89040);
+}
 .splash-syn-entry--global:hover {
-  border-color: #e8c040;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+  border-color: rgba(232, 192, 64, 0.85);
+  background: rgba(110, 62, 18, 0.7);
 }
-.splash-syn-entry-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
-.splash-syn-entry-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.splash-syn-entry--global .splash-syn-entry-name {
+  color: #f0d870;
+}
+.syn-entry-icon-wrap {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--sc, #e8c040) 10%, rgba(0, 0, 0, 0.5));
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 25%, transparent);
+  border-radius: 5px;
+}
+.splash-syn-entry--global .syn-entry-icon-wrap {
+  background: rgba(200, 144, 64, 0.15);
+  border-color: rgba(232, 192, 64, 0.35);
+}
+.splash-syn-entry-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.splash-syn-entry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.syn-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
 .splash-syn-entry-name {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--sc, #e8c040);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.splash-syn-entry-fx { font-size: 10px; color: rgba(232, 192, 64, 0.7); white-space: nowrap; }
 .splash-syn-global-badge {
-  font-size: 9px;
+  font-size: 10px;
   color: #e8c040;
-  opacity: 0.75;
+  opacity: 0.8;
   flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 1px;
   line-height: 1;
 }
-.splash-syn-entry-champs { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
-.splash-syn-champ-avatar {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: top center;
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
-  background: rgba(8, 5, 2, 0.9);
-  flex-shrink: 0;
+.splash-syn-entry-fx {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--sc, #e8c040) 65%, rgba(255, 255, 255, 0.3));
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
-
-/* ══════════════════════════════
-   BOTTOM ZONE — Action + Equipment
-   ══════════════════════════════ */
-.splash-bottom-zone {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 7;
+.splash-syn-entry--global .splash-syn-entry-fx {
+  color: rgba(232, 192, 64, 0.75);
+}
+.splash-syn-entry-champs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.syn-champ-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 14px 12px;
-  background: linear-gradient(
-    to bottom,
-    rgba(8, 5, 2, 0.38) 0%,
-    rgba(8, 5, 2, 0.78) 100%
-  );
-  pointer-events: auto;
+  gap: 2px;
 }
-
-.splash-action-row {
+.splash-syn-champ-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 55%, transparent);
+  background: rgba(8, 5, 2, 0.9);
+  flex-shrink: 0;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.splash-syn-champ-avatar:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
+}
+.syn-champ-name {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
+  white-space: nowrap;
+  max-width: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.syn-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  padding: 20px 8px;
 }
-
-.splash-action-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 16px;
-  color: rgba(200, 144, 64, 0.78);
-  background: rgba(14, 10, 4, 0.88);
-  border: 1px solid rgba(92, 51, 16, 0.65);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+.syn-empty-icon {
+  font-size: 22px;
+  opacity: 0.25;
+}
+.syn-empty-hint {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s,
-    transform 0.1s;
-}
-.splash-action-btn:hover {
-  color: #e8c040;
-  border-color: #c89040;
-  background: rgba(22, 14, 6, 0.96);
-  box-shadow: 0 0 14px rgba(200, 144, 64, 0.28);
-  transform: translateY(-2px);
-}
-.splash-action-btn:active {
-  transform: translateY(0);
+  color: rgba(200, 144, 64, 0.25);
+  text-align: center;
 }
 
-/* Tooltip */
-.splash-action-btn::before {
-  content: attr(data-tip);
+/* ══════════════════════════════════════════
+   EQUIP BAR — zentriert unten, alles größer
+   ══════════════════════════════════════════ */
+.splash-equip-bar {
   position: absolute;
-  bottom: calc(100% + 7px);
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 4px 9px;
-  background: #16140e;
-  border: 1px solid rgba(92, 51, 16, 0.75);
-  border-radius: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: rgba(200, 144, 64, 0.85);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
-}
-.splash-action-btn:hover::before {
-  opacity: 1;
-}
-
-.splash-action-icon { font-size: 15px; line-height: 1; }
-.splash-action-label { font-size: 11px; }
-
-/* ══════════════════════════════
-   EQUIPMENT ROW
-   ══════════════════════════════ */
-.hud-equip-col {
+  z-index: 7;
+  pointer-events: auto;
   display: flex;
   flex-direction: row;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: stretch;
+  background: rgba(6, 4, 1, 0.92);
+  border: 1px solid rgba(122, 78, 32, 0.8);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(92, 51, 16, 0.4),
+    0 10px 36px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(200, 144, 64, 0.15);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(200, 144, 64, 0.15) 0px,
+    rgba(200, 144, 64, 0) 3px
+  );
 }
 
 .hud-equip-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 14px 22px 12px;
   background: transparent;
   border: none;
-  border-radius: 4px;
-  padding: 7px 8px;
+  border-right: 1px solid rgba(92, 51, 16, 0.5);
   cursor: pointer;
-  min-width: 56px;
+  min-width: 118px;
   transition:
-    transform 0.12s,
-    filter 0.15s;
+    background 0.15s,
+    box-shadow 0.15s;
+  overflow: hidden;
 }
-.hud-equip-btn:hover { transform: translateY(-3px); }
+.hud-equip-btn:last-child {
+  border-right: none;
+}
+.hud-equip-btn:hover {
+  background: rgba(200, 144, 64, 0.07);
+  box-shadow: inset 0 1px 0 rgba(200, 144, 64, 0.22);
+}
+.hud-equip-btn--filled:hover {
+  background: rgba(200, 144, 64, 0.1);
+  box-shadow: inset 0 1px 0 rgba(200, 144, 64, 0.38);
+}
+
+/* Item-Art-Feld — deutlich größer */
+.hud-equip-art {
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(92, 51, 16, 0.5);
+  border-radius: 7px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.hud-equip-btn--filled .hud-equip-art {
+  border-color: rgba(200, 144, 64, 0.45);
+  box-shadow: inset 0 0 18px rgba(200, 144, 64, 0.09);
+}
+.hud-equip-btn:hover .hud-equip-art {
+  border-color: rgba(200, 144, 64, 0.8);
+  box-shadow:
+    0 0 22px rgba(200, 144, 64, 0.25),
+    inset 0 0 14px rgba(200, 144, 64, 0.12);
+}
 
 .hud-equip-img {
-  width: 106px;
-  height: 106px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.6));
-  transition: filter 0.15s;
+  filter: drop-shadow(0 0 7px rgba(200, 144, 64, 0.5));
+  transition:
+    filter 0.15s,
+    transform 0.15s;
 }
 .hud-equip-btn:hover .hud-equip-img {
-  filter: drop-shadow(0 0 18px rgba(200, 144, 64, 0.95));
+  filter: drop-shadow(0 0 20px rgba(200, 144, 64, 0.95));
+  transform: scale(1.07);
 }
 .hud-equip-emoji {
-  font-size: 68px;
+  font-size: 42px;
   line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.5));
+  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.45));
+  transition:
+    filter 0.15s,
+    transform 0.15s;
 }
-.hud-equip-empty {
-  font-size: 68px;
-  line-height: 1;
-  opacity: 0.18;
-  transition: opacity 0.15s;
+.hud-equip-btn:hover .hud-equip-emoji {
+  filter: drop-shadow(0 0 16px rgba(200, 144, 64, 0.9));
+  transform: scale(1.09);
 }
-.hud-equip-btn:hover .hud-equip-empty { opacity: 0.48; }
-.hud-equip-cat {
-  font-size: 8px;
-  color: rgba(200, 144, 64, 0.45);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.hud-equip-empty-icon {
+  font-size: 38px;
   line-height: 1;
-  pointer-events: none;
+  opacity: 0.2;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.hud-equip-btn:hover .hud-equip-empty-icon {
+  opacity: 0.5;
+  transform: scale(1.07);
 }
 
-/* ══════════════════════════════
-   ROLE STATS PANEL
-   ══════════════════════════════ */
-.splash-role-fx {
-  position: absolute;
-  top: 46px;
-  left: 0;
-  right: 0;
-  z-index: 5;
+/* Item-Name + Kategorie */
+.hud-equip-meta {
   display: flex;
   flex-direction: column;
   align-items: center;
-  pointer-events: none;
+  gap: 3px;
+  width: 100%;
 }
-.role-fx-panel {
-  background: rgba(0, 0, 0, 0.65);
-  border-radius: 4px;
-  padding: 10px 22px 12px;
-  min-width: 210px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.role-fx-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-.role-fx-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.6);
-  flex-shrink: 0;
-}
-.role-fx-value {
-  font-size: 16px;
-  font-weight: 900;
-  color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.6);
+.hud-equip-name {
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.04em;
-  text-align: right;
+  color: rgba(200, 144, 64, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  max-width: 100px;
+  text-align: center;
+  transition: color 0.15s;
+}
+.hud-equip-btn--filled .hud-equip-name {
+  color: rgba(232, 192, 64, 0.92);
+}
+.hud-equip-btn:hover .hud-equip-name {
+  color: #f0d870;
+}
+.hud-equip-cat {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.3);
+  line-height: 1;
+  transition: color 0.15s;
+}
+.hud-equip-btn:hover .hud-equip-cat {
+  color: rgba(200, 144, 64, 0.6);
+}
+
+.hud-equip-filled-dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8c040;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.9);
 }
 
 /* ══════════════════════════════
@@ -1317,8 +1698,7 @@ void globalSynergies
   min-height: 0;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s,
-    filter 0.2s;
+    box-shadow 0.2s;
 }
 .role-btn:hover {
   border-color: var(--rc);
@@ -1338,9 +1718,17 @@ void globalSynergies
   display: block;
   transition: transform 0.25s ease;
 }
-.role-btn:hover .role-btn-img { transform: scale(1.07); }
-.role-btn-img--placeholder { opacity: 0.18; filter: grayscale(55%); }
-.role-btn:hover .role-btn-img--placeholder { opacity: 0.38; filter: grayscale(30%); }
+.role-btn:hover .role-btn-img {
+  transform: scale(1.07);
+}
+.role-btn-img--placeholder {
+  opacity: 0.18;
+  filter: grayscale(55%);
+}
+.role-btn:hover .role-btn-img--placeholder {
+  opacity: 0.38;
+  filter: grayscale(30%);
+}
 .role-btn-gradient {
   position: absolute;
   bottom: 0;
@@ -1429,7 +1817,7 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   UNIFIED MODAL SYSTEM
+   MODAL SYSTEM
    ══════════════════════════════ */
 .modal-backdrop {
   position: absolute;
@@ -1440,7 +1828,6 @@ void globalSynergies
   align-items: center;
   justify-content: center;
 }
-
 .modal-panel {
   position: relative;
   display: flex;
@@ -1454,7 +1841,6 @@ void globalSynergies
   border-radius: 4px;
   overflow: hidden;
 }
-
 .modal-panel--sm {
   width: min(360px, 90%);
   height: min(85%, 680px);
@@ -1467,15 +1853,11 @@ void globalSynergies
   width: min(660px, 94%);
   height: min(90%, 750px);
 }
-
-/* Gold accent line at top */
 .modal-gold-line {
   height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
   flex-shrink: 0;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
-
-/* Close button */
 .modal-close-btn {
   position: absolute;
   top: 8px;
@@ -1504,8 +1886,6 @@ void globalSynergies
   border-color: #c89040;
   background: rgba(30, 16, 6, 0.97);
 }
-
-/* Tab bar */
 .modal-tab-bar {
   display: flex;
   gap: 4px;
@@ -1541,8 +1921,6 @@ void globalSynergies
   border-color: #c89040;
   box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
 }
-
-/* Content area */
 .modal-content {
   flex: 1;
   min-height: 0;
@@ -1558,12 +1936,19 @@ void globalSynergies
   scrollbar-color: #5c3310 #111;
   display: block;
 }
-.modal-content--scroll::-webkit-scrollbar { width: 4px; }
-.modal-content--scroll::-webkit-scrollbar-track { background: #111; }
-.modal-content--scroll::-webkit-scrollbar-thumb { background: #5c3310; border-radius: 2px; }
+.modal-content--scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.modal-content--scroll::-webkit-scrollbar-track {
+  background: #111;
+}
+.modal-content--scroll::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
 
 /* ══════════════════════════════
-   MODAL TRANSITIONS
+   TRANSITIONS
    ══════════════════════════════ */
 .modal-pop-enter-active {
   transition: opacity 0.22s ease;
@@ -1585,13 +1970,11 @@ void globalSynergies
 .modal-pop-leave-to .modal-panel {
   transform: scale(0.95) translateY(10px);
 }
-
-/* ══════════════════════════════
-   SPLASH TRANSITIONS
-   ══════════════════════════════ */
 .splash-name-fade-enter-active,
 .splash-name-fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 .splash-name-fade-enter-from,
 .splash-name-fade-leave-to {
@@ -1599,14 +1982,33 @@ void globalSynergies
   transform: translateY(-4px);
 }
 .role-fx-fade-enter-active {
-  transition: opacity 0.35s ease 0.05s, transform 0.35s ease 0.05s;
+  transition:
+    opacity 0.35s ease 0.05s,
+    transform 0.35s ease 0.05s;
 }
 .role-fx-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 .role-fx-fade-enter-from,
 .role-fx-fade-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+.syn-champs-fade-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.syn-champs-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.syn-champs-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.syn-champs-fade-leave-to {
+  opacity: 0;
 }
 </style>
