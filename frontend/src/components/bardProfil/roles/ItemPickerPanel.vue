@@ -86,9 +86,9 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px 7px;
-  border-bottom: 1px solid rgba(42, 26, 6, 0.9);
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
   flex-shrink: 0;
-  background: linear-gradient(to bottom, #1a1006, #120d04);
+  background: #1e1006;
 }
 .sub-header-title {
   font-size: 10px;

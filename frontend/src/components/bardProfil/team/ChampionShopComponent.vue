@@ -314,6 +314,17 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* modal-panel already frames — suppress rpg-frame double border */
+.rpg-frame {
+  border: none;
+  box-shadow: none;
+}
+/* Align header separator to modal standard (1px instead of global 3px) */
+.rpg-header {
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(92, 51, 16, 0.5);
+}
+
 /* ── Search icon ── */
 .search-icon {
   position: absolute;

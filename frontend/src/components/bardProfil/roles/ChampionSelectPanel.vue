@@ -155,9 +155,9 @@ function onImgError(e: Event) {
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px 7px;
-  border-bottom: 1px solid rgba(42, 26, 6, 0.9);
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
   flex-shrink: 0;
-  background: linear-gradient(to bottom, #1a1006, #120d04);
+  background: #1e1006;
 }
 
 .csp-title {
@@ -193,7 +193,7 @@ function onImgError(e: Event) {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(42, 26, 6, 0.7);
+  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
   flex-shrink: 0;
 }
 

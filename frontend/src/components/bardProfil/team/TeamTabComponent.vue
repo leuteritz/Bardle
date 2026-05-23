@@ -607,6 +607,7 @@ void globalSynergies
             <div class="modal-panel modal-panel--md" @click.stop>
               <div class="modal-gold-line" />
               <button class="modal-close-btn" @click="closeShop">✕</button>
+              <div class="modal-title-row">⚔️ Recruit Champions</div>
               <div class="modal-content">
                 <ChampionShopComponent
                   :initial-role="shopRole"
@@ -687,6 +688,7 @@ void globalSynergies
           >
             <div class="modal-panel modal-panel--lg" @click.stop>
               <div class="modal-gold-line" />
+              <button class="modal-close-btn" @click="closePanel">✕</button>
               <ChampionSelectPanel
                 class="modal-content"
                 :active-role="activeRole"
@@ -712,6 +714,7 @@ void globalSynergies
           >
             <div class="modal-panel modal-panel--sm" @click.stop>
               <div class="modal-gold-line" />
+              <button class="modal-close-btn" @click="closePanel">✕</button>
               <ItemPickerPanel
                 class="modal-content"
                 :selected-category="selectedCategory"
@@ -1920,6 +1923,19 @@ void globalSynergies
   background: rgba(30, 16, 6, 0.97);
   border-color: #c89040;
   box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+}
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #1e1006;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e8c040;
 }
 .modal-content {
   flex: 1;
