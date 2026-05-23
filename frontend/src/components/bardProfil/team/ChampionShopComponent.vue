@@ -262,6 +262,7 @@ export default defineComponent({
       return championNames.value
         .map((name) => ({ name }))
         .filter((c) => {
+          if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
           if (searchQuery.value.trim()) {
