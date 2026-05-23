@@ -28,6 +28,7 @@ import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vu
 import ExpeditionActiveComponent from './expedition/ExpeditionActiveComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -70,6 +71,11 @@ const CAT_ICONS: Record<ItemCategory, string> = {
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
+const expeditionStore = useExpeditionStore()
+
+const doneExpeditionCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const synergyStore = useSynergyStore()
@@ -641,7 +647,8 @@ void globalSynergies
                   :class="{ 'modal-tab--active': expeditionTab === 'active' }"
                   @click="expeditionTab = 'active'"
                 >
-                  ⚡ Active
+                  ⚡ Aktiv
+                  <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
                 </button>
               </div>
               <div class="modal-content modal-content--scroll">
@@ -1923,6 +1930,23 @@ void globalSynergies
   background: rgba(30, 16, 6, 0.97);
   border-color: #c89040;
   box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+}
+.modal-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 900;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  color: #a0ffa0;
+  margin-left: 5px;
+  line-height: 16px;
+  vertical-align: middle;
 }
 .modal-title-row {
   display: flex;
