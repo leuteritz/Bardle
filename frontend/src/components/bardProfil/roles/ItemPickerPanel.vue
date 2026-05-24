@@ -20,7 +20,6 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   equip: [itemId: string]
 }>()
 </script>
@@ -31,7 +30,6 @@ const emit = defineEmits<{
       <span class="sub-header-title">
         Select {{ CAT_ICONS[selectedCategory] }} {{ CAT_LABELS[selectedCategory] }}
       </span>
-      <button class="back-btn" @click="emit('back')">← Back</button>
     </div>
 
     <div class="item-body">
@@ -97,23 +95,6 @@ const emit = defineEmits<{
   text-transform: uppercase;
   color: var(--gold-bright);
   line-height: 1;
-}
-.back-btn {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(60, 30, 10, 0.5);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.back-btn:hover {
-  color: var(--gold-bright);
-  border-color: rgba(200, 144, 64, 0.5);
-  background: rgba(80, 40, 10, 0.7);
 }
 
 .item-body {

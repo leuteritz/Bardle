@@ -626,7 +626,6 @@ void globalSynergies
                 :secondary-slots="secondarySlots"
                 :active-slot-index="activeSlotIndex"
                 :active-sub-slot="activeSubSlot"
-                @back="closePanel"
                 @select="handleSelect"
               />
             </div>
@@ -648,7 +647,6 @@ void globalSynergies
                 :selected-category="selectedCategory"
                 :category-items="categoryItems"
                 :current-equipment="currentEquipment"
-                @back="closePanel"
                 @equip="handleEquip"
               />
             </div>

@@ -22,7 +22,6 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  back: []
   select: [champion: string]
 }>()
 
@@ -72,7 +71,6 @@ function onImgError(e: Event) {
     <!-- ── Header ── -->
     <div class="csp-header">
       <span class="csp-title">{{ headerTitle }}</span>
-      <button class="csp-back-btn" @click="emit('back')">← Back</button>
     </div>
 
     <!-- ── Search ── -->
@@ -169,23 +167,6 @@ function onImgError(e: Event) {
   line-height: 1;
 }
 
-.csp-back-btn {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(60, 30, 10, 0.5);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.csp-back-btn:hover {
-  color: var(--gold-bright);
-  border-color: rgba(200, 144, 64, 0.5);
-  background: rgba(80, 40, 10, 0.7);
-}
 
 /* ── Search ── */
 .csp-search-row {

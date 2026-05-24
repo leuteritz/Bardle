@@ -11,6 +11,14 @@ const starsProgress = computed(() =>
   Math.min(100, (galaxyStore.starsRescued / Math.max(1, galaxyStore.starsRequired)) * 100),
 )
 
+// Array für jedes Stern-Segment
+const starSegments = computed(() => {
+  const total = Math.max(1, galaxyStore.starsRequired)
+  return Array.from({ length: total }, (_, i) => ({
+    filled: i < galaxyStore.starsRescued,
+  }))
+})
+
 const isStarHovered = ref(false)
 const isMeepHovered = ref(false)
 
@@ -41,22 +49,30 @@ watch(
 
 <template>
   <div class="universe-panel">
-    <!-- ── Obere Zeile: Star · Meep  |  % ── -->
     <div class="stats-row">
       <!-- Star-Block -->
-      <div class="star-block" @mouseenter="isStarHovered = true" @mouseleave="isStarHovered = false">
+      <div
+        class="star-block"
+        @mouseenter="isStarHovered = true"
+        @mouseleave="isStarHovered = false"
+      >
         <img src="/img/star.png" class="star-icon" alt="Sterne" />
-        <span class="star-value">{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span>
+        <span class="star-value"
+          >{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span
+        >
       </div>
 
       <!-- Meep-Block -->
-      <div class="meep-block" :class="{ 'meep-block--rising': isIncreasing }" @mouseenter="isMeepHovered = true" @mouseleave="isMeepHovered = false">
+      <div
+        class="meep-block"
+        :class="{ 'meep-block--rising': isIncreasing }"
+        @mouseenter="isMeepHovered = true"
+        @mouseleave="isMeepHovered = false"
+      >
         <img src="/img/BardAbilities/BardMeep.png" class="meep-icon" alt="Meeps" />
-        <div class="meep-text">
-          <span class="meep-value" :class="{ 'meep-value--rising': isIncreasing }">
-            {{ formatNumber(displayMeeps) }}
-          </span>
-        </div>
+        <span class="meep-value" :class="{ 'meep-value--rising': isIncreasing }">
+          {{ formatNumber(displayMeeps) }}
+        </span>
       </div>
 
       <div class="divider" aria-hidden="true" />
@@ -68,29 +84,29 @@ watch(
       </div>
     </div>
 
-    <!-- ── Sterne-Progressbar ── -->
-    <div class="star-bar-wrap">
-      <div class="star-bar-track" :class="{ 'star-bar-track--glow': isStarHovered }">
-        <div class="star-bar-border" />
-        <div class="star-bar-fill" :style="{ width: starsProgress + '%' }">
-          <div class="star-bar-flow" />
-          <div class="star-bar-gloss" />
+    <!-- ── Sterne-Progressbar (segmentiert) ── -->
+    <div class="star-bar-wrap" :class="{ 'star-bar-wrap--glow': isStarHovered }">
+      <div class="star-bar-border" />
+      <div class="star-segments">
+        <div
+          v-for="(seg, i) in starSegments"
+          :key="i"
+          class="star-segment"
+          :class="{ 'star-segment--filled': seg.filled }"
+        >
+          <div v-if="seg.filled" class="star-segment-flow" />
+          <div v-if="seg.filled" class="star-segment-gloss" />
         </div>
       </div>
     </div>
 
-    <!-- ── Große RPG-Progressbar ── -->
+    <!-- Große RPG-Progressbar -->
     <div class="rpg-bar-wrap" :class="{ 'rpg-bar-wrap--glow': isMeepHovered }">
-      <!-- Innenrahmen-Dekor -->
       <div class="rpg-bar-border" />
-
-      <!-- Füll-Balken -->
       <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
         <div class="rpg-bar-flow" />
         <div class="rpg-bar-gloss" />
       </div>
-
-      <!-- Tick-Markierungen -->
       <div class="rpg-ticks" aria-hidden="true">
         <div class="rpg-tick" style="left: 25%" />
         <div class="rpg-tick" style="left: 50%" />
@@ -98,7 +114,7 @@ watch(
       </div>
     </div>
 
-    <!-- ── Prestige Button ── -->
+    <!-- Prestige Button -->
     <div v-if="gameStore.prestigeAvailable" class="prestige-wrap">
       <button class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">✦ PRESTIGE ✦</button>
     </div>
@@ -113,10 +129,10 @@ watch(
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   height: 100%;
-  padding: 8px 14px;
+  padding: 6px 12px;
   box-sizing: border-box;
 }
 
@@ -128,19 +144,60 @@ watch(
   align-items: center;
   gap: 0;
   width: 100%;
+  overflow: hidden;
+}
+
+/* ── Star-Block ────────────────────────────── */
+.star-block {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.star-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transform: translateZ(0);
+  will-change: transform;
+  image-rendering: auto;
+  transition:
+    transform 0.2s,
+    filter 0.3s;
+  user-select: none;
+}
+.star-icon:hover {
+  transform: scale(1.1) translateZ(0);
+  filter: drop-shadow(0 0 8px rgba(64, 168, 232, 0.85));
+}
+
+.star-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #7ecff0;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(64, 168, 232, 0.35);
+  letter-spacing: -0.01em;
 }
 
 /* ── Meep-Block ────────────────────────────── */
 .meep-block {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   flex: 1;
   min-width: 0;
+  margin-left: 12px;
+  isolation: isolate;
   transition: filter 0.3s;
 }
 .meep-block--rising {
-  filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.55));
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
 }
 
 .meep-icon {
@@ -148,26 +205,22 @@ watch(
   height: 40px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.75));
+  image-rendering: auto;
+  transform: translateZ(0);
+  will-change: transform;
+  filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.75));
   transition:
     transform 0.2s,
     filter 0.3s;
   user-select: none;
 }
 .meep-icon:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 13px rgba(251, 146, 60, 1));
-}
-
-.meep-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+  transform: scale(1.1) translateZ(0);
+  filter: drop-shadow(0 0 12px rgba(251, 146, 60, 1));
 }
 
 .meep-value {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;
@@ -184,8 +237,8 @@ watch(
 .meep-value--rising {
   color: #fdba74;
   text-shadow:
-    0 0 14px rgba(251, 146, 60, 0.85),
-    0 0 28px rgba(251, 146, 60, 0.4);
+    0 0 12px rgba(251, 146, 60, 0.85),
+    0 0 24px rgba(251, 146, 60, 0.4);
 }
 
 /* ── Trennlinie ────────────────────────────── */
@@ -193,7 +246,7 @@ watch(
   flex-shrink: 0;
   width: 1px;
   height: 32px;
-  margin-inline: 12px;
+  margin-inline: 10px;
   background: linear-gradient(
     to bottom,
     transparent,
@@ -212,83 +265,40 @@ watch(
 }
 
 .percent-value {
-  font-size: 1.85rem;
+  font-size: 1.4rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #e8c040;
   line-height: 1;
   letter-spacing: -0.02em;
   text-shadow:
-    0 0 12px rgba(255, 200, 0, 0.6),
-    0 0 28px rgba(255, 200, 0, 0.2);
+    0 0 10px rgba(255, 200, 0, 0.6),
+    0 0 22px rgba(255, 200, 0, 0.2);
 }
 .percent-sym {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: rgba(232, 192, 64, 0.6);
   line-height: 1;
 }
 
-/* ── Star-Block ────────────────────────────── */
-.star-block {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.star-icon {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-  transition:
-    transform 0.2s,
-    filter 0.3s;
-  user-select: none;
-}
-.star-icon:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 8px rgba(64, 168, 232, 0.85));
-}
-
-.star-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #7ecff0;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 0 8px rgba(64, 168, 232, 0.35);
-  letter-spacing: -0.01em;
-}
-
 /* ================================================================
-   STERNE-PROGRESSBAR
+   STERNE-PROGRESSBAR – SEGMENTIERT
    ================================================================ */
 .star-bar-wrap {
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.star-bar-track {
   position: relative;
   width: 100%;
-  height: 18px;
-  border-radius: 4px;
-  overflow: hidden;
   flex-shrink: 0;
+  border-radius: 4px;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
     0 0 0 2px rgba(64, 168, 232, 0.2),
     inset 0 2px 6px rgba(0, 0, 0, 0.65);
   background: rgba(4, 8, 16, 0.75);
   transition: box-shadow 0.25s ease;
+  overflow: hidden;
 }
-.star-bar-track--glow {
+.star-bar-wrap--glow {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
     0 0 0 2px rgba(64, 168, 232, 0.55),
@@ -296,22 +306,40 @@ watch(
     inset 0 2px 6px rgba(0, 0, 0, 0.65);
 }
 
+/* Rahmen über allem */
 .star-bar-border {
   position: absolute;
   inset: 0;
   border-radius: 4px;
   border: 1px solid rgba(64, 168, 232, 0.25);
   pointer-events: none;
-  z-index: 3;
+  z-index: 4;
 }
 
-.star-bar-fill {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  min-width: 4px;
-  border-radius: 3px;
+/* Segment-Container: gleichmäßig verteilt mit 2px Lücken */
+.star-segments {
+  display: flex;
+  height: 16px;
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+/* Einzelnes Segment */
+.star-segment {
+  flex: 1;
+  border-radius: 2px;
+  background: rgba(20, 40, 80, 0.5);
+  position: relative;
+  overflow: hidden;
+  transition:
+    background 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+/* Gefülltes Segment */
+.star-segment--filled {
   background: linear-gradient(
     to bottom,
     rgba(160, 220, 255, 0.75) 0%,
@@ -320,47 +348,49 @@ watch(
     rgba(64, 168, 232, 1) 78%,
     rgba(160, 220, 255, 0.7) 100%
   );
-  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: starBarPulse 3.5s ease-in-out infinite;
-  overflow: hidden;
-  z-index: 1;
+  box-shadow:
+    0 0 6px rgba(64, 168, 232, 0.5),
+    inset 0 0 4px rgba(64, 168, 232, 0.2);
+  animation: segmentPulse 3.5s ease-in-out infinite;
 }
 
-.star-bar-flow {
+/* Fließendes Streifenmuster im Segment */
+.star-segment-flow {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     90deg,
     transparent 0px,
-    rgba(255, 255, 255, 0.09) 14px,
-    rgba(255, 255, 255, 0.03) 22px,
-    transparent 36px
+    rgba(255, 255, 255, 0.09) 8px,
+    rgba(255, 255, 255, 0.03) 12px,
+    transparent 20px
   );
   animation: flowMove 2.2s linear infinite;
 }
 
-.star-bar-gloss {
+/* Glanz oben im Segment */
+.star-segment-gloss {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 45%;
-  background: linear-gradient(to bottom, rgba(160, 220, 255, 0.2) 0%, transparent 100%);
-  border-radius: 3px 3px 0 0;
+  background: linear-gradient(to bottom, rgba(160, 220, 255, 0.22) 0%, transparent 100%);
+  border-radius: 2px 2px 0 0;
   pointer-events: none;
 }
 
-@keyframes starBarPulse {
+@keyframes segmentPulse {
   0%,
   100% {
     box-shadow:
-      0 0 8px rgba(64, 168, 232, 0.35),
-      inset 0 0 6px rgba(64, 168, 232, 0.1);
+      0 0 6px rgba(64, 168, 232, 0.4),
+      inset 0 0 4px rgba(64, 168, 232, 0.1);
   }
   50% {
     box-shadow:
-      0 0 18px rgba(64, 168, 232, 0.65),
-      inset 0 0 10px rgba(64, 168, 232, 0.2);
+      0 0 14px rgba(64, 168, 232, 0.7),
+      inset 0 0 8px rgba(64, 168, 232, 0.25);
   }
 }
 
@@ -370,7 +400,7 @@ watch(
 .rpg-bar-wrap {
   position: relative;
   width: 100%;
-  height: 28px;
+  height: 24px;
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
@@ -398,7 +428,6 @@ watch(
   z-index: 3;
 }
 
-/* Füll-Balken */
 .rpg-bar-fill {
   position: absolute;
   top: 2px;
@@ -420,7 +449,6 @@ watch(
   z-index: 1;
 }
 
-/* Fließendes Streifenmuster */
 .rpg-bar-flow {
   position: absolute;
   inset: 0;
@@ -434,7 +462,6 @@ watch(
   animation: flowMove 2.2s linear infinite;
 }
 
-/* Glanz oben */
 .rpg-bar-gloss {
   position: absolute;
   top: 0;
@@ -446,7 +473,6 @@ watch(
   pointer-events: none;
 }
 
-/* Tick-Markierungen */
 .rpg-ticks {
   position: absolute;
   inset: 0;
