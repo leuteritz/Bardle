@@ -398,6 +398,23 @@ const activeRoleStats = computed<RoleStat[]>(() => {
   }
 })
 
+function getRoleOrbitDescription(role: ChampionRole): string {
+  switch (role) {
+    case 'top':
+      return `Shield: ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild`
+    case 'jungle':
+      return 'Crowd Control'
+    case 'mid':
+      return `Curse every ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s · DoT ${ROLE_MID_CURSE_DOT_DPS}/s`
+    case 'adc':
+      return `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`
+    case 'support':
+      return `Heal ${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`
+    default:
+      return ''
+  }
+}
+
 void championRoleLabel
 void globalSynergies
 </script>
@@ -468,18 +485,32 @@ void globalSynergies
 
         <!-- ══ Top Info Box — Name + Stats (unverändert, nur Größen) ══ -->
         <div v-if="activeChampion" class="splash-info-box" @click.stop>
-          <Transition name="splash-name-fade">
-            <div :key="activeSlotIndex" class="splash-name-in-box">{{ activeChampion }}</div>
-          </Transition>
-          <Transition name="role-fx-fade">
-            <div :key="'fx-' + activeSlotIndex" class="splash-role-fx-in-box">
-              <div v-for="stat in activeRoleStats" :key="stat.key" class="role-fx-row">
-                <span class="role-fx-icon">{{ stat.icon }}</span>
-                <span class="role-fx-label">{{ stat.label }}</span>
-                <span class="role-fx-value">{{ stat.value }}</span>
-              </div>
+          <div class="splash-name-in-box">{{ activeChampion }}</div>
+          <div class="splash-role-orbit-list">
+            <div
+              v-for="role in getChampionRoles(activeChampion)"
+              :key="role"
+              class="orbit-role-row"
+            >
+              <img
+                :src="ROLE_BY_KEY[role].image"
+                :alt="role"
+                class="orbit-role-img"
+                @error="onImgError"
+              />
+              <span class="orbit-role-desc">{{ getRoleOrbitDescription(role) }}</span>
             </div>
-          </Transition>
+          </div>
+          <div class="splash-role-fx-in-box">
+            <div
+              v-for="stat in activeRoleStats.filter(s => /\d/.test(s.value))"
+              :key="stat.key"
+              class="role-fx-row"
+            >
+              <span class="role-fx-label">{{ stat.label }}</span>
+              <span class="role-fx-value">{{ stat.value }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- ══ Secondary Panel (links) ══ -->
@@ -1051,6 +1082,32 @@ void globalSynergies
     0 2px 14px rgba(0, 0, 0, 0.95),
     0 0 32px rgba(200, 144, 64, 0.45);
 }
+.splash-role-orbit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.4);
+}
+.orbit-role-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.orbit-role-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+.orbit-role-desc {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(200, 144, 64, 0.75);
+  letter-spacing: 0.04em;
+}
 .splash-role-fx-in-box {
   display: flex;
   flex-direction: column;
@@ -1061,14 +1118,6 @@ void globalSynergies
   display: flex;
   align-items: center;
   gap: 8px;
-}
-.role-fx-icon {
-  font-size: 13px;
-  line-height: 1;
-  flex-shrink: 0;
-  opacity: 0.75;
-  width: 16px;
-  text-align: center;
 }
 .role-fx-label {
   font-size: 11px;
@@ -2009,32 +2058,6 @@ void globalSynergies
 .modal-pop-enter-from .modal-panel,
 .modal-pop-leave-to .modal-panel {
   transform: scale(0.95) translateY(10px);
-}
-.splash-name-fade-enter-active,
-.splash-name-fade-leave-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
-}
-.splash-name-fade-enter-from,
-.splash-name-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-.role-fx-fade-enter-active {
-  transition:
-    opacity 0.35s ease 0.05s,
-    transform 0.35s ease 0.05s;
-}
-.role-fx-fade-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-.role-fx-fade-enter-from,
-.role-fx-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 .syn-champs-fade-enter-active {
   transition:
