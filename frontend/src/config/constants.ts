@@ -262,12 +262,12 @@ export interface SunGrowthStage {
 
 /** Sun growth stages — thresholds match planet slot costs so stage N is met when slot N becomes affordable. */
 export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
-  { stage: 0, chimesThreshold: 0,       radius: 24,  label: 'Nascent'   },
-  { stage: 1, chimesThreshold: 500,     radius: 34,  label: 'Kindling'  },
-  { stage: 2, chimesThreshold: 2000,    radius: 48,  label: 'Radiant'   },
-  { stage: 3, chimesThreshold: 8000,    radius: 66,  label: 'Blazing'   },
-  { stage: 4, chimesThreshold: 35000,   radius: 88,  label: 'Scorching' },
-  { stage: 5, chimesThreshold: 150000,  radius: 112, label: 'Stellar'   },
+  { stage: 0, chimesThreshold: 0,       radius: 34,  label: 'Nascent'   },
+  { stage: 1, chimesThreshold: 500,     radius: 44,  label: 'Kindling'  },
+  { stage: 2, chimesThreshold: 2000,    radius: 56,  label: 'Radiant'   },
+  { stage: 3, chimesThreshold: 8000,    radius: 72,  label: 'Blazing'   },
+  { stage: 4, chimesThreshold: 35000,   radius: 92,  label: 'Scorching' },
+  { stage: 5, chimesThreshold: 150000,  radius: 116, label: 'Stellar'   },
   { stage: 6, chimesThreshold: 600000,  radius: 144, label: 'Supernova' },
 ]
 
