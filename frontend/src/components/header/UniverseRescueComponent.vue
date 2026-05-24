@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
 
 const gameStore = useGameStore()
+const galaxyStore = useGalaxyStore()
+
+const starsProgress = computed(() =>
+  Math.min(100, (galaxyStore.starsRescued / Math.max(1, galaxyStore.starsRequired)) * 100),
+)
+
+const isStarHovered = ref(false)
+const isMeepHovered = ref(false)
 
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
@@ -32,10 +41,16 @@ watch(
 
 <template>
   <div class="universe-panel">
-    <!-- ── Obere Zeile: Meep-Icon + Zahl  |  Trennlinie  |  % ── -->
+    <!-- ── Obere Zeile: Star · Meep  |  % ── -->
     <div class="stats-row">
+      <!-- Star-Block -->
+      <div class="star-block" @mouseenter="isStarHovered = true" @mouseleave="isStarHovered = false">
+        <img src="/img/star.png" class="star-icon" alt="Sterne" />
+        <span class="star-value">{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span>
+      </div>
+
       <!-- Meep-Block -->
-      <div class="meep-block" :class="{ 'meep-block--rising': isIncreasing }">
+      <div class="meep-block" :class="{ 'meep-block--rising': isIncreasing }" @mouseenter="isMeepHovered = true" @mouseleave="isMeepHovered = false">
         <img src="/img/BardAbilities/BardMeep.png" class="meep-icon" alt="Meeps" />
         <div class="meep-text">
           <span class="meep-value" :class="{ 'meep-value--rising': isIncreasing }">
@@ -53,8 +68,19 @@ watch(
       </div>
     </div>
 
+    <!-- ── Sterne-Progressbar ── -->
+    <div class="star-bar-wrap">
+      <div class="star-bar-track" :class="{ 'star-bar-track--glow': isStarHovered }">
+        <div class="star-bar-border" />
+        <div class="star-bar-fill" :style="{ width: starsProgress + '%' }">
+          <div class="star-bar-flow" />
+          <div class="star-bar-gloss" />
+        </div>
+      </div>
+    </div>
+
     <!-- ── Große RPG-Progressbar ── -->
-    <div class="rpg-bar-wrap">
+    <div class="rpg-bar-wrap" :class="{ 'rpg-bar-wrap--glow': isMeepHovered }">
       <!-- Innenrahmen-Dekor -->
       <div class="rpg-bar-border" />
 
@@ -203,6 +229,141 @@ watch(
   line-height: 1;
 }
 
+/* ── Star-Block ────────────────────────────── */
+.star-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.star-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition:
+    transform 0.2s,
+    filter 0.3s;
+  user-select: none;
+}
+.star-icon:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(64, 168, 232, 0.85));
+}
+
+.star-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #7ecff0;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 8px rgba(64, 168, 232, 0.35);
+  letter-spacing: -0.01em;
+}
+
+/* ================================================================
+   STERNE-PROGRESSBAR
+   ================================================================ */
+.star-bar-wrap {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.star-bar-track {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(64, 168, 232, 0.2),
+    inset 0 2px 6px rgba(0, 0, 0, 0.65);
+  background: rgba(4, 8, 16, 0.75);
+  transition: box-shadow 0.25s ease;
+}
+.star-bar-track--glow {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(64, 168, 232, 0.55),
+    0 0 14px rgba(64, 168, 232, 0.55),
+    inset 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+.star-bar-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(64, 168, 232, 0.25);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.star-bar-fill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  min-width: 4px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to bottom,
+    rgba(160, 220, 255, 0.75) 0%,
+    rgba(64, 168, 232, 1) 25%,
+    rgba(16, 96, 192, 1) 55%,
+    rgba(64, 168, 232, 1) 78%,
+    rgba(160, 220, 255, 0.7) 100%
+  );
+  transition: width 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: starBarPulse 3.5s ease-in-out infinite;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.star-bar-flow {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    rgba(255, 255, 255, 0.09) 14px,
+    rgba(255, 255, 255, 0.03) 22px,
+    transparent 36px
+  );
+  animation: flowMove 2.2s linear infinite;
+}
+
+.star-bar-gloss {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(to bottom, rgba(160, 220, 255, 0.2) 0%, transparent 100%);
+  border-radius: 3px 3px 0 0;
+  pointer-events: none;
+}
+
+@keyframes starBarPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(64, 168, 232, 0.35),
+      inset 0 0 6px rgba(64, 168, 232, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(64, 168, 232, 0.65),
+      inset 0 0 10px rgba(64, 168, 232, 0.2);
+  }
+}
+
 /* ================================================================
    GROSSE RPG-PROGRESSBAR
    ================================================================ */
@@ -213,12 +374,19 @@ watch(
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
-  /* RPG-typischer vertiefter Rahmen */
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
     0 0 0 2px rgba(255, 200, 60, 0.22),
     inset 0 2px 8px rgba(0, 0, 0, 0.65);
   background: rgba(8, 4, 0, 0.7);
+  transition: box-shadow 0.25s ease;
+}
+.rpg-bar-wrap--glow {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(255, 200, 60, 0.55),
+    0 0 14px rgba(255, 200, 60, 0.55),
+    inset 0 2px 8px rgba(0, 0, 0, 0.65);
 }
 
 .rpg-bar-border {
