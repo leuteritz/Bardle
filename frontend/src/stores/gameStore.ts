@@ -453,10 +453,6 @@ export const useGameStore = defineStore('game', {
       const planetBossStore = usePlanetBossStore()
       if (planetBossStore.isBossActive) {
         planetBossStore.applyPassiveDamage()
-        // Top laner shield blocks orbit damage during active shield window
-        if (!roleBehaviorStore.tankShieldActive) {
-          planetBossStore.applyOrbitDamage()
-        }
       }
       if (planetBossStore.cpsPenaltyActive && Date.now() >= planetBossStore.cpsPenaltyExpiresAt) {
         planetBossStore.clearPenalty()

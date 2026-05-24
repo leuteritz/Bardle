@@ -235,18 +235,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       return this.dealDamage(boss.clickDamagePerHit)
     },
 
-    applyOrbitDamage() {
-      const playerStore = usePlayerStore()
-      const dmgReduction = usePlanetShopStore().planetBossDamageReduction
-      for (const boss of this.activeBosses) {
-        if (!boss.defeated && !boss.expired && activePlanetPositions.has(boss.planetId)) {
-          if (Math.random() > dmgReduction) {
-            playerStore.takeDamage(1)
-          }
-        }
-      }
-    },
-
     applyPassiveDamage() {
       const gameStore = useGameStore()
       const starGroupStore = useStarGroupStore()
