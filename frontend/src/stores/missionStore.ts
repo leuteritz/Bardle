@@ -109,7 +109,7 @@ const MISSIONS: Mission[] = [
       id: 'reward_star_concert',
       name: 'Star Concert',
       description: 'The concert of the entire galaxy. +30% CpS.',
-      icon: '⭐',
+      icon: '/img/star.png',
       cost: 0,
       effect: { type: 'cpsMultiplier', value: 1.3 },
     },

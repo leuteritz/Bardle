@@ -313,3 +313,13 @@
   color: var(--rpg-rarity-legendary);
   border-radius: 4px;
 }
+
+.star-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}

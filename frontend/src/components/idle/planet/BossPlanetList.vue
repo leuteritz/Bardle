@@ -2,7 +2,7 @@
   <div class="bpl-root">
     <div class="bpl-title">
       <span class="bpl-title-line" />
-      <span class="bpl-title-text">⭐ Next Planets</span>
+      <span class="bpl-title-text"><img src="/img/star.png" alt="★" class="star-icon"> Next Planets</span>
       <span class="bpl-title-line" />
     </div>
 

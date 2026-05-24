@@ -30,7 +30,7 @@ const flashKey = ref<string | null>(null)
 const quickFields = [
   { key: 'chimes', label: 'Chimes', icon: '🎐', defaultStep: 100, min: 0, float: true },
   { key: 'meeps', label: 'Meeps', icon: '👾', defaultStep: 1, min: 0, float: false },
-  { key: 'level', label: 'Level', icon: '⭐', defaultStep: 1, min: 1, float: false },
+  { key: 'level', label: 'Level', icon: '★', defaultStep: 1, min: 1, float: false },
   { key: 'skillPoints', label: 'Skill Points', icon: '✨', defaultStep: 1, min: 0, float: false },
 ] as const
 
@@ -258,7 +258,7 @@ function resetAllCooldowns() {
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
         @click="spawnStar"
       >
-        <span>⭐</span> Spawn Star
+        <img src="/img/star.png" alt="★" class="star-icon"> Spawn Star
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
@@ -282,7 +282,7 @@ function resetAllCooldowns() {
         class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
         @click="forcePrestige"
       >
-        <span>⭐</span> Force Prestige
+        <img src="/img/star.png" alt="★" class="star-icon"> Force Prestige
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"

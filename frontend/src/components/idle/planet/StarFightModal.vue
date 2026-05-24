@@ -228,7 +228,7 @@ const starTypeLabel = computed(() => {
   if (!star) return 'STAR'
   if (star.starType === 'champion') return '♛ CHAMPION STAR'
   if (star.starType === 'galaxy_boss') return '✦ GALAXY BOSS STAR'
-  return '⭐ RESOURCE STAR'
+  return '★ RESOURCE STAR'
 })
 
 // ── Curse ─────────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@
             v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
             class="minimap-planet-count"
           >
-            <span class="planet-count-icon">★</span>
+            <img src="/img/star.png" alt="★" class="star-icon planet-count-icon">
             <span class="planet-count-text"
               >{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span
             >
@@ -323,8 +323,7 @@ export default defineComponent({
 
 .planet-count-icon {
   font-size: 1rem;
-  color: #ffe080;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.8);
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.8));
 }
 
 .planet-count-text {

@@ -360,7 +360,7 @@ export const RARITY_STAR_FORGED: SynergyDefinition = {
   name: 'Star-Forged',
   description: '5+ rare Champions in orbit — Power +25%',
   type: 'rarity',
-  icon: '⭐',
+  icon: '/img/star.png',
   color: '#ffd700',
   tier: 'gold',
   effects: [{ type: 'power', multiplier: 1.25 }] as SynergyEffect[],
