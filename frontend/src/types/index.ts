@@ -372,6 +372,12 @@ export interface SlotEquipment {
 
 export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 
+export interface RoleAbilityDetail {
+  name: string
+  desc: string
+  value?: string
+}
+
 export interface Material {
   id: string
   name: string

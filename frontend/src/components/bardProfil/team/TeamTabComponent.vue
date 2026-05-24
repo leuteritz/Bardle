@@ -366,15 +366,29 @@ void globalSynergies
             <div
               v-for="role in getChampionRoles(activeChampion)"
               :key="role"
-              class="orbit-role-row"
+              class="orbit-ability-trigger"
             >
-              <img
-                :src="ROLE_BY_KEY[role].image"
-                :alt="role"
-                class="orbit-role-img"
-                @error="onImgError"
-              />
-              <span class="orbit-role-desc">{{ getRoleOrbitDescription(role) }}</span>
+              <div class="orbit-role-row">
+                <img
+                  :src="ROLE_BY_KEY[role].image"
+                  :alt="role"
+                  class="orbit-role-img"
+                  @error="onImgError"
+                />
+                <span class="orbit-role-desc">{{ ROLE_BY_KEY[role].abilityCompact }}</span>
+              </div>
+              <div class="orbit-ability-detail">
+                <div
+                  v-for="item in ROLE_BY_KEY[role].abilityDetails"
+                  :key="item.name"
+                  class="ability-detail-row"
+                >
+                  <span class="ability-detail-name">{{ item.name }}</span>
+                  <span class="ability-detail-sep">–</span>
+                  <span class="ability-detail-desc">{{ item.desc }}</span>
+                  <span v-if="item.value" class="ability-detail-value">{{ item.value }}</span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="splash-role-fx-in-box">
@@ -690,6 +704,7 @@ void globalSynergies
                   <span v-else class="role-btn-sec-plus">＋</span>
                 </div>
               </div>
+              <div class="role-btn-ability">{{ ROLE_BY_KEY[ROLE_MAP[role]]?.abilityCompact ?? '' }}</div>
               <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
             </button>
           </div>
@@ -1949,5 +1964,99 @@ void globalSynergies
 }
 .syn-champs-fade-leave-to {
   opacity: 0;
+}
+
+/* ══════════════════════════════
+   ROLE ABILITY — Compact + Hover Detail
+   ══════════════════════════════ */
+.orbit-ability-trigger {
+  position: relative;
+  border-radius: 4px;
+  padding: 2px 0;
+  transition: background 0.15s;
+  cursor: default;
+}
+.orbit-ability-trigger:hover {
+  background: rgba(200, 144, 64, 0.06);
+}
+
+.orbit-ability-detail {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0 4px;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.2s ease;
+}
+.orbit-ability-trigger:hover .orbit-ability-detail {
+  max-height: 400px;
+  opacity: 1;
+}
+
+.ability-detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.2);
+}
+.ability-detail-row:last-child {
+  border-bottom: none;
+}
+.ability-detail-name {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(232, 192, 64, 0.9);
+  white-space: nowrap;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+.ability-detail-sep {
+  font-size: 10px;
+  color: rgba(200, 144, 64, 0.3);
+  flex-shrink: 0;
+}
+.ability-detail-desc {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(200, 144, 64, 0.6);
+  flex: 1;
+  line-height: 1.4;
+}
+.ability-detail-value {
+  font-size: 11px;
+  font-weight: 900;
+  color: #e8c040;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
+}
+
+/* ══════════════════════════════
+   SIDEBAR — Role compact ability line
+   ══════════════════════════════ */
+.role-btn-ability {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.45);
+  text-align: center;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.role-btn:hover .role-btn-ability,
+.role-btn--active .role-btn-ability {
+  color: rgba(200, 144, 64, 0.8);
 }
 </style>

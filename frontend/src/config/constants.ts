@@ -1,4 +1,4 @@
-import type { ChampionRole, RoleStat } from '../types'
+import type { ChampionRole, RoleStat, RoleAbilityDetail } from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -267,6 +267,12 @@ export const ROLES = [
       { key: 'shield', icon: '🛡', label: 'Shield Rebuild', value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s` },
       { key: 'type',   icon: '💪', label: 'Style',          value: 'Tank / Frontline' },
     ] satisfies RoleStat[],
+    abilityCompact: `Shield – ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s Rebuild · Tank / Frontline`,
+    abilityDetails: [
+      { name: 'Atk Interval', desc: 'Hits boss every', value: '4.0s' },
+      { name: 'Shield', desc: 'Absorbs 1 hit, then rebuilds after', value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s` },
+      { name: 'Style', desc: 'Tank / Frontline – fights on the inner orbit' },
+    ] satisfies RoleAbilityDetail[],
     orbitDesc: `Shield: ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild`,
     orbit: {
       rx: SUN_RADIUS * 2.58,
@@ -292,6 +298,14 @@ export const ROLES = [
       { key: 'effect', icon: '🌀', label: 'Effect', value: 'Crowd Control' },
       { key: 'range',  icon: '🔄', label: 'Orbit',  value: 'Wide Patrol' },
     ] satisfies RoleStat[],
+    abilityCompact: 'Jungle Buffs · Crowd Control · Wide Patrol',
+    abilityDetails: [
+      { name: 'Red Buff', desc: 'Burn DoT on hit, slow enemy movement', value: '10 dmg/s · −30% slow' },
+      { name: 'Blue Buff', desc: 'Ability cooldown reduction & mana regen for nearby allies' },
+      { name: 'Scuttle', desc: 'River vision + movement speed bonus in river zone' },
+      { name: 'Crowd Control', desc: 'Applies CC debuffs to boss planets reducing their effectiveness' },
+      { name: 'Style', desc: 'Assassin / Ganker – patrols wide outer orbit' },
+    ] satisfies RoleAbilityDetail[],
     orbitDesc: 'Crowd Control',
     orbit: {
       rx: SUN_RADIUS * 7.8,
@@ -316,6 +330,17 @@ export const ROLES = [
       { key: 'dot',      icon: '☠',  label: 'DoT DPS',        value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
       { key: 'amp',      icon: '⚡',  label: 'Dmg Amplify',    value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
     ] satisfies RoleStat[],
+    abilityCompact: `Curse ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s CD · 5 Curse Types · DoT ${ROLE_MID_CURSE_DOT_DPS} dmg/s`,
+    abilityDetails: [
+      { name: 'Corruption', desc: `DoT ${ROLE_MID_CURSE_DOT_DPS} dmg/s × ${ROLE_MID_CURSE_DURATION_MS / 1000}s`, value: `${ROLE_MID_CURSE_DOT_DPS * (ROLE_MID_CURSE_DURATION_MS / 1000)} total dmg` },
+      { name: 'Weakness', desc: 'Enemy attack reduced for curse duration', value: `×${ROLE_MID_CURSE_ATTACK_DEBUFF} (${Math.round((1 - ROLE_MID_CURSE_ATTACK_DEBUFF) * 100)}% less)` },
+      { name: 'Hexblight', desc: 'All player damage amplified for curse duration', value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
+      { name: 'Petrify', desc: 'Enemy attack interval multiplied for curse duration', value: `×${ROLE_MID_CURSE_ATTACK_SLOW} slower` },
+      { name: 'Damnation', desc: 'Instant damage as fraction of boss max HP', value: `${Math.round(ROLE_MID_CURSE_DAMNATION_FRAC * 100)}% MaxHP` },
+      { name: 'Cooldown', desc: 'Time between curse casts', value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s` },
+      { name: 'Duration', desc: 'Each curse lasts', value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s` },
+      { name: 'Range', desc: 'Max distance to boss planet', value: `${ROLE_MID_CURSE_RANGE}px` },
+    ] satisfies RoleAbilityDetail[],
     orbitDesc: `Curse every ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s · DoT ${ROLE_MID_CURSE_DOT_DPS}/s`,
     orbit: {
       rx: SUN_RADIUS * 10.75,
@@ -339,6 +364,12 @@ export const ROLES = [
       { key: 'burstcd', icon: '⏱',  label: 'Burst CD',     value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s` },
       { key: 'style',   icon: '🏹', label: 'Style',         value: 'Ranged / DPS' },
     ] satisfies RoleStat[],
+    abilityCompact: `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s · Ranged DPS`,
+    abilityDetails: [
+      { name: 'Burst Damage', desc: 'Bonus damage on direct hit every burst cycle', value: `${ROLE_ADC_BURST_DAMAGE} dmg` },
+      { name: 'Burst CD', desc: 'Time between burst shots', value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s` },
+      { name: 'Style', desc: 'Ranged / DPS – fires from long outer orbit' },
+    ] satisfies RoleAbilityDetail[],
     orbitDesc: `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`,
     orbit: {
       rx: SUN_RADIUS * 12.67,
@@ -363,6 +394,13 @@ export const ROLES = [
       { key: 'pheal', icon: '🌍', label: 'Planet Heal',   value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
       { key: 'pcd',   icon: '⌛', label: 'Planet CD',     value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s` },
     ] satisfies RoleStat[],
+    abilityCompact: `Heal ${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s · Planet Heal ${SUPPORT_PLANET_HEAL_AMOUNT} HP / ${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`,
+    abilityDetails: [
+      { name: 'Player Heal', desc: 'Restores HP to the player every cycle', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s` },
+      { name: 'Planet Heal', desc: 'Heals up to 1 nearby ally planet per cycle', value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP / ${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s` },
+      { name: 'Range', desc: 'Heal targets within distance', value: '1000px' },
+      { name: 'Style', desc: 'Healer / Utility – follows ADC on outer orbit' },
+    ] satisfies RoleAbilityDetail[],
     orbitDesc: `Heal ${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`,
     orbit: {
       rx: SUN_RADIUS * 12.67,
