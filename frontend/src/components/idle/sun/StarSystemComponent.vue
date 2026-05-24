@@ -318,6 +318,7 @@ import {
   ROLE_MID_CURSE_ATTACK_SLOW,
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
+  SUN_RADIUS,
 } from '../../../config/constants'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
@@ -566,9 +567,10 @@ function orbitHintColor(star: StarRenderEntry): string {
 }
 
 function starSize(type: string): number {
-  if (type === 'champion') return ORBIT_TIERS.star[0].size
-  if (type === 'resource') return ORBIT_TIERS.star[1].size
-  return 82
+  const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+  if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
+  if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
+  return 82 * sunScale
 }
 
 function starBoxShadow(starColor: [number, number, number], s: number): string {

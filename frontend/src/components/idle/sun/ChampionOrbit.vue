@@ -127,6 +127,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useSynergyStore } from '../../../stores/synergyStore'
+import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import {
   ORBIT_TIERS,
@@ -136,6 +137,7 @@ import {
   SECONDARY_ANGLE_OFFSET_1,
   SECONDARY_ANGLE_OFFSET_2,
   SECONDARY_SIZE_SCALE,
+  SUN_RADIUS,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
@@ -194,6 +196,7 @@ export default defineComponent({
     const bossStore = usePlanetBossStore()
     const roleBehaviorStore = useRoleBehaviorStore()
     const synergyStore = useSynergyStore()
+    const planetShopStore = usePlanetShopStore()
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
 
@@ -289,12 +292,13 @@ export default defineComponent({
 
         const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
         const planetTier = ORBIT_TIERS.planet[ci % 2]
-        const rx = roleTier ? roleTier.rx : planetTier.rx
-        const ry = roleTier ? roleTier.ry : planetTier.ry
+        const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+        const rx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale
+        const ry = (roleTier ? roleTier.ry : planetTier.ry) * sunScale
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
-        const baseSizeRaw = roleTier ? roleTier.championSize : planetTier.size
+        const baseSizeRaw = (roleTier ? roleTier.championSize : planetTier.size) * sunScale
         const baseSize = isMain ? baseSizeRaw : baseSizeRaw * SECONDARY_SIZE_SCALE
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 

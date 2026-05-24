@@ -7,301 +7,119 @@
         role="dialog"
         aria-modal="true"
         aria-label="Game Paused"
+        @click.self="unpause"
       >
-        <!-- Ambient particles -->
-        <div class="pause-particles">
+        <!-- Cosmic star particles -->
+        <div class="pause-particles" aria-hidden="true">
           <span v-for="i in 20" :key="i" class="particle" :style="particleStyle(i)" />
         </div>
 
-        <!-- Scanlines -->
-        <div class="overlay-scanlines" />
-
         <div class="pause-card">
-          <!-- Ornate top border -->
-          <div class="pause-ornament-top" />
+          <div class="card-top-glow" aria-hidden="true" />
 
-          <!-- Corner decorations -->
-          <div class="corner corner--tl"><span class="corner-gem" /></div>
-          <div class="corner corner--tr"><span class="corner-gem" /></div>
-          <div class="corner corner--bl"><span class="corner-gem" /></div>
-          <div class="corner corner--br"><span class="corner-gem" /></div>
-
-          <!-- Header -->
+          <!-- Title -->
           <div class="pause-header">
-            <div class="pause-header-icon">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-            </div>
-            <div class="pause-title-wrap">
-              <span class="pause-eyebrow">✦ THE BARD RESTS ✦</span>
-              <h2 class="pause-title">— Paused —</h2>
-            </div>
-            <div class="pause-header-icon">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-            </div>
+            <span class="pause-title">Paused</span>
+            <span class="pause-hint">Click anywhere to resume</span>
           </div>
 
-          <!-- Divider -->
-          <div class="pause-divider">
-            <div class="divider-line" />
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#c89040" stroke="none">
-              <polygon
-                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-              />
-            </svg>
-            <div class="divider-line" />
-          </div>
-
-          <!-- Body -->
-          <div class="pause-body">
-            <p class="pause-subtitle">✦ Click the game window to continue ✦</p>
-
-            <!-- ══ HERO: Player HP ══ -->
-            <div class="hp-hero">
-              <div class="hp-hero-header">
-                <div class="hp-hero-title-row">
-                  <span class="hp-hero-icon">❤</span>
-                  <span class="hp-hero-label">Hit Points</span>
-                  <span class="hp-hero-badge" :class="hpBadgeClass">{{ hpStatusText }}</span>
-                </div>
-                <span class="hp-hero-numbers">
-                  <span class="hp-current" :class="hpColor">{{
-                    Math.round(playerStore.currentHP)
-                  }}</span>
-                  <span class="hp-sep"> / </span>
-                  <span class="hp-max">{{ playerStore.maxHP }}</span>
-                </span>
-              </div>
-              <!-- Main HP bar -->
-              <div class="hp-bar-track hp-bar-track--hero">
-                <div
-                  class="hp-bar-fill hp-bar-fill--hero"
-                  :class="hpColor"
-                  :style="{ width: hpPercent + '%' }"
-                />
-                <!-- Tick marks -->
-                <div v-for="t in 9" :key="t" class="hp-tick" :style="{ left: t * 10 + '%' }" />
-                <!-- Danger pulse overlay -->
-                <div v-if="hpPercent <= 25" class="hp-danger-pulse" />
-              </div>
-              <!-- HP segment indicators -->
-              <div class="hp-segments">
-                <span
-                  v-for="seg in 10"
-                  :key="seg"
-                  class="hp-seg"
-                  :class="{
-                    'hp-seg--filled': seg * 10 <= hpPercent,
-                    'hp-seg--danger': hpPercent <= 25,
-                  }"
-                />
-              </div>
-              <div class="hp-flavor-text">
-                <span v-if="hpPercent > 75">⚔ The Bard is ready for battle!</span>
-                <span v-else-if="hpPercent > 50">🎵 The melody carries him still...</span>
-                <span v-else-if="hpPercent > 25">⚠ The Bard is weakened!</span>
-                <span v-else class="text--danger">💀 In grave danger! Return immediately!</span>
-              </div>
-            </div>
-
-            <!-- Divider -->
-            <div class="pause-divider pause-divider--sm">
-              <div class="divider-line" />
-              <span class="divider-rune">⚔</span>
-              <div class="divider-line" />
-            </div>
-
-            <!-- Accumulated chimes -->
-            <div class="chime-reward">
-              <div class="chime-reward-glow" />
-              <div class="chime-reward-icon">
-                <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
-              </div>
-              <div class="chime-reward-text">
-                <span class="chime-label">⟡ Accumulated Chimes</span>
-                <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-                <span class="chime-sublabel">will be credited when you resume</span>
-              </div>
-            </div>
-
-            <!-- Notifications row -->
-            <div class="notifications-grid">
-              <!-- Pending level-ups -->
-              <div
-                v-if="gameStore.pendingAugmentSelections.length > 0"
-                class="notif-card notif-card--gold"
-              >
-                <div class="notif-icon notif-icon--gold">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                  >
-                    <polyline points="18 15 12 9 6 15" />
-                  </svg>
-                </div>
-                <div class="notif-body">
-                  <span class="notif-title">Level-Up!</span>
-                  <span class="notif-desc">
-                    {{
-                      gameStore.pendingAugmentSelections.length === 1
-                        ? 'Choose your Augment!'
-                        : `${gameStore.pendingAugmentSelections.length}× Augments to choose!`
-                    }}
-                  </span>
-                </div>
-                <div class="notif-badge notif-badge--gold">
-                  {{ gameStore.pendingAugmentSelections.length }}
-                </div>
-              </div>
-
-              <!-- Bonus stars -->
-              <div v-if="pendingStars > 0" class="notif-card notif-card--green">
-                <div class="notif-icon notif-icon--green">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                  >
-                    <polygon
-                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                    />
-                  </svg>
-                </div>
-                <div class="notif-body">
-                  <span class="notif-title">Star Systems!</span>
-                  <span class="notif-desc">
-                    {{
-                      pendingStars === 1
-                        ? 'A bonus star awaits'
-                        : `${pendingStars}× bonus stars await`
-                    }}
-                  </span>
-                </div>
-                <div class="notif-badge notif-badge--green">{{ pendingStars }}</div>
-              </div>
-
-              <!-- Pause kills -->
-              <div v-if="pauseKills > 0" class="notif-card notif-card--red">
-                <div class="notif-icon notif-icon--red">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                  >
-                    <path
-                      d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"
-                    />
-                    <path
-                      d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-                    />
-                    <path d="M9.5 14.5v-5c0-.83-.67-1.5-1.5-1.5S6.5 8.67 6.5 9.5v5" />
-                    <path d="M3.5 10H5v-1.5C5 7.67 4.33 7 3.5 7S2 7.67 2 8.5 2.67 10 3.5 10z" />
-                    <path
-                      d="M11.5 15h1a2 2 0 012 2v2.5a2 2 0 01-2 2h-3a2 2 0 01-2-2V17a2 2 0 012-2h.5"
-                    />
-                  </svg>
-                </div>
-                <div class="notif-body">
-                  <span class="notif-title">Bosses Defeated!</span>
-                  <span class="notif-desc">While Paused</span>
-                </div>
-                <div class="notif-badge notif-badge--red">{{ pauseKills }}</div>
-              </div>
-
-              <!-- Material drops -->
-              <div
-                v-if="pauseMaterialEntries.length > 0"
-                class="notif-card notif-card--teal notif-card--wide"
-              >
-                <div class="notif-icon notif-icon--teal">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                  >
-                    <polygon
-                      points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                    />
-                  </svg>
-                </div>
-                <div class="notif-body notif-body--mats">
-                  <span class="notif-title">Materials Looted</span>
-                  <div class="mats-list">
-                    <span v-for="entry in pauseMaterialEntries" :key="entry.id" class="mat-entry">
-                      <img
-                        v-if="entry.image"
-                        :src="entry.image"
-                        :alt="entry.name"
-                        class="mat-icon"
-                      />
-                      <span>{{ entry.name }}</span>
-                      <span class="mat-amount">×{{ entry.amount }}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bottom divider -->
-            <div class="pause-divider pause-divider--sm">
-              <div class="divider-line" />
-              <span class="divider-rune">🎵</span>
-              <div class="divider-line" />
-            </div>
-
-            <!-- Unpause button -->
-            <button class="pause-btn" @click="unpause">
-              <span class="pause-btn-inner">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                Continue
+          <!-- HP Hero -->
+          <div class="hp-block" :class="hpBlockClass">
+            <div class="hp-top">
+              <span class="hp-icon" aria-hidden="true">❤</span>
+              <span class="hp-numbers">
+                <span class="hp-current" :class="hpColor">{{
+                  Math.round(playerStore.currentHP)
+                }}</span>
+                <span class="hp-sep">/</span>
+                <span class="hp-max">{{ playerStore.maxHP }}</span>
               </span>
-              <div class="pause-btn-shine" />
-            </button>
+              <span class="hp-badge" :class="hpBadgeClass">{{ hpStatusText }}</span>
+            </div>
+            <div class="hp-bar-track">
+              <div class="hp-bar-fill" :class="hpColor" :style="{ width: hpPercent + '%' }" />
+              <div v-if="hpPercent <= 25" class="hp-danger-pulse" />
+            </div>
           </div>
 
-          <!-- Ornate bottom border -->
-          <div class="pause-ornament-bottom" />
+          <!-- Chimes -->
+          <div class="chime-block">
+            <div class="chime-icon-wrap">
+              <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
+            </div>
+            <div class="chime-info">
+              <span class="chime-label">Chimes while paused</span>
+              <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
+            </div>
+          </div>
+
+          <!-- Notification badges -->
+          <div v-if="hasNotifications" class="notif-row">
+            <div
+              v-if="gameStore.pendingAugmentSelections.length > 0"
+              class="notif-pill notif-pill--gold"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              Level-Up ×{{ gameStore.pendingAugmentSelections.length }}
+            </div>
+            <div v-if="pendingStars > 0" class="notif-pill notif-pill--green">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+              Stars ×{{ pendingStars }}
+            </div>
+            <div v-if="pauseKills > 0" class="notif-pill notif-pill--red">
+              ☠ Kills ×{{ pauseKills }}
+            </div>
+            <div v-if="pauseMaterialEntries.length > 0" class="notif-pill notif-pill--teal">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+              {{ pauseMaterialEntries.length }} Materials
+            </div>
+          </div>
+
+          <!-- Continue -->
+          <button class="continue-btn" @click="unpause">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Continue
+          </button>
         </div>
       </div>
     </Transition>
@@ -323,13 +141,17 @@ const gameStore = useGameStore()
 const playerStore = usePlayerStore()
 
 const pendingStars = computed(() => galaxyStore.pendingResourceStars)
-
 const hpPercent = computed(() => playerStore.hpPercent)
 
 const hpColor = computed(() => {
   if (hpPercent.value > 50) return 'hp--green'
   if (hpPercent.value > 25) return 'hp--yellow'
   return 'hp--red'
+})
+
+const hpBlockClass = computed(() => {
+  if (hpPercent.value <= 25) return 'hp-block--crit'
+  return ''
 })
 
 const hpBadgeClass = computed(() => {
@@ -380,12 +202,19 @@ const accumulatedChimes = computed(() => {
 })
 
 const pauseKills = computed(() => gameStore.pauseStats.kills)
-
 const pauseMaterialEntries = computed(() =>
   Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
     const mat = MATERIALS.find((m) => m.id === id)
     return { id, amount, name: mat?.name ?? id, image: mat?.image ?? null }
   }),
+)
+
+const hasNotifications = computed(
+  () =>
+    gameStore.pendingAugmentSelections.length > 0 ||
+    pendingStars.value > 0 ||
+    pauseKills.value > 0 ||
+    pauseMaterialEntries.value.length > 0,
 )
 
 function unpause() {
@@ -417,7 +246,7 @@ function particleStyle(i: number): Record<string, string> {
 </script>
 
 <style scoped>
-/* ─── Overlay ──────────────────────────────────────────────────────────── */
+/* ── Overlay ──────────────────────────────────────────── */
 .pause-overlay {
   position: fixed;
   inset: 0;
@@ -427,28 +256,13 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: center;
   background: radial-gradient(
     ellipse at 50% 30%,
-    rgba(60, 20, 0, 0.72) 0%,
-    rgba(0, 0, 0, 0.95) 70%
+    rgba(60, 20, 0, 0.68) 0%,
+    rgba(0, 0, 0, 0.92) 70%
   );
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(4px);
 }
 
-/* ─── Scanlines ────────────────────────────────────────────────────────── */
-.overlay-scanlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(0, 0, 0, 0.08) 3px,
-    rgba(0, 0, 0, 0.08) 4px
-  );
-  z-index: 0;
-}
-
-/* ─── Floating particles ───────────────────────────────────────────────── */
+/* ── Particles ────────────────────────────────────────── */
 .pause-particles {
   position: absolute;
   inset: 0;
@@ -464,7 +278,7 @@ function particleStyle(i: number): Record<string, string> {
 }
 @keyframes particle-float {
   0% {
-    transform: translateY(0px) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 0.2;
   }
   50% {
@@ -476,196 +290,105 @@ function particleStyle(i: number): Record<string, string> {
   }
 }
 
-/* ─── Card ─────────────────────────────────────────────────────────────── */
+/* ── Card ─────────────────────────────────────────────── */
 .pause-card {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 440px;
-  max-width: 540px;
-  width: 100%;
-  background: radial-gradient(ellipse at 50% 0%, #261508 0%, #0b0704 55%), #0b0704;
-  border: 2px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    inset 0 0 60px rgba(200, 144, 64, 0.06),
-    0 0 80px rgba(200, 144, 64, 0.18),
-    0 40px 100px rgba(0, 0, 0, 0.95);
+  width: min(400px, 92vw);
+  background: #0d0a05;
+  border: 1px solid rgba(200, 144, 64, 0.4);
   border-radius: 8px;
   overflow: hidden;
-}
-
-/* ─── Corners with gems ────────────────────────────────────────────────── */
-.corner {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border-color: #c89040;
-  border-style: solid;
-  z-index: 2;
+  box-shadow:
+    0 0 0 1px rgba(92, 51, 16, 0.5),
+    0 32px 80px rgba(0, 0, 0, 0.95),
+    inset 0 1px 0 rgba(232, 192, 64, 0.1);
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.corner--tl {
-  top: 5px;
-  left: 5px;
-  border-width: 2px 0 0 2px;
-}
-.corner--tr {
-  top: 5px;
-  right: 5px;
-  border-width: 2px 2px 0 0;
-}
-.corner--bl {
-  bottom: 5px;
-  left: 5px;
-  border-width: 0 0 2px 2px;
-}
-.corner--br {
-  bottom: 5px;
-  right: 5px;
-  border-width: 0 2px 2px 0;
-}
-.corner-gem {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #c89040;
-  box-shadow: 0 0 6px #e8c040;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 0 24px;
 }
 
-/* ─── Ornament bars ────────────────────────────────────────────────────── */
-.pause-ornament-top {
-  height: 5px;
-  flex-shrink: 0;
+.card-top-glow {
+  height: 4px;
   background: linear-gradient(
     to right,
     #2a0e00,
     #7a3a10,
     #c89040,
     #f0d060,
-    #f8e070,
-    #f0d060,
     #c89040,
     #7a3a10,
     #2a0e00
   );
-}
-.pause-ornament-bottom {
-  height: 5px;
   flex-shrink: 0;
-  background: linear-gradient(to right, #2a0e00, #5c2a0a, #7a4e20, #5c2a0a, #2a0e00);
-  opacity: 0.7;
 }
 
-/* ─── Header ───────────────────────────────────────────────────────────── */
+/* ── Header ───────────────────────────────────────────── */
 .pause-header {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 18px 32px 14px;
-  background: linear-gradient(to bottom, #1e1208, #100c06);
-  border-bottom: 1px solid #5c3310;
-  color: #e8c040;
-}
-.pause-header-icon {
-  color: rgba(200, 144, 64, 0.55);
-  flex-shrink: 0;
-}
-.pause-title-wrap {
-  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-}
-.pause-eyebrow {
-  font-size: 0.65rem;
-  color: rgba(200, 160, 64, 0.5);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+  gap: 4px;
+  padding: 20px 24px 4px;
 }
 .pause-title {
-  font-size: 1.65rem;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  font-weight: 900;
   color: #f0d060;
-  margin: 0;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   text-shadow:
-    0 0 24px rgba(240, 208, 96, 0.6),
-    0 0 50px rgba(200, 144, 64, 0.3);
+    0 0 28px rgba(240, 208, 96, 0.55),
+    0 0 60px rgba(200, 144, 64, 0.25);
+  line-height: 1;
+}
+.pause-hint {
+  font-size: 0.72rem;
+  color: rgba(200, 185, 140, 0.38);
+  letter-spacing: 0.08em;
+  font-style: italic;
 }
 
-/* ─── Divider ──────────────────────────────────────────────────────────── */
-.pause-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 24px;
-  margin: 2px 0;
-}
-.pause-divider--sm {
-  margin: 2px 0;
-}
-.divider-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #7a4e2077, #c8904044, #7a4e2077, transparent);
-}
-.divider-rune {
-  font-size: 0.95rem;
-  color: rgba(200, 144, 64, 0.4);
-}
-
-/* ─── Body ─────────────────────────────────────────────────────────────── */
-.pause-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 24px 20px;
-}
-.pause-subtitle {
-  font-size: 0.82rem;
-  color: rgba(200, 185, 140, 0.45);
-  margin: 0;
-  letter-spacing: 0.07em;
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   ─── HP HERO BLOCK ──────────────────────────────────────────────────
-   ══════════════════════════════════════════════════════════════════════ */
-.hp-hero {
-  width: 100%;
-  padding: 20px 20px 16px;
-  background: linear-gradient(135deg, #1c1006 0%, #0e0804 100%);
-  border: 2px solid #7a4e20;
+/* ── HP Block ─────────────────────────────────────────── */
+.hp-block {
+  margin: 0 20px;
+  padding: 18px 20px 16px;
+  background: #110c05;
+  border: 1px solid rgba(200, 144, 64, 0.28);
   border-radius: 6px;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    inset 0 0 30px rgba(200, 144, 64, 0.05),
-    0 0 20px rgba(200, 144, 64, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.hp-block--crit {
+  border-color: rgba(204, 96, 80, 0.55);
+  box-shadow:
+    0 0 20px rgba(204, 96, 80, 0.15),
+    inset 0 0 20px rgba(204, 96, 80, 0.05);
+  animation: crit-border-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes crit-border-pulse {
+  from {
+    box-shadow: 0 0 12px rgba(204, 96, 80, 0.15);
+  }
+  to {
+    box-shadow: 0 0 28px rgba(204, 96, 80, 0.35);
+  }
 }
 
-.hp-hero-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.hp-hero-title-row {
+.hp-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
-.hp-hero-icon {
+.hp-icon {
   font-size: 1.1rem;
   animation: heartbeat 1.6s ease-in-out infinite;
+  flex-shrink: 0;
 }
 @keyframes heartbeat {
   0%,
@@ -673,7 +396,7 @@ function particleStyle(i: number): Record<string, string> {
     transform: scale(1);
   }
   14% {
-    transform: scale(1.2);
+    transform: scale(1.22);
   }
   28% {
     transform: scale(1);
@@ -685,37 +408,54 @@ function particleStyle(i: number): Record<string, string> {
     transform: scale(1);
   }
 }
-.hp-hero-label {
-  font-size: 0.8rem;
-  color: rgba(200, 185, 140, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+
+.hp-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: 1;
 }
-.hp-hero-badge {
+.hp-current {
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s ease;
+}
+.hp-sep {
+  font-size: 1rem;
+  color: rgba(200, 185, 140, 0.25);
+}
+.hp-max {
+  font-size: 0.95rem;
+  color: rgba(200, 185, 140, 0.4);
+}
+.hp-badge {
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 3px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 .hp-badge--great {
-  background: rgba(82, 184, 48, 0.2);
-  color: #52b830;
+  background: rgba(82, 184, 48, 0.15);
+  color: #62d840;
   border: 1px solid rgba(82, 184, 48, 0.4);
 }
 .hp-badge--good {
-  background: rgba(82, 184, 48, 0.12);
+  background: rgba(82, 184, 48, 0.1);
   color: #7ec050;
-  border: 1px solid rgba(82, 184, 48, 0.28);
+  border: 1px solid rgba(82, 184, 48, 0.25);
 }
 .hp-badge--warn {
-  background: rgba(212, 160, 32, 0.18);
+  background: rgba(212, 160, 32, 0.15);
   color: #d4a020;
   border: 1px solid rgba(212, 160, 32, 0.35);
 }
 .hp-badge--crit {
-  background: rgba(204, 96, 80, 0.2);
+  background: rgba(204, 96, 80, 0.18);
   color: #e05040;
   border: 1px solid rgba(204, 96, 80, 0.45);
   animation: crit-blink 0.9s step-start infinite;
@@ -726,51 +466,29 @@ function particleStyle(i: number): Record<string, string> {
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 
-.hp-hero-numbers {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-.hp-current {
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1;
-  transition: color 400ms;
-}
-.hp-sep {
-  font-size: 1.1rem;
-  color: rgba(200, 185, 140, 0.3);
-  margin: 0 2px;
-}
-.hp-max {
-  font-size: 1rem;
-  color: rgba(200, 185, 140, 0.45);
-}
-
-/* The big HP bar */
-.hp-bar-track--hero {
+/* HP Bar */
+.hp-bar-track {
   position: relative;
   width: 100%;
-  height: 18px;
+  height: 14px;
   background: #060402;
-  border: 1px solid #3e200a;
-  border-radius: 5px;
-  overflow: hidden;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
-}
-.hp-bar-fill--hero {
-  height: 100%;
+  border: 1px solid rgba(62, 32, 10, 0.9);
   border-radius: 4px;
+  overflow: hidden;
+}
+.hp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
   transition:
     width 600ms cubic-bezier(0.25, 1, 0.5, 1),
     background 600ms ease;
   position: relative;
 }
-.hp-bar-fill--hero::after {
+.hp-bar-fill::after {
   content: '';
   position: absolute;
   inset: 2px 4px;
@@ -778,18 +496,10 @@ function particleStyle(i: number): Record<string, string> {
   border-radius: 2px;
   pointer-events: none;
 }
-.hp-tick {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1;
-}
 .hp-danger-pulse {
   position: absolute;
   inset: 0;
-  background: rgba(204, 96, 80, 0.15);
+  background: rgba(204, 96, 80, 0.18);
   animation: danger-pulse 0.8s ease-in-out infinite alternate;
   z-index: 2;
   pointer-events: none;
@@ -803,62 +513,21 @@ function particleStyle(i: number): Record<string, string> {
   }
 }
 
-/* Segment indicators */
-.hp-segments {
-  display: flex;
-  gap: 3px;
-  width: 100%;
-}
-.hp-seg {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
-  background: #1a0e06;
-  border: 1px solid #3e200a;
-  transition:
-    background 400ms,
-    box-shadow 400ms;
-}
-.hp-seg--filled {
-  background: #3a6a20;
-  box-shadow: 0 0 4px rgba(82, 184, 48, 0.4);
-}
-.hp-seg--filled.hp-seg--danger {
-  background: #8a2010;
-  box-shadow: 0 0 4px rgba(204, 96, 80, 0.5);
-}
-
-/* Flavor text */
-.hp-flavor-text {
-  font-size: 0.78rem;
-  color: rgba(200, 185, 140, 0.45);
-  text-align: center;
-  letter-spacing: 0.05em;
-  font-style: italic;
-  min-height: 1.1em;
-}
-.text--danger {
-  color: #e05040;
-  font-style: normal;
-  font-weight: 600;
-  animation: crit-blink 0.9s step-start infinite;
-}
-
-/* HP color classes */
+/* HP color fills */
 .hp--green {
   background: linear-gradient(to right, #2e7a1a, #52b830);
-  box-shadow: 0 0 10px rgba(82, 184, 48, 0.5);
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.45);
 }
 .hp--yellow {
   background: linear-gradient(to right, #7a5010, #d4a020);
-  box-shadow: 0 0 10px rgba(212, 160, 32, 0.5);
+  box-shadow: 0 0 8px rgba(212, 160, 32, 0.45);
 }
 .hp--red {
   background: linear-gradient(to right, #6a1a10, #cc6050);
-  box-shadow: 0 0 10px rgba(204, 96, 80, 0.6);
+  box-shadow: 0 0 8px rgba(204, 96, 80, 0.55);
 }
 
-/* text color variants for hp-current */
+/* HP current text colors */
 .hp-current.hp--green {
   color: #62d840;
 }
@@ -869,308 +538,173 @@ function particleStyle(i: number): Record<string, string> {
   color: #e06050;
 }
 
-/* ─── Chime reward ─────────────────────────────────────────────────────── */
-.chime-reward {
-  position: relative;
+/* ── Chime Block ──────────────────────────────────────── */
+.chime-block {
+  margin: 0 20px;
+  padding: 16px 20px;
+  background: #110c05;
+  border: 1px solid rgba(200, 144, 64, 0.28);
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 18px;
-  width: 100%;
-  padding: 16px 18px;
-  background: linear-gradient(135deg, #1a1008 0%, #130c04 100%);
-  border: 2px solid #7a4e20;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    inset 0 0 20px rgba(200, 144, 64, 0.05);
-  overflow: hidden;
+  gap: 16px;
 }
-.chime-reward-glow {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 120px;
-  height: 120px;
-  background: radial-gradient(circle, rgba(232, 192, 64, 0.14) 0%, transparent 70%);
-  pointer-events: none;
-}
-.chime-reward-icon {
+.chime-icon-wrap {
   flex-shrink: 0;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
-  background: #120e06;
-  border: 2px solid #7a4e20;
+  background: #0c0804;
+  border: 1px solid rgba(200, 144, 64, 0.35);
   border-radius: 5px;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    0 0 16px rgba(200, 144, 64, 0.22);
+  box-shadow: 0 0 14px rgba(200, 144, 64, 0.18);
 }
 .chime-img {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   image-rendering: pixelated;
-  filter: drop-shadow(0 0 7px rgba(232, 192, 64, 0.45));
+  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }
-.chime-reward-text {
+.chime-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 .chime-label {
-  font-size: 0.72rem;
-  color: rgba(200, 185, 140, 0.45);
+  font-size: 0.7rem;
+  color: rgba(200, 185, 140, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 .chime-value {
-  font-size: 1.9rem;
-  font-weight: 700;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 900;
   color: #f0d060;
-  text-shadow:
-    0 0 18px rgba(240, 208, 96, 0.65),
-    0 0 36px rgba(200, 144, 64, 0.3);
   line-height: 1;
-  animation: chime-pulse 2.5s ease-in-out infinite;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 20px rgba(240, 208, 96, 0.6),
+    0 0 40px rgba(200, 144, 64, 0.25);
+  animation: chime-glow 2.5s ease-in-out infinite;
 }
-@keyframes chime-pulse {
+@keyframes chime-glow {
   0%,
   100% {
     text-shadow:
-      0 0 16px rgba(240, 208, 96, 0.55),
-      0 0 32px rgba(200, 144, 64, 0.25);
+      0 0 16px rgba(240, 208, 96, 0.5),
+      0 0 32px rgba(200, 144, 64, 0.2);
   }
   50% {
     text-shadow:
-      0 0 28px rgba(240, 208, 96, 0.9),
-      0 0 56px rgba(200, 144, 64, 0.5);
+      0 0 28px rgba(240, 208, 96, 0.85),
+      0 0 56px rgba(200, 144, 64, 0.45);
   }
 }
-.chime-sublabel {
-  font-size: 0.72rem;
-  color: rgba(200, 185, 140, 0.35);
-}
 
-/* ─── Notifications grid ───────────────────────────────────────────────── */
-.notifications-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  width: 100%;
-}
-
-.notif-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 5px;
-  border: 1px solid;
-  font-size: 0.86rem;
-}
-.notif-card--wide {
-  align-items: flex-start;
-}
-
-.notif-card--gold {
-  background: rgba(232, 192, 64, 0.07);
-  border-color: rgba(232, 192, 64, 0.32);
-  color: #e8c040;
-}
-.notif-card--green {
-  background: rgba(82, 184, 48, 0.07);
-  border-color: rgba(82, 184, 48, 0.28);
-  color: #52b830;
-}
-.notif-card--red {
-  background: rgba(204, 96, 80, 0.07);
-  border-color: rgba(204, 96, 80, 0.32);
-  color: #e07060;
-}
-.notif-card--teal {
-  background: rgba(64, 192, 180, 0.06);
-  border-color: rgba(64, 192, 180, 0.26);
-  color: rgba(64, 210, 200, 0.85);
-}
-
-.notif-icon {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 5px;
-  border: 1px solid currentColor;
-}
-.notif-icon--gold {
-  color: #e8c040;
-  background: rgba(232, 192, 64, 0.1);
-}
-.notif-icon--green {
-  color: #52b830;
-  background: rgba(82, 184, 48, 0.1);
-}
-.notif-icon--red {
-  color: #cc6050;
-  background: rgba(204, 96, 80, 0.1);
-}
-.notif-icon--teal {
-  color: #40c0b4;
-  background: rgba(64, 192, 180, 0.1);
-}
-
-.notif-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex: 1;
-}
-.notif-title {
-  font-weight: 700;
-  font-size: 0.84rem;
-}
-.notif-desc {
-  font-size: 0.76rem;
-  opacity: 0.7;
-}
-.notif-body--mats {
-  gap: 6px;
-}
-
-.notif-badge {
-  margin-left: auto;
-  flex-shrink: 0;
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 0 6px;
-}
-.notif-badge--gold {
-  background: rgba(232, 192, 64, 0.15);
-  color: #f0d060;
-  border: 1px solid rgba(232, 192, 64, 0.35);
-}
-.notif-badge--green {
-  background: rgba(82, 184, 48, 0.15);
-  color: #52b830;
-  border: 1px solid rgba(82, 184, 48, 0.35);
-}
-.notif-badge--red {
-  background: rgba(204, 96, 80, 0.15);
-  color: #e06050;
-  border: 1px solid rgba(204, 96, 80, 0.35);
-}
-
-/* Mats */
-.mats-list {
+/* ── Notification pills ───────────────────────────────── */
+.notif-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 7px;
+  padding: 0 20px;
 }
-.mat-entry {
-  display: flex;
+.notif-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(64, 192, 180, 0.08);
-  border: 1px solid rgba(64, 192, 180, 0.2);
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
-}
-.mat-icon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.mat-amount {
-  color: #40c0b4;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+}
+.notif-pill--gold {
+  background: rgba(232, 192, 64, 0.1);
+  border-color: rgba(232, 192, 64, 0.35);
+  color: #e8c040;
+}
+.notif-pill--green {
+  background: rgba(82, 184, 48, 0.1);
+  border-color: rgba(82, 184, 48, 0.3);
+  color: #62d840;
+}
+.notif-pill--red {
+  background: rgba(204, 96, 80, 0.1);
+  border-color: rgba(204, 96, 80, 0.35);
+  color: #e06050;
+}
+.notif-pill--teal {
+  background: rgba(64, 192, 180, 0.08);
+  border-color: rgba(64, 192, 180, 0.28);
+  color: #40c8be;
 }
 
-/* ─── Button ───────────────────────────────────────────────────────────── */
-.pause-btn {
-  position: relative;
-  margin-top: 4px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  overflow: hidden;
-  border-radius: 5px;
-  width: 100%;
-  max-width: 260px;
-}
-.pause-btn-inner {
-  position: relative;
-  z-index: 1;
+/* ── Continue Button ──────────────────────────────────── */
+.continue-btn {
+  margin: 4px 20px 0;
+  padding: 13px 0;
+  width: calc(100% - 40px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 14px 36px;
+  gap: 8px;
   background: linear-gradient(to bottom, #4aaa28, #2d7818);
-  border: 2px solid #6ec040;
+  border: 1px solid #6ec040;
   border-radius: 5px;
   color: #fff;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 4px 20px rgba(78, 168, 40, 0.35);
+  cursor: pointer;
+  box-shadow: 0 2px 16px rgba(78, 168, 40, 0.4);
   transition:
-    filter 120ms,
-    transform 120ms;
-  width: 100%;
+    filter 0.15s ease,
+    transform 0.1s ease;
 }
-.pause-btn-shine {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.12), transparent);
-  transform: skewX(-20deg);
-  transition: left 400ms ease;
-}
-.pause-btn:hover .pause-btn-inner {
+.continue-btn:hover {
   filter: brightness(1.15);
   transform: translateY(-1px);
 }
-.pause-btn:hover .pause-btn-shine {
-  left: 160%;
-}
-.pause-btn:active .pause-btn-inner {
+.continue-btn:active {
   filter: brightness(0.9);
-  transform: translateY(1px);
+  transform: translateY(0);
 }
 
-/* ─── Transitions ──────────────────────────────────────────────────────── */
+/* ── Transitions ──────────────────────────────────────── */
 .pause-fade-enter-active {
   transition:
-    opacity 280ms ease,
-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .pause-fade-leave-active {
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
+  transition: opacity 0.18s ease;
 }
-.pause-fade-enter-from,
+.pause-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.93) translateY(10px);
+}
 .pause-fade-leave-to {
   opacity: 0;
-  transform: scale(0.92);
+}
+
+/* ── Reduced motion ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .particle,
+  .hp-icon,
+  .chime-value,
+  .hp-danger-pulse,
+  .hp-block--crit {
+    animation: none;
+  }
+  .continue-btn,
+  .pause-fade-enter-active,
+  .pause-fade-leave-active {
+    transition: opacity 0.15s;
+  }
 }
 </style>

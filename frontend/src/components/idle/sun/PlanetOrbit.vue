@@ -123,7 +123,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
@@ -248,24 +248,25 @@ export default defineComponent({
       const purchased = planetShopStore.purchasedSlots.filter((s) => s.role !== null)
       const newPositions: PlanetRenderPos[] = []
 
+      const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
       for (const slot of purchased) {
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size
+        const baseSize = tier.size * sunScale
 
         let ls = localStates.get(slot.id)
         if (!ls) {
           const idx = purchased.indexOf(slot)
           const startAngle = (idx / Math.max(purchased.length, 1)) * Math.PI * 2
-          const initPos = getOrbitPos(startAngle, tier.rx, tier.ry, tier.tiltRad, cx, cy)
+          const initPos = getOrbitPos(startAngle, tier.rx * sunScale, tier.ry * sunScale, tier.tiltRad, cx, cy)
           ls = { id: slot.id, orbitAngle: startAngle, x: initPos.x, y: initPos.y }
           localStates.set(slot.id, ls)
         }
 
         const tiltRad = tier.tiltRad
-        const rx = tier.rx
-        const ry = tier.ry
+        const rx = tier.rx * sunScale
+        const ry = tier.ry * sunScale
 
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05

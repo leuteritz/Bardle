@@ -48,18 +48,18 @@
     <template v-else-if="labelData && (labelData.materialImage || (labelData.chimesImage && labelData.reward))">
       <circle
         :cx="size / 2"
-        :cy="size - 14"
-        r="11"
+        :cy="size * 0.61"
+        :r="size * 0.31"
         fill="rgba(0,0,0,0.6)"
         stroke="rgba(255,200,80,0.35)"
         stroke-width="1"
       />
       <image
         :href="labelData.materialImage ?? labelData.chimesImage"
-        :x="size / 2 - 9"
-        :y="size - 25"
-        width="18"
-        height="18"
+        :x="size * 0.25"
+        :y="size * 0.31"
+        :width="size * 0.5"
+        :height="size * 0.5"
       />
     </template>
   </svg>

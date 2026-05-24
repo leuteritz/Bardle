@@ -7,7 +7,8 @@ import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
-import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING } from '../config/constants'
+import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS } from '../config/constants'
+import { usePlanetShopStore } from '../stores/planetShopStore'
 import type { LabelData, PlanetType, StarType } from '../types'
 
 const PLANET_SIZE_CHAMPION = 44
@@ -269,6 +270,7 @@ export function useStarSystem() {
 
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
+    const sunScale = usePlanetShopStore().currentSunRadius / SUN_RADIUS
 
     const newRenders: StarRenderEntry[] = []
 
@@ -278,16 +280,19 @@ export function useStarSystem() {
       sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)
 
+      const scaledOrbitRx = star.orbitRx * sunScale
+      const scaledOrbitRy = star.orbitRy * sunScale
+
       const { x: sx, y: sy } = getOrbitPos(
         sAngle,
-        star.orbitRx,
-        star.orbitRy,
+        scaledOrbitRx,
+        scaledOrbitRy,
         star.orbitTilt,
         screenCx,
         screenCy,
       )
 
-      const sRelY = (sy - screenCy) / Math.max(star.orbitRy, 1)
+      const sRelY = (sy - screenCy) / Math.max(scaledOrbitRy, 1)
       const sIsBehind = sRelY < BEHIND_THRESHOLD
       const sDepth = Math.max(0, Math.min(1, (sRelY + 1) / 2))
 
@@ -345,10 +350,12 @@ export function useStarSystem() {
         planetAngles.set(slot.planetId, pAngle)
 
         const FLY = 2.5
-        let curRx = planetCurRx.get(slot.planetId) ?? slot.orbitRx * FLY
-        let curRy = planetCurRy.get(slot.planetId) ?? slot.orbitRy * FLY
-        curRx += (slot.orbitRx - curRx) * 0.018
-        curRy += (slot.orbitRy - curRy) * 0.018
+        const targetSlotRx = slot.orbitRx * sunScale
+        const targetSlotRy = slot.orbitRy * sunScale
+        let curRx = planetCurRx.get(slot.planetId) ?? targetSlotRx * FLY
+        let curRy = planetCurRy.get(slot.planetId) ?? targetSlotRy * FLY
+        curRx += (targetSlotRx - curRx) * 0.018
+        curRy += (targetSlotRy - curRy) * 0.018
         planetCurRx.set(slot.planetId, curRx)
         planetCurRy.set(slot.planetId, curRy)
 
@@ -363,14 +370,15 @@ export function useStarSystem() {
 
         const boss = bossStore.activeBosses.find((b) => b.planetId === slot.planetId)
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
-        const pSize = isGalaxyBoss
-          ? PLANET_SIZE_GALAXY_BOSS
-          : slot.isChampionPlanet
-            ? PLANET_SIZE_CHAMPION
-            : PLANET_SIZE_NORMAL
+        const pSize =
+          (isGalaxyBoss
+            ? PLANET_SIZE_GALAXY_BOSS
+            : slot.isChampionPlanet
+              ? PLANET_SIZE_CHAMPION
+              : PLANET_SIZE_NORMAL) * sunScale
         const pR = pSize / 2
 
-        const pRelY = (py - sy) / Math.max(slot.orbitRy, 1)
+        const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
         const pIsBehind = pRelY < -0.05
         const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
         const pScale = 0.72 + pDepth * 0.56
