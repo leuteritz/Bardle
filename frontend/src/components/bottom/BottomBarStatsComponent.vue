@@ -218,6 +218,11 @@ const winChanceColor = computed(() => {
             'ability-slot--inactive': !ab.hasChampion,
           }"
           :style="{ '--role-color': ab.color }"
+          role="button"
+          tabindex="0"
+          @click="uiStore.requestOpenRolesTab(idx)"
+          @keydown.enter="uiStore.requestOpenRolesTab(idx)"
+          @keydown.space.prevent="uiStore.requestOpenRolesTab(idx)"
         >
           <img :src="ab.image" :alt="ab.short" class="ability-role-icon" />
           <span class="bbstat-label ability-label">{{ ab.short }}</span>
@@ -480,6 +485,21 @@ const winChanceColor = computed(() => {
 }
 
 /* ── Ability Slots ──────────────────────────────────────────────────── */
+.ability-slot {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.18s ease;
+}
+
+.ability-slot:hover {
+  background: color-mix(in srgb, var(--role-color, #e8c040) 12%, transparent);
+}
+
+.ability-slot:focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--role-color, #e8c040) 15%, transparent);
+}
+
 .ability-role-icon {
   width: 35px;
   height: 35px;
