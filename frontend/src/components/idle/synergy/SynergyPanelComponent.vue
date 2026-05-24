@@ -2,26 +2,11 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSynergyStore } from '@/stores/synergyStore'
+import { ROLES as ROLE_DEFS } from '@/config/constants'
 import type { ActiveSynergy } from '@/types'
 
 const synergyStore = useSynergyStore()
 const { synergyByRole } = storeToRefs(synergyStore)
-
-const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp'] as const
-const ROLE_COLORS: Record<string, string> = {
-  Top: '#e05050',
-  Jungle: '#50c060',
-  Mid: '#5090e8',
-  ADC: '#e89840',
-  Supp: '#b8c8d8',
-}
-const ROLE_ICONS: Record<string, string> = {
-  Top: '/img/roles/top.png',
-  Jungle: '/img/roles/jungle.png',
-  Mid: '/img/roles/mid.png',
-  ADC: '/img/roles/adc.png',
-  Supp: '/img/roles/supp.png',
-}
 
 const TIER_COLORS: Record<string, string> = {
   bronze: '#c08040',
@@ -71,14 +56,14 @@ const allSynergies = () => synergyByRole.value.flat()
     <div class="syn-grid">
       <!-- Role columns -->
       <div
-        v-for="(role, i) in ROLES"
-        :key="role"
+        v-for="(roleDef, i) in ROLE_DEFS"
+        :key="roleDef.key"
         class="syn-col"
-        :style="{ '--rc': ROLE_COLORS[role] }"
+        :style="{ '--rc': roleDef.color }"
       >
         <div class="syn-col-header">
-          <img class="syn-col-icon" :src="ROLE_ICONS[role]" :alt="role" />
-          <span class="syn-col-label">{{ role }}</span>
+          <img class="syn-col-icon" :src="roleDef.image" :alt="roleDef.label" />
+          <span class="syn-col-label">{{ roleDef.label }}</span>
         </div>
         <div class="syn-col-body">
           <div v-if="synergyByRole[i].length === 0" class="syn-empty">—</div>

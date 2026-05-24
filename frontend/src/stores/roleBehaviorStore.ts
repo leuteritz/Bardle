@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import {
+  ROLES,
   ROLE_SUPPORT_HEAL_INTERVAL_MS,
   ROLE_SUPPORT_HEAL_AMOUNT,
   ROLE_TOP_SHIELD_REBUILD_MS,
@@ -28,7 +29,7 @@ import { useStarGroupStore } from './starGroupStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
 import { activeMidCurse } from '../utils/activeMidCurse'
-import type { MidCurseType, ActiveCurse } from '../types'
+import type { ChampionRole, MidCurseType, ActiveCurse } from '../types'
 import { useEventLog } from '@/composables/useEventLog'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 
@@ -85,12 +86,9 @@ function getPlanetLabel(slot: PlanetSlot): string {
   return formatSlotId(slot.id)
 }
 
-const SLOT_ROLES = ['top', 'jungle', 'mid', 'adc', 'support'] as const
-type SlotRole = (typeof SLOT_ROLES)[number]
-
-function getChampionNameByRole(role: SlotRole): string {
+function getChampionNameByRole(role: ChampionRole): string {
   const battleStore = useBattleStore()
-  const idx = SLOT_ROLES.indexOf(role)
+  const idx = ROLES.findIndex((r) => r.key === role)
   return (idx >= 0 ? battleStore.headerSlots[idx] : null) ?? role.toUpperCase()
 }
 

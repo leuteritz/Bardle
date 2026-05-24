@@ -1,6 +1,13 @@
 // Champion role types
 export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
+export interface RoleStat {
+  key: string
+  icon: string
+  label: string
+  value: string
+}
+
 // Expedition types
 export type ExpeditionStatus = 'active' | 'success' | 'failure'
 

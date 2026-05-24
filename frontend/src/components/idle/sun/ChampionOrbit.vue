@@ -26,7 +26,7 @@
       :key="pos.name"
       class="champion-orbit-avatar champion-orbit-avatar--behind"
       :class="{
-        [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
+        'champion-orbit-avatar--role-colored': !!pos.primaryRole,
         'champion-orbit-avatar--secondary': !pos.isMain,
       }"
       :style="{
@@ -34,6 +34,7 @@
         height: pos.size + 'px',
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
         opacity: pos.opacity,
+        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
@@ -50,7 +51,7 @@
         'champion-orbit-avatar--attacking': pos.isAttacking,
         'champion-orbit-avatar--foreground': pos.isForeground,
         'champion-orbit-avatar--secondary': !pos.isMain,
-        [`champion-orbit-avatar--role-${pos.primaryRole}`]: !!pos.primaryRole,
+        'champion-orbit-avatar--role-colored': !!pos.primaryRole,
         'champion-orbit-avatar--shield':
           pos.isMain && pos.primaryRole === 'top' && roleBehaviorStore.tankShieldActive,
         'champion-orbit-avatar--cursing':
@@ -75,6 +76,7 @@
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
         opacity: pos.opacity,
         zIndex: pos.zIndex,
+        '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
@@ -85,7 +87,6 @@
           :alt="pos.primaryRole"
           :aria-label="pos.primaryRole + ' ability'"
           class="champion-ability-icon"
-          :class="`champion-ability-icon--${pos.primaryRole}`"
         />
       </Transition>
     </div>
@@ -196,8 +197,6 @@ export default defineComponent({
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
 
-    const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
-
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
     const champSpeedMuls = new Map<string, number>()
@@ -248,12 +247,12 @@ export default defineComponent({
     function getAssignment(name: string): Assignment {
       const mainIdx = battleStore.headerSlots.indexOf(name)
       if (mainIdx >= 0)
-        return { role: SLOT_ROLES[mainIdx], isMain: true, subIndex: -1, roleIndex: mainIdx }
+        return { role: ROLES[mainIdx]?.key ?? null, isMain: true, subIndex: -1, roleIndex: mainIdx }
       const secs = battleStore.secondarySlots
       for (let r = 0; r < secs.length; r++) {
         const subIdx = secs[r].indexOf(name)
         if (subIdx >= 0)
-          return { role: SLOT_ROLES[r], isMain: false, subIndex: subIdx, roleIndex: r }
+          return { role: ROLES[r]?.key ?? null, isMain: false, subIndex: subIdx, roleIndex: r }
       }
       return { role: null, isMain: false, subIndex: -1, roleIndex: -1 }
     }
@@ -554,36 +553,12 @@ export default defineComponent({
   border-radius: 50%;
 }
 
-/* ── Rollen-Farben ──────────────────────────────────────────────────────── */
-.champion-orbit-avatar--role-top {
-  border-color: #f54747 !important;
+/* ── Rollen-Farben (via CSS-Variable aus ROLES[].color) ─────────────────── */
+.champion-orbit-avatar--role-colored {
+  border-color: var(--role-color, #c89040) !important;
   box-shadow:
-    0 0 10px rgba(245, 71, 71, 0.7),
-    0 0 20px rgba(245, 71, 71, 0.3);
-}
-.champion-orbit-avatar--role-jungle {
-  border-color: #3eea58 !important;
-  box-shadow:
-    0 0 10px rgba(62, 234, 88, 0.7),
-    0 0 20px rgba(62, 234, 88, 0.3);
-}
-.champion-orbit-avatar--role-mid {
-  border-color: #5598f6 !important;
-  box-shadow:
-    0 0 10px rgba(85, 152, 246, 0.7),
-    0 0 20px rgba(85, 152, 246, 0.3);
-}
-.champion-orbit-avatar--role-adc {
-  border-color: #f7a145 !important;
-  box-shadow:
-    0 0 10px rgba(247, 161, 69, 0.7),
-    0 0 20px rgba(247, 161, 69, 0.3);
-}
-.champion-orbit-avatar--role-support {
-  border-color: #89b8e6 !important;
-  box-shadow:
-    0 0 10px rgba(137, 184, 230, 0.7),
-    0 0 20px rgba(137, 184, 230, 0.3);
+    0 0 10px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent);
 }
 
 .champion-orbit-avatar--behind {
@@ -1148,27 +1123,8 @@ export default defineComponent({
   pointer-events: none;
   z-index: 4;
   border-radius: 50%;
-}
-
-.champion-ability-icon--top {
-  border: 4px solid rgba(245, 71, 71, 0.7);
-  filter: drop-shadow(0 0 5px rgba(245, 71, 71, 0.8));
-}
-.champion-ability-icon--jungle {
-  border: 4px solid rgba(62, 234, 88, 0.7);
-  filter: drop-shadow(0 0 5px rgba(62, 234, 88, 0.8));
-}
-.champion-ability-icon--mid {
-  border: 4px solid rgba(85, 152, 246, 0.7);
-  filter: drop-shadow(0 0 5px rgba(85, 152, 246, 0.8));
-}
-.champion-ability-icon--adc {
-  border: 4px solid rgba(247, 161, 69, 0.7);
-  filter: drop-shadow(0 0 5px rgba(247, 161, 69, 0.8));
-}
-.champion-ability-icon--support {
-  border: 4px solid rgba(137, 184, 230, 0.7);
-  filter: drop-shadow(0 0 5px rgba(137, 184, 230, 0.8));
+  border: 4px solid color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--role-color, #c89040) 80%, transparent));
 }
 
 .ability-icon-enter-active,

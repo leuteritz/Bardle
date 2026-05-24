@@ -5,22 +5,9 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
-import {
-  ROLE_BY_KEY,
-  ROLE_TOP_SHIELD_REBUILD_MS,
-  ROLE_MID_CURSE_INTERVAL_MS,
-  ROLE_MID_CURSE_DURATION_MS,
-  ROLE_MID_CURSE_DOT_DPS,
-  ROLE_MID_CURSE_DAMAGE_AMP,
-  ROLE_ADC_BURST_DAMAGE,
-  ROLE_ADC_BURST_INTERVAL_MS,
-  ROLE_SUPPORT_HEAL_AMOUNT,
-  ROLE_SUPPORT_HEAL_INTERVAL_MS,
-  SUPPORT_PLANET_HEAL_AMOUNT,
-  SUPPORT_PLANET_HEAL_INTERVAL_MS,
-} from '@/config/constants'
+import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy } from '@/types'
+import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy, RoleStat } from '@/types'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
@@ -30,31 +17,10 @@ import ItemShopComponent from './ItemShopComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 
-const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
-
-const ROLE_MAP: Record<string, ChampionRole> = {
-  Top: 'top',
-  Jungle: 'jungle',
-  Mid: 'mid',
-  ADC: 'adc',
-  Supp: 'support',
-}
-
-const ROLE_INDEX: Partial<Record<ChampionRole, number>> = {
-  top: 0,
-  jungle: 1,
-  mid: 2,
-  adc: 3,
-  support: 4,
-}
-
-const ROLE_COLORS: Record<string, string> = {
-  Top: '#e05050',
-  Jungle: '#50c060',
-  Mid: '#5090e8',
-  ADC: '#e89840',
-  Supp: '#b8c8d8',
-}
+const ROLES = ROLE_DEFS.map((r) => r.label)
+const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
+const ROLE_INDEX = Object.fromEntries(ROLE_DEFS.map((r, i) => [r.key, i])) as Partial<Record<ChampionRole, number>>
+const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
 const CAT_LABELS: Record<ItemCategory, string> = {
   weapon: 'Weapon',
@@ -316,103 +282,13 @@ function onSplashMouseLeave() {
   parallaxY.value = 0
 }
 
-interface RoleStat {
-  key: string
-  icon: string
-  label: string
-  value: string
-}
-
 const activeRoleStats = computed<RoleStat[]>(() => {
   const role = ROLE_MAP[activeRole.value]
-  switch (role) {
-    case 'top':
-      return [
-        { key: 'atk', icon: '⚔', label: 'Atk Interval', value: '4.0s' },
-        {
-          key: 'shield',
-          icon: '🛡',
-          label: 'Shield Rebuild',
-          value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`,
-        },
-        { key: 'type', icon: '💪', label: 'Style', value: 'Tank / Frontline' },
-      ]
-    case 'jungle':
-      return [
-        { key: 'style', icon: '🗡', label: 'Style', value: 'Assassin / Ganker' },
-        { key: 'effect', icon: '🌀', label: 'Effect', value: 'Crowd Control' },
-        { key: 'range', icon: '🔄', label: 'Orbit', value: 'Wide Patrol' },
-      ]
-    case 'mid':
-      return [
-        {
-          key: 'cursecd',
-          icon: '💜',
-          label: 'Curse CD',
-          value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`,
-        },
-        {
-          key: 'cursedur',
-          icon: '⏱',
-          label: 'Curse Duration',
-          value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s`,
-        },
-        { key: 'dot', icon: '☠', label: 'DoT DPS', value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
-        { key: 'amp', icon: '⚡', label: 'Dmg Amplify', value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
-      ]
-    case 'adc':
-      return [
-        { key: 'burst', icon: '🎯', label: 'Burst Damage', value: `${ROLE_ADC_BURST_DAMAGE}` },
-        {
-          key: 'burstcd',
-          icon: '⏱',
-          label: 'Burst CD',
-          value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`,
-        },
-        { key: 'style', icon: '🏹', label: 'Style', value: 'Ranged / DPS' },
-      ]
-    case 'support':
-      return [
-        { key: 'heal', icon: '💚', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
-        {
-          key: 'healcd',
-          icon: '⏰',
-          label: 'Heal CD',
-          value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`,
-        },
-        {
-          key: 'pheal',
-          icon: '🌍',
-          label: 'Planet Heal',
-          value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP`,
-        },
-        {
-          key: 'pcd',
-          icon: '⌛',
-          label: 'Planet CD',
-          value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`,
-        },
-      ]
-    default:
-      return []
-  }
+  return role ? ((ROLE_BY_KEY[role]?.stats as RoleStat[]) ?? []) : []
 })
 
 function getRoleOrbitDescription(role: ChampionRole): string {
-  switch (role) {
-    case 'top':
-      return `Shield: ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild`
-    case 'jungle':
-      return 'Crowd Control'
-    case 'mid':
-      return `Curse every ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s · DoT ${ROLE_MID_CURSE_DOT_DPS}/s`
-    case 'adc':
-      return `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`
-    case 'support':
-      return `Heal ${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`
-    default:
-      return ''
-  }
+  return ROLE_BY_KEY[role]?.orbitDesc ?? ''
 }
 
 void championRoleLabel

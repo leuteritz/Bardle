@@ -1,4 +1,4 @@
-import type { ChampionRole } from '../types'
+import type { ChampionRole, RoleStat } from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -253,7 +253,7 @@ export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
-/** Central role registry — single source of truth for key, label, icon and orbit parameters. */
+/** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
 export const ROLES = [
   {
     key: 'top' as ChampionRole,
@@ -261,6 +261,13 @@ export const ROLES = [
     short: 'TOP',
     icon: '🛡️',
     image: '/img/roles/top.png',
+    color: '#e05050',
+    stats: [
+      { key: 'atk',    icon: '⚔', label: 'Atk Interval',  value: '4.0s' },
+      { key: 'shield', icon: '🛡', label: 'Shield Rebuild', value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s` },
+      { key: 'type',   icon: '💪', label: 'Style',          value: 'Tank / Frontline' },
+    ] satisfies RoleStat[],
+    orbitDesc: `Shield: ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s rebuild`,
     orbit: {
       rx: SUN_RADIUS * 2.58,
       ry: SUN_RADIUS * 1.13,
@@ -279,6 +286,13 @@ export const ROLES = [
     short: 'JGL',
     icon: '🌿',
     image: '/img/roles/jungle.png',
+    color: '#50c060',
+    stats: [
+      { key: 'style',  icon: '🗡', label: 'Style',  value: 'Assassin / Ganker' },
+      { key: 'effect', icon: '🌀', label: 'Effect', value: 'Crowd Control' },
+      { key: 'range',  icon: '🔄', label: 'Orbit',  value: 'Wide Patrol' },
+    ] satisfies RoleStat[],
+    orbitDesc: 'Crowd Control',
     orbit: {
       rx: SUN_RADIUS * 7.8,
       ry: SUN_RADIUS * 3.35,
@@ -295,6 +309,14 @@ export const ROLES = [
     short: 'MID',
     icon: '🔮',
     image: '/img/roles/mid.png',
+    color: '#5090e8',
+    stats: [
+      { key: 'cursecd',  icon: '💜', label: 'Curse CD',       value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s` },
+      { key: 'cursedur', icon: '⏱',  label: 'Curse Duration', value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s` },
+      { key: 'dot',      icon: '☠',  label: 'DoT DPS',        value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
+      { key: 'amp',      icon: '⚡',  label: 'Dmg Amplify',    value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
+    ] satisfies RoleStat[],
+    orbitDesc: `Curse every ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s · DoT ${ROLE_MID_CURSE_DOT_DPS}/s`,
     orbit: {
       rx: SUN_RADIUS * 10.75,
       ry: SUN_RADIUS * 4.62,
@@ -311,6 +333,13 @@ export const ROLES = [
     short: 'ADC',
     icon: '🏹',
     image: '/img/roles/adc.png',
+    color: '#e89840',
+    stats: [
+      { key: 'burst',   icon: '🎯', label: 'Burst Damage', value: `${ROLE_ADC_BURST_DAMAGE}` },
+      { key: 'burstcd', icon: '⏱',  label: 'Burst CD',     value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s` },
+      { key: 'style',   icon: '🏹', label: 'Style',         value: 'Ranged / DPS' },
+    ] satisfies RoleStat[],
+    orbitDesc: `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`,
     orbit: {
       rx: SUN_RADIUS * 12.67,
       ry: SUN_RADIUS * 5.43,
@@ -327,6 +356,14 @@ export const ROLES = [
     short: 'SUP',
     icon: '💚',
     image: '/img/roles/supp.png',
+    color: '#b8c8d8',
+    stats: [
+      { key: 'heal',  icon: '💚', label: 'Heal / Tick',  value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
+      { key: 'healcd',icon: '⏰', label: 'Heal CD',       value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s` },
+      { key: 'pheal', icon: '🌍', label: 'Planet Heal',   value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
+      { key: 'pcd',   icon: '⌛', label: 'Planet CD',     value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s` },
+    ] satisfies RoleStat[],
+    orbitDesc: `Heal ${ROLE_SUPPORT_HEAL_AMOUNT} HP / ${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`,
     orbit: {
       rx: SUN_RADIUS * 12.67,
       ry: SUN_RADIUS * 5.43,
@@ -512,11 +549,7 @@ export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
 
-// Role UI colors — single source of truth for ChampionSelector and Event Log
-export const ROLE_COLORS = {
-  top: '#e05050',
-  jungle: '#50c060',
-  mid: '#5090e8',
-  adc: '#e89840',
-  support: '#b8c8d8',
-} as const
+/** Role UI colors derived from ROLES[].color — for ChampionSelector, Event Log, etc. */
+export const ROLE_COLORS = Object.fromEntries(
+  ROLES.map((r) => [r.key, r.color]),
+) as Record<ChampionRole, string>
