@@ -3,10 +3,12 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ROLES, GAME_STATE } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
+const uiStore = useUiStore()
 
 function fmtCd(ms: number): string {
   const s = Math.ceil(ms / 1000)
@@ -233,7 +235,15 @@ const winChanceColor = computed(() => {
     <div class="title-center">BARDLE</div>
 
     <!-- RIGHT: Stats – mirrored: value | label | image -->
-    <div class="stats-right">
+    <div
+      class="stats-right"
+      role="button"
+      tabindex="0"
+      title="Kampf-Stats öffnen"
+      @click="uiStore.setBardTab('kampf')"
+      @keydown.enter="uiStore.setBardTab('kampf')"
+      @keydown.space.prevent="uiStore.setBardTab('kampf')"
+    >
       <!-- RANK -->
       <div class="bbstat-item">
         <span class="bbstat-val">{{ rankLabel }}</span>
@@ -320,6 +330,14 @@ const winChanceColor = computed(() => {
   width: 100%;
   overflow: visible;
   padding-inline-start: 16px;
+  position: relative;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.18s ease;
+}
+
+.stats-right:focus-visible {
+  outline: none;
 }
 
 .bbstat-item {
