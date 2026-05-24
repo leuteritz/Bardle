@@ -253,6 +253,24 @@ export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
+export interface SunGrowthStage {
+  stage: number
+  chimesThreshold: number
+  radius: number
+  label: string
+}
+
+/** Sun growth stages — thresholds match planet slot costs so stage N is met when slot N becomes affordable. */
+export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
+  { stage: 0, chimesThreshold: 0,       radius: 24,  label: 'Nascent'   },
+  { stage: 1, chimesThreshold: 500,     radius: 34,  label: 'Kindling'  },
+  { stage: 2, chimesThreshold: 2000,    radius: 48,  label: 'Radiant'   },
+  { stage: 3, chimesThreshold: 8000,    radius: 66,  label: 'Blazing'   },
+  { stage: 4, chimesThreshold: 35000,   radius: 88,  label: 'Scorching' },
+  { stage: 5, chimesThreshold: 150000,  radius: 112, label: 'Stellar'   },
+  { stage: 6, chimesThreshold: 600000,  radius: 144, label: 'Supernova' },
+]
+
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
 export const ROLES = [
   {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -11,6 +11,7 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
+import { SUN_GROWTH_STAGES } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
@@ -194,6 +195,28 @@ function resetAllCooldowns() {
   roleBehaviorStore.adcBurstCooldownMs = 0
   roleBehaviorStore.jungleBuffCooldownMs = 0
 }
+
+// ── Sun Simulator ─────────────────────────────────────────────────────────────
+
+const sunSimMax = SUN_GROWTH_STAGES[SUN_GROWTH_STAGES.length - 1].chimesThreshold
+const simChimes = ref(gameStore.chimes)
+
+const simStageInfo = computed(() => {
+  const v = simChimes.value
+  let stage = SUN_GROWTH_STAGES[0]
+  for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
+    if (v >= SUN_GROWTH_STAGES[i].chimesThreshold) { stage = SUN_GROWTH_STAGES[i]; break }
+  }
+  const next = SUN_GROWTH_STAGES[stage.stage + 1] ?? null
+  return { stage, next }
+})
+
+function onSunSimInput(raw: string) {
+  const v = Math.max(0, Math.min(sunSimMax, parseInt(raw) || 0))
+  simChimes.value = v
+  gameStore.chimes = v
+  gameStore.totalChimesEarned = v
+}
 </script>
 
 <template>
@@ -315,6 +338,28 @@ function resetAllCooldowns() {
       >
         <span>⏱️</span> Reset Cooldowns
       </button>
+    </div>
+
+    <!-- Sun Stage Simulator -->
+    <div class="sun-sim mt-3">
+      <div class="admin-section-label mb-2">☀ Sun Stage Simulator</div>
+      <input
+        type="range"
+        class="sun-sim-slider"
+        :min="0"
+        :max="sunSimMax"
+        :step="100"
+        :value="simChimes"
+        @input="onSunSimInput(($event.target as HTMLInputElement).value)"
+      />
+      <div class="sun-sim-info">
+        <span class="sun-sim-stage">Stage {{ simStageInfo.stage.stage }} — {{ simStageInfo.stage.label }}</span>
+        <span class="sun-sim-radius">{{ simStageInfo.stage.radius }}px</span>
+        <span v-if="simStageInfo.next" class="sun-sim-next">
+          Next: {{ $formatNumber(simStageInfo.next.chimesThreshold) }} chimes
+        </span>
+        <span v-else class="sun-sim-max">MAX</span>
+      </div>
     </div>
   </div>
 </template>
@@ -599,5 +644,73 @@ function resetAllCooldowns() {
   background: #0d2a35;
   border-color: #60c8e8;
   color: #a0e8f8;
+}
+
+/* ── Sun Simulator ───────────────────────────────────────────────────────────── */
+
+.sun-sim {
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  background: #1a1208;
+  padding: 0.5rem 0.75rem;
+}
+
+.sun-sim-slider {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #c89040, #5c3310);
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 0.4rem;
+}
+
+.sun-sim-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e8c040;
+  border: 2px solid #7a4e20;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
+}
+
+.sun-sim-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e8c040;
+  border: 2px solid #7a4e20;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
+}
+
+.sun-sim-info {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-family: var(--rpg-font-mono);
+  font-size: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.sun-sim-stage {
+  color: #e8c040;
+  font-weight: 700;
+}
+
+.sun-sim-radius {
+  color: #a08030;
+}
+
+.sun-sim-next {
+  color: var(--rpg-text-dim);
+}
+
+.sun-sim-max {
+  color: #e8c040;
+  letter-spacing: 0.1em;
 }
 </style>

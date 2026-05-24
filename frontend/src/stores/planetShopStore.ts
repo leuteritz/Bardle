@@ -8,6 +8,7 @@ import {
   PLANET_SLOT_ORBITS,
   PLANET_HARVEST_INTERVAL_TICKS,
   PLANET_SLOT_MAX_HP,
+  SUN_GROWTH_STAGES,
 } from '@/config/constants'
 
 export type PlanetRoleType =
@@ -163,6 +164,26 @@ export const usePlanetShopStore = defineStore('planetShop', {
   }),
 
   getters: {
+    currentSunStage(): number {
+      const gameStore = useGameStore()
+      for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
+        if (gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[i].chimesThreshold) return i
+      }
+      return 0
+    },
+
+    currentSunRadius(): number {
+      const gameStore = useGameStore()
+      let stage = 0
+      for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
+        if (gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[i].chimesThreshold) {
+          stage = i
+          break
+        }
+      }
+      return SUN_GROWTH_STAGES[stage].radius
+    },
+
     purchasedSlots(state): PlanetSlot[] {
       return state.slots.filter((s) => s.purchased)
     },
@@ -245,9 +266,21 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return gameStore.chimes >= this.getSlotCost(slotId)
     },
 
+    canUnlockPlanetSlot(slotIndex: number): boolean {
+      const slot = this.slots[slotIndex]
+      if (!slot) return false
+      if (!this.canAffordSlot(slot.id)) return false
+      const requiredStage = slotIndex + 1
+      const gameStore = useGameStore()
+      return gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[requiredStage].chimesThreshold
+    },
+
     buySlot(slotId: string): boolean {
       const slot = this.getSlot(slotId)
       if (!slot || slot.purchased) return false
+
+      const slotIndex = this.slots.findIndex((s) => s.id === slotId)
+      if (!this.canUnlockPlanetSlot(slotIndex)) return false
 
       const gameStore = useGameStore()
       const cost = this.getSlotCost(slotId)

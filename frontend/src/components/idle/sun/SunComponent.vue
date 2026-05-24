@@ -135,7 +135,7 @@
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
-import { SUN_RADIUS } from '@/config/constants'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 
 interface DynamicRay {
   id: number
@@ -171,6 +171,7 @@ export default defineComponent({
   name: 'SunComponent',
   setup() {
     const combatStore = useCombatStore()
+    const planetShopStore = usePlanetShopStore()
 
     const CENTER = 180
     const DISC_RADIUS = 108
@@ -312,12 +313,16 @@ export default defineComponent({
       cancelAnimationFrame(animFrame)
     })
 
+    const sunContainerVars = computed(
+      (): Record<string, string> => ({ '--sun-r': `${planetShopStore.currentSunRadius}px` }),
+    )
+
     return {
       combatStore,
       dynamicRays,
       sunspotPositions,
       Math,
-      sunContainerVars: { '--sun-r': `${SUN_RADIUS}px` } as Record<string, string>,
+      sunContainerVars,
     }
   },
 })
@@ -334,6 +339,7 @@ export default defineComponent({
   z-index: 5;
   pointer-events: none;
   overflow: visible;
+  transition: width 1.5s ease, height 1.5s ease;
 }
 
 .orbit-paths {

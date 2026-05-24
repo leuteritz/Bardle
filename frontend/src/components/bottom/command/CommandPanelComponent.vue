@@ -79,7 +79,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             'cmd-planet-tile--filled': slot.purchased && !!slot.role,
             'cmd-planet-tile--buffed': !!(slot.jungleBuff?.active),
             'cmd-planet-tile--empty-slot': slot.purchased && !slot.role,
-            'cmd-planet-tile--locked': !slot.purchased && !planetStore.canAffordSlot(slot.id),
+            'cmd-planet-tile--locked': !slot.purchased && !planetStore.canUnlockPlanetSlot(index),
             'cmd-planet-tile--buy': !slot.purchased,
             [`cmd-planet-tile--role-${slot.role}`]: slot.purchased && !!slot.role,
           }"

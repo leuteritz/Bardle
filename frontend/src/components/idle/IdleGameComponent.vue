@@ -5,11 +5,12 @@
     <div
       @click="handleChimeClick"
       class="fixed z-10 flex items-center justify-center cursor-pointer chime-main-button"
+      :style="chimeButtonStyle"
     >
       <img
         src="/img/BardAbilities/BardChime.png"
         class="rpg-img chime-icon"
-        style="filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))"
+        :style="chimeIconStyle"
         draggable="false"
         @dragstart.prevent
       />
@@ -40,11 +41,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useBattleStore } from '../../stores/battleStore'
 import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
+import { usePlanetShopStore } from '../../stores/planetShopStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
@@ -67,6 +69,20 @@ export default defineComponent({
     const gameStore = useGameStore()
     const battleStore = useBattleStore()
     const galaxyStore = useGalaxyStore()
+    const planetShopStore = usePlanetShopStore()
+
+    const chimeButtonStyle = computed(() => ({
+      width: `${planetShopStore.currentSunRadius * 4}px`,
+      height: `${planetShopStore.currentSunRadius * 4}px`,
+      transition: 'width 1.5s ease, height 1.5s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    }))
+
+    const chimeIconStyle = computed(() => ({
+      width: `${planetShopStore.currentSunRadius * 1.5}px`,
+      height: `${planetShopStore.currentSunRadius * 1.5}px`,
+      filter: 'drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))',
+      transition: 'width 1.5s ease, height 1.5s ease',
+    }))
 
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
@@ -118,6 +134,8 @@ export default defineComponent({
       handleChimeClick,
       chimeGainPos,
       chimeGainKey,
+      chimeButtonStyle,
+      chimeIconStyle,
     }
   },
 })
@@ -242,11 +260,8 @@ export default defineComponent({
 .chime-main-button {
   top: 50%;
   left: 50%;
-  width: 320px;
-  height: 320px;
   transform: translate(-50%, -50%);
   user-select: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chime-main-button:hover {
@@ -258,8 +273,6 @@ export default defineComponent({
 }
 
 .chime-icon {
-  width: 90px;
-  height: 90px;
   user-select: none;
   animation: float-enhanced 4s ease-in-out infinite;
 }

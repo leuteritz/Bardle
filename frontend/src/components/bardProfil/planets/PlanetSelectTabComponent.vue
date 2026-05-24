@@ -46,6 +46,10 @@ const activeSlot = computed(() => {
   return store.slots.find((s) => s.id === selectedSlotId.value) ?? null
 })
 
+const activeSlotIndex = computed(() =>
+  store.slots.findIndex((s) => s.id === selectedSlotId.value),
+)
+
 function assignRole(roleId: PlanetRoleType) {
   if (!activeSlot.value) return
   if (activeSlot.value.role === roleId) return
@@ -115,13 +119,13 @@ function bonusText(role: PlanetRole): string {
     <!-- Slot-Leiste: IMMER alle 6 Slots rendern, ganz oben -->
     <div class="ps-slot-bar" style="--cols: 6">
       <button
-        v-for="slot in store.slots"
+        v-for="(slot, slotIndex) in store.slots"
         :key="slot.id"
         class="ps-slot-btn"
         :class="{
           'ps-slot-btn--active': selectedSlotId === slot.id,
-          'ps-slot-btn--affordable': !slot.purchased && store.canAffordSlot(slot.id),
-          'ps-slot-btn--cant-afford': !slot.purchased && !store.canAffordSlot(slot.id),
+          'ps-slot-btn--affordable': !slot.purchased && store.canUnlockPlanetSlot(slotIndex),
+          'ps-slot-btn--cant-afford': !slot.purchased && !store.canUnlockPlanetSlot(slotIndex),
         }"
         :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
         @click="selectSlot(slot.id)"
@@ -171,13 +175,14 @@ function bonusText(role: PlanetRole): string {
       <span class="ps-locked-panel-cost-label">C H I M E S</span>
       <div class="ps-locked-panel-divider" />
       <button
-        v-if="store.canAffordSlot(activeSlot.id)"
+        v-if="store.canUnlockPlanetSlot(activeSlotIndex)"
         class="ps-locked-panel-buy-btn"
         @click="store.buySlot(activeSlot.id)"
       >
         ✦ Unlock
       </button>
-      <span v-else class="ps-locked-panel-hint">Not enough Chimes yet</span>
+      <span v-else-if="!store.canAffordSlot(activeSlot.id)" class="ps-locked-panel-hint">Not enough Chimes yet</span>
+      <span v-else class="ps-locked-panel-hint">Sun not powerful enough yet</span>
     </div>
 
     <template v-if="activeSlot && activeSlot.purchased">

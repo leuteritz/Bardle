@@ -1,5 +1,5 @@
 <template>
-  <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="{ '--sun-r': SUN_RADIUS + 'px' }">
+  <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="sunRVar">
     <div class="hp-header">
       <span class="hp-icon">♥</span>
       <span class="hp-value">
@@ -17,7 +17,7 @@
 
     <Teleport to="body">
       <div v-if="playerStore.isLow" class="hp-vignette" aria-hidden="true" />
-      <div class="dmg-float-layer" :style="{ '--sun-r': SUN_RADIUS + 'px' }" aria-hidden="true">
+      <div class="dmg-float-layer" :style="sunRVar" aria-hidden="true">
         <span v-for="f in playerStore.damageFloats" :key="f.id" class="dmg-float"
           >-{{ f.value }}</span
         >
@@ -27,14 +27,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, onMounted, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePlayerStore } from '../../../stores/playerStore'
-import { SUN_RADIUS } from '../../../config/constants'
+import { usePlanetShopStore } from '../../../stores/planetShopStore'
 
 export default defineComponent({
   name: 'PlayerHPBar',
   setup() {
     const playerStore = usePlayerStore()
+    const planetShopStore = usePlanetShopStore()
+    const sunRVar = computed(() => ({ '--sun-r': `${planetShopStore.currentSunRadius}px` }))
     const wasHit = ref(false)
     let hitTimer: ReturnType<typeof setTimeout> | null = null
     let pruneInterval: ReturnType<typeof setInterval> | null = null
@@ -61,7 +63,7 @@ export default defineComponent({
       if (hitTimer) clearTimeout(hitTimer)
     })
 
-    return { playerStore, wasHit, Math, SUN_RADIUS }
+    return { playerStore, wasHit, Math, sunRVar }
   },
 })
 </script>
@@ -75,7 +77,8 @@ export default defineComponent({
   transform: translate(-50%, -100%);
   z-index: 20;
   pointer-events: none;
-  width: calc(var(--sun-r) * 3);
+  width: clamp(200px, calc(var(--sun-r) * 3.5), 500px);
+  transition: top 1.5s ease, width 1.5s ease;
 }
 
 /* ── Header ── */
@@ -83,12 +86,12 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   margin-bottom: 5px;
 }
 
 .hp-icon {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #cc2010;
   line-height: 1;
   flex-shrink: 0;
@@ -98,7 +101,7 @@ export default defineComponent({
 }
 
 .hp-value {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -118,7 +121,7 @@ export default defineComponent({
 .hp-track {
   position: relative;
   width: 100%;
-  height: calc(var(--sun-r) * 0.15);
+  height: 10px;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 1px;
   box-shadow:
@@ -224,6 +227,7 @@ export default defineComponent({
   z-index: 30;
   width: 0;
   height: 0;
+  transition: top 1.5s ease;
 }
 
 .dmg-float {
