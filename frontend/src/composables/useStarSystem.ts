@@ -9,6 +9,7 @@ import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
 import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
+import { useOrbitScale } from './useOrbitScale'
 import type { LabelData, PlanetType, StarType } from '../types'
 
 const PLANET_SIZE_CHAMPION = 44
@@ -191,6 +192,8 @@ export function useStarSystem() {
   const starFlyStart = new Map<string, { x: number; y: number }>()
   const vanishFired = new Set<string>()
 
+  const { orbitScale } = useOrbitScale()
+
   let animFrame = 0
   let lastTs = 0
 
@@ -271,6 +274,7 @@ export function useStarSystem() {
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
     const sunScale = usePlanetShopStore().currentSunRadius / SUN_RADIUS
+    const orbitScaleVal = orbitScale.value
 
     const newRenders: StarRenderEntry[] = []
 
@@ -280,8 +284,8 @@ export function useStarSystem() {
       sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)
 
-      const scaledOrbitRx = star.orbitRx * sunScale
-      const scaledOrbitRy = star.orbitRy * sunScale
+      const scaledOrbitRx = star.orbitRx * sunScale * orbitScaleVal
+      const scaledOrbitRy = star.orbitRy * sunScale * orbitScaleVal
 
       const { x: sx, y: sy } = getOrbitPos(
         sAngle,
@@ -350,8 +354,8 @@ export function useStarSystem() {
         planetAngles.set(slot.planetId, pAngle)
 
         const FLY = 2.5
-        const targetSlotRx = slot.orbitRx * sunScale
-        const targetSlotRy = slot.orbitRy * sunScale
+        const targetSlotRx = slot.orbitRx * sunScale * orbitScaleVal
+        const targetSlotRy = slot.orbitRy * sunScale * orbitScaleVal
         let curRx = planetCurRx.get(slot.planetId) ?? targetSlotRx * FLY
         let curRy = planetCurRy.get(slot.planetId) ?? targetSlotRy * FLY
         curRx += (targetSlotRx - curRx) * 0.018

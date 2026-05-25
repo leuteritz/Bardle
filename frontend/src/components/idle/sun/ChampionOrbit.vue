@@ -142,6 +142,7 @@ import {
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
+import { useOrbitScale } from '@/composables/useOrbitScale'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import type { ChampionRole } from '../../../types'
 
@@ -199,6 +200,7 @@ export default defineComponent({
     const planetShopStore = usePlanetShopStore()
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
+    const { orbitScale } = useOrbitScale()
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const localStates = new Map<string, LocalChampState>()
@@ -284,6 +286,9 @@ export default defineComponent({
         return 0
       })
 
+      const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+      const orbitScaleVal = orbitScale.value
+
       for (let ci = 0; ci < ordered.length; ci++) {
         const c = ordered[ci]
         const asn = assignments.get(c.name)!
@@ -292,9 +297,8 @@ export default defineComponent({
 
         const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
         const planetTier = ORBIT_TIERS.planet[ci % 2]
-        const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
-        const rx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale
-        const ry = (roleTier ? roleTier.ry : planetTier.ry) * sunScale
+        const rx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale * orbitScaleVal
+        const ry = (roleTier ? roleTier.ry : planetTier.ry) * sunScale * orbitScaleVal
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color

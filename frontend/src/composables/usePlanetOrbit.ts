@@ -1,5 +1,6 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { useOrbitScale } from '@/composables/useOrbitScale'
 import { activePlanetPositions } from '@/utils/activePlanetPositions'
 import { ORBIT_RADIUS_SCALE, SUN_RADIUS } from '@/config/constants'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
@@ -43,6 +44,7 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
   const renderPositions = ref<PlanetRenderPos[]>([])
   const localStates = new Map<string, LocalState>()
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const { orbitScale } = useOrbitScale()
   let animFrame = 0
   let lastTs = 0
 
@@ -56,9 +58,10 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
     const newPositions: PlanetRenderPos[] = []
 
     const sunScale = usePlanetShopStore().currentSunRadius / SUN_RADIUS
+    const orbitScaleVal = orbitScale.value
     for (const p of planets) {
-      const targetRx = p.orbitRadiusX * ORBIT_RADIUS_SCALE * sunScale
-      const targetRy = p.orbitRadiusY * ORBIT_RADIUS_SCALE * sunScale
+      const targetRx = p.orbitRadiusX * ORBIT_RADIUS_SCALE * sunScale * orbitScaleVal
+      const targetRy = p.orbitRadiusY * ORBIT_RADIUS_SCALE * sunScale * orbitScaleVal
 
       let ls = localStates.get(p.id)
       if (!ls) {

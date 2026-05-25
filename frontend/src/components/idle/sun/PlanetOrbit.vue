@@ -129,6 +129,7 @@ import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPo
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
+import { useOrbitScale } from '@/composables/useOrbitScale'
 
 const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
@@ -221,6 +222,7 @@ export default defineComponent({
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
+    const { orbitScale } = useOrbitScale()
 
     const screenCx = ref(window.innerWidth / 2)
     const screenCy = ref(window.innerHeight / 2)
@@ -249,6 +251,7 @@ export default defineComponent({
       const newPositions: PlanetRenderPos[] = []
 
       const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+      const orbitScaleVal = orbitScale.value
       for (const slot of purchased) {
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
@@ -259,14 +262,14 @@ export default defineComponent({
         if (!ls) {
           const idx = purchased.indexOf(slot)
           const startAngle = (idx / Math.max(purchased.length, 1)) * Math.PI * 2
-          const initPos = getOrbitPos(startAngle, tier.rx * sunScale, tier.ry * sunScale, tier.tiltRad, cx, cy)
+          const initPos = getOrbitPos(startAngle, tier.rx * sunScale * orbitScaleVal, tier.ry * sunScale * orbitScaleVal, tier.tiltRad, cx, cy)
           ls = { id: slot.id, orbitAngle: startAngle, x: initPos.x, y: initPos.y }
           localStates.set(slot.id, ls)
         }
 
         const tiltRad = tier.tiltRad
-        const rx = tier.rx * sunScale
-        const ry = tier.ry * sunScale
+        const rx = tier.rx * sunScale * orbitScaleVal
+        const ry = tier.ry * sunScale * orbitScaleVal
 
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05
