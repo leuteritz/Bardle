@@ -13,6 +13,7 @@
           :ry="tier.ry"
           :tiltDeg="tier.tiltDeg"
           :visible="starOrbitVisible[i]"
+          :sunRadius="planetShopStore.currentSunRadius"
         />
       </template>
 
@@ -27,6 +28,7 @@
           :ry="entry.ry"
           :tiltDeg="entry.tiltDeg"
           :visible="roleOrbitVisibility[i]"
+          :sunRadius="planetShopStore.currentSunRadius"
         />
       </template>
     </svg>
@@ -47,20 +49,23 @@
             <feGaussianBlur stdDeviation="14" />
           </filter>
         </defs>
-        <ellipse
+        <g
           v-for="star in backStars"
           :key="'hint-' + star.id"
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="star.orbitRx"
-          :ry="star.orbitRy"
-          :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-          :stroke="orbitHintColor(star)"
-          :stroke-opacity="star.hintOpacity * 0.65"
           :filter="`url(#orbit-blur-${star.starType})`"
-          fill="none"
-          stroke-width="5"
-        />
+        >
+          <ellipse
+            :cx="screenCx"
+            :cy="screenCy"
+            :rx="star.orbitRx"
+            :ry="star.orbitRy"
+            :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
+            :stroke="orbitHintColor(star)"
+            :stroke-opacity="star.hintOpacity * 0.65"
+            fill="none"
+            :stroke-width="5 * planetShopStore.currentSunRadius / 80"
+          />
+        </g>
       </svg>
 
       <template v-for="star in backStars" :key="star.id">
@@ -113,20 +118,23 @@
             <feGaussianBlur stdDeviation="16" />
           </filter>
         </defs>
-        <ellipse
+        <g
           v-for="star in backStars"
           :key="'front-hint-' + star.id"
-          :cx="screenCx"
-          :cy="screenCy"
-          :rx="star.orbitRx"
-          :ry="star.orbitRy"
-          :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-          :stroke="orbitHintColor(star)"
-          :stroke-opacity="star.hintOpacity * 0.8"
           filter="url(#orbit-blur-star-front)"
-          fill="none"
-          stroke-width="5"
-        />
+        >
+          <ellipse
+            :cx="screenCx"
+            :cy="screenCy"
+            :rx="star.orbitRx"
+            :ry="star.orbitRy"
+            :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
+            :stroke="orbitHintColor(star)"
+            :stroke-opacity="star.hintOpacity * 0.8"
+            fill="none"
+            :stroke-width="5 * planetShopStore.currentSunRadius / 80"
+          />
+        </g>
       </svg>
 
       <template v-for="star in frontStars" :key="star.id">

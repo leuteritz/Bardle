@@ -41,7 +41,7 @@
       fill="none"
       :stroke="color"
       :stroke-opacity="opacity"
-      :stroke-width="28 * strokeWidth"
+      :stroke-width="28 * strokeWidth * (sunRadius !== undefined ? sunRadius / 80 : 1)"
     />
   </g>
 
@@ -99,6 +99,7 @@ withDefaults(
     opacity?: number
     visible?: boolean
     abilityActive?: boolean
+    sunRadius?: number
   }>(),
   { strokeWidth: 0.3, opacity: 0.2, visible: true, abilityActive: false },
 )

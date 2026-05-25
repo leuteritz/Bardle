@@ -6,10 +6,11 @@
         :color="tier.color"
         :x="screenCx"
         :y="screenCy"
-        :rx="tier.rx"
-        :ry="tier.ry"
-        :tiltDeg="tier.tiltDeg"
+        :rx="tierOrbitDimensions[i].rx"
+        :ry="tierOrbitDimensions[i].ry"
+        :tiltDeg="tierOrbitDimensions[i].tiltDeg"
         :visible="tierIsBehind[i]"
+        :sunRadius="planetShopStore.currentSunRadius"
       />
     </template>
   </svg>
@@ -236,6 +237,15 @@ export default defineComponent({
     const slotsWithRole = computed(() => planetShopStore.purchasedSlots.filter((s) => s.role !== null))
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
+
+    const tierOrbitDimensions = computed(() =>
+      ORBIT_TIERS.planet.map((tier, i) => {
+        const rep = renderPositions.value.find((_, si) => si % ORBIT_TIERS.planet.length === i)
+        return rep
+          ? { rx: rep.orbitRx, ry: rep.orbitRy, tiltDeg: rep.tiltDeg }
+          : { rx: tier.rx, ry: tier.ry, tiltDeg: tier.tiltDeg }
+      }),
+    )
 
     let animFrame = 0
     let lastTs = 0
@@ -466,6 +476,7 @@ export default defineComponent({
       frontPlanets,
       renderPositions,
       tierIsBehind,
+      tierOrbitDimensions,
       shots,
       screenCx,
       screenCy,

@@ -13,6 +13,7 @@
       :tiltDeg="pos.tiltDeg"
       :visible="pos.isBehind || (!!pos.primaryRole && isAbilityActive(pos.primaryRole))"
       :abilityActive="!!pos.primaryRole && isAbilityActive(pos.primaryRole)"
+      :sunRadius="currentSunRadius"
     />
   </svg>
 
@@ -514,6 +515,8 @@ export default defineComponent({
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
 
+    const currentSunRadius = computed(() => planetShopStore.currentSunRadius)
+
     return {
       combatStore,
       roleBehaviorStore,
@@ -527,6 +530,7 @@ export default defineComponent({
       isAbilityActive,
       screenCx,
       screenCy,
+      currentSunRadius,
     }
   },
 })
