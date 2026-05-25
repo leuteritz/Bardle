@@ -256,20 +256,32 @@ export default defineComponent({
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size * sunScale
+        const baseSize = tier.size * Math.pow(sunScale, 0.65)
+
+        const tiltRad = tier.tiltRad
+        const rawRx = tier.rx * sunScale * orbitScaleVal
+        const rawRy = tier.ry * sunScale * orbitScaleVal
+        const vMin = Math.min(window.innerWidth, window.innerHeight)
+        const MIN_RY_FACTORS = [1.5, 2.0]
+        const VIEWPORT_RY_FACTORS = [0.10, 0.15]
+        const minRy = Math.max(
+          planetShopStore.currentSunRadius * MIN_RY_FACTORS[slotIdx % MIN_RY_FACTORS.length],
+          vMin * VIEWPORT_RY_FACTORS[slotIdx % VIEWPORT_RY_FACTORS.length],
+        )
+        const flooredRy = Math.max(rawRy, minRy)
+        const flooredRx = flooredRy * (tier.rx / tier.ry)
+        const maxRx = (window.innerWidth / 2) * 0.85
+        const capFactor = Math.min(1.0, maxRx / flooredRx)
+        const rx = flooredRx * capFactor
+        const ry = flooredRy * capFactor
 
         let ls = localStates.get(slot.id)
         if (!ls) {
-          const idx = purchased.indexOf(slot)
-          const startAngle = (idx / Math.max(purchased.length, 1)) * Math.PI * 2
-          const initPos = getOrbitPos(startAngle, tier.rx * sunScale * orbitScaleVal, tier.ry * sunScale * orbitScaleVal, tier.tiltRad, cx, cy)
+          const startAngle = (slotIdx / Math.max(purchased.length, 1)) * Math.PI * 2
+          const initPos = getOrbitPos(startAngle, rx, ry, tiltRad, cx, cy)
           ls = { id: slot.id, orbitAngle: startAngle, x: initPos.x, y: initPos.y }
           localStates.set(slot.id, ls)
         }
-
-        const tiltRad = tier.tiltRad
-        const rx = tier.rx * sunScale * orbitScaleVal
-        const ry = tier.ry * sunScale * orbitScaleVal
 
         const prevRelY = (ls.y - cy) / Math.max(ry, 1)
         const prevIsBehind = prevRelY < -0.05

@@ -326,9 +326,9 @@ export const useStarGroupStore = defineStore('starGroup', {
         starType: 'galaxy_boss',
         starAngle: Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: 1,
-        orbitRx: GALAXY_BOSS_STAR_ORBIT_RX,
-        orbitRy: GALAXY_BOSS_STAR_ORBIT_RY,
-        orbitTilt: GALAXY_BOSS_STAR_ORBIT_TILT,
+        orbitRx: ORBIT_TIERS.star[1].rx,
+        orbitRy: ORBIT_TIERS.star[1].ry,
+        orbitTilt: ORBIT_TIERS.star[1].tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_GALAXY_BOSS,
         planetSlots: [
           {

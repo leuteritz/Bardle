@@ -379,7 +379,7 @@ export function useStarSystem() {
             ? PLANET_SIZE_GALAXY_BOSS
             : slot.isChampionPlanet
               ? PLANET_SIZE_CHAMPION
-              : PLANET_SIZE_NORMAL) * sunScale
+              : PLANET_SIZE_NORMAL) * Math.pow(sunScale, 0.65)
         const pR = pSize / 2
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)

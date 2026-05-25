@@ -297,12 +297,34 @@ export default defineComponent({
 
         const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
         const planetTier = ORBIT_TIERS.planet[ci % 2]
-        const rx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale * orbitScaleVal
-        const ry = (roleTier ? roleTier.ry : planetTier.ry) * sunScale * orbitScaleVal
+        const rawRx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale * orbitScaleVal
+        const rawRy = (roleTier ? roleTier.ry : planetTier.ry) * sunScale * orbitScaleVal
+
+        const vMin = Math.min(window.innerWidth, window.innerHeight)
+        const MIN_RY_BY_ROLE: Record<string, number> = {
+          top: 1.35, jungle: 1.8, mid: 2.2, adc: 2.6, support: 2.6,
+        }
+        const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
+          top: 0.07, jungle: 0.12, mid: 0.17, adc: 0.22, support: 0.22,
+        }
+        const minRyFactor = primaryRole ? (MIN_RY_BY_ROLE[primaryRole] ?? 1.5) : 1.6
+        const viewportFactor = primaryRole ? (VIEWPORT_RY_BY_ROLE[primaryRole] ?? 0.10) : 0.12
+        const minRy = Math.max(
+          planetShopStore.currentSunRadius * minRyFactor,
+          vMin * viewportFactor,
+        )
+        const aspectRatio = roleTier ? roleTier.rx / roleTier.ry : planetTier.rx / planetTier.ry
+        const flooredRy = Math.max(rawRy, minRy)
+        const flooredRx = flooredRy * aspectRatio
+        const maxRx = (window.innerWidth / 2) * 0.85
+        const capFactor = Math.min(1.0, maxRx / flooredRx)
+        const rx = flooredRx * capFactor
+        const ry = flooredRy * capFactor
+
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
-        const baseSizeRaw = (roleTier ? roleTier.championSize : planetTier.size) * sunScale
+        const baseSizeRaw = (roleTier ? roleTier.championSize : planetTier.size) * Math.pow(sunScale, 0.65)
         const baseSize = isMain ? baseSizeRaw : baseSizeRaw * SECONDARY_SIZE_SCALE
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
