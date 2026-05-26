@@ -26,6 +26,8 @@ const starDividers = computed(() => {
 
 const isStarHovered = ref(false)
 const isMeepHovered = ref(false)
+const isUniverseBarHovered = ref(false)
+const isStarBarHovered = ref(false)
 
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
@@ -58,6 +60,7 @@ watch(
       <!-- Star-Block -->
       <div
         class="star-block"
+        :class="{ 'star-block--lit': isStarBarHovered }"
         @mouseenter="isStarHovered = true"
         @mouseleave="isStarHovered = false"
       >
@@ -72,7 +75,7 @@ watch(
       <!-- Meep-Block -->
       <div
         class="meep-block"
-        :class="{ 'meep-block--rising': isIncreasing }"
+        :class="{ 'meep-block--rising': isIncreasing, 'meep-block--lit': isUniverseBarHovered }"
         @mouseenter="isMeepHovered = true"
         @mouseleave="isMeepHovered = false"
       >
@@ -84,7 +87,12 @@ watch(
     </div>
 
     <!-- ── Sterne-Progressbar (segmentiert) ── -->
-    <div class="star-bar-wrap" :class="{ 'star-bar-wrap--glow': isStarHovered }">
+    <div
+      class="star-bar-wrap"
+      :class="{ 'star-bar-wrap--glow': isStarHovered || isStarBarHovered }"
+      @mouseenter="isStarBarHovered = true"
+      @mouseleave="isStarBarHovered = false"
+    >
       <div class="star-bar-border" />
       <div class="star-segments">
         <div
@@ -107,7 +115,12 @@ watch(
     </div>
 
     <!-- Große RPG-Progressbar -->
-    <div class="rpg-bar-wrap" :class="{ 'rpg-bar-wrap--glow': isMeepHovered }">
+    <div
+      class="rpg-bar-wrap"
+      :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
+      @mouseenter="isUniverseBarHovered = true"
+      @mouseleave="isUniverseBarHovered = false"
+    >
       <div class="rpg-bar-border" />
       <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
         <div class="rpg-bar-flow" />
@@ -118,7 +131,7 @@ watch(
         <div class="rpg-tick" style="left: 50%" />
         <div class="rpg-tick" style="left: 75%" />
       </div>
-      <div class="rpg-bar-percent" :class="{ 'rpg-bar-percent--visible': isMeepHovered }">
+      <div class="rpg-bar-percent" :class="{ 'rpg-bar-percent--visible': isMeepHovered || isUniverseBarHovered }">
         {{ gameStore.universeRescueProgress.toFixed(1) }}%
       </div>
     </div>
@@ -192,6 +205,9 @@ watch(
   white-space: nowrap;
   text-shadow: 0 0 8px rgba(82, 184, 48, 0.35);
   letter-spacing: -0.01em;
+  transition:
+    color 0.3s,
+    text-shadow 0.3s;
 }
 
 /* ── Meep-Block ────────────────────────────── */
@@ -246,6 +262,30 @@ watch(
   text-shadow:
     0 0 12px rgba(251, 146, 60, 0.85),
     0 0 24px rgba(251, 146, 60, 0.4);
+}
+
+/* ── Star-Block lit (Star-Bar hover) ─────── */
+.star-block--lit .star-icon {
+  filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
+  transform: scale(1.05) translateZ(0);
+}
+.star-block--lit .star-value {
+  color: #c8f080;
+  text-shadow:
+    0 0 10px rgba(82, 184, 48, 0.7),
+    0 0 20px rgba(82, 184, 48, 0.3);
+}
+
+/* ── Meep-Block lit (Universe-Bar hover) ──── */
+.meep-block--lit .meep-icon {
+  filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.9));
+  transform: scale(1.05) translateZ(0);
+}
+.meep-block--lit .meep-value {
+  color: #fdba74;
+  text-shadow:
+    0 0 10px rgba(251, 146, 60, 0.75),
+    0 0 20px rgba(251, 146, 60, 0.35);
 }
 
 /* ── Stats-Divider ─────────────────────────── */
