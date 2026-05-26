@@ -273,8 +273,19 @@ export function useStarSystem() {
 
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
-    const sunScale = usePlanetShopStore().currentSunRadius / SUN_RADIUS
+    const planetShopStore = usePlanetShopStore()
+    const currentSunRadius = planetShopStore.currentSunRadius
+    const sunScale = currentSunRadius / SUN_RADIUS
     const orbitScaleVal = orbitScale.value
+
+    const vMin = Math.min(window.innerWidth, window.innerHeight)
+    const adcBaseRy = SUN_RADIUS * 5.43
+    const adcBaseRx = SUN_RADIUS * 12.67
+    const adcRawRy = adcBaseRy * sunScale * orbitScaleVal
+    const adcMinRy = Math.max(currentSunRadius * 2.6, vMin * 0.22)
+    const adcFlooredRy = Math.max(adcRawRy, adcMinRy)
+    const adcFlooredRx = adcFlooredRy * (adcBaseRx / adcBaseRy)
+    const adcActualRx = Math.min(adcFlooredRx, screenCx * 0.85)
 
     const newRenders: StarRenderEntry[] = []
 
@@ -285,8 +296,24 @@ export function useStarSystem() {
       starAngles.set(star.id, sAngle)
 
       const starSunScale = Math.max(0.9, sunScale)
-      const scaledOrbitRx = star.orbitRx * starSunScale * orbitScaleVal
-      const scaledOrbitRy = star.orbitRy * starSunScale * orbitScaleVal
+      let scaledOrbitRx = star.orbitRx * starSunScale * orbitScaleVal
+      let scaledOrbitRy = star.orbitRy * starSunScale * orbitScaleVal
+
+      if (star.starType !== 'galaxy_boss') {
+        const starAspect = star.orbitRx / star.orbitRy
+        const tierGap = star.starType === 'resource' ? 140 : 60
+        const minRx = adcActualRx + tierGap
+        if (scaledOrbitRx < minRx) {
+          scaledOrbitRx = minRx
+          scaledOrbitRy = minRx / starAspect
+        }
+        const viewportMaxRx = screenCx - 20
+        if (scaledOrbitRx > viewportMaxRx) {
+          const capFactor = viewportMaxRx / scaledOrbitRx
+          scaledOrbitRx *= capFactor
+          scaledOrbitRy *= capFactor
+        }
+      }
 
       const { x: sx, y: sy } = getOrbitPos(
         sAngle,

@@ -347,7 +347,12 @@ const planetShopStore = usePlanetShopStore()
 const { orbitScale } = useOrbitScale()
 
 const scaledStarOrbitTiers = computed(() =>
-  ORBIT_TIERS.star.map(tier => {
+  ORBIT_TIERS.star.map((tier, i) => {
+    const type = i === 0 ? 'champion' : 'resource'
+    const activeStar = starRenders.value.find(s => s.starType === type)
+    if (activeStar) {
+      return { ...tier, rx: activeStar.orbitRx, ry: activeStar.orbitRy }
+    }
     const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
     const starSunScale = Math.max(0.9, sunScale)
     return {
@@ -392,8 +397,8 @@ const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 
 const starOrbitVisible = computed(() => [
-  starRenders.value.some((s) => s.starType === 'champion' && s.isBehind),
-  starRenders.value.some((s) => s.starType === 'resource' && s.isBehind),
+  starRenders.value.some((s) => s.starType === 'champion' && !s.isBehind),
+  starRenders.value.some((s) => s.starType === 'resource' && !s.isBehind),
 ])
 
 const roleOrbitVisibility = computed(() =>
