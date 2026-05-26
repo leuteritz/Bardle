@@ -238,6 +238,9 @@ watch(
 
 /* ── Stats-Divider ─────────────────────────── */
 .stats-divider {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
   flex-shrink: 0;
   color: rgba(255, 200, 80, 0.4);
   font-size: 1.2rem;
