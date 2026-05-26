@@ -59,7 +59,7 @@ watch(
     <div class="stats-row">
       <!-- Galaxy-Block -->
       <div class="galaxy-block">
-        <span class="galaxy-icon">🌌</span>
+        <img src="/img/galaxy.png" class="galaxy-icon" alt="Galaxie" />
         <span class="galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
       </div>
 
@@ -187,15 +187,20 @@ watch(
 }
 
 .galaxy-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-  user-select: none;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transform: translateZ(0);
+  will-change: transform;
+  image-rendering: auto;
   transition:
     transform 0.2s,
     filter 0.3s;
+  user-select: none;
 }
 .galaxy-icon:hover {
-  transform: scale(1.1);
+  transform: scale(1.1) translateZ(0);
   filter: drop-shadow(0 0 8px rgba(138, 100, 220, 0.85));
 }
 
