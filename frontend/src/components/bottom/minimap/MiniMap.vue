@@ -36,17 +36,6 @@
             <rect width="440" height="440" fill="url(#gridFade)" />
           </svg>
 
-          <!-- ── Sterne-Zähler unten mittig ── -->
-          <div
-            v-if="!galaxyStore.isComplete && !galaxyStore.isBossSearchActive"
-            class="minimap-planet-count"
-          >
-            <img src="/img/star.png" alt="★" class="star-icon planet-count-icon">
-            <span class="planet-count-text"
-              >{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span
-            >
-          </div>
-
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <div v-if="!isRescuing" class="hud-panel">
             <div class="hud-metric hud-metric--arrival">
@@ -64,12 +53,6 @@
                 <span class="hud-metric-value">{{ speedDisplay }}</span>
               </div>
             </template>
-          </div>
-
-          <!-- ── Galaxie-Nummer unten links · gleicher Stil wie HUD-Metriken ── -->
-          <div class="minimap-galaxy-display">
-            <span class="hud-metric-label">GAL</span>
-            <span class="hud-metric-value">{{ galaxyStore.currentGalaxy }}</span>
           </div>
 
           <!-- ── Boss-Suche Label ── -->
@@ -302,40 +285,6 @@ export default defineComponent({
   z-index: 2;
 }
 
-/* ── Sterne-Zähler ── */
-.minimap-planet-count {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 10;
-  pointer-events: none;
-  user-select: none;
-  white-space: nowrap;
-  background: rgba(10, 6, 2, 0.72);
-  border: 1px solid rgba(210, 160, 40, 0.22);
-  border-radius: 20px;
-  padding: 4px 14px 5px;
-}
-
-.planet-count-icon {
-  font-size: 1rem;
-  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.8));
-}
-
-.planet-count-text {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #ffe484;
-  letter-spacing: 0.14em;
-  text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.9),
-    0 1px 3px rgba(0, 0, 0, 0.98);
-}
-
 /* ═══════════════════════════════════════════════
    HUD-Panel
    ═══════════════════════════════════════════════ */
@@ -406,21 +355,6 @@ export default defineComponent({
   letter-spacing: 0.05em;
   line-height: 1.1;
   white-space: nowrap;
-}
-
-/* ── Galaxie-Nummer · unten links · kein Hintergrund ── */
-.minimap-galaxy-display {
-  position: absolute;
-  bottom: 14px;
-  left: 14px;
-  z-index: 10;
-  pointer-events: none;
-  user-select: none;
-
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
 }
 
 /* ── Boss-Suche ── */
