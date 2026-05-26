@@ -19,6 +19,11 @@ const starSegments = computed(() => {
   }))
 })
 
+const starDividers = computed(() => {
+  const n = starSegments.value.length
+  return n > 1 ? Array.from({ length: n - 1 }, (_, i) => ((i + 1) / n) * 100) : []
+})
+
 const isStarHovered = ref(false)
 const isMeepHovered = ref(false)
 
@@ -91,6 +96,13 @@ watch(
           <div v-if="seg.filled" class="star-segment-flow" />
           <div v-if="seg.filled" class="star-segment-gloss" />
         </div>
+        <div
+          v-for="(pct, d) in starDividers"
+          :key="'div-' + d"
+          class="star-divider"
+          :style="{ left: pct + '%' }"
+          aria-hidden="true"
+        />
       </div>
     </div>
 
@@ -283,14 +295,25 @@ watch(
   z-index: 4;
 }
 
-/* Segment-Container: gleichmäßig verteilt mit 2px Lücken */
+/* Segment-Container */
 .star-segments {
   display: flex;
+  position: relative;
   height: 16px;
   width: 100%;
-  gap: 4px;
-  padding: 2px;
   box-sizing: border-box;
+}
+
+/* Overlay-Divider (always visible, independent of fill state) */
+.star-divider {
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.4);
+  z-index: 3;
+  pointer-events: none;
 }
 
 /* Einzelnes Segment */
