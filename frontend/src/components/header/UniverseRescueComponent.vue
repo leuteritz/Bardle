@@ -57,6 +57,14 @@ watch(
 <template>
   <div class="universe-panel">
     <div class="stats-row">
+      <!-- Galaxy-Block -->
+      <div class="galaxy-block">
+        <span class="galaxy-icon">🌌</span>
+        <span class="galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
+      </div>
+
+      <div class="stats-divider" aria-hidden="true">|</div>
+
       <!-- Star-Block -->
       <div
         class="star-block"
@@ -167,6 +175,39 @@ watch(
   gap: 0;
   width: 100%;
   overflow: hidden;
+}
+
+/* ── Galaxy-Block ──────────────────────────── */
+.galaxy-block {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.galaxy-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  user-select: none;
+  transition:
+    transform 0.2s,
+    filter 0.3s;
+}
+.galaxy-icon:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(138, 100, 220, 0.85));
+}
+
+.galaxy-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #c8a0f0;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(138, 100, 220, 0.35);
+  letter-spacing: -0.01em;
 }
 
 /* ── Star-Block ────────────────────────────── */
