@@ -62,6 +62,8 @@ watch(
         >
       </div>
 
+      <div class="stats-divider" aria-hidden="true">|</div>
+
       <!-- Meep-Block -->
       <div
         class="meep-block"
@@ -73,14 +75,6 @@ watch(
         <span class="meep-value" :class="{ 'meep-value--rising': isIncreasing }">
           {{ formatNumber(displayMeeps) }}
         </span>
-      </div>
-
-      <div class="divider" aria-hidden="true" />
-
-      <!-- Prozent-Block -->
-      <div class="percent-block">
-        <span class="percent-value">{{ gameStore.universeRescueProgress.toFixed(1) }}</span>
-        <span class="percent-sym">%</span>
       </div>
     </div>
 
@@ -111,6 +105,9 @@ watch(
         <div class="rpg-tick" style="left: 25%" />
         <div class="rpg-tick" style="left: 50%" />
         <div class="rpg-tick" style="left: 75%" />
+      </div>
+      <div class="rpg-bar-percent" :class="{ 'rpg-bar-percent--visible': isMeepHovered }">
+        {{ gameStore.universeRescueProgress.toFixed(1) }}%
       </div>
     </div>
 
@@ -171,17 +168,17 @@ watch(
 }
 .star-icon:hover {
   transform: scale(1.1) translateZ(0);
-  filter: drop-shadow(0 0 8px rgba(64, 168, 232, 0.85));
+  filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
 }
 
 .star-value {
   font-size: 1.1rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: #7ecff0;
+  color: #a8e060;
   line-height: 1;
   white-space: nowrap;
-  text-shadow: 0 0 8px rgba(64, 168, 232, 0.35);
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.35);
   letter-spacing: -0.01em;
 }
 
@@ -190,9 +187,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 5px;
-  flex: 1;
-  min-width: 0;
-  margin-left: 12px;
+  flex-shrink: 0;
   isolation: isolate;
   transition: filter 0.3s;
 }
@@ -241,45 +236,14 @@ watch(
     0 0 24px rgba(251, 146, 60, 0.4);
 }
 
-/* ── Trennlinie ────────────────────────────── */
-.divider {
+/* ── Stats-Divider ─────────────────────────── */
+.stats-divider {
   flex-shrink: 0;
-  width: 1px;
-  height: 32px;
-  margin-inline: 10px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(255, 200, 80, 0.3) 25%,
-    rgba(255, 200, 80, 0.3) 75%,
-    transparent
-  );
-}
-
-/* ── Prozent-Block ─────────────────────────── */
-.percent-block {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.percent-value {
-  font-size: 1.4rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #e8c040;
+  color: rgba(255, 200, 80, 0.4);
+  font-size: 1.2rem;
   line-height: 1;
-  letter-spacing: -0.02em;
-  text-shadow:
-    0 0 10px rgba(255, 200, 0, 0.6),
-    0 0 22px rgba(255, 200, 0, 0.2);
-}
-.percent-sym {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: rgba(232, 192, 64, 0.6);
-  line-height: 1;
+  padding-inline: 10px;
+  user-select: none;
 }
 
 /* ================================================================
@@ -292,17 +256,17 @@ watch(
   border-radius: 4px;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(64, 168, 232, 0.2),
+    0 0 0 2px rgba(82, 184, 48, 0.2),
     inset 0 2px 6px rgba(0, 0, 0, 0.65);
-  background: rgba(4, 8, 16, 0.75);
+  background: #050808;
   transition: box-shadow 0.25s ease;
   overflow: hidden;
 }
 .star-bar-wrap--glow {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(64, 168, 232, 0.55),
-    0 0 14px rgba(64, 168, 232, 0.55),
+    0 0 0 2px rgba(82, 184, 48, 0.55),
+    0 0 14px rgba(82, 184, 48, 0.55),
     inset 0 2px 6px rgba(0, 0, 0, 0.65);
 }
 
@@ -311,7 +275,7 @@ watch(
   position: absolute;
   inset: 0;
   border-radius: 4px;
-  border: 1px solid rgba(64, 168, 232, 0.25);
+  border: 1px solid rgba(82, 184, 48, 0.25);
   pointer-events: none;
   z-index: 4;
 }
@@ -321,7 +285,7 @@ watch(
   display: flex;
   height: 16px;
   width: 100%;
-  gap: 2px;
+  gap: 4px;
   padding: 2px;
   box-sizing: border-box;
 }
@@ -330,7 +294,7 @@ watch(
 .star-segment {
   flex: 1;
   border-radius: 2px;
-  background: rgba(20, 40, 80, 0.5);
+  background: rgba(10, 20, 10, 0.6);
   position: relative;
   overflow: hidden;
   transition:
@@ -342,15 +306,13 @@ watch(
 .star-segment--filled {
   background: linear-gradient(
     to bottom,
-    rgba(160, 220, 255, 0.75) 0%,
-    rgba(64, 168, 232, 1) 25%,
-    rgba(16, 96, 192, 1) 55%,
-    rgba(64, 168, 232, 1) 78%,
-    rgba(160, 220, 255, 0.7) 100%
+    rgba(160, 230, 100, 0.75) 0%,
+    rgba(82, 184, 48, 1) 25%,
+    rgba(46, 122, 26, 1) 55%,
+    rgba(82, 184, 48, 1) 78%,
+    rgba(160, 230, 100, 0.7) 100%
   );
-  box-shadow:
-    0 0 6px rgba(64, 168, 232, 0.5),
-    inset 0 0 4px rgba(64, 168, 232, 0.2);
+  box-shadow: inset 0 0 5px rgba(82, 184, 48, 0.3);
   animation: segmentPulse 3.5s ease-in-out infinite;
 }
 
@@ -375,7 +337,7 @@ watch(
   left: 0;
   right: 0;
   height: 45%;
-  background: linear-gradient(to bottom, rgba(160, 220, 255, 0.22) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(160, 230, 100, 0.22) 0%, transparent 100%);
   border-radius: 2px 2px 0 0;
   pointer-events: none;
 }
@@ -383,14 +345,10 @@ watch(
 @keyframes segmentPulse {
   0%,
   100% {
-    box-shadow:
-      0 0 6px rgba(64, 168, 232, 0.4),
-      inset 0 0 4px rgba(64, 168, 232, 0.1);
+    box-shadow: inset 0 0 4px rgba(82, 184, 48, 0.15);
   }
   50% {
-    box-shadow:
-      0 0 14px rgba(64, 168, 232, 0.7),
-      inset 0 0 8px rgba(64, 168, 232, 0.25);
+    box-shadow: inset 0 0 8px rgba(82, 184, 48, 0.35);
   }
 }
 
@@ -485,6 +443,30 @@ watch(
   bottom: 20%;
   width: 1px;
   background: rgba(255, 215, 0, 0.2);
+}
+
+.rpg-bar-percent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  letter-spacing: 0.03em;
+  z-index: 5;
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  pointer-events: none;
+}
+.rpg-bar-percent--visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @keyframes barPulse {
