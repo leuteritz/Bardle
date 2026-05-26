@@ -30,11 +30,17 @@
         left: chimeGainPos.x + 'px',
       }"
     >
-      <span class="text-5xl chime-gain-text"> +{{ gameStore.chimesPerClick }} </span>
+      <span class="chime-gain-text" :style="{ fontSize: chimePopupFontSize + 'px' }">
+        +{{ gameStore.chimesPerClick }}
+      </span>
       <img
         src="/img/BardAbilities/BardChime.png"
-        class="w-16 h-16 rpg-img"
-        style="filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))"
+        class="rpg-img"
+        :style="{
+          width: chimePopupIconSize + 'px',
+          height: chimePopupIconSize + 'px',
+          filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))',
+        }"
       />
     </div>
   </div>
@@ -83,6 +89,14 @@ export default defineComponent({
       filter: 'drop-shadow(0 0 30px rgba(251, 191, 36, 0.8))',
       transition: 'width 1.5s ease, height 1.5s ease',
     }))
+
+    const chimePopupFontSize = computed(() =>
+      Math.max(planetShopStore.currentSunRadius * 0.5, 22),
+    )
+
+    const chimePopupIconSize = computed(() =>
+      Math.max(planetShopStore.currentSunRadius * 0.6, 28),
+    )
 
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
@@ -136,6 +150,8 @@ export default defineComponent({
       chimeGainKey,
       chimeButtonStyle,
       chimeIconStyle,
+      chimePopupFontSize,
+      chimePopupIconSize,
     }
   },
 })
