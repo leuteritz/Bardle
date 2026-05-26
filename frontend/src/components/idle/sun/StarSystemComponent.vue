@@ -4,7 +4,7 @@
     <svg class="orbit-tracks-svg" :viewBox="`0 0 ${screenW} ${screenH}`" aria-hidden="true">
       <template v-if="hasActiveStars">
         <OrbitPath
-          v-for="(tier, i) in ORBIT_TIERS.star"
+          v-for="(tier, i) in scaledStarOrbitTiers"
           :key="'track-star-' + i"
           :color="tier.color"
           :x="screenCx"
@@ -315,6 +315,7 @@ import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { usePlayerStore } from '../../../stores/playerStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useRenderingPaused } from '../../../composables/useRenderingPaused'
+import { useOrbitScale } from '../../../composables/useOrbitScale'
 import { useProjectileSystem } from '../../../composables/useProjectileSystem'
 import { MATERIALS } from '../../../config/materials'
 import { formatNumber } from '../../../config/numberFormat'
@@ -343,6 +344,19 @@ function handleStarClick(star: StarRenderEntry) {
 const combatStore = useCombatStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
+const { orbitScale } = useOrbitScale()
+
+const scaledStarOrbitTiers = computed(() =>
+  ORBIT_TIERS.star.map(tier => {
+    const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+    const starSunScale = Math.max(0.9, sunScale)
+    return {
+      ...tier,
+      rx: tier.rx * starSunScale * orbitScale.value,
+      ry: tier.ry * starSunScale * orbitScale.value,
+    }
+  })
+)
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const { isRenderingPaused } = useRenderingPaused()

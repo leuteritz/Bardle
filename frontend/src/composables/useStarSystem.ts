@@ -284,8 +284,9 @@ export function useStarSystem() {
       sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)
 
-      const scaledOrbitRx = star.orbitRx * sunScale * orbitScaleVal
-      const scaledOrbitRy = star.orbitRy * sunScale * orbitScaleVal
+      const starSunScale = Math.max(0.9, sunScale)
+      const scaledOrbitRx = star.orbitRx * starSunScale * orbitScaleVal
+      const scaledOrbitRy = star.orbitRy * starSunScale * orbitScaleVal
 
       const { x: sx, y: sy } = getOrbitPos(
         sAngle,
@@ -437,8 +438,8 @@ export function useStarSystem() {
         opacity: sOpacity,
         isBehind: sIsBehind,
         filterStyle: starFilterStyle,
-        orbitRx: star.orbitRx,
-        orbitRy: star.orbitRy,
+        orbitRx: scaledOrbitRx,
+        orbitRy: scaledOrbitRy,
         orbitTilt: star.orbitTilt,
         hintOpacity: (1 - visibleFactor) * spawnFactor,
         totalPlanets: star.planetSlots.length,
