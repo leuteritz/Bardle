@@ -397,8 +397,8 @@ const hasActiveStars = computed(() => starRenders.value.length > 0)
 const hasActiveChampions = computed(() => combatStore.champions.length > 0)
 
 const starOrbitVisible = computed(() => [
-  starRenders.value.some((s) => s.starType === 'champion' && !s.isBehind),
-  starRenders.value.some((s) => s.starType === 'resource' && !s.isBehind),
+  starRenders.value.some((s) => s.starType === 'champion' && s.isBehind),
+  starRenders.value.some((s) => s.starType === 'resource' && s.isBehind),
 ])
 
 const roleOrbitVisibility = computed(() =>
