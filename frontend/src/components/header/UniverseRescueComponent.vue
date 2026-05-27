@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { formatNumber } from '@/config/numberFormat'
@@ -7,27 +7,9 @@ import { formatNumber } from '@/config/numberFormat'
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 
-const starsProgress = computed(() =>
-  Math.min(100, (galaxyStore.starsRescued / Math.max(1, galaxyStore.starsRequired)) * 100),
-)
-
-// Array für jedes Stern-Segment
-const starSegments = computed(() => {
-  const total = Math.max(1, galaxyStore.starsRequired)
-  return Array.from({ length: total }, (_, i) => ({
-    filled: i < galaxyStore.starsRescued,
-  }))
-})
-
-const starDividers = computed(() => {
-  const n = starSegments.value.length
-  return n > 1 ? Array.from({ length: n - 1 }, (_, i) => ((i + 1) / n) * 100) : []
-})
-
 const isStarHovered = ref(false)
 const isMeepHovered = ref(false)
 const isUniverseBarHovered = ref(false)
-const isStarBarHovered = ref(false)
 
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
@@ -56,31 +38,32 @@ watch(
 
 <template>
   <div class="universe-panel">
-    <div class="stats-row">
-      <!-- Galaxy-Block -->
-      <div class="galaxy-block">
-        <img src="/img/galaxy.png" class="galaxy-icon" alt="Galaxie" />
-        <span class="galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
+    <!-- HUD Top: Galaxy + Stars stat cards -->
+    <div class="hud-top">
+      <div class="stat-card stat-card--galaxy">
+        <img src="/img/galaxy.png" class="stat-icon" alt="Galaxie" />
+        <span class="stat-card-label">GALAXY</span>
+        <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
       </div>
 
-      <div class="stats-divider" aria-hidden="true">|</div>
+      <div class="hud-divider" aria-hidden="true" />
 
-      <!-- Star-Block -->
       <div
-        class="star-block"
-        :class="{ 'star-block--lit': isStarBarHovered }"
+        class="stat-card stat-card--stars"
+        :class="{ 'stat-card--lit-green': isStarHovered }"
         @mouseenter="isStarHovered = true"
         @mouseleave="isStarHovered = false"
       >
-        <img src="/img/star.png" class="star-icon" alt="Sterne" />
-        <span class="star-value"
-          >{{ galaxyStore.starsRescued }} / {{ galaxyStore.starsRequired }}</span
-        >
+        <img src="/img/star.png" class="stat-icon" alt="Sterne" />
+        <span class="stat-card-label">STARS</span>
+        <span class="stat-card-value star-value">
+          {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span>{{ galaxyStore.starsRequired }}
+        </span>
       </div>
+    </div>
 
-      <div class="stats-divider" aria-hidden="true">|</div>
-
-      <!-- Meep-Block -->
+    <!-- Bottom row: Meep + Universe progress bar -->
+    <div class="bottom-row">
       <div
         class="meep-block"
         :class="{ 'meep-block--rising': isIncreasing, 'meep-block--lit': isUniverseBarHovered }"
@@ -92,55 +75,29 @@ watch(
           {{ formatNumber(displayMeeps) }}
         </span>
       </div>
-    </div>
 
-    <!-- ── Sterne-Progressbar (segmentiert) ── -->
-    <div
-      class="star-bar-wrap"
-      :class="{ 'star-bar-wrap--glow': isStarHovered || isStarBarHovered }"
-      @mouseenter="isStarBarHovered = true"
-      @mouseleave="isStarBarHovered = false"
-    >
-      <div class="star-bar-border" />
-      <div class="star-segments">
-        <div
-          v-for="(seg, i) in starSegments"
-          :key="i"
-          class="star-segment"
-          :class="{ 'star-segment--filled': seg.filled }"
-        >
-          <div v-if="seg.filled" class="star-segment-flow" />
-          <div v-if="seg.filled" class="star-segment-gloss" />
+      <div
+        class="rpg-bar-wrap"
+        :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
+        @mouseenter="isUniverseBarHovered = true"
+        @mouseleave="isUniverseBarHovered = false"
+      >
+        <div class="rpg-bar-border" />
+        <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
+          <div class="rpg-bar-flow" />
+          <div class="rpg-bar-gloss" />
+        </div>
+        <div class="rpg-ticks" aria-hidden="true">
+          <div class="rpg-tick" style="left: 25%" />
+          <div class="rpg-tick" style="left: 50%" />
+          <div class="rpg-tick" style="left: 75%" />
         </div>
         <div
-          v-for="(pct, d) in starDividers"
-          :key="'div-' + d"
-          class="star-divider"
-          :style="{ left: pct + '%' }"
-          aria-hidden="true"
-        />
-      </div>
-    </div>
-
-    <!-- Große RPG-Progressbar -->
-    <div
-      class="rpg-bar-wrap"
-      :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
-      @mouseenter="isUniverseBarHovered = true"
-      @mouseleave="isUniverseBarHovered = false"
-    >
-      <div class="rpg-bar-border" />
-      <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
-        <div class="rpg-bar-flow" />
-        <div class="rpg-bar-gloss" />
-      </div>
-      <div class="rpg-ticks" aria-hidden="true">
-        <div class="rpg-tick" style="left: 25%" />
-        <div class="rpg-tick" style="left: 50%" />
-        <div class="rpg-tick" style="left: 75%" />
-      </div>
-      <div class="rpg-bar-percent" :class="{ 'rpg-bar-percent--visible': isMeepHovered || isUniverseBarHovered }">
-        {{ gameStore.universeRescueProgress.toFixed(1) }}%
+          class="rpg-bar-percent"
+          :class="{ 'rpg-bar-percent--visible': isMeepHovered || isUniverseBarHovered }"
+        >
+          {{ gameStore.universeRescueProgress.toFixed(1) }}%
+        </div>
       </div>
     </div>
 
@@ -167,28 +124,27 @@ watch(
 }
 
 /* ================================================================
-   STATS-ZEILE
+   HUD TOP — two stat cards
    ================================================================ */
-.stats-row {
+.hud-top {
   display: flex;
-  align-items: center;
-  gap: 0;
+  align-items: stretch;
   width: 100%;
-  overflow: hidden;
 }
 
-/* ── Galaxy-Block ──────────────────────────── */
-.galaxy-block {
+.stat-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  isolation: isolate;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  padding: 4px 6px;
 }
 
-.galaxy-icon {
-  width: 40px;
-  height: 40px;
+.stat-icon {
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
   transform: translateZ(0);
@@ -199,79 +155,95 @@ watch(
     filter 0.3s;
   user-select: none;
 }
-.galaxy-icon:hover {
+
+.stat-card--galaxy .stat-icon:hover {
   transform: scale(1.1) translateZ(0);
   filter: drop-shadow(0 0 8px rgba(138, 100, 220, 0.85));
 }
 
-.galaxy-value {
-  font-size: 1.1rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #c8a0f0;
-  line-height: 1;
-  white-space: nowrap;
-  text-shadow: 0 0 8px rgba(138, 100, 220, 0.35);
-  letter-spacing: -0.01em;
-}
-
-/* ── Star-Block ────────────────────────────── */
-.star-block {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  isolation: isolate;
-}
-
-.star-icon {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-  transform: translateZ(0);
-  will-change: transform;
-  image-rendering: auto;
-  transition:
-    transform 0.2s,
-    filter 0.3s;
-  user-select: none;
-}
-.star-icon:hover {
+.stat-card--stars .stat-icon:hover {
   transform: scale(1.1) translateZ(0);
   filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
 }
 
-.star-value {
-  font-size: 1.1rem;
+.stat-card-label {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 200, 80, 0.5);
+  line-height: 1;
+}
+
+.stat-card-value {
+  font-size: 1.55rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: #a8e060;
   line-height: 1;
   white-space: nowrap;
-  text-shadow: 0 0 8px rgba(82, 184, 48, 0.35);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+.galaxy-value {
+  color: #c8a0f0;
+  text-shadow: 0 0 10px rgba(138, 100, 220, 0.45);
+}
+
+.star-value {
+  color: #a8e060;
+  text-shadow: 0 0 10px rgba(82, 184, 48, 0.4);
   transition:
     color 0.3s,
     text-shadow 0.3s;
+}
+
+.stat-card--lit-green .star-value {
+  color: #c8f080;
+  text-shadow:
+    0 0 14px rgba(82, 184, 48, 0.7),
+    0 0 28px rgba(82, 184, 48, 0.3);
+}
+
+.stat-card-sep {
+  color: rgba(255, 200, 80, 0.45);
+  font-size: 1.1rem;
+  margin-inline: 1px;
+}
+
+.hud-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 200, 80, 0.15);
+  margin-inline: 6px;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   BOTTOM ROW — Meep + RPG bar
+   ================================================================ */
+.bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 /* ── Meep-Block ────────────────────────────── */
 .meep-block {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-shrink: 0;
   isolation: isolate;
   transition: filter 0.3s;
 }
+
 .meep-block--rising {
   filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
 }
 
 .meep-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   flex-shrink: 0;
   image-rendering: auto;
@@ -283,13 +255,14 @@ watch(
     filter 0.3s;
   user-select: none;
 }
+
 .meep-icon:hover {
   transform: scale(1.1) translateZ(0);
   filter: drop-shadow(0 0 12px rgba(251, 146, 60, 1));
 }
 
 .meep-value {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;
@@ -303,6 +276,7 @@ watch(
     text-shadow 0.3s;
   letter-spacing: -0.01em;
 }
+
 .meep-value--rising {
   color: #fdba74;
   text-shadow:
@@ -310,23 +284,11 @@ watch(
     0 0 24px rgba(251, 146, 60, 0.4);
 }
 
-/* ── Star-Block lit (Star-Bar hover) ─────── */
-.star-block--lit .star-icon {
-  filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
-  transform: scale(1.05) translateZ(0);
-}
-.star-block--lit .star-value {
-  color: #c8f080;
-  text-shadow:
-    0 0 10px rgba(82, 184, 48, 0.7),
-    0 0 20px rgba(82, 184, 48, 0.3);
-}
-
-/* ── Meep-Block lit (Universe-Bar hover) ──── */
 .meep-block--lit .meep-icon {
   filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.9));
   transform: scale(1.05) translateZ(0);
 }
+
 .meep-block--lit .meep-value {
   color: #fdba74;
   text-shadow:
@@ -334,143 +296,13 @@ watch(
     0 0 20px rgba(251, 146, 60, 0.35);
 }
 
-/* ── Stats-Divider ─────────────────────────── */
-.stats-divider {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  flex-shrink: 0;
-  color: rgba(255, 200, 80, 0.4);
-  font-size: 1.2rem;
-  line-height: 1;
-  padding-inline: 10px;
-  user-select: none;
-}
-
-/* ================================================================
-   STERNE-PROGRESSBAR – SEGMENTIERT
-   ================================================================ */
-.star-bar-wrap {
-  position: relative;
-  width: 100%;
-  flex-shrink: 0;
-  border-radius: 4px;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(82, 184, 48, 0.2),
-    inset 0 2px 6px rgba(0, 0, 0, 0.65);
-  background: #050808;
-  transition: box-shadow 0.25s ease;
-  overflow: hidden;
-}
-.star-bar-wrap--glow {
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 2px rgba(82, 184, 48, 0.55),
-    0 0 14px rgba(82, 184, 48, 0.55),
-    inset 0 2px 6px rgba(0, 0, 0, 0.65);
-}
-
-/* Rahmen über allem */
-.star-bar-border {
-  position: absolute;
-  inset: 0;
-  border-radius: 4px;
-  border: 1px solid rgba(82, 184, 48, 0.25);
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* Segment-Container */
-.star-segments {
-  display: flex;
-  position: relative;
-  height: 16px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Overlay-Divider (always visible, independent of fill state) */
-.star-divider {
-  position: absolute;
-  top: 20%;
-  bottom: 20%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.4);
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* Einzelnes Segment */
-.star-segment {
-  flex: 1;
-  border-radius: 2px;
-  background: rgba(10, 20, 10, 0.6);
-  position: relative;
-  overflow: hidden;
-  transition:
-    background 0.4s ease,
-    box-shadow 0.4s ease;
-}
-
-/* Gefülltes Segment */
-.star-segment--filled {
-  background: linear-gradient(
-    to bottom,
-    rgba(160, 230, 100, 0.75) 0%,
-    rgba(82, 184, 48, 1) 25%,
-    rgba(46, 122, 26, 1) 55%,
-    rgba(82, 184, 48, 1) 78%,
-    rgba(160, 230, 100, 0.7) 100%
-  );
-  box-shadow: inset 0 0 5px rgba(82, 184, 48, 0.3);
-  animation: segmentPulse 3.5s ease-in-out infinite;
-}
-
-/* Fließendes Streifenmuster im Segment */
-.star-segment-flow {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    rgba(255, 255, 255, 0.09) 8px,
-    rgba(255, 255, 255, 0.03) 12px,
-    transparent 20px
-  );
-  animation: flowMove 2.2s linear infinite;
-}
-
-/* Glanz oben im Segment */
-.star-segment-gloss {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 45%;
-  background: linear-gradient(to bottom, rgba(160, 230, 100, 0.22) 0%, transparent 100%);
-  border-radius: 2px 2px 0 0;
-  pointer-events: none;
-}
-
-@keyframes segmentPulse {
-  0%,
-  100% {
-    box-shadow: inset 0 0 4px rgba(82, 184, 48, 0.15);
-  }
-  50% {
-    box-shadow: inset 0 0 8px rgba(82, 184, 48, 0.35);
-  }
-}
-
 /* ================================================================
    GROSSE RPG-PROGRESSBAR
    ================================================================ */
 .rpg-bar-wrap {
   position: relative;
-  width: 100%;
-  height: 24px;
+  flex: 1;
+  height: 22px;
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
@@ -481,6 +313,7 @@ watch(
   background: rgba(8, 4, 0, 0.7);
   transition: box-shadow 0.25s ease;
 }
+
 .rpg-bar-wrap--glow {
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
@@ -549,6 +382,7 @@ watch(
   pointer-events: none;
   z-index: 2;
 }
+
 .rpg-tick {
   position: absolute;
   top: 20%;
@@ -563,7 +397,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
@@ -576,6 +410,7 @@ watch(
     transform 0.25s ease;
   pointer-events: none;
 }
+
 .rpg-bar-percent--visible {
   opacity: 1;
   transform: translateY(0);
@@ -594,6 +429,7 @@ watch(
       inset 0 0 10px rgba(255, 215, 0, 0.2);
   }
 }
+
 @keyframes flowMove {
   from {
     background-position-x: 0px;
@@ -610,6 +446,7 @@ watch(
   display: flex;
   flex-shrink: 0;
 }
+
 .prestige-btn {
   width: 100%;
   padding: 4px 12px;
@@ -628,9 +465,11 @@ watch(
     box-shadow 0.18s;
   animation: prestigeGlow 2.5s ease-in-out infinite;
 }
+
 .prestige-btn:hover {
   transform: scale(1.03);
 }
+
 .prestige-btn:active {
   transform: scale(0.96);
 }
