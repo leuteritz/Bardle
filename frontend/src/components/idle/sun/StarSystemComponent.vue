@@ -373,12 +373,40 @@ const midRoleImage = ROLE_BY_KEY['mid'].image
 
 const SLOT_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
 
-const activeRoleOrbits = computed(() =>
-  battleStore.headerSlots
+const MIN_RY_BY_ROLE: Record<string, number> = {
+  top: 1.35, jungle: 1.8, mid: 2.2, adc: 2.6, support: 2.6,
+}
+const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
+  top: 0.07, jungle: 0.12, mid: 0.17, adc: 0.22, support: 0.22,
+}
+
+const activeRoleOrbits = computed(() => {
+  const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+  const orbitScaleVal = orbitScale.value
+  const vMin = Math.min(screenW.value, screenH.value)
+
+  return battleStore.headerSlots
     .map((slot, i) => (slot != null ? SLOT_ROLES[i] : null))
     .filter((r): r is ChampionRole => r != null)
-    .map((role) => ({ role, ...ROLE_BY_KEY[role].orbit })),
-)
+    .map((role) => {
+      const roleTier = ROLE_BY_KEY[role].orbit
+      const minRy = Math.max(
+        planetShopStore.currentSunRadius * (MIN_RY_BY_ROLE[role] ?? 1.5),
+        vMin * (VIEWPORT_RY_BY_ROLE[role] ?? 0.10),
+      )
+      const aspectRatio = roleTier.rx / roleTier.ry
+      const flooredRy = Math.max(roleTier.ry * sunScale * orbitScaleVal, minRy)
+      const flooredRx = flooredRy * aspectRatio
+      const capFactor = Math.min(1.0, ((screenW.value / 2) * 0.85) / flooredRx)
+      return {
+        role,
+        rx: flooredRx * capFactor,
+        ry: flooredRy * capFactor,
+        tiltDeg: roleTier.tiltDeg,
+        color: roleTier.color,
+      }
+    })
+})
 
 const backStars = computed(() => starRenders.value.filter((s) => s.isBehind))
 const frontStars = computed(() => starRenders.value.filter((s) => !s.isBehind))

@@ -1,22 +1,5 @@
 <!-- frontend/src/components/idle/sun/ChampionOrbit.vue -->
 <template>
-  <!-- Champion Orbit-Ring Layer (nebula glow rings) -->
-  <svg class="champion-orbit-rings" aria-hidden="true">
-    <OrbitPath
-      v-for="pos in mainRingPositions"
-      :key="'ring-champ-' + pos.name"
-      :color="pos.orbitColor"
-      :x="screenCx"
-      :y="screenCy"
-      :rx="pos.orbitRx"
-      :ry="pos.orbitRy"
-      :tiltDeg="pos.tiltDeg"
-      :visible="pos.isBehind"
-      :abilityActive="!!pos.primaryRole && isAbilityActive(pos.primaryRole)"
-      :sunRadius="currentSunRadius"
-    />
-  </svg>
-
   <!-- Projektile: teleportiert sich selbst nach body -->
   <AttackProjectileLayer :shots="shots" />
 
@@ -141,7 +124,6 @@ import {
   SUN_RADIUS,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
-import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
@@ -191,7 +173,7 @@ interface LocalChampState {
 
 export default defineComponent({
   name: 'ChampionOrbit',
-  components: { AttackProjectileLayer, OrbitPath },
+  components: { AttackProjectileLayer },
   setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
@@ -227,7 +209,6 @@ export default defineComponent({
 
     const backChampions = computed(() => championRenderPositions.value.filter((p) => p.isBehind))
     const frontChampions = computed(() => championRenderPositions.value.filter((p) => !p.isBehind))
-    const mainRingPositions = computed(() => championRenderPositions.value.filter((p) => p.isMain))
 
     function getOrbitPos(
       angle: number,
@@ -523,7 +504,6 @@ export default defineComponent({
       ROLE_BY_KEY,
       backChampions,
       frontChampions,
-      mainRingPositions,
       championRenderPositions,
       shots,
       topHitActive,
@@ -537,17 +517,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Orbit-Ring SVG ───────────────────────────────────────────────────────── */
-.champion-orbit-rings {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  pointer-events: none;
-  overflow: visible;
-}
-
 /* ── Layer-Container ──────────────────────────────────────────────────────── */
 .champion-orbit-layer {
   position: fixed;
