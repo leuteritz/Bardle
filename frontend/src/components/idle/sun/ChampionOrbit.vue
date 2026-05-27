@@ -11,7 +11,7 @@
       :rx="pos.orbitRx"
       :ry="pos.orbitRy"
       :tiltDeg="pos.tiltDeg"
-      :visible="!pos.isBehind || (!!pos.primaryRole && isAbilityActive(pos.primaryRole))"
+      :visible="pos.isBehind"
       :abilityActive="!!pos.primaryRole && isAbilityActive(pos.primaryRole)"
       :sunRadius="currentSunRadius"
     />
