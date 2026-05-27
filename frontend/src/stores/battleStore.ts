@@ -41,6 +41,9 @@ import {
   BATTLE_DRAIN_REFERENCE_SECONDS,
   BATTLE_OPPONENT_POWER_MIN_FRACTION,
   BATTLE_BIG_BANG_POWER_MULTIPLIER,
+  BATTLE_INITIAL_MMR,
+  BATTLE_DEFAULT_RANK_TIER,
+  BATTLE_KILL_LOG_THROTTLE_MS,
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
@@ -53,7 +56,7 @@ let _visibilityHandler: (() => void) | null = null
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
-    mmr: 1000,
+    mmr: BATTLE_INITIAL_MMR,
     currentRank: {
       tier: 'Iron',
       division: 'IV',
@@ -246,9 +249,9 @@ export const useBattleStore = defineStore('battle', {
 
     syncTeam1ToSlots() {
       this.team1 = this.headerSlots.map((slot) => {
-        if (!slot) return { name: '', rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
+        if (!slot) return { name: '', rank: BATTLE_DEFAULT_RANK_TIER, kills: 0, deaths: 0, assists: 0 }
         const existing = this.team1.find((c) => c.name === slot)
-        return existing ?? { name: slot, rank: 'Silver', kills: 0, deaths: 0, assists: 0 }
+        return existing ?? { name: slot, rank: BATTLE_DEFAULT_RANK_TIER, kills: 0, deaths: 0, assists: 0 }
       })
     },
 
@@ -302,7 +305,7 @@ export const useBattleStore = defineStore('battle', {
           const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
           if (Math.random() < BATTLE_DEATH_CHANCE) victim.deaths += 1
           const now = Date.now()
-          if (now - _lastKillLogMs >= 3000 && killer.name && victim.name) {
+          if (now - _lastKillLogMs >= BATTLE_KILL_LOG_THROTTLE_MS && killer.name && victim.name) {
             _lastKillLogMs = now
             logChampionDefeated(killer.name, victim.name)
           }

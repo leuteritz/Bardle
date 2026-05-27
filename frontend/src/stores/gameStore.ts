@@ -38,6 +38,7 @@ import {
   ABILITY_MEEP_COST_PER_LEVEL_DEFAULT,
   ABILITY_MEEP_COST_MIN_MULTIPLIER,
   ABILITY_CPC_PER_LEVEL_DEFAULT,
+  CHIMES_PER_CLICK_BASE,
 } from '../config/constants'
 import type {
   BuildingProduction,
@@ -61,14 +62,14 @@ function chimeThresholdForLevel(level: number, exponent: number = LEVEL_EXPONENT
 
 export const useGameStore = defineStore('game', {
   state: () => ({
-    gameSpeed: 1000,
+    gameSpeed: GAME_TICK_INTERVAL_MS,
     inGameTime: 0,
 
     chimes: 0,
     chimesPerSecond: 0,
     chimesForNextLevel: LEVEL_BASE,
-    chimesPerClick: 20,
-    baseChimesPerClick: 20,
+    chimesPerClick: CHIMES_PER_CLICK_BASE,
+    baseChimesPerClick: CHIMES_PER_CLICK_BASE,
     chimesForMeep: 0,
     chimesForNextUniverse: 0,
     chimesToUniverseRescue: UNIVERSE_RESCUE_INITIAL_COST,

@@ -784,3 +784,23 @@ export const EVENT_LOG_DISMISS_MS = 7_000
 // Projectile system
 /** Total travel duration of a projectile shot (ms) */
 export const PROJECTILE_SHOT_DURATION_MS = 520
+
+// Gameplay — click base
+export const CHIMES_PER_CLICK_BASE = 20
+
+// Offline progress
+export const OFFLINE_CPS_RATE = 0.6
+export const OFFLINE_MAX_HOURS = 10
+export const OFFLINE_MIN_SECONDS = 60
+
+// CPS tracking periods (seconds) and update intervals (ms)
+export const CPS_PERIOD_1MIN_S = 60
+export const CPS_PERIOD_10MIN_S = 600
+export const CPS_PERIOD_1HOUR_S = 3600
+export const CPS_INTERVAL_10MIN_MS = 10_000
+export const CPS_INTERVAL_1HOUR_MS = 60_000
+
+// Battle — initial state
+export const BATTLE_INITIAL_MMR = 1000
+export const BATTLE_DEFAULT_RANK_TIER = 'Silver'
+export const BATTLE_KILL_LOG_THROTTLE_MS = 3000

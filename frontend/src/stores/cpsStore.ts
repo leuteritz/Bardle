@@ -1,7 +1,15 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import type { TimePeriod } from '../types'
-import { GAME_TICK_INTERVAL_MS, BUILDING_HISTORY_BUFFER_SIZE } from '../config/constants'
+import {
+  GAME_TICK_INTERVAL_MS,
+  BUILDING_HISTORY_BUFFER_SIZE,
+  CPS_PERIOD_1MIN_S,
+  CPS_PERIOD_10MIN_S,
+  CPS_PERIOD_1HOUR_S,
+  CPS_INTERVAL_10MIN_MS,
+  CPS_INTERVAL_1HOUR_MS,
+} from '../config/constants'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({
@@ -32,22 +40,22 @@ export const useCpsStore = defineStore('cps', {
       {
         key: '1min',
         label: '1 Minute',
-        duration: 60,
+        duration: CPS_PERIOD_1MIN_S,
         interval: GAME_TICK_INTERVAL_MS,
         dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
       {
         key: '10min',
         label: '10 Minutes',
-        duration: 600,
-        interval: 10000,
+        duration: CPS_PERIOD_10MIN_S,
+        interval: CPS_INTERVAL_10MIN_MS,
         dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
       {
         key: '1h',
         label: '1 Hour',
-        duration: 3600,
-        interval: 60000,
+        duration: CPS_PERIOD_1HOUR_S,
+        interval: CPS_INTERVAL_1HOUR_MS,
         dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
     ] as TimePeriod[],

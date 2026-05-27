@@ -18,13 +18,11 @@ import {
   MEEP_BASE_COST,
   SAVE_KEY,
   SAVE_VERSION,
+  OFFLINE_CPS_RATE,
+  OFFLINE_MAX_HOURS,
+  OFFLINE_MIN_SECONDS,
 } from '@/config/constants'
 import { logger } from '@/utils/logger'
-
-// ── Offline Progress Balance ──────────────────────────────────────────────────
-const OFFLINE_RATE_MULTIPLIER = 0.6
-const MAX_OFFLINE_HOURS = 10
-const MIN_OFFLINE_SECONDS = 60
 
 export function usePersistence() {
   function saveGame() {
@@ -343,11 +341,11 @@ export function usePersistence() {
       const savedAt = saved.savedAt as number | undefined
       if (savedAt && typeof savedAt === 'number') {
         const rawSeconds = Math.floor((now - savedAt) / 1000)
-        const cappedSeconds = Math.min(rawSeconds, MAX_OFFLINE_HOURS * 3600)
-        if (cappedSeconds >= MIN_OFFLINE_SECONDS) {
+        const cappedSeconds = Math.min(rawSeconds, OFFLINE_MAX_HOURS * 3600)
+        if (cappedSeconds >= OFFLINE_MIN_SECONDS) {
           const offlineMul = planetShopStore.planetOfflineBoostMultiplier
           const earned = Math.floor(
-            gameStore.chimesPerSecond * OFFLINE_RATE_MULTIPLIER * offlineMul * cappedSeconds,
+            gameStore.chimesPerSecond * OFFLINE_CPS_RATE * offlineMul * cappedSeconds,
           )
           gameStore.offlineChimes = earned
           gameStore.offlineSeconds = cappedSeconds
