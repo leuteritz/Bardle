@@ -7,7 +7,7 @@ import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
-import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS } from '../config/constants'
+import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { LabelData, PlanetType, StarType } from '../types'
@@ -18,7 +18,6 @@ const PLANET_SIZE_NORMAL = 36
 const VANISH_DURATION_MS = 800
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
-const BEHIND_SPEED_MULT = 4.5
 const STAR_BEHIND_OPACITY = 0.2
 const SPEED_LERP = 0.04
 
@@ -354,7 +353,7 @@ export function useStarSystem() {
         }
       }
 
-      const targetMul = sIsBehind ? BEHIND_SPEED_MULT : 1.0
+      const targetMul = sIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
       starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * SPEED_LERP)
 
       const baseScale = 0.72 + sDepth * 0.56

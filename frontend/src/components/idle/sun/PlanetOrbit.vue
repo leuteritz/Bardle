@@ -124,7 +124,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
@@ -132,7 +132,6 @@ import OrbitPath from './OrbitPath.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 
-const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
 const TURRET_FIRE_INTERVAL_MS = 1000
 const MIN_SHOT_DISTANCE = 32

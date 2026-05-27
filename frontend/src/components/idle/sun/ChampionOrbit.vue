@@ -122,6 +122,7 @@ import {
   SECONDARY_ANGLE_OFFSET_2,
   SECONDARY_SIZE_SCALE,
   SUN_RADIUS,
+  BEHIND_SUN_SPEED_MULTIPLIER,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -129,7 +130,6 @@ import { useOrbitScale } from '@/composables/useOrbitScale'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import type { ChampionRole } from '../../../types'
 
-const BEHIND_SUN_SPEED_MULTIPLIER = 1.5
 const BEHIND_SPEED_LERP = 0.04
 const PROJECTILE_COOLDOWN_MS = 700
 const INTERCEPT_MAX_OFFSET = 25
