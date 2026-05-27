@@ -279,7 +279,7 @@ export function usePersistence() {
               itemStore.slotEquipment[i] = {
                 weapon: saved.items.slotEquipment[i].weapon ?? null,
                 armor: saved.items.slotEquipment[i].armor ?? null,
-                misc: saved.items.slotEquipment[i].misc ?? null,
+                artefact: saved.items.slotEquipment[i].artefact ?? saved.items.slotEquipment[i].misc ?? null,
               }
             }
           }

@@ -4,13 +4,7 @@ import type { ItemCategory, ShopItem, SlotEquipment } from '@/types'
 const CAT_LABELS: Record<ItemCategory, string> = {
   weapon: 'Weapon',
   armor: 'Armor',
-  misc: 'Misc',
-}
-
-const CAT_ICONS: Record<ItemCategory, string> = {
-  weapon: '⚔️',
-  armor: '🛡️',
-  misc: '✨',
+  artefact: 'Artefact',
 }
 
 defineProps<{
@@ -28,7 +22,9 @@ const emit = defineEmits<{
   <div class="item-picker-panel">
     <div class="sub-header">
       <span class="sub-header-title">
-        Select {{ CAT_ICONS[selectedCategory] }} {{ CAT_LABELS[selectedCategory] }}
+        Select
+        <img :src="`/img/itemShop/${selectedCategory}.png`" :alt="CAT_LABELS[selectedCategory]" width="20" height="20" loading="eager" class="cat-header-img" />
+        {{ CAT_LABELS[selectedCategory] }}
       </span>
     </div>
 
@@ -228,5 +224,19 @@ const emit = defineEmits<{
   filter: drop-shadow(0 0 5px rgba(110, 192, 64, 0.8));
   flex-shrink: 0;
   line-height: 1;
+}
+
+.sub-header-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cat-header-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: auto;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 </style>

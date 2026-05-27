@@ -335,7 +335,7 @@ export interface TimedBuff {
   expiresAt: number
 }
 
-export type ItemCategory = 'weapon' | 'armor' | 'misc'
+export type ItemCategory = 'weapon' | 'armor' | 'artefact'
 export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export interface ItemEffect {
@@ -367,7 +367,7 @@ export interface ShopItem {
 export interface SlotEquipment {
   weapon: string | null
   armor: string | null
-  misc: string | null
+  artefact: string | null
 }
 
 export type MaterialRarity = 'common' | 'uncommon' | 'rare' | 'epic'

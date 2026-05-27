@@ -25,13 +25,7 @@ const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 const CAT_LABELS: Record<ItemCategory, string> = {
   weapon: 'Weapon',
   armor: 'Armor',
-  misc: 'Misc',
-}
-
-const CAT_ICONS: Record<ItemCategory, string> = {
-  weapon: '⚔️',
-  armor: '🛡️',
-  misc: '✨',
+  artefact: 'Artefact',
 }
 
 const battleStore = useBattleStore()
@@ -501,7 +495,7 @@ void globalSynergies
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
         <div class="splash-equip-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
           <button
-            v-for="cat in ['weapon', 'armor', 'misc'] as ItemCategory[]"
+            v-for="cat in ['weapon', 'armor', 'artefact'] as ItemCategory[]"
             :key="cat"
             class="hud-equip-btn"
             :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
@@ -518,7 +512,7 @@ void globalSynergies
                 />
                 <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
               </template>
-              <span v-else class="hud-equip-empty-icon">{{ CAT_ICONS[cat] }}</span>
+              <img v-else class="hud-equip-slot-img" :src="`/img/itemShop/${cat}.png`" :alt="CAT_LABELS[cat]" width="40" height="40" loading="eager" />
             </div>
             <div class="hud-equip-meta">
               <span class="hud-equip-name">{{ getEquippedItem(cat)?.name ?? '— empty —' }}</span>
@@ -588,16 +582,17 @@ void globalSynergies
               <div class="modal-tab-bar">
                 <button
                   v-for="cat in [
-                    { id: 'weapon', icon: '⚔️', label: 'Weapon' },
-                    { id: 'armor', icon: '🛡️', label: 'Armor' },
-                    { id: 'misc', icon: '✨', label: 'Misc' },
+                    { id: 'weapon', label: 'Weapon' },
+                    { id: 'armor', label: 'Armor' },
+                    { id: 'artefact', label: 'Artefact' },
                   ]"
                   :key="cat.id"
                   class="modal-tab"
                   :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
                   @click="itemShopCategory = cat.id as ItemCategory"
                 >
-                  {{ cat.icon }} {{ cat.label }}
+                  <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
+                  {{ cat.label }}
                 </button>
               </div>
               <div class="modal-content modal-content--scroll">
@@ -1498,8 +1493,6 @@ void globalSynergies
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(92, 51, 16, 0.5);
   border-radius: 7px;
   transition:
     border-color 0.15s,
@@ -1507,7 +1500,8 @@ void globalSynergies
   flex-shrink: 0;
 }
 .hud-equip-btn--filled .hud-equip-art {
-  border-color: rgba(200, 144, 64, 0.45);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(200, 144, 64, 0.45);
   box-shadow: inset 0 0 18px rgba(200, 144, 64, 0.09);
 }
 .hud-equip-btn:hover .hud-equip-art {
@@ -1542,17 +1536,28 @@ void globalSynergies
   filter: drop-shadow(0 0 16px rgba(200, 144, 64, 0.9));
   transform: scale(1.09);
 }
-.hud-equip-empty-icon {
-  font-size: 38px;
-  line-height: 1;
-  opacity: 0.2;
+.hud-equip-slot-img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  image-rendering: auto;
+  opacity: 0.3;
   transition:
     opacity 0.15s,
     transform 0.15s;
 }
-.hud-equip-btn:hover .hud-equip-empty-icon {
-  opacity: 0.5;
+.hud-equip-btn:hover .hud-equip-slot-img {
+  opacity: 0.65;
   transform: scale(1.07);
+}
+
+.modal-tab-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  image-rendering: auto;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 /* Item-Name + Kategorie */
@@ -1844,6 +1849,10 @@ void globalSynergies
 }
 .modal-tab {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 6px 10px;
   font-size: 11px;
   font-weight: 900;

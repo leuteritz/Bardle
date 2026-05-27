@@ -27,7 +27,8 @@
         :class="{ 'rpg-tab--active': activeCategory === cat.id }"
         @click="activeCategory = cat.id"
       >
-        {{ cat.icon }} {{ cat.label }}
+        <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="22" height="22" loading="eager" class="rpg-tab-img" />
+        {{ cat.label }}
       </button>
     </div>
 
@@ -146,9 +147,9 @@ export default defineComponent({
     watch(() => props.category, (val) => { if (val) activeCategory.value = val })
 
     const categories = [
-      { id: 'weapon', icon: '⚔️', label: 'Weapons' },
-      { id: 'armor', icon: '🛡️', label: 'Armor' },
-      { id: 'misc', icon: '📿', label: 'Misc' },
+      { id: 'weapon', label: 'Weapons' },
+      { id: 'armor', label: 'Armor' },
+      { id: 'artefact', label: 'Artefact' },
     ]
 
     const filteredItems = computed(() =>
@@ -411,5 +412,18 @@ export default defineComponent({
 }
 .text-white\/40 {
   color: var(--rpg-text-dim) !important;
+}
+
+.rpg-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rpg-tab-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: auto;
+  flex-shrink: 0;
 }
 </style>

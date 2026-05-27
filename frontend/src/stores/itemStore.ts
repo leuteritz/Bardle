@@ -7,7 +7,7 @@ import { ITEM_SETS } from '../config/sets'
 import type { SlotEquipment, ItemCategory, ItemSetBonus } from '../types'
 
 function emptySlotEquipment(): SlotEquipment {
-  return { weapon: null, armor: null, misc: null }
+  return { weapon: null, armor: null, artefact: null }
 }
 
 export const useItemStore = defineStore('item', {
@@ -30,7 +30,7 @@ export const useItemStore = defineStore('item', {
         for (const slot of state.slotEquipment) {
           if (slot.weapon === itemId) equipped++
           if (slot.armor === itemId) equipped++
-          if (slot.misc === itemId) equipped++
+          if (slot.artefact === itemId) equipped++
         }
         return owned - equipped
       }
@@ -41,7 +41,7 @@ export const useItemStore = defineStore('item', {
       for (const slot of state.slotEquipment) {
         const wSetId = slot.weapon ? getItemById(slot.weapon)?.setId : undefined
         const aSetId = slot.armor ? getItemById(slot.armor)?.setId : undefined
-        const mSetId = slot.misc ? getItemById(slot.misc)?.setId : undefined
+        const mSetId = slot.artefact ? getItemById(slot.artefact)?.setId : undefined
         if (wSetId && wSetId === aSetId && aSetId === mSetId) {
           activeSetIds.add(wSetId)
         }
@@ -52,7 +52,7 @@ export const useItemStore = defineStore('item', {
     totalCPSMultiplier(): number {
       let mul = 1
       for (const slot of this.slotEquipment) {
-        for (const itemId of [slot.weapon, slot.armor, slot.misc]) {
+        for (const itemId of [slot.weapon, slot.armor, slot.artefact]) {
           if (!itemId) continue
           const item = getItemById(itemId)
           if (item?.effects.cpsMultiplier) mul *= item.effects.cpsMultiplier
@@ -67,7 +67,7 @@ export const useItemStore = defineStore('item', {
     totalPowerMultiplier(): number {
       let mul = 1
       for (const slot of this.slotEquipment) {
-        for (const itemId of [slot.weapon, slot.armor, slot.misc]) {
+        for (const itemId of [slot.weapon, slot.armor, slot.artefact]) {
           if (!itemId) continue
           const item = getItemById(itemId)
           if (item?.effects.powerMultiplier) mul *= item.effects.powerMultiplier
@@ -118,7 +118,7 @@ export const useItemStore = defineStore('item', {
     },
 
     adminFillRandomEquipment(): void {
-      const categories: ItemCategory[] = ['weapon', 'armor', 'misc']
+      const categories: ItemCategory[] = ['weapon', 'armor', 'artefact']
       for (let i = 0; i < 5; i++) {
         for (const cat of categories) {
           const pool = SHOP_ITEMS.filter((item) => item.category === cat)
