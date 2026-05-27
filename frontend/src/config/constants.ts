@@ -465,7 +465,7 @@ export const ORBIT_TIERS = {
       tiltDeg: 16,
       tiltRad: 0.2793,
       color: '#FFD600',
-      size: SUN_RADIUS * 1.67,
+      size: SUN_RADIUS * 0.85,
     },
     {
       rx: SUN_RADIUS * 16.5,
@@ -473,7 +473,7 @@ export const ORBIT_TIERS = {
       tiltDeg: -14,
       tiltRad: -0.2443,
       color: '#FFD600',
-      size: SUN_RADIUS * 1.67,
+      size: SUN_RADIUS * 0.85,
     },
   ],
 } as const

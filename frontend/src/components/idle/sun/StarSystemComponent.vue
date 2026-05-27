@@ -597,7 +597,7 @@ function starSize(type: string): number {
   const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
   if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
   if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
-  return 82 * sunScale
+  return 46 * sunScale
 }
 
 function starBoxShadow(starColor: [number, number, number], s: number): string {
