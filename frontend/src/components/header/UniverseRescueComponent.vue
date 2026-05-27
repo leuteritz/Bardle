@@ -77,6 +77,7 @@ watch(
       </div>
 
       <div
+        v-if="!gameStore.prestigeAvailable"
         class="rpg-bar-wrap"
         :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
         @mouseenter="isUniverseBarHovered = true"
@@ -99,11 +100,7 @@ watch(
           {{ gameStore.universeRescueProgress.toFixed(1) }}%
         </div>
       </div>
-    </div>
-
-    <!-- Prestige Button -->
-    <div v-if="gameStore.prestigeAvailable" class="prestige-wrap">
-      <button class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">✦ PRESTIGE ✦</button>
+      <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">✦ PRESTIGE ✦</button>
     </div>
   </div>
 </template>
@@ -442,14 +439,10 @@ watch(
 /* ================================================================
    PRESTIGE BUTTON
    ================================================================ */
-.prestige-wrap {
-  display: flex;
-  flex-shrink: 0;
-}
-
 .prestige-btn {
-  width: 100%;
-  padding: 4px 12px;
+  flex: 1;
+  height: 22px;
+  padding: 0 12px;
   font-size: 0.63rem;
   font-weight: 700;
   letter-spacing: 0.14em;
