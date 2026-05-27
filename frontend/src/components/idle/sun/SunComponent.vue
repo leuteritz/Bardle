@@ -128,6 +128,9 @@
     </svg>
 
     <div class="sun-flare"></div>
+
+    <!-- Chime Particles (canvas) -->
+    <canvas ref="canvasEl" class="chime-canvas" />
   </div>
 </template>
 
@@ -136,6 +139,7 @@ import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { useGameStore } from '@/stores/gameStore'
 
 interface DynamicRay {
   id: number
@@ -151,6 +155,18 @@ interface SunspotDef {
   lat: number
   lonOffset: number
   size: number
+}
+
+interface ChimeParticle {
+  id: number
+  active: boolean
+  cx: number
+  cy: number
+  tx: number
+  ty: number
+  duration: number
+  size: number
+  startTime: number
 }
 
 interface SunspotPos {
@@ -172,6 +188,103 @@ export default defineComponent({
   setup() {
     const combatStore = useCombatStore()
     const planetShopStore = usePlanetShopStore()
+    const gameStore = useGameStore()
+
+    const POOL_SIZE = 20
+    const chimeParticles: ChimeParticle[] = Array.from({ length: POOL_SIZE }, (_, i) => ({
+      id: i,
+      active: false,
+      cx: 0,
+      cy: 0,
+      tx: 0,
+      ty: 0,
+      duration: 1500,
+      size: 12,
+      startTime: 0,
+    }))
+
+    const canvasEl = ref<HTMLCanvasElement | null>(null)
+    const chimeImg = new Image()
+    chimeImg.src = '/img/BardAbilities/BardChime.png'
+
+    function resizeCanvas() {
+      const cvs = canvasEl.value
+      if (!cvs) return
+      const r = planetShopStore.currentSunRadius
+      cvs.width = Math.round(r * 6)
+      cvs.height = Math.round(r * 6)
+    }
+
+    watch(() => planetShopStore.currentSunRadius, resizeCanvas)
+
+    let nextSpawnAt = 0
+
+    function spawnChime(timestamp: number) {
+      const cps = gameStore.chimesPerSecond
+      if (cps <= 0 || timestamp < nextSpawnAt) return
+
+      const maxVisible = Math.min(20, Math.max(2, Math.round(Math.sqrt(cps) * 1.8)))
+      const activeCount = chimeParticles.filter((p) => p.active).length
+      const baseInterval = 1200 / maxVisible
+      const interval = baseInterval * (0.7 + Math.random() * 0.6)
+
+      if (activeCount >= maxVisible) {
+        nextSpawnAt = timestamp + interval * 0.5
+        return
+      }
+
+      const slot = chimeParticles.find((p) => !p.active)
+      if (!slot) return
+
+      const r = planetShopStore.currentSunRadius
+      const angle = Math.random() * Math.PI * 2
+
+      slot.cx = r * Math.cos(angle)
+      slot.cy = r * Math.sin(angle)
+
+      const outwardDist = r * 0.5 + Math.random() * r * 0.5
+      const jitter = (Math.random() - 0.5) * 0.6
+      slot.tx = Math.cos(angle + jitter) * outwardDist
+      slot.ty = Math.sin(angle + jitter) * outwardDist
+      slot.duration = 1000 + Math.random() * 1500
+      slot.size = Math.max(14, r * 0.35)
+      slot.startTime = timestamp
+      slot.active = true
+      nextSpawnAt = timestamp + interval
+    }
+
+    function drawChimes(timestamp: number) {
+      const cvs = canvasEl.value
+      if (!cvs || !chimeImg.complete) return
+      const ctx = cvs.getContext('2d')
+      if (!ctx) return
+
+      ctx.clearRect(0, 0, cvs.width, cvs.height)
+      const halfW = cvs.width / 2
+      const halfH = cvs.height / 2
+
+      for (const p of chimeParticles) {
+        if (!p.active) continue
+        const t = (timestamp - p.startTime) / p.duration
+        if (t >= 1) {
+          p.active = false
+          continue
+        }
+
+        const eased = 1 - Math.pow(1 - t, 2)
+        const x = halfW + p.cx + p.tx * eased
+        const y = halfH + p.cy + p.ty * eased
+
+        const opacity =
+          t < 0.15 ? (t / 0.15) * 0.9 : t > 0.8 ? ((1 - t) / 0.2) * 0.9 : 0.9
+        const drawSize = p.size * (0.6 + eased * 0.3)
+
+        ctx.globalAlpha = opacity
+        ctx.drawImage(chimeImg, x - drawSize / 2, y - drawSize / 2, drawSize, drawSize)
+      }
+
+      ctx.globalAlpha = 1
+    }
 
     const CENTER = 180
     const DISC_RADIUS = 108
@@ -273,6 +386,9 @@ export default defineComponent({
     let lastTimestamp = 0
 
     function animate(timestamp: number) {
+      spawnChime(timestamp)
+      drawChimes(timestamp)
+
       if (timestamp - lastTargetUpdate > TARGET_INTERVAL) {
         dynamicRays.value.forEach((ray) => {
           ray.targetLength = MIN_LENGTH + Math.random() * (MAX_LENGTH - MIN_LENGTH)
@@ -306,6 +422,7 @@ export default defineComponent({
     })
 
     onMounted(() => {
+      resizeCanvas()
       animFrame = requestAnimationFrame(animate)
     })
 
@@ -323,6 +440,7 @@ export default defineComponent({
       sunspotPositions,
       Math,
       sunContainerVars,
+      canvasEl,
     }
   },
 })
@@ -699,5 +817,12 @@ export default defineComponent({
     transform: translate(0, 0) scale(1);
     opacity: 0.46;
   }
+}
+
+.chime-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
 }
 </style>
