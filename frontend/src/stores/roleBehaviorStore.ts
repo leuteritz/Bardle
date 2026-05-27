@@ -280,7 +280,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (this.activeCurse && now >= this.activeCurse.activeUntil) {
         const expiredName = CURSE_DEFS[this.activeCurse.type].name
         throttledEvent('mid-curse-expire', 500, () => {
-          addEvent(`${expiredName} ist abgeklungen.`, 'mid')
+          addEvent(`${expiredName} has worn off.`, 'mid')
         })
         this.activeCurse = null
         this.cursedStarId = null
@@ -292,7 +292,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (this.activeCurse?.type === 'corruption' && activeBoss && !activeBoss.defeated && !activeBoss.expired) {
         const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
         throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 3000, () => {
-          addEvent(`${championName} Verderbnis: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
+          addEvent(`${championName} Corruption: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
         })
         if (!defeated) {
           const pos = activePlanetPositions.get(activeBoss.planetId)
@@ -347,9 +347,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         if (pos2) {
           spawnFloat(dmg, pos2.cx, pos2.cy - 65, 1500, { curseFloat: true })
         }
-        addEvent(`${championName} wirkt Verdammnis: −${dmg} HP (20%)!`, 'mid')
+        addEvent(`${championName} casts Damnation: −${dmg} HP (20%)!`, 'mid')
       } else {
-        addEvent(`${championName} verflucht den Boss mit ${CURSE_DEFS[type].name}! (10s)`, 'mid')
+        addEvent(`${championName} curses the boss with ${CURSE_DEFS[type].name}! (10s)`, 'mid')
       }
     },
 
