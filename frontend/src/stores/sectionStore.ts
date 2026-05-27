@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia'
 import { SECTIONS } from '../config/sections'
 import type { SectionProgress } from '../types'
+import { TOTAL_SECTIONS } from '../config/constants'
 
 export const useSectionStore = defineStore('section', {
   state: () => ({
     activeSectionId: 1,
     highestUnlockedSectionId: 1,
     sectionProgress: Object.fromEntries(
-      Array.from({ length: 10 }, (_, i) => [i + 1, { rescueCount: 0, completed: false }]),
+      Array.from({ length: TOTAL_SECTIONS }, (_, i) => [i + 1, { rescueCount: 0, completed: false }]),
     ) as Record<number, SectionProgress>,
   }),
 
@@ -45,14 +46,14 @@ export const useSectionStore = defineStore('section', {
       if (config && progress.rescueCount >= config.requiredRescues && !progress.completed) {
         progress.completed = true
         const nextId = this.activeSectionId + 1
-        if (nextId <= 10 && nextId > this.highestUnlockedSectionId) {
+        if (nextId <= TOTAL_SECTIONS && nextId > this.highestUnlockedSectionId) {
           this.highestUnlockedSectionId = nextId
         }
       }
     },
 
     navigateToSection(id: number) {
-      if (id < 1 || id > 10 || id > this.highestUnlockedSectionId) return
+      if (id < 1 || id > TOTAL_SECTIONS || id > this.highestUnlockedSectionId) return
       this.activeSectionId = id
     },
   },

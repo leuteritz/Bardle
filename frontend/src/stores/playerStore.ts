@@ -3,6 +3,8 @@ import {
   PLAYER_MAX_HP_BASE,
   PLAYER_HP_REGEN_PER_SEC,
   PLAYER_HP_LOSS_ON_ENRAGE,
+  PLAYER_LOW_HP_THRESHOLD_PCT,
+  DAMAGE_FLOAT_DURATION_MS,
 } from '@/config/constants'
 
 export const usePlayerStore = defineStore('player', {
@@ -18,7 +20,7 @@ export const usePlayerStore = defineStore('player', {
       return (this.currentHP / this.maxHP) * 100
     },
     isLow(): boolean {
-      return this.hpPercent < 25
+      return this.hpPercent < PLAYER_LOW_HP_THRESHOLD_PCT
     },
   },
 
@@ -31,7 +33,7 @@ export const usePlayerStore = defineStore('player', {
       this.damageFloats.push({
         id: this._nextFloatId++,
         value: amount,
-        expiresAt: Date.now() + 1400,
+        expiresAt: Date.now() + DAMAGE_FLOAT_DURATION_MS,
       })
     },
     pruneFloats() {

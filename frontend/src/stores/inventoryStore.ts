@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { MATERIALS } from '../config/materials'
 import type { Material } from '../types'
 import { logger } from '../utils/logger'
+import { MATERIAL_DROP_BASE_CHANCE } from '../config/constants'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -35,7 +36,7 @@ export const useInventoryStore = defineStore('inventory', {
       return true
     },
 
-    tryDropMaterial(baseDropChance = 0.30): Material | null {
+    tryDropMaterial(baseDropChance = MATERIAL_DROP_BASE_CHANCE): Material | null {
       if (Math.random() > baseDropChance) return null
 
       const total = MATERIALS.reduce((sum, m) => sum + m.dropChance, 0)

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import type { TimePeriod } from '../types'
+import { GAME_TICK_INTERVAL_MS, BUILDING_HISTORY_BUFFER_SIZE } from '../config/constants'
 
 export const useCpsStore = defineStore('cps', {
   state: () => ({
@@ -11,9 +12,9 @@ export const useCpsStore = defineStore('cps', {
 
     // Stores CPS history data for various time periods as arrays
     productionHistories: {
-      '1min': Array(60).fill(0),
-      '10min': Array(60).fill(0),
-      '1h': Array(60).fill(0),
+      '1min': Array(BUILDING_HISTORY_BUFFER_SIZE).fill(0),
+      '10min': Array(BUILDING_HISTORY_BUFFER_SIZE).fill(0),
+      '1h': Array(BUILDING_HISTORY_BUFFER_SIZE).fill(0),
     } as Record<string, number[]>,
 
     // Tracks last update timestamps for each tracking period
@@ -32,22 +33,22 @@ export const useCpsStore = defineStore('cps', {
         key: '1min',
         label: '1 Minute',
         duration: 60,
-        interval: 1000,
-        dataPoints: 60,
+        interval: GAME_TICK_INTERVAL_MS,
+        dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
       {
         key: '10min',
         label: '10 Minutes',
         duration: 600,
         interval: 10000,
-        dataPoints: 60,
+        dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
       {
         key: '1h',
         label: '1 Hour',
         duration: 3600,
         interval: 60000,
-        dataPoints: 60,
+        dataPoints: BUILDING_HISTORY_BUFFER_SIZE,
       },
     ] as TimePeriod[],
   }),
@@ -128,7 +129,7 @@ export const useCpsStore = defineStore('cps', {
 
       this.mainTimer = setInterval(() => {
         this.updateAllHistories()
-      }, 1000)
+      }, GAME_TICK_INTERVAL_MS)
 
       document.addEventListener('visibilitychange', this._handleVisibilityChange)
     },
@@ -152,7 +153,7 @@ export const useCpsStore = defineStore('cps', {
         if (!this.mainTimer) {
           this.mainTimer = setInterval(() => {
             this.updateAllHistories()
-          }, 1000)
+          }, GAME_TICK_INTERVAL_MS)
         }
       }
     },

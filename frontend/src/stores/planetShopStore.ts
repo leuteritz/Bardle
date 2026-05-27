@@ -9,6 +9,7 @@ import {
   PLANET_HARVEST_INTERVAL_TICKS,
   PLANET_SLOT_MAX_HP,
   SUN_GROWTH_STAGES,
+  BOSS_DAMAGE_REDUCTION_CAP,
 } from '@/config/constants'
 
 export type PlanetRoleType =
@@ -223,7 +224,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return sum + PLANET_ROLES.shield_barrier.bonusPerSlot * mul
         }, 0)
-      return Math.min(0.8, total)
+      return Math.min(BOSS_DAMAGE_REDUCTION_CAP, total)
     },
 
     planetOfflineBoostMultiplier(state): number {

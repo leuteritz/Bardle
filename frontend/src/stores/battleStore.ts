@@ -25,6 +25,22 @@ import {
   BATTLE_REAL_DURATION_SECONDS,
   KILL_EVENTS_PER_TEAM_MIN,
   KILL_EVENTS_PER_TEAM_MAX,
+  MINIMAP_PHASE_BARON_END,
+  MINIMAP_PHASE_DRAKE_END,
+  MINIMAP_PHASE_MIDFIGHT_END,
+  GAME_TICK_INTERVAL_MS,
+  KILL_EVENT_MIN_GAME_SECONDS,
+  KILL_EVENT_MAX_GAME_SECONDS,
+  BATTLE_ASSIST_CHANCE,
+  BATTLE_DEATH_CHANCE,
+  BATTLE_CHAT_MESSAGE_COUNT,
+  BATTLE_EARLY_GAME_SECONDS,
+  BATTLE_RESULT_COUNTDOWN_SECONDS,
+  BATTLE_RESULT_PAUSE_MS,
+  BATTLE_COUNTDOWN_INTERVAL_MS,
+  BATTLE_DRAIN_REFERENCE_SECONDS,
+  BATTLE_OPPONENT_POWER_MIN_FRACTION,
+  BATTLE_BIG_BANG_POWER_MULTIPLIER,
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
@@ -246,7 +262,7 @@ export const useBattleStore = defineStore('battle', {
         KILL_EVENTS_PER_TEAM_MIN +
         Math.floor(Math.random() * (KILL_EVENTS_PER_TEAM_MAX - KILL_EVENTS_PER_TEAM_MIN + 1))
       for (let i = 0; i < totalEvents; i++) {
-        const gameTime = 120 + Math.floor(Math.random() * (1800 - 120))
+        const gameTime = KILL_EVENT_MIN_GAME_SECONDS + Math.floor(Math.random() * (KILL_EVENT_MAX_GAME_SECONDS - KILL_EVENT_MIN_GAME_SECONDS))
         const team = (Math.random() < 0.5 ? 1 : 2) as 1 | 2
         events.push({ gameTime, team })
       }
@@ -278,13 +294,13 @@ export const useBattleStore = defineStore('battle', {
           if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
           const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
           killer.kills += 1
-          const assistCount = Math.random() < 0.6 ? 1 : 2
+          const assistCount = Math.random() < BATTLE_ASSIST_CHANCE ? 1 : 2
           const others = attackingTeam.filter((c) => c !== killer)
           for (let i = 0; i < Math.min(assistCount, others.length); i++) {
             others[Math.floor(Math.random() * others.length)].assists += 1
           }
           const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
-          if (Math.random() < 0.85) victim.deaths += 1
+          if (Math.random() < BATTLE_DEATH_CHANCE) victim.deaths += 1
           const now = Date.now()
           if (now - _lastKillLogMs >= 3000 && killer.name && victim.name) {
             _lastKillLogMs = now
@@ -309,7 +325,7 @@ export const useBattleStore = defineStore('battle', {
           this.baronAlive &&
           this.baronEventTime > 0 &&
           this.battleTime >= this.baronEventTime &&
-          this.battleTime < 2200
+          this.battleTime < MINIMAP_PHASE_BARON_END
         ) {
           this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
           this.baronAlive = false
@@ -334,7 +350,7 @@ export const useBattleStore = defineStore('battle', {
           }
           this.runBattleCycle()
         }
-      }, 1000)
+      }, GAME_TICK_INTERVAL_MS)
     },
 
     async loadChampions() {
@@ -411,7 +427,6 @@ export const useBattleStore = defineStore('battle', {
     },
 
     showRandomChatMessagesSequentially() {
-      const MESSAGE_COUNT = 14
       const allChampions = [
         ...this.team1
           .filter((c) => c.name)
@@ -424,15 +439,15 @@ export const useBattleStore = defineStore('battle', {
 
       const battleIdAtStart = this.currentBattleId
 
-      for (let i = 0; i < MESSAGE_COUNT; i++) {
+      for (let i = 0; i < BATTLE_CHAT_MESSAGE_COUNT; i++) {
         const delay = Math.floor(Math.random() * (BATTLE_REAL_DURATION_SECONDS - 1) * 1000)
         const timeoutId = setTimeout(() => {
           if (this.currentBattleId !== battleIdAtStart) return
           const currentGameTime = this.battleTime
           let pool: string[]
-          if (currentGameTime < 600) {
+          if (currentGameTime < BATTLE_EARLY_GAME_SECONDS) {
             pool = earlyGameMessages
-          } else if (currentGameTime < 1200) {
+          } else if (currentGameTime < MINIMAP_PHASE_DRAKE_END) {
             pool = midGameMessages
           } else {
             pool = lateGameMessages
@@ -470,13 +485,13 @@ export const useBattleStore = defineStore('battle', {
         gameStore.activeModifier as Record<string, unknown>,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
-      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * 30
+      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
       const finalOpponentPower = Math.max(
-        effectiveOpponentPower * 0.1,
+        effectiveOpponentPower * BATTLE_OPPONENT_POWER_MIN_FRACTION,
         effectiveOpponentPower * (1 - drainReduction),
       )
       if (battleMods.bigBangAvailable) {
-        playerPower *= 5
+        playerPower *= BATTLE_BIG_BANG_POWER_MULTIPLIER
       }
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
       this.currentWinProbability = winProbability
@@ -491,8 +506,8 @@ export const useBattleStore = defineStore('battle', {
       this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
         this.generateKillSchedule()
-        this.drakeEventTime = 1200
-        this.baronEventTime = 1500 + Math.floor(Math.random() * 600)
+        this.drakeEventTime = MINIMAP_PHASE_DRAKE_END
+        this.baronEventTime = MINIMAP_PHASE_MIDFIGHT_END + Math.floor(Math.random() * 600)
       }
       logger.group('Battle Init', () => {
         logger.info('Battle', `Team 1: ${this.team1.map((c) => c.name).join(', ')}`)
@@ -526,13 +541,13 @@ export const useBattleStore = defineStore('battle', {
         gameStore.activeModifier as Record<string, unknown>,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
-      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * 30
+      const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
       const finalOpponentPower = Math.max(
-        effectiveOpponentPower * 0.1,
+        effectiveOpponentPower * BATTLE_OPPONENT_POWER_MIN_FRACTION,
         effectiveOpponentPower * (1 - drainReduction),
       )
       if (battleMods.bigBangAvailable) {
-        playerPower *= 5
+        playerPower *= BATTLE_BIG_BANG_POWER_MULTIPLIER
         augmentStore.consumeBigBang()
       }
 
@@ -709,7 +724,7 @@ export const useBattleStore = defineStore('battle', {
       this.showAutoBattleResult = true
       this.resultPhaseStartTimestamp = Date.now()
 
-      this.resultCountdown = 4
+      this.resultCountdown = BATTLE_RESULT_COUNTDOWN_SECONDS
       if (this.resultCountdownTimer) clearInterval(this.resultCountdownTimer)
       this.resultCountdownTimer = setInterval(() => {
         this.resultCountdown--
@@ -717,10 +732,10 @@ export const useBattleStore = defineStore('battle', {
           clearInterval(this.resultCountdownTimer!)
           this.resultCountdownTimer = null
         }
-      }, 1000)
+      }, GAME_TICK_INTERVAL_MS)
       const pauseId = setTimeout(() => {
         this.dismissResult()
-      }, 4000)
+      }, BATTLE_RESULT_PAUSE_MS)
       this.timerIds.push(pauseId)
     },
 
@@ -791,7 +806,7 @@ export const useBattleStore = defineStore('battle', {
             this.beginSimulation()
           }
         }
-      }, 500)
+      }, BATTLE_COUNTDOWN_INTERVAL_MS)
     },
 
     markBattleProcessed() {
@@ -821,7 +836,7 @@ export const useBattleStore = defineStore('battle', {
         killer.kills += 1
         const others = attackingTeam.filter((c) => c !== killer)
         if (others.length > 0) others[Math.floor(Math.random() * others.length)].assists += 1
-        if (Math.random() < 0.85) {
+        if (Math.random() < BATTLE_DEATH_CHANCE) {
           defendingTeam[Math.floor(Math.random() * defendingTeam.length)].deaths += 1
         }
       }

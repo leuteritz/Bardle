@@ -2,7 +2,11 @@ import { defineStore } from 'pinia'
 import { AUGMENTS } from '../config/augments'
 import type { TimedBuff } from '../types'
 import { logger } from '../utils/logger'
-import { AUGMENT_CLICK_HISTORY_SIZE, AUGMENT_GRAVITY_FLIP_DURATION_MS } from '../config/constants'
+import {
+  AUGMENT_CLICK_HISTORY_SIZE,
+  AUGMENT_GRAVITY_FLIP_DURATION_MS,
+  QUANTUM_LUCK_THRESHOLD,
+} from '../config/constants'
 
 export const useAugmentStore = defineStore('augment', {
   state: () => ({
@@ -79,7 +83,7 @@ export const useAugmentStore = defineStore('augment', {
         const aug = AUGMENTS.find((a) => a.id === 'legendary_quantum_luck')
         const chance = aug?.specialEffect?.params.chance ?? 0.1
         if (Math.random() < chance) {
-          bonus = Math.random() < 0.5 ? bonus * 2 : 0
+          bonus = Math.random() < QUANTUM_LUCK_THRESHOLD ? bonus * 2 : 0
         }
       }
 

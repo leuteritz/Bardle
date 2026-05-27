@@ -18,6 +18,13 @@ import {
   SUPPORT_MAX_HEAL_TARGETS,
   JUNGLE_BUFF_RANGE,
   JUNGLE_BUFF_COOLDOWN_MS,
+  GAME_TICK_INTERVAL_MS,
+  HEAL_FLOAT_DURATION_MS,
+  HEAL_FLOAT_Y_OFFSET,
+  HEAL_FLOAT_X_SPREAD,
+  HEAL_FLOAT_PLAYER_Y_OFFSET,
+  INTERCEPT_SHIELD_ANIM_MS,
+  JUNGLE_BUFF_FLASH_ANIM_MS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
 import { usePlayerStore } from './playerStore'
@@ -123,7 +130,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const { isRenderingPaused } = useRenderingPaused()
       if (isRenderingPaused.value) return
 
-      const TICK_MS = 1000
+      const TICK_MS = GAME_TICK_INTERVAL_MS
       const roles = getOrbitingRoles()
 
       this._expireJungleBuffs()
@@ -207,7 +214,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           if (healAmount <= 0) continue
 
           planetShopStore.healSlot(slot.id, healAmount)
-          spawnFloat(healAmount, pos.cx, pos.cy - 35, 1200, { healFloat: true })
+          spawnFloat(healAmount, pos.cx, pos.cy - HEAL_FLOAT_Y_OFFSET, HEAL_FLOAT_DURATION_MS, { healFloat: true })
 
           throttledEvent(`support-heal-${slot.id}`, 4000, () => {
             addEvent(
@@ -228,9 +235,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         spawnFloat(
           healed,
-          window.innerWidth / 2 + (Math.random() - 0.5) * 60,
-          window.innerHeight / 2 - 80,
-          1200,
+          window.innerWidth / 2 + (Math.random() - 0.5) * HEAL_FLOAT_X_SPREAD,
+          window.innerHeight / 2 - HEAL_FLOAT_PLAYER_Y_OFFSET,
+          HEAL_FLOAT_DURATION_MS,
           { healFloat: true },
         )
 
@@ -410,7 +417,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       setTimeout(() => {
         this.tankInterceptActive = false
-      }, 500)
+      }, INTERCEPT_SHIELD_ANIM_MS)
     },
 
     _tickJungler(roles: Set<string>, tickMs: number) {
@@ -458,7 +465,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         this.jungleBuffFlashActive = true
         window.setTimeout(() => {
           this.jungleBuffFlashActive = false
-        }, 450)
+        }, JUNGLE_BUFF_FLASH_ANIM_MS)
       }
     },
   },

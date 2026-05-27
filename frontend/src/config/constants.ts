@@ -696,3 +696,91 @@ export const ROLE_COLORS = Object.fromEntries(ROLES.map((r) => [r.key, r.color])
   ChampionRole,
   string
 >
+
+// Expedition mechanics
+/** Full-role-match synergy bonus multiplier */
+export const EXPEDITION_ROLE_SYNERGY_BONUS = 1.0
+/** Partial/no-role-match synergy penalty multiplier */
+export const EXPEDITION_ROLE_SYNERGY_PENALTY = 0.6
+/** Max additive power bonus cap in success calculation */
+export const EXPEDITION_POWER_BONUS_CAP = 0.4
+/** Scales power ratio into a bonus (powerRatio - 1) * this = bonus */
+export const EXPEDITION_POWER_BONUS_SCALE = 0.2
+/** Base success probability before role/power modifiers */
+export const EXPEDITION_BASE_SUCCESS_CHANCE = 0.5
+/** Fraction of base reward granted on expedition failure */
+export const EXPEDITION_FAILURE_REWARD_FRACTION = 0.1
+
+// Player state
+/** HP percentage below which the "low HP" warning state activates */
+export const PLAYER_LOW_HP_THRESHOLD_PCT = 25
+/** Damage float number visibility duration (ms) */
+export const DAMAGE_FLOAT_DURATION_MS = 1400
+
+// Section navigation
+/** Total number of sections in the game */
+export const TOTAL_SECTIONS = 10
+
+// Augments — Quantum Luck
+/** 50/50 probability split for the Quantum Luck double-or-nullify branch */
+export const QUANTUM_LUCK_THRESHOLD = 0.5
+
+// Planet shop — damage reduction
+/** Maximum fraction of boss damage that can be absorbed by shield-barrier planets */
+export const BOSS_DAMAGE_REDUCTION_CAP = 0.8
+
+// Battle simulation
+/** Earliest game-time (seconds) at which a kill event can fire */
+export const KILL_EVENT_MIN_GAME_SECONDS = 120
+/** Latest game-time (seconds) at which a kill event can be scheduled */
+export const KILL_EVENT_MAX_GAME_SECONDS = 1800
+/** Probability that a kill event grants an assist instead of a second assist */
+export const BATTLE_ASSIST_CHANCE = 0.6
+/** Probability that a kill event records a death for the victim */
+export const BATTLE_DEATH_CHANCE = 0.85
+/** Number of sequential chat messages displayed during a battle */
+export const BATTLE_CHAT_MESSAGE_COUNT = 14
+/** Game-time (seconds) threshold dividing early-game from mid-game chat pool */
+export const BATTLE_EARLY_GAME_SECONDS = 600
+/** Countdown shown on the result screen before auto-advance (seconds) */
+export const BATTLE_RESULT_COUNTDOWN_SECONDS = 4
+/** Pause duration on the result screen before proceeding (ms) */
+export const BATTLE_RESULT_PAUSE_MS = 4000
+/** Countdown tick interval for the pre-battle search-phase timer (ms) */
+export const BATTLE_COUNTDOWN_INTERVAL_MS = 500
+/** Reference duration multiplied by drain rate to reduce opponent power (seconds) */
+export const BATTLE_DRAIN_REFERENCE_SECONDS = 30
+/** Minimum effective opponent power as a fraction of its original value */
+export const BATTLE_OPPONENT_POWER_MIN_FRACTION = 0.1
+/** Player power multiplier applied when the Big Bang augment is consumed */
+export const BATTLE_BIG_BANG_POWER_MULTIPLIER = 5
+
+// Inventory
+/** Default base probability for a material drop from a rescue planet */
+export const MATERIAL_DROP_BASE_CHANCE = 0.30
+
+// Heal floats (Support role — visual feedback)
+/** Duration a heal float number remains visible (ms) */
+export const HEAL_FLOAT_DURATION_MS = 1200
+/** Y-offset applied upward from the heal target position (px) */
+export const HEAL_FLOAT_Y_OFFSET = 35
+/** Horizontal spread of the random player heal float position (px) */
+export const HEAL_FLOAT_X_SPREAD = 60
+/** Y-offset from the player planet center for player heal floats (px) */
+export const HEAL_FLOAT_PLAYER_Y_OFFSET = 80
+
+// Role behavior — animation durations
+/** Duration of the Top champion intercept/shield-broken flash animation (ms) */
+export const INTERCEPT_SHIELD_ANIM_MS = 500
+/** Duration of the Jungle champion buff-granted flash animation (ms) */
+export const JUNGLE_BUFF_FLASH_ANIM_MS = 450
+
+// Event log
+/** Maximum number of events kept in the live event log before trimming */
+export const EVENT_LOG_MAX_SIZE = 12
+/** Milliseconds before an event auto-dismisses from the log */
+export const EVENT_LOG_DISMISS_MS = 7_000
+
+// Projectile system
+/** Total travel duration of a projectile shot (ms) */
+export const PROJECTILE_SHOT_DURATION_MS = 520

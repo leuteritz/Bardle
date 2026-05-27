@@ -8,6 +8,12 @@ import {
   CHAMPION_BASE_POWER,
   CHAMPION_POWER_PER_LEVEL,
   MAX_ACTIVE_EXPEDITIONS,
+  EXPEDITION_ROLE_SYNERGY_BONUS,
+  EXPEDITION_ROLE_SYNERGY_PENALTY,
+  EXPEDITION_POWER_BONUS_CAP,
+  EXPEDITION_POWER_BONUS_SCALE,
+  EXPEDITION_BASE_SUCCESS_CHANCE,
+  EXPEDITION_FAILURE_REWARD_FRACTION,
 } from '../config/constants'
 import type { ExpeditionMission, ChampionRole } from '../types'
 import { logger } from '../utils/logger'
@@ -52,11 +58,11 @@ export const useExpeditionStore = defineStore('expedition', {
           return roles.includes(requiredRole)
         }),
       )
-      const roleSynergyBonus = allRolesMatched ? 1.0 : 0.6
+      const roleSynergyBonus = allRolesMatched ? EXPEDITION_ROLE_SYNERGY_BONUS : EXPEDITION_ROLE_SYNERGY_PENALTY
 
       const powerRatio = teamPower / config.minPowerThreshold
-      const powerBonus = Math.min(0.4, (powerRatio - 1) * 0.2)
-      const successChance = (0.5 + powerBonus) * roleSynergyBonus
+      const powerBonus = Math.min(EXPEDITION_POWER_BONUS_CAP, (powerRatio - 1) * EXPEDITION_POWER_BONUS_SCALE)
+      const successChance = (EXPEDITION_BASE_SUCCESS_CHANCE + powerBonus) * roleSynergyBonus
 
       return Math.max(0.05, Math.min(0.95, successChance))
     },
@@ -117,7 +123,7 @@ export const useExpeditionStore = defineStore('expedition', {
           const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
           expedition.reward = success
             ? Math.floor(expedition.baseReward * relayMul)
-            : Math.floor(expedition.baseReward * 0.1)
+            : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
           logger.info(
             'Expedition',
             `Resolved: ${expedition.name} - ${expedition.status.toUpperCase()}`,

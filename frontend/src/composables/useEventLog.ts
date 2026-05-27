@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useRenderingPaused } from './useRenderingPaused'
+import { EVENT_LOG_MAX_SIZE, EVENT_LOG_DISMISS_MS } from '../config/constants'
 
 export type GameEventType =
   | 'support'
@@ -46,13 +47,13 @@ export function useEventLog() {
       timeString,
     })
 
-    if (events.value.length > 12) {
-      events.value.length = 12
+    if (events.value.length > EVENT_LOG_MAX_SIZE) {
+      events.value.length = EVENT_LOG_MAX_SIZE
     }
 
     window.setTimeout(() => {
       events.value = events.value.filter((event) => event.id !== id)
-    }, 7000)
+    }, EVENT_LOG_DISMISS_MS)
   }
 
   function clearEvents() {

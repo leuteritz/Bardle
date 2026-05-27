@@ -1,5 +1,6 @@
 // frontend/src/composables/useProjectileSystem.ts
 import { ref } from 'vue'
+import { PROJECTILE_SHOT_DURATION_MS } from '../config/constants'
 
 export interface ProjectileShot {
   id: number
@@ -21,7 +22,7 @@ export interface ProjectileShot {
   onIntercept?: (headX: number, headY: number) => void
 }
 
-const SHOT_DURATION_MS = 520
+const SHOT_DURATION_MS = PROJECTILE_SHOT_DURATION_MS
 let _nextId = 0
 
 export function useProjectileSystem() {
