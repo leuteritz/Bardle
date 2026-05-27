@@ -239,8 +239,8 @@ watch(
 }
 
 .meep-icon {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   flex-shrink: 0;
   image-rendering: auto;
@@ -259,7 +259,7 @@ watch(
 }
 
 .meep-value {
-  font-size: 0.9rem;
+  font-size: 1.3rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;
