@@ -57,7 +57,8 @@ watch(
         <img src="/img/star.png" class="stat-icon" alt="Sterne" />
         <span class="stat-card-label">STARS</span>
         <span class="stat-card-value star-value">
-          {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span>{{ galaxyStore.starsRequired }}
+          {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span
+          >{{ galaxyStore.starsRequired }}
         </span>
       </div>
     </div>
@@ -100,7 +101,9 @@ watch(
           {{ gameStore.universeRescueProgress.toFixed(1) }}%
         </div>
       </div>
-      <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">✦ PRESTIGE ✦</button>
+      <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
+        ✦ PRESTIGE ✦
+      </button>
     </div>
   </div>
 </template>
@@ -220,7 +223,6 @@ watch(
 .bottom-row {
   display: flex;
   align-items: center;
-  gap: 8px;
   width: 100%;
 }
 
@@ -228,7 +230,6 @@ watch(
 .meep-block {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
   isolation: isolate;
   transition: filter 0.3s;
@@ -272,6 +273,8 @@ watch(
     color 0.3s,
     text-shadow 0.3s;
   letter-spacing: -0.01em;
+  min-width: 4ch;
+  max-width: 5ch;
 }
 
 .meep-value--rising {
@@ -299,10 +302,10 @@ watch(
 .rpg-bar-wrap {
   position: relative;
   flex: 1;
+  min-width: 0;
   height: 22px;
   border-radius: 6px;
   overflow: hidden;
-  flex-shrink: 0;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
     0 0 0 2px rgba(255, 200, 60, 0.22),
