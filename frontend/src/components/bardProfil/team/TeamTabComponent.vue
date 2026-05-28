@@ -17,6 +17,7 @@ import ItemShopComponent from './ItemShopComponent.vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
 import SynergiesPanelComponent from './SynergiesPanelComponent.vue'
+import RoleSidebarComponent from './RoleSidebarComponent.vue'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
 const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
@@ -590,65 +591,10 @@ void championRoleLabel
       </div>
 
       <!-- ══ RIGHT — Sidebar ══ -->
-      <div class="sidebar">
-        <div class="sidebar-section sidebar-section--roles">
-          <div class="role-list">
-            <button
-              v-for="(role, i) in ROLES"
-              :key="i"
-              class="role-btn"
-              :class="{
-                'role-btn--active': activeSlotIndex === i,
-                'role-btn--filled': headerSlots[i] !== null,
-              }"
-              :style="{ '--rc': ROLE_COLORS[role] }"
-              @click="selectSlot(i)"
-            >
-              <img
-                v-if="headerSlots[i]"
-                :src="battleStore.getChampionImage(headerSlots[i]!)"
-                :alt="headerSlots[i]!"
-                class="role-btn-img"
-                @error="onImgError"
-              />
-              <img
-                v-else
-                :src="ROLE_BY_KEY[ROLE_MAP[role]].image"
-                :alt="role"
-                class="role-btn-img role-btn-img--placeholder"
-                @error="onImgError"
-              />
-              <div class="role-btn-gradient" />
-              <span class="role-btn-label">{{ role }}</span>
-              <span
-                v-if="headerSlots[i]"
-                class="role-btn-origin"
-                :style="{ color: getOriginColor(headerSlots[i]) }"
-              >{{ getChampionOrigin(headerSlots[i]!) }}</span>
-              <div class="role-btn-secs">
-                <div
-                  v-for="s in [0, 1]"
-                  :key="s"
-                  class="role-btn-sec"
-                  :class="{ 'role-btn-sec--filled': secondarySlots[i][s] !== null }"
-                >
-                  <img
-                    v-if="secondarySlots[i][s]"
-                    :src="battleStore.getChampionImage(secondarySlots[i][s]!)"
-                    :alt="secondarySlots[i][s]!"
-                    class="role-btn-sec-img"
-                    @error="onImgError"
-                  />
-                  <span v-else class="role-btn-sec-plus">＋</span>
-                </div>
-              </div>
-              <div class="role-btn-ability">{{ ROLE_BY_KEY[ROLE_MAP[role]]?.abilityCompact ?? '' }}</div>
-              <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
-            </button>
-          </div>
-        </div>
-
-      </div>
+      <RoleSidebarComponent
+        :active-slot-index="activeSlotIndex"
+        @select-slot="selectSlot"
+      />
     </div>
   </div>
 </template>
@@ -1351,164 +1297,6 @@ void championRoleLabel
 }
 
 /* ══════════════════════════════
-   SIDEBAR
-   ══════════════════════════════ */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  background: #0e0b05;
-  overflow: hidden;
-}
-.sidebar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 8px 6px;
-}
-.sidebar-section--roles {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.role-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.role-btn {
-  position: relative;
-  padding: 0;
-  border-radius: var(--r);
-  overflow: hidden;
-  cursor: pointer;
-  background: #0a0804;
-  border: 1px solid rgba(92, 51, 16, 0.35);
-  flex: 1;
-  min-height: 0;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-.role-btn:hover {
-  border-color: var(--rc);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--rc) 30%, transparent);
-}
-.role-btn--active {
-  border-color: var(--rc) !important;
-  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent) !important;
-}
-.role-btn-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  transition: transform 0.25s ease;
-}
-.role-btn:hover .role-btn-img {
-  transform: scale(1.07);
-}
-.role-btn-img--placeholder {
-  opacity: 0.18;
-  filter: grayscale(55%);
-}
-.role-btn:hover .role-btn-img--placeholder {
-  opacity: 0.38;
-  filter: grayscale(30%);
-}
-.role-btn-gradient {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 65%;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.92) 0%,
-    rgba(0, 0, 0, 0.5) 45%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-.role-btn-label {
-  position: absolute;
-  bottom: 6px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rc);
-  line-height: 1;
-  z-index: 2;
-  text-shadow:
-    0 0 12px color-mix(in srgb, var(--rc) 70%, transparent),
-    0 2px 6px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-.role-btn-active-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--rc);
-  box-shadow: 0 0 8px var(--rc);
-  z-index: 3;
-}
-.role-btn-secs {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  pointer-events: none;
-}
-.role-btn-sec {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, var(--rc) 55%, transparent);
-  background: rgba(10, 8, 4, 0.85);
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-.role-btn-sec--filled {
-  border-color: var(--rc);
-  box-shadow:
-    0 0 6px color-mix(in srgb, var(--rc) 45%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.8);
-}
-.role-btn-sec-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  border-radius: 50%;
-}
-.role-btn-sec-plus {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 12px;
-  color: rgba(200, 144, 64, 0.3);
-}
-
-/* ══════════════════════════════
    MODAL SYSTEM
    ══════════════════════════════ */
 .modal-backdrop {
@@ -1780,33 +1568,6 @@ void championRoleLabel
 }
 
 /* ══════════════════════════════
-   SIDEBAR — Role compact ability line
-   ══════════════════════════════ */
-.role-btn-ability {
-  position: absolute;
-  bottom: 28px;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.45);
-  text-align: center;
-  padding: 0 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-  transition: color 0.15s;
-}
-.role-btn:hover .role-btn-ability,
-.role-btn--active .role-btn-ability {
-  color: rgba(200, 144, 64, 0.8);
-}
-
-/* ══════════════════════════════
    ORIGIN — Splash info badge
    ══════════════════════════════ */
 .splash-origin-badge {
@@ -1823,29 +1584,6 @@ void championRoleLabel
   margin-top: 3px;
   margin-bottom: 2px;
   pointer-events: none;
-}
-
-/* ══════════════════════════════
-   ORIGIN — Role sidebar badge
-   ══════════════════════════════ */
-.role-btn-origin {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  z-index: 3;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.72);
-  border-radius: 2px;
-  padding: 1px 5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: calc(100% - 42px);
-  pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 
