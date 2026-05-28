@@ -7,7 +7,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy, RoleStat, ActiveOriginSynergy } from '@/types'
+import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy, RoleStat } from '@/types'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
@@ -40,7 +40,7 @@ const doneExpeditionCount = computed(
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const synergyStore = useSynergyStore()
-const { globalSynergies, activeSynergies, activeOriginSynergies } = storeToRefs(synergyStore)
+const { activeSynergies, activeOriginSynergies } = storeToRefs(synergyStore)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
@@ -58,17 +58,76 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
-const hoveredSynId = ref<string | null>(null)
-const hoveredOriginId = ref<string | null>(null)
+const hoveredTftId = ref<string | null>(null)
+const tooltipPos = ref({ x: 0, y: 0 })
 
-const hoveredSyn = computed(
-  () => activeSynergies.value.find((s) => s.id === hoveredSynId.value) ?? null,
-)
+const TIER_COLORS = {
+  bronze: '#a06030',
+  silver: '#9aa4b4',
+  gold: '#d4a830',
+} as const
 
 const sortedRoleSynergies = computed<ActiveSynergy[]>(() => {
   const globals = activeSynergies.value.filter((s) => s.roleIndex === undefined)
   const roleSpecific = activeSynergies.value.filter((s) => s.roleIndex === activeSlotIndex.value)
   return [...globals, ...roleSpecific]
+})
+
+const tftActiveTraits = computed(() => {
+  const synTraits = sortedRoleSynergies.value.map((syn) => ({
+    id: syn.id,
+    name: syn.name,
+    icon: syn.icon,
+    color: syn.color,
+    tier: syn.tier as 'bronze' | 'silver' | 'gold',
+    count: syn.involvedChampions.length,
+    maxCount: null as number | null,
+    nextCount: null as number | null,
+    effects: syn.effects,
+    thresholds: null as import('@/types').OriginSynergyThreshold[] | null,
+    activeThresholdIdx: -1,
+    involvedChampions: syn.involvedChampions,
+    isOrigin: false,
+  }))
+
+  const originTraits = activeOriginSynergies.value
+    .filter((os) => os.activeThreshold !== null)
+    .map((os) => {
+      const activeIdx = os.def.thresholds.findIndex((t) => t === os.activeThreshold)
+      const total = os.def.thresholds.length
+      const tier: 'bronze' | 'silver' | 'gold' =
+        activeIdx >= total - 1
+          ? 'gold'
+          : activeIdx >= Math.ceil(total / 2) - 1
+            ? 'silver'
+            : 'bronze'
+      return {
+        id: 'origin-' + os.origin,
+        name: os.def.name,
+        icon: os.def.icon,
+        color: os.def.color,
+        tier,
+        count: os.count,
+        maxCount: os.def.thresholds.at(-1)!.count,
+        nextCount: os.nextThreshold?.count ?? null,
+        effects: null as import('@/types').SynergyEffect[] | null,
+        thresholds: os.def.thresholds,
+        activeThresholdIdx: activeIdx,
+        involvedChampions: os.involvedChampions,
+        isOrigin: true,
+      }
+    })
+
+  const ORDER = { gold: 0, silver: 1, bronze: 2 }
+  return [...synTraits, ...originTraits].sort((a, b) => ORDER[a.tier] - ORDER[b.tier])
+})
+
+const hoveredSyn = computed(() => {
+  if (hoveredTftId.value) {
+    const tft = tftActiveTraits.value.find((t) => t.id === hoveredTftId.value)
+    if (tft) return { involvedChampions: tft.involvedChampions, color: tft.color }
+  }
+  return null
 })
 
 watch(
@@ -244,14 +303,10 @@ function getEquippedItem(cat: ItemCategory): ShopItem | null {
   return SHOP_ITEMS.find((i) => i.id === id) ?? null
 }
 
-function formatEffect(syn: ActiveSynergy): string {
-  return syn.effects
-    .map((e) => {
-      const pct = Math.round((e.multiplier - 1) * 100)
-      const label = e.type === 'cps' ? 'CPS' : e.type === 'power' ? 'Power' : 'DPS'
-      return `${label} +${pct}%`
-    })
-    .join(' · ')
+function onTraitHover(id: string, e: MouseEvent) {
+  hoveredTftId.value = id
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  tooltipPos.value = { x: rect.left - 8, y: rect.top }
 }
 
 function isHighlighted(champion: string | null | undefined): boolean {
@@ -287,13 +342,7 @@ function getRoleOrbitDescription(role: ChampionRole): string {
   return ROLE_BY_KEY[role]?.orbitDesc ?? ''
 }
 
-function originProgress(syn: ActiveOriginSynergy): number {
-  const maxCount = syn.def.thresholds.at(-1)!.count
-  return Math.min((syn.count / maxCount) * 100, 100)
-}
-
 void championRoleLabel
-void globalSynergies
 </script>
 
 <template>
@@ -456,101 +505,83 @@ void globalSynergies
           </button>
         </div>
 
-        <!-- ══ Synergy Panel (rechts) ══ -->
-        <div class="splash-syn-panel" @click.stop>
-          <div class="syn-panel-label">Synergies</div>
+        <!-- ══ TFT Synergy Panel (rechts) ══ -->
+        <div class="tft-syn-panel" @click.stop>
+          <div class="tft-syn-label">Synergies</div>
+
           <div
-            v-for="syn in sortedRoleSynergies"
-            :key="syn.id"
-            class="splash-syn-entry"
-            :class="{ 'splash-syn-entry--global': syn.roleIndex === undefined }"
-            :style="syn.roleIndex !== undefined ? { '--sc': syn.color } : {}"
-            @mouseenter="hoveredSynId = syn.id"
-            @mouseleave="hoveredSynId = null"
+            v-for="trait in tftActiveTraits"
+            :key="trait.id"
+            class="tft-trait-row"
+            :style="{ '--tc': TIER_COLORS[trait.tier] }"
+            @mouseenter="onTraitHover(trait.id, $event)"
+            @mouseleave="hoveredTftId = null"
           >
-            <div class="syn-entry-icon-wrap">
-              <span class="splash-syn-entry-icon">{{ syn.icon }}</span>
-            </div>
-            <div class="splash-syn-entry-info">
-              <div class="syn-entry-header">
-                <span class="splash-syn-entry-name">{{ syn.name }}</span>
-                <span v-if="syn.roleIndex === undefined" class="splash-syn-global-badge">✦</span>
+            <div class="tft-hex-badge">
+              <div class="tft-hex-inner" :style="{ background: TIER_COLORS[trait.tier] }">
+                <span class="tft-hex-icon">{{ trait.icon }}</span>
               </div>
-              <span class="splash-syn-entry-fx">{{ formatEffect(syn) }}</span>
-              <Transition name="syn-champs-fade">
-                <div
-                  v-if="hoveredSynId === syn.id && syn.involvedChampions.length"
-                  class="splash-syn-entry-champs"
-                >
-                  <div
-                    v-for="champ in syn.involvedChampions"
-                    :key="champ"
-                    class="syn-champ-wrap"
-                    :title="champ"
-                  >
-                    <img
-                      :src="battleStore.getChampionImage(champ)"
-                      :alt="champ"
-                      class="splash-syn-champ-avatar"
-                      @error="onImgError"
-                    />
-                    <span class="syn-champ-name">{{ champ }}</span>
-                  </div>
-                </div>
-              </Transition>
             </div>
-          </div>
-          <!-- Origin Synergy entries -->
-          <div
-            v-for="osyn in activeOriginSynergies"
-            :key="'origin-' + osyn.origin"
-            class="splash-syn-entry splash-syn-entry--origin"
-            :class="{ 'splash-syn-entry--origin-active': !!osyn.activeThreshold }"
-            :style="{ '--sc': osyn.def.color }"
-            @mouseenter="hoveredOriginId = osyn.origin"
-            @mouseleave="hoveredOriginId = null"
-          >
-            <div class="syn-entry-icon-wrap">
-              <span class="splash-syn-entry-icon">{{ osyn.def.icon }}</span>
-            </div>
-            <div class="splash-syn-entry-info">
-              <div class="syn-entry-header">
-                <span class="splash-syn-entry-name">{{ osyn.def.name }}</span>
-                <span class="origin-count-badge">{{ osyn.count }}/{{ osyn.nextThreshold?.count ?? osyn.def.thresholds.at(-1)!.count }}</span>
-              </div>
-              <div class="origin-inline-bar-wrap">
-                <div class="origin-inline-bar" :style="{ width: originProgress(osyn) + '%', background: osyn.def.color }" />
-              </div>
-              <span class="splash-syn-entry-fx">{{ osyn.activeThreshold ? osyn.activeThreshold.bonus : osyn.nextThreshold ? 'Next: ' + osyn.nextThreshold.bonus : '' }}</span>
-              <Transition name="syn-champs-fade">
-                <div
-                  v-if="hoveredOriginId === osyn.origin && osyn.involvedChampions.length"
-                  class="splash-syn-entry-champs"
-                >
-                  <div
-                    v-for="champ in osyn.involvedChampions"
-                    :key="champ"
-                    class="syn-champ-wrap"
-                    :title="champ"
-                  >
-                    <img
-                      :src="battleStore.getChampionImage(champ)"
-                      :alt="champ"
-                      class="splash-syn-champ-avatar"
-                      @error="onImgError"
-                    />
-                    <span class="syn-champ-name">{{ champ }}</span>
-                  </div>
-                </div>
-              </Transition>
-            </div>
+            <span class="tft-trait-name">{{ trait.name }}</span>
+            <span class="tft-trait-count">
+              <template v-if="trait.maxCount !== null">
+                {{ trait.count }} / {{ trait.nextCount ?? trait.maxCount }}
+              </template>
+              <template v-else>
+                {{ trait.count }}
+              </template>
+            </span>
           </div>
 
-          <div v-if="sortedRoleSynergies.length === 0 && activeOriginSynergies.length === 0" class="syn-empty">
-            <span class="syn-empty-icon">🔗</span>
-            <span class="syn-empty-hint">No active synergies</span>
+          <div v-if="tftActiveTraits.length === 0" class="tft-syn-empty">
+            <span>No active synergies</span>
           </div>
         </div>
+
+        <!-- TFT Tooltip (Teleport → body, fixed links vom Panel) -->
+        <Teleport to="body">
+          <Transition name="tft-tooltip-fade">
+            <div
+              v-if="hoveredTftId !== null"
+              class="tft-tooltip"
+              :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
+            >
+              <template
+                v-for="trait in tftActiveTraits.filter((t) => t.id === hoveredTftId)"
+                :key="trait.id"
+              >
+                <div class="tft-tooltip-header">
+                  <span class="tft-tooltip-icon">{{ trait.icon }}</span>
+                  <span class="tft-tooltip-title" :style="{ color: TIER_COLORS[trait.tier] }">{{ trait.name }}</span>
+                </div>
+                <template v-if="trait.isOrigin && trait.thresholds">
+                  <div
+                    v-for="(thresh, idx) in trait.thresholds"
+                    :key="idx"
+                    class="tft-tooltip-thresh"
+                    :class="{ 'tft-tooltip-thresh--active': idx === trait.activeThresholdIdx }"
+                  >
+                    <span class="tft-tooltip-thresh-count">{{ thresh.count }}</span>
+                    <span class="tft-tooltip-thresh-bonus">{{ thresh.bonus }}</span>
+                  </div>
+                </template>
+                <template v-else-if="trait.effects">
+                  <div
+                    v-for="(eff, idx) in trait.effects"
+                    :key="idx"
+                    class="tft-tooltip-effect"
+                  >
+                    {{ eff.type === 'cps' ? 'CPS' : eff.type === 'power' ? 'Power' : 'DPS' }}
+                    +{{ Math.round((eff.multiplier - 1) * 100) }}%
+                  </div>
+                </template>
+                <div v-if="trait.involvedChampions.length" class="tft-tooltip-champs">
+                  {{ trait.involvedChampions.join(' · ') }}
+                </div>
+              </template>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
         <div class="splash-equip-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
@@ -1288,9 +1319,9 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   SYNERGY PANEL — größerer Text
+   TFT SYNERGY PANEL
    ══════════════════════════════ */
-.splash-syn-panel {
+.tft-syn-panel {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -1298,24 +1329,25 @@ void globalSynergies
   z-index: 6;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   pointer-events: auto;
-  width: 182px;
+  width: 186px;
   max-height: 75%;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
-.splash-syn-panel::-webkit-scrollbar {
+.tft-syn-panel::-webkit-scrollbar {
   width: 3px;
 }
-.splash-syn-panel::-webkit-scrollbar-track {
+.tft-syn-panel::-webkit-scrollbar-track {
   background: transparent;
 }
-.splash-syn-panel::-webkit-scrollbar-thumb {
+.tft-syn-panel::-webkit-scrollbar-thumb {
   background: rgba(92, 51, 16, 0.6);
   border-radius: 2px;
 }
-.syn-panel-label {
+.tft-syn-label {
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.18em;
@@ -1326,172 +1358,65 @@ void globalSynergies
   border-bottom: 1px solid rgba(92, 51, 16, 0.45);
   flex-shrink: 0;
 }
-.splash-syn-entry {
+.tft-trait-row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px 5px 6px;
   background: rgba(8, 5, 2, 0.82);
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 28%, transparent);
-  border-radius: 6px;
-  padding: 8px 10px;
+  border: 1px solid rgba(92, 51, 16, 0.4);
+  border-left: 2px solid var(--tc, #d4a830);
+  border-radius: 4px;
   cursor: default;
-  position: relative;
-  overflow: hidden;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
+  transition: background 0.12s, border-color 0.12s;
 }
-.splash-syn-entry::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: color-mix(in srgb, var(--sc, #e8c040) 70%, transparent);
-  border-radius: 6px 0 0 6px;
+.tft-trait-row:hover {
+  background: rgba(14, 10, 4, 0.92);
+  border-color: var(--tc, #d4a830);
 }
-.splash-syn-entry:hover {
-  border-color: color-mix(in srgb, var(--sc, #e8c040) 70%, transparent);
-  background: rgba(12, 8, 2, 0.92);
-  box-shadow:
-    0 0 12px color-mix(in srgb, var(--sc, #e8c040) 22%, transparent),
-    inset 0 0 20px color-mix(in srgb, var(--sc, #e8c040) 6%, transparent);
-}
-.splash-syn-entry--global {
-  background: rgba(92, 51, 16, 0.55);
-  border: 1px solid rgba(232, 192, 64, 0.45);
-}
-.splash-syn-entry--global::before {
-  background: linear-gradient(to bottom, #e8c040, #c89040);
-}
-.splash-syn-entry--global:hover {
-  border-color: rgba(232, 192, 64, 0.85);
-  background: rgba(110, 62, 18, 0.7);
-}
-.splash-syn-entry--global .splash-syn-entry-name {
-  color: #f0d870;
-}
-.syn-entry-icon-wrap {
-  width: 30px;
-  height: 30px;
+.tft-hex-badge {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--sc, #e8c040) 10%, rgba(0, 0, 0, 0.5));
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 25%, transparent);
-  border-radius: 5px;
-}
-.splash-syn-entry--global .syn-entry-icon-wrap {
-  background: rgba(200, 144, 64, 0.15);
-  border-color: rgba(232, 192, 64, 0.35);
-}
-.splash-syn-entry-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-.splash-syn-entry-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  flex: 1;
-}
-.syn-entry-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-.splash-syn-entry-name {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--sc, #e8c040);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.splash-syn-global-badge {
-  font-size: 10px;
-  color: #e8c040;
-  opacity: 0.8;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.splash-syn-entry-fx {
-  font-size: 11px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--sc, #e8c040) 65%, rgba(255, 255, 255, 0.3));
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
-.splash-syn-entry--global .splash-syn-entry-fx {
-  color: rgba(232, 192, 64, 0.75);
-}
-.splash-syn-entry-champs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 6px;
-}
-.syn-champ-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.splash-syn-champ-avatar {
-  width: 28px;
+  width: 24px;
   height: 28px;
-  border-radius: 5px;
-  object-fit: cover;
-  object-position: top center;
-  border: 1px solid color-mix(in srgb, var(--sc, #e8c040) 55%, transparent);
-  background: rgba(8, 5, 2, 0.9);
-  flex-shrink: 0;
-  transition:
-    transform 0.15s,
-    box-shadow 0.15s;
-}
-.splash-syn-champ-avatar:hover {
-  transform: scale(1.12);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
-}
-.syn-champ-name {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--sc, #e8c040) 60%, transparent);
-  white-space: nowrap;
-  max-width: 34px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
 }
-.syn-empty {
+.tft-hex-inner {
+  width: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 20px 8px;
 }
-.syn-empty-icon {
-  font-size: 22px;
-  opacity: 0.25;
+.tft-hex-icon {
+  font-size: 13px;
+  line-height: 1;
 }
-.syn-empty-hint {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+.tft-trait-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d8c8a0;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.25);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.tft-trait-count {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--tc, #d4a830);
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.tft-syn-empty {
+  font-size: 10px;
+  color: rgba(232, 192, 64, 0.35);
   text-align: center;
+  padding: 12px 0;
+  letter-spacing: 0.06em;
 }
 
 /* ══════════════════════════════════════════
@@ -2176,31 +2101,81 @@ void globalSynergies
 }
 
 /* ══════════════════════════════
-   SYNERGY PANEL — Origin entries
+   TFT TOOLTIP (via Teleport)
    ══════════════════════════════ */
-.splash-syn-entry--origin {
-  opacity: 0.55;
+.tft-tooltip {
+  position: fixed;
+  transform: translateX(-100%);
+  z-index: 9999;
+  width: 200px;
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
 }
-.splash-syn-entry--origin-active {
+.tft-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
+}
+.tft-tooltip-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.tft-tooltip-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.tft-tooltip-thresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  opacity: 0.45;
+  font-size: 11px;
+}
+.tft-tooltip-thresh--active {
   opacity: 1;
-}
-.origin-count-badge {
-  font-size: 9px;
   font-weight: 700;
-  color: var(--sc, #e8c040);
-  margin-left: auto;
+}
+.tft-tooltip-thresh-count {
+  width: 18px;
+  text-align: center;
+  font-weight: 800;
+  color: #e8c040;
   flex-shrink: 0;
 }
-.origin-inline-bar-wrap {
-  height: 2px;
-  background: rgba(92, 51, 16, 0.3);
-  border-radius: 1px;
-  overflow: hidden;
-  margin: 3px 0 4px;
+.tft-tooltip-thresh-bonus {
+  color: #c8b88a;
 }
-.origin-inline-bar {
-  height: 100%;
-  border-radius: 1px;
-  transition: width 0.3s ease;
+.tft-tooltip-effect {
+  font-size: 11px;
+  color: #e8c040;
+  padding: 2px 0;
+}
+.tft-tooltip-champs {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(92, 51, 16, 0.4);
+  font-size: 9px;
+  color: rgba(200, 180, 140, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+.tft-tooltip-fade-enter-active,
+.tft-tooltip-fade-leave-active {
+  transition: opacity 0.1s;
+}
+.tft-tooltip-fade-enter-from,
+.tft-tooltip-fade-leave-to {
+  opacity: 0;
 }
 </style>
