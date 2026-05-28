@@ -393,8 +393,7 @@ void championRoleLabel
           :class="{ 'panel-toggle--sec-collapsed': secCollapsed }"
           :aria-label="secCollapsed ? 'Expand allies panel' : 'Collapse allies panel'"
           :aria-expanded="!secCollapsed"
-          @mouseenter="secCollapsed = false"
-          @click.stop="secCollapsed = !secCollapsed"
+          @mouseenter="secCollapsed = !secCollapsed"
         >{{ secCollapsed ? '▶' : '◀' }}</button>
 
         <!-- Synergy panel toggle -->
@@ -403,8 +402,7 @@ void championRoleLabel
           :class="{ 'panel-toggle--syn-collapsed': synCollapsed }"
           :aria-label="synCollapsed ? 'Expand synergies' : 'Collapse synergies'"
           :aria-expanded="!synCollapsed"
-          @mouseenter="synCollapsed = false"
-          @click.stop="synCollapsed = !synCollapsed"
+          @mouseenter="synCollapsed = !synCollapsed"
         >{{ synCollapsed ? '◀' : '▶' }}</button>
 
         <!-- ══ TFT Synergy Panel (rechts) ══ -->
@@ -420,8 +418,7 @@ void championRoleLabel
           :class="{ 'panel-toggle--equip-collapsed': equipCollapsed }"
           :aria-label="equipCollapsed ? 'Expand equipment' : 'Collapse equipment'"
           :aria-expanded="!equipCollapsed"
-          @mouseenter="equipCollapsed = false"
-          @click.stop="equipCollapsed = !equipCollapsed"
+          @mouseenter="equipCollapsed = !equipCollapsed"
         >{{ equipCollapsed ? '▲' : '▼' }}</button>
 
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
