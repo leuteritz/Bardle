@@ -7,7 +7,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, ShopItem, RoleStat } from '@/types'
+import type { ChampionRole, ItemCategory, RoleStat } from '@/types'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
@@ -18,17 +18,13 @@ import { useExpeditionStore } from '@/stores/expedetionStore'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
 import SynergiesPanelComponent from './SynergiesPanelComponent.vue'
 import RoleSidebarComponent from './RoleSidebarComponent.vue'
+import EquipmentSlotBarComponent from './EquipmentSlotBarComponent.vue'
+import SecondaryChampionsPanelComponent from './SecondaryChampionsPanelComponent.vue'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
 const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
 const ROLE_INDEX = Object.fromEntries(ROLE_DEFS.map((r, i) => [r.key, i])) as Partial<Record<ChampionRole, number>>
 const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
-
-const CAT_LABELS: Record<ItemCategory, string> = {
-  weapon: 'Weapon',
-  armor: 'Armor',
-  artefact: 'Artefact',
-}
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
@@ -229,12 +225,6 @@ function handleEquip(itemId: string) {
   }
 }
 
-function getEquippedItem(cat: ItemCategory): ShopItem | null {
-  const id = currentEquipment.value[cat]
-  if (!id) return null
-  return SHOP_ITEMS.find((i) => i.id === id) ?? null
-}
-
 function isHighlighted(champion: string | null | undefined): boolean {
   if (!champion || !hoveredSyn.value) return false
   return hoveredSyn.value.involvedChampions.includes(champion)
@@ -387,54 +377,15 @@ void championRoleLabel
         </div>
 
         <!-- ══ Secondary Panel (links) ══ -->
-        <div
-          class="splash-sec-panel"
-          :class="{ 'splash-sec-panel--collapsed': secCollapsed }"
-          :style="{ '--rc': ROLE_COLORS[activeRole] }"
-          @click.stop
-        >
-          <div class="sec-panel-label">Allies</div>
-          <button
-            v-for="(slotIdx, i) in [0, 1]"
-            :key="i"
-            class="sec-slot"
-            :class="{
-              'sec-slot--filled': !!activeSecondaries[slotIdx],
-              'sec-slot--syn-glow': isHighlighted(activeSecondaries[slotIdx]),
-            }"
-            :style="highlightStyle(activeSecondaries[slotIdx])"
-            @click.stop="openChampionPicker(slotIdx)"
-          >
-            <span class="sec-slot-num">{{ i + 1 }}</span>
-            <template v-if="activeSecondaries[slotIdx]">
-              <div class="sec-slot-portrait">
-                <img
-                  :src="battleStore.getChampionImage(activeSecondaries[slotIdx]!)"
-                  :alt="activeSecondaries[slotIdx]!"
-                  class="sec-slot-img"
-                  @error="onImgError"
-                />
-                <div class="sec-slot-img-overlay" />
-              </div>
-              <div class="sec-slot-footer">
-                <span class="sec-slot-name">{{ activeSecondaries[slotIdx] }}</span>
-              </div>
-              <button
-                class="sec-slot-remove"
-                title="Remove"
-                @click.stop="clearSecondary(activeSlotIndex, slotIdx, $event)"
-              >
-                ✕
-              </button>
-            </template>
-            <template v-else>
-              <div class="sec-slot-empty-body">
-                <span class="sec-slot-empty-icon">＋</span>
-                <span class="sec-slot-empty-hint">Add Ally</span>
-              </div>
-            </template>
-          </button>
-        </div>
+        <SecondaryChampionsPanelComponent
+          :secondaries="activeSecondaries"
+          :active-slot-index="activeSlotIndex"
+          :collapsed="secCollapsed"
+          :role-color="ROLE_COLORS[activeRole]"
+          :hovered-syn="hoveredSyn"
+          @open-champion-picker="openChampionPicker"
+          @clear-secondary="clearSecondary"
+        />
 
         <!-- Secondary panel toggle -->
         <button
@@ -474,39 +425,12 @@ void championRoleLabel
         >{{ equipCollapsed ? '▲' : '▼' }}</button>
 
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
-        <div
-          class="splash-equip-bar"
-          :class="{ 'splash-equip-bar--collapsed': equipCollapsed }"
-          :style="{ '--rc': ROLE_COLORS[activeRole] }"
-          @click.stop
-        >
-          <button
-            v-for="cat in ['weapon', 'armor', 'artefact'] as ItemCategory[]"
-            :key="cat"
-            class="hud-equip-btn"
-            :class="{ 'hud-equip-btn--filled': currentEquipment[cat] !== null }"
-            :title="getEquippedItem(cat)?.name ?? CAT_LABELS[cat]"
-            @click.stop="openItemPicker(cat)"
-          >
-            <div class="hud-equip-art">
-              <template v-if="getEquippedItem(cat)">
-                <img
-                  v-if="getEquippedItem(cat)!.icon.startsWith('/')"
-                  :src="getEquippedItem(cat)!.icon"
-                  class="hud-equip-img"
-                  :alt="getEquippedItem(cat)!.name"
-                />
-                <span v-else class="hud-equip-emoji">{{ getEquippedItem(cat)!.icon }}</span>
-              </template>
-              <img v-else class="hud-equip-slot-img" :src="`/img/itemShop/${cat}.png`" :alt="CAT_LABELS[cat]" width="40" height="40" loading="eager" />
-            </div>
-            <div class="hud-equip-meta">
-              <span class="hud-equip-name">{{ getEquippedItem(cat)?.name ?? '— empty —' }}</span>
-              <span class="hud-equip-cat">{{ CAT_LABELS[cat] }}</span>
-            </div>
-            <div v-if="currentEquipment[cat]" class="hud-equip-filled-dot" />
-          </button>
-        </div>
+        <EquipmentSlotBarComponent
+          :equipment="currentEquipment"
+          :collapsed="equipCollapsed"
+          :role-color="ROLE_COLORS[activeRole]"
+          @open-item-picker="openItemPicker"
+        />
 
         <!-- ══ MODALS ══ -->
         <Transition name="modal-pop">
@@ -958,329 +882,6 @@ void championRoleLabel
   white-space: nowrap;
 }
 
-/* ══════════════════════════════
-   SECONDARY PANEL — etwas größer
-   ══════════════════════════════ */
-.splash-sec-panel {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  pointer-events: auto;
-  width: 100px;
-}
-.sec-panel-label {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--rc, #c89040) 70%, transparent);
-  text-align: center;
-  padding-bottom: 4px;
-  border-bottom: 1px solid color-mix(in srgb, var(--rc, #c89040) 22%, transparent);
-}
-.sec-slot {
-  position: relative;
-  width: 100px;
-  height: 128px;
-  border-radius: 7px;
-  border: 1px solid color-mix(in srgb, var(--rc, #c89040) 30%, transparent);
-  background: rgba(6, 4, 1, 0.82);
-  overflow: hidden;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.15s ease;
-}
-.sec-slot:hover {
-  border-color: color-mix(in srgb, var(--rc, #c89040) 80%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--rc, #c89040) 25%, transparent),
-    0 8px 24px rgba(0, 0, 0, 0.6);
-  transform: translateY(-3px) scale(1.02);
-}
-.sec-slot:active {
-  transform: translateY(-1px) scale(1.01);
-}
-.sec-slot--filled {
-  border-color: color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
-}
-.sec-slot--filled:hover {
-  border-color: var(--rc, #c89040);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--rc, #c89040) 35%, transparent),
-    0 0 20px color-mix(in srgb, var(--rc, #c89040) 30%, transparent),
-    0 10px 28px rgba(0, 0, 0, 0.7);
-}
-.sec-slot--syn-glow {
-  border-color: var(--hl-color, var(--rc)) !important;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--hl-color, #e8c040) 40%, transparent),
-    0 0 28px color-mix(in srgb, var(--hl-color, #e8c040) 55%, transparent),
-    inset 0 0 12px color-mix(in srgb, var(--hl-color, #e8c040) 15%, transparent) !important;
-  filter: brightness(1.25) saturate(1.15);
-}
-.sec-slot-num {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  z-index: 4;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 18px;
-  text-align: center;
-  color: var(--rc, #c89040);
-  background: rgba(0, 0, 0, 0.72);
-  border: 1px solid color-mix(in srgb, var(--rc, #c89040) 45%, transparent);
-  border-radius: 3px;
-  pointer-events: none;
-}
-.sec-slot-portrait {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.sec-slot-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  display: block;
-  transition: transform 0.25s ease;
-}
-.sec-slot:hover .sec-slot-img {
-  transform: scale(1.07);
-}
-.sec-slot-img-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 45%,
-    rgba(0, 0, 0, 0.55) 75%,
-    rgba(0, 0, 0, 0.85) 100%
-  );
-  pointer-events: none;
-}
-.sec-slot-footer {
-  flex-shrink: 0;
-  padding: 5px 7px;
-  background: rgba(0, 0, 0, 0.78);
-  border-top: 1px solid color-mix(in srgb, var(--rc, #c89040) 20%, transparent);
-}
-.sec-slot-name {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--rc, #c89040);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-.sec-slot-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 5;
-  width: 18px;
-  height: 18px;
-  font-size: 9px;
-  line-height: 1;
-  color: rgba(220, 80, 60, 0.9);
-  background: rgba(10, 5, 2, 0.9);
-  border: 1px solid rgba(180, 50, 30, 0.5);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  cursor: pointer;
-  padding: 0;
-  transition:
-    opacity 0.15s,
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.12s;
-}
-.sec-slot:hover .sec-slot-remove {
-  opacity: 1;
-}
-.sec-slot-remove:hover {
-  background: rgba(160, 30, 15, 0.88);
-  border-color: rgba(220, 70, 50, 0.9);
-  transform: scale(1.1);
-}
-.sec-slot-empty-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-.sec-slot-empty-icon {
-  font-size: 26px;
-  line-height: 1;
-  color: color-mix(in srgb, var(--rc, #c89040) 22%, transparent);
-  transition:
-    color 0.2s,
-    transform 0.2s;
-}
-.sec-slot:hover .sec-slot-empty-icon {
-  color: color-mix(in srgb, var(--rc, #c89040) 60%, transparent);
-  transform: scale(1.15);
-}
-.sec-slot-empty-hint {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--rc, #c89040) 28%, transparent);
-  transition: color 0.2s;
-}
-.sec-slot:hover .sec-slot-empty-hint {
-  color: color-mix(in srgb, var(--rc, #c89040) 55%, transparent);
-}
-
-/* ══════════════════════════════════════════
-   EQUIP BAR — zentriert unten, alles größer
-   ══════════════════════════════════════════ */
-.splash-equip-bar {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 7;
-  pointer-events: auto;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  background: rgba(6, 4, 1, 0.92);
-  border: 1px solid rgba(122, 78, 32, 0.8);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(92, 51, 16, 0.4),
-    0 10px 36px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(200, 144, 64, 0.15);
-  background-image: linear-gradient(
-    to bottom,
-    rgba(200, 144, 64, 0.15) 0px,
-    rgba(200, 144, 64, 0) 3px
-  );
-}
-
-.hud-equip-btn {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 14px 22px 12px;
-  background: transparent;
-  border: none;
-  border-right: 1px solid rgba(92, 51, 16, 0.5);
-  cursor: pointer;
-  min-width: 118px;
-  transition:
-    background 0.15s,
-    box-shadow 0.15s;
-  overflow: hidden;
-}
-.hud-equip-btn:last-child {
-  border-right: none;
-}
-.hud-equip-btn:hover {
-  background: rgba(200, 144, 64, 0.07);
-  box-shadow: inset 0 1px 0 rgba(200, 144, 64, 0.22);
-}
-.hud-equip-btn--filled:hover {
-  background: rgba(200, 144, 64, 0.1);
-  box-shadow: inset 0 1px 0 rgba(200, 144, 64, 0.38);
-}
-
-/* Item-Art-Feld — deutlich größer */
-.hud-equip-art {
-  width: 68px;
-  height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-  flex-shrink: 0;
-}
-.hud-equip-btn--filled .hud-equip-art {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(200, 144, 64, 0.45);
-  box-shadow: inset 0 0 18px rgba(200, 144, 64, 0.09);
-}
-.hud-equip-btn:hover .hud-equip-art {
-  border-color: rgba(200, 144, 64, 0.8);
-  box-shadow:
-    0 0 22px rgba(200, 144, 64, 0.25),
-    inset 0 0 14px rgba(200, 144, 64, 0.12);
-}
-
-.hud-equip-img {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 7px rgba(200, 144, 64, 0.5));
-  transition:
-    filter 0.15s,
-    transform 0.15s;
-}
-.hud-equip-btn:hover .hud-equip-img {
-  filter: drop-shadow(0 0 20px rgba(200, 144, 64, 0.95));
-  transform: scale(1.07);
-}
-.hud-equip-emoji {
-  font-size: 42px;
-  line-height: 1;
-  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.45));
-  transition:
-    filter 0.15s,
-    transform 0.15s;
-}
-.hud-equip-btn:hover .hud-equip-emoji {
-  filter: drop-shadow(0 0 16px rgba(200, 144, 64, 0.9));
-  transform: scale(1.09);
-}
-.hud-equip-slot-img {
-  width: 62px;
-  height: 62px;
-  object-fit: contain;
-  image-rendering: auto;
-  opacity: 0.3;
-  transition:
-    opacity 0.15s,
-    transform 0.15s;
-}
-.hud-equip-btn:hover .hud-equip-slot-img {
-  opacity: 0.65;
-  transform: scale(1.07);
-}
-
 .modal-tab-img {
   width: 18px;
   height: 18px;
@@ -1288,57 +889,6 @@ void championRoleLabel
   image-rendering: auto;
   flex-shrink: 0;
   vertical-align: middle;
-}
-
-/* Item-Name + Kategorie */
-.hud-equip-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  width: 100%;
-}
-.hud-equip-name {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: rgba(200, 144, 64, 0.55);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-  max-width: 100px;
-  text-align: center;
-  transition: color 0.15s;
-}
-.hud-equip-btn--filled .hud-equip-name {
-  color: rgba(232, 192, 64, 0.92);
-}
-.hud-equip-btn:hover .hud-equip-name {
-  color: #f0d870;
-}
-.hud-equip-cat {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.3);
-  line-height: 1;
-  transition: color 0.15s;
-}
-.hud-equip-btn:hover .hud-equip-cat {
-  color: rgba(200, 144, 64, 0.6);
-}
-
-.hud-equip-filled-dot {
-  position: absolute;
-  top: 8px;
-  right: 9px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e8c040;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.9);
 }
 
 /* ══════════════════════════════
@@ -1693,24 +1243,6 @@ void championRoleLabel
   bottom: 4px;
 }
 
-/* ══ Collapse animations ══ */
-.splash-sec-panel {
-  transition: transform 0.3s ease, opacity 0.25s ease;
-}
-.splash-sec-panel--collapsed {
-  transform: translateY(-50%) translateX(-115%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.splash-equip-bar {
-  transition: transform 0.3s ease, opacity 0.25s ease;
-}
-.splash-equip-bar--collapsed {
-  transform: translateX(-50%) translateY(130%);
-  opacity: 0;
-  pointer-events: none;
-}
 
 
 </style>
