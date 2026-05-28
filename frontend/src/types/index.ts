@@ -483,6 +483,45 @@ export interface ActiveSynergy extends SynergyDefinition {
   roleIndex?: number
 }
 
+export type ChampionOrigin =
+  | 'Bandle City'
+  | 'Bilgewater'
+  | 'Demacia'
+  | 'Ionia'
+  | 'Ixtal'
+  | 'Noxus'
+  | 'Piltover'
+  | 'Shadow Isles'
+  | 'Shurima'
+  | 'Targon'
+  | 'The Freljord'
+  | 'The Void'
+  | 'Zaun'
+  | 'Runeterra'
+
+export interface OriginSynergyThreshold {
+  count: number
+  bonus: string
+  effects: SynergyEffect[]
+}
+
+export interface OriginSynergyDef {
+  origin: ChampionOrigin
+  name: string
+  color: string
+  icon: string
+  thresholds: OriginSynergyThreshold[]
+}
+
+export interface ActiveOriginSynergy {
+  origin: ChampionOrigin
+  def: OriginSynergyDef
+  count: number
+  activeThreshold: OriginSynergyThreshold | null
+  nextThreshold: OriginSynergyThreshold | null
+  involvedChampions: string[]
+}
+
 export interface RoleBehaviorState {
   // Support
   supportHealCooldownMs: number

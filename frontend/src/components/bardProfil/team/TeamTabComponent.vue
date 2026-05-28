@@ -7,7 +7,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { getChampionRoles } from '@/config/championRoles'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy, RoleStat } from '@/types'
+import type { ChampionRole, ItemCategory, ShopItem, ActiveSynergy, RoleStat, ActiveOriginSynergy } from '@/types'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
@@ -16,6 +16,7 @@ import ExpeditionActiveComponent from './expedition/ExpeditionActiveComponent.vu
 import ItemShopComponent from './ItemShopComponent.vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
+import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
 const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
@@ -39,7 +40,7 @@ const doneExpeditionCount = computed(
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const synergyStore = useSynergyStore()
-const { globalSynergies, activeSynergies } = storeToRefs(synergyStore)
+const { globalSynergies, activeSynergies, activeOriginSynergies } = storeToRefs(synergyStore)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 
@@ -58,6 +59,7 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 const parallaxX = ref(0)
 const parallaxY = ref(0)
 const hoveredSynId = ref<string | null>(null)
+const hoveredOriginId = ref<string | null>(null)
 
 const hoveredSyn = computed(
   () => activeSynergies.value.find((s) => s.id === hoveredSynId.value) ?? null,
@@ -285,6 +287,11 @@ function getRoleOrbitDescription(role: ChampionRole): string {
   return ROLE_BY_KEY[role]?.orbitDesc ?? ''
 }
 
+function originProgress(syn: ActiveOriginSynergy): number {
+  const maxCount = syn.def.thresholds.at(-1)!.count
+  return Math.min((syn.count / maxCount) * 100, 100)
+}
+
 void championRoleLabel
 void globalSynergies
 </script>
@@ -356,6 +363,13 @@ void globalSynergies
         <!-- ══ Top Info Box — Name + Stats (unverändert, nur Größen) ══ -->
         <div v-if="activeChampion" class="splash-info-box" @click.stop>
           <div class="splash-name-in-box">{{ activeChampion }}</div>
+          <div
+            v-if="getChampionOrigin(activeChampion)"
+            class="splash-origin-badge"
+            :style="{ '--oc': getOriginColor(activeChampion) }"
+          >
+            {{ getChampionOrigin(activeChampion) }}
+          </div>
           <div class="splash-role-orbit-list">
             <div
               v-for="role in getChampionRoles(activeChampion)"
@@ -486,7 +500,53 @@ void globalSynergies
               </Transition>
             </div>
           </div>
-          <div v-if="sortedRoleSynergies.length === 0" class="syn-empty">
+          <!-- Origin Synergy entries -->
+          <div
+            v-for="osyn in activeOriginSynergies"
+            :key="'origin-' + osyn.origin"
+            class="splash-syn-entry splash-syn-entry--origin"
+            :class="{ 'splash-syn-entry--origin-active': !!osyn.activeThreshold }"
+            :style="{ '--sc': osyn.def.color }"
+            @mouseenter="hoveredOriginId = osyn.origin"
+            @mouseleave="hoveredOriginId = null"
+          >
+            <div class="syn-entry-icon-wrap">
+              <span class="splash-syn-entry-icon">{{ osyn.def.icon }}</span>
+            </div>
+            <div class="splash-syn-entry-info">
+              <div class="syn-entry-header">
+                <span class="splash-syn-entry-name">{{ osyn.def.name }}</span>
+                <span class="origin-count-badge">{{ osyn.count }}/{{ osyn.nextThreshold?.count ?? osyn.def.thresholds.at(-1)!.count }}</span>
+              </div>
+              <div class="origin-inline-bar-wrap">
+                <div class="origin-inline-bar" :style="{ width: originProgress(osyn) + '%', background: osyn.def.color }" />
+              </div>
+              <span class="splash-syn-entry-fx">{{ osyn.activeThreshold ? osyn.activeThreshold.bonus : osyn.nextThreshold ? 'Next: ' + osyn.nextThreshold.bonus : '' }}</span>
+              <Transition name="syn-champs-fade">
+                <div
+                  v-if="hoveredOriginId === osyn.origin && osyn.involvedChampions.length"
+                  class="splash-syn-entry-champs"
+                >
+                  <div
+                    v-for="champ in osyn.involvedChampions"
+                    :key="champ"
+                    class="syn-champ-wrap"
+                    :title="champ"
+                  >
+                    <img
+                      :src="battleStore.getChampionImage(champ)"
+                      :alt="champ"
+                      class="splash-syn-champ-avatar"
+                      @error="onImgError"
+                    />
+                    <span class="syn-champ-name">{{ champ }}</span>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </div>
+
+          <div v-if="sortedRoleSynergies.length === 0 && activeOriginSynergies.length === 0" class="syn-empty">
             <span class="syn-empty-icon">🔗</span>
             <span class="syn-empty-hint">No active synergies</span>
           </div>
@@ -680,6 +740,11 @@ void globalSynergies
               />
               <div class="role-btn-gradient" />
               <span class="role-btn-label">{{ role }}</span>
+              <span
+                v-if="headerSlots[i]"
+                class="role-btn-origin"
+                :style="{ color: getOriginColor(headerSlots[i]) }"
+              >{{ getChampionOrigin(headerSlots[i]!) }}</span>
               <div class="role-btn-secs">
                 <div
                   v-for="s in [0, 1]"
@@ -702,6 +767,7 @@ void globalSynergies
             </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -2065,5 +2131,76 @@ void globalSynergies
 .role-btn:hover .role-btn-ability,
 .role-btn--active .role-btn-ability {
   color: rgba(200, 144, 64, 0.8);
+}
+
+/* ══════════════════════════════
+   ORIGIN — Splash info badge
+   ══════════════════════════════ */
+.splash-origin-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--oc, #e8c040);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--oc, #5c3310);
+  border-radius: 3px;
+  padding: 1px 7px;
+  margin-top: 3px;
+  margin-bottom: 2px;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════
+   ORIGIN — Role sidebar badge
+   ══════════════════════════════ */
+.role-btn-origin {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 3;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 2px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 42px);
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ══════════════════════════════
+   SYNERGY PANEL — Origin entries
+   ══════════════════════════════ */
+.splash-syn-entry--origin {
+  opacity: 0.55;
+}
+.splash-syn-entry--origin-active {
+  opacity: 1;
+}
+.origin-count-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--sc, #e8c040);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.origin-inline-bar-wrap {
+  height: 2px;
+  background: rgba(92, 51, 16, 0.3);
+  border-radius: 1px;
+  overflow: hidden;
+  margin: 3px 0 4px;
+}
+.origin-inline-bar {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.3s ease;
 }
 </style>

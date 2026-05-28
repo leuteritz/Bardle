@@ -12,7 +12,8 @@ import {
   RARITY_LEGENDARY,
   RARITY_STAR_FORGED,
 } from '../config/synergies'
-import type { ActiveSynergy } from '../types'
+import { getChampionOrigin, ORIGIN_SYNERGIES } from '../config/championOrigins'
+import type { ActiveSynergy, ActiveOriginSynergy, ChampionOrigin } from '../types'
 
 export const useSynergyStore = defineStore('synergy', () => {
   const battleStore = useBattleStore()
@@ -110,26 +111,68 @@ export const useSynergyStore = defineStore('synergy', () => {
     return synergies
   })
 
-  const cpsSynergyMultiplier = computed(() =>
-    activeSynergies.value
+  const activeOriginSynergies = computed<ActiveOriginSynergy[]>(() => {
+    const orbit = allInOrbit.value
+    const originCounts = new Map<ChampionOrigin, string[]>()
+
+    for (const name of orbit) {
+      const origin = getChampionOrigin(name)
+      if (!origin || origin === 'Runeterra') continue
+      if (!originCounts.has(origin)) originCounts.set(origin, [])
+      originCounts.get(origin)!.push(name)
+    }
+
+    const result: ActiveOriginSynergy[] = []
+    for (const [origin, champs] of originCounts) {
+      const def = ORIGIN_SYNERGIES[origin]
+      if (!def) continue
+      const count = champs.length
+      const sorted = [...def.thresholds].sort((a, b) => b.count - a.count)
+      const activeThreshold = sorted.find((t) => count >= t.count) ?? null
+      const nextThreshold = def.thresholds.find((t) => t.count > count) ?? null
+      result.push({ origin, def, count, activeThreshold, nextThreshold, involvedChampions: champs })
+    }
+    return result.sort((a, b) => (b.activeThreshold ? 1 : 0) - (a.activeThreshold ? 1 : 0))
+  })
+
+  const cpsSynergyMultiplier = computed(() => {
+    const baseMult = activeSynergies.value
       .flatMap((s) => s.effects)
       .filter((e) => e.type === 'cps')
-      .reduce((acc, e) => acc * e.multiplier, 1),
-  )
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    const originMult = activeOriginSynergies.value
+      .filter((s) => s.activeThreshold)
+      .flatMap((s) => s.activeThreshold!.effects)
+      .filter((e) => e.type === 'cps')
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    return baseMult * originMult
+  })
 
-  const powerSynergyMultiplier = computed(() =>
-    activeSynergies.value
+  const powerSynergyMultiplier = computed(() => {
+    const baseMult = activeSynergies.value
       .flatMap((s) => s.effects)
       .filter((e) => e.type === 'power')
-      .reduce((acc, e) => acc * e.multiplier, 1),
-  )
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    const originMult = activeOriginSynergies.value
+      .filter((s) => s.activeThreshold)
+      .flatMap((s) => s.activeThreshold!.effects)
+      .filter((e) => e.type === 'power')
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    return baseMult * originMult
+  })
 
-  const dpsSynergyMultiplier = computed(() =>
-    activeSynergies.value
+  const dpsSynergyMultiplier = computed(() => {
+    const baseMult = activeSynergies.value
       .flatMap((s) => s.effects)
       .filter((e) => e.type === 'dps')
-      .reduce((acc, e) => acc * e.multiplier, 1),
-  )
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    const originMult = activeOriginSynergies.value
+      .filter((s) => s.activeThreshold)
+      .flatMap((s) => s.activeThreshold!.effects)
+      .filter((e) => e.type === 'dps')
+      .reduce((acc, e) => acc * e.multiplier, 1)
+    return baseMult * originMult
+  })
 
   // name → list of synergy ids the champion participates in
   const championSynergyMap = computed<Record<string, string[]>>(() => {
@@ -159,6 +202,7 @@ export const useSynergyStore = defineStore('synergy', () => {
 
   return {
     activeSynergies,
+    activeOriginSynergies,
     cpsSynergyMultiplier,
     powerSynergyMultiplier,
     dpsSynergyMultiplier,
