@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useSynergyStore } from '@/stores/synergyStore'
 import type { ActiveSynergy } from '@/types'
 
-const props = defineProps<{ activeSlotIndex: number }>()
+const props = defineProps<{ activeSlotIndex: number; collapsed?: boolean }>()
 const emit = defineEmits<{
   'hovered-syn-change': [value: { involvedChampions: string[]; color: string } | null]
 }>()
@@ -95,7 +95,7 @@ function onTraitHover(id: string, e: MouseEvent) {
 
 <template>
   <!-- ══ TFT Synergy Panel (rechts) ══ -->
-  <div class="tft-syn-panel" @click.stop>
+  <div class="tft-syn-panel" :class="{ 'tft-syn-panel--collapsed': props.collapsed }" @click.stop>
     <div class="tft-syn-label">Synergies</div>
 
     <div
@@ -192,6 +192,12 @@ function onTraitHover(id: string, e: MouseEvent) {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+  transition: transform 0.3s ease, opacity 0.25s ease;
+}
+.tft-syn-panel--collapsed {
+  transform: translateY(-50%) translateX(115%);
+  opacity: 0;
+  pointer-events: none;
 }
 .tft-syn-panel::-webkit-scrollbar {
   width: 3px;

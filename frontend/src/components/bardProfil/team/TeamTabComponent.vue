@@ -58,6 +58,10 @@ const parallaxX = ref(0)
 const parallaxY = ref(0)
 const hoveredSyn = ref<{ involvedChampions: string[]; color: string } | null>(null)
 
+const equipCollapsed = ref(true)
+const synCollapsed   = ref(true)
+const secCollapsed   = ref(true)
+
 watch(
   () => uiStore.rolesActiveSlot,
   (val) => {
@@ -383,7 +387,12 @@ void championRoleLabel
         </div>
 
         <!-- ══ Secondary Panel (links) ══ -->
-        <div class="splash-sec-panel" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+        <div
+          class="splash-sec-panel"
+          :class="{ 'splash-sec-panel--collapsed': secCollapsed }"
+          :style="{ '--rc': ROLE_COLORS[activeRole] }"
+          @click.stop
+        >
           <div class="sec-panel-label">Allies</div>
           <button
             v-for="(slotIdx, i) in [0, 1]"
@@ -427,14 +436,50 @@ void championRoleLabel
           </button>
         </div>
 
+        <!-- Secondary panel toggle -->
+        <button
+          class="panel-toggle panel-toggle--sec"
+          :class="{ 'panel-toggle--sec-collapsed': secCollapsed }"
+          :aria-label="secCollapsed ? 'Expand allies panel' : 'Collapse allies panel'"
+          :aria-expanded="!secCollapsed"
+          @mouseenter="secCollapsed = false"
+          @click.stop="secCollapsed = !secCollapsed"
+        >{{ secCollapsed ? '▶' : '◀' }}</button>
+
+        <!-- Synergy panel toggle -->
+        <button
+          class="panel-toggle panel-toggle--syn"
+          :class="{ 'panel-toggle--syn-collapsed': synCollapsed }"
+          :aria-label="synCollapsed ? 'Expand synergies' : 'Collapse synergies'"
+          :aria-expanded="!synCollapsed"
+          @mouseenter="synCollapsed = false"
+          @click.stop="synCollapsed = !synCollapsed"
+        >{{ synCollapsed ? '◀' : '▶' }}</button>
+
         <!-- ══ TFT Synergy Panel (rechts) ══ -->
         <SynergiesPanelComponent
           :active-slot-index="activeSlotIndex"
+          :collapsed="synCollapsed"
           @hovered-syn-change="hoveredSyn = $event"
         />
 
+        <!-- Equipment bar toggle -->
+        <button
+          class="panel-toggle panel-toggle--equip"
+          :class="{ 'panel-toggle--equip-collapsed': equipCollapsed }"
+          :aria-label="equipCollapsed ? 'Expand equipment' : 'Collapse equipment'"
+          :aria-expanded="!equipCollapsed"
+          @mouseenter="equipCollapsed = false"
+          @click.stop="equipCollapsed = !equipCollapsed"
+        >{{ equipCollapsed ? '▲' : '▼' }}</button>
+
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
-        <div class="splash-equip-bar" :style="{ '--rc': ROLE_COLORS[activeRole] }" @click.stop>
+        <div
+          class="splash-equip-bar"
+          :class="{ 'splash-equip-bar--collapsed': equipCollapsed }"
+          :style="{ '--rc': ROLE_COLORS[activeRole] }"
+          @click.stop
+        >
           <button
             v-for="cat in ['weapon', 'armor', 'artefact'] as ItemCategory[]"
             :key="cat"
@@ -1583,6 +1628,87 @@ void championRoleLabel
   padding: 1px 7px;
   margin-top: 3px;
   margin-bottom: 2px;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════
+   PANEL TOGGLE BUTTONS
+   ══════════════════════════════ */
+.panel-toggle {
+  position: absolute;
+  z-index: 8;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(200, 144, 64, 0.7);
+  background: rgba(6, 4, 1, 0.88);
+  border: 1px solid rgba(122, 78, 32, 0.65);
+  border-radius: 3px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, left 0.3s ease, right 0.3s ease, bottom 0.3s ease;
+}
+.panel-toggle:hover {
+  color: #f0d870;
+  background: rgba(20, 12, 2, 0.95);
+  border-color: rgba(200, 144, 64, 0.5);
+}
+.panel-toggle[aria-expanded="false"] {
+  color: rgba(200, 144, 64, 0.5);
+  border-color: rgba(92, 51, 16, 0.4);
+}
+
+/* Secondary panel toggle — right edge of sec panel, vertically centered */
+.panel-toggle--sec {
+  left: 116px; /* 12px offset + 100px panel + 4px gap */
+  top: 50%;
+  transform: translateY(-50%);
+}
+.panel-toggle--sec-collapsed {
+  left: 4px;
+}
+
+/* Synergy panel toggle — left edge of syn panel (186px wide, 12px from right) */
+.panel-toggle--syn {
+  right: 200px; /* 12px offset + 186px panel + 2px gap */
+  top: 50%;
+  transform: translateY(-50%);
+}
+.panel-toggle--syn-collapsed {
+  right: 4px;
+}
+
+/* Equipment bar toggle — centered above the equip bar */
+.panel-toggle--equip {
+  bottom: 150px; /* bar top edge ~143px (16px offset + ~127px height) + 7px gap */
+  left: 50%;
+  transform: translateX(-50%);
+}
+.panel-toggle--equip-collapsed {
+  bottom: 4px;
+}
+
+/* ══ Collapse animations ══ */
+.splash-sec-panel {
+  transition: transform 0.3s ease, opacity 0.25s ease;
+}
+.splash-sec-panel--collapsed {
+  transform: translateY(-50%) translateX(-115%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-equip-bar {
+  transition: transform 0.3s ease, opacity 0.25s ease;
+}
+.splash-equip-bar--collapsed {
+  transform: translateX(-50%) translateY(130%);
+  opacity: 0;
   pointer-events: none;
 }
 
