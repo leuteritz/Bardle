@@ -337,7 +337,7 @@ void championRoleLabel
           </div>
           <div class="splash-role-orbit-list">
             <div
-              v-for="role in getChampionRoles(activeChampion)"
+              v-for="role in getChampionRoles(activeChampion).filter(r => r === ROLE_MAP[activeRole])"
               :key="role"
               class="orbit-ability-trigger"
             >
