@@ -37,7 +37,7 @@ watch(
 
 <template>
   <button class="inventory-circle-btn" title="Open Shop" @click="uiStore.setBardTab('shop')">
-    <div class="relative w-36 h-36">
+    <div class="bard-avatar-circle">
       <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
         <circle
           cx="50"
@@ -286,6 +286,16 @@ watch(
 </style>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   BARD AVATAR CIRCLE
+   ═══════════════════════════════════════════ */
+.bard-avatar-circle {
+  width: var(--avatar-circle-size, 144px);
+  height: var(--avatar-circle-size, 144px);
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+
 /* ═══════════════════════════════════════════
    MODAL RAHMEN
    ═══════════════════════════════════════════ */

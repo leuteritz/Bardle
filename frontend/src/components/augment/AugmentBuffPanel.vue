@@ -292,7 +292,7 @@ const iconGroups = computed<IconGroup[]>(() => {
   left: 0.75rem;
   top: 0.45rem;
   z-index: 60;
-  width: 260px;
+  width: clamp(220px, 18vw, 340px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -466,7 +466,7 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 .aug-icon-slot {
   position: relative;
-  height: 56px;
+  height: clamp(48px, 4vw, 68px);
   border-radius: 4px;
   border: 2px solid #5c3310;
   background: #141410;

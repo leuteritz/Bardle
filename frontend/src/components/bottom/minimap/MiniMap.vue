@@ -246,6 +246,8 @@ export default defineComponent({
   left: 0;
   z-index: 10000;
   pointer-events: none;
+  transform-origin: bottom left;
+  transform: scale(var(--hud-scale, 1));
 }
 
 .minimap-panel {

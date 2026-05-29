@@ -226,6 +226,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   width: 440px;
   height: 440px;
   pointer-events: none;
+  transform-origin: bottom right;
+  transform: scale(var(--hud-scale, 1));
 }
 
 @media (max-width: 600px) {

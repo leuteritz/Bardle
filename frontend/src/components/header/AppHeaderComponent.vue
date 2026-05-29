@@ -94,7 +94,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 </script>
 
 <template>
-  <header ref="headerRef" class="z-[120] header-bar w-full max-w-[1400px] mx-auto relative">
+  <header ref="headerRef" class="z-[120] header-bar w-full mx-auto relative">
     <!-- ════════ LINKE SEITE ════════ -->
     <div class="flex items-center gap-2 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
@@ -204,7 +204,7 @@ onUnmounted(() => resizeObserver?.disconnect())
           title="Open Skill Tree"
           @click="uiStore.setBardTab('tree')"
         >
-          <div class="relative w-36 h-36">
+          <div class="header-avatar-circle">
             <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
               <circle
                 cx="50"
@@ -250,6 +250,7 @@ onUnmounted(() => resizeObserver?.disconnect())
    HEADER BAR
    ================================================================ */
 .header-bar {
+  max-width: 1400px;
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border: 2px solid var(--rpg-wood, #7c4f1a);
   border-top: none;
@@ -261,12 +262,19 @@ onUnmounted(() => resizeObserver?.disconnect())
   overflow: visible;
   position: relative;
   display: grid;
-  grid-template-columns: 1fr clamp(300px, 30vw, 400px) 1fr;
+  grid-template-columns: 1fr clamp(220px, 22vw, 320px) 1fr;
   align-items: stretch;
 }
 
+.header-avatar-circle {
+  width: var(--avatar-circle-size, 144px);
+  height: var(--avatar-circle-size, 144px);
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+
 .header-portal-wrap {
-  width: clamp(148px, 14vw, 215px);
+  width: clamp(110px, 11vw, 170px);
   align-self: stretch;
   display: flex;
   align-items: stretch;
@@ -312,7 +320,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-items: center;
   gap: 0;
   pointer-events: none;
-  width: clamp(300px, 30vw, 400px);
+  width: clamp(220px, 22vw, 320px);
   overflow: visible;
 }
 
@@ -335,7 +343,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
-  padding: 4px 20px calc(var(--bump-center) + 10px) 20px;
+  padding: 4px 14px calc(var(--bump-center) + 8px) 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
@@ -399,14 +407,14 @@ onUnmounted(() => resizeObserver?.disconnect())
   opacity: 0.9;
 }
 .sub-stat-value {
-  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  font-size: clamp(0.85rem, 1.2vw, 1.1rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .sub-stat-label {
-  font-size: clamp(0.78rem, 1.1vw, 1rem);
+  font-size: clamp(0.65rem, 0.9vw, 0.85rem);
   font-weight: 600;
   letter-spacing: 0.05em;
   opacity: 0.7;
@@ -420,7 +428,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 .header-divider {
   flex-shrink: 0;
   width: 2px;
-  height: 80px;
+  height: 55px;
   margin-inline: 4px;
   align-self: center;
   border-radius: 1px;
@@ -452,7 +460,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-bottom: 1px;
 }
 .chimes-value {
-  font-size: clamp(3rem, 5vw, 5.5rem);
+  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-chimes);

@@ -52,8 +52,8 @@ const isLogVisible = ref(true)
   top: 0.45rem;
   right: 0.75rem;
   z-index: 9998;
-  width: clamp(300px, 26vw, 420px);
-  max-height: 320px;
+  width: clamp(300px, 22vw, 560px);
+  max-height: clamp(280px, 38vh, 520px);
   overflow: hidden;
   pointer-events: none;
   display: flex;
@@ -180,6 +180,16 @@ const isLogVisible = ref(true)
 
   .log-msg {
     font-size: clamp(0.8rem, 1vw, 0.92rem);
+  }
+}
+
+@media (min-width: 2560px) {
+  .event-log-overlay {
+    right: 1.5rem;
+  }
+
+  .log-msg {
+    font-size: clamp(0.95rem, 0.9vw, 1.1rem);
   }
 }
 </style>

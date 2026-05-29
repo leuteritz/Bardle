@@ -103,11 +103,51 @@ watch(
   --color-label: rgba(200, 185, 140, 0.55);
 
   --bump-profile: 7px;
-  --bump-center: 30px;
+  --bump-center: 20px;
   --header-total-height: 50px;
-  --hud-panel-size: 440px;
+  --hud-panel-size: 330px;
 
-  --bard-avatar-radius: 72px;
+  --bard-avatar-radius: 48px;
+
+  /* Responsive scaling */
+  --hud-scale: 0.75;
+  --avatar-circle-size: 96px;
+}
+
+@media (max-width: 1400px) {
+  :root {
+    --hud-scale: 0.65;
+    --hud-panel-size: 286px;
+    --bard-avatar-radius: 42px;
+    --avatar-circle-size: 84px;
+  }
+}
+
+@media (min-width: 1600px) and (max-width: 1919px) {
+  :root {
+    --hud-scale: 0.78;
+    --hud-panel-size: 343px;
+    --bard-avatar-radius: 50px;
+    --avatar-circle-size: 100px;
+  }
+}
+
+@media (min-width: 1920px) and (max-width: 2559px) {
+  :root {
+    --hud-scale: 0.85;
+    --hud-panel-size: 374px;
+    --bard-avatar-radius: 54px;
+    --avatar-circle-size: 108px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --hud-scale: 1.0;
+    --hud-panel-size: 440px;
+    --bard-avatar-radius: 60px;
+    --avatar-circle-size: 120px;
+  }
 }
 
 .copyright-overlay {
