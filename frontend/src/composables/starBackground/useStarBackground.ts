@@ -38,6 +38,8 @@ type GalaxyItem = {
   lifetime: number
   elapsed: number
   rot: number
+  _lastOpacity: string
+  _lastTransform: string
 }
 
 type GalaxyType =
@@ -79,6 +81,9 @@ type DustPatch = {
   r: number
   g: number
   b: number
+  cachedGradient: CanvasGradient | null
+  _cachedRx: number
+  _cachedOpacity: number
 }
 
 type StarCluster = {
@@ -97,6 +102,8 @@ type NebulaMovingItem = {
   scale: number
   maxScale: number
   size: number
+  _lastOpacity: string
+  _lastTransform: string
 }
 
 // ─── Emission Nebula / Ion Cloud constants ───────────────────────────────────
@@ -1097,6 +1104,8 @@ export function useStarBackground() {
   const emissionNebulas: NebulaMovingItem[] = []
   const dustPatches: DustPatch[] = []
   const starClusters: StarCluster[] = []
+  const galaxyPool: Array<{ el: SVGSVGElement; active: boolean }> = []
+  const nebulaPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   let nextStarId = 1
   let animFrame = 0
 
@@ -1207,10 +1216,45 @@ export function useStarBackground() {
     }
   }
 
+  // ── Object Pools ──────────────────────────────────────────────────────────
+  function initGalaxyPool(): void {
+    if (!starsContainer.value) return
+    for (const slot of galaxyPool) {
+      if (starsContainer.value.contains(slot.el)) starsContainer.value.removeChild(slot.el)
+    }
+    galaxyPool.length = 0
+    for (let i = 0; i < GALAXY_MAX_COUNT + 1; i++) {
+      const el = document.createElementNS(NS, 'svg') as SVGSVGElement
+      el.classList.add('galaxy')
+      el.style.visibility = 'hidden'
+      el.style.willChange = 'transform, opacity'
+      starsContainer.value.appendChild(el)
+      galaxyPool.push({ el, active: false })
+    }
+  }
+
+  function initNebulaPool(): void {
+    if (!starsContainer.value) return
+    for (const slot of nebulaPool) {
+      if (starsContainer.value.contains(slot.el)) starsContainer.value.removeChild(slot.el)
+    }
+    nebulaPool.length = 0
+    for (let i = 0; i < EMISSION_MAX_COUNT + 1; i++) {
+      const el = document.createElementNS(NS, 'svg') as SVGSVGElement
+      el.style.visibility = 'hidden'
+      el.style.willChange = 'transform, opacity'
+      starsContainer.value.appendChild(el)
+      nebulaPool.push({ el, active: false })
+    }
+  }
+
   // ── Galaxy-Spawn ──────────────────────────────────────────────────────────
   function spawnGalaxy(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     if (galaxies.length >= GALAXY_MAX_COUNT) return
+
+    const slot = galaxyPool.find((s) => !s.active)
+    if (!slot) return
 
     const config = pickGalaxyTypeConfig()
     const paletteList = GALAXY_PALETTES_BY_TYPE[config.type]
@@ -1230,13 +1274,13 @@ export function useStarBackground() {
     const rotDeg = config.rotRange[0] + Math.random() * (config.rotRange[1] - config.rotRange[0])
     const rot = rotDir * rotDeg
 
-    const svg = document.createElementNS(NS, 'svg')
+    const svg = slot.el
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
     svg.setAttribute('width', String(size))
     svg.setAttribute('height', String(size))
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
-    svg.classList.add('galaxy')
+    svg.className.baseVal = 'galaxy'
     svg.style.opacity = '0'
-    svg.style.willChange = 'transform, opacity'
 
     const cx = size / 2
     const cy = size / 2
@@ -1270,9 +1314,11 @@ export function useStarBackground() {
         break
     }
 
-    svg.style.transform = `translate(${x}px,${y}px) scale(0.05) rotate(${rot}deg)`
-    starsContainer.value.appendChild(svg)
-    galaxies.push({ el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot })
+    const initTransform = `translate(${x}px,${y}px) scale(0.05) rotate(${rot}deg)`
+    svg.style.transform = initTransform
+    svg.style.visibility = 'visible'
+    slot.active = true
+    galaxies.push({ el: svg, x, y, scale: 0.05, maxScale, lifetime, elapsed: 0, rot, _lastOpacity: '0', _lastTransform: initTransform })
   }
 
   function scheduleNextGalaxy(): void {
@@ -1288,6 +1334,9 @@ export function useStarBackground() {
   function spawnEmissionNebula(randomDist = false): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     if (emissionNebulas.length >= EMISSION_MAX_COUNT) return
+
+    const slot = nebulaPool.find((s) => !s.active)
+    if (!slot) return
 
     const type: EmissionType = Math.random() < 0.55 ? 'emission-nebula' : 'ion-cloud'
     const palettes = type === 'emission-nebula' ? EMISSION_NEBULA_PALETTES : ION_CLOUD_PALETTES
@@ -1305,22 +1354,24 @@ export function useStarBackground() {
     const baseSpeed = 0.44 + Math.random() * 0.32
     const maxScale = 1.4 + Math.random() * 1.2
 
-    const svg = document.createElementNS(NS, 'svg')
+    const svg = slot.el
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
     svg.setAttribute('width', String(size))
     svg.setAttribute('height', String(size))
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
-    svg.classList.add(type)
+    svg.className.baseVal = type
     svg.style.opacity = '0'
-    svg.style.willChange = 'transform, opacity'
 
     const id = `e${++galaxyIdCounter}`
     const half = size / 2
     if (type === 'emission-nebula') drawEmissionNebula(svg, id, half, half, half, palette)
     else drawIonCloud(svg, id, half, half, half, palette)
 
-    svg.style.transform = `translate(0px,0px) scale(0.02) translate(${-half}px,${-half}px)`
-    starsContainer.value.appendChild(svg)
-    emissionNebulas.push({ el: svg, angle, dist, baseSpeed, scale: 0.02, maxScale, size })
+    const initTransform = `translate(0px,0px) scale(0.02) translate(${-half}px,${-half}px)`
+    svg.style.transform = initTransform
+    svg.style.visibility = 'visible'
+    slot.active = true
+    emissionNebulas.push({ el: svg, angle, dist, baseSpeed, scale: 0.02, maxScale, size, _lastOpacity: '0', _lastTransform: initTransform })
   }
 
   function scheduleNextEmission(): void {
@@ -1358,6 +1409,9 @@ export function useStarBackground() {
         r,
         g,
         b,
+        cachedGradient: null,
+        _cachedRx: -1,
+        _cachedOpacity: -1,
       })
     }
   }
@@ -1544,17 +1598,25 @@ export function useStarBackground() {
         const ry = d.ry * dScale
         const fadeEdge = dNorm > 0.85 ? 1 - (dNorm - 0.85) / 0.15 : 1
         const finalOpacity = d.opacity * Math.min(1, dNorm * 2.5) * fadeEdge
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, rx)
-        grad.addColorStop(0, `rgba(${d.r},${d.g},${d.b},${finalOpacity.toFixed(3)})`)
-        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        if (
+          !d.cachedGradient ||
+          Math.abs(rx - d._cachedRx) > 1 ||
+          Math.abs(finalOpacity - d._cachedOpacity) > 0.008
+        ) {
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx)
+          grad.addColorStop(0, `rgba(${d.r},${d.g},${d.b},${finalOpacity.toFixed(3)})`)
+          grad.addColorStop(1, 'rgba(0,0,0,0)')
+          d.cachedGradient = grad
+          d._cachedRx = rx
+          d._cachedOpacity = finalOpacity
+        }
         ctx.save()
         ctx.translate(px, py)
         ctx.rotate(d.rotation)
         ctx.scale(1, ry / rx)
-        ctx.translate(-px, -py)
         ctx.beginPath()
-        ctx.arc(px, py, rx, 0, Math.PI * 2)
-        ctx.fillStyle = grad
+        ctx.arc(0, 0, rx, 0, Math.PI * 2)
+        ctx.fillStyle = d.cachedGradient
         ctx.fill()
         ctx.restore()
       }
@@ -1685,10 +1747,14 @@ export function useStarBackground() {
         const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
         opacity *= Math.max(0, 1 - fadeTime * 3)
       }
-      g.el.style.opacity = opacity.toFixed(2)
-      g.el.style.transform = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+      const gOpStr = opacity.toFixed(2)
+      if (g._lastOpacity !== gOpStr) { g.el.style.opacity = gOpStr; g._lastOpacity = gOpStr }
+      const gTrStr = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+      if (g._lastTransform !== gTrStr) { g.el.style.transform = gTrStr; g._lastTransform = gTrStr }
       if (p >= 1) {
-        if (starsContainer.value?.contains(g.el)) starsContainer.value.removeChild(g.el)
+        g.el.style.visibility = 'hidden'
+        const poolSlot = galaxyPool.find((s) => s.el === g.el)
+        if (poolSlot) poolSlot.active = false
         galaxies.splice(i, 1)
       }
     }
@@ -1719,10 +1785,14 @@ export function useStarBackground() {
         const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
         opacity *= Math.max(0, 1 - fadeTime * 2)
       }
-      n.el.style.opacity = opacity.toFixed(3)
-      n.el.style.transform = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
+      const nOpStr = opacity.toFixed(3)
+      if (n._lastOpacity !== nOpStr) { n.el.style.opacity = nOpStr; n._lastOpacity = nOpStr }
+      const nTrStr = `translate(${wx.toFixed(1)}px,${wy.toFixed(1)}px) scale(${n.scale.toFixed(3)}) translate(${-hw}px,${-hw}px)`
+      if (n._lastTransform !== nTrStr) { n.el.style.transform = nTrStr; n._lastTransform = nTrStr }
       if (n.dist > maxDist) {
-        if (starsContainer.value?.contains(n.el)) starsContainer.value.removeChild(n.el)
+        n.el.style.visibility = 'hidden'
+        const poolSlot = nebulaPool.find((s) => s.el === n.el)
+        if (poolSlot) poolSlot.active = false
         emissionNebulas.splice(i, 1)
         if (!prefersReducedMotion.value)
           setTimeout(() => spawnEmissionNebula(), 200 + Math.random() * 1500)
@@ -1747,6 +1817,7 @@ export function useStarBackground() {
       const newMaxDist = Math.hypot(w / 2, h / 2) + 20
       const scale = newMaxDist / oldMaxDist
       for (const star of stars) star.dist = star.dist * scale
+      for (const d of dustPatches) { d.cachedGradient = null; d._cachedRx = -1; d._cachedOpacity = -1 }
     }, 150)
   }
 
@@ -1756,6 +1827,8 @@ export function useStarBackground() {
     resizeCanvas()
     initDust()
     initClusters()
+    initGalaxyPool()
+    initNebulaPool()
     for (let i = 0; i < EMISSION_MAX_COUNT; i++) spawnEmissionNebula(true)
     for (let i = 0; i < STAR_COUNT; i++) spawnStar(true)
     lastTimestamp = 0
@@ -1797,13 +1870,15 @@ export function useStarBackground() {
     timeouts.length = 0
     stars.length = 0
     if (starsContainer.value) {
-      for (const galaxy of galaxies) {
-        if (starsContainer.value.contains(galaxy.el)) starsContainer.value.removeChild(galaxy.el)
+      for (const slot of galaxyPool) {
+        if (starsContainer.value.contains(slot.el)) starsContainer.value.removeChild(slot.el)
       }
-      for (const nebula of emissionNebulas) {
-        if (starsContainer.value.contains(nebula.el)) starsContainer.value.removeChild(nebula.el)
+      for (const slot of nebulaPool) {
+        if (starsContainer.value.contains(slot.el)) starsContainer.value.removeChild(slot.el)
       }
     }
+    galaxyPool.length = 0
+    nebulaPool.length = 0
     galaxies.length = 0
     emissionNebulas.length = 0
     dustPatches.length = 0
