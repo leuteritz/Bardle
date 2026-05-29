@@ -302,10 +302,10 @@ watch(
 .rp-wrapper {
   position: fixed;
   z-index: 125;
-  left: calc(var(--hud-panel-size) + 50px);
-  right: calc(var(--hud-panel-size) + 50px);
-  top: calc(var(--header-total-height) + max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)) + 48px);
-  bottom: 100px;
+  left: max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px));
+  right: max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px));
+  top: calc(var(--level-badge-bottom, calc(var(--header-total-height) + 60px)) + 8px);
+  height: calc(100dvh - var(--level-badge-bottom, 80px) - 88px);
 }
 
 .rp-modal {

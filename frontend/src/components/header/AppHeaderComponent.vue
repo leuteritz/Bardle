@@ -72,6 +72,8 @@ async function measure() {
   if (!r.width || !r.height) return
   svgW.value = r.width
   svgH.value = r.height
+  // badge sits at svgH-20 from chimes top, 50px tall → bottom = r.bottom + 30
+  document.documentElement.style.setProperty('--level-badge-bottom', `${r.bottom + 30}px`)
 }
 
 function updateHeaderHeight() {
