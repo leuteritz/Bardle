@@ -58,6 +58,10 @@ const equipCollapsed = ref(true)
 const synCollapsed   = ref(true)
 const secCollapsed   = ref(true)
 
+const allOpen      = computed(() => !equipCollapsed.value && !synCollapsed.value && !secCollapsed.value)
+const allCollapsed = computed(() => equipCollapsed.value && synCollapsed.value && secCollapsed.value)
+
+
 watch(
   () => uiStore.rolesActiveSlot,
   (val) => {
@@ -249,6 +253,13 @@ function onSplashMouseLeave() {
   parallaxY.value = 0
 }
 
+function toggleAll() {
+  const target = allOpen.value
+  equipCollapsed.value = target
+  synCollapsed.value  = target
+  secCollapsed.value  = target
+}
+
 const activeRoleStats = computed<RoleStat[]>(() => {
   const role = ROLE_MAP[activeRole.value]
   return role ? ((ROLE_BY_KEY[role]?.stats as RoleStat[]) ?? []) : []
@@ -325,6 +336,16 @@ void championRoleLabel
           </button>
         </div>
 
+        <!-- ══ Global Collapse All ══ -->
+        <button
+          class="panel-collapse-all"
+          :aria-expanded="!allCollapsed"
+          :aria-label="allOpen ? 'Collapse all panels' : 'Expand all panels'"
+          @click.stop="toggleAll"
+        >
+          <span class="collapse-all-icon" :class="{ 'collapse-all-icon--open': allOpen }">▼</span>
+        </button>
+
         <!-- ══ Top Info Box — Name + Stats (unverändert, nur Größen) ══ -->
         <div v-if="activeChampion" class="splash-info-box" @click.stop>
           <div class="splash-name-in-box">{{ activeChampion }}</div>
@@ -395,7 +416,11 @@ void championRoleLabel
           :aria-label="secCollapsed ? 'Expand allies panel' : 'Collapse allies panel'"
           :aria-expanded="!secCollapsed"
           @mouseenter="secCollapsed = !secCollapsed"
-        >{{ secCollapsed ? '▶' : '◀' }}</button>
+          @click.stop="secCollapsed = !secCollapsed"
+        >
+          <span class="toggle-chevron">{{ secCollapsed ? '▶' : '◀' }}</span>
+          <span class="toggle-label">Allies</span>
+        </button>
 
         <!-- Synergy panel toggle -->
         <button
@@ -404,7 +429,11 @@ void championRoleLabel
           :aria-label="synCollapsed ? 'Expand synergies' : 'Collapse synergies'"
           :aria-expanded="!synCollapsed"
           @mouseenter="synCollapsed = !synCollapsed"
-        >{{ synCollapsed ? '◀' : '▶' }}</button>
+          @click.stop="synCollapsed = !synCollapsed"
+        >
+          <span class="toggle-chevron">{{ synCollapsed ? '◀' : '▶' }}</span>
+          <span class="toggle-label">Synergies</span>
+        </button>
 
         <!-- ══ TFT Synergy Panel (rechts) ══ -->
         <SynergiesPanelComponent
@@ -420,7 +449,11 @@ void championRoleLabel
           :aria-label="equipCollapsed ? 'Expand equipment' : 'Collapse equipment'"
           :aria-expanded="!equipCollapsed"
           @mouseenter="equipCollapsed = !equipCollapsed"
-        >{{ equipCollapsed ? '▲' : '▼' }}</button>
+          @click.stop="equipCollapsed = !equipCollapsed"
+        >
+          <span class="toggle-chevron">{{ equipCollapsed ? '▲' : '▼' }}</span>
+          <span class="toggle-label">Equipment</span>
+        </button>
 
         <!-- ══ EQUIP BAR — zentriert unten ══ -->
         <EquipmentSlotBarComponent
@@ -1200,13 +1233,13 @@ void championRoleLabel
 .panel-toggle {
   position: absolute;
   z-index: 8;
-  width: 20px;
-  height: 20px;
-  padding: 0;
+  width: auto;
+  min-height: 36px;
+  padding: 0 10px;
+  gap: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
   line-height: 1;
   color: rgba(200, 144, 64, 0.7);
   background: rgba(6, 4, 1, 0.88);
@@ -1256,6 +1289,59 @@ void championRoleLabel
   bottom: 4px;
 }
 
+.toggle-chevron {
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.toggle-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
+/* ══ GLOBAL COLLAPSE-ALL ══ */
+.panel-collapse-all {
+  position: absolute;
+  top: 44px;
+  left: 8px;
+  z-index: 9;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 4, 1, 0.88);
+  border: 1px solid rgba(122, 78, 32, 0.75);
+  border-radius: 4px;
+  color: rgba(200, 144, 64, 0.75);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.panel-collapse-all:hover {
+  color: #f0d870;
+  background: rgba(20, 12, 2, 0.95);
+  border-color: rgba(200, 144, 64, 0.5);
+}
+.collapse-all-icon {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+.collapse-all-icon--open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-toggle,
+  .panel-collapse-all,
+  .collapse-all-icon {
+    transition: none !important;
+  }
+}
 
 </style>
