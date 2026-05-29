@@ -312,7 +312,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   left: 50%;
   top: 2px;
   bottom: calc(
-    -1 * (max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)) + 7px)
+    -1 * (min(max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)), clamp(20px, 5dvh, 55px)) + 7px)
   );
   transform: translateX(-50%);
   z-index: 20;
