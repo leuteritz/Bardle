@@ -348,6 +348,7 @@ void championRoleLabel
                   class="orbit-role-img"
                   @error="onImgError"
                 />
+                <span class="orbit-role-name">{{ role.toUpperCase() }}</span>
                 <span class="orbit-role-desc">{{ ROLE_BY_KEY[role].abilityCompact }}</span>
               </div>
               <div class="orbit-ability-detail">
@@ -843,18 +844,33 @@ void championRoleLabel
   object-fit: contain;
   opacity: 0.85;
   flex-shrink: 0;
+  filter: drop-shadow(0 0 4px rgba(200, 144, 64, 0.55));
+}
+.orbit-role-name {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.9);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  background: rgba(200, 144, 64, 0.08);
+  border: 1px solid rgba(200, 144, 64, 0.2);
+  border-radius: 3px;
 }
 .orbit-role-desc {
   font-size: 11px;
   font-weight: 700;
   color: rgba(200, 144, 64, 0.75);
   letter-spacing: 0.04em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .splash-role-fx-in-box {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 230px;
+  display: none;
 }
 .role-fx-row {
   display: flex;
