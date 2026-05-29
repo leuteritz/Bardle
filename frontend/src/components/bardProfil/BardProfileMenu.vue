@@ -36,22 +36,8 @@ watch(
 </script>
 
 <template>
-  <button class="inventory-circle-btn" title="Open Shop" @click="uiStore.setBardTab('shop')">
-    <div class="bard-avatar-circle">
-      <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
-          fill="none"
-          stroke="rgba(160,110,15,0.45)"
-          stroke-width="7"
-        />
-      </svg>
-      <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
-        <img src="/img/menu/SHOP.png" class="object-contain w-full h-full p-3" alt="Open Shop" />
-      </div>
-    </div>
+  <button class="header-icon-btn" title="Open Shop" @click="uiStore.setBardTab('shop')">
+    <img src="/img/menu/SHOP.png" class="header-icon-img" alt="Open Shop" />
   </button>
 
   <!-- ══ Backdrop + Modal ══ -->
@@ -286,16 +272,6 @@ watch(
 </style>
 
 <style scoped>
-/* ═══════════════════════════════════════════
-   BARD AVATAR CIRCLE
-   ═══════════════════════════════════════════ */
-.bard-avatar-circle {
-  width: var(--avatar-circle-size, 144px);
-  height: var(--avatar-circle-size, 144px);
-  aspect-ratio: 1 / 1;
-  position: relative;
-}
-
 /* ═══════════════════════════════════════════
    MODAL RAHMEN
    ═══════════════════════════════════════════ */

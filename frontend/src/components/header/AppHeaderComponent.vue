@@ -98,7 +98,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 <template>
   <header ref="headerRef" class="z-[120] header-bar w-full mx-auto relative">
     <!-- ════════ LINKE SEITE ════════ -->
-    <div class="flex items-center gap-2 header-side header-side--left">
+    <div class="flex items-center gap-3 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
@@ -195,36 +195,18 @@ onUnmounted(() => resizeObserver?.disconnect())
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
-    <div class="flex items-center gap-2 header-side header-side--right">
+    <div class="flex items-center gap-3 header-side header-side--right">
       <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
         <UniverseRescueComponent />
       </div>
       <div class="header-divider" aria-hidden="true"></div>
       <div class="flex-shrink-0 header-inventory-bump">
         <button
-          class="inventory-circle-btn"
+          class="header-icon-btn"
           title="Open Skill Tree"
           @click="uiStore.setBardTab('tree')"
         >
-          <div class="header-avatar-circle">
-            <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="none"
-                stroke="rgba(160,110,15,0.45)"
-                stroke-width="7"
-              />
-            </svg>
-            <div class="absolute overflow-hidden inset-2 inventory-portrait-inner">
-              <img
-                src="/img/menu/TREE.png"
-                class="object-contain w-full h-full p-3"
-                alt="Open Skill Tree"
-              />
-            </div>
-          </div>
+          <img src="/img/menu/TREE.png" class="header-icon-img" alt="Open Skill Tree" />
         </button>
       </div>
     </div>
@@ -268,13 +250,6 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-items: stretch;
 }
 
-.header-avatar-circle {
-  width: var(--avatar-circle-size, 144px);
-  height: var(--avatar-circle-size, 144px);
-  aspect-ratio: 1 / 1;
-  position: relative;
-}
-
 .header-portal-wrap {
   width: clamp(110px, 11vw, 170px);
   align-self: stretch;
@@ -290,9 +265,11 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 .header-side--left {
   justify-content: flex-start;
+  padding-left: clamp(6px, 1.2vw, 14px);
 }
 .header-side--right {
   justify-content: flex-end;
+  padding-right: clamp(6px, 1.2vw, 14px);
 }
 
 .header-profile-bump {
@@ -300,6 +277,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-items: center;
   align-self: stretch;
   flex-shrink: 0;
+  padding: 0 6px;
 }
 
 /* ================================================================
@@ -550,7 +528,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 /* ================================================================
-   INVENTAR-KREIS
+   HEADER ICONS (Shop & Tree) – keine Box, kein Hintergrund
    ================================================================ */
 .header-inventory-bump {
   display: flex;
@@ -558,23 +536,35 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-self: stretch;
   flex-shrink: 0;
 }
-.inventory-circle-btn {
+.header-icon-btn {
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 0 6px;
   cursor: pointer;
-  display: block;
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
-.inventory-portrait-inner {
-  border-radius: 50%;
-  background: #141410;
-  transition: transform 0.3s ease;
+.header-icon-img {
+  height: clamp(40px, 6vh, 72px);
+  width: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  transition:
+    transform 0.3s ease,
+    opacity 0.2s ease;
 }
-.inventory-circle-btn:hover .inventory-portrait-inner {
-  transform: scale(1.06);
+.header-icon-btn:hover .header-icon-img {
+  transform: scale(1.08);
+  opacity: 0.9;
 }
-.inventory-circle-btn:active .inventory-portrait-inner {
-  transform: scale(0.96);
+.header-icon-btn:active .header-icon-img {
+  transform: scale(0.94);
+}
+@media (max-width: 600px) {
+  .header-icon-img {
+    height: clamp(28px, 5vh, 44px);
+  }
 }
 
 /* ================================================================
