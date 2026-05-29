@@ -289,7 +289,7 @@ watch(
   overflow: hidden;
   background: #111008;
   border: 4px solid #7a4e20;
-  border-radius: 4px;
+  border-radius: 32px;
   box-shadow:
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
