@@ -123,6 +123,28 @@ watch(
   }
 }
 
+@media (max-width: 1280px) {
+  :root {
+    --hud-scale: 0.58;
+    --hud-panel-size: 260px;
+    --bard-avatar-radius: 28px;
+    --avatar-circle-size: 64px;
+    --bump-center: 10px;
+    --bump-profile: 3px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --hud-scale: 0.52;
+    --hud-panel-size: 230px;
+    --bard-avatar-radius: 18px;
+    --avatar-circle-size: 48px;
+    --bump-center: 6px;
+    --bump-profile: 2px;
+  }
+}
+
 @media (min-width: 1600px) and (max-width: 1919px) {
   :root {
     --hud-scale: 0.78;

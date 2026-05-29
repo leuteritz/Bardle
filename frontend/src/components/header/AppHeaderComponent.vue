@@ -683,4 +683,103 @@ onUnmounted(() => resizeObserver?.disconnect())
   letter-spacing: 0.04em;
   margin-top: 1px;
 }
+
+/* ================================================================
+   COMPACT MODE ≤ 1280 px — smaller header to coexist with event log
+   ================================================================ */
+@media (max-width: 1280px) {
+  .header-bar {
+    grid-template-columns: 1fr clamp(120px, 14vw, 170px) 1fr;
+  }
+
+  .header-center {
+    width: clamp(120px, 14vw, 170px);
+  }
+
+  .chimes-value {
+    font-size: clamp(1rem, 1.8vw, 1.4rem);
+    min-width: 7ch;
+  }
+
+  .chimes-sub-row {
+    gap: 5px;
+    margin-top: 2px;
+  }
+
+  .sub-stat-value {
+    font-size: clamp(0.65rem, 0.9vw, 0.85rem);
+  }
+
+  .sub-stat-label {
+    font-size: clamp(0.55rem, 0.75vw, 0.7rem);
+  }
+
+  .header-divider {
+    height: 38px;
+  }
+
+  .header-portal-wrap {
+    width: clamp(70px, 8vw, 110px);
+  }
+
+  .arc-level-badge {
+    width: 36px;
+    height: 36px;
+  }
+
+  .arc-level-text {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .header-bar {
+    grid-template-columns: 1fr clamp(90px, 11vw, 130px) 1fr;
+  }
+
+  .header-center {
+    width: clamp(90px, 11vw, 130px);
+  }
+
+  .chimes-value {
+    font-size: clamp(0.82rem, 1.4vw, 1rem);
+    min-width: 6ch;
+  }
+
+  .chimes-sub-row {
+    gap: 4px;
+    margin-top: 1px;
+  }
+
+  .sub-stat-value {
+    font-size: clamp(0.58rem, 0.78vw, 0.72rem);
+  }
+
+  .sub-stat-label {
+    font-size: clamp(0.5rem, 0.62vw, 0.6rem);
+  }
+
+  .header-divider {
+    height: 28px;
+  }
+
+  .header-portal-wrap {
+    width: clamp(52px, 6vw, 76px);
+  }
+
+  .arc-level-badge {
+    width: 26px;
+    height: 26px;
+  }
+
+  .arc-level-text {
+    font-size: 13px;
+  }
+
+  .center-reset-btn {
+    width: 16px;
+    height: 16px;
+    font-size: 7px;
+  }
+}
 </style>

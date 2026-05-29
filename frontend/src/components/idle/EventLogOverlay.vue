@@ -52,7 +52,7 @@ const isLogVisible = ref(true)
   top: 0.45rem;
   right: 0.75rem;
   z-index: 9998;
-  width: clamp(300px, 22vw, 560px);
+  width: clamp(260px, 19vw, 340px);
   max-height: clamp(280px, 38vh, 520px);
   overflow: hidden;
   pointer-events: none;
@@ -92,8 +92,10 @@ const isLogVisible = ref(true)
   flex-direction: column;
   gap: 6px;
   padding: 2px 0;
-  overflow: hidden;
+  overflow-y: auto;
   width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
 .log-entry {
@@ -165,12 +167,114 @@ const isLogVisible = ref(true)
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* ≤ 1024px: most compact — narrowest column, smallest text */
+@media (max-width: 1024px) {
+  .event-log-overlay {
+    width: clamp(130px, 14vw, 170px);
+    right: 0.4rem;
+  }
+
+  .log-toggle-btn {
+    padding: 3px 6px;
+  }
+
+  .log-entry {
+    padding: 3px 6px 3px 5px;
+    gap: 4px;
+  }
+
+  .log-msg {
+    font-size: clamp(0.58rem, 0.62vw, 0.68rem);
+  }
+
+  .log-time {
+    font-size: clamp(0.48rem, 0.52vw, 0.58rem);
+  }
+}
+
+/* 1024–1279px: compact mode */
+@media (max-width: 1279px) {
+  .event-log-overlay {
+    width: clamp(180px, 17vw, 240px);
+    right: 0.5rem;
+  }
+
+  .log-entry {
+    padding: 5px 8px 5px 7px;
+    gap: 5px;
+  }
+
+  .log-msg {
+    font-size: clamp(0.65rem, 0.7vw, 0.78rem);
+  }
+
+  .log-time {
+    font-size: clamp(0.55rem, 0.6vw, 0.68rem);
+  }
+}
+
+/* 1280–1439px: medium mode */
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .event-log-overlay {
+    width: clamp(220px, 18vw, 280px);
+  }
+
+  .log-msg {
+    font-size: clamp(0.72rem, 0.8vw, 0.86rem);
+  }
+
+  .log-time {
+    font-size: clamp(0.62rem, 0.68vw, 0.74rem);
+  }
+}
+
+/* 1440–1919px: standard mode (base styles apply, explicit for clarity) */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .event-log-overlay {
+    width: clamp(260px, 19vw, 340px);
+  }
+
+  .log-msg {
+    font-size: clamp(0.78rem, 0.85vw, 0.92rem);
+  }
+
+  .log-time {
+    font-size: clamp(0.66rem, 0.72vw, 0.78rem);
+  }
+}
+
+/* 1920px+: full display */
+@media (min-width: 1920px) {
+  .event-log-overlay {
+    width: clamp(180px, 12.5vw, 240px);
+  }
+
+  .log-msg {
+    font-size: clamp(0.84rem, 0.95vw, 1rem);
+  }
+
+  .log-time {
+    font-size: clamp(0.7rem, 0.76vw, 0.8rem);
+  }
+}
+
+/* 2560px+: ultra-wide */
+@media (min-width: 2560px) {
+  .event-log-overlay {
+    right: 1.5rem;
+    width: clamp(300px, 20vw, 520px);
+  }
+
+  .log-msg {
+    font-size: clamp(0.95rem, 0.9vw, 1.1rem);
+  }
+}
+
+/* mobile fallback (below desktop scope) */
 @media (max-width: 900px) {
   .event-log-overlay {
-    top: 0.6rem;
     right: 0.5rem;
     width: min(320px, calc(100vw - 1rem));
-    max-height: 280px;
   }
 
   .log-entry {
@@ -180,16 +284,6 @@ const isLogVisible = ref(true)
 
   .log-msg {
     font-size: clamp(0.8rem, 1vw, 0.92rem);
-  }
-}
-
-@media (min-width: 2560px) {
-  .event-log-overlay {
-    right: 1.5rem;
-  }
-
-  .log-msg {
-    font-size: clamp(0.95rem, 0.9vw, 1.1rem);
   }
 }
 </style>
