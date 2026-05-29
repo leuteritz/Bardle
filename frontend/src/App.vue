@@ -105,6 +105,7 @@ watch(
   --bump-profile: 7px;
   --bump-center: 30px;
   --header-total-height: 50px;
+  --hud-panel-size: 440px;
 
   --bard-avatar-radius: 72px;
 }

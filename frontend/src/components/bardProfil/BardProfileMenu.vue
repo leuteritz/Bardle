@@ -65,11 +65,8 @@ watch(
     </Transition>
 
     <Transition name="modal-pop">
-      <div
-        v-if="uiStore.bardActiveTab !== null"
-        class="fixed z-[125] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[960px] max-w-[95vw]"
-      >
-        <div class="rp-modal flex flex-col h-[960px]">
+      <div v-if="uiStore.bardActiveTab !== null" class="rp-wrapper">
+        <div class="flex flex-col rp-modal">
           <div class="rp-accent-bar" />
 
           <div class="flex items-center flex-shrink-0 rp-modal-header">
@@ -292,6 +289,15 @@ watch(
 /* ═══════════════════════════════════════════
    MODAL RAHMEN
    ═══════════════════════════════════════════ */
+.rp-wrapper {
+  position: fixed;
+  z-index: 125;
+  left: calc(var(--hud-panel-size) + 50px);
+  right: calc(var(--hud-panel-size) + 50px);
+  top: calc(var(--header-total-height) + max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)) + 48px);
+  bottom: 100px;
+}
+
 .rp-modal {
   position: relative;
   overflow: hidden;
@@ -303,7 +309,7 @@ watch(
     inset 0 0 0 4px #5c3310,
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
-  max-height: 90dvh;
+  height: 100%;
 }
 
 .rp-accent-bar {
@@ -507,7 +513,7 @@ watch(
 .modal-pop-enter-from,
 .modal-pop-leave-to {
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.95);
+  transform: scale(0.97);
 }
 
 .backdrop-enter-active,
