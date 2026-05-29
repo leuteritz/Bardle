@@ -24,6 +24,8 @@ function handleReset() {
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
+const leftDividerRef = ref<HTMLElement | null>(null)
+const rightDividerRef = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
 const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgress ?? 0) / 100)))
@@ -82,11 +84,21 @@ function updateHeaderHeight() {
   document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
 }
 
+function updateDividerPositions() {
+  const l = leftDividerRef.value?.getBoundingClientRect()
+  const r = rightDividerRef.value?.getBoundingClientRect()
+  if (!l || !r) return
+  document.documentElement.style.setProperty('--bard-profile-left', `${l.left}px`)
+  document.documentElement.style.setProperty('--bard-profile-right', `${window.innerWidth - r.right}px`)
+}
+
 onMounted(async () => {
   updateHeaderHeight()
+  updateDividerPositions()
   await measure()
   resizeObserver = new ResizeObserver(async () => {
     updateHeaderHeight()
+    updateDividerPositions()
     await measure()
   })
   if (headerRef.value) resizeObserver.observe(headerRef.value)
@@ -102,7 +114,7 @@ onUnmounted(() => resizeObserver?.disconnect())
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
-      <div class="header-divider" aria-hidden="true"></div>
+      <div ref="leftDividerRef" class="header-divider" aria-hidden="true"></div>
       <HeaderMaterialsComponent style="flex: 1; min-width: 0" />
     </div>
 
@@ -199,7 +211,7 @@ onUnmounted(() => resizeObserver?.disconnect())
       <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
         <UniverseRescueComponent />
       </div>
-      <div class="header-divider" aria-hidden="true"></div>
+      <div ref="rightDividerRef" class="header-divider" aria-hidden="true"></div>
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="header-icon-btn"
