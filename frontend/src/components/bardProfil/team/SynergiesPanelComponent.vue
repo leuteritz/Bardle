@@ -2,17 +2,16 @@
 import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSynergyStore } from '@/stores/synergyStore'
-import type { ActiveSynergy } from '@/types'
 
-const props = defineProps<{ activeSlotIndex: number; collapsed?: boolean }>()
+defineProps<{ activeSlotIndex: number; collapsed?: boolean }>()
 const emit = defineEmits<{
   'hovered-syn-change': [value: { involvedChampions: string[]; color: string } | null]
 }>()
 
 const synergyStore = useSynergyStore()
-const { activeSynergies, activeOriginSynergies } = storeToRefs(synergyStore)
+const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
 
-const hoveredTftId = ref<string | null>(null)
+const hoveredId = ref<string | null>(null)
 const tooltipPos = ref({ x: 0, y: 0 })
 
 const TIER_COLORS = {
@@ -21,40 +20,39 @@ const TIER_COLORS = {
   gold: '#d4a830',
 } as const
 
-const sortedRoleSynergies = computed<ActiveSynergy[]>(() => {
-  const globals = activeSynergies.value.filter((s) => s.roleIndex === undefined)
-  const roleSpecific = activeSynergies.value.filter((s) => s.roleIndex === props.activeSlotIndex)
-  return [...globals, ...roleSpecific]
-})
+// Unified display list: new traits + origin synergies, sorted by tier
+const displayTraits = computed(() => {
+  // Map new TFT traits to display format
+  const traitRows = activeTraits.value.map((at) => {
+    const thresholds = at.trait.thresholds
+    const activeIdx = at.activeThreshold ? thresholds.indexOf(at.activeThreshold) : -1
+    const total = thresholds.length
+    const tier: 'bronze' | 'silver' | 'gold' =
+      activeIdx >= total - 1 ? 'gold' : activeIdx >= Math.ceil(total / 2) - 1 ? 'silver' : 'bronze'
+    return {
+      id: 'trait-' + at.trait.id,
+      name: at.trait.name,
+      icon: at.trait.icon,
+      color: at.trait.color,
+      tier,
+      count: at.count,
+      maxCount: thresholds.at(-1)!.count,
+      nextCount: at.nextThreshold?.count ?? null,
+      thresholds: thresholds.map((t) => ({ count: t.count, bonus: t.bonus })),
+      activeThresholdIdx: activeIdx,
+      involvedChampions: at.involvedChampions,
+      isOrigin: false,
+    }
+  })
 
-const tftActiveTraits = computed(() => {
-  const synTraits = sortedRoleSynergies.value.map((syn) => ({
-    id: syn.id,
-    name: syn.name,
-    icon: syn.icon,
-    color: syn.color,
-    tier: syn.tier as 'bronze' | 'silver' | 'gold',
-    count: syn.involvedChampions.length,
-    maxCount: null as number | null,
-    nextCount: null as number | null,
-    effects: syn.effects,
-    thresholds: null as import('@/types').OriginSynergyThreshold[] | null,
-    activeThresholdIdx: -1,
-    involvedChampions: syn.involvedChampions,
-    isOrigin: false,
-  }))
-
-  const originTraits = activeOriginSynergies.value
+  // Map origin synergies (only those with an active threshold)
+  const originRows = activeOriginSynergies.value
     .filter((os) => os.activeThreshold !== null)
     .map((os) => {
       const activeIdx = os.def.thresholds.findIndex((t) => t === os.activeThreshold)
       const total = os.def.thresholds.length
       const tier: 'bronze' | 'silver' | 'gold' =
-        activeIdx >= total - 1
-          ? 'gold'
-          : activeIdx >= Math.ceil(total / 2) - 1
-            ? 'silver'
-            : 'bronze'
+        activeIdx >= total - 1 ? 'gold' : activeIdx >= Math.ceil(total / 2) - 1 ? 'silver' : 'bronze'
       return {
         id: 'origin-' + os.origin,
         name: os.def.name,
@@ -64,8 +62,7 @@ const tftActiveTraits = computed(() => {
         count: os.count,
         maxCount: os.def.thresholds.at(-1)!.count,
         nextCount: os.nextThreshold?.count ?? null,
-        effects: null as import('@/types').SynergyEffect[] | null,
-        thresholds: os.def.thresholds,
+        thresholds: os.def.thresholds.map((t) => ({ count: t.count, bonus: t.bonus })),
         activeThresholdIdx: activeIdx,
         involvedChampions: os.involvedChampions,
         isOrigin: true,
@@ -73,13 +70,13 @@ const tftActiveTraits = computed(() => {
     })
 
   const ORDER = { gold: 0, silver: 1, bronze: 2 }
-  return [...synTraits, ...originTraits].sort((a, b) => ORDER[a.tier] - ORDER[b.tier])
+  return [...traitRows, ...originRows].sort((a, b) => ORDER[a.tier] - ORDER[b.tier])
 })
 
 const hoveredSyn = computed(() => {
-  if (hoveredTftId.value) {
-    const tft = tftActiveTraits.value.find((t) => t.id === hoveredTftId.value)
-    if (tft) return { involvedChampions: tft.involvedChampions, color: tft.color }
+  if (hoveredId.value) {
+    const row = displayTraits.value.find((t) => t.id === hoveredId.value)
+    if (row) return { involvedChampions: row.involvedChampions, color: row.color }
   }
   return null
 })
@@ -87,85 +84,73 @@ const hoveredSyn = computed(() => {
 watch(hoveredSyn, (val) => emit('hovered-syn-change', val))
 
 function onTraitHover(id: string, e: MouseEvent) {
-  hoveredTftId.value = id
+  hoveredId.value = id
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   tooltipPos.value = { x: rect.left - 8, y: rect.top }
 }
 </script>
 
 <template>
-  <!-- ══ TFT Synergy Panel (rechts) ══ -->
-  <div class="tft-syn-panel" :class="{ 'tft-syn-panel--collapsed': props.collapsed }" @click.stop>
+  <!-- ══ Synergy / Trait Panel (right side) ══ -->
+  <div class="tft-syn-panel" :class="{ 'tft-syn-panel--collapsed': collapsed }" @click.stop>
     <div class="tft-syn-label">Synergies</div>
 
     <div
-      v-for="trait in tftActiveTraits"
-      :key="trait.id"
+      v-for="row in displayTraits"
+      :key="row.id"
       class="tft-trait-row"
-      :style="{ '--tc': TIER_COLORS[trait.tier] }"
-      @mouseenter="onTraitHover(trait.id, $event)"
-      @mouseleave="hoveredTftId = null"
+      :style="{ '--tc': TIER_COLORS[row.tier] }"
+      @mouseenter="onTraitHover(row.id, $event)"
+      @mouseleave="hoveredId = null"
     >
       <div class="tft-hex-badge">
-        <div class="tft-hex-inner" :style="{ background: TIER_COLORS[trait.tier] }">
-          <span class="tft-hex-icon">{{ trait.icon }}</span>
+        <div class="tft-hex-inner" :style="{ background: TIER_COLORS[row.tier] }">
+          <span class="tft-hex-icon">{{ row.icon }}</span>
         </div>
       </div>
-      <span class="tft-trait-name">{{ trait.name }}</span>
+      <span class="tft-trait-name">{{ row.name }}</span>
       <span class="tft-trait-count">
-        <template v-if="trait.maxCount !== null">
-          {{ trait.count }} / {{ trait.nextCount ?? trait.maxCount }}
-        </template>
-        <template v-else>
-          {{ trait.count }}
-        </template>
+        {{ row.count }} / {{ row.nextCount ?? row.maxCount }}
       </span>
     </div>
 
-    <div v-if="tftActiveTraits.length === 0" class="tft-syn-empty">
+    <div v-if="displayTraits.length === 0" class="tft-syn-empty">
       <span>No active synergies</span>
     </div>
   </div>
 
-  <!-- TFT Tooltip (Teleport → body, fixed links vom Panel) -->
+  <!-- Tooltip (Teleport → body) -->
   <Teleport to="body">
     <Transition name="tft-tooltip-fade">
       <div
-        v-if="hoveredTftId !== null"
+        v-if="hoveredId !== null"
         class="tft-tooltip"
         :style="{ left: tooltipPos.x + 'px', top: tooltipPos.y + 'px' }"
       >
         <template
-          v-for="trait in tftActiveTraits.filter((t) => t.id === hoveredTftId)"
-          :key="trait.id"
+          v-for="row in displayTraits.filter((t) => t.id === hoveredId)"
+          :key="row.id"
         >
           <div class="tft-tooltip-header">
-            <span class="tft-tooltip-icon">{{ trait.icon }}</span>
-            <span class="tft-tooltip-title" :style="{ color: TIER_COLORS[trait.tier] }">{{ trait.name }}</span>
+            <span class="tft-tooltip-icon">{{ row.icon }}</span>
+            <span class="tft-tooltip-title" :style="{ color: row.isOrigin ? row.color : TIER_COLORS[row.tier] }">
+              {{ row.name }}
+            </span>
           </div>
-          <template v-if="trait.isOrigin && trait.thresholds">
-            <div
-              v-for="(thresh, idx) in trait.thresholds"
-              :key="idx"
-              class="tft-tooltip-thresh"
-              :class="{ 'tft-tooltip-thresh--active': idx === trait.activeThresholdIdx }"
-            >
-              <span class="tft-tooltip-thresh-count">{{ thresh.count }}</span>
-              <span class="tft-tooltip-thresh-bonus">{{ thresh.bonus }}</span>
-            </div>
-          </template>
-          <template v-else-if="trait.effects">
-            <div
-              v-for="(eff, idx) in trait.effects"
-              :key="idx"
-              class="tft-tooltip-effect"
-            >
-              {{ eff.type === 'cps' ? 'CPS' : eff.type === 'power' ? 'Power' : 'DPS' }}
-              +{{ Math.round((eff.multiplier - 1) * 100) }}%
-            </div>
-          </template>
-          <div v-if="trait.involvedChampions.length" class="tft-tooltip-champs">
-            {{ trait.involvedChampions.join(' · ') }}
+
+          <!-- Threshold progression (same format for both traits and origins) -->
+          <div
+            v-for="(thresh, idx) in row.thresholds"
+            :key="idx"
+            class="tft-tooltip-thresh"
+            :class="{ 'tft-tooltip-thresh--active': idx === row.activeThresholdIdx }"
+          >
+            <span class="tft-tooltip-thresh-count">{{ thresh.count }}</span>
+            <span class="tft-tooltip-thresh-bonus">{{ thresh.bonus }}</span>
+          </div>
+
+          <div v-if="row.involvedChampions.length" class="tft-tooltip-champs">
+            {{ row.involvedChampions.join(' · ') }}
           </div>
         </template>
       </div>
@@ -282,7 +267,7 @@ function onTraitHover(id: string, e: MouseEvent) {
 }
 
 /* ══════════════════════════════
-   TFT TOOLTIP (via Teleport)
+   TOOLTIP (via Teleport)
    ══════════════════════════════ */
 .tft-tooltip {
   position: fixed;
@@ -335,11 +320,6 @@ function onTraitHover(id: string, e: MouseEvent) {
 }
 .tft-tooltip-thresh-bonus {
   color: #c8b88a;
-}
-.tft-tooltip-effect {
-  font-size: 11px;
-  color: #e8c040;
-  padding: 2px 0;
 }
 .tft-tooltip-champs {
   margin-top: 8px;

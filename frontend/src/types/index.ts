@@ -522,6 +522,46 @@ export interface ActiveOriginSynergy {
   involvedChampions: string[]
 }
 
+// Trait system (15 TFT-inspired traits)
+export type TraitId =
+  | 'celestial'
+  | 'arcanist'
+  | 'assassin'
+  | 'enchanter'
+  | 'duelist'
+  | 'guardian'
+  | 'challenger'
+  | 'phantom'
+  | 'moonlight'
+  | 'dark_star'
+  | 'elderwood'
+  | 'reaper'
+  | 'invoker'
+  | 'jade'
+  | 'astral'
+
+export interface TraitThreshold {
+  count: number
+  bonus: string
+  effects: SynergyEffect[]
+}
+
+export interface TraitDefinition {
+  id: TraitId
+  name: string
+  icon: string
+  color: string
+  thresholds: TraitThreshold[]
+}
+
+export interface ActiveTrait {
+  trait: TraitDefinition
+  count: number
+  activeThreshold: TraitThreshold | null
+  nextThreshold: TraitThreshold | null
+  involvedChampions: string[]
+}
+
 export interface RoleBehaviorState {
   // Support
   supportHealCooldownMs: number
