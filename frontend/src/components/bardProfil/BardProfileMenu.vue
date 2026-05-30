@@ -56,19 +56,6 @@ watch(
           <div class="rp-accent-bar" />
 
           <div class="flex items-center flex-shrink-0 rp-modal-header">
-            <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
-              <img
-                src="/img/BardPortalRichtig.png"
-                alt="Portal"
-                class="relative z-10 object-contain w-[72px] h-[72px]"
-              />
-              <div class="absolute inset-0 portal-effect">
-                <div class="portal-glow" />
-                <div class="portal-vortex" />
-                <div class="portal-ring" />
-              </div>
-            </div>
-
             <div class="flex items-center justify-center flex-1 gap-1.5 px-2 py-2">
               <button
                 v-for="item in menuItems"
@@ -91,19 +78,6 @@ watch(
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                 />
               </button>
-            </div>
-
-            <div class="relative flex items-center justify-center flex-shrink-0 w-20 h-20">
-              <img
-                src="/img/PortalEndeRichtig.png"
-                alt="Portal Ende"
-                class="relative z-10 object-contain w-[72px] h-[72px]"
-              />
-              <div class="absolute inset-0 portal-effect">
-                <div class="portal-glow" />
-                <div class="portal-vortex" />
-                <div class="portal-ring" />
-              </div>
             </div>
           </div>
 
@@ -394,97 +368,6 @@ watch(
 .rp-scrollbar::-webkit-scrollbar-thumb {
   background: #5c3310;
   border-radius: 3px;
-}
-
-/* ═══════════════════════════════════════════
-   PORTAL EFFECTS
-   ═══════════════════════════════════════════ */
-.portal-effect {
-  border-radius: 50%;
-  position: absolute;
-  overflow: visible;
-}
-
-.portal-glow {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 215, 0, 0.45) 0%,
-    rgba(255, 180, 0, 0.28) 40%,
-    rgba(180, 120, 0, 0.08) 70%,
-    transparent 100%
-  );
-  filter: blur(10px);
-  animation: portalPulse 4s ease-in-out infinite;
-}
-
-.portal-vortex {
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 215, 0, 0.6),
-    rgba(180, 130, 20, 0.2),
-    rgba(255, 200, 50, 0.5),
-    rgba(120, 80, 10, 0.15),
-    rgba(255, 215, 0, 0.6)
-  );
-  mask-image: radial-gradient(
-    ellipse at center,
-    transparent 30%,
-    black 50%,
-    black 70%,
-    transparent 90%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    transparent 30%,
-    black 50%,
-    black 70%,
-    transparent 90%
-  );
-}
-.portal-vortex::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(40, 20, 5, 0.45) 0%,
-    rgba(80, 50, 10, 0.35) 35%,
-    rgba(180, 120, 20, 0.3) 60%,
-    transparent 80%
-  );
-}
-
-.portal-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)) padding-box,
-    linear-gradient(135deg, #ffd700, #b8860b, #ffd700, #daa520, #ffd700) border-box;
-  box-shadow:
-    0 0 12px 2px rgba(255, 215, 0, 0.4),
-    inset 0 0 10px 2px rgba(255, 215, 0, 0.25);
-  animation: portalPulse 4s ease-in-out infinite;
-}
-
-@keyframes portalPulse {
-  0%,
-  100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
 }
 
 /* ═══════════════════════════════════════════
