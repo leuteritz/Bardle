@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import type { ChampionRole, RoleAbilityDetail, RoleStat, TraitDefinition } from '@/types'
+import { ORIGIN_SYNERGIES } from '@/config/championOrigins'
 
 interface Props {
   championName: string
@@ -20,6 +21,11 @@ defineProps<Props>()
 function onImgError(e: Event) {
   ;(e.target as HTMLImageElement).style.display = 'none'
 }
+
+function getOriginIcon(o: string | null): string {
+  if (!o) return ''
+  return (ORIGIN_SYNERGIES as Record<string, { icon: string } | undefined>)[o]?.icon ?? ''
+}
 </script>
 
 <template>
@@ -31,6 +37,11 @@ function onImgError(e: Event) {
         class="splash-origin-badge"
         :style="{ '--oc': originColor }"
       >
+        <Icon
+          v-if="getOriginIcon(origin).includes(':')"
+          :icon="getOriginIcon(origin)"
+          class="origin-badge-icon"
+        />
         {{ origin }}
       </div>
       <div
@@ -120,7 +131,9 @@ function onImgError(e: Event) {
   justify-content: center;
 }
 .splash-origin-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.6px;
@@ -131,6 +144,13 @@ function onImgError(e: Event) {
   border-radius: 3px;
   padding: 1px 7px;
   pointer-events: none;
+}
+.origin-badge-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--oc, #e8c040);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 .trait-chip {
   display: inline-flex;

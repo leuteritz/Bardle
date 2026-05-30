@@ -5,7 +5,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'celestial',
     name: 'Celestial',
-    icon: 'game-icons:ringed-planet',
+    icon: 'game-icons:stars-stack',
     color: '#a0c8ff',
     thresholds: [
       { count: 2, bonus: 'CPS +8%', effects: [{ type: 'cps', multiplier: 1.08 }] },
@@ -17,7 +17,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'arcanist',
     name: 'Arcanist',
-    icon: 'game-icons:magic-swirl',
+    icon: 'game-icons:crystal-ball',
     color: '#b060e0',
     thresholds: [
       { count: 2, bonus: 'DPS +10%', effects: [{ type: 'dps', multiplier: 1.1 }] },
@@ -29,7 +29,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'assassin',
     name: 'Assassin',
-    icon: 'game-icons:crescent-blade',
+    icon: 'game-icons:stiletto',
     color: '#c83030',
     thresholds: [
       { count: 2, bonus: 'DPS +15%', effects: [{ type: 'dps', multiplier: 1.15 }] },
@@ -101,7 +101,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'moonlight',
     name: 'Moonlight',
-    icon: 'game-icons:moon',
+    icon: 'game-icons:crescent-blade',
     color: '#7090d8',
     thresholds: [
       { count: 2, bonus: 'CPS +8%', effects: [{ type: 'cps', multiplier: 1.08 }] },
@@ -113,7 +113,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'dark_star',
     name: 'Dark Star',
-    icon: 'game-icons:black-hole-bolas',
+    icon: 'game-icons:magic-swirl',
     color: '#7040b0',
     thresholds: [
       { count: 2, bonus: 'Power +12%', effects: [{ type: 'power', multiplier: 1.12 }] },
@@ -137,7 +137,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'reaper',
     name: 'Reaper',
-    icon: 'game-icons:skull-crossed-bones',
+    icon: 'game-icons:scythe',
     color: '#806040',
     thresholds: [
       { count: 2, bonus: 'DPS +10%', effects: [{ type: 'dps', multiplier: 1.1 }] },
@@ -149,7 +149,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'invoker',
     name: 'Invoker',
-    icon: 'game-icons:spell-book',
+    icon: 'game-icons:scroll-unfurled',
     color: '#60c0c0',
     thresholds: [
       { count: 2, bonus: 'CPS +8%', effects: [{ type: 'cps', multiplier: 1.08 }] },
@@ -161,7 +161,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'jade',
     name: 'Jade',
-    icon: 'game-icons:gem-pendant',
+    icon: 'game-icons:gems',
     color: '#30a060',
     thresholds: [
       { count: 2, bonus: 'CPS +8%', effects: [{ type: 'cps', multiplier: 1.08 }] },
@@ -173,7 +173,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   {
     id: 'astral',
     name: 'Astral',
-    icon: 'game-icons:star-formation',
+    icon: 'game-icons:telescope',
     color: '#f0c040',
     thresholds: [
       { count: 2, bonus: 'Power +8%', effects: [{ type: 'power', multiplier: 1.08 }] },

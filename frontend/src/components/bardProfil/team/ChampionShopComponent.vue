@@ -16,7 +16,7 @@
 
       <div class="trait-filter-section">
         <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
-          <span class="trait-filter-title">Traits</span>
+          <span class="trait-filter-title">Filter</span>
           <Icon
             :icon="traitFilterOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'"
             class="trait-chevron"
@@ -26,9 +26,11 @@
           <button
             v-show="!hasSearchTraitMatch"
             class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === 'all' }"
-            @click="activeTrait = 'all'"
+            :class="{ 'trait-chip--active': activeTrait === 'all' && activeRole === 'all' }"
+            @click="activeTrait = 'all'; setActiveRole('all')"
           >Alle</button>
+
+          <div class="filter-group-label">Traits</div>
           <button
             v-for="trait in availableTraits"
             :key="trait.id"
@@ -36,11 +38,28 @@
             class="trait-chip"
             :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
             :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
-            @click="activeTrait = trait.id"
+            @click="activeTrait = trait.id; setActiveRole('all')"
           >
             <Icon :icon="trait.icon" class="trait-chip-icon" />
             {{ trait.name }}
           </button>
+
+          <template v-if="availableOrigins.length">
+            <div class="filter-group-label">Origin</div>
+            <button
+              v-for="origin in availableOrigins"
+              :key="origin.origin"
+              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
+              class="trait-chip"
+              :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
+              :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
+              @click="activeTrait = origin.origin; setActiveRole('all')"
+            >
+              <Icon :icon="origin.icon" class="trait-chip-icon" />
+              {{ origin.origin }}
+            </button>
+          </template>
+
         </div>
       </div>
     </div>
@@ -187,6 +206,7 @@ import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
+import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES } from '../../../config/constants'
@@ -301,6 +321,17 @@ export default defineComponent({
       return TRAIT_DEFINITIONS.filter((t) => seen.has(t.id))
     })
 
+    const availableOrigins = computed(() => {
+      const seen = new Set<string>()
+      for (const name of championNames.value) {
+        const o = getChampionOrigin(name)
+        if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
+      }
+      return (Object.values(ORIGIN_SYNERGIES) as Array<{ origin: string; name: string; icon: string; color: string }>)
+        .filter((o) => seen.has(o.origin))
+        .sort((a, b) => a.origin.localeCompare(b.origin))
+    })
+
     const filteredChampions = computed(() => {
       return championNames.value
         .map((name) => ({ name }))
@@ -308,8 +339,11 @@ export default defineComponent({
           if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
-          if (activeTrait.value !== 'all' && !(CHAMPION_TRAITS[c.name] ?? []).includes(activeTrait.value as never))
-            return false
+          if (activeTrait.value !== 'all') {
+            const traitMatch = (CHAMPION_TRAITS[c.name] ?? []).includes(activeTrait.value as never)
+            const originMatch = getChampionOrigin(c.name) === activeTrait.value
+            if (!traitMatch && !originMatch) return false
+          }
           if (searchQuery.value.trim()) {
             const q = searchQuery.value.toLowerCase().trim()
             const nameMatch = c.name.toLowerCase().includes(q)
@@ -317,7 +351,8 @@ export default defineComponent({
               const def = TRAIT_DEFINITIONS.find((t) => t.id === tid)
               return def?.name.toLowerCase().includes(q)
             })
-            return nameMatch || traitMatch
+            const originMatch = (getChampionOrigin(c.name) ?? '').toLowerCase().includes(q)
+            return nameMatch || traitMatch || originMatch
           }
           return true
         })
@@ -332,9 +367,13 @@ export default defineComponent({
     const searchMatchedTraits = computed(() => {
       const q = searchQuery.value.toLowerCase().trim()
       if (!q) return new Set<string>()
-      return new Set(
+      const matched = new Set<string>(
         TRAIT_DEFINITIONS.filter((t) => t.name.toLowerCase().includes(q)).map((t) => t.id),
       )
+      for (const origin of Object.keys(ORIGIN_SYNERGIES)) {
+        if (origin.toLowerCase().includes(q)) matched.add(origin)
+      }
+      return matched
     })
     const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
 
@@ -347,6 +386,7 @@ export default defineComponent({
     return {
       filteredChampions,
       availableTraits,
+      availableOrigins,
       searchMatchedTraits,
       hasSearchTraitMatch,
       unlockedCount,
@@ -699,4 +739,20 @@ export default defineComponent({
   color: rgba(255, 255, 255, 0.88);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
+
+.filter-group-label {
+  width: 100%;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.5);
+  padding: 3px 2px 2px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.35);
+  margin: 3px 0 2px;
+}
+.filter-group-label:first-child {
+  margin-top: 0;
+}
+
 </style>
