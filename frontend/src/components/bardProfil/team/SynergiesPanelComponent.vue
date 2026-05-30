@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useSynergyStore } from '@/stores/synergyStore'
 
@@ -55,7 +56,7 @@ const displayTraits = computed(() => {
         activeIdx >= total - 1 ? 'gold' : activeIdx >= Math.ceil(total / 2) - 1 ? 'silver' : 'bronze'
       return {
         id: 'origin-' + os.origin,
-        name: os.def.name,
+        name: String(os.origin),
         icon: os.def.icon,
         color: os.def.color,
         tier,
@@ -105,7 +106,8 @@ function onTraitHover(id: string, e: MouseEvent) {
     >
       <div class="tft-hex-badge">
         <div class="tft-hex-inner" :style="{ background: TIER_COLORS[row.tier] }">
-          <span class="tft-hex-icon">{{ row.icon }}</span>
+          <Icon v-if="row.icon.includes(':')" :icon="row.icon" class="tft-hex-icon" />
+          <span v-else class="tft-hex-icon tft-hex-icon--emoji">{{ row.icon }}</span>
         </div>
       </div>
       <span class="tft-trait-name">{{ row.name }}</span>
@@ -132,7 +134,8 @@ function onTraitHover(id: string, e: MouseEvent) {
           :key="row.id"
         >
           <div class="tft-tooltip-header">
-            <span class="tft-tooltip-icon">{{ row.icon }}</span>
+            <Icon v-if="row.icon.includes(':')" :icon="row.icon" class="tft-tooltip-icon" />
+            <span v-else class="tft-tooltip-icon tft-tooltip-icon--emoji">{{ row.icon }}</span>
             <span class="tft-tooltip-title" :style="{ color: row.isOrigin ? row.color : TIER_COLORS[row.tier] }">
               {{ row.name }}
             </span>
@@ -223,8 +226,8 @@ function onTraitHover(id: string, e: MouseEvent) {
 }
 .tft-hex-badge {
   flex-shrink: 0;
-  width: 24px;
-  height: 28px;
+  width: 28px;
+  height: 32px;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   overflow: hidden;
 }
@@ -236,8 +239,20 @@ function onTraitHover(id: string, e: MouseEvent) {
   justify-content: center;
 }
 .tft-hex-icon {
-  font-size: 13px;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+.tft-hex-icon--emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
   line-height: 1;
+  filter: none;
 }
 .tft-trait-name {
   font-size: 11px;
@@ -290,8 +305,16 @@ function onTraitHover(id: string, e: MouseEvent) {
   border-bottom: 1px solid rgba(92, 51, 16, 0.5);
 }
 .tft-tooltip-icon {
-  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #e8c040;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+}
+.tft-tooltip-icon--emoji {
+  font-size: 22px;
   line-height: 1;
+  filter: none;
 }
 .tft-tooltip-title {
   font-size: 12px;

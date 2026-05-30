@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import type { ChampionRole, RoleAbilityDetail, RoleStat, TraitDefinition } from '@/types'
 
 interface Props {
@@ -38,7 +39,7 @@ function onImgError(e: Event) {
         class="trait-chip"
         :style="{ '--tc': trait.color }"
       >
-        <span class="trait-chip-icon">{{ trait.icon }}</span>
+        <Icon :icon="trait.icon" class="trait-chip-icon" />
         <span class="trait-chip-name">{{ trait.name }}</span>
       </div>
     </div>
@@ -147,9 +148,11 @@ function onImgError(e: Event) {
   white-space: nowrap;
 }
 .trait-chip-icon {
-  opacity: 0.85;
-  font-size: 11px;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
 }
 .trait-chip-name {
   line-height: 1;

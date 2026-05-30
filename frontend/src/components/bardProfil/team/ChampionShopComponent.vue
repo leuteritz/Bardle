@@ -14,22 +14,34 @@
 
       <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
 
-      <div class="trait-filter-row">
-        <button
-          v-show="!hasSearchTraitMatch"
-          class="trait-chip"
-          :class="{ 'trait-chip--active': activeTrait === 'all' }"
-          @click="activeTrait = 'all'"
-        >Alle</button>
-        <button
-          v-for="trait in availableTraits"
-          :key="trait.id"
-          v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-          class="trait-chip"
-          :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
-          :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
-          @click="activeTrait = trait.id"
-        >{{ trait.icon }} {{ trait.name }}</button>
+      <div class="trait-filter-section">
+        <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
+          <span class="trait-filter-title">Traits</span>
+          <Icon
+            :icon="traitFilterOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'"
+            class="trait-chevron"
+          />
+        </div>
+        <div v-if="traitFilterOpen" class="trait-filter-body">
+          <button
+            v-show="!hasSearchTraitMatch"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTrait === 'all' }"
+            @click="activeTrait = 'all'"
+          >Alle</button>
+          <button
+            v-for="trait in availableTraits"
+            :key="trait.id"
+            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+            :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
+            @click="activeTrait = trait.id"
+          >
+            <Icon :icon="trait.icon" class="trait-chip-icon" />
+            {{ trait.name }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -168,6 +180,7 @@
 
 <script lang="ts">
 import { ref, onMounted, defineComponent, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
 import { truncate, formatNumber } from '../../../config/numberFormat'
@@ -182,6 +195,7 @@ import type { ChampionRole } from '../../../types'
 
 export default defineComponent({
   name: 'ChampionShopComponent',
+  components: { Icon },
   props: {
     initialRole: { type: String, default: 'all' },
   },
@@ -194,6 +208,7 @@ export default defineComponent({
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
     const activeTrait = ref<string>('all')
+    const traitFilterOpen = ref(false)
 
     watch(
       () => props.initialRole,
@@ -358,6 +373,7 @@ export default defineComponent({
       getCardClass,
       getButtonClass,
       setActiveRole,
+      traitFilterOpen,
     }
   },
 })
@@ -604,21 +620,55 @@ export default defineComponent({
   padding: 8px 10px;
 }
 
-/* ── Trait filter row ── */
-.trait-filter-row {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
+/* ── Trait filter section ── */
+.trait-filter-section {
+  border: 1px solid #3e2a0a;
+  border-radius: 4px;
+  background: #161410;
+  overflow: hidden;
 }
-.trait-filter-row::-webkit-scrollbar {
-  display: none;
+
+.trait-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  cursor: pointer;
+  background: #1e1006;
+  border-bottom: 1px solid #3e2a0a;
+  user-select: none;
+  transition: background 0.15s;
+}
+.trait-filter-header:hover {
+  background: #261408;
+}
+
+.trait-filter-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #c89040;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trait-chevron {
+  width: 14px;
+  height: 14px;
+  color: #7a5020;
+}
+
+.trait-filter-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
 }
 
 .trait-chip {
-  flex-shrink: 0;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
   font-size: 0.6rem;
   font-weight: 700;
   border-radius: 4px;
@@ -640,5 +690,13 @@ export default defineComponent({
   background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
   border-color: var(--chip-color, #e8c040);
   color: var(--chip-color, #e8c040);
+}
+
+.trait-chip-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.88);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
 </style>
