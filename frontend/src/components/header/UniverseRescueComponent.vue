@@ -119,7 +119,7 @@ watch(
 .universe-panel {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 2px;
   width: 100%;
   height: clamp(56px, 4.2vw, 115px);
