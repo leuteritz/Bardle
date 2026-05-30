@@ -289,7 +289,7 @@ export function useStarSystem() {
     const newRenders: StarRenderEntry[] = []
 
     for (const star of starGroupStore.activeStars) {
-      let speedMul = starSpeedMul.get(star.id) ?? 1.0
+      const speedMul = starSpeedMul.get(star.id) ?? 1.0
       let sAngle = starAngles.get(star.id) ?? star.starAngle
       sAngle += star.starDirection * star.orbitSpeed * speedMul * dt
       starAngles.set(star.id, sAngle)

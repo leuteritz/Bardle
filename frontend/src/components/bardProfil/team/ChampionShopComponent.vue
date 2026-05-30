@@ -7,12 +7,30 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search Champion…"
+          placeholder="Champion oder Trait suchen..."
           class="rpg-search w-full pl-9 pr-4 py-2.5"
         />
       </div>
 
       <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
+
+      <div class="trait-filter-row">
+        <button
+          v-show="!hasSearchTraitMatch"
+          class="trait-chip"
+          :class="{ 'trait-chip--active': activeTrait === 'all' }"
+          @click="activeTrait = 'all'"
+        >Alle</button>
+        <button
+          v-for="trait in availableTraits"
+          :key="trait.id"
+          v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+          class="trait-chip"
+          :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+          :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
+          @click="activeTrait = trait.id"
+        >{{ trait.icon }} {{ trait.name }}</button>
+      </div>
     </div>
 
     <!-- ── Champion Grid ── -->
@@ -155,6 +173,7 @@ import { useInventoryStore } from '../../../stores/inventoryStore'
 import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles } from '../../../config/championRoles'
+import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES } from '../../../config/constants'
@@ -174,6 +193,7 @@ export default defineComponent({
     const loadError = ref<string | null>(null)
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
+    const activeTrait = ref<string>('all')
 
     watch(
       () => props.initialRole,
@@ -258,6 +278,14 @@ export default defineComponent({
       return 'btn-locked'
     }
 
+    const availableTraits = computed(() => {
+      const seen = new Set<string>()
+      for (const name of championNames.value) {
+        for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
+      }
+      return TRAIT_DEFINITIONS.filter((t) => seen.has(t.id))
+    })
+
     const filteredChampions = computed(() => {
       return championNames.value
         .map((name) => ({ name }))
@@ -265,8 +293,16 @@ export default defineComponent({
           if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
+          if (activeTrait.value !== 'all' && !(CHAMPION_TRAITS[c.name] ?? []).includes(activeTrait.value as never))
+            return false
           if (searchQuery.value.trim()) {
-            return c.name.toLowerCase().includes(searchQuery.value.toLowerCase().trim())
+            const q = searchQuery.value.toLowerCase().trim()
+            const nameMatch = c.name.toLowerCase().includes(q)
+            const traitMatch = (CHAMPION_TRAITS[c.name] ?? []).some((tid) => {
+              const def = TRAIT_DEFINITIONS.find((t) => t.id === tid)
+              return def?.name.toLowerCase().includes(q)
+            })
+            return nameMatch || traitMatch
           }
           return true
         })
@@ -278,6 +314,15 @@ export default defineComponent({
         })
     })
 
+    const searchMatchedTraits = computed(() => {
+      const q = searchQuery.value.toLowerCase().trim()
+      if (!q) return new Set<string>()
+      return new Set(
+        TRAIT_DEFINITIONS.filter((t) => t.name.toLowerCase().includes(q)).map((t) => t.id),
+      )
+    })
+    const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
+
     const unlockedCount = computed(() => {
       return battleStore.recruitableChampions.length
     })
@@ -286,6 +331,9 @@ export default defineComponent({
 
     return {
       filteredChampions,
+      availableTraits,
+      searchMatchedTraits,
+      hasSearchTraitMatch,
       unlockedCount,
       battleStore,
       inventoryStore,
@@ -294,6 +342,7 @@ export default defineComponent({
       getChampionRoles,
       activeRole,
       searchQuery,
+      activeTrait,
       isOwned,
       isUnlocked,
       isLocked,
@@ -553,5 +602,43 @@ export default defineComponent({
 /* ── Grid-Bereich ── */
 .cs-grid {
   padding: 8px 10px;
+}
+
+/* ── Trait filter row ── */
+.trait-filter-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.trait-filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.trait-chip {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid #3e2a0a;
+  background: #1c1a10;
+  color: var(--rpg-text-dim);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+.trait-chip:hover {
+  border-color: var(--rpg-wood-mid);
+  color: var(--rpg-text-muted);
+}
+.trait-chip--active {
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
+  border-color: var(--chip-color, #e8c040);
+  color: var(--chip-color, #e8c040);
 }
 </style>
