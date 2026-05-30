@@ -42,8 +42,10 @@ watch(
     <div class="hud-top">
       <div class="stat-card stat-card--galaxy">
         <img src="/img/galaxy.png" class="stat-icon" alt="Galaxie" />
-        <span class="stat-card-label">GALAXY</span>
-        <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
+        <div class="stat-text">
+          <span class="stat-card-label">GALAXY</span>
+          <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
+        </div>
       </div>
 
       <div class="hud-divider" aria-hidden="true" />
@@ -55,11 +57,13 @@ watch(
         @mouseleave="isStarHovered = false"
       >
         <img src="/img/star.png" class="stat-icon" alt="Sterne" />
-        <span class="stat-card-label">STARS</span>
-        <span class="stat-card-value star-value">
-          {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span
-          >{{ galaxyStore.starsRequired }}
-        </span>
+        <div class="stat-text">
+          <span class="stat-card-label">STARS</span>
+          <span class="stat-card-value star-value">
+            {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span
+            >{{ galaxyStore.starsRequired }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -116,10 +120,10 @@ watch(
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 2px;
   width: 100%;
-  height: 100%;
-  padding: 6px 12px;
+  height: clamp(52px, 3.6vw, 100px);
+  padding: 2px 8px;
   box-sizing: border-box;
 }
 
@@ -130,21 +134,32 @@ watch(
   display: flex;
   align-items: stretch;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .stat-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
-  padding: 4px 6px;
+  padding: 1px 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .stat-icon {
-  width: 32px;
-  height: 32px;
+  width: clamp(12px, 1.5vw, 36px);
+  height: clamp(12px, 1.5vw, 36px);
   object-fit: contain;
   flex-shrink: 0;
   transform: translateZ(0);
@@ -175,12 +190,14 @@ watch(
 }
 
 .stat-card-value {
-  font-size: 1.55rem;
+  font-size: clamp(0.65rem, 0.95vw, 1.2rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
   letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .galaxy-value {
@@ -224,6 +241,7 @@ watch(
   display: flex;
   align-items: center;
   width: 100%;
+  flex-shrink: 0;
 }
 
 /* ── Meep-Block ────────────────────────────── */
@@ -240,8 +258,8 @@ watch(
 }
 
 .meep-icon {
-  width: 44px;
-  height: 44px;
+  width: clamp(18px, 1.8vw, 36px);
+  height: clamp(18px, 1.8vw, 36px);
   object-fit: contain;
   flex-shrink: 0;
   image-rendering: auto;
@@ -260,7 +278,7 @@ watch(
 }
 
 .meep-value {
-  font-size: 1.3rem;
+  font-size: clamp(0.65rem, 0.9vw, 1.1rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;
@@ -273,8 +291,8 @@ watch(
     color 0.3s,
     text-shadow 0.3s;
   letter-spacing: -0.01em;
-  min-width: 4ch;
-  max-width: 5ch;
+  min-width: 3ch;
+  max-width: none;
 }
 
 .meep-value--rising {
@@ -303,8 +321,8 @@ watch(
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 22px;
-  border-radius: 6px;
+  height: clamp(10px, 0.9vw, 22px);
+  border-radius: 4px;
   overflow: hidden;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
@@ -444,8 +462,8 @@ watch(
    ================================================================ */
 .prestige-btn {
   flex: 1;
-  height: 22px;
-  padding: 0 12px;
+  height: clamp(10px, 0.9vw, 22px);
+  padding: 0 8px;
   font-size: 0.63rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -479,4 +497,5 @@ watch(
     box-shadow: 0 0 22px rgba(200, 144, 64, 0.7);
   }
 }
+
 </style>

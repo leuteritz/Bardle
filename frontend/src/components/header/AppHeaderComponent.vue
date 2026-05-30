@@ -32,6 +32,7 @@ const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgre
 
 const svgW = ref(360)
 const svgH = ref(100)
+const badgeOverlapPx = ref(20)
 
 const arcD = computed(() => `M 0,0 A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},0`)
 
@@ -74,8 +75,11 @@ async function measure() {
   if (!r.width || !r.height) return
   svgW.value = r.width
   svgH.value = r.height
-  // badge sits at svgH-20 from chimes top, 50px tall → bottom = r.bottom + 30
-  document.documentElement.style.setProperty('--level-badge-bottom', `${r.bottom + 30}px`)
+  // Read actual rendered badge height so --level-badge-bottom stays correct at all fluid sizes
+  const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
+  const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50
+  badgeOverlapPx.value = badgeH * 0.4
+  document.documentElement.style.setProperty('--level-badge-bottom', `${r.bottom + badgeH * 0.6}px`)
 }
 
 function updateHeaderHeight() {
@@ -192,13 +196,13 @@ onUnmounted(() => resizeObserver?.disconnect())
         </div>
       </div>
 
-      <div class="arc-level-badge" :style="{ top: svgH - 20 + 'px' }">
+      <div class="arc-level-badge" :style="{ top: (svgH - badgeOverlapPx) + 'px' }">
         <span class="arc-level-text">{{ gameStore.level }}</span>
       </div>
 
       <button
         class="center-reset-btn"
-        :style="{ top: svgH - 10 + 'px' }"
+        :style="{ top: (svgH - badgeOverlapPx * 0.5) + 'px' }"
         title="Delete Save"
         @click.stop="handleReset"
       >
@@ -258,13 +262,14 @@ onUnmounted(() => resizeObserver?.disconnect())
   overflow: visible;
   position: relative;
   display: grid;
-  grid-template-columns: 1fr clamp(220px, 22vw, 320px) 1fr;
+  grid-template-columns: 1fr clamp(90px, 14vw, 270px) 1fr;
   align-items: stretch;
 }
 
 .header-portal-wrap {
-  width: clamp(110px, 11vw, 170px);
+  width: clamp(80px, calc(-5px + 8vw), 180px);
   align-self: stretch;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
 }
@@ -312,7 +317,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-items: center;
   gap: 0;
   pointer-events: none;
-  width: clamp(220px, 22vw, 320px);
+  width: clamp(90px, 14vw, 270px);
   overflow: visible;
 }
 
@@ -335,7 +340,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   border-right: 1px solid rgba(255, 200, 80, 0.24);
   border-bottom: 1px solid rgba(255, 200, 80, 0.28);
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
-  padding: 4px 14px calc(var(--bump-center) + 8px) 14px;
+  padding: 4px 14px calc(var(--bump-center) + 4px) 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 200, 80, 0.08),
     0 6px 24px rgba(0, 0, 0, 0.7);
@@ -369,7 +374,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: clamp(4px, 0.7vw, 8px);
   margin-top: 4px;
 }
 .chimes-sub-stat {
@@ -392,21 +397,21 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-inline: 2px;
 }
 .sub-chime-icon {
-  width: clamp(16px, 2vw, 22px);
-  height: clamp(16px, 2vw, 22px);
+  width: clamp(12px, 1.5vw, 18px);
+  height: clamp(12px, 1.5vw, 18px);
   object-fit: contain;
   flex-shrink: 0;
   opacity: 0.9;
 }
 .sub-stat-value {
-  font-size: clamp(0.85rem, 1.2vw, 1.1rem);
+  font-size: clamp(0.65rem, 1.0vw, 1.1rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .sub-stat-label {
-  font-size: clamp(0.65rem, 0.9vw, 0.85rem);
+  font-size: clamp(0.5rem, 0.8vw, 0.85rem);
   font-weight: 600;
   letter-spacing: 0.05em;
   opacity: 0.7;
@@ -420,7 +425,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 .header-divider {
   flex-shrink: 0;
   width: 2px;
-  height: 55px;
+  height: clamp(28px, calc(-1.5px + 2.6vw), 55px);
   margin-inline: 4px;
   align-self: center;
   border-radius: 1px;
@@ -452,14 +457,14 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-bottom: 1px;
 }
 .chimes-value {
-  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  font-size: clamp(1rem, 1.5vw, 2.4rem);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-chimes);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  min-width: 9.5ch;
+  min-width: 8ch;
   white-space: nowrap;
 }
 .cps-value {
@@ -558,7 +563,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   height: 100%;
 }
 .header-icon-img {
-  height: clamp(40px, 6vh, 72px);
+  height: clamp(48px, 3.6vw, 100px);
   width: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
@@ -622,8 +627,8 @@ onUnmounted(() => resizeObserver?.disconnect())
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  width: 50px;
-  height: 50px;
+  width:  clamp(26px, 2.2vw, 48px);
+  height: clamp(26px, 2.2vw, 48px);
   border-radius: 50%;
   background: linear-gradient(to bottom, #4a8a28, #2e6018);
   border: 2px solid #6ec040;
@@ -636,7 +641,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 .arc-level-text {
-  font-size: 25px;
+  font-size: clamp(13px, 1.15vw, 24px);
   font-weight: 900;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
@@ -651,9 +656,9 @@ onUnmounted(() => resizeObserver?.disconnect())
   left: calc(50% + 33px);
   z-index: 26;
   pointer-events: auto;
-  width: 20px;
-  height: 20px;
-  font-size: 9px;
+  width:     clamp(12px, 1.2vw, 18px);
+  height:    clamp(12px, 1.2vw, 18px);
+  font-size: clamp(5px, 0.55vw, 8px);
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -688,102 +693,5 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-top: 1px;
 }
 
-/* ================================================================
-   COMPACT MODE ≤ 1280 px — smaller header to coexist with event log
-   ================================================================ */
-@media (max-width: 1280px) {
-  .header-bar {
-    grid-template-columns: 1fr clamp(120px, 14vw, 170px) 1fr;
-  }
 
-  .header-center {
-    width: clamp(120px, 14vw, 170px);
-  }
-
-  .chimes-value {
-    font-size: clamp(1rem, 1.8vw, 1.4rem);
-    min-width: 7ch;
-  }
-
-  .chimes-sub-row {
-    gap: 5px;
-    margin-top: 2px;
-  }
-
-  .sub-stat-value {
-    font-size: clamp(0.65rem, 0.9vw, 0.85rem);
-  }
-
-  .sub-stat-label {
-    font-size: clamp(0.55rem, 0.75vw, 0.7rem);
-  }
-
-  .header-divider {
-    height: 38px;
-  }
-
-  .header-portal-wrap {
-    width: clamp(70px, 8vw, 110px);
-  }
-
-  .arc-level-badge {
-    width: 36px;
-    height: 36px;
-  }
-
-  .arc-level-text {
-    font-size: 18px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .header-bar {
-    grid-template-columns: 1fr clamp(90px, 11vw, 130px) 1fr;
-  }
-
-  .header-center {
-    width: clamp(90px, 11vw, 130px);
-  }
-
-  .chimes-value {
-    font-size: clamp(0.82rem, 1.4vw, 1rem);
-    min-width: 6ch;
-  }
-
-  .chimes-sub-row {
-    gap: 4px;
-    margin-top: 1px;
-  }
-
-  .sub-stat-value {
-    font-size: clamp(0.58rem, 0.78vw, 0.72rem);
-  }
-
-  .sub-stat-label {
-    font-size: clamp(0.5rem, 0.62vw, 0.6rem);
-  }
-
-  .header-divider {
-    height: 28px;
-  }
-
-  .header-portal-wrap {
-    width: clamp(52px, 6vw, 76px);
-  }
-
-  .arc-level-badge {
-    width: 26px;
-    height: 26px;
-  }
-
-  .arc-level-text {
-    font-size: 13px;
-  }
-
-  .center-reset-btn {
-    width: 16px;
-    height: 16px;
-    font-size: 7px;
-  }
-}
 </style>

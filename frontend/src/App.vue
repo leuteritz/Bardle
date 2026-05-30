@@ -102,24 +102,23 @@ watch(
   --color-cps: #74d448;
   --color-label: rgba(200, 185, 140, 0.55);
 
-  --bump-profile: 7px;
-  --bump-center: 20px;
   --header-total-height: 50px;
-  --hud-panel-size: 330px;
 
-  --bard-avatar-radius: 48px;
+  /* Fluid scaling — no breakpoint jumps */
+  --bard-avatar-radius: clamp(14px, 1.4vw, 40px);
+  --avatar-circle-size: clamp(48px, calc(-5px + 4.4vw), 100px);
+  --bump-center: clamp(6px, calc(-4px + 1vw), 20px);
+  --bump-profile: clamp(2px, calc(-3px + 0.5vw), 8px);
 
-  /* Responsive scaling */
+  /* hud-scale / hud-panel-size affect non-header components — kept as breakpoints */
   --hud-scale: 0.75;
-  --avatar-circle-size: 96px;
+  --hud-panel-size: 330px;
 }
 
 @media (max-width: 1400px) {
   :root {
     --hud-scale: 0.65;
     --hud-panel-size: 286px;
-    --bard-avatar-radius: 42px;
-    --avatar-circle-size: 84px;
   }
 }
 
@@ -127,10 +126,6 @@ watch(
   :root {
     --hud-scale: 0.58;
     --hud-panel-size: 260px;
-    --bard-avatar-radius: 28px;
-    --avatar-circle-size: 64px;
-    --bump-center: 10px;
-    --bump-profile: 3px;
   }
 }
 
@@ -138,10 +133,6 @@ watch(
   :root {
     --hud-scale: 0.52;
     --hud-panel-size: 230px;
-    --bard-avatar-radius: 18px;
-    --avatar-circle-size: 48px;
-    --bump-center: 6px;
-    --bump-profile: 2px;
   }
 }
 
@@ -149,8 +140,6 @@ watch(
   :root {
     --hud-scale: 0.78;
     --hud-panel-size: 343px;
-    --bard-avatar-radius: 50px;
-    --avatar-circle-size: 100px;
   }
 }
 
@@ -158,8 +147,6 @@ watch(
   :root {
     --hud-scale: 0.85;
     --hud-panel-size: 374px;
-    --bard-avatar-radius: 54px;
-    --avatar-circle-size: 108px;
   }
 }
 
@@ -167,8 +154,6 @@ watch(
   :root {
     --hud-scale: 1.0;
     --hud-panel-size: 440px;
-    --bard-avatar-radius: 60px;
-    --avatar-circle-size: 120px;
   }
 }
 
@@ -179,7 +164,7 @@ watch(
   transform: translateX(-100%);
   z-index: 9999;
   pointer-events: none;
-  font-size: clamp(1rem, 1vw, 1rem);
+  font-size: clamp(0.72rem, 0.9vw, 1rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.08em;

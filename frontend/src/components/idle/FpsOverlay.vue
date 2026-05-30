@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
   border: none;
   box-shadow: none;
 
-  font-size: clamp(0.75rem, 1vw, 1rem);
+  font-size: clamp(0.72rem, 0.9vw, 1rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.08em;

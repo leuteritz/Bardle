@@ -245,7 +245,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
   display: grid;
   grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
   align-items: center;
-  height: 26px;
+  height: clamp(20px, 2.4vw, 28px);
   width: 100%;
   overflow: hidden;
   cursor: pointer;
