@@ -60,11 +60,9 @@ const secCollapsed   = ref(true)
 const allOpen      = computed(() => !equipCollapsed.value && !synCollapsed.value && !secCollapsed.value)
 const allCollapsed = computed(() => equipCollapsed.value && synCollapsed.value && secCollapsed.value)
 
-const showShop = ref(false)
+const activePanel = ref<'shop' | 'expedition' | 'items' | null>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
-const showExpedition = ref(false)
 const expeditionTab = ref<'create' | 'active'>('create')
-const showItemShop = ref(false)
 const itemShopCategory = ref<ItemCategory>('weapon')
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
@@ -97,9 +95,7 @@ watch(
 watch(
   () => props.closeToken,
   () => {
-    showShop.value = false
-    showExpedition.value = false
-    showItemShop.value = false
+    activePanel.value = null
     if (panelMode.value !== 'main') {
       panelMode.value = 'main'
       selectedCategory.value = null
@@ -109,9 +105,7 @@ watch(
 )
 
 function closeActiveModal() {
-  showShop.value = false
-  showExpedition.value = false
-  showItemShop.value = false
+  activePanel.value = null
   if (panelMode.value !== 'main') {
     panelMode.value = 'main'
     selectedCategory.value = null
@@ -127,36 +121,27 @@ onMounted(() => window.addEventListener('keydown', onEsc))
 onUnmounted(() => window.removeEventListener('keydown', onEsc))
 
 function openShop(role: ChampionRole | 'all' = 'all') {
-  showExpedition.value = false
-  showItemShop.value = false
-  panelMode.value = 'main'
   shopRole.value = role
-  showShop.value = true
+  panelMode.value = 'main'
+  activePanel.value = activePanel.value === 'shop' ? null : 'shop'
 }
-function closeShop() { showShop.value = false }
 
 function openExpedition() {
-  showShop.value = false
-  showItemShop.value = false
-  panelMode.value = 'main'
   expeditionTab.value = 'create'
-  showExpedition.value = true
+  panelMode.value = 'main'
+  activePanel.value = activePanel.value === 'expedition' ? null : 'expedition'
 }
-function closeExpedition() { showExpedition.value = false }
 
 function openItemShop() {
-  showShop.value = false
-  showExpedition.value = false
-  panelMode.value = 'main'
   itemShopCategory.value = 'weapon'
-  showItemShop.value = true
+  panelMode.value = 'main'
+  activePanel.value = activePanel.value === 'items' ? null : 'items'
 }
-function closeItemShop() { showItemShop.value = false }
+
+function closeInlinePanel() { activePanel.value = null }
 
 function openChampionPicker(subSlot: number = -1) {
-  showShop.value = false
-  showExpedition.value = false
-  showItemShop.value = false
+  activePanel.value = null
   internalSubSlot.value = subSlot
   panelMode.value = 'champion-picker'
 }
@@ -239,9 +224,7 @@ function onImgError(e: Event) {
     @mousemove="onSplashMouseMove"
     @mouseleave="onSplashMouseLeave"
     @click="
-      !showShop &&
-      !showExpedition &&
-      !showItemShop &&
+      activePanel === null &&
       panelMode === 'main' &&
       openChampionPicker(-1)
     "
@@ -278,17 +261,29 @@ function onImgError(e: Event) {
 
     <!-- ══ ACTION BAR ══ -->
     <div class="splash-action-bar" :style="{ '--rc': roleColor }" @click.stop>
-      <button class="action-bar-btn" @click.stop="openShop('all')">
+      <button
+        class="action-bar-btn"
+        :class="{ 'action-bar-btn--active': activePanel === 'shop' }"
+        @click.stop="openShop('all')"
+      >
         <span class="action-bar-icon">⚔</span>
         <span class="action-bar-label">Shop</span>
       </button>
       <div class="action-bar-sep" />
-      <button class="action-bar-btn action-bar-btn--featured" @click.stop="openExpedition">
+      <button
+        class="action-bar-btn action-bar-btn--featured"
+        :class="{ 'action-bar-btn--active': activePanel === 'expedition' }"
+        @click.stop="openExpedition"
+      >
         <span class="action-bar-icon">🗺</span>
         <span class="action-bar-label">Expedition</span>
       </button>
       <div class="action-bar-sep" />
-      <button class="action-bar-btn" @click.stop="openItemShop">
+      <button
+        class="action-bar-btn"
+        :class="{ 'action-bar-btn--active': activePanel === 'items' }"
+        @click.stop="openItemShop"
+      >
         <span class="action-bar-icon">💼</span>
         <span class="action-bar-label">Items</span>
       </button>
@@ -385,82 +380,66 @@ function onImgError(e: Event) {
       @open-item-picker="openItemPicker"
     />
 
-    <!-- ══ MODALS ══ -->
-    <Transition name="modal-pop">
-      <div v-if="showShop" class="modal-backdrop" @click.stop @click.self="closeShop">
-        <div class="modal-panel modal-panel--md" @click.stop>
-          <div class="modal-gold-line" />
-          <button class="modal-close-btn" @click="closeShop">✕</button>
-          <div class="modal-title-row">⚔️ Recruit Champions</div>
-          <div class="modal-content">
-            <ChampionShopComponent
-              :initial-role="shopRole"
-              @role-change="handleShopRoleChange"
-            />
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <Transition name="modal-pop">
+    <!-- ══ INLINE PANELS ══ -->
+    <Transition name="inline-panel">
       <div
-        v-if="showExpedition"
-        class="modal-backdrop"
+        v-if="activePanel && panelMode === 'main'"
+        :key="activePanel"
+        class="inline-panel"
         @click.stop
-        @click.self="closeExpedition"
       >
-        <div class="modal-panel modal-panel--md" @click.stop>
-          <div class="modal-gold-line" />
-          <button class="modal-close-btn" @click="closeExpedition">✕</button>
-          <div class="modal-tab-bar">
-            <button
-              class="modal-tab"
-              :class="{ 'modal-tab--active': expeditionTab === 'create' }"
-              @click="expeditionTab = 'create'"
-            >
-              🗺 Start
-            </button>
-            <button
-              class="modal-tab"
-              :class="{ 'modal-tab--active': expeditionTab === 'active' }"
-              @click="expeditionTab = 'active'"
-            >
-              ⚡ Aktiv
-              <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
-            </button>
-          </div>
-          <div class="modal-content modal-content--scroll">
+        <div class="inline-panel-gold-line" />
+        <button class="inline-panel-close" @click="closeInlinePanel">✕</button>
+
+        <div v-if="activePanel === 'expedition'" class="inline-panel-tab-bar">
+          <button
+            class="modal-tab"
+            :class="{ 'modal-tab--active': expeditionTab === 'create' }"
+            @click="expeditionTab = 'create'"
+          >
+            🗺 Start
+          </button>
+          <button
+            class="modal-tab"
+            :class="{ 'modal-tab--active': expeditionTab === 'active' }"
+            @click="expeditionTab = 'active'"
+          >
+            ⚡ Aktiv
+            <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
+          </button>
+        </div>
+
+        <div v-if="activePanel === 'items'" class="inline-panel-tab-bar">
+          <button
+            v-for="cat in [
+              { id: 'weapon', label: 'Weapon' },
+              { id: 'armor', label: 'Armor' },
+              { id: 'artefact', label: 'Artefact' },
+            ]"
+            :key="cat.id"
+            class="modal-tab"
+            :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
+            @click="itemShopCategory = cat.id as ItemCategory"
+          >
+            <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
+            {{ cat.label }}
+          </button>
+        </div>
+
+        <div class="inline-panel-content">
+          <ChampionShopComponent
+            v-if="activePanel === 'shop'"
+            :initial-role="shopRole"
+            @role-change="handleShopRoleChange"
+          />
+          <template v-else-if="activePanel === 'expedition'">
             <ExpeditionCreateComponent v-if="expeditionTab === 'create'" />
             <ExpeditionActiveComponent v-else />
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <Transition name="modal-pop">
-      <div v-if="showItemShop" class="modal-backdrop" @click.stop @click.self="closeItemShop">
-        <div class="modal-panel modal-panel--md" @click.stop>
-          <div class="modal-gold-line" />
-          <button class="modal-close-btn" @click="closeItemShop">✕</button>
-          <div class="modal-tab-bar">
-            <button
-              v-for="cat in [
-                { id: 'weapon', label: 'Weapon' },
-                { id: 'armor', label: 'Armor' },
-                { id: 'artefact', label: 'Artefact' },
-              ]"
-              :key="cat.id"
-              class="modal-tab"
-              :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
-              @click="itemShopCategory = cat.id as ItemCategory"
-            >
-              <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
-              {{ cat.label }}
-            </button>
-          </div>
-          <div class="modal-content modal-content--scroll">
-            <ItemShopComponent :category="itemShopCategory" />
-          </div>
+          </template>
+          <ItemShopComponent
+            v-else-if="activePanel === 'items'"
+            :category="itemShopCategory"
+          />
         </div>
       </div>
     </Transition>
@@ -685,6 +664,13 @@ function onImgError(e: Event) {
 .action-bar-btn--featured:hover {
   background: rgba(200, 144, 64, 0.1);
 }
+.action-bar-btn--active {
+  color: #f0d870;
+  background: rgba(200, 144, 64, 0.1);
+}
+.action-bar-btn--active::after {
+  background: rgba(200, 144, 64, 0.85);
+}
 .action-bar-icon {
   font-size: 18px;
   line-height: 1;
@@ -711,6 +697,99 @@ function onImgError(e: Event) {
   image-rendering: auto;
   flex-shrink: 0;
   vertical-align: middle;
+}
+
+/* ══ INLINE PANEL ══ */
+.splash-area {
+  --action-bar-h: 40px;
+}
+.inline-panel {
+  position: absolute;
+  top: var(--action-bar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 6, 2, 0.93);
+  overflow: hidden;
+}
+.inline-panel-gold-line {
+  height: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+}
+.inline-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: rgba(200, 144, 64, 0.55);
+  background: rgba(14, 10, 4, 0.92);
+  border: 1px solid rgba(92, 51, 16, 0.65);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.inline-panel-close:hover {
+  color: #e8c040;
+  border-color: #c89040;
+  background: rgba(30, 16, 6, 0.97);
+}
+.inline-panel-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
+  background: #1e1006;
+  flex-shrink: 0;
+}
+.inline-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.inline-panel-content::-webkit-scrollbar {
+  width: 4px;
+}
+.inline-panel-content::-webkit-scrollbar-track {
+  background: #111;
+}
+.inline-panel-content::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+
+/* ══ INLINE PANEL TRANSITION ══ */
+.inline-panel-enter-active {
+  transition: clip-path 0.32s ease-out;
+}
+.inline-panel-leave-active {
+  transition: clip-path 0.22s ease-in;
+}
+.inline-panel-enter-from,
+.inline-panel-leave-to {
+  clip-path: inset(0 0 100% 0);
+}
+.inline-panel-enter-to,
+.inline-panel-leave-from {
+  clip-path: inset(0 0 0% 0);
 }
 
 /* ══ MODAL SYSTEM ══ */
@@ -1018,6 +1097,15 @@ function onImgError(e: Event) {
   .panel-collapse-all,
   .collapse-all-icon {
     transition: none !important;
+  }
+  .inline-panel-enter-active,
+  .inline-panel-leave-active {
+    transition: opacity 0.15s ease !important;
+  }
+  .inline-panel-enter-from,
+  .inline-panel-leave-to {
+    clip-path: none !important;
+    opacity: 0;
   }
 }
 </style>
