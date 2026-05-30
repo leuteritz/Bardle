@@ -119,11 +119,11 @@ watch(
 .universe-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 2px;
   width: 100%;
-  height: clamp(52px, 3.6vw, 100px);
-  padding: 2px 8px;
+  height: clamp(56px, 4.2vw, 115px);
+  padding: 6px 8px 3px;
   box-sizing: border-box;
 }
 

@@ -251,6 +251,7 @@ onUnmounted(() => resizeObserver?.disconnect())
    ================================================================ */
 .header-bar {
   max-width: 1400px;
+  height: clamp(56px, 4.2vw, 115px);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border: 2px solid var(--rpg-wood, #7c4f1a);
   border-top: none;
@@ -563,7 +564,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   height: 100%;
 }
 .header-icon-img {
-  height: clamp(48px, 3.6vw, 100px);
+  height: clamp(56px, 4.2vw, 115px);
   width: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
