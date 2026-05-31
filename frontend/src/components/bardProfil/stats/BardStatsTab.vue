@@ -1,43 +1,47 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGameStore } from '@/stores/gameStore'
 import { useShopStore } from '@/stores/shopStore'
+import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useBattleStore } from '@/stores/battleStore'
+import { CHAMPION_ROLES } from '@/config/championRoles'
 
-const SESSION_START = Date.now()
+const totalChampions = Object.keys(CHAMPION_ROLES).length
 
 const gameStore = useGameStore()
 const shopStore = useShopStore()
+const galaxyStore = useGalaxyStore()
+const battleStore = useBattleStore()
 
-const { totalChimesEarned, chimesPerSecond, totalClicks, level, currentUniverse, chimesPerClick } =
-  storeToRefs(gameStore)
-
+const { totalChimesEarned, chimesPerClick, meeps } = storeToRefs(gameStore)
+const { starsRescued } = storeToRefs(galaxyStore)
+const { ownedChampions } = storeToRefs(battleStore)
 const { buildingStats } = storeToRefs(shopStore)
 
 const animated = ref(false)
-const sessionSeconds = ref(Math.floor((Date.now() - SESSION_START) / 1000))
-let sessionTimer: ReturnType<typeof setInterval>
+const countUpProgress = ref(0)
+let rafId: number
 
 onMounted(() => {
-  sessionTimer = setInterval(() => {
-    sessionSeconds.value = Math.floor((Date.now() - SESSION_START) / 1000)
-  }, 1000)
-  nextTick(() => {
-    animated.value = true
-  })
+  const startTime = performance.now()
+  const duration = 1000
+  function animFrame(now: number) {
+    countUpProgress.value = Math.min((now - startTime) / duration, 1)
+    if (countUpProgress.value < 1) rafId = requestAnimationFrame(animFrame)
+    else animated.value = true
+  }
+  rafId = requestAnimationFrame(animFrame)
 })
 
-onUnmounted(() => clearInterval(sessionTimer))
+onUnmounted(() => cancelAnimationFrame(rafId))
 
-const sessionTime = computed(() => {
-  const s = sessionSeconds.value
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const sec = s % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${sec}s`
-  return `${sec}s`
-})
+const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpProgress.value))
+const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
+const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
+const animChampions = computed(() =>
+  Math.floor(ownedChampions.value.filter((c) => c !== 'Bard').length * countUpProgress.value),
+)
 
 const maxCPS = computed(() => {
   const vals = buildingStats.value.map((b) => b.currentCPS)
@@ -79,46 +83,41 @@ const extraBonus = computed(() => {
         <span class="sv-name">BARD</span>
         <span class="sv-subtitle">The Wandering Caretaker</span>
       </div>
+
+      <div class="sv-mini-stats">
+        <div class="sv-ms-item sv-ms-chimes">
+          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ $formatNumber(animChimes) }}</span>
+            <span class="sv-ms-lbl">Total Chimes</span>
+          </div>
+        </div>
+        <div class="sv-ms-item sv-ms-stars">
+          <img class="sv-ms-icon" src="/img/star.png" alt="Stars" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ $formatNumber(animStars) }}</span>
+            <span class="sv-ms-lbl">Stars Rescued</span>
+          </div>
+        </div>
+        <div class="sv-ms-item sv-ms-meeps">
+          <img class="sv-ms-icon" src="/img/BardAbilities/BardMeep.png" alt="Meeps" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ $formatNumber(animMeeps) }}</span>
+            <span class="sv-ms-lbl">Meeps</span>
+          </div>
+        </div>
+        <div class="sv-ms-item sv-ms-champs">
+          <img class="sv-ms-icon" src="/img/menu/TEAM.png" alt="Champions" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ animChampions }}<span class="sv-ms-val-total"> / {{ totalChampions }}</span></span>
+            <span class="sv-ms-lbl">Champions</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ══ RIGHT COLUMN ══ -->
     <div class="sv-content-col rpg-scrollbar">
-      <!-- ─ STATISTIKEN ─ -->
-      <div class="sv-block">
-        <div class="sv-block-label">Statistics</div>
-        <div class="sv-stat-grid">
-          <div class="sv-stat">
-            <div class="sv-stat-val">{{ $formatNumber(totalChimesEarned) }}</div>
-            <div class="sv-stat-lbl">Total Chimes</div>
-          </div>
-
-          <div class="sv-stat">
-            <div class="sv-stat-val sv-val-green">{{ $formatNumber(chimesPerSecond) }}</div>
-            <div class="sv-stat-lbl">Chimes / Sec.</div>
-          </div>
-
-          <div class="sv-stat">
-            <div class="sv-stat-val sv-val-blue">{{ $formatNumber(totalClicks) }}</div>
-            <div class="sv-stat-lbl">Clicks</div>
-          </div>
-
-          <div class="sv-stat">
-            <div class="sv-stat-val">{{ level }}</div>
-            <div class="sv-stat-lbl">Level</div>
-          </div>
-
-          <div class="sv-stat">
-            <div class="sv-stat-val sv-val-muted">{{ currentUniverse }}</div>
-            <div class="sv-stat-lbl">Universe</div>
-          </div>
-
-          <div class="sv-stat">
-            <div class="sv-stat-val sv-val-muted sv-val-sm">{{ sessionTime }}</div>
-            <div class="sv-stat-lbl">Session</div>
-          </div>
-        </div>
-      </div>
-
       <!-- ─ CLICK POWER ─ -->
       <div class="sv-block">
         <div class="sv-block-label">Click Power</div>
@@ -231,11 +230,12 @@ const extraBonus = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   padding: 28px 20px;
   background: var(--rpg-bg-dark);
   border-right: 1px solid var(--rpg-wood-inner);
+  overflow-y: auto;
 }
 
 .sv-bard-img {
@@ -293,50 +293,68 @@ const extraBonus = computed(() => {
   border-bottom: 1px solid var(--rpg-wood-inner);
 }
 
-/* ─── Stat-Grid (3×2) ───────────────────────── */
-.sv-stat-grid {
+/* ─── Mini-Stats (linke Spalte, 2×2) ─────────── */
+.sv-mini-stats {
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
-.sv-stat {
-  padding: 18px 14px;
-  background: var(--rpg-bg-dark);
+.sv-ms-item {
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  padding: 12px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.sv-ms-chimes:hover { box-shadow: 0 0 8px color-mix(in srgb, #e8c040 30%, transparent); }
+.sv-ms-stars:hover  { box-shadow: 0 0 8px color-mix(in srgb, #a87ed8 30%, transparent); }
+.sv-ms-meeps:hover  { box-shadow: 0 0 8px color-mix(in srgb, #52b830 30%, transparent); }
+.sv-ms-champs:hover { box-shadow: 0 0 8px color-mix(in srgb, #6080cc 30%, transparent); }
+
+.sv-ms-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  object-fit: contain;
+  transition: filter 0.15s;
+}
+.sv-ms-chimes:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #e8c040); }
+.sv-ms-stars:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #a87ed8); }
+.sv-ms-meeps:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #52b830); }
+.sv-ms-champs:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #6080cc); }
+
+.sv-ms-body {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  transition: background 0.12s;
+  gap: 4px;
+  min-width: 0;
 }
-.sv-stat:hover {
-  background: var(--rpg-bg-hover);
-}
-
-.sv-stat-val {
+.sv-ms-val {
   font-family: var(--rpg-font-mono);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
-  color: var(--rpg-gold);
   line-height: 1;
+  color: var(--rpg-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.sv-val-green {
-  color: var(--rpg-green-top);
-}
-.sv-val-blue {
-  color: var(--rpg-blue);
-}
-.sv-val-muted {
-  color: var(--rpg-text-muted);
-}
-.sv-val-sm {
-  font-size: 20px;
-}
-
-.sv-stat-lbl {
+.sv-ms-lbl {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+.sv-ms-val-total {
+  font-size: 14px;
+  font-weight: 700;
   color: var(--rpg-text-dim);
 }
 
