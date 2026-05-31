@@ -838,7 +838,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:orbit', 'game-icons:star-formation', 'game-icons:diamond',
   // Curses
   'game-icons:skull-crossed-bones', 'game-icons:sword-wound',
-  'game-icons:dark-matter', 'game-icons:ice-bolt', 'game-icons:death-skull',
+  'game-icons:death-zone', 'game-icons:ice-bolt', 'game-icons:death-skull',
   // Battle Ranks
   'game-icons:nails', 'game-icons:rusty-sword', 'game-icons:sword-hilt',
   'game-icons:gold-bar', 'game-icons:diamond-hard', 'game-icons:leaf-skeleton',
@@ -850,9 +850,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:fire-ray', 'game-icons:broadsword', 'game-icons:lightning-storm',
   // Items
   'game-icons:leather-armor', 'game-icons:lamellar', 'game-icons:chain-mail',
-  'game-icons:shield-echoes', 'game-icons:dragon-head', 'game-icons:ringed-planet',
-  'game-icons:potion', 'game-icons:necklace-display', 'game-icons:quartz',
-  'game-icons:crystal-wand', 'game-icons:stopwatch', 'game-icons:black-hole',
+  'game-icons:checked-shield', 'game-icons:dragon-head', 'game-icons:ringed-planet',
+  'game-icons:potion', 'game-icons:necklace', 'game-icons:crystal-shine',
+  'game-icons:crystal-wand', 'game-icons:stopwatch', 'game-icons:black-hole-bolas',
   // Expeditions
   'game-icons:dagger', 'game-icons:dragon-spiral', 'game-icons:sword-brandish',
   'game-icons:whirlpool', 'game-icons:fire-dash', 'game-icons:castle',
@@ -861,17 +861,20 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crystal-cluster', 'game-icons:nebula',
   // Universes
   'game-icons:vortex', 'game-icons:star-swirl', 'game-icons:spectre',
-  'game-icons:icicles', 'game-icons:solar-system', 'game-icons:yin-yang',
+  'game-icons:icicles-aura', 'game-icons:solar-system', 'game-icons:yin-yang',
   'game-icons:sword-altar', 'game-icons:gear-hammer',
   // Augments (rendered)
-  'game-icons:sword-in-stone', 'game-icons:paw-print', 'game-icons:path-distance',
+  'game-icons:harp', 'game-icons:ringing-bell', 'game-icons:sword-in-stone',
+  'game-icons:ancient-columns', 'game-icons:paw-print', 'game-icons:path-distance',
   'game-icons:music-spell', 'game-icons:biceps', 'game-icons:hot-beverage',
-  'game-icons:open-palm', 'game-icons:gold-coin', 'game-icons:hammer',
+  'game-icons:open-palm', 'game-icons:gold-coin', 'game-icons:wave-crest',
+  'game-icons:lightning-arc', 'game-icons:roman-shield', 'game-icons:hammer',
   'game-icons:compass', 'game-icons:drum', 'game-icons:horseshoe',
-  'game-icons:pocket-watch', 'game-icons:royal-crown', 'game-icons:fireworks',
-  'game-icons:time-trap', 'game-icons:void', 'game-icons:ancient-ruins',
-  'game-icons:gravity', 'game-icons:jester-hat', 'game-icons:dice-six-faces-random',
-  'game-icons:loudspeaker', 'game-icons:keyboard',
+  'game-icons:pocket-watch', 'game-icons:bright-explosion', 'game-icons:planet-conquest',
+  'game-icons:royal-crown', 'game-icons:fireworks', 'game-icons:time-trap',
+  'game-icons:void', 'game-icons:falling-star', 'game-icons:ancient-ruins',
+  'game-icons:infinity', 'game-icons:gravity', 'game-icons:jester-hat',
+  'game-icons:dice-six-faces-random', 'game-icons:loudspeaker', 'game-icons:keyboard',
   // Planet Roles
   'game-icons:archery-target', 'game-icons:wheat', 'game-icons:rocket-thruster',
   'game-icons:hourglass', 'game-icons:tower',
@@ -881,9 +884,15 @@ export const USED_GAME_ICONS = new Set<string>([
   // Admin Panel
   'game-icons:alien-egg', 'game-icons:star-medal', 'game-icons:star-cycle',
   'game-icons:bells', 'game-icons:settings-knobs',
+  // Event Log
+  'game-icons:spartan-helmet', 'game-icons:arrow-scope', 'game-icons:machete',
+  'game-icons:power-ring', 'game-icons:alien-bug', 'game-icons:musical-notes',
+  'game-icons:crossed-sabres', 'game-icons:open-book',
   // Roles (rendered in BardProfileMenu, PlanetSelectTab)
-  'game-icons:broadsword', 'game-icons:thorny-vine', 'game-icons:magic-wand',
+  'game-icons:thorny-vine', 'game-icons:orb-wand',
   'game-icons:bow-arrow', 'game-icons:health-potion',
   // ChampionSplashPanel Action Bar
-  'game-icons:knight-helmet', 'game-icons:campfire', 'game-icons:treasure-chest',
+  'game-icons:barbute', 'game-icons:campfire', 'game-icons:open-treasure-chest',
+  // ChampionShop Filter Toggle
+  'game-icons:plain-arrow', 'game-icons:return-arrow',
 ])

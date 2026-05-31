@@ -18,7 +18,7 @@
         <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
           <span class="trait-filter-title">Filter</span>
           <Icon
-            :icon="traitFilterOpen ? 'game-icons:expand-arrow' : 'game-icons:collapse-arrow'"
+            :icon="traitFilterOpen ? 'game-icons:plain-arrow' : 'game-icons:return-arrow'"
             class="trait-chevron"
           />
         </div>

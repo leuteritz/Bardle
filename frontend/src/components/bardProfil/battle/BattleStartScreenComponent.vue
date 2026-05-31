@@ -185,7 +185,7 @@ import {
 const ROLES = [
   { key: 'top',     label: 'TOP', icon: 'game-icons:broadsword',    image: '/img/roles/top.png'    },
   { key: 'jungle',  label: 'JGL', icon: 'game-icons:thorny-vine',   image: '/img/roles/jungle.png' },
-  { key: 'mid',     label: 'MID', icon: 'game-icons:magic-wand',    image: '/img/roles/mid.png'    },
+  { key: 'mid',     label: 'MID', icon: 'game-icons:orb-wand',      image: '/img/roles/mid.png'    },
   { key: 'bot',     label: 'BOT', icon: 'game-icons:bow-arrow',     image: '/img/roles/adc.png'    },
   { key: 'support', label: 'SUP', icon: 'game-icons:health-potion', image: '/img/roles/supp.png'   },
 ] as const

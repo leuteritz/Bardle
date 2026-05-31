@@ -299,7 +299,7 @@ function onImgError(e: Event) {
         :class="{ 'action-bar-btn--active': activePanel === 'shop' }"
         @click.stop="openShop(roleKey)"
       >
-        <Icon icon="game-icons:knight-helmet" class="action-bar-icon" />
+        <Icon icon="game-icons:barbute" class="action-bar-icon" />
         <span class="action-bar-label">Shop</span>
       </button>
       <div class="action-bar-sep" />
@@ -317,7 +317,7 @@ function onImgError(e: Event) {
         :class="{ 'action-bar-btn--active': activePanel === 'items' }"
         @click.stop="openItemShop"
       >
-        <Icon icon="game-icons:treasure-chest" class="action-bar-icon" />
+        <Icon icon="game-icons:open-treasure-chest" class="action-bar-icon" />
         <span class="action-bar-label">Items</span>
       </button>
     </div>

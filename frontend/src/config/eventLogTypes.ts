@@ -3,14 +3,14 @@ import { ROLE_COLORS } from './constants'
 
 export const typeIcon: Record<GameEventType, string> = {
   support: 'game-icons:star-swirl',
-  top: 'game-icons:tower-shield',
+  top: 'game-icons:spartan-helmet',
   mid: 'game-icons:fire-ray',
   adc: 'game-icons:arrow-scope',
-  jungle: 'game-icons:hunting-knife',
+  jungle: 'game-icons:machete',
   planet: '/img/planet.png',
   augment: 'game-icons:power-ring',
   meep: 'game-icons:alien-bug',
-  chime: 'game-icons:wind-chime',
+  chime: 'game-icons:musical-notes',
   combat: 'game-icons:crossed-sabres',
   prestige: 'game-icons:galaxy',
   info: 'game-icons:open-book',

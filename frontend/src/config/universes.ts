@@ -51,7 +51,7 @@ export const universes: UniverseConfig[] = [
       id: 'frozen-resonance',
       name: 'Frozen Resonance',
       description: 'CPC x3, CPS x0.25',
-      icon: 'game-icons:icicles',
+      icon: 'game-icons:icicles-aura',
       effects: { cpcMultiplier: 3, cpsMultiplier: 0.25 },
     },
   },
