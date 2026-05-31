@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { usePersistence } from '@/composables/usePersistence'
 import { AUGMENTS } from '@/config/augments'
@@ -78,6 +79,7 @@ const rarityLabel: Record<string, string> = {
             <!-- Icon -->
             <div class="mb-2 aug-icon-box">
               <img v-if="aug.image" :src="aug.image" class="aug-card-img" :alt="aug.name" />
+              <Icon v-else-if="aug.icon.includes(':')" :icon="aug.icon" class="aug-icon-gi" />
               <span v-else class="text-5xl">{{ aug.icon }}</span>
             </div>
 
@@ -157,6 +159,11 @@ const rarityLabel: Record<string, string> = {
   color: var(--rpg-text-muted);
 }
 
+.aug-icon-gi {
+  width: 48px;
+  height: 48px;
+  color: #c89040;
+}
 .aug-icon-box {
   width: 80px;
   height: 80px;

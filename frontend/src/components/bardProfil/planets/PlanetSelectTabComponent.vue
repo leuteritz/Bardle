@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/uiStore'
 import { usePlanetShopStore, PLANET_ROLES_LIST, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
@@ -199,6 +200,7 @@ function bonusText(role: PlanetRole): string {
               @click="assignRole(role.id)"
             >
               <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
+              <Icon v-else-if="role.icon.includes(':')" :icon="role.icon" class="ps-role-icon ps-role-icon--gi" />
               <span v-else class="ps-role-icon">{{ role.icon }}</span>
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
@@ -271,6 +273,7 @@ function bonusText(role: PlanetRole): string {
               @click="assignRole(role.id)"
             >
               <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
+              <Icon v-else-if="role.icon.includes(':')" :icon="role.icon" class="ps-role-icon ps-role-icon--gi" />
               <span v-else class="ps-role-icon">{{ role.icon }}</span>
               <span class="ps-role-name">{{ role.name }}</span>
               <div class="ps-role-divider" />
@@ -284,7 +287,7 @@ function bonusText(role: PlanetRole): string {
         <Transition name="ps-config-slide">
           <div v-if="activeSlot.role === 'harvest_node'" class="ps-config-section">
             <div class="ps-config-header">
-              <span class="ps-config-header-icon">🌾</span>
+              <Icon icon="game-icons:wheat" class="ps-config-header-icon ps-config-header-icon--gi" />
               <span>Select Material</span>
               <span class="ps-config-header-hint">Choose the material to harvest</span>
             </div>
@@ -601,6 +604,11 @@ img.ps-role-icon {
   height: 32px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+.ps-role-icon--gi {
+  width: 32px;
+  height: 32px;
+  color: var(--rc, #c89040);
 }
 
 .ps-role-option:hover .ps-role-icon,

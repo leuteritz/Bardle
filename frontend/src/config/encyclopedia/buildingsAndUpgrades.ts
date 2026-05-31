@@ -141,7 +141,7 @@ export const permanentUpgradesCategory: EncyclopediaCategory = {
 export const abilitiesCategory: EncyclopediaCategory = {
   id: 'abilities',
   title: 'Abilities',
-  icon: '⚡',
+  icon: 'game-icons:electric',
   entries: [
     {
       id: 'ability-q',

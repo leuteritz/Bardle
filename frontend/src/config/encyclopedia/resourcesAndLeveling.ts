@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const resourcesCategory: EncyclopediaCategory = {
   id: 'resources',
   title: 'Resources',
-  icon: '💎',
+  icon: 'game-icons:gem-chain',
   entries: [
     {
       id: 'chimes',

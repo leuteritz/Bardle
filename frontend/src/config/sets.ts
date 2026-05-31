@@ -4,14 +4,14 @@ export const ITEM_SETS: ItemSetBonus[] = [
   {
     setId: 'arcane',
     setName: 'Arcane Bond',
-    icon: '🔮',
+    icon: 'game-icons:crystal-cluster',
     description: '+15% CPS & +10% Combat Power',
     bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.1 },
   },
   {
     setId: 'cosmic',
     setName: 'Cosmic Power',
-    icon: '🌌',
+    icon: 'game-icons:nebula',
     description: '+15% CPS & +20% Combat Power',
     bonusEffect: { cpsMultiplier: 1.15, powerMultiplier: 1.2 },
   },

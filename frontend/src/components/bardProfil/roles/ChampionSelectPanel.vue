@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -90,7 +91,7 @@ function onImgError(e: Event) {
     <!-- ── Grid ── -->
     <div class="csp-body">
       <div v-if="filteredChampions.length === 0" class="csp-empty">
-        <span class="csp-empty-icon">🎵</span>
+        <Icon icon="game-icons:lyre" class="csp-empty-icon" />
         <span>{{
           roleFilteredChampions.length === 0
             ? `No ${activeRole} champions purchased!`

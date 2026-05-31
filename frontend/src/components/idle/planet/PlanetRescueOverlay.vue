@@ -81,7 +81,8 @@
               <span class="curse-header-line" />
             </div>
             <div class="curse-row">
-              <span class="curse-icon">{{ CURSE_DEFS[activeCurse.type].icon }}</span>
+              <Icon v-if="CURSE_DEFS[activeCurse.type].icon.includes(':')" :icon="CURSE_DEFS[activeCurse.type].icon" class="curse-icon" />
+              <span v-else class="curse-icon">{{ CURSE_DEFS[activeCurse.type].icon }}</span>
               <div class="curse-info">
                 <span class="curse-name">{{ CURSE_DEFS[activeCurse.type].name }}</span>
                 <span class="curse-desc">{{ CURSE_DESC[activeCurse.type] }}</span>
@@ -167,6 +168,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
@@ -1030,8 +1032,11 @@ function handleShake(ms: number) {
 
 .curse-icon {
   font-size: 2rem;
+  width: 2rem;
+  height: 2rem;
   line-height: 1;
   flex-shrink: 0;
+  color: #cc44ff;
   filter: drop-shadow(0 0 10px rgba(180, 50, 255, 0.85));
   animation: curse-icon-float 1.8s ease-in-out infinite alternate;
 }

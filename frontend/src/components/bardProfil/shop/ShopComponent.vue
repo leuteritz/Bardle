@@ -80,7 +80,7 @@
               "
             >
               <span class="buy-cost">
-                {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} 🪙
+                {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} G
               </span>
               <span class="buy-qty">×{{ shopStore.getActualBuyAmount(upgrade) || 1 }}</span>
             </div>
@@ -95,7 +95,7 @@
                   +{{ upgrade.baseCPC }} CpC pro Stufe
                 </div>
                 <div class="tooltip-cost">
-                  Kosten: {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} 🪙
+                  Kosten: {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} G
                 </div>
               </div>
             </Transition>

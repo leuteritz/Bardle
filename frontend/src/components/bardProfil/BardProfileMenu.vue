@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/uiStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
@@ -24,7 +25,7 @@ const menuItems: {
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
   { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'planets', label: '', icon: '', src: '/img/planet.png' },
-  { id: 'admin', label: 'Admin', icon: '⚙️', src: '' },
+  { id: 'admin', label: 'Admin', icon: 'game-icons:settings-knobs', src: '' },
 ]
 
 watch(
@@ -71,6 +72,7 @@ watch(
                   class="relative z-10 object-contain w-14 h-14"
                   :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
                 />
+                <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 w-10 h-10" />
                 <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                 <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                 <span

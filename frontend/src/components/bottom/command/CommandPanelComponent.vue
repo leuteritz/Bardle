@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRoleType } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -96,7 +97,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
             <!-- Jungle Buff: Badge oben rechts -->
             <div v-if="slot.jungleBuff?.active" class="cmd-buff-badge">
-              <span class="cmd-buff-badge-icon">⚡</span>
+              <Icon icon="game-icons:lightning-storm" class="cmd-buff-badge-icon" />
               <span class="cmd-buff-badge-mul">×{{ slot.jungleBuff!.multiplier.toFixed(1) }}</span>
             </div>
 
@@ -901,6 +902,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-buff-badge-icon {
   font-size: 8px;
+  width: 8px;
+  height: 8px;
   line-height: 1;
 }
 

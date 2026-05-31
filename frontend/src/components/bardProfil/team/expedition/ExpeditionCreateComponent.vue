@@ -17,10 +17,11 @@
         >
           <div class="ec-tile-icon">
             <img v-if="config.icon.startsWith('/')" :src="config.icon" :alt="config.name" class="ec-tile-img" />
+            <Icon v-else-if="config.icon.includes(':')" :icon="config.icon" class="ec-tile-gi" />
             <span v-else>{{ config.icon }}</span>
           </div>
           <div class="ec-tile-name">{{ config.name }}</div>
-          <div class="ec-tile-meta">{{ formatDuration(config.durationSeconds) }} · 🎵 {{ config.baseReward }}</div>
+          <div class="ec-tile-meta">{{ formatDuration(config.durationSeconds) }} · ♪ {{ config.baseReward }}</div>
           <div class="ec-tile-roles">
             <span
               v-for="role in config.requiredRoles"
@@ -40,10 +41,11 @@
         <div class="ec-selected-info">
           <span class="ec-selected-icon">
             <img v-if="selectedConfig!.icon.startsWith('/')" :src="selectedConfig!.icon" :alt="selectedConfig!.name" class="ec-tile-img" />
+            <Icon v-else-if="selectedConfig!.icon.includes(':')" :icon="selectedConfig!.icon" class="ec-tile-gi" />
             <span v-else>{{ selectedConfig!.icon }}</span>
           </span>
           <span class="ec-selected-name">{{ selectedConfig!.name }}</span>
-          <span class="ec-selected-meta">{{ formatDuration(selectedConfig!.durationSeconds) }} · 🎵 {{ selectedConfig!.baseReward }}</span>
+          <span class="ec-selected-meta">{{ formatDuration(selectedConfig!.durationSeconds) }} · ♪ {{ selectedConfig!.baseReward }}</span>
         </div>
       </div>
 
@@ -107,6 +109,7 @@
 
 <script lang="ts">
 import { defineComponent, reactive, ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { EXPEDITION_CONFIGS } from '@/config/expedition'
@@ -116,6 +119,7 @@ import type { ChampionRole } from '@/types'
 
 export default defineComponent({
   name: 'ExpeditionCreateComponent',
+  components: { Icon },
   setup() {
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
@@ -294,6 +298,11 @@ export default defineComponent({
   height: 20px;
   object-fit: contain;
   image-rendering: pixelated;
+}
+.ec-tile-gi {
+  width: 20px;
+  height: 20px;
+  color: #c89040;
 }
 .ec-tile-name {
   font-size: 11px;

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -94,7 +95,7 @@ function onImgError(e: Event) {
 
     <div class="picker-body">
       <div v-if="filteredChampions.length === 0" class="picker-empty">
-        <span class="picker-empty-icon">🎵</span>
+        <Icon icon="game-icons:lyre" class="picker-empty-icon" />
         <span>{{
           roleFilteredChampions.length === 0
             ? `No ${activeRole} champions purchased!`

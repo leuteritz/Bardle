@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ItemCategory, ShopItem, SlotEquipment } from '@/types'
+import { Icon } from '@iconify/vue'
 
 const CAT_LABELS: Record<ItemCategory, string> = {
   weapon: 'Weapon',
@@ -30,7 +31,7 @@ const emit = defineEmits<{
 
     <div class="item-body">
       <div v-if="categoryItems.length === 0" class="picker-empty">
-        <span class="picker-empty-icon">🎵</span>
+        <Icon icon="game-icons:lyre" class="picker-empty-icon" />
         <span>No Items Available</span>
       </div>
       <button
@@ -47,6 +48,7 @@ const emit = defineEmits<{
             class="item-row-img"
             :alt="item.name"
           />
+          <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="item-row-gi" />
           <span v-else class="item-row-emoji">{{ item.icon }}</span>
         </div>
         <div class="item-row-info">
@@ -166,6 +168,11 @@ const emit = defineEmits<{
 .item-row-emoji {
   font-size: 22px;
   line-height: 1;
+}
+.item-row-gi {
+  width: 28px;
+  height: 28px;
+  color: #c89040;
 }
 
 .item-row-info {

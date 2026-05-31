@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const augmentsCategory: EncyclopediaCategory = {
   id: 'augments',
   title: 'Augments',
-  icon: '✨',
+  icon: 'game-icons:star-key',
   entries: [
     {
       id: 'augment-system',
@@ -81,7 +81,7 @@ export const augmentsCategory: EncyclopediaCategory = {
 export const battleCategory: EncyclopediaCategory = {
   id: 'battle',
   title: 'Battle System',
-  icon: '⚔️',
+  icon: 'game-icons:katana',
   entries: [
     {
       id: 'auto-battle',

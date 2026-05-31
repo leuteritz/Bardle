@@ -23,9 +23,9 @@ export const BATTLE_REAL_DURATION_SECONDS = 45
 
 // Game State display phases (bottom stats bar)
 export const GAME_STATE = {
-  SEARCHING: { key: 'searching', icon: '🔍', label: 'Planet Search', color: '#9a6830' },
-  BATTLE: { key: 'battle', icon: '⚔️', label: 'Battle', color: '#e8c040' },
-  HONOR: { key: 'honor', icon: '🏆', label: 'Honor Phase', color: '#74d448' },
+  SEARCHING: { key: 'searching', icon: 'game-icons:telescope', label: 'Planet Search', color: '#9a6830' },
+  BATTLE: { key: 'battle', icon: 'game-icons:broadsword', label: 'Battle', color: '#e8c040' },
+  HONOR: { key: 'honor', icon: 'game-icons:trophy', label: 'Honor Phase', color: '#74d448' },
 } as const
 
 export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
@@ -278,18 +278,18 @@ export const ROLES = [
     key: 'top' as ChampionRole,
     label: 'Top',
     short: 'TOP',
-    icon: '🛡️',
+    icon: 'game-icons:broadsword',
     image: '/img/roles/top.png',
     color: '#e05050',
     stats: [
-      { key: 'atk', icon: '⚔', label: 'Atk Interval', value: '4.0s' },
+      { key: 'atk', icon: 'game-icons:crossed-swords', label: 'Atk Interval', value: '4.0s' },
       {
         key: 'shield',
-        icon: '🛡',
+        icon: 'game-icons:shield',
         label: 'Shield Rebuild',
         value: `${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s`,
       },
-      { key: 'type', icon: '💪', label: 'Style', value: 'Tank / Frontline' },
+      { key: 'type', icon: 'game-icons:biceps', label: 'Style', value: 'Tank / Frontline' },
     ] satisfies RoleStat[],
     abilityCompact: `Shield – ${ROLE_TOP_SHIELD_REBUILD_MS / 1000}s Rebuild · Tank / Frontline`,
     abilityDetails: [
@@ -318,13 +318,13 @@ export const ROLES = [
     key: 'jungle' as ChampionRole,
     label: 'Jungle',
     short: 'JGL',
-    icon: '🌿',
+    icon: 'game-icons:thorny-vine',
     image: '/img/roles/jungle.png',
     color: '#50c060',
     stats: [
-      { key: 'style', icon: '🗡', label: 'Style', value: 'Assassin / Ganker' },
-      { key: 'effect', icon: '🌀', label: 'Effect', value: 'Crowd Control' },
-      { key: 'range', icon: '🔄', label: 'Orbit', value: 'Wide Patrol' },
+      { key: 'style', icon: 'game-icons:dagger', label: 'Style', value: 'Assassin / Ganker' },
+      { key: 'effect', icon: 'game-icons:whirlpool', label: 'Effect', value: 'Crowd Control' },
+      { key: 'range', icon: 'game-icons:orbit', label: 'Orbit', value: 'Wide Patrol' },
     ] satisfies RoleStat[],
     abilityCompact: 'Jungle Buffs · Crowd Control · Wide Patrol',
     abilityDetails: [
@@ -356,24 +356,24 @@ export const ROLES = [
     key: 'mid' as ChampionRole,
     label: 'Mid',
     short: 'MID',
-    icon: '🔮',
+    icon: 'game-icons:magic-wand',
     image: '/img/roles/mid.png',
     color: '#5090e8',
     stats: [
       {
         key: 'cursecd',
-        icon: '💜',
+        icon: 'game-icons:sand-clock',
         label: 'Curse CD',
         value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`,
       },
       {
         key: 'cursedur',
-        icon: '⏱',
+        icon: 'game-icons:hourglass',
         label: 'Curse Duration',
         value: `${ROLE_MID_CURSE_DURATION_MS / 1000}s`,
       },
-      { key: 'dot', icon: '☠', label: 'DoT DPS', value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
-      { key: 'amp', icon: '⚡', label: 'Dmg Amplify', value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
+      { key: 'dot', icon: 'game-icons:death-skull', label: 'DoT DPS', value: `${ROLE_MID_CURSE_DOT_DPS} dmg/s` },
+      { key: 'amp', icon: 'game-icons:lightning-bolt', label: 'Dmg Amplify', value: `×${ROLE_MID_CURSE_DAMAGE_AMP}` },
     ] satisfies RoleStat[],
     abilityCompact: `Curse ${ROLE_MID_CURSE_INTERVAL_MS / 1000}s CD · 5 Curse Types · DoT ${ROLE_MID_CURSE_DOT_DPS} dmg/s`,
     abilityDetails: [
@@ -429,18 +429,18 @@ export const ROLES = [
     key: 'adc' as ChampionRole,
     label: 'ADC',
     short: 'ADC',
-    icon: '🏹',
+    icon: 'game-icons:bow-arrow',
     image: '/img/roles/adc.png',
     color: '#e89840',
     stats: [
-      { key: 'burst', icon: '🎯', label: 'Burst Damage', value: `${ROLE_ADC_BURST_DAMAGE}` },
+      { key: 'burst', icon: 'game-icons:archery-target', label: 'Burst Damage', value: `${ROLE_ADC_BURST_DAMAGE}` },
       {
         key: 'burstcd',
-        icon: '⏱',
+        icon: 'game-icons:stopwatch',
         label: 'Burst CD',
         value: `${ROLE_ADC_BURST_INTERVAL_MS / 1000}s`,
       },
-      { key: 'style', icon: '🏹', label: 'Style', value: 'Ranged / DPS' },
+      { key: 'style', icon: 'game-icons:arrow-scope', label: 'Style', value: 'Ranged / DPS' },
     ] satisfies RoleStat[],
     abilityCompact: `Burst ${ROLE_ADC_BURST_DAMAGE} dmg / ${ROLE_ADC_BURST_INTERVAL_MS / 1000}s · Ranged DPS`,
     abilityDetails: [
@@ -471,21 +471,21 @@ export const ROLES = [
     key: 'support' as ChampionRole,
     label: 'Supp',
     short: 'SUP',
-    icon: '💚',
+    icon: 'game-icons:health-potion',
     image: '/img/roles/supp.png',
     color: '#b8c8d8',
     stats: [
-      { key: 'heal', icon: '💚', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
+      { key: 'heal', icon: 'game-icons:health-cross', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
       {
         key: 'healcd',
-        icon: '⏰',
+        icon: 'game-icons:pocket-watch',
         label: 'Heal CD',
         value: `${ROLE_SUPPORT_HEAL_INTERVAL_MS / 1000}s`,
       },
-      { key: 'pheal', icon: '🌍', label: 'Planet Heal', value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
+      { key: 'pheal', icon: 'game-icons:earth-spit', label: 'Planet Heal', value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
       {
         key: 'pcd',
-        icon: '⌛',
+        icon: 'game-icons:timer',
         label: 'Planet CD',
         value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`,
       },
@@ -804,3 +804,84 @@ export const CPS_INTERVAL_1HOUR_MS = 60_000
 export const BATTLE_INITIAL_MMR = 1000
 export const BATTLE_DEFAULT_RANK_TIER = 'Silver'
 export const BATTLE_KILL_LOG_THROTTLE_MS = 3000
+
+// ── Icon Registry ─────────────────────────────────────────────────────────────
+// All game-icons used in the project. Add new icons here before using them
+// to ensure uniqueness across the codebase.
+export const USED_GAME_ICONS = new Set<string>([
+  // Traits
+  'game-icons:stars-stack', 'game-icons:crystal-ball', 'game-icons:stiletto',
+  'game-icons:fairy-wand', 'game-icons:crossed-swords', 'game-icons:shield',
+  'game-icons:trophy', 'game-icons:ghost', 'game-icons:crescent-blade',
+  'game-icons:magic-swirl', 'game-icons:oak-leaf', 'game-icons:scythe',
+  'game-icons:scroll-unfurled', 'game-icons:gems', 'game-icons:telescope',
+  // Origins
+  'game-icons:mushroom', 'game-icons:anchor', 'game-icons:round-shield',
+  'game-icons:lotus-flower', 'game-icons:vine-leaf', 'game-icons:battle-axe',
+  'game-icons:cog', 'game-icons:crowned-skull', 'game-icons:great-pyramid',
+  'game-icons:mountains', 'game-icons:snowflake-1', 'game-icons:suckered-tentacle',
+  'game-icons:gas-mask',
+  // Active Buffs Panel
+  'game-icons:lyre', 'game-icons:hand', 'game-icons:sand-clock',
+  'game-icons:treasure-map', 'game-icons:stone-wall', 'game-icons:turtle',
+  // Synergies — Elemental
+  'game-icons:frozen-ring', 'game-icons:eclipse', 'game-icons:fire-bomb',
+  'game-icons:sparkles', 'game-icons:water-drop', 'game-icons:cliff-crossing',
+  'game-icons:shooting-star',
+  // Synergies — Lore Bonds
+  'game-icons:lightning-bolt', 'game-icons:sun', 'game-icons:whirlwind',
+  'game-icons:rose', 'game-icons:pistol', 'game-icons:chain',
+  'game-icons:all-seeing-eye', 'game-icons:scales', 'game-icons:card-joker',
+  'game-icons:crossbones', 'game-icons:sword', 'game-icons:fish',
+  'game-icons:fox-head', 'game-icons:bomb-explosion',
+  // Synergies — Special
+  'game-icons:orbit', 'game-icons:star-formation', 'game-icons:diamond',
+  // Curses
+  'game-icons:skull-crossed-bones', 'game-icons:sword-wound',
+  'game-icons:dark-matter', 'game-icons:ice-bolt', 'game-icons:death-skull',
+  // Battle Ranks
+  'game-icons:nails', 'game-icons:rusty-sword', 'game-icons:sword-hilt',
+  'game-icons:gold-bar', 'game-icons:diamond-hard', 'game-icons:leaf-skeleton',
+  'game-icons:cube', 'game-icons:crown', 'game-icons:trident',
+  'game-icons:lightning-shout', 'game-icons:bullseye',
+  // Battle Result Modal
+  'game-icons:trophy-cup', 'game-icons:skull',
+  // Hardcoded Icons (templates)
+  'game-icons:fire-ray', 'game-icons:broadsword', 'game-icons:lightning-storm',
+  // Items
+  'game-icons:leather-armor', 'game-icons:lamellar', 'game-icons:chain-mail',
+  'game-icons:shield-echoes', 'game-icons:dragon-head', 'game-icons:ringed-planet',
+  'game-icons:potion', 'game-icons:necklace-display', 'game-icons:quartz',
+  'game-icons:crystal-wand', 'game-icons:stopwatch', 'game-icons:black-hole',
+  // Expeditions
+  'game-icons:dagger', 'game-icons:dragon-spiral', 'game-icons:sword-brandish',
+  'game-icons:whirlpool', 'game-icons:fire-dash', 'game-icons:castle',
+  'game-icons:eye-target', 'game-icons:alien-stare', 'game-icons:explosion',
+  // Sets
+  'game-icons:crystal-cluster', 'game-icons:nebula',
+  // Universes
+  'game-icons:vortex', 'game-icons:star-swirl', 'game-icons:spectre',
+  'game-icons:icicles', 'game-icons:solar-system', 'game-icons:yin-yang',
+  'game-icons:sword-altar', 'game-icons:gear-hammer',
+  // Augments (rendered)
+  'game-icons:sword-in-stone', 'game-icons:paw-print', 'game-icons:path-distance',
+  'game-icons:music-spell', 'game-icons:biceps', 'game-icons:hot-beverage',
+  'game-icons:open-palm', 'game-icons:gold-coin', 'game-icons:hammer',
+  'game-icons:compass', 'game-icons:drum', 'game-icons:horseshoe',
+  'game-icons:pocket-watch', 'game-icons:royal-crown', 'game-icons:fireworks',
+  'game-icons:time-trap', 'game-icons:void', 'game-icons:ancient-ruins',
+  'game-icons:gravity', 'game-icons:jester-hat', 'game-icons:dice-six-faces-random',
+  'game-icons:loudspeaker', 'game-icons:keyboard',
+  // Planet Roles
+  'game-icons:archery-target', 'game-icons:wheat', 'game-icons:rocket-thruster',
+  'game-icons:hourglass', 'game-icons:tower',
+  // Encyclopedia
+  'game-icons:galaxy', 'game-icons:scroll-quill', 'game-icons:map',
+  'game-icons:crystal-growth', 'game-icons:sword-spade',
+  // Admin Panel
+  'game-icons:alien-egg', 'game-icons:star-medal', 'game-icons:star-cycle',
+  'game-icons:bells', 'game-icons:settings-knobs',
+  // Roles (rendered in BardProfileMenu, PlanetSelectTab)
+  'game-icons:broadsword', 'game-icons:thorny-vine', 'game-icons:magic-wand',
+  'game-icons:bow-arrow', 'game-icons:health-potion',
+])

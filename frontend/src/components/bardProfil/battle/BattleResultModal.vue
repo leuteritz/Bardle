@@ -9,7 +9,9 @@
         :class="lastResult.won ? 'result-modal--win' : 'result-modal--loss'"
       >
         <div class="mb-4 rpg-accent-bar" />
-        <div class="mb-2 text-5xl">{{ lastResult.won ? '🏆' : '💀' }}</div>
+        <div class="mb-2 text-5xl">
+          <Icon :icon="lastResult.won ? 'game-icons:trophy-cup' : 'game-icons:skull'" class="result-trophy-icon" />
+        </div>
         <div
           class="mb-3 text-3xl font-black tracking-widest"
           :class="lastResult.won ? 'result-text--win' : 'result-text--loss'"
@@ -121,10 +123,12 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
   name: 'BattleResultModal',
+  components: { Icon },
 
   setup() {
     const battleStore = useBattleStore()
@@ -171,6 +175,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.result-trophy-icon {
+  width: 3rem;
+  height: 3rem;
+  display: inline-block;
+}
 /* ═══════════════════════════════════════════
    RESULT MODAL
    ═══════════════════════════════════════════ */

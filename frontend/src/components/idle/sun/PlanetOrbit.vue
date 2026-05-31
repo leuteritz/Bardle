@@ -55,7 +55,10 @@
       }"
     >
       <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
-      <span class="planet-bonus-badge" :title="pos.roleLabel">{{ pos.roleIcon }}</span>
+      <span class="planet-bonus-badge" :title="pos.roleLabel">
+        <Icon v-if="pos.roleIcon.includes(':')" :icon="pos.roleIcon" class="planet-badge-gi" />
+        <span v-else>{{ pos.roleIcon }}</span>
+      </span>
     </div>
 
     <!-- HP Bars -->
@@ -119,6 +122,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
@@ -210,7 +214,7 @@ function slotRoleLabel(slot: PlanetSlot): string {
 
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { AttackProjectileLayer, OrbitPath },
+  components: { AttackProjectileLayer, OrbitPath, Icon },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
@@ -575,6 +579,14 @@ export default defineComponent({
   border: 1px solid var(--planet-color, #aaa);
   pointer-events: none;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.planet-badge-gi {
+  width: 9px;
+  height: 9px;
+  color: var(--planet-color, #c89040);
 }
 
 @media (prefers-reduced-motion: reduce) {

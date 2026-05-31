@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { encyclopediaData } from '../../config/encyclopedia'
 
@@ -107,6 +108,7 @@ const filteredData = computed(() => {
                 height="20"
                 class="enc-cat-icon-img"
               />
+              <Icon v-else-if="category.icon.includes(':')" :icon="category.icon" class="enc-cat-icon-gi" />
               <span v-else class="text-lg">{{ category.icon }}</span>
               <span class="enc-category-title flex-1 text-sm font-bold">
                 {{ category.title }}
@@ -135,10 +137,16 @@ const filteredData = computed(() => {
                 <div class="flex items-start gap-3">
                   <!-- Icon -->
                   <img
+                    v-if="!entry.icon.includes(':')"
                     :src="entry.icon"
                     :alt="entry.name"
                     class="rpg-icon-box object-contain w-10 h-10 shrink-0"
                     loading="lazy"
+                  />
+                  <Icon
+                    v-else
+                    :icon="entry.icon"
+                    class="enc-entry-icon-gi shrink-0"
                   />
                   <div class="flex-1 min-w-0">
                     <!-- Name -->
@@ -189,6 +197,17 @@ const filteredData = computed(() => {
 </template>
 
 <style scoped>
+.enc-cat-icon-gi {
+  width: 20px;
+  height: 20px;
+  color: #c89040;
+  flex-shrink: 0;
+}
+.enc-entry-icon-gi {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #c89040;
+}
 /* ── Transitions ── */
 .slide-enter-active,
 .slide-leave-active {

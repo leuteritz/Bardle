@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../../stores/gameStore'
 import { universes } from '../../../config/universes'
 import type { ModifierEffects } from '../../../types'
@@ -151,7 +152,8 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
                 :src="universe.modifier.icon"
                 :alt="universe.modifier.name"
               />
-              <span v-else class="mb-2 text-3xl">{{ universe.modifier?.icon ?? '🌍' }}</span>
+              <Icon v-else-if="universe.modifier?.icon?.includes(':')" :icon="universe.modifier.icon" class="mb-2 uni-modifier-gi" />
+              <span v-else class="mb-2 text-3xl">{{ universe.modifier?.icon ?? 'game-icons:earth-spit' }}</span>
 
               <!-- Name -->
               <h3 class="mb-1 text-base font-bold text-center uni-name">
@@ -212,6 +214,11 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
   opacity: 0;
 }
 
+.uni-modifier-gi {
+  width: 30px;
+  height: 30px;
+  color: #c89040;
+}
 .uni-modifier-icon {
   width: 30px;
   height: 30px;

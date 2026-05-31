@@ -78,7 +78,7 @@
 
     <!-- LAUFEND-Sektion -->
     <template v-if="runningExpeditions.length > 0">
-      <div class="section-header" :class="{ 'section-header--mt': doneExpeditions.length > 0 }">⚡ Laufend</div>
+      <div class="section-header" :class="{ 'section-header--mt': doneExpeditions.length > 0 }">Laufend</div>
       <div
         v-for="expedition in runningExpeditions"
         :key="expedition.id"

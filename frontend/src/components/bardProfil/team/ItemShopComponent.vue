@@ -7,7 +7,8 @@
         :key="bonus.setId"
         class="set-bonus-row flex items-center gap-3 px-3 py-2.5"
       >
-        <span class="flex-shrink-0 text-xl">{{ bonus.icon }}</span>
+        <Icon v-if="bonus.icon.includes(':')" :icon="bonus.icon" class="flex-shrink-0 set-bonus-icon" />
+        <span v-else class="flex-shrink-0 text-xl">{{ bonus.icon }}</span>
         <div class="flex flex-col gap-0.5 min-w-0">
           <span class="text-sm font-bold truncate set-bonus-name">{{ bonus.setName }}</span>
           <span class="text-xs set-bonus-desc">{{ bonus.description }}</span>
@@ -61,6 +62,7 @@
               :src="item.icon"
               class="object-contain w-10 h-10 rpg-img"
             />
+            <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="item-icon-gi" />
             <span v-else class="text-2xl">{{ item.icon }}</span>
           </div>
           <div class="flex flex-col items-end gap-1">
@@ -126,6 +128,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
@@ -136,6 +139,7 @@ import type { ItemRarity, ShopItem } from '@/types'
 
 export default defineComponent({
   name: 'ItemShopComponent',
+  components: { Icon },
   props: {
     category: { type: String, default: undefined },
   },
@@ -279,6 +283,15 @@ export default defineComponent({
   opacity: 1;
 }
 
+.item-icon-gi {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #c89040;
+}
+.set-bonus-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
 /* ── Icon Box ── */
 .item-icon-box {
   background: var(--rpg-bg-icon);

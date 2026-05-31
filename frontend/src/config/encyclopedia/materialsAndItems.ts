@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const materialsCategory: EncyclopediaCategory = {
   id: 'materials',
   title: 'Materials',
-  icon: '💠',
+  icon: 'game-icons:crystal-growth',
   entries: [
     {
       id: 'materials-overview',
@@ -80,7 +80,7 @@ export const materialsCategory: EncyclopediaCategory = {
 export const itemsCategory: EncyclopediaCategory = {
   id: 'items',
   title: 'Item Shop',
-  icon: '🗡️',
+  icon: 'game-icons:sword-spade',
   entries: [
     {
       id: 'item-system',

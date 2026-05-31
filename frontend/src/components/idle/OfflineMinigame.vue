@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 
 const emit = defineEmits<{
   win: []
@@ -91,9 +92,9 @@ onUnmounted(() => {
 
     <!-- Header -->
     <div class="mg-header">
-      <span class="mg-icon">⚔️</span>
+      <Icon icon="game-icons:broadsword" class="mg-icon" />
       <p class="mg-hint">Hit the golden zone for <strong>double loot!</strong></p>
-      <span class="mg-icon">⚔️</span>
+      <Icon icon="game-icons:broadsword" class="mg-icon" />
     </div>
 
     <!-- Track -->
@@ -239,6 +240,8 @@ onUnmounted(() => {
 
 .mg-icon {
   font-size: 0.8rem;
+  width: 0.8rem;
+  height: 0.8rem;
   opacity: 0.6;
   animation: iconPulse 2s ease-in-out infinite alternate;
 }

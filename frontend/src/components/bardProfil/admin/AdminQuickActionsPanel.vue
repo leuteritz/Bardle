@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -29,10 +30,10 @@ const editingValue = ref<string>('')
 const flashKey = ref<string | null>(null)
 
 const quickFields = [
-  { key: 'chimes', label: 'Chimes', icon: '🎐', defaultStep: 100, min: 0, float: true },
-  { key: 'meeps', label: 'Meeps', icon: '👾', defaultStep: 1, min: 0, float: false },
-  { key: 'level', label: 'Level', icon: '★', defaultStep: 1, min: 1, float: false },
-  { key: 'skillPoints', label: 'Skill Points', icon: '✨', defaultStep: 1, min: 0, float: false },
+  { key: 'chimes', label: 'Chimes', icon: 'game-icons:bells', defaultStep: 100, min: 0, float: true },
+  { key: 'meeps', label: 'Meeps', icon: 'game-icons:alien-egg', defaultStep: 1, min: 0, float: false },
+  { key: 'level', label: 'Level', icon: 'game-icons:star-medal', defaultStep: 1, min: 1, float: false },
+  { key: 'skillPoints', label: 'Skill Points', icon: 'game-icons:star-cycle', defaultStep: 1, min: 0, float: false },
 ] as const
 
 type QuickKey = (typeof quickFields)[number]['key']
@@ -233,7 +234,8 @@ function onSunSimInput(raw: string) {
       >
         <!-- Label -->
         <label class="admin-field-label">
-          <span>{{ qf.icon }}</span> {{ qf.label }}
+          <Icon v-if="qf.icon.includes(':')" :icon="qf.icon" class="admin-field-icon" />
+          <span v-else>{{ qf.icon }}</span> {{ qf.label }}
         </label>
 
         <!-- Value Stepper -->
@@ -287,19 +289,19 @@ function onSunSimInput(raw: string) {
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
         @click="fillAllMaterials"
       >
-        <span>💎</span> +9999 all Materials
+        <Icon icon="game-icons:diamond-hard" class="admin-btn-icon" /> +9999 all Materials
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
         @click="spawnGalaxyBoss"
       >
-        <span>👾</span> Spawn Galaxy Boss
+        <Icon icon="game-icons:alien-bug" class="admin-btn-icon" /> Spawn Galaxy Boss
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5"
         @click="forceCompleteGalaxy"
       >
-        <span>🌌</span> Complete Galaxy
+        <Icon icon="game-icons:galaxy" class="admin-btn-icon" /> Complete Galaxy
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
@@ -311,32 +313,32 @@ function onSunSimInput(raw: string) {
         class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
         @click="battleStore.unlockAllChampions()"
       >
-        <span>🏆</span> Unlock All Champions
+        <Icon icon="game-icons:laurel-crown" class="admin-btn-icon" /> Unlock All Champions
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--nebula flex items-center gap-1.5 px-3 py-1.5"
         @click="triggerNebula()"
       >
-        <span>🌌</span> Trigger Nebula
+        <Icon icon="game-icons:nebula" class="admin-btn-icon" /> Trigger Nebula
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--team-fill flex items-center gap-1.5 px-3 py-1.5"
         @click="fillTeamWithRandomChampions"
       >
-        <span>🎲</span> Random Team Fill
+        <Icon icon="game-icons:dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--travel flex items-center gap-1.5 px-3 py-1.5"
         :disabled="galaxyStore.championTravelState !== 'traveling'"
         @click="teleportNearPlanet"
       >
-        <span>⚡</span> Skip to -5s
+        <Icon icon="game-icons:lightning-bolt" class="admin-btn-icon" /> Skip to -5s
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--cooldown flex items-center gap-1.5 px-3 py-1.5"
         @click="resetAllCooldowns"
       >
-        <span>⏱️</span> Reset Cooldowns
+        <Icon icon="game-icons:time-trap" class="admin-btn-icon" /> Reset Cooldowns
       </button>
     </div>
 
@@ -402,6 +404,16 @@ function onSunSimInput(raw: string) {
 
 /* ── Label ───────────────────────────────────────────────────────────────────── */
 
+.admin-field-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: #c89040;
+}
+.admin-btn-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #c89040;
+}
 .admin-field-label {
   display: flex;
   align-items: center;

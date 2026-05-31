@@ -2,18 +2,18 @@ import type { GameEventType } from '@/composables/useEventLog'
 import { ROLE_COLORS } from './constants'
 
 export const typeIcon: Record<GameEventType, string> = {
-  support: '✨',
-  top: '🛡️',
-  mid: '🔥',
-  adc: '🏹',
-  jungle: '🗡️',
+  support: 'game-icons:star-swirl',
+  top: 'game-icons:tower-shield',
+  mid: 'game-icons:fire-ray',
+  adc: 'game-icons:arrow-scope',
+  jungle: 'game-icons:hunting-knife',
   planet: '/img/planet.png',
-  augment: '✦',
-  meep: '👾',
-  chime: '🔔',
-  combat: '⚔️',
-  prestige: '🌌',
-  info: '📜',
+  augment: 'game-icons:power-ring',
+  meep: 'game-icons:alien-bug',
+  chime: 'game-icons:wind-chime',
+  combat: 'game-icons:crossed-sabres',
+  prestige: 'game-icons:galaxy',
+  info: 'game-icons:open-book',
 }
 
 export const typeColor: Record<GameEventType, string> = {

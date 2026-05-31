@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const universesCategory: EncyclopediaCategory = {
   id: 'universes',
   title: 'Universes & Prestige',
-  icon: '🌌',
+  icon: 'game-icons:galaxy',
   entries: [
     {
       id: 'prestige-system',
@@ -41,7 +41,7 @@ export const universesCategory: EncyclopediaCategory = {
 export const constantsCategory: EncyclopediaCategory = {
   id: 'constants',
   title: 'All Constants',
-  icon: '🔢',
+  icon: 'game-icons:scroll-quill',
   entries: [
     {
       id: 'constants-game',
@@ -94,7 +94,7 @@ export const constantsCategory: EncyclopediaCategory = {
     {
       id: 'constants-expedition',
       name: 'Expedition Constants',
-      icon: '🗺️',
+      icon: 'game-icons:map',
       description: 'All values for the expedition system.',
       lore: 'The measure of all journeys.',
       formula:

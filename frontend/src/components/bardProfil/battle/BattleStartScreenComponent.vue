@@ -52,7 +52,7 @@
       <div class="stat-col">
         <div class="stat-eyebrow">STREAK</div>
         <div class="streak-main" :class="{ 'streak-on-fire': battleStore.currentWinStreak >= 3 }">
-          <span v-if="battleStore.currentWinStreak >= 3" class="fire-emoji">🔥</span>
+          <Icon v-if="battleStore.currentWinStreak >= 3" icon="game-icons:fire-ray" class="fire-emoji" />
           <span class="streak-num">{{ battleStore.currentWinStreak }}</span>
           <span class="streak-unit">WIN</span>
         </div>
@@ -174,6 +174,7 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,
@@ -182,11 +183,11 @@ import {
 } from '@/config/constants'
 
 const ROLES = [
-  { key: 'top',     label: 'TOP', icon: '⚔️',  image: '/img/roles/top.png'    },
-  { key: 'jungle',  label: 'JGL', icon: '🌿',  image: '/img/roles/jungle.png' },
-  { key: 'mid',     label: 'MID', icon: '🎯',  image: '/img/roles/mid.png'    },
-  { key: 'bot',     label: 'BOT', icon: '🏹',  image: '/img/roles/adc.png'    },
-  { key: 'support', label: 'SUP', icon: '🛡️',  image: '/img/roles/supp.png'   },
+  { key: 'top',     label: 'TOP', icon: 'game-icons:broadsword',    image: '/img/roles/top.png'    },
+  { key: 'jungle',  label: 'JGL', icon: 'game-icons:thorny-vine',   image: '/img/roles/jungle.png' },
+  { key: 'mid',     label: 'MID', icon: 'game-icons:magic-wand',    image: '/img/roles/mid.png'    },
+  { key: 'bot',     label: 'BOT', icon: 'game-icons:bow-arrow',     image: '/img/roles/adc.png'    },
+  { key: 'support', label: 'SUP', icon: 'game-icons:health-potion', image: '/img/roles/supp.png'   },
 ] as const
 
 const RANK_COLORS: Record<string, string> = {
@@ -204,6 +205,7 @@ const RANK_COLORS: Record<string, string> = {
 
 export default defineComponent({
   name: 'BattleStartScreenComponent',
+  components: { Icon },
   props: { isStarting: { type: Boolean, default: false } },
   emits: ['start'],
   setup() {

@@ -24,7 +24,7 @@
           <!-- Status Bar above MiniMap -->
           <div class="status-bar">
             <div class="status-chip">
-              <span class="status-chip-icon">{{ rankIcon }}</span>
+              <Icon :icon="rankIcon" class="status-chip-icon" />
               <div class="status-chip-body">
                 <span class="status-chip-label">RANK</span>
                 <span class="status-chip-rank-row">
@@ -64,7 +64,7 @@
               title="[DEV] Skip to 40s mark"
               @click="battleStore.adminSkipToEnd()"
             >
-              ⚡ Skip
+              Skip
             </button>
           </div>
           <BattleMapComponent
@@ -89,6 +89,7 @@
 
 <script lang="ts">
 import { defineComponent, computed, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import BattleMapComponent from './BattleMapComponent.vue'
 import BattleChatComponent from './BattleChatComponent.vue'
 import ScoreboardComponent from './ScoreboardComponent.vue'
@@ -108,6 +109,7 @@ export default defineComponent({
     PlanetBattleBackgroundComponent,
     BattleStartScreenComponent,
     BattleResultModal,
+    Icon,
   },
 
   setup() {
@@ -146,18 +148,18 @@ export default defineComponent({
 
     const rankIcon = computed(() => {
       const icons: Record<string, string> = {
-        Iron: '🔩',
-        Bronze: '🥉',
-        Silver: '🥈',
-        Gold: '🥇',
-        Platinum: '💎',
-        Emerald: '🌿',
-        Diamond: '💠',
-        Master: '👑',
-        Grandmaster: '🔱',
-        Challenger: '⚡',
+        Iron: 'game-icons:nails',
+        Bronze: 'game-icons:rusty-sword',
+        Silver: 'game-icons:sword-hilt',
+        Gold: 'game-icons:gold-bar',
+        Platinum: 'game-icons:diamond-hard',
+        Emerald: 'game-icons:leaf-skeleton',
+        Diamond: 'game-icons:cube',
+        Master: 'game-icons:crown',
+        Grandmaster: 'game-icons:trident',
+        Challenger: 'game-icons:lightning-shout',
       }
-      return icons[battleStore.currentRank.tier] ?? '🎯'
+      return icons[battleStore.currentRank.tier] ?? 'game-icons:bullseye'
     })
 
     const score = computed(() => ({
@@ -223,6 +225,8 @@ export default defineComponent({
 }
 .status-chip-icon {
   font-size: 20px;
+  width: 20px;
+  height: 20px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }

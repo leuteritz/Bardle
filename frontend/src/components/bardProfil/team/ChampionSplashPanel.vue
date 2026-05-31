@@ -436,7 +436,7 @@ function onImgError(e: Event) {
             :class="{ 'modal-tab--active': expeditionTab === 'active' }"
             @click="expeditionTab = 'active'"
           >
-            ⚡ Aktiv
+            Aktiv
             <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
           </button>
         </div>

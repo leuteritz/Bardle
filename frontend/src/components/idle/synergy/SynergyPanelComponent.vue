@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { ROLES as ROLE_DEFS } from '@/config/constants'
 import type { ActiveSynergy } from '@/types'
@@ -75,7 +76,9 @@ const allSynergies = () => synergyByRole.value.flat()
             @mouseenter="onBadgeEnter($event, syn.id)"
             @mouseleave="onBadgeLeave"
           >
-            <img class="syn-card-icon" :src="syn.icon" :alt="syn.name" />
+            <img v-if="syn.icon.startsWith('/')" class="syn-card-icon" :src="syn.icon" :alt="syn.name" />
+            <Icon v-else-if="syn.icon.includes(':')" :icon="syn.icon" class="syn-card-icon" />
+            <span v-else class="syn-card-icon">{{ syn.icon }}</span>
             <span class="syn-card-name">{{ syn.name }}</span>
             <span class="syn-card-fx">{{ formatEffect(syn) }}</span>
           </button>
@@ -91,7 +94,9 @@ const allSynergies = () => synergyByRole.value.flat()
           <template v-for="syn in allSynergies()" :key="syn.id">
             <template v-if="syn.id === hoveredId">
               <div class="syn-tip-head" :style="{ color: syn.color }">
-                <img class="syn-tip-icon" :src="syn.icon" :alt="syn.name" />
+                <img v-if="syn.icon.startsWith('/')" class="syn-tip-icon" :src="syn.icon" :alt="syn.name" />
+                <Icon v-else-if="syn.icon.includes(':')" :icon="syn.icon" class="syn-tip-icon" />
+                <span v-else class="syn-tip-icon">{{ syn.icon }}</span>
                 {{ syn.name }}
               </div>
               <div class="syn-tip-desc">{{ syn.description }}</div>

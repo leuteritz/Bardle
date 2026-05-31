@@ -107,7 +107,8 @@
             :class="{ 'sf-curse-overlay--galaxy': isGalaxyBoss }"
           >
             <div class="sf-curse-inner">
-              <span class="sf-curse-icon">{{ curseDef?.icon }}</span>
+              <Icon v-if="curseDef?.icon?.includes(':')" :icon="curseDef.icon" class="sf-curse-icon" />
+              <span v-else class="sf-curse-icon">{{ curseDef?.icon }}</span>
               <div class="sf-curse-text">
                 <span class="sf-curse-name">{{ curseDef?.name }}</span>
                 <span class="sf-curse-effect">{{ curseDef?.effect }}</span>
@@ -148,6 +149,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
@@ -711,8 +713,11 @@ function starStyle(i: number): Record<string, string> {
 
 .sf-curse-icon {
   font-size: 2.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
   line-height: 1;
   flex-shrink: 0;
+  color: #cc44ff;
   filter: drop-shadow(0 0 12px rgba(200, 60, 255, 0.8));
   animation: sf-curse-icon-pulse 1.2s ease-in-out infinite alternate;
 }

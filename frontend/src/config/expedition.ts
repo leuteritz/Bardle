@@ -20,7 +20,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 60,
     durationSeconds: 60,
     baseReward: 150,
-    icon: '🗡️',
+    icon: 'game-icons:dagger',
   },
   {
     id: 'bot-lane-push',
@@ -40,7 +40,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 200,
     durationSeconds: 180,
     baseReward: 800,
-    icon: '🐉',
+    icon: 'game-icons:dragon-spiral',
   },
   {
     id: 'split-push',
@@ -50,7 +50,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 80,
     durationSeconds: 90,
     baseReward: 250,
-    icon: '⚔️',
+    icon: 'game-icons:sword-brandish',
   },
   {
     id: 'mid-roam',
@@ -60,7 +60,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 70,
     durationSeconds: 75,
     baseReward: 200,
-    icon: '🌀',
+    icon: 'game-icons:whirlpool',
   },
   {
     id: 'dragon-fight',
@@ -70,7 +70,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 250,
     durationSeconds: 150,
     baseReward: 600,
-    icon: '🔥',
+    icon: 'game-icons:fire-dash',
   },
   {
     id: 'full-team-siege',
@@ -80,7 +80,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 500,
     durationSeconds: 300,
     baseReward: 2000,
-    icon: '🏰',
+    icon: 'game-icons:castle',
   },
   {
     id: 'ward-expedition',
@@ -90,7 +90,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 50,
     durationSeconds: 45,
     baseReward: 100,
-    icon: '👁️',
+    icon: 'game-icons:eye-target',
   },
   {
     id: 'rift-herald',
@@ -100,7 +100,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 150,
     durationSeconds: 120,
     baseReward: 500,
-    icon: '👾',
+    icon: 'game-icons:alien-stare',
   },
   {
     id: 'tower-dive',
@@ -110,6 +110,6 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 180,
     durationSeconds: 100,
     baseReward: 450,
-    icon: '💥',
+    icon: 'game-icons:explosion',
   },
 ]
