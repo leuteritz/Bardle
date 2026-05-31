@@ -123,6 +123,8 @@ function getOriginIcon(o: string | null): string {
     0 0 32px rgba(200, 144, 64, 0.45);
 }
 .badges-row {
+  --badge-icon-size: 18px;
+  --badge-pad-v: 2px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -141,12 +143,12 @@ function getOriginIcon(o: string | null): string {
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid var(--oc, #5c3310);
   border-radius: 3px;
-  padding: 1px 7px;
+  padding: var(--badge-pad-v) 7px;
   pointer-events: none;
 }
 .origin-badge-icon {
-  width: 14px;
-  height: 14px;
+  width: var(--badge-icon-size);
+  height: var(--badge-icon-size);
   flex-shrink: 0;
   color: var(--oc, #e8c040);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
@@ -155,7 +157,7 @@ function getOriginIcon(o: string | null): string {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 7px;
+  padding: var(--badge-pad-v) 7px;
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid var(--tc, #7a4e20);
   border-radius: 3px;
@@ -167,8 +169,8 @@ function getOriginIcon(o: string | null): string {
   white-space: nowrap;
 }
 .trait-chip-icon {
-  width: 18px;
-  height: 18px;
+  width: var(--badge-icon-size);
+  height: var(--badge-icon-size);
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.9);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
