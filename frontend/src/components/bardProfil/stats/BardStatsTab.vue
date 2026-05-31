@@ -6,6 +6,7 @@ import { useShopStore } from '@/stores/shopStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
+import ActiveBuffsPanel from './ActiveBuffsPanel.vue'
 
 const totalChampions = Object.keys(CHAMPION_ROLES).length
 
@@ -68,6 +69,7 @@ const extraBonus = computed(() => {
   const total = chimesPerClick.value
   return Math.max(0, total - baseCPC.value - clickerBonus.value)
 })
+
 </script>
 
 <template>
@@ -114,6 +116,8 @@ const extraBonus = computed(() => {
           </div>
         </div>
       </div>
+
+      <ActiveBuffsPanel />
     </div>
 
     <!-- ══ RIGHT COLUMN ══ -->
@@ -561,4 +565,5 @@ const extraBonus = computed(() => {
   height: 100%;
   transition: width 0.85s ease;
 }
+
 </style>
