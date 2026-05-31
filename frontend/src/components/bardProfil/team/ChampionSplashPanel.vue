@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
@@ -298,7 +299,7 @@ function onImgError(e: Event) {
         :class="{ 'action-bar-btn--active': activePanel === 'shop' }"
         @click.stop="openShop(roleKey)"
       >
-        <span class="action-bar-icon">⚔</span>
+        <Icon icon="game-icons:knight-helmet" class="action-bar-icon" />
         <span class="action-bar-label">Shop</span>
       </button>
       <div class="action-bar-sep" />
@@ -307,7 +308,7 @@ function onImgError(e: Event) {
         :class="{ 'action-bar-btn--active': activePanel === 'expedition' }"
         @click.stop="openExpedition"
       >
-        <span class="action-bar-icon">🗺</span>
+        <Icon icon="game-icons:campfire" class="action-bar-icon" />
         <span class="action-bar-label">Expedition</span>
       </button>
       <div class="action-bar-sep" />
@@ -316,7 +317,7 @@ function onImgError(e: Event) {
         :class="{ 'action-bar-btn--active': activePanel === 'items' }"
         @click.stop="openItemShop"
       >
-        <span class="action-bar-icon">💼</span>
+        <Icon icon="game-icons:treasure-chest" class="action-bar-icon" />
         <span class="action-bar-label">Items</span>
       </button>
     </div>
@@ -429,7 +430,7 @@ function onImgError(e: Event) {
             :class="{ 'modal-tab--active': expeditionTab === 'create' }"
             @click="expeditionTab = 'create'"
           >
-            🗺 Start
+            Start
           </button>
           <button
             class="modal-tab"
@@ -705,8 +706,11 @@ function onImgError(e: Event) {
 }
 .action-bar-icon {
   font-size: 18px;
+  width: 18px;
+  height: 18px;
   line-height: 1;
   flex-shrink: 0;
+  color: currentColor;
 }
 .action-bar-label {
   font-size: 12px;

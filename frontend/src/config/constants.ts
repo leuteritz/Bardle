@@ -884,4 +884,6 @@ export const USED_GAME_ICONS = new Set<string>([
   // Roles (rendered in BardProfileMenu, PlanetSelectTab)
   'game-icons:broadsword', 'game-icons:thorny-vine', 'game-icons:magic-wand',
   'game-icons:bow-arrow', 'game-icons:health-potion',
+  // ChampionSplashPanel Action Bar
+  'game-icons:knight-helmet', 'game-icons:campfire', 'game-icons:treasure-chest',
 ])
