@@ -41,7 +41,7 @@
       fill="none"
       :stroke="color"
       :stroke-opacity="opacity"
-      :stroke-width="28 * strokeWidth * (sunRadius !== undefined ? sunRadius / 80 : 1)"
+      :stroke-width="28 * strokeWidth * (currentSunRadius / 80)"
     />
   </g>
 
@@ -86,6 +86,8 @@
 
 <script setup lang="ts">
 import { getCurrentInstance } from 'vue'
+import { storeToRefs } from 'pinia'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
 
 withDefaults(
   defineProps<{
@@ -99,11 +101,11 @@ withDefaults(
     opacity?: number
     visible?: boolean
     abilityActive?: boolean
-    sunRadius?: number
   }>(),
   { strokeWidth: 0.3, opacity: 0.2, visible: true, abilityActive: false },
 )
 
+const { currentSunRadius } = storeToRefs(usePlanetShopStore())
 const uid = `orbit-glow-${getCurrentInstance()!.uid}`
 </script>
 

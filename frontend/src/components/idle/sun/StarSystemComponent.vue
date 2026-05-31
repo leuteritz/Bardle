@@ -13,7 +13,6 @@
           :ry="tier.ry"
           :tiltDeg="tier.tiltDeg"
           :visible="starOrbitVisible[i]"
-          :sunRadius="planetShopStore.currentSunRadius"
         />
       </template>
 
@@ -28,7 +27,6 @@
           :ry="entry.ry"
           :tiltDeg="entry.tiltDeg"
           :visible="roleOrbitVisibility[i]"
-          :sunRadius="planetShopStore.currentSunRadius"
         />
       </template>
     </svg>

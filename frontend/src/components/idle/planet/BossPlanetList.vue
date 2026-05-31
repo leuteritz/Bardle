@@ -62,15 +62,13 @@ import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { formatNumber } from '../../../config/numberFormat'
 import type { PlanetBossEvent, PlanetType } from '../../../types'
 
-const props = defineProps<{
-  planetQueue: string[]
-  activeIndex: number
-  isGalaxyBoss: boolean
-}>()
-
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 const planetEls = ref<(HTMLDivElement | null)[]>([])
+
+const planetQueue = computed(() => starGroupStore.starFightPlanetQueue)
+const activeIndex = computed(() => starGroupStore.starFightCurrentIndex)
+const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
 
 function registerPlanetEl(el: HTMLDivElement | null, i: number) {
   planetEls.value[i] = el
@@ -91,7 +89,7 @@ interface PlanetEntry {
 const FALLBACK_PLANET_TYPE: PlanetType = 'rocky'
 
 const planetEntries = computed<PlanetEntry[]>(() =>
-  props.planetQueue.map((planetId) => {
+  planetQueue.value.map((planetId) => {
     const slot = activeStar.value?.planetSlots.find((p) => p.planetId === planetId)
     const boss = bossStore.activeBosses.find((b) => b.planetId === planetId) ?? null
     const cleared = slot?.cleared ?? false
@@ -108,7 +106,7 @@ const planetEntries = computed<PlanetEntry[]>(() =>
 )
 
 const displayedEntries = computed<PlanetEntry[]>(() =>
-  planetEntries.value.slice(props.activeIndex + 1),
+  planetEntries.value.slice(activeIndex.value + 1),
 )
 
 function hpPercent(boss: PlanetBossEvent): number {
@@ -152,7 +150,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => [props.planetQueue.join(','), props.activeIndex, bossStore.activeBosses.length],
+  () => [planetQueue.value.join(','), activeIndex.value, bossStore.activeBosses.length],
   async () => {
     if (!isMounted) return
     await nextTick()

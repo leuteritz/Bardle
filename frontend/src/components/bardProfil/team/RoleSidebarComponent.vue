@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -9,15 +10,9 @@ const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as R
 const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
 const battleStore = useBattleStore()
+const uiStore = useUiStore()
 const { headerSlots } = storeToRefs(battleStore)
-
-defineProps<{
-  activeSlotIndex: number
-}>()
-
-const emit = defineEmits<{
-  selectSlot: [index: number]
-}>()
+const { rolesActiveSlot: activeSlotIndex } = storeToRefs(uiStore)
 
 function onImgError(e: Event) {
   ;(e.target as HTMLImageElement).style.display = 'none'
@@ -37,7 +32,7 @@ function onImgError(e: Event) {
             'role-btn--filled': headerSlots[i] !== null,
           }"
           :style="{ '--rc': ROLE_COLORS[role] }"
-          @click="emit('selectSlot', i)"
+          @click="uiStore.setRolesActiveSlot(i)"
         >
           <img
             v-if="headerSlots[i]"

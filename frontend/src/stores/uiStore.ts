@@ -34,6 +34,10 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = 'planets'
   }
 
+  function setRolesActiveSlot(index: number) {
+    rolesActiveSlot.value = index
+  }
+
   return {
     bardActiveTab,
     rolesActiveSlot,
@@ -45,5 +49,6 @@ export const useUiStore = defineStore('ui', () => {
     closeBardModal,
     requestOpenRolesTab,
     requestOpenPlanetsTab,
+    setRolesActiveSlot,
   }
 })

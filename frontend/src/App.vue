@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
@@ -23,8 +23,6 @@ import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
-
-const activeTab = ref('idle')
 
 const { isRenderingPaused } = useRenderingPaused()
 
@@ -65,7 +63,7 @@ watch(
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
           <div class="w-full">
-            <IdleGameComponent :active-tab="activeTab" />
+            <IdleGameComponent />
           </div>
         </div>
       </div>

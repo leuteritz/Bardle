@@ -52,23 +52,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { MATERIALS } from '@/config/materials'
-import type { PlanetBossRewardSlot } from '@/types'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
 
-const props = defineProps<{
-  isGalaxyBoss: boolean
-  rewardSlots: PlanetBossRewardSlot[]
-  homePlanetChampion: string | null
-  homePlanetChampionImage: string | null
-}>()
+const bossStore = usePlanetBossStore()
+
+const activeBoss = computed(() => bossStore.activeBoss)
+const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
+const rewardSlots = computed(() => activeBoss.value?.rewardSlots ?? [])
+const homePlanetChampion = computed(() => activeBoss.value?.homePlanetChampion ?? null)
+const homePlanetChampionImage = computed(() => {
+  const name = homePlanetChampion.value
+  if (!name) return null
+  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
+})
 
 const totalChimes = computed(() =>
-  props.rewardSlots.filter((s) => s.type === 'chimes').reduce((sum, s) => sum + (s.amount ?? 0), 0),
+  rewardSlots.value.filter((s) => s.type === 'chimes').reduce((sum, s) => sum + (s.amount ?? 0), 0),
 )
 
 const stackedMaterials = computed(() => {
   const map = new Map<string, { material: (typeof MATERIALS)[number]; count: number }>()
 
-  for (const slot of props.rewardSlots) {
+  for (const slot of rewardSlots.value) {
     if (slot.type !== 'material' || !slot.materialId) continue
     const mat = MATERIALS.find((m) => m.id === slot.materialId)
     if (!mat) continue

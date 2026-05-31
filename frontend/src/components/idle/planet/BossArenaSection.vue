@@ -20,13 +20,13 @@
 
     <!-- ── Boss Name Overlay ─────────────────────────────────────────────── -->
     <div
-      v-if="props.activeBoss"
+      v-if="activeBoss"
       class="boss-name-overlay"
       :class="{ 'boss-name-overlay--galaxy': isGalaxyBoss }"
     >
       <span v-if="isGalaxyBoss" class="boss-name-galaxy-badge">✦ GALAXY BOSS ✦</span>
       <span class="boss-name-text" :class="{ 'boss-name-text--galaxy': isGalaxyBoss }">
-        {{ props.activeBoss.bossName }}
+        {{ activeBoss?.bossName }}
       </span>
     </div>
 
@@ -116,39 +116,53 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
+import { useBattleStore } from '../../../stores/battleStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { ROLE_BY_KEY } from '../../../config/constants'
 import { formatNumber } from '../../../config/numberFormat'
-import type { PlanetBossEvent } from '../../../types'
 
 const CYCLE_MS = 2600
 const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
 const STAGGER_MS = 650
 
-const props = defineProps<{
-  isGalaxyBoss: boolean
-  bossHPPercent: number
-  secondsRemaining: number
-  enragePercent: number
-  teamChampions: string[]
-  getChampionImage: (name: string) => string
-  activeBoss: PlanetBossEvent | null
-  championDamage?: number
-}>()
+defineProps<{ championDamage?: number }>()
 
 const emit = defineEmits<{ shake: [ms: number] }>()
 
 const bossStore = usePlanetBossStore()
+const battleStore = useBattleStore()
 const starGroupStore = useStarGroupStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const midRoleImage = ROLE_BY_KEY['mid'].image
 
-const isMountedRef = ref(false)
-let isMounted = false
+const activeBoss = computed(() => bossStore.activeBoss)
+const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
+const bossHPPercent = computed(() => bossStore.bossHPPercent)
+const teamChampions = computed(() => battleStore.selectedChampions.slice(0, 4))
 
 const now = ref(Date.now())
 let nowTimer: number
+
+const secondsRemaining = computed(() => {
+  const boss = activeBoss.value
+  if (!boss) return 0
+  return Math.max(0, Math.ceil((boss.enrageTimerMs - (now.value - boss.startTime)) / 1000))
+})
+
+const enragePercent = computed(() => {
+  const boss = activeBoss.value
+  if (!boss) return 0
+  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
+  return (remaining / boss.enrageTimerMs) * 100
+})
+
+function getChampionImage(name: string): string {
+  return battleStore.getChampionImage(name)
+}
+
+const isMountedRef = ref(false)
+let isMounted = false
 
 const curseCountdown = computed(() => {
   const curse = roleBehaviorStore.activeCurse
@@ -157,9 +171,9 @@ const curseCountdown = computed(() => {
 })
 
 const isChampionStarPlanet = computed<boolean>(() => {
-  if (!props.activeBoss) return false
-  if (props.activeBoss.isChampionPlanet) return true
-  const planetId = props.activeBoss.planetId
+  if (!activeBoss.value) return false
+  if (activeBoss.value.isChampionPlanet) return true
+  const planetId = activeBoss.value.planetId
   return starGroupStore.activeStars.some(
     (star) =>
       star.starType === 'champion' && star.planetSlots.some((slot) => slot.planetId === planetId),
@@ -168,10 +182,10 @@ const isChampionStarPlanet = computed<boolean>(() => {
 
 const showEnrageTimer = computed<boolean>(() => !isChampionStarPlanet.value)
 const effectiveSecondsRemaining = computed<number>(() =>
-  isChampionStarPlanet.value ? 0 : props.secondsRemaining,
+  isChampionStarPlanet.value ? 0 : secondsRemaining.value,
 )
 const effectiveEnragePercent = computed<number>(() =>
-  isChampionStarPlanet.value ? 0 : props.enragePercent,
+  isChampionStarPlanet.value ? 0 : enragePercent.value,
 )
 
 const arenaEl = ref<HTMLDivElement | null>(null)
@@ -246,14 +260,14 @@ function triggerHit(hitMs: number, shakeMs: number) {
 
 function handleClick(event: MouseEvent) {
   if (!isMounted) return
-  if (!props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired) return
+  if (!activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired) return
   bossStore.dealClickDamage()
-  spawnFloat(props.activeBoss.clickDamagePerHit ?? 1, event.clientX, event.clientY)
+  spawnFloat(activeBoss.value.clickDamagePerHit ?? 1, event.clientX, event.clientY)
   triggerHit(160, 320)
 }
 
 function handleChampionHit() {
-  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+  if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
     return
   bossStore.dealDamage(1)
   triggerHit(140, 280)
@@ -261,7 +275,7 @@ function handleChampionHit() {
 }
 
 function handleChampionUlt() {
-  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+  if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
     return
   bossStore.dealDamage(5)
   triggerHit(280, 520)
@@ -278,7 +292,7 @@ const ULT_EVERY = 5
 const ULT_ANIM_MS = 3400
 
 function fireAttack(i: number) {
-  if (!isMounted || !props.activeBoss || props.activeBoss.defeated || props.activeBoss.expired)
+  if (!isMounted || !activeBoss.value || activeBoss.value.defeated || activeBoss.value.expired)
     return
   attackCounts[i] = (attackCounts[i] ?? 0) + 1
   const count = attackCounts[i]
@@ -298,12 +312,12 @@ function fireAttack(i: number) {
 
 function startAttackCycles() {
   stopAttackCycles()
-  if (!props.activeBoss) return
-  props.teamChampions.forEach((_, i) => {
+  if (!activeBoss.value) return
+  teamChampions.value.forEach((_, i) => {
     attackCounts[i] = 0
     ultActives[i] = false
   })
-  props.teamChampions.forEach((_, i) => {
+  teamChampions.value.forEach((_, i) => {
     const initialDelay = i * STAGGER_MS + IMPACT_OFFSET_MS
     _hitTimeouts.push(
       window.setTimeout(() => {
@@ -343,7 +357,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => props.activeBoss?.planetId,
+  () => activeBoss.value?.planetId,
   (newId) => {
     if (!newId || !isMounted) return
     bossImage.value = pickRandomBossImage()
@@ -351,7 +365,7 @@ watch(
 )
 
 watch(
-  () => [props.teamChampions.length, props.activeBoss?.planetId] as const,
+  () => [teamChampions.value.length, activeBoss.value?.planetId] as const,
   () => {
     if (!isMounted) return
     startAttackCycles()

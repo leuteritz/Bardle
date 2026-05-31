@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import { SHOP_ITEMS } from '@/config/items'
-import type { ChampionRole, ItemCategory, RoleAbilityDetail, RoleStat, SlotEquipment, ShopItem, TraitDefinition } from '@/types'
+import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
+import { getChampionRoles } from '@/config/championRoles'
+import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
+import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
+import type { ChampionRole, ItemCategory, SlotEquipment, ShopItem } from '@/types'
 import ChampionInfoHeader from './ChampionInfoHeader.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
@@ -14,40 +22,51 @@ import SynergiesPanelComponent from './SynergiesPanelComponent.vue'
 import EquipmentSlotBarComponent from './EquipmentSlotBarComponent.vue'
 import SecondaryChampionsPanelComponent from './SecondaryChampionsPanelComponent.vue'
 
-interface Props {
-  activeChampion: string | null
-  splashImageUrl: string
-  activeRole: string
-  roleKey: ChampionRole
-  roleColor: string
-  roleImage: string
-  abilityCompact: string
-  abilityDetails: RoleAbilityDetail[]
-  roleStats: RoleStat[]
-  championTraits: TraitDefinition[]
-  origin: string | null
-  originColor: string
-  activeSecondaries: (string | null)[]
-  activeSlotIndex: number
-  currentEquipment: SlotEquipment
-  headerSlots: (string | null)[]
-  secondarySlots: (string | null)[][]
-  roleFilteredChampions: string[]
-  doneExpeditionCount: number
-  openPickerToken: number
-  openPickerSubSlot: number
-  closeToken: number
-}
+const ROLES = ROLE_DEFS.map((r) => r.label)
+const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
+const ROLE_INDEX = Object.fromEntries(ROLE_DEFS.map((r, i) => [r.key, i])) as Partial<Record<ChampionRole, number>>
+const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  selectChampion: [champion: string, subSlot: number]
-  clearSecondary: [roleIndex: number, subIndex: number, event: Event]
-  shopRoleChange: [role: ChampionRole | 'all']
-}>()
-
+const battleStore = useBattleStore()
 const itemStore = useItemStore()
+const uiStore = useUiStore()
+const expeditionStore = useExpeditionStore()
+
+const { headerSlots, secondarySlots } = storeToRefs(battleStore)
+const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
+
+const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
+const activeChampion = computed(() => headerSlots.value[activeSlotIndex.value])
+const activeSecondaries = computed(() => secondarySlots.value[activeSlotIndex.value] ?? [null, null])
+const currentEquipment = computed(() => itemStore.slotEquipment[activeSlotIndex.value])
+
+const activeRole = computed(() => ROLES[activeSlotIndex.value])
+const roleKey = computed(() => ROLE_MAP[activeRole.value] as ChampionRole)
+const activeRoleDef = computed(() => ROLE_BY_KEY[roleKey.value])
+
+const splashImageUrl = computed(() =>
+  activeChampion.value ? battleStore.getChampionImage(activeChampion.value) : '',
+)
+const roleColor = computed(() => ROLE_COLORS[activeRole.value])
+const roleImage = computed(() => activeRoleDef.value?.image ?? '')
+const abilityCompact = computed(() => activeRoleDef.value?.abilityCompact ?? '')
+const abilityDetails = computed(() => activeRoleDef.value?.abilityDetails ?? [])
+const roleStats = computed(() => (ROLE_BY_KEY[roleKey.value]?.stats ?? []) as import('@/types').RoleStat[])
+const championTraits = computed(() =>
+  (CHAMPION_TRAITS[activeChampion.value ?? ''] ?? []).map((id) => TRAIT_BY_ID[id]),
+)
+const origin = computed(() => getChampionOrigin(activeChampion.value ?? '') ?? null)
+const originColor = computed(() => getOriginColor(activeChampion.value ?? ''))
+
+const roleFilteredChampions = computed(() => {
+  const internalRole = ROLE_MAP[activeRole.value]
+  if (!internalRole) return availableChampions.value
+  return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
+})
+
+const doneExpeditionCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
 
 const parallaxX = ref(0)
 const parallaxY = ref(0)
@@ -70,8 +89,8 @@ const internalSubSlot = ref(-1)
 const selectedCategory = ref<ItemCategory | null>(null)
 
 const pickerTitle = computed(() => {
-  if (internalSubSlot.value === -1) return `${props.activeRole} — Main`
-  return `${props.activeRole} — Secondary ${internalSubSlot.value + 1}`
+  if (internalSubSlot.value === -1) return `${activeRole.value} — Main`
+  return `${activeRole.value} — Secondary ${internalSubSlot.value + 1}`
 })
 
 const categoryItems = computed<ShopItem[]>(() => {
@@ -79,21 +98,23 @@ const categoryItems = computed<ShopItem[]>(() => {
   const cat = selectedCategory.value
   return SHOP_ITEMS.filter((item) => {
     if (item.category !== cat) return false
-    const equippedHere = props.currentEquipment[cat as keyof SlotEquipment] === item.id
+    const equippedHere = currentEquipment.value[cat as keyof SlotEquipment] === item.id
     return equippedHere || itemStore.availableCount(item.id) > 0
   })
 })
 
 watch(
-  () => props.openPickerToken,
+  () => uiStore.rolesOpenToken,
   () => {
-    panelMode.value = 'champion-picker'
-    internalSubSlot.value = props.openPickerSubSlot
+    if (uiStore.rolesActiveSubSlot >= 0) {
+      internalSubSlot.value = uiStore.rolesActiveSubSlot
+      panelMode.value = 'champion-picker'
+    }
   },
 )
 
 watch(
-  () => props.closeToken,
+  () => uiStore.rolesActiveSlot,
   () => {
     activePanel.value = null
     if (panelMode.value !== 'main') {
@@ -104,12 +125,9 @@ watch(
   },
 )
 
-watch(
-  () => props.roleKey,
-  (role) => {
-    if (activePanel.value === 'shop') shopRole.value = role
-  },
-)
+watch(roleKey, (role) => {
+  if (activePanel.value === 'shop') shopRole.value = role
+})
 
 function closeActiveModal() {
   activePanel.value = null
@@ -165,28 +183,35 @@ function closePanel() {
 }
 
 function handleSelect(champion: string) {
-  emit('selectChampion', champion, internalSubSlot.value)
+  if (internalSubSlot.value === -1) {
+    battleStore.setHeaderSlot(activeSlotIndex.value, champion)
+  } else {
+    battleStore.setSecondarySlot(activeSlotIndex.value, internalSubSlot.value, champion)
+  }
   panelMode.value = 'main'
   internalSubSlot.value = -1
 }
 
 function clearSecondary(roleIndex: number, subIndex: number, event: Event) {
   event.stopPropagation()
-  emit('clearSecondary', roleIndex, subIndex, event)
+  battleStore.clearSecondarySlot(roleIndex, subIndex)
 }
 
 function handleEquip(itemId: string) {
   const cat = selectedCategory.value!
-  if (props.currentEquipment[cat as keyof SlotEquipment] === itemId) {
-    itemStore.unequipItem(props.activeSlotIndex, cat)
+  if (currentEquipment.value[cat as keyof SlotEquipment] === itemId) {
+    itemStore.unequipItem(activeSlotIndex.value, cat)
   } else {
-    itemStore.equipItem(props.activeSlotIndex, itemId)
+    itemStore.equipItem(activeSlotIndex.value, itemId)
   }
 }
 
 function handleShopRoleChange(role: ChampionRole | 'all') {
   shopRole.value = role
-  emit('shopRoleChange', role)
+  if (role !== 'all') {
+    const idx = ROLE_INDEX[role]
+    if (idx !== undefined) uiStore.setRolesActiveSlot(idx)
+  }
 }
 
 function isHighlighted(champion: string | null | undefined): boolean {

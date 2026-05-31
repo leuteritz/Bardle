@@ -10,7 +10,6 @@
         :ry="tierOrbitDimensions[i].ry"
         :tiltDeg="tierOrbitDimensions[i].tiltDeg"
         :visible="tierIsBehind[i]"
-        :sunRadius="planetShopStore.currentSunRadius"
       />
     </template>
   </svg>

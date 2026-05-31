@@ -47,13 +47,6 @@
 
             <BossArenaSection
               v-if="activeBoss"
-              :is-galaxy-boss="isGalaxyBoss"
-              :boss-h-p-percent="bossStore.bossHPPercent"
-              :seconds-remaining="secondsRemaining"
-              :enrage-percent="enragePercent"
-              :team-champions="teamChampions"
-              :get-champion-image="battleStore.getChampionImage"
-              :active-boss="activeBoss"
               @shake="handleShake"
             />
 
@@ -97,22 +90,12 @@
 
           <!-- Section 2: Rewards (~20%) -->
           <div class="sf-rewards-wrap">
-            <BossRewardSection
-              v-if="activeBoss"
-              :is-galaxy-boss="isGalaxyBoss"
-              :reward-slots="rewardSlots"
-              :home-planet-champion="homePlanetChampion"
-              :home-planet-champion-image="homePlanetChampionImage"
-            />
+            <BossRewardSection v-if="activeBoss" />
           </div>
 
           <!-- Section 3: Planet list (~20%, scrollbar) -->
           <div class="sf-planet-list-wrap">
-            <BossPlanetList
-              :planet-queue="starGroupStore.starFightPlanetQueue"
-              :active-index="currentIndex"
-              :is-galaxy-boss="isGalaxyBoss"
-            />
+            <BossPlanetList />
           </div>
         </div>
 
@@ -167,7 +150,6 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import { NS, drawPlanet } from '@/utils/planetDraw'
@@ -178,7 +160,6 @@ import BossPlanetList from '@/components/idle/planet/BossPlanetList.vue'
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
-const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
 // ── Reactive values ───────────────────────────────────────────────────────
@@ -199,29 +180,6 @@ onUnmounted(() => {
 // ── Computed ──────────────────────────────────────────────────────────────
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
-const currentIndex = computed(() => starGroupStore.starFightCurrentIndex)
-const teamChampions = computed<string[]>(() => battleStore.selectedChampions.slice(0, 4))
-const rewardSlots = computed(() => activeBoss.value?.rewardSlots ?? [])
-
-const homePlanetChampion = computed(() => activeBoss.value?.homePlanetChampion ?? null)
-const homePlanetChampionImage = computed(() => {
-  const name = homePlanetChampion.value
-  if (!name) return null
-  return name === 'Bard' ? '/img/BardAbilities/Bard.png' : `/img/champion/${name}.jpg`
-})
-
-const secondsRemaining = computed(() => {
-  const boss = activeBoss.value
-  if (!boss) return 0
-  return Math.max(0, Math.ceil((boss.enrageTimerMs - (now.value - boss.startTime)) / 1000))
-})
-
-const enragePercent = computed(() => {
-  const boss = activeBoss.value
-  if (!boss) return 0
-  const remaining = Math.max(0, boss.enrageTimerMs - (now.value - boss.startTime))
-  return (remaining / boss.enrageTimerMs) * 100
-})
 
 const starTypeLabel = computed(() => {
   const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
