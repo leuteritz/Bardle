@@ -564,7 +564,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   height: 100%;
 }
 .header-icon-img {
-  height: clamp(56px, 4.2vw, 115px);
+  height: clamp(44px, 3.36vw, 92px);
   width: auto;
   aspect-ratio: 1 / 1;
   object-fit: contain;
@@ -579,9 +579,9 @@ onUnmounted(() => resizeObserver?.disconnect())
 .header-icon-btn:active .header-icon-img {
   transform: scale(0.94);
 }
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .header-icon-img {
-    height: clamp(28px, 5vh, 44px);
+    height: clamp(44px, 5vh, 56px);
   }
 }
 
