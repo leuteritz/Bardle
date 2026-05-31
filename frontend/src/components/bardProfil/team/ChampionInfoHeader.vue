@@ -63,7 +63,6 @@ function getOriginIcon(o: string | null): string {
             class="orbit-role-img"
             @error="onImgError"
           />
-          <span class="orbit-role-name">{{ roleLabel }}</span>
           <span class="orbit-role-desc">{{ abilityCompact }}</span>
         </div>
         <div class="orbit-ability-detail">
@@ -197,19 +196,6 @@ function getOriginIcon(o: string | null): string {
   opacity: 0.85;
   flex-shrink: 0;
   filter: drop-shadow(0 0 4px rgba(200, 144, 64, 0.55));
-}
-.orbit-role-name {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.9);
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding: 1px 5px;
-  background: rgba(200, 144, 64, 0.08);
-  border: 1px solid rgba(200, 144, 64, 0.2);
-  border-radius: 3px;
 }
 .orbit-role-desc {
   font-size: 11px;

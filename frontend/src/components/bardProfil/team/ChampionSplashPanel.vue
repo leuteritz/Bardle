@@ -104,6 +104,13 @@ watch(
   },
 )
 
+watch(
+  () => props.roleKey,
+  (role) => {
+    if (activePanel.value === 'shop') shopRole.value = role
+  },
+)
+
 function closeActiveModal() {
   activePanel.value = null
   if (panelMode.value !== 'main') {
@@ -264,7 +271,7 @@ function onImgError(e: Event) {
       <button
         class="action-bar-btn"
         :class="{ 'action-bar-btn--active': activePanel === 'shop' }"
-        @click.stop="openShop('all')"
+        @click.stop="openShop(roleKey)"
       >
         <span class="action-bar-icon">⚔</span>
         <span class="action-bar-label">Shop</span>

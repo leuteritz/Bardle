@@ -38,7 +38,7 @@
             class="trait-chip"
             :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
             :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
-            @click="activeTrait = trait.id; setActiveRole('all')"
+            @click="activeTrait = trait.id"
           >
             <Icon :icon="trait.icon" class="trait-chip-icon" />
             {{ trait.name }}
@@ -53,7 +53,7 @@
               class="trait-chip"
               :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
               :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
-              @click="activeTrait = origin.origin; setActiveRole('all')"
+              @click="activeTrait = origin.origin"
             >
               <Icon :icon="origin.icon" class="trait-chip-icon" />
               {{ origin.origin }}
@@ -122,17 +122,6 @@
 
           <!-- Content -->
           <div class="relative z-10 flex flex-col justify-between h-full p-2">
-            <!-- Rollen oben rechts -->
-            <div class="flex flex-wrap self-end justify-end gap-1">
-              <span
-                v-for="role in getChampionRoles(champion.name)"
-                :key="role"
-                class="px-2 py-0.5 role-tag"
-              >
-                {{ role }}
-              </span>
-            </div>
-
             <!-- Unterer Bereich -->
             <div class="flex flex-col gap-2 mt-auto">
               <!-- Name -->
@@ -546,16 +535,6 @@ export default defineComponent({
 /* ── Shimmer ── */
 .card-shimmer {
   background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.07), transparent);
-}
-
-/* ── Role tag ── */
-.role-tag {
-  font-size: 9px;
-  font-weight: 600;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.55);
-  color: var(--rpg-text-muted);
-  border: 1px solid #333;
 }
 
 /* ── Champion name ── */
