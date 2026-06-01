@@ -88,11 +88,9 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const internalSubSlot = ref(-1)
 const selectedCategory = ref<ItemCategory | null>(null)
+const selectorTab = ref<'main' | 'ally1' | 'ally2'>('main')
+const TAB_SUBSLOT: Record<string, number> = { main: -1, ally1: 0, ally2: 1 }
 
-const pickerTitle = computed(() => {
-  if (internalSubSlot.value === -1) return `${activeRole.value} — Main`
-  return `${activeRole.value} — Secondary ${internalSubSlot.value + 1}`
-})
 
 const categoryItems = computed<ShopItem[]>(() => {
   if (!selectedCategory.value) return []
@@ -169,7 +167,13 @@ function closeInlinePanel() { activePanel.value = null }
 function openChampionPicker(subSlot: number = -1) {
   activePanel.value = null
   internalSubSlot.value = subSlot
+  selectorTab.value = subSlot === 0 ? 'ally1' : subSlot === 1 ? 'ally2' : 'main'
   panelMode.value = 'champion-picker'
+}
+
+function onSelectorTabChange(tab: 'main' | 'ally1' | 'ally2') {
+  selectorTab.value = tab
+  internalSubSlot.value = TAB_SUBSLOT[tab]
 }
 
 function openItemPicker(cat: ItemCategory) {
@@ -476,27 +480,26 @@ function onImgError(e: Event) {
       </div>
     </Transition>
 
-    <Transition name="modal-pop">
+    <Transition name="champion-selector">
       <div
         v-if="panelMode === 'champion-picker'"
-        class="modal-backdrop"
+        class="champion-selector-panel"
         @click.stop
-        @click.self="closePanel"
       >
-        <div class="modal-panel modal-panel--lg" @click.stop>
-          <button class="modal-close-btn" @click="closePanel">✕</button>
-          <ChampionSelectPanel
-            class="modal-content"
-            :active-role="activeRole"
-            :picker-title="pickerTitle"
-            :role-filtered-champions="roleFilteredChampions"
-            :header-slots="headerSlots"
-            :secondary-slots="secondarySlots"
-            :active-slot-index="activeSlotIndex"
-            :active-sub-slot="internalSubSlot"
-            @select="handleSelect"
-          />
-        </div>
+        <button class="champion-selector-close" @click="closePanel">✕</button>
+
+        <ChampionSelectPanel
+          class="champion-selector-content"
+          :active-role="activeRole"
+          :selector-tab="selectorTab"
+          :role-filtered-champions="roleFilteredChampions"
+          :header-slots="headerSlots"
+          :secondary-slots="secondarySlots"
+          :active-slot-index="activeSlotIndex"
+          :active-sub-slot="internalSubSlot"
+          @select="handleSelect"
+          @tab-change="onSelectorTabChange"
+        />
       </div>
     </Transition>
 
@@ -1115,6 +1118,69 @@ function onImgError(e: Event) {
   transform: rotate(180deg);
 }
 
+/* ══ CHAMPION SELECTOR PANEL ══ */
+.champion-selector-panel {
+  position: absolute;
+  top: var(--action-bar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 6, 2, 0.97);
+  border-top: 2px solid #c89040;
+  overflow: hidden;
+}
+.champion-selector-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: rgba(200, 144, 64, 0.55);
+  background: rgba(14, 10, 4, 0.92);
+  border: 1px solid rgba(92, 51, 16, 0.65);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.champion-selector-close:hover {
+  color: #e8c040;
+  border-color: #c89040;
+  background: rgba(30, 16, 6, 0.97);
+}
+.champion-selector-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ══ CHAMPION SELECTOR TRANSITION (slide left → right) ══ */
+.champion-selector-enter-active {
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.champion-selector-leave-active {
+  transition: transform 0.25s cubic-bezier(0.55, 0, 1, 0.45);
+}
+.champion-selector-enter-from,
+.champion-selector-leave-to {
+  transform: translateX(-100%);
+}
+.champion-selector-enter-to,
+.champion-selector-leave-from {
+  transform: translateX(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel-toggle,
   .panel-collapse-all,
@@ -1128,6 +1194,15 @@ function onImgError(e: Event) {
   .inline-panel-enter-from,
   .inline-panel-leave-to {
     clip-path: none !important;
+    opacity: 0;
+  }
+  .champion-selector-enter-active,
+  .champion-selector-leave-active {
+    transition: opacity 0.15s ease !important;
+  }
+  .champion-selector-enter-from,
+  .champion-selector-leave-to {
+    transform: none !important;
     opacity: 0;
   }
 }

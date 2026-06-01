@@ -8,30 +8,27 @@ const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 const props = withDefaults(
   defineProps<{
     activeRole: string
-    pickerTitle?: string
     roleFilteredChampions: string[]
     headerSlots: (string | null)[]
     secondarySlots?: (string | null)[][]
     activeSlotIndex: number
     activeSubSlot?: number
+    selectorTab?: 'main' | 'ally1' | 'ally2'
   }>(),
   {
-    pickerTitle: '',
     secondarySlots: () => [[null, null], [null, null], [null, null], [null, null], [null, null]],
     activeSubSlot: -1,
+    selectorTab: 'main',
   },
 )
 
 const emit = defineEmits<{
   select: [champion: string]
+  'tab-change': [tab: 'main' | 'ally1' | 'ally2']
 }>()
 
 const battleStore = useBattleStore()
 const searchQuery = ref('')
-
-const headerTitle = computed(() =>
-  props.pickerTitle ? props.pickerTitle : `${props.activeRole} — Select Champion`,
-)
 
 const filteredChampions = computed(() => {
   const list = searchQuery.value
@@ -69,9 +66,21 @@ function onImgError(e: Event) {
 
 <template>
   <div class="csp-root">
-    <!-- ── Header ── -->
-    <div class="csp-header">
-      <span class="csp-title">{{ headerTitle }}</span>
+    <!-- ── Tabs ── -->
+    <div class="csp-tabs">
+      <button
+        v-for="tab in [
+          { id: 'main',  label: 'Main' },
+          { id: 'ally1', label: 'Ally 1' },
+          { id: 'ally2', label: 'Ally 2' },
+        ]"
+        :key="tab.id"
+        class="csp-tab"
+        :class="{ 'csp-tab--active': selectorTab === tab.id }"
+        @click="emit('tab-change', tab.id as 'main' | 'ally1' | 'ally2')"
+      >
+        {{ tab.label }}
+      </button>
     </div>
 
     <!-- ── Search ── -->
@@ -148,26 +157,42 @@ function onImgError(e: Event) {
   overflow: hidden;
 }
 
-/* ── Header ── */
-.csp-header {
+/* ── Tabs ── */
+.csp-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px 7px;
+  gap: 4px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.5);
-  flex-shrink: 0;
   background: #1e1006;
+  flex-shrink: 0;
 }
-
-.csp-title {
-  font-size: 10px;
+.csp-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold-bright);
-  line-height: 1;
+  color: rgba(200, 144, 64, 0.55);
+  background: rgba(14, 10, 4, 0.85);
+  border: 1px solid rgba(92, 51, 16, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-
+.csp-tab:hover {
+  color: #e8c040;
+  border-color: rgba(122, 78, 32, 0.8);
+}
+.csp-tab--active {
+  color: #f0d870;
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+}
 
 /* ── Search ── */
 .csp-search-row {
@@ -180,7 +205,7 @@ function onImgError(e: Event) {
 }
 
 .csp-search-icon {
-  font-size: 11px;
+  font-size: 14px;
   opacity: 0.4;
   flex-shrink: 0;
 }
@@ -190,9 +215,9 @@ function onImgError(e: Event) {
   background: #181208;
   border: 1px solid #3a2510;
   border-radius: 4px;
-  padding: 5px 10px;
+  padding: 7px 12px;
   color: var(--gold-bright);
-  font-size: 11px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.15s;
   min-width: 0;
@@ -206,7 +231,7 @@ function onImgError(e: Event) {
 }
 
 .csp-search-count {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--gold-dim);
   flex-shrink: 0;
