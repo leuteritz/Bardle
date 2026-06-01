@@ -6,15 +6,14 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
-import { SHOP_ITEMS } from '@/config/items'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { getChampionRoles } from '@/config/championRoles'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
-import type { ChampionRole, ItemCategory, SlotEquipment, ShopItem } from '@/types'
+import type { ChampionRole, ItemCategory, SlotEquipment } from '@/types'
 import ChampionInfoHeader from './ChampionInfoHeader.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
-import ItemPickerPanel from '../roles/ItemPickerPanel.vue'
+import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
 import ExpeditionActiveComponent from './expedition/ExpeditionActiveComponent.vue'
@@ -92,15 +91,6 @@ const selectorTab = ref<'main' | 'ally1' | 'ally2'>('main')
 const TAB_SUBSLOT: Record<string, number> = { main: -1, ally1: 0, ally2: 1 }
 
 
-const categoryItems = computed<ShopItem[]>(() => {
-  if (!selectedCategory.value) return []
-  const cat = selectedCategory.value
-  return SHOP_ITEMS.filter((item) => {
-    if (item.category !== cat) return false
-    const equippedHere = currentEquipment.value[cat as keyof SlotEquipment] === item.id
-    return equippedHere || itemStore.availableCount(item.id) > 0
-  })
-})
 
 watch(
   () => uiStore.rolesOpenToken,
@@ -202,10 +192,9 @@ function clearSecondary(roleIndex: number, subIndex: number, event: Event) {
   battleStore.clearSecondarySlot(roleIndex, subIndex)
 }
 
-function handleEquip(itemId: string) {
-  const cat = selectedCategory.value!
-  if (currentEquipment.value[cat as keyof SlotEquipment] === itemId) {
-    itemStore.unequipItem(activeSlotIndex.value, cat)
+function handleEquipFromPicker(itemId: string, category: ItemCategory) {
+  if (currentEquipment.value[category] === itemId) {
+    itemStore.unequipItem(activeSlotIndex.value, category)
   } else {
     itemStore.equipItem(activeSlotIndex.value, itemId)
   }
@@ -503,23 +492,19 @@ function onImgError(e: Event) {
       </div>
     </Transition>
 
-    <Transition name="modal-pop">
+    <Transition name="equipment-picker">
       <div
         v-if="panelMode === 'item-picker' && selectedCategory"
-        class="modal-backdrop"
+        class="equipment-picker-panel"
         @click.stop
-        @click.self="closePanel"
       >
-        <div class="modal-panel modal-panel--sm" @click.stop>
-          <button class="modal-close-btn" @click="closePanel">✕</button>
-          <ItemPickerPanel
-            class="modal-content"
-            :selected-category="selectedCategory"
-            :category-items="categoryItems"
-            :current-equipment="currentEquipment"
-            @equip="handleEquip"
-          />
-        </div>
+        <button class="champion-selector-close" @click="closePanel">✕</button>
+        <EquipmentPickerPanel
+          :initial-category="selectedCategory"
+          :current-equipment="currentEquipment"
+          @equip="handleEquipFromPicker"
+          @close="closePanel"
+        />
       </div>
     </Transition>
   </div>
@@ -1121,7 +1106,7 @@ function onImgError(e: Event) {
 /* ══ CHAMPION SELECTOR PANEL ══ */
 .champion-selector-panel {
   position: absolute;
-  top: var(--action-bar-h);
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
@@ -1205,5 +1190,43 @@ function onImgError(e: Event) {
     transform: none !important;
     opacity: 0;
   }
+  .equipment-picker-enter-active,
+  .equipment-picker-leave-active {
+    transition: opacity 0.15s ease !important;
+  }
+  .equipment-picker-enter-from,
+  .equipment-picker-leave-to {
+    transform: none !important;
+    opacity: 0;
+  }
+}
+
+/* ══ EQUIPMENT PICKER PANEL ══ */
+.equipment-picker-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ══ EQUIPMENT PICKER TRANSITION (slide bottom → top) ══ */
+.equipment-picker-enter-active {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.equipment-picker-leave-active {
+  transition: transform 0.25s cubic-bezier(0.55, 0, 1, 0.45);
+}
+.equipment-picker-enter-from,
+.equipment-picker-leave-to {
+  transform: translateY(100%);
+}
+.equipment-picker-enter-to,
+.equipment-picker-leave-from {
+  transform: translateY(0);
 }
 </style>
