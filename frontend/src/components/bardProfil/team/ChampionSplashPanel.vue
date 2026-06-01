@@ -421,7 +421,6 @@ function onImgError(e: Event) {
         class="inline-panel"
         @click.stop
       >
-        <div class="inline-panel-gold-line" />
         <button class="inline-panel-close" @click="closeInlinePanel">✕</button>
 
         <div v-if="activePanel === 'expedition'" class="inline-panel-tab-bar">
@@ -485,7 +484,6 @@ function onImgError(e: Event) {
         @click.self="closePanel"
       >
         <div class="modal-panel modal-panel--lg" @click.stop>
-          <div class="modal-gold-line" />
           <button class="modal-close-btn" @click="closePanel">✕</button>
           <ChampionSelectPanel
             class="modal-content"
@@ -510,7 +508,6 @@ function onImgError(e: Event) {
         @click.self="closePanel"
       >
         <div class="modal-panel modal-panel--sm" @click.stop>
-          <div class="modal-gold-line" />
           <button class="modal-close-btn" @click="closePanel">✕</button>
           <ItemPickerPanel
             class="modal-content"
@@ -749,12 +746,8 @@ function onImgError(e: Event) {
   display: flex;
   flex-direction: column;
   background: rgba(8, 6, 2, 0.93);
+  border-top: 1px solid #c89040;
   overflow: hidden;
-}
-.inline-panel-gold-line {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 .inline-panel-close {
   position: absolute;
@@ -842,10 +835,9 @@ function onImgError(e: Event) {
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 4px solid #7a4e20;
+  border: 1px solid #c89040;
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
+    0 0 0 1px #5c3310,
     0 32px 80px rgba(0, 0, 0, 0.92);
   background: #111008;
   border-radius: 4px;
@@ -862,11 +854,6 @@ function onImgError(e: Event) {
 .modal-panel--lg {
   width: min(660px, 94%);
   height: min(90%, 750px);
-}
-.modal-gold-line {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 .modal-close-btn {
   position: absolute;
