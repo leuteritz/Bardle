@@ -180,6 +180,7 @@ function fillTeamWithRandomChampions() {
   })
 
   planetShopStore.adminFillRandomRoles()
+  itemStore.adminUnlockAllItems()
   itemStore.adminFillRandomEquipment()
 }
 

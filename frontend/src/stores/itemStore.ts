@@ -117,6 +117,14 @@ export const useItemStore = defineStore('item', {
       this._recalculateCPS()
     },
 
+    adminUnlockAllItems(): void {
+      for (const item of SHOP_ITEMS) {
+        if (!this.ownedItems[item.id]) {
+          this.ownedItems[item.id] = 1
+        }
+      }
+    },
+
     adminFillRandomEquipment(): void {
       const categories: ItemCategory[] = ['weapon', 'armor', 'artefact']
       for (let i = 0; i < 5; i++) {
