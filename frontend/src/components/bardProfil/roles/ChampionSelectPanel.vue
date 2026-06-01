@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
+import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -29,13 +31,65 @@ const emit = defineEmits<{
 
 const battleStore = useBattleStore()
 const searchQuery = ref('')
+const activeTrait = ref<string>('all')
+const traitFilterOpen = ref(false)
+
+const availableTraits = computed(() => {
+  const seen = new Set<string>()
+  for (const name of props.roleFilteredChampions) {
+    for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
+  }
+  return TRAIT_DEFINITIONS.filter((t) => seen.has(t.id))
+})
+
+const availableOrigins = computed(() => {
+  const seen = new Set<string>()
+  for (const name of props.roleFilteredChampions) {
+    const o = getChampionOrigin(name)
+    if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
+  }
+  return (Object.values(ORIGIN_SYNERGIES) as Array<{ origin: string; name: string; icon: string; color: string }>)
+    .filter((o) => seen.has(o.origin))
+    .sort((a, b) => a.origin.localeCompare(b.origin))
+})
+
+const searchMatchedTraits = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return new Set<string>()
+  const matched = new Set<string>(
+    TRAIT_DEFINITIONS.filter((t) => t.name.toLowerCase().includes(q)).map((t) => t.id),
+  )
+  for (const origin of Object.keys(ORIGIN_SYNERGIES)) {
+    if (origin.toLowerCase().includes(q)) matched.add(origin)
+  }
+  return matched
+})
+const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
 
 const filteredChampions = computed(() => {
-  const list = searchQuery.value
-    ? props.roleFilteredChampions.filter((c) =>
-        c.toLowerCase().includes(searchQuery.value.toLowerCase()),
-      )
-    : props.roleFilteredChampions
+  let list = props.roleFilteredChampions
+
+  if (activeTrait.value !== 'all') {
+    list = list.filter((c) => {
+      const traitMatch = (CHAMPION_TRAITS[c] ?? []).includes(activeTrait.value as never)
+      const originMatch = getChampionOrigin(c) === activeTrait.value
+      return traitMatch || originMatch
+    })
+  }
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim()
+    list = list.filter((c) => {
+      const nameMatch = c.toLowerCase().includes(q)
+      const traitMatch = (CHAMPION_TRAITS[c] ?? []).some((tid) => {
+        const def = TRAIT_DEFINITIONS.find((t) => t.id === tid)
+        return def?.name.toLowerCase().includes(q)
+      })
+      const originMatch = (getChampionOrigin(c) ?? '').toLowerCase().includes(q)
+      return nameMatch || traitMatch || originMatch
+    })
+  }
+
   return [...list].sort((a, b) => a.localeCompare(b))
 })
 
@@ -95,6 +149,57 @@ function onImgError(e: Event) {
       <span class="csp-search-count">
         {{ filteredChampions.length }}<span class="csp-count-sep">/</span>{{ roleFilteredChampions.length }}
       </span>
+    </div>
+
+    <!-- ── Trait/Origin Filter ── -->
+    <div class="trait-filter-section">
+      <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
+        <span class="trait-filter-title">Filter</span>
+        <Icon
+          :icon="traitFilterOpen ? 'game-icons:plain-arrow' : 'game-icons:return-arrow'"
+          class="trait-chevron"
+        />
+      </div>
+      <div v-if="traitFilterOpen" class="trait-filter-body">
+        <button
+          v-show="!hasSearchTraitMatch"
+          class="trait-chip"
+          :class="{ 'trait-chip--active': activeTrait === 'all' }"
+          @click="activeTrait = 'all'"
+        >Alle</button>
+
+        <template v-if="availableTraits.length">
+          <div class="filter-group-label">Traits</div>
+          <button
+            v-for="trait in availableTraits"
+            :key="trait.id"
+            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+            :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
+            @click="activeTrait = trait.id"
+          >
+            <Icon :icon="trait.icon" class="trait-chip-icon" />
+            {{ trait.name }}
+          </button>
+        </template>
+
+        <template v-if="availableOrigins.length">
+          <div class="filter-group-label">Origin</div>
+          <button
+            v-for="origin in availableOrigins"
+            :key="origin.origin"
+            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
+            :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
+            @click="activeTrait = origin.origin"
+          >
+            <Icon :icon="origin.icon" class="trait-chip-icon" />
+            {{ origin.origin }}
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- ── Grid ── -->
@@ -231,15 +336,109 @@ function onImgError(e: Event) {
 }
 
 .csp-search-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gold-dim);
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--gold);
   flex-shrink: 0;
   letter-spacing: 0.04em;
 }
 .csp-count-sep {
   opacity: 0.3;
   margin: 0 1px;
+}
+
+/* ── Trait filter section ── */
+.trait-filter-section {
+  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
+  background: #161410;
+  flex-shrink: 0;
+}
+
+.trait-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  cursor: pointer;
+  background: #1e1006;
+  border-bottom: 1px solid #3e2a0a;
+  user-select: none;
+  transition: background 0.15s;
+}
+.trait-filter-header:hover {
+  background: #261408;
+}
+
+.trait-filter-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #c89040;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trait-chevron {
+  width: 14px;
+  height: 14px;
+  color: #7a5020;
+}
+
+.trait-filter-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 12px;
+}
+
+.trait-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid #3e2a0a;
+  background: #1c1a10;
+  color: var(--rpg-text-dim);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+.trait-chip:hover {
+  border-color: var(--rpg-wood-mid);
+  color: var(--rpg-text-muted);
+}
+.trait-chip--active {
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
+  border-color: var(--chip-color, #e8c040);
+  color: var(--chip-color, #e8c040);
+}
+
+.trait-chip-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.88);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+
+.filter-group-label {
+  width: 100%;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.5);
+  padding: 3px 2px 2px;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.35);
+  margin: 3px 0 2px;
+}
+.filter-group-label:first-child {
+  margin-top: 0;
 }
 
 /* ── Body / Grid ── */
