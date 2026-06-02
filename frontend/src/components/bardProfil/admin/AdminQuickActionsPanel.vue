@@ -12,12 +12,14 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
-import { SUN_GROWTH_STAGES } from '@/config/constants'
+import { STAR_PHASE_DATA } from '@/config/constants'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
+const solarStore = useSolarUpgradeStore()
 const starGroupStore = useStarGroupStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
@@ -198,26 +200,10 @@ function resetAllCooldowns() {
   roleBehaviorStore.jungleBuffCooldownMs = 0
 }
 
-// ── Sun Simulator ─────────────────────────────────────────────────────────────
+// ── Sun Phase Override (Debug) ─────────────────────────────────────────────────
 
-const sunSimMax = SUN_GROWTH_STAGES[SUN_GROWTH_STAGES.length - 1].chimesThreshold
-const simChimes = ref(gameStore.chimes)
-
-const simStageInfo = computed(() => {
-  const v = simChimes.value
-  let stage = SUN_GROWTH_STAGES[0]
-  for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
-    if (v >= SUN_GROWTH_STAGES[i].chimesThreshold) { stage = SUN_GROWTH_STAGES[i]; break }
-  }
-  const next = SUN_GROWTH_STAGES[stage.stage + 1] ?? null
-  return { stage, next }
-})
-
-function onSunSimInput(raw: string) {
-  const v = Math.max(0, Math.min(sunSimMax, parseInt(raw) || 0))
-  simChimes.value = v
-  gameStore.chimes = v
-  gameStore.totalChimesEarned = v
+function setStarPhase(phase: number) {
+  solarStore.starPhase = Math.max(0, Math.min(5, phase))
 }
 </script>
 
@@ -343,25 +329,26 @@ function onSunSimInput(raw: string) {
       </button>
     </div>
 
-    <!-- Sun Stage Simulator -->
+    <!-- Star Phase Override -->
     <div class="sun-sim mt-3">
-      <div class="admin-section-label mb-2">☀ Sun Stage Simulator</div>
-      <input
-        type="range"
-        class="sun-sim-slider"
-        :min="0"
-        :max="sunSimMax"
-        :step="100"
-        :value="simChimes"
-        @input="onSunSimInput(($event.target as HTMLInputElement).value)"
-      />
-      <div class="sun-sim-info">
-        <span class="sun-sim-stage">Stage {{ simStageInfo.stage.stage }} — {{ simStageInfo.stage.label }}</span>
-        <span class="sun-sim-radius">{{ simStageInfo.stage.radius }}px</span>
-        <span v-if="simStageInfo.next" class="sun-sim-next">
-          Next: {{ $formatNumber(simStageInfo.next.chimesThreshold) }} chimes
+      <div class="admin-section-label mb-2">
+        ✦ Star Phase Override
+        <span class="sun-sim-current-phase">
+          (Current: Phase {{ solarStore.starPhase }} — {{ STAR_PHASE_DATA[solarStore.starPhase].name }})
         </span>
-        <span v-else class="sun-sim-max">MAX</span>
+      </div>
+      <div class="star-phase-btns">
+        <button
+          v-for="(phase, idx) in STAR_PHASE_DATA"
+          :key="idx"
+          class="star-phase-btn"
+          :class="{ 'star-phase-btn--active': solarStore.starPhase === idx }"
+          :style="{ '--phase-color': phase.phasePrimary }"
+          @click="setStarPhase(idx)"
+        >
+          <span class="phase-btn-num">{{ idx }}</span>
+          <span class="phase-btn-name">{{ phase.name }}</span>
+        </button>
       </div>
     </div>
   </div>
@@ -668,62 +655,62 @@ function onSunSimInput(raw: string) {
   padding: 0.5rem 0.75rem;
 }
 
-.sun-sim-slider {
-  width: 100%;
-  appearance: none;
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right, #c89040, #5c3310);
-  outline: none;
-  cursor: pointer;
-  margin-bottom: 0.4rem;
-}
-
-.sun-sim-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #e8c040;
-  border: 2px solid #7a4e20;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
-}
-
-.sun-sim-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #e8c040;
-  border: 2px solid #7a4e20;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.6);
-}
-
-.sun-sim-info {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  font-family: var(--rpg-font-mono);
-  font-size: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.sun-sim-stage {
-  color: #e8c040;
-  font-weight: 700;
-}
-
-.sun-sim-radius {
-  color: #a08030;
-}
-
-.sun-sim-next {
+.sun-sim-current-phase {
   color: var(--rpg-text-dim);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
 }
 
-.sun-sim-max {
-  color: #e8c040;
-  letter-spacing: 0.1em;
+.star-phase-btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.star-phase-btn {
+  padding: 10px 6px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  border: 2px solid #3e200a;
+  background: #111008;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.phase-btn-num {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  color: inherit;
+}
+
+.phase-btn-name {
+  font-size: 8px;
+  font-weight: 700;
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: inherit;
+}
+
+.star-phase-btn:hover {
+  border-color: var(--phase-color);
+  color: var(--phase-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--phase-color) 40%, transparent);
+}
+
+.star-phase-btn--active {
+  background: color-mix(in srgb, var(--phase-color) 14%, #111008);
+  border-color: var(--phase-color);
+  color: var(--phase-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--phase-color) 55%, transparent);
 }
 </style>

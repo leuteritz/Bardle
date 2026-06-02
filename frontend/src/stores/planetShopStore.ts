@@ -8,9 +8,11 @@ import {
   PLANET_SLOT_ORBITS,
   PLANET_HARVEST_INTERVAL_TICKS,
   PLANET_SLOT_MAX_HP,
+  STAR_PHASE_DATA,
   SUN_GROWTH_STAGES,
   BOSS_DAMAGE_REDUCTION_CAP,
 } from '@/config/constants'
+import { useSolarUpgradeStore } from './solarUpgradeStore'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -166,23 +168,11 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
   getters: {
     currentSunStage(): number {
-      const gameStore = useGameStore()
-      for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
-        if (gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[i].chimesThreshold) return i
-      }
-      return 0
+      return useSolarUpgradeStore().starPhase
     },
 
     currentSunRadius(): number {
-      const gameStore = useGameStore()
-      let stage = 0
-      for (let i = SUN_GROWTH_STAGES.length - 1; i >= 0; i--) {
-        if (gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[i].chimesThreshold) {
-          stage = i
-          break
-        }
-      }
-      return SUN_GROWTH_STAGES[stage].radius
+      return STAR_PHASE_DATA[useSolarUpgradeStore().starPhase].radius
     },
 
     purchasedSlots(state): PlanetSlot[] {

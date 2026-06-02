@@ -817,12 +817,79 @@ export const SOLAR_CPS_BASE_COST = 50
 export const SOLAR_CPS_MULTIPLIER = 1.5
 export const SOLAR_DMG_BASE_COST = 200
 export const SOLAR_DMG_MULTIPLIER = 1.6
-export const SOLAR_MAX_LEVELS = 5
+export const SOLAR_MAX_LEVELS = 6
 export const SOLAR_HP_PER_LEVEL = 25
 export const SOLAR_CPS_PER_LEVEL = 20
 export const SOLAR_CPC_PER_LEVEL = 2
 export const SOLAR_CPS_FLIGHT_BONUS = 0.1
 export const SOLAR_DMG_BONUS = 0.25
+
+// Star Evolution Phases (replaces chimes-threshold radius system)
+export interface StarPhaseData {
+  name: string
+  radius: number
+  core: string
+  mid: string
+  edge: string
+  glow1: string
+  glow2: string
+  glow3: string
+  phasePrimary: string
+  phaseGlow: string
+  factor: number
+  pulseSpeed: string
+}
+
+export const STAR_PHASE_DATA: StarPhaseData[] = [
+  {
+    name: 'Protostar',
+    radius: 38,
+    core: '#fff0e0', mid: '#ffd4a3', edge: '#cc5500',
+    glow1: '#ff8c42', glow2: '#cc5500', glow3: '#882200',
+    phasePrimary: '#ffd4a3', phaseGlow: '#ff8c42',
+    factor: 0.9, pulseSpeed: '4s',
+  },
+  {
+    name: 'Main Sequence (Young)',
+    radius: 50,
+    core: '#ffffff', mid: '#a8d8ff', edge: '#3a70c0',
+    glow1: '#7bb8ff', glow2: '#4a90d9', glow3: '#2050a0',
+    phasePrimary: '#a8d8ff', phaseGlow: '#7bb8ff',
+    factor: 1.0, pulseSpeed: '5s',
+  },
+  {
+    name: 'Main Sequence (Mature)',
+    radius: 64,
+    core: '#fffce0', mid: '#fff176', edge: '#d4a000',
+    glow1: '#ffd600', glow2: '#cc9900', glow3: '#886600',
+    phasePrimary: '#fff176', phaseGlow: '#ffd600',
+    factor: 1.1, pulseSpeed: '5s',
+  },
+  {
+    name: 'Subgiant',
+    radius: 84,
+    core: '#fff0c0', mid: '#ffb347', edge: '#cc5500',
+    glow1: '#ff8c00', glow2: '#cc5500', glow3: '#882200',
+    phasePrimary: '#ffb347', phaseGlow: '#ff8c00',
+    factor: 1.2, pulseSpeed: '4s',
+  },
+  {
+    name: 'Red Giant',
+    radius: 110,
+    core: '#ffb0b0', mid: '#ff4d4d', edge: '#990000',
+    glow1: '#cc0000', glow2: '#880000', glow3: '#440000',
+    phasePrimary: '#ff4d4d', phaseGlow: '#cc0000',
+    factor: 1.35, pulseSpeed: '3s',
+  },
+  {
+    name: 'White Dwarf',
+    radius: 30,
+    core: '#ffffff', mid: '#e8f4ff', edge: '#80b8e8',
+    glow1: '#b3d9ff', glow2: '#80b0ee', glow3: '#4080cc',
+    phasePrimary: '#e8f4ff', phaseGlow: '#b3d9ff',
+    factor: 0.85, pulseSpeed: '2s',
+  },
+]
 
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them

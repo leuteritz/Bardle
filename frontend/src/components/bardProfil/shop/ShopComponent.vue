@@ -56,13 +56,19 @@
           </template>
         </svg>
 
-        <!-- Sun (unchanged logic) -->
+        <!-- Sun -->
         <div class="sun-wrapper" :style="sunStyle">
           <div class="sun-trail" />
           <div
             class="cosmic-sun"
             :class="{ 'sun-burst': purchaseFlash }"
             :style="{ transform: `scale(${currentStage.factor})` }"
+          />
+          <!-- Next phase preview overlay — shown when evolve is ready -->
+          <div
+            v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
+            class="next-phase-preview"
+            :style="nextPhasePreviewStyle"
           />
           <div class="sun-hp-text">
             <span class="hp-label">HP</span>
@@ -71,6 +77,25 @@
             </span>
             <span class="hp-max">/ {{ playerStore.maxHP }}</span>
           </div>
+        </div>
+
+        <!-- Evolve Star button — centered below the sun -->
+        <div
+          v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
+          class="evolve-btn-wrap"
+        >
+          <button
+            class="evolve-btn"
+            :class="{ 'evolve-btn--upgrading': solarStore.isUpgrading }"
+            :style="evolveBtnStyle"
+            :disabled="solarStore.isUpgrading"
+            @click="handleUpgradeStar"
+          >
+            <span v-if="!solarStore.isUpgrading">
+              ✦ Evolve to {{ nextStage.name }}
+            </span>
+            <span v-else class="evolve-in-progress">Evolving…</span>
+          </button>
         </div>
 
         <!-- Branch icon + info card -->
@@ -115,8 +140,14 @@
               <span class="info-stat-val">{{ solarStore.statDisplay(branch.id, solarStore.branchLevel(branch.id)) }}</span>
             </div>
 
-            <!-- Next cost or MAXED -->
-            <template v-if="solarStore.branchLevel(branch.id) < SOLAR_MAX_LEVELS">
+            <!-- Next cost, capped notice, or MAXED -->
+            <template v-if="solarStore.branchLevel(branch.id) >= SOLAR_MAX_LEVELS">
+              <div class="info-maxed">✦ MAXED</div>
+            </template>
+            <template v-else-if="solarStore.branchLevel(branch.id) >= solarStore.maxAllowedLevel">
+              <div class="info-capped">⟳ Sync others first</div>
+            </template>
+            <template v-else>
               <div class="info-next-row">
                 <span class="info-arrow">→</span>
                 <span class="info-stat-next">{{ solarStore.statDisplay(branch.id, solarStore.branchLevel(branch.id) + 1) }}</span>
@@ -128,7 +159,6 @@
                 {{ formatNumber(solarStore.branchCost(branch.id)) }} G
               </div>
             </template>
-            <div v-else class="info-maxed">✦ MAXED</div>
           </div>
         </div>
 
@@ -143,7 +173,7 @@ import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { formatNumber } from '@/config/numberFormat'
-import { SOLAR_MAX_LEVELS } from '@/config/constants'
+import { SOLAR_MAX_LEVELS, STAR_PHASE_DATA } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
@@ -170,43 +200,9 @@ const BRANCHES: BranchDef[] = [
   { id: 'dmgPerClick',     name: 'DMG / Click',    icon: 'game-icons:fist',            angleDeg: 198, color: '#c060a0', statLabel: 'Dmg Mult.' },
 ]
 
-// ── Sun stage system ──────────────────────────────────────────────────────────
-interface SunStageData {
-  min: number
-  core: string
-  mid: string
-  edge: string
-  glow1: string
-  glow2: string
-  glow3: string
-  factor: number
-}
-
-const SUN_STAGES: SunStageData[] = [
-  { min: 0,  core: '#fffce0', mid: '#f5a020', edge: '#8b2800', glow1: '#e06808', glow2: '#c84000', glow3: '#802000', factor: 1.0  },
-  { min: 3,  core: '#ffd060', mid: '#ff8810', edge: '#c03000', glow1: '#e04000', glow2: '#b02800', glow3: '#701800', factor: 1.08 },
-  { min: 7,  core: '#ffe080', mid: '#ff6600', edge: '#aa2000', glow1: '#cc4000', glow2: '#992800', glow3: '#661800', factor: 1.15 },
-  { min: 12, core: '#ffffff', mid: '#ffd040', edge: '#e06000', glow1: '#ffaa00', glow2: '#cc7000', glow3: '#883800', factor: 1.22 },
-  { min: 17, core: '#ffffff', mid: '#ff88cc', edge: '#cc2080', glow1: '#ee44aa', glow2: '#cc2080', glow3: '#881050', factor: 1.30 },
-  { min: 22, core: '#ffc0e0', mid: '#cc2090', edge: '#880060', glow1: '#aa0060', glow2: '#770040', glow3: '#440028', factor: 1.38 },
-  { min: 25, core: '#e8b8ff', mid: '#9030e8', edge: '#4010a0', glow1: '#6010c0', glow2: '#480090', glow3: '#280060', factor: 1.45 },
-]
-
-const totalUpgradeLevel = computed(() =>
-  solarStore.flightSpeedLevel +
-  solarStore.maxHpLevel +
-  solarStore.chimesPerClickLevel +
-  solarStore.chimesPerSecondLevel +
-  solarStore.dmgPerClickLevel
-)
-
-const currentStage = computed((): SunStageData => {
-  let stage = SUN_STAGES[0]
-  for (const s of SUN_STAGES) {
-    if (totalUpgradeLevel.value >= s.min) stage = s
-  }
-  return stage
-})
+// ── Star phase system (driven by solarStore.starPhase) ────────────────────────
+const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
+const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 5)])
 
 const sunStyle = computed(() => {
   const s = currentStage.value
@@ -221,6 +217,16 @@ const sunStyle = computed(() => {
     '--trail-color': s.glow1,
   }
 })
+
+const evolveBtnStyle = computed(() => ({
+  '--evolve-primary': nextStage.value.phasePrimary,
+  '--evolve-glow': nextStage.value.phaseGlow,
+}))
+
+const nextPhasePreviewStyle = computed(() => ({
+  background: `radial-gradient(circle at 38% 35%, ${nextStage.value.core} 0%, ${nextStage.value.mid} 45%, ${nextStage.value.edge} 100%)`,
+  boxShadow: `0 0 40px 16px ${nextStage.value.glow1}88, 0 0 80px 30px ${nextStage.value.glow2}55`,
+}))
 
 // ── Purchase flash ────────────────────────────────────────────────────────────
 const purchaseFlash = ref(false)
@@ -275,6 +281,7 @@ function getNodePos(angleDeg: number, dist: number): Record<string, string> {
 function getIconClass(branchId: SolarBranchId): string {
   const level = solarStore.branchLevel(branchId)
   if (level >= SOLAR_MAX_LEVELS) return 'icon-circle--maxed'
+  if (level >= solarStore.maxAllowedLevel) return 'icon-circle--capped'
   if (solarStore.canAfford(branchId)) return 'icon-circle--affordable'
   if (level > 0) return 'icon-circle--partial'
   return 'icon-circle--empty'
@@ -286,12 +293,17 @@ function isCardBelow(angleDeg: number): boolean {
 }
 
 function handleClick(branchId: SolarBranchId): void {
+  if (solarStore.branchLevel(branchId) >= solarStore.maxAllowedLevel) return
   const beforeLevel = solarStore.branchLevel(branchId)
   solarStore.buyBranch(branchId)
   if (solarStore.branchLevel(branchId) > beforeLevel) {
     purchaseFlash.value = true
     setTimeout(() => { purchaseFlash.value = false }, 500)
   }
+}
+
+function handleUpgradeStar(): void {
+  solarStore.upgradeStar()
 }
 </script>
 
@@ -704,6 +716,116 @@ function handleClick(branchId: SolarBranchId): void {
   color: #e8c040;
   text-align: center;
   letter-spacing: 1px;
+}
+
+.info-capped {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 200, 80, 0.55);
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.icon-circle--capped {
+  border-color: #4a3010;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.icon-circle--capped:hover {
+  transform: none;
+}
+
+/* ══════════════════════════════════════════════════
+   NEXT PHASE PREVIEW OVERLAY
+══════════════════════════════════════════════════ */
+.next-phase-preview {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+  animation: phase-preview-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+  transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes phase-preview-pulse {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(1.06); }
+}
+
+/* ══════════════════════════════════════════════════
+   EVOLVE STAR BUTTON
+══════════════════════════════════════════════════ */
+.evolve-btn-wrap {
+  position: absolute;
+  top: calc(50% + 115px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+}
+
+.evolve-btn {
+  padding: 9px 22px;
+  border: 2px solid #7a4e20;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, var(--evolve-primary), var(--evolve-glow));
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 0 18px color-mix(in srgb, var(--evolve-glow) 60%, transparent),
+    0 0 40px color-mix(in srgb, var(--evolve-glow) 30%, transparent);
+  color: #111008;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  animation: evolve-btn-glow 2s ease-in-out infinite;
+}
+
+.evolve-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 0 28px color-mix(in srgb, var(--evolve-glow) 85%, transparent),
+    0 0 60px color-mix(in srgb, var(--evolve-glow) 45%, transparent);
+}
+
+.evolve-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.evolve-btn--upgrading {
+  animation: evolve-btn-upgrading 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes evolve-btn-glow {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px #3e200a,
+      0 0 18px color-mix(in srgb, var(--evolve-glow) 60%, transparent),
+      0 0 40px color-mix(in srgb, var(--evolve-glow) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #3e200a,
+      0 0 28px color-mix(in srgb, var(--evolve-glow) 85%, transparent),
+      0 0 60px color-mix(in srgb, var(--evolve-glow) 50%, transparent);
+  }
+}
+
+@keyframes evolve-btn-upgrading {
+  from { opacity: 0.6; transform: scale(0.98); }
+  to   { opacity: 1;   transform: scale(1.02); }
+}
+
+.evolve-in-progress {
+  letter-spacing: 2px;
 }
 
 /* ══════════════════════════════════════════════════

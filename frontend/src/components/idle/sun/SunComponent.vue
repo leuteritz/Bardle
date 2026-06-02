@@ -140,6 +140,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useGameStore } from '@/stores/gameStore'
+import { STAR_PHASE_DATA } from '@/config/constants'
 
 interface DynamicRay {
   id: number
@@ -430,9 +431,18 @@ export default defineComponent({
       cancelAnimationFrame(animFrame)
     })
 
-    const sunContainerVars = computed(
-      (): Record<string, string> => ({ '--sun-r': `${planetShopStore.currentSunRadius}px` }),
-    )
+    const sunContainerVars = computed((): Record<string, string> => {
+      const phase = STAR_PHASE_DATA[planetShopStore.currentSunStage]
+      return {
+        '--sun-r': `${planetShopStore.currentSunRadius}px`,
+        '--phase-primary': phase.phasePrimary,
+        '--phase-glow': phase.phaseGlow,
+        '--phase-core': phase.core,
+        '--phase-mid': phase.mid,
+        '--phase-edge': phase.edge,
+        '--pulse-speed': phase.pulseSpeed,
+      }
+    })
 
     return {
       combatStore,
@@ -477,9 +487,9 @@ export default defineComponent({
   background: radial-gradient(
     circle,
     transparent 28%,
-    rgba(255, 138, 18, 0.04) 48%,
-    rgba(255, 110, 0, 0.03) 64%,
-    rgba(200, 80, 0, 0.015) 80%,
+    color-mix(in srgb, var(--phase-glow) 4%, transparent) 48%,
+    color-mix(in srgb, var(--phase-glow) 3%, transparent) 64%,
+    color-mix(in srgb, var(--phase-glow) 1%, transparent) 80%,
     transparent 100%
   );
   animation: corona-breathe 8s ease-in-out infinite;
@@ -494,10 +504,10 @@ export default defineComponent({
   background: radial-gradient(
     circle,
     transparent 18%,
-    rgba(255, 182, 60, 0.05) 34%,
-    rgba(255, 205, 92, 0.11) 47%,
-    rgba(255, 152, 30, 0.045) 63%,
-    rgba(200, 100, 0, 0.02) 79%,
+    color-mix(in srgb, var(--phase-primary) 5%, transparent) 34%,
+    color-mix(in srgb, var(--phase-primary) 11%, transparent) 47%,
+    color-mix(in srgb, var(--phase-glow) 4%, transparent) 63%,
+    color-mix(in srgb, var(--phase-glow) 2%, transparent) 79%,
     transparent 100%
   );
   animation: corona-breathe 5.5s ease-in-out infinite;
@@ -539,19 +549,19 @@ export default defineComponent({
   background:
     radial-gradient(
       circle at 42% 36%,
-      /* ← war 38% 32%, näher an Mitte */ rgba(255, 255, 236, 0.92) 0%,
-      rgba(255, 247, 190, 0.78) 13%,
+      color-mix(in srgb, white 92%, var(--phase-core)) 0%,
+      color-mix(in srgb, white 78%, var(--phase-core)) 13%,
       transparent 26%
     ),
     radial-gradient(
       circle at 50% 50%,
-      rgba(255, 235, 120, 0.95) 0%,
-      rgba(255, 198, 50, 0.82) 38%,
-      rgba(230, 125, 12, 0.56) 68%,
-      rgba(150, 48, 0, 0.28) 88%,
+      color-mix(in srgb, var(--phase-core) 95%, transparent) 0%,
+      color-mix(in srgb, var(--phase-mid) 82%, transparent) 38%,
+      color-mix(in srgb, var(--phase-mid) 56%, transparent) 68%,
+      color-mix(in srgb, var(--phase-edge) 28%, transparent) 88%,
       transparent 100%
     );
-  animation: core-pulse 3.6s ease-in-out infinite;
+  animation: core-pulse var(--pulse-speed, 3.6s) ease-in-out infinite;
   filter: blur(1.6px);
   z-index: 5;
 }
@@ -730,9 +740,9 @@ export default defineComponent({
   background: radial-gradient(
     circle,
     transparent 56%,
-    rgba(255, 115, 25, 0.52) 65%,
-    rgba(220, 68, 10, 0.62) 72%,
-    rgba(170, 40, 0, 0.3) 81%,
+    color-mix(in srgb, var(--phase-glow) 52%, transparent) 65%,
+    color-mix(in srgb, var(--phase-glow) 62%, transparent) 72%,
+    color-mix(in srgb, var(--phase-edge, #802000) 30%, transparent) 81%,
     transparent 91%
   );
   animation: chrom-spin-rev 64s linear infinite reverse;
@@ -745,9 +755,9 @@ export default defineComponent({
   background: radial-gradient(
     circle,
     transparent 60%,
-    rgba(255, 132, 20, 0.28) 70%,
-    rgba(200, 60, 5, 0.4) 76%,
-    rgba(150, 30, 0, 0.2) 84%,
+    color-mix(in srgb, var(--phase-primary) 28%, transparent) 70%,
+    color-mix(in srgb, var(--phase-glow) 40%, transparent) 76%,
+    color-mix(in srgb, var(--phase-glow) 20%, transparent) 84%,
     transparent 93%
   );
   animation: chrom-spin-fwd 34s linear infinite;

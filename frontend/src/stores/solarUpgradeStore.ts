@@ -44,6 +44,8 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     chimesPerClickLevel: 0 as number,
     chimesPerSecondLevel: 0 as number,
     dmgPerClickLevel: 0 as number,
+    starPhase: 0 as number,
+    isUpgrading: false as boolean,
   }),
 
   getters: {
@@ -61,6 +63,24 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     },
     dmgMultiplier(): number {
       return 1 + this.dmgPerClickLevel * SOLAR_DMG_BONUS
+    },
+
+    minBranchLevel(state): number {
+      return Math.min(
+        state.flightSpeedLevel,
+        state.maxHpLevel,
+        state.chimesPerClickLevel,
+        state.chimesPerSecondLevel,
+        state.dmgPerClickLevel,
+      )
+    },
+
+    maxAllowedLevel(): number {
+      return Math.min(SOLAR_MAX_LEVELS, this.minBranchLevel + 1)
+    },
+
+    canUpgradeStar(): boolean {
+      return this.starPhase < 5 && this.minBranchLevel >= this.starPhase + 1 && !this.isUpgrading
     },
 
     branchLevel(state): (id: SolarBranchId) => number {
@@ -115,7 +135,11 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     canAfford(): (id: SolarBranchId) => boolean {
       return (id: SolarBranchId): boolean => {
         const gameStore = useGameStore()
-        return this.branchLevel(id) < SOLAR_MAX_LEVELS && gameStore.chimes >= this.branchCost(id)
+        return (
+          this.branchLevel(id) < SOLAR_MAX_LEVELS &&
+          this.branchLevel(id) < this.maxAllowedLevel &&
+          gameStore.chimes >= this.branchCost(id)
+        )
       }
     },
 
@@ -142,6 +166,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       const gameStore = useGameStore()
       const level = this.branchLevel(id)
       if (level >= SOLAR_MAX_LEVELS) return
+      if (level >= this.maxAllowedLevel) return
       const cost = this.branchCost(id)
       if (gameStore.chimes < cost) return
 
@@ -173,6 +198,16 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       if (id === 'chimesPerSecond' || id === 'flightSpeed') {
         useCpsStore().updateCurrentCPS(gameStore.chimesPerSecond)
       }
+    },
+
+    upgradeStar(): void {
+      if (!this.canUpgradeStar) return
+      this.isUpgrading = true
+      setTimeout(() => {
+        this.starPhase++
+        this.isUpgrading = false
+        console.log('[Bardle] Star evolved to phase', this.starPhase)
+      }, 2500)
     },
   },
 })
