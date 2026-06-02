@@ -1,6 +1,6 @@
 <template>
   <div class="shop-frame">
-    <!-- Animated star background -->
+    <!-- Animated star field -->
     <span
       v-for="star in stars"
       :key="star.id"
@@ -56,9 +56,14 @@
           </template>
         </svg>
 
-        <!-- Sun (unchanged) -->
-        <div class="sun-wrapper">
-          <div class="cosmic-sun" />
+        <!-- Sun (unchanged logic) -->
+        <div class="sun-wrapper" :style="sunStyle">
+          <div class="sun-trail" />
+          <div
+            class="cosmic-sun"
+            :class="{ 'sun-burst': purchaseFlash }"
+            :style="{ transform: `scale(${currentStage.factor})` }"
+          />
           <div class="sun-hp-text">
             <span class="hp-label">HP</span>
             <span class="hp-value" :class="{ 'hp-value--low': playerStore.isLow }">
@@ -89,7 +94,7 @@
             <span v-else class="icon-maxed-badge">MAX</span>
           </div>
 
-          <!-- Short connector line + info card -->
+          <!-- Info card -->
           <div class="branch-info" :class="isCardBelow(branch.angleDeg) ? 'branch-info--below' : 'branch-info--above'">
             <div class="info-name">{{ branch.name }}</div>
 
@@ -100,6 +105,7 @@
                 :key="n"
                 class="pip"
                 :class="n <= solarStore.branchLevel(branch.id) ? 'pip--filled' : 'pip--empty'"
+                :style="n <= solarStore.branchLevel(branch.id) ? { '--pip-color': branch.color } : {}"
               />
             </div>
 
@@ -132,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/playerStore'
@@ -157,47 +163,67 @@ interface BranchDef {
 }
 
 const BRANCHES: BranchDef[] = [
-  {
-    id: 'flightSpeed',
-    name: 'Flight Speed',
-    icon: 'game-icons:feathered-wing',
-    angleDeg: 270,
-    color: '#e8c040',
-    statLabel: 'CpS Mult.',
-  },
-  {
-    id: 'maxHp',
-    name: 'Max HP',
-    icon: 'game-icons:health-increase',
-    angleDeg: 342,
-    color: '#e05050',
-    statLabel: 'HP Bonus',
-  },
-  {
-    id: 'chimesPerClick',
-    name: 'Chimes / Click',
-    icon: 'game-icons:gold-nuggets',
-    angleDeg: 54,
-    color: '#52b830',
-    statLabel: 'CpC Bonus',
-  },
-  {
-    id: 'chimesPerSecond',
-    name: 'Chimes / Sec',
-    icon: 'game-icons:metronome',
-    angleDeg: 126,
-    color: '#e89840',
-    statLabel: 'CpS Bonus',
-  },
-  {
-    id: 'dmgPerClick',
-    name: 'DMG / Click',
-    icon: 'game-icons:fist',
-    angleDeg: 198,
-    color: '#c060a0',
-    statLabel: 'Dmg Mult.',
-  },
+  { id: 'flightSpeed',     name: 'Flight Speed',  icon: 'game-icons:feathered-wing',  angleDeg: 270, color: '#e8c040', statLabel: 'CpS Mult.' },
+  { id: 'maxHp',           name: 'Max HP',         icon: 'game-icons:health-increase', angleDeg: 342, color: '#e05050', statLabel: 'HP Bonus'  },
+  { id: 'chimesPerClick',  name: 'Chimes / Click', icon: 'game-icons:gold-nuggets',    angleDeg: 54,  color: '#52b830', statLabel: 'CpC Bonus' },
+  { id: 'chimesPerSecond', name: 'Chimes / Sec',   icon: 'game-icons:metronome',       angleDeg: 126, color: '#e89840', statLabel: 'CpS Bonus' },
+  { id: 'dmgPerClick',     name: 'DMG / Click',    icon: 'game-icons:fist',            angleDeg: 198, color: '#c060a0', statLabel: 'Dmg Mult.' },
 ]
+
+// ── Sun stage system ──────────────────────────────────────────────────────────
+interface SunStageData {
+  min: number
+  core: string
+  mid: string
+  edge: string
+  glow1: string
+  glow2: string
+  glow3: string
+  factor: number
+}
+
+const SUN_STAGES: SunStageData[] = [
+  { min: 0,  core: '#fffce0', mid: '#f5a020', edge: '#8b2800', glow1: '#e06808', glow2: '#c84000', glow3: '#802000', factor: 1.0  },
+  { min: 3,  core: '#ffd060', mid: '#ff8810', edge: '#c03000', glow1: '#e04000', glow2: '#b02800', glow3: '#701800', factor: 1.08 },
+  { min: 7,  core: '#ffe080', mid: '#ff6600', edge: '#aa2000', glow1: '#cc4000', glow2: '#992800', glow3: '#661800', factor: 1.15 },
+  { min: 12, core: '#ffffff', mid: '#ffd040', edge: '#e06000', glow1: '#ffaa00', glow2: '#cc7000', glow3: '#883800', factor: 1.22 },
+  { min: 17, core: '#ffffff', mid: '#ff88cc', edge: '#cc2080', glow1: '#ee44aa', glow2: '#cc2080', glow3: '#881050', factor: 1.30 },
+  { min: 22, core: '#ffc0e0', mid: '#cc2090', edge: '#880060', glow1: '#aa0060', glow2: '#770040', glow3: '#440028', factor: 1.38 },
+  { min: 25, core: '#e8b8ff', mid: '#9030e8', edge: '#4010a0', glow1: '#6010c0', glow2: '#480090', glow3: '#280060', factor: 1.45 },
+]
+
+const totalUpgradeLevel = computed(() =>
+  solarStore.flightSpeedLevel +
+  solarStore.maxHpLevel +
+  solarStore.chimesPerClickLevel +
+  solarStore.chimesPerSecondLevel +
+  solarStore.dmgPerClickLevel
+)
+
+const currentStage = computed((): SunStageData => {
+  let stage = SUN_STAGES[0]
+  for (const s of SUN_STAGES) {
+    if (totalUpgradeLevel.value >= s.min) stage = s
+  }
+  return stage
+})
+
+const sunStyle = computed(() => {
+  const s = currentStage.value
+  return {
+    '--sun-core': s.core,
+    '--sun-mid': s.mid,
+    '--sun-edge': s.edge,
+    '--sun-glow1': s.glow1,
+    '--sun-glow2': s.glow2,
+    '--sun-glow3': s.glow3,
+    '--trail-opacity': (solarStore.flightSpeedLevel / SOLAR_MAX_LEVELS).toFixed(2),
+    '--trail-color': s.glow1,
+  }
+})
+
+// ── Purchase flash ────────────────────────────────────────────────────────────
+const purchaseFlash = ref(false)
 
 // ── Static star field ─────────────────────────────────────────────────────────
 const stars = Array.from({ length: 70 }, (_, i) => {
@@ -218,14 +244,14 @@ const stars = Array.from({ length: 70 }, (_, i) => {
   }
 })
 
-// ── Computed drift duration tied to flight speed ───────────────────────────────
+// ── Drift speed tied to flight speed ─────────────────────────────────────────
 function starDriftDuration(starId: number): string {
   const base = 13 - solarStore.flightSpeedLevel * 1.8
   const jitter = (starId % 5) * 0.6
   return Math.max(2.5, base + jitter).toFixed(1) + 's'
 }
 
-// ── Helper functions ──────────────────────────────────────────────────────────
+// ── SVG helpers ───────────────────────────────────────────────────────────────
 function rad(deg: number): number {
   return (deg * Math.PI) / 180
 }
@@ -254,14 +280,18 @@ function getIconClass(branchId: SolarBranchId): string {
   return 'icon-circle--empty'
 }
 
-// info card appears below the icon for bottom-half branches (54°, 126°)
 function isCardBelow(angleDeg: number): boolean {
   const n = ((angleDeg % 360) + 360) % 360
   return n > 0 && n < 180
 }
 
 function handleClick(branchId: SolarBranchId): void {
+  const beforeLevel = solarStore.branchLevel(branchId)
   solarStore.buyBranch(branchId)
+  if (solarStore.branchLevel(branchId) > beforeLevel) {
+    purchaseFlash.value = true
+    setTimeout(() => { purchaseFlash.value = false }, 500)
+  }
 }
 </script>
 
@@ -279,7 +309,7 @@ function handleClick(branchId: SolarBranchId): void {
   box-shadow:
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
-    0 4px 20px rgba(0, 0, 0, 0.8);
+    0 4px 20px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   position: relative;
 }
@@ -312,6 +342,7 @@ function handleClick(branchId: SolarBranchId): void {
   align-items: center;
   justify-content: center;
   z-index: 1;
+  background: radial-gradient(ellipse 55% 55% at 50% 50%, rgba(255, 200, 60, 0.06) 0%, transparent 70%);
 }
 
 .arena-stage {
@@ -334,7 +365,7 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 /* ══════════════════════════════════════════════════
-   SUN (unchanged)
+   SUN
 ══════════════════════════════════════════════════ */
 .sun-wrapper {
   position: absolute;
@@ -349,41 +380,68 @@ function handleClick(branchId: SolarBranchId): void {
   z-index: 2;
 }
 
+.sun-trail {
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 48% 78% at 68% 50%,
+    transparent 32%,
+    var(--trail-color) 68%,
+    transparent 100%
+  );
+  opacity: var(--trail-opacity);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.8s ease;
+}
+
 .cosmic-sun {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 35%,
-    #fffce0 0%,
-    #ffd060 20%,
-    #f5a020 45%,
-    #e06808 70%,
-    #8b2800 100%
+    var(--sun-core) 0%,
+    color-mix(in srgb, var(--sun-core) 50%, var(--sun-mid)) 20%,
+    var(--sun-mid) 45%,
+    color-mix(in srgb, var(--sun-mid) 30%, var(--sun-edge)) 70%,
+    var(--sun-edge) 100%
   );
   box-shadow:
-    0 0 55px 22px rgba(245, 160, 30, 0.8),
-    0 0 120px 50px rgba(200, 80, 10, 0.55),
-    0 0 200px 90px rgba(150, 40, 0, 0.32),
-    0 0 300px 130px rgba(120, 30, 0, 0.16);
+    0 0 55px 22px color-mix(in srgb, var(--sun-glow1) 80%, transparent),
+    0 0 120px 50px color-mix(in srgb, var(--sun-glow1) 55%, transparent),
+    0 0 200px 90px color-mix(in srgb, var(--sun-glow2) 32%, transparent),
+    0 0 300px 130px color-mix(in srgb, var(--sun-glow3) 16%, transparent);
   animation: sun-pulse 3.2s ease-in-out infinite;
+  transition: transform 0.8s ease;
 }
 
 @keyframes sun-pulse {
   0%, 100% {
     box-shadow:
-      0 0 55px 22px rgba(245, 160, 30, 0.8),
-      0 0 120px 50px rgba(200, 80, 10, 0.55),
-      0 0 200px 90px rgba(150, 40, 0, 0.32),
-      0 0 300px 130px rgba(120, 30, 0, 0.16);
+      0 0 55px 22px color-mix(in srgb, var(--sun-glow1) 80%, transparent),
+      0 0 120px 50px color-mix(in srgb, var(--sun-glow1) 55%, transparent),
+      0 0 200px 90px color-mix(in srgb, var(--sun-glow2) 32%, transparent),
+      0 0 300px 130px color-mix(in srgb, var(--sun-glow3) 16%, transparent);
   }
   50% {
     box-shadow:
-      0 0 80px 36px rgba(255, 210, 50, 1),
-      0 0 170px 75px rgba(230, 100, 10, 0.78),
-      0 0 280px 125px rgba(180, 60, 0, 0.48),
-      0 0 400px 175px rgba(140, 40, 0, 0.22);
+      0 0 80px 36px color-mix(in srgb, var(--sun-glow1) 100%, transparent),
+      0 0 170px 75px color-mix(in srgb, var(--sun-glow1) 78%, transparent),
+      0 0 280px 125px color-mix(in srgb, var(--sun-glow2) 48%, transparent),
+      0 0 400px 175px color-mix(in srgb, var(--sun-glow3) 22%, transparent);
   }
+}
+
+.cosmic-sun.sun-burst {
+  animation: sun-burst 0.45s ease-out, sun-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes sun-burst {
+  0%   { filter: brightness(1) saturate(1); }
+  35%  { filter: brightness(2.4) saturate(1.8); }
+  100% { filter: brightness(1) saturate(1); }
 }
 
 .sun-hp-text {
@@ -532,11 +590,11 @@ function handleClick(branchId: SolarBranchId): void {
    INFO CARD
 ══════════════════════════════════════════════════ */
 .branch-info {
-  width: 130px;
+  width: 155px;
   background: #16140e;
   border: 2px solid #3e200a;
   border-radius: 4px;
-  padding: 6px 8px 7px;
+  padding: 8px 10px 9px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -555,7 +613,7 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 .info-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   color: #e8c040;
   text-align: center;
@@ -575,8 +633,8 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 .pip--filled {
-  background: #e8c040;
-  box-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
+  background: var(--pip-color, #e8c040);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--pip-color, #e8c040) 60%, transparent);
 }
 
 .pip--empty {
@@ -592,13 +650,13 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 .info-stat-label {
-  font-size: 9px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
 }
 
 .info-stat-val {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.75);
 }
@@ -621,7 +679,7 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 .info-cost {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   text-align: center;
   border-radius: 3px;
@@ -641,7 +699,7 @@ function handleClick(branchId: SolarBranchId): void {
 }
 
 .info-maxed {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   color: #e8c040;
   text-align: center;
