@@ -56,25 +56,26 @@ function getOriginIcon(o: string | null): string {
     </div>
     <div class="splash-role-orbit-list">
       <div class="orbit-ability-trigger">
-        <div class="orbit-role-row">
-          <img
-            :src="roleImage"
-            :alt="roleKey"
-            class="orbit-role-img"
-            @error="onImgError"
-          />
+        <div class="orbit-ability-card">
+          <div class="ability-icon-frame">
+            <img
+              :src="roleImage"
+              :alt="roleKey"
+              class="ability-role-img"
+              @error="onImgError"
+            />
+          </div>
           <span class="orbit-role-desc">{{ abilityCompact }}</span>
         </div>
-        <div class="orbit-ability-detail">
+        <div class="orbit-ability-tooltip">
           <div
             v-for="item in abilityDetails"
             :key="item.name"
-            class="ability-detail-row"
+            class="tooltip-row"
           >
-            <span class="ability-detail-name">{{ item.name }}</span>
-            <span class="ability-detail-sep">–</span>
-            <span class="ability-detail-desc">{{ item.desc }}</span>
-            <span v-if="item.value" class="ability-detail-value">{{ item.value }}</span>
+            <span class="tooltip-key">{{ item.name }}</span>
+            <span class="tooltip-sep">:</span>
+            <span class="tooltip-val">{{ item.value ?? item.desc }}</span>
           </div>
         </div>
       </div>
@@ -186,28 +187,107 @@ function getOriginIcon(o: string | null): string {
   padding-bottom: 6px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.4);
 }
-.orbit-role-row {
+.orbit-ability-trigger {
+  position: relative;
+  border-radius: 4px;
+  padding: 2px 0;
+  transition: background 0.15s;
+  cursor: default;
+}
+.orbit-ability-trigger:hover {
+  background: rgba(200, 144, 64, 0.06);
+}
+.orbit-ability-card {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
-.orbit-role-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  opacity: 0.85;
+.ability-icon-frame {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141410;
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(200, 144, 64, 0.35);
+  border-radius: 4px;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 4px rgba(200, 144, 64, 0.55));
+}
+.ability-role-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px rgba(200, 144, 64, 0.55));
 }
 .orbit-role-desc {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(200, 144, 64, 0.75);
+  color: rgba(200, 144, 64, 0.9);
   letter-spacing: 0.04em;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.orbit-ability-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  width: max-content;
+  min-width: 200px;
+  max-width: 290px;
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  padding: 8px 12px;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s,
+    transform 0.2s ease;
+  pointer-events: none;
+}
+.orbit-ability-trigger:hover .orbit-ability-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.tooltip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.25);
+}
+.tooltip-row:last-child {
+  border-bottom: none;
+}
+.tooltip-key {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(232, 192, 64, 0.9);
+  white-space: nowrap;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+.tooltip-sep {
+  font-size: 11px;
+  color: rgba(200, 144, 64, 0.35);
+  flex-shrink: 0;
+}
+.tooltip-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e8c040;
+  line-height: 1.4;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
 }
 .splash-role-fx-in-box {
   display: none;
@@ -233,66 +313,5 @@ function getOriginIcon(o: string | null): string {
   letter-spacing: 0.03em;
   text-align: right;
   white-space: nowrap;
-}
-.orbit-ability-trigger {
-  position: relative;
-  border-radius: 4px;
-  padding: 2px 0;
-  transition: background 0.15s;
-  cursor: default;
-}
-.orbit-ability-trigger:hover {
-  background: rgba(200, 144, 64, 0.06);
-}
-.orbit-ability-detail {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  padding: 0 4px;
-  transition:
-    max-height 0.25s ease,
-    opacity 0.2s ease;
-}
-.orbit-ability-trigger:hover .orbit-ability-detail {
-  max-height: 400px;
-  opacity: 1;
-}
-.ability-detail-row {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.2);
-}
-.ability-detail-row:last-child {
-  border-bottom: none;
-}
-.ability-detail-name {
-  font-size: 10px;
-  font-weight: 800;
-  color: rgba(232, 192, 64, 0.9);
-  white-space: nowrap;
-  min-width: 72px;
-  flex-shrink: 0;
-}
-.ability-detail-sep {
-  font-size: 10px;
-  color: rgba(200, 144, 64, 0.3);
-  flex-shrink: 0;
-}
-.ability-detail-desc {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(200, 144, 64, 0.6);
-  flex: 1;
-  line-height: 1.4;
-}
-.ability-detail-value {
-  font-size: 11px;
-  font-weight: 900;
-  color: #e8c040;
-  white-space: nowrap;
-  flex-shrink: 0;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.45);
 }
 </style>
