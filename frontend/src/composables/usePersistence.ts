@@ -10,8 +10,9 @@ import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useCpsStore } from '@/stores/cpsStore'
-import { usePlayerStore } from '@/stores/playerStore' // ← NEW
+import { usePlayerStore } from '@/stores/playerStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -34,8 +35,9 @@ export function usePersistence() {
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
     const galaxyStore = useGalaxyStore()
-    const playerStore = usePlayerStore() // ← NEW
+    const playerStore = usePlayerStore()
     const planetShopStore = usePlanetShopStore()
+    const solarStore = useSolarUpgradeStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -121,6 +123,7 @@ export function usePersistence() {
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
+        championTravelBaseDurationMs: galaxyStore.championTravelBaseDurationMs,
         searchingForGalaxyBoss: galaxyStore.searchingForGalaxyBoss,
         resourceStarActive: galaxyStore.resourceStarActive,
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
@@ -137,6 +140,13 @@ export function usePersistence() {
           role: s.role,
           slotConfig: s.slotConfig,
         })),
+      },
+      solar: {
+        flightSpeedLevel: solarStore.flightSpeedLevel,
+        maxHpLevel: solarStore.maxHpLevel,
+        chimesPerClickLevel: solarStore.chimesPerClickLevel,
+        chimesPerSecondLevel: solarStore.chimesPerSecondLevel,
+        dmgPerClickLevel: solarStore.dmgPerClickLevel,
       },
     }
 
@@ -201,9 +211,7 @@ export function usePersistence() {
         }
       }
 
-      // Recalculate derived CPS/CPC from restored building levels + abilities
-      gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
-      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+      // CPS/CPC recalculation deferred until after solarStore is restored (see below)
 
       // Restore battleStore
       if (saved.battle) {
@@ -311,6 +319,8 @@ export function usePersistence() {
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
           galaxyStore.championTravelDurationMs =
             gx.championTravelDurationMs ?? galaxyStore.championTravelDurationMs
+          galaxyStore.championTravelBaseDurationMs =
+            gx.championTravelBaseDurationMs ?? gx.championTravelDurationMs ?? galaxyStore.championTravelBaseDurationMs
         } else {
           galaxyStore.startChampionTravel()
         }
@@ -335,6 +345,20 @@ export function usePersistence() {
           }
         }
       }
+
+      // Restore solarUpgradeStore
+      const solarStore = useSolarUpgradeStore()
+      if (saved.solar) {
+        solarStore.flightSpeedLevel = saved.solar.flightSpeedLevel ?? 0
+        solarStore.maxHpLevel = saved.solar.maxHpLevel ?? 0
+        solarStore.chimesPerClickLevel = saved.solar.chimesPerClickLevel ?? 0
+        solarStore.chimesPerSecondLevel = saved.solar.chimesPerSecondLevel ?? 0
+        solarStore.dmgPerClickLevel = saved.solar.dmgPerClickLevel ?? 0
+      }
+
+      // Recalculate derived CPS/CPC after all levels (buildings + solar) are restored
+      gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
       // ── Offline Progress ─────────────────────────────────────────────────────
       const now = Date.now()
@@ -479,9 +503,13 @@ export function usePersistence() {
     itemStore.$reset()
     cpsStore.$reset()
 
-    // 7. Reset playerStore – reset HP/Life to initial value ← NEW
+    // 7. Reset playerStore – reset HP/Life to initial value
     const playerStore = usePlayerStore()
     playerStore.$reset()
+
+    // 7c. Reset solarUpgradeStore
+    const solarStoreR = useSolarUpgradeStore()
+    solarStoreR.$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

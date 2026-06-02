@@ -1,6 +1,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
+import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import {
   STAR_COUNT,
   WARP_SPEED_MAX,
@@ -12,6 +13,7 @@ import {
   STAR_BG_BASE_SPEED_MIN,
   STAR_BG_BASE_SPEED_RANGE,
   BACKGROUND_STAR_BLUE_BIAS,
+  SOLAR_STAR_SPEED_BONUS,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
 
@@ -1556,7 +1558,8 @@ export function useStarBackground() {
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
       speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
     } else {
-      speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : 1
+      const flightBonus = 1 + useSolarUpgradeStore().flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
+      speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : flightBonus
     }
 
     const w = starsContainer.value?.clientWidth ?? window.innerWidth

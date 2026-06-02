@@ -805,6 +805,25 @@ export const BATTLE_INITIAL_MMR = 1000
 export const BATTLE_DEFAULT_RANK_TIER = 'Silver'
 export const BATTLE_KILL_LOG_THROTTLE_MS = 3000
 
+// Solar Upgrade Tree
+export const SOLAR_STAR_SPEED_BONUS = 0.35
+export const SOLAR_FLIGHT_BASE_COST = 200
+export const SOLAR_FLIGHT_MULTIPLIER = 1.6
+export const SOLAR_HP_BASE_COST = 150
+export const SOLAR_HP_MULTIPLIER = 1.5
+export const SOLAR_CPC_BASE_COST = 50
+export const SOLAR_CPC_MULTIPLIER = 1.5
+export const SOLAR_CPS_BASE_COST = 50
+export const SOLAR_CPS_MULTIPLIER = 1.5
+export const SOLAR_DMG_BASE_COST = 200
+export const SOLAR_DMG_MULTIPLIER = 1.6
+export const SOLAR_MAX_LEVELS = 5
+export const SOLAR_HP_PER_LEVEL = 25
+export const SOLAR_CPS_PER_LEVEL = 20
+export const SOLAR_CPC_PER_LEVEL = 2
+export const SOLAR_CPS_FLIGHT_BONUS = 0.1
+export const SOLAR_DMG_BONUS = 0.25
+
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
 // to ensure uniqueness across the codebase.
@@ -895,4 +914,10 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:barbute', 'game-icons:campfire', 'game-icons:open-treasure-chest',
   // ChampionShop Filter Toggle
   'game-icons:plain-arrow', 'game-icons:return-arrow',
+  // Solar Upgrade Shop — branch icons
+  'game-icons:feathered-wing',   // Flight Speed
+  'game-icons:health-increase',  // Max HP
+  'game-icons:gold-nuggets',     // Chimes/Click
+  'game-icons:metronome',        // Chimes/Second
+  'game-icons:fist',             // DMG/Click
 ])

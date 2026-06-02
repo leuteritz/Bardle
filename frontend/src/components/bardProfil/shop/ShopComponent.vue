@@ -1,6 +1,6 @@
 <template>
   <div class="shop-frame">
-    <!-- Sternenhimmel über gesamte Komponente -->
+    <!-- Animated star background -->
     <span
       v-for="star in stars"
       :key="star.id"
@@ -11,26 +11,52 @@
         width: star.size + 'px',
         height: star.size + 'px',
         opacity: star.opacity,
+        '--drift-duration': starDriftDuration(star.id),
+        '--star-dx': star.dx + 'px',
+        '--star-dy': star.dy + 'px',
       }"
     />
 
-    <!-- ── Kaufmengen-Selector ── -->
-    <div class="selector-bar">
-      <button
-        v-for="opt in buyOptions"
-        :key="String(opt.value)"
-        class="selector-btn"
-        :class="{ 'selector-btn--active': shopStore.buyAmount === opt.value }"
-        @click="shopStore.setBuyAmount(opt.value)"
-      >
-        {{ opt.label }}
-      </button>
-    </div>
-
-    <!-- ── Kosmische Arena ── -->
+    <!-- Cosmic arena -->
     <div class="cosmic-arena">
       <div class="arena-stage">
-        <!-- Sonne + HP-Text -->
+
+        <!-- SVG branch rays -->
+        <svg class="branch-svg" viewBox="0 0 760 760" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter v-for="branch in BRANCHES" :key="'f-' + branch.id" :id="'glow-' + branch.id">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <template v-for="branch in BRANCHES" :key="branch.id + '-ray'">
+            <!-- Dim background ray -->
+            <line
+              :x1="svgPt(branch.angleDeg, SUN_EDGE_R).x"
+              :y1="svgPt(branch.angleDeg, SUN_EDGE_R).y"
+              :x2="svgPt(branch.angleDeg, ICON_DIST).x"
+              :y2="svgPt(branch.angleDeg, ICON_DIST).y"
+              stroke="#2a1a08"
+              stroke-width="5"
+              stroke-linecap="round"
+            />
+            <!-- Colored progress ray -->
+            <line
+              v-if="solarStore.branchLevel(branch.id) > 0"
+              :x1="svgPt(branch.angleDeg, SUN_EDGE_R).x"
+              :y1="svgPt(branch.angleDeg, SUN_EDGE_R).y"
+              :x2="svgPt(branch.angleDeg, ICON_DIST).x"
+              :y2="svgPt(branch.angleDeg, ICON_DIST).y"
+              :stroke="branch.color"
+              stroke-width="4"
+              stroke-linecap="round"
+              :opacity="0.25 + (solarStore.branchLevel(branch.id) / SOLAR_MAX_LEVELS) * 0.75"
+              :filter="`url(#glow-${branch.id})`"
+            />
+          </template>
+        </svg>
+
+        <!-- Sun (unchanged) -->
         <div class="sun-wrapper">
           <div class="cosmic-sun" />
           <div class="sun-hp-text">
@@ -42,214 +68,237 @@
           </div>
         </div>
 
-        <!-- Orbit-Positionen -->
+        <!-- Branch icon + info card -->
         <div
-          v-for="(upgrade, index) in shopStore.shopUpgrades"
-          :key="upgrade.id"
-          class="orbit-pos"
-          :style="getOrbitPos(index)"
+          v-for="branch in BRANCHES"
+          :key="branch.id + '-node'"
+          class="branch-node"
+          :style="getNodePos(branch.angleDeg, ICON_DIST)"
         >
+          <!-- Icon circle -->
           <div
-            class="orbit-card"
-            :class="{
-              'orbit-card--can': shopStore.canAffordUpgrade(upgrade),
-              'orbit-card--locked': !shopStore.canAffordUpgrade(upgrade),
-              'orbit-card--hovered': hoveredId === upgrade.id,
-            }"
-            :style="{ '--idx': index }"
-            @mouseenter="hoveredId = upgrade.id"
-            @mouseleave="hoveredId = null"
-            @click="shopStore.buyUpgrade(upgrade.id)"
+            class="icon-circle"
+            :class="getIconClass(branch.id)"
+            :style="{ '--branch-color': branch.color }"
+            @click="handleClick(branch.id)"
           >
-            <img :src="upgrade.icon" :alt="upgrade.name" class="card-icon" />
-            <div class="card-name">{{ upgrade.name }}</div>
-            <div class="card-level">Lv. {{ upgrade.level }}</div>
+            <Icon :icon="branch.icon" width="38" height="38" :style="{ color: branch.color }" />
+            <span v-if="solarStore.branchLevel(branch.id) < SOLAR_MAX_LEVELS" class="icon-level-badge">
+              {{ solarStore.branchLevel(branch.id) }}/{{ SOLAR_MAX_LEVELS }}
+            </span>
+            <span v-else class="icon-maxed-badge">MAX</span>
+          </div>
 
-            <div v-if="upgrade.baseCPS && upgrade.level > 0" class="card-stat card-stat--cps">
-              +{{ formatNumber(upgrade.baseCPS * upgrade.level) }} CpS
-            </div>
-            <div v-if="upgrade.baseCPC && upgrade.level > 0" class="card-stat card-stat--cpc">
-              +{{ formatNumber(upgrade.baseCPC * upgrade.level) }} CpC
-            </div>
+          <!-- Short connector line + info card -->
+          <div class="branch-info" :class="isCardBelow(branch.angleDeg) ? 'branch-info--below' : 'branch-info--above'">
+            <div class="info-name">{{ branch.name }}</div>
 
-            <div
-              class="card-buy"
-              :class="shopStore.canAffordUpgrade(upgrade) ? 'card-buy--can' : 'card-buy--cant'"
-              :style="
-                !shopStore.canAffordUpgrade(upgrade) ? { '--prog': getProgress(upgrade) + '%' } : {}
-              "
-            >
-              <span class="buy-cost">
-                {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} G
-              </span>
-              <span class="buy-qty">×{{ shopStore.getActualBuyAmount(upgrade) || 1 }}</span>
+            <!-- Level pips -->
+            <div class="info-pips">
+              <span
+                v-for="n in SOLAR_MAX_LEVELS"
+                :key="n"
+                class="pip"
+                :class="n <= solarStore.branchLevel(branch.id) ? 'pip--filled' : 'pip--empty'"
+              />
             </div>
 
-            <Transition name="tooltip-fade">
-              <div v-if="hoveredId === upgrade.id" class="card-tooltip">
-                <div class="tooltip-title">{{ upgrade.name }}</div>
-                <div v-if="upgrade.baseCPS" class="tooltip-line">
-                  +{{ upgrade.baseCPS }} CpS pro Stufe
-                </div>
-                <div v-if="upgrade.baseCPC" class="tooltip-line">
-                  +{{ upgrade.baseCPC }} CpC pro Stufe
-                </div>
-                <div class="tooltip-cost">
-                  Kosten: {{ formatNumber(shopStore.getTotalUpgradeCost(upgrade)) }} G
-                </div>
+            <!-- Stat row -->
+            <div class="info-stat-row">
+              <span class="info-stat-label">{{ branch.statLabel }}:</span>
+              <span class="info-stat-val">{{ solarStore.statDisplay(branch.id, solarStore.branchLevel(branch.id)) }}</span>
+            </div>
+
+            <!-- Next cost or MAXED -->
+            <template v-if="solarStore.branchLevel(branch.id) < SOLAR_MAX_LEVELS">
+              <div class="info-next-row">
+                <span class="info-arrow">→</span>
+                <span class="info-stat-next">{{ solarStore.statDisplay(branch.id, solarStore.branchLevel(branch.id) + 1) }}</span>
               </div>
-            </Transition>
+              <div
+                class="info-cost"
+                :class="solarStore.canAfford(branch.id) ? 'info-cost--can' : 'info-cost--cant'"
+              >
+                {{ formatNumber(solarStore.branchCost(branch.id)) }} G
+              </div>
+            </template>
+            <div v-else class="info-maxed">✦ MAXED</div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue'
-import { useShopStore } from '@/stores/shopStore'
-import { useGameStore } from '@/stores/gameStore'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { formatNumber } from '@/config/numberFormat'
-import type { ShopUpgrade } from '@/types'
+import { SOLAR_MAX_LEVELS } from '@/config/constants'
 
-const ORBIT_RADIUS = 240
-const START_ANGLE_DEG = 270
+const solarStore = useSolarUpgradeStore()
+const playerStore = usePlayerStore()
 
-const stars = Array.from({ length: 62 }, (_, i) => {
+// ── Layout constants ──────────────────────────────────────────────────────────
+const SUN_EDGE_R = 110
+const ICON_DIST = 285
+
+// ── Branch definitions ────────────────────────────────────────────────────────
+interface BranchDef {
+  id: SolarBranchId
+  name: string
+  icon: string
+  angleDeg: number
+  color: string
+  statLabel: string
+}
+
+const BRANCHES: BranchDef[] = [
+  {
+    id: 'flightSpeed',
+    name: 'Flight Speed',
+    icon: 'game-icons:feathered-wing',
+    angleDeg: 270,
+    color: '#e8c040',
+    statLabel: 'CpS Mult.',
+  },
+  {
+    id: 'maxHp',
+    name: 'Max HP',
+    icon: 'game-icons:health-increase',
+    angleDeg: 342,
+    color: '#e05050',
+    statLabel: 'HP Bonus',
+  },
+  {
+    id: 'chimesPerClick',
+    name: 'Chimes / Click',
+    icon: 'game-icons:gold-nuggets',
+    angleDeg: 54,
+    color: '#52b830',
+    statLabel: 'CpC Bonus',
+  },
+  {
+    id: 'chimesPerSecond',
+    name: 'Chimes / Sec',
+    icon: 'game-icons:metronome',
+    angleDeg: 126,
+    color: '#e89840',
+    statLabel: 'CpS Bonus',
+  },
+  {
+    id: 'dmgPerClick',
+    name: 'DMG / Click',
+    icon: 'game-icons:fist',
+    angleDeg: 198,
+    color: '#c060a0',
+    statLabel: 'Dmg Mult.',
+  },
+]
+
+// ── Static star field ─────────────────────────────────────────────────────────
+const stars = Array.from({ length: 70 }, (_, i) => {
   let s = (i * 1664525 + 1013904223) & 0x7fffffff
   s = (s * 1664525 + 1013904223) & 0x7fffffff
   const s2 = (s * 1664525 + 1013904223) & 0x7fffffff
   const s3 = (s2 * 1664525 + 1013904223) & 0x7fffffff
+  const s4 = (s3 * 1664525 + 1013904223) & 0x7fffffff
+  const s5 = (s4 * 1664525 + 1013904223) & 0x7fffffff
   return {
     id: i,
     x: (s % 1000) / 10,
     y: (s2 % 1000) / 10,
     size: 1 + (s3 % 3),
     opacity: (3 + (s % 6)) / 10,
+    dx: -8 + (s4 % 17),
+    dy: -8 + (s5 % 17),
   }
 })
 
-export default defineComponent({
-  name: 'ShopComponent',
+// ── Computed drift duration tied to flight speed ───────────────────────────────
+function starDriftDuration(starId: number): string {
+  const base = 13 - solarStore.flightSpeedLevel * 1.8
+  const jitter = (starId % 5) * 0.6
+  return Math.max(2.5, base + jitter).toFixed(1) + 's'
+}
 
-  setup() {
-    const shopStore = useShopStore()
-    const gameStore = useGameStore()
-    const playerStore = usePlayerStore()
-    const hoveredId = ref<string | null>(null)
+// ── Helper functions ──────────────────────────────────────────────────────────
+function rad(deg: number): number {
+  return (deg * Math.PI) / 180
+}
 
-    const buyOptions: { label: string; value: number | 'max' }[] = [
-      { label: '1×', value: 1 },
-      { label: '5×', value: 5 },
-      { label: '10×', value: 10 },
-      { label: '50×', value: 50 },
-      { label: '100×', value: 100 },
-      { label: 'Max', value: 'max' },
-    ]
+function svgPt(angleDeg: number, dist: number): { x: number; y: number } {
+  return {
+    x: 380 + Math.cos(rad(angleDeg)) * dist,
+    y: 380 + Math.sin(rad(angleDeg)) * dist,
+  }
+}
 
-    const getOrbitPos = (index: number) => {
-      const angleDeg = START_ANGLE_DEG + index * 60
-      const rad = (angleDeg * Math.PI) / 180
-      const x = Math.cos(rad) * ORBIT_RADIUS
-      const y = Math.sin(rad) * ORBIT_RADIUS
-      return {
-        left: `calc(50% + ${Math.round(x)}px)`,
-        top: `calc(50% + ${Math.round(y)}px)`,
-      }
-    }
+function getNodePos(angleDeg: number, dist: number): Record<string, string> {
+  const x = Math.cos(rad(angleDeg)) * dist
+  const y = Math.sin(rad(angleDeg)) * dist
+  return {
+    left: `calc(50% + ${Math.round(x)}px)`,
+    top: `calc(50% + ${Math.round(y)}px)`,
+  }
+}
 
-    const getProgress = (upgrade: ShopUpgrade): number => {
-      const cost = shopStore.getTotalUpgradeCost(upgrade)
-      if (cost <= 0) return 100
-      return Math.min(100, Math.floor((gameStore.chimes / cost) * 100))
-    }
+function getIconClass(branchId: SolarBranchId): string {
+  const level = solarStore.branchLevel(branchId)
+  if (level >= SOLAR_MAX_LEVELS) return 'icon-circle--maxed'
+  if (solarStore.canAfford(branchId)) return 'icon-circle--affordable'
+  if (level > 0) return 'icon-circle--partial'
+  return 'icon-circle--empty'
+}
 
-    return {
-      shopStore,
-      gameStore,
-      playerStore,
-      hoveredId,
-      stars,
-      buyOptions,
-      getOrbitPos,
-      getProgress,
-      formatNumber,
-    }
-  },
-})
+// info card appears below the icon for bottom-half branches (54°, 126°)
+function isCardBelow(angleDeg: number): boolean {
+  const n = ((angleDeg % 360) + 360) % 360
+  return n > 0 && n < 180
+}
+
+function handleClick(branchId: SolarBranchId): void {
+  solarStore.buyBranch(branchId)
+}
 </script>
 
 <style scoped>
 /* ══════════════════════════════════════════════════
-   SHOP-RAHMEN
+   FRAME
 ══════════════════════════════════════════════════ */
 .shop-frame {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--rpg-bg-deep);
-  border: 4px solid var(--rpg-wood);
+  background: #111008;
+  border: 4px solid #7a4e20;
   border-radius: 4px;
   box-shadow:
-    inset 0 0 0 2px var(--rpg-wood-inner),
-    inset 0 0 0 4px var(--rpg-wood-mid),
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
     0 4px 20px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   position: relative;
 }
 
+/* ══════════════════════════════════════════════════
+   ANIMATED STARS
+══════════════════════════════════════════════════ */
 .star {
   position: absolute;
   border-radius: 50%;
   background: #ffffff;
   pointer-events: none;
   z-index: 0;
+  animation: shop-star-drift var(--drift-duration) ease-in-out infinite alternate;
 }
 
-/* ══════════════════════════════════════════════════
-   SELECTOR
-══════════════════════════════════════════════════ */
-.selector-bar {
-  display: flex;
-  gap: 5px;
-  padding: 8px 10px;
-  background: transparent;
-  border-bottom: none;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.selector-btn {
-  flex: 1;
-  padding: 7px 2px;
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--rpg-gold-dim);
-  background: transparent;
-  border: 1px solid var(--rpg-wood-inner);
-  border-radius: 4px;
-  cursor: pointer;
-  transition:
-    background 0.12s,
-    color 0.12s,
-    border-color 0.12s;
-  letter-spacing: 0.3px;
-}
-
-.selector-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--rpg-gold);
-  border-color: var(--rpg-wood-mid);
-}
-
-.selector-btn--active {
-  background: rgba(122, 78, 32, 0.25);
-  border-color: var(--rpg-gold-dim);
-  color: var(--rpg-gold-bright);
-  box-shadow: 0 0 8px rgba(200, 144, 64, 0.35);
+@keyframes shop-star-drift {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(var(--star-dx), var(--star-dy)); }
 }
 
 /* ══════════════════════════════════════════════════
@@ -267,24 +316,37 @@ export default defineComponent({
 
 .arena-stage {
   position: relative;
-  width: 640px;
-  height: 640px;
+  width: 760px;
+  height: 760px;
   flex-shrink: 0;
 }
 
 /* ══════════════════════════════════════════════════
-   SONNE + HP-TEXT
+   SVG OVERLAY
+══════════════════════════════════════════════════ */
+.branch-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════
+   SUN (unchanged)
 ══════════════════════════════════════════════════ */
 .sun-wrapper {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
+  width: 210px;
+  height: 210px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .cosmic-sun {
@@ -308,8 +370,7 @@ export default defineComponent({
 }
 
 @keyframes sun-pulse {
-  0%,
-  100% {
+  0%, 100% {
     box-shadow:
       0 0 55px 22px rgba(245, 160, 30, 0.8),
       0 0 120px 50px rgba(200, 80, 10, 0.55),
@@ -325,7 +386,6 @@ export default defineComponent({
   }
 }
 
-/* HP-Text zentriert über der Sonne */
 .sun-hp-text {
   position: relative;
   z-index: 2;
@@ -346,7 +406,7 @@ export default defineComponent({
 }
 
 .hp-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 900;
   color: #ffffff;
   line-height: 1;
@@ -356,256 +416,236 @@ export default defineComponent({
 }
 
 .hp-value--low {
-  color: var(--rpg-red);
+  color: #cc6050;
   text-shadow:
     0 0 10px rgba(204, 96, 80, 0.8),
     0 2px 6px rgba(0, 0, 0, 1);
 }
 
 .hp-max {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.35);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
 }
 
 /* ══════════════════════════════════════════════════
-   ORBIT-POSITIONIERUNG
+   BRANCH NODE (icon + info card)
 ══════════════════════════════════════════════════ */
-.orbit-pos {
+.branch-node {
   position: absolute;
   transform: translate(-50%, -50%);
-}
-
-/* ══════════════════════════════════════════════════
-   ORBIT-KARTE
-══════════════════════════════════════════════════ */
-.orbit-card {
-  width: 128px;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 13px 10px 10px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: none;
-  transition:
-    transform 0.15s,
-    filter 0.15s,
-    opacity 0.15s;
-  animation: float 3.8s ease-in-out infinite;
-  animation-delay: calc(var(--idx, 0) * 0.55s);
-  position: relative;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-/* ── Locked: nur das Icon ausgrauen ── */
-.orbit-card--locked .card-icon {
-  opacity: 0.35;
-  filter: grayscale(85%);
-  transition:
-    opacity 0.15s,
-    filter 0.15s;
-}
-
-.orbit-card--locked:hover .card-icon,
-.orbit-card--locked.orbit-card--hovered .card-icon {
-  opacity: 0.6;
-  filter: grayscale(50%);
-}
-
-.orbit-card--locked:hover,
-.orbit-card--locked.orbit-card--hovered {
-  transform: translateY(-4px) scale(1.04);
-  animation-play-state: paused;
-  z-index: 10;
-}
-
-/* ── Can-Afford ── */
-.orbit-card--can .card-icon {
-  filter: drop-shadow(0 0 8px rgba(78, 192, 64, 0.7)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
-}
-
-.orbit-card--can:hover,
-.orbit-card--can.orbit-card--hovered {
-  transform: translateY(-6px) scale(1.08);
-  animation-play-state: paused;
-  z-index: 10;
-}
-
-.orbit-card--can:hover .card-icon,
-.orbit-card--can.orbit-card--hovered .card-icon {
-  filter: drop-shadow(0 0 12px rgba(200, 144, 64, 0.85)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
-}
-
-.card-icon {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  image-rendering: auto;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.7));
-  transition: filter 0.15s;
-}
-
-.card-name {
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--rpg-text);
-  text-align: center;
-  letter-spacing: 0.2px;
-  line-height: 1.2;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
-}
-
-.card-level {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--rpg-gold);
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
-}
-
-.card-stat {
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 1);
-}
-
-.card-stat--cps {
-  color: var(--rpg-orange);
-}
-.card-stat--cpc {
-  color: var(--rpg-green-light);
+  gap: 0;
 }
 
 /* ══════════════════════════════════════════════════
-   KAUFBUTTON
+   ICON CIRCLE
 ══════════════════════════════════════════════════ */
-.card-buy {
-  width: 100%;
+.icon-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 3px solid #2a1a08;
+  background: #111008;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 5px 8px;
-  border-radius: 5px;
-  margin-top: 3px;
-  gap: 4px;
+  justify-content: center;
+  cursor: pointer;
   position: relative;
-  overflow: hidden;
-}
-
-.card-buy--can {
-  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
-  border: 2px solid var(--rpg-green-border);
-  box-shadow:
-    0 0 10px rgba(60, 220, 40, 0.45),
-    inset 0 1px 0 rgba(100, 255, 60, 0.15);
-}
-
-.card-buy--can .buy-cost {
-  color: #a0ffa0;
-  font-weight: 900;
-}
-
-.card-buy--can .buy-qty {
-  color: var(--rpg-green-light);
-  font-weight: 700;
-}
-
-.card-buy--cant {
-  background-color: var(--rpg-bg-red-subtle);
-  background-image: linear-gradient(to right, #502010, #803020);
-  background-size: var(--prog, 0%) 100%;
-  background-repeat: no-repeat;
-  background-position: left center;
-  border: 2px solid var(--rpg-red);
-  box-shadow: 0 0 8px rgba(180, 40, 40, 0.3);
-}
-
-.card-buy--cant .buy-cost {
-  color: var(--rpg-red);
-  font-weight: 900;
-}
-
-.card-buy--cant .buy-qty {
-  color: #904040;
-  font-weight: 700;
-}
-
-.buy-cost {
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.buy-qty {
-  font-size: 11px;
+  gap: 2px;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
   flex-shrink: 0;
 }
 
-/* ══════════════════════════════════════════════════
-   TOOLTIP
-══════════════════════════════════════════════════ */
-.card-tooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 170px;
-  background: var(--rpg-bg-tooltip);
-  border: 2px solid var(--rpg-wood-mid);
-  border-radius: 6px;
-  padding: 10px 12px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.9);
-  z-index: 100;
+.icon-level-badge {
+  font-size: 9px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1;
   pointer-events: none;
-  filter: none;
-  opacity: 1;
 }
 
-.tooltip-title {
-  font-size: 13px;
+.icon-maxed-badge {
+  font-size: 8px;
   font-weight: 900;
-  color: var(--rpg-gold-bright);
+  color: #e8c040;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+/* States */
+.icon-circle--empty {
+  border-color: #2a1a08;
+  opacity: 0.55;
+}
+
+.icon-circle--partial {
+  border-color: #7a4e20;
+  box-shadow: 0 0 6px rgba(200, 144, 64, 0.3);
+}
+
+.icon-circle--partial:hover {
+  transform: scale(1.1);
+  border-color: #c89040;
+}
+
+.icon-circle--affordable {
+  border-color: var(--branch-color);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--branch-color) 60%, transparent),
+    0 0 24px color-mix(in srgb, var(--branch-color) 25%, transparent);
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.icon-circle--affordable:hover {
+  transform: scale(1.15);
+  animation-play-state: paused;
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--branch-color) 80%, transparent),
+    0 0 36px color-mix(in srgb, var(--branch-color) 40%, transparent);
+}
+
+.icon-circle--maxed {
+  border-color: #c89040;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 0 20px rgba(232, 192, 64, 0.2);
+  cursor: default;
+}
+
+.icon-circle--maxed:hover {
+  transform: scale(1.05);
+}
+
+@keyframes icon-pulse {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--branch-color) 55%, transparent), 0 0 22px color-mix(in srgb, var(--branch-color) 22%, transparent); }
+  50%       { box-shadow: 0 0 18px color-mix(in srgb, var(--branch-color) 80%, transparent), 0 0 35px color-mix(in srgb, var(--branch-color) 38%, transparent); }
+}
+
+/* ══════════════════════════════════════════════════
+   INFO CARD
+══════════════════════════════════════════════════ */
+.branch-info {
+  width: 130px;
+  background: #16140e;
+  border: 2px solid #3e200a;
+  border-radius: 4px;
+  padding: 6px 8px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.branch-info--below {
+  margin-top: 6px;
+  border-top-color: #5c3310;
+}
+
+.branch-info--above {
   margin-bottom: 6px;
+  order: -1;
+  border-bottom-color: #5c3310;
+}
+
+.info-name {
+  font-size: 11px;
+  font-weight: 900;
+  color: #e8c040;
+  text-align: center;
   letter-spacing: 0.3px;
 }
 
-.tooltip-line {
-  font-size: 11px;
-  color: var(--rpg-text-muted);
-  margin-bottom: 3px;
+.info-pips {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
 }
 
-.tooltip-cost {
-  font-size: 11px;
-  color: var(--rpg-gold);
-  margin-top: 6px;
+.pip {
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.pip--filled {
+  background: #e8c040;
+  box-shadow: 0 0 4px rgba(232, 192, 64, 0.5);
+}
+
+.pip--empty {
+  background: #2a1a08;
+  border: 1px solid #3e200a;
+}
+
+.info-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-stat-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.info-stat-val {
+  font-size: 10px;
   font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
 }
 
-.tooltip-fade-enter-active,
-.tooltip-fade-leave-active {
-  transition: opacity 0.12s ease;
+.info-next-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.tooltip-fade-enter-from,
-.tooltip-fade-leave-to {
-  opacity: 0;
+.info-arrow {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.info-stat-next {
+  font-size: 10px;
+  font-weight: 900;
+  color: #52b830;
+}
+
+.info-cost {
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.info-cost--can {
+  color: #a0ffa0;
+  background: rgba(82, 184, 48, 0.15);
+  border: 1px solid rgba(82, 184, 48, 0.3);
+}
+
+.info-cost--cant {
+  color: #cc6050;
+  background: rgba(180, 40, 40, 0.12);
+  border: 1px solid rgba(140, 40, 40, 0.3);
+}
+
+.info-maxed {
+  font-size: 10px;
+  font-weight: 900;
+  color: #e8c040;
+  text-align: center;
+  letter-spacing: 1px;
 }
 
 /* ══════════════════════════════════════════════════
@@ -613,7 +653,8 @@ export default defineComponent({
 ══════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   .cosmic-sun,
-  .orbit-card {
+  .icon-circle--affordable,
+  .star {
     animation: none;
   }
 }
@@ -624,30 +665,14 @@ export default defineComponent({
 @media (max-width: 560px) {
   .cosmic-arena {
     overflow-y: auto;
+    overflow-x: hidden;
     align-items: flex-start;
-    padding: 8px;
   }
 
   .arena-stage {
-    width: 100%;
-    height: auto;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-
-  .sun-wrapper {
-    display: none;
-  }
-
-  .orbit-pos {
-    position: static;
-    transform: none;
-  }
-
-  .orbit-card {
-    width: 100%;
-    animation: none;
+    transform: scale(0.55);
+    transform-origin: top center;
+    margin: 0 auto;
   }
 }
 </style>

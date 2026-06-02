@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -49,6 +50,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     championTravelState: 'traveling' as ChampionTravelState,
     championTravelStartTime: 0,
     championTravelDurationMs: CHAMPION_TRAVEL_BASE_MS,
+    championTravelBaseDurationMs: CHAMPION_TRAVEL_BASE_MS,
     _travelTickMs: 0,
     // Champion-Ankunfts-Signal
     championJustArrived: false,
@@ -107,20 +109,29 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
+    effectiveTravelDurationMs(): number {
+      const base =
+        this.championTravelBaseDurationMs > 0
+          ? this.championTravelBaseDurationMs
+          : this.championTravelDurationMs
+      return Math.max(1000, Math.round(base / useSolarUpgradeStore().flightSpeedMultiplier))
+    },
+
     travelProgressPercent(): number {
       void this._travelTickMs
       if (this.championTravelState !== 'traveling') return 0
-      if (this.championTravelDurationMs <= 0 || this.championTravelStartTime === 0) return 0
+      const dur = this.effectiveTravelDurationMs
+      if (dur <= 0 || this.championTravelStartTime === 0) return 0
       const elapsed = Date.now() - this.championTravelStartTime
-      return Math.min(100, (elapsed / this.championTravelDurationMs) * 100)
+      return Math.min(100, (elapsed / dur) * 100)
     },
 
     travelRemainingMs(): number {
       void this._travelTickMs
       if (this.championTravelState !== 'traveling') return 0
-      if (this.championTravelStartTime === 0) return this.championTravelDurationMs
+      if (this.championTravelStartTime === 0) return this.effectiveTravelDurationMs
       const elapsed = Date.now() - this.championTravelStartTime
-      return Math.max(0, this.championTravelDurationMs - elapsed)
+      return Math.max(0, this.effectiveTravelDurationMs - elapsed)
     },
 
     resourceStarRemainingMs(): number {
@@ -130,10 +141,11 @@ export const useGalaxyStore = defineStore('galaxy', {
 
   actions: {
     startChampionTravel() {
-      const duration = CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
+      const baseDuration = CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
+      this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
       this.championTravelStartTime = Date.now()
-      this.championTravelDurationMs = duration
+      this.championTravelDurationMs = Math.round(baseDuration / useSolarUpgradeStore().flightSpeedMultiplier)
     },
 
     tickChampionTravel() {
@@ -145,7 +157,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         return
       }
       const elapsed = now - this.championTravelStartTime
-      if (elapsed >= this.championTravelDurationMs) {
+      if (elapsed >= this.effectiveTravelDurationMs) {
         this.championTravelState = 'champion_available'
         this.championJustArrived = true
         setTimeout(() => {

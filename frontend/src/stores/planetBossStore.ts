@@ -34,6 +34,7 @@ import { useGalaxyStore } from './galaxyStore'
 import { usePlayerStore } from './playerStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useStarGroupStore } from './starGroupStore'
+import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -232,7 +233,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     dealClickDamage(): boolean {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
-      return this.dealDamage(boss.clickDamagePerHit)
+      const solar = useSolarUpgradeStore()
+      return this.dealDamage(Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier))
     },
 
     applyPassiveDamage() {

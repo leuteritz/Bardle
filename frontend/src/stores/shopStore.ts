@@ -8,6 +8,7 @@ import type { ShopUpgrade, BuildingStat } from '../types'
 import { logger } from '../utils/logger'
 import { usePlanetShopStore } from './planetShopStore'
 import { useSynergyStore } from './synergyStore'
+import { useSolarUpgradeStore } from './solarUpgradeStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -289,16 +290,20 @@ export const useShopStore = defineStore('shop', {
         itemStore.totalCPSMultiplier *
         synergyStore.cpsSynergyMultiplier *
         bossStore.cpsPenaltyMultiplier
-      return Math.floor(baseCPS * gameStore.abilityCPSMultiplier * cpsMul)
+      const solar = useSolarUpgradeStore()
+      const solarCPS = solar.cpsBonus
+      const flightMul = solar.flightSpeedMultiplier
+      return Math.floor((baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul)
     },
 
     calculateTotalCPC(): number {
       const gameStore = useGameStore()
       const mod = gameStore.activeModifier
 
+      const solar = useSolarUpgradeStore()
       const upgradeBonus = this.shopUpgrades.reduce((total, upgrade) => {
         return total + (upgrade.baseCPC || 0) * upgrade.level
-      }, 0)
+      }, 0) + solar.cpcBonus
 
       const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
       const cpcMul = mod.cpcMultiplier ?? 1
