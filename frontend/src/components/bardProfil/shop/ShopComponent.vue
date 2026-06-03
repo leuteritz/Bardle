@@ -202,7 +202,7 @@ const BRANCHES: BranchDef[] = [
 
 // ── Star phase system (driven by solarStore.starPhase) ────────────────────────
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 5)])
+const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)])
 
 const sunStyle = computed(() => {
   const s = currentStage.value

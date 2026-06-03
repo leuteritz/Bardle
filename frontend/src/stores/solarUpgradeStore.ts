@@ -80,7 +80,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     },
 
     canUpgradeStar(): boolean {
-      return this.starPhase < 5 && this.minBranchLevel >= this.starPhase + 1 && !this.isUpgrading
+      return this.starPhase < 6 && this.minBranchLevel >= this.starPhase + 1 && !this.isUpgrading
     },
 
     branchLevel(state): (id: SolarBranchId) => number {

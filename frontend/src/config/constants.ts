@@ -272,6 +272,9 @@ export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
   { stage: 6, chimesThreshold: 600000, radius: 144, label: 'Supernova' },
 ]
 
+/** Required sun phase (starPhase) to unlock each planet slot. Slot index 0 → phase 1, …, slot index 5 → phase 6. */
+export const PLANET_SLOT_SUN_PHASE_REQUIREMENTS: number[] = [1, 2, 3, 4, 5, 6]
+
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
 export const ROLES = [
   {
@@ -888,6 +891,14 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     glow1: '#b3d9ff', glow2: '#80b0ee', glow3: '#4080cc',
     phasePrimary: '#e8f4ff', phaseGlow: '#b3d9ff',
     factor: 0.85, pulseSpeed: '2s',
+  },
+  {
+    name: 'Supernova',
+    radius: 140,
+    core: '#ffffff', mid: '#e8b0ff', edge: '#8000cc',
+    glow1: '#c060ff', glow2: '#8000cc', glow3: '#400066',
+    phasePrimary: '#e8b0ff', phaseGlow: '#c060ff',
+    factor: 1.6, pulseSpeed: '1.5s',
   },
 ]
 

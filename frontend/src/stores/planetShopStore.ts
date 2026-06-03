@@ -9,7 +9,7 @@ import {
   PLANET_HARVEST_INTERVAL_TICKS,
   PLANET_SLOT_MAX_HP,
   STAR_PHASE_DATA,
-  SUN_GROWTH_STAGES,
+  PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   BOSS_DAMAGE_REDUCTION_CAP,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
@@ -261,9 +261,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
       const slot = this.slots[slotIndex]
       if (!slot) return false
       if (!this.canAffordSlot(slot.id)) return false
-      const requiredStage = slotIndex + 1
-      const gameStore = useGameStore()
-      return gameStore.totalChimesEarned >= SUN_GROWTH_STAGES[requiredStage].chimesThreshold
+      const requiredPhase = PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex + 1
+      return useSolarUpgradeStore().starPhase >= requiredPhase
+    },
+
+    getSlotRequiredPhase(slotIndex: number): number {
+      return PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex + 1
     },
 
     buySlot(slotId: string): boolean {

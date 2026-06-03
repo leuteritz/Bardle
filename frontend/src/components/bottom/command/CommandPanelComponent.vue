@@ -152,6 +152,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             <div class="cmd-tile-icon cmd-tile-icon--locked">
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
+            <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">UNLOCK</div>
+            <div class="cmd-tile-phase-row">
+              <Icon icon="game-icons:sun" width="9" height="9" />
+              <span>Ph.{{ planetStore.getSlotRequiredPhase(index) }}</span>
+            </div>
             <div class="cmd-tile-cost-row">
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
               <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
@@ -808,6 +813,32 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   color: #e8c040;
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+.cmd-tile-unlock-label {
+  position: relative;
+  z-index: 1;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #90e050;
+  text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
+}
+
+.cmd-tile-phase-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(200, 160, 60, 0.5);
+  letter-spacing: 0.04em;
+}
+
+.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-phase-row {
+  color: rgba(144, 224, 80, 0.7);
 }
 
 /* Slot-Nummer Badge (nur leere / gesperrte Slots) */

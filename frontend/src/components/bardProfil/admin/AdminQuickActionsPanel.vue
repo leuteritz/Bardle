@@ -203,7 +203,7 @@ function resetAllCooldowns() {
 // ── Sun Phase Override (Debug) ─────────────────────────────────────────────────
 
 function setStarPhase(phase: number) {
-  solarStore.starPhase = Math.max(0, Math.min(5, phase))
+  solarStore.starPhase = Math.max(0, Math.min(6, phase))
 }
 </script>
 

@@ -135,6 +135,10 @@ function bonusText(role: PlanetRole): string {
           <span class="ps-slot-btn-lock">
             <img src="/img/lock.png" alt="Locked" class="lock-icon" />
           </span>
+          <span class="ps-slot-phase-badge">
+            <Icon icon="game-icons:sun" width="9" height="9" />
+            {{ store.getSlotRequiredPhase(slotIndex) }}
+          </span>
         </template>
         <template v-else>
           <img
@@ -175,6 +179,15 @@ function bonusText(role: PlanetRole): string {
       </div>
       <span class="ps-locked-panel-cost-label">C H I M E S</span>
       <div class="ps-locked-panel-divider" />
+      <div
+        class="ps-locked-panel-sun-req"
+        :class="{ 'ps-locked-panel-sun-req--met': store.currentSunStage >= store.getSlotRequiredPhase(activeSlotIndex) }"
+      >
+        <Icon icon="game-icons:sun" width="16" height="16" class="ps-sun-req-icon" />
+        <span class="ps-sun-req-label">Phase {{ store.getSlotRequiredPhase(activeSlotIndex) }}</span>
+        <span class="ps-sun-req-sep">·</span>
+        <span class="ps-sun-req-current">Current {{ store.currentSunStage }}</span>
+      </div>
       <button
         v-if="store.canUnlockPlanetSlot(activeSlotIndex)"
         class="ps-locked-panel-buy-btn"
@@ -182,8 +195,10 @@ function bonusText(role: PlanetRole): string {
       >
         ✦ Unlock
       </button>
-      <span v-else-if="!store.canAffordSlot(activeSlot.id)" class="ps-locked-panel-hint">Not enough Chimes yet</span>
-      <span v-else class="ps-locked-panel-hint">Sun not powerful enough yet</span>
+      <span v-else-if="store.currentSunStage < store.getSlotRequiredPhase(activeSlotIndex)" class="ps-locked-panel-hint">
+        Reach Sun Phase {{ store.getSlotRequiredPhase(activeSlotIndex) }} to unlock
+      </span>
+      <span v-else class="ps-locked-panel-hint">Not enough Chimes yet</span>
     </div>
 
     <template v-if="activeSlot && activeSlot.purchased">
@@ -1103,6 +1118,62 @@ img.ps-role-icon {
 .ps-empty--hint {
   flex: 1;
   min-height: 200px;
+}
+
+/* ── Slot phase badge ──────────────────────────────────────────────────────── */
+.ps-slot-phase-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: rgba(200, 160, 60, 0.5);
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.ps-slot-btn--affordable .ps-slot-phase-badge {
+  color: #90e050;
+}
+
+/* ── Sun requirement row in locked panel ───────────────────────────────────── */
+.ps-locked-panel-sun-req {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(40, 10, 10, 0.6);
+  border: 1px solid rgba(180, 50, 50, 0.4);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(220, 100, 80, 0.8);
+  transition: border-color 0.25s, background 0.25s, color 0.25s;
+}
+
+.ps-locked-panel-sun-req--met {
+  background: rgba(10, 40, 10, 0.6);
+  border-color: rgba(80, 200, 60, 0.45);
+  color: #80e050;
+}
+
+.ps-sun-req-icon {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.ps-sun-req-label {
+  font-weight: 800;
+}
+
+.ps-sun-req-sep {
+  opacity: 0.4;
+}
+
+.ps-sun-req-current {
+  font-size: 0.66rem;
+  opacity: 0.6;
+  font-weight: 600;
 }
 
 /* ── Config Slide Transition ───────────────────────────────────────────────── */
