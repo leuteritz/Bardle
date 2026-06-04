@@ -460,43 +460,37 @@ function handleUpgradeStar(): void {
   position: relative;
   z-index: 2;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
   pointer-events: none;
 }
 
 .hp-label {
   font-size: 10px;
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--sun-edge) 70%, transparent);
+  letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
 }
 
 .hp-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
-  color: #ffffff;
+  color: var(--sun-edge);
   line-height: 1;
-  text-shadow:
-    0 0 10px rgba(255, 200, 80, 0.7),
-    0 2px 6px rgba(0, 0, 0, 1);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--sun-edge) 35%, transparent);
 }
 
 .hp-value--low {
-  color: #cc6050;
-  text-shadow:
-    0 0 10px rgba(204, 96, 80, 0.8),
-    0 2px 6px rgba(0, 0, 0, 1);
+  color: #990000;
+  text-shadow: none;
 }
 
 .hp-max {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.35);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
+  color: color-mix(in srgb, var(--sun-edge) 50%, transparent);
 }
 
 /* ══════════════════════════════════════════════════
