@@ -227,6 +227,7 @@ export const STAR_BURST_COOLDOWN = 10_000 // ms cooldown after a full burst comp
 
 // Champion Orbit
 export const BEHIND_SUN_SPEED_MULTIPLIER = 3.5
+export const HOVER_SPEED_MULTIPLIER = 0.3
 export const AVATAR_SIZE_LARGE = 40
 export const AVATAR_SIZE_SMALL = 32
 export const ORBIT_RADIUS_SCALE = 1.8

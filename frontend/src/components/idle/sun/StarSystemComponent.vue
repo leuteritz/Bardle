@@ -70,7 +70,7 @@
         <div
           class="star-body"
           :class="`star-body--${star.starType}`"
-          :style="starBodyStyle(star)"
+          :style="starBodyBackStyle(star)"
         />
         <PlanetComponent
           v-for="p in star.planets.filter((p) => p.isBehind)"
@@ -137,11 +137,21 @@
 
       <template v-for="star in frontStars" :key="star.id">
         <div
-          class="star-body"
-          :class="`star-body--${star.starType}`"
-          :style="starBodyStyle(star)"
+          class="star-body-wrap"
+          :style="starWrapStyle(star)"
           @click="handleStarClick(star)"
-        />
+          @mouseenter="hoveredStarId = star.id"
+          @mouseleave="hoveredStarId = null"
+        >
+          <div
+            class="star-body"
+            :class="`star-body--${star.starType}`"
+            :style="starBodyVisualStyle(star)"
+            role="button"
+            :aria-label="`${star.starType === 'galaxy_boss' ? 'Galaxy Boss' : star.starType === 'champion' ? 'Champion' : 'Resource'} Star – Boss-Fight starten`"
+            tabindex="0"
+          />
+        </div>
         <PlanetComponent
           v-for="p in star.planets.filter((p) => !p.isBehind)"
           :key="p.planetId"
@@ -331,7 +341,8 @@ import { activeChampionBehindState } from '../../../utils/activeChampionBehindSt
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import type { ChampionRole } from '../../../types'
 
-const { starRenders } = useStarSystem()
+const hoveredStarId = ref<string | null>(null)
+const { starRenders } = useStarSystem(hoveredStarId)
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 
@@ -636,7 +647,17 @@ function starBoxShadow(starColor: [number, number, number], s: number): string {
   ].join(', ')
 }
 
-function starBodyStyle(star: StarRenderEntry) {
+function starWrapStyle(star: StarRenderEntry) {
+  const s = starSize(star.starType)
+  return {
+    transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
+    opacity: String(star.opacity.toFixed(3)),
+    width: `${s}px`,
+    height: `${s}px`,
+  }
+}
+
+function starBodyVisualStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   const ringInset = Math.round(s * 0.16)
   const [r, g, b] = star.starColor
@@ -646,12 +667,7 @@ function starBodyStyle(star: StarRenderEntry) {
   const r3 = Math.round(r * 0.22),
     g3 = Math.round(g * 0.22),
     b3 = Math.round(b * 0.22)
-
   return {
-    transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
-    opacity: String(star.opacity.toFixed(3)),
-    width: `${s}px`,
-    height: `${s}px`,
     background: `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(${r3},${g3},${b3}) 100%)`,
     boxShadow: starBoxShadow(star.starColor, s),
     '--star-rgb': `${r}, ${g}, ${b}`,
@@ -659,6 +675,10 @@ function starBodyStyle(star: StarRenderEntry) {
     filter: star.filterStyle || undefined,
     transition: 'filter 0.3s ease',
   }
+}
+
+function starBodyBackStyle(star: StarRenderEntry) {
+  return { ...starWrapStyle(star), ...starBodyVisualStyle(star) }
 }
 
 function getStarRewardSummary(star: StarRenderEntry) {
@@ -780,17 +800,50 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+.star-body-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform, opacity;
+}
+
 .star-body {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  will-change: transform, opacity;
+  will-change: transform, filter;
   animation:
     star-spawn 0.7s ease-out,
     star-pulse 2.8s ease-in-out 0.7s infinite;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
+}
+
+.star-body-wrap:hover .star-body {
+  animation: star-hover-pulse 0.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px rgba(255, 224, 102, 0.45)) brightness(1.3);
+}
+
+.star-body-wrap:active .star-body {
+  animation: star-hover-pulse 0.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px #ffe066) brightness(1.3);
+}
+
+@keyframes star-hover-pulse {
+  0%, 100% { transform: scale(1.0); }
+  50%       { transform: scale(1.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-body-wrap:hover .star-body,
+  .star-body-wrap:active .star-body {
+    animation: none;
+    filter: drop-shadow(0 0 14px #ffe066) brightness(1.25);
+  }
 }
 
 .star-body--champion::after,

@@ -1,4 +1,5 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import type { Ref } from 'vue'
 import { useStarGroupStore } from '../stores/starGroupStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
 import { useGalaxyStore } from '../stores/galaxyStore'
@@ -7,7 +8,7 @@ import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
 import { MATERIALS } from '../config/materials'
-import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '../config/constants'
+import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_SPEED_MULTIPLIER } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { LabelData, PlanetType, StarType } from '../types'
@@ -170,7 +171,7 @@ function buildLabelData(
   }
 }
 
-export function useStarSystem() {
+export function useStarSystem(hoveredStarId?: Ref<string | null>) {
   const starGroupStore = useStarGroupStore()
   const bossStore = usePlanetBossStore()
   const galaxyStore = useGalaxyStore()
@@ -353,7 +354,12 @@ export function useStarSystem() {
         }
       }
 
-      const targetMul = sIsBehind ? BEHIND_SUN_SPEED_MULTIPLIER : 1.0
+      const isHovered = !sIsBehind && !reducedMotion && hoveredStarId?.value === star.id
+      const targetMul = sIsBehind
+        ? BEHIND_SUN_SPEED_MULTIPLIER
+        : isHovered
+          ? HOVER_SPEED_MULTIPLIER
+          : 1.0
       starSpeedMul.set(star.id, speedMul + (targetMul - speedMul) * SPEED_LERP)
 
       const baseScale = 0.72 + sDepth * 0.56
