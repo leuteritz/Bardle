@@ -46,6 +46,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     dmgPerClickLevel: 0 as number,
     starPhase: 0 as number,
     isUpgrading: false as boolean,
+    phaseEnteredAt: 0 as number,
   }),
 
   getters: {
@@ -205,6 +206,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       this.isUpgrading = true
       setTimeout(() => {
         this.starPhase++
+        this.phaseEnteredAt = Date.now()
         this.isUpgrading = false
         console.log('[Bardle] Star evolved to phase', this.starPhase)
       }, 2500)

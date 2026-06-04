@@ -7,6 +7,7 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import ActiveBuffsPanel from './ActiveBuffsPanel.vue'
+import StarPhasePanel from './StarPhasePanel.vue'
 
 const totalChampions = Object.keys(CHAMPION_ROLES).length
 
@@ -122,6 +123,9 @@ const extraBonus = computed(() => {
 
     <!-- ══ RIGHT COLUMN ══ -->
     <div class="sv-content-col rpg-scrollbar">
+      <!-- ─ STAR PHASE ─ -->
+      <StarPhasePanel />
+
       <!-- ─ CLICK POWER ─ -->
       <div class="sv-block">
         <div class="sv-block-label">Click Power</div>
