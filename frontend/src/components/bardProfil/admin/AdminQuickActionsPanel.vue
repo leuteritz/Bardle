@@ -203,7 +203,11 @@ function resetAllCooldowns() {
 // ── Sun Phase Override (Debug) ─────────────────────────────────────────────────
 
 function setStarPhase(phase: number) {
+  const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
+  solarStore.totalPhaseSeconds += elapsed
+  solarStore.phaseTimeHistory[solarStore.starPhase] = (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
   solarStore.starPhase = Math.max(0, Math.min(6, phase))
+  solarStore.phaseEnteredAt = Date.now()
 }
 </script>
 

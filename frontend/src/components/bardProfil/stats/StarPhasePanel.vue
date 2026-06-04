@@ -35,6 +35,36 @@ const phaseAgeParts = computed(() => {
   }
 })
 
+const totalAgeParts = computed(() => {
+  const secs = store.totalPhaseSeconds + Math.floor((now.value - store.phaseEnteredAt) / 1000)
+  return {
+    d: Math.floor(secs / 86400),
+    h: Math.floor((secs % 86400) / 3600),
+    m: Math.floor((secs % 3600) / 60),
+    s: secs % 60,
+  }
+})
+
+function compactTime(secs: number): string {
+  if (secs < 60) return '< 1m'
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
+const phaseHistory = computed(() => {
+  if (store.starPhase === 0) return []
+  const total = store.totalPhaseSeconds + Math.floor((now.value - store.phaseEnteredAt) / 1000)
+  return Array.from({ length: store.starPhase }, (_, i) => {
+    const secs = store.phaseTimeHistory[i] ?? 0
+    const pct = total > 0 ? (secs / total) * 100 : 0
+    return { phase: STAR_PHASE_DATA[i], secs, pct }
+  })
+})
+
 const BRANCHES: Array<{ id: SolarBranchId; label: string; color: string }> = [
   { id: 'flightSpeed',     label: 'Flight', color: '#60a8e8' },
   { id: 'maxHp',           label: 'HP',     color: '#e06060' },
@@ -107,6 +137,29 @@ function branchBarPct(id: SolarBranchId): number {
         <div class="spp-seg">
           <span class="spp-seg-val">{{ String(phaseAgeParts.s).padStart(2, '0') }}</span>
           <span class="spp-seg-lbl">s</span>
+        </div>
+      </div>
+      <div class="spp-total-wrap">
+        <div class="spp-total">
+          <span class="spp-total-label">Total</span>
+          <span class="spp-total-val">
+            <template v-if="totalAgeParts.d > 0">{{ totalAgeParts.d }}d </template>{{ String(totalAgeParts.h).padStart(2, '0') }}h {{ String(totalAgeParts.m).padStart(2, '0') }}m {{ String(totalAgeParts.s).padStart(2, '0') }}s
+          </span>
+          <span v-if="phaseHistory.length" class="spp-total-hint">▾</span>
+        </div>
+        <div v-if="phaseHistory.length" class="spp-chronicle">
+          <div class="spp-chronicle-header">
+            <Icon icon="game-icons:scroll-unfurled" width="11" height="11" style="color: #5c4a30" />
+            <span>Phase Chronicle</span>
+          </div>
+          <div v-for="(row, i) in phaseHistory" :key="i" class="spp-chr-row">
+            <span class="spp-chr-dot" :style="{ background: row.phase.phasePrimary, 'box-shadow': `0 0 5px ${row.phase.phaseGlow}` }" />
+            <span class="spp-chr-name">{{ row.phase.name.split(' ')[0] }}</span>
+            <div class="spp-chr-track">
+              <div class="spp-chr-fill" :style="{ width: row.pct + '%', background: row.phase.phasePrimary }" />
+            </div>
+            <span class="spp-chr-time">{{ compactTime(row.secs) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -368,6 +421,131 @@ function branchBarPct(id: SolarBranchId): number {
   padding-bottom: 14px;
   line-height: 1;
   flex-shrink: 0;
+}
+
+.spp-total-wrap {
+  position: relative;
+  cursor: default;
+}
+
+.spp-total {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2a1a08;
+}
+
+.spp-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #5c4a30;
+  flex-shrink: 0;
+}
+
+.spp-total-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #9a8060;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.spp-total-hint {
+  font-size: 12px;
+  color: #4a3820;
+  margin-left: auto;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: transform 0.25s ease, color 0.2s ease;
+  display: inline-block;
+}
+
+.spp-total-wrap:hover .spp-total-hint {
+  transform: rotate(180deg);
+  color: #9a8060;
+}
+
+/* ─ Phase Chronicle ─────────────────────────────── */
+.spp-chronicle {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding-top: 0;
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: max-height 0.35s ease, opacity 0.25s ease, padding-top 0.25s ease;
+}
+
+.spp-total-wrap:hover .spp-chronicle {
+  max-height: 320px;
+  opacity: 1;
+  padding-top: 8px;
+  border-top: 1px solid #1e1208;
+}
+
+.spp-chronicle-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5c4a30;
+  margin-bottom: 2px;
+}
+
+.spp-chr-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.spp-chr-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spp-chr-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #7a6848;
+  min-width: 52px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+.spp-chr-track {
+  flex: 1;
+  height: 4px;
+  background: #1c1a10;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #2a1e08;
+}
+
+.spp-chr-fill {
+  height: 100%;
+  border-radius: 2px;
+  opacity: 0.7;
+  transition: width 0.5s ease;
+}
+
+.spp-chr-time {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9a8060;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─ Fortschrittsbalken ──────────────────────────── */

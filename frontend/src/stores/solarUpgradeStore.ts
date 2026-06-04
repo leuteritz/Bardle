@@ -47,6 +47,8 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     starPhase: 0 as number,
     isUpgrading: false as boolean,
     phaseEnteredAt: Date.now() as number,
+    totalPhaseSeconds: 0 as number,
+    phaseTimeHistory: [] as number[],
   }),
 
   getters: {
@@ -205,6 +207,9 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       if (!this.canUpgradeStar) return
       this.isUpgrading = true
       setTimeout(() => {
+        const elapsed = Math.floor((Date.now() - this.phaseEnteredAt) / 1000)
+        this.totalPhaseSeconds += elapsed
+        this.phaseTimeHistory[this.starPhase] = (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
         this.starPhase++
         this.phaseEnteredAt = Date.now()
         this.isUpgrading = false

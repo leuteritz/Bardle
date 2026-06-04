@@ -148,6 +148,9 @@ export function usePersistence() {
         chimesPerSecondLevel: solarStore.chimesPerSecondLevel,
         dmgPerClickLevel: solarStore.dmgPerClickLevel,
         starPhase: solarStore.starPhase,
+        phaseEnteredAt: solarStore.phaseEnteredAt,
+        totalPhaseSeconds: solarStore.totalPhaseSeconds,
+        phaseTimeHistory: solarStore.phaseTimeHistory,
       },
     }
 
@@ -356,6 +359,9 @@ export function usePersistence() {
         solarStore.chimesPerSecondLevel = saved.solar.chimesPerSecondLevel ?? 0
         solarStore.dmgPerClickLevel = saved.solar.dmgPerClickLevel ?? 0
         solarStore.starPhase = saved.solar.starPhase ?? 0
+        solarStore.phaseEnteredAt = saved.solar.phaseEnteredAt ?? Date.now()
+        solarStore.totalPhaseSeconds = saved.solar.totalPhaseSeconds ?? 0
+        solarStore.phaseTimeHistory = saved.solar.phaseTimeHistory ?? []
       }
 
       // Recalculate derived CPS/CPC after all levels (buildings + solar) are restored
