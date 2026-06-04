@@ -65,7 +65,7 @@
               </span>
             </div>
             <button
-              @click="expeditionStore.collectExpedition(expedition.id)"
+              @click="collectExpedition(expedition.id)"
               class="px-4 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95"
               :class="expedition.status === 'success' ? 'rpg-btn-green' : 'rpg-btn-disabled'"
             >
@@ -130,6 +130,7 @@ import { defineComponent, computed, onMounted, onUnmounted, ref } from 'vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { EXPEDITION_CONFIGS } from '@/config/expedition'
+import { useActionToast } from '@/composables/useActionToast'
 import type { ExpeditionMission } from '@/types'
 
 export default defineComponent({
@@ -137,6 +138,7 @@ export default defineComponent({
   setup() {
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
+    const { showToast } = useActionToast()
     const now = ref(Date.now())
     let timer: ReturnType<typeof setInterval> | null = null
 
@@ -177,6 +179,13 @@ export default defineComponent({
       return battleStore.getChampionImage(name)
     }
 
+    function collectExpedition(id: string) {
+      const expedition = expeditionStore.activeExpeditions.find((e) => e.id === id)
+      const status = expedition?.status
+      expeditionStore.collectExpedition(id)
+      showToast(status === 'success' ? 'Expedition rewards collected!' : 'Expedition completed.')
+    }
+
     return {
       expeditionStore,
       doneExpeditions,
@@ -185,6 +194,7 @@ export default defineComponent({
       getTimeRemaining,
       getExpeditionIcon,
       getChampionImage,
+      collectExpedition,
     }
   },
 })

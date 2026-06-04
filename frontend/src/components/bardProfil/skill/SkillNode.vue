@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useGameStore } from '@/stores/gameStore'
+import { useActionToast } from '@/composables/useActionToast'
 
 const props = defineProps<{
   data: {
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const gameStore = useGameStore()
+const { showToast } = useActionToast()
 const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
 
 const state = computed((): 'bought' | 'buyable' | 'locked' => {
@@ -26,7 +28,9 @@ const state = computed((): 'bought' | 'buyable' | 'locked' => {
 })
 
 function handleBuy() {
-  if (state.value === 'buyable') gameStore.unlockSkillWithMeeps(props.data.index)
+  if (state.value !== 'buyable') return
+  gameStore.unlockSkillWithMeeps(props.data.index)
+  showToast(`${props.data.skill.key} skill learned!`)
 }
 </script>
 

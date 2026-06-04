@@ -902,6 +902,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
 ]
 
+// ── UI Timing ─────────────────────────────────────────────────────────────────
+export const TOAST_DURATION_MS = 1800
+
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
 // to ensure uniqueness across the codebase.

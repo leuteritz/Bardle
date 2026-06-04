@@ -10,6 +10,7 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
+import ActionToast from '@/components/bardProfil/ActionToast.vue'
 
 const uiStore = useUiStore()
 
@@ -84,6 +85,7 @@ watch(
           </div>
 
           <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
+            <ActionToast />
             <!-- Battle-Tab: immer gemountet (v-show), Watch + Simulation bleiben aktiv -->
             <div v-show="uiStore.bardActiveTab === 'kampf'" class="battle-tab-layer">
               <BattleResultComponent />

@@ -5,6 +5,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { usePlanetShopStore, PLANET_ROLES_LIST, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
 import { MATERIALS } from '@/config/materials'
+import { useActionToast } from '@/composables/useActionToast'
 
 const CPS_BUILDINGS = [
   { id: 'glockenturm', name: 'Bell Tower', icon: '/img/Glockenturm.png' },
@@ -16,6 +17,7 @@ const CPS_BUILDINGS = [
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
+const { showToast } = useActionToast()
 
 const purchasedSlots = computed(() => store.slots.filter((s) => s.purchased))
 
@@ -55,6 +57,13 @@ function assignRole(roleId: PlanetRoleType) {
   if (!activeSlot.value) return
   if (activeSlot.value.role === roleId) return
   store.assignRole(activeSlot.value.id, roleId)
+  const roleName = PLANET_ROLES[roleId]?.name ?? roleId
+  showToast(`${roleName} assigned to planet slot!`)
+}
+
+function buySlot(slotId: string) {
+  store.buySlot(slotId)
+  showToast('Planet orbit slot unlocked!')
 }
 
 const activeImage = computed(() => {
@@ -191,7 +200,7 @@ function bonusText(role: PlanetRole): string {
       <button
         v-if="store.canUnlockPlanetSlot(activeSlotIndex)"
         class="ps-locked-panel-buy-btn"
-        @click="store.buySlot(activeSlot.id)"
+        @click="buySlot(activeSlot.id)"
       >
         ✦ Unlock
       </button>

@@ -199,6 +199,7 @@ import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOri
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES } from '../../../config/constants'
+import { useActionToast } from '../../../composables/useActionToast'
 import type { ChampionRole } from '../../../types'
 
 
@@ -213,6 +214,7 @@ export default defineComponent({
     const championNames = ref<string[]>([])
     const battleStore = useBattleStore()
     const inventoryStore = useInventoryStore()
+    const { showToast } = useActionToast()
     const loadError = ref<string | null>(null)
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
@@ -268,6 +270,7 @@ export default defineComponent({
     function handleBuy(name: string) {
       if (!canClickBuy(name)) return
       battleStore.recruitChampion(name)
+      showToast(`${name} recruited!`)
     }
 
     function hasEnoughMaterial(matId: string, qty: number): boolean {

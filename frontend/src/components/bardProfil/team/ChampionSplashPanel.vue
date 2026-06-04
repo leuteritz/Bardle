@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
+import { useActionToast } from '@/composables/useActionToast'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
@@ -30,6 +31,7 @@ const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
+const { showToast } = useActionToast()
 const expeditionStore = useExpeditionStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
@@ -178,10 +180,13 @@ function closePanel() {
 }
 
 function handleSelect(champion: string) {
-  if (internalSubSlot.value === -1) {
+  const subSlot = internalSubSlot.value
+  if (subSlot === -1) {
     battleStore.setHeaderSlot(activeSlotIndex.value, champion)
+    showToast(`${champion} set as ${activeRole.value}!`)
   } else {
-    battleStore.setSecondarySlot(activeSlotIndex.value, internalSubSlot.value, champion)
+    battleStore.setSecondarySlot(activeSlotIndex.value, subSlot, champion)
+    showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
   }
   panelMode.value = 'main'
   internalSubSlot.value = -1

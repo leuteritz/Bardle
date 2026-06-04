@@ -174,9 +174,11 @@ import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeS
 import { usePlayerStore } from '@/stores/playerStore'
 import { formatNumber } from '@/config/numberFormat'
 import { SOLAR_MAX_LEVELS, STAR_PHASE_DATA } from '@/config/constants'
+import { useActionToast } from '@/composables/useActionToast'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
+const { showToast } = useActionToast()
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const SUN_EDGE_R = 110
@@ -299,11 +301,16 @@ function handleClick(branchId: SolarBranchId): void {
   if (solarStore.branchLevel(branchId) > beforeLevel) {
     purchaseFlash.value = true
     setTimeout(() => { purchaseFlash.value = false }, 500)
+    const branch = BRANCHES.find((b) => b.id === branchId)
+    showToast(`${branch?.name ?? 'Branch'} upgraded!`)
   }
 }
 
 function handleUpgradeStar(): void {
+  if (!solarStore.canUpgradeStar) return
+  const targetName = nextStage.value.name
   solarStore.upgradeStar()
+  showToast(`Star evolving to ${targetName}…`)
 }
 </script>
 

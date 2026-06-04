@@ -115,6 +115,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { EXPEDITION_CONFIGS } from '@/config/expedition'
 import { getChampionRoles } from '@/config/championRoles'
 import { MAX_ACTIVE_EXPEDITIONS } from '@/config/constants'
+import { useActionToast } from '@/composables/useActionToast'
 import type { ChampionRole } from '@/types'
 
 export default defineComponent({
@@ -123,6 +124,7 @@ export default defineComponent({
   setup() {
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
+    const { showToast } = useActionToast()
     const selections = reactive<Record<string, Record<number, string>>>({})
     const selectedConfigId = ref<string | null>(null)
 
@@ -221,6 +223,7 @@ export default defineComponent({
       if (expeditionStore.startExpedition(configId, assigned)) {
         delete selections[configId]
         selectedConfigId.value = null
+        showToast(`Expedition started: ${config.name}!`)
       }
     }
 

@@ -135,6 +135,7 @@ import { useInventoryStore } from '@/stores/inventoryStore'
 import { SHOP_ITEMS } from '@/config/items'
 import { MATERIALS } from '@/config/materials'
 import { formatNumber } from '@/config/numberFormat'
+import { useActionToast } from '@/composables/useActionToast'
 import type { ItemRarity, ShopItem } from '@/types'
 
 export default defineComponent({
@@ -147,6 +148,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const itemStore = useItemStore()
     const inventoryStore = useInventoryStore()
+    const { showToast } = useActionToast()
     const activeCategory = ref(props.category ?? 'weapon')
     watch(() => props.category, (val) => { if (val) activeCategory.value = val })
 
@@ -179,6 +181,7 @@ export default defineComponent({
     function buyItem(item: ShopItem) {
       if (!canAfford(item)) return
       itemStore.buyItem(item.id)
+      showToast(`${item.name} equipped!`)
     }
 
     const rarityCardClass = (r: ItemRarity) =>
