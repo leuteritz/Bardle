@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
 import { STAR_PHASE_DATA, SOLAR_MAX_LEVELS } from '@/config/constants'
@@ -17,18 +18,21 @@ const progressPct = computed(() => {
 
 const now = ref(Date.now())
 let ticker: ReturnType<typeof setInterval>
-onMounted(() => { ticker = setInterval(() => { now.value = Date.now() }, 1000) })
+onMounted(() => {
+  if (!store.phaseEnteredAt) store.phaseEnteredAt = Date.now()
+  ticker = setInterval(() => { now.value = Date.now() }, 1000)
+})
 onUnmounted(() => clearInterval(ticker))
 
-const phaseAge = computed(() => {
-  if (!store.phaseEnteredAt) return '–'
+const phaseAgeParts = computed(() => {
+  if (!store.phaseEnteredAt) return null
   const secs = Math.floor((now.value - store.phaseEnteredAt) / 1000)
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  const s = secs % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
+  return {
+    d: Math.floor(secs / 86400),
+    h: Math.floor((secs % 86400) / 3600),
+    m: Math.floor((secs % 3600) / 60),
+    s: secs % 60,
+  }
 })
 
 const BRANCHES: Array<{ id: SolarBranchId; label: string; color: string }> = [
@@ -75,6 +79,38 @@ function branchBarPct(id: SolarBranchId): number {
       <div class="spp-phase-name">{{ phase.name }}</div>
     </div>
 
+    <!-- ─ Phase Duration ─ -->
+    <div class="spp-duration">
+      <div class="spp-duration-header">
+        <Icon icon="game-icons:sand-clock" width="14" height="14" :style="{ color: 'var(--phase-primary)' }" />
+        <span>Time in Phase</span>
+      </div>
+      <div v-if="!phaseAgeParts" class="spp-duration-unknown">Not tracked yet</div>
+      <div v-else class="spp-duration-clock">
+        <template v-if="phaseAgeParts.d > 0">
+          <div class="spp-seg">
+            <span class="spp-seg-val">{{ phaseAgeParts.d }}</span>
+            <span class="spp-seg-lbl">d</span>
+          </div>
+          <span class="spp-seg-sep">:</span>
+        </template>
+        <div class="spp-seg">
+          <span class="spp-seg-val">{{ String(phaseAgeParts.h).padStart(2, '0') }}</span>
+          <span class="spp-seg-lbl">h</span>
+        </div>
+        <span class="spp-seg-sep">:</span>
+        <div class="spp-seg">
+          <span class="spp-seg-val">{{ String(phaseAgeParts.m).padStart(2, '0') }}</span>
+          <span class="spp-seg-lbl">m</span>
+        </div>
+        <span class="spp-seg-sep">:</span>
+        <div class="spp-seg">
+          <span class="spp-seg-val">{{ String(phaseAgeParts.s).padStart(2, '0') }}</span>
+          <span class="spp-seg-lbl">s</span>
+        </div>
+      </div>
+    </div>
+
     <!-- ─ Fortschrittsbalken ─ -->
     <div class="spp-progress-wrap">
       <div class="spp-bar-track">
@@ -89,8 +125,8 @@ function branchBarPct(id: SolarBranchId): number {
     <!-- ─ Info-Grid 2×2 ─ -->
     <div class="spp-info-grid">
       <div class="spp-cell">
-        <span class="spp-cell-lbl">Phase Age</span>
-        <span class="spp-cell-val">{{ phaseAge }}</span>
+        <span class="spp-cell-lbl">Pulse</span>
+        <span class="spp-cell-val">{{ phase.pulseSpeed }}</span>
       </div>
       <div class="spp-cell">
         <span class="spp-cell-lbl">Factor</span>
@@ -257,6 +293,81 @@ function branchBarPct(id: SolarBranchId): number {
   50% {
     text-shadow: 0 0 3px var(--phase-glow);
   }
+}
+
+/* ─ Phase Duration ──────────────────────────────── */
+.spp-duration {
+  background: #0e0d07;
+  border: 1px solid color-mix(in srgb, var(--phase-glow) 35%, #3e200a);
+  border-radius: 4px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spp-duration-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rpg-wood);
+}
+
+.spp-duration-unknown {
+  font-size: 12px;
+  color: var(--rpg-text-dim);
+  font-style: italic;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.spp-duration-clock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+}
+
+.spp-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #111008;
+  border: 1px solid color-mix(in srgb, var(--phase-glow) 22%, #3e200a);
+  border-radius: 4px;
+  padding: 6px 10px;
+  min-width: 44px;
+}
+
+.spp-seg-val {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--phase-primary);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--phase-glow) 60%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.spp-seg-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+
+.spp-seg-sep {
+  font-size: 20px;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--phase-glow) 40%, transparent);
+  padding-bottom: 14px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* ─ Fortschrittsbalken ──────────────────────────── */

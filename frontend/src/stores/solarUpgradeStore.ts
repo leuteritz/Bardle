@@ -46,7 +46,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     dmgPerClickLevel: 0 as number,
     starPhase: 0 as number,
     isUpgrading: false as boolean,
-    phaseEnteredAt: 0 as number,
+    phaseEnteredAt: Date.now() as number,
   }),
 
   getters: {
