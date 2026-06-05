@@ -9,7 +9,10 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
-const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
+const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<
+  string,
+  ChampionRole
+>
 const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
 const battleStore = useBattleStore()
@@ -24,10 +27,21 @@ const roleStats = computed(() =>
     const roleKey = r.key
     const total = Object.values(CHAMPION_ROLES).filter((v) => v === roleKey).length
     const owned = ownedChampions.value.filter((n) => CHAMPION_ROLES[n] === roleKey).length
-    const affordableCount = recruitableChampions.value.filter(
-      (c) => CHAMPION_ROLES[c.name] === roleKey && inventoryStore.hasMaterials(c.materialCost),
+    const roleRecruitables = recruitableChampions.value.filter(
+      (c) => CHAMPION_ROLES[c.name] === roleKey,
+    )
+    const recruitableCount = roleRecruitables.length
+    const affordableCount = roleRecruitables.filter((c) =>
+      inventoryStore.hasMaterials(c.materialCost),
     ).length
-    return { total, owned, affordableCount, canBuy: affordableCount > 0, complete: owned >= total && total > 0 }
+    return {
+      total,
+      owned,
+      recruitableCount,
+      affordableCount,
+      canBuy: recruitableCount > 0,
+      complete: owned >= total && total > 0,
+    }
   }),
 )
 
@@ -70,9 +84,9 @@ function onImgError(e: Event) {
           <!-- Grüner Glow wenn ein Champion dieser Rolle kaufbar ist -->
           <div v-if="roleStats[i].canBuy" class="role-affordable-glow" />
 
-          <!-- Anzahl kaufbarer Champions dieser Rolle -->
-          <div v-if="roleStats[i].affordableCount > 0" class="role-shop-count">
-            +{{ roleStats[i].affordableCount }}
+          <!-- Anzahl freigeschalten Champions dieser Rolle -->
+          <div v-if="roleStats[i].recruitableCount > 0" class="role-shop-count">
+            +{{ roleStats[i].recruitableCount }}
           </div>
 
           <span class="role-btn-label">{{ role }}</span>
@@ -210,41 +224,50 @@ function onImgError(e: Event) {
 /* Fortschritts-Badge oben rechts */
 .role-progress-badge {
   position: absolute;
-  top: 5px;
-  right: 5px;
+  top: 15px;
+  right: 15px;
   z-index: 4;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: #c8a060;
   line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.8);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.95),
+    0 0 8px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
 .role-progress-badge--complete {
   color: #e8c040;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(200, 144, 64, 0.6);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(200, 144, 64, 0.6);
 }
 
-/* Anzahl kaufbarer Champions (top-left) */
+/* Anzahl freigeschalteter Champions (top-left) */
 .role-shop-count {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 15px;
+  left: 15px;
   z-index: 4;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: #6ec040;
   line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(82, 184, 48, 0.5);
   pointer-events: none;
+  color: #c080e8;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(192, 128, 232, 0.45);
 }
 
 /* Kaufbarer-Champion-Glow */
 @keyframes affordable-pulse {
-  0%, 100% { opacity: 0.55; }
-  50%       { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .role-affordable-glow {
   position: absolute;
