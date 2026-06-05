@@ -26,7 +26,7 @@
           <!-- HP Hero -->
           <div class="hp-block" :class="hpBlockClass">
             <div class="hp-top">
-              <span class="hp-icon" aria-hidden="true">❤</span>
+              <Icon icon="game-icons:hearts" width="16" height="16" class="hp-icon" style="color: #cc6050" aria-hidden="true" />
               <span class="hp-numbers">
                 <span class="hp-current" :class="hpColor">{{
                   Math.round(playerStore.currentHP)
@@ -128,6 +128,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'

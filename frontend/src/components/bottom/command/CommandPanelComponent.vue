@@ -111,7 +111,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             >
               <!-- HP Wert Label -->
               <div class="cmd-tile-hp-label-row">
-                <span class="cmd-tile-hp-icon">♥</span>
+                <Icon icon="game-icons:heart-bottle" width="14" height="14" class="cmd-tile-hp-icon" style="color: #cc6050" />
                 <span class="cmd-tile-hp-value">
                   {{ formatNumber(slot.currentHp) }}<span class="cmd-tile-hp-sep">/</span
                   >{{ formatNumber(slot.maxHp) }}

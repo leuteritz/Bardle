@@ -360,7 +360,7 @@ export const ROLES = [
     key: 'mid' as ChampionRole,
     label: 'Mid',
     short: 'MID',
-    icon: 'game-icons:magic-wand',
+    icon: 'game-icons:wizard-staff',
     image: '/img/roles/mid.png',
     color: '#5090e8',
     stats: [
@@ -479,7 +479,7 @@ export const ROLES = [
     image: '/img/roles/supp.png',
     color: '#b8c8d8',
     stats: [
-      { key: 'heal', icon: 'game-icons:health-cross', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
+      { key: 'heal', icon: 'game-icons:healing', label: 'Heal / Tick', value: `${ROLE_SUPPORT_HEAL_AMOUNT} HP` },
       {
         key: 'healcd',
         icon: 'game-icons:pocket-watch',
@@ -489,7 +489,7 @@ export const ROLES = [
       { key: 'pheal', icon: 'game-icons:earth-spit', label: 'Planet Heal', value: `${SUPPORT_PLANET_HEAL_AMOUNT} HP` },
       {
         key: 'pcd',
-        icon: 'game-icons:timer',
+        icon: 'game-icons:cuckoo-clock',
         label: 'Planet CD',
         value: `${SUPPORT_PLANET_HEAL_INTERVAL_MS / 1000}s`,
       },
@@ -1005,4 +1005,48 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:gold-nuggets',     // Chimes/Click
   'game-icons:metronome',        // Chimes/Second
   'game-icons:fist',             // DMG/Click
+  // Missions (missionStore.ts)
+  'game-icons:guitar',           // Silver Strings reward
+  'game-icons:microphone',       // Street Performer mission
+  'game-icons:earth-spit',       // Planet Rescuer I mission + Support Planet Heal stat
+  'game-icons:radar-dish',       // Cosmic Frequency reward
+  'game-icons:electric',         // Synergy Master reward + Buildings encyclopedia
+  'game-icons:laurel-crown',     // Legendary Symphony reward
+  // Encyclopedia categories (augments, battle, resources)
+  'game-icons:katana',           // Battle category icon
+  'game-icons:star-key',         // Augments category icon
+  'game-icons:gem-chain',        // Resources category icon
+  // Role replacements (invalid → valid)
+  'game-icons:wizard-staff',     // Mid role icon (was magic-wand)
+  'game-icons:hearts',           // HP-Bars — Sonne (PlayerHPBar, PauseOverlay) + Bosse (PlanetRescueOverlay, StarFightModal)
+  'game-icons:healing',          // Support Heal/Tick stat (roleData)
+  'game-icons:cuckoo-clock',     // Support planet CD stat (was timer)
+  // Mission icon replacements (invalid → valid)
+  'game-icons:arrow-cursor',     // Nimble Fingers reward (was finger-pointing)
+  'game-icons:greek-temple',     // Building Master mission (was temple)
+  'game-icons:house',            // Architectural Harmony reward (was building)
+  'game-icons:globe',            // Planet Song reward (was world-map)
+  // Emoji → game-icons replacements
+  'game-icons:plasma-bolt',      // ⚡ Quickstart button (ExpeditionCreateComponent)
+  'game-icons:two-handed-sword', // ⚔ Champion damage display (BossArenaSection)
+  'game-icons:shield-reflect',   // 🛡 Shield damage float (ChampionOrbit)
+  'game-icons:war-pick',         // ⚔ Equipment empty state (EquipmentPickerPanel)
+  'game-icons:magnifying-glass', // 🔍 Search inputs (ChampionPickerPanel, ChampionSelectPanel, ChampionShopComponent, EncyclopediaPanel)
+  'game-icons:heart-bottle',     // ❤/♥ HP icons (PlayerHPBar, CommandPanel, PlanetSelect, etc.)
+  'game-icons:wrench',           // ⚙ Admin Dashboard header icon
+  'game-icons:heraldic-sun',     // ⚜️ Honor shield (BattleResultModal)
+  'game-icons:brick-wall',       // 🏗️ Construction icon (PlanetSelectTab + Buildings encyclopedia)
+  'game-icons:open-chest',       // 📦 Expedition ready header (ExpeditionActiveComponent)
+  'game-icons:wax-tablet',       // 📖 Encyclopedia tab button (App.vue + EncyclopediaPanel)
+  'game-icons:rolled-cloth',     // 📜 Expedition icon fallback (ExpeditionActiveComponent)
+  'game-icons:fingers-crossed',  // ✌️ Double Tap augment icon
+  'game-icons:plain-square',     // ⚪ Common rarity (augmentsAndBattle.ts)
+  'game-icons:ice-iris',         // 🔵 Rare rarity (augmentsAndBattle.ts)
+  'game-icons:crystal-eye',      // 🟣 Epic/Legendary rarity (augmentsAndBattle.ts)
+  'game-icons:spanner',          // 🔧 Upgrades encyclopedia entry
+  'game-icons:goblin',           // 👹 Planet Boss encyclopedia category
+  'game-icons:papyrus',          // 🗺️ Expeditions encyclopedia category
+  'game-icons:rank-3',           // ⬆️ Leveling encyclopedia category
+  'game-icons:sundial',          // ⏳ Loading indicator in BattleStartScreenComponent
+  'game-icons:hazard-sign',      // ⚠ Warning label in ExpeditionCreateComponent
 ])

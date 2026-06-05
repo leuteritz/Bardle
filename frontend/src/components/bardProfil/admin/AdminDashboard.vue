@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import AdminQuickActionsPanel from './AdminQuickActionsPanel.vue'
 import AdminSectionsList from './AdminSectionsList.vue'
 
@@ -46,7 +47,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-3 rpg-header">
           <div class="flex items-center gap-2">
-            <span class="admin-icon">⚙</span>
+            <Icon icon="game-icons:wrench" width="20" height="20" class="admin-icon" style="color: #e8c040" />
             <span class="admin-title">Admin Dashboard</span>
           </div>
           <div class="flex items-center gap-2">

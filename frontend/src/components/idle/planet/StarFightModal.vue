@@ -53,7 +53,7 @@
             <!-- ── HP Bar ──────────────────────────────────────────── -->
             <div v-if="activeBoss" class="sf-hp-section">
               <div class="sf-hp-header">
-                <span class="sf-stat-label">❤ HP</span>
+                <span class="sf-stat-label"><Icon icon="game-icons:hearts" width="14" height="14" style="color: #cc6050; vertical-align: middle; margin-right: 3px" />HP</span>
                 <span class="sf-hp-numbers">
                   {{ formatNumber(activeBoss.currentHP) }}
                   <span class="sf-hp-sep">／</span>

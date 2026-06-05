@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const augmentsCategory: EncyclopediaCategory = {
   id: 'augments',
   title: 'Augments',
-  icon: 'game-icons:star-key',
+  icon: 'game-icons:star-key', // star-key is valid in game-icons
   entries: [
     {
       id: 'augment-system',
@@ -23,7 +23,7 @@ export const augmentsCategory: EncyclopediaCategory = {
     {
       id: 'augments-common',
       name: 'Augments: Common',
-      icon: '⚪',
+      icon: 'game-icons:plain-square',
       description:
         'Common augments (≈60% chance). Moderate bonuses:\n' +
         '• Melodic Surge: +30% CPS\n' +
@@ -43,7 +43,7 @@ export const augmentsCategory: EncyclopediaCategory = {
     {
       id: 'augments-rare',
       name: 'Augments: Rare',
-      icon: '🔵',
+      icon: 'game-icons:ice-iris',
       description:
         'Rare augments (≈25% chance). Strong bonuses:\n' +
         '• Harmonic Cascade: +70% CPS\n' +
@@ -61,7 +61,7 @@ export const augmentsCategory: EncyclopediaCategory = {
     {
       id: 'augments-epic-legendary',
       name: 'Augments: Epic & Legendary',
-      icon: '🟣',
+      icon: 'game-icons:crystal-eye',
       description:
         'Epic (≈12% chance):\n' +
         '• Eternal Melody: +150% CPS\n' +

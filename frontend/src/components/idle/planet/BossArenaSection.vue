@@ -57,7 +57,7 @@
               class="champ-avatar"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
-            <div class="champ-dmg">⚔ {{ championDamage ?? 1 }}</div>
+            <div class="champ-dmg"><Icon icon="game-icons:two-handed-sword" width="14" height="14" style="color: #cc6050; vertical-align: middle" /> {{ championDamage ?? 1 }}</div>
           </div>
         </div>
       </div>
@@ -115,6 +115,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'

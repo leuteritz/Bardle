@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
@@ -74,7 +75,7 @@ watch(
       class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
       @click="gameStore.toggleEncyclopedia()"
     >
-      <span class="text-lg transition-transform duration-200 group-hover:scale-110">📖</span>
+      <Icon icon="game-icons:wax-tablet" width="24" height="24" class="transition-transform duration-200 group-hover:scale-110" style="color: #e8c040" />
     </button>
 
     <EncyclopediaPanel />

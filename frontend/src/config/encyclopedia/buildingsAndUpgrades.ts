@@ -3,7 +3,7 @@ import type { EncyclopediaCategory } from './types'
 export const buildingsCategory: EncyclopediaCategory = {
   id: 'buildings',
   title: 'Buildings',
-  icon: '🏗️',
+  icon: 'game-icons:brick-wall',
   entries: [
     {
       id: 'chimeClicker',
@@ -85,7 +85,7 @@ export const buildingsCategory: EncyclopediaCategory = {
 export const permanentUpgradesCategory: EncyclopediaCategory = {
   id: 'permanentUpgrades',
   title: 'Permanent Upgrades',
-  icon: '🔧',
+  icon: 'game-icons:spanner',
   entries: [
     {
       id: 'perm-cpc',

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useItemStore } from '@/stores/itemStore'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ItemCategory, SlotEquipment } from '@/types'
@@ -72,7 +73,7 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
     <!-- Grid -->
     <div class="ep-grid-wrapper">
       <div v-if="filteredItems.length === 0" class="ep-empty">
-        <span class="ep-empty-icon">⚔</span>
+        <Icon icon="game-icons:war-pick" width="32" height="32" class="ep-empty-icon" />
         <span>No Items Available</span>
       </div>
       <div v-else class="ep-grid">

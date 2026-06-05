@@ -30,7 +30,7 @@
         <div class="honor-section">
           <!-- Header -->
           <div class="honor-header">
-            <span class="honor-shield">⚜️</span>
+            <Icon icon="game-icons:heraldic-sun" width="20" height="20" class="honor-shield" style="color: #e8c040" />
             <span class="honor-title">GRANT HONOR</span>
             <div class="honor-pips">
               <span

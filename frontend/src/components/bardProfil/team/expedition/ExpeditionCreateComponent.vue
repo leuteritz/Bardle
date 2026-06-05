@@ -16,7 +16,7 @@
 
     <!-- ── Max-limit warning ──────────────────────────────────── -->
     <div v-if="!expeditionStore.canStartExpedition" class="ec-warning">
-      ⚠ Maximum erreicht ({{ MAX_ACTIVE_EXPEDITIONS }}) — Sammle aktive Expeditionen ein
+      <Icon icon="game-icons:hazard-sign" width="14" height="14" style="color: #e8c040; vertical-align: middle; margin-right: 4px" />Maximum erreicht ({{ MAX_ACTIVE_EXPEDITIONS }}) — Sammle aktive Expeditionen ein
     </div>
 
     <!-- ── No results ─────────────────────────────────────────── -->
@@ -82,7 +82,7 @@
             :disabled="!canQuickstart(config.id)"
             @click.stop="quickstartExpedition(config.id)"
           >
-            <span class="ec-qs-bolt">⚡</span>
+            <Icon icon="game-icons:plasma-bolt" width="16" height="16" style="color: #e8c040; flex-shrink: 0" />
             Quickstart
           </button>
         </div>
@@ -198,7 +198,7 @@ export default defineComponent({
         return { name, role }
       })
       if (expeditionStore.startExpedition(configId, assigned)) {
-        showToast(`⚡ ${config.name} gestartet!`)
+        showToast(`${config.name} gestartet!`)
       }
     }
 

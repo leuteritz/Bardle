@@ -71,7 +71,7 @@
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
-          <span class="text-2xl opacity-20">🔍</span>
+          <Icon icon="game-icons:magnifying-glass" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
         </div>
         <p class="empty-label">No champion found.</p>
       </div>

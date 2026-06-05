@@ -157,7 +157,7 @@
       @click="$emit('start')"
     >
       <span class="start-btn-icon">
-        <template v-if="isStarting">⏳</template>
+        <Icon v-if="isStarting" icon="game-icons:sundial" width="28" height="28" style="color: #e8c040" />
         <template v-else-if="!hasFullTeam">
           <img src="/img/lock.png" alt="Locked" class="start-btn-lock-img" />
         </template>

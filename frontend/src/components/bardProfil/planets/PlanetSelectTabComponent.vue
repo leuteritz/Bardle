@@ -158,7 +158,7 @@ function bonusText(role: PlanetRole): string {
           />
           <span v-else class="ps-slot-btn-placeholder">＋</span>
           <template v-if="slot.maxHp > 0">
-            <span class="ps-slot-btn-hp-text">❤ {{ slot.currentHp }} / {{ slot.maxHp }}</span>
+            <span class="ps-slot-btn-hp-text"><Icon icon="game-icons:heart-bottle" width="12" height="12" style="color: #cc6050; vertical-align: middle; margin-right: 2px" />{{ slot.currentHp }} / {{ slot.maxHp }}</span>
             <div class="ps-slot-btn-hp-track">
               <div
                 class="ps-slot-btn-hp-fill"
@@ -238,7 +238,7 @@ function bonusText(role: PlanetRole): string {
             <!-- HP -->
             <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
               <div class="ps-planet-hp-text">
-                <span class="ps-hp-heart">❤</span>
+                <Icon icon="game-icons:heart-bottle" width="16" height="16" class="ps-hp-heart" style="color: #cc6050" />
                 <span class="ps-hp-values"
                   >{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span
                 >
@@ -343,7 +343,7 @@ function bonusText(role: PlanetRole): string {
         <Transition name="ps-config-slide">
           <div v-if="activeSlot.role === 'resonance_tower'" class="ps-config-section">
             <div class="ps-config-header">
-              <span class="ps-config-header-icon">🏗️</span>
+              <Icon icon="game-icons:brick-wall" width="20" height="20" class="ps-config-header-icon" style="color: #e8c040" />
               <span>Select Building</span>
               <span class="ps-config-header-hint">Which building should be boosted?</span>
             </div>
@@ -357,7 +357,7 @@ function bonusText(role: PlanetRole): string {
               >
                 <div class="ps-config-btn-img-wrap">
                   <img v-if="bld.icon" :src="bld.icon" class="ps-config-btn-img" alt="" />
-                  <div v-else class="ps-config-btn-img-placeholder">🏗</div>
+                  <Icon v-else icon="game-icons:brick-wall" width="24" height="24" class="ps-config-btn-img-placeholder" style="color: #7a4e20" />
                 </div>
                 <span class="ps-config-btn-label">{{ bld.name }}</span>
                 <div

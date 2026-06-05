@@ -139,7 +139,7 @@ function onImgError(e: Event) {
 
     <!-- ── Search ── -->
     <div class="csp-search-row">
-      <span class="csp-search-icon">🔍</span>
+      <Icon icon="game-icons:magnifying-glass" width="16" height="16" class="csp-search-icon" style="color: #7a4e20" />
       <input
         v-model="searchQuery"
         type="text"

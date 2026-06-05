@@ -93,7 +93,7 @@
             }"
             :style="{ left: f.x + 'px', top: f.y + 'px' }"
           >
-            <template v-if="f.shieldFloat">🛡</template>
+            <template v-if="f.shieldFloat"><Icon icon="game-icons:shield-reflect" width="16" height="16" style="color: #5090e8" /></template>
             <template v-else-if="f.healFloat">+{{ f.value }}</template>
             <template v-else>-{{ f.value }}</template>
           </span>
@@ -105,6 +105,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '../../../stores/combatStore'
 import { useBattleStore } from '../../../stores/battleStore'
@@ -173,7 +174,7 @@ interface LocalChampState {
 
 export default defineComponent({
   name: 'ChampionOrbit',
-  components: { AttackProjectileLayer },
+  components: { AttackProjectileLayer, Icon },
   setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()

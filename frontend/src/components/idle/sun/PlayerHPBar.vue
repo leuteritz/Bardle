@@ -1,7 +1,7 @@
 <template>
   <div class="hp-bar-container" :class="{ 'hp-bar-container--hit': wasHit }" :style="sunRVar">
     <div class="hp-header">
-      <span class="hp-icon">♥</span>
+      <Icon icon="game-icons:hearts" width="16" height="16" class="hp-icon" style="color: #cc6050" />
       <span class="hp-value">
         {{ Math.ceil(playerStore.currentHP) }}<span class="hp-sep"> / </span>{{ playerStore.maxHP }}
       </span>
@@ -28,11 +28,13 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { usePlayerStore } from '../../../stores/playerStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
 
 export default defineComponent({
   name: 'PlayerHPBar',
+  components: { Icon },
   setup() {
     const playerStore = usePlayerStore()
     const planetShopStore = usePlanetShopStore()

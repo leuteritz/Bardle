@@ -7,7 +7,7 @@
 
     <!-- BEREIT-Sektion -->
     <template v-if="doneExpeditions.length > 0">
-      <div class="section-header">📦 Bereit zum Abholen</div>
+      <div class="section-header"><Icon icon="game-icons:open-chest" width="16" height="16" style="color: #e8c040; vertical-align: middle; margin-right: 4px" />Bereit zum Abholen</div>
       <div
         v-for="expedition in doneExpeditions"
         :key="expedition.id"
@@ -27,7 +27,8 @@
         <div class="p-3 pt-4 space-y-2.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-base">{{ getExpeditionIcon(expedition.configId) }}</span>
+              <img v-if="!getExpeditionIcon(expedition.configId).includes(':')" :src="getExpeditionIcon(expedition.configId)" alt="" width="20" height="20" style="object-fit: contain" />
+              <Icon v-else :icon="getExpeditionIcon(expedition.configId)" width="20" height="20" style="color: #c89040" />
               <span class="text-sm font-bold tracking-wide text-white/90">{{ expedition.name }}</span>
             </div>
             <span
@@ -88,7 +89,8 @@
         <div class="p-3 pt-4 space-y-2.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-base">{{ getExpeditionIcon(expedition.configId) }}</span>
+              <img v-if="!getExpeditionIcon(expedition.configId).includes(':')" :src="getExpeditionIcon(expedition.configId)" alt="" width="20" height="20" style="object-fit: contain" />
+              <Icon v-else :icon="getExpeditionIcon(expedition.configId)" width="20" height="20" style="color: #c89040" />
               <span class="text-sm font-bold tracking-wide text-white/90">{{ expedition.name }}</span>
             </div>
             <span class="text-xs font-mono text-white/40">{{ getTimeRemaining(expedition) }}</span>
@@ -127,6 +129,7 @@
 
 <script lang="ts">
 import { defineComponent, computed, onMounted, onUnmounted, ref } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { EXPEDITION_CONFIGS } from '@/config/expedition'
@@ -135,6 +138,7 @@ import type { ExpeditionMission } from '@/types'
 
 export default defineComponent({
   name: 'ExpeditionActiveComponent',
+  components: { Icon },
   setup() {
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
@@ -173,7 +177,7 @@ export default defineComponent({
       return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
     }
     function getExpeditionIcon(configId: string): string {
-      return EXPEDITION_CONFIGS.find((e) => e.id === configId)?.icon ?? '📜'
+      return EXPEDITION_CONFIGS.find((e) => e.id === configId)?.icon ?? 'game-icons:rolled-cloth'
     }
     function getChampionImage(name: string): string {
       return battleStore.getChampionImage(name)

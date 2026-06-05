@@ -43,7 +43,7 @@
         <!-- ── HP Bar ────────────────────────────────────────────────────── -->
         <div class="hp-section">
           <div class="hp-header">
-            <span class="stat-label">❤ HP</span>
+            <span class="stat-label"><Icon icon="game-icons:hearts" width="14" height="14" style="color: #cc6050; vertical-align: middle; margin-right: 3px" />HP</span>
             <span class="hp-numbers">
               {{ formatNumber(bossStore.activeBoss?.currentHP ?? 0) }}
               <span class="hp-sep">／</span>

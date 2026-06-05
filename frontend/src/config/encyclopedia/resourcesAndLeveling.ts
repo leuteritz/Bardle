@@ -50,7 +50,7 @@ export const resourcesCategory: EncyclopediaCategory = {
 export const levelingCategory: EncyclopediaCategory = {
   id: 'leveling',
   title: 'Leveling & Skill Points',
-  icon: '⬆️',
+  icon: 'game-icons:rank-3',
   entries: [
     {
       id: 'level-system',

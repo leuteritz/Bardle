@@ -53,7 +53,7 @@ export const planetEventsCategory: EncyclopediaCategory = {
 export const planetBossCategory: EncyclopediaCategory = {
   id: 'planetBoss',
   title: 'Planet Boss',
-  icon: '👹',
+  icon: 'game-icons:goblin',
   entries: [
     {
       id: 'boss-hp',
@@ -104,7 +104,7 @@ export const planetBossCategory: EncyclopediaCategory = {
 export const expeditionsCategory: EncyclopediaCategory = {
   id: 'expeditions',
   title: 'Expeditions',
-  icon: '🗺️',
+  icon: 'game-icons:papyrus',
   entries: [
     {
       id: 'expedition-system',

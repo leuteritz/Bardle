@@ -61,7 +61,7 @@ const filteredData = computed(() => {
         <!-- Header -->
         <div class="enc-header relative z-10 flex items-center justify-between px-5 py-4 shrink-0">
           <div class="flex items-center gap-3">
-            <span class="text-2xl">📖</span>
+            <Icon icon="game-icons:wax-tablet" width="28" height="28" style="color: #e8c040" />
             <h2 class="enc-title text-xl font-bold">
               Bardle Enzyklopaedie
             </h2>
@@ -77,7 +77,7 @@ const filteredData = computed(() => {
         <!-- Search -->
         <div class="enc-search-wrap relative z-10 px-5 py-3 shrink-0">
           <div class="relative">
-            <span class="enc-search-icon absolute text-sm -translate-y-1/2 left-3 top-1/2">🔍</span>
+            <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="enc-search-icon absolute -translate-y-1/2 left-3 top-1/2" style="color: #7a4e20" />
             <input
               v-model="searchQuery"
               type="text"

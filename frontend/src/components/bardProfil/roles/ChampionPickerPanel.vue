@@ -80,7 +80,7 @@ function onImgError(e: Event) {
     </div>
 
     <div class="search-row">
-      <span class="search-icon">🔍</span>
+      <Icon icon="game-icons:magnifying-glass" width="16" height="16" class="search-icon" style="color: #7a4e20" />
       <input
         v-model="searchQuery"
         type="text"

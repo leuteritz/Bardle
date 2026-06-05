@@ -175,7 +175,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     name: 'Double Tap',
     description: 'Every 10th click counts twice.',
     effectLine: 'Every 10th Click Counts Twice',
-    icon: '✌️',
+    icon: 'game-icons:fingers-crossed',
     image: '/img/augments/augment6.png',
     rarity: 'rare',
     effects: {},
