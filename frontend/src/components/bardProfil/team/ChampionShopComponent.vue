@@ -34,33 +34,37 @@
           >Alle</button>
 
           <div class="filter-group-label">Traits</div>
-          <button
-            v-for="trait in availableTraits"
-            :key="trait.id"
-            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
-            :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
-            @click="activeTrait = trait.id"
-          >
-            <Icon :icon="trait.icon" class="trait-chip-icon" />
-            {{ trait.name }}
-          </button>
+          <TransitionGroup tag="div" name="chip" class="chip-group">
+            <button
+              v-for="trait in availableTraits"
+              :key="trait.id"
+              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+              class="trait-chip"
+              :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+              :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
+              @click="activeTrait = trait.id"
+            >
+              <Icon :icon="trait.icon" class="trait-chip-icon" />
+              {{ trait.name }}
+            </button>
+          </TransitionGroup>
 
           <template v-if="availableOrigins.length">
             <div class="filter-group-label">Origin</div>
-            <button
-              v-for="origin in availableOrigins"
-              :key="origin.origin"
-              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
-              class="trait-chip"
-              :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
-              :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
-              @click="activeTrait = origin.origin"
-            >
-              <Icon :icon="origin.icon" class="trait-chip-icon" />
-              {{ origin.origin }}
-            </button>
+            <TransitionGroup tag="div" name="chip" class="chip-group">
+              <button
+                v-for="origin in availableOrigins"
+                :key="origin.origin"
+                v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
+                class="trait-chip"
+                :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
+                :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
+                @click="activeTrait = origin.origin"
+              >
+                <Icon :icon="origin.icon" class="trait-chip-icon" />
+                {{ origin.origin }}
+              </button>
+            </TransitionGroup>
           </template>
 
         </div>
@@ -196,7 +200,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
 import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
-import { getChampionRoles } from '../../../config/championRoles'
+import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
 import { MATERIALS } from '../../../config/materials'
@@ -231,6 +235,15 @@ export default defineComponent({
         activeRole.value = val as ChampionRole | 'all'
       },
     )
+
+    watch(activeRole, () => {
+      if (activeTrait.value === 'all') return
+      const traitIds = new Set<string>(availableTraits.value.map((t) => t.id))
+      const originIds = new Set<string>(availableOrigins.value.map((o) => o.origin))
+      if (!traitIds.has(activeTrait.value) && !originIds.has(activeTrait.value)) {
+        activeTrait.value = 'all'
+      }
+    })
 
     function setActiveRole(role: ChampionRole | 'all') {
       activeRole.value = role
@@ -310,16 +323,22 @@ export default defineComponent({
     }
 
     const availableTraits = computed(() => {
+      const relevant = activeRole.value === 'all'
+        ? championNames.value
+        : championNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const seen = new Set<string>()
-      for (const name of championNames.value) {
+      for (const name of relevant) {
         for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
       }
       return TRAIT_DEFINITIONS.filter((t) => seen.has(t.id))
     })
 
     const availableOrigins = computed(() => {
+      const relevant = activeRole.value === 'all'
+        ? championNames.value
+        : championNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const seen = new Set<string>()
-      for (const name of championNames.value) {
+      for (const name of relevant) {
         const o = getChampionOrigin(name)
         if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
       }
@@ -749,6 +768,20 @@ export default defineComponent({
 }
 .filter-group-label:first-child {
   margin-top: 0;
+}
+
+.chip-group {
+  display: contents;
+}
+
+.chip-enter-active,
+.chip-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.chip-enter-from,
+.chip-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 </style>
