@@ -2,14 +2,17 @@
   <div class="rpg-frame flex flex-col h-full">
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
-      <div class="relative">
-        <span class="search-icon">⌕</span>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Champion oder Trait suchen..."
-          class="rpg-search w-full pl-9 pr-4 py-2.5"
-        />
+      <div class="cs-search-row">
+        <div class="relative flex-1">
+          <span class="search-icon">⌕</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Champion oder Trait suchen..."
+            class="rpg-search w-full pl-9 pr-4 py-2.5"
+          />
+        </div>
+        <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
       <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
@@ -208,8 +211,9 @@ export default defineComponent({
   components: { Icon },
   props: {
     initialRole: { type: String, default: 'all' },
+    showClose: { type: Boolean, default: false },
   },
-  emits: ['roleChange'],
+  emits: ['roleChange', 'close'],
   setup(props, { emit }) {
     const championNames = ref<string[]>([])
     const battleStore = useBattleStore()
@@ -635,6 +639,16 @@ export default defineComponent({
   gap: 8px;
   padding: 8px 10px;
   flex-shrink: 0;
+}
+.cs-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-search-row .modal-close-btn {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
 }
 
 /* ── Grid-Bereich ── */

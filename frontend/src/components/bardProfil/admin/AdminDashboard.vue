@@ -41,16 +41,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         v-if="isOpen"
         class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(780px,95vw)] max-h-[88vh] flex flex-col rpg-frame"
       >
-        <button class="modal-close-btn" @click="isOpen = false">✕</button>
-
         <!-- Gold accent bar -->
         <div class="rpg-accent-bar" />
 
         <!-- Header -->
-        <div class="flex items-center gap-2 px-5 py-3 rpg-header">
+        <div class="relative flex items-center gap-2 px-5 py-3 rpg-header">
           <Icon icon="game-icons:wrench" width="20" height="20" class="admin-icon" style="color: #e8c040" />
           <span class="admin-title">Admin Dashboard</span>
           <span class="admin-shortcut ml-auto">Ctrl+Shift+A</span>
+          <button class="modal-close-btn" @click="isOpen = false">✕</button>
         </div>
 
         <AdminQuickActionsPanel />
@@ -106,5 +105,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text-dim);
+}
+.rpg-header .modal-close-btn {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
 }
 </style>

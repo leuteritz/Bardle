@@ -101,12 +101,10 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           <!-- Gold Accent -->
           <div class="rpg-accent-bar"></div>
 
-          <!-- Close Button -->
-          <button class="modal-close-btn" @click="gameStore.closePrestigeModal()">✕</button>
-
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">
             <h2 class="text-3xl font-bold uni-title">Choose Your Next Universe</h2>
+            <button class="modal-close-btn" @click="gameStore.closePrestigeModal()">✕</button>
           </div>
 
           <!-- Universe Cards Grid -->

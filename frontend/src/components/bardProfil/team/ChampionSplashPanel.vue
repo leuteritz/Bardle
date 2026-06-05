@@ -407,48 +407,50 @@ function onImgError(e: Event) {
         class="inline-panel"
         @click.stop
       >
-        <button class="modal-close-btn" @click="closeInlinePanel">✕</button>
-
-        <div v-if="activePanel === 'expedition'" class="inline-panel-tab-bar">
-          <button
-            class="modal-tab"
-            :class="{ 'modal-tab--active': expeditionTab === 'create' }"
-            @click="expeditionTab = 'create'"
-          >
-            Start
-          </button>
-          <button
-            class="modal-tab"
-            :class="{ 'modal-tab--active': expeditionTab === 'active' }"
-            @click="expeditionTab = 'active'"
-          >
-            Aktiv
-            <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
-          </button>
-        </div>
-
-        <div v-if="activePanel === 'items'" class="inline-panel-tab-bar">
-          <button
-            v-for="cat in [
-              { id: 'weapon', label: 'Weapon' },
-              { id: 'armor', label: 'Armor' },
-              { id: 'artefact', label: 'Artefact' },
-            ]"
-            :key="cat.id"
-            class="modal-tab"
-            :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
-            @click="itemShopCategory = cat.id as ItemCategory"
-          >
-            <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
-            {{ cat.label }}
-          </button>
+        <div v-if="activePanel !== 'shop'" class="inline-panel-tab-bar">
+          <template v-if="activePanel === 'expedition'">
+            <button
+              class="modal-tab"
+              :class="{ 'modal-tab--active': expeditionTab === 'create' }"
+              @click="expeditionTab = 'create'"
+            >
+              Start
+            </button>
+            <button
+              class="modal-tab"
+              :class="{ 'modal-tab--active': expeditionTab === 'active' }"
+              @click="expeditionTab = 'active'"
+            >
+              Aktiv
+              <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
+            </button>
+          </template>
+          <template v-if="activePanel === 'items'">
+            <button
+              v-for="cat in [
+                { id: 'weapon', label: 'Weapon' },
+                { id: 'armor', label: 'Armor' },
+                { id: 'artefact', label: 'Artefact' },
+              ]"
+              :key="cat.id"
+              class="modal-tab"
+              :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
+              @click="itemShopCategory = cat.id as ItemCategory"
+            >
+              <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
+              {{ cat.label }}
+            </button>
+          </template>
+          <button class="modal-close-btn" @click="closeInlinePanel">✕</button>
         </div>
 
         <div class="inline-panel-content">
           <ChampionShopComponent
             v-if="activePanel === 'shop'"
             :initial-role="shopRole"
+            :show-close="true"
             @role-change="handleShopRoleChange"
+            @close="closeInlinePanel"
           />
           <template v-else-if="activePanel === 'expedition'">
             <ExpeditionCreateComponent v-if="expeditionTab === 'create'" />
@@ -733,11 +735,18 @@ function onImgError(e: Event) {
 
 .inline-panel-tab-bar {
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 8px 12px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.5);
   background: #1e1006;
   flex-shrink: 0;
+}
+.inline-panel-tab-bar > .modal-close-btn {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+  transform: none;
 }
 .inline-panel-content {
   flex: 1;
@@ -1056,6 +1065,11 @@ function onImgError(e: Event) {
   border-top: 2px solid #c89040;
   overflow: hidden;
 }
+/* Align close button with ChampionSelectPanel's csp-tabs row center (padding:8px + btn~26px/2 ≈ 21px) */
+.champion-selector-panel > .modal-close-btn {
+  top: 21px;
+  transform: translateY(-50%);
+}
 
 .champion-selector-content {
   flex: 1;
@@ -1127,6 +1141,11 @@ function onImgError(e: Event) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+/* Align close button with EquipmentPickerPanel's ep-tabs row center (gold-bar:3px + ep-tab padding:13px + 18px/2 ≈ 25px) */
+.equipment-picker-panel > .modal-close-btn {
+  top: 25px;
+  transform: translateY(-50%);
 }
 
 /* ══ EQUIPMENT PICKER TRANSITION (slide bottom → top) ══ */

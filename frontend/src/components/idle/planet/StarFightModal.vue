@@ -15,8 +15,6 @@
 
       <!-- ── Modal ─────────────────────────────────────────────────────── -->
       <div class="sf-modal" :class="{ 'sf-modal--galaxy': isGalaxyBoss }">
-        <button class="modal-close-btn" @click="handleClose">✕</button>
-
         <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
         <div class="sf-topbar" />
 
@@ -38,6 +36,7 @@
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="sf-header" :class="{ 'sf-header--galaxy': isGalaxyBoss }">
           <span class="sf-star-type">{{ starTypeLabel }}</span>
+          <button class="modal-close-btn" @click="handleClose">✕</button>
         </div>
 
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
@@ -488,6 +487,7 @@ function starStyle(i: number): Record<string, string> {
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .sf-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -496,6 +496,10 @@ function starStyle(i: number): Record<string, string> {
   border-bottom: 2px solid rgba(90, 45, 10, 0.6);
   gap: 0.75rem;
   flex-shrink: 0;
+}
+.sf-header .modal-close-btn {
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .sf-header--galaxy {

@@ -55,8 +55,6 @@ const filteredData = computed(() => {
         v-if="gameStore.isEncyclopediaOpen"
         class="enc-panel fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden"
       >
-        <button class="modal-close-btn" @click="closePanel">✕</button>
-
         <!-- Gold accent bar -->
         <div class="rpg-accent-bar"></div>
 
@@ -66,6 +64,7 @@ const filteredData = computed(() => {
           <h2 class="enc-title text-xl font-bold">
             Bardle Enzyklopaedie
           </h2>
+          <button class="modal-close-btn" @click="closePanel">✕</button>
         </div>
 
         <!-- Search -->
