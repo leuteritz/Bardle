@@ -1005,4 +1005,6 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:gold-nuggets',     // Chimes/Click
   'game-icons:metronome',        // Chimes/Second
   'game-icons:fist',             // DMG/Click
+  // Expedition Create Panel — reward icon
+  'game-icons:coins',            // Chimes reward display
 ])

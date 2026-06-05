@@ -1,114 +1,96 @@
 <template>
-  <div class="flex flex-col w-full gap-3">
+  <div class="ec-panel">
 
-    <!-- ── SCHRITT 1: Expedition wählen ───────────────────────── -->
-    <template v-if="!selectedConfigId">
-      <div v-if="!expeditionStore.canStartExpedition" class="ec-warning">
-        ⚠️ Maximum erreicht ({{ MAX_ACTIVE_EXPEDITIONS }})
-      </div>
-      <div class="ec-grid">
-        <button
-          v-for="config in expeditionConfigs"
-          :key="config.id"
-          class="ec-tile"
-          :class="expeditionStore.canStartExpedition ? 'ec-tile--available' : 'ec-tile--locked'"
-          :disabled="!expeditionStore.canStartExpedition"
-          @click="expeditionStore.canStartExpedition && selectConfig(config.id)"
-        >
-          <div class="ec-tile-icon">
-            <img v-if="config.icon.startsWith('/')" :src="config.icon" :alt="config.name" class="ec-tile-img" />
-            <Icon v-else-if="config.icon.includes(':')" :icon="config.icon" class="ec-tile-gi" />
-            <span v-else>{{ config.icon }}</span>
-          </div>
-          <div class="ec-tile-name">{{ config.name }}</div>
-          <div class="ec-tile-meta">{{ formatDuration(config.durationSeconds) }} · ♪ {{ config.baseReward }}</div>
-          <div class="ec-tile-roles">
-            <span
-              v-for="role in config.requiredRoles"
-              :key="role"
-              class="ec-role-dot"
-              :class="'ec-role-dot--' + role"
-            >{{ roleShort[role] }}</span>
-          </div>
-        </button>
-      </div>
-    </template>
+    <!-- ── Search Bar ─────────────────────────────────────────── -->
+    <div class="ec-search-wrap">
+      <span class="ec-search-icon">&#9906;</span>
+      <input
+        v-model="searchQuery"
+        class="ec-search"
+        placeholder="Nach Belohnung suchen…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button v-if="searchQuery" class="ec-search-clear" @click="searchQuery = ''">✕</button>
+    </div>
 
-    <!-- ── SCHRITT 2: Champions zuweisen ─────────────────────── -->
-    <template v-else>
-      <div class="ec-step2-header">
-        <button class="ec-back-btn" @click="selectedConfigId = null">← Zurück</button>
-        <div class="ec-selected-info">
-          <span class="ec-selected-icon">
-            <img v-if="selectedConfig!.icon.startsWith('/')" :src="selectedConfig!.icon" :alt="selectedConfig!.name" class="ec-tile-img" />
-            <Icon v-else-if="selectedConfig!.icon.includes(':')" :icon="selectedConfig!.icon" class="ec-tile-gi" />
-            <span v-else>{{ selectedConfig!.icon }}</span>
-          </span>
-          <span class="ec-selected-name">{{ selectedConfig!.name }}</span>
-          <span class="ec-selected-meta">{{ formatDuration(selectedConfig!.durationSeconds) }} · ♪ {{ selectedConfig!.baseReward }}</span>
-        </div>
-      </div>
+    <!-- ── Max-limit warning ──────────────────────────────────── -->
+    <div v-if="!expeditionStore.canStartExpedition" class="ec-warning">
+      ⚠ Maximum erreicht ({{ MAX_ACTIVE_EXPEDITIONS }}) — Sammle aktive Expeditionen ein
+    </div>
 
-      <div class="ec-roles-list">
-        <div v-for="(role, roleIdx) in selectedConfig!.requiredRoles" :key="role + '-' + roleIdx" class="ec-role-row">
-          <div class="ec-role-label-row">
-            <span class="ec-role-badge" :class="'ec-role-badge--' + role">{{ role }}</span>
-            <span v-if="getSelection(selectedConfigId, roleIdx)" class="ec-role-selected-name">
-              {{ getSelection(selectedConfigId, roleIdx) }}
-            </span>
-            <span v-else class="ec-role-placeholder">— wählen</span>
+    <!-- ── No results ─────────────────────────────────────────── -->
+    <div v-if="filteredConfigs.length === 0" class="ec-empty">
+      Keine Expedition gefunden für „{{ searchQuery }}"
+    </div>
+
+    <!-- ── Cards Grid ─────────────────────────────────────────── -->
+    <div class="ec-grid">
+      <div
+        v-for="config in filteredConfigs"
+        :key="config.id"
+        class="ec-card"
+        :class="canQuickstart(config.id) ? 'ec-card--available' : 'ec-card--locked'"
+      >
+        <!-- Accent bar -->
+        <div class="ec-card-accent"></div>
+
+        <!-- Card body -->
+        <div class="ec-card-body">
+          <!-- Icon -->
+          <div class="ec-card-icon-wrap">
+            <img
+              v-if="!config.icon.includes(':')"
+              :src="config.icon"
+              :alt="config.name"
+              class="ec-card-img"
+            />
+            <Icon
+              v-else
+              :icon="config.icon"
+              width="36"
+              height="36"
+              style="color: #c89040"
+            />
           </div>
-          <div class="ec-champ-row">
-            <button
-              v-for="champ in getAvailableChampions(selectedConfigId, roleIdx, role)"
-              :key="champ"
-              class="ec-champ-pick"
-              :class="
-                getSelection(selectedConfigId, roleIdx) === champ
-                  ? 'ec-champ-pick--selected'
-                  : isSelectedElsewhere(selectedConfigId, roleIdx, champ)
-                    ? 'ec-champ-pick--disabled'
-                    : 'ec-champ-pick--available'
-              "
-              :disabled="isSelectedElsewhere(selectedConfigId, roleIdx, champ)"
-              @click="toggleSelection(selectedConfigId, roleIdx, champ)"
-            >
-              <img
-                :src="getChampionImage(champ)"
-                :alt="champ"
-                class="ec-champ-img rpg-img"
-                @error="onImgError"
-              />
-              <div v-if="getSelection(selectedConfigId, roleIdx) === champ" class="ec-champ-check">✓</div>
-            </button>
-            <span v-if="getAvailableChampions(selectedConfigId, roleIdx, role).length === 0" class="ec-role-placeholder">
-              Kein {{ role }}-Champion verfügbar
-            </span>
+
+          <!-- Info -->
+          <div class="ec-card-info">
+            <div class="ec-card-name">{{ config.name }}</div>
+
+            <div class="ec-card-reward">
+              <Icon icon="game-icons:coins" width="14" height="14" style="color: #e8c040; flex-shrink: 0" />
+              <span class="ec-reward-amount">{{ $formatNumber(config.baseReward) }}</span>
+              <span class="ec-reward-label">Chimes</span>
+            </div>
+
+            <div class="ec-card-duration">
+              <Icon icon="game-icons:sand-clock" width="12" height="12" style="color: rgba(200,144,64,0.55); flex-shrink: 0" />
+              <span>{{ formatDuration(config.durationSeconds) }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="ec-footer">
-        <span v-if="isFullyAssigned(selectedConfigId, selectedConfig!.requiredRoles.length)" class="ec-chance" :class="getSuccessChanceColor(getSuccessChance(selectedConfigId))">
-          {{ Math.round(getSuccessChance(selectedConfigId) * 100) }}% Erfolgschance
-        </span>
-        <span v-else class="ec-role-placeholder">Alle Rollen besetzen …</span>
-        <button
-          @click="startExpedition(selectedConfigId)"
-          :disabled="!canStart(selectedConfigId, selectedConfig!.requiredRoles.length)"
-          class="ec-start-btn"
-          :class="canStart(selectedConfigId, selectedConfig!.requiredRoles.length) ? 'rpg-btn-green' : 'rpg-btn-disabled'"
-        >
-          Entsenden
-        </button>
+        <!-- Quickstart button -->
+        <div class="ec-qs-wrap" :title="getTooltipText(config.id)">
+          <button
+            class="ec-qs-btn"
+            :class="canQuickstart(config.id) ? 'ec-qs-btn--active' : 'ec-qs-btn--disabled'"
+            :disabled="!canQuickstart(config.id)"
+            @click="quickstartExpedition(config.id)"
+          >
+            <span class="ec-qs-bolt">⚡</span>
+            Quickstart
+          </button>
+        </div>
       </div>
-    </template>
+    </div>
 
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, ref, computed } from 'vue'
+import { defineComponent, ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
@@ -125,70 +107,71 @@ export default defineComponent({
     const expeditionStore = useExpeditionStore()
     const battleStore = useBattleStore()
     const { showToast } = useActionToast()
-    const selections = reactive<Record<string, Record<number, string>>>({})
-    const selectedConfigId = ref<string | null>(null)
+    const searchQuery = ref('')
 
-    const selectedConfig = computed(() =>
-      selectedConfigId.value
-        ? EXPEDITION_CONFIGS.find((e) => e.id === selectedConfigId.value) ?? null
-        : null,
-    )
-
-    const roleShort: Record<ChampionRole, string> = {
-      top: 'T',
-      jungle: 'J',
-      mid: 'M',
-      adc: 'A',
-      support: 'S',
-    }
-
-    function selectConfig(id: string) {
-      selectedConfigId.value = id
-    }
-
-    function getSelection(configId: string, roleIdx: number): string {
-      return selections[configId]?.[roleIdx] ?? ''
-    }
-    function setSelection(configId: string, roleIdx: number, value: string) {
-      if (!selections[configId]) selections[configId] = {}
-      selections[configId][roleIdx] = value
-    }
-    function getAvailableChampions(configId: string, roleIdx: number, role: ChampionRole): string[] {
-      const onExpedition = expeditionStore.championsOnExpedition
-      const owned = battleStore.ownedChampions.filter(
-        (c) => c !== 'Bard' && !onExpedition.includes(c),
+    const filteredConfigs = computed(() => {
+      const q = searchQuery.value.trim().toLowerCase()
+      if (!q) return EXPEDITION_CONFIGS
+      return EXPEDITION_CONFIGS.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.baseReward.toString().includes(q),
       )
-      const withRole = owned.filter((c) => getChampionRoles(c).includes(role))
-      const selectedElsewhere = Object.entries(selections[configId] ?? {})
-        .filter(([idx]) => Number(idx) !== roleIdx)
-        .map(([, name]) => name)
-        .filter(Boolean)
-      return withRole.filter((c) => !selectedElsewhere.includes(c))
+    })
+
+    function getAvailableForRole(role: ChampionRole, usedChamps: string[]): string[] {
+      const onExpedition = expeditionStore.championsOnExpedition
+      return battleStore.ownedChampions.filter(
+        (c) =>
+          c !== 'Bard' &&
+          !onExpedition.includes(c) &&
+          !usedChamps.includes(c) &&
+          getChampionRoles(c).includes(role),
+      )
     }
-    function isFullyAssigned(configId: string, roleCount: number): boolean {
-      const sel = selections[configId]
-      if (!sel) return false
-      for (let i = 0; i < roleCount; i++) {
-        if (!sel[i]) return false
+
+    function canQuickstart(configId: string): boolean {
+      if (!expeditionStore.canStartExpedition) return false
+      const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
+      if (!config) return false
+      const used: string[] = []
+      for (const role of config.requiredRoles) {
+        const avail = getAvailableForRole(role, used)
+        if (!avail.length) return false
+        used.push(avail[0])
       }
       return true
     }
-    function canStart(configId: string, roleCount: number): boolean {
-      return expeditionStore.canStartExpedition && isFullyAssigned(configId, roleCount)
-    }
-    function getSuccessChance(configId: string): number {
+
+    function getTooltipText(configId: string): string {
       const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
-      if (!config) return 0
-      const sel = selections[configId] ?? {}
-      const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx] ?? '', role }))
-      if (assigned.some((a) => !a.name)) return 0
-      return expeditionStore.calculateSuccessChance(assigned, configId)
+      if (!config) return ''
+      if (!expeditionStore.canStartExpedition)
+        return `Maximum von ${MAX_ACTIVE_EXPEDITIONS} aktiven Expeditionen erreicht`
+      const used: string[] = []
+      for (const role of config.requiredRoles) {
+        const avail = getAvailableForRole(role, used)
+        if (!avail.length) return `Kein ${role}-Champion verfügbar`
+        used.push(avail[0])
+      }
+      return ''
     }
-    function getSuccessChanceColor(chance: number): string {
-      if (chance >= 0.7) return 'ec-chance--high'
-      if (chance >= 0.4) return 'ec-chance--mid'
-      return 'ec-chance--low'
+
+    function quickstartExpedition(configId: string) {
+      const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
+      if (!config || !canQuickstart(configId)) return
+      const used: string[] = []
+      const assigned = config.requiredRoles.map((role) => {
+        const avail = getAvailableForRole(role, used)
+        const name = avail[0]
+        used.push(name)
+        return { name, role }
+      })
+      if (expeditionStore.startExpedition(configId, assigned)) {
+        showToast(`⚡ ${config.name} gestartet!`)
+      }
     }
+
     function formatDuration(seconds: number): string {
       const min = Math.floor(seconds / 60)
       const sec = seconds % 60
@@ -196,57 +179,15 @@ export default defineComponent({
       if (sec === 0) return `${min}m`
       return `${min}m ${sec}s`
     }
-    function toggleSelection(configId: string, roleIdx: number, champ: string) {
-      if (getSelection(configId, roleIdx) === champ) {
-        setSelection(configId, roleIdx, '')
-      } else {
-        setSelection(configId, roleIdx, champ)
-      }
-    }
-    function isSelectedElsewhere(configId: string, roleIdx: number, champ: string): boolean {
-      return Object.entries(selections[configId] ?? {})
-        .filter(([idx]) => Number(idx) !== roleIdx)
-        .some(([, name]) => name === champ)
-    }
-    function getChampionImage(name: string): string {
-      return battleStore.getChampionImage(name)
-    }
-    function onImgError(e: Event) {
-      ;(e.target as HTMLImageElement).style.display = 'none'
-    }
-    function startExpedition(configId: string) {
-      const config = EXPEDITION_CONFIGS.find((e) => e.id === configId)
-      if (!config) return
-      const sel = selections[configId] ?? {}
-      const assigned = config.requiredRoles.map((role, idx) => ({ name: sel[idx], role }))
-      if (assigned.some((a) => !a.name)) return
-      if (expeditionStore.startExpedition(configId, assigned)) {
-        delete selections[configId]
-        selectedConfigId.value = null
-        showToast(`Expedition started: ${config.name}!`)
-      }
-    }
 
     return {
       expeditionStore,
-      expeditionConfigs: EXPEDITION_CONFIGS,
-      selections,
-      selectedConfigId,
-      selectedConfig,
-      roleShort,
-      selectConfig,
-      getSelection,
-      toggleSelection,
-      getAvailableChampions,
-      isSelectedElsewhere,
-      getChampionImage,
-      onImgError,
-      isFullyAssigned,
-      canStart,
-      getSuccessChance,
-      getSuccessChanceColor,
+      searchQuery,
+      filteredConfigs,
+      canQuickstart,
+      getTooltipText,
+      quickstartExpedition,
       formatDuration,
-      startExpedition,
       MAX_ACTIVE_EXPEDITIONS,
     }
   },
@@ -254,263 +195,222 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ── Warning ────────────────────────────── */
+/* ── Panel ────────────────────────────────────────────────── */
+.ec-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ── Search ───────────────────────────────────────────────── */
+.ec-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #141410;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ec-search-icon {
+  padding: 0 8px;
+  font-size: 14px;
+  color: rgba(200, 144, 64, 0.4);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.ec-search {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e8c040;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 4px;
+  letter-spacing: 0.03em;
+}
+.ec-search::placeholder {
+  color: rgba(200, 144, 64, 0.3);
+}
+.ec-search-wrap:focus-within {
+  border-color: #c89040;
+}
+.ec-search-clear {
+  background: transparent;
+  border: none;
+  color: rgba(200, 144, 64, 0.4);
+  font-size: 11px;
+  padding: 0 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.ec-search-clear:hover {
+  color: #e8c040;
+}
+
+/* ── Warning / Empty ──────────────────────────────────────── */
 .ec-warning {
-  background: #1a1008;
+  background: #1a0a08;
   border: 1px solid #cc6050;
   border-radius: 4px;
   color: #cc6050;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.ec-empty {
+  color: rgba(200, 144, 64, 0.35);
+  font-size: 11px;
+  text-align: center;
+  padding: 20px 0;
 }
 
-/* ── Step 1: Kachel-Grid ─────────────────── */
+/* ── Grid ─────────────────────────────────────────────────── */
 .ec-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
-.ec-tile {
+
+/* ── Card ─────────────────────────────────────────────────── */
+.ec-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 10px 12px;
   background: #1a1008;
-  border: 1px solid #3e2010;
+  border: 2px solid #7a4e20;
   border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s, background 0.15s;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.ec-tile--available:hover {
+.ec-card--available:hover {
   border-color: #c89040;
-  background: #1e1408;
+  box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(200, 144, 64, 0.12);
 }
-.ec-tile--locked {
-  opacity: 0.4;
-  cursor: not-allowed;
+.ec-card--locked {
+  opacity: 0.52;
+  filter: grayscale(35%);
+  border-color: #5c2a10;
 }
-.ec-tile-icon {
-  font-size: 20px;
-  line-height: 1;
+
+/* Gold accent line top */
+.ec-card-accent {
+  height: 2px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #c89040, #5c3310);
+  flex-shrink: 0;
 }
-.ec-tile-img {
-  width: 20px;
-  height: 20px;
+
+/* ── Card body ────────────────────────────────────────────── */
+.ec-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px 8px;
+  flex: 1;
+}
+.ec-card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #141410;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.ec-card-img {
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   image-rendering: pixelated;
 }
-.ec-tile-gi {
-  width: 20px;
-  height: 20px;
-  color: #c89040;
+.ec-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
 }
-.ec-tile-name {
-  font-size: 11px;
+.ec-card-name {
+  font-size: 12px;
   font-weight: 900;
   color: #e8c040;
   letter-spacing: 0.04em;
   line-height: 1.2;
-}
-.ec-tile-meta {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(200, 144, 64, 0.5);
-}
-.ec-tile-roles {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-}
-.ec-role-dot {
-  font-size: 8px;
-  font-weight: 900;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.06em;
-}
-.ec-role-dot--top    { background: rgba(239,68,68,0.2); color: #fca5a5; }
-.ec-role-dot--jungle { background: rgba(34,197,94,0.2); color: #86efac; }
-.ec-role-dot--mid    { background: rgba(59,130,246,0.2); color: #93c5fd; }
-.ec-role-dot--adc    { background: rgba(245,158,11,0.2); color: #fcd34d; }
-.ec-role-dot--support{ background: rgba(168,85,247,0.2); color: #d8b4fe; }
-
-/* ── Step 2: Header ──────────────────────── */
-.ec-step2-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #3e2010;
-}
-.ec-back-btn {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: rgba(200, 144, 64, 0.55);
-  background: transparent;
-  border: 1px solid #3e2010;
-  border-radius: 4px;
-  padding: 4px 9px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s, border-color 0.15s;
-}
-.ec-back-btn:hover {
-  color: #e8c040;
-  border-color: #c89040;
-}
-.ec-selected-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-.ec-selected-icon {
-  font-size: 18px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.ec-selected-name {
-  font-size: 13px;
-  font-weight: 900;
-  color: #e8c040;
-  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ec-selected-meta {
-  font-size: 10px;
-  color: rgba(200, 144, 64, 0.45);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ── Step 2: Rollen-Zuweisung ────────────── */
-.ec-roles-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ec-role-row {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.ec-role-label-row {
+.ec-card-reward {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
 }
-.ec-role-badge {
-  font-size: 9px;
+.ec-reward-amount {
+  font-size: 13px;
   font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 3px;
-  flex-shrink: 0;
+  color: #ffd060;
+  letter-spacing: 0.02em;
 }
-.ec-role-badge--top    { background: rgba(239,68,68,0.2); color: #fca5a5; }
-.ec-role-badge--jungle { background: rgba(34,197,94,0.2); color: #86efac; }
-.ec-role-badge--mid    { background: rgba(59,130,246,0.2); color: #93c5fd; }
-.ec-role-badge--adc    { background: rgba(245,158,11,0.2); color: #fcd34d; }
-.ec-role-badge--support{ background: rgba(168,85,247,0.2); color: #d8b4fe; }
-
-.ec-role-selected-name {
-  font-size: 11px;
+.ec-reward-label {
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(255,255,255,0.65);
+  color: rgba(200, 144, 64, 0.5);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.ec-role-placeholder {
-  font-size: 10px;
-  color: rgba(255,255,255,0.2);
-}
-.ec-champ-row {
+.ec-card-duration {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(200, 144, 64, 0.45);
+  letter-spacing: 0.03em;
 }
-.ec-champ-pick {
-  position: relative;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 3px;
-  cursor: pointer;
-  background: transparent;
-  transition: border-color 0.12s, background 0.12s;
+
+/* ── Quickstart Button ────────────────────────────────────── */
+.ec-qs-wrap {
+  padding: 0 10px 10px;
 }
-.ec-champ-pick--available {
-  background: #141410;
-  border-color: rgba(92, 51, 16, 0.4);
-}
-.ec-champ-pick--available:hover {
-  border-color: #c89040;
-  background: #1e1408;
-}
-.ec-champ-pick--selected {
-  background: rgba(82, 184, 48, 0.12);
-  border-color: #52b830;
-}
-.ec-champ-pick--disabled {
-  opacity: 0.3;
-  filter: grayscale(60%);
-  cursor: not-allowed;
-}
-.ec-champ-img {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  object-position: top center;
-  border-radius: 3px;
-  display: block;
-}
-.ec-champ-check {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #52b830;
+.ec-qs-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
-  color: white;
-  font-weight: 900;
-}
-
-/* ── Step 2: Footer ──────────────────────── */
-.ec-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 4px;
-  border-top: 1px solid #3e2010;
-  margin-top: 2px;
-}
-.ec-chance {
-  font-size: 12px;
-  font-weight: 900;
-}
-.ec-chance--high { color: #52b830; }
-.ec-chance--mid  { color: #e8c040; }
-.ec-chance--low  { color: #cc6050; }
-.ec-start-btn {
-  padding: 6px 18px;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 0;
   border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: box-shadow 0.18s, background 0.18s;
 }
-.ec-start-btn:active:not(:disabled) {
-  transform: scale(0.96);
+.ec-qs-btn--active {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  color: #fff;
+}
+.ec-qs-btn--active:hover {
+  box-shadow: 0 0 14px rgba(82, 184, 48, 0.55), 0 0 4px rgba(82, 184, 48, 0.3);
+}
+.ec-qs-btn--active:active {
+  transform: scale(0.97);
+}
+.ec-qs-btn--disabled {
+  background: #1c1408;
+  border: 1px solid #3e200a;
+  color: rgba(200, 144, 64, 0.22);
+  cursor: not-allowed;
+}
+.ec-qs-bolt {
+  font-size: 12px;
+  line-height: 1;
 }
 </style>
