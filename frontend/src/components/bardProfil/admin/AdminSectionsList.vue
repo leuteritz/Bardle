@@ -290,7 +290,7 @@ function resetSection(sectionId: string) {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.375rem 0.75rem;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.875rem;
   color: var(--rpg-text);
   outline: none;
@@ -315,7 +315,6 @@ function resetSection(sectionId: string) {
   border-bottom: 1px solid var(--rpg-wood-mid);
 }
 .admin-section-title {
-  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -337,7 +336,7 @@ function resetSection(sectionId: string) {
 
 /* ── Action buttons (reset) ── */
 .admin-action-btn {
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.625rem;
   padding: 0.125rem 0.5rem;
   border-radius: 4px;
@@ -378,7 +377,6 @@ function resetSection(sectionId: string) {
   background: var(--rpg-bg-row);
 }
 .admin-field-name {
-  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text-muted);
 }
@@ -389,7 +387,7 @@ function resetSection(sectionId: string) {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.375rem 0.625rem;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.875rem;
   color: var(--rpg-text);
   outline: none;
@@ -410,7 +408,7 @@ function resetSection(sectionId: string) {
   border: 1px solid var(--rpg-wood-mid);
   border-radius: 4px;
   padding: 0.125rem 0.5rem;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.75rem;
   color: var(--rpg-text);
   outline: none;
@@ -425,7 +423,6 @@ function resetSection(sectionId: string) {
   accent-color: var(--rpg-gold);
 }
 .admin-range-value {
-  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-gold);
 }
@@ -437,7 +434,6 @@ function resetSection(sectionId: string) {
 
 /* ── Empty state ── */
 .admin-empty-msg {
-  font-family: var(--rpg-font-mono);
   color: var(--rpg-text-dim);
 }
 </style>

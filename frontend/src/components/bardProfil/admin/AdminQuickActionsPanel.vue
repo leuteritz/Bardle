@@ -398,7 +398,6 @@ function setStarPhase(phase: number) {
 }
 
 .admin-section-label {
-  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   font-weight: 700;
   color: var(--rpg-text-muted);
@@ -443,7 +442,6 @@ function setStarPhase(phase: number) {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   color: var(--rpg-text-dim);
   text-transform: uppercase;
@@ -472,7 +470,7 @@ function setStarPhase(phase: number) {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--rpg-text-muted);
@@ -508,7 +506,7 @@ function setStarPhase(phase: number) {
   border: none;
   outline: none;
   padding: 0 0.25rem;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.875rem;
   color: var(--rpg-text);
   text-align: center;
@@ -532,7 +530,6 @@ function setStarPhase(phase: number) {
 }
 
 .admin-step-label {
-  font-family: var(--rpg-font-mono);
   font-size: 0.625rem;
   color: var(--rpg-text-muted);
   user-select: none;
@@ -548,7 +545,7 @@ function setStarPhase(phase: number) {
   border-radius: 3px;
   outline: none;
   padding: 0 0.3rem;
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.6875rem;
   color: var(--rpg-text-muted);
   text-align: right;
@@ -573,7 +570,7 @@ function setStarPhase(phase: number) {
 /* ── Spawn Buttons ───────────────────────────────────────────────────────────── */
 
 .admin-spawn-btn {
-  font-family: var(--rpg-font-mono);
+  font-family: 'MedievalSharp', cursive;
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 4px;

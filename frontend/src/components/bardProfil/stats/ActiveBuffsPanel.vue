@@ -196,7 +196,6 @@ const hasActiveBuffs = computed(
 .abp-val {
   font-size: 16px;
   font-weight: 900;
-  font-family: var(--rpg-font-mono);
   color: #e8c040;
 }
 

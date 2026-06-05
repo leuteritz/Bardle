@@ -228,7 +228,6 @@ const extraBonus = computed(() => {
   overflow: hidden;
   background: var(--rpg-bg-deep);
   color: var(--rpg-text);
-  font-family: var(--rpg-font-mono);
 }
 
 /* ─── Linke Spalte ──────────────────────────── */
@@ -266,7 +265,6 @@ const extraBonus = computed(() => {
   font-weight: 700;
   letter-spacing: 0.24em;
   color: var(--rpg-gold);
-  font-family: var(--rpg-font-mono);
 }
 .sv-subtitle {
   font-size: 11px;
@@ -344,7 +342,6 @@ const extraBonus = computed(() => {
   min-width: 0;
 }
 .sv-ms-val {
-  font-family: var(--rpg-font-mono);
   font-size: 22px;
   font-weight: 900;
   line-height: 1;
@@ -402,13 +399,11 @@ const extraBonus = computed(() => {
   font-size: 12px;
   font-weight: 700;
   color: var(--rpg-gold-dim);
-  font-family: var(--rpg-font-mono);
   letter-spacing: 0.05em;
 }
 .sv-clickpower-count {
   font-size: 11px;
   color: var(--rpg-text-muted);
-  font-family: var(--rpg-font-mono);
 }
 
 /* Rechte Aufschlüsselung */
@@ -441,7 +436,6 @@ const extraBonus = computed(() => {
   font-size: 14px;
   font-weight: 700;
   color: var(--rpg-text-muted);
-  font-family: var(--rpg-font-mono);
 }
 .sv-cpc-total {
   font-size: 22px;
@@ -483,7 +477,6 @@ const extraBonus = computed(() => {
   font-size: 11px;
   font-weight: 700;
   color: var(--rpg-text-dim);
-  font-family: var(--rpg-font-mono);
   min-width: 22px;
   text-align: right;
   flex-shrink: 0;
@@ -519,20 +512,17 @@ const extraBonus = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  font-family: var(--rpg-font-mono);
 }
 .sv-building-count {
   font-size: 13px;
   color: var(--rpg-text-dim);
   flex-shrink: 0;
-  font-family: var(--rpg-font-mono);
 }
 .sv-building-output {
   font-size: 14px;
   font-weight: 700;
   margin-left: auto;
   flex-shrink: 0;
-  font-family: var(--rpg-font-mono);
 }
 
 /* Zeile 2: Gesamt produziert + % */
@@ -545,7 +535,6 @@ const extraBonus = computed(() => {
   font-size: 13px;
   font-weight: 700;
   color: var(--rpg-gold);
-  font-family: var(--rpg-font-mono);
 }
 .sv-produced-lbl {
   font-size: 10px;
@@ -557,7 +546,6 @@ const extraBonus = computed(() => {
   font-size: 11px;
   font-weight: 700;
   color: var(--rpg-orange);
-  font-family: var(--rpg-font-mono);
   margin-left: auto;
 }
 

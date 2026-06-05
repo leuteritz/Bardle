@@ -111,7 +111,6 @@ const isLogVisible = ref(true)
   box-shadow:
     inset 0 0 0 1px rgba(255, 200, 80, 0.04),
     0 2px 10px rgba(0, 0, 0, 0.6);
-  font-family: 'Cinzel', 'Palatino Linotype', serif;
   line-height: 1.32;
 }
 

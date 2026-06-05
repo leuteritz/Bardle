@@ -94,7 +94,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-size: 1.125rem;
 }
 .admin-title {
-  font-family: var(--rpg-font-mono);
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--rpg-gold);
@@ -102,7 +101,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   text-transform: uppercase;
 }
 .admin-shortcut {
-  font-family: var(--rpg-font-mono);
   font-size: 0.75rem;
   color: var(--rpg-text-dim);
 }

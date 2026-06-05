@@ -57,7 +57,6 @@ onBeforeUnmount(() => {
   line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-family: 'Cinzel', 'Palatino Linotype', serif;
 
   color: #f8e7a6;
   text-shadow:
