@@ -102,19 +102,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
           <div class="rpg-accent-bar"></div>
 
           <!-- Close Button -->
-          <button
-            class="absolute z-10 flex items-center justify-center w-8 h-8 top-4 right-4 rpg-close-btn"
-            @click="gameStore.closePrestigeModal()"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+          <button class="modal-close-btn" @click="gameStore.closePrestigeModal()">✕</button>
 
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">

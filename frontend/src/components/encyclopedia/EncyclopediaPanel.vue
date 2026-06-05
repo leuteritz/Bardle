@@ -55,23 +55,17 @@ const filteredData = computed(() => {
         v-if="gameStore.isEncyclopediaOpen"
         class="enc-panel fixed right-0 top-0 h-full w-[420px] z-[70] flex flex-col overflow-hidden"
       >
+        <button class="modal-close-btn" @click="closePanel">✕</button>
+
         <!-- Gold accent bar -->
         <div class="rpg-accent-bar"></div>
 
         <!-- Header -->
-        <div class="enc-header relative z-10 flex items-center justify-between px-5 py-4 shrink-0">
-          <div class="flex items-center gap-3">
-            <Icon icon="game-icons:wax-tablet" width="28" height="28" style="color: #e8c040" />
-            <h2 class="enc-title text-xl font-bold">
-              Bardle Enzyklopaedie
-            </h2>
-          </div>
-          <button
-            class="rpg-close-btn flex items-center justify-center w-8 h-8"
-            @click="closePanel"
-          >
-            <span class="text-sm">✕</span>
-          </button>
+        <div class="enc-header relative z-10 flex items-center gap-3 px-5 py-4 shrink-0">
+          <Icon icon="game-icons:wax-tablet" width="28" height="28" style="color: #e8c040" />
+          <h2 class="enc-title text-xl font-bold">
+            Bardle Enzyklopaedie
+          </h2>
         </div>
 
         <!-- Search -->

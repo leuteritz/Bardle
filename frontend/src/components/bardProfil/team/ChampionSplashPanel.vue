@@ -407,7 +407,7 @@ function onImgError(e: Event) {
         class="inline-panel"
         @click.stop
       >
-        <button class="inline-panel-close" @click="closeInlinePanel">✕</button>
+        <button class="modal-close-btn" @click="closeInlinePanel">✕</button>
 
         <div v-if="activePanel === 'expedition'" class="inline-panel-tab-bar">
           <button
@@ -468,7 +468,7 @@ function onImgError(e: Event) {
         class="champion-selector-panel"
         @click.stop
       >
-        <button class="champion-selector-close" @click="closePanel">✕</button>
+        <button class="modal-close-btn" @click="closePanel">✕</button>
 
         <ChampionSelectPanel
           class="champion-selector-content"
@@ -491,7 +491,7 @@ function onImgError(e: Event) {
         class="equipment-picker-panel"
         @click.stop
       >
-        <button class="champion-selector-close" @click="closePanel">✕</button>
+        <button class="modal-close-btn" @click="closePanel">✕</button>
         <EquipmentPickerPanel
           :initial-category="selectedCategory"
           :current-equipment="currentEquipment"
@@ -730,34 +730,7 @@ function onImgError(e: Event) {
   border-top: 1px solid #c89040;
   overflow: hidden;
 }
-.inline-panel-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.92);
-  border: 1px solid rgba(92, 51, 16, 0.65);
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
-}
-.inline-panel-close:hover {
-  color: #e8c040;
-  border-color: #c89040;
-  background: rgba(30, 16, 6, 0.97);
-}
+
 .inline-panel-tab-bar {
   display: flex;
   gap: 4px;
@@ -836,34 +809,7 @@ function onImgError(e: Event) {
   width: min(660px, 94%);
   height: min(90%, 750px);
 }
-.modal-close-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.92);
-  border: 1px solid rgba(92, 51, 16, 0.65);
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
-}
-.modal-close-btn:hover {
-  color: #e8c040;
-  border-color: #c89040;
-  background: rgba(30, 16, 6, 0.97);
-}
+
 .modal-tab-bar {
   display: flex;
   gap: 4px;
@@ -1110,31 +1056,7 @@ function onImgError(e: Event) {
   border-top: 2px solid #c89040;
   overflow: hidden;
 }
-.champion-selector-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.92);
-  border: 1px solid rgba(92, 51, 16, 0.65);
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-.champion-selector-close:hover {
-  color: #e8c040;
-  border-color: #c89040;
-  background: rgba(30, 16, 6, 0.97);
-}
+
 .champion-selector-content {
   flex: 1;
   min-height: 0;
