@@ -104,18 +104,6 @@ watch(
   },
 )
 
-watch(
-  () => uiStore.rolesActiveSlot,
-  () => {
-    activePanel.value = null
-    if (panelMode.value !== 'main') {
-      panelMode.value = 'main'
-      selectedCategory.value = null
-      internalSubSlot.value = -1
-    }
-  },
-)
-
 watch(roleKey, (role) => {
   if (activePanel.value === 'shop') shopRole.value = role
 })
