@@ -117,7 +117,7 @@ const hasActiveBuffs = computed(
     </div>
 
     <div v-if="buffCDRPct > 0" class="abp-row">
-      <Icon icon="game-icons:sand-clock" class="abp-icon" />
+      <Icon icon="game-icons:empty-hourglass" class="abp-icon" />
       <span class="abp-lbl">Cooldowns</span>
       <span class="abp-val abp-val--green">-{{ buffCDRPct }}%</span>
     </div>

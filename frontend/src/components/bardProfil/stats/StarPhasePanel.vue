@@ -112,7 +112,7 @@ function branchBarPct(id: SolarBranchId): number {
     <!-- ─ Phase Duration ─ -->
     <div class="spp-duration">
       <div class="spp-duration-header">
-        <Icon icon="game-icons:sand-clock" width="14" height="14" :style="{ color: 'var(--phase-primary)' }" />
+        <Icon icon="game-icons:empty-hourglass" width="14" height="14" :style="{ color: 'var(--phase-primary)' }" />
         <span>Time in Phase</span>
       </div>
       <div v-if="!phaseAgeParts" class="spp-duration-unknown">Not tracked yet</div>

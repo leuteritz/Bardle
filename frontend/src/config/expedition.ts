@@ -20,7 +20,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 60,
     durationSeconds: 60,
     baseReward: 150,
-    icon: 'game-icons:dagger',
+    icon: 'game-icons:plain-dagger',
   },
   {
     id: 'bot-lane-push',
@@ -60,7 +60,7 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 70,
     durationSeconds: 75,
     baseReward: 200,
-    icon: 'game-icons:whirlpool',
+    icon: 'game-icons:tornado',
   },
   {
     id: 'dragon-fight',
@@ -110,6 +110,6 @@ export const EXPEDITION_CONFIGS: ExpeditionConfig[] = [
     minPowerThreshold: 180,
     durationSeconds: 100,
     baseReward: 450,
-    icon: 'game-icons:explosion',
+    icon: 'game-icons:explosion-rays',
   },
 ]

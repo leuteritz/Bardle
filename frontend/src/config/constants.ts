@@ -326,8 +326,8 @@ export const ROLES = [
     image: '/img/roles/jungle.png',
     color: '#50c060',
     stats: [
-      { key: 'style', icon: 'game-icons:dagger', label: 'Style', value: 'Assassin / Ganker' },
-      { key: 'effect', icon: 'game-icons:whirlpool', label: 'Effect', value: 'Crowd Control' },
+      { key: 'style', icon: 'game-icons:plain-dagger', label: 'Style', value: 'Assassin / Ganker' },
+      { key: 'effect', icon: 'game-icons:tornado', label: 'Effect', value: 'Crowd Control' },
       { key: 'range', icon: 'game-icons:orbit', label: 'Orbit', value: 'Wide Patrol' },
     ] satisfies RoleStat[],
     abilityCompact: 'Jungle Buffs · Crowd Control · Wide Patrol',
@@ -366,7 +366,7 @@ export const ROLES = [
     stats: [
       {
         key: 'cursecd',
-        icon: 'game-icons:sand-clock',
+        icon: 'game-icons:empty-hourglass',
         label: 'Curse CD',
         value: `${ROLE_MID_CURSE_INTERVAL_MS / 1000}s`,
       },
@@ -926,7 +926,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:mountains', 'game-icons:snowflake-1', 'game-icons:suckered-tentacle',
   'game-icons:gas-mask',
   // Active Buffs Panel
-  'game-icons:lyre', 'game-icons:hand', 'game-icons:sand-clock',
+  'game-icons:lyre', 'game-icons:hand', 'game-icons:empty-hourglass',
   'game-icons:treasure-map', 'game-icons:stone-wall', 'game-icons:turtle',
   // Synergies — Elemental
   'game-icons:frozen-ring', 'game-icons:eclipse', 'game-icons:fire-bomb',
@@ -958,9 +958,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:potion', 'game-icons:necklace', 'game-icons:crystal-shine',
   'game-icons:crystal-wand', 'game-icons:stopwatch', 'game-icons:black-hole-bolas',
   // Expeditions
-  'game-icons:dagger', 'game-icons:dragon-spiral', 'game-icons:sword-brandish',
-  'game-icons:whirlpool', 'game-icons:fire-dash', 'game-icons:castle',
-  'game-icons:eye-target', 'game-icons:alien-stare', 'game-icons:explosion',
+  'game-icons:plain-dagger', 'game-icons:dragon-spiral', 'game-icons:sword-brandish',
+  'game-icons:tornado', 'game-icons:fire-dash', 'game-icons:castle',
+  'game-icons:eye-target', 'game-icons:alien-stare', 'game-icons:explosion-rays',
   // Sets
   'game-icons:crystal-cluster', 'game-icons:nebula',
   // Universes
@@ -1005,6 +1005,4 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:gold-nuggets',     // Chimes/Click
   'game-icons:metronome',        // Chimes/Second
   'game-icons:fist',             // DMG/Click
-  // Expedition Create Panel — reward icon
-  'game-icons:coins',            // Chimes reward display
 ])

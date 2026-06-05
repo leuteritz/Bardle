@@ -253,7 +253,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     name: 'Chain Reaction',
     description: 'Clicks have a chance to trigger a chain click.',
     effectLine: '20% Chance for Bonus Click',
-    icon: 'game-icons:explosion',
+    icon: 'game-icons:explosion-rays',
     image: '/img/augments/augment8.png',
     rarity: 'epic',
     effects: {},
