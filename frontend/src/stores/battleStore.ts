@@ -180,6 +180,12 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    addAllRecruitableChampions() {
+      for (const config of CHAMPION_HOME_PLANETS) {
+        this.addRecruitableChampion(config.championName, config.materialCost)
+      }
+    },
+
     recruitChampion(name: string): boolean {
       const recruit = this.recruitableChampions.find((c) => c.name === name)
       if (!recruit) return false

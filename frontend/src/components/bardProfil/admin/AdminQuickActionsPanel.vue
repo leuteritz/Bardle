@@ -12,7 +12,7 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
-import { STAR_PHASE_DATA } from '@/config/constants'
+import { STAR_PHASE_DATA, ADMIN_QUICK_RESOURCE_AMOUNT } from '@/config/constants'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import type { ChampionRole } from '@/types'
 
@@ -137,10 +137,13 @@ function forcePrestige() {
   gameStore.prestigeAvailable = true
 }
 
-function fillAllMaterials() {
+function fillAllResources() {
   MATERIALS.forEach((m) => {
     inventoryStore.collectedMaterials[m.id] = 9999
   })
+  gameStore.chimes += ADMIN_QUICK_RESOURCE_AMOUNT
+  gameStore.meeps += ADMIN_QUICK_RESOURCE_AMOUNT
+  battleStore.addAllRecruitableChampions()
 }
 
 function fillTeamWithRandomChampions() {
@@ -278,9 +281,9 @@ function setStarPhase(phase: number) {
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
-        @click="fillAllMaterials"
+        @click="fillAllResources"
       >
-        <Icon icon="game-icons:diamond-hard" class="admin-btn-icon" /> +9999 all Materials
+        <Icon icon="game-icons:diamond-hard" class="admin-btn-icon" /> +9999 Materials & Resources
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
