@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
+import { CHAMPION_ROLES } from '@/config/championRoles'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
@@ -11,8 +14,22 @@ const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
-const { headerSlots } = storeToRefs(battleStore)
+const inventoryStore = useInventoryStore()
+const { headerSlots, ownedChampions, recruitableChampions } = storeToRefs(battleStore)
 const { rolesActiveSlot: activeSlotIndex } = storeToRefs(uiStore)
+
+// Pro Rolle: Gesamtzahl, freigeschaltete und kaufbare Champions
+const roleStats = computed(() =>
+  ROLE_DEFS.map((r) => {
+    const roleKey = r.key
+    const total = Object.values(CHAMPION_ROLES).filter((v) => v === roleKey).length
+    const owned = ownedChampions.value.filter((n) => CHAMPION_ROLES[n] === roleKey).length
+    const affordableCount = recruitableChampions.value.filter(
+      (c) => CHAMPION_ROLES[c.name] === roleKey && inventoryStore.hasMaterials(c.materialCost),
+    ).length
+    return { total, owned, affordableCount, canBuy: affordableCount > 0, complete: owned >= total && total > 0 }
+  }),
+)
 
 function onImgError(e: Event) {
   ;(e.target as HTMLImageElement).style.display = 'none'
@@ -49,7 +66,26 @@ function onImgError(e: Event) {
             @error="onImgError"
           />
           <div class="role-btn-gradient" />
+
+          <!-- Grüner Glow wenn ein Champion dieser Rolle kaufbar ist -->
+          <div v-if="roleStats[i].canBuy" class="role-affordable-glow" />
+
+          <!-- Anzahl kaufbarer Champions dieser Rolle -->
+          <div v-if="roleStats[i].affordableCount > 0" class="role-shop-count">
+            +{{ roleStats[i].affordableCount }}
+          </div>
+
           <span class="role-btn-label">{{ role }}</span>
+
+          <!-- Fortschritts-Badge oben rechts: XX / YY oder ✓ wenn komplett -->
+          <div
+            class="role-progress-badge"
+            :class="{ 'role-progress-badge--complete': roleStats[i].complete }"
+          >
+            <span v-if="roleStats[i].complete">✓</span>
+            <span v-else>{{ roleStats[i].owned }} / {{ roleStats[i].total }}</span>
+          </div>
+
           <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
         </button>
       </div>
@@ -154,7 +190,7 @@ function onImgError(e: Event) {
   text-transform: uppercase;
   color: var(--rc);
   line-height: 1;
-  z-index: 2;
+  z-index: 3;
   text-shadow:
     0 0 12px color-mix(in srgb, var(--rc) 70%, transparent),
     0 2px 6px rgba(0, 0, 0, 0.95);
@@ -168,6 +204,56 @@ function onImgError(e: Event) {
   width: 2px;
   background: var(--rc);
   box-shadow: 0 0 8px var(--rc);
-  z-index: 3;
+  z-index: 4;
+}
+
+/* Fortschritts-Badge oben rechts */
+.role-progress-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #c8a060;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.role-progress-badge--complete {
+  color: #e8c040;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(200, 144, 64, 0.6);
+}
+
+/* Anzahl kaufbarer Champions (top-left) */
+.role-shop-count {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #6ec040;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(82, 184, 48, 0.5);
+  pointer-events: none;
+}
+
+/* Kaufbarer-Champion-Glow */
+@keyframes affordable-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
+}
+.role-affordable-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 50% 40%, rgba(82, 184, 48, 0.28) 0%, transparent 70%);
+  box-shadow: inset 0 0 14px rgba(82, 184, 48, 0.35);
+  animation: affordable-pulse 2s ease-in-out infinite;
+  pointer-events: none;
 }
 </style>
