@@ -32,17 +32,45 @@ const editingValue = ref<string>('')
 const flashKey = ref<string | null>(null)
 
 const quickFields = [
-  { key: 'chimes', label: 'Chimes', icon: 'game-icons:bells', defaultStep: 100, min: 0, float: true },
-  { key: 'meeps', label: 'Meeps', icon: 'game-icons:alien-egg', defaultStep: 1, min: 0, float: false },
-  { key: 'level', label: 'Level', icon: 'game-icons:star-medal', defaultStep: 1, min: 1, float: false },
-  { key: 'skillPoints', label: 'Skill Points', icon: 'game-icons:star-cycle', defaultStep: 1, min: 0, float: false },
+  {
+    key: 'chimes',
+    label: 'Chimes',
+    icon: 'game-icons:bells',
+    defaultStep: 100,
+    min: 0,
+    float: true,
+  },
+  {
+    key: 'meeps',
+    label: 'Meeps',
+    icon: 'game-icons:alien-egg',
+    defaultStep: 1,
+    min: 0,
+    float: false,
+  },
+  {
+    key: 'level',
+    label: 'Level',
+    icon: 'game-icons:star-medal',
+    defaultStep: 1,
+    min: 1,
+    float: false,
+  },
+  {
+    key: 'skillPoints',
+    label: 'Skill Points',
+    icon: 'game-icons:star-cycle',
+    defaultStep: 1,
+    min: 0,
+    float: false,
+  },
 ] as const
 
 type QuickKey = (typeof quickFields)[number]['key']
 
 // Konfigurierbare Schrittweiten – pro Feld individuell
 const steps = reactive<Record<QuickKey, number>>({
-  chimes: 100,
+  chimes: 100000,
   meeps: 1,
   level: 1,
   skillPoints: 1,
@@ -208,7 +236,8 @@ function resetAllCooldowns() {
 function setStarPhase(phase: number) {
   const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
   solarStore.totalPhaseSeconds += elapsed
-  solarStore.phaseTimeHistory[solarStore.starPhase] = (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
+  solarStore.phaseTimeHistory[solarStore.starPhase] =
+    (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
   solarStore.starPhase = Math.max(0, Math.min(6, phase))
   solarStore.phaseEnteredAt = Date.now()
 }
@@ -219,7 +248,7 @@ function setStarPhase(phase: number) {
     <div class="mb-2 admin-section-label">Quick Actions</div>
 
     <!-- Inline Editable Values + Stepper -->
-    <div class="grid grid-cols-2 gap-x-3 gap-y-3 mb-3 sm:grid-cols-4">
+    <div class="grid grid-cols-2 mb-3 gap-x-3 gap-y-3 sm:grid-cols-4">
       <div
         v-for="qf in quickFields"
         :key="qf.key"
@@ -277,7 +306,7 @@ function setStarPhase(phase: number) {
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
         @click="spawnStar"
       >
-        <img src="/img/star.png" alt="★" class="star-icon"> Spawn Star
+        <img src="/img/star.png" alt="★" class="star-icon" /> Spawn Star
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--material flex items-center gap-1.5 px-3 py-1.5"
@@ -301,7 +330,7 @@ function setStarPhase(phase: number) {
         class="admin-spawn-btn admin-spawn-btn--prestige flex items-center gap-1.5 px-3 py-1.5"
         @click="forcePrestige"
       >
-        <img src="/img/star.png" alt="★" class="star-icon"> Force Prestige
+        <img src="/img/star.png" alt="★" class="star-icon" /> Force Prestige
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--champion flex items-center gap-1.5 px-3 py-1.5"
@@ -337,11 +366,12 @@ function setStarPhase(phase: number) {
     </div>
 
     <!-- Star Phase Override -->
-    <div class="sun-sim mt-3">
-      <div class="admin-section-label mb-2">
+    <div class="mt-3 sun-sim">
+      <div class="mb-2 admin-section-label">
         ✦ Star Phase Override
         <span class="sun-sim-current-phase">
-          (Current: Phase {{ solarStore.starPhase }} — {{ STAR_PHASE_DATA[solarStore.starPhase].name }})
+          (Current: Phase {{ solarStore.starPhase }} —
+          {{ STAR_PHASE_DATA[solarStore.starPhase].name }})
         </span>
       </div>
       <div class="star-phase-btns">
