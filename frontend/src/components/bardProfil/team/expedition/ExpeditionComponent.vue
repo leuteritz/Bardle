@@ -133,7 +133,7 @@
         <!-- Card body -->
         <div class="ec-card-body">
           <div class="ec-card-icon-wrap">
-            <Icon :icon="slot.icon" width="36" height="36" :style="{ color: getColor(slot.colorKey).dim }" />
+            <Icon :icon="slot.icon" width="36" height="36" :style="{ color: getColor(slot.colorKey).primary }" />
           </div>
 
           <div class="ec-card-info">
@@ -884,17 +884,21 @@ export default defineComponent({
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #1a1008;
-  border: 2px solid #7a4e20;
+  background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.07) 0%, #1a1008 38%);
+  border: 2px solid var(--exp-d, #7a4e20);
   border-radius: 4px;
-  box-shadow: inset 0 0 0 1px #3e200a;
+  box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(var(--exp-glow, 200,144,64), 0.1);
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
   cursor: pointer;
 }
 .ec-card--available:hover {
-  border-color: var(--exp-d, #c89040);
-  box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(var(--exp-glow, 232,192,64), 0.15);
+  border-color: var(--exp-p, #e8c040);
+  box-shadow: inset 0 0 0 1px #3e200a, 0 0 20px rgba(var(--exp-glow, 232,192,64), 0.3);
+}
+.ec-card--available:hover .ec-card-icon-wrap {
+  border-color: var(--exp-p, #e8c040);
+  box-shadow: 0 0 14px rgba(var(--exp-glow, 200,144,64), 0.3), inset 0 0 8px rgba(var(--exp-glow, 200,144,64), 0.08);
 }
 .ec-card--locked {
   opacity: 0.52;
@@ -909,10 +913,11 @@ export default defineComponent({
   50%       { box-shadow: inset 0 0 0 1px #3e200a, 0 0 14px rgba(204, 96, 80, 0.5); }
 }
 .ec-card-accent {
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--exp-p, #e8c040), transparent);
+  height: 3px;
+  background: linear-gradient(to right, transparent, var(--exp-p, #e8c040) 30%, var(--exp-p, #e8c040) 70%, transparent);
   flex-shrink: 0;
   border-radius: 2px 2px 0 0;
+  box-shadow: 0 1px 6px rgba(var(--exp-glow, 200,144,64), 0.4);
 }
 
 /* ── Tier Badge ───────────────────────────────────────────── */
@@ -928,10 +933,10 @@ export default defineComponent({
   border: 1px solid;
   color: var(--exp-p, #e8c040);
   border-color: var(--exp-d, #c89040);
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(var(--exp-glow, 200,144,64), 0.15);
 }
 .ec-tier-badge--epic {
-  box-shadow: 0 0 6px rgba(var(--exp-glow, 232,192,64), 0.35);
+  box-shadow: 0 0 8px rgba(var(--exp-glow, 232,192,64), 0.5);
 }
 
 /* ── Card body ────────────────────────────────────────────── */
@@ -948,10 +953,12 @@ export default defineComponent({
   justify-content: center;
   width: 44px;
   height: 44px;
-  background: #141410;
+  background: linear-gradient(135deg, #141410 55%, rgba(var(--exp-glow, 200,144,64), 0.13) 100%);
   border: 1px solid var(--exp-d, #3e200a);
   border-radius: 4px;
   flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(var(--exp-glow, 200,144,64), 0.08);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .ec-card-info {
   display: flex;
@@ -1034,6 +1041,8 @@ export default defineComponent({
 /* ── Quickstart Button ────────────────────────────────────── */
 .ec-qs-wrap {
   padding: 0 10px 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(var(--exp-glow, 200,144,64), 0.15);
 }
 .ec-qs-btn {
   display: flex;
@@ -1231,8 +1240,9 @@ export default defineComponent({
   overflow: hidden;
 }
 .ec-mission-card--active {
-  background: #1a1008;
-  border-color: rgba(92, 51, 16, 0.4);
+  background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.07) 0%, #1a1008 35%);
+  border-color: var(--exp-d, rgba(92,51,16,0.4));
+  box-shadow: 0 0 8px rgba(var(--exp-glow, 200,144,64), 0.1);
 }
 .ec-mission-card--success {
   background: #0e1a0e;
