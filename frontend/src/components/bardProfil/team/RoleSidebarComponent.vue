@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -97,7 +98,9 @@ function onImgError(e: Event) {
             class="role-progress-badge"
             :class="{ 'role-progress-badge--complete': roleStats[i].complete }"
           >
-            <span v-if="roleStats[i].complete" class="badge-star">★</span>{{ roleStats[i].owned }} / {{ roleStats[i].total }}
+            <Icon icon="game-icons:barbute" width="15" height="15" class="badge-icon" />
+            <span v-if="roleStats[i].complete" class="badge-star">★</span>
+            <span class="badge-count">{{ roleStats[i].owned }}/{{ roleStats[i].total }}</span>
           </div>
 
           <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
@@ -224,24 +227,35 @@ function onImgError(e: Event) {
 /* Fortschritts-Badge oben rechts */
 .role-progress-badge {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: 10px;
+  right: 10px;
   z-index: 4;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 5px 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: #c8a060;
   line-height: 1;
-  text-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.95),
-    0 0 8px rgba(0, 0, 0, 0.8);
   pointer-events: none;
+}
+.badge-icon {
+  display: block;
+  flex-shrink: 0;
+  opacity: 0.85;
+  color: currentColor;
+}
+.badge-count {
+  line-height: 1;
 }
 .role-progress-badge--complete {
   color: #e8c040;
-  text-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.95),
-    0 0 14px rgba(232, 192, 64, 0.8);
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.35);
 }
 @keyframes star-pulse {
   0%,
@@ -260,7 +274,9 @@ function onImgError(e: Event) {
 }
 .role-btn--complete {
   border-color: rgba(200, 160, 48, 0.55);
-  box-shadow: 0 0 10px rgba(200, 160, 48, 0.22), inset 0 0 8px rgba(200, 160, 48, 0.06);
+  box-shadow:
+    0 0 10px rgba(200, 160, 48, 0.22),
+    inset 0 0 8px rgba(200, 160, 48, 0.06);
 }
 
 /* Anzahl freigeschalteter Champions (top-left) */
@@ -275,7 +291,9 @@ function onImgError(e: Event) {
   line-height: 1;
   pointer-events: none;
   color: #c080e8;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(192, 128, 232, 0.45);
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(192, 128, 232, 0.45);
 }
 
 /* Kaufbarer-Champion-Glow */
