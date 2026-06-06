@@ -6,7 +6,6 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useActionToast } from '@/composables/useActionToast'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useExpeditionStore } from '@/stores/expedetionStore'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { getChampionRoles } from '@/config/championRoles'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
@@ -16,8 +15,7 @@ import ChampionInfoHeader from './ChampionInfoHeader.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
-import ExpeditionCreateComponent from './expedition/ExpeditionCreateComponent.vue'
-import ExpeditionActiveComponent from './expedition/ExpeditionActiveComponent.vue'
+import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 import SynergiesPanelComponent from './SynergiesPanelComponent.vue'
 import EquipmentSlotBarComponent from './EquipmentSlotBarComponent.vue'
@@ -32,7 +30,6 @@ const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
 const { showToast } = useActionToast()
-const expeditionStore = useExpeditionStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
@@ -66,10 +63,6 @@ const roleFilteredChampions = computed(() => {
   return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
 })
 
-const doneExpeditionCount = computed(
-  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-)
-
 const parallaxX = ref(0)
 const parallaxY = ref(0)
 const hoveredSyn = ref<{ involvedChampions: string[]; color: string } | null>(null)
@@ -83,7 +76,6 @@ const allCollapsed = computed(() => equipCollapsed.value && synCollapsed.value &
 
 const activePanel = ref<'shop' | 'expedition' | 'items' | null>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
-const expeditionTab = ref<'create' | 'active'>('create')
 const itemShopCategory = ref<ItemCategory>('weapon')
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
@@ -131,7 +123,6 @@ function openShop(role: ChampionRole | 'all' = 'all') {
 }
 
 function openExpedition() {
-  expeditionTab.value = 'create'
   panelMode.value = 'main'
   activePanel.value = activePanel.value === 'expedition' ? null : 'expedition'
 }
@@ -407,24 +398,7 @@ function onImgError(e: Event) {
         class="inline-panel"
         @click.stop
       >
-        <div v-if="activePanel !== 'shop'" class="inline-panel-tab-bar">
-          <template v-if="activePanel === 'expedition'">
-            <button
-              class="modal-tab"
-              :class="{ 'modal-tab--active': expeditionTab === 'create' }"
-              @click="expeditionTab = 'create'"
-            >
-              Start
-            </button>
-            <button
-              class="modal-tab"
-              :class="{ 'modal-tab--active': expeditionTab === 'active' }"
-              @click="expeditionTab = 'active'"
-            >
-              Aktiv
-              <span v-if="doneExpeditionCount > 0" class="modal-tab-badge">{{ doneExpeditionCount }}</span>
-            </button>
-          </template>
+        <div v-if="activePanel === 'items'" class="inline-panel-tab-bar">
           <template v-if="activePanel === 'items'">
             <button
               v-for="cat in [
@@ -452,10 +426,7 @@ function onImgError(e: Event) {
             @role-change="handleShopRoleChange"
             @close="closeInlinePanel"
           />
-          <template v-else-if="activePanel === 'expedition'">
-            <ExpeditionCreateComponent v-if="expeditionTab === 'create'" />
-            <ExpeditionActiveComponent v-else />
-          </template>
+          <ExpeditionComponent v-else-if="activePanel === 'expedition'" @close="closeInlinePanel" />
           <ItemShopComponent
             v-else-if="activePanel === 'items'"
             :category="itemShopCategory"
