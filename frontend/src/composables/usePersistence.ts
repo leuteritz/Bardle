@@ -99,6 +99,8 @@ export function usePersistence() {
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
         completedExpeditions: expeditionStore.completedExpeditions,
+        availableExpeditions: expeditionStore.availableExpeditions,
+        nextSpawnAt: expeditionStore.nextSpawnAt,
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
@@ -262,6 +264,10 @@ export function usePersistence() {
           expeditionStore.activeExpeditions = saved.expeditions.activeExpeditions
         if (Array.isArray(saved.expeditions.completedExpeditions))
           expeditionStore.completedExpeditions = saved.expeditions.completedExpeditions
+        if (Array.isArray(saved.expeditions.availableExpeditions))
+          expeditionStore.availableExpeditions = saved.expeditions.availableExpeditions
+        if (typeof saved.expeditions.nextSpawnAt === 'number')
+          expeditionStore.nextSpawnAt = saved.expeditions.nextSpawnAt
       }
 
       // Restore inventoryStore

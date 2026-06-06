@@ -460,6 +460,7 @@ export const useGameStore = defineStore('game', {
       }
       const expeditionStore = useExpeditionStore()
       expeditionStore.checkExpeditions()
+      expeditionStore.checkAvailability()
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
       const planetShopStore = usePlanetShopStore()

@@ -11,6 +11,20 @@ export interface RoleStat {
 // Expedition types
 export type ExpeditionStatus = 'active' | 'success' | 'failure'
 
+export interface AvailableExpeditionSlot {
+  id: string
+  colorKey: string
+  availableUntil: number
+  spawnedAt: number
+  tier: 'common' | 'rare' | 'epic'
+  name: string
+  icon: string
+  baseReward: number
+  durationSeconds: number
+  requiredRoles: ChampionRole[]
+  minPowerThreshold: number
+}
+
 export interface ExpeditionMission {
   id: string
   configId: string
@@ -25,6 +39,7 @@ export interface ExpeditionMission {
   successChance: number
   status: ExpeditionStatus
   reward: number
+  colorKey?: string
 }
 
 export interface ModifierEffects {

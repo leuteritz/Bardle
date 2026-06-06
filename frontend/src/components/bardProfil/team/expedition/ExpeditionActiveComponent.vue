@@ -2,12 +2,12 @@
   <div class="flex flex-col w-full h-full gap-3">
     <!-- Global empty state -->
     <div v-if="expeditionStore.activeExpeditions.length === 0" class="exp-empty">
-      Keine Expeditionen aktiv.
+      No active expeditions.
     </div>
 
     <!-- BEREIT-Sektion -->
     <template v-if="doneExpeditions.length > 0">
-      <div class="section-header"><Icon icon="game-icons:open-chest" width="16" height="16" style="color: #e8c040; vertical-align: middle; margin-right: 4px" />Bereit zum Abholen</div>
+      <div class="section-header"><Icon icon="game-icons:open-chest" width="16" height="16" style="color: #e8c040; vertical-align: middle; margin-right: 4px" />Ready to Collect</div>
       <div
         v-for="expedition in doneExpeditions"
         :key="expedition.id"
@@ -27,8 +27,7 @@
         <div class="p-3 pt-4 space-y-2.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <img v-if="!getExpeditionIcon(expedition.configId).includes(':')" :src="getExpeditionIcon(expedition.configId)" alt="" width="20" height="20" style="object-fit: contain" />
-              <Icon v-else :icon="getExpeditionIcon(expedition.configId)" width="20" height="20" style="color: #c89040" />
+              <Icon :icon="expedition.icon || 'game-icons:rolled-cloth'" width="20" height="20" style="color: #c89040" />
               <span class="text-sm font-bold tracking-wide text-white/90">{{ expedition.name }}</span>
             </div>
             <span
@@ -38,7 +37,7 @@
                 'expedition-status--failure': expedition.status === 'failure',
               }"
             >
-              {{ expedition.status === 'success' ? 'Erfolg' : 'Gescheitert' }}
+              {{ expedition.status === 'success' ? 'Success' : 'Failed' }}
             </span>
           </div>
           <div class="flex flex-wrap gap-1.5">
@@ -57,7 +56,7 @@
           </div>
           <div class="flex items-center justify-between pt-0.5">
             <div class="text-xs text-white/45">
-              Belohnung:
+              Reward:
               <span
                 class="ml-1 font-bold"
                 :class="expedition.status === 'success' ? 'text-amber-300' : 'text-red-400'"
@@ -70,7 +69,7 @@
               class="px-4 py-1.5 text-xs font-bold transition-all duration-200 active:scale-95"
               :class="expedition.status === 'success' ? 'rpg-btn-green' : 'rpg-btn-disabled'"
             >
-              Abholen
+              Collect
             </button>
           </div>
         </div>
@@ -79,18 +78,18 @@
 
     <!-- LAUFEND-Sektion -->
     <template v-if="runningExpeditions.length > 0">
-      <div class="section-header" :class="{ 'section-header--mt': doneExpeditions.length > 0 }">Laufend</div>
+      <div class="section-header" :class="{ 'section-header--mt': doneExpeditions.length > 0 }">Running</div>
       <div
         v-for="expedition in runningExpeditions"
         :key="expedition.id"
         class="relative overflow-hidden transition-all duration-300 expedition-card expedition-card--active"
+        :style="activeCardStyle(expedition)"
       >
-        <div class="absolute top-0 left-0 right-0 h-[2px] expedition-accent expedition-accent--active" />
+        <div class="absolute top-0 left-0 right-0 h-[2px] expedition-accent-active" />
         <div class="p-3 pt-4 space-y-2.5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <img v-if="!getExpeditionIcon(expedition.configId).includes(':')" :src="getExpeditionIcon(expedition.configId)" alt="" width="20" height="20" style="object-fit: contain" />
-              <Icon v-else :icon="getExpeditionIcon(expedition.configId)" width="20" height="20" style="color: #c89040" />
+              <Icon :icon="expedition.icon || 'game-icons:rolled-cloth'" width="20" height="20" :style="{ color: getExpeditionColor(expedition).dim }" />
               <span class="text-sm font-bold tracking-wide text-white/90">{{ expedition.name }}</span>
             </div>
             <span class="text-xs font-mono text-white/40">{{ getTimeRemaining(expedition) }}</span>
@@ -115,6 +114,7 @@
                 class="h-full transition-all duration-1000 ease-linear expedition-progress-fill"
                 :style="{ width: getProgress(expedition) + '%' }"
               />
+
             </div>
             <div class="flex justify-between text-[10px] font-semibold text-white/35">
               <span>{{ Math.round(getProgress(expedition)) }}%</span>
@@ -132,7 +132,7 @@ import { defineComponent, computed, onMounted, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { EXPEDITION_CONFIGS } from '@/config/expedition'
+import { EXPEDITION_COLORS, type ExpeditionColorDef } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ExpeditionMission } from '@/types'
 
@@ -176,11 +176,18 @@ export default defineComponent({
       const secs = Math.ceil(remaining / 1000)
       return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
     }
-    function getExpeditionIcon(configId: string): string {
-      return EXPEDITION_CONFIGS.find((e) => e.id === configId)?.icon ?? 'game-icons:rolled-cloth'
-    }
     function getChampionImage(name: string): string {
       return battleStore.getChampionImage(name)
+    }
+
+    function getExpeditionColor(expedition: ExpeditionMission): ExpeditionColorDef {
+      const key = expedition.colorKey ?? 'gold'
+      return EXPEDITION_COLORS.find((x) => x.key === key) ?? EXPEDITION_COLORS[0]
+    }
+
+    function activeCardStyle(expedition: ExpeditionMission) {
+      const c = getExpeditionColor(expedition)
+      return { '--exp-p': c.primary, '--exp-d': c.dim, '--exp-glow': c.glowRgb }
     }
 
     function collectExpedition(id: string) {
@@ -196,9 +203,10 @@ export default defineComponent({
       runningExpeditions,
       getProgress,
       getTimeRemaining,
-      getExpeditionIcon,
+      getExpeditionColor,
       getChampionImage,
       collectExpedition,
+      activeCardStyle,
     }
   },
 })
@@ -224,6 +232,9 @@ export default defineComponent({
 
 .expedition-accent--active {
   background: linear-gradient(to right, #5c3310, #c89040, #5c3310);
+}
+.expedition-accent-active {
+  background: linear-gradient(to right, transparent, var(--exp-p, #e8c040), transparent);
 }
 .expedition-accent--success {
   background: linear-gradient(to right, #2e7a1a, #52b830);
@@ -260,7 +271,7 @@ export default defineComponent({
   border-radius: 4px;
 }
 .expedition-progress-fill {
-  background: linear-gradient(to right, #c89040, #e8c040);
+  background: linear-gradient(to right, var(--exp-d, #c89040), var(--exp-p, #e8c040));
 }
 
 .section-header {

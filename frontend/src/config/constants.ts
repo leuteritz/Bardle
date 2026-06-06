@@ -701,6 +701,67 @@ export const ROLE_COLORS = Object.fromEntries(ROLES.map((r) => [r.key, r.color])
   string
 >
 
+// Expedition color system
+export interface ExpeditionColorDef {
+  key: string
+  primary: string
+  dim: string
+  glowRgb: string
+}
+
+export const EXPEDITION_COLORS: ExpeditionColorDef[] = [
+  { key: 'gold',      primary: '#e8c040', dim: '#c89040', glowRgb: '232,192,64'  },
+  { key: 'celestial', primary: '#60b0f0', dim: '#3a7ab8', glowRgb: '96,176,240'  },
+  { key: 'arcane',    primary: '#c080e0', dim: '#8040a8', glowRgb: '192,128,224' },
+  { key: 'emerald',   primary: '#4dc870', dim: '#2a7840', glowRgb: '77,200,112'  },
+  { key: 'ember',     primary: '#e08050', dim: '#a04828', glowRgb: '224,128,80'  },
+  { key: 'frost',     primary: '#70d0e8', dim: '#3080a0', glowRgb: '112,208,232' },
+]
+
+/** How long (ms) a spawned expedition slot is visible/available */
+export const EXPEDITION_AVAILABILITY_DURATION_MS = 5 * 60 * 1000
+/** Minimum interval (ms) between consecutive slot spawns */
+export const EXPEDITION_SPAWN_INTERVAL_MS = 2 * 60 * 1000
+/** Maximum number of simultaneously visible expedition slots */
+export const EXPEDITION_MAX_AVAILABLE = 3
+/** Time threshold (ms) below which a slot enters the "expiring soon" warning state */
+export const EXPEDITION_EXPIRY_WARNING_MS = 30_000
+
+// Expedition generation — tiers
+export const EXPEDITION_TIERS = {
+  common: { rewardMin: 80,  rewardMax: 280,  durMin: 30,  durMax: 100, maxRoles: 2, powerBase: 50  },
+  rare:   { rewardMin: 280, rewardMax: 750,  durMin: 60,  durMax: 220, maxRoles: 3, powerBase: 120 },
+  epic:   { rewardMin: 750, rewardMax: 2800, durMin: 120, durMax: 380, maxRoles: 5, powerBase: 280 },
+} as const
+export type ExpeditionTier = keyof typeof EXPEDITION_TIERS
+
+// Expedition generation — name parts
+export const EXPEDITION_NAME_ADJECTIVES = [
+  'Mystical', 'Ancient', 'Forgotten', 'Spectral', 'Cosmic',
+  'Twilight', 'Arcane', 'Wandering', 'Timeless', 'Hidden',
+]
+export const EXPEDITION_NAME_TARGETS = [
+  'Rift', 'Freljord', 'Void', 'Ionia', 'Summit',
+  'Shrine', 'Nexus', 'Jungle', 'Abyss', 'Ruins',
+]
+export const EXPEDITION_NAME_ACTIONS = [
+  'Expedition', 'Patrol', 'Raid', 'Trek', 'Odyssey', 'Pilgrimage',
+]
+
+// Expedition generation — icon pool (thematic, all registered in USED_GAME_ICONS below)
+export const EXPEDITION_ICON_POOL: string[] = [
+  'game-icons:journey',
+  'game-icons:interstellar-path',
+  'game-icons:castle-ruins',
+  'game-icons:dungeon-gate',
+  'game-icons:lantern-flame',
+  'game-icons:caravan',
+  'game-icons:cave-entrance',
+  'game-icons:mountain-road',
+  'game-icons:elven-castle',
+  'game-icons:forest',
+]
+
 // Expedition mechanics
 /** Full-role-match synergy bonus multiplier */
 export const EXPEDITION_ROLE_SYNERGY_BONUS = 1.0
@@ -1049,4 +1110,15 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:rank-3',           // ⬆️ Leveling encyclopedia category
   'game-icons:sundial',          // ⏳ Loading indicator in BattleStartScreenComponent
   'game-icons:hazard-sign',      // ⚠ Warning label in ExpeditionCreateComponent
+  // Expedition icon pool (EXPEDITION_ICON_POOL — random generated expedition icons)
+  'game-icons:journey',
+  'game-icons:interstellar-path',
+  'game-icons:castle-ruins',
+  'game-icons:dungeon-gate',
+  'game-icons:lantern-flame',
+  'game-icons:caravan',
+  'game-icons:cave-entrance',
+  'game-icons:mountain-road',
+  'game-icons:elven-castle',
+  'game-icons:forest',
 ])
