@@ -61,6 +61,7 @@ function onImgError(e: Event) {
           :class="{
             'role-btn--active': activeSlotIndex === i,
             'role-btn--filled': headerSlots[i] !== null,
+            'role-btn--complete': roleStats[i].complete,
           }"
           :style="{ '--rc': ROLE_COLORS[role] }"
           @click="uiStore.setRolesActiveSlot(i)"
@@ -91,13 +92,12 @@ function onImgError(e: Event) {
 
           <span class="role-btn-label">{{ role }}</span>
 
-          <!-- Fortschritts-Badge oben rechts: XX / YY oder ✓ wenn komplett -->
+          <!-- Fortschritts-Badge oben rechts: immer XX / YY; ★ bei Abschluss -->
           <div
             class="role-progress-badge"
             :class="{ 'role-progress-badge--complete': roleStats[i].complete }"
           >
-            <span v-if="roleStats[i].complete">✓</span>
-            <span v-else>{{ roleStats[i].owned }} / {{ roleStats[i].total }}</span>
+            <span v-if="roleStats[i].complete" class="badge-star">★</span>{{ roleStats[i].owned }} / {{ roleStats[i].total }}
           </div>
 
           <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
@@ -241,7 +241,26 @@ function onImgError(e: Event) {
   color: #e8c040;
   text-shadow:
     0 1px 4px rgba(0, 0, 0, 0.95),
-    0 0 10px rgba(200, 144, 64, 0.6);
+    0 0 14px rgba(232, 192, 64, 0.8);
+}
+@keyframes star-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 6px #e8c040;
+  }
+  50% {
+    opacity: 0.75;
+    text-shadow: 0 0 14px #f0d060;
+  }
+}
+.badge-star {
+  margin-right: 3px;
+  animation: star-pulse 2.4s ease-in-out infinite;
+}
+.role-btn--complete {
+  border-color: rgba(200, 160, 48, 0.55);
+  box-shadow: 0 0 10px rgba(200, 160, 48, 0.22), inset 0 0 8px rgba(200, 160, 48, 0.06);
 }
 
 /* Anzahl freigeschalteter Champions (top-left) */
