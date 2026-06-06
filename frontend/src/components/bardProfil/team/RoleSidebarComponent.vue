@@ -93,13 +93,12 @@ function onImgError(e: Event) {
 
           <span class="role-btn-label">{{ role }}</span>
 
-          <!-- Fortschritts-Badge oben rechts: immer XX / YY; ★ bei Abschluss -->
+          <!-- Fortschritts-Badge oben rechts: immer Icon + XX/YY -->
           <div
             class="role-progress-badge"
             :class="{ 'role-progress-badge--complete': roleStats[i].complete }"
           >
             <Icon icon="game-icons:barbute" width="15" height="15" class="badge-icon" />
-            <span v-if="roleStats[i].complete" class="badge-star">★</span>
             <span class="badge-count">{{ roleStats[i].owned }}/{{ roleStats[i].total }}</span>
           </div>
 
@@ -256,21 +255,6 @@ function onImgError(e: Event) {
   color: #e8c040;
   background: rgba(0, 0, 0, 0.55);
   box-shadow: 0 0 6px rgba(232, 192, 64, 0.35);
-}
-@keyframes star-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    text-shadow: 0 0 6px #e8c040;
-  }
-  50% {
-    opacity: 0.75;
-    text-shadow: 0 0 14px #f0d060;
-  }
-}
-.badge-star {
-  margin-right: 3px;
-  animation: star-pulse 2.4s ease-in-out infinite;
 }
 .role-btn--complete {
   border-color: rgba(200, 160, 48, 0.55);
