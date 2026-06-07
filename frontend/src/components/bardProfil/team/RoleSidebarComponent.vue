@@ -36,10 +36,13 @@ const roleStats = computed(() =>
     const affordableCount = roleRecruitables.filter((c) =>
       inventoryStore.hasMaterials(c.materialCost),
     ).length
+    const seen = uiStore.shopSeenCounts[roleKey] ?? 0
+    const unseenCount = Math.max(0, recruitableCount - seen)
     return {
       total,
       owned,
       recruitableCount,
+      unseenCount,
       affordableCount,
       canBuy: recruitableCount > 0,
       complete: owned >= total && total > 0,
@@ -100,7 +103,7 @@ function onImgError(e: Event) {
 
           <!-- Notify-Badge oben rechts: Anzahl kaufbarer Champions dieser Rolle -->
           <RpgNotifyBadge
-            :count="roleStats[i].recruitableCount"
+            :count="roleStats[i].unseenCount"
             variant="shop"
             label="Champions recruitable for this role"
           />

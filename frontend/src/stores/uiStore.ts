@@ -9,6 +9,7 @@ export const useUiStore = defineStore('ui', () => {
   const rolesActiveSubSlot = ref(-1)
   const rolesOpenToken = ref(0)
   const planetActiveSlotId = ref<string | null>(null)
+  const shopSeenCounts = ref<Record<string, number>>({})
 
   function openBardModal() {
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
@@ -38,17 +39,23 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSlot.value = index
   }
 
+  function markShopRoleVisited(role: string, count: number) {
+    shopSeenCounts.value[role] = count
+  }
+
   return {
     bardActiveTab,
     rolesActiveSlot,
     rolesActiveSubSlot,
     rolesOpenToken,
     planetActiveSlotId,
+    shopSeenCounts,
     openBardModal,
     setBardTab,
     closeBardModal,
     requestOpenRolesTab,
     requestOpenPlanetsTab,
     setRolesActiveSlot,
+    markShopRoleVisited,
   }
 })
