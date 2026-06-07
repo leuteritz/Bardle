@@ -114,8 +114,7 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 </script>
 
 <template>
-  <div class="st-wrapper rpg-frame">
-    <div class="rpg-accent-bar" />
+  <div class="st-wrapper">
     <div class="st-canvas">
       <VueFlow
         :nodes="nodes"

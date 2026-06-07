@@ -323,12 +323,6 @@ function handleUpgradeStar(): void {
   flex-direction: column;
   height: 100%;
   background: #111008;
-  border: 4px solid #7a4e20;
-  border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 4px 20px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   position: relative;
 }
