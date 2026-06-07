@@ -6,6 +6,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useActionToast } from '@/composables/useActionToast'
 import { useItemStore } from '@/stores/itemStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { getChampionRoles } from '@/config/championRoles'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
@@ -20,6 +21,7 @@ import ItemShopComponent from './ItemShopComponent.vue'
 import SynergiesPanelComponent from './SynergiesPanelComponent.vue'
 import EquipmentSlotBarComponent from './EquipmentSlotBarComponent.vue'
 import SecondaryChampionsPanelComponent from './SecondaryChampionsPanelComponent.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
 const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<
@@ -34,6 +36,7 @@ const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
 const uiStore = useUiStore()
+const expeditionStore = useExpeditionStore()
 const { showToast } = useActionToast()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
@@ -88,6 +91,10 @@ const allCollapsed = computed(
 const activePanel = ref<'shop' | 'expedition' | 'items' | null>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
 const itemShopCategory = ref<ItemCategory>('weapon')
+
+const expeditionBadgeCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const internalSubSlot = ref(-1)
@@ -290,6 +297,7 @@ function onImgError(e: Event) {
       >
         <Icon icon="game-icons:campfire" class="action-bar-icon" />
         <span class="action-bar-label">Expedition</span>
+        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
       </button>
       <div class="action-bar-sep" />
       <button
@@ -617,6 +625,7 @@ function onImgError(e: Event) {
   cursor: pointer;
   color: rgba(200, 144, 64, 0.55);
   position: relative;
+  overflow: visible;
   transition:
     color 0.15s,
     background 0.15s;
@@ -1146,4 +1155,5 @@ function onImgError(e: Event) {
 .equipment-picker-leave-from {
   transform: translateY(0);
 }
+
 </style>

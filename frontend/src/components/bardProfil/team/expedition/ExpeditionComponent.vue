@@ -70,7 +70,7 @@
           >
             <Icon icon="game-icons:chest" width="14" height="14" />
             Collect All
-            <span v-if="activeCount > 0" class="ec-collect-count" :class="{ 'ec-collect-count--ready': readyCount > 0 }">{{ activeCount }}</span>
+            <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
           </button>
 
           <!-- Hover tooltip: running + ready -->
@@ -225,6 +225,7 @@ import {
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ChampionRole, AvailableExpeditionSlot, ExpeditionMission } from '@/types'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const ROLE_IMG: Record<string, string> = {
   top:     '/img/roles/top.png',
@@ -236,7 +237,7 @@ const ROLE_IMG: Record<string, string> = {
 
 export default defineComponent({
   name: 'ExpeditionComponent',
-  components: { Icon },
+  components: { Icon, RpgNotifyBadge },
   emits: ['close'],
   setup(_, { emit }) {
     const expeditionStore = useExpeditionStore()
@@ -590,6 +591,8 @@ export default defineComponent({
   letter-spacing: 0.06em;
   cursor: pointer;
   flex-shrink: 0;
+  position: relative;
+  overflow: visible;
   transition: box-shadow 0.15s, opacity 0.15s;
   white-space: nowrap;
 }
@@ -651,25 +654,11 @@ export default defineComponent({
   100% { background: linear-gradient(to bottom, #2e7a4e, #1e5433); box-shadow: none; }
 }
 
-/* Collect count badge */
-.ec-collect-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  background: rgba(100, 220, 180, 0.12);
-  border: 1px solid rgba(100, 220, 180, 0.3);
-  border-radius: var(--bp-radius);
-  font-size: 9px;
-  font-weight: 900;
-  color: rgba(100, 220, 180, 0.6);
-}
-.ec-collect-count--ready {
-  background: rgba(100, 220, 180, 0.22);
-  border-color: rgba(100, 220, 180, 0.6);
-  color: #a0f0d0;
+
+/* Badge position override: button is ~24px tall so default top:4px centers it */
+.ec-bulk-btn--collect :deep(.rpg-notify-badge) {
+  top: -6px;
+  right: -6px;
 }
 
 /* ── Collect Dropdown ─────────────────────────────────────── */

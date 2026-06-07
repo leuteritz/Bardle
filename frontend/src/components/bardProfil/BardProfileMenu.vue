@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/uiStore'
+import { useExpeditionStore } from '@/stores/expedetionStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -11,8 +12,14 @@ import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const uiStore = useUiStore()
+const expeditionStore = useExpeditionStore()
+
+const teamBadgeCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
 
 const menuItems: {
   id: BardTabId
@@ -79,6 +86,11 @@ watch(
                 <span
                   v-if="uiStore.bardActiveTab === item.id"
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
+                />
+                <RpgNotifyBadge
+                  v-if="item.id === 'team'"
+                  :count="teamBadgeCount"
+                  label="Team action available"
                 />
               </button>
             </div>
@@ -406,4 +418,5 @@ watch(
 .tab-fade-leave-to {
   opacity: 0;
 }
+
 </style>
