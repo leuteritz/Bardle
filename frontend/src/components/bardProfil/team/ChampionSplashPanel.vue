@@ -22,8 +22,13 @@ import EquipmentSlotBarComponent from './EquipmentSlotBarComponent.vue'
 import SecondaryChampionsPanelComponent from './SecondaryChampionsPanelComponent.vue'
 
 const ROLES = ROLE_DEFS.map((r) => r.label)
-const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<string, ChampionRole>
-const ROLE_INDEX = Object.fromEntries(ROLE_DEFS.map((r, i) => [r.key, i])) as Partial<Record<ChampionRole, number>>
+const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.key])) as Record<
+  string,
+  ChampionRole
+>
+const ROLE_INDEX = Object.fromEntries(ROLE_DEFS.map((r, i) => [r.key, i])) as Partial<
+  Record<ChampionRole, number>
+>
 const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 
 const battleStore = useBattleStore()
@@ -36,7 +41,9 @@ const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 const activeChampion = computed(() => headerSlots.value[activeSlotIndex.value])
-const activeSecondaries = computed(() => secondarySlots.value[activeSlotIndex.value] ?? [null, null])
+const activeSecondaries = computed(
+  () => secondarySlots.value[activeSlotIndex.value] ?? [null, null],
+)
 const currentEquipment = computed(() => itemStore.slotEquipment[activeSlotIndex.value])
 
 const activeRole = computed(() => ROLES[activeSlotIndex.value])
@@ -50,7 +57,9 @@ const roleColor = computed(() => ROLE_COLORS[activeRole.value])
 const roleImage = computed(() => activeRoleDef.value?.image ?? '')
 const abilityCompact = computed(() => activeRoleDef.value?.abilityCompact ?? '')
 const abilityDetails = computed(() => activeRoleDef.value?.abilityDetails ?? [])
-const roleStats = computed(() => (ROLE_BY_KEY[roleKey.value]?.stats ?? []) as import('@/types').RoleStat[])
+const roleStats = computed(
+  () => (ROLE_BY_KEY[roleKey.value]?.stats ?? []) as import('@/types').RoleStat[],
+)
 const championTraits = computed(() =>
   (CHAMPION_TRAITS[activeChampion.value ?? ''] ?? []).map((id) => TRAIT_BY_ID[id]),
 )
@@ -68,11 +77,13 @@ const parallaxY = ref(0)
 const hoveredSyn = ref<{ involvedChampions: string[]; color: string } | null>(null)
 
 const equipCollapsed = ref(true)
-const synCollapsed   = ref(true)
-const secCollapsed   = ref(true)
+const synCollapsed = ref(true)
+const secCollapsed = ref(true)
 
-const allOpen      = computed(() => !equipCollapsed.value && !synCollapsed.value && !secCollapsed.value)
-const allCollapsed = computed(() => equipCollapsed.value && synCollapsed.value && secCollapsed.value)
+const allOpen = computed(() => !equipCollapsed.value && !synCollapsed.value && !secCollapsed.value)
+const allCollapsed = computed(
+  () => equipCollapsed.value && synCollapsed.value && secCollapsed.value,
+)
 
 const activePanel = ref<'shop' | 'expedition' | 'items' | null>(null)
 const shopRole = ref<ChampionRole | 'all'>('all')
@@ -83,8 +94,6 @@ const internalSubSlot = ref(-1)
 const selectedCategory = ref<ItemCategory | null>(null)
 const selectorTab = ref<'main' | 'ally1' | 'ally2'>('main')
 const TAB_SUBSLOT: Record<string, number> = { main: -1, ally1: 0, ally2: 1 }
-
-
 
 watch(
   () => uiStore.rolesOpenToken,
@@ -133,7 +142,9 @@ function openItemShop() {
   activePanel.value = activePanel.value === 'items' ? null : 'items'
 }
 
-function closeInlinePanel() { activePanel.value = null }
+function closeInlinePanel() {
+  activePanel.value = null
+}
 
 function openChampionPicker(subSlot: number = -1) {
   activePanel.value = null
@@ -219,8 +230,8 @@ function onSplashMouseLeave() {
 function toggleAll() {
   const target = allOpen.value
   equipCollapsed.value = target
-  synCollapsed.value   = target
-  secCollapsed.value   = target
+  synCollapsed.value = target
+  secCollapsed.value = target
 }
 
 function onImgError(e: Event) {
@@ -233,11 +244,7 @@ function onImgError(e: Event) {
     class="splash-area"
     @mousemove="onSplashMouseMove"
     @mouseleave="onSplashMouseLeave"
-    @click="
-      activePanel === null &&
-      panelMode === 'main' &&
-      openChampionPicker(-1)
-    "
+    @click="activePanel === null && panelMode === 'main' && openChampionPicker(-1)"
   >
     <div class="splash-inner">
       <template v-if="activeChampion">
@@ -254,11 +261,7 @@ function onImgError(e: Event) {
         />
       </template>
       <div v-else class="splash-empty">
-        <img
-          :src="roleImage"
-          :alt="activeRole"
-          class="splash-empty-role-img"
-        />
+        <img :src="roleImage" :alt="activeRole" class="splash-empty-role-img" />
         <span class="splash-empty-plus">＋</span>
         <span class="splash-empty-hint">Select Champion</span>
       </div>
@@ -411,7 +414,14 @@ function onImgError(e: Event) {
               :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
               @click="itemShopCategory = cat.id as ItemCategory"
             >
-              <img :src="`/img/itemShop/${cat.id}.png`" :alt="cat.label" width="18" height="18" loading="eager" class="modal-tab-img" />
+              <img
+                :src="`/img/itemShop/${cat.id}.png`"
+                :alt="cat.label"
+                width="18"
+                height="18"
+                loading="eager"
+                class="modal-tab-img"
+              />
               {{ cat.label }}
             </button>
           </template>
@@ -427,20 +437,13 @@ function onImgError(e: Event) {
             @close="closeInlinePanel"
           />
           <ExpeditionComponent v-else-if="activePanel === 'expedition'" @close="closeInlinePanel" />
-          <ItemShopComponent
-            v-else-if="activePanel === 'items'"
-            :category="itemShopCategory"
-          />
+          <ItemShopComponent v-else-if="activePanel === 'items'" :category="itemShopCategory" />
         </div>
       </div>
     </Transition>
 
     <Transition name="champion-selector">
-      <div
-        v-if="panelMode === 'champion-picker'"
-        class="champion-selector-panel"
-        @click.stop
-      >
+      <div v-if="panelMode === 'champion-picker'" class="champion-selector-panel" @click.stop>
         <button class="modal-close-btn" @click="closePanel">✕</button>
 
         <ChampionSelectPanel
@@ -869,7 +872,7 @@ function onImgError(e: Event) {
 .modal-content--scroll {
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px;
+  padding: 0;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
   display: block;
@@ -940,14 +943,20 @@ function onImgError(e: Event) {
   border-radius: 3px;
   cursor: pointer;
   pointer-events: auto;
-  transition: color 0.15s, background 0.15s, border-color 0.15s, left 0.3s ease, right 0.3s ease, bottom 0.3s ease;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s,
+    left 0.3s ease,
+    right 0.3s ease,
+    bottom 0.3s ease;
 }
 .panel-toggle:hover {
   color: #f0d870;
   background: rgba(20, 12, 2, 0.95);
   border-color: rgba(200, 144, 64, 0.5);
 }
-.panel-toggle[aria-expanded="false"] {
+.panel-toggle[aria-expanded='false'] {
   color: rgba(200, 144, 64, 0.5);
   border-color: rgba(92, 51, 16, 0.4);
 }
@@ -1005,7 +1014,10 @@ function onImgError(e: Event) {
   color: rgba(200, 144, 64, 0.75);
   cursor: pointer;
   pointer-events: auto;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
 }
 .panel-collapse-all:hover {
   color: #f0d870;
