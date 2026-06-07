@@ -35,7 +35,7 @@
             @click.stop="showActiveModal = !showActiveModal"
             title="Active Expeditions"
           >
-            <Icon icon="game-icons:campfire" width="14" height="14" />
+            <Icon icon="game-icons:campfire" width="16" height="16" />
             <span class="ec-active-label">Active</span>
             <span v-if="activeCount > 0" class="ec-active-badge" :class="{ 'ec-active-badge--pulse': readyCount > 0 }">
               {{ activeCount }}
@@ -585,7 +585,7 @@ export default defineComponent({
 }
 .ec-header-top {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   padding: 8px 10px;
 }
@@ -613,8 +613,9 @@ export default defineComponent({
 .ec-admin-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
-  padding: 3px 7px;
+  padding: 0 9px;
   background: #1c1008;
   border: 1px solid #5c3310;
   border-radius: 3px;
@@ -638,12 +639,17 @@ export default defineComponent({
   position: static;
   flex-shrink: 0;
   transform: none;
+  width: auto;
+  height: auto;
+  padding: 0 12px;
+  font-size: 16px;
 }
 
 /* ── Active Expeditions Button ────────────────────────────── */
 .ec-active-wrap {
   position: relative;
   flex-shrink: 0;
+  display: flex;
 }
 .ec-active-wrap::after {
   content: '';
@@ -656,22 +662,23 @@ export default defineComponent({
 .ec-active-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  background: #1c1008;
-  border: 1px solid #5c3310;
+  gap: 6px;
+  padding: 0 12px;
+  background: rgba(96, 128, 204, 0.06);
+  border: 1px solid rgba(96, 128, 204, 0.4);
   border-radius: 4px;
-  color: rgba(200, 144, 64, 0.7);
-  font-size: 10px;
+  color: #6080cc;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .ec-active-btn:hover {
-  border-color: #c89040;
-  color: #e8c040;
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.18);
+  border-color: #6080cc;
+  color: #8090e0;
+  background: rgba(96, 128, 204, 0.12);
+  box-shadow: 0 0 10px rgba(96, 128, 204, 0.28);
 }
 .ec-active-btn--ready {
   border-color: #c89040;
@@ -693,12 +700,12 @@ export default defineComponent({
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #3e200a;
-  border: 1px solid #7a4e20;
+  background: rgba(96, 128, 204, 0.15);
+  border: 1px solid rgba(96, 128, 204, 0.5);
   border-radius: 8px;
   font-size: 10px;
   font-weight: 900;
-  color: rgba(200, 144, 64, 0.8);
+  color: #6080cc;
 }
 .ec-active-badge--pulse {
   background: rgba(232, 192, 64, 0.18);
