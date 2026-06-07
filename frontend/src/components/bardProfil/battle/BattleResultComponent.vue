@@ -206,7 +206,7 @@ export default defineComponent({
   background: #1a0e00;
   border: 1px solid #7a4e20;
   color: #c89040;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   letter-spacing: 0.5px;
   opacity: 0.7;

@@ -118,7 +118,7 @@ function onImgError(e: Event) {
   position: relative;
   width: 100px;
   height: 128px;
-  border-radius: 7px;
+  border-radius: var(--bp-radius);
   border: 1px solid color-mix(in srgb, var(--rc, #c89040) 30%, transparent);
   background: rgba(6, 4, 1, 0.82);
   overflow: hidden;
@@ -239,7 +239,7 @@ function onImgError(e: Event) {
   color: rgba(220, 80, 60, 0.9);
   background: rgba(10, 5, 2, 0.9);
   border: 1px solid rgba(180, 50, 30, 0.5);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   display: flex;
   align-items: center;
   justify-content: center;

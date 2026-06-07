@@ -584,7 +584,7 @@ export default defineComponent({
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -661,7 +661,7 @@ export default defineComponent({
   padding: 0 4px;
   background: rgba(100, 220, 180, 0.12);
   border: 1px solid rgba(100, 220, 180, 0.3);
-  border-radius: 8px;
+  border-radius: var(--bp-radius);
   font-size: 9px;
   font-weight: 900;
   color: rgba(100, 220, 180, 0.6);
@@ -680,7 +680,7 @@ export default defineComponent({
   min-width: 210px;
   background: #16140e;
   border: 2px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9);
   padding: 8px 10px;
   z-index: 40;
@@ -760,7 +760,7 @@ export default defineComponent({
 .ec-warning {
   background: #1a0a08;
   border: 1px solid #cc6050;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: #cc6050;
   padding: 8px 12px;
   font-size: 11px;
@@ -807,7 +807,7 @@ export default defineComponent({
   flex-direction: column;
   background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.07) 0%, #1a1008 38%);
   border: 2px solid var(--exp-d, #7a4e20);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(var(--exp-glow, 200,144,64), 0.1);
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -876,7 +876,7 @@ export default defineComponent({
   height: 44px;
   background: linear-gradient(135deg, #141410 55%, rgba(var(--exp-glow, 200,144,64), 0.13) 100%);
   border: 1px solid var(--exp-d, #3e200a);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   flex-shrink: 0;
   box-shadow: 0 0 6px rgba(var(--exp-glow, 200,144,64), 0.08);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -972,7 +972,7 @@ export default defineComponent({
   gap: 5px;
   width: 100%;
   padding: 7px 0;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1003,7 +1003,7 @@ export default defineComponent({
   right: 0;
   background: #16140e;
   border: 2px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   padding: 8px 10px;
   z-index: 20;

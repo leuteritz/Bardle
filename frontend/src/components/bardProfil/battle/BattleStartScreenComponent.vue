@@ -316,7 +316,7 @@ export default defineComponent({
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(212, 160, 32, 0.14);
-  border-radius: 8px;
+  border-radius: var(--bp-radius);
   box-shadow:
     inset 0 1px 0 rgba(212, 160, 32, 0.09),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
@@ -536,7 +536,7 @@ export default defineComponent({
   padding: 12px 20px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(212, 160, 32, 0.1);
-  border-radius: 7px;
+  border-radius: var(--bp-radius);
 }
 .win-prob-eyebrow {
   font-size: 10px;
@@ -594,7 +594,7 @@ export default defineComponent({
   padding: 18px 20px 16px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(212, 160, 32, 0.1);
-  border-radius: 8px;
+  border-radius: var(--bp-radius);
 }
 .roster-header {
   display: flex;
@@ -660,7 +660,7 @@ export default defineComponent({
 .roster-slot {
   position: relative;
   flex: 1;
-  border-radius: 8px;
+  border-radius: var(--bp-radius);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -736,7 +736,7 @@ export default defineComponent({
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.2px;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 2px 7px;
   line-height: 1.4;
 }
@@ -769,7 +769,7 @@ export default defineComponent({
 .slot-pulse-ring {
   position: absolute;
   inset: -4px;
-  border-radius: 12px;
+  border-radius: var(--bp-radius);
   border: 1px solid rgba(90, 60, 20, 0.22);
   animation: slotPulse 2.4s ease-in-out infinite;
   pointer-events: none;
@@ -802,7 +802,7 @@ export default defineComponent({
   letter-spacing: 3px;
   background: linear-gradient(to bottom, #1e2e12, #131e0c);
   border: 2px solid #4a8a28;
-  border-radius: 6px;
+  border-radius: var(--bp-radius);
   color: #6ec040;
   cursor: pointer;
   transition: all 0.15s;

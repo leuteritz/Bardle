@@ -288,7 +288,7 @@ function resetSection(sectionId: string) {
 .admin-search-input {
   background: var(--rpg-bg-deep);
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 0.375rem 0.75rem;
   font-family: 'MedievalSharp', cursive;
   font-size: 0.875rem;
@@ -307,7 +307,7 @@ function resetSection(sectionId: string) {
 /* ── Section containers ── */
 .admin-section {
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 /* ── Section header ── */
@@ -339,7 +339,7 @@ function resetSection(sectionId: string) {
   font-family: 'MedievalSharp', cursive;
   font-size: 0.625rem;
   padding: 0.125rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid var(--rpg-wood-mid);
   background: transparent;
   cursor: pointer;
@@ -385,7 +385,7 @@ function resetSection(sectionId: string) {
 .admin-input {
   background: var(--rpg-bg-deep);
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 0.375rem 0.625rem;
   font-family: 'MedievalSharp', cursive;
   font-size: 0.875rem;
@@ -406,7 +406,7 @@ function resetSection(sectionId: string) {
 .admin-select {
   background: var(--rpg-bg-deep);
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 0.125rem 0.5rem;
   font-family: 'MedievalSharp', cursive;
   font-size: 0.75rem;

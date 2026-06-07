@@ -158,7 +158,7 @@ const nodeTypes = { skill: markRaw(SkillNode) }
 :deep(.vue-flow__controls) {
   background: var(--rpg-bg-icon);
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
   gap: 0;

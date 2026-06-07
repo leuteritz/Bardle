@@ -214,7 +214,7 @@ export default defineComponent({
 
 <style scoped>
 .expedition-card {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid;
 }
 .expedition-card--active {
@@ -244,7 +244,7 @@ export default defineComponent({
 }
 
 .expedition-status-badge {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid;
 }
 .expedition-status--success {
@@ -261,14 +261,14 @@ export default defineComponent({
 .expedition-champ-tag {
   background: #1c1c18;
   border: 1px solid rgba(92, 51, 16, 0.35);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: rgba(255, 255, 255, 0.55);
 }
 
 .expedition-progress-track {
   background: #111008;
   border: 1px solid rgba(92, 51, 16, 0.3);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 .expedition-progress-fill {
   background: linear-gradient(to right, var(--exp-d, #c89040), var(--exp-p, #e8c040));

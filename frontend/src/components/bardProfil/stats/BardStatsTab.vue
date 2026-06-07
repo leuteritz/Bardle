@@ -310,7 +310,7 @@ const extraBonus = computed(() => {
 .sv-ms-item {
   background: #111008;
   border: 1px solid #3e200a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 12px 12px;
   display: flex;
   align-items: center;

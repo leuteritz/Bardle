@@ -205,7 +205,7 @@ export default defineComponent({
 }
 
 .lp-badge {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid;
 }
 .lp-badge--pos {
@@ -222,7 +222,7 @@ export default defineComponent({
 .result-btn {
   background: var(--rpg-bg-dark);
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: var(--rpg-text-muted);
   cursor: pointer;
   transition: all 0.2s;
@@ -248,7 +248,7 @@ export default defineComponent({
 .honor-section {
   background: rgba(0, 0, 0, 0.28);
   border: 1px solid rgba(200, 160, 60, 0.15);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 10px 8px 8px;
   margin-bottom: 8px;
 }
@@ -323,7 +323,7 @@ export default defineComponent({
   width: 52px;
   background: #111008;
   border: 1px solid #2a2a2a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 0;
   overflow: hidden;
   cursor: pointer;

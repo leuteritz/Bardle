@@ -234,7 +234,7 @@ function branchBarPct(id: SolarBranchId): number {
 .spp-root {
   background: #111008;
   border: 1px solid var(--phase-glow);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
@@ -352,7 +352,7 @@ function branchBarPct(id: SolarBranchId): number {
 .spp-duration {
   background: #0e0d07;
   border: 1px solid color-mix(in srgb, var(--phase-glow) 35%, #3e200a);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
@@ -392,7 +392,7 @@ function branchBarPct(id: SolarBranchId): number {
   gap: 2px;
   background: #111008;
   border: 1px solid color-mix(in srgb, var(--phase-glow) 22%, #3e200a);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 6px 10px;
   min-width: 44px;
 }
@@ -619,7 +619,7 @@ function branchBarPct(id: SolarBranchId): number {
 .spp-cell {
   background: #1a1008;
   border: 1px solid #3e200a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
@@ -654,7 +654,7 @@ function branchBarPct(id: SolarBranchId): number {
   gap: 7px;
   background: #0e0d07;
   border: 1px solid #2a1a08;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 10px 12px;
 }
 

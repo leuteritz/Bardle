@@ -244,7 +244,7 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
   padding: 14px 10px 12px;
   background: #1a1008;
   border: 2px solid rgba(92, 51, 16, 0.45);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   text-align: center;
   transition:
@@ -299,7 +299,7 @@ function effectSummary(item: (typeof SHOP_ITEMS)[number]): string {
   flex-shrink: 0;
   background: #141410;
   border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 .ep-card-icon {

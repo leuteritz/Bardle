@@ -371,7 +371,7 @@ export default defineComponent({
    ═══════════════════════════════════════════ */
 .universe-overlay {
   background: #0a0a0f;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   overflow: hidden;
 }
 

@@ -475,7 +475,7 @@ function bonusText(role: PlanetRole): string {
   min-width: 0;
   background: #131210;
   border: 1px solid #2e1e0a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   color: inherit;
   transition:
@@ -578,7 +578,7 @@ function bonusText(role: PlanetRole): string {
   padding: 0.85rem 0.5rem 0.75rem;
   background: #131210;
   border: 1px solid #2e1e0a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   text-align: center;
   color: inherit;
@@ -776,7 +776,7 @@ img.ps-role-icon {
   padding: 0.6rem 0.75rem;
   background: #0c1209;
   border: 1px solid #3a8040;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow:
     0 0 12px #5ce66a22,
     inset 0 0 8px #5ce66a0a;
@@ -857,7 +857,7 @@ img.ps-role-icon {
   margin: 0 0.85rem 0.75rem;
   padding: 1rem;
   border: 1px solid #3a2a10;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: linear-gradient(180deg, #100f0a 0%, #0c0b07 100%);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
@@ -908,7 +908,7 @@ img.ps-role-icon {
   padding: 0.7rem 0.4rem 0.6rem;
   background: #161410;
   border: 1px solid #2e1e0a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   color: inherit;
   transition:
@@ -1153,7 +1153,7 @@ img.ps-role-icon {
   padding: 6px 14px;
   background: rgba(40, 10, 10, 0.6);
   border: 1px solid rgba(180, 50, 50, 0.4);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-size: 0.72rem;
   font-weight: 700;
   color: rgba(220, 100, 80, 0.8);
@@ -1287,7 +1287,7 @@ img.ps-role-icon {
   padding: 10px 36px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: #fff;
   font-size: 14px;
   font-weight: 800;

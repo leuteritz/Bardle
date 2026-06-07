@@ -777,7 +777,7 @@ function onImgError(e: Event) {
     0 0 0 1px #5c3310,
     0 32px 80px rgba(0, 0, 0, 0.92);
   background: #111008;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   overflow: hidden;
 }
 .modal-panel--sm {
@@ -815,7 +815,7 @@ function onImgError(e: Event) {
   color: rgba(200, 144, 64, 0.55);
   background: rgba(14, 10, 4, 0.85);
   border: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   transition:
     color 0.15s,
@@ -841,7 +841,7 @@ function onImgError(e: Event) {
   padding: 0 4px;
   font-size: 9px;
   font-weight: 900;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
   color: #a0ffa0;
@@ -1010,7 +1010,7 @@ function onImgError(e: Event) {
   justify-content: center;
   background: rgba(6, 4, 1, 0.88);
   border: 1px solid rgba(122, 78, 32, 0.75);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: rgba(200, 144, 64, 0.75);
   cursor: pointer;
   pointer-events: auto;

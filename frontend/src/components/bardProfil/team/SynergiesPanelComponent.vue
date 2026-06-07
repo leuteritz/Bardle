@@ -216,7 +216,7 @@ function onTraitHover(id: string, e: MouseEvent) {
   background: rgba(8, 5, 2, 0.82);
   border: 1px solid rgba(92, 51, 16, 0.4);
   border-left: 2px solid var(--tc, #d4a830);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: default;
   transition: background 0.12s, border-color 0.12s;
 }
@@ -291,7 +291,7 @@ function onTraitHover(id: string, e: MouseEvent) {
   width: 200px;
   background: #16140e;
   border: 2px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 10px 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   pointer-events: none;

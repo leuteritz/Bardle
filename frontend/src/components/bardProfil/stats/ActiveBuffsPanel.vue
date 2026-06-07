@@ -168,7 +168,7 @@ const hasActiveBuffs = computed(
   padding: 10px 12px;
   background: #111008;
   border: 1px solid #3e200a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   transition: background 0.15s;
 }
 

@@ -149,7 +149,7 @@ watch(
   padding: 9px 16px;
   background: linear-gradient(to bottom, #1e1a0e, #130f09);
   border: 2px solid #7a4e20;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   white-space: nowrap;
   min-width: 158px;
   box-shadow:
@@ -267,7 +267,7 @@ watch(
   overflow: hidden;
   background: #111008;
   border: 4px solid #7a4e20;
-  border-radius: 32px;
+  border-radius: var(--bp-radius);
   box-shadow:
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
@@ -304,7 +304,7 @@ watch(
   color: #555;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   transition: all 0.12s;
 }

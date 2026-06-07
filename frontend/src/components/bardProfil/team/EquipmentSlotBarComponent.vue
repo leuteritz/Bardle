@@ -82,7 +82,7 @@ function getEquippedItem(cat: ItemCategory): ShopItem | null {
   align-items: stretch;
   background: rgba(6, 4, 1, 0.92);
   border: 1px solid rgba(122, 78, 32, 0.8);
-  border-radius: 10px;
+  border-radius: var(--bp-radius);
   overflow: hidden;
   box-shadow:
     0 0 0 1px rgba(92, 51, 16, 0.4),
@@ -137,7 +137,7 @@ function getEquippedItem(cat: ItemCategory): ShopItem | null {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: var(--bp-radius);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;

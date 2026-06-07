@@ -353,7 +353,7 @@ export default defineComponent({
 .ec-warning {
   background: #1a0a08;
   border: 1px solid #cc6050;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   color: #cc6050;
   padding: 8px 12px;
   font-size: 11px;
@@ -400,7 +400,7 @@ export default defineComponent({
   flex-direction: column;
   background: #1a1008;
   border: 2px solid #7a4e20;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: inset 0 0 0 1px #3e200a;
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -466,7 +466,7 @@ export default defineComponent({
   height: 44px;
   background: #141410;
   border: 1px solid var(--exp-d, #3e200a);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   flex-shrink: 0;
 }
 .ec-card-info {
@@ -562,7 +562,7 @@ export default defineComponent({
   gap: 5px;
   width: 100%;
   padding: 7px 0;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -595,7 +595,7 @@ export default defineComponent({
   right: 0;
   background: #16140e;
   border: 2px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   padding: 8px 10px;
   z-index: 20;

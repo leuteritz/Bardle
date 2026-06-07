@@ -85,11 +85,11 @@ export default defineComponent({
 .scoreboard-panel {
   background: rgba(17, 16, 8, 0.45);
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 .team-badge {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid;
 }
 .team-badge--blue {
@@ -104,7 +104,7 @@ export default defineComponent({
 }
 
 .champ-row {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid;
 }
 .champ-row--blue {

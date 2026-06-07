@@ -189,7 +189,7 @@ function getOriginIcon(o: string | null): string {
 }
 .orbit-ability-trigger {
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 2px 0;
   transition: background 0.15s;
   cursor: default;
@@ -211,7 +211,7 @@ function getOriginIcon(o: string | null): string {
   background: #141410;
   border: 2px solid #7a4e20;
   box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(200, 144, 64, 0.35);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   flex-shrink: 0;
 }
 .ability-role-img {
@@ -242,7 +242,7 @@ function getOriginIcon(o: string | null): string {
   max-width: 290px;
   background: #16140e;
   border: 2px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   padding: 8px 12px;
   z-index: 20;

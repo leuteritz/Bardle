@@ -63,7 +63,7 @@ watch(
 .chat-panel {
   background: rgba(17, 16, 8, 0.45);
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 .chat-shimmer {
@@ -73,7 +73,7 @@ watch(
 .chat-box {
   background: rgba(26, 16, 8, 0.35);
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 .chat-msg--system {

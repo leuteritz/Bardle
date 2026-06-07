@@ -241,7 +241,7 @@ export default defineComponent({
 .set-bonus-row {
   background: var(--rpg-bg-selected);
   border: 1px solid var(--rpg-gold-dim);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 .set-bonus-name {
   color: var(--rpg-gold);
@@ -253,13 +253,13 @@ export default defineComponent({
   color: var(--rpg-gold);
   background: rgba(232, 192, 64, 0.15);
   border: 1px solid rgba(232, 192, 64, 0.3);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 /* ── Item Card Base ── */
 .item-card {
   background: var(--rpg-bg-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid var(--rpg-border-row);
   transition: all 0.15s;
 }
@@ -278,7 +278,7 @@ export default defineComponent({
 
 /* ── Item Glow (hover overlay) ── */
 .item-glow {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -298,7 +298,7 @@ export default defineComponent({
 /* ── Icon Box ── */
 .item-icon-box {
   background: var(--rpg-bg-icon);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 /* ── Owned Badge ── */
@@ -306,12 +306,12 @@ export default defineComponent({
   background: var(--rpg-bg-green-subtle);
   border: 1px solid var(--rpg-green-border);
   color: var(--rpg-green-top);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 /* ── Set Tag Base ── */
 .set-tag {
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 /* ── Item Name ── */

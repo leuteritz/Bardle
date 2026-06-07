@@ -175,7 +175,7 @@ function onImgError(e: Event) {
   color: rgba(200, 144, 64, 0.55);
   background: rgba(60, 30, 10, 0.5);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 4px 10px;
   cursor: pointer;
   transition: all 0.15s;
@@ -203,7 +203,7 @@ function onImgError(e: Event) {
   flex: 1;
   background: #181208;
   border: 1px solid #3a2510;
-  border-radius: 5px;
+  border-radius: var(--bp-radius);
   padding: 5px 10px;
   color: var(--gold-bright);
   font-size: 11px;
@@ -266,7 +266,7 @@ function onImgError(e: Event) {
 .picker-champ {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 6px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   overflow: hidden;
   border: 1px solid var(--border);

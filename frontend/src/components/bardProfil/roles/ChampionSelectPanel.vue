@@ -284,7 +284,7 @@ function onImgError(e: Event) {
   color: rgba(200, 144, 64, 0.55);
   background: rgba(14, 10, 4, 0.85);
   border: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
@@ -319,7 +319,7 @@ function onImgError(e: Event) {
   flex: 1;
   background: #181208;
   border: 1px solid #3a2510;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 7px 12px;
   color: var(--gold-bright);
   font-size: 13px;
@@ -397,7 +397,7 @@ function onImgError(e: Event) {
   padding: 3px 8px;
   font-size: 0.6rem;
   font-weight: 700;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid #3e2a0a;
   background: #1c1a10;
   color: var(--rpg-text-dim);
@@ -479,7 +479,7 @@ function onImgError(e: Event) {
 .csp-champ {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   cursor: pointer;
   overflow: hidden;
   border: 1px solid var(--border);

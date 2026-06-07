@@ -454,7 +454,7 @@ export default defineComponent({
 /* ── Empty state ── */
 .empty-icon-box {
   border: 1px dashed var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 .empty-label {
   font-size: 0.875rem;
@@ -465,7 +465,7 @@ export default defineComponent({
 .champion-card {
   min-height: 140px;
   height: 140px;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid var(--rpg-wood-mid);
   transition:
     transform 0.3s,
@@ -567,7 +567,7 @@ export default defineComponent({
 .cost-badge {
   font-size: 0.65rem;
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-weight: 700;
 }
 .cost-badge--ok {
@@ -586,7 +586,7 @@ export default defineComponent({
   padding: 0.25rem 0;
   font-size: 0.7rem;
   font-weight: 700;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid transparent;
   cursor: pointer;
   transition:
@@ -626,7 +626,7 @@ export default defineComponent({
   padding: 0.4rem 0.75rem;
   background: var(--rpg-bg-tooltip);
   border: 2px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   font-size: 0.6rem;
   color: var(--rpg-text-muted);
   white-space: nowrap;
@@ -667,7 +667,7 @@ export default defineComponent({
 /* ── Trait filter section ── */
 .trait-filter-section {
   border: 1px solid #3e2a0a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: #161410;
   overflow: hidden;
 }
@@ -715,7 +715,7 @@ export default defineComponent({
   padding: 3px 8px;
   font-size: 0.6rem;
   font-weight: 700;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid #3e2a0a;
   background: #1c1a10;
   color: var(--rpg-text-dim);

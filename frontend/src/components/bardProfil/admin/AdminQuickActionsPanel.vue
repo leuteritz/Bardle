@@ -455,7 +455,7 @@ function setStarPhase(phase: number) {
   display: flex;
   align-items: center;
   border: 1px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   overflow: hidden;
 }
 
@@ -573,7 +573,7 @@ function setStarPhase(phase: number) {
   font-family: 'MedievalSharp', cursive;
   font-size: 0.75rem;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 1px solid var(--rpg-wood-mid);
   background: transparent;
   cursor: pointer;
@@ -684,7 +684,7 @@ function setStarPhase(phase: number) {
 
 .sun-sim {
   border: 1px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: #1a1208;
   padding: 0.5rem 0.75rem;
 }
@@ -710,7 +710,7 @@ function setStarPhase(phase: number) {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   border: 2px solid #3e200a;
   background: #111008;
   color: rgba(255, 255, 255, 0.45);

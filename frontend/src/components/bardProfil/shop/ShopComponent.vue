@@ -600,7 +600,7 @@ function handleUpgradeStar(): void {
   width: 155px;
   background: #16140e;
   border: 2px solid #3e200a;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   padding: 8px 10px 9px;
   display: flex;
   flex-direction: column;
@@ -766,7 +766,7 @@ function handleUpgradeStar(): void {
 .evolve-btn {
   padding: 9px 22px;
   border: 2px solid #7a4e20;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: linear-gradient(to bottom, var(--evolve-primary), var(--evolve-glow));
   box-shadow:
     inset 0 0 0 1px #3e200a,

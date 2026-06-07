@@ -126,7 +126,7 @@ function handleBuy() {
   position: relative;
   width: 96px;
   height: 96px;
-  border-radius: 20px;
+  border-radius: var(--bp-radius);
   border: 1.5px solid;
   display: flex;
   align-items: center;

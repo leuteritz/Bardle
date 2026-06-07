@@ -461,14 +461,14 @@ export default defineComponent({
 
 .minimap-field {
   border: 2px solid var(--rpg-wood-mid);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: transparent;
 }
 
 .minimap-overlay-badge {
   background: #000000b3;
   border: 1px solid var(--rpg-border-row);
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
 }
 
 .minimap-champ--blue {
@@ -563,7 +563,7 @@ export default defineComponent({
   align-items: center;
   gap: 4px;
   padding: 3px 7px;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: rgba(17, 16, 8, 0.88);
   border: 1px solid #5c3310;
   white-space: nowrap;
