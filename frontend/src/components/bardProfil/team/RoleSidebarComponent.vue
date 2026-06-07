@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
@@ -86,14 +87,9 @@ function onImgError(e: Event) {
           <!-- Grüner Glow wenn ein Champion dieser Rolle kaufbar ist -->
           <div v-if="roleStats[i].canBuy" class="role-affordable-glow" />
 
-          <!-- Anzahl freigeschalten Champions dieser Rolle -->
-          <div v-if="roleStats[i].recruitableCount > 0" class="role-shop-count">
-            +{{ roleStats[i].recruitableCount }}
-          </div>
-
           <span class="role-btn-label">{{ role }}</span>
 
-          <!-- Fortschritts-Badge oben rechts: immer Icon + XX/YY -->
+          <!-- Fortschritts-Badge oben links: immer Icon + XX/YY -->
           <div
             class="role-progress-badge"
             :class="{ 'role-progress-badge--complete': roleStats[i].complete }"
@@ -101,6 +97,13 @@ function onImgError(e: Event) {
             <Icon icon="game-icons:barbute" width="15" height="15" class="badge-icon" />
             <span class="badge-count">{{ roleStats[i].owned }}/{{ roleStats[i].total }}</span>
           </div>
+
+          <!-- Notify-Badge oben rechts: Anzahl kaufbarer Champions dieser Rolle -->
+          <RpgNotifyBadge
+            :count="roleStats[i].recruitableCount"
+            variant="shop"
+            label="Champions recruitable for this role"
+          />
 
           <div v-if="activeSlotIndex === i" class="role-btn-active-bar" />
         </button>
@@ -223,11 +226,11 @@ function onImgError(e: Event) {
   z-index: 4;
 }
 
-/* Fortschritts-Badge oben rechts */
+/* Fortschritts-Badge oben links */
 .role-progress-badge {
   position: absolute;
   top: 10px;
-  right: 10px;
+  left: 10px;
   z-index: 4;
   display: flex;
   align-items: center;
@@ -261,23 +264,6 @@ function onImgError(e: Event) {
   box-shadow:
     0 0 10px rgba(200, 160, 48, 0.22),
     inset 0 0 8px rgba(200, 160, 48, 0.06);
-}
-
-/* Anzahl freigeschalteter Champions (top-left) */
-.role-shop-count {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  z-index: 4;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1;
-  pointer-events: none;
-  color: #c080e8;
-  text-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.95),
-    0 0 10px rgba(192, 128, 232, 0.45);
 }
 
 /* Kaufbarer-Champion-Glow */

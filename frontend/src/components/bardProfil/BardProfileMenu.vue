@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
+import { useBattleStore } from '@/stores/battleStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -16,10 +18,13 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
+const battleStore = useBattleStore()
+const { recruitableChampions } = storeToRefs(battleStore)
 
-const teamBadgeCount = computed(
+const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
+const shopBadgeCount = computed(() => recruitableChampions.value.length)
 
 const menuItems: {
   id: BardTabId
@@ -87,11 +92,10 @@ watch(
                   v-if="uiStore.bardActiveTab === item.id"
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                 />
-                <RpgNotifyBadge
-                  v-if="item.id === 'team'"
-                  :count="teamBadgeCount"
-                  label="Team action available"
-                />
+                <div v-if="item.id === 'team'" class="team-badge-row">
+                  <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
+                  <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                </div>
               </button>
             </div>
           </div>
@@ -262,6 +266,61 @@ watch(
 </style>
 
 <style scoped>
+.team-badge-row {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.mini-badge {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  animation: team-badge-pulse 1.8s ease-in-out infinite;
+}
+
+.mini-badge--expedition {
+  background: linear-gradient(135deg, #e8af34, #cc6050);
+  border: 1.5px solid #ffcf60;
+  --tb-glow-a: rgba(232, 175, 52, 0.5);
+  --tb-glow-b: rgba(232, 175, 52, 0.9);
+  --tb-glow-c: rgba(204, 96, 80, 0.4);
+}
+
+.mini-badge--shop {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border: 1.5px solid #38bdf8;
+  --tb-glow-a: rgba(6, 182, 212, 0.5);
+  --tb-glow-b: rgba(6, 182, 212, 0.9);
+  --tb-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+@keyframes team-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 4px var(--tb-glow-a);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow:
+      0 0 10px var(--tb-glow-b),
+      0 0 18px var(--tb-glow-c);
+  }
+}
+
 /* ═══════════════════════════════════════════
    MODAL RAHMEN
    ═══════════════════════════════════════════ */

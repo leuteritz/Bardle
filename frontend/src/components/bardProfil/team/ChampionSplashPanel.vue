@@ -39,7 +39,7 @@ const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const { showToast } = useActionToast()
 
-const { headerSlots, secondarySlots } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots, recruitableChampions } = storeToRefs(battleStore)
 const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
@@ -94,6 +94,9 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
+const shopBadgeCount = computed(() =>
+  recruitableChampions.value.filter((c) => getChampionRoles(c.name).includes(roleKey.value)).length,
 )
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
@@ -288,6 +291,7 @@ function onImgError(e: Event) {
       >
         <Icon icon="game-icons:barbute" class="action-bar-icon" />
         <span class="action-bar-label">Shop</span>
+        <RpgNotifyBadge :count="shopBadgeCount" variant="shop" label="Champions available in shop" />
       </button>
       <div class="action-bar-sep" />
       <button
