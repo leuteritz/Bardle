@@ -76,18 +76,43 @@
         <button class="modal-close-btn" @click.stop="closePanel">✕</button>
       </div>
 
-      <!-- Spawn subheader -->
-      <div class="ec-spawn-bar">
-        <span class="ec-spawn-dot">○</span>
-        <span v-if="expeditionStore.availableExpeditions.length >= EXPEDITION_MAX_AVAILABLE" class="ec-spawn-text">
-          All slots filled ({{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }})
-        </span>
-        <span v-else-if="expeditionStore.availableExpeditions.length === 0" class="ec-spawn-text">
-          Next expedition in {{ formatCountdown(timeUntilNextSpawn) }}
-        </span>
-        <span v-else class="ec-spawn-text">
-          Next slot in {{ formatCountdown(timeUntilNextSpawn) }} · {{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}
-        </span>
+      <!-- Action bar: Send All | Timer | Accept All -->
+      <div class="ec-action-bar">
+        <div class="ec-bulk-slot ec-bulk-slot--left">
+          <button
+            v-show="canSendAll"
+            class="ec-bulk-btn ec-bulk-btn--send"
+            @click.stop="sendAll"
+            title="Send all available expeditions"
+          >
+            <Icon icon="game-icons:camping-tent" width="14" height="14" />
+            Send All
+          </button>
+        </div>
+
+        <div class="ec-timer-center">
+          <div v-if="expeditionStore.availableExpeditions.length >= EXPEDITION_MAX_AVAILABLE" class="ec-timer-time">FULL</div>
+          <div v-else class="ec-timer-time">{{ formatCountdown(timeUntilNextSpawn) }}</div>
+          <div class="ec-timer-label">
+            <span v-if="expeditionStore.availableExpeditions.length >= EXPEDITION_MAX_AVAILABLE">
+              All slots filled · {{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}
+            </span>
+            <span v-else-if="expeditionStore.availableExpeditions.length === 0">next expedition</span>
+            <span v-else>next slot · {{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}</span>
+          </div>
+        </div>
+
+        <div class="ec-bulk-slot ec-bulk-slot--right">
+          <button
+            v-show="canAcceptAll"
+            class="ec-bulk-btn ec-bulk-btn--accept"
+            @click.stop="acceptAll"
+            title="Collect all completed expeditions"
+          >
+            <Icon icon="game-icons:chest" width="14" height="14" />
+            Accept All
+          </button>
+        </div>
       </div>
     </div>
 
@@ -483,6 +508,32 @@ export default defineComponent({
       activeTooltipId.value = activeTooltipId.value === id ? null : id
     }
 
+    // ── Bulk Actions ──────────────────────────────────────────
+    const canAcceptAll = computed(() => readyCount.value > 0)
+
+    const canSendAll = computed(
+      () =>
+        expeditionStore.canStartExpedition &&
+        filteredExpeditions.value.some((slot) => canQuickstart(slot)),
+    )
+
+    function acceptAll() {
+      const toCollect = [...doneExpeditions.value]
+      for (const exp of toCollect) {
+        collectExpedition(exp.id)
+      }
+    }
+
+    function sendAll() {
+      const slots = [...filteredExpeditions.value]
+      for (const slot of slots) {
+        if (!expeditionStore.canStartExpedition) break
+        if (canQuickstart(slot)) {
+          quickstartExpedition(slot)
+        }
+      }
+    }
+
     // ── Active expedition helpers ─────────────────────────────
     function getProgress(expedition: ExpeditionMission): number {
       return Math.min(
@@ -559,6 +610,10 @@ export default defineComponent({
       MAX_ACTIVE_EXPEDITIONS,
       EXPEDITION_MAX_AVAILABLE,
       ROLE_IMG,
+      canAcceptAll,
+      canSendAll,
+      acceptAll,
+      sendAll,
     }
   },
 })
@@ -664,10 +719,10 @@ export default defineComponent({
   align-items: center;
   gap: 6px;
   padding: 0 12px;
-  background: rgba(96, 128, 204, 0.06);
-  border: 1px solid rgba(96, 128, 204, 0.4);
+  background: rgba(139, 105, 20, 0.06);
+  border: 1px solid rgba(200, 144, 64, 0.35);
   border-radius: 4px;
-  color: #6080cc;
+  color: #c9a84c;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -675,10 +730,10 @@ export default defineComponent({
   transition: border-color 0.15s, color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .ec-active-btn:hover {
-  border-color: #6080cc;
-  color: #8090e0;
-  background: rgba(96, 128, 204, 0.12);
-  box-shadow: 0 0 10px rgba(96, 128, 204, 0.28);
+  border-color: #c9a84c;
+  color: #e8c040;
+  background: rgba(139, 105, 20, 0.12);
+  box-shadow: 0 0 10px rgba(200, 144, 64, 0.28);
 }
 .ec-active-btn--ready {
   border-color: #c89040;
@@ -700,12 +755,12 @@ export default defineComponent({
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: rgba(96, 128, 204, 0.15);
-  border: 1px solid rgba(96, 128, 204, 0.5);
+  background: rgba(200, 144, 64, 0.1);
+  border: 1px solid rgba(200, 144, 64, 0.35);
   border-radius: 8px;
   font-size: 10px;
   font-weight: 900;
-  color: #6080cc;
+  color: #c9a84c;
 }
 .ec-active-badge--pulse {
   background: rgba(232, 192, 64, 0.18);
@@ -794,27 +849,76 @@ export default defineComponent({
   letter-spacing: 0.05em;
 }
 
-/* ── Spawn Bar ────────────────────────────────────────────── */
-.ec-spawn-bar {
-  display: flex;
+/* ── Action Bar ───────────────────────────────────────────── */
+.ec-action-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px 6px;
+  padding: 5px 10px 7px;
   background: #161410;
   border-top: 1px solid #2a1a08;
 }
-.ec-spawn-dot {
-  color: rgba(200, 144, 64, 0.35);
-  font-size: 10px;
-  flex-shrink: 0;
+.ec-bulk-slot {
+  display: flex;
 }
-.ec-spawn-text {
+.ec-bulk-slot--left  { justify-content: flex-start; }
+.ec-bulk-slot--right { justify-content: flex-end; }
+.ec-timer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.ec-timer-time {
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  font-weight: 900;
+  color: #e8c040;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.45);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ec-timer-label {
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.45);
 }
+
+/* ── Bulk Action Buttons ──────────────────────────────────── */
+.ec-bulk-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: box-shadow 0.15s;
+  white-space: nowrap;
+}
+.ec-bulk-btn--accept {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  color: #fff;
+}
+.ec-bulk-btn--accept:hover {
+  box-shadow: 0 0 12px rgba(82, 184, 48, 0.5);
+}
+.ec-bulk-btn--accept:active { transform: scale(0.95); }
+.ec-bulk-btn--send {
+  background: linear-gradient(to bottom, #7a5c20, #5c3e10);
+  border: 1px solid #c9a84c;
+  color: #e8c040;
+}
+.ec-bulk-btn--send:hover {
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+}
+.ec-bulk-btn--send:active { transform: scale(0.95); }
 
 /* ── Warning / Empty ──────────────────────────────────────── */
 .ec-warning {

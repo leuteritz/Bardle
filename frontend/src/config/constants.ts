@@ -1110,6 +1110,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:rank-3',           // ⬆️ Leveling encyclopedia category
   'game-icons:sundial',          // ⏳ Loading indicator in BattleStartScreenComponent
   'game-icons:hazard-sign',      // ⚠ Warning label in ExpeditionCreateComponent
+  // Expedition action bar bulk buttons
+  'game-icons:chest',            // Accept All button (ExpeditionComponent action bar)
+  'game-icons:camping-tent',     // Send All button (ExpeditionComponent action bar)
   // Expedition icon pool (EXPEDITION_ICON_POOL — random generated expedition icons)
   'game-icons:journey',
   'game-icons:interstellar-path',
