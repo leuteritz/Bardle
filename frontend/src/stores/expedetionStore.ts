@@ -3,6 +3,8 @@ import { useGameStore } from './gameStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { getChampionRoles } from '../config/championRoles'
+import { useEventLog, type GameEventType } from '../composables/useEventLog'
+import { formatNumber } from '../config/numberFormat'
 import {
   CHAMPION_BASE_POWER,
   CHAMPION_POWER_PER_LEVEL,
@@ -26,6 +28,43 @@ import {
 } from '../config/constants'
 import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '../types'
 import { logger } from '../utils/logger'
+
+const ROLE_EVENT_TYPE: Record<ChampionRole, GameEventType> = {
+  jungle: 'jungle',
+  top: 'top',
+  mid: 'mid',
+  adc: 'adc',
+  support: 'support',
+}
+
+const EXPEDITION_SUCCESS_MESSAGES: Record<ChampionRole, string[]> = {
+  jungle: [
+    '– The jungle answers. Chimes bloom.',
+    '– Enemy camps cleared. Bard wanders on.',
+  ],
+  top: [
+    '– Tower falls. Victory whispers.',
+    '– Side lane taken. Silence follows.',
+  ],
+  mid: [
+    '– Lane closed. Echoes of power linger.',
+    '– Roam complete. A spark in the dark.',
+  ],
+  adc: [
+    '– Precision wins. Chimes follow.',
+    '– Bot lane cleared. Objectives fall.',
+  ],
+  support: [
+    '– Vision secured. Allies find the path.',
+    '– Wards planted deep. Darkness lifts.',
+  ],
+}
+
+const EXPEDITION_FAILURE_MESSAGES = [
+  '– Lost to the void.',
+  '– The expedition did not return…',
+  '– Swallowed by darkness.',
+]
 
 function randInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
@@ -247,6 +286,19 @@ export const useExpeditionStore = defineStore('expedition', {
       gameStore.calculateLevel()
       gameStore.addMeep()
       gameStore.checkPrestigeAvailability()
+
+      const { addEvent } = useEventLog()
+      const primaryRole = expedition.requiredRoles[0] ?? null
+      const eventType: GameEventType = primaryRole ? ROLE_EVENT_TYPE[primaryRole] : 'info'
+      const rewardStr = `+${formatNumber(expedition.reward)}`
+      let flavor: string
+      if (expedition.status === 'success') {
+        const pool = primaryRole ? EXPEDITION_SUCCESS_MESSAGES[primaryRole] : ['– Mission complete.']
+        flavor = pool[Math.floor(Math.random() * pool.length)]
+      } else {
+        flavor = EXPEDITION_FAILURE_MESSAGES[Math.floor(Math.random() * EXPEDITION_FAILURE_MESSAGES.length)]
+      }
+      addEvent(`${expedition.name} ${flavor} (${rewardStr})`, eventType)
 
       this.activeExpeditions.splice(idx, 1)
       this.completedExpeditions.unshift(expedition)
