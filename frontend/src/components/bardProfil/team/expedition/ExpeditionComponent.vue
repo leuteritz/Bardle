@@ -5,13 +5,13 @@
     <div class="ec-header">
       <div class="ec-header-top">
         <!-- Search -->
-        <div class="ec-search-wrap">
-          <Icon icon="game-icons:magnifying-glass" width="13" height="13" class="ec-search-icon" />
+        <div class="rpg-search-wrap">
+          <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
           <input
             v-model="searchQuery"
             type="text"
-            class="ec-search-input"
             placeholder="Search expeditions…"
+            class="rpg-search w-full pl-9 pr-8 py-2.5"
           />
           <button v-if="searchQuery" class="ec-search-clear" @click.stop="searchQuery = ''">✕</button>
         </div>
@@ -579,62 +579,34 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 0;
-  border-bottom: 1px solid #3e2010;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
   padding-bottom: 0;
 }
 .ec-header-top {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px 8px;
+  padding: 8px 10px;
 }
 
 /* ── Search ───────────────────────────────────────────────── */
-.ec-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 1;
-  background: #111008;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  padding: 4px 8px;
-  transition: border-color 0.15s;
-}
-.ec-search-wrap:focus-within {
-  border-color: #7a4e20;
-}
-.ec-search-icon {
-  color: rgba(200, 144, 64, 0.35);
-  flex-shrink: 0;
-}
-.ec-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(232, 192, 64, 0.8);
-  letter-spacing: 0.04em;
-  min-width: 0;
-}
-.ec-search-input::placeholder {
-  color: rgba(200, 144, 64, 0.25);
-  font-weight: 600;
-}
 .ec-search-clear {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: rgba(200, 144, 64, 0.4);
-  font-size: 10px;
+  color: var(--rpg-text-dim);
+  font-size: 12px;
   cursor: pointer;
   padding: 0;
   line-height: 1;
   transition: color 0.12s;
 }
 .ec-search-clear:hover {
-  color: #e8c040;
+  color: var(--rpg-gold);
 }
 
 /* ── Admin Button ─────────────────────────────────────────── */
@@ -820,7 +792,9 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px 7px;
+  padding: 4px 10px 6px;
+  background: #161410;
+  border-top: 1px solid #2a1a08;
 }
 .ec-spawn-dot {
   color: rgba(200, 144, 64, 0.35);

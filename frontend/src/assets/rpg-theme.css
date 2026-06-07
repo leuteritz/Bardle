@@ -250,6 +250,22 @@
   border-color: var(--rpg-gold-dim);
 }
 
+/* ── Search Wrap ── */
+.rpg-search-wrap {
+  position: relative;
+  flex: 1;
+}
+
+/* ── Search Icon (inside .rpg-search-wrap) ── */
+.rpg-search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--rpg-text-dim);
+  pointer-events: none;
+}
+
 /* ── Progress Bar ── */
 .rpg-progress-track {
   background: #2a2a22;

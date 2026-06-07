@@ -3,8 +3,8 @@
     <!-- ── Header: Search + Role Filter ── -->
     <div class="rpg-header cs-header">
       <div class="cs-search-row">
-        <div class="relative flex-1">
-          <span class="search-icon">⌕</span>
+        <div class="rpg-search-wrap">
+          <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
           <input
             v-model="searchQuery"
             type="text"
@@ -444,17 +444,6 @@ export default defineComponent({
 .rpg-header {
   border-bottom-width: 1px;
   border-bottom-color: rgba(92, 51, 16, 0.5);
-}
-
-/* ── Search icon ── */
-.search-icon {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.875rem;
-  color: var(--rpg-text-dim);
-  pointer-events: none;
 }
 
 /* ── Load error ── */
