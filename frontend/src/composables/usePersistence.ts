@@ -92,6 +92,7 @@ export function usePersistence() {
         battleHistory: battleStore.battleHistory.slice(-20),
         recruitableChampions: battleStore.recruitableChampions,
         recruitedChampions: [...battleStore.recruitedChampions],
+        newlyUnlockedChampions: [...battleStore.newlyUnlockedChampions],
         battleEverStarted: battleStore.battleEverStarted,
         isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
         resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
@@ -253,6 +254,8 @@ export function usePersistence() {
           battleStore.recruitableChampions = b.recruitableChampions
         if (Array.isArray(b.recruitedChampions))
           battleStore.recruitedChampions = b.recruitedChampions
+        if (Array.isArray(b.newlyUnlockedChampions))
+          battleStore.newlyUnlockedChampions = b.newlyUnlockedChampions
         battleStore.battleEverStarted = b.battleEverStarted ?? false
         battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
         battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
@@ -497,6 +500,7 @@ export function usePersistence() {
     battleStore.showAutoBattleResult = false
     battleStore.recruitableChampions = []
     battleStore.recruitedChampions = []
+    battleStore.newlyUnlockedChampions = []
     battleStore.battleTime = 0
     battleStore.timeUntilNextBattle = 0
     battleStore.currentBattleId = 0

@@ -90,6 +90,7 @@
           class="relative overflow-hidden champion-card group"
           :class="getCardClass(champion.name)"
           @click="handleBuy(champion.name)"
+          @mouseenter="onChampionHover(champion.name)"
         >
           <!-- Hintergrundbild -->
           <img
@@ -187,6 +188,16 @@
           <div v-if="isLocked(champion.name)" class="locked-tooltip">
             {{ getLockedTooltip(champion.name) }}
           </div>
+
+          <!-- New champion badge -->
+          <Transition name="champion-badge-fade">
+            <RpgNotifyBadge
+              v-if="isNew(champion.name)"
+              :count="1"
+              variant="shop"
+              label="New champion"
+            />
+          </Transition>
         </div>
       </div>
     </div>
@@ -198,6 +209,7 @@ import { ref, onMounted, defineComponent, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
+import RpgNotifyBadge from '../../ui/RpgNotifyBadge.vue'
 import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
@@ -212,7 +224,7 @@ import type { ChampionRole } from '../../../types'
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon },
+  components: { Icon, RpgNotifyBadge },
   props: {
     initialRole: { type: String, default: 'all' },
     showClose: { type: Boolean, default: false },
@@ -396,6 +408,28 @@ export default defineComponent({
       return battleStore.recruitableChampions.length
     })
 
+    const newChampionNames = computed(() =>
+      new Set(
+        battleStore.newlyUnlockedChampions.filter((n) =>
+          battleStore.recruitableChampions.some((r) => r.name === n),
+        ),
+      ),
+    )
+
+    function isNew(name: string): boolean {
+      return newChampionNames.value.has(name)
+    }
+
+    let hoverTimer: ReturnType<typeof setTimeout> | null = null
+    function onChampionHover(name: string) {
+      if (!isNew(name)) return
+      if (hoverTimer !== null) clearTimeout(hoverTimer)
+      hoverTimer = setTimeout(() => {
+        battleStore.dismissNewChampion(name)
+        hoverTimer = null
+      }, 75)
+    }
+
     onMounted(() => loadChampions())
 
     return {
@@ -429,6 +463,8 @@ export default defineComponent({
       getButtonClass,
       setActiveRole,
       traitFilterOpen,
+      isNew,
+      onChampionHover,
     }
   },
 })
@@ -771,6 +807,14 @@ export default defineComponent({
 .chip-leave-to {
   opacity: 0;
   transform: scale(0.8);
+}
+
+.champion-badge-fade-leave-active {
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.champion-badge-fade-leave-to {
+  opacity: 0;
 }
 
 </style>

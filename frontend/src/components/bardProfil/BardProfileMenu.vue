@@ -5,8 +5,6 @@ import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expedetionStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { ROLES as ROLE_DEFS } from '@/config/constants'
-import { CHAMPION_ROLES } from '@/config/championRoles'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -21,20 +19,12 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
-const { recruitableChampions } = storeToRefs(battleStore)
+const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
-const shopBadgeCount = computed(() =>
-  ROLE_DEFS.reduce((sum, r) => {
-    const roleCount = recruitableChampions.value.filter(
-      (c) => CHAMPION_ROLES[c.name] === r.key,
-    ).length
-    const seen = uiStore.shopSeenCounts[r.key] ?? 0
-    return sum + Math.max(0, roleCount - seen)
-  }, 0),
-)
+const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 
 const menuItems: {
   id: BardTabId

@@ -117,6 +117,7 @@ export const useBattleStore = defineStore('battle', {
 
     recruitableChampions: [] as RecruitableChampion[],
     recruitedChampions: [] as string[],
+    newlyUnlockedChampions: [] as string[],
 
     battleSimIntervalId: null as ReturnType<typeof setInterval> | null,
     killEventSchedule: [] as Array<{ gameTime: number; team: 1 | 2 }>,
@@ -166,6 +167,12 @@ export const useBattleStore = defineStore('battle', {
       if (this.recruitableChampions.some((c) => c.name === name)) return
       if (this.recruitedChampions.includes(name)) return
       this.recruitableChampions.push({ name, materialCost, discoveredAt: Date.now() })
+      this.newlyUnlockedChampions.push(name)
+    },
+
+    dismissNewChampion(name: string) {
+      const idx = this.newlyUnlockedChampions.indexOf(name)
+      if (idx >= 0) this.newlyUnlockedChampions.splice(idx, 1)
     },
 
     unlockAllChampions() {
@@ -195,6 +202,7 @@ export const useBattleStore = defineStore('battle', {
       this.ownedChampions.push(name)
       this.recruitedChampions.push(name)
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
+      this.dismissNewChampion(name)
       logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost })
       return true
     },

@@ -20,7 +20,7 @@ const ROLE_COLORS = Object.fromEntries(ROLE_DEFS.map((r) => [r.label, r.color]))
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
 const inventoryStore = useInventoryStore()
-const { headerSlots, ownedChampions, recruitableChampions } = storeToRefs(battleStore)
+const { headerSlots, ownedChampions, recruitableChampions, newlyUnlockedChampions } = storeToRefs(battleStore)
 const { rolesActiveSlot: activeSlotIndex } = storeToRefs(uiStore)
 
 // Pro Rolle: Gesamtzahl, freigeschaltete und kaufbare Champions
@@ -36,8 +36,7 @@ const roleStats = computed(() =>
     const affordableCount = roleRecruitables.filter((c) =>
       inventoryStore.hasMaterials(c.materialCost),
     ).length
-    const seen = uiStore.shopSeenCounts[roleKey] ?? 0
-    const unseenCount = Math.max(0, recruitableCount - seen)
+    const unseenCount = newlyUnlockedChampions.value.filter((n) => CHAMPION_ROLES[n] === roleKey).length
     return {
       total,
       owned,

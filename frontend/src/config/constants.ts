@@ -1060,7 +1060,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
 ]
 
 // ── UI Timing ─────────────────────────────────────────────────────────────────
-export const TOAST_DURATION_MS = 1800
+export const TOAST_DURATION_MS = 800
 
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000

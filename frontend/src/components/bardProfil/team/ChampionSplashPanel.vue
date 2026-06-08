@@ -39,7 +39,7 @@ const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const { showToast } = useActionToast()
 
-const { headerSlots, secondarySlots, recruitableChampions } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots, recruitableChampions, newlyUnlockedChampions } = storeToRefs(battleStore)
 const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
@@ -95,13 +95,9 @@ const itemShopCategory = ref<ItemCategory>('weapon')
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
-const shopBadgeCount = computed(() => {
-  const total = recruitableChampions.value.filter((c) =>
-    getChampionRoles(c.name).includes(roleKey.value),
-  ).length
-  const seen = uiStore.shopSeenCounts[roleKey.value] ?? 0
-  return Math.max(0, total - seen)
-})
+const shopBadgeCount = computed(() =>
+  newlyUnlockedChampions.value.filter((n) => getChampionRoles(n).includes(roleKey.value)).length,
+)
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const internalSubSlot = ref(-1)
@@ -122,22 +118,7 @@ watch(
 watch(roleKey, (role) => {
   if (activePanel.value === 'shop') {
     shopRole.value = role
-    const count = recruitableChampions.value.filter((c) =>
-      getChampionRoles(c.name).includes(role),
-    ).length
-    uiStore.markShopRoleVisited(role, count)
   }
-})
-
-watch(recruitableChampions, () => {
-  Object.keys(uiStore.shopSeenCounts).forEach((rk) => {
-    const count = recruitableChampions.value.filter((c) =>
-      getChampionRoles(c.name).includes(rk as ChampionRole),
-    ).length
-    if (uiStore.shopSeenCounts[rk] > count) {
-      uiStore.markShopRoleVisited(rk, count)
-    }
-  })
 })
 
 function closeActiveModal() {
@@ -161,12 +142,6 @@ function openShop(role: ChampionRole | 'all' = 'all') {
   panelMode.value = 'main'
   const wasOpen = activePanel.value === 'shop'
   activePanel.value = wasOpen ? null : 'shop'
-  if (!wasOpen && role !== 'all') {
-    const count = recruitableChampions.value.filter((c) =>
-      getChampionRoles(c.name).includes(role),
-    ).length
-    uiStore.markShopRoleVisited(role, count)
-  }
 }
 
 function openExpedition() {
