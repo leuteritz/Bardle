@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUiStore } from '../../stores/uiStore'
+import { useBattleStore } from '../../stores/battleStore'
+import { useExpeditionStore } from '../../stores/expedetionStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
@@ -10,7 +12,36 @@ import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
+const battleStore = useBattleStore()
+const expeditionStore = useExpeditionStore()
 const { resetGame } = usePersistence()
+
+const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
+const expeditionBadgeCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
+
+const expedBadgeStyle = computed(() => {
+  const xFrac = 0.22
+  const t = (xFrac - 0.5) / 0.5
+  return {
+    top: `${svgH.value * Math.sqrt(Math.max(0, 1 - t * t)) - badgeOverlapPx.value}px`,
+    left: `${svgW.value * xFrac}px`,
+  }
+})
+const champBadgeStyle = computed(() => {
+  const xFrac = 0.78
+  const t = (xFrac - 0.5) / 0.5
+  return {
+    top: `${svgH.value * Math.sqrt(Math.max(0, 1 - t * t)) - badgeOverlapPx.value}px`,
+    left: `${svgW.value * xFrac}px`,
+  }
+})
+
+function openTeamTab() {
+  uiStore.openBardModal()
+  uiStore.setBardTab('team')
+}
 
 function handleReset() {
   if (
@@ -208,6 +239,26 @@ onUnmounted(() => resizeObserver?.disconnect())
       >
         ✕
       </button>
+
+      <Transition name="header-badge">
+        <button
+          v-if="expeditionBadgeCount > 0"
+          class="header-notif-badge header-notif-badge--expedition"
+          :style="expedBadgeStyle"
+          :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
+          @click.stop="openTeamTab"
+        >{{ expeditionBadgeCount }}</button>
+      </Transition>
+
+      <Transition name="header-badge">
+        <button
+          v-if="championBadgeCount > 0"
+          class="header-notif-badge header-notif-badge--champion"
+          :style="champBadgeStyle"
+          :aria-label="`${championBadgeCount} new champion(s)`"
+          @click.stop="openTeamTab"
+        >{{ championBadgeCount }}</button>
+      </Transition>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -694,5 +745,81 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-top: 1px;
 }
 
+/* ================================================================
+   HEADER NOTIFICATION BADGES (arc-positioned, number-only)
+   ================================================================ */
+.header-notif-badge {
+  position: absolute;
+  z-index: 27;
+  width:  clamp(20px, 1.8vw, 36px);
+  height: clamp(20px, 1.8vw, 36px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(9px, 0.85vw, 18px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateX(-50%);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  animation: header-badge-glow 1.8s ease-in-out infinite;
+}
+
+.header-notif-badge--expedition {
+  background: linear-gradient(to bottom, #e8af34, #c87028);
+  border: 2px solid #ffcf60;
+  box-shadow:
+    0 0 8px rgba(232, 175, 52, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --badge-glow-a: rgba(232, 175, 52, 0.5);
+  --badge-glow-b: rgba(232, 175, 52, 0.9);
+  --badge-glow-c: rgba(200, 112, 40, 0.4);
+}
+
+.header-notif-badge--champion {
+  background: linear-gradient(to bottom, #06b6d4, #0891b2);
+  border: 2px solid #38bdf8;
+  box-shadow:
+    0 0 8px rgba(6, 182, 212, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  --badge-glow-a: rgba(6, 182, 212, 0.5);
+  --badge-glow-b: rgba(6, 182, 212, 0.9);
+  --badge-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+.header-notif-badge:hover {
+  filter: brightness(1.2);
+}
+
+.header-notif-badge:active {
+  filter: brightness(0.85);
+}
+
+@keyframes header-badge-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 6px var(--badge-glow-a);
+  }
+  50% {
+    box-shadow:
+      0 0 14px var(--badge-glow-b),
+      0 0 24px var(--badge-glow-c);
+  }
+}
+
+.header-badge-enter-active,
+.header-badge-leave-active {
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.18s ease;
+}
+.header-badge-enter-from,
+.header-badge-leave-to {
+  transform: translateX(-50%) scale(0);
+  opacity: 0;
+}
 
 </style>
