@@ -137,7 +137,7 @@
 
       <template v-for="star in frontStars" :key="star.id">
         <div
-          class="star-body-wrap"
+          :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id }]"
           :style="starWrapStyle(star)"
           @click="handleStarClick(star)"
           @mouseenter="hoveredStarId = star.id"
@@ -240,46 +240,51 @@
             getStarRewardSummary(star).materials.length > 0 ||
             getStarRewardSummary(star).champion
           "
-          class="star-reward-summary"
+          :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id }]"
           :style="rewardSummaryStyle(star)"
+          @click="handleStarClick(star)"
+          @mouseenter="hoveredSummaryStarId = star.id"
+          @mouseleave="hoveredSummaryStarId = null"
         >
-          <div v-if="getStarRewardSummary(star).champion" class="summary-champion">
-            <span class="summary-champion__crown">♛</span>
-            <div class="summary-champion__icon-wrap">
-              <img
-                :src="getStarRewardSummary(star).champion!.image"
-                :alt="getStarRewardSummary(star).champion!.name"
-                class="summary-champion__icon"
-              />
+          <div class="summary-inner">
+            <div v-if="getStarRewardSummary(star).champion" class="summary-champion">
+              <span class="summary-champion__crown">♛</span>
+              <div class="summary-champion__icon-wrap">
+                <img
+                  :src="getStarRewardSummary(star).champion!.image"
+                  :alt="getStarRewardSummary(star).champion!.name"
+                  class="summary-champion__icon"
+                />
+              </div>
+              <span class="summary-champion__name">{{
+                getStarRewardSummary(star).champion!.name
+              }}</span>
             </div>
-            <span class="summary-champion__name">{{
-              getStarRewardSummary(star).champion!.name
-            }}</span>
-          </div>
 
-          <div
-            v-if="
-              getStarRewardSummary(star).champion &&
-              (getStarRewardSummary(star).totalChimes > 0 ||
-                getStarRewardSummary(star).materials.length > 0)
-            "
-            class="summary-divider"
-          />
-
-          <div class="summary-loot-row">
-            <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
-              <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
-              <span class="summary-count"
-                >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
-              >
-            </div>
             <div
-              v-for="mat in getStarRewardSummary(star).materials"
-              :key="mat.name"
-              class="summary-item"
-            >
-              <img :src="mat.image" :alt="mat.name" class="summary-icon" />
-              <span class="summary-count">×{{ mat.count }}</span>
+              v-if="
+                getStarRewardSummary(star).champion &&
+                (getStarRewardSummary(star).totalChimes > 0 ||
+                  getStarRewardSummary(star).materials.length > 0)
+              "
+              class="summary-divider"
+            />
+
+            <div class="summary-loot-row">
+              <div v-if="getStarRewardSummary(star).totalChimes > 0" class="summary-item">
+                <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="summary-icon" />
+                <span class="summary-count"
+                  >×{{ formatNumber(getStarRewardSummary(star).totalChimes) }}</span
+                >
+              </div>
+              <div
+                v-for="mat in getStarRewardSummary(star).materials"
+                :key="mat.name"
+                class="summary-item"
+              >
+                <img :src="mat.image" :alt="mat.name" class="summary-icon" />
+                <span class="summary-count">×{{ mat.count }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -342,7 +347,11 @@ import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPo
 import type { ChampionRole } from '../../../types'
 
 const hoveredStarId = ref<string | null>(null)
-const { starRenders } = useStarSystem(hoveredStarId)
+const hoveredSummaryStarId = ref<string | null>(null)
+const effectiveHoveredStarId = computed(
+  () => hoveredStarId.value ?? hoveredSummaryStarId.value,
+)
+const { starRenders } = useStarSystem(effectiveHoveredStarId)
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 
@@ -823,7 +832,8 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-.star-body-wrap:hover .star-body {
+.star-body-wrap:hover .star-body,
+.star-body-wrap.star-hovered .star-body {
   animation: star-hover-pulse 0.6s ease-in-out infinite;
   filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px rgba(255, 224, 102, 0.45)) brightness(1.3);
 }
@@ -840,10 +850,12 @@ function starCountStyle(star: StarRenderEntry) {
 
 @media (prefers-reduced-motion: reduce) {
   .star-body-wrap:hover .star-body,
-  .star-body-wrap:active .star-body {
+  .star-body-wrap:active .star-body,
+  .star-body-wrap.star-hovered .star-body {
     animation: none;
     filter: drop-shadow(0 0 14px #ffe066) brightness(1.25);
   }
+
 }
 
 .star-body--champion::after,
@@ -940,19 +952,29 @@ function starCountStyle(star: StarRenderEntry) {
   position: absolute;
   top: 0;
   left: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 8;
+}
+
+.summary-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  padding: 5px 9px;
+  padding: 6px 10px;
   border-radius: 4px;
-  background: rgba(8, 5, 18, 0.82);
-  border: 1px solid rgba(232, 192, 64, 0.5);
-  pointer-events: none;
-  z-index: 8;
+  background: linear-gradient(160deg, #0e0b1a 0%, #111008 100%);
+  border: 1px solid rgba(232, 192, 64, 0.45);
+  box-shadow:
+    0 0 8px rgba(232, 192, 64, 0.12),
+    inset 0 0 0 1px rgba(232, 192, 64, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  position: relative;
 }
 
-.star-reward-summary::before {
+.summary-inner::before {
   content: '';
   position: absolute;
   top: 0;
@@ -966,6 +988,27 @@ function starCountStyle(star: StarRenderEntry) {
     rgba(232, 192, 64, 0.25) 40%,
     rgba(232, 192, 64, 0.5) 100%
   );
+}
+
+.star-reward-summary:hover .summary-inner {
+  transform: translateY(-3px);
+  border-color: rgba(232, 192, 64, 0.85);
+  box-shadow:
+    0 0 18px rgba(232, 192, 64, 0.35),
+    inset 0 0 0 1px rgba(232, 192, 64, 0.2);
+}
+
+.star-reward-summary:active .summary-inner {
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.2);
+}
+
+.star-reward-summary--star-hovered .summary-inner {
+  border-color: rgba(232, 192, 64, 0.9);
+  box-shadow:
+    0 0 22px rgba(232, 192, 64, 0.4),
+    0 0 6px rgba(255, 220, 80, 0.25),
+    inset 0 0 0 1px rgba(232, 192, 64, 0.2);
 }
 
 .summary-loot-row {
