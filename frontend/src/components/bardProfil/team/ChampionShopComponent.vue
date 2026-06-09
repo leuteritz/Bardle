@@ -84,112 +84,143 @@
       </div>
 
       <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+        <!-- Grid slot: fixed height, holds layout space -->
         <div
           v-for="champion in filteredChampions"
           :key="champion.name"
-          class="relative overflow-hidden champion-card group"
-          :class="getCardClass(champion.name)"
+          class="champion-card-slot"
+          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name }]"
           @click="handleBuy(champion.name)"
-          @mouseenter="onChampionHover(champion.name)"
+          @mouseenter="onCardHoverAndDismiss(champion.name)"
+          @mouseleave="onCardLeave"
         >
-          <!-- Hintergrundbild -->
-          <img
-            :src="battleStore.getChampionImage(champion.name)"
-            :alt="champion.name"
-            class="absolute inset-0 object-cover object-top w-full h-full transition-transform duration-500 rpg-img group-hover:scale-105"
-            :class="isLocked(champion.name) ? 'grayscale' : ''"
-          />
+          <!-- Visual card: expands absolutely out of grid slot on hover -->
+          <div class="card-inner">
 
-          <!-- Lock-Overlay -->
-          <img
-            v-if="isLocked(champion.name)"
-            src="/img/lock.png"
-            alt="Locked"
-            class="lock-overlay"
-          />
+            <!-- Image layer: clipped to card-inner bounds -->
+            <div class="card-img-layer">
+              <img
+                :src="battleStore.getChampionImage(champion.name)"
+                :alt="champion.name"
+                class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
+                :class="isLocked(champion.name) ? 'grayscale' : ''"
+              />
 
-          <!-- Gradient Overlay -->
-          <div
-            class="absolute inset-0 card-overlay"
-            :class="
-              isUnlocked(champion.name) && canAffordChampion(champion.name)
-                ? 'card-overlay--buyable'
-                : 'card-overlay--default'
-            "
-          />
+              <img
+                v-if="isLocked(champion.name)"
+                src="/img/lock.png"
+                alt="Locked"
+                class="lock-overlay"
+              />
 
-          <!-- Shimmer -->
-          <div
-            v-if="
-              isUnlocked(champion.name) &&
-              !isOwned(champion.name) &&
-              canAffordChampion(champion.name)
-            "
-            class="absolute inset-0 pointer-events-none card-shimmer translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
-          />
-
-          <!-- Content -->
-          <div class="relative z-10 flex flex-col justify-between h-full p-2">
-            <!-- Unterer Bereich -->
-            <div class="flex flex-col gap-2 mt-auto">
-              <!-- Name -->
-              <span
-                class="text-sm font-black leading-tight tracking-wide champion-name"
-                :class="
-                  isOwned(champion.name) || isLocked(champion.name)
-                    ? 'champion-name--dim'
-                    : 'champion-name--bright'
-                "
-              >
-                {{ truncate(champion.name, 12) }}
-              </span>
-
-              <!-- Material-Kosten -->
               <div
-                v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-                class="flex flex-wrap gap-1"
-              >
+                class="absolute inset-0 card-overlay"
+                :class="
+                  isUnlocked(champion.name) && canAffordChampion(champion.name)
+                    ? 'card-overlay--buyable'
+                    : 'card-overlay--default'
+                "
+              />
+
+              <div
+                v-if="
+                  isUnlocked(champion.name) &&
+                  !isOwned(champion.name) &&
+                  canAffordChampion(champion.name)
+                "
+                class="absolute inset-0 pointer-events-none card-shimmer card-shimmer-anim"
+              />
+            </div>
+
+            <!-- Content: always anchored to bottom of card-inner -->
+            <div class="card-content">
+              <div class="flex flex-col">
+                <!-- 1. Name — always visible -->
                 <span
-                  v-for="(qty, matId) in getMaterialCost(champion.name)"
-                  :key="matId"
-                  class="cost-badge"
+                  class="text-sm font-black leading-tight tracking-wide champion-name"
                   :class="
-                    hasEnoughMaterial(String(matId), qty as number)
-                      ? 'cost-badge--ok'
-                      : 'cost-badge--missing'
+                    isOwned(champion.name) || isLocked(champion.name)
+                      ? 'champion-name--dim'
+                      : 'champion-name--bright'
                   "
                 >
-                  <img
-                    :src="getMaterialImage(String(matId))"
-                    :alt="getMaterialName(String(matId))"
-                    class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
-                  />
-                  {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
-                    formatNumber(qty as number)
-                  }}
+                  {{ truncate(champion.name, 12) }}
                 </span>
+
+                <!-- 2. Trait/origin badges — revealed on expand, zero space when collapsed -->
+                <div class="card-traits-section">
+                  <div
+                    v-for="trait in getChampionDetail(champion.name).traits"
+                    :key="trait.id"
+                    class="card-trait-badge"
+                    :style="{ '--tc': trait.color }"
+                  >
+                    <Icon :icon="trait.icon" class="card-trait-icon" :style="{ color: trait.color }" />
+                    <span>{{ trait.name }}</span>
+                  </div>
+                  <div
+                    v-if="getChampionDetail(champion.name).origin"
+                    class="card-trait-badge"
+                    :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
+                  >
+                    <Icon
+                      :icon="getChampionDetail(champion.name).origin!.icon"
+                      class="card-trait-icon"
+                      :style="{ color: getChampionDetail(champion.name).origin!.color }"
+                    />
+                    <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
+                  </div>
+                </div>
+
+                <!-- 3. Costs + Button -->
+                <div class="card-bottom-section">
+                  <div
+                    v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
+                    class="flex flex-wrap gap-1"
+                  >
+                    <span
+                      v-for="(qty, matId) in getMaterialCost(champion.name)"
+                      :key="matId"
+                      class="cost-badge"
+                      :class="
+                        hasEnoughMaterial(String(matId), qty as number)
+                          ? 'cost-badge--ok'
+                          : 'cost-badge--missing'
+                      "
+                    >
+                      <img
+                        :src="getMaterialImage(String(matId))"
+                        :alt="getMaterialName(String(matId))"
+                        class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
+                      />
+                      {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
+                        formatNumber(qty as number)
+                      }}
+                    </span>
+                  </div>
+
+                  <button
+                    class="w-full card-btn"
+                    :class="getButtonClass(champion.name)"
+                    :disabled="!canClickBuy(champion.name)"
+                  >
+                    <span v-if="isOwned(champion.name)">In Team</span>
+                    <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Recruit</span>
+                    <span v-else-if="isUnlocked(champion.name)">Materials Missing</span>
+                    <span v-else>Locked</span>
+                  </button>
+                </div>
               </div>
-
-              <!-- Button -->
-              <button
-                class="w-full card-btn"
-                :class="getButtonClass(champion.name)"
-                :disabled="!canClickBuy(champion.name)"
-              >
-                <span v-if="isOwned(champion.name)">In Team</span>
-                <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Recruit</span>
-                <span v-else-if="isUnlocked(champion.name)">Materials Missing</span>
-                <span v-else>Locked</span>
-              </button>
             </div>
+
+            <!-- Locked Tooltip -->
+            <div v-if="isLocked(champion.name)" class="locked-tooltip">
+              {{ getLockedTooltip(champion.name) }}
+            </div>
+
           </div>
 
-          <!-- Locked Tooltip -->
-          <div v-if="isLocked(champion.name)" class="locked-tooltip">
-            {{ getLockedTooltip(champion.name) }}
-          </div>
-
-          <!-- New champion badge -->
+          <!-- New champion badge (outside card-inner so it's not clipped) -->
           <Transition name="champion-badge-fade">
             <RpgNotifyBadge
               v-if="isNew(champion.name)"
@@ -421,13 +452,33 @@ export default defineComponent({
     }
 
     let hoverTimer: ReturnType<typeof setTimeout> | null = null
-    function onChampionHover(name: string) {
+    function dismissNewOnHover(name: string) {
       if (!isNew(name)) return
       if (hoverTimer !== null) clearTimeout(hoverTimer)
       hoverTimer = setTimeout(() => {
         battleStore.dismissNewChampion(name)
         hoverTimer = null
       }, 75)
+    }
+
+    // ── Card expand state ──
+    const hoveredChampion = ref<string | null>(null)
+
+    function getChampionDetail(name: string) {
+      const traitIds = CHAMPION_TRAITS[name] ?? []
+      const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
+      const originKey = getChampionOrigin(name)
+      const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
+      return { traits, origin }
+    }
+
+    function onCardHoverAndDismiss(name: string) {
+      dismissNewOnHover(name)
+      hoveredChampion.value = name
+    }
+
+    function onCardLeave() {
+      hoveredChampion.value = null
     }
 
     onMounted(() => loadChampions())
@@ -464,7 +515,10 @@ export default defineComponent({
       setActiveRole,
       traitFilterOpen,
       isNew,
-      onChampionHover,
+      hoveredChampion,
+      getChampionDetail,
+      onCardHoverAndDismiss,
+      onCardLeave,
     }
   },
 })
@@ -476,16 +530,13 @@ export default defineComponent({
   border: none;
   box-shadow: none;
 }
-/* Align header separator to modal standard (1px instead of global 3px) */
 .rpg-header {
   border-bottom-width: 1px;
   border-bottom-color: rgba(92, 51, 16, 0.5);
 }
 
 /* ── Load error ── */
-.load-error {
-  color: var(--rpg-red);
-}
+.load-error { color: var(--rpg-red); }
 
 /* ── Empty state ── */
 .empty-icon-box {
@@ -497,64 +548,95 @@ export default defineComponent({
   color: var(--rpg-text-dim);
 }
 
-/* ── Champion card base ── */
-.champion-card {
-  min-height: 140px;
+/* ══ Grid slot — invisible, holds layout space only ══ */
+.champion-card-slot {
   height: 140px;
-  border-radius: var(--bp-radius);
-  border: 1px solid var(--rpg-wood-mid);
-  transition:
-    transform 0.3s,
-    box-shadow 0.3s;
+  position: relative;
+  z-index: 1;
+}
+.champion-card-slot.card-expanded {
+  z-index: 20;
 }
 
-/* Card state variants */
+/* Card state: pointer-events / opacity / filter on the slot */
 .card-owned {
-  background: var(--rpg-bg-deep);
-  border-color: var(--rpg-border-row);
   opacity: 0.55;
   filter: grayscale(30%);
   cursor: default;
   pointer-events: none;
 }
-.card-buyable {
-  background: var(--rpg-bg-deep);
-  border-color: var(--rpg-gold-dim);
-  box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
-  cursor: pointer;
-}
-.card-buyable:hover {
-  transform: scale(1.015) translateY(-2px);
-  box-shadow: 0 0 35px rgba(232, 192, 64, 0.25);
-}
+.card-buyable { cursor: pointer; }
 .card-unlocked {
-  background: var(--rpg-bg-deep);
-  border-color: var(--rpg-wood-mid);
   opacity: 0.7;
   cursor: default;
 }
 .card-locked {
-  background: var(--rpg-bg-deep);
-  border-color: var(--rpg-border-row);
   opacity: 0.4;
   filter: grayscale(55%);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* ── Lock-Icon Overlay ── */
-.lock-overlay {
+/* ══ Visual card — expands absolutely out of the grid slot ══ */
+.card-inner {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -60%);
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  z-index: 12;
-  opacity: 0.85;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
-  pointer-events: none;
+  inset: 0;
+  border-radius: var(--bp-radius);
+  border: 1px solid var(--rpg-wood-mid);
+  overflow: hidden;
+  transition:
+    bottom 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    left 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    right 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.card-buyable .card-inner {
+  border-color: var(--rpg-gold-dim);
+  box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
+}
+.card-expanded .card-inner {
+  bottom: -100px;
+  left: -50px;
+  right: -50px;
+  border-color: #c89040;
+  box-shadow:
+    inset 0 0 0 1px #5c3310,
+    0 20px 50px rgba(0, 0, 0, 0.95),
+    0 0 30px rgba(200, 144, 64, 0.18);
+}
+
+/* ── Edge-column overflow prevention ── */
+/* Mobile: 2-col grid */
+@media (max-width: 639px) {
+  .champion-card-slot:nth-child(2n+1).card-expanded .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(2n).card-expanded .card-inner   { left: -100px; right: 0; }
+}
+/* Small: 3-col grid */
+@media (min-width: 640px) and (max-width: 767px) {
+  .champion-card-slot:nth-child(3n+1).card-expanded .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(3n).card-expanded .card-inner   { left: -100px; right: 0; }
+}
+/* Medium+: 4-col grid */
+@media (min-width: 768px) {
+  .champion-card-slot:nth-child(4n+1).card-expanded .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(4n).card-expanded .card-inner   { left: -100px; right: 0; }
+}
+
+/* ── Image layer: clipped within card-inner ── */
+.card-img-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--bp-radius);
+}
+
+/* Image scale on expand via card-expanded parent */
+.card-img-scale {
+  transition: transform 0.5s ease;
+}
+.card-expanded .card-img-scale {
+  transform: scale(1.04);
 }
 
 /* ── Gradient overlays ── */
@@ -587,16 +669,44 @@ export default defineComponent({
 .card-shimmer {
   background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.07), transparent);
 }
+.card-shimmer-anim {
+  transform: translateX(-100%);
+  transition: transform 0.7s ease;
+}
+.card-buyable:hover .card-shimmer-anim {
+  transform: translateX(100%);
+}
+
+/* ── Card content: always anchored to bottom of card-inner ── */
+.card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  z-index: 10;
+}
 
 /* ── Champion name ── */
 .champion-name {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
 }
-.champion-name--bright {
-  color: rgba(255, 255, 255, 0.95);
-}
-.champion-name--dim {
-  color: rgba(255, 255, 255, 0.45);
+.champion-name--bright { color: rgba(255, 255, 255, 0.95); }
+.champion-name--dim { color: rgba(255, 255, 255, 0.45); }
+
+/* ── Lock-Icon Overlay ── */
+.lock-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  z-index: 12;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
+  pointer-events: none;
 }
 
 /* ── Cost badges ── */
@@ -625,9 +735,7 @@ export default defineComponent({
   border-radius: var(--bp-radius);
   border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    opacity 0.15s,
-    transform 0.1s;
+  transition: opacity 0.15s, transform 0.1s;
 }
 .btn-owned {
   background: var(--rpg-bg-row);
@@ -640,12 +748,8 @@ export default defineComponent({
   border-color: var(--rpg-green-border);
   color: #fff;
 }
-.btn-buyable:hover {
-  opacity: 0.9;
-}
-.btn-buyable:active {
-  transform: scale(0.97);
-}
+.btn-buyable:hover { opacity: 0.9; }
+.btn-buyable:active { transform: scale(0.97); }
 .btn-locked {
   background: var(--rpg-bg-row);
   border-color: var(--rpg-border-row);
@@ -672,11 +776,11 @@ export default defineComponent({
   z-index: 10;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
 }
-.champion-card:hover .locked-tooltip {
+.card-inner:hover .locked-tooltip {
   opacity: 1;
 }
 
-/* ── Header-Bar (Search + Rollen) ── */
+/* ── Header-Bar ── */
 .cs-header {
   display: flex;
   flex-direction: column;
@@ -695,19 +799,16 @@ export default defineComponent({
   transform: none;
 }
 
-/* ── Grid-Bereich ── */
-.cs-grid {
-  padding: 8px 10px;
-}
+/* ── Grid area ── */
+.cs-grid { padding: 8px 10px; }
 
-/* ── Trait filter section ── */
+/* ── Trait filter ── */
 .trait-filter-section {
   border: 1px solid #3e2a0a;
   border-radius: var(--bp-radius);
   background: #161410;
   overflow: hidden;
 }
-
 .trait-filter-header {
   display: flex;
   align-items: center;
@@ -719,10 +820,7 @@ export default defineComponent({
   user-select: none;
   transition: background 0.15s;
 }
-.trait-filter-header:hover {
-  background: #261408;
-}
-
+.trait-filter-header:hover { background: #261408; }
 .trait-filter-title {
   font-size: 0.6rem;
   font-weight: 700;
@@ -730,20 +828,13 @@ export default defineComponent({
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-
-.trait-chevron {
-  width: 14px;
-  height: 14px;
-  color: #7a5020;
-}
-
+.trait-chevron { width: 14px; height: 14px; color: #7a5020; }
 .trait-filter-body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   padding: 6px 8px;
 }
-
 .trait-chip {
   display: inline-flex;
   align-items: center;
@@ -756,22 +847,15 @@ export default defineComponent({
   background: #1c1a10;
   color: var(--rpg-text-dim);
   cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
 }
-.trait-chip:hover {
-  border-color: var(--rpg-wood-mid);
-  color: var(--rpg-text-muted);
-}
+.trait-chip:hover { border-color: var(--rpg-wood-mid); color: var(--rpg-text-muted); }
 .trait-chip--active {
   background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
   border-color: var(--chip-color, #e8c040);
   color: var(--chip-color, #e8c040);
 }
-
 .trait-chip-icon {
   width: 18px;
   height: 18px;
@@ -779,7 +863,6 @@ export default defineComponent({
   color: rgba(255, 255, 255, 0.88);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
-
 .filter-group-label {
   width: 100%;
   font-size: 0.5rem;
@@ -791,20 +874,12 @@ export default defineComponent({
   border-bottom: 1px solid rgba(92, 51, 16, 0.35);
   margin: 3px 0 2px;
 }
-.filter-group-label:first-child {
-  margin-top: 0;
-}
-
-.chip-group {
-  display: contents;
-}
-
-.chip-enter-active,
-.chip-leave-active {
+.filter-group-label:first-child { margin-top: 0; }
+.chip-group { display: contents; }
+.chip-enter-active, .chip-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.chip-enter-from,
-.chip-leave-to {
+.chip-enter-from, .chip-leave-to {
   opacity: 0;
   transform: scale(0.8);
 }
@@ -813,8 +888,48 @@ export default defineComponent({
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
-.champion-badge-fade-leave-to {
+.champion-badge-fade-leave-to { opacity: 0; }
+
+/* ══ Trait/origin badges ══ */
+.card-traits-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 0;
+  overflow: hidden;
   opacity: 0;
+  margin: 0;
+  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+}
+.card-expanded .card-traits-section {
+  max-height: 120px;
+  opacity: 1;
+  margin: 4px 0 2px;
+}
+.card-bottom-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-trait-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px 3px 5px;
+  border-radius: var(--bp-radius);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--tc, #7a4e20);
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
+}
+.card-trait-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 </style>
