@@ -427,7 +427,8 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-items: center;
   justify-content: center;
   gap: clamp(4px, 0.7vw, 8px);
-  margin-top: 4px;
+  margin-top: 2px;
+  opacity: 0.72;
 }
 .chimes-sub-stat {
   display: flex;
@@ -436,7 +437,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 .chimes-sub-divider {
   width: 1px;
-  height: 18px;
+  height: 14px;
   border-radius: 1px;
   background: linear-gradient(
     to bottom,
@@ -449,21 +450,21 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-inline: 2px;
 }
 .sub-chime-icon {
-  width: clamp(12px, 1.5vw, 18px);
-  height: clamp(12px, 1.5vw, 18px);
+  width: clamp(10px, 1.1vw, 14px);
+  height: clamp(10px, 1.1vw, 14px);
   object-fit: contain;
   flex-shrink: 0;
   opacity: 0.9;
 }
 .sub-stat-value {
-  font-size: clamp(0.65rem, 1.0vw, 1.1rem);
+  font-size: clamp(0.55rem, 0.75vw, 0.85rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .sub-stat-label {
-  font-size: clamp(0.5rem, 0.8vw, 0.85rem);
+  font-size: clamp(0.45rem, 0.6vw, 0.72rem);
   font-weight: 600;
   letter-spacing: 0.05em;
   opacity: 0.7;
@@ -509,7 +510,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   margin-bottom: 1px;
 }
 .chimes-value {
-  font-size: clamp(1rem, 1.5vw, 2.4rem);
+  font-size: clamp(1.4rem, 2.2vw, 3.4rem);
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--color-chimes);
@@ -551,7 +552,8 @@ onUnmounted(() => resizeObserver?.disconnect())
     drop-shadow(0 0 12px rgba(251, 191, 36, 0.22));
 }
 .chimes-text-glow {
-  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7))
+          drop-shadow(0 0 24px rgba(251, 191, 36, 0.28));
 }
 .cps-text-glow {
   color: #74d448;

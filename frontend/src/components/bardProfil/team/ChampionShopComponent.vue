@@ -86,10 +86,10 @@
       <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
         <!-- Grid slot: fixed height, holds layout space -->
         <div
-          v-for="champion in filteredChampions"
+          v-for="(champion, index) in filteredChampions"
           :key="champion.name"
           class="champion-card-slot"
-          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name }]"
+          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': lastRowIndices.has(index) }]"
           @click="handleBuy(champion.name)"
           @mouseenter="onCardHoverAndDismiss(champion.name)"
           @mouseleave="onCardLeave"
@@ -236,7 +236,7 @@
 </template>
 
 <script lang="ts">
-import { ref, onMounted, defineComponent, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, defineComponent, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
@@ -461,6 +461,25 @@ export default defineComponent({
       }, 75)
     }
 
+    // ── Window width for last-row detection ──
+    const windowWidth = ref(window.innerWidth)
+    function onWindowResize() { windowWidth.value = window.innerWidth }
+
+    const colCount = computed(() => {
+      if (windowWidth.value >= 768) return 4
+      if (windowWidth.value >= 640) return 3
+      return 2
+    })
+
+    const lastRowIndices = computed(() => {
+      const count = filteredChampions.value.length
+      const cols = colCount.value
+      const lastRowStart = Math.floor((count - 1) / cols) * cols
+      const indices = new Set<number>()
+      for (let i = lastRowStart; i < count; i++) indices.add(i)
+      return indices
+    })
+
     // ── Card expand state ──
     const hoveredChampion = ref<string | null>(null)
 
@@ -481,7 +500,11 @@ export default defineComponent({
       hoveredChampion.value = null
     }
 
-    onMounted(() => loadChampions())
+    onMounted(() => {
+      loadChampions()
+      window.addEventListener('resize', onWindowResize)
+    })
+    onUnmounted(() => window.removeEventListener('resize', onWindowResize))
 
     return {
       filteredChampions,
@@ -516,6 +539,7 @@ export default defineComponent({
       traitFilterOpen,
       isNew,
       hoveredChampion,
+      lastRowIndices,
       getChampionDetail,
       onCardHoverAndDismiss,
       onCardLeave,
@@ -586,6 +610,7 @@ export default defineComponent({
   overflow: hidden;
   transition:
     bottom 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    top 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     left 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     right 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     border-color 0.25s ease,
@@ -621,6 +646,12 @@ export default defineComponent({
 @media (min-width: 768px) {
   .champion-card-slot:nth-child(4n+1).card-expanded .card-inner { left: 0; right: -100px; }
   .champion-card-slot:nth-child(4n).card-expanded .card-inner   { left: -100px; right: 0; }
+}
+
+/* Last-row cards expand upward instead of downward */
+.is-last-row.card-expanded .card-inner {
+  top: -100px;
+  bottom: 0;
 }
 
 /* ── Image layer: clipped within card-inner ── */
