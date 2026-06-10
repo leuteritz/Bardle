@@ -1,9 +1,5 @@
 <template>
-  <svg
-    class="bottom-bar-frame"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
+  <svg class="bottom-bar-frame" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path
       :d="framePath"
       fill="none"
@@ -54,7 +50,9 @@ import {
 } from '@/config/constants'
 
 const vw = ref(window.innerWidth)
-const onResize = () => { vw.value = window.innerWidth }
+const onResize = () => {
+  vw.value = window.innerWidth
+}
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
@@ -64,18 +62,20 @@ const O = 3
 
 const framePath = computed(() => {
   const W = vw.value
-  const mm2 = 438, mm1 = mm2 - ARC
-  const cm1 = W - mm2, cm2 = W - mm1
-  const CY = 440 - 48 - O  // 389 — bottom of BottomStatusComponent in frame coords
+  const mm2 = 438,
+    mm1 = mm2 - ARC
+  const cm1 = W - mm2,
+    cm2 = W - mm1
+  const CY = 440 - 60 // 437 — notch floor at bottom edge of frame
 
   return [
     `M ${O},${O}`,
     `L ${mm1},${O}`,
     `A ${ARC},${ARC} 0 0,1 ${mm2},${ARC + O}`,
     `L ${mm2},${CY - NR}`,
-    `A ${NR},${NR} 0 0,1 ${mm2 + NR},${CY}`,
+    `A ${NR},${NR} 0 0,0 ${mm2 + NR},${CY}`,
     `L ${cm1 - NR},${CY}`,
-    `A ${NR},${NR} 0 0,1 ${cm1},${CY - NR}`,
+    `A ${NR},${NR} 0 0,0 ${cm1},${CY - NR}`,
     `L ${cm1},${ARC + O}`,
     `A ${ARC},${ARC} 0 0,1 ${cm2},${O}`,
     `L ${W - O},${O}`,
