@@ -90,6 +90,7 @@
           :key="champion.name"
           class="champion-card-slot"
           :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': lastRowIndices.has(index) }]"
+          :data-role="CHAMPION_ROLES[champion.name]"
           @click="handleBuy(champion.name)"
           @mouseenter="onCardHoverAndDismiss(champion.name)"
           @mouseleave="onCardLeave"
@@ -517,6 +518,7 @@ export default defineComponent({
       inventoryStore,
       loadError,
       truncate,
+      CHAMPION_ROLES,
       getChampionRoles,
       activeRole,
       searchQuery,
@@ -619,6 +621,66 @@ export default defineComponent({
     border-color 0.25s ease,
     box-shadow 0.25s ease;
 }
+/* ── Role-specific card borders ── */
+.champion-card-slot[data-role="top"]     { --role-c: #e05050; --role-c-hi: #f07070; }
+.champion-card-slot[data-role="jungle"]  { --role-c: #50c060; --role-c-hi: #70d880; }
+.champion-card-slot[data-role="mid"]     { --role-c: #5090e8; --role-c-hi: #70a8f8; }
+.champion-card-slot[data-role="adc"]     { --role-c: #e89840; --role-c-hi: #f0b060; }
+.champion-card-slot[data-role="support"] { --role-c: #b8c8d8; --role-c-hi: #d0dde8; }
+
+.champion-card-slot[data-role] .card-inner {
+  border-color: var(--role-c);
+}
+
+/* Role hover glow — excluded on buyable/owned so state styles always dominate */
+.champion-card-slot[data-role="top"]:not(.card-buyable):not(.card-owned):hover .card-inner {
+  border-color: #f07070;
+  box-shadow: inset 0 0 0 1px rgba(224,80,80,0.25), 0 0 14px rgba(224,80,80,0.35);
+}
+.champion-card-slot[data-role="jungle"]:not(.card-buyable):not(.card-owned):hover .card-inner {
+  border-color: #70d880;
+  box-shadow: inset 0 0 0 1px rgba(80,192,96,0.25), 0 0 14px rgba(80,192,96,0.40);
+}
+.champion-card-slot[data-role="mid"]:not(.card-buyable):not(.card-owned):hover .card-inner {
+  border-color: #70a8f8;
+  box-shadow: inset 0 0 0 1px rgba(80,144,232,0.30), 0 0 16px rgba(80,144,232,0.45);
+}
+.champion-card-slot[data-role="adc"]:not(.card-buyable):not(.card-owned):hover .card-inner {
+  border-color: #f0b060;
+  box-shadow: inset 0 0 0 1px rgba(232,152,64,0.25), 0 0 16px rgba(232,152,64,0.40);
+}
+.champion-card-slot[data-role="support"]:not(.card-buyable):not(.card-owned):hover .card-inner {
+  border-color: #d0dde8;
+  box-shadow: inset 0 0 0 1px rgba(184,200,216,0.30), 0 0 16px rgba(184,200,216,0.35);
+}
+
+/* Buyable pulse — role inset glow complements the gold buyable border */
+@keyframes role-pulse-top {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(224,80,80,0.15); }
+  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(224,80,80,0.35); }
+}
+@keyframes role-pulse-jungle {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(80,192,96,0.15); }
+  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(80,192,96,0.35); }
+}
+@keyframes role-pulse-mid {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(80,144,232,0.15); }
+  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(80,144,232,0.35); }
+}
+@keyframes role-pulse-adc {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(232,152,64,0.15); }
+  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(232,152,64,0.35); }
+}
+@keyframes role-pulse-support {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(184,200,216,0.15); }
+  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(184,200,216,0.35); }
+}
+.card-buyable.champion-card-slot[data-role="top"]:not(.card-expanded)     .card-inner { animation: role-pulse-top     2.5s ease-in-out infinite; }
+.card-buyable.champion-card-slot[data-role="jungle"]:not(.card-expanded)  .card-inner { animation: role-pulse-jungle  2.5s ease-in-out infinite; }
+.card-buyable.champion-card-slot[data-role="mid"]:not(.card-expanded)     .card-inner { animation: role-pulse-mid     2.5s ease-in-out infinite; }
+.card-buyable.champion-card-slot[data-role="adc"]:not(.card-expanded)     .card-inner { animation: role-pulse-adc     2.5s ease-in-out infinite; }
+.card-buyable.champion-card-slot[data-role="support"]:not(.card-expanded) .card-inner { animation: role-pulse-support 2.5s ease-in-out infinite; }
+
 .card-buyable .card-inner {
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
@@ -1018,6 +1080,9 @@ export default defineComponent({
   .champion-name,
   .cost-badge {
     transition: none !important;
+  }
+  .champion-card-slot[data-role] .card-inner {
+    animation: none !important;
   }
 }
 
