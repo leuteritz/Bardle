@@ -29,9 +29,9 @@
           <button
             v-show="!hasSearchTraitMatch"
             class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === 'all' && activeRole === 'all' }"
-            @click="activeTrait = 'all'; setActiveRole('all')"
-          >Alle</button>
+            :class="{ 'trait-chip--active': activeTrait === 'all' }"
+            @click="activeTrait = 'all'"
+          >ALL</button>
 
           <div class="filter-group-label">Traits</div>
           <TransitionGroup tag="div" name="chip" class="chip-group">
@@ -937,14 +937,24 @@ const availableTraits = computed(() => {
   white-space: nowrap;
 }
 .trait-chip:hover {
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #0e0c06);
   border-color: var(--chip-color, #c89040);
-  background: rgba(0, 0, 0, 0.55);
   color: var(--chip-color, #e8c040);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--chip-color, #e8c040) 25%, transparent);
+}
+.trait-chip:hover .trait-chip-icon {
+  color: rgba(255, 255, 255, 0.92);
 }
 .trait-chip--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 22%, #1a1208);
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 32%, #0e0c06);
   border-color: var(--chip-color, #e8c040);
   color: var(--chip-color, #e8c040);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #e8c040) 45%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.trait-chip--active .trait-chip-icon {
+  color: #fff;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--chip-color, #e8c040) 60%, transparent));
 }
 .trait-chip-icon {
   width: 22px;
