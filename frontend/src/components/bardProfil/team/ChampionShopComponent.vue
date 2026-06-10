@@ -200,16 +200,6 @@
                     </span>
                   </div>
 
-                  <button
-                    class="w-full card-btn"
-                    :class="getButtonClass(champion.name)"
-                    :disabled="!canClickBuy(champion.name)"
-                  >
-                    <span v-if="isOwned(champion.name)">In Team</span>
-                    <span v-else-if="isUnlocked(champion.name) && canAffordChampion(champion.name)">Recruit</span>
-                    <span v-else-if="isUnlocked(champion.name)">Materials Missing</span>
-                    <span v-else>Locked</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -360,13 +350,7 @@ export default defineComponent({
       return 'card-locked'
     }
 
-    function getButtonClass(name: string): string {
-      if (isOwned(name)) return 'btn-owned'
-      if (isUnlocked(name) && canAffordChampion(name)) return 'btn-buyable'
-      return 'btn-locked'
-    }
-
-    const availableTraits = computed(() => {
+const availableTraits = computed(() => {
       const relevant = activeRole.value === 'all'
         ? championNames.value
         : championNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
@@ -536,7 +520,6 @@ export default defineComponent({
       formatNumber,
       getLockedTooltip,
       getCardClass,
-      getButtonClass,
       setActiveRole,
       traitFilterOpen,
       isNew,
@@ -555,8 +538,6 @@ export default defineComponent({
 .rpg-frame {
   border: none;
   box-shadow: none;
-  --btn-hover-scale: 0.65;
-  --btn-transition-dur: 0.18s;
   --text-transition-dur: 0.22s;
 }
 .rpg-header {
@@ -685,6 +666,14 @@ export default defineComponent({
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
 }
+.card-buyable.card-expanded .card-inner {
+  border-color: #e8c040;
+  box-shadow:
+    0 0 38px rgba(232, 192, 64, 0.55),
+    0 0 70px rgba(200, 144, 64, 0.25),
+    inset 0 0 0 2px rgba(232, 192, 64, 0.58),
+    0 20px 50px rgba(0, 0, 0, 0.95);
+}
 .card-expanded .card-inner {
   bottom: -100px;
   left: -50px;
@@ -718,6 +707,7 @@ export default defineComponent({
   top: -100px;
   bottom: 0;
 }
+
 
 /* ── Image layer: clipped within card-inner ── */
 .card-img-layer {
@@ -823,82 +813,34 @@ export default defineComponent({
   pointer-events: none;
 }
 
-/* ── Cost badges ── */
+/* ── Cost badges — identical in resting and expanded states ── */
 .cost-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.65rem;
   font-weight: 700;
-  padding: 0.1rem 0;
+  line-height: 1;
+  padding: 0.15rem 0.4rem;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--bp-radius);
   transition:
     background var(--text-transition-dur) ease,
     border-color var(--text-transition-dur) ease,
-    padding var(--text-transition-dur) ease;
+    color var(--text-transition-dur) ease;
 }
-.cost-badge--ok { color: var(--rpg-green-light); }
-.cost-badge--missing { color: var(--rpg-red); }
-.card-expanded .cost-badge--ok {
-  background: var(--rpg-bg-green-subtle);
-  border: 1px solid var(--rpg-green-bottom);
-  padding: 0.15rem 0.4rem;
+.cost-badge--ok {
+  color: #e8c040;
+  background: rgba(232, 192, 64, 0.10);
+  border-color: rgba(232, 192, 64, 0.45);
 }
-.card-expanded .cost-badge--missing {
-  background: var(--rpg-bg-red-subtle);
-  border: 1px solid var(--rpg-red);
-  padding: 0.15rem 0.4rem;
+.cost-badge--missing {
+  color: #e8c040;
+  background: rgba(232, 192, 64, 0.10);
+  border-color: rgba(232, 192, 64, 0.45);
 }
 
-/* ── Card buttons ── */
-.card-btn {
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-radius: var(--bp-radius);
-  border: 1px solid transparent;
-  cursor: pointer;
-  max-height: 0;
-  overflow: hidden;
-  padding: 0;
-  margin-top: 0;
-  opacity: 0;
-  transform: scale(var(--btn-hover-scale));
-  transform-origin: center bottom;
-  transition:
-    max-height var(--btn-transition-dur) ease,
-    padding var(--btn-transition-dur) ease,
-    margin-top var(--btn-transition-dur) ease,
-    opacity var(--btn-transition-dur) ease,
-    transform var(--btn-transition-dur) ease;
-  will-change: transform, opacity;
-}
-.card-expanded .card-btn {
-  max-height: 40px;
-  padding: 0.25rem 0;
-  margin-top: 6px;
-  opacity: 1;
-}
-.btn-owned {
-  background: var(--rpg-bg-row);
-  border-color: var(--rpg-border-row);
-  color: #555548;
-  cursor: not-allowed;
-}
-.btn-buyable {
-  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
-  border-color: var(--rpg-green-border);
-  color: #fff;
-}
-.btn-buyable:hover { opacity: 0.9; }
-.btn-buyable:active { transform: scale(0.97); }
-.btn-locked {
-  background: var(--rpg-bg-row);
-  border-color: var(--rpg-border-row);
-  color: var(--rpg-btn-disabled-border);
-  cursor: not-allowed;
-}
 
 /* ── Locked tooltip ── */
 .locked-tooltip {
@@ -1063,6 +1005,7 @@ export default defineComponent({
   border: 1px solid var(--tc, #7a4e20);
   font-size: 0.58rem;
   font-weight: 700;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
   box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
@@ -1075,14 +1018,14 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card-btn,
   .card-content,
   .champion-name,
   .cost-badge {
     transition: none !important;
   }
-  .champion-card-slot[data-role] .card-inner {
+  .card-inner {
     animation: none !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
   }
 }
 
