@@ -41,7 +41,7 @@
               v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
               class="trait-chip"
               :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
-              :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
+              :style="`--chip-color: ${trait.color}`"
               @click="activeTrait = trait.id"
             >
               <Icon :icon="trait.icon" class="trait-chip-icon" />
@@ -58,7 +58,7 @@
                 v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
                 class="trait-chip"
                 :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
-                :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
+                :style="`--chip-color: ${origin.color}`"
                 @click="activeTrait = origin.origin"
               >
                 <Icon :icon="origin.icon" class="trait-chip-icon" />
@@ -156,7 +156,7 @@
                     class="card-trait-badge"
                     :style="{ '--tc': trait.color }"
                   >
-                    <Icon :icon="trait.icon" class="card-trait-icon" :style="{ color: trait.color }" />
+                    <Icon :icon="trait.icon" class="card-trait-icon" />
                     <span>{{ trait.name }}</span>
                   </div>
                   <div
@@ -167,7 +167,6 @@
                     <Icon
                       :icon="getChampionDetail(champion.name).origin!.icon"
                       class="card-trait-icon"
-                      :style="{ color: getChampionDetail(champion.name).origin!.color }"
                     />
                     <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
                   </div>
@@ -924,26 +923,32 @@ const availableTraits = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 8px;
-  font-size: 0.6rem;
+  padding: 4px 10px;
+  font-size: 0.72rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   border-radius: var(--bp-radius);
-  border: 1px solid #3e2a0a;
-  background: #1c1a10;
-  color: var(--rpg-text-dim);
+  border: 1px solid color-mix(in srgb, var(--chip-color, #7a4e20) 55%, #3e2a0a);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--chip-color, #e8c040);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
 }
-.trait-chip:hover { border-color: var(--rpg-wood-mid); color: var(--rpg-text-muted); }
+.trait-chip:hover {
+  border-color: var(--chip-color, #c89040);
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--chip-color, #e8c040);
+}
 .trait-chip--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 22%, #1a1208);
   border-color: var(--chip-color, #e8c040);
   color: var(--chip-color, #e8c040);
 }
 .trait-chip-icon {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.88);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
@@ -1006,7 +1011,8 @@ const availableTraits = computed(() => {
   font-size: 0.58rem;
   font-weight: 700;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--tc, #e8c040);
+  text-transform: uppercase;
   white-space: nowrap;
   box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
 }
@@ -1014,6 +1020,7 @@ const availableTraits = computed(() => {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.9);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
