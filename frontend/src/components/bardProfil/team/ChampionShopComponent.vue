@@ -553,6 +553,9 @@ export default defineComponent({
 .rpg-frame {
   border: none;
   box-shadow: none;
+  --btn-hover-scale: 0.65;
+  --btn-transition-dur: 0.18s;
+  --text-transition-dur: 0.22s;
 }
 .rpg-header {
   border-bottom-width: 1px;
@@ -716,14 +719,32 @@ export default defineComponent({
   right: 0;
   padding: 8px;
   z-index: 10;
+  transition: transform var(--text-transition-dur) ease;
+  will-change: transform;
+}
+.card-expanded .card-content {
+  transform: translateY(-2px);
 }
 
 /* ── Champion name ── */
 .champion-name {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  transition: transform var(--text-transition-dur) ease, text-shadow var(--text-transition-dur) ease;
+  will-change: transform;
 }
 .champion-name--bright { color: rgba(255, 255, 255, 0.95); }
 .champion-name--dim { color: rgba(255, 255, 255, 0.45); }
+.card-expanded .champion-name--bright {
+  transform: scale(1.08);
+  transform-origin: left bottom;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 12px rgba(232, 192, 64, 0.25);
+}
+.card-expanded .champion-name--dim {
+  transform: scale(1.06);
+  transform-origin: left bottom;
+}
 
 /* ── Lock-Icon Overlay ── */
 .lock-overlay {
@@ -742,31 +763,60 @@ export default defineComponent({
 
 /* ── Cost badges ── */
 .cost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.65rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: var(--bp-radius);
   font-weight: 700;
+  padding: 0.1rem 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--bp-radius);
+  transition:
+    background var(--text-transition-dur) ease,
+    border-color var(--text-transition-dur) ease,
+    padding var(--text-transition-dur) ease;
 }
-.cost-badge--ok {
+.cost-badge--ok { color: var(--rpg-green-light); }
+.cost-badge--missing { color: var(--rpg-red); }
+.card-expanded .cost-badge--ok {
   background: var(--rpg-bg-green-subtle);
   border: 1px solid var(--rpg-green-bottom);
-  color: var(--rpg-green-light);
+  padding: 0.15rem 0.4rem;
 }
-.cost-badge--missing {
+.card-expanded .cost-badge--missing {
   background: var(--rpg-bg-red-subtle);
   border: 1px solid var(--rpg-red);
-  color: var(--rpg-red);
+  padding: 0.15rem 0.4rem;
 }
 
 /* ── Card buttons ── */
 .card-btn {
-  padding: 0.25rem 0;
   font-size: 0.7rem;
   font-weight: 700;
   border-radius: var(--bp-radius);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin-top: 0;
+  opacity: 0;
+  transform: scale(var(--btn-hover-scale));
+  transform-origin: center bottom;
+  transition:
+    max-height var(--btn-transition-dur) ease,
+    padding var(--btn-transition-dur) ease,
+    margin-top var(--btn-transition-dur) ease,
+    opacity var(--btn-transition-dur) ease,
+    transform var(--btn-transition-dur) ease;
+  will-change: transform, opacity;
+}
+.card-expanded .card-btn {
+  max-height: 40px;
+  padding: 0.25rem 0;
+  margin-top: 6px;
+  opacity: 1;
 }
 .btn-owned {
   background: var(--rpg-bg-row);
@@ -940,7 +990,6 @@ export default defineComponent({
 .card-bottom-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 .card-trait-badge {
   display: inline-flex;
@@ -961,6 +1010,15 @@ export default defineComponent({
   height: 13px;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-btn,
+  .card-content,
+  .champion-name,
+  .cost-badge {
+    transition: none !important;
+  }
 }
 
 </style>
