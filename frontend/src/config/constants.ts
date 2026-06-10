@@ -622,6 +622,12 @@ export const HUD_PANEL_ARC_R = 60
 // Canonical border-radius for bardProfil cards, containers, and buttons
 export const BARD_PROFILE_RADIUS = 4
 
+// ── Bottom Bar Frame strokes ──────────────────────────────────────────────
+export const BOTTOM_FRAME_STROKE_SHADOW = 'rgba(30,12,0,0.95)'    // dark outer shadow
+export const BOTTOM_FRAME_STROKE_WOOD   = '#7a4e20'               // wood brown — matches --rpg-wood / header border
+export const BOTTOM_FRAME_STROKE_GRAIN  = 'rgba(160,95,38,0.75)'  // lighter wood grain
+export const BOTTOM_FRAME_STROKE_SHEEN  = 'rgba(190,115,46,0.14)' // subtle warm surface sheen
+
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
 export const MEEP_ADD_DELAY_MS = 100

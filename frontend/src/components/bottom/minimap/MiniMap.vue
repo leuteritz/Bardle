@@ -75,56 +75,6 @@
         </div>
       </div>
 
-      <!-- ── Dekorativer Rahmen mit goldener Linie ── -->
-      <svg
-        class="panel-frame-svg"
-        viewBox="0 0 440 440"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <filter id="goldGlow" x="-8%" y="-8%" width="116%" height="116%">
-            <feGaussianBlur stdDeviation="1.8" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <path
-          :d="framePath"
-          fill="none"
-          stroke="rgba(30,12,0,0.95)"
-          stroke-width="5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          :d="framePath"
-          fill="none"
-          stroke="#7a4e20"
-          stroke-width="3"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          :d="framePath"
-          fill="none"
-          stroke="rgba(210,160,40,0.85)"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          filter="url(#goldGlow)"
-        />
-        <path
-          :d="framePath"
-          fill="none"
-          stroke="rgba(255,220,80,0.25)"
-          stroke-width="1"
-          stroke-linecap="round"
-        />
-      </svg>
     </div>
   </Transition>
 </template>
@@ -453,28 +403,4 @@ export default defineComponent({
   box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
 }
 
-/* ── Dekorativer SVG-Rahmen ── */
-.panel-frame-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 440px;
-  height: 440px;
-  pointer-events: none;
-  z-index: 100;
-  overflow: visible;
-  animation: minimap-pulse-glow 3.5s ease-in-out infinite;
-}
-
-@keyframes minimap-pulse-glow {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 10px rgba(180, 130, 28, 0.45))
-      drop-shadow(0 0 3px rgba(90, 58, 10, 0.65));
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(210, 160, 40, 0.65))
-      drop-shadow(0 0 6px rgba(120, 82, 15, 0.75));
-  }
-}
 </style>
