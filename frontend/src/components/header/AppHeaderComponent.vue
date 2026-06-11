@@ -6,6 +6,12 @@ import { useBattleStore } from '../../stores/battleStore'
 import { useExpeditionStore } from '../../stores/expedetionStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
+import {
+  BOTTOM_FRAME_STROKE_SHADOW,
+  BOTTOM_FRAME_STROKE_WOOD,
+  BOTTOM_FRAME_STROKE_GRAIN,
+  BOTTOM_FRAME_STROKE_SHEEN,
+} from '../../config/constants'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
@@ -65,6 +71,27 @@ const svgW = ref(360)
 const svgH = ref(100)
 const badgeOverlapPx = ref(20)
 
+const headerW = ref(0)
+const headerH = ref(0)
+const headerR = ref(20)
+
+const headerFramePath = computed(() => {
+  const W = headerW.value
+  const H = headerH.value
+  const R = headerR.value
+  const O = 1.5
+  if (!W || !H) return ''
+  return [
+    `M ${O},0`,
+    `L ${O},${H - R}`,
+    `A ${R},${R} 0 0,0 ${R + O},${H - O}`,
+    `L ${W - R - O},${H - O}`,
+    `A ${R},${R} 0 0,0 ${W - O},${H - R}`,
+    `L ${W - O},0`,
+    'Z',
+  ].join(' ')
+})
+
 const arcD = computed(() => `M 0,0 A ${svgW.value / 2},${svgH.value} 0 0 0 ${svgW.value},0`)
 
 const arcLen = computed(() => {
@@ -117,6 +144,9 @@ function updateHeaderHeight() {
   if (!headerRef.value) return
   const rect = headerRef.value.getBoundingClientRect()
   document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
+  headerW.value = rect.width
+  headerH.value = rect.height
+  headerR.value = parseFloat(getComputedStyle(headerRef.value).borderBottomLeftRadius) || 20
 }
 
 function updateDividerPositions() {
@@ -144,6 +174,19 @@ onUnmounted(() => resizeObserver?.disconnect())
 
 <template>
   <header ref="headerRef" class="z-[120] header-bar w-full mx-auto relative">
+    <!-- ════════ SVG WOOD FRAME (same technique as BottomBarComponent) ════════ -->
+    <svg
+      class="header-frame-svg"
+      :viewBox="`0 0 ${headerW} ${headerH}`"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_SHADOW" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_WOOD"   stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_GRAIN"  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_SHEEN"  stroke-width="1"   stroke-linecap="round" />
+    </svg>
+
     <!-- ════════ LINKE SEITE ════════ -->
     <div class="flex items-center gap-3 header-side header-side--left">
       <div class="flex-shrink-0 header-profile-bump">
@@ -304,18 +347,22 @@ onUnmounted(() => resizeObserver?.disconnect())
   max-width: 1400px;
   height: clamp(56px, 4.2vw, 115px);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
-  border: 2px solid var(--rpg-wood, #7c4f1a);
-  border-top: none;
   border-radius: 0 0 var(--bard-avatar-radius) var(--bard-avatar-radius);
-  box-shadow:
-    inset 0 0 0 1px var(--rpg-wood-inner, rgba(255, 200, 80, 0.08)),
-    inset 0 0 0 3px var(--rpg-wood-mid, rgba(255, 200, 80, 0.04)),
-    0 6px 28px rgba(0, 0, 0, 0.75);
   overflow: visible;
   position: relative;
   display: grid;
   grid-template-columns: 1fr clamp(90px, 14vw, 270px) 1fr;
   align-items: stretch;
+}
+
+.header-frame-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
 }
 
 .header-portal-wrap {

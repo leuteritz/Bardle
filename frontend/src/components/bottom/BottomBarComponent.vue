@@ -1,5 +1,5 @@
 <template>
-  <svg class="bottom-bar-frame" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <svg ref="svgRef" class="bottom-bar-frame" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path
       :d="framePath"
       fill="none"
@@ -49,12 +49,21 @@ import {
   BOTTOM_FRAME_STROKE_SHEEN,
 } from '@/config/constants'
 
+const svgRef = ref<SVGSVGElement | null>(null)
 const vw = ref(window.innerWidth)
-const onResize = () => {
-  vw.value = window.innerWidth
-}
-onMounted(() => window.addEventListener('resize', onResize))
-onUnmounted(() => window.removeEventListener('resize', onResize))
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (svgRef.value) {
+    vw.value = svgRef.value.getBoundingClientRect().width
+    resizeObserver = new ResizeObserver((entries) => {
+      vw.value = entries[0].contentRect.width
+    })
+    resizeObserver.observe(svgRef.value)
+  }
+})
+onUnmounted(() => resizeObserver?.disconnect())
 
 const ARC = 60
 const NR = 20
