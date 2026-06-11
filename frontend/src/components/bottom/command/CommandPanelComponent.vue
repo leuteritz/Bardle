@@ -138,9 +138,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
           <template v-else-if="slot.purchased">
             <div class="cmd-tile-icon cmd-tile-icon--empty">＋</div>
-            <div class="cmd-slot-number-badge">
-              <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
-            </div>
           </template>
 
           <template v-else>
@@ -148,16 +145,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
               <img src="/img/lock.png" alt="Locked" class="lock-icon" />
             </div>
             <div v-if="planetStore.canUnlockPlanetSlot(index)" class="cmd-tile-unlock-label">UNLOCK</div>
-            <div class="cmd-tile-phase-row">
-              <Icon icon="game-icons:sun" width="9" height="9" />
-              <span>Ph.{{ planetStore.getSlotRequiredPhase(index) }}</span>
-            </div>
             <div class="cmd-tile-cost-row">
               <img src="/img/BardAbilities/BardChime.png" class="cmd-tile-chime-img" alt="Chimes" />
               <span class="cmd-tile-cost-value">{{ formatNumber(planetStore.getSlotCost(slot.id)) }}</span>
-            </div>
-            <div class="cmd-slot-number-badge">
-              <span class="cmd-slot-number-text">Slot {{ index + 1 }}</span>
             </div>
           </template>
         </div>
@@ -328,26 +318,26 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-planet-tile--locked {
-  background: linear-gradient(180deg, rgba(14, 28, 8, 0.70), rgba(8, 18, 4, 0.84));
-  border: 2px solid var(--rpg-slot-locked-border, rgba(82, 184, 48, 0.72));
-  box-shadow: 0 0 6px rgba(82, 184, 48, 0.18), inset 0 0 8px rgba(52, 140, 20, 0.04);
-  opacity: var(--rpg-slot-locked-opacity, 0.88);
-  filter: none;
-  cursor: pointer;
+  background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
+  border: 2px solid rgba(122, 78, 32, 0.35);
+  box-shadow: none;
+  opacity: 0.55;
+  filter: grayscale(40%);
+  cursor: not-allowed;
 }
 .cmd-planet-tile--locked:hover {
-  transform: translateY(-1px);
-  background: linear-gradient(180deg, rgba(18, 36, 10, 0.76), rgba(12, 24, 6, 0.88));
-  box-shadow: 0 0 10px rgba(82, 184, 48, 0.30), inset 0 0 10px rgba(52, 140, 20, 0.06);
-  border-color: rgba(110, 192, 64, 0.90);
+  background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
+  border-color: rgba(122, 78, 32, 0.45);
+  box-shadow: none;
+  transform: none;
 }
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
-  background: linear-gradient(180deg, rgba(14, 30, 10, 0.72), rgba(10, 22, 8, 0.82));
-  border: 2px solid rgba(82, 184, 48, 0.4);
+  background: linear-gradient(180deg, rgba(18, 30, 10, 0.72), rgba(12, 20, 6, 0.82));
+  border: 2px solid rgba(110, 192, 64, 0.45);
   box-shadow:
-    0 0 8px rgba(82, 184, 48, 0.18),
-    inset 0 0 10px rgba(82, 184, 48, 0.04);
+    0 0 8px rgba(110, 192, 64, 0.18),
+    inset 0 0 10px rgba(110, 192, 64, 0.04);
   animation: cmd-afford-pulse 2.2s ease-in-out infinite;
   overflow: hidden;
 }
@@ -373,11 +363,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked):hover {
   background: linear-gradient(180deg, rgba(18, 36, 12, 0.8), rgba(12, 26, 10, 0.9));
-  border-color: #6de030;
+  border-color: #6ec040;
   box-shadow:
-    0 0 18px rgba(82, 184, 48, 0.6),
-    0 0 36px rgba(82, 184, 48, 0.18),
-    inset 0 0 12px rgba(82, 184, 48, 0.08);
+    0 0 18px rgba(110, 192, 64, 0.6),
+    0 0 36px rgba(110, 192, 64, 0.18),
+    inset 0 0 12px rgba(110, 192, 64, 0.08);
   transform: translateY(-1px) scale(1.03);
   animation: none;
 }
@@ -402,17 +392,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 @keyframes cmd-afford-pulse {
   0%, 100% {
-    border-color: rgba(82, 184, 48, 0.35);
+    border-color: rgba(110, 192, 64, 0.35);
     box-shadow:
-      0 0 6px rgba(82, 184, 48, 0.15),
-      inset 0 0 8px rgba(82, 184, 48, 0.03);
+      0 0 6px rgba(110, 192, 64, 0.15),
+      inset 0 0 8px rgba(110, 192, 64, 0.03);
   }
   50% {
-    border-color: rgba(110, 210, 64, 0.85);
+    border-color: #6ec040;
     box-shadow:
-      0 0 16px rgba(82, 184, 48, 0.55),
-      0 0 28px rgba(82, 184, 48, 0.16),
-      inset 0 0 10px rgba(82, 184, 48, 0.08);
+      0 0 16px rgba(110, 192, 64, 0.55),
+      0 0 28px rgba(110, 192, 64, 0.16),
+      inset 0 0 10px rgba(110, 192, 64, 0.08);
   }
 }
 
@@ -709,10 +699,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   justify-content: center;
 }
 .cmd-tile-icon--locked .lock-icon {
-  width: 20px;
-  height: 20px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
-  opacity: 0.5;
+  opacity: 0.8;
   image-rendering: auto;
 }
 
@@ -738,17 +728,20 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   align-items: center;
   justify-content: center;
   gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 
 .cmd-tile-chime-img {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   image-rendering: pixelated;
   flex-shrink: 0;
 }
 
 .cmd-tile-cost-value {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   color: #e8c040;
   letter-spacing: 0.04em;
@@ -765,52 +758,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
 }
 
-.cmd-tile-phase-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 8px;
-  font-weight: 700;
-  color: rgba(200, 160, 60, 0.5);
-  letter-spacing: 0.04em;
-}
 
-.cmd-planet-tile--buy:not(.cmd-planet-tile--locked) .cmd-tile-phase-row {
-  color: rgba(144, 224, 80, 0.7);
-}
-
-/* Slot-Nummer Badge (nur leere / gesperrte Slots) */
-.cmd-slot-number-badge {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 4px 4px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0) 100%);
-  pointer-events: none;
-}
-.cmd-slot-number-text {
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(180, 130, 50, 0.6);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  line-height: 1;
-  transition: color 0.2s ease;
-}
-.cmd-planet-tile:hover .cmd-slot-number-text {
-  color: #e8c040;
-}
 
 /* ── Jungle Buff: Tile-Modifier ── */
 .cmd-planet-tile--buffed {
