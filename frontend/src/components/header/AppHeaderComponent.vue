@@ -88,7 +88,6 @@ const headerFramePath = computed(() => {
     `L ${W - R - O},${H - O}`,
     `A ${R},${R} 0 0,0 ${W - O},${H - R}`,
     `L ${W - O},0`,
-    'Z',
   ].join(' ')
 })
 

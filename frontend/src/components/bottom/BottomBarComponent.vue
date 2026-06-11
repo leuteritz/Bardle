@@ -88,9 +88,6 @@ const framePath = computed(() => {
     `L ${cm1},${ARC + O}`,
     `A ${ARC},${ARC} 0 0,1 ${cm2},${O}`,
     `L ${W - O},${O}`,
-    `L ${W - O},${440 - O}`,
-    `L ${O},${440 - O}`,
-    `Z`,
   ].join(' ')
 })
 </script>
