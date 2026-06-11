@@ -41,6 +41,17 @@ function hpGlowColor(ratio: number): string {
   return 'rgba(204,48,32,0.6)'
 }
 
+function hpTextColor(ratio: number): string {
+  if (ratio > 0.5) return '#52b830'
+  if (ratio > 0.25) return '#d4a030'
+  return '#cc3020'
+}
+
+function hpTextGlow(ratio: number): string {
+  const col = ratio > 0.5 ? '82,184,48' : ratio > 0.25 ? '212,160,48' : '204,48,32'
+  return `0 1px 4px rgba(0,0,0,0.98), 0 0 8px rgba(0,0,0,0.8), 0 0 6px rgba(${col},0.65)`
+}
+
 const HP_SEGMENTS = 8
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
@@ -106,10 +117,15 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             >
               <!-- HP Wert Label -->
               <div class="cmd-tile-hp-label-row">
-                <Icon icon="game-icons:heart-bottle" width="14" height="14" class="cmd-tile-hp-icon" style="color: #cc6050" />
-                <span class="cmd-tile-hp-value">
+                <span
+                  class="cmd-tile-hp-value"
+                  :style="{
+                    color: hpTextColor(slot.currentHp / slot.maxHp),
+                    textShadow: hpTextGlow(slot.currentHp / slot.maxHp),
+                  }"
+                >
                   {{ formatNumber(slot.currentHp) }}<span class="cmd-tile-hp-sep">/</span
-                  >{{ formatNumber(slot.maxHp) }}
+                  ><span class="cmd-tile-hp-max">{{ formatNumber(slot.maxHp) }}</span>
                 </span>
               </div>
 
@@ -572,23 +588,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   line-height: 1;
 }
 
-.cmd-tile-hp-icon {
-  font-size: 10px;
-  color: #e05050;
-  text-shadow: 0 0 5px rgba(220, 60, 60, 0.8);
-  line-height: 1;
-  flex-shrink: 0;
+.cmd-tile-hp-value {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: color 0.4s ease;
 }
 
-.cmd-tile-hp-value {
-  font-size: 10px;
-  font-weight: 800;
-  color: rgba(230, 200, 130, 0.95);
-  letter-spacing: 0.04em;
-  text-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.98),
-    0 0 8px rgba(0, 0, 0, 0.8);
-  white-space: nowrap;
+.cmd-tile-hp-max {
+  font-size: 11px;
+  opacity: 0.65;
 }
 
 .cmd-tile-hp-sep {
