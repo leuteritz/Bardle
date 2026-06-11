@@ -6,6 +6,7 @@ import { useGalaxyStore } from './galaxyStore'
 import {
   RESOURCE_STAR_PLANET_COUNT,
   RESOURCE_STAR_DURATION_MS,
+  CHAMPION_STAR_DURATION_MS,
   STAR_ORBIT_SPEED_RESOURCE,
   STAR_ORBIT_SPEED_CHAMPION,
   STAR_ORBIT_SPEED_GALAXY_BOSS,
@@ -27,6 +28,7 @@ import {
   STAR_FORCED_PLANET_MIN,
   STAR_FORCED_PLANET_RANGE,
   STAR_REMOVAL_DELAY_MS,
+  STAR_DESPAWN_DELAY_MS,
   STAR_EXTRA_PLANET_MIN,
   STAR_EXTRA_PLANET_RANGE,
   CHAMPION_STAR_FIXED_ANGLE_FRAC_PI,
@@ -291,7 +293,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           orbitTilt: Math.random() * EXTRA_PLANET_ORBIT_TILT_MAX,
           cleared: false,
         })
-        bossStore.spawnBoss(planetId, config.type, false)
+        bossStore.spawnBoss(planetId, config.type, false, false, true)
       }
 
       galaxyStore.championTravelState = 'champion_spawned'
@@ -307,6 +309,8 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitTilt: tier.tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_CHAMPION,
         planetSlots,
+        spawnedAt: Date.now(),
+        durationMs: CHAMPION_STAR_DURATION_MS,
         starColor: pickStarColor(),
       }
 
@@ -391,18 +395,58 @@ export const useStarGroupStore = defineStore('starGroup', {
           adminStarTimeouts.delete(star.id)
         }
         if (this.activeFightStarId === star.id) this.closeStarFightModal()
-        for (const slot of star.planetSlots) {
-          if (!slot.cleared) {
-            slot.cleared = true
-            bossStore.removeBoss(slot.planetId)
-          }
-        }
         const starRef = star
         setTimeout(() => {
-          const currentIdx = this.activeStars.indexOf(starRef)
-          if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-        }, 600)
+          for (const slot of starRef.planetSlots) {
+            if (!slot.cleared) {
+              slot.cleared = true
+              bossStore.removeBoss(slot.planetId)
+            }
+          }
+          // One JS tick later so the render loop sees allSlotsCleared and fires the vanish effect
+          setTimeout(() => {
+            const currentIdx = this.activeStars.indexOf(starRef)
+            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+          }, 0)
+        }, STAR_DESPAWN_DELAY_MS)
       }
+    },
+
+    tickChampionStar() {
+      const galaxyStore = useGalaxyStore()
+      if (galaxyStore.championTravelState !== 'champion_spawned') return
+      const champion = this.activeStars.find((s) => s.starType === 'champion')
+      if (!champion || champion.spawnedAt === undefined || champion.durationMs === undefined) return
+      if (Date.now() >= champion.spawnedAt + champion.durationMs) {
+        this.clearChampionStar()
+      }
+    },
+
+    clearChampionStar() {
+      const bossStore = usePlanetBossStore()
+      const galaxyStore = useGalaxyStore()
+      const toRemove = this.activeStars.filter((s) => s.starType === 'champion')
+      if (toRemove.length === 0) return
+
+      for (const star of toRemove) {
+        if (this.activeFightStarId === star.id) this.closeStarFightModal()
+        const starRef = star
+        setTimeout(() => {
+          for (const slot of starRef.planetSlots) {
+            if (!slot.cleared) {
+              slot.cleared = true
+              bossStore.removeBoss(slot.planetId)
+            }
+          }
+          // One JS tick later so the render loop sees allSlotsCleared and fires the vanish effect
+          setTimeout(() => {
+            const currentIdx = this.activeStars.indexOf(starRef)
+            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+          }, 0)
+        }, STAR_DESPAWN_DELAY_MS)
+      }
+
+      galaxyStore.onChampionStarExpired()
     },
 
     clearAll() {

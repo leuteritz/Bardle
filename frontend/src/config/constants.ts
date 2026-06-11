@@ -91,6 +91,7 @@ export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 export const RESOURCE_STAR_INTERVAL_MS = 120_000 // every 2 min a flyby
 export const RESOURCE_STAR_DURATION_MS = 45_000 // flyby lasts 45s
 export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
+export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
@@ -713,6 +714,7 @@ export const STAR_SPAWN_ANGLE_RANGE_PI = 0.7
 export const STAR_FORCED_PLANET_MIN = 1
 export const STAR_FORCED_PLANET_RANGE = 4
 export const STAR_REMOVAL_DELAY_MS = 1500
+export const STAR_DESPAWN_DELAY_MS = 600 // delay from timer expiry to simultaneous star+planet removal
 export const STAR_EXTRA_PLANET_MIN = 2
 export const STAR_EXTRA_PLANET_RANGE = 2
 export const CHAMPION_STAR_FIXED_ANGLE_FRAC_PI = 0.6
@@ -1336,4 +1338,6 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:mountain-road',
   'game-icons:elven-castle',
   'game-icons:forest',
+  // ChampionStarTimerComponent
+  'game-icons:comet-spark',
 ])

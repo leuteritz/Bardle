@@ -5,7 +5,10 @@
         v-for="entry in sortedEntries"
         :key="entry.starId"
         class="timer-bar-row"
-        :class="{ 'timer-bar-row--cursed': entry.isCursed }"
+        :class="{
+          'timer-bar-row--cursed': entry.isCursed,
+          'timer-bar-row--champion': entry.isChampion,
+        }"
         :style="entry.isCursed ? { '--curse-ratio': entry.curseRatio } : {}"
         @click="starGroupStore.openStarFightModal(entry.starId)"
       >
@@ -21,7 +24,7 @@
             }"
           />
           <span
-            v-if="entry.starType === 'resource' && entry.fillRatio > 0"
+            v-if="entry.fillRatio > 0"
             class="bar-seconds-label bar-seconds-label--left"
             :style="{
               '--fill': entry.fillRatio,
@@ -32,7 +35,15 @@
           >
         </div>
 
-        <div class="bar-center" />
+        <div class="bar-center">
+          <Icon
+            v-if="entry.isChampion"
+            icon="game-icons:comet-spark"
+            width="14"
+            height="14"
+            :style="{ color: entry.palette.mid, filter: `drop-shadow(0 0 4px ${entry.palette.glow})` }"
+          />
+        </div>
 
         <div class="bar-side bar-side--right">
           <div
@@ -46,7 +57,7 @@
             }"
           />
           <span
-            v-if="entry.starType === 'resource' && entry.fillRatio > 0"
+            v-if="entry.fillRatio > 0"
             class="bar-seconds-label bar-seconds-label--right"
             :style="{
               '--fill': entry.fillRatio,
@@ -63,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
@@ -93,6 +105,7 @@ interface Palette {
 interface BarEntry {
   starId: string
   starType: 'resource' | 'champion' | 'galaxy_boss'
+  isChampion: boolean
   valueStr: string
   secondsInt: number
   fillRatio: number
@@ -109,6 +122,13 @@ const palettes: Palette[] = [
   { outer: '#a6471b', mid: '#c86831', inner: '#e39b6d', glow: 'rgba(200,104,49,0.25)' },
   { outer: '#9d4019', mid: '#bd5e2d', inner: '#dc8f67', glow: 'rgba(189,94,45,0.24)' },
 ]
+
+const championPalette: Palette = {
+  outer: '#1a52cc',
+  mid: '#3a7aee',
+  inner: '#80b8ff',
+  glow: 'rgba(58,122,238,0.32)',
+}
 
 function fmtMs(ms: number): string {
   const s = Math.ceil(Math.max(0, ms) / 1000)
@@ -178,11 +198,11 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
       const fillRatio = durationFromBoss > 0 ? remaining / durationFromBoss : 0
 
-      // Zeile erst dann in der Liste lassen wenn der Star wirklich noch aktiv ist
       if (!allCleared || remaining > 0) {
         raw.push({
           starId: star.id,
           starType: 'resource',
+          isChampion: false,
           valueStr: fmtMs(remaining),
           secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
           fillRatio: clamp01(fillRatio),
@@ -192,15 +212,22 @@ const sortedEntries = computed<BarEntry[]>(() => {
         })
       }
     } else if (star.starType === 'champion') {
-      const ratio = allCleared || total <= 0 ? 0 : 1 - cleared / total
+      const remaining = allCleared
+        ? 0
+        : star.spawnedAt !== undefined && star.durationMs !== undefined
+          ? Math.max(0, star.spawnedAt + star.durationMs - nowTs)
+          : 0
+      const totalMs = star.durationMs ?? 1
+      const fillRatio = totalMs > 0 ? remaining / totalMs : 0
 
       if (!allCleared) {
         raw.push({
           starId: star.id,
           starType: 'champion',
-          valueStr: `${cleared}/${total}`,
-          secondsInt: 0,
-          fillRatio: clamp01(ratio),
+          isChampion: true,
+          valueStr: fmtMs(remaining),
+          secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
+          fillRatio: clamp01(fillRatio),
           sortKey: Number.MAX_SAFE_INTEGER,
           isCursed,
           curseRatio,
@@ -212,7 +239,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
   raw.sort((a, b) => a.sortKey - b.sortKey)
   return raw.map((entry, index) => ({
     ...entry,
-    palette: palettes[index % palettes.length],
+    palette: entry.isChampion ? championPalette : palettes[index % palettes.length],
   }))
 })
 </script>
@@ -259,6 +286,17 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .timer-bar-row:hover .bar-fill {
   filter: brightness(1.18);
+}
+
+.timer-bar-row--champion {
+  outline: 1px solid rgba(58, 122, 238, 0.28);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+.timer-bar-row--champion:hover {
+  outline: 1px solid rgba(100, 160, 255, 0.5);
+  outline-offset: 1px;
 }
 
 .timer-bar-row--cursed {

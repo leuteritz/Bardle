@@ -226,6 +226,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
+    onChampionStarExpired() {
+      this.startChampionTravel()
+    },
+
     tickBossSearch(deltaMs: number) {
       if (!this.searchingForGalaxyBoss) return
       this.bossSearchTotalElapsed += deltaMs

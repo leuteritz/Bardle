@@ -90,6 +90,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       planetType: PlanetType,
       isChampionPlanet = false,
       noEnrage = false,
+      isChampionEscort = false,
     ) {
       const gameStore = useGameStore()
 
@@ -178,6 +179,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         ...(homePlanetChampion && { homePlanetChampion }),
         ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
         ...(isChampionPlanet && { isChampionPlanet: true }),
+        ...(isChampionEscort && { isChampionEscort: true }),
         sectionId: sectionStore.activeSectionId,
       }
 
@@ -269,6 +271,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         if (boss.defeated || boss.expired) continue
 
         if (boss.isChampionPlanet) continue
+        if (boss.isChampionEscort) continue
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
@@ -371,6 +374,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         if (boss.defeated || boss.expired) continue
 
         if (boss.isChampionPlanet) continue
+        if (boss.isChampionEscort) continue
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 

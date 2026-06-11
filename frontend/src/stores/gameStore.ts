@@ -5,6 +5,7 @@ import { useSynergyStore } from './synergyStore'
 import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
+import { useStarGroupStore } from './starGroupStore'
 import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
@@ -449,6 +450,8 @@ export const useGameStore = defineStore('game', {
       const galaxyStore = useGalaxyStore()
       galaxyStore.tickBossSearch(GAME_TICK_INTERVAL_MS)
       galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)
+      const starGroupStore = useStarGroupStore()
+      starGroupStore.tickChampionStar()
       const roleBehaviorStore = useRoleBehaviorStore()
       roleBehaviorStore.tick()
       const planetBossStore = usePlanetBossStore()

@@ -251,6 +251,7 @@ export interface PlanetBossEvent {
   homePlanetChampion?: string
   isGalaxyBoss?: boolean
   isChampionPlanet?: boolean
+  isChampionEscort?: boolean
   sectionId?: number
 }
 
