@@ -51,6 +51,18 @@
   --rpg-danger: #ff6a00;
   --rpg-danger-dark: #ff1500;
   --rpg-green-light: #7ac060;
+
+  /* Panel system — Header / BottomStats / CommandPanel share one background */
+  --color-panel-bg: var(--rpg-bg-header);
+
+  /* Planet Slot — Empty & Locked States */
+  --rpg-slot-locked-opacity:     0.88;
+  --rpg-slot-locked-grayscale:   0%;
+  --rpg-slot-locked-border:      rgba(82, 184, 48, 0.72);
+  --rpg-slot-empty-border:       rgba(82, 184, 48, 0.52);
+  --rpg-slot-empty-border-hover: rgba(110, 192, 64, 0.82);
+  --rpg-slot-empty-icon:         rgba(116, 212, 72, 0.80);
+  --rpg-slot-empty-icon-glow:    rgba(82, 184, 48, 0.38);
 }
 
 /* ── Wooden Frame (containers, modals) — 5-layer carved groove ── */

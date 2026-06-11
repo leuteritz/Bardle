@@ -31,7 +31,7 @@ import BottomBarStatsComponent from './BottomBarStatsComponent.vue'
   bottom: -80px;
   left: -50vw;
   right: -50vw;
-  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
+  background: var(--color-panel-bg);
   z-index: 0;
 }
 

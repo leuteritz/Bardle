@@ -65,11 +65,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
         </div>
       </div>
 
-      <!-- ── Separator ── -->
-      <div class="cmd-sep">
-        <div class="cmd-sep-line" />
-      </div>
-
       <!-- ── Planet Grid ── -->
       <div class="cmd-planet-grid">
         <div
@@ -208,7 +203,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--rpg-bg-header, rgba(6, 4, 14, 0.92));
+  background: var(--color-panel-bg);
 }
 
 .cmd-surface-glow {
@@ -262,34 +257,9 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   box-shadow: none !important;
 }
 
-.cmd-sep {
-  position: absolute;
-  top: 190px;
-  left: 8px;
-  right: 8px;
-  height: 20px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-}
-
-.cmd-sep-line {
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(200, 144, 64, 0.18) 15%,
-    rgba(210, 160, 40, 0.55) 50%,
-    rgba(200, 144, 64, 0.18) 85%,
-    transparent 100%
-  );
-  border-radius: 999px;
-}
-
 .cmd-planet-grid {
   position: absolute;
-  top: 214px;
+  top: 192px;
   left: 8px;
   right: 8px;
   bottom: 8px;
@@ -345,22 +315,31 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-planet-tile--empty-slot {
-  border: 2px solid rgba(90, 142, 224, 0.22);
+  border: 2px dashed var(--rpg-slot-empty-border, rgba(82, 184, 48, 0.52));
+  background: linear-gradient(180deg, rgba(8, 18, 6, 0.70), rgba(5, 12, 4, 0.84));
+  box-shadow: inset 0 0 14px rgba(52, 160, 24, 0.06);
+  animation: cmd-empty-breathe 3s ease-in-out infinite;
 }
 .cmd-planet-tile--empty-slot:hover {
-  border-color: rgba(90, 142, 224, 0.52);
+  border-color: var(--rpg-slot-empty-border-hover, rgba(110, 192, 64, 0.82));
+  box-shadow:
+    inset 0 0 14px rgba(82, 184, 48, 0.12),
+    0 0 8px rgba(82, 184, 48, 0.20);
 }
 
 .cmd-planet-tile--locked {
-  opacity: 0.38;
+  background: linear-gradient(180deg, rgba(14, 28, 8, 0.70), rgba(8, 18, 4, 0.84));
+  border: 2px solid var(--rpg-slot-locked-border, rgba(82, 184, 48, 0.72));
+  box-shadow: 0 0 6px rgba(82, 184, 48, 0.18), inset 0 0 8px rgba(52, 140, 20, 0.04);
+  opacity: var(--rpg-slot-locked-opacity, 0.88);
+  filter: none;
   cursor: pointer;
-  border: 2px solid rgba(200, 144, 64, 0.08);
 }
 .cmd-planet-tile--locked:hover {
   transform: translateY(-1px);
-  box-shadow: 0 0 8px rgba(200, 144, 64, 0.1);
-  border-color: rgba(200, 144, 64, 0.18);
-  background: linear-gradient(180deg, rgba(52, 26, 10, 0.55), rgba(28, 13, 5, 0.72));
+  background: linear-gradient(180deg, rgba(18, 36, 10, 0.76), rgba(12, 24, 6, 0.88));
+  box-shadow: 0 0 10px rgba(82, 184, 48, 0.30), inset 0 0 10px rgba(52, 140, 20, 0.06);
+  border-color: rgba(110, 192, 64, 0.90);
 }
 
 .cmd-planet-tile--buy:not(.cmd-planet-tile--locked) {
@@ -446,6 +425,16 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 @keyframes cmd-chime-bob {
   0%, 100% { transform: translateY(0) scale(1); }
   50%       { transform: translateY(-2px) scale(1.1); }
+}
+
+@keyframes cmd-empty-breathe {
+  0%, 100% { border-color: rgba(82, 184, 48, 0.38); }
+  50%       { border-color: rgba(82, 184, 48, 0.68); }
+}
+
+@keyframes cmd-empty-icon-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1; }
 }
 
 /* Rollenfarbige Rahmen */
@@ -709,8 +698,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-tile-icon--empty {
-  color: rgba(90, 142, 224, 0.35);
+  color: var(--rpg-slot-empty-icon, rgba(200, 144, 64, 0.65));
   font-size: 24px;
+  text-shadow: 0 0 10px var(--rpg-slot-empty-icon-glow, rgba(200, 144, 64, 0.38));
+  animation: cmd-empty-icon-pulse 3s ease-in-out infinite;
 }
 .cmd-tile-icon--locked {
   display: flex;
