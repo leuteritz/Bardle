@@ -191,23 +191,23 @@ watch(
 }
 
 .galaxy-value {
-  color: #c8a0f0;
-  text-shadow: 0 0 10px rgba(138, 100, 220, 0.45);
+  color: var(--rpg-green-border);
+  text-shadow: 0 0 10px rgba(110, 192, 64, 0.45);
 }
 
 .star-value {
-  color: #a8e060;
-  text-shadow: 0 0 10px rgba(82, 184, 48, 0.4);
+  color: var(--rpg-green-border);
+  text-shadow: 0 0 10px rgba(110, 192, 64, 0.45);
   transition:
     color 0.3s,
     text-shadow 0.3s;
 }
 
 .stat-card--lit-green .star-value {
-  color: #c8f080;
+  color: #8adc50;
   text-shadow:
-    0 0 14px rgba(82, 184, 48, 0.7),
-    0 0 28px rgba(82, 184, 48, 0.3);
+    0 0 14px rgba(110, 192, 64, 0.7),
+    0 0 28px rgba(110, 192, 64, 0.3);
 }
 
 .stat-card-sep {
