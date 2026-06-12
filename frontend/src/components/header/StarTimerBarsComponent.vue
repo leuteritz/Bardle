@@ -423,7 +423,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .bar-seconds-label {
   position: absolute;
   top: 50%;
-  font-size: 0.7rem;
+  font-size: clamp(0.85rem, 0.6vw + 0.55rem, 1.05rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.06em;
@@ -436,13 +436,13 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .bar-seconds-label--left {
   left: calc((1 - var(--fill)) * 100%);
-  transform: translateX(calc(-50% - 10px)) translateY(-50%);
+  transform: translateX(calc(-50% - 18px)) translateY(-50%);
   transition: left 0.2s linear;
 }
 
 .bar-seconds-label--right {
   right: calc((1 - var(--fill)) * 100%);
-  transform: translateX(calc(50% + 10px)) translateY(-50%);
+  transform: translateX(calc(50% + 18px)) translateY(-50%);
   transition: right 0.2s linear;
 }
 
