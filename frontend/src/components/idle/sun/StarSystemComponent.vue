@@ -247,7 +247,7 @@
           @mouseleave="hoveredSummaryStarId = null"
         >
           <div class="summary-inner">
-            <div v-if="getStarRewardSummary(star).champion" class="summary-champion">
+            <div v-if="getStarRewardSummary(star).champion" class="summary-champion" :style="getChampionRoleStyles(getStarRewardSummary(star).champion!.name)">
               <span class="summary-champion__crown">♛</span>
               <div class="summary-champion__icon-wrap">
                 <img
@@ -335,6 +335,7 @@ import { formatNumber } from '../../../config/numberFormat'
 import {
   ORBIT_TIERS,
   ROLE_BY_KEY,
+  ROLE_COLORS,
   ENEMY_PROJECTILE_DAMAGE,
   ROLE_MID_CURSE_ATTACK_DEBUFF,
   ROLE_MID_CURSE_ATTACK_SLOW,
@@ -342,6 +343,7 @@ import {
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   SUN_RADIUS,
 } from '../../../config/constants'
+import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import type { ChampionRole } from '../../../types'
@@ -688,6 +690,21 @@ function starBodyVisualStyle(star: StarRenderEntry) {
 
 function starBodyBackStyle(star: StarRenderEntry) {
   return { ...starWrapStyle(star), ...starBodyVisualStyle(star) }
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+}
+
+function getChampionRoleStyles(name: string): Record<string, string> {
+  const role = CHAMPION_ROLES[name]
+  const hex = (role && ROLE_COLORS[role]) ?? '#c8a0ff'
+  const [r, g, b] = hexToRgb(hex)
+  return {
+    '--champ-color': hex,
+    '--champ-glow': `rgba(${r}, ${g}, ${b}, 0.5)`,
+    '--champ-glow-dim': `rgba(${r}, ${g}, ${b}, 0.25)`,
+  }
 }
 
 function getStarRewardSummary(star: StarRenderEntry) {
@@ -1059,8 +1076,8 @@ function starCountStyle(star: StarRenderEntry) {
 
 .summary-champion__crown {
   font-size: 13px;
-  color: #c8a0ff;
-  text-shadow: 0 0 8px rgba(195, 100, 255, 0.85);
+  color: var(--champ-color, #c8a0ff);
+  text-shadow: 0 0 8px var(--champ-glow, rgba(195, 100, 255, 0.85));
   flex-shrink: 0;
 }
 
@@ -1069,10 +1086,10 @@ function starCountStyle(star: StarRenderEntry) {
   height: 38px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(195, 160, 255, 0.8);
+  border: 2px solid var(--champ-color, rgba(195, 160, 255, 0.8));
   box-shadow:
-    0 0 10px rgba(180, 80, 255, 0.5),
-    0 0 20px rgba(140, 40, 220, 0.25);
+    0 0 10px var(--champ-glow, rgba(180, 80, 255, 0.5)),
+    0 0 20px var(--champ-glow-dim, rgba(140, 40, 220, 0.25));
   flex-shrink: 0;
   animation: champIconPulse 2.2s ease-in-out infinite;
 }
@@ -1087,10 +1104,10 @@ function starCountStyle(star: StarRenderEntry) {
 .summary-champion__name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: rgba(200, 165, 255, 0.97);
+  color: var(--champ-color, rgba(200, 165, 255, 0.97));
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(190, 80, 255, 0.5);
+  text-shadow: 0 0 6px var(--champ-glow, rgba(190, 80, 255, 0.5));
   white-space: nowrap;
 }
 

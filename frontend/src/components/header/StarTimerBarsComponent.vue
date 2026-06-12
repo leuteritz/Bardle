@@ -9,7 +9,10 @@
           'timer-bar-row--cursed': entry.isCursed,
           'timer-bar-row--champion': entry.isChampion,
         }"
-        :style="entry.isCursed ? { '--curse-ratio': entry.curseRatio } : {}"
+        :style="{
+          ...(entry.isCursed ? { '--curse-ratio': entry.curseRatio } : {}),
+          ...(entry.isChampion ? { '--champ-outline': entry.palette.mid + '44' } : {}),
+        }"
         @click="starGroupStore.openStarFightModal(entry.starId)"
       >
         <div class="bar-side bar-side--left">
@@ -78,7 +81,9 @@ import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
-import { ROLE_MID_CURSE_DURATION_MS } from '../../config/constants'
+import { ROLE_MID_CURSE_DURATION_MS, ROLE_COLORS } from '../../config/constants'
+import { CHAMPION_ROLES } from '../../config/championRoles'
+import type { StarGroup } from '../../stores/starGroupStore'
 
 const starGroupStore = useStarGroupStore()
 const planetBossStore = usePlanetBossStore()
@@ -139,6 +144,33 @@ function fmtMs(ms: number): string {
 
 function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v))
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]
+}
+
+function roleColorToPalette(hex: string): Palette {
+  const [r, g, b] = hexToRgb(hex)
+  const cap = (v: number) => Math.min(255, Math.round(v))
+  const toHex = (r: number, g: number, b: number) =>
+    '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
+  return {
+    outer: toHex(cap(r * 0.6), cap(g * 0.6), cap(b * 0.6)),
+    mid: hex,
+    inner: toHex(cap(r * 1.5), cap(g * 1.5), cap(b * 1.5)),
+    glow: `rgba(${r}, ${g}, ${b}, 0.32)`,
+  }
+}
+
+function getStarRoleColor(star: StarGroup): string | null {
+  const champSlot = star.planetSlots.find(s => s.isChampionPlanet)
+  if (!champSlot) return null
+  const boss = planetBossStore.activeBosses.find(b => b.planetId === champSlot.planetId)
+  const name = boss?.homePlanetChampion
+  if (!name) return null
+  const role = CHAMPION_ROLES[name]
+  return role ? ROLE_COLORS[role] : null
 }
 
 function getBossRemainingMs(planetId: string): number | null {
@@ -239,7 +271,12 @@ const sortedEntries = computed<BarEntry[]>(() => {
   raw.sort((a, b) => a.sortKey - b.sortKey)
   return raw.map((entry, index) => ({
     ...entry,
-    palette: entry.isChampion ? championPalette : palettes[index % palettes.length],
+    palette: (() => {
+      if (!entry.isChampion) return palettes[index % palettes.length]
+      const star = starGroupStore.activeStars.find(s => s.id === entry.starId)
+      const roleColor = star ? getStarRoleColor(star) : null
+      return roleColor ? roleColorToPalette(roleColor) : championPalette
+    })(),
   }))
 })
 </script>
@@ -289,14 +326,15 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 .timer-bar-row--champion {
-  outline: 1px solid rgba(58, 122, 238, 0.28);
+  outline: 1px solid var(--champ-outline, rgba(58, 122, 238, 0.28));
   outline-offset: 1px;
   border-radius: 3px;
 }
 
 .timer-bar-row--champion:hover {
-  outline: 1px solid rgba(100, 160, 255, 0.5);
+  outline: 1px solid var(--champ-outline, rgba(100, 160, 255, 0.5));
   outline-offset: 1px;
+  filter: brightness(1.12);
 }
 
 .timer-bar-row--cursed {
