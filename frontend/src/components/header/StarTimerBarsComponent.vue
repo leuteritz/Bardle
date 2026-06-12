@@ -326,8 +326,6 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 .timer-bar-row--champion {
-  outline: 1px solid var(--champ-outline, rgba(58, 122, 238, 0.28));
-  outline-offset: 1px;
   border-radius: 3px;
 }
 
