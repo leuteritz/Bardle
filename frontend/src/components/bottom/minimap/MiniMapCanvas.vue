@@ -592,45 +592,6 @@ export default defineComponent({
         drawPlanet(ctx, sx, sy, 19, galaxySeed + order[i], 'rescued')
       }
 
-      // Planeten des aktiven Champion-Sterns orbitieren um ihren Stern
-      const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
-      const shouldPreviewOrbits = isTraveling && galaxyStore.travelRemainingMs <= 5_000
-      const STAR_R = 22
-
-      if ((championStar || shouldPreviewOrbits) && targetIdx >= 0) {
-        const [csx, csy] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        const nowSec = Date.now() / 1000
-
-        if (championStar) {
-          championStar.planetSlots.forEach((slot, idx) => {
-            if (slot.cleared) return
-            const planetR = Math.min(7 + idx * 2, STAR_R - 2)
-            const orbitR = Math.max(STAR_R + planetR + 4, 26 + idx * 9)
-            const speed = (0.35 + idx * 0.18) * slot.orbitDirection
-            const angle = nowSec * speed + idx * Math.PI * 0.67
-            const px = csx + Math.cos(angle) * orbitR
-            const py = csy + Math.sin(angle) * orbitR * 0.55
-            drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
-          })
-        } else {
-          // Vorschau-Planeten während letzter 5s (Stern noch nicht gespawnt)
-          const previewRng = seededRng(
-            galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31,
-          )
-          const previewCount = 3 + Math.floor(previewRng() * 2)
-          for (let idx = 0; idx < previewCount; idx++) {
-            const dir = (previewRng() < 0.5 ? 1 : -1) as 1 | -1
-            const planetR = Math.min(7 + idx * 2, STAR_R - 2)
-            const orbitR = Math.max(STAR_R + planetR + 4, 26 + idx * 9)
-            const speed = (0.35 + idx * 0.18) * dir
-            const angle = nowSec * speed + idx * Math.PI * 0.67
-            const px = csx + Math.cos(angle) * orbitR
-            const py = csy + Math.sin(angle) * orbitR * 0.55
-            drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
-          }
-        }
-      }
-
       if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive) {
         const [bx, by] = wToC(0.5, 0.5)
         if (rescued > 0) {
@@ -685,31 +646,6 @@ export default defineComponent({
           pulseFrame === 1,
           STAR_PALETTE,
         )
-      }
-
-      // Planetenanzahl-Label: nur wenn Champion-Stern aktiv (Anzahl bekannt)
-      const showCountLabel =
-        targetIdx >= 0 &&
-        (galaxyStore.championTravelState === 'champion_spawned' ||
-          (isTraveling && galaxyStore.travelRemainingMs <= 5_000))
-      if (showCountLabel) {
-        const [lx, ly] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        const activeStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
-        const planetCount = activeStar
-          ? activeStar.planetSlots.filter((p) => !p.cleared).length
-          : null
-        if (planetCount !== null) {
-          ctx.save()
-          ctx.font = 'bold 9px serif'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'bottom'
-          ctx.fillStyle = 'rgba(255,220,80,0.95)'
-          ctx.shadowColor = 'rgba(0,0,0,0.9)'
-          ctx.shadowBlur = 4
-          ctx.fillText(`⬡ ${planetCount}`, lx, ly - 20)
-          ctx.shadowBlur = 0
-          ctx.restore()
-        }
       }
 
       if (galaxyStore.isBossSearchActive) {
