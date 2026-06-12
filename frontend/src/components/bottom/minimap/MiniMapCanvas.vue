@@ -19,6 +19,7 @@ const MAP_WORLD_ZOOMED = 0.14
 const ZOOM_TRIGGER_MS = 20_000
 const ZOOM_FULL_MS = 1_000
 const ZOOM_LERP_SPEED = 0.04
+const ARRIVAL_TRANSITION_MS = 900
 
 function seededRng(seed: number) {
   let s = seed >>> 0
@@ -279,6 +280,10 @@ function drawPlanet(
   }
 }
 
+function easeInOut(t: number) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+}
+
 export default defineComponent({
   name: 'MiniMapCanvas',
   setup() {
@@ -307,6 +312,7 @@ export default defineComponent({
     let hyperspaceTimeouts: number[] = []
     let warpLastFrameMs = 0
     let warpParticles: WarpParticle[] = []
+    let arrivalTransitionStart = -1
 
     const show = computed(
       () =>
@@ -767,6 +773,170 @@ export default defineComponent({
       }
     }
 
+    function drawArrivalView(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const cx = w / 2
+      const cy = h / 2
+      const nowMs = Date.now()
+
+      // Dark space background
+      ctx.fillStyle = '#06040e'
+      ctx.fillRect(0, 0, w, h)
+
+      // Seeded background star field
+      const bgRng = seededRng(galaxyStore.currentGalaxy * 77771)
+      for (let i = 0; i < 60; i++) {
+        const bx = bgRng() * w
+        const by = bgRng() * h
+        const br = 0.5 + bgRng() * 0.7
+        const ba = 0.2 + bgRng() * 0.4
+        const bc = 180 + Math.floor(bgRng() * 75)
+        ctx.beginPath()
+        ctx.arc(bx, by, br, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${bc}, ${bc + 10}, 255, ${ba.toFixed(2)})`
+        ctx.fill()
+      }
+
+      // Star color from store (RGB 0-255)
+      const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
+      const [sr, sg, sb] = championStar?.starColor ?? [255, 160, 60]
+
+      // Pulse animation
+      const pulse = 0.5 + 0.5 * Math.sin(nowMs / 900)
+      const ARRIVAL_STAR_R = 46
+
+      // Outer corona (large diffuse glow)
+      const coroR = ARRIVAL_STAR_R * (3.6 + 0.4 * pulse)
+      const outerCorona = ctx.createRadialGradient(cx, cy, ARRIVAL_STAR_R * 0.85, cx, cy, coroR)
+      outerCorona.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, 0.28)`)
+      outerCorona.addColorStop(0.45, `rgba(${sr}, ${Math.max(0, sg - 40)}, 0, 0.08)`)
+      outerCorona.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      ctx.beginPath()
+      ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
+      ctx.fillStyle = outerCorona
+      ctx.fill()
+
+      // Inner halo (tighter, warmer)
+      const innerHalo = ctx.createRadialGradient(
+        cx,
+        cy,
+        ARRIVAL_STAR_R * 0.6,
+        cx,
+        cy,
+        ARRIVAL_STAR_R * 2.2,
+      )
+      innerHalo.addColorStop(0, 'rgba(255, 230, 190, 0.6)')
+      innerHalo.addColorStop(0.4, `rgba(${sr}, ${sg}, ${sb}, 0.25)`)
+      innerHalo.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      ctx.beginPath()
+      ctx.arc(cx, cy, ARRIVAL_STAR_R * 2.2, 0, Math.PI * 2)
+      ctx.fillStyle = innerHalo
+      ctx.fill()
+
+      // Build planet slot list
+      const galaxySeed = galaxyStore.currentGalaxy * 10007
+      const rawSlots = championStar?.planetSlots.filter((s) => !s.cleared) ?? []
+
+      type ArrivalSlot = { orbitDirection: 1 | -1 }
+      let slots: ArrivalSlot[]
+      if (rawSlots.length > 0) {
+        slots = rawSlots as ArrivalSlot[]
+      } else {
+        const previewRng = seededRng(
+          galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31,
+        )
+        const previewCount = 3 + Math.floor(previewRng() * 2)
+        slots = Array.from({ length: previewCount }, () => ({
+          orbitDirection: (previewRng() < 0.5 ? 1 : -1) as 1 | -1,
+        }))
+      }
+
+      // Compute planet positions for this frame
+      const planetData = slots.map((slot, idx) => {
+        const orbitRx = ARRIVAL_STAR_R + 28 + idx * 26
+        const orbitRy = orbitRx * 0.48
+        const planetR = 6 + idx * 2.5
+        const speed = slot.orbitDirection * (0.32 + idx * 0.15)
+        const angle = (nowMs / 1000) * speed + idx * Math.PI * 0.67
+        return {
+          px: cx + Math.cos(angle) * orbitRx,
+          py: cy + Math.sin(angle) * orbitRy,
+          orbitRx,
+          orbitRy,
+          planetR,
+          idx,
+        }
+      })
+
+      // Orbit ellipses (dashed, subtle)
+      planetData.forEach(({ orbitRx, orbitRy }) => {
+        ctx.save()
+        ctx.globalAlpha = 0.1
+        ctx.beginPath()
+        ctx.ellipse(cx, cy, orbitRx, orbitRy, 0, 0, Math.PI * 2)
+        ctx.strokeStyle = 'rgba(140, 160, 220, 1)'
+        ctx.lineWidth = 0.7
+        ctx.setLineDash([3, 5])
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.restore()
+      })
+
+      // Behind-planets (py < cy) drawn first at reduced opacity
+      planetData.forEach(({ px, py, planetR, idx }) => {
+        if (py >= cy) return
+        ctx.save()
+        ctx.globalAlpha = 0.45
+        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+        ctx.restore()
+      })
+
+      // Star body (on top of behind-planets, below foreground-planets)
+      const pulseGlow = 1 + 0.12 * pulse
+      const bodyGrad = ctx.createRadialGradient(
+        cx - ARRIVAL_STAR_R * 0.28,
+        cy - ARRIVAL_STAR_R * 0.25,
+        2,
+        cx,
+        cy,
+        ARRIVAL_STAR_R * pulseGlow,
+      )
+      bodyGrad.addColorStop(0, '#fff8f0')
+      bodyGrad.addColorStop(
+        0.22,
+        `rgb(${Math.min(255, sr + 30)}, ${Math.min(255, sg + 15)}, ${sb})`,
+      )
+      bodyGrad.addColorStop(0.65, `rgb(${sr}, ${sg}, ${Math.max(0, sb - 20)})`)
+      bodyGrad.addColorStop(1, `rgb(${Math.max(0, sr - 90)}, ${Math.max(0, sg - 70)}, 0)`)
+      ctx.shadowColor = `rgba(${sr}, ${sg}, ${sb}, 0.9)`
+      ctx.shadowBlur = ARRIVAL_STAR_R * (1.6 + 0.3 * pulse)
+      ctx.beginPath()
+      ctx.arc(cx, cy, ARRIVAL_STAR_R * pulseGlow, 0, Math.PI * 2)
+      ctx.fillStyle = bodyGrad
+      ctx.fill()
+      ctx.shadowBlur = 0
+
+      // Foreground planets (py >= cy) at full opacity
+      planetData.forEach(({ px, py, planetR, idx }) => {
+        if (py < cy) return
+        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+      })
+
+      // Planet count label above star
+      const planetCount = slots.length
+      if (planetCount > 0) {
+        ctx.save()
+        ctx.font = 'bold 9px serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.fillStyle = 'rgba(255, 220, 80, 0.95)'
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
+        ctx.shadowBlur = 4
+        ctx.fillText(`⬡ ${planetCount}`, cx, cy - ARRIVAL_STAR_R * pulseGlow - 10)
+        ctx.shadowBlur = 0
+        ctx.restore()
+      }
+    }
+
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
@@ -794,10 +964,39 @@ export default defineComponent({
       }
       const img = imgEl.value
       if (!img || !img.complete) return
+
+      const isArrived =
+        galaxyStore.championTravelState === 'champion_available' ||
+        galaxyStore.championTravelState === 'champion_spawned'
+      if (isArrived) {
+        const elapsed =
+          arrivalTransitionStart >= 0
+            ? Date.now() - arrivalTransitionStart
+            : ARRIVAL_TRANSITION_MS
+        const t = easeInOut(Math.min(1, elapsed / ARRIVAL_TRANSITION_MS))
+        if (t < 1) {
+          drawNormalMap(ctx, w, h)
+          ctx.save()
+          ctx.globalAlpha = t
+          drawArrivalView(ctx, w, h)
+          ctx.restore()
+        } else {
+          drawArrivalView(ctx, w, h)
+        }
+        return
+      }
+
       drawNormalMap(ctx, w, h)
     }
 
     function updateZoom() {
+      const isArrived =
+        galaxyStore.championTravelState === 'champion_available' ||
+        galaxyStore.championTravelState === 'champion_spawned'
+      if (isArrived) {
+        currentMapVisible.value += (MAP_WORLD_ZOOMED - currentMapVisible.value) * ZOOM_LERP_SPEED
+        return
+      }
       const isBossPhase =
         galaxyStore.searchingForGalaxyBoss ||
         galaxyStore.needsFinalBoss ||
@@ -936,6 +1135,18 @@ export default defineComponent({
       },
     )
 
+    watch(
+      () => galaxyStore.championTravelState,
+      (state) => {
+        const arrived = state === 'champion_available' || state === 'champion_spawned'
+        if (arrived && arrivalTransitionStart === -1) {
+          arrivalTransitionStart = Date.now()
+        } else if (!arrived) {
+          arrivalTransitionStart = -1
+        }
+      },
+    )
+
     onMounted(() => {
       nextTick(() => {
         if (imgEl.value?.complete) drawCanvas()
@@ -949,6 +1160,7 @@ export default defineComponent({
       }
       for (const id of hyperspaceTimeouts) window.clearTimeout(id)
       hyperspaceTimeouts = []
+      arrivalTransitionStart = -1
     })
 
     return { canvasEl, imgEl, onImageLoad }
