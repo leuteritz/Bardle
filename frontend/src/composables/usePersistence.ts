@@ -130,6 +130,8 @@ export function usePersistence() {
         searchingForGalaxyBoss: galaxyStore.searchingForGalaxyBoss,
         resourceStarActive: galaxyStore.resourceStarActive,
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
+        pendingRoleSelection: galaxyStore.pendingRoleSelection,
+        nextStarRole: galaxyStore.nextStarRole,
       },
       // ← NEW: Persist player HP
       player: {
@@ -327,6 +329,8 @@ export function usePersistence() {
             galaxyStore.starsRescued >= galaxyStore.starsRequired &&
             !galaxyStore.galaxyBossDefeated
         }
+        galaxyStore.pendingRoleSelection = gx.pendingRoleSelection ?? false
+        galaxyStore.nextStarRole = gx.nextStarRole ?? null
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0

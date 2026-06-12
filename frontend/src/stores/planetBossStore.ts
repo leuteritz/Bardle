@@ -22,6 +22,7 @@ import {
 } from '../config/constants'
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { CHAMPION_ROLES } from '../config/championRoles'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activeMidCurse } from '../utils/activeMidCurse'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
@@ -147,15 +148,24 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           !battleStore.ownedChampions.includes(name) &&
           !battleStore.recruitableChampions.some((r) => r.name === name)
 
-        let candidates = CHAMPION_HOME_PLANETS.filter(
-          (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
-        )
-        if (candidates.length === 0 && isChampionPlanet) {
+        const nextRole = galaxyStore.nextStarRole
+        let candidates = CHAMPION_HOME_PLANETS.filter((c) => {
+          if (!isUnrecruitedUnowned(c.championName)) return false
+          if (nextRole) return CHAMPION_ROLES[c.championName] === nextRole
+          return c.planetType === planetType
+        })
+        if (candidates.length === 0) {
+          candidates = CHAMPION_HOME_PLANETS.filter(
+            (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
+          )
+        }
+        if (candidates.length === 0) {
           candidates = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
         }
         if (candidates.length > 0) {
           homePlanetChampion =
             candidates[Math.floor(Math.random() * candidates.length)].championName
+          galaxyStore.nextStarRole = null
         }
       }
 

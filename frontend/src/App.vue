@@ -9,6 +9,7 @@ import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.v
 import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vue'
 import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
+import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
 import AugmentBuffPanel from '@/components/augment/AugmentBuffPanel.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
 import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.vue'
@@ -43,6 +44,7 @@ watch(
     <NebulaFlythroughComponent />
     <StarFightModal />
     <AugmentSelectionModal />
+    <RoleSelectionModal />
     <AugmentBuffPanel />
     <HyperspaceOverlay />
     <UniverseSelectModal />

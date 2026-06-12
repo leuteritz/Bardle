@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
+import type { ChampionRole } from '../types'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
@@ -46,8 +47,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     pendingTransition: false,
     isGalaxyTransitioning: false,
     currentThemeIndex: 0,
+    // Role selection modal
+    pendingRoleSelection: true,
+    nextStarRole: null as ChampionRole | null,
     // Champion travel state machine
-    championTravelState: 'traveling' as ChampionTravelState,
+    championTravelState: 'idle' as ChampionTravelState,
     championTravelStartTime: 0,
     championTravelDurationMs: CHAMPION_TRAVEL_BASE_MS,
     championTravelBaseDurationMs: CHAMPION_TRAVEL_BASE_MS,
@@ -140,6 +144,17 @@ export const useGalaxyStore = defineStore('galaxy', {
   },
 
   actions: {
+    requestRoleSelection() {
+      this.nextStarRole = null
+      this.pendingRoleSelection = true
+    },
+
+    confirmRoleSelection(role: ChampionRole) {
+      this.nextStarRole = role
+      this.pendingRoleSelection = false
+      this.startChampionTravel()
+    },
+
     startChampionTravel() {
       const baseDuration = CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS
       this.championTravelBaseDurationMs = baseDuration
@@ -222,12 +237,12 @@ export const useGalaxyStore = defineStore('galaxy', {
         this.bossSearchTotalDuration = GALAXY_BOSS_TOTAL_SEARCH_MIN_MS + Math.random() * GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS
         this._startBossSearchSegment(0.5, 0.5, Math.random() * 360)
       } else {
-        this.startChampionTravel()
+        this.requestRoleSelection()
       }
     },
 
     onChampionStarExpired() {
-      this.startChampionTravel()
+      this.requestRoleSelection()
     },
 
     tickBossSearch(deltaMs: number) {
@@ -274,6 +289,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.galaxyBossDefeated = false
       this.pendingGalaxyBoss = false
       this.pendingTransition = false
+      this.pendingRoleSelection = false
       this.searchingForGalaxyBoss = false
       this.bossSearchTotalElapsed = 0
       this.bossSearchTotalDuration = 0
@@ -284,7 +300,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingResourceStars = 0
       this.pendingChampionStar = false
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
-      this.startChampionTravel()
+      this.requestRoleSelection()
     },
   },
 })
