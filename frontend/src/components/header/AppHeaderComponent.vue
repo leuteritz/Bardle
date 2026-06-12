@@ -132,6 +132,19 @@ async function measure() {
   if (!r.width || !r.height) return
   svgW.value = r.width
   svgH.value = r.height
+  document.documentElement.style.setProperty('--xp-arc-outer-width', `${r.width}px`)
+
+  // Compute where the center-chimes' VISIBLE curved border is at the timer-bar y-level.
+  // border-radius: 0 0 50% 50% / 0 0 100% 100% → entire left/right sides are elliptical arcs
+  // with h-radius = 50%w, v-radius = 100%h, arc center at (w/2, 0) relative to element top.
+  const headerRect = headerRef.value!.getBoundingClientRect()
+  const timerBarY = Math.max(0, headerRect.bottom - r.top)   // y from element top to timer-bar row
+  const hR = r.width * 0.5
+  const vR = r.height
+  const t = Math.min(1, timerBarY / vR)
+  const xInset = hR * (1 - Math.sqrt(1 - t * t))       // inset of visible border from box edge
+  document.documentElement.style.setProperty('--bar-side-width',
+    `${Math.max(0, r.left + xInset - headerRect.left)}px`)
   // Read actual rendered badge height so --level-badge-bottom stays correct at all fluid sizes
   const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
   const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50
@@ -143,6 +156,8 @@ function updateHeaderHeight() {
   if (!headerRef.value) return
   const rect = headerRef.value.getBoundingClientRect()
   document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
+  document.documentElement.style.setProperty('--header-vp-left',  `${rect.left}px`)
+  document.documentElement.style.setProperty('--header-vp-right', `${window.innerWidth - rect.right}px`)
   headerW.value = rect.width
   headerH.value = rect.height
   headerR.value = parseFloat(getComputedStyle(headerRef.value).borderBottomLeftRadius) || 20

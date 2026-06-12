@@ -287,11 +287,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .star-timer-bars-host {
   position: fixed;
   top: var(--header-total-height, 50px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 1400px;
-  padding-inline: 1rem;
+  left: var(--header-vp-left, 1rem);
+  right: var(--header-vp-right, 1rem);
   z-index: 119;
   pointer-events: none;
   display: flex;
@@ -309,7 +306,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .timer-bar-row {
   display: grid;
-  grid-template-columns: 1fr clamp(200px, 20vw, 280px) 1fr;
+  grid-template-columns: var(--bar-side-width, 1fr) 1fr var(--bar-side-width, 1fr);
   align-items: center;
   height: clamp(20px, 2.4vw, 28px);
   width: 100%;
