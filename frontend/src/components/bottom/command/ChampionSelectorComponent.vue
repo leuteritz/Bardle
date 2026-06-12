@@ -17,7 +17,6 @@ function clearSlot(slotIndex: number, event: Event) {
   battleStore.clearHeaderSlot(slotIndex)
 }
 
-
 function onImgError(e: Event) {
   const img = e.target as HTMLImageElement
   img.style.display = 'none'
@@ -45,9 +44,6 @@ function onImgError(e: Event) {
         "
         @click="openPicker(i)"
       >
-        <span class="slot-corner slot-corner--tl" aria-hidden="true" />
-        <span class="slot-corner slot-corner--br" aria-hidden="true" />
-
         <div class="slot-portrait-wrap">
           <img
             v-if="slot"
@@ -70,7 +66,7 @@ function onImgError(e: Event) {
           <span class="slot-name-text">{{ ROLES[i].label }}</span>
         </div>
 
-<button v-if="slot" class="slot-clear" title="Entfernen" @click.stop="clearSlot(i, $event)">
+        <button v-if="slot" class="slot-clear" title="Entfernen" @click.stop="clearSlot(i, $event)">
           ✕
         </button>
       </button>
@@ -214,7 +210,9 @@ function onImgError(e: Event) {
   filter: grayscale(50%);
   object-fit: contain;
   object-position: center;
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
 }
 .slot-tile:hover .slot-portrait--placeholder {
   opacity: 0.38;
@@ -408,5 +406,4 @@ function onImgError(e: Event) {
     inset 0 1px 0 rgba(184, 200, 216, 0.12),
     0 2px 8px rgba(0, 0, 0, 0.5);
 }
-
 </style>
