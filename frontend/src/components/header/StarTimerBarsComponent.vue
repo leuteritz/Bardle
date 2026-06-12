@@ -14,6 +14,8 @@
           ...(entry.isChampion ? { '--champ-outline': entry.palette.mid + '44' } : {}),
         }"
         @click="starGroupStore.openStarFightModal(entry.starId)"
+        @mouseenter="starGroupStore.setHoveredTimerStar(entry.starId)"
+        @mouseleave="starGroupStore.setHoveredTimerStar(null)"
       >
         <div class="bar-side bar-side--left">
           <div

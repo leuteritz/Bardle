@@ -109,6 +109,7 @@ export const useStarGroupStore = defineStore('starGroup', {
     activeFightStarId: null as string | null,
     starFightPlanetQueue: [] as string[],
     starFightCurrentIndex: 0,
+    hoveredTimerStarId: null as string | null,
   }),
 
   getters: {
@@ -128,6 +129,10 @@ export const useStarGroupStore = defineStore('starGroup', {
   },
 
   actions: {
+    setHoveredTimerStar(id: string | null) {
+      this.hoveredTimerStarId = id
+    },
+
     openStarFightModal(starId: string) {
       const star = this.activeStars.find((s) => s.id === starId)
       if (!star) return

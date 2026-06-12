@@ -43,7 +43,6 @@ watch(
       <div class="stat-card stat-card--galaxy">
         <img src="/img/galaxy.png" class="stat-icon" alt="Galaxie" />
         <div class="stat-text">
-          <span class="stat-card-label">GALAXY</span>
           <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
         </div>
       </div>
@@ -58,7 +57,6 @@ watch(
       >
         <img src="/img/star.png" class="stat-icon" alt="Sterne" />
         <div class="stat-text">
-          <span class="stat-card-label">STARS</span>
           <span class="stat-card-value star-value">
             {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span
             >{{ galaxyStore.starsRequired }}
@@ -142,7 +140,7 @@ watch(
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   padding: 1px 4px;
   min-width: 0;
@@ -181,16 +179,8 @@ watch(
   filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
 }
 
-.stat-card-label {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: rgba(255, 200, 80, 0.5);
-  line-height: 1;
-}
-
 .stat-card-value {
-  font-size: clamp(0.65rem, 0.95vw, 1.2rem);
+  font-size: clamp(0.75rem, 1.05vw, 1.3rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;

@@ -137,7 +137,7 @@
 
       <template v-for="star in frontStars" :key="star.id">
         <div
-          :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id }]"
+          :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="starWrapStyle(star)"
           @click="handleStarClick(star)"
           @mouseenter="hoveredStarId = star.id"
@@ -240,7 +240,7 @@
             getStarRewardSummary(star).materials.length > 0 ||
             getStarRewardSummary(star).champion
           "
-          :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id }]"
+          :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="rewardSummaryStyle(star)"
           @click="handleStarClick(star)"
           @mouseenter="hoveredSummaryStarId = star.id"
@@ -351,7 +351,7 @@ import type { ChampionRole } from '../../../types'
 const hoveredStarId = ref<string | null>(null)
 const hoveredSummaryStarId = ref<string | null>(null)
 const effectiveHoveredStarId = computed(
-  () => hoveredStarId.value ?? hoveredSummaryStarId.value,
+  () => hoveredStarId.value ?? hoveredSummaryStarId.value ?? starGroupStore.hoveredTimerStarId,
 )
 const { starRenders } = useStarSystem(effectiveHoveredStarId)
 const bossStore = usePlanetBossStore()
