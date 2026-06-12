@@ -1497,7 +1497,7 @@ export function useStarBackground() {
 
     const galaxyStore = useGalaxyStore()
 
-    // ── Champion-Rettungs-Kameraschwenk ────────────────────────────────────
+    // ── Champion-Rettungs-Kameraschwenk (runs even while background is paused) ──
     if (galaxyStore.isRescueRotating) {
       if (prefersReducedMotion.value) {
         galaxyStore.endRescueRotation()
@@ -1515,6 +1515,11 @@ export function useStarBackground() {
         for (const c of starClusters) c.angle += angularDelta * dir
         if (t >= 1) galaxyStore.endRescueRotation()
       }
+    }
+
+    if (galaxyStore.starsBackgroundPaused) {
+      animFrame = requestAnimationFrame(animateStars)
+      return
     }
 
     const pendingTrans = galaxyStore.pendingTransition

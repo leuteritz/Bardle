@@ -83,6 +83,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     rescueRotationStartTime: 0,
     rescueRotationDirection: 1 as 1 | -1,
     rescueBurstAngleDeg: 0,
+    travelPendingAfterRotation: false,
   }),
 
   getters: {
@@ -141,6 +142,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     resourceStarRemainingMs(): number {
       return this.resourceStarActive ? Math.max(0, this.resourceStarDurationMs) : 0
     },
+
+    starsBackgroundPaused(): boolean {
+      if (this.rescueRotationPhase === 'rotating') return false
+      return this.pendingRoleSelection || this.championTravelState === 'champion_spawned'
+    },
   },
 
   actions: {
@@ -152,7 +158,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     confirmRoleSelection(role: ChampionRole) {
       this.nextStarRole = role
       this.pendingRoleSelection = false
-      this.startChampionTravel()
+      this.travelPendingAfterRotation = true
+      this.startRescueRotation()
     },
 
     startChampionTravel() {
@@ -223,11 +230,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     endRescueRotation() {
       this.rescueRotationPhase = 'idle'
       this.rescueRotationStartTime = 0
+      if (this.travelPendingAfterRotation) {
+        this.travelPendingAfterRotation = false
+        this.startChampionTravel()
+      }
     },
 
     onChampionStarRescued() {
       if (this.starsRescued >= this.starsRequired) return
-      this.startRescueRotation()
       this.starsRescued++
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         this.championTravelState = 'idle'

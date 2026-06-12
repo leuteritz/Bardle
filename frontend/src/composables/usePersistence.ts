@@ -132,6 +132,7 @@ export function usePersistence() {
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
         pendingRoleSelection: galaxyStore.pendingRoleSelection,
         nextStarRole: galaxyStore.nextStarRole,
+        travelPendingAfterRotation: galaxyStore.travelPendingAfterRotation,
       },
       // ← NEW: Persist player HP
       player: {
@@ -331,6 +332,10 @@ export function usePersistence() {
         }
         galaxyStore.pendingRoleSelection = gx.pendingRoleSelection ?? false
         galaxyStore.nextStarRole = gx.nextStarRole ?? null
+        galaxyStore.travelPendingAfterRotation = false
+        if (gx.travelPendingAfterRotation) {
+          galaxyStore.startChampionTravel()
+        }
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
