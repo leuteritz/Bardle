@@ -1016,17 +1016,21 @@ function onImgError(e: Event) {
 /* ══ GLOBAL COLLAPSE-ALL ══ */
 .panel-collapse-all {
   position: absolute;
-  top: 44px;
-  left: 8px;
-  z-index: 9;
-  min-width: 44px;
-  min-height: 44px;
+  top: 40px;
+  left: 0;
+  z-index: 10;
+  width: 44px;
+  min-width: 0;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(6, 4, 1, 0.88);
-  border: 1px solid rgba(122, 78, 32, 0.75);
-  border-radius: var(--bp-radius);
+  border-top: none;
+  border-left: none;
+  border-bottom: 1px solid rgba(122, 78, 32, 0.6);
+  border-right: 1px solid rgba(122, 78, 32, 0.6);
+  border-radius: 0 0 4px 0;
   color: rgba(200, 144, 64, 0.75);
   cursor: pointer;
   pointer-events: auto;
