@@ -23,18 +23,19 @@
             <span class="pause-hint">Click anywhere to resume</span>
           </div>
 
-          <!-- HP Hero -->
-          <div class="hp-block" :class="hpBlockClass">
+          <div class="divider" />
+
+          <!-- HP Section -->
+          <div class="hp-section" :class="hpSectionClass">
             <div class="hp-top">
               <Icon icon="game-icons:hearts" width="16" height="16" class="hp-icon" style="color: #cc6050" aria-hidden="true" />
               <span class="hp-numbers">
-                <span class="hp-current" :class="hpColor">{{
+                <span class="hp-current">{{
                   Math.round(playerStore.currentHP)
                 }}</span>
                 <span class="hp-sep">/</span>
                 <span class="hp-max">{{ playerStore.maxHP }}</span>
               </span>
-              <span class="hp-badge" :class="hpBadgeClass">{{ hpStatusText }}</span>
             </div>
             <div class="hp-bar-track">
               <div class="hp-bar-fill" :class="hpColor" :style="{ width: hpPercent + '%' }" />
@@ -42,15 +43,21 @@
             </div>
           </div>
 
+          <div class="divider" />
+
           <!-- Chimes -->
-          <div class="chime-block">
-            <div class="chime-icon-wrap">
-              <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
-            </div>
+          <div class="chime-section">
+            <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
             <div class="chime-info">
               <span class="chime-label">Chimes while paused</span>
               <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
             </div>
+          </div>
+
+          <!-- Champion Found Event -->
+          <div v-if="isPlanetDiscovered" class="champion-found">
+            <Icon icon="game-icons:barbute" width="36" height="36" class="champion-found__icon" aria-hidden="true" />
+            <span class="champion-found__label">Champion Found</span>
           </div>
 
           <!-- Notification badges -->
@@ -150,23 +157,9 @@ const hpColor = computed(() => {
   return 'hp--red'
 })
 
-const hpBlockClass = computed(() => {
-  if (hpPercent.value <= 25) return 'hp-block--crit'
+const hpSectionClass = computed(() => {
+  if (hpPercent.value <= 25) return 'hp-section--crit'
   return ''
-})
-
-const hpBadgeClass = computed(() => {
-  if (hpPercent.value > 75) return 'hp-badge--great'
-  if (hpPercent.value > 50) return 'hp-badge--good'
-  if (hpPercent.value > 25) return 'hp-badge--warn'
-  return 'hp-badge--crit'
-})
-
-const hpStatusText = computed(() => {
-  if (hpPercent.value > 75) return 'GOOD'
-  if (hpPercent.value > 50) return 'STABLE'
-  if (hpPercent.value > 25) return 'WEAKENED'
-  return 'CRITICAL'
 })
 
 const pauseStartChimes = ref(0)
@@ -216,6 +209,10 @@ const hasNotifications = computed(
     pendingStars.value > 0 ||
     pauseKills.value > 0 ||
     pauseMaterialEntries.value.length > 0,
+)
+
+const isPlanetDiscovered = computed(
+  () => galaxyStore.championTravelState === 'champion_available',
 )
 
 function unpause() {
@@ -306,7 +303,7 @@ function particleStyle(i: number): Record<string, string> {
     inset 0 1px 0 rgba(232, 192, 64, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
   padding: 0 0 24px;
 }
 
@@ -325,13 +322,19 @@ function particleStyle(i: number): Record<string, string> {
   flex-shrink: 0;
 }
 
+/* ── Divider ──────────────────────────────────────────── */
+.divider {
+  margin: 0 20px;
+  border-top: 1px solid rgba(200, 144, 64, 0.1);
+}
+
 /* ── Header ───────────────────────────────────────────── */
 .pause-header {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 20px 24px 4px;
+  padding: 20px 24px 16px;
 }
 .pause-title {
   font-size: clamp(2rem, 8vw, 2.8rem);
@@ -351,33 +354,26 @@ function particleStyle(i: number): Record<string, string> {
   font-style: italic;
 }
 
-/* ── HP Block ─────────────────────────────────────────── */
-.hp-block {
-  margin: 0 20px;
-  padding: 18px 20px 16px;
-  background: #110c05;
-  border: 1px solid rgba(200, 144, 64, 0.28);
-  border-radius: 6px;
+/* ── HP Section ───────────────────────────────────────── */
+.hp-section {
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   transition:
-    border-color 0.3s ease,
+    background 0.3s ease,
     box-shadow 0.3s ease;
 }
-.hp-block--crit {
-  border-color: rgba(204, 96, 80, 0.55);
-  box-shadow:
-    0 0 20px rgba(204, 96, 80, 0.15),
-    inset 0 0 20px rgba(204, 96, 80, 0.05);
-  animation: crit-border-pulse 0.9s ease-in-out infinite alternate;
+.hp-section--crit {
+  background: rgba(204, 96, 80, 0.04);
+  animation: crit-section-pulse 0.9s ease-in-out infinite alternate;
 }
-@keyframes crit-border-pulse {
+@keyframes crit-section-pulse {
   from {
-    box-shadow: 0 0 12px rgba(204, 96, 80, 0.15);
+    background: rgba(204, 96, 80, 0.03);
   }
   to {
-    box-shadow: 0 0 28px rgba(204, 96, 80, 0.35);
+    background: rgba(204, 96, 80, 0.09);
   }
 }
 
@@ -421,7 +417,8 @@ function particleStyle(i: number): Record<string, string> {
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  transition: color 0.4s ease;
+  color: #e8d8b0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 .hp-sep {
   font-size: 1rem;
@@ -430,45 +427,6 @@ function particleStyle(i: number): Record<string, string> {
 .hp-max {
   font-size: 0.95rem;
   color: rgba(200, 185, 140, 0.4);
-}
-.hp-badge {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 3px 8px;
-  border-radius: 3px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-.hp-badge--great {
-  background: rgba(82, 184, 48, 0.15);
-  color: #62d840;
-  border: 1px solid rgba(82, 184, 48, 0.4);
-}
-.hp-badge--good {
-  background: rgba(82, 184, 48, 0.1);
-  color: #7ec050;
-  border: 1px solid rgba(82, 184, 48, 0.25);
-}
-.hp-badge--warn {
-  background: rgba(212, 160, 32, 0.15);
-  color: #d4a020;
-  border: 1px solid rgba(212, 160, 32, 0.35);
-}
-.hp-badge--crit {
-  background: rgba(204, 96, 80, 0.18);
-  color: #e05040;
-  border: 1px solid rgba(204, 96, 80, 0.45);
-  animation: crit-blink 0.9s step-start infinite;
-}
-@keyframes crit-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
 }
 
 /* HP Bar */
@@ -528,46 +486,20 @@ function particleStyle(i: number): Record<string, string> {
   box-shadow: 0 0 8px rgba(204, 96, 80, 0.55);
 }
 
-/* HP current text colors */
-.hp-current.hp--green {
-  color: #62d840;
-}
-.hp-current.hp--yellow {
-  color: #e8c040;
-}
-.hp-current.hp--red {
-  color: #e06050;
-}
-
-/* ── Chime Block ──────────────────────────────────────── */
-.chime-block {
-  margin: 0 20px;
-  padding: 16px 20px;
-  background: #110c05;
-  border: 1px solid rgba(200, 144, 64, 0.28);
-  border-radius: 6px;
+/* ── Chime Section ────────────────────────────────────── */
+.chime-section {
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
 }
-.chime-icon-wrap {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0c0804;
-  border: 1px solid rgba(200, 144, 64, 0.35);
-  border-radius: 5px;
-  box-shadow: 0 0 14px rgba(200, 144, 64, 0.18);
-}
 .chime-img {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   image-rendering: pixelated;
-  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
 }
 .chime-info {
   display: flex;
@@ -605,12 +537,47 @@ function particleStyle(i: number): Record<string, string> {
   }
 }
 
+/* ── Champion Found ───────────────────────────────────── */
+.champion-found {
+  margin: 4px 20px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  animation: champion-found-glow 2.5s ease-in-out infinite;
+}
+.champion-found__icon {
+  color: #e8c040;
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.65));
+  flex-shrink: 0;
+}
+.champion-found__label {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f0d060;
+  text-shadow:
+    0 0 20px rgba(240, 208, 96, 0.65),
+    0 1px 4px rgba(0, 0, 0, 0.9);
+}
+@keyframes champion-found-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ── Notification pills ───────────────────────────────── */
 .notif-row {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  padding: 0 20px;
+  padding: 8px 20px 0;
 }
 .notif-pill {
   display: inline-flex;
@@ -646,7 +613,7 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Continue Button ──────────────────────────────────── */
 .continue-btn {
-  margin: 4px 20px 0;
+  margin: 12px 20px 0;
   padding: 13px 0;
   width: calc(100% - 40px);
   display: flex;
@@ -699,7 +666,8 @@ function particleStyle(i: number): Record<string, string> {
   .hp-icon,
   .chime-value,
   .hp-danger-pulse,
-  .hp-block--crit {
+  .hp-section--crit,
+  .champion-found {
     animation: none;
   }
   .continue-btn,
