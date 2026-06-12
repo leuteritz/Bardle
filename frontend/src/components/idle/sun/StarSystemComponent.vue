@@ -698,12 +698,14 @@ function hexToRgb(hex: string): [number, number, number] {
 
 function getChampionRoleStyles(name: string): Record<string, string> {
   const role = CHAMPION_ROLES[name]
-  const hex = (role && ROLE_COLORS[role]) ?? '#c8a0ff'
+  const hex = (role && ROLE_COLORS[role]) ?? '#e8c040'
   const [r, g, b] = hexToRgb(hex)
   return {
-    '--champ-color': hex,
-    '--champ-glow': `rgba(${r}, ${g}, ${b}, 0.5)`,
-    '--champ-glow-dim': `rgba(${r}, ${g}, ${b}, 0.25)`,
+    '--champ-color':       hex,
+    '--champ-glow':        `rgba(${r}, ${g}, ${b}, 0.5)`,
+    '--champ-glow-dim':    `rgba(${r}, ${g}, ${b}, 0.25)`,
+    '--champ-glow-bright': `rgba(${r}, ${g}, ${b}, 0.8)`,
+    '--champ-glow-mid':    `rgba(${r}, ${g}, ${b}, 0.45)`,
   }
 }
 
@@ -1076,8 +1078,8 @@ function starCountStyle(star: StarRenderEntry) {
 
 .summary-champion__crown {
   font-size: 13px;
-  color: var(--champ-color, #c8a0ff);
-  text-shadow: 0 0 8px var(--champ-glow, rgba(195, 100, 255, 0.85));
+  color: var(--champ-color, #e8c040);
+  text-shadow: 0 0 8px var(--champ-glow, rgba(232, 192, 64, 0.85));
   flex-shrink: 0;
 }
 
@@ -1086,10 +1088,10 @@ function starCountStyle(star: StarRenderEntry) {
   height: 38px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--champ-color, rgba(195, 160, 255, 0.8));
+  border: 2px solid var(--champ-color, rgba(232, 192, 64, 0.8));
   box-shadow:
-    0 0 10px var(--champ-glow, rgba(180, 80, 255, 0.5)),
-    0 0 20px var(--champ-glow-dim, rgba(140, 40, 220, 0.25));
+    0 0 10px var(--champ-glow, rgba(232, 192, 64, 0.5)),
+    0 0 20px var(--champ-glow-dim, rgba(232, 192, 64, 0.25));
   flex-shrink: 0;
   animation: champIconPulse 2.2s ease-in-out infinite;
 }
@@ -1104,10 +1106,10 @@ function starCountStyle(star: StarRenderEntry) {
 .summary-champion__name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--champ-color, rgba(200, 165, 255, 0.97));
+  color: var(--champ-color, #e8c040);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  text-shadow: 0 0 6px var(--champ-glow, rgba(190, 80, 255, 0.5));
+  text-shadow: 0 0 6px var(--champ-glow, rgba(232, 192, 64, 0.5));
   white-space: nowrap;
 }
 
@@ -1115,13 +1117,13 @@ function starCountStyle(star: StarRenderEntry) {
   0%,
   100% {
     box-shadow:
-      0 0 10px rgba(180, 80, 255, 0.5),
-      0 0 20px rgba(140, 40, 220, 0.25);
+      0 0 10px var(--champ-glow),
+      0 0 20px var(--champ-glow-dim);
   }
   50% {
     box-shadow:
-      0 0 16px rgba(195, 100, 255, 0.8),
-      0 0 32px rgba(160, 60, 240, 0.45);
+      0 0 16px var(--champ-glow-bright),
+      0 0 32px var(--champ-glow-mid);
   }
 }
 
