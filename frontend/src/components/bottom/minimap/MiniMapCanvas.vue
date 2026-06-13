@@ -857,20 +857,6 @@ export default defineComponent({
         drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
       })
 
-      // Planet count label above star
-      const planetCount = slots.length
-      if (planetCount > 0) {
-        ctx.save()
-        ctx.font = 'bold 9px serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.fillStyle = 'rgba(255, 220, 80, 0.95)'
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'
-        ctx.shadowBlur = 4
-        ctx.fillText(`⬡ ${planetCount}`, cx, cy - ARRIVAL_STAR_R * pulseGlow - 10)
-        ctx.shadowBlur = 0
-        ctx.restore()
-      }
     }
 
     function drawCanvas(timestamp = performance.now()) {
