@@ -121,6 +121,19 @@ watch(roleKey, (role) => {
   }
 })
 
+watch(
+  () => uiStore.pendingChampionSearch,
+  (name) => {
+    if (name) {
+      const roles = getChampionRoles(name)
+      shopRole.value = roles.length > 0 ? roles[0] : 'all'
+      panelMode.value = 'main'
+      activePanel.value = 'shop'
+    }
+  },
+  { immediate: true },
+)
+
 function closeActiveModal() {
   activePanel.value = null
   if (panelMode.value !== 'main') {
