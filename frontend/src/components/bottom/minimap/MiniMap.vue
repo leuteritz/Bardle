@@ -37,23 +37,7 @@
           </svg>
 
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
-          <div v-if="!isRescuing" class="hud-panel">
-            <div class="hud-metric hud-metric--arrival">
-              <span class="hud-metric-label">ARRIVAL</span>
-              <span class="hud-metric-value">{{ countdown }}</span>
-            </div>
-
-            <template v-if="isTraveling">
-              <div class="hud-metric hud-metric--dist">
-                <span class="hud-metric-label">DIST. · LY</span>
-                <span class="hud-metric-value">{{ remainingDistDisplay }}</span>
-              </div>
-              <div class="hud-metric hud-metric--speed">
-                <span class="hud-metric-label">SPEED · LY/s</span>
-                <span class="hud-metric-value">{{ speedDisplay }}</span>
-              </div>
-            </template>
-          </div>
+          <MiniMapHudPanel />
 
           <!-- ── Boss-Suche Label ── -->
           <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
@@ -83,18 +67,15 @@
 import { defineComponent, computed } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
-import {
-  CHAMPION_TRAVEL_BASE_LY,
-  CHAMPION_TRAVEL_LY_PER_GALAXY,
-  HUD_PANEL_ARC_R,
-} from '../../../config/constants'
+import { HUD_PANEL_ARC_R } from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
+import MiniMapHudPanel from './MiniMapHudPanel.vue'
 
 const CORNER_R = 20
 
 export default defineComponent({
   name: 'MiniMap',
-  components: { MiniMapCanvas },
+  components: { MiniMapCanvas, MiniMapHudPanel },
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
@@ -112,56 +93,11 @@ export default defineComponent({
         galaxyStore.isComplete,
     )
 
-    const isRescuing = computed(
-      () =>
-        galaxyStore.championTravelState === 'champion_available' ||
-        galaxyStore.championTravelState === 'champion_spawned',
-    )
-
-    const countdown = computed(() => {
-      const ms = galaxyStore.travelRemainingMs
-      const s = Math.ceil(ms / 1000)
-      const h = Math.floor(s / 3600)
-      const m = Math.floor((s % 3600) / 60)
-      const sec = s % 60
-      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-      return `${m}:${String(sec).padStart(2, '0')}`
-    })
-
-    const isTraveling = computed(() => galaxyStore.championTravelState === 'traveling')
-
-    const totalDistanceLY = computed(
-      () =>
-        CHAMPION_TRAVEL_BASE_LY + (galaxyStore.currentGalaxy - 1) * CHAMPION_TRAVEL_LY_PER_GALAXY,
-    )
-
-    const remainingDistanceLY = computed(
-      () => totalDistanceLY.value * (1 - galaxyStore.travelProgressPercent / 100),
-    )
-
-    const speedLJperS = computed(() => {
-      const remainingSec = galaxyStore.travelRemainingMs / 1000
-      if (remainingSec < 0.5) return 0
-      return remainingDistanceLY.value / remainingSec
-    })
-
-    const remainingDistDisplay = computed(() => {
-      const v = remainingDistanceLY.value
-      return v >= 100 ? `${Math.round(v)}` : `${v.toFixed(1)}`
-    })
-
-    const speedDisplay = computed(() => speedLJperS.value.toFixed(1))
-
     const ARC_R = HUD_PANEL_ARC_R
     const framePath = `M 0,0 L ${438 - ARC_R},0 A ${ARC_R},${ARC_R} 0 0,1 438,${ARC_R} L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
     return {
       show,
-      isRescuing,
-      isTraveling,
-      countdown,
-      remainingDistDisplay,
-      speedDisplay,
       galaxyStore,
       starGroupStore,
       framePath,
@@ -235,78 +171,6 @@ export default defineComponent({
   height: 100%;
   pointer-events: none;
   z-index: 2;
-}
-
-/* ═══════════════════════════════════════════════
-   HUD-Panel
-   ═══════════════════════════════════════════════ */
-.hud-panel {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 10;
-  pointer-events: none;
-  user-select: none;
-
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 24px;
-
-  padding: 4px 0;
-
-  animation: hud-panel-fadein 0.4s ease both;
-}
-
-@keyframes hud-panel-fadein {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Basis-Metrik (geteilt mit Galaxy-Display) */
-.hud-metric {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  overflow: hidden;
-}
-
-.hud-metric--arrival {
-  width: 60px;
-}
-.hud-metric--dist {
-  width: 60px;
-}
-.hud-metric--speed {
-  width: 80px;
-}
-
-/* Label – wird auch von .minimap-galaxy-display genutzt */
-.hud-metric-label {
-  font-size: 9px;
-  letter-spacing: 1.8px;
-  color: rgba(232, 192, 64, 0.55);
-  text-transform: uppercase;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-/* Wert – wird auch von .minimap-galaxy-display genutzt */
-.hud-metric-value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.05em;
-  line-height: 1.1;
-  white-space: nowrap;
 }
 
 /* ── Boss-Suche ── */

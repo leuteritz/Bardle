@@ -1340,4 +1340,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:forest',
   // ChampionStarTimerComponent
   'game-icons:comet-spark',
+  // Minimap HUD stats
+  'game-icons:sands-of-time',  // Arrival time countdown
+  'game-icons:winged-leg',     // Travel speed
+  'game-icons:radar-sweep',    // Remaining distance
 ])
