@@ -11,6 +11,7 @@ import {
   BOTTOM_FRAME_STROKE_WOOD,
   BOTTOM_FRAME_STROKE_GRAIN,
   BOTTOM_FRAME_STROKE_SHEEN,
+  CHAMP_TOOLTIP_MAX_VISIBLE,
 } from '../../config/constants'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
@@ -46,6 +47,50 @@ const champBadgeStyle = computed(() => {
 
 function openTeamTab() {
   uiStore.openBardModal()
+  uiStore.setBardTab('team')
+}
+
+// ── Champion badge tooltip ────────────────────────────────────────────────────
+const champBadgeRef = ref<HTMLButtonElement | null>(null)
+const showChampTooltip = ref(false)
+const champTooltipStyle = ref<{ left: string; top: string; transform: string }>({ left: '0px', top: '0px', transform: '' })
+let champHideTimer: ReturnType<typeof setTimeout> | null = null
+
+const champTooltipList = computed(() =>
+  battleStore.newlyUnlockedChampions.slice(0, CHAMP_TOOLTIP_MAX_VISIBLE),
+)
+const champTooltipExtra = computed(() =>
+  Math.max(0, battleStore.newlyUnlockedChampions.length - CHAMP_TOOLTIP_MAX_VISIBLE),
+)
+
+function onChampBadgeEnter() {
+  if (champHideTimer) { clearTimeout(champHideTimer); champHideTimer = null }
+  if (champBadgeRef.value) {
+    const rect = champBadgeRef.value.getBoundingClientRect()
+    champTooltipStyle.value = {
+      left: `${rect.right + 14}px`,
+      top: `${rect.top + rect.height / 2}px`,
+      transform: 'translateY(-50%)',
+    }
+  }
+  showChampTooltip.value = true
+}
+
+function onChampBadgeLeave() {
+  champHideTimer = setTimeout(() => { showChampTooltip.value = false }, 120)
+}
+
+function onChampTooltipEnter() {
+  if (champHideTimer) { clearTimeout(champHideTimer); champHideTimer = null }
+}
+
+function onChampTooltipLeave() {
+  champHideTimer = setTimeout(() => { showChampTooltip.value = false }, 120)
+}
+
+function openChampionInShop(name: string) {
+  showChampTooltip.value = false
+  uiStore.pendingChampionSearch = name
   uiStore.setBardTab('team')
 }
 
@@ -310,10 +355,13 @@ onUnmounted(() => resizeObserver?.disconnect())
       <Transition name="header-badge">
         <button
           v-if="championBadgeCount > 0"
+          ref="champBadgeRef"
           class="header-notif-badge header-notif-badge--champion"
           :style="champBadgeStyle"
           :aria-label="`${championBadgeCount} new champion(s)`"
           @click.stop="openTeamTab"
+          @mouseenter="onChampBadgeEnter"
+          @mouseleave="onChampBadgeLeave"
         >{{ championBadgeCount }}</button>
       </Transition>
     </div>
@@ -348,6 +396,36 @@ onUnmounted(() => resizeObserver?.disconnect())
           <span class="xp-tt__unit">Chimes</span>
         </div>
         <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % to next Level</div>
+      </div>
+    </Transition>
+
+    <Transition name="champ-tt">
+      <div
+        v-if="showChampTooltip && champTooltipList.length > 0"
+        class="champ-tt"
+        :style="champTooltipStyle"
+        @mouseenter="onChampTooltipEnter"
+        @mouseleave="onChampTooltipLeave"
+      >
+        <div class="champ-tt__caret" />
+        <div class="champ-tt__header">
+          <span class="champ-tt__star">★</span>
+          <span class="champ-tt__title">New Champions</span>
+          <span class="champ-tt__star">★</span>
+        </div>
+        <ul class="champ-tt__list">
+          <li
+            v-for="name in champTooltipList"
+            :key="name"
+            class="champ-tt__item"
+            @click="openChampionInShop(name)"
+          >
+            <span class="champ-tt__dot" />{{ name }}
+          </li>
+          <li v-if="champTooltipExtra > 0" class="champ-tt__item champ-tt__item--more">
+            ...+{{ champTooltipExtra }} more
+          </li>
+        </ul>
       </div>
     </Transition>
   </Teleport>
@@ -883,6 +961,126 @@ onUnmounted(() => resizeObserver?.disconnect())
 .header-badge-leave-to {
   transform: translateX(-50%) scale(0);
   opacity: 0;
+}
+
+/* ================================================================
+   CHAMPION BADGE TOOLTIP
+   ================================================================ */
+.champ-tt {
+  position: fixed;
+  z-index: 200;
+  min-width: 160px;
+  max-width: 220px;
+  background: #111008;
+  border: 2px solid #0891b2;
+  border-radius: 4px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.85),
+    0 0 12px rgba(6, 182, 212, 0.2),
+    inset 0 0 0 1px #0369a1;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.champ-tt__caret {
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #0891b2;
+}
+
+.champ-tt__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px 4px;
+  background: #1e1006;
+  border-bottom: 2px solid #0891b2;
+}
+
+.champ-tt__title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.champ-tt__star {
+  color: #e8c040;
+  font-size: 9px;
+}
+
+.champ-tt__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.champ-tt__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #c8e8f0;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, text-shadow 0.1s;
+}
+
+.champ-tt__item:hover {
+  background: rgba(6, 182, 212, 0.1);
+  color: #e8c040;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.45);
+}
+
+.champ-tt__item--more {
+  color: rgba(200, 232, 240, 0.38);
+  font-size: 11px;
+  cursor: default;
+  font-style: italic;
+}
+
+.champ-tt__item--more:hover {
+  background: none;
+  color: rgba(200, 232, 240, 0.38);
+  text-shadow: none;
+}
+
+.champ-tt__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #0891b2;
+  flex-shrink: 0;
+}
+
+.champ-tt-enter-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.champ-tt-leave-active {
+  transition:
+    opacity 0.12s ease,
+    transform 0.1s ease;
+}
+
+.champ-tt-enter-from {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-6px);
+}
+
+.champ-tt-leave-to {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-4px);
 }
 
 </style>

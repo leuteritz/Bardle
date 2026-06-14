@@ -1073,6 +1073,9 @@ export const TOAST_DURATION_MS = 800
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
+// Champion badge tooltip — max visible entries before "+N more" overflow
+export const CHAMP_TOOLTIP_MAX_VISIBLE = 5
+
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
 // to ensure uniqueness across the codebase.

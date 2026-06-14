@@ -230,6 +230,7 @@ import { ref, onMounted, onUnmounted, defineComponent, computed, watch } from 'v
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
+import { useUiStore } from '../../../stores/uiStore'
 import RpgNotifyBadge from '../../ui/RpgNotifyBadge.vue'
 import { truncate, formatNumber } from '../../../config/numberFormat'
 import { fetchChampionNames } from '../../../utils/champions'
@@ -255,12 +256,24 @@ export default defineComponent({
     const championNames = ref<string[]>([])
     const battleStore = useBattleStore()
     const inventoryStore = useInventoryStore()
+    const uiStore = useUiStore()
     const { showToast } = useActionToast()
     const loadError = ref<string | null>(null)
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
     const activeTrait = ref<string>('all')
     const traitFilterOpen = ref(false)
+
+    watch(
+      () => uiStore.pendingChampionSearch,
+      (name) => {
+        if (name) {
+          searchQuery.value = name
+          uiStore.clearPendingChampionSearch()
+        }
+      },
+      { immediate: true },
+    )
 
     watch(
       () => props.initialRole,
