@@ -9,8 +9,16 @@
             v-model="searchQuery"
             type="text"
             placeholder="Champion oder Trait suchen..."
-            class="rpg-search w-full pl-9 pr-4 py-2.5"
+            class="rpg-search w-full pl-9 pr-9 py-2.5"
           />
+          <button
+            class="search-clear-btn"
+            :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
+            aria-label="Clear search"
+            @click="resetSearch"
+            @keydown.enter.prevent="resetSearch"
+            @keydown.space.prevent="resetSearch"
+          >✕</button>
         </div>
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
@@ -30,7 +38,7 @@
             v-show="!hasSearchTraitMatch"
             class="trait-chip"
             :class="{ 'trait-chip--active': activeTrait === 'all' }"
-            @click="activeTrait = 'all'"
+            @click="resetSearch"
           >ALL</button>
 
           <div class="filter-group-label">Traits</div>
@@ -296,6 +304,11 @@ export default defineComponent({
       emit('roleChange', role)
     }
 
+    function resetSearch() {
+      searchQuery.value = ''
+      activeTrait.value = 'all'
+    }
+
     async function loadChampions() {
       try {
         championNames.value = await fetchChampionNames()
@@ -533,6 +546,7 @@ const availableTraits = computed(() => {
       getLockedTooltip,
       getCardClass,
       setActiveRole,
+      resetSearch,
       traitFilterOpen,
       isNew,
       hoveredChampion,
@@ -1057,6 +1071,44 @@ const availableTraits = computed(() => {
     animation: none !important;
     transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
   }
+}
+
+/* ── Search clear button ── */
+.search-clear-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) scale(0.7);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(122, 80, 32, 0);
+  opacity: 0;
+  pointer-events: none;
+  border-radius: var(--bp-radius);
+  font-size: 0.75rem;
+  z-index: 5;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.search-clear-btn--visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  pointer-events: auto;
+  color: rgba(200, 144, 64, 0.55);
+}
+.search-clear-btn--visible:hover {
+  color: #e8c040;
+  background: rgba(122, 80, 32, 0.18);
+}
+.search-clear-btn--visible:focus-visible {
+  outline: 1px solid #c89040;
+  outline-offset: -2px;
 }
 
 </style>
