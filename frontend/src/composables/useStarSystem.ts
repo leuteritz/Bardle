@@ -13,9 +13,11 @@ import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
 import type { LabelData, PlanetType, StarType } from '../types'
 
-const PLANET_SIZE_CHAMPION = 44
-const PLANET_SIZE_GALAXY_BOSS = 52
-const PLANET_SIZE_NORMAL = 36
+const PLANET_SIZE_CHAMPION = 12
+const PLANET_SIZE_GALAXY_BOSS = 14
+const PLANET_SIZE_NORMAL = 10
+
+export const livePlanetAngles = new Map<string, number>()
 const VANISH_DURATION_MS = 800
 const BEHIND_FADE_BAND = 0.12
 const BEHIND_THRESHOLD = -0.05
@@ -385,6 +387,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
         let pAngle = planetAngles.get(slot.planetId) ?? slot.orbitAngle
         pAngle += slot.orbitDirection * slot.orbitSpeed * dt
         planetAngles.set(slot.planetId, pAngle)
+        livePlanetAngles.set(slot.planetId, pAngle)
 
         const FLY = 2.5
         const targetSlotRx = slot.orbitRx * sunScale * orbitScaleVal
@@ -502,6 +505,9 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
     )
     for (const id of activePlanetPositions.keys()) {
       if (!allActiveSlots.has(id)) activePlanetPositions.delete(id)
+    }
+    for (const id of livePlanetAngles.keys()) {
+      if (!allActiveSlots.has(id)) livePlanetAngles.delete(id)
     }
     for (const id of planetSavedAt.keys()) {
       if (!starGroupStore.activeStars.some((s) => s.planetSlots.some((p) => p.planetId === id))) {

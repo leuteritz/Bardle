@@ -11,6 +11,10 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { livePlanetAngles } from '@/composables/useStarSystem'
+import type { StarPlanetSlot } from '@/stores/starGroupStore'
+import type { PlanetType } from '@/types'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '@/config/constants'
 
@@ -122,6 +126,17 @@ const PLANET_PALETTES = [
     ring: false,
   },
 ]
+
+const PLANET_TYPE_PALETTES: Record<PlanetType, typeof STAR_PALETTE> = {
+  'rocky':     { base: '#8a7060', shadow: '#2a1808', highlight: '#b8a090', atmo: 'rgba(130,100,80,0.4)',   ring: false },
+  'ice':       { base: '#90c8f0', shadow: '#104060', highlight: '#d0f0ff', atmo: 'rgba(80,160,240,0.4)',  ring: false },
+  'gas-giant': { base: '#c87941', shadow: '#4a2010', highlight: '#e8aa70', atmo: 'rgba(200,120,60,0.45)', ring: false },
+  'lava':      { base: '#e05020', shadow: '#600800', highlight: '#ff8050', atmo: 'rgba(240,80,30,0.5)',   ring: false },
+  'ocean':     { base: '#3080c0', shadow: '#082040', highlight: '#60c0f0', atmo: 'rgba(40,120,200,0.4)',  ring: false },
+  'desert':    { base: '#c8a048', shadow: '#604010', highlight: '#f0d080', atmo: 'rgba(200,160,60,0.4)',  ring: false },
+  'jungle':    { base: '#50a840', shadow: '#102808', highlight: '#90e870', atmo: 'rgba(60,180,50,0.4)',   ring: false },
+  'ringed':    { base: '#9060c0', shadow: '#200840', highlight: '#c090f0', atmo: 'rgba(140,80,220,0.45)', ring: true  },
+}
 
 function drawPlanet(
   ctx: CanvasRenderingContext2D,
@@ -290,6 +305,17 @@ export default defineComponent({
     const galaxyStore = useGalaxyStore()
     const gameStore = useGameStore()
     const starGroupStore = useStarGroupStore()
+    const planetBossStore = usePlanetBossStore()
+
+    const championImageCache = new Map<string, HTMLImageElement>()
+
+    function getOrLoadChampionImage(name: string): HTMLImageElement | null {
+      if (championImageCache.has(name)) return championImageCache.get(name)!
+      const img = new Image()
+      img.src = `/img/champion/${name}.jpg`
+      img.onload = () => championImageCache.set(name, img)
+      return null
+    }
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
     const imgEl = ref<HTMLImageElement | null>(null)
@@ -709,6 +735,40 @@ export default defineComponent({
       }
     }
 
+    function drawChampionPortrait(
+      ctx: CanvasRenderingContext2D,
+      px: number,
+      py: number,
+      r: number,
+      slot: { planetId?: string; isChampionPlanet?: boolean },
+      alpha: number,
+    ) {
+      if (!slot.isChampionPlanet || !slot.planetId) return
+      const boss = planetBossStore.activeBosses.find((b) => b.planetId === slot.planetId)
+      if (!boss?.homePlanetChampion) return
+      const img = getOrLoadChampionImage(boss.homePlanetChampion)
+      if (!img) return
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.beginPath()
+      ctx.arc(px, py, r * 0.88, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.drawImage(img, px - r, py - r, r * 2, r * 2)
+      ctx.restore()
+      // gold ring around champion planet
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.beginPath()
+      ctx.arc(px, py, r, 0, Math.PI * 2)
+      ctx.strokeStyle = '#e8c040'
+      ctx.lineWidth = 1.2
+      ctx.shadowColor = 'rgba(232,192,64,0.8)'
+      ctx.shadowBlur = 4
+      ctx.stroke()
+      ctx.shadowBlur = 0
+      ctx.restore()
+    }
+
     function drawArrivalView(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const cx = w / 2
       const cy = h / 2
@@ -782,10 +842,20 @@ export default defineComponent({
       const galaxySeed = galaxyStore.currentGalaxy * 10007
       const rawSlots = championStar?.planetSlots.filter((s) => !s.cleared) ?? []
 
-      type ArrivalSlot = { orbitDirection: 1 | -1 }
+      type ArrivalSlot = {
+        orbitDirection: 1 | -1
+        planetId?: string
+        type?: PlanetType
+        isChampionPlanet?: boolean
+      }
       let slots: ArrivalSlot[]
       if (rawSlots.length > 0) {
-        slots = rawSlots as ArrivalSlot[]
+        slots = (rawSlots as StarPlanetSlot[]).map((s) => ({
+          orbitDirection: s.orbitDirection,
+          planetId: s.planetId,
+          type: s.type,
+          isChampionPlanet: s.isChampionPlanet,
+        }))
       } else {
         const previewRng = seededRng(
           galaxyStore.currentGalaxy * 997 + galaxyStore.starsRescued * 31,
@@ -798,11 +868,22 @@ export default defineComponent({
 
       // Compute planet positions for this frame (speed boosted when hovered)
       const planetData = slots.map((slot, idx) => {
+        const isChamp = slot.isChampionPlanet ?? false
+        const planetR = isChamp ? 18 : 6 + idx * 2.5
+
         const orbitRx = ARRIVAL_STAR_R + 28 + idx * 26
         const orbitRy = orbitRx * 0.48
-        const planetR = 6 + idx * 2.5
-        const speed = slot.orbitDirection * (0.32 + idx * 0.15) * hoverSpeedMult
-        const angle = (nowMs / 1000) * speed + idx * Math.PI * 0.67
+
+        // Sync with main UI: read live angle from useStarSystem; fallback to time-based
+        const liveAngle = slot.planetId ? livePlanetAngles.get(slot.planetId) : undefined
+        let angle: number
+        if (liveAngle !== undefined) {
+          angle = liveAngle
+        } else {
+          const speed = slot.orbitDirection * (0.32 + idx * 0.15) * hoverSpeedMult
+          angle = (nowMs / 1000) * speed + idx * Math.PI * 0.67
+        }
+
         return {
           px: cx + Math.cos(angle) * orbitRx,
           py: cy + Math.sin(angle) * orbitRy,
@@ -830,10 +911,13 @@ export default defineComponent({
       // Behind-planets (py < cy) drawn first at reduced opacity (brighter when hovered)
       planetData.forEach(({ px, py, planetR, idx }) => {
         if (py >= cy) return
+        const slot = slots[idx]
+        const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
         ctx.save()
         ctx.globalAlpha = hoverPlanetAlpha
-        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued', false, typePal)
         ctx.restore()
+        drawChampionPortrait(ctx, px, py, planetR, slot, hoverPlanetAlpha)
       })
 
       // Star body (on top of behind-planets, below foreground-planets)
@@ -864,7 +948,10 @@ export default defineComponent({
       // Foreground planets (py >= cy) at full opacity
       planetData.forEach(({ px, py, planetR, idx }) => {
         if (py < cy) return
-        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
+        const slot = slots[idx]
+        const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
+        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued', false, typePal)
+        drawChampionPortrait(ctx, px, py, planetR, slot, 1)
       })
 
     }

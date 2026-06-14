@@ -84,7 +84,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
-          :championImage="getChampionImageForPlanet(p) ?? undefined"
+          :championImage="undefined"
         />
       </template>
 
@@ -101,7 +101,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
-          :championImage="getChampionImageForPlanet(p) ?? undefined"
+          :championImage="undefined"
         />
       </template>
     </div>
@@ -164,7 +164,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
-          :championImage="getChampionImageForPlanet(p) ?? undefined"
+          :championImage="undefined"
         />
       </template>
 
@@ -181,7 +181,7 @@
           :isGalaxyBoss="p.isGalaxyBoss"
           :labelData="null"
           :animState="p.animState"
-          :championImage="getChampionImageForPlanet(p) ?? undefined"
+          :championImage="undefined"
         />
       </template>
 
