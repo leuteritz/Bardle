@@ -736,15 +736,25 @@ export default defineComponent({
       const championStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
       const [sr, sg, sb] = championStar?.starColor ?? [255, 160, 60]
 
+      // Hover state — drives visual enhancements
+      const isHovered = !!championStar && starGroupStore.hoveredTimerStarId === championStar.id
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const hoverGlowMult = isHovered ? 1.18 : 1.0
+      const hoverBodyMult = isHovered ? 1.06 : 1.0
+      const hoverBlurMult = isHovered ? 1.35 : 1.0
+      const hoverAlphaBoost = isHovered ? 0.12 : 0.0
+      const hoverSpeedMult = isHovered && !reducedMotion ? 1.55 : 1.0
+      const hoverPlanetAlpha = isHovered ? 0.62 : 0.45
+
       // Pulse animation
       const pulse = 0.5 + 0.5 * Math.sin(nowMs / 900)
       const ARRIVAL_STAR_R = 46
 
       // Outer corona (large diffuse glow)
-      const coroR = ARRIVAL_STAR_R * (3.6 + 0.4 * pulse)
+      const coroR = ARRIVAL_STAR_R * (3.6 + 0.4 * pulse) * hoverGlowMult
       const outerCorona = ctx.createRadialGradient(cx, cy, ARRIVAL_STAR_R * 0.85, cx, cy, coroR)
-      outerCorona.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, 0.28)`)
-      outerCorona.addColorStop(0.45, `rgba(${sr}, ${Math.max(0, sg - 40)}, 0, 0.08)`)
+      outerCorona.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, ${0.28 + hoverAlphaBoost})`)
+      outerCorona.addColorStop(0.45, `rgba(${sr}, ${Math.max(0, sg - 40)}, 0, ${0.08 + hoverAlphaBoost * 0.5})`)
       outerCorona.addColorStop(1, 'rgba(0, 0, 0, 0)')
       ctx.beginPath()
       ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
@@ -761,7 +771,7 @@ export default defineComponent({
         ARRIVAL_STAR_R * 2.2,
       )
       innerHalo.addColorStop(0, 'rgba(255, 230, 190, 0.6)')
-      innerHalo.addColorStop(0.4, `rgba(${sr}, ${sg}, ${sb}, 0.25)`)
+      innerHalo.addColorStop(0.4, `rgba(${sr}, ${sg}, ${sb}, ${0.25 + hoverAlphaBoost})`)
       innerHalo.addColorStop(1, 'rgba(0, 0, 0, 0)')
       ctx.beginPath()
       ctx.arc(cx, cy, ARRIVAL_STAR_R * 2.2, 0, Math.PI * 2)
@@ -786,12 +796,12 @@ export default defineComponent({
         }))
       }
 
-      // Compute planet positions for this frame
+      // Compute planet positions for this frame (speed boosted when hovered)
       const planetData = slots.map((slot, idx) => {
         const orbitRx = ARRIVAL_STAR_R + 28 + idx * 26
         const orbitRy = orbitRx * 0.48
         const planetR = 6 + idx * 2.5
-        const speed = slot.orbitDirection * (0.32 + idx * 0.15)
+        const speed = slot.orbitDirection * (0.32 + idx * 0.15) * hoverSpeedMult
         const angle = (nowMs / 1000) * speed + idx * Math.PI * 0.67
         return {
           px: cx + Math.cos(angle) * orbitRx,
@@ -803,10 +813,10 @@ export default defineComponent({
         }
       })
 
-      // Orbit ellipses (dashed, subtle)
+      // Orbit ellipses (dashed, subtle — slightly more visible when hovered)
       planetData.forEach(({ orbitRx, orbitRy }) => {
         ctx.save()
-        ctx.globalAlpha = 0.1
+        ctx.globalAlpha = isHovered ? 0.18 : 0.1
         ctx.beginPath()
         ctx.ellipse(cx, cy, orbitRx, orbitRy, 0, 0, Math.PI * 2)
         ctx.strokeStyle = 'rgba(140, 160, 220, 1)'
@@ -817,17 +827,17 @@ export default defineComponent({
         ctx.restore()
       })
 
-      // Behind-planets (py < cy) drawn first at reduced opacity
+      // Behind-planets (py < cy) drawn first at reduced opacity (brighter when hovered)
       planetData.forEach(({ px, py, planetR, idx }) => {
         if (py >= cy) return
         ctx.save()
-        ctx.globalAlpha = 0.45
+        ctx.globalAlpha = hoverPlanetAlpha
         drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued')
         ctx.restore()
       })
 
       // Star body (on top of behind-planets, below foreground-planets)
-      const pulseGlow = 1 + 0.12 * pulse
+      const pulseGlow = (1 + 0.12 * pulse) * hoverBodyMult
       const bodyGrad = ctx.createRadialGradient(
         cx - ARRIVAL_STAR_R * 0.28,
         cy - ARRIVAL_STAR_R * 0.25,
@@ -844,7 +854,7 @@ export default defineComponent({
       bodyGrad.addColorStop(0.65, `rgb(${sr}, ${sg}, ${Math.max(0, sb - 20)})`)
       bodyGrad.addColorStop(1, `rgb(${Math.max(0, sr - 90)}, ${Math.max(0, sg - 70)}, 0)`)
       ctx.shadowColor = `rgba(${sr}, ${sg}, ${sb}, 0.9)`
-      ctx.shadowBlur = ARRIVAL_STAR_R * (1.6 + 0.3 * pulse)
+      ctx.shadowBlur = ARRIVAL_STAR_R * (1.6 + 0.3 * pulse) * hoverBlurMult
       ctx.beginPath()
       ctx.arc(cx, cy, ARRIVAL_STAR_R * pulseGlow, 0, Math.PI * 2)
       ctx.fillStyle = bodyGrad

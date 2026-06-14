@@ -8,6 +8,7 @@
         :class="{
           'timer-bar-row--cursed': entry.isCursed,
           'timer-bar-row--champion': entry.isChampion,
+          'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="{
           ...(entry.isCursed ? { '--curse-ratio': entry.curseRatio } : {}),
@@ -315,12 +316,14 @@ const sortedEntries = computed<BarEntry[]>(() => {
   pointer-events: auto;
 }
 
-.timer-bar-row:hover {
+.timer-bar-row:hover,
+.timer-bar-row.star-hover-active {
   outline: 1px solid rgba(255, 200, 80, 0.22);
   outline-offset: 1px;
 }
 
-.timer-bar-row:hover .bar-fill {
+.timer-bar-row:hover .bar-fill,
+.timer-bar-row.star-hover-active .bar-fill {
   filter: brightness(1.18);
 }
 
@@ -328,7 +331,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
   border-radius: 3px;
 }
 
-.timer-bar-row--champion:hover {
+.timer-bar-row--champion:hover,
+.timer-bar-row--champion.star-hover-active {
   outline: 1px solid var(--champ-outline, rgba(100, 160, 255, 0.5));
   outline-offset: 1px;
   filter: brightness(1.12);

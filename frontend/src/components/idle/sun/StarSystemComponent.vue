@@ -140,8 +140,8 @@
           :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="starWrapStyle(star)"
           @click="handleStarClick(star)"
-          @mouseenter="hoveredStarId = star.id"
-          @mouseleave="hoveredStarId = null"
+          @mouseenter="hoveredStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
+          @mouseleave="hoveredStarId = null; starGroupStore.setHoveredTimerStar(null)"
         >
           <div
             class="star-body"
@@ -243,8 +243,8 @@
           :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="rewardSummaryStyle(star)"
           @click="handleStarClick(star)"
-          @mouseenter="hoveredSummaryStarId = star.id"
-          @mouseleave="hoveredSummaryStarId = null"
+          @mouseenter="hoveredSummaryStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
+          @mouseleave="hoveredSummaryStarId = null; starGroupStore.setHoveredTimerStar(null)"
         >
           <div class="summary-inner">
             <div v-if="getStarRewardSummary(star).champion" class="summary-champion" :style="getChampionRoleStyles(getStarRewardSummary(star).champion!.name)">

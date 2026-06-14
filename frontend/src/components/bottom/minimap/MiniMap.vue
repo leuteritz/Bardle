@@ -39,6 +39,16 @@
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
 
+          <!-- ── Minimap-Stern Interaktionsbereich (Arrival-View) ── -->
+          <div
+            v-if="isArrived && championStar"
+            class="minimap-star-hitarea"
+            :class="{ 'star-hover-active': starGroupStore.hoveredTimerStarId === championStar.id }"
+            @mouseenter="onMinimapStarEnter"
+            @mouseleave="onMinimapStarLeave"
+            @click="onMinimapStarClick"
+          />
+
           <!-- ── Boss-Suche Label ── -->
           <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
 
@@ -93,6 +103,29 @@ export default defineComponent({
         galaxyStore.isComplete,
     )
 
+    const isArrived = computed(
+      () =>
+        galaxyStore.championTravelState === 'champion_available' ||
+        galaxyStore.championTravelState === 'champion_spawned',
+    )
+
+    const championStar = computed(
+      () => starGroupStore.activeStars.find((s) => s.starType === 'champion') ?? null,
+    )
+
+    function onMinimapStarEnter() {
+      if (championStar.value) starGroupStore.setHoveredTimerStar(championStar.value.id)
+    }
+
+    function onMinimapStarLeave() {
+      starGroupStore.setHoveredTimerStar(null)
+    }
+
+    function onMinimapStarClick() {
+      if (!championStar.value || starGroupStore.starFightModalOpen) return
+      starGroupStore.openStarFightModal(championStar.value.id)
+    }
+
     const ARC_R = HUD_PANEL_ARC_R
     const framePath = `M 0,0 L ${438 - ARC_R},0 A ${ARC_R},${ARC_R} 0 0,1 438,${ARC_R} L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
@@ -101,6 +134,11 @@ export default defineComponent({
       galaxyStore,
       starGroupStore,
       framePath,
+      isArrived,
+      championStar,
+      onMinimapStarEnter,
+      onMinimapStarLeave,
+      onMinimapStarClick,
     }
   },
 })
@@ -171,6 +209,50 @@ export default defineComponent({
   height: 100%;
   pointer-events: none;
   z-index: 2;
+}
+
+/* ── Minimap-Stern Hit-Area (Arrival View) ── */
+.minimap-star-hitarea {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 112px;
+  height: 112px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 4;
+  pointer-events: auto;
+  box-shadow: 0 0 0 0 rgba(255, 200, 80, 0);
+  transition: box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.minimap-star-hitarea:hover,
+.minimap-star-hitarea.star-hover-active {
+  animation: minimap-star-ring-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes minimap-star-ring-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(255, 200, 80, 0.55),
+      0 0 18px 6px rgba(255, 180, 40, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(255, 220, 80, 0.35),
+      0 0 32px 10px rgba(255, 180, 40, 0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .minimap-star-hitarea:hover,
+  .minimap-star-hitarea.star-hover-active {
+    animation: none;
+    box-shadow:
+      0 0 0 3px rgba(255, 200, 80, 0.55),
+      0 0 18px 6px rgba(255, 180, 40, 0.3);
+  }
 }
 
 /* ── Boss-Suche ── */
