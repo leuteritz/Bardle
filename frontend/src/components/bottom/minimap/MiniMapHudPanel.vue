@@ -3,8 +3,10 @@
     <!-- Row 1: icon + arrival value + time unit -->
     <div class="hud-arrival">
       <Icon icon="game-icons:sands-of-time" width="24" height="24" style="color: rgba(232, 192, 64, 0.55)" />
-      <span class="hud-arrival-value">{{ countdown }}</span>
-      <span class="hud-unit">{{ countdownUnit }}</span>
+      <div class="hud-arrival-inner">
+        <span class="hud-arrival-value">{{ countdown }}</span>
+        <span class="hud-unit">{{ countdownUnit }}</span>
+      </div>
     </div>
 
     <!-- Row 2: icon + value + unit pairs inline -->
@@ -12,14 +14,17 @@
       <div class="hud-secondary">
         <div class="hud-sm-metric">
           <Icon icon="game-icons:winged-leg" width="24" height="24" style="color: rgba(232, 192, 64, 0.4)" />
-          <span class="hud-sm-value">{{ speedDisplay }}</span>
-          <span class="hud-sm-unit">LY/s</span>
+          <div class="hud-sm-val-unit">
+            <span class="hud-sm-value">{{ speedDisplay }}</span>
+            <span class="hud-sm-unit">LY/s</span>
+          </div>
         </div>
-        <div class="hud-sm-sep" />
         <div class="hud-sm-metric">
           <Icon icon="game-icons:radar-sweep" width="24" height="24" style="color: rgba(232, 192, 64, 0.4)" />
-          <span class="hud-sm-value">{{ remainingDistDisplay }}</span>
-          <span class="hud-sm-unit">LY</span>
+          <div class="hud-sm-val-unit">
+            <span class="hud-sm-value">{{ remainingDistDisplay }}</span>
+            <span class="hud-sm-unit">LY</span>
+          </div>
         </div>
       </div>
     </template>
@@ -138,6 +143,15 @@ export default defineComponent({
   gap: 8px;
 }
 
+.hud-arrival-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 5px;
+  font-size: 2.4rem;
+  min-width: 7ch;
+}
+
 .hud-arrival-value {
   font-size: 2.4rem;
   font-weight: 700;
@@ -155,7 +169,7 @@ export default defineComponent({
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 10px;
+  gap: 20px;
 }
 
 .hud-sm-metric {
@@ -165,10 +179,13 @@ export default defineComponent({
   gap: 6px;
 }
 
-.hud-sm-sep {
-  width: 1px;
-  background: rgba(122, 78, 32, 0.3);
-  align-self: stretch;
+.hud-sm-val-unit {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 1.15rem;
+  min-width: 4.5ch;
 }
 
 .hud-sm-value {
@@ -189,7 +206,6 @@ export default defineComponent({
   text-transform: uppercase;
   letter-spacing: 0.08em;
   white-space: nowrap;
-  align-self: flex-end;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
@@ -200,7 +216,6 @@ export default defineComponent({
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
-  align-self: flex-end;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 </style>
