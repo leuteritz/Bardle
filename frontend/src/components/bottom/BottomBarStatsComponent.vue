@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
@@ -66,6 +66,8 @@ const {
   battlePhaseStartTimestamp,
   resultPhaseStartTimestamp,
   searchingPhaseStartTimestamp,
+  lastLpChange,
+  lastAutoBattleResult,
 } = storeToRefs(battleStore)
 
 const now = ref(Date.now())
@@ -79,6 +81,20 @@ onUnmounted(() => {
   if (_nowTicker) clearInterval(_nowTicker)
 })
 
+// ── Phase tracking for transition flash animation ──────────────────────
+type PhaseKey = 'idle' | 'searching' | 'battle' | 'honor'
+
+const phaseKey = computed<PhaseKey>(() => {
+  if (!isAutoBattleInitialized.value) return 'idle'
+  if (showAutoBattleResult.value) return 'honor'
+  if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) return 'battle'
+  if (searchingPhaseStartTimestamp.value > 0 && battlePhaseStartTimestamp.value === 0)
+    return 'searching'
+  return 'idle'
+})
+
+
+// ── Game-state display (timer + phase label) ───────────────────────────
 const gameStateDisplay = computed(() => {
   const _now = now.value
   if (
@@ -92,33 +108,45 @@ const gameStateDisplay = computed(() => {
       .padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
     return {
-      icon: GAME_STATE.SEARCHING.icon,
+      label: GAME_STATE.SEARCHING.label,
       text: `${min}:${sec}`,
       color: GAME_STATE.SEARCHING.color,
     }
   }
   if (!isAutoBattleInitialized.value) {
-    return { icon: '—', text: '', color: '#6a4418' }
+    return { label: '', text: '—', color: '#6a4418' }
   }
   if (showAutoBattleResult.value) {
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
-    const min = Math.floor(elapsed / 60)
-      .toString()
-      .padStart(2, '00')
+    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
-    return { icon: '/img/star.png', text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
+    return { label: GAME_STATE.HONOR.label, text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
   }
   if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
     const min = Math.floor(battleTime.value / 60)
       .toString()
       .padStart(2, '0')
     const sec = (battleTime.value % 60).toString().padStart(2, '0')
-    const { icon, label, color } = GAME_STATE.BATTLE
-    return { icon, text: `${label} ${min}:${sec}`, color }
+    const { label, color } = GAME_STATE.BATTLE
+    return { label, text: `${min}:${sec}`, color }
   }
-  return { icon: '—', text: '', color: '#6a4418' }
+  return { label: '', text: '—', color: '#6a4418' }
 })
 
+// ── Last-result badge (shown during honor phase) ───────────────────────
+const resultBadge = computed(() => {
+  if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null
+  const won = lastAutoBattleResult.value.won
+  const lp = lastLpChange.value
+  return {
+    label: won ? 'W' : 'L',
+    lp: lp >= 0 ? `+${lp}` : `${lp}`,
+    color: won ? '#74d448' : '#cc6050',
+    glow: won ? 'rgba(116, 212, 72, 0.6)' : 'rgba(204, 96, 80, 0.6)',
+  }
+})
+
+// ── Rank ──────────────────────────────────────────────────────────────
 const rankLabel = computed(() => {
   const { tier, division } = currentRank.value
   if (tier === 'Master' || tier === 'Grandmaster' || tier === 'Challenger') return tier
@@ -127,7 +155,6 @@ const rankLabel = computed(() => {
 
 const lpValue = computed(() => currentRank.value.lp)
 
-// ── Rank Border Image ──────────────────────────────────────────────────────
 const RANK_IMAGE_MAP: Record<string, string> = {
   Iron: '/img/RankBorder/RankIron.png',
   Bronze: '/img/RankBorder/RankBronze.png',
@@ -141,36 +168,29 @@ const RANK_IMAGE_MAP: Record<string, string> = {
   Challenger: '/img/RankBorder/RankChallenger.png',
 }
 
-// Rank-specific glow colors matching each LoL rank aesthetic
 const RANK_GLOW_MAP: Record<string, string> = {
-  Iron: '#a8a09a', // Gray-brown / weathered metal
-  Bronze: '#cd7f4f', // Copper orange
-  Silver: '#b8cdd6', // Cool silver-gray
-  Gold: '#f0b429', // Rich gold
-  Platinum: '#4dd0b8', // Turquoise teal
-  Emerald: '#4caf76', // Emerald green
-  Diamond: '#6ec6f0', // Ice blue
-  Master: '#b566e8', // Violet
-  Grandmaster: '#e84040', // Deep red
-  Challenger: '#a8d8f0', // Light cyan
+  Iron: '#a8a09a',
+  Bronze: '#cd7f4f',
+  Silver: '#b8cdd6',
+  Gold: '#f0b429',
+  Platinum: '#4dd0b8',
+  Emerald: '#4caf76',
+  Diamond: '#6ec6f0',
+  Master: '#b566e8',
+  Grandmaster: '#e84040',
+  Challenger: '#a8d8f0',
 }
 
-const rankImage = computed(() => {
-  const tier = currentRank.value.tier
-  return RANK_IMAGE_MAP[tier] ?? '/img/RankBorder/RankIron.png'
-})
+const rankImage = computed(() => RANK_IMAGE_MAP[currentRank.value.tier] ?? '/img/RankBorder/RankIron.png')
 
-const rankGlowColor = computed(() => {
-  const tier = currentRank.value.tier
-  return RANK_GLOW_MAP[tier] ?? '#a8a09a'
-})
+const rankGlowColor = computed(() => RANK_GLOW_MAP[currentRank.value.tier] ?? '#a8a09a')
 
 const rankIconFilter = computed(() => {
   const c = rankGlowColor.value
   return `drop-shadow(0 0 4px ${c}) drop-shadow(0 0 8px ${c}80)`
 })
-// ──────────────────────────────────────────────────────────────────────────
 
+// ── Win chance ────────────────────────────────────────────────────────
 const liveWinChance = computed<number | null>(() => {
   if (!isAutoBattleInitialized.value) return null
 
@@ -239,26 +259,37 @@ const winChanceColor = computed(() => {
     <!-- CENTER: Title -->
     <div class="title-center">BARDLE</div>
 
-    <!-- RIGHT: Stats – mirrored: value | label | image -->
+    <!-- RIGHT: Stats -->
     <div
       class="stats-right"
       role="button"
       tabindex="0"
-      title="Kampf-Stats öffnen"
+      title="Open Battle Stats"
       @click="uiStore.setBardTab('kampf')"
       @keydown.enter="uiStore.setBardTab('kampf')"
       @keydown.space.prevent="uiStore.setBardTab('kampf')"
     >
-      <!-- RANK -->
-      <div class="bbstat-item">
-        <span class="bbstat-val">{{ rankLabel }}</span>
-        <span class="bbstat-label">RANK</span>
-        <img
-          :src="rankImage"
-          :alt="currentRank.tier"
-          class="bbstat-stat-icon bbstat-rank-icon"
-          :style="{ filter: rankIconFilter }"
-        />
+      <!-- RANK / Battle Timer (swaps during battle) -->
+      <div class="bbstat-item rank-slot">
+        <Transition name="rank-swap" mode="out-in">
+          <div v-if="phaseKey === 'battle'" key="timer" class="rank-slot-inner">
+            <span
+              class="bbstat-val battle-rank-timer"
+              :style="{ color: gameStateDisplay.color }"
+            >{{ gameStateDisplay.text }}</span>
+            <img src="/img/stats/gamestate.png" alt="battle timer" class="bbstat-stat-icon" />
+          </div>
+          <div v-else key="rank" class="rank-slot-inner">
+            <span class="bbstat-val">{{ rankLabel }}</span>
+            <span class="bbstat-label">RANK</span>
+            <img
+              :src="rankImage"
+              :alt="currentRank.tier"
+              class="bbstat-stat-icon bbstat-rank-icon"
+              :style="{ filter: rankIconFilter }"
+            />
+          </div>
+        </Transition>
       </div>
       <div class="bbstat-divider" />
 
@@ -280,13 +311,34 @@ const winChanceColor = computed(() => {
       </div>
       <div class="bbstat-divider" />
 
-      <!-- Game State -->
-      <div class="bbstat-item">
+      <!-- BATTLE STATUS — phase + opponent + timer -->
+      <div
+        class="bbstat-item battle-status"
+      >
+        <!-- Honor result badge -->
+        <Transition name="badge-slide">
+          <span
+            v-if="resultBadge"
+            class="result-badge"
+            :style="{ color: resultBadge.color, '--badge-glow': resultBadge.glow }"
+          >
+            {{ resultBadge.label }}&thinsp;{{ resultBadge.lp }}&thinsp;LP
+          </span>
+        </Transition>
+
+        <!-- Searching pulse dots -->
+        <span v-if="phaseKey === 'searching'" class="scan-dots" aria-hidden="true">
+          <span class="scan-dot" />
+          <span class="scan-dot" />
+          <span class="scan-dot" />
+        </span>
+
+        <!-- Phase + timer -->
         <span
-          class="bbstat-val"
-          :style="{ color: gameStateDisplay.color, fontSize: '13px', whiteSpace: 'nowrap' }"
-          >{{ gameStateDisplay.text }}</span
-        >
+          class="battle-timer"
+          :style="{ color: gameStateDisplay.color }"
+        >{{ gameStateDisplay.text }}</span>
+
         <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
       </div>
       <div class="bbstat-divider" />
@@ -362,11 +414,9 @@ const winChanceColor = computed(() => {
   transition: filter 0.4s ease;
 }
 
-/* Rank icon: larger + no static filter (set via :style) */
 .bbstat-rank-icon {
   width: 42px;
   height: 42px;
-  /* filter fully set via :style="{ filter: rankIconFilter }" */
   transition: filter 0.5s ease;
 }
 
@@ -393,18 +443,6 @@ const winChanceColor = computed(() => {
   line-height: 1;
   flex-shrink: 0;
   filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
-}
-.bbstat-icon--green {
-  color: #74d448;
-  filter: drop-shadow(0 0 3px rgba(116, 212, 72, 0.7));
-}
-.bbstat-icon--red {
-  color: #ff7a50;
-  filter: drop-shadow(0 0 3px rgba(255, 100, 60, 0.7));
-}
-.bbstat-icon--gold {
-  color: #fbbf24;
-  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
 }
 
 /* ── Label: hidden by default, shown on hover ────────────────────────── */
@@ -460,12 +498,6 @@ const winChanceColor = computed(() => {
   text-shadow:
     0 0 4px rgba(251, 191, 36, 0.8),
     0 0 10px rgba(251, 191, 36, 0.5);
-}
-.bbstat-val--green {
-  color: #74d448;
-  text-shadow:
-    0 0 4px rgba(116, 212, 72, 0.8),
-    0 0 10px rgba(116, 212, 72, 0.5);
 }
 .bbstat-val--win {
   color: #74d448;
@@ -595,6 +627,84 @@ const winChanceColor = computed(() => {
   filter: grayscale(80%);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   BATTLE STATUS COMPOUND ITEM
+   ══════════════════════════════════════════════════════════════════════ */
+
+.battle-status {
+  position: relative;
+  gap: 5px;
+}
+
+/* ── Battle timer ─────────────────────────────────────────────────── */
+.battle-timer {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  transition: color 0.4s ease;
+}
+
+/* ── Result badge (shown during honor phase) ────────────────────────── */
+.result-badge {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.4px;
+  text-shadow: 0 0 8px var(--badge-glow, rgba(116, 212, 72, 0.6));
+}
+
+.badge-slide-enter-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-slide-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.badge-slide-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.badge-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ── Searching scan dots ─────────────────────────────────────────────── */
+.scan-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-end: 2px;
+}
+
+.scan-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #9a6830;
+  animation: scan-pulse 1.2s ease-in-out infinite;
+}
+.scan-dot:nth-child(2) { animation-delay: 0.2s; }
+.scan-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes scan-pulse {
+  0%, 80%, 100% {
+    background: #5c3a14;
+    transform: scale(0.8);
+  }
+  40% {
+    background: #c89040;
+    transform: scale(1.15);
+    box-shadow: 0 0 4px rgba(200, 140, 40, 0.7);
+  }
+}
+
 /* ── Animations ─────────────────────────────────────────────────────── */
 @keyframes ability-icon-flash {
   0% {
@@ -614,6 +724,35 @@ const winChanceColor = computed(() => {
   100% {
     text-shadow: 0 0 8px var(--role-color, #e8c040);
   }
+}
+
+/* ── RANK ↔ Timer crossfade ─────────────────────────────────────────── */
+.rank-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.rank-slot-inner {
+  display: contents;
+}
+
+.rank-swap-enter-active,
+.rank-swap-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.rank-swap-enter-from,
+.rank-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.battle-rank-timer {
+  font-size: 18px;
+  letter-spacing: 1px;
 }
 
 /* ── Title ──────────────────────────────────────────────────────────── */

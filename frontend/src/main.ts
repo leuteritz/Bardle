@@ -5,6 +5,7 @@ import './assets/main.css'
 import { formatNumber } from './config/numberFormat'
 import { BARD_PROFILE_RADIUS } from './config/constants'
 import { usePersistence } from './composables/usePersistence'
+import { useBattleStore } from './stores/battleStore'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -19,6 +20,15 @@ const { loadGame, saveGame } = usePersistence()
 loadGame()
 
 let saveTimer: ReturnType<typeof setInterval> | null = setInterval(saveGame, 5000)
+
+// Keep the battle loop alive even when the browser throttles setInterval on hidden tabs.
+// syncFromTimestamps() is idempotent and safe to call frequently.
+setInterval(() => {
+  const bs = useBattleStore()
+  if (bs.isAutoBattleInitialized && bs.autoBattleEnabled) {
+    bs.syncFromTimestamps()
+  }
+}, 1000)
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {

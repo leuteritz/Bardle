@@ -789,8 +789,11 @@ export const useBattleStore = defineStore('battle', {
       await this.initializeBattle()
       this.autoBattleTimerEndTimestamp = Date.now() + this.autoBattleInterval
       this.searchingPhaseStartTimestamp = Date.now()
-      this.simulationReadyToStart = true
-      this.startCountdown()
+      // simulationReadyToStart and startCountdown() are NOT set here —
+      // the initial start goes through startBattle() in BattleResultComponent,
+      // which calls beginSimulation() directly after its animation. Setting
+      // simulationReadyToStart here would trigger the watcher and play a second
+      // search animation (the double-animation bug).
     },
 
     pauseBattleSimulation() {
@@ -927,6 +930,17 @@ export const useBattleStore = defineStore('battle', {
       }
       if (this.autoBattleEnabled) {
         this.syncFromTimestamps()
+        // If we were mid-search-phase (countdown was running before reload)
+        // and the timer hasn't expired yet, restart the countdown so the
+        // battle can auto-begin without requiring user interaction.
+        if (
+          this.autoBattleTimerEndTimestamp > Date.now() &&
+          this.battlePhaseStartTimestamp === 0 &&
+          !this.showAutoBattleResult
+        ) {
+          this.simulationReadyToStart = true
+          this.startCountdown()
+        }
       }
     },
 
