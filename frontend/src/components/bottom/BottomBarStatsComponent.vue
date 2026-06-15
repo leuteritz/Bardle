@@ -269,27 +269,18 @@ const winChanceColor = computed(() => {
       @keydown.enter="uiStore.setBardTab('kampf')"
       @keydown.space.prevent="uiStore.setBardTab('kampf')"
     >
-      <!-- RANK / Battle Timer (swaps during battle) -->
+      <!-- RANK (always visible) -->
       <div class="bbstat-item rank-slot">
-        <Transition name="rank-swap" mode="out-in">
-          <div v-if="phaseKey === 'battle'" key="timer" class="rank-slot-inner">
-            <span
-              class="bbstat-val battle-rank-timer"
-              :style="{ color: gameStateDisplay.color }"
-            >{{ gameStateDisplay.text }}</span>
-            <img src="/img/stats/gamestate.png" alt="battle timer" class="bbstat-stat-icon" />
-          </div>
-          <div v-else key="rank" class="rank-slot-inner">
-            <span class="bbstat-val">{{ rankLabel }}</span>
-            <span class="bbstat-label">RANK</span>
-            <img
-              :src="rankImage"
-              :alt="currentRank.tier"
-              class="bbstat-stat-icon bbstat-rank-icon"
-              :style="{ filter: rankIconFilter }"
-            />
-          </div>
-        </Transition>
+        <div class="rank-slot-inner">
+          <span class="bbstat-val">{{ rankLabel }}</span>
+          <span class="bbstat-label">RANK</span>
+          <img
+            :src="rankImage"
+            :alt="currentRank.tier"
+            class="bbstat-stat-icon bbstat-rank-icon"
+            :style="{ filter: rankIconFilter }"
+          />
+        </div>
       </div>
       <div class="bbstat-divider" />
 
@@ -726,7 +717,7 @@ const winChanceColor = computed(() => {
   }
 }
 
-/* ── RANK ↔ Timer crossfade ─────────────────────────────────────────── */
+/* ── Rank slot ───────────────────────────────────────────────────────── */
 .rank-slot {
   display: flex;
   align-items: center;
@@ -736,23 +727,6 @@ const winChanceColor = computed(() => {
 }
 .rank-slot-inner {
   display: contents;
-}
-
-.rank-swap-enter-active,
-.rank-swap-leave-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
-}
-.rank-swap-enter-from,
-.rank-swap-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
-}
-
-.battle-rank-timer {
-  font-size: 18px;
-  letter-spacing: 1px;
 }
 
 /* ── Title ──────────────────────────────────────────────────────────── */
