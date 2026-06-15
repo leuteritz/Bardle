@@ -874,6 +874,10 @@ export const BATTLE_RESULT_COUNTDOWN_SECONDS = 4
 export const BATTLE_RESULT_PAUSE_MS = 4000
 /** Countdown tick interval for the pre-battle search-phase timer (ms) */
 export const BATTLE_COUNTDOWN_INTERVAL_MS = 500
+/** Duration of the planet-search warp animation (ms) — must match ANIM_DURATION in PlanetSearchComponent */
+export const PLANET_SEARCH_ANIM_DURATION_MS = 5000
+/** Extra margin after the planet-search animation duration before the RAF-fallback setTimeout fires (ms) */
+export const PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS = 200
 /** Reference duration multiplied by drain rate to reduce opponent power (seconds) */
 export const BATTLE_DRAIN_REFERENCE_SECONDS = 30
 /** Minimum effective opponent power as a fraction of its original value */

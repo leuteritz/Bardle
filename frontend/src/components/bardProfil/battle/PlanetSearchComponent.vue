@@ -12,10 +12,12 @@
 
 <script lang="ts">
 import { defineComponent, ref, onUnmounted, nextTick } from 'vue'
+import {
+  PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS,
+  PLANET_SEARCH_ANIM_DURATION_MS,
+} from '@/config/constants'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const ANIM_DURATION = 5000
 const SLOW_AT = 3500
 const PLANET_TEXT_MS = 3600
 const STAR_COUNT = 300
@@ -123,6 +125,7 @@ export default defineComponent({
     let rafId: number | null = null
     let planetFoundTimer: ReturnType<typeof setTimeout> | null = null
     let pendingResolve: (() => void) | null = null
+    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null
 
     // ── Canvas render loop ────────────────────────────────────────────────────
 
@@ -136,13 +139,28 @@ export default defineComponent({
         const CY = H / 2
         const MAXZ = W
 
+        // Fallback: resolve after PLANET_SEARCH_ANIM_DURATION_MS even if RAF is throttled (background browser tab).
+        // setTimeout is only clamped to ~1s minimum in background tabs, not fully paused.
+        fallbackTimerId = setTimeout(() => {
+          fallbackTimerId = null
+          if (pendingResolve) {
+            pendingResolve = null
+            ctx.clearRect(0, 0, W, H)
+            resolve()
+          }
+        }, PLANET_SEARCH_ANIM_DURATION_MS + PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS)
+
         const stars = buildStars(W, H)
         const planets = buildPlanets(W, H)
         const t0 = performance.now()
 
         function frame(now: number) {
           const elapsed = now - t0
-          if (elapsed >= ANIM_DURATION) {
+          if (elapsed >= PLANET_SEARCH_ANIM_DURATION_MS) {
+            if (fallbackTimerId !== null) {
+              clearTimeout(fallbackTimerId)
+              fallbackTimerId = null
+            }
             pendingResolve = null
             ctx.clearRect(0, 0, W, H)
             resolve()
@@ -150,7 +168,7 @@ export default defineComponent({
           }
 
           const warp =
-            elapsed < SLOW_AT ? 1.0 : 1.0 - ((elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT)) * 0.95
+            elapsed < SLOW_AT ? 1.0 : 1.0 - ((elapsed - SLOW_AT) / (PLANET_SEARCH_ANIM_DURATION_MS - SLOW_AT)) * 0.95
           const speed = warp * 20 + 0.4
 
           ctx.fillStyle = '#0a0a0f'
@@ -248,7 +266,7 @@ export default defineComponent({
 
           // Warp-exit vignette + destination glow
           if (elapsed > SLOW_AT) {
-            const t = (elapsed - SLOW_AT) / (ANIM_DURATION - SLOW_AT)
+            const t = (elapsed - SLOW_AT) / (PLANET_SEARCH_ANIM_DURATION_MS - SLOW_AT)
 
             // Vignette (unverändert)
             const vg = ctx.createRadialGradient(
@@ -312,6 +330,10 @@ export default defineComponent({
       // Resolve any pending Promise so awaiting callers (startBattle, inter-battle watch) continue
       pendingResolve?.()
       pendingResolve = null
+      if (fallbackTimerId !== null) {
+        clearTimeout(fallbackTimerId)
+        fallbackTimerId = null
+      }
       if (rafId !== null) {
         cancelAnimationFrame(rafId)
         rafId = null

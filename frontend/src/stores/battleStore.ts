@@ -38,6 +38,8 @@ import {
   BATTLE_RESULT_COUNTDOWN_SECONDS,
   BATTLE_RESULT_PAUSE_MS,
   BATTLE_COUNTDOWN_INTERVAL_MS,
+  PLANET_SEARCH_ANIM_DURATION_MS,
+  PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS,
   BATTLE_DRAIN_REFERENCE_SECONDS,
   BATTLE_OPPONENT_POWER_MIN_FRACTION,
   BATTLE_BIG_BANG_POWER_MULTIPLIER,
@@ -895,6 +897,23 @@ export const useBattleStore = defineStore('battle', {
         }
         return
       }
+      // Fast rescue: search phase has been running longer than animation+margin with no
+      // simulation started. Watcher unavailable (modal closed) or animation hung.
+      // syncFromTimestamps() polls every 1s from main.ts → fires at ~7s from search start.
+      if (
+        this.autoBattleEnabled &&
+        this.searchingPhaseStartTimestamp > 0 &&
+        !this.battleSimIntervalId &&
+        this.battlePhaseStartTimestamp === 0 &&
+        !this.showAutoBattleResult &&
+        Date.now() - this.searchingPhaseStartTimestamp >
+          PLANET_SEARCH_ANIM_DURATION_MS + PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS + 1500
+      ) {
+        this.simulationReadyToStart = false
+        this.beginSimulation()
+        return
+      }
+
       if (
         this.autoBattleEnabled &&
         this.autoBattleTimerEndTimestamp > 0 &&
@@ -910,6 +929,10 @@ export const useBattleStore = defineStore('battle', {
         // (e.g. after tab switch during search phase)
         if (this.simulationReadyToStart) {
           this.simulationReadyToStart = false
+          this.beginSimulation()
+        } else if (!this.battleSimIntervalId && this.battlePhaseStartTimestamp === 0) {
+          // Rescue: the watcher consumed simulationReadyToStart but the planet-search animation
+          // hung (RAF throttled in background tab). Timer expired, no simulation running.
           this.beginSimulation()
         }
       }
