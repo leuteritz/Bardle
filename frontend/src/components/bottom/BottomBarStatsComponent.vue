@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useUiStore } from '@/stores/uiStore'
-import { ROLES, GAME_STATE, BATTLE_REAL_DURATION_SECONDS } from '@/config/constants'
+import { ROLES, GAME_STATE } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -103,9 +103,7 @@ const gameStateDisplay = computed(() => {
     battlePhaseStartTimestamp.value === 0
   ) {
     const elapsed = Math.min(5, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000))
-    const min = Math.floor(elapsed / 60)
-      .toString()
-      .padStart(2, '0')
+    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
     return {
       label: GAME_STATE.SEARCHING.label,
@@ -119,19 +117,12 @@ const gameStateDisplay = computed(() => {
   if (showAutoBattleResult.value) {
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
     const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
-    const sec = (elapsed % 60).toString().padStart(2, '0')
-    return { label: GAME_STATE.HONOR.label, text: `${min}:${sec}`, color: GAME_STATE.HONOR.color }
+    return { label: GAME_STATE.HONOR.label, text: `${min}:00`, color: GAME_STATE.HONOR.color }
   }
   if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
-    const realElapsedS = (_now - battlePhaseStartTimestamp.value) / 1000
-    const gameTime = Math.min(
-      Math.floor(realElapsedS * 60),
-      BATTLE_REAL_DURATION_SECONDS * 60,
-    )
-    const min = Math.floor(gameTime / 60).toString().padStart(2, '0')
-    const sec = (gameTime % 60).toString().padStart(2, '0')
+    const min = Math.floor(battleTime.value / 60).toString().padStart(2, '0')
     const { label, color } = GAME_STATE.BATTLE
-    return { label, text: `${min}:${sec}`, color }
+    return { label, text: `${min}:00`, color }
   }
   return { label: '', text: '—', color: '#6a4418' }
 })
