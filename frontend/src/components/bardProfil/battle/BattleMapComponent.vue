@@ -27,11 +27,56 @@
             {{ formatTime(battleStore.battleTime) }}
           </div>
 
-          <!-- Score -->
-          <div class="absolute z-20 top-1 right-1 px-1.5 py-0.5 minimap-overlay-badge">
-            <span class="text-xs font-black score-blue">{{ score.team1Kills }}</span>
-            <span class="text-xs score-sep"> vs </span>
-            <span class="text-xs font-black score-red">{{ score.team2Kills }}</span>
+          <!-- Score badge + scoreboard tooltip -->
+          <div
+            class="absolute z-20 top-1 right-1 score-trigger"
+            @mouseenter="showScoreboard = true"
+            @mouseleave="showScoreboard = false"
+          >
+            <div class="px-1.5 py-0.5 minimap-overlay-badge score-badge-hover">
+              <span class="text-xs font-black score-blue">{{ score.team1Kills }}</span>
+              <span class="text-xs score-sep"> vs </span>
+              <span class="text-xs font-black score-red">{{ score.team2Kills }}</span>
+            </div>
+
+            <!-- Scoreboard tooltip (hover reveal) -->
+            <div v-show="showScoreboard" class="score-tooltip">
+              <div class="score-tooltip-team">
+                <span class="score-tooltip-badge score-tooltip-badge--blue">BLUE</span>
+                <div
+                  v-for="(champ, i) in battleStore.team1.filter((c) => c.name)"
+                  :key="'tt1-' + i"
+                  class="score-tooltip-row"
+                >
+                  <span class="score-tooltip-name score-tooltip-name--blue">{{ champ.name }}</span>
+                  <span class="score-tooltip-kda">
+                    <span class="kda-k">{{ champ.kills }}</span>
+                    <span class="kda-s">/</span>
+                    <span class="kda-d">{{ champ.deaths }}</span>
+                    <span class="kda-s">/</span>
+                    <span class="kda-a">{{ champ.assists }}</span>
+                  </span>
+                </div>
+              </div>
+              <div class="score-tooltip-divider" />
+              <div class="score-tooltip-team">
+                <span class="score-tooltip-badge score-tooltip-badge--red">RED</span>
+                <div
+                  v-for="(champ, i) in battleStore.team2.filter((c) => c.name)"
+                  :key="'tt2-' + i"
+                  class="score-tooltip-row"
+                >
+                  <span class="score-tooltip-name score-tooltip-name--red">{{ champ.name }}</span>
+                  <span class="score-tooltip-kda">
+                    <span class="kda-k">{{ champ.kills }}</span>
+                    <span class="kda-s">/</span>
+                    <span class="kda-d">{{ champ.deaths }}</span>
+                    <span class="kda-s">/</span>
+                    <span class="kda-a">{{ champ.assists }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <img
@@ -107,6 +152,28 @@
             </div>
           </div>
 
+          <!-- Skip battle button — arcane portal style, bottom-left -->
+          <button
+            v-if="battleStore.battlePhase === 'playing'"
+            class="skip-portal-btn"
+            title="Skip to end"
+            @click="battleStore.adminSkipToEnd()"
+          >
+            <div class="skip-portal-ring" />
+            <Icon icon="game-icons:magic-portal" style="color: #c084fc; position: relative; z-index: 1;" width="22" height="22" />
+            <span class="skip-portal-label">SKIP</span>
+          </button>
+
+          <!-- Chat toggle button — bottom-right -->
+          <button
+            class="chat-toggle-btn"
+            :class="{ 'chat-toggle-btn--active': chatOpen }"
+            title="Toggle chat"
+            @click="$emit('toggle-chat')"
+          >
+            <Icon icon="game-icons:chat-bubble" style="color: #e8c040;" width="20" height="20" />
+          </button>
+
           <div class="absolute inset-0 pointer-events-none minimap-inner-border" />
         </div>
       </div>
@@ -116,6 +183,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import {
   MINIMAP_PHASE_LANING_END,
@@ -194,11 +262,15 @@ function getPhaseTarget(
 
 export default defineComponent({
   name: 'MiniMapComponent',
+  components: { Icon },
+  emits: ['toggle-chat'],
   props: {
     battleId: { type: [String, Number], default: 0 },
     score: { type: Object, default: () => ({ team1Kills: 0, team2Kills: 0 }) },
+    chatOpen: { type: Boolean, default: false },
   },
   setup(props) {
+    const showScoreboard = ref(false)
     const battleStore = useBattleStore()
     let moveInterval: ReturnType<typeof setInterval> | null = null
 
@@ -449,6 +521,7 @@ export default defineComponent({
       drakeFighting,
       predeterminedWin,
       announcement,
+      showScoreboard,
     }
   },
 })
@@ -595,5 +668,176 @@ export default defineComponent({
 .announce-fade-enter-from,
 .announce-fade-leave-to {
   opacity: 0;
+}
+
+/* ═══════════════════════════════════════════
+   SCORE TRIGGER & SCOREBOARD TOOLTIP
+   ═══════════════════════════════════════════ */
+.score-trigger {
+  cursor: pointer;
+  position: absolute;
+}
+
+.score-badge-hover {
+  transition: border-color 0.15s ease;
+}
+.score-trigger:hover .score-badge-hover {
+  border-color: #e8c04066;
+}
+
+.score-tooltip {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 50;
+  min-width: 180px;
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  padding: 8px;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.score-tooltip-team {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.score-tooltip-badge {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid;
+  display: inline-block;
+  margin-bottom: 3px;
+}
+.score-tooltip-badge--blue {
+  background: #3b82f620;
+  border-color: #3b82f650;
+  color: #93c5fd;
+}
+.score-tooltip-badge--red {
+  background: #ef444420;
+  border-color: #ef444450;
+  color: #fca5a5;
+}
+
+.score-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 1px 2px;
+}
+
+.score-tooltip-name {
+  font-size: 10px;
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.score-tooltip-name--blue { color: #bfdbfe; }
+.score-tooltip-name--red  { color: #fecaca; }
+
+.score-tooltip-kda {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.kda-k { color: #6ee7b7; font-weight: 700; }
+.kda-d { color: #fca5a5; font-weight: 700; }
+.kda-a { color: #93c5fd; font-weight: 700; }
+.kda-s { color: #ffffff33; }
+
+.score-tooltip-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #5c3310, transparent);
+  margin: 6px 0;
+}
+
+/* ═══════════════════════════════════════════
+   SKIP PORTAL BUTTON
+   ═══════════════════════════════════════════ */
+.skip-portal-btn {
+  position: absolute;
+  bottom: 3%;
+  left: 3%;
+  z-index: 30;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(16, 8, 24, 0.82);
+  border: 2px solid #7a4e20;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 6px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
+}
+.skip-portal-btn:hover {
+  border-color: #c084fc;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.55);
+}
+
+.skip-portal-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  animation: portal-pulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes portal-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 0.1; transform: scale(1.2); }
+}
+
+.skip-portal-label {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #c084fc;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════
+   CHAT TOGGLE BUTTON
+   ═══════════════════════════════════════════ */
+.chat-toggle-btn {
+  position: absolute;
+  bottom: 3%;
+  right: 3%;
+  z-index: 30;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 16, 8, 0.82);
+  border: 2px solid #7a4e20;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 6px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.chat-toggle-btn:hover,
+.chat-toggle-btn--active {
+  border-color: #e8c040;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.4);
 }
 </style>

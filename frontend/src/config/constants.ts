@@ -1351,4 +1351,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:sands-of-time',  // Arrival time countdown
   'game-icons:winged-leg',     // Travel speed
   'game-icons:radar-sweep',    // Remaining distance
+  // Battle Minimap overlays
+  'game-icons:magic-portal',   // Skip button on minimap (BattleMapComponent)
+  'game-icons:chat-bubble',    // Chat toggle button on minimap (BattleMapComponent)
 ])
