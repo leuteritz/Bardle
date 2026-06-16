@@ -96,6 +96,8 @@ export function usePersistence() {
         battleEverStarted: battleStore.battleEverStarted,
         isAutoBattleInitialized: battleStore.isAutoBattleInitialized,
         resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
+        battlePhaseStartTimestamp: battleStore.battlePhaseStartTimestamp,
+        autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
       },
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
@@ -262,6 +264,8 @@ export function usePersistence() {
         battleStore.battleEverStarted = b.battleEverStarted ?? false
         battleStore.isAutoBattleInitialized = b.isAutoBattleInitialized ?? false
         battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
+        battleStore.battlePhaseStartTimestamp = b.battlePhaseStartTimestamp ?? 0
+        battleStore.autoBattleTimerEndTimestamp = b.autoBattleTimerEndTimestamp ?? 0
       }
 
       // Restore expeditionStore

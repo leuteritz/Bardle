@@ -936,6 +936,20 @@ export const useBattleStore = defineStore('battle', {
           this.beginSimulation()
         }
       }
+
+      // Fallback: autoBattle is active but all timestamps are zero (old save pre-fix, or
+      // edge case where the timer fired and cleared itself before the page was saved).
+      // Start a fresh battle cycle so the loop never stays silently stuck.
+      if (
+        this.autoBattleEnabled &&
+        this.isAutoBattleInitialized &&
+        this.battlePhaseStartTimestamp === 0 &&
+        this.autoBattleTimerEndTimestamp === 0 &&
+        !this.showAutoBattleResult &&
+        !this.battleSimIntervalId
+      ) {
+        this.proceedToNextBattle()
+      }
     },
 
     autoSimulateHonorAndProceed() {
