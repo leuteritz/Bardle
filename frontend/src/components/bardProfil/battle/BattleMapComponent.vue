@@ -88,7 +88,7 @@
           <div
             v-for="(champ, i) in blueChampions"
             :key="'blue-' + i"
-            class="absolute -translate-x-1/2 -translate-y-1/2"
+            class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
             :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
@@ -96,19 +96,20 @@
               v-if="battleStore.team1[i]?.name"
               :src="battleStore.getChampionImage(battleStore.team1[i].name)"
               :alt="battleStore.team1[i].name"
-              class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--blue"
+              class="minimap-champ-img rpg-img minimap-champ--blue"
               :class="{
                 'opacity-30 grayscale': champ.dead,
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === true,
               }"
             />
+            <span v-if="battleStore.team1[i]?.name" class="minimap-champ-tooltip">{{ battleStore.team1[i].name }}</span>
           </div>
 
           <!-- Red Champions -->
           <div
             v-for="(champ, i) in redChampions"
             :key="'red-' + i"
-            class="absolute -translate-x-1/2 -translate-y-1/2"
+            class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
             :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
           >
@@ -116,41 +117,48 @@
               v-if="battleStore.team2[i]?.name"
               :src="battleStore.getChampionImage(battleStore.team2[i].name)"
               :alt="battleStore.team2[i].name"
-              class="w-[26px] h-[26px] rounded-full object-cover rpg-img minimap-champ--red"
+              class="minimap-champ-img rpg-img minimap-champ--red"
               :class="{
                 'opacity-30 grayscale': champ.dead,
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === false,
               }"
             />
+            <span v-if="battleStore.team2[i]?.name" class="minimap-champ-tooltip">{{ battleStore.team2[i].name }}</span>
           </div>
 
           <!-- Drake Dot -->
-          <div
-            v-if="drakeVisible"
-            class="absolute -translate-x-1/2 -translate-y-1/2"
-            :style="{ left: '66%', top: '69%', zIndex: 4 }"
-          >
-            <div class="drake-dot" :class="{ 'drake-fighting': drakeFighting }">
-              <img
-                src="/img/dragon.png"
-                class="w-[28px] h-[28px] rounded-full object-cover drake-icon"
-              />
+          <Transition name="obj-fade">
+            <div
+              v-if="drakeVisible"
+              class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
+              :style="{ left: '66%', top: '69%', zIndex: 6 }"
+            >
+              <div class="drake-dot" :class="{ 'drake-fighting': drakeFighting }">
+                <img
+                  src="/img/dragon.png"
+                  class="minimap-obj-img drake-icon"
+                />
+              </div>
+              <span class="minimap-champ-tooltip">Dragon</span>
             </div>
-          </div>
+          </Transition>
 
           <!-- Baron Dot -->
-          <div
-            v-if="baronVisible"
-            class="absolute -translate-x-1/2 -translate-y-1/2"
-            :style="{ left: '33%', top: '33%', zIndex: 4 }"
-          >
-            <div class="baron-dot" :class="{ 'baron-fighting': baronFighting }">
-              <img
-                src="/img/baron.png"
-                class="w-[28px] h-[28px] rounded-full object-cover baron-icon"
-              />
+          <Transition name="obj-fade">
+            <div
+              v-if="baronVisible"
+              class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
+              :style="{ left: '33%', top: '33%', zIndex: 6 }"
+            >
+              <div class="baron-dot" :class="{ 'baron-fighting': baronFighting }">
+                <img
+                  src="/img/baron.png"
+                  class="minimap-obj-img baron-icon"
+                />
+              </div>
+              <span class="minimap-champ-tooltip">Baron Nashor</span>
             </div>
-          </div>
+          </Transition>
 
           <!-- Skip battle button — arcane portal style, bottom-left -->
           <button
@@ -533,6 +541,8 @@ export default defineComponent({
 }
 
 .minimap-field {
+  --champ-size: 44px;
+  --obj-size: 50px;
   border: 2px solid var(--rpg-wood-mid);
   border-radius: var(--bp-radius);
   background: transparent;
@@ -544,14 +554,58 @@ export default defineComponent({
   border-radius: var(--bp-radius);
 }
 
+.minimap-champ-img {
+  width: var(--champ-size);
+  height: var(--champ-size);
+  border-radius: 50%;
+  object-fit: cover;
+  image-rendering: auto;
+  transition: transform 0.15s ease;
+}
+
+.minimap-champ-wrapper:hover .minimap-champ-img {
+  transform: scale(1.18);
+}
+
+.minimap-obj-img {
+  width: var(--obj-size);
+  height: var(--obj-size);
+  border-radius: 50%;
+  object-fit: cover;
+  image-rendering: auto;
+}
+
+.minimap-champ-tooltip {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #16140e;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: #e8c040;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 50;
+}
+
+.minimap-champ-wrapper:hover .minimap-champ-tooltip {
+  opacity: 1;
+}
+
 .minimap-champ--blue {
   border: 2px solid #60a5fa;
-  box-shadow: 0 0 6px #3b82f6cc;
+  box-shadow: 0 0 10px #3b82f6cc, 0 0 20px #3b82f640;
 }
 
 .minimap-champ--red {
   border: 2px solid #f87171;
-  box-shadow: 0 0 6px #ef444499;
+  box-shadow: 0 0 10px #ef4444aa, 0 0 20px #ef444430;
 }
 
 .score-blue {
@@ -570,13 +624,13 @@ export default defineComponent({
 
 .drake-icon {
   border: 2px solid #22c55e;
-  box-shadow: 0 0 8px #22c55eaa;
+  box-shadow: 0 0 12px #22c55ecc, 0 0 24px #22c55e40;
 }
 
 .drake-dot.drake-fighting::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
   border: 2px solid #22c55e;
   animation: drake-pulse 1.2s ease-in-out infinite;
@@ -601,13 +655,13 @@ export default defineComponent({
 
 .baron-icon {
   border: 2px solid #a855f7;
-  box-shadow: 0 0 8px #a855f7aa;
+  box-shadow: 0 0 12px #a855f7cc, 0 0 24px #a855f740;
 }
 
 .baron-dot.baron-fighting::after {
   content: '';
   position: absolute;
-  inset: -6px;
+  inset: -8px;
   border-radius: 50%;
   border: 2px solid #a855f7;
   animation: baron-pulse 1.2s ease-in-out infinite;
@@ -839,5 +893,34 @@ export default defineComponent({
 .chat-toggle-btn--active {
   border-color: #e8c040;
   box-shadow: 0 0 10px rgba(232, 192, 64, 0.4);
+}
+
+/* ═══════════════════════════════════════════
+   OBJECTIVE APPEAR / DISAPPEAR TRANSITION
+   ═══════════════════════════════════════════ */
+.obj-fade-enter-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.obj-fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.obj-fade-enter-from,
+.obj-fade-leave-to {
+  opacity: 0;
+}
+
+/* ═══════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .minimap-champ-img,
+  .minimap-obj-img,
+  .minimap-champ-tooltip { transition: none; }
+  .minimap-champ-wrapper:hover .minimap-champ-img { transform: none; }
+  .obj-fade-enter-active,
+  .obj-fade-leave-active { transition: none; }
+  .drake-dot.drake-fighting::after,
+  .baron-dot.baron-fighting::after { animation: none; }
+  .skip-portal-ring { animation: none; }
 }
 </style>
