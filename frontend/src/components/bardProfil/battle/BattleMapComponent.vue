@@ -7,7 +7,7 @@
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
-        <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field">
+        <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field" :style="{ '--scoreboard-w': scoreboardWidth + 'px' }">
           <!-- Kill Announcement Banner -->
           <Transition name="announce-fade">
             <div
@@ -35,27 +35,15 @@
             @mouseenter="showScoreboard = true"
             @mouseleave="showScoreboard = false"
           >
-            <!-- Compact scoreboard — kills only by default, D/A revealed on hover -->
-            <div class="score-compact-panel">
+            <!-- Compact scoreboard — kills only -->
+            <div class="score-compact-panel" ref="scoreboardPanelRef">
               <div class="score-compact-single-row">
                 <span class="score-compact-team">
                   <span class="score-compact-kills score-kills--blue">{{ team1Stats.kills }}</span>
-                  <span class="score-compact-da score-compact-da--blue">
-                    <span class="score-da-sep">/</span>
-                    <span class="score-da-val">{{ team1Stats.deaths }}</span>
-                    <span class="score-da-sep">/</span>
-                    <span class="score-da-val">{{ team1Stats.assists }}</span>
-                  </span>
                 </span>
                 <span class="score-mid-sep">–</span>
                 <span class="score-compact-team">
                   <span class="score-compact-kills score-kills--red">{{ team2Stats.kills }}</span>
-                  <span class="score-compact-da score-compact-da--red">
-                    <span class="score-da-sep">/</span>
-                    <span class="score-da-val">{{ team2Stats.deaths }}</span>
-                    <span class="score-da-sep">/</span>
-                    <span class="score-da-val">{{ team2Stats.assists }}</span>
-                  </span>
                 </span>
               </div>
             </div>
@@ -147,7 +135,16 @@
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === true,
               }"
             />
-            <span v-if="battleStore.team1[i]?.name" class="minimap-champ-tooltip">{{ battleStore.team1[i].name }}</span>
+            <div v-if="battleStore.team1[i]?.name" class="minimap-champ-tooltip minimap-champ-tooltip--blue">
+              <span class="tip-name">{{ battleStore.team1[i].name }}</span>
+              <span class="tip-kda">
+                <span class="tip-k">{{ battleStore.team1[i].kills }}</span>
+                <span class="tip-s">/</span>
+                <span class="tip-d">{{ battleStore.team1[i].deaths }}</span>
+                <span class="tip-s">/</span>
+                <span class="tip-a">{{ battleStore.team1[i].assists }}</span>
+              </span>
+            </div>
           </div>
 
           <!-- Red Champions -->
@@ -168,7 +165,16 @@
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === false,
               }"
             />
-            <span v-if="battleStore.team2[i]?.name" class="minimap-champ-tooltip">{{ battleStore.team2[i].name }}</span>
+            <div v-if="battleStore.team2[i]?.name" class="minimap-champ-tooltip minimap-champ-tooltip--red">
+              <span class="tip-name">{{ battleStore.team2[i].name }}</span>
+              <span class="tip-kda">
+                <span class="tip-k">{{ battleStore.team2[i].kills }}</span>
+                <span class="tip-s">/</span>
+                <span class="tip-d">{{ battleStore.team2[i].deaths }}</span>
+                <span class="tip-s">/</span>
+                <span class="tip-a">{{ battleStore.team2[i].assists }}</span>
+              </span>
+            </div>
           </div>
 
           <!-- Drake Dot -->
@@ -326,6 +332,10 @@ export default defineComponent({
     const showScoreboard = ref(false)
     const battleStore = useBattleStore()
     let moveInterval: ReturnType<typeof setInterval> | null = null
+
+    const scoreboardPanelRef = ref<HTMLElement | null>(null)
+    const scoreboardWidth = ref(120)
+    let resizeObs: ResizeObserver | null = null
 
     const blueChampions = ref<ChampPos[]>([])
     const redChampions = ref<ChampPos[]>([])
@@ -493,18 +503,28 @@ export default defineComponent({
       },
     )
 
-    onMounted(() => {
+    onMounted(async () => {
       resetChampions()
       startMovement()
-      // ── NEU: Listener registrieren ──
       document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      await nextTick()
+      if (scoreboardPanelRef.value) {
+        scoreboardWidth.value = scoreboardPanelRef.value.getBoundingClientRect().width
+        resizeObs = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            scoreboardWidth.value = entry.contentRect.width
+          }
+        })
+        resizeObs.observe(scoreboardPanelRef.value)
+      }
     })
 
     onUnmounted(() => {
       if (moveInterval) clearInterval(moveInterval)
-      // ── NEU: Listener aufräumen ──
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (announceTimer) clearTimeout(announceTimer)
+      resizeObs?.disconnect()
     })
 
     // Kill announcement banner
@@ -589,6 +609,8 @@ export default defineComponent({
       showScoreboard,
       team1Stats,
       team2Stats,
+      scoreboardPanelRef,
+      scoreboardWidth,
     }
   },
 })
@@ -602,6 +624,11 @@ export default defineComponent({
 .minimap-field {
   --champ-size: 44px;
   --obj-size: 50px;
+  --hud-font: clamp(1.8rem, 3vw, 2.8rem);
+  --hud-pad-v: 5px;
+  --hud-pad-vb: 6px;
+  --hud-pad-h: 10px;
+  --score-panel-w: 340px;
   border: 2px solid var(--rpg-wood-mid);
   border-radius: var(--bp-radius);
   background: transparent;
@@ -615,7 +642,7 @@ export default defineComponent({
   border-right: 1px solid #3e200a;
   border-bottom: 1px solid #3e200a;
   border-radius: 0 0 4px 0;
-  padding: 5px 12px 6px;
+  padding: var(--hud-pad-v) var(--hud-pad-h) var(--hud-pad-vb);
   min-width: 5.5ch;
   text-align: center;
   box-shadow:
@@ -630,7 +657,7 @@ export default defineComponent({
   align-items: center;
   justify-items: center;
   column-gap: 2px;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-size: var(--hud-font);
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -680,23 +707,48 @@ export default defineComponent({
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
+  width: var(--scoreboard-w, 120px);
   background: #16140e;
   border: 1px solid #5c3310;
   border-radius: 4px;
-  color: #e8c040;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  white-space: nowrap;
+  padding: 5px 8px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s ease;
   z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 8px rgba(92, 51, 16, 0.3);
 }
+
+.minimap-champ-tooltip--blue { border-color: #3b82f640; }
+.minimap-champ-tooltip--red  { border-color: #ef444440; }
 
 .minimap-champ-wrapper:hover .minimap-champ-tooltip {
   opacity: 1;
 }
+
+.tip-name {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #e8c040;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tip-kda {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-k { color: #6ee7b7; font-weight: 700; }
+.tip-d { color: #fca5a5; font-weight: 700; }
+.tip-a { color: #93c5fd; font-weight: 700; }
+.tip-s { color: rgba(255, 255, 255, 0.3); }
 
 .minimap-champ--blue {
   border: 2px solid #60a5fa;
@@ -830,6 +882,7 @@ export default defineComponent({
 .score-trigger {
   cursor: pointer;
   position: absolute;
+  min-width: var(--score-panel-w);
 }
 
 .score-badge-hover {
@@ -847,7 +900,7 @@ export default defineComponent({
   border-left: 1px solid #3e200a;
   border-bottom: 1px solid #3e200a;
   border-radius: 0 0 0 4px;
-  padding: 5px 10px 6px;
+  padding: var(--hud-pad-v) var(--hud-pad-h) var(--hud-pad-vb);
   cursor: default;
   box-shadow:
     inset 0 0 0 1px #1a1008,
@@ -862,14 +915,16 @@ export default defineComponent({
 .score-compact-single-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  line-height: 1;
 }
 
 .score-compact-team {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-size: var(--hud-font);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -883,41 +938,9 @@ export default defineComponent({
 .score-kills--blue { color: #93c5fd; }
 .score-kills--red  { color: #fca5a5; }
 
-.score-compact-da {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  max-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  white-space: nowrap;
-  transition: max-width 220ms ease, opacity 150ms ease;
-}
-
-.score-compact-da--blue { color: #93c5fd; }
-.score-compact-da--red  { color: #fca5a5; }
-
-.score-da-sep {
-  display: inline-block;
-  min-width: 1ch;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.25);
-}
-
-.score-da-val {
-  display: inline-block;
-  min-width: 3ch;
-  text-align: center;
-}
-
-.score-trigger:hover .score-compact-da {
-  max-width: 180px;
-  opacity: 1;
-}
-
 .score-mid-sep {
   color: rgba(232, 192, 64, 0.35);
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-size: var(--hud-font);
   line-height: 1;
   flex-shrink: 0;
   padding: 0 2px;
@@ -941,7 +964,8 @@ export default defineComponent({
   top: calc(100% + 4px);
   right: 0;
   z-index: 50;
-  min-width: 340px;
+  width: 100%;
+  min-width: unset;
   background: #0d0c08;
   border: 1px solid #3e200a;
   border-radius: 4px 0 4px 4px;
@@ -1156,7 +1180,8 @@ export default defineComponent({
 @media (prefers-reduced-motion: reduce) {
   .minimap-champ-img,
   .minimap-obj-img,
-  .minimap-champ-tooltip { transition: none; }
+  .minimap-champ-tooltip,
+  .tip-kda { transition: none; }
   .minimap-champ-wrapper:hover .minimap-champ-img { transform: none; }
   .obj-fade-enter-active,
   .obj-fade-leave-active { transition: none; }
