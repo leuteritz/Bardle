@@ -48,63 +48,56 @@
               </div>
             </div>
 
-            <!-- Scoreboard hover panel — two-column LoL style with champion images -->
+            <!-- Scoreboard hover panel — two-column K/D/A matchup -->
             <Transition name="scoreboard-expand">
               <div v-if="showScoreboard" class="score-tooltip">
-                <div class="score-tooltip-cols-header">
-                  <span class="score-tooltip-badge score-tooltip-badge--blue">BLUE TEAM</span>
-                  <span class="score-tooltip-badge score-tooltip-badge--red">RED TEAM</span>
-                </div>
-                <div class="score-tooltip-divider" />
-                <div class="score-tooltip-cols">
-                  <!-- Blue column -->
-                  <div class="score-tooltip-col">
-                    <div
-                      v-for="(champ, i) in battleStore.team1.filter((c) => c.name)"
-                      :key="'tt1-' + i"
-                      class="score-tooltip-row"
-                    >
-                      <img
-                        :src="battleStore.getChampionImage(champ.name)"
-                        :alt="champ.name"
-                        class="score-champ-img score-champ-img--blue"
-                      />
-                      <div class="score-champ-info">
-                        <span class="score-tooltip-name score-tooltip-name--blue">{{ champ.name }}</span>
-                        <span class="score-tooltip-kda">
-                          <span class="kda-k">{{ champ.kills }}</span>
-                          <span class="kda-s">/</span>
-                          <span class="kda-d">{{ champ.deaths }}</span>
-                          <span class="kda-s">/</span>
-                          <span class="kda-a">{{ champ.assists }}</span>
-                        </span>
-                      </div>
+                <div class="score-matchup-list">
+                  <div
+                    v-for="(blueChamp, i) in battleStore.team1"
+                    :key="'mu-' + i"
+                    class="score-matchup-row"
+                  >
+                    <!-- Blue side: img → name + kda -->
+                    <div class="score-matchup-side score-matchup-side--blue">
+                      <template v-if="blueChamp.name">
+                        <img
+                          :src="battleStore.getChampionImage(blueChamp.name)"
+                          :alt="blueChamp.name"
+                          class="score-mu-img score-mu-img--blue"
+                        />
+                        <div class="score-mu-info">
+                          <span class="score-mu-name score-mu-name--blue">{{ blueChamp.name }}</span>
+                          <span class="score-mu-kda">
+                            <span class="score-mu-k">{{ blueChamp.kills }}</span>
+                            <span class="score-mu-s">/</span>
+                            <span class="score-mu-d">{{ blueChamp.deaths }}</span>
+                            <span class="score-mu-s">/</span>
+                            <span class="score-mu-a">{{ blueChamp.assists }}</span>
+                          </span>
+                        </div>
+                      </template>
                     </div>
-                  </div>
-                  <!-- Vertical divider -->
-                  <div class="score-tooltip-col-sep" />
-                  <!-- Red column -->
-                  <div class="score-tooltip-col">
-                    <div
-                      v-for="(champ, i) in battleStore.team2.filter((c) => c.name)"
-                      :key="'tt2-' + i"
-                      class="score-tooltip-row"
-                    >
-                      <img
-                        :src="battleStore.getChampionImage(champ.name)"
-                        :alt="champ.name"
-                        class="score-champ-img score-champ-img--red"
-                      />
-                      <div class="score-champ-info">
-                        <span class="score-tooltip-name score-tooltip-name--red">{{ champ.name }}</span>
-                        <span class="score-tooltip-kda">
-                          <span class="kda-k">{{ champ.kills }}</span>
-                          <span class="kda-s">/</span>
-                          <span class="kda-d">{{ champ.deaths }}</span>
-                          <span class="kda-s">/</span>
-                          <span class="kda-a">{{ champ.assists }}</span>
-                        </span>
-                      </div>
+                    <!-- Vertical separator -->
+                    <div class="score-col-sep" />
+                    <!-- Red side: name + kda ← img (mirrored) -->
+                    <div class="score-matchup-side score-matchup-side--red">
+                      <template v-if="battleStore.team2[i]?.name">
+                        <img
+                          :src="battleStore.getChampionImage(battleStore.team2[i].name)"
+                          :alt="battleStore.team2[i].name"
+                          class="score-mu-img score-mu-img--red"
+                        />
+                        <div class="score-mu-info score-mu-info--red">
+                          <span class="score-mu-name score-mu-name--red">{{ battleStore.team2[i].name }}</span>
+                          <span class="score-mu-kda">
+                            <span class="score-mu-k">{{ battleStore.team2[i].kills }}</span>
+                            <span class="score-mu-s">/</span>
+                            <span class="score-mu-d">{{ battleStore.team2[i].deaths }}</span>
+                            <span class="score-mu-s">/</span>
+                            <span class="score-mu-a">{{ battleStore.team2[i].assists }}</span>
+                          </span>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -628,7 +621,7 @@ export default defineComponent({
   --hud-pad-v: 5px;
   --hud-pad-vb: 6px;
   --hud-pad-h: 10px;
-  --score-panel-w: 340px;
+  --score-panel-w: 420px;
   border: 2px solid var(--rpg-wood-mid);
   border-radius: var(--bp-radius);
   background: transparent;
@@ -972,117 +965,105 @@ export default defineComponent({
   box-shadow:
     inset 0 0 0 1px #1a1008,
     0 12px 32px rgba(0, 0, 0, 0.9);
-  padding: 10px;
+  padding: 14px;
   pointer-events: none;
 }
 
-.score-tooltip-cols-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2px;
-}
-
-.score-tooltip-badge {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  padding: 2px 7px;
-  border-radius: 3px;
-  border: 1px solid;
-  display: inline-block;
-}
-.score-tooltip-badge--blue {
-  background: #3b82f620;
-  border-color: #3b82f650;
-  color: #93c5fd;
-}
-.score-tooltip-badge--red {
-  background: #ef444420;
-  border-color: #ef444450;
-  color: #fca5a5;
-}
-
-.score-tooltip-divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, #5c3310, transparent);
-  margin: 6px 0;
-}
-
-.score-tooltip-cols {
-  display: flex;
-  gap: 0;
-}
-
-.score-tooltip-col {
-  flex: 1;
+/* ── Matchup rows ── */
+.score-matchup-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 8px;
 }
 
-.score-tooltip-col-sep {
-  width: 1px;
-  background: linear-gradient(to bottom, transparent, #5c3310 30%, #5c3310 70%, transparent);
-  margin: 0 8px;
-  flex-shrink: 0;
-}
-
-.score-tooltip-row {
+.score-matchup-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 4px;
+  gap: 0;
+  min-height: 52px;
+}
+
+.score-matchup-side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 3px 4px;
   border-radius: 3px;
   transition: background 0.1s ease;
 }
+.score-matchup-side--blue {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+.score-matchup-side--blue:hover { background: rgba(59, 130, 246, 0.07); }
+.score-matchup-side--red {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+.score-matchup-side--red:hover { background: rgba(239, 68, 68, 0.07); }
 
-.score-champ-img {
-  width: 40px;
-  height: 40px;
+.score-col-sep {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(to bottom, transparent, #5c3310 20%, #5c3310 80%, transparent);
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+.score-mu-img {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
-.score-champ-img--blue {
+.score-mu-img--blue {
   border: 2px solid #3b82f660;
-  box-shadow: 0 0 8px #3b82f640;
+  box-shadow: 0 0 12px #3b82f650;
 }
-.score-champ-img--red {
+.score-mu-img--red {
   border: 2px solid #ef444460;
-  box-shadow: 0 0 8px #ef444430;
+  box-shadow: 0 0 12px #ef444440;
 }
 
-.score-champ-info {
+.score-mu-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
-.score-tooltip-name {
-  font-size: 11px;
+.score-mu-info--red {
+  align-items: flex-end;
+}
+
+.score-mu-name {
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
-.score-tooltip-name--blue { color: #bfdbfe; }
-.score-tooltip-name--red  { color: #fecaca; }
+.score-mu-name--blue { color: #bfdbfe; }
+.score-mu-name--red  { color: #fecaca; }
 
-.score-tooltip-kda {
+.score-mu-kda {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  line-height: 1;
 }
-.kda-k { color: #6ee7b7; font-weight: 700; }
-.kda-d { color: #fca5a5; font-weight: 700; }
-.kda-a { color: #93c5fd; font-weight: 700; }
-.kda-s { color: #ffffff33; }
+
+.score-mu-k { color: #6ee7b7; font-weight: 700; }
+.score-mu-d { color: #fca5a5; font-weight: 700; }
+.score-mu-a { color: #93c5fd; font-weight: 700; }
+.score-mu-s { color: rgba(255, 255, 255, 0.25); }
 
 /* ═══════════════════════════════════════════
    SKIP PORTAL BUTTON
