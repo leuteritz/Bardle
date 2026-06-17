@@ -20,9 +20,13 @@
             </div>
           </Transition>
 
-          <!-- Time Display -->
+          <!-- Time Display — each digit in its own grid cell to lock width -->
           <div class="absolute z-20 top-0 left-0 time-display-panel">
-            <div class="time-display-value">{{ formatTime(battleStore.battleTime) }}</div>
+            <div class="time-display-value">
+              <template v-for="(char, i) in formatTime(battleStore.battleTime).split('')" :key="i">
+                <span :class="char === ':' ? 't-sep' : 't-char'">{{ char }}</span>
+              </template>
+            </div>
           </div>
 
           <!-- Score badge + scoreboard tooltip -->
@@ -31,26 +35,28 @@
             @mouseenter="showScoreboard = true"
             @mouseleave="showScoreboard = false"
           >
-            <!-- Compact K/D/A — single horizontal row -->
+            <!-- Compact scoreboard — kills only by default, D/A revealed on hover -->
             <div class="score-compact-panel">
               <div class="score-compact-single-row">
-                <span class="score-compact-label score-compact-label--blue">BLUE</span>
-                <span class="score-compact-kda">
-                  <span class="kda-k">{{ team1Stats.kills }}</span>
-                  <span class="kda-s">/</span>
-                  <span class="kda-d">{{ team1Stats.deaths }}</span>
-                  <span class="kda-s">/</span>
-                  <span class="kda-a">{{ team1Stats.assists }}</span>
+                <span class="score-compact-team">
+                  <span class="score-compact-kills score-kills--blue">{{ team1Stats.kills }}</span>
+                  <span class="score-compact-da score-compact-da--blue">
+                    <span class="score-da-sep">/</span>
+                    <span>{{ team1Stats.deaths }}</span>
+                    <span class="score-da-sep">/</span>
+                    <span>{{ team1Stats.assists }}</span>
+                  </span>
                 </span>
-                <span class="score-mid-sep">·</span>
-                <span class="score-compact-kda">
-                  <span class="kda-k">{{ team2Stats.kills }}</span>
-                  <span class="kda-s">/</span>
-                  <span class="kda-d">{{ team2Stats.deaths }}</span>
-                  <span class="kda-s">/</span>
-                  <span class="kda-a">{{ team2Stats.assists }}</span>
+                <span class="score-mid-sep">–</span>
+                <span class="score-compact-team">
+                  <span class="score-compact-kills score-kills--red">{{ team2Stats.kills }}</span>
+                  <span class="score-compact-da score-compact-da--red">
+                    <span class="score-da-sep">/</span>
+                    <span>{{ team2Stats.deaths }}</span>
+                    <span class="score-da-sep">/</span>
+                    <span>{{ team2Stats.assists }}</span>
+                  </span>
                 </span>
-                <span class="score-compact-label score-compact-label--red">RED</span>
               </div>
             </div>
 
@@ -610,6 +616,7 @@ export default defineComponent({
   border-bottom: 1px solid #3e200a;
   border-radius: 0 0 4px 0;
   padding: 5px 12px 6px;
+  min-width: 5.5ch;
   text-align: center;
   box-shadow:
     inset 0 0 0 1px #1a1008,
@@ -618,16 +625,33 @@ export default defineComponent({
 }
 
 .time-display-value {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  column-gap: 2px;
   font-size: clamp(1.8rem, 3vw, 2.8rem);
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 2px;
   line-height: 1;
   text-shadow:
     0 0 14px rgba(232, 192, 64, 0.75),
     0 0 28px rgba(232, 192, 64, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.t-char {
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+
+.t-sep {
+  display: block;
+  text-align: center;
+  padding: 0 1px;
+  opacity: 0.75;
 }
 
 .minimap-champ-img {
@@ -841,28 +865,8 @@ export default defineComponent({
   gap: 6px;
 }
 
-.score-compact-label {
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  padding: 1px 5px;
-  border-radius: 2px;
-  line-height: 1.4;
-  flex-shrink: 0;
-}
-
-.score-compact-label--blue {
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.15);
-}
-
-.score-compact-label--red {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.score-compact-kda {
-  display: flex;
+.score-compact-team {
+  display: inline-flex;
   align-items: center;
   gap: 2px;
   font-size: clamp(1.8rem, 3vw, 2.8rem);
@@ -870,11 +874,44 @@ export default defineComponent({
   font-variant-numeric: tabular-nums;
 }
 
+.score-compact-kills {
+  display: inline-block;
+  min-width: 3ch;
+  text-align: center;
+}
+
+.score-kills--blue { color: #93c5fd; }
+.score-kills--red  { color: #fca5a5; }
+
+.score-compact-da {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transition: max-width 220ms ease, opacity 150ms ease;
+}
+
+.score-compact-da--blue { color: #93c5fd; }
+.score-compact-da--red  { color: #fca5a5; }
+
+.score-da-sep {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.score-trigger:hover .score-compact-da {
+  max-width: 180px;
+  opacity: 1;
+}
+
 .score-mid-sep {
   color: rgba(232, 192, 64, 0.35);
   font-size: clamp(1.8rem, 3vw, 2.8rem);
   line-height: 1;
   flex-shrink: 0;
+  padding: 0 2px;
 }
 
 /* ═══════════════════════════════════════════
