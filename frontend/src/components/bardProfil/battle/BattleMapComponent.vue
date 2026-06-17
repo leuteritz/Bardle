@@ -20,63 +20,102 @@
             </div>
           </Transition>
 
-          <!-- Time -->
-          <div
-            class="absolute z-20 top-1 left-1 px-1.5 py-0.5 text-xs font-black text-white minimap-overlay-badge"
-          >
-            {{ formatTime(battleStore.battleTime) }}
+          <!-- Time Display -->
+          <div class="absolute z-20 top-0 left-0 time-display-panel">
+            <div class="time-display-value">{{ formatTime(battleStore.battleTime) }}</div>
           </div>
 
           <!-- Score badge + scoreboard tooltip -->
           <div
-            class="absolute z-20 top-1 right-1 score-trigger"
+            class="absolute z-20 top-0 right-0 score-trigger"
             @mouseenter="showScoreboard = true"
             @mouseleave="showScoreboard = false"
           >
-            <div class="px-1.5 py-0.5 minimap-overlay-badge score-badge-hover">
-              <span class="text-xs font-black score-blue">{{ score.team1Kills }}</span>
-              <span class="text-xs score-sep"> vs </span>
-              <span class="text-xs font-black score-red">{{ score.team2Kills }}</span>
+            <!-- Compact K/D/A — single horizontal row -->
+            <div class="score-compact-panel">
+              <div class="score-compact-single-row">
+                <span class="score-compact-label score-compact-label--blue">BLUE</span>
+                <span class="score-compact-kda">
+                  <span class="kda-k">{{ team1Stats.kills }}</span>
+                  <span class="kda-s">/</span>
+                  <span class="kda-d">{{ team1Stats.deaths }}</span>
+                  <span class="kda-s">/</span>
+                  <span class="kda-a">{{ team1Stats.assists }}</span>
+                </span>
+                <span class="score-mid-sep">·</span>
+                <span class="score-compact-kda">
+                  <span class="kda-k">{{ team2Stats.kills }}</span>
+                  <span class="kda-s">/</span>
+                  <span class="kda-d">{{ team2Stats.deaths }}</span>
+                  <span class="kda-s">/</span>
+                  <span class="kda-a">{{ team2Stats.assists }}</span>
+                </span>
+                <span class="score-compact-label score-compact-label--red">RED</span>
+              </div>
             </div>
 
-            <!-- Scoreboard tooltip (hover reveal) -->
-            <div v-show="showScoreboard" class="score-tooltip">
-              <div class="score-tooltip-team">
-                <span class="score-tooltip-badge score-tooltip-badge--blue">BLUE</span>
-                <div
-                  v-for="(champ, i) in battleStore.team1.filter((c) => c.name)"
-                  :key="'tt1-' + i"
-                  class="score-tooltip-row"
-                >
-                  <span class="score-tooltip-name score-tooltip-name--blue">{{ champ.name }}</span>
-                  <span class="score-tooltip-kda">
-                    <span class="kda-k">{{ champ.kills }}</span>
-                    <span class="kda-s">/</span>
-                    <span class="kda-d">{{ champ.deaths }}</span>
-                    <span class="kda-s">/</span>
-                    <span class="kda-a">{{ champ.assists }}</span>
-                  </span>
+            <!-- Scoreboard hover panel — two-column LoL style with champion images -->
+            <Transition name="scoreboard-expand">
+              <div v-if="showScoreboard" class="score-tooltip">
+                <div class="score-tooltip-cols-header">
+                  <span class="score-tooltip-badge score-tooltip-badge--blue">BLUE TEAM</span>
+                  <span class="score-tooltip-badge score-tooltip-badge--red">RED TEAM</span>
+                </div>
+                <div class="score-tooltip-divider" />
+                <div class="score-tooltip-cols">
+                  <!-- Blue column -->
+                  <div class="score-tooltip-col">
+                    <div
+                      v-for="(champ, i) in battleStore.team1.filter((c) => c.name)"
+                      :key="'tt1-' + i"
+                      class="score-tooltip-row"
+                    >
+                      <img
+                        :src="battleStore.getChampionImage(champ.name)"
+                        :alt="champ.name"
+                        class="score-champ-img score-champ-img--blue"
+                      />
+                      <div class="score-champ-info">
+                        <span class="score-tooltip-name score-tooltip-name--blue">{{ champ.name }}</span>
+                        <span class="score-tooltip-kda">
+                          <span class="kda-k">{{ champ.kills }}</span>
+                          <span class="kda-s">/</span>
+                          <span class="kda-d">{{ champ.deaths }}</span>
+                          <span class="kda-s">/</span>
+                          <span class="kda-a">{{ champ.assists }}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Vertical divider -->
+                  <div class="score-tooltip-col-sep" />
+                  <!-- Red column -->
+                  <div class="score-tooltip-col">
+                    <div
+                      v-for="(champ, i) in battleStore.team2.filter((c) => c.name)"
+                      :key="'tt2-' + i"
+                      class="score-tooltip-row"
+                    >
+                      <img
+                        :src="battleStore.getChampionImage(champ.name)"
+                        :alt="champ.name"
+                        class="score-champ-img score-champ-img--red"
+                      />
+                      <div class="score-champ-info">
+                        <span class="score-tooltip-name score-tooltip-name--red">{{ champ.name }}</span>
+                        <span class="score-tooltip-kda">
+                          <span class="kda-k">{{ champ.kills }}</span>
+                          <span class="kda-s">/</span>
+                          <span class="kda-d">{{ champ.deaths }}</span>
+                          <span class="kda-s">/</span>
+                          <span class="kda-a">{{ champ.assists }}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="score-tooltip-divider" />
-              <div class="score-tooltip-team">
-                <span class="score-tooltip-badge score-tooltip-badge--red">RED</span>
-                <div
-                  v-for="(champ, i) in battleStore.team2.filter((c) => c.name)"
-                  :key="'tt2-' + i"
-                  class="score-tooltip-row"
-                >
-                  <span class="score-tooltip-name score-tooltip-name--red">{{ champ.name }}</span>
-                  <span class="score-tooltip-kda">
-                    <span class="kda-k">{{ champ.kills }}</span>
-                    <span class="kda-s">/</span>
-                    <span class="kda-d">{{ champ.deaths }}</span>
-                    <span class="kda-s">/</span>
-                    <span class="kda-a">{{ champ.assists }}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
+            </Transition>
           </div>
 
           <img
@@ -516,6 +555,18 @@ export default defineComponent({
 
     const predeterminedWin = computed(() => battleStore.predeterminedWin)
 
+    const team1Stats = computed(() => ({
+      kills:   battleStore.team1.reduce((s, c) => s + (c.kills ?? 0), 0),
+      deaths:  battleStore.team1.reduce((s, c) => s + (c.deaths ?? 0), 0),
+      assists: battleStore.team1.reduce((s, c) => s + (c.assists ?? 0), 0),
+    }))
+
+    const team2Stats = computed(() => ({
+      kills:   battleStore.team2.reduce((s, c) => s + (c.kills ?? 0), 0),
+      deaths:  battleStore.team2.reduce((s, c) => s + (c.deaths ?? 0), 0),
+      assists: battleStore.team2.reduce((s, c) => s + (c.assists ?? 0), 0),
+    }))
+
     return {
       blueChampions,
       redChampions,
@@ -530,6 +581,8 @@ export default defineComponent({
       predeterminedWin,
       announcement,
       showScoreboard,
+      team1Stats,
+      team2Stats,
     }
   },
 })
@@ -548,10 +601,33 @@ export default defineComponent({
   background: transparent;
 }
 
-.minimap-overlay-badge {
-  background: #000000b3;
-  border: 1px solid var(--rpg-border-row);
-  border-radius: var(--bp-radius);
+/* ═══════════════════════════════════════════
+   TIME DISPLAY
+   ═══════════════════════════════════════════ */
+.time-display-panel {
+  background: #0d0c08;
+  border-right: 1px solid #3e200a;
+  border-bottom: 1px solid #3e200a;
+  border-radius: 0 0 4px 0;
+  padding: 5px 12px 6px;
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 1px #1a1008,
+    0 4px 12px rgba(0, 0, 0, 0.85),
+    0 0 20px rgba(232, 192, 64, 0.06);
+}
+
+.time-display-value {
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 700;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  line-height: 1;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.75),
+    0 0 28px rgba(232, 192, 64, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 .minimap-champ-img {
@@ -739,36 +815,112 @@ export default defineComponent({
   border-color: #e8c04066;
 }
 
-.score-tooltip {
-  position: absolute;
-  top: calc(100% + 5px);
-  right: 0;
-  z-index: 50;
-  min-width: 180px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 8px;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
+/* ═══════════════════════════════════════════
+   COMPACT SCOREBOARD PANEL
+   ═══════════════════════════════════════════ */
+.score-compact-panel {
+  background: #0d0c08;
+  border-left: 1px solid #3e200a;
+  border-bottom: 1px solid #3e200a;
+  border-radius: 0 0 0 4px;
+  padding: 5px 10px 6px;
+  cursor: default;
+  box-shadow:
+    inset 0 0 0 1px #1a1008,
+    0 4px 12px rgba(0, 0, 0, 0.75);
+  transition: border-color 0.15s ease;
 }
 
-.score-tooltip-team {
+.score-trigger:hover .score-compact-panel {
+  border-color: #5c331088;
+}
+
+.score-compact-single-row {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-compact-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.score-compact-label--blue {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.score-compact-label--red {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.score-compact-kda {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-mid-sep {
+  color: rgba(232, 192, 64, 0.35);
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════
+   HOVER SCOREBOARD TRANSITION
+   ═══════════════════════════════════════════ */
+.scoreboard-expand-enter-active,
+.scoreboard-expand-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.scoreboard-expand-enter-from,
+.scoreboard-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.score-tooltip {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 340px;
+  background: #0d0c08;
+  border: 1px solid #3e200a;
+  border-radius: 4px 0 4px 4px;
+  box-shadow:
+    inset 0 0 0 1px #1a1008,
+    0 12px 32px rgba(0, 0, 0, 0.9);
+  padding: 10px;
+  pointer-events: none;
+}
+
+.score-tooltip-cols-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
 }
 
 .score-tooltip-badge {
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 1.5px;
-  padding: 1px 5px;
+  padding: 2px 7px;
   border-radius: 3px;
   border: 1px solid;
   display: inline-block;
-  margin-bottom: 3px;
 }
 .score-tooltip-badge--blue {
   background: #3b82f620;
@@ -781,22 +933,70 @@ export default defineComponent({
   color: #fca5a5;
 }
 
+.score-tooltip-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #5c3310, transparent);
+  margin: 6px 0;
+}
+
+.score-tooltip-cols {
+  display: flex;
+  gap: 0;
+}
+
+.score-tooltip-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.score-tooltip-col-sep {
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #5c3310 30%, #5c3310 70%, transparent);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
 .score-tooltip-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 1px 2px;
+  gap: 7px;
+  padding: 4px 4px;
+  border-radius: 3px;
+  transition: background 0.1s ease;
+}
+
+.score-champ-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.score-champ-img--blue {
+  border: 2px solid #3b82f660;
+  box-shadow: 0 0 8px #3b82f640;
+}
+.score-champ-img--red {
+  border: 2px solid #ef444460;
+  box-shadow: 0 0 8px #ef444430;
+}
+
+.score-champ-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .score-tooltip-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  flex: 1;
-  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .score-tooltip-name--blue { color: #bfdbfe; }
 .score-tooltip-name--red  { color: #fecaca; }
@@ -804,20 +1004,15 @@ export default defineComponent({
 .score-tooltip-kda {
   display: flex;
   align-items: center;
-  gap: 1px;
-  font-size: 10px;
+  gap: 2px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 .kda-k { color: #6ee7b7; font-weight: 700; }
 .kda-d { color: #fca5a5; font-weight: 700; }
 .kda-a { color: #93c5fd; font-weight: 700; }
 .kda-s { color: #ffffff33; }
-
-.score-tooltip-divider {
-  height: 1px;
-  background: linear-gradient(to right, transparent, #5c3310, transparent);
-  margin: 6px 0;
-}
 
 /* ═══════════════════════════════════════════
    SKIP PORTAL BUTTON
@@ -922,5 +1117,10 @@ export default defineComponent({
   .drake-dot.drake-fighting::after,
   .baron-dot.baron-fighting::after { animation: none; }
   .skip-portal-ring { animation: none; }
+  .scoreboard-expand-enter-active,
+  .scoreboard-expand-leave-active { transition: none; }
+  .scoreboard-expand-enter-from,
+  .scoreboard-expand-leave-to { opacity: 1; transform: none; }
+  .score-compact-panel { transition: none; }
 }
 </style>
