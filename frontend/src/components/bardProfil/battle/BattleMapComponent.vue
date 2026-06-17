@@ -42,9 +42,9 @@
                   <span class="score-compact-kills score-kills--blue">{{ team1Stats.kills }}</span>
                   <span class="score-compact-da score-compact-da--blue">
                     <span class="score-da-sep">/</span>
-                    <span>{{ team1Stats.deaths }}</span>
+                    <span class="score-da-val">{{ team1Stats.deaths }}</span>
                     <span class="score-da-sep">/</span>
-                    <span>{{ team1Stats.assists }}</span>
+                    <span class="score-da-val">{{ team1Stats.assists }}</span>
                   </span>
                 </span>
                 <span class="score-mid-sep">–</span>
@@ -52,9 +52,9 @@
                   <span class="score-compact-kills score-kills--red">{{ team2Stats.kills }}</span>
                   <span class="score-compact-da score-compact-da--red">
                     <span class="score-da-sep">/</span>
-                    <span>{{ team2Stats.deaths }}</span>
+                    <span class="score-da-val">{{ team2Stats.deaths }}</span>
                     <span class="score-da-sep">/</span>
-                    <span>{{ team2Stats.assists }}</span>
+                    <span class="score-da-val">{{ team2Stats.assists }}</span>
                   </span>
                 </span>
               </div>
@@ -898,7 +898,16 @@ export default defineComponent({
 .score-compact-da--red  { color: #fca5a5; }
 
 .score-da-sep {
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
   color: rgba(255, 255, 255, 0.25);
+}
+
+.score-da-val {
+  display: inline-block;
+  min-width: 3ch;
+  text-align: center;
 }
 
 .score-trigger:hover .score-compact-da {
