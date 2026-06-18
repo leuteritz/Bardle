@@ -943,6 +943,7 @@ export const useBattleStore = defineStore('battle', {
 
       this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
       this.battleTime = targetSeconds
+      this.startBattleSimulation(true)
     },
 
     syncFromTimestamps() {
