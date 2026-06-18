@@ -152,6 +152,14 @@ export const useBattleStore = defineStore('battle', {
       }
       return out
     },
+    drakeJumpTarget: (state): number => {
+      if (state.drakeEventTime <= 0) return -1
+      return Math.floor((state.drakeEventTime - 1) / 60) * 60
+    },
+    baronJumpTarget: (state): number => {
+      if (state.baronEventTime <= 0) return -1
+      return Math.floor((state.baronEventTime - 1) / 60) * 60
+    },
   },
 
   actions: {
@@ -866,6 +874,75 @@ export const useBattleStore = defineStore('battle', {
       this.battleTime = endGameTime
       this.battlePhase = 'result'
       await this.runBattleCycle()
+    },
+
+    jumpToGameTime(targetSeconds: number) {
+      if (this.battlePhase !== 'playing') return
+      if (targetSeconds <= this.battleTime) return
+      if (targetSeconds >= BATTLE_REAL_DURATION_SECONDS * 60) return
+
+      // Flush kill events up to target time
+      const pending = this.killEventSchedule.filter((e) => e.gameTime <= targetSeconds)
+      this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > targetSeconds)
+      for (const event of pending) {
+        const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
+        const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
+        if (!attackingTeam.length || !defendingTeam.length) continue
+        const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
+        killer.kills += 1
+        const assistCount = Math.random() < BATTLE_ASSIST_CHANCE ? 1 : 2
+        const others = attackingTeam.filter((c) => c !== killer)
+        for (let i = 0; i < Math.min(assistCount, others.length); i++) {
+          others[Math.floor(Math.random() * others.length)].assists += 1
+        }
+        const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
+        if (Math.random() < BATTLE_DEATH_CHANCE) victim.deaths += 1
+      }
+
+      // Simulate Drake kill if its event falls within the skipped window
+      if (this.drakeAlive && this.drakeEventTime > 0 && this.drakeEventTime <= targetSeconds) {
+        this.drakeKilledByTeam = Math.random() < 0.5 ? 1 : 2
+        this.drakeAlive = false
+        const teamName = this.drakeKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
+        this.chatMessages.push({
+          user: 'System',
+          text: `${teamName} slew the Dragon!`,
+          time: this.formatTime(this.drakeEventTime),
+          team: this.drakeKilledByTeam,
+          type: 'system',
+        })
+      }
+
+      // Simulate Baron kill if its event falls within the skipped window
+      if (
+        this.baronAlive &&
+        this.baronEventTime > 0 &&
+        this.baronEventTime <= targetSeconds &&
+        targetSeconds < MINIMAP_PHASE_BARON_END
+      ) {
+        this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
+        this.baronAlive = false
+        const baronTeamName = this.baronKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
+        this.chatMessages.push({
+          user: 'System',
+          text: `${baronTeamName} slew Baron Nashor!`,
+          time: this.formatTime(this.baronEventTime),
+          team: this.baronKilledByTeam,
+          type: 'system',
+        })
+      }
+
+      // System message marking the skip
+      this.chatMessages.push({
+        user: 'System',
+        text: `Match skipped to ${this.formatTime(targetSeconds)}`,
+        time: this.formatTime(targetSeconds),
+        team: 0,
+        type: 'system',
+      })
+
+      this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
+      this.battleTime = targetSeconds
     },
 
     syncFromTimestamps() {

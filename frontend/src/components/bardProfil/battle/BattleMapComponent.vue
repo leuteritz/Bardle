@@ -204,6 +204,31 @@
             <span class="skip-portal-label">SKIP</span>
           </button>
 
+          <!-- Dragon / Baron spawn shortcuts — bottom-center -->
+          <div
+            v-if="battleStore.battlePhase === 'playing'"
+            class="spawn-shortcuts"
+          >
+            <button
+              class="spawn-shortcut-btn spawn-shortcut-btn--drake"
+              :disabled="battleStore.drakeJumpTarget < 0 || battleStore.battleTime >= battleStore.drakeJumpTarget"
+              :title="`Jump to ${formatTime(battleStore.drakeJumpTarget)} — 1 min before Dragon dies`"
+              @click="battleStore.jumpToGameTime(battleStore.drakeJumpTarget)"
+            >
+              <Icon icon="game-icons:dragon-head" style="color: #22c55e; position: relative; z-index: 1;" width="18" height="18" />
+              <span class="spawn-shortcut-label">{{ formatTime(battleStore.drakeJumpTarget) }}</span>
+            </button>
+            <button
+              class="spawn-shortcut-btn spawn-shortcut-btn--baron"
+              :disabled="battleStore.baronJumpTarget < 0 || battleStore.battleTime >= battleStore.baronJumpTarget"
+              :title="`Jump to ${formatTime(battleStore.baronJumpTarget)} — 1 min before Baron dies`"
+              @click="battleStore.jumpToGameTime(battleStore.baronJumpTarget)"
+            >
+              <Icon icon="game-icons:hydra" style="color: #a855f7; position: relative; z-index: 1;" width="18" height="18" />
+              <span class="spawn-shortcut-label">{{ formatTime(battleStore.baronJumpTarget) }}</span>
+            </button>
+          </div>
+
           <!-- Chat toggle button — bottom-right -->
           <button
             class="chat-toggle-btn"
@@ -481,6 +506,19 @@ export default defineComponent({
       () => {
         resetChampions()
         startMovement()
+      },
+    )
+
+    // Snap champions immediately when battleTime jumps forward more than one normal tick
+    // (normal tick = ~60 game-seconds; threshold of 90 catches only time-jump button presses)
+    let prevBattleTime = 0
+    watch(
+      () => battleStore.battleTime,
+      (newTime) => {
+        if (newTime - prevBattleTime > 90) {
+          snapChampionsToPhase()
+        }
+        prevBattleTime = newTime
       },
     )
 
@@ -1030,6 +1068,65 @@ export default defineComponent({
 }
 
 /* ═══════════════════════════════════════════
+   SPAWN SHORTCUT BUTTONS (Dragon / Baron)
+   ═══════════════════════════════════════════ */
+.spawn-shortcuts {
+  position: absolute;
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+}
+
+.spawn-shortcut-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 5px 6px;
+  border: 2px solid #7a4e20;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  background: rgba(13, 12, 8, 0.85);
+}
+
+.spawn-shortcut-btn--drake {
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.15);
+}
+.spawn-shortcut-btn--drake:not(:disabled):hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.5);
+}
+
+.spawn-shortcut-btn--baron {
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
+}
+.spawn-shortcut-btn--baron:not(:disabled):hover {
+  border-color: #a855f7;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+}
+
+.spawn-shortcut-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}
+
+.spawn-shortcut-label {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: rgba(232, 192, 64, 0.7);
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════
    CHAT TOGGLE BUTTON
    ═══════════════════════════════════════════ */
 .chat-toggle-btn {
@@ -1083,6 +1180,7 @@ export default defineComponent({
   .drake-dot.drake-fighting::after,
   .baron-dot.baron-fighting::after { animation: none; }
   .skip-portal-ring { animation: none; }
+  .spawn-shortcut-btn { transition: none; }
   .scoreboard-expand-enter-active,
   .scoreboard-expand-leave-active { transition: none; }
   .scoreboard-expand-enter-from,

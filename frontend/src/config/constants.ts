@@ -1356,4 +1356,6 @@ export const USED_GAME_ICONS = new Set<string>([
   // Battle Minimap overlays
   'game-icons:magic-portal',   // Skip button on minimap (BattleMapComponent)
   'game-icons:chat-bubble',    // Chat toggle button on minimap (BattleMapComponent)
+  'game-icons:dragon-head',    // Dragon spawn shortcut button (BattleMapComponent)
+  'game-icons:hydra',          // Baron spawn shortcut button (BattleMapComponent)
 ])
