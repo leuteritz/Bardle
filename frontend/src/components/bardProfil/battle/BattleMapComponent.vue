@@ -20,8 +20,8 @@
           <!-- Score badge + scoreboard tooltip -->
           <div
             class="absolute z-20 top-0 right-0 score-trigger"
-            @mouseenter="showScoreboard = true"
-            @mouseleave="showScoreboard = false"
+            @mouseenter="showScoreboardFromTrigger = true"
+            @mouseleave="showScoreboardFromTrigger = false"
           >
             <!-- Compact scoreboard — kills only -->
             <div class="score-compact-panel" ref="scoreboardPanelRef">
@@ -36,7 +36,7 @@
               </div>
             </div>
 
-            <!-- Scoreboard hover panel — two-column K/D/A matchup -->
+            <!-- Scoreboard hover panel — full 5v5 matchup with spotlight on hovered champion -->
             <Transition name="scoreboard-expand">
               <div v-if="showScoreboard" class="score-tooltip">
                 <div class="score-matchup-list">
@@ -44,6 +44,10 @@
                     v-for="(blueChamp, i) in battleStore.team1"
                     :key="'mu-' + i"
                     class="score-matchup-row"
+                    :class="{
+                      'score-matchup-row--highlighted': hoveredChampionKey === '1-' + i || hoveredChampionKey === '2-' + i,
+                      'score-matchup-row--dimmed': hoveredChampionKey !== null && hoveredChampionKey !== '1-' + i && hoveredChampionKey !== '2-' + i,
+                    }"
                   >
                     <!-- Blue side: img → name + kda -->
                     <div class="score-matchup-side score-matchup-side--blue">
@@ -105,6 +109,8 @@
             class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
             :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
+            @mouseenter="onChampHover('1', i)"
+            @mouseleave="onChampLeave()"
           >
             <img
               v-if="battleStore.team1[i]?.name"
@@ -116,16 +122,7 @@
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === true,
               }"
             />
-            <div v-if="battleStore.team1[i]?.name" class="minimap-champ-tooltip minimap-champ-tooltip--blue">
-              <span class="tip-name">{{ battleStore.team1[i].name }}</span>
-              <span class="tip-kda">
-                <span class="tip-k">{{ battleStore.team1[i].kills }}</span>
-                <span class="tip-s">/</span>
-                <span class="tip-d">{{ battleStore.team1[i].deaths }}</span>
-                <span class="tip-s">/</span>
-                <span class="tip-a">{{ battleStore.team1[i].assists }}</span>
-              </span>
-            </div>
+            <div v-if="battleStore.team1[i]?.name" class="champ-name-overlay">{{ battleStore.team1[i].name }}</div>
           </div>
 
           <!-- Red Champions -->
@@ -135,6 +132,8 @@
             class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
             :class="isSnapping ? '' : 'transition-all duration-500'"
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
+            @mouseenter="onChampHover('2', i)"
+            @mouseleave="onChampLeave()"
           >
             <img
               v-if="battleStore.team2[i]?.name"
@@ -146,23 +145,15 @@
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === false,
               }"
             />
-            <div v-if="battleStore.team2[i]?.name" class="minimap-champ-tooltip minimap-champ-tooltip--red">
-              <span class="tip-name">{{ battleStore.team2[i].name }}</span>
-              <span class="tip-kda">
-                <span class="tip-k">{{ battleStore.team2[i].kills }}</span>
-                <span class="tip-s">/</span>
-                <span class="tip-d">{{ battleStore.team2[i].deaths }}</span>
-                <span class="tip-s">/</span>
-                <span class="tip-a">{{ battleStore.team2[i].assists }}</span>
-              </span>
-            </div>
+            <div v-if="battleStore.team2[i]?.name" class="champ-name-overlay">{{ battleStore.team2[i].name }}</div>
           </div>
 
           <!-- Drake Dot -->
           <Transition name="obj-fade">
             <div
               v-if="drakeVisible"
-              class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
+              class="absolute -translate-x-1/2 -translate-y-1/2"
+              style="pointer-events: none"
               :style="{ left: '66%', top: '69%', zIndex: 6 }"
             >
               <div class="drake-dot" :class="{ 'drake-fighting': drakeFighting }">
@@ -171,7 +162,6 @@
                   class="minimap-obj-img drake-icon"
                 />
               </div>
-              <span class="minimap-champ-tooltip">Dragon</span>
             </div>
           </Transition>
 
@@ -179,7 +169,8 @@
           <Transition name="obj-fade">
             <div
               v-if="baronVisible"
-              class="absolute -translate-x-1/2 -translate-y-1/2 minimap-champ-wrapper"
+              class="absolute -translate-x-1/2 -translate-y-1/2"
+              style="pointer-events: none"
               :style="{ left: '33%', top: '33%', zIndex: 6 }"
             >
               <div class="baron-dot" :class="{ 'baron-fighting': baronFighting }">
@@ -188,7 +179,6 @@
                   class="minimap-obj-img baron-icon"
                 />
               </div>
-              <span class="minimap-champ-tooltip">Baron Nashor</span>
             </div>
           </Transition>
 
@@ -335,7 +325,9 @@ export default defineComponent({
     chatOpen: { type: Boolean, default: false },
   },
   setup(props) {
-    const showScoreboard = ref(false)
+    const showScoreboardFromTrigger = ref(false)
+    const hoveredChampionKey = ref<string | null>(null)
+    const showScoreboard = computed(() => showScoreboardFromTrigger.value || hoveredChampionKey.value !== null)
     const battleStore = useBattleStore()
     let moveInterval: ReturnType<typeof setInterval> | null = null
 
@@ -362,6 +354,14 @@ export default defineComponent({
       const min = Math.floor(seconds / 60)
       const sec = seconds % 60
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+    }
+
+    function onChampHover(team: '1' | '2', index: number) {
+      hoveredChampionKey.value = `${team}-${index}`
+    }
+
+    function onChampLeave() {
+      hoveredChampionKey.value = null
     }
 
     function lerp(a: number, b: number, t: number) {
@@ -590,7 +590,11 @@ export default defineComponent({
       drakeVisible,
       drakeFighting,
       predeterminedWin,
+      showScoreboardFromTrigger,
+      hoveredChampionKey,
       showScoreboard,
+      onChampHover,
+      onChampLeave,
       team1Stats,
       team2Stats,
       scoreboardPanelRef,
@@ -686,53 +690,30 @@ export default defineComponent({
   image-rendering: auto;
 }
 
-.minimap-champ-tooltip {
+.champ-name-overlay {
   position: absolute;
-  bottom: calc(100% + 5px);
+  bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  width: var(--scoreboard-w, 120px);
-  background: #16140e;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  padding: 5px 8px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #e8c040;
+  text-shadow:
+    0 0 12px rgba(168, 85, 247, 0.9),
+    0 0 24px rgba(168, 85, 247, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.95);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.12s ease;
-  z-index: 50;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 8px rgba(92, 51, 16, 0.3);
+  transition: opacity 0.15s ease-out;
+  z-index: 60;
 }
 
-.minimap-champ-tooltip--blue { border-color: #3b82f640; }
-.minimap-champ-tooltip--red  { border-color: #ef444440; }
-
-.minimap-champ-wrapper:hover .minimap-champ-tooltip {
+.minimap-champ-wrapper:hover .champ-name-overlay {
   opacity: 1;
 }
 
-.tip-name {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  color: #e8c040;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tip-kda {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.tip-k { color: #6ee7b7; font-weight: 700; }
-.tip-d { color: #fca5a5; font-weight: 700; }
-.tip-a { color: #93c5fd; font-weight: 700; }
-.tip-s { color: rgba(255, 255, 255, 0.3); }
 
 .minimap-champ--blue {
   border: 2px solid #60a5fa;
@@ -956,6 +937,46 @@ export default defineComponent({
 }
 .score-matchup-side--red:hover { background: rgba(239, 68, 68, 0.07); }
 
+/* ── Spotlight: highlighted row (hovered champion) ── */
+.score-matchup-row--highlighted {
+  position: relative;
+  border-radius: 3px;
+  background: rgba(232, 192, 64, 0.06);
+}
+
+.score-matchup-row--highlighted::before,
+.score-matchup-row--highlighted::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, transparent, #e8c040aa, transparent);
+  pointer-events: none;
+}
+.score-matchup-row--highlighted::before { left: 0; }
+.score-matchup-row--highlighted::after  { right: 0; }
+
+.score-matchup-row--highlighted .score-mu-img--blue {
+  border-color: #93c5fd;
+  box-shadow: 0 0 18px #3b82f6bb;
+}
+.score-matchup-row--highlighted .score-mu-img--red {
+  border-color: #fca5a5;
+  box-shadow: 0 0 18px #ef4444bb;
+}
+.score-matchup-row--highlighted .score-mu-name--blue { color: #dbeafe; }
+.score-matchup-row--highlighted .score-mu-name--red  { color: #fee2e2; }
+.score-matchup-row--highlighted .score-mu-kda { font-size: 15px; }
+
+/* Dimmed rows: non-hovered rows fade back */
+.score-matchup-row--dimmed {
+  opacity: 0.35;
+  filter: grayscale(25%);
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
 .score-col-sep {
   width: 1px;
   align-self: stretch;
@@ -1172,8 +1193,7 @@ export default defineComponent({
 @media (prefers-reduced-motion: reduce) {
   .minimap-champ-img,
   .minimap-obj-img,
-  .minimap-champ-tooltip,
-  .tip-kda { transition: none; }
+  .champ-name-overlay { transition: none; }
   .minimap-champ-wrapper:hover .minimap-champ-img { transform: none; }
   .obj-fade-enter-active,
   .obj-fade-leave-active { transition: none; }
