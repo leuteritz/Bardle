@@ -1073,6 +1073,8 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
 
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
+/** Milliseconds the cinematic kill-announcement banner stays visible before fading */
+export const KILL_BANNER_DISPLAY_MS = 3_500
 
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000

@@ -39,6 +39,9 @@
           />
         </Transition>
       </div>
+
+      <!-- Cinematic kill announcement banner — overlays the entire battle area -->
+      <BattleKillBannerComponent />
     </template>
   </div>
 
@@ -54,6 +57,7 @@ import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
 import BattleStartScreenComponent from './BattleStartScreenComponent.vue'
 import BattleResultModal from './BattleResultModal.vue'
+import BattleKillBannerComponent from './BattleKillBannerComponent.vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
@@ -65,6 +69,7 @@ export default defineComponent({
     PlanetBattleBackgroundComponent,
     BattleStartScreenComponent,
     BattleResultModal,
+    BattleKillBannerComponent,
   },
 
   setup() {

@@ -8,18 +8,6 @@
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
         <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field" :style="{ '--scoreboard-w': scoreboardWidth + 'px' }">
-          <!-- Kill Announcement Banner -->
-          <Transition name="announce-fade">
-            <div
-              v-if="announcement"
-              class="absolute z-30 left-1/2 -translate-x-1/2 top-[12%] pointer-events-none announcement-banner"
-              :class="announcement.team === 1 ? 'announcement-banner--blue' : 'announcement-banner--red'"
-            >
-              <img :src="announcement.icon" class="w-[14px] h-[14px] object-cover rounded-full flex-shrink-0" />
-              <span class="announcement-text">{{ announcement.text }}</span>
-            </div>
-          </Transition>
-
           <!-- Time Display — each digit in its own grid cell to lock width -->
           <div class="absolute z-20 top-0 left-0 time-display-panel">
             <div class="time-display-value">
@@ -516,42 +504,8 @@ export default defineComponent({
     onUnmounted(() => {
       if (moveInterval) clearInterval(moveInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      if (announceTimer) clearTimeout(announceTimer)
       resizeObs?.disconnect()
     })
-
-    // Kill announcement banner
-    const announcement = ref<{ text: string; icon: string; team: 1 | 2 } | null>(null)
-    let announceTimer: ReturnType<typeof setTimeout> | null = null
-
-    function showAnnouncement(text: string, icon: string, team: 1 | 2) {
-      if (announceTimer) clearTimeout(announceTimer)
-      announcement.value = { text, icon, team }
-      announceTimer = setTimeout(() => {
-        announcement.value = null
-      }, 5000)
-    }
-
-    watch(
-      () => battleStore.drakeAlive,
-      (alive) => {
-        if (!alive && battleStore.drakeKilledByTeam) {
-          const team = battleStore.drakeKilledByTeam
-          const name = team === 1 ? 'Blue Team' : 'Red Team'
-          showAnnouncement(`Dragon slain by ${name}`, '/img/dragon.png', team)
-        }
-      },
-    )
-
-    watch(
-      () => battleStore.baronKilledByTeam,
-      (team) => {
-        if (team) {
-          const name = team === 1 ? 'Blue Team' : 'Red Team'
-          showAnnouncement(`Baron slain by ${name}`, '/img/baron.png', team)
-        }
-      },
-    )
 
     const baronVisible = computed(() => {
       const t = battleStore.battleTime
@@ -598,7 +552,6 @@ export default defineComponent({
       drakeVisible,
       drakeFighting,
       predeterminedWin,
-      announcement,
       showScoreboard,
       team1Stats,
       team2Stats,
@@ -828,45 +781,6 @@ export default defineComponent({
 .minimap-champ--buffed {
   border-color: #a855f7 !important;
   box-shadow: 0 0 10px #a855f7cc !important;
-}
-
-.announcement-banner {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
-  border-radius: var(--bp-radius);
-  background: rgba(17, 16, 8, 0.88);
-  border: 1px solid #5c3310;
-  white-space: nowrap;
-}
-
-.announcement-banner--blue {
-  border-color: #3b82f6;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
-}
-
-.announcement-banner--red {
-  border-color: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
-}
-
-.announcement-text {
-  font-size: 9px;
-  font-weight: 700;
-  color: #e8c040;
-  letter-spacing: 0.3px;
-}
-
-.announce-fade-enter-active {
-  transition: opacity 0.3s ease;
-}
-.announce-fade-leave-active {
-  transition: opacity 0.8s ease;
-}
-.announce-fade-enter-from,
-.announce-fade-leave-to {
-  opacity: 0;
 }
 
 /* ═══════════════════════════════════════════
