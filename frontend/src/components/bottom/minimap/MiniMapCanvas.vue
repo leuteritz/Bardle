@@ -17,7 +17,7 @@ import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA } from '@/config/constants'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA, RESCUE_ROTATION_DURATION_MS } from '@/config/constants'
 
 const MAP_WORLD_DEFAULT = 0.3
 const MAP_WORLD_ZOOMED = 0.14
@@ -352,6 +352,7 @@ export default defineComponent({
     const show = computed(
       () =>
         galaxyStore.pendingRoleSelection ||
+        galaxyStore.isRescueRotating ||
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
@@ -966,6 +967,100 @@ export default defineComponent({
 
     }
 
+    function drawRotationTransition(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const cx = w / 2
+      const cy = h / 2
+      const nowMs = Date.now()
+      const elapsed = Math.max(0, nowMs - galaxyStore.rescueRotationStartTime)
+      const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
+      const te = easeInOut(t)
+
+      // Layer 1: normal travel map fading in
+      ctx.save()
+      ctx.globalAlpha = te
+      drawNormalMap(ctx, w, h)
+      ctx.restore()
+
+      // Layer 2: waiting-state sun fading out + shrinking + launch streaks
+      if (te < 0.99) {
+        const fade = 1 - te
+        const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
+        const sunR = 13 + (46 - 13) * (1 - te)
+        const pulseMs = parseFloat(phase.pulseSpeed) * 1000 / (Math.PI * 2)
+        const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+
+        ctx.save()
+        ctx.globalAlpha = fade
+
+        // Outer corona
+        const coroR = sunR * (3.2 + 0.3 * pulse)
+        const outerCorona = ctx.createRadialGradient(cx, cy, sunR * 0.85, cx, cy, coroR)
+        outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
+        outerCorona.addColorStop(0.5, hexToRgba(phase.glow2, 0.08))
+        outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.beginPath()
+        ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
+        ctx.fillStyle = outerCorona
+        ctx.fill()
+
+        // Inner halo (boosted — launch ignition)
+        const innerHalo = ctx.createRadialGradient(cx, cy, sunR * 0.5, cx, cy, sunR * 2.4)
+        innerHalo.addColorStop(0, hexToRgba(phase.core, 0.85))
+        innerHalo.addColorStop(0.35, hexToRgba(phase.glow1, 0.45))
+        innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.beginPath()
+        ctx.arc(cx, cy, sunR * 2.4, 0, Math.PI * 2)
+        ctx.fillStyle = innerHalo
+        ctx.fill()
+
+        // Sun body
+        const bodyGrad = ctx.createRadialGradient(
+          cx - sunR * 0.28, cy - sunR * 0.3, sunR * 0.05,
+          cx, cy, sunR,
+        )
+        bodyGrad.addColorStop(0, phase.core)
+        bodyGrad.addColorStop(0.5, phase.mid)
+        bodyGrad.addColorStop(1, phase.edge)
+        ctx.beginPath()
+        ctx.arc(cx, cy, sunR, 0, Math.PI * 2)
+        ctx.fillStyle = bodyGrad
+        ctx.fill()
+
+        // Rim
+        ctx.beginPath()
+        ctx.arc(cx, cy, sunR, 0, Math.PI * 2)
+        ctx.strokeStyle = `rgba(255,255,220,${(0.4 + 0.2 * pulse).toFixed(3)})`
+        ctx.lineWidth = 1.0
+        ctx.stroke()
+
+        ctx.restore()
+
+        // Radial launch streaks (grow longer as t increases, then fade with sun)
+        const numStreaks = 8
+        const streakBaseLen = sunR * (1.2 + te * 3.5)
+        const streakAlpha = te * 0.55 * fade
+        const streakOffset = galaxyStore.rescueRotationDirection * te * Math.PI * 0.5
+        for (let i = 0; i < numStreaks; i++) {
+          const angle = (i / numStreaks) * Math.PI * 2 + streakOffset
+          const startR = sunR * 1.15
+          const endR = startR + streakBaseLen
+          const sx = cx + Math.cos(angle) * startR
+          const sy = cy + Math.sin(angle) * startR
+          const ex = cx + Math.cos(angle) * endR
+          const ey = cy + Math.sin(angle) * endR
+          const grad = ctx.createLinearGradient(sx, sy, ex, ey)
+          grad.addColorStop(0, hexToRgba(phase.glow1, streakAlpha))
+          grad.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.beginPath()
+          ctx.strokeStyle = grad
+          ctx.lineWidth = 1.2
+          ctx.moveTo(sx, sy)
+          ctx.lineTo(ex, ey)
+          ctx.stroke()
+        }
+      }
+    }
+
     function drawWaitingState(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const cx = w / 2
       const cy = h / 2
@@ -1064,6 +1159,10 @@ export default defineComponent({
       ctx.clearRect(0, 0, w, h)
       if (galaxyStore.pendingRoleSelection) {
         drawWaitingState(ctx, w, h)
+        return
+      }
+      if (galaxyStore.isRescueRotating) {
+        drawRotationTransition(ctx, w, h)
         return
       }
       if (hyperspacePhase === 'streaks') {

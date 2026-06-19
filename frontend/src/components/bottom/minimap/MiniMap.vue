@@ -98,6 +98,7 @@ export default defineComponent({
     const show = computed(
       () =>
         galaxyStore.pendingRoleSelection ||
+        galaxyStore.isRescueRotating ||
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&

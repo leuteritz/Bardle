@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isRescuing && !isWaiting" class="hud-panel">
+  <div v-if="!isRescuing && !isWaiting && !isRotating" class="hud-panel">
     <!-- Row 1: icon + arrival value + time unit -->
     <div class="hud-arrival">
       <Icon icon="game-icons:sands-of-time" width="24" height="24" style="color: rgba(232, 192, 64, 0.55)" />
@@ -51,6 +51,8 @@ export default defineComponent({
 
     const isWaiting = computed(() => galaxyStore.pendingRoleSelection)
 
+    const isRotating = computed(() => galaxyStore.isRescueRotating)
+
     const countdown = computed(() => {
       const ms = galaxyStore.travelRemainingMs
       const s = Math.ceil(ms / 1000)
@@ -95,6 +97,7 @@ export default defineComponent({
     return {
       isRescuing,
       isWaiting,
+      isRotating,
       countdown,
       countdownUnit,
       isTraveling,
