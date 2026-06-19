@@ -499,6 +499,10 @@ export default defineComponent({
       rescued: number,
     ): { x: number; y: number } {
       if (galaxyStore.isBossSearchActive) return galaxyStore.bossSearchInterpolatedPos
+      if (galaxyStore.isRescueRotating) {
+        if (rescued > 0) return dots[order[rescued - 1]]
+        return spawnPos.value
+      }
       const state = galaxyStore.championTravelState
       if (state === 'traveling') {
         const startTime = galaxyStore.championTravelStartTime
