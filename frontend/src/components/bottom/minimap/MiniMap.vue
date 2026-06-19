@@ -36,6 +36,11 @@
             <rect width="440" height="440" fill="url(#gridFade)" />
           </svg>
 
+          <!-- ── Waiting for role selection ── -->
+          <div v-if="galaxyStore.pendingRoleSelection" class="minimap-waiting-label">
+            Choose your Role
+          </div>
+
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
 
@@ -92,6 +97,7 @@ export default defineComponent({
 
     const show = computed(
       () =>
+        galaxyStore.pendingRoleSelection ||
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
@@ -252,6 +258,36 @@ export default defineComponent({
     box-shadow:
       0 0 0 3px rgba(255, 200, 80, 0.55),
       0 0 18px 6px rgba(255, 180, 40, 0.3);
+  }
+}
+
+/* ── Rollenauswahl-Wartezustand ── */
+.minimap-waiting-label {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: #e8c040;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+  text-transform: uppercase;
+  animation: waiting-label-pulse 1.8s ease-in-out infinite alternate;
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.9),
+    0 0 5px rgba(200, 150, 20, 0.7),
+    0 1px 4px rgba(0, 0, 0, 0.98);
+}
+
+@keyframes waiting-label-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
   }
 }
 

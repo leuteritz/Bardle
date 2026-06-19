@@ -12,11 +12,12 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS } from '@/config/constants'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA } from '@/config/constants'
 
 const MAP_WORLD_DEFAULT = 0.3
 const MAP_WORLD_ZOOMED = 0.14
@@ -299,6 +300,13 @@ function easeInOut(t: number) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
 export default defineComponent({
   name: 'MiniMapCanvas',
   setup() {
@@ -306,6 +314,7 @@ export default defineComponent({
     const gameStore = useGameStore()
     const starGroupStore = useStarGroupStore()
     const planetBossStore = usePlanetBossStore()
+    const solarUpgradeStore = useSolarUpgradeStore()
 
     const championImageCache = new Map<string, HTMLImageElement>()
 
@@ -342,6 +351,7 @@ export default defineComponent({
 
     const show = computed(
       () =>
+        galaxyStore.pendingRoleSelection ||
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
@@ -956,6 +966,100 @@ export default defineComponent({
 
     }
 
+    function drawWaitingState(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const cx = w / 2
+      const cy = h / 2
+      const nowMs = Date.now()
+
+      // Dark space background
+      ctx.fillStyle = '#06040e'
+      ctx.fillRect(0, 0, w, h)
+
+      // Faint galaxy image for depth
+      const img = imgEl.value
+      if (img?.complete) {
+        ctx.save()
+        ctx.globalAlpha = 0.18
+        ctx.drawImage(img, 0, 0, w, h)
+        ctx.restore()
+      }
+
+      // Seeded background star field
+      const bgRng = seededRng(galaxyStore.currentGalaxy * 77771)
+      for (let i = 0; i < 55; i++) {
+        const bx = bgRng() * w
+        const by = bgRng() * h
+        const br = 0.4 + bgRng() * 0.7
+        const ba = 0.15 + bgRng() * 0.35
+        const bc = 180 + Math.floor(bgRng() * 75)
+        ctx.beginPath()
+        ctx.arc(bx, by, br, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${bc}, ${bc + 10}, 255, ${ba.toFixed(2)})`
+        ctx.fill()
+      }
+
+      // Phase-accurate sun
+      const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
+      const SUN_R = 18
+      const pulseMs = parseFloat(phase.pulseSpeed) * 1000 / (Math.PI * 2)
+      const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+
+      // Expanding gold ripple rings — "waiting for input" beacon
+      for (let ring = 0; ring < 3; ring++) {
+        const rippleT = ((nowMs / 2200 + ring / 3) % 1)
+        const rippleR = SUN_R * (1.8 + rippleT * 3.5)
+        const rippleA = (1 - rippleT) * 0.22
+        ctx.beginPath()
+        ctx.arc(cx, cy, rippleR, 0, Math.PI * 2)
+        ctx.strokeStyle = `rgba(232,192,64,${rippleA.toFixed(3)})`
+        ctx.lineWidth = 1.2
+        ctx.stroke()
+      }
+
+      // Phase glow (outer diffuse halo)
+      const glowR = SUN_R * (2.8 + 0.3 * pulse)
+      const outerGlow = ctx.createRadialGradient(cx, cy, SUN_R * 0.8, cx, cy, glowR)
+      outerGlow.addColorStop(0, hexToRgba(phase.glow1, 0.55))
+      outerGlow.addColorStop(0.5, hexToRgba(phase.glow2, 0.2))
+      outerGlow.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.beginPath()
+      ctx.arc(cx, cy, glowR, 0, Math.PI * 2)
+      ctx.fillStyle = outerGlow
+      ctx.fill()
+
+      // Sun body (phase core → mid → edge)
+      const bodyGrad = ctx.createRadialGradient(
+        cx - SUN_R * 0.28, cy - SUN_R * 0.3, SUN_R * 0.05,
+        cx, cy, SUN_R,
+      )
+      bodyGrad.addColorStop(0, phase.core)
+      bodyGrad.addColorStop(0.5, phase.mid)
+      bodyGrad.addColorStop(1, phase.edge)
+      ctx.beginPath()
+      ctx.arc(cx, cy, SUN_R, 0, Math.PI * 2)
+      ctx.fillStyle = bodyGrad
+      ctx.fill()
+
+      // Rim highlight
+      ctx.beginPath()
+      ctx.arc(cx, cy, SUN_R, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(255,255,220,${(0.35 + 0.15 * pulse).toFixed(3)})`
+      ctx.lineWidth = 1.2
+      ctx.stroke()
+
+      // Player dot (Bard on the sun — golden beacon)
+      ctx.shadowColor = 'rgba(232,192,64,0.95)'
+      ctx.shadowBlur = 14
+      ctx.beginPath()
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2)
+      ctx.fillStyle = '#ffe060'
+      ctx.fill()
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+      ctx.shadowBlur = 0
+    }
+
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
@@ -969,6 +1073,10 @@ export default defineComponent({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, w, h)
+      if (galaxyStore.pendingRoleSelection) {
+        drawWaitingState(ctx, w, h)
+        return
+      }
       if (hyperspacePhase === 'streaks') {
         drawStreaksPhase(ctx, w, h, timestamp)
         return
