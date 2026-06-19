@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { ChampionRole } from '../types'
 
 export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets'
 
@@ -10,6 +11,7 @@ export const useUiStore = defineStore('ui', () => {
   const rolesOpenToken = ref(0)
   const planetActiveSlotId = ref<string | null>(null)
   const pendingChampionSearch = ref('')
+  const hoveredChampionRole = ref<ChampionRole | null>(null)
 
   function openBardModal() {
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
@@ -48,6 +50,10 @@ export const useUiStore = defineStore('ui', () => {
     pendingChampionSearch.value = ''
   }
 
+  function setHoveredChampionRole(role: ChampionRole | null) {
+    hoveredChampionRole.value = role
+  }
+
   return {
     bardActiveTab,
     rolesActiveSlot,
@@ -55,6 +61,7 @@ export const useUiStore = defineStore('ui', () => {
     rolesOpenToken,
     planetActiveSlotId,
     pendingChampionSearch,
+    hoveredChampionRole,
     openBardModal,
     setBardTab,
     closeBardModal,
@@ -63,5 +70,6 @@ export const useUiStore = defineStore('ui', () => {
     setRolesActiveSlot,
     requestOpenTeamTabWithSearch,
     clearPendingChampionSearch,
+    setHoveredChampionRole,
   }
 })

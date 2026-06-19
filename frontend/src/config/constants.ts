@@ -1359,3 +1359,14 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:dragon-head',    // Dragon spawn shortcut button (BattleMapComponent)
   'game-icons:hydra',          // Baron spawn shortcut button (BattleMapComponent)
 ])
+
+// ── Hover-effect colors per role (Command Panel slot hover) ───────────────
+// Distinct from ROLES[].color — these drive the champion lift-glow and slot
+// pulse on hover, giving each role a thematic creative accent.
+export const ROLE_HOVER_COLORS: Record<string, string> = {
+  top:     '#c8a060',  // Stone-gold — warrior's golden trim
+  jungle:  '#3dc850',  // Poison-green — hunter's venom
+  mid:     '#c060f0',  // Arcane-violet — mage's essence
+  adc:     '#50c8ff',  // Sky-cyan — marksman's precision
+  support: '#ffd060',  // Warm-gold — healer's blessing
+}

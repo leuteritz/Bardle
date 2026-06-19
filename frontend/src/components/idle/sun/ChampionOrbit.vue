@@ -12,6 +12,8 @@
       :class="{
         'champion-orbit-avatar--role-colored': !!pos.primaryRole,
         'champion-orbit-avatar--secondary': !pos.isMain,
+        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
+        'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
       }"
       :style="{
         width: pos.size + 'px',
@@ -19,6 +21,7 @@
         transform: `translate(${pos.x - pos.size / 2}px, ${pos.y - pos.size / 2}px)`,
         opacity: pos.opacity,
         '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
+        '--hover-role-color': hoverColor || undefined,
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
@@ -53,6 +56,8 @@
         'champion-orbit-avatar--ability-adc':
           pos.isMain && pos.primaryRole === 'adc' && roleBehaviorStore.adcBurstActive,
         'champion-orbit-avatar--synergy': pos.synergyActive,
+        'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
+        'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
       }"
       :style="{
         width: pos.size + 'px',
@@ -61,6 +66,7 @@
         opacity: pos.opacity,
         zIndex: pos.zIndex,
         '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
+        '--hover-role-color': hoverColor || undefined,
       }"
     >
       <img :src="pos.img" :alt="pos.name" />
@@ -113,6 +119,8 @@ import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useSynergyStore } from '../../../stores/synergyStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
+import { useUiStore } from '../../../stores/uiStore'
+import { ROLE_HOVER_COLORS } from '@/config/constants'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import {
   ORBIT_TIERS,
@@ -182,6 +190,12 @@ export default defineComponent({
     const roleBehaviorStore = useRoleBehaviorStore()
     const synergyStore = useSynergyStore()
     const planetShopStore = usePlanetShopStore()
+    const uiStore = useUiStore()
+
+    const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
+    const hoverColor = computed(() =>
+      hoveredChampionRole.value ? (ROLE_HOVER_COLORS[hoveredChampionRole.value] ?? null) : null,
+    )
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
     const { orbitScale } = useOrbitScale()
@@ -512,6 +526,8 @@ export default defineComponent({
       screenCx,
       screenCy,
       currentSunRadius,
+      hoveredChampionRole,
+      hoverColor,
     }
   },
 })
@@ -1096,6 +1112,25 @@ export default defineComponent({
   }
 }
 
+/* ── Role-Hover Lift Effect (Command Panel slot hover) ──────────────────── */
+/* `translate` (CSS Transforms Level 2) composes independently with the
+   JS-set inline `transform: translate(X, Y)` — no conflict. */
+.champion-orbit-avatar--role-hover {
+  translate: 0 -5px;
+  filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--hover-role-color, #c89040) 55%, transparent));
+  transition:
+    translate 0.35s ease,
+    filter 0.35s ease,
+    box-shadow 0.3s ease;
+}
+
+.champion-orbit-avatar--role-hover-primary {
+  translate: 0 -10px;
+  filter:
+    brightness(1.2)
+    drop-shadow(0 8px 20px color-mix(in srgb, var(--hover-role-color, #c89040) 85%, transparent));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking,
   .champion-orbit-avatar--top-hit,
@@ -1112,6 +1147,11 @@ export default defineComponent({
   .champion-orbit-avatar--ability-adc::before,
   .champion-orbit-avatar--ability-adc::after {
     animation: none;
+  }
+  .champion-orbit-avatar--role-hover,
+  .champion-orbit-avatar--role-hover-primary {
+    translate: none;
+    filter: none;
   }
 }
 

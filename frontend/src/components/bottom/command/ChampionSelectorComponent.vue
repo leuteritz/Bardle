@@ -2,7 +2,8 @@
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
-import { ROLES } from '@/config/constants'
+import { ROLES, ROLE_HOVER_COLORS } from '@/config/constants'
+import type { ChampionRole } from '@/types'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
@@ -21,6 +22,16 @@ function onImgError(e: Event) {
   const img = e.target as HTMLImageElement
   img.style.display = 'none'
 }
+
+function onSlotEnter(i: number) {
+  if (headerSlots.value[i] !== null) {
+    uiStore.setHoveredChampionRole(ROLES[i].key as ChampionRole)
+  }
+}
+
+function onSlotLeave() {
+  uiStore.setHoveredChampionRole(null)
+}
 </script>
 
 <template>
@@ -36,13 +47,18 @@ function onImgError(e: Event) {
           [`slot-tile--role-${ROLES[i].key}`]: true,
           'slot-tile--first': i === 0,
         }"
-        :style="{ '--role-color': ROLES[i].orbit.color }"
+        :style="{
+          '--role-color': ROLES[i].orbit.color,
+          '--hover-role-color': ROLE_HOVER_COLORS[ROLES[i].key],
+        }"
         :title="
           slot
             ? `${slot} (${ROLES[i].label}) – click to change`
             : `${ROLES[i].label} – Select Champion`
         "
         @click="openPicker(i)"
+        @mouseenter="onSlotEnter(i)"
+        @mouseleave="onSlotLeave()"
       >
         <div class="slot-portrait-wrap">
           <img
@@ -368,6 +384,43 @@ function onImgError(e: Event) {
     0 0 10px -1px rgba(184, 200, 216, 0.45),
     inset 0 1px 0 rgba(184, 200, 216, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* ════════════════════════════════════════════════
+   FILLED-SLOT HOVER PULSE (role accent color)
+   ════════════════════════════════════════════════ */
+
+/* Replace the generic inner glow with a role-colored pulse when hovered while filled */
+.slot-tile--filled:hover .slot-hover-glow {
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    color-mix(in srgb, var(--hover-role-color, #c89040) 28%, transparent),
+    transparent 70%
+  );
+  animation: slot-role-pulse 1.4s ease-in-out infinite;
+  opacity: 1;
+}
+
+@keyframes slot-role-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
+}
+
+/* Portrait subtle tint overlay for the hovered filled slot */
+.slot-tile--filled:hover .slot-portrait-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--hover-role-color, #c89040) 10%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-tile--filled:hover .slot-hover-glow {
+    animation: none;
+    opacity: 0.75;
+  }
 }
 
 /* Hover: stärkerer Glow in Rollenfarbe */

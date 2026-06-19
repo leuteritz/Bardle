@@ -27,6 +27,7 @@
           :ry="entry.ry"
           :tiltDeg="entry.tiltDeg"
           :visible="roleOrbitVisibility[i]"
+          :abilityActive="entry.role === hoveredChampionRole"
         />
       </template>
     </svg>
@@ -327,6 +328,7 @@ import { useBattleStore } from '../../../stores/battleStore'
 import { usePlanetShopStore } from '../../../stores/planetShopStore'
 import { usePlayerStore } from '../../../stores/playerStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
+import { useUiStore } from '../../../stores/uiStore'
 import { useRenderingPaused } from '../../../composables/useRenderingPaused'
 import { useOrbitScale } from '../../../composables/useOrbitScale'
 import { useProjectileSystem } from '../../../composables/useProjectileSystem'
@@ -347,6 +349,9 @@ import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import type { ChampionRole } from '../../../types'
+
+const uiStore = useUiStore()
+const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
 
 const hoveredStarId = ref<string | null>(null)
 const hoveredSummaryStarId = ref<string | null>(null)
