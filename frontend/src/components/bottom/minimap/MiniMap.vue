@@ -267,8 +267,8 @@ export default defineComponent({
   bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: 1.05rem;
+  letter-spacing: 0.22em;
   color: #e8c040;
   white-space: nowrap;
   pointer-events: none;

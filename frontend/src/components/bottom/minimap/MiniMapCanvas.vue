@@ -971,26 +971,17 @@ export default defineComponent({
       const cy = h / 2
       const nowMs = Date.now()
 
-      // Dark space background
+      // Deep space background
       ctx.fillStyle = '#06040e'
       ctx.fillRect(0, 0, w, h)
 
-      // Faint galaxy image for depth
-      const img = imgEl.value
-      if (img?.complete) {
-        ctx.save()
-        ctx.globalAlpha = 0.18
-        ctx.drawImage(img, 0, 0, w, h)
-        ctx.restore()
-      }
-
-      // Seeded background star field
+      // Seeded star field (60 stars, matching arrival view density)
       const bgRng = seededRng(galaxyStore.currentGalaxy * 77771)
-      for (let i = 0; i < 55; i++) {
+      for (let i = 0; i < 60; i++) {
         const bx = bgRng() * w
         const by = bgRng() * h
-        const br = 0.4 + bgRng() * 0.7
-        const ba = 0.15 + bgRng() * 0.35
+        const br = 0.5 + bgRng() * 0.7
+        const ba = 0.2 + bgRng() * 0.4
         const bc = 180 + Math.floor(bgRng() * 75)
         ctx.beginPath()
         ctx.arc(bx, by, br, 0, Math.PI * 2)
@@ -998,66 +989,64 @@ export default defineComponent({
         ctx.fill()
       }
 
-      // Phase-accurate sun
       const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
-      const SUN_R = 18
+      const WAIT_SUN_R = 46
       const pulseMs = parseFloat(phase.pulseSpeed) * 1000 / (Math.PI * 2)
       const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
 
       // Expanding gold ripple rings — "waiting for input" beacon
       for (let ring = 0; ring < 3; ring++) {
-        const rippleT = ((nowMs / 2200 + ring / 3) % 1)
-        const rippleR = SUN_R * (1.8 + rippleT * 3.5)
-        const rippleA = (1 - rippleT) * 0.22
+        const rippleT = (nowMs / 2200 + ring / 3) % 1
+        const rippleR = WAIT_SUN_R * (1.5 + rippleT * 2.5)
+        const rippleA = (1 - rippleT) * 0.28
         ctx.beginPath()
         ctx.arc(cx, cy, rippleR, 0, Math.PI * 2)
         ctx.strokeStyle = `rgba(232,192,64,${rippleA.toFixed(3)})`
-        ctx.lineWidth = 1.2
+        ctx.lineWidth = 1.4
         ctx.stroke()
       }
 
-      // Phase glow (outer diffuse halo)
-      const glowR = SUN_R * (2.8 + 0.3 * pulse)
-      const outerGlow = ctx.createRadialGradient(cx, cy, SUN_R * 0.8, cx, cy, glowR)
-      outerGlow.addColorStop(0, hexToRgba(phase.glow1, 0.55))
-      outerGlow.addColorStop(0.5, hexToRgba(phase.glow2, 0.2))
-      outerGlow.addColorStop(1, 'rgba(0,0,0,0)')
+      // Outer corona (large diffuse glow — phase colors)
+      const coroR = WAIT_SUN_R * (3.6 + 0.4 * pulse)
+      const outerCorona = ctx.createRadialGradient(cx, cy, WAIT_SUN_R * 0.85, cx, cy, coroR)
+      outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
+      outerCorona.addColorStop(0.45, hexToRgba(phase.glow2, 0.1))
+      outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.beginPath()
-      ctx.arc(cx, cy, glowR, 0, Math.PI * 2)
-      ctx.fillStyle = outerGlow
+      ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
+      ctx.fillStyle = outerCorona
+      ctx.fill()
+
+      // Inner halo (tighter, warmer)
+      const innerHalo = ctx.createRadialGradient(cx, cy, WAIT_SUN_R * 0.6, cx, cy, WAIT_SUN_R * 2.2)
+      innerHalo.addColorStop(0, hexToRgba(phase.core, 0.6))
+      innerHalo.addColorStop(0.4, hexToRgba(phase.glow1, 0.22))
+      innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.beginPath()
+      ctx.arc(cx, cy, WAIT_SUN_R * 2.2, 0, Math.PI * 2)
+      ctx.fillStyle = innerHalo
       ctx.fill()
 
       // Sun body (phase core → mid → edge)
       const bodyGrad = ctx.createRadialGradient(
-        cx - SUN_R * 0.28, cy - SUN_R * 0.3, SUN_R * 0.05,
-        cx, cy, SUN_R,
+        cx - WAIT_SUN_R * 0.28, cy - WAIT_SUN_R * 0.3, WAIT_SUN_R * 0.05,
+        cx, cy, WAIT_SUN_R,
       )
       bodyGrad.addColorStop(0, phase.core)
       bodyGrad.addColorStop(0.5, phase.mid)
       bodyGrad.addColorStop(1, phase.edge)
       ctx.beginPath()
-      ctx.arc(cx, cy, SUN_R, 0, Math.PI * 2)
+      ctx.arc(cx, cy, WAIT_SUN_R, 0, Math.PI * 2)
       ctx.fillStyle = bodyGrad
       ctx.fill()
 
       // Rim highlight
       ctx.beginPath()
-      ctx.arc(cx, cy, SUN_R, 0, Math.PI * 2)
+      ctx.arc(cx, cy, WAIT_SUN_R, 0, Math.PI * 2)
       ctx.strokeStyle = `rgba(255,255,220,${(0.35 + 0.15 * pulse).toFixed(3)})`
       ctx.lineWidth = 1.2
       ctx.stroke()
 
-      // Player dot (Bard on the sun — golden beacon)
-      ctx.shadowColor = 'rgba(232,192,64,0.95)'
-      ctx.shadowBlur = 14
-      ctx.beginPath()
-      ctx.arc(cx, cy, 7, 0, Math.PI * 2)
-      ctx.fillStyle = '#ffe060'
-      ctx.fill()
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 1.5
-      ctx.stroke()
-      ctx.shadowBlur = 0
     }
 
     function drawCanvas(timestamp = performance.now()) {
