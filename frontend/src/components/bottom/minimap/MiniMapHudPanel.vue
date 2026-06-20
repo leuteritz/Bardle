@@ -2,7 +2,9 @@
   <div v-if="!isRescuing && !isWaiting && !isRotating" class="hud-panel">
     <!-- Row 1: icon + arrival value + time unit -->
     <div class="hud-arrival">
-      <Icon icon="game-icons:sands-of-time" width="24" height="24" style="color: rgba(232, 192, 64, 0.55)" />
+      <span class="hud-arrival-icon">
+        <Icon icon="game-icons:sands-of-time" width="24" height="24" style="color: rgba(232, 192, 64, 0.55)" />
+      </span>
       <div class="hud-arrival-inner">
         <span class="hud-arrival-value">{{ countdown }}</span>
         <span class="hud-unit">{{ countdownUnit }}</span>
@@ -143,16 +145,24 @@ export default defineComponent({
 }
 
 .hud-arrival {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
+  width: 100%;
+}
+
+.hud-arrival-icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .hud-arrival-inner {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
+  justify-content: center;
   gap: 5px;
   font-size: 2.4rem;
   min-width: 7ch;
@@ -175,7 +185,9 @@ export default defineComponent({
   display: flex;
   flex-direction: row;
   align-items: flex-start;
+  justify-content: center;
   gap: 20px;
+  width: 100%;
 }
 
 .hud-sm-metric {
