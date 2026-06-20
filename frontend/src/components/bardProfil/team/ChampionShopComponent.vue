@@ -255,15 +255,14 @@
               @mouseenter="onCardHoverAndDismiss(champion.name)"
               @mouseleave="onCardLeave"
             >
-              <!-- Role badge pill -->
-              <div
-                class="role-badge-pill"
-                :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
-              >
-                {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
-              </div>
-
               <div class="card-inner">
+                <!-- Role badge pill — inside card-inner so it tracks the expanding card edge -->
+                <div
+                  class="role-badge-pill"
+                  :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
+                >
+                  {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
+                </div>
                 <div class="card-img-layer">
                   <img
                     :src="battleStore.getChampionImage(champion.name)"
