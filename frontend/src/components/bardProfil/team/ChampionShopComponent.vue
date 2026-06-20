@@ -105,7 +105,7 @@
           v-for="(champion, index) in filteredChampions"
           :key="champion.name"
           class="champion-card-slot"
-          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': lastRowIndices.has(index) }]"
+          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': lastRowIndices.has(index), 'is-first-row': firstRowIndices.has(index) }]"
           :data-role="CHAMPION_ROLES[champion.name]"
           @click="handleBuy(champion.name)"
           @mouseenter="onCardHoverAndDismiss(champion.name)"
@@ -657,6 +657,13 @@ const availableTraits = computed(() => {
       return indices
     })
 
+    const firstRowIndices = computed(() => {
+      const cols = colCount.value
+      const indices = new Set<number>()
+      for (let i = 0; i < cols; i++) indices.add(i)
+      return indices
+    })
+
     // ── Card expand state ──
     const hoveredChampion = ref<string | null>(null)
 
@@ -718,6 +725,7 @@ const availableTraits = computed(() => {
       isNew,
       hoveredChampion,
       lastRowIndices,
+      firstRowIndices,
       getChampionDetail,
       onCardHoverAndDismiss,
       onCardLeave,
@@ -901,6 +909,11 @@ const availableTraits = computed(() => {
 .is-last-row.card-expanded .card-inner {
   top: -100px;
   bottom: 0;
+}
+/* First-row cards always expand downward, overriding is-last-row when only one row exists */
+.is-first-row.card-expanded .card-inner {
+  top: 0;
+  bottom: -100px;
 }
 
 
