@@ -3,6 +3,7 @@ import type { PlanetType, StarType } from '../types'
 import { pickConfig } from '../utils/planetDraw'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
+import { CHAMPION_ROLES } from '../config/championRoles'
 import {
   RESOURCE_STAR_PLANET_COUNT,
   RESOURCE_STAR_DURATION_MS,
@@ -48,6 +49,8 @@ import {
   GALAXY_BOSS_PLANET_ORBIT_RX,
   GALAXY_BOSS_PLANET_ORBIT_RY,
   GALAXY_BOSS_PLANET_ORBIT_TILT,
+  RESOURCE_STAR_COLORS,
+  ROLE_COLORS,
 } from '../config/constants'
 
 let starIdCounter = 0
@@ -98,6 +101,15 @@ function pickStarColor(): [number, number, number] {
       return category.colors[Math.floor(Math.random() * category.colors.length)]
   }
   return SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1].colors[0]
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function pickResourceStarColor(): [number, number, number] {
+  return RESOURCE_STAR_COLORS[Math.floor(Math.random() * RESOURCE_STAR_COLORS.length)]
 }
 
 const adminStarTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
@@ -202,7 +214,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots: this._buildResourcePlanetSlots(RESOURCE_STAR_PLANET_COUNT),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
-        starColor: pickStarColor(),
+        starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)
     },
@@ -223,7 +235,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots: this._buildResourcePlanetSlots(STAR_FORCED_PLANET_MIN + Math.floor(Math.random() * STAR_FORCED_PLANET_RANGE)),
         spawnedAt: Date.now(),
         durationMs: RESOURCE_STAR_DURATION_MS,
-        starColor: pickStarColor(),
+        starColor: pickResourceStarColor(),
       }
       this.activeStars.push(star)
 
@@ -282,6 +294,9 @@ export const useStarGroupStore = defineStore('starGroup', {
         cleared: false,
       })
       bossStore.spawnBoss(champId, champConfig.type, true)
+      const champName = bossStore.activeBosses.find(b => b.planetId === champId)?.homePlanetChampion
+      const role = champName ? CHAMPION_ROLES[champName] : undefined
+      const champStarColor: [number, number, number] = role ? hexToRgb(ROLE_COLORS[role]) : [255, 255, 255]
 
       for (let i = 1; i < totalCount; i++) {
         const config = pickConfig()
@@ -316,7 +331,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         planetSlots,
         spawnedAt: Date.now(),
         durationMs: CHAMPION_STAR_DURATION_MS,
-        starColor: pickStarColor(),
+        starColor: champStarColor,
       }
 
       this.activeStars.push(star)

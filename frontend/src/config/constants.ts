@@ -1371,3 +1371,16 @@ export const ROLE_HOVER_COLORS: Record<string, string> = {
   adc:     '#50c8ff',  // Sky-cyan — marksman's precision
   support: '#ffd060',  // Warm-gold — healer's blessing
 }
+
+// ── Resource-Star Color Palette ────────────────────────────────────────────
+// Six realistic stellar spectral colors for resource stars (no champion).
+// None overlap with role colors (red/green/blue/orange/silver-blue).
+// Stored as RGB tuples to match StarGroup.starColor directly.
+export const RESOURCE_STAR_COLORS: [number, number, number][] = [
+  [255, 248, 226], // F-type  — cream white    (Procyon-class)
+  [255, 252, 192], // F5-type — pale lemon-white
+  [255, 234, 86],  // G-type  — golden yellow   (sun-like)
+  [230, 240, 255], // A-type  — ice-blue white   (Vega-class)
+  [204, 196, 255], // B-type  — pale violet-white (hot, Rigel-class)
+  [255, 214, 162], // K-type  — warm buff        (subdued, not orange)
+]

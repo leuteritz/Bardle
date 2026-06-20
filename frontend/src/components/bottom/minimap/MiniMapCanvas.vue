@@ -55,6 +55,17 @@ const STAR_PALETTE = {
   ring: false,
 }
 
+function rolePaletteFromRgb(r: number, g: number, b: number): typeof STAR_PALETTE {
+  const h = (v: number) => v.toString(16).padStart(2, '0')
+  return {
+    base:      `#${h(r)}${h(g)}${h(b)}`,
+    shadow:    `#${h(Math.round(r * 0.25))}${h(Math.round(g * 0.25))}${h(Math.round(b * 0.25))}`,
+    highlight: `#${h(Math.min(255, Math.round(r * 0.6 + 102)))}${h(Math.min(255, Math.round(g * 0.6 + 102)))}${h(Math.min(255, Math.round(b * 0.6 + 102)))}`,
+    atmo:      `rgba(${r}, ${g}, ${b}, 0.55)`,
+    ring:      false,
+  }
+}
+
 const PLANET_PALETTES = [
   {
     base: '#d4723a',
@@ -677,6 +688,8 @@ export default defineComponent({
 
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
+        const champStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
+        const targetPal = champStar ? rolePaletteFromRgb(...champStar.starColor) : STAR_PALETTE
         drawPlanet(
           ctx,
           tx,
@@ -685,7 +698,7 @@ export default defineComponent({
           galaxySeed + targetIdx,
           'target',
           pulseFrame === 1,
-          STAR_PALETTE,
+          targetPal,
         )
       }
 
