@@ -165,7 +165,6 @@ export default defineComponent({
   justify-content: center;
   gap: 5px;
   font-size: 2.4rem;
-  min-width: 7ch;
 }
 
 .hud-arrival-value {
