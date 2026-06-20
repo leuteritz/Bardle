@@ -8,14 +8,6 @@ const galaxyStore = useGalaxyStore()
 
 type RoleDef = { key: ChampionRole; label: string; short: string; image: string; color: string }
 
-const FLAVOUR: Record<ChampionRole, string> = {
-  top:     'Unyielding. A titan at the vanguard.',
-  jungle:  'Shadows stir. The hunt begins.',
-  mid:     'Power flows through every rune.',
-  adc:     'From a distance, nothing survives.',
-  support: 'Bonds forged in starlight never break.',
-}
-
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
 
@@ -52,13 +44,11 @@ function choose(role: RoleDef) {
 
         <!-- Header -->
         <div class="role-header">
-          <p class="role-eyebrow">Next Champion</p>
-          <h2 class="role-title">✦ CHOOSE YOUR PATH ✦</h2>
-          <p class="role-subtitle">Select the role for your next champion</p>
+          <h2 class="role-title">✦ CHOOSE YOUR NEXT CHAMPION ROLE ✦</h2>
         </div>
 
         <!-- Role panels -->
-        <div class="flex flex-row gap-4 p-6">
+        <div class="flex flex-col sm:flex-row gap-4 p-6">
           <button
             v-for="role in displayedRoles"
             :key="role.key"
@@ -75,8 +65,7 @@ function choose(role: RoleDef) {
 
             <!-- Vignette + text overlay -->
             <div class="role-overlay-layer">
-              <h3 class="role-name">{{ role.short }}</h3>
-              <p class="role-flavour">{{ FLAVOUR[role.key] }}</p>
+              <h3 class="role-name">{{ role.label }}</h3>
             </div>
 
             <!-- Role-colored bottom border accent -->
@@ -89,6 +78,14 @@ function choose(role: RoleDef) {
 </template>
 
 <style scoped>
+:root {
+  --role-top:     #c0392b;
+  --role-jungle:  #27ae60;
+  --role-mid:     #2980b9;
+  --role-adc:     #d4a020;
+  --role-support: #16a085;
+}
+
 .role-fade-enter-active,
 .role-fade-leave-active {
   transition: opacity 0.3s ease;
@@ -101,6 +98,14 @@ function choose(role: RoleDef) {
 /* ── Overlay ─────────────────────────────────────────────────────────── */
 .role-overlay {
   background: rgba(5, 4, 2, 0.92);
+}
+
+.role-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(200, 150, 40, 0.05) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 /* ── Frame ───────────────────────────────────────────────────────────── */
@@ -131,53 +136,39 @@ function choose(role: RoleDef) {
 .role-header {
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-  padding: 20px 24px 16px;
+  padding: 18px 24px 16px;
   text-align: center;
 }
 
-.role-eyebrow {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #c89040;
-  margin-bottom: 4px;
-}
-
 .role-title {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 900;
   color: #e8c040;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
+  text-shadow: 0 0 18px rgba(232, 192, 64, 0.55);
   letter-spacing: 0.06em;
-  margin-bottom: 4px;
-}
-
-.role-subtitle {
-  font-size: 11px;
-  color: #8a7a60;
 }
 
 /* ── Cards ───────────────────────────────────────────────────────────── */
 .role-card {
   position: relative;
-  height: 260px;
+  height: 290px;
   border-radius: 4px;
   overflow: hidden;
-  border: 2px solid var(--role-color);
   cursor: pointer;
   padding: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    opacity 0.18s ease;
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .role-card:hover {
-  transform: scale(1.04) translateY(-3px);
+  transform: translateY(-4px);
   box-shadow:
-    0 0 30px color-mix(in srgb, var(--role-color) 60%, transparent),
-    0 10px 36px rgba(0, 0, 0, 0.65);
+    0 0 42px color-mix(in srgb, var(--role-color) 55%, transparent),
+    0 20px 52px rgba(0, 0, 0, 0.7),
+    0 6px 16px rgba(0, 0, 0, 0.5);
 }
 
 .role-card--selected {
@@ -207,11 +198,11 @@ function choose(role: RoleDef) {
   object-fit: cover;
   object-position: center top;
   display: block;
-  transition: transform 0.38s ease;
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .role-card:hover .role-artwork {
-  transform: scale(1.07);
+  transform: scale(1.05);
 }
 
 /* ── Text overlay ────────────────────────────────────────────────────── */
@@ -221,7 +212,7 @@ function choose(role: RoleDef) {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 14px 16px 20px;
+  padding: 14px 16px 24px;
   background: linear-gradient(
     to bottom,
     transparent 28%,
@@ -232,23 +223,15 @@ function choose(role: RoleDef) {
 }
 
 .role-name {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--role-color);
   text-shadow:
-    0 0 12px color-mix(in srgb, var(--role-color) 70%, transparent),
-    0 2px 6px rgba(0, 0, 0, 0.8);
+    0 0 20px color-mix(in srgb, var(--role-color) 70%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.9);
   line-height: 1;
-  margin-bottom: 5px;
-}
-
-.role-flavour {
-  font-size: 10px;
-  color: rgba(200, 185, 158, 0.75);
-  font-style: italic;
-  line-height: 1.4;
 }
 
 /* ── Bottom color bar ────────────────────────────────────────────────── */
@@ -261,5 +244,12 @@ function choose(role: RoleDef) {
   background: var(--role-color);
   opacity: 0.9;
   pointer-events: none;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .role-card {
+    height: 200px;
+  }
 }
 </style>
