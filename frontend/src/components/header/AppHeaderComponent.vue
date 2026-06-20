@@ -6,6 +6,7 @@ import { useBattleStore } from '../../stores/battleStore'
 import { useExpeditionStore } from '../../stores/expedetionStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
+import { CHAMPION_ROLES } from '../../config/championRoles'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
@@ -62,6 +63,19 @@ const champTooltipList = computed(() =>
 const champTooltipExtra = computed(() =>
   Math.max(0, battleStore.newlyUnlockedChampions.length - CHAMP_TOOLTIP_MAX_VISIBLE),
 )
+
+const ROLE_DISPLAY: Record<string, { label: string; color: string }> = {
+  top:     { label: 'Fighter',  color: '#e6813a' },
+  jungle:  { label: 'Assassin', color: '#e8534a' },
+  mid:     { label: 'Mage',     color: '#5b8de8' },
+  adc:     { label: 'Marksman', color: '#61c76f' },
+  support: { label: 'Support',  color: '#c37de0' },
+}
+
+function getRoleDisplay(name: string) {
+  const role = CHAMPION_ROLES[name] ?? 'mid'
+  return ROLE_DISPLAY[role] ?? { label: 'Mage', color: '#5b8de8' }
+}
 
 function onChampBadgeEnter() {
   if (champHideTimer) { clearTimeout(champHideTimer); champHideTimer = null }
@@ -408,11 +422,6 @@ onUnmounted(() => resizeObserver?.disconnect())
         @mouseleave="onChampTooltipLeave"
       >
         <div class="champ-tt__caret" />
-        <div class="champ-tt__header">
-          <span class="champ-tt__star">★</span>
-          <span class="champ-tt__title">New Champions</span>
-          <span class="champ-tt__star">★</span>
-        </div>
         <ul class="champ-tt__list">
           <li
             v-for="name in champTooltipList"
@@ -420,10 +429,16 @@ onUnmounted(() => resizeObserver?.disconnect())
             class="champ-tt__item"
             @click="openChampionInShop(name)"
           >
-            <span class="champ-tt__dot" />{{ name }}
+            <img
+              :src="battleStore.getChampionImage(name)"
+              class="champ-tt__img"
+              :alt="name"
+            />
+            <span class="champ-tt__name" :style="{ color: getRoleDisplay(name).color }">{{ name }}</span>
           </li>
           <li v-if="champTooltipExtra > 0" class="champ-tt__item champ-tt__item--more">
-            ...+{{ champTooltipExtra }} more
+            <span class="champ-tt__more-dots">…</span>
+            <span class="champ-tt__more-count">+{{ champTooltipExtra }} more</span>
           </li>
         </ul>
       </div>
@@ -969,15 +984,13 @@ onUnmounted(() => resizeObserver?.disconnect())
 .champ-tt {
   position: fixed;
   z-index: 200;
-  min-width: 160px;
-  max-width: 220px;
-  background: #111008;
-  border: 2px solid #0891b2;
+  min-width: 260px;
+  background: #14121e;
+  border: 2px solid #2a2550;
   border-radius: 4px;
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.85),
-    0 0 12px rgba(6, 182, 212, 0.2),
-    inset 0 0 0 1px #0369a1;
+    0 12px 32px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(42, 37, 80, 0.6);
   pointer-events: auto;
   overflow: hidden;
 }
@@ -991,30 +1004,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   height: 0;
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
-  border-right: 6px solid #0891b2;
-}
-
-.champ-tt__header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 5px 12px 4px;
-  background: #1e1006;
-  border-bottom: 2px solid #0891b2;
-}
-
-.champ-tt__title {
-  font-size: 10px;
-  font-weight: 700;
-  color: #38bdf8;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.champ-tt__star {
-  color: #e8c040;
-  font-size: 9px;
+  border-right: 6px solid #2a2550;
 }
 
 .champ-tt__list {
@@ -1026,39 +1016,58 @@ onUnmounted(() => resizeObserver?.disconnect())
 .champ-tt__item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  font-size: 12px;
-  color: #c8e8f0;
+  gap: 10px;
+  padding: 7px 12px;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s, text-shadow 0.1s;
+  transition: background 0.12s;
 }
 
 .champ-tt__item:hover {
-  background: rgba(6, 182, 212, 0.1);
-  color: #e8c040;
-  text-shadow: 0 0 6px rgba(232, 192, 64, 0.45);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.champ-tt__img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  object-position: top;
+  flex-shrink: 0;
+  display: block;
+}
+
+.champ-tt__name {
+  font-size: 1rem;
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .champ-tt__item--more {
-  color: rgba(200, 232, 240, 0.38);
-  font-size: 11px;
   cursor: default;
-  font-style: italic;
+  gap: 6px;
+  padding: 5px 12px 6px;
+  border-top: 1px solid rgba(42, 37, 80, 0.6);
 }
 
 .champ-tt__item--more:hover {
   background: none;
-  color: rgba(200, 232, 240, 0.38);
-  text-shadow: none;
 }
 
-.champ-tt__dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #0891b2;
-  flex-shrink: 0;
+.champ-tt__more-dots {
+  font-size: 0.875rem;
+  color: rgba(200, 200, 220, 0.35);
+  font-style: italic;
+}
+
+.champ-tt__more-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(200, 200, 220, 0.45);
+  letter-spacing: 0.03em;
 }
 
 .champ-tt-enter-active {
