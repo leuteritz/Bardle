@@ -54,7 +54,7 @@ function openTeamTab() {
 // ── Champion badge tooltip ────────────────────────────────────────────────────
 const champBadgeRef = ref<HTMLButtonElement | null>(null)
 const showChampTooltip = ref(false)
-const champTooltipStyle = ref<{ left: string; top: string; transform: string }>({ left: '0px', top: '0px', transform: '' })
+const champTooltipStyle = ref<Record<string, string>>({ left: '0px', top: '0px', transform: '' })
 let champHideTimer: ReturnType<typeof setTimeout> | null = null
 
 const champTooltipList = computed(() =>
@@ -82,9 +82,10 @@ function onChampBadgeEnter() {
   if (champBadgeRef.value) {
     const rect = champBadgeRef.value.getBoundingClientRect()
     champTooltipStyle.value = {
-      left: `${rect.right + 14}px`,
-      top: `${rect.top + rect.height / 2}px`,
-      transform: 'translateY(-50%)',
+      left: `${rect.left}px`,
+      top: `${rect.bottom + 8}px`,
+      transform: 'none',
+      '--caret-x': `${rect.width / 2}px`,
     }
   }
   showChampTooltip.value = true
@@ -985,26 +986,24 @@ onUnmounted(() => resizeObserver?.disconnect())
   position: fixed;
   z-index: 200;
   min-width: 260px;
-  background: #14121e;
-  border: 2px solid #2a2550;
+  background: #111008;
+  border: 4px solid #7a4e20;
   border-radius: 4px;
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(42, 37, 80, 0.6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9);
   pointer-events: auto;
   overflow: hidden;
 }
 
 .champ-tt__caret {
   position: absolute;
-  left: -6px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: -6px;
+  left: var(--caret-x, 20px);
+  transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-right: 6px solid #2a2550;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #7a4e20;
 }
 
 .champ-tt__list {
@@ -1050,7 +1049,7 @@ onUnmounted(() => resizeObserver?.disconnect())
   cursor: default;
   gap: 6px;
   padding: 5px 12px 6px;
-  border-top: 1px solid rgba(42, 37, 80, 0.6);
+  border-top: 1px solid #3e200a;
 }
 
 .champ-tt__item--more:hover {
@@ -1084,12 +1083,12 @@ onUnmounted(() => resizeObserver?.disconnect())
 
 .champ-tt-enter-from {
   opacity: 0;
-  transform: translateY(-50%) translateX(-6px);
+  transform: translateY(-6px);
 }
 
 .champ-tt-leave-to {
   opacity: 0;
-  transform: translateY(-50%) translateX(-4px);
+  transform: translateY(-4px);
 }
 
 </style>
