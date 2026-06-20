@@ -148,7 +148,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, ROLES } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
@@ -374,13 +374,8 @@ export default defineComponent({
         const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
 
         const hPlanetId = uiStore.hoveredPlanetSlotId
-        const hSlotIdx = uiStore.hoveredChampionSlotIndex
-        const isPlanetDirectHover = slot.id === hPlanetId
-        const isChampionHover = hPlanetId === null && slotNum === hSlotIdx
-        const isHighlighted = isPlanetDirectHover || isChampionHover
-        const highlightColor = isPlanetDirectHover
-          ? (slot.role ? PLANET_ROLES[slot.role].color : '#c89040')
-          : (hSlotIdx !== null && hSlotIdx < ROLES.length ? ROLES[hSlotIdx].orbit.color : '#c89040')
+        const isHighlighted = slot.id === hPlanetId
+        const highlightColor = slot.role ? PLANET_ROLES[slot.role].color : '#c89040'
 
         newPositions.push({
           id: slot.id,
