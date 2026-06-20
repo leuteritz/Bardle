@@ -7,7 +7,7 @@
     <div class="flex flex-col flex-1 min-h-0 p-3 space-y-2">
       <!-- Map Container -->
       <div class="flex items-center justify-center flex-1 min-h-0 overflow-hidden">
-        <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field" :style="{ '--scoreboard-w': scoreboardWidth + 'px' }">
+        <div class="relative h-full max-w-full overflow-hidden aspect-square minimap-field" :style="{ '--scoreboard-w': scoreboardWidth + 'px' }" @click.self="lockedChampionKey = null">
           <!-- Time Display — each digit in its own grid cell to lock width -->
           <div class="absolute z-20 top-0 left-0 time-display-panel">
             <div class="time-display-value">
@@ -45,8 +45,12 @@
                     :key="'mu-' + i"
                     class="score-matchup-row"
                     :class="{
+                      'score-matchup-row--locked':      lockedChampionKey === '1-' + i || lockedChampionKey === '2-' + i,
                       'score-matchup-row--highlighted': hoveredChampionKey === '1-' + i || hoveredChampionKey === '2-' + i,
-                      'score-matchup-row--dimmed': hoveredChampionKey !== null && hoveredChampionKey !== '1-' + i && hoveredChampionKey !== '2-' + i,
+                      'score-matchup-row--dimmed':
+                        (hoveredChampionKey !== null || lockedChampionKey !== null) &&
+                        hoveredChampionKey !== '1-' + i && hoveredChampionKey !== '2-' + i &&
+                        lockedChampionKey  !== '1-' + i && lockedChampionKey  !== '2-' + i,
                     }"
                   >
                     <!-- Blue side: img → name + kda -->
@@ -111,6 +115,7 @@
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
             @mouseenter="onChampHover('1', i)"
             @mouseleave="onChampLeave()"
+            @click="onChampClick('1', i)"
           >
             <img
               v-if="battleStore.team1[i]?.name"
@@ -120,9 +125,15 @@
               :class="{
                 'opacity-30 grayscale': champ.dead,
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === true,
+                'minimap-champ--locked': lockedChampionKey === '1-' + i,
+                'minimap-champ-img--dimmed': lockedChampionKey !== null && lockedChampionKey !== '1-' + i,
               }"
             />
-            <div v-if="battleStore.team1[i]?.name" class="champ-name-overlay">{{ battleStore.team1[i].name }}</div>
+            <div
+              v-if="battleStore.team1[i]?.name"
+              class="champ-name-overlay"
+              :class="{ 'champ-name-overlay--locked': lockedChampionKey === '1-' + i }"
+            >{{ battleStore.team1[i].name }}</div>
           </div>
 
           <!-- Red Champions -->
@@ -134,6 +145,7 @@
             :style="{ left: champ.x + '%', top: champ.y + '%', zIndex: 5 }"
             @mouseenter="onChampHover('2', i)"
             @mouseleave="onChampLeave()"
+            @click="onChampClick('2', i)"
           >
             <img
               v-if="battleStore.team2[i]?.name"
@@ -143,9 +155,15 @@
               :class="{
                 'opacity-30 grayscale': champ.dead,
                 'minimap-champ--buffed': phase === 'nexusPush' && predeterminedWin === false,
+                'minimap-champ--locked': lockedChampionKey === '2-' + i,
+                'minimap-champ-img--dimmed': lockedChampionKey !== null && lockedChampionKey !== '2-' + i,
               }"
             />
-            <div v-if="battleStore.team2[i]?.name" class="champ-name-overlay">{{ battleStore.team2[i].name }}</div>
+            <div
+              v-if="battleStore.team2[i]?.name"
+              class="champ-name-overlay"
+              :class="{ 'champ-name-overlay--locked': lockedChampionKey === '2-' + i }"
+            >{{ battleStore.team2[i].name }}</div>
           </div>
 
           <!-- Drake Dot -->
@@ -327,7 +345,10 @@ export default defineComponent({
   setup(props) {
     const showScoreboardFromTrigger = ref(false)
     const hoveredChampionKey = ref<string | null>(null)
-    const showScoreboard = computed(() => showScoreboardFromTrigger.value || hoveredChampionKey.value !== null)
+    const lockedChampionKey = ref<string | null>(null)
+    const showScoreboard = computed(
+      () => showScoreboardFromTrigger.value || hoveredChampionKey.value !== null || lockedChampionKey.value !== null,
+    )
     const battleStore = useBattleStore()
     let moveInterval: ReturnType<typeof setInterval> | null = null
 
@@ -362,6 +383,11 @@ export default defineComponent({
 
     function onChampLeave() {
       hoveredChampionKey.value = null
+    }
+
+    function onChampClick(team: '1' | '2', index: number) {
+      const key = `${team}-${index}`
+      lockedChampionKey.value = lockedChampionKey.value === key ? null : key
     }
 
     function lerp(a: number, b: number, t: number) {
@@ -495,6 +521,7 @@ export default defineComponent({
       () => battleStore.battlePhase,
       (newPhase) => {
         if (newPhase === 'playing') {
+          lockedChampionKey.value = null
           resetChampions()
           startMovement()
         }
@@ -504,6 +531,7 @@ export default defineComponent({
     watch(
       () => props.battleId,
       () => {
+        lockedChampionKey.value = null
         resetChampions()
         startMovement()
       },
@@ -540,19 +568,18 @@ export default defineComponent({
     })
 
     onUnmounted(() => {
+      lockedChampionKey.value = null
       if (moveInterval) clearInterval(moveInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       resizeObs?.disconnect()
     })
 
     const baronVisible = computed(() => {
-      const t = battleStore.battleTime
-      return t >= 1200 && t < 2200
+      return battleStore.battleTime >= 1200 && battleStore.baronAlive
     })
 
     const baronFighting = computed(() => {
-      const t = battleStore.battleTime
-      return t >= 1500 && t < 2200
+      return battleStore.battleTime >= 1200 && battleStore.baronAlive
     })
 
     const drakeVisible = computed(() => {
@@ -592,9 +619,11 @@ export default defineComponent({
       predeterminedWin,
       showScoreboardFromTrigger,
       hoveredChampionKey,
+      lockedChampionKey,
       showScoreboard,
       onChampHover,
       onChampLeave,
+      onChampClick,
       team1Stats,
       team2Stats,
       scoreboardPanelRef,
@@ -675,7 +704,7 @@ export default defineComponent({
   border-radius: 50%;
   object-fit: cover;
   image-rendering: auto;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.2s ease, filter 0.2s ease;
 }
 
 .minimap-champ-wrapper:hover .minimap-champ-img {
@@ -1188,6 +1217,63 @@ export default defineComponent({
 }
 
 /* ═══════════════════════════════════════════
+   CHAMPION LOCK SYSTEM
+   ═══════════════════════════════════════════ */
+.minimap-champ-wrapper {
+  cursor: pointer;
+}
+
+.minimap-champ-img.minimap-champ--locked {
+  border-color: #c89040 !important;
+  animation: champ-lock-pulse 2s ease-in-out infinite;
+}
+
+@keyframes champ-lock-pulse {
+  0%, 100% { box-shadow: 0 0 10px #c89040aa, 0 0 20px #c8904030; }
+  50%       { box-shadow: 0 0 18px #e8c060cc, 0 0 36px #e8c06050; }
+}
+
+.minimap-champ-img--dimmed {
+  opacity: 0.3;
+  filter: grayscale(40%);
+}
+
+.champ-name-overlay--locked {
+  opacity: 1 !important;
+}
+
+.score-matchup-row--locked {
+  position: relative;
+  border-radius: 3px;
+  background: rgba(200, 144, 64, 0.10);
+}
+
+.score-matchup-row--locked::before,
+.score-matchup-row--locked::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, transparent, #c89040bb, transparent);
+  pointer-events: none;
+}
+.score-matchup-row--locked::before { left: 0; }
+.score-matchup-row--locked::after  { right: 0; }
+
+.score-matchup-row--locked .score-mu-img--blue,
+.score-matchup-row--locked .score-mu-img--red {
+  border-color: #c89040;
+  box-shadow: 0 0 14px #c89040bb;
+}
+
+.score-matchup-row--locked .score-mu-name--blue,
+.score-matchup-row--locked .score-mu-name--red { color: #f5d87a; }
+
+.score-matchup-row--locked .score-mu-kda { font-size: 15px; }
+
+/* ═══════════════════════════════════════════
    REDUCED MOTION
    ═══════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
@@ -1206,5 +1292,6 @@ export default defineComponent({
   .scoreboard-expand-enter-from,
   .scoreboard-expand-leave-to { opacity: 1; transform: none; }
   .score-compact-panel { transition: none; }
+  .minimap-champ-img.minimap-champ--locked { animation: none; }
 }
 </style>

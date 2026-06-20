@@ -142,6 +142,20 @@ export const DRAKE_POS = { x: 72, y: 72 }
 export const BARON_POS = { x: 28, y: 28 }
 export const MID_CENTER = { x: 50, y: 50 }
 
+// ── Objective Modal ────────────────────────────────────────────────────────
+export const OBJECTIVE_DRAKE_SPAWN = 300   // game-seconds when drake appears on minimap
+export const OBJECTIVE_BARON_SPAWN = 1200  // game-seconds when baron appears on minimap
+export const DRAKE_OBJECTIVE_HP = 3000
+export const BARON_OBJECTIVE_HP = 5000
+export const OBJECTIVE_OWN_TEAM_DPS = 150
+export const OBJECTIVE_ENEMY_TEAM_DPS = 100
+export const OBJECTIVE_CLICK_DAMAGE = 80
+export const OBJECTIVE_DRAKE_WIN_BONUS = 0.08
+export const OBJECTIVE_BARON_WIN_BONUS = 0.12
+export const OBJECTIVE_DPS_TICK_MS = 200
+export const OBJECTIVE_TIMEOUT_MS = 12000
+export const OBJECTIVE_RESULT_DELAY_MS = 1800
+
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100
 export const LP_MASTER_PROMOTION_THRESHOLD = 500

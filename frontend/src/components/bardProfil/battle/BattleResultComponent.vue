@@ -27,6 +27,9 @@
           @toggle-chat="showChat = !showChat"
         />
 
+        <!-- Objective modal overlays the minimap when dragon/baron spawns -->
+        <ObjectiveModalComponent />
+
         <!--
           Chat is a collapsible overlay anchored to the bottom-left of the map.
           Moved out of the main layout column so the minimap gets full space.
@@ -58,6 +61,7 @@ import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.v
 import BattleStartScreenComponent from './BattleStartScreenComponent.vue'
 import BattleResultModal from './BattleResultModal.vue'
 import BattleKillBannerComponent from './BattleKillBannerComponent.vue'
+import ObjectiveModalComponent from './ObjectiveModalComponent.vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
@@ -70,6 +74,7 @@ export default defineComponent({
     BattleStartScreenComponent,
     BattleResultModal,
     BattleKillBannerComponent,
+    ObjectiveModalComponent,
   },
 
   setup() {

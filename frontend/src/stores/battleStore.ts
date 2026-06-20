@@ -46,6 +46,18 @@ import {
   BATTLE_INITIAL_MMR,
   BATTLE_DEFAULT_RANK_TIER,
   BATTLE_KILL_LOG_THROTTLE_MS,
+  OBJECTIVE_DRAKE_SPAWN,
+  OBJECTIVE_BARON_SPAWN,
+  DRAKE_OBJECTIVE_HP,
+  BARON_OBJECTIVE_HP,
+  OBJECTIVE_OWN_TEAM_DPS,
+  OBJECTIVE_ENEMY_TEAM_DPS,
+  OBJECTIVE_CLICK_DAMAGE,
+  OBJECTIVE_DRAKE_WIN_BONUS,
+  OBJECTIVE_BARON_WIN_BONUS,
+  OBJECTIVE_DPS_TICK_MS,
+  OBJECTIVE_TIMEOUT_MS,
+  OBJECTIVE_RESULT_DELAY_MS,
 } from '../config/constants'
 import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
@@ -130,6 +142,14 @@ export const useBattleStore = defineStore('battle', {
     baronAlive: true,
     baronKilledByTeam: null as (1 | 2) | null,
     baronEventTime: 0,
+    objectiveModalOpen: false,
+    activeObjective: null as 'drake' | 'baron' | null,
+    objectiveHP: 0,
+    objectiveMaxHP: 0,
+    objectiveResult: null as 'player' | 'own' | 'enemy' | null,
+    objectiveWinDelta: 0,
+    _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
+    _objectiveTimeoutId: null as ReturnType<typeof setTimeout> | null,
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     searchingPhaseStartTimestamp: 0,
@@ -335,35 +355,16 @@ export const useBattleStore = defineStore('battle', {
           }
         }
 
-        if (this.drakeAlive && this.drakeEventTime > 0 && this.battleTime >= this.drakeEventTime) {
-          this.drakeKilledByTeam = Math.random() < 0.5 ? 1 : 2
-          this.drakeAlive = false
-          const teamName = this.drakeKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
-          this.chatMessages.push({
-            user: 'System',
-            text: `${teamName} slew the Dragon!`,
-            time: this.formatTime(this.battleTime),
-            team: this.drakeKilledByTeam,
-            type: 'system',
-          })
+        if (this.drakeAlive && this.drakeEventTime > 0
+            && this.activeObjective !== 'drake'
+            && this.battleTime >= OBJECTIVE_DRAKE_SPAWN) {
+          this._openObjectiveModal('drake')
         }
 
-        if (
-          this.baronAlive &&
-          this.baronEventTime > 0 &&
-          this.battleTime >= this.baronEventTime &&
-          this.battleTime < MINIMAP_PHASE_BARON_END
-        ) {
-          this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
-          this.baronAlive = false
-          const baronTeamName = this.baronKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
-          this.chatMessages.push({
-            user: 'System',
-            text: `${baronTeamName} slew Baron Nashor!`,
-            time: this.formatTime(this.battleTime),
-            team: this.baronKilledByTeam,
-            type: 'system',
-          })
+        if (this.baronAlive && this.baronEventTime > 0
+            && this.activeObjective !== 'baron'
+            && this.battleTime >= OBJECTIVE_BARON_SPAWN) {
+          this._openObjectiveModal('baron')
         }
 
         if (this.battleTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
@@ -375,6 +376,7 @@ export const useBattleStore = defineStore('battle', {
             clearTimeout(this.autoBattleTimer)
             this.autoBattleTimer = null
           }
+          this._clearObjectiveModal()
           this.runBattleCycle()
         }
       }, GAME_TICK_INTERVAL_MS)
@@ -444,6 +446,10 @@ export const useBattleStore = defineStore('battle', {
       this.baronAlive = true
       this.baronKilledByTeam = null
       this.baronEventTime = 0
+      this._clearObjectiveModal()
+      this.objectiveHP = 0
+      this.objectiveMaxHP = 0
+      this.objectiveWinDelta = 0
       this.battlePhase = 'playing'
       this.predeterminedWin = null
       this.showAutoBattleResult = false
@@ -846,6 +852,8 @@ export const useBattleStore = defineStore('battle', {
     async adminSkipToEnd() {
       if (this.battlePhase !== 'playing') return
 
+      this._clearObjectiveModal()
+
       if (this.battleSimIntervalId) {
         clearInterval(this.battleSimIntervalId)
         this.battleSimIntervalId = null
@@ -880,6 +888,8 @@ export const useBattleStore = defineStore('battle', {
       if (this.battlePhase !== 'playing') return
       if (targetSeconds <= this.battleTime) return
       if (targetSeconds >= BATTLE_REAL_DURATION_SECONDS * 60) return
+
+      this._clearObjectiveModal()
 
       // Flush kill events up to target time
       const pending = this.killEventSchedule.filter((e) => e.gameTime <= targetSeconds)
@@ -944,6 +954,97 @@ export const useBattleStore = defineStore('battle', {
       this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
       this.battleTime = targetSeconds
       this.startBattleSimulation(true)
+    },
+
+    _openObjectiveModal(type: 'drake' | 'baron') {
+      const maxHP = type === 'drake' ? DRAKE_OBJECTIVE_HP : BARON_OBJECTIVE_HP
+      this.activeObjective = type
+      this.objectiveHP = maxHP
+      this.objectiveMaxHP = maxHP
+      this.objectiveResult = null
+      this.objectiveWinDelta = 0
+      this.objectiveModalOpen = true
+
+      const totalDPS = OBJECTIVE_OWN_TEAM_DPS + OBJECTIVE_ENEMY_TEAM_DPS
+      const drainPerTick = totalDPS * (OBJECTIVE_DPS_TICK_MS / 1000)
+      this._objectiveIntervalId = setInterval(() => {
+        if (!this.objectiveModalOpen || this.objectiveResult !== null) return
+        this.objectiveHP = Math.max(0, this.objectiveHP - drainPerTick)
+        if (this.objectiveHP <= 0) {
+          const ownKill = Math.random() < OBJECTIVE_OWN_TEAM_DPS / totalDPS
+          this._resolveObjective(ownKill ? 'own' : 'enemy')
+        }
+      }, OBJECTIVE_DPS_TICK_MS)
+
+      this._objectiveTimeoutId = setTimeout(() => {
+        if (this.objectiveModalOpen && this.objectiveResult === null) {
+          this._resolveObjective(Math.random() < 0.5 ? 'own' : 'enemy')
+        }
+      }, OBJECTIVE_TIMEOUT_MS)
+    },
+
+    clickObjective() {
+      if (!this.objectiveModalOpen || this.objectiveResult !== null) return
+      this.objectiveHP = Math.max(0, this.objectiveHP - OBJECTIVE_CLICK_DAMAGE)
+      if (this.objectiveHP <= 0) {
+        this._resolveObjective('player')
+      }
+    },
+
+    _resolveObjective(by: 'player' | 'own' | 'enemy') {
+      if (this._objectiveIntervalId) {
+        clearInterval(this._objectiveIntervalId)
+        this._objectiveIntervalId = null
+      }
+      if (this._objectiveTimeoutId) {
+        clearTimeout(this._objectiveTimeoutId)
+        this._objectiveTimeoutId = null
+      }
+      this.objectiveResult = by
+      const ownWin = by === 'player' || by === 'own'
+      const bonus =
+        this.activeObjective === 'drake' ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS
+
+      if (this.activeObjective === 'drake') {
+        this.drakeKilledByTeam = ownWin ? 1 : 2
+        this.drakeAlive = false
+      } else {
+        this.baronKilledByTeam = ownWin ? 1 : 2
+        this.baronAlive = false
+      }
+
+      const prevProb = this.currentWinProbability
+      this.currentWinProbability = Math.max(0.05, Math.min(0.95, prevProb + (ownWin ? bonus : -bonus)))
+      this.objectiveWinDelta = ownWin ? bonus : -bonus
+
+      const objectiveName = this.activeObjective === 'drake' ? 'Dragon' : 'Baron Nashor'
+      const teamName = ownWin ? 'Blue Team' : 'Red Team'
+      this.chatMessages.push({
+        user: 'System',
+        text: `${teamName} slew the ${objectiveName}!`,
+        time: this.formatTime(this.battleTime),
+        team: ownWin ? 1 : 2,
+        type: 'system',
+      })
+
+      const closeTimeoutId = setTimeout(() => {
+        this._clearObjectiveModal()
+      }, OBJECTIVE_RESULT_DELAY_MS)
+      this.timerIds.push(closeTimeoutId)
+    },
+
+    _clearObjectiveModal() {
+      if (this._objectiveIntervalId) {
+        clearInterval(this._objectiveIntervalId)
+        this._objectiveIntervalId = null
+      }
+      if (this._objectiveTimeoutId) {
+        clearTimeout(this._objectiveTimeoutId)
+        this._objectiveTimeoutId = null
+      }
+      this.objectiveModalOpen = false
+      this.objectiveResult = null
+      this.activeObjective = null
     },
 
     syncFromTimestamps() {
