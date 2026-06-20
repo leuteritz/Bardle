@@ -92,6 +92,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
           }"
           :style="slot.purchased && slot.role ? { '--role-color': roleColor(slot.role) } : {}"
           @click="handleSlotClick(slot)"
+          @mouseenter="uiStore.setHoveredPlanetSlotId(slot.id)"
+          @mouseleave="uiStore.setHoveredPlanetSlotId(null)"
         >
           <template v-if="slot.purchased && slot.role">
             <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />

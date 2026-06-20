@@ -12,6 +12,8 @@ export const useUiStore = defineStore('ui', () => {
   const planetActiveSlotId = ref<string | null>(null)
   const pendingChampionSearch = ref('')
   const hoveredChampionRole = ref<ChampionRole | null>(null)
+  const hoveredChampionSlotIndex = ref<number | null>(null)
+  const hoveredPlanetSlotId = ref<string | null>(null)
 
   function openBardModal() {
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
@@ -54,6 +56,14 @@ export const useUiStore = defineStore('ui', () => {
     hoveredChampionRole.value = role
   }
 
+  function setHoveredChampionSlotIndex(index: number | null) {
+    hoveredChampionSlotIndex.value = index
+  }
+
+  function setHoveredPlanetSlotId(id: string | null) {
+    hoveredPlanetSlotId.value = id
+  }
+
   return {
     bardActiveTab,
     rolesActiveSlot,
@@ -62,6 +72,8 @@ export const useUiStore = defineStore('ui', () => {
     planetActiveSlotId,
     pendingChampionSearch,
     hoveredChampionRole,
+    hoveredChampionSlotIndex,
+    hoveredPlanetSlotId,
     openBardModal,
     setBardTab,
     closeBardModal,
@@ -71,5 +83,7 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenTeamTabWithSearch,
     clearPendingChampionSearch,
     setHoveredChampionRole,
+    setHoveredChampionSlotIndex,
+    setHoveredPlanetSlotId,
   }
 })

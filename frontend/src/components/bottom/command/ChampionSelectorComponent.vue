@@ -24,12 +24,14 @@ function onImgError(e: Event) {
 }
 
 function onSlotEnter(i: number) {
+  uiStore.setHoveredChampionSlotIndex(i)
   if (headerSlots.value[i] !== null) {
     uiStore.setHoveredChampionRole(ROLES[i].key as ChampionRole)
   }
 }
 
 function onSlotLeave() {
+  uiStore.setHoveredChampionSlotIndex(null)
   uiStore.setHoveredChampionRole(null)
 }
 </script>

@@ -21,7 +21,10 @@
       v-for="pos in backPlanets"
       :key="pos.id"
       class="planet-orbit-item planet-orbit-item--behind"
-      :class="{ 'planet-orbit-item--healing': pos.isHealing }"
+      :class="{
+        'planet-orbit-item--healing': pos.isHealing,
+        'planet-orbit-item--highlight-behind': pos.isHighlighted,
+      }"
       :style="{
         width: pos.size + 'px',
         height: pos.size + 'px',
@@ -117,6 +120,24 @@
         </Transition>
       </div>
     </template>
+
+    <!-- Hover ring — front and behind planets; behind ring floats above sun via z-index: 8 -->
+    <template v-for="pos in renderPositions" :key="'hover-ring-' + pos.id">
+      <Transition name="champion-ring">
+        <div
+          v-if="pos.isHighlighted"
+          class="planet-champion-hover-ring"
+          :class="{ 'planet-champion-hover-ring--behind': pos.isBehind }"
+          :style="{
+            width: (pos.size + 26) + 'px',
+            height: (pos.size + 26) + 'px',
+            transform: `translate(${pos.x - (pos.size + 26) / 2}px, ${pos.y - (pos.size + 26) / 2}px)`,
+            '--cring-color': pos.highlightColor,
+            zIndex: pos.isBehind ? 8 : pos.zIndex + 1,
+          }"
+        />
+      </Transition>
+    </template>
   </div>
 </template>
 
@@ -127,7 +148,8 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, ROLES } from '@/config/constants'
+import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
@@ -166,6 +188,9 @@ interface PlanetRenderPos {
   isJungleBuffed: boolean
   jungleBuffSecsLeft: number
   jungleBuffType: string
+  slotNum: number
+  isHighlighted: boolean
+  highlightColor: string
 }
 
 interface LocalPlanetState {
@@ -218,6 +243,7 @@ export default defineComponent({
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
+    const uiStore = useUiStore()
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
@@ -345,6 +371,17 @@ export default defineComponent({
           : 0
         const jungleBuffType = jb?.buffType ?? ''
 
+        const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
+
+        const hPlanetId = uiStore.hoveredPlanetSlotId
+        const hSlotIdx = uiStore.hoveredChampionSlotIndex
+        const isPlanetDirectHover = slot.id === hPlanetId
+        const isChampionHover = hPlanetId === null && slotNum === hSlotIdx
+        const isHighlighted = isPlanetDirectHover || isChampionHover
+        const highlightColor = isPlanetDirectHover
+          ? (slot.role ? PLANET_ROLES[slot.role].color : '#c89040')
+          : (hSlotIdx !== null && hSlotIdx < ROLES.length ? ROLES[hSlotIdx].orbit.color : '#c89040')
+
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
@@ -372,6 +409,9 @@ export default defineComponent({
           isJungleBuffed,
           jungleBuffSecsLeft,
           jungleBuffType,
+          slotNum,
+          isHighlighted,
+          highlightColor,
         })
       }
 
@@ -846,5 +886,84 @@ export default defineComponent({
   .status-badge-leave-active {
     animation: none;
   }
+}
+
+/* ── Champion slot / planet tile hover ring ─────────────────────────────── */
+.planet-champion-hover-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 3px solid var(--cring-color);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--cring-color) 28%, transparent),
+    0 0 14px 5px var(--cring-color),
+    0 0 30px 10px color-mix(in srgb, var(--cring-color) 42%, transparent),
+    inset 0 0 10px 3px color-mix(in srgb, var(--cring-color) 22%, transparent);
+  animation: champion-ring-pulse 1.3s ease-in-out infinite;
+}
+
+/* Inner counter-pulse ring */
+.planet-champion-hover-ring::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--cring-color) 58%, transparent);
+  animation: champion-ring-inner 1.3s ease-in-out infinite;
+}
+
+/* Behind-sun variant: dashed outer border + stronger glow signals "hidden" location */
+.planet-champion-hover-ring--behind {
+  border-style: dashed;
+  box-shadow:
+    0 0 18px 7px var(--cring-color),
+    0 0 38px 14px color-mix(in srgb, var(--cring-color) 50%, transparent);
+  opacity: 0.88;
+}
+
+@keyframes champion-ring-pulse {
+  0%, 100% {
+    opacity: 0.82;
+    box-shadow:
+      0 0 10px 3px var(--cring-color),
+      inset 0 0 6px 2px color-mix(in srgb, var(--cring-color) 18%, transparent);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 22px 8px var(--cring-color),
+      0 0 44px 14px color-mix(in srgb, var(--cring-color) 42%, transparent),
+      inset 0 0 12px 4px color-mix(in srgb, var(--cring-color) 28%, transparent);
+  }
+}
+
+@keyframes champion-ring-inner {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.88; }
+}
+
+.champion-ring-enter-active {
+  animation: champion-ring-in 0.22s ease-out both;
+}
+.champion-ring-leave-active {
+  animation: champion-ring-in 0.16s ease-in reverse both;
+}
+
+@keyframes champion-ring-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Behind-planet: partially break through the sun blur when highlighted */
+.planet-orbit-item--behind.planet-orbit-item--highlight-behind {
+  filter: blur(0.4px) brightness(1.25) saturate(0.85);
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-champion-hover-ring,
+  .planet-champion-hover-ring::before { animation: none; }
 }
 </style>
