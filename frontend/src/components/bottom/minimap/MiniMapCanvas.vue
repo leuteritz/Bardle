@@ -17,7 +17,7 @@ import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA, RESCUE_ROTATION_DURATION_MS } from '@/config/constants'
+import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA, RESCUE_ROTATION_DURATION_MS, ROLE_COLORS } from '@/config/constants'
 
 const MAP_WORLD_DEFAULT = 0.3
 const MAP_WORLD_ZOOMED = 0.14
@@ -64,6 +64,11 @@ function rolePaletteFromRgb(r: number, g: number, b: number): typeof STAR_PALETT
     atmo:      `rgba(${r}, ${g}, ${b}, 0.55)`,
     ring:      false,
   }
+}
+
+function rolePaletteFromHex(hex: string): typeof STAR_PALETTE {
+  const n = parseInt(hex.slice(1), 16)
+  return rolePaletteFromRgb((n >> 16) & 255, (n >> 8) & 255, n & 255)
 }
 
 const PLANET_PALETTES = [
@@ -689,7 +694,13 @@ export default defineComponent({
       if (targetIdx >= 0 && isTraveling) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const champStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
-        const targetPal = champStar ? rolePaletteFromRgb(...champStar.starColor) : STAR_PALETTE
+        const nextRole = galaxyStore.nextStarRole
+        let targetPal: typeof STAR_PALETTE = STAR_PALETTE
+        if (champStar) {
+          targetPal = rolePaletteFromRgb(...champStar.starColor)
+        } else if (nextRole && ROLE_COLORS[nextRole]) {
+          targetPal = rolePaletteFromHex(ROLE_COLORS[nextRole])
+        }
         drawPlanet(
           ctx,
           tx,
