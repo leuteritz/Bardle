@@ -81,8 +81,16 @@
 
     <!-- ── Champion Grid ── -->
     <div class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid">
+      <!-- Empty: current role has no matches but cross-role does -->
       <div
-        v-if="filteredChampions.length === 0"
+        v-if="filteredChampions.length === 0 && crossRoleChampions.length > 0"
+        class="cross-role-only-state"
+      >
+        <p class="empty-label">No "{{ searchQuery }}" in this role — found in other roles:</p>
+      </div>
+      <!-- Empty: nothing anywhere -->
+      <div
+        v-else-if="filteredChampions.length === 0 && crossRoleChampions.length === 0"
         class="flex flex-col items-center justify-center gap-4 py-12"
       >
         <div class="flex items-center justify-center empty-icon-box w-14 h-14">
@@ -229,6 +237,133 @@
           </Transition>
         </div>
       </div>
+
+      <!-- ── Cross-role search results ── -->
+      <Transition name="cross-role-fade">
+        <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
+          <div class="cross-role-divider">
+            <span class="cross-role-divider-label">Also from other roles</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+            <div
+              v-for="champion in crossRoleChampions"
+              :key="'cross-' + champion.name"
+              class="champion-card-slot cross-role-card"
+              :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name }]"
+              :data-role="CHAMPION_ROLES[champion.name]"
+              @click="handleBuy(champion.name)"
+              @mouseenter="onCardHoverAndDismiss(champion.name)"
+              @mouseleave="onCardLeave"
+            >
+              <!-- Role badge pill -->
+              <div
+                class="role-badge-pill"
+                :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
+              >
+                {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
+              </div>
+
+              <div class="card-inner">
+                <div class="card-img-layer">
+                  <img
+                    :src="battleStore.getChampionImage(champion.name)"
+                    :alt="champion.name"
+                    class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
+                    :class="isLocked(champion.name) ? 'grayscale' : ''"
+                  />
+                  <img
+                    v-if="isLocked(champion.name)"
+                    src="/img/lock.png"
+                    alt="Locked"
+                    class="lock-overlay"
+                  />
+                  <div
+                    class="absolute inset-0 card-overlay"
+                    :class="
+                      isUnlocked(champion.name) && canAffordChampion(champion.name)
+                        ? 'card-overlay--buyable'
+                        : 'card-overlay--default'
+                    "
+                  />
+                  <div
+                    v-if="isUnlocked(champion.name) && !isOwned(champion.name) && canAffordChampion(champion.name)"
+                    class="absolute inset-0 pointer-events-none card-shimmer card-shimmer-anim"
+                  />
+                </div>
+
+                <div class="card-content">
+                  <div class="flex flex-col">
+                    <span
+                      class="text-sm font-black leading-tight tracking-wide champion-name"
+                      :class="
+                        isOwned(champion.name) || isLocked(champion.name)
+                          ? 'champion-name--dim'
+                          : 'champion-name--bright'
+                      "
+                    >
+                      {{ truncate(champion.name, 12) }}
+                    </span>
+
+                    <div class="card-traits-section">
+                      <div
+                        v-for="trait in getChampionDetail(champion.name).traits"
+                        :key="trait.id"
+                        class="card-trait-badge"
+                        :style="{ '--tc': trait.color }"
+                      >
+                        <Icon :icon="trait.icon" class="card-trait-icon" />
+                        <span>{{ trait.name }}</span>
+                      </div>
+                      <div
+                        v-if="getChampionDetail(champion.name).origin"
+                        class="card-trait-badge"
+                        :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
+                      >
+                        <Icon
+                          :icon="getChampionDetail(champion.name).origin!.icon"
+                          class="card-trait-icon"
+                        />
+                        <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
+                      </div>
+                    </div>
+
+                    <div class="card-bottom-section">
+                      <div
+                        v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
+                        class="flex flex-wrap gap-1"
+                      >
+                        <span
+                          v-for="(qty, matId) in getMaterialCost(champion.name)"
+                          :key="matId"
+                          class="cost-badge"
+                          :class="
+                            hasEnoughMaterial(String(matId), qty as number)
+                              ? 'cost-badge--ok'
+                              : 'cost-badge--missing'
+                          "
+                        >
+                          <img
+                            :src="getMaterialImage(String(matId))"
+                            :alt="getMaterialName(String(matId))"
+                            class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
+                          />
+                          {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
+                            formatNumber(qty as number)
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="isLocked(champion.name)" class="locked-tooltip">
+                  {{ getLockedTooltip(champion.name) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -271,6 +406,14 @@ export default defineComponent({
     const searchQuery = ref('')
     const activeTrait = ref<string>('all')
     const traitFilterOpen = ref(false)
+
+    const ROLE_BADGE = {
+      top:     { label: 'TOP', color: '#e05050' },
+      jungle:  { label: 'JGL', color: '#52b830' },
+      mid:     { label: 'MID', color: '#5090e8' },
+      adc:     { label: 'ADC', color: '#e89840' },
+      support: { label: 'SUP', color: '#b8c8d8' },
+    } as const
 
     watch(
       () => uiStore.pendingChampionSearch,
@@ -432,6 +575,31 @@ const availableTraits = computed(() => {
         })
     })
 
+    const crossRoleChampions = computed(() => {
+      const q = searchQuery.value.toLowerCase().trim()
+      if (!q || activeRole.value === 'all') return []
+      return championNames.value
+        .filter((name) => {
+          if (isOwned(name)) return false
+          const role = CHAMPION_ROLES[name] as ChampionRole | undefined
+          if (!role || role === activeRole.value) return false
+          const nameMatch = name.toLowerCase().includes(q)
+          const traitMatch = (CHAMPION_TRAITS[name] ?? []).some((tid) => {
+            const def = TRAIT_DEFINITIONS.find((t) => t.id === tid)
+            return def?.name.toLowerCase().includes(q)
+          })
+          const originMatch = (getChampionOrigin(name) ?? '').toLowerCase().includes(q)
+          return nameMatch || traitMatch || originMatch
+        })
+        .sort((a, b) => {
+          const ra = ROLE_BADGE[CHAMPION_ROLES[a] as keyof typeof ROLE_BADGE]?.label ?? ''
+          const rb = ROLE_BADGE[CHAMPION_ROLES[b] as keyof typeof ROLE_BADGE]?.label ?? ''
+          if (ra !== rb) return ra.localeCompare(rb)
+          return a.localeCompare(b)
+        })
+        .map((name) => ({ name }))
+    })
+
     const searchMatchedTraits = computed(() => {
       const q = searchQuery.value.toLowerCase().trim()
       if (!q) return new Set<string>()
@@ -554,6 +722,8 @@ const availableTraits = computed(() => {
       getChampionDetail,
       onCardHoverAndDismiss,
       onCardLeave,
+      crossRoleChampions,
+      ROLE_BADGE,
     }
   },
 })
@@ -1109,6 +1279,72 @@ const availableTraits = computed(() => {
 .search-clear-btn--visible:focus-visible {
   outline: 1px solid #c89040;
   outline-offset: -2px;
+}
+
+/* ── Cross-role search results ── */
+.cross-role-section {
+  margin-top: 14px;
+}
+
+.cross-role-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.cross-role-divider::before,
+.cross-role-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #5c3310, transparent);
+}
+.cross-role-divider-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #7a6040;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.cross-role-card { opacity: 0.88; transition: opacity 0.18s ease; }
+.cross-role-card:hover { opacity: 1; }
+
+.role-badge-pill {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 15;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #111008;
+  padding: 2px 5px;
+  border-radius: 3px;
+  line-height: 1.2;
+  pointer-events: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
+
+.cross-role-fade-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.cross-role-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.cross-role-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.cross-role-fade-leave-to {
+  opacity: 0;
+}
+
+.cross-role-only-state {
+  padding: 16px 8px 4px;
+  text-align: center;
 }
 
 </style>
