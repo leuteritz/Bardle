@@ -87,6 +87,7 @@ export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
 export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selection
 export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
 export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
+export const SKIP_DURATION_SECONDS = 5 // minimap skip-to-arrival shortcut
 
 // Resource star flyby
 export const RESOURCE_STAR_INTERVAL_MS = 120_000 // every 2 min a flyby

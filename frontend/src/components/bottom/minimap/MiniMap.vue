@@ -71,6 +71,16 @@
               » Next Galaxy «
             </button>
           </div>
+
+          <!-- ── Skip-to-arrival shortcut (travel only) ── -->
+          <button
+            v-if="galaxyStore.championTravelState === 'traveling'"
+            class="minimap-skip-btn"
+            :title="`Skip to -${SKIP_DURATION_SECONDS}s`"
+            @click="teleportNearPlanet"
+          >
+            ⏩ -{{ SKIP_DURATION_SECONDS }}s
+          </button>
         </div>
       </div>
 
@@ -82,7 +92,7 @@
 import { defineComponent, computed } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
-import { HUD_PANEL_ARC_R } from '../../../config/constants'
+import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS } from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 
@@ -133,6 +143,12 @@ export default defineComponent({
       starGroupStore.openStarFightModal(championStar.value.id)
     }
 
+    function teleportNearPlanet() {
+      if (galaxyStore.championTravelState !== 'traveling') return
+      galaxyStore.championTravelStartTime =
+        Date.now() - (galaxyStore.championTravelDurationMs - SKIP_DURATION_SECONDS * 1000)
+    }
+
     const ARC_R = HUD_PANEL_ARC_R
     const framePath = `M 0,0 L ${438 - ARC_R},0 A ${ARC_R},${ARC_R} 0 0,1 438,${ARC_R} L 438,${380 - CORNER_R} A ${CORNER_R},${CORNER_R} 0 0,0 ${438 + CORNER_R},380`
 
@@ -146,6 +162,8 @@ export default defineComponent({
       onMinimapStarEnter,
       onMinimapStarLeave,
       onMinimapStarClick,
+      teleportNearPlanet,
+      SKIP_DURATION_SECONDS,
     }
   },
 })
@@ -384,6 +402,49 @@ export default defineComponent({
 .next-galaxy-btn:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
+}
+
+/* ── Minimap skip button ── */
+.minimap-skip-btn {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 6;
+  pointer-events: auto;
+  background: linear-gradient(to bottom, #1e1006, #110900);
+  border: 2px solid #7a4e20;
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 0 8px rgba(200, 144, 64, 0.18);
+  border-radius: 4px;
+  color: #e8c040;
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  padding: 6px 14px;
+  cursor: pointer;
+  line-height: 1.4;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+.minimap-skip-btn:hover {
+  background: linear-gradient(to bottom, #2a1a08, #180c04);
+  border-color: #c89040;
+  box-shadow:
+    inset 0 0 0 1px #5c3310,
+    0 0 14px rgba(232, 192, 64, 0.35);
+  color: #f0d060;
+}
+.minimap-skip-btn:active {
+  background: linear-gradient(to bottom, #110900, #0e0700);
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 0 4px rgba(200, 144, 64, 0.12);
 }
 
 </style>

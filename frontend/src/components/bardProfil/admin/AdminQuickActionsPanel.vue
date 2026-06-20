@@ -217,11 +217,6 @@ function fillTeamWithRandomChampions() {
   itemStore.adminFillRandomEquipment()
 }
 
-function teleportNearPlanet() {
-  if (galaxyStore.championTravelState !== 'traveling') return
-  galaxyStore.championTravelStartTime = Date.now() - (galaxyStore.championTravelDurationMs - 5000)
-}
-
 function resetAllCooldowns() {
   roleBehaviorStore.supportHealCooldownMs = 0
   roleBehaviorStore.supportPlanetHealCooldownMs = 0
@@ -349,13 +344,6 @@ function setStarPhase(phase: number) {
         @click="fillTeamWithRandomChampions"
       >
         <Icon icon="game-icons:dice-six-faces-random" class="admin-btn-icon" /> Random Team Fill
-      </button>
-      <button
-        class="admin-spawn-btn admin-spawn-btn--travel flex items-center gap-1.5 px-3 py-1.5"
-        :disabled="galaxyStore.championTravelState !== 'traveling'"
-        @click="teleportNearPlanet"
-      >
-        <Icon icon="game-icons:lightning-bolt" class="admin-btn-icon" /> Skip to -5s
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--cooldown flex items-center gap-1.5 px-3 py-1.5"
