@@ -143,8 +143,8 @@ export const BARON_POS = { x: 28, y: 28 }
 export const MID_CENTER = { x: 50, y: 50 }
 
 // ── Objective Modal ────────────────────────────────────────────────────────
-export const OBJECTIVE_DRAKE_SPAWN = 300   // game-seconds when drake appears on minimap
-export const OBJECTIVE_BARON_SPAWN = 1200  // game-seconds when baron appears on minimap
+export const OBJECTIVE_DRAKE_SPAWN = 300 // game-seconds when drake appears on minimap
+export const OBJECTIVE_BARON_SPAWN = 1200 // game-seconds when baron appears on minimap
 export const DRAKE_OBJECTIVE_HP = 3000
 export const BARON_OBJECTIVE_HP = 5000
 export const OBJECTIVE_OWN_TEAM_DPS = 150
@@ -640,10 +640,10 @@ export const HUD_PANEL_ARC_R = 60
 export const BARD_PROFILE_RADIUS = 4
 
 // ── Bottom Bar Frame strokes ──────────────────────────────────────────────
-export const BOTTOM_FRAME_STROKE_SHADOW = 'rgba(30,12,0,0.95)'    // dark outer shadow
-export const BOTTOM_FRAME_STROKE_WOOD   = '#7a4e20'               // wood brown — matches --rpg-wood / header border
-export const BOTTOM_FRAME_STROKE_GRAIN  = 'rgba(160,95,38,0.75)'  // lighter wood grain
-export const BOTTOM_FRAME_STROKE_SHEEN  = 'rgba(190,115,46,0.14)' // subtle warm surface sheen
+export const BOTTOM_FRAME_STROKE_SHADOW = 'rgba(30,12,0,0.95)' // dark outer shadow
+export const BOTTOM_FRAME_STROKE_WOOD = '#7a4e20' // wood brown — matches --rpg-wood / header border
+export const BOTTOM_FRAME_STROKE_GRAIN = 'rgba(160,95,38,0.75)' // lighter wood grain
+export const BOTTOM_FRAME_STROKE_SHEEN = 'rgba(190,115,46,0.14)' // subtle warm surface sheen
 
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
@@ -1092,6 +1092,11 @@ export const TOAST_DURATION_MS = 800
 /** Milliseconds the cinematic kill-announcement banner stays visible before fading */
 export const KILL_BANNER_DISPLAY_MS = 3_500
 
+// ── Music ─────────────────────────────────────────────────────────────────────
+export const MUSIC_DEFAULT_VOLUME = 0.1
+export const MUSIC_FADE_DURATION_MS = 1500
+export const MUSIC_STORAGE_KEY = 'bard-music-settings'
+
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
@@ -1366,25 +1371,27 @@ export const USED_GAME_ICONS = new Set<string>([
   // ChampionStarTimerComponent
   'game-icons:comet-spark',
   // Minimap HUD stats
-  'game-icons:sands-of-time',  // Arrival time countdown
-  'game-icons:winged-leg',     // Travel speed
-  'game-icons:radar-sweep',    // Remaining distance
+  'game-icons:sands-of-time', // Arrival time countdown
+  'game-icons:winged-leg', // Travel speed
+  'game-icons:radar-sweep', // Remaining distance
   // Battle Minimap overlays
-  'game-icons:magic-portal',   // Skip button on minimap (BattleMapComponent)
-  'game-icons:chat-bubble',    // Chat toggle button on minimap (BattleMapComponent)
-  'game-icons:dragon-head',    // Dragon spawn shortcut button (BattleMapComponent)
-  'game-icons:hydra',          // Baron spawn shortcut button (BattleMapComponent)
+  'game-icons:magic-portal', // Skip button on minimap (BattleMapComponent)
+  'game-icons:chat-bubble', // Chat toggle button on minimap (BattleMapComponent)
+  'game-icons:dragon-head', // Dragon spawn shortcut button (BattleMapComponent)
+  'game-icons:hydra', // Baron spawn shortcut button (BattleMapComponent)
+  // Music Control Widget
+  'game-icons:trumpet', // MusicControlWidget toggle button
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
 // Distinct from ROLES[].color — these drive the champion lift-glow and slot
 // pulse on hover, giving each role a thematic creative accent.
 export const ROLE_HOVER_COLORS: Record<string, string> = {
-  top:     '#c8a060',  // Stone-gold — warrior's golden trim
-  jungle:  '#3dc850',  // Poison-green — hunter's venom
-  mid:     '#c060f0',  // Arcane-violet — mage's essence
-  adc:     '#50c8ff',  // Sky-cyan — marksman's precision
-  support: '#ffd060',  // Warm-gold — healer's blessing
+  top: '#c8a060', // Stone-gold — warrior's golden trim
+  jungle: '#3dc850', // Poison-green — hunter's venom
+  mid: '#c060f0', // Arcane-violet — mage's essence
+  adc: '#50c8ff', // Sky-cyan — marksman's precision
+  support: '#ffd060', // Warm-gold — healer's blessing
 }
 
 // ── Resource-Star Color Palette ────────────────────────────────────────────
@@ -1394,7 +1401,7 @@ export const ROLE_HOVER_COLORS: Record<string, string> = {
 export const RESOURCE_STAR_COLORS: [number, number, number][] = [
   [255, 248, 226], // F-type  — cream white    (Procyon-class)
   [255, 252, 192], // F5-type — pale lemon-white
-  [255, 234, 86],  // G-type  — golden yellow   (sun-like)
+  [255, 234, 86], // G-type  — golden yellow   (sun-like)
   [230, 240, 255], // A-type  — ice-blue white   (Vega-class)
   [204, 196, 255], // B-type  — pale violet-white (hot, Rigel-class)
   [255, 214, 162], // K-type  — warm buff        (subdued, not orange)

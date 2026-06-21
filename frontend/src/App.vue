@@ -4,6 +4,8 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { useSpaceMusic } from '@/composables/useSpaceMusic'
+import MusicControlWidget from '@/components/idle/MusicControlWidget.vue'
 import IdleGameComponent from '@/components/idle/IdleGameComponent.vue'
 import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.vue'
 import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vue'
@@ -25,6 +27,7 @@ import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
 useGalaxyTheme()
+useSpaceMusic()
 
 const { isRenderingPaused } = useRenderingPaused()
 
@@ -71,6 +74,8 @@ watch(
         </div>
       </div>
     </div>
+
+    <MusicControlWidget />
 
     <button
       v-show="!gameStore.isEncyclopediaOpen"
