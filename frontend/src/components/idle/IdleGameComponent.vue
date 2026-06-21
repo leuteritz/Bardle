@@ -60,6 +60,7 @@ import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
 import PlanetOrbit from './sun/PlanetOrbit.vue'
+import { playChimeSound } from '../../composables/useChimeSound'
 
 export default defineComponent({
   name: 'IdleGameComponent',
@@ -104,6 +105,7 @@ export default defineComponent({
     let gameTimer: ReturnType<typeof setInterval> | null = null
 
     function handleChimeClick(event: MouseEvent) {
+      playChimeSound()
       gameStore.addChime()
       const augmentStore = useAugmentStore()
       const bonus = augmentStore.onClick(gameStore.chimesPerClick, gameStore.activeAugments)

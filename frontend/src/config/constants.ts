@@ -1097,6 +1097,20 @@ export const MUSIC_DEFAULT_VOLUME = 0.1
 export const MUSIC_FADE_DURATION_MS = 1500
 export const MUSIC_STORAGE_KEY = 'bard-music-settings'
 
+// ── SFX ───────────────────────────────────────────────────────────────────────
+export const SFX_CHIME_GAIN = 0.10
+export const SFX_CHIME_MAIN_FREQ = 130
+export const SFX_CHIME_OVERTONE_FREQ = 261
+export const SFX_CHIME_MOD_FREQ = 4
+export const SFX_CHIME_MOD_DEPTH = 8
+export const SFX_CHIME_ATTACK_S = 0.003
+export const SFX_CHIME_DECAY_S = 0.40
+export const SFX_CHIME_OVERTONE_DELAY_S = 0.010
+export const SFX_CHIME_OVERTONE_DECAY_S = 0.32
+export const SFX_CHIME_SUB_FREQ = 55
+export const SFX_CHIME_SUB_GAIN = 0.18
+export const SFX_CHIME_SUB_DECAY_S = 0.22
+
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
