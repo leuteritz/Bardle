@@ -79,6 +79,7 @@
                 class="trait-chip"
                 :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
                 :style="`--chip-color: ${trait.color}`"
+                :title="`${filterChampionCount[trait.id] ?? 0} Champions`"
                 @click="activeTrait = trait.id"
               >
                 <Icon :icon="trait.icon" class="trait-chip-icon" />
@@ -102,6 +103,7 @@
                 class="trait-chip"
                 :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
                 :style="`--chip-color: ${origin.color}`"
+                :title="`${filterChampionCount[origin.origin] ?? 0} Champions`"
                 @click="activeTrait = origin.origin"
               >
                 <Icon :icon="origin.icon" class="trait-chip-icon" />
@@ -596,10 +598,14 @@ export default defineComponent({
       return 'card-locked'
     }
 
-const availableTraits = computed(() => {
+const shopChampionNames = computed(() =>
+      battleStore.recruitableChampions.map((r) => r.name)
+    )
+
+    const availableTraits = computed(() => {
       const relevant = activeRole.value === 'all'
-        ? championNames.value
-        : championNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
+        ? shopChampionNames.value
+        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const seen = new Set<string>()
       for (const name of relevant) {
         for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
@@ -609,8 +615,8 @@ const availableTraits = computed(() => {
 
     const availableOrigins = computed(() => {
       const relevant = activeRole.value === 'all'
-        ? championNames.value
-        : championNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
+        ? shopChampionNames.value
+        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const seen = new Set<string>()
       for (const name of relevant) {
         const o = getChampionOrigin(name)
@@ -619,6 +625,32 @@ const availableTraits = computed(() => {
       return (Object.values(ORIGIN_SYNERGIES) as Array<{ origin: string; name: string; icon: string; color: string }>)
         .filter((o) => seen.has(o.origin))
         .sort((a, b) => a.origin.localeCompare(b.origin))
+    })
+
+    const filterChampionCount = computed(() => {
+      const relevant = activeRole.value === 'all'
+        ? shopChampionNames.value
+        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
+      const counts: Record<string, number> = {}
+      for (const name of relevant) {
+        for (const tid of (CHAMPION_TRAITS[name] ?? [])) {
+          counts[tid] = (counts[tid] ?? 0) + 1
+        }
+        const o = getChampionOrigin(name)
+        if (o && ORIGIN_SYNERGIES[o]) {
+          counts[o] = (counts[o] ?? 0) + 1
+        }
+      }
+      return counts
+    })
+
+    watch(shopChampionNames, () => {
+      if (activeTrait.value === 'all') return
+      const traitIds = new Set<string>(availableTraits.value.map((t) => t.id))
+      const originIds = new Set<string>(availableOrigins.value.map((o) => o.origin))
+      if (!traitIds.has(activeTrait.value) && !originIds.has(activeTrait.value)) {
+        activeTrait.value = 'all'
+      }
     })
 
     const filteredChampions = computed(() => {
@@ -777,6 +809,7 @@ const availableTraits = computed(() => {
       filteredChampions,
       availableTraits,
       availableOrigins,
+      filterChampionCount,
       searchMatchedTraits,
       hasSearchTraitMatch,
       filterOpen,
