@@ -20,43 +20,80 @@
             @keydown.space.prevent="resetSearch"
           >✕</button>
         </div>
+        <!-- Filter panel toggle -->
+        <button
+          class="filter-toggle-btn"
+          :class="{
+            'filter-toggle-btn--open': filterOpen,
+            'filter-toggle-btn--active': hasActiveFilter,
+          }"
+          :title="filterOpen ? 'Hide filters' : 'Show filters'"
+          aria-label="Toggle filters"
+          @click="filterOpen = !filterOpen"
+        >
+          <Icon icon="game-icons:toggles" width="16" height="16" />
+          <span class="filter-toggle-label">Filter</span>
+          <span class="filter-toggle-chevron">{{ filterOpen ? '▾' : '▴' }}</span>
+          <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
+        </button>
+
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
-      <div class="trait-filter-section">
-        <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
-          <span class="trait-filter-title">Filter</span>
-          <Icon
-            :icon="traitFilterOpen ? 'game-icons:plain-arrow' : 'game-icons:return-arrow'"
-            class="trait-chevron"
-          />
-        </div>
-        <div v-if="traitFilterOpen" class="trait-filter-body">
+      <!-- ── Filter panel: 3 rows ── -->
+      <Transition name="filter-panel">
+      <div v-show="filterOpen" class="cs-filter-panel">
+
+        <!-- Row 1: ALL reset + Tier filter -->
+        <div class="cs-filter-row">
           <button
             v-show="!hasSearchTraitMatch"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === 'all' }"
+            class="trait-chip trait-chip--all"
+            :class="{ 'trait-chip--active': activeTrait === 'all' && activeTier === 'all' }"
             @click="resetSearch"
           >ALL</button>
+          <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
+          <button
+            v-for="[key, t] in tierEntries"
+            :key="key"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTier === key }"
+            :style="`--chip-color: ${t.color}`"
+            @click="activeTier = key"
+          >
+            {{ t.label }}
+          </button>
+        </div>
 
-          <div class="filter-group-label">Traits</div>
-          <TransitionGroup tag="div" name="chip" class="chip-group">
-            <button
-              v-for="trait in availableTraits"
-              :key="trait.id"
-              v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-              class="trait-chip"
-              :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
-              :style="`--chip-color: ${trait.color}`"
-              @click="activeTrait = trait.id"
-            >
-              <Icon :icon="trait.icon" class="trait-chip-icon" />
-              {{ trait.name }}
-            </button>
-          </TransitionGroup>
+        <!-- Row 2: Trait chips -->
+        <template v-if="availableTraits.length">
+          <div class="filter-divider">
+            <span class="filter-divider-label">Traits</span>
+          </div>
+          <div class="cs-filter-row cs-filter-row--wrap">
+            <TransitionGroup tag="div" name="chip" class="chip-group">
+              <button
+                v-for="trait in availableTraits"
+                :key="trait.id"
+                v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+                class="trait-chip"
+                :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+                :style="`--chip-color: ${trait.color}`"
+                @click="activeTrait = trait.id"
+              >
+                <Icon :icon="trait.icon" class="trait-chip-icon" />
+                {{ trait.name }}
+              </button>
+            </TransitionGroup>
+          </div>
+        </template>
 
-          <template v-if="availableOrigins.length">
-            <div class="filter-group-label">Origin</div>
+        <!-- Row 3: Origin chips (only when role has synergy origins) -->
+        <template v-if="availableOrigins.length">
+          <div class="filter-divider">
+            <span class="filter-divider-label">Origins</span>
+          </div>
+          <div class="cs-filter-row cs-filter-row--wrap">
             <TransitionGroup tag="div" name="chip" class="chip-group">
               <button
                 v-for="origin in availableOrigins"
@@ -71,27 +108,11 @@
                 {{ origin.origin }}
               </button>
             </TransitionGroup>
-          </template>
+          </div>
+        </template>
 
-          <div class="filter-group-label">Tier</div>
-          <button
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTier === 'all' }"
-            @click="activeTier = 'all'"
-          >All</button>
-          <button
-            v-for="[key, t] in tierEntries"
-            :key="key"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTier === key }"
-            :style="`--chip-color: ${t.color}`"
-            @click="activeTier = key"
-          >
-            {{ t.label }}
-          </button>
-
-        </div>
       </div>
+      </Transition>
     </div>
 
     <!-- ── Champion Grid ── -->
@@ -446,7 +467,7 @@ export default defineComponent({
     const searchQuery = ref('')
     const activeTrait = ref<string>('all')
     const activeTier = ref<'all' | ChimesTier>('all')
-    const traitFilterOpen = ref(false)
+    const filterOpen = ref(true)
     const tierEntries = computed(() =>
       Object.entries(CHIMES_PRICE_TIERS) as [ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }][]
     )
@@ -673,6 +694,7 @@ const availableTraits = computed(() => {
       return matched
     })
     const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
+    const hasActiveFilter = computed(() => activeTrait.value !== 'all' || activeTier.value !== 'all')
 
     const unlockedCount = computed(() => {
       return battleStore.recruitableChampions.length
@@ -757,6 +779,8 @@ const availableTraits = computed(() => {
       availableOrigins,
       searchMatchedTraits,
       hasSearchTraitMatch,
+      filterOpen,
+      hasActiveFilter,
       unlockedCount,
       battleStore,
       inventoryStore,
@@ -788,7 +812,6 @@ const availableTraits = computed(() => {
       getCardClass,
       setActiveRole,
       resetSearch,
-      traitFilterOpen,
       isNew,
       hoveredChampion,
       lastRowIndices,
@@ -1157,41 +1180,144 @@ const availableTraits = computed(() => {
   transform: none;
 }
 
+/* ── Filter panel toggle button ── */
+.filter-toggle-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+  cursor: pointer;
+  color: #7a6040;
+  transition: background 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, box-shadow 0.15s ease;
+}
+.filter-toggle-btn:hover {
+  background: rgba(92, 51, 16, 0.22);
+  border-color: #c89040;
+  color: #c89040;
+}
+.filter-toggle-btn--open {
+  background: rgba(200, 144, 64, 0.15);
+  border-color: #c89040;
+  color: #e8c040;
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.3);
+}
+.filter-toggle-btn--active:not(.filter-toggle-btn--open) {
+  border-color: #c89040;
+  color: #c89040;
+}
+.filter-toggle-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.filter-toggle-chevron {
+  font-size: 10px;
+  opacity: 0.75;
+}
+.filter-active-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8c040;
+  box-shadow: 0 0 4px rgba(232, 192, 64, 0.7);
+}
+
+/* ── Filter panel collapse animation ── */
+.filter-panel-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.filter-panel-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.filter-panel-enter-from,
+.filter-panel-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 /* ── Grid area ── */
 .cs-grid { padding: 8px 10px; }
 
-/* ── Trait filter ── */
-.trait-filter-section {
-  border: 1px solid #3e2a0a;
-  border-radius: var(--bp-radius);
-  background: #161410;
-  overflow: hidden;
+/* ── Filter panel wrapper (3-row stack) ── */
+.cs-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
-.trait-filter-header {
+
+/* ── Each filter row: horizontal scrollable strip ── */
+.cs-filter-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 5px 10px;
-  cursor: pointer;
-  background: #1e1006;
-  border-bottom: 1px solid #3e2a0a;
-  user-select: none;
-  transition: background 0.15s;
-}
-.trait-filter-header:hover { background: #261408; }
-.trait-filter-title {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: #c89040;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.trait-chevron { width: 14px; height: 14px; color: #7a5020; }
-.trait-filter-body {
-  display: flex;
-  flex-wrap: wrap;
   gap: 4px;
-  padding: 6px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 1px 2px 3px;
+  flex-shrink: 0;
+}
+.cs-filter-row::-webkit-scrollbar { display: none; }
+.cs-filter-row--wrap {
+  overflow-x: visible;
+  flex-wrap: wrap;
+}
+
+/* ── ALL button emphasis ── */
+.trait-chip--all {
+  padding: 4px 14px;
+  letter-spacing: 0.12em;
+  border-color: #7a4e20;
+  color: #c89040;
+}
+.trait-chip--all.trait-chip--active {
+  background: rgba(200, 144, 64, 0.18);
+  border-color: #c89040;
+  color: #e8c040;
+  box-shadow: 0 0 10px rgba(200, 144, 64, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ── Filter row divider with category label ── */
+.filter-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  margin: 1px 0;
+}
+.filter-divider::before,
+.filter-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(92, 51, 16, 0.45), transparent);
+}
+.filter-divider-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a6030;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.filter-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 14px;
+  background: rgba(92, 51, 16, 0.5);
+  margin: 0 2px;
+  align-self: center;
 }
 .trait-chip {
   display: inline-flex;
@@ -1237,18 +1363,6 @@ const availableTraits = computed(() => {
   color: rgba(255, 255, 255, 0.88);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
-.filter-group-label {
-  width: 100%;
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  padding: 3px 2px 2px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.35);
-  margin: 3px 0 2px;
-}
-.filter-group-label:first-child { margin-top: 0; }
 .chip-group { display: contents; }
 .chip-enter-active, .chip-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
