@@ -936,12 +936,15 @@ export const CHIMES_PER_CLICK_BASE = 20
 
 // ── Champion Chimes Price Tiers ────────────────────────────────────────────
 export const CHIMES_PRICE_TIERS = {
-  starter:    { chimesPrice: 500,  label: '✦ Starter',         color: '#7a6a58', multiplier: 1.0 },
-  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice',     color: '#527a4a', multiplier: 1.2 },
-  adept:      { chimesPrice: 3500, label: '✦✦✦ Adept',         color: '#3a5880', multiplier: 1.5 },
-  epic:       { chimesPrice: 5500, label: '✦✦✦✦ Epic',         color: '#5a3d80', multiplier: 2.0 },
-  legendary:  { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary',  color: '#803828', multiplier: 2.5 },
-} as const satisfies Record<ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }>
+  starter: { chimesPrice: 500, label: '✦ Starter', color: '#7a6a58', multiplier: 1.0 },
+  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice', color: '#527a4a', multiplier: 1.2 },
+  adept: { chimesPrice: 3500, label: '✦✦✦ Adept', color: '#3a5880', multiplier: 1.5 },
+  epic: { chimesPrice: 5500, label: '✦✦✦✦ Epic', color: '#5a3d80', multiplier: 2.0 },
+  legendary: { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary', color: '#803828', multiplier: 2.5 },
+} as const satisfies Record<
+  ChimesTier,
+  { chimesPrice: number; label: string; color: string; multiplier: number }
+>
 
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
@@ -1105,16 +1108,19 @@ export const KILL_BANNER_DISPLAY_MS = 3_500
 export const MUSIC_DEFAULT_VOLUME = 0.1
 export const MUSIC_FADE_DURATION_MS = 1500
 export const MUSIC_STORAGE_KEY = 'bard-music-settings'
+export const BOSS_MUSIC_PATH = '/audio/StarBossMusic.ogg'
+export const BOSS_MUSIC_VOLUME = 0.05
+export const BOSS_MUSIC_FADE_MS = 800
 
 // ── SFX ───────────────────────────────────────────────────────────────────────
-export const SFX_CHIME_GAIN = 0.10
+export const SFX_CHIME_GAIN = 0.1
 export const SFX_CHIME_MAIN_FREQ = 130
 export const SFX_CHIME_OVERTONE_FREQ = 261
 export const SFX_CHIME_MOD_FREQ = 4
 export const SFX_CHIME_MOD_DEPTH = 8
 export const SFX_CHIME_ATTACK_S = 0.003
-export const SFX_CHIME_DECAY_S = 0.40
-export const SFX_CHIME_OVERTONE_DELAY_S = 0.010
+export const SFX_CHIME_DECAY_S = 0.4
+export const SFX_CHIME_OVERTONE_DELAY_S = 0.01
 export const SFX_CHIME_OVERTONE_DECAY_S = 0.32
 export const SFX_CHIME_SUB_FREQ = 55
 export const SFX_CHIME_SUB_GAIN = 0.18
