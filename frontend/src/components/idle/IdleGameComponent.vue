@@ -24,24 +24,16 @@
 
     <div
       :key="chimeGainKey"
-      class="fixed z-50 flex items-center gap-1 font-bold pointer-events-none chime-popup"
+      class="fixed z-50 pointer-events-none chime-popup"
       :style="{
         top: chimeGainPos.y + 'px',
-        left: chimeGainPos.x + 'px',
+        left: (chimeGainPos.x + chimeGainOffsetX) + 'px',
+        '--angle': chimeGainAngle + 'deg',
       }"
     >
       <span class="chime-gain-text" :style="{ fontSize: chimePopupFontSize + 'px' }">
-        +{{ gameStore.chimesPerClick }}
+        +{{ $formatNumber(gameStore.chimesPerClick) }}
       </span>
-      <img
-        src="/img/BardAbilities/BardChime.png"
-        class="rpg-img"
-        :style="{
-          width: chimePopupIconSize + 'px',
-          height: chimePopupIconSize + 'px',
-          filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))',
-        }"
-      />
     </div>
   </div>
 </template>
@@ -95,12 +87,10 @@ export default defineComponent({
       Math.max(planetShopStore.currentSunRadius * 0.5, 22),
     )
 
-    const chimePopupIconSize = computed(() =>
-      Math.max(planetShopStore.currentSunRadius * 0.6, 28),
-    )
-
     const chimeGainPos = ref({ x: 0, y: 0 })
     const chimeGainKey = ref(0)
+    const chimeGainOffsetX = ref(0)
+    const chimeGainAngle = ref(0)
 
     let gameTimer: ReturnType<typeof setInterval> | null = null
 
@@ -117,6 +107,8 @@ export default defineComponent({
       }
 
       chimeGainPos.value = { x: event.clientX, y: event.clientY }
+      chimeGainOffsetX.value = Math.round((Math.random() - 0.5) * 30)
+      chimeGainAngle.value = Math.round((Math.random() - 0.5) * 10)
       chimeGainKey.value++
     }
 
@@ -150,10 +142,11 @@ export default defineComponent({
       handleChimeClick,
       chimeGainPos,
       chimeGainKey,
+      chimeGainOffsetX,
+      chimeGainAngle,
       chimeButtonStyle,
       chimeIconStyle,
       chimePopupFontSize,
-      chimePopupIconSize,
     }
   },
 })
@@ -227,28 +220,22 @@ export default defineComponent({
 @keyframes fadeUpEnhanced {
   0% {
     opacity: 1;
-    transform: translate(-50%, -100%) scale(1);
-  }
-  50% {
-    transform: translate(-50%, -120%) scale(1.2);
+    transform: translateX(-50%) translateY(-100%) rotate(var(--angle, 0deg)) scale(1.1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -160%) scale(0.8);
+    transform: translateX(-50%) translateY(-220%) rotate(var(--angle, 0deg)) scale(0.85);
   }
 }
 
 .chime-gain-text {
-  color: #ff8c00;
-  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.9);
+  color: #e8c040;
+  font-weight: 900;
+  -webkit-text-stroke: 1.5px #3e200a;
   text-shadow:
-    -1px -1px 0 rgba(0, 0, 0, 0.95),
-    1px -1px 0 rgba(0, 0, 0, 0.95),
-    -1px 1px 0 rgba(0, 0, 0, 0.95),
-    1px 1px 0 rgba(0, 0, 0, 0.95),
-    0 0 14px rgba(255, 140, 0, 0.95),
-    0 0 30px rgba(255, 140, 0, 0.6),
-    0 0 50px rgba(255, 100, 0, 0.3);
+    0 0 6px #e8c040,
+    0 0 14px #c89040,
+    0 0 28px rgba(232, 192, 64, 0.5);
 }
 
 .animate-blob {
@@ -300,7 +287,7 @@ export default defineComponent({
 }
 
 .chime-popup {
-  animation: fadeUpEnhanced 1s ease-out forwards;
+  animation: fadeUpEnhanced 0.8s ease-out forwards;
 }
 
 @media (max-width: 1024px) {
