@@ -14,7 +14,6 @@ import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
-import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()

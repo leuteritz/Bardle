@@ -19,8 +19,6 @@ const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const { showToast } = useActionToast()
 
-const purchasedSlots = computed(() => store.slots.filter((s) => s.purchased))
-
 const selectedSlotId = ref<string | null>(null)
 
 function initSlot() {

@@ -11,7 +11,7 @@ import { ROLES as ROLE_DEFS, ROLE_BY_KEY } from '@/config/constants'
 import { getChampionRoles } from '@/config/championRoles'
 import { getChampionOrigin, getOriginColor } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
-import type { ChampionRole, ItemCategory, SlotEquipment } from '@/types'
+import type { ChampionRole, ItemCategory } from '@/types'
 import ChampionInfoHeader from './ChampionInfoHeader.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
@@ -39,7 +39,7 @@ const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const { showToast } = useActionToast()
 
-const { headerSlots, secondarySlots, recruitableChampions, newlyUnlockedChampions } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots, newlyUnlockedChampions } = storeToRefs(battleStore)
 const activeSlotIndex = computed(() => uiStore.rolesActiveSlot)
 
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))

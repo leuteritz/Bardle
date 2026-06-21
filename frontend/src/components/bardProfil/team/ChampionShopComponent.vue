@@ -1044,9 +1044,9 @@ const availableTraits = computed(() => {
   border-color: rgba(232, 192, 64, 0.45);
 }
 .cost-badge--missing {
-  color: #e8c040;
-  background: rgba(232, 192, 64, 0.10);
-  border-color: rgba(232, 192, 64, 0.45);
+  color: #cc6050;
+  background: rgba(204, 96, 80, 0.10);
+  border-color: rgba(204, 96, 80, 0.45);
 }
 
 

@@ -294,7 +294,6 @@ export default defineComponent({
 
         const roleTier = primaryRole ? ROLE_BY_KEY[primaryRole].orbit : null
         const planetTier = ORBIT_TIERS.planet[ci % 2]
-        const rawRx = (roleTier ? roleTier.rx : planetTier.rx) * sunScale * orbitScaleVal
         const rawRy = (roleTier ? roleTier.ry : planetTier.ry) * sunScale * orbitScaleVal
 
         const vMin = Math.min(window.innerWidth, window.innerHeight)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useBattleStore } from '@/stores/battleStore'

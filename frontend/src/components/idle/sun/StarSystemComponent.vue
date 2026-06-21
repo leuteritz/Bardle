@@ -318,7 +318,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
-import type { StarRenderEntry, PlanetRenderEntry } from '../../../composables/useStarSystem'
+import type { StarRenderEntry } from '../../../composables/useStarSystem'
 import PlanetComponent from '../planet/PlanetComponent.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
@@ -757,15 +757,6 @@ function getStarRewardSummary(star: StarRenderEntry) {
   }
 
   return { totalChimes, materials: [...materialMap.values()], champion }
-}
-
-function getChampionImageForPlanet(planet: PlanetRenderEntry): string | null {
-  if (planet.animState === 'saved') return null
-  const boss = bossStore.activeBosses.find(
-    (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
-  )
-  if (!boss || !boss.isChampionPlanet || !boss.homePlanetChampion) return null
-  return `/img/champion/${boss.homePlanetChampion}.jpg`
 }
 
 function rewardSummaryStyle(star: StarRenderEntry) {

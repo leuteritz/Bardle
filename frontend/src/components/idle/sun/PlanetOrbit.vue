@@ -297,7 +297,6 @@ export default defineComponent({
         const baseSize = tier.size * Math.pow(sunScale, 0.65)
 
         const tiltRad = tier.tiltRad
-        const rawRx = tier.rx * sunScale * orbitScaleVal
         const rawRy = tier.ry * sunScale * orbitScaleVal
         const vMin = Math.min(window.innerWidth, window.innerHeight)
         const MIN_RY_FACTORS = [1.5, 2.0]

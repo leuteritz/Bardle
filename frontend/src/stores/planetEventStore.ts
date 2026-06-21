@@ -8,7 +8,7 @@ export const usePlanetEventStore = defineStore('planetEvent', {
   actions: {
     // Called every second from gameStore.tick()
     // Star spawning is now handled by useStarSystem composable (watchers on galaxy state).
-    checkAndMaybeSpawnEvent(_inGameTime: number, _universeProgress: number) {
+    checkAndMaybeSpawnEvent() {
       const bossStore = usePlanetBossStore()
       const galaxyStore = useGalaxyStore()
 

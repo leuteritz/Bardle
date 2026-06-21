@@ -68,7 +68,6 @@ const planetEls = ref<(HTMLDivElement | null)[]>([])
 
 const planetQueue = computed(() => starGroupStore.starFightPlanetQueue)
 const activeIndex = computed(() => starGroupStore.starFightCurrentIndex)
-const isGalaxyBoss = computed(() => bossStore.activeBoss?.isGalaxyBoss ?? false)
 
 function registerPlanetEl(el: HTMLDivElement | null, i: number) {
   planetEls.value[i] = el
