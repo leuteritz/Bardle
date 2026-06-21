@@ -36,6 +36,16 @@
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <div class="sf-header" :class="{ 'sf-header--galaxy': isGalaxyBoss }">
           <span class="sf-star-type">{{ starTypeLabel }}</span>
+          <button
+            v-if="activeBoss"
+            class="sf-admin-kill-btn"
+            :class="{ 'sf-admin-kill-btn--flash': adminKillFlashing }"
+            title="Admin: instantly defeat all bosses in this star"
+            @click="adminKillAllBosses"
+          >
+            <Icon icon="game-icons:skull" width="12" height="12" />
+            ADMIN
+          </button>
           <button class="modal-close-btn" @click="handleClose">✕</button>
         </div>
 
@@ -154,6 +164,7 @@ import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
+import { BOSS_REMOVAL_DELAY_MS } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
@@ -242,6 +253,34 @@ watch(
     }
   },
 )
+
+// ── Admin ─────────────────────────────────────────────────────────────────
+const adminKillFlashing = ref(false)
+
+function adminKillAllBosses() {
+  const star = starGroupStore.activeStars.find(
+    (s) => s.id === starGroupStore.activeFightStarId,
+  )
+  if (!star) return
+
+  for (const slot of star.planetSlots) {
+    if (slot.cleared) continue
+    const boss = bossStore.activeBosses.find(
+      (b) => b.planetId === slot.planetId && !b.defeated && !b.expired,
+    )
+    if (!boss) continue
+    boss.currentHP = 0
+    boss.defeated = true
+    bossStore.grantBossRewards(boss)
+    const pid = boss.planetId
+    setTimeout(() => bossStore.removeBoss(pid), BOSS_REMOVAL_DELAY_MS)
+  }
+
+  adminKillFlashing.value = true
+  setTimeout(() => {
+    adminKillFlashing.value = false
+  }, 500)
+}
 
 // ── Methods ───────────────────────────────────────────────────────────────
 function handleClose() {
@@ -498,8 +537,9 @@ function starStyle(i: number): Record<string, string> {
   flex-shrink: 0;
 }
 .sf-header .modal-close-btn {
-  top: 50%;
-  transform: translateY(-50%);
+  position: static;
+  transform: none;
+  flex-shrink: 0;
 }
 
 .sf-header--galaxy {
@@ -819,6 +859,54 @@ function starStyle(i: number): Record<string, string> {
     rgba(0, 0, 0, 0.05) 4px
   );
   z-index: 5;
+}
+
+/* ── Admin Kill Button ────────────────────────────────────────────────────── */
+.sf-admin-kill-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid #6a1818;
+  background: linear-gradient(to bottom, #2a0808, #1a0404);
+  color: #cc5040;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sf-admin-kill-btn:hover {
+  border-color: #cc3030;
+  background: linear-gradient(to bottom, #3a0a0a, #220606);
+  color: #e06050;
+  box-shadow: 0 0 8px rgba(200, 40, 40, 0.35);
+}
+
+.sf-admin-kill-btn:active {
+  transform: scale(0.95);
+}
+
+.sf-admin-kill-btn--flash {
+  animation: admin-kill-flash 0.5s ease-out forwards;
+}
+
+@keyframes admin-kill-flash {
+  0% {
+    background: #cc3030;
+    color: #fff;
+    border-color: #ff5050;
+    box-shadow: 0 0 14px rgba(220, 40, 40, 0.7);
+  }
+  100% {
+    background: linear-gradient(to bottom, #2a0808, #1a0404);
+    color: #cc5040;
+    border-color: #6a1818;
+    box-shadow: none;
+  }
 }
 
 /* ── Entrance Transition ──────────────────────────────────────────────────── */
