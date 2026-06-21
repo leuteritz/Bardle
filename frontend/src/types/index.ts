@@ -260,10 +260,16 @@ export interface SectionProgress {
   completed: boolean
 }
 
+export type ChimesTier = 'starter' | 'apprentice' | 'adept' | 'epic' | 'legendary'
+
 export interface RecruitableChampion {
   name: string
   materialCost: Record<string, number>
   discoveredAt: number
+  chimesPrice: number
+  priceTier: ChimesTier
+  tierLabel: string
+  tierBonusMultiplier: number // TODO: tierBonusMultiplier used for combat & material bonuses
 }
 
 export interface ChampionState {

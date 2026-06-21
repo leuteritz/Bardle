@@ -23,8 +23,6 @@
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
-      <p v-if="loadError" class="text-xs text-center load-error">{{ loadError }}</p>
-
       <div class="trait-filter-section">
         <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
           <span class="trait-filter-title">Filter</span>
@@ -75,6 +73,23 @@
             </TransitionGroup>
           </template>
 
+          <div class="filter-group-label">Tier</div>
+          <button
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTier === 'all' }"
+            @click="activeTier = 'all'"
+          >All</button>
+          <button
+            v-for="[key, t] in tierEntries"
+            :key="key"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeTier === key }"
+            :style="`--chip-color: ${t.color}`"
+            @click="activeTier = key"
+          >
+            {{ t.label }}
+          </button>
+
         </div>
       </div>
     </div>
@@ -113,6 +128,11 @@
         >
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
+
+            <!-- Tier badge: top-left -->
+            <div v-if="!isOwned(champion.name)" class="tier-badge" :style="{ '--tier-c': getTierColor(champion.name) }">
+              {{ getChampionTierLabel(champion.name) }}
+            </div>
 
             <!-- Image layer: clipped to card-inner bounds -->
             <div class="card-img-layer">
@@ -213,6 +233,14 @@
                         formatNumber(qty as number)
                       }}
                     </span>
+                    <span
+                      class="cost-badge chimes-cost-badge"
+                      :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
+                      :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
+                    >
+                      <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
+                      {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
+                    </span>
                   </div>
 
                 </div>
@@ -262,6 +290,10 @@
                   :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
                 >
                   {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
+                </div>
+                <!-- Tier badge: top-left -->
+                <div v-if="!isOwned(champion.name)" class="tier-badge" :style="{ '--tier-c': getTierColor(champion.name) }">
+                  {{ getChampionTierLabel(champion.name) }}
                 </div>
                 <div class="card-img-layer">
                   <img
@@ -350,6 +382,14 @@
                             formatNumber(qty as number)
                           }}
                         </span>
+                        <span
+                          class="cost-badge chimes-cost-badge"
+                          :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
+                          :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
+                        >
+                          <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
+                          {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -372,18 +412,19 @@ import { ref, onMounted, onUnmounted, defineComponent, computed, watch } from 'v
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '../../../stores/battleStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
+import { useGameStore } from '../../../stores/gameStore'
 import { useUiStore } from '../../../stores/uiStore'
 import RpgNotifyBadge from '../../ui/RpgNotifyBadge.vue'
 import { truncate, formatNumber } from '../../../config/numberFormat'
-import { fetchChampionNames } from '../../../utils/champions'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES } from '../../../config/constants'
+import { PLANET_TYPE_NAMES, CHIMES_PRICE_TIERS, CHIMES_COST_ICON } from '../../../config/constants'
+import { CHAMPION_DATA, getChampionNames } from '../../../config/championData'
 import { useActionToast } from '../../../composables/useActionToast'
-import type { ChampionRole } from '../../../types'
+import type { ChampionRole, ChimesTier } from '../../../types'
 
 
 export default defineComponent({
@@ -395,16 +436,20 @@ export default defineComponent({
   },
   emits: ['roleChange', 'close'],
   setup(props, { emit }) {
-    const championNames = ref<string[]>([])
+    const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
     const inventoryStore = useInventoryStore()
+    const gameStore = useGameStore()
     const uiStore = useUiStore()
     const { showToast } = useActionToast()
-    const loadError = ref<string | null>(null)
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
     const activeTrait = ref<string>('all')
+    const activeTier = ref<'all' | ChimesTier>('all')
     const traitFilterOpen = ref(false)
+    const tierEntries = computed(() =>
+      Object.entries(CHIMES_PRICE_TIERS) as [ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }][]
+    )
 
     const ROLE_BADGE = {
       top:     { label: 'TOP', color: '#e05050' },
@@ -449,14 +494,7 @@ export default defineComponent({
     function resetSearch() {
       searchQuery.value = ''
       activeTrait.value = 'all'
-    }
-
-    async function loadChampions() {
-      try {
-        championNames.value = await fetchChampionNames()
-      } catch {
-        loadError.value = 'Champions konnten nicht geladen werden.'
-      }
+      activeTier.value = 'all'
     }
 
     function isOwned(name: string): boolean {
@@ -476,9 +514,29 @@ export default defineComponent({
       return recruit?.materialCost ?? {}
     }
 
+    function getChimesPrice(name: string): number {
+      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
+      if (recruit) return recruit.chimesPrice
+      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].chimesPrice
+    }
+
+    function getTierColor(name: string): string {
+      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].color
+    }
+
+    function getChampionTierLabel(name: string): string {
+      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
+      if (recruit) return recruit.tierLabel
+      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].label
+    }
+
+    function canAffordChimes(name: string): boolean {
+      return gameStore.chimes >= getChimesPrice(name)
+    }
+
     function canAffordChampion(name: string): boolean {
       const cost = getMaterialCost(name)
-      return Object.keys(cost).length > 0 && inventoryStore.hasMaterials(cost)
+      return Object.keys(cost).length > 0 && inventoryStore.hasMaterials(cost) && canAffordChimes(name)
     }
 
     function canClickBuy(name: string): boolean {
@@ -553,6 +611,10 @@ const availableTraits = computed(() => {
             const traitMatch = (CHAMPION_TRAITS[c.name] ?? []).includes(activeTrait.value as never)
             const originMatch = getChampionOrigin(c.name) === activeTrait.value
             if (!traitMatch && !originMatch) return false
+          }
+          if (activeTier.value !== 'all') {
+            const champTier = CHAMPION_DATA[c.name]?.priceTier ?? 'epic'
+            if (champTier !== activeTier.value) return false
           }
           if (searchQuery.value.trim()) {
             const q = searchQuery.value.toLowerCase().trim()
@@ -685,7 +747,6 @@ const availableTraits = computed(() => {
     }
 
     onMounted(() => {
-      loadChampions()
       window.addEventListener('resize', onWindowResize)
     })
     onUnmounted(() => window.removeEventListener('resize', onWindowResize))
@@ -699,17 +760,23 @@ const availableTraits = computed(() => {
       unlockedCount,
       battleStore,
       inventoryStore,
-      loadError,
+      gameStore,
       truncate,
       CHAMPION_ROLES,
       getChampionRoles,
       activeRole,
       searchQuery,
       activeTrait,
+      activeTier,
+      tierEntries,
       isOwned,
       isUnlocked,
       isLocked,
       getMaterialCost,
+      getChimesPrice,
+      getTierColor,
+      getChampionTierLabel,
+      canAffordChimes,
       canAffordChampion,
       canClickBuy,
       handleBuy,
@@ -731,6 +798,7 @@ const availableTraits = computed(() => {
       onCardLeave,
       crossRoleChampions,
       ROLE_BADGE,
+      CHIMES_COST_ICON,
     }
   },
 })
@@ -747,9 +815,6 @@ const availableTraits = computed(() => {
   border-bottom-width: 1px;
   border-bottom-color: rgba(92, 51, 16, 0.5);
 }
-
-/* ── Load error ── */
-.load-error { color: var(--rpg-red); }
 
 /* ── Empty state ── */
 .empty-icon-box {
@@ -1333,6 +1398,24 @@ const availableTraits = computed(() => {
   font-weight: 900;
   letter-spacing: 0.06em;
   color: #111008;
+  padding: 2px 5px;
+  border-radius: 3px;
+  line-height: 1.2;
+  pointer-events: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
+
+.tier-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 15;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--tier-c);
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid color-mix(in srgb, var(--tier-c) 50%, #111);
   padding: 2px 5px;
   border-radius: 3px;
   line-height: 1.2;

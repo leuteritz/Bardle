@@ -59,7 +59,7 @@ import {
   OBJECTIVE_TIMEOUT_MS,
   OBJECTIVE_RESULT_DELAY_MS,
 } from '../config/constants'
-import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
+import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion, ChimesTier } from '../types'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -192,11 +192,26 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
-    addRecruitableChampion(name: string, materialCost: Record<string, number>) {
+    addRecruitableChampion(
+      name: string,
+      materialCost: Record<string, number>,
+      chimesPrice: number,
+      priceTier: ChimesTier,
+      tierLabel: string,
+      tierBonusMultiplier: number,
+    ) {
       if (this.ownedChampions.includes(name)) return
       if (this.recruitableChampions.some((c) => c.name === name)) return
       if (this.recruitedChampions.includes(name)) return
-      this.recruitableChampions.push({ name, materialCost, discoveredAt: Date.now() })
+      this.recruitableChampions.push({
+        name,
+        materialCost,
+        discoveredAt: Date.now(),
+        chimesPrice,
+        priceTier,
+        tierLabel,
+        tierBonusMultiplier,
+      })
       this.newlyUnlockedChampions.push(name)
     },
 
@@ -219,7 +234,14 @@ export const useBattleStore = defineStore('battle', {
 
     addAllRecruitableChampions() {
       for (const config of CHAMPION_HOME_PLANETS) {
-        this.addRecruitableChampion(config.championName, config.materialCost)
+        this.addRecruitableChampion(
+          config.championName,
+          config.materialCost,
+          config.chimesPrice,
+          config.priceTier,
+          config.tierLabel,
+          config.tierBonusMultiplier,
+        )
       }
     },
 
@@ -228,12 +250,15 @@ export const useBattleStore = defineStore('battle', {
       if (!recruit) return false
       const inventoryStore = useInventoryStore()
       if (!inventoryStore.hasMaterials(recruit.materialCost)) return false
+      const gameStore = useGameStore()
+      if (gameStore.chimes < recruit.chimesPrice) return false
       inventoryStore.removeMaterials(recruit.materialCost)
+      gameStore.chimes -= recruit.chimesPrice
       this.ownedChampions.push(name)
       this.recruitedChampions.push(name)
       this.recruitableChampions = this.recruitableChampions.filter((c) => c.name !== name)
       this.dismissNewChampion(name)
-      logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost })
+      logger.info('Battle', `Recruited: ${name}`, { materialCost: recruit.materialCost, chimesPrice: recruit.chimesPrice })
       return true
     },
 

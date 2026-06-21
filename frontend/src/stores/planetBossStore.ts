@@ -341,7 +341,14 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const battleStore = useBattleStore()
         const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === boss.homePlanetChampion)
         if (config) {
-          battleStore.addRecruitableChampion(boss.homePlanetChampion, config.materialCost)
+          battleStore.addRecruitableChampion(
+            boss.homePlanetChampion,
+            config.materialCost,
+            config.chimesPrice,
+            config.priceTier,
+            config.tierLabel,
+            config.tierBonusMultiplier,
+          )
         }
       }
 

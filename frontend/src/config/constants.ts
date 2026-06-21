@@ -1,4 +1,4 @@
-import type { ChampionRole, RoleStat, RoleAbilityDetail } from '../types'
+import type { ChampionRole, RoleStat, RoleAbilityDetail, ChimesTier } from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -934,6 +934,15 @@ export const PROJECTILE_SHOT_DURATION_MS = 520
 // Gameplay — click base
 export const CHIMES_PER_CLICK_BASE = 20
 
+// ── Champion Chimes Price Tiers ────────────────────────────────────────────
+export const CHIMES_PRICE_TIERS = {
+  starter:    { chimesPrice: 500,  label: '✦ Starter',         color: '#7a6a58', multiplier: 1.0 },
+  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice',     color: '#527a4a', multiplier: 1.2 },
+  adept:      { chimesPrice: 3500, label: '✦✦✦ Adept',         color: '#3a5880', multiplier: 1.5 },
+  epic:       { chimesPrice: 5500, label: '✦✦✦✦ Epic',         color: '#5a3d80', multiplier: 2.0 },
+  legendary:  { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary',  color: '#803828', multiplier: 2.5 },
+} as const satisfies Record<ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }>
+
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
 export const OFFLINE_MAX_HOURS = 10
@@ -1116,6 +1125,9 @@ export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
 // Champion badge tooltip — max visible entries before "+N more" overflow
 export const CHAMP_TOOLTIP_MAX_VISIBLE = 5
+
+// Champion Shop — Chimes cost badge icon
+export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
 // ── Icon Registry ─────────────────────────────────────────────────────────────
 // All game-icons used in the project. Add new icons here before using them
@@ -1395,6 +1407,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:hydra', // Baron spawn shortcut button (BattleMapComponent)
   // Music Control Widget
   'game-icons:trumpet', // MusicControlWidget toggle button
+  // Champion Shop — Chimes cost badge
+  'game-icons:windchimes', // Chimes cost display in ChampionShopComponent
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
