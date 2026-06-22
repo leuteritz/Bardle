@@ -6,10 +6,15 @@
         <div class="rpg-search-wrap">
           <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
           <input
+            ref="searchInputRef"
             v-model="searchQuery"
             type="text"
-            placeholder="Champion oder Trait suchen..."
+            placeholder="Search champion or trait..."
             class="rpg-search w-full pl-9 pr-9 py-2.5"
+            :aria-expanded="filterOpen"
+            aria-label="Search champions and traits"
+            @blur="onSearchBlur"
+            @focus="onSearchFocus"
           />
           <button
             class="search-clear-btn"
@@ -44,12 +49,12 @@
       <Transition name="filter-panel">
       <div v-show="filterOpen" class="cs-filter-panel">
 
-        <!-- Row 1: ALL reset + Tier filter -->
+        <!-- Row 1: ALL reset + Tier filter + Clear Traits -->
         <div class="cs-filter-row">
           <button
             v-show="!hasSearchTraitMatch"
             class="trait-chip trait-chip--all"
-            :class="{ 'trait-chip--active': activeTrait === 'all' && activeTier === 'all' }"
+            :class="{ 'trait-chip--active': activeTraits.length === 0 && activeTier === 'all' }"
             @click="resetSearch"
           >ALL</button>
           <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
@@ -63,27 +68,42 @@
           >
             {{ t.label }}
           </button>
+          <span v-if="activeTraits.length > 0" class="filter-sep"></span>
+          <button
+            v-if="activeTraits.length > 0"
+            class="trait-chip trait-chip--clear-all"
+            title="Clear all trait filters"
+            @click="clearTraits"
+          >× Clear</button>
         </div>
 
         <!-- Row 2: Trait chips -->
-        <template v-if="availableTraits.length">
+        <template v-if="availableTraits.length || (hasSearchTraitMatch && searchMatchedTraits.size > 0) || noTraitFound">
           <div class="filter-divider">
             <span class="filter-divider-label">Traits</span>
           </div>
-          <div class="cs-filter-row cs-filter-row--wrap">
+          <div v-if="noTraitFound" class="trait-empty-state">No trait found</div>
+          <div v-else class="cs-filter-row cs-filter-row--wrap">
             <TransitionGroup tag="div" name="chip" class="chip-group">
               <button
                 v-for="trait in availableTraits"
                 :key="trait.id"
                 v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
                 class="trait-chip"
-                :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
+                :class="{
+                  'trait-chip--active': activeTraits.includes(trait.id),
+                  'trait-chip--search-match': searchMatchedTraits.has(trait.id) && !activeTraits.includes(trait.id),
+                  'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleTraitIds.has(trait.id),
+                }"
                 :style="`--chip-color: ${trait.color}`"
-                :title="`${filterChampionCount[trait.id] ?? 0} Champions`"
-                @click="activeTrait = trait.id"
+                :title="`${filterChampionCount[trait.id] ?? 0} Champions${activeRole !== 'all' && !roleTraitIds.has(trait.id) ? ' (other roles)' : ''}`"
+                tabindex="0"
+                @click="toggleTrait(trait.id)"
+                @keydown="onChipKeydown($event, trait.id)"
               >
                 <Icon :icon="trait.icon" class="trait-chip-icon" />
                 {{ trait.name }}
+                <span v-if="activeTraits.includes(trait.id)" class="chip-dismiss" @click.stop="toggleTrait(trait.id)">×</span>
               </button>
             </TransitionGroup>
           </div>
@@ -101,13 +121,20 @@
                 :key="origin.origin"
                 v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
                 class="trait-chip"
-                :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
+                :class="{
+                  'trait-chip--active': activeTraits.includes(origin.origin),
+                  'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && !activeTraits.includes(origin.origin),
+                  'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleOriginIds.has(origin.origin),
+                }"
                 :style="`--chip-color: ${origin.color}`"
-                :title="`${filterChampionCount[origin.origin] ?? 0} Champions`"
-                @click="activeTrait = origin.origin"
+                :title="`${filterChampionCount[origin.origin] ?? 0} Champions${activeRole !== 'all' && !roleOriginIds.has(origin.origin) ? ' (other roles)' : ''}`"
+                tabindex="0"
+                @click="toggleTrait(origin.origin)"
+                @keydown="onChipKeydown($event, origin.origin)"
               >
                 <Icon :icon="origin.icon" class="trait-chip-icon" />
                 {{ origin.origin }}
+                <span v-if="activeTraits.includes(origin.origin)" class="chip-dismiss" @click.stop="toggleTrait(origin.origin)">×</span>
               </button>
             </TransitionGroup>
           </div>
@@ -124,7 +151,7 @@
         v-if="filteredChampions.length === 0 && crossRoleChampions.length > 0"
         class="cross-role-only-state"
       >
-        <p class="empty-label">No "{{ searchQuery }}" in this role — found in other roles:</p>
+        <p class="empty-label">Not in this role</p>
       </div>
       <!-- Empty: nothing anywhere -->
       <div
@@ -293,7 +320,7 @@
       <Transition name="cross-role-fade">
         <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
           <div class="cross-role-divider">
-            <span class="cross-role-divider-label">Also from other roles</span>
+            <span class="cross-role-divider-label">Other Roles</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
             <div
@@ -467,9 +494,10 @@ export default defineComponent({
     const { showToast } = useActionToast()
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
-    const activeTrait = ref<string>('all')
+    const activeTraits = ref<string[]>([])
     const activeTier = ref<'all' | ChimesTier>('all')
     const filterOpen = ref(true)
+    const searchInputRef = ref<HTMLInputElement | null>(null)
     const tierEntries = computed(() =>
       Object.entries(CHIMES_PRICE_TIERS) as [ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }][]
     )
@@ -501,12 +529,11 @@ export default defineComponent({
     )
 
     watch(activeRole, () => {
-      if (activeTrait.value === 'all') return
+      if (activeTraits.value.length === 0) return
       const traitIds = new Set<string>(availableTraits.value.map((t) => t.id))
       const originIds = new Set<string>(availableOrigins.value.map((o) => o.origin))
-      if (!traitIds.has(activeTrait.value) && !originIds.has(activeTrait.value)) {
-        activeTrait.value = 'all'
-      }
+      const filtered = activeTraits.value.filter((t) => traitIds.has(t) || originIds.has(t))
+      if (filtered.length !== activeTraits.value.length) activeTraits.value = filtered
     })
 
     function setActiveRole(role: ChampionRole | 'all') {
@@ -514,10 +541,53 @@ export default defineComponent({
       emit('roleChange', role)
     }
 
+    function toggleTrait(id: string) {
+      activeTraits.value = activeTraits.value.includes(id)
+        ? activeTraits.value.filter((t) => t !== id)
+        : [...activeTraits.value, id]
+    }
+
+    function clearTraits() {
+      activeTraits.value = []
+    }
+
     function resetSearch() {
       searchQuery.value = ''
-      activeTrait.value = 'all'
+      activeTraits.value = []
       activeTier.value = 'all'
+    }
+
+    let blurTimer: ReturnType<typeof setTimeout> | null = null
+    function onSearchBlur() {
+      blurTimer = setTimeout(() => {
+        if (!searchQuery.value.trim() && activeTraits.value.length === 0) {
+          filterOpen.value = false
+        }
+      }, 200)
+    }
+    function onSearchFocus() {
+      if (blurTimer) { clearTimeout(blurTimer); blurTimer = null }
+    }
+
+    function onChipKeydown(event: KeyboardEvent, traitId: string) {
+      const panel = (event.target as HTMLElement).closest('.cs-filter-panel')
+      if (!panel) return
+      const chips = Array.from(panel.querySelectorAll<HTMLElement>('.trait-chip[tabindex="0"]'))
+      const idx = chips.indexOf(event.target as HTMLElement)
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        chips[(idx + 1) % chips.length]?.focus()
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        chips[(idx - 1 + chips.length) % chips.length]?.focus()
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        filterOpen.value = false
+        searchInputRef.value?.focus()
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        toggleTrait(traitId)
+      }
     }
 
     function isOwned(name: string): boolean {
@@ -566,6 +636,15 @@ export default defineComponent({
       return isUnlocked(name) && !isOwned(name) && canAffordChampion(name)
     }
 
+    function nameRelevance(name: string, q: string): number {
+      if (!q) return 3
+      const n = name.toLowerCase()
+      if (n === q) return 0
+      if (n.startsWith(q)) return 1
+      if (n.includes(q)) return 2
+      return 3
+    }
+
     function handleBuy(name: string) {
       if (!canClickBuy(name)) return
       battleStore.recruitChampion(name)
@@ -602,23 +681,35 @@ const shopChampionNames = computed(() =>
       battleStore.recruitableChampions.map((r) => r.name)
     )
 
-    const availableTraits = computed(() => {
-      const relevant = activeRole.value === 'all'
+    // Role-only pool (no search expansion) — used for cross-role chip detection and watch validation
+    const roleChampionNames = computed(() =>
+      activeRole.value === 'all'
         ? shopChampionNames.value
-        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
+        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value),
+    )
+
+    // When search matches a trait/origin globally, expand chip pool to all roles
+    const chipPool = computed(() => {
+      if (activeRole.value !== 'all' && searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase().trim()
+        const anyTraitMatch = TRAIT_DEFINITIONS.some((t) => t.name.toLowerCase().includes(q))
+        const anyOriginMatch = Object.keys(ORIGIN_SYNERGIES).some((o) => o.toLowerCase().includes(q))
+        if (anyTraitMatch || anyOriginMatch) return shopChampionNames.value
+      }
+      return roleChampionNames.value
+    })
+
+    const availableTraits = computed(() => {
       const seen = new Set<string>()
-      for (const name of relevant) {
+      for (const name of chipPool.value) {
         for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
       }
       return TRAIT_DEFINITIONS.filter((t) => seen.has(t.id))
     })
 
     const availableOrigins = computed(() => {
-      const relevant = activeRole.value === 'all'
-        ? shopChampionNames.value
-        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const seen = new Set<string>()
-      for (const name of relevant) {
+      for (const name of chipPool.value) {
         const o = getChampionOrigin(name)
         if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
       }
@@ -628,11 +719,8 @@ const shopChampionNames = computed(() =>
     })
 
     const filterChampionCount = computed(() => {
-      const relevant = activeRole.value === 'all'
-        ? shopChampionNames.value
-        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value)
       const counts: Record<string, number> = {}
-      for (const name of relevant) {
+      for (const name of chipPool.value) {
         for (const tid of (CHAMPION_TRAITS[name] ?? [])) {
           counts[tid] = (counts[tid] ?? 0) + 1
         }
@@ -644,12 +732,37 @@ const shopChampionNames = computed(() =>
       return counts
     })
 
+    // Which trait/origin IDs belong to the current role (not cross-role)
+    const roleTraitIds = computed(() => {
+      const seen = new Set<string>()
+      for (const name of roleChampionNames.value) {
+        for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
+      }
+      return seen
+    })
+
+    const roleOriginIds = computed(() => {
+      const seen = new Set<string>()
+      for (const name of roleChampionNames.value) {
+        const o = getChampionOrigin(name)
+        if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
+      }
+      return seen
+    })
+
     watch(shopChampionNames, () => {
-      if (activeTrait.value === 'all') return
+      if (activeTraits.value.length === 0) return
       const traitIds = new Set<string>(availableTraits.value.map((t) => t.id))
       const originIds = new Set<string>(availableOrigins.value.map((o) => o.origin))
-      if (!traitIds.has(activeTrait.value) && !originIds.has(activeTrait.value)) {
-        activeTrait.value = 'all'
+      const filtered = activeTraits.value.filter((t) => traitIds.has(t) || originIds.has(t))
+      if (filtered.length !== activeTraits.value.length) activeTraits.value = filtered
+    })
+
+    watch(searchQuery, (q) => {
+      if (q.trim()) {
+        filterOpen.value = true
+      } else if (activeTraits.value.length === 0) {
+        filterOpen.value = false
       }
     })
 
@@ -660,10 +773,13 @@ const shopChampionNames = computed(() =>
           if (isOwned(c.name)) return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
-          if (activeTrait.value !== 'all') {
-            const traitMatch = (CHAMPION_TRAITS[c.name] ?? []).includes(activeTrait.value as never)
-            const originMatch = getChampionOrigin(c.name) === activeTrait.value
-            if (!traitMatch && !originMatch) return false
+          if (activeTraits.value.length > 0) {
+            const champTraits = CHAMPION_TRAITS[c.name] ?? []
+            const champOrigin = getChampionOrigin(c.name)
+            const hit = activeTraits.value.some(
+              (t) => (champTraits as string[]).includes(t) || champOrigin === t,
+            )
+            if (!hit) return false
           }
           if (activeTier.value !== 'all') {
             const champTier = CHAMPION_DATA[c.name]?.priceTier ?? 'epic'
@@ -682,6 +798,10 @@ const shopChampionNames = computed(() =>
           return true
         })
         .sort((a, b) => {
+          const q = searchQuery.value.toLowerCase().trim()
+          const rna = nameRelevance(a.name, q)
+          const rnb = nameRelevance(b.name, q)
+          if (rna !== rnb) return rna - rnb
           const aUnlocked = isUnlocked(a.name) ? 0 : 1
           const bUnlocked = isUnlocked(b.name) ? 0 : 1
           if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked
@@ -706,9 +826,16 @@ const shopChampionNames = computed(() =>
           return nameMatch || traitMatch || originMatch
         })
         .sort((a, b) => {
-          const ra = ROLE_BADGE[CHAMPION_ROLES[a] as keyof typeof ROLE_BADGE]?.label ?? ''
-          const rb = ROLE_BADGE[CHAMPION_ROLES[b] as keyof typeof ROLE_BADGE]?.label ?? ''
-          if (ra !== rb) return ra.localeCompare(rb)
+          const q = searchQuery.value.toLowerCase().trim()
+          const rna = nameRelevance(a, q)
+          const rnb = nameRelevance(b, q)
+          if (rna !== rnb) return rna - rnb
+          const aUnlocked = isUnlocked(a) ? 0 : 1
+          const bUnlocked = isUnlocked(b) ? 0 : 1
+          if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked
+          const rla = ROLE_BADGE[CHAMPION_ROLES[a] as keyof typeof ROLE_BADGE]?.label ?? ''
+          const rlb = ROLE_BADGE[CHAMPION_ROLES[b] as keyof typeof ROLE_BADGE]?.label ?? ''
+          if (rla !== rlb) return rla.localeCompare(rlb)
           return a.localeCompare(b)
         })
         .map((name) => ({ name }))
@@ -726,7 +853,10 @@ const shopChampionNames = computed(() =>
       return matched
     })
     const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
-    const hasActiveFilter = computed(() => activeTrait.value !== 'all' || activeTier.value !== 'all')
+    const noTraitFound = computed(
+      () => searchQuery.value.trim() !== '' && !hasSearchTraitMatch.value,
+    )
+    const hasActiveFilter = computed(() => activeTraits.value.length > 0 || activeTier.value !== 'all')
 
     const unlockedCount = computed(() => {
       return battleStore.recruitableChampions.length
@@ -810,8 +940,11 @@ const shopChampionNames = computed(() =>
       availableTraits,
       availableOrigins,
       filterChampionCount,
+      roleTraitIds,
+      roleOriginIds,
       searchMatchedTraits,
       hasSearchTraitMatch,
+      noTraitFound,
       filterOpen,
       hasActiveFilter,
       unlockedCount,
@@ -823,7 +956,7 @@ const shopChampionNames = computed(() =>
       getChampionRoles,
       activeRole,
       searchQuery,
-      activeTrait,
+      activeTraits,
       activeTier,
       tierEntries,
       isOwned,
@@ -845,6 +978,12 @@ const shopChampionNames = computed(() =>
       getCardClass,
       setActiveRole,
       resetSearch,
+      toggleTrait,
+      clearTraits,
+      onSearchBlur,
+      onSearchFocus,
+      onChipKeydown,
+      searchInputRef,
       isNew,
       hoveredChampion,
       lastRowIndices,
@@ -1570,6 +1709,49 @@ const shopChampionNames = computed(() =>
   line-height: 1.2;
   pointer-events: none;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* ── Search-match hint (trait name matches text but chip not yet activated) ── */
+.trait-chip--search-match {
+  border-color: color-mix(in srgb, var(--chip-color, #e8c040) 55%, transparent);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--chip-color, #e8c040) 22%, transparent);
+}
+
+/* ── Cross-role chip: trait/origin found in another role ── */
+.trait-chip--cross-role {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.trait-chip--cross-role:hover {
+  opacity: 0.9;
+}
+.trait-chip--cross-role.trait-chip--active {
+  opacity: 1;
+  border-style: solid;
+}
+
+/* ── Per-chip dismiss (×) ── */
+.chip-dismiss {
+  margin-left: 3px;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.1s ease;
+}
+.chip-dismiss:hover { opacity: 1; }
+
+/* ── Global clear-all button ── */
+.trait-chip--clear-all {
+  --chip-color: #cc6050;
+}
+
+/* ── "No trait found" empty state ── */
+.trait-empty-state {
+  font-size: 0.72rem;
+  color: #8a6030;
+  font-style: italic;
+  padding: 3px 6px;
 }
 
 .tier-badge {
