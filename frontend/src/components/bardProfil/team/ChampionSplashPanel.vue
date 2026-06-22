@@ -75,6 +75,12 @@ const roleFilteredChampions = computed(() => {
   return availableChampions.value.filter((c) => getChampionRoles(c).includes(internalRole))
 })
 
+const hasAssignableChampion = computed(() => {
+  if (activeChampion.value) return false
+  const assigned = new Set(battleStore.assignedChampions)
+  return roleFilteredChampions.value.some((c) => !assigned.has(c))
+})
+
 const parallaxX = ref(0)
 const parallaxY = ref(0)
 const hoveredSyn = ref<{ involvedChampions: string[]; color: string } | null>(null)
@@ -289,6 +295,7 @@ function onImgError(e: Event) {
       <div
         v-else
         class="splash-empty"
+        :class="{ 'splash-empty--has-candidate': hasAssignableChampion }"
         role="button"
         :aria-label="`Select a champion for the ${activeRole} slot`"
       >
@@ -629,6 +636,98 @@ function onImgError(e: Event) {
 }
 @media (prefers-reduced-motion: reduce) {
   .splash-empty::before { animation: none; }
+}
+/* ── Candidate available: player owns a matching unassigned champion ── */
+.splash-empty--has-candidate::before {
+  background: radial-gradient(
+    ellipse 65% 55% at 50% 48%,
+    rgba(200, 144, 64, 0.20) 0%,
+    transparent 70%
+  );
+  animation: beacon-pulse-strong 2.0s ease-in-out infinite;
+}
+.splash-area:hover .splash-empty--has-candidate::before {
+  animation: none;
+  background: radial-gradient(
+    ellipse 65% 55% at 50% 48%,
+    rgba(200, 144, 64, 0.32) 0%,
+    transparent 70%
+  );
+}
+.splash-empty--has-candidate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow:
+    inset 0 0 32px rgba(200, 144, 64, 0.22),
+    inset 0 0 80px rgba(200, 144, 64, 0.08);
+  animation: rim-glow 2.0s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.splash-area:hover .splash-empty--has-candidate::after {
+  animation: none;
+  box-shadow:
+    inset 0 0 48px rgba(232, 192, 64, 0.35),
+    inset 0 0 100px rgba(200, 144, 64, 0.12);
+}
+.splash-empty--has-candidate .splash-empty-role-img {
+  opacity: 0.45;
+  filter: grayscale(15%) sepia(30%);
+}
+.splash-area:hover .splash-empty--has-candidate .splash-empty-role-img {
+  opacity: 0.62;
+  filter: grayscale(0%) sepia(35%);
+}
+.splash-empty--has-candidate .splash-empty-cta {
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  gap: 10px;
+  z-index: 4;
+}
+.splash-empty--has-candidate .splash-empty-cta::before {
+  content: '';
+  display: block;
+  height: 1px;
+  width: 110px;
+  background: linear-gradient(to right, transparent, #c89040, #e8c060, #c89040, transparent);
+  margin-bottom: 2px;
+  animation: gold-line-pulse 2.0s ease-in-out infinite;
+}
+.splash-empty--has-candidate .splash-empty-hint {
+  font-size: 24px;
+  letter-spacing: 0.22em;
+  color: rgba(232, 192, 64, 1);
+  text-shadow: 0 0 16px rgba(232, 192, 64, 0.45);
+  animation: hint-glow 2.0s ease-in-out infinite;
+}
+.splash-empty--has-candidate .splash-empty-sub {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(200, 144, 64, 0.80);
+}
+@keyframes beacon-pulse-strong {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1.0; }
+}
+@keyframes rim-glow {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1.0; }
+}
+@keyframes gold-line-pulse {
+  0%, 100% { opacity: 0.40; }
+  50%       { opacity: 1.0; }
+}
+@keyframes hint-glow {
+  0%, 100% { text-shadow: 0 0 12px rgba(232, 192, 64, 0.30); }
+  50%       { text-shadow: 0 0 28px rgba(232, 192, 64, 0.70); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-empty--has-candidate::before                   { animation: none; }
+  .splash-empty--has-candidate::after                    { animation: none; }
+  .splash-empty--has-candidate .splash-empty-cta::before { animation: none; }
+  .splash-empty--has-candidate .splash-empty-hint        { animation: none; }
 }
 
 .vignette-edge {
