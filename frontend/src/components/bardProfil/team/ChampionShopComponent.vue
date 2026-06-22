@@ -261,7 +261,7 @@
                       :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
                       :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
                     >
-                      <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
+                      <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img inline-block w-4 h-4 object-contain align-middle" />
                       {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
                     </span>
                   </div>
@@ -410,7 +410,7 @@
                           :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
                           :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
                         >
-                          <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
+                          <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img inline-block w-4 h-4 object-contain align-middle" />
                           {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
                         </span>
                       </div>
@@ -903,6 +903,10 @@ const shopChampionNames = computed(() =>
 .card-unlocked {
   opacity: 0.7;
   cursor: default;
+  transition: opacity 0.2s ease;
+}
+.card-unlocked:hover {
+  opacity: 1;
 }
 .card-locked {
   opacity: 0.4;
@@ -1147,7 +1151,7 @@ const shopChampionNames = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.65rem;
+  font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
   padding: 0.15rem 0.4rem;
@@ -1165,6 +1169,22 @@ const shopChampionNames = computed(() =>
   border-color: rgba(232, 192, 64, 0.45);
 }
 .cost-badge--missing {
+  color: #cc6050;
+  background: rgba(204, 96, 80, 0.10);
+  border-color: rgba(204, 96, 80, 0.45);
+}
+
+/* Chimes cost badge: larger and sky-teal to distinguish from material gold */
+.chimes-cost-badge {
+  font-size: 0.9rem;
+  padding: 0.2rem 0.5rem;
+}
+.chimes-cost-badge.cost-badge--ok {
+  color: #5cc8e8;
+  background: rgba(92, 200, 232, 0.10);
+  border-color: rgba(92, 200, 232, 0.35);
+}
+.chimes-cost-badge.cost-badge--missing {
   color: #cc6050;
   background: rgba(204, 96, 80, 0.10);
   border-color: rgba(204, 96, 80, 0.45);
@@ -1557,17 +1577,18 @@ const shopChampionNames = computed(() =>
   top: 5px;
   left: 5px;
   z-index: 15;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.04em;
   color: var(--tier-c);
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid color-mix(in srgb, var(--tier-c) 50%, #111);
-  padding: 2px 5px;
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid color-mix(in srgb, var(--tier-c) 70%, #111);
+  padding: 2px 6px;
   border-radius: 3px;
   line-height: 1.2;
   pointer-events: none;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
 }
 
 .cross-role-fade-enter-active {

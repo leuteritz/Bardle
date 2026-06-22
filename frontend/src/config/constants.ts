@@ -936,11 +936,11 @@ export const CHIMES_PER_CLICK_BASE = 20
 
 // ── Champion Chimes Price Tiers ────────────────────────────────────────────
 export const CHIMES_PRICE_TIERS = {
-  starter: { chimesPrice: 500, label: '✦ Starter', color: '#7a6a58', multiplier: 1.0 },
-  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice', color: '#527a4a', multiplier: 1.2 },
-  adept: { chimesPrice: 3500, label: '✦✦✦ Adept', color: '#3a5880', multiplier: 1.5 },
-  epic: { chimesPrice: 5500, label: '✦✦✦✦ Epic', color: '#5a3d80', multiplier: 2.0 },
-  legendary: { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary', color: '#803828', multiplier: 2.5 },
+  starter: { chimesPrice: 500, label: '✦ Starter', color: '#a08c72', multiplier: 1.0 },
+  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice', color: '#62b84e', multiplier: 1.2 },
+  adept: { chimesPrice: 3500, label: '✦✦✦ Adept', color: '#4e96e0', multiplier: 1.5 },
+  epic: { chimesPrice: 5500, label: '✦✦✦✦ Epic', color: '#9c5ed4', multiplier: 2.0 },
+  legendary: { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary', color: '#d85030', multiplier: 2.5 },
 } as const satisfies Record<
   ChimesTier,
   { chimesPrice: number; label: string; color: string; multiplier: number }
