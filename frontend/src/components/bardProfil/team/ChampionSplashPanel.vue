@@ -286,10 +286,17 @@ function onImgError(e: Event) {
           @error="onImgError"
         />
       </template>
-      <div v-else class="splash-empty">
+      <div
+        v-else
+        class="splash-empty"
+        role="button"
+        :aria-label="`Select a champion for the ${activeRole} slot`"
+      >
         <img :src="roleImage" :alt="activeRole" class="splash-empty-role-img" />
-        <span class="splash-empty-plus">＋</span>
-        <span class="splash-empty-hint">Select Champion</span>
+        <div class="splash-empty-cta">
+          <span class="splash-empty-hint">Select Champion</span>
+          <span class="splash-empty-sub">＋ Click to browse</span>
+        </div>
       </div>
     </div>
 
@@ -534,29 +541,36 @@ function onImgError(e: Event) {
 .splash-img--syn-glow {
   filter: brightness(1.3) saturate(1.2) drop-shadow(0 0 24px var(--hl-color, #e8c040));
 }
+/* Full-panel atmospheric empty state.
+   Mirrors champion-splash structure: fills 100% of the panel, role icon as
+   large centered ghost visual, CTA text anchored at the bottom.
+   Beacon pulse (::before radial gradient) signals interactivity without any
+   bordered card that would conflict with the full-panel champion splash.    */
 .splash-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
-.splash-empty-plus {
-  font-size: 48px;
-  line-height: 1;
-  color: rgba(200, 144, 64, 0.18);
-  transition: color 0.15s;
+.splash-empty::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 48%,
+    rgba(200, 144, 64, 0.07) 0%,
+    transparent 70%
+  );
+  animation: beacon-pulse 3.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
 }
-.splash-area:hover .splash-empty-plus {
-  color: rgba(200, 144, 64, 0.45);
-}
-.splash-empty-hint {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.28);
+.splash-area:hover .splash-empty::before {
+  animation: none;
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 48%,
+    rgba(200, 144, 64, 0.16) 0%,
+    transparent 70%
+  );
 }
 .splash-empty-role-img {
   position: absolute;
@@ -564,17 +578,57 @@ function onImgError(e: Event) {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  object-position: center;
-  opacity: 0.12;
-  filter: grayscale(50%);
+  object-position: center 45%;
+  opacity: 0.28;
+  filter: grayscale(55%) sepia(15%);
   pointer-events: none;
   transition:
-    opacity 0.25s,
-    filter 0.25s;
+    opacity 0.3s,
+    filter 0.3s;
+  z-index: 1;
 }
 .splash-area:hover .splash-empty-role-img {
-  opacity: 0.22;
-  filter: grayscale(25%);
+  opacity: 0.46;
+  filter: grayscale(20%) sepia(28%);
+}
+.splash-empty-cta {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.splash-empty-hint {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.68);
+  transition: color 0.25s;
+}
+.splash-area:hover .splash-empty-hint {
+  color: rgba(232, 192, 64, 1);
+}
+.splash-empty-sub {
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.32);
+  transition: color 0.25s;
+}
+.splash-area:hover .splash-empty-sub {
+  color: rgba(200, 144, 64, 0.62);
+}
+@keyframes beacon-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1.0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-empty::before { animation: none; }
 }
 
 .vignette-edge {
