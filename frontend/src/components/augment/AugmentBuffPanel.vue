@@ -21,7 +21,6 @@ const activeAugmentSlots = computed<AugmentSlot[]>(() =>
     .filter((s): s is AugmentSlot => !!s),
 )
 
-const isExpanded = ref(true)
 const hoveredKey = ref<string | null>(null)
 const isSummaryHovered = ref(false)
 
@@ -181,31 +180,7 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 <template>
   <div v-if="activeAugmentSlots.length > 0" class="aug-panel">
-    <button
-      class="aug-toggle-btn"
-      @click="isExpanded = !isExpanded"
-      :aria-label="isExpanded ? 'Collapse augments' : 'Expand augments'"
-    >
-      <svg
-        class="aug-chevron"
-        :class="{ 'is-expanded': isExpanded }"
-        width="14"
-        height="14"
-        viewBox="0 0 14 14"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <polyline
-          points="2,4 7,10 12,4"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </button>
-
-    <div v-show="isExpanded" class="aug-body">
+    <div class="aug-body">
       <!-- ── Summary ── -->
       <div
         class="aug-buff-summary"
@@ -288,40 +263,9 @@ const iconGroups = computed<IconGroup[]>(() => {
 
 <style scoped>
 .aug-panel {
-  position: fixed;
-  left: 0.75rem;
-  top: 0.45rem;
-  z-index: 60;
-  width: clamp(220px, 18vw, 340px);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 4px;
-}
-
-.aug-toggle-btn {
-  padding: 4px 7px;
-  line-height: 0;
-  background: rgba(10, 7, 2, 0.9);
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  color: rgba(200, 160, 80, 0.75);
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-.aug-toggle-btn:hover {
-  border-color: #c89040;
-  color: #e8c040;
-}
-
-.aug-chevron {
-  display: block;
-  transition: transform 0.2s ease;
-}
-.aug-chevron.is-expanded {
-  transform: rotate(180deg);
 }
 
 .aug-body {
@@ -468,7 +412,7 @@ const iconGroups = computed<IconGroup[]>(() => {
   position: relative;
   height: clamp(48px, 4vw, 68px);
   border-radius: 4px;
-  border: 2px solid #5c3310;
+  border: none;
   background: #141410;
   cursor: default;
   display: flex;

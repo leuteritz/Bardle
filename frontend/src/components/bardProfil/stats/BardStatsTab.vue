@@ -8,6 +8,7 @@ import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import ActiveBuffsPanel from './ActiveBuffsPanel.vue'
 import StarPhasePanel from './StarPhasePanel.vue'
+import AugmentBuffPanel from '@/components/augment/AugmentBuffPanel.vue'
 
 const totalChampions = Object.keys(CHAMPION_ROLES).length
 
@@ -16,10 +17,14 @@ const shopStore = useShopStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
 
-const { totalChimesEarned, chimesPerClick, meeps } = storeToRefs(gameStore)
+const { totalChimesEarned, chimesPerClick, chimesPerSecond, meeps } = storeToRefs(gameStore)
 const { starsRescued } = storeToRefs(galaxyStore)
 const { ownedChampions } = storeToRefs(battleStore)
 const { buildingStats } = storeToRefs(shopStore)
+
+const augOpen = ref(true)
+const phaseOpen = ref(true)
+const hasActiveAugments = computed(() => gameStore.activeAugments.length > 0)
 
 const animated = ref(false)
 const countUpProgress = ref(0)
@@ -50,26 +55,6 @@ const maxCPS = computed(() => {
   return vals.length > 0 ? Math.max(...vals) : 1
 })
 
-// Klicker-Upgrade (baseCPS === 0)
-const clickerUpgrade = computed(
-  () => shopStore.shopUpgrades.find((u) => (u.baseCPS ?? 0) === 0) ?? null,
-)
-
-// Base CPC without Clicker upgrade bonus (display only for breakdown)
-const baseCPC = computed(() => gameStore.baseChimesPerClick)
-
-// Bonus from Clicker building
-const clickerBonus = computed(() => {
-  const u = clickerUpgrade.value
-  if (!u || u.level === 0) return 0
-  return (u.baseCPC ?? 0) * u.level
-})
-
-// Total bonus from Augments/Skills/Modifier = finalCPC - base - clickerBonus
-const extraBonus = computed(() => {
-  const total = chimesPerClick.value
-  return Math.max(0, total - baseCPC.value - clickerBonus.value)
-})
 
 </script>
 
@@ -116,6 +101,20 @@ const extraBonus = computed(() => {
             <span class="sv-ms-lbl">Champions</span>
           </div>
         </div>
+        <div class="sv-ms-item sv-ms-cps">
+          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes/s" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ $formatNumber(chimesPerSecond) }}</span>
+            <span class="sv-ms-lbl">Chimes / Sec</span>
+          </div>
+        </div>
+        <div class="sv-ms-item sv-ms-cpc">
+          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes/click" />
+          <div class="sv-ms-body">
+            <span class="sv-ms-val">{{ $formatNumber(chimesPerClick) }}</span>
+            <span class="sv-ms-lbl">Chimes / Click</span>
+          </div>
+        </div>
       </div>
 
       <ActiveBuffsPanel />
@@ -123,53 +122,68 @@ const extraBonus = computed(() => {
 
     <!-- ══ RIGHT COLUMN ══ -->
     <div class="sv-content-col rpg-scrollbar">
-      <!-- ─ STAR PHASE ─ -->
-      <StarPhasePanel />
 
-      <!-- ─ CLICK POWER ─ -->
-      <div class="sv-block">
-        <div class="sv-block-label">Click Power</div>
-
-        <div class="sv-clickpower">
-          <!-- Linke Seite: Icon + Name -->
-          <div class="sv-clickpower-hero">
-            <img
-              v-if="clickerUpgrade"
-              :src="clickerUpgrade.icon"
-              :alt="clickerUpgrade.name"
-              class="sv-clickpower-icon"
+      <!-- ─ ACTIVE AUGMENTS (collapsible) ─ -->
+      <div v-if="hasActiveAugments" class="cp-card">
+        <div class="cp-gold-line" />
+        <button
+          class="cp-header"
+          @click="augOpen = !augOpen"
+          :aria-label="augOpen ? 'Collapse Active Augments' : 'Expand Active Augments'"
+        >
+          <span class="cp-title">Active Augments</span>
+          <svg
+            class="cp-chevron"
+            :class="{ 'is-open': augOpen }"
+            width="13"
+            height="13"
+            viewBox="0 0 14 14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polyline
+              points="2,4 7,10 12,4"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             />
-            <div class="sv-clickpower-meta">
-              <span class="sv-clickpower-name">
-                {{ clickerUpgrade?.name ?? 'Clicker' }}
-              </span>
-              <span class="sv-clickpower-count" v-if="clickerUpgrade && clickerUpgrade.level > 0">
-                ×{{ clickerUpgrade.level }}
-              </span>
-              <span class="sv-clickpower-count sv-val-muted" v-else>not purchased</span>
-            </div>
-          </div>
+          </svg>
+        </button>
+        <div class="cp-body" :class="{ 'is-open': augOpen }">
+          <AugmentBuffPanel />
+        </div>
+      </div>
 
-          <!-- Rechte Seite: Aufschlüsselung -->
-          <div class="sv-clickpower-breakdown">
-            <div class="sv-cpc-row">
-              <span class="sv-cpc-lbl">Base</span>
-              <span class="sv-cpc-val">{{ $formatNumber(baseCPC) }}</span>
-            </div>
-            <div class="sv-cpc-row" v-if="clickerBonus > 0">
-              <span class="sv-cpc-lbl">Clicker ×{{ clickerUpgrade?.level }}</span>
-              <span class="sv-cpc-val sv-val-blue">+{{ $formatNumber(clickerBonus) }}</span>
-            </div>
-            <div class="sv-cpc-row" v-if="extraBonus > 0">
-              <span class="sv-cpc-lbl">Augments / Skills</span>
-              <span class="sv-cpc-val sv-val-green">+{{ $formatNumber(extraBonus) }}</span>
-            </div>
-            <div class="sv-cpc-divider" />
-            <div class="sv-cpc-row sv-cpc-row--total">
-              <span class="sv-cpc-lbl">Total / Click</span>
-              <span class="sv-cpc-val sv-cpc-total">{{ $formatNumber(chimesPerClick) }}</span>
-            </div>
-          </div>
+      <!-- ─ STAR PHASE (collapsible) ─ -->
+      <div class="cp-card">
+        <div class="cp-gold-line" />
+        <button
+          class="cp-header"
+          @click="phaseOpen = !phaseOpen"
+          :aria-label="phaseOpen ? 'Collapse Star Phase' : 'Expand Star Phase'"
+        >
+          <span class="cp-title">Star Phase</span>
+          <svg
+            class="cp-chevron"
+            :class="{ 'is-open': phaseOpen }"
+            width="13"
+            height="13"
+            viewBox="0 0 14 14"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polyline
+              points="2,4 7,10 12,4"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+        <div class="cp-body" :class="{ 'is-open': phaseOpen }">
+          <StarPhasePanel />
         </div>
       </div>
 
@@ -299,11 +313,11 @@ const extraBonus = computed(() => {
   border-bottom: 1px solid var(--rpg-wood-inner);
 }
 
-/* ─── Mini-Stats (linke Spalte, 2×2) ─────────── */
+/* ─── Mini-Stats (linke Spalte, 2×3) ─────────── */
 .sv-mini-stats {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 
@@ -322,10 +336,12 @@ const extraBonus = computed(() => {
 .sv-ms-stars:hover  { box-shadow: 0 0 8px color-mix(in srgb, #a87ed8 30%, transparent); }
 .sv-ms-meeps:hover  { box-shadow: 0 0 8px color-mix(in srgb, #52b830 30%, transparent); }
 .sv-ms-champs:hover { box-shadow: 0 0 8px color-mix(in srgb, #6080cc 30%, transparent); }
+.sv-ms-cps:hover    { box-shadow: 0 0 8px color-mix(in srgb, #e8c040 30%, transparent); }
+.sv-ms-cpc:hover    { box-shadow: 0 0 8px color-mix(in srgb, #e8a040 30%, transparent); }
 
 .sv-ms-icon {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   object-fit: contain;
   transition: filter 0.15s;
@@ -334,6 +350,8 @@ const extraBonus = computed(() => {
 .sv-ms-stars:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #a87ed8); }
 .sv-ms-meeps:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #52b830); }
 .sv-ms-champs:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #6080cc); }
+.sv-ms-cps:hover    .sv-ms-icon { filter: drop-shadow(0 0 5px #e8c040); }
+.sv-ms-cpc:hover    .sv-ms-icon { filter: drop-shadow(0 0 5px #e8a040); }
 
 .sv-ms-body {
   display: flex;
@@ -342,7 +360,7 @@ const extraBonus = computed(() => {
   min-width: 0;
 }
 .sv-ms-val {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -361,91 +379,6 @@ const extraBonus = computed(() => {
   font-size: 14px;
   font-weight: 700;
   color: var(--rpg-text-dim);
-}
-
-/* ─── Click Power Panel ─────────────────────── */
-.sv-clickpower {
-  display: flex;
-  align-items: stretch;
-  gap: 0;
-  background: var(--rpg-bg-dark);
-}
-
-/* Linke Hero-Seite */
-.sv-clickpower-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 20px 22px;
-  border-right: 1px solid var(--rpg-wood-inner);
-  flex-shrink: 0;
-  min-width: 110px;
-}
-.sv-clickpower-icon {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--rpg-blue) 35%, transparent));
-}
-.sv-clickpower-meta {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.sv-clickpower-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--rpg-gold-dim);
-  letter-spacing: 0.05em;
-}
-.sv-clickpower-count {
-  font-size: 11px;
-  color: var(--rpg-text-muted);
-}
-
-/* Rechte Aufschlüsselung */
-.sv-clickpower-breakdown {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  padding: 20px 20px;
-}
-
-.sv-cpc-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.sv-cpc-row--total {
-  margin-top: 2px;
-}
-.sv-cpc-lbl {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rpg-text-dim);
-}
-.sv-cpc-val {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--rpg-text-muted);
-}
-.sv-cpc-total {
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--rpg-gold);
-}
-.sv-cpc-divider {
-  height: 1px;
-  background: var(--rpg-wood-inner);
-  margin: 2px 0;
 }
 
 /* ─── Gebäude-Liste ─────────────────────────── */
@@ -556,6 +489,80 @@ const extraBonus = computed(() => {
 .sv-bar-fill {
   height: 100%;
   transition: width 0.85s ease;
+}
+
+/* ─── Collapsible Panels ────────────────────── */
+.cp-card {
+  border: 2px solid #7a4e20;
+  box-shadow: inset 0 0 0 1px #5c3310;
+  background: #111008;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.cp-gold-line {
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
+}
+
+.cp-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: #1e1006;
+  border: none;
+  border-bottom: 2px solid #5c3310;
+  cursor: pointer;
+  color: #c89040;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cp-header:hover {
+  background: #2a1508;
+  color: #e8c040;
+}
+
+.cp-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cp-chevron {
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.cp-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.cp-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+
+.cp-body.is-open {
+  max-height: 1200px;
+  opacity: 1;
+}
+
+/* Remove redundant border/spacing from StarPhasePanel when embedded */
+:deep(.spp-root) {
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:deep(.spp-section-label) {
+  display: none;
 }
 
 </style>
