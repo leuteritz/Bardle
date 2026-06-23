@@ -34,6 +34,14 @@ const searchQuery = ref('')
 const activeTrait = ref<string>('all')
 const traitFilterOpen = ref(false)
 
+// Champion currently assigned to each selector tab for the active role.
+// main → header slot, ally1/ally2 → secondary sub-slots 0/1.
+const tabChampions = computed<Record<'main' | 'ally1' | 'ally2', string | null>>(() => ({
+  main: props.headerSlots[props.activeSlotIndex] ?? null,
+  ally1: props.secondarySlots?.[props.activeSlotIndex]?.[0] ?? null,
+  ally2: props.secondarySlots?.[props.activeSlotIndex]?.[1] ?? null,
+}))
+
 const availableTraits = computed(() => {
   const seen = new Set<string>()
   for (const name of props.roleFilteredChampions) {
@@ -133,7 +141,16 @@ function onImgError(e: Event) {
         :class="{ 'csp-tab--active': selectorTab === tab.id }"
         @click="emit('tab-change', tab.id as 'main' | 'ally1' | 'ally2')"
       >
-        {{ tab.label }}
+        <img
+          v-if="tabChampions[tab.id as 'main' | 'ally1' | 'ally2']"
+          :src="battleStore.getChampionImage(tabChampions[tab.id as 'main' | 'ally1' | 'ally2']!)"
+          :alt="tabChampions[tab.id as 'main' | 'ally1' | 'ally2']!"
+          class="csp-tab-img"
+          @error="onImgError"
+        />
+        <span v-else class="csp-tab-img csp-tab-img--empty">＋</span>
+        <span class="csp-tab-gradient" />
+        <span class="csp-tab-label">{{ tab.label }}</span>
       </button>
     </div>
 
@@ -262,41 +279,126 @@ function onImgError(e: Event) {
   overflow: hidden;
 }
 
-/* ── Tabs ── */
+/* ── Tabs ── (mirrors ChampionSplashPanel .splash-action-bar / .action-bar-btn) */
 .csp-tabs {
   display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.5);
-  background: #1e1006;
+  flex-direction: row;
+  align-items: stretch;
   flex-shrink: 0;
+  background: rgba(6, 4, 1, 0.88);
+  border-bottom: 1px solid rgba(122, 78, 32, 0.6);
+  box-shadow:
+    inset 0 -1px 0 rgba(92, 51, 16, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.5);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(200, 144, 64, 0) calc(100% - 2px),
+    rgba(200, 144, 64, 0.15) 100%
+  );
 }
 .csp-tab {
   flex: 1;
-  display: inline-flex;
+  position: relative;
+  height: 72px;
+  padding: 0;
+  background: #0c0906;
+  border: none;
+  cursor: pointer;
+  color: rgba(200, 144, 64, 0.55);
+  overflow: hidden;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.csp-tab + .csp-tab {
+  border-left: 1px solid rgba(92, 51, 16, 0.55);
+}
+.csp-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  height: 2px;
+  background: rgba(200, 144, 64, 0);
+  border-radius: 2px 2px 0 0;
+  z-index: 4;
+  transition: background 0.2s;
+}
+.csp-tab:hover::after {
+  background: rgba(200, 144, 64, 0.65);
+}
+.csp-tab--active::after {
+  background: rgba(200, 144, 64, 0.85);
+}
+
+/* Full-bleed champion image fills the whole tab button */
+.csp-tab-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  transition:
+    transform 0.25s ease,
+    filter 0.15s;
+}
+.csp-tab:hover .csp-tab-img {
+  transform: scale(1.06);
+  filter: brightness(1.08);
+}
+.csp-tab--active .csp-tab-img {
+  filter: brightness(1.12) saturate(1.08);
+}
+
+.csp-tab-img--empty {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 12px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(200, 144, 64, 0.3);
+  background: #0c0906;
+  border: 1px dashed rgba(92, 51, 16, 0.55);
+}
+.csp-tab:hover .csp-tab-img--empty {
   color: rgba(200, 144, 64, 0.55);
-  background: rgba(14, 10, 4, 0.85);
-  border: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: var(--bp-radius);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.csp-tab:hover {
-  color: #e8c040;
-  border-color: rgba(122, 78, 32, 0.8);
+
+.csp-tab-gradient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0) 58%);
+  pointer-events: none;
 }
-.csp-tab--active {
+.csp-tab--active .csp-tab-gradient {
+  box-shadow: inset 0 0 0 1px rgba(200, 144, 64, 0.55);
+}
+
+.csp-tab-label {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+.csp-tab:hover .csp-tab-label {
   color: #f0d870;
-  background: rgba(30, 16, 6, 0.97);
-  border-color: #c89040;
-  box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.5);
+}
+.csp-tab--active .csp-tab-label {
+  color: #f0d870;
 }
 
 /* ── Search ── */
