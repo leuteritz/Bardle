@@ -107,6 +107,7 @@ const shopBadgeCount = computed(() =>
 
 const panelMode = ref<'main' | 'champion-picker' | 'item-picker'>('main')
 const internalSubSlot = ref(-1)
+const pickerTransitionName = ref('champion-selector-slide')
 const selectedCategory = ref<ItemCategory | null>(null)
 const selectorTab = ref<'main' | 'ally1' | 'ally2'>('main')
 const TAB_SUBSLOT: Record<string, number> = { main: -1, ally1: 0, ally2: 1 }
@@ -182,6 +183,7 @@ function openChampionPicker(subSlot: number = -1) {
   activePanel.value = null
   internalSubSlot.value = subSlot
   selectorTab.value = subSlot === 0 ? 'ally1' : subSlot === 1 ? 'ally2' : 'main'
+  pickerTransitionName.value = subSlot === -1 ? 'champion-selector-scale' : 'champion-selector-slide'
   panelMode.value = 'champion-picker'
 }
 
@@ -484,7 +486,7 @@ function onImgError(e: Event) {
       </div>
     </Transition>
 
-    <Transition name="champion-selector">
+    <Transition :name="pickerTransitionName">
       <div v-if="panelMode === 'champion-picker'" class="champion-selector-panel" @click.stop>
         <button class="modal-close-btn" @click="closePanel">✕</button>
 
@@ -1248,19 +1250,41 @@ function onImgError(e: Event) {
   flex-direction: column;
 }
 
-/* ══ CHAMPION SELECTOR TRANSITION (slide left → right) ══ */
-.champion-selector-enter-active {
+/* ══ CHAMPION SELECTOR — SCALE (main champion) ══ */
+.champion-selector-scale-enter-active {
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity   0.32s ease;
+  transform-origin: center center;
+}
+.champion-selector-scale-leave-active {
+  transition: transform 0.22s cubic-bezier(0.55, 0, 1, 0.45),
+              opacity   0.22s ease;
+  transform-origin: center center;
+}
+.champion-selector-scale-enter-from,
+.champion-selector-scale-leave-to {
+  transform: scale(0.1);
+  opacity: 0;
+}
+.champion-selector-scale-enter-to,
+.champion-selector-scale-leave-from {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ══ CHAMPION SELECTOR — SLIDE (ally1 / ally2) ══ */
+.champion-selector-slide-enter-active {
   transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-.champion-selector-leave-active {
+.champion-selector-slide-leave-active {
   transition: transform 0.25s cubic-bezier(0.55, 0, 1, 0.45);
 }
-.champion-selector-enter-from,
-.champion-selector-leave-to {
+.champion-selector-slide-enter-from,
+.champion-selector-slide-leave-to {
   transform: translateX(-100%);
 }
-.champion-selector-enter-to,
-.champion-selector-leave-from {
+.champion-selector-slide-enter-to,
+.champion-selector-slide-leave-from {
   transform: translateX(0);
 }
 
@@ -1279,12 +1303,16 @@ function onImgError(e: Event) {
     clip-path: none !important;
     opacity: 0;
   }
-  .champion-selector-enter-active,
-  .champion-selector-leave-active {
+  .champion-selector-scale-enter-active,
+  .champion-selector-scale-leave-active,
+  .champion-selector-slide-enter-active,
+  .champion-selector-slide-leave-active {
     transition: opacity 0.15s ease !important;
   }
-  .champion-selector-enter-from,
-  .champion-selector-leave-to {
+  .champion-selector-scale-enter-from,
+  .champion-selector-scale-leave-to,
+  .champion-selector-slide-enter-from,
+  .champion-selector-slide-leave-to {
     transform: none !important;
     opacity: 0;
   }
