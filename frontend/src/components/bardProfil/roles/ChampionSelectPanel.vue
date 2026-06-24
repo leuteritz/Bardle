@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
@@ -73,6 +73,25 @@ const searchMatchedTraits = computed(() => {
   return matched
 })
 const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
+
+// Mirrors the Champion Shop filter toggle: lit dot / active state when a
+// trait or origin is selected.
+const hasActiveFilter = computed(() => activeTrait.value !== 'all')
+
+function resetSearch() {
+  searchQuery.value = ''
+  activeTrait.value = 'all'
+}
+
+// Auto-open the filter panel while searching, auto-collapse when cleared and
+// no trait is active — same behaviour as ChampionShopComponent.
+watch(searchQuery, (q) => {
+  if (q.trim()) {
+    traitFilterOpen.value = true
+  } else if (activeTrait.value === 'all') {
+    traitFilterOpen.value = false
+  }
+})
 
 const filteredChampions = computed(() => {
   let list = props.roleFilteredChampions
@@ -154,69 +173,117 @@ function onImgError(e: Event) {
       </button>
     </div>
 
-    <!-- ── Search ── -->
-    <div class="csp-search-row">
-      <Icon icon="game-icons:magnifying-glass" width="16" height="16" class="csp-search-icon" style="color: #7a4e20" />
-      <input
-        v-model="searchQuery"
-        type="text"
-        :placeholder="`Search ${activeRole} Champion…`"
-        class="csp-search-input"
-      />
-      <span class="csp-search-count">
-        {{ filteredChampions.length }}<span class="csp-count-sep">/</span>{{ roleFilteredChampions.length }}
-      </span>
-    </div>
+    <!-- ── Search + Trait/Origin Filter (harmonized with Champion Shop) ── -->
+    <div class="csp-filter-header">
+      <div class="cs-search-row">
+        <div class="rpg-search-wrap">
+          <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="`Search ${activeRole} champion or trait...`"
+            class="rpg-search w-full pl-9 pr-9 py-2.5"
+            :aria-expanded="traitFilterOpen"
+            aria-label="Search champions and traits"
+          />
+          <button
+            class="search-clear-btn"
+            :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
+            aria-label="Clear search"
+            @click="resetSearch"
+            @keydown.enter.prevent="resetSearch"
+            @keydown.space.prevent="resetSearch"
+          >✕</button>
+        </div>
 
-    <!-- ── Trait/Origin Filter ── -->
-    <div class="trait-filter-section">
-      <div class="trait-filter-header" @click="traitFilterOpen = !traitFilterOpen">
-        <span class="trait-filter-title">Filter</span>
-        <Icon
-          :icon="traitFilterOpen ? 'game-icons:plain-arrow' : 'game-icons:return-arrow'"
-          class="trait-chevron"
-        />
-      </div>
-      <div v-if="traitFilterOpen" class="trait-filter-body">
+        <span class="csp-search-count">
+          {{ filteredChampions.length }}<span class="csp-count-sep">/</span>{{ roleFilteredChampions.length }}
+        </span>
+
+        <!-- Filter panel toggle -->
         <button
-          v-show="!hasSearchTraitMatch"
-          class="trait-chip"
-          :class="{ 'trait-chip--active': activeTrait === 'all' }"
-          @click="activeTrait = 'all'"
-        >Alle</button>
-
-        <template v-if="availableTraits.length">
-          <div class="filter-group-label">Traits</div>
-          <button
-            v-for="trait in availableTraits"
-            :key="trait.id"
-            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === trait.id || searchMatchedTraits.has(trait.id) }"
-            :style="(activeTrait === trait.id || searchMatchedTraits.has(trait.id)) ? `--chip-color: ${trait.color}` : ''"
-            @click="activeTrait = trait.id"
-          >
-            <Icon :icon="trait.icon" class="trait-chip-icon" />
-            {{ trait.name }}
-          </button>
-        </template>
-
-        <template v-if="availableOrigins.length">
-          <div class="filter-group-label">Origin</div>
-          <button
-            v-for="origin in availableOrigins"
-            :key="origin.origin"
-            v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeTrait === origin.origin || searchMatchedTraits.has(origin.origin) }"
-            :style="(activeTrait === origin.origin || searchMatchedTraits.has(origin.origin)) ? `--chip-color: ${origin.color}` : ''"
-            @click="activeTrait = origin.origin"
-          >
-            <Icon :icon="origin.icon" class="trait-chip-icon" />
-            {{ origin.origin }}
-          </button>
-        </template>
+          class="filter-toggle-btn"
+          :class="{
+            'filter-toggle-btn--open': traitFilterOpen,
+            'filter-toggle-btn--active': hasActiveFilter,
+          }"
+          :title="traitFilterOpen ? 'Hide filters' : 'Show filters'"
+          aria-label="Toggle filters"
+          @click="traitFilterOpen = !traitFilterOpen"
+        >
+          <Icon icon="game-icons:toggles" width="16" height="16" />
+          <span class="filter-toggle-label">Filter</span>
+          <span class="filter-toggle-chevron">{{ traitFilterOpen ? '▾' : '▴' }}</span>
+          <span v-if="hasActiveFilter && !traitFilterOpen" class="filter-active-dot"></span>
+        </button>
       </div>
+
+      <!-- ── Collapsible filter panel ── -->
+      <Transition name="filter-panel">
+        <div v-show="traitFilterOpen" class="cs-filter-panel">
+          <!-- Row 1: ALL reset -->
+          <div class="cs-filter-row">
+            <button
+              v-show="!hasSearchTraitMatch"
+              class="trait-chip trait-chip--all"
+              :class="{ 'trait-chip--active': activeTrait === 'all' }"
+              @click="activeTrait = 'all'"
+            >ALL</button>
+          </div>
+
+          <!-- Row 2: Trait chips -->
+          <template v-if="availableTraits.length">
+            <div class="filter-divider">
+              <span class="filter-divider-label">Traits</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <TransitionGroup tag="div" name="chip" class="chip-group">
+                <button
+                  v-for="trait in availableTraits"
+                  :key="trait.id"
+                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
+                  class="trait-chip"
+                  :class="{
+                    'trait-chip--active': activeTrait === trait.id,
+                    'trait-chip--search-match': searchMatchedTraits.has(trait.id) && activeTrait !== trait.id,
+                  }"
+                  :style="`--chip-color: ${trait.color}`"
+                  @click="activeTrait = trait.id"
+                >
+                  <Icon :icon="trait.icon" class="trait-chip-icon" />
+                  {{ trait.name }}
+                </button>
+              </TransitionGroup>
+            </div>
+          </template>
+
+          <!-- Row 3: Origin chips -->
+          <template v-if="availableOrigins.length">
+            <div class="filter-divider">
+              <span class="filter-divider-label">Origins</span>
+            </div>
+            <div class="cs-filter-row cs-filter-row--wrap">
+              <TransitionGroup tag="div" name="chip" class="chip-group">
+                <button
+                  v-for="origin in availableOrigins"
+                  :key="origin.origin"
+                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
+                  class="trait-chip"
+                  :class="{
+                    'trait-chip--active': activeTrait === origin.origin,
+                    'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && activeTrait !== origin.origin,
+                  }"
+                  :style="`--chip-color: ${origin.color}`"
+                  @click="activeTrait = origin.origin"
+                >
+                  <Icon :icon="origin.icon" class="trait-chip-icon" />
+                  {{ origin.origin }}
+                </button>
+              </TransitionGroup>
+            </div>
+          </template>
+        </div>
+      </Transition>
     </div>
 
     <!-- ── Grid ── -->
@@ -401,146 +468,33 @@ function onImgError(e: Event) {
   color: #f0d870;
 }
 
-/* ── Search ── */
-.csp-search-row {
+/* ── Search + filter header ──
+   Search row, filter toggle, collapsible panel and chips are shared with
+   ChampionShopComponent via .cs-* / .trait-chip classes in rpg-theme.css.
+   This wrapper mirrors the shop's .cs-header spacing so both filters align. */
+.csp-filter-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.3);
   flex-shrink: 0;
 }
 
-.csp-search-icon {
-  font-size: 14px;
-  opacity: 0.4;
-  flex-shrink: 0;
-}
-
-.csp-search-input {
-  flex: 1;
-  background: #181208;
-  border: 1px solid #3a2510;
-  border-radius: var(--bp-radius);
-  padding: 7px 12px;
-  color: var(--gold-bright);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.15s;
-  min-width: 0;
-}
-.csp-search-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(200, 144, 64, 0.08);
-}
-.csp-search-input::placeholder {
-  color: rgba(200, 144, 64, 0.28);
-}
-
+/* Result count — subtle, sits between the search field and the Filter toggle */
 .csp-search-count {
-  font-size: 15px;
-  font-weight: 900;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--gold);
-  flex-shrink: 0;
   letter-spacing: 0.04em;
-}
-.csp-count-sep {
-  opacity: 0.3;
-  margin: 0 1px;
-}
-
-/* ── Trait filter section ── */
-.trait-filter-section {
-  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
-  background: #161410;
-  flex-shrink: 0;
-}
-
-.trait-filter-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 12px;
-  cursor: pointer;
-  background: #1e1006;
-  border-bottom: 1px solid #3e2a0a;
-  user-select: none;
-  transition: background 0.15s;
-}
-.trait-filter-header:hover {
-  background: #261408;
-}
-
-.trait-filter-title {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: #c89040;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.trait-chevron {
-  width: 14px;
-  height: 14px;
-  color: #7a5020;
-}
-
-.trait-filter-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 12px;
-}
-
-.trait-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  border-radius: var(--bp-radius);
-  border: 1px solid #3e2a0a;
-  background: #1c1a10;
-  color: var(--rpg-text-dim);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    color 0.15s;
+  opacity: 0.8;
+  padding: 0 2px;
   white-space: nowrap;
 }
-.trait-chip:hover {
-  border-color: var(--rpg-wood-mid);
-  color: var(--rpg-text-muted);
-}
-.trait-chip--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #1c1a10);
-  border-color: var(--chip-color, #e8c040);
-  color: var(--chip-color, #e8c040);
-}
-
-.trait-chip-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.88);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
-}
-
-.filter-group-label {
-  width: 100%;
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  padding: 3px 2px 2px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.35);
-  margin: 3px 0 2px;
-}
-.filter-group-label:first-child {
-  margin-top: 0;
+.csp-count-sep {
+  opacity: 0.4;
+  margin: 0 1px;
 }
 
 /* ── Body / Grid ── */

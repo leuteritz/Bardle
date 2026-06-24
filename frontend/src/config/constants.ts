@@ -1416,7 +1416,7 @@ export const USED_GAME_ICONS = new Set<string>([
   // Champion Shop — Chimes cost badge
   'game-icons:windchimes', // Chimes cost display in ChampionShopComponent
   // Champion Shop — filter toggle panel button
-  'game-icons:toggles', // Filter panel toggle button in ChampionShopComponent
+  'game-icons:toggles', // Filter panel toggle button in ChampionShopComponent & ChampionSelectPanel
   // Admin — StarFightModal instant-kill button
   'game-icons:skull', // Admin kill button in StarFightModal
 ])

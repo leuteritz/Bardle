@@ -1361,208 +1361,17 @@ const shopChampionNames = computed(() =>
   padding: 8px 10px;
   flex-shrink: 0;
 }
-.cs-search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* Shared search row + filter toggle + collapsible filter panel + chips live in
+   rpg-theme.css (── Champion Filter ──), reused by ChampionSelectPanel. Only the
+   shop-specific close-button override and grid padding remain scoped here. */
 .cs-search-row .modal-close-btn {
   position: static;
   flex-shrink: 0;
   transform: none;
 }
 
-/* ── Filter panel toggle button ── */
-.filter-toggle-btn {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 34px;
-  padding: 0 10px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid #5c3310;
-  border-radius: var(--bp-radius);
-  cursor: pointer;
-  color: #7a6040;
-  transition: background 0.15s ease, border-color 0.15s ease,
-              color 0.15s ease, box-shadow 0.15s ease;
-}
-.filter-toggle-btn:hover {
-  background: rgba(92, 51, 16, 0.22);
-  border-color: #c89040;
-  color: #c89040;
-}
-.filter-toggle-btn--open {
-  background: rgba(200, 144, 64, 0.15);
-  border-color: #c89040;
-  color: #e8c040;
-  box-shadow: 0 0 8px rgba(200, 144, 64, 0.3);
-}
-.filter-toggle-btn--active:not(.filter-toggle-btn--open) {
-  border-color: #c89040;
-  color: #c89040;
-}
-.filter-toggle-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.filter-toggle-chevron {
-  font-size: 10px;
-  opacity: 0.75;
-}
-.filter-active-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e8c040;
-  box-shadow: 0 0 4px rgba(232, 192, 64, 0.7);
-}
-
-/* ── Filter panel collapse animation ── */
-.filter-panel-enter-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.filter-panel-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.filter-panel-enter-from,
-.filter-panel-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
 /* ── Grid area ── */
 .cs-grid { padding: 8px 10px; }
-
-/* ── Filter panel wrapper (3-row stack) ── */
-.cs-filter-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-/* ── Each filter row: horizontal scrollable strip ── */
-.cs-filter-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 1px 2px 3px;
-  flex-shrink: 0;
-}
-.cs-filter-row::-webkit-scrollbar { display: none; }
-.cs-filter-row--wrap {
-  overflow-x: visible;
-  flex-wrap: wrap;
-}
-
-/* ── ALL button emphasis ── */
-.trait-chip--all {
-  padding: 4px 14px;
-  letter-spacing: 0.12em;
-  border-color: #7a4e20;
-  color: #c89040;
-}
-.trait-chip--all.trait-chip--active {
-  background: rgba(200, 144, 64, 0.18);
-  border-color: #c89040;
-  color: #e8c040;
-  box-shadow: 0 0 10px rgba(200, 144, 64, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-/* ── Filter row divider with category label ── */
-.filter-divider {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 2px;
-  margin: 1px 0;
-}
-.filter-divider::before,
-.filter-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(92, 51, 16, 0.45), transparent);
-}
-.filter-divider-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #8a6030;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
-.filter-sep {
-  flex-shrink: 0;
-  width: 1px;
-  height: 14px;
-  background: rgba(92, 51, 16, 0.5);
-  margin: 0 2px;
-  align-self: center;
-}
-.trait-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: var(--bp-radius);
-  border: 1px solid color-mix(in srgb, var(--chip-color, #7a4e20) 55%, #3e2a0a);
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--chip-color, #e8c040);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  white-space: nowrap;
-}
-.trait-chip:hover {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #0e0c06);
-  border-color: var(--chip-color, #c89040);
-  color: var(--chip-color, #e8c040);
-  box-shadow: 0 0 5px color-mix(in srgb, var(--chip-color, #e8c040) 25%, transparent);
-}
-.trait-chip:hover .trait-chip-icon {
-  color: rgba(255, 255, 255, 0.92);
-}
-.trait-chip--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 32%, #0e0c06);
-  border-color: var(--chip-color, #e8c040);
-  color: var(--chip-color, #e8c040);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #e8c040) 45%, transparent),
-              inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-.trait-chip--active .trait-chip-icon {
-  color: #fff;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--chip-color, #e8c040) 60%, transparent));
-}
-.trait-chip-icon {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.88);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
-}
-.chip-group { display: contents; }
-.chip-enter-active, .chip-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.chip-enter-from, .chip-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
-}
 
 .champion-badge-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -1626,44 +1435,6 @@ const shopChampionNames = computed(() =>
   }
 }
 
-/* ── Search clear button ── */
-.search-clear-btn {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%) scale(0.7);
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: rgba(122, 80, 32, 0);
-  opacity: 0;
-  pointer-events: none;
-  border-radius: var(--bp-radius);
-  font-size: 0.75rem;
-  z-index: 5;
-  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-.search-clear-btn--visible {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-  pointer-events: auto;
-  color: rgba(200, 144, 64, 0.55);
-}
-.search-clear-btn--visible:hover {
-  color: #e8c040;
-  background: rgba(122, 80, 32, 0.18);
-}
-.search-clear-btn--visible:focus-visible {
-  outline: 1px solid #c89040;
-  outline-offset: -2px;
-}
-
 /* ── Cross-role search results ── */
 .cross-role-section {
   margin-top: 14px;
@@ -1711,12 +1482,6 @@ const shopChampionNames = computed(() =>
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
 }
 
-/* ── Search-match hint (trait name matches text but chip not yet activated) ── */
-.trait-chip--search-match {
-  border-color: color-mix(in srgb, var(--chip-color, #e8c040) 55%, transparent);
-  box-shadow: 0 0 5px color-mix(in srgb, var(--chip-color, #e8c040) 22%, transparent);
-}
-
 /* ── Cross-role chip: trait/origin found in another role ── */
 .trait-chip--cross-role {
   opacity: 0.55;
@@ -1728,30 +1493,6 @@ const shopChampionNames = computed(() =>
 .trait-chip--cross-role.trait-chip--active {
   opacity: 1;
   border-style: solid;
-}
-
-/* ── Per-chip dismiss (×) ── */
-.chip-dismiss {
-  margin-left: 3px;
-  font-size: 0.75rem;
-  line-height: 1;
-  opacity: 0.65;
-  cursor: pointer;
-  transition: opacity 0.1s ease;
-}
-.chip-dismiss:hover { opacity: 1; }
-
-/* ── Global clear-all button ── */
-.trait-chip--clear-all {
-  --chip-color: #cc6050;
-}
-
-/* ── "No trait found" empty state ── */
-.trait-empty-state {
-  font-size: 0.72rem;
-  color: #8a6030;
-  font-style: italic;
-  padding: 3px 6px;
 }
 
 .tier-badge {
