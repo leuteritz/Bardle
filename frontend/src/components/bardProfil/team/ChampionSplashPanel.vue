@@ -488,8 +488,6 @@ function onImgError(e: Event) {
 
     <Transition :name="pickerTransitionName">
       <div v-if="panelMode === 'champion-picker'" class="champion-selector-panel" @click.stop>
-        <button class="modal-close-btn" @click="closePanel">✕</button>
-
         <ChampionSelectPanel
           class="champion-selector-content"
           :active-role="activeRole"
@@ -499,8 +497,10 @@ function onImgError(e: Event) {
           :secondary-slots="secondarySlots"
           :active-slot-index="activeSlotIndex"
           :active-sub-slot="internalSubSlot"
+          :show-close="true"
           @select="handleSelect"
           @tab-change="onSelectorTabChange"
+          @close="closePanel"
         />
       </div>
     </Transition>
@@ -1235,11 +1235,6 @@ function onImgError(e: Event) {
   background: rgba(8, 6, 2, 0.97);
   border-top: 2px solid #c89040;
   overflow: hidden;
-}
-/* Align close button with ChampionSelectPanel's csp-tabs row center (padding:8px + btn~26px/2 ≈ 21px) */
-.champion-selector-panel > .modal-close-btn {
-  top: 21px;
-  transform: translateY(-50%);
 }
 
 .champion-selector-content {

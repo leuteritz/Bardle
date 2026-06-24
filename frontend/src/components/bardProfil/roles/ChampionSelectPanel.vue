@@ -19,17 +19,20 @@ const props = withDefaults(
     activeSlotIndex: number
     activeSubSlot?: number
     selectorTab?: 'main' | 'ally1' | 'ally2'
+    showClose?: boolean
   }>(),
   {
     secondarySlots: () => [[null, null], [null, null], [null, null], [null, null], [null, null]],
     activeSubSlot: -1,
     selectorTab: 'main',
+    showClose: false,
   },
 )
 
 const emit = defineEmits<{
   select: [champion: string]
   'tab-change': [tab: 'main' | 'ally1' | 'ally2']
+  close: []
 }>()
 
 const battleStore = useBattleStore()
@@ -229,6 +232,8 @@ function onImgError(e: Event) {
           <span class="filter-toggle-chevron">{{ traitFilterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !traitFilterOpen" class="filter-active-dot"></span>
         </button>
+
+        <button v-if="showClose" class="modal-close-btn" @click="emit('close')">✕</button>
       </div>
 
       <!-- ── Collapsible filter panel ── -->
@@ -503,6 +508,13 @@ function onImgError(e: Event) {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.3);
   flex-shrink: 0;
+}
+
+/* Close button flows inline at the end of the search row (mirrors the Shop) */
+.cs-search-row .modal-close-btn {
+  position: static;
+  flex-shrink: 0;
+  transform: none;
 }
 
 /* ── Body / Grid ── */
