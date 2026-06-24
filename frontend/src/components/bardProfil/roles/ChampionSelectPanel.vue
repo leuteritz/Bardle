@@ -4,6 +4,9 @@ import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
+import { CHAMPION_DATA } from '@/config/championData'
+import { CHIMES_PRICE_TIERS } from '@/config/constants'
+import type { ChimesTier } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
@@ -32,7 +35,16 @@ const emit = defineEmits<{
 const battleStore = useBattleStore()
 const searchQuery = ref('')
 const activeTrait = ref<string>('all')
+const activeTier = ref<'all' | ChimesTier>('all')
 const traitFilterOpen = ref(false)
+
+const tierEntries = computed(
+  () =>
+    Object.entries(CHIMES_PRICE_TIERS) as [
+      ChimesTier,
+      { chimesPrice: number; label: string; color: string; multiplier: number },
+    ][],
+)
 
 // Champion currently assigned to each selector tab for the active role.
 // main → header slot, ally1/ally2 → secondary sub-slots 0/1.
@@ -76,11 +88,12 @@ const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
 
 // Mirrors the Champion Shop filter toggle: lit dot / active state when a
 // trait or origin is selected.
-const hasActiveFilter = computed(() => activeTrait.value !== 'all')
+const hasActiveFilter = computed(() => activeTrait.value !== 'all' || activeTier.value !== 'all')
 
 function resetSearch() {
   searchQuery.value = ''
   activeTrait.value = 'all'
+  activeTier.value = 'all'
 }
 
 // Auto-open the filter panel while searching, auto-collapse when cleared and
@@ -102,6 +115,10 @@ const filteredChampions = computed(() => {
       const originMatch = getChampionOrigin(c) === activeTrait.value
       return traitMatch || originMatch
     })
+  }
+
+  if (activeTier.value !== 'all') {
+    list = list.filter((c) => (CHAMPION_DATA[c]?.priceTier ?? 'epic') === activeTier.value)
   }
 
   if (searchQuery.value.trim()) {
@@ -196,10 +213,6 @@ function onImgError(e: Event) {
           >✕</button>
         </div>
 
-        <span class="csp-search-count">
-          {{ filteredChampions.length }}<span class="csp-count-sep">/</span>{{ roleFilteredChampions.length }}
-        </span>
-
         <!-- Filter panel toggle -->
         <button
           class="filter-toggle-btn"
@@ -221,14 +234,25 @@ function onImgError(e: Event) {
       <!-- ── Collapsible filter panel ── -->
       <Transition name="filter-panel">
         <div v-show="traitFilterOpen" class="cs-filter-panel">
-          <!-- Row 1: ALL reset -->
+          <!-- Row 1: ALL reset + tier chips -->
           <div class="cs-filter-row">
             <button
               v-show="!hasSearchTraitMatch"
               class="trait-chip trait-chip--all"
-              :class="{ 'trait-chip--active': activeTrait === 'all' }"
-              @click="activeTrait = 'all'"
+              :class="{ 'trait-chip--active': activeTrait === 'all' && activeTier === 'all' }"
+              @click="resetSearch"
             >ALL</button>
+            <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
+            <button
+              v-for="[key, t] in tierEntries"
+              :key="key"
+              class="trait-chip"
+              :class="{ 'trait-chip--active': activeTier === key }"
+              :style="`--chip-color: ${t.color}`"
+              @click="activeTier = key"
+            >
+              {{ t.label }}
+            </button>
           </div>
 
           <!-- Row 2: Trait chips -->
@@ -479,22 +503,6 @@ function onImgError(e: Event) {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.3);
   flex-shrink: 0;
-}
-
-/* Result count — subtle, sits between the search field and the Filter toggle */
-.csp-search-count {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.04em;
-  opacity: 0.8;
-  padding: 0 2px;
-  white-space: nowrap;
-}
-.csp-count-sep {
-  opacity: 0.4;
-  margin: 0 1px;
 }
 
 /* ── Body / Grid ── */
