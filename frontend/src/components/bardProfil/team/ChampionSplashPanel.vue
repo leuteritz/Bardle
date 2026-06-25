@@ -491,6 +491,7 @@ function onImgError(e: Event) {
         <ChampionSelectPanel
           class="champion-selector-content"
           :active-role="activeRole"
+          :role-key="roleKey"
           :selector-tab="selectorTab"
           :role-filtered-champions="roleFilteredChampions"
           :header-slots="headerSlots"

@@ -42,6 +42,20 @@
           <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
         </button>
 
+        <!-- Collapse / expand all tier sections -->
+        <button
+          v-if="tierGroups.length > 1"
+          class="tier-collapse-all"
+          :class="{ 'tier-collapse-all--active': allTiersCollapsed }"
+          :title="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          :aria-label="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          @click="toggleAllTiers"
+          @keydown.enter.prevent="toggleAllTiers"
+          @keydown.space.prevent="toggleAllTiers"
+        >
+          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="16" height="16" />
+        </button>
+
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
@@ -165,13 +179,27 @@
       </div>
 
       <div v-else class="tier-groups">
-        <!-- Tier section: header divider + its own grid -->
+        <!-- Tier section: header (click to collapse) + its own grid -->
         <div v-for="group in tierGroups" :key="group.tier" class="tier-group">
-          <div class="cross-role-divider tier-divider" :style="{ '--tier-c': group.color }">
-            <span class="cross-role-divider-label tier-divider-label">{{ group.label }}</span>
-            <span class="tier-divider-count">{{ group.champions.length }}</span>
+          <div
+            class="tier-header"
+            :class="{ 'is-collapsed': isTierCollapsed(group.tier) }"
+            :style="{ '--tier-c': group.color }"
+            role="button"
+            tabindex="0"
+            :aria-expanded="!isTierCollapsed(group.tier)"
+            @click="toggleTier(group.tier)"
+            @keydown.enter.prevent="toggleTier(group.tier)"
+            @keydown.space.prevent="toggleTier(group.tier)"
+          >
+            <span class="tier-header-chevron">▾</span>
+            <span class="tier-header-label">{{ group.label }}</span>
+            <span class="tier-header-line"></span>
+            <span class="tier-header-counter">
+              <span class="tier-header-count">{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span>
+            </span>
           </div>
-          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+          <div v-show="!isTierCollapsed(group.tier)" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
             <!-- Grid slot: fixed height, holds layout space -->
             <div
               v-for="(champion, index) in group.champions"
@@ -836,6 +864,79 @@ const shopChampionNames = computed(() =>
         }))
     })
 
+    // ── Tier collection progress (owned / total), scoped to the active role ──
+    // Role-scoped and independent of search/trait/tier-chip filters, so it reads
+    // as stable "Fortschritt pro Tier" and updates instantly on recruit.
+    const shopTotalByTier = computed(() => {
+      const map = new Map<ChimesTier, number>()
+      for (const name of championNames.value) {
+        if (name === 'Bard') continue
+        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
+        const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+        map.set(tier, (map.get(tier) ?? 0) + 1)
+      }
+      return map
+    })
+    const shopOwnedByTier = computed(() => {
+      const map = new Map<ChimesTier, number>()
+      for (const name of battleStore.ownedChampions) {
+        if (name === 'Bard') continue
+        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
+        const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+        map.set(tier, (map.get(tier) ?? 0) + 1)
+      }
+      return map
+    })
+    function tierOwned(tier: ChimesTier): number {
+      return shopOwnedByTier.value.get(tier) ?? 0
+    }
+    function tierTotal(tier: ChimesTier): number {
+      return shopTotalByTier.value.get(tier) ?? 0
+    }
+
+    // ── Collapsible tier sections (collapsed by default) ──
+    const ALL_TIER_KEYS = Object.keys(CHIMES_PRICE_TIERS) as ChimesTier[]
+    const collapsedTiers = ref(new Set<ChimesTier>(ALL_TIER_KEYS))
+    // While searching/filtering, force every tier open so matches are never hidden.
+    const searchOrFilterActive = computed(
+      () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
+    )
+    function isTierCollapsed(tier: ChimesTier): boolean {
+      return searchOrFilterActive.value ? false : collapsedTiers.value.has(tier)
+    }
+    function toggleTier(tier: ChimesTier) {
+      const next = new Set(collapsedTiers.value)
+      if (next.has(tier)) next.delete(tier)
+      else next.add(tier)
+      collapsedTiers.value = next
+    }
+    const allTiersCollapsed = computed(
+      () =>
+        !searchOrFilterActive.value &&
+        tierGroups.value.length > 0 &&
+        tierGroups.value.every((g) => collapsedTiers.value.has(g.tier)),
+    )
+    function toggleAllTiers() {
+      collapsedTiers.value = allTiersCollapsed.value
+        ? new Set()
+        : new Set(tierGroups.value.map((g) => g.tier))
+    }
+
+    // Auto-open the tier of any freshly-unlocked (recruitable) champion so the new
+    // champion is visible among its tier — mirrors the "New champion" badge set.
+    watch(
+      () => battleStore.newlyUnlockedChampions,
+      (names) => {
+        if (!names?.length) return
+        const next = new Set(collapsedTiers.value)
+        for (const name of names) {
+          next.delete((CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier)
+        }
+        collapsedTiers.value = next
+      },
+      { immediate: true, deep: true },
+    )
+
     const crossRoleChampions = computed(() => {
       const q = searchQuery.value.toLowerCase().trim()
       if (!q || activeRole.value === 'all') return []
@@ -959,6 +1060,12 @@ const shopChampionNames = computed(() =>
     return {
       filteredChampions,
       tierGroups,
+      tierOwned,
+      tierTotal,
+      isTierCollapsed,
+      toggleTier,
+      allTiersCollapsed,
+      toggleAllTiers,
       isFirstRow,
       isLastRow,
       availableTraits,
@@ -1488,27 +1595,8 @@ const shopChampionNames = computed(() =>
 .cross-role-card { opacity: 0.88; transition: opacity 0.18s ease; }
 .cross-role-card:hover { opacity: 1; }
 
-/* ── Tier section header (built on .cross-role-divider) ── */
+/* ── Tier section spacing (header styles shared in rpg-theme.css → .tier-header*) ── */
 .tier-group + .tier-group { margin-top: 12px; }
-.tier-divider::before,
-.tier-divider::after {
-  background: linear-gradient(to right, transparent,
-    color-mix(in srgb, var(--tier-c) 55%, #5c3310), transparent);
-}
-.tier-divider-label {
-  color: var(--tier-c);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-.tier-divider-count {
-  font-size: 9px;
-  font-weight: 700;
-  color: #7a6040;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid #3a2a12;
-  border-radius: 3px;
-  padding: 1px 5px;
-  line-height: 1.3;
-}
 
 .role-badge-pill {
   position: absolute;

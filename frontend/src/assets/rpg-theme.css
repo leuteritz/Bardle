@@ -669,3 +669,115 @@
   font-style: italic;
   padding: 3px 6px;
 }
+
+/* ── Champion Tier Header (shared, owned/total progress) ────────────────────
+   Prominent tier section header used by ChampionShopComponent and
+   ChampionSelectPanel. Big tier-colored label on the left, a tinted divider
+   line, and a stacked owned/total counter on the right. Driven by a per-tier
+   --tier-c custom property set inline by the component. */
+.tier-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+  padding: 2px 4px;
+  border-radius: var(--bp-radius);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.tier-header:hover {
+  background: rgba(200, 144, 64, 0.06);
+}
+.tier-header:hover .tier-header-label {
+  color: color-mix(in srgb, var(--tier-c, #c89040) 75%, #fff);
+}
+.tier-header:focus-visible {
+  outline: 1px solid var(--tier-c, #c89040);
+  outline-offset: 1px;
+}
+.tier-header-chevron {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--tier-c, #c89040);
+  line-height: 1;
+  transition: transform 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.tier-header.is-collapsed .tier-header-chevron {
+  transform: rotate(-90deg);
+}
+.tier-header-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tier-c, #c89040);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+.tier-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--tier-c, #5c3310) 55%, #5c3310),
+    transparent
+  );
+}
+.tier-header-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.tier-header-count {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--tier-c, #e8c040);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* Global expand/collapse-all control — compact icon button in the header row,
+   visually paired with .filter-toggle-btn. */
+.tier-collapse-all {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+  color: #7a6040;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.tier-collapse-all:hover {
+  color: #e8c040;
+  border-color: #7a4e20;
+  background: rgba(200, 144, 64, 0.08);
+}
+.tier-collapse-all--active {
+  color: #e8c040;
+  border-color: #7a4e20;
+  background: rgba(200, 144, 64, 0.12);
+}
+.tier-collapse-all:focus-visible {
+  outline: 1px solid #c89040;
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-header,
+  .tier-header-chevron,
+  .tier-collapse-all {
+    transition: none !important;
+  }
+}

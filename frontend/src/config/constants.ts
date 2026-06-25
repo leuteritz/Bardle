@@ -1419,6 +1419,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:toggles', // Filter panel toggle button in ChampionShopComponent & ChampionSelectPanel
   // Admin — StarFightModal instant-kill button
   'game-icons:skull', // Admin kill button in StarFightModal
+  // Champion Shop / Select Panel — tier collapse-all header button
+  'game-icons:contract', // Collapse-all tiers (ChampionShopComponent & ChampionSelectPanel)
+  'game-icons:expand', // Expand-all tiers (ChampionShopComponent & ChampionSelectPanel)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

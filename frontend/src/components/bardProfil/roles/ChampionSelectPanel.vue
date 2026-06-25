@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 import { CHAMPION_DATA } from '@/config/championData'
+import { CHAMPION_ROLES } from '@/config/championRoles'
 import { CHIMES_PRICE_TIERS } from '@/config/constants'
-import type { ChimesTier } from '@/types'
+import type { ChampionRole, ChimesTier } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
 
 const props = withDefaults(
   defineProps<{
     activeRole: string
+    roleKey?: ChampionRole | null
     roleFilteredChampions: string[]
     headerSlots: (string | null)[]
     secondarySlots?: (string | null)[][]
@@ -22,6 +24,7 @@ const props = withDefaults(
     showClose?: boolean
   }>(),
   {
+    roleKey: null,
     secondarySlots: () => [[null, null], [null, null], [null, null], [null, null], [null, null]],
     activeSubSlot: -1,
     selectorTab: 'main',
@@ -140,6 +143,96 @@ const filteredChampions = computed(() => {
   return [...list].sort((a, b) => a.localeCompare(b))
 })
 
+// Group filtered champions into tier buckets (tier order from CHIMES_PRICE_TIERS),
+// alphabetical order preserved within each tier — mirrors ChampionShopComponent.
+const tierGroups = computed(() => {
+  const groups = new Map<ChimesTier, string[]>()
+  for (const c of filteredChampions.value) {
+    const tier = (CHAMPION_DATA[c]?.priceTier ?? 'epic') as ChimesTier
+    const bucket = groups.get(tier) ?? groups.set(tier, []).get(tier)!
+    bucket.push(c)
+  }
+  return tierEntries.value
+    .filter(([tier]) => groups.has(tier))
+    .map(([tier, meta]) => ({
+      tier,
+      label: meta.label,
+      color: meta.color,
+      champions: groups.get(tier)!,
+    }))
+})
+
+// ── Tier collection progress (owned / total) ──
+// Numerator: owned champions for this role, grouped by tier (roleFilteredChampions
+// is already the owned-by-role pool, before the in-panel search/trait/tier filters).
+const ownedByTier = computed(() => {
+  const map = new Map<ChimesTier, number>()
+  for (const name of props.roleFilteredChampions) {
+    if (name === 'Bard') continue
+    const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+    map.set(tier, (map.get(tier) ?? 0) + 1)
+  }
+  return map
+})
+// Denominator: all champions that exist in this role, grouped by tier.
+const totalByTier = computed(() => {
+  const map = new Map<ChimesTier, number>()
+  for (const name of Object.keys(CHAMPION_DATA)) {
+    if (name === 'Bard') continue
+    if (props.roleKey && CHAMPION_ROLES[name] !== props.roleKey) continue
+    const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+    map.set(tier, (map.get(tier) ?? 0) + 1)
+  }
+  return map
+})
+function tierOwned(tier: ChimesTier): number {
+  return ownedByTier.value.get(tier) ?? 0
+}
+function tierTotal(tier: ChimesTier): number {
+  return totalByTier.value.get(tier) ?? 0
+}
+
+// ── Collapsible tier sections (collapsed by default) ──
+const ALL_TIER_KEYS = Object.keys(CHIMES_PRICE_TIERS) as ChimesTier[]
+const collapsedTiers = ref(new Set<ChimesTier>(ALL_TIER_KEYS))
+// While searching/filtering, force every tier open so matches are never hidden.
+const searchOrFilterActive = computed(
+  () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
+)
+function isTierCollapsed(tier: ChimesTier): boolean {
+  return searchOrFilterActive.value ? false : collapsedTiers.value.has(tier)
+}
+function toggleTier(tier: ChimesTier) {
+  const next = new Set(collapsedTiers.value)
+  if (next.has(tier)) next.delete(tier)
+  else next.add(tier)
+  collapsedTiers.value = next
+}
+const allTiersCollapsed = computed(
+  () =>
+    !searchOrFilterActive.value &&
+    tierGroups.value.length > 0 &&
+    tierGroups.value.every((g) => collapsedTiers.value.has(g.tier)),
+)
+function toggleAllTiers() {
+  collapsedTiers.value = allTiersCollapsed.value
+    ? new Set()
+    : new Set(tierGroups.value.map((g) => g.tier))
+}
+
+// Auto-open the tier of the most recently recruited (newly owned) champion, so a
+// just-unlocked champion's section is open when assigning it to this role slot.
+onMounted(() => {
+  const recruited = battleStore.recruitedChampions
+  const latest = recruited[recruited.length - 1]
+  if (latest && props.roleFilteredChampions.includes(latest)) {
+    const tier = (CHAMPION_DATA[latest]?.priceTier ?? 'epic') as ChimesTier
+    const next = new Set(collapsedTiers.value)
+    next.delete(tier)
+    collapsedTiers.value = next
+  }
+})
+
 function isActiveSelection(champion: string): boolean {
   if (props.activeSubSlot === -1) {
     return props.headerSlots[props.activeSlotIndex] === champion
@@ -158,6 +251,23 @@ function takenLabel(champion: string): string | null {
     }
   }
   return null
+}
+
+// Trait + origin details for a champion (mirrors ChampionShopComponent).
+function getChampionDetail(name: string) {
+  const traitIds = CHAMPION_TRAITS[name] ?? []
+  const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
+  const originKey = getChampionOrigin(name)
+  const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
+  return { traits, origin }
+}
+
+function getTierColor(name: string): string {
+  return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].color
+}
+
+function getChampionTierLabel(name: string): string {
+  return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].label
 }
 
 function onImgError(e: Event) {
@@ -231,6 +341,20 @@ function onImgError(e: Event) {
           <span class="filter-toggle-label">Filter</span>
           <span class="filter-toggle-chevron">{{ traitFilterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !traitFilterOpen" class="filter-active-dot"></span>
+        </button>
+
+        <!-- Collapse / expand all tier sections -->
+        <button
+          v-if="tierGroups.length > 1"
+          class="tier-collapse-all"
+          :class="{ 'tier-collapse-all--active': allTiersCollapsed }"
+          :title="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          :aria-label="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          @click="toggleAllTiers"
+          @keydown.enter.prevent="toggleAllTiers"
+          @keydown.space.prevent="toggleAllTiers"
+        >
+          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="16" height="16" />
         </button>
 
         <button v-if="showClose" class="modal-close-btn" @click="emit('close')">✕</button>
@@ -326,34 +450,95 @@ function onImgError(e: Event) {
         }}</span>
       </div>
 
-      <div v-else class="csp-grid">
-        <button
-          v-for="champion in filteredChampions"
-          :key="champion"
-          class="csp-champ"
+      <div v-else class="csp-tier-groups">
+        <div v-for="group in tierGroups" :key="group.tier" class="csp-tier-group">
+          <!-- Tier header: big label + owned/total progress counter (click to collapse) -->
+          <div
+            class="tier-header"
+            :class="{ 'is-collapsed': isTierCollapsed(group.tier) }"
+            :style="{ '--tier-c': group.color }"
+            role="button"
+            tabindex="0"
+            :aria-expanded="!isTierCollapsed(group.tier)"
+            @click="toggleTier(group.tier)"
+            @keydown.enter.prevent="toggleTier(group.tier)"
+            @keydown.space.prevent="toggleTier(group.tier)"
+          >
+            <span class="tier-header-chevron">▾</span>
+            <span class="tier-header-label">{{ group.label }}</span>
+            <span class="tier-header-line"></span>
+            <span class="tier-header-counter">
+              <span class="tier-header-count">{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span>
+            </span>
+          </div>
+
+          <div v-show="!isTierCollapsed(group.tier)" class="csp-grid">
+            <button
+              v-for="champion in group.champions"
+              :key="champion"
+              class="csp-champ"
           :class="{
             'csp-champ--active': isActiveSelection(champion),
             'csp-champ--taken': !!takenLabel(champion),
           }"
+          :data-role="CHAMPION_ROLES[champion]"
           @click="emit('select', champion)"
         >
+          <!-- Image + gradient overlay -->
           <img
             :src="battleStore.getChampionImage(champion)"
             :alt="champion"
             class="csp-champ-img"
             @error="onImgError"
           />
-          <div class="csp-champ-gradient" />
-          <span class="csp-champ-name">{{ champion }}</span>
-          <span class="csp-corner csp-corner--tl" />
-          <span class="csp-corner csp-corner--br" />
+          <div class="csp-champ-gradient card-overlay card-overlay--default" />
+          <div class="csp-champ-shimmer card-shimmer card-shimmer-anim" />
+
+          <!-- Tier badge: top-left -->
+          <div class="tier-badge" :style="{ '--tier-c': getTierColor(champion) }">
+            {{ getChampionTierLabel(champion) }}
+          </div>
+
+          <!-- Content: name + always-visible trait/origin badges -->
+          <div class="csp-champ-content">
+            <span
+              class="champion-name"
+              :class="takenLabel(champion) ? 'champion-name--dim' : 'champion-name--bright'"
+            >
+              {{ champion }}
+            </span>
+            <div class="card-traits-section">
+              <div
+                v-for="trait in getChampionDetail(champion).traits"
+                :key="trait.id"
+                class="card-trait-badge"
+                :style="{ '--tc': trait.color }"
+              >
+                <Icon :icon="trait.icon" class="card-trait-icon" />
+                <span>{{ trait.name }}</span>
+              </div>
+              <div
+                v-if="getChampionDetail(champion).origin"
+                class="card-trait-badge"
+                :style="{ '--tc': getChampionDetail(champion).origin!.color }"
+              >
+                <Icon :icon="getChampionDetail(champion).origin!.icon" class="card-trait-icon" />
+                <span>{{ getChampionDetail(champion).origin!.origin }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected overlay -->
           <div v-if="isActiveSelection(champion)" class="csp-active-overlay">
             <span class="csp-check">✓</span>
           </div>
+          <!-- Taken-in-another-slot badge -->
           <div v-else-if="takenLabel(champion)" class="csp-taken-badge">
             {{ takenLabel(champion) }}
           </div>
-        </button>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -544,39 +729,88 @@ function onImgError(e: Event) {
   opacity: 0.38;
 }
 
+/* ── Tier groups (mirrors the Shop's tier sections; header styles shared in
+   rpg-theme.css → .tier-header*) ── */
+.csp-tier-group + .csp-tier-group {
+  margin-top: 10px;
+}
+
 .csp-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
   align-content: start;
 }
 
-/* ── Champion Card ── */
+/* ── Champion Card ── (shares the Shop's visual DNA) */
 .csp-champ {
   position: relative;
-  aspect-ratio: 3 / 4;
+  height: 140px;
   border-radius: var(--bp-radius);
   cursor: pointer;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--rpg-wood-mid);
   background: #0c0906;
   padding: 0;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.12s;
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    transform 0.18s ease;
 }
+
+/* Role-colored border (mirrors ChampionShopComponent data-role rules) */
+.csp-champ[data-role='top']     { --role-c: #e05050; --role-c-hi: #f07070; }
+.csp-champ[data-role='jungle']  { --role-c: #50c060; --role-c-hi: #70d880; }
+.csp-champ[data-role='mid']     { --role-c: #5090e8; --role-c-hi: #70a8f8; }
+.csp-champ[data-role='adc']     { --role-c: #e89840; --role-c-hi: #f0b060; }
+.csp-champ[data-role='support'] { --role-c: #b8c8d8; --role-c-hi: #d0dde8; }
+.csp-champ[data-role] {
+  border-color: var(--role-c);
+}
+
+/* Per-role hover glow + subtle lift — excluded on active/taken so state wins */
 .csp-champ:hover {
-  border-color: rgba(200, 144, 64, 0.9);
-  box-shadow: 0 0 14px var(--gold-glow);
   transform: translateY(-2px) scale(1.025);
 }
-.csp-champ--active {
-  border-color: var(--green);
-  box-shadow: 0 0 16px var(--green-glow);
+.csp-champ[data-role='top']:not(.csp-champ--active):not(.csp-champ--taken):hover {
+  border-color: #f07070;
+  box-shadow: inset 0 0 0 1px rgba(224, 80, 80, 0.25), 0 0 14px rgba(224, 80, 80, 0.35);
 }
+.csp-champ[data-role='jungle']:not(.csp-champ--active):not(.csp-champ--taken):hover {
+  border-color: #70d880;
+  box-shadow: inset 0 0 0 1px rgba(80, 192, 96, 0.25), 0 0 14px rgba(80, 192, 96, 0.4);
+}
+.csp-champ[data-role='mid']:not(.csp-champ--active):not(.csp-champ--taken):hover {
+  border-color: #70a8f8;
+  box-shadow: inset 0 0 0 1px rgba(80, 144, 232, 0.3), 0 0 16px rgba(80, 144, 232, 0.45);
+}
+.csp-champ[data-role='adc']:not(.csp-champ--active):not(.csp-champ--taken):hover {
+  border-color: #f0b060;
+  box-shadow: inset 0 0 0 1px rgba(232, 152, 64, 0.25), 0 0 16px rgba(232, 152, 64, 0.4);
+}
+.csp-champ[data-role='support']:not(.csp-champ--active):not(.csp-champ--taken):hover {
+  border-color: #d0dde8;
+  box-shadow: inset 0 0 0 1px rgba(184, 200, 216, 0.3), 0 0 16px rgba(184, 200, 216, 0.35);
+}
+
+/* Selected (active) — green, mirrors the Shop's green state language */
+.csp-champ--active {
+  border-color: #e8c040;
+  box-shadow:
+    0 0 22px rgba(110, 192, 64, 0.45),
+    inset 0 0 0 2px rgba(110, 192, 64, 0.55);
+}
+.csp-champ--active[data-role] {
+  border-color: var(--rpg-green-border);
+}
+
+/* Taken in another slot — dimmed + slight grayscale */
 .csp-champ--taken {
-  opacity: 0.42;
+  opacity: 0.45;
+  filter: grayscale(35%);
+}
+.csp-champ--taken:hover {
+  opacity: 0.7;
 }
 
 .csp-champ-img {
@@ -593,63 +827,117 @@ function onImgError(e: Event) {
   transform: scale(1.08);
 }
 
+/* ── Gradient overlay (ported from Shop .card-overlay) ── */
 .csp-champ-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, transparent 52%);
   pointer-events: none;
   z-index: 1;
 }
+.card-overlay--default {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.45) 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
 
-.csp-champ-name {
+/* ── Light shimmer sweep on hover (ported from Shop) ── */
+.csp-champ-shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.07), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.7s ease;
+}
+.csp-champ:hover .csp-champ-shimmer {
+  transform: translateX(100%);
+}
+
+/* ── Content: name + always-visible trait/origin badges ── */
+.csp-champ-content {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 2;
-  padding: 0 3px 5px;
-  font-size: 8px;
-  font-weight: 900;
-  color: rgba(215, 175, 75, 0.88);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: center;
-  line-height: 1.2;
+  z-index: 3;
+  padding: 6px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
   pointer-events: none;
-}
-.csp-champ:hover .csp-champ-name {
-  color: #f0d060;
-}
-.csp-champ--active .csp-champ-name {
-  color: #8ed84a;
 }
 
-/* Corner decorations */
-.csp-corner {
+/* Name typography (ported from Shop .champion-name).
+   text-align:left overrides the <button>'s default centering. */
+.champion-name {
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-align: left;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+.champion-name--bright { color: rgba(255, 255, 255, 0.95); }
+.champion-name--dim { color: rgba(255, 255, 255, 0.45); }
+.csp-champ--active .champion-name {
+  color: #8ed84a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 12px rgba(110, 192, 64, 0.3);
+}
+
+/* Trait/origin badges (ported from Shop .card-trait-badge) */
+.card-traits-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.card-trait-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 4px;
+  border-radius: var(--bp-radius);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--tc, #7a4e20);
+  font-size: 0.52rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tc, #e8c040);
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
+}
+.card-trait-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* ── Tier badge: top-left (ported from Shop .tier-badge) ── */
+.tier-badge {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-color: rgba(200, 144, 64, 0.22);
-  border-style: solid;
+  top: 5px;
+  left: 5px;
+  z-index: 4;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--tier-c);
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid color-mix(in srgb, var(--tier-c) 70%, #111);
+  padding: 1px 5px;
+  border-radius: 3px;
+  line-height: 1.2;
   pointer-events: none;
-  z-index: 3;
-  transition: border-color 0.15s;
-}
-.csp-champ:hover .csp-corner {
-  border-color: rgba(200, 144, 64, 0.6);
-}
-.csp-champ--active .csp-corner {
-  border-color: rgba(110, 192, 64, 0.5);
-}
-.csp-corner--tl {
-  top: 2px;
-  left: 2px;
-  border-width: 1px 0 0 1px;
-}
-.csp-corner--br {
-  bottom: 2px;
-  right: 2px;
-  border-width: 0 1px 1px 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
 }
 
 /* Active overlay */
@@ -685,5 +973,17 @@ function onImgError(e: Event) {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csp-champ,
+  .csp-champ-img,
+  .csp-champ-shimmer {
+    transition: border-color 0.2s ease, box-shadow 0.25s ease !important;
+    transform: none !important;
+  }
+  .csp-champ:hover {
+    transform: none !important;
+  }
 }
 </style>
