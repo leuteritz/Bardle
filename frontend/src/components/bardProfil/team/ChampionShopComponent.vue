@@ -164,18 +164,25 @@
         <p class="empty-label">No champion found.</p>
       </div>
 
-      <div v-else class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
-        <!-- Grid slot: fixed height, holds layout space -->
-        <div
-          v-for="(champion, index) in filteredChampions"
-          :key="champion.name"
-          class="champion-card-slot"
-          :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': lastRowIndices.has(index), 'is-first-row': firstRowIndices.has(index) }]"
-          :data-role="CHAMPION_ROLES[champion.name]"
-          @click="handleBuy(champion.name)"
-          @mouseenter="onCardHoverAndDismiss(champion.name)"
-          @mouseleave="onCardLeave"
-        >
+      <div v-else class="tier-groups">
+        <!-- Tier section: header divider + its own grid -->
+        <div v-for="group in tierGroups" :key="group.tier" class="tier-group">
+          <div class="cross-role-divider tier-divider" :style="{ '--tier-c': group.color }">
+            <span class="cross-role-divider-label tier-divider-label">{{ group.label }}</span>
+            <span class="tier-divider-count">{{ group.champions.length }}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+            <!-- Grid slot: fixed height, holds layout space -->
+            <div
+              v-for="(champion, index) in group.champions"
+              :key="champion.name"
+              class="champion-card-slot"
+              :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
+              :data-role="CHAMPION_ROLES[champion.name]"
+              @click="handleBuy(champion.name)"
+              @mouseenter="onCardHoverAndDismiss(champion.name)"
+              @mouseleave="onCardLeave"
+            >
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
 
@@ -313,6 +320,8 @@
               label="New champion"
             />
           </Transition>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -496,11 +505,15 @@ export default defineComponent({
     const searchQuery = ref('')
     const activeTraits = ref<string[]>([])
     const activeTier = ref<'all' | ChimesTier>('all')
-    const filterOpen = ref(true)
+    const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
     const tierEntries = computed(() =>
       Object.entries(CHIMES_PRICE_TIERS) as [ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }][]
     )
+    const TIER_ORDER = Object.keys(CHIMES_PRICE_TIERS) as ChimesTier[]
+    function tierRank(name: string): number {
+      return TIER_ORDER.indexOf(CHAMPION_DATA[name]?.priceTier ?? 'epic')
+    }
 
     const ROLE_BADGE = {
       top:     { label: 'TOP', color: '#e05050' },
@@ -798,15 +811,29 @@ const shopChampionNames = computed(() =>
           return true
         })
         .sort((a, b) => {
-          const q = searchQuery.value.toLowerCase().trim()
-          const rna = nameRelevance(a.name, q)
-          const rnb = nameRelevance(b.name, q)
-          if (rna !== rnb) return rna - rnb
-          const aUnlocked = isUnlocked(a.name) ? 0 : 1
-          const bUnlocked = isUnlocked(b.name) ? 0 : 1
-          if (aUnlocked !== bUnlocked) return aUnlocked - bUnlocked
+          const tr = tierRank(a.name) - tierRank(b.name)
+          if (tr !== 0) return tr
           return a.name.localeCompare(b.name)
         })
+    })
+
+    // Group the filtered champions into tier buckets (ascending tier order),
+    // preserving the alphabetical order from filteredChampions within each tier.
+    const tierGroups = computed(() => {
+      const groups = new Map<ChimesTier, { name: string }[]>()
+      for (const c of filteredChampions.value) {
+        const tier = (CHAMPION_DATA[c.name]?.priceTier ?? 'epic') as ChimesTier
+        const bucket = groups.get(tier) ?? groups.set(tier, []).get(tier)!
+        bucket.push(c)
+      }
+      return tierEntries.value
+        .filter(([tier]) => groups.has(tier))
+        .map(([tier, meta]) => ({
+          tier,
+          label: meta.label,
+          color: meta.color,
+          champions: groups.get(tier)!,
+        }))
     })
 
     const crossRoleChampions = computed(() => {
@@ -894,21 +921,15 @@ const shopChampionNames = computed(() =>
       return 2
     })
 
-    const lastRowIndices = computed(() => {
-      const count = filteredChampions.value.length
+    // Row detection per tier group: drives the hover-expand up/down direction
+    // so first-row cards expand downward and last-row cards expand upward.
+    function isFirstRow(i: number): boolean {
+      return i < colCount.value
+    }
+    function isLastRow(i: number, len: number): boolean {
       const cols = colCount.value
-      const lastRowStart = Math.floor((count - 1) / cols) * cols
-      const indices = new Set<number>()
-      for (let i = lastRowStart; i < count; i++) indices.add(i)
-      return indices
-    })
-
-    const firstRowIndices = computed(() => {
-      const cols = colCount.value
-      const indices = new Set<number>()
-      for (let i = 0; i < cols; i++) indices.add(i)
-      return indices
-    })
+      return i >= Math.floor((len - 1) / cols) * cols
+    }
 
     // ── Card expand state ──
     const hoveredChampion = ref<string | null>(null)
@@ -937,6 +958,9 @@ const shopChampionNames = computed(() =>
 
     return {
       filteredChampions,
+      tierGroups,
+      isFirstRow,
+      isLastRow,
       availableTraits,
       availableOrigins,
       filterChampionCount,
@@ -986,8 +1010,6 @@ const shopChampionNames = computed(() =>
       searchInputRef,
       isNew,
       hoveredChampion,
-      lastRowIndices,
-      firstRowIndices,
       getChampionDetail,
       onCardHoverAndDismiss,
       onCardLeave,
@@ -1465,6 +1487,28 @@ const shopChampionNames = computed(() =>
 
 .cross-role-card { opacity: 0.88; transition: opacity 0.18s ease; }
 .cross-role-card:hover { opacity: 1; }
+
+/* ── Tier section header (built on .cross-role-divider) ── */
+.tier-group + .tier-group { margin-top: 12px; }
+.tier-divider::before,
+.tier-divider::after {
+  background: linear-gradient(to right, transparent,
+    color-mix(in srgb, var(--tier-c) 55%, #5c3310), transparent);
+}
+.tier-divider-label {
+  color: var(--tier-c);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.tier-divider-count {
+  font-size: 9px;
+  font-weight: 700;
+  color: #7a6040;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #3a2a12;
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 1.3;
+}
 
 .role-badge-pill {
   position: absolute;
