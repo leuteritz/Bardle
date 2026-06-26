@@ -73,14 +73,16 @@
           >ALL</button>
           <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
           <button
-            v-for="[key, t] in tierEntries"
-            :key="key"
+            v-for="t in tierEntries"
+            :key="t.starLevel"
             class="trait-chip"
-            :class="{ 'trait-chip--active': activeTier === key }"
+            :class="{ 'trait-chip--active': activeTier === t.starLevel }"
             :style="`--chip-color: ${t.color}`"
-            @click="activeTier = key"
+            :title="`★${t.starLevel} ${t.name}`"
+            @click="activeTier = t.starLevel"
           >
-            {{ t.label }}
+            <Icon :icon="t.icon" class="trait-chip-icon" />
+            {{ t.name }}
           </button>
           <span v-if="activeTraits.length > 0" class="filter-sep"></span>
           <button
@@ -181,6 +183,7 @@
       <div v-else class="tier-groups">
         <!-- Tier section: header (click to collapse) + its own grid -->
         <div v-for="group in tierGroups" :key="group.tier" class="tier-group">
+          <!-- Tier section: collapsible header (click to toggle) + its grid -->
           <div
             class="tier-header"
             :class="{ 'is-collapsed': isTierCollapsed(group.tier) }"
@@ -193,7 +196,9 @@
             @keydown.space.prevent="toggleTier(group.tier)"
           >
             <span class="tier-header-chevron">▾</span>
+            <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
             <span class="tier-header-label">{{ group.label }}</span>
+            <span class="tier-header-stars">★{{ group.starLevel }}</span>
             <span class="tier-header-line"></span>
             <span class="tier-header-counter">
               <span class="tier-header-count">{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span>
@@ -214,8 +219,13 @@
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
 
-            <!-- Tier badge: top-left -->
-            <div v-if="!isOwned(champion.name)" class="tier-badge" :style="{ '--tier-c': getTierColor(champion.name) }">
+            <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
+            <div
+              v-if="!isOwned(champion.name)"
+              class="tier-badge"
+              :style="{ '--tier-c': getTierColor(champion.name) }"
+              :title="getChampionDetail(champion.name).cosmic.name"
+            >
               {{ getChampionTierLabel(champion.name) }}
             </div>
 
@@ -378,8 +388,13 @@
                 >
                   {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
                 </div>
-                <!-- Tier badge: top-left -->
-                <div v-if="!isOwned(champion.name)" class="tier-badge" :style="{ '--tier-c': getTierColor(champion.name) }">
+                <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
+                <div
+                  v-if="!isOwned(champion.name)"
+                  class="tier-badge"
+                  :style="{ '--tier-c': getTierColor(champion.name) }"
+                  :title="getChampionDetail(champion.name).cosmic.name"
+                >
                   {{ getChampionTierLabel(champion.name) }}
                 </div>
                 <div class="card-img-layer">
@@ -506,12 +521,13 @@ import { truncate, formatNumber } from '../../../config/numberFormat'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
+import { getChampionCosmicTrait, getChampionStarLevel, getChampionChimesPrice, COSMIC_TRAITS_BY_STAR } from '../../../config/cosmicTraits'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES, CHIMES_PRICE_TIERS, CHIMES_COST_ICON } from '../../../config/constants'
-import { CHAMPION_DATA, getChampionNames } from '../../../config/championData'
+import { PLANET_TYPE_NAMES, CHIMES_COST_ICON } from '../../../config/constants'
+import { getChampionNames } from '../../../config/championData'
 import { useActionToast } from '../../../composables/useActionToast'
-import type { ChampionRole, ChimesTier } from '../../../types'
+import type { ChampionRole } from '../../../types'
 
 
 export default defineComponent({
@@ -532,15 +548,14 @@ export default defineComponent({
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
     const activeTraits = ref<string[]>([])
-    const activeTier = ref<'all' | ChimesTier>('all')
+    // Active cosmic-tier filter chip — 'all' or a star level (1..MAX_STAR_LEVEL).
+    const activeTier = ref<'all' | number>('all')
     const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
-    const tierEntries = computed(() =>
-      Object.entries(CHIMES_PRICE_TIERS) as [ChimesTier, { chimesPrice: number; label: string; color: string; multiplier: number }][]
-    )
-    const TIER_ORDER = Object.keys(CHIMES_PRICE_TIERS) as ChimesTier[]
+    // Tier chips / sections are the 12 Cosmic Tiers (weak→strong), not price tiers.
+    const tierEntries = computed(() => COSMIC_TRAITS_BY_STAR)
     function tierRank(name: string): number {
-      return TIER_ORDER.indexOf(CHAMPION_DATA[name]?.priceTier ?? 'epic')
+      return getChampionStarLevel(name)
     }
 
     const ROLE_BADGE = {
@@ -651,17 +666,16 @@ export default defineComponent({
     function getChimesPrice(name: string): number {
       const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
       if (recruit) return recruit.chimesPrice
-      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].chimesPrice
+      return getChampionChimesPrice(name)
     }
 
+    // Card tier badge → the champion's Cosmic/Champion Tier (★N) — the single tier.
     function getTierColor(name: string): string {
-      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].color
+      return getChampionCosmicTrait(name).color
     }
 
     function getChampionTierLabel(name: string): string {
-      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
-      if (recruit) return recruit.tierLabel
-      return CHIMES_PRICE_TIERS[CHAMPION_DATA[name]?.priceTier ?? 'epic'].label
+      return `★${getChampionStarLevel(name)}`
     }
 
     function canAffordChimes(name: string): boolean {
@@ -706,9 +720,9 @@ export default defineComponent({
 
     function getLockedTooltip(name: string): string {
       const config = getHomePlanetConfig(name)
-      if (!config) return 'Planet retten, um freizuschalten.'
+      if (!config) return 'Rescue a planet to unlock.'
       const planetName = PLANET_TYPE_NAMES[config.planetType] ?? config.planetType
-      return `Rette einen ${planetName}, um diesen Champion freizuschalten.`
+      return `Rescue a ${planetName} to unlock this champion.`
     }
 
     function getCardClass(name: string): string {
@@ -823,8 +837,7 @@ const shopChampionNames = computed(() =>
             if (!hit) return false
           }
           if (activeTier.value !== 'all') {
-            const champTier = CHAMPION_DATA[c.name]?.priceTier ?? 'epic'
-            if (champTier !== activeTier.value) return false
+            if (getChampionStarLevel(c.name) !== activeTier.value) return false
           }
           if (searchQuery.value.trim()) {
             const q = searchQuery.value.toLowerCase().trim()
@@ -845,66 +858,67 @@ const shopChampionNames = computed(() =>
         })
     })
 
-    // Group the filtered champions into tier buckets (ascending tier order),
+    // Group the filtered champions into Cosmic Tier buckets (ascending star level),
     // preserving the alphabetical order from filteredChampions within each tier.
+    // Every tier is a plain collapsible section — browsable regardless of galaxy.
     const tierGroups = computed(() => {
-      const groups = new Map<ChimesTier, { name: string }[]>()
+      const groups = new Map<number, { name: string }[]>()
       for (const c of filteredChampions.value) {
-        const tier = (CHAMPION_DATA[c.name]?.priceTier ?? 'epic') as ChimesTier
-        const bucket = groups.get(tier) ?? groups.set(tier, []).get(tier)!
+        const star = getChampionStarLevel(c.name)
+        const bucket = groups.get(star) ?? groups.set(star, []).get(star)!
         bucket.push(c)
       }
-      return tierEntries.value
-        .filter(([tier]) => groups.has(tier))
-        .map(([tier, meta]) => ({
-          tier,
-          label: meta.label,
-          color: meta.color,
-          champions: groups.get(tier)!,
-        }))
+      return COSMIC_TRAITS_BY_STAR.filter((t) => groups.has(t.starLevel)).map((t) => ({
+        tier: t.starLevel,
+        starLevel: t.starLevel,
+        label: t.name,
+        color: t.color,
+        icon: t.icon,
+        champions: groups.get(t.starLevel)!,
+      }))
     })
 
     // ── Tier collection progress (owned / total), scoped to the active role ──
     // Role-scoped and independent of search/trait/tier-chip filters, so it reads
     // as stable "Fortschritt pro Tier" and updates instantly on recruit.
     const shopTotalByTier = computed(() => {
-      const map = new Map<ChimesTier, number>()
+      const map = new Map<number, number>()
       for (const name of championNames.value) {
         if (name === 'Bard') continue
         if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
-        const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+        const tier = getChampionStarLevel(name)
         map.set(tier, (map.get(tier) ?? 0) + 1)
       }
       return map
     })
     const shopOwnedByTier = computed(() => {
-      const map = new Map<ChimesTier, number>()
+      const map = new Map<number, number>()
       for (const name of battleStore.ownedChampions) {
         if (name === 'Bard') continue
         if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
-        const tier = (CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier
+        const tier = getChampionStarLevel(name)
         map.set(tier, (map.get(tier) ?? 0) + 1)
       }
       return map
     })
-    function tierOwned(tier: ChimesTier): number {
+    function tierOwned(tier: number): number {
       return shopOwnedByTier.value.get(tier) ?? 0
     }
-    function tierTotal(tier: ChimesTier): number {
+    function tierTotal(tier: number): number {
       return shopTotalByTier.value.get(tier) ?? 0
     }
 
     // ── Collapsible tier sections (collapsed by default) ──
-    const ALL_TIER_KEYS = Object.keys(CHIMES_PRICE_TIERS) as ChimesTier[]
-    const collapsedTiers = ref(new Set<ChimesTier>(ALL_TIER_KEYS))
+    const ALL_TIER_KEYS = COSMIC_TRAITS_BY_STAR.map((t) => t.starLevel)
+    const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
     // While searching/filtering, force every tier open so matches are never hidden.
     const searchOrFilterActive = computed(
       () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
     )
-    function isTierCollapsed(tier: ChimesTier): boolean {
+    function isTierCollapsed(tier: number): boolean {
       return searchOrFilterActive.value ? false : collapsedTiers.value.has(tier)
     }
-    function toggleTier(tier: ChimesTier) {
+    function toggleTier(tier: number) {
       const next = new Set(collapsedTiers.value)
       if (next.has(tier)) next.delete(tier)
       else next.add(tier)
@@ -930,7 +944,7 @@ const shopChampionNames = computed(() =>
         if (!names?.length) return
         const next = new Set(collapsedTiers.value)
         for (const name of names) {
-          next.delete((CHAMPION_DATA[name]?.priceTier ?? 'epic') as ChimesTier)
+          next.delete(getChampionStarLevel(name))
         }
         collapsedTiers.value = next
       },
@@ -1040,7 +1054,9 @@ const shopChampionNames = computed(() =>
       const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
       const originKey = getChampionOrigin(name)
       const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
-      return { traits, origin }
+      const cosmic = getChampionCosmicTrait(name)
+      const starLevel = getChampionStarLevel(name)
+      return { traits, origin, cosmic, starLevel }
     }
 
     function onCardHoverAndDismiss(name: string) {
@@ -1543,6 +1559,11 @@ const shopChampionNames = computed(() =>
   text-transform: uppercase;
   white-space: nowrap;
   box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
+}
+/* Cosmic Trait (star level) badge — slightly stronger fill to read as the primary tag */
+.card-cosmic-badge {
+  background: color-mix(in srgb, var(--tc, #7a4e20) 18%, rgba(0, 0, 0, 0.6));
+  border-width: 1px;
 }
 .card-trait-icon {
   width: 13px;

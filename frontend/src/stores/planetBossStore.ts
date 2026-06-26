@@ -146,12 +146,31 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           !battleStore.ownedChampions.includes(name) &&
           !battleStore.recruitableChampions.some((r) => r.name === name)
 
+        // ── Galaxy star-level pool ──
+        // Only champions in this galaxy's rolled pool (2-4, matching its star
+        // level) may spawn. Ensure the pool is populated (fresh game / legacy save).
+        if (galaxyStore.currentGalaxyChampionPool.length === 0) {
+          galaxyStore.rollGalaxyChampionPool()
+        }
+        const pool = new Set(galaxyStore.currentGalaxyChampionPool)
+        const inPool = (name: string) => pool.size === 0 || pool.has(name)
+
         const nextRole = galaxyStore.nextStarRole
+        // 1) pool ∩ unrecruited ∩ selected role
         let candidates = CHAMPION_HOME_PLANETS.filter((c) => {
           if (!isUnrecruitedUnowned(c.championName)) return false
+          if (!inPool(c.championName)) return false
           if (nextRole) return CHAMPION_ROLES[c.championName] === nextRole
-          return c.planetType === planetType
+          return true
         })
+        // 2) pool ∩ unrecruited (ignore role)
+        if (candidates.length === 0) {
+          candidates = CHAMPION_HOME_PLANETS.filter(
+            (c) => inPool(c.championName) && isUnrecruitedUnowned(c.championName),
+          )
+        }
+        // 3) fall back to the original planet-type / global selection so a star is
+        //    never left without a champion if the pool is exhausted.
         if (candidates.length === 0) {
           candidates = CHAMPION_HOME_PLANETS.filter(
             (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
@@ -345,9 +364,6 @@ export const usePlanetBossStore = defineStore('planetBoss', {
             boss.homePlanetChampion,
             config.materialCost,
             config.chimesPrice,
-            config.priceTier,
-            config.tierLabel,
-            config.tierBonusMultiplier,
           )
         }
       }

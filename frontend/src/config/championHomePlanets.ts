@@ -1,30 +1,21 @@
-import type { PlanetType, ChimesTier } from '../types'
+import type { PlanetType } from '../types'
 import { CHAMPION_DATA } from './championData'
-import { CHIMES_PRICE_TIERS } from './constants'
+import { getChampionChimesPrice } from './cosmicTraits'
 
 export interface ChampionHomePlanetConfig {
   championName: string
   planetType: PlanetType
   materialCost: Record<string, number>
   chimesPrice: number
-  priceTier: ChimesTier
-  tierLabel: string
-  tierBonusMultiplier: number // TODO: tierBonusMultiplier used for combat & material bonuses
 }
 
 export const CHAMPION_HOME_PLANETS: ChampionHomePlanetConfig[] = Object.entries(CHAMPION_DATA).map(
-  ([name, d]) => {
-    const tier = CHIMES_PRICE_TIERS[d.priceTier]
-    return {
-      championName: name,
-      planetType: d.planetType,
-      materialCost: d.materialCost,
-      chimesPrice: tier.chimesPrice,
-      priceTier: d.priceTier,
-      tierLabel: tier.label,
-      tierBonusMultiplier: tier.multiplier,
-    }
-  },
+  ([name, d]) => ({
+    championName: name,
+    planetType: d.planetType,
+    materialCost: d.materialCost,
+    chimesPrice: getChampionChimesPrice(name),
+  }),
 )
 
 const homePlanetMap = new Map<string, ChampionHomePlanetConfig>()

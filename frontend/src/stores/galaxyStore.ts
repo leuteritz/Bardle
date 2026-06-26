@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { useGameStore } from './gameStore'
+import { useInventoryStore } from './inventoryStore'
+import { useBattleStore } from './battleStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
+import { CHAMPION_DATA } from '../config/championData'
+import { getChampionStarLevel } from '../config/cosmicTraits'
 import type { ChampionRole } from '../types'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -20,12 +25,52 @@ import {
   GALAXY_BOSS_SPAWN_ANIM_MS,
   GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG,
   GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG,
+  MAX_STAR_LEVEL,
+  GALAXY_POOL_MIN,
+  GALAXY_POOL_MAX,
+  TIER_UNLOCK_CHIMES_BASE,
+  TIER_UNLOCK_CHIMES_GROWTH,
+  TIER_UNLOCK_MATERIAL_GROWTH,
+  TIER_UNLOCK_MATERIAL_BASE,
 } from '../config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
 
+export interface TierUnlockCost {
+  chimes: number
+  material: Record<string, number>
+}
+
 function computeRequired(galaxy: number): number {
   return GALAXY_STARS_BASE_REQUIRED + (galaxy - 1)
+}
+
+// ── Galaxy Tier helpers (pure, exported for tests) ──────────────────────────
+// Fixed grouping: Tier 1 = G1-2, then every later tier spans 3 galaxies
+// (T2 = G3-5, T3 = G6-8, …).
+export function tierOf(galaxy: number): number {
+  return galaxy <= 2 ? 1 : 2 + Math.floor((galaxy - 3) / 3)
+}
+
+export function firstGalaxyOfTier(tier: number): number {
+  return tier <= 1 ? 1 : 3 + (tier - 2) * 3
+}
+
+// Galaxy N targets star level N, clamped to the finite champion pool ceiling.
+export function starLevelForGalaxy(galaxy: number): number {
+  return Math.min(Math.max(1, galaxy), MAX_STAR_LEVEL)
+}
+
+// Tier 1 is free. From tier 2 up, Chimes + Material grow geometrically.
+export function computeTierUnlockCost(tier: number): TierUnlockCost {
+  if (tier <= 1) return { chimes: 0, material: {} }
+  const exp = tier - 2
+  const chimes = Math.ceil(TIER_UNLOCK_CHIMES_BASE * Math.pow(TIER_UNLOCK_CHIMES_GROWTH, exp))
+  const material: Record<string, number> = {}
+  for (const [id, base] of Object.entries(TIER_UNLOCK_MATERIAL_BASE)) {
+    material[id] = Math.ceil(base * Math.pow(TIER_UNLOCK_MATERIAL_GROWTH, exp))
+  }
+  return { chimes, material }
 }
 
 function pickRandomThemeIndex(current: number): number {
@@ -42,6 +87,10 @@ export const useGalaxyStore = defineStore('galaxy', {
     currentGalaxy: 1,
     starsRescued: 0,
     starsRequired: GALAXY_STARS_BASE_REQUIRED,
+    // ── Galaxy Tier system ──
+    unlockedTier: 1, // highest tier the player has paid to unlock
+    currentGalaxyChampionPool: [] as string[], // 2-4 champions rolled for this galaxy
+    tierJustUnlocked: false, // transient flag → UI plays the unlock celebration, then resets
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
     pendingTransition: false,
@@ -89,6 +138,36 @@ export const useGalaxyStore = defineStore('galaxy', {
   getters: {
     isComplete(): boolean {
       return this.starsRescued >= this.starsRequired && this.galaxyBossDefeated
+    },
+
+    // ── Galaxy Tier getters ──
+    currentTier(): number {
+      return tierOf(this.currentGalaxy)
+    },
+
+    nextTier(): number {
+      return tierOf(this.currentGalaxy + 1)
+    },
+
+    // Star level of the current galaxy → which champion pool spawns here.
+    requiredStarLevel(): number {
+      return starLevelForGalaxy(this.currentGalaxy)
+    },
+
+    // True when warping to the next galaxy would cross into a tier the player
+    // has not yet paid to unlock.
+    nextTierLocked(): boolean {
+      return this.nextTier > this.currentTier && this.nextTier > this.unlockedTier
+    },
+
+    // Cost to unlock the next (locked) tier.
+    tierUnlockCost(): TierUnlockCost {
+      return computeTierUnlockCost(this.nextTier)
+    },
+
+    // Galaxy is complete AND the next tier (if any) is unlocked.
+    canAdvance(): boolean {
+      return this.isComplete && !this.nextTierLocked
     },
 
     needsFinalBoss(): boolean {
@@ -288,8 +367,56 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     requestTransition() {
-      if (!this.isComplete || this.pendingTransition) return
+      // Block the warp while the next tier is still locked — the player must pay
+      // the tier-unlock cost first (see unlockNextTier / TierUnlockPanel).
+      if (!this.isComplete || this.pendingTransition || this.nextTierLocked) return
       this.pendingTransition = true
+    },
+
+    // Roll the 2-4 champions that may spawn in the current galaxy, matching its
+    // star level. Prefers champions the player does not yet own/recruit so the
+    // pool stays meaningful; falls back to the full star-level pool, then any.
+    rollGalaxyChampionPool() {
+      const targetStar = this.requiredStarLevel
+      const allNames = Object.keys(CHAMPION_DATA)
+      const atStarLevel = allNames.filter((n) => getChampionStarLevel(n) === targetStar)
+
+      const battleStore = useBattleStore()
+      const isUnrecruitedUnowned = (name: string) =>
+        !battleStore.ownedChampions.includes(name) &&
+        !battleStore.recruitableChampions.some((r) => r.name === name)
+
+      let basis = atStarLevel.filter(isUnrecruitedUnowned)
+      if (basis.length === 0) basis = atStarLevel
+      if (basis.length === 0) basis = allNames
+
+      // Fisher-Yates shuffle, then take a random count in [GALAXY_POOL_MIN, GALAXY_POOL_MAX].
+      const shuffled = [...basis]
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      }
+      const count = Math.min(
+        shuffled.length,
+        GALAXY_POOL_MIN + Math.floor(Math.random() * (GALAXY_POOL_MAX - GALAXY_POOL_MIN + 1)),
+      )
+      this.currentGalaxyChampionPool = shuffled.slice(0, count)
+    },
+
+    // Pay the Chimes + Material cost to unlock the next tier. Returns true on success.
+    unlockNextTier(): boolean {
+      if (!this.nextTierLocked) return false
+      const cost = this.tierUnlockCost
+      const gameStore = useGameStore()
+      const inventoryStore = useInventoryStore()
+      if (gameStore.chimes < cost.chimes) return false
+      if (!inventoryStore.hasMaterials(cost.material)) return false
+
+      gameStore.chimes -= cost.chimes
+      inventoryStore.removeMaterials(cost.material)
+      this.unlockedTier = this.nextTier
+      this.tierJustUnlocked = true
+      return true
     },
 
     commitAdvance() {
@@ -310,6 +437,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingResourceStars = 0
       this.pendingChampionStar = false
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
+      this.rollGalaxyChampionPool()
       this.requestRoleSelection()
     },
   },

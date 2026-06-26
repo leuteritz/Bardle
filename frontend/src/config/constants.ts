@@ -1,4 +1,4 @@
-import type { ChampionRole, RoleStat, RoleAbilityDetail, ChimesTier } from '../types'
+import type { ChampionRole, RoleStat, RoleAbilityDetail } from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -710,6 +710,38 @@ export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000
 export const GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG = 60
 export const GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG = 240
 
+// ── Galaxy Tier & Champion Star Level (Tier redesign) ───────────────────────
+// Two axes both derived from galaxyStore.currentGalaxy:
+//  • Tier  — groups galaxies (T1 = G1-2, T2 = G3-5, T3 = G6-8, …) and gates
+//            progression behind a Chimes + Material unlock cost.
+//  • Star level — picks which champion pool spawns in a galaxy (Galaxy N → ★N).
+//
+// Champions are finite (~169) but galaxies are unbounded, so the required star
+// level is clamped to MAX_STAR_LEVEL: G1→★1 … G12→★12, then G13+ stay at ★12
+// (highest galaxies keep drawing from the top-tier pool). The 12 star levels are
+// the 12 Cosmic Tiers (cosmicTraits.ts) the Shop/Select panels group by — the single
+// champion-tier axis (set per champion via cosmicTrait), driving grouping + recruit cost.
+export const MAX_STAR_LEVEL = 12
+
+// Per galaxy visit, only this many champions are rolled from the matching
+// star-level pool (re-rolled each time a galaxy is entered).
+export const GALAXY_POOL_MIN = 2
+export const GALAXY_POOL_MAX = 4
+
+// Tier-unlock cost. Tier 1 is owned for free; cost applies from tier 2 upward.
+// Chimes grow geometrically so each tier feels like a real milestone:
+//   chimes(tier) = ceil(BASE * GROWTH^(tier - 2))   → 50k, 160k, 512k, …
+export const TIER_UNLOCK_CHIMES_BASE = 50_000
+export const TIER_UNLOCK_CHIMES_GROWTH = 3.2
+
+// Material cost scales the same way from a flat base set:
+//   amount(tier) = ceil(baseAmount * MATERIAL_GROWTH^(tier - 2))
+export const TIER_UNLOCK_MATERIAL_GROWTH = 2
+export const TIER_UNLOCK_MATERIAL_BASE: Record<string, number> = {
+  nebula_quartz: 5,
+  stardust: 4,
+}
+
 // Planet boss (extended)
 export const BOSS_ENRAGE_BONUS_SECONDS_PER_STEP = 5
 export const BOSS_ENRAGE_MIN_SECONDS = 10
@@ -934,17 +966,13 @@ export const PROJECTILE_SHOT_DURATION_MS = 520
 // Gameplay — click base
 export const CHIMES_PER_CLICK_BASE = 20
 
-// ── Champion Chimes Price Tiers ────────────────────────────────────────────
-export const CHIMES_PRICE_TIERS = {
-  starter: { chimesPrice: 500, label: '✦ Starter', color: '#a08c72', multiplier: 1.0 },
-  apprentice: { chimesPrice: 1500, label: '✦✦ Apprentice', color: '#62b84e', multiplier: 1.2 },
-  adept: { chimesPrice: 3500, label: '✦✦✦ Adept', color: '#4e96e0', multiplier: 1.5 },
-  epic: { chimesPrice: 5500, label: '✦✦✦✦ Epic', color: '#9c5ed4', multiplier: 2.0 },
-  legendary: { chimesPrice: 8000, label: '✦✦✦✦✦ Legendary', color: '#d85030', multiplier: 2.5 },
-} as const satisfies Record<
-  ChimesTier,
-  { chimesPrice: number; label: string; color: string; multiplier: number }
->
+// ── Cosmic Tier recruit cost ───────────────────────────────────────────────
+// The single Champion-Tier economy: Chimes recruit cost per star level (★1..★12).
+// Index 0 = ★1 … index 11 = ★12. Strictly ascending. Read via getChampionChimesPrice
+// (cosmicTraits.ts). Replaces the old 5-tier CHIMES_PRICE_TIERS.
+export const COSMIC_TIER_CHIMES_PRICE: number[] = [
+  500, 900, 1400, 2000, 2800, 3600, 4500, 5500, 6500, 7500, 8500, 9500,
+]
 
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
@@ -1422,6 +1450,21 @@ export const USED_GAME_ICONS = new Set<string>([
   // Champion Shop / Select Panel — tier collapse-all header button
   'game-icons:contract', // Collapse-all tiers (ChampionShopComponent & ChampionSelectPanel)
   'game-icons:expand', // Expand-all tiers (ChampionShopComponent & ChampionSelectPanel)
+  // Galaxy Tier unlock gate (TierUnlockPanel)
+  'game-icons:locked-fortress', // Locked-tier header icon
+  // Cosmic Traits — champion star-level classification (cosmicTraits.ts, TierUnlockPanel, champion cards)
+  'game-icons:walking-boot', // ★1 Lone Wanderer
+  'game-icons:north-star', // ★2 Star Drifter
+  'game-icons:fairy', // ★3 Meep Guardian
+  'game-icons:star-gate', // ★4 Rift Keeper
+  'game-icons:meteor', // ★5 Comet Rider
+  'game-icons:star-prominences', // ★6 Nebula Sage
+  'game-icons:spider-web', // ★7 Chime Weaver
+  'game-icons:star-altar', // ★8 Astral Warden
+  'game-icons:moon-orbit', // ★9 Eclipse Herald
+  'game-icons:portal', // ★10 Void Sovereign
+  'game-icons:cosmic-egg', // ★11 Galaxy Warden
+  'game-icons:queen-crown', // ★12 Cosmic Sovereign
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

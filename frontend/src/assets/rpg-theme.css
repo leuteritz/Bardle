@@ -742,6 +742,21 @@
   line-height: 1;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
+/* Cosmic-tier identity: lore icon + star count beside the tier name. */
+.tier-header-icon {
+  flex-shrink: 0;
+  color: var(--tier-c, #c89040);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+.tier-header-stars {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--tier-c, #e8c040);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
 
 /* Global expand/collapse-all control — compact icon button in the header row,
    visually paired with .filter-toggle-btn. */

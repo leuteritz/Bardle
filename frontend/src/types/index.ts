@@ -260,16 +260,45 @@ export interface SectionProgress {
   completed: boolean
 }
 
-export type ChimesTier = 'starter' | 'apprentice' | 'adept' | 'epic' | 'legendary'
+// ── Cosmic Traits (Galaxy/Champion Tier redesign) ───────────────────────────
+// A Cosmic Trait classifies a champion by its *star level* (1..MAX_STAR_LEVEL).
+// Galaxy N spawns champions whose star level matches that galaxy. Independent of
+// (and additive to) the 15 synergy traits in championTraits.ts.
+export type CosmicTraitId =
+  | 'lone_wanderer' // ★1
+  | 'star_drifter' // ★2
+  | 'meep_guardian' // ★3
+  | 'rift_keeper' // ★4
+  | 'comet_rider' // ★5
+  | 'nebula_sage' // ★6
+  | 'chime_weaver' // ★7
+  | 'astral_warden' // ★8
+  | 'eclipse_herald' // ★9
+  | 'void_sovereign' // ★10
+  | 'galaxy_warden' // ★11
+  | 'cosmic_sovereign' // ★12
+
+export interface CosmicTraitDef {
+  id: CosmicTraitId
+  starLevel: number // 1..MAX_STAR_LEVEL — which galaxy star level this trait spawns at
+  name: string
+  icon: string // game-icons:* (registered in USED_GAME_ICONS)
+  color: string
+  description: string
+}
+
+// A galaxy tier groups several galaxies and gates progression behind a cost.
+export interface GalaxyTier {
+  tier: number
+  firstGalaxy: number
+  lastGalaxy: number
+}
 
 export interface RecruitableChampion {
   name: string
   materialCost: Record<string, number>
   discoveredAt: number
   chimesPrice: number
-  priceTier: ChimesTier
-  tierLabel: string
-  tierBonusMultiplier: number // TODO: tierBonusMultiplier used for combat & material bonuses
 }
 
 export interface ChampionState {

@@ -67,10 +67,20 @@
             class="complete-overlay"
           >
             <span class="complete-badge">✦ Galaxy Liberated ✦</span>
-            <button class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
+
+            <!-- Next tier still locked → show the unlock gate; otherwise the warp button -->
+            <TierUnlockPanel v-if="galaxyStore.nextTierLocked" />
+            <button v-else class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
               » Next Galaxy «
             </button>
           </div>
+
+          <!-- ── Tier unlocked celebration ── -->
+          <Transition name="tier-flash-fade">
+            <div v-if="galaxyStore.tierJustUnlocked" class="tier-flash" aria-hidden="true">
+              <span class="tier-flash-text">✦ Tier {{ galaxyStore.unlockedTier }} Unlocked ✦</span>
+            </div>
+          </Transition>
 
           <!-- ── Skip-to-arrival shortcut (travel only) ── -->
           <button
@@ -89,21 +99,37 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from 'vue'
+import { defineComponent, computed, watch } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
+import { useActionToast } from '../../../composables/useActionToast'
 import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS } from '../../../config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
+import TierUnlockPanel from './TierUnlockPanel.vue'
 
 const CORNER_R = 20
+const TIER_FLASH_MS = 2400
 
 export default defineComponent({
   name: 'MiniMap',
-  components: { MiniMapCanvas, MiniMapHudPanel },
+  components: { MiniMapCanvas, MiniMapHudPanel, TierUnlockPanel },
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
+    const { showToast } = useActionToast()
+
+    // Celebrate a tier unlock: toast + on-screen flash, then clear the flag.
+    watch(
+      () => galaxyStore.tierJustUnlocked,
+      (justUnlocked) => {
+        if (!justUnlocked) return
+        showToast(`✦ Tier ${galaxyStore.unlockedTier} unlocked!`)
+        setTimeout(() => {
+          galaxyStore.tierJustUnlocked = false
+        }, TIER_FLASH_MS)
+      },
+    )
 
     const show = computed(
       () =>
@@ -402,6 +428,65 @@ export default defineComponent({
 .next-galaxy-btn:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
+}
+
+/* ── Tier unlocked celebration flash ── */
+.tier-flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(82, 184, 48, 0.22) 0%, transparent 65%);
+}
+
+.tier-flash-text {
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  color: #b6ff8c;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 16px rgba(120, 220, 80, 0.95),
+    0 0 6px rgba(82, 184, 48, 0.8),
+    0 1px 4px rgba(0, 0, 0, 0.98);
+  animation: tier-flash-pop 2.4s ease-out forwards;
+}
+
+@keyframes tier-flash-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.tier-flash-fade-enter-active,
+.tier-flash-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.tier-flash-fade-enter-from,
+.tier-flash-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-flash-text {
+    animation: none;
+  }
 }
 
 /* ── Minimap skip button ── */

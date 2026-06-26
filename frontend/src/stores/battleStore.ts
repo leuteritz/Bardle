@@ -59,7 +59,7 @@ import {
   OBJECTIVE_TIMEOUT_MS,
   OBJECTIVE_RESULT_DELAY_MS,
 } from '../config/constants'
-import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion, ChimesTier } from '../types'
+import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -196,9 +196,6 @@ export const useBattleStore = defineStore('battle', {
       name: string,
       materialCost: Record<string, number>,
       chimesPrice: number,
-      priceTier: ChimesTier,
-      tierLabel: string,
-      tierBonusMultiplier: number,
     ) {
       if (this.ownedChampions.includes(name)) return
       if (this.recruitableChampions.some((c) => c.name === name)) return
@@ -208,9 +205,6 @@ export const useBattleStore = defineStore('battle', {
         materialCost,
         discoveredAt: Date.now(),
         chimesPrice,
-        priceTier,
-        tierLabel,
-        tierBonusMultiplier,
       })
       this.newlyUnlockedChampions.push(name)
     },
@@ -234,14 +228,7 @@ export const useBattleStore = defineStore('battle', {
 
     addAllRecruitableChampions() {
       for (const config of CHAMPION_HOME_PLANETS) {
-        this.addRecruitableChampion(
-          config.championName,
-          config.materialCost,
-          config.chimesPrice,
-          config.priceTier,
-          config.tierLabel,
-          config.tierBonusMultiplier,
-        )
+        this.addRecruitableChampion(config.championName, config.materialCost, config.chimesPrice)
       }
     },
 
