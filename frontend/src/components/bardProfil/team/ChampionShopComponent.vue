@@ -208,6 +208,17 @@
             <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
             <span class="tier-header-label">{{ group.label }}</span>
             <span class="tier-header-stars">★{{ group.starLevel }}</span>
+            <span
+              class="tier-header-chance"
+              :class="{ 'is-locked': group.spawnPercent == null }"
+              :title="
+                group.spawnPercent == null
+                  ? 'Tier locked — does not spawn yet'
+                  : `This tier's current spawn chance`
+              "
+            >
+              {{ group.spawnPercent != null ? group.spawnPercent + '%' : 'Locked' }}
+            </span>
             <span class="tier-header-line"></span>
             <span v-if="group.isGalaxyLocked" class="tier-header-req">
               <Icon icon="game-icons:padlock" class="tier-req-icon" width="16" height="16" />
@@ -539,7 +550,7 @@ import { truncate, formatNumber } from '../../../config/numberFormat'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
-import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
+import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
@@ -909,8 +920,9 @@ const shopChampionNames = computed(() =>
 
     // Group the filtered champions into Champion Tier buckets (ascending star level),
     // preserving the alphabetical order from filteredChampions within each tier.
-    // All 12 tiers render as rows (incl. galaxy-locked teasers); while searching or
+    // All 6 tiers render as rows (incl. galaxy-locked teasers); while searching or
     // filtering, only tiers with matches are shown so results stay focused.
+    // spawnPercent = this tier's live spawn chance (null when not yet spawning).
     const tierGroups = computed(() => {
       const groups = new Map<number, { name: string }[]>()
       for (const c of filteredChampions.value) {
@@ -919,6 +931,7 @@ const shopChampionNames = computed(() =>
         bucket.push(c)
       }
       const activeStar = galaxyStore.requiredStarLevel
+      const galaxy = galaxyStore.currentGalaxy
       const tiers = searchOrFilterActive.value
         ? CHAMPION_TIERS_BY_STAR.filter((t) => groups.has(t.starLevel))
         : CHAMPION_TIERS_BY_STAR
@@ -932,6 +945,7 @@ const shopChampionNames = computed(() =>
         requiredGalaxy: requiredGalaxyForTier(t.starLevel),
         isGalaxyLocked: isTierGalaxyLocked(t.starLevel),
         isActive: t.starLevel === activeStar,
+        spawnPercent: championTierSpawnPercent(t.starLevel, galaxy),
       }))
     })
 
@@ -1747,6 +1761,26 @@ const shopChampionNames = computed(() =>
 .trait-chip--cross-role.trait-chip--active {
   opacity: 1;
   border-style: solid;
+}
+
+/* Live spawn-chance pill in the tier header: solid tier color when spawning,
+   muted "Locked" outline when the tier is not yet available. */
+.tier-header-chance {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #161208;
+  background: var(--tier-c, #e8c040);
+  padding: 1px 7px;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+.tier-header-chance.is-locked {
+  color: #b89a5a;
+  background: transparent;
+  border: 1px solid #5c3310;
 }
 
 .tier-badge {

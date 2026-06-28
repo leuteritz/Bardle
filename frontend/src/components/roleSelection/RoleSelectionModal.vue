@@ -5,14 +5,26 @@ import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
 import { CHAMPION_DATA } from '@/config/championData'
 import { getChampionRoles } from '@/config/championRoles'
-import { getChampionStarLevel, getChampionTier, isChampionTierUnlocked } from '@/config/championTiers'
+import {
+  getChampionStarLevel,
+  getChampionTier,
+  isChampionTierUnlocked,
+  championTierSpawnPercent,
+} from '@/config/championTiers'
 import type { ChampionRole } from '@/types'
 
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
 
 type RoleDef = { key: ChampionRole; label: string; short: string; image: string; color: string }
-type AvailableChampion = { name: string; star: number; tierName: string; tierColor: string; image: string }
+type AvailableChampion = {
+  name: string
+  star: number
+  tierName: string
+  tierColor: string
+  image: string
+  spawnPercent: number | null // this tier's live spawn chance (null when not spawning)
+}
 
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
@@ -68,6 +80,7 @@ const availableByRole = computed(() => {
       tierName: tier.name,
       tierColor: tier.color,
       image: battleStore.getChampionImage(name),
+      spawnPercent: championTierSpawnPercent(star, galaxyStore.currentGalaxy),
     }
     for (const role of getChampionRoles(name)) {
       map[role]?.push(entry)
@@ -153,6 +166,9 @@ function choose(role: RoleDef) {
                     <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
                       <span class="role-tier-dot"></span>
                       {{ champ.tierName }}
+                      <span v-if="champ.spawnPercent != null" class="role-tier-pct"
+                        >· {{ champ.spawnPercent }}%</span
+                      >
                     </span>
                   </li>
                 </ul>
@@ -496,6 +512,13 @@ function choose(role: RoleDef) {
   border-radius: 50%;
   background: var(--tier-c);
   box-shadow: 0 0 7px color-mix(in srgb, var(--tier-c) 70%, transparent);
+}
+
+/* Live spawn chance appended to the tier chip (e.g. "Nebula Sage · 30%"). */
+.role-tier-pct {
+  flex: none;
+  font-weight: 800;
+  color: var(--tier-c);
 }
 
 .role-roster-empty {

@@ -124,7 +124,6 @@ export function usePersistence() {
         starsRescued: galaxyStore.starsRescued,
         starsRequired: galaxyStore.starsRequired,
         unlockedTier: galaxyStore.unlockedTier,
-        currentGalaxyChampionPool: [...galaxyStore.currentGalaxyChampionPool],
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
         championTravelState: galaxyStore.championTravelState,
@@ -324,12 +323,6 @@ export function usePersistence() {
         galaxyStore.starsRescued = gx.starsRescued ?? 0
         galaxyStore.starsRequired = gx.starsRequired ?? 3
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
-        // Restore the rolled champion pool; re-roll for legacy saves without one.
-        if (Array.isArray(gx.currentGalaxyChampionPool) && gx.currentGalaxyChampionPool.length > 0) {
-          galaxyStore.currentGalaxyChampionPool = [...gx.currentGalaxyChampionPool]
-        } else {
-          galaxyStore.rollGalaxyChampionPool()
-        }
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
         galaxyStore.resourceStarActive = gx.resourceStarActive ?? false

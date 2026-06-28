@@ -2,10 +2,8 @@ import { defineStore } from 'pinia'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
-import { useBattleStore } from './battleStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
-import { CHAMPION_DATA } from '../config/championData'
-import { getChampionStarLevel } from '../config/championTiers'
+import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -26,8 +24,6 @@ import {
   GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG,
   GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG,
   MAX_STAR_LEVEL,
-  GALAXY_POOL_MIN,
-  GALAXY_POOL_MAX,
   TIER_UNLOCK_CHIMES_BASE,
   TIER_UNLOCK_CHIMES_GROWTH,
   TIER_UNLOCK_MATERIAL_GROWTH,
@@ -89,7 +85,6 @@ export const useGalaxyStore = defineStore('galaxy', {
     starsRequired: GALAXY_STARS_BASE_REQUIRED,
     // ── Galaxy Tier system ──
     unlockedTier: 1, // highest tier the player has paid to unlock
-    currentGalaxyChampionPool: [] as string[], // 2-4 champions rolled for this galaxy
     tierJustUnlocked: false, // transient flag → UI plays the unlock celebration, then resets
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
@@ -149,9 +144,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       return tierOf(this.currentGalaxy + 1)
     },
 
-    // Star level of the current galaxy → which champion pool spawns here.
+    // Highest Champion Tier unlocked at the current galaxy (tiers spawn cumulatively).
+    // Drives the Shop "unlocked" styling and the spawn-weight row.
     requiredStarLevel(): number {
-      return starLevelForGalaxy(this.currentGalaxy)
+      return unlockedChampionTierCount(this.currentGalaxy)
     },
 
     // True when warping to the next galaxy would cross into a tier the player
@@ -373,36 +369,6 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingTransition = true
     },
 
-    // Roll the 2-4 champions that may spawn in the current galaxy, matching its
-    // star level. Prefers champions the player does not yet own/recruit so the
-    // pool stays meaningful; falls back to the full star-level pool, then any.
-    rollGalaxyChampionPool() {
-      const targetStar = this.requiredStarLevel
-      const allNames = Object.keys(CHAMPION_DATA)
-      const atStarLevel = allNames.filter((n) => getChampionStarLevel(n) === targetStar)
-
-      const battleStore = useBattleStore()
-      const isUnrecruitedUnowned = (name: string) =>
-        !battleStore.ownedChampions.includes(name) &&
-        !battleStore.recruitableChampions.some((r) => r.name === name)
-
-      let basis = atStarLevel.filter(isUnrecruitedUnowned)
-      if (basis.length === 0) basis = atStarLevel
-      if (basis.length === 0) basis = allNames
-
-      // Fisher-Yates shuffle, then take a random count in [GALAXY_POOL_MIN, GALAXY_POOL_MAX].
-      const shuffled = [...basis]
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-      }
-      const count = Math.min(
-        shuffled.length,
-        GALAXY_POOL_MIN + Math.floor(Math.random() * (GALAXY_POOL_MAX - GALAXY_POOL_MIN + 1)),
-      )
-      this.currentGalaxyChampionPool = shuffled.slice(0, count)
-    },
-
     // Pay the Chimes + Material cost to unlock the next tier. Returns true on success.
     unlockNextTier(): boolean {
       if (!this.nextTierLocked) return false
@@ -437,7 +403,6 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingResourceStars = 0
       this.pendingChampionStar = false
       this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
-      this.rollGalaxyChampionPool()
       this.requestRoleSelection()
     },
 

@@ -1,15 +1,19 @@
 import type { ChampionTierId, ChampionTierDef } from '../types'
-import { CHAMPION_TIER_CHIMES_PRICE, CHAMPION_TIER_REQUIRED_GALAXY } from './constants'
+import {
+  CHAMPION_TIER_CHIMES_PRICE,
+  CHAMPION_TIER_REQUIRED_GALAXY,
+  MAX_STAR_LEVEL,
+  TIER_SPAWN_WEIGHTS,
+} from './constants'
 import { CHAMPION_DATA } from './championData'
 
 // ── Champion Tiers ────────────────────────────────────────────────────────────
-// Part of the Galaxy/Champion Tier system. Each Champion Tier represents one
-// *star level* (1..MAX_STAR_LEVEL). A galaxy at star level N spawns champions
-// whose Champion Tier is level N, and the Shop / Select panels group champions
-// into these 12 tiers (weak→strong). This is the single Champion-Tier axis: set
-// explicitly per champion via `championTier` in championData.ts, it also drives the
-// recruit cost (getChampionChimesPrice). Completely separate from the 15 synergy
-// traits in championTraits.ts (which drive CPS/power/DPS bonuses).
+// The spawn-pool axis: exactly 6 Champion Tiers, weakest (★1, most champions) →
+// strongest (★6, fewest). Set explicitly per champion via `championTier` in
+// championData.ts; also drives the recruit cost (getChampionChimesPrice). Tiers
+// unlock cumulatively by galaxy (CHAMPION_TIER_REQUIRED_GALAXY) and, once unlocked,
+// spawn together by weighted probability (TIER_SPAWN_WEIGHTS). Completely separate
+// from the 15 synergy traits in championTraits.ts (which drive CPS/power/DPS bonuses).
 //
 // Icons are registered in USED_GAME_ICONS (constants.ts) before use.
 export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
@@ -22,100 +26,46 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
     color: '#a08c72',
     description: 'A solitary traveler taking the first steps across the cosmos.',
   },
-  // ★2 — those who chase the north star between the first galaxies.
-  star_drifter: {
-    id: 'star_drifter',
-    starLevel: 2,
-    name: 'Star Drifter',
-    icon: 'game-icons:polar-star',
-    color: '#8ba36a',
-    description: 'A drifter following the north star between the early galaxies.',
-  },
-  // ★3 — champions sworn to protect Bard's meeps.
-  meep_guardian: {
-    id: 'meep_guardian',
-    starLevel: 3,
-    name: 'Meep Guardian',
-    icon: 'game-icons:fairy',
-    color: '#62b84e',
-    description: "Keeper of the meeps, shepherding Bard's tiny companions.",
-  },
-  // ★4 — those who learned to walk between the stars through rifts.
+  // ★2 — those who learned to walk between the stars through rifts.
   rift_keeper: {
     id: 'rift_keeper',
-    starLevel: 4,
+    starLevel: 2,
     name: 'Rift Keeper',
     icon: 'game-icons:star-gate',
     color: '#4e96e0',
     description: 'Warden of the star-rifts that thread the galaxies together.',
   },
-  // ★5 — daredevils who ride comets through the burning dark.
-  comet_rider: {
-    id: 'comet_rider',
-    starLevel: 5,
-    name: 'Comet Rider',
-    icon: 'game-icons:burning-meteor',
-    color: '#4ec6c0',
-    description: 'A daredevil who rides comets through the burning dark.',
-  },
-  // ★6 — sages who read the swirling nebulae for hidden starlight.
+  // ★3 — sages who read the swirling nebulae for hidden starlight.
   nebula_sage: {
     id: 'nebula_sage',
-    starLevel: 6,
+    starLevel: 3,
     name: 'Nebula Sage',
     icon: 'game-icons:star-prominences',
     color: '#5e86d4',
     description: 'A sage who reads the swirling nebulae for hidden starlight.',
   },
-  // ★7 — masters who weave the chimes of the cosmos.
-  chime_weaver: {
-    id: 'chime_weaver',
-    starLevel: 7,
-    name: 'Chime Weaver',
-    icon: 'game-icons:spider-web',
-    color: '#9c5ed4',
-    description: 'Weaver of cosmic chimes, bending sound and starlight alike.',
-  },
-  // ★8 — guardians of the astral altar where star-fire is forged.
+  // ★4 — guardians of the astral altar where star-fire is forged.
   astral_warden: {
     id: 'astral_warden',
-    starLevel: 8,
+    starLevel: 4,
     name: 'Astral Warden',
     icon: 'game-icons:star-altar',
     color: '#b75ed4',
     description: 'Guardian of the astral altar where star-fire is forged.',
   },
-  // ★9 — heralds of the eclipse, moving worlds across the sun.
-  eclipse_herald: {
-    id: 'eclipse_herald',
-    starLevel: 9,
-    name: 'Eclipse Herald',
-    icon: 'game-icons:moon-orbit',
-    color: '#d45eb0',
-    description: 'Herald of the eclipse, moving worlds across the sun.',
-  },
-  // ★10 — sovereigns of the void-gates between dying galaxies.
+  // ★5 — sovereigns of the void-gates between dying galaxies.
   void_sovereign: {
     id: 'void_sovereign',
-    starLevel: 10,
+    starLevel: 5,
     name: 'Void Sovereign',
     icon: 'game-icons:portal',
     color: '#d45e7e',
     description: 'Sovereign of the void-gates between dying galaxies.',
   },
-  // ★11 — wardens of whole galaxies, cradling stars yet unborn.
-  galaxy_warden: {
-    id: 'galaxy_warden',
-    starLevel: 11,
-    name: 'Galaxy Warden',
-    icon: 'game-icons:cosmic-egg',
-    color: '#e0883a',
-    description: 'Warden of whole galaxies, cradling new stars yet unborn.',
-  },
-  // ★12 — the highest echelon, rulers of the deep cosmos.
+  // ★6 — the highest echelon, rulers of the deep cosmos.
   cosmic_sovereign: {
     id: 'cosmic_sovereign',
-    starLevel: 12,
+    starLevel: 6,
     name: 'Cosmic Sovereign',
     icon: 'game-icons:queen-crown',
     color: '#d85030',
@@ -173,4 +123,28 @@ export function isChampionTierUnlocked(
   if (tier <= requiredStarLevel) return true
   if (currentGalaxy >= requiredGalaxyForTier(tier)) return true
   return discoveredStars.has(tier)
+}
+
+// ── Weighted spawn odds (single source of truth for stores + UI) ───────────────
+
+/** How many Champion Tiers are unlocked at a galaxy (cumulative, clamped 1..MAX). */
+export function unlockedChampionTierCount(currentGalaxy: number): number {
+  const count = CHAMPION_TIER_REQUIRED_GALAXY.filter((g) => currentGalaxy >= g).length
+  return Math.min(MAX_STAR_LEVEL, Math.max(1, count))
+}
+
+/** Spawn-weight row for a given number of unlocked tiers (descending, sums to 100). */
+export function tierSpawnWeights(unlockedCount: number): number[] {
+  const idx = Math.min(TIER_SPAWN_WEIGHTS.length, Math.max(1, unlockedCount)) - 1
+  return TIER_SPAWN_WEIGHTS[idx]
+}
+
+/** Current spawn chance (%) for a tier at a galaxy, or null when the tier is locked. */
+export function championTierSpawnPercent(
+  tierStarLevel: number,
+  currentGalaxy: number,
+): number | null {
+  const unlocked = unlockedChampionTierCount(currentGalaxy)
+  if (tierStarLevel < 1 || tierStarLevel > unlocked) return null
+  return tierSpawnWeights(unlocked)[tierStarLevel - 1] ?? null
 }

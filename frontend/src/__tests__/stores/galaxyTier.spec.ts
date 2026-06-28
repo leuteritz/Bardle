@@ -12,16 +12,18 @@ import { useInventoryStore } from '../../stores/inventoryStore'
 import {
   getChampionStarLevel,
   requiredGalaxyForTier,
+  unlockedChampionTierCount,
+  tierSpawnWeights,
+  championTierSpawnPercent,
   CHAMPION_TIERS,
   CHAMPION_TIERS_BY_STAR,
 } from '../../config/championTiers'
 import { CHAMPION_DATA } from '../../config/championData'
 import {
   MAX_STAR_LEVEL,
-  GALAXY_POOL_MIN,
-  GALAXY_POOL_MAX,
   CHAMPION_TIER_CHIMES_PRICE,
   CHAMPION_TIER_REQUIRED_GALAXY,
+  TIER_SPAWN_WEIGHTS,
 } from '../../config/constants'
 
 describe('Galaxy Tier helpers', () => {
@@ -111,7 +113,8 @@ describe('Explicit champion tiers (championData)', () => {
 describe('Champion Tier coverage + economy', () => {
   const names = Object.keys(CHAMPION_DATA)
 
-  it('exposes one champion tier per star level 1..MAX_STAR_LEVEL', () => {
+  it('exposes one champion tier per star level 1..MAX_STAR_LEVEL (6 tiers)', () => {
+    expect(MAX_STAR_LEVEL).toBe(6)
     expect(CHAMPION_TIERS_BY_STAR).toHaveLength(MAX_STAR_LEVEL)
     expect(CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)).toEqual(
       Array.from({ length: MAX_STAR_LEVEL }, (_, i) => i + 1),
@@ -125,7 +128,7 @@ describe('Champion Tier coverage + economy', () => {
     }
   })
 
-  it('has a strictly ascending Chimes price per tier (★1..★12)', () => {
+  it('has a strictly ascending Chimes price per tier (★1..★6)', () => {
     expect(CHAMPION_TIER_CHIMES_PRICE).toHaveLength(MAX_STAR_LEVEL)
     for (let i = 1; i < CHAMPION_TIER_CHIMES_PRICE.length; i++) {
       expect(CHAMPION_TIER_CHIMES_PRICE[i]).toBeGreaterThan(CHAMPION_TIER_CHIMES_PRICE[i - 1])
@@ -134,7 +137,7 @@ describe('Champion Tier coverage + economy', () => {
 })
 
 describe('Champion Tier galaxy-unlock curve', () => {
-  it('covers all 12 tiers, starts at galaxy 1, and is non-decreasing', () => {
+  it('covers all 6 tiers, starts at galaxy 1, and is non-decreasing', () => {
     expect(CHAMPION_TIER_REQUIRED_GALAXY).toHaveLength(MAX_STAR_LEVEL)
     expect(CHAMPION_TIER_REQUIRED_GALAXY[0]).toBe(1)
     for (let i = 1; i < CHAMPION_TIER_REQUIRED_GALAXY.length; i++) {
@@ -160,21 +163,51 @@ describe('Champion Tier galaxy-unlock curve', () => {
   })
 })
 
+describe('Weighted champion-tier spawn', () => {
+  it('TIER_SPAWN_WEIGHTS: each row sums to 100, descends, and Tier 1 is highest', () => {
+    expect(TIER_SPAWN_WEIGHTS).toHaveLength(MAX_STAR_LEVEL)
+    TIER_SPAWN_WEIGHTS.forEach((row, i) => {
+      expect(row).toHaveLength(i + 1) // row N-1 covers N unlocked tiers
+      expect(row.reduce((a, b) => a + b, 0)).toBe(100)
+      for (let j = 1; j < row.length; j++) {
+        expect(row[j - 1]).toBeGreaterThanOrEqual(row[j]) // descending
+      }
+      expect(row[0]).toBe(Math.max(...row)) // Tier 1 always highest
+    })
+  })
+
+  it('unlockedChampionTierCount grows cumulatively with the galaxy, clamped 1..6', () => {
+    // CHAMPION_TIER_REQUIRED_GALAXY = [1, 3, 6, 10, 15, 21]
+    expect(unlockedChampionTierCount(1)).toBe(1)
+    expect(unlockedChampionTierCount(2)).toBe(1)
+    expect(unlockedChampionTierCount(3)).toBe(2)
+    expect(unlockedChampionTierCount(6)).toBe(3)
+    expect(unlockedChampionTierCount(10)).toBe(4)
+    expect(unlockedChampionTierCount(15)).toBe(5)
+    expect(unlockedChampionTierCount(21)).toBe(6)
+    expect(unlockedChampionTierCount(999)).toBe(6) // clamped to MAX
+  })
+
+  it('tierSpawnWeights returns the row for the unlocked-tier count', () => {
+    expect(tierSpawnWeights(1)).toEqual([100])
+    expect(tierSpawnWeights(2)).toEqual([70, 30])
+    expect(tierSpawnWeights(6)).toEqual(TIER_SPAWN_WEIGHTS[5])
+  })
+
+  it('championTierSpawnPercent: weight when unlocked, null when locked', () => {
+    // Galaxy 3 → 2 tiers unlocked → [70, 30]
+    expect(championTierSpawnPercent(1, 3)).toBe(70)
+    expect(championTierSpawnPercent(2, 3)).toBe(30)
+    expect(championTierSpawnPercent(3, 3)).toBeNull() // Tier 3 not yet unlocked at G3
+    // Galaxy 1 → only Tier 1 spawns at 100%
+    expect(championTierSpawnPercent(1, 1)).toBe(100)
+    expect(championTierSpawnPercent(2, 1)).toBeNull()
+  })
+})
+
 describe('galaxyStore — tier progression', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-  })
-
-  it('rolls a 2-4 champion pool matching the galaxy star level', () => {
-    const store = useGalaxyStore()
-    store.currentGalaxy = 1 // → star level 1
-    store.rollGalaxyChampionPool()
-
-    expect(store.currentGalaxyChampionPool.length).toBeGreaterThanOrEqual(GALAXY_POOL_MIN)
-    expect(store.currentGalaxyChampionPool.length).toBeLessThanOrEqual(GALAXY_POOL_MAX)
-    for (const name of store.currentGalaxyChampionPool) {
-      expect(getChampionStarLevel(name)).toBe(1)
-    }
   })
 
   it('blocks requestTransition while the next tier is locked', () => {

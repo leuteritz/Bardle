@@ -262,21 +262,16 @@ export interface SectionProgress {
 
 // ── Champion Tiers (Galaxy/Champion Tier redesign) ───────────────────────────
 // A Champion Tier classifies a champion by its *star level* (1..MAX_STAR_LEVEL).
-// Galaxy N spawns champions whose star level matches that galaxy. Independent of
-// (and additive to) the 15 synergy traits in championTraits.ts.
+// 6 Champion Tiers, weakest → strongest. Tiers unlock cumulatively by galaxy and
+// spawn together by weighted probability. Independent of (and additive to) the 15
+// synergy traits in championTraits.ts.
 export type ChampionTierId =
   | 'lone_wanderer' // ★1
-  | 'star_drifter' // ★2
-  | 'meep_guardian' // ★3
-  | 'rift_keeper' // ★4
-  | 'comet_rider' // ★5
-  | 'nebula_sage' // ★6
-  | 'chime_weaver' // ★7
-  | 'astral_warden' // ★8
-  | 'eclipse_herald' // ★9
-  | 'void_sovereign' // ★10
-  | 'galaxy_warden' // ★11
-  | 'cosmic_sovereign' // ★12
+  | 'rift_keeper' // ★2
+  | 'nebula_sage' // ★3
+  | 'astral_warden' // ★4
+  | 'void_sovereign' // ★5
+  | 'cosmic_sovereign' // ★6
 
 export interface ChampionTierDef {
   id: ChampionTierId

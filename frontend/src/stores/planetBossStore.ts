@@ -23,6 +23,11 @@ import {
 import { pickMaterial } from '../config/materials'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
 import { CHAMPION_ROLES } from '../config/championRoles'
+import {
+  getChampionStarLevel,
+  unlockedChampionTierCount,
+  tierSpawnWeights,
+} from '../config/championTiers'
 import { activeMidCurse } from '../utils/activeMidCurse'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '../config/constants'
 import { useGameStore } from './gameStore'
@@ -146,42 +151,63 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           !battleStore.ownedChampions.includes(name) &&
           !battleStore.recruitableChampions.some((r) => r.name === name)
 
-        // ── Galaxy star-level pool ──
-        // Only champions in this galaxy's rolled pool (2-4, matching its star
-        // level) may spawn. Ensure the pool is populated (fresh game / legacy save).
-        if (galaxyStore.currentGalaxyChampionPool.length === 0) {
-          galaxyStore.rollGalaxyChampionPool()
-        }
-        const pool = new Set(galaxyStore.currentGalaxyChampionPool)
-        const inPool = (name: string) => pool.size === 0 || pool.has(name)
-
+        // ── Role → tier-weighted → champion ──
+        // Role is chosen first (player pick → nextStarRole). Within the eligible
+        // champions, group by Champion Tier (1..unlocked) and pick a tier by its
+        // current spawn weight, then a uniform champion inside that tier. Empty
+        // tiers are dropped and the remaining weights renormalized on the fly.
         const nextRole = galaxyStore.nextStarRole
-        // 1) pool ∩ unrecruited ∩ selected role
-        let candidates = CHAMPION_HOME_PLANETS.filter((c) => {
-          if (!isUnrecruitedUnowned(c.championName)) return false
-          if (!inPool(c.championName)) return false
-          if (nextRole) return CHAMPION_ROLES[c.championName] === nextRole
-          return true
-        })
-        // 2) pool ∩ unrecruited (ignore role)
-        if (candidates.length === 0) {
-          candidates = CHAMPION_HOME_PLANETS.filter(
-            (c) => inPool(c.championName) && isUnrecruitedUnowned(c.championName),
+        const unlocked = unlockedChampionTierCount(galaxyStore.currentGalaxy)
+        const weights = tierSpawnWeights(unlocked)
+
+        const pickWeighted = (eligible: typeof CHAMPION_HOME_PLANETS): string | undefined => {
+          const byTier = new Map<number, string[]>()
+          for (const c of eligible) {
+            const star = getChampionStarLevel(c.championName)
+            if (star < 1 || star > unlocked) continue // only unlocked tiers spawn
+            ;(byTier.get(star) ?? byTier.set(star, []).get(star)!).push(c.championName)
+          }
+          if (byTier.size === 0) return undefined
+          // Weighted-pick a present tier over the sum of its weight (renormalized).
+          const tiers = [...byTier.keys()]
+          const total = tiers.reduce((sum, t) => sum + (weights[t - 1] ?? 0), 0)
+          let roll = Math.random() * total
+          let chosenTier = tiers[tiers.length - 1]
+          for (const t of tiers) {
+            roll -= weights[t - 1] ?? 0
+            if (roll <= 0) {
+              chosenTier = t
+              break
+            }
+          }
+          const names = byTier.get(chosenTier)!
+          return names[Math.floor(Math.random() * names.length)]
+        }
+
+        // 1) selected role ∩ unrecruited, tier-weighted
+        let chosen = nextRole
+          ? pickWeighted(
+              CHAMPION_HOME_PLANETS.filter(
+                (c) =>
+                  isUnrecruitedUnowned(c.championName) &&
+                  CHAMPION_ROLES[c.championName] === nextRole,
+              ),
+            )
+          : undefined
+        // 2) any unrecruited (ignore role), still tier-weighted
+        if (!chosen) {
+          chosen = pickWeighted(
+            CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName)),
           )
         }
-        // 3) fall back to the original planet-type / global selection so a star is
-        //    never left without a champion if the pool is exhausted.
-        if (candidates.length === 0) {
-          candidates = CHAMPION_HOME_PLANETS.filter(
-            (c) => c.planetType === planetType && isUnrecruitedUnowned(c.championName),
-          )
+        // 3) last resort: any unrecruited at all (covers fully-recruited unlocked
+        //    tiers) so a champion star is never left without a champion.
+        if (!chosen) {
+          const any = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
+          if (any.length > 0) chosen = any[Math.floor(Math.random() * any.length)].championName
         }
-        if (candidates.length === 0) {
-          candidates = CHAMPION_HOME_PLANETS.filter((c) => isUnrecruitedUnowned(c.championName))
-        }
-        if (candidates.length > 0) {
-          homePlanetChampion =
-            candidates[Math.floor(Math.random() * candidates.length)].championName
+        if (chosen) {
+          homePlanetChampion = chosen
           galaxyStore.nextStarRole = null
         }
       }

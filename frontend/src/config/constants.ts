@@ -716,28 +716,32 @@ export const GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG = 240
 //            progression behind a Chimes + Material unlock cost.
 //  • Star level — picks which champion pool spawns in a galaxy (Galaxy N → ★N).
 //
-// Champions are finite (~169) but galaxies are unbounded, so the required star
-// level is clamped to MAX_STAR_LEVEL: G1→★1 … G12→★12, then G13+ stay at ★12
-// (highest galaxies keep drawing from the top-tier pool). The 12 star levels are
-// the 12 Champion Tiers (championTiers.ts) the Shop/Select panels group by — the single
-// champion-tier axis (set per champion via championTier), driving grouping + recruit cost.
-export const MAX_STAR_LEVEL = 12
+// There are exactly 6 Champion Tiers (championTiers.ts), the spawn-pool axis the
+// Shop/Select panels group by — set per champion via championTier, driving grouping
+// + recruit cost. MAX_STAR_LEVEL is that count: tiers run ★1 (weakest, most champions)
+// → ★6 (strongest, fewest). Tiers unlock cumulatively by galaxy progression
+// (CHAMPION_TIER_REQUIRED_GALAXY) and, once unlocked, spawn together by weighted
+// probability (TIER_SPAWN_WEIGHTS) — no longer one exact star level per galaxy.
+export const MAX_STAR_LEVEL = 6
 
-// Champion Tier → galaxy at which the Shop reveals/expands that tier.
-// Gentle super-linear curve: early tiers come quickly, later tiers stretch out so
-// the player keeps rescuing galaxies to reveal the strongest champions. Index 0 =
-// Tier 1 (Galaxy 1) … index 11 = Tier 12 (Galaxy 55). This is a SHOP-DISPLAY gate
-// only — it does NOT change champion spawn timing (see starLevelForGalaxy). A tier
-// also auto-unlocks once the player owns/has discovered any champion of that tier,
-// so a champion found via spawning is never stranded behind a far-off lock.
-export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [
-  1, 2, 3, 5, 7, 10, 14, 19, 25, 33, 43, 55,
+// Champion Tier → galaxy at which that tier unlocks (cumulatively). Index 0 = Tier 1
+// (Galaxy 1, always available) … index 5 = Tier 6 (Galaxy 21). Once a tier's galaxy is
+// reached it joins the weighted spawn pool AND is revealed in the Shop. A tier also
+// auto-unlocks once the player owns/has discovered any champion of that tier, so a
+// champion found via spawning is never stranded behind a far-off lock.
+export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 10, 15, 21]
+
+// Spawn probability per Champion Tier, indexed by how many tiers are currently
+// unlocked (row N-1 = N unlocked tiers). Tier 1 always has the highest share; each
+// row is descending and sums to 100. As a new tier unlocks, lower tiers' shares drop.
+export const TIER_SPAWN_WEIGHTS: number[][] = [
+  [100], // 1 tier unlocked
+  [70, 30], // 2 tiers
+  [55, 30, 15], // 3 tiers
+  [45, 27, 18, 10], // 4 tiers
+  [38, 25, 18, 12, 7], // 5 tiers
+  [33, 24, 18, 13, 8, 4], // 6 tiers
 ]
-
-// Per galaxy visit, only this many champions are rolled from the matching
-// star-level pool (re-rolled each time a galaxy is entered).
-export const GALAXY_POOL_MIN = 2
-export const GALAXY_POOL_MAX = 4
 
 // Tier-unlock cost. Tier 1 is owned for free; cost applies from tier 2 upward.
 // Chimes grow geometrically so each tier feels like a real milestone:
@@ -978,11 +982,11 @@ export const PROJECTILE_SHOT_DURATION_MS = 520
 export const CHIMES_PER_CLICK_BASE = 20
 
 // ── Champion Tier recruit cost ───────────────────────────────────────────────
-// The single Champion-Tier economy: Chimes recruit cost per star level (★1..★12).
-// Index 0 = ★1 … index 11 = ★12. Strictly ascending. Read via getChampionChimesPrice
+// The single Champion-Tier economy: Chimes recruit cost per star level (★1..★6).
+// Index 0 = ★1 … index 5 = ★6. Strictly ascending. Read via getChampionChimesPrice
 // (championTiers.ts). Replaces the old 5-tier CHIMES_PRICE_TIERS.
 export const CHAMPION_TIER_CHIMES_PRICE: number[] = [
-  500, 900, 1400, 2000, 2800, 3600, 4500, 5500, 6500, 7500, 8500, 9500,
+  500, 1400, 2800, 4500, 6500, 9500,
 ]
 
 // Offline progress
