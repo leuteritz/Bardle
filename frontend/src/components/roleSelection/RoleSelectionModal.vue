@@ -31,6 +31,8 @@ const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
 const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
+// Hovering any role card also reveals the header search, so players discover it.
+const rolesHovered = ref(false)
 
 function clearSearch() {
   searchQuery.value = ''
@@ -158,7 +160,10 @@ function choose(role: RoleDef) {
         <div class="role-header">
           <div
             class="role-search-morph"
-            :class="{ 'role-search-morph--active': searchActive }"
+            :class="{
+              'role-search-morph--active': searchActive,
+              'role-search-morph--reveal': rolesHovered,
+            }"
             @click="focusSearch"
           >
             <!-- Resting face: the heading -->
@@ -198,7 +203,11 @@ function choose(role: RoleDef) {
         </div>
 
         <!-- Role panels -->
-        <div class="flex flex-col sm:flex-row gap-4 p-6">
+        <div
+          class="flex flex-col sm:flex-row gap-4 p-6"
+          @mouseenter="rolesHovered = true"
+          @mouseleave="rolesHovered = false"
+        >
           <button
             v-for="role in displayedRoles"
             :key="role.key"
@@ -393,10 +402,12 @@ function choose(role: RoleDef) {
     box-shadow 0.2s ease-out;
 }
 
-/* Open: fade the title out, settle the search in. */
+/* Open: fade the title out, settle the search in.
+   --reveal = a role card is hovered, so the search advertises itself too. */
 .role-search-morph:hover .role-title.role-morph-face,
 .role-search-morph:focus-within .role-title.role-morph-face,
-.role-search-morph--active .role-title.role-morph-face {
+.role-search-morph--active .role-title.role-morph-face,
+.role-search-morph--reveal .role-title.role-morph-face {
   opacity: 0;
   transform: translateY(-6px) scale(0.98);
   pointer-events: none;
@@ -404,7 +415,8 @@ function choose(role: RoleDef) {
 
 .role-search-morph:hover .role-search-wrap.role-morph-face,
 .role-search-morph:focus-within .role-search-wrap.role-morph-face,
-.role-search-morph--active .role-search-wrap.role-morph-face {
+.role-search-morph--active .role-search-wrap.role-morph-face,
+.role-search-morph--reveal .role-search-wrap.role-morph-face {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
