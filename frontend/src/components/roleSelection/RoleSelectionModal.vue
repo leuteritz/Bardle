@@ -30,9 +30,23 @@ type AvailableChampion = {
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
 const searchQuery = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
 function clearSearch() {
   searchQuery.value = ''
+}
+
+// Tap/click the morphing header → focus the (hidden) input. On touch devices
+// without :hover this is what expands the label into the search field.
+function focusSearch() {
+  searchInputRef.value?.focus()
+}
+
+// Escape clears the query first; a second Escape (already empty) blurs the input
+// so the header morphs back to the title.
+function onEscape() {
+  if (searchQuery.value) clearSearch()
+  else searchInputRef.value?.blur()
 }
 
 watch(
@@ -140,37 +154,46 @@ function choose(role: RoleDef) {
         <!-- Gold accent bar -->
         <div class="role-accent-bar"></div>
 
-        <!-- Header -->
+        <!-- Header — the title morphs into a champion search on hover/focus -->
         <div class="role-header">
-          <h2 class="role-title">✦ CHOOSE YOUR NEXT CHAMPION ROLE ✦</h2>
-
-          <!-- Roster search — filters each role's roster on hover -->
           <div
-            class="rpg-search-wrap role-search-wrap"
-            @click.stop
-            @mousedown.stop
+            class="role-search-morph"
+            :class="{ 'role-search-morph--active': searchActive }"
+            @click="focusSearch"
           >
-            <Icon
-              icon="game-icons:magnifying-glass"
-              width="14"
-              height="14"
-              class="rpg-search-icon"
-            />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search champion — then hover a role…"
-              class="rpg-search w-full pl-9 pr-9 py-2"
-              aria-label="Search champions in the role rosters"
-            />
-            <button
-              class="search-clear-btn"
-              :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
-              aria-label="Clear search"
-              @click="clearSearch"
-              @keydown.enter.prevent="clearSearch"
-              @keydown.space.prevent="clearSearch"
-            >✕</button>
+            <!-- Resting face: the heading -->
+            <h2 class="role-title role-morph-face">✦ CHOOSE YOUR NEXT CHAMPION ROLE ✦</h2>
+
+            <!-- Active face: the search input (filters every roster live) -->
+            <div
+              class="rpg-search-wrap role-search-wrap role-morph-face"
+              @click.stop
+              @mousedown.stop
+            >
+              <Icon
+                icon="game-icons:magnifying-glass"
+                width="14"
+                height="14"
+                class="rpg-search-icon"
+              />
+              <input
+                ref="searchInputRef"
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search champion… e.g. Ashe"
+                class="rpg-search w-full pl-9 pr-9 py-2"
+                aria-label="Search champions across all role rosters"
+                @keydown.escape.prevent="onEscape"
+              />
+              <button
+                class="search-clear-btn"
+                :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
+                aria-label="Clear search"
+                @click="clearSearch"
+                @keydown.enter.prevent="clearSearch"
+                @keydown.space.prevent="clearSearch"
+              >✕</button>
+            </div>
           </div>
         </div>
 
@@ -183,6 +206,7 @@ function choose(role: RoleDef) {
             :class="[
               selectedKey === role.key ? 'role-card--selected' : '',
               selectedKey && selectedKey !== role.key ? 'role-card--faded' : '',
+              searchActive ? 'role-card--searching' : '',
             ]"
             :style="{ '--role-color': role.color }"
             @click="choose(role)"
@@ -327,10 +351,75 @@ function choose(role: RoleDef) {
   letter-spacing: 0.06em;
 }
 
-/* ── Roster search (reuses global .rpg-search* / .search-clear-btn) ──────── */
-.role-search-wrap {
-  margin: 12px auto 0;
-  max-width: 360px;
+/* ── Morphing header: title ⇄ search ─────────────────────────────────────
+   Title and search input share one grid cell, so swapping faces never shifts
+   layout. The search is revealed on hover, focus, or while a query is active
+   (so it stays open after blur as long as there's text). */
+.role-search-morph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  cursor: text;
+}
+
+.role-morph-face {
+  grid-area: 1 / 1;
+  width: 100%;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+}
+
+/* Resting: title shown, search hidden (still Tab-focusable — no visibility:hidden). */
+.role-title.role-morph-face {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.role-search-wrap.role-morph-face {
+  justify-self: center;
+  max-width: 420px;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  pointer-events: none;
+  /* Soft gold glow so the field feels "inside" the role-selection UI. */
+  border-radius: 4px;
+  box-shadow: 0 0 0 transparent;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+
+/* Open: fade the title out, settle the search in. */
+.role-search-morph:hover .role-title.role-morph-face,
+.role-search-morph:focus-within .role-title.role-morph-face,
+.role-search-morph--active .role-title.role-morph-face {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+}
+
+.role-search-morph:hover .role-search-wrap.role-morph-face,
+.role-search-morph:focus-within .role-search-wrap.role-morph-face,
+.role-search-morph--active .role-search-wrap.role-morph-face {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.role-search-morph:focus-within .role-search-wrap.role-morph-face {
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.35);
+}
+
+/* Touch / no-hover: hint that the title is tappable to open the search. */
+@media (hover: none) {
+  .role-title.role-morph-face {
+    text-decoration: underline dotted rgba(232, 192, 64, 0.5);
+    text-underline-offset: 6px;
+  }
 }
 
 /* ── Cards ───────────────────────────────────────────────────────────── */
@@ -510,11 +599,17 @@ function choose(role: RoleDef) {
 }
 
 .role-card:hover .role-roster,
-.role-card:focus-within .role-roster {
+.role-card:focus-within .role-roster,
+.role-card--searching .role-roster {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+/* While searching, every card's roster is open — hide the "Roster" hint. */
+.role-card--searching .role-hint {
+  opacity: 0;
 }
 
 .role-roster-header {
@@ -662,6 +757,16 @@ function choose(role: RoleDef) {
   .role-roster-portrait {
     width: 28px;
     height: 28px;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────
+   Drop the morph slide/scale (faces still cross-fade via instant opacity). */
+@media (prefers-reduced-motion: reduce) {
+  .role-morph-face,
+  .role-search-wrap.role-morph-face {
+    transition: opacity 0.2s ease-out;
+    transform: none !important;
   }
 }
 </style>
