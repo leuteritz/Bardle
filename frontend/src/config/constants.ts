@@ -1168,6 +1168,9 @@ export const SFX_CHIME_SUB_DECAY_S = 0.22
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
+// Admin Galaxy Jump — warp-flash duration (ms) after teleporting to a galaxy
+export const GALAXY_JUMP_WARP_MS = 420
+
 // Champion badge tooltip — max visible entries before "+N more" overflow
 export const CHAMP_TOOLTIP_MAX_VISIBLE = 5
 
@@ -1478,6 +1481,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:portal', // ★10 Void Sovereign
   'game-icons:cosmic-egg', // ★11 Galaxy Warden
   'game-icons:queen-crown', // ★12 Cosmic Sovereign
+  'game-icons:teleport', // Admin Galaxy Jump — warp button
+  'game-icons:sun-radiations', // Admin Star Phase panel — header icon
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

@@ -440,5 +440,16 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.rollGalaxyChampionPool()
       this.requestRoleSelection()
     },
+
+    // Admin-only: teleport straight to galaxy N. Reuses commitAdvance() so the
+    // resulting state is identical to legitimately entering galaxy N (stars reset,
+    // starsRequired recomputed, champion pool re-rolled, theme + role-selection set).
+    // unlockedTier is raised so later legit advances aren't blocked at a tier gate.
+    adminJumpToGalaxy(target: number) {
+      const n = Math.max(1, Math.floor(target))
+      this.currentGalaxy = n - 1
+      this.unlockedTier = Math.max(this.unlockedTier, tierOf(n))
+      this.commitAdvance()
+    },
   },
 })

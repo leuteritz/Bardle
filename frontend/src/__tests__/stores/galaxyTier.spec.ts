@@ -230,3 +230,37 @@ describe('galaxyStore — tier progression', () => {
     expect(store.unlockedTier).toBe(1)
   })
 })
+
+describe('adminJumpToGalaxy', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('teleports to galaxy N with consistent per-galaxy state', () => {
+    const store = useGalaxyStore()
+    store.starsRescued = 99
+    store.galaxyBossDefeated = true
+    store.adminJumpToGalaxy(5)
+    expect(store.currentGalaxy).toBe(5)
+    expect(store.starsRequired).toBe(7) // computeRequired(5) = 5 + 2
+    expect(store.starsRescued).toBe(0)
+    expect(store.galaxyBossDefeated).toBe(false)
+    expect(store.unlockedTier).toBeGreaterThanOrEqual(tierOf(5))
+  })
+
+  it('clamps non-positive / fractional targets to galaxy 1', () => {
+    const store = useGalaxyStore()
+    store.adminJumpToGalaxy(0)
+    expect(store.currentGalaxy).toBe(1)
+    store.adminJumpToGalaxy(3.9)
+    expect(store.currentGalaxy).toBe(3)
+  })
+
+  it('unlocks the matching champion tier (galaxy gate)', () => {
+    const store = useGalaxyStore()
+    store.adminJumpToGalaxy(55) // max required galaxy → every tier unlocked
+    for (const tier of CHAMPION_TIERS_BY_STAR) {
+      expect(store.currentGalaxy >= requiredGalaxyForTier(tier.starLevel)).toBe(true)
+    }
+  })
+})

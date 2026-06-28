@@ -2,7 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import AdminQuickActionsPanel from './AdminQuickActionsPanel.vue'
-import AdminSectionsList from './AdminSectionsList.vue'
+import AdminGalaxyJumpPanel from './AdminGalaxyJumpPanel.vue'
+import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
 
 const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
 
@@ -52,8 +53,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           <button class="modal-close-btn" @click="isOpen = false">✕</button>
         </div>
 
-        <AdminQuickActionsPanel />
-        <AdminSectionsList />
+        <div class="flex-1 overflow-y-auto rpg-scrollbar">
+          <AdminQuickActionsPanel />
+          <div class="flex flex-col gap-3 px-5 pb-4">
+            <AdminGalaxyJumpPanel />
+            <AdminStarPhasePanel />
+          </div>
+        </div>
       </div>
     </Transition>
   </template>
@@ -61,7 +67,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
   <template v-else>
     <AdminQuickActionsPanel />
-    <AdminSectionsList />
+    <div class="flex flex-col gap-3 px-5 pb-4">
+      <AdminGalaxyJumpPanel />
+      <AdminStarPhasePanel />
+    </div>
   </template>
 </template>
 
