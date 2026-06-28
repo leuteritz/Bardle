@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
@@ -20,20 +21,26 @@ type RoleDef = { key: ChampionRole; label: string; short: string; image: string;
 type AvailableChampion = {
   name: string
   star: number
-  tierName: string
   tierColor: string
+  tierIcon: string
   image: string
   spawnPercent: number | null // this tier's live spawn chance (null when not spawning)
 }
 
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
+const searchQuery = ref('')
+
+function clearSearch() {
+  searchQuery.value = ''
+}
 
 watch(
   () => galaxyStore.pendingRoleSelection,
   (pending) => {
     if (pending) {
       selectedKey.value = null
+      searchQuery.value = ''
       const shuffled = [...(ROLES as unknown as RoleDef[])].sort(() => Math.random() - 0.5)
       displayedRoles.value = shuffled.slice(0, 3)
     }
@@ -55,8 +62,11 @@ const discoveredStars = computed(() => {
   return stars
 })
 
-// Champions available per role at the player's currently unlocked Champion Tiers
-// (same galaxy gate as the Shop), sorted by tier ascending then name.
+// Champions still obtainable per role at the player's currently unlocked Champion
+// Tiers (same galaxy gate as the Shop). A champion already unlocked in the Shop
+// (recruitable, after a star kill) or already recruited (owned) was obtained by an
+// earlier action, so it is excluded — the modal answers "what can I still get for
+// this role?". Sorted by tier ascending then name.
 const availableByRole = computed(() => {
   const map: Record<ChampionRole, AvailableChampion[]> = {
     top: [], jungle: [], mid: [], adc: [], support: [],
@@ -73,12 +83,16 @@ const availableByRole = computed(() => {
       )
     )
       continue
+    // Hide champions the player has already obtained (Shop-unlocked or owned).
+    const owned = battleStore.ownedChampions.includes(name)
+    const recruitable = battleStore.recruitableChampions.some((r) => r.name === name)
+    if (owned || recruitable) continue
     const tier = getChampionTier(name)
     const entry: AvailableChampion = {
       name,
       star,
-      tierName: tier.name,
       tierColor: tier.color,
+      tierIcon: tier.icon,
       image: battleStore.getChampionImage(name),
       spawnPercent: championTierSpawnPercent(star, galaxyStore.currentGalaxy),
     }
@@ -92,8 +106,19 @@ const availableByRole = computed(() => {
   return map
 })
 
+const searchActive = computed(() => searchQuery.value.trim().length > 0)
+
+// Total champions still obtainable for a role (independent of the search box) —
+// drives the at-rest "N left" card badge and the roster-header count.
+function obtainableCount(roleKey: ChampionRole): number {
+  return availableByRole.value[roleKey]?.length ?? 0
+}
+
 function availableFor(roleKey: ChampionRole): AvailableChampion[] {
-  return availableByRole.value[roleKey] ?? []
+  const list = availableByRole.value[roleKey] ?? []
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return list
+  return list.filter((c) => c.name.toLowerCase().includes(q))
 }
 
 function choose(role: RoleDef) {
@@ -118,6 +143,35 @@ function choose(role: RoleDef) {
         <!-- Header -->
         <div class="role-header">
           <h2 class="role-title">✦ CHOOSE YOUR NEXT CHAMPION ROLE ✦</h2>
+
+          <!-- Roster search — filters each role's roster on hover -->
+          <div
+            class="rpg-search-wrap role-search-wrap"
+            @click.stop
+            @mousedown.stop
+          >
+            <Icon
+              icon="game-icons:magnifying-glass"
+              width="14"
+              height="14"
+              class="rpg-search-icon"
+            />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search champion — then hover a role…"
+              class="rpg-search w-full pl-9 pr-9 py-2"
+              aria-label="Search champions in the role rosters"
+            />
+            <button
+              class="search-clear-btn"
+              :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
+              aria-label="Clear search"
+              @click="clearSearch"
+              @keydown.enter.prevent="clearSearch"
+              @keydown.space.prevent="clearSearch"
+            >✕</button>
+          </div>
         </div>
 
         <!-- Role panels -->
@@ -137,6 +191,17 @@ function choose(role: RoleDef) {
             <div class="role-artwork-clip">
               <img :src="role.image" :alt="role.label" class="role-artwork" />
 
+              <!-- At-rest obtainable counter (hidden behind the hover roster) -->
+              <div
+                class="role-count-badge"
+                :class="{ 'role-count-badge--complete': obtainableCount(role.key) === 0 }"
+              >
+                <template v-if="obtainableCount(role.key) > 0">
+                  {{ obtainableCount(role.key) }} left
+                </template>
+                <template v-else>✓ Complete</template>
+              </div>
+
               <!-- Vignette + text overlay -->
               <div class="role-overlay-layer">
                 <h3 class="role-name">{{ role.label }}</h3>
@@ -152,7 +217,13 @@ function choose(role: RoleDef) {
               <div class="role-roster">
                 <div class="role-roster-header">
                   <span class="role-roster-role">{{ role.label }}</span>
-                  <span class="role-roster-caption">Available champions</span>
+                  <span class="role-roster-caption">
+                    {{
+                      obtainableCount(role.key) > 0
+                        ? `Available · ${obtainableCount(role.key)} to unlock`
+                        : 'All champions unlocked ✓'
+                    }}
+                  </span>
                 </div>
 
                 <ul v-if="availableFor(role.key).length" class="role-roster-list">
@@ -164,8 +235,8 @@ function choose(role: RoleDef) {
                     <img :src="champ.image" :alt="champ.name" class="role-roster-portrait" />
                     <span class="role-roster-name">{{ champ.name }}</span>
                     <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
-                      <span class="role-tier-dot"></span>
-                      {{ champ.tierName }}
+                      <Icon :icon="champ.tierIcon" class="role-tier-icon" />
+                      <span class="role-tier-star">★{{ champ.star }}</span>
                       <span v-if="champ.spawnPercent != null" class="role-tier-pct"
                         >· {{ champ.spawnPercent }}%</span
                       >
@@ -173,7 +244,9 @@ function choose(role: RoleDef) {
                   </li>
                 </ul>
 
-                <div v-else class="role-roster-empty">No champions unlocked yet</div>
+                <div v-else class="role-roster-empty">
+                  {{ searchActive ? 'No champions match your search' : 'All champions unlocked ✓' }}
+                </div>
               </div>
             </div>
           </button>
@@ -252,6 +325,12 @@ function choose(role: RoleDef) {
   color: #e8c040;
   text-shadow: 0 0 18px rgba(232, 192, 64, 0.55);
   letter-spacing: 0.06em;
+}
+
+/* ── Roster search (reuses global .rpg-search* / .search-clear-btn) ──────── */
+.role-search-wrap {
+  margin: 12px auto 0;
+  max-width: 360px;
 }
 
 /* ── Cards ───────────────────────────────────────────────────────────── */
@@ -358,6 +437,33 @@ function choose(role: RoleDef) {
   background: var(--role-color);
   opacity: 0.9;
   pointer-events: none;
+}
+
+/* ── Obtainable counter (top-right, at rest) ─────────────────────────────
+   Shown before hover so roles can be compared at a glance; the hover roster
+   slides over and covers it. */
+.role-count-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #e8c040;
+  background: #16140e;
+  border: 1px solid #c89040;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.role-count-badge--complete {
+  color: #d6f4c6;
+  background: #18260e;
+  border-color: #6ec040;
+  box-shadow: 0 0 10px rgba(82, 184, 48, 0.45);
 }
 
 /* ── Hover hint (text only — no icon/number) ─────────────────────────── */
@@ -505,16 +611,23 @@ function choose(role: RoleDef) {
   border-radius: 4px;
 }
 
-.role-tier-dot {
-  width: 8px;
-  height: 8px;
+/* Shop-style tier glyph: the tier's game-icon, tier-colored. */
+.role-tier-icon {
+  width: 14px;
+  height: 14px;
   flex: none;
-  border-radius: 50%;
-  background: var(--tier-c);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--tier-c) 70%, transparent);
+  color: var(--tier-c);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tier-c) 60%, transparent));
 }
 
-/* Live spawn chance appended to the tier chip (e.g. "Nebula Sage · 30%"). */
+/* Star count (★N) — mirrors the Shop's tier header. */
+.role-tier-star {
+  flex: none;
+  font-weight: 800;
+  color: var(--tier-c);
+}
+
+/* Live spawn chance appended to the tier chip (e.g. "★3 · 30%"). */
 .role-tier-pct {
   flex: none;
   font-weight: 800;
