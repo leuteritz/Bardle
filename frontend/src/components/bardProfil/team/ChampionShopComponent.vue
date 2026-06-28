@@ -201,8 +201,8 @@
               v-if="group.isGalaxyLocked"
               icon="game-icons:padlock"
               class="tier-header-lock"
-              width="13"
-              height="13"
+              width="14"
+              height="14"
             />
             <span v-else class="tier-header-chevron">▾</span>
             <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
@@ -210,7 +210,7 @@
             <span class="tier-header-stars">★{{ group.starLevel }}</span>
             <span class="tier-header-line"></span>
             <span v-if="group.isGalaxyLocked" class="tier-header-req">
-              <Icon icon="game-icons:padlock" class="tier-req-icon" width="11" height="11" />
+              <Icon icon="game-icons:padlock" class="tier-req-icon" width="16" height="16" />
               Galaxy {{ group.requiredGalaxy }}
             </span>
             <span v-else class="tier-header-counter">

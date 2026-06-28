@@ -676,6 +676,7 @@
    line, and a stacked owned/total counter on the right. Driven by a per-tier
    --tier-c custom property set inline by the component. */
 .tier-header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -698,6 +699,9 @@
 }
 .tier-header-chevron {
   flex-shrink: 0;
+  width: 14px;
+  display: inline-block;
+  text-align: center;
   font-size: 11px;
   color: var(--tier-c, #c89040);
   line-height: 1;
@@ -708,6 +712,12 @@
   transform: rotate(-90deg);
 }
 .tier-header-label {
+  /* Reserve the width of the longest tier name ("Cosmic Sovereign", 16 chars) so
+     the ★N badge that follows lands in the same column on every row, regardless of
+     the individual tier title length. Tuned for the fixed 12-name set; biased a
+     touch high so the longest label never pushes its stars out of the column (the
+     surplus is absorbed by the flexible divider line). */
+  min-width: 168px;
   font-size: 15px;
   font-weight: 700;
   color: var(--tier-c, #c89040);
@@ -758,11 +768,22 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
-/* Active tier — the tier the current galaxy is currently feeding. A subtle
-   tier-colored frame + glow so the player always sees "where they are". */
-.tier-header.is-active-tier {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier-c, #c89040) 70%, transparent);
-  background: color-mix(in srgb, var(--tier-c, #c89040) 8%, transparent);
+/* Active tier — the tier the current galaxy is currently feeding. Marked with a
+   slim tier-colored accent bar at the left edge + a brighter label (no filled
+   background), so "where you are" reads instantly without a heavy box. */
+.tier-header.is-active-tier::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--tier-c, #c89040);
+  box-shadow: 0 0 6px 0 color-mix(in srgb, var(--tier-c, #c89040) 55%, transparent);
+}
+.tier-header.is-active-tier .tier-header-label {
+  color: color-mix(in srgb, var(--tier-c, #c89040) 78%, #fff);
 }
 
 /* Galaxy-locked tier (Shop only) — greyed, non-interactive, padlock + the galaxy
@@ -787,11 +808,13 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  font-weight: 700;
+  gap: 5px;
+  /* Match the unlocked counter's metrics so the right-side status text is the
+     same size on every row (locked "Galaxy X" === unlocked "xx/yy"). */
+  font-size: 19px;
+  font-weight: 900;
   color: #b89a5a;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
