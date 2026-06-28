@@ -1,6 +1,6 @@
 import type { PlanetType } from '../types'
 import { CHAMPION_DATA } from './championData'
-import { getChampionChimesPrice } from './cosmicTraits'
+import { getChampionChimesPrice } from './championTiers'
 
 export interface ChampionHomePlanetConfig {
   championName: string

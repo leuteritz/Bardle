@@ -719,9 +719,20 @@ export const GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG = 240
 // Champions are finite (~169) but galaxies are unbounded, so the required star
 // level is clamped to MAX_STAR_LEVEL: G1→★1 … G12→★12, then G13+ stay at ★12
 // (highest galaxies keep drawing from the top-tier pool). The 12 star levels are
-// the 12 Cosmic Tiers (cosmicTraits.ts) the Shop/Select panels group by — the single
-// champion-tier axis (set per champion via cosmicTrait), driving grouping + recruit cost.
+// the 12 Champion Tiers (championTiers.ts) the Shop/Select panels group by — the single
+// champion-tier axis (set per champion via championTier), driving grouping + recruit cost.
 export const MAX_STAR_LEVEL = 12
+
+// Champion Tier → galaxy at which the Shop reveals/expands that tier.
+// Gentle super-linear curve: early tiers come quickly, later tiers stretch out so
+// the player keeps rescuing galaxies to reveal the strongest champions. Index 0 =
+// Tier 1 (Galaxy 1) … index 11 = Tier 12 (Galaxy 55). This is a SHOP-DISPLAY gate
+// only — it does NOT change champion spawn timing (see starLevelForGalaxy). A tier
+// also auto-unlocks once the player owns/has discovered any champion of that tier,
+// so a champion found via spawning is never stranded behind a far-off lock.
+export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [
+  1, 2, 3, 5, 7, 10, 14, 19, 25, 33, 43, 55,
+]
 
 // Per galaxy visit, only this many champions are rolled from the matching
 // star-level pool (re-rolled each time a galaxy is entered).
@@ -966,11 +977,11 @@ export const PROJECTILE_SHOT_DURATION_MS = 520
 // Gameplay — click base
 export const CHIMES_PER_CLICK_BASE = 20
 
-// ── Cosmic Tier recruit cost ───────────────────────────────────────────────
+// ── Champion Tier recruit cost ───────────────────────────────────────────────
 // The single Champion-Tier economy: Chimes recruit cost per star level (★1..★12).
 // Index 0 = ★1 … index 11 = ★12. Strictly ascending. Read via getChampionChimesPrice
-// (cosmicTraits.ts). Replaces the old 5-tier CHIMES_PRICE_TIERS.
-export const COSMIC_TIER_CHIMES_PRICE: number[] = [
+// (championTiers.ts). Replaces the old 5-tier CHIMES_PRICE_TIERS.
+export const CHAMPION_TIER_CHIMES_PRICE: number[] = [
   500, 900, 1400, 2000, 2800, 3600, 4500, 5500, 6500, 7500, 8500, 9500,
 ]
 
@@ -1452,7 +1463,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:expand', // Expand-all tiers (ChampionShopComponent & ChampionSelectPanel)
   // Galaxy Tier unlock gate (TierUnlockPanel)
   'game-icons:locked-fortress', // Locked-tier header icon
-  // Cosmic Traits — champion star-level classification (cosmicTraits.ts, TierUnlockPanel, champion cards)
+  // Champion Shop — galaxy-locked Champion Tier row header
+  'game-icons:padlock', // Galaxy-locked tier header icon (ChampionShopComponent)
+  // Champion Tiers — champion star-level classification (championTiers.ts, TierUnlockPanel, champion cards)
   'game-icons:walking-boot', // ★1 Lone Wanderer
   'game-icons:north-star', // ★2 Star Drifter
   'game-icons:fairy', // ★3 Meep Guardian

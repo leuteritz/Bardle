@@ -5,7 +5,7 @@ import { useInventoryStore } from './inventoryStore'
 import { useBattleStore } from './battleStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { CHAMPION_DATA } from '../config/championData'
-import { getChampionStarLevel } from '../config/cosmicTraits'
+import { getChampionStarLevel } from '../config/championTiers'
 import type { ChampionRole } from '../types'
 import {
   CHAMPION_TRAVEL_BASE_MS,

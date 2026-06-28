@@ -260,11 +260,11 @@ export interface SectionProgress {
   completed: boolean
 }
 
-// ── Cosmic Traits (Galaxy/Champion Tier redesign) ───────────────────────────
-// A Cosmic Trait classifies a champion by its *star level* (1..MAX_STAR_LEVEL).
+// ── Champion Tiers (Galaxy/Champion Tier redesign) ───────────────────────────
+// A Champion Tier classifies a champion by its *star level* (1..MAX_STAR_LEVEL).
 // Galaxy N spawns champions whose star level matches that galaxy. Independent of
 // (and additive to) the 15 synergy traits in championTraits.ts.
-export type CosmicTraitId =
+export type ChampionTierId =
   | 'lone_wanderer' // ★1
   | 'star_drifter' // ★2
   | 'meep_guardian' // ★3
@@ -278,8 +278,8 @@ export type CosmicTraitId =
   | 'galaxy_warden' // ★11
   | 'cosmic_sovereign' // ★12
 
-export interface CosmicTraitDef {
-  id: CosmicTraitId
+export interface ChampionTierDef {
+  id: ChampionTierId
   starLevel: number // 1..MAX_STAR_LEVEL — which galaxy star level this trait spawns at
   name: string
   icon: string // game-icons:* (registered in USED_GAME_ICONS)

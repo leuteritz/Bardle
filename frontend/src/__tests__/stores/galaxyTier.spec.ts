@@ -11,15 +11,17 @@ import { useGameStore } from '../../stores/gameStore'
 import { useInventoryStore } from '../../stores/inventoryStore'
 import {
   getChampionStarLevel,
-  COSMIC_TRAITS,
-  COSMIC_TRAITS_BY_STAR,
-} from '../../config/cosmicTraits'
+  requiredGalaxyForTier,
+  CHAMPION_TIERS,
+  CHAMPION_TIERS_BY_STAR,
+} from '../../config/championTiers'
 import { CHAMPION_DATA } from '../../config/championData'
 import {
   MAX_STAR_LEVEL,
   GALAXY_POOL_MIN,
   GALAXY_POOL_MAX,
-  COSMIC_TIER_CHIMES_PRICE,
+  CHAMPION_TIER_CHIMES_PRICE,
+  CHAMPION_TIER_REQUIRED_GALAXY,
 } from '../../config/constants'
 
 describe('Galaxy Tier helpers', () => {
@@ -79,7 +81,7 @@ describe('Galaxy Tier helpers', () => {
   })
 })
 
-describe('Cosmic Traits', () => {
+describe('Champion Tiers', () => {
   it('every champion resolves to a star level within 1..MAX_STAR_LEVEL', () => {
     for (const name of Object.keys(CHAMPION_DATA)) {
       const star = getChampionStarLevel(name)
@@ -92,26 +94,26 @@ describe('Cosmic Traits', () => {
 describe('Explicit champion tiers (championData)', () => {
   const names = Object.keys(CHAMPION_DATA)
 
-  it('every champion declares an explicit cosmicTrait', () => {
+  it('every champion declares an explicit championTier', () => {
     for (const name of names) {
-      expect(CHAMPION_DATA[name].cosmicTrait, `${name} is missing cosmicTrait`).toBeDefined()
+      expect(CHAMPION_DATA[name].championTier, `${name} is missing championTier`).toBeDefined()
     }
   })
 
-  it('getChampionStarLevel matches the explicit cosmicTrait star level', () => {
+  it('getChampionStarLevel matches the explicit championTier star level', () => {
     for (const name of names) {
-      const id = CHAMPION_DATA[name].cosmicTrait!
-      expect(getChampionStarLevel(name)).toBe(COSMIC_TRAITS[id].starLevel)
+      const id = CHAMPION_DATA[name].championTier!
+      expect(getChampionStarLevel(name)).toBe(CHAMPION_TIERS[id].starLevel)
     }
   })
 })
 
-describe('Cosmic Tier coverage + economy', () => {
+describe('Champion Tier coverage + economy', () => {
   const names = Object.keys(CHAMPION_DATA)
 
-  it('exposes one cosmic trait per star level 1..MAX_STAR_LEVEL', () => {
-    expect(COSMIC_TRAITS_BY_STAR).toHaveLength(MAX_STAR_LEVEL)
-    expect(COSMIC_TRAITS_BY_STAR.map((t) => t.starLevel)).toEqual(
+  it('exposes one champion tier per star level 1..MAX_STAR_LEVEL', () => {
+    expect(CHAMPION_TIERS_BY_STAR).toHaveLength(MAX_STAR_LEVEL)
+    expect(CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)).toEqual(
       Array.from({ length: MAX_STAR_LEVEL }, (_, i) => i + 1),
     )
   })
@@ -124,10 +126,37 @@ describe('Cosmic Tier coverage + economy', () => {
   })
 
   it('has a strictly ascending Chimes price per tier (★1..★12)', () => {
-    expect(COSMIC_TIER_CHIMES_PRICE).toHaveLength(MAX_STAR_LEVEL)
-    for (let i = 1; i < COSMIC_TIER_CHIMES_PRICE.length; i++) {
-      expect(COSMIC_TIER_CHIMES_PRICE[i]).toBeGreaterThan(COSMIC_TIER_CHIMES_PRICE[i - 1])
+    expect(CHAMPION_TIER_CHIMES_PRICE).toHaveLength(MAX_STAR_LEVEL)
+    for (let i = 1; i < CHAMPION_TIER_CHIMES_PRICE.length; i++) {
+      expect(CHAMPION_TIER_CHIMES_PRICE[i]).toBeGreaterThan(CHAMPION_TIER_CHIMES_PRICE[i - 1])
     }
+  })
+})
+
+describe('Champion Tier galaxy-unlock curve', () => {
+  it('covers all 12 tiers, starts at galaxy 1, and is non-decreasing', () => {
+    expect(CHAMPION_TIER_REQUIRED_GALAXY).toHaveLength(MAX_STAR_LEVEL)
+    expect(CHAMPION_TIER_REQUIRED_GALAXY[0]).toBe(1)
+    for (let i = 1; i < CHAMPION_TIER_REQUIRED_GALAXY.length; i++) {
+      expect(CHAMPION_TIER_REQUIRED_GALAXY[i]).toBeGreaterThanOrEqual(
+        CHAMPION_TIER_REQUIRED_GALAXY[i - 1],
+      )
+    }
+  })
+
+  it('grows super-linearly (later tiers gated beyond their star level)', () => {
+    // Beyond the first few tiers, the required galaxy outpaces the tier number,
+    // so the curve is steeper than linear.
+    expect(requiredGalaxyForTier(MAX_STAR_LEVEL)).toBeGreaterThan(MAX_STAR_LEVEL)
+  })
+
+  it('requiredGalaxyForTier matches the curve and clamps out of range', () => {
+    for (let t = 1; t <= MAX_STAR_LEVEL; t++) {
+      expect(requiredGalaxyForTier(t)).toBe(CHAMPION_TIER_REQUIRED_GALAXY[t - 1])
+    }
+    expect(requiredGalaxyForTier(MAX_STAR_LEVEL + 5)).toBe(
+      CHAMPION_TIER_REQUIRED_GALAXY[MAX_STAR_LEVEL - 1],
+    )
   })
 })
 

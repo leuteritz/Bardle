@@ -62,7 +62,7 @@ import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { useInventoryStore } from '../../../stores/inventoryStore'
 import { MATERIALS } from '../../../config/materials'
-import { COSMIC_TRAIT_BY_STAR, COSMIC_TRAITS } from '../../../config/cosmicTraits'
+import { CHAMPION_TIER_BY_STAR, CHAMPION_TIERS } from '../../../config/championTiers'
 import { starLevelForGalaxy } from '../../../stores/galaxyStore'
 import { formatNumber } from '../../../config/numberFormat'
 
@@ -76,10 +76,10 @@ export default defineComponent({
 
     const cost = computed(() => galaxyStore.tierUnlockCost)
 
-    // Star level / cosmic trait that the next tier's first galaxy introduces.
+    // Star level / champion tier that the next tier's first galaxy introduces.
     const nextStarLevel = computed(() => starLevelForGalaxy(galaxyStore.currentGalaxy + 1))
     const nextStarTrait = computed(
-      () => COSMIC_TRAIT_BY_STAR[nextStarLevel.value] ?? COSMIC_TRAITS.lone_wanderer,
+      () => CHAMPION_TIER_BY_STAR[nextStarLevel.value] ?? CHAMPION_TIERS.lone_wanderer,
     )
 
     const hasChimes = computed(() => gameStore.chimes >= cost.value.chimes)

@@ -742,7 +742,7 @@
   line-height: 1;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
-/* Cosmic-tier identity: lore icon + star count beside the tier name. */
+/* Champion-tier identity: lore icon + star count beside the tier name. */
 .tier-header-icon {
   flex-shrink: 0;
   color: var(--tier-c, #c89040);
@@ -756,6 +756,47 @@
   letter-spacing: 0.04em;
   line-height: 1;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* Active tier — the tier the current galaxy is currently feeding. A subtle
+   tier-colored frame + glow so the player always sees "where they are". */
+.tier-header.is-active-tier {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tier-c, #c89040) 70%, transparent);
+  background: color-mix(in srgb, var(--tier-c, #c89040) 8%, transparent);
+}
+
+/* Galaxy-locked tier (Shop only) — greyed, non-interactive, padlock + the galaxy
+   it unlocks at. Follows the project locked style (opacity + grayscale). */
+.tier-header.is-galaxy-locked {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(55%);
+}
+.tier-header.is-galaxy-locked:hover {
+  background: transparent;
+}
+.tier-header.is-galaxy-locked:hover .tier-header-label {
+  color: var(--tier-c, #c89040);
+}
+.tier-header-lock {
+  flex-shrink: 0;
+  color: var(--tier-c, #c89040);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+.tier-header-req {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b89a5a;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.tier-req-icon {
+  color: #8a7448;
 }
 
 /* Global expand/collapse-all control — compact icon button in the header row,
@@ -792,7 +833,8 @@
 @media (prefers-reduced-motion: reduce) {
   .tier-header,
   .tier-header-chevron,
-  .tier-collapse-all {
+  .tier-collapse-all,
+  .tier-body-inner {
     transition: none !important;
   }
 }

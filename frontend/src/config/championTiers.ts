@@ -1,18 +1,18 @@
-import type { CosmicTraitId, CosmicTraitDef } from '../types'
-import { COSMIC_TIER_CHIMES_PRICE } from './constants'
+import type { ChampionTierId, ChampionTierDef } from '../types'
+import { CHAMPION_TIER_CHIMES_PRICE, CHAMPION_TIER_REQUIRED_GALAXY } from './constants'
 import { CHAMPION_DATA } from './championData'
 
-// ── Cosmic Traits ────────────────────────────────────────────────────────────
-// Part of the Galaxy/Champion Tier system. Each Cosmic Trait represents one
+// ── Champion Tiers ────────────────────────────────────────────────────────────
+// Part of the Galaxy/Champion Tier system. Each Champion Tier represents one
 // *star level* (1..MAX_STAR_LEVEL). A galaxy at star level N spawns champions
-// whose Cosmic Trait is level N, and the Shop / Select panels group champions
+// whose Champion Tier is level N, and the Shop / Select panels group champions
 // into these 12 tiers (weak→strong). This is the single Champion-Tier axis: set
-// explicitly per champion via `cosmicTrait` in championData.ts, it also drives the
+// explicitly per champion via `championTier` in championData.ts, it also drives the
 // recruit cost (getChampionChimesPrice). Completely separate from the 15 synergy
 // traits in championTraits.ts (which drive CPS/power/DPS bonuses).
 //
 // Icons are registered in USED_GAME_ICONS (constants.ts) before use.
-export const COSMIC_TRAITS: Record<CosmicTraitId, CosmicTraitDef> = {
+export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   // ★1 — the newest recruits, drifting alone through the first galaxies.
   lone_wanderer: {
     id: 'lone_wanderer',
@@ -123,32 +123,37 @@ export const COSMIC_TRAITS: Record<CosmicTraitId, CosmicTraitDef> = {
   },
 }
 
-// Fast lookup: star level → Cosmic Trait definition.
-export const COSMIC_TRAIT_BY_STAR: Record<number, CosmicTraitDef> = Object.fromEntries(
-  Object.values(COSMIC_TRAITS).map((t) => [t.starLevel, t]),
+// Fast lookup: star level → Champion Tier definition.
+export const CHAMPION_TIER_BY_STAR: Record<number, ChampionTierDef> = Object.fromEntries(
+  Object.values(CHAMPION_TIERS).map((t) => [t.starLevel, t]),
 )
 
-// All cosmic traits ordered by star level (1..MAX_STAR_LEVEL) — used by the
+// All champion tiers ordered by star level (1..MAX_STAR_LEVEL) — used by the
 // Shop / Select panels to render every tier section (incl. locked teasers).
-export const COSMIC_TRAITS_BY_STAR: CosmicTraitDef[] = Object.values(COSMIC_TRAITS).sort(
+export const CHAMPION_TIERS_BY_STAR: ChampionTierDef[] = Object.values(CHAMPION_TIERS).sort(
   (a, b) => a.starLevel - b.starLevel,
 )
 
-/** Resolve a champion's Champion Tier star level (1..MAX_STAR_LEVEL) from its `cosmicTrait`. */
+/** Resolve a champion's Champion Tier star level (1..MAX_STAR_LEVEL) from its `championTier`. */
 export function getChampionStarLevel(name: string): number {
   const def = CHAMPION_DATA[name]
-  return def?.cosmicTrait ? COSMIC_TRAITS[def.cosmicTrait].starLevel : 1
+  return def?.championTier ? CHAMPION_TIERS[def.championTier].starLevel : 1
 }
 
-/** Resolve a champion's Cosmic Trait definition from its explicit `cosmicTrait`. */
-export function getChampionCosmicTrait(name: string): CosmicTraitDef {
+/** Resolve a champion's Champion Tier definition from its explicit `championTier`. */
+export function getChampionTier(name: string): ChampionTierDef {
   const def = CHAMPION_DATA[name]
-  if (def?.cosmicTrait) return COSMIC_TRAITS[def.cosmicTrait]
-  return COSMIC_TRAIT_BY_STAR[1] ?? COSMIC_TRAITS.lone_wanderer
+  if (def?.championTier) return CHAMPION_TIERS[def.championTier]
+  return CHAMPION_TIER_BY_STAR[1] ?? CHAMPION_TIERS.lone_wanderer
 }
 
 /** Recruit cost (Chimes) for a champion, by its Champion Tier — the single tier economy. */
 export function getChampionChimesPrice(name: string): number {
   const star = getChampionStarLevel(name)
-  return COSMIC_TIER_CHIMES_PRICE[star - 1] ?? COSMIC_TIER_CHIMES_PRICE[0]
+  return CHAMPION_TIER_CHIMES_PRICE[star - 1] ?? CHAMPION_TIER_CHIMES_PRICE[0]
+}
+
+/** Galaxy at which the Shop reveals/expands a given Champion Tier (1..MAX_STAR_LEVEL). */
+export function requiredGalaxyForTier(tier: number): number {
+  return CHAMPION_TIER_REQUIRED_GALAXY[tier - 1] ?? CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1]
 }

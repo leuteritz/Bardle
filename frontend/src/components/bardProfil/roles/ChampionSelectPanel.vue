@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
-import { getChampionCosmicTrait, getChampionStarLevel, COSMIC_TRAITS_BY_STAR } from '@/config/cosmicTraits'
+import { getChampionTier, getChampionStarLevel, CHAMPION_TIERS_BY_STAR } from '@/config/championTiers'
 import { CHAMPION_DATA } from '@/config/championData'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import type { ChampionRole } from '@/types'
@@ -45,8 +45,8 @@ const activeTrait = ref<string>('all')
 const activeTier = ref<'all' | number>('all')
 const traitFilterOpen = ref(false)
 
-// Tier chips / sections are the 12 Cosmic Tiers (weak→strong), not price tiers.
-const tierEntries = computed(() => COSMIC_TRAITS_BY_STAR)
+// Tier chips / sections are the 12 Champion Tiers (weak→strong), not price tiers.
+const tierEntries = computed(() => CHAMPION_TIERS_BY_STAR)
 
 // Champion currently assigned to each selector tab for the active role.
 // main → header slot, ally1/ally2 → secondary sub-slots 0/1.
@@ -139,7 +139,7 @@ const filteredChampions = computed(() => {
   return [...list].sort((a, b) => a.localeCompare(b))
 })
 
-// Group filtered champions into Cosmic Tier buckets (ascending star level),
+// Group filtered champions into Champion Tier buckets (ascending star level),
 // alphabetical order preserved within each tier — mirrors ChampionShopComponent.
 const tierGroups = computed(() => {
   const groups = new Map<number, string[]>()
@@ -148,7 +148,7 @@ const tierGroups = computed(() => {
     const bucket = groups.get(star) ?? groups.set(star, []).get(star)!
     bucket.push(c)
   }
-  return COSMIC_TRAITS_BY_STAR.filter((t) => groups.has(t.starLevel)).map((t) => ({
+  return CHAMPION_TIERS_BY_STAR.filter((t) => groups.has(t.starLevel)).map((t) => ({
     tier: t.starLevel,
     starLevel: t.starLevel,
     label: t.name,
@@ -189,7 +189,7 @@ function tierTotal(tier: number): number {
 }
 
 // ── Collapsible tier sections (collapsed by default) ──
-const ALL_TIER_KEYS = COSMIC_TRAITS_BY_STAR.map((t) => t.starLevel)
+const ALL_TIER_KEYS = CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)
 const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
 // While searching/filtering, force every tier open so matches are never hidden.
 const searchOrFilterActive = computed(
@@ -255,14 +255,14 @@ function getChampionDetail(name: string) {
   const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
   const originKey = getChampionOrigin(name)
   const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
-  const cosmic = getChampionCosmicTrait(name)
+  const cosmic = getChampionTier(name)
   const starLevel = getChampionStarLevel(name)
   return { traits, origin, cosmic, starLevel }
 }
 
 // Card tier badge → the champion's Cosmic/Champion Tier (★N) — the single tier.
 function getTierColor(name: string): string {
-  return getChampionCosmicTrait(name).color
+  return getChampionTier(name).color
 }
 
 function getChampionTierLabel(name: string): string {
@@ -919,7 +919,7 @@ function onImgError(e: Event) {
   white-space: nowrap;
   box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
 }
-/* Cosmic Trait (star level) badge — slightly stronger fill to read as the primary tag */
+/* Champion Tier (star level) badge — slightly stronger fill to read as the primary tag */
 .card-cosmic-badge {
   background: color-mix(in srgb, var(--tc, #7a4e20) 18%, rgba(0, 0, 0, 0.6));
 }

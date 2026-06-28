@@ -186,36 +186,51 @@
           <!-- Tier section: collapsible header (click to toggle) + its grid -->
           <div
             class="tier-header"
-            :class="{ 'is-collapsed': isTierCollapsed(group.tier) }"
+            :class="{ 'is-collapsed': isTierCollapsed(group.tier), 'is-galaxy-locked': group.isGalaxyLocked, 'is-active-tier': group.isActive }"
             :style="{ '--tier-c': group.color }"
             role="button"
-            tabindex="0"
-            :aria-expanded="!isTierCollapsed(group.tier)"
+            :tabindex="group.isGalaxyLocked ? -1 : 0"
+            :aria-expanded="group.isGalaxyLocked ? false : !isTierCollapsed(group.tier)"
+            :aria-disabled="group.isGalaxyLocked"
+            :title="group.isGalaxyLocked ? `Unlocked in Galaxy ${group.requiredGalaxy}` : ''"
             @click="toggleTier(group.tier)"
             @keydown.enter.prevent="toggleTier(group.tier)"
             @keydown.space.prevent="toggleTier(group.tier)"
           >
-            <span class="tier-header-chevron">▾</span>
+            <Icon
+              v-if="group.isGalaxyLocked"
+              icon="game-icons:padlock"
+              class="tier-header-lock"
+              width="13"
+              height="13"
+            />
+            <span v-else class="tier-header-chevron">▾</span>
             <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
             <span class="tier-header-label">{{ group.label }}</span>
             <span class="tier-header-stars">★{{ group.starLevel }}</span>
             <span class="tier-header-line"></span>
-            <span class="tier-header-counter">
+            <span v-if="group.isGalaxyLocked" class="tier-header-req">
+              <Icon icon="game-icons:padlock" class="tier-req-icon" width="11" height="11" />
+              Galaxy {{ group.requiredGalaxy }}
+            </span>
+            <span v-else class="tier-header-counter">
               <span class="tier-header-count">{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span>
             </span>
           </div>
-          <div v-show="!isTierCollapsed(group.tier)" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
-            <!-- Grid slot: fixed height, holds layout space -->
-            <div
-              v-for="(champion, index) in group.champions"
-              :key="champion.name"
-              class="champion-card-slot"
-              :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
-              :data-role="CHAMPION_ROLES[champion.name]"
-              @click="handleBuy(champion.name)"
-              @mouseenter="onCardHoverAndDismiss(champion.name)"
-              @mouseleave="onCardLeave"
-            >
+          <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
+            <div v-show="!isTierCollapsed(group.tier)" class="tier-body-inner">
+              <div v-if="group.champions.length" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+              <!-- Grid slot: fixed height, holds layout space -->
+              <div
+                v-for="(champion, index) in group.champions"
+                :key="champion.name"
+                class="champion-card-slot"
+                :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
+                :data-role="CHAMPION_ROLES[champion.name]"
+                @click="handleBuy(champion.name)"
+                @mouseenter="onCardHoverAndDismiss(champion.name)"
+                @mouseleave="onCardLeave"
+              >
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
 
@@ -359,7 +374,10 @@
             />
           </Transition>
             </div>
-          </div>
+              </div>
+              <p v-else class="tier-all-recruited">All recruited ✓</p>
+            </div>
+          </Transition>
         </div>
       </div>
 
@@ -521,7 +539,8 @@ import { truncate, formatNumber } from '../../../config/numberFormat'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
-import { getChampionCosmicTrait, getChampionStarLevel, getChampionChimesPrice, COSMIC_TRAITS_BY_STAR } from '../../../config/cosmicTraits'
+import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
+import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
 import { PLANET_TYPE_NAMES, CHIMES_COST_ICON } from '../../../config/constants'
@@ -544,6 +563,7 @@ export default defineComponent({
     const inventoryStore = useInventoryStore()
     const gameStore = useGameStore()
     const uiStore = useUiStore()
+    const galaxyStore = useGalaxyStore()
     const { showToast } = useActionToast()
     const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
     const searchQuery = ref('')
@@ -552,8 +572,8 @@ export default defineComponent({
     const activeTier = ref<'all' | number>('all')
     const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
-    // Tier chips / sections are the 12 Cosmic Tiers (weak→strong), not price tiers.
-    const tierEntries = computed(() => COSMIC_TRAITS_BY_STAR)
+    // Tier chips / sections are the 12 Champion Tiers (weak→strong), not price tiers.
+    const tierEntries = computed(() => CHAMPION_TIERS_BY_STAR)
     function tierRank(name: string): number {
       return getChampionStarLevel(name)
     }
@@ -671,7 +691,7 @@ export default defineComponent({
 
     // Card tier badge → the champion's Cosmic/Champion Tier (★N) — the single tier.
     function getTierColor(name: string): string {
-      return getChampionCosmicTrait(name).color
+      return getChampionTier(name).color
     }
 
     function getChampionTierLabel(name: string): string {
@@ -858,9 +878,36 @@ const shopChampionNames = computed(() =>
         })
     })
 
-    // Group the filtered champions into Cosmic Tier buckets (ascending star level),
+    // ── Galaxy gate (Shop-display only) ──
+    // Star levels the player has already met (owns or has discovered as recruitable),
+    // independent of the role filter — so an owned champion never re-locks its tier.
+    const discoveredTierStars = computed(() => {
+      const stars = new Set<number>()
+      for (const name of battleStore.ownedChampions) {
+        if (name === 'Bard') continue
+        stars.add(getChampionStarLevel(name))
+      }
+      for (const r of battleStore.recruitableChampions) {
+        stars.add(getChampionStarLevel(r.name))
+      }
+      return stars
+    })
+    // A tier is galaxy-locked until the player reaches its required galaxy. Two
+    // always-unlock escape hatches keep it coherent with linear spawning:
+    //  • tiers up to the current galaxy's spawn level are already reachable, so the
+    //    active/feeding tier is never shown locked;
+    //  • a tier whose champion was already met is revealed regardless.
+    // The required-galaxy label therefore reads as an upper-bound "by Galaxy X" teaser.
+    function isTierGalaxyLocked(tier: number): boolean {
+      if (tier <= galaxyStore.requiredStarLevel) return false
+      if (galaxyStore.currentGalaxy >= requiredGalaxyForTier(tier)) return false
+      return !discoveredTierStars.value.has(tier)
+    }
+
+    // Group the filtered champions into Champion Tier buckets (ascending star level),
     // preserving the alphabetical order from filteredChampions within each tier.
-    // Every tier is a plain collapsible section — browsable regardless of galaxy.
+    // All 12 tiers render as rows (incl. galaxy-locked teasers); while searching or
+    // filtering, only tiers with matches are shown so results stay focused.
     const tierGroups = computed(() => {
       const groups = new Map<number, { name: string }[]>()
       for (const c of filteredChampions.value) {
@@ -868,13 +915,20 @@ const shopChampionNames = computed(() =>
         const bucket = groups.get(star) ?? groups.set(star, []).get(star)!
         bucket.push(c)
       }
-      return COSMIC_TRAITS_BY_STAR.filter((t) => groups.has(t.starLevel)).map((t) => ({
+      const activeStar = galaxyStore.requiredStarLevel
+      const tiers = searchOrFilterActive.value
+        ? CHAMPION_TIERS_BY_STAR.filter((t) => groups.has(t.starLevel))
+        : CHAMPION_TIERS_BY_STAR
+      return tiers.map((t) => ({
         tier: t.starLevel,
         starLevel: t.starLevel,
         label: t.name,
         color: t.color,
         icon: t.icon,
-        champions: groups.get(t.starLevel)!,
+        champions: groups.get(t.starLevel) ?? [],
+        requiredGalaxy: requiredGalaxyForTier(t.starLevel),
+        isGalaxyLocked: isTierGalaxyLocked(t.starLevel),
+        isActive: t.starLevel === activeStar,
       }))
     })
 
@@ -909,31 +963,58 @@ const shopChampionNames = computed(() =>
     }
 
     // ── Collapsible tier sections (collapsed by default) ──
-    const ALL_TIER_KEYS = COSMIC_TRAITS_BY_STAR.map((t) => t.starLevel)
+    const ALL_TIER_KEYS = CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)
     const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
     // While searching/filtering, force every tier open so matches are never hidden.
     const searchOrFilterActive = computed(
       () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
     )
     function isTierCollapsed(tier: number): boolean {
+      // Galaxy-locked tiers never expand, regardless of search/collapse state.
+      if (isTierGalaxyLocked(tier)) return true
       return searchOrFilterActive.value ? false : collapsedTiers.value.has(tier)
     }
     function toggleTier(tier: number) {
+      if (isTierGalaxyLocked(tier)) return
       const next = new Set(collapsedTiers.value)
       if (next.has(tier)) next.delete(tier)
       else next.add(tier)
       collapsedTiers.value = next
     }
-    const allTiersCollapsed = computed(
-      () =>
-        !searchOrFilterActive.value &&
-        tierGroups.value.length > 0 &&
-        tierGroups.value.every((g) => collapsedTiers.value.has(g.tier)),
-    )
+    // Collapse-all only governs the tiers the player can actually open.
+    const allTiersCollapsed = computed(() => {
+      if (searchOrFilterActive.value) return false
+      const unlocked = tierGroups.value.filter((g) => !g.isGalaxyLocked)
+      return unlocked.length > 0 && unlocked.every((g) => collapsedTiers.value.has(g.tier))
+    })
     function toggleAllTiers() {
-      collapsedTiers.value = allTiersCollapsed.value
-        ? new Set()
-        : new Set(tierGroups.value.map((g) => g.tier))
+      const unlockedKeys = tierGroups.value.filter((g) => !g.isGalaxyLocked).map((g) => g.tier)
+      const next = new Set(collapsedTiers.value)
+      if (allTiersCollapsed.value) for (const k of unlockedKeys) next.delete(k)
+      else for (const k of unlockedKeys) next.add(k)
+      collapsedTiers.value = next
+    }
+
+    // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
+    // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
+    function onTierEnter(el: Element) {
+      const node = el as HTMLElement
+      node.style.height = '0'
+      node.style.overflow = 'hidden'
+      void node.offsetHeight // force reflow so the start height is applied
+      node.style.height = `${node.scrollHeight}px`
+    }
+    function onTierAfterEnter(el: Element) {
+      const node = el as HTMLElement
+      node.style.height = ''
+      node.style.overflow = ''
+    }
+    function onTierLeave(el: Element) {
+      const node = el as HTMLElement
+      node.style.height = `${node.scrollHeight}px`
+      node.style.overflow = 'hidden'
+      void node.offsetHeight
+      node.style.height = '0'
     }
 
     // Auto-open the tier of any freshly-unlocked (recruitable) champion so the new
@@ -1054,7 +1135,7 @@ const shopChampionNames = computed(() =>
       const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
       const originKey = getChampionOrigin(name)
       const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
-      const cosmic = getChampionCosmicTrait(name)
+      const cosmic = getChampionTier(name)
       const starLevel = getChampionStarLevel(name)
       return { traits, origin, cosmic, starLevel }
     }
@@ -1082,6 +1163,9 @@ const shopChampionNames = computed(() =>
       toggleTier,
       allTiersCollapsed,
       toggleAllTiers,
+      onTierEnter,
+      onTierAfterEnter,
+      onTierLeave,
       isFirstRow,
       isLastRow,
       availableTraits,
@@ -1560,7 +1644,7 @@ const shopChampionNames = computed(() =>
   white-space: nowrap;
   box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
 }
-/* Cosmic Trait (star level) badge — slightly stronger fill to read as the primary tag */
+/* Champion Tier (star level) badge — slightly stronger fill to read as the primary tag */
 .card-cosmic-badge {
   background: color-mix(in srgb, var(--tc, #7a4e20) 18%, rgba(0, 0, 0, 0.6));
   border-width: 1px;
@@ -1618,6 +1702,20 @@ const shopChampionNames = computed(() =>
 
 /* ── Tier section spacing (header styles shared in rpg-theme.css → .tier-header*) ── */
 .tier-group + .tier-group { margin-top: 12px; }
+
+/* Smooth expand/collapse. JS hooks (onTierEnter/Leave) animate height between 0
+   and scrollHeight, then clear inline styles so the open body is overflow:visible
+   — letting the hover-expanded cards spill out of their slot as designed. The
+   chevron rotation is shared in rpg-theme.css. */
+.tier-body-inner {
+  transition: height 0.28s ease;
+}
+.tier-all-recruited {
+  padding: 4px 2px 8px;
+  font-size: 12px;
+  color: #6e7c52;
+  letter-spacing: 0.03em;
+}
 
 .role-badge-pill {
   position: absolute;
