@@ -804,13 +804,13 @@
   color: var(--tier-c, #c89040);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
+/* Locked tier status — lock icon + "Galaxy N" on one inline row, right-aligned.
+   Sized to match the unlocked xx/yy counter so both rows read at the same size. */
 .tier-header-req {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 5px;
-  /* Match the unlocked counter's metrics so the right-side status text is the
-     same size on every row (locked "Galaxy X" === unlocked "xx/yy"). */
   font-size: 19px;
   font-weight: 900;
   color: #b89a5a;
