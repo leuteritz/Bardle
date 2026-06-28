@@ -157,3 +157,20 @@ export function getChampionChimesPrice(name: string): number {
 export function requiredGalaxyForTier(tier: number): number {
   return CHAMPION_TIER_REQUIRED_GALAXY[tier - 1] ?? CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1]
 }
+
+/** True when a Champion Tier (1..MAX_STAR_LEVEL) is currently unlocked for the
+ *  player, given galaxy progression and the tiers already met. Single source of
+ *  truth for the galaxy gate (the inverse of the Shop's isTierGalaxyLocked):
+ *   • tiers up to the current galaxy's spawn level are already reachable;
+ *   • a tier whose required galaxy has been reached is unlocked;
+ *   • a tier whose champion was already met is revealed regardless. */
+export function isChampionTierUnlocked(
+  tier: number,
+  currentGalaxy: number,
+  requiredStarLevel: number,
+  discoveredStars: Set<number>,
+): boolean {
+  if (tier <= requiredStarLevel) return true
+  if (currentGalaxy >= requiredGalaxyForTier(tier)) return true
+  return discoveredStars.has(tier)
+}

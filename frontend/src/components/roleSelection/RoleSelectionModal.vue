@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
+import { CHAMPION_DATA } from '@/config/championData'
+import { getChampionRoles } from '@/config/championRoles'
+import { getChampionStarLevel, getChampionTier, isChampionTierUnlocked } from '@/config/championTiers'
 import type { ChampionRole } from '@/types'
 
 const galaxyStore = useGalaxyStore()
+const battleStore = useBattleStore()
 
 type RoleDef = { key: ChampionRole; label: string; short: string; image: string; color: string }
+type AvailableChampion = { name: string; star: number; tierName: string; tierColor: string; image: string }
 
 const displayedRoles = ref<RoleDef[]>([])
 const selectedKey = ref<ChampionRole | null>(null)
@@ -22,6 +28,60 @@ watch(
   },
   { immediate: true },
 )
+
+// Star levels the player has already met (owns or has discovered as recruitable),
+// mirroring the Shop's discoveredTierStars — so the unlock gate stays consistent.
+const discoveredStars = computed(() => {
+  const stars = new Set<number>()
+  for (const name of battleStore.ownedChampions) {
+    if (name === 'Bard') continue
+    stars.add(getChampionStarLevel(name))
+  }
+  for (const r of battleStore.recruitableChampions) {
+    stars.add(getChampionStarLevel(r.name))
+  }
+  return stars
+})
+
+// Champions available per role at the player's currently unlocked Champion Tiers
+// (same galaxy gate as the Shop), sorted by tier ascending then name.
+const availableByRole = computed(() => {
+  const map: Record<ChampionRole, AvailableChampion[]> = {
+    top: [], jungle: [], mid: [], adc: [], support: [],
+  }
+  for (const name of Object.keys(CHAMPION_DATA)) {
+    if (name === 'Bard') continue
+    const star = getChampionStarLevel(name)
+    if (
+      !isChampionTierUnlocked(
+        star,
+        galaxyStore.currentGalaxy,
+        galaxyStore.requiredStarLevel,
+        discoveredStars.value,
+      )
+    )
+      continue
+    const tier = getChampionTier(name)
+    const entry: AvailableChampion = {
+      name,
+      star,
+      tierName: tier.name,
+      tierColor: tier.color,
+      image: battleStore.getChampionImage(name),
+    }
+    for (const role of getChampionRoles(name)) {
+      map[role]?.push(entry)
+    }
+  }
+  for (const role of Object.keys(map) as ChampionRole[]) {
+    map[role].sort((a, b) => a.star - b.star || a.name.localeCompare(b.name))
+  }
+  return map
+})
+
+function availableFor(roleKey: ChampionRole): AvailableChampion[] {
+  return availableByRole.value[roleKey] ?? []
+}
 
 function choose(role: RoleDef) {
   if (selectedKey.value) return
@@ -60,16 +120,46 @@ function choose(role: RoleDef) {
             :style="{ '--role-color': role.color }"
             @click="choose(role)"
           >
-            <!-- Full-card artwork -->
-            <img :src="role.image" :alt="role.label" class="role-artwork" />
+            <!-- Clipped artwork layer (keeps the zoom + roster reveal rounded) -->
+            <div class="role-artwork-clip">
+              <img :src="role.image" :alt="role.label" class="role-artwork" />
 
-            <!-- Vignette + text overlay -->
-            <div class="role-overlay-layer">
-              <h3 class="role-name">{{ role.label }}</h3>
+              <!-- Vignette + text overlay -->
+              <div class="role-overlay-layer">
+                <h3 class="role-name">{{ role.label }}</h3>
+              </div>
+
+              <!-- Subtle hover affordance (text only) -->
+              <span class="role-hint">Roster</span>
+
+              <!-- Role-colored bottom border accent -->
+              <div class="role-bottom-bar"></div>
+
+              <!-- Roster reveal — slides up over the art on hover/focus -->
+              <div class="role-roster">
+                <div class="role-roster-header">
+                  <span class="role-roster-role">{{ role.label }}</span>
+                  <span class="role-roster-caption">Available champions</span>
+                </div>
+
+                <ul v-if="availableFor(role.key).length" class="role-roster-list">
+                  <li
+                    v-for="champ in availableFor(role.key)"
+                    :key="champ.name"
+                    class="role-roster-row"
+                  >
+                    <img :src="champ.image" :alt="champ.name" class="role-roster-portrait" />
+                    <span class="role-roster-name">{{ champ.name }}</span>
+                    <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
+                      <span class="role-tier-dot"></span>
+                      {{ champ.tierName }}
+                    </span>
+                  </li>
+                </ul>
+
+                <div v-else class="role-roster-empty">No champions unlocked yet</div>
+              </div>
             </div>
-
-            <!-- Role-colored bottom border accent -->
-            <div class="role-bottom-bar"></div>
           </button>
         </div>
       </div>
@@ -189,6 +279,14 @@ function choose(role: RoleDef) {
   100% { transform: scale(1.04); }
 }
 
+/* ── Artwork clip ────────────────────────────────────────────────────── */
+.role-artwork-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
 /* ── Artwork ─────────────────────────────────────────────────────────── */
 .role-artwork {
   position: absolute;
@@ -246,10 +344,188 @@ function choose(role: RoleDef) {
   pointer-events: none;
 }
 
+/* ── Hover hint (text only — no icon/number) ─────────────────────────── */
+.role-hint {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #cdb98a;
+  opacity: 0.62;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.role-card:hover .role-hint,
+.role-card:focus-within .role-hint {
+  opacity: 0;
+}
+
+/* ── Roster reveal ───────────────────────────────────────────────────── */
+.role-roster {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 4, 2, 0.86) 0%,
+    rgba(5, 4, 2, 0.93) 100%
+  );
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+  pointer-events: none;
+}
+
+.role-card:hover .role-roster,
+.role-card:focus-within .role-roster {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.role-roster-header {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  background: rgba(30, 16, 6, 0.78);
+  border-bottom: 1px solid #5c3310;
+}
+
+.role-roster-role {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--role-color);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--role-color) 55%, transparent);
+}
+
+.role-roster-caption {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #9c8a68;
+}
+
+.role-roster-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+.role-roster-list::-webkit-scrollbar {
+  width: 8px;
+}
+.role-roster-list::-webkit-scrollbar-track {
+  background: #111;
+}
+.role-roster-list::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 4px;
+}
+
+.role-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.role-roster-row:hover {
+  background: #1c1c18;
+}
+
+.role-roster-portrait {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #5c3310;
+  background: #141410;
+}
+
+.role-roster-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #e8dcc0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role-tier-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #d8ccb4;
+  background: #16140e;
+  border: 1px solid var(--tier-c);
+  border-radius: 4px;
+}
+
+.role-tier-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tier-c);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--tier-c) 70%, transparent);
+}
+
+.role-roster-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-size: 13px;
+  color: #9c8a68;
+  text-align: center;
+}
+
 /* ── Mobile ──────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .role-card {
     height: 200px;
+  }
+
+  .role-roster-role {
+    font-size: 16px;
+  }
+
+  .role-roster-name {
+    font-size: 13px;
+  }
+
+  .role-roster-portrait {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

@@ -539,7 +539,7 @@ import { truncate, formatNumber } from '../../../config/numberFormat'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '../../../config/championOrigins'
-import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
+import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, CHAMPION_TIERS_BY_STAR } from '../../../config/championTiers'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
@@ -899,9 +899,12 @@ const shopChampionNames = computed(() =>
     //  • a tier whose champion was already met is revealed regardless.
     // The required-galaxy label therefore reads as an upper-bound "by Galaxy X" teaser.
     function isTierGalaxyLocked(tier: number): boolean {
-      if (tier <= galaxyStore.requiredStarLevel) return false
-      if (galaxyStore.currentGalaxy >= requiredGalaxyForTier(tier)) return false
-      return !discoveredTierStars.value.has(tier)
+      return !isChampionTierUnlocked(
+        tier,
+        galaxyStore.currentGalaxy,
+        galaxyStore.requiredStarLevel,
+        discoveredTierStars.value,
+      )
     }
 
     // Group the filtered champions into Champion Tier buckets (ascending star level),
