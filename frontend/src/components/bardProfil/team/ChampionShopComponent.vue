@@ -885,6 +885,9 @@ const shopChampionNames = computed(() =>
         .sort((a, b) => {
           const tr = tierRank(a.name) - tierRank(b.name)
           if (tr !== 0) return tr
+          const ua = isUnlocked(a.name) ? 0 : 1
+          const ub = isUnlocked(b.name) ? 0 : 1
+          if (ua !== ub) return ua - ub
           return a.name.localeCompare(b.name)
         })
     })
