@@ -950,34 +950,38 @@ function chooseBuilding(buildingId: string) {
   height: clamp(320px, 52vh, 460px);
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  z-index: 0;
   background:
     radial-gradient(
       circle at 42% 38%,
-      color-mix(in srgb, white 90%, var(--phase-core, #fff)) 0%,
-      transparent 24%
+      color-mix(in srgb, white 92%, var(--phase-core, #fff)) 0%,
+      transparent 22%
     ),
+    /* opaque inner disk (out to ~52%) so the planet is hidden when behind it */
     radial-gradient(
       circle at 50% 50%,
       var(--phase-core, #fff0e0) 0%,
-      color-mix(in srgb, var(--phase-mid, #ffd4a3) 88%, transparent) 40%,
+      var(--phase-mid, #ffd4a3) 34%,
+      var(--phase-edge, #cc5500) 52%,
       color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
-      transparent 100%
+      transparent 86%
     );
   box-shadow:
     0 0 90px color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
     0 0 180px color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
+  /* z above the planet's "far" half so the planet can pass behind the sun */
+  z-index: 1;
   animation: ps-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
 }
 
-/* Planet orbits the sun's center, rendered in front (camera perspective) */
+/* Planet revolves around the sun on a tilted ellipse, with depth (near = larger
+   & in front, far = smaller & behind the sun) so it reads as a real orbit. */
 .ps-planet-preview-wrap {
   position: absolute;
   top: 50%;
   left: 50%;
-  z-index: 2;
+  z-index: 3;
   transform: translate(-50%, -50%);
-  animation: ps-planet-orbit 22s linear infinite;
+  animation: ps-planet-orbit 26s linear infinite;
 }
 
 @keyframes ps-sun-pulse {
@@ -985,12 +989,54 @@ function chooseBuilding(buildingId: string) {
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
 }
 
+/* Tilted ellipse (rx ≈ 150px, ry ≈ 40px). Front/lower arc (in front of sun) takes
+   ~70% of the loop → slow & large; back/upper arc (behind the sun) ~30% → fast,
+   small, fully occluded by the opaque sun core, vanishing one side & reappearing the other. */
 @keyframes ps-planet-orbit {
-  0%   { transform: translate(-50%, -50%) translate(52px, 0); }
-  25%  { transform: translate(-50%, -50%) translate(0, 30px); }
-  50%  { transform: translate(-50%, -50%) translate(-52px, 0); }
-  75%  { transform: translate(-50%, -50%) translate(0, -30px); }
-  100% { transform: translate(-50%, -50%) translate(52px, 0); }
+  0% {
+    transform: translate(-50%, -50%) translate(-150px, 0) scale(1);
+    z-index: 3;
+  }
+  17.5% {
+    transform: translate(-50%, -50%) translate(-106px, 28px) scale(1.08);
+    z-index: 3;
+  }
+  35% {
+    transform: translate(-50%, -50%) translate(0, 40px) scale(1.15);
+    z-index: 3;
+  }
+  52.5% {
+    transform: translate(-50%, -50%) translate(106px, 28px) scale(1.08);
+    z-index: 3;
+  }
+  70% {
+    transform: translate(-50%, -50%) translate(150px, 0) scale(1);
+    z-index: 3;
+  }
+  71% {
+    transform: translate(-50%, -50%) translate(150px, -1px) scale(0.98);
+    z-index: 0;
+  }
+  82% {
+    transform: translate(-50%, -50%) translate(106px, -28px) scale(0.78);
+    z-index: 0;
+  }
+  90% {
+    transform: translate(-50%, -50%) translate(0, -40px) scale(0.55);
+    z-index: 0;
+  }
+  95% {
+    transform: translate(-50%, -50%) translate(-106px, -28px) scale(0.72);
+    z-index: 0;
+  }
+  99% {
+    transform: translate(-50%, -50%) translate(-150px, -1px) scale(0.98);
+    z-index: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(-150px, 0) scale(1);
+    z-index: 3;
+  }
 }
 
 @keyframes ps-stars-twinkle {
@@ -1618,8 +1664,8 @@ img.ps-role-icon {
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
 /* (positioning handled by the .ps-planet-preview-wrap rule in the stage section) */
 .ps-planet-preview-img {
-  width: clamp(200px, 40vh, 300px);
-  height: clamp(200px, 40vh, 300px);
+  width: clamp(168px, 32vh, 248px);
+  height: clamp(168px, 32vh, 248px);
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
