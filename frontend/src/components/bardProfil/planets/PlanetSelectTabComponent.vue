@@ -101,8 +101,9 @@ const jungleBuffSecsLeft = computed(() => {
   return Math.max(0, Math.ceil((jb.activeUntil - now.value) / 1000))
 })
 
-const rolesLeft = PLANET_ROLES_LIST.slice(0, 3)
-const rolesRight = PLANET_ROLES_LIST.slice(3, 6)
+// Hero-Planet + Rollen-Grid: alle 6 Rollen in einem einheitlichen, scanbaren
+// Grid statt 3-links/3-rechts-Split (bessere Scannbarkeit, geringere kognitive Last).
+const roles = PLANET_ROLES_LIST
 
 function bonusText(role: PlanetRole): string {
   switch (role.bonusType) {
@@ -209,30 +210,14 @@ function bonusText(role: PlanetRole): string {
     </div>
 
     <template v-if="activeSlot && activeSlot.purchased">
-        <!-- 3-Spalten-Body -->
+        <!--
+          Hero-Planet + Rollen-Grid:
+          Oben der Planet als zentrales Showcase (Bild, HP, Rollenname, Jungle-Buff),
+          darunter alle 6 Rollen als einheitliches, scanbares Karten-Grid.
+        -->
         <div class="ps-body">
-          <!-- Linke Rollenspalte -->
-          <div class="ps-role-col">
-            <button
-              v-for="role in rolesLeft"
-              :key="role.id"
-              class="ps-role-option"
-              :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
-              :style="{ '--rc': role.color }"
-              @click="assignRole(role.id)"
-            >
-              <img v-if="role.icon.startsWith('/')" class="ps-role-icon" :src="role.icon" :alt="role.name" />
-              <Icon v-else-if="role.icon.includes(':')" :icon="role.icon" class="ps-role-icon ps-role-icon--gi" />
-              <span v-else class="ps-role-icon">{{ role.icon }}</span>
-              <span class="ps-role-name">{{ role.name }}</span>
-              <div class="ps-role-divider" />
-              <span class="ps-role-effect">{{ bonusText(role) }}</span>
-              <div v-if="activeSlot.role === role.id" class="ps-role-badge">✓ Active</div>
-            </button>
-          </div>
-
-          <!-- Mittlere Spalte: Planet -->
-          <div class="ps-center-col">
+          <!-- Hero: Planet-Showcase -->
+          <div class="ps-hero">
             <!-- HP -->
             <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
               <div class="ps-planet-hp-text">
@@ -284,10 +269,10 @@ function bonusText(role: PlanetRole): string {
             </Transition>
           </div>
 
-          <!-- Rechte Rollenspalte -->
-          <div class="ps-role-col">
+          <!-- Rollen-Grid: alle 6 Rollen in einer scanbaren Auswahl -->
+          <div class="ps-role-grid">
             <button
-              v-for="role in rolesRight"
+              v-for="role in roles"
               :key="role.id"
               class="ps-role-option"
               :class="{ 'ps-role-option--selected': activeSlot.role === role.id }"
@@ -477,14 +462,22 @@ function bonusText(role: PlanetRole): string {
   cursor: pointer;
   color: inherit;
   transition:
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s;
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .ps-slot-btn:hover {
   background: #1a1812;
   border-color: #5c3310;
+}
+
+.ps-slot-btn:focus-visible {
+  outline: none;
+  border-color: #e8c040;
+  box-shadow:
+    0 0 0 2px rgba(232, 192, 64, 0.85),
+    0 0 12px rgba(232, 192, 64, 0.4);
 }
 
 .ps-slot-btn--active {
@@ -546,25 +539,34 @@ function bonusText(role: PlanetRole): string {
   transition: width 0.3s ease;
 }
 
-/* ── 3-Spalten-Body ────────────────────────────────────────────────────────── */
+/* ── Hero-Body (Planet oben, Rollen-Grid unten) ────────────────────────────── */
 .ps-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px) minmax(0, 1fr);
-  gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
   padding: 0.85rem 0.85rem 0.5rem;
   /* Nimmt den verbleibenden Platz ein */
   flex: 1;
-  /* Alle 3 Spalten gleich hoch strecken */
-  align-items: stretch;
 }
 
-/* ── Rollen-Spalten ────────────────────────────────────────────────────────── */
-.ps-role-col {
+/* ── Hero: Planet-Showcase ─────────────────────────────────────────────────── */
+.ps-hero {
   display: flex;
   flex-direction: column;
-  /* Karten verteilen sich gleichmäßig über die volle Höhe */
-  justify-content: space-between;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* ── Rollen-Grid ───────────────────────────────────────────────────────────── */
+.ps-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  align-items: stretch;
 }
 
 .ps-role-option {
@@ -582,15 +584,21 @@ function bonusText(role: PlanetRole): string {
   color: inherit;
   position: relative;
   transition:
-    border-color 0.18s,
-    background 0.18s,
-    box-shadow 0.18s,
-    transform 0.12s;
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
   width: 100%;
-  /* Jede Karte wächst gleich */
-  flex: 1;
   /* Inhalt vertikal zentriert innerhalb der Karte */
   justify-content: center;
+}
+
+.ps-role-option:focus-visible {
+  outline: none;
+  border-color: #e8c040;
+  box-shadow:
+    0 0 0 2px rgba(232, 192, 64, 0.85),
+    0 0 12px rgba(232, 192, 64, 0.4);
 }
 
 .ps-role-option:hover {
@@ -685,16 +693,6 @@ img.ps-role-icon {
   text-transform: uppercase;
 }
 
-/* ── Mittlere Planet-Spalte ────────────────────────────────────────────────── */
-.ps-center-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* Planet-Inhalt vertikal zentriert in der vollen Spalthöhe */
-  justify-content: center;
-  gap: 0.7rem;
-}
-
 /* ── HP ────────────────────────────────────────────────────────────────────── */
 .ps-planet-hp {
   width: 100%;
@@ -749,8 +747,8 @@ img.ps-role-icon {
 }
 
 .ps-planet-preview-img {
-  width: 260px;
-  height: 260px;
+  width: clamp(180px, 38vh, 240px);
+  height: clamp(180px, 38vh, 240px);
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 40px rgba(180, 140, 60, 0.5));
@@ -910,11 +908,19 @@ img.ps-role-icon {
   cursor: pointer;
   color: inherit;
   transition:
-    border-color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s,
-    transform 0.1s;
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
   position: relative;
+}
+
+.ps-config-btn:focus-visible {
+  outline: none;
+  border-color: #e8c040;
+  box-shadow:
+    0 0 0 2px rgba(232, 192, 64, 0.85),
+    0 0 12px rgba(232, 192, 64, 0.4);
 }
 
 .ps-config-btn:hover {
@@ -987,8 +993,8 @@ img.ps-role-icon {
 
 /* ── Planet Placeholder ────────────────────────────────────────────────────── */
 .ps-planet-no-role {
-  width: 260px;
-  height: 260px;
+  width: clamp(180px, 38vh, 240px);
+  height: clamp(180px, 38vh, 240px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1292,13 +1298,21 @@ img.ps-role-icon {
   letter-spacing: 0.08em;
   cursor: pointer;
   transition:
-    filter 0.15s ease,
-    transform 0.12s ease;
+    filter 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .ps-locked-panel-buy-btn:hover {
   filter: brightness(1.15);
   transform: translateY(-1px);
+}
+
+.ps-locked-panel-buy-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(232, 192, 64, 0.9),
+    0 0 14px rgba(232, 192, 64, 0.5);
 }
 
 .ps-locked-panel-buy-btn:active {
