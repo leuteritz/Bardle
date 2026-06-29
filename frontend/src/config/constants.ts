@@ -243,6 +243,25 @@ export const PLAYER_HP_LOSS_ON_ENRAGE = 25
 
 // Enemy planet attacks
 export const PLANET_SLOT_MAX_HP = 100
+// Planet "Attunement" leveling — per-slot progression gated by Chimes + Sun Phase
+export const PLANET_LEVEL_BONUS_PCT = 0.1 // +10% to the role's bonusPerSlot per level above 1
+export const PLANET_LEVEL_HP_PCT = 0.2 // +20% of base max HP per level above 1
+export const PLANET_LEVEL_COST_FACTOR = 0.5 // level-up base cost = slot.baseCost * factor
+export const PLANET_LEVEL_COST_MULTIPLIER = 1.6 // geometric cost growth per level
+export const PLANET_LEVELS_PER_PHASE = 5 // levels unlocked per Sun Phase
+export const PLANET_LEVEL_MAX_PHASE = 6 // cap aligned to starPhase max (0–6)
+export const PLANET_MILESTONE_INTERVAL = 5 // every Nth Attunement grants a perk spike
+export const PLANET_MILESTONE_BONUS = 0.25 // +25% of base role bonus per milestone reached
+export const PLANET_BULK_LEVEL_STEP = 10 // "Attune ×10" button step
+export const PLANET_MAX_BULK_LEVELS = 1000 // safety cap for the "Max" simulation loop
+// Attunement rank tiers — ordered bands; highest min <= level wins
+export const PLANET_RANK_TIERS: { min: number; name: string; color: string }[] = [
+  { min: 1, name: 'Nascent', color: '#9aa0a6' },
+  { min: 5, name: 'Resonant', color: '#52b830' },
+  { min: 10, name: 'Harmonic', color: '#40a0e0' },
+  { min: 20, name: 'Celestial', color: '#c060e0' },
+  { min: 35, name: 'Transcendent', color: '#e8c040' },
+]
 export const ENEMY_PROJECTILE_DAMAGE = 8
 export const STAR_BURST_DELAY_BETWEEN_SHOTS = 200 // ms between individual shots within a burst
 export const STAR_BURST_COOLDOWN = 10_000 // ms cooldown after a full burst completes

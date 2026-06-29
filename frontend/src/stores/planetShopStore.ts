@@ -11,6 +11,16 @@ import {
   STAR_PHASE_DATA,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   BOSS_DAMAGE_REDUCTION_CAP,
+  PLANET_LEVEL_BONUS_PCT,
+  PLANET_LEVEL_HP_PCT,
+  PLANET_LEVEL_COST_FACTOR,
+  PLANET_LEVEL_COST_MULTIPLIER,
+  PLANET_LEVELS_PER_PHASE,
+  PLANET_LEVEL_MAX_PHASE,
+  PLANET_MILESTONE_INTERVAL,
+  PLANET_MILESTONE_BONUS,
+  PLANET_MAX_BULK_LEVELS,
+  PLANET_RANK_TIERS,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 
@@ -61,6 +71,7 @@ export interface PlanetSlot {
   baseSpeed: number
   direction: 1 | -1
   baseCost: number
+  level: number
   slotConfig?: { materialId?: string; buildingId?: string }
   currentHp: number
   maxHp: number
@@ -136,6 +147,45 @@ export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
   resonance_tower:  { name: 'Resonant Smite',        multiplier: 2.0, durationMs: 18_000 },
 }
 
+// ── Attunement (per-planet leveling) helpers ───────────────────────────────
+// Pure functions, exported for reuse in tests + UI.
+
+// Number of milestone perks reached at a given level (every Nth level).
+export function planetMilestoneCount(level: number): number {
+  return Math.floor(level / PLANET_MILESTONE_INTERVAL)
+}
+
+export function planetLevelBonusMultiplier(level: number): number {
+  return (
+    1 +
+    (level - 1) * PLANET_LEVEL_BONUS_PCT +
+    planetMilestoneCount(level) * PLANET_MILESTONE_BONUS
+  )
+}
+
+// Highest rank tier whose `min` is <= level.
+export function planetRankTier(level: number): { min: number; name: string; color: string } {
+  let tier = PLANET_RANK_TIERS[0]
+  for (const t of PLANET_RANK_TIERS) {
+    if (level >= t.min) tier = t
+  }
+  return tier
+}
+
+export function computePlanetMaxHp(level: number): number {
+  return Math.round(PLANET_SLOT_MAX_HP * (1 + (level - 1) * PLANET_LEVEL_HP_PCT))
+}
+
+export function planetLevelUpCost(slot: Pick<PlanetSlot, 'baseCost' | 'level'>): number {
+  return Math.ceil(
+    slot.baseCost * PLANET_LEVEL_COST_FACTOR * PLANET_LEVEL_COST_MULTIPLIER ** (slot.level - 1),
+  )
+}
+
+export function planetLevelRequiredPhase(nextLevel: number): number {
+  return Math.min(PLANET_LEVEL_MAX_PHASE, Math.floor((nextLevel - 1) / PLANET_LEVELS_PER_PHASE))
+}
+
 const SLOT_CONFIG = [
   { id: 'slot_1', direction: 1 as const, baseSpeed: 0.00018, baseCost: 500 },
   { id: 'slot_2', direction: -1 as const, baseSpeed: 0.00014, baseCost: 2000 },
@@ -149,6 +199,7 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   ...SLOT_CONFIG[i],
   purchased: false,
   role: null,
+  level: 1,
   orbitRadiusX: orbit.rx,
   orbitRadiusY: orbit.ry,
   tiltDeg: orbit.tiltDeg,
@@ -188,7 +239,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
         .filter((s) => s.purchased && s.role === 'turret_planet')
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return sum + PLANET_ROLES.turret_planet.bonusPerSlot * mul
+          return (
+            sum +
+            PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
+          )
         }, 0)
     },
 
@@ -203,7 +257,13 @@ export const usePlanetShopStore = defineStore('planetShop', {
         .filter((s) => s.purchased && s.role === 'expedition_relay')
         .reduce((prod, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return prod * (1 + PLANET_ROLES.expedition_relay.bonusPerSlot * mul)
+          return (
+            prod *
+            (1 +
+              PLANET_ROLES.expedition_relay.bonusPerSlot *
+                planetLevelBonusMultiplier(slot.level) *
+                mul)
+          )
         }, 1)
     },
 
@@ -212,7 +272,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
         .filter((s) => s.purchased && s.role === 'shield_barrier')
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return sum + PLANET_ROLES.shield_barrier.bonusPerSlot * mul
+          return (
+            sum +
+            PLANET_ROLES.shield_barrier.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
+          )
         }, 0)
       return Math.min(BOSS_DAMAGE_REDUCTION_CAP, total)
     },
@@ -222,7 +285,13 @@ export const usePlanetShopStore = defineStore('planetShop', {
         .filter((s) => s.purchased && s.role === 'time_capsule')
         .reduce((prod, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          return prod * (1 + PLANET_ROLES.time_capsule.bonusPerSlot * mul)
+          return (
+            prod *
+            (1 +
+              PLANET_ROLES.time_capsule.bonusPerSlot *
+                planetLevelBonusMultiplier(slot.level) *
+                mul)
+          )
         }, 1)
     },
 
@@ -232,7 +301,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
         if (slot.purchased && slot.role === 'resonance_tower' && slot.slotConfig?.buildingId) {
           const bId = slot.slotConfig.buildingId
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-          result[bId] = (result[bId] ?? 1) * (1 + PLANET_ROLES.resonance_tower.bonusPerSlot * mul)
+          result[bId] =
+            (result[bId] ?? 1) *
+            (1 +
+              PLANET_ROLES.resonance_tower.bonusPerSlot *
+                planetLevelBonusMultiplier(slot.level) *
+                mul)
         }
       }
       return result
@@ -269,6 +343,99 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex + 1
     },
 
+    // ── Attunement leveling ──────────────────────────────────────────────
+    getPlanetLevelUpCost(slotId: string): number {
+      const slot = this.getSlot(slotId)
+      if (!slot) return Infinity
+      return planetLevelUpCost(slot)
+    },
+
+    getPlanetLevelRequiredPhase(slotId: string): number {
+      const slot = this.getSlot(slotId)
+      if (!slot) return PLANET_LEVEL_MAX_PHASE
+      return planetLevelRequiredPhase(slot.level + 1)
+    },
+
+    canLevelUpPlanet(slotId: string): boolean {
+      return this.planetLevelUpBlockReason(slotId) === null
+    },
+
+    planetLevelUpBlockReason(slotId: string): 'phase' | 'chimes' | null {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return 'phase'
+      if (useSolarUpgradeStore().starPhase < this.getPlanetLevelRequiredPhase(slotId)) return 'phase'
+      if (useGameStore().chimes < planetLevelUpCost(slot)) return 'chimes'
+      return null
+    },
+
+    levelUpPlanet(slotId: string): boolean {
+      return this.levelUpPlanetTimes(slotId, 1) > 0
+    },
+
+    // Attune a slot up to `maxCount` times, stopping at the chimes/phase gate.
+    // Returns the number of levels actually gained. CPS/CPC recomputed once.
+    levelUpPlanetTimes(slotId: string, maxCount: number): number {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return 0
+
+      const gameStore = useGameStore()
+      let gained = 0
+      const limit = Math.min(maxCount, PLANET_MAX_BULK_LEVELS)
+
+      while (gained < limit && this.canLevelUpPlanet(slotId)) {
+        const cost = planetLevelUpCost(slot)
+        gameStore.chimes -= cost
+        slot.level += 1
+
+        // Grow max HP and heal by the delta so level-ups are visibly rewarding.
+        const prevMaxHp = slot.maxHp
+        slot.maxHp = computePlanetMaxHp(slot.level)
+        slot.currentHp = Math.min(slot.maxHp, slot.currentHp + (slot.maxHp - prevMaxHp))
+        gained++
+      }
+
+      if (gained > 0) {
+        // Level affects role bonuses (incl. resonance CPS) → recompute production.
+        const shopStore = useShopStore()
+        gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+        gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+        logger.info('Planet', `Slot ${slotId} attuned +${gained} → level ${slot.level}`)
+      }
+      return gained
+    },
+
+    // How many levels the player can currently afford (respecting the phase gate).
+    getMaxAffordableLevelCount(slotId: string): number {
+      const slot = this.getSlot(slotId)
+      if (!slot || !slot.purchased) return 0
+
+      const starPhase = useSolarUpgradeStore().starPhase
+      let budget = useGameStore().chimes
+      let level = slot.level
+      let count = 0
+
+      while (count < PLANET_MAX_BULK_LEVELS) {
+        if (starPhase < planetLevelRequiredPhase(level + 1)) break
+        const cost = planetLevelUpCost({ baseCost: slot.baseCost, level })
+        if (budget < cost) break
+        budget -= cost
+        level++
+        count++
+      }
+      return count
+    },
+
+    // Total chimes to attune the next `count` levels of a slot.
+    getBulkLevelUpCost(slotId: string, count: number): number {
+      const slot = this.getSlot(slotId)
+      if (!slot) return Infinity
+      let total = 0
+      for (let i = 0; i < count; i++) {
+        total += planetLevelUpCost({ baseCost: slot.baseCost, level: slot.level + i })
+      }
+      return total
+    },
+
     buySlot(slotId: string): boolean {
       const slot = this.getSlot(slotId)
       if (!slot || slot.purchased) return false
@@ -282,6 +449,9 @@ export const usePlanetShopStore = defineStore('planetShop', {
 
       gameStore.chimes -= cost
       slot.purchased = true
+      slot.level = 1
+      slot.maxHp = computePlanetMaxHp(slot.level)
+      slot.currentHp = slot.maxHp
 
       const shopStore = useShopStore()
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
@@ -296,6 +466,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
     assignRole(slotId: string, role: PlanetRoleType | null): void {
       const slot = this.getSlot(slotId)
       if (!slot || !slot.purchased) return
+      // Permanent choice: a planet type can only ever be set once (null → role).
+      if (slot.role !== null) return
 
       const prev = slot.role
       slot.role = role

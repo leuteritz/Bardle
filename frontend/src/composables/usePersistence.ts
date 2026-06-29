@@ -11,7 +11,7 @@ import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { useCpsStore } from '@/stores/cpsStore'
 import { usePlayerStore } from '@/stores/playerStore'
-import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import {
   LEVEL_BASE,
@@ -147,6 +147,7 @@ export function usePersistence() {
           id: s.id,
           purchased: s.purchased,
           role: s.role,
+          level: s.level,
           slotConfig: s.slotConfig,
         })),
       },
@@ -369,7 +370,11 @@ export function usePersistence() {
           if (slot) {
             slot.purchased = sv.purchased ?? false
             slot.role = sv.role ?? null
+            slot.level = sv.level ?? 1
             slot.slotConfig = sv.slotConfig ?? undefined
+            // currentHp/maxHp are not persisted; derive from level on load.
+            slot.maxHp = computePlanetMaxHp(slot.level)
+            slot.currentHp = slot.maxHp
           }
         }
       }
@@ -549,6 +554,8 @@ export function usePersistence() {
     planetShopStoreR.slots.forEach((s) => {
       s.purchased = false
       s.role = null
+      s.level = 1
+      s.maxHp = computePlanetMaxHp(1)
       s.currentHp = s.maxHp
     })
     planetShopStoreR.activeRoleModalSlotId = null
