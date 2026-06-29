@@ -13,7 +13,12 @@ import {
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
 import { MATERIALS } from '@/config/materials'
-import { PLANET_MILESTONE_INTERVAL, PLANET_MILESTONE_BONUS, PLANET_BULK_LEVEL_STEP } from '@/config/constants'
+import {
+  PLANET_MILESTONE_INTERVAL,
+  PLANET_MILESTONE_BONUS,
+  PLANET_BULK_LEVEL_STEP,
+  STAR_PHASE_DATA,
+} from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 
 const CPS_BUILDINGS = [
@@ -105,6 +110,19 @@ const activeRoleName = computed(() => {
 const activeRoleColor = computed(() => {
   const role = activeSlot.value?.role
   return role ? PLANET_ROLES[role].color : '#aaaaaa'
+})
+
+// Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).
+const sunPhaseStyle = computed(() => {
+  const phase = STAR_PHASE_DATA[store.currentSunStage] ?? STAR_PHASE_DATA[0]
+  return {
+    '--phase-core': phase.core,
+    '--phase-mid': phase.mid,
+    '--phase-edge': phase.edge,
+    '--phase-primary': phase.phasePrimary,
+    '--phase-glow': phase.phaseGlow,
+    '--pulse-speed': phase.pulseSpeed,
+  }
 })
 
 const hpPercent = computed(() => {
@@ -232,6 +250,55 @@ function attune(count: number) {
     )
   }
 }
+
+// ── Config picker (Harvester material / Resonator building) ────────────────
+const configPickerOpen = ref(false)
+
+// Reset picker when switching slots.
+watch(selectedSlotId, () => {
+  configPickerOpen.value = false
+})
+
+const isConfigurableRole = computed(
+  () => activeSlot.value?.role === 'harvest_node' || activeSlot.value?.role === 'resonance_tower',
+)
+
+const selectedMaterial = computed(() =>
+  MATERIALS.find((m) => m.id === activeSlot.value?.slotConfig?.materialId) ?? null,
+)
+const selectedBuilding = computed(() =>
+  CPS_BUILDINGS.find((b) => b.id === activeSlot.value?.slotConfig?.buildingId) ?? null,
+)
+
+// Chip label + icon for the configurable-role target.
+const configChip = computed(() => {
+  if (activeSlot.value?.role === 'harvest_node') {
+    return {
+      verb: 'Harvesting',
+      name: selectedMaterial.value?.name ?? 'Choose…',
+      icon: selectedMaterial.value?.image ?? null,
+    }
+  }
+  if (activeSlot.value?.role === 'resonance_tower') {
+    return {
+      verb: 'Boosting',
+      name: selectedBuilding.value?.name ?? 'Choose…',
+      icon: selectedBuilding.value?.icon ?? null,
+    }
+  }
+  return null
+})
+
+function chooseMaterial(materialId: string) {
+  if (!activeSlot.value) return
+  store.setSlotConfig(activeSlot.value.id, { materialId })
+  configPickerOpen.value = false
+}
+function chooseBuilding(buildingId: string) {
+  if (!activeSlot.value) return
+  store.setSlotConfig(activeSlot.value.id, { buildingId })
+  configPickerOpen.value = false
+}
 </script>
 
 <template>
@@ -295,12 +362,6 @@ function attune(count: number) {
             </template>
           </div>
         </button>
-
-        <!-- Sun Phase indicator (phase gates unlocking + attuning; not shown globally) -->
-        <div class="ps-rail-phase">
-          <Icon icon="game-icons:sun" width="18" height="18" class="ps-rail-phase-icon" />
-          <span class="ps-rail-phase-text">Sun Phase {{ store.currentSunStage }}</span>
-        </div>
       </div>
 
       <!-- RIGHT DETAIL ─────────────────────────────────────────────── -->
@@ -379,21 +440,17 @@ function attune(count: number) {
           </Transition>
         </div>
 
-        <!-- Purchased + role locked: Attunement panel -->
+        <!-- Purchased + role locked: cosmic stage + frameless fixed upgrade menu -->
         <template v-else-if="activeSlot && activeSlot.purchased && activeSlot.role">
-          <div class="ps-body">
-            <!-- Hero: Planet showcase -->
-            <div class="ps-hero">
-              <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
-                <div class="ps-planet-hp-text">
-                  <Icon icon="game-icons:heart-bottle" width="18" height="18" class="ps-hp-heart" style="color: #cc6050" />
-                  <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
-                </div>
-                <div class="ps-hp-bar-track">
-                  <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
-                </div>
-              </div>
+          <!-- Stage: planet orbiting the current-phase sun, over sparse stars -->
+          <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
+            <div class="ps-stage-bg" aria-hidden="true">
+              <div class="ps-stage-stars" />
+            </div>
 
+            <!-- Sun + orbiting planet share one centered system -->
+            <div class="ps-system">
+              <div class="ps-stage-sun" />
               <div class="ps-planet-preview-wrap">
                 <Transition name="ps-planet-swap" mode="out-in">
                   <img
@@ -404,175 +461,193 @@ function attune(count: number) {
                   />
                 </Transition>
               </div>
-
-              <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
-                {{ activeRoleName }}
-              </div>
-
-              <Transition name="ps-config-slide">
-                <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
-                  <div class="ps-jungle-buff-header">
-                    <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle" />
-                    <span class="ps-jungle-buff-title">Jungle Buff</span>
-                    <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
-                  </div>
-                  <div class="ps-jungle-buff-row">
-                    <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
-                  </div>
-                  <div class="ps-jungle-buff-row">
-                    <span class="ps-jungle-buff-label">Multiplier</span>
-                    <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
-                  </div>
-                </div>
-              </Transition>
             </div>
 
-            <!-- Attunement panel: rank, preview, milestone, bulk attune -->
-            <div class="ps-level-block" :style="{ '--rc': activeRoleColor }">
-              <div class="ps-level-info">
-                <span class="ps-level-title">Attunement {{ attunementLabel(activeSlot.level) }}</span>
-                <span
-                  class="ps-rank-badge"
-                  :style="{ color: rankTier.color, borderColor: rankTier.color }"
-                >
-                  {{ rankTier.name }}
-                </span>
-              </div>
-
-              <!-- Next-level preview -->
-              <div class="ps-preview">
-                <div class="ps-preview-row">
-                  <span class="ps-preview-label">Effect</span>
-                  <span class="ps-preview-now">{{ activeSlotBonusText }}</span>
-                  <span class="ps-preview-arrow">→</span>
-                  <span class="ps-preview-next">{{ nextBonusText }}</span>
-                </div>
-                <div class="ps-preview-row">
-                  <span class="ps-preview-label">Max HP</span>
-                  <span class="ps-preview-now">{{ currentMaxHp }}</span>
-                  <span class="ps-preview-arrow">→</span>
-                  <span class="ps-preview-next">{{ nextMaxHp }}</span>
-                </div>
-              </div>
-
-              <!-- Milestone tracker -->
-              <div class="ps-milestone">
-                <div class="ps-milestone-head">
-                  <span class="ps-milestone-count">★ {{ milestonesReached }} milestone<span v-if="milestonesReached !== 1">s</span></span>
-                  <span class="ps-milestone-next">
-                    Next at {{ attunementLabel(nextMilestoneLevel) }} · +{{ milestoneBonusPct }}% power
-                  </span>
-                </div>
-                <div class="ps-milestone-track">
-                  <div class="ps-milestone-fill" :style="{ width: milestoneProgressPct + '%' }" />
-                </div>
-              </div>
-
-              <!-- Bulk attune buttons -->
-              <div class="ps-attune-row">
-                <button
-                  class="ps-level-btn"
-                  :class="{ 'ps-level-btn--locked': !canLevelUp }"
-                  :disabled="!canLevelUp"
-                  :title="canLevelUp ? 'Attune once' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
-                  @click="attune(1)"
-                >
-                  <span class="ps-level-btn-main">✦ Attune</span>
-                  <span class="ps-level-btn-cost">
-                    <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                    {{ $formatNumber(levelUpCost) }}
-                  </span>
-                </button>
-                <button
-                  class="ps-level-btn ps-level-btn--alt"
-                  :class="{ 'ps-level-btn--locked': !canLevelUp }"
-                  :disabled="!canLevelUp"
-                  title="Attune up to ten times"
-                  @click="attune(bulkStep)"
-                >
-                  <span class="ps-level-btn-main">×{{ bulkStep }}</span>
-                  <span class="ps-level-btn-cost">
-                    <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                    {{ $formatNumber(bulkStepCost) }}
-                  </span>
-                </button>
-                <button
-                  class="ps-level-btn ps-level-btn--alt"
-                  :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
-                  :disabled="maxAffordableCount === 0"
-                  title="Attune as much as you can afford"
-                  @click="attune(maxAffordableCount)"
-                >
-                  <span class="ps-level-btn-main">Max +{{ maxAffordableCount }}</span>
-                  <span class="ps-level-btn-cost">
-                    <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                    {{ $formatNumber(maxCost) }}
-                  </span>
-                </button>
-              </div>
-
-              <!-- Phase gate + block hint -->
-              <div class="ps-level-gate">
-                <Icon icon="game-icons:sun" width="12" height="12" />
-                Next tier needs Sun Phase {{ levelUpReqPhase }} · current {{ store.currentSunStage }}
-              </div>
-              <span v-if="levelUpReason === 'chimes'" class="ps-level-hint">Not enough Chimes</span>
-              <span v-else-if="levelUpReason === 'phase'" class="ps-level-hint">
-                Reach Sun Phase {{ levelUpReqPhase }} to keep attuning
-              </span>
+            <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
+              {{ activeRoleName }}
             </div>
+
+            <!-- Config target chip (Harvester / Resonator only) -->
+            <button
+              v-if="isConfigurableRole && configChip"
+              class="ps-config-chip"
+              @click="configPickerOpen = !configPickerOpen"
+            >
+              <span class="ps-config-chip-verb">{{ configChip.verb }}:</span>
+              <img v-if="configChip.icon" :src="configChip.icon" class="ps-config-chip-icon" alt="" />
+              <span class="ps-config-chip-name">{{ configChip.name }}</span>
+              <span class="ps-config-chip-caret">▾</span>
+            </button>
+
+            <!-- HP -->
+            <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
+              <div class="ps-planet-hp-text">
+                <Icon icon="game-icons:heart-bottle" width="20" height="20" class="ps-hp-heart" style="color: #cc6050" />
+                <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
+              </div>
+              <div class="ps-hp-bar-track">
+                <div class="ps-hp-bar-fill" :style="{ width: hpPercent + '%' }" />
+              </div>
+            </div>
+
+            <!-- Jungle buff -->
+            <Transition name="ps-config-slide">
+              <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
+                <div class="ps-jungle-buff-header">
+                  <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle" />
+                  <span class="ps-jungle-buff-title">Jungle Buff</span>
+                  <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
+                </div>
+                <div class="ps-jungle-buff-row">
+                  <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
+                </div>
+                <div class="ps-jungle-buff-row">
+                  <span class="ps-jungle-buff-label">Multiplier</span>
+                  <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
+                </div>
+              </div>
+            </Transition>
           </div>
 
-          <!-- Config: harvest_node -->
-          <Transition name="ps-config-slide">
-            <div v-if="activeSlot.role === 'harvest_node'" class="ps-config-section">
-              <div class="ps-config-header">
-                <Icon icon="game-icons:wheat" class="ps-config-header-icon ps-config-header-icon--gi" />
-                <span>Select Material</span>
-                <span class="ps-config-header-hint">Choose the material to harvest</span>
+          <!-- Upgrade menu: frameless, pinned to bottom, identical for every planet type -->
+          <div class="ps-upgrade" :style="{ '--rc': activeRoleColor }">
+            <div class="ps-level-info">
+              <span class="ps-level-title">Attunement {{ attunementLabel(activeSlot.level) }}</span>
+              <span
+                class="ps-rank-badge"
+                :style="{ color: rankTier.color, borderColor: rankTier.color }"
+              >
+                {{ rankTier.name }}
+              </span>
+            </div>
+
+            <!-- Next-level preview -->
+            <div class="ps-preview">
+              <div class="ps-preview-row">
+                <span class="ps-preview-label">Effect</span>
+                <span class="ps-preview-now">{{ activeSlotBonusText }}</span>
+                <span class="ps-preview-arrow">→</span>
+                <span class="ps-preview-next">{{ nextBonusText }}</span>
               </div>
-              <div class="ps-config-grid">
-                <button
-                  v-for="mat in MATERIALS"
-                  :key="mat.id"
-                  class="ps-config-btn"
-                  :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.materialId === mat.id }"
-                  @click="store.setSlotConfig(activeSlot.id, { materialId: mat.id })"
-                >
-                  <div class="ps-config-btn-img-wrap">
-                    <img v-if="mat.image" :src="mat.image" class="ps-config-btn-img" alt="" />
-                    <div v-else class="ps-config-btn-img-placeholder">?</div>
-                  </div>
-                  <span class="ps-config-btn-label">{{ mat.name }}</span>
-                  <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="ps-config-btn-check">✓</div>
-                </button>
+              <div class="ps-preview-row">
+                <span class="ps-preview-label">Max HP</span>
+                <span class="ps-preview-now">{{ currentMaxHp }}</span>
+                <span class="ps-preview-arrow">→</span>
+                <span class="ps-preview-next">{{ nextMaxHp }}</span>
               </div>
             </div>
-          </Transition>
 
-          <!-- Config: resonance_tower -->
-          <Transition name="ps-config-slide">
-            <div v-if="activeSlot.role === 'resonance_tower'" class="ps-config-section">
-              <div class="ps-config-header">
-                <Icon icon="game-icons:brick-wall" width="20" height="20" class="ps-config-header-icon" style="color: #e8c040" />
-                <span>Select Building</span>
-                <span class="ps-config-header-hint">Which building should be boosted?</span>
+            <!-- Milestone tracker -->
+            <div class="ps-milestone">
+              <div class="ps-milestone-head">
+                <span class="ps-milestone-count">★ {{ milestonesReached }} milestone<span v-if="milestonesReached !== 1">s</span></span>
+                <span class="ps-milestone-next">
+                  Next at {{ attunementLabel(nextMilestoneLevel) }} · +{{ milestoneBonusPct }}% power
+                </span>
               </div>
-              <div class="ps-config-grid">
-                <button
-                  v-for="bld in CPS_BUILDINGS"
-                  :key="bld.id"
-                  class="ps-config-btn"
-                  :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.buildingId === bld.id }"
-                  @click="store.setSlotConfig(activeSlot.id, { buildingId: bld.id })"
-                >
-                  <div class="ps-config-btn-img-wrap">
-                    <img v-if="bld.icon" :src="bld.icon" class="ps-config-btn-img" alt="" />
-                    <Icon v-else icon="game-icons:brick-wall" width="24" height="24" class="ps-config-btn-img-placeholder" style="color: #7a4e20" />
-                  </div>
-                  <span class="ps-config-btn-label">{{ bld.name }}</span>
-                  <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="ps-config-btn-check">✓</div>
-                </button>
+              <div class="ps-milestone-track">
+                <div class="ps-milestone-fill" :style="{ width: milestoneProgressPct + '%' }" />
+              </div>
+            </div>
+
+            <!-- Bulk attune buttons -->
+            <div class="ps-attune-row">
+              <button
+                class="ps-level-btn"
+                :class="{ 'ps-level-btn--locked': !canLevelUp }"
+                :disabled="!canLevelUp"
+                :title="canLevelUp ? 'Attune once' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
+                @click="attune(1)"
+              >
+                <span class="ps-level-btn-main">✦ Attune</span>
+                <span class="ps-level-btn-cost">
+                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+                  {{ $formatNumber(levelUpCost) }}
+                </span>
+              </button>
+              <button
+                class="ps-level-btn ps-level-btn--alt"
+                :class="{ 'ps-level-btn--locked': !canLevelUp }"
+                :disabled="!canLevelUp"
+                title="Attune up to ten times"
+                @click="attune(bulkStep)"
+              >
+                <span class="ps-level-btn-main">×{{ bulkStep }}</span>
+                <span class="ps-level-btn-cost">
+                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+                  {{ $formatNumber(bulkStepCost) }}
+                </span>
+              </button>
+              <button
+                class="ps-level-btn ps-level-btn--alt"
+                :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
+                :disabled="maxAffordableCount === 0"
+                title="Attune as much as you can afford"
+                @click="attune(maxAffordableCount)"
+              >
+                <span class="ps-level-btn-main">Max +{{ maxAffordableCount }}</span>
+                <span class="ps-level-btn-cost">
+                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
+                  {{ $formatNumber(maxCost) }}
+                </span>
+              </button>
+            </div>
+
+            <!-- Phase gate + block hint -->
+            <div class="ps-level-gate">
+              <Icon icon="game-icons:sun" width="14" height="14" />
+              Next tier needs Sun Phase {{ levelUpReqPhase }} · current {{ store.currentSunStage }}
+            </div>
+            <span v-if="levelUpReason === 'chimes'" class="ps-level-hint">Not enough Chimes</span>
+            <span v-else-if="levelUpReason === 'phase'" class="ps-level-hint">
+              Reach Sun Phase {{ levelUpReqPhase }} to keep attuning
+            </span>
+          </div>
+
+          <!-- Config picker popover overlay -->
+          <Transition name="ps-pop">
+            <div v-if="configPickerOpen" class="ps-pop-scrim" @click.self="configPickerOpen = false">
+              <div class="ps-pop">
+                <div class="ps-pop-head">
+                  <span class="ps-pop-title">
+                    {{ activeSlot.role === 'harvest_node' ? 'Select Material' : 'Select Building' }}
+                  </span>
+                  <button class="ps-pop-close" @click="configPickerOpen = false">✕</button>
+                </div>
+                <div class="ps-config-grid">
+                  <template v-if="activeSlot.role === 'harvest_node'">
+                    <button
+                      v-for="mat in MATERIALS"
+                      :key="mat.id"
+                      class="ps-config-btn"
+                      :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.materialId === mat.id }"
+                      @click="chooseMaterial(mat.id)"
+                    >
+                      <div class="ps-config-btn-img-wrap">
+                        <img v-if="mat.image" :src="mat.image" class="ps-config-btn-img" alt="" />
+                        <div v-else class="ps-config-btn-img-placeholder">?</div>
+                      </div>
+                      <span class="ps-config-btn-label">{{ mat.name }}</span>
+                      <div v-if="activeSlot.slotConfig?.materialId === mat.id" class="ps-config-btn-check">✓</div>
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      v-for="bld in CPS_BUILDINGS"
+                      :key="bld.id"
+                      class="ps-config-btn"
+                      :class="{ 'ps-config-btn--active': activeSlot.slotConfig?.buildingId === bld.id }"
+                      @click="chooseBuilding(bld.id)"
+                    >
+                      <div class="ps-config-btn-img-wrap">
+                        <img v-if="bld.icon" :src="bld.icon" class="ps-config-btn-img" alt="" />
+                        <Icon v-else icon="game-icons:brick-wall" width="24" height="24" class="ps-config-btn-img-placeholder" style="color: #7a4e20" />
+                      </div>
+                      <span class="ps-config-btn-label">{{ bld.name }}</span>
+                      <div v-if="activeSlot.slotConfig?.buildingId === bld.id" class="ps-config-btn-check">✓</div>
+                    </button>
+                  </template>
+                </div>
               </div>
             </div>
           </Transition>
@@ -614,30 +689,9 @@ function attune(count: number) {
   scrollbar-color: #5c3310 #111;
 }
 
-/* Sun Phase chip pinned to rail bottom */
-.ps-rail-phase {
-  flex-shrink: 0;
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px;
-  background: #141008;
-  border: 1px solid #3a2a10;
-  border-radius: 4px;
-  color: #e0a040;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-}
-
-.ps-rail-phase-icon {
-  filter: drop-shadow(0 0 5px rgba(224, 160, 64, 0.6));
-}
-
 /* Right detail panel */
 .ps-detail {
+  position: relative;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
@@ -756,7 +810,7 @@ function attune(count: number) {
 }
 
 .ps-slot-sub {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: rgba(200, 160, 80, 0.7);
@@ -805,7 +859,7 @@ function attune(count: number) {
 }
 
 .ps-slot-btn-label {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -842,43 +896,202 @@ function attune(count: number) {
 }
 
 /* ── Hero-Body (Planet oben, Rollen-Grid unten) ────────────────────────────── */
-.ps-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  padding: 1.4rem 1.4rem 0.75rem;
-  /* Nimmt den verbleibenden Platz ein */
+/* ── Stage: centered planet over a cosmic backdrop ─────────────────────────── */
+.ps-stage {
+  --rc: #e8c040;
+  position: relative;
   flex: 1;
-  justify-content: center;
-}
-
-/* ── Hero: Planet-Showcase ─────────────────────────────────────────────────── */
-.ps-hero {
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.8rem;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+  padding: 1.4rem;
+  overflow: hidden;
 }
 
-/* ── Attunement (level-up) block ───────────────────────────────────────────── */
-.ps-level-block {
-  --rc: #e8c040;
+/* Background: sparse stars only (no planet dots) + faint vignette */
+.ps-stage-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.55), transparent 60%);
+}
+
+.ps-stage-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 16% 22%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 82% 28%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 30% 78%, rgba(255, 255, 255, 0.42), transparent),
+    radial-gradient(1.5px 1.5px at 70% 72%, rgba(255, 255, 255, 0.32), transparent),
+    radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1.5px 1.5px at 10% 60%, rgba(255, 255, 255, 0.3), transparent);
+  animation: ps-stars-twinkle 5s ease-in-out infinite;
+}
+
+/* Sun + orbiting planet share one centered system */
+.ps-system {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+  height: clamp(300px, 50vh, 460px);
+}
+
+/* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
+.ps-stage-sun {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(320px, 52vh, 460px);
+  height: clamp(320px, 52vh, 460px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 0;
+  background:
+    radial-gradient(
+      circle at 42% 38%,
+      color-mix(in srgb, white 90%, var(--phase-core, #fff)) 0%,
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      var(--phase-core, #fff0e0) 0%,
+      color-mix(in srgb, var(--phase-mid, #ffd4a3) 88%, transparent) 40%,
+      color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 90px color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
+    0 0 180px color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
+  animation: ps-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
+}
+
+/* Planet orbits the sun's center, rendered in front (camera perspective) */
+.ps-planet-preview-wrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  animation: ps-planet-orbit 22s linear infinite;
+}
+
+@keyframes ps-sun-pulse {
+  0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes ps-planet-orbit {
+  0%   { transform: translate(-50%, -50%) translate(52px, 0); }
+  25%  { transform: translate(-50%, -50%) translate(0, 30px); }
+  50%  { transform: translate(-50%, -50%) translate(-52px, 0); }
+  75%  { transform: translate(-50%, -50%) translate(0, -30px); }
+  100% { transform: translate(-50%, -50%) translate(52px, 0); }
+}
+
+@keyframes ps-stars-twinkle {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-stage-sun,
+  .ps-planet-preview-wrap,
+  .ps-stage-stars {
+    animation: none;
+  }
+}
+
+/* Role label / chip / hp / jungle sit above the backdrop, below the system */
+.ps-stage > .ps-planet-role-label,
+.ps-stage > .ps-config-chip,
+.ps-stage > .ps-planet-hp,
+.ps-stage > .ps-jungle-buff-panel {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Config target chip ────────────────────────────────────────────────────── */
+.ps-config-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.8rem;
+  background: #16140e;
+  border: 1px solid color-mix(in oklch, var(--rc) 55%, #3a2a10);
+  border-radius: 4px;
+  color: #d4c89a;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.ps-config-chip:hover {
+  background: #1c1a12;
+  border-color: var(--rc);
+  transform: translateY(-1px);
+}
+
+.ps-config-chip-verb {
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+
+.ps-config-chip-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.ps-config-chip-name {
+  color: var(--rc);
+  font-weight: 800;
+}
+
+.ps-config-chip-caret {
+  color: var(--rc);
+  font-size: 0.7rem;
+}
+
+/* ── Attunement upgrade menu (frameless, pinned bottom) ─────────────────────── */
+.ps-upgrade {
+  --rc: #e8c040;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.6rem;
-  padding: 1rem 1.1rem;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: var(--bp-radius);
-  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.4);
+  gap: 0.7rem;
+  padding: 1rem 1.3rem 1.1rem;
+  background: #131009;
+  /* Frameless — integrated into the panel with just a gold separator on top */
+  border-top: 3px solid transparent;
+  border-image: linear-gradient(
+      to right,
+      transparent,
+      #5c3310 10%,
+      #c89040 30%,
+      #f0d060 50%,
+      #c89040 70%,
+      #5c3310 90%,
+      transparent
+    )
+    1;
+}
+
+/* Back-compat alias retained for shared inner rules */
+.ps-level-block {
+  --rc: #e8c040;
 }
 
 .ps-level-info {
@@ -890,7 +1103,7 @@ function attune(count: number) {
 }
 
 .ps-level-title {
-  font-size: 0.82rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -964,7 +1177,7 @@ function attune(count: number) {
 }
 
 .ps-level-btn-main {
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -974,14 +1187,14 @@ function attune(count: number) {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 700;
   opacity: 0.95;
 }
 
 .ps-level-chime {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   image-rendering: pixelated;
 }
 
@@ -991,7 +1204,7 @@ function attune(count: number) {
 }
 
 .ps-level-hint {
-  font-size: 0.66rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #cc6050;
   letter-spacing: 0.03em;
@@ -1000,11 +1213,11 @@ function attune(count: number) {
 
 /* ── Rank badge ────────────────────────────────────────────────────────────── */
 .ps-rank-badge {
-  font-size: 0.62rem;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.12rem 0.5rem;
+  padding: 0.16rem 0.6rem;
   border: 1px solid;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.35);
@@ -1027,16 +1240,16 @@ function attune(count: number) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
 .ps-preview-label {
-  flex: 0 0 4.2rem;
+  flex: 0 0 4.6rem;
   color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
 }
 
 .ps-preview-now {
@@ -1069,14 +1282,14 @@ function attune(count: number) {
 }
 
 .ps-milestone-count {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 800;
   color: #e8c040;
   letter-spacing: 0.03em;
 }
 
 .ps-milestone-next {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.5);
 }
@@ -1114,7 +1327,7 @@ function attune(count: number) {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: 0.62rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: rgba(224, 160, 64, 0.7);
   letter-spacing: 0.02em;
@@ -1358,9 +1571,11 @@ img.ps-role-icon {
 /* ── HP ────────────────────────────────────────────────────────────────────── */
 .ps-planet-hp {
   width: 100%;
+  max-width: 360px;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .ps-planet-hp-text {
@@ -1377,7 +1592,7 @@ img.ps-role-icon {
 }
 
 .ps-hp-values {
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 0.03em;
@@ -1385,7 +1600,8 @@ img.ps-role-icon {
 
 .ps-hp-bar-track {
   width: 100%;
-  height: 6px;
+  max-width: 360px;
+  height: 8px;
   background: #1c1c18;
   border: 1px solid #3a2a10;
   border-radius: 3px;
@@ -1400,30 +1616,23 @@ img.ps-role-icon {
 }
 
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
-.ps-planet-preview-wrap {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* (positioning handled by the .ps-planet-preview-wrap rule in the stage section) */
 .ps-planet-preview-img {
-  width: clamp(220px, 44vh, 320px);
-  height: clamp(220px, 44vh, 320px);
+  width: clamp(200px, 40vh, 300px);
+  height: clamp(200px, 40vh, 300px);
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 0 40px rgba(180, 140, 60, 0.5));
+  filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
 }
 
 /* ── Rollenname ────────────────────────────────────────────────────────────── */
 .ps-planet-role-label {
-  font-size: 0.88rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-align: center;
   text-transform: uppercase;
-  text-shadow: 0 0 12px currentColor;
+  text-shadow: 0 0 14px currentColor;
   min-height: 1.2em;
   width: 100%;
 }
@@ -1511,45 +1720,80 @@ img.ps-role-icon {
 }
 
 /* ── Config-Sektion ────────────────────────────────────────────────────────── */
-.ps-config-section {
-  margin: 0 0.85rem 0.75rem;
-  padding: 1rem;
-  border: 1px solid #3a2a10;
-  border-radius: var(--bp-radius);
-  background: linear-gradient(180deg, #100f0a 0%, #0c0b07 100%);
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
-  flex-shrink: 0;
-}
-
-.ps-config-header {
+/* ── Config picker popover ─────────────────────────────────────────────────── */
+.ps-pop-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.ps-pop {
+  width: 100%;
+  max-width: 460px;
+  max-height: 80%;
+  overflow-y: auto;
+  background: #16140e;
+  border: 4px solid #7a4e20;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 0 0 4px #5c3310,
+    0 12px 40px rgba(0, 0, 0, 0.85);
+  border-radius: 5px;
+  padding: 1rem 1.1rem 1.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+
+.ps-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 0.85rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid #2a1a08;
+  padding-bottom: 0.55rem;
+  border-bottom: 2px solid #5c3310;
 }
 
-.ps-config-header-icon {
-  font-size: 1.1rem;
-}
-
-.ps-config-header > span:nth-child(2) {
-  font-size: 0.85rem;
+.ps-pop-title {
+  font-size: 0.95rem;
   font-weight: 800;
   color: #f0d060;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  flex: 1;
 }
 
-.ps-config-header-hint {
-  font-size: 0.64rem !important;
-  color: rgba(255, 255, 255, 0.3) !important;
-  font-weight: 400 !important;
-  text-transform: none !important;
-  letter-spacing: 0.01em !important;
-  white-space: nowrap;
+.ps-pop-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c1c18;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: #cc6050;
+  font-size: 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+
+.ps-pop-close:hover {
+  filter: brightness(1.3);
+}
+
+/* Popover transition */
+.ps-pop-enter-active,
+.ps-pop-leave-active {
+  transition: opacity 0.18s ease;
+}
+.ps-pop-enter-from,
+.ps-pop-leave-to {
+  opacity: 0;
 }
 
 .ps-config-grid {
