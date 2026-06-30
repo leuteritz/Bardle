@@ -11,7 +11,7 @@ import {
   planetRankTier,
   computePlanetMaxHp,
 } from '@/stores/planetShopStore'
-import type { PlanetRole, PlanetRoleType } from '@/stores/planetShopStore'
+import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { MATERIALS } from '@/config/materials'
 import {
   PLANET_MILESTONE_INTERVAL,
@@ -161,6 +161,14 @@ const jungleBuffSecsLeft = computed(() => {
   if (!jb?.active) return 0
   return Math.max(0, Math.ceil((jb.activeUntil - now.value) / 1000))
 })
+
+// Per-slot remaining seconds — used by the sidebar, where the buffed planet
+// is usually NOT the currently selected slot.
+function buffSecsLeft(slot: PlanetSlot): number {
+  const jb = slot.jungleBuff
+  if (!jb?.active) return 0
+  return Math.max(0, Math.ceil((jb.activeUntil - now.value) / 1000))
+}
 
 // Hero-Planet + Rollen-Grid: alle 6 Rollen in einem einheitlichen, scanbaren
 // Grid statt 3-links/3-rechts-Split (bessere Scannbarkeit, geringere kognitive Last).
@@ -331,10 +339,19 @@ function chooseBuilding(buildingId: string) {
             'ps-slot-btn--active': selectedSlotId === slot.id,
             'ps-slot-btn--affordable': !slot.purchased && store.canUnlockPlanetSlot(slotIndex),
             'ps-slot-btn--cant-afford': !slot.purchased && !store.canUnlockPlanetSlot(slotIndex),
+            'ps-slot-btn--buffed': slot.jungleBuff?.active,
           }"
           :style="slot.role ? { '--rc': PLANET_ROLES[slot.role].color } : {}"
           @click="selectSlot(slot.id)"
         >
+          <!-- Jungle buff aura + badge (overlay only → no layout shift) -->
+          <span v-if="slot.jungleBuff?.active" class="ps-slot-buff-ring" aria-hidden="true" />
+          <span v-if="slot.jungleBuff?.active" class="ps-slot-buff-badge">
+            <img class="ps-slot-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
+            <span class="ps-slot-buff-mult">×{{ slot.jungleBuff.multiplier }}</span>
+            <span class="ps-slot-buff-timer">{{ buffSecsLeft(slot) }}s</span>
+          </span>
+
           <div class="ps-slot-icon">
             <template v-if="!slot.purchased">
               <span class="ps-slot-btn-lock">
@@ -474,6 +491,7 @@ function chooseBuilding(buildingId: string) {
                     :key="activeImage"
                     :src="activeImage"
                     class="ps-planet-preview-img"
+                    :class="{ 'ps-planet-preview-img--buffed': activeSlot.jungleBuff?.active }"
                     alt="Planet"
                   />
                 </Transition>
@@ -507,21 +525,13 @@ function chooseBuilding(buildingId: string) {
               </div>
             </div>
 
-            <!-- Jungle buff -->
-            <Transition name="ps-config-slide">
-              <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-panel">
-                <div class="ps-jungle-buff-header">
-                  <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle" />
-                  <span class="ps-jungle-buff-title">Jungle Buff</span>
-                  <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
-                </div>
-                <div class="ps-jungle-buff-row">
-                  <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
-                </div>
-                <div class="ps-jungle-buff-row">
-                  <span class="ps-jungle-buff-label">Multiplier</span>
-                  <span class="ps-jungle-buff-value">×{{ activeSlot.jungleBuff.multiplier }}</span>
-                </div>
+            <!-- Jungle buff — compact in-place badge, top-right corner (no layout shift) -->
+            <Transition name="ps-buff-pop">
+              <div v-if="activeSlot.jungleBuff?.active" class="ps-jungle-buff-chip">
+                <img class="ps-jungle-buff-leaf" src="/img/roles/jungle.png" alt="Jungle buff" />
+                <span class="ps-jungle-buff-name">{{ activeSlot.jungleBuff.buffType }}</span>
+                <span class="ps-jungle-buff-mult">×{{ activeSlot.jungleBuff.multiplier }}</span>
+                <span class="ps-jungle-buff-timer">{{ jungleBuffSecsLeft }}s</span>
               </div>
             </Transition>
           </div>
@@ -859,6 +869,84 @@ function chooseBuilding(buildingId: string) {
   box-shadow: 0 0 10px color-mix(in oklch, var(--rc, #52b830) 30%, transparent);
 }
 
+/* ── Sidebar jungle-buff highlight — prominent, overlay-only (no layout shift) ── */
+.ps-slot-btn--buffed {
+  background: #0f1a0c;
+  border-color: #5ce66a;
+  animation: ps-buff-pulse 1.8s ease-in-out infinite;
+}
+
+/* Buff overrides the active border colour but keeps the buff language */
+.ps-slot-btn--buffed.ps-slot-btn--active {
+  border-color: #5ce66a;
+}
+
+/* Animated aura ring drawn over the button edge */
+.ps-slot-buff-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #5ce66a;
+  border-radius: var(--bp-radius);
+  pointer-events: none;
+  box-shadow:
+    0 0 14px #5ce66a55,
+    inset 0 0 10px #5ce66a22;
+  animation: ps-slot-buff-ring 1.8s ease-in-out infinite;
+}
+
+@keyframes ps-slot-buff-ring {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Buff badge — pinned to the slot's top-right, overlapping the edge */
+.ps-slot-buff-badge {
+  position: absolute;
+  top: -9px;
+  right: -8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  background: #0c1209;
+  border: 1px solid #3a8040;
+  border-radius: 4px;
+  box-shadow: 0 0 10px #5ce66a55;
+  pointer-events: none;
+}
+
+.ps-slot-buff-leaf {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 0 4px #5ce66a88);
+}
+
+.ps-slot-buff-mult {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #5ce66a;
+  text-shadow: 0 0 6px #5ce66a66;
+  line-height: 1;
+}
+
+.ps-slot-buff-timer {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #a0e880;
+  background: #162a1a;
+  border-radius: 2px;
+  padding: 1px 5px;
+  line-height: 16px;
+}
+
 .ps-slot-btn-img {
   width: 50px;
   height: 50px;
@@ -1132,11 +1220,10 @@ function chooseBuilding(buildingId: string) {
   }
 }
 
-/* Role label / chip / hp / jungle sit above the backdrop, below the system */
+/* Role label / chip / hp sit above the backdrop, below the system */
 .ps-stage > .ps-planet-role-label,
 .ps-stage > .ps-config-chip,
-.ps-stage > .ps-planet-hp,
-.ps-stage > .ps-jungle-buff-panel {
+.ps-stage > .ps-planet-hp {
   position: relative;
   z-index: 1;
 }
@@ -1765,86 +1852,103 @@ img.ps-role-icon {
   width: 100%;
 }
 
-/* ── Jungle Buff Panel ─────────────────────────────────────────────────────── */
-.ps-jungle-buff-panel {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  background: #0c1209;
-  border: 1px solid #3a8040;
-  border-radius: var(--bp-radius);
-  box-shadow:
-    0 0 12px #5ce66a22,
-    inset 0 0 8px #5ce66a0a;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.ps-jungle-buff-header {
+/* ── Jungle Buff — compact in-place chip (top-right of stage) ───────────────── */
+/* Absolutely positioned so showing/hiding the buff never shifts the stage or the
+   upgrade panel below it. */
+.ps-jungle-buff-chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  border-bottom: 1px solid #2a5030;
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.1rem;
+  gap: 8px;
+  padding: 7px 12px 7px 9px;
+  background: #0c1209;
+  border: 1px solid #3a8040;
+  border-radius: 4px;
+  box-shadow:
+    0 0 10px #5ce66a44,
+    inset 0 0 6px #5ce66a14;
+  animation: ps-buff-pulse 1.8s ease-in-out infinite;
 }
 
 .ps-jungle-buff-leaf {
-  width: 14px;
-  height: 14px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
   filter: drop-shadow(0 0 4px #5ce66a88);
 }
 
-.ps-jungle-buff-title {
-  font-size: 0.65rem;
+.ps-jungle-buff-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #a0e880;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.ps-jungle-buff-mult {
+  font-size: 1.1rem;
   font-weight: 800;
   color: #5ce66a;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  flex: 1;
+  text-shadow: 0 0 8px #5ce66a66;
 }
 
 .ps-jungle-buff-timer {
-  font-size: 0.65rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: #5ce66a;
   background: #162a1a;
   border: 1px solid #3a8040;
   border-radius: 3px;
-  padding: 0 4px;
-  line-height: 16px;
+  padding: 1px 6px;
+  line-height: 20px;
 }
 
-.ps-jungle-buff-name {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #a0e880;
-  text-align: center;
-  width: 100%;
-  display: block;
+/* Pulsing green glow on the orbiting planet itself — follows it on its path. */
+.ps-planet-preview-img--buffed {
+  animation: ps-planet-buff-glow 1.8s ease-in-out infinite;
 }
 
-.ps-jungle-buff-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+@keyframes ps-planet-buff-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 8px #5ce66a66);
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 20px #5ce66acc);
+  }
 }
 
-.ps-jungle-buff-label {
-  font-size: 0.62rem;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+/* Shared buff pulse (stage chip + sidebar aura) — subtle, idle-friendly. */
+@keyframes ps-buff-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px #5ce66a33,
+      inset 0 0 6px #5ce66a14;
+  }
+  50% {
+    box-shadow:
+      0 0 16px #5ce66a77,
+      inset 0 0 8px #5ce66a22;
+  }
 }
 
-.ps-jungle-buff-value {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #5ce66a;
-  text-shadow: 0 0 8px #5ce66a66;
+/* Stage chip enter/leave */
+.ps-buff-pop-enter-active,
+.ps-buff-pop-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.ps-buff-pop-enter-from,
+.ps-buff-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.9);
 }
 
 /* ── Config-Sektion ────────────────────────────────────────────────────────── */
