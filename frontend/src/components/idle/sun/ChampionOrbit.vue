@@ -4,7 +4,11 @@
   <AttackProjectileLayer :shots="shots" />
 
   <!-- ① Back-Layer: Champions HINTER der Sonne -->
-  <div class="champion-orbit-layer champion-orbit-back" aria-hidden="true">
+  <div
+    class="champion-orbit-layer champion-orbit-back"
+    aria-hidden="true"
+    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+  >
     <div
       v-for="pos in backChampions"
       :key="pos.name"
@@ -24,12 +28,21 @@
         '--hover-role-color': hoverColor || undefined,
       }"
     >
-      <img :src="pos.img" :alt="pos.name" />
+      <img
+        :src="pos.img"
+        :alt="pos.name"
+        class="champion-orbit-portrait"
+        :class="{ 'champion-orbit-portrait--dimmed': isChampionDimmed(pos) }"
+      />
     </div>
   </div>
 
   <!-- ② Front-Layer: Champions VOR der Sonne -->
-  <div class="champion-orbit-layer champion-orbit-front" aria-hidden="true">
+  <div
+    class="champion-orbit-layer champion-orbit-front"
+    aria-hidden="true"
+    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+  >
     <div
       v-for="pos in frontChampions"
       :key="pos.name"
@@ -69,7 +82,12 @@
         '--hover-role-color': hoverColor || undefined,
       }"
     >
-      <img :src="pos.img" :alt="pos.name" />
+      <img
+        :src="pos.img"
+        :alt="pos.name"
+        class="champion-orbit-portrait"
+        :class="{ 'champion-orbit-portrait--dimmed': isChampionDimmed(pos) }"
+      />
       <Transition name="ability-icon">
         <img
           v-if="pos.isMain && pos.primaryRole && isAbilityActive(pos.primaryRole)"
@@ -132,6 +150,7 @@ import {
   SECONDARY_SIZE_SCALE,
   SUN_RADIUS,
   BEHIND_SUN_SPEED_MULTIPLIER,
+  HOVER_DIM_OPACITY,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -193,9 +212,17 @@ export default defineComponent({
     const uiStore = useUiStore()
 
     const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
+    const hoveredPlanetSlotId = computed(() => uiStore.hoveredPlanetSlotId)
     const hoverColor = computed(() =>
       hoveredChampionRole.value ? (ROLE_HOVER_COLORS[hoveredChampionRole.value] ?? null) : null,
     )
+
+    // Dim a champion when focusing a planet (all champions recede) or a champion
+    // of a different role (same-role champions stay full).
+    function isChampionDimmed(pos: ChampionRenderPos): boolean {
+      if (hoveredPlanetSlotId.value !== null) return true
+      return hoveredChampionRole.value !== null && pos.primaryRole !== hoveredChampionRole.value
+    }
 
     const { shots, spawnShot, tickShots } = useProjectileSystem()
     const { orbitScale } = useOrbitScale()
@@ -527,6 +554,8 @@ export default defineComponent({
       currentSunRadius,
       hoveredChampionRole,
       hoverColor,
+      isChampionDimmed,
+      HOVER_DIM_OPACITY,
     }
   },
 })
@@ -570,6 +599,19 @@ export default defineComponent({
   object-position: center top;
   display: block;
   border-radius: 50%;
+}
+
+/* ── Hover-Focus dim (Command-Panel-Hover) ─────────────────────────────────
+   Opacity sitzt auf dem Portrait-<img>, nicht am äußeren Avatar, dessen
+   Tiefen-Opacity pro Frame per JS gesetzt wird. So multiplizieren sich beide
+   Werte und die Dimm-Transition läuft weich (Klasse toggelt nur als Boolean). */
+.champion-orbit-portrait {
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.champion-orbit-portrait--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
+  filter: grayscale(1) brightness(0.65) blur(1.5px);
 }
 
 /* ── Rollen-Farben (via CSS-Variable aus ROLES[].color) ─────────────────── */

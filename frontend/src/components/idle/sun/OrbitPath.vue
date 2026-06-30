@@ -31,7 +31,13 @@
   </defs>
 
   <!-- Normal orbit ring (visible when behind sun or as base) -->
-  <g :filter="`url(#${uid})`" :style="{ opacity: visible ? 1 : 0, transition: 'opacity 0.5s ease' }">
+  <g
+    :filter="`url(#${uid})`"
+    :style="{
+      opacity: (visible ? 1 : 0) * (dimmed ? HOVER_DIM_OPACITY : 1),
+      transition: 'opacity 0.5s ease',
+    }"
+  >
     <ellipse
       :cx="x"
       :cy="y"
@@ -88,6 +94,7 @@
 import { getCurrentInstance } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { HOVER_DIM_OPACITY } from '@/config/constants'
 
 withDefaults(
   defineProps<{
@@ -101,8 +108,9 @@ withDefaults(
     opacity?: number
     visible?: boolean
     abilityActive?: boolean
+    dimmed?: boolean
   }>(),
-  { strokeWidth: 0.3, opacity: 0.2, visible: true, abilityActive: false },
+  { strokeWidth: 0.3, opacity: 0.2, visible: true, abilityActive: false, dimmed: false },
 )
 
 const { currentSunRadius } = storeToRefs(usePlanetShopStore())

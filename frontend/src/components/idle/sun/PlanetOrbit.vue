@@ -10,13 +10,18 @@
         :ry="tierOrbitDimensions[i].ry"
         :tiltDeg="tierOrbitDimensions[i].tiltDeg"
         :visible="tierIsBehind[i]"
+        :dimmed="hoveredChampionRole !== null"
       />
     </template>
   </svg>
 
   <AttackProjectileLayer :shots="shots" />
 
-  <div class="planet-orbit-layer planet-orbit-back" aria-hidden="true">
+  <div
+    class="planet-orbit-layer planet-orbit-back"
+    aria-hidden="true"
+    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+  >
     <div
       v-for="pos in backPlanets"
       :key="pos.id"
@@ -33,11 +38,20 @@
         '--planet-color': pos.color,
       }"
     >
-      <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
+      <img
+        :src="pos.planetImage"
+        :alt="pos.name"
+        draggable="false"
+        class="planet-orbit-portrait"
+        :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
+      />
     </div>
   </div>
 
-  <div class="planet-orbit-layer planet-orbit-front">
+  <div
+    class="planet-orbit-layer planet-orbit-front"
+    :style="{ '--hover-dim-opacity': HOVER_DIM_OPACITY }"
+  >
     <div
       v-for="pos in frontPlanets"
       :key="pos.id"
@@ -57,7 +71,13 @@
         '--planet-color': pos.color,
       }"
     >
-      <img :src="pos.planetImage" :alt="pos.name" draggable="false" />
+      <img
+        :src="pos.planetImage"
+        :alt="pos.name"
+        draggable="false"
+        class="planet-orbit-portrait"
+        :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
+      />
       <span class="planet-bonus-badge" :title="pos.roleLabel">
         <Icon v-if="pos.roleIcon.includes(':')" :icon="pos.roleIcon" class="planet-badge-gi" />
         <span v-else>{{ pos.roleIcon }}</span>
@@ -148,7 +168,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
@@ -191,6 +211,7 @@ interface PlanetRenderPos {
   slotNum: number
   isHighlighted: boolean
   highlightColor: string
+  isDimmed: boolean
 }
 
 interface LocalPlanetState {
@@ -244,6 +265,7 @@ export default defineComponent({
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
     const uiStore = useUiStore()
+    const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
     const localStates = new Map<string, LocalPlanetState>()
     const planetSpeedMuls = new Map<string, number>()
     const renderPositions = ref<PlanetRenderPos[]>([])
@@ -375,6 +397,9 @@ export default defineComponent({
         const hPlanetId = uiStore.hoveredPlanetSlotId
         const isHighlighted = slot.id === hPlanetId
         const highlightColor = slot.role ? PLANET_ROLES[slot.role].color : '#c89040'
+        // Dim when focusing a champion (all planets recede) or another planet.
+        const isDimmed =
+          uiStore.hoveredChampionRole !== null || (hPlanetId !== null && slot.id !== hPlanetId)
 
         newPositions.push({
           id: slot.id,
@@ -406,6 +431,7 @@ export default defineComponent({
           slotNum,
           isHighlighted,
           highlightColor,
+          isDimmed,
         })
       }
 
@@ -506,6 +532,8 @@ export default defineComponent({
 
     return {
       planetShopStore,
+      hoveredChampionRole,
+      HOVER_DIM_OPACITY,
       allSlots,
       slotsWithRole,
       backPlanets,
@@ -571,6 +599,19 @@ export default defineComponent({
   object-fit: contain;
   display: block;
   image-rendering: high-quality;
+}
+
+/* ── Hover-Focus dim (Command-Panel-Hover) ─────────────────────────────────
+   Opacity sitzt auf dem Planet-<img>, nicht am äußeren Item, dessen
+   Tiefen-Opacity pro Frame per JS gesetzt wird → beide multiplizieren sich,
+   Dimm-Transition läuft weich (Klasse toggelt nur als Boolean). */
+.planet-orbit-portrait {
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+.planet-orbit-portrait--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
+  filter: grayscale(1) brightness(0.65) blur(1.5px);
 }
 
 .planet-orbit-item--behind {

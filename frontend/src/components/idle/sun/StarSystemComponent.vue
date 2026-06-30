@@ -28,6 +28,7 @@
           :tiltDeg="entry.tiltDeg"
           :visible="roleOrbitVisibility[i]"
           :abilityActive="entry.role === hoveredChampionRole"
+          :dimmed="roleOrbitDimmed(entry.role)"
         />
       </template>
     </svg>
@@ -352,6 +353,14 @@ import type { ChampionRole } from '../../../types'
 
 const uiStore = useUiStore()
 const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
+const hoveredPlanetSlotId = computed(() => uiStore.hoveredPlanetSlotId)
+
+// Dim a role's orbit ring when the player is focusing a different role
+// (champion-slot hover) or any planet (planet-tile hover).
+function roleOrbitDimmed(role: ChampionRole): boolean {
+  if (hoveredPlanetSlotId.value !== null) return true
+  return hoveredChampionRole.value !== null && role !== hoveredChampionRole.value
+}
 
 const hoveredStarId = ref<string | null>(null)
 const hoveredSummaryStarId = ref<string | null>(null)
