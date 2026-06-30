@@ -1161,6 +1161,14 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
 ]
 
+// ── Planet Tab stage sizing ───────────────────────────────────────────────────
+/** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
+export const PLANET_TAB_SUN_MIN_DIAMETER = 300
+/** Sun image diameter (px) in the Planet Tab at the largest phase radius. */
+export const PLANET_TAB_SUN_MAX_DIAMETER = 470
+/** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
+export const PLANET_TAB_PLANET_DIAMETER = 96
+
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
 /** Milliseconds the cinematic kill-announcement banner stays visible before fading */

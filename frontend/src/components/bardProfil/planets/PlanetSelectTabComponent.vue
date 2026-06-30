@@ -18,6 +18,9 @@ import {
   PLANET_MILESTONE_BONUS,
   PLANET_BULK_LEVEL_STEP,
   STAR_PHASE_DATA,
+  PLANET_TAB_SUN_MIN_DIAMETER,
+  PLANET_TAB_SUN_MAX_DIAMETER,
+  PLANET_TAB_PLANET_DIAMETER,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 
@@ -115,6 +118,16 @@ const activeRoleColor = computed(() => {
 // Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).
 const sunPhaseStyle = computed(() => {
   const phase = STAR_PHASE_DATA[store.currentSunStage] ?? STAR_PHASE_DATA[0]
+  // Scale the stage sun proportionally to the real Sun-Phase radius (the same
+  // value SunComponent uses), normalized over the data's own min/max so it adapts
+  // if phases change, then mapped into a safe diameter band that keeps the fixed
+  // orbit framed by the sun.
+  const radii = STAR_PHASE_DATA.map((p) => p.radius)
+  const minR = Math.min(...radii)
+  const maxR = Math.max(...radii)
+  const t = maxR === minR ? 0 : (phase.radius - minR) / (maxR - minR)
+  const sunD =
+    PLANET_TAB_SUN_MIN_DIAMETER + t * (PLANET_TAB_SUN_MAX_DIAMETER - PLANET_TAB_SUN_MIN_DIAMETER)
   return {
     '--phase-core': phase.core,
     '--phase-mid': phase.mid,
@@ -122,6 +135,8 @@ const sunPhaseStyle = computed(() => {
     '--phase-primary': phase.phasePrimary,
     '--phase-glow': phase.phaseGlow,
     '--pulse-speed': phase.pulseSpeed,
+    '--ps-sun-d': `${Math.round(sunD)}px`,
+    '--ps-planet-d': `${PLANET_TAB_PLANET_DIAMETER}px`,
   }
 })
 
@@ -445,7 +460,9 @@ function chooseBuilding(buildingId: string) {
           <!-- Stage: planet orbiting the current-phase sun, over sparse stars -->
           <div class="ps-stage" :style="[{ '--rc': activeRoleColor }, sunPhaseStyle]">
             <div class="ps-stage-bg" aria-hidden="true">
-              <div class="ps-stage-stars" />
+              <div class="ps-stage-stars ps-stage-stars--far" />
+              <div class="ps-stage-stars ps-stage-stars--mid" />
+              <div class="ps-stage-stars ps-stage-stars--near" />
             </div>
 
             <!-- Sun + orbiting planet share one centered system -->
@@ -920,17 +937,71 @@ function chooseBuilding(buildingId: string) {
   background: radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.55), transparent 60%);
 }
 
+/* Layered parallax starfield behind the sun: three depth layers, each twinkling
+   at its own rate with a barely-there drift, so it reads alive but stays subtle. */
 .ps-stage-stars {
   position: absolute;
-  inset: 0;
+  /* slight overscan so the gentle drift never reveals hard edges */
+  inset: -12px;
+  pointer-events: none;
+  /* both animations run together: opacity twinkle + transform drift (independent) */
+  animation:
+    ps-stars-twinkle 6s ease-in-out infinite,
+    ps-stars-drift 80s ease-in-out infinite alternate;
+}
+
+/* Far layer: many tiny, dim stars — slowest twinkle + slowest drift */
+.ps-stage-stars--far {
   background-image:
-    radial-gradient(1.5px 1.5px at 16% 22%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1.5px 1.5px at 82% 28%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(1.5px 1.5px at 30% 78%, rgba(255, 255, 255, 0.42), transparent),
-    radial-gradient(1.5px 1.5px at 70% 72%, rgba(255, 255, 255, 0.32), transparent),
-    radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.3), transparent),
-    radial-gradient(1.5px 1.5px at 10% 60%, rgba(255, 255, 255, 0.3), transparent);
-  animation: ps-stars-twinkle 5s ease-in-out infinite;
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 26% 64%, rgba(255, 255, 255, 0.24), transparent),
+    radial-gradient(1px 1px at 38% 32%, rgba(255, 255, 255, 0.28), transparent),
+    radial-gradient(1px 1px at 47% 82%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(1px 1px at 58% 14%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 66% 54%, rgba(255, 255, 255, 0.24), transparent),
+    radial-gradient(1px 1px at 74% 88%, rgba(255, 255, 255, 0.26), transparent),
+    radial-gradient(1px 1px at 84% 38%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 92% 70%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(1px 1px at 6% 46%, rgba(255, 255, 255, 0.26), transparent);
+  animation-duration: 7s, 90s;
+}
+
+/* Mid layer: medium stars at a different cadence (reversed drift) */
+.ps-stage-stars--mid {
+  background-image:
+    radial-gradient(1.5px 1.5px at 16% 22%, rgba(255, 255, 255, 0.48), transparent),
+    radial-gradient(1.5px 1.5px at 30% 78%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 44% 40%, rgba(255, 255, 255, 0.42), transparent),
+    radial-gradient(1.5px 1.5px at 55% 66%, rgba(255, 255, 255, 0.34), transparent),
+    radial-gradient(1.5px 1.5px at 70% 24%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 82% 60%, rgba(255, 255, 255, 0.36), transparent),
+    radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.34), transparent),
+    radial-gradient(1.5px 1.5px at 10% 88%, rgba(255, 255, 255, 0.32), transparent),
+    radial-gradient(1.5px 1.5px at 62% 92%, rgba(255, 255, 255, 0.3), transparent);
+  animation-duration: 5.5s, 70s;
+  animation-delay: -2.5s, -18s;
+  animation-direction: alternate, alternate-reverse;
+}
+
+/* Near layer: a few brighter stars, two faintly tinted to the current sun phase */
+.ps-stage-stars--near {
+  background-image:
+    radial-gradient(2px 2px at 22% 30%, rgba(255, 255, 255, 0.66), transparent),
+    radial-gradient(2px 2px at 48% 18%, rgba(255, 255, 255, 0.56), transparent),
+    radial-gradient(
+      2px 2px at 36% 70%,
+      color-mix(in srgb, white 82%, var(--phase-glow, #ff8c42)) 0%,
+      transparent 100%
+    ),
+    radial-gradient(2px 2px at 68% 78%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(
+      2px 2px at 80% 44%,
+      color-mix(in srgb, white 84%, var(--phase-primary, #ffb347)) 0%,
+      transparent 100%
+    ),
+    radial-gradient(2px 2px at 14% 52%, rgba(255, 255, 255, 0.5), transparent);
+  animation-duration: 4.2s, 58s;
+  animation-delay: -1.2s, -9s;
 }
 
 /* Sun + orbiting planet share one centered system */
@@ -946,10 +1017,13 @@ function chooseBuilding(buildingId: string) {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(320px, 52vh, 460px);
-  height: clamp(320px, 52vh, 460px);
+  /* Diameter scales with the current Sun-Phase (see sunPhaseStyle); capped on
+     narrow viewports. Smooth transition so phase changes grow/shrink the sun. */
+  width: min(var(--ps-sun-d, 380px), 90vw);
+  height: min(var(--ps-sun-d, 380px), 90vw);
   transform: translate(-50%, -50%);
   border-radius: 50%;
+  transition: width 1.2s ease, height 1.2s ease;
   background:
     radial-gradient(
       circle at 42% 38%,
@@ -1042,6 +1116,12 @@ function chooseBuilding(buildingId: string) {
 @keyframes ps-stars-twinkle {
   0%, 100% { opacity: 0.85; }
   50% { opacity: 0.5; }
+}
+
+/* Barely-there parallax drift (≤6px) — used with `alternate` for a slow back-and-forth */
+@keyframes ps-stars-drift {
+  from { transform: translate(0, 0); }
+  to { transform: translate(5px, -4px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1664,8 +1744,10 @@ img.ps-role-icon {
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
 /* (positioning handled by the .ps-planet-preview-wrap rule in the stage section) */
 .ps-planet-preview-img {
-  width: clamp(168px, 32vh, 248px);
-  height: clamp(168px, 32vh, 248px);
+  /* Fixed, deliberately small so the sun clearly dominates; orbit depth-scaling
+     then yields a larger near pass and a smaller far pass. */
+  width: var(--ps-planet-d, 96px);
+  height: var(--ps-planet-d, 96px);
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
