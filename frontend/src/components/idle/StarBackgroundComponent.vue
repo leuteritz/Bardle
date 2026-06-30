@@ -2,11 +2,12 @@
   <div
     ref="starsContainer"
     class="stars"
-    id="stars"
+    :class="{ 'stars--contained': contained }"
+    :id="contained ? undefined : 'stars'"
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
-    <div :class="{ 'nebulas-paused': !windowFocused || nebulasPaused }">
+    <div :class="{ 'nebulas-paused': !windowFocused || nebulasPaused || frozen }">
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
       <div class="nebula nebula-3"></div>
@@ -28,7 +29,17 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useStarBackground } from '../../composables/starBackground'
 import { useWindowFocus } from '../../composables/useWindowFocus'
 
-const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground()
+const props = withDefaults(
+  defineProps<{
+    /** Render contained within a positioned parent (Shop) instead of fixed full-viewport. */
+    contained?: boolean
+    /** Static field: no streaming/warp, no galaxy/nebula spawns — only in-place twinkle (Shop). */
+    frozen?: boolean
+  }>(),
+  { contained: false, frozen: false },
+)
+
+const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground({ frozen: props.frozen })
 const { windowFocused, onFocusChange } = useWindowFocus()
 
 const NEBULA_IDLE_TIMEOUT = 30_000
@@ -96,6 +107,12 @@ onBeforeUnmount(() => {
   pointer-events: none !important;
   z-index: 1 !important;
   overflow: hidden !important;
+}
+
+/* Contained variant: fills its positioned parent (Shop box) instead of the viewport. */
+.stars.stars--contained {
+  position: absolute !important;
+  z-index: 0 !important;
 }
 
 .star-canvas {

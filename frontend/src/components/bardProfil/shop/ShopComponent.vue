@@ -1,21 +1,7 @@
 <template>
   <div class="shop-frame">
-    <!-- Animated star field -->
-    <span
-      v-for="star in stars"
-      :key="star.id"
-      class="star"
-      :style="{
-        left: star.x + '%',
-        top: star.y + '%',
-        width: star.size + 'px',
-        height: star.size + 'px',
-        opacity: star.opacity,
-        '--drift-duration': starDriftDuration(star.id),
-        '--star-dx': star.dx + 'px',
-        '--star-dy': star.dy + 'px',
-      }"
-    />
+    <!-- Planet-tab background: canvas starfield + floating nebulas (contained, frozen/static) -->
+    <StarBackgroundComponent contained frozen />
 
     <!-- Cosmic arena -->
     <div class="cosmic-arena">
@@ -56,14 +42,9 @@
           </template>
         </svg>
 
-        <!-- Sun -->
-        <div class="sun-wrapper" :style="sunStyle">
-          <div class="sun-trail" />
-          <div
-            class="cosmic-sun"
-            :class="{ 'sun-burst': purchaseFlash }"
-            :style="{ transform: `scale(${currentStage.factor})` }"
-          />
+        <!-- Sun — planet-tab layered sun, top-down camera, contained & clamped to the shop -->
+        <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }" :style="sunStyle">
+          <SunComponent contained :radius="shopSunRadius" :show-rings="false" />
           <!-- Next phase preview overlay — shown when evolve is ready -->
           <div
             v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
@@ -173,8 +154,15 @@ import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { formatNumber } from '@/config/numberFormat'
-import { SOLAR_MAX_LEVELS, STAR_PHASE_DATA } from '@/config/constants'
+import {
+  SOLAR_MAX_LEVELS,
+  STAR_PHASE_DATA,
+  SHOP_SUN_RADIUS_MIN,
+  SHOP_SUN_RADIUS_MAX,
+} from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
+import SunComponent from '@/components/idle/sun/SunComponent.vue'
+import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.vue'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
@@ -206,6 +194,16 @@ const BRANCHES: BranchDef[] = [
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
 const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)])
 
+// ── Clamped shop sun size — grows with phase, never collides with branch icons ──
+const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))
+const PHASE_RADIUS_MAX = Math.max(...STAR_PHASE_DATA.map((p) => p.radius))
+const shopSunRadius = computed(() => {
+  const r = currentStage.value.radius
+  const t = (r - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
+  return SHOP_SUN_RADIUS_MIN + t * (SHOP_SUN_RADIUS_MAX - SHOP_SUN_RADIUS_MIN)
+})
+
+// Supplies --sun-edge etc. used by the HP-text overlay color.
 const sunStyle = computed(() => {
   const s = currentStage.value
   return {
@@ -215,8 +213,6 @@ const sunStyle = computed(() => {
     '--sun-glow1': s.glow1,
     '--sun-glow2': s.glow2,
     '--sun-glow3': s.glow3,
-    '--trail-opacity': (solarStore.flightSpeedLevel / SOLAR_MAX_LEVELS).toFixed(2),
-    '--trail-color': s.glow1,
   }
 })
 
@@ -232,32 +228,6 @@ const nextPhasePreviewStyle = computed(() => ({
 
 // ── Purchase flash ────────────────────────────────────────────────────────────
 const purchaseFlash = ref(false)
-
-// ── Static star field ─────────────────────────────────────────────────────────
-const stars = Array.from({ length: 70 }, (_, i) => {
-  let s = (i * 1664525 + 1013904223) & 0x7fffffff
-  s = (s * 1664525 + 1013904223) & 0x7fffffff
-  const s2 = (s * 1664525 + 1013904223) & 0x7fffffff
-  const s3 = (s2 * 1664525 + 1013904223) & 0x7fffffff
-  const s4 = (s3 * 1664525 + 1013904223) & 0x7fffffff
-  const s5 = (s4 * 1664525 + 1013904223) & 0x7fffffff
-  return {
-    id: i,
-    x: (s % 1000) / 10,
-    y: (s2 % 1000) / 10,
-    size: 1 + (s3 % 3),
-    opacity: (3 + (s % 6)) / 10,
-    dx: -8 + (s4 % 17),
-    dy: -8 + (s5 % 17),
-  }
-})
-
-// ── Drift speed tied to flight speed ─────────────────────────────────────────
-function starDriftDuration(starId: number): string {
-  const base = 13 - solarStore.flightSpeedLevel * 1.8
-  const jitter = (starId % 5) * 0.6
-  return Math.max(2.5, base + jitter).toFixed(1) + 's'
-}
 
 // ── SVG helpers ───────────────────────────────────────────────────────────────
 function rad(deg: number): number {
@@ -328,23 +298,6 @@ function handleUpgradeStar(): void {
 }
 
 /* ══════════════════════════════════════════════════
-   ANIMATED STARS
-══════════════════════════════════════════════════ */
-.star {
-  position: absolute;
-  border-radius: 50%;
-  background: #ffffff;
-  pointer-events: none;
-  z-index: 0;
-  animation: shop-star-drift var(--drift-duration) ease-in-out infinite alternate;
-}
-
-@keyframes shop-star-drift {
-  from { transform: translate(0, 0); }
-  to   { transform: translate(var(--star-dx), var(--star-dy)); }
-}
-
-/* ══════════════════════════════════════════════════
    ARENA
 ══════════════════════════════════════════════════ */
 .cosmic-arena {
@@ -393,73 +346,20 @@ function handleUpgradeStar(): void {
   z-index: 2;
 }
 
-.sun-trail {
-  position: absolute;
-  inset: -28%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse 48% 78% at 68% 50%,
-    transparent 32%,
-    var(--trail-color) 68%,
-    transparent 100%
-  );
-  opacity: var(--trail-opacity);
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.8s ease;
+/* Brief brightness burst on purchase (applied to the layered SunComponent). */
+.sun-wrapper.sun-flash {
+  animation: shop-sun-flash 0.45s ease-out;
 }
 
-.cosmic-sun {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 38% 35%,
-    var(--sun-core) 0%,
-    color-mix(in srgb, var(--sun-core) 50%, var(--sun-mid)) 20%,
-    var(--sun-mid) 45%,
-    color-mix(in srgb, var(--sun-mid) 30%, var(--sun-edge)) 70%,
-    var(--sun-edge) 100%
-  );
-  box-shadow:
-    0 0 55px 22px color-mix(in srgb, var(--sun-glow1) 80%, transparent),
-    0 0 120px 50px color-mix(in srgb, var(--sun-glow1) 55%, transparent),
-    0 0 200px 90px color-mix(in srgb, var(--sun-glow2) 32%, transparent),
-    0 0 300px 130px color-mix(in srgb, var(--sun-glow3) 16%, transparent);
-  animation: sun-pulse 3.2s ease-in-out infinite;
-  transition: transform 0.8s ease;
-}
-
-@keyframes sun-pulse {
-  0%, 100% {
-    box-shadow:
-      0 0 55px 22px color-mix(in srgb, var(--sun-glow1) 80%, transparent),
-      0 0 120px 50px color-mix(in srgb, var(--sun-glow1) 55%, transparent),
-      0 0 200px 90px color-mix(in srgb, var(--sun-glow2) 32%, transparent),
-      0 0 300px 130px color-mix(in srgb, var(--sun-glow3) 16%, transparent);
-  }
-  50% {
-    box-shadow:
-      0 0 80px 36px color-mix(in srgb, var(--sun-glow1) 100%, transparent),
-      0 0 170px 75px color-mix(in srgb, var(--sun-glow1) 78%, transparent),
-      0 0 280px 125px color-mix(in srgb, var(--sun-glow2) 48%, transparent),
-      0 0 400px 175px color-mix(in srgb, var(--sun-glow3) 22%, transparent);
-  }
-}
-
-.cosmic-sun.sun-burst {
-  animation: sun-burst 0.45s ease-out, sun-pulse 3.2s ease-in-out infinite;
-}
-
-@keyframes sun-burst {
+@keyframes shop-sun-flash {
   0%   { filter: brightness(1) saturate(1); }
-  35%  { filter: brightness(2.4) saturate(1.8); }
+  35%  { filter: brightness(1.8) saturate(1.5); }
   100% { filter: brightness(1) saturate(1); }
 }
 
 .sun-hp-text {
   position: relative;
-  z-index: 2;
+  z-index: 10;
   display: flex;
   flex-direction: row;
   align-items: baseline;
@@ -741,7 +641,7 @@ function handleUpgradeStar(): void {
   opacity: 0;
   animation: phase-preview-pulse 1.8s ease-in-out infinite;
   pointer-events: none;
-  z-index: 3;
+  z-index: 6;
   transition: all 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -827,9 +727,8 @@ function handleUpgradeStar(): void {
    REDUCED MOTION
 ══════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  .cosmic-sun,
   .icon-circle--affordable,
-  .star {
+  .sun-wrapper.sun-flash {
     animation: none;
   }
 }

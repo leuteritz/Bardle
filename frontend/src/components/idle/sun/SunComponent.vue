@@ -1,10 +1,10 @@
 <template>
-  <div class="sun-container" :style="sunContainerVars">
+  <div class="sun-container" :class="{ 'top-down': topDown, contained, calm }" :style="sunContainerVars">
     <div class="sun-atmosphere"></div>
     <div class="sun-corona"></div>
 
     <!-- Orbit-Ringe der Champions -->
-    <svg class="orbit-paths" viewBox="0 0 360 360">
+    <svg v-if="showRings" class="orbit-paths" viewBox="0 0 360 360">
       <ellipse
         v-for="c in combatStore.champions"
         :key="'ring-' + c.name"
@@ -115,10 +115,10 @@
           filter="url(#sf-blur-umbra)"
         />
 
-        <!-- Terminator / leichte Volumenschattierung -->
+        <!-- Terminator / leichte Volumenschattierung (zentriert bei Top-Down) -->
         <ellipse
-          cx="195"
-          cy="184"
+          :cx="topDown ? 180 : 195"
+          :cy="topDown ? 180 : 184"
           rx="78"
           ry="98"
           fill="rgba(70, 15, 0, 0.10)"
@@ -140,7 +140,7 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useGameStore } from '@/stores/gameStore'
-import { STAR_PHASE_DATA } from '@/config/constants'
+import { STAR_PHASE_DATA, SUN_AXIAL_TILT, SUN_TOPDOWN_AXIAL_TILT } from '@/config/constants'
 
 interface DynamicRay {
   id: number
@@ -186,10 +186,25 @@ interface SunspotPos {
 
 export default defineComponent({
   name: 'SunComponent',
-  setup() {
+  props: {
+    /** Override the visual radius (px). Defaults to the live phase radius from planetShopStore. */
+    radius: { type: Number, default: null },
+    /** Top-down camera: centers all lighting cues and zeroes the axial tilt. */
+    topDown: { type: Boolean, default: false },
+    /** Calm: freeze pulse/breathe + dynamic-ray shimmer, keep only self-rotation (Shop). */
+    calm: { type: Boolean, default: false },
+    /** Show the champion orbit rings around the sun (planet tab only). */
+    showRings: { type: Boolean, default: true },
+    /** Position the sun within its parent (absolute) instead of the viewport (fixed). */
+    contained: { type: Boolean, default: false },
+  },
+  setup(props) {
     const combatStore = useCombatStore()
     const planetShopStore = usePlanetShopStore()
     const gameStore = useGameStore()
+
+    const effectiveRadius = computed(() => props.radius ?? planetShopStore.currentSunRadius)
+    const axialTilt = computed(() => (props.topDown ? SUN_TOPDOWN_AXIAL_TILT : SUN_AXIAL_TILT))
 
     const POOL_SIZE = 20
     const chimeParticles: ChimeParticle[] = Array.from({ length: POOL_SIZE }, (_, i) => ({
@@ -211,12 +226,12 @@ export default defineComponent({
     function resizeCanvas() {
       const cvs = canvasEl.value
       if (!cvs) return
-      const r = planetShopStore.currentSunRadius
+      const r = effectiveRadius.value
       cvs.width = Math.round(r * 6)
       cvs.height = Math.round(r * 6)
     }
 
-    watch(() => planetShopStore.currentSunRadius, resizeCanvas)
+    watch(effectiveRadius, resizeCanvas)
 
     let nextSpawnAt = 0
 
@@ -237,7 +252,7 @@ export default defineComponent({
       const slot = chimeParticles.find((p) => !p.active)
       if (!slot) return
 
-      const r = planetShopStore.currentSunRadius
+      const r = effectiveRadius.value
       const angle = Math.random() * Math.PI * 2
 
       slot.cx = r * Math.cos(angle)
@@ -298,8 +313,7 @@ export default defineComponent({
     // Etwas langsamer und ruhiger, dafür räumlicher
     const SOLAR_ROT_SPEED = 0.000082
 
-    // Blick auf die Kugel: leichte Neigung
-    const AXIAL_TILT = -0.42
+    // Blick auf die Kugel: leichte Neigung (reaktiv über axialTilt — top-down = 0)
     const Y_FLATTENING = 0.9
 
     const SOLAR_SPOTS: SunspotDef[] = [
@@ -345,8 +359,8 @@ export default defineComponent({
       const z3 = cosLat * Math.cos(lon)
 
       // Neigung der Sonnenachse
-      const cosT = Math.cos(AXIAL_TILT)
-      const sinT = Math.sin(AXIAL_TILT)
+      const cosT = Math.cos(axialTilt.value)
+      const sinT = Math.sin(axialTilt.value)
 
       const yTilt = y3 * cosT - z3 * sinT
       const zTilt = y3 * sinT + z3 * cosT
@@ -390,17 +404,20 @@ export default defineComponent({
       spawnChime(timestamp)
       drawChimes(timestamp)
 
-      if (timestamp - lastTargetUpdate > TARGET_INTERVAL) {
-        dynamicRays.value.forEach((ray) => {
-          ray.targetLength = MIN_LENGTH + Math.random() * (MAX_LENGTH - MIN_LENGTH)
-        })
-        lastTargetUpdate = timestamp
-      }
+      // Calm: rays hold their initial length (steady corona); only self-rotation continues.
+      if (!props.calm) {
+        if (timestamp - lastTargetUpdate > TARGET_INTERVAL) {
+          dynamicRays.value.forEach((ray) => {
+            ray.targetLength = MIN_LENGTH + Math.random() * (MAX_LENGTH - MIN_LENGTH)
+          })
+          lastTargetUpdate = timestamp
+        }
 
-      dynamicRays.value.forEach((ray) => {
-        ray.currentLength += (ray.targetLength - ray.currentLength) * ray.speed
-        ray.opacity = 0.78 - ((ray.currentLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.62
-      })
+        dynamicRays.value.forEach((ray) => {
+          ray.currentLength += (ray.targetLength - ray.currentLength) * ray.speed
+          ray.opacity = 0.78 - ((ray.currentLength - MIN_LENGTH) / (MAX_LENGTH - MIN_LENGTH)) * 0.62
+        })
+      }
 
       const dt = lastTimestamp === 0 ? 0 : timestamp - lastTimestamp
       lastTimestamp = timestamp
@@ -434,7 +451,7 @@ export default defineComponent({
     const sunContainerVars = computed((): Record<string, string> => {
       const phase = STAR_PHASE_DATA[planetShopStore.currentSunStage]
       return {
-        '--sun-r': `${planetShopStore.currentSunRadius}px`,
+        '--sun-r': `${effectiveRadius.value}px`,
         '--phase-primary': phase.phasePrimary,
         '--phase-glow': phase.phaseGlow,
         '--phase-core': phase.core,
@@ -468,6 +485,74 @@ export default defineComponent({
   pointer-events: none;
   overflow: visible;
   transition: width 1.5s ease, height 1.5s ease;
+}
+
+/* Contained: zentriert im positionierten Eltern-Element statt im Viewport (Shop). */
+.sun-container.contained {
+  position: absolute;
+}
+
+/* ── Top-Down-Kamera: alle Licht-Hinweise zentrieren (Shop) ─────────────────── */
+.sun-container.top-down .sun-core {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, white 92%, var(--phase-core)) 0%,
+      color-mix(in srgb, white 78%, var(--phase-core)) 13%,
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--phase-core) 95%, transparent) 0%,
+      color-mix(in srgb, var(--phase-mid) 82%, transparent) 38%,
+      color-mix(in srgb, var(--phase-mid) 56%, transparent) 68%,
+      color-mix(in srgb, var(--phase-edge) 28%, transparent) 88%,
+      transparent 100%
+    );
+}
+
+.sun-container.top-down .sun-volume--light {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 230, 0.22) 0%,
+    rgba(255, 250, 220, 0.12) 18%,
+    rgba(255, 240, 180, 0.04) 34%,
+    transparent 52%
+  );
+}
+
+/* Richtungsschatten → symmetrische Limb-Darkening (Rand rundum dunkler). */
+.sun-container.top-down .sun-volume--shade {
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 0%,
+    transparent 55%,
+    rgba(100, 25, 0, 0.08) 80%,
+    rgba(60, 12, 0, 0.18) 100%
+  );
+}
+
+/* Lens-Flare zentriert als statischer Top-Glanzpunkt (kein Richtungs-Drift). */
+.sun-container.top-down .sun-flare {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: none;
+}
+
+/* ── Calm: Pulsieren/Atmen einfrieren — nur Eigenrotation bleibt (Shop) ─────── */
+.sun-container.calm .sun-core {
+  animation: none;
+}
+
+.sun-container.calm .sun-corona {
+  animation: none;
+  opacity: 0.85;
+}
+
+.sun-container.calm .sun-atmosphere {
+  animation: none;
+  opacity: 0.8;
 }
 
 .orbit-paths {

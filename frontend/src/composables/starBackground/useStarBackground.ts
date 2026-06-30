@@ -4,6 +4,7 @@ import { useGalaxyStore } from '../../stores/galaxyStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import {
   STAR_COUNT,
+  STAR_BG_MIN_STARS,
   WARP_SPEED_MAX,
   GALAXY_TRANS_WARP_MS,
   GALAXY_TRANS_DECEL_MS,
@@ -1097,7 +1098,11 @@ function pickOrbitStarColor(): [number, number, number] {
   return cat.colors[Math.floor(Math.random() * cat.colors.length)]
 }
 
-export function useStarBackground() {
+export function useStarBackground(options: { frozen?: boolean } = {}) {
+  // frozen = statisches Sternenfeld (Shop): kein Heranfliegen, keine Galaxien/Nebel-Spawns,
+  // keine Galaxy-/Warp-Mutationen — nur In-Place-Twinkle.
+  const isFrozen = options.frozen ?? false
+
   const starsContainer = ref<HTMLElement>()
   const starCanvas = ref<HTMLCanvasElement>()
   const prefersReducedMotion = ref(false)
@@ -1145,6 +1150,15 @@ export function useStarBackground() {
     if (!starCanvas.value || !starsContainer.value) return
     starCanvas.value.width = starsContainer.value.clientWidth || window.innerWidth
     starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
+  }
+
+  // Per-area density: scale element counts by container area vs. the viewport, so a contained
+  // instance (Shop) renders at the same star density as the full-screen one (Planet) — capped at 1.
+  function densityScale(): number {
+    const w = starsContainer.value?.clientWidth || window.innerWidth
+    const h = starsContainer.value?.clientHeight || window.innerHeight
+    const ref = window.innerWidth * window.innerHeight
+    return ref > 0 ? Math.min(1, (w * h) / ref) : 1
   }
 
   // ── Canvas ein-/ausblenden ─────────────────────────────────────────────────
@@ -1324,6 +1338,7 @@ export function useStarBackground() {
   }
 
   function scheduleNextGalaxy(): void {
+    if (isFrozen) return
     const delay =
       GALAXY_SPAWN_INTERVAL_MIN +
       Math.random() * (GALAXY_SPAWN_INTERVAL_MAX - GALAXY_SPAWN_INTERVAL_MIN)
@@ -1377,6 +1392,7 @@ export function useStarBackground() {
   }
 
   function scheduleNextEmission(): void {
+    if (isFrozen) return
     const delay = EMISSION_SPAWN_MIN + Math.random() * (EMISSION_SPAWN_MAX - EMISSION_SPAWN_MIN)
     emissionSpawnTimeout = setTimeout(() => {
       spawnEmissionNebula()
@@ -1398,7 +1414,8 @@ export function useStarBackground() {
       [9, 6, 6, 0.21],
       [4, 6, 10, 0.17],
     ]
-    for (let i = 0; i < DUST_PATCH_COUNT; i++) {
+    const dustCount = Math.max(1, Math.round(DUST_PATCH_COUNT * densityScale()))
+    for (let i = 0; i < dustCount; i++) {
       const [r, g, b, opacity] = dustConfigs[i]
       dustPatches.push({
         angle: Math.random() * Math.PI * 2,
@@ -1423,7 +1440,8 @@ export function useStarBackground() {
     const w = starsContainer.value?.clientWidth || window.innerWidth
     const h = starsContainer.value?.clientHeight || window.innerHeight
     const maxDist = Math.hypot(w / 2, h / 2) + 20
-    for (let i = 0; i < CLUSTER_COUNT; i++) {
+    const clusterCount = Math.max(1, Math.round(CLUSTER_COUNT * densityScale()))
+    for (let i = 0; i < clusterCount; i++) {
       const count = 15 + Math.floor(Math.random() * 12)
       const radius = 18 + Math.random() * 32
       const clusterStars = []
@@ -1489,8 +1507,12 @@ export function useStarBackground() {
     const delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
+    // Frozen (Shop): kein Heranfliegen, keine Galaxy-/Warp-/Rescue-Mutationen.
+    let hyperActive = false
+    let speedMultiplier = 0
+    if (!isFrozen) {
     const gameStore = useGameStore()
-    const hyperActive = gameStore.isHyperspaceActive
+    hyperActive = gameStore.isHyperspaceActive
     if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
     wasHyperspaceActive = hyperActive
     if (hyperActive) hyperspaceElapsed += delta
@@ -1553,7 +1575,6 @@ export function useStarBackground() {
       }
     }
 
-    let speedMultiplier: number
     if (galaxyStore.isRescueRotating) {
       speedMultiplier = 0
     } else if (galaxyTransPhase === 'warp') {
@@ -1565,6 +1586,7 @@ export function useStarBackground() {
     } else {
       const flightBonus = 1 + useSolarUpgradeStore().flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
       speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : flightBonus
+    }
     }
 
     const w = starsContainer.value?.clientWidth ?? window.innerWidth
@@ -1837,8 +1859,11 @@ export function useStarBackground() {
     initClusters()
     initGalaxyPool()
     initNebulaPool()
-    for (let i = 0; i < EMISSION_MAX_COUNT; i++) spawnEmissionNebula(true)
-    for (let i = 0; i < STAR_COUNT; i++) spawnStar(true)
+    if (!isFrozen) {
+      for (let i = 0; i < EMISSION_MAX_COUNT; i++) spawnEmissionNebula(true)
+    }
+    const starCount = Math.max(STAR_BG_MIN_STARS, Math.round(STAR_COUNT * densityScale()))
+    for (let i = 0; i < starCount; i++) spawnStar(true)
     lastTimestamp = 0
     if (isWindowFocused) startLoop()
   }

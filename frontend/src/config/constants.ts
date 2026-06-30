@@ -40,6 +40,8 @@ export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
 export const STAR_COUNT = 400
+/** Floor for the area-scaled star count so a small contained instance (Shop) is never empty. */
+export const STAR_BG_MIN_STARS = 60
 
 // Rank system
 export const RANK_DIVISIONS = ['IV', 'III', 'II', 'I'] as const
@@ -295,6 +297,16 @@ export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
+
+/** Axial tilt of the layered SunComponent. Default = angled/side view (planet tab). */
+export const SUN_AXIAL_TILT = -0.42
+/** Axial tilt for the top-down camera (shop tab) — looking straight down at the sun. */
+export const SUN_TOPDOWN_AXIAL_TILT = 0
+
+/** Clamped on-screen sun radius (px) inside the Shop skill-tree, mapped from the current phase
+ *  radius (STAR_PHASE_DATA, 30…140). Grows with phase yet never collides with the branch icons. */
+export const SHOP_SUN_RADIUS_MIN = 40
+export const SHOP_SUN_RADIUS_MAX = 60
 
 export interface SunGrowthStage {
   stage: number
