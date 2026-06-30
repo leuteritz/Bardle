@@ -1,7 +1,10 @@
 <template>
-  <div class="shop-frame">
-    <!-- Planet-tab background: canvas starfield + floating nebulas (contained, frozen/static) -->
-    <StarBackgroundComponent contained frozen />
+  <div class="shop-frame" :style="shopStageStyle">
+    <!-- Cosmic backdrop — 1:1 mirror of the Planets tab (PlanetSelectTabComponent .ps-stage-*) -->
+    <div class="shop-stage-bg" aria-hidden="true" />
+    <div class="shop-stage-stars shop-stage-stars--far" aria-hidden="true" />
+    <div class="shop-stage-stars shop-stage-stars--mid" aria-hidden="true" />
+    <div class="shop-stage-stars shop-stage-stars--near" aria-hidden="true" />
 
     <!-- Cosmic arena -->
     <div class="cosmic-arena">
@@ -42,9 +45,9 @@
           </template>
         </svg>
 
-        <!-- Sun — planet-tab layered sun, top-down camera, contained & clamped to the shop -->
-        <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }" :style="sunStyle">
-          <SunComponent contained :radius="shopSunRadius" :show-rings="false" />
+        <!-- Sun — 1:1 mirror of the Planets-tab sun (.ps-stage-sun): glowing phase-colored disc -->
+        <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
+          <div class="shop-stage-sun" />
           <!-- Next phase preview overlay — shown when evolve is ready -->
           <div
             v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
@@ -157,12 +160,10 @@ import { formatNumber } from '@/config/numberFormat'
 import {
   SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
-  SHOP_SUN_RADIUS_MIN,
-  SHOP_SUN_RADIUS_MAX,
+  SHOP_SUN_MIN_DIAMETER,
+  SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
-import SunComponent from '@/components/idle/sun/SunComponent.vue'
-import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.vue'
 
 const solarStore = useSolarUpgradeStore()
 const playerStore = usePlayerStore()
@@ -194,25 +195,24 @@ const BRANCHES: BranchDef[] = [
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
 const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)])
 
-// ── Clamped shop sun size — grows with phase, never collides with branch icons ──
+// ── Stage backdrop vars — mirrors PlanetSelectTabComponent's `sunPhaseStyle` so the
+//    shop sun + stars render 1:1 like the Planets tab. Sun diameter scales with the
+//    current phase, mapped into a shop-fit band that stays inside the branch-icon ring. ──
 const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))
 const PHASE_RADIUS_MAX = Math.max(...STAR_PHASE_DATA.map((p) => p.radius))
-const shopSunRadius = computed(() => {
-  const r = currentStage.value.radius
-  const t = (r - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
-  return SHOP_SUN_RADIUS_MIN + t * (SHOP_SUN_RADIUS_MAX - SHOP_SUN_RADIUS_MIN)
-})
-
-// Supplies --sun-edge etc. used by the HP-text overlay color.
-const sunStyle = computed(() => {
+const shopStageStyle = computed(() => {
   const s = currentStage.value
+  const t = (s.radius - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
+  const sunD = SHOP_SUN_MIN_DIAMETER + t * (SHOP_SUN_MAX_DIAMETER - SHOP_SUN_MIN_DIAMETER)
   return {
-    '--sun-core': s.core,
-    '--sun-mid': s.mid,
+    '--phase-core': s.core,
+    '--phase-mid': s.mid,
+    '--phase-edge': s.edge,
+    '--phase-primary': s.phasePrimary,
+    '--phase-glow': s.phaseGlow,
+    '--pulse-speed': s.pulseSpeed,
+    '--shop-sun-d': `${Math.round(sunD)}px`,
     '--sun-edge': s.edge,
-    '--sun-glow1': s.glow1,
-    '--sun-glow2': s.glow2,
-    '--sun-glow3': s.glow3,
   }
 })
 
@@ -319,6 +319,89 @@ function handleUpgradeStar(): void {
 }
 
 /* ══════════════════════════════════════════════════
+   COSMIC BACKDROP — 1:1 mirror of PlanetSelectTabComponent
+   (.ps-stage-bg / .ps-stage-stars*). Keep in sync with that file.
+══════════════════════════════════════════════════ */
+.shop-stage-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.55), transparent 60%);
+}
+
+.shop-stage-stars {
+  position: absolute;
+  inset: -12px;
+  pointer-events: none;
+  z-index: 0;
+  animation:
+    shop-stars-twinkle 6s ease-in-out infinite,
+    shop-stars-drift 80s ease-in-out infinite alternate;
+}
+
+.shop-stage-stars--far {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 26% 64%, rgba(255, 255, 255, 0.24), transparent),
+    radial-gradient(1px 1px at 38% 32%, rgba(255, 255, 255, 0.28), transparent),
+    radial-gradient(1px 1px at 47% 82%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(1px 1px at 58% 14%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 66% 54%, rgba(255, 255, 255, 0.24), transparent),
+    radial-gradient(1px 1px at 74% 88%, rgba(255, 255, 255, 0.26), transparent),
+    radial-gradient(1px 1px at 84% 38%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 92% 70%, rgba(255, 255, 255, 0.22), transparent),
+    radial-gradient(1px 1px at 6% 46%, rgba(255, 255, 255, 0.26), transparent);
+  animation-duration: 7s, 90s;
+}
+
+.shop-stage-stars--mid {
+  background-image:
+    radial-gradient(1.5px 1.5px at 16% 22%, rgba(255, 255, 255, 0.48), transparent),
+    radial-gradient(1.5px 1.5px at 30% 78%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 44% 40%, rgba(255, 255, 255, 0.42), transparent),
+    radial-gradient(1.5px 1.5px at 55% 66%, rgba(255, 255, 255, 0.34), transparent),
+    radial-gradient(1.5px 1.5px at 70% 24%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 82% 60%, rgba(255, 255, 255, 0.36), transparent),
+    radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.34), transparent),
+    radial-gradient(1.5px 1.5px at 10% 88%, rgba(255, 255, 255, 0.32), transparent),
+    radial-gradient(1.5px 1.5px at 62% 92%, rgba(255, 255, 255, 0.3), transparent);
+  animation-duration: 5.5s, 70s;
+  animation-delay: -2.5s, -18s;
+  animation-direction: alternate, alternate-reverse;
+}
+
+.shop-stage-stars--near {
+  background-image:
+    radial-gradient(2px 2px at 22% 30%, rgba(255, 255, 255, 0.66), transparent),
+    radial-gradient(2px 2px at 48% 18%, rgba(255, 255, 255, 0.56), transparent),
+    radial-gradient(
+      2px 2px at 36% 70%,
+      color-mix(in srgb, white 82%, var(--phase-glow, #ff8c42)) 0%,
+      transparent 100%
+    ),
+    radial-gradient(2px 2px at 68% 78%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(
+      2px 2px at 80% 44%,
+      color-mix(in srgb, white 84%, var(--phase-primary, #ffb347)) 0%,
+      transparent 100%
+    ),
+    radial-gradient(2px 2px at 14% 52%, rgba(255, 255, 255, 0.5), transparent);
+  animation-duration: 4.2s, 58s;
+  animation-delay: -1.2s, -9s;
+}
+
+@keyframes shop-stars-twinkle {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shop-stars-drift {
+  from { transform: translate(0, 0); }
+  to { transform: translate(5px, -4px); }
+}
+
+/* ══════════════════════════════════════════════════
    SVG OVERLAY
 ══════════════════════════════════════════════════ */
 .branch-svg {
@@ -346,7 +429,43 @@ function handleUpgradeStar(): void {
   z-index: 2;
 }
 
-/* Brief brightness burst on purchase (applied to the layered SunComponent). */
+/* Sun disc — 1:1 mirror of PlanetSelectTabComponent .ps-stage-sun. Keep in sync. */
+.shop-stage-sun {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--shop-sun-d, 200px);
+  height: var(--shop-sun-d, 200px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  transition: width 1.2s ease, height 1.2s ease;
+  background:
+    radial-gradient(
+      circle at 42% 38%,
+      color-mix(in srgb, white 92%, var(--phase-core, #fff)) 0%,
+      transparent 22%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      var(--phase-core, #fff0e0) 0%,
+      var(--phase-mid, #ffd4a3) 34%,
+      var(--phase-edge, #cc5500) 52%,
+      color-mix(in srgb, var(--phase-edge, #cc5500) 45%, transparent) 70%,
+      transparent 86%
+    );
+  box-shadow:
+    0 0 90px color-mix(in srgb, var(--phase-glow, #ff8c42) 55%, transparent),
+    0 0 180px color-mix(in srgb, var(--phase-glow, #ff8c42) 28%, transparent);
+  z-index: 1;
+  animation: shop-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
+}
+
+@keyframes shop-sun-pulse {
+  0%, 100% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* Brief brightness burst on purchase (applied to the sun disc). */
 .sun-wrapper.sun-flash {
   animation: shop-sun-flash 0.45s ease-out;
 }

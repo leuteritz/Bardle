@@ -303,10 +303,11 @@ export const SUN_AXIAL_TILT = -0.42
 /** Axial tilt for the top-down camera (shop tab) — looking straight down at the sun. */
 export const SUN_TOPDOWN_AXIAL_TILT = 0
 
-/** Clamped on-screen sun radius (px) inside the Shop skill-tree, mapped from the current phase
- *  radius (STAR_PHASE_DATA, 30…140). Grows with phase yet never collides with the branch icons. */
-export const SHOP_SUN_RADIUS_MIN = 40
-export const SHOP_SUN_RADIUS_MAX = 60
+/** Shop sun disc diameter band (px), mapped from the current phase radius (STAR_PHASE_DATA, 30…140).
+ *  Mirrors the Planets-tab sun style but a smaller band so it stays inside the branch-icon ring
+ *  (ICON_DIST = 285). Grows with phase. */
+export const SHOP_SUN_MIN_DIAMETER = 170
+export const SHOP_SUN_MAX_DIAMETER = 240
 
 export interface SunGrowthStage {
   stage: number
