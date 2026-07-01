@@ -1216,6 +1216,17 @@ export const SFX_CHIME_SUB_FREQ = 55
 export const SFX_CHIME_SUB_GAIN = 0.18
 export const SFX_CHIME_SUB_DECAY_S = 0.22
 
+// ── Central Chime click feedback ──────────────────────────────────────────────
+// Juicy click response for the central sun chime (IdleGameComponent). Distances
+// and sizes are multipliers of planetShopStore.currentSunRadius so the effect
+// scales with the sun.
+export const CHIME_BURST_COUNT = 5 // mini chimes spawned per click
+export const CHIME_BURST_DURATION_MS = 650 // burst fly-out + fade (also cleanup timeout)
+export const CHIME_RIPPLE_DURATION_MS = 500 // ripple ring expand/fade
+export const CHIME_BURST_DIST_MIN_FACTOR = 1.1 // min travel distance (× sun radius)
+export const CHIME_BURST_DIST_MAX_FACTOR = 2.0 // max travel distance (× sun radius)
+export const CHIME_BURST_SIZE_FACTOR = 0.45 // mini-chime size (× sun radius)
+
 // ── Admin / Debug ─────────────────────────────────────────────────────────────
 export const ADMIN_QUICK_RESOURCE_AMOUNT = 100_000_000_000
 
