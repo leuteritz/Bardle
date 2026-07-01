@@ -303,6 +303,13 @@ export const SUN_AXIAL_TILT = -0.42
 /** Axial tilt for the top-down camera (shop tab) — looking straight down at the sun. */
 export const SUN_TOPDOWN_AXIAL_TILT = 0
 
+/**
+ * Background idle-scene sun disc diameter as a multiple of the current sun radius.
+ * Matches the visible core (~4r) and the chime click target (currentSunRadius * 4),
+ * so the shared phase disc stays aligned with the chime button and champion orbits.
+ */
+export const SUN_BG_DISC_RADIUS_FACTOR = 4
+
 /** Shop sun disc diameter band (px), mapped from the current phase radius (STAR_PHASE_DATA, 30…140).
  *  Mirrors the Planets-tab sun style but a smaller band so it stays inside the branch-icon ring
  *  (ICON_DIST = 285). Grows with phase. */
