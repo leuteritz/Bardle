@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGameStore } from '@/stores/gameStore'
-import { useShopStore } from '@/stores/shopStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
@@ -13,20 +12,22 @@ import AugmentBuffPanel from '@/components/augment/AugmentBuffPanel.vue'
 const totalChampions = Object.keys(CHAMPION_ROLES).length
 
 const gameStore = useGameStore()
-const shopStore = useShopStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
 
-const { totalChimesEarned, chimesPerClick, chimesPerSecond, meeps } = storeToRefs(gameStore)
-const { starsRescued } = storeToRefs(galaxyStore)
-const { ownedChampions } = storeToRefs(battleStore)
-const { buildingStats } = storeToRefs(shopStore)
+const { totalChimesEarned, chimesPerClick, chimesPerSecond, meeps, level, totalClicks } =
+  storeToRefs(gameStore)
+const { starsRescued, currentGalaxy } = storeToRefs(galaxyStore)
+const { ownedChampions, currentRank } = storeToRefs(battleStore)
 
 const augOpen = ref(true)
 const phaseOpen = ref(true)
 const hasActiveAugments = computed(() => gameStore.activeAugments.length > 0)
 
-const animated = ref(false)
+const championCount = computed(
+  () => ownedChampions.value.filter((c) => c !== 'Bard').length,
+)
+
 const countUpProgress = ref(0)
 let rafId: number
 
@@ -36,7 +37,6 @@ onMounted(() => {
   function animFrame(now: number) {
     countUpProgress.value = Math.min((now - startTime) / duration, 1)
     if (countUpProgress.value < 1) rafId = requestAnimationFrame(animFrame)
-    else animated.value = true
   }
   rafId = requestAnimationFrame(animFrame)
 })
@@ -46,22 +46,14 @@ onUnmounted(() => cancelAnimationFrame(rafId))
 const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpProgress.value))
 const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
 const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
-const animChampions = computed(() =>
-  Math.floor(ownedChampions.value.filter((c) => c !== 'Bard').length * countUpProgress.value),
-)
-
-const maxCPS = computed(() => {
-  const vals = buildingStats.value.map((b) => b.currentCPS)
-  return vals.length > 0 ? Math.max(...vals) : 1
-})
-
-
+const animClicks = computed(() => Math.floor(totalClicks.value * countUpProgress.value))
+const animChampions = computed(() => Math.floor(championCount.value * countUpProgress.value))
 </script>
 
 <template>
   <div class="sv-root rpg-scrollbar">
     <!-- ══ LEFT COLUMN: Bard ══ -->
-    <div class="sv-portrait-col">
+    <div class="sv-portrait-col rpg-scrollbar">
       <img
         src="/img/BardAbilities/Bard.png"
         alt="Bard – The Wandering Caretaker"
@@ -72,48 +64,19 @@ const maxCPS = computed(() => {
         <span class="sv-subtitle">The Wandering Caretaker</span>
       </div>
 
-      <div class="sv-mini-stats">
-        <div class="sv-ms-item sv-ms-chimes">
-          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ $formatNumber(animChimes) }}</span>
-            <span class="sv-ms-lbl">Total Chimes</span>
-          </div>
+      <!-- Identity chips: Level · Galaxy · Rank -->
+      <div class="sv-identity">
+        <div class="sv-chip sv-chip-level">
+          <span class="sv-chip-lbl">Level</span>
+          <span class="sv-chip-val">{{ level }}</span>
         </div>
-        <div class="sv-ms-item sv-ms-stars">
-          <img class="sv-ms-icon" src="/img/star.png" alt="Stars" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ $formatNumber(animStars) }}</span>
-            <span class="sv-ms-lbl">Stars Rescued</span>
-          </div>
+        <div class="sv-chip sv-chip-galaxy">
+          <span class="sv-chip-lbl">Galaxy</span>
+          <span class="sv-chip-val">{{ currentGalaxy }}</span>
         </div>
-        <div class="sv-ms-item sv-ms-meeps">
-          <img class="sv-ms-icon" src="/img/BardAbilities/BardMeep.png" alt="Meeps" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ $formatNumber(animMeeps) }}</span>
-            <span class="sv-ms-lbl">Meeps</span>
-          </div>
-        </div>
-        <div class="sv-ms-item sv-ms-champs">
-          <img class="sv-ms-icon" src="/img/menu/TEAM.png" alt="Champions" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ animChampions }}<span class="sv-ms-val-total"> / {{ totalChampions }}</span></span>
-            <span class="sv-ms-lbl">Champions</span>
-          </div>
-        </div>
-        <div class="sv-ms-item sv-ms-cps">
-          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes/s" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ $formatNumber(chimesPerSecond) }}</span>
-            <span class="sv-ms-lbl">Chimes / Sec</span>
-          </div>
-        </div>
-        <div class="sv-ms-item sv-ms-cpc">
-          <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="Chimes/click" />
-          <div class="sv-ms-body">
-            <span class="sv-ms-val">{{ $formatNumber(chimesPerClick) }}</span>
-            <span class="sv-ms-lbl">Chimes / Click</span>
-          </div>
+        <div class="sv-chip sv-chip-rank">
+          <span class="sv-chip-lbl">Rank</span>
+          <span class="sv-chip-val">{{ currentRank.tier }} {{ currentRank.division }}</span>
         </div>
       </div>
 
@@ -122,6 +85,69 @@ const maxCPS = computed(() => {
 
     <!-- ══ RIGHT COLUMN ══ -->
     <div class="sv-content-col rpg-scrollbar">
+      <!-- ─ HERO PRODUCTION ─ -->
+      <div class="sv-block">
+        <div class="sv-block-label">Production</div>
+
+        <div class="sv-hero-grid">
+          <div class="sv-hero-plate sv-hero-cps">
+            <img class="sv-hero-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <div class="sv-hero-body">
+              <span class="sv-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
+              <span class="sv-hero-lbl">Chimes / Sec</span>
+            </div>
+          </div>
+          <div class="sv-hero-plate sv-hero-cpc">
+            <img class="sv-hero-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <div class="sv-hero-body">
+              <span class="sv-hero-val">{{ $formatNumber(chimesPerClick) }}</span>
+              <span class="sv-hero-lbl">Chimes / Click</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sv-total-strip">
+          <img class="sv-total-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+          <span class="sv-total-val">{{ $formatNumber(animChimes) }}</span>
+          <span class="sv-total-lbl">Total Chimes Earned</span>
+        </div>
+      </div>
+
+      <!-- ─ MILESTONES ─ -->
+      <div class="sv-block">
+        <div class="sv-block-label">Milestones</div>
+
+        <div class="sv-mini-stats">
+          <div class="sv-ms-item sv-ms-stars">
+            <img class="sv-ms-icon" src="/img/star.png" alt="" aria-hidden="true" />
+            <div class="sv-ms-body">
+              <span class="sv-ms-val">{{ $formatNumber(animStars) }}</span>
+              <span class="sv-ms-lbl">Stars Rescued</span>
+            </div>
+          </div>
+          <div class="sv-ms-item sv-ms-champs">
+            <img class="sv-ms-icon" src="/img/menu/TEAM.png" alt="" aria-hidden="true" />
+            <div class="sv-ms-body">
+              <span class="sv-ms-val">{{ animChampions }}<span class="sv-ms-val-total"> / {{ totalChampions }}</span></span>
+              <span class="sv-ms-lbl">Champions</span>
+            </div>
+          </div>
+          <div class="sv-ms-item sv-ms-meeps">
+            <img class="sv-ms-icon" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
+            <div class="sv-ms-body">
+              <span class="sv-ms-val">{{ $formatNumber(animMeeps) }}</span>
+              <span class="sv-ms-lbl">Meeps</span>
+            </div>
+          </div>
+          <div class="sv-ms-item sv-ms-clicks">
+            <img class="sv-ms-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <div class="sv-ms-body">
+              <span class="sv-ms-val">{{ $formatNumber(animClicks) }}</span>
+              <span class="sv-ms-lbl">Total Clicks</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- ─ ACTIVE AUGMENTS (collapsible) ─ -->
       <div v-if="hasActiveAugments" class="cp-card">
@@ -186,47 +212,6 @@ const maxCPS = computed(() => {
           <StarPhasePanel />
         </div>
       </div>
-
-      <!-- ─ GEBÄUDE ─ -->
-      <div class="sv-block">
-        <div class="sv-block-label">Buildings</div>
-
-        <ul class="sv-building-list" role="list">
-          <li v-for="(b, index) in buildingStats" :key="b.id" class="sv-building-row">
-            <div class="sv-rank">#{{ index + 1 }}</div>
-
-            <img :src="b.icon" :alt="b.name" class="sv-building-icon" />
-
-            <div class="sv-building-info">
-              <!-- Zeile 1: Name + Count + aktueller CPS -->
-              <div class="sv-building-top">
-                <span class="sv-building-name">{{ b.name }}</span>
-                <span class="sv-building-count">×{{ b.level }}</span>
-                <span class="sv-building-output sv-val-green">
-                  {{ $formatNumber(b.currentCPS) }}/s
-                </span>
-              </div>
-
-              <!-- Zeile 2: Gesamt produziert + Anteil -->
-              <div class="sv-building-produced">
-                <span class="sv-produced-val">{{ $formatNumber(b.lifetimeProduction) }}</span>
-                <span class="sv-produced-lbl">produced</span>
-                <span class="sv-produced-pct">{{ b.efficiency }}%</span>
-              </div>
-
-              <!-- Zeile 3: CPS-Balken -->
-              <div class="rpg-progress-track sv-bar-track">
-                <div
-                  class="rpg-progress-bar sv-bar-fill"
-                  :style="{
-                    width: animated && maxCPS > 0 ? `${(b.currentCPS / maxCPS) * 100}%` : '0%',
-                  }"
-                />
-              </div>
-            </div>
-          </li>
-        </ul>
-      </div>
     </div>
   </div>
 </template>
@@ -246,13 +231,13 @@ const maxCPS = computed(() => {
 
 /* ─── Linke Spalte ──────────────────────────── */
 .sv-portrait-col {
-  width: 36%;
+  width: 34%;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 20px;
+  gap: 18px;
   padding: 28px 20px;
   background: var(--rpg-bg-dark);
   border-right: 1px solid var(--rpg-wood-inner);
@@ -261,7 +246,7 @@ const maxCPS = computed(() => {
 
 .sv-bard-img {
   width: 100%;
-  max-width: 260px;
+  max-width: 240px;
   height: auto;
   object-fit: contain;
   display: block;
@@ -287,6 +272,52 @@ const maxCPS = computed(() => {
   color: var(--rpg-text-muted);
 }
 
+/* ─── Identity Chips ────────────────────────── */
+.sv-identity {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+}
+
+.sv-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: var(--bp-radius);
+  min-width: 0;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.sv-chip-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+
+.sv-chip-val {
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sv-chip-level:hover  { border-color: #5c3310; box-shadow: 0 0 8px color-mix(in srgb, var(--rpg-gold) 30%, transparent); }
+.sv-chip-galaxy:hover { border-color: #4a3a6a; box-shadow: 0 0 8px color-mix(in srgb, var(--rpg-rarity-rare) 30%, transparent); }
+.sv-chip-galaxy .sv-chip-val { color: var(--rpg-rarity-rare); }
+.sv-chip-rank:hover   { border-color: #4a5a3a; box-shadow: 0 0 8px color-mix(in srgb, var(--rpg-green-top) 30%, transparent); }
+.sv-chip-rank .sv-chip-val { color: var(--rpg-green-light); font-size: 12px; }
+
 /* ─── Rechte Spalte ─────────────────────────── */
 .sv-content-col {
   flex: 1;
@@ -297,10 +328,13 @@ const maxCPS = computed(() => {
   overflow-y: auto;
   min-width: 0;
 }
+.sv-content-col > :last-child {
+  margin-bottom: 0;
+}
 
 /* ─── Block ─────────────────────────────────── */
 .sv-block {
-  margin-bottom: 36px;
+  margin-bottom: 30px;
 }
 .sv-block-label {
   font-size: 10px;
@@ -313,45 +347,133 @@ const maxCPS = computed(() => {
   border-bottom: 1px solid var(--rpg-wood-inner);
 }
 
-/* ─── Mini-Stats (linke Spalte, 2×3) ─────────── */
+/* ─── Hero Production ───────────────────────── */
+.sv-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sv-hero-plate {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  background: linear-gradient(to bottom, #16130a, #100e07);
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+  box-shadow: inset 0 0 0 1px #2a1a08;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.sv-hero-plate:hover {
+  border-color: #7a4e20;
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 0 14px color-mix(in srgb, var(--rpg-gold) 28%, transparent);
+}
+
+.sv-hero-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
+  transition: filter 0.15s;
+}
+.sv-hero-plate:hover .sv-hero-icon {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--rpg-gold) 70%, transparent));
+}
+
+.sv-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.sv-hero-val {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sv-hero-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+
+/* Total-Chimes-Streifen */
+.sv-total-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: var(--bp-radius);
+}
+.sv-total-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.sv-total-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--rpg-gold);
+  line-height: 1;
+}
+.sv-total-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+  margin-left: auto;
+}
+
+/* ─── Mini-Stats (Milestones 2×2) ───────────── */
 .sv-mini-stats {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
 }
 
 .sv-ms-item {
   background: #111008;
   border: 1px solid #3e200a;
   border-radius: var(--bp-radius);
-  padding: 12px 12px;
+  padding: 14px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
   transition: background 0.15s, box-shadow 0.15s;
 }
 
-.sv-ms-chimes:hover { box-shadow: 0 0 8px color-mix(in srgb, #e8c040 30%, transparent); }
 .sv-ms-stars:hover  { box-shadow: 0 0 8px color-mix(in srgb, #a87ed8 30%, transparent); }
-.sv-ms-meeps:hover  { box-shadow: 0 0 8px color-mix(in srgb, #52b830 30%, transparent); }
 .sv-ms-champs:hover { box-shadow: 0 0 8px color-mix(in srgb, #6080cc 30%, transparent); }
-.sv-ms-cps:hover    { box-shadow: 0 0 8px color-mix(in srgb, #e8c040 30%, transparent); }
-.sv-ms-cpc:hover    { box-shadow: 0 0 8px color-mix(in srgb, #e8a040 30%, transparent); }
+.sv-ms-meeps:hover  { box-shadow: 0 0 8px color-mix(in srgb, #52b830 30%, transparent); }
+.sv-ms-clicks:hover { box-shadow: 0 0 8px color-mix(in srgb, #e8c040 30%, transparent); }
 
 .sv-ms-icon {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   object-fit: contain;
   transition: filter 0.15s;
 }
-.sv-ms-chimes:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #e8c040); }
 .sv-ms-stars:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #a87ed8); }
-.sv-ms-meeps:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #52b830); }
 .sv-ms-champs:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #6080cc); }
-.sv-ms-cps:hover    .sv-ms-icon { filter: drop-shadow(0 0 5px #e8c040); }
-.sv-ms-cpc:hover    .sv-ms-icon { filter: drop-shadow(0 0 5px #e8a040); }
+.sv-ms-meeps:hover  .sv-ms-icon { filter: drop-shadow(0 0 5px #52b830); }
+.sv-ms-clicks:hover .sv-ms-icon { filter: drop-shadow(0 0 5px #e8c040); }
 
 .sv-ms-body {
   display: flex;
@@ -360,7 +482,7 @@ const maxCPS = computed(() => {
   min-width: 0;
 }
 .sv-ms-val {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -376,119 +498,9 @@ const maxCPS = computed(() => {
   color: var(--rpg-text-dim);
 }
 .sv-ms-val-total {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--rpg-text-dim);
-}
-
-/* ─── Gebäude-Liste ─────────────────────────── */
-.sv-building-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.sv-building-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 6px;
-  border-bottom: 1px solid var(--rpg-bg-row);
-  transition: background 0.1s;
-}
-.sv-building-row:last-child {
-  border-bottom: none;
-}
-.sv-building-row:hover {
-  background: var(--rpg-bg-hover);
-}
-
-/* Rang */
-.sv-rank {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--rpg-text-dim);
-  min-width: 22px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.sv-building-icon {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.sv-building-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Zeile 1: Name + Count + Output */
-.sv-building-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.sv-building-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--rpg-gold-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-.sv-building-count {
-  font-size: 13px;
-  color: var(--rpg-text-dim);
-  flex-shrink: 0;
-}
-.sv-building-output {
-  font-size: 14px;
-  font-weight: 700;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-/* Zeile 2: Gesamt produziert + % */
-.sv-building-produced {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.sv-produced-val {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--rpg-gold);
-}
-.sv-produced-lbl {
-  font-size: 10px;
-  color: var(--rpg-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.sv-produced-pct {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--rpg-orange);
-  margin-left: auto;
-}
-
-/* Zeile 3: CPS-Bar */
-.sv-bar-track {
-  height: 5px;
-}
-.sv-bar-fill {
-  height: 100%;
-  transition: width 0.85s ease;
 }
 
 /* ─── Collapsible Panels ────────────────────── */
@@ -498,7 +510,7 @@ const maxCPS = computed(() => {
   background: #111008;
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
 .cp-gold-line {
@@ -564,5 +576,4 @@ const maxCPS = computed(() => {
 :deep(.spp-section-label) {
   display: none;
 }
-
 </style>
