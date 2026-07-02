@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { SECTIONS } from '../config/sections'
 import type { SectionProgress } from '../types'
 import { TOTAL_SECTIONS } from '../config/constants'
+import { clampPercent } from '../utils/math'
 
 export const useSectionStore = defineStore('section', {
   state: () => ({
@@ -28,7 +29,7 @@ export const useSectionStore = defineStore('section', {
     progressPercent(): number {
       const req = this.requiredRescues
       if (req === 0) return 100
-      return Math.min(100, Math.floor((this.activeSectionProgress.rescueCount / req) * 100))
+      return clampPercent(Math.floor((this.activeSectionProgress.rescueCount / req) * 100))
     },
 
     isSectionUnlocked(): (id: number) => boolean {

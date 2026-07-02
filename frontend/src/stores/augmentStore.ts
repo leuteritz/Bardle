@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { AUGMENTS } from '../config/augments'
-import type { TimedBuff } from '../types'
+import type { ModifierEffects, TimedBuff } from '../types'
 import { logger } from '../utils/logger'
 import {
   AUGMENT_CLICK_HISTORY_SIZE,
@@ -32,10 +32,10 @@ export const useAugmentStore = defineStore('augment', {
   },
 
   actions: {
-    getActiveBattleModifiers(activeAugments: string[], activeModifier: Record<string, unknown>) {
+    getActiveBattleModifiers(activeAugments: string[], activeModifier: ModifierEffects) {
       return {
-        enemySpeedMultiplier: (activeModifier.enemySpeedMultiplier as number) ?? 1,
-        enemyMaxHPDrainPerSecond: (activeModifier.enemyMaxHPDrainPerSecond as number) ?? 0,
+        enemySpeedMultiplier: activeModifier.enemySpeedMultiplier ?? 1,
+        enemyMaxHPDrainPerSecond: activeModifier.enemyMaxHPDrainPerSecond ?? 0,
         bigBangAvailable:
           !this.bigBangUsed && activeAugments.includes('legendary_big_bang'),
       }

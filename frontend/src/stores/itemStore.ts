@@ -3,6 +3,7 @@ import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useShopStore } from './shopStore'
 import { SHOP_ITEMS, getItemById } from '../config/items'
+import { ITEM_SLOT_COUNT } from '../config/constants'
 import { ITEM_SETS } from '../config/sets'
 import type { SlotEquipment, ItemCategory, ItemSetBonus } from '../types'
 
@@ -98,7 +99,7 @@ export const useItemStore = defineStore('item', {
     },
 
     equipItem(slotIndex: number, itemId: string): boolean {
-      if (slotIndex < 0 || slotIndex > 4) return false
+      if (slotIndex < 0 || slotIndex >= ITEM_SLOT_COUNT) return false
 
       const item = getItemById(itemId)
       if (!item) return false
@@ -112,7 +113,7 @@ export const useItemStore = defineStore('item', {
     },
 
     unequipItem(slotIndex: number, category: ItemCategory) {
-      if (slotIndex < 0 || slotIndex > 4) return
+      if (slotIndex < 0 || slotIndex >= ITEM_SLOT_COUNT) return
       this.slotEquipment[slotIndex][category] = null
       this._recalculateCPS()
     },

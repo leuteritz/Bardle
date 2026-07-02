@@ -6,12 +6,13 @@ import { usePlanetEventStore } from './planetEventStore'
 import { usePlanetBossStore } from './planetBossStore'
 import { useGalaxyStore } from './galaxyStore'
 import { useStarGroupStore } from './starGroupStore'
-import { useExpeditionStore } from './expedetionStore' // ← useStore → useExpeditionStore
+import { useExpeditionStore } from './expeditionStore'
 import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
 import { useRoleBehaviorStore } from './roleBehaviorStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { universes } from '../config/universes'
+import { clampPercent } from '../utils/math'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
 import {
@@ -618,7 +619,7 @@ export const useGameStore = defineStore('game', {
     },
 
     levelProgress(): number {
-      return Math.min(100, Math.max(0, (this.currentLevelChimes / this.totalChimesThisLevel) * 100))
+      return clampPercent((this.currentLevelChimes / this.totalChimesThisLevel) * 100)
     },
 
     totalPower(): number {
@@ -652,7 +653,7 @@ export const useGameStore = defineStore('game', {
     },
 
     universeRescueProgress(): number {
-      return Math.min(100, (this.chimesForNextUniverse / this.chimesToUniverseRescue) * 100)
+      return clampPercent((this.chimesForNextUniverse / this.chimesToUniverseRescue) * 100)
     },
 
     totalUniverses(): number {
@@ -674,7 +675,7 @@ export const useGameStore = defineStore('game', {
     expeditionProgress(): number {
       if (!this.activeExpedition) return 0
       const elapsed = Date.now() - this.activeExpedition.startTime
-      return Math.min(100, (elapsed / this.activeExpedition.durationMs) * 100)
+      return clampPercent((elapsed / this.activeExpedition.durationMs) * 100)
     },
   },
 })

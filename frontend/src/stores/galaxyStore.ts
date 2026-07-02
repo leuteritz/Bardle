@@ -5,6 +5,7 @@ import { useInventoryStore } from './inventoryStore'
 import { GALAXY_THEMES } from '../config/galaxyThemes'
 import { unlockedChampionTierCount } from '../config/championTiers'
 import type { ChampionRole } from '../types'
+import { clampPercent } from '../utils/math'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
@@ -203,7 +204,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       const dur = this.effectiveTravelDurationMs
       if (dur <= 0 || this.championTravelStartTime === 0) return 0
       const elapsed = Date.now() - this.championTravelStartTime
-      return Math.min(100, (elapsed / dur) * 100)
+      return clampPercent((elapsed / dur) * 100)
     },
 
     travelRemainingMs(): number {

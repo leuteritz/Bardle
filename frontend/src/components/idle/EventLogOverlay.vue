@@ -8,7 +8,7 @@ const isLogVisible = ref(true)
 </script>
 
 <template>
-  <div class="event-log-overlay" aria-live="polite" aria-label="Spielereignisse">
+  <div class="event-log-overlay" aria-live="polite" aria-label="Game Events">
     <button
       class="log-toggle-btn"
       @click="isLogVisible = !isLogVisible"

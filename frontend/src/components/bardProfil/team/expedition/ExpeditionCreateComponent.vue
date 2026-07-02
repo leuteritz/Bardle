@@ -134,7 +134,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useExpeditionStore } from '@/stores/expedetionStore'
+import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { getChampionRoles } from '@/config/championRoles'
 import {

@@ -24,6 +24,8 @@ import {
   EXPEDITION_NAME_TARGETS,
   EXPEDITION_NAME_ACTIONS,
   EXPEDITION_ICON_POOL,
+  EXPEDITION_TIER_THRESHOLDS,
+  EXPEDITION_ID_RANDOM_MAX,
   type ExpeditionTier,
 } from '../config/constants'
 import type { ExpeditionMission, AvailableExpeditionSlot, ChampionRole } from '../types'
@@ -85,8 +87,8 @@ function shuffle<T>(arr: T[]): T[] {
 
 function weightedTierPick(): ExpeditionTier {
   const r = Math.random() * 100
-  if (r < 10) return 'epic'
-  if (r < 40) return 'rare'
+  if (r < EXPEDITION_TIER_THRESHOLDS.epic) return 'epic'
+  if (r < EXPEDITION_TIER_THRESHOLDS.rare) return 'rare'
   return 'common'
 }
 
@@ -168,7 +170,7 @@ export const useExpeditionStore = defineStore('expedition', {
       const colorDef = pickRandom(colorPool)
 
       const slot: AvailableExpeditionSlot = {
-        id: `avail-${tier}-${now}-${Math.floor(Math.random() * 9999)}`,
+        id: `avail-${tier}-${now}-${Math.floor(Math.random() * EXPEDITION_ID_RANDOM_MAX)}`,
         colorKey: colorDef.key,
         spawnedAt: now,
         availableUntil: now + EXPEDITION_AVAILABILITY_DURATION_MS,

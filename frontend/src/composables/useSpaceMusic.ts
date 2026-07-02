@@ -99,14 +99,6 @@ function _tryPlay() {
   }
 }
 
-function _pause() {
-  if (!audio || audio.paused) return
-  _fadeTo(0, MUSIC_FADE_DURATION_MS, () => {
-    audio?.pause()
-    isPlaying.value = false
-  })
-}
-
 function _startBossMusic() {
   if (!bossAudio || !_userHasInteracted) return
   // Duck main track to silence — keep it running to avoid play() restart issues

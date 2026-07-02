@@ -527,7 +527,7 @@ export const useBattleStore = defineStore('battle', {
       const opponent = this.generateOpponent(this.mmr)
       const battleMods = augmentStore.getActiveBattleModifiers(
         gameStore.activeAugments,
-        gameStore.activeModifier as Record<string, unknown>,
+        gameStore.activeModifier,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
       const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS
@@ -583,7 +583,7 @@ export const useBattleStore = defineStore('battle', {
       const augmentStore = useAugmentStore()
       const battleMods = augmentStore.getActiveBattleModifiers(
         gameStore.activeAugments,
-        gameStore.activeModifier as Record<string, unknown>,
+        gameStore.activeModifier,
       )
       const effectiveOpponentPower = opponent.power * (battleMods.enemySpeedMultiplier ?? 1)
       const drainReduction = (battleMods.enemyMaxHPDrainPerSecond ?? 0) * BATTLE_DRAIN_REFERENCE_SECONDS

@@ -259,9 +259,9 @@ const winChanceColor = computed(() => {
       role="button"
       tabindex="0"
       title="Open Battle Stats"
-      @click="uiStore.setBardTab('kampf')"
-      @keydown.enter="uiStore.setBardTab('kampf')"
-      @keydown.space.prevent="uiStore.setBardTab('kampf')"
+      @click="uiStore.setBardTab('battle')"
+      @keydown.enter="uiStore.setBardTab('battle')"
+      @keydown.space.prevent="uiStore.setBardTab('battle')"
     >
       <!-- RANK (always visible) -->
       <div class="bbstat-item rank-slot">

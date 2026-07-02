@@ -3,7 +3,7 @@ import { watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
-import { useExpeditionStore } from '@/stores/expedetionStore'
+import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
@@ -35,7 +35,7 @@ const menuItems: {
   { id: 'shop', label: '', icon: '', src: '/img/menu/SHOP.png' },
   { id: 'tree', label: '', icon: '', src: '/img/menu/TREE.png' },
   { id: 'team', label: '', icon: '', src: '/img/menu/TEAM.png' },
-  { id: 'kampf', label: '', icon: '', src: '/img/menu/BATTLE.png' },
+  { id: 'battle', label: '', icon: '', src: '/img/menu/BATTLE.png' },
   { id: 'planets', label: '', icon: '', src: '/img/planet.png' },
   { id: 'admin', label: 'Admin', icon: 'game-icons:settings-knobs', src: '' },
 ]
@@ -102,7 +102,7 @@ watch(
           <div class="relative flex-1 min-h-0 overflow-hidden rp-modal-content">
             <ActionToast />
             <!-- Battle-Tab: immer gemountet (v-show), Watch + Simulation bleiben aktiv -->
-            <div v-show="uiStore.bardActiveTab === 'kampf'" class="battle-tab-layer">
+            <div v-show="uiStore.bardActiveTab === 'battle'" class="battle-tab-layer">
               <BattleResultComponent />
             </div>
 

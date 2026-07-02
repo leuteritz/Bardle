@@ -1,7 +1,7 @@
 import { useGameStore } from '@/stores/gameStore'
 import { useShopStore } from '@/stores/shopStore'
 import { useBattleStore } from '@/stores/battleStore'
-import { useExpeditionStore } from '@/stores/expedetionStore'
+import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useAugmentStore } from '@/stores/augmentStore'
 import { useItemStore } from '@/stores/itemStore'
@@ -22,6 +22,7 @@ import {
   OFFLINE_CPS_RATE,
   OFFLINE_MAX_HOURS,
   OFFLINE_MIN_SECONDS,
+  ITEM_SLOT_COUNT,
 } from '@/config/constants'
 import { logger } from '@/utils/logger'
 
@@ -304,7 +305,7 @@ export function usePersistence() {
       if (saved.items) {
         if (saved.items.ownedItems) itemStore.ownedItems = { ...saved.items.ownedItems }
         if (Array.isArray(saved.items.slotEquipment)) {
-          for (let i = 0; i < 4; i++) {
+          for (let i = 0; i < ITEM_SLOT_COUNT; i++) {
             if (saved.items.slotEquipment[i]) {
               itemStore.slotEquipment[i] = {
                 weapon: saved.items.slotEquipment[i].weapon ?? null,

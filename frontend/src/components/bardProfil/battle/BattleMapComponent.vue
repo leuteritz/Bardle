@@ -371,12 +371,6 @@ export default defineComponent({
       return 'nexusPush'
     })
 
-    function formatTime(seconds: number) {
-      const min = Math.floor(seconds / 60)
-      const sec = seconds % 60
-      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
-    }
-
     function onChampHover(team: '1' | '2', index: number) {
       hoveredChampionKey.value = `${team}-${index}`
     }
@@ -608,7 +602,7 @@ export default defineComponent({
     return {
       blueChampions,
       redChampions,
-      formatTime,
+      formatTime: battleStore.formatTime,
       battleStore,
       isSnapping,
       phase,

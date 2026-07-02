@@ -31,13 +31,13 @@ const skills = [
     key: 'W',
     icon: '/img/BardAbilities/BardW.png',
     effect: '+1500 Power',
-    description: '+1500 Kampfkraft',
+    description: '+1500 Battle Power',
   },
   {
     key: 'E',
     icon: '/img/BardAbilities/BardE.png',
-    effect: '−50% Meep-Kosten',
-    description: 'Halbierte Kosten',
+    effect: '−50% Meep Cost',
+    description: 'Halved Costs',
   },
   {
     key: 'R',

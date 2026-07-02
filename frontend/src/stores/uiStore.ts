@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ChampionRole } from '../types'
 
-export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'kampf' | 'admin' | 'planets'
+export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'battle' | 'admin' | 'planets'
 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)

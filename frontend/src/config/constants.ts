@@ -232,11 +232,21 @@ export const GALAXY_MAX_COUNT = 4
 export const IDLE_CRUISE_MULTIPLIER = 20
 export const CHAMPION_POWER_PER_LEVEL = 10
 export const MAX_ACTIVE_EXPEDITIONS = 3
+// Weighted tier roll (d100): r < epic → epic, r < rare → rare, else common
+export const EXPEDITION_TIER_THRESHOLDS = { epic: 10, rare: 40 }
+export const EXPEDITION_ID_RANDOM_MAX = 9999 // random suffix range for expedition slot IDs
+
+// Item Equipment
+export const ITEM_SLOT_COUNT = 5 // champion team slots that can hold weapon/armor/artefact
+
+// Command Panel HP bar (CommandPanelComponent)
+export const HP_COLOR_THRESHOLD_HIGH = 0.5 // above → green
+export const HP_COLOR_THRESHOLD_LOW = 0.25 // above → gold, below → red
+export const HP_BAR_SEGMENTS = 8
 
 // Champion Combat System
 /** Detection radius from screen center in px. Planet within this range → champions can hit it. Not sun-relative. */
 export const CHAMPION_DETECT_RADIUS = 350
-export const ATTACK_RANGE = 110 // px from planet center; kept for reference (unused in orbit mode)
 export const CHAMPION_ORBIT_HIT_RANGE = 220 // px: champion orbit position must be within this of planet to deal damage
 export const CHAMPION_DPS_BASE = 40 // damage per champion per second
 export const PLAYER_MAX_HP_BASE = 100
@@ -1545,6 +1555,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:queen-crown', // ★12 Cosmic Sovereign
   'game-icons:teleport', // Admin Galaxy Jump — warp button
   'game-icons:sun-radiations', // Admin Star Phase panel — header icon
+  'game-icons:sand-clock', // Cooldown buff chip (ActiveBuffsPanel) & phase countdown (StarPhasePanel)
+  'game-icons:cursor', // Click mission icon (missionStore)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

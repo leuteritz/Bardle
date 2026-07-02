@@ -4,6 +4,12 @@ import { Icon } from '@iconify/vue'
 import { usePlanetShopStore, PLANET_ROLES } from '@/stores/planetShopStore'
 import type { PlanetRoleType } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
+import { formatNumber } from '@/config/numberFormat'
+import {
+  HP_BAR_SEGMENTS,
+  HP_COLOR_THRESHOLD_HIGH,
+  HP_COLOR_THRESHOLD_LOW,
+} from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 const planetStore = usePlanetShopStore()
 const uiStore = useUiStore()
@@ -17,36 +23,33 @@ function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image
 }
 
-function formatNumber(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
-  return n.toString()
-}
-
 function hpFillColor(ratio: number): string {
-  if (ratio > 0.5) return 'linear-gradient(to right, #2e7a1a, #52b830)'
-  if (ratio > 0.25) return 'linear-gradient(to right, #9a6010, #d4a030)'
+  if (ratio > HP_COLOR_THRESHOLD_HIGH) return 'linear-gradient(to right, #2e7a1a, #52b830)'
+  if (ratio > HP_COLOR_THRESHOLD_LOW) return 'linear-gradient(to right, #9a6010, #d4a030)'
   return 'linear-gradient(to right, #7a1a10, #cc3020)'
 }
 
 function hpGlowColor(ratio: number): string {
-  if (ratio > 0.5) return 'rgba(82,184,48,0.6)'
-  if (ratio > 0.25) return 'rgba(212,160,48,0.6)'
+  if (ratio > HP_COLOR_THRESHOLD_HIGH) return 'rgba(82,184,48,0.6)'
+  if (ratio > HP_COLOR_THRESHOLD_LOW) return 'rgba(212,160,48,0.6)'
   return 'rgba(204,48,32,0.6)'
 }
 
 function hpTextColor(ratio: number): string {
-  if (ratio > 0.5) return '#52b830'
-  if (ratio > 0.25) return '#d4a030'
+  if (ratio > HP_COLOR_THRESHOLD_HIGH) return '#52b830'
+  if (ratio > HP_COLOR_THRESHOLD_LOW) return '#d4a030'
   return '#cc3020'
 }
 
 function hpTextGlow(ratio: number): string {
-  const col = ratio > 0.5 ? '82,184,48' : ratio > 0.25 ? '212,160,48' : '204,48,32'
+  const col =
+    ratio > HP_COLOR_THRESHOLD_HIGH
+      ? '82,184,48'
+      : ratio > HP_COLOR_THRESHOLD_LOW
+        ? '212,160,48'
+        : '204,48,32'
   return `0 1px 4px rgba(0,0,0,0.98), 0 0 8px rgba(0,0,0,0.8), 0 0 6px rgba(${col},0.65)`
 }
-
-const HP_SEGMENTS = 8
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
   uiStore.requestOpenPlanetsTab(slot.id)
@@ -136,10 +139,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
                   <div class="cmd-tile-hp-shine" />
                   <div class="cmd-tile-hp-notches">
                     <div
-                      v-for="i in HP_SEGMENTS - 1"
+                      v-for="i in HP_BAR_SEGMENTS - 1"
                       :key="i"
                       class="cmd-tile-hp-notch"
-                      :style="{ left: `${(i / HP_SEGMENTS) * 100}%` }"
+                      :style="{ left: `${(i / HP_BAR_SEGMENTS) * 100}%` }"
                     />
                   </div>
                 </div>
