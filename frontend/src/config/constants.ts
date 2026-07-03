@@ -1077,6 +1077,8 @@ export const SOLAR_DMG_BONUS = 0.25
 // Star Evolution Phases (replaces chimes-threshold radius system)
 export interface StarPhaseData {
   name: string
+  /** Compact label for tight UI spots (e.g. Stellar Evolution timeline in BardStatsTab) */
+  shortName: string
   radius: number
   core: string
   mid: string
@@ -1093,6 +1095,7 @@ export interface StarPhaseData {
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
     name: 'Protostar',
+    shortName: 'Protostar',
     radius: 38,
     core: '#fff0e0',
     mid: '#ffd4a3',
@@ -1107,6 +1110,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'Main Sequence (Young)',
+    shortName: 'MS Young',
     radius: 50,
     core: '#ffffff',
     mid: '#a8d8ff',
@@ -1121,6 +1125,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'Main Sequence (Mature)',
+    shortName: 'MS Mature',
     radius: 64,
     core: '#fffce0',
     mid: '#fff176',
@@ -1135,6 +1140,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'Subgiant',
+    shortName: 'Subgiant',
     radius: 84,
     core: '#fff0c0',
     mid: '#ffb347',
@@ -1149,6 +1155,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'Red Giant',
+    shortName: 'Red Giant',
     radius: 110,
     core: '#ffb0b0',
     mid: '#ff4d4d',
@@ -1163,6 +1170,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'White Dwarf',
+    shortName: 'White Dwarf',
     radius: 30,
     core: '#ffffff',
     mid: '#e8f4ff',
@@ -1177,6 +1185,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
   {
     name: 'Supernova',
+    shortName: 'Supernova',
     radius: 140,
     core: '#ffffff',
     mid: '#e8b0ff',
@@ -1198,6 +1207,34 @@ export const PLANET_TAB_SUN_MIN_DIAMETER = 300
 export const PLANET_TAB_SUN_MAX_DIAMETER = 470
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
 export const PLANET_TAB_PLANET_DIAMETER = 96
+
+// ── Bard Stats Tab starfield ──────────────────────────────────────────────────
+/** Generated backdrop starfield on the Star Forge stage (BardStatsTab).
+ *  Seeded PRNG keeps the layout stable across renders — change SEED to reshuffle. */
+export const STATS_TAB_STARFIELD = {
+  /** total stars across all drift layers */
+  COUNT: 130,
+  /** fixed PRNG seed */
+  SEED: 20260703,
+  SIZE_MIN_PX: 1,
+  SIZE_MAX_PX: 3.2,
+  /** stars at least this big get a glow halo */
+  BRIGHT_THRESHOLD_PX: 2.4,
+  /** size cutoffs that split stars into slow/mid/fast drift layers (parallax by depth) */
+  LAYER_SIZE_CUTOFFS_PX: [1.75, 2.5],
+  OPACITY_MIN: 0.25,
+  OPACITY_MAX: 0.9,
+  TWINKLE_MIN_S: 3,
+  TWINKLE_MAX_S: 9,
+  /** share of stars tinted in the current phase color */
+  PHASE_TINT_SHARE: 0.08,
+  /** share of stars tinted cool blue */
+  BLUE_TINT_SHARE: 0.06,
+} as const
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+/** Max augment selections queued by a single admin level grant (keeps a "+500 levels" from queueing 500 modals) */
+export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
 
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
@@ -1258,7 +1295,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crystal-ball',
   'game-icons:stiletto',
   'game-icons:fairy-wand',
-  'game-icons:crossed-swords',
+  'game-icons:crossed-swords', // Traits & Combat DPS row (BardStatsTab Star Forge stage)
   'game-icons:shield',
   'game-icons:trophy',
   'game-icons:ghost',
@@ -1555,7 +1592,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:queen-crown', // ★12 Cosmic Sovereign
   'game-icons:teleport', // Admin Galaxy Jump — warp button
   'game-icons:sun-radiations', // Admin Star Phase panel — header icon
-  'game-icons:sand-clock', // Cooldown buff chip (ActiveBuffsPanel) & phase countdown (StarPhasePanel)
+  'game-icons:sand-clock', // Time-in-phase indicator (BardStatsTab Star Forge stage)
   'game-icons:cursor', // Click mission icon (missionStore)
 ])
 

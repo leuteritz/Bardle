@@ -1,26 +1,38 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
+import { useSynergyStore } from '@/stores/synergyStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useUiStore } from '@/stores/uiStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
-import ActiveBuffsPanel from './ActiveBuffsPanel.vue'
-import StarPhasePanel from './StarPhasePanel.vue'
+import { STAR_PHASE_DATA, STATS_TAB_STARFIELD } from '@/config/constants'
+import { AUGMENTS } from '@/config/augments'
+import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
+import type { AugmentDefinition } from '@/types'
 
 const totalChampions = Object.keys(CHAMPION_ROLES).length
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
+const synergyStore = useSynergyStore()
+const solarStore = useSolarUpgradeStore()
+const uiStore = useUiStore()
 
 const { totalChimesEarned, chimesPerClick, chimesPerSecond, meeps, level, totalClicks } =
   storeToRefs(gameStore)
 const { starsRescued, currentGalaxy } = storeToRefs(galaxyStore)
 const { ownedChampions, currentRank } = storeToRefs(battleStore)
+const { dpsSynergyMultiplier } = storeToRefs(synergyStore)
 
 const championCount = computed(() => ownedChampions.value.filter((c) => c !== 'Bard').length)
+const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
 
+/* ── Count-up animation on mount ─────────────────────────────── */
 const countUpProgress = ref(0)
 let rafId: number
 
@@ -34,205 +46,750 @@ onMounted(() => {
   rafId = requestAnimationFrame(animFrame)
 })
 
-onUnmounted(() => cancelAnimationFrame(rafId))
-
 const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpProgress.value))
 const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
 const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
 const animClicks = computed(() => Math.floor(totalClicks.value * countUpProgress.value))
 const animChampions = computed(() => Math.floor(championCount.value * countUpProgress.value))
+
+/* ── Generated backdrop starfield ────────────────────────────── */
+/* Seeded PRNG (mulberry32) so the sky layout is identical on every render */
+function mulberry32(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+interface BgStar {
+  x: number
+  y: number
+  size: number
+  opacity: number
+  twinkleDur: number
+  twinkleDelay: number
+  bright: boolean
+  tint: 'white' | 'phase' | 'blue'
+}
+
+/* Three drift layers by star size: small stars drift slowest (far),
+   big stars fastest (near) — cheap parallax depth. */
+const STAR_LAYERS: BgStar[][] = (() => {
+  const cfg = STATS_TAB_STARFIELD
+  const rnd = mulberry32(cfg.SEED)
+  const layers: BgStar[][] = [[], [], []]
+  for (let i = 0; i < cfg.COUNT; i++) {
+    const size = cfg.SIZE_MIN_PX + rnd() * (cfg.SIZE_MAX_PX - cfg.SIZE_MIN_PX)
+    const tintRoll = rnd()
+    const layer = size < cfg.LAYER_SIZE_CUTOFFS_PX[0] ? 0 : size < cfg.LAYER_SIZE_CUTOFFS_PX[1] ? 1 : 2
+    layers[layer].push({
+      x: rnd() * 100,
+      y: rnd() * 100,
+      size,
+      opacity: cfg.OPACITY_MIN + rnd() * (cfg.OPACITY_MAX - cfg.OPACITY_MIN),
+      twinkleDur: cfg.TWINKLE_MIN_S + rnd() * (cfg.TWINKLE_MAX_S - cfg.TWINKLE_MIN_S),
+      twinkleDelay: -rnd() * cfg.TWINKLE_MAX_S,
+      bright: size >= cfg.BRIGHT_THRESHOLD_PX,
+      tint:
+        tintRoll < cfg.PHASE_TINT_SHARE
+          ? 'phase'
+          : tintRoll < cfg.PHASE_TINT_SHARE + cfg.BLUE_TINT_SHARE
+            ? 'blue'
+            : 'white',
+    })
+  }
+  return layers
+})()
+
+/* ── Star phase (sun + timeline) ─────────────────────────────── */
+const totalPhases = STAR_PHASE_DATA.length
+const phase = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
+const isMax = computed(() => solarStore.starPhase >= totalPhases - 1)
+
+const phaseVars = computed(() => ({
+  '--sun-core': phase.value.core,
+  '--sun-mid': phase.value.mid,
+  '--sun-edge': phase.value.edge,
+  '--sun-glow1': phase.value.glow1,
+  '--sun-glow2': phase.value.glow2,
+  '--sun-glow3': phase.value.glow3,
+  '--phase-primary': phase.value.phasePrimary,
+  '--phase-glow': phase.value.phaseGlow,
+  '--pulse-speed': phase.value.pulseSpeed,
+}))
+
+const timelineDots = computed(() =>
+  STAR_PHASE_DATA.map((p, i) => ({
+    label: p.shortName,
+    color: p.phasePrimary,
+    glow: p.phaseGlow,
+    done: i < solarStore.starPhase,
+    current: i === solarStore.starPhase,
+  })),
+)
+
+const timelineFillPct = computed(() => (solarStore.starPhase / (totalPhases - 1)) * 100)
+
+/* ── Time in phase ticker ────────────────────────────────────── */
+const now = ref(Date.now())
+let ticker: ReturnType<typeof setInterval>
+
+onMounted(() => {
+  if (!solarStore.phaseEnteredAt) solarStore.phaseEnteredAt = Date.now()
+  ticker = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(rafId)
+  clearInterval(ticker)
+})
+
+const phaseAge = computed(() => {
+  if (!solarStore.phaseEnteredAt) return null
+  const secs = Math.floor((now.value - solarStore.phaseEnteredAt) / 1000)
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
+  return `${s}s`
+})
+
+/* ── Augment shelf ───────────────────────────────────────────── */
+interface AugCard {
+  aug: AugmentDefinition
+  key: string
+  color: string
+}
+
+const augCards = computed<AugCard[]>(() =>
+  gameStore.activeAugments.flatMap((id, idx) => {
+    const aug = AUGMENTS.find((a) => a.id === id)
+    if (!aug) return []
+    return [{ aug, key: `${id}-${idx}`, color: AUGMENT_RARITY_COLOR[aug.rarity] }]
+  }),
+)
+
+const augmentCount = computed(() => augCards.value.length)
 </script>
 
 <template>
-  <div class="sv-root">
-    <!-- ══ LEFT SIDEBAR: Bard + Key Stats ══ -->
-    <aside class="sv-sidebar rpg-scrollbar">
+  <div class="sf-root rpg-scrollbar">
+    <!-- ══ Cinematic stage: Bard | stats | sun ══ -->
+    <div class="sf-stage" :style="phaseVars">
+      <div class="sf-stage-bg" aria-hidden="true">
+        <div
+          v-for="(layer, li) in STAR_LAYERS"
+          :key="li"
+          class="sf-drift"
+          :class="`sf-drift--${li}`"
+        >
+          <span
+            v-for="(s, si) in layer"
+            :key="si"
+            class="sf-star"
+            :class="{
+              'sf-star--bright': s.bright,
+              'sf-star--phase': s.tint === 'phase',
+              'sf-star--blue': s.tint === 'blue',
+            }"
+            :style="{
+              left: s.x + '%',
+              top: s.y + '%',
+              width: s.size + 'px',
+              height: s.size + 'px',
+              '--star-opacity': s.opacity,
+              animationDuration: s.twinkleDur + 's',
+              animationDelay: s.twinkleDelay + 's',
+            }"
+          />
+        </div>
+        <span class="sf-sparkle sf-sparkle--1">✦</span>
+        <span class="sf-sparkle sf-sparkle--2">✦</span>
+        <span class="sf-sparkle sf-sparkle--3">✦</span>
+        <div class="sf-galaxy" />
+        <div class="sf-nebula" />
+        <div class="sf-shooting-star" />
+        <div class="sf-shooting-star sf-shooting-star--2" />
+      </div>
       <img
         src="/img/BardAbilities/Bard.png"
         alt="Bard – The Wandering Caretaker"
-        class="sv-bard-img"
+        class="sf-bard"
       />
-      <div class="sv-nameplate">
-        <span class="sv-name">BARD</span>
-        <span class="sv-subtitle">The Wandering Caretaker</span>
-      </div>
 
-      <!-- ─ Identity ─ -->
-      <div class="sv-stat-group">
-        <div class="sv-group-label">Identity</div>
-        <div class="sv-stat-row">
-          <span class="sv-stat-lbl">Level</span>
-          <span class="sv-stat-val">{{ level }}</span>
+      <!-- ─ Center stat card ─ -->
+      <div class="sf-card">
+        <div class="sf-card-gold" />
+        <div class="sf-chips">
+          <div class="sf-chip sf-chip--gold">
+            <span class="sf-chip-lbl">Level</span>
+            <span class="sf-chip-val">{{ level }}</span>
+          </div>
+          <div class="sf-chip sf-chip--green">
+            <span class="sf-chip-lbl">Rank</span>
+            <span class="sf-chip-val sf-chip-val--sm">{{ currentRank.tier }} {{ currentRank.division }}</span>
+          </div>
+          <div class="sf-chip sf-chip--rare">
+            <span class="sf-chip-lbl">Galaxy</span>
+            <span class="sf-chip-val sf-chip-val--sm">{{ currentGalaxy }}</span>
+          </div>
         </div>
-        <div class="sv-stat-row">
-          <span class="sv-stat-lbl">Galaxy</span>
-          <span class="sv-stat-val sv-val-rare">{{ currentGalaxy }}</span>
-        </div>
-        <div class="sv-stat-row">
-          <span class="sv-stat-lbl">Rank</span>
-          <span class="sv-stat-val sv-val-green">{{ currentRank.tier }} {{ currentRank.division }}</span>
-        </div>
-      </div>
 
-      <!-- ─ Production ─ -->
-      <div class="sv-stat-group">
-        <div class="sv-group-label">Production</div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Chimes / Sec</span>
-          <span class="sv-stat-val">{{ $formatNumber(chimesPerSecond) }}</span>
+        <div class="sf-hero-row">
+          <img class="sf-row-icon sf-row-icon--lg" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Chimes / Sec</span>
+          <span class="sf-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
         </div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Chimes / Click</span>
-          <span class="sv-stat-val">{{ $formatNumber(chimesPerClick) }}</span>
-        </div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Total Chimes</span>
-          <span class="sv-stat-val">{{ $formatNumber(animChimes) }}</span>
-        </div>
-      </div>
 
-      <!-- ─ Progress ─ -->
-      <div class="sv-stat-group">
-        <div class="sv-group-label">Progress</div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/star.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Stars Rescued</span>
-          <span class="sv-stat-val">{{ $formatNumber(animStars) }}</span>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Chimes / Click</span>
+          <span class="sf-row-val">{{ $formatNumber(chimesPerClick) }}</span>
         </div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/menu/TEAM.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Champions</span>
-          <span class="sv-stat-val">
-            {{ animChampions }}<span class="sv-stat-val-sub"> / {{ totalChampions }}</span>
+        <div v-if="dpsPct > 0" class="sf-row">
+          <Icon icon="game-icons:crossed-swords" class="sf-row-icon sf-icon-dps" width="19" height="19" />
+          <span class="sf-row-lbl">Combat DPS</span>
+          <span class="sf-row-val sf-row-val--dps">+{{ dpsPct }}%</span>
+        </div>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Meeps Guided</span>
+          <span class="sf-row-val sf-row-val--green">{{ $formatNumber(animMeeps) }}</span>
+        </div>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Total Chimes</span>
+          <span class="sf-row-val">{{ $formatNumber(animChimes) }}</span>
+        </div>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/star.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Stars Rescued</span>
+          <span class="sf-row-val">{{ $formatNumber(animStars) }}</span>
+        </div>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/menu/TEAM.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Champions</span>
+          <span class="sf-row-val">
+            {{ animChampions }}<span class="sf-row-val-sub"> / {{ totalChampions }}</span>
           </span>
         </div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Meeps</span>
-          <span class="sv-stat-val">{{ $formatNumber(animMeeps) }}</span>
-        </div>
-        <div class="sv-stat-row">
-          <img class="sv-stat-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sv-stat-lbl">Total Clicks</span>
-          <span class="sv-stat-val">{{ $formatNumber(animClicks) }}</span>
+        <div class="sf-row">
+          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+          <span class="sf-row-lbl">Total Clicks</span>
+          <span class="sf-row-val">{{ $formatNumber(animClicks) }}</span>
         </div>
       </div>
-    </aside>
 
-    <!-- ══ MAIN AREA: Star Phase (hero) + Augment Buffs ══ -->
-    <div class="sv-main rpg-scrollbar">
-      <StarPhasePanel />
-      <ActiveBuffsPanel />
+      <!-- ─ Sun column (click → solar shop) ─ -->
+      <div class="sf-sun-col" @click="uiStore.setBardTab('shop')">
+        <div class="sf-sun-wrap">
+          <div class="sf-ring sf-ring--outer" />
+          <div class="sf-ring sf-ring--inner" />
+          <div class="sf-sun" />
+        </div>
+        <div class="sf-phase-kicker">Star Phase · {{ solarStore.starPhase + 1 }} / {{ totalPhases }}</div>
+        <div class="sf-phase-name">{{ phase.name }}</div>
+        <div class="sf-time">
+          <Icon icon="game-icons:sand-clock" width="13" height="13" class="sf-time-icon" />
+          <span class="sf-time-lbl">Time in phase</span>
+          <span class="sf-time-val">{{ phaseAge ?? '—' }}</span>
+        </div>
+        <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved · MAX</div>
+        <div v-else-if="solarStore.canUpgradeStar" class="sf-pill sf-pill--ready">Ready to Evolve · Shop</div>
+        <div v-else class="sf-pill sf-pill--hint">Evolve in Shop →</div>
+      </div>
+    </div>
+
+    <!-- ══ Bottom band: evolution timeline + augment shelf ══ -->
+    <div class="sf-band" :style="phaseVars">
+      <div class="sf-evo">
+        <div class="sf-band-label">Stellar Evolution</div>
+        <div class="sf-timeline">
+          <div class="sf-timeline-track">
+            <div class="sf-timeline-fill" :style="{ width: timelineFillPct + '%' }" />
+          </div>
+          <div
+            v-for="(dot, i) in timelineDots"
+            :key="i"
+            class="sf-tl-step"
+            :title="STAR_PHASE_DATA[i].name"
+          >
+            <div
+              class="sf-tl-dot"
+              :class="{ 'is-done': dot.done, 'is-current': dot.current }"
+              :style="{ '--dot-color': dot.color, '--dot-glow': dot.glow }"
+            />
+            <span class="sf-tl-lbl" :class="{ 'is-current': dot.current }" :style="dot.current ? { color: dot.color } : undefined">
+              {{ dot.label }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sf-shelf-row">
+        <div class="sf-shelf-head">
+          <span class="sf-band-label">Augments</span>
+          <span class="sf-shelf-count">
+            {{ augmentCount }} <span class="sf-shelf-count-sub">active</span>
+          </span>
+        </div>
+        <div v-if="augmentCount === 0" class="sf-shelf-empty">
+          <Icon icon="game-icons:gems" width="26" height="26" class="sf-shelf-empty-icon" />
+          <span>No augments active yet — level up to pick your first one</span>
+        </div>
+        <div v-else class="sf-shelf rpg-scrollbar">
+          <div
+            v-for="card in augCards"
+            :key="card.key"
+            class="sf-aug-card"
+            :style="{ '--rarity': card.color }"
+            :title="card.aug.effectLine"
+          >
+            <div class="sf-aug-icon">
+              <img v-if="card.aug.image" :src="card.aug.image" :alt="card.aug.name" />
+              <Icon
+                v-else-if="card.aug.icon.includes(':')"
+                :icon="card.aug.icon"
+                width="28"
+                height="28"
+              />
+              <span v-else class="sf-aug-emoji">{{ card.aug.icon }}</span>
+            </div>
+            <span class="sf-aug-name">{{ card.aug.name }}</span>
+            <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ══════════════════════════════════════════════
-   BARD STATS — 260px stat sidebar + stacked main
-══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   BARD STATS — "Star Forge": cinematic stage + evolution band
+══════════════════════════════════════════════════════════════ */
 
-.sv-root {
+.sf-root {
   display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--rpg-bg-deep);
   color: var(--rpg-text);
 }
 
-/* ─── Left sidebar ──────────────────────────── */
-.sv-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 16px;
-  padding: 24px 18px;
-  background: var(--rpg-bg-dark);
-  border-right: 1px solid var(--rpg-wood-inner);
-  overflow-y: auto;
-}
-
-.sv-bard-img {
-  width: 100%;
-  max-width: 180px;
-  height: auto;
-  object-fit: contain;
-  display: block;
-  margin: 0 auto;
-  filter: drop-shadow(0 0 24px color-mix(in srgb, var(--rpg-gold) 22%, transparent));
-}
-
-.sv-nameplate {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.sv-name {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  color: var(--rpg-gold);
-}
-.sv-subtitle {
-  font-size: 10px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--rpg-text-muted);
-}
-
-/* ─── Stat groups ───────────────────────────── */
-.sv-stat-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sv-group-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--rpg-wood);
-  padding-bottom: 7px;
-  margin-bottom: 3px;
-  border-bottom: 1px solid var(--rpg-wood-inner);
-}
-
-.sv-stat-row {
+/* ─── Cinematic stage ───────────────────────────────────────── */
+.sf-stage {
+  position: relative;
+  flex: 1;
+  min-height: 440px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 84% 50%, color-mix(in srgb, var(--sun-glow1) 24%, transparent), transparent 40%),
+    radial-gradient(circle at 90% 50%, color-mix(in srgb, var(--sun-glow2) 14%, transparent), transparent 60%),
+    radial-gradient(120% 120% at 12% 50%, #16110b, #0a0806 72%);
+}
+
+/* ─── Animated space backdrop (stars, galaxy, nebula) ───────── */
+.sf-stage-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Generated starfield: three drift layers (slow/mid/fast by star size,
+   seeded PRNG layout) — every star twinkles at its own pace. */
+.sf-drift {
+  position: absolute;
+  /* slight overscan so the gentle drift never reveals hard edges */
+  inset: -14px;
+  animation: sf-stars-drift 90s ease-in-out infinite alternate;
+}
+.sf-drift--1 {
+  animation-duration: 65s;
+  animation-direction: alternate-reverse;
+  animation-delay: -22s;
+}
+.sf-drift--2 {
+  animation-duration: 45s;
+  animation-delay: -10s;
+}
+
+.sf-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  opacity: var(--star-opacity);
+  animation: sf-star-twinkle 6s ease-in-out infinite;
+}
+.sf-star--bright {
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+}
+.sf-star--phase {
+  background: color-mix(in srgb, white 55%, var(--phase-primary));
+}
+.sf-star--phase.sf-star--bright {
+  box-shadow: 0 0 6px var(--phase-glow);
+}
+.sf-star--blue {
+  background: #a8c8ff;
+}
+.sf-star--blue.sf-star--bright {
+  box-shadow: 0 0 6px rgba(140, 180, 255, 0.6);
+}
+
+@keyframes sf-star-twinkle {
+  0%,
+  100% {
+    opacity: var(--star-opacity);
+  }
+  50% {
+    opacity: calc(var(--star-opacity) * 0.3);
+  }
+}
+
+/* Barely-there parallax drift (≤8px), run with `alternate` */
+@keyframes sf-stars-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(7px, -5px);
+  }
+}
+
+/* Distant spiral galaxy: tilted ellipse slowly rotating in the
+   upper-left quadrant — cool violet counterpoint to the warm sun. */
+.sf-galaxy {
+  position: absolute;
+  top: 6%;
+  left: 8%;
+  width: 200px;
+  height: 200px;
+  opacity: 0.22;
+  background:
+    radial-gradient(ellipse 50% 14% at 50% 50%, rgba(232, 224, 255, 0.9) 0%, rgba(160, 130, 220, 0.5) 34%, transparent 72%),
+    radial-gradient(ellipse 26% 8% at 50% 50%, rgba(255, 255, 255, 0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 62% 22% at 50% 50%, rgba(128, 96, 192, 0.35) 0%, transparent 78%);
+  animation: sf-galaxy-spin 240s linear infinite;
+}
+
+@keyframes sf-galaxy-spin {
+  from {
+    transform: rotate(-24deg);
+  }
+  to {
+    transform: rotate(336deg);
+  }
+}
+
+/* Nebula wisp: large soft blob near the top center, tinted to the
+   current star phase so it recolors on evolution. */
+.sf-nebula {
+  position: absolute;
+  top: -20%;
+  left: 30%;
+  width: 46%;
+  height: 70%;
+  background: radial-gradient(
+    ellipse 50% 40% at 50% 50%,
+    color-mix(in srgb, var(--phase-glow) 60%, #6040a0) 0%,
+    transparent 70%
+  );
+  opacity: 0.07;
+  animation: sf-nebula-drift 60s ease-in-out infinite alternate;
+}
+
+@keyframes sf-nebula-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(-4%, 6%) scale(1.12);
+  }
+}
+
+/* Rare shooting star: one streak crossing the upper stage, visible
+   for a blink (~6% of a 14s cycle) — rarity keeps it charming. */
+.sf-shooting-star {
+  position: absolute;
+  top: 14%;
+  left: -8%;
+  width: 90px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.25) 60%, transparent);
+  transform: rotate(16deg);
+  opacity: 0;
+  animation: sf-shooting 14s linear infinite;
+}
+
+@keyframes sf-shooting {
+  0%,
+  91% {
+    transform: translate(0, 0) rotate(16deg);
+    opacity: 0;
+  }
+  92% {
+    opacity: 0.9;
+  }
+  97% {
+    transform: translate(52vw, 16vh) rotate(16deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(52vw, 16vh) rotate(16deg);
+    opacity: 0;
+  }
+}
+
+/* Second shooting star: opposite direction, off-sync cycle */
+.sf-shooting-star--2 {
+  top: 34%;
+  left: auto;
+  right: -8%;
+  width: 70px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.2) 60%, transparent);
+  transform: rotate(-170deg);
+  animation: sf-shooting-2 19s linear infinite;
+  animation-delay: -7s;
+}
+
+@keyframes sf-shooting-2 {
+  0%,
+  90% {
+    transform: translate(0, 0) rotate(-170deg);
+    opacity: 0;
+  }
+  91% {
+    opacity: 0.8;
+  }
+  96% {
+    transform: translate(-46vw, 10vh) rotate(-170deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-46vw, 10vh) rotate(-170deg);
+    opacity: 0;
+  }
+}
+
+/* Sparkle stars: four-point ✦ glints pinging at their own cadence */
+.sf-sparkle {
+  position: absolute;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: sf-sparkle-ping 5s ease-in-out infinite;
+}
+.sf-sparkle--1 {
+  top: 18%;
+  left: 40%;
+}
+.sf-sparkle--2 {
+  top: 66%;
+  left: 12%;
+  font-size: 10px;
+  color: color-mix(in srgb, white 75%, var(--phase-primary));
+  text-shadow: 0 0 6px var(--phase-glow);
+  animation-duration: 7s;
+  animation-delay: -2.8s;
+}
+.sf-sparkle--3 {
+  top: 8%;
+  left: 74%;
+  font-size: 11px;
+  animation-duration: 6s;
+  animation-delay: -4.4s;
+}
+
+@keyframes sf-sparkle-ping {
+  0%,
+  100% {
+    transform: scale(0.5) rotate(0deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.15) rotate(45deg);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-drift,
+  .sf-star,
+  .sf-galaxy,
+  .sf-nebula,
+  .sf-shooting-star,
+  .sf-sparkle,
+  .sf-bard,
+  .sf-sun,
+  .sf-ring {
+    animation: none;
+  }
+}
+
+/* ─ Bard hero ─ */
+.sf-bard {
+  position: relative;
+  z-index: 1;
+  width: clamp(170px, 24%, 300px);
+  height: auto;
+  flex-shrink: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 22px rgba(232, 192, 64, 0.3));
+  animation: sf-floaty 7s ease-in-out infinite;
+}
+
+@keyframes sf-floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* ─ Center stat card ─ */
+.sf-card {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 384px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  background: rgba(13, 12, 7, 0.82);
+  border: 1px solid #5c3310;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px #3e200a, 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+.sf-card-gold {
+  height: 3px;
+  margin: -16px -18px 2px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
+  border-radius: 5px 5px 0 0;
+}
+
+.sf-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.sf-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
   background: #111008;
+  border-radius: 5px;
+}
+.sf-chip--gold {
+  border: 1px solid #5c3310;
+}
+.sf-chip--green {
+  border: 1px solid #4a6a2a;
+}
+.sf-chip--rare {
+  border: 1px solid #6a4a80;
+}
+
+.sf-chip-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7a6848;
+}
+
+.sf-chip-val {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+}
+.sf-chip-val--sm {
+  font-size: 14px;
+}
+.sf-chip--green .sf-chip-val {
+  color: var(--rpg-green-light);
+}
+.sf-chip--rare .sf-chip-val {
+  color: var(--rpg-rarity-rare);
+}
+
+/* ─ Hero CPS row ─ */
+.sf-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: linear-gradient(to right, #1a1008, #120d07);
   border: 1px solid #3e200a;
-  border-radius: var(--bp-radius);
-  transition: border-color 0.15s, background 0.15s;
+  border-radius: 5px;
 }
 
-.sv-stat-row:hover {
-  background: #1a1008;
-  border-color: #5c3310;
+.sf-hero-val {
+  font-size: 27px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.sv-stat-icon {
-  width: 20px;
-  height: 20px;
+/* ─ Compact stat rows ─ */
+.sf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-top: 1px solid #241a0c;
+}
+
+.sf-row-icon {
+  width: 19px;
+  height: 19px;
   flex-shrink: 0;
   object-fit: contain;
 }
+.sf-row-icon--lg {
+  width: 26px;
+  height: 26px;
+}
+.sf-icon-dps {
+  color: #c060a0;
+}
 
-.sv-stat-lbl {
+.sf-row-lbl {
   flex: 1;
   min-width: 0;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--rpg-text-muted);
   white-space: nowrap;
@@ -240,8 +797,8 @@ const animChampions = computed(() => Math.floor(championCount.value * countUpPro
   text-overflow: ellipsis;
 }
 
-.sv-stat-val {
-  font-size: 15px;
+.sf-row-val {
+  font-size: 18px;
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -249,30 +806,408 @@ const animChampions = computed(() => Math.floor(championCount.value * countUpPro
   white-space: nowrap;
   flex-shrink: 0;
 }
-.sv-val-rare {
-  color: var(--rpg-rarity-rare);
+.sf-row-val--dps {
+  color: #c060a0;
 }
-.sv-val-green {
+.sf-row-val--green {
   color: var(--rpg-green-light);
-  font-size: 13px;
 }
-.sv-stat-val-sub {
+.sf-row-val-sub {
   font-size: 12px;
   font-weight: 700;
   color: var(--rpg-text-dim);
 }
 
-/* ─── Main area (stacked) ───────────────────── */
-.sv-main {
-  flex: 1;
+/* ─ Sun column ─ */
+.sf-sun-col {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: clamp(220px, 27%, 320px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px 22px;
-  overflow-y: auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.sf-sun-wrap {
+  position: relative;
+  width: clamp(190px, 90%, 300px);
+  aspect-ratio: 1;
+}
+
+.sf-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sf-ring--outer {
+  inset: -6px;
+  border: 1px solid color-mix(in srgb, var(--phase-glow) 25%, transparent);
+  animation: sf-cw 30s linear infinite;
+}
+.sf-ring--inner {
+  inset: 8%;
+  border: 1px dashed color-mix(in srgb, var(--phase-glow) 17%, transparent);
+  animation: sf-ccw 18s linear infinite;
+}
+@keyframes sf-cw {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sf-ccw {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.sf-sun {
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 35%,
+    var(--sun-core) 0%,
+    color-mix(in srgb, var(--sun-core) 50%, var(--sun-mid)) 20%,
+    var(--sun-mid) 45%,
+    color-mix(in srgb, var(--sun-mid) 30%, var(--sun-edge)) 70%,
+    var(--sun-edge) 100%
+  );
+  box-shadow:
+    0 0 50px 18px color-mix(in srgb, var(--sun-glow1) 75%, transparent),
+    0 0 110px 44px color-mix(in srgb, var(--sun-glow1) 45%, transparent),
+    0 0 190px 80px color-mix(in srgb, var(--sun-glow2) 28%, transparent),
+    0 0 250px 110px color-mix(in srgb, var(--sun-glow3) 14%, transparent);
+  animation: sf-sun-pulse var(--pulse-speed) ease-in-out infinite;
+}
+
+@keyframes sf-sun-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+}
+
+.sf-phase-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #b0a080;
+  text-align: center;
+}
+
+.sf-phase-name {
+  font-size: 34px;
+  letter-spacing: 0.04em;
+  color: var(--phase-primary);
+  line-height: 1.15;
+  text-align: center;
+  animation: sf-name-pulse var(--pulse-speed) ease-in-out infinite;
+}
+
+@keyframes sf-name-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 12px var(--phase-glow), 0 0 26px var(--phase-glow);
+  }
+  50% {
+    text-shadow: 0 0 4px var(--phase-glow);
+  }
+}
+
+.sf-time {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  background: #0e0d07;
+  border: 1px solid #2a1a08;
+  border-radius: 4px;
+}
+.sf-time-icon {
+  color: var(--phase-primary);
+  flex-shrink: 0;
+}
+.sf-time-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rpg-text-dim);
+}
+.sf-time-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rpg-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sf-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  transition: box-shadow 0.15s;
+}
+.sf-pill--ready {
+  background: rgba(26, 42, 16, 0.9);
+  border: 1px solid #52b830;
+  color: #7ac060;
+  box-shadow: 0 0 16px rgba(82, 184, 48, 0.3);
+}
+.sf-sun-col:hover .sf-pill--ready {
+  box-shadow: 0 0 24px rgba(82, 184, 48, 0.5);
+}
+.sf-pill--max {
+  background: #1e1a06;
+  border: 1px solid #e8c040;
+  color: #e8c040;
+}
+.sf-pill--hint {
+  background: #16130c;
+  border: 1px solid #3e200a;
+  color: var(--rpg-text-dim);
+}
+.sf-sun-col:hover .sf-pill--hint {
+  color: var(--phase-primary);
+  border-color: #5c3310;
+}
+
+/* ─── Bottom band ───────────────────────────────────────────── */
+.sf-band {
+  flex-shrink: 0;
+  background: #1a1008;
+  border-top: 2px solid #5c3310;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sf-band-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rpg-wood);
+}
+
+/* ─ Stellar Evolution timeline ─ */
+.sf-evo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sf-timeline {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.sf-timeline-track {
+  position: absolute;
+  top: 11px;
+  left: 22px;
+  right: 22px;
+  height: 2px;
+  background: #2a1a08;
+}
+
+.sf-timeline-fill {
+  height: 100%;
+  background: var(--phase-primary);
+  box-shadow: 0 0 6px var(--phase-glow);
+  transition: width 0.6s ease;
+}
+
+.sf-tl-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 14%;
+  z-index: 1;
+}
+
+.sf-tl-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  transition: all 0.2s ease;
+}
+.sf-tl-dot.is-done {
+  background: var(--dot-color);
+  border-color: var(--dot-color);
+  opacity: 0.55;
+}
+.sf-tl-dot.is-current {
+  width: 24px;
+  height: 24px;
+  margin-top: -4px;
+  background: radial-gradient(circle at 40% 35%, var(--sun-core), var(--dot-color) 55%, var(--sun-edge));
+  border: 2px solid color-mix(in srgb, var(--dot-color) 60%, #ffffff);
+  box-shadow: 0 0 12px var(--dot-glow), 0 0 20px color-mix(in srgb, var(--dot-glow) 50%, transparent);
+  animation: sf-dot-pulse var(--pulse-speed) ease-in-out infinite;
+}
+@keyframes sf-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px var(--dot-glow), 0 0 14px color-mix(in srgb, var(--dot-glow) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 16px var(--dot-glow), 0 0 28px color-mix(in srgb, var(--dot-glow) 60%, transparent);
+  }
+}
+
+.sf-tl-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6a5a3a;
+  text-align: center;
+}
+.sf-tl-lbl.is-current {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* ─ Augment shelf ─ */
+.sf-shelf-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sf-shelf-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-right: 14px;
+  border-right: 1px solid #3e200a;
+}
+
+.sf-shelf-count {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--rpg-gold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sf-shelf-count-sub {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7a6848;
+}
+
+.sf-shelf-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--rpg-text-dim);
+}
+.sf-shelf-empty-icon {
+  color: #5c4a30;
+  flex-shrink: 0;
+}
+
+.sf-shelf {
+  flex: 1;
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding-bottom: 4px;
   min-width: 0;
 }
-.sv-main > :last-child {
-  margin-bottom: 4px;
+
+.sf-aug-card {
+  flex-shrink: 0;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  padding: 9px;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-top: 3px solid var(--rarity);
+  border-radius: 5px;
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--rarity) 10%, transparent);
+  transition: box-shadow 0.15s, background 0.15s;
+}
+.sf-aug-card:hover {
+  background: #221f18;
+  box-shadow:
+    inset 0 0 12px color-mix(in srgb, var(--rarity) 16%, transparent),
+    0 0 10px color-mix(in srgb, var(--rarity) 30%, transparent);
+}
+
+.sf-aug-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #141410;
+  border: 1px solid #2a1a08;
+  border-radius: 5px;
+  overflow: hidden;
+  color: var(--rarity);
+}
+.sf-aug-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.sf-aug-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.sf-aug-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--rarity);
+  text-align: center;
+  line-height: 1.05;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sf-aug-effect {
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--rpg-gold);
+  text-align: center;
+  line-height: 1.1;
 }
 </style>

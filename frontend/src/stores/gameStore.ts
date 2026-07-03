@@ -28,6 +28,7 @@ import {
   GAME_TICK_INTERVAL_MS,
   MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
+  ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
   BUILDING_HISTORY_BUFFER_SIZE,
   HYPERSPACE_ANIM_START_MS,
@@ -204,11 +205,28 @@ export const useGameStore = defineStore('game', {
         remaining.splice(remaining.indexOf(chosen), 1)
       }
 
-      if (this.isGamePaused) {
+      if (this.isGamePaused || this.pendingAugmentChoice) {
         this.pendingAugmentSelections.push({ options: picked.map((a) => a.id) })
       } else {
         this.pendingAugmentOptions = picked.map((a) => a.id)
         this.pendingAugmentChoice = true
+      }
+    },
+
+    /** Admin: set the level directly — each gained level grants an augment
+     *  selection like a real level-up (capped so huge jumps don't queue dozens). */
+    adminSetLevel(newLevel: number) {
+      const gained = newLevel - this.level
+      this.level = newLevel
+      if (gained <= 0) return
+      const grants = Math.min(gained, ADMIN_LEVEL_AUGMENT_QUEUE_MAX)
+      if (grants < gained) {
+        logger.info('Game', `Admin level grant capped: ${gained} levels, ${grants} augment picks`)
+      }
+      const augmentStore = useAugmentStore()
+      for (let i = 0; i < grants; i++) {
+        augmentStore.onLevelUp(this.activeAugments)
+        this.triggerAugmentSelection()
       }
     },
 

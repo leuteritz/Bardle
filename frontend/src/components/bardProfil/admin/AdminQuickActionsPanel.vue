@@ -92,7 +92,7 @@ function setValue(key: QuickKey, raw: string | number) {
   const clamped = Math.max(meta.min, parsed)
   if (key === 'chimes') gameStore.chimes = clamped
   else if (key === 'meeps') gameStore.meeps = clamped
-  else if (key === 'level') gameStore.level = clamped
+  else if (key === 'level') gameStore.adminSetLevel(clamped)
   else if (key === 'skillPoints') gameStore.skillPoints = clamped
 }
 
