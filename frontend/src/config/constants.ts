@@ -1076,9 +1076,12 @@ export const SOLAR_DMG_BONUS = 0.25
 
 // Star Evolution Phases (replaces chimes-threshold radius system)
 export interface StarPhaseData {
+  /** Unique Bardle name — the sun's life told as one piece of music */
   name: string
   /** Compact label for tight UI spots (e.g. Stellar Evolution timeline in BardStatsTab) */
   shortName: string
+  /** Scientific star-phase term, shown as secondary context (tooltips) */
+  astroName: string
   radius: number
   core: string
   mid: string
@@ -1098,10 +1101,15 @@ export interface StarPhaseData {
  *  solarUpgradeStore.dwellTimeMultiplier. */
 export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 36_000, 86_400]
 
+/** Stellar-Evolution timeline (BardStatsTab): dot diameter = phase radius × this scale,
+ *  so the timeline circles stay true to the in-game sun proportions (7.5px…35px). */
+export const STATS_TAB_PHASE_DOT_SCALE = 0.25
+
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
-    name: 'Protostar',
-    shortName: 'Protostar',
+    name: 'First Spark',
+    shortName: 'Spark',
+    astroName: 'Protostar',
     radius: 38,
     core: '#fff0e0',
     mid: '#ffd4a3',
@@ -1115,8 +1123,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Main Sequence (Young)',
-    shortName: 'MS Young',
+    name: 'Azure Prelude',
+    shortName: 'Prelude',
+    astroName: 'Main Sequence (Young)',
     radius: 50,
     core: '#ffffff',
     mid: '#a8d8ff',
@@ -1130,8 +1139,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '5s',
   },
   {
-    name: 'Main Sequence (Mature)',
-    shortName: 'MS Mature',
+    name: 'Golden Crescendo',
+    shortName: 'Crescendo',
+    astroName: 'Main Sequence (Mature)',
     radius: 64,
     core: '#fffce0',
     mid: '#fff176',
@@ -1145,8 +1155,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '5s',
   },
   {
-    name: 'Subgiant',
-    shortName: 'Subgiant',
+    name: 'Amber Swell',
+    shortName: 'Swell',
+    astroName: 'Subgiant',
     radius: 84,
     core: '#fff0c0',
     mid: '#ffb347',
@@ -1160,8 +1171,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Red Giant',
-    shortName: 'Red Giant',
+    name: 'Crimson Requiem',
+    shortName: 'Requiem',
+    astroName: 'Red Giant',
     radius: 110,
     core: '#ffb0b0',
     mid: '#ff4d4d',
@@ -1175,8 +1187,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '3s',
   },
   {
-    name: 'White Dwarf',
-    shortName: 'White Dwarf',
+    name: 'Fading Echo',
+    shortName: 'Echo',
+    astroName: 'White Dwarf',
     radius: 30,
     core: '#ffffff',
     mid: '#e8f4ff',
@@ -1190,8 +1203,9 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '2s',
   },
   {
-    name: 'Supernova',
-    shortName: 'Supernova',
+    name: 'Grand Finale',
+    shortName: 'Finale',
+    astroName: 'Supernova',
     radius: 140,
     core: '#ffffff',
     mid: '#e8b0ff',

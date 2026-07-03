@@ -10,7 +10,11 @@ import { useAugmentStore } from '@/stores/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
-import { STAR_PHASE_DATA, STATS_TAB_STARFIELD } from '@/config/constants'
+import {
+  STAR_PHASE_DATA,
+  STATS_TAB_STARFIELD,
+  STATS_TAB_PHASE_DOT_SCALE,
+} from '@/config/constants'
 import { AUGMENTS } from '@/config/augments'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
 import type { AugmentDefinition } from '@/types'
@@ -141,6 +145,11 @@ const timelineDots = computed(() =>
     label: p.shortName,
     color: p.phasePrimary,
     glow: p.phaseGlow,
+    core: p.core,
+    mid: p.mid,
+    edge: p.edge,
+    /* diameter true to the in-game sun proportions */
+    size: p.radius * STATS_TAB_PHASE_DOT_SCALE,
     done: i < solarStore.starPhase,
     current: i === solarStore.starPhase,
   })),
@@ -190,11 +199,8 @@ const dwellPct = computed(() =>
 /* Active timeline segment (current dot → next dot) filled by dwell progress */
 const activeSegLeftPct = computed(() => (solarStore.starPhase / (totalPhases - 1)) * 100)
 const activeSegWidthPct = computed(() => (dwellPct.value / 100 / (totalPhases - 1)) * 100)
-/* Timer label sits above the segment midpoint, clamped so it never overflows the band */
-const timerLabelFrac = computed(() => {
-  const f = (solarStore.starPhase + 0.5) / (totalPhases - 1)
-  return Math.min(0.88, Math.max(0.12, f))
-})
+/* Timer label centers on the active segment's midpoint (track coordinates) */
+const timerLabelFrac = computed(() => (solarStore.starPhase + 0.5) / (totalPhases - 1))
 
 const phaseAge = computed(() => {
   if (!solarStore.phaseEnteredAt) return null
@@ -461,12 +467,23 @@ const filteredAugCards = computed(() => {
     <div class="sf-band" :style="phaseVars">
       <div class="sf-evo">
         <div class="sf-band-label">Stellar Evolution</div>
+        <!-- TEMP: admin dwell-skip — remove later (incl. .sf-dev-skip CSS + adminSkipDwellTime in solarUpgradeStore) -->
+        <button
+          v-if="!isMax && !dwellMet"
+          class="sf-dev-skip"
+          type="button"
+          title="Admin: skip the remaining dwell time of this phase"
+          @click.stop="solarStore.adminSkipDwellTime()"
+        >
+          DEV · Skip Time
+        </button>
+        <!-- /TEMP -->
         <div class="sf-timeline">
           <!-- Dwell timer above the currently filling segment -->
           <div
             v-if="!isMax"
             class="sf-tl-timer"
-            :style="{ left: `calc(22px + (100% - 44px) * ${timerLabelFrac})` }"
+            :style="{ left: `calc(7% + 86% * ${timerLabelFrac})` }"
             :title="`${formatDuration(dwellElapsedMs)} of ${formatDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
           >
             <span v-if="dwellMet" class="sf-time-big sf-time-big--sm is-met">✓ Ready</span>
@@ -486,13 +503,23 @@ const filteredAugCards = computed(() => {
             v-for="(dot, i) in timelineDots"
             :key="i"
             class="sf-tl-step"
-            :title="STAR_PHASE_DATA[i].name"
+            :title="`${STAR_PHASE_DATA[i].name} · ${STAR_PHASE_DATA[i].astroName}`"
           >
-            <div
-              class="sf-tl-dot"
-              :class="{ 'is-done': dot.done, 'is-current': dot.current }"
-              :style="{ '--dot-color': dot.color, '--dot-glow': dot.glow }"
-            />
+            <div class="sf-tl-dot-slot">
+              <div
+                class="sf-tl-dot"
+                :class="{ 'is-done': dot.done, 'is-current': dot.current }"
+                :style="{
+                  width: dot.size + 'px',
+                  height: dot.size + 'px',
+                  '--dot-color': dot.color,
+                  '--dot-glow': dot.glow,
+                  '--dot-core': dot.core,
+                  '--dot-mid': dot.mid,
+                  '--dot-edge': dot.edge,
+                }"
+              />
+            </div>
             <span class="sf-tl-lbl" :class="{ 'is-current': dot.current }" :style="dot.current ? { color: dot.color } : undefined">
               {{ dot.label }}
             </span>
@@ -1232,9 +1259,34 @@ const filteredAugCards = computed(() => {
 
 /* ─ Stellar Evolution timeline ─ */
 .sf-evo {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* TEMP: admin dwell-skip chip — absolutely positioned, zero layout impact */
+.sf-dev-skip {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  z-index: 3;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #cc6050;
+  background: #16100c;
+  border: 1px dashed #cc6050;
+  border-radius: 4px;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+.sf-dev-skip:hover {
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
 }
 
 .sf-timeline {
@@ -1242,14 +1294,17 @@ const filteredAugCards = computed(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0 6px;
+  padding: 0;
 }
 
 .sf-timeline-track {
   position: absolute;
-  top: 11px;
-  left: 22px;
-  right: 22px;
+  /* vertical center of the 36px dot slot */
+  top: 17px;
+  /* 7 columns × 14% + space-between → first/last dot centers sit exactly
+     at 7% / 93%, so the line starts at the first sun and ends at the last */
+  left: 7%;
+  right: 7%;
   height: 2px;
   background: #2a1a08;
 }
@@ -1283,7 +1338,7 @@ const filteredAugCards = computed(() => {
 .sf-tl-timer {
   position: absolute;
   /* just below the track, in the gap between the two dot labels */
-  top: 22px;
+  top: 28px;
   transform: translateX(-50%);
   /* fixed box: ticking digits never resize or shift the label */
   width: 76px;
@@ -1325,26 +1380,38 @@ const filteredAugCards = computed(() => {
   z-index: 1;
 }
 
+/* Fixed-height slot keeps every sun — tiny White Dwarf to huge Supernova —
+   vertically centered on the track line. */
+.sf-tl-dot-slot {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .sf-tl-dot {
-  width: 16px;
-  height: 16px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: #1c1c18;
   border: 1px solid #3e200a;
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+/* Reached phases render as miniature suns in their real palette */
+.sf-tl-dot.is-done,
+.sf-tl-dot.is-current {
+  border: none;
+  background: radial-gradient(
+    circle at 38% 35%,
+    var(--dot-core),
+    var(--dot-mid) 55%,
+    var(--dot-edge)
+  );
 }
 .sf-tl-dot.is-done {
-  background: var(--dot-color);
-  border-color: var(--dot-color);
-  opacity: 0.55;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--dot-glow) 55%, transparent);
 }
 .sf-tl-dot.is-current {
-  width: 24px;
-  height: 24px;
-  margin-top: -4px;
-  background: radial-gradient(circle at 40% 35%, var(--sun-core), var(--dot-color) 55%, var(--sun-edge));
-  border: 2px solid color-mix(in srgb, var(--dot-color) 60%, #ffffff);
-  box-shadow: 0 0 12px var(--dot-glow), 0 0 20px color-mix(in srgb, var(--dot-glow) 50%, transparent);
+  box-shadow: 0 0 12px var(--dot-glow), 0 0 22px color-mix(in srgb, var(--dot-glow) 50%, transparent);
   animation: sf-dot-pulse var(--pulse-speed) ease-in-out infinite;
 }
 @keyframes sf-dot-pulse {

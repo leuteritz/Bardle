@@ -200,6 +200,14 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       this.dwellNow = Date.now()
     },
 
+    /** TEMP (admin/testing): instantly satisfy the current phase's dwell-time gate
+     *  by backdating phaseEnteredAt. Branch requirements stay untouched.
+     *  Remove together with the "DEV · Skip Time" button in BardStatsTab.vue. */
+    adminSkipDwellTime(): void {
+      this.phaseEnteredAt = Date.now() - this.phaseDwellRequiredMs
+      this.tickDwell()
+    },
+
     buyBranch(id: SolarBranchId): void {
       const gameStore = useGameStore()
       const level = this.branchLevel(id)
