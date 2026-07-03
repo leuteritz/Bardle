@@ -9,6 +9,7 @@ import { logger } from '../utils/logger'
 import { usePlanetShopStore } from './planetShopStore'
 import { useSynergyStore } from './synergyStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { useStarForgeStore } from './starForgeStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -293,7 +294,10 @@ export const useShopStore = defineStore('shop', {
       const solar = useSolarUpgradeStore()
       const solarCPS = solar.cpsBonus
       const flightMul = solar.flightSpeedMultiplier
-      return Math.floor((baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul)
+      const forgeMul = useStarForgeStore().cpsMult
+      return Math.floor(
+        (baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul * forgeMul,
+      )
     },
 
     calculateTotalCPC(): number {
@@ -307,7 +311,14 @@ export const useShopStore = defineStore('shop', {
 
       const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
       const cpcMul = mod.cpcMultiplier ?? 1
-      return Math.floor((baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul)
+      const forge = useStarForgeStore()
+      // Resonance / Midas Bell (Star Forge): clicks gain a fraction of total CpS
+      const cpsPortion =
+        forge.cpcFromCpsPct > 0 ? this.calculateTotalCPS() * forge.cpcFromCpsPct : 0
+      return Math.floor(
+        (baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul * forge.cpcMult +
+          cpsPortion,
+      )
     },
   },
 })

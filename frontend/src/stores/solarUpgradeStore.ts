@@ -3,6 +3,7 @@ import { useGameStore } from './gameStore'
 import { usePlayerStore } from './playerStore'
 import { useShopStore } from './shopStore'
 import { useCpsStore } from './cpsStore'
+import { useStarForgeStore } from './starForgeStore'
 import {
   SOLAR_FLIGHT_BASE_COST,
   SOLAR_FLIGHT_MULTIPLIER,
@@ -86,10 +87,11 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       return Math.min(SOLAR_MAX_LEVELS, this.minBranchLevel + 1)
     },
 
-    /** Future-upgrade hook: augments/upgrades that shorten dwell times multiply in
-     *  here (e.g. 0.8 = 20% faster phases). Keep every consumer on this getter. */
+    /** Upgrades that shorten dwell times multiply in here (e.g. 0.8 = 20% faster
+     *  phases). Keep every consumer on this getter. Currently fed by the Star
+     *  Forge "Allegro" branch (+ its "Time Weaver" leaf). */
     dwellTimeMultiplier(): number {
-      return 1
+      return useStarForgeStore().dwellMult
     },
 
     /** Minimum time (ms) the sun must stay in the CURRENT phase before evolving. */

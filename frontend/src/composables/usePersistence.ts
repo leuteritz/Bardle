@@ -13,6 +13,7 @@ import { useCpsStore } from '@/stores/cpsStore'
 import { usePlayerStore } from '@/stores/playerStore'
 import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { useStarForgeStore } from '@/stores/starForgeStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -39,6 +40,7 @@ export function usePersistence() {
     const playerStore = usePlayerStore()
     const planetShopStore = usePlanetShopStore()
     const solarStore = useSolarUpgradeStore()
+    const starForgeStore = useStarForgeStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -162,6 +164,16 @@ export function usePersistence() {
         phaseEnteredAt: solarStore.phaseEnteredAt,
         totalPhaseSeconds: solarStore.totalPhaseSeconds,
         phaseTimeHistory: solarStore.phaseTimeHistory,
+      },
+      starForge: {
+        branchLevels: { ...starForgeStore.branchLevels },
+        leafLevels: { ...starForgeStore.leafLevels },
+        relicLevels: { ...starForgeStore.relicLevels },
+        forgedConstellations: [...starForgeStore.forgedConstellations],
+        bargainDealId: starForgeStore.bargainDealId,
+        bargainRestockAt: starForgeStore.bargainRestockAt,
+        bargainPurchased: starForgeStore.bargainPurchased,
+        activeBuffs: starForgeStore.activeBuffs.map((b) => ({ ...b })),
       },
     }
 
@@ -394,7 +406,22 @@ export function usePersistence() {
         solarStore.phaseTimeHistory = saved.solar.phaseTimeHistory ?? []
       }
 
-      // Recalculate derived CPS/CPC after all levels (buildings + solar) are restored
+      // Restore starForgeStore — missing key (old saves) keeps all-zero defaults
+      const starForgeStore = useStarForgeStore()
+      if (saved.starForge) {
+        starForgeStore.branchLevels = { ...(saved.starForge.branchLevels ?? {}) }
+        starForgeStore.leafLevels = { ...(saved.starForge.leafLevels ?? {}) }
+        starForgeStore.relicLevels = { ...(saved.starForge.relicLevels ?? {}) }
+        starForgeStore.forgedConstellations = [...(saved.starForge.forgedConstellations ?? [])]
+        starForgeStore.bargainDealId = saved.starForge.bargainDealId ?? ''
+        starForgeStore.bargainRestockAt = saved.starForge.bargainRestockAt ?? 0
+        starForgeStore.bargainPurchased = saved.starForge.bargainPurchased ?? false
+        starForgeStore.activeBuffs = (saved.starForge.activeBuffs ?? []).map(
+          (b: { id: 'cpcX2' | 'cpsX2'; expiresAt: number }) => ({ ...b }),
+        )
+      }
+
+      // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
@@ -403,9 +430,11 @@ export function usePersistence() {
       const savedAt = saved.savedAt as number | undefined
       if (savedAt && typeof savedAt === 'number') {
         const rawSeconds = Math.floor((now - savedAt) / 1000)
-        const cappedSeconds = Math.min(rawSeconds, OFFLINE_MAX_HOURS * 3600)
+        const maxOfflineHours = OFFLINE_MAX_HOURS + starForgeStore.offlineMaxHoursBonus
+        const cappedSeconds = Math.min(rawSeconds, maxOfflineHours * 3600)
         if (cappedSeconds >= OFFLINE_MIN_SECONDS) {
-          const offlineMul = planetShopStore.planetOfflineBoostMultiplier
+          const offlineMul =
+            planetShopStore.planetOfflineBoostMultiplier * starForgeStore.offlineEarningsMult
           const earned = Math.floor(
             gameStore.chimesPerSecond * OFFLINE_CPS_RATE * offlineMul * cappedSeconds,
           )
@@ -549,6 +578,10 @@ export function usePersistence() {
     // 7c. Reset solarUpgradeStore
     const solarStoreR = useSolarUpgradeStore()
     solarStoreR.$reset()
+
+    // 7d. Reset starForgeStore
+    const starForgeStoreR = useStarForgeStore()
+    starForgeStoreR.$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

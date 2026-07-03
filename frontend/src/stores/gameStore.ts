@@ -12,6 +12,7 @@ import { usePlayerStore } from './playerStore'
 import { useRoleBehaviorStore } from './roleBehaviorStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { useStarForgeStore } from './starForgeStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/math'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
@@ -143,11 +144,14 @@ export const useGameStore = defineStore('game', {
 
     // Adds Chimes and updates all dependent values
     addChime() {
-      this.chimes += this.chimesPerClick
-      this.chimesForMeep += this.chimesPerClick
-      this.chimesForNextUniverse += this.chimesPerClick
-      this.totalChimesEarned += this.chimesPerClick
-      this.chimesEarnedForLevel += this.chimesPerClick
+      // Golden Echo (Star Forge): chance that a click counts twice
+      const doubled = Math.random() < useStarForgeStore().doubleClickChance
+      const gain = doubled ? this.chimesPerClick * 2 : this.chimesPerClick
+      this.chimes += gain
+      this.chimesForMeep += gain
+      this.chimesForNextUniverse += gain
+      this.totalChimesEarned += gain
+      this.chimesEarnedForLevel += gain
       this.totalClicks += 1
       this.calculateLevel()
       this.addMeep()
@@ -454,6 +458,7 @@ export const useGameStore = defineStore('game', {
     tick() {
       this.inGameTime++
       useSolarUpgradeStore().tickDwell()
+      useStarForgeStore().tick()
       const cps = this.chimesPerSecond
       if (cps > 0) {
         this.chimes += cps

@@ -1105,6 +1105,47 @@ export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 36_000, 
  *  so the timeline circles stay true to the in-game sun proportions (7.5px…35px). */
 export const STATS_TAB_PHASE_DOT_SCALE = 0.25
 
+// ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
+// Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.
+export const FORGE_STAGE_SIZE = 820
+export const FORGE_RING_ROOT_R = 165
+export const FORGE_RING_BRANCH_R = 285
+export const FORGE_RING_LEAF_R = 385
+export const FORGE_NODE_SIZE_ROOT = 56
+export const FORGE_NODE_SIZE_BRANCH = 46
+export const FORGE_NODE_SIZE_LEAF = 38
+/** Branch nodes sit at their root's angle ± this offset (degrees). */
+export const FORGE_BRANCH_ANGLE_OFFSET = 24
+
+// Ring unlock gating (starPhase index)
+export const FORGE_BRANCH_UNLOCK_PHASE = 2
+export const FORGE_LEAF_UNLOCK_PHASE = 4
+/** Branch max level at unlock; +1 per phase past the unlock phase, up to the cap
+ *  → "old upgrades gain new tiers" with every sun evolution. */
+export const FORGE_BRANCH_BASE_MAX_LEVEL = 3
+export const FORGE_BRANCH_MAX_LEVEL_CAP = 5
+export const FORGE_LEAF_MAX_LEVEL = 3
+/** Parent level required before a child node can be bought. */
+export const FORGE_BRANCH_PARENT_MIN_LEVEL = 1
+export const FORGE_LEAF_PARENT_MIN_LEVEL = 2
+/** Each leaf level amplifies its parent branch's effect by this fraction. */
+export const FORGE_LEAF_AMPLIFY_PER_LEVEL = 0.25
+
+// Relics & constellations
+export const FORGE_RELIC_REQUIRED_BRANCH_LEVEL = 3
+export const FORGE_CONSTELLATION_REQUIRED_LEVEL = 3
+
+// Cosmic Bargain
+export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000
+export const FORGE_BARGAIN_REROLL_MATERIAL = 'dark_matter'
+export const FORGE_BARGAIN_REROLL_COST = 1
+
+// Tree zoom (wheel + buttons)
+export const FORGE_TREE_ZOOM_MIN = 0.55
+export const FORGE_TREE_ZOOM_MAX = 1.4
+export const FORGE_TREE_ZOOM_STEP = 0.15
+export const FORGE_TREE_ZOOM_DEFAULT = 0.92
+
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
     name: 'First Spark',
@@ -1614,6 +1655,51 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:sun-radiations', // Admin Star Phase panel — header icon
   'game-icons:sand-clock', // Time-in-phase indicator (BardStatsTab Star Forge stage)
   'game-icons:cursor', // Click mission icon (missionStore)
+  // Star Forge — tree branch nodes (config/starForge.ts)
+  'game-icons:caravel', // Solar Sails (expedition speed)
+  'game-icons:moon', // Moon Orbit (offline earnings)
+  'game-icons:remedy', // Regeneration (HP regen)
+  'game-icons:bolt-shield', // Aegis (damage reduction)
+  'game-icons:two-coins', // Golden Echo (double-click chance)
+  'game-icons:sound-waves', // Resonance (CpC from CpS)
+  'game-icons:mining', // Comet Miner (material drop chance)
+  'game-icons:extra-time', // Allegro (phase dwell reduction)
+  'game-icons:sonic-shout', // Warcry (champion DPS)
+  'game-icons:shattered-glass', // Shatter (boss damage)
+  // Star Forge — tree leaf nodes (amplifiers)
+  'game-icons:sunrise', // Aurora Wake (amplifies Solar Sails)
+  'game-icons:night-sky', // Midnight Tide (amplifies Moon Orbit)
+  'game-icons:heart-plus', // Vital Bloom (amplifies Regeneration)
+  'game-icons:shield-echoes', // Echoing Bulwark (amplifies Aegis)
+  'game-icons:coins-pile', // Coin Cascade (amplifies Golden Echo)
+  'game-icons:echo-ripples', // Echo Chamber (amplifies Resonance)
+  'game-icons:gold-mine', // Deep Vein (amplifies Comet Miner)
+  'game-icons:clockwork', // Time Weaver (amplifies Allegro)
+  'game-icons:swords-power', // Battle Chorus (amplifies Warcry)
+  'game-icons:implosion', // Starquake (amplifies Shatter)
+  // Star Forge — crafted relics
+  'game-icons:evil-moon', // Echo of the Void relic
+  'game-icons:musical-score', // Choir of Champions relic
+  'game-icons:shining-heart', // Heart of the Star relic
+  'game-icons:bell-shield', // Midas Bell relic
+  // Star Forge — constellations
+  'game-icons:wind-hole', // Stellar Wind constellation
+  'game-icons:beams-aura', // Percussive Nova constellation
+  'game-icons:temporary-shield', // Bulwark Choir constellation
+  'game-icons:mine-wagon', // Prospector's Song constellation
+  'game-icons:ouroboros', // Eternal Cadence constellation
+  // Star Forge — cosmic bargain deals
+  'game-icons:take-my-money', // Midas Cadence deal
+  'game-icons:profit', // Tempo Surge deal
+  'game-icons:swap-bag', // Stellar Cache deal
+  'game-icons:time-synchronization', // Solar Winds deal (dwell skip)
+  'game-icons:receive-money', // Gold Rush deal
+  // Star Forge — panel section headers & controls (StarForgePanel.vue)
+  'game-icons:anvil-impact', // CRAFTED RELICS section header
+  'game-icons:barbed-star', // CONSTELLATIONS section header
+  'game-icons:cash', // COSMIC BARGAIN section header
+  'game-icons:card-exchange', // Bargain reroll button
+  'game-icons:sunbeams', // Phase status banner icon
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

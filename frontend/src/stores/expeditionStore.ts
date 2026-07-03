@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetShopStore } from './planetShopStore'
+import { useStarForgeStore } from './starForgeStore'
 import { getChampionRoles } from '../config/championRoles'
 import { useEventLog, type GameEventType } from '../composables/useEventLog'
 import { formatNumber } from '../config/numberFormat'
@@ -156,7 +157,12 @@ export const useExpeditionStore = defineStore('expedition', {
       const icon = pickRandom(iconPool)
 
       const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
-      const durationSeconds = Math.round(randInt(tierDef.durMin, tierDef.durMax) / 5) * 5
+      // Solar Sails (Star Forge): expeditions complete faster
+      const speedMult = useStarForgeStore().expeditionSpeedMult
+      const durationSeconds = Math.max(
+        5,
+        Math.round((randInt(tierDef.durMin, tierDef.durMax) * speedMult) / 5) * 5,
+      )
 
       const roleCount = randInt(1, tierDef.maxRoles)
       const requiredRoles = shuffle(ALL_ROLES).slice(0, roleCount) as ChampionRole[]

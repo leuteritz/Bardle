@@ -3,6 +3,7 @@ import { MATERIALS } from '../config/materials'
 import type { Material } from '../types'
 import { logger } from '../utils/logger'
 import { MATERIAL_DROP_BASE_CHANCE } from '../config/constants'
+import { useStarForgeStore } from './starForgeStore'
 
 export const useInventoryStore = defineStore('inventory', {
   state: () => ({
@@ -37,21 +38,27 @@ export const useInventoryStore = defineStore('inventory', {
     },
 
     tryDropMaterial(baseDropChance = MATERIAL_DROP_BASE_CHANCE): Material | null {
-      if (Math.random() > baseDropChance) return null
+      // Comet Miner (Star Forge): boosts the drop chance
+      const forge = useStarForgeStore()
+      if (Math.random() > baseDropChance * forge.materialDropMult) return null
 
       const total = MATERIALS.reduce((sum, m) => sum + m.dropChance, 0)
       let roll = Math.random() * total
+      let dropped: Material | null = null
       for (const material of MATERIALS) {
         roll -= material.dropChance
         if (roll <= 0) {
-          this.addMaterial(material.id)
-          return material
+          dropped = material
+          break
         }
       }
       // Fallback: last material
-      const last = MATERIALS[MATERIALS.length - 1]
-      this.addMaterial(last.id)
-      return last
+      if (!dropped) dropped = MATERIALS[MATERIALS.length - 1]
+      // Prospector's Song (Star Forge): every drop grants extra materials
+      for (let i = 0; i < 1 + forge.extraDropCount; i++) {
+        this.addMaterial(dropped.id)
+      }
+      return dropped
     },
   },
 })

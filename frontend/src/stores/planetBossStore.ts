@@ -39,6 +39,7 @@ import { useGalaxyStore } from './galaxyStore'
 import { usePlayerStore } from './playerStore'
 import { useStarGroupStore } from './starGroupStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { useStarForgeStore } from './starForgeStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -262,10 +263,15 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     dealDamage(amount: number): boolean {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
+      return this.dealDamageToBoss(boss, amount)
+    },
 
+    /** Applies damage (incl. curse + Star Forge boss multipliers) to a specific boss. */
+    dealDamageToBoss(boss: PlanetBossEvent, amount: number): boolean {
       const banished =
         activeMidCurse.type === 'banishment' && Date.now() < activeMidCurse.activeUntil
-      const effective = banished ? Math.round(amount * ROLE_MID_CURSE_DAMAGE_AMP) : amount
+      const cursed = banished ? amount * ROLE_MID_CURSE_DAMAGE_AMP : amount
+      const effective = Math.round(cursed * useStarForgeStore().bossDamageMult)
 
       boss.currentHP = Math.max(0, boss.currentHP - effective)
       boss.totalDamageDealt += effective
@@ -289,7 +295,18 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const boss = this.activeBoss
       if (!boss || boss.defeated || boss.expired) return false
       const solar = useSolarUpgradeStore()
-      return this.dealDamage(Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier))
+      const clickDamage = Math.ceil(boss.clickDamagePerHit * solar.dmgMultiplier)
+      const defeated = this.dealDamage(clickDamage)
+      // Percussive Nova: clicks splash a fraction of their damage to all other bosses
+      const splashPct = useStarForgeStore().clickSplashPct
+      if (splashPct > 0) {
+        const splash = Math.ceil(clickDamage * splashPct)
+        for (const other of this.activeBosses) {
+          if (other === boss || other.defeated || other.expired) continue
+          this.dealDamageToBoss(other, splash)
+        }
+      }
+      return defeated
     },
 
     applyPassiveDamage() {
