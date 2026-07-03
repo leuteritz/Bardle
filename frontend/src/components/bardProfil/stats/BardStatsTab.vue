@@ -164,6 +164,38 @@ onUnmounted(() => {
   clearInterval(ticker)
 })
 
+/* ── Phase dwell time (evolve time gate) ─────────────────────── */
+function formatDuration(ms: number): string {
+  const secs = Math.max(0, Math.ceil(ms / 1000))
+  const d = Math.floor(secs / 86400)
+  const h = Math.floor((secs % 86400) / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
+const dwellRequiredMs = computed(() => solarStore.phaseDwellRequiredMs)
+const dwellElapsedMs = computed(() =>
+  Math.max(0, now.value - (solarStore.phaseEnteredAt ?? now.value)),
+)
+const dwellRemainingMs = computed(() => Math.max(0, dwellRequiredMs.value - dwellElapsedMs.value))
+const dwellMet = computed(() => dwellRemainingMs.value <= 0)
+const dwellPct = computed(() =>
+  dwellRequiredMs.value <= 0 ? 100 : Math.min(100, (dwellElapsedMs.value / dwellRequiredMs.value) * 100),
+)
+
+/* Active timeline segment (current dot → next dot) filled by dwell progress */
+const activeSegLeftPct = computed(() => (solarStore.starPhase / (totalPhases - 1)) * 100)
+const activeSegWidthPct = computed(() => (dwellPct.value / 100 / (totalPhases - 1)) * 100)
+/* Timer label sits above the segment midpoint, clamped so it never overflows the band */
+const timerLabelFrac = computed(() => {
+  const f = (solarStore.starPhase + 0.5) / (totalPhases - 1)
+  return Math.min(0.88, Math.max(0.12, f))
+})
+
 const phaseAge = computed(() => {
   if (!solarStore.phaseEnteredAt) return null
   const secs = Math.floor((now.value - solarStore.phaseEnteredAt) / 1000)
@@ -410,12 +442,17 @@ const filteredAugCards = computed(() => {
         <div class="sf-phase-kicker">Star Phase · {{ solarStore.starPhase + 1 }} / {{ totalPhases }}</div>
         <div class="sf-phase-name">{{ phase.name }}</div>
         <div class="sf-time">
-          <Icon icon="game-icons:sand-clock" width="13" height="13" class="sf-time-icon" />
-          <span class="sf-time-lbl">Time in phase</span>
-          <span class="sf-time-val">{{ phaseAge ?? '—' }}</span>
+          <span class="sf-time-big">{{ phaseAge ?? '—' }}</span>
+          <span class="sf-time-sub">
+            <Icon icon="game-icons:sand-clock" width="12" height="12" class="sf-time-sub-icon" />
+            Time in phase
+          </span>
         </div>
         <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved · MAX</div>
         <div v-else-if="solarStore.canUpgradeStar" class="sf-pill sf-pill--ready">Ready to Evolve · Shop</div>
+        <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
+          Evolving in {{ formatDuration(dwellRemainingMs) }}
+        </div>
         <div v-else class="sf-pill sf-pill--hint">Evolve in Shop →</div>
       </div>
     </div>
@@ -425,8 +462,25 @@ const filteredAugCards = computed(() => {
       <div class="sf-evo">
         <div class="sf-band-label">Stellar Evolution</div>
         <div class="sf-timeline">
+          <!-- Dwell timer above the currently filling segment -->
+          <div
+            v-if="!isMax"
+            class="sf-tl-timer"
+            :style="{ left: `calc(22px + (100% - 44px) * ${timerLabelFrac})` }"
+            :title="`${formatDuration(dwellElapsedMs)} of ${formatDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
+          >
+            <span v-if="dwellMet" class="sf-time-big sf-time-big--sm is-met">✓ Ready</span>
+            <span v-else class="sf-time-big sf-time-big--sm">{{ formatDuration(dwellRemainingMs) }}</span>
+          </div>
           <div class="sf-timeline-track">
             <div class="sf-timeline-fill" :style="{ width: timelineFillPct + '%' }" />
+            <!-- Segment current → next phase, filling with dwell progress -->
+            <div
+              v-if="!isMax"
+              class="sf-timeline-fill--active"
+              :class="{ 'is-met': dwellMet }"
+              :style="{ left: activeSegLeftPct + '%', width: activeSegWidthPct + '%' }"
+            />
           </div>
           <div
             v-for="(dot, i) in timelineDots"
@@ -775,6 +829,7 @@ const filteredAugCards = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sf-timeline-fill--active,
   .sf-drift,
   .sf-star,
   .sf-galaxy,
@@ -1067,29 +1122,51 @@ const filteredAugCards = computed(() => {
 
 .sf-time {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 4px 12px;
-  background: #0e0d07;
-  border: 1px solid #2a1a08;
-  border-radius: 4px;
+  gap: 3px;
 }
-.sf-time-icon {
-  color: var(--phase-primary);
-  flex-shrink: 0;
+
+/* Shared time-display style: big gold value + muted uppercase sub-label —
+   used by the timeline dwell timer and the sun's "Time in phase". */
+.sf-time-big {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--rpg-gold);
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.45);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.sf-time-lbl {
+.sf-time-big.is-met {
+  color: #7ac060;
+  text-shadow: 0 0 10px rgba(82, 184, 48, 0.6);
+}
+/* Compact variant: same look, sized to fit between two timeline dots */
+.sf-time-big--sm {
+  font-size: 13px;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
+}
+.sf-time-big--sm.is-met {
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
+}
+
+.sf-time-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--rpg-text-dim);
-}
-.sf-time-val {
-  font-size: 12px;
-  font-weight: 700;
   color: var(--rpg-text-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sf-time-sub-icon {
+  color: var(--rpg-text-muted);
+  flex-shrink: 0;
 }
 
 .sf-pill {
@@ -1117,6 +1194,12 @@ const filteredAugCards = computed(() => {
   background: #1e1a06;
   border: 1px solid #e8c040;
   color: #e8c040;
+}
+.sf-pill--wait {
+  background: #16130c;
+  border: 1px solid color-mix(in srgb, var(--phase-glow) 40%, #3e200a);
+  color: var(--phase-primary);
+  font-variant-numeric: tabular-nums;
 }
 .sf-pill--hint {
   background: #16130c;
@@ -1170,6 +1253,60 @@ const filteredAugCards = computed(() => {
   height: 2px;
   background: #2a1a08;
 }
+
+/* Dwell progress creeping from the current dot toward the next phase */
+.sf-timeline-fill--active {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(to right, var(--phase-primary), #ffffff);
+  box-shadow: 0 0 8px var(--phase-glow);
+  animation: sf-seg-pulse 2.4s ease-in-out infinite;
+  transition: width 0.6s ease;
+}
+.sf-timeline-fill--active.is-met {
+  background: linear-gradient(to right, #52b830, #9ae070);
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.7);
+  animation: none;
+}
+@keyframes sf-seg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Big on-graph dwell timer above the active segment */
+.sf-tl-timer {
+  position: absolute;
+  /* just below the track, in the gap between the two dot labels */
+  top: 22px;
+  transform: translateX(-50%);
+  /* fixed box: ticking digits never resize or shift the label */
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* hoverable: title tooltip carries the elapsed/total detail */
+  cursor: help;
+  text-align: center;
+  z-index: 2;
+}
+
+/* Countdown reads as a neutral clock, not another gold stat value */
+.sf-tl-timer .sf-time-big--sm {
+  color: #e8e4d8;
+  text-shadow: 0 0 8px rgba(232, 228, 216, 0.35);
+}
+.sf-tl-timer .sf-time-big--sm.is-met {
+  color: #7ac060;
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
+}
+
 
 .sf-timeline-fill {
   height: 100%;

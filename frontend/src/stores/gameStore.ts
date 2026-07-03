@@ -11,6 +11,7 @@ import { useCombatStore } from './combatStore'
 import { usePlayerStore } from './playerStore'
 import { useRoleBehaviorStore } from './roleBehaviorStore'
 import { usePlanetShopStore } from './planetShopStore'
+import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/math'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
@@ -452,6 +453,7 @@ export const useGameStore = defineStore('game', {
     // Processes passive income per second
     tick() {
       this.inGameTime++
+      useSolarUpgradeStore().tickDwell()
       const cps = this.chimesPerSecond
       if (cps > 0) {
         this.chimes += cps

@@ -20,6 +20,7 @@ import {
   SOLAR_CPC_PER_LEVEL,
   SOLAR_CPS_FLIGHT_BONUS,
   SOLAR_DMG_BONUS,
+  STAR_PHASE_MIN_DWELL_SECONDS,
 } from '../config/constants'
 
 export type SolarBranchId =
@@ -49,6 +50,9 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     phaseEnteredAt: Date.now() as number,
     totalPhaseSeconds: 0 as number,
     phaseTimeHistory: [] as number[],
+    /** Reactive clock for dwell-time getters — advanced by gameStore.tick() once
+     *  per second (a raw Date.now() inside a getter would never re-evaluate). */
+    dwellNow: Date.now() as number,
   }),
 
   getters: {
@@ -82,8 +86,34 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       return Math.min(SOLAR_MAX_LEVELS, this.minBranchLevel + 1)
     },
 
+    /** Future-upgrade hook: augments/upgrades that shorten dwell times multiply in
+     *  here (e.g. 0.8 = 20% faster phases). Keep every consumer on this getter. */
+    dwellTimeMultiplier(): number {
+      return 1
+    },
+
+    /** Minimum time (ms) the sun must stay in the CURRENT phase before evolving. */
+    phaseDwellRequiredMs(state): number {
+      if (state.starPhase >= STAR_PHASE_MIN_DWELL_SECONDS.length) return 0
+      return STAR_PHASE_MIN_DWELL_SECONDS[state.starPhase] * 1000 * this.dwellTimeMultiplier
+    },
+
+    phaseDwellElapsedMs(state): number {
+      return Math.max(0, state.dwellNow - state.phaseEnteredAt)
+    },
+
+    phaseDwellRemainingMs(): number {
+      return Math.max(0, this.phaseDwellRequiredMs - this.phaseDwellElapsedMs)
+    },
+
+    /** Branch-level requirement alone (without the time gate) — lets the UI explain
+     *  WHY evolving is blocked. */
+    branchesReadyForEvolve(state): boolean {
+      return state.starPhase < 6 && this.minBranchLevel >= state.starPhase + 1
+    },
+
     canUpgradeStar(): boolean {
-      return this.starPhase < 6 && this.minBranchLevel >= this.starPhase + 1 && !this.isUpgrading
+      return this.branchesReadyForEvolve && this.phaseDwellRemainingMs <= 0 && !this.isUpgrading
     },
 
     branchLevel(state): (id: SolarBranchId) => number {
@@ -165,6 +195,11 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
   },
 
   actions: {
+    /** Advance the reactive dwell clock — called by gameStore.tick() every second. */
+    tickDwell(): void {
+      this.dwellNow = Date.now()
+    },
+
     buyBranch(id: SolarBranchId): void {
       const gameStore = useGameStore()
       const level = this.branchLevel(id)

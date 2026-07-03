@@ -1092,6 +1092,12 @@ export interface StarPhaseData {
   pulseSpeed: string
 }
 
+/** Minimum time (seconds) the sun must spend in each phase before it may evolve
+ *  to the next one — index = current starPhase (evolutions 0→1 … 5→6).
+ *  Ramp: 10min, 30min, 1.5h, 4h, 10h, 24h. Future upgrades can shorten these via
+ *  solarUpgradeStore.dwellTimeMultiplier. */
+export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 36_000, 86_400]
+
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
     name: 'Protostar',
