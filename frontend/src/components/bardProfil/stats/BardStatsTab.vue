@@ -6,6 +6,7 @@ import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSynergyStore } from '@/stores/synergyStore'
+import { useAugmentStore } from '@/stores/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
@@ -20,14 +21,27 @@ const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
 const synergyStore = useSynergyStore()
+const augmentStore = useAugmentStore()
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
 
-const { totalChimesEarned, chimesPerClick, chimesPerSecond, meeps, level, totalClicks } =
-  storeToRefs(gameStore)
+const {
+  totalChimesEarned,
+  chimesPerClick,
+  chimesPerSecond,
+  meeps,
+  level,
+  totalClicks,
+  activeModifier,
+  abilityCPSMultiplier,
+  abilityCPCMultiplier,
+  abilityPowerBonus,
+} = storeToRefs(gameStore)
 const { starsRescued, currentGalaxy } = storeToRefs(galaxyStore)
 const { ownedChampions, currentRank } = storeToRefs(battleStore)
-const { dpsSynergyMultiplier } = storeToRefs(synergyStore)
+const { cpsSynergyMultiplier, powerSynergyMultiplier, dpsSynergyMultiplier } =
+  storeToRefs(synergyStore)
+const { temporaryCPSMultiplier } = storeToRefs(augmentStore)
 
 const championCount = computed(() => ownedChampions.value.filter((c) => c !== 'Bard').length)
 const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
@@ -179,6 +193,103 @@ const augCards = computed<AugCard[]>(() =>
 )
 
 const augmentCount = computed(() => augCards.value.length)
+
+/* ── Aggregate buff chips (augments + abilities + synergies) ─── */
+const buffCPSPct = computed(() => {
+  const mod = activeModifier.value
+  const total =
+    (mod.cpsMultiplier ?? 1) - 1 +
+    (abilityCPSMultiplier.value - 1) +
+    (cpsSynergyMultiplier.value - 1) +
+    (temporaryCPSMultiplier.value - 1)
+  return Math.round(total * 100)
+})
+
+const buffCPCPct = computed(() => {
+  const mod = activeModifier.value
+  const total = (mod.cpcMultiplier ?? 1) - 1 + (abilityCPCMultiplier.value - 1)
+  return Math.round(total * 100)
+})
+
+const buffPowerSynergyPct = computed(() => Math.round((powerSynergyMultiplier.value - 1) * 100))
+const buffPowerFlat = computed(() => abilityPowerBonus.value)
+const buffMeepPct = computed(() =>
+  Math.round(((activeModifier.value.meepPowerMultiplier ?? 1) - 1) * 100),
+)
+const buffCDRPct = computed(() => {
+  const mul = activeModifier.value.cooldownMultiplier ?? 1
+  return mul < 1 ? Math.round((1 - mul) * 100) : 0
+})
+const buffExpPct = computed(() =>
+  Math.round(((activeModifier.value.expeditionRewardMultiplier ?? 1) - 1) * 100),
+)
+const buffCostPct = computed(() => {
+  const mul = activeModifier.value.buildingCostMultiplier ?? 1
+  return mul < 1 ? Math.round((1 - mul) * 100) : 0
+})
+const buffEnemyPct = computed(() => {
+  const mul = activeModifier.value.enemySpeedMultiplier ?? 1
+  return mul < 1 ? Math.round((1 - mul) * 100) : 0
+})
+
+interface BuffChip {
+  key: string
+  icon: string
+  label: string
+  value: string
+  positive: boolean
+}
+
+const totalChips = computed<BuffChip[]>(() => {
+  const chips: BuffChip[] = []
+  if (buffCPSPct.value > 0)
+    chips.push({ key: 'cps', icon: 'game-icons:lyre', label: 'Production', value: `+${buffCPSPct.value}%`, positive: true })
+  if (buffCPCPct.value > 0)
+    chips.push({ key: 'cpc', icon: 'game-icons:hand', label: 'Click', value: `+${buffCPCPct.value}%`, positive: true })
+  if (buffPowerSynergyPct.value > 0 || buffPowerFlat.value > 0) {
+    const parts: string[] = []
+    if (buffPowerSynergyPct.value > 0) parts.push(`+${buffPowerSynergyPct.value}%`)
+    if (buffPowerFlat.value > 0) parts.push(`+${buffPowerFlat.value}`)
+    chips.push({ key: 'power', icon: 'game-icons:magic-swirl', label: 'Power', value: parts.join(' & '), positive: true })
+  }
+  if (buffMeepPct.value > 0)
+    chips.push({ key: 'meep', icon: 'game-icons:crystal-ball', label: 'Meep Power', value: `+${buffMeepPct.value}%`, positive: true })
+  if (dpsPct.value > 0)
+    chips.push({ key: 'dps', icon: 'game-icons:crossed-swords', label: 'Combat DPS', value: `+${dpsPct.value}%`, positive: true })
+  if (buffCDRPct.value > 0)
+    chips.push({ key: 'cdr', icon: 'game-icons:sand-clock', label: 'Cooldowns', value: `-${buffCDRPct.value}%`, positive: false })
+  if (buffExpPct.value > 0)
+    chips.push({ key: 'exp', icon: 'game-icons:treasure-map', label: 'Expeditions', value: `+${buffExpPct.value}%`, positive: true })
+  if (buffCostPct.value > 0)
+    chips.push({ key: 'cost', icon: 'game-icons:stone-wall', label: 'Build Cost', value: `-${buffCostPct.value}%`, positive: false })
+  if (buffEnemyPct.value > 0)
+    chips.push({ key: 'enemy', icon: 'game-icons:turtle', label: 'Enemy Speed', value: `-${buffEnemyPct.value}%`, positive: false })
+  return chips
+})
+
+/* ── Shared search: filters buff chips AND augment cards ─────── */
+const buffSearch = ref('')
+
+const searchQuery = computed(() => buffSearch.value.trim().toLowerCase())
+
+const filteredChips = computed(() => {
+  const q = searchQuery.value
+  if (!q) return totalChips.value
+  return totalChips.value.filter(
+    (c) => c.label.toLowerCase().includes(q) || c.key.includes(q),
+  )
+})
+
+const filteredAugCards = computed(() => {
+  const q = searchQuery.value
+  if (!q) return augCards.value
+  return augCards.value.filter(
+    (c) =>
+      c.aug.name.toLowerCase().includes(q) ||
+      c.aug.effectLine.toLowerCase().includes(q) ||
+      c.aug.rarity.toLowerCase().includes(q),
+  )
+})
 </script>
 
 <template>
@@ -335,37 +446,68 @@ const augmentCount = computed(() => augCards.value.length)
         </div>
       </div>
 
-      <div class="sf-shelf-row">
-        <div class="sf-shelf-head">
-          <span class="sf-band-label">Augments</span>
-          <span class="sf-shelf-count">
-            {{ augmentCount }} <span class="sf-shelf-count-sub">active</span>
-          </span>
-        </div>
-        <div v-if="augmentCount === 0" class="sf-shelf-empty">
-          <Icon icon="game-icons:gems" width="26" height="26" class="sf-shelf-empty-icon" />
-          <span>No augments active yet — level up to pick your first one</span>
-        </div>
-        <div v-else class="sf-shelf rpg-scrollbar">
-          <div
-            v-for="card in augCards"
-            :key="card.key"
-            class="sf-aug-card"
-            :style="{ '--rarity': card.color }"
-            :title="card.aug.effectLine"
-          >
-            <div class="sf-aug-icon">
-              <img v-if="card.aug.image" :src="card.aug.image" :alt="card.aug.name" />
-              <Icon
-                v-else-if="card.aug.icon.includes(':')"
-                :icon="card.aug.icon"
-                width="28"
-                height="28"
-              />
-              <span v-else class="sf-aug-emoji">{{ card.aug.icon }}</span>
+      <div class="sf-aug-zone">
+        <!-- ─ Left: buff panel with search ─ -->
+        <div class="sf-buff-panel">
+          <div class="sf-buff-head">
+            <span class="sf-band-label">Augments</span>
+            <span class="sf-shelf-count">
+              {{ augmentCount }} <span class="sf-shelf-count-sub">active</span>
+            </span>
+          </div>
+          <input
+            v-model="buffSearch"
+            class="sf-buff-search"
+            type="text"
+            placeholder="Search augment or buff…"
+          />
+          <div class="sf-buff-chips rpg-scrollbar">
+            <div v-if="filteredChips.length === 0" class="sf-buff-empty">
+              {{ totalChips.length === 0 ? 'No buffs active yet' : 'No buffs match' }}
             </div>
-            <span class="sf-aug-name">{{ card.aug.name }}</span>
-            <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
+            <div v-for="chip in filteredChips" :key="chip.key" class="sf-chip-buff">
+              <Icon :icon="chip.icon" width="15" height="15" class="sf-chip-buff-icon" />
+              <span class="sf-chip-buff-lbl">{{ chip.label }}</span>
+              <span class="sf-chip-buff-val" :class="chip.positive ? 'is-up' : 'is-down'">
+                {{ chip.value }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─ Right: augment card shelf (fixed height) ─ -->
+        <div class="sf-shelf-col">
+          <div v-if="filteredAugCards.length === 0" class="sf-shelf-empty">
+            <Icon icon="game-icons:gems" width="30" height="30" class="sf-shelf-empty-icon" />
+            <span>
+              {{
+                augmentCount === 0
+                  ? 'No augments active yet — level up to pick your first one'
+                  : 'No augments match your search'
+              }}
+            </span>
+          </div>
+          <div v-else class="sf-shelf rpg-scrollbar">
+            <div
+              v-for="card in filteredAugCards"
+              :key="card.key"
+              class="sf-aug-card"
+              :style="{ '--rarity': card.color }"
+              :title="card.aug.effectLine"
+            >
+              <div class="sf-aug-icon">
+                <img v-if="card.aug.image" :src="card.aug.image" :alt="card.aug.name" />
+                <Icon
+                  v-else-if="card.aug.icon.includes(':')"
+                  :icon="card.aug.icon"
+                  width="32"
+                  height="32"
+                />
+                <span v-else class="sf-aug-emoji">{{ card.aug.icon }}</span>
+              </div>
+              <span class="sf-aug-name">{{ card.aug.name }}</span>
+              <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1091,24 +1233,34 @@ const augmentCount = computed(() => augCards.value.length)
   font-weight: 900;
 }
 
-/* ─ Augment shelf ─ */
-.sf-shelf-row {
+/* ─ Augment zone: fixed height in every state ─ */
+.sf-aug-zone {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 14px;
+  height: 190px;
 }
 
-.sf-shelf-head {
+/* Left: buff panel with shared search */
+.sf-buff-panel {
+  flex-shrink: 0;
+  width: 300px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
+  gap: 8px;
   padding-right: 14px;
   border-right: 1px solid #3e200a;
 }
 
+.sf-buff-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .sf-shelf-count {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
   color: var(--rpg-gold);
   line-height: 1;
@@ -1120,12 +1272,97 @@ const augmentCount = computed(() => augCards.value.length)
   color: #7a6848;
 }
 
+.sf-buff-search {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--rpg-text);
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.sf-buff-search::placeholder {
+  color: var(--rpg-text-dim);
+  font-weight: 400;
+}
+.sf-buff-search:focus {
+  border-color: #7a4e20;
+}
+
+.sf-buff-chips {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sf-buff-empty {
+  width: 100%;
+  align-self: center;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--rpg-text-dim);
+}
+
+.sf-chip-buff {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: fit-content;
+  padding: 6px 10px;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
+.sf-chip-buff-icon {
+  color: #c89040;
+  flex-shrink: 0;
+}
+.sf-chip-buff-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+}
+.sf-chip-buff-val {
+  font-size: 13px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.sf-chip-buff-val.is-up {
+  color: var(--rpg-gold);
+}
+.sf-chip-buff-val.is-down {
+  color: #52b830;
+}
+
+/* Right: augment card shelf */
+.sf-shelf-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+}
+
 .sf-shelf-empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 4px;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1139,6 +1376,7 @@ const augmentCount = computed(() => augCards.value.length)
 .sf-shelf {
   flex: 1;
   display: flex;
+  align-items: stretch;
   gap: 9px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -1147,12 +1385,12 @@ const augmentCount = computed(() => augCards.value.length)
 
 .sf-aug-card {
   flex-shrink: 0;
-  width: 96px;
+  width: 120px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   align-items: center;
-  padding: 9px;
+  padding: 12px 10px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-top: 3px solid var(--rarity);
@@ -1168,8 +1406,8 @@ const augmentCount = computed(() => augCards.value.length)
 }
 
 .sf-aug-icon {
-  width: 46px;
-  height: 46px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1192,7 +1430,7 @@ const augmentCount = computed(() => augCards.value.length)
 }
 
 .sf-aug-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--rarity);
   text-align: center;
@@ -1203,11 +1441,18 @@ const augmentCount = computed(() => augCards.value.length)
   overflow: hidden;
 }
 
+/* The buff is the card's key info — biggest text, anchored to the bottom
+   so the card's full height is used. */
 .sf-aug-effect {
-  font-size: 10px;
+  margin-top: auto;
+  font-size: 14px;
   font-weight: 900;
   color: var(--rpg-gold);
   text-align: center;
-  line-height: 1.1;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
