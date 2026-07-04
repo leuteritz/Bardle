@@ -46,27 +46,28 @@
             </div>
           </div>
 
-          <div class="row-names">
-            <div class="row-champ-name">{{ battleStore.headerSlots[idx] }}</div>
-            <div class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</div>
-          </div>
-
-          <div class="row-stats">
-            <div class="row-stat">
-              <span class="row-stat-value row-stat-value--kills">
-                {{ statFor(battleStore.headerSlots[idx]!).kills }}
-              </span>
-              <span class="row-stat-label">KILLS</span>
+          <div class="row-center">
+            <div class="row-name-line">
+              <span class="row-champ-name">{{ battleStore.headerSlots[idx] }}</span>
+              <span class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</span>
             </div>
-            <div class="row-stat">
-              <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
-              <span class="row-stat-label">KDA</span>
-            </div>
-            <div class="row-stat">
-              <span class="row-stat-value row-stat-value--mvp">
-                {{ statFor(battleStore.headerSlots[idx]!).mvps }}
-              </span>
-              <span class="row-stat-label">MVP</span>
+            <div class="row-stats">
+              <div class="row-stat">
+                <span class="row-stat-value row-stat-value--kills">
+                  {{ statFor(battleStore.headerSlots[idx]!).kills }}
+                </span>
+                <span class="row-stat-label">KILLS</span>
+              </div>
+              <div class="row-stat">
+                <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
+                <span class="row-stat-label">KDA</span>
+              </div>
+              <div class="row-stat">
+                <span class="row-stat-value row-stat-value--mvp">
+                  {{ statFor(battleStore.headerSlots[idx]!).mvps }}
+                </span>
+                <span class="row-stat-label">MVP</span>
+              </div>
             </div>
           </div>
 
@@ -77,10 +78,12 @@
           />
         </template>
         <template v-else>
-          <div class="row-names">
-            <div class="row-champ-name row-champ-name--empty">Empty slot</div>
-            <div class="row-role-label" :style="{ color: hexToRgba(role.color, 0.55) }">
-              {{ role.roleLabel }}
+          <div class="row-center">
+            <div class="row-name-line">
+              <span class="row-champ-name row-champ-name--empty">Empty slot</span>
+              <span class="row-role-label" :style="{ color: hexToRgba(role.color, 0.55) }">
+                {{ role.roleLabel }}
+              </span>
             </div>
           </div>
           <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
@@ -388,14 +391,30 @@ const mvpHolder = computed<string | null>(() => {
   flex-shrink: 0;
 }
 
-.row-names {
+/* ── Center block: name line over mini-stats ── */
+.row-center {
   flex: 1;
   min-width: 0;
-  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.row-name-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .row-champ-name {
-  font-size: 16px;
+  font-size: 18px;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -409,14 +428,14 @@ const mvpHolder = computed<string | null>(() => {
 .row-role-label {
   font-size: 11px;
   letter-spacing: 2px;
+  flex-shrink: 0;
 }
 
 /* ── Per-champion career mini-stats ── */
 .row-stats {
   display: flex;
-  gap: 10px;
-  flex-shrink: 0;
-  padding-right: 4px;
+  justify-content: center;
+  gap: 14px;
 }
 
 .row-stat {
