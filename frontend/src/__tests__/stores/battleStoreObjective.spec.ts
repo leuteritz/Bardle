@@ -186,6 +186,15 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.objectiveFighters!.t2.filter((f) => f.alive)).toHaveLength(5)
   })
 
+  it('always lists all 5 champions per team, even when participants are a subset', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', { t1: [0, 1, 2], t2: [0, 1] })
+    expect(store.objectiveFighters!.t1).toHaveLength(5)
+    expect(store.objectiveFighters!.t2).toHaveLength(5)
+    expect(store.objectiveAliveCounts).toEqual({ own: 5, enemy: 5 })
+  })
+
   it('per-fighter damage sums to the team total; dead fighters stay at 0', () => {
     const store = useBattleStore()
     setupBattle(store)

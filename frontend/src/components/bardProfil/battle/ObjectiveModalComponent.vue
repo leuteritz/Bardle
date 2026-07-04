@@ -46,7 +46,7 @@
               <div class="fighter-info">
                 <span class="fighter-name">{{ f.name }}</span>
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
-                  {{ f.alive ? fmt(Math.round(f.damage)) : '—' }}
+                  {{ fmt(Math.round(f.damage)) }}
                 </span>
               </div>
             </div>
@@ -95,7 +95,7 @@
               <div class="fighter-info fighter-info--enemy">
                 <span class="fighter-name">{{ f.name }}</span>
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
-                  {{ f.alive ? fmt(Math.round(f.damage)) : '—' }}
+                  {{ fmt(Math.round(f.damage)) }}
                 </span>
               </div>
               <div class="fighter-portrait-wrap">

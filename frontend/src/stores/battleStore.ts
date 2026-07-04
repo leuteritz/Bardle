@@ -1269,18 +1269,6 @@ export const useBattleStore = defineStore('battle', {
       this.startBattleSimulation(true)
     },
 
-    /** Living own-team champions currently at the active objective pit. */
-    _objectiveSideCounts(): { own: number; enemy: number } {
-      const parts = this.activeObjectiveParticipants
-      const countSide = (idxs: number[], team: ChampionState[], until: number[]) =>
-        idxs.filter((i) => team[i]?.name && until[i] <= this.battleTime).length
-      if (!parts) return { own: 3, enemy: 3 }
-      return {
-        own: Math.max(1, countSide(parts.t1, this.team1, this.respawnUntil.t1)),
-        enemy: Math.max(1, countSide(parts.t2, this.team2, this.respawnUntil.t2)),
-      }
-    },
-
     /**
      * Opens the frozen-time objective fight. The battle simulation is paused and
      * battlePhaseStartTimestamp keeps sliding forward, so game-time stands still:
@@ -1300,10 +1288,13 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveEnemyDamage = 0
       this.objectivePlayerDamage = 0
       // Alive counts cannot change while time is frozen — snapshot once.
-      this.objectiveAliveCounts = this._objectiveSideCounts()
       this.objectiveFighters = {
-        t1: this._buildObjectiveFighters(participants?.t1, this.team1, this.respawnUntil.t1),
-        t2: this._buildObjectiveFighters(participants?.t2, this.team2, this.respawnUntil.t2),
+        t1: this._buildObjectiveFighters(this.team1, this.respawnUntil.t1),
+        t2: this._buildObjectiveFighters(this.team2, this.respawnUntil.t2),
+      }
+      this.objectiveAliveCounts = {
+        own: Math.max(1, this.objectiveFighters.t1.filter((f) => f.alive).length),
+        enemy: Math.max(1, this.objectiveFighters.t2.filter((f) => f.alive).length),
       }
       this.objectiveModalOpen = true
 
@@ -1336,13 +1327,15 @@ export const useBattleStore = defineStore('battle', {
     },
 
     /**
-     * Snapshot of one side's pit fighters. Living fighters get a random DPS
-     * weight, normalized so the side's weights sum to its alive count — the
-     * team DPS stays exactly aliveCount × base, only the split varies.
+     * Snapshot of one side's pit fighters — always the whole team, so the
+     * modal shows all 5 champions with the dead ones grayed out. Living
+     * fighters get a random DPS weight, normalized so the side's weights sum
+     * to its alive count — the team DPS stays exactly aliveCount × base, only
+     * the split varies.
      */
-    _buildObjectiveFighters(idxs: number[] | undefined, team: ChampionState[], until: number[]): ObjectiveFighter[] {
-      const indices = idxs && idxs.length > 0 ? idxs : team.map((_, i) => i)
-      const fighters: ObjectiveFighter[] = indices
+    _buildObjectiveFighters(team: ChampionState[], until: number[]): ObjectiveFighter[] {
+      const fighters: ObjectiveFighter[] = team
+        .map((_, i) => i)
         .filter((i) => team[i]?.name)
         .map((i) => ({
           idx: i,
