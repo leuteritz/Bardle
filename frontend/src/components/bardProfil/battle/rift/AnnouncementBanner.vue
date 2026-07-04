@@ -75,22 +75,33 @@ function pump() {
 }
 
 // ── Multikill / First Blood from the kill feed ──
+// Several feed entries can arrive batched in one sim tick; scan everything new
+// and announce only the highest multikill tier of the batch (PENTA beats the
+// DOUBLE/TRIPLE/QUADRA steps that led up to it).
+let lastSeenFeedTime = -1
 watch(
   () => battleStore.killFeed.length + (battleStore.killFeed.at(-1)?.t ?? 0),
   () => {
-    const entry = battleStore.killFeed.at(-1)
-    if (!entry) return
-    if (entry.t < battleStore.battleTime - ANNOUNCE_FRESHNESS_GAME_SECONDS) return
-    if (entry.firstBlood) {
-      enqueue({ kind: 'firstblood', name: entry.killerName, team: entry.killerTeam })
+    const fresh = battleStore.killFeed.filter(
+      (e) => e.t > lastSeenFeedTime && e.t >= battleStore.battleTime - ANNOUNCE_FRESHNESS_GAME_SECONDS,
+    )
+    if (battleStore.killFeed.length > 0) {
+      lastSeenFeedTime = Math.max(lastSeenFeedTime, battleStore.killFeed.at(-1)!.t)
     }
-    if (entry.multikillTier && entry.multikillTier >= 2) {
-      enqueue({
-        kind: 'multikill',
-        tier: entry.multikillTier,
-        name: entry.killerName,
-        team: entry.killerTeam,
-      })
+    if (fresh.length === 0) return
+
+    const firstBlood = fresh.find((e) => e.firstBlood)
+    if (firstBlood) {
+      enqueue({ kind: 'firstblood', name: firstBlood.killerName, team: firstBlood.killerTeam })
+    }
+    let best: (typeof fresh)[number] | null = null
+    for (const e of fresh) {
+      if (e.multikillTier && e.multikillTier >= 2 && (!best || e.multikillTier > (best.multikillTier ?? 0))) {
+        best = e
+      }
+    }
+    if (best) {
+      enqueue({ kind: 'multikill', tier: best.multikillTier, name: best.killerName, team: best.killerTeam })
     }
   },
 )
@@ -119,6 +130,7 @@ watch(
   () => {
     queue.value = []
     current.value = null
+    lastSeenFeedTime = -1
     if (displayTimer) {
       clearTimeout(displayTimer)
       displayTimer = null
