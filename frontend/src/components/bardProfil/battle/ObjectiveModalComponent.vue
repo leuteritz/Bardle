@@ -45,10 +45,10 @@
         <div class="arena-row">
           <TransitionGroup name="fighter" tag="div" class="fighters-col">
             <div
-              v-for="f in fightersOwn"
+              v-for="(f, i) in fightersOwn"
               :key="'f1' + f.idx"
               class="fighter-card fighter-card--own"
-              :class="{ 'fighter-card--dead': !f.alive }"
+              :class="[{ 'fighter-card--dead': !f.alive }, cardRankClass(f, i)]"
             >
               <div class="fighter-portrait-wrap">
                 <img
@@ -64,7 +64,11 @@
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
                   {{ fmt(Math.round(f.damage)) }}
                 </span>
+                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f) }}/s</span>
               </div>
+              <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, i)}`">
+                <Icon icon="game-icons:sport-medal" width="28" height="28" />
+              </span>
             </div>
           </TransitionGroup>
 
@@ -103,16 +107,20 @@
 
           <TransitionGroup name="fighter" tag="div" class="fighters-col fighters-col--enemy">
             <div
-              v-for="f in fightersEnemy"
+              v-for="(f, i) in fightersEnemy"
               :key="'f2' + f.idx"
               class="fighter-card fighter-card--enemy"
-              :class="{ 'fighter-card--dead': !f.alive }"
+              :class="[{ 'fighter-card--dead': !f.alive }, cardRankClass(f, i)]"
             >
+              <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--enemy" :class="`rank--${rankOf(f, i)}`">
+                <Icon icon="game-icons:sport-medal" width="28" height="28" />
+              </span>
               <div class="fighter-info fighter-info--enemy">
                 <span class="fighter-name">{{ f.name }}</span>
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
                   {{ fmt(Math.round(f.damage)) }}
                 </span>
+                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f) }}/s</span>
               </div>
               <div class="fighter-portrait-wrap">
                 <img
@@ -223,6 +231,33 @@ function sortByDamage(fighters: ObjectiveFighter[]): ObjectiveFighter[] {
 
 const fightersOwn = computed(() => sortByDamage(battleStore.objectiveFighters?.t1 ?? []))
 const fightersEnemy = computed(() => sortByDamage(battleStore.objectiveFighters?.t2 ?? []))
+
+/**
+ * Damage rank (1–3) of a fighter in its already-sorted column, null otherwise.
+ * Dead fighters never rank — they sort last with 0 damage, so the first three
+ * living entries are exactly the team's top 3.
+ */
+function rankOf(f: ObjectiveFighter, sortedIndex: number): number | null {
+  return f.alive && sortedIndex < 3 ? sortedIndex + 1 : null
+}
+
+/** Card shell class for the podium ranks — gold pulses, silver glows, bronze is a tinted frame. */
+function cardRankClass(f: ObjectiveFighter, sortedIndex: number): string | null {
+  const rank = rankOf(f, sortedIndex)
+  if (rank === 1) return 'fighter-card--top'
+  if (rank === 2) return 'fighter-card--second'
+  if (rank === 3) return 'fighter-card--third'
+  return null
+}
+
+/**
+ * A fighter's steady DPS share. Side weights are normalized to sum to the
+ * alive count, so weight × base DPS is the exact per-fighter rate the tick
+ * loop distributes (before the ±variance wobble, which averages out).
+ */
+function fighterDps(f: ObjectiveFighter): number {
+  return Math.round(f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP)
+}
 
 const topFighter = computed(() => {
   const all = [...fightersOwn.value, ...fightersEnemy.value].filter((f) => f.alive)
@@ -536,6 +571,53 @@ watch(show, (v) => {
   opacity: 0.55;
 }
 
+/* Damage leader: warm gold shell with a slow breathing glow */
+.fighter-card--top {
+  border-color: #c89040;
+  background: linear-gradient(to bottom, #26200f, #1c1c18);
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 192, 64, 0.25),
+    0 0 6px rgba(232, 192, 64, 0.15);
+  animation: top-card-glow 2.6s ease-in-out infinite;
+}
+.fighter-card--top .fighter-name {
+  color: #e8c060;
+}
+
+/* Second place: cool silver frame with a faint static glow — no motion */
+.fighter-card--second {
+  border-color: #8a96a4;
+  background: linear-gradient(to bottom, #20222a, #1c1c18);
+  box-shadow:
+    inset 0 0 0 1px rgba(184, 196, 208, 0.18),
+    0 0 5px rgba(184, 196, 208, 0.12);
+}
+.fighter-card--second .fighter-name {
+  color: #d0d8e0;
+}
+
+/* Third place: bronze-tinted frame only — quietest podium step */
+.fighter-card--third {
+  border-color: #8a5a28;
+  box-shadow: inset 0 0 0 1px rgba(205, 127, 50, 0.16);
+}
+.fighter-card--third .fighter-name {
+  color: #cd9a66;
+}
+@keyframes top-card-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(232, 192, 64, 0.25),
+      0 0 6px rgba(232, 192, 64, 0.15);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(232, 192, 64, 0.25),
+      0 0 12px rgba(232, 192, 64, 0.35);
+  }
+}
+
 .fighter-portrait-wrap {
   position: relative;
   flex-shrink: 0;
@@ -573,6 +655,30 @@ watch(show, (v) => {
   border-radius: 50%;
 }
 
+.fighter-rank-badge {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+  pointer-events: none;
+}
+.fighter-rank-badge--own {
+  margin-left: auto;
+}
+.fighter-rank-badge--enemy {
+  margin-right: auto;
+}
+.rank--1 {
+  color: #e8c040;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
+}
+.rank--2 {
+  color: #b8c4d0;
+}
+.rank--3 {
+  color: #cd7f32;
+}
+
 .fighter-info {
   display: flex;
   flex-direction: column;
@@ -601,6 +707,12 @@ watch(show, (v) => {
 .fighter-damage--dead {
   color: #8a8070;
   font-weight: 400;
+}
+.fighter-dps {
+  font-size: 11px;
+  color: #8a8070;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 /* ── Arena ───────────────────────────────────────────────────────────────── */

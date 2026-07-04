@@ -2013,6 +2013,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
   'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)
   'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
+  'game-icons:sport-medal', // Top-3 damage rank badge (ObjectiveModalComponent)
   'game-icons:imperial-crown', // TEAM MVP badge (TeamRosterPanel)
   'game-icons:bloody-sword', // TOP KILLS badge (TeamRosterPanel)
   'game-icons:fire-punch', // TOP DAMAGE badge (TeamRosterPanel)
