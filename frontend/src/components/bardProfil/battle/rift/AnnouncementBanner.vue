@@ -12,7 +12,15 @@
 
         <!-- Portrait -->
         <div class="banner-portrait-wrap">
-          <img :src="portraitSrc" :alt="current.name" class="banner-portrait" :class="portraitClass" />
+          <Icon
+            v-if="isStructureKind"
+            icon="game-icons:watchtower"
+            width="40"
+            height="40"
+            class="banner-structure-icon"
+            :class="current.team === 1 ? 'structure-icon--blue' : 'structure-icon--red'"
+          />
+          <img v-else :src="portraitSrc" :alt="current.name" class="banner-portrait" :class="portraitClass" />
         </div>
 
         <!-- Text -->
@@ -29,6 +37,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { multikillLabel } from '@/utils/battleMovement'
 import {
@@ -39,10 +48,11 @@ import {
 
 interface Announcement {
   id: number
-  kind: 'multikill' | 'firstblood' | 'drake' | 'baron'
+  kind: 'multikill' | 'firstblood' | 'drake' | 'baron' | 'turret' | 'inhibitor'
   tier?: 2 | 3 | 4 | 5
   name: string
   team: 1 | 2
+  lane?: 'top' | 'mid' | 'bot'
 }
 
 const battleStore = useBattleStore()
@@ -106,6 +116,30 @@ watch(
   },
 )
 
+// ── Turret / inhibitor falls from the structure feed ──
+// Freshness-gated like the kill feed so background catch-up after a tab
+// return replays silently instead of spamming banners.
+let lastSeenStructureTime = -1
+watch(
+  () => battleStore.structureFeed.length + (battleStore.structureFeed.at(-1)?.t ?? 0),
+  () => {
+    const fresh = battleStore.structureFeed.filter(
+      (e) => e.t > lastSeenStructureTime && e.t >= battleStore.battleTime - ANNOUNCE_FRESHNESS_GAME_SECONDS,
+    )
+    if (battleStore.structureFeed.length > 0) {
+      lastSeenStructureTime = Math.max(lastSeenStructureTime, battleStore.structureFeed.at(-1)!.t)
+    }
+    for (const e of fresh) {
+      enqueue({
+        kind: e.tier === 'inhibitor' ? 'inhibitor' : 'turret',
+        name: '',
+        team: e.team,
+        lane: e.lane,
+      })
+    }
+  },
+)
+
 // ── Drake / Baron kills from the team counters ──
 watch(
   () => battleStore.team1Drakes + battleStore.team2Drakes,
@@ -131,6 +165,7 @@ watch(
     queue.value = []
     current.value = null
     lastSeenFeedTime = -1
+    lastSeenStructureTime = -1
     if (displayTimer) {
       clearTimeout(displayTimer)
       displayTimer = null
@@ -164,6 +199,10 @@ const portraitClass = computed(() => {
   return a.team === 1 ? 'portrait--blue' : 'portrait--red'
 })
 
+const isStructureKind = computed(
+  () => current.value?.kind === 'turret' || current.value?.kind === 'inhibitor',
+)
+
 const headline = computed(() => {
   const a = current.value
   if (!a) return ''
@@ -174,6 +213,10 @@ const headline = computed(() => {
       return 'DRAKE SLAIN'
     case 'baron':
       return 'BARON SLAIN'
+    case 'turret':
+      return 'TURRET DESTROYED'
+    case 'inhibitor':
+      return 'INHIBITOR DESTROYED'
     default:
       return `${multikillLabel(a.tier ?? 2)}!`
   }
@@ -185,6 +228,8 @@ const headlineClass = computed(() => {
   if (a.kind === 'firstblood') return 'headline--firstblood'
   if (a.kind === 'drake') return 'headline--drake'
   if (a.kind === 'baron') return 'headline--baron'
+  if (a.kind === 'turret') return 'headline--turret'
+  if (a.kind === 'inhibitor') return 'headline--inhibitor'
   return `headline--tier${a.tier ?? 2}`
 })
 
@@ -193,6 +238,9 @@ const subline = computed(() => {
   if (!a) return ''
   const teamName = a.team === 1 ? "BARD'S VANGUARD" : 'CRIMSON PACT'
   if (a.kind === 'drake' || a.kind === 'baron') return `secured by ${teamName}`
+  if (a.kind === 'turret' || a.kind === 'inhibitor') {
+    return a.lane ? `${a.lane.toUpperCase()} LANE · by ${teamName}` : `NEXUS SIEGE · by ${teamName}`
+  }
   return `${a.name} · ${teamName}`
 })
 </script>
@@ -284,6 +332,16 @@ const subline = computed(() => {
   border-color: #a855f7;
   box-shadow: 0 0 14px rgba(168, 85, 247, 0.8);
 }
+.banner-structure-icon {
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.6));
+}
+.structure-icon--blue {
+  color: #60a5fa;
+}
+.structure-icon--red {
+  color: #f87171;
+}
 
 /* ── Text ── */
 .banner-text {
@@ -325,6 +383,14 @@ const subline = computed(() => {
 .headline--baron {
   color: #c9a0f5;
   text-shadow: 0 0 18px rgba(168, 85, 247, 0.8);
+}
+.headline--turret {
+  color: #e8c040;
+  text-shadow: 0 0 18px rgba(232, 192, 64, 0.8);
+}
+.headline--inhibitor {
+  color: #e884d8;
+  text-shadow: 0 0 18px rgba(216, 100, 200, 0.8);
 }
 
 .banner-sub {

@@ -204,11 +204,36 @@ export const TIMELINE_DRAKE_WINPROB_DELTA = 0.06
 export const TIMELINE_BARON_WINPROB_DELTA = 0.1
 export const TIMELINE_TURRET_WINPROB_DELTA = 0.03
 export const TIMELINE_INHIB_WINPROB_DELTA = 0.04
-/** Turrets taken by the winning side after baron (min/max) */
-export const TIMELINE_PUSH_TURRETS_MIN = 2
-export const TIMELINE_PUSH_TURRETS_MAX = 4
-export const TIMELINE_PUSH_INHIBS_MIN = 1
-export const TIMELINE_PUSH_INHIBS_MAX = 2
+// ── Structure destruction schedule (all times in game-seconds) ─────────────
+/** Window in which the first turret of the game falls (shortly after laning) */
+export const TIMELINE_FIRST_TURRET_MIN_T = 820
+export const TIMELINE_FIRST_TURRET_MAX_T = 1150
+/** Structure falls spread across the drake/midfight windows (min/max count) */
+export const TIMELINE_MIDGAME_STRUCTURES_MIN = 2
+export const TIMELINE_MIDGAME_STRUCTURES_MAX = 4
+/** Padding after laning before midgame falls start (must clear TIMELINE_FIRST_TURRET_MAX_T) */
+export const TIMELINE_MIDGAME_STRUCTURES_START_PAD_T = 300
+/** The losing team still takes at most this many structures */
+export const TIMELINE_LOSER_STRUCTURES_MAX = 3
+/** Extra off-lane structures the winner takes during the final push (min/max) */
+export const TIMELINE_PUSH_EXTRA_STRUCTURES_MIN = 0
+export const TIMELINE_PUSH_EXTRA_STRUCTURES_MAX = 2
+/** Minimum spacing between consecutive structure falls in the push chain */
+export const TIMELINE_STRUCTURE_MIN_GAP_T = 40
+/** The push chain must finish this long before the nexus falls */
+export const TIMELINE_PUSH_CHAIN_END_MARGIN_T = 250
+/** Nexus turrets fall this long after the push-lane inhibitor (min/max delay each) */
+export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 30
+export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 90
+/** Both nexus turrets must be down this long before the nexus falls */
+export const TIMELINE_NEXUS_TURRET_END_MARGIN_T = 60
+/** Champions on the attacking side present at a structure fall (min/max) */
+export const STRUCTURE_ATTACKERS_MIN = 1
+export const STRUCTURE_ATTACKERS_MAX = 3
+/** Chance the baron team cracks a consolation structure when it isn't the game winner */
+export const TIMELINE_BARON_TEAM_STRUCTURE_CHANCE = 0.7
+export const TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MIN_T = 130
+export const TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MAX_T = 240
 /** Objective pit participants per team (min/max champions) */
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
@@ -305,6 +330,8 @@ export const MOVE_WALKOUT_END_T = 90
 export const MOVE_RESPAWN_WALK_SECONDS = 240
 /** Champions start moving toward a fight this many game-seconds before it starts */
 export const MOVE_FIGHT_GATHER_LEAD_T = 80
+/** Game-seconds attackers keep sieging at a structure after it falls */
+export const MOVE_SIEGE_HOLD_T = 120
 /** Cosmetic position jitter in map-units applied by the UI ticker */
 export const MOVE_JITTER_UNITS = 1.5
 /** UI position sampling interval (ms) */
@@ -323,6 +350,10 @@ export const ANNOUNCE_DISPLAY_MS = 2600
 export const ANNOUNCE_QUEUE_MAX = 3
 /** Kill-feed entries older than this (game-seconds vs. current battleTime) never announce */
 export const ANNOUNCE_FRESHNESS_GAME_SECONDS = 240
+/** How long the minimap plays the destruction burst after a structure falls (game-seconds) */
+export const STRUCTURE_BURST_GAME_SECONDS = 90
+/** Maximum retained structure-feed entries */
+export const STRUCTURE_FEED_MAX = 10
 
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100

@@ -48,6 +48,7 @@ import {
   OBJECTIVE_RESULT_DELAY_MS,
   HONOR_MAX_SELECTIONS,
   MOVE_RESPAWN_WALK_SECONDS,
+  STRUCTURE_FEED_MAX,
 } from '../config/constants'
 import type {
   AllTimeBattleStats,
@@ -61,6 +62,8 @@ import type {
   ObjectiveFighter,
   ObjectiveOverride,
   RecruitableChampion,
+  StructureFeedEntry,
+  StructureId,
 } from '../types'
 import {
   BATTLE_ROLES,
@@ -248,6 +251,9 @@ export const useBattleStore = defineStore('battle', {
       t2: number[]
     },
     battleTrack: defaultBattleTrack(),
+    // Derived from timeline replay — never persisted (rebuilt via applyTimelineUpTo)
+    destroyedStructures: [] as StructureId[],
+    structureFeed: [] as StructureFeedEntry[],
     team1Turrets: 0,
     team2Turrets: 0,
     team1Inhibs: 0,
@@ -664,18 +670,30 @@ export const useBattleStore = defineStore('battle', {
           if (e.team === 1) this.team1Turrets += 1
           else this.team2Turrets += 1
           this._shiftWinProbability(e.winProbDelta)
+          this._recordStructureFall(e)
           break
         }
         case 'inhibitor': {
           if (e.team === 1) this.team1Inhibs += 1
           else this.team2Inhibs += 1
           this._shiftWinProbability(e.winProbDelta)
+          this._recordStructureFall(e)
           break
         }
         case 'nexus': {
           this.nexusDestroyedByTeam = (e.team ?? this.timeline?.winner ?? 1) as 1 | 2
           break
         }
+      }
+    },
+
+    _recordStructureFall(e: BattleEvent) {
+      if (!e.structureId || !e.structureTier || !e.team) return
+      if (this.destroyedStructures.includes(e.structureId)) return
+      this.destroyedStructures.push(e.structureId)
+      this.structureFeed.push({ id: e.structureId, tier: e.structureTier, team: e.team, lane: e.lane, t: e.t })
+      if (this.structureFeed.length > STRUCTURE_FEED_MAX) {
+        this.structureFeed.splice(0, this.structureFeed.length - STRUCTURE_FEED_MAX)
       }
     },
 
@@ -810,6 +828,8 @@ export const useBattleStore = defineStore('battle', {
       this.activeFights = []
       this.respawnUntil = { t1: [0, 0, 0, 0, 0], t2: [0, 0, 0, 0, 0] }
       this.battleTrack = defaultBattleTrack()
+      this.destroyedStructures = []
+      this.structureFeed = []
       this.team1Turrets = 0
       this.team2Turrets = 0
       this.team1Inhibs = 0

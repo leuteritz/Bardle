@@ -11,6 +11,9 @@ import {
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_NEXUS_FALL_T,
+  TIMELINE_FIRST_TURRET_MIN_T,
+  TIMELINE_FIRST_TURRET_MAX_T,
+  TIMELINE_LOSER_STRUCTURES_MAX,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -18,7 +21,12 @@ import {
   GOLD_PER_ASSIST,
   GOLD_PER_CS,
 } from '@/config/constants'
-import type { ChampionState } from '@/types'
+import {
+  STRUCTURE_POSITIONS,
+  LANE_TIER_ORDER,
+  parseStructureId,
+} from '@/utils/battleStructures'
+import type { BattleEvent, ChampionState } from '@/types'
 
 describe('createRng', () => {
   it('is deterministic for the same seed', () => {
@@ -109,6 +117,107 @@ describe('generateTimeline', () => {
       }
     }
     expect(sawDouble).toBe(true)
+  })
+})
+
+/**
+ * Replays all structure events (sorted by t) and asserts the LoL rules:
+ * unique ids, per-lane tier order, nexus turrets only after an inhibitor,
+ * annotated attacker participants, and canonical map positions.
+ */
+function checkStructureInvariants(events: BattleEvent[]) {
+  const seen = new Set<string>()
+  const laneProgress: Record<string, number> = {}
+  const inhibDownT: Record<number, number> = {}
+  for (const e of events) {
+    if (e.type !== 'turret' && e.type !== 'inhibitor') continue
+    expect(e.structureId).toBeDefined()
+    expect(e.structureTier).toBeDefined()
+    expect(e.team).toBeDefined()
+    const id = e.structureId!
+    expect(seen.has(id)).toBe(false)
+    seen.add(id)
+    const { ownerTeam, laneKey, tier } = parseStructureId(id)
+    expect(ownerTeam).toBe(e.team === 1 ? 2 : 1)
+    expect(tier).toBe(e.structureTier)
+    expect(e.location).toEqual(STRUCTURE_POSITIONS[id])
+    const attackers = e.team === 1 ? e.participants?.t1 : e.participants?.t2
+    expect(attackers?.length ?? 0).toBeGreaterThanOrEqual(1)
+    expect(attackers).toContain(e.killerIdx)
+    if (tier === 'nexusTurret') {
+      expect(inhibDownT[ownerTeam]).toBeDefined()
+      expect(e.t).toBeGreaterThanOrEqual(inhibDownT[ownerTeam])
+    } else {
+      const key = `${ownerTeam}:${laneKey}`
+      const idx = LANE_TIER_ORDER.indexOf(tier as (typeof LANE_TIER_ORDER)[number])
+      expect(idx).toBe((laneProgress[key] ?? -1) + 1)
+      laneProgress[key] = idx
+      if (tier === 'inhibitor') {
+        inhibDownT[ownerTeam] = Math.min(inhibDownT[ownerTeam] ?? Infinity, e.t)
+      }
+    }
+  }
+  return seen
+}
+
+describe('structure destruction', () => {
+  it('every structure event is annotated and obeys LoL destruction order', () => {
+    for (let seed = 0; seed < 150; seed++) {
+      checkStructureInvariants(generateTimeline(seed, 0.5).events)
+    }
+  })
+
+  it('the first structure falls within the first-turret window in a lane', () => {
+    for (const seed of [1, 7, 42, 1337, 99999]) {
+      const tl = generateTimeline(seed, 0.5)
+      const first = tl.events.find((e) => e.type === 'turret' || e.type === 'inhibitor')!
+      expect(first.type).toBe('turret')
+      expect(first.structureTier).toBe('outer')
+      expect(first.lane).toBeDefined()
+      expect(first.t).toBeGreaterThanOrEqual(TIMELINE_FIRST_TURRET_MIN_T)
+      expect(first.t).toBeLessThanOrEqual(TIMELINE_FIRST_TURRET_MAX_T)
+    }
+  })
+
+  it('the losing team still takes 1..max structures', () => {
+    for (let seed = 0; seed < 150; seed++) {
+      const tl = generateTimeline(seed, 0.5)
+      const loser = tl.winner === 1 ? 2 : 1
+      const loserTakes = tl.events.filter(
+        (e) => (e.type === 'turret' || e.type === 'inhibitor') && e.team === loser,
+      ).length
+      expect(loserTakes).toBeGreaterThanOrEqual(1)
+      expect(loserTakes).toBeLessThanOrEqual(TIMELINE_LOSER_STRUCTURES_MAX)
+    }
+  })
+
+  it('the winner cracks a full lane: inhibitor and both nexus turrets fall before the nexus', () => {
+    for (const seed of [3, 42, 512, 90210]) {
+      const tl = generateTimeline(seed, 0.5)
+      const loser = tl.winner === 1 ? 2 : 1
+      const loserInhibs = tl.events.filter(
+        (e) => e.type === 'inhibitor' && parseStructureId(e.structureId!).ownerTeam === loser,
+      )
+      const loserNexusTurrets = tl.events.filter(
+        (e) => e.structureTier === 'nexusTurret' && parseStructureId(e.structureId!).ownerTeam === loser,
+      )
+      expect(loserInhibs.length).toBeGreaterThanOrEqual(1)
+      expect(loserNexusTurrets.length).toBe(2)
+      for (const e of [...loserInhibs, ...loserNexusTurrets]) {
+        expect(e.t).toBeLessThan(TIMELINE_NEXUS_FALL_T)
+      }
+    }
+  })
+
+  it('reseeding keeps structure invariants across the cut', () => {
+    for (const seed of [11, 42, 777]) {
+      const base = generateTimeline(seed, 0.4)
+      for (const cut of [900, 2000, 3100]) {
+        const merged = reseedTimelineFrom(base, cut, seed * 31 + 7, 0.85)
+        checkStructureInvariants(merged.events)
+        expect(merged.events.filter((e) => e.type === 'nexus').length).toBe(1)
+      }
+    }
   })
 })
 

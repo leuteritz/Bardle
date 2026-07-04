@@ -379,6 +379,14 @@ export type BattleEventType =
   | 'inhibitor'
   | 'nexus'
 
+export type StructureTier = 'outer' | 'inner' | 'inhibTurret' | 'inhibitor' | 'nexusTurret'
+
+/** Lane slot a structure belongs to; nexus turrets sit outside the three lanes. */
+export type StructureLaneKey = 'top' | 'mid' | 'bot' | 'nexus1' | 'nexus2'
+
+/** `"ownerTeam:laneKey:tier"`, e.g. `"2:top:outer"` or `"1:nexus1:nexusTurret"`. */
+export type StructureId = string
+
 export interface BattleEvent {
   t: number
   type: BattleEventType
@@ -393,7 +401,20 @@ export interface BattleEvent {
   lane?: 'top' | 'mid' | 'bot'
   objective?: 'drake' | 'baron'
   participants?: { t1: number[]; t2: number[] }
+  /** Set on turret/inhibitor events; `team` stays the attacker, the owner is encoded in the id. */
+  structureId?: StructureId
+  structureTier?: StructureTier
   winProbDelta: number
+}
+
+/** One destroyed structure in the live feed (derived from the timeline, never persisted). */
+export interface StructureFeedEntry {
+  id: StructureId
+  tier: StructureTier
+  /** Attacking team that destroyed the structure. */
+  team: 1 | 2
+  lane?: 'top' | 'mid' | 'bot'
+  t: number
 }
 
 export interface BattleTimeline {

@@ -49,6 +49,21 @@ describe('battleStore timeline integration', () => {
     expect(adc.level).toBeGreaterThan(10)
   })
 
+  it('structure counters and derived state match the timeline events', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    const turretEvents = store.timeline!.events.filter((e) => e.type === 'turret').length
+    const inhibEvents = store.timeline!.events.filter((e) => e.type === 'inhibitor').length
+    expect(store.team1Turrets + store.team2Turrets).toBe(turretEvents)
+    expect(store.team1Inhibs + store.team2Inhibs).toBe(inhibEvents)
+    expect(store.destroyedStructures.length).toBe(turretEvents + inhibEvents)
+    expect(new Set(store.destroyedStructures).size).toBe(store.destroyedStructures.length)
+    // re-applying must not duplicate derived structure state
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    expect(store.destroyedStructures.length).toBe(turretEvents + inhibEvents)
+  })
+
   it('two stores with the same seed replay to identical stats (background catch-up)', () => {
     const storeA = useBattleStore()
     setupBattle(storeA, 1337, 0.55)
@@ -74,6 +89,10 @@ describe('battleStore timeline integration', () => {
     expect(storeB.team1Drakes).toBe(storeA.team1Drakes)
     expect(storeB.team2Barons).toBe(storeA.team2Barons)
     expect(storeB.nexusDestroyedByTeam).toBe(storeA.nexusDestroyedByTeam)
+    expect([...storeB.destroyedStructures]).toEqual([...storeA.destroyedStructures])
+    expect(JSON.parse(JSON.stringify(storeB.structureFeed))).toEqual(
+      JSON.parse(JSON.stringify(storeA.structureFeed)),
+    )
   })
 
   it('nexus falls for the loser and is credited to the winner', () => {
@@ -134,6 +153,8 @@ describe('battleStore timeline integration', () => {
     expect(store.team1Drakes + store.team2Drakes).toBeLessThanOrEqual(3)
     // cursor points past everything
     expect(store.timelineCursor).toBe(store.timeline!.events.length)
+    // reseed never double-destroys a structure
+    expect(new Set(store.destroyedStructures).size).toBe(store.destroyedStructures.length)
     // timeline rebuilt from seed + overrides matches the live one
     const liveEvents = JSON.parse(JSON.stringify(store.timeline!.events))
     const liveWinner = store.timeline!.winner

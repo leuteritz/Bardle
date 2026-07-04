@@ -9,9 +9,11 @@ import {
   MOVE_WALKOUT_END_T,
   MOVE_RESPAWN_WALK_SECONDS,
   MOVE_FIGHT_GATHER_LEAD_T,
+  MOVE_SIEGE_HOLD_T,
 } from '../config/constants'
 import {
   type MapPoint,
+  pointAlongPath,
   ROLE_LANE_PATH,
   BLUE_JUNGLE_CIRCUIT,
   RED_JUNGLE_CIRCUIT,
@@ -42,38 +44,9 @@ export interface ChampionPosition {
   kind: MovementSegment['kind'] | 'hold'
 }
 
-// ── Geometry helpers ─────────────────────────────────────────────────────────
+// ── Geometry helpers (moved to config/battleRoutes, re-exported for consumers) ──
 
-function segLength(a: MapPoint, b: MapPoint): number {
-  return Math.hypot(b.x - a.x, b.y - a.y)
-}
-
-function pathLength(path: MapPoint[]): number {
-  let len = 0
-  for (let i = 1; i < path.length; i++) len += segLength(path[i - 1], path[i])
-  return len
-}
-
-/** Point at `fraction` (0..1) of the polyline's arc length. */
-export function pointAlongPath(path: MapPoint[], fraction: number): MapPoint {
-  if (path.length === 0) return { x: 50, y: 50 }
-  if (path.length === 1 || fraction <= 0) return { ...path[0] }
-  if (fraction >= 1) return { ...path[path.length - 1] }
-  const total = pathLength(path)
-  let remaining = total * fraction
-  for (let i = 1; i < path.length; i++) {
-    const len = segLength(path[i - 1], path[i])
-    if (remaining <= len && len > 0) {
-      const f = remaining / len
-      return {
-        x: path[i - 1].x + (path[i].x - path[i - 1].x) * f,
-        y: path[i - 1].y + (path[i].y - path[i - 1].y) * f,
-      }
-    }
-    remaining -= len
-  }
-  return { ...path[path.length - 1] }
-}
+export { pointAlongPath }
 
 /** Sub-polyline between two arc-length fractions (start may exceed end → reversed walk). */
 function subPath(path: MapPoint[], fromFrac: number, toFrac: number, steps = 6): MapPoint[] {
@@ -98,6 +71,8 @@ interface Order {
   location: MapPoint
   holdUntil: number
   kind: MovementSegment['kind']
+  /** Preempts whatever the champion is holding — used for structure sieges, where an attacker MUST be present. */
+  priority?: boolean
 }
 
 function fountainOf(team: 1 | 2): MapPoint {
@@ -157,6 +132,16 @@ function buildChampionSchedule(
         location: jittered(e.location, rng, 4),
         holdUntil: e.t + 600,
         kind: 'objective',
+      })
+    }
+    // attackers siege the structure they are about to destroy (direct path, like a fight)
+    if ((e.type === 'turret' || e.type === 'inhibitor') && e.location && inFight && e.team === team) {
+      orders.push({
+        t: Math.max(0, e.t - MOVE_FIGHT_GATHER_LEAD_T),
+        location: jittered(e.location, rng, 2),
+        holdUntil: e.t + MOVE_SIEGE_HOLD_T,
+        kind: 'fight',
+        priority: true,
       })
     }
   }
@@ -226,8 +211,8 @@ function buildChampionSchedule(
   let cursorPos = walkoutPath[walkoutPath.length - 1]
   let cursorT = MOVE_WALKOUT_END_T
   for (const order of orders) {
-    if (order.t <= cursorT) continue
-    const travelStart = Math.max(cursorT, order.t - 1)
+    if (order.t <= cursorT && !order.priority) continue
+    const travelStart = order.priority ? order.t - 1 : Math.max(cursorT, order.t - 1)
     const isPush = order.kind === 'push' || order.kind === 'retreat'
     const path = isPush
       ? pushPath(cursorPos, order.location, team, rng)

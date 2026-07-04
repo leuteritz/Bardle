@@ -3,17 +3,28 @@
     <span class="ticker-label">KILL FEED</span>
 
     <TransitionGroup name="feed" tag="div" class="feed-items">
-      <div
-        v-for="entry in feedEntries"
-        :key="`${entry.t}-${entry.killerName}-${entry.victimName}`"
-        class="feed-item"
-        :class="{ 'feed-item--multikill': entry.multikillTier }"
-      >
-        <img :src="battleStore.getChampionImage(entry.killerName)" :alt="entry.killerName" class="feed-img" :class="entry.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-        <span class="feed-star">★</span>
-        <img :src="battleStore.getChampionImage(entry.victimName)" :alt="entry.victimName" class="feed-img feed-img--dead" :class="entry.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
-        <span v-if="entry.multikillTier" class="feed-mk">{{ multikillLabel(entry.multikillTier) }}</span>
-      </div>
+      <template v-for="row in feedEntries" :key="row.key">
+        <div
+          v-if="row.type === 'kill'"
+          class="feed-item"
+          :class="{ 'feed-item--multikill': row.kill.multikillTier }"
+        >
+          <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+          <span class="feed-star">★</span>
+          <img :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
+          <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
+        </div>
+        <div v-else class="feed-item feed-item--structure">
+          <Icon
+            icon="game-icons:watchtower"
+            width="16"
+            height="16"
+            class="feed-structure-icon"
+            :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
+          />
+          <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
+        </div>
+      </template>
     </TransitionGroup>
 
     <div class="ticker-right">
@@ -31,12 +42,41 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { multikillLabel } from '@/utils/battleMovement'
+import type { KillFeedEntry, StructureFeedEntry, StructureTier } from '@/types'
 
 const battleStore = useBattleStore()
 
-const feedEntries = computed(() => battleStore.killFeed.slice(-4).reverse())
+type FeedRow =
+  | { type: 'kill'; t: number; key: string; kill: KillFeedEntry }
+  | { type: 'structure'; t: number; key: string; structure: StructureFeedEntry }
+
+const feedEntries = computed<FeedRow[]>(() => {
+  const rows: FeedRow[] = [
+    ...battleStore.killFeed.map(
+      (e): FeedRow => ({ type: 'kill', t: e.t, key: `${e.t}-${e.killerName}-${e.victimName}`, kill: e }),
+    ),
+    ...battleStore.structureFeed.map(
+      (e): FeedRow => ({ type: 'structure', t: e.t, key: e.id, structure: e }),
+    ),
+  ]
+  return rows.sort((a, b) => a.t - b.t).slice(-4).reverse()
+})
+
+const STRUCTURE_TIER_LABELS: Record<StructureTier, string> = {
+  outer: 'Outer Turret',
+  inner: 'Inner Turret',
+  inhibTurret: 'Inhib Turret',
+  inhibitor: 'Inhibitor',
+  nexusTurret: 'Nexus Turret',
+}
+
+function structureLabel(e: StructureFeedEntry): string {
+  const label = STRUCTURE_TIER_LABELS[e.tier]
+  return e.lane ? `${e.lane.toUpperCase()} · ${label}` : label
+}
 
 const drakeStatus = computed(() => {
   if (battleStore.drakeKilledByTeam !== null)
@@ -122,6 +162,22 @@ const baronStatus = computed(() => {
   letter-spacing: 1px;
   color: #ff9a40;
   text-shadow: 0 0 8px rgba(240, 104, 32, 0.6);
+}
+
+.feed-item--structure {
+  padding: 2px 7px;
+  background: rgba(232, 192, 64, 0.08);
+  border: 1px solid rgba(232, 192, 64, 0.35);
+  border-radius: 4px;
+}
+.feed-structure-icon--blue { color: #60a5fa; }
+.feed-structure-icon--red { color: #f87171; }
+.feed-structure-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #e8c040;
+  white-space: nowrap;
 }
 
 .ticker-right {

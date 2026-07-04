@@ -1,4 +1,12 @@
-import type { BattleEvent, BattleRole, BattleTimeline, ChampionState } from '../types'
+import type { BattleEvent, BattleRole, BattleTimeline, ChampionState, StructureId } from '../types'
+import {
+  STRUCTURE_POSITIONS,
+  nextStructureInLane,
+  nextNexusTurret,
+  canFallNexusTurret,
+  parseStructureId,
+  destroyedStructuresUpTo,
+} from './battleStructures'
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_LANING_END,
@@ -29,10 +37,24 @@ import {
   TIMELINE_BARON_WINPROB_DELTA,
   TIMELINE_TURRET_WINPROB_DELTA,
   TIMELINE_INHIB_WINPROB_DELTA,
-  TIMELINE_PUSH_TURRETS_MIN,
-  TIMELINE_PUSH_TURRETS_MAX,
-  TIMELINE_PUSH_INHIBS_MIN,
-  TIMELINE_PUSH_INHIBS_MAX,
+  TIMELINE_FIRST_TURRET_MIN_T,
+  TIMELINE_FIRST_TURRET_MAX_T,
+  TIMELINE_MIDGAME_STRUCTURES_MIN,
+  TIMELINE_MIDGAME_STRUCTURES_MAX,
+  TIMELINE_MIDGAME_STRUCTURES_START_PAD_T,
+  TIMELINE_LOSER_STRUCTURES_MAX,
+  TIMELINE_PUSH_EXTRA_STRUCTURES_MIN,
+  TIMELINE_PUSH_EXTRA_STRUCTURES_MAX,
+  TIMELINE_STRUCTURE_MIN_GAP_T,
+  TIMELINE_PUSH_CHAIN_END_MARGIN_T,
+  TIMELINE_NEXUS_TURRET_DELAY_MIN_T,
+  TIMELINE_NEXUS_TURRET_DELAY_MAX_T,
+  TIMELINE_NEXUS_TURRET_END_MARGIN_T,
+  STRUCTURE_ATTACKERS_MIN,
+  STRUCTURE_ATTACKERS_MAX,
+  TIMELINE_BARON_TEAM_STRUCTURE_CHANCE,
+  TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MIN_T,
+  TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MAX_T,
   TIMELINE_OBJECTIVE_PARTICIPANTS_MIN,
   TIMELINE_OBJECTIVE_PARTICIPANTS_MAX,
   TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T,
@@ -57,6 +79,7 @@ import {
   GOLD_PER_KILL,
   GOLD_PER_ASSIST,
   CHAMPION_LEVEL_SECONDS,
+  MOVE_RESPAWN_WALK_SECONDS,
   CHAMPION_MAX_LEVEL,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
@@ -105,6 +128,10 @@ interface GenContext {
   momentum: number
   firstBloodDone: boolean
   fromT: number
+  /** Structures already down — evolves with emitted falls (post-cut only, see emitStructureFall). */
+  destroyed: Set<StructureId>
+  /** Structures taken per attacking team, used to keep the losing side in a realistic band. */
+  structureTakes: Record<1 | 2, number>
 }
 
 function clampMomentum(m: number): number {
@@ -196,6 +223,68 @@ function emitFight(
   pushEvent(ctx, { t, type: 'fightEnd', location, lane: opts.lane, winProbDelta: 0 })
 }
 
+/**
+ * Emit one structure fall for `attackerTeam`. `lane` targets the enemy lane
+ * chain (outer → inner → inhib turret → inhibitor); `'nexus'` targets the next
+ * nexus turret, gated on at least one enemy inhibitor being down. Returns false
+ * when nothing is standing / the gate is closed — the caller just skips.
+ *
+ * Reseed rule: `ctx.destroyed` is only mutated for events at/after `ctx.fromT`.
+ * Pre-cut events are discarded by pushEvent anyway; skipping the mutation means
+ * the post-cut generator sees exactly the pre-seeded world state, so structures
+ * can never double-fall across a reseed cut.
+ */
+function emitStructureFall(
+  ctx: GenContext,
+  t: number,
+  attackerTeam: 1 | 2,
+  lane: 'top' | 'mid' | 'bot' | 'nexus',
+): boolean {
+  const ownerTeam = (3 - attackerTeam) as 1 | 2
+  const id =
+    lane === 'nexus'
+      ? canFallNexusTurret(ctx.destroyed, ownerTeam)
+        ? nextNexusTurret(ctx.destroyed, ownerTeam)
+        : null
+      : nextStructureInLane(ctx.destroyed, ownerTeam, lane)
+  if (!id) return false
+
+  const tier = parseStructureId(id).tier
+  // dead champions can't take structures — exclude anyone still on the respawn walk at t
+  const walkingBack = new Set<number>()
+  for (const ev of ctx.events) {
+    if (ev.type !== 'kill' || ev.team === attackerTeam || ev.victimIdx === undefined) continue
+    if (ev.t <= t && t < ev.t + MOVE_RESPAWN_WALK_SECONDS) walkingBack.add(ev.victimIdx)
+  }
+  const basePool = lane === 'nexus' ? [0, 1, 2, 3, 4] : LANE_FIGHTERS[lane]
+  const alivePool = basePool.filter((idx) => !walkingBack.has(idx))
+  const pool = alivePool.length > 0 ? [...alivePool] : [...basePool]
+  const count = randInt(ctx.rng, STRUCTURE_ATTACKERS_MIN, Math.min(STRUCTURE_ATTACKERS_MAX, pool.length))
+  const attackers: number[] = []
+  while (attackers.length < count && pool.length > 0) {
+    attackers.push(pool.splice(Math.floor(ctx.rng() * pool.length), 1)[0])
+  }
+  attackers.sort((a, b) => a - b)
+  const killerIdx = pick(ctx.rng, attackers)
+
+  const delta = tier === 'inhibitor' ? TIMELINE_INHIB_WINPROB_DELTA : TIMELINE_TURRET_WINPROB_DELTA
+  pushEvent(ctx, {
+    t,
+    type: tier === 'inhibitor' ? 'inhibitor' : 'turret',
+    team: attackerTeam,
+    killerIdx,
+    location: STRUCTURE_POSITIONS[id],
+    lane: lane === 'nexus' ? undefined : lane,
+    participants: attackerTeam === 1 ? { t1: attackers, t2: [] } : { t1: [], t2: attackers },
+    structureId: id,
+    structureTier: tier,
+    winProbDelta: attackerTeam === 1 ? delta : -delta,
+  })
+  if (t >= ctx.fromT) ctx.destroyed.add(id)
+  ctx.structureTakes[attackerTeam] += 1
+  return true
+}
+
 function pickParticipants(ctx: GenContext): { t1: number[]; t2: number[] } {
   const pickSide = () => {
     const count = randInt(ctx.rng, TIMELINE_OBJECTIVE_PARTICIPANTS_MIN, TIMELINE_OBJECTIVE_PARTICIPANTS_MAX)
@@ -244,7 +333,12 @@ function emitObjective(
  * override re-seed); earlier phases still advance the RNG identically cheaply
  * by being generated and discarded via the fromT filter in pushEvent.
  */
-export function generateTimeline(seed: number, initialWinProb: number, fromT = 0): BattleTimeline {
+export function generateTimeline(
+  seed: number,
+  initialWinProb: number,
+  fromT = 0,
+  preDestroyed: ReadonlySet<StructureId> = new Set(),
+): BattleTimeline {
   const rng = createRng(seed)
   const ctx: GenContext = {
     rng,
@@ -252,6 +346,8 @@ export function generateTimeline(seed: number, initialWinProb: number, fromT = 0
     momentum: clampMomentum((initialWinProb - 0.5) * 2),
     firstBloodDone: fromT > TIMELINE_FIRST_BLOOD_MAX_T,
     fromT,
+    destroyed: new Set(preDestroyed),
+    structureTakes: { 1: 0, 2: 0 },
   }
 
   // ── Laning (0–TIMELINE_LANING_END) ──
@@ -272,6 +368,14 @@ export function generateTimeline(seed: number, initialWinProb: number, fromT = 0
     })
   }
 
+  // ── First turret — falls shortly after laning, momentum-biased random lane ──
+  emitStructureFall(
+    ctx,
+    randInt(rng, TIMELINE_FIRST_TURRET_MIN_T, TIMELINE_FIRST_TURRET_MAX_T),
+    pickTeam(ctx),
+    pick(rng, LANES),
+  )
+
   // ── Drake window ──
   const drakeCount = randInt(rng, TIMELINE_DRAKE_COUNT_MIN, TIMELINE_DRAKE_COUNT_MAX)
   const drakeWindow = TIMELINE_DRAKE_WINDOW_END - TIMELINE_LANING_END
@@ -291,6 +395,23 @@ export function generateTimeline(seed: number, initialWinProb: number, fromT = 0
     emitFight(ctx, t, MID_CENTER, randInt(rng, TIMELINE_FIGHT_KILLS_MIN, TIMELINE_FIGHT_KILLS_MAX))
   }
 
+  // ── Mid-game structure falls — spread across the drake/midfight windows ──
+  // Ascending sub-windows keep per-lane tier order monotone in time; the
+  // window ends before baron spawns so the late-game blocks stay ordered too.
+  const midgameFalls = randInt(rng, TIMELINE_MIDGAME_STRUCTURES_MIN, TIMELINE_MIDGAME_STRUCTURES_MAX)
+  const mgStart = TIMELINE_LANING_END + TIMELINE_MIDGAME_STRUCTURES_START_PAD_T
+  const mgSlot = (OBJECTIVE_BARON_SPAWN - mgStart) / midgameFalls
+  for (let i = 0; i < midgameFalls; i++) {
+    let team = pickTeam(ctx)
+    if (ctx.structureTakes[team] >= TIMELINE_LOSER_STRUCTURES_MAX) team = (3 - team) as 1 | 2
+    const lane = pick(rng, LANES)
+    const t = Math.floor(mgStart + mgSlot * i + rng() * Math.max(1, mgSlot - TIMELINE_STRUCTURE_MIN_GAP_T))
+    // inhibitors don't fall this early — leave the lane at its inhib turret
+    const target = nextStructureInLane(ctx.destroyed, (3 - team) as 1 | 2, lane)
+    if (target && parseStructureId(target).tier === 'inhibitor' && t < TIMELINE_MIDFIGHT_END) continue
+    emitStructureFall(ctx, t, team, lane)
+  }
+
   // ── Baron ──
   const baronSpawnT = OBJECTIVE_BARON_SPAWN + randInt(rng, 0, 200)
   const baronTeam = emitObjective(ctx, baronSpawnT, 'baron')
@@ -306,39 +427,84 @@ export function generateTimeline(seed: number, initialWinProb: number, fromT = 0
   )
   const pushKills = randInt(rng, TIMELINE_PUSH_KILLS_MIN, TIMELINE_PUSH_KILLS_MAX)
   const loserNexus = winner === 1 ? RED_NEXUS : BLUE_NEXUS
+  const loser = (3 - winner) as 1 | 2
   emitFight(ctx, randInt(rng, pushStart, pushStart + 200), MID_CENTER, pushKills, {
     biasTeam: winner,
   })
-  const turrets = randInt(rng, TIMELINE_PUSH_TURRETS_MIN, TIMELINE_PUSH_TURRETS_MAX)
-  for (let i = 0; i < turrets; i++) {
-    pushEvent(ctx, {
-      t: randInt(rng, pushStart + 100, TIMELINE_NEXUS_FALL_T - 150),
-      type: 'turret',
-      team: winner,
-      location: loserNexus,
-      winProbDelta: winner === 1 ? TIMELINE_TURRET_WINPROB_DELTA : -TIMELINE_TURRET_WINPROB_DELTA,
-    })
+
+  // baron winner also cracks a structure mid-game if it isn't the game winner
+  if (
+    baronTeam !== winner &&
+    ctx.structureTakes[baronTeam] < TIMELINE_LOSER_STRUCTURES_MAX &&
+    ctx.rng() < TIMELINE_BARON_TEAM_STRUCTURE_CHANCE
+  ) {
+    emitStructureFall(
+      ctx,
+      baronSpawnT + randInt(rng, TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MIN_T, TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MAX_T),
+      baronTeam,
+      pick(rng, LANES),
+    )
   }
-  // baron winner also cracks a turret/inhib mid-game if it isn't the game winner
-  if (baronTeam !== winner && ctx.rng() < 0.7) {
-    pushEvent(ctx, {
-      t: baronSpawnT + randInt(rng, 130, 240),
-      type: 'turret',
-      team: baronTeam,
-      location: baronTeam === 1 ? RED_NEXUS : BLUE_NEXUS,
-      winProbDelta: baronTeam === 1 ? TIMELINE_TURRET_WINPROB_DELTA : -TIMELINE_TURRET_WINPROB_DELTA,
-    })
+
+  // the losing team always walks away with at least one desperation take
+  if (ctx.structureTakes[loser] === 0) {
+    emitStructureFall(ctx, randInt(rng, pushStart + 40, pushStart + 260), loser, pick(rng, LANES))
   }
-  const inhibs = randInt(rng, TIMELINE_PUSH_INHIBS_MIN, TIMELINE_PUSH_INHIBS_MAX)
-  for (let i = 0; i < inhibs; i++) {
-    pushEvent(ctx, {
-      t: randInt(rng, pushStart + 200, TIMELINE_NEXUS_FALL_T - 80),
-      type: 'inhibitor',
-      team: winner,
-      location: loserNexus,
-      winProbDelta: winner === 1 ? TIMELINE_INHIB_WINPROB_DELTA : -TIMELINE_INHIB_WINPROB_DELTA,
-    })
+
+  // ── Winner cracks one full lane: remaining chain outer → … → inhibitor ──
+  const pushLane = pick(rng, LANES)
+  const chain: StructureId[] = []
+  {
+    const probe = new Set(ctx.destroyed)
+    let next = nextStructureInLane(probe, loser, pushLane)
+    while (next) {
+      chain.push(next)
+      probe.add(next)
+      next = nextStructureInLane(probe, loser, pushLane)
+    }
   }
+  const chainStart = Math.max(pushStart + 100, fromT + TIMELINE_STRUCTURE_MIN_GAP_T)
+  const chainEnd = TIMELINE_NEXUS_FALL_T - TIMELINE_PUSH_CHAIN_END_MARGIN_T
+  // if an inhibitor is already down (reseed mid-push), nexus turrets are open immediately
+  let tInhibitorDown: number | null = canFallNexusTurret(ctx.destroyed, loser) ? chainStart : null
+  let tCursor = chainStart
+  for (let i = 0; i < chain.length; i++) {
+    const remainingSlots = chain.length - i
+    const slack = Math.max(0, chainEnd - tCursor - remainingSlots * TIMELINE_STRUCTURE_MIN_GAP_T)
+    const t = Math.min(
+      chainEnd,
+      tCursor + TIMELINE_STRUCTURE_MIN_GAP_T + Math.floor(rng() * Math.max(1, Math.min(slack, 160))),
+    )
+    if (emitStructureFall(ctx, t, winner, pushLane) && parseStructureId(chain[i]).tier === 'inhibitor') {
+      tInhibitorDown = t
+    }
+    tCursor = t
+  }
+
+  // extra off-lane takes while the main push happens
+  const extras = randInt(rng, TIMELINE_PUSH_EXTRA_STRUCTURES_MIN, TIMELINE_PUSH_EXTRA_STRUCTURES_MAX)
+  const otherLanes = LANES.filter((l) => l !== pushLane)
+  let tExtra = chainStart
+  for (let i = 0; i < extras; i++) {
+    tExtra += randInt(rng, TIMELINE_STRUCTURE_MIN_GAP_T, TIMELINE_STRUCTURE_MIN_GAP_T + 160)
+    if (tExtra >= chainEnd) break
+    emitStructureFall(ctx, tExtra, winner, pick(rng, otherLanes))
+  }
+
+  // ── Nexus turrets — only exposed once an inhibitor of the loser is down ──
+  if (tInhibitorDown !== null) {
+    let tNex = tInhibitorDown
+    for (let i = 0; i < 2; i++) {
+      tNex = Math.min(
+        tNex + randInt(rng, TIMELINE_NEXUS_TURRET_DELAY_MIN_T, TIMELINE_NEXUS_TURRET_DELAY_MAX_T),
+        TIMELINE_NEXUS_FALL_T -
+          TIMELINE_NEXUS_TURRET_END_MARGIN_T -
+          (1 - i) * TIMELINE_STRUCTURE_MIN_GAP_T,
+      )
+      emitStructureFall(ctx, tNex, winner, 'nexus')
+    }
+  }
+
   pushEvent(ctx, {
     t: TIMELINE_NEXUS_FALL_T,
     type: 'nexus',
@@ -362,7 +528,10 @@ export function reseedTimelineFrom(
   newSeed: number,
   boostedWinProb: number,
 ): BattleTimeline {
-  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1)
+  // Structures already down at the cut stay down: the regenerated tail starts
+  // from this world state, so nothing double-falls or skips its lane order.
+  const preDestroyed = destroyedStructuresUpTo(current.events, t)
+  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed)
   // Drop regenerated objectiveResults whose spawn happened before the cut —
   // that objective was already resolved live (orphan results would double-count).
   const spawnedAfterCut = new Set<string>()
@@ -378,6 +547,8 @@ export function reseedTimelineFrom(
       })
       return hasSpawn
     }
+    // insurance: a regenerated fall of an already-destroyed structure never survives the merge
+    if (e.structureId && preDestroyed.has(e.structureId)) return false
     return true
   })
   return {

@@ -75,6 +75,25 @@ describe('buildMovementSchedules', () => {
     expect(near).toBeGreaterThanOrEqual(3)
   })
 
+  it('an attacker is at the first turret when it falls', () => {
+    for (const seed of [1, 42, 1337]) {
+      const tl = generateTimeline(seed, 0.55)
+      const scheds = buildMovementSchedules(tl, seed)
+      const ev = tl.events.find((e) => (e.type === 'turret' || e.type === 'inhibitor') && e.participants)!
+      const attackers = ev.team === 1 ? ev.participants!.t1 : ev.participants!.t2
+      const teamScheds = ev.team === 1 ? scheds.t1 : scheds.t2
+      let minDist = Infinity
+      for (const idx of attackers) {
+        // sample a small window around the fall — arrival may lag the gather lead
+        for (const t of [ev.t, ev.t + 30, ev.t + 60, ev.t + 90]) {
+          const p = positionAt(teamScheds[idx], t)
+          minDist = Math.min(minDist, Math.hypot(p.x - ev.location!.x, p.y - ev.location!.y))
+        }
+      }
+      expect(minDist).toBeLessThan(10)
+    }
+  })
+
   it('positions stay within map bounds for the whole game', () => {
     for (const sched of [...schedules.t1, ...schedules.t2]) {
       for (let t = 0; t <= BATTLE_TOTAL_GAME_SECONDS; t += 120) {

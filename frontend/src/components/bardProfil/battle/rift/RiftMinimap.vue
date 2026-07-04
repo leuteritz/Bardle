@@ -31,6 +31,22 @@
         :style="{ left: dot.x + '%', top: dot.y + '%' }"
       />
 
+      <!-- Structures: lane turrets, inhibitors, nexus turrets -->
+      <div
+        v-for="s in structureMarkers"
+        :key="s.id"
+        class="structure"
+        :class="[
+          s.tier === 'inhibitor' ? 'structure--inhib' : 'structure--turret',
+          s.ownerTeam === 1 ? 'structure--blue' : 'structure--red',
+          { 'structure--dead': s.destroyed },
+        ]"
+        :style="{ left: s.x + '%', top: s.y + '%' }"
+      >
+        <span v-if="s.destroyed" class="structure-x">✕</span>
+        <div v-if="s.justDestroyed" class="structure-burst" />
+      </div>
+
       <!-- Active fight FX -->
       <div
         v-for="(fight, fi) in battleStore.activeFights"
@@ -135,7 +151,8 @@
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
-import { DRAKE_POS, BARON_POS, BLUE_NEXUS, RED_NEXUS } from '@/config/constants'
+import { DRAKE_POS, BARON_POS, BLUE_NEXUS, RED_NEXUS, STRUCTURE_BURST_GAME_SECONDS } from '@/config/constants'
+import { ALL_STRUCTURE_IDS, STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battleStructures'
 import type { ChampionState } from '@/types'
 
 const battleStore = useBattleStore()
@@ -205,6 +222,25 @@ const baronLabel = computed(() =>
 const nexusPos = computed(() =>
   battleStore.nexusDestroyedByTeam === 1 ? RED_NEXUS : BLUE_NEXUS,
 )
+
+const structureMarkers = computed(() => {
+  const destroyed = new Set(battleStore.destroyedStructures)
+  return ALL_STRUCTURE_IDS.map((id) => {
+    const { ownerTeam, tier } = parseStructureId(id)
+    const pos = STRUCTURE_POSITIONS[id]
+    const feed = battleStore.structureFeed.find((f) => f.id === id)
+    return {
+      id,
+      x: pos.x,
+      y: pos.y,
+      ownerTeam,
+      tier,
+      destroyed: destroyed.has(id),
+      justDestroyed:
+        feed !== undefined && battleStore.battleTime - feed.t < STRUCTURE_BURST_GAME_SECONDS,
+    }
+  })
+})
 </script>
 
 <style scoped>
@@ -269,6 +305,62 @@ const nexusPos = computed(() =>
 .minion-dot--red {
   background: #ff8a8a;
   box-shadow: 0 0 4px #ef4444;
+}
+
+/* ── Structures ── */
+.structure {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+.structure--turret {
+  border-radius: 1px;
+}
+.structure--inhib {
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 2px;
+}
+.structure--blue {
+  background: #60a5fa;
+  border: 1px solid #cfe0ff;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.9);
+}
+.structure--red {
+  background: #f87171;
+  border: 1px solid #ffd0d0;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.85);
+}
+.structure--dead {
+  background: #23211a;
+  border-color: #4a4436;
+  box-shadow: none;
+}
+.structure-x {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -54%);
+  font-size: 9px;
+  font-weight: 700;
+  color: #cc6050;
+  text-shadow: 0 0 3px #000;
+  line-height: 1;
+}
+.structure--inhib .structure-x {
+  transform: translate(-50%, -54%) rotate(-45deg);
+}
+.structure-burst {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 192, 64, 0.85);
+  animation: clash-ring 0.9s ease-out 3;
+  opacity: 0;
 }
 
 /* ── Fight FX ── */
@@ -593,6 +685,7 @@ const nexusPos = computed(() =>
   .fight-aoe,
   .obj-spin-ring,
   .walk-indicator,
+  .structure-burst,
   .nexus-ring {
     animation: none;
   }
