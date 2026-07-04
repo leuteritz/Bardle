@@ -4,11 +4,22 @@
       <img src="/img/minimap.png" alt="Minimap" class="map-bg" />
       <div class="map-vignette" />
 
-      <!-- Lane trails -->
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="lane-svg">
-        <path :d="lanePathD(TOP_LANE_PATH)" class="lane-trail" style="animation-duration: 1.5s" />
-        <path :d="lanePathD(MID_LANE_PATH)" class="lane-trail lane-trail--mid" style="animation-duration: 1.6s" />
-        <path :d="lanePathD(BOT_LANE_PATH)" class="lane-trail" style="animation-duration: 1.4s" />
+      <!-- Per-champion movement trails: fade toward the tail, vanish when standing -->
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="trail-svg">
+        <template v-for="trail in trails" :key="`trail-${trail.team}-${trail.idx}`">
+          <line
+            v-for="(seg, i) in trailSegments(trail)"
+            :key="i"
+            :x1="seg.x1"
+            :y1="seg.y1"
+            :x2="seg.x2"
+            :y2="seg.y2"
+            :stroke="trailColor(trail)"
+            :stroke-opacity="((i + 1) / trailSegments(trail).length) * 0.55"
+            :stroke-width="0.4 + ((i + 1) / trailSegments(trail).length) * 0.4"
+            stroke-linecap="round"
+          />
+        </template>
       </svg>
 
       <!-- Minions -->
@@ -123,16 +134,36 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { useBattleMovement } from '@/composables/useBattleMovement'
+import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
 import { DRAKE_POS, BARON_POS, BLUE_NEXUS, RED_NEXUS } from '@/config/constants'
-import { TOP_LANE_PATH, MID_LANE_PATH, BOT_LANE_PATH, type MapPoint } from '@/config/battleRoutes'
 import type { ChampionState } from '@/types'
 
 const battleStore = useBattleStore()
-const { positions, minions } = useBattleMovement()
+const { positions, minions, trails } = useBattleMovement()
 
-function lanePathD(path: MapPoint[]): string {
-  return path.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+interface TrailSegment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+function trailSegments(trail: ChampionTrail): TrailSegment[] {
+  const segs: TrailSegment[] = []
+  for (let i = 1; i < trail.points.length; i++) {
+    segs.push({
+      x1: trail.points[i - 1].x,
+      y1: trail.points[i - 1].y,
+      x2: trail.points[i].x,
+      y2: trail.points[i].y,
+    })
+  }
+  return segs
+}
+
+function trailColor(trail: ChampionTrail): string {
+  if (trail.isBard) return '#e8c040'
+  return trail.team === 1 ? '#60a5fa' : '#f87171'
 }
 
 function champAt(team: 1 | 2, idx: number): ChampionState | undefined {
@@ -212,24 +243,13 @@ const nexusPos = computed(() =>
   pointer-events: none;
 }
 
-/* ── Lane trails ── */
-.lane-svg {
+/* ── Movement trails ── */
+.trail-svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-.lane-trail {
-  fill: none;
-  stroke: rgba(96, 165, 250, 0.35);
-  stroke-width: 0.6;
-  stroke-dasharray: 2 3;
-  animation: dash-move linear infinite;
-}
-.lane-trail--mid {
-  stroke: rgba(130, 150, 255, 0.35);
 }
 
 /* ── Minions ── */
@@ -546,11 +566,6 @@ const nexusPos = computed(() =>
 }
 
 /* ── Animations ── */
-@keyframes dash-move {
-  0% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -40; }
-}
-
 @keyframes clash-ring {
   0% { opacity: 0.9; transform: scale(0.4); }
   100% { opacity: 0; transform: scale(2.2); }
@@ -573,7 +588,6 @@ const nexusPos = computed(() =>
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lane-trail,
   .clash-ring,
   .dmg-float,
   .fight-aoe,

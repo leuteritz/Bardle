@@ -54,7 +54,7 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
 .score-bar {
   display: flex;
   align-items: stretch;
-  height: 52px;
+  height: 60px;
   flex-shrink: 0;
   border-bottom: 2px solid #3e200a;
   background: #0d0c08;
@@ -77,7 +77,7 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
 }
 
 .side-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 2px;
   white-space: nowrap;
@@ -92,7 +92,7 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
   align-items: center;
   gap: 14px;
   margin-left: auto;
-  font-size: 12px;
+  font-size: 14px;
   color: #8ab0e0;
 }
 .side-stats--red {
@@ -112,8 +112,8 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
 
 .stat-icon { opacity: 0.8; }
 .stat-img {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -130,10 +130,10 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
 }
 
 .kills {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 700;
   line-height: 1;
-  min-width: 36px;
+  min-width: 44px;
   text-align: center;
 }
 .kills--blue { color: #93c5fd; }
@@ -143,12 +143,12 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
   text-align: center;
 }
 .timer-eyebrow {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 2px;
   color: #6a5820;
 }
 .timer-value {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -176,7 +176,7 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
   top: -1px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.75);

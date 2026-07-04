@@ -303,6 +303,12 @@ export const MOVE_FIGHT_GATHER_LEAD_T = 80
 export const MOVE_JITTER_UNITS = 1.5
 /** UI position sampling interval (ms) */
 export const MOVE_TICK_INTERVAL_MS = 500
+/** Movement-trail history length per champion (samples × tick interval ≈ trail duration) */
+export const TRAIL_MAX_POINTS = 7
+/** Minimum total walked distance (map-units) in the history before a trail is drawn */
+export const TRAIL_MIN_DISTANCE_UNITS = 6
+/** A single step longer than this (map-units) is a teleport (death→fountain) — trail resets */
+export const TRAIL_TELEPORT_RESET_UNITS = 25
 
 // ── Kill / objective announcement banners (rift board) ────────────────────
 /** How long a single announcement banner stays on screen (ms) */

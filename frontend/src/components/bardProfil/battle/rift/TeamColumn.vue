@@ -39,16 +39,13 @@
         <span v-if="champ.respawnState === 'walking-back'" class="respawn-tag">⟳</span>
       </div>
 
-      <div class="card-bottom" :class="{ 'card-bottom--reverse': side === 'red' }">
+      <div class="card-bottom">
         <div class="hp-track">
           <div
             class="hp-fill"
             :class="hpClass(champ.hpPercent)"
             :style="{ width: (champ.respawnState === 'walking-back' ? 100 : champ.hpPercent) + '%', float: side === 'red' ? 'right' : 'none' }"
           />
-        </div>
-        <div class="item-pips">
-          <span v-for="p in 6" :key="p" class="item-pip" :class="{ 'item-pip--filled': p <= champ.items }" />
         </div>
       </div>
     </div>
@@ -90,7 +87,7 @@ function hpClass(hp: number): string {
 <style scoped>
 .team-col {
   /* slim spectator HUD panel floating above the map */
-  width: 172px;
+  width: 192px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -112,7 +109,7 @@ function hpClass(hp: number): string {
 }
 
 .col-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
   padding: 0 2px 2px;
@@ -155,8 +152,8 @@ function hpClass(hp: number): string {
 }
 
 .portrait {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 5px;
   object-fit: cover;
   border: 1px solid #60a5fa;
@@ -174,12 +171,12 @@ function hpClass(hp: number): string {
   position: absolute;
   bottom: -3px;
   right: -3px;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: #0d1830;
   border: 1px solid #60a5fa;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   color: #cfe0ff;
   display: flex;
@@ -204,7 +201,7 @@ function hpClass(hp: number): string {
 .name-block--right { text-align: right; }
 
 .champ-name {
-  font-size: 11px;
+  font-size: 13px;
   color: #dbeafe;
   white-space: nowrap;
   overflow: hidden;
@@ -214,19 +211,19 @@ function hpClass(hp: number): string {
 .champ-card--bard .champ-name { color: #e8c040; }
 
 .you-tag {
-  font-size: 8px;
+  font-size: 9px;
   color: #6a5820;
   letter-spacing: 1px;
 }
 .mvp-tag {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 1px;
 }
 
 .kda {
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   align-items: baseline;
   gap: 1px;
@@ -239,13 +236,13 @@ function hpClass(hp: number): string {
 
 .cs-tag {
   margin-left: 6px;
-  font-size: 9px;
+  font-size: 11px;
   color: #8a8070;
 }
 
 .respawn-tag {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 14px;
   color: #e8c040;
   animation: respawn-spin 1.4s linear infinite;
 }
@@ -253,13 +250,11 @@ function hpClass(hp: number): string {
 .card-bottom {
   display: flex;
   align-items: center;
-  gap: 5px;
 }
-.card-bottom--reverse { flex-direction: row-reverse; }
 
 .hp-track {
   flex: 1;
-  height: 5px;
+  height: 6px;
   background: #3a1010;
   border-radius: 2px;
   overflow: hidden;
@@ -271,24 +266,6 @@ function hpClass(hp: number): string {
 .hp--high { background: #37d14a; }
 .hp--mid { background: #c9d137; }
 .hp--low { background: #d15a37; }
-
-.item-pips {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.item-pip {
-  width: 8px;
-  height: 8px;
-  background: #241a0c;
-  border: 1px solid #5c3310;
-  border-radius: 2px;
-}
-.item-pip--filled {
-  background: #5c3310;
-  border-color: #c89040;
-  box-shadow: inset 0 0 3px rgba(232, 192, 64, 0.6);
-}
 
 @keyframes respawn-spin {
   0% { transform: rotate(0); }
