@@ -12,6 +12,8 @@ import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_NEXUS_FALL_T,
   TIMELINE_CRACK_WINDOW_START_T,
+  TIMELINE_DRAKE_COUNT_MAX,
+  TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -294,6 +296,46 @@ describe('reseedTimelineFrom', () => {
     const base = generateTimeline(7, 0.5)
     const re = reseedTimelineFrom(base, 1200, 1234, 0.9)
     expect(re.events.filter((e) => e.type === 'nexus').length).toBe(1)
+  })
+
+  it('never respawns baron when reseeding at the baron spawn (interactive fight)', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const base = generateTimeline(seed, 0.5)
+      const baronSpawn = base.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
+      const merged = reseedTimelineFrom(base, baronSpawn.t, seed * 31 + 7, 0.85)
+      const spawns = merged.events.filter((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')
+      expect(spawns.length).toBe(1)
+      expect(spawns[0].t).toBe(baronSpawn.t)
+    }
+  })
+
+  it('keeps drake spawns within the count cap and respawn gap across the cut', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const base = generateTimeline(seed, 0.5)
+      const firstDrake = base.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')!
+      const merged = reseedTimelineFrom(base, firstDrake.t, seed * 17 + 3, 0.85)
+      const spawns = merged.events.filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
+      expect(spawns.length).toBeLessThanOrEqual(TIMELINE_DRAKE_COUNT_MAX)
+      for (let i = 1; i < spawns.length; i++) {
+        expect(spawns[i].t - spawns[i - 1].t).toBeGreaterThanOrEqual(TIMELINE_DRAKE_RESPAWN_MIN_GAP_T)
+      }
+    }
+  })
+
+  it('every post-cut objective result has a post-cut spawn before it', () => {
+    for (const seed of [1, 42, 777]) {
+      const base = generateTimeline(seed, 0.5)
+      for (const cut of [400, 1000, 2050]) {
+        const merged = reseedTimelineFrom(base, cut, seed * 13 + 1, 0.8)
+        const results = merged.events.filter((e) => e.type === 'objectiveResult' && e.t > cut)
+        for (const res of results) {
+          const hasSpawn = merged.events.some(
+            (e) => e.type === 'objectiveSpawn' && e.objective === res.objective && e.t > cut && e.t < res.t,
+          )
+          expect(hasSpawn).toBe(true)
+        }
+      }
+    }
   })
 })
 

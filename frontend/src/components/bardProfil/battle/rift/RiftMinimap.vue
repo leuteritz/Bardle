@@ -267,7 +267,7 @@ const drakeUp = computed(() => battleStore.battleTime >= battleStore.drakeEventT
 const drakeLabel = computed(() =>
   drakeUp.value
     ? 'CONTESTED'
-    : `SPAWN ${battleStore.formatTime(Math.max(0, battleStore.drakeEventTime - battleStore.battleTime))}`,
+    : `SPAWN ${battleStore.formatSpawnCountdown(battleStore.drakeEventTime)}`,
 )
 
 const showBaron = computed(
@@ -277,7 +277,7 @@ const baronUp = computed(() => battleStore.battleTime >= battleStore.baronEventT
 const baronLabel = computed(() =>
   baronUp.value
     ? 'BARON UP'
-    : `SPAWN ${battleStore.formatTime(Math.max(0, battleStore.baronEventTime - battleStore.battleTime))}`,
+    : `SPAWN ${battleStore.formatSpawnCountdown(battleStore.baronEventTime)}`,
 )
 
 const nexusPos = computed(() =>

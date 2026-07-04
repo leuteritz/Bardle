@@ -866,6 +866,12 @@ export const useBattleStore = defineStore('battle', {
       return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
     },
 
+    /** Spawn countdown rounded UP to whole game-minutes — battleTime is not minute-aligned. */
+    formatSpawnCountdown(eventTime: number) {
+      const remaining = Math.max(0, eventTime - this.battleTime)
+      return this.formatTime(Math.ceil(remaining / 60) * 60)
+    },
+
     getRandomTimeIncrement() {
       return Math.floor(Math.random() * BATTLE_TIME_RANGE_SECONDS) + BATTLE_TIME_MIN_SECONDS
     },

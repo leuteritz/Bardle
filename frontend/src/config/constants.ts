@@ -190,6 +190,8 @@ export const TIMELINE_LANE_FIGHTS_MIN = 4
 export const TIMELINE_LANE_FIGHTS_MAX = 7
 export const TIMELINE_DRAKE_COUNT_MIN = 1
 export const TIMELINE_DRAKE_COUNT_MAX = 2
+/** Minimum game-seconds between two drake spawns surviving a timeline reseed */
+export const TIMELINE_DRAKE_RESPAWN_MIN_GAP_T = 300
 export const TIMELINE_MID_FIGHTS_MIN = 2
 export const TIMELINE_MID_FIGHTS_MAX = 3
 export const TIMELINE_FIGHT_KILLS_MIN = 2

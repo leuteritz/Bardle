@@ -84,7 +84,7 @@ const drakeStatus = computed(() => {
   if (battleStore.drakeEventTime > 0 && battleStore.battleTime >= battleStore.drakeEventTime)
     return 'Drake up · contested'
   if (battleStore.drakeEventTime > 0)
-    return `Drake ${battleStore.formatTime(Math.max(0, battleStore.drakeEventTime - battleStore.battleTime))}`
+    return `Drake ${battleStore.formatSpawnCountdown(battleStore.drakeEventTime)}`
   return 'Drake —'
 })
 
@@ -94,7 +94,7 @@ const baronStatus = computed(() => {
   if (battleStore.baronEventTime > 0 && battleStore.battleTime >= battleStore.baronEventTime)
     return 'Baron up!'
   if (battleStore.baronEventTime > 0)
-    return `Baron ${battleStore.formatTime(Math.max(0, battleStore.baronEventTime - battleStore.battleTime))}`
+    return `Baron ${battleStore.formatSpawnCountdown(battleStore.baronEventTime)}`
   return 'Baron —'
 })
 </script>

@@ -24,6 +24,7 @@ import {
   TIMELINE_LANE_FIGHTS_MAX,
   TIMELINE_DRAKE_COUNT_MIN,
   TIMELINE_DRAKE_COUNT_MAX,
+  TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
   TIMELINE_MID_FIGHTS_MIN,
   TIMELINE_MID_FIGHTS_MAX,
   TIMELINE_FIGHT_KILLS_MIN,
@@ -524,11 +525,34 @@ export function reseedTimelineFrom(
   // from this world state, so nothing double-falls or skips its lane order.
   const preDestroyed = destroyedStructuresUpTo(current.events, t)
   const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed)
+  // Objectives already spawned before the cut must not respawn in the tail:
+  // baron happens once per battle; drakes keep the total count cap and a
+  // minimum respawn gap so a just-fought drake can't reappear moments later.
+  const baronAlreadySpawned = current.events.some(
+    (e) => e.type === 'objectiveSpawn' && e.objective === 'baron' && e.t <= t,
+  )
+  const preDrakeSpawns = current.events.filter(
+    (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t <= t,
+  )
+  let drakeCount = preDrakeSpawns.length
+  let lastDrakeSpawnT = drakeCount > 0 ? preDrakeSpawns[preDrakeSpawns.length - 1].t : -Infinity
   // Drop regenerated objectiveResults whose spawn happened before the cut —
   // that objective was already resolved live (orphan results would double-count).
   const spawnedAfterCut = new Set<string>()
   const futureEvents = regenerated.events.filter((e) => {
     if (e.type === 'objectiveSpawn' && e.objective) {
+      if (e.objective === 'baron') {
+        if (baronAlreadySpawned) return false
+      } else {
+        if (
+          drakeCount >= TIMELINE_DRAKE_COUNT_MAX ||
+          e.t < lastDrakeSpawnT + TIMELINE_DRAKE_RESPAWN_MIN_GAP_T
+        ) {
+          return false
+        }
+        drakeCount++
+        lastDrakeSpawnT = e.t
+      }
       spawnedAfterCut.add(`${e.objective}:${e.t}`)
       return true
     }
