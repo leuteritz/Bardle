@@ -214,6 +214,15 @@ export const TIMELINE_QUADRA_CHANCE = 0.18
 export const TIMELINE_PENTA_CHANCE = 0.12
 /** How strongly current momentum biases which team wins the next event */
 export const TIMELINE_MOMENTUM_TEAM_BIAS = 0.35
+/** Live win probability / momentum clamp bounds */
+export const WINPROB_MIN = 0.05
+export const WINPROB_MAX = 0.95
+/** Victory momentum meter: dominance glow thresholds + fill transition */
+export const MOMENTUM_HIGH_THRESHOLD = 0.65
+export const MOMENTUM_LOW_THRESHOLD = 0.35
+export const MOMENTUM_BAR_TRANSITION_MS = 800
+/** Victory momentum meter: delta chip fade-out duration */
+export const MOMENTUM_DELTA_CHIP_MS = 1200
 export const TIMELINE_KILL_WINPROB_DELTA = 0.02
 export const TIMELINE_DRAKE_WINPROB_DELTA = 0.06
 export const TIMELINE_BARON_WINPROB_DELTA = 0.1

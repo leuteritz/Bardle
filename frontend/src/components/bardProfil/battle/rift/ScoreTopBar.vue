@@ -39,21 +39,68 @@
     </div>
   </div>
 
-  <!-- Live win chance strip -->
-  <div class="winprob-strip">
-    <div class="winprob-fill" :style="{ width: winProbPercent + '%' }" />
-    <span class="winprob-label">WIN {{ winProbPercent }}%</span>
+  <!-- Live victory momentum meter -->
+  <div class="momentum-meter" :class="{ 'is-shifting': isShifting }">
+    <div class="momentum-row">
+      <div class="momentum-pct momentum-pct--blue" :class="{ 'is-dominant': bluePercent >= highThreshold }">
+        <span class="momentum-pct-value">{{ bluePercent }}%</span>
+      </div>
+      <div class="momentum-track">
+        <div class="momentum-fill momentum-fill--blue" :style="{ width: bluePercent + '%' }" />
+        <div class="momentum-fill momentum-fill--red" :style="{ width: 100 - bluePercent + '%' }" />
+        <div class="momentum-center-tick" />
+        <span class="momentum-marker" :style="{ left: bluePercent + '%' }">◆</span>
+        <span
+          v-if="lastDelta > 0"
+          :key="deltaKey"
+          class="momentum-delta momentum-delta--blue"
+        >▲ +{{ lastDelta }}%</span>
+        <span
+          v-if="lastDelta < 0"
+          :key="deltaKey"
+          class="momentum-delta momentum-delta--red"
+        >▲ +{{ -lastDelta }}%</span>
+      </div>
+      <div class="momentum-pct momentum-pct--red" :class="{ 'is-dominant': bluePercent <= lowThreshold }">
+        <span class="momentum-pct-value">{{ 100 - bluePercent }}%</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { formatNumber } from '@/config/numberFormat'
+import {
+  MOMENTUM_HIGH_THRESHOLD,
+  MOMENTUM_LOW_THRESHOLD,
+  MOMENTUM_DELTA_CHIP_MS,
+} from '@/config/constants'
 
 const battleStore = useBattleStore()
-const winProbPercent = computed(() => Math.round(battleStore.currentWinProbability * 100))
+const bluePercent = computed(() => Math.round(battleStore.liveWinMomentum * 100))
+const highThreshold = MOMENTUM_HIGH_THRESHOLD * 100
+const lowThreshold = MOMENTUM_LOW_THRESHOLD * 100
+
+const lastDelta = ref(0)
+const deltaKey = ref(0)
+const isShifting = ref(false)
+let chipTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(bluePercent, (next, prev) => {
+  const delta = next - prev
+  if (delta === 0) return
+  lastDelta.value = delta
+  deltaKey.value += 1
+  isShifting.value = true
+  if (chipTimer) clearTimeout(chipTimer)
+  chipTimer = setTimeout(() => {
+    lastDelta.value = 0
+    isShifting.value = false
+  }, MOMENTUM_DELTA_CHIP_MS)
+})
 </script>
 
 <style scoped>
@@ -171,32 +218,149 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
   text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
 }
 
-/* ── Win probability strip ── */
-.winprob-strip {
+/* ── Victory momentum meter ── */
+.momentum-meter {
   position: relative;
-  height: 8px;
   flex-shrink: 0;
-  background: rgba(239, 68, 68, 0.25);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background:
+    linear-gradient(to right, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0) 30%),
+    linear-gradient(to left, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0) 30%),
+    #0d0c08;
   border-bottom: 2px solid #3e200a;
-  overflow: hidden;
 }
-.winprob-fill {
-  height: 100%;
-  background: linear-gradient(to right, #1d4ed8, #3b82f6);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+.momentum-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.winprob-label {
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
+
+.momentum-pct {
+  position: relative;
+  min-width: 62px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.momentum-pct--red {
+  flex-direction: row-reverse;
+}
+
+.momentum-pct-value {
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 10px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: text-shadow 0.4s ease;
+}
+.momentum-pct--blue .momentum-pct-value {
+  color: #93c5fd;
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
+}
+.momentum-pct--red .momentum-pct-value {
+  color: #fca5a5;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+}
+.momentum-pct--blue.is-dominant .momentum-pct-value {
+  text-shadow:
+    0 0 10px rgba(59, 130, 246, 0.9),
+    0 0 24px rgba(59, 130, 246, 0.5);
+}
+.momentum-pct--red.is-dominant .momentum-pct-value {
+  text-shadow:
+    0 0 10px rgba(239, 68, 68, 0.9),
+    0 0 24px rgba(239, 68, 68, 0.5);
+}
+
+.momentum-delta {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: momentum-delta-fade 1.2s ease-out forwards;
+}
+.momentum-delta--blue { color: #6ee7b7; }
+.momentum-delta--red { color: #f87171; }
+
+@keyframes momentum-delta-fade {
+  0% {
+    opacity: 1;
+    transform: translateY(3px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.momentum-track {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  display: flex;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  background: #16140e;
+  overflow: visible;
+}
+
+.momentum-fill {
+  height: 100%;
+  transition:
+    width 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.4s ease;
+}
+.momentum-fill--blue {
+  background: linear-gradient(to right, #1d4ed8, #3b82f6);
+  border-radius: 3px 0 0 3px;
+  box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.4);
+}
+.momentum-fill--red {
+  background: linear-gradient(to left, #b91c1c, #ef4444);
+  border-radius: 0 3px 3px 0;
+  box-shadow: inset 0 1px 0 rgba(252, 165, 165, 0.4);
+}
+.is-shifting .momentum-fill--blue {
+  box-shadow:
+    inset 0 1px 0 rgba(147, 197, 253, 0.4),
+    0 0 12px rgba(59, 130, 246, 0.8);
+}
+.is-shifting .momentum-fill--red {
+  box-shadow:
+    inset 0 1px 0 rgba(252, 165, 165, 0.4),
+    0 0 12px rgba(239, 68, 68, 0.8);
+}
+
+.momentum-center-tick {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(232, 192, 64, 0.35);
   pointer-events: none;
+}
+
+.momentum-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  line-height: 1;
+  color: #e8c040;
+  text-shadow:
+    0 0 6px rgba(232, 192, 64, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
 }
 </style>

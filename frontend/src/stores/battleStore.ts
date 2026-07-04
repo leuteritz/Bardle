@@ -49,6 +49,8 @@ import {
   HONOR_MAX_SELECTIONS,
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
+  WINPROB_MIN,
+  WINPROB_MAX,
 } from '../config/constants'
 import type {
   AllTimeBattleStats,
@@ -338,6 +340,11 @@ export const useBattleStore = defineStore('battle', {
     baronJumpTarget: (state): number => {
       if (state.baronEventTime <= 0) return -1
       return Math.floor((state.baronEventTime - 1) / 60) * 60
+    },
+    /** Live victory momentum: starts at 0.5 each battle, shifts with every event's winProbDelta */
+    liveWinMomentum: (state): number => {
+      const raw = 0.5 + (state.currentWinProbability - state.initialWinProbability)
+      return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
     },
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
     team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
@@ -718,7 +725,7 @@ export const useBattleStore = defineStore('battle', {
 
     _shiftWinProbability(delta: number) {
       if (delta === 0) return
-      this.currentWinProbability = Math.max(0.05, Math.min(0.95, this.currentWinProbability + delta))
+      this.currentWinProbability = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + delta))
     },
 
     _creditObjective(objective: 'drake' | 'baron', team: 1 | 2, participants: { t1: number[]; t2: number[] } | null) {
@@ -1561,7 +1568,7 @@ export const useBattleStore = defineStore('battle', {
 
       this._creditObjective(objective, ownWin ? 1 : 2, this.activeObjectiveParticipants)
 
-      const newProb = Math.max(0.05, Math.min(0.95, this.currentWinProbability + (ownWin ? bonus : -bonus)))
+      const newProb = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + (ownWin ? bonus : -bonus)))
       this.currentWinProbability = newProb
       this.objectiveWinDelta = ownWin ? bonus : -bonus
 
