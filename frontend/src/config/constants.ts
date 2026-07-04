@@ -139,9 +139,9 @@ export const RED_NEXUS = { x: 88, y: 12 }
 export const BLUE_FOUNTAIN = { x: 8, y: 92 }
 export const RED_FOUNTAIN = { x: 92, y: 8 }
 
-// Objective positions
-export const DRAKE_POS = { x: 72, y: 72 }
-export const BARON_POS = { x: 28, y: 28 }
+// Objective positions (river pit bulges on minimap.png, point-symmetric across center)
+export const DRAKE_POS = { x: 66, y: 70 }
+export const BARON_POS = { x: 35, y: 32 }
 export const MID_CENTER = { x: 50, y: 50 }
 
 // Typical skirmish locations per lane (map-units on the 100x100 minimap)
@@ -1219,9 +1219,7 @@ export const CHIMES_PER_CLICK_BASE = 20
 // The single Champion-Tier economy: Chimes recruit cost per star level (★1..★6).
 // Index 0 = ★1 … index 5 = ★6. Strictly ascending. Read via getChampionChimesPrice
 // (championTiers.ts). Replaces the old 5-tier CHIMES_PRICE_TIERS.
-export const CHAMPION_TIER_CHIMES_PRICE: number[] = [
-  500, 1400, 2800, 4500, 6500, 9500,
-]
+export const CHAMPION_TIER_CHIMES_PRICE: number[] = [500, 1400, 2800, 4500, 6500, 9500]
 
 // Offline progress
 export const OFFLINE_CPS_RATE = 0.6
@@ -1369,11 +1367,56 @@ export const SIGIL_MANDALA_AT_FILLED = 15
 /** Unlit color for pentagon vertices, spokes and rune ticks. */
 export const SIGIL_DIM_COLOR = '#3a2a12'
 export const SIGIL_STAGES: SigilStageDef[] = [
-  { name: 'Dormant', minFilled: 0, crestColor: '#8a7448', ringColor: '#3a2a12', pulseSec: 0, spinSec: 90, emberCount: 0, extraRings: 0 },
-  { name: 'Kindled', minFilled: 1, crestColor: '#c89040', ringColor: '#5c3310', pulseSec: 4.5, spinSec: 70, emberCount: 4, extraRings: 0 },
-  { name: 'Ascendant', minFilled: 5, crestColor: '#e8c060', ringColor: '#7a4e20', pulseSec: 3.5, spinSec: 50, emberCount: 8, extraRings: 1 },
-  { name: 'Radiant', minFilled: 10, crestColor: '#f0d870', ringColor: '#c89040', pulseSec: 2.5, spinSec: 35, emberCount: 12, extraRings: 2 },
-  { name: 'Eternal', minFilled: 15, crestColor: '#ffe9a0', ringColor: '#e8c060', pulseSec: 1.8, spinSec: 22, emberCount: 18, extraRings: 2 },
+  {
+    name: 'Dormant',
+    minFilled: 0,
+    crestColor: '#8a7448',
+    ringColor: '#3a2a12',
+    pulseSec: 0,
+    spinSec: 90,
+    emberCount: 0,
+    extraRings: 0,
+  },
+  {
+    name: 'Kindled',
+    minFilled: 1,
+    crestColor: '#c89040',
+    ringColor: '#5c3310',
+    pulseSec: 4.5,
+    spinSec: 70,
+    emberCount: 4,
+    extraRings: 0,
+  },
+  {
+    name: 'Ascendant',
+    minFilled: 5,
+    crestColor: '#e8c060',
+    ringColor: '#7a4e20',
+    pulseSec: 3.5,
+    spinSec: 50,
+    emberCount: 8,
+    extraRings: 1,
+  },
+  {
+    name: 'Radiant',
+    minFilled: 10,
+    crestColor: '#f0d870',
+    ringColor: '#c89040',
+    pulseSec: 2.5,
+    spinSec: 35,
+    emberCount: 12,
+    extraRings: 2,
+  },
+  {
+    name: 'Eternal',
+    minFilled: 15,
+    crestColor: '#ffe9a0',
+    ringColor: '#e8c060',
+    pulseSec: 1.8,
+    spinSec: 22,
+    emberCount: 18,
+    extraRings: 2,
+  },
 ]
 /** Ember particles orbit between these radii (deterministic golden-angle spread). */
 export const SIGIL_EMBER_MIN_R = 130

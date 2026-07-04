@@ -744,8 +744,9 @@ const structureMarkers = computed(() => {
 
 .obj-img-wrap {
   position: relative;
-  width: 44px;
-  height: 44px;
+  /* scales with the square minimap (100cqmin) so the icon stays pit-sized on all resolutions */
+  width: clamp(28px, 7.5cqmin, 48px);
+  height: clamp(28px, 7.5cqmin, 48px);
 }
 
 .obj-spin-ring {
@@ -761,8 +762,8 @@ const structureMarkers = computed(() => {
 .obj-spin-ring--baron { border-color: #a855f7; }
 
 .obj-img {
-  width: 44px;
-  height: 44px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
 }
