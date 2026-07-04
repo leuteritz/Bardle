@@ -107,29 +107,44 @@ export const ROLE_LANE_PATH: Record<BattleRole, MapPoint[]> = {
 }
 
 // ── Structure layout ─────────────────────────────────────────────────────────
-// Lane structures sit at fixed arc-length fractions along each lane path,
-// measured from the blue fountain — blue structures near 0, red near 1.
+// Positions measured from the turret icons drawn on public/img/minimap.png
+// (pixel-cluster centroids of the red icons, 0–100 map units). The blue side
+// is the point mirror of the red side; the mirror also swaps top ↔ bot lane.
 
 export type LaneStructureTier = Exclude<StructureTier, 'nexusTurret'>
 
-export const STRUCTURE_LANE_FRACTIONS_BLUE: Record<LaneStructureTier, number> = {
-  outer: 0.3,
-  inner: 0.21,
-  inhibTurret: 0.13,
-  inhibitor: 0.09,
+/** Point mirror across the map center — maps red-side positions to blue-side ones. */
+export function mirrorPoint(p: MapPoint): MapPoint {
+  return { x: 100 - p.x, y: 100 - p.y }
 }
 
-export const STRUCTURE_LANE_FRACTIONS_RED: Record<LaneStructureTier, number> = {
-  outer: 0.7,
-  inner: 0.79,
-  inhibTurret: 0.87,
-  inhibitor: 0.91,
+export const RED_STRUCTURE_MAP_POSITIONS: Record<
+  'top' | 'mid' | 'bot',
+  Record<LaneStructureTier, MapPoint>
+> = {
+  top: {
+    outer: { x: 31.3, y: 9.8 },
+    inner: { x: 53.5, y: 12.0 },
+    inhibTurret: { x: 69.2, y: 10.6 },
+    inhibitor: { x: 74.0, y: 10.3 },
+  },
+  mid: {
+    outer: { x: 59.9, y: 42.8 },
+    inner: { x: 64.8, y: 32.4 },
+    inhibTurret: { x: 73.2, y: 25.6 },
+    inhibitor: { x: 75.9, y: 22.8 },
+  },
+  bot: {
+    outer: { x: 90.3, y: 67.5 },
+    inner: { x: 86.8, y: 44.1 },
+    inhibTurret: { x: 88.7, y: 29.6 },
+    inhibitor: { x: 88.5, y: 25.9 },
+  },
 }
 
-/** Offsets of the two nexus turrets relative to the blue nexus (mirrored for red). */
-export const NEXUS_TURRET_OFFSETS: [MapPoint, MapPoint] = [
-  { x: 4, y: -1.5 },
-  { x: 1.5, y: -4 },
+export const RED_NEXUS_TURRET_POSITIONS: [MapPoint, MapPoint] = [
+  { x: 82.4, y: 14.1 },
+  { x: 85.2, y: 17.0 },
 ]
 
 /** Minion wave cadence (game-seconds between waves) and their walk speed as path-fraction per game-second. */

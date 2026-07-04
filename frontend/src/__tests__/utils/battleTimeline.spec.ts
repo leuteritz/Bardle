@@ -23,6 +23,7 @@ import {
 } from '@/config/constants'
 import {
   STRUCTURE_POSITIONS,
+  ALL_STRUCTURE_IDS,
   LANE_TIER_ORDER,
   parseStructureId,
 } from '@/utils/battleStructures'
@@ -161,6 +162,28 @@ function checkStructureInvariants(events: BattleEvent[]) {
 }
 
 describe('structure destruction', () => {
+  it('all 28 structure positions are in bounds and blue is the point mirror of red', () => {
+    // 2 teams × (3 lanes × 4 tiers + 2 nexus turrets)
+    expect(ALL_STRUCTURE_IDS.length).toBe(28)
+    for (const id of ALL_STRUCTURE_IDS) {
+      const p = STRUCTURE_POSITIONS[id]
+      expect(p.x).toBeGreaterThan(0)
+      expect(p.x).toBeLessThan(100)
+      expect(p.y).toBeGreaterThan(0)
+      expect(p.y).toBeLessThan(100)
+    }
+    // the point mirror swaps top ↔ bot lane
+    const mirrorLane = { top: 'bot', mid: 'mid', bot: 'top' } as const
+    for (const lane of ['top', 'mid', 'bot'] as const) {
+      for (const tier of LANE_TIER_ORDER) {
+        const red = STRUCTURE_POSITIONS[`2:${lane}:${tier}`]
+        const blue = STRUCTURE_POSITIONS[`1:${mirrorLane[lane]}:${tier}`]
+        expect(blue.x).toBeCloseTo(100 - red.x, 5)
+        expect(blue.y).toBeCloseTo(100 - red.y, 5)
+      }
+    }
+  })
+
   it('every structure event is annotated and obeys LoL destruction order', () => {
     for (let seed = 0; seed < 150; seed++) {
       checkStructureInvariants(generateTimeline(seed, 0.5).events)

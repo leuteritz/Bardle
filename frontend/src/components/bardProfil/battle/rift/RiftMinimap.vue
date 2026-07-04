@@ -43,8 +43,12 @@
         ]"
         :style="{ left: s.x + '%', top: s.y + '%' }"
       >
-        <span v-if="s.destroyed" class="structure-x">✕</span>
-        <div v-if="s.justDestroyed" class="structure-burst" />
+        <span v-if="s.destroyed" class="structure-x" :class="{ 'structure-x--punch': s.justDestroyed }">✕</span>
+        <template v-if="s.justDestroyed">
+          <div class="structure-burst structure-burst--gold" />
+          <div class="structure-burst structure-burst--red" />
+          <div class="structure-ember" />
+        </template>
       </div>
 
       <!-- Active fight FX -->
@@ -308,59 +312,79 @@ const structureMarkers = computed(() => {
 }
 
 /* ── Structures ── */
+/* Standing: subtle team-colored ring around the turret icon drawn on the
+   minimap PNG itself. Destroyed: dark disc covering the icon + red ✕. */
 .structure {
   position: absolute;
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 2;
 }
 .structure--turret {
-  border-radius: 1px;
+  border-radius: 2px;
 }
 .structure--inhib {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   transform: translate(-50%, -50%) rotate(45deg);
   border-radius: 2px;
 }
 .structure--blue {
-  background: #60a5fa;
-  border: 1px solid #cfe0ff;
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.9);
+  border: 1px solid rgba(96, 165, 250, 0.75);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.55);
 }
 .structure--red {
-  background: #f87171;
-  border: 1px solid #ffd0d0;
-  box-shadow: 0 0 5px rgba(239, 68, 68, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.75);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
 }
 .structure--dead {
-  background: #23211a;
-  border-color: #4a4436;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid #4a4436;
+  background: rgba(10, 8, 6, 0.88);
   box-shadow: none;
+}
+.structure--inhib.structure--dead {
+  transform: translate(-50%, -50%);
 }
 .structure-x {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -54%);
-  font-size: 9px;
+  transform: translate(-50%, -54%) rotate(-12deg);
+  font-size: 11px;
   font-weight: 700;
-  color: #cc6050;
-  text-shadow: 0 0 3px #000;
+  color: #ff4a3a;
+  text-shadow: 0 0 4px #000, 0 0 8px rgba(255, 74, 58, 0.5);
   line-height: 1;
 }
-.structure--inhib .structure-x {
-  transform: translate(-50%, -54%) rotate(-45deg);
+.structure-x--punch {
+  animation: structure-x-punch 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 .structure-burst {
   position: absolute;
   inset: -14px;
   border-radius: 50%;
-  border: 2px solid rgba(232, 192, 64, 0.85);
+  border: 2px solid;
   animation: clash-ring 0.9s ease-out 3;
   opacity: 0;
+}
+.structure-burst--gold {
+  border-color: rgba(232, 192, 64, 0.85);
+}
+.structure-burst--red {
+  border-color: rgba(255, 74, 58, 0.7);
+  animation-delay: 0.3s;
+}
+.structure-ember {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 120, 40, 0.55), transparent 65%);
+  animation: structure-ember-fade 1.6s ease-out forwards;
 }
 
 /* ── Fight FX ── */
@@ -679,6 +703,16 @@ const structureMarkers = computed(() => {
   100% { transform: rotate(360deg); }
 }
 
+@keyframes structure-x-punch {
+  0% { transform: translate(-50%, -54%) rotate(-12deg) scale(2.4); opacity: 0; }
+  100% { transform: translate(-50%, -54%) rotate(-12deg) scale(1); opacity: 1; }
+}
+
+@keyframes structure-ember-fade {
+  0% { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .clash-ring,
   .dmg-float,
@@ -686,6 +720,8 @@ const structureMarkers = computed(() => {
   .obj-spin-ring,
   .walk-indicator,
   .structure-burst,
+  .structure-ember,
+  .structure-x--punch,
   .nexus-ring {
     animation: none;
   }

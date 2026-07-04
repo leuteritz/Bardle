@@ -8,7 +8,8 @@
     <div class="side side--blue">
       <span class="side-name side-name--blue">BARD'S VANGUARD</span>
       <div class="side-stats">
-        <span class="stat"><Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
+        <span class="stat" title="Turrets destroyed"><Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
+        <span class="stat" title="Inhibitors destroyed"><Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
         <span class="stat"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes + battleStore.team1Barons }}</span>
         <span class="stat stat--gold">◈ {{ formatNumber(battleStore.team1Gold) }}</span>
         <span class="stat stat--level">Lv {{ battleStore.team1AvgLevel }}</span>
@@ -32,7 +33,8 @@
         <span class="stat stat--level">Lv {{ battleStore.team2AvgLevel }}</span>
         <span class="stat stat--gold">{{ formatNumber(battleStore.team2Gold) }} ◈</span>
         <span class="stat">{{ battleStore.team2Drakes + battleStore.team2Barons }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
-        <span class="stat">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /></span>
+        <span class="stat" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /></span>
+        <span class="stat" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /></span>
       </div>
     </div>
   </div>
@@ -123,6 +125,7 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
 .stat--level { color: #e8e2d0; }
 
 .stat-icon { opacity: 0.8; }
+.stat-icon--inhib { color: #e884d8; }
 .stat-img {
   width: 17px;
   height: 17px;

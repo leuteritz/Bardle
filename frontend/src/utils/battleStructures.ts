@@ -1,15 +1,10 @@
 import type { BattleEvent, StructureId, StructureLaneKey, StructureTier } from '../types'
-import { BLUE_NEXUS, RED_NEXUS } from '../config/constants'
 import {
   type MapPoint,
   type LaneStructureTier,
-  pointAlongPath,
-  TOP_LANE_PATH,
-  MID_LANE_PATH,
-  BOT_LANE_PATH,
-  STRUCTURE_LANE_FRACTIONS_BLUE,
-  STRUCTURE_LANE_FRACTIONS_RED,
-  NEXUS_TURRET_OFFSETS,
+  mirrorPoint,
+  RED_STRUCTURE_MAP_POSITIONS,
+  RED_NEXUS_TURRET_POSITIONS,
 } from '../config/battleRoutes'
 
 // Pure structure bookkeeping for the battle timeline: ids, fixed map
@@ -21,10 +16,11 @@ export const STRUCTURE_LANES: Array<'top' | 'mid' | 'bot'> = ['top', 'mid', 'bot
 /** Per-lane destruction order — a tier can only fall once all earlier tiers are down. */
 export const LANE_TIER_ORDER: LaneStructureTier[] = ['outer', 'inner', 'inhibTurret', 'inhibitor']
 
-const LANE_PATHS: Record<'top' | 'mid' | 'bot', MapPoint[]> = {
-  top: TOP_LANE_PATH,
-  mid: MID_LANE_PATH,
-  bot: BOT_LANE_PATH,
+/** The point mirror that produces the blue side swaps the top and bot lanes. */
+const MIRRORED_LANE: Record<'top' | 'mid' | 'bot', 'top' | 'mid' | 'bot'> = {
+  top: 'bot',
+  mid: 'mid',
+  bot: 'top',
 }
 
 export function structureId(ownerTeam: 1 | 2, laneKey: StructureLaneKey, tier: StructureTier): StructureId {
@@ -46,22 +42,18 @@ export function parseStructureId(id: StructureId): {
 
 function buildStructurePositions(): Record<StructureId, MapPoint> {
   const out: Record<StructureId, MapPoint> = {}
-  for (const ownerTeam of [1, 2] as const) {
-    const fractions = ownerTeam === 1 ? STRUCTURE_LANE_FRACTIONS_BLUE : STRUCTURE_LANE_FRACTIONS_RED
-    for (const lane of STRUCTURE_LANES) {
-      for (const tier of LANE_TIER_ORDER) {
-        out[structureId(ownerTeam, lane, tier)] = pointAlongPath(LANE_PATHS[lane], fractions[tier])
-      }
+  for (const lane of STRUCTURE_LANES) {
+    for (const tier of LANE_TIER_ORDER) {
+      const redPos = RED_STRUCTURE_MAP_POSITIONS[lane][tier]
+      out[structureId(2, lane, tier)] = { ...redPos }
+      out[structureId(1, MIRRORED_LANE[lane], tier)] = mirrorPoint(redPos)
     }
-    const nexus = ownerTeam === 1 ? BLUE_NEXUS : RED_NEXUS
-    const mirror = ownerTeam === 1 ? 1 : -1
-    NEXUS_TURRET_OFFSETS.forEach((offset, i) => {
-      out[structureId(ownerTeam, `nexus${i + 1}` as StructureLaneKey, 'nexusTurret')] = {
-        x: nexus.x + offset.x * mirror,
-        y: nexus.y + offset.y * mirror,
-      }
-    })
   }
+  RED_NEXUS_TURRET_POSITIONS.forEach((pos, i) => {
+    const slot = `nexus${i + 1}` as StructureLaneKey
+    out[structureId(2, slot, 'nexusTurret')] = { ...pos }
+    out[structureId(1, slot, 'nexusTurret')] = mirrorPoint(pos)
+  })
   return out
 }
 

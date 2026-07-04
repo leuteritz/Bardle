@@ -1948,6 +1948,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow)
   'game-icons:medal', // Honor pips / grant honor header (HonorGrantPanel)
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
+  'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)
   'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
 ])
 
