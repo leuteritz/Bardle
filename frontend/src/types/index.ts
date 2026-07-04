@@ -447,6 +447,8 @@ export interface KillFeedEntry {
   killerTeam: 1 | 2
   multikillTier?: 2 | 3 | 4 | 5
   firstBlood?: boolean
+  soloKill?: boolean
+  assistNames?: string[]
   t: number
 }
 

@@ -49,6 +49,7 @@ import {
   HONOR_MAX_SELECTIONS,
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
+  KILL_FEED_MAX,
   WINPROB_MIN,
   WINPROB_MAX,
 } from '../config/constants'
@@ -633,15 +634,22 @@ export const useBattleStore = defineStore('battle', {
             if (e.soloKill) this.battleTrack.soloKillsT1 += 1
           }
           if (killer.name && victim.name) {
+            const assistNames = (e.assistIdxs ?? [])
+              .filter((idx) => idx !== e.killerIdx)
+              .map((idx) => attackers[idx]?.name)
+              .filter((name): name is string => !!name)
             this.killFeed.push({
               killerName: killer.name,
               victimName: victim.name,
               killerTeam: (e.team ?? 1) as 1 | 2,
               multikillTier: e.multikillTier,
               firstBlood: e.firstBlood,
+              soloKill: e.soloKill,
+              assistNames: assistNames.length ? assistNames : undefined,
               t: e.t,
             })
-            if (this.killFeed.length > 8) this.killFeed.splice(0, this.killFeed.length - 8)
+            if (this.killFeed.length > KILL_FEED_MAX)
+              this.killFeed.splice(0, this.killFeed.length - KILL_FEED_MAX)
             const now = Date.now()
             if (now - _lastKillLogMs >= BATTLE_KILL_LOG_THROTTLE_MS) {
               _lastKillLogMs = now

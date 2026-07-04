@@ -374,6 +374,8 @@ export const ANNOUNCE_FRESHNESS_GAME_SECONDS = 240
 export const STRUCTURE_BURST_GAME_SECONDS = 90
 /** Maximum retained structure-feed entries */
 export const STRUCTURE_FEED_MAX = 10
+/** Maximum retained kill-feed entries */
+export const KILL_FEED_MAX = 30
 
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100
