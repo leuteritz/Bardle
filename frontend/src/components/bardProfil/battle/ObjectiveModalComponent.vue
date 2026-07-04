@@ -7,17 +7,7 @@
 
         <!-- Spawn banner header -->
         <div class="obj-header">
-          <div class="obj-header-titles">
-            <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
-            <span class="obj-epithet">{{ objectiveEpithet }}</span>
-          </div>
-          <div class="frozen-chip">
-            <Icon icon="game-icons:heavy-timer" width="28" height="28" class="frozen-chip-icon" />
-            <div class="frozen-chip-text">
-              <span class="frozen-chip-label">TIME FROZEN</span>
-              <span class="frozen-chip-clock">{{ frozenClock }}</span>
-            </div>
-          </div>
+          <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
         </div>
 
         <!-- Alive-count strip: the fight is locked at these numbers -->
@@ -200,11 +190,6 @@ const show = computed(() => battleStore.objectiveModalOpen || battleStore.object
 const isDrake = computed(() => battleStore.activeObjective === 'drake')
 
 const objectiveTitle = computed(() => (isDrake.value ? 'HEXTECH DRAKE' : 'BARON NASHOR'))
-const objectiveEpithet = computed(() =>
-  isDrake.value ? '"Herald of the Rift"' : '"Voidbringer of the Pit"',
-)
-
-const frozenClock = computed(() => battleStore.formatTime(battleStore.battleTime))
 
 // Alive counts are snapshotted at fight start — frozen time keeps them fixed.
 const aliveOwn = computed(() => battleStore.objectiveAliveCounts?.own ?? 3)
@@ -374,25 +359,16 @@ watch(show, (v) => {
   width: 100%;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-  padding: 8px 12px 7px;
+  padding: 9px 12px 8px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.obj-header-titles {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  justify-content: center;
 }
 
 .obj-title {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 3px;
-  animation: title-breathe 2.4s ease-in-out infinite;
   white-space: nowrap;
 }
 .title--drake {
@@ -402,46 +378,6 @@ watch(show, (v) => {
 .title--baron {
   color: #c9a0f5;
   text-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
-}
-
-.obj-epithet {
-  font-size: 13px;
-  letter-spacing: 1px;
-  color: #7a6030;
-  font-style: italic;
-}
-
-.frozen-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: #141410;
-  border: 2px solid #7a4e20;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px #3e200a;
-  animation: frozen-pulse 2.5s ease-in-out infinite;
-  flex-shrink: 0;
-}
-.frozen-chip-icon {
-  color: #7ec8e8;
-}
-.frozen-chip-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-.frozen-chip-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: #7ec8e8;
-}
-.frozen-chip-clock {
-  font-size: 15px;
-  font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
 
 /* ── Alive strip ─────────────────────────────────────────────────────────── */
@@ -992,16 +928,6 @@ watch(show, (v) => {
   100% { opacity: 0; transform: translateY(-110px) scale(1.1); }
 }
 
-@keyframes title-breathe {
-  0%, 100% { letter-spacing: 3px; opacity: 1; }
-  50% { letter-spacing: 4px; opacity: 0.85; }
-}
-
-@keyframes frozen-pulse {
-  0%, 100% { box-shadow: inset 0 0 0 1px #3e200a; }
-  50% { box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(126, 200, 232, 0.35); }
-}
-
 @keyframes hit-flash {
   0% { opacity: 0.9; }
   100% { opacity: 0; }
@@ -1034,9 +960,7 @@ watch(show, (v) => {
   .arena-aura,
   .rune-ring,
   .ember,
-  .obj-title,
   .result-rays,
-  .frozen-chip,
   .hp-section--shake {
     animation: none !important;
   }
