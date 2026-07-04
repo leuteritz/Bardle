@@ -6,14 +6,22 @@
     <!-- ══ PHASE 1 · LANDING (career stats + start) ══ -->
     <Transition name="start-fade">
       <BattleLandingScreen
-        v-if="!battleStore.isAutoBattleInitialized && !isUniverseAnimating && !isStarting"
+        v-if="
+          (!battleStore.isAutoBattleInitialized || battleStore.isViewingLanding) &&
+          !isUniverseAnimating &&
+          !isStarting
+        "
         :is-starting="isStarting"
         @start="startBattle"
       />
     </Transition>
 
     <!-- ══ PHASE 3 · RIFT BATTLE (broadcast board) ══ -->
-    <template v-if="battleStore.isAutoBattleInitialized && !isUniverseAnimating">
+    <template
+      v-if="
+        battleStore.isAutoBattleInitialized && !isUniverseAnimating && !battleStore.isViewingLanding
+      "
+    >
       <PlanetBattleBackgroundComponent :variant="planetVariant" />
 
       <RiftBattleBoard />
@@ -76,6 +84,11 @@ export default defineComponent({
 
     const startBattle = async () => {
       if (isStarting.value) return
+      if (battleStore.isAutoBattleInitialized) {
+        // Battle loop already running — just return from the landing peek to the live view.
+        battleStore.isViewingLanding = false
+        return
+      }
       isStarting.value = true
       battleStore.searchingPhaseStartTimestamp = Date.now()
       await runUniverseAnimation()

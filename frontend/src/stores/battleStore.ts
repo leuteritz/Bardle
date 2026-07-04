@@ -191,6 +191,9 @@ export const useBattleStore = defineStore('battle', {
     currentWinStreak: 0,
 
     isAutoBattleInitialized: false,
+    // Transient view flag: player peeks at the landing (career stats) screen
+    // while a battle keeps simulating. Never persisted.
+    isViewingLanding: false,
     battleEverStarted: false,
     currentBattleId: 0,
     timeUntilNextBattle: 0,
@@ -1140,6 +1143,7 @@ export const useBattleStore = defineStore('battle', {
       const result = await this.simulateBattle(this.mmr)
       this.lastAutoBattleResult = result
       this.showAutoBattleResult = true
+      this.isViewingLanding = false
       this.resultPhaseStartTimestamp = Date.now()
 
       this.resultCountdown = BATTLE_RESULT_COUNTDOWN_SECONDS

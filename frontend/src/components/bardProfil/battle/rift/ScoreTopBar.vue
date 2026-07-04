@@ -1,5 +1,9 @@
 <template>
-  <div class="score-bar">
+  <div
+    class="score-bar score-bar--clickable"
+    title="View career stats"
+    @click="battleStore.isViewingLanding = true"
+  >
     <!-- Blue side -->
     <div class="side side--blue">
       <span class="side-name side-name--blue">BARD'S VANGUARD</span>
@@ -58,6 +62,14 @@ const winProbPercent = computed(() => Math.round(battleStore.currentWinProbabili
   flex-shrink: 0;
   border-bottom: 2px solid #3e200a;
   background: #0d0c08;
+}
+
+.score-bar--clickable {
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.score-bar--clickable:hover {
+  filter: brightness(1.25);
 }
 
 .side {

@@ -588,6 +588,7 @@ export function usePersistence() {
     battleStore.team1 = []
     battleStore.team2 = []
     battleStore.isAutoBattleInitialized = false
+    battleStore.isViewingLanding = false
     battleStore.autoBattleEnabled = false
     battleStore.lastAutoBattleResult = null
     battleStore.showAutoBattleResult = false

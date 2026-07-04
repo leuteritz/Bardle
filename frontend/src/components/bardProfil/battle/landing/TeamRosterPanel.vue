@@ -2,7 +2,12 @@
   <div class="roster-panel">
     <div class="roster-head">
       <span class="roster-title">YOUR TEAM</span>
-      <span class="ready-badge" :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'">
+      <span v-if="isBattleLive" class="ready-badge ready-badge--full">LIVE</span>
+      <span
+        v-else
+        class="ready-badge"
+        :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'"
+      >
         {{ teamProgress }} / 5 {{ hasFullTeam ? 'READY' : 'OPEN' }}
       </span>
     </div>
@@ -39,9 +44,9 @@
 
     <button
       class="start-btn"
-      :class="{ 'start-btn--locked': !hasFullTeam }"
-      :disabled="isStarting || !hasFullTeam"
-      :title="!hasFullTeam ? `${5 - teamProgress} role(s) still open` : ''"
+      :class="{ 'start-btn--locked': !hasFullTeam && !isBattleLive }"
+      :disabled="isStarting || (!hasFullTeam && !isBattleLive)"
+      :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
       @click="$emit('start')"
     >
       <Icon
@@ -51,9 +56,15 @@
         height="22"
         style="color: #e8c040"
       />
-      <img v-else-if="!hasFullTeam" src="/img/lock.png" alt="Locked" class="start-btn-lock" />
+      <img
+        v-else-if="!hasFullTeam && !isBattleLive"
+        src="/img/lock.png"
+        alt="Locked"
+        class="start-btn-lock"
+      />
       <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="start-btn-img" />
       <span v-if="isStarting">STARTING…</span>
+      <span v-else-if="isBattleLive">RETURN TO LIVE BATTLE</span>
       <span v-else-if="!hasFullTeam">{{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN</span>
       <span v-else>START BATTLE</span>
     </button>
@@ -79,6 +90,7 @@ const ROLES = [
 const battleStore = useBattleStore()
 const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
 const hasFullTeam = computed(() => teamProgress.value >= 5)
+const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 </script>
 
 <style scoped>
