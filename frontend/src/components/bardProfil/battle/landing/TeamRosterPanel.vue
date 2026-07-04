@@ -24,8 +24,9 @@
         :style="rowStyle(role, !!battleStore.headerSlots[idx])"
       >
         <template v-if="battleStore.headerSlots[idx]">
-          <!-- Standout badges: uniform labeled ribbons, stacked (max 4 per column) -->
-          <div v-if="badgesFor(battleStore.headerSlots[idx]!).length" class="row-badges">
+          <!-- Standout badges: uniform labeled ribbons, stacked (max 4 per column).
+               Always rendered so the center block aligns across all rows. -->
+          <div class="row-badges">
             <div
               v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
               :key="badge.key"
@@ -78,6 +79,7 @@
           />
         </template>
         <template v-else>
+          <div class="row-badges" />
           <div class="row-center">
             <div class="row-name-line">
               <span class="row-champ-name row-champ-name--empty">Empty slot</span>
@@ -349,6 +351,9 @@ const mvpHolder = computed<string | null>(() => {
   gap: 3px;
   padding: 4px 0 4px 10px;
   align-self: center;
+  /* Reserved badge column so the center block aligns across all rows */
+  min-width: 120px;
+  box-sizing: border-box;
 }
 
 .row-ribbon {
