@@ -56,6 +56,7 @@ import type {
   BattleResult,
   BattleRole,
   BattleTimeline,
+  ChampionCareerStats,
   ChampionState,
   KillFeedEntry,
   LiveBattleStats,
@@ -131,6 +132,22 @@ export function defaultAllTimeStats(): AllTimeBattleStats {
     visionScoreSum: 0,
     longestGameSeconds: 0,
     honorsGiven: 0,
+  }
+}
+
+export function defaultChampionCareer(): ChampionCareerStats {
+  return {
+    battles: 0,
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    mvps: 0,
+    damage: 0,
+    gold: 0,
+    cs: 0,
+    healing: 0,
+    damageTaken: 0,
+    wardsPlaced: 0,
   }
 }
 
@@ -267,6 +284,8 @@ export const useBattleStore = defineStore('battle', {
 
     // ── All-time career stats ──
     allTime: defaultAllTimeStats(),
+    // Per-champion career stats keyed by champion name (own champions only)
+    championCareer: {} as Record<string, ChampionCareerStats>,
     honoredChampions: [] as string[],
 
     drakeAlive: true,
@@ -1025,6 +1044,17 @@ export const useBattleStore = defineStore('battle', {
       let visionSum = 0
       const filled = this.team1.filter((c) => c.name)
       for (const champ of filled) {
+        const career = (this.championCareer[champ.name] ??= defaultChampionCareer())
+        career.battles += 1
+        career.kills += champ.kills
+        career.deaths += champ.deaths
+        career.assists += champ.assists
+        career.damage += champ.damage
+        career.gold += champ.gold
+        career.cs += champ.cs
+        career.healing += champ.healing
+        career.damageTaken += champ.damageTaken
+        career.wardsPlaced += champ.wardsPlaced
         this.totalKills += champ.kills
         this.totalDeaths += champ.deaths
         this.totalAssists += champ.assists
@@ -1078,7 +1108,11 @@ export const useBattleStore = defineStore('battle', {
           mvpIsOwn = false
         }
       }
-      if (mvpIsOwn) this.allTime.mvpAwards += 1
+      if (mvpIsOwn) {
+        this.allTime.mvpAwards += 1
+        const career = this.championCareer[mvpName]
+        if (career) career.mvps += 1
+      }
       return mvpName
     },
 

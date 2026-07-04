@@ -1,6 +1,6 @@
 import { useGameStore } from '@/stores/gameStore'
 import { useShopStore } from '@/stores/shopStore'
-import { useBattleStore, defaultAllTimeStats } from '@/stores/battleStore'
+import { useBattleStore, defaultAllTimeStats, defaultChampionCareer } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useAugmentStore } from '@/stores/augmentStore'
@@ -103,6 +103,7 @@ export function usePersistence() {
         autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
         searchingPhaseStartTimestamp: battleStore.searchingPhaseStartTimestamp,
         allTime: JSON.parse(JSON.stringify(battleStore.allTime)),
+        championCareer: JSON.parse(JSON.stringify(battleStore.championCareer)),
         battleSeed: battleStore.battleSeed,
         initialWinProbability: battleStore.initialWinProbability,
         objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
@@ -300,6 +301,13 @@ export function usePersistence() {
             ...(b.allTime?.multikills ?? {}),
           },
         }
+        // Per-champion career: merge defaults so fields added later default to 0
+        battleStore.championCareer = Object.fromEntries(
+          Object.entries(b.championCareer ?? {}).map(([name, entry]) => [
+            name,
+            { ...defaultChampionCareer(), ...(entry as object) },
+          ]),
+        )
         battleStore.battleSeed = b.battleSeed ?? 0
         battleStore.initialWinProbability = b.initialWinProbability ?? 0.5
         battleStore.currentWinProbability = b.initialWinProbability ?? 0.5
@@ -599,6 +607,7 @@ export function usePersistence() {
     battleStore.timeUntilNextBattle = 0
     battleStore.currentBattleId = 0
     battleStore.allTime = defaultAllTimeStats()
+    battleStore.championCareer = {}
     battleStore.battleSeed = 0
     battleStore.initialWinProbability = 0.5
     battleStore.objectiveOverrides = []

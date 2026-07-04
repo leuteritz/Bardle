@@ -17,58 +17,76 @@
         v-for="(role, idx) in roleRows"
         :key="role.key"
         class="roster-row"
-        :class="battleStore.headerSlots[idx] ? 'roster-row--filled' : 'roster-row--empty'"
+        :class="[
+          battleStore.headerSlots[idx] ? 'roster-row--filled' : 'roster-row--empty',
+          { 'roster-row--mvp': battleStore.headerSlots[idx] === mvpHolder },
+        ]"
         :style="rowStyle(role, !!battleStore.headerSlots[idx])"
       >
         <template v-if="battleStore.headerSlots[idx]">
+          <!-- Standout badges: uniform labeled ribbons, stacked (max 4 per column) -->
+          <div v-if="badgesFor(battleStore.headerSlots[idx]!).length" class="row-badges">
+            <div
+              v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
+              :key="badge.key"
+              class="row-ribbon"
+              :style="{
+                background: `linear-gradient(90deg, ${hexToRgba(badge.color, 0.38)}, rgba(10, 8, 4, 0.85))`,
+              }"
+              :title="badge.label"
+            >
+              <Icon
+                :icon="badge.icon"
+                width="24"
+                height="24"
+                class="ribbon-icon"
+                :style="{ color: badge.color }"
+              />
+              <span>{{ badge.label }}</span>
+            </div>
+          </div>
+
+          <div class="row-names">
+            <div class="row-champ-name">{{ battleStore.headerSlots[idx] }}</div>
+            <div class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</div>
+          </div>
+
+          <div class="row-stats">
+            <div class="row-stat">
+              <span class="row-stat-value row-stat-value--kills">
+                {{ statFor(battleStore.headerSlots[idx]!).kills }}
+              </span>
+              <span class="row-stat-label">KILLS</span>
+            </div>
+            <div class="row-stat">
+              <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
+              <span class="row-stat-label">KDA</span>
+            </div>
+            <div class="row-stat">
+              <span class="row-stat-value row-stat-value--mvp">
+                {{ statFor(battleStore.headerSlots[idx]!).mvps }}
+              </span>
+              <span class="row-stat-label">MVP</span>
+            </div>
+          </div>
+
           <img
             :src="battleStore.getChampionImage(battleStore.headerSlots[idx]!)"
             :alt="battleStore.headerSlots[idx]!"
             class="row-champ-img"
           />
-          <div class="row-names">
-            <div class="row-champ-name">{{ battleStore.headerSlots[idx] }}</div>
-            <div class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</div>
-          </div>
         </template>
         <template v-else>
-          <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
           <div class="row-names">
             <div class="row-champ-name row-champ-name--empty">Empty slot</div>
             <div class="row-role-label" :style="{ color: hexToRgba(role.color, 0.55) }">
               {{ role.roleLabel }}
             </div>
           </div>
+          <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
         </template>
       </div>
     </div>
-
-    <button
-      class="start-btn"
-      :class="{ 'start-btn--locked': !hasFullTeam && !isBattleLive }"
-      :disabled="isStarting || (!hasFullTeam && !isBattleLive)"
-      :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
-      @click="$emit('start')"
-    >
-      <Icon
-        v-if="isStarting"
-        icon="game-icons:sundial"
-        width="22"
-        height="22"
-        style="color: #e8c040"
-      />
-      <img
-        v-else-if="!hasFullTeam && !isBattleLive"
-        src="/img/lock.png"
-        alt="Locked"
-        class="start-btn-lock"
-      />
-      <img v-else src="/img/menu/BATTLE.png" alt="Battle" class="start-btn-img" />
-      <span v-if="isStarting">STARTING…</span>
-      <span v-else-if="isBattleLive">RETURN TO LIVE BATTLE</span>
-      <span v-else-if="!hasFullTeam">{{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN</span>
-      <span v-else>START BATTLE</span>
-    </button>
   </div>
 </template>
 
@@ -77,9 +95,7 @@ import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { ROLES } from '@/config/constants'
-
-defineProps<{ isStarting: boolean }>()
-defineEmits<{ start: [] }>()
+import { formatNumber } from '@/config/numberFormat'
 
 // Same order as battleStore.headerSlots: top, jungle, mid, adc, support
 const roleRows = ROLES.map((r) => ({
@@ -97,7 +113,8 @@ function rowStyle(role: { color: string }, filled: boolean): CSSProperties {
   if (!filled) return { borderLeft: `3px solid ${hexToRgba(role.color, 0.3)}` }
   return {
     borderLeft: `3px solid ${role.color}`,
-    background: `linear-gradient(90deg, ${hexToRgba(role.color, 0.12)}, rgba(0, 0, 0, 0.25))`,
+    // Role tint sits behind the portrait on the right edge
+    background: `linear-gradient(90deg, rgba(0, 0, 0, 0.25), ${hexToRgba(role.color, 0.12)})`,
   }
 }
 
@@ -105,6 +122,135 @@ const battleStore = useBattleStore()
 const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
 const hasFullTeam = computed(() => teamProgress.value >= 5)
 const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
+
+// Career kills merged with the running battle, same display-only pattern as
+// the landing stat panels (career accumulates once the battle finalizes).
+function liveKills(name: string): number {
+  const champ = battleStore.team1.find((c) => c.name === name)
+  return champ ? champ.kills : 0
+}
+
+function mergedKills(name: string): number {
+  return (battleStore.championCareer[name]?.kills ?? 0) + liveKills(name)
+}
+
+function statFor(name: string): { kills: string; kda: string; mvps: string } {
+  const career = battleStore.championCareer[name]
+  const kills = mergedKills(name)
+  if (!career && kills === 0) return { kills: '—', kda: '—', mvps: '—' }
+  const deaths = career?.deaths ?? 0
+  const assists = career?.assists ?? 0
+  const kda =
+    deaths === 0
+      ? kills + assists > 0
+        ? 'Perfect'
+        : '—'
+      : ((kills + assists) / deaths).toFixed(1)
+  return {
+    kills: formatNumber(kills),
+    kda,
+    mvps: formatNumber(career?.mvps ?? 0),
+  }
+}
+
+// ── Standout badge engine ──
+// Each category crowns the team leader (>0 required; ties: first slot).
+// Loop order = display priority; one champion can hold several badges.
+interface BadgeDef {
+  key: string
+  label: string
+  icon: string
+  color: string
+  statOf: (name: string) => number
+}
+
+const BADGE_DEFS: BadgeDef[] = [
+  {
+    key: 'mvp',
+    label: 'TEAM MVP',
+    icon: 'game-icons:imperial-crown',
+    color: '#e8c040',
+    statOf: (n) => battleStore.championCareer[n]?.mvps ?? 0,
+  },
+  {
+    key: 'kills',
+    label: 'TOP KILLS',
+    icon: 'game-icons:bloody-sword',
+    color: '#cc6050',
+    statOf: (n) => mergedKills(n),
+  },
+  {
+    key: 'damage',
+    label: 'TOP DAMAGE',
+    icon: 'game-icons:fire-punch',
+    color: '#f06820',
+    statOf: (n) => battleStore.championCareer[n]?.damage ?? 0,
+  },
+  {
+    key: 'gold',
+    label: 'GOLD LEADER',
+    icon: 'game-icons:gold-stack',
+    color: '#e8c040',
+    statOf: (n) => battleStore.championCareer[n]?.gold ?? 0,
+  },
+  {
+    key: 'cs',
+    label: 'FARM LORD',
+    icon: 'game-icons:sickle',
+    color: '#52b830',
+    statOf: (n) => battleStore.championCareer[n]?.cs ?? 0,
+  },
+  {
+    key: 'healing',
+    label: 'GUARDIAN',
+    icon: 'game-icons:health-normal',
+    color: '#6ee7b7',
+    statOf: (n) => battleStore.championCareer[n]?.healing ?? 0,
+  },
+  {
+    key: 'tank',
+    label: 'FRONTLINE',
+    icon: 'game-icons:arrows-shield',
+    color: '#5b8dd9',
+    statOf: (n) => battleStore.championCareer[n]?.damageTaken ?? 0,
+  },
+  {
+    key: 'wards',
+    label: 'SENTINEL',
+    icon: 'game-icons:surrounded-eye',
+    color: '#93c5fd',
+    statOf: (n) => battleStore.championCareer[n]?.wardsPlaced ?? 0,
+  },
+]
+
+const badgesByChampion = computed<Record<string, BadgeDef[]>>(() => {
+  const result: Record<string, BadgeDef[]> = {}
+  for (const def of BADGE_DEFS) {
+    let bestName: string | null = null
+    let best = 0
+    for (const name of battleStore.headerSlots) {
+      if (!name) continue
+      const value = def.statOf(name)
+      if (value > best) {
+        best = value
+        bestName = name
+      }
+    }
+    if (bestName) (result[bestName] ??= []).push(def)
+  }
+  return result
+})
+
+function badgesFor(name: string): BadgeDef[] {
+  return badgesByChampion.value[name] ?? []
+}
+
+const mvpHolder = computed<string | null>(() => {
+  for (const [name, defs] of Object.entries(badgesByChampion.value)) {
+    if (defs.some((d) => d.key === 'mvp')) return name
+  }
+  return null
+})
 </script>
 
 <style scoped>
@@ -165,10 +311,10 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 12px 0 0;
+  gap: 10px;
+  padding: 0;
   border-radius: 5px;
-  min-height: 68px;
+  min-height: 72px;
 }
 .roster-row--filled {
   border-top: 1px solid rgba(0, 0, 0, 0.35);
@@ -182,21 +328,61 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
   border-bottom: 1px dashed rgba(90, 60, 20, 0.4);
   opacity: 0.75;
 }
+.roster-row--mvp {
+  border-top: 1px solid rgba(212, 160, 32, 0.55);
+  border-right: 1px solid rgba(212, 160, 32, 0.55);
+  border-bottom: 1px solid rgba(212, 160, 32, 0.55);
+  box-shadow:
+    inset 0 0 18px rgba(212, 160, 32, 0.12),
+    0 0 12px rgba(212, 160, 32, 0.25);
+}
 
-/* Splash portrait: full row height, fades into the role-tinted card */
+/* ── Standout badges: uniform ribbons, stacked, max 4 per column ── */
+.row-badges {
+  flex-shrink: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(4, auto);
+  gap: 3px;
+  padding: 4px 0 4px 10px;
+  align-self: center;
+}
+
+.row-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 6px;
+  min-width: 104px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f0ead8;
+  border-radius: 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+.ribbon-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Splash portrait: right edge, full row height, fades toward the center */
 .row-champ-img {
   align-self: stretch;
-  width: 96px;
+  width: 92px;
   object-fit: cover;
   flex-shrink: 0;
-  -webkit-mask-image: linear-gradient(to right, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to right, #000 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 55%, transparent 100%);
 }
 
 .row-empty-slot {
   align-self: stretch;
-  width: 96px;
-  margin: 6px 0 6px 6px;
+  width: 92px;
+  margin: 6px 6px 6px 0;
   border-radius: 4px;
   border: 2px dashed rgba(90, 60, 20, 0.5);
   flex-shrink: 0;
@@ -209,7 +395,7 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 }
 
 .row-champ-name {
-  font-size: 17px;
+  font-size: 16px;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -225,52 +411,37 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
   letter-spacing: 2px;
 }
 
-/* ── Start button ── */
-.start-btn {
-  flex-shrink: 0;
+/* ── Per-champion career mini-stats ── */
+.row-stats {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 14px;
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  background: linear-gradient(to bottom, #1e2e12, #131e0c);
-  border: 2px solid #4a8a28;
-  border-radius: 5px;
-  color: #8ee060;
-  cursor: pointer;
-  box-shadow: 0 0 20px rgba(74, 138, 40, 0.3);
-  transition: all 0.15s;
-}
-.start-btn:hover:not(:disabled) {
-  background: linear-gradient(to bottom, #28401a, #1a2a10);
-  border-color: #6ec040;
-  box-shadow: 0 0 32px rgba(82, 184, 48, 0.55);
-}
-.start-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-.start-btn--locked {
-  background: linear-gradient(to bottom, #150e06, #0e0904) !important;
-  border-color: #3a2010 !important;
-  color: #4a3018 !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
-  font-size: 14px;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-right: 4px;
 }
 
-.start-btn-img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
+.row-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 32px;
 }
-.start-btn-lock {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  opacity: 0.7;
+
+.row-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8e2d0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.row-stat-value--kills {
+  color: #6ee7b7;
+}
+.row-stat-value--mvp {
+  color: #e8c040;
+}
+
+.row-stat-label {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: rgba(232, 226, 208, 0.45);
 }
 </style>

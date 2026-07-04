@@ -475,6 +475,20 @@ export interface AllTimeBattleStats {
   honorsGiven: number
 }
 
+export interface ChampionCareerStats {
+  battles: number
+  kills: number
+  deaths: number
+  assists: number
+  mvps: number
+  damage: number
+  gold: number
+  cs: number
+  healing: number
+  damageTaken: number
+  wardsPlaced: number
+}
+
 export interface CurrentRank {
   tier: string
   division: string

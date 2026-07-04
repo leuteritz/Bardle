@@ -53,7 +53,7 @@ const multikills = computed(() => ({
 
 .mk-card {
   position: relative;
-  padding: 10px 8px;
+  padding: 14px 8px;
   text-align: center;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 5px;
@@ -87,7 +87,7 @@ const multikills = computed(() => ({
 }
 
 .mk-value {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
   line-height: 1;
 }
@@ -101,9 +101,9 @@ const multikills = computed(() => ({
 .mk-value--mvp { color: #e8c040; }
 
 .mk-label {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1px;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 .mk-label--double { color: #6a7fb0; }
 .mk-label--triple { color: #6aa080; }

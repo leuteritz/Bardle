@@ -1995,6 +1995,14 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
   'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)
   'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
+  'game-icons:imperial-crown', // TEAM MVP badge (TeamRosterPanel)
+  'game-icons:bloody-sword', // TOP KILLS badge (TeamRosterPanel)
+  'game-icons:fire-punch', // TOP DAMAGE badge (TeamRosterPanel)
+  'game-icons:gold-stack', // GOLD LEADER badge (TeamRosterPanel)
+  'game-icons:sickle', // FARM LORD badge (TeamRosterPanel)
+  'game-icons:health-normal', // GUARDIAN badge (TeamRosterPanel)
+  'game-icons:arrows-shield', // FRONTLINE badge (TeamRosterPanel)
+  'game-icons:surrounded-eye', // SENTINEL badge (TeamRosterPanel)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

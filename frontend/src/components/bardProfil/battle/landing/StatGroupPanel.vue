@@ -3,12 +3,11 @@
     <div class="group-header" :style="{ color: color }">
       <Icon :icon="icon" width="24" height="24" class="group-icon" />
       <span class="group-title">{{ title }}</span>
-      <span v-if="live" class="live-dot" title="Updating live" />
     </div>
     <div class="group-rows">
       <div v-for="row in rows" :key="row.label" class="group-row">
-        <span class="row-label">{{ row.label }}</span>
         <span class="row-value" :style="row.color ? { color: row.color } : undefined">{{ row.value }}</span>
+        <span class="row-label">{{ row.label }}</span>
       </div>
     </div>
   </div>
@@ -28,7 +27,6 @@ defineProps<{
   icon: string
   color: string
   rows: StatRow[]
-  live?: boolean
 }>()
 </script>
 
@@ -37,7 +35,7 @@ defineProps<{
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(212, 160, 32, 0.12);
   border-radius: 5px;
-  padding: 12px 14px;
+  padding: 14px 18px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -56,58 +54,42 @@ defineProps<{
 }
 
 .group-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 2px;
-}
-
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #52b830;
-  box-shadow: 0 0 6px rgba(82, 184, 48, 0.8);
-  margin-left: auto;
-  animation: live-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-dot { animation: none; }
 }
 
 .group-rows {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 16px;
-  align-content: center;
+  gap: 10px 22px;
+  align-content: space-evenly;
   min-height: 0;
 }
 
+/* Stacked tile: big value on top, label beneath — labels own the full
+   column width and may wrap, so nothing ever truncates. */
 .group-row {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 1px;
   min-width: 0;
 }
 
-.row-label {
-  font-size: 12px;
-  color: #8a8070;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.row-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #e8e2d0;
+  line-height: 1.15;
 }
 
-.row-value {
-  font-size: 13px;
-  color: #e8e2d0;
-  white-space: nowrap;
+.row-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #8a8070;
+  white-space: normal;
+  line-height: 1.3;
 }
 </style>
