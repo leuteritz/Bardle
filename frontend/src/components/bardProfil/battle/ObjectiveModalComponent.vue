@@ -12,7 +12,7 @@
             <span class="obj-epithet">{{ objectiveEpithet }}</span>
           </div>
           <div class="frozen-chip">
-            <Icon icon="game-icons:heavy-timer" width="24" height="24" class="frozen-chip-icon" />
+            <Icon icon="game-icons:heavy-timer" width="28" height="28" class="frozen-chip-icon" />
             <div class="frozen-chip-text">
               <span class="frozen-chip-label">TIME FROZEN</span>
               <span class="frozen-chip-clock">{{ frozenClock }}</span>
@@ -37,7 +37,7 @@
 
         <!-- Arena row: own fighters | boss | enemy fighters -->
         <div class="arena-row">
-          <div class="fighters-col">
+          <TransitionGroup name="fighter" tag="div" class="fighters-col">
             <div
               v-for="f in fightersOwn"
               :key="'f1' + f.idx"
@@ -60,7 +60,7 @@
                 </span>
               </div>
             </div>
-          </div>
+          </TransitionGroup>
 
           <!-- Arena: aura + rune ring + embers + boss -->
           <div
@@ -95,7 +95,7 @@
           </TransitionGroup>
           </div>
 
-          <div class="fighters-col fighters-col--enemy">
+          <TransitionGroup name="fighter" tag="div" class="fighters-col fighters-col--enemy">
             <div
               v-for="f in fightersEnemy"
               :key="'f2' + f.idx"
@@ -118,7 +118,7 @@
                 <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
               </div>
             </div>
-          </div>
+          </TransitionGroup>
         </div>
 
         <!-- Segmented HP bar -->
@@ -164,13 +164,6 @@
           <span class="reward reward--lose">Lose: −{{ winBonusPercent }}%</span>
         </div>
 
-        <!-- Hint -->
-        <div class="hint-row">
-          <span v-if="battleStore.objectiveResult === null" class="hint-text">
-            Time stands still — every click adds to your team's damage!
-          </span>
-        </div>
-
         <!-- Result overlay with burst rays -->
         <Transition name="result-pop">
           <div v-if="battleStore.objectiveResult !== null" class="result-overlay" :class="resultClass">
@@ -190,6 +183,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
 import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
@@ -218,8 +212,16 @@ const aliveEnemy = computed(() => battleStore.objectiveAliveCounts?.enemy ?? 3)
 const ownDps = computed(() => aliveOwn.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
 const enemyDps = computed(() => aliveEnemy.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
 
-const fightersOwn = computed(() => battleStore.objectiveFighters?.t1 ?? [])
-const fightersEnemy = computed(() => battleStore.objectiveFighters?.t2 ?? [])
+/** Living fighters first, sorted by damage descending — the carry leads the list. */
+function sortByDamage(fighters: ObjectiveFighter[]): ObjectiveFighter[] {
+  return [...fighters].sort((a, b) => {
+    if (a.alive !== b.alive) return a.alive ? -1 : 1
+    return b.damage - a.damage
+  })
+}
+
+const fightersOwn = computed(() => sortByDamage(battleStore.objectiveFighters?.t1 ?? []))
+const fightersEnemy = computed(() => sortByDamage(battleStore.objectiveFighters?.t2 ?? []))
 
 const topFighter = computed(() => {
   const all = [...fightersOwn.value, ...fightersEnemy.value].filter((f) => f.alive)
@@ -343,7 +345,7 @@ watch(show, (v) => {
 /* ── Modal card ──────────────────────────────────────────────────────────── */
 .objective-modal {
   position: relative;
-  width: 580px;
+  width: 680px;
   background: #111008;
   border: 4px solid #7a4e20;
   box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 20px 50px rgba(0, 0, 0, 0.95);
@@ -387,7 +389,7 @@ watch(show, (v) => {
 }
 
 .obj-title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: 3px;
   animation: title-breathe 2.4s ease-in-out infinite;
@@ -403,7 +405,7 @@ watch(show, (v) => {
 }
 
 .obj-epithet {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 1px;
   color: #7a6030;
   font-style: italic;
@@ -430,12 +432,12 @@ watch(show, (v) => {
   align-items: flex-end;
 }
 .frozen-chip-label {
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 1.5px;
   color: #7ec8e8;
 }
 .frozen-chip-clock {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -464,8 +466,8 @@ watch(show, (v) => {
   justify-content: flex-end;
 }
 .alive-pip {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
 }
 .alive-pip--own {
@@ -487,7 +489,7 @@ watch(show, (v) => {
   color: #e8c040;
 }
 .alive-count {
-  font-size: 22px;
+  font-size: 27px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -517,11 +519,16 @@ watch(show, (v) => {
   gap: 6px;
 }
 
+/* FLIP reorder animation when the damage sorting changes ranks */
+.fighter-move {
+  transition: transform 0.4s ease;
+}
+
 .fighter-card {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 3px 5px;
+  gap: 8px;
+  padding: 4px 6px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -538,8 +545,8 @@ watch(show, (v) => {
   flex-shrink: 0;
 }
 .fighter-portrait {
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   border-radius: 4px;
   object-fit: cover;
   display: block;
@@ -555,14 +562,14 @@ watch(show, (v) => {
 }
 .fighter-dead-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 15px;
-  height: 15px;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #e07060;
   background: #16140e;
@@ -580,7 +587,7 @@ watch(show, (v) => {
   text-align: right;
 }
 .fighter-name {
-  font-size: 12px;
+  font-size: 15px;
   color: #c0b090;
   letter-spacing: 0.03em;
   white-space: nowrap;
@@ -589,7 +596,7 @@ watch(show, (v) => {
   max-width: 100%;
 }
 .fighter-damage {
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -603,8 +610,8 @@ watch(show, (v) => {
 /* ── Arena ───────────────────────────────────────────────────────────────── */
 .boss-arena {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   flex-shrink: 0;
   cursor: pointer;
   user-select: none;
@@ -675,8 +682,8 @@ watch(show, (v) => {
 .boss-img {
   position: relative;
   z-index: 1;
-  width: 150px;
-  height: 150px;
+  width: 165px;
+  height: 165px;
   border-radius: 50%;
   object-fit: cover;
   transition: transform 0.08s ease;
@@ -713,7 +720,7 @@ watch(show, (v) => {
 .dmg-float {
   position: absolute;
   top: 16%;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
   color: #ffd24a;
   text-shadow: 0 0 10px rgba(232, 160, 20, 0.8), 0 2px 4px rgba(0, 0, 0, 0.95);
@@ -743,7 +750,7 @@ watch(show, (v) => {
 .hp-segments {
   display: flex;
   gap: 3px;
-  height: 14px;
+  height: 16px;
 }
 
 .hp-segment {
@@ -766,7 +773,7 @@ watch(show, (v) => {
 
 .hp-text {
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #a09060;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
@@ -786,7 +793,7 @@ watch(show, (v) => {
   justify-content: space-between;
 }
 .race-label {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
@@ -795,7 +802,7 @@ watch(show, (v) => {
 
 .race-track {
   position: relative;
-  height: 14px;
+  height: 16px;
   border-radius: 3px;
   border: 1px solid #3e200a;
   background: linear-gradient(to bottom, #7a2818, #57201a);
@@ -833,13 +840,13 @@ watch(show, (v) => {
   min-height: 14px;
 }
 .race-caption-player {
-  font-size: 11px;
+  font-size: 13px;
   color: #e8c040;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
 .race-caption-idle {
-  font-size: 11px;
+  font-size: 13px;
   color: #8a8070;
   letter-spacing: 0.04em;
 }
@@ -847,8 +854,8 @@ watch(show, (v) => {
 /* ── Reward preview ──────────────────────────────────────────────────────── */
 .reward-row {
   width: calc(100% - 28px);
-  margin: 5px 14px 0;
-  padding: 4px 0;
+  margin: 6px 14px 0;
+  padding: 6px 0 12px;
   border-top: 1px solid #3e200a;
   display: flex;
   align-items: center;
@@ -856,26 +863,12 @@ watch(show, (v) => {
   gap: 8px;
 }
 .reward {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.05em;
 }
 .reward--win { color: #6ec040; }
 .reward--lose { color: #e07060; }
-.reward-divider { color: #7a6030; font-size: 11px; }
-
-/* ── Hint ────────────────────────────────────────────────────────────────── */
-.hint-row {
-  width: 100%;
-  padding: 4px 12px 10px;
-  text-align: center;
-  min-height: 24px;
-}
-.hint-text {
-  font-size: 11px;
-  color: #7a6030;
-  letter-spacing: 0.06em;
-  animation: hint-blink 2.5s ease-in-out infinite;
-}
+.reward-divider { color: #7a6030; font-size: 13px; }
 
 /* ── Result overlay ──────────────────────────────────────────────────────── */
 .result-overlay {
@@ -921,7 +914,7 @@ watch(show, (v) => {
 }
 
 .result-label {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-align: center;
@@ -941,14 +934,14 @@ watch(show, (v) => {
 }
 
 .result-score {
-  font-size: 13px;
+  font-size: 15px;
   color: #a09060;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
 }
 
 .result-top {
-  font-size: 12px;
+  font-size: 14px;
   color: #e8c040;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
@@ -1027,11 +1020,6 @@ watch(show, (v) => {
   75% { transform: translateX(-2px); }
 }
 
-@keyframes hint-blink {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
 @keyframes rays-spin {
   0% { transform: translate(-50%, -50%) rotate(0); }
   100% { transform: translate(-50%, -50%) rotate(360deg); }
@@ -1047,11 +1035,13 @@ watch(show, (v) => {
   .rune-ring,
   .ember,
   .obj-title,
-  .hint-text,
   .result-rays,
   .frozen-chip,
   .hp-section--shake {
     animation: none !important;
+  }
+  .fighter-move {
+    transition: none !important;
   }
 }
 </style>
