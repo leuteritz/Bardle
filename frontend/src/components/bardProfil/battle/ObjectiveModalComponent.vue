@@ -368,10 +368,13 @@ watch(show, (v) => {
 
 <style scoped>
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
+/* Anchored inside .board-middle (RiftBattleBoard) so the fight centers within
+   the tab, on the same vertical band as the left/right team scoreboards.
+   ScoreTopBar and kill feed stay visible above/below — broadcast feel. */
 .objective-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 200;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,12 +384,16 @@ watch(show, (v) => {
 /* ── Modal card ──────────────────────────────────────────────────────────── */
 .objective-modal {
   position: relative;
-  width: 680px;
+  width: min(680px, calc(100% - 32px));
+  max-height: 92%;
   background: #111008;
   border: 4px solid #7a4e20;
   box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 20px 50px rgba(0, 0, 0, 0.95);
   border-radius: 4px;
   overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
   display: flex;
   flex-direction: column;
   align-items: center;

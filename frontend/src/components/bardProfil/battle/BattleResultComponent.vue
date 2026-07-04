@@ -26,9 +26,6 @@
 
       <RiftBattleBoard />
 
-      <!-- Objective modal overlays the board when dragon/baron spawns -->
-      <ObjectiveModalComponent />
-
       <!-- ══ PHASE 4 · HONOR / RESULT ══ -->
       <Transition name="honor-fade">
         <HonorResultScreen v-if="battleStore.showAutoBattleResult" />
@@ -41,7 +38,6 @@
 import { defineComponent, computed, ref, watch } from 'vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
-import ObjectiveModalComponent from './ObjectiveModalComponent.vue'
 import BattleLandingScreen from './landing/BattleLandingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
@@ -52,7 +48,6 @@ export default defineComponent({
   components: {
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,
-    ObjectiveModalComponent,
     BattleLandingScreen,
     RiftBattleBoard,
     HonorResultScreen,

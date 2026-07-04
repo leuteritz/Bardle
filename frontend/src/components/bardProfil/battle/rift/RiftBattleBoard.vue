@@ -6,6 +6,8 @@
       <RiftMinimap class="map-layer" />
       <TeamColumn side="blue" class="hud hud--left" />
       <TeamColumn side="red" class="hud hud--right" />
+      <!-- Objective fight (drake/baron) centers within the board middle, on scoreboard height -->
+      <ObjectiveModalComponent />
     </div>
     <KillFeedTicker />
     <AnnouncementBanner />
@@ -18,6 +20,7 @@ import TeamColumn from './TeamColumn.vue'
 import RiftMinimap from './RiftMinimap.vue'
 import KillFeedTicker from './KillFeedTicker.vue'
 import AnnouncementBanner from './AnnouncementBanner.vue'
+import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
 </script>
 
 <style scoped>
