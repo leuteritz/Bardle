@@ -23,16 +23,9 @@ import {
   BATTLE_TIME_RANGE_SECONDS,
   MMR_RANK_THRESHOLDS,
   BATTLE_REAL_DURATION_SECONDS,
-  KILL_EVENTS_PER_TEAM_MIN,
-  KILL_EVENTS_PER_TEAM_MAX,
-  MINIMAP_PHASE_BARON_END,
+  BATTLE_TOTAL_GAME_SECONDS,
   MINIMAP_PHASE_DRAKE_END,
-  MINIMAP_PHASE_MIDFIGHT_END,
   GAME_TICK_INTERVAL_MS,
-  KILL_EVENT_MIN_GAME_SECONDS,
-  KILL_EVENT_MAX_GAME_SECONDS,
-  BATTLE_ASSIST_CHANCE,
-  BATTLE_DEATH_CHANCE,
   BATTLE_CHAT_MESSAGE_COUNT,
   BATTLE_EARLY_GAME_SECONDS,
   BATTLE_RESULT_COUNTDOWN_SECONDS,
@@ -46,20 +39,39 @@ import {
   BATTLE_INITIAL_MMR,
   BATTLE_DEFAULT_RANK_TIER,
   BATTLE_KILL_LOG_THROTTLE_MS,
-  OBJECTIVE_DRAKE_SPAWN,
-  OBJECTIVE_BARON_SPAWN,
   DRAKE_OBJECTIVE_HP,
   BARON_OBJECTIVE_HP,
-  OBJECTIVE_OWN_TEAM_DPS,
-  OBJECTIVE_ENEMY_TEAM_DPS,
+  OBJECTIVE_BASE_DPS_PER_CHAMP,
   OBJECTIVE_CLICK_DAMAGE,
   OBJECTIVE_DRAKE_WIN_BONUS,
   OBJECTIVE_BARON_WIN_BONUS,
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_TIMEOUT_MS,
   OBJECTIVE_RESULT_DELAY_MS,
+  HONOR_MAX_SELECTIONS,
+  MOVE_RESPAWN_WALK_SECONDS,
 } from '../config/constants'
-import type { BattleResult, ChampionState, ChatMessage, RecruitableChampion } from '../types'
+import type {
+  AllTimeBattleStats,
+  BattleEvent,
+  BattleResult,
+  BattleRole,
+  BattleTimeline,
+  ChampionState,
+  ChatMessage,
+  KillFeedEntry,
+  ObjectiveOverride,
+  RecruitableChampion,
+} from '../types'
+import {
+  BATTLE_ROLES,
+  bountyGold,
+  championNoise,
+  continuousStatsAt,
+  generateTimeline,
+  mvpScore,
+  reseedTimelineFrom,
+} from '../utils/battleTimeline'
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
@@ -67,6 +79,67 @@ import { logBattleStarted, logBattleEnded, logChampionDefeated } from '../config
 
 let _lastKillLogMs = 0
 let _visibilityHandler: (() => void) | null = null
+
+export function defaultAllTimeStats(): AllTimeBattleStats {
+  return {
+    killParticipationSum: 0,
+    killParticipationGames: 0,
+    largestSpree: 0,
+    firstBloods: 0,
+    soloKills: 0,
+    multikills: { double: 0, triple: 0, quadra: 0, penta: 0 },
+    mvpAwards: 0,
+    cs: 0,
+    gold: 0,
+    damage: 0,
+    healing: 0,
+    damageTaken: 0,
+    dragons: 0,
+    barons: 0,
+    turrets: 0,
+    inhibitors: 0,
+    wardsPlaced: 0,
+    wardsKilled: 0,
+    controlWards: 0,
+    visionScoreSum: 0,
+    longestGameSeconds: 0,
+    honorsGiven: 0,
+  }
+}
+
+export function makeChampionState(name: string, rank: string, roleIndex: number): ChampionState {
+  return {
+    name,
+    rank,
+    role: BATTLE_ROLES[roleIndex] ?? 'mid',
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    cs: 0,
+    gold: 0,
+    damage: 0,
+    healing: 0,
+    damageTaken: 0,
+    wardsPlaced: 0,
+    wardsKilled: 0,
+    controlWards: 0,
+    level: 1,
+    items: 0,
+    multikills: { double: 0, triple: 0, quadra: 0, penta: 0 },
+    currentSpree: 0,
+    largestSpree: 0,
+    hpPercent: 100,
+    respawnState: 'alive',
+  }
+}
+
+function defaultBattleTrack() {
+  return {
+    firstBloodTeam1: false,
+    soloKillsT1: 0,
+    objectiveParticipationsT1: [0, 0, 0, 0, 0],
+  }
+}
 
 export const useBattleStore = defineStore('battle', {
   state: () => ({
@@ -134,8 +207,36 @@ export const useBattleStore = defineStore('battle', {
     newlyUnlockedChampions: [] as string[],
 
     battleSimIntervalId: null as ReturnType<typeof setInterval> | null,
-    killEventSchedule: [] as Array<{ gameTime: number; team: 1 | 2 }>,
     battlePhase: 'playing' as 'playing' | 'result',
+
+    // ── Deterministic event timeline ──
+    battleSeed: 0,
+    initialWinProbability: 0.5,
+    timeline: null as BattleTimeline | null,
+    timelineCursor: 0,
+    objectiveOverrides: [] as ObjectiveOverride[],
+    killFeed: [] as KillFeedEntry[],
+    activeFights: [] as Array<{ x: number; y: number; until: number }>,
+    respawnUntil: { t1: [0, 0, 0, 0, 0], t2: [0, 0, 0, 0, 0] } as {
+      t1: number[]
+      t2: number[]
+    },
+    battleTrack: defaultBattleTrack(),
+    team1Turrets: 0,
+    team2Turrets: 0,
+    team1Inhibs: 0,
+    team2Inhibs: 0,
+    team1Drakes: 0,
+    team2Drakes: 0,
+    team1Barons: 0,
+    team2Barons: 0,
+    nexusDestroyedByTeam: null as (1 | 2) | null,
+    activeObjectiveParticipants: null as { t1: number[]; t2: number[] } | null,
+
+    // ── All-time career stats ──
+    allTime: defaultAllTimeStats(),
+    honoredChampions: [] as string[],
+
     drakeAlive: true,
     drakeKilledByTeam: null as (1 | 2) | null,
     drakeEventTime: 0,
@@ -180,6 +281,40 @@ export const useBattleStore = defineStore('battle', {
       if (state.baronEventTime <= 0) return -1
       return Math.floor((state.baronEventTime - 1) / 60) * 60
     },
+    team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
+    team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
+    team1Gold: (state): number => state.team1.reduce((s, c) => s + c.gold, 0),
+    team2Gold: (state): number => state.team2.reduce((s, c) => s + c.gold, 0),
+    team1AvgLevel: (state): number => {
+      const filled = state.team1.filter((c) => c.name)
+      if (!filled.length) return 1
+      return Math.round(filled.reduce((s, c) => s + c.level, 0) / filled.length)
+    },
+    team2AvgLevel: (state): number => {
+      const filled = state.team2.filter((c) => c.name)
+      if (!filled.length) return 1
+      return Math.round(filled.reduce((s, c) => s + c.level, 0) / filled.length)
+    },
+    winRate: (state): number =>
+      state.totalBattles > 0 ? (state.totalWins / state.totalBattles) * 100 : 0,
+    careerKda: (state): number =>
+      state.totalDeaths > 0
+        ? (state.totalKills + state.totalAssists) / state.totalDeaths
+        : state.totalKills + state.totalAssists,
+    avgKillParticipation: (state): number =>
+      state.allTime.killParticipationGames > 0
+        ? state.allTime.killParticipationSum / state.allTime.killParticipationGames
+        : 0,
+    avgVisionScore: (state): number =>
+      state.allTime.killParticipationGames > 0
+        ? state.allTime.visionScoreSum / state.allTime.killParticipationGames
+        : 0,
+    csPerMinute: (state): number =>
+      state.totalBattleTime > 0 ? state.allTime.cs / (state.totalBattleTime / 60) : 0,
+    goldPerMinute: (state): number =>
+      state.totalBattleTime > 0 ? state.allTime.gold / (state.totalBattleTime / 60) : 0,
+    damagePerMinute: (state): number =>
+      state.totalBattleTime > 0 ? state.allTime.damage / (state.totalBattleTime / 60) : 0,
   },
 
   actions: {
@@ -304,29 +439,19 @@ export const useBattleStore = defineStore('battle', {
     },
 
     syncTeam1ToSlots() {
-      this.team1 = this.headerSlots.map((slot) => {
-        if (!slot) return { name: '', rank: BATTLE_DEFAULT_RANK_TIER, kills: 0, deaths: 0, assists: 0 }
+      this.team1 = this.headerSlots.map((slot, i) => {
+        if (!slot) return makeChampionState('', BATTLE_DEFAULT_RANK_TIER, i)
         const existing = this.team1.find((c) => c.name === slot)
-        return existing ?? { name: slot, rank: BATTLE_DEFAULT_RANK_TIER, kills: 0, deaths: 0, assists: 0 }
+        if (existing) {
+          existing.role = BATTLE_ROLES[i] ?? 'mid'
+          return existing
+        }
+        return makeChampionState(slot, BATTLE_DEFAULT_RANK_TIER, i)
       })
     },
 
     getAvgBattleTime(): string {
       return this.formatTime(Math.round(this.totalBattleTime / this.totalBattles) || 0)
-    },
-
-    generateKillSchedule() {
-      const events: Array<{ gameTime: number; team: 1 | 2 }> = []
-      const totalEvents =
-        KILL_EVENTS_PER_TEAM_MIN +
-        Math.floor(Math.random() * (KILL_EVENTS_PER_TEAM_MAX - KILL_EVENTS_PER_TEAM_MIN + 1))
-      for (let i = 0; i < totalEvents; i++) {
-        const gameTime = KILL_EVENT_MIN_GAME_SECONDS + Math.floor(Math.random() * (KILL_EVENT_MAX_GAME_SECONDS - KILL_EVENT_MIN_GAME_SECONDS))
-        const team = (Math.random() < 0.5 ? 1 : 2) as 1 | 2
-        events.push({ gameTime, team })
-      }
-      events.sort((a, b) => a.gameTime - b.gameTime)
-      this.killEventSchedule = events
     },
 
     startBattleSimulation(resume = false) {
@@ -340,48 +465,14 @@ export const useBattleStore = defineStore('battle', {
       this.battleSimIntervalId = setInterval(() => {
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
         const newBattleTime = Math.floor(realElapsedS * 60)
-
-        const pending = this.killEventSchedule.filter(
-          (e) => e.gameTime > this.battleTime && e.gameTime <= newBattleTime,
-        )
-        this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > newBattleTime)
+        this.applyTimelineUpTo(newBattleTime)
         this.battleTime = newBattleTime
 
-        for (const event of pending) {
-          const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
-          const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
-          if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
-          const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
-          killer.kills += 1
-          const assistCount = Math.random() < BATTLE_ASSIST_CHANCE ? 1 : 2
-          const others = attackingTeam.filter((c) => c !== killer)
-          for (let i = 0; i < Math.min(assistCount, others.length); i++) {
-            others[Math.floor(Math.random() * others.length)].assists += 1
-          }
-          const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
-          if (Math.random() < BATTLE_DEATH_CHANCE) victim.deaths += 1
-          const now = Date.now()
-          if (now - _lastKillLogMs >= BATTLE_KILL_LOG_THROTTLE_MS && killer.name && victim.name) {
-            _lastKillLogMs = now
-            logChampionDefeated(killer.name, victim.name)
-          }
-        }
-
-        if (this.drakeAlive && this.drakeEventTime > 0
-            && this.activeObjective !== 'drake'
-            && this.battleTime >= OBJECTIVE_DRAKE_SPAWN) {
-          this._openObjectiveModal('drake')
-        }
-
-        if (this.baronAlive && this.baronEventTime > 0
-            && this.activeObjective !== 'baron'
-            && this.battleTime >= OBJECTIVE_BARON_SPAWN) {
-          this._openObjectiveModal('baron')
-        }
-
-        if (this.battleTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
+        if (this.battleTime >= BATTLE_TOTAL_GAME_SECONDS) {
           clearInterval(this.battleSimIntervalId!)
           this.battleSimIntervalId = null
+          this.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+          this.battleTime = BATTLE_TOTAL_GAME_SECONDS
           this.battlePhase = 'result'
           logBattleEnded(this.predeterminedWin ?? false)
           if (this.autoBattleTimer) {
@@ -394,6 +485,207 @@ export const useBattleStore = defineStore('battle', {
       }, GAME_TICK_INTERVAL_MS)
     },
 
+    /**
+     * Applies every timeline event with t <= gameTime exactly once and refreshes
+     * the closed-form continuous stats. Serves live ticks, background catch-up,
+     * time jumps and skip-to-end alike.
+     */
+    applyTimelineUpTo(gameTime: number) {
+      if (!this.timeline) return
+      const events = this.timeline.events
+      while (this.timelineCursor < events.length && events[this.timelineCursor].t <= gameTime) {
+        this._applyEvent(events[this.timelineCursor], gameTime)
+        this.timelineCursor++
+      }
+      this._refreshContinuousStats(gameTime)
+      this._refreshRespawnStates(gameTime)
+      this.activeFights = this.activeFights.filter((f) => f.until > gameTime)
+    },
+
+    _applyEvent(e: BattleEvent, targetGameTime: number) {
+      switch (e.type) {
+        case 'kill': {
+          const attackers = e.team === 1 ? this.team1 : this.team2
+          const defenders = e.team === 1 ? this.team2 : this.team1
+          const killer = attackers[e.killerIdx ?? 0]
+          const victim = defenders[e.victimIdx ?? 0]
+          if (!killer || !victim) break
+          killer.kills += 1
+          killer.currentSpree += 1
+          killer.largestSpree = Math.max(killer.largestSpree, killer.currentSpree)
+          if (e.multikillTier) {
+            const key = (['double', 'triple', 'quadra', 'penta'] as const)[e.multikillTier - 2]
+            killer.multikills[key] += 1
+          }
+          for (const idx of e.assistIdxs ?? []) {
+            if (attackers[idx] && idx !== e.killerIdx) attackers[idx].assists += 1
+          }
+          victim.deaths += 1
+          victim.currentSpree = 0
+          const untilArr = e.team === 1 ? this.respawnUntil.t2 : this.respawnUntil.t1
+          untilArr[e.victimIdx ?? 0] = e.t + MOVE_RESPAWN_WALK_SECONDS
+          if (e.team === 1) {
+            if (e.firstBlood) this.battleTrack.firstBloodTeam1 = true
+            if (e.soloKill) this.battleTrack.soloKillsT1 += 1
+          }
+          if (killer.name && victim.name) {
+            this.killFeed.push({
+              killerName: killer.name,
+              victimName: victim.name,
+              killerTeam: (e.team ?? 1) as 1 | 2,
+              multikillTier: e.multikillTier,
+              firstBlood: e.firstBlood,
+              t: e.t,
+            })
+            if (this.killFeed.length > 8) this.killFeed.splice(0, this.killFeed.length - 8)
+            const now = Date.now()
+            if (now - _lastKillLogMs >= BATTLE_KILL_LOG_THROTTLE_MS) {
+              _lastKillLogMs = now
+              logChampionDefeated(killer.name, victim.name)
+            }
+          }
+          this._shiftWinProbability(e.winProbDelta)
+          break
+        }
+        case 'fightStart': {
+          if (e.location) {
+            this.activeFights.push({ x: e.location.x, y: e.location.y, until: e.t + 120 })
+          }
+          break
+        }
+        case 'fightEnd': {
+          break
+        }
+        case 'objectiveSpawn': {
+          if (!e.objective) break
+          if (e.objective === 'drake') {
+            this.drakeAlive = true
+            this.drakeKilledByTeam = null
+            this.drakeEventTime = e.t
+          } else {
+            this.baronAlive = true
+            this.baronKilledByTeam = null
+            this.baronEventTime = e.t
+          }
+          // Only open the interactive modal when the scripted result is still ahead —
+          // during background catch-up spawn+result apply together and no modal opens.
+          const resultStillAhead = this.timeline!.events.some(
+            (ev) => ev.type === 'objectiveResult' && ev.objective === e.objective && ev.t > targetGameTime,
+          )
+          if (resultStillAhead && !this.objectiveModalOpen) {
+            this._openObjectiveModal(e.objective, e.participants ?? null)
+          }
+          break
+        }
+        case 'objectiveResult': {
+          if (!e.objective || !e.team) break
+          this._creditObjective(e.objective, e.team, e.participants ?? null)
+          this._shiftWinProbability(e.winProbDelta)
+          if (this.objectiveModalOpen && this.activeObjective === e.objective) {
+            this._finishObjectiveModal(e.team === 1 ? 'own' : 'enemy')
+          }
+          break
+        }
+        case 'turret': {
+          if (e.team === 1) this.team1Turrets += 1
+          else this.team2Turrets += 1
+          this._shiftWinProbability(e.winProbDelta)
+          this._systemMessage(`${e.team === 1 ? 'Blue Team' : 'Red Team'} destroyed a turret!`, e.team ?? 0, e.t)
+          break
+        }
+        case 'inhibitor': {
+          if (e.team === 1) this.team1Inhibs += 1
+          else this.team2Inhibs += 1
+          this._shiftWinProbability(e.winProbDelta)
+          this._systemMessage(`${e.team === 1 ? 'Blue Team' : 'Red Team'} destroyed an inhibitor!`, e.team ?? 0, e.t)
+          break
+        }
+        case 'nexus': {
+          this.nexusDestroyedByTeam = (e.team ?? this.timeline?.winner ?? 1) as 1 | 2
+          this._systemMessage(
+            `${this.nexusDestroyedByTeam === 1 ? 'Blue Team' : 'Red Team'} destroyed the Nexus!`,
+            this.nexusDestroyedByTeam,
+            e.t,
+          )
+          break
+        }
+      }
+    },
+
+    _shiftWinProbability(delta: number) {
+      if (delta === 0) return
+      this.currentWinProbability = Math.max(0.05, Math.min(0.95, this.currentWinProbability + delta))
+    },
+
+    _systemMessage(text: string, team: number, gameT: number) {
+      this.chatMessages.push({
+        user: 'System',
+        text,
+        time: this.formatTime(gameT),
+        team,
+        type: 'system',
+      })
+    },
+
+    _creditObjective(objective: 'drake' | 'baron', team: 1 | 2, participants: { t1: number[]; t2: number[] } | null) {
+      if (objective === 'drake') {
+        this.drakeAlive = false
+        this.drakeKilledByTeam = team
+        if (team === 1) this.team1Drakes += 1
+        else this.team2Drakes += 1
+      } else {
+        this.baronAlive = false
+        this.baronKilledByTeam = team
+        if (team === 1) this.team1Barons += 1
+        else this.team2Barons += 1
+      }
+      for (const idx of participants?.t1 ?? []) {
+        if (this.battleTrack.objectiveParticipationsT1[idx] !== undefined) {
+          this.battleTrack.objectiveParticipationsT1[idx] += 1
+        }
+      }
+      const objectiveName = objective === 'drake' ? 'the Dragon' : 'Baron Nashor'
+      this._systemMessage(`${team === 1 ? 'Blue Team' : 'Red Team'} slew ${objectiveName}!`, team, this.battleTime)
+    },
+
+    _refreshContinuousStats(gameTime: number) {
+      const refresh = (team: ChampionState[], teamNo: 1 | 2) => {
+        for (let i = 0; i < team.length; i++) {
+          const champ = team[i]
+          if (!champ.name) continue
+          const noise = championNoise(this.battleSeed, teamNo, i)
+          const cont = continuousStatsAt(champ.role, noise, gameTime)
+          champ.cs = cont.cs
+          champ.gold = cont.goldPassive + bountyGold(champ.kills, champ.assists, cont.cs)
+          champ.damage = cont.damage
+          champ.healing = cont.healing
+          champ.damageTaken = cont.damageTaken
+          champ.wardsPlaced = cont.wardsPlaced
+          champ.wardsKilled = cont.wardsKilled
+          champ.controlWards = cont.controlWards
+          champ.level = cont.level
+          champ.items = cont.items
+        }
+      }
+      refresh(this.team1, 1)
+      refresh(this.team2, 2)
+    },
+
+    _refreshRespawnStates(gameTime: number) {
+      const apply = (team: ChampionState[], until: number[], teamNo: number) => {
+        for (let i = 0; i < team.length; i++) {
+          const walking = until[i] > gameTime
+          team[i].respawnState = walking ? 'walking-back' : 'alive'
+          // cosmetic pseudo-HP, deterministic per champion and ~1.5s time slice
+          team[i].hpPercent = walking
+            ? 100
+            : 35 + ((i * 53 + Math.floor(gameTime / 90) * 31 + teamNo * 17 + this.battleSeed % 97) % 66)
+        }
+      }
+      apply(this.team1, this.respawnUntil.t1, 1)
+      apply(this.team2, this.respawnUntil.t2, 2)
+    },
+
     async loadChampions() {
       return fetchChampionNames()
     },
@@ -401,16 +693,22 @@ export const useBattleStore = defineStore('battle', {
     async refreshTeams() {
       const champions = await this.loadChampions()
       const selected = this.getRandomChampions(champions, 5)
-      this.team1 = this.headerSlots.map((slot) => ({
-        name: slot ?? '',
-        rank: slot ? this.currentRank.tier : 'Silver',
-        ...this.getStats(),
-      }))
-      this.team2 = selected.map((name) => ({ name, rank: 'Silver', ...this.getStats() }))
+      this.team1 = this.headerSlots.map((slot, i) =>
+        makeChampionState(slot ?? '', slot ? this.currentRank.tier : 'Silver', i),
+      )
+      this.team2 = selected.map((name, i) => makeChampionState(name, 'Silver', i))
     },
 
-    getStats() {
-      return { kills: 0, deaths: 0, assists: 0 }
+    /** Restore persisted team rosters (names + roles) without re-randomizing. */
+    restoreTeams(t1: Array<{ name: string; role: BattleRole }>, t2: Array<{ name: string; role: BattleRole }>) {
+      const build = (list: Array<{ name: string; role: BattleRole }>) =>
+        list.map((c, i) => {
+          const champ = makeChampionState(c.name, 'Silver', i)
+          champ.role = c.role
+          return champ
+        })
+      this.team1 = build(t1)
+      this.team2 = build(t2)
     },
 
     getRandomChampions(champions: string[], count: number) {
@@ -424,10 +722,10 @@ export const useBattleStore = defineStore('battle', {
     },
 
     resetTeamStats(team: ChampionState[]) {
-      team.forEach((champ) => {
-        champ.kills = 0
-        champ.deaths = 0
-        champ.assists = 0
+      team.forEach((champ, i) => {
+        const fresh = makeChampionState(champ.name, champ.rank, i)
+        fresh.role = champ.role
+        Object.assign(champ, fresh)
       })
     },
 
@@ -447,11 +745,28 @@ export const useBattleStore = defineStore('battle', {
         this.resultCountdownTimer = null
       }
       this.resultCountdown = 0
-      this.killEventSchedule = []
       this.resetTeamStats(this.team1)
       this.resetTeamStats(this.team2)
       this.chatMessages = []
       this.battleTime = 0
+      this.timeline = null
+      this.timelineCursor = 0
+      this.objectiveOverrides = []
+      this.killFeed = []
+      this.activeFights = []
+      this.respawnUntil = { t1: [0, 0, 0, 0, 0], t2: [0, 0, 0, 0, 0] }
+      this.battleTrack = defaultBattleTrack()
+      this.team1Turrets = 0
+      this.team2Turrets = 0
+      this.team1Inhibs = 0
+      this.team2Inhibs = 0
+      this.team1Drakes = 0
+      this.team2Drakes = 0
+      this.team1Barons = 0
+      this.team2Barons = 0
+      this.nexusDestroyedByTeam = null
+      this.activeObjectiveParticipants = null
+      this.honoredChampions = []
       this.drakeAlive = true
       this.drakeKilledByTeam = null
       this.drakeEventTime = 0
@@ -540,8 +855,23 @@ export const useBattleStore = defineStore('battle', {
       }
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
       this.currentWinProbability = winProbability
-      this.predeterminedWin = Math.random() < winProbability
+      this.initialWinProbability = winProbability
       this.currentOpponentLabel = `${opponent.rank.tier} ${opponent.rank.division}`
+    },
+
+    /** (Re)build the timeline from seed + persisted overrides — pure, reload-safe. */
+    rebuildTimeline() {
+      let timeline = generateTimeline(this.battleSeed, this.initialWinProbability)
+      for (const override of this.objectiveOverrides) {
+        timeline = reseedTimelineFrom(timeline, override.t, override.newSeed, override.prob)
+      }
+      this.timeline = timeline
+      this.predeterminedWin = timeline.winner === 1
+      // Jump targets for the admin drake/baron shortcuts
+      const firstDrake = timeline.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
+      const baron = timeline.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')
+      this.drakeEventTime = firstDrake?.t ?? 0
+      this.baronEventTime = baron?.t ?? 0
     },
 
     async initializeBattle() {
@@ -550,9 +880,10 @@ export const useBattleStore = defineStore('battle', {
       await this.refreshTeams()
       this.predetermineOutcome()
       if (this.team1.length > 0 && this.team2.length > 0) {
-        this.generateKillSchedule()
-        this.drakeEventTime = MINIMAP_PHASE_DRAKE_END
-        this.baronEventTime = MINIMAP_PHASE_MIDFIGHT_END + Math.floor(Math.random() * 600)
+        this.battleSeed = (Date.now() ^ Math.imul(this.currentBattleId, 2654435761)) >>> 0
+        this.objectiveOverrides = []
+        this.timelineCursor = 0
+        this.rebuildTimeline()
       }
       logger.group('Battle Init', () => {
         logger.info('Battle', `Team 1: ${this.team1.map((c) => c.name).join(', ')}`)
@@ -597,7 +928,9 @@ export const useBattleStore = defineStore('battle', {
       }
 
       const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
-      const battleResult = this.predeterminedWin ?? Math.random() < winProbability
+      const battleResult = this.timeline
+        ? this.timeline.winner === 1
+        : (this.predeterminedWin ?? Math.random() < winProbability)
 
       this.updateRanking(battleResult, opponentMMR)
 
@@ -617,6 +950,9 @@ export const useBattleStore = defineStore('battle', {
       this.totalBattleTime += this.battleTime
       this.lastMmrChange = actualMmrChange
       this.lastLpChange = actualLpChange
+
+      const mvpName = this.accumulateBattleStats()
+
       logger.info('Battle', `Result: ${battleResult ? 'WIN' : 'LOSS'}`, {
         mmrChange: actualMmrChange,
         lpChange: actualLpChange,
@@ -626,8 +962,99 @@ export const useBattleStore = defineStore('battle', {
         won: battleResult,
         opponent,
         winProbability,
+        lpChange: actualLpChange,
+        duration: this.battleTime,
+        teamKills: this.team1Kills,
+        enemyKills: this.team2Kills,
+        mvpName,
+      }
+      this.battleHistory.push(this.lastAutoBattleResult)
+      if (this.battleHistory.length > 20) {
+        this.battleHistory.splice(0, this.battleHistory.length - 20)
       }
       return this.lastAutoBattleResult
+    },
+
+    /**
+     * Folds the finished battle's per-champion stats into the all-time career
+     * stats. Returns the MVP name (best score across both teams).
+     */
+    accumulateBattleStats(): string {
+      const teamKills = Math.max(1, this.team1Kills)
+      let kpSum = 0
+      let visionSum = 0
+      const filled = this.team1.filter((c) => c.name)
+      for (const champ of filled) {
+        this.totalKills += champ.kills
+        this.totalDeaths += champ.deaths
+        this.totalAssists += champ.assists
+        this.allTime.cs += champ.cs
+        this.allTime.gold += champ.gold
+        this.allTime.damage += champ.damage
+        this.allTime.healing += champ.healing
+        this.allTime.damageTaken += champ.damageTaken
+        this.allTime.wardsPlaced += champ.wardsPlaced
+        this.allTime.wardsKilled += champ.wardsKilled
+        this.allTime.controlWards += champ.controlWards
+        this.allTime.multikills.double += champ.multikills.double
+        this.allTime.multikills.triple += champ.multikills.triple
+        this.allTime.multikills.quadra += champ.multikills.quadra
+        this.allTime.multikills.penta += champ.multikills.penta
+        this.allTime.largestSpree = Math.max(this.allTime.largestSpree, champ.largestSpree)
+        kpSum += (champ.kills + champ.assists) / teamKills
+        visionSum += champ.wardsPlaced + champ.wardsKilled * 1.5 + champ.controlWards
+      }
+      if (filled.length > 0) {
+        this.allTime.killParticipationSum += Math.min(1, kpSum / filled.length)
+        this.allTime.visionScoreSum += visionSum / filled.length
+        this.allTime.killParticipationGames += 1
+      }
+      if (this.battleTrack.firstBloodTeam1) this.allTime.firstBloods += 1
+      this.allTime.soloKills += this.battleTrack.soloKillsT1
+      this.allTime.dragons += this.team1Drakes
+      this.allTime.barons += this.team1Barons
+      this.allTime.turrets += this.team1Turrets
+      this.allTime.inhibitors += this.team1Inhibs
+      this.allTime.longestGameSeconds = Math.max(this.allTime.longestGameSeconds, this.battleTime)
+
+      // MVP across both teams; the award counter only rises for own champions
+      let mvpName = ''
+      let best = -Infinity
+      this.team1.forEach((champ, i) => {
+        if (!champ.name) return
+        const score = mvpScore(champ, this.battleTrack.objectiveParticipationsT1[i])
+        if (score > best) {
+          best = score
+          mvpName = champ.name
+        }
+      })
+      let mvpIsOwn = mvpName !== ''
+      for (const champ of this.team2) {
+        if (!champ.name) continue
+        const score = mvpScore(champ)
+        if (score > best) {
+          best = score
+          mvpName = champ.name
+          mvpIsOwn = false
+        }
+      }
+      if (mvpIsOwn) this.allTime.mvpAwards += 1
+      return mvpName
+    },
+
+    honorChampion(name: string) {
+      const idx = this.honoredChampions.indexOf(name)
+      if (idx >= 0) {
+        this.honoredChampions.splice(idx, 1)
+        return
+      }
+      if (this.honoredChampions.length >= HONOR_MAX_SELECTIONS) return
+      this.honoredChampions.push(name)
+    },
+
+    confirmHonorAndContinue() {
+      this.allTime.honorsGiven += this.honoredChampions.length
+      this.dismissResult()
     },
 
     promoteRank() {
@@ -877,21 +1304,8 @@ export const useBattleStore = defineStore('battle', {
         this.autoBattleTimer = null
       }
 
-      const endGameTime = BATTLE_REAL_DURATION_SECONDS * 60
-      for (const event of this.killEventSchedule) {
-        const attackingTeam = event.team === 1 ? this.team1 : this.team2
-        const defendingTeam = event.team === 1 ? this.team2 : this.team1
-        if (attackingTeam.length === 0 || defendingTeam.length === 0) continue
-        const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
-        killer.kills += 1
-        const others = attackingTeam.filter((c) => c !== killer)
-        if (others.length > 0) others[Math.floor(Math.random() * others.length)].assists += 1
-        if (Math.random() < BATTLE_DEATH_CHANCE) {
-          defendingTeam[Math.floor(Math.random() * defendingTeam.length)].deaths += 1
-        }
-      }
-      this.killEventSchedule = []
-      this.battleTime = endGameTime
+      this.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+      this.battleTime = BATTLE_TOTAL_GAME_SECONDS
       this.battlePhase = 'result'
       await this.runBattleCycle()
     },
@@ -899,98 +1313,56 @@ export const useBattleStore = defineStore('battle', {
     jumpToGameTime(targetSeconds: number) {
       if (this.battlePhase !== 'playing') return
       if (targetSeconds <= this.battleTime) return
-      if (targetSeconds >= BATTLE_REAL_DURATION_SECONDS * 60) return
+      if (targetSeconds >= BATTLE_TOTAL_GAME_SECONDS) return
 
       this._clearObjectiveModal()
+      this.applyTimelineUpTo(targetSeconds)
 
-      // Flush kill events up to target time
-      const pending = this.killEventSchedule.filter((e) => e.gameTime <= targetSeconds)
-      this.killEventSchedule = this.killEventSchedule.filter((e) => e.gameTime > targetSeconds)
-      for (const event of pending) {
-        const attackingTeam = (event.team === 1 ? this.team1 : this.team2).filter((c) => c.name)
-        const defendingTeam = (event.team === 1 ? this.team2 : this.team1).filter((c) => c.name)
-        if (!attackingTeam.length || !defendingTeam.length) continue
-        const killer = attackingTeam[Math.floor(Math.random() * attackingTeam.length)]
-        killer.kills += 1
-        const assistCount = Math.random() < BATTLE_ASSIST_CHANCE ? 1 : 2
-        const others = attackingTeam.filter((c) => c !== killer)
-        for (let i = 0; i < Math.min(assistCount, others.length); i++) {
-          others[Math.floor(Math.random() * others.length)].assists += 1
-        }
-        const victim = defendingTeam[Math.floor(Math.random() * defendingTeam.length)]
-        if (Math.random() < BATTLE_DEATH_CHANCE) victim.deaths += 1
-      }
-
-      // Simulate Drake kill if its event falls within the skipped window
-      if (this.drakeAlive && this.drakeEventTime > 0 && this.drakeEventTime <= targetSeconds) {
-        this.drakeKilledByTeam = Math.random() < 0.5 ? 1 : 2
-        this.drakeAlive = false
-        const teamName = this.drakeKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
-        this.chatMessages.push({
-          user: 'System',
-          text: `${teamName} slew the Dragon!`,
-          time: this.formatTime(this.drakeEventTime),
-          team: this.drakeKilledByTeam,
-          type: 'system',
-        })
-      }
-
-      // Simulate Baron kill if its event falls within the skipped window
-      if (
-        this.baronAlive &&
-        this.baronEventTime > 0 &&
-        this.baronEventTime <= targetSeconds &&
-        targetSeconds < MINIMAP_PHASE_BARON_END
-      ) {
-        this.baronKilledByTeam = Math.random() < 0.5 ? 1 : 2
-        this.baronAlive = false
-        const baronTeamName = this.baronKilledByTeam === 1 ? 'Blue Team' : 'Red Team'
-        this.chatMessages.push({
-          user: 'System',
-          text: `${baronTeamName} slew Baron Nashor!`,
-          time: this.formatTime(this.baronEventTime),
-          team: this.baronKilledByTeam,
-          type: 'system',
-        })
-      }
-
-      // System message marking the skip
-      this.chatMessages.push({
-        user: 'System',
-        text: `Match skipped to ${this.formatTime(targetSeconds)}`,
-        time: this.formatTime(targetSeconds),
-        team: 0,
-        type: 'system',
-      })
+      this._systemMessage(`Match skipped to ${this.formatTime(targetSeconds)}`, 0, targetSeconds)
 
       this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
       this.battleTime = targetSeconds
       this.startBattleSimulation(true)
     },
 
-    _openObjectiveModal(type: 'drake' | 'baron') {
+    /** Living own-team champions currently at the active objective pit. */
+    _objectiveSideCounts(): { own: number; enemy: number } {
+      const parts = this.activeObjectiveParticipants
+      const countSide = (idxs: number[], team: ChampionState[], until: number[]) =>
+        idxs.filter((i) => team[i]?.name && until[i] <= this.battleTime).length
+      if (!parts) return { own: 3, enemy: 3 }
+      return {
+        own: Math.max(1, countSide(parts.t1, this.team1, this.respawnUntil.t1)),
+        enemy: Math.max(1, countSide(parts.t2, this.team2, this.respawnUntil.t2)),
+      }
+    },
+
+    _openObjectiveModal(type: 'drake' | 'baron', participants: { t1: number[]; t2: number[] } | null) {
       const maxHP = type === 'drake' ? DRAKE_OBJECTIVE_HP : BARON_OBJECTIVE_HP
       this.activeObjective = type
+      this.activeObjectiveParticipants = participants
       this.objectiveHP = maxHP
       this.objectiveMaxHP = maxHP
       this.objectiveResult = null
       this.objectiveWinDelta = 0
       this.objectiveModalOpen = true
 
-      const totalDPS = OBJECTIVE_OWN_TEAM_DPS + OBJECTIVE_ENEMY_TEAM_DPS
-      const drainPerTick = totalDPS * (OBJECTIVE_DPS_TICK_MS / 1000)
       this._objectiveIntervalId = setInterval(() => {
         if (!this.objectiveModalOpen || this.objectiveResult !== null) return
-        this.objectiveHP = Math.max(0, this.objectiveHP - drainPerTick)
+        const sides = this._objectiveSideCounts()
+        const totalDPS = (sides.own + sides.enemy) * OBJECTIVE_BASE_DPS_PER_CHAMP
+        this.objectiveHP = Math.max(0, this.objectiveHP - totalDPS * (OBJECTIVE_DPS_TICK_MS / 1000))
         if (this.objectiveHP <= 0) {
-          const ownKill = Math.random() < OBJECTIVE_OWN_TEAM_DPS / totalDPS
-          this._resolveObjective(ownKill ? 'own' : 'enemy')
+          const ownChance = sides.own / (sides.own + sides.enemy)
+          this._resolveObjective(Math.random() < ownChance ? 'own' : 'enemy')
         }
       }, OBJECTIVE_DPS_TICK_MS)
 
       this._objectiveTimeoutId = setTimeout(() => {
         if (this.objectiveModalOpen && this.objectiveResult === null) {
-          this._resolveObjective(Math.random() < 0.5 ? 'own' : 'enemy')
+          const sides = this._objectiveSideCounts()
+          const ownChance = sides.own / (sides.own + sides.enemy)
+          this._resolveObjective(Math.random() < ownChance ? 'own' : 'enemy')
         }
       }, OBJECTIVE_TIMEOUT_MS)
     },
@@ -1003,6 +1375,11 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    /**
+     * Live resolution of the interactive objective. The remaining timeline is
+     * re-seeded with the shifted win probability, so the outcome of the match
+     * can genuinely flip — the override is persisted for reload determinism.
+     */
     _resolveObjective(by: 'player' | 'own' | 'enemy') {
       if (this._objectiveIntervalId) {
         clearInterval(this._objectiveIntervalId)
@@ -1013,32 +1390,45 @@ export const useBattleStore = defineStore('battle', {
         this._objectiveTimeoutId = null
       }
       this.objectiveResult = by
+      const objective = this.activeObjective
+      if (!objective) return
       const ownWin = by === 'player' || by === 'own'
-      const bonus =
-        this.activeObjective === 'drake' ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS
+      const bonus = objective === 'drake' ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS
 
-      if (this.activeObjective === 'drake') {
-        this.drakeKilledByTeam = ownWin ? 1 : 2
-        this.drakeAlive = false
-      } else {
-        this.baronKilledByTeam = ownWin ? 1 : 2
-        this.baronAlive = false
-      }
+      this._creditObjective(objective, ownWin ? 1 : 2, this.activeObjectiveParticipants)
 
-      const prevProb = this.currentWinProbability
-      this.currentWinProbability = Math.max(0.05, Math.min(0.95, prevProb + (ownWin ? bonus : -bonus)))
+      const newProb = Math.max(0.05, Math.min(0.95, this.currentWinProbability + (ownWin ? bonus : -bonus)))
+      this.currentWinProbability = newProb
       this.objectiveWinDelta = ownWin ? bonus : -bonus
 
-      const objectiveName = this.activeObjective === 'drake' ? 'Dragon' : 'Baron Nashor'
-      const teamName = ownWin ? 'Blue Team' : 'Red Team'
-      this.chatMessages.push({
-        user: 'System',
-        text: `${teamName} slew the ${objectiveName}!`,
-        time: this.formatTime(this.battleTime),
-        team: ownWin ? 1 : 2,
-        type: 'system',
-      })
+      if (this.timeline) {
+        const newSeed =
+          (this.battleSeed ^ Math.imul(this.battleTime + 1, 2654435761) ^ (this.objectiveOverrides.length + 1)) >>> 0
+        this.objectiveOverrides.push({ t: this.battleTime, newSeed, prob: newProb })
+        this.timeline = reseedTimelineFrom(this.timeline, this.battleTime, newSeed, newProb)
+        this.predeterminedWin = this.timeline.winner === 1
+        this.timelineCursor = this.timeline.events.findIndex((ev) => ev.t > this.battleTime)
+        if (this.timelineCursor < 0) this.timelineCursor = this.timeline.events.length
+      }
 
+      const closeTimeoutId = setTimeout(() => {
+        this._clearObjectiveModal()
+      }, OBJECTIVE_RESULT_DELAY_MS)
+      this.timerIds.push(closeTimeoutId)
+    },
+
+    /** Close the modal after a scripted (timeline) objective result — no reseed. */
+    _finishObjectiveModal(by: 'own' | 'enemy') {
+      if (this._objectiveIntervalId) {
+        clearInterval(this._objectiveIntervalId)
+        this._objectiveIntervalId = null
+      }
+      if (this._objectiveTimeoutId) {
+        clearTimeout(this._objectiveTimeoutId)
+        this._objectiveTimeoutId = null
+      }
+      this.objectiveResult = by
+      this.objectiveWinDelta = 0
       const closeTimeoutId = setTimeout(() => {
         this._clearObjectiveModal()
       }, OBJECTIVE_RESULT_DELAY_MS)
@@ -1057,11 +1447,20 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveModalOpen = false
       this.objectiveResult = null
       this.activeObjective = null
+      this.activeObjectiveParticipants = null
     },
 
     syncFromTimestamps() {
       if (this.showAutoBattleResult && this.isAutoBattleInitialized) {
-        this.autoSimulateHonorAndProceed()
+        // Give the honor screen its full display window before auto-continuing;
+        // only force-proceed once the result pause has actually elapsed
+        // (background tabs where the local setTimeout was throttled).
+        if (
+          this.resultPhaseStartTimestamp > 0 &&
+          Date.now() - this.resultPhaseStartTimestamp >= BATTLE_RESULT_PAUSE_MS
+        ) {
+          this.autoSimulateHonorAndProceed()
+        }
         return
       }
 
@@ -1072,12 +1471,14 @@ export const useBattleStore = defineStore('battle', {
       ) {
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
         const gameTime = Math.floor(realElapsedS * 60)
-        if (gameTime >= BATTLE_REAL_DURATION_SECONDS * 60) {
+        if (gameTime >= BATTLE_TOTAL_GAME_SECONDS) {
           if (this.battleSimIntervalId) {
             clearInterval(this.battleSimIntervalId)
             this.battleSimIntervalId = null
           }
-          this.battleTime = BATTLE_REAL_DURATION_SECONDS * 60
+          this._clearObjectiveModal()
+          this.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+          this.battleTime = BATTLE_TOTAL_GAME_SECONDS
           this.battlePhase = 'result'
           logBattleEnded(this.predeterminedWin ?? false)
           this.runBattleCycle()
@@ -1150,6 +1551,22 @@ export const useBattleStore = defineStore('battle', {
     resumeBattleAfterLoad() {
       this.simulationReadyToStart = false
       if (!this.isAutoBattleInitialized) return
+      // Rebuild the deterministic timeline for a battle that was running when
+      // the page was closed; the cursor fast-forwards via applyTimelineUpTo.
+      if (
+        this.battlePhaseStartTimestamp > 0 &&
+        this.battleSeed > 0 &&
+        !this.timeline &&
+        this.team1.length > 0 &&
+        this.team2.length > 0
+      ) {
+        this.rebuildTimeline()
+        this.timelineCursor = 0
+        const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
+        const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS * 60))
+        this.applyTimelineUpTo(gameTime)
+        this.battleTime = gameTime
+      }
       if (!_visibilityHandler) {
         _visibilityHandler = () => {
           if (!document.hidden) this.syncFromTimestamps()

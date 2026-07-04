@@ -311,12 +311,110 @@ export interface RecruitableChampion {
   chimesPrice: number
 }
 
+export type BattleRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
+
+export interface MultikillCounts {
+  double: number
+  triple: number
+  quadra: number
+  penta: number
+}
+
 export interface ChampionState {
   name: string
   rank: string
+  role: BattleRole
   kills: number
   deaths: number
   assists: number
+  cs: number
+  gold: number
+  damage: number
+  healing: number
+  damageTaken: number
+  wardsPlaced: number
+  wardsKilled: number
+  controlWards: number
+  level: number
+  items: number
+  multikills: MultikillCounts
+  currentSpree: number
+  largestSpree: number
+  hpPercent: number
+  respawnState: 'alive' | 'walking-back'
+}
+
+export type BattleEventType =
+  | 'kill'
+  | 'fightStart'
+  | 'fightEnd'
+  | 'objectiveSpawn'
+  | 'objectiveResult'
+  | 'turret'
+  | 'inhibitor'
+  | 'nexus'
+
+export interface BattleEvent {
+  t: number
+  type: BattleEventType
+  team?: 1 | 2
+  killerIdx?: number
+  victimIdx?: number
+  assistIdxs?: number[]
+  multikillTier?: 2 | 3 | 4 | 5
+  firstBlood?: boolean
+  soloKill?: boolean
+  location?: { x: number; y: number }
+  lane?: 'top' | 'mid' | 'bot'
+  objective?: 'drake' | 'baron'
+  participants?: { t1: number[]; t2: number[] }
+  winProbDelta: number
+}
+
+export interface BattleTimeline {
+  seed: number
+  winner: 1 | 2
+  events: BattleEvent[]
+}
+
+export interface ObjectiveOverride {
+  t: number
+  newSeed: number
+  prob: number
+}
+
+export interface KillFeedEntry {
+  killerName: string
+  victimName: string
+  killerTeam: 1 | 2
+  multikillTier?: 2 | 3 | 4 | 5
+  firstBlood?: boolean
+  t: number
+}
+
+export interface AllTimeBattleStats {
+  killParticipationSum: number
+  killParticipationGames: number
+  largestSpree: number
+  firstBloods: number
+  soloKills: number
+  multikills: MultikillCounts
+  mvpAwards: number
+  cs: number
+  gold: number
+  damage: number
+  healing: number
+  damageTaken: number
+  dragons: number
+  barons: number
+  turrets: number
+  inhibitors: number
+  wardsPlaced: number
+  wardsKilled: number
+  controlWards: number
+  visionScoreSum: number
+  longestGameSeconds: number
+  honorsGiven: number
 }
 
 export interface ChatMessage {
@@ -343,6 +441,11 @@ export interface BattleResult {
   won: boolean
   opponent: Opponent
   winProbability: number
+  lpChange?: number
+  duration?: number
+  teamKills?: number
+  enemyKills?: number
+  mvpName?: string
 }
 
 export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'

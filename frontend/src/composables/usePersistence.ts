@@ -1,6 +1,6 @@
 import { useGameStore } from '@/stores/gameStore'
 import { useShopStore } from '@/stores/shopStore'
-import { useBattleStore } from '@/stores/battleStore'
+import { useBattleStore, defaultAllTimeStats } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { useAugmentStore } from '@/stores/augmentStore'
@@ -101,6 +101,15 @@ export function usePersistence() {
         resultPhaseStartTimestamp: battleStore.resultPhaseStartTimestamp,
         battlePhaseStartTimestamp: battleStore.battlePhaseStartTimestamp,
         autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
+        searchingPhaseStartTimestamp: battleStore.searchingPhaseStartTimestamp,
+        allTime: JSON.parse(JSON.stringify(battleStore.allTime)),
+        battleSeed: battleStore.battleSeed,
+        initialWinProbability: battleStore.initialWinProbability,
+        objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
+        battleTeams: {
+          t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
+          t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role })),
+        },
       },
       expeditions: {
         activeExpeditions: expeditionStore.activeExpeditions,
@@ -281,6 +290,41 @@ export function usePersistence() {
         battleStore.resultPhaseStartTimestamp = b.resultPhaseStartTimestamp ?? 0
         battleStore.battlePhaseStartTimestamp = b.battlePhaseStartTimestamp ?? 0
         battleStore.autoBattleTimerEndTimestamp = b.autoBattleTimerEndTimestamp ?? 0
+        battleStore.searchingPhaseStartTimestamp = b.searchingPhaseStartTimestamp ?? 0
+        // All-time career stats: spread-merge so fields added later default to 0
+        battleStore.allTime = {
+          ...defaultAllTimeStats(),
+          ...(b.allTime ?? {}),
+          multikills: {
+            ...defaultAllTimeStats().multikills,
+            ...(b.allTime?.multikills ?? {}),
+          },
+        }
+        battleStore.battleSeed = b.battleSeed ?? 0
+        battleStore.initialWinProbability = b.initialWinProbability ?? 0.5
+        battleStore.currentWinProbability = b.initialWinProbability ?? 0.5
+        if (Array.isArray(b.objectiveOverrides)) {
+          battleStore.objectiveOverrides = b.objectiveOverrides
+            .filter(
+              (o: unknown): o is { t: number; newSeed: number; prob: number } =>
+                typeof o === 'object' && o !== null &&
+                typeof (o as { t?: unknown }).t === 'number' &&
+                typeof (o as { newSeed?: unknown }).newSeed === 'number' &&
+                typeof (o as { prob?: unknown }).prob === 'number',
+            )
+            .map((o) => ({ ...o }))
+        }
+        // Mid-battle rosters (needed for deterministic timeline resume)
+        if (
+          b.battleTeams &&
+          Array.isArray(b.battleTeams.t1) &&
+          Array.isArray(b.battleTeams.t2) &&
+          b.battleTeams.t1.length === 5 &&
+          b.battleTeams.t2.length === 5 &&
+          b.battlePhaseStartTimestamp > 0
+        ) {
+          battleStore.restoreTeams(b.battleTeams.t1, b.battleTeams.t2)
+        }
       }
 
       // Restore expeditionStore
@@ -554,6 +598,14 @@ export function usePersistence() {
     battleStore.battleTime = 0
     battleStore.timeUntilNextBattle = 0
     battleStore.currentBattleId = 0
+    battleStore.allTime = defaultAllTimeStats()
+    battleStore.battleSeed = 0
+    battleStore.initialWinProbability = 0.5
+    battleStore.objectiveOverrides = []
+    battleStore.timeline = null
+    battleStore.timelineCursor = 0
+    battleStore.killFeed = []
+    battleStore.honoredChampions = []
     // 6. Reset remaining stores
     const inventoryStore = useInventoryStore()
     inventoryStore.$reset()

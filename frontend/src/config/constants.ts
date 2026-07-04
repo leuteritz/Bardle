@@ -19,7 +19,9 @@ export const MEEP_COST_EXPONENT = 1.2
 
 // Auto-battle
 export const AUTO_BATTLE_INTERVAL_MS = 45000
-export const BATTLE_REAL_DURATION_SECONDS = 45
+export const BATTLE_REAL_DURATION_SECONDS = 60
+/** Total simulated game-seconds per battle (60 game-seconds per real second) */
+export const BATTLE_TOTAL_GAME_SECONDS = BATTLE_REAL_DURATION_SECONDS * 60
 
 // Game State display phases (bottom stats bar)
 export const GAME_STATE = {
@@ -34,8 +36,6 @@ export const GAME_STATE = {
 } as const
 
 export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
-export const KILL_EVENTS_PER_TEAM_MIN = 20
-export const KILL_EVENTS_PER_TEAM_MAX = 40
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
@@ -127,12 +127,12 @@ export const PLANET_TYPE_NAMES: Record<string, string> = {
 // Title rotation
 export const TITLE_MESSAGE_INTERVAL_MS = 5000
 
-// Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 1800)
-export const MINIMAP_PHASE_LANING_END = 700
-export const MINIMAP_PHASE_DRAKE_END = 1200
-export const MINIMAP_PHASE_MIDFIGHT_END = 1500
-export const MINIMAP_PHASE_BARON_END = 2200
-export const MINIMAP_PHASE_PUSH_END = 2700
+// Minimap phases (game-time seconds, 60 game-sec = 1 real-sec, total = 3600)
+export const MINIMAP_PHASE_LANING_END = 930
+export const MINIMAP_PHASE_DRAKE_END = 1600
+export const MINIMAP_PHASE_MIDFIGHT_END = 2400
+export const MINIMAP_PHASE_BARON_END = 2930
+export const MINIMAP_PHASE_PUSH_END = 3600
 
 export const BLUE_NEXUS = { x: 12, y: 88 }
 export const RED_NEXUS = { x: 88, y: 12 }
@@ -144,19 +144,173 @@ export const DRAKE_POS = { x: 72, y: 72 }
 export const BARON_POS = { x: 28, y: 28 }
 export const MID_CENTER = { x: 50, y: 50 }
 
+// Typical skirmish locations per lane (map-units on the 100x100 minimap)
+export const LANE_FIGHT_POSITIONS: Record<'top' | 'mid' | 'bot', { x: number; y: number }> = {
+  top: { x: 24, y: 22 },
+  mid: { x: 50, y: 50 },
+  bot: { x: 78, y: 80 },
+}
+
 // ── Objective Modal ────────────────────────────────────────────────────────
 export const OBJECTIVE_DRAKE_SPAWN = 300 // game-seconds when drake appears on minimap
-export const OBJECTIVE_BARON_SPAWN = 1200 // game-seconds when baron appears on minimap
+export const OBJECTIVE_BARON_SPAWN = 2400 // game-seconds when baron appears on minimap
 export const DRAKE_OBJECTIVE_HP = 3000
 export const BARON_OBJECTIVE_HP = 5000
-export const OBJECTIVE_OWN_TEAM_DPS = 150
-export const OBJECTIVE_ENEMY_TEAM_DPS = 100
+/** Objective DPS contributed by every living champion present at the pit */
+export const OBJECTIVE_BASE_DPS_PER_CHAMP = 40
 export const OBJECTIVE_CLICK_DAMAGE = 80
 export const OBJECTIVE_DRAKE_WIN_BONUS = 0.08
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 export const OBJECTIVE_DPS_TICK_MS = 200
 export const OBJECTIVE_TIMEOUT_MS = 12000
 export const OBJECTIVE_RESULT_DELAY_MS = 1800
+
+// ── Battle Event Timeline ──────────────────────────────────────────────────
+// Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
+export const TIMELINE_LANING_END = 900
+export const TIMELINE_DRAKE_WINDOW_END = 1800
+export const TIMELINE_MIDFIGHT_END = 2400
+export const TIMELINE_BARON_END = 2900
+/** Game-second at which the losing nexus falls */
+export const TIMELINE_NEXUS_FALL_T = 3550
+export const TIMELINE_FIRST_BLOOD_MIN_T = 120
+export const TIMELINE_FIRST_BLOOD_MAX_T = 300
+export const TIMELINE_SOLO_KILL_CHANCE = 0.3
+export const TIMELINE_LANE_FIGHTS_MIN = 4
+export const TIMELINE_LANE_FIGHTS_MAX = 7
+export const TIMELINE_DRAKE_COUNT_MIN = 1
+export const TIMELINE_DRAKE_COUNT_MAX = 2
+export const TIMELINE_MID_FIGHTS_MIN = 2
+export const TIMELINE_MID_FIGHTS_MAX = 3
+export const TIMELINE_FIGHT_KILLS_MIN = 2
+export const TIMELINE_FIGHT_KILLS_MAX = 4
+export const TIMELINE_PUSH_KILLS_MIN = 3
+export const TIMELINE_PUSH_KILLS_MAX = 6
+/** Chance that a fight's top killer escalates to the next multikill tier */
+export const TIMELINE_DOUBLE_CHANCE = 0.22
+export const TIMELINE_TRIPLE_CHANCE = 0.3
+export const TIMELINE_QUADRA_CHANCE = 0.18
+export const TIMELINE_PENTA_CHANCE = 0.12
+/** How strongly current momentum biases which team wins the next event */
+export const TIMELINE_MOMENTUM_TEAM_BIAS = 0.35
+export const TIMELINE_KILL_WINPROB_DELTA = 0.02
+export const TIMELINE_DRAKE_WINPROB_DELTA = 0.06
+export const TIMELINE_BARON_WINPROB_DELTA = 0.1
+export const TIMELINE_TURRET_WINPROB_DELTA = 0.03
+export const TIMELINE_INHIB_WINPROB_DELTA = 0.04
+/** Turrets taken by the winning side after baron (min/max) */
+export const TIMELINE_PUSH_TURRETS_MIN = 2
+export const TIMELINE_PUSH_TURRETS_MAX = 4
+export const TIMELINE_PUSH_INHIBS_MIN = 1
+export const TIMELINE_PUSH_INHIBS_MAX = 2
+/** Objective pit participants per team (min/max champions) */
+export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
+export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
+/** Game-seconds between objective spawn and its scripted result (720 game-s = 12 real-s, leaves room for the click modal) */
+export const TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T = 720
+export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 900
+
+// ── Per-champion continuous stat rates (per game-minute unless noted) ──────
+export const CS_RATE_BY_ROLE: Record<string, number> = {
+  top: 7.2,
+  jungle: 5.8,
+  mid: 7.8,
+  adc: 8.4,
+  support: 0.9,
+}
+export const DMG_RATE_BY_ROLE: Record<string, number> = {
+  top: 560,
+  jungle: 520,
+  mid: 780,
+  adc: 900,
+  support: 260,
+}
+export const HEAL_RATE_BY_ROLE: Record<string, number> = {
+  top: 120,
+  jungle: 140,
+  mid: 80,
+  adc: 60,
+  support: 350,
+}
+export const DMG_TAKEN_RATE_BY_ROLE: Record<string, number> = {
+  top: 850,
+  jungle: 700,
+  mid: 500,
+  adc: 420,
+  support: 380,
+}
+export const WARDS_PLACED_RATE_BY_ROLE: Record<string, number> = {
+  top: 0.4,
+  jungle: 0.8,
+  mid: 0.4,
+  adc: 0.4,
+  support: 1.4,
+}
+export const WARDS_KILLED_RATE_BY_ROLE: Record<string, number> = {
+  top: 0.1,
+  jungle: 0.3,
+  mid: 0.1,
+  adc: 0.1,
+  support: 0.3,
+}
+export const CONTROL_WARDS_RATE_BY_ROLE: Record<string, number> = {
+  top: 0.05,
+  jungle: 0.15,
+  mid: 0.05,
+  adc: 0.05,
+  support: 0.25,
+}
+export const GOLD_PASSIVE_PER_MIN = 210
+export const GOLD_PER_CS = 21
+export const GOLD_PER_KILL = 300
+export const GOLD_PER_ASSIST = 150
+/** Champion levels 1→18 spread over the game: one level per this many game-seconds */
+export const CHAMPION_LEVEL_SECONDS = 210
+export const CHAMPION_MAX_LEVEL = 18
+/** Per-champion stat-rate noise range (multiplier drawn from the battle seed) */
+export const STAT_NOISE_MIN = 0.75
+export const STAT_NOISE_MAX = 1.3
+
+// ── MVP score weights ──────────────────────────────────────────────────────
+export const MVP_W_KILL = 3
+export const MVP_W_ASSIST = 1.5
+export const MVP_W_DEATH = -2
+export const MVP_W_CS_DIV = 25
+export const MVP_W_DAMAGE_DIV = 1500
+export const MVP_W_GOLD_DIV = 2000
+export const MVP_W_OBJECTIVE = 2
+
+// ── Honor phase ────────────────────────────────────────────────────────────
+export const HONOR_MAX_SELECTIONS = 3
+
+// ── Warp HUD (planet search) ───────────────────────────────────────────────
+export const WARP_DISTANCE_LY_MIN = 1.2
+export const WARP_DISTANCE_LY_MAX = 8.5
+export const WARP_VELOCITY_C_MIN = 0.82
+export const WARP_VELOCITY_C_MAX = 0.99
+export const WARP_STAR_COUNT = 460
+export const WARP_STAR_SPEED = 22
+export const WARP_HUD_UPDATE_MS = 100
+
+// ── Champion movement (minimap waypoints, game-seconds / map-units) ────────
+/** Game-seconds champions need to walk from base to their lane at game start */
+export const MOVE_WALKOUT_END_T = 90
+/** Game-seconds a respawned champion needs to walk back to its planned action */
+export const MOVE_RESPAWN_WALK_SECONDS = 240
+/** Champions start moving toward a fight this many game-seconds before it starts */
+export const MOVE_FIGHT_GATHER_LEAD_T = 80
+/** Cosmetic position jitter in map-units applied by the UI ticker */
+export const MOVE_JITTER_UNITS = 1.5
+/** UI position sampling interval (ms) */
+export const MOVE_TICK_INTERVAL_MS = 500
+
+// ── Kill / objective announcement banners (rift board) ────────────────────
+/** How long a single announcement banner stays on screen (ms) */
+export const ANNOUNCE_DISPLAY_MS = 2600
+/** Maximum queued announcements — older ones are dropped */
+export const ANNOUNCE_QUEUE_MAX = 3
+/** Kill-feed entries older than this (game-seconds vs. current battleTime) never announce */
+export const ANNOUNCE_FRESHNESS_GAME_SECONDS = 240
 
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100
@@ -968,22 +1122,14 @@ export const QUANTUM_LUCK_THRESHOLD = 0.5
 export const BOSS_DAMAGE_REDUCTION_CAP = 0.8
 
 // Battle simulation
-/** Earliest game-time (seconds) at which a kill event can fire */
-export const KILL_EVENT_MIN_GAME_SECONDS = 120
-/** Latest game-time (seconds) at which a kill event can be scheduled */
-export const KILL_EVENT_MAX_GAME_SECONDS = 1800
-/** Probability that a kill event grants an assist instead of a second assist */
-export const BATTLE_ASSIST_CHANCE = 0.6
-/** Probability that a kill event records a death for the victim */
-export const BATTLE_DEATH_CHANCE = 0.85
 /** Number of sequential chat messages displayed during a battle */
 export const BATTLE_CHAT_MESSAGE_COUNT = 14
 /** Game-time (seconds) threshold dividing early-game from mid-game chat pool */
 export const BATTLE_EARLY_GAME_SECONDS = 600
 /** Countdown shown on the result screen before auto-advance (seconds) */
-export const BATTLE_RESULT_COUNTDOWN_SECONDS = 4
-/** Pause duration on the result screen before proceeding (ms) */
-export const BATTLE_RESULT_PAUSE_MS = 4000
+export const BATTLE_RESULT_COUNTDOWN_SECONDS = 8
+/** Pause duration on the result screen before proceeding (ms) — honor phase window */
+export const BATTLE_RESULT_PAUSE_MS = 8000
 /** Countdown tick interval for the pre-battle search-phase timer (ms) */
 export const BATTLE_COUNTDOWN_INTERVAL_MS = 500
 /** Duration of the planet-search warp animation (ms) — must match ANIM_DURATION in PlanetSearchComponent */
@@ -1347,8 +1493,6 @@ export const ADMIN_LEVEL_AUGMENT_QUEUE_MAX = 10
 
 // ── UI Timing ─────────────────────────────────────────────────────────────────
 export const TOAST_DURATION_MS = 800
-/** Milliseconds the cinematic kill-announcement banner stays visible before fading */
-export const KILL_BANNER_DISPLAY_MS = 3_500
 
 // ── Music ─────────────────────────────────────────────────────────────────────
 export const MUSIC_DEFAULT_VOLUME = 0.1
@@ -1757,6 +1901,14 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:shopping-bag', // Shop action button (SigilDetailsPanel footer)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
   'game-icons:round-star', // Sigil stage badge (SigilBoardComponent)
+  // Battle tab redesign (landing / rift / honor)
+  'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)
+  'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)
+  'game-icons:stone-tower', // OBJECTIVES stat group header (BattleLandingScreen)
+  'game-icons:semi-closed-eye', // VISION & TIME stat group header (BattleLandingScreen)
+  'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow)
+  'game-icons:medal', // Honor pips / grant honor header (HonorGrantPanel)
+  'game-icons:watchtower', // Turret counter (ScoreTopBar)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

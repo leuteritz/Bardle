@@ -1,10 +1,11 @@
 <template>
   <div v-if="isAnimating" class="absolute inset-0 z-30 universe-overlay" ref="containerRef">
     <canvas ref="universeCanvas" class="universe-canvas" />
+    <WarpHudOverlay v-if="!showPlanetFound" />
     <Transition name="planet-found-fade">
       <div v-if="showPlanetFound" class="planet-found-overlay">
         <img src="/img/planet.png" alt="planet" width="52" height="52" class="planet-found-icon" />
-        <span class="planet-found-text">PLANET GEFUNDEN!</span>
+        <span class="planet-found-text">PLANET FOUND!</span>
       </div>
     </Transition>
   </div>
@@ -12,6 +13,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, onUnmounted, nextTick } from 'vue'
+import WarpHudOverlay from './search/WarpHudOverlay.vue'
 import {
   PLANET_SEARCH_ANIM_FALLBACK_MARGIN_MS,
   PLANET_SEARCH_ANIM_DURATION_MS,
@@ -108,6 +110,7 @@ function buildPlanets(W: number, H: number): PlanetDef[] {
 
 export default defineComponent({
   name: 'PlanetSearchComponent',
+  components: { WarpHudOverlay },
 
   props: {
     variant: {

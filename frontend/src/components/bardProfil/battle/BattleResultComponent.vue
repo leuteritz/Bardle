@@ -1,80 +1,60 @@
 <template>
   <div class="relative flex flex-col w-full h-full overflow-hidden">
-    <!-- ══ UNIVERSE ANIMATION ══ -->
+    <!-- ══ PHASE 2 · PLANET SEARCH (warp overlay, triggers itself) ══ -->
     <PlanetSearchComponent ref="universeAnim" :variant="planetVariant" />
 
-    <!-- ══ START SCREEN ══ -->
+    <!-- ══ PHASE 1 · LANDING (career stats + start) ══ -->
     <Transition name="start-fade">
-      <BattleStartScreenComponent
+      <BattleLandingScreen
         v-if="!battleStore.isAutoBattleInitialized && !isUniverseAnimating && !isStarting"
         :is-starting="isStarting"
         @start="startBattle"
       />
     </Transition>
 
-    <!-- ══ BATTLE UI ══ -->
+    <!-- ══ PHASE 3 · RIFT BATTLE (broadcast board) ══ -->
     <template v-if="battleStore.isAutoBattleInitialized && !isUniverseAnimating">
-      <!-- ── PLANET BATTLE BACKGROUND ── -->
       <PlanetBattleBackgroundComponent :variant="planetVariant" />
 
-      <!-- Minimap fills the entire tab -->
-      <div class="relative z-10 flex flex-1 min-h-0">
-        <BattleMapComponent
-          class="w-full h-full"
-          :battle-id="currentBattleId"
-          :score="score"
-          :chat-open="showChat"
-          @toggle-chat="showChat = !showChat"
-        />
+      <RiftBattleBoard :chat-open="showChat" @toggle-chat="showChat = !showChat" />
 
-        <!-- Objective modal overlays the minimap when dragon/baron spawns -->
-        <ObjectiveModalComponent />
+      <!-- Objective modal overlays the board when dragon/baron spawns -->
+      <ObjectiveModalComponent />
 
-        <!--
-          Chat is a collapsible overlay anchored to the bottom-left of the map.
-          Moved out of the main layout column so the minimap gets full space.
-          Players toggle it via the chat button on the minimap.
-        -->
-        <Transition name="chat-slide">
-          <BattleChatComponent
-            v-if="showChat"
-            class="absolute bottom-0 left-0 z-40 chat-overlay"
-          />
-        </Transition>
-      </div>
+      <!-- Collapsible chat overlay -->
+      <Transition name="chat-slide">
+        <BattleChatComponent v-if="showChat" class="absolute bottom-0 left-0 z-40 chat-overlay" />
+      </Transition>
 
-      <!-- Cinematic kill announcement banner — overlays the entire battle area -->
-      <BattleKillBannerComponent />
+      <!-- ══ PHASE 4 · HONOR / RESULT ══ -->
+      <Transition name="honor-fade">
+        <HonorResultScreen v-if="battleStore.showAutoBattleResult" />
+      </Transition>
     </template>
   </div>
-
-  <!-- Result Modal -->
-  <BattleResultModal />
 </template>
 
 <script lang="ts">
 import { defineComponent, computed, ref, watch } from 'vue'
-import BattleMapComponent from './BattleMapComponent.vue'
-import BattleChatComponent from './BattleChatComponent.vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
-import BattleStartScreenComponent from './BattleStartScreenComponent.vue'
-import BattleResultModal from './BattleResultModal.vue'
-import BattleKillBannerComponent from './BattleKillBannerComponent.vue'
+import BattleChatComponent from './BattleChatComponent.vue'
 import ObjectiveModalComponent from './ObjectiveModalComponent.vue'
+import BattleLandingScreen from './landing/BattleLandingScreen.vue'
+import RiftBattleBoard from './rift/RiftBattleBoard.vue'
+import HonorResultScreen from './result/HonorResultScreen.vue'
 import { useBattleStore } from '@/stores/battleStore'
 
 export default defineComponent({
   name: 'BattleResultComponent',
   components: {
-    BattleMapComponent,
-    BattleChatComponent,
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,
-    BattleStartScreenComponent,
-    BattleResultModal,
-    BattleKillBannerComponent,
+    BattleChatComponent,
     ObjectiveModalComponent,
+    BattleLandingScreen,
+    RiftBattleBoard,
+    HonorResultScreen,
   },
 
   setup() {
@@ -112,12 +92,6 @@ export default defineComponent({
       isStarting.value = false
     }
 
-    const score = computed(() => ({
-      team1Kills: battleStore.team1.reduce((sum, c) => sum + c.kills, 0),
-      team2Kills: battleStore.team2.reduce((sum, c) => sum + c.kills, 0),
-    }))
-
-    const currentBattleId = computed(() => battleStore.currentBattleId)
     const planetVariant = computed(() => battleStore.currentBattleId % 5)
 
     return {
@@ -127,8 +101,6 @@ export default defineComponent({
       universeAnim,
       planetVariant,
       startBattle,
-      score,
-      currentBattleId,
       showChat,
     }
   },
@@ -136,7 +108,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Chat overlay panel anchored bottom-left over the minimap */
+/* Chat overlay panel anchored bottom-left over the board */
 .chat-overlay {
   width: 280px;
   max-height: 220px;
@@ -145,16 +117,11 @@ export default defineComponent({
   border-radius: 4px;
 }
 
-/* Slide-up transition for chat overlay */
 .chat-slide-enter-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 .chat-slide-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .chat-slide-enter-from,
 .chat-slide-leave-to {
@@ -162,14 +129,24 @@ export default defineComponent({
   transform: translateY(12px);
 }
 
-/* Start screen fade */
+/* Landing screen fade */
 .start-fade-leave-active {
-  transition:
-    opacity 0.4s ease,
-    transform 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .start-fade-leave-to {
   opacity: 0;
   transform: scale(0.96);
+}
+
+/* Honor screen fade */
+.honor-fade-enter-active {
+  transition: opacity 0.35s ease;
+}
+.honor-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.honor-fade-enter-from,
+.honor-fade-leave-to {
+  opacity: 0;
 }
 </style>
