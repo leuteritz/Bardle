@@ -11,9 +11,7 @@ import {
 import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_NEXUS_FALL_T,
-  TIMELINE_FIRST_TURRET_MIN_T,
-  TIMELINE_FIRST_TURRET_MAX_T,
-  TIMELINE_LOSER_STRUCTURES_MAX,
+  TIMELINE_CRACK_WINDOW_START_T,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -190,27 +188,63 @@ describe('structure destruction', () => {
     }
   })
 
-  it('the first structure falls within the first-turret window in a lane', () => {
+  it('the first structure falls after laning, is an outer turret in a lane', () => {
     for (const seed of [1, 7, 42, 1337, 99999]) {
       const tl = generateTimeline(seed, 0.5)
+      const baronSpawn = tl.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
       const first = tl.events.find((e) => e.type === 'turret' || e.type === 'inhibitor')!
       expect(first.type).toBe('turret')
       expect(first.structureTier).toBe('outer')
       expect(first.lane).toBeDefined()
-      expect(first.t).toBeGreaterThanOrEqual(TIMELINE_FIRST_TURRET_MIN_T)
-      expect(first.t).toBeLessThanOrEqual(TIMELINE_FIRST_TURRET_MAX_T)
+      expect(first.t).toBeGreaterThanOrEqual(TIMELINE_CRACK_WINDOW_START_T)
+      expect(first.t).toBeLessThan(baronSpawn.t)
     }
   })
 
-  it('the losing team still takes 1..max structures', () => {
+  it('both teams fully crack exactly one enemy lane before baron; no inhibs elsewhere', () => {
     for (let seed = 0; seed < 150; seed++) {
       const tl = generateTimeline(seed, 0.5)
-      const loser = tl.winner === 1 ? 2 : 1
-      const loserTakes = tl.events.filter(
-        (e) => (e.type === 'turret' || e.type === 'inhibitor') && e.team === loser,
-      ).length
-      expect(loserTakes).toBeGreaterThanOrEqual(1)
-      expect(loserTakes).toBeLessThanOrEqual(TIMELINE_LOSER_STRUCTURES_MAX)
+      const baronSpawn = tl.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
+      for (const owner of [1, 2] as const) {
+        const ownerEvents = tl.events.filter(
+          (e) =>
+            (e.type === 'turret' || e.type === 'inhibitor') &&
+            e.structureId !== undefined &&
+            parseStructureId(e.structureId).ownerTeam === owner,
+        )
+        // exactly one inhibitor falls per side, before baron
+        const inhibs = ownerEvents.filter((e) => e.structureTier === 'inhibitor')
+        expect(inhibs.length).toBe(1)
+        const crackLane = parseStructureId(inhibs[0].structureId!).laneKey
+        // the crack lane loses its full chain before baron spawns
+        const chainEvents = ownerEvents.filter(
+          (e) => e.structureTier !== 'nexusTurret' && parseStructureId(e.structureId!).laneKey === crackLane,
+        )
+        expect(chainEvents.length).toBe(4)
+        for (const e of chainEvents) expect(e.t).toBeLessThan(baronSpawn.t)
+        // other lanes: 1-2 turret falls, never an inhibitor, all before baron
+        const others = ownerEvents.filter(
+          (e) => e.structureTier !== 'nexusTurret' && parseStructureId(e.structureId!).laneKey !== crackLane,
+        )
+        expect(others.length).toBeGreaterThanOrEqual(1)
+        expect(others.length).toBeLessThanOrEqual(2)
+        for (const e of others) {
+          expect(e.structureTier).not.toBe('inhibitor')
+          expect(e.t).toBeLessThan(baronSpawn.t)
+        }
+        // nexus turrets only fall after the baron fight starts
+        for (const e of ownerEvents.filter((x) => x.structureTier === 'nexusTurret')) {
+          expect(e.t).toBeGreaterThan(baronSpawn.t)
+        }
+      }
+    }
+  })
+
+  it('the baron fight gathers all ten champions', () => {
+    for (const seed of [1, 42, 777]) {
+      const tl = generateTimeline(seed, 0.5)
+      const baron = tl.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
+      expect(baron.participants).toEqual({ t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
     }
   })
 

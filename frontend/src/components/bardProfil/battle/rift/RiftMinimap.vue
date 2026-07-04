@@ -31,6 +31,18 @@
         :style="{ left: dot.x + '%', top: dot.y + '%' }"
       />
 
+      <!-- Nexus markers: biggest structure symbol, always visible -->
+      <div
+        v-for="n in nexusMarkers"
+        :key="`nexus-${n.team}`"
+        class="nexus-marker"
+        :class="[n.team === 1 ? 'nexus-marker--blue' : 'nexus-marker--red', { 'nexus-marker--dead': n.dead }]"
+        :style="{ left: n.x + '%', top: n.y + '%' }"
+      >
+        <div v-if="!n.dead" class="nexus-core" />
+        <span v-if="n.dead" class="nexus-marker-x">✕</span>
+      </div>
+
       <!-- Structures: lane turrets, inhibitors, nexus turrets -->
       <div
         v-for="s in structureMarkers"
@@ -155,7 +167,8 @@
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
-import { DRAKE_POS, BARON_POS, BLUE_NEXUS, RED_NEXUS, STRUCTURE_BURST_GAME_SECONDS } from '@/config/constants'
+import { DRAKE_POS, BARON_POS, STRUCTURE_BURST_GAME_SECONDS } from '@/config/constants'
+import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION } from '@/config/battleRoutes'
 import { ALL_STRUCTURE_IDS, STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battleStructures'
 import type { ChampionState } from '@/types'
 
@@ -224,8 +237,13 @@ const baronLabel = computed(() =>
 )
 
 const nexusPos = computed(() =>
-  battleStore.nexusDestroyedByTeam === 1 ? RED_NEXUS : BLUE_NEXUS,
+  battleStore.nexusDestroyedByTeam === 1 ? RED_NEXUS_MAP_POSITION : BLUE_NEXUS_MAP_POSITION,
 )
+
+const nexusMarkers = computed(() => [
+  { team: 1 as const, ...BLUE_NEXUS_MAP_POSITION, dead: battleStore.nexusDestroyedByTeam === 2 },
+  { team: 2 as const, ...RED_NEXUS_MAP_POSITION, dead: battleStore.nexusDestroyedByTeam === 1 },
+])
 
 const structureMarkers = computed(() => {
   const destroyed = new Set(battleStore.destroyedStructures)
@@ -316,8 +334,8 @@ const structureMarkers = computed(() => {
    minimap PNG itself. Destroyed: dark disc covering the icon + red ✕. */
 .structure {
   position: absolute;
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 2;
@@ -326,22 +344,22 @@ const structureMarkers = computed(() => {
   border-radius: 2px;
 }
 .structure--inhib {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   transform: translate(-50%, -50%) rotate(45deg);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 .structure--blue {
-  border: 1px solid rgba(96, 165, 250, 0.75);
-  box-shadow: 0 0 4px rgba(59, 130, 246, 0.55);
+  border: 2px solid rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
 }
 .structure--red {
-  border: 1px solid rgba(248, 113, 113, 0.75);
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+  border: 2px solid rgba(248, 113, 113, 0.8);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.55);
 }
 .structure--dead {
-  width: 13px;
-  height: 13px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   border: 1px solid #4a4436;
   background: rgba(10, 8, 6, 0.88);
@@ -355,10 +373,10 @@ const structureMarkers = computed(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -54%) rotate(-12deg);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   color: #ff4a3a;
-  text-shadow: 0 0 4px #000, 0 0 8px rgba(255, 74, 58, 0.5);
+  text-shadow: 0 0 4px #000, 0 0 9px rgba(255, 74, 58, 0.55);
   line-height: 1;
 }
 .structure-x--punch {
@@ -366,7 +384,7 @@ const structureMarkers = computed(() => {
 }
 .structure-burst {
   position: absolute;
-  inset: -14px;
+  inset: -16px;
   border-radius: 50%;
   border: 2px solid;
   animation: clash-ring 0.9s ease-out 3;
@@ -381,10 +399,58 @@ const structureMarkers = computed(() => {
 }
 .structure-ember {
   position: absolute;
-  inset: -10px;
+  inset: -12px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 120, 40, 0.55), transparent 65%);
   animation: structure-ember-fade 1.6s ease-out forwards;
+}
+
+/* ── Nexus markers ── */
+.nexus-marker {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 4px;
+  border: 2px solid;
+  pointer-events: none;
+  z-index: 3;
+}
+.nexus-marker--blue {
+  border-color: #60a5fa;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.75);
+}
+.nexus-marker--red {
+  border-color: #f87171;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+}
+.nexus-core {
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  animation: aoe-pulse 2.6s ease-in-out infinite;
+}
+.nexus-marker--blue .nexus-core {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.95), rgba(29, 78, 216, 0.45));
+}
+.nexus-marker--red .nexus-core {
+  background: radial-gradient(circle, rgba(248, 113, 113, 0.95), rgba(185, 28, 28, 0.45));
+}
+.nexus-marker--dead {
+  border-color: #4a4436;
+  background: rgba(10, 8, 6, 0.9);
+  box-shadow: none;
+}
+.nexus-marker-x {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -52%) rotate(-45deg);
+  font-size: 16px;
+  font-weight: 700;
+  color: #ff4a3a;
+  text-shadow: 0 0 5px #000, 0 0 10px rgba(255, 74, 58, 0.6);
+  line-height: 1;
 }
 
 /* ── Fight FX ── */
@@ -722,6 +788,7 @@ const structureMarkers = computed(() => {
   .structure-burst,
   .structure-ember,
   .structure-x--punch,
+  .nexus-core,
   .nexus-ring {
     animation: none;
   }

@@ -88,6 +88,31 @@ export function nextNexusTurret(destroyed: ReadonlySet<StructureId>, ownerTeam: 
   return null
 }
 
+/** How many tiers of an owner's lane are already down (0..4, in destruction order). */
+export function laneProgress(
+  destroyed: ReadonlySet<StructureId>,
+  ownerTeam: 1 | 2,
+  lane: 'top' | 'mid' | 'bot',
+): number {
+  let n = 0
+  for (const tier of LANE_TIER_ORDER) {
+    if (!destroyed.has(structureId(ownerTeam, lane, tier))) break
+    n++
+  }
+  return n
+}
+
+/** The owner's lane whose inhibitor is already down, or null (used to find the winner's push lane). */
+export function crackedLaneOf(
+  destroyed: ReadonlySet<StructureId>,
+  ownerTeam: 1 | 2,
+): 'top' | 'mid' | 'bot' | null {
+  for (const lane of STRUCTURE_LANES) {
+    if (destroyed.has(structureId(ownerTeam, lane, 'inhibitor'))) return lane
+  }
+  return null
+}
+
 /** Replay helper — the set of structures destroyed by events at or before `t`. */
 export function destroyedStructuresUpTo(events: BattleEvent[], t: number): Set<StructureId> {
   const out = new Set<StructureId>()

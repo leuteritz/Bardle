@@ -147,6 +147,10 @@ export const RED_NEXUS_TURRET_POSITIONS: [MapPoint, MapPoint] = [
   { x: 85.2, y: 17.0 },
 ]
 
+/** Nexus icon positions as drawn on minimap.png (measured; blue is the mirror). */
+export const RED_NEXUS_MAP_POSITION: MapPoint = { x: 87.2, y: 12.9 }
+export const BLUE_NEXUS_MAP_POSITION: MapPoint = mirrorPoint(RED_NEXUS_MAP_POSITION)
+
 /** Minion wave cadence (game-seconds between waves) and their walk speed as path-fraction per game-second. */
 export const MINION_WAVE_INTERVAL_T = 90
 export const MINION_PATH_SPEED = 0.00045

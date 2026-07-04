@@ -28,6 +28,7 @@ import {
   BOT_LANE_PATH,
 } from '../config/battleRoutes'
 import { createRng, BATTLE_ROLES } from './battleTimeline'
+import { parseStructureId } from './battleStructures'
 
 export interface MovementSegment {
   tStart: number
@@ -107,6 +108,7 @@ function buildChampionSchedule(
   role: BattleRole,
 ): ChampionSchedule {
   const rng = createRng((seed ^ Math.imul(team, 0x2545f491) ^ Math.imul(idx + 1, 0x9e3779b9)) >>> 0)
+  const endgameLanePath = winnerPushLanePath(timeline)
   const fountain = fountainOf(team)
   const lanePath = ROLE_LANE_PATH[role]
   const holdFrac = team === 1 ? LANE_HOLD_FRACTION_BLUE : LANE_HOLD_FRACTION_RED
@@ -215,7 +217,7 @@ function buildChampionSchedule(
     const travelStart = order.priority ? order.t - 1 : Math.max(cursorT, order.t - 1)
     const isPush = order.kind === 'push' || order.kind === 'retreat'
     const path = isPush
-      ? pushPath(cursorPos, order.location, team, rng)
+      ? pushPath(cursorPos, order.location, team, rng, endgameLanePath)
       : [cursorPos, jittered(midpoint(cursorPos, order.location), rng, 5), order.location]
     const travelEnd = Math.min(order.holdUntil, travelStart + 120)
     segments.push({ tStart: travelStart, tEnd: travelEnd, path, kind: order.kind })
@@ -242,10 +244,35 @@ function midpoint(a: MapPoint, b: MapPoint): MapPoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }
 
-/** Endgame push follows the mid lane instead of a straight line. */
-function pushPath(from: MapPoint, to: MapPoint, team: 1 | 2, rng: () => number): MapPoint[] {
+const LANE_PATH_BY_KEY: Record<'top' | 'mid' | 'bot', MapPoint[]> = {
+  top: TOP_LANE_PATH,
+  mid: MID_LANE_PATH,
+  bot: BOT_LANE_PATH,
+}
+
+/** The lane the winner pushes at the end — the one whose loser inhibitor fell. */
+function winnerPushLanePath(timeline: BattleTimeline): MapPoint[] {
+  const loser = (3 - timeline.winner) as 1 | 2
+  for (const e of timeline.events) {
+    if (e.type !== 'inhibitor' || !e.structureId) continue
+    const { ownerTeam, laneKey } = parseStructureId(e.structureId)
+    if (ownerTeam === loser && (laneKey === 'top' || laneKey === 'mid' || laneKey === 'bot')) {
+      return LANE_PATH_BY_KEY[laneKey]
+    }
+  }
+  return MID_LANE_PATH
+}
+
+/** Endgame push follows the winner's cracked lane instead of a straight line. */
+function pushPath(
+  from: MapPoint,
+  to: MapPoint,
+  team: 1 | 2,
+  rng: () => number,
+  lanePath: MapPoint[],
+): MapPoint[] {
   const laneFracs = team === 1 ? [0.55, 0.7, 0.85] : [0.45, 0.3, 0.15]
-  const via = laneFracs.map((f) => jittered(pointAlongPath(MID_LANE_PATH, f), rng, 3))
+  const via = laneFracs.map((f) => jittered(pointAlongPath(lanePath, f), rng, 3))
   return [from, ...via, to]
 }
 

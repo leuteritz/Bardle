@@ -205,24 +205,18 @@ export const TIMELINE_BARON_WINPROB_DELTA = 0.1
 export const TIMELINE_TURRET_WINPROB_DELTA = 0.03
 export const TIMELINE_INHIB_WINPROB_DELTA = 0.04
 // ── Structure destruction schedule (all times in game-seconds) ─────────────
-/** Window in which the first turret of the game falls (shortly after laning) */
-export const TIMELINE_FIRST_TURRET_MIN_T = 820
-export const TIMELINE_FIRST_TURRET_MAX_T = 1150
-/** Structure falls spread across the drake/midfight windows (min/max count) */
-export const TIMELINE_MIDGAME_STRUCTURES_MIN = 2
-export const TIMELINE_MIDGAME_STRUCTURES_MAX = 4
-/** Padding after laning before midgame falls start (must clear TIMELINE_FIRST_TURRET_MAX_T) */
-export const TIMELINE_MIDGAME_STRUCTURES_START_PAD_T = 300
-/** The losing team still takes at most this many structures */
-export const TIMELINE_LOSER_STRUCTURES_MAX = 3
-/** Extra off-lane structures the winner takes during the final push (min/max) */
-export const TIMELINE_PUSH_EXTRA_STRUCTURES_MIN = 0
-export const TIMELINE_PUSH_EXTRA_STRUCTURES_MAX = 2
-/** Minimum spacing between consecutive structure falls in the push chain */
+// Both teams fully crack one random enemy lane (up to the inhibitor) before
+// baron spawns; other lanes only lose 1-2 turrets and never an inhibitor.
+/** Structure falls start shortly after the laning phase */
+export const TIMELINE_CRACK_WINDOW_START_T = 820
+/** The crack phase must finish this long before baron spawns */
+export const TIMELINE_CRACK_WINDOW_END_MARGIN_T = 80
+/** Extra turrets each team takes outside its crack lane (min/max) */
+export const TIMELINE_EXTRA_TURRETS_MIN = 1
+export const TIMELINE_EXTRA_TURRETS_MAX = 2
+/** Minimum spacing between consecutive structure falls */
 export const TIMELINE_STRUCTURE_MIN_GAP_T = 40
-/** The push chain must finish this long before the nexus falls */
-export const TIMELINE_PUSH_CHAIN_END_MARGIN_T = 250
-/** Nexus turrets fall this long after the push-lane inhibitor (min/max delay each) */
+/** Nexus turrets fall this long after the baron resolves (min/max delay each) */
 export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 30
 export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 90
 /** Both nexus turrets must be down this long before the nexus falls */
@@ -230,10 +224,6 @@ export const TIMELINE_NEXUS_TURRET_END_MARGIN_T = 60
 /** Champions on the attacking side present at a structure fall (min/max) */
 export const STRUCTURE_ATTACKERS_MIN = 1
 export const STRUCTURE_ATTACKERS_MAX = 3
-/** Chance the baron team cracks a consolation structure when it isn't the game winner */
-export const TIMELINE_BARON_TEAM_STRUCTURE_CHANCE = 0.7
-export const TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MIN_T = 130
-export const TIMELINE_BARON_TEAM_STRUCTURE_DELAY_MAX_T = 240
 /** Objective pit participants per team (min/max champions) */
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
