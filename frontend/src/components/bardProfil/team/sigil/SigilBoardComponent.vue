@@ -1,0 +1,532 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
+import { useGameStore } from '@/stores/gameStore'
+import { useInventoryStore } from '@/stores/inventoryStore'
+import { useSynergyStore } from '@/stores/synergyStore'
+import { useTeamSigil } from '@/composables/useTeamSigil'
+import { MATERIALS } from '@/config/materials'
+import {
+  ROLES,
+  SIGIL_STAGE_SIZE,
+  SIGIL_CREST_SIZE,
+  TEAM_SIGIL_ZOOM_MIN,
+  TEAM_SIGIL_ZOOM_MAX,
+  TEAM_SIGIL_ZOOM_STEP,
+  TEAM_SIGIL_ZOOM_DEFAULT,
+} from '@/config/constants'
+import SigilSvgLayers from './SigilSvgLayers.vue'
+import SigilRoleNode from './SigilRoleNode.vue'
+
+defineProps<{
+  /** True while the details panel is open — hides header/footer chrome. */
+  chromeHidden: boolean
+  selectedRole: number | null
+}>()
+
+const emit = defineEmits<{
+  'select-role': [roleIndex: number]
+  'select-ally': [roleIndex: number, subSlot: number]
+}>()
+
+const gameStore = useGameStore()
+const inventoryStore = useInventoryStore()
+const synergyStore = useSynergyStore()
+const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
+
+const {
+  mainFilled,
+  filledMains,
+  filledSlots,
+  roleFull,
+  sigilStage,
+  showPentagram,
+  showMandala,
+  teamPower,
+  avgTier,
+  rolePoints,
+  allyPoints,
+  embers,
+} = useTeamSigil()
+
+const roleColors = ROLES.map((r) => r.color)
+
+const materialCounts = computed(() =>
+  MATERIALS.map((m) => ({
+    id: m.id,
+    name: m.name,
+    image: m.image,
+    count: inventoryStore.collectedMaterials[m.id] ?? 0,
+  })),
+)
+
+const synergyCount = computed(
+  () => activeTraits.value.length + activeOriginSynergies.value.length,
+)
+
+// ── Zoom (mirrors ForgeTreePanel) ────────────────────────────────────────────
+const panelEl = ref<HTMLElement | null>(null)
+const zoom = ref(TEAM_SIGIL_ZOOM_DEFAULT)
+const fitScale = ref(1)
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (!panelEl.value) return
+  resizeObserver = new ResizeObserver((entries) => {
+    const rect = entries[0]?.contentRect
+    if (!rect) return
+    fitScale.value = Math.min(rect.width, rect.height) / SIGIL_STAGE_SIZE
+  })
+  resizeObserver.observe(panelEl.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+})
+
+const totalScale = computed(() => fitScale.value * zoom.value)
+
+const zoomKnobPos = computed(() => {
+  const t = (zoom.value - TEAM_SIGIL_ZOOM_MIN) / (TEAM_SIGIL_ZOOM_MAX - TEAM_SIGIL_ZOOM_MIN)
+  return `${Math.round(t * 100)}%`
+})
+
+function zoomBy(direction: number): void {
+  zoom.value = Math.min(
+    TEAM_SIGIL_ZOOM_MAX,
+    Math.max(TEAM_SIGIL_ZOOM_MIN, zoom.value + direction * TEAM_SIGIL_ZOOM_STEP),
+  )
+}
+
+function onWheel(event: WheelEvent): void {
+  zoomBy(event.deltaY < 0 ? 1 : -1)
+}
+</script>
+
+<template>
+  <div ref="panelEl" class="sigil-board" @wheel.prevent="onWheel">
+    <!-- header: title + currencies -->
+    <div v-show="!chromeHidden" class="sigil-header">
+      <div class="sigil-header-icon">
+        <Icon icon="game-icons:crenel-crown" width="24" height="24" class="crest-icon" />
+      </div>
+      <div class="sigil-header-titles">
+        <div class="sigil-title">BATTLE SIGIL</div>
+        <div class="sigil-subtitle">Champion Command</div>
+      </div>
+      <div class="sigil-header-spacer" />
+      <div class="sigil-currency sigil-currency--chimes">
+        <Icon icon="game-icons:windchimes" width="18" height="18" class="chimes-icon" />
+        <span class="sigil-currency-value">{{ $formatNumber(gameStore.chimes) }}</span>
+      </div>
+      <div
+        v-for="mat in materialCounts"
+        :key="mat.id"
+        class="sigil-currency"
+        :title="mat.name"
+      >
+        <img :src="mat.image" :alt="mat.name" class="sigil-mat-img" />
+        <span class="sigil-mat-count">{{ $formatNumber(mat.count) }}</span>
+      </div>
+    </div>
+
+    <!-- zoom control -->
+    <div class="sigil-zoom">
+      <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
+      <div class="zoom-track">
+        <div class="zoom-knob" :style="{ bottom: zoomKnobPos }" />
+      </div>
+      <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
+    </div>
+
+    <!-- scaled sigil stage -->
+    <div
+      class="sigil-stage"
+      :style="{
+        width: `${SIGIL_STAGE_SIZE}px`,
+        height: `${SIGIL_STAGE_SIZE}px`,
+        transform: `translate(-50%, -50%) scale(${totalScale})`,
+      }"
+    >
+      <SigilSvgLayers
+        :stage="sigilStage"
+        :filled-slots="filledSlots"
+        :role-points="rolePoints"
+        :role-colors="roleColors"
+        :main-filled="mainFilled"
+        :role-full="roleFull"
+        :selected-role="selectedRole"
+        :show-pentagram="showPentagram"
+        :show-mandala="showMandala"
+      />
+
+      <!-- center crest -->
+      <div
+        class="sigil-crest-pulse"
+        :style="{
+          width: `${SIGIL_CREST_SIZE}px`,
+          height: `${SIGIL_CREST_SIZE}px`,
+          borderColor: sigilStage.crestColor,
+          animationDuration: sigilStage.pulseSec > 0 ? `${sigilStage.pulseSec}s` : undefined,
+          animationName: sigilStage.pulseSec > 0 ? undefined : 'none',
+        }"
+      />
+      <div
+        class="sigil-crest"
+        :style="{ width: `${SIGIL_CREST_SIZE}px`, height: `${SIGIL_CREST_SIZE}px` }"
+      >
+        <Icon
+          icon="game-icons:crenel-crown"
+          width="30"
+          height="30"
+          :style="{ color: sigilStage.crestColor }"
+        />
+        <div class="sigil-crest-power" :style="{ color: sigilStage.crestColor }">
+          {{ $formatNumber(teamPower) }}
+        </div>
+        <div class="sigil-crest-label">Team Power</div>
+        <div
+          class="sigil-crest-stage"
+          :style="{ color: sigilStage.crestColor, textShadow: `0 0 9px ${sigilStage.crestColor}` }"
+        >
+          {{ sigilStage.name }}
+        </div>
+      </div>
+
+      <!-- escalation embers -->
+      <div
+        v-for="(ember, k) in embers"
+        :key="`ember-${k}`"
+        class="sigil-ember"
+        :style="{
+          left: `${ember.x}px`,
+          top: `${ember.y}px`,
+          width: `${ember.size}px`,
+          height: `${ember.size}px`,
+          background: sigilStage.crestColor,
+          boxShadow: `0 0 6px ${sigilStage.crestColor}`,
+          animationDelay: `${ember.delaySec}s`,
+          animationDuration: `${ember.durationSec}s`,
+        }"
+      />
+
+      <!-- role nodes + ally satellites -->
+      <SigilRoleNode
+        v-for="(role, i) in ROLES"
+        :key="role.key"
+        :role-index="i"
+        :point="rolePoints[i]"
+        :ally-points="allyPoints[i]"
+        :selected="selectedRole === i"
+        :full="roleFull[i]"
+        @select="emit('select-role', i)"
+        @select-ally="(sub: number) => emit('select-ally', i, sub)"
+      />
+    </div>
+
+    <!-- footer: team stat chips -->
+    <div v-show="!chromeHidden" class="sigil-stats">
+      <div class="sigil-stat">
+        <Icon icon="game-icons:bordered-shield" width="20" height="20" class="stat-icon" />
+        <div>
+          <div class="sigil-stat-label">Roster</div>
+          <div class="sigil-stat-value">{{ filledMains }}/5</div>
+        </div>
+      </div>
+      <div class="sigil-stat">
+        <Icon icon="game-icons:laurels" width="20" height="20" class="stat-icon" />
+        <div>
+          <div class="sigil-stat-label">Avg Tier</div>
+          <div class="sigil-stat-value">★{{ avgTier.toFixed(1) }}</div>
+        </div>
+      </div>
+      <div class="sigil-stat">
+        <Icon icon="game-icons:linked-rings" width="20" height="20" class="stat-icon" />
+        <div>
+          <div class="sigil-stat-label">Synergies</div>
+          <div class="sigil-stat-value">{{ synergyCount }}</div>
+        </div>
+      </div>
+      <div class="sigil-stat">
+        <Icon icon="game-icons:round-star" width="20" height="20" class="stat-icon" />
+        <div>
+          <div class="sigil-stat-label">Sigil</div>
+          <div class="sigil-stat-value" :style="{ color: sigilStage.crestColor }">
+            {{ sigilStage.name }} · {{ filledSlots }}/15
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.sigil-board {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at 42% 46%, #1c1409, #0b0705 72%);
+}
+.sigil-board::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(200, 164, 90, 0.12);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+/* ── header ── */
+.sigil-header {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  right: 26px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 5;
+}
+.sigil-header-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: radial-gradient(circle at 40% 30%, #2a1f10, #120c08);
+  border: 1px solid rgba(220, 180, 90, 0.4);
+  flex-shrink: 0;
+}
+.crest-icon {
+  color: #e8c040;
+}
+.sigil-title {
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  color: #f0dca0;
+  line-height: 1;
+}
+.sigil-subtitle {
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.55);
+  margin-top: 3px;
+}
+.sigil-header-spacer {
+  flex: 1;
+}
+.sigil-currency {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(200, 164, 90, 0.14);
+}
+.sigil-currency--chimes {
+  border-color: rgba(220, 180, 90, 0.3);
+}
+.chimes-icon {
+  color: #e8c040;
+}
+.sigil-currency-value {
+  font-size: 14px;
+  color: #f0d878;
+}
+.sigil-mat-img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+}
+.sigil-mat-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbbf9e;
+}
+
+/* ── zoom (mirrors ForgeTreePanel) ── */
+.sigil-zoom {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 6;
+}
+.zoom-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: #e8c040;
+  background: rgba(20, 12, 2, 0.85);
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.zoom-btn:hover {
+  background: rgba(40, 24, 6, 0.95);
+  border-color: #c89040;
+}
+.zoom-track {
+  width: 4px;
+  height: 90px;
+  background: rgba(200, 144, 64, 0.2);
+  border-radius: 2px;
+  position: relative;
+}
+.zoom-knob {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  width: 12px;
+  height: 12px;
+  background: #c89040;
+  border-radius: 50%;
+}
+
+/* ── stage ── */
+.sigil-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+}
+.sigil-crest-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid;
+  pointer-events: none;
+  animation: crest-pulse 3.5s ease-out infinite;
+}
+.sigil-crest {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: radial-gradient(circle at 50% 36%, #2a1f10, #0e0906);
+  box-shadow:
+    0 0 0 2px #7a5a1e,
+    0 0 28px rgba(220, 170, 60, 0.3),
+    inset 0 0 22px rgba(0, 0, 0, 0.75);
+}
+.sigil-crest-power {
+  font-size: 28px;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(220, 170, 60, 0.45);
+}
+.sigil-crest-label {
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.6);
+}
+.sigil-crest-stage {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.sigil-ember {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: ember-rise 2.8s ease-out infinite;
+  z-index: 1;
+}
+
+/* ── footer stats ── */
+.sigil-stats {
+  position: absolute;
+  bottom: 22px;
+  left: 26px;
+  right: 26px;
+  display: flex;
+  gap: 10px;
+  z-index: 5;
+}
+.sigil-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(200, 164, 90, 0.16);
+}
+.stat-icon {
+  color: #c8a860;
+  flex-shrink: 0;
+}
+.sigil-stat-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.55);
+}
+.sigil-stat-value {
+  font-size: 16px;
+  color: #f0dca0;
+  line-height: 1.15;
+}
+
+@keyframes crest-pulse {
+  0% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+}
+@keyframes ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(8px) scale(0.5);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-34px) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sigil-crest-pulse,
+  .sigil-ember {
+    animation: none !important;
+  }
+}
+</style>

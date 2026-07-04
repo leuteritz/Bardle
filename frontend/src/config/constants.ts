@@ -1,4 +1,4 @@
-import type { ChampionRole, RoleStat, RoleAbilityDetail } from '../types'
+import type { ChampionRole, RoleStat, RoleAbilityDetail, SigilStageDef } from '../types'
 
 // ELO rating system
 export const ELO_K_FACTOR = 32
@@ -1146,6 +1146,54 @@ export const FORGE_TREE_ZOOM_MAX = 1.4
 export const FORGE_TREE_ZOOM_STEP = 0.15
 export const FORGE_TREE_ZOOM_DEFAULT = 0.92
 
+// ── Battle Sigil (Team tab) ───────────────────────────────────────────────────
+// Sigil geometry — the sigil lives on a square stage; the 5 role nodes sit on a
+// pentagon (Top at 12 o'clock, ROLES order clockwise), each with 2 ally
+// satellites placed outward beside the role node.
+export const SIGIL_STAGE_SIZE = 900
+export const SIGIL_PENTAGON_RADIUS = 300
+export const SIGIL_ALLY_RADIUS = 395
+/** Ally satellites sit at the role's pentagon angle ± this offset (degrees). */
+export const SIGIL_ALLY_ANGLE_OFFSET = 16
+export const SIGIL_NODE_SIZE = 94
+export const SIGIL_ALLY_SIZE = 44
+export const SIGIL_CREST_SIZE = 170
+/** SVG ring radii (stage coordinates, center = SIGIL_STAGE_SIZE / 2). */
+export const SIGIL_RING_OUTER_R = 430
+export const SIGIL_RING_RUNE_R = 360
+export const SIGIL_RING_INNER_R = 180
+export const SIGIL_RING_CORE_R = 120
+
+// Sigil zoom (wheel + buttons)
+export const TEAM_SIGIL_ZOOM_MIN = 0.7
+export const TEAM_SIGIL_ZOOM_MAX = 1.6
+export const TEAM_SIGIL_ZOOM_STEP = 0.15
+export const TEAM_SIGIL_ZOOM_DEFAULT = 1.0
+
+// Sigil escalation — the sigil grows more epic with every filled slot:
+// each main lights its pentagon vertex + spoke, each ally lights a rune tick,
+// each full role (main + 2 allies) gains a spinning aura; global stages below
+// escalate crest/rings/embers by total filled slots (0..15).
+export const SIGIL_TOTAL_SLOTS = 15
+export const SIGIL_POWER_PER_STAR = 100
+export const SIGIL_ALLY_POWER_PER_STAR = 40
+/** Pentagram overlay appears once all 5 mains are set. */
+export const SIGIL_PENTAGRAM_AT_MAINS = 5
+/** Full mandala (all decorations) at a complete 15/15 team. */
+export const SIGIL_MANDALA_AT_FILLED = 15
+/** Unlit color for pentagon vertices, spokes and rune ticks. */
+export const SIGIL_DIM_COLOR = '#3a2a12'
+export const SIGIL_STAGES: SigilStageDef[] = [
+  { name: 'Dormant', minFilled: 0, crestColor: '#8a7448', ringColor: '#3a2a12', pulseSec: 0, spinSec: 90, emberCount: 0, extraRings: 0 },
+  { name: 'Kindled', minFilled: 1, crestColor: '#c89040', ringColor: '#5c3310', pulseSec: 4.5, spinSec: 70, emberCount: 4, extraRings: 0 },
+  { name: 'Ascendant', minFilled: 5, crestColor: '#e8c060', ringColor: '#7a4e20', pulseSec: 3.5, spinSec: 50, emberCount: 8, extraRings: 1 },
+  { name: 'Radiant', minFilled: 10, crestColor: '#f0d870', ringColor: '#c89040', pulseSec: 2.5, spinSec: 35, emberCount: 12, extraRings: 2 },
+  { name: 'Eternal', minFilled: 15, crestColor: '#ffe9a0', ringColor: '#e8c060', pulseSec: 1.8, spinSec: 22, emberCount: 18, extraRings: 2 },
+]
+/** Ember particles orbit between these radii (deterministic golden-angle spread). */
+export const SIGIL_EMBER_MIN_R = 130
+export const SIGIL_EMBER_R_SPREAD = 190
+
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
     name: 'First Spark',
@@ -1541,7 +1589,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:orb-wand',
   'game-icons:bow-arrow',
   'game-icons:health-potion',
-  // ChampionSplashPanel Action Bar
+  // Team tab actions (Shop / Expedition / Items)
   'game-icons:barbute',
   'game-icons:campfire',
   'game-icons:open-treasure-chest',
@@ -1700,6 +1748,15 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cash', // COSMIC BARGAIN section header
   'game-icons:card-exchange', // Bargain reroll button
   'game-icons:sunbeams', // Phase status banner icon
+  // Battle Sigil (Team tab)
+  'game-icons:crenel-crown', // Sigil center crest (SigilBoardComponent)
+  'game-icons:bordered-shield', // Roster stat chip (SigilBoardComponent)
+  'game-icons:laurels', // Avg Tier stat chip (SigilBoardComponent)
+  'game-icons:linked-rings', // Synergies stat chip + details panel header (Team tab)
+  'game-icons:cycle', // Swap champion button (SigilDetailsPanel)
+  'game-icons:shopping-bag', // Shop action button (SigilDetailsPanel footer)
+  'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
+  'game-icons:round-star', // Sigil stage badge (SigilBoardComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

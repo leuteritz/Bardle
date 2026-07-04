@@ -282,6 +282,21 @@ export interface ChampionTierDef {
   description: string
 }
 
+// ── Battle Sigil (Team tab) ──────────────────────────────────────────────────
+// Global escalation stage of the team sigil, selected by how many of the 15
+// team slots (5 mains + 10 allies) are filled. Drives crest color, ring color,
+// pulse/spin speed, ember particle count and extra decorative rings.
+export interface SigilStageDef {
+  name: string
+  minFilled: number // 0..15 — stage applies from this many filled slots
+  crestColor: string
+  ringColor: string
+  pulseSec: number // crest pulse duration; 0 = no pulse
+  spinSec: number // outer ring rotation duration
+  emberCount: number
+  extraRings: number // 0..2 decorative rings added around the sigil
+}
+
 // A galaxy tier groups several galaxies and gates progression behind a cost.
 export interface GalaxyTier {
   tier: number

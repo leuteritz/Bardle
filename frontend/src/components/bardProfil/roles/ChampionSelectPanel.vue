@@ -567,7 +567,7 @@ function onImgError(e: Event) {
   overflow: hidden;
 }
 
-/* ── Tabs ── (mirrors ChampionSplashPanel .splash-action-bar / .action-bar-btn) */
+/* ── Tabs ── (RPG action-bar styling, shared look with the Team tab) */
 .csp-tabs {
   display: flex;
   flex-direction: row;
