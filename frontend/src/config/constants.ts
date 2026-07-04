@@ -154,16 +154,22 @@ export const LANE_FIGHT_POSITIONS: Record<'top' | 'mid' | 'bot', { x: number; y:
 // ── Objective Modal ────────────────────────────────────────────────────────
 export const OBJECTIVE_DRAKE_SPAWN = 300 // game-seconds when drake appears on minimap
 export const OBJECTIVE_BARON_SPAWN = 2400 // game-seconds when baron appears on minimap
-export const DRAKE_OBJECTIVE_HP = 3000
-export const BARON_OBJECTIVE_HP = 5000
-/** Objective DPS contributed by every living champion present at the pit */
-export const OBJECTIVE_BASE_DPS_PER_CHAMP = 40
-export const OBJECTIVE_CLICK_DAMAGE = 80
+export const DRAKE_OBJECTIVE_HP = 3200
+export const BARON_OBJECTIVE_HP = 4000
+/** Objective DPS contributed by every living champion present at the pit (per team) */
+export const OBJECTIVE_BASE_DPS_PER_CHAMP = 45
+export const OBJECTIVE_CLICK_DAMAGE = 15
 export const OBJECTIVE_DRAKE_WIN_BONUS = 0.08
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 export const OBJECTIVE_DPS_TICK_MS = 200
-export const OBJECTIVE_TIMEOUT_MS = 12000
-export const OBJECTIVE_RESULT_DELAY_MS = 1800
+/** Per-tick DPS wobble (±fraction) so the damage race stays dramatic */
+export const OBJECTIVE_DPS_VARIANCE = 0.15
+/** Per-fighter DPS weight spread (normalized per side, avg = 1 — team DPS unchanged) */
+export const OBJECTIVE_FIGHTER_WEIGHT_MIN = 0.75
+export const OBJECTIVE_FIGHTER_WEIGHT_MAX = 1.25
+/** Hard cap on the frozen-time objective fight; resolves by damage lead */
+export const OBJECTIVE_MAX_DURATION_MS = 20000
+export const OBJECTIVE_RESULT_DELAY_MS = 2200
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
@@ -1911,6 +1917,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow)
   'game-icons:medal', // Honor pips / grant honor header (HonorGrantPanel)
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
+  'game-icons:heavy-timer', // TIME FROZEN chip (ObjectiveModalComponent)
+  'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

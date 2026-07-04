@@ -383,6 +383,18 @@ export interface ObjectiveOverride {
   prob: number
 }
 
+/** One champion attacking (or lying dead at) the frozen-time objective pit. */
+export interface ObjectiveFighter {
+  /** Index into team1/team2 */
+  idx: number
+  name: string
+  alive: boolean
+  /** Normalized DPS share within the side (0 when dead) */
+  weight: number
+  /** Cumulative damage dealt to this objective */
+  damage: number
+}
+
 export interface KillFeedEntry {
   killerName: string
   victimName: string

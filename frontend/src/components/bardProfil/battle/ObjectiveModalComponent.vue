@@ -7,18 +7,69 @@
 
         <!-- Spawn banner header -->
         <div class="obj-header">
-          <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
-          <span class="obj-subtitle">{{ objectiveSubtitle }}</span>
+          <div class="obj-header-titles">
+            <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
+            <span class="obj-epithet">{{ objectiveEpithet }}</span>
+          </div>
+          <div class="frozen-chip">
+            <Icon icon="game-icons:heavy-timer" width="24" height="24" class="frozen-chip-icon" />
+            <div class="frozen-chip-text">
+              <span class="frozen-chip-label">TIME FROZEN</span>
+              <span class="frozen-chip-clock">{{ frozenClock }}</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Arena: aura + rune ring + embers + boss -->
-        <div
-          class="boss-arena"
-          @click="handleClick"
-          @mousedown="imgPressed = true"
-          @mouseup="imgPressed = false"
-          @mouseleave="imgPressed = false"
-        >
+        <!-- Alive-count strip: the fight is locked at these numbers -->
+        <div class="alive-strip">
+          <span class="alive-pips">
+            <span v-for="p in aliveOwn" :key="'o' + p" class="alive-pip alive-pip--own" />
+          </span>
+          <span class="alive-versus">
+            <span class="alive-count alive-count--own">{{ aliveOwn }}</span>
+            <Icon icon="game-icons:duel" width="26" height="26" class="alive-versus-icon" />
+            <span class="alive-count alive-count--enemy">{{ aliveEnemy }}</span>
+          </span>
+          <span class="alive-pips alive-pips--enemy">
+            <span v-for="p in aliveEnemy" :key="'e' + p" class="alive-pip alive-pip--enemy" />
+          </span>
+        </div>
+
+        <!-- Arena row: own fighters | boss | enemy fighters -->
+        <div class="arena-row">
+          <div class="fighters-col">
+            <div
+              v-for="f in fightersOwn"
+              :key="'f1' + f.idx"
+              class="fighter-card fighter-card--own"
+              :class="{ 'fighter-card--dead': !f.alive }"
+            >
+              <div class="fighter-portrait-wrap">
+                <img
+                  :src="battleStore.getChampionImage(f.name)"
+                  class="fighter-portrait fighter-portrait--own"
+                  :class="{ 'fighter-portrait--dead': !f.alive }"
+                  :alt="f.name"
+                />
+                <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+              </div>
+              <div class="fighter-info">
+                <span class="fighter-name">{{ f.name }}</span>
+                <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
+                  {{ f.alive ? fmt(Math.round(f.damage)) : '—' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Arena: aura + rune ring + embers + boss -->
+          <div
+            class="boss-arena"
+            @click="handleClick"
+            @mousedown="imgPressed = true"
+            @mouseup="imgPressed = false"
+            @mouseleave="imgPressed = false"
+          >
           <div class="arena-aura" :class="isDrake ? 'aura--drake' : 'aura--baron'" />
           <div class="rune-ring rune-ring--outer" :class="isDrake ? 'ring--drake' : 'ring--baron'" />
           <div class="rune-ring rune-ring--inner" :class="isDrake ? 'ring--drake' : 'ring--baron'" />
@@ -42,6 +93,32 @@
               -{{ f.value }}
             </span>
           </TransitionGroup>
+          </div>
+
+          <div class="fighters-col fighters-col--enemy">
+            <div
+              v-for="f in fightersEnemy"
+              :key="'f2' + f.idx"
+              class="fighter-card fighter-card--enemy"
+              :class="{ 'fighter-card--dead': !f.alive }"
+            >
+              <div class="fighter-info fighter-info--enemy">
+                <span class="fighter-name">{{ f.name }}</span>
+                <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
+                  {{ f.alive ? fmt(Math.round(f.damage)) : '—' }}
+                </span>
+              </div>
+              <div class="fighter-portrait-wrap">
+                <img
+                  :src="battleStore.getChampionImage(f.name)"
+                  class="fighter-portrait fighter-portrait--enemy"
+                  :class="{ 'fighter-portrait--dead': !f.alive }"
+                  :alt="f.name"
+                />
+                <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Segmented HP bar -->
@@ -60,35 +137,49 @@
           <div class="hp-text">{{ Math.ceil(battleStore.objectiveHP) }} / {{ battleStore.objectiveMaxHP }}</div>
         </div>
 
-        <!-- Tug-of-war: living champions at the pit decide the odds -->
-        <div class="tug-section">
-          <div class="tug-side tug-side--own">
-            <span class="tug-pips">
-              <span v-for="p in ownAtPit" :key="p" class="tug-pip tug-pip--own" />
+        <!-- Damage race: most total damage secures it — no last-hit steals -->
+        <div class="race-section">
+          <div class="race-labels">
+            <span class="race-label race-label--own">YOUR TEAM {{ fmt(ownDamage) }} · {{ ownDps }}/s</span>
+            <span class="race-label race-label--enemy">ENEMY {{ fmt(enemyDamage) }} · {{ enemyDps }}/s</span>
+          </div>
+          <div class="race-track">
+            <div class="race-own" :style="{ width: ownShare + '%' }">
+              <div class="race-player" :style="{ width: playerShareOfOwn + '%' }" />
+            </div>
+            <div class="race-midmark" />
+          </div>
+          <div class="race-caption">
+            <span v-if="playerDamage > 0" class="race-caption-player">
+              Your clicks: +{{ fmt(playerDamage) }} ({{ playerPercentOfOwn }}% of team dmg)
             </span>
-            <span class="tug-label">{{ ownAtPit }} champs · {{ ownDps }}/s</span>
+            <span v-else class="race-caption-idle">Most total damage secures it — no steals!</span>
           </div>
-          <div class="tug-track">
-            <div class="tug-own" :style="{ width: ownShare + '%' }" />
-          </div>
-          <div class="tug-side tug-side--enemy">
-            <span class="tug-label">{{ enemyAtPit }} champs · {{ enemyDps }}/s</span>
-            <span class="tug-pips">
-              <span v-for="p in enemyAtPit" :key="p" class="tug-pip tug-pip--enemy" />
-            </span>
-          </div>
+        </div>
+
+        <!-- Reward preview -->
+        <div class="reward-row">
+          <span class="reward reward--win">Secure: +{{ winBonusPercent }}% win chance</span>
+          <span class="reward-divider">·</span>
+          <span class="reward reward--lose">Lose: −{{ winBonusPercent }}%</span>
         </div>
 
         <!-- Hint -->
         <div class="hint-row">
-          <span v-if="battleStore.objectiveResult === null" class="hint-text">Click the beast — every hit tips the scales!</span>
+          <span v-if="battleStore.objectiveResult === null" class="hint-text">
+            Time stands still — every click adds to your team's damage!
+          </span>
         </div>
 
         <!-- Result overlay with burst rays -->
         <Transition name="result-pop">
           <div v-if="battleStore.objectiveResult !== null" class="result-overlay" :class="resultClass">
             <div class="result-rays" />
-            <span class="result-label">{{ resultLabel }}</span>
+            <div class="result-content">
+              <span class="result-label">{{ resultLabel }}</span>
+              <span class="result-score">{{ fmt(ownDamage) }} vs {{ fmt(enemyDamage) }} damage</span>
+              <span v-if="topFighter" class="result-top">Top: {{ topFighter.name }} · {{ fmt(Math.round(topFighter.damage)) }} dmg</span>
+            </div>
           </div>
         </Transition>
       </div>
@@ -98,8 +189,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { OBJECTIVE_BASE_DPS_PER_CHAMP, OBJECTIVE_CLICK_DAMAGE } from '@/config/constants'
+import {
+  OBJECTIVE_BASE_DPS_PER_CHAMP,
+  OBJECTIVE_CLICK_DAMAGE,
+  OBJECTIVE_DRAKE_WIN_BONUS,
+  OBJECTIVE_BARON_WIN_BONUS,
+} from '@/config/constants'
 
 const HP_SEGMENTS = 10
 
@@ -109,26 +206,49 @@ const show = computed(() => battleStore.objectiveModalOpen || battleStore.object
 const isDrake = computed(() => battleStore.activeObjective === 'drake')
 
 const objectiveTitle = computed(() => (isDrake.value ? 'HEXTECH DRAKE' : 'BARON NASHOR'))
-const objectiveSubtitle = computed(() =>
-  isDrake.value ? 'The drake has spawned — claim it!' : 'The Baron has awakened — strike now!',
+const objectiveEpithet = computed(() =>
+  isDrake.value ? '"Herald of the Rift"' : '"Voidbringer of the Pit"',
 )
 
-function countAtPit(idxs: number[] | undefined, until: number[]): number {
-  if (!idxs) return 3
-  return Math.max(1, idxs.filter((i) => until[i] <= battleStore.battleTime).length)
+const frozenClock = computed(() => battleStore.formatTime(battleStore.battleTime))
+
+// Alive counts are snapshotted at fight start — frozen time keeps them fixed.
+const aliveOwn = computed(() => battleStore.objectiveAliveCounts?.own ?? 3)
+const aliveEnemy = computed(() => battleStore.objectiveAliveCounts?.enemy ?? 3)
+const ownDps = computed(() => aliveOwn.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
+const enemyDps = computed(() => aliveEnemy.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
+
+const fightersOwn = computed(() => battleStore.objectiveFighters?.t1 ?? [])
+const fightersEnemy = computed(() => battleStore.objectiveFighters?.t2 ?? [])
+
+const topFighter = computed(() => {
+  const all = [...fightersOwn.value, ...fightersEnemy.value].filter((f) => f.alive)
+  if (all.length === 0) return null
+  return all.reduce((best, f) => (f.damage > best.damage ? f : best))
+})
+
+const ownDamage = computed(() => Math.round(battleStore.objectiveOwnDamage))
+const enemyDamage = computed(() => Math.round(battleStore.objectiveEnemyDamage))
+const playerDamage = computed(() => Math.round(battleStore.objectivePlayerDamage))
+
+const ownShare = computed(() => {
+  const total = ownDamage.value + enemyDamage.value
+  if (total === 0) return 50
+  return Math.round((ownDamage.value / total) * 100)
+})
+const playerShareOfOwn = computed(() => {
+  if (ownDamage.value === 0) return 0
+  return Math.min(100, Math.round((playerDamage.value / ownDamage.value) * 100))
+})
+const playerPercentOfOwn = computed(() => playerShareOfOwn.value)
+
+const winBonusPercent = computed(() =>
+  Math.round((isDrake.value ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS) * 100),
+)
+
+function fmt(n: number): string {
+  return n.toLocaleString('en-US')
 }
-
-const ownAtPit = computed(() =>
-  countAtPit(battleStore.activeObjectiveParticipants?.t1, battleStore.respawnUntil.t1),
-)
-const enemyAtPit = computed(() =>
-  countAtPit(battleStore.activeObjectiveParticipants?.t2, battleStore.respawnUntil.t2),
-)
-const ownDps = computed(() => ownAtPit.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
-const enemyDps = computed(() => enemyAtPit.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
-const ownShare = computed(() =>
-  Math.round((ownDps.value / Math.max(1, ownDps.value + enemyDps.value)) * 100),
-)
 
 const hpFraction = computed(() => {
   if (battleStore.objectiveMaxHP === 0) return 0
@@ -144,9 +264,9 @@ function segmentFill(s: number): number {
 
 const resultLabel = computed(() => {
   const r = battleStore.objectiveResult
-  if (r === 'player') return 'YOU SECURED IT!'
+  if (r === 'player') return 'YOUR HANDS SECURED IT!'
   if (r === 'own') return 'SECURED'
-  return 'STOLEN'
+  return 'LOST TO THE ENEMY'
 })
 
 const resultClass = computed(() => {
@@ -211,9 +331,9 @@ watch(show, (v) => {
 <style scoped>
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
 .objective-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 200;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -223,7 +343,7 @@ watch(show, (v) => {
 /* ── Modal card ──────────────────────────────────────────────────────────── */
 .objective-modal {
   position: relative;
-  width: 380px;
+  width: 580px;
   background: #111008;
   border: 4px solid #7a4e20;
   box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 20px 50px rgba(0, 0, 0, 0.95);
@@ -252,18 +372,26 @@ watch(show, (v) => {
   width: 100%;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-  padding: 9px 12px 7px;
+  padding: 8px 12px 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.obj-header-titles {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
+  min-width: 0;
 }
 
 .obj-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
   animation: title-breathe 2.4s ease-in-out infinite;
+  white-space: nowrap;
 }
 .title--drake {
   color: #6ee0a0;
@@ -274,18 +402,210 @@ watch(show, (v) => {
   text-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
 }
 
-.obj-subtitle {
-  font-size: 10px;
+.obj-epithet {
+  font-size: 11px;
   letter-spacing: 1px;
   color: #7a6030;
+  font-style: italic;
+}
+
+.frozen-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #141410;
+  border: 2px solid #7a4e20;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #3e200a;
+  animation: frozen-pulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.frozen-chip-icon {
+  color: #7ec8e8;
+}
+.frozen-chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.frozen-chip-label {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #7ec8e8;
+}
+.frozen-chip-clock {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* ── Alive strip ─────────────────────────────────────────────────────────── */
+.alive-strip {
+  width: calc(100% - 28px);
+  margin: 8px 14px 0;
+  padding: 5px 10px;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.alive-pips {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.alive-pips--enemy {
+  justify-content: flex-end;
+}
+.alive-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.alive-pip--own {
+  background: #52b830;
+  box-shadow: 0 0 4px #52b830;
+}
+.alive-pip--enemy {
+  background: #cc6050;
+  box-shadow: 0 0 4px #cc6050;
+}
+
+.alive-versus {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+}
+.alive-versus-icon {
+  color: #e8c040;
+}
+.alive-count {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.alive-count--own {
+  color: #6ec040;
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.5);
+}
+.alive-count--enemy {
+  color: #e07060;
+  text-shadow: 0 0 8px rgba(204, 96, 80, 0.5);
+}
+
+/* ── Arena row: fighters | boss | fighters ──────────────────────────────── */
+.arena-row {
+  width: calc(100% - 28px);
+  margin: 8px 14px 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fighters-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fighter-card {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 5px;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
+.fighter-card--enemy {
+  justify-content: flex-end;
+}
+.fighter-card--dead {
+  opacity: 0.55;
+}
+
+.fighter-portrait-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.fighter-portrait {
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  object-fit: cover;
+  display: block;
+}
+.fighter-portrait--own {
+  border: 2px solid #6ec040;
+}
+.fighter-portrait--enemy {
+  border: 2px solid #cc6050;
+}
+.fighter-portrait--dead {
+  filter: grayscale(0.85) brightness(0.6);
+}
+.fighter-dead-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #e07060;
+  background: #16140e;
+  border: 1px solid #cc6050;
+  border-radius: 50%;
+}
+
+.fighter-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fighter-info--enemy {
+  align-items: flex-end;
+  text-align: right;
+}
+.fighter-name {
+  font-size: 12px;
+  color: #c0b090;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.fighter-damage {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.fighter-damage--dead {
+  color: #8a8070;
+  font-weight: 400;
 }
 
 /* ── Arena ───────────────────────────────────────────────────────────────── */
 .boss-arena {
   position: relative;
-  width: 190px;
-  height: 190px;
-  margin: 12px auto 2px;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
   cursor: pointer;
   user-select: none;
   display: flex;
@@ -355,8 +675,8 @@ watch(show, (v) => {
 .boss-img {
   position: relative;
   z-index: 1;
-  width: 138px;
-  height: 138px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   object-fit: cover;
   transition: transform 0.08s ease;
@@ -423,7 +743,7 @@ watch(show, (v) => {
 .hp-segments {
   display: flex;
   gap: 3px;
-  height: 12px;
+  height: 14px;
 }
 
 .hp-segment {
@@ -446,78 +766,112 @@ watch(show, (v) => {
 
 .hp-text {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #a09060;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Tug-of-war ──────────────────────────────────────────────────────────── */
-.tug-section {
+/* ── Damage race ─────────────────────────────────────────────────────────── */
+.race-section {
   width: calc(100% - 28px);
-  margin: 6px 14px 2px;
+  margin: 6px 14px 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.tug-track {
-  height: 9px;
+.race-labels {
+  display: flex;
+  justify-content: space-between;
+}
+.race-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.race-label--own { color: #6ec040; }
+.race-label--enemy { color: #e07060; }
+
+.race-track {
+  position: relative;
+  height: 14px;
   border-radius: 3px;
   border: 1px solid #3e200a;
   background: linear-gradient(to bottom, #7a2818, #57201a);
   overflow: hidden;
 }
-.tug-own {
+.race-own {
+  position: relative;
   height: 100%;
   background: linear-gradient(to right, #2e7a1a, #52b830);
   box-shadow: 0 0 8px rgba(82, 184, 48, 0.6);
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.25s ease-out;
+}
+.race-player {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(to right, #c89040, #e8c060);
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.7);
+  transition: width 0.25s ease-out;
+}
+.race-midmark {
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: #e8c040;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
-.tug-side {
+.race-caption {
+  text-align: center;
+  min-height: 14px;
+}
+.race-caption-player {
+  font-size: 11px;
+  color: #e8c040;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.race-caption-idle {
+  font-size: 11px;
+  color: #8a8070;
+  letter-spacing: 0.04em;
+}
+
+/* ── Reward preview ──────────────────────────────────────────────────────── */
+.reward-row {
+  width: calc(100% - 28px);
+  margin: 5px 14px 0;
+  padding: 4px 0;
+  border-top: 1px solid #3e200a;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
 }
-.tug-side--own { justify-content: flex-start; }
-.tug-side--enemy { justify-content: flex-end; }
-
-.tug-pips {
-  display: flex;
-  gap: 3px;
+.reward {
+  font-size: 11px;
+  letter-spacing: 0.05em;
 }
-.tug-pip {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-.tug-pip--own {
-  background: #52b830;
-  box-shadow: 0 0 4px #52b830;
-}
-.tug-pip--enemy {
-  background: #cc6050;
-  box-shadow: 0 0 4px #cc6050;
-}
-
-.tug-label {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: #8a8070;
-}
-.tug-side--own .tug-label { color: #6ec040; }
-.tug-side--enemy .tug-label { color: #e07060; }
+.reward--win { color: #6ec040; }
+.reward--lose { color: #e07060; }
+.reward-divider { color: #7a6030; font-size: 11px; }
 
 /* ── Hint ────────────────────────────────────────────────────────────────── */
 .hint-row {
   width: 100%;
-  padding: 6px 12px 10px;
+  padding: 4px 12px 10px;
   text-align: center;
-  min-height: 26px;
+  min-height: 24px;
 }
 .hint-text {
-  font-size: 10px;
+  font-size: 11px;
   color: #7a6030;
   letter-spacing: 0.06em;
   animation: hint-blink 2.5s ease-in-out infinite;
@@ -558,11 +912,19 @@ watch(show, (v) => {
   background: conic-gradient(from 0deg, transparent 0deg, rgba(204, 96, 80, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(204, 96, 80, 0.1) 76deg, transparent 90deg);
 }
 
-.result-label {
+.result-content {
   position: relative;
-  font-size: 27px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.result-label {
+  font-size: 28px;
   font-weight: 900;
   letter-spacing: 0.08em;
+  text-align: center;
   animation: result-punch 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 .result-overlay--player .result-label {
@@ -576,6 +938,20 @@ watch(show, (v) => {
 .result-overlay--enemy .result-label {
   color: #e07060;
   text-shadow: 0 0 28px rgba(224, 112, 96, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.result-score {
+  font-size: 13px;
+  color: #a09060;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-top {
+  font-size: 12px;
+  color: #e8c040;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Transitions ─────────────────────────────────────────────────────────── */
@@ -624,8 +1000,13 @@ watch(show, (v) => {
 }
 
 @keyframes title-breathe {
-  0%, 100% { letter-spacing: 4px; opacity: 1; }
-  50% { letter-spacing: 5px; opacity: 0.85; }
+  0%, 100% { letter-spacing: 3px; opacity: 1; }
+  50% { letter-spacing: 4px; opacity: 0.85; }
+}
+
+@keyframes frozen-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px #3e200a; }
+  50% { box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(126, 200, 232, 0.35); }
 }
 
 @keyframes hit-flash {
@@ -668,6 +1049,7 @@ watch(show, (v) => {
   .obj-title,
   .hint-text,
   .result-rays,
+  .frozen-chip,
   .hp-section--shake {
     animation: none !important;
   }

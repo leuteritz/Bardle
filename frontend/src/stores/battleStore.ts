@@ -41,7 +41,10 @@ import {
   OBJECTIVE_DRAKE_WIN_BONUS,
   OBJECTIVE_BARON_WIN_BONUS,
   OBJECTIVE_DPS_TICK_MS,
-  OBJECTIVE_TIMEOUT_MS,
+  OBJECTIVE_DPS_VARIANCE,
+  OBJECTIVE_FIGHTER_WEIGHT_MIN,
+  OBJECTIVE_FIGHTER_WEIGHT_MAX,
+  OBJECTIVE_MAX_DURATION_MS,
   OBJECTIVE_RESULT_DELAY_MS,
   HONOR_MAX_SELECTIONS,
   MOVE_RESPAWN_WALK_SECONDS,
@@ -54,6 +57,7 @@ import type {
   BattleTimeline,
   ChampionState,
   KillFeedEntry,
+  ObjectiveFighter,
   ObjectiveOverride,
   RecruitableChampion,
 } from '../types'
@@ -242,8 +246,15 @@ export const useBattleStore = defineStore('battle', {
     objectiveMaxHP: 0,
     objectiveResult: null as 'player' | 'own' | 'enemy' | null,
     objectiveWinDelta: 0,
+    // ── Frozen-time objective damage race ──
+    objectiveFreezeStartMs: 0,
+    objectiveFightStartMs: 0,
+    objectiveOwnDamage: 0,
+    objectiveEnemyDamage: 0,
+    objectivePlayerDamage: 0,
+    objectiveAliveCounts: null as { own: number; enemy: number } | null,
+    objectiveFighters: null as { t1: ObjectiveFighter[]; t2: ObjectiveFighter[] } | null,
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
-    _objectiveTimeoutId: null as ReturnType<typeof setTimeout> | null,
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     searchingPhaseStartTimestamp: 0,
@@ -565,7 +576,9 @@ export const useBattleStore = defineStore('battle', {
           const resultStillAhead = this.timeline!.events.some(
             (ev) => ev.type === 'objectiveResult' && ev.objective === e.objective && ev.t > targetGameTime,
           )
-          if (resultStillAhead && !this.objectiveModalOpen) {
+          // Hidden tabs skip the interactive fight — background catch-up keeps
+          // using the scripted objectiveResult instead of freezing time unseen.
+          if (resultStillAhead && !this.objectiveModalOpen && !document.hidden) {
             this._openObjectiveModal(e.objective, e.participants ?? null)
           }
           break
@@ -1268,6 +1281,13 @@ export const useBattleStore = defineStore('battle', {
       }
     },
 
+    /**
+     * Opens the frozen-time objective fight. The battle simulation is paused and
+     * battlePhaseStartTimestamp keeps sliding forward, so game-time stands still:
+     * no kills, no respawns, no timeline events — a 3v5 stays a 3v5 for the whole
+     * fight. Both teams stack damage each tick (DPS ∝ alive participants); the
+     * team with more TOTAL damage when the objective dies secures it.
+     */
     _openObjectiveModal(type: 'drake' | 'baron', participants: { t1: number[]; t2: number[] } | null) {
       const maxHP = type === 'drake' ? DRAKE_OBJECTIVE_HP : BARON_OBJECTIVE_HP
       this.activeObjective = type
@@ -1276,34 +1296,122 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveMaxHP = maxHP
       this.objectiveResult = null
       this.objectiveWinDelta = 0
+      this.objectiveOwnDamage = 0
+      this.objectiveEnemyDamage = 0
+      this.objectivePlayerDamage = 0
+      // Alive counts cannot change while time is frozen — snapshot once.
+      this.objectiveAliveCounts = this._objectiveSideCounts()
+      this.objectiveFighters = {
+        t1: this._buildObjectiveFighters(participants?.t1, this.team1, this.respawnUntil.t1),
+        t2: this._buildObjectiveFighters(participants?.t2, this.team2, this.respawnUntil.t2),
+      }
       this.objectiveModalOpen = true
+
+      this.pauseBattleSimulation()
+      this.objectiveFreezeStartMs = Date.now()
+      this.objectiveFightStartMs = Date.now()
 
       this._objectiveIntervalId = setInterval(() => {
         if (!this.objectiveModalOpen || this.objectiveResult !== null) return
-        const sides = this._objectiveSideCounts()
-        const totalDPS = (sides.own + sides.enemy) * OBJECTIVE_BASE_DPS_PER_CHAMP
-        this.objectiveHP = Math.max(0, this.objectiveHP - totalDPS * (OBJECTIVE_DPS_TICK_MS / 1000))
-        if (this.objectiveHP <= 0) {
-          const ownChance = sides.own / (sides.own + sides.enemy)
-          this._resolveObjective(Math.random() < ownChance ? 'own' : 'enemy')
+        this._slideFreezeAnchor()
+        const sides = this.objectiveAliveCounts ?? { own: 3, enemy: 3 }
+        const dt = OBJECTIVE_DPS_TICK_MS / 1000
+        const wobble = () => 1 + OBJECTIVE_DPS_VARIANCE * (2 * Math.random() - 1)
+        const ownTick = sides.own * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble()
+        const enemyTick = sides.enemy * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble()
+        this.objectiveOwnDamage += ownTick
+        this.objectiveEnemyDamage += enemyTick
+        if (this.objectiveFighters) {
+          this._distributeFighterDamage(this.objectiveFighters.t1, ownTick)
+          this._distributeFighterDamage(this.objectiveFighters.t2, enemyTick)
+        }
+        this.objectiveHP = Math.max(0, this.objectiveHP - ownTick - enemyTick)
+        if (
+          this.objectiveHP <= 0 ||
+          Date.now() - this.objectiveFightStartMs >= OBJECTIVE_MAX_DURATION_MS
+        ) {
+          this._resolveByDamageLead()
         }
       }, OBJECTIVE_DPS_TICK_MS)
-
-      this._objectiveTimeoutId = setTimeout(() => {
-        if (this.objectiveModalOpen && this.objectiveResult === null) {
-          const sides = this._objectiveSideCounts()
-          const ownChance = sides.own / (sides.own + sides.enemy)
-          this._resolveObjective(Math.random() < ownChance ? 'own' : 'enemy')
-        }
-      }, OBJECTIVE_TIMEOUT_MS)
     },
 
+    /**
+     * Snapshot of one side's pit fighters. Living fighters get a random DPS
+     * weight, normalized so the side's weights sum to its alive count — the
+     * team DPS stays exactly aliveCount × base, only the split varies.
+     */
+    _buildObjectiveFighters(idxs: number[] | undefined, team: ChampionState[], until: number[]): ObjectiveFighter[] {
+      const indices = idxs && idxs.length > 0 ? idxs : team.map((_, i) => i)
+      const fighters: ObjectiveFighter[] = indices
+        .filter((i) => team[i]?.name)
+        .map((i) => ({
+          idx: i,
+          name: team[i].name,
+          alive: until[i] <= this.battleTime,
+          weight: 0,
+          damage: 0,
+        }))
+      const living = fighters.filter((f) => f.alive)
+      if (living.length === 0) return fighters
+      const raw = living.map(
+        () => OBJECTIVE_FIGHTER_WEIGHT_MIN + Math.random() * (OBJECTIVE_FIGHTER_WEIGHT_MAX - OBJECTIVE_FIGHTER_WEIGHT_MIN),
+      )
+      const rawSum = raw.reduce((a, b) => a + b, 0)
+      living.forEach((f, i) => {
+        f.weight = (raw[i] / rawSum) * living.length
+      })
+      return fighters
+    },
+
+    /** Spread one side's tick damage across its living fighters by weight. */
+    _distributeFighterDamage(fighters: ObjectiveFighter[], tick: number) {
+      const living = fighters.filter((f) => f.alive)
+      const sumWeights = living.reduce((a, f) => a + f.weight, 0)
+      if (sumWeights <= 0) return
+      for (const f of living) {
+        f.damage += tick * (f.weight / sumWeights)
+      }
+    },
+
+    /**
+     * While the objective fight freezes game-time, keep pushing the battle
+     * anchor forward so battleTime stays constant and a mid-freeze save/reload
+     * resumes at (about) the frozen moment.
+     */
+    _slideFreezeAnchor() {
+      if (this.objectiveFreezeStartMs <= 0) return
+      this.battlePhaseStartTimestamp += Date.now() - this.objectiveFreezeStartMs
+      this.objectiveFreezeStartMs = Date.now()
+    },
+
+    /** Player clicks add damage to the own team's total — no last-hit steal. */
     clickObjective() {
       if (!this.objectiveModalOpen || this.objectiveResult !== null) return
       this.objectiveHP = Math.max(0, this.objectiveHP - OBJECTIVE_CLICK_DAMAGE)
+      this.objectiveOwnDamage += OBJECTIVE_CLICK_DAMAGE
+      this.objectivePlayerDamage += OBJECTIVE_CLICK_DAMAGE
       if (this.objectiveHP <= 0) {
-        this._resolveObjective('player')
+        this._resolveByDamageLead()
       }
+    },
+
+    /**
+     * The objective goes to the team with the higher cumulative damage.
+     * Tie-break: more alive champions at the pit, then the player's team.
+     * Result reads 'player' only when the player's clicks were decisive.
+     */
+    _resolveByDamageLead() {
+      const sides = this.objectiveAliveCounts ?? { own: 3, enemy: 3 }
+      let ownWins: boolean
+      if (this.objectiveOwnDamage !== this.objectiveEnemyDamage) {
+        ownWins = this.objectiveOwnDamage > this.objectiveEnemyDamage
+      } else {
+        ownWins = sides.own >= sides.enemy
+      }
+      const clicksDecisive =
+        this.objectivePlayerDamage > 0 &&
+        this.objectiveOwnDamage - this.objectivePlayerDamage <= this.objectiveEnemyDamage
+      this._resolveObjective(ownWins ? (clicksDecisive ? 'player' : 'own') : 'enemy')
     },
 
     /**
@@ -1315,10 +1423,6 @@ export const useBattleStore = defineStore('battle', {
       if (this._objectiveIntervalId) {
         clearInterval(this._objectiveIntervalId)
         this._objectiveIntervalId = null
-      }
-      if (this._objectiveTimeoutId) {
-        clearTimeout(this._objectiveTimeoutId)
-        this._objectiveTimeoutId = null
       }
       this.objectiveResult = by
       const objective = this.activeObjective
@@ -1343,7 +1447,7 @@ export const useBattleStore = defineStore('battle', {
       }
 
       const closeTimeoutId = setTimeout(() => {
-        this._clearObjectiveModal()
+        this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
       this.timerIds.push(closeTimeoutId)
     },
@@ -1354,16 +1458,20 @@ export const useBattleStore = defineStore('battle', {
         clearInterval(this._objectiveIntervalId)
         this._objectiveIntervalId = null
       }
-      if (this._objectiveTimeoutId) {
-        clearTimeout(this._objectiveTimeoutId)
-        this._objectiveTimeoutId = null
-      }
       this.objectiveResult = by
       this.objectiveWinDelta = 0
       const closeTimeoutId = setTimeout(() => {
-        this._clearObjectiveModal()
+        this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
       this.timerIds.push(closeTimeoutId)
+    },
+
+    /** Unfreeze after a fight: clear the modal, then continue the paused simulation. */
+    _closeObjectiveModalAndResume() {
+      this._clearObjectiveModal()
+      if (this.battlePhase === 'playing' && this.battlePhaseStartTimestamp > 0 && !this.battleSimIntervalId) {
+        this.startBattleSimulation(true)
+      }
     },
 
     _clearObjectiveModal() {
@@ -1371,10 +1479,14 @@ export const useBattleStore = defineStore('battle', {
         clearInterval(this._objectiveIntervalId)
         this._objectiveIntervalId = null
       }
-      if (this._objectiveTimeoutId) {
-        clearTimeout(this._objectiveTimeoutId)
-        this._objectiveTimeoutId = null
-      }
+      this._slideFreezeAnchor()
+      this.objectiveFreezeStartMs = 0
+      this.objectiveFightStartMs = 0
+      this.objectiveOwnDamage = 0
+      this.objectiveEnemyDamage = 0
+      this.objectivePlayerDamage = 0
+      this.objectiveAliveCounts = null
+      this.objectiveFighters = null
       this.objectiveModalOpen = false
       this.objectiveResult = null
       this.activeObjective = null
@@ -1400,6 +1512,12 @@ export const useBattleStore = defineStore('battle', {
         this.battlePhaseStartTimestamp > 0 &&
         !this.showAutoBattleResult
       ) {
+        // Objective fight freezes game-time: keep sliding the anchor instead of
+        // restarting the (deliberately paused) simulation interval.
+        if (this.objectiveModalOpen || this.objectiveFreezeStartMs > 0) {
+          this._slideFreezeAnchor()
+          return
+        }
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
         const gameTime = Math.floor(realElapsedS * 60)
         if (gameTime >= BATTLE_TOTAL_GAME_SECONDS) {
