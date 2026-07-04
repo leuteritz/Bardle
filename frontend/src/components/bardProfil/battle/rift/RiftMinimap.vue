@@ -153,7 +153,11 @@
             class="champ-img"
             :class="[
               pos.team === 1 ? 'champ-img--blue' : 'champ-img--red',
-              { 'champ-img--bard': champAt(pos.team, pos.idx)?.name === 'Bard', 'champ-img--walking': pos.walking },
+              {
+                'champ-img--bard': champAt(pos.team, pos.idx)?.name === 'Bard',
+                'champ-img--walking': pos.walking,
+                'champ-img--victor': revealedWinner !== null && pos.team === revealedWinner,
+              },
             ]"
           />
           <span class="champ-level" :class="pos.team === 1 ? 'champ-level--blue' : 'champ-level--red'">
@@ -208,6 +212,7 @@ import {
   crackedLaneOf,
   structureId,
   killRoutePoints,
+  fullKillRoutePoints,
 } from '@/utils/battleStructures'
 import type { ChampionState } from '@/types'
 
@@ -292,23 +297,29 @@ interface LaneHighlight {
   routeOwner: 1 | 2
 }
 
+// the match winner, revealed only once the baron has resolved (no spoilers)
+const revealedWinner = computed<1 | 2 | null>(() =>
+  battleStore.baronKilledByTeam !== null ? (battleStore.timeline?.winner ?? null) : null,
+)
+
 const laneHighlights = computed<LaneHighlight[]>(() => {
   const destroyed = new Set(battleStore.destroyedStructures)
-  // reveal the winner's push lane only once the baron has resolved (no spoilers)
-  const winner =
-    battleStore.baronKilledByTeam !== null ? (battleStore.timeline?.winner ?? null) : null
+  const winner = revealedWinner.value
   const highlights: LaneHighlight[] = []
   for (const owner of [1, 2] as const) {
     const lane = crackedLaneOf(destroyed, owner)
     if (!lane) continue
     const attackerTeam = (3 - owner) as 1 | 2
+    const state: LaneHighlight['state'] =
+      winner === null ? 'pending' : attackerTeam === winner ? 'victory' : 'faded'
+    // the winner's line spans nexus to nexus; hints stay on the defender half
+    const points =
+      state === 'victory' ? fullKillRoutePoints(attackerTeam, lane) : killRoutePoints(owner, lane)
     highlights.push({
       lane,
       attackerTeam,
-      state: winner === null ? 'pending' : attackerTeam === winner ? 'victory' : 'faded',
-      svgPoints: killRoutePoints(owner, lane)
-        .map((p) => `${p.x},${p.y}`)
-        .join(' '),
+      state,
+      svgPoints: points.map((p) => `${p.x},${p.y}`).join(' '),
       routeOwner: owner,
     })
   }
@@ -839,15 +850,30 @@ const structureMarkers = computed(() => {
 }
 .champ-img--blue {
   border-color: #60a5fa;
+  color: #60a5fa;
   box-shadow: 0 0 9px rgba(59, 130, 246, 0.8);
 }
 .champ-img--red {
   border-color: #f87171;
+  color: #f87171;
   box-shadow: 0 0 9px rgba(239, 68, 68, 0.65);
 }
 .champ-img--bard {
   border-color: #e8c040 !important;
   box-shadow: 0 0 12px rgba(232, 192, 64, 0.9) !important;
+}
+/* Winning team once the baron has revealed the outcome — breathing team glow */
+.champ-img--victor {
+  animation: victor-pulse 1.6s ease-in-out infinite;
+}
+@keyframes victor-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 9px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 18px 3px currentColor;
+  }
 }
 .champ-img--walking {
   filter: grayscale(0.7) brightness(0.75);
@@ -1000,7 +1026,8 @@ const structureMarkers = computed(() => {
   .lane-glow--pending,
   .lane-glow-core,
   .lane-push-label,
-  .structure-breach {
+  .structure-breach,
+  .champ-img--victor {
     animation: none;
   }
 }

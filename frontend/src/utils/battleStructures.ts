@@ -1,4 +1,5 @@
 import type { BattleEvent, StructureId, StructureLaneKey, StructureTier } from '../types'
+import { LANE_FIGHT_POSITIONS } from '../config/constants'
 import {
   type MapPoint,
   type LaneStructureTier,
@@ -125,11 +126,34 @@ export function killRoutePoints(owner: 1 | 2, lane: 'top' | 'mid' | 'bot'): MapP
   const laneTiers = LANE_TIER_ORDER.map(
     (tier) => STRUCTURE_POSITIONS[structureId(owner, lane, tier)],
   )
+  const nexus = owner === 1 ? BLUE_NEXUS_MAP_POSITION : RED_NEXUS_MAP_POSITION
+  return [...laneTiers, nexusGate(owner), { ...nexus }]
+}
+
+/** Midpoint between a team's two nexus turrets — the gate in front of its nexus. */
+function nexusGate(owner: 1 | 2): MapPoint {
   const nt1 = STRUCTURE_POSITIONS[structureId(owner, 'nexus1', 'nexusTurret')]
   const nt2 = STRUCTURE_POSITIONS[structureId(owner, 'nexus2', 'nexusTurret')]
-  const betweenNexusTurrets = { x: (nt1.x + nt2.x) / 2, y: (nt1.y + nt2.y) / 2 }
-  const nexus = owner === 1 ? BLUE_NEXUS_MAP_POSITION : RED_NEXUS_MAP_POSITION
-  return [...laneTiers, betweenNexusTurrets, { ...nexus }]
+  return { x: (nt1.x + nt2.x) / 2, y: (nt1.y + nt2.y) / 2 }
+}
+
+/**
+ * The winner's full march: own nexus → own lane structures walking outward →
+ * lane middle → the defender-half kill route down to the enemy nexus.
+ */
+export function fullKillRoutePoints(attacker: 1 | 2, lane: 'top' | 'mid' | 'bot'): MapPoint[] {
+  const ownNexus = attacker === 1 ? BLUE_NEXUS_MAP_POSITION : RED_NEXUS_MAP_POSITION
+  const ownSideOutward = [...LANE_TIER_ORDER]
+    .reverse()
+    .map((tier) => STRUCTURE_POSITIONS[structureId(attacker, lane, tier)])
+  const defender = (3 - attacker) as 1 | 2
+  return [
+    { ...ownNexus },
+    nexusGate(attacker),
+    ...ownSideOutward,
+    { ...LANE_FIGHT_POSITIONS[lane] },
+    ...killRoutePoints(defender, lane),
+  ]
 }
 
 /** Replay helper — the set of structures destroyed by events at or before `t`. */
