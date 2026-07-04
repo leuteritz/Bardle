@@ -183,16 +183,18 @@ const nexusPos = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 6px;
   min-height: 0;
   min-width: 0;
+  /* size container so the square below can measure BOTH axes (cqw/cqh) */
+  container-type: size;
 }
 
+/* Always a perfect square: the smaller container axis wins, never stretches */
 .map-square {
   position: relative;
-  height: 100%;
-  aspect-ratio: 1;
-  max-width: 100%;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
 }
 
 .map-bg {

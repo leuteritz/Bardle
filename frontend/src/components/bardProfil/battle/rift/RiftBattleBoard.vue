@@ -1,10 +1,11 @@
 <template>
   <div class="rift-board">
     <ScoreTopBar />
+    <!-- Spectator layout: the map owns the whole middle, team HUDs float above it -->
     <div class="board-middle">
-      <TeamColumn side="blue" />
-      <RiftMinimap />
-      <TeamColumn side="red" />
+      <RiftMinimap class="map-layer" />
+      <TeamColumn side="blue" class="hud hud--left" />
+      <TeamColumn side="red" class="hud hud--right" />
     </div>
     <KillFeedTicker />
     <AnnouncementBanner />
@@ -31,7 +32,22 @@ import AnnouncementBanner from './AnnouncementBanner.vue'
 
 .board-middle {
   flex: 1;
-  display: flex;
+  position: relative;
   min-height: 0;
 }
+
+.map-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.hud {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  max-height: 92%;
+  z-index: 6;
+}
+.hud--left { left: 8px; }
+.hud--right { right: 8px; }
 </style>

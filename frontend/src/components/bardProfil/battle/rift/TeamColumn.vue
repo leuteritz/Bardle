@@ -89,24 +89,26 @@ function hpClass(hp: number): string {
 
 <style scoped>
 .team-col {
-  width: 218px;
+  /* slim spectator HUD panel floating above the map */
+  width: 172px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 8px;
+  gap: 5px;
+  padding: 8px 7px;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+  background: rgba(13, 12, 8, 0.82);
+  border: 1px solid #3e200a;
+  border-radius: 5px;
 }
 .team-col--blue {
-  border-right: 1px solid #3e200a;
-  background: rgba(59, 130, 246, 0.04);
+  box-shadow: inset 3px 0 0 rgba(59, 130, 246, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 .team-col--red {
-  border-left: 1px solid #3e200a;
-  background: rgba(239, 68, 68, 0.04);
+  box-shadow: inset -3px 0 0 rgba(239, 68, 68, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
 .col-title {
@@ -120,14 +122,12 @@ function hpClass(hp: number): string {
 .col-title--red { color: #c08080; text-align: right; }
 
 .champ-card {
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 3px;
+  padding: 5px 6px;
   border-radius: 5px;
-  min-height: 56px;
 }
 .champ-card--blue {
   background: rgba(59, 130, 246, 0.07);
@@ -155,8 +155,8 @@ function hpClass(hp: number): string {
 }
 
 .portrait {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 5px;
   object-fit: cover;
   border: 1px solid #60a5fa;
@@ -174,8 +174,8 @@ function hpClass(hp: number): string {
   position: absolute;
   bottom: -3px;
   right: -3px;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: #0d1830;
   border: 1px solid #60a5fa;
@@ -204,7 +204,7 @@ function hpClass(hp: number): string {
 .name-block--right { text-align: right; }
 
 .champ-name {
-  font-size: 12px;
+  font-size: 11px;
   color: #dbeafe;
   white-space: nowrap;
   overflow: hidden;
@@ -226,7 +226,7 @@ function hpClass(hp: number): string {
 }
 
 .kda {
-  font-size: 11px;
+  font-size: 10px;
   display: flex;
   align-items: baseline;
   gap: 1px;
@@ -278,8 +278,8 @@ function hpClass(hp: number): string {
   flex-shrink: 0;
 }
 .item-pip {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   background: #241a0c;
   border: 1px solid #5c3310;
   border-radius: 2px;
