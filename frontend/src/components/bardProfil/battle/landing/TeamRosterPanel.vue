@@ -14,12 +14,12 @@
 
     <div class="roster-rows">
       <div
-        v-for="(role, idx) in ROLES"
+        v-for="(role, idx) in roleRows"
         :key="role.key"
         class="roster-row"
         :class="battleStore.headerSlots[idx] ? 'roster-row--filled' : 'roster-row--empty'"
+        :style="rowStyle(role, !!battleStore.headerSlots[idx])"
       >
-        <img :src="role.image" :alt="role.label" class="row-role-icon" />
         <template v-if="battleStore.headerSlots[idx]">
           <img
             :src="battleStore.getChampionImage(battleStore.headerSlots[idx]!)"
@@ -28,15 +28,16 @@
           />
           <div class="row-names">
             <div class="row-champ-name">{{ battleStore.headerSlots[idx] }}</div>
-            <div class="row-role-label">{{ role.long }}</div>
+            <div class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</div>
           </div>
-          <span class="row-ready">✓</span>
         </template>
         <template v-else>
-          <div class="row-empty-circle" />
+          <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
           <div class="row-names">
             <div class="row-champ-name row-champ-name--empty">Empty slot</div>
-            <div class="row-role-label">{{ role.long }}</div>
+            <div class="row-role-label" :style="{ color: hexToRgba(role.color, 0.55) }">
+              {{ role.roleLabel }}
+            </div>
           </div>
         </template>
       </div>
@@ -72,20 +73,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { ROLES } from '@/config/constants'
 
 defineProps<{ isStarting: boolean }>()
 defineEmits<{ start: [] }>()
 
-const ROLES = [
-  { key: 'top', label: 'TOP', long: 'TOP · VANGUARD', image: '/img/roles/top.png' },
-  { key: 'jungle', label: 'JGL', long: 'JUNGLE · SKIRMISHER', image: '/img/roles/jungle.png' },
-  { key: 'mid', label: 'MID', long: 'MID · BURST MAGE', image: '/img/roles/mid.png' },
-  { key: 'bot', label: 'BOT', long: 'BOT · MARKSMAN', image: '/img/roles/adc.png' },
-  { key: 'support', label: 'SUP', long: 'SUPPORT · ROAMING', image: '/img/roles/supp.png' },
-] as const
+// Same order as battleStore.headerSlots: top, jungle, mid, adc, support
+const roleRows = ROLES.map((r) => ({
+  key: r.key,
+  roleLabel: r.key.toUpperCase(),
+  color: r.color,
+}))
+
+function hexToRgba(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+}
+
+function rowStyle(role: { color: string }, filled: boolean): CSSProperties {
+  if (!filled) return { borderLeft: `3px solid ${hexToRgba(role.color, 0.3)}` }
+  return {
+    borderLeft: `3px solid ${role.color}`,
+    background: `linear-gradient(90deg, ${hexToRgba(role.color, 0.12)}, rgba(0, 0, 0, 0.25))`,
+  }
+}
 
 const battleStore = useBattleStore()
 const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
@@ -147,44 +161,43 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 
 .roster-row {
   flex: 1;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 12px;
+  padding: 0 12px 0 0;
   border-radius: 5px;
-  min-height: 52px;
+  min-height: 68px;
 }
 .roster-row--filled {
-  background: rgba(96, 165, 250, 0.05);
-  border: 1px solid rgba(74, 138, 40, 0.28);
-  border-left: 3px solid #4a8a28;
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
+  border-right: 1px solid rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
 }
 .roster-row--empty {
   background: rgba(14, 10, 4, 0.6);
-  border: 1px dashed rgba(90, 60, 20, 0.4);
+  border-top: 1px dashed rgba(90, 60, 20, 0.4);
+  border-right: 1px dashed rgba(90, 60, 20, 0.4);
+  border-bottom: 1px dashed rgba(90, 60, 20, 0.4);
+  opacity: 0.75;
 }
 
-.row-role-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
+/* Splash portrait: full row height, fades into the role-tinted card */
 .row-champ-img {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+  align-self: stretch;
+  width: 96px;
   object-fit: cover;
-  border: 2px solid #4a8a28;
   flex-shrink: 0;
+  -webkit-mask-image: linear-gradient(to right, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 55%, transparent 100%);
 }
 
-.row-empty-circle {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+.row-empty-slot {
+  align-self: stretch;
+  width: 96px;
+  margin: 6px 0 6px 6px;
+  border-radius: 4px;
   border: 2px dashed rgba(90, 60, 20, 0.5);
   flex-shrink: 0;
 }
@@ -192,29 +205,24 @@ const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 .row-names {
   flex: 1;
   min-width: 0;
+  padding-left: 12px;
 }
 
 .row-champ-name {
-  font-size: 14px;
+  font-size: 17px;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 .row-champ-name--empty {
   color: #5a4820;
 }
 
 .row-role-label {
-  font-size: 10px;
-  color: #6a5820;
+  font-size: 11px;
   letter-spacing: 2px;
-}
-
-.row-ready {
-  color: #52b830;
-  font-size: 15px;
-  flex-shrink: 0;
 }
 
 /* ── Start button ── */

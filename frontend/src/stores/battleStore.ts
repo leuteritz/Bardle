@@ -57,6 +57,7 @@ import type {
   BattleTimeline,
   ChampionState,
   KillFeedEntry,
+  LiveBattleStats,
   ObjectiveFighter,
   ObjectiveOverride,
   RecruitableChampion,
@@ -77,6 +78,31 @@ import { logBattleStarted, logBattleEnded, logChampionDefeated } from '../config
 
 let _lastKillLogMs = 0
 let _visibilityHandler: (() => void) | null = null
+
+export function zeroLiveBattleStats(): LiveBattleStats {
+  return {
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    cs: 0,
+    gold: 0,
+    damage: 0,
+    healing: 0,
+    damageTaken: 0,
+    wardsPlaced: 0,
+    wardsKilled: 0,
+    controlWards: 0,
+    multikills: { double: 0, triple: 0, quadra: 0, penta: 0 },
+    largestSpree: 0,
+    firstBloods: 0,
+    soloKills: 0,
+    dragons: 0,
+    barons: 0,
+    turrets: 0,
+    inhibitors: 0,
+    battleSeconds: 0,
+  }
+}
 
 export function defaultAllTimeStats(): AllTimeBattleStats {
   return {
@@ -322,6 +348,45 @@ export const useBattleStore = defineStore('battle', {
       state.totalBattleTime > 0 ? state.allTime.gold / (state.totalBattleTime / 60) : 0,
     damagePerMinute: (state): number =>
       state.totalBattleTime > 0 ? state.allTime.damage / (state.totalBattleTime / 60) : 0,
+    // battlePhaseStartTimestamp > 0 guards the window where clearBattle() has
+    // already flipped the phase back to 'playing' but the old team stats were
+    // just accumulated into allTime (prevents double counting on the landing).
+    isBattleInProgress: (state): boolean =>
+      state.isAutoBattleInitialized &&
+      state.battlePhase === 'playing' &&
+      state.battlePhaseStartTimestamp > 0,
+    // Display-only totals of the running battle, mirroring accumulateBattleStats().
+    liveBattleStats(state): LiveBattleStats {
+      const live = zeroLiveBattleStats()
+      if (!this.isBattleInProgress) return live
+      for (const champ of state.team1) {
+        if (!champ.name) continue
+        live.kills += champ.kills
+        live.deaths += champ.deaths
+        live.assists += champ.assists
+        live.cs += champ.cs
+        live.gold += champ.gold
+        live.damage += champ.damage
+        live.healing += champ.healing
+        live.damageTaken += champ.damageTaken
+        live.wardsPlaced += champ.wardsPlaced
+        live.wardsKilled += champ.wardsKilled
+        live.controlWards += champ.controlWards
+        live.multikills.double += champ.multikills.double
+        live.multikills.triple += champ.multikills.triple
+        live.multikills.quadra += champ.multikills.quadra
+        live.multikills.penta += champ.multikills.penta
+        live.largestSpree = Math.max(live.largestSpree, champ.largestSpree)
+      }
+      live.firstBloods = state.battleTrack.firstBloodTeam1 ? 1 : 0
+      live.soloKills = state.battleTrack.soloKillsT1
+      live.dragons = state.team1Drakes
+      live.barons = state.team1Barons
+      live.turrets = state.team1Turrets
+      live.inhibitors = state.team1Inhibs
+      live.battleSeconds = state.battleTime
+      return live
+    },
   },
 
   actions: {

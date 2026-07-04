@@ -344,6 +344,31 @@ export interface ChampionState {
   respawnState: 'alive' | 'walking-back'
 }
 
+// Display-only snapshot of the running battle's own-team totals, mirroring the
+// fields that accumulateBattleStats() folds into the career stats at battle end.
+export interface LiveBattleStats {
+  kills: number
+  deaths: number
+  assists: number
+  cs: number
+  gold: number
+  damage: number
+  healing: number
+  damageTaken: number
+  wardsPlaced: number
+  wardsKilled: number
+  controlWards: number
+  multikills: MultikillCounts
+  largestSpree: number
+  firstBloods: number
+  soloKills: number
+  dragons: number
+  barons: number
+  turrets: number
+  inhibitors: number
+  battleSeconds: number
+}
+
 export type BattleEventType =
   | 'kill'
   | 'fightStart'

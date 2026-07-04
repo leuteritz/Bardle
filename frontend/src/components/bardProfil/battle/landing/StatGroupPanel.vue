@@ -3,6 +3,7 @@
     <div class="group-header" :style="{ color: color }">
       <Icon :icon="icon" width="24" height="24" class="group-icon" />
       <span class="group-title">{{ title }}</span>
+      <span v-if="live" class="live-dot" title="Updating live" />
     </div>
     <div class="group-rows">
       <div v-for="row in rows" :key="row.label" class="group-row">
@@ -27,6 +28,7 @@ defineProps<{
   icon: string
   color: string
   rows: StatRow[]
+  live?: boolean
 }>()
 </script>
 
@@ -57,6 +59,25 @@ defineProps<{
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #52b830;
+  box-shadow: 0 0 6px rgba(82, 184, 48, 0.8);
+  margin-left: auto;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
 }
 
 .group-rows {

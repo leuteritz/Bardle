@@ -19,10 +19,10 @@
       <div class="perf-col">
         <MultikillCardsRow />
         <div class="group-grid">
-          <StatGroupPanel title="COMBAT" icon="game-icons:sword-clash" color="#cc6050" :rows="combatRows" />
-          <StatGroupPanel title="FARM &amp; ECONOMY" icon="game-icons:crown-coin" color="#e8c040" :rows="economyRows" />
-          <StatGroupPanel title="OBJECTIVES" icon="game-icons:stone-tower" color="#a855f7" :rows="objectiveRows" />
-          <StatGroupPanel title="VISION &amp; TIME" icon="game-icons:semi-closed-eye" color="#5b8dd9" :rows="visionRows" />
+          <StatGroupPanel title="COMBAT" icon="game-icons:sword-clash" color="#cc6050" :rows="combatRows" :live="battleStore.isBattleInProgress" />
+          <StatGroupPanel title="FARM &amp; ECONOMY" icon="game-icons:crown-coin" color="#e8c040" :rows="economyRows" :live="battleStore.isBattleInProgress" />
+          <StatGroupPanel title="OBJECTIVES" icon="game-icons:stone-tower" color="#a855f7" :rows="objectiveRows" :live="battleStore.isBattleInProgress" />
+          <StatGroupPanel title="VISION &amp; TIME" icon="game-icons:semi-closed-eye" color="#5b8dd9" :rows="visionRows" :live="battleStore.isBattleInProgress" />
         </div>
       </div>
 
@@ -46,61 +46,76 @@ defineEmits<{ start: [] }>()
 
 const battleStore = useBattleStore()
 
+// Career totals merged with the running battle (display-only; the store's
+// allTime stays untouched — liveBattleStats zeroes out the moment the battle
+// finalizes and accumulateBattleStats() takes over the same numbers).
+const live = computed(() => battleStore.liveBattleStats)
+const kills = computed(() => battleStore.totalKills + live.value.kills)
+const deaths = computed(() => battleStore.totalDeaths + live.value.deaths)
+const assists = computed(() => battleStore.totalAssists + live.value.assists)
+const playtimeGameSeconds = computed(() => battleStore.totalBattleTime + live.value.battleSeconds)
+
 const kdaStr = computed(() => {
-  if (battleStore.totalDeaths === 0)
-    return battleStore.totalKills + battleStore.totalAssists > 0 ? 'Perfect' : '—'
-  return battleStore.careerKda.toFixed(2)
+  if (deaths.value === 0) return kills.value + assists.value > 0 ? 'Perfect' : '—'
+  return ((kills.value + assists.value) / deaths.value).toFixed(2)
 })
 
+function perMinute(total: number): number {
+  return playtimeGameSeconds.value > 0 ? total / (playtimeGameSeconds.value / 60) : 0
+}
+
 const combatRows = computed<StatRow[]>(() => [
-  { label: 'Kills', value: formatNumber(battleStore.totalKills), color: '#6ee7b7' },
-  { label: 'Deaths', value: formatNumber(battleStore.totalDeaths), color: '#fca5a5' },
-  { label: 'Assists', value: formatNumber(battleStore.totalAssists), color: '#93c5fd' },
+  { label: 'Kills', value: formatNumber(kills.value), color: '#6ee7b7' },
+  { label: 'Deaths', value: formatNumber(deaths.value), color: '#fca5a5' },
+  { label: 'Assists', value: formatNumber(assists.value), color: '#93c5fd' },
   { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
   { label: 'Kill Part.', value: `${Math.round(battleStore.avgKillParticipation * 100)}%` },
-  { label: 'Largest Spree', value: formatNumber(battleStore.allTime.largestSpree) },
-  { label: 'First Bloods', value: formatNumber(battleStore.allTime.firstBloods) },
-  { label: 'Solo Kills', value: formatNumber(battleStore.allTime.soloKills) },
+  {
+    label: 'Largest Spree',
+    value: formatNumber(Math.max(battleStore.allTime.largestSpree, live.value.largestSpree)),
+  },
+  { label: 'First Bloods', value: formatNumber(battleStore.allTime.firstBloods + live.value.firstBloods) },
+  { label: 'Solo Kills', value: formatNumber(battleStore.allTime.soloKills + live.value.soloKills) },
 ])
 
 const economyRows = computed<StatRow[]>(() => [
-  { label: 'Total CS', value: formatNumber(battleStore.allTime.cs) },
-  { label: 'CS / min', value: battleStore.csPerMinute.toFixed(1), color: '#e8c040' },
-  { label: 'Total Gold', value: formatNumber(battleStore.allTime.gold), color: '#e8c040' },
-  { label: 'Gold / min', value: formatNumber(Math.round(battleStore.goldPerMinute)) },
-  { label: 'Champ Dmg', value: formatNumber(battleStore.allTime.damage) },
-  { label: 'Dmg / min', value: formatNumber(Math.round(battleStore.damagePerMinute)) },
-  { label: 'Healing', value: formatNumber(battleStore.allTime.healing) },
-  { label: 'Dmg Taken', value: formatNumber(battleStore.allTime.damageTaken) },
+  { label: 'Total CS', value: formatNumber(battleStore.allTime.cs + live.value.cs) },
+  { label: 'CS / min', value: perMinute(battleStore.allTime.cs + live.value.cs).toFixed(1), color: '#e8c040' },
+  { label: 'Total Gold', value: formatNumber(battleStore.allTime.gold + live.value.gold), color: '#e8c040' },
+  { label: 'Gold / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.gold + live.value.gold))) },
+  { label: 'Champ Dmg', value: formatNumber(battleStore.allTime.damage + live.value.damage) },
+  { label: 'Dmg / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.damage + live.value.damage))) },
+  { label: 'Healing', value: formatNumber(battleStore.allTime.healing + live.value.healing) },
+  { label: 'Dmg Taken', value: formatNumber(battleStore.allTime.damageTaken + live.value.damageTaken) },
 ])
 
 const objectiveRows = computed<StatRow[]>(() => [
-  { label: 'Dragons', value: formatNumber(battleStore.allTime.dragons), color: '#6ee0a0' },
-  { label: 'Barons', value: formatNumber(battleStore.allTime.barons), color: '#c9a0f5' },
-  { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets) },
-  { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors) },
+  { label: 'Dragons', value: formatNumber(battleStore.allTime.dragons + live.value.dragons), color: '#6ee0a0' },
+  { label: 'Barons', value: formatNumber(battleStore.allTime.barons + live.value.barons), color: '#c9a0f5' },
+  { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets + live.value.turrets) },
+  { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors + live.value.inhibitors) },
   { label: 'Nexus Kills', value: formatNumber(battleStore.totalWins) },
   { label: 'Honors Given', value: formatNumber(battleStore.allTime.honorsGiven) },
 ])
 
 const visionRows = computed<StatRow[]>(() => [
   { label: 'Vision Score', value: battleStore.avgVisionScore.toFixed(1) },
-  { label: 'Wards Placed', value: formatNumber(battleStore.allTime.wardsPlaced) },
-  { label: 'Wards Killed', value: formatNumber(battleStore.allTime.wardsKilled) },
-  { label: 'Control Wards', value: formatNumber(battleStore.allTime.controlWards) },
+  { label: 'Wards Placed', value: formatNumber(battleStore.allTime.wardsPlaced + live.value.wardsPlaced) },
+  { label: 'Wards Killed', value: formatNumber(battleStore.allTime.wardsKilled + live.value.wardsKilled) },
+  { label: 'Control Wards', value: formatNumber(battleStore.allTime.controlWards + live.value.controlWards) },
   { label: 'Longest Game', value: longestGameStr.value },
   { label: 'Playtime', value: playtimeStr.value },
 ])
 
 const longestGameStr = computed(() => {
-  const s = battleStore.allTime.longestGameSeconds
+  const s = Math.max(battleStore.allTime.longestGameSeconds, live.value.battleSeconds)
   if (s <= 0) return '—'
   return battleStore.formatTime(s)
 })
 
 const playtimeStr = computed(() => {
-  // totalBattleTime is stored in game-seconds (60x real time)
-  const realSeconds = battleStore.totalBattleTime / 60
+  // playtime is tracked in game-seconds (60x real time)
+  const realSeconds = playtimeGameSeconds.value / 60
   if (realSeconds < 60) return `${Math.round(realSeconds)}s`
   if (realSeconds < 3600) return `${Math.round(realSeconds / 60)}m`
   return `${(realSeconds / 3600).toFixed(1)}h`

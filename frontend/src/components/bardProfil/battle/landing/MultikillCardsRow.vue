@@ -1,20 +1,20 @@
 <template>
   <div class="mk-row">
     <div class="mk-card mk-card--double">
-      <div class="mk-value mk-value--double">{{ $formatNumber(allTime.multikills.double) }}</div>
+      <div class="mk-value mk-value--double">{{ $formatNumber(multikills.double) }}</div>
       <div class="mk-label mk-label--double">DOUBLE KILLS</div>
     </div>
     <div class="mk-card mk-card--triple">
-      <div class="mk-value mk-value--triple">{{ $formatNumber(allTime.multikills.triple) }}</div>
+      <div class="mk-value mk-value--triple">{{ $formatNumber(multikills.triple) }}</div>
       <div class="mk-label mk-label--triple">TRIPLE KILLS</div>
     </div>
     <div class="mk-card mk-card--quadra">
-      <div class="mk-value mk-value--quadra">{{ $formatNumber(allTime.multikills.quadra) }}</div>
+      <div class="mk-value mk-value--quadra">{{ $formatNumber(multikills.quadra) }}</div>
       <div class="mk-label mk-label--quadra">QUADRA KILLS</div>
     </div>
     <div class="mk-card mk-card--penta">
       <div class="mk-shimmer" />
-      <div class="mk-value mk-value--penta">{{ $formatNumber(allTime.multikills.penta) }}</div>
+      <div class="mk-value mk-value--penta">{{ $formatNumber(multikills.penta) }}</div>
       <div class="mk-label mk-label--penta">PENTA KILLS</div>
     </div>
     <div class="mk-card mk-card--mvp">
@@ -26,11 +26,21 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 
-const { allTime } = storeToRefs(useBattleStore())
+const battleStore = useBattleStore()
+const { allTime } = storeToRefs(battleStore)
+
+// Career multikills plus the running battle's (live delta zeroes on finalize)
+const multikills = computed(() => ({
+  double: allTime.value.multikills.double + battleStore.liveBattleStats.multikills.double,
+  triple: allTime.value.multikills.triple + battleStore.liveBattleStats.multikills.triple,
+  quadra: allTime.value.multikills.quadra + battleStore.liveBattleStats.multikills.quadra,
+  penta: allTime.value.multikills.penta + battleStore.liveBattleStats.multikills.penta,
+}))
 </script>
 
 <style scoped>
