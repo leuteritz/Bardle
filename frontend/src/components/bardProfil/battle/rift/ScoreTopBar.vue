@@ -241,14 +241,14 @@ watch(bluePercent, (next, prev) => {
 }
 
 .momentum-pct {
-  position: relative;
-  min-width: 62px;
+  width: 64px;
+  flex-shrink: 0;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
 }
 .momentum-pct--red {
-  flex-direction: row-reverse;
+  justify-content: flex-start;
 }
 
 .momentum-pct-value {
@@ -278,26 +278,40 @@ watch(bluePercent, (next, prev) => {
 }
 
 .momentum-delta {
+  position: absolute;
+  top: 50%;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 6px rgba(0, 0, 0, 0.8);
   animation: momentum-delta-fade 1.2s ease-out forwards;
 }
-.momentum-delta--blue { color: #6ee7b7; }
-.momentum-delta--red { color: #f87171; }
+.momentum-delta--blue {
+  left: 10px;
+  color: #d9f7ea;
+}
+.momentum-delta--red {
+  right: 10px;
+  color: #ffe3e0;
+}
 
 @keyframes momentum-delta-fade {
   0% {
     opacity: 1;
-    transform: translateY(3px);
+    transform: translateY(calc(-50% + 3px));
   }
   60% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-50%);
   }
   100% {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(calc(-50% - 4px));
   }
 }
 
@@ -342,11 +356,14 @@ watch(bluePercent, (next, prev) => {
 .momentum-center-tick {
   position: absolute;
   left: 50%;
-  top: -2px;
-  bottom: -2px;
-  width: 1px;
-  background: rgba(232, 192, 64, 0.35);
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: #e8c040;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.7);
   pointer-events: none;
+  z-index: 1;
 }
 
 .momentum-marker {
@@ -361,6 +378,6 @@ watch(bluePercent, (next, prev) => {
     0 1px 2px rgba(0, 0, 0, 0.9);
   transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 </style>
