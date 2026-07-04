@@ -5,6 +5,8 @@ import {
   mirrorPoint,
   RED_STRUCTURE_MAP_POSITIONS,
   RED_NEXUS_TURRET_POSITIONS,
+  BLUE_NEXUS_MAP_POSITION,
+  RED_NEXUS_MAP_POSITION,
 } from '../config/battleRoutes'
 
 // Pure structure bookkeeping for the battle timeline: ids, fixed map
@@ -111,6 +113,23 @@ export function crackedLaneOf(
     if (destroyed.has(structureId(ownerTeam, lane, 'inhibitor'))) return lane
   }
   return null
+}
+
+/**
+ * The kill route through the defender's structures: 1st tower → 2nd tower →
+ * inhib turret → inhibitor → between the two nexus turrets → nexus. Ordered
+ * in the attacker's walking direction. Shared by the minimap lane highlight
+ * and the endgame champion movement.
+ */
+export function killRoutePoints(owner: 1 | 2, lane: 'top' | 'mid' | 'bot'): MapPoint[] {
+  const laneTiers = LANE_TIER_ORDER.map(
+    (tier) => STRUCTURE_POSITIONS[structureId(owner, lane, tier)],
+  )
+  const nt1 = STRUCTURE_POSITIONS[structureId(owner, 'nexus1', 'nexusTurret')]
+  const nt2 = STRUCTURE_POSITIONS[structureId(owner, 'nexus2', 'nexusTurret')]
+  const betweenNexusTurrets = { x: (nt1.x + nt2.x) / 2, y: (nt1.y + nt2.y) / 2 }
+  const nexus = owner === 1 ? BLUE_NEXUS_MAP_POSITION : RED_NEXUS_MAP_POSITION
+  return [...laneTiers, betweenNexusTurrets, { ...nexus }]
 }
 
 /** Replay helper — the set of structures destroyed by events at or before `t`. */

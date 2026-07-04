@@ -1466,6 +1466,13 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveFreezeStartMs = Date.now()
     },
 
+    /** Instantly slays the active objective and credits the chosen team. */
+    forceResolveObjective(team: 1 | 2) {
+      if (!this.objectiveModalOpen || this.objectiveResult !== null || !this.activeObjective) return
+      this.objectiveHP = 0
+      this._resolveObjective(team === 1 ? 'own' : 'enemy')
+    },
+
     /** Player clicks add damage to the own team's total — no last-hit steal. */
     clickObjective() {
       if (!this.objectiveModalOpen || this.objectiveResult !== null) return

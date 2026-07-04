@@ -22,6 +22,23 @@
         </template>
       </svg>
 
+      <!-- Cracked-lane highlights: lit once a lane's inhibitor falls, the winner's
+           push lane intensifies after the baron resolves, the other lane fades -->
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="lane-glow-svg">
+        <g
+          v-for="hl in laneHighlights"
+          :key="`lane-${hl.lane}-${hl.attackerTeam}`"
+          class="lane-glow"
+          :class="[
+            `lane-glow--${hl.state}`,
+            hl.attackerTeam === 1 ? 'lane-glow--blue' : 'lane-glow--red',
+          ]"
+        >
+          <polyline :points="hl.svgPoints" class="lane-glow-under" />
+          <polyline :points="hl.svgPoints" class="lane-glow-core" />
+        </g>
+      </svg>
+
       <!-- Minions -->
       <div
         v-for="dot in minions"
@@ -56,12 +73,27 @@
         :style="{ left: s.x + '%', top: s.y + '%' }"
       >
         <span v-if="s.destroyed" class="structure-x" :class="{ 'structure-x--punch': s.justDestroyed }">✕</span>
+        <div
+          v-if="s.destroyed && s.tier === 'inhibitor'"
+          class="structure-breach"
+          :class="s.ownerTeam === 1 ? 'structure-breach--red' : 'structure-breach--blue'"
+        />
         <template v-if="s.justDestroyed">
           <div class="structure-burst structure-burst--gold" />
           <div class="structure-burst structure-burst--red" />
           <div class="structure-ember" />
         </template>
       </div>
+
+      <!-- PUSH label on the winner's cracked lane once the baron has resolved -->
+      <span
+        v-if="pushLabel"
+        class="lane-push-label"
+        :class="pushLabel.team === 1 ? 'lane-push-label--blue' : 'lane-push-label--red'"
+        :style="{ left: pushLabel.x + '%', top: pushLabel.y + '%' }"
+      >
+        PUSH
+      </span>
 
       <!-- Active fight FX -->
       <div
@@ -169,7 +201,14 @@ import { useBattleStore } from '@/stores/battleStore'
 import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
 import { DRAKE_POS, BARON_POS, STRUCTURE_BURST_GAME_SECONDS } from '@/config/constants'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION } from '@/config/battleRoutes'
-import { ALL_STRUCTURE_IDS, STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battleStructures'
+import {
+  ALL_STRUCTURE_IDS,
+  STRUCTURE_POSITIONS,
+  parseStructureId,
+  crackedLaneOf,
+  structureId,
+  killRoutePoints,
+} from '@/utils/battleStructures'
 import type { ChampionState } from '@/types'
 
 const battleStore = useBattleStore()
@@ -245,6 +284,50 @@ const nexusMarkers = computed(() => [
   { team: 2 as const, ...RED_NEXUS_MAP_POSITION, dead: battleStore.nexusDestroyedByTeam === 1 },
 ])
 
+interface LaneHighlight {
+  lane: 'top' | 'mid' | 'bot'
+  attackerTeam: 1 | 2
+  state: 'pending' | 'victory' | 'faded'
+  svgPoints: string
+  routeOwner: 1 | 2
+}
+
+const laneHighlights = computed<LaneHighlight[]>(() => {
+  const destroyed = new Set(battleStore.destroyedStructures)
+  // reveal the winner's push lane only once the baron has resolved (no spoilers)
+  const winner =
+    battleStore.baronKilledByTeam !== null ? (battleStore.timeline?.winner ?? null) : null
+  const highlights: LaneHighlight[] = []
+  for (const owner of [1, 2] as const) {
+    const lane = crackedLaneOf(destroyed, owner)
+    if (!lane) continue
+    const attackerTeam = (3 - owner) as 1 | 2
+    highlights.push({
+      lane,
+      attackerTeam,
+      state: winner === null ? 'pending' : attackerTeam === winner ? 'victory' : 'faded',
+      svgPoints: killRoutePoints(owner, lane)
+        .map((p) => `${p.x},${p.y}`)
+        .join(' '),
+      routeOwner: owner,
+    })
+  }
+  return highlights
+})
+
+const pushLabel = computed(() => {
+  const hl = laneHighlights.value.find((h) => h.state === 'victory')
+  if (!hl) return null
+  // sits on the lane between 2nd tower and inhib turret, away from the nexus cluster
+  const inner = STRUCTURE_POSITIONS[structureId(hl.routeOwner, hl.lane, 'inner')]
+  const inhibTurret = STRUCTURE_POSITIONS[structureId(hl.routeOwner, hl.lane, 'inhibTurret')]
+  return {
+    team: hl.attackerTeam,
+    x: (inner.x + inhibTurret.x) / 2,
+    y: (inner.y + inhibTurret.y) / 2,
+  }
+})
+
 const structureMarkers = computed(() => {
   const destroyed = new Set(battleStore.destroyedStructures)
   return ALL_STRUCTURE_IDS.map((id) => {
@@ -308,6 +391,100 @@ const structureMarkers = computed(() => {
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+/* ── Cracked-lane highlights ── */
+.lane-glow-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.lane-glow polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lane-glow--blue {
+  color: #60a5fa;
+}
+.lane-glow--red {
+  color: #f87171;
+}
+
+.lane-glow-under {
+  stroke-width: 1.3;
+  opacity: 0.12;
+}
+.lane-glow-core {
+  stroke-width: 0.45;
+  stroke-dasharray: 1.5 2.5;
+  opacity: 0.5;
+  /* dash flows toward the defender's nexus (points are outer tower → nexus) */
+  animation: lane-dash-flow 2.2s linear infinite;
+}
+
+.lane-glow--pending {
+  animation: lane-glow-pulse 2.6s ease-in-out infinite;
+}
+.lane-glow--victory .lane-glow-under {
+  stroke-width: 1.8;
+  opacity: 0.2;
+}
+.lane-glow--victory .lane-glow-core {
+  stroke-width: 0.65;
+  opacity: 0.8;
+  animation-duration: 0.9s;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+.lane-glow--faded {
+  opacity: 0.08;
+}
+.lane-glow--faded .lane-glow-core {
+  animation: none;
+}
+
+@keyframes lane-dash-flow {
+  to {
+    /* multiple of the dash period (1.5 + 2.5) so the loop is seamless */
+    stroke-dashoffset: -8;
+  }
+}
+@keyframes lane-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.lane-push-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 8px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid;
+  background: rgba(10, 10, 8, 0.75);
+  pointer-events: none;
+  animation: lane-glow-pulse 1.4s ease-in-out infinite;
+}
+.lane-push-label--blue {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.7);
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.8);
+}
+.lane-push-label--red {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.7);
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
 }
 
 /* ── Minions ── */
@@ -403,6 +580,36 @@ const structureMarkers = computed(() => {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 120, 40, 0.55), transparent 65%);
   animation: structure-ember-fade 1.6s ease-out forwards;
+}
+
+/* Broken inhibitor gate: persistent ring in the attacker's color marks the push entry */
+.structure-breach {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  pointer-events: none;
+  animation: breach-pulse 1.8s ease-in-out infinite;
+}
+.structure-breach--blue {
+  border-color: #60a5fa;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+}
+.structure-breach--red {
+  border-color: #f87171;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+}
+
+@keyframes breach-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
 }
 
 /* ── Nexus markers ── */
@@ -789,7 +996,11 @@ const structureMarkers = computed(() => {
   .structure-ember,
   .structure-x--punch,
   .nexus-core,
-  .nexus-ring {
+  .nexus-ring,
+  .lane-glow--pending,
+  .lane-glow-core,
+  .lane-push-label,
+  .structure-breach {
     animation: none;
   }
 }

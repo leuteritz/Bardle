@@ -5,9 +5,25 @@
         <!-- Gold accent bar -->
         <div class="accent-bar" />
 
-        <!-- Spawn banner header -->
+        <!-- Spawn banner header with instant-resolve buttons -->
         <div class="obj-header">
+          <button
+            class="force-btn force-btn--ally"
+            :disabled="battleStore.objectiveResult !== null"
+            title="Instantly slay — your team takes it"
+            @click="battleStore.forceResolveObjective(1)"
+          >
+            SECURE ✦
+          </button>
           <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
+          <button
+            class="force-btn force-btn--enemy"
+            :disabled="battleStore.objectiveResult !== null"
+            title="Instantly slay — enemy team takes it"
+            @click="battleStore.forceResolveObjective(2)"
+          >
+            ✦ CONCEDE
+          </button>
         </div>
 
         <!-- Alive-count strip: the fight is locked at these numbers -->
@@ -356,6 +372,7 @@ watch(show, (v) => {
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
 .obj-header {
+  position: relative;
   width: 100%;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
@@ -363,6 +380,49 @@ watch(show, (v) => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Instant-resolve buttons flanking the title */
+.force-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 26px;
+  padding: 0 9px;
+  background: rgba(13, 12, 8, 0.85);
+  border: 1px solid;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.force-btn--ally {
+  left: 10px;
+  border-color: rgba(96, 165, 250, 0.65);
+  color: #60a5fa;
+}
+.force-btn--ally:hover:not(:disabled) {
+  border-color: #60a5fa;
+  background: rgba(20, 30, 48, 0.95);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.45);
+}
+.force-btn--enemy {
+  right: 10px;
+  border-color: rgba(248, 113, 113, 0.65);
+  color: #f87171;
+}
+.force-btn--enemy:hover:not(:disabled) {
+  border-color: #f87171;
+  background: rgba(48, 18, 18, 0.95);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+.force-btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
 }
 
 .obj-title {

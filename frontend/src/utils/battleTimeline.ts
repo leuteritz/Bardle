@@ -56,6 +56,7 @@ import {
   TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
   OBJECTIVE_DRAKE_SPAWN,
   OBJECTIVE_BARON_SPAWN,
+  TIMELINE_BARON_SPAWN_JITTER_T,
   LANE_FIGHT_POSITIONS,
   DRAKE_POS,
   BARON_POS,
@@ -458,7 +459,7 @@ export function generateTimeline(
   }
 
   // ── Baron — both teams have cracked a lane; all ten champions meet at the pit ──
-  const baronSpawnT = OBJECTIVE_BARON_SPAWN + randInt(rng, 0, 200)
+  const baronSpawnT = OBJECTIVE_BARON_SPAWN + randInt(rng, 0, TIMELINE_BARON_SPAWN_JITTER_T)
   emitObjective(ctx, baronSpawnT, 'baron', undefined, {
     t1: [0, 1, 2, 3, 4],
     t2: [0, 1, 2, 3, 4],

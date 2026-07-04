@@ -10,6 +10,10 @@ import {
   MOVE_RESPAWN_WALK_SECONDS,
   MOVE_FIGHT_GATHER_LEAD_T,
   MOVE_SIEGE_HOLD_T,
+  MOVE_PUSH_START_DELAY_T,
+  MOVE_PUSH_STAGGER_T,
+  MOVE_PUSH_TRAVEL_T,
+  TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
 } from '../config/constants'
 import {
   type MapPoint,
@@ -28,7 +32,7 @@ import {
   BOT_LANE_PATH,
 } from '../config/battleRoutes'
 import { createRng, BATTLE_ROLES } from './battleTimeline'
-import { parseStructureId } from './battleStructures'
+import { parseStructureId, killRoutePoints } from './battleStructures'
 
 export interface MovementSegment {
   tStart: number
@@ -108,7 +112,7 @@ function buildChampionSchedule(
   role: BattleRole,
 ): ChampionSchedule {
   const rng = createRng((seed ^ Math.imul(team, 0x2545f491) ^ Math.imul(idx + 1, 0x9e3779b9)) >>> 0)
-  const endgameLanePath = winnerPushLanePath(timeline)
+  const endgameRoute = winnerKillRoute(timeline)
   const fountain = fountainOf(team)
   const lanePath = ROLE_LANE_PATH[role]
   const holdFrac = team === 1 ? LANE_HOLD_FRACTION_BLUE : LANE_HOLD_FRACTION_RED
@@ -170,9 +174,20 @@ function buildChampionSchedule(
     }
   }
 
-  // 2) Endgame: winner pushes down mid to the enemy nexus, loser falls back
+  // 2) Endgame: right after the baron resolves the winner marches the kill
+  // route (loser's cracked-lane structures → nexus), the loser falls back
   const winnerTeam = timeline.winner
-  const pushT = TIMELINE_NEXUS_FALL_T - 500 + Math.floor(rng() * 120)
+  const baronResult = timeline.events.find(
+    (e) => e.type === 'objectiveResult' && e.objective === 'baron',
+  )
+  const baronSpawn = timeline.events.find(
+    (e) => e.type === 'objectiveSpawn' && e.objective === 'baron',
+  )
+  // a very late reseed can cut the baron out of the script — degrade to the old timing
+  const pushBaseT =
+    baronResult?.t ??
+    (baronSpawn ? baronSpawn.t + TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T : TIMELINE_NEXUS_FALL_T - 500)
+  const pushT = pushBaseT + MOVE_PUSH_START_DELAY_T + Math.floor(rng() * MOVE_PUSH_STAGGER_T)
   if (team === winnerTeam) {
     const enemyNexus = team === 1 ? RED_NEXUS : BLUE_NEXUS
     orders.push({
@@ -180,6 +195,8 @@ function buildChampionSchedule(
       location: jittered(enemyNexus, rng, 4),
       holdUntil: BATTLE_TOTAL_GAME_SECONDS,
       kind: 'push',
+      // must preempt any lingering lane-drift hold, or the march never starts
+      priority: true,
     })
   } else {
     const ownNexus = team === 1 ? BLUE_NEXUS : RED_NEXUS
@@ -188,6 +205,7 @@ function buildChampionSchedule(
       location: jittered(ownNexus, rng, 5),
       holdUntil: BATTLE_TOTAL_GAME_SECONDS,
       kind: 'retreat',
+      priority: true,
     })
   }
 
@@ -217,9 +235,9 @@ function buildChampionSchedule(
     const travelStart = order.priority ? order.t - 1 : Math.max(cursorT, order.t - 1)
     const isPush = order.kind === 'push' || order.kind === 'retreat'
     const path = isPush
-      ? pushPath(cursorPos, order.location, team, rng, endgameLanePath)
+      ? pushPath(cursorPos, order.location, rng, endgameRoute)
       : [cursorPos, jittered(midpoint(cursorPos, order.location), rng, 5), order.location]
-    const travelEnd = Math.min(order.holdUntil, travelStart + 120)
+    const travelEnd = Math.min(order.holdUntil, travelStart + (isPush ? MOVE_PUSH_TRAVEL_T : 120))
     segments.push({ tStart: travelStart, tEnd: travelEnd, path, kind: order.kind })
     cursorPos = order.location
     cursorT = Math.max(travelEnd, order.holdUntil)
@@ -244,35 +262,26 @@ function midpoint(a: MapPoint, b: MapPoint): MapPoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }
 
-const LANE_PATH_BY_KEY: Record<'top' | 'mid' | 'bot', MapPoint[]> = {
-  top: TOP_LANE_PATH,
-  mid: MID_LANE_PATH,
-  bot: BOT_LANE_PATH,
-}
-
-/** The lane the winner pushes at the end — the one whose loser inhibitor fell. */
-function winnerPushLanePath(timeline: BattleTimeline): MapPoint[] {
+/**
+ * The kill route the winner marches at the end — through the structures of the
+ * lane whose loser inhibitor fell: outer → inner → inhib turret → inhibitor →
+ * between the nexus turrets → nexus (mirrors the minimap lane highlight).
+ */
+function winnerKillRoute(timeline: BattleTimeline): MapPoint[] {
   const loser = (3 - timeline.winner) as 1 | 2
   for (const e of timeline.events) {
     if (e.type !== 'inhibitor' || !e.structureId) continue
     const { ownerTeam, laneKey } = parseStructureId(e.structureId)
     if (ownerTeam === loser && (laneKey === 'top' || laneKey === 'mid' || laneKey === 'bot')) {
-      return LANE_PATH_BY_KEY[laneKey]
+      return killRoutePoints(loser, laneKey)
     }
   }
-  return MID_LANE_PATH
+  return killRoutePoints(loser, 'mid')
 }
 
-/** Endgame push follows the winner's cracked lane instead of a straight line. */
-function pushPath(
-  from: MapPoint,
-  to: MapPoint,
-  team: 1 | 2,
-  rng: () => number,
-  lanePath: MapPoint[],
-): MapPoint[] {
-  const laneFracs = team === 1 ? [0.55, 0.7, 0.85] : [0.45, 0.3, 0.15]
-  const via = laneFracs.map((f) => jittered(pointAlongPath(lanePath, f), rng, 3))
+/** Endgame push/retreat walks structure to structure along the kill route. */
+function pushPath(from: MapPoint, to: MapPoint, rng: () => number, route: MapPoint[]): MapPoint[] {
+  const via = route.slice(0, -1).map((p) => jittered(p, rng, 1.5))
   return [from, ...via, to]
 }
 

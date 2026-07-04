@@ -153,7 +153,7 @@ export const LANE_FIGHT_POSITIONS: Record<'top' | 'mid' | 'bot', { x: number; y:
 
 // ── Objective Modal ────────────────────────────────────────────────────────
 export const OBJECTIVE_DRAKE_SPAWN = 300 // game-seconds when drake appears on minimap
-export const OBJECTIVE_BARON_SPAWN = 2400 // game-seconds when baron appears on minimap
+export const OBJECTIVE_BARON_SPAWN = 2000 // game-seconds when baron appears on minimap (early enough for a full lane push afterwards)
 export const DRAKE_OBJECTIVE_HP = 3200
 export const BARON_OBJECTIVE_HP = 4000
 /** Objective DPS contributed by every living champion present at the pit (per team) */
@@ -173,10 +173,14 @@ export const OBJECTIVE_RESULT_DELAY_MS = 2200
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
+// Match script: laning 0-900 → drakes 900-1450 → mid fights 1250-1890 →
+// cracks 820-1920 → baron 2000-2120 (result ~2720-2900) → push ~2850-3300 → nexus 3550
 export const TIMELINE_LANING_END = 900
-export const TIMELINE_DRAKE_WINDOW_END = 1800
-export const TIMELINE_MIDFIGHT_END = 2400
-export const TIMELINE_BARON_END = 2900
+export const TIMELINE_DRAKE_WINDOW_END = 1450
+export const TIMELINE_MIDFIGHT_END = 1950
+export const TIMELINE_BARON_END = 2650
+/** Random extra delay on the baron spawn time */
+export const TIMELINE_BARON_SPAWN_JITTER_T = 120
 /** Game-second at which the losing nexus falls */
 export const TIMELINE_NEXUS_FALL_T = 3550
 export const TIMELINE_FIRST_BLOOD_MIN_T = 120
@@ -216,9 +220,9 @@ export const TIMELINE_EXTRA_TURRETS_MIN = 1
 export const TIMELINE_EXTRA_TURRETS_MAX = 2
 /** Minimum spacing between consecutive structure falls */
 export const TIMELINE_STRUCTURE_MIN_GAP_T = 40
-/** Nexus turrets fall this long after the baron resolves (min/max delay each) */
-export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 30
-export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 90
+/** Nexus turrets fall this long after the baron resolves (min/max delay each) — paced so the winner visibly marches the cracked lane */
+export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 130
+export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 240
 /** Both nexus turrets must be down this long before the nexus falls */
 export const TIMELINE_NEXUS_TURRET_END_MARGIN_T = 60
 /** Champions on the attacking side present at a structure fall (min/max) */
@@ -229,7 +233,7 @@ export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
 /** Game-seconds between objective spawn and its scripted result (720 game-s = 12 real-s, leaves room for the click modal) */
 export const TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T = 720
-export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 900
+export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 780
 
 // ── Per-champion continuous stat rates (per game-minute unless noted) ──────
 export const CS_RATE_BY_ROLE: Record<string, number> = {
@@ -322,6 +326,12 @@ export const MOVE_RESPAWN_WALK_SECONDS = 240
 export const MOVE_FIGHT_GATHER_LEAD_T = 80
 /** Game-seconds attackers keep sieging at a structure after it falls */
 export const MOVE_SIEGE_HOLD_T = 120
+/** Winners leave the baron pit this long after the baron result */
+export const MOVE_PUSH_START_DELAY_T = 40
+/** Per-champion random stagger on the endgame push start */
+export const MOVE_PUSH_STAGGER_T = 120
+/** Game-seconds the endgame push/retreat march takes along the kill route */
+export const MOVE_PUSH_TRAVEL_T = 420
 /** Cosmetic position jitter in map-units applied by the UI ticker */
 export const MOVE_JITTER_UNITS = 1.5
 /** UI position sampling interval (ms) */
