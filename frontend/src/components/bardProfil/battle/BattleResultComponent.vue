@@ -16,15 +16,10 @@
     <template v-if="battleStore.isAutoBattleInitialized && !isUniverseAnimating">
       <PlanetBattleBackgroundComponent :variant="planetVariant" />
 
-      <RiftBattleBoard :chat-open="showChat" @toggle-chat="showChat = !showChat" />
+      <RiftBattleBoard />
 
       <!-- Objective modal overlays the board when dragon/baron spawns -->
       <ObjectiveModalComponent />
-
-      <!-- Collapsible chat overlay -->
-      <Transition name="chat-slide">
-        <BattleChatComponent v-if="showChat" class="absolute bottom-0 left-0 z-40 chat-overlay" />
-      </Transition>
 
       <!-- ══ PHASE 4 · HONOR / RESULT ══ -->
       <Transition name="honor-fade">
@@ -38,7 +33,6 @@
 import { defineComponent, computed, ref, watch } from 'vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
-import BattleChatComponent from './BattleChatComponent.vue'
 import ObjectiveModalComponent from './ObjectiveModalComponent.vue'
 import BattleLandingScreen from './landing/BattleLandingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
@@ -50,7 +44,6 @@ export default defineComponent({
   components: {
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,
-    BattleChatComponent,
     ObjectiveModalComponent,
     BattleLandingScreen,
     RiftBattleBoard,
@@ -63,7 +56,6 @@ export default defineComponent({
     const isStarting = ref(false)
     const isUniverseAnimating = ref(false)
     const universeAnim = ref<{ trigger: () => Promise<void> } | null>(null)
-    const showChat = ref(false)
 
     async function runUniverseAnimation(): Promise<void> {
       isUniverseAnimating.value = true
@@ -101,34 +93,12 @@ export default defineComponent({
       universeAnim,
       planetVariant,
       startBattle,
-      showChat,
     }
   },
 })
 </script>
 
 <style scoped>
-/* Chat overlay panel anchored bottom-left over the board */
-.chat-overlay {
-  width: 280px;
-  max-height: 220px;
-  border: 4px solid #7a4e20;
-  box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 8px 24px rgba(0, 0, 0, 0.85);
-  border-radius: 4px;
-}
-
-.chat-slide-enter-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.chat-slide-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.chat-slide-enter-from,
-.chat-slide-leave-to {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
 /* Landing screen fade */
 .start-fade-leave-active {
   transition: opacity 0.4s ease, transform 0.4s ease;

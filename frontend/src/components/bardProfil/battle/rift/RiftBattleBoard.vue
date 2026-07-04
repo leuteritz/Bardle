@@ -3,7 +3,7 @@
     <ScoreTopBar />
     <div class="board-middle">
       <TeamColumn side="blue" />
-      <RiftMinimap :chat-open="chatOpen" @toggle-chat="$emit('toggle-chat')" />
+      <RiftMinimap />
       <TeamColumn side="red" />
     </div>
     <KillFeedTicker />
@@ -17,9 +17,6 @@ import TeamColumn from './TeamColumn.vue'
 import RiftMinimap from './RiftMinimap.vue'
 import KillFeedTicker from './KillFeedTicker.vue'
 import AnnouncementBanner from './AnnouncementBanner.vue'
-
-defineProps<{ chatOpen: boolean }>()
-defineEmits<{ 'toggle-chat': [] }>()
 </script>
 
 <style scoped>

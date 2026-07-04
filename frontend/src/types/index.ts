@@ -417,14 +417,6 @@ export interface AllTimeBattleStats {
   honorsGiven: number
 }
 
-export interface ChatMessage {
-  user: string
-  text: string
-  time: string
-  team: number
-  type?: 'system' | 'player'
-}
-
 export interface CurrentRank {
   tier: string
   division: string

@@ -587,7 +587,6 @@ export function usePersistence() {
     battleStore.battleHistory = []
     battleStore.team1 = []
     battleStore.team2 = []
-    battleStore.chatMessages = []
     battleStore.isAutoBattleInitialized = false
     battleStore.autoBattleEnabled = false
     battleStore.lastAutoBattleResult = null

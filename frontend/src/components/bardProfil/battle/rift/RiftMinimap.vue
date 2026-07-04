@@ -115,9 +115,6 @@
         <button class="ctrl-btn ctrl-btn--skip" title="Skip battle" @click="battleStore.adminSkipToEnd()">
           ⟳ SKIP
         </button>
-        <button class="ctrl-btn" :class="{ 'ctrl-btn--active': chatOpen }" title="Toggle chat" @click="$emit('toggle-chat')">
-          ✎
-        </button>
       </div>
     </div>
   </div>
@@ -130,9 +127,6 @@ import { useBattleMovement } from '@/composables/useBattleMovement'
 import { DRAKE_POS, BARON_POS, BLUE_NEXUS, RED_NEXUS } from '@/config/constants'
 import { TOP_LANE_PATH, MID_LANE_PATH, BOT_LANE_PATH, type MapPoint } from '@/config/battleRoutes'
 import type { ChampionState } from '@/types'
-
-defineProps<{ chatOpen: boolean }>()
-defineEmits<{ 'toggle-chat': [] }>()
 
 const battleStore = useBattleStore()
 const { positions, minions } = useBattleMovement()
@@ -541,10 +535,6 @@ const nexusPos = computed(() =>
 .ctrl-btn--skip {
   border-color: #6b3aa0;
   color: #c084fc;
-}
-.ctrl-btn--active {
-  border-color: #c89040;
-  background: rgba(60, 40, 12, 0.9);
 }
 .ctrl-img {
   width: 16px;

@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
-import { earlyGameMessages, midGameMessages, lateGameMessages } from '../config/messages'
 import {
   ELO_K_FACTOR,
   ELO_RATING_SCALE,
@@ -22,12 +21,8 @@ import {
   BATTLE_TIME_MIN_SECONDS,
   BATTLE_TIME_RANGE_SECONDS,
   MMR_RANK_THRESHOLDS,
-  BATTLE_REAL_DURATION_SECONDS,
   BATTLE_TOTAL_GAME_SECONDS,
-  MINIMAP_PHASE_DRAKE_END,
   GAME_TICK_INTERVAL_MS,
-  BATTLE_CHAT_MESSAGE_COUNT,
-  BATTLE_EARLY_GAME_SECONDS,
   BATTLE_RESULT_COUNTDOWN_SECONDS,
   BATTLE_RESULT_PAUSE_MS,
   BATTLE_COUNTDOWN_INTERVAL_MS,
@@ -58,7 +53,6 @@ import type {
   BattleRole,
   BattleTimeline,
   ChampionState,
-  ChatMessage,
   KillFeedEntry,
   ObjectiveOverride,
   RecruitableChampion,
@@ -197,7 +191,6 @@ export const useBattleStore = defineStore('battle', {
     currentBattleId: 0,
     timeUntilNextBattle: 0,
     countdownTimer: null as ReturnType<typeof setInterval> | null,
-    chatMessages: [] as ChatMessage[],
     team1: [] as ChampionState[],
     team2: [] as ChampionState[],
     timerIds: [] as ReturnType<typeof setTimeout>[],
@@ -590,23 +583,16 @@ export const useBattleStore = defineStore('battle', {
           if (e.team === 1) this.team1Turrets += 1
           else this.team2Turrets += 1
           this._shiftWinProbability(e.winProbDelta)
-          this._systemMessage(`${e.team === 1 ? 'Blue Team' : 'Red Team'} destroyed a turret!`, e.team ?? 0, e.t)
           break
         }
         case 'inhibitor': {
           if (e.team === 1) this.team1Inhibs += 1
           else this.team2Inhibs += 1
           this._shiftWinProbability(e.winProbDelta)
-          this._systemMessage(`${e.team === 1 ? 'Blue Team' : 'Red Team'} destroyed an inhibitor!`, e.team ?? 0, e.t)
           break
         }
         case 'nexus': {
           this.nexusDestroyedByTeam = (e.team ?? this.timeline?.winner ?? 1) as 1 | 2
-          this._systemMessage(
-            `${this.nexusDestroyedByTeam === 1 ? 'Blue Team' : 'Red Team'} destroyed the Nexus!`,
-            this.nexusDestroyedByTeam,
-            e.t,
-          )
           break
         }
       }
@@ -615,16 +601,6 @@ export const useBattleStore = defineStore('battle', {
     _shiftWinProbability(delta: number) {
       if (delta === 0) return
       this.currentWinProbability = Math.max(0.05, Math.min(0.95, this.currentWinProbability + delta))
-    },
-
-    _systemMessage(text: string, team: number, gameT: number) {
-      this.chatMessages.push({
-        user: 'System',
-        text,
-        time: this.formatTime(gameT),
-        team,
-        type: 'system',
-      })
     },
 
     _creditObjective(objective: 'drake' | 'baron', team: 1 | 2, participants: { t1: number[]; t2: number[] } | null) {
@@ -644,8 +620,6 @@ export const useBattleStore = defineStore('battle', {
           this.battleTrack.objectiveParticipationsT1[idx] += 1
         }
       }
-      const objectiveName = objective === 'drake' ? 'the Dragon' : 'Baron Nashor'
-      this._systemMessage(`${team === 1 ? 'Blue Team' : 'Red Team'} slew ${objectiveName}!`, team, this.battleTime)
     },
 
     _refreshContinuousStats(gameTime: number) {
@@ -747,7 +721,6 @@ export const useBattleStore = defineStore('battle', {
       this.resultCountdown = 0
       this.resetTeamStats(this.team1)
       this.resetTeamStats(this.team2)
-      this.chatMessages = []
       this.battleTime = 0
       this.timeline = null
       this.timelineCursor = 0
@@ -784,45 +757,6 @@ export const useBattleStore = defineStore('battle', {
       // nicht hier – so verhindert man den "sofort-fertig"-Bug.
       this.battlePhaseStartTimestamp = 0
       this.searchingPhaseStartTimestamp = 0
-    },
-
-    showRandomChatMessagesSequentially() {
-      const allChampions = [
-        ...this.team1
-          .filter((c) => c.name)
-          .map((champ) => ({ name: champ.name, team: 1 as 1 | 2 })),
-        ...this.team2
-          .filter((c) => c.name)
-          .map((champ) => ({ name: champ.name, team: 2 as 1 | 2 })),
-      ]
-      if (allChampions.length === 0) return
-
-      const battleIdAtStart = this.currentBattleId
-
-      for (let i = 0; i < BATTLE_CHAT_MESSAGE_COUNT; i++) {
-        const delay = Math.floor(Math.random() * (BATTLE_REAL_DURATION_SECONDS - 1) * 1000)
-        const timeoutId = setTimeout(() => {
-          if (this.currentBattleId !== battleIdAtStart) return
-          const currentGameTime = this.battleTime
-          let pool: string[]
-          if (currentGameTime < BATTLE_EARLY_GAME_SECONDS) {
-            pool = earlyGameMessages
-          } else if (currentGameTime < MINIMAP_PHASE_DRAKE_END) {
-            pool = midGameMessages
-          } else {
-            pool = lateGameMessages
-          }
-          const text = pool[Math.floor(Math.random() * pool.length)]
-          const champ = allChampions[Math.floor(Math.random() * allChampions.length)]
-          this.chatMessages.push({
-            user: champ.name,
-            text,
-            time: this.formatTime(currentGameTime),
-            team: champ.team,
-          })
-        }, delay)
-        this.timerIds.push(timeoutId)
-      }
     },
 
     formatTime(seconds: number) {
@@ -897,7 +831,6 @@ export const useBattleStore = defineStore('battle', {
         // Timestamp hier setzen – erst jetzt beginnt die echte Spielzeit.
         this.battlePhaseStartTimestamp = Date.now()
         this.startBattleSimulation()
-        this.showRandomChatMessagesSequentially()
         logBattleStarted(this.currentOpponentLabel)
       }
     },
@@ -1317,8 +1250,6 @@ export const useBattleStore = defineStore('battle', {
 
       this._clearObjectiveModal()
       this.applyTimelineUpTo(targetSeconds)
-
-      this._systemMessage(`Match skipped to ${this.formatTime(targetSeconds)}`, 0, targetSeconds)
 
       this.battlePhaseStartTimestamp = Date.now() - (targetSeconds / 60) * 1000
       this.battleTime = targetSeconds

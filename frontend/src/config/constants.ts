@@ -1122,10 +1122,6 @@ export const QUANTUM_LUCK_THRESHOLD = 0.5
 export const BOSS_DAMAGE_REDUCTION_CAP = 0.8
 
 // Battle simulation
-/** Number of sequential chat messages displayed during a battle */
-export const BATTLE_CHAT_MESSAGE_COUNT = 14
-/** Game-time (seconds) threshold dividing early-game from mid-game chat pool */
-export const BATTLE_EARLY_GAME_SECONDS = 600
 /** Countdown shown on the result screen before auto-advance (seconds) */
 export const BATTLE_RESULT_COUNTDOWN_SECONDS = 8
 /** Pause duration on the result screen before proceeding (ms) — honor phase window */
