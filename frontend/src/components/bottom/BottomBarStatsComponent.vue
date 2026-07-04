@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useUiStore } from '@/stores/uiStore'
-import { ROLES, GAME_STATE } from '@/config/constants'
+import { ROLES, GAME_STATE, OBJECTIVE_FIGHT_STATUS } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -68,6 +68,13 @@ const {
   searchingPhaseStartTimestamp,
   lastLpChange,
   lastAutoBattleResult,
+  activeObjective,
+  objectiveModalOpen,
+  objectiveHP,
+  objectiveMaxHP,
+  objectiveOwnDamage,
+  objectiveEnemyDamage,
+  objectiveResult,
 } = storeToRefs(battleStore)
 
 const now = ref(Date.now())
@@ -125,6 +132,33 @@ const gameStateDisplay = computed(() => {
     return { label, text: `${min}:00`, color }
   }
   return { label: '', text: '—', color: '#6a4418' }
+})
+
+// ── Objective-fight display (drake/baron — replaces the frozen timer) ──
+const objectiveFightDisplay = computed(() => {
+  const objective = activeObjective.value
+  if (!objective || (!objectiveModalOpen.value && objectiveResult.value === null)) return null
+  const { label, image } = OBJECTIVE_FIGHT_STATUS[objective]
+  if (objectiveResult.value !== null) {
+    const won = objectiveResult.value !== 'enemy'
+    return {
+      label,
+      icon: image,
+      text: won ? OBJECTIVE_FIGHT_STATUS.securedText : OBJECTIVE_FIGHT_STATUS.lostText,
+      color: won ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
+      resolved: true,
+    }
+  }
+  const hpPct =
+    objectiveMaxHP.value > 0 ? Math.round((objectiveHP.value / objectiveMaxHP.value) * 100) : 0
+  const leading = objectiveOwnDamage.value >= objectiveEnemyDamage.value
+  return {
+    label,
+    icon: image,
+    text: `${hpPct}%`,
+    color: leading ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
+    resolved: false,
+  }
 })
 
 // ── Last-result badge (shown during honor phase) ───────────────────────
@@ -300,31 +334,48 @@ const winChanceColor = computed(() => {
       <div
         class="bbstat-item battle-status"
       >
-        <!-- Honor result badge -->
-        <Transition name="badge-slide">
+        <!-- Objective fight (drake/baron) — HP race replaces the frozen timer -->
+        <template v-if="objectiveFightDisplay">
           <span
-            v-if="resultBadge"
-            class="result-badge"
-            :style="{ color: resultBadge.color, '--badge-glow': resultBadge.glow }"
-          >
-            {{ resultBadge.label }}&thinsp;{{ resultBadge.lp }}&thinsp;LP
+            class="battle-timer"
+            :style="{ color: objectiveFightDisplay.color }"
+          >{{ objectiveFightDisplay.text }}</span>
+          <span class="bbstat-label">{{ objectiveFightDisplay.label }}</span>
+          <img
+            :src="objectiveFightDisplay.icon"
+            :alt="objectiveFightDisplay.label"
+            class="bbstat-stat-icon"
+            :class="{ 'objective-icon--live': !objectiveFightDisplay.resolved }"
+          />
+        </template>
+
+        <template v-else>
+          <!-- Honor result badge -->
+          <Transition name="badge-slide">
+            <span
+              v-if="resultBadge"
+              class="result-badge"
+              :style="{ color: resultBadge.color, '--badge-glow': resultBadge.glow }"
+            >
+              {{ resultBadge.label }}&thinsp;{{ resultBadge.lp }}&thinsp;LP
+            </span>
+          </Transition>
+
+          <!-- Searching pulse dots -->
+          <span v-if="phaseKey === 'searching'" class="scan-dots" aria-hidden="true">
+            <span class="scan-dot" />
+            <span class="scan-dot" />
+            <span class="scan-dot" />
           </span>
-        </Transition>
 
-        <!-- Searching pulse dots -->
-        <span v-if="phaseKey === 'searching'" class="scan-dots" aria-hidden="true">
-          <span class="scan-dot" />
-          <span class="scan-dot" />
-          <span class="scan-dot" />
-        </span>
+          <!-- Phase + timer -->
+          <span
+            class="battle-timer"
+            :style="{ color: gameStateDisplay.color }"
+          >{{ gameStateDisplay.text }}</span>
 
-        <!-- Phase + timer -->
-        <span
-          class="battle-timer"
-          :style="{ color: gameStateDisplay.color }"
-        >{{ gameStateDisplay.text }}</span>
-
-        <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
+          <img src="/img/stats/gamestate.png" alt="state" class="bbstat-stat-icon" />
+        </template>
       </div>
       <div class="bbstat-divider" />
 
@@ -630,6 +681,21 @@ const winChanceColor = computed(() => {
   line-height: 1;
   letter-spacing: 0.5px;
   transition: color 0.4s ease;
+}
+
+/* ── Objective fight icon pulse (drake/baron, while fight is live) ───── */
+.objective-icon--live {
+  animation: objective-icon-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes objective-icon-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(200, 140, 40, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px rgba(200, 140, 40, 0.95));
+  }
 }
 
 /* ── Result badge (shown during honor phase) ────────────────────────── */

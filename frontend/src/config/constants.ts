@@ -170,6 +170,15 @@ export const OBJECTIVE_FIGHTER_WEIGHT_MAX = 1.25
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000
 export const OBJECTIVE_RESULT_DELAY_MS = 2200
+/** Bottom-bar game-state stat display during a frozen-time objective fight */
+export const OBJECTIVE_FIGHT_STATUS = {
+  drake: { label: 'Drake Fight', image: '/img/dragon.png' },
+  baron: { label: 'Baron Fight', image: '/img/baron.png' },
+  leadColor: '#74d448',
+  behindColor: '#cc6050',
+  securedText: 'SECURED',
+  lostText: 'LOST',
+} as const
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
