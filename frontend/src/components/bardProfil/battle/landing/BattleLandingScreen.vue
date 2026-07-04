@@ -1,15 +1,5 @@
 <template>
   <div class="landing-screen">
-    <!-- ── Header ── -->
-    <div class="landing-header">
-      <img src="/img/menu/BATTLE.png" alt="Battle" class="header-crest" />
-      <div class="header-title">RANKED QUEUE</div>
-      <div class="header-right">
-        <div class="header-season">RANKED · SOLO / DUO</div>
-        <div class="header-summary">Career summary · {{ battleStore.totalBattles }} ranked games</div>
-      </div>
-    </div>
-
     <!-- ── Rank band ── -->
     <RankBandPanel />
 
@@ -181,46 +171,6 @@ const playtimeStr = computed(() => {
   scrollbar-color: #5c3310 #111;
 }
 
-/* ── Header ── */
-.landing-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.header-crest {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  animation: crest-pulse 3s ease-in-out infinite;
-}
-
-.header-title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 7px;
-  color: #d4a020;
-  text-shadow: 0 0 24px rgba(212, 160, 32, 0.45);
-}
-
-.header-right {
-  margin-left: auto;
-  text-align: right;
-  line-height: 1.3;
-}
-
-.header-season {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: #6a5820;
-}
-
-.header-summary {
-  font-size: 13px;
-  color: rgba(232, 226, 208, 0.55);
-}
-
 /* ── Main split ── */
 .landing-main {
   flex: 1;
@@ -361,19 +311,7 @@ const playtimeStr = computed(() => {
   50% { opacity: 0.35; }
 }
 
-@keyframes crest-pulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 10px rgba(200, 150, 30, 0.4));
-    transform: scale(1);
-  }
-  50% {
-    filter: drop-shadow(0 0 22px rgba(210, 160, 20, 0.85));
-    transform: scale(1.06);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .header-crest { animation: none; }
   .battle-btn,
   .battle-btn--live { animation: none; }
   .battle-btn-live-dot { animation: none; }
