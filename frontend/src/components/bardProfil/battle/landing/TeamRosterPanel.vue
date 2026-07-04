@@ -77,6 +77,29 @@
             :alt="battleStore.headerSlots[idx]!"
             class="row-champ-img"
           />
+
+          <!-- Hover stat sheet: full career breakdown for this champion -->
+          <div class="row-detail">
+            <div class="detail-head">
+              <span class="detail-name">{{ battleStore.headerSlots[idx] }}</span>
+              <span class="detail-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
+            </div>
+            <div class="detail-grid">
+              <div
+                v-for="entry in detailFor(battleStore.headerSlots[idx]!)"
+                :key="entry.label"
+                class="detail-stat"
+              >
+                <span
+                  class="detail-value"
+                  :style="entry.color ? { color: entry.color } : undefined"
+                >
+                  {{ entry.value }}
+                </span>
+                <span class="detail-label">{{ entry.label }}</span>
+              </div>
+            </div>
+          </div>
         </template>
         <template v-else>
           <div class="row-badges" />
@@ -156,6 +179,34 @@ function statFor(name: string): { kills: string; kda: string; mvps: string } {
     kda,
     mvps: formatNumber(career?.mvps ?? 0),
   }
+}
+
+interface DetailEntry {
+  label: string
+  value: string
+  color?: string
+}
+
+// Full career breakdown for the hover stat sheet (all tracked fields)
+function detailFor(name: string): DetailEntry[] {
+  const career = battleStore.championCareer[name]
+  const kills = mergedKills(name)
+  const stat = statFor(name)
+  const fmt = (v: number | undefined) => (career || kills > 0 ? formatNumber(v ?? 0) : '—')
+  return [
+    { label: 'BATTLES', value: fmt(career?.battles) },
+    { label: 'KILLS', value: career || kills > 0 ? formatNumber(kills) : '—', color: '#6ee7b7' },
+    { label: 'DEATHS', value: fmt(career?.deaths), color: '#fca5a5' },
+    { label: 'ASSISTS', value: fmt(career?.assists), color: '#93c5fd' },
+    { label: 'KDA', value: stat.kda, color: '#e8c040' },
+    { label: 'MVPS', value: fmt(career?.mvps), color: '#e8c040' },
+    { label: 'DAMAGE', value: fmt(career?.damage), color: '#f06820' },
+    { label: 'GOLD', value: fmt(career?.gold), color: '#e8c040' },
+    { label: 'CS', value: fmt(career?.cs), color: '#52b830' },
+    { label: 'HEALING', value: fmt(career?.healing), color: '#6ee7b7' },
+    { label: 'DMG TAKEN', value: fmt(career?.damageTaken), color: '#5b8dd9' },
+    { label: 'WARDS', value: fmt(career?.wardsPlaced), color: '#93c5fd' },
+  ]
 }
 
 // ── Standout badge engine ──
@@ -320,6 +371,107 @@ const mvpHolder = computed<string | null>(() => {
   padding: 0;
   border-radius: 5px;
   min-height: 72px;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.roster-row--filled:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 20px rgba(212, 160, 32, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.55),
+    0 0 14px rgba(212, 160, 32, 0.3);
+}
+
+/* Default content fades out while the stat sheet fades in */
+.row-badges,
+.row-center,
+.row-champ-img {
+  transition: opacity 0.25s ease;
+}
+.roster-row--filled:hover .row-badges,
+.roster-row--filled:hover .row-center,
+.roster-row--filled:hover .row-champ-img {
+  opacity: 0.06;
+}
+
+/* ── Hover stat sheet ── */
+.row-detail {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 14px;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.roster-row--filled:hover .row-detail {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.detail-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #d4a020;
+}
+.detail-role {
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px 10px;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.detail-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8e2d0;
+  line-height: 1.1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+.detail-label {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: rgba(232, 226, 208, 0.5);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roster-row,
+  .row-detail {
+    transition: opacity 0.25s ease;
+    transform: none;
+  }
+  .roster-row--filled:hover {
+    transform: none;
+  }
+  .roster-row--filled:hover .row-detail {
+    transform: none;
+  }
 }
 .roster-row--filled {
   border-top: 1px solid rgba(0, 0, 0, 0.35);
