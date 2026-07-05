@@ -22,6 +22,7 @@ import {
   SOLAR_CPS_FLIGHT_BONUS,
   SOLAR_DMG_BONUS,
   STAR_PHASE_MIN_DWELL_SECONDS,
+  COMET_MIN_DWELL_SECONDS,
 } from '../config/constants'
 
 export type SolarBranchId =
@@ -47,6 +48,13 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     chimesPerSecondLevel: 0 as number,
     dmgPerClickLevel: 0 as number,
     starPhase: 0 as number,
+    /** Origin state: the player starts as a wandering comet BEFORE First Spark.
+     *  The first Star Forge evolve ("Ignition") clears this instead of bumping
+     *  starPhase. Loaded saves default to false (see usePersistence) so existing
+     *  players never regress into the comet. */
+    isCometState: true as boolean,
+    /** Seconds spent drifting as a comet (kept out of phaseTimeHistory). */
+    cometSeconds: 0 as number,
     isUpgrading: false as boolean,
     phaseEnteredAt: Date.now() as number,
     totalPhaseSeconds: 0 as number,
@@ -96,6 +104,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
 
     /** Minimum time (ms) the sun must stay in the CURRENT phase before evolving. */
     phaseDwellRequiredMs(state): number {
+      if (state.isCometState) return COMET_MIN_DWELL_SECONDS * 1000 * this.dwellTimeMultiplier
       if (state.starPhase >= STAR_PHASE_MIN_DWELL_SECONDS.length) return 0
       return STAR_PHASE_MIN_DWELL_SECONDS[state.starPhase] * 1000 * this.dwellTimeMultiplier
     },
@@ -253,6 +262,16 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       this.isUpgrading = true
       setTimeout(() => {
         const elapsed = Math.floor((Date.now() - this.phaseEnteredAt) / 1000)
+        if (this.isCometState) {
+          // Ignition: the comet becomes First Spark — starPhase stays 0, the
+          // First Spark dwell timer starts fresh at this moment.
+          this.cometSeconds += elapsed
+          this.isCometState = false
+          this.phaseEnteredAt = Date.now()
+          this.isUpgrading = false
+          console.log('[Bardle] Comet ignited into First Spark')
+          return
+        }
         this.totalPhaseSeconds += elapsed
         this.phaseTimeHistory[this.starPhase] = (this.phaseTimeHistory[this.starPhase] ?? 0) + elapsed
         this.starPhase++

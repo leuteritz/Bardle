@@ -12,12 +12,14 @@ import {
   computePlanetMaxHp,
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { MATERIALS } from '@/config/materials'
 import {
   PLANET_MILESTONE_INTERVAL,
   PLANET_MILESTONE_BONUS,
   PLANET_BULK_LEVEL_STEP,
   STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   PLANET_TAB_SUN_MIN_DIAMETER,
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
@@ -34,6 +36,7 @@ const CPS_BUILDINGS = [
 
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
+const solarStore = useSolarUpgradeStore()
 const { showToast } = useActionToast()
 
 const selectedSlotId = ref<string | null>(null)
@@ -117,6 +120,18 @@ const activeRoleColor = computed(() => {
 
 // Current Sun-Phase colors for the stage backdrop sun (mirrors SunComponent vars).
 const sunPhaseStyle = computed(() => {
+  if (solarStore.isCometState) {
+    return {
+      '--phase-core': COMET_PHASE_DATA.core,
+      '--phase-mid': COMET_PHASE_DATA.mid,
+      '--phase-edge': COMET_PHASE_DATA.edge,
+      '--phase-primary': COMET_PHASE_DATA.accent,
+      '--phase-glow': COMET_PHASE_DATA.glow,
+      '--pulse-speed': COMET_PHASE_DATA.pulseSpeed,
+      '--ps-sun-d': `${PLANET_TAB_SUN_MIN_DIAMETER}px`,
+      '--ps-planet-d': `${PLANET_TAB_PLANET_DIAMETER}px`,
+    }
+  }
   const phase = STAR_PHASE_DATA[store.currentSunStage] ?? STAR_PHASE_DATA[0]
   // Scale the stage sun proportionally to the real Sun-Phase radius (the same
   // value SunComponent uses), normalized over the data's own min/max so it adapts
@@ -428,6 +443,9 @@ function chooseBuilding(buildingId: string) {
           >
             ✦ Unlock
           </button>
+          <span v-else-if="solarStore.isCometState" class="ps-locked-panel-hint">
+            Your comet has no planetary system yet — ignite it into a star in the Star Forge.
+          </span>
           <span v-else-if="store.currentSunStage < store.getSlotRequiredPhase(activeSlotIndex)" class="ps-locked-panel-hint">
             Reach Sun Phase {{ store.getSlotRequiredPhase(activeSlotIndex) }} to unlock
           </span>

@@ -91,7 +91,8 @@
 
       <!-- Sun -->
       <div class="sun-wrapper" :class="{ 'sun-flash': purchaseFlash }">
-        <div class="tree-stage-sun" />
+        <CometDisc v-if="solarStore.isCometState" :diameter="SHOP_SUN_MIN_DIAMETER" />
+        <div v-else class="tree-stage-sun" />
         <div
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
           class="next-phase-preview"
@@ -181,9 +182,11 @@ import { MATERIALS } from '@/config/materials'
 import { formatNumber } from '@/config/numberFormat'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ForgeNodeDef } from '@/types'
+import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import {
   SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   SHOP_SUN_MIN_DIAMETER,
   SHOP_SUN_MAX_DIAMETER,
   FORGE_STAGE_SIZE,
@@ -533,12 +536,29 @@ function onWheel(event: WheelEvent): void {
 
 // ── Phase-colored stage vars (mirrors PlanetSelectTabComponent sunPhaseStyle) ─
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)])
+/** While still a comet, the next evolution target is First Spark (phase 0). */
+const nextStage = computed(() =>
+  solarStore.isCometState
+    ? STAR_PHASE_DATA[0]
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)],
+)
 
 const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))
 const PHASE_RADIUS_MAX = Math.max(...STAR_PHASE_DATA.map((p) => p.radius))
 
 const stageStyle = computed(() => {
+  if (solarStore.isCometState) {
+    return {
+      '--phase-core': COMET_PHASE_DATA.core,
+      '--phase-mid': COMET_PHASE_DATA.mid,
+      '--phase-edge': COMET_PHASE_DATA.edge,
+      '--phase-primary': COMET_PHASE_DATA.accent,
+      '--phase-glow': COMET_PHASE_DATA.glow,
+      '--pulse-speed': COMET_PHASE_DATA.pulseSpeed,
+      '--shop-sun-d': `${SHOP_SUN_MIN_DIAMETER}px`,
+      '--sun-edge': COMET_PHASE_DATA.edge,
+    }
+  }
   const s = currentStage.value
   const t = (s.radius - PHASE_RADIUS_MIN) / (PHASE_RADIUS_MAX - PHASE_RADIUS_MIN || 1)
   const sunD = SHOP_SUN_MIN_DIAMETER + t * (SHOP_SUN_MAX_DIAMETER - SHOP_SUN_MIN_DIAMETER)

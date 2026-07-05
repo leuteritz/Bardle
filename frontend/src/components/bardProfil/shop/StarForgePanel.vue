@@ -28,13 +28,35 @@
 
     <!-- Phase status banner -->
     <div class="phase-banner" :class="{ 'phase-banner--ready': solarStore.canUpgradeStar }">
-      <Icon icon="game-icons:sunbeams" width="30" height="30" class="phase-banner-icon" />
+      <Icon
+        :icon="solarStore.isCometState ? 'game-icons:asteroid' : 'game-icons:sunbeams'"
+        width="30"
+        height="30"
+        class="phase-banner-icon"
+      />
       <div class="phase-banner-body">
         <div class="phase-banner-title-row">
-          <span class="phase-name" :style="{ color: currentStage.phasePrimary }">{{ currentStage.name }}</span>
-          <span class="phase-count">Phase {{ solarStore.starPhase + 1 }} / 7</span>
+          <span
+            class="phase-name"
+            :style="{ color: solarStore.isCometState ? COMET_PHASE_DATA.accent : currentStage.phasePrimary }"
+          >
+            {{ solarStore.isCometState ? COMET_PHASE_DATA.name : currentStage.name }}
+          </span>
+          <span class="phase-count">
+            {{ solarStore.isCometState ? 'Origin' : `Phase ${solarStore.starPhase + 1} / 7` }}
+          </span>
         </div>
-        <div v-if="solarStore.starPhase >= 6" class="phase-hint">
+        <div v-if="solarStore.isCometState && solarStore.canUpgradeStar" class="phase-hint">
+          Ignite the comet into <b class="phase-hint-next">First Spark</b> — your first star.
+        </div>
+        <div v-else-if="solarStore.isCometState && !solarStore.branchesReadyForEvolve" class="phase-hint">
+          Grow all five core rays to Lv 1 to ready the Ignition.
+        </div>
+        <div v-else-if="solarStore.isCometState" class="phase-hint">
+          The comet must drift a while longer — ready in
+          <b class="phase-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
+        </div>
+        <div v-else-if="solarStore.starPhase >= 6" class="phase-hint">
           The sun has reached its <b class="phase-hint-next">Grand Finale</b> — the tree is fully grown.
         </div>
         <div v-else-if="solarStore.canUpgradeStar" class="phase-hint">
@@ -55,7 +77,11 @@
         :disabled="solarStore.isUpgrading"
         @click="handleEvolve"
       >
-        {{ solarStore.isUpgrading ? 'Evolving…' : '✦ Evolve' }}
+        {{
+          solarStore.isUpgrading
+            ? solarStore.isCometState ? 'Igniting…' : 'Evolving…'
+            : solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
+        }}
       </button>
       <span v-else-if="solarStore.starPhase >= 6" class="ready-badge">✦ COMPLETE</span>
     </div>
@@ -66,8 +92,8 @@
         v-for="(phase, i) in STAR_PHASE_DATA"
         :key="phase.name"
         class="phase-pip"
-        :class="{ 'phase-pip--done': i <= solarStore.starPhase }"
-        :style="i <= solarStore.starPhase ? { background: phase.phasePrimary, boxShadow: `0 0 5px ${phase.phaseGlow}` } : {}"
+        :class="{ 'phase-pip--done': !solarStore.isCometState && i <= solarStore.starPhase }"
+        :style="!solarStore.isCometState && i <= solarStore.starPhase ? { background: phase.phasePrimary, boxShadow: `0 0 5px ${phase.phaseGlow}` } : {}"
         :title="phase.name"
       />
     </div>
@@ -255,6 +281,7 @@ import {
 } from '@/config/starForge'
 import {
   STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_REROLL_COST,
   FORGE_BARGAIN_REROLL_MATERIAL,
@@ -283,7 +310,12 @@ const MATERIAL_CHIP_COLORS: Record<string, string> = {
 
 // ── Phase banner ──────────────────────────────────────────────────────────────
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-const nextStage = computed(() => STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)])
+/** While still a comet, the next evolution target is First Spark (phase 0). */
+const nextStage = computed(() =>
+  solarStore.isCometState
+    ? STAR_PHASE_DATA[0]
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)],
+)
 
 const nextPhaseUnlockText = computed(() => {
   const nextPhase = solarStore.starPhase + 1
@@ -294,9 +326,10 @@ const nextPhaseUnlockText = computed(() => {
 
 function handleEvolve(): void {
   if (!solarStore.canUpgradeStar) return
+  const wasComet = solarStore.isCometState
   const targetName = nextStage.value.name
   solarStore.upgradeStar()
-  showToast(`Star evolving to ${targetName}…`)
+  showToast(wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`)
 }
 
 // ── Relics ────────────────────────────────────────────────────────────────────

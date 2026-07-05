@@ -12,6 +12,7 @@ import { useUiStore } from '@/stores/uiStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
 import {
   STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   STATS_TAB_STARFIELD,
   STATS_TAB_PHASE_DOT_SCALE,
 } from '@/config/constants'
@@ -128,17 +129,32 @@ const totalPhases = STAR_PHASE_DATA.length
 const phase = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
 const isMax = computed(() => solarStore.starPhase >= totalPhases - 1)
 
-const phaseVars = computed(() => ({
-  '--sun-core': phase.value.core,
-  '--sun-mid': phase.value.mid,
-  '--sun-edge': phase.value.edge,
-  '--sun-glow1': phase.value.glow1,
-  '--sun-glow2': phase.value.glow2,
-  '--sun-glow3': phase.value.glow3,
-  '--phase-primary': phase.value.phasePrimary,
-  '--phase-glow': phase.value.phaseGlow,
-  '--pulse-speed': phase.value.pulseSpeed,
-}))
+const phaseVars = computed(() => {
+  if (solarStore.isCometState) {
+    return {
+      '--sun-core': COMET_PHASE_DATA.core,
+      '--sun-mid': COMET_PHASE_DATA.mid,
+      '--sun-edge': COMET_PHASE_DATA.edge,
+      '--sun-glow1': COMET_PHASE_DATA.glow,
+      '--sun-glow2': COMET_PHASE_DATA.dust,
+      '--sun-glow3': COMET_PHASE_DATA.crater,
+      '--phase-primary': COMET_PHASE_DATA.accent,
+      '--phase-glow': COMET_PHASE_DATA.glow,
+      '--pulse-speed': COMET_PHASE_DATA.pulseSpeed,
+    }
+  }
+  return {
+    '--sun-core': phase.value.core,
+    '--sun-mid': phase.value.mid,
+    '--sun-edge': phase.value.edge,
+    '--sun-glow1': phase.value.glow1,
+    '--sun-glow2': phase.value.glow2,
+    '--sun-glow3': phase.value.glow3,
+    '--phase-primary': phase.value.phasePrimary,
+    '--phase-glow': phase.value.phaseGlow,
+    '--pulse-speed': phase.value.pulseSpeed,
+  }
+})
 
 const timelineDots = computed(() =>
   STAR_PHASE_DATA.map((p, i) => ({
@@ -150,8 +166,8 @@ const timelineDots = computed(() =>
     edge: p.edge,
     /* diameter true to the in-game sun proportions */
     size: p.radius * STATS_TAB_PHASE_DOT_SCALE,
-    done: i < solarStore.starPhase,
-    current: i === solarStore.starPhase,
+    done: !solarStore.isCometState && i < solarStore.starPhase,
+    current: !solarStore.isCometState && i === solarStore.starPhase,
   })),
 )
 
@@ -445,8 +461,10 @@ const filteredAugCards = computed(() => {
           <div class="sf-ring sf-ring--inner" />
           <div class="sf-sun" />
         </div>
-        <div class="sf-phase-kicker">Star Phase · {{ solarStore.starPhase + 1 }} / {{ totalPhases }}</div>
-        <div class="sf-phase-name">{{ phase.name }}</div>
+        <div class="sf-phase-kicker">
+          {{ solarStore.isCometState ? 'Origin · Pre-Stellar' : `Star Phase · ${solarStore.starPhase + 1} / ${totalPhases}` }}
+        </div>
+        <div class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</div>
         <div class="sf-time">
           <span class="sf-time-big">{{ phaseAge ?? '—' }}</span>
           <span class="sf-time-sub">
@@ -455,11 +473,15 @@ const filteredAugCards = computed(() => {
           </span>
         </div>
         <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved · MAX</div>
-        <div v-else-if="solarStore.canUpgradeStar" class="sf-pill sf-pill--ready">Ready to Evolve · Shop</div>
-        <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
-          Evolving in {{ formatDuration(dwellRemainingMs) }}
+        <div v-else-if="solarStore.canUpgradeStar" class="sf-pill sf-pill--ready">
+          {{ solarStore.isCometState ? 'Ready to Ignite · Shop' : 'Ready to Evolve · Shop' }}
         </div>
-        <div v-else class="sf-pill sf-pill--hint">Evolve in Shop →</div>
+        <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
+          {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }} {{ formatDuration(dwellRemainingMs) }}
+        </div>
+        <div v-else class="sf-pill sf-pill--hint">
+          {{ solarStore.isCometState ? 'Ignite in Shop →' : 'Evolve in Shop →' }}
+        </div>
       </div>
     </div>
 

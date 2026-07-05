@@ -1728,6 +1728,40 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
   },
 ]
 
+// ── Comet Origin State (pre-phase before First Spark) ────────────────────────
+/** The player's celestial body BEFORE its first ignition: a wandering comet with
+ *  Bard asleep inside. Not part of STAR_PHASE_DATA on purpose — prepending there
+ *  would shift every saved starPhase index. solarUpgradeStore.isCometState flags
+ *  this origin state instead; the first Star Forge evolve ("Ignition") clears it. */
+export const COMET_PHASE_DATA = {
+  name: 'Wandering Comet',
+  shortName: 'Comet',
+  astroName: 'Rogue Planetesimal',
+  radius: 24,
+  core: '#8a7a68',
+  mid: '#6b5d4f',
+  edge: '#4a4038',
+  crater: '#3a322b',
+  /** Accent golds match Bard's UI gold (titles/chimes in the header, #e8c040). */
+  glow: '#e8c040',
+  accent: '#f0d878',
+  dust: '#8a6420',
+  tumbleSec: '14s',
+  pulseSpeed: '6s',
+} as const
+
+/** Minimum drift time (seconds) before the comet may ignite into First Spark. */
+export const COMET_MIN_DWELL_SECONDS = 180
+/** Background star drift is boosted by this factor while in comet state, selling
+ *  the impression that the comet races through space. */
+export const COMET_DRIFT_SPEED_MULT = 2.5
+/** Parallax debris rocks streaming past the player on the background canvas. */
+export const COMET_DEBRIS_COUNT = 3
+export const COMET_DEBRIS_MIN_R = 3
+export const COMET_DEBRIS_MAX_R = 9
+/** Debris moves this much faster than regular background stars. */
+export const COMET_DEBRIS_SPEED_MULT = 1.6
+
 // ── Planet Tab stage sizing ───────────────────────────────────────────────────
 /** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
 export const PLANET_TAB_SUN_MIN_DIAMETER = 300
@@ -2079,6 +2113,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:forest',
   // ChampionStarTimerComponent
   'game-icons:comet-spark',
+  // Comet origin state — Star Forge phase banner (StarForgePanel)
+  'game-icons:asteroid',
   // Minimap HUD stats
   'game-icons:sands-of-time', // Arrival time countdown
   'game-icons:winged-leg', // Travel speed

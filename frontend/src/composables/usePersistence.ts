@@ -176,6 +176,8 @@ export function usePersistence() {
         chimesPerSecondLevel: solarStore.chimesPerSecondLevel,
         dmgPerClickLevel: solarStore.dmgPerClickLevel,
         starPhase: solarStore.starPhase,
+        isCometState: solarStore.isCometState,
+        cometSeconds: solarStore.cometSeconds,
         phaseEnteredAt: solarStore.phaseEnteredAt,
         totalPhaseSeconds: solarStore.totalPhaseSeconds,
         phaseTimeHistory: solarStore.phaseTimeHistory,
@@ -471,6 +473,15 @@ export function usePersistence() {
         solarStore.totalPhaseSeconds = saved.solar.totalPhaseSeconds ?? 0
         solarStore.phaseTimeHistory = saved.solar.phaseTimeHistory ?? []
       }
+      // Comet origin state — deliberately OUTSIDE the saved.solar guard: any
+      // existing save (even one predating the solar block) must load as a star,
+      // never regress into the comet. Only a truly fresh game keeps the state
+      // default (isCometState: true).
+      // Comet is only ever valid at starPhase 0 — a save claiming otherwise is
+      // inconsistent and loads as a star.
+      solarStore.isCometState =
+        (saved.solar?.isCometState ?? false) && (saved.solar?.starPhase ?? 0) === 0
+      solarStore.cometSeconds = saved.solar?.cometSeconds ?? 0
 
       // Restore starForgeStore — missing key (old saves) keeps all-zero defaults
       const starForgeStore = useStarForgeStore()

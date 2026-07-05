@@ -15,6 +15,12 @@ import {
   STAR_BG_BASE_SPEED_RANGE,
   BACKGROUND_STAR_BLUE_BIAS,
   SOLAR_STAR_SPEED_BONUS,
+  COMET_PHASE_DATA,
+  COMET_DRIFT_SPEED_MULT,
+  COMET_DEBRIS_COUNT,
+  COMET_DEBRIS_MIN_R,
+  COMET_DEBRIS_MAX_R,
+  COMET_DEBRIS_SPEED_MULT,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
 
@@ -30,6 +36,18 @@ type StarItem = {
   b: number
   twinklePhase: number
   twinkleSpeed: number
+}
+
+/** Parallax rock streaming past the player while in comet origin state. */
+type DebrisRock = {
+  angle: number
+  dist: number
+  baseSpeed: number
+  r: number
+  spin: number
+  spinSpeed: number
+  /** Pre-generated per-vertex radius jitter → stable irregular silhouette. */
+  verts: number[]
 }
 
 type GalaxyItem = {
@@ -1111,6 +1129,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   const emissionNebulas: NebulaMovingItem[] = []
   const dustPatches: DustPatch[] = []
   const starClusters: StarCluster[] = []
+  const cometDebris: DebrisRock[] = []
   const galaxyPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   const nebulaPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   let nextStarId = 1
@@ -1584,8 +1603,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
       speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
     } else {
-      const flightBonus = 1 + useSolarUpgradeStore().flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
-      speedMultiplier = hyperActive ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19 : flightBonus
+      const solar = useSolarUpgradeStore()
+      const flightBonus = 1 + solar.flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
+      // Comet origin state: stars drift noticeably faster — the comet races
+      // through space (streak trails stay off, they need hyperActive/warp).
+      const cometBoost = solar.isCometState ? COMET_DRIFT_SPEED_MULT : 1
+      speedMultiplier = hyperActive
+        ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
+        : flightBonus * cometBoost
     }
     }
 
@@ -1760,6 +1785,63 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha * 0.12})`
           ctx.fill()
         }
+      }
+    }
+
+    // ── Comet debris — rocks streaming past while in comet origin state ────
+    if (ctx && !isFrozen) {
+      const isComet = useSolarUpgradeStore().isCometState
+      if (!isComet && cometDebris.length > 0) cometDebris.length = 0
+      if (isComet) {
+        while (cometDebris.length < COMET_DEBRIS_COUNT) {
+          cometDebris.push({
+            angle: Math.random() * Math.PI * 2,
+            dist: maxDist * (0.05 + Math.random() * 0.1),
+            baseSpeed: STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE,
+            r: COMET_DEBRIS_MIN_R + Math.random() * (COMET_DEBRIS_MAX_R - COMET_DEBRIS_MIN_R),
+            spin: Math.random() * Math.PI * 2,
+            spinSpeed: (Math.random() - 0.5) * 2,
+            verts: Array.from({ length: 7 }, () => 0.7 + Math.random() * 0.6),
+          })
+        }
+        for (const d of cometDebris) {
+          const dNorm = d.dist / maxDist
+          d.dist +=
+            d.baseSpeed * dNorm * dNorm * WARP_SPEED_MAX * speedMultiplier * COMET_DEBRIS_SPEED_MULT * delta
+          d.spin += d.spinSpeed * delta
+          if (d.dist > maxDist) {
+            d.angle = Math.random() * Math.PI * 2
+            d.dist = maxDist * (0.05 + Math.random() * 0.08)
+            d.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
+            d.r = COMET_DEBRIS_MIN_R + Math.random() * (COMET_DEBRIS_MAX_R - COMET_DEBRIS_MIN_R)
+            d.verts = Array.from({ length: 7 }, () => 0.7 + Math.random() * 0.6)
+          }
+          const px = cx + Math.cos(d.angle) * d.dist
+          const py = cy + Math.sin(d.angle) * d.dist
+          const scale = 0.3 + dNorm * 1.2
+          const alpha = Math.min(1, dNorm * 3)
+          if (alpha < 0.03) continue
+          ctx.save()
+          ctx.translate(px, py)
+          ctx.rotate(d.spin)
+          ctx.globalAlpha = alpha
+          ctx.beginPath()
+          for (let v = 0; v < d.verts.length; v++) {
+            const a = (v / d.verts.length) * Math.PI * 2
+            const rr = d.r * scale * d.verts[v]
+            if (v === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr)
+            else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
+          }
+          ctx.closePath()
+          ctx.fillStyle = COMET_PHASE_DATA.mid
+          ctx.fill()
+          ctx.beginPath()
+          ctx.arc(d.r * scale * 0.25, -d.r * scale * 0.15, d.r * scale * 0.28, 0, Math.PI * 2)
+          ctx.fillStyle = COMET_PHASE_DATA.crater
+          ctx.fill()
+          ctx.restore()
+        }
+        ctx.globalAlpha = 1
       }
     }
 

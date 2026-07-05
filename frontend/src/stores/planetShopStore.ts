@@ -9,6 +9,7 @@ import {
   PLANET_HARVEST_INTERVAL_TICKS,
   PLANET_SLOT_MAX_HP,
   STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   BOSS_DAMAGE_REDUCTION_CAP,
   PLANET_LEVEL_BONUS_PCT,
@@ -223,7 +224,10 @@ export const usePlanetShopStore = defineStore('planetShop', {
     },
 
     currentSunRadius(): number {
-      return STAR_PHASE_DATA[useSolarUpgradeStore().starPhase].radius
+      const solar = useSolarUpgradeStore()
+      return solar.isCometState
+        ? COMET_PHASE_DATA.radius
+        : STAR_PHASE_DATA[solar.starPhase].radius
     },
 
     purchasedSlots(state): PlanetSlot[] {

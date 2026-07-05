@@ -17,8 +17,10 @@
       />
     </svg>
 
-    <!-- Sonnenscheibe — geteiltes Phase-Disc (identisch zu Planet-/Shop-Tab) -->
-    <PhaseSunDisc :diameter="discDiameter" />
+    <!-- Sonnenscheibe — geteiltes Phase-Disc (identisch zu Planet-/Shop-Tab);
+         vor der ersten Ignition fliegt stattdessen der Komet -->
+    <CometDisc v-if="solarStore.isCometState" :diameter="discDiameter" />
+    <PhaseSunDisc v-else :diameter="discDiameter" />
 
     <!-- Chime Particles (canvas) -->
     <canvas ref="canvasEl" class="chime-canvas" />
@@ -31,8 +33,10 @@ import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useGameStore } from '@/stores/gameStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { SUN_BG_DISC_RADIUS_FACTOR } from '@/config/constants'
 import PhaseSunDisc from './PhaseSunDisc.vue'
+import CometDisc from './CometDisc.vue'
 
 interface ChimeParticle {
   id: number
@@ -48,7 +52,7 @@ interface ChimeParticle {
 
 export default defineComponent({
   name: 'SunComponent',
-  components: { PhaseSunDisc },
+  components: { PhaseSunDisc, CometDisc },
   props: {
     /** Override the visual radius (px). Defaults to the live phase radius from planetShopStore. */
     radius: { type: Number, default: null },
@@ -61,6 +65,7 @@ export default defineComponent({
     const combatStore = useCombatStore()
     const planetShopStore = usePlanetShopStore()
     const gameStore = useGameStore()
+    const solarStore = useSolarUpgradeStore()
 
     const effectiveRadius = computed(() => props.radius ?? planetShopStore.currentSunRadius)
     const discDiameter = computed(() => effectiveRadius.value * SUN_BG_DISC_RADIUS_FACTOR)
@@ -195,6 +200,7 @@ export default defineComponent({
 
     return {
       combatStore,
+      solarStore,
       discDiameter,
       sunContainerVars,
       canvasEl,

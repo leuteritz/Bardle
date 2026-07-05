@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { STAR_PHASE_DATA } from '@/config/constants'
+import { STAR_PHASE_DATA, COMET_PHASE_DATA } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
 const solarStore = useSolarUpgradeStore()
@@ -10,7 +10,20 @@ function setStarPhase(phase: number) {
   solarStore.totalPhaseSeconds += elapsed
   solarStore.phaseTimeHistory[solarStore.starPhase] =
     (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
+  // A star-phase override always means "be a star" — otherwise the comet
+  // origin flag would keep rendering the comet for every phase.
+  solarStore.isCometState = false
   solarStore.starPhase = Math.max(0, Math.min(6, phase))
+  solarStore.phaseEnteredAt = Date.now()
+}
+
+function setCometState() {
+  const elapsed = Math.floor((Date.now() - solarStore.phaseEnteredAt) / 1000)
+  solarStore.totalPhaseSeconds += elapsed
+  solarStore.phaseTimeHistory[solarStore.starPhase] =
+    (solarStore.phaseTimeHistory[solarStore.starPhase] ?? 0) + elapsed
+  solarStore.isCometState = true
+  solarStore.starPhase = 0
   solarStore.phaseEnteredAt = Date.now()
 }
 </script>
@@ -18,15 +31,29 @@ function setStarPhase(phase: number) {
 <template>
   <AdminCollapsiblePanel title="Star Phase Override" icon="game-icons:sun-radiations">
     <template #meta>
-      Current: Phase {{ solarStore.starPhase }} — {{ STAR_PHASE_DATA[solarStore.starPhase].name }}
+      Current:
+      {{
+        solarStore.isCometState
+          ? `Origin — ${COMET_PHASE_DATA.name}`
+          : `Phase ${solarStore.starPhase} — ${STAR_PHASE_DATA[solarStore.starPhase].name}`
+      }}
     </template>
 
     <div class="star-phase-btns">
       <button
+        class="star-phase-btn"
+        :class="{ 'star-phase-btn--active': solarStore.isCometState }"
+        :style="{ '--phase-color': COMET_PHASE_DATA.accent }"
+        @click="setCometState"
+      >
+        <span class="phase-btn-num">C</span>
+        <span class="phase-btn-name">{{ COMET_PHASE_DATA.name }}</span>
+      </button>
+      <button
         v-for="(phase, idx) in STAR_PHASE_DATA"
         :key="idx"
         class="star-phase-btn"
-        :class="{ 'star-phase-btn--active': solarStore.starPhase === idx }"
+        :class="{ 'star-phase-btn--active': !solarStore.isCometState && solarStore.starPhase === idx }"
         :style="{ '--phase-color': phase.phasePrimary }"
         @click="setStarPhase(idx)"
       >
