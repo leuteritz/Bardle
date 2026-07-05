@@ -128,8 +128,6 @@ interface GenContext {
   rng: () => number
   events: BattleEvent[]
   momentum: number
-  /** Mirror of the store's currentWinProbability — same deltas, same clamps (see _shiftWinProbability). */
-  liveProb: number
   firstBloodDone: boolean
   fromT: number
   /** Structures already down — evolves with emitted falls (post-cut only, see emitStructureFall). */
@@ -149,7 +147,21 @@ function pushEvent(ctx: GenContext, ev: BattleEvent) {
   if (ev.t < ctx.fromT) return
   ctx.events.push(ev)
   ctx.momentum = clampMomentum(ctx.momentum + ev.winProbDelta * 2)
-  ctx.liveProb = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, ctx.liveProb + ev.winProbDelta))
+}
+
+/**
+ * Mirror of the store's win-probability replay (_shiftWinProbability): apply
+ * each event's delta in time order with per-step clamping, up to (exclusive)
+ * `untilT`. This is the exact value the UI momentum bar shows at that time.
+ */
+export function replayWinProbability(events: BattleEvent[], startProb: number, untilT: number): number {
+  let prob = startProb
+  for (const e of [...events].sort((a, b) => a.t - b.t)) {
+    if (e.t >= untilT) break
+    if (e.winProbDelta === 0) continue
+    prob = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, prob + e.winProbDelta))
+  }
+  return prob
 }
 
 function killDelta(team: 1 | 2): number {
@@ -339,6 +351,8 @@ function emitObjective(
  * by being generated and discarded via the fromT filter in pushEvent.
  * `baselineProb` is the probability the UI momentum bar is measured against
  * (the battle-start probability) — the winner is read off that displayed metric.
+ * `forceWinner` overrides the momentum decision — used by the reseed merge when
+ * its filter drops delta-carrying events and the displayed leader flips.
  */
 export function generateTimeline(
   seed: number,
@@ -346,13 +360,13 @@ export function generateTimeline(
   fromT = 0,
   preDestroyed: ReadonlySet<StructureId> = new Set(),
   baselineProb = initialWinProb,
+  forceWinner?: 1 | 2,
 ): BattleTimeline {
   const rng = createRng(seed)
   const ctx: GenContext = {
     rng,
     events: [],
     momentum: clampMomentum((initialWinProb - 0.5) * 2),
-    liveProb: initialWinProb,
     firstBloodDone: fromT > TIMELINE_FIRST_BLOOD_MAX_T,
     fromT,
     destroyed: new Set(preDestroyed),
@@ -479,11 +493,13 @@ export function generateTimeline(
   })
 
   // ── Winner decision: WYSIWYG — the team whose displayed win chance (the
-  // momentum bar, 0.5 + accumulated event deltas) is above 50% at the final
-  // push reveal wins; rng only breaks a dead-even 50/50 ──
-  const displayedMomentum = 0.5 + (ctx.liveProb - baselineProb)
+  // momentum bar: baseline-relative, t-ordered clamped delta replay, exactly
+  // like the store) leads at the final push reveal wins; rng only breaks a
+  // dead-even 50/50 ──
+  const decisionProb = replayWinProbability(ctx.events, initialWinProb, FINAL_PUSH_FIGHT_T)
+  const displayedMomentum = 0.5 + (decisionProb - baselineProb)
   const winner: 1 | 2 =
-    displayedMomentum > 0.5 ? 1 : displayedMomentum < 0.5 ? 2 : rng() < 0.5 ? 1 : 2
+    forceWinner ?? (displayedMomentum > 0.5 ? 1 : displayedMomentum < 0.5 ? 2 : rng() < 0.5 ? 1 : 2)
 
   // ── Final push / end phase — at 50:00 the winner marches the cracked lane,
   // the loser digs in at its fallen inhibitor, and the last fight happens there ──
@@ -525,36 +541,29 @@ export function generateTimeline(
 }
 
 /**
- * Re-seed the remaining battle after the player wins an objective click event:
- * keeps all events up to `t` from the current timeline and regenerates the rest
- * with a boosted win probability, so the outcome can genuinely flip.
+ * Merge filter for a regenerated tail. Objectives already spawned before the
+ * cut must not respawn: baron happens once per battle; drakes keep the total
+ * count cap and a minimum respawn gap so a just-fought drake can't reappear
+ * moments later. Regenerated objectiveResults whose spawn happened before the
+ * cut are dropped — that objective was already resolved live (orphan results
+ * would double-count).
  */
-export function reseedTimelineFrom(
-  current: BattleTimeline,
+function filterRegeneratedTail(
+  currentEvents: BattleEvent[],
   t: number,
-  newSeed: number,
-  boostedWinProb: number,
-  baselineProb = boostedWinProb,
-): BattleTimeline {
-  // Structures already down at the cut stay down: the regenerated tail starts
-  // from this world state, so nothing double-falls or skips its lane order.
-  const preDestroyed = destroyedStructuresUpTo(current.events, t)
-  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb)
-  // Objectives already spawned before the cut must not respawn in the tail:
-  // baron happens once per battle; drakes keep the total count cap and a
-  // minimum respawn gap so a just-fought drake can't reappear moments later.
-  const baronAlreadySpawned = current.events.some(
+  regeneratedEvents: BattleEvent[],
+  preDestroyed: ReadonlySet<StructureId>,
+): BattleEvent[] {
+  const baronAlreadySpawned = currentEvents.some(
     (e) => e.type === 'objectiveSpawn' && e.objective === 'baron' && e.t <= t,
   )
-  const preDrakeSpawns = current.events.filter(
+  const preDrakeSpawns = currentEvents.filter(
     (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t <= t,
   )
   let drakeCount = preDrakeSpawns.length
   let lastDrakeSpawnT = drakeCount > 0 ? preDrakeSpawns[preDrakeSpawns.length - 1].t : -Infinity
-  // Drop regenerated objectiveResults whose spawn happened before the cut —
-  // that objective was already resolved live (orphan results would double-count).
   const spawnedAfterCut = new Set<string>()
-  const futureEvents = regenerated.events.filter((e) => {
+  return regeneratedEvents.filter((e) => {
     if (e.type === 'objectiveSpawn' && e.objective) {
       if (e.objective === 'baron') {
         if (baronAlreadySpawned) return false
@@ -582,9 +591,43 @@ export function reseedTimelineFrom(
     if (e.structureId && preDestroyed.has(e.structureId)) return false
     return true
   })
+}
+
+/**
+ * Re-seed the remaining battle after the player wins an objective click event:
+ * keeps all events up to `t` from the current timeline and regenerates the rest
+ * with a boosted win probability, so the outcome can genuinely flip.
+ */
+export function reseedTimelineFrom(
+  current: BattleTimeline,
+  t: number,
+  newSeed: number,
+  boostedWinProb: number,
+  baselineProb = boostedWinProb,
+): BattleTimeline {
+  // Structures already down at the cut stay down: the regenerated tail starts
+  // from this world state, so nothing double-falls or skips its lane order.
+  const preDestroyed = destroyedStructuresUpTo(current.events, t)
+  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb)
+  let futureEvents = filterRegeneratedTail(current.events, t, regenerated.events, preDestroyed)
+  let winner = regenerated.winner
+  // WYSIWYG guard: the merge filter may have dropped delta-carrying events the
+  // generator's decision already counted (e.g. an orphan baron result). Re-read
+  // the displayed momentum off the MERGED tail — the store replays exactly this
+  // set — and if the leader flipped, regenerate the tail with the winner forced.
+  // Pre-decision events are seed-identical across passes and all winner-shaped
+  // events sit at/after FINAL_PUSH_FIGHT_T, so one forced pass converges.
+  const mergedProb = replayWinProbability(futureEvents, boostedWinProb, FINAL_PUSH_FIGHT_T)
+  const displayed = 0.5 + (mergedProb - baselineProb)
+  const desired: 1 | 2 | null = displayed > 0.5 ? 1 : displayed < 0.5 ? 2 : null
+  if (desired !== null && desired !== winner) {
+    const forced = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb, desired)
+    futureEvents = filterRegeneratedTail(current.events, t, forced.events, preDestroyed)
+    winner = desired
+  }
   return {
     seed: current.seed,
-    winner: regenerated.winner,
+    winner,
     events: [...current.events.filter((e) => e.t <= t), ...futureEvents].sort((a, b) => a.t - b.t),
   }
 }

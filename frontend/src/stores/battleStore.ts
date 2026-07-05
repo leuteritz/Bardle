@@ -716,6 +716,8 @@ export const useBattleStore = defineStore('battle', {
         }
         case 'nexus': {
           this.nexusDestroyedByTeam = (e.team ?? this.timeline?.winner ?? 1) as 1 | 2
+          // the slam delta pins the momentum bar to the winner's end
+          this._shiftWinProbability(e.winProbDelta)
           break
         }
       }

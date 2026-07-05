@@ -3,6 +3,7 @@ import {
   createRng,
   generateTimeline,
   reseedTimelineFrom,
+  replayWinProbability,
   championNoise,
   continuousStatsAt,
   bountyGold,
@@ -17,8 +18,6 @@ import {
   FINAL_PUSH_FIGHT_T,
   FINAL_PUSH_FIGHT_HOLD_T,
   TIMELINE_NEXUS_WINPROB_DELTA,
-  WINPROB_MIN,
-  WINPROB_MAX,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -114,22 +113,32 @@ describe('generateTimeline', () => {
     let checked = 0
     for (let seed = 0; seed < 120; seed++) {
       const tl = generateTimeline(seed, 0.5)
-      // replay the momentum bar exactly like the store: initial prob + per-event
-      // clamped deltas; only events before the reveal decision count
-      let prob = 0.5
-      let clamped = false
-      for (const e of tl.events) {
-        if (e.t >= FINAL_PUSH_FIGHT_T) continue
-        const raw = prob + e.winProbDelta
-        if (raw < WINPROB_MIN || raw > WINPROB_MAX) clamped = true
-        prob = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
-      }
-      // clamping makes the sum order-dependent; ties fall back to a coin flip — skip both
-      if (clamped || prob === 0.5) continue
+      // the exact store replay of the momentum bar up to the reveal decision
+      const prob = replayWinProbability(tl.events, 0.5, FINAL_PUSH_FIGHT_T)
+      // a dead-even bar falls back to a coin flip — skip
+      if (prob === 0.5) continue
       checked++
       expect(tl.winner).toBe(prob > 0.5 ? 1 : 2)
     }
-    expect(checked).toBeGreaterThan(50)
+    expect(checked).toBeGreaterThan(80)
+  })
+
+  it('after a reseed the merged timeline still crowns the displayed leader', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const base = generateTimeline(seed, 0.35)
+      const baronSpawn = base.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
+      // cut at the baron spawn — the interactive case whose merge filter drops
+      // the orphan scripted baron result (the delta the old decision counted)
+      for (const cut of [900, 2000, baronSpawn.t]) {
+        const boosted = 0.55
+        const merged = reseedTimelineFrom(base, cut, seed * 31 + 7, boosted, 0.35)
+        const tail = merged.events.filter((e) => e.t > cut)
+        const prob = replayWinProbability(tail, boosted, FINAL_PUSH_FIGHT_T)
+        const displayed = 0.5 + (prob - 0.35)
+        if (displayed === 0.5) continue
+        expect(merged.winner).toBe(displayed > 0.5 ? 1 : 2)
+      }
+    }
   })
 
   it('the nexus explosion slams the momentum bar toward the winner', () => {
