@@ -1057,8 +1057,9 @@ export const SCOREBOARD_LABEL_COLOR = '#7a6a44'
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
-export const MINIMAP_SHIP_SIZE = 9 // player ship triangle length in px
-export const MINIMAP_ORIGIN_SUN_R = 7 // small player-sun marker at the flight origin
+export const MINIMAP_COMET_HEAD_R = 3.5 // player comet head radius (× √zoom)
+export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the flight curve
+export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count
 export const MINIMAP_IDLE_SUN_R = 11 // player-sun marker when not traveling
 export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
 export const MINIMAP_ZOOM_TRIGGER_MS = 30_000 // zoom-in phase starts this long before arrival

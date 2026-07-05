@@ -24,8 +24,9 @@ import {
   RESCUE_ROTATION_DURATION_MS,
   ROLE_COLORS,
   MINIMAP_FLIGHTPATH_BEND,
-  MINIMAP_SHIP_SIZE,
-  MINIMAP_ORIGIN_SUN_R,
+  MINIMAP_COMET_HEAD_R,
+  MINIMAP_COMET_TAIL_LEN,
+  MINIMAP_COMET_TAIL_SEGMENTS,
   MINIMAP_IDLE_SUN_R,
   MINIMAP_TWINKLE_COUNT,
   MINIMAP_ZOOM_TRIGGER_MS,
@@ -865,17 +866,17 @@ export default defineComponent({
           targetPal,
         )
 
-        // "NEXT STAR" tag above the destination — fades out while zooming in
-        const labelAlpha = Math.max(0, Math.min(1, 1 - (cam.zoom - 1)))
-        if (labelAlpha > 0.02) {
-          ctx.font = '10px MedievalSharp, serif'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'bottom'
-          ctx.fillStyle = `rgba(255, 207, 90, ${(0.92 * labelAlpha).toFixed(3)})`
-          ctx.shadowColor = 'rgba(0,0,0,0.9)'
-          ctx.shadowBlur = 4
-          ctx.fillText('N E X T   S T A R', tx, ty - targetR - 11)
-          ctx.shadowBlur = 0
+        // Expanding beacon rings in the destination's role color — draws the
+        // eye more reliably than a text label and scales with the zoom
+        for (let ring = 0; ring < 2; ring++) {
+          const ringT = (nowMs / 1800 + ring / 2) % 1
+          const ringR = targetR * (1.3 + ringT * 1.6)
+          const ringA = (1 - ringT) * 0.45
+          ctx.beginPath()
+          ctx.arc(tx, ty, ringR, 0, Math.PI * 2)
+          ctx.strokeStyle = hexToRgba(targetPal.base, ringA)
+          ctx.lineWidth = 1.6
+          ctx.stroke()
         }
       }
 
@@ -910,41 +911,63 @@ export default defineComponent({
         ctx.fillText('?', bx, by)
         ctx.shadowBlur = 0
       } else if (flight) {
-        // Player-sun at the flight origin (overview element — fades with layer 1)
-        if (farAlpha > 0.01) {
-          ctx.save()
-          ctx.globalAlpha = farAlpha
-          drawMiniSun(ctx, flight.x0, flight.y0, MINIMAP_ORIGIN_SUN_R, nowMs)
-          ctx.restore()
-        }
-
-        // … and the ship travelling along the quadratic flight path
+        // Player comet travelling along the quadratic flight path:
+        // glowing white-gold head + tapering tail along the flown route
         const startTime = galaxyStore.championTravelStartTime
         const duration = galaxyStore.championTravelDurationMs
         const t =
           startTime > 0 && duration > 0 ? Math.min((nowMs - startTime) / duration, 1) : 0
-        const mt = 1 - t
-        const sx = mt * mt * flight.x0 + 2 * mt * t * flight.cx + t * t * flight.x2
-        const sy = mt * mt * flight.y0 + 2 * mt * t * flight.cy + t * t * flight.y2
-        const dxT = 2 * mt * (flight.cx - flight.x0) + 2 * t * (flight.x2 - flight.cx)
-        const dyT = 2 * mt * (flight.cy - flight.y0) + 2 * t * (flight.y2 - flight.cy)
-        const angle = Math.atan2(dyT, dxT)
+        const qx = (tt: number) => {
+          const m = 1 - tt
+          return m * m * flight.x0 + 2 * m * tt * flight.cx + tt * tt * flight.x2
+        }
+        const qy = (tt: number) => {
+          const m = 1 - tt
+          return m * m * flight.y0 + 2 * m * tt * flight.cy + tt * tt * flight.y2
+        }
 
-        const shipSize = MINIMAP_SHIP_SIZE * Math.sqrt(cam.zoom)
-        ctx.save()
-        ctx.translate(sx, sy)
-        ctx.rotate(angle)
-        ctx.shadowColor = 'rgba(224, 80, 80, 0.85)'
-        ctx.shadowBlur = 8
+        // Tail: sample the curve backwards from the current position
+        const legLen = Math.hypot(flight.x2 - flight.x0, flight.y2 - flight.y0)
+        const tailT =
+          legLen > 1
+            ? Math.min(t, (MINIMAP_COMET_TAIL_LEN * Math.sqrt(cam.zoom)) / legLen)
+            : 0
+        if (tailT > 0.0001) {
+          ctx.lineCap = 'round'
+          for (let i = MINIMAP_COMET_TAIL_SEGMENTS; i >= 1; i--) {
+            const f1 = i / MINIMAP_COMET_TAIL_SEGMENTS
+            const f0 = (i - 1) / MINIMAP_COMET_TAIL_SEGMENTS
+            const t1 = Math.max(0, t - tailT * f1)
+            const t0 = Math.max(0, t - tailT * f0)
+            const nearHead = 1 - f1
+            ctx.beginPath()
+            ctx.strokeStyle = `rgba(255, 214, 120, ${(nearHead * 0.85).toFixed(3)})`
+            ctx.lineWidth = 0.4 + nearHead * 2.8
+            ctx.shadowColor = 'rgba(255, 190, 80, 0.6)'
+            ctx.shadowBlur = nearHead * 5
+            ctx.moveTo(qx(t1), qy(t1))
+            ctx.lineTo(qx(t0), qy(t0))
+            ctx.stroke()
+          }
+          ctx.shadowBlur = 0
+        }
+
+        // Head: hot white core with warm gold glow
+        const hx = qx(t)
+        const hy = qy(t)
+        const headR = MINIMAP_COMET_HEAD_R * Math.sqrt(cam.zoom)
+        const headGlow = ctx.createRadialGradient(hx, hy, 0, hx, hy, headR * 3.2)
+        headGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
+        headGlow.addColorStop(0.35, 'rgba(255, 216, 112, 0.65)')
+        headGlow.addColorStop(1, 'rgba(255, 190, 80, 0)')
         ctx.beginPath()
-        ctx.moveTo(shipSize, 0)
-        ctx.lineTo(-shipSize * 0.55, -shipSize * 0.65)
-        ctx.lineTo(-shipSize * 0.55, shipSize * 0.65)
-        ctx.closePath()
-        ctx.fillStyle = '#e05050'
+        ctx.arc(hx, hy, headR * 3.2, 0, Math.PI * 2)
+        ctx.fillStyle = headGlow
         ctx.fill()
-        ctx.shadowBlur = 0
-        ctx.restore()
+        ctx.beginPath()
+        ctx.arc(hx, hy, headR, 0, Math.PI * 2)
+        ctx.fillStyle = '#fff8e8'
+        ctx.fill()
       } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
         // Idle: player-sun at the current position (the waiting screen draws
         // its own departure beacon at the flight origin instead)
