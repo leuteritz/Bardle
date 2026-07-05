@@ -445,11 +445,15 @@ export interface ObjectiveFighter {
   damage: number
   /** Battle role — drives the fighter's pit ability (idx order: top/jungle/mid/adc/support) */
   role: BattleRole
-  /** Fight-local HP — every fighter alive at fight start enters at full HP */
+  /** Fight-local HP — every fighter alive at fight start enters at full role HP */
   fightHp: number
   fightMaxHp: number
   /** Dropped to 0 fight-HP mid-fight: contributes no DPS, ability stops */
   down: boolean
+  /** End (ms timestamp) of the ability's active window; 0 = inactive */
+  abilityActiveUntil: number
+  /** Timestamp (ms) when the ability can cast again */
+  abilityCooldownUntil: number
 }
 
 export interface KillFeedEntry {

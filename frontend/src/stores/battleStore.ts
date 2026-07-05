@@ -51,20 +51,19 @@ import {
   OBJECTIVE_FIGHTER_WEIGHT_MAX,
   OBJECTIVE_MAX_DURATION_MS,
   OBJECTIVE_RESULT_DELAY_MS,
-  OBJECTIVE_FIGHT_HP,
+  OBJECTIVE_ROLE_MAX_HP,
   OBJECTIVE_AOE_DPS_DRAKE,
   OBJECTIVE_AOE_DPS_BARON,
   OBJECTIVE_ABILITY_TICK_S,
+  OBJECTIVE_ABILITY_CD_S,
+  OBJECTIVE_ABILITY_DURATION_S,
+  OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S,
   OBJECTIVE_ADC_CRIT_CHANCE,
   OBJECTIVE_ADC_CRIT_MULT,
   OBJECTIVE_MID_CURSE_DPS,
-  OBJECTIVE_SUPPORT_HEAL_PS,
+  OBJECTIVE_SUPPORT_MEND_HEAL,
   OBJECTIVE_JUNGLE_BUFF_MULT,
-  OBJECTIVE_JUNGLE_BUFF_ROTATE_S,
-  OBJECTIVE_TOP_TAUNT_INTERVAL_S,
-  OBJECTIVE_TOP_TAUNT_DURATION_S,
   OBJECTIVE_TOP_TAUNT_TARGETS,
-  OBJECTIVE_TOP_TAUNT_DMG_TAKEN,
   HONOR_MAX_SELECTIONS,
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
@@ -342,14 +341,10 @@ export const useBattleStore = defineStore('battle', {
     objectivePlayerDamage: 0,
     objectiveAliveCounts: null as { own: number; enemy: number } | null,
     objectiveFighters: null as { t1: ObjectiveFighter[]; t2: ObjectiveFighter[] } | null,
-    /** End (ms timestamp) of each side's top-laner taunt window; 0 = inactive */
-    objectiveTauntUntil: { own: 0, enemy: 0 } as { own: number; enemy: number },
-    /** Fighter idx currently holding the jungle's rotating DPS buff per side */
+    /** Fighter idx currently holding the jungle's Wild Rally buff per side */
     objectiveBuffTarget: { own: null, enemy: null } as { own: number | null; enemy: number | null },
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
     _objAbilityAccumMs: 0,
-    _objNextTauntAtMs: { own: 0, enemy: 0 } as { own: number; enemy: number },
-    _objBuffRotateAccumMs: { own: 0, enemy: 0 } as { own: number; enemy: number },
     battlePhaseStartTimestamp: 0,
     resultPhaseStartTimestamp: 0,
     searchingPhaseStartTimestamp: 0,
@@ -1541,20 +1536,14 @@ export const useBattleStore = defineStore('battle', {
       this.pauseBattleSimulation()
       this.objectiveFreezeStartMs = Date.now()
       this.objectiveFightStartMs = Date.now()
-      this.objectiveTauntUntil = { own: 0, enemy: 0 }
       this.objectiveBuffTarget = { own: null, enemy: null }
       this._objAbilityAccumMs = 0
-      // stagger the two tops so the taunt windows never fully overlap
-      this._objNextTauntAtMs = {
-        own: Date.now() + OBJECTIVE_TOP_TAUNT_INTERVAL_S * 1000,
-        enemy: Date.now() + OBJECTIVE_TOP_TAUNT_INTERVAL_S * 1000 + (OBJECTIVE_TOP_TAUNT_INTERVAL_S * 1000) / 2,
-      }
-      this._objBuffRotateAccumMs = { own: 0, enemy: 0 }
 
       this._objectiveIntervalId = setInterval(() => {
         if (!this.objectiveModalOpen || this.objectiveResult !== null) return
         this._slideFreezeAnchor()
         if (!this.objectiveFighters) return
+        this._runAbilityCasts()
         const ownTick = this._runFightDamageTick('own')
         const enemyTick = this._runFightDamageTick('enemy')
         this.objectiveOwnDamage += ownTick
@@ -1571,26 +1560,65 @@ export const useBattleStore = defineStore('battle', {
     },
 
     /**
+     * Auto-cast pass: every standing fighter whose cooldown elapsed opens its
+     * ability window. Support's Mend is an instant burst heal; Jungle's Wild
+     * Rally locks its buff onto the strongest standing ally for the window.
+     */
+    _runAbilityCasts() {
+      const now = Date.now()
+      for (const side of ['own', 'enemy'] as const) {
+        const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
+        for (const f of fighters) {
+          if (!this._isStanding(f)) continue
+          if (now < f.abilityCooldownUntil) continue
+          const duration = OBJECTIVE_ABILITY_DURATION_S[f.role] * 1000
+          f.abilityActiveUntil = now + duration
+          f.abilityCooldownUntil = f.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S[f.role] * 1000
+          if (f.role === 'support') {
+            for (const ally of fighters) {
+              if (this._isStanding(ally)) {
+                ally.fightHp = Math.min(ally.fightMaxHp, ally.fightHp + OBJECTIVE_SUPPORT_MEND_HEAL)
+              }
+            }
+          }
+          if (f.role === 'jungle') {
+            const standing = fighters.filter((x) => this._isStanding(x))
+            if (standing.length > 0) {
+              const strongest = standing.reduce((best, x) => (x.damage > best.damage ? x : best))
+              this.objectiveBuffTarget[side] = strongest.idx
+            }
+          }
+        }
+        // Wild Rally expires with its window (or when the jungle drops)
+        const jungle = fighters.find((f) => f.role === 'jungle')
+        if (!jungle || !this._isStanding(jungle) || jungle.abilityActiveUntil <= now) {
+          this.objectiveBuffTarget[side] = null
+        }
+      }
+    },
+
+    /**
      * One 200ms objective-damage tick for one side: every standing fighter
-     * contributes weight × base DPS (× drake buffs × jungle rally × ADC crit).
-     * Taunted fighters hit the opposing top laner instead of the objective.
-     * Mid's Hex Curse adds a flat DoT credited to the mid. Every point added
-     * to a fighter is also part of the returned side total (accounting invariant).
+     * contributes weight × base DPS (× drake buffs × Wild Rally × Deadeye crit).
+     * While the opposing top's Challenge is active, the taunted fighters pour
+     * their FULL contribution onto that top instead of the objective. Mid's
+     * Hex Curse adds a DoT credited to the mid while its window runs. Every
+     * point added to a fighter is part of the returned side total (invariant).
      */
     _runFightDamageTick(side: 'own' | 'enemy'): number {
       const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
       const dt = OBJECTIVE_DPS_TICK_MS / 1000
+      const now = Date.now()
       const dpsMult = side === 'own' ? this.objectiveOwnDpsMult : this.objectiveEnemyDpsMult
       const buffIdx = this.objectiveBuffTarget[side]
-      // this side is taunted while the OPPOSING top's window is active
-      const opposing = side === 'own' ? 'enemy' : 'own'
-      const tauntActive = this.objectiveTauntUntil[opposing] > Date.now()
-      const tauntedIdxs = tauntActive
-        ? fighters.filter((f) => this._isStanding(f)).slice(0, OBJECTIVE_TOP_TAUNT_TARGETS).map((f) => f.idx)
-        : []
+      // this side is taunted while the OPPOSING top's Challenge window is active
       const opposingTop = (side === 'own' ? this.objectiveFighters!.t2 : this.objectiveFighters!.t1).find(
         (f) => f.role === 'top',
       )
+      const tauntActive = !!opposingTop && this._isStanding(opposingTop) && opposingTop.abilityActiveUntil > now
+      const tauntedIdxs = tauntActive
+        ? fighters.filter((f) => this._isStanding(f)).slice(0, OBJECTIVE_TOP_TAUNT_TARGETS).map((f) => f.idx)
+        : []
 
       let total = 0
       for (const f of fighters) {
@@ -1598,20 +1626,21 @@ export const useBattleStore = defineStore('battle', {
         let contrib = f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * dpsMult
         contrib *= 1 + OBJECTIVE_DPS_VARIANCE * (2 * Math.random() - 1)
         if (buffIdx === f.idx) contrib *= OBJECTIVE_JUNGLE_BUFF_MULT
-        if (f.role === 'adc' && Math.random() < OBJECTIVE_ADC_CRIT_CHANCE) contrib *= OBJECTIVE_ADC_CRIT_MULT
+        const focusActive = f.role === 'adc' && f.abilityActiveUntil > now
+        if (f.role === 'adc' && (focusActive || Math.random() < OBJECTIVE_ADC_CRIT_CHANCE)) {
+          contrib *= OBJECTIVE_ADC_CRIT_MULT
+        }
         if (tauntedIdxs.includes(f.idx)) {
-          // diverted onto the opposing top laner — no objective damage this tick
-          if (opposingTop && this._isStanding(opposingTop)) {
-            opposingTop.fightHp = Math.max(0, opposingTop.fightHp - contrib * OBJECTIVE_TOP_TAUNT_DMG_TAKEN)
-          }
+          // full damage diverted onto the challenging top laner
+          opposingTop!.fightHp = Math.max(0, opposingTop!.fightHp - contrib)
           continue
         }
         f.damage += contrib
         total += contrib
       }
-      // Hex Curse: flat DoT while the mid stands, credited to the mid
+      // Hex Curse: DoT credited to the mid while its window is active
       const mid = fighters.find((f) => f.role === 'mid')
-      if (mid && this._isStanding(mid)) {
+      if (mid && this._isStanding(mid) && mid.abilityActiveUntil > now) {
         const curse = OBJECTIVE_MID_CURSE_DPS * dt
         mid.damage += curse
         total += curse
@@ -1619,57 +1648,20 @@ export const useBattleStore = defineStore('battle', {
       return total
     },
 
-    /** Boss AoE, support heal, down detection, jungle buff rotation and taunt windows — 1s cadence. */
+    /** Boss AoE and down detection — 1s cadence. */
     _runFightAbilityTick() {
       this._objAbilityAccumMs += OBJECTIVE_DPS_TICK_MS
       if (this._objAbilityAccumMs < OBJECTIVE_ABILITY_TICK_S * 1000) return
       this._objAbilityAccumMs -= OBJECTIVE_ABILITY_TICK_S * 1000
 
       const aoe = this.activeObjective === 'baron' ? OBJECTIVE_AOE_DPS_BARON : OBJECTIVE_AOE_DPS_DRAKE
-      const now = Date.now()
       for (const side of ['own', 'enemy'] as const) {
         const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
-        // boss AoE hits every standing fighter
         for (const f of fighters) {
           if (this._isStanding(f)) f.fightHp = Math.max(0, f.fightHp - aoe * OBJECTIVE_ABILITY_TICK_S)
         }
-        // support Mend heals all standing allies
-        const support = fighters.find((f) => f.role === 'support')
-        if (support && this._isStanding(support)) {
-          for (const f of fighters) {
-            if (this._isStanding(f)) {
-              f.fightHp = Math.min(f.fightMaxHp, f.fightHp + OBJECTIVE_SUPPORT_HEAL_PS * OBJECTIVE_ABILITY_TICK_S)
-            }
-          }
-        }
-        // down detection
         for (const f of fighters) {
           if (f.alive && !f.down && f.fightHp <= 0) f.down = true
-        }
-        // jungle Wild Rally: rotate the buff across standing allies
-        const jungle = fighters.find((f) => f.role === 'jungle')
-        if (jungle && this._isStanding(jungle)) {
-          this._objBuffRotateAccumMs[side] += OBJECTIVE_ABILITY_TICK_S * 1000
-          if (this.objectiveBuffTarget[side] === null || this._objBuffRotateAccumMs[side] >= OBJECTIVE_JUNGLE_BUFF_ROTATE_S * 1000) {
-            this._objBuffRotateAccumMs[side] = 0
-            const standing = fighters.filter((f) => this._isStanding(f))
-            if (standing.length > 0) {
-              const current = standing.findIndex((f) => f.idx === this.objectiveBuffTarget[side])
-              this.objectiveBuffTarget[side] = standing[(current + 1) % standing.length].idx
-            }
-          }
-        } else {
-          this.objectiveBuffTarget[side] = null
-        }
-        // top Challenge: open a taunt window on schedule while the top stands
-        const top = fighters.find((f) => f.role === 'top')
-        if (top && this._isStanding(top)) {
-          if (now >= this._objNextTauntAtMs[side]) {
-            this.objectiveTauntUntil[side] = now + OBJECTIVE_TOP_TAUNT_DURATION_S * 1000
-            this._objNextTauntAtMs[side] = now + OBJECTIVE_TOP_TAUNT_INTERVAL_S * 1000
-          }
-        } else {
-          this.objectiveTauntUntil[side] = 0
         }
       }
     },
@@ -1691,17 +1683,22 @@ export const useBattleStore = defineStore('battle', {
         .filter((i) => team[i]?.name)
         .map((i) => {
           const alive = until[i] <= this.battleTime
+          const role = BATTLE_ROLES[i] ?? 'mid'
+          const maxHp = OBJECTIVE_ROLE_MAX_HP[role]
           return {
             idx: i,
             name: team[i].name,
             alive,
             weight: 0,
             damage: 0,
-            role: BATTLE_ROLES[i] ?? 'mid',
-            // everyone alive at fight start regroups at full fight-local HP
-            fightHp: alive ? OBJECTIVE_FIGHT_HP : 0,
-            fightMaxHp: OBJECTIVE_FIGHT_HP,
+            role,
+            // everyone alive at fight start regroups at full role-specific HP
+            fightHp: alive ? maxHp : 0,
+            fightMaxHp: maxHp,
             down: false,
+            abilityActiveUntil: 0,
+            // staggered first casts so the pit doesn't fire everything at once
+            abilityCooldownUntil: Date.now() + OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S[role] * 1000,
           }
         })
       const living = fighters.filter((f) => f.alive)
@@ -1856,7 +1853,6 @@ export const useBattleStore = defineStore('battle', {
       this.objectivePlayerDamage = 0
       this.objectiveAliveCounts = null
       this.objectiveFighters = null
-      this.objectiveTauntUntil = { own: 0, enemy: 0 }
       this.objectiveBuffTarget = { own: null, enemy: null }
       this._objAbilityAccumMs = 0
       this.objectiveModalOpen = false

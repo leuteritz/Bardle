@@ -13,9 +13,11 @@ import {
   DRAKE_OCEAN_LOSS_PENALTY_MULT,
   DRAKE_ELDER_LP_BONUS,
   MOVE_RESPAWN_WALK_SECONDS,
-  OBJECTIVE_FIGHT_HP,
+  OBJECTIVE_ROLE_MAX_HP,
   OBJECTIVE_AOE_DPS_DRAKE,
   OBJECTIVE_MID_CURSE_DPS,
+  OBJECTIVE_SUPPORT_MEND_HEAL,
+  OBJECTIVE_ABILITY_CD_S,
 } from '../../config/constants'
 import { DRAKE_TYPES } from '../../config/drakes'
 
@@ -331,14 +333,15 @@ describe('battleStore frozen-time objective damage race', () => {
     }
   })
 
-  it('fighters enter the pit at full fight HP with their battle role', () => {
+  it('fighters enter the pit at full role-specific HP with their battle role', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     const t1 = store.objectiveFighters!.t1
     expect(t1.map((f) => f.role)).toEqual(['top', 'jungle', 'mid', 'adc', 'support'])
     for (const f of t1) {
-      expect(f.fightHp).toBe(OBJECTIVE_FIGHT_HP)
+      expect(f.fightMaxHp).toBe(OBJECTIVE_ROLE_MAX_HP[f.role])
+      expect(f.fightHp).toBe(OBJECTIVE_ROLE_MAX_HP[f.role])
       expect(f.down).toBe(false)
     }
   })
@@ -350,19 +353,65 @@ describe('battleStore frozen-time objective damage race', () => {
     store.respawnUntil.t1 = [0, 0, 0, 0, 9999]
     store._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
     vi.advanceTimersByTime(3000)
-    // 3 ability ticks × drake AoE, no Mend on this side
-    expect(store.objectiveFighters!.t1[0].fightHp).toBe(OBJECTIVE_FIGHT_HP - 3 * OBJECTIVE_AOE_DPS_DRAKE)
+    // 3 AoE ticks, no Mend on this side — the mid never takes taunt damage
+    expect(store.objectiveFighters!.t1[2].fightHp).toBe(
+      OBJECTIVE_ROLE_MAX_HP.mid - 3 * OBJECTIVE_AOE_DPS_DRAKE,
+    )
   })
 
-  it('support Mend keeps a full team topped up against the drake AoE', () => {
+  it('a living support keeps the team healthier than a dead one', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
-    vi.advanceTimersByTime(3000)
-    // heal/s exceeds drake AoE/s — full teams stay at max HP
-    for (const f of store.objectiveFighters!.t1) {
-      expect(f.fightHp).toBe(OBJECTIVE_FIGHT_HP)
-    }
+    vi.advanceTimersByTime(4100)
+    const withSupport = store.objectiveFighters!.t1[2].fightHp
+
+    setActivePinia(createPinia())
+    const store2 = useBattleStore()
+    setupBattle(store2)
+    store2.battleTime = 100
+    store2.respawnUntil.t1 = [0, 0, 0, 0, 9999]
+    store2._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
+    vi.advanceTimersByTime(4100)
+    const withoutSupport = store2.objectiveFighters!.t1[2].fightHp
+
+    expect(withSupport).toBeGreaterThan(withoutSupport)
+  })
+
+  it('Mend bursts heal all standing allies when the support casts', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    const t1 = store.objectiveFighters!.t1
+    const support = t1[4]
+    t1[2].fightHp = 100
+    support.abilityCooldownUntil = Date.now() // ready now
+    vi.advanceTimersByTime(200) // one tick: cast fires, no AoE yet
+    expect(t1[2].fightHp).toBe(100 + OBJECTIVE_SUPPORT_MEND_HEAL)
+    // cooldown rescheduled
+    expect(support.abilityCooldownUntil).toBeGreaterThan(Date.now())
+  })
+
+  it('casting opens the ability window and schedules the next cooldown', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    const mid = store.objectiveFighters!.t1[2]
+    mid.abilityCooldownUntil = Date.now()
+    vi.advanceTimersByTime(200)
+    expect(mid.abilityActiveUntil).toBeGreaterThan(Date.now())
+    expect(mid.abilityCooldownUntil).toBe(mid.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S.mid * 1000)
+  })
+
+  it('Wild Rally buffs the strongest standing ally', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    const t1 = store.objectiveFighters!.t1
+    t1[3].damage = 500 // ADC leads
+    t1[1].abilityCooldownUntil = Date.now() // jungle ready
+    vi.advanceTimersByTime(200)
+    expect(store.objectiveBuffTarget.own).toBe(3)
   })
 
   it('a downed fighter stops dealing objective damage', () => {
@@ -376,31 +425,36 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(top.damage).toBe(frozen)
   })
 
-  it('Hex Curse credits the mid laner independently of attack weights', () => {
+  it('Hex Curse credits the mid laner only while its window is active', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     for (const f of store.objectiveFighters!.t1) f.weight = 0
     for (const f of store.objectiveFighters!.t2) f.weight = 0
+    const mid = store.objectiveFighters!.t1[2]
+    mid.abilityActiveUntil = Date.now() + 100000 // window open, own mid only
     vi.advanceTimersByTime(1000)
-    const t1 = store.objectiveFighters!.t1
-    expect(t1[2].damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
-    expect(t1[0].damage).toBe(0)
+    expect(mid.damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
+    expect(store.objectiveFighters!.t1[0].damage).toBe(0)
+    // enemy mid's window is still on its first-cast offset — no curse credited
+    expect(store.objectiveEnemyDamage).toBe(0)
     expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
   })
 
-  it('an active taunt diverts enemy damage onto the top laner instead of the objective', () => {
+  it('an active taunt diverts the full enemy damage onto the top laner instead of the objective', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
-    store.objectiveTauntUntil.own = Date.now() + 100000
+    const top = store.objectiveFighters!.t1[0]
+    top.abilityActiveUntil = Date.now() + 100000 // Challenge window open
     vi.advanceTimersByTime(800) // stays below the first ability tick (no AoE/heal noise)
     const t2 = store.objectiveFighters!.t2
     // the first two standing enemies attack our top instead of the objective
     expect(t2[0].damage).toBe(0)
     expect(t2[1].damage).toBe(0)
     expect(t2[2].damage).toBeGreaterThan(0)
-    expect(store.objectiveFighters!.t1[0].fightHp).toBeLessThan(OBJECTIVE_FIGHT_HP)
+    // full contribution lands on the top laner as fight-HP damage
+    expect(top.fightHp).toBeLessThan(OBJECTIVE_ROLE_MAX_HP.top)
   })
 
   it('ADC crits double the contribution when the crit roll always hits', () => {

@@ -200,36 +200,61 @@ export const OBJECTIVE_LUNGE_STRIKE_FRACTION = 0.7
 export const OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS = 900
 /** Scheduler resolution for spawning fighter strike floats */
 export const OBJECTIVE_FIGHTER_FLOAT_TICK_MS = 100
-// ── Objective Fight 2.0: fight-local HP, boss AoE, role abilities ──────────
-/** Every fighter alive at fight start enters the pit with full fight-local HP */
-export const OBJECTIVE_FIGHT_HP = 100
+// ── Objective Fight 2.1: role HP pools, boss AoE, cooldown abilities ───────
+/** Fight-local max HP per role — the tank soaks taunted damage, the ADC is fragile */
+export const OBJECTIVE_ROLE_MAX_HP: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+  top: 260,
+  jungle: 190,
+  mid: 150,
+  adc: 130,
+  support: 170,
+}
 /** Boss AoE damage per second on every standing fighter (both teams) */
 export const OBJECTIVE_AOE_DPS_DRAKE = 5
 export const OBJECTIVE_AOE_DPS_BARON = 7
-/** Cadence of the ability/AoE tick inside the fight */
+/** Cadence of the AoE/down tick inside the fight */
 export const OBJECTIVE_ABILITY_TICK_S = 1
-/** ADC "Deadeye": real crit chance and multiplier on strike damage */
+/** Ability cooldown per role (seconds, measured from the end of the active window) */
+export const OBJECTIVE_ABILITY_CD_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+  top: 6,
+  jungle: 5,
+  mid: 4,
+  adc: 5,
+  support: 4,
+}
+/** Ability active-window duration per role (0 = instant burst) */
+export const OBJECTIVE_ABILITY_DURATION_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+  top: 1.5,
+  jungle: 2.5,
+  mid: 2,
+  adc: 1.5,
+  support: 0,
+}
+/** Staggered first casts so the pit doesn't fire everything at once */
+export const OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+  top: 2,
+  jungle: 1,
+  mid: 1.5,
+  adc: 2.5,
+  support: 3,
+}
+/** ADC "Deadeye": passive crit chance and multiplier; "Focus Fire" window crits always */
 export const OBJECTIVE_ADC_CRIT_CHANCE = 0.25
 export const OBJECTIVE_ADC_CRIT_MULT = 2
-/** Mid "Hex Curse": flat DoT on the objective, credited to the mid laner */
-export const OBJECTIVE_MID_CURSE_DPS = 12
-/** Support "Mend": heal per second on every standing ally */
-export const OBJECTIVE_SUPPORT_HEAL_PS = 8
-/** Jungle "Wild Rally": rotating ally DPS buff */
-export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.3
-export const OBJECTIVE_JUNGLE_BUFF_ROTATE_S = 2
-/** Top "Challenge": periodic taunt window pulling enemy DPS onto the top laner */
-export const OBJECTIVE_TOP_TAUNT_INTERVAL_S = 4
-export const OBJECTIVE_TOP_TAUNT_DURATION_S = 1.5
+/** Mid "Hex Curse": DoT on the objective while the window is active, credited to the mid */
+export const OBJECTIVE_MID_CURSE_DPS = 15
+/** Support "Mend": instant burst heal on every standing ally per cast */
+export const OBJECTIVE_SUPPORT_MEND_HEAL = 24
+/** Jungle "Wild Rally": DPS buff on the strongest standing ally while active */
+export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.4
+/** Top "Challenge": taunted enemies pour their FULL objective DPS onto the top laner */
 export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
-/** Fraction of the taunted enemies' DPS the top laner takes as fight-HP damage */
-export const OBJECTIVE_TOP_TAUNT_DMG_TAKEN = 0.5
 /** Role ability metadata for the objective fight panels (icons registered in USED_GAME_ICONS) */
 export const OBJECTIVE_ROLE_ABILITIES = {
   top: { name: 'Challenge', icon: 'game-icons:enrage', color: '#e8a040' },
   jungle: { name: 'Wild Rally', icon: 'game-icons:uprising', color: '#6ec040' },
   mid: { name: 'Hex Curse', icon: 'game-icons:cursed-star', color: '#b06cf8' },
-  adc: { name: 'Deadeye', icon: 'game-icons:dead-eye', color: '#e8c040' },
+  adc: { name: 'Focus Fire', icon: 'game-icons:dead-eye', color: '#e8c040' },
   support: { name: 'Mend', icon: 'game-icons:healing', color: '#5adf9e' },
 } as const
 
