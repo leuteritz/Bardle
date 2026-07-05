@@ -9,14 +9,14 @@
             v-for="row in feedEntries"
             :key="row.key"
             class="feed-row"
-            :class="rowAccentClass(row)"
+            :class="[rowAccentClass(row), multikillEventClass(row)]"
             @mouseenter="onRowEnter(row, $event)"
             @mouseleave="onRowLeave"
           >
             <span class="feed-time">{{ formatFeedTime(row.t) }}</span>
 
             <template v-if="row.type === 'kill'">
-              <div class="feed-item" :class="{ 'feed-item--multikill': row.kill.multikillTier }">
+              <div class="feed-item">
                 <span class="feed-name" :class="row.kill.killerTeam === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.kill.killerName }}</span>
                 <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
                 <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
@@ -60,15 +60,12 @@
           v-for="row in barEntries"
           :key="row.key"
           class="bar-event"
+          :class="multikillEventClass(row)"
           @mouseenter="onRowEnter(row, $event)"
           @mouseleave="onRowLeave"
         >
           <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
-          <div
-            v-if="row.type === 'kill'"
-            class="feed-item"
-            :class="{ 'feed-item--multikill': row.kill.multikillTier }"
-          >
+          <div v-if="row.type === 'kill'" class="feed-item">
             <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
             <Icon icon="game-icons:saber-slash" width="20" height="20" class="feed-star" />
             <template v-if="row.kill.multikillTier">
@@ -202,6 +199,12 @@ function formatFeedTime(t: number): string {
 function rowAccentClass(row: FeedRow): string {
   if (row.type === 'structure') return 'feed-row--gold'
   return row.kill.killerTeam === 1 ? 'feed-row--blue' : 'feed-row--red'
+}
+
+/** Tier-escalated highlight for the whole event (incl. timestamp) — t2 subtle … t5 penta. */
+function multikillEventClass(row: FeedRow): string {
+  if (row.type !== 'kill' || !row.kill.multikillTier) return ''
+  return `mk-event mk-event--t${Math.min(row.kill.multikillTier, 5)}`
 }
 
 /** All kills of a multikill chain (oldest first) — the entry with tier N is the Nth kill by that killer. */
@@ -389,11 +392,84 @@ function structureLabel(e: StructureFeedEntry): string {
   min-width: 0;
   flex-shrink: 0;
 }
-.feed-item--multikill {
-  padding: 2px 7px;
-  background: rgba(240, 104, 32, 0.12);
-  border: 1px solid rgba(240, 104, 32, 0.45);
+/* ── Multikill event highlight — covers the WHOLE event incl. timestamp.
+     Escalating ramp in the feed's warm multikill hue family (team blue/red stays unambiguous):
+     t2 DOUBLE subtle amber → t3 TRIPLE orange → t4 QUADRA hot orange-red → t5 PENTA gold on fire ── */
+.bar-event.mk-event {
+  padding: 3px 10px;
   border-radius: 4px;
+  border: 1px solid transparent;
+}
+.feed-row.mk-event {
+  border-radius: 4px;
+}
+
+/* t2 — DOUBLE: frequent, so kept calm but clearly recognizable */
+.bar-event.mk-event--t2,
+.feed-row.mk-event--t2 { background: rgba(240, 104, 32, 0.08); }
+.bar-event.mk-event--t2 { border-color: rgba(240, 104, 32, 0.3); }
+.feed-row.mk-event--t2 { box-shadow: inset 0 0 0 1px rgba(240, 104, 32, 0.3); }
+.mk-event--t2 .bar-time,
+.mk-event--t2 .feed-time { color: #ffc46a; }
+.mk-event--t2 .feed-mk { color: #ffc46a; text-shadow: none; }
+
+/* t3 — TRIPLE */
+.bar-event.mk-event--t3,
+.feed-row.mk-event--t3 { background: rgba(240, 104, 32, 0.14); }
+.bar-event.mk-event--t3 { border-color: rgba(240, 104, 32, 0.5); }
+.feed-row.mk-event--t3 { box-shadow: inset 0 0 0 1px rgba(240, 104, 32, 0.5); }
+.mk-event--t3 .bar-time,
+.mk-event--t3 .feed-time { color: #ff9a40; }
+.mk-event--t3 .feed-mk { color: #ff9a40; text-shadow: 0 0 8px rgba(240, 104, 32, 0.6); }
+
+/* t4 — QUADRA */
+.bar-event.mk-event--t4,
+.feed-row.mk-event--t4 { background: rgba(240, 104, 32, 0.2); }
+.bar-event.mk-event--t4 {
+  border-color: rgba(255, 112, 56, 0.7);
+  box-shadow: 0 0 10px rgba(255, 90, 40, 0.3);
+}
+.feed-row.mk-event--t4 {
+  box-shadow: inset 0 0 0 1px rgba(255, 112, 56, 0.7), 0 0 10px rgba(255, 90, 40, 0.25);
+}
+.mk-event--t4 .bar-time,
+.mk-event--t4 .feed-time { color: #ff7038; }
+.mk-event--t4 .feed-mk { color: #ff7038; text-shadow: 0 0 10px rgba(255, 90, 40, 0.75); }
+
+/* t5 — PENTA: gold on fiery gradient, pulsing glow */
+.bar-event.mk-event--t5,
+.feed-row.mk-event--t5 {
+  background: linear-gradient(to bottom, rgba(240, 104, 32, 0.3), rgba(160, 40, 10, 0.25));
+}
+.bar-event.mk-event--t5 {
+  border-color: #ff9a40;
+  animation: mk-penta-pulse 1s ease-in-out infinite;
+}
+.feed-row.mk-event--t5 {
+  animation: mk-penta-pulse-row 1s ease-in-out infinite;
+}
+.mk-event--t5 .bar-time,
+.mk-event--t5 .feed-time { color: #ffd24a; }
+.mk-event--t5 .feed-mk { color: #ffd24a; text-shadow: 0 0 12px rgba(240, 104, 32, 0.9); }
+
+@keyframes mk-penta-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(240, 104, 32, 0.35); }
+  50% { box-shadow: 0 0 16px rgba(240, 104, 32, 0.8); }
+}
+/* row variant keeps its inset ring while the outer glow breathes */
+@keyframes mk-penta-pulse-row {
+  0%, 100% { box-shadow: inset 0 0 0 1px #ff9a40, 0 0 6px rgba(240, 104, 32, 0.35); }
+  50% { box-shadow: inset 0 0 0 1px #ff9a40, 0 0 16px rgba(240, 104, 32, 0.8); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-event.mk-event--t5,
+  .feed-row.mk-event--t5 {
+    animation: none;
+  }
+  .feed-row.mk-event--t5 {
+    box-shadow: inset 0 0 0 1px #ff9a40;
+  }
 }
 
 .feed-name {
