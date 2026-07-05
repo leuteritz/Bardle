@@ -29,7 +29,7 @@
             <template v-else>
               <div class="feed-item feed-item--structure">
                 <Icon
-                  icon="game-icons:watchtower"
+                  :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
                   width="18"
                   height="18"
                   class="feed-structure-icon"
@@ -45,9 +45,6 @@
 
     <!-- Collapsed single-row bar -->
     <div class="ticker-bar">
-      <span class="ticker-label">KILL FEED</span>
-      <span class="ticker-chevron" :class="{ 'ticker-chevron--open': expanded }">▲</span>
-
       <TransitionGroup name="tick" tag="div" class="bar-items">
         <div v-for="row in barEntries" :key="row.key" class="bar-event">
           <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
@@ -63,7 +60,7 @@
           </div>
           <div v-else class="feed-item feed-item--structure">
             <Icon
-              icon="game-icons:watchtower"
+              :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
               width="18"
               height="18"
               class="feed-structure-icon"
@@ -73,6 +70,8 @@
           </div>
         </div>
       </TransitionGroup>
+
+      <span class="ticker-chevron" :class="{ 'ticker-chevron--open': expanded }">▲</span>
     </div>
 
     <Teleport to="body">
@@ -210,17 +209,11 @@ function structureLabel(e: StructureFeedEntry): string {
   background: #12100a;
 }
 
-.ticker-label {
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: #6a5820;
-  flex-shrink: 0;
-}
-
 .ticker-chevron {
   font-size: 8px;
   color: #6a5820;
   flex-shrink: 0;
+  margin-left: auto;
   transition: transform 0.18s ease, color 0.18s ease;
 }
 .ticker-chevron--open {
@@ -380,17 +373,10 @@ function structureLabel(e: StructureFeedEntry): string {
   white-space: nowrap;
 }
 
-.feed-item--structure {
-  padding: 2px 7px;
-  background: rgba(232, 192, 64, 0.08);
-  border: 1px solid rgba(232, 192, 64, 0.35);
-  border-radius: 4px;
-}
 .feed-structure-icon--blue { color: #60a5fa; }
 .feed-structure-icon--red { color: #f87171; }
 .feed-structure-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
   letter-spacing: 1px;
   color: #e8c040;
   white-space: nowrap;
