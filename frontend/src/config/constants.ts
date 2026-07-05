@@ -161,8 +161,28 @@ export const BARON_OBJECTIVE_HP = 4000
 /** Objective DPS contributed by every living champion present at the pit (per team) */
 export const OBJECTIVE_BASE_DPS_PER_CHAMP = 45
 export const OBJECTIVE_CLICK_DAMAGE = 15
-export const OBJECTIVE_DRAKE_WIN_BONUS = 0.08
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
+
+// ── Drake Types (see src/config/drakes.ts for the full definitions) ────────
+/** Chance the second drake of a battle rolls as the Elder Dragon */
+export const ELDER_DRAKE_CHANCE = 0.25
+/** Win-chance swing for Infernal — pure aggression, no secondary effect */
+export const DRAKE_WIN_BONUS_MAJOR = 0.1
+/** Win-chance swing for basic drakes that carry a secondary battle effect */
+export const DRAKE_WIN_BONUS_MINOR = 0.06
+export const DRAKE_WIN_BONUS_ELDER = 0.12
+/** Mountain: own team DPS multiplier in later objective fights */
+export const DRAKE_MOUNTAIN_DPS_MULT = 1.2
+/** Chemtech: enemy team DPS multiplier in later objective fights */
+export const DRAKE_CHEMTECH_ENEMY_DPS_MULT = 0.85
+/** Hextech: player click damage multiplier in later objective fights */
+export const DRAKE_HEXTECH_CLICK_MULT = 2
+/** Cloud: ally respawn time multiplier for the rest of the battle */
+export const DRAKE_CLOUD_RESPAWN_MULT = 0.7
+/** Ocean: losing a later objective fight only costs this fraction of win chance */
+export const DRAKE_OCEAN_LOSS_PENALTY_MULT = 0.5
+/** Elder: flat bonus LP when the battle is won */
+export const DRAKE_ELDER_LP_BONUS = 5
 export const OBJECTIVE_DPS_TICK_MS = 200
 /** Per-tick DPS wobble (±fraction) so the damage race stays dramatic */
 export const OBJECTIVE_DPS_VARIANCE = 0.15

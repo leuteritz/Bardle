@@ -1,7 +1,7 @@
 <template>
   <Transition name="obj-pop">
     <div v-if="show" class="objective-overlay">
-      <div class="objective-modal" :class="isDrake ? 'modal--drake' : 'modal--baron'">
+      <div class="objective-modal" :style="themeVars">
         <!-- Gold accent bar -->
         <div class="accent-bar" />
 
@@ -15,7 +15,7 @@
           >
             SECURE ✦
           </button>
-          <span class="obj-title" :class="isDrake ? 'title--drake' : 'title--baron'">{{ objectiveTitle }}</span>
+          <span class="obj-title">{{ objectiveTitle }}</span>
           <button
             class="force-btn force-btn--enemy"
             :disabled="battleStore.objectiveResult !== null"
@@ -50,7 +50,11 @@
               class="fighter-card fighter-card--own"
               :class="[{ 'fighter-card--dead': !f.alive }, cardRankClass(f, i)]"
             >
-              <div class="fighter-portrait-wrap">
+              <div
+                class="fighter-portrait-wrap"
+                :class="{ 'attacking attacking--own': isAttacking(f) }"
+                :style="isAttacking(f) ? { animationDelay: i * 0.35 + 's' } : undefined"
+              >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
                   class="fighter-portrait fighter-portrait--own"
@@ -64,7 +68,7 @@
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
                   {{ fmt(Math.round(f.damage)) }}
                 </span>
-                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f) }}/s</span>
+                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveOwnDpsMult) }}/s</span>
               </div>
               <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, i)}`">
                 <Icon icon="game-icons:sport-medal" width="28" height="28" />
@@ -80,19 +84,15 @@
             @mouseup="imgPressed = false"
             @mouseleave="imgPressed = false"
           >
-          <div class="arena-aura" :class="isDrake ? 'aura--drake' : 'aura--baron'" />
-          <div class="rune-ring rune-ring--outer" :class="isDrake ? 'ring--drake' : 'ring--baron'" />
-          <div class="rune-ring rune-ring--inner" :class="isDrake ? 'ring--drake' : 'ring--baron'" />
-          <span v-for="e in 6" :key="e" class="ember" :class="[`ember--${e}`, isDrake ? 'ember--drake' : 'ember--baron']" />
+          <div class="arena-aura" />
+          <div class="rune-ring rune-ring--outer" />
+          <div class="rune-ring rune-ring--inner" />
+          <span v-for="e in 6" :key="e" class="ember" :class="`ember--${e}`" />
 
           <img
             :src="isDrake ? '/img/dragon.png' : '/img/baron.png'"
             class="boss-img"
-            :class="{
-              'boss-img--pressed': imgPressed,
-              'boss-img--drake': isDrake,
-              'boss-img--baron': !isDrake,
-            }"
+            :class="{ 'boss-img--pressed': imgPressed }"
             :alt="objectiveTitle"
           />
           <div v-if="hitFlash" class="hit-flash" />
@@ -120,9 +120,13 @@
                 <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
                   {{ fmt(Math.round(f.damage)) }}
                 </span>
-                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f) }}/s</span>
+                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveEnemyDpsMult) }}/s</span>
               </div>
-              <div class="fighter-portrait-wrap">
+              <div
+                class="fighter-portrait-wrap"
+                :class="{ 'attacking attacking--enemy': isAttacking(f) }"
+                :style="isAttacking(f) ? { animationDelay: i * 0.35 + 0.18 + 's' } : undefined"
+              >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
                   class="fighter-portrait fighter-portrait--enemy"
@@ -142,9 +146,7 @@
               v-for="s in HP_SEGMENTS"
               :key="s"
               class="hp-segment"
-              :class="[
-                segmentFill(s) > 0 ? (isDrake ? 'seg--drake' : 'seg--baron') : 'seg--empty',
-              ]"
+              :class="segmentFill(s) > 0 ? 'seg--full' : 'seg--empty'"
               :style="segmentFill(s) > 0 && segmentFill(s) < 1 ? { opacity: 0.35 + segmentFill(s) * 0.65 } : undefined"
             />
           </div>
@@ -175,8 +177,9 @@
         <div class="reward-row">
           <span class="reward reward--win">Secure: +{{ winBonusPercent }}% win chance</span>
           <span class="reward-divider">·</span>
-          <span class="reward reward--lose">Lose: −{{ winBonusPercent }}%</span>
+          <span class="reward reward--lose">Lose: −{{ loseBonusPercent }}%</span>
         </div>
+        <div v-if="effectText" class="reward-effect">{{ effectText }}</div>
 
         <!-- Result overlay with burst rays -->
         <Transition name="result-pop">
@@ -186,6 +189,7 @@
               <span class="result-label">{{ resultLabel }}</span>
               <span class="result-score">{{ fmt(ownDamage) }} vs {{ fmt(enemyDamage) }} damage</span>
               <span v-if="topFighter" class="result-top">Top: {{ topFighter.name }} · {{ fmt(Math.round(topFighter.damage)) }} dmg</span>
+              <span v-if="resultEffectText" class="result-effect">{{ resultEffectText }}</span>
             </div>
           </div>
         </Transition>
@@ -201,25 +205,45 @@ import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
 import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
-  OBJECTIVE_CLICK_DAMAGE,
-  OBJECTIVE_DRAKE_WIN_BONUS,
   OBJECTIVE_BARON_WIN_BONUS,
+  DRAKE_OCEAN_LOSS_PENALTY_MULT,
 } from '@/config/constants'
+import { DRAKE_TYPES } from '@/config/drakes'
 
 const HP_SEGMENTS = 10
+const BARON_THEME = { color: '#a855f7', colorDark: '#5c2a90', glow: 'rgba(168, 85, 247, 0.6)' }
 
 const battleStore = useBattleStore()
 
 const show = computed(() => battleStore.objectiveModalOpen || battleStore.objectiveResult !== null)
 const isDrake = computed(() => battleStore.activeObjective === 'drake')
 
-const objectiveTitle = computed(() => (isDrake.value ? 'HEXTECH DRAKE' : 'BARON NASHOR'))
+const drakeDef = computed(() => DRAKE_TYPES[battleStore.activeDrakeType ?? 'infernal'])
+
+/** Theme variables driving title, aura, rings, embers, HP segments and boss glow. */
+const themeVars = computed(() => {
+  const t = isDrake.value ? drakeDef.value : BARON_THEME
+  return { '--obj-color': t.color, '--obj-dark': t.colorDark, '--obj-glow': t.glow }
+})
+
+const objectiveTitle = computed(() =>
+  isDrake.value ? drakeDef.value.label.toUpperCase() : 'BARON NASHOR',
+)
+
+/** A fighter lunges at the pit while alive and the fight is still running. */
+function isAttacking(f: ObjectiveFighter): boolean {
+  return f.alive && battleStore.objectiveResult === null
+}
 
 // Alive counts are snapshotted at fight start — frozen time keeps them fixed.
 const aliveOwn = computed(() => battleStore.objectiveAliveCounts?.own ?? 3)
 const aliveEnemy = computed(() => battleStore.objectiveAliveCounts?.enemy ?? 3)
-const ownDps = computed(() => aliveOwn.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
-const enemyDps = computed(() => aliveEnemy.value * OBJECTIVE_BASE_DPS_PER_CHAMP)
+const ownDps = computed(() =>
+  Math.round(aliveOwn.value * OBJECTIVE_BASE_DPS_PER_CHAMP * battleStore.objectiveOwnDpsMult),
+)
+const enemyDps = computed(() =>
+  Math.round(aliveEnemy.value * OBJECTIVE_BASE_DPS_PER_CHAMP * battleStore.objectiveEnemyDpsMult),
+)
 
 /** Living fighters first, sorted by damage descending — the carry leads the list. */
 function sortByDamage(fighters: ObjectiveFighter[]): ObjectiveFighter[] {
@@ -255,8 +279,8 @@ function cardRankClass(f: ObjectiveFighter, sortedIndex: number): string | null 
  * alive count, so weight × base DPS is the exact per-fighter rate the tick
  * loop distributes (before the ±variance wobble, which averages out).
  */
-function fighterDps(f: ObjectiveFighter): number {
-  return Math.round(f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP)
+function fighterDps(f: ObjectiveFighter, mult = 1): number {
+  return Math.round(f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult)
 }
 
 const topFighter = computed(() => {
@@ -280,9 +304,21 @@ const playerShareOfOwn = computed(() => {
 })
 const playerPercentOfOwn = computed(() => playerShareOfOwn.value)
 
-const winBonusPercent = computed(() =>
-  Math.round((isDrake.value ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS) * 100),
+const winBonus = computed(() =>
+  isDrake.value ? drakeDef.value.winDelta : OBJECTIVE_BARON_WIN_BONUS,
 )
+const winBonusPercent = computed(() => Math.round(winBonus.value * 100))
+/** Ocean buff softens the displayed loss of later objective fights — matches the sim. */
+const loseBonusPercent = computed(() => {
+  const oceanHeld = battleStore.drakeBuffs.includes('ocean')
+  return Math.round(winBonus.value * (oceanHeld ? DRAKE_OCEAN_LOSS_PENALTY_MULT : 1) * 100)
+})
+const effectText = computed(() => (isDrake.value ? drakeDef.value.effectText : ''))
+const resultEffectText = computed(() => {
+  const r = battleStore.objectiveResult
+  if (!isDrake.value || (r !== 'own' && r !== 'player')) return ''
+  return drakeDef.value.effectText
+})
 
 function fmt(n: number): string {
   return n.toLocaleString('en-US')
@@ -337,7 +373,7 @@ function handleClick() {
   const id = ++_floatId
   damageFloats.value.push({
     id,
-    value: OBJECTIVE_CLICK_DAMAGE,
+    value: battleStore.objectiveClickDamage,
     rot: -14 + (id % 5) * 7,
     left: 34 + (id % 4) * 11,
   })
@@ -384,7 +420,7 @@ watch(show, (v) => {
 /* ── Modal card ──────────────────────────────────────────────────────────── */
 .objective-modal {
   position: relative;
-  width: min(680px, calc(100% - 32px));
+  width: min(760px, calc(100% - 32px));
   max-height: 92%;
   background: #111008;
   border: 4px solid #7a4e20;
@@ -398,11 +434,14 @@ watch(show, (v) => {
   flex-direction: column;
   align-items: center;
 }
-.modal--drake {
-  background: radial-gradient(circle at 50% 32%, #12180c, #111008 70%);
-}
-.modal--baron {
-  background: radial-gradient(circle at 50% 32%, #150e1c, #111008 70%);
+/* Soft objective-colored haze over the flat dark base */
+.objective-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 32%, var(--obj-glow), transparent 60%);
+  opacity: 0.1;
+  pointer-events: none;
 }
 
 .accent-bar {
@@ -472,14 +511,8 @@ watch(show, (v) => {
   font-weight: 700;
   letter-spacing: 3px;
   white-space: nowrap;
-}
-.title--drake {
-  color: #6ee0a0;
-  text-shadow: 0 0 14px rgba(34, 197, 94, 0.6);
-}
-.title--baron {
-  color: #c9a0f5;
-  text-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
+  color: var(--obj-color);
+  text-shadow: 0 0 14px var(--obj-glow);
 }
 
 /* ── Alive strip ─────────────────────────────────────────────────────────── */
@@ -629,6 +662,18 @@ watch(show, (v) => {
   position: relative;
   flex-shrink: 0;
 }
+
+/* Alive fighters periodically lunge toward the pit — animates the inner wrap,
+   never the card root (TransitionGroup FLIP owns the card's transform) */
+.attacking {
+  animation: 1.8s ease-in-out infinite;
+}
+.attacking--own {
+  animation-name: attack-lunge-own;
+}
+.attacking--enemy {
+  animation-name: attack-lunge-enemy;
+}
 .fighter-portrait {
   width: 48px;
   height: 48px;
@@ -725,8 +770,8 @@ watch(show, (v) => {
 /* ── Arena ───────────────────────────────────────────────────────────────── */
 .boss-arena {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: 280px;
+  height: 240px;
   flex-shrink: 0;
   cursor: pointer;
   user-select: none;
@@ -743,18 +788,13 @@ watch(show, (v) => {
   opacity: 0.5;
   animation: aura-pulse 1.8s ease-in-out infinite;
   pointer-events: none;
-}
-.aura--drake {
-  background: radial-gradient(circle, #34d060, #157a30 55%, transparent 78%);
-}
-.aura--baron {
-  background: radial-gradient(circle, #a855f7, #5c2a90 55%, transparent 78%);
+  background: radial-gradient(circle, var(--obj-color), var(--obj-dark) 55%, transparent 78%);
 }
 
 .rune-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px dashed;
+  border: 1px dashed var(--obj-glow);
   pointer-events: none;
 }
 .rune-ring--outer {
@@ -766,8 +806,6 @@ watch(show, (v) => {
   border-style: dotted;
   animation: ring-spin-rev 9s linear infinite;
 }
-.ring--drake { border-color: rgba(34, 197, 94, 0.45); }
-.ring--baron { border-color: rgba(168, 85, 247, 0.45); }
 
 /* Rising embers */
 .ember {
@@ -778,14 +816,8 @@ watch(show, (v) => {
   border-radius: 50%;
   pointer-events: none;
   animation: ember-rise 2.6s ease-in infinite;
-}
-.ember--drake {
-  background: #6ee0a0;
-  box-shadow: 0 0 6px #22c55e;
-}
-.ember--baron {
-  background: #c9a0f5;
-  box-shadow: 0 0 6px #a855f7;
+  background: var(--obj-color);
+  box-shadow: 0 0 6px var(--obj-glow);
 }
 .ember--1 { left: 22%; animation-delay: 0s; }
 .ember--2 { left: 36%; animation-delay: 0.7s; }
@@ -794,24 +826,21 @@ watch(show, (v) => {
 .ember--5 { left: 74%; animation-delay: 1.8s; }
 .ember--6 { left: 30%; animation-delay: 2.2s; }
 
+/* Unframed boss sprite at natural aspect ratio — the glow follows the PNG alpha contour */
 .boss-img {
   position: relative;
   z-index: 1;
-  width: 165px;
-  height: 165px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
   transition: transform 0.08s ease;
-  border: 3px solid #7a4e20;
-}
-.boss-img--drake {
-  box-shadow: 0 0 24px rgba(34, 197, 94, 0.7), 0 0 48px rgba(21, 122, 48, 0.35), inset 0 0 0 1px #3e200a;
-}
-.boss-img--baron {
-  box-shadow: 0 0 24px rgba(168, 85, 247, 0.7), 0 0 48px rgba(92, 42, 144, 0.35), inset 0 0 0 1px #3e200a;
+  filter: drop-shadow(0 0 14px var(--obj-glow)) drop-shadow(0 0 36px var(--obj-glow));
+  animation: boss-breathe 3.2s ease-in-out infinite;
 }
 .boss-img--pressed {
-  transform: scale(0.91);
+  transform: scale(0.91) !important;
+  animation: none;
 }
 
 .hit-flash {
@@ -874,13 +903,9 @@ watch(show, (v) => {
   border: 1px solid #3e200a;
   transition: opacity 0.15s ease, background 0.15s ease;
 }
-.seg--drake {
-  background: linear-gradient(to bottom, #34d060, #157a30);
-  box-shadow: 0 0 7px rgba(34, 197, 94, 0.55);
-}
-.seg--baron {
-  background: linear-gradient(to bottom, #b06cf8, #6c30a8);
-  box-shadow: 0 0 7px rgba(168, 85, 247, 0.55);
+.seg--full {
+  background: linear-gradient(to bottom, var(--obj-color), var(--obj-dark));
+  box-shadow: 0 0 7px var(--obj-glow);
 }
 .seg--empty {
   background: #1c1c18;
@@ -985,6 +1010,18 @@ watch(show, (v) => {
 .reward--lose { color: #e07060; }
 .reward-divider { color: #7a6030; font-size: 13px; }
 
+/* Drake-specific secondary effect line under the reward row */
+.reward-effect {
+  width: calc(100% - 28px);
+  margin: -6px 14px 0;
+  padding-bottom: 12px;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--obj-color);
+  text-shadow: 0 0 8px var(--obj-glow);
+}
+
 /* ── Result overlay ──────────────────────────────────────────────────────── */
 .result-overlay {
   position: absolute;
@@ -1062,6 +1099,13 @@ watch(show, (v) => {
   font-variant-numeric: tabular-nums;
 }
 
+.result-effect {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--obj-color);
+  text-shadow: 0 0 10px var(--obj-glow);
+}
+
 /* ── Transitions ─────────────────────────────────────────────────────────── */
 .obj-pop-enter-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -1135,12 +1179,38 @@ watch(show, (v) => {
   100% { opacity: 1; transform: scale(1); }
 }
 
+@keyframes boss-breathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 0 12px var(--obj-glow)) drop-shadow(0 0 30px var(--obj-glow));
+  }
+  50% {
+    transform: scale(1.045) translateY(-4px);
+    filter: drop-shadow(0 0 22px var(--obj-glow)) drop-shadow(0 0 50px var(--obj-glow));
+  }
+}
+
+@keyframes attack-lunge-own {
+  0%, 55%, 100% { transform: translateX(0); }
+  62% { transform: translateX(-4px); }
+  70% { transform: translateX(14px) scale(1.06); }
+  78% { transform: translateX(0); }
+}
+@keyframes attack-lunge-enemy {
+  0%, 55%, 100% { transform: translateX(0); }
+  62% { transform: translateX(4px); }
+  70% { transform: translateX(-14px) scale(1.06); }
+  78% { transform: translateX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arena-aura,
   .rune-ring,
   .ember,
   .result-rays,
-  .hp-section--shake {
+  .hp-section--shake,
+  .boss-img,
+  .attacking {
     animation: none !important;
   }
   .fighter-move {

@@ -38,8 +38,13 @@ import {
   BARON_OBJECTIVE_HP,
   OBJECTIVE_BASE_DPS_PER_CHAMP,
   OBJECTIVE_CLICK_DAMAGE,
-  OBJECTIVE_DRAKE_WIN_BONUS,
   OBJECTIVE_BARON_WIN_BONUS,
+  DRAKE_MOUNTAIN_DPS_MULT,
+  DRAKE_CHEMTECH_ENEMY_DPS_MULT,
+  DRAKE_HEXTECH_CLICK_MULT,
+  DRAKE_CLOUD_RESPAWN_MULT,
+  DRAKE_OCEAN_LOSS_PENALTY_MULT,
+  DRAKE_ELDER_LP_BONUS,
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_DPS_VARIANCE,
   OBJECTIVE_FIGHTER_WEIGHT_MIN,
@@ -54,6 +59,7 @@ import {
   WINPROB_MAX,
   BATTLE_BASE_START_WIN_CHANCE,
 } from '../config/constants'
+import { DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
 import type {
   AllTimeBattleStats,
   BattleEvent,
@@ -302,6 +308,10 @@ export const useBattleStore = defineStore('battle', {
     baronAlive: true,
     baronKilledByTeam: null as (1 | 2) | null,
     baronEventTime: 0,
+    /** Type of the most recently spawned/contested drake (re-derived from event replay). */
+    activeDrakeType: null as DrakeTypeId | null,
+    /** Drake types secured by team 1 this battle — battle-scoped buffs (unique). */
+    drakeBuffs: [] as DrakeTypeId[],
     objectiveModalOpen: false,
     activeObjective: null as 'drake' | 'baron' | null,
     objectiveHP: 0,
@@ -339,6 +349,18 @@ export const useBattleStore = defineStore('battle', {
       }
       return out
     },
+    /** Mountain buff: own team DPS multiplier in later objective fights. */
+    objectiveOwnDpsMult: (state): number =>
+      state.drakeBuffs.includes('mountain') ? DRAKE_MOUNTAIN_DPS_MULT : 1,
+    /** Chemtech buff: enemy team DPS multiplier in later objective fights. */
+    objectiveEnemyDpsMult: (state): number =>
+      state.drakeBuffs.includes('chemtech') ? DRAKE_CHEMTECH_ENEMY_DPS_MULT : 1,
+    /** Hextech buff: player click damage in objective fights. */
+    objectiveClickDamage: (state): number =>
+      OBJECTIVE_CLICK_DAMAGE * (state.drakeBuffs.includes('hextech') ? DRAKE_HEXTECH_CLICK_MULT : 1),
+    /** Cloud buff: ally respawn time multiplier for the rest of the battle. */
+    allyRespawnMult: (state): number =>
+      state.drakeBuffs.includes('cloud') ? DRAKE_CLOUD_RESPAWN_MULT : 1,
     drakeJumpTarget: (state): number => {
       if (state.drakeEventTime <= 0) return -1
       return Math.floor((state.drakeEventTime - 1) / 60) * 60
@@ -639,7 +661,12 @@ export const useBattleStore = defineStore('battle', {
           victim.deaths += 1
           victim.currentSpree = 0
           const untilArr = e.team === 1 ? this.respawnUntil.t2 : this.respawnUntil.t1
-          untilArr[e.victimIdx ?? 0] = e.t + MOVE_RESPAWN_WALK_SECONDS
+          // Cloud buff shortens only the own team's respawn walk (victims of team-2 kills)
+          const walkSeconds =
+            e.team === 2
+              ? Math.round(MOVE_RESPAWN_WALK_SECONDS * this.allyRespawnMult)
+              : MOVE_RESPAWN_WALK_SECONDS
+          untilArr[e.victimIdx ?? 0] = e.t + walkSeconds
           if (e.team === 1) {
             if (e.firstBlood) this.battleTrack.firstBloodTeam1 = true
             if (e.soloKill) this.battleTrack.soloKillsT1 += 1
@@ -685,6 +712,7 @@ export const useBattleStore = defineStore('battle', {
             this.drakeAlive = true
             this.drakeKilledByTeam = null
             this.drakeEventTime = e.t
+            this.activeDrakeType = e.drakeType ?? 'infernal'
           } else {
             this.baronAlive = true
             this.baronKilledByTeam = null
@@ -704,7 +732,7 @@ export const useBattleStore = defineStore('battle', {
         }
         case 'objectiveResult': {
           if (!e.objective || !e.team) break
-          this._creditObjective(e.objective, e.team, e.participants ?? null)
+          this._creditObjective(e.objective, e.team, e.participants ?? null, e.drakeType)
           this._shiftWinProbability(e.winProbDelta)
           if (this.objectiveModalOpen && this.activeObjective === e.objective) {
             this._finishObjectiveModal(e.team === 1 ? 'own' : 'enemy')
@@ -749,12 +777,21 @@ export const useBattleStore = defineStore('battle', {
       this.currentWinProbability = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + delta))
     },
 
-    _creditObjective(objective: 'drake' | 'baron', team: 1 | 2, participants: { t1: number[]; t2: number[] } | null) {
+    _creditObjective(
+      objective: 'drake' | 'baron',
+      team: 1 | 2,
+      participants: { t1: number[]; t2: number[] } | null,
+      drakeType?: DrakeTypeId | null,
+    ) {
       if (objective === 'drake') {
         this.drakeAlive = false
         this.drakeKilledByTeam = team
         if (team === 1) this.team1Drakes += 1
         else this.team2Drakes += 1
+        // battle-scoped drake buff — unique push keeps replay/persist idempotent
+        if (team === 1 && drakeType && !this.drakeBuffs.includes(drakeType)) {
+          this.drakeBuffs.push(drakeType)
+        }
       } else {
         this.baronAlive = false
         this.baronKilledByTeam = team
@@ -894,6 +931,8 @@ export const useBattleStore = defineStore('battle', {
       this.baronAlive = true
       this.baronKilledByTeam = null
       this.baronEventTime = 0
+      this.activeDrakeType = null
+      this.drakeBuffs = []
       this._clearObjectiveModal()
       this.objectiveHP = 0
       this.objectiveMaxHP = 0
@@ -1249,7 +1288,9 @@ export const useBattleStore = defineStore('battle', {
     calculateLPChange(mmrChange: number, won: boolean) {
       const lpChange = won ? LP_BASE_CHANGE : -LP_BASE_CHANGE
       const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
-      return Math.round(lpChange * mmrFactor)
+      // Elder Dragon buff: flat bonus LP on a won battle
+      const elderBonus = won && this.drakeBuffs.includes('elder') ? DRAKE_ELDER_LP_BONUS : 0
+      return Math.round(lpChange * mmrFactor) + elderBonus
     },
 
     mmrToPower(mmr: number) {
@@ -1480,8 +1521,8 @@ export const useBattleStore = defineStore('battle', {
         const sides = this.objectiveAliveCounts ?? { own: 3, enemy: 3 }
         const dt = OBJECTIVE_DPS_TICK_MS / 1000
         const wobble = () => 1 + OBJECTIVE_DPS_VARIANCE * (2 * Math.random() - 1)
-        const ownTick = sides.own * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble()
-        const enemyTick = sides.enemy * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble()
+        const ownTick = sides.own * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble() * this.objectiveOwnDpsMult
+        const enemyTick = sides.enemy * OBJECTIVE_BASE_DPS_PER_CHAMP * dt * wobble() * this.objectiveEnemyDpsMult
         this.objectiveOwnDamage += ownTick
         this.objectiveEnemyDamage += enemyTick
         if (this.objectiveFighters) {
@@ -1559,9 +1600,10 @@ export const useBattleStore = defineStore('battle', {
     /** Player clicks add damage to the own team's total — no last-hit steal. */
     clickObjective() {
       if (!this.objectiveModalOpen || this.objectiveResult !== null) return
-      this.objectiveHP = Math.max(0, this.objectiveHP - OBJECTIVE_CLICK_DAMAGE)
-      this.objectiveOwnDamage += OBJECTIVE_CLICK_DAMAGE
-      this.objectivePlayerDamage += OBJECTIVE_CLICK_DAMAGE
+      const clickDamage = this.objectiveClickDamage
+      this.objectiveHP = Math.max(0, this.objectiveHP - clickDamage)
+      this.objectiveOwnDamage += clickDamage
+      this.objectivePlayerDamage += clickDamage
       if (this.objectiveHP <= 0) {
         this._resolveByDamageLead()
       }
@@ -1600,9 +1642,19 @@ export const useBattleStore = defineStore('battle', {
       const objective = this.activeObjective
       if (!objective) return
       const ownWin = by === 'player' || by === 'own'
-      const bonus = objective === 'drake' ? OBJECTIVE_DRAKE_WIN_BONUS : OBJECTIVE_BARON_WIN_BONUS
+      let bonus =
+        objective === 'drake'
+          ? DRAKE_TYPES[this.activeDrakeType ?? 'infernal'].winDelta
+          : OBJECTIVE_BARON_WIN_BONUS
+      // Ocean buff: losing a later objective fight only costs half the win chance
+      if (!ownWin && this.drakeBuffs.includes('ocean')) bonus *= DRAKE_OCEAN_LOSS_PENALTY_MULT
 
-      this._creditObjective(objective, ownWin ? 1 : 2, this.activeObjectiveParticipants)
+      this._creditObjective(
+        objective,
+        ownWin ? 1 : 2,
+        this.activeObjectiveParticipants,
+        objective === 'drake' ? this.activeDrakeType : null,
+      )
 
       const newProb = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, this.currentWinProbability + (ownWin ? bonus : -bonus)))
       this.currentWinProbability = newProb

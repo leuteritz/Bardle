@@ -25,6 +25,7 @@ import {
   OFFLINE_MIN_SECONDS,
   ITEM_SLOT_COUNT,
 } from '@/config/constants'
+import { DRAKE_TYPES, type DrakeTypeId } from '@/config/drakes'
 import { logger } from '@/utils/logger'
 
 export function usePersistence() {
@@ -109,6 +110,7 @@ export function usePersistence() {
         startWinChanceBonus: battleStore.startWinChanceBonus,
         battleStartBonus: battleStore.battleStartBonus,
         objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
+        drakeBuffs: [...battleStore.drakeBuffs],
         battleTeams: {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
           t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role })),
@@ -326,6 +328,10 @@ export function usePersistence() {
             )
             .map((o) => ({ ...o }))
         }
+        // Battle-scoped drake buffs — interactively-resolved drakes are not replayable
+        battleStore.drakeBuffs = Array.isArray(b.drakeBuffs)
+          ? b.drakeBuffs.filter((t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES)
+          : []
         // Mid-battle rosters (needed for deterministic timeline resume)
         if (
           b.battleTeams &&
@@ -617,6 +623,7 @@ export function usePersistence() {
     battleStore.startWinChanceBonus = 0
     battleStore.battleStartBonus = 0
     battleStore.objectiveOverrides = []
+    battleStore.drakeBuffs = []
     battleStore.timeline = null
     battleStore.timelineCursor = 0
     battleStore.killFeed = []

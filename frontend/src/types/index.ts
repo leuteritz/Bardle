@@ -1,3 +1,5 @@
+import type { DrakeTypeId } from '../config/drakes'
+
 // Champion role types
 export type ChampionRole = 'top' | 'jungle' | 'mid' | 'adc' | 'support'
 
@@ -400,6 +402,8 @@ export interface BattleEvent {
   location?: { x: number; y: number }
   lane?: 'top' | 'mid' | 'bot'
   objective?: 'drake' | 'baron'
+  /** Set on drake objectiveSpawn/objectiveResult events (optional for save-compat). */
+  drakeType?: DrakeTypeId
   participants?: { t1: number[]; t2: number[] }
   /** Set on turret/inhibitor events; `team` stays the attacker, the owner is encoded in the id. */
   structureId?: StructureId

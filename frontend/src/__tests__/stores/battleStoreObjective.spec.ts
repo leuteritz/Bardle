@@ -5,7 +5,16 @@ import {
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_MAX_DURATION_MS,
   OBJECTIVE_RESULT_DELAY_MS,
+  OBJECTIVE_CLICK_DAMAGE,
+  DRAKE_HEXTECH_CLICK_MULT,
+  DRAKE_MOUNTAIN_DPS_MULT,
+  DRAKE_CHEMTECH_ENEMY_DPS_MULT,
+  DRAKE_CLOUD_RESPAWN_MULT,
+  DRAKE_OCEAN_LOSS_PENALTY_MULT,
+  DRAKE_ELDER_LP_BONUS,
+  MOVE_RESPAWN_WALK_SECONDS,
 } from '../../config/constants'
+import { DRAKE_TYPES } from '../../config/drakes'
 
 const T1_NAMES = ['Garen', 'Lee Sin', 'Ahri', 'Jinx', 'Bard']
 const T2_NAMES = ['Darius', 'Kha Zix', 'Zed', 'Caitlyn', 'Thresh']
@@ -210,6 +219,101 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(t1Sum).toBeCloseTo(store.objectiveOwnDamage, 6)
     expect(t2Sum).toBeCloseTo(store.objectiveEnemyDamage, 6)
     for (const f of t1.filter((x) => !x.alive)) expect(f.damage).toBe(0)
+  })
+
+  it('securing a drake pushes its type into drakeBuffs; enemy secure does not', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.activeDrakeType = 'mountain'
+    store._openObjectiveModal('drake', null)
+    store.forceResolveObjective(1)
+    expect(store.drakeBuffs).toEqual(['mountain'])
+    expect(store.objectiveWinDelta).toBeCloseTo(DRAKE_TYPES.mountain.winDelta, 6)
+
+    vi.advanceTimersByTime(OBJECTIVE_RESULT_DELAY_MS + 100)
+    store.activeDrakeType = 'hextech'
+    store._openObjectiveModal('drake', null)
+    store.forceResolveObjective(2)
+    expect(store.drakeBuffs).toEqual(['mountain'])
+  })
+
+  it('_creditObjective is idempotent per drake type', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._creditObjective('drake', 1, null, 'cloud')
+    store._creditObjective('drake', 1, null, 'cloud')
+    expect(store.drakeBuffs).toEqual(['cloud'])
+  })
+
+  it('hextech buff multiplies click damage', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.drakeBuffs = ['hextech']
+    store._openObjectiveModal('drake', null)
+    store.objectiveHP = 100000
+    store.objectiveOwnDamage = 0
+    store.objectivePlayerDamage = 0
+    store.clickObjective()
+    expect(store.objectivePlayerDamage).toBe(OBJECTIVE_CLICK_DAMAGE * DRAKE_HEXTECH_CLICK_MULT)
+  })
+
+  it('mountain and chemtech buffs shift the objective DPS multipliers', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    expect(store.objectiveOwnDpsMult).toBe(1)
+    expect(store.objectiveEnemyDpsMult).toBe(1)
+    store.drakeBuffs = ['mountain', 'chemtech']
+    expect(store.objectiveOwnDpsMult).toBe(DRAKE_MOUNTAIN_DPS_MULT)
+    expect(store.objectiveEnemyDpsMult).toBe(DRAKE_CHEMTECH_ENEMY_DPS_MULT)
+  })
+
+  it('ocean buff halves the win-chance loss of a later lost objective', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.drakeBuffs = ['ocean']
+    store.activeDrakeType = 'infernal'
+    store._openObjectiveModal('drake', null)
+    store.forceResolveObjective(2)
+    expect(store.objectiveWinDelta).toBeCloseTo(
+      -DRAKE_TYPES.infernal.winDelta * DRAKE_OCEAN_LOSS_PENALTY_MULT,
+      6,
+    )
+  })
+
+  it('cloud buff shortens only own-team respawn walks', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.drakeBuffs = ['cloud']
+    // enemy (team 2) kills our champion 0 → shortened walk
+    store._applyEvent({ t: 500, type: 'kill', team: 2, killerIdx: 0, victimIdx: 0, winProbDelta: 0 }, 500)
+    expect(store.respawnUntil.t1[0]).toBe(500 + Math.round(MOVE_RESPAWN_WALK_SECONDS * DRAKE_CLOUD_RESPAWN_MULT))
+    // we (team 1) kill enemy champion 0 → full walk
+    store._applyEvent({ t: 600, type: 'kill', team: 1, killerIdx: 0, victimIdx: 0, winProbDelta: 0 }, 600)
+    expect(store.respawnUntil.t2[0]).toBe(600 + MOVE_RESPAWN_WALK_SECONDS)
+  })
+
+  it('elder buff grants flat bonus LP only on a won battle', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    const winBase = store.calculateLPChange(20, true)
+    const lossBase = store.calculateLPChange(20, false)
+    store.drakeBuffs = ['elder']
+    expect(store.calculateLPChange(20, true)).toBe(winBase + DRAKE_ELDER_LP_BONUS)
+    expect(store.calculateLPChange(20, false)).toBe(lossBase)
+  })
+
+  it('applying a drake spawn event sets activeDrakeType', () => {
+    const hiddenSpy = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+    try {
+      const store = useBattleStore()
+      setupBattle(store)
+      const spawn = drakeSpawn(store)
+      store.applyTimelineUpTo(spawn.t)
+      expect(store.activeDrakeType).toBe(spawn.drakeType)
+      expect(DRAKE_TYPES[store.activeDrakeType!]).toBeDefined()
+    } finally {
+      hiddenSpy.mockRestore()
+    }
   })
 
   it('does not open the modal on a hidden tab (background catch-up path)', () => {

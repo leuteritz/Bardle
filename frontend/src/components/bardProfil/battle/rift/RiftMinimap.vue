@@ -111,26 +111,33 @@
       </div>
 
       <!-- Drake marker -->
-      <div v-if="showDrake" class="obj-marker" :style="{ left: DRAKE_POS.x + '%', top: DRAKE_POS.y + '%' }">
+      <div
+        v-if="showDrake"
+        class="obj-marker"
+        :style="{ left: DRAKE_POS.x + '%', top: DRAKE_POS.y + '%', '--obj-glow': drakeDef.glow }"
+      >
         <div class="obj-img-wrap">
-          <div class="obj-spin-ring obj-spin-ring--drake" />
-          <img src="/img/dragon.png" alt="Drake" class="obj-img obj-img--drake" />
+          <img src="/img/dragon.png" alt="Drake" class="obj-img" />
         </div>
         <span
-          class="obj-label obj-label--drake"
-          :class="{ 'obj-label--countdown': !drakeUp, 'obj-label--soon-drake': drakeSpawnSoon }"
+          class="obj-label"
+          :class="{ 'obj-label--countdown': !drakeUp, 'obj-label--soon': drakeSpawnSoon }"
+          :style="drakeUp ? { color: drakeDef.color, textShadow: '0 0 6px ' + drakeDef.glow } : { color: '#6ee0a0' }"
         >{{ drakeLabel }}</span>
       </div>
 
       <!-- Baron marker -->
-      <div v-if="showBaron" class="obj-marker" :style="{ left: BARON_POS.x + '%', top: BARON_POS.y + '%' }">
+      <div
+        v-if="showBaron"
+        class="obj-marker"
+        :style="{ left: BARON_POS.x + '%', top: BARON_POS.y + '%', '--obj-glow': 'rgba(168, 85, 247, 0.6)' }"
+      >
         <div class="obj-img-wrap">
-          <div v-if="baronUp" class="obj-spin-ring obj-spin-ring--baron" />
-          <img src="/img/baron.png" alt="Baron" class="obj-img obj-img--baron" :class="{ 'obj-img--dormant': !baronUp }" />
+          <img src="/img/baron.png" alt="Baron" class="obj-img" :class="{ 'obj-img--dormant': !baronUp }" />
         </div>
         <span
           class="obj-label obj-label--baron"
-          :class="{ 'obj-label--countdown': !baronUp, 'obj-label--soon-baron': baronSpawnSoon }"
+          :class="{ 'obj-label--countdown': !baronUp, 'obj-label--soon': baronSpawnSoon }"
         >{{ baronLabel }}</span>
       </div>
 
@@ -216,6 +223,7 @@ import {
   STRUCTURE_BURST_GAME_SECONDS,
   FINAL_PUSH_START_T,
 } from '@/config/constants'
+import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION } from '@/config/battleRoutes'
 import {
   ALL_STRUCTURE_IDS,
@@ -276,9 +284,10 @@ const showDrake = computed(
   () => battleStore.drakeEventTime > 0 && battleStore.drakeKilledByTeam === null,
 )
 const drakeUp = computed(() => battleStore.battleTime >= battleStore.drakeEventTime)
+const drakeDef = computed(() => DRAKE_TYPES[battleStore.activeDrakeType ?? 'infernal'])
 const drakeLabel = computed(() =>
   drakeUp.value
-    ? 'CONTESTED'
+    ? drakeDef.value.label
     : battleStore.formatSpawnCountdown(battleStore.drakeEventTime),
 )
 const drakeSpawnSoon = computed(
@@ -293,7 +302,7 @@ const showBaron = computed(
 const baronUp = computed(() => battleStore.battleTime >= battleStore.baronEventTime)
 const baronLabel = computed(() =>
   baronUp.value
-    ? 'BARON UP'
+    ? 'Baron'
     : battleStore.formatSpawnCountdown(battleStore.baronEventTime),
 )
 const baronSpawnSoon = computed(
@@ -769,51 +778,31 @@ const structureMarkers = computed(() => {
 
 .obj-img-wrap {
   position: relative;
-  /* scales with the square minimap (100cqmin) so the icon stays pit-sized on all resolutions */
-  width: clamp(28px, 7.5cqmin, 48px);
-  height: clamp(28px, 7.5cqmin, 48px);
+  /* scales with the square minimap (100cqmin) so the sprite stays pit-sized on all resolutions */
+  width: clamp(44px, 12cqmin, 78px);
 }
 
-.obj-spin-ring {
-  position: absolute;
-  inset: -5px;
-  border-radius: 50%;
-  border: 2px solid;
-  border-right-color: transparent !important;
-  border-bottom-color: transparent !important;
-  animation: obj-spin 3s linear infinite;
-}
-.obj-spin-ring--drake { border-color: #22c55e; }
-.obj-spin-ring--baron { border-color: #a855f7; }
-
+/* Unframed sprite at natural aspect ratio — crisp downscale, glow follows the PNG alpha contour */
 .obj-img {
   width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.obj-img--drake {
-  border: 2px solid #22c55e;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.7);
-}
-.obj-img--baron {
-  border: 2px solid #a855f7;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8))
+    drop-shadow(0 0 7px var(--obj-glow, rgba(168, 85, 247, 0.5)));
 }
 .obj-img--dormant {
   opacity: 0.75;
-  filter: grayscale(0.4);
+  filter: grayscale(0.4) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 .obj-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   background: rgba(0, 0, 0, 0.6);
   border-radius: 3px;
   padding: 0 5px;
   white-space: nowrap;
 }
-.obj-label--drake { color: #6ee0a0; }
 .obj-label--baron { color: #c9a0f5; }
 
 /* Pre-spawn countdown — timer digits only, larger and steady */
@@ -825,19 +814,12 @@ const structureMarkers = computed(() => {
   padding: 0 6px;
 }
 /* Last displayed minute before spawn — soft "get ready" pulse in objective color */
-.obj-label--soon-drake {
-  animation: spawn-soon-drake 1.2s ease-in-out infinite;
+.obj-label--soon {
+  animation: spawn-soon 1.2s ease-in-out infinite;
 }
-.obj-label--soon-baron {
-  animation: spawn-soon-baron 1.2s ease-in-out infinite;
-}
-@keyframes spawn-soon-drake {
+@keyframes spawn-soon {
   0%, 100% { text-shadow: none; }
-  50% { text-shadow: 0 0 8px rgba(34, 197, 94, 0.9); }
-}
-@keyframes spawn-soon-baron {
-  0%, 100% { text-shadow: none; }
-  50% { text-shadow: 0 0 8px rgba(168, 85, 247, 0.9); }
+  50% { text-shadow: 0 0 8px var(--obj-glow, rgba(168, 85, 247, 0.9)); }
 }
 
 /* ── Nexus explosion ── */
@@ -1067,7 +1049,7 @@ const structureMarkers = computed(() => {
   .clash-ring,
   .dmg-float,
   .fight-aoe,
-  .obj-spin-ring,
+  .obj-label--soon,
   .walk-indicator,
   .structure-burst,
   .structure-ember,

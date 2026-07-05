@@ -31,6 +31,7 @@ import {
   LANE_TIER_ORDER,
   parseStructureId,
 } from '@/utils/battleStructures'
+import { DRAKE_TYPES } from '@/config/drakes'
 import type { BattleEvent, ChampionState } from '@/types'
 
 describe('createRng', () => {
@@ -415,6 +416,63 @@ describe('reseedTimelineFrom', () => {
           )
           expect(hasSpawn).toBe(true)
         }
+      }
+    }
+  })
+})
+
+describe('drake types', () => {
+  const seeds = [1, 7, 42, 777, 1337, 2024, 99999]
+
+  it('every drake spawn and result carries a valid drakeType; baron never does', () => {
+    for (const seed of seeds) {
+      const tl = generateTimeline(seed, 0.5)
+      for (const e of tl.events) {
+        if ((e.type === 'objectiveSpawn' || e.type === 'objectiveResult') && e.objective === 'drake') {
+          expect(e.drakeType).toBeDefined()
+          expect(DRAKE_TYPES[e.drakeType!]).toBeDefined()
+        }
+        if (e.objective === 'baron') {
+          expect(e.drakeType).toBeUndefined()
+        }
+      }
+    }
+  })
+
+  it('is deterministic: same seed yields the same drake types', () => {
+    for (const seed of seeds) {
+      const a = generateTimeline(seed, 0.5)
+      const b = generateTimeline(seed, 0.5)
+      const typesOf = (tl: typeof a) =>
+        tl.events.filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake').map((e) => e.drakeType)
+      expect(typesOf(a)).toEqual(typesOf(b))
+    }
+  })
+
+  it('two drakes never share a type, elder never spawns first', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const tl = generateTimeline(seed, 0.5)
+      const types = tl.events
+        .filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
+        .map((e) => e.drakeType!)
+      expect(types[0]).not.toBe('elder')
+      if (types.length === 2) {
+        expect(types[0]).not.toBe(types[1])
+      }
+    }
+  })
+
+  it('reseeded tail drakes still carry a drakeType', () => {
+    for (const seed of [1, 42, 777]) {
+      const base = generateTimeline(seed, 0.5)
+      const firstDrake = base.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')!
+      const merged = reseedTimelineFrom(base, firstDrake.t, seed * 17 + 3, 0.85)
+      const tailDrakes = merged.events.filter(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t > firstDrake.t,
+      )
+      for (const e of tailDrakes) {
+        expect(e.drakeType).toBeDefined()
+        expect(DRAKE_TYPES[e.drakeType!]).toBeDefined()
       }
     }
   })

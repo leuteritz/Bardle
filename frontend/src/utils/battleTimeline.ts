@@ -1,4 +1,5 @@
 import type { BattleEvent, BattleRole, BattleTimeline, ChampionState, StructureId } from '../types'
+import { BASIC_DRAKE_TYPES, type DrakeTypeId } from '../config/drakes'
 import {
   STRUCTURE_POSITIONS,
   LANE_TIER_ORDER,
@@ -62,6 +63,7 @@ import {
   TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
   OBJECTIVE_DRAKE_SPAWN,
   OBJECTIVE_BARON_SPAWN,
+  ELDER_DRAKE_CHANCE,
   TIMELINE_BARON_SPAWN_JITTER_T,
   LANE_FIGHT_POSITIONS,
   DRAKE_POS,
@@ -320,10 +322,11 @@ function emitObjective(
   objective: 'drake' | 'baron',
   forcedTeam?: 1 | 2,
   forcedParticipants?: { t1: number[]; t2: number[] },
+  drakeType?: DrakeTypeId,
 ) {
   const location = objective === 'drake' ? DRAKE_POS : BARON_POS
   const participants = forcedParticipants ?? pickParticipants(ctx)
-  pushEvent(ctx, { t: tSpawn, type: 'objectiveSpawn', objective, location, participants, winProbDelta: 0 })
+  pushEvent(ctx, { t: tSpawn, type: 'objectiveSpawn', objective, drakeType, location, participants, winProbDelta: 0 })
 
   // small scrap around the pit
   if (ctx.rng() < 0.6) {
@@ -336,6 +339,7 @@ function emitObjective(
     t: tSpawn + randInt(ctx.rng, TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T, TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T),
     type: 'objectiveResult',
     objective,
+    drakeType,
     team: winnerTeam,
     location,
     participants,
@@ -393,13 +397,19 @@ export function generateTimeline(
   // ── Drake window ──
   const drakeCount = randInt(rng, TIMELINE_DRAKE_COUNT_MIN, TIMELINE_DRAKE_COUNT_MAX)
   const drakeWindow = TIMELINE_DRAKE_WINDOW_END - TIMELINE_LANING_END
+  // basic types drawn without replacement per battle; elder only rolls as the 2nd drake
+  const drakeTypePool = [...BASIC_DRAKE_TYPES]
   for (let i = 0; i < drakeCount; i++) {
     const base = TIMELINE_LANING_END + (drakeWindow / drakeCount) * i
     const tSpawn = Math.max(
       OBJECTIVE_DRAKE_SPAWN,
       Math.floor(base + rng() * (drakeWindow / drakeCount - 120)),
     )
-    emitObjective(ctx, tSpawn, 'drake')
+    const isElder = i === 1 && rng() < ELDER_DRAKE_CHANCE
+    const drakeType: DrakeTypeId = isElder
+      ? 'elder'
+      : drakeTypePool.splice(Math.floor(rng() * drakeTypePool.length), 1)[0]
+    emitObjective(ctx, tSpawn, 'drake', undefined, undefined, drakeType)
   }
 
   // ── Mid fights ──
