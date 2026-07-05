@@ -245,6 +245,18 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.drakeBuffs).toEqual(['cloud'])
   })
 
+  it('team-2 drake secures are tracked separately for display', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._creditObjective('drake', 2, null, 'ocean')
+    store._creditObjective('drake', 2, null, 'ocean')
+    expect(store.drakeBuffsT2).toEqual(['ocean'])
+    expect(store.drakeBuffs).toEqual([])
+    // display-only: no mechanical effect for the enemy side
+    expect(store.objectiveOwnDpsMult).toBe(1)
+    expect(store.objectiveEnemyDpsMult).toBe(1)
+  })
+
   it('hextech buff multiplies click damage', () => {
     const store = useBattleStore()
     setupBattle(store)

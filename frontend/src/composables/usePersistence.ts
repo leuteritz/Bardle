@@ -111,6 +111,7 @@ export function usePersistence() {
         battleStartBonus: battleStore.battleStartBonus,
         objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
         drakeBuffs: [...battleStore.drakeBuffs],
+        drakeBuffsT2: [...battleStore.drakeBuffsT2],
         battleTeams: {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
           t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role })),
@@ -331,6 +332,9 @@ export function usePersistence() {
         // Battle-scoped drake buffs — interactively-resolved drakes are not replayable
         battleStore.drakeBuffs = Array.isArray(b.drakeBuffs)
           ? b.drakeBuffs.filter((t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES)
+          : []
+        battleStore.drakeBuffsT2 = Array.isArray(b.drakeBuffsT2)
+          ? b.drakeBuffsT2.filter((t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES)
           : []
         // Mid-battle rosters (needed for deterministic timeline resume)
         if (
@@ -624,6 +628,7 @@ export function usePersistence() {
     battleStore.battleStartBonus = 0
     battleStore.objectiveOverrides = []
     battleStore.drakeBuffs = []
+    battleStore.drakeBuffsT2 = []
     battleStore.timeline = null
     battleStore.timelineCursor = 0
     battleStore.killFeed = []

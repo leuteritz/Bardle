@@ -189,6 +189,22 @@ export const OBJECTIVE_DPS_VARIANCE = 0.15
 /** Per-fighter DPS weight spread (normalized per side, avg = 1 — team DPS unchanged) */
 export const OBJECTIVE_FIGHTER_WEIGHT_MIN = 0.75
 export const OBJECTIVE_FIGHTER_WEIGHT_MAX = 1.25
+/** Lunge attack cycle of pit fighters in the objective modal (drives CSS + float scheduler) */
+export const OBJECTIVE_LUNGE_CYCLE_S = 1.8
+/** Per-fighter stagger of the lunge animation */
+export const OBJECTIVE_LUNGE_STAGGER_S = 0.35
+/** Extra lunge offset for the enemy column so both sides never strike in unison */
+export const OBJECTIVE_LUNGE_ENEMY_OFFSET_S = 0.18
+/** Point within the lunge cycle where the strike lands (matches the 70% keyframe) */
+export const OBJECTIVE_LUNGE_STRIKE_FRACTION = 0.7
+/** Chance a fighter's strike float rolls as a crit */
+export const OBJECTIVE_FIGHTER_CRIT_CHANCE = 0.15
+export const OBJECTIVE_FIGHTER_CRIT_MULT = 1.5
+/** ±display jitter on fighter strike floats */
+export const OBJECTIVE_FIGHTER_FLOAT_JITTER = 0.2
+export const OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS = 900
+/** Scheduler resolution for spawning fighter strike floats */
+export const OBJECTIVE_FIGHTER_FLOAT_TICK_MS = 100
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000
 export const OBJECTIVE_RESULT_DELAY_MS = 2200

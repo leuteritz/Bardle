@@ -53,7 +53,7 @@
               <div
                 class="fighter-portrait-wrap"
                 :class="{ 'attacking attacking--own': isAttacking(f) }"
-                :style="isAttacking(f) ? { animationDelay: i * 0.35 + 's' } : undefined"
+                :style="isAttacking(f) ? lungeStyle(i, false) : undefined"
               >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
@@ -103,6 +103,21 @@
               -{{ f.value }}
             </span>
           </TransitionGroup>
+
+          <!-- Fighter strike floats, timed to the lunge impact -->
+          <TransitionGroup name="fdmg" tag="div" class="dmg-floats">
+            <span
+              v-for="f in fighterFloats"
+              :key="'fd' + f.id"
+              class="fdmg"
+              :class="[f.side === 'own' ? 'fdmg--own' : 'fdmg--enemy', { 'fdmg--crit': f.crit }]"
+              :style="{
+                top: f.top + '%',
+                [f.side === 'own' ? 'left' : 'right']: '6%',
+                '--fd-drift': (f.side === 'own' ? 18 : -18) + 'px',
+              }"
+            >-{{ f.value }}{{ f.crit ? '!' : '' }}</span>
+          </TransitionGroup>
           </div>
 
           <TransitionGroup name="fighter" tag="div" class="fighters-col fighters-col--enemy">
@@ -125,7 +140,7 @@
               <div
                 class="fighter-portrait-wrap"
                 :class="{ 'attacking attacking--enemy': isAttacking(f) }"
-                :style="isAttacking(f) ? { animationDelay: i * 0.35 + 0.18 + 's' } : undefined"
+                :style="isAttacking(f) ? lungeStyle(i, true) : undefined"
               >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
@@ -199,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
@@ -207,6 +222,15 @@ import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
   OBJECTIVE_BARON_WIN_BONUS,
   DRAKE_OCEAN_LOSS_PENALTY_MULT,
+  OBJECTIVE_LUNGE_CYCLE_S,
+  OBJECTIVE_LUNGE_STAGGER_S,
+  OBJECTIVE_LUNGE_ENEMY_OFFSET_S,
+  OBJECTIVE_LUNGE_STRIKE_FRACTION,
+  OBJECTIVE_FIGHTER_CRIT_CHANCE,
+  OBJECTIVE_FIGHTER_CRIT_MULT,
+  OBJECTIVE_FIGHTER_FLOAT_JITTER,
+  OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS,
+  OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 
@@ -233,6 +257,18 @@ const objectiveTitle = computed(() =>
 /** A fighter lunges at the pit while alive and the fight is still running. */
 function isAttacking(f: ObjectiveFighter): boolean {
   return f.alive && battleStore.objectiveResult === null
+}
+
+/** Lunge delay of the fighter at `i` in its sorted column — single source for CSS and the float scheduler. */
+function lungeDelayS(i: number, enemy: boolean): number {
+  return i * OBJECTIVE_LUNGE_STAGGER_S + (enemy ? OBJECTIVE_LUNGE_ENEMY_OFFSET_S : 0)
+}
+
+function lungeStyle(i: number, enemy: boolean) {
+  return {
+    animationDelay: lungeDelayS(i, enemy) + 's',
+    animationDuration: OBJECTIVE_LUNGE_CYCLE_S + 's',
+  }
 }
 
 // Alive counts are snapshotted at fight start — frozen time keeps them fixed.
@@ -400,6 +436,74 @@ watch(show, (v) => {
     hpShake.value = false
   }
 })
+
+// ── Fighter strike floats: one per living fighter, timed to its lunge impact ─
+interface FighterFloat {
+  id: number
+  value: number
+  crit: boolean
+  side: 'own' | 'enemy'
+  top: number
+}
+const fighterFloats = ref<FighterFloat[]>([])
+let _fighterFloatId = 0
+let _floatSchedulerId: ReturnType<typeof setInterval> | null = null
+/** Last lunge cycle a float was spawned for, per fighter — exactly one float per cycle. */
+const _lastStrikeCycle = new Map<string, number>()
+
+function _spawnFighterFloat(f: ObjectiveFighter, side: 'own' | 'enemy', mult: number) {
+  const crit = Math.random() < OBJECTIVE_FIGHTER_CRIT_CHANCE
+  const jitter = 1 + OBJECTIVE_FIGHTER_FLOAT_JITTER * (2 * Math.random() - 1)
+  const base = f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult * OBJECTIVE_LUNGE_CYCLE_S * jitter
+  const value = Math.max(1, Math.round(base * (crit ? OBJECTIVE_FIGHTER_CRIT_MULT : 1)))
+  const id = ++_fighterFloatId
+  fighterFloats.value.push({ id, value, crit, side, top: 25 + Math.random() * 40 })
+  setTimeout(() => {
+    fighterFloats.value = fighterFloats.value.filter((x) => x.id !== id)
+  }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
+}
+
+/** Spawn a float for every living fighter whose lunge strike landed since the last tick. */
+function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy', mult: number) {
+  const cycleMs = OBJECTIVE_LUNGE_CYCLE_S * 1000
+  const strikeMs = OBJECTIVE_LUNGE_STRIKE_FRACTION * cycleMs
+  const now = Date.now()
+  fighters.forEach((f, i) => {
+    if (!f.alive) return
+    const elapsed = now - battleStore.objectiveFightStartMs - lungeDelayS(i, side === 'enemy') * 1000
+    if (elapsed < 0) return
+    const cycleNo = Math.floor(elapsed / cycleMs)
+    const pos = elapsed - cycleNo * cycleMs
+    const key = side + f.idx
+    if (pos >= strikeMs && _lastStrikeCycle.get(key) !== cycleNo) {
+      _lastStrikeCycle.set(key, cycleNo)
+      _spawnFighterFloat(f, side, mult)
+    }
+  })
+}
+
+function _startFloatScheduler() {
+  if (_floatSchedulerId) return
+  _lastStrikeCycle.clear()
+  _floatSchedulerId = setInterval(() => {
+    if (!battleStore.objectiveModalOpen || battleStore.objectiveResult !== null) return
+    if (!battleStore.objectiveFighters) return
+    _checkStrikes(fightersOwn.value, 'own', battleStore.objectiveOwnDpsMult)
+    _checkStrikes(fightersEnemy.value, 'enemy', battleStore.objectiveEnemyDpsMult)
+  }, OBJECTIVE_FIGHTER_FLOAT_TICK_MS)
+}
+
+function _stopFloatScheduler() {
+  if (_floatSchedulerId) {
+    clearInterval(_floatSchedulerId)
+    _floatSchedulerId = null
+  }
+  _lastStrikeCycle.clear()
+  fighterFloats.value = []
+}
+
+watch(show, (v) => (v ? _startFloatScheduler() : _stopFloatScheduler()), { immediate: true })
+onUnmounted(_stopFloatScheduler)
 </script>
 
 <style scoped>
@@ -664,9 +768,10 @@ watch(show, (v) => {
 }
 
 /* Alive fighters periodically lunge toward the pit — animates the inner wrap,
-   never the card root (TransitionGroup FLIP owns the card's transform) */
+   never the card root (TransitionGroup FLIP owns the card's transform).
+   Duration comes inline from OBJECTIVE_LUNGE_CYCLE_S so the float scheduler stays in sync. */
 .attacking {
-  animation: 1.8s ease-in-out infinite;
+  animation: ease-in-out infinite;
 }
 .attacking--own {
   animation-name: attack-lunge-own;
@@ -876,6 +981,42 @@ watch(show, (v) => {
   animation: crit-float 0.75s ease-out forwards;
 }
 .dmg-float-leave-active {
+  display: none;
+}
+
+/* Fighter strike floats — spawn at the arena edge, punch in, drift toward the pit */
+.fdmg {
+  position: absolute;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  z-index: 9;
+  white-space: nowrap;
+}
+.fdmg--own {
+  color: #8ee060;
+  text-shadow: 0 0 8px rgba(82, 184, 48, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
+}
+.fdmg--enemy {
+  color: #f08070;
+  text-shadow: 0 0 8px rgba(204, 96, 80, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
+}
+.fdmg--crit {
+  font-size: 21px;
+  font-weight: 900;
+}
+.fdmg--crit.fdmg--own {
+  text-shadow: 0 0 14px rgba(110, 224, 64, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+}
+.fdmg--crit.fdmg--enemy {
+  text-shadow: 0 0 14px rgba(240, 96, 72, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+}
+
+.fdmg-enter-active {
+  animation: fdmg-float 0.9s ease-out forwards;
+}
+.fdmg-leave-active {
   display: none;
 }
 
@@ -1203,6 +1344,12 @@ watch(show, (v) => {
   78% { transform: translateX(0); }
 }
 
+@keyframes fdmg-float {
+  0% { opacity: 0; transform: translate(0, 8px) scale(1.4); }
+  16% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--fd-drift), -34px) scale(0.92); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arena-aura,
   .rune-ring,
@@ -1212,6 +1359,11 @@ watch(show, (v) => {
   .boss-img,
   .attacking {
     animation: none !important;
+  }
+  .fdmg,
+  .fdmg-enter-active {
+    animation: none !important;
+    opacity: 0;
   }
   .fighter-move {
     transition: none !important;

@@ -312,6 +312,8 @@ export const useBattleStore = defineStore('battle', {
     activeDrakeType: null as DrakeTypeId | null,
     /** Drake types secured by team 1 this battle — battle-scoped buffs (unique). */
     drakeBuffs: [] as DrakeTypeId[],
+    /** Drake types secured by team 2 this battle — display only, no mechanical effect. */
+    drakeBuffsT2: [] as DrakeTypeId[],
     objectiveModalOpen: false,
     activeObjective: null as 'drake' | 'baron' | null,
     objectiveHP: 0,
@@ -792,6 +794,9 @@ export const useBattleStore = defineStore('battle', {
         if (team === 1 && drakeType && !this.drakeBuffs.includes(drakeType)) {
           this.drakeBuffs.push(drakeType)
         }
+        if (team === 2 && drakeType && !this.drakeBuffsT2.includes(drakeType)) {
+          this.drakeBuffsT2.push(drakeType)
+        }
       } else {
         this.baronAlive = false
         this.baronKilledByTeam = team
@@ -933,6 +938,7 @@ export const useBattleStore = defineStore('battle', {
       this.baronEventTime = 0
       this.activeDrakeType = null
       this.drakeBuffs = []
+      this.drakeBuffsT2 = []
       this._clearObjectiveModal()
       this.objectiveHP = 0
       this.objectiveMaxHP = 0
