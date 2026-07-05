@@ -30,8 +30,8 @@
               <div class="feed-item feed-item--structure">
                 <Icon
                   icon="game-icons:watchtower"
-                  width="16"
-                  height="16"
+                  width="18"
+                  height="18"
                   class="feed-structure-icon"
                   :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
                 />
@@ -63,8 +63,8 @@
           <div v-else class="feed-item feed-item--structure">
             <Icon
               icon="game-icons:watchtower"
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               class="feed-structure-icon"
               :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
             />
@@ -240,7 +240,7 @@ const baronStatus = computed(() => {
 }
 
 .ticker-label {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
   color: #6a5820;
   flex-shrink: 0;
@@ -272,7 +272,7 @@ const baronStatus = computed(() => {
   bottom: 100%;
   left: 0;
   right: 0;
-  height: 220px;
+  height: 248px;
   z-index: 8;
   display: flex;
   flex-direction: column;
@@ -301,7 +301,7 @@ const baronStatus = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 30px;
+  height: 34px;
   padding: 0 8px;
   border-left: 3px solid transparent;
   border-bottom: 1px solid #1f1a10;
@@ -321,7 +321,7 @@ const baronStatus = computed(() => {
 }
 
 .feed-time {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: #6a5820;
   width: 38px;
@@ -345,19 +345,19 @@ const baronStatus = computed(() => {
 }
 
 .feed-name {
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 110px;
+  max-width: 130px;
 }
 .feed-name--blue { color: #60a5fa; }
 .feed-name--red { color: #f87171; }
 .feed-name--dead { color: #8a8578; }
 
 .feed-img {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -367,12 +367,12 @@ const baronStatus = computed(() => {
 .feed-img--dead { filter: grayscale(0.6) brightness(0.75); }
 
 .feed-star {
-  font-size: 12px;
+  font-size: 15px;
   color: #e8c040;
 }
 
 .feed-fb {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #cc6050;
@@ -381,7 +381,7 @@ const baronStatus = computed(() => {
 }
 
 .feed-mk {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #ff9a40;
@@ -398,7 +398,7 @@ const baronStatus = computed(() => {
 .feed-structure-icon--blue { color: #60a5fa; }
 .feed-structure-icon--red { color: #f87171; }
 .feed-structure-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #e8c040;
@@ -417,7 +417,7 @@ const baronStatus = computed(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 13px;
   color: #6ee0a0;
   white-space: nowrap;
 }
@@ -427,8 +427,8 @@ const baronStatus = computed(() => {
 }
 
 .obj-img {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
 }
