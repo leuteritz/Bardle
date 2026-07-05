@@ -62,12 +62,14 @@
                 {
                   'fighter-card--dead': !f.alive || f.down,
                   'attacking attacking--own': isAttacking(f),
+                  'card--casting': isAbilityActive(f) && !isTaunted(f, 'own'),
                   'card--taunted': isTaunted(f, 'own'),
+                  'card--buffed': isBuffed(f, 'own') && !isTaunted(f, 'own'),
                 },
                 cardRankClass(f, 'own'),
                 cardFlashClass('own' + f.idx),
               ]"
-              :style="isAttacking(f) ? lungeStyle(i, false) : undefined"
+              :style="cardStyle(f, i, false)"
             >
               <div v-if="isTaunted(f, 'own')" class="taunt-chip">
                 <img
@@ -78,6 +80,14 @@
                 />
                 <Icon icon="game-icons:enrage" width="12" height="12" />
                 TAUNTED
+              </div>
+              <div v-else-if="isBuffed(f, 'own')" class="rally-chip">
+                <img :src="jungleImage" class="rally-chip-img" alt="Wild Rally" />
+                RALLY +{{ rallyPercent }}%
+              </div>
+              <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
+                <Icon icon="game-icons:cursed-star" width="12" height="12" />
+                HEX CURSE
               </div>
               <div class="fighter-main">
                 <div
@@ -92,13 +102,6 @@
                   />
                   <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
                   <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
-                  <Icon
-                    v-if="isBuffed(f, 'own')"
-                    icon="game-icons:uprising"
-                    width="14"
-                    height="14"
-                    class="buff-pip"
-                  />
                   <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
                     <span
                       v-for="h in hpFloatsFor('own' + f.idx)"
@@ -108,25 +111,25 @@
                     >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
                   </TransitionGroup>
                 </div>
-                <span class="fighter-name">{{ f.name }}</span>
-                <span v-if="rankOf(f, 'own')" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, 'own')}`">
-                  <Icon icon="game-icons:sport-medal" width="26" height="26" />
+                <span v-if="rankOf(f, 'own')" class="fighter-rank-badge" :class="`rank--${rankOf(f, 'own')}`">
+                  <Icon icon="game-icons:sport-medal" width="18" height="18" />
                 </span>
-              </div>
-              <div v-if="f.alive" class="fighter-hp-row">
-                <div class="fight-hp">
-                  <div class="fight-hp-fill" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                <span class="fighter-name">{{ f.name }}</span>
+                <div
+                  v-if="f.alive"
+                  class="skill-btn"
+                  :class="{
+                    'skill-btn--active': isAbilityActive(f),
+                    'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
+                    'skill-btn--off': f.down,
+                  }"
+                  :title="abilityTooltip(f)"
+                >
+                  <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
+                  <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
+                    {{ Math.ceil(abilityCdLeft(f)) }}
+                  </span>
                 </div>
-                <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
-              </div>
-              <div
-                v-if="f.alive"
-                class="fighter-ability"
-                :class="{ 'fighter-ability--active': isAbilityActive(f) || isBuffed(f, 'own'), 'fighter-ability--off': f.down }"
-                :style="{ color: abilityOf(f).color }"
-              >
-                <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
-                {{ ABILITY_LABELS[f.role] }}
                 <template v-if="isTaunting(f)">
                   <span class="taunt-arrow">⟶</span>
                   <img
@@ -137,25 +140,35 @@
                     :alt="t.name"
                   />
                 </template>
-                <div class="ability-cd-track">
-                  <div
-                    class="ability-cd-fill"
-                    :class="{ 'ability-cd-fill--active': isAbilityActive(f) }"
-                    :style="{ width: abilityCdFraction(f) * 100 + '%' }"
-                  />
+                <div class="stat-block">
+                  <span class="stat-big-row">
+                    <span class="stat-mini-label">DMG</span>
+                    <span :key="damageBumps['own' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
+                      {{ fmt(displayedDamage(f, 'own')) }}
+                    </span>
+                  </span>
+                  <span class="stat-small-row">
+                    <span class="stat-mini-label">DPS</span>
+                    <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveOwnDpsMult) + '/s' : '—' }}</span>
+                  </span>
                 </div>
-                <span class="ability-cd" :class="{ 'ability-cd--active': isAbilityActive(f) }">{{ abilityStatus(f) }}</span>
               </div>
-              <div class="fighter-stats">
-                <span class="stat-label">DPS</span>
-                <span class="stat-value">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveOwnDpsMult) + '/s' : '—' }}</span>
-                <span class="stat-sep">·</span>
-                <span class="stat-label">DMG</span>
-                <span :key="damageBumps['own' + f.idx] ?? 0" class="stat-value stat-value--dmg fighter-damage--bump">
-                  {{ fmt(displayedDamage(f, 'own')) }}
-                </span>
+              <div v-if="f.alive" class="fighter-hp-row">
+                <div class="fight-hp">
+                  <div class="fight-hp-fill" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                </div>
+                <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
               </div>
             </div>
+          </div>
+
+          <!-- Center column: boss HP bar on top, arena below -->
+          <div class="boss-col">
+          <div class="boss-hp" :class="{ 'boss-hp--shake': hpShake }">
+            <div class="boss-hp-track">
+              <div class="boss-hp-fill" :style="{ width: hpFraction * 100 + '%' }" />
+            </div>
+            <span class="boss-hp-num">{{ fmt(Math.ceil(battleStore.objectiveHP)) }} / {{ fmt(battleStore.objectiveMaxHP) }}</span>
           </div>
 
           <!-- Arena: aura + rune ring + embers + boss -->
@@ -186,6 +199,16 @@
             </span>
           </TransitionGroup>
 
+          <!-- Hex Curse mark — frameless mid-role sprite hovering over the boss for the window -->
+          <div v-if="curseActive('own')" class="curse-mark curse-mark--own">
+            <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
+            −{{ OBJECTIVE_MID_CURSE_DPS }}/s
+          </div>
+          <div v-if="curseActive('enemy')" class="curse-mark curse-mark--enemy">
+            <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
+            −{{ OBJECTIVE_MID_CURSE_DPS }}/s
+          </div>
+
           <!-- Hex Curse DoT ticks on the boss -->
           <TransitionGroup name="hpfl" tag="div" class="dmg-floats">
             <span
@@ -214,6 +237,7 @@
             </span>
           </TransitionGroup>
           </div>
+          </div>
 
           <div class="fighters-col fighters-col--enemy">
             <div
@@ -224,12 +248,14 @@
                 {
                   'fighter-card--dead': !f.alive || f.down,
                   'attacking attacking--enemy': isAttacking(f),
+                  'card--casting': isAbilityActive(f) && !isTaunted(f, 'enemy'),
                   'card--taunted': isTaunted(f, 'enemy'),
+                  'card--buffed': isBuffed(f, 'enemy') && !isTaunted(f, 'enemy'),
                 },
                 cardRankClass(f, 'enemy'),
                 cardFlashClass('enemy' + f.idx),
               ]"
-              :style="isAttacking(f) ? lungeStyle(i, true) : undefined"
+              :style="cardStyle(f, i, true)"
             >
               <div v-if="isTaunted(f, 'enemy')" class="taunt-chip">
                 <img
@@ -241,11 +267,56 @@
                 <Icon icon="game-icons:enrage" width="12" height="12" />
                 TAUNTED
               </div>
+              <div v-else-if="isBuffed(f, 'enemy')" class="rally-chip">
+                <img :src="jungleImage" class="rally-chip-img" alt="Wild Rally" />
+                RALLY +{{ rallyPercent }}%
+              </div>
+              <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
+                <Icon icon="game-icons:cursed-star" width="12" height="12" />
+                HEX CURSE
+              </div>
               <div class="fighter-main fighter-main--enemy">
-                <span v-if="rankOf(f, 'enemy')" class="fighter-rank-badge fighter-rank-badge--enemy" :class="`rank--${rankOf(f, 'enemy')}`">
-                  <Icon icon="game-icons:sport-medal" width="26" height="26" />
-                </span>
+                <div class="stat-block stat-block--enemy">
+                  <span class="stat-big-row">
+                    <span :key="damageBumps['enemy' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
+                      {{ fmt(displayedDamage(f, 'enemy')) }}
+                    </span>
+                    <span class="stat-mini-label">DMG</span>
+                  </span>
+                  <span class="stat-small-row">
+                    <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveEnemyDpsMult) + '/s' : '—' }}</span>
+                    <span class="stat-mini-label">DPS</span>
+                  </span>
+                </div>
+                <template v-if="isTaunting(f)">
+                  <img
+                    v-for="t in tauntedEnemiesOf('enemy')"
+                    :key="'tt' + t.idx"
+                    :src="battleStore.getChampionImage(t.name)"
+                    class="taunt-target-img"
+                    :alt="t.name"
+                  />
+                  <span class="taunt-arrow">⟵</span>
+                </template>
+                <div
+                  v-if="f.alive"
+                  class="skill-btn"
+                  :class="{
+                    'skill-btn--active': isAbilityActive(f),
+                    'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
+                    'skill-btn--off': f.down,
+                  }"
+                  :title="abilityTooltip(f)"
+                >
+                  <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
+                  <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
+                    {{ Math.ceil(abilityCdLeft(f)) }}
+                  </span>
+                </div>
                 <span class="fighter-name">{{ f.name }}</span>
+                <span v-if="rankOf(f, 'enemy')" class="fighter-rank-badge" :class="`rank--${rankOf(f, 'enemy')}`">
+                  <Icon icon="game-icons:sport-medal" width="18" height="18" />
+                </span>
                 <div
                   class="fighter-portrait-wrap"
                   :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
@@ -258,13 +329,6 @@
                   />
                   <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
                   <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
-                  <Icon
-                    v-if="isBuffed(f, 'enemy')"
-                    icon="game-icons:uprising"
-                    width="14"
-                    height="14"
-                    class="buff-pip"
-                  />
                   <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
                     <span
                       v-for="h in hpFloatsFor('enemy' + f.idx)"
@@ -281,58 +345,8 @@
                   <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
                 </div>
               </div>
-              <div
-                v-if="f.alive"
-                class="fighter-ability fighter-ability--enemy"
-                :class="{ 'fighter-ability--active': isAbilityActive(f) || isBuffed(f, 'enemy'), 'fighter-ability--off': f.down }"
-                :style="{ color: abilityOf(f).color }"
-              >
-                <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
-                {{ ABILITY_LABELS[f.role] }}
-                <template v-if="isTaunting(f)">
-                  <span class="taunt-arrow">⟵</span>
-                  <img
-                    v-for="t in tauntedEnemiesOf('enemy')"
-                    :key="'tt' + t.idx"
-                    :src="battleStore.getChampionImage(t.name)"
-                    class="taunt-target-img"
-                    :alt="t.name"
-                  />
-                </template>
-                <div class="ability-cd-track">
-                  <div
-                    class="ability-cd-fill ability-cd-fill--enemy"
-                    :class="{ 'ability-cd-fill--active': isAbilityActive(f) }"
-                    :style="{ width: abilityCdFraction(f) * 100 + '%' }"
-                  />
-                </div>
-                <span class="ability-cd" :class="{ 'ability-cd--active': isAbilityActive(f) }">{{ abilityStatus(f) }}</span>
-              </div>
-              <div class="fighter-stats fighter-stats--enemy">
-                <span class="stat-label">DPS</span>
-                <span class="stat-value">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveEnemyDpsMult) + '/s' : '—' }}</span>
-                <span class="stat-sep">·</span>
-                <span class="stat-label">DMG</span>
-                <span :key="damageBumps['enemy' + f.idx] ?? 0" class="stat-value stat-value--dmg fighter-damage--bump">
-                  {{ fmt(displayedDamage(f, 'enemy')) }}
-                </span>
-              </div>
             </div>
           </div>
-        </div>
-
-        <!-- Segmented HP bar -->
-        <div class="hp-section" :class="{ 'hp-section--shake': hpShake }">
-          <div class="hp-segments">
-            <div
-              v-for="s in HP_SEGMENTS"
-              :key="s"
-              class="hp-segment"
-              :class="segmentFill(s) > 0 ? 'seg--full' : 'seg--empty'"
-              :style="segmentFill(s) > 0 && segmentFill(s) < 1 ? { opacity: 0.35 + segmentFill(s) * 0.65 } : undefined"
-            />
-          </div>
-          <div class="hp-text">{{ Math.ceil(battleStore.objectiveHP) }} / {{ battleStore.objectiveMaxHP }}</div>
         </div>
 
         <!-- Damage race: most total damage secures it — no last-hit steals -->
@@ -401,13 +415,12 @@ import {
   OBJECTIVE_SUPPORT_MEND_HEAL,
   OBJECTIVE_JUNGLE_BUFF_MULT,
   OBJECTIVE_ABILITY_TICK_S,
-  OBJECTIVE_ABILITY_CD_S,
   OBJECTIVE_TOP_TAUNT_TARGETS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
+  ROLE_BY_KEY,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 
-const HP_SEGMENTS = 10
 const BARON_THEME = { color: '#a855f7', colorDark: '#5c2a90', glow: 'rgba(168, 85, 247, 0.6)' }
 
 const battleStore = useBattleStore()
@@ -445,6 +458,23 @@ function abilityOf(f: ObjectiveFighter) {
   return OBJECTIVE_ROLE_ABILITIES[f.role]
 }
 
+/** Role color/image from the central role registry — the skill button speaks the role's language. */
+function roleColor(f: ObjectiveFighter): string {
+  return ROLE_BY_KEY[f.role].color
+}
+
+function roleImage(f: ObjectiveFighter): string {
+  return ROLE_BY_KEY[f.role].image
+}
+
+function abilityTooltip(f: ObjectiveFighter): string {
+  return `${abilityOf(f).name} — ${ABILITY_LABELS[f.role]}`
+}
+
+const jungleImage = ROLE_BY_KEY.jungle.image
+const midImage = ROLE_BY_KEY.mid.image
+const rallyPercent = Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)
+
 /** Ticking clock (100ms via the float scheduler) so ability windows render reactively. */
 const nowMs = ref(Date.now())
 
@@ -465,19 +495,10 @@ function abilityCdLeft(f: ObjectiveFighter): number {
   return Math.max(0, (f.abilityCooldownUntil - nowMs.value) / 1000)
 }
 
-function abilityStatus(f: ObjectiveFighter): string {
-  if (f.down) return 'OUT'
-  if (isAbilityActive(f)) return 'ACTIVE'
-  const left = abilityCdLeft(f)
-  return left > 0 ? `${left.toFixed(1)}s` : 'READY'
-}
-
-/** Cooldown refill 0→1 for the mini progress bar; full while the window is active. */
-function abilityCdFraction(f: ObjectiveFighter): number {
-  if (isAbilityActive(f)) return 1
-  const cd = OBJECTIVE_ABILITY_CD_S[f.role]
-  if (cd <= 0) return 1
-  return Math.max(0, Math.min(1, 1 - abilityCdLeft(f) / cd))
+/** A side's Hex Curse is ticking on the boss while its mid's window runs. */
+function curseActive(side: 'own' | 'enemy'): boolean {
+  const mid = _rawSide(side).find((f) => f.role === 'mid')
+  return !!mid && isAbilityActive(mid)
 }
 
 function hpPct(f: ObjectiveFighter): number {
@@ -497,10 +518,20 @@ function lungeDelayS(i: number, enemy: boolean): number {
   return i * OBJECTIVE_LUNGE_STAGGER_S + (enemy ? OBJECTIVE_LUNGE_ENEMY_OFFSET_S : 0)
 }
 
-function lungeStyle(i: number, enemy: boolean) {
+function lungeStyle(f: ObjectiveFighter, i: number, enemy: boolean) {
+  // Focus Fire feels like an attack-speed steroid: the ADC jabs twice as fast
+  const speedMult = f.role === 'adc' && isAbilityActive(f) ? 0.5 : 1
   return {
     animationDelay: lungeDelayS(i, enemy) + 's',
-    animationDuration: OBJECTIVE_LUNGE_CYCLE_S + 's',
+    animationDuration: OBJECTIVE_LUNGE_CYCLE_S * speedMult + 's',
+  }
+}
+
+/** Card inline style: role color var (skill button + casting outline) + lunge timing when attacking. */
+function cardStyle(f: ObjectiveFighter, i: number, enemy: boolean) {
+  return {
+    '--ability-color': roleColor(f),
+    ...(isAttacking(f) ? lungeStyle(f, i, enemy) : {}),
   }
 }
 
@@ -642,13 +673,6 @@ const hpFraction = computed(() => {
   if (battleStore.objectiveMaxHP === 0) return 0
   return Math.max(0, battleStore.objectiveHP / battleStore.objectiveMaxHP)
 })
-
-/** Fill state of segment s (1-based from the left): 1 full, 0 empty, fraction partial. */
-function segmentFill(s: number): number {
-  const per = 1 / HP_SEGMENTS
-  const start = (s - 1) * per
-  return Math.max(0, Math.min(1, (hpFraction.value - start) / per))
-}
 
 const resultLabel = computed(() => {
   const r = battleStore.objectiveResult
@@ -1096,6 +1120,12 @@ onUnmounted(_stopFloatScheduler)
   text-align: right;
 }
 
+/* An ability window is firing — the card glows in the role's ability color */
+.card--casting {
+  border-color: var(--ability-color, #e8c040);
+  box-shadow: 0 0 9px var(--ability-color, #e8c040);
+}
+
 /* This side is being challenged — bound to the enemy top laner */
 .card--taunted {
   border-color: #e8a040;
@@ -1320,18 +1350,36 @@ onUnmounted(_stopFloatScheduler)
 .fight-hp-num.hp--mid { color: #e8c040; }
 .fight-hp-num.hp--low { color: #f08070; }
 
-/* Jungle Wild Rally target marker */
-.buff-pip {
+/* Jungle Wild Rally target — chip + green card glow */
+.card--buffed {
+  border-color: #50c060;
+  box-shadow: 0 0 8px rgba(80, 192, 96, 0.55);
+}
+.rally-chip {
   position: absolute;
-  top: -7px;
-  left: -7px;
-  color: #6ec040;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #6ee080;
   background: #16140e;
-  border: 1px solid #52b830;
-  border-radius: 50%;
-  padding: 1px;
-  filter: drop-shadow(0 0 4px rgba(82, 184, 48, 0.7));
-  z-index: 2;
+  border: 1px solid #50c060;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 4;
+}
+.rally-chip-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 4px rgba(80, 192, 96, 0.8));
 }
 
 /* Top laner taunt window */
@@ -1374,64 +1422,93 @@ onUnmounted(_stopFloatScheduler)
   display: none;
 }
 
-/* Ability row with cooldown status on the fighter card */
-.fighter-ability {
+/* Role skill button next to the name — frameless role sprite, glow speaks the role color */
+.skill-btn {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.skill-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 4px var(--ability-color, #e8c040));
+}
+.skill-cd-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* On cooldown: dimmed sprite with the seconds on top */
+.skill-btn--cooling .skill-img {
+  filter: grayscale(0.7) brightness(0.55) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+.skill-btn--active .skill-img {
+  animation: skill-pulse 0.7s ease-in-out infinite;
+}
+.skill-btn--off {
+  opacity: 0.4;
+}
+.skill-btn--off .skill-img {
+  filter: grayscale(0.8) brightness(0.5);
+}
+
+/* Hex Curse mark — frameless mid sprite with a soft purple breath above the boss */
+.curse-mark {
+  position: absolute;
+  top: 4%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #c9a0f5;
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 8;
+  animation: curse-breathe 1.6s ease-in-out infinite;
+}
+.curse-mark--own { left: 6%; }
+.curse-mark--enemy { right: 6%; }
+.curse-mark-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.9));
+}
+
+/* Mid card chip while Hex Curse is channeling */
+.curse-chip {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  line-height: 1.2;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #c9a0f5;
+  background: #16140e;
+  border: 1px solid #b06cf8;
+  border-radius: 4px;
   white-space: nowrap;
-}
-.fighter-ability--enemy {
-  flex-direction: row-reverse;
-}
-.fighter-ability--active {
-  animation: ability-flash 0.6s ease-in-out infinite;
-}
-.fighter-ability--off {
-  opacity: 0.35;
-  filter: grayscale(55%);
-}
-.ability-icon {
-  flex-shrink: 0;
-}
-/* Cooldown refill bar — readable at a glance, pulses while the ability is active */
-.ability-cd-track {
-  flex: 1;
-  min-width: 22px;
-  height: 3px;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.ability-cd-fill {
-  height: 100%;
-  background: currentColor;
-  transition: width 0.2s linear;
-}
-.ability-cd-fill--enemy {
-  margin-left: auto;
-}
-.ability-cd-fill--active {
-  animation: ability-flash 0.6s ease-in-out infinite;
-}
-.ability-cd {
-  font-size: 10px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #8a8070;
-  min-width: 34px;
-  text-align: right;
-}
-.fighter-ability--enemy .ability-cd {
-  text-align: left;
-}
-.ability-cd--active {
-  color: inherit;
-  text-shadow: 0 0 6px currentColor;
+  z-index: 4;
 }
 
 /* Hex Curse ticks on the boss */
@@ -1461,12 +1538,6 @@ onUnmounted(_stopFloatScheduler)
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
   pointer-events: none;
 }
-.fighter-rank-badge--own {
-  margin-left: auto;
-}
-.fighter-rank-badge--enemy {
-  margin-right: auto;
-}
 .rank--1 {
   color: #e8c040;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
@@ -1489,35 +1560,42 @@ onUnmounted(_stopFloatScheduler)
   text-overflow: ellipsis;
 }
 
-/* Labeled stat row: DPS · DMG */
-.fighter-stats {
+/* Prominent damage stats in the card's top corner */
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+}
+.stat-block--enemy {
+  align-items: flex-start;
+}
+.stat-big-row,
+.stat-small-row {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  line-height: 1.2;
 }
-.fighter-stats--enemy {
-  justify-content: flex-end;
-}
-.stat-label {
-  font-size: 9px;
+.stat-mini-label {
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #8a8070;
 }
-.stat-sep {
-  color: #5c4a28;
-  font-size: 11px;
-}
-.stat-value {
-  font-size: 12px;
+.stat-big {
+  font-size: 16px;
   font-weight: 700;
-  color: #c0b090;
-  font-variant-numeric: tabular-nums;
-}
-.stat-value--dmg {
   color: #e8c040;
-  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.stat-small {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a09060;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 /* Replays on every strike step via :key bump — ties the counter jump to the float */
 .fighter-damage--bump {
@@ -1526,6 +1604,50 @@ onUnmounted(_stopFloatScheduler)
 @keyframes dmg-bump {
   0% { transform: scale(1.25); }
   100% { transform: scale(1); }
+}
+
+/* ── Center column: boss HP bar above the arena ─────────────────────────── */
+.boss-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.boss-hp {
+  position: relative;
+  width: 280px;
+  z-index: 3;
+}
+.boss-hp--shake {
+  animation: hp-shake 0.22s ease-in-out;
+}
+.boss-hp-track {
+  height: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #3e200a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.boss-hp-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, var(--obj-color), var(--obj-dark));
+  box-shadow: 0 0 8px var(--obj-glow);
+  transition: width 0.15s ease-out;
+}
+.boss-hp-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 /* ── Arena ───────────────────────────────────────────────────────────────── */
@@ -1681,46 +1803,6 @@ onUnmounted(_stopFloatScheduler)
 }
 .fdmg-leave-active {
   display: none;
-}
-
-/* ── Segmented HP bar ────────────────────────────────────────────────────── */
-.hp-section {
-  width: calc(100% - 28px);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 10px 14px 2px;
-}
-.hp-section--shake {
-  animation: hp-shake 0.22s ease-in-out;
-}
-
-.hp-segments {
-  display: flex;
-  gap: 3px;
-  height: 16px;
-}
-
-.hp-segment {
-  flex: 1;
-  border-radius: 2px;
-  border: 1px solid #3e200a;
-  transition: opacity 0.15s ease, background 0.15s ease;
-}
-.seg--full {
-  background: linear-gradient(to bottom, var(--obj-color), var(--obj-dark));
-  box-shadow: 0 0 7px var(--obj-glow);
-}
-.seg--empty {
-  background: #1c1c18;
-}
-
-.hp-text {
-  text-align: center;
-  font-size: 14px;
-  color: #a09060;
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Damage race ─────────────────────────────────────────────────────────── */
@@ -2024,9 +2106,16 @@ onUnmounted(_stopFloatScheduler)
   50% { box-shadow: 0 0 14px rgba(232, 160, 64, 0.95); }
 }
 
-@keyframes ability-flash {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+/* Skill sprite breathes in the role color while its window is active */
+@keyframes skill-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--ability-color, #e8c040)); }
+  50% { filter: drop-shadow(0 0 10px var(--ability-color, #e8c040)); }
+}
+
+/* Curse mark breathes softly over the boss for the whole Hex Curse window */
+@keyframes curse-breathe {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2034,7 +2123,7 @@ onUnmounted(_stopFloatScheduler)
   .rune-ring,
   .ember,
   .result-rays,
-  .hp-section--shake,
+  .boss-hp--shake,
   .boss-img,
   .attacking {
     animation: none !important;
@@ -2049,8 +2138,8 @@ onUnmounted(_stopFloatScheduler)
   .hpfl-enter-active,
   .curse-float,
   .portrait--taunting .fighter-portrait,
-  .fighter-ability--active,
-  .ability-cd-fill--active,
+  .skill-btn--active .skill-img,
+  .curse-mark,
   .card-flash-hit,
   .card-flash-heal {
     animation: none !important;

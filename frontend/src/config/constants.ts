@@ -218,23 +218,23 @@ export const OBJECTIVE_ABILITY_TICK_S = 1
 export const OBJECTIVE_ABILITY_CD_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
   top: 6,
   jungle: 5,
-  mid: 4,
+  mid: 3.5,
   adc: 5,
   support: 4,
 }
-/** Ability active-window duration per role (0 = instant burst) */
+/** Ability active-window duration per role (support: visual cast window — the burst applies once at cast) */
 export const OBJECTIVE_ABILITY_DURATION_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
   top: 1.5,
   jungle: 2.5,
   mid: 2,
   adc: 1.5,
-  support: 0,
+  support: 0.8,
 }
 /** Staggered first casts so the pit doesn't fire everything at once */
 export const OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
   top: 2,
-  jungle: 1,
-  mid: 1.5,
+  jungle: 1.5,
+  mid: 1,
   adc: 2.5,
   support: 3,
 }
@@ -249,13 +249,13 @@ export const OBJECTIVE_SUPPORT_MEND_HEAL = 24
 export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.4
 /** Top "Challenge": taunted enemies pour their FULL objective DPS onto the top laner */
 export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
-/** Role ability metadata for the objective fight panels (icons registered in USED_GAME_ICONS) */
+/** Role ability metadata for the objective fight panels (icons registered in USED_GAME_ICONS; colors come from ROLE_BY_KEY) */
 export const OBJECTIVE_ROLE_ABILITIES = {
-  top: { name: 'Challenge', icon: 'game-icons:enrage', color: '#e8a040' },
-  jungle: { name: 'Wild Rally', icon: 'game-icons:uprising', color: '#6ec040' },
-  mid: { name: 'Hex Curse', icon: 'game-icons:cursed-star', color: '#b06cf8' },
-  adc: { name: 'Focus Fire', icon: 'game-icons:dead-eye', color: '#e8c040' },
-  support: { name: 'Mend', icon: 'game-icons:healing', color: '#5adf9e' },
+  top: { name: 'Challenge', icon: 'game-icons:enrage' },
+  jungle: { name: 'Wild Rally', icon: 'game-icons:uprising' },
+  mid: { name: 'Hex Curse', icon: 'game-icons:cursed-star' },
+  adc: { name: 'Focus Fire', icon: 'game-icons:dead-eye' },
+  support: { name: 'Mend', icon: 'game-icons:healing' },
 } as const
 
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */

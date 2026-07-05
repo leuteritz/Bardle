@@ -425,6 +425,20 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(top.damage).toBe(frozen)
   })
 
+  it('mid auto-casts Hex Curse via its first-cast offset and the curse ticks damage', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    for (const f of store.objectiveFighters!.t1) f.weight = 0
+    for (const f of store.objectiveFighters!.t2) f.weight = 0
+    vi.advanceTimersByTime(2000)
+    const mid = store.objectiveFighters!.t1[2]
+    // window opened automatically (no manual trigger) and the DoT is flowing
+    expect(mid.abilityActiveUntil).toBeGreaterThan(0)
+    expect(mid.damage).toBeGreaterThan(0)
+    expect(store.objectiveFighters!.t1[0].damage).toBe(0)
+  })
+
   it('Hex Curse credits the mid laner only while its window is active', () => {
     const store = useBattleStore()
     setupBattle(store)
@@ -433,12 +447,12 @@ describe('battleStore frozen-time objective damage race', () => {
     for (const f of store.objectiveFighters!.t2) f.weight = 0
     const mid = store.objectiveFighters!.t1[2]
     mid.abilityActiveUntil = Date.now() + 100000 // window open, own mid only
-    vi.advanceTimersByTime(1000)
-    expect(mid.damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
+    // stay below the 1s first-cast offset so the enemy mid never casts
+    vi.advanceTimersByTime(800)
+    expect(mid.damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS * 0.8, 6)
     expect(store.objectiveFighters!.t1[0].damage).toBe(0)
-    // enemy mid's window is still on its first-cast offset — no curse credited
     expect(store.objectiveEnemyDamage).toBe(0)
-    expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
+    expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS * 0.8, 6)
   })
 
   it('an active taunt diverts the full enemy damage onto the top laner instead of the objective', () => {
