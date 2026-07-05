@@ -290,16 +290,16 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .stat-label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 2px;
-  color: #6a5820;
+  color: #a08448;
   margin-top: 4px;
 }
 
 .stats-sub {
   font-size: 10px;
   letter-spacing: 1.5px;
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(232, 226, 208, 0.55);
   margin-top: 8px;
 }
 
@@ -314,7 +314,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 .card-eyebrow {
   font-size: 10px;
   letter-spacing: 2px;
-  color: #6a5820;
+  color: #a08448;
 }
 
 .card-row {
@@ -366,9 +366,9 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .card-sub {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 1.5px;
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(232, 226, 208, 0.55);
   margin-top: 5px;
 }
 
