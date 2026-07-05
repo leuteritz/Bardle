@@ -1737,7 +1737,6 @@ export const COMET_PHASE_DATA = {
   name: 'Wandering Comet',
   shortName: 'Comet',
   astroName: 'Rogue Planetesimal',
-  radius: 24,
   core: '#8a7a68',
   mid: '#6b5d4f',
   edge: '#4a4038',
@@ -1751,6 +1750,12 @@ export const COMET_PHASE_DATA = {
 } as const
 
 /** Minimum drift time (seconds) before the comet may ignite into First Spark. */
+/** Comet growth per Star Forge core ray at Lv 1+ (index 0..5 = rays kindled).
+ *  Radius stays well below First Spark's 38 — ignition must feel like a jump. */
+export const COMET_STAGE_RADII = [16, 18, 20, 22, 24, 26]
+/** Gold-accent intensity per stage (0 = bare grey rock, 1 = fully gilded). */
+export const COMET_STAGE_GOLD = [0, 0.2, 0.4, 0.6, 0.8, 1]
+
 export const COMET_MIN_DWELL_SECONDS = 180
 /** Background star drift is boosted by this factor while in comet state, selling
  *  the impression that the comet races through space. */

@@ -38,6 +38,18 @@ describe('solarUpgradeStore — comet origin state', () => {
     expect(store.starPhase).toBe(0)
   })
 
+  it('cometStage counts core rays at Lv 1+', () => {
+    const store = useSolarUpgradeStore()
+    expect(store.cometStage).toBe(0)
+
+    store.flightSpeedLevel = 1
+    store.maxHpLevel = 3 // higher levels still count once
+    expect(store.cometStage).toBe(2)
+
+    setAllBranchLevels(store, 1)
+    expect(store.cometStage).toBe(5)
+  })
+
   it('comet dwell time replaces the First Spark dwell time', () => {
     const store = useSolarUpgradeStore()
     expect(store.phaseDwellRequiredMs).toBe(COMET_MIN_DWELL_SECONDS * 1000)

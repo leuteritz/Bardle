@@ -1,7 +1,9 @@
 <template>
   <div class="comet-root" :style="vars">
     <div class="comet-halo" />
+    <div class="comet-halo comet-halo--gold" />
     <div class="comet-rock">
+      <div class="comet-gilding" />
       <div class="comet-shading" />
     </div>
   </div>
@@ -9,15 +11,17 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
-import { COMET_PHASE_DATA } from '@/config/constants'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
+import { COMET_PHASE_DATA, COMET_STAGE_GOLD } from '@/config/constants'
 
 /**
  * The player's origin body before First Spark: a wandering asteroid with Bard
- * asleep inside (a faint green shimmer, matching the header level badge).
- * Shared by every place that renders the player's celestial body — sibling of
- * PhaseSunDisc with the same contract (absolutely centered in its parent,
- * sized via the diameter prop) and the same breathing animation language as
- * the sun phases.
+ * asleep inside. Each of the five Star Forge core rays bought to Lv 1 gilds
+ * the rock a little more (solarUpgradeStore.cometStage drives --comet-gold);
+ * at stage 0 it is bare grey stone. Shared by every place that renders the
+ * player's celestial body — sibling of PhaseSunDisc with the same contract
+ * (absolutely centered in its parent, sized via the diameter prop) and the
+ * same breathing animation language as the sun phases.
  */
 export default defineComponent({
   name: 'CometDisc',
@@ -26,6 +30,8 @@ export default defineComponent({
     diameter: { type: Number, required: true },
   },
   setup(props) {
+    const solarStore = useSolarUpgradeStore()
+
     const vars = computed((): Record<string, string> => ({
       '--comet-d': `${props.diameter}px`,
       '--comet-core': COMET_PHASE_DATA.core,
@@ -34,6 +40,7 @@ export default defineComponent({
       '--comet-crater': COMET_PHASE_DATA.crater,
       '--comet-glow': COMET_PHASE_DATA.glow,
       '--comet-dust': COMET_PHASE_DATA.dust,
+      '--comet-gold': `${COMET_STAGE_GOLD[solarStore.cometStage]}`,
       '--comet-tumble': COMET_PHASE_DATA.tumbleSec,
       '--comet-pulse': COMET_PHASE_DATA.pulseSpeed,
     }))
@@ -57,7 +64,7 @@ export default defineComponent({
   animation: comet-breathe var(--comet-pulse, 6s) ease-in-out infinite;
 }
 
-/* ── Dust halo — faint cold corona hinting at motion through space ── */
+/* ── Dust halo — faint grey corona; a gold twin fades in with each stage ── */
 .comet-halo {
   position: absolute;
   inset: -14%;
@@ -66,10 +73,22 @@ export default defineComponent({
   background: radial-gradient(
     circle at 50% 50%,
     transparent 38%,
-    color-mix(in srgb, var(--comet-dust) 12%, transparent) 58%,
+    color-mix(in srgb, var(--comet-mid) 12%, transparent) 58%,
     transparent 78%
   );
   animation: comet-halo-shimmer 8s ease-in-out infinite;
+}
+
+.comet-halo--gold {
+  /* static — the shimmer keyframe would override the stage-driven opacity */
+  animation: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 38%,
+    color-mix(in srgb, var(--comet-dust) 14%, transparent) 58%,
+    transparent 78%
+  );
+  opacity: calc(var(--comet-gold, 0) * 0.9);
 }
 
 /* ── Rock — irregular tumbling blob (celestial-body shape, not a UI box) ── */
@@ -100,12 +119,34 @@ export default defineComponent({
       var(--comet-edge) 78%,
       var(--comet-crater) 100%
     );
-  box-shadow: 0 0 18px color-mix(in srgb, var(--comet-glow) 16%, transparent);
   /* Wobble, not a full spin — keeps the painted light source coherent */
   animation: comet-tumble var(--comet-tumble, 14s) ease-in-out infinite alternate;
 }
 
-/* ── Shading overlay — terminator (day/night edge) + cold rim light ── */
+/* ── Gilding — gold veins + rim light, fading in per kindled core ray ── */
+.comet-gilding {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 44% 34%, color-mix(in srgb, var(--comet-glow) 55%, transparent) 0 1.4%, transparent 2.4%),
+    radial-gradient(circle at 58% 58%, color-mix(in srgb, var(--comet-glow) 45%, transparent) 0 1.1%, transparent 2%),
+    radial-gradient(circle at 33% 55%, color-mix(in srgb, var(--comet-glow) 40%, transparent) 0 0.9%, transparent 1.7%),
+    radial-gradient(circle at 66% 26%, color-mix(in srgb, var(--comet-glow) 35%, transparent) 0 0.8%, transparent 1.6%),
+    /* a thin molten vein hinting at the star waking inside */
+    linear-gradient(
+      118deg,
+      transparent 46%,
+      color-mix(in srgb, var(--comet-glow) 30%, transparent) 49.5%,
+      transparent 53%
+    );
+  box-shadow: inset -3px -4px 8px color-mix(in srgb, var(--comet-glow) 22%, transparent);
+  opacity: var(--comet-gold, 0);
+  transition: opacity 0.8s ease;
+}
+
+/* ── Shading overlay — terminator (day/night edge), always on top ── */
 .comet-shading {
   position: absolute;
   inset: 0;
@@ -117,10 +158,7 @@ export default defineComponent({
     rgba(0, 0, 0, 0.18) 58%,
     rgba(0, 0, 0, 0.55) 82%
   );
-  /* faint starlight grazing the shadowed limb */
-  box-shadow:
-    inset -3px -4px 6px color-mix(in srgb, var(--comet-glow) 12%, transparent),
-    inset 6px 6px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 6px 6px 14px rgba(0, 0, 0, 0.25);
 }
 
 @keyframes comet-breathe {

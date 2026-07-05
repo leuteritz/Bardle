@@ -81,6 +81,17 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       return 1 + this.dmgPerClickLevel * SOLAR_DMG_BONUS
     },
 
+    /** 0..5 — how many of the five core rays are at Lv 1+ (drives comet growth). */
+    cometStage(state): number {
+      return [
+        state.flightSpeedLevel,
+        state.maxHpLevel,
+        state.chimesPerClickLevel,
+        state.chimesPerSecondLevel,
+        state.dmgPerClickLevel,
+      ].filter((l) => l >= 1).length
+    },
+
     minBranchLevel(state): number {
       return Math.min(
         state.flightSpeedLevel,

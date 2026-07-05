@@ -9,7 +9,15 @@
     >
       <!-- Idle affordance: pulsing gold "energy heart" of the sun = the click target.
            The sun itself is the button; this glow signals "tap here for Chimes". -->
-      <div class="chime-aura" :class="{ punched: isPunching }" aria-hidden="true"></div>
+      <!-- During the comet origin state the gold aura desaturates with the
+           comet's gilding stage: bare grey rock = grey aura, fully kindled =
+           full gold (style from auraStageStyle). -->
+      <div
+        class="chime-aura"
+        :class="{ punched: isPunching }"
+        :style="auraStageStyle"
+        aria-hidden="true"
+      ></div>
 
       <!-- Click feedback: expanding ripple ring, keyed so it replays every click -->
       <div
@@ -67,6 +75,7 @@ import { useBattleStore } from '../../stores/battleStore'
 import { useAugmentStore } from '../../stores/augmentStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
 import { usePlanetShopStore } from '../../stores/planetShopStore'
+import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { formatNumber } from '../../config/numberFormat'
 import SunComponent from './sun/SunComponent.vue'
 import ChampionOrbit from './sun/ChampionOrbit.vue'
@@ -81,6 +90,7 @@ import {
   CHIME_BURST_DIST_MIN_FACTOR,
   CHIME_BURST_DIST_MAX_FACTOR,
   CHIME_BURST_SIZE_FACTOR,
+  COMET_STAGE_GOLD,
 } from '../../config/constants'
 
 interface ChimeBurstParticle {
@@ -110,6 +120,14 @@ export default defineComponent({
     const battleStore = useBattleStore()
     const galaxyStore = useGalaxyStore()
     const planetShopStore = usePlanetShopStore()
+    const solarStore = useSolarUpgradeStore()
+
+    /** Comet state: desaturate the gold aura by the un-gilded remainder. */
+    const auraStageStyle = computed(() => {
+      if (!solarStore.isCometState) return {}
+      const gold = COMET_STAGE_GOLD[solarStore.cometStage]
+      return { filter: `grayscale(${(1 - gold).toFixed(2)})` }
+    })
 
     const chimeButtonStyle = computed(() => ({
       width: `${planetShopStore.currentSunRadius * 4}px`,
@@ -239,6 +257,7 @@ export default defineComponent({
       chimeGainOffsetX,
       chimeGainAngle,
       chimeButtonStyle,
+      auraStageStyle,
       chimePopupFontSize,
       rippleKey,
       rippleStyle,

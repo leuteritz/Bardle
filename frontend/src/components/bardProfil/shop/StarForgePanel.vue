@@ -50,7 +50,8 @@
           Ignite the comet into <b class="phase-hint-next">First Spark</b> — your first star.
         </div>
         <div v-else-if="solarStore.isCometState && !solarStore.branchesReadyForEvolve" class="phase-hint">
-          Grow all five core rays to Lv 1 to ready the Ignition.
+          Grow all five core rays to Lv 1 to ready the Ignition —
+          <b class="phase-hint-next">{{ solarStore.cometStage }} / 5 kindled</b>
         </div>
         <div v-else-if="solarStore.isCometState" class="phase-hint">
           The comet must drift a while longer — ready in
