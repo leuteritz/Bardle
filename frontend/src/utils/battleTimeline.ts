@@ -43,6 +43,9 @@ import {
   TIMELINE_BARON_WINPROB_DELTA,
   TIMELINE_TURRET_WINPROB_DELTA,
   TIMELINE_INHIB_WINPROB_DELTA,
+  TIMELINE_NEXUS_WINPROB_DELTA,
+  WINPROB_MIN,
+  WINPROB_MAX,
   TIMELINE_CRACK_WINDOW_START_T,
   TIMELINE_CRACK_WINDOW_END_MARGIN_T,
   TIMELINE_EXTRA_TURRETS_MIN,
@@ -125,6 +128,8 @@ interface GenContext {
   rng: () => number
   events: BattleEvent[]
   momentum: number
+  /** Mirror of the store's currentWinProbability — same deltas, same clamps (see _shiftWinProbability). */
+  liveProb: number
   firstBloodDone: boolean
   fromT: number
   /** Structures already down — evolves with emitted falls (post-cut only, see emitStructureFall). */
@@ -144,6 +149,7 @@ function pushEvent(ctx: GenContext, ev: BattleEvent) {
   if (ev.t < ctx.fromT) return
   ctx.events.push(ev)
   ctx.momentum = clampMomentum(ctx.momentum + ev.winProbDelta * 2)
+  ctx.liveProb = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, ctx.liveProb + ev.winProbDelta))
 }
 
 function killDelta(team: 1 | 2): number {
@@ -331,18 +337,22 @@ function emitObjective(
  * `fromT` > 0 regenerates only events at/after that game-second (objective
  * override re-seed); earlier phases still advance the RNG identically cheaply
  * by being generated and discarded via the fromT filter in pushEvent.
+ * `baselineProb` is the probability the UI momentum bar is measured against
+ * (the battle-start probability) — the winner is read off that displayed metric.
  */
 export function generateTimeline(
   seed: number,
   initialWinProb: number,
   fromT = 0,
   preDestroyed: ReadonlySet<StructureId> = new Set(),
+  baselineProb = initialWinProb,
 ): BattleTimeline {
   const rng = createRng(seed)
   const ctx: GenContext = {
     rng,
     events: [],
     momentum: clampMomentum((initialWinProb - 0.5) * 2),
+    liveProb: initialWinProb,
     firstBloodDone: fromT > TIMELINE_FIRST_BLOOD_MAX_T,
     fromT,
     destroyed: new Set(preDestroyed),
@@ -468,9 +478,12 @@ export function generateTimeline(
     t2: [0, 1, 2, 3, 4],
   })
 
-  // ── Winner decision: momentum walk result, sampled once ──
-  const finalProb = Math.max(0.08, Math.min(0.92, 0.5 + ctx.momentum / 2))
-  const winner: 1 | 2 = rng() < finalProb ? 1 : 2
+  // ── Winner decision: WYSIWYG — the team whose displayed win chance (the
+  // momentum bar, 0.5 + accumulated event deltas) is above 50% at the final
+  // push reveal wins; rng only breaks a dead-even 50/50 ──
+  const displayedMomentum = 0.5 + (ctx.liveProb - baselineProb)
+  const winner: 1 | 2 =
+    displayedMomentum > 0.5 ? 1 : displayedMomentum < 0.5 ? 2 : rng() < 0.5 ? 1 : 2
 
   // ── Final push / end phase — at 50:00 the winner marches the cracked lane,
   // the loser digs in at its fallen inhibitor, and the last fight happens there ──
@@ -503,7 +516,8 @@ export function generateTimeline(
     type: 'nexus',
     team: winner,
     location: loserNexus,
-    winProbDelta: 0,
+    // slam the momentum bar to its end on the nexus explosion
+    winProbDelta: winner === 1 ? TIMELINE_NEXUS_WINPROB_DELTA : -TIMELINE_NEXUS_WINPROB_DELTA,
   })
 
   ctx.events.sort((a, b) => a.t - b.t)
@@ -520,11 +534,12 @@ export function reseedTimelineFrom(
   t: number,
   newSeed: number,
   boostedWinProb: number,
+  baselineProb = boostedWinProb,
 ): BattleTimeline {
   // Structures already down at the cut stay down: the regenerated tail starts
   // from this world state, so nothing double-falls or skips its lane order.
   const preDestroyed = destroyedStructuresUpTo(current.events, t)
-  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed)
+  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb)
   // Objectives already spawned before the cut must not respawn in the tail:
   // baron happens once per battle; drakes keep the total count cap and a
   // minimum respawn gap so a just-fought drake can't reappear moments later.

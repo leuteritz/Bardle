@@ -16,6 +16,9 @@ import {
   TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
   FINAL_PUSH_FIGHT_T,
   FINAL_PUSH_FIGHT_HOLD_T,
+  TIMELINE_NEXUS_WINPROB_DELTA,
+  WINPROB_MIN,
+  WINPROB_MAX,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -105,6 +108,38 @@ describe('generateTimeline', () => {
     }
     // clearly above coin-flip for a strong favorite
     expect(wins / n).toBeGreaterThan(0.55)
+  })
+
+  it('the winner is the team whose displayed momentum leads at the final push reveal', () => {
+    let checked = 0
+    for (let seed = 0; seed < 120; seed++) {
+      const tl = generateTimeline(seed, 0.5)
+      // replay the momentum bar exactly like the store: initial prob + per-event
+      // clamped deltas; only events before the reveal decision count
+      let prob = 0.5
+      let clamped = false
+      for (const e of tl.events) {
+        if (e.t >= FINAL_PUSH_FIGHT_T) continue
+        const raw = prob + e.winProbDelta
+        if (raw < WINPROB_MIN || raw > WINPROB_MAX) clamped = true
+        prob = Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
+      }
+      // clamping makes the sum order-dependent; ties fall back to a coin flip — skip both
+      if (clamped || prob === 0.5) continue
+      checked++
+      expect(tl.winner).toBe(prob > 0.5 ? 1 : 2)
+    }
+    expect(checked).toBeGreaterThan(50)
+  })
+
+  it('the nexus explosion slams the momentum bar toward the winner', () => {
+    for (const seed of [1, 42, 777, 1337]) {
+      const tl = generateTimeline(seed, 0.5)
+      const nexus = tl.events.find((e) => e.type === 'nexus')!
+      expect(nexus.winProbDelta).toBe(
+        tl.winner === 1 ? TIMELINE_NEXUS_WINPROB_DELTA : -TIMELINE_NEXUS_WINPROB_DELTA,
+      )
+    }
   })
 
   it('multikill tiers are only ever 2..5 and escalate from doubles', () => {
@@ -324,6 +359,15 @@ describe('reseedTimelineFrom', () => {
     const base = generateTimeline(7, 0.5)
     const re = reseedTimelineFrom(base, 1200, 1234, 0.9)
     expect(re.events.filter((e) => e.type === 'nexus').length).toBe(1)
+  })
+
+  it('is deterministic with an explicit baseline probability', () => {
+    const base = generateTimeline(42, 0.4)
+    const a = reseedTimelineFrom(base, 1500, 999, 0.8, 0.4)
+    const b = reseedTimelineFrom(base, 1500, 999, 0.8, 0.4)
+    expect(a.events).toEqual(b.events)
+    expect(a.winner).toBe(b.winner)
+    expect(a.events.filter((e) => e.type === 'nexus').length).toBe(1)
   })
 
   it('never respawns baron when reseeding at the baron spawn (interactive fight)', () => {

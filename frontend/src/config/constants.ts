@@ -228,6 +228,8 @@ export const TIMELINE_DRAKE_WINPROB_DELTA = 0.06
 export const TIMELINE_BARON_WINPROB_DELTA = 0.1
 export const TIMELINE_TURRET_WINPROB_DELTA = 0.03
 export const TIMELINE_INHIB_WINPROB_DELTA = 0.04
+/** Momentum slam on the nexus explosion — oversized on purpose, the clamps pin the bar to its end */
+export const TIMELINE_NEXUS_WINPROB_DELTA = 1
 // ── Structure destruction schedule (all times in game-seconds) ─────────────
 // Both teams fully crack one random enemy lane (up to the inhibitor) before
 // baron spawns; other lanes only lose 1-2 turrets and never an inhibitor.

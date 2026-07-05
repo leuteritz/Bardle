@@ -938,7 +938,13 @@ export const useBattleStore = defineStore('battle', {
     rebuildTimeline() {
       let timeline = generateTimeline(this.battleSeed, this.initialWinProbability)
       for (const override of this.objectiveOverrides) {
-        timeline = reseedTimelineFrom(timeline, override.t, override.newSeed, override.prob)
+        timeline = reseedTimelineFrom(
+          timeline,
+          override.t,
+          override.newSeed,
+          override.prob,
+          this.initialWinProbability,
+        )
       }
       this.timeline = timeline
       this.predeterminedWin = timeline.winner === 1
@@ -1584,7 +1590,13 @@ export const useBattleStore = defineStore('battle', {
         const newSeed =
           (this.battleSeed ^ Math.imul(this.battleTime + 1, 2654435761) ^ (this.objectiveOverrides.length + 1)) >>> 0
         this.objectiveOverrides.push({ t: this.battleTime, newSeed, prob: newProb })
-        this.timeline = reseedTimelineFrom(this.timeline, this.battleTime, newSeed, newProb)
+        this.timeline = reseedTimelineFrom(
+          this.timeline,
+          this.battleTime,
+          newSeed,
+          newProb,
+          this.initialWinProbability,
+        )
         this.predeterminedWin = this.timeline.winner === 1
         this.timelineCursor = this.timeline.events.findIndex((ev) => ev.t > this.battleTime)
         if (this.timelineCursor < 0) this.timelineCursor = this.timeline.events.length
