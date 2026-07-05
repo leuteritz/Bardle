@@ -183,11 +183,11 @@ export const OBJECTIVE_FIGHT_STATUS = {
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
 // Match script: laning 0-900 → drakes 900-1450 → mid fights 1250-1890 →
-// cracks 820-1920 → baron 2000-2120 (result ~2720-2900) → push ~2850-3300 → nexus 3550
+// cracks 820-1920 → baron 2000-2120 (result ~2720-2900) → final push 3000 (50:00)
+// → defense fight at the loser inhibitor ~3200 → nexus turrets ~3400-3490 → nexus 3550
 export const TIMELINE_LANING_END = 900
 export const TIMELINE_DRAKE_WINDOW_END = 1450
 export const TIMELINE_MIDFIGHT_END = 1950
-export const TIMELINE_BARON_END = 2650
 /** Random extra delay on the baron spawn time */
 export const TIMELINE_BARON_SPAWN_JITTER_T = 120
 /** Game-second at which the losing nexus falls */
@@ -240,9 +240,9 @@ export const TIMELINE_EXTRA_TURRETS_MIN = 1
 export const TIMELINE_EXTRA_TURRETS_MAX = 2
 /** Minimum spacing between consecutive structure falls */
 export const TIMELINE_STRUCTURE_MIN_GAP_T = 40
-/** Nexus turrets fall this long after the baron resolves (min/max delay each) — paced so the winner visibly marches the cracked lane */
-export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 130
-export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 240
+/** Nexus turrets fall this long after the final defense fight ends (min/max delay each) — paced so the winner visibly breaks through */
+export const TIMELINE_NEXUS_TURRET_DELAY_MIN_T = 60
+export const TIMELINE_NEXUS_TURRET_DELAY_MAX_T = 110
 /** Both nexus turrets must be down this long before the nexus falls */
 export const TIMELINE_NEXUS_TURRET_END_MARGIN_T = 60
 /** Champions on the attacking side present at a structure fall (min/max) */
@@ -346,12 +346,25 @@ export const MOVE_RESPAWN_WALK_SECONDS = 240
 export const MOVE_FIGHT_GATHER_LEAD_T = 80
 /** Game-seconds attackers keep sieging at a structure after it falls */
 export const MOVE_SIEGE_HOLD_T = 120
-/** Winners leave the baron pit this long after the baron result */
-export const MOVE_PUSH_START_DELAY_T = 40
-/** Per-champion random stagger on the endgame push start */
-export const MOVE_PUSH_STAGGER_T = 120
-/** Game-seconds the endgame push/retreat march takes along the kill route */
-export const MOVE_PUSH_TRAVEL_T = 420
+/** Default travel duration of a movement order */
+export const MOVE_ORDER_TRAVEL_T = 120
+// ── Final push choreography (endgame at the 50:00 clock mark) ──────────────
+/** Game-second the endgame push begins — 50:00 on the match clock */
+export const FINAL_PUSH_START_T = 3000
+/** Per-champion random stagger on the final push start */
+export const FINAL_PUSH_STAGGER_T = 50
+/** Defenders start moving this many game-seconds before the attackers (shorter way, they dig in first) */
+export const FINAL_PUSH_DEFENDER_LEAD_T = 30
+/** Game-seconds both teams need to march to the defense line (loser inhibitor) */
+export const FINAL_PUSH_TO_INHIB_TRAVEL_T = 150
+/** Game-second of the final defense fight at the loser's inhibitor */
+export const FINAL_PUSH_FIGHT_T = 3200
+/** Game-seconds both teams stand and fight at the inhibitor before the breakthrough */
+export const FINAL_PUSH_FIGHT_HOLD_T = 140
+/** Game-seconds the winner's breakthrough march takes (inhibitor → nexus gate → nexus) */
+export const FINAL_PUSH_NEXUS_TRAVEL_T = 250
+/** Game-seconds the loser survivors need to fall back from the inhibitor to their nexus */
+export const FINAL_PUSH_LAST_STAND_TRAVEL_T = 120
 /** Cosmetic position jitter in map-units applied by the UI ticker */
 export const MOVE_JITTER_UNITS = 1.5
 /** UI position sampling interval (ms) */

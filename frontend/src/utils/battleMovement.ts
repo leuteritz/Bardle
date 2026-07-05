@@ -10,10 +10,15 @@ import {
   MOVE_RESPAWN_WALK_SECONDS,
   MOVE_FIGHT_GATHER_LEAD_T,
   MOVE_SIEGE_HOLD_T,
-  MOVE_PUSH_START_DELAY_T,
-  MOVE_PUSH_STAGGER_T,
-  MOVE_PUSH_TRAVEL_T,
-  TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
+  MOVE_ORDER_TRAVEL_T,
+  FINAL_PUSH_START_T,
+  FINAL_PUSH_STAGGER_T,
+  FINAL_PUSH_DEFENDER_LEAD_T,
+  FINAL_PUSH_TO_INHIB_TRAVEL_T,
+  FINAL_PUSH_FIGHT_T,
+  FINAL_PUSH_FIGHT_HOLD_T,
+  FINAL_PUSH_NEXUS_TRAVEL_T,
+  FINAL_PUSH_LAST_STAND_TRAVEL_T,
 } from '../config/constants'
 import {
   type MapPoint,
@@ -32,7 +37,7 @@ import {
   BOT_LANE_PATH,
 } from '../config/battleRoutes'
 import { createRng, BATTLE_ROLES } from './battleTimeline'
-import { parseStructureId, killRoutePoints } from './battleStructures'
+import { parseStructureId, killRoutePoints, LANE_TIER_ORDER } from './battleStructures'
 
 export interface MovementSegment {
   tStart: number
@@ -78,6 +83,10 @@ interface Order {
   kind: MovementSegment['kind']
   /** Preempts whatever the champion is holding — used for structure sieges, where an attacker MUST be present. */
   priority?: boolean
+  /** Travel duration override in game-seconds (default: MOVE_ORDER_TRAVEL_T). */
+  travelT?: number
+  /** Waypoints walked between the current position and the order location (default: a jittered midpoint). */
+  via?: MapPoint[]
 }
 
 function fountainOf(team: 1 | 2): MapPoint {
@@ -174,38 +183,57 @@ function buildChampionSchedule(
     }
   }
 
-  // 2) Endgame: right after the baron resolves the winner marches the kill
-  // route (loser's cracked-lane structures → nexus), the loser falls back
+  // 2) Endgame: at the 50:00 mark the winner marches the cracked lane down
+  // while the loser digs in at its fallen inhibitor — the scripted final
+  // fight happens right there, then the winner breaks through to the nexus
   const winnerTeam = timeline.winner
-  const baronResult = timeline.events.find(
-    (e) => e.type === 'objectiveResult' && e.objective === 'baron',
-  )
-  const baronSpawn = timeline.events.find(
-    (e) => e.type === 'objectiveSpawn' && e.objective === 'baron',
-  )
-  // a very late reseed can cut the baron out of the script — degrade to the old timing
-  const pushBaseT =
-    baronResult?.t ??
-    (baronSpawn ? baronSpawn.t + TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T : TIMELINE_NEXUS_FALL_T - 500)
-  const pushT = pushBaseT + MOVE_PUSH_START_DELAY_T + Math.floor(rng() * MOVE_PUSH_STAGGER_T)
+  const pushT = FINAL_PUSH_START_T + Math.floor(rng() * FINAL_PUSH_STAGGER_T)
+  const breakthroughT = FINAL_PUSH_FIGHT_T + FINAL_PUSH_FIGHT_HOLD_T
+  // kill route: [outer, inner, inhibTurret, inhibitor, nexusGate, nexus]
+  const inhibIdx = LANE_TIER_ORDER.length - 1
+  const defensePoint = endgameRoute[inhibIdx]
   if (team === winnerTeam) {
     const enemyNexus = team === 1 ? RED_NEXUS : BLUE_NEXUS
     orders.push({
       t: pushT,
-      location: jittered(enemyNexus, rng, 4),
-      holdUntil: BATTLE_TOTAL_GAME_SECONDS,
+      location: jittered(defensePoint, rng, 2.5),
+      holdUntil: breakthroughT,
       kind: 'push',
       // must preempt any lingering lane-drift hold, or the march never starts
       priority: true,
+      travelT: FINAL_PUSH_TO_INHIB_TRAVEL_T,
+      // march visibly tower to tower down the cracked lane to the defense line
+      via: endgameRoute.slice(0, inhibIdx),
+    })
+    orders.push({
+      t: breakthroughT,
+      location: jittered(enemyNexus, rng, 3),
+      holdUntil: BATTLE_TOTAL_GAME_SECONDS,
+      kind: 'push',
+      priority: true,
+      travelT: FINAL_PUSH_NEXUS_TRAVEL_T,
+      // breakthrough: inhibitor → nexus gate → nexus
+      via: endgameRoute.slice(inhibIdx + 1, -1),
     })
   } else {
     const ownNexus = team === 1 ? BLUE_NEXUS : RED_NEXUS
     orders.push({
-      t: pushT + 80,
-      location: jittered(ownNexus, rng, 5),
+      // defenders have the shorter way — they stand first
+      t: pushT - FINAL_PUSH_DEFENDER_LEAD_T,
+      location: jittered(defensePoint, rng, 3.5),
+      holdUntil: breakthroughT,
+      kind: 'retreat',
+      priority: true,
+      travelT: FINAL_PUSH_TO_INHIB_TRAVEL_T,
+    })
+    // last stand: survivors fall back to their nexus once the line breaks
+    orders.push({
+      t: breakthroughT,
+      location: jittered(ownNexus, rng, 4),
       holdUntil: BATTLE_TOTAL_GAME_SECONDS,
       kind: 'retreat',
       priority: true,
+      travelT: FINAL_PUSH_LAST_STAND_TRAVEL_T,
     })
   }
 
@@ -233,11 +261,10 @@ function buildChampionSchedule(
   for (const order of orders) {
     if (order.t <= cursorT && !order.priority) continue
     const travelStart = order.priority ? order.t - 1 : Math.max(cursorT, order.t - 1)
-    const isPush = order.kind === 'push' || order.kind === 'retreat'
-    const path = isPush
-      ? pushPath(cursorPos, order.location, rng, endgameRoute)
+    const path = order.via
+      ? [cursorPos, ...order.via.map((p) => jittered(p, rng, 1.5)), order.location]
       : [cursorPos, jittered(midpoint(cursorPos, order.location), rng, 5), order.location]
-    const travelEnd = Math.min(order.holdUntil, travelStart + (isPush ? MOVE_PUSH_TRAVEL_T : 120))
+    const travelEnd = Math.min(order.holdUntil, travelStart + (order.travelT ?? MOVE_ORDER_TRAVEL_T))
     segments.push({ tStart: travelStart, tEnd: travelEnd, path, kind: order.kind })
     cursorPos = order.location
     cursorT = Math.max(travelEnd, order.holdUntil)
@@ -277,12 +304,6 @@ function winnerKillRoute(timeline: BattleTimeline): MapPoint[] {
     }
   }
   return killRoutePoints(loser, 'mid')
-}
-
-/** Endgame push/retreat walks structure to structure along the kill route. */
-function pushPath(from: MapPoint, to: MapPoint, rng: () => number, route: MapPoint[]): MapPoint[] {
-  const via = route.slice(0, -1).map((p) => jittered(p, rng, 1.5))
-  return [from, ...via, to]
 }
 
 function positionFromSegments(segments: MovementSegment[], t: number): MapPoint | null {

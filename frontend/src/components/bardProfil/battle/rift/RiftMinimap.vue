@@ -203,7 +203,12 @@
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
-import { DRAKE_POS, BARON_POS, STRUCTURE_BURST_GAME_SECONDS } from '@/config/constants'
+import {
+  DRAKE_POS,
+  BARON_POS,
+  STRUCTURE_BURST_GAME_SECONDS,
+  FINAL_PUSH_START_T,
+} from '@/config/constants'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION } from '@/config/battleRoutes'
 import {
   ALL_STRUCTURE_IDS,
@@ -297,9 +302,12 @@ interface LaneHighlight {
   routeOwner: 1 | 2
 }
 
-// the match winner, revealed only once the baron has resolved (no spoilers)
+// the match winner, revealed only once the final push begins at the 50:00
+// mark (baron must also have resolved — no spoilers)
 const revealedWinner = computed<1 | 2 | null>(() =>
-  battleStore.baronKilledByTeam !== null ? (battleStore.timeline?.winner ?? null) : null,
+  battleStore.baronKilledByTeam !== null && battleStore.battleTime >= FINAL_PUSH_START_T
+    ? (battleStore.timeline?.winner ?? null)
+    : null,
 )
 
 const laneHighlights = computed<LaneHighlight[]>(() => {

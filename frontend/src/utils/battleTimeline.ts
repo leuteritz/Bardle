@@ -6,6 +6,7 @@ import {
   nextNexusTurret,
   canFallNexusTurret,
   parseStructureId,
+  structureId,
   destroyedStructuresUpTo,
   laneProgress,
   crackedLaneOf,
@@ -15,8 +16,9 @@ import {
   TIMELINE_LANING_END,
   TIMELINE_DRAKE_WINDOW_END,
   TIMELINE_MIDFIGHT_END,
-  TIMELINE_BARON_END,
   TIMELINE_NEXUS_FALL_T,
+  FINAL_PUSH_FIGHT_T,
+  FINAL_PUSH_FIGHT_HOLD_T,
   TIMELINE_FIRST_BLOOD_MIN_T,
   TIMELINE_FIRST_BLOOD_MAX_T,
   TIMELINE_SOLO_KILL_CHANCE,
@@ -470,24 +472,22 @@ export function generateTimeline(
   const finalProb = Math.max(0.08, Math.min(0.92, 0.5 + ctx.momentum / 2))
   const winner: 1 | 2 = rng() < finalProb ? 1 : 2
 
-  // ── Push / end phase — the winner pushes its already-cracked lane home ──
-  const pushStart = Math.min(
-    Math.max(TIMELINE_BARON_END, baronSpawnT + TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T + 50),
-    TIMELINE_NEXUS_FALL_T - 400,
-  )
+  // ── Final push / end phase — at 50:00 the winner marches the cracked lane,
+  // the loser digs in at its fallen inhibitor, and the last fight happens there ──
   const pushKills = randInt(rng, TIMELINE_PUSH_KILLS_MIN, TIMELINE_PUSH_KILLS_MAX)
   const loserNexus = winner === 1 ? RED_NEXUS : BLUE_NEXUS
   const loser = (3 - winner) as 1 | 2
   // the lane whose loser inhibitor is down — a very late reseed can leave the
   // crack unfinished (falls before the cut window are gone); degrade to random
   const pushLane = crackedLaneOf(ctx.destroyed, loser) ?? pick(rng, LANES)
-  emitFight(ctx, randInt(rng, pushStart, pushStart + 200), LANE_FIGHT_POSITIONS[pushLane], pushKills, {
+  const defensePoint = STRUCTURE_POSITIONS[structureId(loser, pushLane, 'inhibitor')]
+  emitFight(ctx, randInt(rng, FINAL_PUSH_FIGHT_T, FINAL_PUSH_FIGHT_T + 40), defensePoint, pushKills, {
     lane: pushLane,
     biasTeam: winner,
   })
 
-  // ── Nexus turrets — fall after the baron resolves, gated on the inhibitor ──
-  let tNex = Math.max(pushStart, baronSpawnT + TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T)
+  // ── Nexus turrets — fall after the defense fight breaks, gated on the inhibitor ──
+  let tNex = FINAL_PUSH_FIGHT_T + FINAL_PUSH_FIGHT_HOLD_T
   for (let i = 0; i < 2; i++) {
     tNex = Math.min(
       tNex + randInt(rng, TIMELINE_NEXUS_TURRET_DELAY_MIN_T, TIMELINE_NEXUS_TURRET_DELAY_MAX_T),

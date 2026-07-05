@@ -13,7 +13,11 @@ import {
   RED_NEXUS,
   MOVE_RESPAWN_WALK_SECONDS,
   BATTLE_TOTAL_GAME_SECONDS,
+  FINAL_PUSH_START_T,
+  FINAL_PUSH_DEFENDER_LEAD_T,
+  FINAL_PUSH_FIGHT_T,
 } from '@/config/constants'
+import { STRUCTURE_POSITIONS, parseStructureId } from '@/utils/battleStructures'
 
 describe('pointAlongPath', () => {
   it('returns endpoints at 0 and 1', () => {
@@ -73,6 +77,43 @@ describe('buildMovementSchedules', () => {
       if (Math.hypot(p.x - enemyNexus.x, p.y - enemyNexus.y) < 15) near++
     }
     expect(near).toBeGreaterThanOrEqual(3)
+  })
+
+  it('the endgame push/retreat never starts before the 50:00 mark', () => {
+    for (const seed of [1, 42, 1337]) {
+      const tl = generateTimeline(seed, 0.55)
+      const scheds = buildMovementSchedules(tl, seed)
+      for (const sched of [...scheds.t1, ...scheds.t2]) {
+        for (const seg of sched) {
+          if (seg.kind !== 'push' && seg.kind !== 'retreat') continue
+          // defenders lead by FINAL_PUSH_DEFENDER_LEAD_T; travel starts at order.t - 1
+          expect(seg.tStart).toBeGreaterThanOrEqual(
+            FINAL_PUSH_START_T - FINAL_PUSH_DEFENDER_LEAD_T - 1,
+          )
+        }
+      }
+    }
+  })
+
+  it('both teams converge on the loser inhibitor for the final defense fight', () => {
+    for (const seed of [1, 42, 1337]) {
+      const tl = generateTimeline(seed, 0.55)
+      const scheds = buildMovementSchedules(tl, seed)
+      const loser = tl.winner === 1 ? 2 : 1
+      const inhibEvent = tl.events.find(
+        (e) => e.type === 'inhibitor' && parseStructureId(e.structureId!).ownerTeam === loser,
+      )!
+      const inhib = STRUCTURE_POSITIONS[inhibEvent.structureId!]
+      let alive = 0
+      let near = 0
+      for (const sched of [...scheds.t1, ...scheds.t2]) {
+        const p = positionAt(sched, FINAL_PUSH_FIGHT_T)
+        if (p.kind === 'respawn-walk') continue
+        alive++
+        if (Math.hypot(p.x - inhib.x, p.y - inhib.y) < 12) near++
+      }
+      expect(near).toBeGreaterThanOrEqual(Math.min(alive, 8))
+    }
   })
 
   it('an attacker is at the first turret when it falls', () => {

@@ -14,6 +14,8 @@ import {
   TIMELINE_CRACK_WINDOW_START_T,
   TIMELINE_DRAKE_COUNT_MAX,
   TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
+  FINAL_PUSH_FIGHT_T,
+  FINAL_PUSH_FIGHT_HOLD_T,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   CHAMPION_MAX_LEVEL,
@@ -263,6 +265,32 @@ describe('structure destruction', () => {
       expect(loserInhibs.length).toBeGreaterThanOrEqual(1)
       expect(loserNexusTurrets.length).toBe(2)
       for (const e of [...loserInhibs, ...loserNexusTurrets]) {
+        expect(e.t).toBeLessThan(TIMELINE_NEXUS_FALL_T)
+      }
+    }
+  })
+
+  it('the final defense fight happens at the loser inhibitor in the final push window', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const tl = generateTimeline(seed, 0.5)
+      const loser = tl.winner === 1 ? 2 : 1
+      const finalFights = tl.events.filter((e) => e.type === 'fightStart' && e.t >= FINAL_PUSH_FIGHT_T)
+      expect(finalFights.length).toBe(1)
+      const inhib = tl.events.find(
+        (e) => e.type === 'inhibitor' && parseStructureId(e.structureId!).ownerTeam === loser,
+      )!
+      expect(finalFights[0].location).toEqual(STRUCTURE_POSITIONS[inhib.structureId!])
+      expect(finalFights[0].lane).toBe(parseStructureId(inhib.structureId!).laneKey)
+    }
+  })
+
+  it('nexus turrets fall only after the final defense fight breaks', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const tl = generateTimeline(seed, 0.5)
+      const nexusTurrets = tl.events.filter((e) => e.structureTier === 'nexusTurret')
+      expect(nexusTurrets.length).toBe(2)
+      for (const e of nexusTurrets) {
+        expect(e.t).toBeGreaterThan(FINAL_PUSH_FIGHT_T + FINAL_PUSH_FIGHT_HOLD_T)
         expect(e.t).toBeLessThan(TIMELINE_NEXUS_FALL_T)
       }
     }
