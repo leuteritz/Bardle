@@ -64,6 +64,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
 import { formatNumber } from '@/config/numberFormat'
 import RankBandPanel from './RankBandPanel.vue'
 import MultikillCardsRow from './MultikillCardsRow.vue'
@@ -80,19 +81,10 @@ const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== 
 const hasFullTeam = computed(() => teamProgress.value >= 5)
 const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 
-// Career totals merged with the running battle (display-only; the store's
-// allTime stays untouched — liveBattleStats zeroes out the moment the battle
-// finalizes and accumulateBattleStats() takes over the same numbers).
-const live = computed(() => battleStore.liveBattleStats)
-const kills = computed(() => battleStore.totalKills + live.value.kills)
-const deaths = computed(() => battleStore.totalDeaths + live.value.deaths)
-const assists = computed(() => battleStore.totalAssists + live.value.assists)
-const playtimeGameSeconds = computed(() => battleStore.totalBattleTime + live.value.battleSeconds)
-
-const kdaStr = computed(() => {
-  if (deaths.value === 0) return kills.value + assists.value > 0 ? 'Perfect' : '—'
-  return ((kills.value + assists.value) / deaths.value).toFixed(2)
-})
+// Career totals merged with the running battle — shared with the bottom-bar
+// scoreboard via useBattleScoreboardStats so both always show the same numbers.
+const { live, kills, deaths, assists, playtimeGameSeconds, kdaStr, killPartPct } =
+  useBattleScoreboardStats()
 
 function perMinute(total: number): number {
   return playtimeGameSeconds.value > 0 ? total / (playtimeGameSeconds.value / 60) : 0
@@ -103,7 +95,7 @@ const combatRows = computed<StatRow[]>(() => [
   { label: 'Deaths', value: formatNumber(deaths.value), color: '#fca5a5' },
   { label: 'Assists', value: formatNumber(assists.value), color: '#93c5fd' },
   { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
-  { label: 'Kill Part.', value: `${Math.round(battleStore.avgKillParticipation * 100)}%` },
+  { label: 'Kill Part.', value: `${killPartPct.value}%` },
   {
     label: 'Largest Spree',
     value: formatNumber(Math.max(battleStore.allTime.largestSpree, live.value.largestSpree)),

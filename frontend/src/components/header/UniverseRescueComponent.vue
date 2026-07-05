@@ -41,7 +41,7 @@ watch(
     <!-- HUD Top: Galaxy + Stars stat cards -->
     <div class="hud-top">
       <div class="stat-card stat-card--galaxy">
-        <img src="/img/galaxy.png" class="stat-icon" alt="Galaxie" />
+        <img src="/img/galaxy-far.png" class="stat-icon" alt="Galaxy" />
         <div class="stat-text">
           <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
         </div>

@@ -1,29 +1,45 @@
 <template>
-  <img ref="imgEl" src="/img/galaxie.png" style="display: none" alt="" @load="onImageLoad" />
+  <img ref="imgFarEl" src="/img/galaxy-far.png" style="display: none" alt="" @load="onImageLoad" />
+  <img ref="imgNearEl" src="/img/galaxy-near.png" style="display: none" alt="" @load="onImageLoad" />
   <canvas ref="canvasEl" class="map-canvas" />
   <div class="minimap-vignette" />
 </template>
 
 <script lang="ts">
-/* ── SCRIPT UNVERÄNDERT – identisch zur aktuellen Version ── */
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
-import { GALAXY_TRANS_WARP_MS, GALAXY_TRANS_DECEL_MS, STAR_PHASE_DATA, RESCUE_ROTATION_DURATION_MS, ROLE_COLORS } from '@/config/constants'
+import {
+  GALAXY_TRANS_WARP_MS,
+  GALAXY_TRANS_DECEL_MS,
+  STAR_PHASE_DATA,
+  RESCUE_ROTATION_DURATION_MS,
+  ROLE_COLORS,
+  MINIMAP_FLIGHTPATH_BEND,
+  MINIMAP_SHIP_SIZE,
+  MINIMAP_ORIGIN_SUN_R,
+  MINIMAP_IDLE_SUN_R,
+  MINIMAP_TWINKLE_COUNT,
+  MINIMAP_ZOOM_TRIGGER_MS,
+  MINIMAP_ZOOM_MAX,
+  MINIMAP_ZOOM_LERP,
+  MINIMAP_ZOOM_OUT_LERP,
+  MINIMAP_DEPARTURE_TRANSITION_MS,
+  MINIMAP_LAYER2_WORLD_SCALE,
+  MINIMAP_LAYER1_FADE,
+  MINIMAP_LAYER2_FADE,
+  MINIMAP_TARGET_BASE_R,
+  MINIMAP_WAIT_SUN_R,
+} from '@/config/constants'
 
-const MAP_WORLD_DEFAULT = 0.3
-const MAP_WORLD_ZOOMED = 0.14
-const ZOOM_TRIGGER_MS = 20_000
-const ZOOM_FULL_MS = 1_000
-const ZOOM_LERP_SPEED = 0.04
 const ARRIVAL_TRANSITION_MS = 900
 
 function seededRng(seed: number) {
@@ -312,8 +328,32 @@ function drawPlanet(
   }
 }
 
-function easeInOut(t: number) {
-  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+/** Small pulsing sun marker (player origin / idle position) in the mock's gold palette. */
+function drawMiniSun(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  nowMs: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 540)
+  const glowR = r * (2.4 + 0.5 * pulse)
+  const glow = ctx.createRadialGradient(x, y, r * 0.4, x, y, glowR)
+  glow.addColorStop(0, `rgba(255, 180, 60, ${0.4 + 0.2 * pulse})`)
+  glow.addColorStop(1, 'rgba(255, 180, 60, 0)')
+  ctx.beginPath()
+  ctx.arc(x, y, glowR, 0, Math.PI * 2)
+  ctx.fillStyle = glow
+  ctx.fill()
+
+  const body = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r)
+  body.addColorStop(0, '#fff6d8')
+  body.addColorStop(0.58, '#ffcf5a')
+  body.addColorStop(1, '#c8791f')
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fillStyle = body
+  ctx.fill()
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -321,6 +361,66 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   return `rgba(${r},${g},${b},${alpha})`
+}
+
+/** Player sun rendered in its current phase palette (STAR_PHASE_DATA). */
+function drawPhaseSun(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  phase: (typeof STAR_PHASE_DATA)[number],
+  nowMs: number,
+) {
+  const pulseMs = (parseFloat(phase.pulseSpeed) * 1000) / (Math.PI * 2)
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+
+  // Outer corona
+  const coroR = r * (3.2 + 0.4 * pulse)
+  const outerCorona = ctx.createRadialGradient(x, y, r * 0.85, x, y, coroR)
+  outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
+  outerCorona.addColorStop(0.5, hexToRgba(phase.glow2, 0.09))
+  outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(x, y, coroR, 0, Math.PI * 2)
+  ctx.fillStyle = outerCorona
+  ctx.fill()
+
+  // Inner halo
+  const innerHalo = ctx.createRadialGradient(x, y, r * 0.55, x, y, r * 2.2)
+  innerHalo.addColorStop(0, hexToRgba(phase.core, 0.6))
+  innerHalo.addColorStop(0.4, hexToRgba(phase.glow1, 0.22))
+  innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(x, y, r * 2.2, 0, Math.PI * 2)
+  ctx.fillStyle = innerHalo
+  ctx.fill()
+
+  // Body
+  const bodyGrad = ctx.createRadialGradient(x - r * 0.28, y - r * 0.3, r * 0.05, x, y, r)
+  bodyGrad.addColorStop(0, phase.core)
+  bodyGrad.addColorStop(0.5, phase.mid)
+  bodyGrad.addColorStop(1, phase.edge)
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fillStyle = bodyGrad
+  ctx.fill()
+
+  // Rim highlight
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.strokeStyle = `rgba(255,255,220,${(0.35 + 0.15 * pulse).toFixed(3)})`
+  ctx.lineWidth = 1.2
+  ctx.stroke()
+}
+
+function smoothstep(v: number, a: number, b: number): number {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+
+function easeInOut(t: number) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
 
 export default defineComponent({
@@ -343,20 +443,19 @@ export default defineComponent({
     }
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
-    const imgEl = ref<HTMLImageElement | null>(null)
+    const imgFarEl = ref<HTMLImageElement | null>(null)
+    const imgNearEl = ref<HTMLImageElement | null>(null)
     const dotPositions = ref<DotPos[]>([])
     const rescueOrder = ref<number[]>([])
     const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
-    const currentMapVisible = ref(MAP_WORLD_DEFAULT)
 
     let rafId: number | null = null
     let pulseFrame = 0
     let rafLastPulseMs = 0
 
-    const TRAIL_MIN_DIST = 0.0008
-    const TRAIL_MAX_PTS = 60
-    let playerTrail: Array<{ wx: number; wy: number }> = []
-    let trailLastPos = { wx: -1, wy: -1 }
+    // Camera (world-space center + zoom). zoom 1 = whole galaxy visible;
+    // during the final travel phase it eases toward the destination star.
+    const camera = { x: 0.5, y: 0.5, zoom: 1 }
 
     let hyperspacePhase: HyperspacePhase = 'idle'
     let hyperspacePhaseStart = 0
@@ -364,6 +463,7 @@ export default defineComponent({
     let warpLastFrameMs = 0
     let warpParticles: WarpParticle[] = []
     let arrivalTransitionStart = -1
+    let departureTransitionStart = -1
 
     const show = computed(
       () =>
@@ -543,72 +643,91 @@ export default defineComponent({
     }
 
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      const img = imgEl.value
+      const img = imgFarEl.value
       if (!img || !img.complete) return
       const dots = dotPositions.value
       const order = rescueOrder.value
       const rescued = Math.min(galaxyStore.starsRescued, dots.length)
       const isTraveling = galaxyStore.championTravelState === 'traveling'
-      const player = getPlayerWorldPos(dots, order, rescued)
-      const scale = w / currentMapVisible.value
+      const nowMs = Date.now()
+      const targetIdx = rescued < dots.length ? order[rescued] : -1
 
+      // Static map with a soft camera: world coords (0..1) map onto the
+      // canvas relative to the camera center + zoom (no rotation). At
+      // zoom 1 / center (0.5, 0.5) the whole galaxy is visible; the base
+      // stays transparent so the unified bar background shows through.
+      const cam = camera
       function wToC(wx: number, wy: number): [number, number] {
-        return [w / 2 + (wx - player.x) * scale, h / 2 + (wy - player.y) * scale]
+        return [w / 2 + (wx - cam.x) * w * cam.zoom, h / 2 + (wy - cam.y) * h * cam.zoom]
       }
 
-      const isMoving = isTraveling || galaxyStore.isBossSearchActive
-      if (galaxyStore.isRescueRotating) {
-        // nichts
-      } else if (isMoving) {
-        const dx = player.x - trailLastPos.wx
-        const dy = player.y - trailLastPos.wy
-        const moved = Math.sqrt(dx * dx + dy * dy)
-        if (trailLastPos.wx === -1 || moved > TRAIL_MIN_DIST) {
-          playerTrail.push({ wx: player.x, wy: player.y })
-          if (playerTrail.length > TRAIL_MAX_PTS) playerTrail.shift()
-          trailLastPos = { wx: player.x, wy: player.y }
+      // Layered zoom: layer 1 (far overview) fades out while layer 2
+      // (deep star field anchored on the target star) fades in beneath it.
+      const farAlpha = 1 - smoothstep(cam.zoom, MINIMAP_LAYER1_FADE[0], MINIMAP_LAYER1_FADE[1])
+      const nearAlpha = smoothstep(cam.zoom, MINIMAP_LAYER2_FADE[0], MINIMAP_LAYER2_FADE[1])
+
+      // Layer 1 — galaxy overview sprite, centered on world 0.5/0.5
+      if (farAlpha > 0.01) {
+        const iw = img.naturalWidth || img.width
+        const ih = img.naturalHeight || img.height
+        if (iw > 0 && ih > 0) {
+          const cover = Math.max(w / iw, h / ih) * 1.08
+          const dw = iw * cover * cam.zoom
+          const dh = ih * cover * cam.zoom
+          const [gx, gy] = wToC(0.5, 0.5)
+          ctx.globalAlpha = 0.9 * farAlpha
+          ctx.drawImage(img, gx - dw / 2, gy - dh / 2, dw, dh)
+          ctx.globalAlpha = 1
         }
-      } else {
-        playerTrail = []
-        trailLastPos = { wx: -1, wy: -1 }
       }
 
-      ctx.fillStyle = '#1a0c02'
-      ctx.fillRect(0, 0, w, h)
-
-      const imgW = scale
-      const imgH = scale
-      const imgX = w / 2 - player.x * imgW
-      const imgY = h / 2 - player.y * imgH
-      ctx.drawImage(img, imgX, imgY, imgW, imgH)
+      // Layer 2 — deep star field growing out of the destination
+      const nearImg = imgNearEl.value
+      if (nearAlpha > 0.01 && nearImg && nearImg.complete) {
+        const niw = nearImg.naturalWidth || nearImg.width
+        const nih = nearImg.naturalHeight || nearImg.height
+        if (niw > 0 && nih > 0) {
+          const anchor = targetIdx >= 0 ? dots[targetIdx] : { x: 0.5, y: 0.5 }
+          const coverN = Math.max(w / niw, h / nih) * 1.08 * MINIMAP_LAYER2_WORLD_SCALE
+          const dw = niw * coverN * cam.zoom
+          const dh = nih * coverN * cam.zoom
+          const [gx, gy] = wToC(anchor.x, anchor.y)
+          ctx.globalAlpha = 0.92 * nearAlpha
+          ctx.drawImage(nearImg, gx - dw / 2, gy - dh / 2, dw, dh)
+          ctx.globalAlpha = 1
+        }
+      }
 
       const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
       ctx.globalCompositeOperation = 'source-over'
-      ctx.fillStyle = theme.nebulaColors[0].replace(/,\s*[\d.]+\)/, ', 0.28)')
+      ctx.fillStyle = theme.nebulaColors[0].replace(/,\s*[\d.]+\)/, ', 0.18)')
       ctx.fillRect(0, 0, w, h)
       ctx.globalCompositeOperation = 'source-over'
 
-      if (playerTrail.length >= 2) {
-        for (let i = 1; i < playerTrail.length; i++) {
-          const ratio = i / (playerTrail.length - 1)
-          const alpha = ratio * 0.8
-          const lw = ratio * 3.5 + 0.4
-          const [x1, y1] = wToC(playerTrail[i - 1].wx, playerTrail[i - 1].wy)
-          const [x2, y2] = wToC(playerTrail[i].wx, playerTrail[i].wy)
-          ctx.beginPath()
-          ctx.strokeStyle = `rgba(255, 210, 55, ${alpha})`
-          ctx.lineWidth = lw
-          ctx.lineCap = 'round'
-          ctx.shadowColor = `rgba(255, 180, 30, ${ratio * 0.5})`
-          ctx.shadowBlur = ratio * 6
-          ctx.moveTo(x1, y1)
-          ctx.lineTo(x2, y2)
-          ctx.stroke()
-        }
-        ctx.shadowBlur = 0
+      // Seeded twinkling background stars
+      const twRng = seededRng(galaxyStore.currentGalaxy * 52361 + 7)
+      for (let i = 0; i < MINIMAP_TWINKLE_COUNT; i++) {
+        const tx = twRng() * w
+        const ty = twRng() * h
+        const phase = twRng() * Math.PI * 2
+        const period = 2200 + twRng() * 2600
+        const size = 0.8 + twRng() * 1.0
+        const tint = twRng()
+        const a = 0.2 + 0.55 * (0.5 + 0.5 * Math.sin((nowMs / period) * Math.PI * 2 + phase))
+        ctx.beginPath()
+        ctx.arc(tx, ty, size, 0, Math.PI * 2)
+        ctx.fillStyle =
+          tint < 0.33
+            ? `rgba(255, 233, 176, ${a.toFixed(3)})`
+            : tint < 0.66
+              ? `rgba(207, 224, 255, ${a.toFixed(3)})`
+              : `rgba(255, 255, 255, ${a.toFixed(3)})`
+        ctx.fill()
       }
 
-      if (rescued >= 2) {
+      if (rescued >= 2 && farAlpha > 0.01) {
+        ctx.save()
+        ctx.globalAlpha = farAlpha
         ctx.beginPath()
         ctx.strokeStyle = 'rgba(232, 192, 64, 0.55)'
         ctx.lineWidth = 2
@@ -620,36 +739,66 @@ export default defineComponent({
           else ctx.lineTo(sx, sy)
         }
         ctx.stroke()
+        ctx.restore()
       }
 
-      const targetIdx = rescued < dots.length ? order[rescued] : -1
-      if (targetIdx >= 0 && isTraveling && rescued > 0) {
-        const [lx, ly] = wToC(dots[order[rescued - 1]].x, dots[order[rescued - 1]].y)
-        const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        ctx.beginPath()
-        ctx.setLineDash([3, 5])
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'
-        ctx.lineWidth = 1.5
-        ctx.moveTo(lx, ly)
-        ctx.lineTo(tx, ty)
-        ctx.stroke()
-        ctx.setLineDash([])
+      // Current flight leg as a curved, dashed gold path (origin → next star)
+      let flight: {
+        x0: number
+        y0: number
+        cx: number
+        cy: number
+        x2: number
+        y2: number
+      } | null = null
+      if (targetIdx >= 0 && isTraveling) {
+        const from = rescued > 0 ? dots[order[rescued - 1]] : spawnPos.value
+        const [x0, y0] = wToC(from.x, from.y)
+        const [x2, y2] = wToC(dots[targetIdx].x, dots[targetIdx].y)
+        const dx = x2 - x0
+        const dy = y2 - y0
+        const len = Math.sqrt(dx * dx + dy * dy)
+        if (len > 1) {
+          const bend = len * MINIMAP_FLIGHTPATH_BEND
+          const cx = (x0 + x2) / 2 - (dy / len) * bend
+          const cy = (y0 + y2) / 2 + (dx / len) * bend
+          flight = { x0, y0, cx, cy, x2, y2 }
+          ctx.beginPath()
+          ctx.setLineDash([4, 7])
+          ctx.lineDashOffset = -((nowMs / 55) % 11)
+          ctx.strokeStyle = 'rgba(255, 210, 120, 0.4)'
+          ctx.lineWidth = 2
+          ctx.lineCap = 'round'
+          ctx.moveTo(x0, y0)
+          ctx.quadraticCurveTo(cx, cy, x2, y2)
+          ctx.stroke()
+          ctx.setLineDash([])
+          ctx.lineDashOffset = 0
+        }
       }
 
+      // Overview markers belong to layer 1 → fade with the far layer
       const rescuedSet = new Set(order.slice(0, rescued))
       const galaxySeed = galaxyStore.currentGalaxy * 10007
-      for (let i = 0; i < dots.length; i++) {
-        if (rescuedSet.has(i)) continue
-        if (targetIdx === i) continue
-        const [sx, sy] = wToC(dots[i].x, dots[i].y)
-        drawPlanet(ctx, sx, sy, 16, galaxySeed + i, 'unrescued', false, STAR_PALETTE)
-      }
-      for (let i = 0; i < rescued; i++) {
-        const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-        drawPlanet(ctx, sx, sy, 19, galaxySeed + order[i], 'rescued')
+      if (farAlpha > 0.01) {
+        ctx.save()
+        ctx.globalAlpha = farAlpha
+        for (let i = 0; i < dots.length; i++) {
+          if (rescuedSet.has(i)) continue
+          if (targetIdx === i) continue
+          const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          drawPlanet(ctx, sx, sy, 9, galaxySeed + i, 'unrescued', false, STAR_PALETTE)
+        }
+        for (let i = 0; i < rescued; i++) {
+          const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
+          drawPlanet(ctx, sx, sy, 11, galaxySeed + order[i], 'rescued')
+        }
+        ctx.restore()
       }
 
-      if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive) {
+      if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive && farAlpha > 0.01) {
+        ctx.save()
+        ctx.globalAlpha = farAlpha
         const [bx, by] = wToC(0.5, 0.5)
         if (rescued > 0) {
           const last = dots[order[rescued - 1]]
@@ -689,6 +838,7 @@ export default defineComponent({
         ctx.textBaseline = 'middle'
         ctx.fillStyle = '#ff6040'
         ctx.fillText('☠', bx, by)
+        ctx.restore()
       }
 
       if (targetIdx >= 0 && isTraveling) {
@@ -701,32 +851,51 @@ export default defineComponent({
         } else if (nextRole && ROLE_COLORS[nextRole]) {
           targetPal = rolePaletteFromHex(ROLE_COLORS[nextRole])
         }
+        // the destination grows with the camera zoom so the full zoom-in
+        // hands over seamlessly to the arrival star (≈ ARRIVAL_STAR_R)
+        const targetR = MINIMAP_TARGET_BASE_R * cam.zoom
         drawPlanet(
           ctx,
           tx,
           ty,
-          22,
+          targetR,
           galaxySeed + targetIdx,
           'target',
           pulseFrame === 1,
           targetPal,
         )
+
+        // "NEXT STAR" tag above the destination — fades out while zooming in
+        const labelAlpha = Math.max(0, Math.min(1, 1 - (cam.zoom - 1)))
+        if (labelAlpha > 0.02) {
+          ctx.font = '10px MedievalSharp, serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.fillStyle = `rgba(255, 207, 90, ${(0.92 * labelAlpha).toFixed(3)})`
+          ctx.shadowColor = 'rgba(0,0,0,0.9)'
+          ctx.shadowBlur = 4
+          ctx.fillText('N E X T   S T A R', tx, ty - targetR - 11)
+          ctx.shadowBlur = 0
+        }
       }
 
       if (galaxyStore.isBossSearchActive) {
-        const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 400)
+        // Purple search marker at the interpolated search position
+        const searchPos = galaxyStore.bossSearchInterpolatedPos
+        const [bx, by] = wToC(searchPos.x, searchPos.y)
+        const pulse = 0.6 + 0.4 * Math.sin(nowMs / 400)
         for (const [r, a] of [
           [20, 0.08 * pulse],
           [14, 0.18 * pulse],
           [10, 0.28 * pulse],
         ] as [number, number][]) {
           ctx.beginPath()
-          ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2)
+          ctx.arc(bx, by, r, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(120,80,255,${a})`
           ctx.fill()
         }
         ctx.beginPath()
-        ctx.arc(w / 2, h / 2, 8, 0, Math.PI * 2)
+        ctx.arc(bx, by, 8, 0, Math.PI * 2)
         ctx.fillStyle = '#2a0f6a'
         ctx.fill()
         ctx.strokeStyle = `rgba(160,110,255,${0.8 + 0.2 * pulse})`
@@ -738,39 +907,50 @@ export default defineComponent({
         ctx.fillStyle = `rgba(200,160,255,${0.75 + 0.25 * pulse})`
         ctx.shadowColor = 'rgba(140,80,255,0.9)'
         ctx.shadowBlur = 8
-        ctx.fillText('?', w / 2, h / 2)
+        ctx.fillText('?', bx, by)
         ctx.shadowBlur = 0
-      } else {
-        ctx.shadowColor = 'rgba(232,192,64,0.95)'
-        ctx.shadowBlur = 16
-        ctx.beginPath()
-        ctx.arc(w / 2, h / 2, 13, 0, Math.PI * 2)
-        ctx.fillStyle = '#ffe060'
-        ctx.fill()
-        ctx.strokeStyle = '#ffffff'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        ctx.shadowBlur = 0
-      }
-
-      if (targetIdx >= 0 && isTraveling) {
-        const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
-        const dx = tx - w / 2
-        const dy = ty - h / 2
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist > 14) {
-          const nx = dx / dist
-          const ny = dy / dist
-          const ax = w / 2 + nx * 11
-          const ay = h / 2 + ny * 11
-          ctx.beginPath()
-          ctx.moveTo(ax, ay)
-          ctx.lineTo(ax - ny * 3 - nx * 4, ay + nx * 3 - ny * 4)
-          ctx.lineTo(ax + ny * 3 - nx * 4, ay - nx * 3 - ny * 4)
-          ctx.closePath()
-          ctx.fillStyle = 'rgba(255,230,80,0.85)'
-          ctx.fill()
+      } else if (flight) {
+        // Player-sun at the flight origin (overview element — fades with layer 1)
+        if (farAlpha > 0.01) {
+          ctx.save()
+          ctx.globalAlpha = farAlpha
+          drawMiniSun(ctx, flight.x0, flight.y0, MINIMAP_ORIGIN_SUN_R, nowMs)
+          ctx.restore()
         }
+
+        // … and the ship travelling along the quadratic flight path
+        const startTime = galaxyStore.championTravelStartTime
+        const duration = galaxyStore.championTravelDurationMs
+        const t =
+          startTime > 0 && duration > 0 ? Math.min((nowMs - startTime) / duration, 1) : 0
+        const mt = 1 - t
+        const sx = mt * mt * flight.x0 + 2 * mt * t * flight.cx + t * t * flight.x2
+        const sy = mt * mt * flight.y0 + 2 * mt * t * flight.cy + t * t * flight.y2
+        const dxT = 2 * mt * (flight.cx - flight.x0) + 2 * t * (flight.x2 - flight.cx)
+        const dyT = 2 * mt * (flight.cy - flight.y0) + 2 * t * (flight.y2 - flight.cy)
+        const angle = Math.atan2(dyT, dxT)
+
+        const shipSize = MINIMAP_SHIP_SIZE * Math.sqrt(cam.zoom)
+        ctx.save()
+        ctx.translate(sx, sy)
+        ctx.rotate(angle)
+        ctx.shadowColor = 'rgba(224, 80, 80, 0.85)'
+        ctx.shadowBlur = 8
+        ctx.beginPath()
+        ctx.moveTo(shipSize, 0)
+        ctx.lineTo(-shipSize * 0.55, -shipSize * 0.65)
+        ctx.lineTo(-shipSize * 0.55, shipSize * 0.65)
+        ctx.closePath()
+        ctx.fillStyle = '#e05050'
+        ctx.fill()
+        ctx.shadowBlur = 0
+        ctx.restore()
+      } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
+        // Idle: player-sun at the current position (the waiting screen draws
+        // its own departure beacon at the flight origin instead)
+        const player = getPlayerWorldPos(dots, order, rescued)
+        const [px, py] = wToC(player.x, player.y)
+        drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, nowMs)
       }
     }
 
@@ -813,8 +993,13 @@ export default defineComponent({
       const cy = h / 2
       const nowMs = Date.now()
 
-      // Dark space background
-      ctx.fillStyle = '#06040e'
+      // Deep-space glow that fades out toward the edges so the unified
+      // bar background stays visible around the star system
+      const space = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.62)
+      space.addColorStop(0, 'rgba(6, 4, 14, 0.88)')
+      space.addColorStop(0.72, 'rgba(6, 4, 14, 0.5)')
+      space.addColorStop(1, 'rgba(6, 4, 14, 0)')
+      ctx.fillStyle = space
       ctx.fillRect(0, 0, w, h)
 
       // Seeded background star field
@@ -996,88 +1181,44 @@ export default defineComponent({
     }
 
     function drawRotationTransition(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      const cx = w / 2
-      const cy = h / 2
       const nowMs = Date.now()
       const elapsed = Math.max(0, nowMs - galaxyStore.rescueRotationStartTime)
       const t = Math.min(elapsed / RESCUE_ROTATION_DURATION_MS, 1)
       const te = easeInOut(t)
 
-      // Layer 1: normal travel map fading in
-      ctx.save()
-      ctx.globalAlpha = te
+      // The galaxy map stays visible throughout — the waiting screen already
+      // shows it. The player sun glides from the center to the flight origin,
+      // shrinking down to the small departure marker while launch streaks fire.
       drawNormalMap(ctx, w, h)
-      ctx.restore()
 
-      // Layer 2: waiting-state sun fading out + shrinking + launch streaks
       if (te < 0.99) {
         const fade = 1 - te
+        const origin = getFlightOrigin()
+        const bx = w / 2 + (origin.x * w - w / 2) * te
+        const by = h / 2 + (origin.y * h - h / 2) * te
+        const sunR = MINIMAP_WAIT_SUN_R + (MINIMAP_IDLE_SUN_R - MINIMAP_WAIT_SUN_R) * te
+
+        // Contrast scrim fades out as the sun docks at its departure point
+        drawSunScrim(ctx, bx, by, sunR, fade)
+
         const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
-        const sunR = 13 + (46 - 13) * (1 - te)
-        const pulseMs = parseFloat(phase.pulseSpeed) * 1000 / (Math.PI * 2)
-        const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+        drawPhaseSun(ctx, bx, by, sunR, phase, nowMs)
 
-        ctx.save()
-        ctx.globalAlpha = fade
-
-        // Outer corona
-        const coroR = sunR * (3.2 + 0.3 * pulse)
-        const outerCorona = ctx.createRadialGradient(cx, cy, sunR * 0.85, cx, cy, coroR)
-        outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
-        outerCorona.addColorStop(0.5, hexToRgba(phase.glow2, 0.08))
-        outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.beginPath()
-        ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
-        ctx.fillStyle = outerCorona
-        ctx.fill()
-
-        // Inner halo (boosted — launch ignition)
-        const innerHalo = ctx.createRadialGradient(cx, cy, sunR * 0.5, cx, cy, sunR * 2.4)
-        innerHalo.addColorStop(0, hexToRgba(phase.core, 0.85))
-        innerHalo.addColorStop(0.35, hexToRgba(phase.glow1, 0.45))
-        innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.beginPath()
-        ctx.arc(cx, cy, sunR * 2.4, 0, Math.PI * 2)
-        ctx.fillStyle = innerHalo
-        ctx.fill()
-
-        // Sun body
-        const bodyGrad = ctx.createRadialGradient(
-          cx - sunR * 0.28, cy - sunR * 0.3, sunR * 0.05,
-          cx, cy, sunR,
-        )
-        bodyGrad.addColorStop(0, phase.core)
-        bodyGrad.addColorStop(0.5, phase.mid)
-        bodyGrad.addColorStop(1, phase.edge)
-        ctx.beginPath()
-        ctx.arc(cx, cy, sunR, 0, Math.PI * 2)
-        ctx.fillStyle = bodyGrad
-        ctx.fill()
-
-        // Rim
-        ctx.beginPath()
-        ctx.arc(cx, cy, sunR, 0, Math.PI * 2)
-        ctx.strokeStyle = `rgba(255,255,220,${(0.4 + 0.2 * pulse).toFixed(3)})`
-        ctx.lineWidth = 1.0
-        ctx.stroke()
-
-        ctx.restore()
-
-        // Radial launch streaks (grow longer as t increases, then fade with sun)
+        // Radial launch streaks (grow longer as t increases, then fade out)
         const numStreaks = 8
-        const streakBaseLen = sunR * (1.2 + te * 3.5)
+        const streakBaseLen = sunR * (1.2 + te * 5)
         const streakAlpha = te * 0.55 * fade
         const streakOffset = galaxyStore.rescueRotationDirection * te * Math.PI * 0.5
         for (let i = 0; i < numStreaks; i++) {
           const angle = (i / numStreaks) * Math.PI * 2 + streakOffset
           const startR = sunR * 1.15
           const endR = startR + streakBaseLen
-          const sx = cx + Math.cos(angle) * startR
-          const sy = cy + Math.sin(angle) * startR
-          const ex = cx + Math.cos(angle) * endR
-          const ey = cy + Math.sin(angle) * endR
+          const sx = bx + Math.cos(angle) * startR
+          const sy = by + Math.sin(angle) * startR
+          const ex = bx + Math.cos(angle) * endR
+          const ey = by + Math.sin(angle) * endR
           const grad = ctx.createLinearGradient(sx, sy, ex, ey)
-          grad.addColorStop(0, hexToRgba(phase.glow1, streakAlpha))
+          grad.addColorStop(0, `rgba(255, 210, 120, ${streakAlpha.toFixed(3)})`)
           grad.addColorStop(1, 'rgba(0,0,0,0)')
           ctx.beginPath()
           ctx.strokeStyle = grad
@@ -1089,39 +1230,50 @@ export default defineComponent({
       }
     }
 
+    /** World position the next flight departs from (last rescued star or spawn). */
+    function getFlightOrigin(): DotPos {
+      const dots = dotPositions.value
+      const order = rescueOrder.value
+      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
+      return rescued > 0 ? dots[order[rescued - 1]] : spawnPos.value
+    }
+
+    /** Dark radial scrim behind the sun so it stays readable on the golden
+     *  galaxy sprite (yellow-on-yellow contrast fix). */
+    function drawSunScrim(
+      ctx: CanvasRenderingContext2D,
+      x: number,
+      y: number,
+      r: number,
+      alpha: number,
+    ) {
+      const scrim = ctx.createRadialGradient(x, y, 0, x, y, r * 3.5)
+      scrim.addColorStop(0, `rgba(6, 4, 14, ${(0.65 * alpha).toFixed(3)})`)
+      scrim.addColorStop(0.6, `rgba(6, 4, 14, ${(0.42 * alpha).toFixed(3)})`)
+      scrim.addColorStop(1, 'rgba(6, 4, 14, 0)')
+      ctx.beginPath()
+      ctx.arc(x, y, r * 3.5, 0, Math.PI * 2)
+      ctx.fillStyle = scrim
+      ctx.fill()
+    }
+
     function drawWaitingState(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const nowMs = Date.now()
       const cx = w / 2
       const cy = h / 2
-      const nowMs = Date.now()
 
-      // Deep space background
-      ctx.fillStyle = '#06040e'
-      ctx.fillRect(0, 0, w, h)
+      // The galaxy overview IS the waiting screen — the flight departs from
+      // here once a role is chosen ("Choose your Role" label is a DOM overlay).
+      drawNormalMap(ctx, w, h)
 
-      // Seeded star field (60 stars, matching arrival view density)
-      const bgRng = seededRng(galaxyStore.currentGalaxy * 77771)
-      for (let i = 0; i < 60; i++) {
-        const bx = bgRng() * w
-        const by = bgRng() * h
-        const br = 0.5 + bgRng() * 0.7
-        const ba = 0.2 + bgRng() * 0.4
-        const bc = 180 + Math.floor(bgRng() * 75)
-        ctx.beginPath()
-        ctx.arc(bx, by, br, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${bc}, ${bc + 10}, 255, ${ba.toFixed(2)})`
-        ctx.fill()
-      }
-
-      const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
-      const WAIT_SUN_R = 46
-      const pulseMs = parseFloat(phase.pulseSpeed) * 1000 / (Math.PI * 2)
-      const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
+      // Centered player sun in its current phase state, on a dark scrim
+      drawSunScrim(ctx, cx, cy, MINIMAP_WAIT_SUN_R, 1)
 
       // Expanding gold ripple rings — "waiting for input" beacon
       for (let ring = 0; ring < 3; ring++) {
         const rippleT = (nowMs / 2200 + ring / 3) % 1
-        const rippleR = WAIT_SUN_R * (1.5 + rippleT * 2.5)
-        const rippleA = (1 - rippleT) * 0.28
+        const rippleR = MINIMAP_WAIT_SUN_R * (1.5 + rippleT * 2.5)
+        const rippleA = (1 - rippleT) * 0.3
         ctx.beginPath()
         ctx.arc(cx, cy, rippleR, 0, Math.PI * 2)
         ctx.strokeStyle = `rgba(232,192,64,${rippleA.toFixed(3)})`
@@ -1129,47 +1281,8 @@ export default defineComponent({
         ctx.stroke()
       }
 
-      // Outer corona (large diffuse glow — phase colors)
-      const coroR = WAIT_SUN_R * (3.6 + 0.4 * pulse)
-      const outerCorona = ctx.createRadialGradient(cx, cy, WAIT_SUN_R * 0.85, cx, cy, coroR)
-      outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
-      outerCorona.addColorStop(0.45, hexToRgba(phase.glow2, 0.1))
-      outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.beginPath()
-      ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
-      ctx.fillStyle = outerCorona
-      ctx.fill()
-
-      // Inner halo (tighter, warmer)
-      const innerHalo = ctx.createRadialGradient(cx, cy, WAIT_SUN_R * 0.6, cx, cy, WAIT_SUN_R * 2.2)
-      innerHalo.addColorStop(0, hexToRgba(phase.core, 0.6))
-      innerHalo.addColorStop(0.4, hexToRgba(phase.glow1, 0.22))
-      innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.beginPath()
-      ctx.arc(cx, cy, WAIT_SUN_R * 2.2, 0, Math.PI * 2)
-      ctx.fillStyle = innerHalo
-      ctx.fill()
-
-      // Sun body (phase core → mid → edge)
-      const bodyGrad = ctx.createRadialGradient(
-        cx - WAIT_SUN_R * 0.28, cy - WAIT_SUN_R * 0.3, WAIT_SUN_R * 0.05,
-        cx, cy, WAIT_SUN_R,
-      )
-      bodyGrad.addColorStop(0, phase.core)
-      bodyGrad.addColorStop(0.5, phase.mid)
-      bodyGrad.addColorStop(1, phase.edge)
-      ctx.beginPath()
-      ctx.arc(cx, cy, WAIT_SUN_R, 0, Math.PI * 2)
-      ctx.fillStyle = bodyGrad
-      ctx.fill()
-
-      // Rim highlight
-      ctx.beginPath()
-      ctx.arc(cx, cy, WAIT_SUN_R, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(255,255,220,${(0.35 + 0.15 * pulse).toFixed(3)})`
-      ctx.lineWidth = 1.2
-      ctx.stroke()
-
+      const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
+      drawPhaseSun(ctx, cx, cy, MINIMAP_WAIT_SUN_R, phase, nowMs)
     }
 
     function drawCanvas(timestamp = performance.now()) {
@@ -1205,7 +1318,7 @@ export default defineComponent({
         drawFadeoutPhase(ctx, w, h)
         return
       }
-      const img = imgEl.value
+      const img = imgFarEl.value
       if (!img || !img.complete) return
 
       const isArrived =
@@ -1229,33 +1342,73 @@ export default defineComponent({
         return
       }
 
+      // Departure crossfade: star system fades out over the (still zoomed-in)
+      // galaxy map — the camera then glides back out through layer 2.
+      if (departureTransitionStart >= 0) {
+        const elapsed = Date.now() - departureTransitionStart
+        if (elapsed < MINIMAP_DEPARTURE_TRANSITION_MS) {
+          const t = easeInOut(Math.min(1, elapsed / MINIMAP_DEPARTURE_TRANSITION_MS))
+          drawNormalMap(ctx, w, h)
+          ctx.save()
+          ctx.globalAlpha = 1 - t
+          drawArrivalView(ctx, w, h)
+          ctx.restore()
+          return
+        }
+        departureTransitionStart = -1
+      }
+
       drawNormalMap(ctx, w, h)
     }
 
-    function updateZoom() {
+    function updateCamera() {
+      // Desired camera per frame: full galaxy by default; during the final
+      // MINIMAP_ZOOM_TRIGGER_MS of a flight ease onto the destination star so
+      // the camera is fully zoomed exactly at arrival 0:00. After clearing a
+      // star the same lerp glides back out to the whole galaxy.
+      let dz = 1
+      let dx = 0.5
+      let dy = 0.5
+
+      const dots = dotPositions.value
+      const order = rescueOrder.value
+      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
+      const targetIdx = rescued < dots.length ? order[rescued] : -1
+      const target = targetIdx >= 0 ? dots[targetIdx] : null
       const isArrived =
         galaxyStore.championTravelState === 'champion_available' ||
         galaxyStore.championTravelState === 'champion_spawned'
-      if (isArrived) {
-        currentMapVisible.value += (MAP_WORLD_ZOOMED - currentMapVisible.value) * ZOOM_LERP_SPEED
-        return
-      }
       const isBossPhase =
         galaxyStore.searchingForGalaxyBoss ||
         galaxyStore.needsFinalBoss ||
         galaxyStore.pendingGalaxyBoss
-      let desired = MAP_WORLD_DEFAULT
-      if (galaxyStore.championTravelState === 'traveling' && !isBossPhase) {
+
+      if (isArrived && target) {
+        dz = MINIMAP_ZOOM_MAX
+        dx = target.x
+        dy = target.y
+      } else if (
+        galaxyStore.championTravelState === 'traveling' &&
+        !isBossPhase &&
+        target
+      ) {
         const remaining = galaxyStore.travelRemainingMs
-        if (remaining <= ZOOM_TRIGGER_MS) {
-          const t = Math.max(
-            0,
-            Math.min(1, (ZOOM_TRIGGER_MS - remaining) / (ZOOM_TRIGGER_MS - ZOOM_FULL_MS)),
+        if (remaining <= MINIMAP_ZOOM_TRIGGER_MS) {
+          const tz = easeInOut(
+            Math.max(0, Math.min(1, 1 - remaining / MINIMAP_ZOOM_TRIGGER_MS)),
           )
-          desired = MAP_WORLD_DEFAULT + (MAP_WORLD_ZOOMED - MAP_WORLD_DEFAULT) * t
+          dz = 1 + (MINIMAP_ZOOM_MAX - 1) * tz
+          dx = 0.5 + (target.x - 0.5) * tz
+          dy = 0.5 + (target.y - 0.5) * tz
         }
       }
-      currentMapVisible.value += (desired - currentMapVisible.value) * ZOOM_LERP_SPEED
+
+      // Zoom out noticeably slower than in, so the layer-2 star field stays
+      // readable for a moment on the way back to the galaxy overview
+      const lerp = dz < camera.zoom ? MINIMAP_ZOOM_OUT_LERP : MINIMAP_ZOOM_LERP
+      camera.zoom += (dz - camera.zoom) * lerp
+      camera.x += (dx - camera.x) * lerp
+      camera.y += (dy - camera.y) * lerp
     }
 
     function rafTick(timestamp: number) {
@@ -1263,7 +1416,7 @@ export default defineComponent({
         pulseFrame = pulseFrame === 0 ? 1 : 0
         rafLastPulseMs = timestamp
       }
-      updateZoom()
+      updateCamera()
       drawCanvas(timestamp)
       if (show.value) {
         rafId = requestAnimationFrame(rafTick)
@@ -1278,11 +1431,7 @@ export default defineComponent({
 
     watch(
       () => [galaxyStore.currentGalaxy, galaxyStore.starsRequired],
-      () => {
-        playerTrail = []
-        trailLastPos = { wx: -1, wy: -1 }
-        generateDots()
-      },
+      () => generateDots(),
       { immediate: true },
     )
 
@@ -1341,7 +1490,10 @@ export default defineComponent({
           window.setTimeout(() => {
             hyperspacePhase = 'idle'
             warpParticles = []
-            currentMapVisible.value = MAP_WORLD_DEFAULT
+            camera.x = 0.5
+            camera.y = 0.5
+            camera.zoom = 1
+            departureTransitionStart = -1
           }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
         )
       },
@@ -1372,7 +1524,9 @@ export default defineComponent({
           window.setTimeout(() => {
             hyperspacePhase = 'idle'
             warpParticles = []
-            currentMapVisible.value = MAP_WORLD_DEFAULT
+            camera.x = 0.5
+            camera.y = 0.5
+            camera.zoom = 1
           }, 3500),
         )
       },
@@ -1380,19 +1534,24 @@ export default defineComponent({
 
     watch(
       () => galaxyStore.championTravelState,
-      (state) => {
+      (state, prevState) => {
         const arrived = state === 'champion_available' || state === 'champion_spawned'
+        const wasArrived =
+          prevState === 'champion_available' || prevState === 'champion_spawned'
         if (arrived && arrivalTransitionStart === -1) {
           arrivalTransitionStart = Date.now()
+          departureTransitionStart = -1
         } else if (!arrived) {
           arrivalTransitionStart = -1
+          // leaving the star system → crossfade back onto the galaxy map
+          if (wasArrived) departureTransitionStart = Date.now()
         }
       },
     )
 
     onMounted(() => {
       nextTick(() => {
-        if (imgEl.value?.complete) drawCanvas()
+        if (imgFarEl.value?.complete) drawCanvas()
       })
     })
 
@@ -1404,9 +1563,10 @@ export default defineComponent({
       for (const id of hyperspaceTimeouts) window.clearTimeout(id)
       hyperspaceTimeouts = []
       arrivalTransitionStart = -1
+      departureTransitionStart = -1
     })
 
-    return { canvasEl, imgEl, onImageLoad }
+    return { canvasEl, imgFarEl, imgNearEl, onImageLoad }
   },
 })
 </script>
@@ -1423,14 +1583,8 @@ export default defineComponent({
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Vignette folgt der Kreisform: stärker oben-rechts, sanft ausblendend */
-  background:
-    radial-gradient(
-      ellipse at 100% 0%,
-      rgba(0, 0, 0, 0) 30%,
-      rgba(0, 0, 0, 0.45) 75%,
-      rgba(0, 0, 0, 0.7) 100%
-    ),
-    radial-gradient(ellipse at center, transparent 48%, rgba(0, 0, 0, 0.45) 100%);
+  /* very soft edge shading only — the unified bar background must stay
+     recognizable across the whole minimap area */
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.22) 100%);
 }
 </style>

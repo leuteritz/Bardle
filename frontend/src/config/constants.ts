@@ -1022,6 +1022,64 @@ export const BOTTOM_FRAME_STROKE_WOOD = '#7a4e20' // wood brown — matches --rp
 export const BOTTOM_FRAME_STROKE_GRAIN = 'rgba(160,95,38,0.75)' // lighter wood grain
 export const BOTTOM_FRAME_STROKE_SHEEN = 'rgba(190,115,46,0.14)' // subtle warm surface sheen
 
+// ── Bottom Bar v2 (unified silhouette shell) ──────────────────────────────
+// Reference geometry at hud-scale 1 (design mock is a 1920×443 layout).
+export const BOTTOM_BAR_HEIGHT = 443 // total bar height
+export const BOTTOM_BAR_SIDE_W = 440 // raised side panel width (minimap / command)
+export const BOTTOM_BAR_CENTER_TOP_Y = 380 // top edge of the low center strip
+export const BOTTOM_BAR_NOTCH_R = 20 // inner notch radius where panels meet the strip
+export const BOTTOM_BAR_EDGE_INSET = 2 // stroke inset from the viewport edges
+// Frame stroke widths (drawn shadow → wood → gold, top edge only)
+export const BOTTOM_FRAME_W_SHADOW = 7
+export const BOTTOM_FRAME_W_WOOD = 3.5
+export const BOTTOM_FRAME_W_GOLD = 1.2
+export const BOTTOM_FRAME_STROKE_GOLD = '#c89040' // thin gold highlight line
+// Unified background fill (header-brown family) + panel seam hairlines
+export const BOTTOM_BAR_BG_TOP = '#241608'
+export const BOTTOM_BAR_BG_MID = '#1a1005'
+export const BOTTOM_BAR_BG_BOTTOM = '#130b04'
+export const BOTTOM_BAR_SEAM_COLOR = 'rgba(122,78,32,0.35)'
+
+// Center scoreboard (5 combat | crest | 5 economy stats)
+export const SCOREBOARD_STAT_COLORS = {
+  kills: '#6ee7b7',
+  deaths: '#fca5a5',
+  assists: '#93c5fd',
+  kda: '#e8c040',
+  killPart: '#d8c48a',
+  gold: '#e8c040',
+  cs: '#52b830',
+  dmg: '#f08850',
+  dragons: '#6ee0a0',
+  barons: '#c9a0f5',
+} as const
+export const SCOREBOARD_LABEL_COLOR = '#7a6a44'
+
+// Minimap travel rendering (static galaxy map)
+export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
+export const MINIMAP_SHIP_SIZE = 9 // player ship triangle length in px
+export const MINIMAP_ORIGIN_SUN_R = 7 // small player-sun marker at the flight origin
+export const MINIMAP_IDLE_SUN_R = 11 // player-sun marker when not traveling
+export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
+export const MINIMAP_ZOOM_TRIGGER_MS = 30_000 // zoom-in phase starts this long before arrival
+export const MINIMAP_ZOOM_MAX = 4.2 // camera zoom at arrival (target star grows ≈ arrival sun)
+export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)
+export const MINIMAP_ZOOM_OUT_LERP = 0.03 // slower zoom-out so layer 2 stays visible a while
+export const MINIMAP_DEPARTURE_TRANSITION_MS = 900 // crossfade arrival view → galaxy map
+// Layered zoom: layer 1 = galaxy-far.png (overview), layer 2 = galaxy-near.png
+// (deep star field, anchored on the target star), layer 3 = arrival view.
+export const MINIMAP_LAYER2_WORLD_SCALE = 0.55 // near sprite covers this fraction of the world
+export const MINIMAP_LAYER1_FADE: readonly [number, number] = [2.1, 2.9] // zoom range: far layer fades out
+export const MINIMAP_LAYER2_FADE: readonly [number, number] = [1.8, 2.6] // zoom range: near layer fades in
+export const MINIMAP_TARGET_BASE_R = 11 // target star base radius (× zoom ≈ arrival sun at max)
+export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
+
+// Command panel v2 (portrait cards + planet dock row)
+export const CMD_PLANET_ROW_H = 118 // planet dock row height
+export const CMD_READY_DOT_SIZE = 15 // ability-ready indicator dot
+export const CMD_CARD_ROLE_BAR_H = 5 // role-colored top bar on champion cards
+export const CMD_CARD_OUTER_ARC_R = 44 // outer corner radius following the silhouette arc
+
 // Game Loop
 export const GAME_TICK_INTERVAL_MS = 1000
 export const MEEP_ADD_DELAY_MS = 100

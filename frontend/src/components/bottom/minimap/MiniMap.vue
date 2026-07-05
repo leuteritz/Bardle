@@ -29,7 +29,7 @@
               </pattern>
               <radialGradient id="gridFade" cx="50%" cy="50%" r="50%">
                 <stop offset="40%" stop-color="rgba(0,0,0,0)" />
-                <stop offset="100%" stop-color="rgba(10,6,2,0.55)" />
+                <stop offset="100%" stop-color="rgba(10,6,2,0.25)" />
               </radialGradient>
             </defs>
             <rect width="440" height="440" fill="url(#gridPat)" />
@@ -216,10 +216,11 @@ export default defineComponent({
 }
 
 .travel-hud {
-  position: fixed;
+  /* lives inside the unified bottom-bar shell — bg comes from the shell */
+  position: absolute;
   bottom: 0;
   left: 0;
-  z-index: 10000;
+  z-index: 2;
   pointer-events: none;
   transform-origin: bottom left;
   transform: scale(var(--hud-scale, 1));
@@ -231,9 +232,7 @@ export default defineComponent({
   width: 440px;
   height: 440px;
   clip-path: path('M 0,0 L 380,0 A 60,60 0 0,1 440,60 L 440,440 L 0,440 Z');
-  background:
-    radial-gradient(ellipse at 20% 80%, rgba(60, 38, 8, 0.3) 0%, transparent 55%),
-    linear-gradient(160deg, #1a0d04 0%, #120900 60%, #0e0700 100%);
+  background: transparent;
   display: flex;
   flex-direction: column;
 }
@@ -242,7 +241,8 @@ export default defineComponent({
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #050302;
+  /* transparent — the unified bottom-bar background shows through */
+  background: transparent;
   clip-path: path('M 0,0 L 380,0 A 60,60 0 0,1 440,60 L 440,440 L 0,440 Z');
 }
 

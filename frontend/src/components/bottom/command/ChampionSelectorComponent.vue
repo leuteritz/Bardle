@@ -2,12 +2,14 @@
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useRoleAbilityStates } from '@/composables/useRoleAbilityStates'
 import { ROLES, ROLE_HOVER_COLORS } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
 const { headerSlots } = storeToRefs(battleStore)
+const { roleAbilities } = useRoleAbilityStates()
 
 function openPicker(slotIndex: number, subSlot: number = -1) {
   uiStore.requestOpenRolesTab(slotIndex, subSlot)
@@ -37,193 +39,166 @@ function onSlotLeave() {
 </script>
 
 <template>
-  <div class="champ-selector">
-    <!-- ── 5 Slots ── -->
-    <div class="panel-slots">
-      <button
-        v-for="(slot, i) in headerSlots"
-        :key="i"
-        class="slot-tile"
-        :class="{
-          'slot-tile--filled': slot !== null,
-          [`slot-tile--role-${ROLES[i].key}`]: true,
-          'slot-tile--first': i === 0,
-        }"
-        :style="{
-          '--role-color': ROLES[i].orbit.color,
-          '--hover-role-color': ROLE_HOVER_COLORS[ROLES[i].key],
-        }"
-        :title="
-          slot
-            ? `${slot} (${ROLES[i].label}) – click to change`
-            : `${ROLES[i].label} – Select Champion`
-        "
-        @click="openPicker(i)"
-        @mouseenter="onSlotEnter(i)"
-        @mouseleave="onSlotLeave()"
-      >
-        <div class="slot-portrait-wrap">
-          <img
-            v-if="slot"
-            :src="battleStore.getChampionImage(slot)"
-            :alt="slot"
-            class="slot-portrait"
-            @error="onImgError"
-          />
-          <img
-            v-else
-            :src="ROLES[i].image"
-            :alt="ROLES[i].short"
-            class="slot-portrait slot-portrait--placeholder"
-            aria-hidden="true"
-          />
-          <div class="slot-hover-glow" aria-hidden="true" />
-        </div>
+  <div class="champ-cards">
+    <button
+      v-for="(slot, i) in headerSlots"
+      :key="i"
+      class="champ-card"
+      :class="{
+        'champ-card--filled': slot !== null,
+        'champ-card--first': i === 0,
+        'champ-card--last': i === headerSlots.length - 1,
+        'champ-card--flash': roleAbilities[i].isFlashing,
+      }"
+      :style="{
+        '--role-color': ROLES[i].orbit.color,
+        '--hover-role-color': ROLE_HOVER_COLORS[ROLES[i].key],
+      }"
+      :title="
+        slot
+          ? `${slot} (${ROLES[i].label}) – click to change`
+          : `${ROLES[i].label} – Select Champion`
+      "
+      @click="openPicker(i)"
+      @mouseenter="onSlotEnter(i)"
+      @mouseleave="onSlotLeave()"
+    >
+      <!-- role-colored header bar -->
+      <div class="champ-card-bar" />
 
-        <div class="slot-name-badge">
-          <span class="slot-name-text">{{ ROLES[i].label }}</span>
-        </div>
+      <!-- portrait body -->
+      <div class="champ-card-body">
+        <img
+          v-if="slot"
+          :src="battleStore.getChampionImage(slot)"
+          :alt="slot"
+          class="champ-card-portrait"
+          @error="onImgError"
+        />
+        <img
+          v-else
+          :src="ROLES[i].image"
+          :alt="ROLES[i].short"
+          class="champ-card-portrait champ-card-portrait--placeholder"
+          aria-hidden="true"
+        />
+        <div class="champ-card-hover-glow" aria-hidden="true" />
 
-        <button v-if="slot" class="slot-clear" title="Entfernen" @click.stop="clearSlot(i, $event)">
+        <!-- ability state (role ability tracking, was in the old bottom stats) -->
+        <template v-if="slot !== null">
+          <span
+            v-if="roleAbilities[i].onCooldown && roleAbilities[i].timer"
+            class="champ-card-cd-pill"
+          >
+            {{ roleAbilities[i].timer }}
+          </span>
+          <span v-else class="champ-card-ready-dot" aria-hidden="true" />
+        </template>
+
+        <!-- role label -->
+        <div class="champ-card-label">{{ ROLES[i].short }}</div>
+
+        <!-- clear champion -->
+        <button
+          v-if="slot"
+          class="champ-card-clear"
+          title="Remove"
+          @click.stop="clearSlot(i, $event)"
+        >
           ✕
         </button>
-      </button>
-    </div>
+      </div>
+    </button>
   </div>
 </template>
 
 <style scoped>
-/* ════════════════════════════════════════════════
-   WRAPPER
-   ════════════════════════════════════════════════ */
-.champ-selector {
+.champ-cards {
   display: flex;
-  align-items: center;
+  gap: 9px;
   flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0 4px;
-}
-
-/* ════════════════════════════════════════════════
-   SLOT-LEISTE
-   ════════════════════════════════════════════════ */
-.panel-slots {
-  display: flex;
-  gap: 4px;
-  flex: 1;
+  min-height: 0;
   align-items: stretch;
+  width: 100%;
   height: 100%;
-  padding: 4px 0;
 }
 
-/* ── Einzelner Slot ── */
-.slot-tile {
+/* ── Card ── */
+.champ-card {
   position: relative;
   flex: 1;
   min-width: 0;
   padding: 0;
-  background: linear-gradient(170deg, #1a1408 0%, #120e04 100%);
-  border: 2px solid rgba(122, 78, 32, 0.45);
-  border-radius: 5px;
+  border: none;
+  background: transparent;
   cursor: pointer;
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 200, 80, 0.05);
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease;
 }
-
-/* ── Erster Slot (TOP): große Rundung oben links passend zum Panel-Arc ── */
-.slot-tile--first {
-  border-top-left-radius: 48px;
-}
-
-.slot-tile:hover {
-  background: linear-gradient(170deg, #261c08 0%, #1a1206 100%);
-  border-color: rgba(200, 144, 64, 0.75);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.1),
-    0 0 12px rgba(200, 144, 64, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.5);
+.champ-card:hover {
   transform: translateY(-1px);
 }
-.slot-tile:active {
-  transform: translateY(0px) scale(0.97);
+.champ-card:active {
+  transform: translateY(0) scale(0.98);
 }
 
-.slot-tile--filled {
-  background: linear-gradient(170deg, #1e1208 0%, #150f04 100%);
-  border-color: rgba(160, 100, 20, 0.6);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+/* role-colored top bar with glow */
+.champ-card-bar {
+  height: 5px;
+  flex-shrink: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--role-color, #c89040);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent);
 }
-.slot-tile--filled:hover {
-  border-color: #c89040;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 200, 80, 0.14),
-    0 0 14px rgba(200, 144, 64, 0.22),
-    0 2px 10px rgba(0, 0, 0, 0.55);
+/* outer corners follow the panel silhouette arc (frame geometry — exception
+   to the 4-5px radius rule, matches the 60px shell arc) */
+.champ-card--first .champ-card-bar {
+  border-top-left-radius: 44px;
 }
-
-/* ── Eck-Ornamente ── */
-.slot-corner {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-color: rgba(200, 144, 64, 0.35);
-  border-style: solid;
-  pointer-events: none;
-  z-index: 3;
-  transition: border-color 0.2s ease;
-}
-.slot-tile:hover .slot-corner,
-.slot-tile--filled .slot-corner {
-  border-color: rgba(200, 144, 64, 0.65);
-}
-.slot-corner--tl {
-  top: 3px;
-  left: 3px;
-  border-width: 1px 0 0 1px;
-}
-.slot-corner--br {
-  bottom: 3px;
-  right: 3px;
-  border-width: 0 1px 1px 0;
+.champ-card--last .champ-card-bar {
+  border-top-right-radius: 44px;
 }
 
-/* Beim ersten Slot: TL-Ornament weiter einrücken wegen großer Rundung */
-.slot-tile--first .slot-corner--tl {
-  top: 18px;
-  left: 10px;
-}
-
-/* ── Portrait füllt den gesamten Slot ── */
-.slot-portrait-wrap {
-  position: absolute;
-  inset: 0;
-  background: #0e0c08;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* portrait body */
+.champ-card-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  border: 2px solid var(--role-color, #c89040);
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+  background: #0e0c08;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent);
+  transition: box-shadow 0.2s ease;
+}
+.champ-card--first .champ-card-body {
+  border-bottom-left-radius: 5px;
+  border-top-left-radius: 44px;
+}
+.champ-card--last .champ-card-body {
+  border-bottom-right-radius: 5px;
+  border-top-right-radius: 44px;
+}
+.champ-card:hover .champ-card-body {
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--role-color, #c89040) 55%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.slot-portrait {
+.champ-card-portrait {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top center;
   transition: transform 0.25s ease;
 }
-.slot-tile:hover .slot-portrait {
+.champ-card:hover .champ-card-portrait {
   transform: scale(1.06);
 }
 
-.slot-portrait--placeholder {
+.champ-card-portrait--placeholder {
   opacity: 0.18;
   filter: grayscale(50%);
   object-fit: contain;
@@ -232,233 +207,170 @@ function onSlotLeave() {
     opacity 0.2s ease,
     filter 0.2s ease;
 }
-.slot-tile:hover .slot-portrait--placeholder {
+.champ-card:hover .champ-card-portrait--placeholder {
   opacity: 0.38;
   filter: grayscale(25%);
   transform: none;
 }
 
-/* ── Plus-Icon für leere Slots ── */
-.slot-add-icon {
-  font-size: 20px;
-  color: rgba(200, 144, 64, 0.2);
-  line-height: 1;
-  z-index: 1;
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-.slot-tile:hover .slot-add-icon {
-  color: rgba(200, 144, 64, 0.55);
-  transform: scale(1.2);
-}
-
-/* ── Hover-Glow innen ── */
-.slot-hover-glow {
+/* hover glow inside the portrait */
+.champ-card-hover-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 50%, rgba(200, 144, 64, 0.12), transparent 70%);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    color-mix(in srgb, var(--hover-role-color, #c89040) 22%, transparent),
+    transparent 70%
+  );
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
-.slot-tile:hover .slot-hover-glow {
+.champ-card:hover .champ-card-hover-glow {
   opacity: 1;
 }
+.champ-card--filled:hover .champ-card-hover-glow {
+  animation: champ-role-pulse 1.4s ease-in-out infinite;
+}
 
-/* ── Name-Badge als Overlay am unteren Rand ── */
-.slot-name-badge {
+@keyframes champ-role-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Ability indicators ── */
+.champ-card-ready-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--role-color, #c89040);
+  border: 1px solid rgba(255, 235, 200, 0.7);
+  box-shadow: 0 0 7px var(--role-color, #c89040);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.champ-card-cd-pill {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 0 6px;
+  height: 17px;
+  border-radius: 4px;
+  background: rgba(10, 7, 3, 0.85);
+  border: 1px solid var(--role-color, #c89040);
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1;
+  color: #efe4c8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ability just triggered → card flash */
+.champ-card--flash .champ-card-body {
+  animation: champ-card-flash 0.45s ease-out;
+  box-shadow:
+    0 0 16px var(--role-color, #c89040),
+    0 0 30px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+}
+.champ-card--flash .champ-card-ready-dot {
+  animation: champ-dot-flash 0.45s ease-out;
+}
+
+@keyframes champ-card-flash {
+  0% {
+    box-shadow:
+      0 0 26px var(--role-color, #c89040),
+      0 0 50px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 16px var(--role-color, #c89040),
+      0 0 30px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  }
+}
+
+@keyframes champ-dot-flash {
+  0% {
+    transform: scale(1.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ── Role label at the bottom ── */
+.champ-card-label {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 4px 4px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0) 100%);
-}
-.slot-name-text {
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(180, 130, 50, 0.6);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  z-index: 3;
+  padding: 8px 0 4px;
   text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: rgba(180, 130, 50, 0.7);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
   line-height: 1;
+  pointer-events: none;
   transition: color 0.2s ease;
 }
-.slot-tile--filled .slot-name-text {
-  color: rgba(220, 170, 60, 0.95);
-}
-.slot-tile:hover .slot-name-text {
+.champ-card--filled .champ-card-label {
   color: #e8c040;
 }
+.champ-card:hover .champ-card-label {
+  color: #f0d060;
+}
 
-/* ── Clear-Button ── */
-.slot-clear {
+/* ── Clear button ── */
+.champ-card-clear {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  font-size: 7px;
+  top: 4px;
+  left: 4px;
+  width: 15px;
+  height: 15px;
+  font-size: 8px;
   color: #cc6050;
   background: rgba(20, 10, 6, 0.85);
   border: 1px solid rgba(180, 60, 40, 0.4);
-  border-radius: 2px;
+  border-radius: 3px;
   padding: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  z-index: 10;
+  z-index: 5;
   transition:
     opacity 0.15s ease,
     background 0.15s ease;
 }
-.slot-tile:hover .slot-clear {
+.champ-card:hover .champ-card-clear {
   opacity: 1;
 }
-.slot-clear:hover {
-  background: rgba(160, 40, 20, 0.7) !important;
+.champ-card-clear:hover {
+  background: rgba(160, 40, 20, 0.7);
   border-color: #cc6050;
 }
 
-/* ════════════════════════════════════════════════
-   ROLLEN-AKZENTFARBEN — dickere, leuchtendere Rahmen
-   ════════════════════════════════════════════════ */
-
-/* Leere Slots: klar sichtbarer Rollenrahmen */
-.slot-tile--role-top {
-  border: 3px solid rgba(224, 80, 80, 0.65);
-}
-.slot-tile--role-jungle {
-  border: 3px solid rgba(80, 192, 96, 0.65);
-}
-.slot-tile--role-mid {
-  border: 3px solid rgba(80, 144, 232, 0.65);
-}
-.slot-tile--role-adc {
-  border: 3px solid rgba(232, 152, 64, 0.65);
-}
-.slot-tile--role-support {
-  border: 3px solid rgba(184, 200, 216, 0.65);
-}
-
-/* Belegte Slots: volle Sättigung + Glow */
-.slot-tile--role-top.slot-tile--filled {
-  border: 3px solid rgba(224, 80, 80, 0.92);
-  box-shadow:
-    0 0 10px -1px rgba(224, 80, 80, 0.45),
-    inset 0 1px 0 rgba(224, 80, 80, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-.slot-tile--role-jungle.slot-tile--filled {
-  border: 3px solid rgba(80, 192, 96, 0.92);
-  box-shadow:
-    0 0 10px -1px rgba(80, 192, 96, 0.45),
-    inset 0 1px 0 rgba(80, 192, 96, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-.slot-tile--role-mid.slot-tile--filled {
-  border: 3px solid rgba(80, 144, 232, 0.92);
-  box-shadow:
-    0 0 10px -1px rgba(80, 144, 232, 0.45),
-    inset 0 1px 0 rgba(80, 144, 232, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-.slot-tile--role-adc.slot-tile--filled {
-  border: 3px solid rgba(232, 152, 64, 0.92);
-  box-shadow:
-    0 0 10px -1px rgba(232, 152, 64, 0.45),
-    inset 0 1px 0 rgba(232, 152, 64, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-.slot-tile--role-support.slot-tile--filled {
-  border: 3px solid rgba(184, 200, 216, 0.92);
-  box-shadow:
-    0 0 10px -1px rgba(184, 200, 216, 0.45),
-    inset 0 1px 0 rgba(184, 200, 216, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-}
-
-/* ════════════════════════════════════════════════
-   FILLED-SLOT HOVER PULSE (role accent color)
-   ════════════════════════════════════════════════ */
-
-/* Replace the generic inner glow with a role-colored pulse when hovered while filled */
-.slot-tile--filled:hover .slot-hover-glow {
-  background: radial-gradient(
-    ellipse at 50% 35%,
-    color-mix(in srgb, var(--hover-role-color, #c89040) 28%, transparent),
-    transparent 70%
-  );
-  animation: slot-role-pulse 1.4s ease-in-out infinite;
-  opacity: 1;
-}
-
-@keyframes slot-role-pulse {
-  0%, 100% { opacity: 0.55; }
-  50%       { opacity: 1; }
-}
-
-/* Portrait subtle tint overlay for the hovered filled slot */
-.slot-tile--filled:hover .slot-portrait-wrap::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--hover-role-color, #c89040) 10%, transparent);
-  pointer-events: none;
-  z-index: 1;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .slot-tile--filled:hover .slot-hover-glow {
+  .champ-card--filled:hover .champ-card-hover-glow,
+  .champ-card--flash .champ-card-body,
+  .champ-card--flash .champ-card-ready-dot {
     animation: none;
-    opacity: 0.75;
   }
-}
-
-/* Hover: stärkerer Glow in Rollenfarbe */
-.slot-tile--role-top:hover {
-  border-color: #e05050;
-  box-shadow:
-    0 0 14px -1px rgba(224, 80, 80, 0.65),
-    inset 0 1px 0 rgba(224, 80, 80, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-}
-.slot-tile--role-jungle:hover {
-  border-color: #50c060;
-  box-shadow:
-    0 0 14px -1px rgba(80, 192, 96, 0.65),
-    inset 0 1px 0 rgba(80, 192, 96, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-}
-.slot-tile--role-mid:hover {
-  border-color: #5090e8;
-  box-shadow:
-    0 0 14px -1px rgba(80, 144, 232, 0.65),
-    inset 0 1px 0 rgba(80, 144, 232, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-}
-.slot-tile--role-adc:hover {
-  border-color: #e89840;
-  box-shadow:
-    0 0 14px -1px rgba(232, 152, 64, 0.65),
-    inset 0 1px 0 rgba(232, 152, 64, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.5);
-}
-.slot-tile--role-support:hover {
-  border-color: #b8c8d8;
-  box-shadow:
-    0 0 14px -1px rgba(184, 200, 216, 0.65),
-    inset 0 1px 0 rgba(184, 200, 216, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.5);
 }
 </style>
