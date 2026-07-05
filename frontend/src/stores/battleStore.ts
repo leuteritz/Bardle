@@ -343,6 +343,8 @@ export const useBattleStore = defineStore('battle', {
     objectiveFighters: null as { t1: ObjectiveFighter[]; t2: ObjectiveFighter[] } | null,
     /** Fighter idx currently holding the jungle's Wild Rally buff per side */
     objectiveBuffTarget: { own: null, enemy: null } as { own: number | null; enemy: number | null },
+    /** Cumulative Hex Curse damage per side this fight (transient, drives the boss curse mark) */
+    objectiveCurseDamage: { own: 0, enemy: 0 } as { own: number; enemy: number },
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
     _objAbilityAccumMs: 0,
     battlePhaseStartTimestamp: 0,
@@ -1537,6 +1539,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveFreezeStartMs = Date.now()
       this.objectiveFightStartMs = Date.now()
       this.objectiveBuffTarget = { own: null, enemy: null }
+      this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this._objAbilityAccumMs = 0
 
       this._objectiveIntervalId = setInterval(() => {
@@ -1644,6 +1647,7 @@ export const useBattleStore = defineStore('battle', {
         const curse = OBJECTIVE_MID_CURSE_DPS * dt
         mid.damage += curse
         total += curse
+        this.objectiveCurseDamage[side] += curse
       }
       return total
     },
@@ -1854,6 +1858,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveAliveCounts = null
       this.objectiveFighters = null
       this.objectiveBuffTarget = { own: null, enemy: null }
+      this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this._objAbilityAccumMs = 0
       this.objectiveModalOpen = false
       this.objectiveResult = null

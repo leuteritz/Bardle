@@ -199,25 +199,15 @@
             </span>
           </TransitionGroup>
 
-          <!-- Hex Curse mark — frameless mid-role sprite hovering over the boss for the window -->
+          <!-- Hex Curse mark — mid-role sprite with the fight's cumulative curse damage -->
           <div v-if="curseActive('own')" class="curse-mark curse-mark--own">
             <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
-            −{{ OBJECTIVE_MID_CURSE_DPS }}/s
+            −{{ fmt(Math.round(battleStore.objectiveCurseDamage.own)) }}
           </div>
           <div v-if="curseActive('enemy')" class="curse-mark curse-mark--enemy">
             <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
-            −{{ OBJECTIVE_MID_CURSE_DPS }}/s
+            −{{ fmt(Math.round(battleStore.objectiveCurseDamage.enemy)) }}
           </div>
-
-          <!-- Hex Curse DoT ticks on the boss -->
-          <TransitionGroup name="hpfl" tag="div" class="dmg-floats">
-            <span
-              v-for="c in curseFloats"
-              :key="'cf' + c.id"
-              class="curse-float"
-              :class="c.side === 'own' ? 'curse-float--own' : 'curse-float--enemy'"
-            >-{{ OBJECTIVE_MID_CURSE_DPS }}</span>
-          </TransitionGroup>
 
           <!-- Fighter strike floats, timed to the lunge impact -->
           <TransitionGroup name="fdmg" tag="div" class="dmg-floats">
@@ -414,7 +404,6 @@ import {
   OBJECTIVE_MID_CURSE_DPS,
   OBJECTIVE_SUPPORT_MEND_HEAL,
   OBJECTIVE_JUNGLE_BUFF_MULT,
-  OBJECTIVE_ABILITY_TICK_S,
   OBJECTIVE_TOP_TAUNT_TARGETS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
   ROLE_BY_KEY,
@@ -839,38 +828,12 @@ function cardFlashClass(key: string): string | null {
   return null
 }
 
-// ── Curse ticks: purple DoT floats on the boss while a mid stands ──────────
-interface CurseFloat {
-  id: number
-  side: 'own' | 'enemy'
-}
-const curseFloats = ref<CurseFloat[]>([])
-let _curseFloatId = 0
-let _curseAccumMs = 0
-
-function _tickCurseFloats() {
-  _curseAccumMs += OBJECTIVE_FIGHTER_FLOAT_TICK_MS
-  if (_curseAccumMs < OBJECTIVE_ABILITY_TICK_S * 1000) return
-  _curseAccumMs -= OBJECTIVE_ABILITY_TICK_S * 1000
-  for (const side of ['own', 'enemy'] as const) {
-    const fighters = side === 'own' ? fightersOwn.value : fightersEnemy.value
-    const mid = fighters.find((f) => f.role === 'mid')
-    if (!mid || !isAbilityActive(mid)) continue
-    const id = ++_curseFloatId
-    curseFloats.value.push({ id, side })
-    setTimeout(() => {
-      curseFloats.value = curseFloats.value.filter((x) => x.id !== id)
-    }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
-  }
-}
-
 function _startFloatScheduler() {
   if (_floatSchedulerId) return
   _lastStrikeCycle.clear()
   shownDamage.value = {}
   damageBumps.value = {}
   _prevHp.clear()
-  _curseAccumMs = 0
   cardFlash.value = {}
   _floatSchedulerId = setInterval(() => {
     nowMs.value = Date.now()
@@ -880,7 +843,6 @@ function _startFloatScheduler() {
     _checkStrikes(fightersEnemy.value, 'enemy')
     _checkHpChanges(fightersOwn.value, 'own')
     _checkHpChanges(fightersEnemy.value, 'enemy')
-    _tickCurseFloats()
   }, OBJECTIVE_FIGHTER_FLOAT_TICK_MS)
 }
 
@@ -893,7 +855,6 @@ function _stopFloatScheduler() {
   _prevHp.clear()
   fighterFloats.value = []
   hpFloats.value = []
-  curseFloats.value = []
 }
 
 /** Card counter: stepped snapshot while the fight runs, real final value once resolved (or out of the fight). */
@@ -1470,7 +1431,7 @@ onUnmounted(_stopFloatScheduler)
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #c9a0f5;
   text-shadow: 0 0 6px rgba(168, 85, 247, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
@@ -1483,8 +1444,8 @@ onUnmounted(_stopFloatScheduler)
 .curse-mark--own { left: 6%; }
 .curse-mark--enemy { right: 6%; }
 .curse-mark-img {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.9));
@@ -1510,20 +1471,6 @@ onUnmounted(_stopFloatScheduler)
   white-space: nowrap;
   z-index: 4;
 }
-
-/* Hex Curse ticks on the boss */
-.curse-float {
-  position: absolute;
-  bottom: 16%;
-  font-size: 13px;
-  font-weight: 700;
-  color: #c9a0f5;
-  text-shadow: 0 0 8px rgba(168, 85, 247, 0.85), 0 1px 3px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-  z-index: 9;
-}
-.curse-float--own { left: 18%; }
-.curse-float--enemy { right: 18%; }
 
 .alive-pip--out {
   background: #3a382e;
@@ -2136,7 +2083,6 @@ onUnmounted(_stopFloatScheduler)
   .fighter-damage--bump,
   .hpfl,
   .hpfl-enter-active,
-  .curse-float,
   .portrait--taunting .fighter-portrait,
   .skill-btn--active .skill-img,
   .curse-mark,

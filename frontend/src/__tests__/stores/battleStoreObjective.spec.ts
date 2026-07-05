@@ -453,6 +453,9 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.objectiveFighters!.t1[0].damage).toBe(0)
     expect(store.objectiveEnemyDamage).toBe(0)
     expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS * 0.8, 6)
+    // cumulative curse tracker mirrors exactly what was credited
+    expect(store.objectiveCurseDamage.own).toBeCloseTo(mid.damage, 6)
+    expect(store.objectiveCurseDamage.enemy).toBe(0)
   })
 
   it('an active taunt diverts the full enemy damage onto the top laner instead of the objective', () => {
