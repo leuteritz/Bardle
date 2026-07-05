@@ -2,12 +2,7 @@
   <div class="roster-panel">
     <div class="roster-head">
       <span class="roster-title">YOUR TEAM</span>
-      <span v-if="isBattleLive" class="ready-badge ready-badge--full">LIVE</span>
-      <span
-        v-else
-        class="ready-badge"
-        :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'"
-      >
+      <span class="ready-badge" :class="hasFullTeam ? 'ready-badge--full' : 'ready-badge--open'">
         {{ teamProgress }} / 5 {{ hasFullTeam ? 'READY' : 'OPEN' }}
       </span>
     </div>
@@ -149,7 +144,6 @@ function rowStyle(role: { color: string }, filled: boolean): CSSProperties {
 const battleStore = useBattleStore()
 const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
 const hasFullTeam = computed(() => teamProgress.value >= 5)
-const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 
 // Career kills merged with the running battle, same display-only pattern as
 // the landing stat panels (career accumulates once the battle finalizes).

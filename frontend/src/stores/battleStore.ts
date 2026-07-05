@@ -52,6 +52,7 @@ import {
   KILL_FEED_MAX,
   WINPROB_MIN,
   WINPROB_MAX,
+  BATTLE_BASE_START_WIN_CHANCE,
 } from '../config/constants'
 import type {
   AllTimeBattleStats,
@@ -261,6 +262,10 @@ export const useBattleStore = defineStore('battle', {
     // ── Deterministic event timeline ──
     battleSeed: 0,
     initialWinProbability: 0.5,
+    /** Permanent bonus on the battle-start win chance — raised by future upgrades. */
+    startWinChanceBonus: 0,
+    /** Bonus snapshotted at battle init so a mid-battle change can't shift the live bar. */
+    battleStartBonus: 0,
     timeline: null as BattleTimeline | null,
     timelineCursor: 0,
     objectiveOverrides: [] as ObjectiveOverride[],
@@ -342,9 +347,15 @@ export const useBattleStore = defineStore('battle', {
       if (state.baronEventTime <= 0) return -1
       return Math.floor((state.baronEventTime - 1) / 60) * 60
     },
-    /** Live victory momentum: starts at 0.5 each battle, shifts with every event's winProbDelta */
+    /** Live victory momentum: starts at the battle's starting win chance, shifts with every event's winProbDelta */
     liveWinMomentum: (state): number => {
-      const raw = 0.5 + (state.currentWinProbability - state.initialWinProbability)
+      const start = BATTLE_BASE_START_WIN_CHANCE + state.battleStartBonus
+      const raw = start + (state.currentWinProbability - state.initialWinProbability)
+      return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
+    },
+    /** What the momentum bar will show when the next battle begins — base 50% plus upgrade bonus. */
+    nextBattleStartWinChance: (state): number => {
+      const raw = BATTLE_BASE_START_WIN_CHANCE + state.startWinChanceBonus
       return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
     },
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
@@ -930,9 +941,18 @@ export const useBattleStore = defineStore('battle', {
       if (battleMods.bigBangAvailable) {
         playerPower *= BATTLE_BIG_BANG_POWER_MULTIPLIER
       }
-      const winProbability = this.calculateWinProbability(playerPower, finalOpponentPower)
+      // The upgrade bonus tilts the real odds too — a higher initial probability
+      // biases the seeded timeline toward a player win.
+      const winProbability = Math.max(
+        WINPROB_MIN,
+        Math.min(
+          WINPROB_MAX,
+          this.calculateWinProbability(playerPower, finalOpponentPower) + this.startWinChanceBonus,
+        ),
+      )
       this.currentWinProbability = winProbability
       this.initialWinProbability = winProbability
+      this.battleStartBonus = this.startWinChanceBonus
       this.currentOpponentLabel = `${opponent.rank.tier} ${opponent.rank.division}`
     },
 

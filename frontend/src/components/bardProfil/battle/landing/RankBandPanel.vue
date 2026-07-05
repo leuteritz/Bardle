@@ -1,48 +1,70 @@
 <template>
   <div class="rank-band" :style="{ borderColor: rankColorDim, background: bandBg }">
-    <!-- Rank emblem (image) -->
+    <!-- ── Zone 1: Rank identity ── -->
     <div class="rank-emblem">
       <div class="emblem-ring" :style="{ borderColor: rankColorDim }" />
       <img :src="rankImage" :alt="currentRank.tier" class="emblem-img" :style="{ filter: emblemGlow }" />
     </div>
 
-    <!-- Rank text + LP bar -->
     <div class="rank-info">
       <div class="rank-name" :style="{ color: rankColor }">
         {{ currentRank.tier.toUpperCase() }}<template v-if="!isHighTier"> {{ currentRank.division }}</template>
       </div>
-      <div class="rank-sub">{{ currentRank.lp }} LP · MMR {{ mmr }}</div>
-      <div class="lp-track">
-        <div class="lp-fill" :style="{ width: lpPercent + '%', background: rankColor, boxShadow: `0 0 8px ${rankColor}` }" />
+      <div class="lp-line">
+        <div class="lp-track">
+          <div class="lp-fill" :style="{ width: lpPercent + '%', background: rankColor, boxShadow: `0 0 8px ${rankColor}` }" />
+        </div>
+        <span class="lp-value">{{ currentRank.lp }} LP</span>
+      </div>
+      <div class="rank-goal">{{ promotionGoal }}</div>
+    </div>
+
+    <!-- ── Zone 2: Rank stats ── -->
+    <div class="band-divider" />
+
+    <div class="stats-zone">
+      <div class="stats-row">
+        <div class="stat-col">
+          <div class="stat-num stat-num--win">{{ totalWins }}</div>
+          <div class="stat-label">WINS</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-num stat-num--loss">{{ totalLosses }}</div>
+          <div class="stat-label">LOSSES</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-num stat-num--gold">{{ winRateStr }}%</div>
+          <div class="stat-label">WINRATE</div>
+        </div>
+        <div class="stat-col">
+          <div class="stat-num stat-num--gold" :class="{ 'streak-fire': currentWinStreak >= 3 }">
+            {{ currentWinStreak }}W
+          </div>
+          <div class="stat-label">STREAK</div>
+        </div>
+      </div>
+      <div class="stats-sub">
+        {{ totalBattles }} GAMES · MMR {{ mmr }} · BEST STREAK {{ bestWinStreak }}W
       </div>
     </div>
 
-    <!-- W/L/Streak -->
-    <div class="wl-block">
-      <div class="wl-item">
-        <div class="wl-num wl-num--win">{{ totalWins }}<span class="wl-suffix">W</span></div>
-        <div class="wl-sub">{{ winRateStr }}% WR</div>
-      </div>
-      <div class="wl-item">
-        <div class="wl-num wl-num--loss">{{ totalLosses }}<span class="wl-suffix">L</span></div>
-        <div class="wl-sub">{{ totalBattles }} games</div>
-      </div>
-      <div class="wl-item">
-        <div class="wl-num wl-num--streak" :class="{ 'streak-fire': currentWinStreak >= 3 }">
-          {{ currentWinStreak }}W
-        </div>
-        <div class="wl-sub">Best {{ bestWinStreak }}</div>
-      </div>
-    </div>
+    <!-- ── Zone 3: Next battle win chance ── -->
+    <div class="band-divider" />
 
-    <!-- Next match win chance -->
-    <div class="chance-block">
-      <div class="chance-eyebrow">NEXT MATCH · WIN CHANCE</div>
-      <div class="chance-row">
-        <div class="chance-track">
-          <div class="chance-fill" :class="probClass" :style="{ width: winProbPercent + '%' }" />
+    <div class="chance-zone">
+      <div class="card-eyebrow">NEXT BATTLE</div>
+      <div class="card-row">
+        <div class="card-track">
+          <div class="card-base-tick" :style="{ left: baseTickPercent + '%' }" />
+          <div class="card-fill card-fill--start" :style="{ width: startChancePercent + '%' }" />
         </div>
-        <span class="chance-value" :class="probClass">{{ winProbPercent }}%</span>
+        <span class="card-value card-value--start">{{ startChancePercent }}%</span>
+      </div>
+      <div class="card-sub" :class="{ 'card-sub--boosted': startBonusPercent > 0 }">
+        <template v-if="startBonusPercent > 0">
+          BASE {{ basePercent }}% + {{ startBonusPercent }}% FROM UPGRADES
+        </template>
+        <template v-else>STARTING WIN CHANCE</template>
       </div>
     </div>
   </div>
@@ -56,6 +78,9 @@ import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,
   LP_GRANDMASTER_PROMOTION_THRESHOLD,
+  RANK_TIERS,
+  RANK_DIVISIONS,
+  BATTLE_BASE_START_WIN_CHANCE,
 } from '@/config/constants'
 
 const battleStore = useBattleStore()
@@ -102,40 +127,57 @@ const isHighTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
 )
 
-const lpPercent = computed(() => {
+const lpCap = computed(() => {
   const tier = currentRank.value.tier
-  if (tier === 'Challenger') return 100
-  let cap = LP_NORMAL_PROMOTION_THRESHOLD
-  if (tier === 'Master') cap = LP_MASTER_PROMOTION_THRESHOLD
-  else if (tier === 'Grandmaster') cap = LP_GRANDMASTER_PROMOTION_THRESHOLD
-  return Math.min(100, Math.max(0, (currentRank.value.lp / cap) * 100))
+  if (tier === 'Master') return LP_MASTER_PROMOTION_THRESHOLD
+  if (tier === 'Grandmaster') return LP_GRANDMASTER_PROMOTION_THRESHOLD
+  return LP_NORMAL_PROMOTION_THRESHOLD
+})
+
+const lpPercent = computed(() => {
+  if (currentRank.value.tier === 'Challenger') return 100
+  return Math.min(100, Math.max(0, (currentRank.value.lp / lpCap.value) * 100))
+})
+
+/** Where the player is headed next — the idle-game carrot under the LP bar. */
+const promotionGoal = computed(() => {
+  const { tier, division, lp } = currentRank.value
+  if (tier === 'Challenger') return 'TOP OF THE LADDER'
+  const lpNeeded = Math.max(0, lpCap.value - lp)
+  if (tier === 'Master') return `${lpNeeded} LP TO GRANDMASTER`
+  if (tier === 'Grandmaster') return `${lpNeeded} LP TO CHALLENGER`
+  const divIdx = RANK_DIVISIONS.indexOf(division as (typeof RANK_DIVISIONS)[number])
+  if (divIdx >= 0 && divIdx < RANK_DIVISIONS.length - 1) {
+    return `${lpNeeded} LP TO ${tier.toUpperCase()} ${RANK_DIVISIONS[divIdx + 1]}`
+  }
+  const tierIdx = RANK_TIERS.indexOf(tier as (typeof RANK_TIERS)[number])
+  const nextTier = RANK_TIERS[tierIdx + 1] ?? 'Master'
+  return `${lpNeeded} LP TO ${nextTier.toUpperCase()}`
 })
 
 const winRateStr = computed(() =>
   totalBattles.value === 0 ? '0.0' : ((totalWins.value / totalBattles.value) * 100).toFixed(1),
 )
 
-const winProbPercent = computed(() => Math.round(battleStore.currentWinProbability * 100))
-const probClass = computed(() => {
-  const p = battleStore.currentWinProbability
-  if (p >= 0.65) return 'prob--high'
-  if (p >= 0.45) return 'prob--mid'
-  return 'prob--low'
-})
+// ── Next battle win chance ──
+const basePercent = Math.round(BATTLE_BASE_START_WIN_CHANCE * 100)
+const baseTickPercent = basePercent
+const startChancePercent = computed(() => Math.round(battleStore.nextBattleStartWinChance * 100))
+const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 </script>
 
 <style scoped>
 .rank-band {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 14px 22px;
+  gap: 18px;
+  padding: 12px 18px;
   flex-shrink: 0;
   border: 1px solid;
   border-radius: 5px;
 }
 
-/* ── Emblem ── */
+/* ── Zone 1: Emblem + rank identity ── */
 .rank-emblem {
   position: relative;
   width: 74px;
@@ -161,9 +203,8 @@ const probClass = computed(() => {
   object-fit: contain;
 }
 
-/* ── Rank info ── */
 .rank-info {
-  min-width: 180px;
+  min-width: 190px;
 }
 
 .rank-name {
@@ -173,16 +214,16 @@ const probClass = computed(() => {
   line-height: 1.1;
 }
 
-.rank-sub {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.42);
-  margin-top: 2px;
+.lp-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
 }
 
 .lp-track {
-  width: 100%;
+  flex: 1;
   height: 6px;
-  margin-top: 7px;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 3px;
   overflow: hidden;
@@ -194,100 +235,145 @@ const probClass = computed(() => {
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── W/L/Streak ── */
-.wl-block {
-  display: flex;
-  gap: 26px;
-  margin-left: 8px;
+.lp-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e8e2d0;
+  flex-shrink: 0;
 }
 
-.wl-item {
+.rank-goal {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #c8a058;
+  margin-top: 4px;
+}
+
+/* ── Divider between zones ── */
+.band-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 0;
+  background: rgba(212, 160, 32, 0.15);
+  flex-shrink: 0;
+}
+
+/* ── Zone 2: Rank stats ── */
+.stats-zone {
+  flex: 1;
+  min-width: 0;
   text-align: center;
 }
 
-.wl-num {
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 34px;
+}
+
+.stat-col {
+  text-align: center;
+}
+
+.stat-num {
   font-size: 24px;
   font-weight: 700;
   line-height: 1;
 }
-.wl-num--win { color: #52b830; }
-.wl-num--loss { color: #cc6050; }
-.wl-num--streak {
-  color: #d4a020;
-}
+.stat-num--win { color: #52b830; }
+.stat-num--loss { color: #cc6050; }
+.stat-num--gold { color: #e8c040; }
 .streak-fire {
   color: #f06820;
   animation: streak-pulse 1.6s ease-in-out infinite;
 }
 
-.wl-suffix {
-  font-size: 12px;
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 2px;
   color: #6a5820;
-  margin-left: 1px;
+  margin-top: 4px;
 }
 
-.wl-sub {
+.stats-sub {
   font-size: 10px;
-  letter-spacing: 1px;
-  color: #6a5820;
-  margin-top: 3px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.32);
+  margin-top: 8px;
 }
 
-/* ── Win chance ── */
-.chance-block {
-  margin-left: auto;
+/* ── Zone 3: Next battle win chance ── */
+.chance-zone {
+  flex-shrink: 0;
+  min-width: 220px;
+  padding-right: 4px;
   text-align: right;
 }
 
-.chance-eyebrow {
+.card-eyebrow {
   font-size: 10px;
   letter-spacing: 2px;
   color: #6a5820;
 }
 
-.chance-row {
+.card-row {
   display: flex;
   align-items: center;
   gap: 10px;
   justify-content: flex-end;
-  margin-top: 5px;
+  margin-top: 6px;
 }
 
-.chance-track {
-  width: 150px;
+.card-track {
+  position: relative;
+  width: 140px;
   height: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   overflow: hidden;
 }
 
-.chance-fill {
+.card-base-tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.28);
+  z-index: 1;
+}
+
+.card-fill {
   height: 100%;
   border-radius: 4px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.chance-value {
+.card-fill--start {
+  background: linear-gradient(to right, #7a6010, #d4a020);
+  box-shadow: 0 0 10px rgba(212, 160, 32, 0.45);
+}
+
+.card-value {
   font-size: 22px;
   font-weight: 700;
   line-height: 1;
   min-width: 52px;
 }
 
-.prob--high {
-  background: linear-gradient(to right, #2a7020, #52b830);
-  box-shadow: 0 0 10px rgba(82, 184, 48, 0.5);
+.card-value--start {
+  color: #e8c040;
+}
+
+.card-sub {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.32);
+  margin-top: 5px;
+}
+
+.card-sub--boosted {
   color: #52b830;
-}
-.prob--mid {
-  background: linear-gradient(to right, #7a6010, #d4a020);
-  box-shadow: 0 0 10px rgba(212, 160, 32, 0.45);
-  color: #d4a020;
-}
-.prob--low {
-  background: linear-gradient(to right, #7a2010, #cc5030);
-  box-shadow: 0 0 10px rgba(204, 80, 48, 0.45);
-  color: #cc6050;
 }
 
 @keyframes emblem-spin {

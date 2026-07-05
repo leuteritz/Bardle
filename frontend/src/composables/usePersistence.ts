@@ -106,6 +106,8 @@ export function usePersistence() {
         championCareer: JSON.parse(JSON.stringify(battleStore.championCareer)),
         battleSeed: battleStore.battleSeed,
         initialWinProbability: battleStore.initialWinProbability,
+        startWinChanceBonus: battleStore.startWinChanceBonus,
+        battleStartBonus: battleStore.battleStartBonus,
         objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
         battleTeams: {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
@@ -311,6 +313,8 @@ export function usePersistence() {
         battleStore.battleSeed = b.battleSeed ?? 0
         battleStore.initialWinProbability = b.initialWinProbability ?? 0.5
         battleStore.currentWinProbability = b.initialWinProbability ?? 0.5
+        battleStore.startWinChanceBonus = b.startWinChanceBonus ?? 0
+        battleStore.battleStartBonus = b.battleStartBonus ?? 0
         if (Array.isArray(b.objectiveOverrides)) {
           battleStore.objectiveOverrides = b.objectiveOverrides
             .filter(
@@ -610,6 +614,8 @@ export function usePersistence() {
     battleStore.championCareer = {}
     battleStore.battleSeed = 0
     battleStore.initialWinProbability = 0.5
+    battleStore.startWinChanceBonus = 0
+    battleStore.battleStartBonus = 0
     battleStore.objectiveOverrides = []
     battleStore.timeline = null
     battleStore.timelineCursor = 0
