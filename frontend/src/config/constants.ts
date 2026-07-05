@@ -2041,6 +2041,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:health-normal', // GUARDIAN badge (TeamRosterPanel)
   'game-icons:arrows-shield', // FRONTLINE badge (TeamRosterPanel)
   'game-icons:surrounded-eye', // SENTINEL badge (TeamRosterPanel)
+  'game-icons:saber-slash', // Kill marker between killer/victim (KillFeedTicker)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

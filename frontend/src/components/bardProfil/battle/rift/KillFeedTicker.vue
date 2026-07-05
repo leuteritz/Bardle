@@ -19,7 +19,7 @@
               <div class="feed-item" :class="{ 'feed-item--multikill': row.kill.multikillTier }">
                 <span class="feed-name" :class="row.kill.killerTeam === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.kill.killerName }}</span>
                 <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-                <span class="feed-star">★</span>
+                <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
                 <img :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
                 <span class="feed-name feed-name--dead">{{ row.kill.victimName }}</span>
                 <span v-if="row.kill.firstBlood" class="feed-fb">FIRST BLOOD</span>
@@ -54,7 +54,7 @@
             :class="{ 'feed-item--multikill': row.kill.multikillTier }"
           >
             <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-            <span class="feed-star">★</span>
+            <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
             <img :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
             <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
           </div>
@@ -351,8 +351,8 @@ function structureLabel(e: StructureFeedEntry): string {
 .feed-img--dead { filter: grayscale(0.6) brightness(0.75); }
 
 .feed-star {
-  font-size: 15px;
   color: #e8c040;
+  flex-shrink: 0;
 }
 
 .feed-fb {
