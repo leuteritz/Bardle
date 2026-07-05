@@ -443,6 +443,13 @@ export interface ObjectiveFighter {
   weight: number
   /** Cumulative damage dealt to this objective */
   damage: number
+  /** Battle role — drives the fighter's pit ability (idx order: top/jungle/mid/adc/support) */
+  role: BattleRole
+  /** Fight-local HP — every fighter alive at fight start enters at full HP */
+  fightHp: number
+  fightMaxHp: number
+  /** Dropped to 0 fight-HP mid-fight: contributes no DPS, ability stops */
+  down: boolean
 }
 
 export interface KillFeedEntry {

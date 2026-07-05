@@ -13,6 +13,9 @@ import {
   DRAKE_OCEAN_LOSS_PENALTY_MULT,
   DRAKE_ELDER_LP_BONUS,
   MOVE_RESPAWN_WALK_SECONDS,
+  OBJECTIVE_FIGHT_HP,
+  OBJECTIVE_AOE_DPS_DRAKE,
+  OBJECTIVE_MID_CURSE_DPS,
 } from '../../config/constants'
 import { DRAKE_TYPES } from '../../config/drakes'
 
@@ -325,6 +328,93 @@ describe('battleStore frozen-time objective damage race', () => {
       expect(DRAKE_TYPES[store.activeDrakeType!]).toBeDefined()
     } finally {
       hiddenSpy.mockRestore()
+    }
+  })
+
+  it('fighters enter the pit at full fight HP with their battle role', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    const t1 = store.objectiveFighters!.t1
+    expect(t1.map((f) => f.role)).toEqual(['top', 'jungle', 'mid', 'adc', 'support'])
+    for (const f of t1) {
+      expect(f.fightHp).toBe(OBJECTIVE_FIGHT_HP)
+      expect(f.down).toBe(false)
+    }
+  })
+
+  it('boss AoE wears fighters down when their support is dead', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.battleTime = 100
+    store.respawnUntil.t1 = [0, 0, 0, 0, 9999]
+    store._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
+    vi.advanceTimersByTime(3000)
+    // 3 ability ticks × drake AoE, no Mend on this side
+    expect(store.objectiveFighters!.t1[0].fightHp).toBe(OBJECTIVE_FIGHT_HP - 3 * OBJECTIVE_AOE_DPS_DRAKE)
+  })
+
+  it('support Mend keeps a full team topped up against the drake AoE', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    vi.advanceTimersByTime(3000)
+    // heal/s exceeds drake AoE/s — full teams stay at max HP
+    for (const f of store.objectiveFighters!.t1) {
+      expect(f.fightHp).toBe(OBJECTIVE_FIGHT_HP)
+    }
+  })
+
+  it('a downed fighter stops dealing objective damage', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    const top = store.objectiveFighters!.t1[0]
+    top.down = true
+    const frozen = top.damage
+    vi.advanceTimersByTime(1000)
+    expect(top.damage).toBe(frozen)
+  })
+
+  it('Hex Curse credits the mid laner independently of attack weights', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    for (const f of store.objectiveFighters!.t1) f.weight = 0
+    for (const f of store.objectiveFighters!.t2) f.weight = 0
+    vi.advanceTimersByTime(1000)
+    const t1 = store.objectiveFighters!.t1
+    expect(t1[2].damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
+    expect(t1[0].damage).toBe(0)
+    expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS, 6)
+  })
+
+  it('an active taunt diverts enemy damage onto the top laner instead of the objective', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    store.objectiveTauntUntil.own = Date.now() + 100000
+    vi.advanceTimersByTime(800) // stays below the first ability tick (no AoE/heal noise)
+    const t2 = store.objectiveFighters!.t2
+    // the first two standing enemies attack our top instead of the objective
+    expect(t2[0].damage).toBe(0)
+    expect(t2[1].damage).toBe(0)
+    expect(t2[2].damage).toBeGreaterThan(0)
+    expect(store.objectiveFighters!.t1[0].fightHp).toBeLessThan(OBJECTIVE_FIGHT_HP)
+  })
+
+  it('ADC crits double the contribution when the crit roll always hits', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
+    try {
+      const store = useBattleStore()
+      setupBattle(store)
+      store._openObjectiveModal('drake', null)
+      vi.advanceTimersByTime(800)
+      const t1 = store.objectiveFighters!.t1
+      // equal weights under the mocked rng — the ADC deals exactly double the top's damage
+      expect(t1[3].damage).toBeCloseTo(t1[0].damage * 2, 6)
+    } finally {
+      randomSpy.mockRestore()
     }
   })
 

@@ -29,7 +29,12 @@
         <!-- Alive-count strip: the fight is locked at these numbers -->
         <div class="alive-strip">
           <span class="alive-pips">
-            <span v-for="p in aliveOwn" :key="'o' + p" class="alive-pip alive-pip--own" />
+            <span
+              v-for="f in fightersOwn"
+              :key="'op' + f.idx"
+              class="alive-pip alive-pip--own"
+              :class="{ 'alive-pip--out': !isStanding(f) }"
+            />
           </span>
           <span class="alive-versus">
             <span class="alive-count alive-count--own">{{ aliveOwn }}</span>
@@ -37,7 +42,12 @@
             <span class="alive-count alive-count--enemy">{{ aliveEnemy }}</span>
           </span>
           <span class="alive-pips alive-pips--enemy">
-            <span v-for="p in aliveEnemy" :key="'e' + p" class="alive-pip alive-pip--enemy" />
+            <span
+              v-for="f in fightersEnemy"
+              :key="'ep' + f.idx"
+              class="alive-pip alive-pip--enemy"
+              :class="{ 'alive-pip--out': !isStanding(f) }"
+            />
           </span>
         </div>
 
@@ -48,31 +58,63 @@
               v-for="(f, i) in fightersOwn"
               :key="'f1' + f.idx"
               class="fighter-card fighter-card--own"
-              :class="[{ 'fighter-card--dead': !f.alive }, cardRankClass(f, i)]"
+              :class="[{ 'fighter-card--dead': !f.alive || f.down }, cardRankClass(f, i)]"
             >
               <div
                 class="fighter-portrait-wrap"
-                :class="{ 'attacking attacking--own': isAttacking(f) }"
+                :class="{
+                  'attacking attacking--own': isAttacking(f),
+                  'portrait--taunting': isTaunting(f, 'own'),
+                  'portrait--buffed': isBuffed(f, 'own'),
+                }"
                 :style="isAttacking(f) ? lungeStyle(i, false) : undefined"
               >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
                   class="fighter-portrait fighter-portrait--own"
-                  :class="{ 'fighter-portrait--dead': !f.alive }"
+                  :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
                 />
                 <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+                <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
+                <Icon
+                  v-if="isBuffed(f, 'own')"
+                  icon="game-icons:uprising"
+                  width="14"
+                  height="14"
+                  class="buff-pip"
+                />
+                <div v-if="f.alive" class="fight-hp">
+                  <div class="fight-hp-fill" :class="{ 'fight-hp-fill--low': hpPct(f) <= 35 }" :style="{ width: hpPct(f) + '%' }" />
+                </div>
+                <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
+                  <span
+                    v-for="h in hpFloatsFor('own' + f.idx)"
+                    :key="'h' + h.id"
+                    class="hpfl"
+                    :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
+                  >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
+                </TransitionGroup>
               </div>
               <div class="fighter-info">
                 <span class="fighter-name">{{ f.name }}</span>
                 <span
                   :key="damageBumps['own' + f.idx] ?? 0"
                   class="fighter-damage fighter-damage--bump"
-                  :class="{ 'fighter-damage--dead': !f.alive }"
+                  :class="{ 'fighter-damage--dead': !f.alive || f.down }"
                 >
                   {{ fmt(displayedDamage(f, 'own')) }}
                 </span>
-                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveOwnDpsMult) }}/s</span>
+                <span v-if="isStanding(f)" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveOwnDpsMult) }}/s</span>
+                <span
+                  v-if="f.alive"
+                  class="fighter-ability"
+                  :class="{ 'fighter-ability--active': isTaunting(f, 'own') || isBuffed(f, 'own'), 'fighter-ability--off': f.down }"
+                  :style="{ color: abilityOf(f).color }"
+                >
+                  <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
+                  {{ ABILITY_LABELS[f.role] }}
+                </span>
               </div>
               <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, i)}`">
                 <Icon icon="game-icons:sport-medal" width="28" height="28" />
@@ -108,6 +150,16 @@
             </span>
           </TransitionGroup>
 
+          <!-- Hex Curse DoT ticks on the boss -->
+          <TransitionGroup name="hpfl" tag="div" class="dmg-floats">
+            <span
+              v-for="c in curseFloats"
+              :key="'cf' + c.id"
+              class="curse-float"
+              :class="c.side === 'own' ? 'curse-float--own' : 'curse-float--enemy'"
+            >-{{ OBJECTIVE_MID_CURSE_DPS }}</span>
+          </TransitionGroup>
+
           <!-- Fighter strike floats, timed to the lunge impact -->
           <TransitionGroup name="fdmg" tag="div" class="dmg-floats">
             <span
@@ -132,7 +184,7 @@
               v-for="(f, i) in fightersEnemy"
               :key="'f2' + f.idx"
               class="fighter-card fighter-card--enemy"
-              :class="[{ 'fighter-card--dead': !f.alive }, cardRankClass(f, i)]"
+              :class="[{ 'fighter-card--dead': !f.alive || f.down }, cardRankClass(f, i)]"
             >
               <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--enemy" :class="`rank--${rankOf(f, i)}`">
                 <Icon icon="game-icons:sport-medal" width="28" height="28" />
@@ -142,24 +194,56 @@
                 <span
                   :key="damageBumps['enemy' + f.idx] ?? 0"
                   class="fighter-damage fighter-damage--bump"
-                  :class="{ 'fighter-damage--dead': !f.alive }"
+                  :class="{ 'fighter-damage--dead': !f.alive || f.down }"
                 >
                   {{ fmt(displayedDamage(f, 'enemy')) }}
                 </span>
-                <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveEnemyDpsMult) }}/s</span>
+                <span v-if="isStanding(f)" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveEnemyDpsMult) }}/s</span>
+                <span
+                  v-if="f.alive"
+                  class="fighter-ability"
+                  :class="{ 'fighter-ability--active': isTaunting(f, 'enemy') || isBuffed(f, 'enemy'), 'fighter-ability--off': f.down }"
+                  :style="{ color: abilityOf(f).color }"
+                >
+                  <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
+                  {{ ABILITY_LABELS[f.role] }}
+                </span>
               </div>
               <div
                 class="fighter-portrait-wrap"
-                :class="{ 'attacking attacking--enemy': isAttacking(f) }"
+                :class="{
+                  'attacking attacking--enemy': isAttacking(f),
+                  'portrait--taunting': isTaunting(f, 'enemy'),
+                  'portrait--buffed': isBuffed(f, 'enemy'),
+                }"
                 :style="isAttacking(f) ? lungeStyle(i, true) : undefined"
               >
                 <img
                   :src="battleStore.getChampionImage(f.name)"
                   class="fighter-portrait fighter-portrait--enemy"
-                  :class="{ 'fighter-portrait--dead': !f.alive }"
+                  :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
                   :alt="f.name"
                 />
                 <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+                <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
+                <Icon
+                  v-if="isBuffed(f, 'enemy')"
+                  icon="game-icons:uprising"
+                  width="14"
+                  height="14"
+                  class="buff-pip"
+                />
+                <div v-if="f.alive" class="fight-hp">
+                  <div class="fight-hp-fill" :class="{ 'fight-hp-fill--low': hpPct(f) <= 35 }" :style="{ width: hpPct(f) + '%' }" />
+                </div>
+                <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
+                  <span
+                    v-for="h in hpFloatsFor('enemy' + f.idx)"
+                    :key="'h' + h.id"
+                    class="hpfl"
+                    :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
+                  >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
+                </TransitionGroup>
               </div>
             </div>
           </TransitionGroup>
@@ -237,8 +321,14 @@ import {
   OBJECTIVE_LUNGE_STAGGER_S,
   OBJECTIVE_LUNGE_ENEMY_OFFSET_S,
   OBJECTIVE_LUNGE_STRIKE_FRACTION,
-  OBJECTIVE_FIGHTER_CRIT_CHANCE,
   OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS,
+  OBJECTIVE_ROLE_ABILITIES,
+  OBJECTIVE_ADC_CRIT_CHANCE,
+  OBJECTIVE_ADC_CRIT_MULT,
+  OBJECTIVE_MID_CURSE_DPS,
+  OBJECTIVE_SUPPORT_HEAL_PS,
+  OBJECTIVE_JUNGLE_BUFF_MULT,
+  OBJECTIVE_ABILITY_TICK_S,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
@@ -263,9 +353,38 @@ const objectiveTitle = computed(() =>
   isDrake.value ? drakeDef.value.label.toUpperCase() : 'BARON NASHOR',
 )
 
-/** A fighter lunges at the pit while alive and the fight is still running. */
+/** A fighter lunges at the pit while standing and the fight is still running. */
 function isAttacking(f: ObjectiveFighter): boolean {
-  return f.alive && battleStore.objectiveResult === null
+  return isStanding(f) && battleStore.objectiveResult === null
+}
+
+// ── Role abilities: panel copy + live state ─────────────────────────────────
+const ABILITY_LABELS: Record<string, string> = {
+  top: 'TAUNT',
+  jungle: `RALLY +${Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)}%`,
+  mid: `CURSE +${OBJECTIVE_MID_CURSE_DPS}/s`,
+  adc: `CRIT ${Math.round(OBJECTIVE_ADC_CRIT_CHANCE * 100)}%`,
+  support: `HEAL ${OBJECTIVE_SUPPORT_HEAL_PS}/s`,
+}
+
+function abilityOf(f: ObjectiveFighter) {
+  return OBJECTIVE_ROLE_ABILITIES[f.role]
+}
+
+/** Ticking clock (100ms via the float scheduler) so taunt windows render reactively. */
+const nowMs = ref(Date.now())
+
+function isTaunting(f: ObjectiveFighter, side: 'own' | 'enemy'): boolean {
+  return f.role === 'top' && isStanding(f) && battleStore.objectiveTauntUntil[side] > nowMs.value
+}
+
+function isBuffed(f: ObjectiveFighter, side: 'own' | 'enemy'): boolean {
+  return isStanding(f) && battleStore.objectiveBuffTarget[side] === f.idx
+}
+
+function hpPct(f: ObjectiveFighter): number {
+  if (f.fightMaxHp <= 0) return 0
+  return Math.max(0, Math.min(100, (f.fightHp / f.fightMaxHp) * 100))
 }
 
 /** Lunge delay of the fighter at `i` in its sorted column — single source for CSS and the float scheduler. */
@@ -280,9 +399,18 @@ function lungeStyle(i: number, enemy: boolean) {
   }
 }
 
-// Alive counts are snapshotted at fight start — frozen time keeps them fixed.
-const aliveOwn = computed(() => battleStore.objectiveAliveCounts?.own ?? 3)
-const aliveEnemy = computed(() => battleStore.objectiveAliveCounts?.enemy ?? 3)
+/** A fighter still fighting at the pit: alive at start and not downed by the boss. */
+function isStanding(f: ObjectiveFighter): boolean {
+  return f.alive && !f.down
+}
+
+// Standing counts update live as fighters go down under the boss AoE.
+const aliveOwn = computed(
+  () => battleStore.objectiveFighters?.t1.filter(isStanding).length ?? battleStore.objectiveAliveCounts?.own ?? 3,
+)
+const aliveEnemy = computed(
+  () => battleStore.objectiveFighters?.t2.filter(isStanding).length ?? battleStore.objectiveAliveCounts?.enemy ?? 3,
+)
 const ownDps = computed(() =>
   Math.round(aliveOwn.value * OBJECTIVE_BASE_DPS_PER_CHAMP * battleStore.objectiveOwnDpsMult),
 )
@@ -472,7 +600,10 @@ function _spawnFighterFloat(f: ObjectiveFighter, key: string, side: 'own' | 'ene
   if (value < 1) return
   shownDamage.value[key] = f.damage
   damageBumps.value[key] = (damageBumps.value[key] ?? 0) + 1
-  const crit = Math.random() < OBJECTIVE_FIGHTER_CRIT_CHANCE
+  // Crit styling when the second's damage clearly exceeds the expected rate — real ADC crits pop
+  const mult = side === 'own' ? battleStore.objectiveOwnDpsMult : battleStore.objectiveEnemyDpsMult
+  const expected = f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult * OBJECTIVE_LUNGE_CYCLE_S
+  const crit = value >= expected * ((1 + OBJECTIVE_ADC_CRIT_MULT) / 2)
   const id = ++_fighterFloatId
   fighterFloats.value.push({ id, value, crit, side, top: 25 + Math.random() * 40 })
   setTimeout(() => {
@@ -480,13 +611,13 @@ function _spawnFighterFloat(f: ObjectiveFighter, key: string, side: 'own' | 'ene
   }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
 }
 
-/** Spawn a float for every living fighter whose lunge strike landed since the last tick. */
+/** Spawn a float for every standing fighter whose lunge strike landed since the last tick. */
 function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
   const cycleMs = OBJECTIVE_LUNGE_CYCLE_S * 1000
   const strikeMs = OBJECTIVE_LUNGE_STRIKE_FRACTION * cycleMs
   const now = Date.now()
   fighters.forEach((f, i) => {
-    if (!f.alive) return
+    if (!isStanding(f)) return
     const elapsed = now - battleStore.objectiveFightStartMs - lungeDelayS(i, side === 'enemy') * 1000
     if (elapsed < 0) return
     const cycleNo = Math.floor(elapsed / cycleMs)
@@ -499,16 +630,77 @@ function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
   })
 }
 
+// ── Fight-HP floats (boss AoE hits and support heals on the fighter cards) ──
+interface HpFloat {
+  id: number
+  key: string
+  value: number
+}
+const hpFloats = ref<HpFloat[]>([])
+let _hpFloatId = 0
+const _prevHp = new Map<string, number>()
+
+function hpFloatsFor(key: string): HpFloat[] {
+  return hpFloats.value.filter((h) => h.key === key)
+}
+
+function _checkHpChanges(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
+  for (const f of fighters) {
+    const key = side + f.idx
+    const prev = _prevHp.get(key)
+    _prevHp.set(key, f.fightHp)
+    if (prev === undefined || !f.alive) continue
+    const delta = Math.round(f.fightHp - prev)
+    if (delta === 0) continue
+    const id = ++_hpFloatId
+    hpFloats.value.push({ id, key, value: delta })
+    setTimeout(() => {
+      hpFloats.value = hpFloats.value.filter((x) => x.id !== id)
+    }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
+  }
+}
+
+// ── Curse ticks: purple DoT floats on the boss while a mid stands ──────────
+interface CurseFloat {
+  id: number
+  side: 'own' | 'enemy'
+}
+const curseFloats = ref<CurseFloat[]>([])
+let _curseFloatId = 0
+let _curseAccumMs = 0
+
+function _tickCurseFloats() {
+  _curseAccumMs += OBJECTIVE_FIGHTER_FLOAT_TICK_MS
+  if (_curseAccumMs < OBJECTIVE_ABILITY_TICK_S * 1000) return
+  _curseAccumMs -= OBJECTIVE_ABILITY_TICK_S * 1000
+  for (const side of ['own', 'enemy'] as const) {
+    const fighters = side === 'own' ? fightersOwn.value : fightersEnemy.value
+    const mid = fighters.find((f) => f.role === 'mid')
+    if (!mid || !isStanding(mid)) continue
+    const id = ++_curseFloatId
+    curseFloats.value.push({ id, side })
+    setTimeout(() => {
+      curseFloats.value = curseFloats.value.filter((x) => x.id !== id)
+    }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
+  }
+}
+
 function _startFloatScheduler() {
   if (_floatSchedulerId) return
   _lastStrikeCycle.clear()
   shownDamage.value = {}
   damageBumps.value = {}
+  _prevHp.clear()
+  _curseAccumMs = 0
   _floatSchedulerId = setInterval(() => {
+    nowMs.value = Date.now()
     if (!battleStore.objectiveModalOpen || battleStore.objectiveResult !== null) return
     if (!battleStore.objectiveFighters) return
     _checkStrikes(fightersOwn.value, 'own')
     _checkStrikes(fightersEnemy.value, 'enemy')
+    _checkHpChanges(fightersOwn.value, 'own')
+    _checkHpChanges(fightersEnemy.value, 'enemy')
+    _tickCurseFloats()
   }, OBJECTIVE_FIGHTER_FLOAT_TICK_MS)
 }
 
@@ -518,12 +710,15 @@ function _stopFloatScheduler() {
     _floatSchedulerId = null
   }
   _lastStrikeCycle.clear()
+  _prevHp.clear()
   fighterFloats.value = []
+  hpFloats.value = []
+  curseFloats.value = []
 }
 
-/** Card counter: stepped snapshot while the fight runs, real final value once resolved (or when dead). */
+/** Card counter: stepped snapshot while the fight runs, real final value once resolved (or out of the fight). */
 function displayedDamage(f: ObjectiveFighter, side: 'own' | 'enemy'): number {
-  if (battleStore.objectiveResult !== null || !f.alive) return Math.round(f.damage)
+  if (battleStore.objectiveResult !== null || !f.alive || f.down) return Math.round(f.damage)
   return Math.round(shownDamage.value[side + f.idx] ?? 0)
 }
 
@@ -835,6 +1030,144 @@ onUnmounted(_stopFloatScheduler)
   background: #16140e;
   border: 1px solid #cc6050;
   border-radius: 50%;
+}
+
+/* Downed mid-fight by the boss — distinct from champions dead at fight start */
+.fighter-down-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #e07060;
+  background: rgba(22, 20, 14, 0.9);
+  border: 1px solid #cc6050;
+  border-radius: 3px;
+  padding: 0 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Fight-local HP bar under the portrait */
+.fight-hp {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 2;
+}
+.fight-hp-fill {
+  height: 100%;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  transition: width 0.3s ease;
+}
+.fight-hp-fill--low {
+  background: linear-gradient(to bottom, #e07060, #a83a2a);
+}
+
+/* Jungle Wild Rally target marker */
+.buff-pip {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  color: #6ec040;
+  background: #16140e;
+  border: 1px solid #52b830;
+  border-radius: 50%;
+  padding: 1px;
+  filter: drop-shadow(0 0 4px rgba(82, 184, 48, 0.7));
+  z-index: 2;
+}
+
+/* Top laner taunt window */
+.portrait--taunting .fighter-portrait {
+  animation: taunt-pulse 0.6s ease-in-out infinite;
+}
+/* Rally target glow */
+.portrait--buffed .fighter-portrait {
+  box-shadow: 0 0 10px rgba(82, 184, 48, 0.75);
+}
+
+/* HP change floats (boss AoE / support heal) above the portrait */
+.hpfl-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.hpfl {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hpfl--dmg {
+  color: #f08070;
+  text-shadow: 0 0 6px rgba(204, 96, 80, 0.8), 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+.hpfl--heal {
+  color: #7de89a;
+  text-shadow: 0 0 6px rgba(82, 184, 48, 0.8), 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+.hpfl-enter-active {
+  animation: hpfl-rise 0.9s ease-out forwards;
+}
+.hpfl-leave-active {
+  display: none;
+}
+
+/* Ability line on the fighter card */
+.fighter-ability {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.fighter-info--enemy .fighter-ability {
+  flex-direction: row-reverse;
+}
+.fighter-ability--active {
+  animation: ability-flash 0.6s ease-in-out infinite;
+}
+.fighter-ability--off {
+  opacity: 0.35;
+  filter: grayscale(55%);
+}
+.ability-icon {
+  flex-shrink: 0;
+}
+
+/* Hex Curse ticks on the boss */
+.curse-float {
+  position: absolute;
+  bottom: 16%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #c9a0f5;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.85), 0 1px 3px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+  z-index: 9;
+}
+.curse-float--own { left: 18%; }
+.curse-float--enemy { right: 18%; }
+
+.alive-pip--out {
+  background: #3a382e;
+  box-shadow: none;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .fighter-rank-badge {
@@ -1390,6 +1723,22 @@ onUnmounted(_stopFloatScheduler)
   100% { opacity: 0; transform: translate(var(--fd-drift), -34px) scale(0.92); }
 }
 
+@keyframes hpfl-rise {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(1.2); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -22px) scale(0.9); }
+}
+
+@keyframes taunt-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(232, 160, 64, 0.5); }
+  50% { box-shadow: 0 0 14px rgba(232, 160, 64, 0.95); }
+}
+
+@keyframes ability-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arena-aura,
   .rune-ring,
@@ -1405,7 +1754,12 @@ onUnmounted(_stopFloatScheduler)
     animation: none !important;
     opacity: 0;
   }
-  .fighter-damage--bump {
+  .fighter-damage--bump,
+  .hpfl,
+  .hpfl-enter-active,
+  .curse-float,
+  .portrait--taunting .fighter-portrait,
+  .fighter-ability--active {
     animation: none !important;
   }
   .fighter-move {

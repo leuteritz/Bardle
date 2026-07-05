@@ -197,11 +197,42 @@ export const OBJECTIVE_LUNGE_STAGGER_S = 0.19
 export const OBJECTIVE_LUNGE_ENEMY_OFFSET_S = 0.1
 /** Point within the lunge cycle where the strike lands (matches the 70% keyframe) */
 export const OBJECTIVE_LUNGE_STRIKE_FRACTION = 0.7
-/** Chance a fighter's strike float is emphasized as a crit — cosmetic only, value stays real */
-export const OBJECTIVE_FIGHTER_CRIT_CHANCE = 0.15
 export const OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS = 900
 /** Scheduler resolution for spawning fighter strike floats */
 export const OBJECTIVE_FIGHTER_FLOAT_TICK_MS = 100
+// ── Objective Fight 2.0: fight-local HP, boss AoE, role abilities ──────────
+/** Every fighter alive at fight start enters the pit with full fight-local HP */
+export const OBJECTIVE_FIGHT_HP = 100
+/** Boss AoE damage per second on every standing fighter (both teams) */
+export const OBJECTIVE_AOE_DPS_DRAKE = 5
+export const OBJECTIVE_AOE_DPS_BARON = 7
+/** Cadence of the ability/AoE tick inside the fight */
+export const OBJECTIVE_ABILITY_TICK_S = 1
+/** ADC "Deadeye": real crit chance and multiplier on strike damage */
+export const OBJECTIVE_ADC_CRIT_CHANCE = 0.25
+export const OBJECTIVE_ADC_CRIT_MULT = 2
+/** Mid "Hex Curse": flat DoT on the objective, credited to the mid laner */
+export const OBJECTIVE_MID_CURSE_DPS = 12
+/** Support "Mend": heal per second on every standing ally */
+export const OBJECTIVE_SUPPORT_HEAL_PS = 8
+/** Jungle "Wild Rally": rotating ally DPS buff */
+export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.3
+export const OBJECTIVE_JUNGLE_BUFF_ROTATE_S = 2
+/** Top "Challenge": periodic taunt window pulling enemy DPS onto the top laner */
+export const OBJECTIVE_TOP_TAUNT_INTERVAL_S = 4
+export const OBJECTIVE_TOP_TAUNT_DURATION_S = 1.5
+export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
+/** Fraction of the taunted enemies' DPS the top laner takes as fight-HP damage */
+export const OBJECTIVE_TOP_TAUNT_DMG_TAKEN = 0.5
+/** Role ability metadata for the objective fight panels (icons registered in USED_GAME_ICONS) */
+export const OBJECTIVE_ROLE_ABILITIES = {
+  top: { name: 'Challenge', icon: 'game-icons:enrage', color: '#e8a040' },
+  jungle: { name: 'Wild Rally', icon: 'game-icons:uprising', color: '#6ec040' },
+  mid: { name: 'Hex Curse', icon: 'game-icons:cursed-star', color: '#b06cf8' },
+  adc: { name: 'Deadeye', icon: 'game-icons:dead-eye', color: '#e8c040' },
+  support: { name: 'Mend', icon: 'game-icons:healing', color: '#5adf9e' },
+} as const
+
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000
 export const OBJECTIVE_RESULT_DELAY_MS = 2200
@@ -2078,6 +2109,11 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:surrounded-eye', // SENTINEL badge (TeamRosterPanel)
   'game-icons:saber-slash', // Kill marker between killer/victim (KillFeedTicker)
   'game-icons:quick-slash', // Damage marker on fighter strike floats (ObjectiveModalComponent)
+  'game-icons:enrage', // Top "Challenge" taunt ability (ObjectiveModalComponent)
+  'game-icons:uprising', // Jungle "Wild Rally" buff ability (ObjectiveModalComponent)
+  'game-icons:cursed-star', // Mid "Hex Curse" ability (ObjectiveModalComponent)
+  'game-icons:dead-eye', // ADC "Deadeye" crit ability (ObjectiveModalComponent)
+  'game-icons:healing', // Support "Mend" heal ability (ObjectiveModalComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
