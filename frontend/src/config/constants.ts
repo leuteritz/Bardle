@@ -143,6 +143,8 @@ export const RED_FOUNTAIN = { x: 92, y: 8 }
 export const DRAKE_POS = { x: 66, y: 70 }
 export const BARON_POS = { x: 35, y: 32 }
 export const MID_CENTER = { x: 50, y: 50 }
+/** Spawn countdowns display in whole game-minutes — pulse during the last displayed minute */
+export const OBJECTIVE_SPAWN_SOON_T = 60
 
 // Typical skirmish locations per lane (map-units on the 100x100 minimap)
 export const LANE_FIGHT_POSITIONS: Record<'top' | 'mid' | 'bot', { x: number; y: number }> = {

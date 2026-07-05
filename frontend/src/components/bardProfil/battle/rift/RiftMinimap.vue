@@ -116,7 +116,10 @@
           <div class="obj-spin-ring obj-spin-ring--drake" />
           <img src="/img/dragon.png" alt="Drake" class="obj-img obj-img--drake" />
         </div>
-        <span class="obj-label obj-label--drake">{{ drakeLabel }}</span>
+        <span
+          class="obj-label obj-label--drake"
+          :class="{ 'obj-label--countdown': !drakeUp, 'obj-label--soon-drake': drakeSpawnSoon }"
+        >{{ drakeLabel }}</span>
       </div>
 
       <!-- Baron marker -->
@@ -125,7 +128,10 @@
           <div v-if="baronUp" class="obj-spin-ring obj-spin-ring--baron" />
           <img src="/img/baron.png" alt="Baron" class="obj-img obj-img--baron" :class="{ 'obj-img--dormant': !baronUp }" />
         </div>
-        <span class="obj-label obj-label--baron">{{ baronLabel }}</span>
+        <span
+          class="obj-label obj-label--baron"
+          :class="{ 'obj-label--countdown': !baronUp, 'obj-label--soon-baron': baronSpawnSoon }"
+        >{{ baronLabel }}</span>
       </div>
 
       <!-- Nexus explosion -->
@@ -206,6 +212,7 @@ import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMo
 import {
   DRAKE_POS,
   BARON_POS,
+  OBJECTIVE_SPAWN_SOON_T,
   STRUCTURE_BURST_GAME_SECONDS,
   FINAL_PUSH_START_T,
 } from '@/config/constants'
@@ -272,7 +279,12 @@ const drakeUp = computed(() => battleStore.battleTime >= battleStore.drakeEventT
 const drakeLabel = computed(() =>
   drakeUp.value
     ? 'CONTESTED'
-    : `SPAWN ${battleStore.formatSpawnCountdown(battleStore.drakeEventTime)}`,
+    : battleStore.formatSpawnCountdown(battleStore.drakeEventTime),
+)
+const drakeSpawnSoon = computed(
+  () =>
+    !drakeUp.value &&
+    battleStore.drakeEventTime - battleStore.battleTime <= OBJECTIVE_SPAWN_SOON_T,
 )
 
 const showBaron = computed(
@@ -282,7 +294,12 @@ const baronUp = computed(() => battleStore.battleTime >= battleStore.baronEventT
 const baronLabel = computed(() =>
   baronUp.value
     ? 'BARON UP'
-    : `SPAWN ${battleStore.formatSpawnCountdown(battleStore.baronEventTime)}`,
+    : battleStore.formatSpawnCountdown(battleStore.baronEventTime),
+)
+const baronSpawnSoon = computed(
+  () =>
+    !baronUp.value &&
+    battleStore.baronEventTime - battleStore.battleTime <= OBJECTIVE_SPAWN_SOON_T,
 )
 
 const nexusPos = computed(() =>
@@ -798,6 +815,30 @@ const structureMarkers = computed(() => {
 }
 .obj-label--drake { color: #6ee0a0; }
 .obj-label--baron { color: #c9a0f5; }
+
+/* Pre-spawn countdown — timer digits only, larger and steady */
+.obj-label--countdown {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+  padding: 0 6px;
+}
+/* Last displayed minute before spawn — soft "get ready" pulse in objective color */
+.obj-label--soon-drake {
+  animation: spawn-soon-drake 1.2s ease-in-out infinite;
+}
+.obj-label--soon-baron {
+  animation: spawn-soon-baron 1.2s ease-in-out infinite;
+}
+@keyframes spawn-soon-drake {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 8px rgba(34, 197, 94, 0.9); }
+}
+@keyframes spawn-soon-baron {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 8px rgba(168, 85, 247, 0.9); }
+}
 
 /* ── Nexus explosion ── */
 .nexus-boom {
