@@ -260,7 +260,8 @@ export const OBJECTIVE_ROLE_ABILITIES = {
 
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
 export const OBJECTIVE_MAX_DURATION_MS = 20000
-export const OBJECTIVE_RESULT_DELAY_MS = 2200
+/** Post-fight summary display time — dismissible early via the X button */
+export const OBJECTIVE_RESULT_DELAY_MS = 6000
 /** Bottom-bar game-state stat display during a frozen-time objective fight */
 export const OBJECTIVE_FIGHT_STATUS = {
   drake: { label: 'Drake Fight', image: '/img/dragon.png' },

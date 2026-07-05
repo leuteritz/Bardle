@@ -357,6 +357,7 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.objectiveFighters!.t1[2].fightHp).toBe(
       OBJECTIVE_ROLE_MAX_HP.mid - 3 * OBJECTIVE_AOE_DPS_DRAKE,
     )
+    expect(store.objectiveFighters!.t1[2].damageTaken).toBe(3 * OBJECTIVE_AOE_DPS_DRAKE)
   })
 
   it('a living support keeps the team healthier than a dead one', () => {
@@ -488,8 +489,23 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(t2[0].damage).toBe(0)
     expect(t2[1].damage).toBe(0)
     expect(t2[2].damage).toBeGreaterThan(0)
-    // full contribution lands on the top laner as fight-HP damage
+    // full contribution lands on the top laner as fight-HP damage and is tracked as taken
     expect(top.fightHp).toBeLessThan(OBJECTIVE_ROLE_MAX_HP.top)
+    expect(top.damageTaken).toBeGreaterThan(0)
+  })
+
+  it('dismissObjectiveResult closes the summary immediately', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store._openObjectiveModal('drake', null)
+    store.forceResolveObjective(1)
+    expect(store.objectiveResult).not.toBeNull()
+    store.dismissObjectiveResult()
+    expect(store.objectiveModalOpen).toBe(false)
+    expect(store.objectiveResult).toBeNull()
+    // the cancelled auto-close timer must not throw later
+    vi.advanceTimersByTime(OBJECTIVE_RESULT_DELAY_MS + 100)
+    expect(store.objectiveModalOpen).toBe(false)
   })
 
   it('ADC crits double the contribution when the crit roll always hits', () => {

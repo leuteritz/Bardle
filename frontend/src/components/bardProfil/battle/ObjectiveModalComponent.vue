@@ -377,17 +377,9 @@
         </div>
         <div v-if="effectText" class="reward-effect">{{ effectText }}</div>
 
-        <!-- Result overlay with burst rays -->
+        <!-- Post-fight summary overlay -->
         <Transition name="result-pop">
-          <div v-if="battleStore.objectiveResult !== null" class="result-overlay" :class="resultClass">
-            <div class="result-rays" />
-            <div class="result-content">
-              <span class="result-label">{{ resultLabel }}</span>
-              <span class="result-score">{{ fmt(ownDamage) }} vs {{ fmt(enemyDamage) }} damage</span>
-              <span v-if="topFighter" class="result-top">Top: {{ topFighter.name }} · {{ fmt(Math.round(topFighter.damage)) }} dmg</span>
-              <span v-if="resultEffectText" class="result-effect">{{ resultEffectText }}</span>
-            </div>
-          </div>
+          <ObjectiveResultSummary v-if="battleStore.objectiveResult !== null" />
         </Transition>
       </div>
     </div>
@@ -399,6 +391,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
+import ObjectiveResultSummary from './ObjectiveResultSummary.vue'
 import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
   OBJECTIVE_BARON_WIN_BONUS,
@@ -628,12 +621,6 @@ function fighterDps(f: ObjectiveFighter, mult = 1): number {
   return Math.round(f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult)
 }
 
-const topFighter = computed(() => {
-  const all = [...fightersOwn.value, ...fightersEnemy.value].filter((f) => f.alive)
-  if (all.length === 0) return null
-  return all.reduce((best, f) => (f.damage > best.damage ? f : best))
-})
-
 const ownDamage = computed(() => Math.round(battleStore.objectiveOwnDamage))
 const enemyDamage = computed(() => Math.round(battleStore.objectiveEnemyDamage))
 const playerDamage = computed(() => Math.round(battleStore.objectivePlayerDamage))
@@ -659,11 +646,6 @@ const loseBonusPercent = computed(() => {
   return Math.round(winBonus.value * (oceanHeld ? DRAKE_OCEAN_LOSS_PENALTY_MULT : 1) * 100)
 })
 const effectText = computed(() => (isDrake.value ? drakeDef.value.effectText : ''))
-const resultEffectText = computed(() => {
-  const r = battleStore.objectiveResult
-  if (!isDrake.value || (r !== 'own' && r !== 'player')) return ''
-  return drakeDef.value.effectText
-})
 
 function fmt(n: number): string {
   return n.toLocaleString('en-US')
@@ -674,19 +656,6 @@ const hpFraction = computed(() => {
   return Math.max(0, battleStore.objectiveHP / battleStore.objectiveMaxHP)
 })
 
-const resultLabel = computed(() => {
-  const r = battleStore.objectiveResult
-  if (r === 'player') return 'YOUR HANDS SECURED IT!'
-  if (r === 'own') return 'SECURED'
-  return 'LOST TO THE ENEMY'
-})
-
-const resultClass = computed(() => {
-  const r = battleStore.objectiveResult
-  if (r === 'player') return 'result-overlay--player'
-  if (r === 'own') return 'result-overlay--own'
-  return 'result-overlay--enemy'
-})
 
 // ── Click feedback: crit floats + hit flash + hp shake ─────────────────────
 interface DmgFloat {
@@ -1881,90 +1850,6 @@ onUnmounted(_stopFloatScheduler)
   text-shadow: 0 0 8px var(--obj-glow);
 }
 
-/* ── Result overlay ──────────────────────────────────────────────────────── */
-.result-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  z-index: 20;
-  overflow: hidden;
-}
-.result-overlay--player { background: rgba(20, 14, 2, 0.82); }
-.result-overlay--own { background: rgba(8, 18, 4, 0.82); }
-.result-overlay--enemy { background: rgba(22, 8, 6, 0.82); }
-
-.result-rays {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 560px;
-  height: 560px;
-  transform: translate(-50%, -50%);
-  animation: rays-spin 14s linear infinite;
-  pointer-events: none;
-}
-.result-overlay--player .result-rays {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(232, 192, 64, 0.18) 14deg, transparent 28deg, transparent 62deg, rgba(232, 192, 64, 0.12) 76deg, transparent 90deg);
-}
-.result-overlay--own .result-rays {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(82, 184, 48, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(82, 184, 48, 0.1) 76deg, transparent 90deg);
-}
-.result-overlay--enemy .result-rays {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(204, 96, 80, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(204, 96, 80, 0.1) 76deg, transparent 90deg);
-}
-
-.result-content {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.result-label {
-  font-size: 34px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-align: center;
-  animation: result-punch 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
-}
-.result-overlay--player .result-label {
-  color: #e8c040;
-  text-shadow: 0 0 28px rgba(232, 192, 64, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
-}
-.result-overlay--own .result-label {
-  color: #6ec040;
-  text-shadow: 0 0 28px rgba(110, 192, 64, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
-}
-.result-overlay--enemy .result-label {
-  color: #e07060;
-  text-shadow: 0 0 28px rgba(224, 112, 96, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
-}
-
-.result-score {
-  font-size: 15px;
-  color: #a09060;
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-}
-
-.result-top {
-  font-size: 14px;
-  color: #e8c040;
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-}
-
-.result-effect {
-  font-size: 14px;
-  letter-spacing: 0.06em;
-  color: var(--obj-color);
-  text-shadow: 0 0 10px var(--obj-glow);
-}
-
 /* ── Transitions ─────────────────────────────────────────────────────────── */
 .obj-pop-enter-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -2026,16 +1911,6 @@ onUnmounted(_stopFloatScheduler)
   25% { transform: translateX(-3px); }
   50% { transform: translateX(3px); }
   75% { transform: translateX(-2px); }
-}
-
-@keyframes rays-spin {
-  0% { transform: translate(-50%, -50%) rotate(0); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-@keyframes result-punch {
-  0% { opacity: 0; transform: scale(1.4); }
-  100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes boss-breathe {
@@ -2100,7 +1975,6 @@ onUnmounted(_stopFloatScheduler)
   .arena-aura,
   .rune-ring,
   .ember,
-  .result-rays,
   .boss-hp--shake,
   .boss-img,
   .attacking {

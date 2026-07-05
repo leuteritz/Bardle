@@ -347,6 +347,9 @@ export const useBattleStore = defineStore('battle', {
     objectiveCurseDamage: { own: 0, enemy: 0 } as { own: number; enemy: number },
     /** Permanent Hex Curse stacks per side — every mid cast adds one for the rest of the fight */
     objectiveCurseStacks: { own: 1, enemy: 1 } as { own: number; enemy: number },
+    /** How long the resolved fight ran (ms) — shown in the post-fight summary */
+    objectiveFightDurationMs: 0,
+    _objectiveCloseTimeoutId: null as ReturnType<typeof setTimeout> | null,
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
     _objAbilityAccumMs: 0,
     battlePhaseStartTimestamp: 0,
@@ -1543,6 +1546,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveBuffTarget = { own: null, enemy: null }
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this.objectiveCurseStacks = { own: 1, enemy: 1 }
+      this.objectiveFightDurationMs = 0
       this._objAbilityAccumMs = 0
 
       this._objectiveIntervalId = setInterval(() => {
@@ -1643,6 +1647,7 @@ export const useBattleStore = defineStore('battle', {
         if (tauntedIdxs.includes(f.idx)) {
           // full damage diverted onto the challenging top laner
           opposingTop!.fightHp = Math.max(0, opposingTop!.fightHp - contrib)
+          opposingTop!.damageTaken += contrib
           continue
         }
         f.damage += contrib
@@ -1669,7 +1674,10 @@ export const useBattleStore = defineStore('battle', {
       for (const side of ['own', 'enemy'] as const) {
         const fighters = side === 'own' ? this.objectiveFighters!.t1 : this.objectiveFighters!.t2
         for (const f of fighters) {
-          if (this._isStanding(f)) f.fightHp = Math.max(0, f.fightHp - aoe * OBJECTIVE_ABILITY_TICK_S)
+          if (this._isStanding(f)) {
+            f.fightHp = Math.max(0, f.fightHp - aoe * OBJECTIVE_ABILITY_TICK_S)
+            f.damageTaken += aoe * OBJECTIVE_ABILITY_TICK_S
+          }
         }
         for (const f of fighters) {
           if (f.alive && !f.down && f.fightHp <= 0) f.down = true
@@ -1707,6 +1715,7 @@ export const useBattleStore = defineStore('battle', {
             fightHp: alive ? maxHp : 0,
             fightMaxHp: maxHp,
             down: false,
+            damageTaken: 0,
             abilityActiveUntil: 0,
             // staggered first casts so the pit doesn't fire everything at once
             abilityCooldownUntil: Date.now() + OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S[role] * 1000,
@@ -1786,6 +1795,7 @@ export const useBattleStore = defineStore('battle', {
         this._objectiveIntervalId = null
       }
       this.objectiveResult = by
+      this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
       const objective = this.activeObjective
       if (!objective) return
       const ownWin = by === 'player' || by === 'own'
@@ -1826,6 +1836,7 @@ export const useBattleStore = defineStore('battle', {
       const closeTimeoutId = setTimeout(() => {
         this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
+      this._objectiveCloseTimeoutId = closeTimeoutId
       this.timerIds.push(closeTimeoutId)
     },
 
@@ -1836,11 +1847,23 @@ export const useBattleStore = defineStore('battle', {
         this._objectiveIntervalId = null
       }
       this.objectiveResult = by
+      this.objectiveFightDurationMs = Date.now() - this.objectiveFightStartMs
       this.objectiveWinDelta = 0
       const closeTimeoutId = setTimeout(() => {
         this._closeObjectiveModalAndResume()
       }, OBJECTIVE_RESULT_DELAY_MS)
+      this._objectiveCloseTimeoutId = closeTimeoutId
       this.timerIds.push(closeTimeoutId)
+    },
+
+    /** X button on the post-fight summary — close immediately instead of waiting out the timer. */
+    dismissObjectiveResult() {
+      if (this.objectiveResult === null) return
+      if (this._objectiveCloseTimeoutId) {
+        clearTimeout(this._objectiveCloseTimeoutId)
+        this._objectiveCloseTimeoutId = null
+      }
+      this._closeObjectiveModalAndResume()
     },
 
     /** Unfreeze after a fight: clear the modal, then continue the paused simulation. */
@@ -1868,6 +1891,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
       this.objectiveCurseStacks = { own: 1, enemy: 1 }
       this._objAbilityAccumMs = 0
+      this._objectiveCloseTimeoutId = null
       this.objectiveModalOpen = false
       this.objectiveResult = null
       this.activeObjective = null

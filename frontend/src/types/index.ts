@@ -443,6 +443,8 @@ export interface ObjectiveFighter {
   weight: number
   /** Cumulative damage dealt to this objective */
   damage: number
+  /** Cumulative fight-HP damage taken (boss AoE + taunt diversion; heals excluded) */
+  damageTaken: number
   /** Battle role — drives the fighter's pit ability (idx order: top/jungle/mid/adc/support) */
   role: BattleRole
   /** Fight-local HP — every fighter alive at fight start enters at full role HP */
