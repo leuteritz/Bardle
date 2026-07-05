@@ -241,6 +241,9 @@ function structureLabel(e: StructureFeedEntry): string {
   /* layout reservation stays 36px so the minimap keeps its exact size —
      the visible bar below grows upward as an overlay */
   height: 36px;
+  /* above .objective-overlay (40), below .announce-layer (45) — the HUD footer
+     must stay fully visible over the modal backdrop */
+  z-index: 41;
 }
 
 /* ── Collapsed single-row bar ── */
