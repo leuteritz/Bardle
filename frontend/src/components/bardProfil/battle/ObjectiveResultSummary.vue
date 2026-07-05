@@ -6,39 +6,45 @@
       <span class="result-label">{{ resultLabel }}</span>
 
       <div class="summary-panel">
-        <div v-if="topFighter" class="summary-hero">
-          <img
-            :src="battleStore.getChampionImage(topFighter.name)"
-            class="summary-portrait"
-            :class="fighterTeam(topFighter) === 'own' ? 'summary-portrait--own' : 'summary-portrait--enemy'"
-            :alt="topFighter.name"
-          />
-          <div class="summary-hero-info">
-            <span class="summary-hero-label">TOP DAMAGE</span>
-            <span class="summary-hero-name">{{ topFighter.name }}</span>
+        <div class="panel-goldline" />
+
+        <!-- Post-game awards -->
+        <div class="award-grid">
+          <div
+            v-for="(a, i) in awards"
+            :key="a.key"
+            class="award-card"
+            :class="`award--${a.key}`"
+            :style="{ '--i': i }"
+          >
+            <div class="award-portrait-wrap">
+              <img
+                :src="battleStore.getChampionImage(a.fighter.name)"
+                class="award-portrait"
+                :class="fighterTeam(a.fighter) === 'own' ? 'award-portrait--own' : 'award-portrait--enemy'"
+                :alt="a.fighter.name"
+              />
+              <span class="award-badge">
+                <Icon :icon="a.icon" width="12" height="12" />
+              </span>
+            </div>
+            <span class="award-label">{{ a.label }}</span>
+            <span class="award-name">{{ a.fighter.name }}</span>
+            <span class="award-value">{{ a.valueText }}</span>
           </div>
-          <span class="summary-hero-value summary-hero-value--gold">{{ fmt(Math.round(topFighter.damage)) }}</span>
         </div>
-        <div v-if="tankFighter" class="summary-hero">
-          <img
-            :src="battleStore.getChampionImage(tankFighter.name)"
-            class="summary-portrait"
-            :class="fighterTeam(tankFighter) === 'own' ? 'summary-portrait--own' : 'summary-portrait--enemy'"
-            :alt="tankFighter.name"
-          />
-          <div class="summary-hero-info">
-            <span class="summary-hero-label">MOST PUNISHED</span>
-            <span class="summary-hero-name">{{ tankFighter.name }}</span>
-          </div>
-          <span class="summary-hero-value summary-hero-value--red">{{ fmt(Math.round(tankFighter.damageTaken)) }}</span>
+
+        <!-- Team damage split -->
+        <div class="team-split">
+          <div class="team-split-own" :style="{ width: ownShare + '%' }" />
+          <div class="team-split-mid" />
+          <span class="team-split-val team-split-val--own">{{ fmt(ownDamage) }}</span>
+          <span class="team-split-val team-split-val--enemy">{{ fmt(enemyDamage) }}</span>
         </div>
 
         <div class="summary-chips">
-          <span class="sum-chip sum-chip--own">YOUR TEAM {{ fmt(ownDamage) }}</span>
-          <span class="sum-chip sum-chip--enemy">ENEMY {{ fmt(enemyDamage) }}</span>
           <span class="sum-chip">{{ fightDurationText }}</span>
           <span v-if="playerDamage > 0" class="sum-chip sum-chip--gold">CLICKS {{ fmt(playerDamage) }}</span>
-          <span v-if="totalCurseDamage > 0" class="sum-chip sum-chip--curse">CURSE {{ fmt(totalCurseDamage) }}</span>
           <span v-if="downsCount > 0" class="sum-chip sum-chip--red">DOWNS {{ downsCount }}</span>
         </div>
       </div>
@@ -54,10 +60,19 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
 import { OBJECTIVE_RESULT_DELAY_MS } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
+
+interface Award {
+  key: string
+  label: string
+  icon: string
+  fighter: ObjectiveFighter
+  valueText: string
+}
 
 const battleStore = useBattleStore()
 
@@ -87,6 +102,11 @@ const resultClass = computed(() => {
   return 'result-overlay--enemy'
 })
 
+/** Which side a fighter belongs to — for team-colored portrait rings. */
+function fighterTeam(f: ObjectiveFighter): 'own' | 'enemy' {
+  return battleStore.objectiveFighters?.t1.includes(f) ? 'own' : 'enemy'
+}
+
 const topFighter = computed(() => {
   const all = fightersAll.value.filter((f) => f.alive)
   if (all.length === 0) return null
@@ -100,16 +120,67 @@ const tankFighter = computed(() => {
   return all.reduce((best, f) => (f.damageTaken > best.damageTaken ? f : best))
 })
 
-/** Which side a fighter belongs to — for team-colored portrait frames. */
-function fighterTeam(f: ObjectiveFighter): 'own' | 'enemy' {
-  return battleStore.objectiveFighters?.t1.includes(f) ? 'own' : 'enemy'
-}
+/** The mid whose Hex Curse dealt more damage — null when no curse ticked. */
+const curseMaster = computed(() => {
+  const { own, enemy } = battleStore.objectiveCurseDamage
+  if (own <= 0 && enemy <= 0) return null
+  const side = own >= enemy ? 'own' : 'enemy'
+  const fighters = side === 'own' ? battleStore.objectiveFighters?.t1 : battleStore.objectiveFighters?.t2
+  const mid = fighters?.find((f) => f.role === 'mid' && f.alive)
+  if (!mid) return null
+  return { fighter: mid, value: Math.round(Math.max(own, enemy)) }
+})
+
+/** The standing fighter who kept the highest HP fraction. */
+const survivor = computed(() => {
+  const standing = fightersAll.value.filter((f) => f.alive && !f.down && f.fightMaxHp > 0)
+  if (standing.length === 0) return null
+  const best = standing.reduce((b, f) => (f.fightHp / f.fightMaxHp > b.fightHp / b.fightMaxHp ? f : b))
+  return { fighter: best, pct: Math.round((best.fightHp / best.fightMaxHp) * 100) }
+})
+
+const awards = computed<Award[]>(() => {
+  const out: Award[] = []
+  if (topFighter.value) {
+    out.push({
+      key: 'damage',
+      label: 'TOP DAMAGE',
+      icon: 'game-icons:quick-slash',
+      fighter: topFighter.value,
+      valueText: fmt(Math.round(topFighter.value.damage)),
+    })
+  }
+  if (tankFighter.value) {
+    out.push({
+      key: 'punished',
+      label: 'MOST PUNISHED',
+      icon: 'game-icons:heart-shield',
+      fighter: tankFighter.value,
+      valueText: fmt(Math.round(tankFighter.value.damageTaken)),
+    })
+  }
+  if (curseMaster.value) {
+    out.push({
+      key: 'curse',
+      label: 'CURSE MASTER',
+      icon: 'game-icons:cursed-star',
+      fighter: curseMaster.value.fighter,
+      valueText: fmt(curseMaster.value.value),
+    })
+  }
+  if (survivor.value) {
+    out.push({
+      key: 'survivor',
+      label: 'SURVIVOR',
+      icon: 'game-icons:heart-beats',
+      fighter: survivor.value.fighter,
+      valueText: `${survivor.value.pct}% HP`,
+    })
+  }
+  return out
+})
 
 const downsCount = computed(() => fightersAll.value.filter((f) => f.down).length)
-
-const totalCurseDamage = computed(() =>
-  Math.round(battleStore.objectiveCurseDamage.own + battleStore.objectiveCurseDamage.enemy),
-)
 
 const fightDurationText = computed(
   () => (battleStore.objectiveFightDurationMs / 1000).toFixed(1) + 's',
@@ -118,6 +189,12 @@ const fightDurationText = computed(
 const ownDamage = computed(() => Math.round(battleStore.objectiveOwnDamage))
 const enemyDamage = computed(() => Math.round(battleStore.objectiveEnemyDamage))
 const playerDamage = computed(() => Math.round(battleStore.objectivePlayerDamage))
+
+const ownShare = computed(() => {
+  const total = ownDamage.value + enemyDamage.value
+  if (total === 0) return 50
+  return Math.round((ownDamage.value / total) * 100)
+})
 
 const resultEffectText = computed(() => {
   const r = battleStore.objectiveResult
@@ -137,9 +214,9 @@ const resultEffectText = computed(() => {
   z-index: 20;
   overflow: hidden;
 }
-.result-overlay--player { background: rgba(20, 14, 2, 0.85); }
-.result-overlay--own { background: rgba(8, 18, 4, 0.85); }
-.result-overlay--enemy { background: rgba(22, 8, 6, 0.85); }
+.result-overlay--player { background: rgba(20, 14, 2, 0.88); }
+.result-overlay--own { background: rgba(8, 18, 4, 0.88); }
+.result-overlay--enemy { background: rgba(22, 8, 6, 0.88); }
 
 .result-rays {
   position: absolute;
@@ -214,77 +291,154 @@ const resultEffectText = computed(() => {
 }
 
 .summary-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 440px;
-  padding: 12px 18px;
+  min-width: 480px;
+  padding: 14px 18px 12px;
   background: #16140e;
   border: 1px solid #5c3310;
   border-radius: 4px;
+  overflow: hidden;
+}
+.panel-goldline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
-.summary-hero {
+/* ── Awards ──────────────────────────────────────────────────────────────── */
+.award-grid {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
-.summary-portrait {
-  width: 60px;
-  height: 60px;
+.award-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 102px;
+  padding: 8px 8px 7px;
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  animation: award-in 0.4s ease both;
+  animation-delay: calc(var(--i) * 0.12s);
+}
+
+.award-portrait-wrap {
+  position: relative;
+}
+.award-portrait {
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
-  flex-shrink: 0;
 }
-.summary-portrait--own {
+.award-portrait--own {
   border: 2px solid #60a5fa;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.55);
 }
-.summary-portrait--enemy {
+.award-portrait--enemy {
   border: 2px solid #f87171;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
 }
-.summary-hero-info {
+.award-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 20px;
+  height: 20px;
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: #16140e;
+  border: 1px solid #3e200a;
+  border-radius: 50%;
 }
-.summary-hero-label {
-  font-size: 10px;
+
+.award-label {
+  margin-top: 4px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   color: #8a8070;
+  white-space: nowrap;
 }
-.summary-hero-name {
-  font-size: 17px;
+.award-name {
+  font-size: 13px;
   color: #c0b090;
+  max-width: 96px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.summary-hero-value {
-  font-size: 22px;
+.award-value {
+  font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.summary-hero-value--gold {
-  color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+
+/* Award theming: badge icon + value speak the award's color */
+.award--damage .award-badge { color: #e8c040; border-color: #7a5a18; }
+.award--damage .award-value { color: #e8c040; text-shadow: 0 0 8px rgba(232, 192, 64, 0.5); }
+.award--punished .award-badge { color: #f08070; border-color: #7a3020; }
+.award--punished .award-value { color: #f08070; text-shadow: 0 0 8px rgba(204, 96, 80, 0.5); }
+.award--curse .award-badge { color: #c9a0f5; border-color: #5a3080; }
+.award--curse .award-value { color: #c9a0f5; text-shadow: 0 0 8px rgba(168, 85, 247, 0.5); }
+.award--survivor .award-badge { color: #8ee060; border-color: #2e6018; }
+.award--survivor .award-value { color: #8ee060; text-shadow: 0 0 8px rgba(82, 184, 48, 0.5); }
+
+/* ── Team damage split ───────────────────────────────────────────────────── */
+.team-split {
+  position: relative;
+  height: 18px;
+  border: 1px solid #3e200a;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #7a2818, #57201a);
+  overflow: hidden;
 }
-.summary-hero-value--red {
-  color: #f08070;
-  text-shadow: 0 0 10px rgba(204, 96, 80, 0.5);
+.team-split-own {
+  height: 100%;
+  background: linear-gradient(to right, #2e7a1a, #52b830);
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
 }
+.team-split-mid {
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  background: #e8c040;
+  opacity: 0.7;
+}
+.team-split-val {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.team-split-val--own { left: 8px; }
+.team-split-val--enemy { right: 8px; }
 
 .summary-chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  border-top: 1px solid #3e200a;
-  padding-top: 10px;
 }
 .sum-chip {
   padding: 3px 10px;
@@ -298,10 +452,7 @@ const resultEffectText = computed(() => {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.sum-chip--own { color: #8ee060; }
-.sum-chip--enemy { color: #f08070; }
 .sum-chip--gold { color: #e8c040; }
-.sum-chip--curse { color: #c9a0f5; }
 .sum-chip--red { color: #f08070; }
 
 .result-effect {
@@ -339,6 +490,11 @@ const resultEffectText = computed(() => {
   100% { opacity: 1; transform: scale(1); }
 }
 
+@keyframes award-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes result-drain {
   0% { width: 100%; }
   100% { width: 0%; }
@@ -347,7 +503,8 @@ const resultEffectText = computed(() => {
 @media (prefers-reduced-motion: reduce) {
   .result-rays,
   .result-label,
-  .result-timer-fill {
+  .result-timer-fill,
+  .award-card {
     animation: none !important;
   }
 }

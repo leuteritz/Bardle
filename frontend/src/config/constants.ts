@@ -2140,6 +2140,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cursed-star', // Mid "Hex Curse" ability (ObjectiveModalComponent)
   'game-icons:dead-eye', // ADC "Deadeye" crit ability (ObjectiveModalComponent)
   'game-icons:healing', // Support "Mend" heal ability (ObjectiveModalComponent)
+  'game-icons:heart-shield', // MOST PUNISHED award badge (ObjectiveResultSummary)
+  'game-icons:heart-beats', // SURVIVOR award badge (ObjectiveResultSummary)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
