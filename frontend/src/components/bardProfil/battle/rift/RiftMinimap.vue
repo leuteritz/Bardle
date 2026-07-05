@@ -992,7 +992,8 @@ const structureMarkers = computed(() => {
 .map-controls {
   position: absolute;
   right: 6px;
-  bottom: 6px;
+  /* clears the kill-feed bar, which overlays the bottom 10px of the map stage */
+  bottom: 16px;
   display: flex;
   gap: 6px;
   z-index: 10;

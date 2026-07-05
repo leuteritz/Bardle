@@ -70,7 +70,7 @@
             :class="{ 'feed-item--multikill': row.kill.multikillTier }"
           >
             <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
-            <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
+            <Icon icon="game-icons:saber-slash" width="20" height="20" class="feed-star" />
             <template v-if="row.kill.multikillTier">
               <img
                 v-for="k in multikillChain(row.kill)"
@@ -87,8 +87,8 @@
           <div v-else class="feed-item feed-item--structure">
             <Icon
               :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
-              width="18"
-              height="18"
+              width="22"
+              height="22"
               class="feed-structure-icon"
               :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
             />
@@ -238,11 +238,18 @@ function structureLabel(e: StructureFeedEntry): string {
 .ticker-root {
   position: relative;
   flex-shrink: 0;
+  /* layout reservation stays 36px so the minimap keeps its exact size —
+     the visible bar below grows upward as an overlay */
+  height: 36px;
 }
 
 /* ── Collapsed single-row bar ── */
 .ticker-bar {
-  height: 36px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -256,7 +263,7 @@ function structureLabel(e: StructureFeedEntry): string {
 }
 
 .ticker-chevron {
-  font-size: 8px;
+  font-size: 10px;
   color: #6a5820;
   flex-shrink: 0;
   margin-left: auto;
@@ -290,16 +297,28 @@ function structureLabel(e: StructureFeedEntry): string {
 }
 
 .bar-time {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1px;
   color: #6a5820;
   flex-shrink: 0;
 }
 
+/* Bar-only readability bumps — the expanded panel keeps its compact sizing */
+.ticker-bar .feed-img {
+  width: 28px;
+  height: 28px;
+}
+.ticker-bar .feed-mk {
+  font-size: 13px;
+}
+.ticker-bar .feed-structure-label {
+  font-size: 14px;
+}
+
 /* ── Expanded history overlay ── */
 .feed-panel {
   position: absolute;
-  bottom: 100%;
+  bottom: 46px; /* docks onto the top edge of the overlay-grown bar */
   left: 0;
   right: 0;
   height: 248px;
