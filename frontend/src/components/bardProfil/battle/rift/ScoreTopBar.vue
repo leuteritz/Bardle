@@ -10,7 +10,8 @@
       <div class="side-stats">
         <span class="stat" title="Turrets destroyed"><Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
         <span class="stat" title="Inhibitors destroyed"><Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
-        <span class="stat"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes + battleStore.team1Barons }}</span>
+        <span class="stat" title="Drakes secured"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
+        <span class="stat" title="Barons secured"><img src="/img/baron.png" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
         <span class="stat stat--gold">◈ {{ formatNumber(battleStore.team1Gold) }}</span>
         <span class="stat stat--level">Lv {{ battleStore.team1AvgLevel }}</span>
       </div>
@@ -32,7 +33,8 @@
       <div class="side-stats side-stats--red">
         <span class="stat stat--level">Lv {{ battleStore.team2AvgLevel }}</span>
         <span class="stat stat--gold">{{ formatNumber(battleStore.team2Gold) }} ◈</span>
-        <span class="stat">{{ battleStore.team2Drakes + battleStore.team2Barons }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
+        <span class="stat" title="Barons secured">{{ battleStore.team2Barons }} <img src="/img/baron.png" alt="Barons" class="stat-img" /></span>
+        <span class="stat" title="Drakes secured">{{ battleStore.team2Drakes }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
         <span class="stat" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /></span>
         <span class="stat" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /></span>
       </div>

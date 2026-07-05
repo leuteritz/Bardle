@@ -73,17 +73,6 @@
           </div>
         </div>
       </TransitionGroup>
-
-      <div class="ticker-right">
-        <span class="obj-status" :class="battleStore.drakeAlive && battleStore.drakeEventTime > 0 ? 'obj-status--live' : ''">
-          <img src="/img/dragon.png" alt="Drake" class="obj-img" />
-          {{ drakeStatus }}
-        </span>
-        <span class="obj-status obj-status--baron" :class="battleStore.baronAlive && battleStore.baronEventTime > 0 ? 'obj-status--live' : ''">
-          <img src="/img/baron.png" alt="Baron" class="obj-img" />
-          {{ baronStatus }}
-        </span>
-      </div>
     </div>
 
     <Teleport to="body">
@@ -198,25 +187,6 @@ function structureLabel(e: StructureFeedEntry): string {
   return e.lane ? `${e.lane.toUpperCase()} · ${label}` : label
 }
 
-const drakeStatus = computed(() => {
-  if (battleStore.drakeKilledByTeam !== null)
-    return battleStore.drakeKilledByTeam === 1 ? 'Drake secured' : 'Drake lost'
-  if (battleStore.drakeEventTime > 0 && battleStore.battleTime >= battleStore.drakeEventTime)
-    return 'Drake up · contested'
-  if (battleStore.drakeEventTime > 0)
-    return `Drake ${battleStore.formatSpawnCountdown(battleStore.drakeEventTime)}`
-  return 'Drake —'
-})
-
-const baronStatus = computed(() => {
-  if (battleStore.baronKilledByTeam !== null)
-    return battleStore.baronKilledByTeam === 1 ? 'Baron secured' : 'Baron lost'
-  if (battleStore.baronEventTime > 0 && battleStore.battleTime >= battleStore.baronEventTime)
-    return 'Baron up!'
-  if (battleStore.baronEventTime > 0)
-    return `Baron ${battleStore.formatSpawnCountdown(battleStore.baronEventTime)}`
-  return 'Baron —'
-})
 </script>
 
 <style scoped>
@@ -424,34 +394,6 @@ const baronStatus = computed(() => {
   letter-spacing: 1px;
   color: #e8c040;
   white-space: nowrap;
-}
-
-.ticker-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.obj-status {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: #6ee0a0;
-  white-space: nowrap;
-}
-.obj-status--baron { color: #c9a0f5; }
-.obj-status--live {
-  text-shadow: 0 0 8px currentColor;
-}
-
-.obj-img {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 /* ── Transitions ── */
