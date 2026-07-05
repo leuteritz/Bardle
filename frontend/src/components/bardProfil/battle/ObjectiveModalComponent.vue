@@ -53,22 +53,36 @@
 
         <!-- Arena row: own fighters | boss | enemy fighters -->
         <div class="arena-row">
-          <TransitionGroup name="fighter" tag="div" class="fighters-col">
+          <div class="fighters-col">
             <div
               v-for="(f, i) in fightersOwn"
               :key="'f1' + f.idx"
               class="fighter-card fighter-card--own"
-              :class="[{ 'fighter-card--dead': !f.alive || f.down }, cardRankClass(f, i), cardFlashClass('own' + f.idx)]"
+              :class="[
+                {
+                  'fighter-card--dead': !f.alive || f.down,
+                  'attacking attacking--own': isAttacking(f),
+                  'card--taunted': isTaunted(f, 'own'),
+                },
+                cardRankClass(f, 'own'),
+                cardFlashClass('own' + f.idx),
+              ]"
+              :style="isAttacking(f) ? lungeStyle(i, false) : undefined"
             >
+              <div v-if="isTaunted(f, 'own')" class="taunt-chip">
+                <img
+                  v-if="tauntingTopOf('own')"
+                  :src="battleStore.getChampionImage(tauntingTopOf('own')!.name)"
+                  class="taunt-chip-img"
+                  :alt="tauntingTopOf('own')!.name"
+                />
+                <Icon icon="game-icons:enrage" width="12" height="12" />
+                TAUNTED
+              </div>
               <div class="fighter-main">
                 <div
                   class="fighter-portrait-wrap"
-                  :class="{
-                    'attacking attacking--own': isAttacking(f),
-                    'portrait--taunting': isTaunting(f),
-                    'portrait--buffed': isBuffed(f, 'own'),
-                  }"
-                  :style="isAttacking(f) ? lungeStyle(i, false) : undefined"
+                  :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'own') }"
                 >
                   <img
                     :src="battleStore.getChampionImage(f.name)"
@@ -94,19 +108,9 @@
                     >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
                   </TransitionGroup>
                 </div>
-                <div class="fighter-info">
-                  <span class="fighter-name">{{ f.name }}</span>
-                  <span
-                    :key="damageBumps['own' + f.idx] ?? 0"
-                    class="fighter-damage fighter-damage--bump"
-                    :class="{ 'fighter-damage--dead': !f.alive || f.down }"
-                  >
-                    {{ fmt(displayedDamage(f, 'own')) }}
-                  </span>
-                  <span v-if="isStanding(f)" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveOwnDpsMult) }}/s</span>
-                </div>
-                <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, i)}`">
-                  <Icon icon="game-icons:sport-medal" width="28" height="28" />
+                <span class="fighter-name">{{ f.name }}</span>
+                <span v-if="rankOf(f, 'own')" class="fighter-rank-badge fighter-rank-badge--own" :class="`rank--${rankOf(f, 'own')}`">
+                  <Icon icon="game-icons:sport-medal" width="26" height="26" />
                 </span>
               </div>
               <div v-if="f.alive" class="fighter-hp-row">
@@ -123,10 +127,36 @@
               >
                 <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
                 {{ ABILITY_LABELS[f.role] }}
+                <template v-if="isTaunting(f)">
+                  <span class="taunt-arrow">⟶</span>
+                  <img
+                    v-for="t in tauntedEnemiesOf('own')"
+                    :key="'tt' + t.idx"
+                    :src="battleStore.getChampionImage(t.name)"
+                    class="taunt-target-img"
+                    :alt="t.name"
+                  />
+                </template>
+                <div class="ability-cd-track">
+                  <div
+                    class="ability-cd-fill"
+                    :class="{ 'ability-cd-fill--active': isAbilityActive(f) }"
+                    :style="{ width: abilityCdFraction(f) * 100 + '%' }"
+                  />
+                </div>
                 <span class="ability-cd" :class="{ 'ability-cd--active': isAbilityActive(f) }">{{ abilityStatus(f) }}</span>
               </div>
+              <div class="fighter-stats">
+                <span class="stat-label">DPS</span>
+                <span class="stat-value">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveOwnDpsMult) + '/s' : '—' }}</span>
+                <span class="stat-sep">·</span>
+                <span class="stat-label">DMG</span>
+                <span :key="damageBumps['own' + f.idx] ?? 0" class="stat-value stat-value--dmg fighter-damage--bump">
+                  {{ fmt(displayedDamage(f, 'own')) }}
+                </span>
+              </div>
             </div>
-          </TransitionGroup>
+          </div>
 
           <!-- Arena: aura + rune ring + embers + boss -->
           <div
@@ -185,36 +215,40 @@
           </TransitionGroup>
           </div>
 
-          <TransitionGroup name="fighter" tag="div" class="fighters-col fighters-col--enemy">
+          <div class="fighters-col fighters-col--enemy">
             <div
               v-for="(f, i) in fightersEnemy"
               :key="'f2' + f.idx"
               class="fighter-card fighter-card--enemy"
-              :class="[{ 'fighter-card--dead': !f.alive || f.down }, cardRankClass(f, i), cardFlashClass('enemy' + f.idx)]"
+              :class="[
+                {
+                  'fighter-card--dead': !f.alive || f.down,
+                  'attacking attacking--enemy': isAttacking(f),
+                  'card--taunted': isTaunted(f, 'enemy'),
+                },
+                cardRankClass(f, 'enemy'),
+                cardFlashClass('enemy' + f.idx),
+              ]"
+              :style="isAttacking(f) ? lungeStyle(i, true) : undefined"
             >
+              <div v-if="isTaunted(f, 'enemy')" class="taunt-chip">
+                <img
+                  v-if="tauntingTopOf('enemy')"
+                  :src="battleStore.getChampionImage(tauntingTopOf('enemy')!.name)"
+                  class="taunt-chip-img"
+                  :alt="tauntingTopOf('enemy')!.name"
+                />
+                <Icon icon="game-icons:enrage" width="12" height="12" />
+                TAUNTED
+              </div>
               <div class="fighter-main fighter-main--enemy">
-                <span v-if="rankOf(f, i)" class="fighter-rank-badge fighter-rank-badge--enemy" :class="`rank--${rankOf(f, i)}`">
-                  <Icon icon="game-icons:sport-medal" width="28" height="28" />
+                <span v-if="rankOf(f, 'enemy')" class="fighter-rank-badge fighter-rank-badge--enemy" :class="`rank--${rankOf(f, 'enemy')}`">
+                  <Icon icon="game-icons:sport-medal" width="26" height="26" />
                 </span>
-                <div class="fighter-info fighter-info--enemy">
-                  <span class="fighter-name">{{ f.name }}</span>
-                  <span
-                    :key="damageBumps['enemy' + f.idx] ?? 0"
-                    class="fighter-damage fighter-damage--bump"
-                    :class="{ 'fighter-damage--dead': !f.alive || f.down }"
-                  >
-                    {{ fmt(displayedDamage(f, 'enemy')) }}
-                  </span>
-                  <span v-if="isStanding(f)" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveEnemyDpsMult) }}/s</span>
-                </div>
+                <span class="fighter-name">{{ f.name }}</span>
                 <div
                   class="fighter-portrait-wrap"
-                  :class="{
-                    'attacking attacking--enemy': isAttacking(f),
-                    'portrait--taunting': isTaunting(f),
-                    'portrait--buffed': isBuffed(f, 'enemy'),
-                  }"
-                  :style="isAttacking(f) ? lungeStyle(i, true) : undefined"
+                  :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
                 >
                   <img
                     :src="battleStore.getChampionImage(f.name)"
@@ -255,10 +289,36 @@
               >
                 <Icon :icon="abilityOf(f).icon" width="12" height="12" class="ability-icon" />
                 {{ ABILITY_LABELS[f.role] }}
+                <template v-if="isTaunting(f)">
+                  <span class="taunt-arrow">⟵</span>
+                  <img
+                    v-for="t in tauntedEnemiesOf('enemy')"
+                    :key="'tt' + t.idx"
+                    :src="battleStore.getChampionImage(t.name)"
+                    class="taunt-target-img"
+                    :alt="t.name"
+                  />
+                </template>
+                <div class="ability-cd-track">
+                  <div
+                    class="ability-cd-fill ability-cd-fill--enemy"
+                    :class="{ 'ability-cd-fill--active': isAbilityActive(f) }"
+                    :style="{ width: abilityCdFraction(f) * 100 + '%' }"
+                  />
+                </div>
                 <span class="ability-cd" :class="{ 'ability-cd--active': isAbilityActive(f) }">{{ abilityStatus(f) }}</span>
               </div>
+              <div class="fighter-stats fighter-stats--enemy">
+                <span class="stat-label">DPS</span>
+                <span class="stat-value">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveEnemyDpsMult) + '/s' : '—' }}</span>
+                <span class="stat-sep">·</span>
+                <span class="stat-label">DMG</span>
+                <span :key="damageBumps['enemy' + f.idx] ?? 0" class="stat-value stat-value--dmg fighter-damage--bump">
+                  {{ fmt(displayedDamage(f, 'enemy')) }}
+                </span>
+              </div>
             </div>
-          </TransitionGroup>
+          </div>
         </div>
 
         <!-- Segmented HP bar -->
@@ -341,6 +401,8 @@ import {
   OBJECTIVE_SUPPORT_MEND_HEAL,
   OBJECTIVE_JUNGLE_BUFF_MULT,
   OBJECTIVE_ABILITY_TICK_S,
+  OBJECTIVE_ABILITY_CD_S,
+  OBJECTIVE_TOP_TAUNT_TARGETS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
@@ -410,6 +472,14 @@ function abilityStatus(f: ObjectiveFighter): string {
   return left > 0 ? `${left.toFixed(1)}s` : 'READY'
 }
 
+/** Cooldown refill 0→1 for the mini progress bar; full while the window is active. */
+function abilityCdFraction(f: ObjectiveFighter): number {
+  if (isAbilityActive(f)) return 1
+  const cd = OBJECTIVE_ABILITY_CD_S[f.role]
+  if (cd <= 0) return 1
+  return Math.max(0, Math.min(1, 1 - abilityCdLeft(f) / cd))
+}
+
 function hpPct(f: ObjectiveFighter): number {
   if (f.fightMaxHp <= 0) return 0
   return Math.max(0, Math.min(100, (f.fightHp / f.fightMaxHp) * 100))
@@ -453,33 +523,69 @@ const enemyDps = computed(() =>
   Math.round(aliveEnemy.value * OBJECTIVE_BASE_DPS_PER_CHAMP * battleStore.objectiveEnemyDpsMult),
 )
 
-/** Living fighters first, sorted by damage descending — the carry leads the list. */
-function sortByDamage(fighters: ObjectiveFighter[]): ObjectiveFighter[] {
-  return [...fighters].sort((a, b) => {
-    if (a.alive !== b.alive) return a.alive ? -1 : 1
-    return b.damage - a.damage
-  })
-}
+// Fixed role order (top/jungle/mid/adc/support) — no live reordering; medals show the damage ranks.
+const fightersOwn = computed(() => battleStore.objectiveFighters?.t1 ?? [])
+const fightersEnemy = computed(() => battleStore.objectiveFighters?.t2 ?? [])
 
-const fightersOwn = computed(() => sortByDamage(battleStore.objectiveFighters?.t1 ?? []))
-const fightersEnemy = computed(() => sortByDamage(battleStore.objectiveFighters?.t2 ?? []))
+/** Damage podium (1–3) per side, computed live without reordering the cards. */
+const damageRanks = computed(() => {
+  const map: Record<string, number> = {}
+  const rank = (arr: ObjectiveFighter[], side: string) => {
+    ;[...arr]
+      .filter((f) => f.alive && f.damage > 0)
+      .sort((a, b) => b.damage - a.damage)
+      .slice(0, 3)
+      .forEach((f, i) => {
+        map[side + f.idx] = i + 1
+      })
+  }
+  rank(fightersOwn.value, 'own')
+  rank(fightersEnemy.value, 'enemy')
+  return map
+})
 
-/**
- * Damage rank (1–3) of a fighter in its already-sorted column, null otherwise.
- * Dead fighters never rank — they sort last with 0 damage, so the first three
- * living entries are exactly the team's top 3.
- */
-function rankOf(f: ObjectiveFighter, sortedIndex: number): number | null {
-  return f.alive && sortedIndex < 3 ? sortedIndex + 1 : null
+function rankOf(f: ObjectiveFighter, side: 'own' | 'enemy'): number | null {
+  return damageRanks.value[side + f.idx] ?? null
 }
 
 /** Card shell class for the podium ranks — gold pulses, silver glows, bronze is a tinted frame. */
-function cardRankClass(f: ObjectiveFighter, sortedIndex: number): string | null {
-  const rank = rankOf(f, sortedIndex)
+function cardRankClass(f: ObjectiveFighter, side: 'own' | 'enemy'): string | null {
+  const rank = rankOf(f, side)
   if (rank === 1) return 'fighter-card--top'
   if (rank === 2) return 'fighter-card--second'
   if (rank === 3) return 'fighter-card--third'
   return null
+}
+
+// ── Taunt visibility: who challenges whom ───────────────────────────────────
+function _rawSide(side: 'own' | 'enemy'): ObjectiveFighter[] {
+  return side === 'own' ? battleStore.objectiveFighters?.t1 ?? [] : battleStore.objectiveFighters?.t2 ?? []
+}
+
+/** The opposing top laner currently taunting this side, if any. */
+function tauntingTopOf(side: 'own' | 'enemy'): ObjectiveFighter | null {
+  const top = _rawSide(side === 'own' ? 'enemy' : 'own').find((f) => f.role === 'top')
+  return top && isAbilityActive(top) ? top : null
+}
+
+/** Mirrors the store's taunt rule: first N standing fighters (idx order) while the enemy top's window runs. */
+function tauntedIdxsOf(side: 'own' | 'enemy'): number[] {
+  if (!tauntingTopOf(side)) return []
+  return _rawSide(side)
+    .filter(isStanding)
+    .slice(0, OBJECTIVE_TOP_TAUNT_TARGETS)
+    .map((f) => f.idx)
+}
+
+function isTaunted(f: ObjectiveFighter, side: 'own' | 'enemy'): boolean {
+  return tauntedIdxsOf(side).includes(f.idx)
+}
+
+/** The fighters a taunting top (on `topSide`) is currently binding — for the mini portraits. */
+function tauntedEnemiesOf(topSide: 'own' | 'enemy'): ObjectiveFighter[] {
+  const victimSide = topSide === 'own' ? 'enemy' : 'own'
+  const idxs = tauntedIdxsOf(victimSide)
+  return _rawSide(victimSide).filter((f) => idxs.includes(f.idx))
 }
 
 /**
@@ -964,12 +1070,8 @@ onUnmounted(_stopFloatScheduler)
   gap: 6px;
 }
 
-/* FLIP reorder animation when the damage sorting changes ranks */
-.fighter-move {
-  transition: transform 0.4s ease;
-}
-
 .fighter-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -989,6 +1091,55 @@ onUnmounted(_stopFloatScheduler)
 }
 .fighter-main--enemy {
   justify-content: flex-end;
+}
+.fighter-main--enemy .fighter-name {
+  text-align: right;
+}
+
+/* This side is being challenged — bound to the enemy top laner */
+.card--taunted {
+  border-color: #e8a040;
+  box-shadow: 0 0 8px rgba(232, 160, 64, 0.5);
+}
+.taunt-chip {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #e8a040;
+  background: #16140e;
+  border: 1px solid #e8a040;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 4;
+}
+.taunt-chip-img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #e8a040;
+  object-fit: cover;
+  display: block;
+}
+.taunt-arrow {
+  color: #e8a040;
+  font-weight: 700;
+}
+.taunt-target-img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #e8a040;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 0 5px rgba(232, 160, 64, 0.6);
 }
 
 /* Incoming damage / healing flash — the whole card blinks so hits are unmissable */
@@ -1059,8 +1210,7 @@ onUnmounted(_stopFloatScheduler)
   flex-shrink: 0;
 }
 
-/* Alive fighters periodically lunge toward the pit — animates the inner wrap,
-   never the card root (TransitionGroup FLIP owns the card's transform).
+/* Standing fighters periodically lunge toward the pit — the whole card moves.
    Duration comes inline from OBJECTIVE_LUNGE_CYCLE_S so the float scheduler stays in sync. */
 .attacking {
   animation: ease-in-out infinite;
@@ -1248,16 +1398,36 @@ onUnmounted(_stopFloatScheduler)
 .ability-icon {
   flex-shrink: 0;
 }
-.ability-cd {
+/* Cooldown refill bar — readable at a glance, pulses while the ability is active */
+.ability-cd-track {
+  flex: 1;
+  min-width: 22px;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ability-cd-fill {
+  height: 100%;
+  background: currentColor;
+  transition: width 0.2s linear;
+}
+.ability-cd-fill--enemy {
   margin-left: auto;
+}
+.ability-cd-fill--active {
+  animation: ability-flash 0.6s ease-in-out infinite;
+}
+.ability-cd {
   font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #8a8070;
+  min-width: 34px;
+  text-align: right;
 }
 .fighter-ability--enemy .ability-cd {
-  margin-left: 0;
-  margin-right: auto;
+  text-align: left;
 }
 .ability-cd--active {
   color: inherit;
@@ -1308,34 +1478,46 @@ onUnmounted(_stopFloatScheduler)
   color: #cd7f32;
 }
 
-.fighter-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.fighter-info--enemy {
-  align-items: flex-end;
-  text-align: right;
-}
 .fighter-name {
+  flex: 1;
+  min-width: 0;
   font-size: 15px;
   color: #c0b090;
   letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
 }
-.fighter-damage {
-  font-size: 17px;
+
+/* Labeled stat row: DPS · DMG */
+.fighter-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.2;
+}
+.fighter-stats--enemy {
+  justify-content: flex-end;
+}
+.stat-label {
+  font-size: 9px;
   font-weight: 700;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-}
-.fighter-damage--dead {
+  letter-spacing: 1px;
   color: #8a8070;
-  font-weight: 400;
+}
+.stat-sep {
+  color: #5c4a28;
+  font-size: 11px;
+}
+.stat-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c0b090;
+  font-variant-numeric: tabular-nums;
+}
+.stat-value--dmg {
+  color: #e8c040;
+  font-size: 14px;
 }
 /* Replays on every strike step via :key bump — ties the counter jump to the float */
 .fighter-damage--bump {
@@ -1344,12 +1526,6 @@ onUnmounted(_stopFloatScheduler)
 @keyframes dmg-bump {
   0% { transform: scale(1.25); }
   100% { transform: scale(1); }
-}
-.fighter-dps {
-  font-size: 11px;
-  color: #8a8070;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
 
 /* ── Arena ───────────────────────────────────────────────────────────────── */
@@ -1820,14 +1996,14 @@ onUnmounted(_stopFloatScheduler)
 
 @keyframes attack-lunge-own {
   0%, 55%, 100% { transform: translateX(0); }
-  62% { transform: translateX(-4px); }
-  70% { transform: translateX(14px) scale(1.06); }
+  62% { transform: translateX(-2px); }
+  70% { transform: translateX(6px) scale(1.015); }
   78% { transform: translateX(0); }
 }
 @keyframes attack-lunge-enemy {
   0%, 55%, 100% { transform: translateX(0); }
-  62% { transform: translateX(4px); }
-  70% { transform: translateX(-14px) scale(1.06); }
+  62% { transform: translateX(2px); }
+  70% { transform: translateX(-6px) scale(1.015); }
   78% { transform: translateX(0); }
 }
 
@@ -1874,12 +2050,10 @@ onUnmounted(_stopFloatScheduler)
   .curse-float,
   .portrait--taunting .fighter-portrait,
   .fighter-ability--active,
+  .ability-cd-fill--active,
   .card-flash-hit,
   .card-flash-heal {
     animation: none !important;
-  }
-  .fighter-move {
-    transition: none !important;
   }
 }
 </style>
