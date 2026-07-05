@@ -87,7 +87,7 @@
               </div>
               <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
                 <Icon icon="game-icons:cursed-star" width="12" height="12" />
-                HEX CURSE
+                HEX CURSE +1
               </div>
               <div class="fighter-main">
                 <div
@@ -199,13 +199,23 @@
             </span>
           </TransitionGroup>
 
-          <!-- Hex Curse mark — mid-role sprite with the fight's cumulative curse damage -->
-          <div v-if="curseActive('own')" class="curse-mark curse-mark--own">
+          <!-- Hex Curse mark — permanent while the mid stands; the cast window stacks it to ×2 -->
+          <div
+            v-if="curseStacks('own') > 0"
+            class="curse-mark curse-mark--own"
+            :class="{ 'curse-mark--stacked': curseStacks('own') > 1 }"
+          >
             <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
+            <span v-if="curseStacks('own') > 1" class="curse-x2">×{{ curseStacks('own') }}</span>
             −{{ fmt(Math.round(battleStore.objectiveCurseDamage.own)) }}
           </div>
-          <div v-if="curseActive('enemy')" class="curse-mark curse-mark--enemy">
+          <div
+            v-if="curseStacks('enemy') > 0"
+            class="curse-mark curse-mark--enemy"
+            :class="{ 'curse-mark--stacked': curseStacks('enemy') > 1 }"
+          >
             <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
+            <span v-if="curseStacks('enemy') > 1" class="curse-x2">×{{ curseStacks('enemy') }}</span>
             −{{ fmt(Math.round(battleStore.objectiveCurseDamage.enemy)) }}
           </div>
 
@@ -263,7 +273,7 @@
               </div>
               <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
                 <Icon icon="game-icons:cursed-star" width="12" height="12" />
-                HEX CURSE
+                HEX CURSE +1
               </div>
               <div class="fighter-main fighter-main--enemy">
                 <div class="stat-block stat-block--enemy">
@@ -438,7 +448,7 @@ function isAttacking(f: ObjectiveFighter): boolean {
 const ABILITY_LABELS: Record<string, string> = {
   top: 'TAUNT',
   jungle: `RALLY +${Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)}%`,
-  mid: `CURSE +${OBJECTIVE_MID_CURSE_DPS}/s`,
+  mid: `CURSE ${OBJECTIVE_MID_CURSE_DPS}/s · +STACK`,
   adc: `CRIT ${Math.round(OBJECTIVE_ADC_CRIT_CHANCE * 100)}% · ×${OBJECTIVE_ADC_CRIT_MULT}`,
   support: `MEND +${OBJECTIVE_SUPPORT_MEND_HEAL}`,
 }
@@ -484,10 +494,11 @@ function abilityCdLeft(f: ObjectiveFighter): number {
   return Math.max(0, (f.abilityCooldownUntil - nowMs.value) / 1000)
 }
 
-/** A side's Hex Curse is ticking on the boss while its mid's window runs. */
-function curseActive(side: 'own' | 'enemy'): boolean {
+/** Hex Curse stacks on the boss: 0 = mid out, otherwise the fight's accumulated stack count. */
+function curseStacks(side: 'own' | 'enemy'): number {
   const mid = _rawSide(side).find((f) => f.role === 'mid')
-  return !!mid && isAbilityActive(mid)
+  if (!mid || !isStanding(mid)) return 0
+  return battleStore.objectiveCurseStacks[side]
 }
 
 function hpPct(f: ObjectiveFighter): number {
@@ -1430,8 +1441,8 @@ onUnmounted(_stopFloatScheduler)
   top: 4%;
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 13px;
   font-weight: 700;
   color: #c9a0f5;
   text-shadow: 0 0 6px rgba(168, 85, 247, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
@@ -1449,6 +1460,21 @@ onUnmounted(_stopFloatScheduler)
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.9));
+}
+/* Second stack: everything burns hotter and breathes faster */
+.curse-mark--stacked {
+  animation-duration: 0.8s;
+}
+.curse-mark--stacked .curse-mark-img {
+  filter: drop-shadow(0 0 9px rgba(168, 85, 247, 1));
+}
+.curse-x2 {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #e0b0ff;
+  text-shadow: 0 0 10px rgba(190, 110, 255, 1), 0 1px 2px rgba(0, 0, 0, 0.9);
+  animation: x2-pulse 0.6s ease-in-out infinite;
 }
 
 /* Mid card chip while Hex Curse is channeling */
@@ -2059,10 +2085,15 @@ onUnmounted(_stopFloatScheduler)
   50% { filter: drop-shadow(0 0 10px var(--ability-color, #e8c040)); }
 }
 
-/* Curse mark breathes softly over the boss for the whole Hex Curse window */
+/* Curse mark breathes softly over the boss while the objective is cursed */
 @keyframes curse-breathe {
   0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
+}
+
+@keyframes x2-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2086,6 +2117,7 @@ onUnmounted(_stopFloatScheduler)
   .portrait--taunting .fighter-portrait,
   .skill-btn--active .skill-img,
   .curse-mark,
+  .curse-x2,
   .card-flash-hit,
   .card-flash-heal {
     animation: none !important;

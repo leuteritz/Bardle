@@ -241,8 +241,8 @@ export const OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S: Record<'top' | 'jungle' | 'm
 /** ADC "Deadeye": passive crit chance and multiplier; "Focus Fire" window crits always */
 export const OBJECTIVE_ADC_CRIT_CHANCE = 0.25
 export const OBJECTIVE_ADC_CRIT_MULT = 2
-/** Mid "Hex Curse": DoT on the objective while the window is active, credited to the mid */
-export const OBJECTIVE_MID_CURSE_DPS = 15
+/** Mid "Hex Curse": DoT per stack while the mid stands — every cast adds a permanent stack */
+export const OBJECTIVE_MID_CURSE_DPS = 6
 /** Support "Mend": instant burst heal on every standing ally per cast */
 export const OBJECTIVE_SUPPORT_MEND_HEAL = 24
 /** Jungle "Wild Rally": DPS buff on the strongest standing ally while active */

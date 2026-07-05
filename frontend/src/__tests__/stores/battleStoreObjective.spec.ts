@@ -439,23 +439,41 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.objectiveFighters!.t1[0].damage).toBe(0)
   })
 
-  it('Hex Curse credits the mid laner only while its window is active', () => {
+  it('Hex Curse stacks permanently: every mid cast raises the tick rate for good', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     for (const f of store.objectiveFighters!.t1) f.weight = 0
     for (const f of store.objectiveFighters!.t2) f.weight = 0
     const mid = store.objectiveFighters!.t1[2]
-    mid.abilityActiveUntil = Date.now() + 100000 // window open, own mid only
-    // stay below the 1s first-cast offset so the enemy mid never casts
+    // prevent auto-casts from interfering with the measurement windows
+    const enemyMid = store.objectiveFighters!.t2[2]
+    enemyMid.abilityCooldownUntil = Date.now() + 1000000
+
+    // stay below the 1s first-cast offset — base stack (1) ticks on both sides
     vi.advanceTimersByTime(800)
-    expect(mid.damage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS * 0.8, 6)
+    const baseTick = OBJECTIVE_MID_CURSE_DPS * 0.8
+    expect(mid.damage).toBeCloseTo(baseTick, 6)
+    expect(store.objectiveEnemyDamage).toBeCloseTo(baseTick, 6)
     expect(store.objectiveFighters!.t1[0].damage).toBe(0)
-    expect(store.objectiveEnemyDamage).toBe(0)
-    expect(store.objectiveOwnDamage).toBeCloseTo(OBJECTIVE_MID_CURSE_DPS * 0.8, 6)
-    // cumulative curse tracker mirrors exactly what was credited
+
+    // trigger our mid's cast: +1 permanent stack → double rate
+    mid.abilityCooldownUntil = Date.now()
+    let before = mid.damage
+    vi.advanceTimersByTime(800)
+    expect(store.objectiveCurseStacks.own).toBe(2)
+    expect(mid.damage - before).toBeCloseTo(baseTick * 2, 6)
+
+    // long after the cast window expired the stack still holds
+    mid.abilityCooldownUntil = Date.now() + 1000000 // block further auto-casts
+    vi.advanceTimersByTime(2400)
+    before = mid.damage
+    vi.advanceTimersByTime(800)
+    expect(mid.damage - before).toBeCloseTo(baseTick * 2, 6)
+
+    // cumulative curse trackers mirror exactly what was credited
     expect(store.objectiveCurseDamage.own).toBeCloseTo(mid.damage, 6)
-    expect(store.objectiveCurseDamage.enemy).toBe(0)
+    expect(store.objectiveCurseDamage.enemy).toBeCloseTo(enemyMid.damage, 6)
   })
 
   it('an active taunt diverts the full enemy damage onto the top laner instead of the objective', () => {

@@ -345,6 +345,8 @@ export const useBattleStore = defineStore('battle', {
     objectiveBuffTarget: { own: null, enemy: null } as { own: number | null; enemy: number | null },
     /** Cumulative Hex Curse damage per side this fight (transient, drives the boss curse mark) */
     objectiveCurseDamage: { own: 0, enemy: 0 } as { own: number; enemy: number },
+    /** Permanent Hex Curse stacks per side — every mid cast adds one for the rest of the fight */
+    objectiveCurseStacks: { own: 1, enemy: 1 } as { own: number; enemy: number },
     _objectiveIntervalId: null as ReturnType<typeof setInterval> | null,
     _objAbilityAccumMs: 0,
     battlePhaseStartTimestamp: 0,
@@ -1540,6 +1542,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveFightStartMs = Date.now()
       this.objectiveBuffTarget = { own: null, enemy: null }
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
+      this.objectiveCurseStacks = { own: 1, enemy: 1 }
       this._objAbilityAccumMs = 0
 
       this._objectiveIntervalId = setInterval(() => {
@@ -1591,6 +1594,10 @@ export const useBattleStore = defineStore('battle', {
               this.objectiveBuffTarget[side] = strongest.idx
             }
           }
+          if (f.role === 'mid') {
+            // Hex Curse: every cast adds a permanent stack for the rest of the fight
+            this.objectiveCurseStacks[side] += 1
+          }
         }
         // Wild Rally expires with its window (or when the jungle drops)
         const jungle = fighters.find((f) => f.role === 'jungle')
@@ -1641,10 +1648,10 @@ export const useBattleStore = defineStore('battle', {
         f.damage += contrib
         total += contrib
       }
-      // Hex Curse: DoT credited to the mid while its window is active
+      // Hex Curse: permanent DoT while the mid stands, scaling with the accumulated stacks
       const mid = fighters.find((f) => f.role === 'mid')
-      if (mid && this._isStanding(mid) && mid.abilityActiveUntil > now) {
-        const curse = OBJECTIVE_MID_CURSE_DPS * dt
+      if (mid && this._isStanding(mid)) {
+        const curse = OBJECTIVE_MID_CURSE_DPS * this.objectiveCurseStacks[side] * dt
         mid.damage += curse
         total += curse
         this.objectiveCurseDamage[side] += curse
@@ -1859,6 +1866,7 @@ export const useBattleStore = defineStore('battle', {
       this.objectiveFighters = null
       this.objectiveBuffTarget = { own: null, enemy: null }
       this.objectiveCurseDamage = { own: 0, enemy: 0 }
+      this.objectiveCurseStacks = { own: 1, enemy: 1 }
       this._objAbilityAccumMs = 0
       this.objectiveModalOpen = false
       this.objectiveResult = null
