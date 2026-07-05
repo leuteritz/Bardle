@@ -20,7 +20,17 @@
                 <span class="feed-name" :class="row.kill.killerTeam === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.kill.killerName }}</span>
                 <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
                 <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
-                <img :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
+                <template v-if="row.kill.multikillTier">
+                  <img
+                    v-for="k in multikillChain(row.kill)"
+                    :key="`${k.t}-${k.victimName}`"
+                    :src="battleStore.getChampionImage(k.victimName)"
+                    :alt="k.victimName"
+                    class="feed-img feed-img--dead feed-img--chain"
+                    :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'"
+                  />
+                </template>
+                <img v-else :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
                 <span class="feed-name feed-name--dead">{{ row.kill.victimName }}</span>
                 <span v-if="row.kill.firstBlood" class="feed-fb">FIRST BLOOD</span>
                 <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
@@ -46,7 +56,13 @@
     <!-- Collapsed single-row bar -->
     <div class="ticker-bar">
       <TransitionGroup name="tick" tag="div" class="bar-items">
-        <div v-for="row in barEntries" :key="row.key" class="bar-event">
+        <div
+          v-for="row in barEntries"
+          :key="row.key"
+          class="bar-event"
+          @mouseenter="onRowEnter(row, $event)"
+          @mouseleave="onRowLeave"
+        >
           <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
           <div
             v-if="row.type === 'kill'"
@@ -55,7 +71,17 @@
           >
             <img :src="battleStore.getChampionImage(row.kill.killerName)" :alt="row.kill.killerName" class="feed-img" :class="row.kill.killerTeam === 1 ? 'feed-img--blue' : 'feed-img--red'" />
             <Icon icon="game-icons:saber-slash" width="16" height="16" class="feed-star" />
-            <img :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
+            <template v-if="row.kill.multikillTier">
+              <img
+                v-for="k in multikillChain(row.kill)"
+                :key="`${k.t}-${k.victimName}`"
+                :src="battleStore.getChampionImage(k.victimName)"
+                :alt="k.victimName"
+                class="feed-img feed-img--dead feed-img--chain"
+                :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'"
+              />
+            </template>
+            <img v-else :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
             <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
           </div>
           <div v-else class="feed-item feed-item--structure">
@@ -86,7 +112,18 @@
           >
             {{ killHeadline(hoveredRow.kill) }}
           </div>
-          <div class="tip-line">
+          <template v-if="hoveredRow.kill.multikillTier">
+            <div class="tip-line">
+              <span :class="hoveredRow.kill.killerTeam === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.kill.killerName }}</span>
+              <span class="tip-verb"> eliminated:</span>
+            </div>
+            <div v-for="(k, i) in multikillChain(hoveredRow.kill)" :key="`${k.t}-${k.victimName}`" class="tip-victim">
+              <span class="tip-victim-idx">{{ i + 1 }}</span>
+              <img :src="battleStore.getChampionImage(k.victimName)" :alt="k.victimName" class="tip-victim-img" />
+              <span :class="hoveredRow.kill.killerTeam === 1 ? 'tip-name--red' : 'tip-name--blue'">{{ k.victimName }}</span>
+            </div>
+          </template>
+          <div v-else class="tip-line">
             <span :class="hoveredRow.kill.killerTeam === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.kill.killerName }}</span>
             <span class="tip-verb"> slew </span>
             <span :class="hoveredRow.kill.killerTeam === 1 ? 'tip-name--red' : 'tip-name--blue'">{{ hoveredRow.kill.victimName }}</span>
@@ -167,9 +204,18 @@ function rowAccentClass(row: FeedRow): string {
   return row.kill.killerTeam === 1 ? 'feed-row--blue' : 'feed-row--red'
 }
 
+/** All kills of a multikill chain (oldest first) — the entry with tier N is the Nth kill by that killer. */
+function multikillChain(kill: KillFeedEntry): KillFeedEntry[] {
+  if (!kill.multikillTier) return []
+  return battleStore.killFeed
+    .filter((e) => e.killerName === kill.killerName && e.t <= kill.t)
+    .sort((a, b) => a.t - b.t)
+    .slice(-kill.multikillTier)
+}
+
 function killHeadline(kill: KillFeedEntry): string {
   if (kill.firstBlood) return 'FIRST BLOOD'
-  if (kill.multikillTier) return `${multikillLabel(kill.multikillTier)} KILL`
+  if (kill.multikillTier) return multikillLabel(kill.multikillTier)
   return 'CHAMPION SLAIN'
 }
 
@@ -349,6 +395,7 @@ function structureLabel(e: StructureFeedEntry): string {
 .feed-img--blue { border: 1px solid #60a5fa; }
 .feed-img--red { border: 1px solid #f87171; }
 .feed-img--dead { filter: grayscale(0.6) brightness(0.75); }
+.feed-img--chain + .feed-img--chain { margin-left: -8px; }
 
 .feed-star {
   color: #e8c040;
@@ -456,6 +503,28 @@ function structureLabel(e: StructureFeedEntry): string {
 .feed-tooltip .tip-name--red { color: #f87171; }
 .feed-tooltip .tip-verb { color: #8a8578; }
 .feed-tooltip .tip-structure { color: #e8c040; }
+
+.feed-tooltip .tip-victim {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12px;
+}
+.feed-tooltip .tip-victim-idx {
+  font-size: 10px;
+  color: #6a5820;
+  width: 12px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.feed-tooltip .tip-victim-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 
 .feed-tooltip .tip-detail {
   margin-top: 3px;
