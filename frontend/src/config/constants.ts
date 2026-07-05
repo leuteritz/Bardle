@@ -1072,7 +1072,8 @@ export const MINIMAP_DEPARTURE_TRANSITION_MS = 900 // crossfade arrival view →
 export const MINIMAP_LAYER2_WORLD_SCALE = 0.55 // near sprite covers this fraction of the world
 export const MINIMAP_LAYER1_FADE: readonly [number, number] = [2.1, 2.9] // zoom range: far layer fades out
 export const MINIMAP_LAYER2_FADE: readonly [number, number] = [1.8, 2.6] // zoom range: near layer fades in
-export const MINIMAP_TARGET_BASE_R = 11 // target star base radius (× zoom ≈ arrival sun at max)
+export const MINIMAP_TARGET_BASE_R = 6 // target star radius in the far overview (~1.7× comet head)
+export const MINIMAP_TARGET_MAX_R = 46 // target star radius at full zoom (= ARRIVAL_STAR_R in MiniMapCanvas)
 export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
 
 // Command panel v2 (portrait cards + planet dock row)

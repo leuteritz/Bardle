@@ -38,6 +38,7 @@ import {
   MINIMAP_LAYER1_FADE,
   MINIMAP_LAYER2_FADE,
   MINIMAP_TARGET_BASE_R,
+  MINIMAP_TARGET_MAX_R,
   MINIMAP_WAIT_SUN_R,
 } from '@/config/constants'
 
@@ -420,6 +421,57 @@ function smoothstep(v: number, a: number, b: number): number {
   return t * t * (3 - 2 * t)
 }
 
+/** Realistic star in the destination's role/champion palette — same visual
+ *  family as the arrival sun, so the zoom hand-over reads as one object. */
+function drawRoleStar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  pal: typeof STAR_PALETTE,
+  nowMs: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 700)
+
+  // Corona
+  const coroR = r * (2.8 + 0.4 * pulse)
+  const corona = ctx.createRadialGradient(x, y, r * 0.8, x, y, coroR)
+  corona.addColorStop(0, pal.atmo)
+  corona.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(x, y, coroR, 0, Math.PI * 2)
+  ctx.fillStyle = corona
+  ctx.fill()
+
+  // Inner halo
+  const halo = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 1.9)
+  halo.addColorStop(0, 'rgba(255,255,255,0.5)')
+  halo.addColorStop(0.45, pal.atmo)
+  halo.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.beginPath()
+  ctx.arc(x, y, r * 1.9, 0, Math.PI * 2)
+  ctx.fillStyle = halo
+  ctx.fill()
+
+  // Body — hot white core toward the role color
+  const body = ctx.createRadialGradient(x - r * 0.25, y - r * 0.28, r * 0.05, x, y, r)
+  body.addColorStop(0, '#ffffff')
+  body.addColorStop(0.3, pal.highlight)
+  body.addColorStop(0.65, pal.base)
+  body.addColorStop(1, pal.shadow)
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fillStyle = body
+  ctx.fill()
+
+  // Rim
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.strokeStyle = `rgba(255,255,255,${(0.35 + 0.15 * pulse).toFixed(3)})`
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
 function easeInOut(t: number) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
@@ -451,9 +503,6 @@ export default defineComponent({
     const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
 
     let rafId: number | null = null
-    let pulseFrame = 0
-    let rafLastPulseMs = 0
-
     // Camera (world-space center + zoom). zoom 1 = whole galaxy visible;
     // during the final travel phase it eases toward the destination star.
     const camera = { x: 0.5, y: 0.5, zoom: 1 }
@@ -852,19 +901,13 @@ export default defineComponent({
         } else if (nextRole && ROLE_COLORS[nextRole]) {
           targetPal = rolePaletteFromHex(ROLE_COLORS[nextRole])
         }
-        // the destination grows with the camera zoom so the full zoom-in
-        // hands over seamlessly to the arrival star (≈ ARRIVAL_STAR_R)
-        const targetR = MINIMAP_TARGET_BASE_R * cam.zoom
-        drawPlanet(
-          ctx,
-          tx,
-          ty,
-          targetR,
-          galaxySeed + targetIdx,
-          'target',
-          pulseFrame === 1,
-          targetPal,
-        )
+        // Small in the far overview (comet-relative scale), growing to the
+        // arrival-sun size only during the layer-2 phase → seamless hand-over
+        const targetR =
+          MINIMAP_TARGET_BASE_R +
+          (MINIMAP_TARGET_MAX_R - MINIMAP_TARGET_BASE_R) *
+            smoothstep(cam.zoom, MINIMAP_LAYER2_FADE[0], MINIMAP_ZOOM_MAX)
+        drawRoleStar(ctx, tx, ty, targetR, targetPal, nowMs)
 
         // Expanding beacon rings in the destination's role color — draws the
         // eye more reliably than a text label and scales with the zoom
@@ -1435,10 +1478,6 @@ export default defineComponent({
     }
 
     function rafTick(timestamp: number) {
-      if (timestamp - rafLastPulseMs > 600) {
-        pulseFrame = pulseFrame === 0 ? 1 : 0
-        rafLastPulseMs = timestamp
-      }
       updateCamera()
       drawCanvas(timestamp)
       if (show.value) {
@@ -1467,7 +1506,6 @@ export default defineComponent({
       show,
       (val) => {
         if (val && rafId === null) {
-          rafLastPulseMs = 0
           rafId = requestAnimationFrame(rafTick)
         }
       },
@@ -1483,7 +1521,6 @@ export default defineComponent({
           rafId = null
         }
       } else if (show.value && rafId === null) {
-        rafLastPulseMs = 0
         rafId = requestAnimationFrame(rafTick)
       }
     })
