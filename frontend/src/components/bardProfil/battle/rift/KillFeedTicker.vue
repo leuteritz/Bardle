@@ -147,7 +147,7 @@ const feedEntries = computed<FeedRow[]>(() => {
   return rows.sort((a, b) => a.t - b.t).reverse()
 })
 
-const barEntries = computed<FeedRow[]>(() => feedEntries.value.slice(0, 3))
+const barEntries = computed<FeedRow[]>(() => feedEntries.value)
 
 const expanded = ref(false)
 const hoveredRow = ref<FeedRow | null>(null)
@@ -264,6 +264,8 @@ const baronStatus = computed(() => {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
 }
 
 /* ── Expanded history overlay ── */
@@ -463,10 +465,13 @@ const baronStatus = computed(() => {
 }
 .tick-enter-from {
   opacity: 0;
-  transform: translateX(14px);
+  transform: translateX(-14px);
 }
 .tick-leave-active {
   display: none;
+}
+.tick-move {
+  transition: transform 0.3s ease;
 }
 </style>
 
