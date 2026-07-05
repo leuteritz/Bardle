@@ -49,7 +49,8 @@
       <span class="ticker-chevron" :class="{ 'ticker-chevron--open': expanded }">▲</span>
 
       <TransitionGroup name="tick" tag="div" class="bar-items">
-        <template v-for="row in barEntries" :key="row.key">
+        <div v-for="row in barEntries" :key="row.key" class="bar-event">
+          <span class="bar-time">{{ formatFeedTime(row.t) }}</span>
           <div
             v-if="row.type === 'kill'"
             class="feed-item"
@@ -70,7 +71,7 @@
             />
             <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
           </div>
-        </template>
+        </div>
       </TransitionGroup>
 
       <div class="ticker-right">
@@ -266,6 +267,24 @@ const baronStatus = computed(() => {
   overflow: hidden;
   mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
+}
+
+.bar-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.bar-event + .bar-event {
+  border-left: 1px solid #3e200a;
+  padding-left: 14px;
+}
+
+.bar-time {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #6a5820;
+  flex-shrink: 0;
 }
 
 /* ── Expanded history overlay ── */
