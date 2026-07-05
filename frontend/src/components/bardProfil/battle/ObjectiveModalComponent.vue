@@ -65,8 +65,12 @@
               </div>
               <div class="fighter-info">
                 <span class="fighter-name">{{ f.name }}</span>
-                <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
-                  {{ fmt(Math.round(f.damage)) }}
+                <span
+                  :key="damageBumps['own' + f.idx] ?? 0"
+                  class="fighter-damage fighter-damage--bump"
+                  :class="{ 'fighter-damage--dead': !f.alive }"
+                >
+                  {{ fmt(displayedDamage(f, 'own')) }}
                 </span>
                 <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveOwnDpsMult) }}/s</span>
               </div>
@@ -116,7 +120,10 @@
                 [f.side === 'own' ? 'left' : 'right']: '6%',
                 '--fd-drift': (f.side === 'own' ? 18 : -18) + 'px',
               }"
-            >-{{ f.value }}{{ f.crit ? '!' : '' }}</span>
+            >
+              <Icon icon="game-icons:quick-slash" :width="f.crit ? 17 : 13" :height="f.crit ? 17 : 13" class="fdmg-icon" />
+              -{{ f.value }}{{ f.crit ? '!' : '' }}
+            </span>
           </TransitionGroup>
           </div>
 
@@ -132,8 +139,12 @@
               </span>
               <div class="fighter-info fighter-info--enemy">
                 <span class="fighter-name">{{ f.name }}</span>
-                <span class="fighter-damage" :class="{ 'fighter-damage--dead': !f.alive }">
-                  {{ fmt(Math.round(f.damage)) }}
+                <span
+                  :key="damageBumps['enemy' + f.idx] ?? 0"
+                  class="fighter-damage fighter-damage--bump"
+                  :class="{ 'fighter-damage--dead': !f.alive }"
+                >
+                  {{ fmt(displayedDamage(f, 'enemy')) }}
                 </span>
                 <span v-if="f.alive" class="fighter-dps">{{ fighterDps(f, battleStore.objectiveEnemyDpsMult) }}/s</span>
               </div>
@@ -227,8 +238,6 @@ import {
   OBJECTIVE_LUNGE_ENEMY_OFFSET_S,
   OBJECTIVE_LUNGE_STRIKE_FRACTION,
   OBJECTIVE_FIGHTER_CRIT_CHANCE,
-  OBJECTIVE_FIGHTER_CRIT_MULT,
-  OBJECTIVE_FIGHTER_FLOAT_JITTER,
   OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
 } from '@/config/constants'
@@ -450,12 +459,20 @@ let _fighterFloatId = 0
 let _floatSchedulerId: ReturnType<typeof setInterval> | null = null
 /** Last lunge cycle a float was spawned for, per fighter — exactly one float per cycle. */
 const _lastStrikeCycle = new Map<string, number>()
+/** Damage shown on the fighter card — snapshots of f.damage taken at each strike, so the
+    card jumps by exactly the float's value in the same moment. */
+const shownDamage = ref<Record<string, number>>({})
+/** Bumped per strike to retrigger the card counter's punch animation. */
+const damageBumps = ref<Record<string, number>>({})
 
-function _spawnFighterFloat(f: ObjectiveFighter, side: 'own' | 'enemy', mult: number) {
+function _spawnFighterFloat(f: ObjectiveFighter, key: string, side: 'own' | 'enemy') {
+  // Float value = real damage accrued since the last strike (≈ the card's /s figure)
+  const prev = shownDamage.value[key] ?? 0
+  const value = Math.round(f.damage - prev)
+  if (value < 1) return
+  shownDamage.value[key] = f.damage
+  damageBumps.value[key] = (damageBumps.value[key] ?? 0) + 1
   const crit = Math.random() < OBJECTIVE_FIGHTER_CRIT_CHANCE
-  const jitter = 1 + OBJECTIVE_FIGHTER_FLOAT_JITTER * (2 * Math.random() - 1)
-  const base = f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult * OBJECTIVE_LUNGE_CYCLE_S * jitter
-  const value = Math.max(1, Math.round(base * (crit ? OBJECTIVE_FIGHTER_CRIT_MULT : 1)))
   const id = ++_fighterFloatId
   fighterFloats.value.push({ id, value, crit, side, top: 25 + Math.random() * 40 })
   setTimeout(() => {
@@ -464,7 +481,7 @@ function _spawnFighterFloat(f: ObjectiveFighter, side: 'own' | 'enemy', mult: nu
 }
 
 /** Spawn a float for every living fighter whose lunge strike landed since the last tick. */
-function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy', mult: number) {
+function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy') {
   const cycleMs = OBJECTIVE_LUNGE_CYCLE_S * 1000
   const strikeMs = OBJECTIVE_LUNGE_STRIKE_FRACTION * cycleMs
   const now = Date.now()
@@ -477,7 +494,7 @@ function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy', mult
     const key = side + f.idx
     if (pos >= strikeMs && _lastStrikeCycle.get(key) !== cycleNo) {
       _lastStrikeCycle.set(key, cycleNo)
-      _spawnFighterFloat(f, side, mult)
+      _spawnFighterFloat(f, key, side)
     }
   })
 }
@@ -485,11 +502,13 @@ function _checkStrikes(fighters: ObjectiveFighter[], side: 'own' | 'enemy', mult
 function _startFloatScheduler() {
   if (_floatSchedulerId) return
   _lastStrikeCycle.clear()
+  shownDamage.value = {}
+  damageBumps.value = {}
   _floatSchedulerId = setInterval(() => {
     if (!battleStore.objectiveModalOpen || battleStore.objectiveResult !== null) return
     if (!battleStore.objectiveFighters) return
-    _checkStrikes(fightersOwn.value, 'own', battleStore.objectiveOwnDpsMult)
-    _checkStrikes(fightersEnemy.value, 'enemy', battleStore.objectiveEnemyDpsMult)
+    _checkStrikes(fightersOwn.value, 'own')
+    _checkStrikes(fightersEnemy.value, 'enemy')
   }, OBJECTIVE_FIGHTER_FLOAT_TICK_MS)
 }
 
@@ -500,6 +519,12 @@ function _stopFloatScheduler() {
   }
   _lastStrikeCycle.clear()
   fighterFloats.value = []
+}
+
+/** Card counter: stepped snapshot while the fight runs, real final value once resolved (or when dead). */
+function displayedDamage(f: ObjectiveFighter, side: 'own' | 'enemy'): number {
+  if (battleStore.objectiveResult !== null || !f.alive) return Math.round(f.damage)
+  return Math.round(shownDamage.value[side + f.idx] ?? 0)
 }
 
 watch(show, (v) => (v ? _startFloatScheduler() : _stopFloatScheduler()), { immediate: true })
@@ -865,6 +890,14 @@ onUnmounted(_stopFloatScheduler)
   color: #8a8070;
   font-weight: 400;
 }
+/* Replays on every strike step via :key bump — ties the counter jump to the float */
+.fighter-damage--bump {
+  animation: dmg-bump 0.25s ease-out;
+}
+@keyframes dmg-bump {
+  0% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
 .fighter-dps {
   font-size: 11px;
   color: #8a8070;
@@ -987,12 +1020,19 @@ onUnmounted(_stopFloatScheduler)
 /* Fighter strike floats — spawn at the arena edge, punch in, drift toward the pit */
 .fdmg {
   position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   z-index: 9;
   white-space: nowrap;
+}
+.fdmg-icon {
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
 }
 .fdmg--own {
   color: #8ee060;
@@ -1364,6 +1404,9 @@ onUnmounted(_stopFloatScheduler)
   .fdmg-enter-active {
     animation: none !important;
     opacity: 0;
+  }
+  .fighter-damage--bump {
+    animation: none !important;
   }
   .fighter-move {
     transition: none !important;
