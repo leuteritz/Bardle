@@ -34,7 +34,32 @@ import {
   FLIGHT_BURST_LEN_FACTOR,
   FLIGHT_BURST_WIDTH,
   STAR_PHASE_DATA,
+  COMET_BG_MAX_COUNT,
+  COMET_BG_INTERVAL_MIN_SEC,
+  COMET_BG_INTERVAL_MAX_SEC,
+  COMET_BG_FIRST_DELAY_MIN_SEC,
+  COMET_BG_FIRST_DELAY_MAX_SEC,
+  COMET_BG_SPEED_MIN,
+  COMET_BG_SPEED_MAX,
+  COMET_BG_TAIL_MIN,
+  COMET_BG_TAIL_MAX,
+  COMET_BG_WIDTH_MIN,
+  COMET_BG_WIDTH_MAX,
+  COMET_BG_PARTIAL_LIFE_MIN_SEC,
+  COMET_BG_PARTIAL_LIFE_MAX_SEC,
+  COMET_BG_PARTIAL_CHANCE,
+  COMET_BG_TWIN_CHANCE,
+  COMET_BG_DIAGONAL_CHANCE,
+  COMET_BG_ANGLE_JITTER_RAD,
+  COMET_BG_FADE_IN_FRAC,
+  COMET_BG_FADE_OUT_FRAC,
+  COMET_BG_ALPHA,
+  COMET_BG_TWIN_OFFSET_MIN,
+  COMET_BG_TWIN_OFFSET_MAX,
+  COMET_BG_TWIN_SCALE,
+  COMET_BG_TINT_WHITE_MIX,
 } from '../../config/constants'
+import { GALAXY_THEMES } from '../../config/galaxyThemes'
 import { useWindowFocus } from '../useWindowFocus'
 
 /** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
@@ -1147,6 +1172,36 @@ function pickOrbitStarColor(): [number, number, number] {
   return cat.colors[Math.floor(Math.random() * cat.colors.length)]
 }
 
+/** Ambient background comet — free cartesian flight across the canvas, unlike
+ *  the radial center-outward flow of stars/streaks. */
+type BgComet = {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  len: number
+  width: number
+  life: number
+  maxLife: number
+  /** true → partial burn: alpha envelope fades in/out; false → full crossing */
+  fades: boolean
+  r: number
+  g: number
+  b: number
+  sparkPhase: number
+}
+
+/** Pastel comet tint from the current galaxy's (dark, low-alpha) nebula color:
+ *  parse the rgb components and mix them toward white so the comet reads as
+ *  white-hot with a subtle per-galaxy mood. */
+function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: number } {
+  const theme = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length]
+  const m = theme.nebulaColors[0].match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  const mix = (v: number) => Math.round(v + (255 - v) * COMET_BG_TINT_WHITE_MIX)
+  if (!m) return { r: 230, g: 235, b: 255 }
+  return { r: mix(Number(m[1])), g: mix(Number(m[2])), b: mix(Number(m[3])) }
+}
+
 export function useStarBackground(options: { frozen?: boolean } = {}) {
   // frozen = statisches Sternenfeld (Shop): kein Heranfliegen, keine Galaxien/Nebel-Spawns,
   // keine Galaxy-/Warp-Mutationen — nur In-Place-Twinkle.
@@ -1167,6 +1222,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let burstCooldown =
     FLIGHT_BURST_INTERVAL_MIN_SEC +
     Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
+  /** Rare ambient comets crossing the canvas; spawned in-loop (auto-pauses with
+   *  the RAF loop), finite — spliced when done, no timers, no extra cleanup. */
+  const bgComets: BgComet[] = []
+  let cometCooldown =
+    COMET_BG_FIRST_DELAY_MIN_SEC +
+    Math.random() * (COMET_BG_FIRST_DELAY_MAX_SEC - COMET_BG_FIRST_DELAY_MIN_SEC)
   const galaxyPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   const nebulaPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   let nextStarId = 1
@@ -1551,6 +1612,99 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   }
 
   // ── Haupt-Animationsschleife ───────────────────────────────────────────────
+  /** Spawn one ambient comet (occasionally a twin pair). Two flight variants:
+   *  full crossing (enters one edge, exits another) or partial burn (ignites
+   *  on-screen, burns out mid-flight). Tinted by the current galaxy theme. */
+  function spawnBgComet(w: number, h: number): void {
+    const tint = cometTintForGalaxy(useGalaxyStore().currentThemeIndex)
+    const speed = COMET_BG_SPEED_MIN + Math.random() * (COMET_BG_SPEED_MAX - COMET_BG_SPEED_MIN)
+    const len = COMET_BG_TAIL_MIN + Math.random() * (COMET_BG_TAIL_MAX - COMET_BG_TAIL_MIN)
+    const width = COMET_BG_WIDTH_MIN + Math.random() * (COMET_BG_WIDTH_MAX - COMET_BG_WIDTH_MIN)
+
+    // Heading in screen space (y grows downward): mostly the signature
+    // top-left→bottom-right dive, otherwise one of three alternates.
+    let heading: number
+    if (Math.random() < COMET_BG_DIAGONAL_CHANCE) {
+      heading = Math.PI / 4
+    } else {
+      const alternates = [(Math.PI * 3) / 4, 0, Math.PI / 2]
+      heading = alternates[Math.floor(Math.random() * alternates.length)]
+    }
+    heading += (Math.random() * 2 - 1) * COMET_BG_ANGLE_JITTER_RAD
+    const ux = Math.cos(heading)
+    const uy = Math.sin(heading)
+
+    if (Math.random() < COMET_BG_PARTIAL_CHANCE) {
+      // Partial burn: ignites at a visible point, fades out before any edge.
+      const maxLife =
+        COMET_BG_PARTIAL_LIFE_MIN_SEC +
+        Math.random() * (COMET_BG_PARTIAL_LIFE_MAX_SEC - COMET_BG_PARTIAL_LIFE_MIN_SEC)
+      bgComets.push({
+        x: w * (0.1 + Math.random() * 0.6),
+        y: h * (0.05 + Math.random() * 0.6),
+        vx: ux * speed,
+        vy: uy * speed,
+        len,
+        width,
+        life: 0,
+        maxLife,
+        fades: true,
+        r: tint.r,
+        g: tint.g,
+        b: tint.b,
+        sparkPhase: Math.random() * Math.PI * 2,
+      })
+      return
+    }
+
+    // Full crossing: aim through a random interior target and back the head up
+    // along the flight path until just past the entry edge, so the comet
+    // appears almost immediately, crosses the target and exits another edge.
+    const diag = Math.hypot(w, h)
+    const targetX = w * (0.25 + Math.random() * 0.5)
+    const targetY = h * (0.25 + Math.random() * 0.5)
+    // Distance (backwards from the target) to the edge the comet enters from.
+    const backX = ux > 0 ? targetX / ux : ux < 0 ? (targetX - w) / ux : Infinity
+    const backY = uy > 0 ? targetY / uy : uy < 0 ? (targetY - h) / uy : Infinity
+    const backup = Math.min(backX, backY) + len + 60
+    const head: BgComet = {
+      x: targetX - ux * backup,
+      y: targetY - uy * backup,
+      vx: ux * speed,
+      vy: uy * speed,
+      len,
+      width,
+      life: 0,
+      maxLife: (backup + diag + len + 100) / speed,
+      fades: false,
+      r: tint.r,
+      g: tint.g,
+      b: tint.b,
+      sparkPhase: Math.random() * Math.PI * 2,
+    }
+    bgComets.push(head)
+    if (Math.random() < COMET_BG_TWIN_CHANCE && bgComets.length < COMET_BG_MAX_COUNT) {
+      // Twin pair: a smaller companion offset perpendicular to the flight path.
+      const off =
+        COMET_BG_TWIN_OFFSET_MIN +
+        Math.random() * (COMET_BG_TWIN_OFFSET_MAX - COMET_BG_TWIN_OFFSET_MIN)
+      const side = Math.random() < 0.5 ? 1 : -1
+      const twinSpeed = speed * (0.9 + Math.random() * 0.2)
+      bgComets.push({
+        ...head,
+        x: head.x - uy * off * side,
+        y: head.y + ux * off * side,
+        vx: ux * twinSpeed,
+        vy: uy * twinSpeed,
+        // Slower companion needs proportionally more time to finish the crossing
+        maxLife: head.maxLife * (speed / twinSpeed),
+        len: len * COMET_BG_TWIN_SCALE,
+        width: Math.max(1, width * COMET_BG_TWIN_SCALE),
+        sparkPhase: Math.random() * Math.PI * 2,
+      })
+    }
+  }
+
   function animateStars(timestamp: number): void {
     // Kein Fokus oder Tab versteckt → sofort abbrechen, nächsten Frame NICHT anfordern
     if (!isWindowFocused || document.hidden) {
@@ -1993,6 +2147,89 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
+    // ── Background comets — rare diagonal flybys across the whole canvas.
+    // In-loop spawn (delta accumulator like the streak bursts) → pauses with
+    // the RAF loop for free; finite array, spliced when done, no timers.
+    if (ctx && !isFrozen) {
+      cometCooldown -= delta
+      if (
+        cometCooldown <= 0 &&
+        galaxyTransPhase === 'idle' &&
+        !hyperActive &&
+        bgComets.length < COMET_BG_MAX_COUNT
+      ) {
+        spawnBgComet(w, h)
+        cometCooldown =
+          COMET_BG_INTERVAL_MIN_SEC +
+          Math.random() * (COMET_BG_INTERVAL_MAX_SEC - COMET_BG_INTERVAL_MIN_SEC)
+      }
+      for (let i = bgComets.length - 1; i >= 0; i--) {
+        const c = bgComets[i]
+        c.life += delta
+        c.x += c.vx * delta
+        c.y += c.vy * delta
+        if (c.life > c.maxLife) {
+          bgComets.splice(i, 1)
+          continue
+        }
+        // Partial burns fade in/out; crossings fly at full strength and simply
+        // enter/leave via the screen edges.
+        let env = 1
+        if (c.fades) {
+          const p = c.life / c.maxLife
+          if (p < COMET_BG_FADE_IN_FRAC) env = p / COMET_BG_FADE_IN_FRAC
+          else if (p > 1 - COMET_BG_FADE_OUT_FRAC) env = (1 - p) / COMET_BG_FADE_OUT_FRAC
+        }
+        if (env < 0.03) continue
+        const cSpeed = Math.hypot(c.vx, c.vy)
+        const cux = c.vx / cSpeed
+        const cuy = c.vy / cSpeed
+        const tailX = c.x - cux * c.len
+        const tailY = c.y - cuy * c.len
+        // Skip drawing while a crossing is still on its off-screen approach.
+        const margin = 40
+        if (
+          (c.x < -margin && tailX < -margin) ||
+          (c.x > w + margin && tailX > w + margin) ||
+          (c.y < -margin && tailY < -margin) ||
+          (c.y > h + margin && tailY > h + margin)
+        ) {
+          continue
+        }
+        const flicker = 1 + 0.25 * Math.sin(c.sparkPhase + c.life * 18)
+        ctx.save()
+        ctx.globalAlpha = env
+        ctx.lineCap = 'round'
+        // Outer tinted tail
+        const grad = ctx.createLinearGradient(tailX, tailY, c.x, c.y)
+        grad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0)`)
+        grad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},${COMET_BG_ALPHA})`)
+        ctx.beginPath()
+        ctx.moveTo(tailX, tailY)
+        ctx.lineTo(c.x, c.y)
+        ctx.strokeStyle = grad
+        ctx.lineWidth = c.width
+        ctx.stroke()
+        // Hot white inner tail (shorter, thinner) — bright without shadowBlur
+        ctx.beginPath()
+        ctx.moveTo(c.x - cux * c.len * 0.55, c.y - cuy * c.len * 0.55)
+        ctx.lineTo(c.x, c.y)
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+        ctx.lineWidth = c.width * 0.45
+        ctx.stroke()
+        // Head: tinted halo + white-hot core, subtly flickering
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, c.width * 2.2 * flicker, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.25)`
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(c.x, c.y, c.width * 0.9 * flicker, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'
+        ctx.fill()
+        ctx.restore()
+      }
+    }
+
     // ── Galaxy-SVG-Animation ───────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
@@ -2146,6 +2383,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     emissionNebulas.length = 0
     dustPatches.length = 0
     starClusters.length = 0
+    bgComets.length = 0
     window.removeEventListener('resize', handleResize)
     removeFocusListener?.()
     if (resizeTimeout) clearTimeout(resizeTimeout)

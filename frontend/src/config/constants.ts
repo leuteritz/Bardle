@@ -1815,6 +1815,50 @@ export const FLIGHT_BURST_LEN_FACTOR = 7
 /** Outer stroke width of a burst streak; the hot white core is thinner. */
 export const FLIGHT_BURST_WIDTH = 2.5
 
+// ── Background comets ─────────────────────────────────────────────────────────
+/** Rare ambient comets streaking diagonally across the star background canvas.
+ *  Unlike the radial flight streaks (player motion), these are "environment":
+ *  free cartesian flights, deliberately infrequent so they stay special in a
+ *  game that idles on screen for hours. */
+export const COMET_BG_MAX_COUNT = 3
+/** Seconds between comet spawns (randomized within this range). */
+export const COMET_BG_INTERVAL_MIN_SEC = 18
+export const COMET_BG_INTERVAL_MAX_SEC = 45
+/** First comet after load appears sooner, so the effect is discoverable. */
+export const COMET_BG_FIRST_DELAY_MIN_SEC = 8
+export const COMET_BG_FIRST_DELAY_MAX_SEC = 20
+/** Head speed in px/s. */
+export const COMET_BG_SPEED_MIN = 550
+export const COMET_BG_SPEED_MAX = 1100
+/** Tail length in px. */
+export const COMET_BG_TAIL_MIN = 90
+export const COMET_BG_TAIL_MAX = 260
+/** Core stroke width of head/tail in px. */
+export const COMET_BG_WIDTH_MIN = 1.5
+export const COMET_BG_WIDTH_MAX = 3
+/** Partial-burn comets live this long — fade in, burn out mid-screen. */
+export const COMET_BG_PARTIAL_LIFE_MIN_SEC = 1.2
+export const COMET_BG_PARTIAL_LIFE_MAX_SEC = 2.5
+/** Variant odds: partial burn, else full crossing; twin rides on a crossing. */
+export const COMET_BG_PARTIAL_CHANCE = 0.35
+export const COMET_BG_TWIN_CHANCE = 0.15
+/** Share of crossings heading top-left → bottom-right (the signature flight);
+ *  the rest picks evenly from the remaining headings. */
+export const COMET_BG_DIAGONAL_CHANCE = 0.45
+/** Random per-comet deviation from the base heading (radians, ± ≈ 20°). */
+export const COMET_BG_ANGLE_JITTER_RAD = 0.35
+/** Alpha envelope of partial burns: fade-in / fade-out fractions of life. */
+export const COMET_BG_FADE_IN_FRAC = 0.15
+export const COMET_BG_FADE_OUT_FRAC = 0.3
+/** Peak alpha of the tail's outer (tinted) stroke. */
+export const COMET_BG_ALPHA = 0.55
+/** Twin companion: perpendicular offset range (px) and size/speed ratio. */
+export const COMET_BG_TWIN_OFFSET_MIN = 40
+export const COMET_BG_TWIN_OFFSET_MAX = 80
+export const COMET_BG_TWIN_SCALE = 0.6
+/** White-mix applied to the dark galaxy nebula color → pastel comet tint. */
+export const COMET_BG_TINT_WHITE_MIX = 0.55
+
 // ── Planet Tab stage sizing ───────────────────────────────────────────────────
 /** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
 export const PLANET_TAB_SUN_MIN_DIAMETER = 300

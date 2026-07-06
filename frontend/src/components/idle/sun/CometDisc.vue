@@ -1,7 +1,5 @@
 <template>
   <div class="comet-root" :style="vars">
-    <div class="comet-halo" />
-    <div class="comet-halo comet-halo--gold" />
     <div class="comet-rock">
       <div class="comet-gilding" />
       <div class="comet-shading" />
@@ -39,7 +37,6 @@ export default defineComponent({
       '--comet-edge': COMET_PHASE_DATA.edge,
       '--comet-crater': COMET_PHASE_DATA.crater,
       '--comet-glow': COMET_PHASE_DATA.glow,
-      '--comet-dust': COMET_PHASE_DATA.dust,
       '--comet-gold': `${COMET_STAGE_GOLD[solarStore.cometStage]}`,
       '--comet-tumble': COMET_PHASE_DATA.tumbleSec,
       '--comet-pulse': COMET_PHASE_DATA.pulseSpeed,
@@ -62,33 +59,6 @@ export default defineComponent({
   /* Same breathing language as phase-sun-pulse, just subtler — cold rock,
      not burning plasma. */
   animation: comet-breathe var(--comet-pulse, 6s) ease-in-out infinite;
-}
-
-/* ── Dust halo — faint grey corona; a gold twin fades in with each stage ── */
-.comet-halo {
-  position: absolute;
-  inset: -14%;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(
-    circle at 50% 50%,
-    transparent 38%,
-    color-mix(in srgb, var(--comet-mid) 12%, transparent) 58%,
-    transparent 78%
-  );
-  animation: comet-halo-shimmer 8s ease-in-out infinite;
-}
-
-.comet-halo--gold {
-  /* static — the shimmer keyframe would override the stage-driven opacity */
-  animation: none;
-  background: radial-gradient(
-    circle at 50% 50%,
-    transparent 38%,
-    color-mix(in srgb, var(--comet-dust) 14%, transparent) 58%,
-    transparent 78%
-  );
-  opacity: calc(var(--comet-gold, 0) * 0.9);
 }
 
 /* ── Rock — irregular tumbling blob (celestial-body shape, not a UI box) ── */
@@ -121,6 +91,11 @@ export default defineComponent({
     );
   /* Wobble, not a full spin — keeps the painted light source coherent */
   animation: comet-tumble var(--comet-tumble, 14s) ease-in-out infinite alternate;
+  /* Stage-driven gold aura hugging the rock silhouette — replaces the old
+     ring-shaped halo; invisible at stage 0, grows with the gilding. */
+  box-shadow: 0 0 18px
+    color-mix(in srgb, var(--comet-glow) calc(var(--comet-gold, 0) * 30%), transparent);
+  transition: box-shadow 0.8s ease;
 }
 
 /* ── Gilding — gold veins + rim light, fading in per kindled core ray ── */
@@ -171,15 +146,9 @@ export default defineComponent({
   to { transform: rotate(9deg); }
 }
 
-@keyframes comet-halo-shimmer {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .comet-root,
-  .comet-rock,
-  .comet-halo {
+  .comet-rock {
     animation: none;
   }
 }
