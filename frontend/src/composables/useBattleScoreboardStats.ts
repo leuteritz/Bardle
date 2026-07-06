@@ -32,6 +32,7 @@ export function useBattleScoreboardStats() {
   const damage = computed(() => battleStore.allTime.damage + live.value.damage)
   const dragons = computed(() => battleStore.allTime.dragons + live.value.dragons)
   const barons = computed(() => battleStore.allTime.barons + live.value.barons)
+  const turrets = computed(() => battleStore.allTime.turrets + live.value.turrets)
 
   return {
     live,
@@ -46,5 +47,6 @@ export function useBattleScoreboardStats() {
     damage,
     dragons,
     barons,
+    turrets,
   }
 }

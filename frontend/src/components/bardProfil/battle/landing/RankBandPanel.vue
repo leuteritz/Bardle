@@ -81,40 +81,18 @@ import {
   RANK_TIERS,
   RANK_DIVISIONS,
   BATTLE_BASE_START_WIN_CHANCE,
+  RANK_EMBLEM_IMAGES,
+  RANK_TIER_COLORS,
 } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const { currentRank, mmr, totalWins, totalLosses, totalBattles, currentWinStreak, bestWinStreak } =
   storeToRefs(battleStore)
 
-const RANK_IMAGE_MAP: Record<string, string> = {
-  Iron: '/img/RankBorder/RankIron.png',
-  Bronze: '/img/RankBorder/RankBronze.png',
-  Silver: '/img/RankBorder/RankSilver.png',
-  Gold: '/img/RankBorder/RankGold.png',
-  Platinum: '/img/RankBorder/RankPlatin.png',
-  Emerald: '/img/RankBorder/RankEmerald.png',
-  Diamond: '/img/RankBorder/RankDiamand.png',
-  Master: '/img/RankBorder/RankMaster.png',
-  Grandmaster: '/img/RankBorder/RankGrandMaster.png',
-  Challenger: '/img/RankBorder/RankChallenger.png',
-}
-
-const RANK_COLORS: Record<string, string> = {
-  Iron: '#8a9098',
-  Bronze: '#c87832',
-  Silver: '#b0b8c4',
-  Gold: '#d4a020',
-  Platinum: '#4ab8c0',
-  Emerald: '#3cbc78',
-  Diamond: '#88d8f8',
-  Master: '#b060f0',
-  Grandmaster: '#f06028',
-  Challenger: '#f0dc50',
-}
-
-const rankImage = computed(() => RANK_IMAGE_MAP[currentRank.value.tier] ?? RANK_IMAGE_MAP.Iron)
-const rankColor = computed(() => RANK_COLORS[currentRank.value.tier] ?? '#d4a020')
+const rankImage = computed(
+  () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
+)
+const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
 const rankColorDim = computed(() => rankColor.value + '4d')
 const bandBg = computed(
   () => `linear-gradient(to right, ${rankColor.value}22, rgba(0, 0, 0, 0.32) 55%)`,

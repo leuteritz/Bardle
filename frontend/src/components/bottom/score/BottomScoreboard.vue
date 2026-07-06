@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
@@ -9,23 +10,15 @@ import {
   GAME_STATE,
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
+  RANK_EMBLEM_IMAGES,
+  RANK_TIER_COLORS,
 } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
 
-const {
-  kills,
-  deaths,
-  assists,
-  kdaStr,
-  killPartPct,
-  gold,
-  cs,
-  damage,
-  dragons,
-  barons,
-} = useBattleScoreboardStats()
+const { kills, deaths, assists, gold, cs, dragons, barons, turrets } =
+  useBattleScoreboardStats()
 
 interface ScoreStat {
   key: string
@@ -33,23 +26,38 @@ interface ScoreStat {
   color: string
   label: string
   icon?: string
+  gameIcon?: string
 }
 
 const leftStats = computed<ScoreStat[]>(() => [
   { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, label: 'Kills' },
   { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, label: 'Deaths' },
   { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, label: 'Assists' },
-  { key: 'kda', value: kdaStr.value, color: SCOREBOARD_STAT_COLORS.kda, label: 'KDA' },
-  { key: 'killPart', value: `${killPartPct.value}%`, color: SCOREBOARD_STAT_COLORS.killPart, label: 'Kill %' },
+  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, label: 'Gold', icon: '/img/BardGold.png' },
+  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, label: 'CS' },
 ])
 
 const rightStats = computed<ScoreStat[]>(() => [
-  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, label: 'Gold', icon: '/img/BardGold.png' },
-  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, label: 'CS' },
-  { key: 'dmg', value: formatNumber(damage.value), color: SCOREBOARD_STAT_COLORS.dmg, label: 'Dmg' },
+  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, label: 'Turrets', gameIcon: 'game-icons:tower-fall' },
   { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: '/img/dragon.png' },
   { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: '/img/baron.png' },
 ])
+
+/* ── Rank + win/loss cells (right side, next to the crest) ── */
+const { currentRank, totalWins, totalLosses } = storeToRefs(battleStore)
+
+const isApexTier = computed(() =>
+  ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
+)
+const rankLabel = computed(() =>
+  isApexTier.value
+    ? currentRank.value.tier
+    : `${currentRank.value.tier} ${currentRank.value.division}`,
+)
+const rankEmblem = computed(
+  () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
+)
+const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
 
 function openBattleTab() {
   uiStore.setBardTab('battle')
@@ -184,12 +192,11 @@ const resultBadge = computed(() => {
       @keydown.space.prevent="openBattleTab"
     >
       <div v-for="stat in leftStats" :key="stat.key" class="sb-stat">
+        <span class="sb-stat-label">{{ stat.label }}</span>
         <span class="sb-stat-value" :style="{ color: stat.color }">
           <img v-if="stat.icon" :src="stat.icon" :alt="stat.label" class="sb-stat-icon" />
           {{ stat.value }}
         </span>
-        <span class="sb-stat-bar" :style="{ background: stat.color }" />
-        <span class="sb-stat-label">{{ stat.label }}</span>
       </div>
     </div>
 
@@ -248,13 +255,43 @@ const resultBadge = computed(() => {
       @keydown.enter="openBattleTab"
       @keydown.space.prevent="openBattleTab"
     >
+      <!-- Rank cell: emblem + tier-colored value -->
+      <div class="sb-stat sb-stat--rank">
+        <img :src="rankEmblem" :alt="rankLabel" class="sb-rank-emblem" />
+        <div class="sb-rank-text">
+          <span class="sb-stat-label">Rank</span>
+          <span
+            class="sb-stat-value sb-rank-value"
+            :style="{ color: rankColor, '--rank-glow': rankColor }"
+          >
+            {{ rankLabel }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Win / loss cell: two-tone value -->
+      <div class="sb-stat">
+        <span class="sb-stat-label">Win / Loss</span>
+        <span class="sb-stat-value">
+          <span class="sb-wl-win">{{ formatNumber(totalWins) }}W</span>
+          <span class="sb-wl-sep">·</span>
+          <span class="sb-wl-loss">{{ formatNumber(totalLosses) }}L</span>
+        </span>
+      </div>
+
       <div v-for="stat in rightStats" :key="stat.key" class="sb-stat">
+        <span class="sb-stat-label">{{ stat.label }}</span>
         <span class="sb-stat-value" :style="{ color: stat.color }">
           <img v-if="stat.icon" :src="stat.icon" :alt="stat.label" class="sb-stat-icon" />
+          <Icon
+            v-else-if="stat.gameIcon"
+            :icon="stat.gameIcon"
+            width="24"
+            height="24"
+            class="sb-stat-icon"
+          />
           {{ stat.value }}
         </span>
-        <span class="sb-stat-bar" :style="{ background: stat.color }" />
-        <span class="sb-stat-label">{{ stat.label }}</span>
       </div>
     </div>
   </div>
@@ -263,10 +300,9 @@ const resultBadge = computed(() => {
 <style scoped>
 .scoreboard {
   /* scale typography with the HUD, but never below readable minimums */
-  --sb-val-size: max(14px, calc(22px * var(--hud-scale, 1)));
-  --sb-label-size: max(7px, calc(9px * var(--hud-scale, 1)));
+  --sb-val-size: max(17px, calc(27px * var(--hud-scale, 1)));
+  --sb-label-size: max(8px, calc(10px * var(--hud-scale, 1)));
   --sb-title-size: max(19px, calc(30px * var(--hud-scale, 1)));
-  --sb-gap: max(10px, calc(20px * var(--hud-scale, 1)));
 
   position: absolute;
   left: calc(440px * var(--hud-scale, 1));
@@ -277,7 +313,7 @@ const resultBadge = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(8px * var(--hud-scale, 1)) 28px 0;
+  padding: calc(8px * var(--hud-scale, 1)) 12px 0;
   min-width: 0;
   pointer-events: none;
 }
@@ -287,17 +323,10 @@ const resultBadge = computed(() => {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: var(--sb-gap);
+  align-items: stretch;
   cursor: pointer;
   pointer-events: auto;
   border-radius: 4px;
-}
-.sb-stats--left {
-  justify-content: flex-end;
-}
-.sb-stats--right {
-  justify-content: flex-start;
 }
 .sb-stats:focus-visible {
   outline: none;
@@ -307,11 +336,59 @@ const resultBadge = computed(() => {
 }
 
 .sb-stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
   min-width: 0;
+}
+.sb-stat + .sb-stat {
+  border-left: 1px solid rgba(122, 78, 32, 0.3);
+}
+
+/* ── Rank cell ── */
+.sb-stat--rank {
+  flex-direction: row;
+  gap: max(5px, calc(8px * var(--hud-scale, 1)));
+}
+
+.sb-rank-emblem {
+  width: max(26px, calc(38px * var(--hud-scale, 1)));
+  height: max(26px, calc(38px * var(--hud-scale, 1)));
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.sb-rank-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sb-rank-value {
+  /* slightly smaller than plain stats so long tiers (Grandmaster) never clip */
+  font-size: max(14px, calc(21px * var(--hud-scale, 1)));
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 10px var(--rank-glow, #d4a020);
+}
+
+/* ── Win / loss cell ── */
+.sb-wl-win {
+  color: #74d448;
+}
+.sb-wl-loss {
+  color: #cc6050;
+}
+.sb-wl-sep {
+  color: #7a6a44;
+  font-size: 0.7em;
 }
 
 .sb-stat-value {
@@ -327,22 +404,15 @@ const resultBadge = computed(() => {
 }
 
 .sb-stat-icon {
-  width: max(13px, calc(19px * var(--hud-scale, 1)));
-  height: max(13px, calc(19px * var(--hud-scale, 1)));
+  width: max(15px, calc(22px * var(--hud-scale, 1)));
+  height: max(15px, calc(22px * var(--hud-scale, 1)));
   object-fit: contain;
   flex-shrink: 0;
 }
 
-.sb-stat-bar {
-  width: 22px;
-  height: 2px;
-  border-radius: 2px;
-  opacity: 0.9;
-}
-
 .sb-stat-label {
   font-size: var(--sb-label-size);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   color: #7a6a44;
   text-transform: uppercase;
   line-height: 1;

@@ -1052,8 +1052,36 @@ export const SCOREBOARD_STAT_COLORS = {
   dmg: '#f08850',
   dragons: '#6ee0a0',
   barons: '#c9a0f5',
+  turrets: '#d8b878',
 } as const
 export const SCOREBOARD_LABEL_COLOR = '#7a6a44'
+
+// Rank emblem art + tier accent colors (shared: RankBandPanel, BottomScoreboard)
+export const RANK_EMBLEM_IMAGES: Record<string, string> = {
+  Iron: '/img/RankBorder/RankIron.png',
+  Bronze: '/img/RankBorder/RankBronze.png',
+  Silver: '/img/RankBorder/RankSilver.png',
+  Gold: '/img/RankBorder/RankGold.png',
+  Platinum: '/img/RankBorder/RankPlatin.png',
+  Emerald: '/img/RankBorder/RankEmerald.png',
+  Diamond: '/img/RankBorder/RankDiamand.png',
+  Master: '/img/RankBorder/RankMaster.png',
+  Grandmaster: '/img/RankBorder/RankGrandMaster.png',
+  Challenger: '/img/RankBorder/RankChallenger.png',
+}
+
+export const RANK_TIER_COLORS: Record<string, string> = {
+  Iron: '#8a9098',
+  Bronze: '#c87832',
+  Silver: '#b0b8c4',
+  Gold: '#d4a020',
+  Platinum: '#4ab8c0',
+  Emerald: '#3cbc78',
+  Diamond: '#88d8f8',
+  Master: '#b060f0',
+  Grandmaster: '#f06028',
+  Challenger: '#f0dc50',
+}
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
@@ -2347,6 +2375,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow)
   'game-icons:medal', // Honor pips / grant honor header (HonorGrantPanel)
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
+  'game-icons:tower-fall', // Turrets destroyed stat (BottomScoreboard)
   'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)
   'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
   'game-icons:sport-medal', // Top-3 damage rank badge (ObjectiveModalComponent)

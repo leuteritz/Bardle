@@ -57,7 +57,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import MiniMap from '@/components/bottom/minimap/MiniMap.vue'
-import BottomScoreboard from './BottomScoreboard.vue'
+import BottomScoreboard from './score/BottomScoreboard.vue'
 import CommandPanelComponent from '@/components/bottom/command/CommandPanelComponent.vue'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
