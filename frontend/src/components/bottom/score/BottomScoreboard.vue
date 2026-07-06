@@ -69,6 +69,7 @@ function openBattleTab() {
    ══════════════════════════════════════════════════════════════════════ */
 const {
   isAutoBattleInitialized,
+  autoBattleEnabled,
   battlePhase,
   battleTime,
   showAutoBattleResult,
@@ -177,6 +178,19 @@ const resultBadge = computed(() => {
     glow: won ? 'rgba(116, 212, 72, 0.6)' : 'rgba(204, 96, 80, 0.6)',
   }
 })
+
+/**
+ * State-based, not display-based: the status owns the title slot for the
+ * whole auto-battle lifecycle. searchingPhaseStartTimestamp is set
+ * synchronously on the Battle Start click, so the swap happens instantly —
+ * before the intro animation and any phase displays exist.
+ */
+const hasLiveStatus = computed(
+  () =>
+    isAutoBattleInitialized.value ||
+    autoBattleEnabled.value ||
+    searchingPhaseStartTimestamp.value > 0,
+)
 </script>
 
 <template>
@@ -207,42 +221,52 @@ const resultBadge = computed(() => {
         <img src="/img/star.png" alt="" class="sb-crest-star" />
         <span class="sb-crest-rule sb-crest-rule--right" />
       </div>
-      <div class="sb-title">BARDLE</div>
-
-      <!-- compact live battle status where the old sublabel sat -->
-      <div class="sb-status">
-        <template v-if="objectiveFightDisplay">
-          <img
-            :src="objectiveFightDisplay.icon"
-            :alt="objectiveFightDisplay.label"
-            class="sb-status-icon"
-            :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
-          />
-          <span class="sb-status-text" :style="{ color: objectiveFightDisplay.color }">
-            {{ objectiveFightDisplay.label }} · {{ objectiveFightDisplay.text }}
-          </span>
-        </template>
-        <template v-else-if="resultBadge">
-          <Transition name="badge-slide" appear>
+      <!-- title slot: game title when idle, promoted live status when active -->
+      <Transition name="crest-swap" mode="out-in">
+        <div v-if="hasLiveStatus" key="live" class="sb-live-title">
+          <template v-if="objectiveFightDisplay">
+            <img
+              :src="objectiveFightDisplay.icon"
+              :alt="objectiveFightDisplay.label"
+              class="sb-live-icon"
+              :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
+            />
+            <span class="sb-live-text" :style="{ color: objectiveFightDisplay.color }">
+              {{ objectiveFightDisplay.label }} · {{ objectiveFightDisplay.text }}
+            </span>
+          </template>
+          <template v-else-if="resultBadge">
             <span
-              class="sb-result-badge"
-              :style="{ color: resultBadge.color, '--badge-glow': resultBadge.glow }"
+              class="sb-live-text sb-live-text--badge"
+              :style="{ color: resultBadge.color, '--live-glow': resultBadge.glow }"
             >
               {{ resultBadge.label }}&thinsp;{{ resultBadge.lp }}&thinsp;LP
             </span>
-          </Transition>
-        </template>
-        <template v-else-if="gameStateDisplay">
-          <span v-if="phaseKey === 'searching'" class="sb-scan-dots" aria-hidden="true">
-            <span class="sb-scan-dot" />
-            <span class="sb-scan-dot" />
-            <span class="sb-scan-dot" />
-          </span>
-          <span class="sb-status-text" :style="{ color: gameStateDisplay.color }">
-            {{ gameStateDisplay.label }} · {{ gameStateDisplay.text }}
-          </span>
-        </template>
-      </div>
+          </template>
+          <template v-else-if="gameStateDisplay">
+            <span v-if="phaseKey === 'searching'" class="sb-scan-dots sb-scan-dots--big" aria-hidden="true">
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+            </span>
+            <span class="sb-live-text" :style="{ color: gameStateDisplay.color }">
+              {{ gameStateDisplay.label }} · {{ gameStateDisplay.text }}
+            </span>
+          </template>
+          <!-- fallback: battle loop is live but no phase display yet -->
+          <template v-else>
+            <span class="sb-scan-dots sb-scan-dots--big" aria-hidden="true">
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+              <span class="sb-scan-dot" />
+            </span>
+            <span class="sb-live-text" :style="{ color: GAME_STATE.SEARCHING.color }">
+              {{ GAME_STATE.SEARCHING.label }}
+            </span>
+          </template>
+        </div>
+        <div v-else key="title" class="sb-title">BARDLE</div>
+      </Transition>
     </div>
 
     <!-- RIGHT · economy / objective stats -->
@@ -424,12 +448,15 @@ const resultBadge = computed(() => {
 
 /* ── Title crest ── */
 .sb-crest {
+  /* fixed width: sized for the longest live status so nothing around it
+     ever shifts when the text or mode changes */
   flex: none;
+  width: calc(310px * var(--hud-scale, 1));
+  min-width: 210px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 0 max(12px, calc(24px * var(--hud-scale, 1)));
   pointer-events: none;
   user-select: none;
 }
@@ -489,35 +516,48 @@ const resultBadge = computed(() => {
   }
 }
 
-/* ── Live battle status line ── */
-.sb-status {
+/* ── Live status in the title slot ── */
+.sb-live-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: max(10px, calc(13px * var(--hud-scale, 1)));
-  line-height: 1;
+  gap: max(5px, calc(8px * var(--hud-scale, 1)));
+  /* match the BARDLE title box so the crest never shifts */
+  min-height: calc(var(--sb-title-size) * 1.1);
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.sb-status-text {
-  font-size: max(8px, calc(10px * var(--hud-scale, 1)));
-  letter-spacing: 0.18em;
+.sb-live-text {
+  font-size: max(14px, calc(21px * var(--hud-scale, 1)));
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   transition: color 0.4s ease;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 14px currentcolor;
 }
 
-.sb-status-icon {
-  width: max(10px, calc(14px * var(--hud-scale, 1)));
-  height: max(10px, calc(14px * var(--hud-scale, 1)));
+.sb-live-text--badge {
+  font-weight: 700;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 12px var(--live-glow, rgba(116, 212, 72, 0.6));
+}
+
+.sb-live-icon {
+  width: max(15px, calc(22px * var(--hud-scale, 1)));
+  height: max(15px, calc(22px * var(--hud-scale, 1)));
   object-fit: contain;
 }
 
 .sb-status-icon--live {
   animation: sb-objective-pulse 1.2s ease-in-out infinite;
 }
+
 
 @keyframes sb-objective-pulse {
   0%,
@@ -529,37 +569,38 @@ const resultBadge = computed(() => {
   }
 }
 
-.sb-result-badge {
-  font-size: max(9px, calc(11px * var(--hud-scale, 1)));
-  font-weight: 700;
-  white-space: nowrap;
-  letter-spacing: 0.14em;
-  text-shadow: 0 0 8px var(--badge-glow, rgba(116, 212, 72, 0.6));
-}
-
-.badge-slide-enter-active {
+/* title ↔ live status swap */
+.crest-swap-enter-active {
   transition:
-    opacity 0.35s ease,
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.badge-slide-leave-active {
+.crest-swap-leave-active {
   transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
-.badge-slide-enter-from {
+.crest-swap-enter-from {
   opacity: 0;
   transform: translateY(6px);
 }
-.badge-slide-leave-to {
+.crest-swap-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-5px);
 }
 
 .sb-scan-dots {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+}
+
+.sb-scan-dots--big {
+  gap: 4px;
+}
+.sb-scan-dots--big .sb-scan-dot {
+  width: 5px;
+  height: 5px;
 }
 
 .sb-scan-dot {
@@ -595,6 +636,10 @@ const resultBadge = computed(() => {
   .sb-status-icon--live,
   .sb-scan-dot {
     animation: none;
+  }
+  .crest-swap-enter-active,
+  .crest-swap-leave-active {
+    transition: none;
   }
 }
 </style>
