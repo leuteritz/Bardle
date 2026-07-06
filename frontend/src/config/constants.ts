@@ -1093,7 +1093,7 @@ export const RANK_TIER_COLORS: Record<string, string> = {
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
-export const MINIMAP_COMET_HEAD_R = 3.5 // player comet head radius (× √zoom)
+export const MINIMAP_COMET_HEAD_R = 4.5 // player comet head radius (× √zoom)
 export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the flight curve
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count
 export const MINIMAP_IDLE_SUN_R = 11 // player-sun marker when not traveling
@@ -1110,18 +1110,18 @@ export const MINIMAP_GALAXY_BULGE_R = 0.11 // gaussian bulge radius
 export const MINIMAP_GALAXY_KNOTS = 18 // bright accent-colored knots on the arms
 export const MINIMAP_GALAXY_BRIGHT_STARS = 70 // distinct single stars along the arms
 export const MINIMAP_GALAXY_CORE_RADIUS = 0.15 // core glow radius in world coords
-export const MINIMAP_ZOOM_TRIGGER_MS = 30_000 // zoom-in phase starts this long before arrival
-export const MINIMAP_ZOOM_MAX = 4.2 // camera zoom at arrival (target star grows ≈ arrival sun)
+export const MINIMAP_ZOOM_TRIGGER_MS = 45_000 // zoom-in phase starts this long before arrival
+export const MINIMAP_ZOOM_MAX = 5.4 // camera zoom at arrival (target star grows ≈ arrival sun)
 export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)
-export const MINIMAP_ZOOM_OUT_LERP = 0.03 // slower zoom-out so layer 2 stays visible a while
+export const MINIMAP_ZOOM_OUT_LERP = 0.03 // slower zoom-out so the near field stays visible a while
 export const MINIMAP_DEPARTURE_TRANSITION_MS = 900 // crossfade arrival view → galaxy map
-// Layered zoom: layer 1 = galaxy-far.png (overview), layer 2 = galaxy-near.png
-// (deep star field, anchored on the target star), layer 3 = arrival view.
-export const MINIMAP_LAYER2_WORLD_SCALE = 0.55 // near sprite covers this fraction of the world
-export const MINIMAP_LAYER1_FADE: readonly [number, number] = [2.1, 2.9] // zoom range: far layer fades out
-export const MINIMAP_LAYER2_FADE: readonly [number, number] = [1.8, 2.6] // zoom range: near layer fades in
+// Zoom acts: galaxy overview → fly-through (arms spread, near field fades in) → arrival view
+export const MINIMAP_GALAXY_FADE: readonly [number, number] = [3.4, 5.2] // zoom range: galaxy body fades out
+export const MINIMAP_NEARFIELD_FADE: readonly [number, number] = [2.4, 4.2] // zoom range: local star field fades in
+export const MINIMAP_NEARFIELD_STARS = 90 // seeded local stars around the destination
+export const MINIMAP_NEARFIELD_SPREAD = 0.09 // near-field star spread in world coords
 export const MINIMAP_TARGET_BASE_R = 6 // target star radius in the far overview (~1.7× comet head)
-export const MINIMAP_TARGET_MAX_R = 46 // target star radius at full zoom (= ARRIVAL_STAR_R in MiniMapCanvas)
+export const MINIMAP_TARGET_MAX_R = 12 // target star radius at full zoom (arrival crossfade bridges to the arrival sun)
 export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
 
 // Command panel v2 (portrait cards + planet dock row)

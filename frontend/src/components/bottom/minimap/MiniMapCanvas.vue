@@ -30,8 +30,10 @@ import {
   MINIMAP_ZOOM_LERP,
   MINIMAP_ZOOM_OUT_LERP,
   MINIMAP_DEPARTURE_TRANSITION_MS,
-  MINIMAP_LAYER1_FADE,
-  MINIMAP_LAYER2_FADE,
+  MINIMAP_GALAXY_FADE,
+  MINIMAP_NEARFIELD_FADE,
+  MINIMAP_NEARFIELD_STARS,
+  MINIMAP_NEARFIELD_SPREAD,
   MINIMAP_TARGET_BASE_R,
   MINIMAP_TARGET_MAX_R,
   MINIMAP_WAIT_SUN_R,
@@ -108,6 +110,33 @@ function galaxyPlaneToWorld(geo: GalaxyGeo, angle: number, r: number): DotPos {
 /** Centerline angle of a spiral arm at normalized radius t (0 core → 1 rim). */
 function armAngle(geo: GalaxyGeo, arm: number, t: number): number {
   return (arm / geo.arms) * Math.PI * 2 + t * geo.twist * Math.PI * 2
+}
+
+/**
+ * "You are here" player signature: stars are filled dots, only the player
+ * carries gold rings — a crisp pulsing ring plus an expanding gold ping
+ * (tighter and gold, so it never reads as the role-colored target beacon).
+ */
+function drawPlayerRing(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  nowMs: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 500)
+  ctx.beginPath()
+  ctx.arc(x, y, r * (1.05 + 0.1 * pulse), 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(232, 192, 64, 0.9)'
+  ctx.lineWidth = 1.6
+  ctx.stroke()
+
+  const pingT = (nowMs / 1400) % 1
+  ctx.beginPath()
+  ctx.arc(x, y, r * (1.2 + pingT * 1.1), 0, Math.PI * 2)
+  ctx.strokeStyle = `rgba(232, 192, 64, ${((1 - pingT) * 0.5).toFixed(3)})`
+  ctx.lineWidth = 1.2
+  ctx.stroke()
 }
 
 /** Arm radius in galaxy-plane units at normalized t. */
@@ -662,6 +691,7 @@ export default defineComponent({
     // Camera (world-space center + zoom). zoom 1 = whole galaxy visible;
     // during the final travel phase it eases toward the destination star.
     const camera = { x: 0.5, y: 0.5, zoom: 1 }
+    let prevCamZoom = 1
 
     let hyperspacePhase: HyperspacePhase = 'idle'
     let hyperspacePhaseStart = 0
@@ -899,8 +929,39 @@ export default defineComponent({
         return [w / 2 + (wx - cam.x) * w * cam.zoom, h / 2 + (wy - cam.y) * h * cam.zoom]
       }
 
-      // Overview content fades out while the camera zooms onto the target
-      const farAlpha = 1 - smoothstep(cam.zoom, MINIMAP_LAYER1_FADE[0], MINIMAP_LAYER1_FADE[1])
+      // Overview content fades out while the camera zooms onto the target —
+      // late enough that the player visibly flies THROUGH the galaxy body.
+      const farAlpha = 1 - smoothstep(cam.zoom, MINIMAP_GALAXY_FADE[0], MINIMAP_GALAXY_FADE[1])
+
+      // Zoom velocity → motion streaks while the camera dives in
+      const zoomVel = cam.zoom - prevCamZoom
+      prevCamZoom = cam.zoom
+      const streaking = zoomVel > 0.002 && cam.zoom > 1.6
+      function drawStarParticle(px: number, py: number, size: number, rgb: string, a: number) {
+        const style = `rgba(${rgb}, ${a.toFixed(3)})`
+        if (streaking) {
+          const dx = px - w / 2
+          const dy = py - h / 2
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist > 1) {
+            const len = Math.min(16, zoomVel * dist * 0.5)
+            if (len > 0.8) {
+              ctx.beginPath()
+              ctx.strokeStyle = style
+              ctx.lineWidth = size
+              ctx.lineCap = 'round'
+              ctx.moveTo(px, py)
+              ctx.lineTo(px + (dx / dist) * len, py + (dy / dist) * len)
+              ctx.stroke()
+              return
+            }
+          }
+        }
+        ctx.beginPath()
+        ctx.arc(px, py, size, 0, Math.PI * 2)
+        ctx.fillStyle = style
+        ctx.fill()
+      }
 
       // Seeded twinkling background stars
       const twRng = seededRng(galaxyStore.currentGalaxy * 52361 + 7)
@@ -927,8 +988,8 @@ export default defineComponent({
       // (bulge / two arms / knots / haze) drawn additively over a two-layer
       // core glow. Follows the camera and fades with the overview layer.
       // Static (no rotation) so the rescue stars stay pinned to the arms.
+      const geo = galaxyGeo(galaxyStore.currentGalaxy)
       if (farAlpha > 0.01) {
-        const geo = galaxyGeo(galaxyStore.currentGalaxy)
         ctx.save()
         ctx.globalCompositeOperation = 'lighter'
 
@@ -949,10 +1010,32 @@ export default defineComponent({
           const wp = galaxyPlaneToWorld(geo, p.angle, p.r)
           const [px, py] = wToC(wp.x, wp.y)
           const rgb = p.color === 2 ? geo.accent : GALAXY_PARTICLE_COLORS[p.color]
-          ctx.beginPath()
-          ctx.arc(px, py, p.size, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(${rgb}, ${(p.alpha * farAlpha).toFixed(3)})`
-          ctx.fill()
+          drawStarParticle(px, py, p.size, rgb, p.alpha * farAlpha)
+        }
+        ctx.restore()
+      }
+
+      // ── Near-field star field around the destination: fades in while the
+      // galaxy body thins out → depth during the fly-through, replaces the
+      // old galaxy-near sprite. Expands naturally with the camera zoom.
+      const nearAlpha = smoothstep(
+        cam.zoom,
+        MINIMAP_NEARFIELD_FADE[0],
+        MINIMAP_NEARFIELD_FADE[1],
+      )
+      if (nearAlpha > 0.01 && targetIdx >= 0) {
+        const anchor = dots[targetIdx]
+        const nfRng = seededRng(galaxyStore.currentGalaxy * 7717 + targetIdx * 131)
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        for (let i = 0; i < MINIMAP_NEARFIELD_STARS; i++) {
+          const wx = anchor.x + (nfRng() - 0.5) * 2 * MINIMAP_NEARFIELD_SPREAD
+          const wy = anchor.y + (nfRng() - 0.5) * 2 * MINIMAP_NEARFIELD_SPREAD
+          const size = 0.5 + nfRng() * 1.3
+          const tint = nfRng()
+          const a = (0.25 + nfRng() * 0.5) * nearAlpha
+          const [px, py] = wToC(wx, wy)
+          drawStarParticle(px, py, size, tint < 0.6 ? '255, 246, 228' : geo.accent, a)
         }
         ctx.restore()
       }
@@ -1009,7 +1092,7 @@ export default defineComponent({
         }
       }
 
-      // Overview markers belong to layer 1 → fade with the far layer
+      // Overview markers belong to the galaxy overview → fade with it
       const rescuedSet = new Set(order.slice(0, rescued))
       const galaxySeed = galaxyStore.currentGalaxy * 10007
       if (farAlpha > 0.01) {
@@ -1083,12 +1166,13 @@ export default defineComponent({
         } else if (nextRole && ROLE_COLORS[nextRole]) {
           targetPal = rolePaletteFromHex(ROLE_COLORS[nextRole])
         }
-        // Small in the far overview (comet-relative scale), growing to the
-        // arrival-sun size only during the layer-2 phase → seamless hand-over
+        // Small in the far overview (comet-relative scale), growing only
+        // moderately with the zoom — the arrival crossfade bridges the
+        // remaining size gap to the arrival sun
         const targetR =
           MINIMAP_TARGET_BASE_R +
           (MINIMAP_TARGET_MAX_R - MINIMAP_TARGET_BASE_R) *
-            smoothstep(cam.zoom, MINIMAP_LAYER2_FADE[0], MINIMAP_ZOOM_MAX)
+            smoothstep(cam.zoom, MINIMAP_NEARFIELD_FADE[0], MINIMAP_ZOOM_MAX)
         drawRoleStar(ctx, tx, ty, targetR, targetPal, nowMs)
 
         // Expanding beacon rings in the destination's role color — draws the
@@ -1193,12 +1277,14 @@ export default defineComponent({
         ctx.arc(hx, hy, headR, 0, Math.PI * 2)
         ctx.fillStyle = '#fff8e8'
         ctx.fill()
+        drawPlayerRing(ctx, hx, hy, headR * 2.2, nowMs)
       } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
         // Idle: player-sun at the current position (the waiting screen draws
         // its own departure beacon at the flight origin instead)
         const player = getPlayerWorldPos(dots, order, rescued)
         const [px, py] = wToC(player.x, player.y)
         drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, nowMs)
+        drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
       }
     }
 
@@ -1588,7 +1674,7 @@ export default defineComponent({
       }
 
       // Departure crossfade: star system fades out over the (still zoomed-in)
-      // galaxy map — the camera then glides back out through layer 2.
+      // galaxy map — the camera then glides back out through the near field.
       if (departureTransitionStart >= 0) {
         const elapsed = Date.now() - departureTransitionStart
         if (elapsed < MINIMAP_DEPARTURE_TRANSITION_MS) {
@@ -1648,7 +1734,7 @@ export default defineComponent({
         }
       }
 
-      // Zoom out noticeably slower than in, so the layer-2 star field stays
+      // Zoom out noticeably slower than in, so the near-field star field stays
       // readable for a moment on the way back to the galaxy overview
       const lerp = dz < camera.zoom ? MINIMAP_ZOOM_OUT_LERP : MINIMAP_ZOOM_LERP
       camera.zoom += (dz - camera.zoom) * lerp
