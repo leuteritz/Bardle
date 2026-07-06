@@ -21,8 +21,30 @@ import {
   COMET_DEBRIS_MIN_R,
   COMET_DEBRIS_MAX_R,
   COMET_DEBRIS_SPEED_MULT,
+  FLIGHT_STREAK_COUNT,
+  FLIGHT_STREAK_SPEED_MULT,
+  FLIGHT_STREAK_LEN_FACTOR,
+  FLIGHT_STREAK_ALPHA,
+  FLIGHT_BURST_INTERVAL_MIN_SEC,
+  FLIGHT_BURST_INTERVAL_MAX_SEC,
+  FLIGHT_BURST_STREAK_MIN,
+  FLIGHT_BURST_STREAK_MAX,
+  FLIGHT_BURST_ALPHA,
+  FLIGHT_BURST_SPEED_MULT,
+  FLIGHT_BURST_LEN_FACTOR,
+  FLIGHT_BURST_WIDTH,
+  STAR_PHASE_DATA,
 } from '../../config/constants'
 import { useWindowFocus } from '../useWindowFocus'
+
+/** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
+const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)
+  .toString(16)
+  .padStart(2, '0')
+/** Same for FLIGHT_BURST_ALPHA (outer stroke of burst streaks). */
+const BURST_ALPHA_HEX = Math.round(FLIGHT_BURST_ALPHA * 255)
+  .toString(16)
+  .padStart(2, '0')
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +58,15 @@ type StarItem = {
   b: number
   twinklePhase: number
   twinkleSpeed: number
+}
+
+/** Radial phase-tinted speed line — rides the same center-outward flow as the
+ *  stars (the player flies INTO the screen; shed material streams back past
+ *  the viewer), reinforcing the parallax. Active in every phase. */
+type FlightStreak = {
+  angle: number
+  dist: number
+  baseSpeed: number
 }
 
 /** Parallax rock streaming past the player while in comet origin state. */
@@ -1130,6 +1161,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   const dustPatches: DustPatch[] = []
   const starClusters: StarCluster[] = []
   const cometDebris: DebrisRock[] = []
+  const flightStreaks: FlightStreak[] = []
+  /** Finite gusts of bright speed lines; refilled when burstCooldown expires. */
+  const burstStreaks: FlightStreak[] = []
+  let burstCooldown =
+    FLIGHT_BURST_INTERVAL_MIN_SEC +
+    Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
   const galaxyPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   const nebulaPool: Array<{ el: SVGSVGElement; active: boolean }> = []
   let nextStarId = 1
@@ -1785,6 +1822,117 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           ctx.fillStyle = `rgba(${star.r},${star.g},${star.b},${alpha * 0.12})`
           ctx.fill()
         }
+      }
+    }
+
+    // ── Flight streaks — the player flies INTO the screen in every phase;
+    // shed material streams back past the viewer as radial phase-tinted
+    // lines riding the same center-outward flow as the stars.
+    if (ctx && !isFrozen && speedMultiplier > 0) {
+      const solarForStreaks = useSolarUpgradeStore()
+      const streakColor = solarForStreaks.isCometState
+        ? COMET_PHASE_DATA.accent
+        : STAR_PHASE_DATA[solarForStreaks.starPhase].phaseGlow
+      while (flightStreaks.length < FLIGHT_STREAK_COUNT) {
+        flightStreaks.push({
+          angle: Math.random() * Math.PI * 2,
+          dist: maxDist * (0.05 + Math.random() * 0.3),
+          baseSpeed: STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE,
+        })
+      }
+      for (const s of flightStreaks) {
+        const sNorm = s.dist / maxDist
+        const sSpeed =
+          s.baseSpeed * sNorm * sNorm * WARP_SPEED_MAX * speedMultiplier * FLIGHT_STREAK_SPEED_MULT
+        s.dist += sSpeed * delta
+        if (s.dist > maxDist) {
+          s.angle = Math.random() * Math.PI * 2
+          s.dist = maxDist * (0.05 + Math.random() * 0.1)
+          s.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
+        }
+        const len = Math.max(6, sSpeed * delta * FLIGHT_STREAK_LEN_FACTOR)
+        const hx = cx + Math.cos(s.angle) * s.dist
+        const hy = cy + Math.sin(s.angle) * s.dist
+        const tx = hx - Math.cos(s.angle) * len
+        const ty = hy - Math.sin(s.angle) * len
+        // fade in with distance like the stars: invisible at center, present
+        // at the edges where it rushes past the camera
+        const alpha = Math.min(1, sNorm * 3)
+        if (alpha < 0.05) continue
+        const grad = ctx.createLinearGradient(tx, ty, hx, hy)
+        grad.addColorStop(0, `${streakColor}00`)
+        grad.addColorStop(1, `${streakColor}${STREAK_ALPHA_HEX}`)
+        ctx.save()
+        ctx.globalAlpha = alpha
+        ctx.beginPath()
+        ctx.moveTo(tx, ty)
+        ctx.lineTo(hx, hy)
+        ctx.strokeStyle = grad
+        ctx.lineWidth = 1 + sNorm * 1.2
+        ctx.lineCap = 'round'
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      // Streak bursts: a calm→gust→calm rhythm — every few seconds a handful
+      // of bright, long lines rushes past. Skipped during warp/hyperspace,
+      // where the stars themselves already streak.
+      burstCooldown -= delta
+      if (burstCooldown <= 0 && galaxyTransPhase === 'idle' && !hyperActive) {
+        const count =
+          FLIGHT_BURST_STREAK_MIN +
+          Math.floor(Math.random() * (FLIGHT_BURST_STREAK_MAX - FLIGHT_BURST_STREAK_MIN + 1))
+        for (let i = 0; i < count; i++) {
+          burstStreaks.push({
+            angle: Math.random() * Math.PI * 2,
+            dist: maxDist * (0.1 + Math.random() * 0.2),
+            baseSpeed:
+              STAR_BG_BASE_SPEED_MIN + STAR_BG_BASE_SPEED_RANGE * (0.7 + Math.random() * 0.3),
+          })
+        }
+        burstCooldown =
+          FLIGHT_BURST_INTERVAL_MIN_SEC +
+          Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
+      }
+      for (let i = burstStreaks.length - 1; i >= 0; i--) {
+        const s = burstStreaks[i]
+        const sNorm = s.dist / maxDist
+        const sSpeed =
+          s.baseSpeed * sNorm * sNorm * WARP_SPEED_MAX * speedMultiplier * FLIGHT_BURST_SPEED_MULT
+        s.dist += sSpeed * delta
+        if (s.dist > maxDist) {
+          // gusts are finite — the streak leaves the screen and is gone
+          burstStreaks.splice(i, 1)
+          continue
+        }
+        const len = Math.max(10, sSpeed * delta * FLIGHT_BURST_LEN_FACTOR)
+        const hx = cx + Math.cos(s.angle) * s.dist
+        const hy = cy + Math.sin(s.angle) * s.dist
+        const tx = hx - Math.cos(s.angle) * len
+        const ty = hy - Math.sin(s.angle) * len
+        const alpha = Math.min(1, sNorm * 3)
+        if (alpha < 0.05) continue
+        const grad = ctx.createLinearGradient(tx, ty, hx, hy)
+        grad.addColorStop(0, `${streakColor}00`)
+        grad.addColorStop(1, `${streakColor}${BURST_ALPHA_HEX}`)
+        ctx.save()
+        ctx.globalAlpha = alpha
+        const outerWidth = FLIGHT_BURST_WIDTH * (0.6 + sNorm)
+        ctx.beginPath()
+        ctx.moveTo(tx, ty)
+        ctx.lineTo(hx, hy)
+        ctx.strokeStyle = grad
+        ctx.lineWidth = outerWidth
+        ctx.lineCap = 'round'
+        ctx.stroke()
+        // hot white core — reads as bright without expensive shadowBlur
+        ctx.beginPath()
+        ctx.moveTo(tx, ty)
+        ctx.lineTo(hx, hy)
+        ctx.strokeStyle = `rgba(255,255,255,${(FLIGHT_BURST_ALPHA * 0.5).toFixed(3)})`
+        ctx.lineWidth = outerWidth * 0.35
+        ctx.stroke()
+        ctx.restore()
       }
     }
 

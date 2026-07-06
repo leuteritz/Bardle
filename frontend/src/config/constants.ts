@@ -1767,6 +1767,54 @@ export const COMET_DEBRIS_MAX_R = 9
 /** Debris moves this much faster than regular background stars. */
 export const COMET_DEBRIS_SPEED_MULT = 1.6
 
+// ── Flight Wake ───────────────────────────────────────────────────────────────
+/** Camera perspective: the viewer sits BEHIND the player's celestial body,
+ *  which flies straight INTO the screen (the background stars spawn at center
+ *  and stream radially outward past the viewer). Shed material therefore comes
+ *  AT the camera — on the 2D screen it reads as motes/streaks expanding
+ *  radially outward, growing and fading, using the same motion language as
+ *  the starfield. Active in EVERY phase (comet and all sun phases), tinted in
+ *  the current phase color: the player is always in flight. */
+/** Speed lines shooting radially off the disc toward the viewer (CSS). */
+export const FLIGHT_LINE_COUNT = 8
+/** Radial reach of the lines relative to the disc diameter — kept short: the
+ *  lines form a tight wake ring around the player; the far-field motion is
+ *  the job of the ambient/burst streaks on the background canvas. */
+export const FLIGHT_LINE_REACH_FACTOR = 0.85
+/** Line intensity gain per progression step (cometStage / starPhase). */
+export const FLIGHT_LINE_STAGE_BONUS = 0.25
+/** Base line length relative to the disc diameter. */
+export const FLIGHT_LINE_BASE_LEN_FACTOR = 0.16
+/** Line thickness in px. */
+export const FLIGHT_LINE_THICKNESS = 2
+/** End scaleX of a line — it stretches while flying out (parallax growth). */
+export const FLIGHT_LINE_GROW_SCALE = 1.7
+/** Radial phase-tinted streaks on the background canvas — they ride the same
+ *  center-outward flow as the stars, reinforcing the parallax. */
+export const FLIGHT_STREAK_COUNT = 10
+/** Streaks run this much faster than regular background stars. */
+export const FLIGHT_STREAK_SPEED_MULT = 1.4
+/** Streak line length relative to per-frame travel (cf. warp streak 2.2). */
+export const FLIGHT_STREAK_LEN_FACTOR = 2.6
+/** Peak alpha of a streak — background accent, never foreground noise. */
+export const FLIGHT_STREAK_ALPHA = 0.18
+/** Streak bursts: every few seconds a gust of bright, long speed lines rushes
+ *  past — a calm→gust→calm rhythm sells the motion far better than a constant
+ *  glare would in a game that sits on screen for hours. */
+export const FLIGHT_BURST_INTERVAL_MIN_SEC = 6
+export const FLIGHT_BURST_INTERVAL_MAX_SEC = 12
+/** Streaks per gust. */
+export const FLIGHT_BURST_STREAK_MIN = 3
+export const FLIGHT_BURST_STREAK_MAX = 6
+/** Peak alpha of a burst streak — clearly visible, unlike the ambient ones. */
+export const FLIGHT_BURST_ALPHA = 0.4
+/** Burst streaks run this much faster than regular background stars. */
+export const FLIGHT_BURST_SPEED_MULT = 2.4
+/** Burst line length relative to per-frame travel (ambient uses 2.6). */
+export const FLIGHT_BURST_LEN_FACTOR = 7
+/** Outer stroke width of a burst streak; the hot white core is thinner. */
+export const FLIGHT_BURST_WIDTH = 2.5
+
 // ── Planet Tab stage sizing ───────────────────────────────────────────────────
 /** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
 export const PLANET_TAB_SUN_MIN_DIAMETER = 300

@@ -17,6 +17,9 @@
       />
     </svg>
 
+    <!-- Flight wake — Motes fliegen radial auf den Betrachter zu, in jeder Phase -->
+    <FlightMotes :diameter="discDiameter" />
+
     <!-- Sonnenscheibe — geteiltes Phase-Disc (identisch zu Planet-/Shop-Tab);
          vor der ersten Ignition fliegt stattdessen der Komet -->
     <CometDisc v-if="solarStore.isCometState" :diameter="discDiameter" />
@@ -37,6 +40,7 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { SUN_BG_DISC_RADIUS_FACTOR } from '@/config/constants'
 import PhaseSunDisc from './PhaseSunDisc.vue'
 import CometDisc from './CometDisc.vue'
+import FlightMotes from './FlightMotes.vue'
 
 interface ChimeParticle {
   id: number
@@ -52,7 +56,7 @@ interface ChimeParticle {
 
 export default defineComponent({
   name: 'SunComponent',
-  components: { PhaseSunDisc, CometDisc },
+  components: { PhaseSunDisc, CometDisc, FlightMotes },
   props: {
     /** Override the visual radius (px). Defaults to the live phase radius from planetShopStore. */
     radius: { type: Number, default: null },
