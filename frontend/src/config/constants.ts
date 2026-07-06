@@ -215,15 +215,19 @@ export const OBJECTIVE_AOE_DPS_BARON = 7
 /** Cadence of the AoE/down tick inside the fight */
 export const OBJECTIVE_ABILITY_TICK_S = 1
 /** Ability cooldown per role (seconds, measured from the end of the active window) */
-export const OBJECTIVE_ABILITY_CD_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
-  top: 6,
-  jungle: 5,
-  mid: 3.5,
-  adc: 5,
-  support: 4,
-}
+export const OBJECTIVE_ABILITY_CD_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> =
+  {
+    top: 6,
+    jungle: 5,
+    mid: 3.5,
+    adc: 5,
+    support: 4,
+  }
 /** Ability active-window duration per role (support: visual cast window — the burst applies once at cast) */
-export const OBJECTIVE_ABILITY_DURATION_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+export const OBJECTIVE_ABILITY_DURATION_S: Record<
+  'top' | 'jungle' | 'mid' | 'adc' | 'support',
+  number
+> = {
   top: 1.5,
   jungle: 2.5,
   mid: 2,
@@ -231,7 +235,10 @@ export const OBJECTIVE_ABILITY_DURATION_S: Record<'top' | 'jungle' | 'mid' | 'ad
   support: 0.8,
 }
 /** Staggered first casts so the pit doesn't fire everything at once */
-export const OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S: Record<'top' | 'jungle' | 'mid' | 'adc' | 'support', number> = {
+export const OBJECTIVE_ABILITY_FIRST_CAST_OFFSET_S: Record<
+  'top' | 'jungle' | 'mid' | 'adc' | 'support',
+  number
+> = {
   top: 2,
   jungle: 1.5,
   mid: 1,
@@ -1091,6 +1098,18 @@ export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the fl
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count
 export const MINIMAP_IDLE_SUN_R = 11 // player-sun marker when not traveling
 export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
+// Procedural spiral galaxy (canvas-drawn, replaces the old galaxy-far sprite)
+export const MINIMAP_GALAXY_ARMS_MIN = 2 // min seeded spiral arm count
+export const MINIMAP_GALAXY_ARMS_MAX = 3 // max seeded spiral arm count
+export const MINIMAP_GALAXY_PARTICLES = 1200 // particles across bulge + arms + haze
+export const MINIMAP_GALAXY_RADIUS = 0.5 // outer radius in world (0..1) coords
+export const MINIMAP_GALAXY_INNER_RADIUS = 0.05 // arms start here (bulge edge)
+export const MINIMAP_GALAXY_SWIRL_TURNS = 1.9 // base revolutions from core to rim
+export const MINIMAP_GALAXY_SQUASH = 0.62 // base disk squash (inclination illusion)
+export const MINIMAP_GALAXY_BULGE_R = 0.11 // gaussian bulge radius
+export const MINIMAP_GALAXY_KNOTS = 18 // bright accent-colored knots on the arms
+export const MINIMAP_GALAXY_BRIGHT_STARS = 70 // distinct single stars along the arms
+export const MINIMAP_GALAXY_CORE_RADIUS = 0.15 // core glow radius in world coords
 export const MINIMAP_ZOOM_TRIGGER_MS = 30_000 // zoom-in phase starts this long before arrival
 export const MINIMAP_ZOOM_MAX = 4.2 // camera zoom at arrival (target star grows ≈ arrival sun)
 export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)

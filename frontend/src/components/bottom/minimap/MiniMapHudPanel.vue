@@ -1,9 +1,6 @@
 <template>
   <div v-if="!isRescuing && !isWaiting && !isRotating" class="hud-top">
-    <!-- left: sector tag -->
-    <div class="hud-sector">◈ Sector {{ sectorRoman }}</div>
-
-    <!-- right: arrival countdown (travel only) -->
+    <!-- top left: arrival countdown (travel only) -->
     <div v-if="isTraveling" class="hud-arrival">
       <div class="hud-arrival-row">
         <span class="hud-arrival-label">Arrival</span>
@@ -21,7 +18,6 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { useGalaxyStore } from '../../../stores/galaxyStore'
-import { toRoman } from '../../../utils/roman'
 import { CHAMPION_TRAVEL_BASE_LY, CHAMPION_TRAVEL_LY_PER_GALAXY } from '../../../config/constants'
 
 export default defineComponent({
@@ -38,8 +34,6 @@ export default defineComponent({
     const isWaiting = computed(() => galaxyStore.pendingRoleSelection)
 
     const isRotating = computed(() => galaxyStore.isRescueRotating)
-
-    const sectorRoman = computed(() => toRoman(galaxyStore.currentGalaxy))
 
     const countdown = computed(() => {
       const ms = galaxyStore.travelRemainingMs
@@ -79,7 +73,6 @@ export default defineComponent({
       isRescuing,
       isWaiting,
       isRotating,
-      sectorRoman,
       countdown,
       isTraveling,
       speedDisplay,
@@ -100,7 +93,7 @@ export default defineComponent({
   user-select: none;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   animation: hud-top-fadein 0.4s ease both;
 }
@@ -116,20 +109,10 @@ export default defineComponent({
   }
 }
 
-.hud-sector {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: #8a6a30;
-  text-transform: uppercase;
-  white-space: nowrap;
-  padding-top: 6px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
 .hud-arrival {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 2px;
 }
 

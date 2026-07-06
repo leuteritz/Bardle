@@ -35,6 +35,17 @@ import {
   MINIMAP_TARGET_BASE_R,
   MINIMAP_TARGET_MAX_R,
   MINIMAP_WAIT_SUN_R,
+  MINIMAP_GALAXY_ARMS_MIN,
+  MINIMAP_GALAXY_ARMS_MAX,
+  MINIMAP_GALAXY_PARTICLES,
+  MINIMAP_GALAXY_RADIUS,
+  MINIMAP_GALAXY_INNER_RADIUS,
+  MINIMAP_GALAXY_SWIRL_TURNS,
+  MINIMAP_GALAXY_SQUASH,
+  MINIMAP_GALAXY_BULGE_R,
+  MINIMAP_GALAXY_KNOTS,
+  MINIMAP_GALAXY_BRIGHT_STARS,
+  MINIMAP_GALAXY_CORE_RADIUS,
 } from '@/config/constants'
 
 const ARRIVAL_TRANSITION_MS = 900
@@ -50,6 +61,158 @@ function seededRng(seed: number) {
 interface DotPos {
   x: number
   y: number
+}
+
+/* ── Procedural spiral galaxy ──────────────────────────────────────────────
+   Shared geometry: the particle renderer AND generateDots() sample the same
+   seeded spiral, so the rescue stars always sit on the galaxy's arms. */
+
+interface GalaxyGeo {
+  arms: number
+  tilt: number
+  twist: number
+  squash: number
+  radiusScale: number
+  accent: string // rgb triplet for outer arms / knots / bright stars
+}
+
+// Seeded per-galaxy accent palettes: ice blue, ember orange, teal, violet.
+// Core/bulge always stays warm gold — the accent makes galaxies distinct.
+const GALAXY_ACCENTS = ['176, 200, 255', '255, 150, 110', '150, 230, 200', '208, 168, 255']
+
+function galaxyGeo(galaxyKey: number): GalaxyGeo {
+  const rng = seededRng(galaxyKey * 40093 + 11)
+  return {
+    arms:
+      rng() < 0.6
+        ? MINIMAP_GALAXY_ARMS_MIN
+        : MINIMAP_GALAXY_ARMS_MIN +
+          Math.min(1, MINIMAP_GALAXY_ARMS_MAX - MINIMAP_GALAXY_ARMS_MIN),
+    tilt: rng() * Math.PI,
+    twist: MINIMAP_GALAXY_SWIRL_TURNS + (rng() - 0.5) * 1.1,
+    squash: MINIMAP_GALAXY_SQUASH + (rng() - 0.5) * 0.28,
+    radiusScale: 0.9 + rng() * 0.18,
+    accent: GALAXY_ACCENTS[Math.floor(rng() * GALAXY_ACCENTS.length)],
+  }
+}
+
+/** Galaxy-plane polar coords → world (0..1) coords: squash, tilt, center. */
+function galaxyPlaneToWorld(geo: GalaxyGeo, angle: number, r: number): DotPos {
+  const px = Math.cos(angle) * r
+  const py = Math.sin(angle) * r * geo.squash
+  const cosT = Math.cos(geo.tilt)
+  const sinT = Math.sin(geo.tilt)
+  return { x: 0.5 + px * cosT - py * sinT, y: 0.5 + px * sinT + py * cosT }
+}
+
+/** Centerline angle of a spiral arm at normalized radius t (0 core → 1 rim). */
+function armAngle(geo: GalaxyGeo, arm: number, t: number): number {
+  return (arm / geo.arms) * Math.PI * 2 + t * geo.twist * Math.PI * 2
+}
+
+/** Arm radius in galaxy-plane units at normalized t. */
+function armRadius(geo: GalaxyGeo, t: number): number {
+  return (
+    (MINIMAP_GALAXY_INNER_RADIUS +
+      t * (MINIMAP_GALAXY_RADIUS - MINIMAP_GALAXY_INNER_RADIUS)) *
+    geo.radiusScale
+  )
+}
+
+interface GalaxyParticle {
+  angle: number // galaxy-plane polar angle (pre-rotation)
+  r: number // galaxy-plane radius
+  size: number
+  color: number // 0 warm gold, 1 star white, 2 galaxy accent
+  alpha: number
+}
+
+const GALAXY_PARTICLE_COLORS = ['240, 214, 160', '255, 246, 228']
+
+let galaxyParticleCache: GalaxyParticle[] = []
+let galaxyParticleCacheKey = -1
+
+function getGalaxyParticles(galaxyKey: number): GalaxyParticle[] {
+  if (galaxyParticleCacheKey === galaxyKey) return galaxyParticleCache
+  const geo = galaxyGeo(galaxyKey)
+  const rng = seededRng(galaxyKey * 91127 + 3)
+  const gauss = () => rng() + rng() + rng() - 1.5
+  const parts: GalaxyParticle[] = []
+
+  const bulgeN = Math.round(MINIMAP_GALAXY_PARTICLES * 0.24)
+  const hazeN = Math.round(MINIMAP_GALAXY_PARTICLES * 0.14)
+  const armN =
+    MINIMAP_GALAXY_PARTICLES -
+    bulgeN -
+    hazeN -
+    MINIMAP_GALAXY_KNOTS -
+    MINIMAP_GALAXY_BRIGHT_STARS
+
+  // Dense warm bulge around the core
+  for (let i = 0; i < bulgeN; i++) {
+    parts.push({
+      angle: rng() * Math.PI * 2,
+      r: Math.abs(gauss()) * MINIMAP_GALAXY_BULGE_R * geo.radiusScale,
+      size: 0.5 + rng() * 1.2,
+      color: rng() < 0.75 ? 0 : 1,
+      alpha: 0.22 + rng() * 0.3,
+    })
+  }
+
+  // Spiral arms: tight scatter around the centerline, warm → accent outward
+  for (let i = 0; i < armN; i++) {
+    const arm = i % geo.arms
+    const t = Math.pow(rng(), 0.85)
+    const tint = rng()
+    parts.push({
+      angle: armAngle(geo, arm, t) + gauss() * (0.42 - 0.22 * t),
+      r: armRadius(geo, t) + gauss() * 0.012,
+      size: 0.5 + rng() * 1.1,
+      color: t < 0.35 ? (tint < 0.7 ? 0 : 1) : tint < 0.45 ? 1 : tint < 0.8 ? 2 : 0,
+      alpha: (0.55 - 0.3 * t) * (0.7 + 0.3 * rng()),
+    })
+  }
+
+  // Bright accent-colored star-forming knots dotted along the arms
+  for (let k = 0; k < MINIMAP_GALAXY_KNOTS; k++) {
+    const arm = k % geo.arms
+    const t = 0.25 + rng() * 0.65
+    parts.push({
+      angle: armAngle(geo, arm, t) + gauss() * 0.08,
+      r: armRadius(geo, t) + gauss() * 0.008,
+      size: 1.8 + rng() * 1.2,
+      color: 2,
+      alpha: 0.4 + rng() * 0.2,
+    })
+  }
+
+  // Distinct single background stars strung along the arms
+  for (let s = 0; s < MINIMAP_GALAXY_BRIGHT_STARS; s++) {
+    const arm = s % geo.arms
+    const t = 0.12 + rng() * 0.85
+    parts.push({
+      angle: armAngle(geo, arm, t) + gauss() * 0.11,
+      r: armRadius(geo, t) + gauss() * 0.01,
+      size: 1.1 + rng() * 0.9,
+      color: rng() < 0.55 ? 1 : 2,
+      alpha: 0.5 + rng() * 0.35,
+    })
+  }
+
+  // Faint disk haze between the arms
+  for (let i = 0; i < hazeN; i++) {
+    parts.push({
+      angle: rng() * Math.PI * 2,
+      r: Math.sqrt(rng()) * MINIMAP_GALAXY_RADIUS * geo.radiusScale,
+      size: 0.4 + rng() * 0.8,
+      color: rng() < 0.6 ? 0 : 1,
+      alpha: 0.05 + rng() * 0.07,
+    })
+  }
+
+  galaxyParticleCache = parts
+  galaxyParticleCacheKey = galaxyKey
+  return parts
 }
 
 interface WarpParticle {
@@ -603,20 +766,53 @@ export default defineComponent({
       const galaxyKey = galaxyStore.currentGalaxy
       const totalPlanets = galaxyStore.starsRequired
       const rng = seededRng(galaxyKey * 31337 + totalPlanets)
+      const geo = galaxyGeo(galaxyKey)
+      const gauss = () => rng() + rng() + rng() - 1.5
+      // Stars sit ON the galaxy: sampled along the same seeded spiral arms
+      // the particle renderer draws, spread from the bulge edge to the rim.
       const dots: DotPos[] = []
+      const minDistSq = 0.085 * 0.085
+      const clamp = (p: DotPos): DotPos => ({
+        x: Math.min(0.94, Math.max(0.06, p.x)),
+        y: Math.min(0.94, Math.max(0.06, p.y)),
+      })
       for (let i = 0; i < totalPlanets; i++) {
-        const angle = rng() * Math.PI * 2
-        const r = Math.sqrt(rng()) * 0.32
-        dots.push({ x: 0.5 + r * Math.cos(angle), y: 0.5 + r * Math.sin(angle) * 0.75 })
+        let pos: DotPos | null = null
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const arm = (i + attempt) % geo.arms
+          const t = Math.min(
+            1,
+            Math.max(0, 0.22 + 0.7 * (i / Math.max(1, totalPlanets - 1)) + gauss() * 0.06),
+          )
+          const candidate = clamp(
+            galaxyPlaneToWorld(
+              geo,
+              armAngle(geo, arm, t) + gauss() * 0.16,
+              armRadius(geo, t) + gauss() * 0.015,
+            ),
+          )
+          const farEnough = dots.every(
+            (d) => (d.x - candidate.x) ** 2 + (d.y - candidate.y) ** 2 >= minDistSq,
+          )
+          if (farEnough || attempt === 7) {
+            pos = candidate
+            break
+          }
+        }
+        dots.push(pos!)
       }
       dotPositions.value = dots
+      // Spawn just outside the bulge, on a random arm
       const spawnRng = seededRng(galaxyKey * 99997 + totalPlanets * 13)
-      const angle = spawnRng() * Math.PI * 2
-      const r = Math.sqrt(spawnRng()) * 0.3
-      spawnPos.value = {
-        x: 0.5 + r * Math.cos(angle),
-        y: 0.5 + r * Math.sin(angle),
-      }
+      const spawnArm = Math.floor(spawnRng() * geo.arms)
+      const spawnT = 0.1 + spawnRng() * 0.08
+      spawnPos.value = clamp(
+        galaxyPlaneToWorld(
+          geo,
+          armAngle(geo, spawnArm, spawnT) + (spawnRng() - 0.5) * 0.2,
+          armRadius(geo, spawnT),
+        ),
+      )
       let originIdx = 0
       let nearestToSpawn = Infinity
       for (let i = 0; i < dots.length; i++) {
@@ -725,6 +921,40 @@ export default defineComponent({
               ? `rgba(207, 224, 255, ${a.toFixed(3)})`
               : `rgba(255, 255, 255, ${a.toFixed(3)})`
         ctx.fill()
+      }
+
+      // ── Procedural spiral galaxy (no sprite): precomputed seeded particles
+      // (bulge / two arms / knots / haze) drawn additively over a two-layer
+      // core glow. Follows the camera and fades with the overview layer.
+      // Static (no rotation) so the rescue stars stay pinned to the arms.
+      if (farAlpha > 0.01) {
+        const geo = galaxyGeo(galaxyStore.currentGalaxy)
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+
+        const [gcx, gcy] = wToC(0.5, 0.5)
+        const coreR = MINIMAP_GALAXY_CORE_RADIUS * w * cam.zoom
+        const coreBright = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 0.55)
+        coreBright.addColorStop(0, `rgba(255, 240, 200, ${(0.35 * farAlpha).toFixed(3)})`)
+        coreBright.addColorStop(1, 'rgba(255, 240, 200, 0)')
+        ctx.fillStyle = coreBright
+        ctx.fillRect(gcx - coreR, gcy - coreR, coreR * 2, coreR * 2)
+        const halo = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreR * 1.9)
+        halo.addColorStop(0, `rgba(240, 205, 140, ${(0.1 * farAlpha).toFixed(3)})`)
+        halo.addColorStop(1, 'rgba(240, 205, 140, 0)')
+        ctx.fillStyle = halo
+        ctx.fillRect(gcx - coreR * 2, gcy - coreR * 2, coreR * 4, coreR * 4)
+
+        for (const p of getGalaxyParticles(galaxyStore.currentGalaxy)) {
+          const wp = galaxyPlaneToWorld(geo, p.angle, p.r)
+          const [px, py] = wToC(wp.x, wp.y)
+          const rgb = p.color === 2 ? geo.accent : GALAXY_PARTICLE_COLORS[p.color]
+          ctx.beginPath()
+          ctx.arc(px, py, p.size, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(${rgb}, ${(p.alpha * farAlpha).toFixed(3)})`
+          ctx.fill()
+        }
+        ctx.restore()
       }
 
       if (rescued >= 2 && farAlpha > 0.01) {
@@ -866,11 +1096,11 @@ export default defineComponent({
         for (let ring = 0; ring < 2; ring++) {
           const ringT = (nowMs / 1800 + ring / 2) % 1
           const ringR = targetR * (1.3 + ringT * 1.6)
-          const ringA = (1 - ringT) * 0.45
+          const ringA = (1 - ringT) * 0.6
           ctx.beginPath()
           ctx.arc(tx, ty, ringR, 0, Math.PI * 2)
           ctx.strokeStyle = hexToRgba(targetPal.base, ringA)
-          ctx.lineWidth = 1.6
+          ctx.lineWidth = 2
           ctx.stroke()
         }
       }
