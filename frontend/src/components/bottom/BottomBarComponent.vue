@@ -151,9 +151,8 @@ const seamY2 = computed(() => (BOTTOM_BAR_CENTER_TOP_Y - 28) * hudScale.value)
 .bar-bg {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(120% 90% at 50% 115%, rgba(58, 36, 14, 0) 55%, rgba(0, 0, 0, 0.55) 100%),
-    linear-gradient(to bottom, #241608 0%, #1a1005 50%, #130b04 100%);
+  /* flat header brown — identical across all three panels, no gradients */
+  background: #1e1006;
 }
 
 .bar-frame {

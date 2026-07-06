@@ -1034,10 +1034,11 @@ export const BOTTOM_FRAME_W_SHADOW = 7
 export const BOTTOM_FRAME_W_WOOD = 3.5
 export const BOTTOM_FRAME_W_GOLD = 1.2
 export const BOTTOM_FRAME_STROKE_GOLD = '#c89040' // thin gold highlight line
-// Unified background fill (header-brown family) + panel seam hairlines
-export const BOTTOM_BAR_BG_TOP = '#241608'
-export const BOTTOM_BAR_BG_MID = '#1a1005'
-export const BOTTOM_BAR_BG_BOTTOM = '#130b04'
+// Unified background fill: flat header brown — must stay identical across
+// all three bottom panels (minimap / scoreboard / command), no deviations
+export const BOTTOM_BAR_BG_TOP = '#1e1006'
+export const BOTTOM_BAR_BG_MID = '#1e1006'
+export const BOTTOM_BAR_BG_BOTTOM = '#1e1006'
 export const BOTTOM_BAR_SEAM_COLOR = 'rgba(122,78,32,0.35)'
 
 // Center scoreboard (5 combat | crest | 5 economy stats)

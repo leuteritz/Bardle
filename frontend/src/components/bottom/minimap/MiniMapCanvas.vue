@@ -1,8 +1,5 @@
 <template>
-  <img ref="imgFarEl" src="/img/galaxy-far.png" style="display: none" alt="" @load="onImageLoad" />
-  <img ref="imgNearEl" src="/img/galaxy-near.png" style="display: none" alt="" @load="onImageLoad" />
   <canvas ref="canvasEl" class="map-canvas" />
-  <div class="minimap-vignette" />
 </template>
 
 <script lang="ts">
@@ -16,7 +13,6 @@ import { livePlanetAngles } from '@/composables/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/starGroupStore'
 import type { PlanetType } from '@/types'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_TRANS_DECEL_MS,
@@ -34,7 +30,6 @@ import {
   MINIMAP_ZOOM_LERP,
   MINIMAP_ZOOM_OUT_LERP,
   MINIMAP_DEPARTURE_TRANSITION_MS,
-  MINIMAP_LAYER2_WORLD_SCALE,
   MINIMAP_LAYER1_FADE,
   MINIMAP_LAYER2_FADE,
   MINIMAP_TARGET_BASE_R,
@@ -496,8 +491,6 @@ export default defineComponent({
     }
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
-    const imgFarEl = ref<HTMLImageElement | null>(null)
-    const imgNearEl = ref<HTMLImageElement | null>(null)
     const dotPositions = ref<DotPos[]>([])
     const rescueOrder = ref<number[]>([])
     const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
@@ -558,7 +551,7 @@ export default defineComponent({
       const cx = w / 2
       const cy = h / 2
       const maxR = Math.sqrt(cx * cx + cy * cy)
-      ctx.fillStyle = 'rgba(6, 4, 22, 0.75)'
+      ctx.fillStyle = 'rgba(30, 16, 6, 0.75)'
       ctx.fillRect(0, 0, w, h)
       for (const p of warpParticles) {
         const tailLen = (4 + p.speed * 0.08) * accel
@@ -586,7 +579,7 @@ export default defineComponent({
     }
 
     function drawFlashPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      ctx.fillStyle = 'rgba(6, 4, 22, 1)'
+      ctx.fillStyle = 'rgba(30, 16, 6, 1)'
       ctx.fillRect(0, 0, w, h)
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 450, 1)
       ctx.fillStyle = `rgba(255, 255, 255, ${t * 0.85})`
@@ -693,8 +686,6 @@ export default defineComponent({
     }
 
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
-      const img = imgFarEl.value
-      if (!img || !img.complete) return
       const dots = dotPositions.value
       const order = rescueOrder.value
       const rescued = Math.min(galaxyStore.starsRescued, dots.length)
@@ -705,54 +696,15 @@ export default defineComponent({
       // Static map with a soft camera: world coords (0..1) map onto the
       // canvas relative to the camera center + zoom (no rotation). At
       // zoom 1 / center (0.5, 0.5) the whole galaxy is visible; the base
-      // stays transparent so the unified bar background shows through.
+      // stays fully transparent so the flat unified bar background IS the
+      // map background — no sprites or tints of its own.
       const cam = camera
       function wToC(wx: number, wy: number): [number, number] {
         return [w / 2 + (wx - cam.x) * w * cam.zoom, h / 2 + (wy - cam.y) * h * cam.zoom]
       }
 
-      // Layered zoom: layer 1 (far overview) fades out while layer 2
-      // (deep star field anchored on the target star) fades in beneath it.
+      // Overview content fades out while the camera zooms onto the target
       const farAlpha = 1 - smoothstep(cam.zoom, MINIMAP_LAYER1_FADE[0], MINIMAP_LAYER1_FADE[1])
-      const nearAlpha = smoothstep(cam.zoom, MINIMAP_LAYER2_FADE[0], MINIMAP_LAYER2_FADE[1])
-
-      // Layer 1 — galaxy overview sprite, centered on world 0.5/0.5
-      if (farAlpha > 0.01) {
-        const iw = img.naturalWidth || img.width
-        const ih = img.naturalHeight || img.height
-        if (iw > 0 && ih > 0) {
-          const cover = Math.max(w / iw, h / ih) * 1.08
-          const dw = iw * cover * cam.zoom
-          const dh = ih * cover * cam.zoom
-          const [gx, gy] = wToC(0.5, 0.5)
-          ctx.globalAlpha = 0.9 * farAlpha
-          ctx.drawImage(img, gx - dw / 2, gy - dh / 2, dw, dh)
-          ctx.globalAlpha = 1
-        }
-      }
-
-      // Layer 2 — deep star field growing out of the destination
-      const nearImg = imgNearEl.value
-      if (nearAlpha > 0.01 && nearImg && nearImg.complete) {
-        const niw = nearImg.naturalWidth || nearImg.width
-        const nih = nearImg.naturalHeight || nearImg.height
-        if (niw > 0 && nih > 0) {
-          const anchor = targetIdx >= 0 ? dots[targetIdx] : { x: 0.5, y: 0.5 }
-          const coverN = Math.max(w / niw, h / nih) * 1.08 * MINIMAP_LAYER2_WORLD_SCALE
-          const dw = niw * coverN * cam.zoom
-          const dh = nih * coverN * cam.zoom
-          const [gx, gy] = wToC(anchor.x, anchor.y)
-          ctx.globalAlpha = 0.92 * nearAlpha
-          ctx.drawImage(nearImg, gx - dw / 2, gy - dh / 2, dw, dh)
-          ctx.globalAlpha = 1
-        }
-      }
-
-      const theme = GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]
-      ctx.globalCompositeOperation = 'source-over'
-      ctx.fillStyle = theme.nebulaColors[0].replace(/,\s*[\d.]+\)/, ', 0.18)')
-      ctx.fillRect(0, 0, w, h)
-      ctx.globalCompositeOperation = 'source-over'
 
       // Seeded twinkling background stars
       const twRng = seededRng(galaxyStore.currentGalaxy * 52361 + 7)
@@ -1062,9 +1014,9 @@ export default defineComponent({
       // Deep-space glow that fades out toward the edges so the unified
       // bar background stays visible around the star system
       const space = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.62)
-      space.addColorStop(0, 'rgba(6, 4, 14, 0.88)')
-      space.addColorStop(0.72, 'rgba(6, 4, 14, 0.5)')
-      space.addColorStop(1, 'rgba(6, 4, 14, 0)')
+      space.addColorStop(0, 'rgba(10, 6, 2, 0.88)')
+      space.addColorStop(0.72, 'rgba(10, 6, 2, 0.5)')
+      space.addColorStop(1, 'rgba(10, 6, 2, 0)')
       ctx.fillStyle = space
       ctx.fillRect(0, 0, w, h)
 
@@ -1384,9 +1336,6 @@ export default defineComponent({
         drawFadeoutPhase(ctx, w, h)
         return
       }
-      const img = imgFarEl.value
-      if (!img || !img.complete) return
-
       const isArrived =
         galaxyStore.championTravelState === 'champion_available' ||
         galaxyStore.championTravelState === 'champion_spawned'
@@ -1485,10 +1434,6 @@ export default defineComponent({
       } else {
         rafId = null
       }
-    }
-
-    function onImageLoad() {
-      drawCanvas()
     }
 
     watch(
@@ -1611,7 +1556,7 @@ export default defineComponent({
 
     onMounted(() => {
       nextTick(() => {
-        if (imgFarEl.value?.complete) drawCanvas()
+        drawCanvas()
       })
     })
 
@@ -1626,7 +1571,7 @@ export default defineComponent({
       departureTransitionStart = -1
     })
 
-    return { canvasEl, imgFarEl, imgNearEl, onImageLoad }
+    return { canvasEl }
   },
 })
 </script>
@@ -1637,14 +1582,5 @@ export default defineComponent({
   width: 100%;
   height: 100%;
   /* Canvas erbt den clip-path des Wrappers – keine eigene Rundung nötig */
-}
-
-.minimap-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* very soft edge shading only — the unified bar background must stay
-     recognizable across the whole minimap area */
-  background: radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.22) 100%);
 }
 </style>

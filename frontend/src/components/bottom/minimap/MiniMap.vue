@@ -5,37 +5,6 @@
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
-          <svg
-            class="map-grid-overlay"
-            viewBox="0 0 440 440"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <pattern
-                id="gridPat"
-                x="0"
-                y="0"
-                width="44"
-                height="44"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 44 0 L 0 0 0 44"
-                  fill="none"
-                  stroke="rgba(210,160,40,0.05)"
-                  stroke-width="0.5"
-                />
-              </pattern>
-              <radialGradient id="gridFade" cx="50%" cy="50%" r="50%">
-                <stop offset="40%" stop-color="rgba(0,0,0,0)" />
-                <stop offset="100%" stop-color="rgba(10,6,2,0.25)" />
-              </radialGradient>
-            </defs>
-            <rect width="440" height="440" fill="url(#gridPat)" />
-            <rect width="440" height="440" fill="url(#gridFade)" />
-          </svg>
-
           <!-- ── Waiting for role selection ── -->
           <div v-if="galaxyStore.pendingRoleSelection" class="minimap-waiting-label">
             Choose your Role
@@ -251,15 +220,6 @@ export default defineComponent({
   width: 100% !important;
   height: 100% !important;
   display: block;
-}
-
-.map-grid-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
 }
 
 /* ── Minimap-Stern Hit-Area (Arrival View) ── */
