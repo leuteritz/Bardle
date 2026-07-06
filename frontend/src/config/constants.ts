@@ -1820,10 +1820,19 @@ export const FLIGHT_BURST_WIDTH = 2.5
  *  Unlike the radial flight streaks (player motion), these are "environment":
  *  free cartesian flights, deliberately infrequent so they stay special in a
  *  game that idles on screen for hours. */
-export const COMET_BG_MAX_COUNT = 3
-/** Seconds between comet spawns (randomized within this range). */
+export const COMET_BG_MAX_COUNT = 5
+/** Seconds between comet sky events (randomized within this range). */
 export const COMET_BG_INTERVAL_MIN_SEC = 18
 export const COMET_BG_INTERVAL_MAX_SEC = 45
+/** Comets per sky event — index = count-1. Mostly 1, a 5-comet "meteor
+ *  moment" is the rare jackpot. */
+export const COMET_BG_COUNT_WEIGHTS = [0.62, 0.24, 0.09, 0.035, 0.015]
+/** Extra cooldown per additional comet in an event, so multi-events don't
+ *  raise the average comet rate — overall rarity stays constant. */
+export const COMET_BG_EVENT_COOLDOWN_BONUS_SEC = 6
+/** Max random entry delay (s) per comet in a multi-event — staggered arrivals
+ *  read as "the sky comes alive", not a synchronized volley. */
+export const COMET_BG_STAGGER_MAX_SEC = 1.8
 /** First comet after load appears sooner, so the effect is discoverable. */
 export const COMET_BG_FIRST_DELAY_MIN_SEC = 8
 export const COMET_BG_FIRST_DELAY_MAX_SEC = 20
@@ -1839,9 +1848,32 @@ export const COMET_BG_WIDTH_MAX = 3
 /** Partial-burn comets live this long — fade in, burn out mid-screen. */
 export const COMET_BG_PARTIAL_LIFE_MIN_SEC = 1.2
 export const COMET_BG_PARTIAL_LIFE_MAX_SEC = 2.5
-/** Variant odds: partial burn, else full crossing; twin rides on a crossing. */
-export const COMET_BG_PARTIAL_CHANCE = 0.35
+/** Behavior variant weights: crossing / partial burn / slow drifter /
+ *  fast flash / arc comet. */
+export const COMET_BG_VARIANT_WEIGHTS = {
+  crossing: 0.4,
+  partial: 0.3,
+  drifter: 0.12,
+  flash: 0.12,
+  arc: 0.06,
+} as const
+/** Twin flourish odds — only on single-comet crossing events. */
 export const COMET_BG_TWIN_CHANCE = 0.15
+/** Slow drifter: majestic distant comet — slow, long dim tail. */
+export const COMET_BG_DRIFTER_SPEED_MIN = 120
+export const COMET_BG_DRIFTER_SPEED_MAX = 260
+export const COMET_BG_DRIFTER_TAIL_MULT = 1.6
+export const COMET_BG_DRIFTER_ALPHA_MULT = 0.7
+/** Fast flash: blink-and-miss streak — very fast, thin, bright core. */
+export const COMET_BG_FLASH_SPEED_MIN = 1500
+export const COMET_BG_FLASH_SPEED_MAX = 2000
+export const COMET_BG_FLASH_TAIL_MULT = 0.6
+export const COMET_BG_FLASH_ALPHA_MULT = 1.3
+/** Arc comet: velocity rotates by this rate (rad/s) → visibly curved path. */
+export const COMET_BG_ARC_TURN_RATE_MIN = 0.15
+export const COMET_BG_ARC_TURN_RATE_MAX = 0.45
+/** Curved paths are longer — lifetime safety margin for arc comets. */
+export const COMET_BG_ARC_LIFE_MARGIN = 1.25
 /** Share of crossings heading top-left → bottom-right (the signature flight);
  *  the rest picks evenly from the remaining headings. */
 export const COMET_BG_DIAGONAL_CHANCE = 0.45
