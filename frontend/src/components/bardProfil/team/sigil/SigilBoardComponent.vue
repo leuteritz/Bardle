@@ -2,11 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { useGameStore } from '@/stores/gameStore'
-import { useInventoryStore } from '@/stores/inventoryStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
-import { MATERIALS } from '@/config/materials'
 import {
   ROLES,
   SIGIL_STAGE_SIZE,
@@ -31,8 +28,6 @@ const emit = defineEmits<{
   'select-ally': [roleIndex: number, subSlot: number]
 }>()
 
-const gameStore = useGameStore()
-const inventoryStore = useInventoryStore()
 const synergyStore = useSynergyStore()
 const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
 
@@ -52,15 +47,6 @@ const {
 } = useTeamSigil()
 
 const roleColors = ROLES.map((r) => r.color)
-
-const materialCounts = computed(() =>
-  MATERIALS.map((m) => ({
-    id: m.id,
-    name: m.name,
-    image: m.image,
-    count: inventoryStore.collectedMaterials[m.id] ?? 0,
-  })),
-)
 
 const synergyCount = computed(
   () => activeTraits.value.length + activeOriginSynergies.value.length,
@@ -129,31 +115,6 @@ function onWheel(event: WheelEvent): void {
 
 <template>
   <div ref="panelEl" class="sigil-board" @wheel.prevent="onWheel">
-    <!-- header: title + currencies -->
-    <div v-show="!chromeHidden" class="sigil-header">
-      <div class="sigil-header-icon">
-        <Icon icon="game-icons:crenel-crown" width="24" height="24" class="crest-icon" />
-      </div>
-      <div class="sigil-header-titles">
-        <div class="sigil-title">BATTLE SIGIL</div>
-        <div class="sigil-subtitle">Champion Command</div>
-      </div>
-      <div class="sigil-header-spacer" />
-      <div class="sigil-currency sigil-currency--chimes">
-        <Icon icon="game-icons:windchimes" width="18" height="18" class="chimes-icon" />
-        <span class="sigil-currency-value">{{ $formatNumber(gameStore.chimes) }}</span>
-      </div>
-      <div
-        v-for="mat in materialCounts"
-        :key="mat.id"
-        class="sigil-currency"
-        :title="mat.name"
-      >
-        <img :src="mat.image" :alt="mat.name" class="sigil-mat-img" />
-        <span class="sigil-mat-count">{{ $formatNumber(mat.count) }}</span>
-      </div>
-    </div>
-
     <!-- zoom control -->
     <div class="sigil-zoom">
       <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
@@ -300,77 +261,6 @@ function onWheel(event: WheelEvent): void {
   border: 1px solid rgba(200, 164, 90, 0.12);
   border-radius: 5px;
   pointer-events: none;
-}
-
-/* ── header ── */
-.sigil-header {
-  position: absolute;
-  top: 22px;
-  left: 26px;
-  right: 26px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 5;
-}
-.sigil-header-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  background: radial-gradient(circle at 40% 30%, #2a1f10, #120c08);
-  border: 1px solid rgba(220, 180, 90, 0.4);
-  flex-shrink: 0;
-}
-.crest-icon {
-  color: #e8c040;
-}
-.sigil-title {
-  font-size: 20px;
-  letter-spacing: 0.1em;
-  color: #f0dca0;
-  line-height: 1;
-}
-.sigil-subtitle {
-  font-size: 10.5px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.55);
-  margin-top: 3px;
-}
-.sigil-header-spacer {
-  flex: 1;
-}
-.sigil-currency {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 9px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.38);
-  border: 1px solid rgba(200, 164, 90, 0.14);
-}
-.sigil-currency--chimes {
-  border-color: rgba(220, 180, 90, 0.3);
-}
-.chimes-icon {
-  color: #e8c040;
-}
-.sigil-currency-value {
-  font-size: 14px;
-  color: #f0d878;
-}
-.sigil-mat-img {
-  width: 17px;
-  height: 17px;
-  object-fit: contain;
-}
-.sigil-mat-count {
-  font-size: 11px;
-  font-weight: 600;
-  color: #cbbf9e;
 }
 
 /* ── zoom (mirrors ForgeTreePanel) ── */
