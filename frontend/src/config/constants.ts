@@ -584,6 +584,11 @@ export const HP_BAR_SEGMENTS = 8
 export const CHAMPION_DETECT_RADIUS = 350
 export const CHAMPION_ORBIT_HIT_RANGE = 220 // px: champion orbit position must be within this of planet to deal damage
 export const CHAMPION_DPS_BASE = 40 // damage per champion per second
+/** Ally slots per role (team = 5 mains + 5 × ALLIES_PER_ROLE allies). Single source of truth. */
+export const ALLIES_PER_ROLE = 5
+/** Passive DPS bonus per assigned ally of the attacking main's role.
+ *  Full row (5 allies) → ×3.0 = the old ceiling where main + 2 orbiting allies attacked as 3 units. */
+export const ALLY_DPS_CONTRIBUTION = 0.4
 export const PLAYER_MAX_HP_BASE = 100
 export const PLAYER_HP_REGEN_PER_SEC = 1
 export const PLAYER_HP_LOSS_ON_ENRAGE = 25
@@ -959,6 +964,10 @@ export const ROLE_BY_KEY = Object.fromEntries(ROLES.map((r) => [r.key, r])) as R
   (typeof ROLES)[number]
 >
 
+/** Empty ally grid: one row per role, ALLIES_PER_ROLE null slots each. */
+export const createEmptyAllyRows = (): (string | null)[][] =>
+  ROLES.map(() => Array<string | null>(ALLIES_PER_ROLE).fill(null))
+
 // Canonical orbit tiers — 2 distinct orbit paths per category
 export const ORBIT_TIERS = {
   planet: [
@@ -1001,11 +1010,6 @@ export const ORBIT_TIERS = {
 
 // Support orbits the same path as ADC, offset by this angle (radians) behind
 export const SUPPORT_ANGLE_OFFSET = Math.PI / 5
-
-// Secondary champions follow the main on the same role orbit ring with these angular offsets
-export const SECONDARY_ANGLE_OFFSET_1 = Math.PI / 7
-export const SECONDARY_ANGLE_OFFSET_2 = -Math.PI / 7
-export const SECONDARY_SIZE_SCALE = 0.6
 
 /** Pre-scale planet-slot orbit radii (× ORBIT_RADIUS_SCALE = effective radius in px).
  *  These orbit planets around *stars*, not the sun — not scaled via SUN_RADIUS. */
@@ -1570,13 +1574,13 @@ export const FORGE_TREE_ZOOM_DEFAULT = 0.92
 
 // ── Battle Sigil (Team tab) ───────────────────────────────────────────────────
 // Sigil geometry — the sigil lives on a square stage; the 5 role nodes sit on a
-// pentagon (Top at 12 o'clock, ROLES order clockwise), each with 2 ally
-// satellites placed outward beside the role node.
+// pentagon (Top at 12 o'clock, ROLES order clockwise), each with a constellation
+// arc of ALLIES_PER_ROLE ally satellites placed outward around the role node.
 export const SIGIL_STAGE_SIZE = 900
 export const SIGIL_PENTAGON_RADIUS = 300
 export const SIGIL_ALLY_RADIUS = 395
-/** Ally satellites sit at the role's pentagon angle ± this offset (degrees). */
-export const SIGIL_ALLY_ANGLE_OFFSET = 16
+/** Total angular span (degrees) of the ally constellation arc, centered on the role's pentagon angle. */
+export const SIGIL_ALLY_ARC_DEG = 44
 export const SIGIL_NODE_SIZE = 94
 export const SIGIL_ALLY_SIZE = 44
 export const SIGIL_CREST_SIZE = 170
@@ -1592,21 +1596,21 @@ export const TEAM_SIGIL_ZOOM_MAX = 1.6
 export const TEAM_SIGIL_ZOOM_STEP = 0.15
 export const TEAM_SIGIL_ZOOM_DEFAULT = 1.0
 /** Extra zoom multiplier while a role is focused (camera zoom-in on role + allies). */
-export const TEAM_SIGIL_FOCUS_ZOOM = 1.9
+export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
 /** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */
 export const TEAM_SIGIL_CAMERA_MS = 450
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,
-// each full role (main + 2 allies) gains a spinning aura; global stages below
-// escalate crest/rings/embers by total filled slots (0..15).
-export const SIGIL_TOTAL_SLOTS = 15
+// each full role (main + all allies) gains a spinning aura; global stages below
+// escalate crest/rings/embers by total filled slots (0..SIGIL_TOTAL_SLOTS).
+export const SIGIL_TOTAL_SLOTS = ROLES.length * (1 + ALLIES_PER_ROLE)
 export const SIGIL_POWER_PER_STAR = 100
-export const SIGIL_ALLY_POWER_PER_STAR = 40
+export const SIGIL_ALLY_POWER_PER_STAR = 25
 /** Pentagram overlay appears once all 5 mains are set. */
 export const SIGIL_PENTAGRAM_AT_MAINS = 5
-/** Full mandala (all decorations) at a complete 15/15 team. */
-export const SIGIL_MANDALA_AT_FILLED = 15
+/** Full mandala (all decorations) at a complete team. */
+export const SIGIL_MANDALA_AT_FILLED = SIGIL_TOTAL_SLOTS
 /** Unlit color for pentagon vertices, spokes and rune ticks. */
 export const SIGIL_DIM_COLOR = '#3a2a12'
 export const SIGIL_STAGES: SigilStageDef[] = [
@@ -1632,7 +1636,7 @@ export const SIGIL_STAGES: SigilStageDef[] = [
   },
   {
     name: 'Ascendant',
-    minFilled: 5,
+    minFilled: 5, // all 5 mains set
     crestColor: '#e8c060',
     ringColor: '#7a4e20',
     pulseSec: 3.5,
@@ -1642,7 +1646,7 @@ export const SIGIL_STAGES: SigilStageDef[] = [
   },
   {
     name: 'Radiant',
-    minFilled: 10,
+    minFilled: 18,
     crestColor: '#f0d870',
     ringColor: '#c89040',
     pulseSec: 2.5,
@@ -1652,7 +1656,7 @@ export const SIGIL_STAGES: SigilStageDef[] = [
   },
   {
     name: 'Eternal',
-    minFilled: 15,
+    minFilled: 30, // full 30/30 team
     crestColor: '#ffe9a0',
     ringColor: '#e8c060',
     pulseSec: 1.8,

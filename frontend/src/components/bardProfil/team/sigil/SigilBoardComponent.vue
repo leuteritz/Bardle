@@ -78,13 +78,15 @@ onBeforeUnmount(() => {
 })
 
 // ── Camera focus on the selected role cluster ────────────────────────────────
-/** Focal point = centroid of the role node and its two allies (stage coords). */
+/** Focal point = centroid of the role node and all its ally satellites (stage coords). */
 const focusPoint = computed(() => {
   const i = props.selectedRole
   if (i === null) return null
-  const r = rolePoints.value[i]
-  const [a1, a2] = allyPoints.value[i]
-  return { x: (r.x + a1.x + a2.x) / 3, y: (r.y + a1.y + a2.y) / 3 }
+  const cluster = [rolePoints.value[i], ...allyPoints.value[i]]
+  return {
+    x: cluster.reduce((sum, p) => sum + p.x, 0) / cluster.length,
+    y: cluster.reduce((sum, p) => sum + p.y, 0) / cluster.length,
+  }
 })
 
 const totalScale = computed(

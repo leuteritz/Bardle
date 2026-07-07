@@ -3,6 +3,7 @@ import { useGameStore } from './gameStore'
 import { useInventoryStore } from './inventoryStore'
 import { useAugmentStore } from './augmentStore'
 import {
+  createEmptyAllyRows,
   ELO_K_FACTOR,
   ELO_RATING_SCALE,
   ELO_LUCK_FACTOR,
@@ -237,13 +238,7 @@ export const useBattleStore = defineStore('battle', {
     ownedChampions: ['Bard'],
     teamSlotAssignments: [null, null, null, null] as (string | null)[],
     headerSlots: [null, null, null, null, null] as (string | null)[],
-    secondarySlots: [
-      [null, null],
-      [null, null],
-      [null, null],
-      [null, null],
-      [null, null],
-    ] as (string | null)[][],
+    secondarySlots: createEmptyAllyRows(),
     battleFormula: {
       luckFactor: ELO_LUCK_FACTOR,
     },

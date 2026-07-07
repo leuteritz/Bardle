@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { getChampionTier } from '@/config/championTiers'
-import { ROLES, SIGIL_NODE_SIZE, SIGIL_ALLY_SIZE } from '@/config/constants'
+import { ROLES, SIGIL_NODE_SIZE, SIGIL_ALLY_SIZE, ALLIES_PER_ROLE } from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
 
 const props = defineProps<{
@@ -28,7 +28,9 @@ const mainImage = computed(() =>
   main.value ? battleStore.getChampionImage(main.value) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
-const allies = computed(() => secondarySlots.value[props.roleIndex] ?? [null, null])
+const allies = computed(
+  () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
+)
 
 function allyImage(ally: string | null): string {
   return ally ? battleStore.getChampionImage(ally) : ''
@@ -51,7 +53,10 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     :key="`ally-${roleIndex}-${sub}`"
     class="sigil-ally"
     :class="{ 'sigil-ally--filled': !!ally }"
-    :style="[nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE), { '--role-color': roleDef.color }]"
+    :style="[
+      nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE),
+      { '--role-color': roleDef.color, '--sub': String(sub) },
+    ]"
     :title="ally ?? `${roleDef.label} — Ally ${sub + 1}`"
     :aria-label="ally ? `${ally} (Ally ${sub + 1})` : `Assign Ally ${sub + 1} for ${roleDef.label}`"
     @click.stop="emit('select-ally', sub)"
@@ -102,6 +107,8 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   transition:
     transform 0.15s,
     box-shadow 0.2s;
+  /* constellation feel: each satellite reacts with a slight cascade */
+  transition-delay: calc(var(--sub, 0) * 25ms);
 }
 .sigil-ally--filled {
   background: #0a0704;

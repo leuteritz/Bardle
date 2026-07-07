@@ -24,9 +24,23 @@ import {
   OFFLINE_MAX_HOURS,
   OFFLINE_MIN_SECONDS,
   ITEM_SLOT_COUNT,
+  ALLIES_PER_ROLE,
+  createEmptyAllyRows,
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/drakes'
 import { logger } from '@/utils/logger'
+
+/** Normalize saved ally rows to exactly ALLIES_PER_ROLE entries per role.
+ *  Legacy 2-slot saves are padded with nulls; longer rows are truncated.
+ *  Backward + forward compatible — no SAVE_VERSION bump needed. */
+export function normalizeSecondarySlots(rows: unknown[]): (string | null)[][] {
+  return rows.map((row) => {
+    const arr = Array.isArray(row) ? row : []
+    return Array.from({ length: ALLIES_PER_ROLE }, (_, s) =>
+      typeof arr[s] === 'string' ? (arr[s] as string) : null,
+    )
+  })
+}
 
 export function usePersistence() {
   function saveGame() {
@@ -267,13 +281,7 @@ export function usePersistence() {
           battleStore.teamSlotAssignments = b.teamSlotAssignments
         if (Array.isArray(b.headerSlots)) battleStore.headerSlots = b.headerSlots
         if (Array.isArray(b.secondarySlots) && b.secondarySlots.length === 5) {
-          battleStore.secondarySlots = b.secondarySlots.map((row: unknown) => {
-            const arr = Array.isArray(row) ? row : []
-            return [
-              typeof arr[0] === 'string' ? (arr[0] as string) : null,
-              typeof arr[1] === 'string' ? (arr[1] as string) : null,
-            ]
-          })
+          battleStore.secondarySlots = normalizeSecondarySlots(b.secondarySlots)
         }
         battleStore.totalBattles = b.totalBattles ?? battleStore.totalBattles
         battleStore.totalWins = b.totalWins ?? battleStore.totalWins
@@ -600,13 +608,7 @@ export function usePersistence() {
     battleStore.ownedChampions = ['Bard']
     battleStore.teamSlotAssignments = [null, null, null, null]
     battleStore.headerSlots = [null, null, null, null, null]
-    battleStore.secondarySlots = [
-      [null, null],
-      [null, null],
-      [null, null],
-      [null, null],
-      [null, null],
-    ]
+    battleStore.secondarySlots = createEmptyAllyRows()
     battleStore.totalBattles = 0
     battleStore.totalWins = 0
     battleStore.totalLosses = 0

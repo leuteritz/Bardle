@@ -45,9 +45,6 @@ const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
 const currentEquipment = computed(() => itemStore.slotEquipment[roleIndex.value])
 
-const selectorTab = ref<'main' | 'ally1' | 'ally2'>('main')
-const TAB_SUBSLOT: Record<string, number> = { main: -1, ally1: 0, ally2: 1 }
-
 const availableChampions = computed(() => battleStore.ownedChampions.filter((c) => c !== 'Bard'))
 const roleFilteredChampions = computed(() =>
   availableChampions.value.filter((c) => getChampionRoles(c).includes(roleDef.value.key)),
@@ -77,7 +74,6 @@ function closePanel() {
 // ── Modals ───────────────────────────────────────────────────────────────────
 function openPicker(subSlot: number = -1) {
   pickerSubSlot.value = subSlot
-  selectorTab.value = subSlot === 0 ? 'ally1' : subSlot === 1 ? 'ally2' : 'main'
   activeModal.value = 'picker'
 }
 
@@ -101,9 +97,8 @@ function closeModal() {
   pickerSubSlot.value = -1
 }
 
-function onSelectorTabChange(tab: 'main' | 'ally1' | 'ally2') {
-  selectorTab.value = tab
-  pickerSubSlot.value = TAB_SUBSLOT[tab]
+function onSelectorTabChange(subSlot: number) {
+  pickerSubSlot.value = subSlot
 }
 
 function handleSelect(champion: string) {
@@ -111,11 +106,19 @@ function handleSelect(champion: string) {
   if (subSlot === -1) {
     battleStore.setHeaderSlot(roleIndex.value, champion)
     showToast(`${champion} set as ${roleDef.value.label}!`)
-  } else {
-    battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
-    showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
+    closeModal()
+    return
   }
-  closeModal()
+  battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
+  showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
+  // Rapid-fire flow: jump to the next empty ally slot of this role; close once the row is full
+  const row = battleStore.secondarySlots[roleIndex.value] ?? []
+  const nextEmpty = row.findIndex((s) => s === null)
+  if (nextEmpty === -1) {
+    closeModal()
+  } else {
+    pickerSubSlot.value = nextEmpty
+  }
 }
 
 function clearAlly(subSlot: number) {
@@ -219,7 +222,6 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
         class="team-modal-fill"
         :active-role="roleDef.label"
         :role-key="roleDef.key"
-        :selector-tab="selectorTab"
         :role-filtered-champions="roleFilteredChampions"
         :header-slots="headerSlots"
         :secondary-slots="secondarySlots"

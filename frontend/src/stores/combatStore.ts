@@ -4,6 +4,7 @@ import {
   CHAMPION_DETECT_RADIUS,
   CHAMPION_ORBIT_HIT_RANGE,
   CHAMPION_DPS_BASE,
+  ALLY_DPS_CONTRIBUTION,
   COMBAT_ORBIT_RADIUS_X_MIN,
   COMBAT_ORBIT_RADIUS_X_RANGE,
   COMBAT_ORBIT_Y_SCALE_MIN,
@@ -133,9 +134,19 @@ export const useCombatStore = defineStore('combat', {
       if (attackingCount > 0) {
         const gameStore = useGameStore()
         if (gameStore.isGamePaused && activeBoss.isChampionPlanet) return
+        // Each attacking main hits harder per assigned ally of its role (allies no longer orbit)
+        const battleStore = useBattleStore()
+        let baseDPS = 0
+        for (const a of attackers) {
+          const roleIdx = battleStore.headerSlots.indexOf(a.name)
+          const filledAllies =
+            roleIdx >= 0
+              ? (battleStore.secondarySlots[roleIdx]?.filter(Boolean).length ?? 0)
+              : 0
+          baseDPS += CHAMPION_DPS_BASE * (1 + filledAllies * ALLY_DPS_CONTRIBUTION)
+        }
         const totalDPS =
-          attackingCount *
-          CHAMPION_DPS_BASE *
+          baseDPS *
           useSynergyStore().dpsSynergyMultiplier *
           useStarForgeStore().championDpsMult
         const defeated = bossStore.dealDamage(totalDPS)

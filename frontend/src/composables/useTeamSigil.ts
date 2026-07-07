@@ -7,7 +7,8 @@ import {
   SIGIL_STAGE_SIZE,
   SIGIL_PENTAGON_RADIUS,
   SIGIL_ALLY_RADIUS,
-  SIGIL_ALLY_ANGLE_OFFSET,
+  SIGIL_ALLY_ARC_DEG,
+  ALLIES_PER_ROLE,
   SIGIL_STAGES,
   SIGIL_POWER_PER_STAR,
   SIGIL_ALLY_POWER_PER_STAR,
@@ -62,7 +63,7 @@ export function useTeamSigil() {
   )
   const filledSlots = computed(() => filledMains.value + filledAllies.value)
 
-  /** Roles with main + both allies set (index-aligned with ROLES). */
+  /** Roles with main + all allies set (index-aligned with ROLES). */
   const roleFull = computed(() =>
     ROLES.map(
       (_, i) =>
@@ -107,12 +108,16 @@ export function useTeamSigil() {
     ROLES.map((_, i) => polarPoint(roleAngle(i), SIGIL_PENTAGON_RADIUS)),
   )
 
-  /** Ally satellite positions per role: [roleIndex][subSlot 0|1]. */
+  /** Ally satellite positions per role: [roleIndex][subSlot 0..ALLIES_PER_ROLE-1].
+   *  Constellation arc — evenly spread over SIGIL_ALLY_ARC_DEG, centered on the role angle. */
   const allyPoints = computed<SigilPoint[][]>(() =>
-    ROLES.map((_, i) => [
-      polarPoint(roleAngle(i) - SIGIL_ALLY_ANGLE_OFFSET, SIGIL_ALLY_RADIUS),
-      polarPoint(roleAngle(i) + SIGIL_ALLY_ANGLE_OFFSET, SIGIL_ALLY_RADIUS),
-    ]),
+    ROLES.map((_, i) =>
+      Array.from({ length: ALLIES_PER_ROLE }, (_, k) => {
+        const step = SIGIL_ALLY_ARC_DEG / Math.max(ALLIES_PER_ROLE - 1, 1)
+        const offset = (k - (ALLIES_PER_ROLE - 1) / 2) * step
+        return polarPoint(roleAngle(i) + offset, SIGIL_ALLY_RADIUS)
+      }),
+    ),
   )
 
   /** Deterministic ember particles (golden-angle spread, index-derived timing). */

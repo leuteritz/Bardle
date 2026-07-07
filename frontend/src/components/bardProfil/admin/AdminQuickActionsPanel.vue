@@ -12,7 +12,11 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
-import { ADMIN_QUICK_RESOURCE_AMOUNT } from '@/config/constants'
+import {
+  ADMIN_QUICK_RESOURCE_AMOUNT,
+  ALLIES_PER_ROLE,
+  createEmptyAllyRows,
+} from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 const gameStore = useGameStore()
@@ -181,10 +185,7 @@ function fillTeamWithRandomChampions() {
     .sort(() => Math.random() - 0.5)
 
   battleStore.headerSlots.splice(0, 5, null, null, null, null, null)
-  for (let r = 0; r < 5; r++) {
-    battleStore.secondarySlots[r][0] = null
-    battleStore.secondarySlots[r][1] = null
-  }
+  battleStore.secondarySlots = createEmptyAllyRows()
   battleStore.syncTeam1ToSlots()
 
   roles.forEach((role, slotIndex) => {
@@ -201,7 +202,7 @@ function fillTeamWithRandomChampions() {
     const secondaryPool = pool.filter(
       (name) => !used.has(name) && (CHAMPION_ROLES[name] ?? []).includes(role),
     )
-    for (let subIndex = 0; subIndex < 2; subIndex++) {
+    for (let subIndex = 0; subIndex < ALLIES_PER_ROLE; subIndex++) {
       if (secondaryPool.length === 0) break
       const idx = Math.floor(Math.random() * secondaryPool.length)
       const secondary = secondaryPool.splice(idx, 1)[0]

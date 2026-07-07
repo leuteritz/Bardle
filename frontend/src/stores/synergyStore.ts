@@ -8,18 +8,16 @@ import type { ActiveOriginSynergy, ActiveSynergy, ActiveTrait, ChampionOrigin, T
 export const useSynergyStore = defineStore('synergy', () => {
   const battleStore = useBattleStore()
 
-  // [header, sec0, sec1] per role index
-  const roleTriples = computed(() =>
-    battleStore.headerSlots.map((h, i) => [
-      h,
-      battleStore.secondarySlots[i]?.[0] ?? null,
-      battleStore.secondarySlots[i]?.[1] ?? null,
-    ] as (string | null)[]),
+  // [header, ...all ally sub-slots] per role index
+  const roleRows = computed(() =>
+    battleStore.headerSlots.map(
+      (h, i) => [h, ...(battleStore.secondarySlots[i] ?? [])] as (string | null)[],
+    ),
   )
 
   const allInOrbit = computed(() => {
     const out: string[] = []
-    for (const row of roleTriples.value) for (const n of row) if (n) out.push(n)
+    for (const row of roleRows.value) for (const n of row) if (n) out.push(n)
     return out
   })
 

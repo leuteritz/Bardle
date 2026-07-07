@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useSynergyStore } from '@/stores/synergyStore'
-import { ROLES } from '@/config/constants'
+import { ROLES, ALLIES_PER_ROLE } from '@/config/constants'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
@@ -37,7 +37,9 @@ const mainImage = computed(() =>
   main.value ? battleStore.getChampionImage(main.value) : '',
 )
 const tier = computed(() => (main.value ? getChampionTier(main.value) : null))
-const allies = computed(() => secondarySlots.value[props.roleIndex] ?? [null, null])
+const allies = computed(
+  () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
+)
 const equipment = computed(() => itemStore.slotEquipment[props.roleIndex])
 
 const origin = computed(() => (main.value ? getChampionOrigin(main.value) : null))
@@ -561,14 +563,14 @@ const synergyRows = computed(() => {
   color: rgba(230, 220, 196, 0.4);
 }
 
-/* allies */
+/* allies — grid wraps cleanly for any ally count per role */
 .sdp-allies {
-  display: flex;
-  gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
 }
 .sdp-ally {
   position: relative;
-  flex: 1;
   height: 90px;
   padding: 0;
   cursor: pointer;

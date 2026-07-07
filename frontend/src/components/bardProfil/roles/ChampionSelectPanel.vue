@@ -7,6 +7,7 @@ import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 import { getChampionTier, getChampionStarLevel, CHAMPION_TIERS_BY_STAR } from '@/config/championTiers'
 import { CHAMPION_DATA } from '@/config/championData'
 import { CHAMPION_ROLES } from '@/config/championRoles'
+import { createEmptyAllyRows } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -19,22 +20,21 @@ const props = withDefaults(
     headerSlots: (string | null)[]
     secondarySlots?: (string | null)[][]
     activeSlotIndex: number
+    /** -1 = main slot, 0..N-1 = ally sub-slot */
     activeSubSlot?: number
-    selectorTab?: 'main' | 'ally1' | 'ally2'
     showClose?: boolean
   }>(),
   {
     roleKey: null,
-    secondarySlots: () => [[null, null], [null, null], [null, null], [null, null], [null, null]],
+    secondarySlots: () => createEmptyAllyRows(),
     activeSubSlot: -1,
-    selectorTab: 'main',
     showClose: false,
   },
 )
 
 const emit = defineEmits<{
   select: [champion: string]
-  'tab-change': [tab: 'main' | 'ally1' | 'ally2']
+  'tab-change': [subSlot: number]
   close: []
 }>()
 
@@ -48,13 +48,20 @@ const traitFilterOpen = ref(false)
 // Tier chips / sections are the 12 Champion Tiers (weak→strong), not price tiers.
 const tierEntries = computed(() => CHAMPION_TIERS_BY_STAR)
 
-// Champion currently assigned to each selector tab for the active role.
-// main → header slot, ally1/ally2 → secondary sub-slots 0/1.
-const tabChampions = computed<Record<'main' | 'ally1' | 'ally2', string | null>>(() => ({
-  main: props.headerSlots[props.activeSlotIndex] ?? null,
-  ally1: props.secondarySlots?.[props.activeSlotIndex]?.[0] ?? null,
-  ally2: props.secondarySlots?.[props.activeSlotIndex]?.[1] ?? null,
-}))
+// Slot tabs generated from the active role's ally row: Main + A1..AN.
+const allyRow = computed(
+  () => props.secondarySlots?.[props.activeSlotIndex] ?? createEmptyAllyRows()[0],
+)
+const slotTabs = computed(() => [
+  { subSlot: -1, label: 'Main' },
+  ...allyRow.value.map((_, k) => ({ subSlot: k, label: `A${k + 1}` })),
+])
+
+/** Champion currently assigned to a slot tab (-1 = main, 0..N-1 = ally). */
+function tabChampion(subSlot: number): string | null {
+  if (subSlot === -1) return props.headerSlots[props.activeSlotIndex] ?? null
+  return allyRow.value[subSlot] ?? null
+}
 
 const availableTraits = computed(() => {
   const seen = new Set<string>()
@@ -243,7 +250,7 @@ function takenLabel(champion: string): string | null {
   if (props.secondarySlots) {
     for (let r = 0; r < props.secondarySlots.length; r++) {
       const sub = props.secondarySlots[r].indexOf(champion)
-      if (sub >= 0) return `${ROLES[r]}·S${sub + 1}`
+      if (sub >= 0) return `${ROLES[r]}·A${sub + 1}`
     }
   }
   return null
@@ -276,23 +283,19 @@ function onImgError(e: Event) {
 
 <template>
   <div class="csp-root">
-    <!-- ── Tabs ── -->
+    <!-- ── Slot tabs: Main + one tab per ally sub-slot ── -->
     <div class="csp-tabs">
       <button
-        v-for="tab in [
-          { id: 'main',  label: 'Main' },
-          { id: 'ally1', label: 'Ally 1' },
-          { id: 'ally2', label: 'Ally 2' },
-        ]"
-        :key="tab.id"
+        v-for="tab in slotTabs"
+        :key="tab.subSlot"
         class="csp-tab"
-        :class="{ 'csp-tab--active': selectorTab === tab.id }"
-        @click="emit('tab-change', tab.id as 'main' | 'ally1' | 'ally2')"
+        :class="{ 'csp-tab--active': activeSubSlot === tab.subSlot }"
+        @click="emit('tab-change', tab.subSlot)"
       >
         <img
-          v-if="tabChampions[tab.id as 'main' | 'ally1' | 'ally2']"
-          :src="battleStore.getChampionImage(tabChampions[tab.id as 'main' | 'ally1' | 'ally2']!)"
-          :alt="tabChampions[tab.id as 'main' | 'ally1' | 'ally2']!"
+          v-if="tabChampion(tab.subSlot)"
+          :src="battleStore.getChampionImage(tabChampion(tab.subSlot)!)"
+          :alt="tabChampion(tab.subSlot)!"
           class="csp-tab-img"
           @error="onImgError"
         />
