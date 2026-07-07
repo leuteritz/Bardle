@@ -59,18 +59,58 @@
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
       </div>
 
-      <!-- ── Filter panel: 3 rows ── -->
+      <!-- ── Active filter summary: always visible while filters are set ── -->
+      <div v-if="hasActiveFilter" class="cs-active-filters">
+        <button class="trait-chip trait-chip--clear-all" @click="clearFilters">
+          × Clear filters
+        </button>
+        <span class="filter-sep"></span>
+        <span class="cs-active-label">Active:</span>
+        <button
+          v-if="activeRoleDef"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${activeRoleDef.color}`"
+          title="Remove role filter"
+          @click="setActiveRole('all')"
+        >
+          <img :src="activeRoleDef.image" :alt="activeRoleDef.label" class="role-chip-img" />
+          {{ activeRoleDef.short }}
+          <span class="chip-dismiss">×</span>
+        </button>
+        <button
+          v-if="activeTierDef"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${activeTierDef.color}`"
+          title="Remove tier filter"
+          @click="activeTier = 'all'"
+        >
+          <Icon :icon="activeTierDef.icon" class="trait-chip-icon" />
+          {{ activeTierDef.name }}
+          <span class="chip-dismiss">×</span>
+        </button>
+        <button
+          v-for="chip in activeTraitChips"
+          :key="chip.id"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${chip.color}`"
+          :title="`Remove ${chip.label} filter`"
+          @click="toggleTrait(chip.id)"
+        >
+          <Icon v-if="chip.icon" :icon="chip.icon" class="trait-chip-icon" />
+          {{ chip.label }}
+          <span class="chip-dismiss">×</span>
+        </button>
+      </div>
+
+      <!-- ── Filter panel: labeled category sections ── -->
       <Transition name="filter-panel">
       <div v-show="filterOpen" class="cs-filter-panel">
 
-        <!-- Row 0: Role filter -->
+        <!-- Section: Role -->
+        <div class="filter-divider">
+          <span class="filter-divider-label">Role</span>
+        </div>
         <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            class="trait-chip trait-chip--all"
-            :class="{ 'trait-chip--active': activeRole === 'all' }"
-            @click="setActiveRole('all')"
-          >ALL ROLES</button>
-          <span class="filter-sep"></span>
           <button
             v-for="r in ROLES"
             :key="r.key"
@@ -85,15 +125,11 @@
           </button>
         </div>
 
-        <!-- Row 1: ALL reset + Tier filter + Clear Traits -->
+        <!-- Section: Tier -->
+        <div class="filter-divider">
+          <span class="filter-divider-label">Tier</span>
+        </div>
         <div class="cs-filter-row cs-filter-row--wrap">
-          <button
-            v-show="!hasSearchTraitMatch"
-            class="trait-chip trait-chip--all"
-            :class="{ 'trait-chip--active': activeTraits.length === 0 && activeTier === 'all' }"
-            @click="resetSearch"
-          >ALL</button>
-          <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
           <button
             v-for="t in tierEntries"
             :key="t.starLevel"
@@ -101,18 +137,11 @@
             :class="{ 'trait-chip--active': activeTier === t.starLevel }"
             :style="`--chip-color: ${t.color}`"
             :title="`★${t.starLevel} ${t.name}`"
-            @click="activeTier = t.starLevel"
+            @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
           >
             <Icon :icon="t.icon" class="trait-chip-icon" />
             {{ t.name }}
           </button>
-          <span v-if="activeTraits.length > 0" class="filter-sep"></span>
-          <button
-            v-if="activeTraits.length > 0"
-            class="trait-chip trait-chip--clear-all"
-            title="Clear all trait filters"
-            @click="clearTraits"
-          >× Clear</button>
         </div>
 
         <!-- Row 2: Trait chips -->
@@ -660,6 +689,13 @@ export default defineComponent({
       activeTraits.value = []
     }
 
+    /** Clears role + tier + trait filters but keeps the search text. */
+    function clearFilters() {
+      activeTraits.value = []
+      activeTier.value = 'all'
+      setActiveRole('all')
+    }
+
     function resetSearch() {
       searchQuery.value = ''
       activeTraits.value = []
@@ -1127,6 +1163,24 @@ const shopChampionNames = computed(() =>
         activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
     )
 
+    // ── Active filter summary chips (shown even with the panel collapsed) ──
+    const activeRoleDef = computed(() =>
+      activeRole.value === 'all' ? null : (ROLES.find((r) => r.key === activeRole.value) ?? null),
+    )
+    const activeTierDef = computed(() =>
+      activeTier.value === 'all'
+        ? null
+        : (CHAMPION_TIERS_BY_STAR.find((t) => t.starLevel === activeTier.value) ?? null),
+    )
+    const activeTraitChips = computed(() =>
+      activeTraits.value.map((id) => {
+        const trait = TRAIT_DEFINITIONS.find((t) => t.id === id)
+        if (trait) return { id, label: trait.name, icon: trait.icon, color: trait.color }
+        const origin = ORIGIN_SYNERGIES[id as keyof typeof ORIGIN_SYNERGIES]
+        return { id, label: id, icon: origin?.icon ?? '', color: origin?.color ?? '#c89040' }
+      }),
+    )
+
     const unlockedCount = computed(() => {
       return battleStore.recruitableChampions.length
     })
@@ -1224,6 +1278,9 @@ const shopChampionNames = computed(() =>
       noTraitFound,
       filterOpen,
       hasActiveFilter,
+      activeRoleDef,
+      activeTierDef,
+      activeTraitChips,
       unlockedCount,
       battleStore,
       inventoryStore,
@@ -1258,6 +1315,7 @@ const shopChampionNames = computed(() =>
       resetSearch,
       toggleTrait,
       clearTraits,
+      clearFilters,
       onSearchBlur,
       onSearchFocus,
       onChipKeydown,
@@ -1857,5 +1915,21 @@ const shopChampionNames = computed(() =>
   height: 14px;
   object-fit: contain;
   flex-shrink: 0;
+}
+
+/* active filter summary bar (below the search row) */
+.cs-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 2px 1px;
+}
+.cs-active-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.55);
+  margin-right: 2px;
 }
 </style>
