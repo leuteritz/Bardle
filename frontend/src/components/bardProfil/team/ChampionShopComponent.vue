@@ -64,7 +64,7 @@
       <div v-show="filterOpen" class="cs-filter-panel">
 
         <!-- Row 0: Role filter -->
-        <div class="cs-filter-row">
+        <div class="cs-filter-row cs-filter-row--wrap">
           <button
             class="trait-chip trait-chip--all"
             :class="{ 'trait-chip--active': activeRole === 'all' }"
@@ -86,7 +86,7 @@
         </div>
 
         <!-- Row 1: ALL reset + Tier filter + Clear Traits -->
-        <div class="cs-filter-row">
+        <div class="cs-filter-row cs-filter-row--wrap">
           <button
             v-show="!hasSearchTraitMatch"
             class="trait-chip trait-chip--all"
