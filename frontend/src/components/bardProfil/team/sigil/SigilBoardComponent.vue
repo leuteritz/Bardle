@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
-import { storeToRefs } from 'pinia'
-import { useSynergyStore } from '@/stores/synergyStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import {
   ROLES,
@@ -18,8 +16,6 @@ import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 
 const props = defineProps<{
-  /** True while the details panel is open — hides header/footer chrome. */
-  chromeHidden: boolean
   selectedRole: number | null
 }>()
 
@@ -28,29 +24,20 @@ const emit = defineEmits<{
   'select-ally': [roleIndex: number, subSlot: number]
 }>()
 
-const synergyStore = useSynergyStore()
-const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
-
 const {
   mainFilled,
-  filledMains,
   filledSlots,
   roleFull,
   sigilStage,
   showPentagram,
   showMandala,
   teamPower,
-  avgTier,
   rolePoints,
   allyPoints,
   embers,
 } = useTeamSigil()
 
 const roleColors = ROLES.map((r) => r.color)
-
-const synergyCount = computed(
-  () => activeTraits.value.length + activeOriginSynergies.value.length,
-)
 
 // ── Zoom (mirrors ForgeTreePanel) ────────────────────────────────────────────
 const panelEl = ref<HTMLElement | null>(null)
@@ -209,39 +196,6 @@ function onWheel(event: WheelEvent): void {
       />
     </div>
 
-    <!-- footer: team stat chips -->
-    <div v-show="!chromeHidden" class="sigil-stats">
-      <div class="sigil-stat">
-        <Icon icon="game-icons:bordered-shield" width="20" height="20" class="stat-icon" />
-        <div>
-          <div class="sigil-stat-label">Roster</div>
-          <div class="sigil-stat-value">{{ filledMains }}/5</div>
-        </div>
-      </div>
-      <div class="sigil-stat">
-        <Icon icon="game-icons:laurels" width="20" height="20" class="stat-icon" />
-        <div>
-          <div class="sigil-stat-label">Avg Tier</div>
-          <div class="sigil-stat-value">★{{ avgTier.toFixed(1) }}</div>
-        </div>
-      </div>
-      <div class="sigil-stat">
-        <Icon icon="game-icons:linked-rings" width="20" height="20" class="stat-icon" />
-        <div>
-          <div class="sigil-stat-label">Synergies</div>
-          <div class="sigil-stat-value">{{ synergyCount }}</div>
-        </div>
-      </div>
-      <div class="sigil-stat">
-        <Icon icon="game-icons:round-star" width="20" height="20" class="stat-icon" />
-        <div>
-          <div class="sigil-stat-label">Sigil</div>
-          <div class="sigil-stat-value" :style="{ color: sigilStage.crestColor }">
-            {{ sigilStage.name }} · {{ filledSlots }}/15
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -375,42 +329,6 @@ function onWheel(event: WheelEvent): void {
   pointer-events: none;
   animation: ember-rise 2.8s ease-out infinite;
   z-index: 1;
-}
-
-/* ── footer stats ── */
-.sigil-stats {
-  position: absolute;
-  bottom: 22px;
-  left: 26px;
-  right: 26px;
-  display: flex;
-  gap: 10px;
-  z-index: 5;
-}
-.sigil-stat {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 13px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.36);
-  border: 1px solid rgba(200, 164, 90, 0.16);
-}
-.stat-icon {
-  color: #c8a860;
-  flex-shrink: 0;
-}
-.sigil-stat-label {
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.55);
-}
-.sigil-stat-value {
-  font-size: 16px;
-  color: #f0dca0;
-  line-height: 1.15;
 }
 
 @keyframes crest-pulse {

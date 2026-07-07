@@ -185,7 +185,6 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
   <div class="team-tab">
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
-      :chrome-hidden="selectedRole !== null"
       :selected-role="selectedRole"
       @select-role="selectRole"
       @select-ally="selectAlly"
