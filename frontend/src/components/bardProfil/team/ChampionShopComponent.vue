@@ -63,6 +63,28 @@
       <Transition name="filter-panel">
       <div v-show="filterOpen" class="cs-filter-panel">
 
+        <!-- Row 0: Role filter -->
+        <div class="cs-filter-row">
+          <button
+            class="trait-chip trait-chip--all"
+            :class="{ 'trait-chip--active': activeRole === 'all' }"
+            @click="setActiveRole('all')"
+          >ALL ROLES</button>
+          <span class="filter-sep"></span>
+          <button
+            v-for="r in ROLES"
+            :key="r.key"
+            class="trait-chip"
+            :class="{ 'trait-chip--active': activeRole === r.key }"
+            :style="`--chip-color: ${r.color}`"
+            :title="r.label"
+            @click="setActiveRole(activeRole === r.key ? 'all' : (r.key as any))"
+          >
+            <img :src="r.image" :alt="r.label" class="role-chip-img" />
+            {{ r.short }}
+          </button>
+        </div>
+
         <!-- Row 1: ALL reset + Tier filter + Clear Traits -->
         <div class="cs-filter-row">
           <button
@@ -554,7 +576,7 @@ import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, required
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES, CHIMES_COST_ICON } from '../../../config/constants'
+import { PLANET_TYPE_NAMES, CHIMES_COST_ICON, ROLES } from '../../../config/constants'
 import { getChampionNames } from '../../../config/championData'
 import { useActionToast } from '../../../composables/useActionToast'
 import type { ChampionRole } from '../../../types'
@@ -642,6 +664,7 @@ export default defineComponent({
       searchQuery.value = ''
       activeTraits.value = []
       activeTier.value = 'all'
+      setActiveRole('all')
     }
 
     let blurTimer: ReturnType<typeof setTimeout> | null = null
@@ -1099,7 +1122,10 @@ const shopChampionNames = computed(() =>
     const noTraitFound = computed(
       () => searchQuery.value.trim() !== '' && !hasSearchTraitMatch.value,
     )
-    const hasActiveFilter = computed(() => activeTraits.value.length > 0 || activeTier.value !== 'all')
+    const hasActiveFilter = computed(
+      () =>
+        activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
+    )
 
     const unlockedCount = computed(() => {
       return battleStore.recruitableChampions.length
@@ -1204,6 +1230,7 @@ const shopChampionNames = computed(() =>
       gameStore,
       truncate,
       CHAMPION_ROLES,
+      ROLES,
       getChampionRoles,
       activeRole,
       searchQuery,
@@ -1824,4 +1851,11 @@ const shopChampionNames = computed(() =>
   text-align: center;
 }
 
+/* role filter chips (Row 0) */
+.role-chip-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 </style>

@@ -7,8 +7,10 @@ withDefaults(
     icon: string
     subtitle?: string
     size?: 'md' | 'lg'
+    /** Hides the title header — content owns the top area, close floats top-right. */
+    hideHeader?: boolean
   }>(),
-  { subtitle: '', size: 'lg' },
+  { subtitle: '', size: 'lg', hideHeader: false },
 )
 
 const emit = defineEmits<{ close: [] }>()
@@ -18,7 +20,15 @@ const emit = defineEmits<{ close: [] }>()
   <div class="tms-backdrop" @click.self="emit('close')">
     <div class="tms-panel" :class="`tms-panel--${size}`">
       <div class="tms-gold-line" />
-      <div class="tms-header">
+      <button
+        v-if="hideHeader"
+        class="tms-close tms-close--floating"
+        aria-label="Close"
+        @click="emit('close')"
+      >
+        ✕
+      </button>
+      <div v-if="!hideHeader" class="tms-header">
         <Icon :icon="icon" width="22" height="22" class="tms-header-icon" />
         <div class="tms-header-text">
           <div class="tms-title">{{ title }}</div>
@@ -131,6 +141,12 @@ const emit = defineEmits<{ close: [] }>()
 .tms-close:hover {
   background: rgba(120, 30, 20, 0.6);
   color: #fff;
+}
+.tms-close--floating {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
 }
 .tms-content {
   flex: 1;

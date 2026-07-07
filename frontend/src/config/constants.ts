@@ -2222,7 +2222,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:bow-arrow',
   'game-icons:health-potion',
   // Team tab actions (Shop / Expedition / Items)
-  'game-icons:barbute',
+  'game-icons:barbute', // Champions shop main tab (TeamTabComponent)
   'game-icons:campfire',
   'game-icons:open-treasure-chest',
   // ChampionShop Filter Toggle
@@ -2388,6 +2388,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:cycle', // Swap champion button (SigilDetailsPanel)
   'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
+  'game-icons:knapsack', // Items shop main tab (TeamTabComponent)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)
   'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)

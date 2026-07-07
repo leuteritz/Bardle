@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
@@ -234,48 +235,50 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       v-if="activeModal === 'shop'"
       title="Shop"
       icon="game-icons:barbute"
-      subtitle="Recruit champions & equip items"
+      hide-header
       @close="closeModal"
     >
-      <div class="team-shop-tabs">
+      <!-- primary division: Champions vs Items -->
+      <div class="team-shop-switch">
         <button
-          class="modal-tab"
-          :class="{ 'modal-tab--active': shopTab === 'champions' }"
+          class="shop-switch-btn"
+          :class="{ 'shop-switch-btn--active': shopTab === 'champions' }"
           @click="shopTab = 'champions'"
         >
+          <Icon icon="game-icons:barbute" width="26" height="26" class="shop-switch-icon" />
           Champions
         </button>
         <button
-          class="modal-tab"
-          :class="{ 'modal-tab--active': shopTab === 'items' }"
+          class="shop-switch-btn"
+          :class="{ 'shop-switch-btn--active': shopTab === 'items' }"
           @click="shopTab = 'items'"
         >
+          <Icon icon="game-icons:knapsack" width="26" height="26" class="shop-switch-icon" />
           Items
         </button>
-        <template v-if="shopTab === 'items'">
-          <div class="team-shop-tabs-sep" />
-          <button
-            v-for="cat in [
-              { id: 'weapon', label: 'Weapon' },
-              { id: 'armor', label: 'Armor' },
-              { id: 'artefact', label: 'Artefact' },
-            ]"
-            :key="cat.id"
-            class="modal-tab"
-            :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
-            @click="itemShopCategory = cat.id as ItemCategory"
-          >
-            <img
-              :src="`/img/itemShop/${cat.id}.png`"
-              :alt="cat.label"
-              width="18"
-              height="18"
-              loading="eager"
-              class="team-shop-tab-img"
-            />
-            {{ cat.label }}
-          </button>
-        </template>
+      </div>
+      <div v-if="shopTab === 'items'" class="team-shop-tabs">
+        <button
+          v-for="cat in [
+            { id: 'weapon', label: 'Weapon' },
+            { id: 'armor', label: 'Armor' },
+            { id: 'artefact', label: 'Artefact' },
+          ]"
+          :key="cat.id"
+          class="modal-tab"
+          :class="{ 'modal-tab--active': itemShopCategory === cat.id }"
+          @click="itemShopCategory = cat.id as ItemCategory"
+        >
+          <img
+            :src="`/img/itemShop/${cat.id}.png`"
+            :alt="cat.label"
+            width="18"
+            height="18"
+            loading="eager"
+            class="team-shop-tab-img"
+          />
+          {{ cat.label }}
+        </button>
       </div>
       <div class="team-shop-content">
         <ChampionShopComponent
@@ -335,7 +338,54 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
   flex-direction: column;
 }
 
-/* shop modal sub-tabs (mirrors the old inline-panel tab bar) */
+/* shop modal — primary Champions/Items switch (headerless shell) */
+.team-shop-switch {
+  display: flex;
+  gap: 10px;
+  padding: 12px 58px 10px 14px; /* right inset clears the floating close button */
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+  flex-shrink: 0;
+}
+.shop-switch-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 54px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.5);
+  background: rgba(14, 10, 4, 0.85);
+  border: 2px solid rgba(92, 51, 16, 0.5);
+  border-radius: 5px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.shop-switch-btn:hover {
+  color: #e8c040;
+  border-color: rgba(200, 144, 64, 0.7);
+}
+.shop-switch-btn--active {
+  color: #f0d870;
+  background: rgba(30, 16, 6, 0.97);
+  border-color: #c89040;
+  box-shadow:
+    inset 0 0 0 1px rgba(92, 51, 16, 0.5),
+    0 0 12px rgba(232, 192, 64, 0.22);
+}
+.shop-switch-icon {
+  flex-shrink: 0;
+}
+
+/* item category sub-tabs */
 .team-shop-tabs {
   display: flex;
   align-items: center;
@@ -343,13 +393,6 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
   padding: 8px 12px;
   border-bottom: 1px solid rgba(92, 51, 16, 0.5);
   background: #1e1006;
-  flex-shrink: 0;
-}
-.team-shop-tabs-sep {
-  width: 1px;
-  height: 22px;
-  background: rgba(92, 51, 16, 0.6);
-  margin: 0 4px;
   flex-shrink: 0;
 }
 .team-shop-tabs .modal-tab {
