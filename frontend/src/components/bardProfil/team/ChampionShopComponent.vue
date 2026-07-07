@@ -131,12 +131,16 @@
         </div>
         <div class="cs-filter-row cs-filter-row--wrap">
           <button
-            v-for="t in tierEntries"
+            v-for="t in tierChips"
             :key="t.starLevel"
             class="trait-chip"
-            :class="{ 'trait-chip--active': activeTier === t.starLevel }"
+            :class="{
+              'trait-chip--active': activeTier === t.starLevel,
+              'trait-chip--disabled': t.locked,
+            }"
             :style="`--chip-color: ${t.color}`"
-            :title="`★${t.starLevel} ${t.name}`"
+            :disabled="t.locked"
+            :title="t.locked ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}` : `★${t.starLevel} ${t.name}`"
             @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
           >
             <Icon :icon="t.icon" class="trait-chip-icon" />
@@ -638,8 +642,15 @@ export default defineComponent({
     const activeTier = ref<'all' | number>('all')
     const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
-    // Tier chips / sections are the 12 Champion Tiers (weak→strong), not price tiers.
-    const tierEntries = computed(() => CHAMPION_TIERS_BY_STAR)
+    // Tier chips / sections are the 6 Champion Tiers (weak→strong), not price tiers.
+    // Galaxy-locked tiers stay visible but greyed out (same lock as the grid sections).
+    const tierChips = computed(() =>
+      CHAMPION_TIERS_BY_STAR.map((t) => ({
+        ...t,
+        locked: isTierGalaxyLocked(t.starLevel),
+        requiredGalaxy: requiredGalaxyForTier(t.starLevel),
+      })),
+    )
     function tierRank(name: string): number {
       return getChampionStarLevel(name)
     }
@@ -1315,7 +1326,7 @@ const shopChampionNames = computed(() =>
       searchQuery,
       activeTraits,
       activeTier,
-      tierEntries,
+      tierChips,
       isOwned,
       isUnlocked,
       isLocked,
