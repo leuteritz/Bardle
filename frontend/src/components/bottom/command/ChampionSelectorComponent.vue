@@ -15,11 +15,6 @@ function openPicker(slotIndex: number, subSlot: number = -1) {
   uiStore.requestOpenRolesTab(slotIndex, subSlot)
 }
 
-function clearSlot(slotIndex: number, event: Event) {
-  event.stopPropagation()
-  battleStore.clearHeaderSlot(slotIndex)
-}
-
 function onImgError(e: Event) {
   const img = e.target as HTMLImageElement
   img.style.display = 'none'
@@ -49,6 +44,7 @@ function onSlotLeave() {
         'champ-card--first': i === 0,
         'champ-card--last': i === headerSlots.length - 1,
         'champ-card--flash': roleAbilities[i].isFlashing,
+        'champ-card--cd': roleAbilities[i].onCooldown && slot !== null,
       }"
       :style="{
         '--role-color': ROLES[i].orbit.color,
@@ -97,16 +93,6 @@ function onSlotLeave() {
 
         <!-- role label -->
         <div class="champ-card-label">{{ ROLES[i].short }}</div>
-
-        <!-- clear champion -->
-        <button
-          v-if="slot"
-          class="champ-card-clear"
-          title="Remove"
-          @click.stop="clearSlot(i, $event)"
-        >
-          ✕
-        </button>
       </div>
     </button>
   </div>
@@ -190,7 +176,13 @@ function onSlotLeave() {
   height: 100%;
   object-fit: cover;
   object-position: top center;
-  transition: transform 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    filter 0.3s ease;
+}
+/* ability on cooldown → portrait reads "not ready" at a glance */
+.champ-card--cd .champ-card-portrait {
+  filter: grayscale(60%) brightness(0.65);
 }
 .champ-card:hover .champ-card-portrait {
   transform: scale(1.06);
@@ -244,10 +236,10 @@ function onSlotLeave() {
 /* ── Ability indicators ── */
 .champ-card-ready-dot {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 15px;
-  height: 15px;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--role-color, #c89040);
   border: 1px solid rgba(255, 235, 200, 0.7);
@@ -260,14 +252,16 @@ function onSlotLeave() {
   position: absolute;
   top: 5px;
   right: 5px;
-  padding: 0 6px;
-  height: 17px;
+  padding: 0 9px;
+  height: 24px;
   border-radius: 4px;
   background: rgba(10, 7, 3, 0.85);
-  border: 1px solid var(--role-color, #c89040);
+  border: 2px solid var(--role-color, #c89040);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
-  font-size: 10px;
+  font-size: 14px;
+  letter-spacing: 0.03em;
   line-height: 1;
   color: #efe4c8;
   font-variant-numeric: tabular-nums;
@@ -331,37 +325,6 @@ function onSlotLeave() {
 }
 .champ-card:hover .champ-card-label {
   color: #f0d060;
-}
-
-/* ── Clear button ── */
-.champ-card-clear {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 15px;
-  height: 15px;
-  font-size: 8px;
-  color: #cc6050;
-  background: rgba(20, 10, 6, 0.85);
-  border: 1px solid rgba(180, 60, 40, 0.4);
-  border-radius: 3px;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  z-index: 5;
-  transition:
-    opacity 0.15s ease,
-    background 0.15s ease;
-}
-.champ-card:hover .champ-card-clear {
-  opacity: 1;
-}
-.champ-card-clear:hover {
-  background: rgba(160, 40, 20, 0.7);
-  border-color: #cc6050;
 }
 
 @media (prefers-reduced-motion: reduce) {
