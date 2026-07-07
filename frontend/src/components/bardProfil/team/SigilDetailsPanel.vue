@@ -4,16 +4,13 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
-import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { ROLES } from '@/config/constants'
-import { getChampionRoles } from '@/config/championRoles'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
 import { SHOP_ITEMS } from '@/config/items'
 import type { ItemCategory, ShopItem } from '@/types'
-import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const props = defineProps<{
   roleIndex: number
@@ -25,16 +22,13 @@ const emit = defineEmits<{
   'pick-ally': [subSlot: number]
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
-  'open-shop': []
-  'open-expedition': []
 }>()
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
-const expeditionStore = useExpeditionStore()
 const synergyStore = useSynergyStore()
 
-const { headerSlots, secondarySlots, newlyUnlockedChampions } = storeToRefs(battleStore)
+const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
 
 const roleDef = computed(() => ROLES[props.roleIndex])
@@ -102,13 +96,6 @@ const synergyRows = computed(() => {
   return [...traitRows, ...originRows]
 })
 
-const expeditionBadgeCount = computed(
-  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
-)
-const shopBadgeCount = computed(() =>
-  newlyUnlockedChampions.value.filter((n) => getChampionRoles(n).includes(roleDef.value.key))
-    .length,
-)
 </script>
 
 <template>
@@ -301,19 +288,6 @@ const shopBadgeCount = computed(() =>
       </div>
     </div>
 
-    <!-- ── footer actions ── -->
-    <div class="sdp-footer">
-      <button class="sdp-action" @click="emit('open-shop')">
-        <Icon icon="game-icons:shopping-bag" width="18" height="18" class="sdp-action-icon" />
-        Shop
-        <RpgNotifyBadge :count="shopBadgeCount" variant="shop" label="Champions available in shop" />
-      </button>
-      <button class="sdp-action" @click="emit('open-expedition')">
-        <Icon icon="game-icons:campfire" width="18" height="18" class="sdp-action-icon" />
-        Expedition
-        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
-      </button>
-    </div>
   </div>
 </template>
 
@@ -810,38 +784,4 @@ const shopBadgeCount = computed(() =>
   font-size: 12px;
 }
 
-/* ── footer ── */
-.sdp-footer {
-  flex-shrink: 0;
-  display: flex;
-  gap: 1px;
-  padding: 1px;
-  background: rgba(200, 164, 90, 0.1);
-  border-top: 1px solid rgba(200, 164, 90, 0.16);
-}
-.sdp-action {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 13px;
-  cursor: pointer;
-  border: none;
-  background: linear-gradient(180deg, rgba(24, 18, 12, 0.9), rgba(14, 10, 8, 0.9));
-  color: rgba(220, 200, 150, 0.9);
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.sdp-action:hover {
-  background: linear-gradient(180deg, #2a2012, #1a120a);
-  color: #f0d878;
-}
-.sdp-action-icon {
-  color: #e8c040;
-}
 </style>

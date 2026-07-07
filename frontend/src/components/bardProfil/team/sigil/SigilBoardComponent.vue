@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
+import { useBattleStore } from '@/stores/battleStore'
+import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import {
   ROLES,
@@ -14,6 +17,7 @@ import {
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const props = defineProps<{
   selectedRole: number | null
@@ -22,7 +26,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   'select-role': [roleIndex: number]
   'select-ally': [roleIndex: number, subSlot: number]
+  'open-shop': []
+  'open-expedition': []
 }>()
+
+const battleStore = useBattleStore()
+const expeditionStore = useExpeditionStore()
+const { newlyUnlockedChampions } = storeToRefs(battleStore)
+
+const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
+const expeditionBadgeCount = computed(
+  () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
 
 const {
   mainFilled,
@@ -110,6 +125,18 @@ function onWheel(event: WheelEvent): void {
       </div>
       <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
     </div>
+
+    <!-- board actions: shop + expedition (always reachable) -->
+    <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
+      <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
+      Shop
+      <RpgNotifyBadge :count="shopBadgeCount" variant="shop" label="Champions available in shop" />
+    </button>
+    <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
+      <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
+      Expedition
+      <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
+    </button>
 
     <!-- scaled sigil stage -->
     <div
@@ -215,6 +242,46 @@ function onWheel(event: WheelEvent): void {
   border: 1px solid rgba(200, 164, 90, 0.12);
   border-radius: 5px;
   pointer-events: none;
+}
+
+/* ── board actions (shop / expedition) ── */
+.sigil-action {
+  position: absolute;
+  bottom: 22px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 24px;
+  border-radius: 5px;
+  background: rgba(14, 10, 5, 0.88);
+  border: 2px solid #5c3310;
+  color: #e8c040;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.sigil-action--shop {
+  left: 26px;
+}
+.sigil-action--expedition {
+  right: 26px;
+}
+.sigil-action:hover {
+  border-color: #c89040;
+  box-shadow: 0 0 14px rgba(232, 192, 64, 0.35);
+  transform: translateY(-1px);
+}
+.sigil-action:active {
+  transform: translateY(0);
+}
+.sigil-action-icon {
+  color: #e8c040;
+  flex-shrink: 0;
 }
 
 /* ── zoom (mirrors ForgeTreePanel) ── */

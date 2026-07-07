@@ -2386,7 +2386,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crenel-crown', // Sigil center crest (SigilBoardComponent)
   'game-icons:linked-rings', // Details panel synergy header (SigilDetailsPanel)
   'game-icons:cycle', // Swap champion button (SigilDetailsPanel)
-  'game-icons:shopping-bag', // Shop action button (SigilDetailsPanel footer)
+  'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
   // Battle tab redesign (landing / rift / honor)
   'game-icons:sword-clash', // COMBAT stat group header (BattleLandingScreen)

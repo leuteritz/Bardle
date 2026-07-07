@@ -188,6 +188,8 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       :selected-role="selectedRole"
       @select-role="selectRole"
       @select-ally="selectAlly"
+      @open-shop="openShop('all')"
+      @open-expedition="openExpedition"
     />
 
     <!-- ══ RIGHT — Details Panel (slides in on champion click) ══ -->
@@ -200,8 +202,6 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
         @pick-ally="openPicker"
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
-        @open-shop="openShop(roleDef.key)"
-        @open-expedition="openExpedition"
       />
     </Transition>
 
