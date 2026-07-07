@@ -15,11 +15,12 @@ import {
   TEAM_SIGIL_ZOOM_MAX,
   TEAM_SIGIL_ZOOM_STEP,
   TEAM_SIGIL_ZOOM_DEFAULT,
+  TEAM_SIGIL_FOCUS_ZOOM,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 
-defineProps<{
+const props = defineProps<{
   /** True while the details panel is open — hides header/footer chrome. */
   chromeHidden: boolean
   selectedRole: number | null
@@ -86,7 +87,28 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
 })
 
-const totalScale = computed(() => fitScale.value * zoom.value)
+// ── Camera focus on the selected role cluster ────────────────────────────────
+/** Focal point = centroid of the role node and its two allies (stage coords). */
+const focusPoint = computed(() => {
+  const i = props.selectedRole
+  if (i === null) return null
+  const r = rolePoints.value[i]
+  const [a1, a2] = allyPoints.value[i]
+  return { x: (r.x + a1.x + a2.x) / 3, y: (r.y + a1.y + a2.y) / 3 }
+})
+
+const totalScale = computed(
+  () => fitScale.value * zoom.value * (focusPoint.value ? TEAM_SIGIL_FOCUS_ZOOM : 1),
+)
+
+/** Pans the stage so the focal point lands on the container center (screen px). */
+const stageTransform = computed(() => {
+  const s = totalScale.value
+  const f = focusPoint.value
+  const half = SIGIL_STAGE_SIZE / 2
+  const pan = f ? `translate(${-(f.x - half) * s}px, ${-(f.y - half) * s}px) ` : ''
+  return `${pan}translate(-50%, -50%) scale(${s})`
+})
 
 const zoomKnobPos = computed(() => {
   const t = (zoom.value - TEAM_SIGIL_ZOOM_MIN) / (TEAM_SIGIL_ZOOM_MAX - TEAM_SIGIL_ZOOM_MIN)
@@ -147,7 +169,7 @@ function onWheel(event: WheelEvent): void {
       :style="{
         width: `${SIGIL_STAGE_SIZE}px`,
         height: `${SIGIL_STAGE_SIZE}px`,
-        transform: `translate(-50%, -50%) scale(${totalScale})`,
+        transform: stageTransform,
       }"
     >
       <SigilSvgLayers
@@ -408,6 +430,8 @@ function onWheel(event: WheelEvent): void {
   top: 50%;
   left: 50%;
   transform-origin: center center;
+  /* camera pan/zoom (TEAM_SIGIL_CAMERA_MS) — also smooths wheel zoom */
+  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.35, 1);
 }
 .sigil-crest-pulse {
   position: absolute;
@@ -524,6 +548,9 @@ function onWheel(event: WheelEvent): void {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .sigil-stage {
+    transition: none;
+  }
   .sigil-crest-pulse,
   .sigil-ember {
     animation: none !important;

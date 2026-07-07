@@ -1591,6 +1591,10 @@ export const TEAM_SIGIL_ZOOM_MIN = 0.7
 export const TEAM_SIGIL_ZOOM_MAX = 1.6
 export const TEAM_SIGIL_ZOOM_STEP = 0.15
 export const TEAM_SIGIL_ZOOM_DEFAULT = 1.0
+/** Extra zoom multiplier while a role is focused (camera zoom-in on role + allies). */
+export const TEAM_SIGIL_FOCUS_ZOOM = 1.9
+/** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */
+export const TEAM_SIGIL_CAMERA_MS = 450
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,
