@@ -21,6 +21,8 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 
 const props = defineProps<{
   selectedRole: number | null
+  /** True while a modal covers the board — pauses all decorative animations. */
+  paused?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -116,7 +118,12 @@ function onWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <div ref="panelEl" class="sigil-board" @wheel.prevent="onWheel">
+  <div
+    ref="panelEl"
+    class="sigil-board"
+    :class="{ 'sigil-board--paused': paused }"
+    @wheel.prevent="onWheel"
+  >
     <!-- zoom control -->
     <div class="sigil-zoom">
       <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
@@ -235,6 +242,12 @@ function onWheel(event: WheelEvent): void {
   overflow: hidden;
   background: radial-gradient(circle at 42% 46%, #1c1409, #0b0705 72%);
 }
+/* a modal covers the board (semi-transparent backdrop) — freeze all decorative
+   animations so they stop compositing behind it; they resume on close */
+.sigil-board--paused :deep(*) {
+  animation-play-state: paused !important;
+}
+
 .sigil-board::after {
   content: '';
   position: absolute;

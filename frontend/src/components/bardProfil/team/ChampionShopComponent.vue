@@ -311,6 +311,8 @@
               <img
                 :src="battleStore.getChampionImage(champion.name)"
                 :alt="champion.name"
+                loading="lazy"
+                decoding="async"
                 class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
                 :class="isLocked(champion.name) ? 'grayscale' : ''"
               />
@@ -481,6 +483,8 @@
                   <img
                     :src="battleStore.getChampionImage(champion.name)"
                     :alt="champion.name"
+                    loading="lazy"
+                    decoding="async"
                     class="absolute inset-0 object-cover object-top w-full h-full rpg-img card-img-scale"
                     :class="isLocked(champion.name) ? 'grayscale' : ''"
                   />
@@ -748,13 +752,17 @@ export default defineComponent({
       return !isOwned(name) && !isUnlocked(name)
     }
 
+    // Memoized lookup — these run per card per render; a .find() scan here is O(n²)
+    const recruitableByName = computed(
+      () => new Map(battleStore.recruitableChampions.map((r) => [r.name, r])),
+    )
+
     function getMaterialCost(name: string): Record<string, number> {
-      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
-      return recruit?.materialCost ?? {}
+      return recruitableByName.value.get(name)?.materialCost ?? {}
     }
 
     function getChimesPrice(name: string): number {
-      const recruit = battleStore.recruitableChampions.find((r) => r.name === name)
+      const recruit = recruitableByName.value.get(name)
       if (recruit) return recruit.chimesPrice
       return getChampionChimesPrice(name)
     }
@@ -1436,32 +1444,35 @@ const shopChampionNames = computed(() =>
   box-shadow: inset 0 0 0 1px rgba(184,200,216,0.30), 0 0 16px rgba(184,200,216,0.35);
 }
 
-/* Buyable pulse — role inset glow complements the gold buyable border */
-@keyframes role-pulse-top {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(224,80,80,0.15); }
-  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(224,80,80,0.35); }
+/* Buyable pulse — role inset glow complements the gold buyable border.
+   Shadows are static on pseudo-elements; only opacity animates (compositor-only,
+   no per-frame repaints — animating box-shadow directly caused scroll jank). */
+.card-buyable.champion-card-slot:not(.card-expanded)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--bp-radius);
+  pointer-events: none;
+  box-shadow: 0 0 26px rgba(232, 192, 64, 0.12);
+  animation: card-glow-pulse 2.5s ease-in-out infinite;
 }
-@keyframes role-pulse-jungle {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(80,192,96,0.15); }
-  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(80,192,96,0.35); }
+.card-buyable.champion-card-slot:not(.card-expanded) .card-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-c, #e8c040) 35%, transparent);
+  animation: card-ring-pulse 2.5s ease-in-out infinite;
 }
-@keyframes role-pulse-mid {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(80,144,232,0.15); }
-  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(80,144,232,0.35); }
+@keyframes card-glow-pulse {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
 }
-@keyframes role-pulse-adc {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(232,152,64,0.15); }
-  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(232,152,64,0.35); }
+@keyframes card-ring-pulse {
+  0%, 100% { opacity: 0.43; }
+  50%      { opacity: 1; }
 }
-@keyframes role-pulse-support {
-  0%, 100% { box-shadow: 0 0 20px rgba(232,192,64,0.12), inset 0 0 0 1px rgba(184,200,216,0.15); }
-  50%       { box-shadow: 0 0 26px rgba(232,192,64,0.22), inset 0 0 0 1px rgba(184,200,216,0.35); }
-}
-.card-buyable.champion-card-slot[data-role="top"]:not(.card-expanded)     .card-inner { animation: role-pulse-top     2.5s ease-in-out infinite; }
-.card-buyable.champion-card-slot[data-role="jungle"]:not(.card-expanded)  .card-inner { animation: role-pulse-jungle  2.5s ease-in-out infinite; }
-.card-buyable.champion-card-slot[data-role="mid"]:not(.card-expanded)     .card-inner { animation: role-pulse-mid     2.5s ease-in-out infinite; }
-.card-buyable.champion-card-slot[data-role="adc"]:not(.card-expanded)     .card-inner { animation: role-pulse-adc     2.5s ease-in-out infinite; }
-.card-buyable.champion-card-slot[data-role="support"]:not(.card-expanded) .card-inner { animation: role-pulse-support 2.5s ease-in-out infinite; }
 
 .card-buyable .card-inner {
   border-color: var(--rpg-gold-dim);
@@ -1771,6 +1782,10 @@ const shopChampionNames = computed(() =>
   .card-inner {
     animation: none !important;
     transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+  }
+  .champion-card-slot::after,
+  .card-inner::after {
+    animation: none !important;
   }
 }
 

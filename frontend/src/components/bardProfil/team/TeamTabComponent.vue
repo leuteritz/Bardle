@@ -187,6 +187,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
+      :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
       @open-shop="openShop('all')"

@@ -1,6 +1,7 @@
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useGalaxyStore } from '../../stores/galaxyStore'
+import { useUiStore } from '../../stores/uiStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import {
   STAR_COUNT,
@@ -1371,6 +1372,23 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
   }
 
+  // ── Modal-Pause ────────────────────────────────────────────────────────────
+  // Solange das Bard-Modal offen ist (bg-black/80-Backdrop), ist der Canvas
+  // praktisch unsichtbar → rAF-Loop komplett stoppen, beim Schließen fortsetzen.
+  const uiStoreForPause = useUiStore()
+  watch(
+    () => uiStoreForPause.bardActiveTab !== null,
+    (modalOpen) => {
+      if (modalOpen) {
+        stopLoop()
+      } else if (isWindowFocused && !prefersReducedMotion.value && stars.length > 0) {
+        startLoop()
+        scheduleNextGalaxy()
+        scheduleNextEmission()
+      }
+    },
+  )
+
   // ── Polling-Fallback für Multi-Monitor (Chrome blur-Event-Problem) ─────────
   // document.hasFocus() ist zuverlässiger als blur/focus Events auf Multi-Monitor-Setups
   function startFocusPolling(): void {
@@ -1814,8 +1832,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   }
 
   function animateStars(timestamp: number): void {
-    // Kein Fokus oder Tab versteckt → sofort abbrechen, nächsten Frame NICHT anfordern
-    if (!isWindowFocused || document.hidden) {
+    // Kein Fokus, Tab versteckt oder Bard-Modal offen → sofort abbrechen,
+    // nächsten Frame NICHT anfordern (Restart via watch/onWindowFocus)
+    if (!isWindowFocused || document.hidden || uiStoreForPause.bardActiveTab !== null) {
       animFrame = 0
       return
     }
