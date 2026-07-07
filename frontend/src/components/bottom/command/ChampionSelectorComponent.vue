@@ -151,13 +151,11 @@ function onSlotLeave() {
   background: var(--role-color, #c89040);
   box-shadow: 0 0 8px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent);
 }
-/* outer corners follow the panel silhouette arc (frame geometry — exception
-   to the 4-5px radius rule, matches the 60px shell arc) */
+/* first card: the flat 5px bar can't bend around the 44px shell arc (CSS clamps
+   the radius to the bar height) — the color is drawn as the body's top border
+   instead, which follows the curve natively */
 .champ-card--first .champ-card-bar {
-  border-top-left-radius: 44px;
-}
-.champ-card--last .champ-card-bar {
-  border-top-right-radius: 44px;
+  display: none;
 }
 
 /* portrait body */
@@ -173,13 +171,13 @@ function onSlotLeave() {
   box-shadow: 0 0 10px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent);
   transition: box-shadow 0.2s ease;
 }
+/* top-left corner follows the panel silhouette arc (frame geometry — exception
+   to the 4-5px radius rule, matches the 60px shell arc); the right panel edge
+   sits flush with the screen edge, so the last card stays square up top */
 .champ-card--first .champ-card-body {
+  border-top: 5px solid var(--role-color, #c89040);
   border-bottom-left-radius: 5px;
   border-top-left-radius: 44px;
-}
-.champ-card--last .champ-card-body {
-  border-bottom-right-radius: 5px;
-  border-top-right-radius: 44px;
 }
 .champ-card:hover .champ-card-body {
   box-shadow:
