@@ -138,17 +138,17 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
 }
 
 // ── External navigation hooks ────────────────────────────────────────────────
-watch(
-  () => uiStore.rolesOpenToken,
-  () => {
-    selectedRole.value = uiStore.rolesActiveSlot
-    if (uiStore.rolesActiveSubSlot >= 0) {
-      openPicker(uiStore.rolesActiveSubSlot)
-    } else {
-      activeModal.value = null
-    }
-  },
-)
+function applyRolesOpenRequest() {
+  selectedRole.value = uiStore.rolesActiveSlot
+  if (uiStore.rolesActiveSubSlot >= 0) {
+    openPicker(uiStore.rolesActiveSubSlot)
+  } else {
+    activeModal.value = null
+  }
+  uiStore.clearRolesOpenPending()
+}
+
+watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
 
 watch(
   () => uiStore.pendingChampionSearch,
@@ -172,7 +172,12 @@ function onEsc(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onEsc))
+onMounted(() => {
+  window.addEventListener('keydown', onEsc)
+  // the tab may have just been opened BY a requestOpenRolesTab call — the token
+  // watcher above wasn't registered yet, so consume the pending request here
+  if (uiStore.rolesOpenPending) applyRolesOpenRequest()
+})
 onUnmounted(() => window.removeEventListener('keydown', onEsc))
 </script>
 

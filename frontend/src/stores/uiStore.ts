@@ -9,6 +9,10 @@ export const useUiStore = defineStore('ui', () => {
   const rolesActiveSlot = ref(0)
   const rolesActiveSubSlot = ref(-1)
   const rolesOpenToken = ref(0)
+  // true while a requestOpenRolesTab call has not been consumed yet — lets the
+  // team tab apply the request on mount (the token watcher registers too late
+  // when the tab is opened by the request itself)
+  const rolesOpenPending = ref(false)
   const planetActiveSlotId = ref<string | null>(null)
   const pendingChampionSearch = ref('')
   const hoveredChampionRole = ref<ChampionRole | null>(null)
@@ -31,7 +35,12 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSlot.value = slotIndex
     rolesActiveSubSlot.value = subSlot
     rolesOpenToken.value++
+    rolesOpenPending.value = true
     bardActiveTab.value = 'team'
+  }
+
+  function clearRolesOpenPending() {
+    rolesOpenPending.value = false
   }
 
   function requestOpenPlanetsTab(slotId: string) {
@@ -69,6 +78,7 @@ export const useUiStore = defineStore('ui', () => {
     rolesActiveSlot,
     rolesActiveSubSlot,
     rolesOpenToken,
+    rolesOpenPending,
     planetActiveSlotId,
     pendingChampionSearch,
     hoveredChampionRole,
@@ -78,6 +88,7 @@ export const useUiStore = defineStore('ui', () => {
     setBardTab,
     closeBardModal,
     requestOpenRolesTab,
+    clearRolesOpenPending,
     requestOpenPlanetsTab,
     setRolesActiveSlot,
     requestOpenTeamTabWithSearch,
