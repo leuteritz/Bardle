@@ -112,12 +112,16 @@
         </div>
         <div class="cs-filter-row cs-filter-row--wrap">
           <button
-            v-for="r in ROLES"
+            v-for="r in roleChips"
             :key="r.key"
-            class="trait-chip"
-            :class="{ 'trait-chip--active': activeRole === r.key }"
+            class="trait-chip role-chip"
+            :class="{
+              'trait-chip--active': activeRole === r.key,
+              'trait-chip--disabled': !r.available,
+            }"
             :style="`--chip-color: ${r.color}`"
-            :title="r.label"
+            :disabled="!r.available"
+            :title="r.available ? r.label : 'No champions in shop'"
             @click="setActiveRole(activeRole === r.key ? 'all' : (r.key as any))"
           >
             <img :src="r.image" :alt="r.label" class="role-chip-img" />
@@ -852,6 +856,19 @@ const shopChampionNames = computed(() =>
         : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value),
     )
 
+    // Role chips: greyed out when no purchasable champion of that role exists.
+    // Availability uses the UNFILTERED shop pool (chipPool is already role-scoped).
+    const roleChips = computed(() =>
+      ROLES.map((r) => ({
+        key: r.key,
+        label: r.label,
+        short: r.short,
+        color: r.color,
+        image: r.image,
+        available: shopChampionNames.value.some((name) => CHAMPION_ROLES[name] === r.key),
+      })),
+    )
+
     // When search matches a trait/origin globally, expand chip pool to all roles
     const chipPool = computed(() => {
       if (activeRole.value !== 'all' && searchQuery.value.trim()) {
@@ -1320,7 +1337,7 @@ const shopChampionNames = computed(() =>
       gameStore,
       truncate,
       CHAMPION_ROLES,
-      ROLES,
+      roleChips,
       getChampionRoles,
       activeRole,
       searchQuery,
@@ -1949,12 +1966,21 @@ const shopChampionNames = computed(() =>
   text-align: center;
 }
 
-/* role filter chips (Row 0) */
+/* role filter chips — larger variant of the shared trait-chip style */
+.trait-chip.role-chip {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+}
 .role-chip-img {
   width: 14px;
   height: 14px;
   object-fit: contain;
   flex-shrink: 0;
+}
+.role-chip .role-chip-img {
+  width: 18px;
+  height: 18px;
 }
 
 /* filter chip without purchasable champions — visible but locked */
