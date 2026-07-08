@@ -460,7 +460,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .sdp-slide-leave-active {
-  transition: transform 0.22s cubic-bezier(0.55, 0, 1, 0.45);
+  transition: transform 0.12s cubic-bezier(0.55, 0, 1, 0.45);
 }
 .sdp-slide-enter-from,
 .sdp-slide-leave-to {

@@ -1590,11 +1590,6 @@ export const SIGIL_RING_RUNE_R = 360
 export const SIGIL_RING_INNER_R = 180
 export const SIGIL_RING_CORE_R = 120
 
-// Sigil zoom (wheel + buttons)
-export const TEAM_SIGIL_ZOOM_MIN = 0.7
-export const TEAM_SIGIL_ZOOM_MAX = 1.6
-export const TEAM_SIGIL_ZOOM_STEP = 0.15
-export const TEAM_SIGIL_ZOOM_DEFAULT = 1.0
 /** Extra zoom multiplier while a role is focused (camera zoom-in on role + allies). */
 export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
 /** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */

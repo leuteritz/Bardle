@@ -9,10 +9,6 @@ import {
   ROLES,
   SIGIL_STAGE_SIZE,
   SIGIL_CREST_SIZE,
-  TEAM_SIGIL_ZOOM_MIN,
-  TEAM_SIGIL_ZOOM_MAX,
-  TEAM_SIGIL_ZOOM_STEP,
-  TEAM_SIGIL_ZOOM_DEFAULT,
   TEAM_SIGIL_FOCUS_ZOOM,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
 } from '@/config/constants'
@@ -57,9 +53,8 @@ const {
 
 const roleColors = ROLES.map((r) => r.color)
 
-// ── Zoom (mirrors ForgeTreePanel) ────────────────────────────────────────────
+// ── Fit-scale (camera-only zoom — no manual zoom controls) ──────────────────
 const panelEl = ref<HTMLElement | null>(null)
-const zoom = ref(TEAM_SIGIL_ZOOM_DEFAULT)
 const tabRect = ref({ width: 0, height: 0 })
 
 let resizeObserver: ResizeObserver | null = null
@@ -104,7 +99,7 @@ const focusPoint = computed(() => {
 })
 
 const totalScale = computed(
-  () => fitScale.value * zoom.value * (focusPoint.value ? TEAM_SIGIL_FOCUS_ZOOM : 1),
+  () => fitScale.value * (focusPoint.value ? TEAM_SIGIL_FOCUS_ZOOM : 1),
 )
 
 /** Board center in tab px — computed (not CSS 50%) so the close animation targets
@@ -124,21 +119,6 @@ const stageTransform = computed(() => {
   return `translate(${c.x}px, ${c.y}px) ${pan}translate(-50%, -50%) scale(${s})`
 })
 
-const zoomKnobPos = computed(() => {
-  const t = (zoom.value - TEAM_SIGIL_ZOOM_MIN) / (TEAM_SIGIL_ZOOM_MAX - TEAM_SIGIL_ZOOM_MIN)
-  return `${Math.round(t * 100)}%`
-})
-
-function zoomBy(direction: number): void {
-  zoom.value = Math.min(
-    TEAM_SIGIL_ZOOM_MAX,
-    Math.max(TEAM_SIGIL_ZOOM_MIN, zoom.value + direction * TEAM_SIGIL_ZOOM_STEP),
-  )
-}
-
-function onWheel(event: WheelEvent): void {
-  zoomBy(event.deltaY < 0 ? 1 : -1)
-}
 </script>
 
 <template>
@@ -146,17 +126,7 @@ function onWheel(event: WheelEvent): void {
     ref="panelEl"
     class="sigil-board"
     :class="{ 'sigil-board--paused': paused }"
-    @wheel.prevent="onWheel"
   >
-    <!-- zoom control -->
-    <div class="sigil-zoom">
-      <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
-      <div class="zoom-track">
-        <div class="zoom-knob" :style="{ bottom: zoomKnobPos }" />
-      </div>
-      <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
-    </div>
-
     <!-- board actions: shop + expedition (always reachable) -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
@@ -319,57 +289,6 @@ function onWheel(event: WheelEvent): void {
 .sigil-action-icon {
   color: #e8c040;
   flex-shrink: 0;
-}
-
-/* ── zoom (mirrors ForgeTreePanel) ── */
-.sigil-zoom {
-  position: absolute;
-  right: 22px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  z-index: 6;
-}
-.zoom-btn {
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  line-height: 1;
-  color: #e8c040;
-  background: rgba(20, 12, 2, 0.85);
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-.zoom-btn:hover {
-  background: rgba(40, 24, 6, 0.95);
-  border-color: #c89040;
-}
-.zoom-track {
-  width: 4px;
-  height: 90px;
-  background: rgba(200, 144, 64, 0.2);
-  border-radius: 2px;
-  position: relative;
-}
-.zoom-knob {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, 50%);
-  width: 12px;
-  height: 12px;
-  background: #c89040;
-  border-radius: 50%;
 }
 
 /* ── stage ── */
