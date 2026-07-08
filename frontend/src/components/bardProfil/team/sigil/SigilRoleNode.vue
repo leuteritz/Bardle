@@ -52,7 +52,7 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     v-for="(ally, sub) in allies"
     :key="`ally-${roleIndex}-${sub}`"
     class="sigil-ally"
-    :class="{ 'sigil-ally--filled': !!ally }"
+    :class="{ 'sigil-ally--filled': !!ally, 'sigil-ally--highlight': selected }"
     :style="[
       nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE),
       { '--role-color': roleDef.color, '--sub': String(sub) },
@@ -115,6 +115,18 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   box-shadow:
     0 0 0 2px var(--role-color),
     0 0 12px color-mix(in srgb, var(--role-color) 50%, transparent);
+}
+/* selected role: its ally constellation lights up with it (cascade via --sub delay) */
+.sigil-ally--highlight {
+  transform: translate(-50%, -50%) scale(1.12);
+  background: #0a0704;
+  box-shadow:
+    0 0 0 2px var(--role-color),
+    0 0 16px color-mix(in srgb, var(--role-color) 65%, transparent);
+  z-index: 2;
+}
+.sigil-ally--highlight .sigil-ally-plus {
+  opacity: 1;
 }
 .sigil-ally:hover {
   transform: translate(-50%, -50%) scale(1.15);
