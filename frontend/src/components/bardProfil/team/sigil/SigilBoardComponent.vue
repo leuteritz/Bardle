@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
@@ -11,6 +11,8 @@ import {
   SIGIL_CREST_SIZE,
   TEAM_SIGIL_FOCUS_ZOOM,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
+  TEAM_SIGIL_PAN_MAX_FRACTION,
+  TEAM_SIGIL_DRAG_THRESHOLD_PX,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -109,15 +111,89 @@ const boardCenter = computed(() => ({
   y: tabRect.value.height / 2,
 }))
 
+/** Manual camera offset from drag-to-pan (screen px), bounded by the rubber band below. */
+const panOffset = ref({ x: 0, y: 0 })
+
 /** Pans the stage so the focal point lands on the board center (screen px). */
 const stageTransform = computed(() => {
   const s = totalScale.value
   const f = focusPoint.value
   const c = boardCenter.value
+  const o = panOffset.value
   const half = SIGIL_STAGE_SIZE / 2
   const pan = f ? `translate(${-(f.x - half) * s}px, ${-(f.y - half) * s}px) ` : ''
-  return `translate(${c.x}px, ${c.y}px) ${pan}translate(-50%, -50%) scale(${s})`
+  return `translate(${c.x + o.x}px, ${c.y + o.y}px) ${pan}translate(-50%, -50%) scale(${s})`
 })
+
+// ── Drag-to-pan (rubber-band bounded camera offset) ──────────────────────────
+const isDragging = ref(false)
+/** Set on the first move past the drag threshold; suppresses the trailing click. */
+let didDrag = false
+let dragPointerId: number | null = null
+let dragStart = { x: 0, y: 0 }
+let dragStartOffset = { x: 0, y: 0 }
+
+const maxPan = computed(() => TEAM_SIGIL_PAN_MAX_FRACTION * SIGIL_STAGE_SIZE * totalScale.value)
+
+/** 1:1 near center, tanh-saturating toward the bound — the offset never exceeds maxPan. */
+function rubberBand(raw: number): number {
+  const m = maxPan.value
+  return m > 0 ? m * Math.tanh(raw / m) : 0
+}
+
+function onPointerDown(event: PointerEvent): void {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  dragPointerId = event.pointerId
+  didDrag = false
+  dragStart = { x: event.clientX, y: event.clientY }
+  dragStartOffset = { ...panOffset.value }
+}
+
+function onPointerMove(event: PointerEvent): void {
+  if (event.pointerId !== dragPointerId) return
+  const dx = event.clientX - dragStart.x
+  const dy = event.clientY - dragStart.y
+  if (!isDragging.value) {
+    if (Math.hypot(dx, dy) < TEAM_SIGIL_DRAG_THRESHOLD_PX) return
+    isDragging.value = true
+    didDrag = true
+    // capture only once it IS a drag — capturing on pointerdown would retarget
+    // the trailing click to the board and break role/ally node clicks
+    panelEl.value?.setPointerCapture(event.pointerId)
+  }
+  panOffset.value = {
+    x: rubberBand(dragStartOffset.x + dx),
+    y: rubberBand(dragStartOffset.y + dy),
+  }
+}
+
+function onPointerEnd(event: PointerEvent): void {
+  if (event.pointerId !== dragPointerId) return
+  dragPointerId = null
+  isDragging.value = false
+  // safety clamp (rubber band already stays inside; bound shrinks with the camera)
+  const m = maxPan.value
+  panOffset.value = {
+    x: Math.min(m, Math.max(-m, panOffset.value.x)),
+    y: Math.min(m, Math.max(-m, panOffset.value.y)),
+  }
+}
+
+/** After a real drag, swallow the click so nodes/buttons under the pointer don't fire. */
+function onClickCapture(event: MouseEvent): void {
+  if (!didDrag) return
+  didDrag = false
+  event.stopPropagation()
+  event.preventDefault()
+}
+
+// the focus camera owns the framing — a selection change eases the pan back home
+watch(
+  () => props.selectedRole,
+  () => {
+    panOffset.value = { x: 0, y: 0 }
+  },
+)
 
 </script>
 
@@ -125,7 +201,13 @@ const stageTransform = computed(() => {
   <div
     ref="panelEl"
     class="sigil-board"
-    :class="{ 'sigil-board--paused': paused }"
+    :class="{ 'sigil-board--paused': paused, 'sigil-board--dragging': isDragging }"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerEnd"
+    @pointercancel="onPointerEnd"
+    @click.capture="onClickCapture"
+    @dragstart.prevent
   >
     <!-- board actions: shop + expedition (always reachable) -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
@@ -235,6 +317,17 @@ const stageTransform = computed(() => {
   height: 100%;
   overflow: hidden;
   background: radial-gradient(circle at 42% 46%, #1c1409, #0b0705 72%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.sigil-board--dragging {
+  cursor: grabbing;
+}
+/* while dragging the stage follows the pointer 1:1 — the camera transition
+   resumes on release and eases the pan back inside the bound / to center */
+.sigil-board--dragging .sigil-stage {
+  transition: none;
 }
 /* a modal covers the board (semi-transparent backdrop) — freeze all decorative
    animations so they stop compositing behind it; they resume on close */

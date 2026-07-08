@@ -1597,6 +1597,10 @@ export const TEAM_SIGIL_CAMERA_MS = 450
 /** Width (px) of the role details panel — the board's fit-scale subtracts it while
  *  a role is selected so open/close resolves in a single camera move. */
 export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 460
+/** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
+export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
+/** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
+export const TEAM_SIGIL_DRAG_THRESHOLD_PX = 5
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,
