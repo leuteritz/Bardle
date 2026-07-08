@@ -4,6 +4,13 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useSynergyStore } from '@/stores/synergyStore'
+import { TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
+
+const emit = defineEmits<{
+  close: []
+}>()
+
+const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
 
 const battleStore = useBattleStore()
 const synergyStore = useSynergyStore()
@@ -90,7 +97,15 @@ function championImage(name: string): string {
 </script>
 
 <template>
-  <div class="tsp">
+  <div class="tsp-panel">
+    <div class="tsp-goldline" />
+    <header class="tsp-head">
+      <Icon icon="game-icons:linked-rings" width="20" height="20" class="tsp-head-icon" />
+      <span class="tsp-head-title">Team Synergies</span>
+      <button class="tsp-close" aria-label="Close synergies" @click="emit('close')">✕</button>
+    </header>
+
+    <div class="tsp">
     <!-- ── team-wide buff totals ── -->
     <div class="tsp-summary">
       <div
@@ -100,10 +115,8 @@ function championImage(name: string): string {
         :class="{ 'tsp-chip--zero': chip.pct === 0 }"
       >
         <Icon :icon="chip.icon" width="26" height="26" class="tsp-chip-icon" />
-        <div class="tsp-chip-text">
-          <span class="tsp-chip-value">+{{ chip.pct }}%</span>
-          <span class="tsp-chip-label">{{ chip.label }}</span>
-        </div>
+        <span class="tsp-chip-label">{{ chip.label }}</span>
+        <span class="tsp-chip-value">+{{ chip.pct }}%</span>
       </div>
     </div>
 
@@ -183,29 +196,117 @@ function championImage(name: string): string {
       <Icon icon="game-icons:linked-rings" width="34" height="34" class="tsp-empty-icon" />
       <span>No active synergies yet — field champions that share traits or origins.</span>
     </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* ── side panel shell (mirrors SigilDetailsPanel) ── */
+.tsp-panel {
+  width: v-bind(panelWidthPx);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: linear-gradient(180deg, #1a1008, #0d0905);
+  border-left: 2px solid #5c3310;
+}
+.tsp-goldline {
+  height: 3px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    to right,
+    #5c3310,
+    #c89040,
+    #e8c060,
+    #d4a020,
+    #c89040,
+    #5c3310
+  );
+}
+.tsp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  flex-shrink: 0;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+}
+.tsp-head-icon {
+  color: #e8c040;
+  flex-shrink: 0;
+}
+.tsp-head-title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e8c040;
+}
+.tsp-close {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+  background: rgba(14, 10, 4, 0.85);
+  border: 1px solid #5c3310;
+  color: #c89040;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.tsp-close:hover {
+  color: #ffdddd;
+  border-color: #cc6050;
+  background: rgba(60, 20, 14, 0.7);
+}
+
+/* ── scrollable content ── */
 .tsp {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.tsp::-webkit-scrollbar {
+  width: 4px;
+}
+.tsp::-webkit-scrollbar-track {
+  background: #111;
+}
+.tsp::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
 }
 
 /* ── buff summary chips ── */
 .tsp-summary {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 .tsp-chip {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
   border-radius: 5px;
-  background: #1a1008;
+  background: #111008;
   border: 1px solid #5c3310;
   box-shadow: inset 0 0 0 1px rgba(92, 51, 16, 0.35);
 }
@@ -217,19 +318,15 @@ function championImage(name: string): string {
   color: #e8c040;
   flex-shrink: 0;
 }
-.tsp-chip-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
 .tsp-chip-value {
-  font-size: 19px;
+  font-size: 22px;
   line-height: 1;
   color: #e8c040;
   text-shadow: 0 0 10px rgba(232, 192, 64, 0.35);
 }
 .tsp-chip-label {
-  font-size: 9.5px;
+  flex: 1;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -267,7 +364,7 @@ function championImage(name: string): string {
 /* ── cards ── */
 .tsp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 .tsp-card {
@@ -387,8 +484,8 @@ function championImage(name: string): string {
   gap: 5px;
 }
 .tsp-champ {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
   object-position: top;

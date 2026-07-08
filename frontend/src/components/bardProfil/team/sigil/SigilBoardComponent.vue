@@ -23,6 +23,8 @@ const props = defineProps<{
   selectedRole: number | null
   /** True while a modal covers the board — pauses all decorative animations. */
   paused?: boolean
+  /** True while a non-role side panel (e.g. synergies) occupies the right edge. */
+  panelOpen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -85,9 +87,11 @@ onMounted(() => {
   resizeObserver.observe(tabEl)
 })
 
+/** A right-side panel (role details OR synergies) narrows the visible board. */
+const sidePanelOpen = computed(() => props.selectedRole !== null || !!props.panelOpen)
+
 const fitScale = computed(() => {
-  const boardWidth =
-    tabRect.value.width - (props.selectedRole !== null ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)
+  const boardWidth = tabRect.value.width - (sidePanelOpen.value ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)
   if (boardWidth <= 0 || tabRect.value.height <= 0) return 1
   return Math.min(boardWidth, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
@@ -115,7 +119,7 @@ const totalScale = computed(
 /** Board center in tab px — computed (not CSS 50%) so the close animation targets
  *  the FINAL board width immediately instead of jumping when the panel unmounts. */
 const boardCenter = computed(() => ({
-  x: (tabRect.value.width - (props.selectedRole !== null ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)) / 2,
+  x: (tabRect.value.width - (sidePanelOpen.value ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)) / 2,
   y: tabRect.value.height / 2,
 }))
 
@@ -195,9 +199,9 @@ function onClickCapture(event: MouseEvent): void {
   event.preventDefault()
 }
 
-// the focus camera owns the framing — a selection change eases the pan back home
+// the focus camera owns the framing — a selection/panel change eases the pan back home
 watch(
-  () => props.selectedRole,
+  [() => props.selectedRole, () => props.panelOpen],
   () => {
     panOffset.value = { x: 0, y: 0 }
   },
@@ -227,13 +231,6 @@ watch(
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
       Expedition
       <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
-    </button>
-    <button class="sigil-action sigil-action--synergies" @click.stop="emit('open-synergies')">
-      <Icon icon="game-icons:linked-rings" width="26" height="26" class="sigil-action-icon" />
-      Synergies
-      <span v-if="activeSynergyCount > 0" class="sigil-action-count">{{
-        activeSynergyCount
-      }}</span>
     </button>
 
     <!-- scaled sigil stage -->
@@ -268,9 +265,11 @@ watch(
           animationName: sigilStage.pulseSec > 0 ? undefined : 'none',
         }"
       />
-      <div
+      <button
         class="sigil-crest"
         :style="{ width: `${SIGIL_CREST_SIZE}px`, height: `${SIGIL_CREST_SIZE}px` }"
+        aria-label="Open team synergies"
+        @click.stop="emit('open-synergies')"
       >
         <Icon
           icon="game-icons:crenel-crown"
@@ -288,7 +287,11 @@ watch(
         >
           {{ sigilStage.name }}
         </div>
-      </div>
+        <span class="sigil-crest-syn">
+          <Icon icon="game-icons:linked-rings" width="14" height="14" />
+          {{ activeSynergyCount }}
+        </span>
+      </button>
 
       <!-- escalation embers -->
       <div
@@ -386,30 +389,6 @@ watch(
 .sigil-action--expedition {
   right: 26px;
 }
-.sigil-action--synergies {
-  left: 50%;
-  transform: translateX(-50%);
-}
-.sigil-action--synergies:hover {
-  transform: translateX(-50%) translateY(-1px);
-}
-.sigil-action--synergies:active {
-  transform: translateX(-50%);
-}
-.sigil-action-count {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background: #1e1006;
-  border: 1px solid #c89040;
-  color: #f0d870;
-  font-size: 12px;
-  line-height: 1;
-}
 .sigil-action:hover {
   border-color: #c89040;
   box-shadow: 0 0 14px rgba(232, 192, 64, 0.35);
@@ -442,6 +421,7 @@ watch(
   pointer-events: none;
   animation: crest-pulse 3.5s ease-out infinite;
 }
+/* crest doubles as the team-synergies trigger */
 .sigil-crest {
   position: absolute;
   left: 50%;
@@ -453,11 +433,45 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 2px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
   background: radial-gradient(circle at 50% 36%, #2a1f10, #0e0906);
   box-shadow:
     0 0 0 2px #7a5a1e,
     0 0 28px rgba(220, 170, 60, 0.3),
     inset 0 0 22px rgba(0, 0, 0, 0.75);
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+.sigil-crest:hover {
+  transform: translate(-50%, -50%) scale(1.03);
+  box-shadow:
+    0 0 0 2px #c89040,
+    0 0 40px rgba(232, 192, 64, 0.5),
+    inset 0 0 22px rgba(0, 0, 0, 0.75);
+}
+.sigil-crest-syn {
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: #1e1006;
+  border: 1px solid #c89040;
+  color: #e8c040;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: box-shadow 0.2s;
+}
+.sigil-crest:hover .sigil-crest-syn {
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
 }
 .sigil-crest-power {
   font-size: 28px;

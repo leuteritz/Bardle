@@ -19,7 +19,7 @@ import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'synergies' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -35,6 +35,8 @@ const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 // ── Tab UI state ─────────────────────────────────────────────────────────────
 /** null = details panel closed (sigil fills the tab). */
 const selectedRole = ref<number | null>(null)
+/** Team synergies side panel — mutually exclusive with the role details panel. */
+const synergiesOpen = ref(false)
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
@@ -59,6 +61,7 @@ const pickerTitle = computed(() =>
 
 // ── Selection ────────────────────────────────────────────────────────────────
 function selectRole(index: number) {
+  synergiesOpen.value = false
   selectedRole.value = index
   uiStore.setRolesActiveSlot(index)
 }
@@ -89,7 +92,8 @@ function openExpedition() {
 }
 
 function openSynergies() {
-  activeModal.value = 'synergies'
+  selectedRole.value = null
+  synergiesOpen.value = true
 }
 
 function openEquipment(category: ItemCategory) {
@@ -148,6 +152,7 @@ function handleShopRoleChange(role: ChampionRole | 'all') {
 
 // ── External navigation hooks ────────────────────────────────────────────────
 function applyRolesOpenRequest() {
+  synergiesOpen.value = false
   selectedRole.value = uiStore.rolesActiveSlot
   if (uiStore.rolesActiveSubSlot >= 0) {
     openPicker(uiStore.rolesActiveSubSlot)
@@ -171,11 +176,13 @@ watch(
   { immediate: true },
 )
 
-// Escape closes the modal first, then the details panel.
+// Escape closes the modal first, then whichever side panel is open.
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (activeModal.value) {
     closeModal()
+  } else if (synergiesOpen.value) {
+    synergiesOpen.value = false
   } else if (selectedRole.value !== null) {
     closePanel()
   }
@@ -195,6 +202,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
+      :panel-open="synergiesOpen"
       :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
@@ -203,8 +211,8 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       @open-synergies="openSynergies"
     />
 
-    <!-- ══ RIGHT — Details Panel (slides in on champion click) ══ -->
-    <Transition name="sdp-slide">
+    <!-- ══ RIGHT — side panel: role details OR team synergies ══ -->
+    <Transition name="sdp-slide" mode="out-in">
       <SigilDetailsPanel
         v-if="selectedRole !== null"
         :role-index="selectedRole"
@@ -214,6 +222,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
       />
+      <TeamSynergiesPanel v-else-if="synergiesOpen" @close="synergiesOpen = false" />
     </Transition>
 
     <!-- ══ MODAL OVERLAYS ══ -->
@@ -310,18 +319,6 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
     >
       <div class="team-shop-content">
         <ExpeditionComponent @close="closeModal" />
-      </div>
-    </TeamModalShell>
-
-    <TeamModalShell
-      v-if="activeModal === 'synergies'"
-      title="Team Synergies"
-      icon="game-icons:linked-rings"
-      subtitle="Trait & origin bonuses for your whole orbit"
-      @close="closeModal"
-    >
-      <div class="team-shop-content">
-        <TeamSynergiesPanel />
       </div>
     </TeamModalShell>
 
