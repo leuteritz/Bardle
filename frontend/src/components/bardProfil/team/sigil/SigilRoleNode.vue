@@ -83,9 +83,6 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
       <span v-if="main && tier" class="sigil-node-star" :style="{ color: tier.color }">
         ★{{ tier.starLevel }}
       </span>
-      <span v-if="main" class="sigil-node-role-chip">
-        <img :src="roleDef.image" :alt="''" class="sigil-node-role-chip-img" />
-      </span>
     </span>
     <span class="sigil-node-name">{{ main ?? roleDef.label }}</span>
   </button>
@@ -261,24 +258,6 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   font-size: 10px;
   font-weight: 800;
   line-height: 1.1;
-}
-.sigil-node-role-chip {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
-}
-.sigil-node-role-chip-img {
-  width: 15px;
-  height: 15px;
-  object-fit: contain;
 }
 .sigil-node-name {
   position: absolute;
