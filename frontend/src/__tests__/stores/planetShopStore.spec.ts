@@ -12,7 +12,11 @@ import {
 } from '../../stores/planetShopStore'
 import { useGameStore } from '../../stores/gameStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
-import { PLANET_SLOT_MAX_HP } from '../../config/constants'
+import {
+  PLANET_SLOT_MAX_HP,
+  PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
+  STAR_PHASE_DATA,
+} from '../../config/constants'
 
 describe('planetShopStore — Attunement leveling', () => {
   beforeEach(() => {
@@ -37,11 +41,16 @@ describe('planetShopStore — Attunement leveling', () => {
       expect(planetLevelUpCost({ baseCost: 1000, level: 2 })).toBe(Math.ceil(1000 * 0.5 * 1.6))
     })
 
-    it('planetLevelRequiredPhase: ~5 levels per phase, capped at 6', () => {
+    it('planetLevelRequiredPhase: ~5 levels per phase, capped at 5', () => {
       expect(planetLevelRequiredPhase(2)).toBe(0)
       expect(planetLevelRequiredPhase(6)).toBe(1)
-      expect(planetLevelRequiredPhase(31)).toBe(6)
-      expect(planetLevelRequiredPhase(100)).toBe(6)
+      expect(planetLevelRequiredPhase(31)).toBe(5)
+      expect(planetLevelRequiredPhase(100)).toBe(5)
+    })
+
+    it('every sun phase after the comet unlocks one planet slot', () => {
+      expect(PLANET_SLOT_SUN_PHASE_REQUIREMENTS).toEqual([0, 1, 2, 3, 4, 5])
+      expect(PLANET_SLOT_SUN_PHASE_REQUIREMENTS.length).toBe(STAR_PHASE_DATA.length)
     })
   })
 

@@ -199,6 +199,7 @@ import {
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
+  SUN_PHASE_DISPLAY_OFFSET,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -447,7 +448,7 @@ function lockReason(node: TreeNode): string {
   const def = node.def
   if (!def) return ''
   if (solarStore.starPhase < def.phase) {
-    const phaseName = STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + 1}`
+    const phaseName = STAR_PHASE_DATA[def.phase]?.name ?? `Phase ${def.phase + SUN_PHASE_DISPLAY_OFFSET}`
     return `Unlocks at ${phaseName}`
   }
   const parent = allNodes.value.find((n) => n.id === def.parentId)
@@ -540,7 +541,7 @@ const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
 const nextStage = computed(() =>
   solarStore.isCometState
     ? STAR_PHASE_DATA[0]
-    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)],
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, STAR_PHASE_DATA.length - 1)],
 )
 
 const PHASE_RADIUS_MIN = Math.min(...STAR_PHASE_DATA.map((p) => p.radius))

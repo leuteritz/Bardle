@@ -43,7 +43,11 @@
             {{ solarStore.isCometState ? COMET_PHASE_DATA.name : currentStage.name }}
           </span>
           <span class="phase-count">
-            {{ solarStore.isCometState ? 'Origin' : `Phase ${solarStore.starPhase + 1} / 7` }}
+            {{
+              solarStore.isCometState
+                ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
+                : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`
+            }}
           </span>
         </div>
         <div v-if="solarStore.isCometState && solarStore.canUpgradeStar" class="phase-hint">
@@ -57,7 +61,7 @@
           The comet must drift a while longer — ready in
           <b class="phase-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
         </div>
-        <div v-else-if="solarStore.starPhase >= 6" class="phase-hint">
+        <div v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1" class="phase-hint">
           The sun has reached its <b class="phase-hint-next">Grand Finale</b> — the tree is fully grown.
         </div>
         <div v-else-if="solarStore.canUpgradeStar" class="phase-hint">
@@ -84,7 +88,7 @@
             : solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
         }}
       </button>
-      <span v-else-if="solarStore.starPhase >= 6" class="ready-badge">✦ COMPLETE</span>
+      <span v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1" class="ready-badge">✦ COMPLETE</span>
     </div>
 
     <!-- Phase progress pips -->
@@ -288,6 +292,8 @@ import {
   FORGE_BARGAIN_REROLL_MATERIAL,
   FORGE_BRANCH_UNLOCK_PHASE,
   FORGE_LEAF_UNLOCK_PHASE,
+  SUN_PHASE_DISPLAY_OFFSET,
+  SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import { formatNumber } from '@/config/numberFormat'
 import { useActionToast } from '@/composables/useActionToast'
@@ -315,7 +321,7 @@ const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
 const nextStage = computed(() =>
   solarStore.isCometState
     ? STAR_PHASE_DATA[0]
-    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, 6)],
+    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, STAR_PHASE_DATA.length - 1)],
 )
 
 const nextPhaseUnlockText = computed(() => {

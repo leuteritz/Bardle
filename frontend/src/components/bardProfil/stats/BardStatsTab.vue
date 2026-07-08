@@ -15,6 +15,8 @@ import {
   COMET_PHASE_DATA,
   STATS_TAB_STARFIELD,
   STATS_TAB_PHASE_DOT_SCALE,
+  SUN_PHASE_DISPLAY_OFFSET,
+  SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import { AUGMENTS } from '@/config/augments'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
@@ -462,7 +464,7 @@ const filteredAugCards = computed(() => {
           <div class="sf-sun" />
         </div>
         <div class="sf-phase-kicker">
-          {{ solarStore.isCometState ? 'Origin · Pre-Stellar' : `Star Phase · ${solarStore.starPhase + 1} / ${totalPhases}` }}
+          {{ solarStore.isCometState ? `Star Phase · 1 / ${SUN_PHASE_DISPLAY_TOTAL}` : `Star Phase · ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}` }}
         </div>
         <div class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</div>
         <div class="sf-time">
@@ -1402,7 +1404,7 @@ const filteredAugCards = computed(() => {
   z-index: 1;
 }
 
-/* Fixed-height slot keeps every sun — tiny White Dwarf to huge Supernova —
+/* Fixed-height slot keeps every sun — small Protostar to huge Supernova —
    vertically centered on the track line. */
 .sf-tl-dot-slot {
   height: 36px;

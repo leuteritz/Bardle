@@ -625,7 +625,7 @@ export const PLANET_LEVEL_HP_PCT = 0.2 // +20% of base max HP per level above 1
 export const PLANET_LEVEL_COST_FACTOR = 0.5 // level-up base cost = slot.baseCost * factor
 export const PLANET_LEVEL_COST_MULTIPLIER = 1.6 // geometric cost growth per level
 export const PLANET_LEVELS_PER_PHASE = 5 // levels unlocked per Sun Phase
-export const PLANET_LEVEL_MAX_PHASE = 6 // cap aligned to starPhase max (0–6)
+export const PLANET_LEVEL_MAX_PHASE = 5 // cap aligned to starPhase max (0–5)
 export const PLANET_MILESTONE_INTERVAL = 5 // every Nth Attunement grants a perk spike
 export const PLANET_MILESTONE_BONUS = 0.25 // +25% of base role bonus per milestone reached
 export const PLANET_BULK_LEVEL_STEP = 10 // "Attune ×10" button step
@@ -708,8 +708,10 @@ export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
   { stage: 6, chimesThreshold: 600000, radius: 144, label: 'Supernova' },
 ]
 
-/** Required sun phase (starPhase) to unlock each planet slot. Slot index 0 → phase 1, …, slot index 5 → phase 6. */
-export const PLANET_SLOT_SUN_PHASE_REQUIREMENTS: number[] = [1, 2, 3, 4, 5, 6]
+/** Required sun phase (starPhase) to unlock each planet slot. Every sun phase after
+ *  the comet unlocks one slot: slot index 0 → First Spark (phase 0), …,
+ *  slot index 5 → Grand Finale (phase 5). */
+export const PLANET_SLOT_SUN_PHASE_REQUIREMENTS: number[] = [0, 1, 2, 3, 4, 5]
 
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
 export const ROLES = [
@@ -1546,10 +1548,10 @@ export interface StarPhaseData {
 }
 
 /** Minimum time (seconds) the sun must spend in each phase before it may evolve
- *  to the next one — index = current starPhase (evolutions 0→1 … 5→6).
- *  Ramp: 10min, 30min, 1.5h, 4h, 10h, 24h. Future upgrades can shorten these via
+ *  to the next one — index = current starPhase (evolutions 0→1 … 4→5).
+ *  Ramp: 10min, 30min, 1.5h, 4h, 24h. Future upgrades can shorten these via
  *  solarUpgradeStore.dwellTimeMultiplier. */
-export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 36_000, 86_400]
+export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
 
 /** Stellar-Evolution timeline (BardStatsTab): dot diameter = phase radius × this scale,
  *  so the timeline circles stay true to the in-game sun proportions (7.5px…35px). */
@@ -1777,22 +1779,6 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '3s',
   },
   {
-    name: 'Fading Echo',
-    shortName: 'Echo',
-    astroName: 'White Dwarf',
-    radius: 30,
-    core: '#ffffff',
-    mid: '#e8f4ff',
-    edge: '#80b8e8',
-    glow1: '#b3d9ff',
-    glow2: '#80b0ee',
-    glow3: '#4080cc',
-    phasePrimary: '#e8f4ff',
-    phaseGlow: '#b3d9ff',
-    factor: 0.85,
-    pulseSpeed: '2s',
-  },
-  {
     name: 'Grand Finale',
     shortName: 'Finale',
     astroName: 'Supernova',
@@ -1809,6 +1795,12 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '1.5s',
   },
 ]
+
+// ── Sun phase display numbering ──────────────────────────────────────────────
+// The Wandering Comet counts as display phase 1, so sun phases render as
+// starPhase + SUN_PHASE_DISPLAY_OFFSET (First Spark = 2 … Grand Finale = 7).
+export const SUN_PHASE_DISPLAY_OFFSET = 2
+export const SUN_PHASE_DISPLAY_TOTAL = STAR_PHASE_DATA.length + 1 // comet + sun phases
 
 // ── Comet Origin State (pre-phase before First Spark) ────────────────────────
 /** The player's celestial body BEFORE its first ignition: a wandering comet with

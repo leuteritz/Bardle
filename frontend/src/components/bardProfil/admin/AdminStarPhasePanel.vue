@@ -13,7 +13,7 @@ function setStarPhase(phase: number) {
   // A star-phase override always means "be a star" — otherwise the comet
   // origin flag would keep rendering the comet for every phase.
   solarStore.isCometState = false
-  solarStore.starPhase = Math.max(0, Math.min(6, phase))
+  solarStore.starPhase = Math.max(0, Math.min(STAR_PHASE_DATA.length - 1, phase))
   solarStore.phaseEnteredAt = Date.now()
 }
 

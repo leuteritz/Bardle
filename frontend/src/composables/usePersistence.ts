@@ -26,6 +26,7 @@ import {
   ITEM_SLOT_COUNT,
   ALLIES_PER_ROLE,
   createEmptyAllyRows,
+  STAR_PHASE_DATA,
 } from '@/config/constants'
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/drakes'
 import { logger } from '@/utils/logger'
@@ -476,7 +477,9 @@ export function usePersistence() {
         solarStore.chimesPerClickLevel = saved.solar.chimesPerClickLevel ?? 0
         solarStore.chimesPerSecondLevel = saved.solar.chimesPerSecondLevel ?? 0
         solarStore.dmgPerClickLevel = saved.solar.dmgPerClickLevel ?? 0
-        solarStore.starPhase = saved.solar.starPhase ?? 0
+        // Clamp to the current phase list — older saves may hold indices from a
+        // longer STAR_PHASE_DATA (e.g. the removed White Dwarf phase).
+        solarStore.starPhase = Math.min(saved.solar.starPhase ?? 0, STAR_PHASE_DATA.length - 1)
         solarStore.phaseEnteredAt = saved.solar.phaseEnteredAt ?? Date.now()
         solarStore.totalPhaseSeconds = saved.solar.totalPhaseSeconds ?? 0
         solarStore.phaseTimeHistory = saved.solar.phaseTimeHistory ?? []

@@ -111,7 +111,7 @@ describe('starForgeStore', () => {
       expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_BASE_MAX_LEVEL)
       solar.starPhase = FORGE_BRANCH_UNLOCK_PHASE + 1
       expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_BASE_MAX_LEVEL + 1)
-      solar.starPhase = 6
+      solar.starPhase = 5 // Grand Finale — last phase index
       expect(store.nodeMaxLevel('solarSails')).toBe(FORGE_BRANCH_MAX_LEVEL_CAP)
     })
 

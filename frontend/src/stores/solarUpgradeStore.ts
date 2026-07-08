@@ -23,6 +23,7 @@ import {
   SOLAR_DMG_BONUS,
   STAR_PHASE_MIN_DWELL_SECONDS,
   COMET_MIN_DWELL_SECONDS,
+  STAR_PHASE_DATA,
 } from '../config/constants'
 
 export type SolarBranchId =
@@ -131,7 +132,10 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     /** Branch-level requirement alone (without the time gate) — lets the UI explain
      *  WHY evolving is blocked. */
     branchesReadyForEvolve(state): boolean {
-      return state.starPhase < 6 && this.minBranchLevel >= state.starPhase + 1
+      return (
+        state.starPhase < STAR_PHASE_DATA.length - 1 &&
+        this.minBranchLevel >= state.starPhase + 1
+      )
     },
 
     canUpgradeStar(): boolean {

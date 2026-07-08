@@ -2,18 +2,27 @@
 import { computed } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
-import { STAR_PHASE_DATA, COMET_PHASE_DATA } from '@/config/constants'
+import {
+  STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
+  SUN_PHASE_DISPLAY_OFFSET,
+  SUN_PHASE_DISPLAY_TOTAL,
+} from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
 const uiStore = useUiStore()
-
-const phaseCount = STAR_PHASE_DATA.length
 
 const phaseData = computed(() =>
   solarStore.isCometState ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],
 )
 
-const phaseLabel = computed(() => `Sun · Phase ${solarStore.starPhase + 1}/${phaseCount}`)
+// Comet counts as display phase 1; sun phases render as starPhase + offset.
+const phaseLabel = computed(() => {
+  const displayPhase = solarStore.isCometState
+    ? 1
+    : solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET
+  return `Sun · Phase ${displayPhase}/${SUN_PHASE_DISPLAY_TOTAL}`
+})
 
 const glowColor = computed(() =>
   solarStore.isCometState ? COMET_PHASE_DATA.glow : STAR_PHASE_DATA[solarStore.starPhase].glow1,
@@ -74,7 +83,7 @@ const dwellText = computed(() => {
       </svg>
     </div>
     <div class="info-grp">
-      <span v-if="!solarStore.isCometState" class="info-lbl">{{ phaseLabel }}</span>
+      <span class="info-lbl">{{ phaseLabel }}</span>
       <span class="info-name">{{ phaseData.name }}</span>
       <span class="dwell" :class="{ 'dwell--complete': dwellComplete }">
         <span class="dwell-dot"></span>{{ dwellText }}

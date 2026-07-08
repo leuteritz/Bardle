@@ -23,6 +23,7 @@ import {
   PLANET_TAB_SUN_MIN_DIAMETER,
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
+  SUN_PHASE_DISPLAY_OFFSET,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
 
@@ -37,6 +38,14 @@ const CPS_BUILDINGS = [
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+
+// Display numbering counts the comet as phase 1 (sun phases render as index + 2).
+function displaySunPhase(phaseIndex: number): number {
+  return phaseIndex + SUN_PHASE_DISPLAY_OFFSET
+}
+const currentDisplayPhase = computed(() =>
+  solarStore.isCometState ? 1 : solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET,
+)
 const { showToast } = useActionToast()
 
 const selectedSlotId = ref<string | null>(null)
@@ -389,7 +398,7 @@ function chooseBuilding(buildingId: string) {
             <template v-if="!slot.purchased">
               <span class="ps-slot-phase-badge">
                 <Icon icon="game-icons:sun" width="9" height="9" />
-                Phase {{ store.getSlotRequiredPhase(slotIndex) }}
+                Phase {{ displaySunPhase(store.getSlotRequiredPhase(slotIndex)) }}
               </span>
             </template>
             <template v-else>
@@ -429,12 +438,12 @@ function chooseBuilding(buildingId: string) {
           <div class="ps-locked-panel-divider" />
           <div
             class="ps-locked-panel-sun-req"
-            :class="{ 'ps-locked-panel-sun-req--met': store.currentSunStage >= store.getSlotRequiredPhase(activeSlotIndex) }"
+            :class="{ 'ps-locked-panel-sun-req--met': !solarStore.isCometState && store.currentSunStage >= store.getSlotRequiredPhase(activeSlotIndex) }"
           >
             <Icon icon="game-icons:sun" width="16" height="16" class="ps-sun-req-icon" />
-            <span class="ps-sun-req-label">Phase {{ store.getSlotRequiredPhase(activeSlotIndex) }}</span>
+            <span class="ps-sun-req-label">Phase {{ displaySunPhase(store.getSlotRequiredPhase(activeSlotIndex)) }}</span>
             <span class="ps-sun-req-sep">·</span>
-            <span class="ps-sun-req-current">Current {{ store.currentSunStage }}</span>
+            <span class="ps-sun-req-current">Current {{ currentDisplayPhase }}</span>
           </div>
           <button
             v-if="store.canUnlockPlanetSlot(activeSlotIndex)"
@@ -447,7 +456,7 @@ function chooseBuilding(buildingId: string) {
             Your comet has no planetary system yet — ignite it into a star in the Star Forge.
           </span>
           <span v-else-if="store.currentSunStage < store.getSlotRequiredPhase(activeSlotIndex)" class="ps-locked-panel-hint">
-            Reach Sun Phase {{ store.getSlotRequiredPhase(activeSlotIndex) }} to unlock
+            Reach Sun Phase {{ displaySunPhase(store.getSlotRequiredPhase(activeSlotIndex)) }} to unlock
           </span>
           <span v-else class="ps-locked-panel-hint">Not enough Chimes yet</span>
         </div>

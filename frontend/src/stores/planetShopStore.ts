@@ -339,12 +339,16 @@ export const usePlanetShopStore = defineStore('planetShop', {
       const slot = this.slots[slotIndex]
       if (!slot) return false
       if (!this.canAffordSlot(slot.id)) return false
-      const requiredPhase = PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex + 1
-      return useSolarUpgradeStore().starPhase >= requiredPhase
+      const solarStore = useSolarUpgradeStore()
+      // A comet has no planetary system — slot 1 requires phase 0 (First Spark),
+      // which only counts once the comet has ignited into a star.
+      if (solarStore.isCometState) return false
+      const requiredPhase = PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex
+      return solarStore.starPhase >= requiredPhase
     },
 
     getSlotRequiredPhase(slotIndex: number): number {
-      return PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex + 1
+      return PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex
     },
 
     // ── Attunement leveling ──────────────────────────────────────────────
