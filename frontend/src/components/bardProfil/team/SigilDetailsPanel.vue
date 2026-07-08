@@ -70,6 +70,24 @@ function allyImage(ally: string | null): string {
   return ally ? battleStore.getChampionImage(ally) : ''
 }
 
+function allyOrigin(name: string) {
+  return getChampionOrigin(name)
+}
+
+function allyOriginIcon(name: string): string {
+  const allyOriginName = getChampionOrigin(name)
+  return allyOriginName
+    ? ((ORIGIN_SYNERGIES as Record<string, { icon: string } | undefined>)[allyOriginName]?.icon ??
+        '')
+    : ''
+}
+
+function allyTraits(name: string) {
+  return (CHAMPION_TRAITS[name] ?? []).map((id) => TRAIT_BY_ID[id])
+}
+
+const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[cat]).length)
+const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== null).length)
 </script>
 
 <template>
@@ -132,7 +150,7 @@ function allyImage(ally: string | null): string {
         </span>
       </div>
 
-      <!-- role ability -->
+      <!-- role ability — part of the main champion block -->
       <div class="sdp-ability">
         <div class="sdp-ability-icon">
           <img :src="roleDef.image" :alt="roleDef.label" class="sdp-ability-img" />
@@ -143,46 +161,13 @@ function allyImage(ally: string | null): string {
         </div>
       </div>
 
-      <!-- allies -->
+      <!-- equipment — the main champion's loadout, right below the splash -->
       <div>
         <div class="sdp-section-head">
-          <span class="sdp-section-title">Allies</span>
-          <div class="sdp-section-rule" />
-        </div>
-        <div class="sdp-allies">
-          <button
-            v-for="(ally, sub) in allies"
-            :key="sub"
-            class="sdp-ally"
-            :class="{ 'sdp-ally--filled': !!ally }"
-            @click="emit('pick-ally', sub)"
-          >
-            <template v-if="ally">
-              <img :src="allyImage(ally)" :alt="ally" class="sdp-ally-img" />
-              <div class="sdp-ally-fade" />
-              <span class="sdp-ally-name">{{ ally }}</span>
-              <span
-                class="sdp-ally-clear"
-                role="button"
-                title="Remove"
-                @click.stop="emit('clear-ally', sub)"
-              >
-                ✕
-              </span>
-            </template>
-            <template v-else>
-              <span class="sdp-ally-plus">＋</span>
-              <span class="sdp-ally-label">Ally {{ sub + 1 }}</span>
-            </template>
-          </button>
-        </div>
-      </div>
-
-      <!-- equipment -->
-      <div>
-        <div class="sdp-section-head">
+          <span class="sdp-section-accent">✦</span>
           <span class="sdp-section-title">Equipment</span>
           <div class="sdp-section-rule" />
+          <span class="sdp-section-count">{{ equippedCount }}/{{ CATEGORIES.length }}</span>
         </div>
         <div class="sdp-equips">
           <button
@@ -201,6 +186,7 @@ function allyImage(ally: string | null): string {
                 class="sdp-equip-img"
               />
               <span v-else class="sdp-equip-emoji">{{ equippedItem(cat)!.icon }}</span>
+              <span class="sdp-equip-name">{{ equippedItem(cat)!.name }}</span>
             </template>
             <img
               v-else
@@ -209,6 +195,73 @@ function allyImage(ally: string | null): string {
               class="sdp-equip-img sdp-equip-img--ghost"
             />
             <span class="sdp-equip-cat">{{ CAT_LABELS[cat] }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- allies -->
+      <div>
+        <div class="sdp-section-head">
+          <span class="sdp-section-accent">✦</span>
+          <span class="sdp-section-title">Allies</span>
+          <div class="sdp-section-rule" />
+          <span class="sdp-section-count">{{ filledAllyCount }}/{{ allies.length }}</span>
+        </div>
+        <div class="sdp-ally-rows">
+          <button
+            v-for="(ally, sub) in allies"
+            :key="sub"
+            class="sdp-ally-row"
+            :class="{ 'sdp-ally-row--filled': !!ally }"
+            @click="emit('pick-ally', sub)"
+          >
+            <template v-if="ally">
+              <img :src="allyImage(ally)" :alt="ally" class="sdp-ally-row-img" />
+              <div class="sdp-ally-row-fade" />
+              <span class="sdp-ally-row-main">
+                <span class="sdp-ally-row-name">{{ ally }}</span>
+                <span class="sdp-ally-row-chips">
+                  <span
+                    v-if="allyOrigin(ally)"
+                    class="sdp-mini-chip"
+                    :style="{ borderColor: getOriginColor(ally), color: getOriginColor(ally) }"
+                  >
+                    <Icon
+                      v-if="allyOriginIcon(ally).includes(':')"
+                      :icon="allyOriginIcon(ally)"
+                      width="13"
+                      height="13"
+                      class="sdp-mini-chip-icon"
+                    />
+                    {{ allyOrigin(ally) }}
+                  </span>
+                  <span
+                    v-for="trait in allyTraits(ally)"
+                    :key="trait.id"
+                    class="sdp-mini-chip"
+                    :style="{ borderColor: trait.color, color: trait.color }"
+                  >
+                    <Icon :icon="trait.icon" width="13" height="13" class="sdp-mini-chip-icon" />
+                    {{ trait.name }}
+                  </span>
+                </span>
+              </span>
+              <span
+                class="sdp-ally-clear"
+                role="button"
+                title="Remove"
+                @click.stop="emit('clear-ally', sub)"
+              >
+                ✕
+              </span>
+            </template>
+            <template v-else>
+              <span class="sdp-ally-row-plus">＋</span>
+              <span class="sdp-ally-row-main">
+                <span class="sdp-ally-row-empty-label">Ally {{ sub + 1 }}</span>
+                <span class="sdp-ally-row-hint">Tap to assign</span>
+              </span>
+            </template>
           </button>
         </div>
       </div>
@@ -382,7 +435,7 @@ function allyImage(ally: string | null): string {
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -406,11 +459,11 @@ function allyImage(ally: string | null): string {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -428,6 +481,7 @@ function allyImage(ally: string | null): string {
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(200, 164, 90, 0.12);
+  border-left: 3px solid var(--rc);
 }
 .sdp-ability-icon {
   width: 42px;
@@ -452,7 +506,7 @@ function allyImage(ally: string | null): string {
   color: rgba(200, 164, 90, 0.6);
 }
 .sdp-ability-desc {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #dcc99a;
   line-height: 1.35;
@@ -465,8 +519,12 @@ function allyImage(ally: string | null): string {
   gap: 8px;
   margin-bottom: 8px;
 }
+.sdp-section-accent {
+  font-size: 12px;
+  color: var(--rc);
+}
 .sdp-section-title {
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #c8a860;
@@ -476,65 +534,107 @@ function allyImage(ally: string | null): string {
   height: 1px;
   background: rgba(200, 164, 90, 0.16);
 }
-/* allies — grid wraps cleanly for any ally count per role */
-.sdp-allies {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+.sdp-section-count {
+  font-size: 11px;
+  color: rgba(230, 220, 196, 0.4);
+}
+/* allies — one info row per ally (portrait + name + origin/trait chips) */
+.sdp-ally-rows {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
-.sdp-ally {
+.sdp-ally-row {
   position: relative;
-  height: 90px;
-  padding: 0;
-  cursor: pointer;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 78px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
   border-radius: 4px;
-  background: #0d0a06;
-  border: 1px solid rgba(200, 164, 90, 0.2);
+  background: #1c1c18;
+  border: 1px solid rgba(200, 164, 90, 0.14);
+  border-left: 3px solid rgba(200, 164, 90, 0.2);
   transition:
     transform 0.15s,
     border-color 0.15s;
 }
-.sdp-ally--filled {
-  border-color: color-mix(in srgb, var(--rc) 55%, transparent);
+.sdp-ally-row--filled {
+  border-left-color: var(--rc);
 }
-.sdp-ally:hover {
-  transform: translateY(-2px);
+.sdp-ally-row:hover {
+  transform: translateY(-1px);
   border-color: var(--rc);
 }
-.sdp-ally-img {
+/* splash image fills the whole row; the fade keeps the left text readable */
+.sdp-ally-row-img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top;
+  object-position: center 22%;
 }
-.sdp-ally-fade {
+.sdp-ally-row-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 42%, rgba(6, 4, 8, 0.92));
+  background: linear-gradient(
+    90deg,
+    rgba(10, 7, 4, 0.94) 0%,
+    rgba(10, 7, 4, 0.82) 42%,
+    rgba(10, 7, 4, 0.25) 100%
+  );
 }
-.sdp-ally-name {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 5px;
-  text-align: center;
-  font-size: 10.5px;
+.sdp-ally-row-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sdp-ally-row-name {
+  font-size: 16px;
   font-weight: 700;
   color: #e8dcc0;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 4px;
+}
+.sdp-ally-row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sdp-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sdp-mini-chip-icon {
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  flex-shrink: 0;
 }
 .sdp-ally-clear {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -542,7 +642,7 @@ function allyImage(ally: string | null): string {
   background: rgba(10, 5, 5, 0.85);
   border: 1px solid rgba(180, 60, 45, 0.5);
   color: #d88;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   cursor: pointer;
   transition: background 0.15s;
@@ -550,20 +650,30 @@ function allyImage(ally: string | null): string {
 .sdp-ally-clear:hover {
   background: rgba(120, 30, 20, 0.8);
 }
-.sdp-ally-plus {
-  display: block;
-  font-size: 22px;
-  color: var(--rc);
+.sdp-ally-row-plus {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
   line-height: 1;
-  margin-bottom: 4px;
+  color: var(--rc);
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid rgba(200, 164, 90, 0.18);
 }
-.sdp-ally-label {
-  display: block;
-  font-size: 9px;
+.sdp-ally-row-empty-label {
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.4);
+  color: rgba(200, 164, 90, 0.55);
+}
+.sdp-ally-row-hint {
+  font-size: 11.5px;
+  color: rgba(230, 220, 196, 0.35);
 }
 
 /* equipment */
@@ -574,7 +684,7 @@ function allyImage(ally: string | null): string {
 .sdp-equip {
   position: relative;
   flex: 1;
-  height: 82px;
+  height: 100px;
   padding: 0;
   cursor: pointer;
   overflow: hidden;
@@ -585,36 +695,46 @@ function allyImage(ally: string | null): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   transition:
     transform 0.15s,
     border-color 0.15s;
 }
 .sdp-equip--filled {
-  border-color: rgba(220, 180, 90, 0.4);
+  border-color: rgba(220, 180, 90, 0.55);
+  box-shadow: inset 0 0 14px rgba(200, 144, 64, 0.12);
 }
 .sdp-equip:hover {
   transform: translateY(-2px);
   border-color: #c89040;
 }
 .sdp-equip-img {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   filter: drop-shadow(0 0 7px rgba(200, 144, 64, 0.5));
 }
 .sdp-equip-img--ghost {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   opacity: 0.28;
   filter: none;
 }
 .sdp-equip-emoji {
-  font-size: 32px;
+  font-size: 38px;
   line-height: 1;
 }
+.sdp-equip-name {
+  max-width: 100%;
+  padding: 0 6px;
+  font-size: 11px;
+  color: #e8c040;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sdp-equip-cat {
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: rgba(200, 164, 90, 0.55);
