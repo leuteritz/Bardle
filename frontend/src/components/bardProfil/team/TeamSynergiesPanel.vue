@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
@@ -84,10 +84,31 @@ const originCards = computed<SynergyCard[]>(() =>
   })),
 )
 
+// ── Search (name, kind, effect texts, champion names) ───────────────────────
+const searchQuery = ref('')
+const normalizedQuery = computed(() => searchQuery.value.trim().toLowerCase())
+
+function matchesQuery(card: SynergyCard): boolean {
+  const q = normalizedQuery.value
+  if (!q) return true
+  if (card.name.toLowerCase().includes(q)) return true
+  if (card.kind.toLowerCase().includes(q)) return true
+  if (card.thresholds.some((t) => t.bonus.toLowerCase().includes(q))) return true
+  return card.champions.some((c) => c.toLowerCase().includes(q))
+}
+
+/** Highlights the avatars the player searched for inside each card. */
+function champMatches(name: string): boolean {
+  const q = normalizedQuery.value
+  return q.length > 0 && name.toLowerCase().includes(q)
+}
+
 const sections = computed(() => [
-  { key: 'traits', title: 'Traits', cards: traitCards.value },
-  { key: 'origins', title: 'Origins', cards: originCards.value },
+  { key: 'traits', title: 'Traits', cards: traitCards.value.filter(matchesQuery) },
+  { key: 'origins', title: 'Origins', cards: originCards.value.filter(matchesQuery) },
 ])
+
+const visibleCount = computed(() => sections.value.reduce((sum, g) => sum + g.cards.length, 0))
 
 const hasAnySynergy = computed(() => traitCards.value.length + originCards.value.length > 0)
 
@@ -105,6 +126,33 @@ function championImage(name: string): string {
       <button class="tsp-close" aria-label="Close synergies" @click="emit('close')">✕</button>
     </header>
 
+    <!-- ── search (shared rpg-search pattern) ── -->
+    <div class="tsp-search">
+      <div class="rpg-search-wrap">
+        <Icon
+          icon="game-icons:magnifying-glass"
+          width="14"
+          height="14"
+          class="rpg-search-icon"
+        />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search synergies, effects or champions..."
+          class="rpg-search w-full pl-9 pr-9 py-2.5"
+          aria-label="Search synergies, effects or champions"
+        />
+        <button
+          class="search-clear-btn"
+          :class="{ 'search-clear-btn--visible': searchQuery.length > 0 }"
+          aria-label="Clear search"
+          @click="searchQuery = ''"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+
     <div class="tsp">
     <!-- ── team-wide buff totals ── -->
     <div class="tsp-summary">
@@ -121,9 +169,10 @@ function championImage(name: string): string {
     </div>
 
     <!-- ── trait / origin sections ── -->
-    <template v-if="hasAnySynergy">
-      <section v-for="group in sections" :key="group.key" class="tsp-section">
-        <div v-if="group.cards.length > 0" class="tsp-section-head">
+    <template v-if="hasAnySynergy && visibleCount > 0">
+      <template v-for="group in sections" :key="group.key">
+        <section v-if="group.cards.length > 0" class="tsp-section">
+        <div class="tsp-section-head">
           <span class="tsp-section-title">✦ {{ group.title }}</span>
           <div class="tsp-section-rule" />
           <span class="tsp-section-count">{{ group.cards.length }}</span>
@@ -185,12 +234,19 @@ function championImage(name: string): string {
                 :alt="champ"
                 :title="champ"
                 class="tsp-champ"
+                :class="{ 'tsp-champ--match': champMatches(champ) }"
               />
             </div>
           </article>
         </div>
-      </section>
+        </section>
+      </template>
     </template>
+
+    <div v-else-if="hasAnySynergy" class="tsp-empty">
+      <Icon icon="game-icons:linked-rings" width="34" height="34" class="tsp-empty-icon" />
+      <span>No synergies match "{{ searchQuery.trim() }}".</span>
+    </div>
 
     <div v-else class="tsp-empty">
       <Icon icon="game-icons:linked-rings" width="34" height="34" class="tsp-empty-icon" />
@@ -270,6 +326,14 @@ function championImage(name: string): string {
   background: rgba(60, 20, 14, 0.7);
 }
 
+/* ── search row (below header, does not scroll) ── */
+.tsp-search {
+  padding: 10px 14px;
+  flex-shrink: 0;
+  background: #1e1006;
+  border-bottom: 1px solid #5c3310;
+}
+
 /* ── scrollable content ── */
 .tsp {
   flex: 1;
@@ -326,7 +390,7 @@ function championImage(name: string): string {
 }
 .tsp-chip-label {
   flex: 1;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -345,7 +409,7 @@ function championImage(name: string): string {
   gap: 10px;
 }
 .tsp-section-title {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -370,8 +434,8 @@ function championImage(name: string): string {
 .tsp-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 9px;
+  padding: 12px 14px;
   border-radius: 4px;
   background: #1c1c18;
   border: 1px solid rgba(200, 164, 90, 0.12);
@@ -408,7 +472,7 @@ function championImage(name: string): string {
   gap: 1px;
 }
 .tsp-card-name {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   color: #e8dcc0;
   white-space: nowrap;
@@ -416,7 +480,7 @@ function championImage(name: string): string {
   text-overflow: ellipsis;
 }
 .tsp-card-kind {
-  font-size: 9px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgba(230, 220, 196, 0.4);
@@ -427,13 +491,13 @@ function championImage(name: string): string {
   flex-shrink: 0;
 }
 .tsp-pip {
-  min-width: 19px;
-  height: 19px;
+  min-width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 3px;
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1;
   color: rgba(230, 220, 196, 0.35);
   background: rgba(0, 0, 0, 0.35);
@@ -449,7 +513,7 @@ function championImage(name: string): string {
 .tsp-card-count {
   min-width: 26px;
   text-align: right;
-  font-size: 17px;
+  font-size: 20px;
   color: var(--sc);
   flex-shrink: 0;
 }
@@ -458,22 +522,22 @@ function championImage(name: string): string {
 .tsp-card-bonus {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 7px 9px;
+  gap: 3px;
+  padding: 9px 11px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(200, 164, 90, 0.1);
 }
 .tsp-bonus-active {
-  font-size: 12.5px;
+  font-size: 14.5px;
   color: #e8c040;
 }
 .tsp-bonus-none {
-  font-size: 12px;
+  font-size: 13.5px;
   color: rgba(230, 220, 196, 0.45);
 }
 .tsp-bonus-next {
-  font-size: 10.5px;
+  font-size: 12px;
   color: rgba(230, 220, 196, 0.4);
 }
 
@@ -492,6 +556,11 @@ function championImage(name: string): string {
   background: #141410;
   border: 1px solid color-mix(in srgb, var(--sc) 60%, transparent);
 }
+/* avatar matching the current search query lights up */
+.tsp-champ--match {
+  border-color: #e8c060;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.55);
+}
 
 /* ── empty state ── */
 .tsp-empty {
@@ -501,7 +570,7 @@ function championImage(name: string): string {
   gap: 10px;
   padding: 46px 20px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: rgba(200, 164, 90, 0.5);
 }
 .tsp-empty-icon {
