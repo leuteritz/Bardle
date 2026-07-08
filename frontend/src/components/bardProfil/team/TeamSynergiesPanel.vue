@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
@@ -8,6 +8,8 @@ import { TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
 
 const emit = defineEmits<{
   close: []
+  /** Champions the current search spotlights — mirrored on the sigil board. */
+  highlight: [champions: string[]]
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
@@ -103,6 +105,65 @@ function champMatches(name: string): boolean {
   return q.length > 0 && name.toLowerCase().includes(q)
 }
 
+/** Direct trait/origin hit — the card itself is what the player searched for. */
+function cardNameHit(card: SynergyCard): boolean {
+  const q = normalizedQuery.value
+  return (
+    q.length > 0 && (card.name.toLowerCase().includes(q) || card.kind.toLowerCase().includes(q))
+  )
+}
+
+/** Champions a visible card spotlights: a trait/origin/effect hit lights the whole
+ *  constellation, a champion-name hit only the matching champions. */
+function cardHighlights(card: SynergyCard): string[] {
+  const q = normalizedQuery.value
+  if (!q) return []
+  if (cardNameHit(card) || card.thresholds.some((t) => t.bonus.toLowerCase().includes(q))) {
+    return card.champions
+  }
+  return card.champions.filter((c) => c.toLowerCase().includes(q))
+}
+
+function champDimmed(card: SynergyCard, name: string): boolean {
+  return normalizedQuery.value.length > 0 && !cardHighlights(card).includes(name)
+}
+
+const highlightedChampions = computed(() => {
+  if (!normalizedQuery.value) return []
+  const names = new Set<string>()
+  for (const group of sections.value) {
+    for (const card of group.cards) {
+      for (const champ of cardHighlights(card)) names.add(champ)
+    }
+  }
+  return [...names]
+})
+
+/** Hovering a card temporarily spotlights its constellation (wins over the search). */
+const hoveredChampions = ref<string[] | null>(null)
+
+const effectiveHighlights = computed(() => hoveredChampions.value ?? highlightedChampions.value)
+
+watch(effectiveHighlights, (list) => emit('highlight', list))
+
+/** Splits text into segments so the query can be marked inline. */
+function splitByQuery(text: string): { text: string; hit: boolean }[] {
+  const q = normalizedQuery.value
+  if (!q) return [{ text, hit: false }]
+  const segments: { text: string; hit: boolean }[] = []
+  const lower = text.toLowerCase()
+  let pos = 0
+  for (;;) {
+    const idx = lower.indexOf(q, pos)
+    if (idx === -1) break
+    if (idx > pos) segments.push({ text: text.slice(pos, idx), hit: false })
+    segments.push({ text: text.slice(idx, idx + q.length), hit: true })
+    pos = idx + q.length
+  }
+  if (pos < text.length) segments.push({ text: text.slice(pos), hit: false })
+  return segments
+}
+
 const sections = computed(() => [
   { key: 'traits', title: 'Traits', cards: traitCards.value.filter(matchesQuery) },
   { key: 'origins', title: 'Origins', cards: originCards.value.filter(matchesQuery) },
@@ -151,6 +212,11 @@ function championImage(name: string): string {
           ✕
         </button>
       </div>
+      <div v-if="normalizedQuery" class="tsp-search-result">
+        {{ visibleCount }} {{ visibleCount === 1 ? 'synergy' : 'synergies' }} ·
+        {{ highlightedChampions.length }}
+        {{ highlightedChampions.length === 1 ? 'champion' : 'champions' }}
+      </div>
     </div>
 
     <div class="tsp">
@@ -182,8 +248,10 @@ function championImage(name: string): string {
             v-for="card in group.cards"
             :key="card.id"
             class="tsp-card"
-            :class="{ 'tsp-card--brewing': card.brewing }"
+            :class="{ 'tsp-card--brewing': card.brewing, 'tsp-card--hit': cardNameHit(card) }"
             :style="{ '--sc': card.color }"
+            @mouseenter="hoveredChampions = card.champions"
+            @mouseleave="hoveredChampions = null"
           >
             <div class="tsp-card-head">
               <div class="tsp-hex">
@@ -197,7 +265,12 @@ function championImage(name: string): string {
                 <span v-else class="tsp-hex-icon">{{ card.icon }}</span>
               </div>
               <div class="tsp-card-title">
-                <span class="tsp-card-name">{{ card.name }}</span>
+                <span class="tsp-card-name">
+                  <template v-for="(seg, i) in splitByQuery(card.name)" :key="i">
+                    <span v-if="seg.hit" class="tsp-mark">{{ seg.text }}</span>
+                    <template v-else>{{ seg.text }}</template>
+                  </template>
+                </span>
                 <span class="tsp-card-kind">{{ card.kind }}</span>
               </div>
               <!-- threshold pips: one segment per tier, filled when reached -->
@@ -216,12 +289,20 @@ function championImage(name: string): string {
             </div>
 
             <div class="tsp-card-bonus">
-              <template v-if="card.activeBonus">
-                <span class="tsp-bonus-active">{{ card.activeBonus }}</span>
-              </template>
+              <span v-if="card.activeBonus" class="tsp-bonus-active">
+                <template v-for="(seg, i) in splitByQuery(card.activeBonus)" :key="i">
+                  <span v-if="seg.hit" class="tsp-mark">{{ seg.text }}</span>
+                  <template v-else>{{ seg.text }}</template>
+                </template>
+              </span>
               <span v-else class="tsp-bonus-none">Not active yet</span>
               <span v-if="card.nextBonus" class="tsp-bonus-next">
-                Next: {{ card.nextBonus }} at {{ card.nextCount }}
+                Next:
+                <template v-for="(seg, i) in splitByQuery(card.nextBonus)" :key="i">
+                  <span v-if="seg.hit" class="tsp-mark">{{ seg.text }}</span>
+                  <template v-else>{{ seg.text }}</template>
+                </template>
+                at {{ card.nextCount }}
               </span>
               <span v-else-if="card.activeBonus" class="tsp-bonus-next">Max tier reached</span>
             </div>
@@ -234,7 +315,10 @@ function championImage(name: string): string {
                 :alt="champ"
                 :title="champ"
                 class="tsp-champ"
-                :class="{ 'tsp-champ--match': champMatches(champ) }"
+                :class="{
+                  'tsp-champ--match': champMatches(champ),
+                  'tsp-champ--dim': champDimmed(card, champ),
+                }"
               />
             </div>
           </article>
@@ -332,6 +416,20 @@ function championImage(name: string): string {
   flex-shrink: 0;
   background: #1e1006;
   border-bottom: 1px solid #5c3310;
+}
+.tsp-search-result {
+  margin-top: 7px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: rgba(200, 164, 90, 0.6);
+}
+
+/* inline query mark inside names and bonus texts */
+.tsp-mark {
+  background: rgba(232, 192, 64, 0.22);
+  color: #f0d870;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 /* ── scrollable content ── */
@@ -440,10 +538,41 @@ function championImage(name: string): string {
   background: #1c1c18;
   border: 1px solid rgba(200, 164, 90, 0.12);
   border-left: 3px solid var(--sc);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+/* hover mirrors the search-hit look — panel and board speak the same language */
+.tsp-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--sc);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--sc) 35%, transparent),
+    0 0 14px color-mix(in srgb, var(--sc) 40%, transparent);
 }
 .tsp-card--brewing {
   opacity: 0.5;
   filter: grayscale(55%);
+}
+/* the searched trait/origin itself — glows in its synergy color */
+.tsp-card--hit {
+  border-color: var(--sc);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--sc) 35%, transparent),
+    0 0 14px color-mix(in srgb, var(--sc) 40%, transparent);
+}
+.tsp-card--hit .tsp-hex {
+  animation: tsp-hex-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tsp-hex-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sc) 60%, transparent));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px var(--sc));
+  }
 }
 .tsp-card-head {
   display: flex;
@@ -561,6 +690,11 @@ function championImage(name: string): string {
   border-color: #e8c060;
   box-shadow: 0 0 8px rgba(232, 192, 64, 0.55);
 }
+/* spotlight: avatars not part of the current search recede */
+.tsp-champ--dim {
+  opacity: 0.45;
+  filter: grayscale(45%);
+}
 
 /* ── empty state ── */
 .tsp-empty {
@@ -575,5 +709,11 @@ function championImage(name: string): string {
 }
 .tsp-empty-icon {
   color: rgba(200, 164, 90, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tsp-card--hit .tsp-hex {
+    animation: none !important;
+  }
 }
 </style>

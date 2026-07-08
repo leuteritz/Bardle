@@ -25,6 +25,8 @@ const props = defineProps<{
   paused?: boolean
   /** True while a non-role side panel (e.g. synergies) occupies the right edge. */
   panelOpen?: boolean
+  /** Champions spotlighted by the synergies search — hits pulse, the rest dims. */
+  searchHighlights?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -319,6 +321,7 @@ watch(
         :ally-points="allyPoints[i]"
         :selected="selectedRole === i"
         :full="roleFull[i]"
+        :search-highlights="searchHighlights"
         @select="emit('select-role', i)"
         @select-ally="(sub: number) => emit('select-ally', i, sub)"
       />

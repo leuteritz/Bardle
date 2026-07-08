@@ -37,6 +37,12 @@ const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const selectedRole = ref<number | null>(null)
 /** Team synergies side panel — mutually exclusive with the role details panel. */
 const synergiesOpen = ref(false)
+/** Champions spotlighted by the synergies search — mirrored on the sigil board. */
+const searchHighlights = ref<string[]>([])
+
+watch(synergiesOpen, (open) => {
+  if (!open) searchHighlights.value = []
+})
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
@@ -203,6 +209,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
     <SigilBoardComponent
       :selected-role="selectedRole"
       :panel-open="synergiesOpen"
+      :search-highlights="searchHighlights"
       :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
@@ -222,7 +229,11 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
       />
-      <TeamSynergiesPanel v-else-if="synergiesOpen" @close="synergiesOpen = false" />
+      <TeamSynergiesPanel
+        v-else-if="synergiesOpen"
+        @close="synergiesOpen = false"
+        @highlight="searchHighlights = $event"
+      />
     </Transition>
 
     <!-- ══ MODAL OVERLAYS ══ -->

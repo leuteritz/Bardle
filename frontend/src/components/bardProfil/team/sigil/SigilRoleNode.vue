@@ -12,6 +12,8 @@ const props = defineProps<{
   allyPoints: SigilPoint[]
   selected: boolean
   full: boolean
+  /** Champions spotlighted by the synergies search — hits pulse gold, the rest dims. */
+  searchHighlights?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -36,6 +38,15 @@ function allyImage(ally: string | null): string {
   return ally ? battleStore.getChampionImage(ally) : ''
 }
 
+// ── Search spotlight ─────────────────────────────────────────────────────────
+const searchActive = computed(() => (props.searchHighlights?.length ?? 0) > 0)
+const searchSet = computed(() => new Set(props.searchHighlights ?? []))
+const mainHit = computed(() => main.value !== null && searchSet.value.has(main.value))
+
+function allyHit(ally: string | null): boolean {
+  return ally !== null && searchSet.value.has(ally)
+}
+
 function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   return {
     left: `${point.x}px`,
@@ -52,7 +63,12 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     v-for="(ally, sub) in allies"
     :key="`ally-${roleIndex}-${sub}`"
     class="sigil-ally"
-    :class="{ 'sigil-ally--filled': !!ally, 'sigil-ally--highlight': selected }"
+    :class="{
+      'sigil-ally--filled': !!ally,
+      'sigil-ally--highlight': selected,
+      'sigil-ally--search-hit': allyHit(ally),
+      'sigil-ally--search-miss': searchActive && !allyHit(ally),
+    }"
     :style="[
       nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE),
       { '--role-color': roleDef.color, '--sub': String(sub) },
@@ -68,7 +84,12 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   <!-- role node -->
   <button
     class="sigil-node"
-    :class="{ 'sigil-node--selected': selected, 'sigil-node--full': full }"
+    :class="{
+      'sigil-node--selected': selected,
+      'sigil-node--full': full,
+      'sigil-node--search-hit': mainHit,
+      'sigil-node--search-miss': searchActive && !mainHit,
+    }"
     :style="[nodeStyle(point, SIGIL_NODE_SIZE), { '--role-color': roleDef.color }]"
     :aria-label="main ? `${main} (${roleDef.label})` : `Assign a champion for ${roleDef.label}`"
     @click.stop="emit('select')"
@@ -103,7 +124,9 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   z-index: 1;
   transition:
     transform 0.15s,
-    box-shadow 0.2s;
+    box-shadow 0.2s,
+    opacity 0.25s,
+    filter 0.25s;
   /* constellation feel: each satellite reacts with a slight cascade */
   transition-delay: calc(var(--sub, 0) * 25ms);
 }
@@ -156,7 +179,10 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   border: none;
   cursor: pointer;
   z-index: 2;
-  transition: transform 0.18s;
+  transition:
+    transform 0.18s,
+    opacity 0.25s,
+    filter 0.25s;
 }
 .sigil-node--selected {
   transform: translate(-50%, -50%) scale(1.12);
@@ -278,6 +304,36 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   color: #0a0806;
 }
 
+/* ── search spotlight: hits pulse gold, the rest recedes ── */
+.sigil-node--search-miss,
+.sigil-ally--search-miss {
+  opacity: 0.35;
+  filter: grayscale(45%);
+}
+.sigil-node--search-hit {
+  z-index: 3;
+}
+.sigil-node--search-hit .sigil-node-circle {
+  animation: sigil-search-pulse 1.6s ease-in-out infinite;
+}
+.sigil-ally--search-hit {
+  z-index: 2;
+  animation: sigil-search-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sigil-search-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px #e8c040,
+      0 0 14px rgba(232, 192, 64, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px #e8c060,
+      0 0 26px rgba(232, 192, 64, 0.85);
+  }
+}
+
 @keyframes sigil-aura {
   0%,
   100% {
@@ -301,6 +357,13 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   .sigil-node-aura,
   .sigil-node-conic {
     animation: none !important;
+  }
+  .sigil-node--search-hit .sigil-node-circle,
+  .sigil-ally--search-hit {
+    animation: none !important;
+    box-shadow:
+      0 0 0 3px #e8c040,
+      0 0 14px rgba(232, 192, 64, 0.55);
   }
 }
 </style>
