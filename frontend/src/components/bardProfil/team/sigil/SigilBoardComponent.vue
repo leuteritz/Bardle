@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
+import { useSynergyStore } from '@/stores/synergyStore'
 import { useTeamSigil } from '@/composables/useTeamSigil'
 import {
   ROLES,
@@ -29,15 +30,22 @@ const emit = defineEmits<{
   'select-ally': [roleIndex: number, subSlot: number]
   'open-shop': []
   'open-expedition': []
+  'open-synergies': []
 }>()
 
 const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
+const synergyStore = useSynergyStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
+)
+const activeSynergyCount = computed(
+  () =>
+    synergyStore.activeTraits.length +
+    synergyStore.activeOriginSynergies.filter((o) => o.activeThreshold !== null).length,
 )
 
 const {
@@ -220,6 +228,13 @@ watch(
       Expedition
       <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
     </button>
+    <button class="sigil-action sigil-action--synergies" @click.stop="emit('open-synergies')">
+      <Icon icon="game-icons:linked-rings" width="26" height="26" class="sigil-action-icon" />
+      Synergies
+      <span v-if="activeSynergyCount > 0" class="sigil-action-count">{{
+        activeSynergyCount
+      }}</span>
+    </button>
 
     <!-- scaled sigil stage -->
     <div
@@ -370,6 +385,30 @@ watch(
 }
 .sigil-action--expedition {
   right: 26px;
+}
+.sigil-action--synergies {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.sigil-action--synergies:hover {
+  transform: translateX(-50%) translateY(-1px);
+}
+.sigil-action--synergies:active {
+  transform: translateX(-50%);
+}
+.sigil-action-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: #1e1006;
+  border: 1px solid #c89040;
+  color: #f0d870;
+  font-size: 12px;
+  line-height: 1;
 }
 .sigil-action:hover {
   border-color: #c89040;

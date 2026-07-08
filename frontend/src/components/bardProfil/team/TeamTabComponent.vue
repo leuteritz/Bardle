@@ -15,10 +15,11 @@ import TeamModalShell from './TeamModalShell.vue'
 import ChampionSelectPanel from '../roles/ChampionSelectPanel.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
+import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 import ItemShopComponent from './ItemShopComponent.vue'
 
-type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | null
+type TeamModal = 'picker' | 'shop' | 'expedition' | 'equipment' | 'synergies' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -85,6 +86,10 @@ function openShop(role: ChampionRole | 'all' = 'all') {
 
 function openExpedition() {
   activeModal.value = 'expedition'
+}
+
+function openSynergies() {
+  activeModal.value = 'synergies'
 }
 
 function openEquipment(category: ItemCategory) {
@@ -195,6 +200,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       @select-ally="selectAlly"
       @open-shop="openShop('all')"
       @open-expedition="openExpedition"
+      @open-synergies="openSynergies"
     />
 
     <!-- ══ RIGHT — Details Panel (slides in on champion click) ══ -->
@@ -304,6 +310,18 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
     >
       <div class="team-shop-content">
         <ExpeditionComponent @close="closeModal" />
+      </div>
+    </TeamModalShell>
+
+    <TeamModalShell
+      v-if="activeModal === 'synergies'"
+      title="Team Synergies"
+      icon="game-icons:linked-rings"
+      subtitle="Trait & origin bonuses for your whole orbit"
+      @close="closeModal"
+    >
+      <div class="team-shop-content">
+        <TeamSynergiesPanel />
       </div>
     </TeamModalShell>
 

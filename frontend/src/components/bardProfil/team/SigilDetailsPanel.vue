@@ -4,7 +4,6 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
-import { useSynergyStore } from '@/stores/synergyStore'
 import { ROLES, ALLIES_PER_ROLE, TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
@@ -28,10 +27,8 @@ const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
-const synergyStore = useSynergyStore()
 
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
-const { activeTraits, activeOriginSynergies } = storeToRefs(synergyStore)
 
 const roleDef = computed(() => ROLES[props.roleIndex])
 const main = computed(() => headerSlots.value[props.roleIndex])
@@ -72,33 +69,6 @@ function equippedItem(cat: ItemCategory): ShopItem | null {
 function allyImage(ally: string | null): string {
   return ally ? battleStore.getChampionImage(ally) : ''
 }
-
-// ── Synergies (whole team, mockup-style progress rows) ──────────────────────
-const synergyRows = computed(() => {
-  const traitRows = activeTraits.value.map((at) => ({
-    id: `trait-${at.trait.id}`,
-    name: at.trait.name,
-    kind: 'Trait',
-    icon: at.trait.icon,
-    color: at.trait.color,
-    count: at.count,
-    need: at.nextThreshold?.count ?? at.trait.thresholds.at(-1)!.count,
-    champions: at.involvedChampions,
-  }))
-  const originRows = activeOriginSynergies.value
-    .filter((os) => os.activeThreshold !== null)
-    .map((os) => ({
-      id: `origin-${os.origin}`,
-      name: String(os.origin),
-      kind: 'Origin',
-      icon: os.def.icon,
-      color: os.def.color,
-      count: os.count,
-      need: os.nextThreshold?.count ?? os.def.thresholds.at(-1)!.count,
-      champions: os.involvedChampions,
-    }))
-  return [...traitRows, ...originRows]
-})
 
 </script>
 
@@ -243,53 +213,6 @@ const synergyRows = computed(() => {
         </div>
       </div>
 
-      <!-- synergies -->
-      <div>
-        <div class="sdp-section-head">
-          <Icon icon="game-icons:linked-rings" width="15" height="15" class="sdp-syn-icon" />
-          <span class="sdp-section-title sdp-section-title--gold">Synergies</span>
-          <div class="sdp-section-rule" />
-          <span class="sdp-syn-count">{{ synergyRows.length }}</span>
-        </div>
-        <div class="sdp-syn-list">
-          <div
-            v-for="row in synergyRows"
-            :key="row.id"
-            class="sdp-syn-row"
-            :style="{ '--sc': row.color }"
-            :title="row.champions.join(' · ')"
-          >
-            <div class="sdp-syn-hex">
-              <Icon
-                v-if="row.icon.includes(':')"
-                :icon="row.icon"
-                width="15"
-                height="15"
-                class="sdp-syn-hex-icon"
-              />
-              <span v-else class="sdp-syn-hex-icon">{{ row.icon }}</span>
-            </div>
-            <div class="sdp-syn-main">
-              <div class="sdp-syn-title-row">
-                <span class="sdp-syn-name">{{ row.name }}</span>
-                <span class="sdp-syn-kind">{{ row.kind }}</span>
-              </div>
-              <div class="sdp-syn-bar">
-                <div
-                  class="sdp-syn-bar-fill"
-                  :style="{ width: `${Math.min(100, (row.count / row.need) * 100)}%` }"
-                />
-              </div>
-            </div>
-            <span class="sdp-syn-progress">
-              {{ row.count }}<span class="sdp-syn-need">/{{ row.need }}</span>
-            </span>
-          </div>
-          <div v-if="synergyRows.length === 0" class="sdp-syn-empty">
-            No active synergies yet
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -548,23 +471,11 @@ const synergyRows = computed(() => {
   text-transform: uppercase;
   color: #c8a860;
 }
-.sdp-section-title--gold {
-  color: #e8c040;
-}
 .sdp-section-rule {
   flex: 1;
   height: 1px;
   background: rgba(200, 164, 90, 0.16);
 }
-.sdp-syn-icon {
-  color: #e8c040;
-  flex-shrink: 0;
-}
-.sdp-syn-count {
-  font-size: 11px;
-  color: rgba(230, 220, 196, 0.4);
-}
-
 /* allies — grid wraps cleanly for any ally count per role */
 .sdp-allies {
   display: grid;
@@ -708,84 +619,6 @@ const synergyRows = computed(() => {
   letter-spacing: 0.06em;
   color: rgba(200, 164, 90, 0.55);
   text-transform: uppercase;
-}
-
-/* synergies */
-.sdp-syn-list {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.sdp-syn-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(200, 164, 90, 0.1);
-  border-left: 3px solid var(--sc);
-}
-.sdp-syn-hex {
-  width: 26px;
-  height: 29px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: var(--sc);
-}
-.sdp-syn-hex-icon {
-  color: #fff;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-}
-.sdp-syn-main {
-  flex: 1;
-  min-width: 0;
-}
-.sdp-syn-title-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.sdp-syn-name {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #e8dcc0;
-}
-.sdp-syn-kind {
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(230, 220, 196, 0.4);
-}
-.sdp-syn-bar {
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  margin-top: 5px;
-  overflow: hidden;
-}
-.sdp-syn-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--sc);
-}
-.sdp-syn-progress {
-  font-size: 14px;
-  color: var(--sc);
-  flex-shrink: 0;
-}
-.sdp-syn-need {
-  font-size: 10px;
-  color: rgba(230, 220, 196, 0.35);
-}
-.sdp-syn-empty {
-  padding: 20px 0;
-  text-align: center;
-  color: rgba(200, 164, 90, 0.35);
-  font-size: 12px;
 }
 
 </style>

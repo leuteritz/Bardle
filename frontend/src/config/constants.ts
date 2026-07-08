@@ -2390,7 +2390,10 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:sunbeams', // Phase status banner icon
   // Battle Sigil (Team tab)
   'game-icons:crenel-crown', // Sigil center crest (SigilBoardComponent)
-  'game-icons:linked-rings', // Details panel synergy header (SigilDetailsPanel)
+  'game-icons:linked-rings', // Synergies board button + modal header (SigilBoardComponent/TeamTabComponent)
+  'game-icons:sing', // Production buff chip (TeamSynergiesPanel)
+  'game-icons:mailed-fist', // Power buff chip (TeamSynergiesPanel)
+  'game-icons:deadly-strike', // Combat DPS buff chip (TeamSynergiesPanel)
   'game-icons:cycle', // Swap champion button (SigilDetailsPanel)
   'game-icons:shopping-bag', // Shop action button (SigilBoardComponent)
   'game-icons:switch-weapon', // Champion picker modal header (TeamTabComponent)
