@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
 import { useSynergyStore } from '@/stores/synergyStore'
-import { ROLES, ALLIES_PER_ROLE } from '@/config/constants'
+import { ROLES, ALLIES_PER_ROLE, TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
@@ -23,6 +23,8 @@ const emit = defineEmits<{
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
 }>()
+
+const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
@@ -295,7 +297,7 @@ const synergyRows = computed(() => {
 
 <style scoped>
 .sdp-panel {
-  width: 460px;
+  width: v-bind(panelWidthPx);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

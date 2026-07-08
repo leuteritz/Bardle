@@ -1599,6 +1599,9 @@ export const TEAM_SIGIL_ZOOM_DEFAULT = 1.0
 export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
 /** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */
 export const TEAM_SIGIL_CAMERA_MS = 450
+/** Width (px) of the role details panel — the board's fit-scale subtracts it while
+ *  a role is selected so open/close resolves in a single camera move. */
+export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 460
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,

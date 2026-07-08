@@ -14,6 +14,7 @@ import {
   TEAM_SIGIL_ZOOM_STEP,
   TEAM_SIGIL_ZOOM_DEFAULT,
   TEAM_SIGIL_FOCUS_ZOOM,
+  TEAM_SIGIL_DETAILS_PANEL_WIDTH,
 } from '@/config/constants'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
@@ -59,18 +60,31 @@ const roleColors = ROLES.map((r) => r.color)
 // ── Zoom (mirrors ForgeTreePanel) ────────────────────────────────────────────
 const panelEl = ref<HTMLElement | null>(null)
 const zoom = ref(TEAM_SIGIL_ZOOM_DEFAULT)
-const fitScale = ref(1)
+const tabRect = ref({ width: 0, height: 0 })
 
 let resizeObserver: ResizeObserver | null = null
 
+// Observe the tab container (not the board): the details panel leaves the flex
+// layout only AFTER its slide-out transition, so watching the board itself would
+// fire a second, delayed fit-scale animation. Subtracting the panel width
+// reactively lets open/close resolve in a single camera move.
 onMounted(() => {
-  if (!panelEl.value) return
+  const tabEl = panelEl.value?.parentElement
+  if (!tabEl) return
+  tabRect.value = { width: tabEl.clientWidth, height: tabEl.clientHeight }
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (!rect) return
-    fitScale.value = Math.min(rect.width, rect.height) / SIGIL_STAGE_SIZE
+    tabRect.value = { width: rect.width, height: rect.height }
   })
-  resizeObserver.observe(panelEl.value)
+  resizeObserver.observe(tabEl)
+})
+
+const fitScale = computed(() => {
+  const boardWidth =
+    tabRect.value.width - (props.selectedRole !== null ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)
+  if (boardWidth <= 0 || tabRect.value.height <= 0) return 1
+  return Math.min(boardWidth, tabRect.value.height) / SIGIL_STAGE_SIZE
 })
 
 onBeforeUnmount(() => {
@@ -93,13 +107,21 @@ const totalScale = computed(
   () => fitScale.value * zoom.value * (focusPoint.value ? TEAM_SIGIL_FOCUS_ZOOM : 1),
 )
 
-/** Pans the stage so the focal point lands on the container center (screen px). */
+/** Board center in tab px — computed (not CSS 50%) so the close animation targets
+ *  the FINAL board width immediately instead of jumping when the panel unmounts. */
+const boardCenter = computed(() => ({
+  x: (tabRect.value.width - (props.selectedRole !== null ? TEAM_SIGIL_DETAILS_PANEL_WIDTH : 0)) / 2,
+  y: tabRect.value.height / 2,
+}))
+
+/** Pans the stage so the focal point lands on the board center (screen px). */
 const stageTransform = computed(() => {
   const s = totalScale.value
   const f = focusPoint.value
+  const c = boardCenter.value
   const half = SIGIL_STAGE_SIZE / 2
   const pan = f ? `translate(${-(f.x - half) * s}px, ${-(f.y - half) * s}px) ` : ''
-  return `${pan}translate(-50%, -50%) scale(${s})`
+  return `translate(${c.x}px, ${c.y}px) ${pan}translate(-50%, -50%) scale(${s})`
 })
 
 const zoomKnobPos = computed(() => {
@@ -353,8 +375,8 @@ function onWheel(event: WheelEvent): void {
 /* ── stage ── */
 .sigil-stage {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 0;
+  left: 0;
   transform-origin: center center;
   /* camera pan/zoom (TEAM_SIGIL_CAMERA_MS) — also smooths wheel zoom */
   transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.35, 1);
