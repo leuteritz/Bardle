@@ -3,6 +3,11 @@ import { computed } from 'vue'
 import { useInventoryStore } from '@/stores/inventoryStore'
 import { MATERIALS } from '@/config/materials'
 import { formatNumber } from '@/config/numberFormat'
+import {
+  MATERIAL_COLOR,
+  MATERIAL_PLACEHOLDER_LABELS,
+  HEADER_MATERIALS_GRID_COLUMNS,
+} from '@/config/constants'
 
 const inventoryStore = useInventoryStore()
 
@@ -10,19 +15,11 @@ const materials = computed(() =>
   MATERIALS.map((m) => ({ ...m, count: inventoryStore.collectedMaterials[m.id] ?? 0 })),
 )
 
-// Individuelle Farbe pro Material-ID
-const MATERIAL_COLOR: Record<string, string> = {
-  stardust: '#fde68a', // warmes Goldgelb  – Sternstaub
-  moon_crystal: '#bae6fd', // eisiges Hellblau  – Mondkristall
-  nebula_quartz: '#6ee7b7', // mintgrün          – Nebelquarz
-  solar_essence: '#fb923c', // leuchtendes Orange – Sonnenessenz
-  void_shard: '#a78bfa', // tiefes Violett    – Leerscherbe
-  dark_matter: '#f472b6', // pinkmagenta       – Dunkle Materie
-}
+const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS}, minmax(0, 1fr))` }
 </script>
 
 <template>
-  <div class="mat-grid">
+  <div class="mat-grid" :style="gridStyle">
     <div
       v-for="m in materials"
       :key="m.id"
@@ -30,7 +27,10 @@ const MATERIAL_COLOR: Record<string, string> = {
       :class="{ 'mat-cell--empty': m.count === 0 }"
       :title="m.name"
     >
-      <img :src="m.image" class="mat-icon rpg-img" :alt="m.name" />
+      <img v-if="m.image" :src="m.image" class="mat-icon rpg-img" :alt="m.name" />
+      <span v-else class="mat-ph" :style="{ color: MATERIAL_COLOR[m.id] }">
+        {{ MATERIAL_PLACEHOLDER_LABELS[m.id] ?? m.name.slice(0, 2).toUpperCase() }}
+      </span>
       <span class="mat-count" :style="{ color: MATERIAL_COLOR[m.id] }">
         {{ formatNumber(m.count) }}
       </span>
@@ -41,9 +41,8 @@ const MATERIAL_COLOR: Record<string, string> = {
 <style scoped>
 .mat-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px 8px;
-  padding: 6px 10px;
+  gap: clamp(3px, 0.5vw, 7px) clamp(6px, 1vw, 14px);
+  padding: 6px 0;
   width: 100%;
   min-width: 0;
   height: 100%;
@@ -54,7 +53,7 @@ const MATERIAL_COLOR: Record<string, string> = {
 .mat-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: clamp(4px, 0.5vw, 7px);
   flex-wrap: nowrap;
   min-width: 0;
   overflow: hidden;
@@ -62,23 +61,42 @@ const MATERIAL_COLOR: Record<string, string> = {
 }
 
 .mat-cell--empty {
-  opacity: 0.25;
-  filter: grayscale(0.8);
+  opacity: 0.32;
+  filter: grayscale(0.6);
 }
 
 .mat-icon {
-  width: clamp(18px, 3vw, 32px);
-  height: clamp(18px, 3vw, 32px);
-  min-width: 18px;
-  min-height: 18px;
+  width: clamp(16px, 1.9vw, 26px);
+  height: clamp(16px, 1.9vw, 26px);
+  min-width: 16px;
+  min-height: 16px;
   object-fit: contain;
-  flex-shrink: 1;
+  flex-shrink: 0;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
   user-select: none;
 }
 
+/* Placeholder box for materials without artwork yet */
+.mat-ph {
+  width: clamp(16px, 1.9vw, 26px);
+  height: clamp(16px, 1.9vw, 26px);
+  flex-shrink: 0;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(45deg, #2b2117, #2b2117 3px, #1b150e 3px, #1b150e 6px);
+  border: 1px solid rgba(255, 200, 80, 0.2);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: clamp(6px, 0.5vw, 7px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
+}
+
 .mat-count {
-  font-size: clamp(0.75rem, 1.2vw, 1.2rem);
+  font-size: clamp(0.68rem, 0.85vw, 0.92rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;

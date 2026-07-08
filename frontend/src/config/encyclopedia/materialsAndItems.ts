@@ -12,13 +12,14 @@ export const materialsCategory: EncyclopediaCategory = {
       description:
         'Materials are collected during planet rescues (60% chance) and expeditions. ' +
         'They are required as crafting costs for rare items. ' +
-        'There are 6 materials in total with different drop chances.',
+        'There are 10 materials in total with different drop chances.',
       lore: 'The raw materials of the cosmos — in the right hands, they become wonders.',
       formula:
         'PLANET_MATERIAL_CHANCE = 0.6 (60%)\n' +
-        'Drop chances relative to total weight (1.00):\n' +
-        'Stardust 35% | Moon Crystal 25% | Nebula Quartz 20%\n' +
-        'Solar Essence 12% | Void Shard 6% | Dark Matter 2%',
+        'Drop weights (relative to total weight 1.173):\n' +
+        'Stardust 0.35 | Moon Crystal 0.25 | Nebula Quartz 0.20\n' +
+        'Solar Essence 0.12 | Comet Ice 0.10 | Void Shard 0.06\n' +
+        'Star Iron 0.05 | Dark Matter 0.02 | Plasma Core 0.015 | Aether Dust 0.008',
     },
     {
       id: 'material-stardust',
@@ -73,6 +74,42 @@ export const materialsCategory: EncyclopediaCategory = {
         'Extremely rare material (2% drop). Incomprehensible matter beyond the visible. Required for Legendary items. Rarity: Epic.',
       lore: 'Incomprehensible matter beyond the visible.',
       formula: 'id = dark_matter | rarity = epic | dropChance = 0.02 (2%)',
+    },
+    {
+      id: 'material-comet-ice',
+      name: 'Comet Ice',
+      icon: 'game-icons:frozen-orb',
+      description:
+        'Uncommon material (weight 0.10). Ancient ice chipped from a wandering comet. Rarity: Uncommon.',
+      lore: 'Ancient ice chipped from a wandering comet.',
+      formula: 'id = comet_ice | rarity = uncommon | dropChance = 0.10',
+    },
+    {
+      id: 'material-star-iron',
+      name: 'Star Iron',
+      icon: 'game-icons:metal-bar',
+      description:
+        'Rare material (weight 0.05). Metal forged in the heart of a dying star. Rarity: Rare.',
+      lore: 'Metal forged in the heart of a dying star.',
+      formula: 'id = star_iron | rarity = rare | dropChance = 0.05',
+    },
+    {
+      id: 'material-plasma-core',
+      name: 'Plasma Core',
+      icon: 'game-icons:atom-core',
+      description:
+        'Very rare material (weight 0.015). A still-burning fragment of stellar plasma. Rarity: Epic.',
+      lore: 'A still-burning fragment of stellar plasma.',
+      formula: 'id = plasma_core | rarity = epic | dropChance = 0.015',
+    },
+    {
+      id: 'material-aether-dust',
+      name: 'Aether Dust',
+      icon: 'game-icons:dust-cloud',
+      description:
+        'Extremely rare material (weight 0.008). Shimmering residue of the space between worlds. Rarity: Epic.',
+      lore: 'Shimmering residue of the space between worlds.',
+      formula: 'id = aether_dust | rarity = epic | dropChance = 0.008',
     },
   ],
 }

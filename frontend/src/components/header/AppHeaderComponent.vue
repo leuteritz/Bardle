@@ -17,6 +17,7 @@ import {
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
+import SunPhaseIndicator from './SunPhaseIndicator.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
@@ -383,17 +384,15 @@ onUnmounted(() => resizeObserver?.disconnect())
 
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-3 header-side header-side--right">
+      <SunPhaseIndicator />
+      <div class="header-sub-divider" aria-hidden="true"></div>
       <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
         <UniverseRescueComponent />
       </div>
       <div ref="rightDividerRef" class="header-divider" aria-hidden="true"></div>
       <div class="flex-shrink-0 header-inventory-bump">
-        <button
-          class="header-icon-btn"
-          title="Open Skill Tree"
-          @click="uiStore.setBardTab('tree')"
-        >
-          <img src="/img/menu/TREE.png" class="header-icon-img" alt="Open Skill Tree" />
+        <button class="btn-gem" title="Open Skill Tree" @click="uiStore.setBardTab('tree')">
+          <img src="/img/menu/TREE.png" class="btn-gem-img" alt="Open Skill Tree" />
         </button>
       </div>
     </div>
@@ -474,7 +473,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 .header-portal-wrap {
-  width: clamp(80px, calc(-5px + 8vw), 180px);
+  min-width: clamp(80px, 8vw, 180px);
   align-self: stretch;
   overflow: hidden;
   display: flex;
@@ -490,10 +489,14 @@ onUnmounted(() => resizeObserver?.disconnect())
 .header-side--left {
   justify-content: flex-start;
   padding-left: clamp(6px, 1.2vw, 14px);
+  /* symmetric inner gap towards the center teardrop (matches --right padding-left) */
+  padding-right: clamp(8px, 1vw, 16px);
 }
 .header-side--right {
   justify-content: flex-end;
   padding-right: clamp(6px, 1.2vw, 14px);
+  /* symmetric inner gap towards the center teardrop (matches --left padding-right) */
+  padding-left: clamp(8px, 1vw, 16px);
 }
 
 .header-profile-bump {
@@ -652,6 +655,21 @@ onUnmounted(() => resizeObserver?.disconnect())
     0 0 8px rgba(160, 110, 15, 0.06);
 }
 
+/* Thin sub-divider between sun phase and galaxy block (design .r-vd) */
+.header-sub-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: clamp(32px, calc(-1.5px + 3vw), 62px);
+  align-self: center;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 200, 80, 0.16) 18%,
+    rgba(255, 200, 80, 0.16) 82%,
+    transparent
+  );
+}
+
 /* ================================================================
    TYPOGRAFIE
    ================================================================ */
@@ -754,7 +772,8 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 /* ================================================================
-   HEADER ICONS (Shop & Tree) – keine Box, kein Hintergrund
+   HEADER GEM BUTTONS (Shop & Tree) – runde Holzrahmen-Buttons
+   (global: auch von BardProfileMenu verwendet)
    ================================================================ */
 .header-inventory-bump {
   display: flex;
@@ -762,34 +781,58 @@ onUnmounted(() => resizeObserver?.disconnect())
   align-self: stretch;
   flex-shrink: 0;
 }
-.header-icon-btn {
-  background: transparent;
-  border: none;
-  padding: 0 6px;
+.btn-gem {
+  position: relative;
+  width: clamp(44px, 3.4vw, 64px);
+  height: clamp(44px, 3.4vw, 64px);
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
-  height: 100%;
-}
-.header-icon-img {
-  height: clamp(44px, 3.36vw, 92px);
-  width: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  background: radial-gradient(circle at 40% 32%, #2a1a0a, #120a03);
+  border: 2px solid #c89040;
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    inset 0 3px 8px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(232, 192, 64, 0.2);
   transition:
-    transform 0.3s ease,
-    opacity 0.2s ease;
+    transform 0.2s,
+    box-shadow 0.2s;
 }
-.header-icon-btn:hover .header-icon-img {
-  transform: scale(1.08);
-  opacity: 0.9;
+.btn-gem::before {
+  content: '';
+  position: absolute;
+  top: 8%;
+  left: 17%;
+  right: 30%;
+  height: 22%;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, rgba(255, 230, 160, 0.25), transparent);
+  pointer-events: none;
 }
-.header-icon-btn:active .header-icon-img {
-  transform: scale(0.94);
+.btn-gem:hover {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 0 0 2px #3e200a,
+    0 0 16px rgba(232, 192, 64, 0.55),
+    0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.btn-gem:active {
+  transform: scale(0.95);
+}
+.btn-gem-img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
 }
 @media (max-width: 768px) {
-  .header-icon-img {
-    height: clamp(44px, 5vh, 56px);
+  .btn-gem {
+    width: clamp(40px, 5vh, 52px);
+    height: clamp(40px, 5vh, 52px);
   }
 }
 

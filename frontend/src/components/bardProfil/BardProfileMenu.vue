@@ -49,8 +49,8 @@ watch(
 </script>
 
 <template>
-  <button class="header-icon-btn" title="Open Shop" @click="uiStore.setBardTab('shop')">
-    <img src="/img/menu/SHOP.png" class="header-icon-img" alt="Open Shop" />
+  <button class="btn-gem" title="Open Shop" @click="uiStore.setBardTab('shop')">
+    <img src="/img/menu/SHOP.png" class="btn-gem-img" alt="Open Shop" />
   </button>
 
   <!-- ══ Backdrop + Modal ══ -->

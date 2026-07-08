@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
+import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import { formatNumber } from '@/config/numberFormat'
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 
-const isStarHovered = ref(false)
 const isMeepHovered = ref(false)
 const isUniverseBarHovered = ref(false)
+
+const galaxyName = computed(
+  () => GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length].name,
+)
 
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
@@ -37,36 +41,15 @@ watch(
 </script>
 
 <template>
-  <div class="universe-panel">
-    <!-- HUD Top: Galaxy + Stars stat cards -->
-    <div class="hud-top">
-      <div class="stat-card stat-card--galaxy">
-        <img src="/img/galaxy-far.png" class="stat-icon" alt="Galaxy" />
-        <div class="stat-text">
-          <span class="stat-card-value galaxy-value">{{ galaxyStore.currentGalaxy }}</span>
-        </div>
+  <div class="uni-block">
+    <!-- Row 1: Galaxy icon + name, Meeps flush right -->
+    <div class="gx-row">
+      <img src="/img/galaxy-far.png" class="gx-icon" alt="Galaxy" />
+      <div class="info-grp">
+        <span class="info-lbl">Galaxy {{ galaxyStore.currentGalaxy }}</span>
+        <span class="info-name">{{ galaxyName }}</span>
       </div>
 
-      <div class="hud-divider" aria-hidden="true" />
-
-      <div
-        class="stat-card stat-card--stars"
-        :class="{ 'stat-card--lit-green': isStarHovered }"
-        @mouseenter="isStarHovered = true"
-        @mouseleave="isStarHovered = false"
-      >
-        <img src="/img/star.png" class="stat-icon" alt="Sterne" />
-        <div class="stat-text">
-          <span class="stat-card-value star-value">
-            {{ galaxyStore.starsRescued }}<span class="stat-card-sep">/</span
-            >{{ galaxyStore.starsRequired }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom row: Meep + Universe progress bar -->
-    <div class="bottom-row">
       <div
         class="meep-block"
         :class="{ 'meep-block--rising': isIncreasing, 'meep-block--lit': isUniverseBarHovered }"
@@ -78,167 +61,118 @@ watch(
           {{ formatNumber(displayMeeps) }}
         </span>
       </div>
-
-      <div
-        v-if="!gameStore.prestigeAvailable"
-        class="rpg-bar-wrap"
-        :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
-        @mouseenter="isUniverseBarHovered = true"
-        @mouseleave="isUniverseBarHovered = false"
-      >
-        <div class="rpg-bar-border" />
-        <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
-          <div class="rpg-bar-flow" />
-          <div class="rpg-bar-gloss" />
-        </div>
-        <div class="rpg-ticks" aria-hidden="true">
-          <div class="rpg-tick" style="left: 25%" />
-          <div class="rpg-tick" style="left: 50%" />
-          <div class="rpg-tick" style="left: 75%" />
-        </div>
-        <div
-          class="rpg-bar-percent"
-          :class="{ 'rpg-bar-percent--visible': isMeepHovered || isUniverseBarHovered }"
-        >
-          {{ gameStore.universeRescueProgress.toFixed(1) }}%
-        </div>
-      </div>
-      <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
-        ✦ PRESTIGE ✦
-      </button>
     </div>
+
+    <!-- Row 2: Universe rescue bar (or prestige button) -->
+    <div
+      v-if="!gameStore.prestigeAvailable"
+      class="rpg-bar-wrap"
+      :class="{ 'rpg-bar-wrap--glow': isMeepHovered || isUniverseBarHovered }"
+      @mouseenter="isUniverseBarHovered = true"
+      @mouseleave="isUniverseBarHovered = false"
+    >
+      <div class="rpg-bar-border" />
+      <div class="rpg-bar-fill" :style="{ width: gameStore.universeRescueProgress + '%' }">
+        <div class="rpg-bar-flow" />
+        <div class="rpg-bar-gloss" />
+      </div>
+      <div class="rpg-ticks" aria-hidden="true">
+        <div class="rpg-tick" style="left: 25%" />
+        <div class="rpg-tick" style="left: 50%" />
+        <div class="rpg-tick" style="left: 75%" />
+      </div>
+      <div class="rpg-bar-percent">
+        Universe Rescue · {{ gameStore.universeRescueProgress.toFixed(1) }}%
+      </div>
+    </div>
+    <button v-else class="prestige-btn" @click.stop="gameStore.openPrestigeModal()">
+      ✦ PRESTIGE ✦
+    </button>
   </div>
 </template>
 
 <style scoped>
 /* ================================================================
-   ROOT
+   ROOT — galaxy row over the universe rescue bar
    ================================================================ */
-.universe-panel {
+.uni-block {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: clamp(3px, 0.5vw, 8px);
   width: 100%;
   height: clamp(56px, 4.2vw, 115px);
   padding: 6px 8px 3px;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 /* ================================================================
-   HUD TOP — two stat cards
+   ROW 1 — galaxy + meeps
    ================================================================ */
-.hud-top {
+.gx-row {
   display: flex;
-  align-items: stretch;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
-  padding: 1px 4px;
+  gap: clamp(5px, 0.7vw, 9px);
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
 }
 
-.stat-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.stat-icon {
-  width: clamp(12px, 1.5vw, 36px);
-  height: clamp(12px, 1.5vw, 36px);
+.gx-icon {
+  width: clamp(20px, 2.2vw, 30px);
+  height: clamp(20px, 2.2vw, 30px);
   object-fit: contain;
   flex-shrink: 0;
   transform: translateZ(0);
   will-change: transform;
-  image-rendering: auto;
   transition:
     transform 0.2s,
     filter 0.3s;
   user-select: none;
 }
 
-.stat-card--galaxy .stat-icon:hover {
+.gx-icon:hover {
   transform: scale(1.1) translateZ(0);
   filter: drop-shadow(0 0 8px rgba(138, 100, 220, 0.85));
 }
 
-.stat-card--stars .stat-icon:hover {
-  transform: scale(1.1) translateZ(0);
-  filter: drop-shadow(0 0 8px rgba(82, 184, 48, 0.85));
-}
-
-.stat-card-value {
-  font-size: clamp(0.75rem, 1.05vw, 1.3rem);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  white-space: nowrap;
-  letter-spacing: -0.02em;
-  text-overflow: ellipsis;
+.info-grp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
   overflow: hidden;
 }
 
-.galaxy-value {
-  color: var(--rpg-green-border);
-  text-shadow: 0 0 10px rgba(110, 192, 64, 0.45);
+.info-lbl {
+  font-size: clamp(0.48rem, 0.5vw, 0.56rem);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(200, 185, 140, 0.5);
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.star-value {
-  color: var(--rpg-green-border);
-  text-shadow: 0 0 10px rgba(110, 192, 64, 0.45);
-  transition:
-    color 0.3s,
-    text-shadow 0.3s;
+.info-name {
+  font-size: clamp(0.72rem, 0.85vw, 0.92rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--rpg-green-border, #6ec040);
+  text-shadow: 0 0 8px rgba(110, 192, 64, 0.3);
 }
 
-.stat-card--lit-green .star-value {
-  color: #8adc50;
-  text-shadow:
-    0 0 14px rgba(110, 192, 64, 0.7),
-    0 0 28px rgba(110, 192, 64, 0.3);
-}
-
-.stat-card-sep {
-  color: rgba(255, 200, 80, 0.45);
-  font-size: 1.1rem;
-  margin-inline: 1px;
-}
-
-.hud-divider {
-  width: 1px;
-  align-self: stretch;
-  background: rgba(255, 200, 80, 0.15);
-  margin-inline: 6px;
-  flex-shrink: 0;
-}
-
-/* ================================================================
-   BOTTOM ROW — Meep + RPG bar
-   ================================================================ */
-.bottom-row {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-/* ── Meep-Block ────────────────────────────── */
+/* ── Meep block (flush right) ────────────────── */
 .meep-block {
   display: flex;
   align-items: center;
+  gap: 5px;
   flex-shrink: 0;
+  margin-left: auto;
   isolation: isolate;
   transition: filter 0.3s;
 }
@@ -248,8 +182,8 @@ watch(
 }
 
 .meep-icon {
-  width: clamp(18px, 1.8vw, 36px);
-  height: clamp(18px, 1.8vw, 36px);
+  width: clamp(18px, 1.8vw, 30px);
+  height: clamp(18px, 1.8vw, 30px);
   object-fit: contain;
   flex-shrink: 0;
   image-rendering: auto;
@@ -260,6 +194,7 @@ watch(
     transform 0.2s,
     filter 0.3s;
   user-select: none;
+  animation: meep-pulse 3s ease-in-out infinite;
 }
 
 .meep-icon:hover {
@@ -268,7 +203,7 @@ watch(
 }
 
 .meep-value {
-  font-size: clamp(0.65rem, 0.9vw, 1.1rem);
+  font-size: clamp(0.65rem, 0.9vw, 1rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;
@@ -276,7 +211,7 @@ watch(
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 0 8px rgba(251, 146, 60, 0.3);
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.35);
   transition:
     color 0.3s,
     text-shadow 0.3s;
@@ -304,14 +239,24 @@ watch(
     0 0 20px rgba(251, 146, 60, 0.35);
 }
 
+@keyframes meep-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(251, 146, 60, 0.55));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(251, 146, 60, 0.9));
+  }
+}
+
 /* ================================================================
-   GROSSE RPG-PROGRESSBAR
+   ROW 2 — RPG progress bar with always-visible inline label
    ================================================================ */
 .rpg-bar-wrap {
   position: relative;
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  height: clamp(10px, 0.9vw, 22px);
+  height: clamp(14px, 1.2vw, 22px);
   border-radius: 4px;
   overflow: hidden;
   box-shadow:
@@ -405,23 +350,15 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
+  font-size: clamp(0.56rem, 0.62vw, 0.7rem);
   font-weight: 700;
   color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
   letter-spacing: 0.03em;
   z-index: 5;
-  opacity: 0;
-  transform: translateY(2px);
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
   pointer-events: none;
-}
-
-.rpg-bar-percent--visible {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 @keyframes barPulse {
@@ -451,8 +388,8 @@ watch(
    PRESTIGE BUTTON
    ================================================================ */
 .prestige-btn {
-  flex: 1;
-  height: clamp(10px, 0.9vw, 22px);
+  width: 100%;
+  height: clamp(14px, 1.2vw, 22px);
   padding: 0 8px;
   font-size: 0.63rem;
   font-weight: 700;
@@ -487,5 +424,4 @@ watch(
     box-shadow: 0 0 22px rgba(200, 144, 64, 0.7);
   }
 }
-
 </style>

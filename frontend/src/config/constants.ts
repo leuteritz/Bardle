@@ -80,6 +80,30 @@ export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
 // Planet material drop chance (probability that a rescue planet carries material)
 export const PLANET_MATERIAL_CHANCE = 0.6
 
+// ── Material display (header materials grid) ────────────────────────────────
+// Count color per material id.
+export const MATERIAL_COLOR: Record<string, string> = {
+  stardust: '#fde68a', // warm gold        – Stardust
+  moon_crystal: '#bae6fd', // icy light blue   – Moon Crystal
+  nebula_quartz: '#6ee7b7', // mint green       – Nebula Quartz
+  solar_essence: '#fb923c', // glowing orange   – Solar Essence
+  void_shard: '#a78bfa', // deep violet      – Void Shard
+  dark_matter: '#f472b6', // pink magenta     – Dark Matter
+  comet_ice: '#7dd3fc', // pale ice blue    – Comet Ice
+  star_iron: '#cbd5e1', // steel grey       – Star Iron
+  plasma_core: '#f0abfc', // hot fuchsia      – Plasma Core
+  aether_dust: '#fcd34d', // shimmering amber – Aether Dust
+}
+// Initials shown in the placeholder box while a material has no artwork yet.
+export const MATERIAL_PLACEHOLDER_LABELS: Record<string, string> = {
+  comet_ice: 'CI',
+  star_iron: 'SI',
+  plasma_core: 'PC',
+  aether_dust: 'AD',
+}
+// Header materials grid: fixed column count (2 rows × 5 columns = 10 materials).
+export const HEADER_MATERIALS_GRID_COLUMNS = 5
+
 // Champion home planet discovery chance
 export const CHAMPION_HOME_PLANET_CHANCE = 0.5
 
@@ -2207,6 +2231,11 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:map',
   'game-icons:crystal-growth',
   'game-icons:sword-spade',
+  // Encyclopedia — new materials (artwork pending, materialsAndItems.ts)
+  'game-icons:frozen-orb', // Comet Ice
+  'game-icons:metal-bar', // Star Iron
+  'game-icons:atom-core', // Plasma Core
+  'game-icons:dust-cloud', // Aether Dust
   // Admin Panel
   'game-icons:alien-egg',
   'game-icons:star-medal',

@@ -55,6 +55,40 @@ export const MATERIALS: Material[] = [
     dropChance: 0.02,
     dropCount: 3,
   },
+  // ── New materials (artwork pending — header shows a placeholder box until
+  //    an `image` path is added here) ──────────────────────────────────────
+  {
+    id: 'comet_ice',
+    name: 'Comet Ice',
+    description: 'Ancient ice chipped from a wandering comet.',
+    rarity: 'uncommon',
+    dropChance: 0.1,
+    dropCount: 3,
+  },
+  {
+    id: 'star_iron',
+    name: 'Star Iron',
+    description: 'Metal forged in the heart of a dying star.',
+    rarity: 'rare',
+    dropChance: 0.05,
+    dropCount: 3,
+  },
+  {
+    id: 'plasma_core',
+    name: 'Plasma Core',
+    description: 'A still-burning fragment of stellar plasma.',
+    rarity: 'epic',
+    dropChance: 0.015,
+    dropCount: 3,
+  },
+  {
+    id: 'aether_dust',
+    name: 'Aether Dust',
+    description: 'Shimmering residue of the space between worlds.',
+    rarity: 'epic',
+    dropChance: 0.008,
+    dropCount: 3,
+  },
 ]
 
 export function pickMaterial(): Material {
