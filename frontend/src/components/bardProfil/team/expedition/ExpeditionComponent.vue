@@ -99,7 +99,12 @@
               </div>
 
               <div class="ec-champ-tags">
-                <span v-for="champ in exp.assignedChampions" :key="champ.name" class="ec-champ-tag">
+                <span
+                  v-for="champ in exp.assignedChampions"
+                  :key="champ.name"
+                  class="ec-champ-tag"
+                  :style="{ color: getRoleColor(champ.role) }"
+                >
                   <img :src="getChampionImage(champ.name)" :alt="champ.name" class="ec-champ-img" />
                   {{ champ.name }}
                 </span>
@@ -152,7 +157,12 @@
               </div>
 
               <div class="ec-champ-tags">
-                <span v-for="champ in exp.assignedChampions" :key="champ.name" class="ec-champ-tag">
+                <span
+                  v-for="champ in exp.assignedChampions"
+                  :key="champ.name"
+                  class="ec-champ-tag"
+                  :style="{ color: getRoleColor(champ.role) }"
+                >
                   <img :src="getChampionImage(champ.name)" :alt="champ.name" class="ec-champ-img" />
                   {{ champ.name }}
                 </span>
@@ -284,7 +294,11 @@
                   :alt="p.champion"
                 />
                 <img v-else :src="ROLE_IMG[p.role]" class="ec-preview-role-img" :alt="p.role" />
-                <span class="ec-preview-champ" :class="{ 'ec-preview-champ--missing': !p.champion }">
+                <span
+                  class="ec-preview-champ"
+                  :class="{ 'ec-preview-champ--missing': !p.champion }"
+                  :style="p.champion ? { color: getRoleColor(p.role) } : undefined"
+                >
                   {{ p.champion ?? '— no champion —' }}
                 </span>
               </div>
@@ -319,6 +333,7 @@ import {
   EXPEDITION_MAX_AVAILABLE,
   EXPEDITION_EXPIRY_WARNING_MS,
   EXPEDITION_COLORS,
+  ROLE_BY_KEY,
   type ExpeditionColorDef,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
@@ -491,6 +506,10 @@ export default defineComponent({
     function getChampionImage(name: string): string {
       return battleStore.getChampionImage(name)
     }
+    /** Role accent color (same palette as everywhere else in the app). */
+    function getRoleColor(role: ChampionRole): string {
+      return ROLE_BY_KEY[role]?.color ?? '#e8c040'
+    }
 
     // ── Animated collect feedback ─────────────────────────────
     const chimePops = ref<Array<{ id: number; amount: number; dx: number }>>([])
@@ -556,6 +575,7 @@ export default defineComponent({
       getProgress,
       getTimeRemaining,
       getChampionImage,
+      getRoleColor,
       collectExpedition,
       formatDuration,
       formatCountdown,
