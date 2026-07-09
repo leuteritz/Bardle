@@ -70,7 +70,10 @@ const mainChampion = computed(() => tabChampion(-1))
 // ── Role synergy summary: aggregated trait/origin counts across the role's
 // current lineup (main + allies) — what this role contributes at a glance. ──
 const roleSynergies = computed(() => {
-  const counts = new Map<string, { label: string; icon: string; color: string; count: number }>()
+  const counts = new Map<
+    string,
+    { key: string; label: string; icon: string; color: string; count: number }
+  >()
   const lineup = [mainChampion.value, ...allyRow.value].filter(
     (c): c is string => c !== null,
   )
@@ -79,23 +82,35 @@ const roleSynergies = computed(() => {
     for (const trait of traits) {
       const entry = counts.get(trait.id)
       if (entry) entry.count++
-      else counts.set(trait.id, { label: trait.name, icon: trait.icon, color: trait.color, count: 1 })
-    }
-    if (origin) {
-      const entry = counts.get(`origin:${origin.origin}`)
-      if (entry) entry.count++
       else
-        counts.set(`origin:${origin.origin}`, {
-          label: origin.origin,
-          icon: origin.icon,
-          color: origin.color,
+        counts.set(trait.id, {
+          key: trait.id,
+          label: trait.name,
+          icon: trait.icon,
+          color: trait.color,
           count: 1,
         })
+    }
+    if (origin) {
+      const key = `origin:${origin.origin}`
+      const entry = counts.get(key)
+      if (entry) entry.count++
+      else counts.set(key, { key, label: origin.origin, icon: origin.icon, color: origin.color, count: 1 })
     }
   }
   return [...counts.values()].sort(
     (a, b) => b.count - a.count || a.label.localeCompare(b.label),
   )
+})
+
+// ── Rail hover → spotlight that champion's synergies in the bar ──
+const hoveredRailChampion = ref<string | null>(null)
+const hoveredContrib = computed(() => {
+  if (!hoveredRailChampion.value) return null
+  const { traits, origin } = getChampionDetail(hoveredRailChampion.value)
+  const keys = new Set<string>(traits.map((t) => t.id))
+  if (origin) keys.add(`origin:${origin.origin}`)
+  return keys
 })
 
 
@@ -373,6 +388,8 @@ function onImgError(e: Event) {
         :class="{ 'csp-slot--active': activeSubSlot === -1 }"
         :title="tabChampion(-1) ?? `Assign your ${activeRole} main champion`"
         @click="emit('tab-change', -1)"
+        @mouseenter="hoveredRailChampion = mainChampion"
+        @mouseleave="hoveredRailChampion = null"
       >
         <span class="csp-slot-portrait">
           <img
@@ -398,6 +415,8 @@ function onImgError(e: Event) {
         :class="{ 'csp-slot--active': activeSubSlot === k }"
         :title="ally ?? `Assign Ally ${k + 1}`"
         @click="emit('tab-change', k)"
+        @mouseenter="hoveredRailChampion = ally"
+        @mouseleave="hoveredRailChampion = null"
       >
         <span class="csp-slot-portrait csp-slot-portrait--round">
           <img
@@ -424,8 +443,12 @@ function onImgError(e: Event) {
       <div class="csp-synergy-chips">
         <span
           v-for="s in roleSynergies"
-          :key="s.label"
+          :key="s.key"
           class="csp-synergy-chip"
+          :class="{
+            'csp-synergy-chip--hit': hoveredContrib?.has(s.key),
+            'csp-synergy-chip--dim': hoveredContrib && !hoveredContrib.has(s.key),
+          }"
           :style="{ borderColor: s.color, color: s.color }"
         >
           <Icon :icon="s.icon" width="16" height="16" class="csp-synergy-icon" />
@@ -933,6 +956,21 @@ function onImgError(e: Event) {
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  transition:
+    opacity 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s,
+    filter 0.15s;
+}
+/* Rail hover: chips of the hovered champion light up, the rest recedes */
+.csp-synergy-chip--hit {
+  transform: scale(1.08);
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 12px color-mix(in srgb, currentColor 55%, transparent);
+}
+.csp-synergy-chip--dim {
+  opacity: 0.3;
+  filter: saturate(0.5);
 }
 .csp-synergy-icon {
   color: #fff;
