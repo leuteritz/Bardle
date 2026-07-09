@@ -47,13 +47,22 @@
         Maximum reached ({{ MAX_ACTIVE_EXPEDITIONS }}) — collect active expeditions first
       </div>
 
-      <!-- ══ ACTIVE MISSIONS ══════════════════════════════════ -->
+      <!-- ══ ACTIVE EXPEDITIONS ═══════════════════════════════ -->
       <section v-if="activeCount > 0" class="ec-section">
-        <div class="ec-section-head">
-          <span class="ec-section-accent">✦</span>
-          <span class="ec-section-title">Active Expeditions</span>
-          <span class="ec-section-count">{{ activeCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}</span>
-          <div class="ec-section-rule"></div>
+        <div
+          class="ec-section-banner ec-section-banner--active"
+          role="button"
+          tabindex="0"
+          :aria-expanded="!activeCollapsed"
+          @click="activeCollapsed = !activeCollapsed"
+          @keydown.enter.prevent="activeCollapsed = !activeCollapsed"
+          @keydown.space.prevent="activeCollapsed = !activeCollapsed"
+        >
+          <span class="ec-banner-chevron" :class="{ 'ec-banner-chevron--collapsed': activeCollapsed }">▾</span>
+          <Icon icon="game-icons:campfire" width="24" height="24" class="ec-banner-ico" />
+          <span class="ec-banner-title">Active Expeditions</span>
+          <span class="ec-banner-count">{{ activeCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}</span>
+          <span class="ec-banner-spacer"></span>
 
           <button
             class="ec-bulk-btn ec-bulk-btn--collect"
@@ -72,7 +81,7 @@
           </button>
         </div>
 
-        <TransitionGroup name="ec-card-fly" tag="div" class="ec-active-list">
+        <TransitionGroup v-show="!activeCollapsed" name="ec-card-fly" tag="div" class="ec-active-list">
           <!-- Ready to collect -->
           <div
             v-for="exp in doneExpeditions"
@@ -184,11 +193,20 @@
 
       <!-- ══ AVAILABLE ════════════════════════════════════════ -->
       <section class="ec-section">
-        <div class="ec-section-head">
-          <span class="ec-section-accent">✦</span>
-          <span class="ec-section-title">Available</span>
-          <span class="ec-section-count">{{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}</span>
-          <div class="ec-section-rule"></div>
+        <div
+          class="ec-section-banner ec-section-banner--offers"
+          role="button"
+          tabindex="0"
+          :aria-expanded="!availableCollapsed"
+          @click="availableCollapsed = !availableCollapsed"
+          @keydown.enter.prevent="availableCollapsed = !availableCollapsed"
+          @keydown.space.prevent="availableCollapsed = !availableCollapsed"
+        >
+          <span class="ec-banner-chevron" :class="{ 'ec-banner-chevron--collapsed': availableCollapsed }">▾</span>
+          <Icon icon="game-icons:rolled-cloth" width="24" height="24" class="ec-banner-ico" />
+          <span class="ec-banner-title">Available</span>
+          <span class="ec-banner-count">{{ expeditionStore.availableExpeditions.length }}/{{ EXPEDITION_MAX_AVAILABLE }}</span>
+          <span class="ec-banner-spacer"></span>
 
           <button
             class="ec-bulk-btn ec-bulk-btn--send"
@@ -203,14 +221,20 @@
         </div>
 
         <!-- Empty state -->
-        <div v-if="expeditionStore.availableExpeditions.length === 0" class="ec-empty">
+        <div v-if="!availableCollapsed && expeditionStore.availableExpeditions.length === 0" class="ec-empty">
           <div class="ec-empty-icon">✦</div>
           <div>No expeditions available</div>
           <div class="ec-empty-sub">Next in {{ formatCountdown(timeUntilNextSpawn) }}</div>
         </div>
 
         <!-- Offer rows -->
-        <TransitionGroup v-else name="ec-card-fly" tag="div" class="ec-offer-list">
+        <TransitionGroup
+          v-if="expeditionStore.availableExpeditions.length > 0"
+          v-show="!availableCollapsed"
+          name="ec-card-fly"
+          tag="div"
+          class="ec-offer-list"
+        >
           <div
             v-for="slot in expeditionStore.availableExpeditions"
             :key="slot.id"
@@ -360,6 +384,9 @@ export default defineComponent({
     const isDev = import.meta.env.DEV
     const collectFlashing = ref(false)
     const activeTooltipId = ref<string | null>(null)
+    // Collapsible sections — both expanded by default
+    const activeCollapsed = ref(false)
+    const availableCollapsed = ref(false)
 
     let timer: ReturnType<typeof setInterval> | null = null
 
@@ -556,6 +583,8 @@ export default defineComponent({
       isDev,
       collectFlashing,
       activeTooltipId,
+      activeCollapsed,
+      availableCollapsed,
       timeUntilNextSpawn,
       slotsFull,
       activeCount,
@@ -697,30 +726,71 @@ export default defineComponent({
 
 /* ── Section ──────────────────────────────────────────────── */
 .ec-section { display: flex; flex-direction: column; gap: 11px; }
-.ec-section-head {
+
+/* Section headlines — big glowing titles (no box, so they can't be mistaken
+   for cards), color-coded with a gradient underline; click to collapse */
+.ec-section-banner {
+  --sec-c: #e8c040;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
+  padding: 2px 2px 10px;
+  cursor: pointer;
+  user-select: none;
 }
-.ec-section-accent { font-size: 12px; color: #e8c040; }
-.ec-section-title {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+.ec-section-banner::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--sec-c), color-mix(in srgb, var(--sec-c) 35%, transparent) 55%, transparent);
+}
+.ec-section-banner--active { --sec-c: #64dcb4; }
+.ec-section-banner--active .ec-banner-ico,
+.ec-section-banner--active .ec-banner-title,
+.ec-section-banner--active .ec-banner-chevron { color: #a0f0d0; }
+.ec-section-banner--offers { --sec-c: #e8c040; }
+.ec-section-banner--offers .ec-banner-ico,
+.ec-section-banner--offers .ec-banner-title,
+.ec-section-banner--offers .ec-banner-chevron { color: #e8c040; }
+.ec-section-banner:hover .ec-banner-title {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--sec-c) 75%, transparent);
+}
+.ec-banner-chevron {
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.8;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.ec-banner-chevron--collapsed { transform: rotate(-90deg); }
+.ec-banner-ico {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--sec-c) 50%, transparent));
+}
+.ec-banner-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #c8a860;
+  white-space: nowrap;
+  line-height: 1;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--sec-c) 45%, transparent);
+  transition: text-shadow 0.15s;
 }
-.ec-section-count {
-  font-size: 12px;
+.ec-banner-count {
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(230, 220, 196, 0.4);
+  color: rgba(230, 220, 196, 0.5);
   font-variant-numeric: tabular-nums;
+  align-self: flex-end;
+  padding-bottom: 2px;
 }
-.ec-section-rule {
-  flex: 1;
-  height: 1px;
-  background: rgba(200, 164, 90, 0.16);
-}
+.ec-banner-spacer { flex: 1; }
 
 /* ── Bulk Action Buttons ──────────────────────────────────── */
 .ec-bulk-btn {
@@ -794,9 +864,9 @@ export default defineComponent({
   top: 0; left: 0; right: 0;
   height: 3px;
 }
-.ec-active-accent--success { background: linear-gradient(to right, #2e7a1a, #52b830, #2e7a1a); }
-.ec-active-accent--failure { background: linear-gradient(to right, #a04030, #cc6050, #a04030); }
-.ec-active-accent--running { background: linear-gradient(to right, transparent, var(--exp-p, #e8c040), transparent); }
+.ec-active-accent--success { background: linear-gradient(to right, #2e7a1a, #52b830, #2e7a1a); opacity: 0.7; }
+.ec-active-accent--failure { background: linear-gradient(to right, #a04030, #cc6050, #a04030); opacity: 0.7; }
+.ec-active-accent--running { background: linear-gradient(to right, transparent, var(--exp-p, #e8c040), transparent); opacity: 0.5; }
 
 .ec-active-body {
   display: flex;
@@ -983,21 +1053,22 @@ export default defineComponent({
   position: relative;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.07) 0%, #1a1008 38%);
-  border: 2px solid var(--exp-d, #7a4e20);
+  background: linear-gradient(180deg, rgba(var(--exp-glow, 200,144,64), 0.035) 0%, #1a1008 38%);
+  border: 1px solid color-mix(in srgb, var(--exp-d, #7a4e20) 55%, #241408);
   border-radius: 4px;
-  box-shadow: inset 0 0 0 1px #3e200a, 0 0 10px rgba(var(--exp-glow, 200,144,64), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(62, 32, 10, 0.6);
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
   cursor: pointer;
 }
 .ec-card--available:hover {
-  border-color: var(--exp-p, #e8c040);
-  box-shadow: inset 0 0 0 1px #3e200a, 0 0 20px rgba(var(--exp-glow, 232,192,64), 0.3);
+  border-color: color-mix(in srgb, var(--exp-p, #e8c040) 75%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(62, 32, 10, 0.6), 0 0 14px rgba(var(--exp-glow, 232,192,64), 0.18);
 }
 .ec-card--available:hover .ec-card-ico {
+  opacity: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 14px rgba(var(--exp-glow, 200, 144, 64), 0.65));
+    drop-shadow(0 0 12px rgba(var(--exp-glow, 200, 144, 64), 0.5));
   transform: scale(1.06);
 }
 .ec-card--locked {
@@ -1011,11 +1082,11 @@ export default defineComponent({
   50%       { box-shadow: inset 0 0 0 1px #3e200a, 0 0 14px rgba(204, 96, 80, 0.5); }
 }
 .ec-card-accent {
-  height: 3px;
+  height: 2px;
   background: linear-gradient(to right, transparent, var(--exp-p, #e8c040) 30%, var(--exp-p, #e8c040) 70%, transparent);
+  opacity: 0.45;
   flex-shrink: 0;
   border-radius: 2px 2px 0 0;
-  box-shadow: 0 1px 6px rgba(var(--exp-glow, 200,144,64), 0.4);
 }
 
 /* Tier badge — inline next to the name */
@@ -1049,19 +1120,20 @@ export default defineComponent({
   width: 64px;
   height: 64px;
   flex-shrink: 0;
-  background: radial-gradient(circle, rgba(var(--exp-glow, 200, 144, 64), 0.22) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(var(--exp-glow, 200, 144, 64), 0.12) 0%, transparent 68%);
 }
 .ec-card-ico {
+  opacity: 0.85;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 8px rgba(var(--exp-glow, 200, 144, 64), 0.35));
-  transition: filter 0.15s, transform 0.15s;
+    drop-shadow(0 0 6px rgba(var(--exp-glow, 200, 144, 64), 0.2));
+  transition: filter 0.15s, transform 0.15s, opacity 0.15s;
 }
 .ec-card-info { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
 .ec-card-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .ec-card-name {
   font-size: 17px;
   font-weight: 700;
-  color: var(--exp-p, #e8c040);
+  color: color-mix(in srgb, var(--exp-p, #e8c040) 62%, #cfc2a4);
   letter-spacing: 0.02em;
   line-height: 1.2;
   white-space: nowrap;
