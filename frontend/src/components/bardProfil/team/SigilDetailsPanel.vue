@@ -20,6 +20,8 @@ import type { ItemCategory, ShopItem } from '@/types'
 
 const props = defineProps<{
   roleIndex: number
+  /** Ally sub-slot hovered on the sigil board — its row lights up here. */
+  highlightedAlly?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -279,7 +281,12 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
             v-for="(ally, sub) in allies"
             :key="sub"
             class="sdp-ally-row"
-            :class="{ 'sdp-ally-row--filled': !!ally }"
+            :class="{
+              'sdp-ally-row--filled': !!ally,
+              'sdp-ally-row--highlight': highlightedAlly === sub,
+              'sdp-ally-row--dimmed':
+                highlightedAlly !== null && highlightedAlly !== undefined && highlightedAlly !== sub,
+            }"
             @click="emit('pick-ally', sub)"
             @mouseenter="emit('hover-ally', sub)"
             @mouseleave="emit('hover-ally', null)"
@@ -705,6 +712,23 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 .sdp-ally-row:hover {
   transform: translateY(-1px);
   border-color: var(--rc);
+}
+/* Board hover mirrored into the panel — same language as the row's own hover,
+   plus a role-colored glow so it stands out among the siblings */
+.sdp-ally-row--highlight {
+  transform: translateY(-1px);
+  border-color: var(--rc);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 45%, transparent);
+}
+/* Siblings recede while one row is board-highlighted — focus on the hovered one */
+.sdp-ally-row--dimmed {
+  opacity: 0.35;
+  filter: saturate(0.55);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    opacity 0.15s,
+    filter 0.15s;
 }
 /* splash image fills the whole row; the fade keeps the left text readable */
 .sdp-ally-row-img {

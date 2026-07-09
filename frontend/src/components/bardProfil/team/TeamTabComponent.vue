@@ -45,9 +45,12 @@ watch(synergiesOpen, (open) => {
 })
 /** Ally row hovered in the details panel — spotlighted on the sigil board. */
 const hoveredAllySub = ref<number | null>(null)
+/** Ally satellite hovered on the board — highlighted in the details panel. */
+const boardHoveredAlly = ref<number | null>(null)
 
 watch(selectedRole, () => {
   hoveredAllySub.value = null
+  boardHoveredAlly.value = null
 })
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
@@ -220,6 +223,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
+      @hover-ally="boardHoveredAlly = $event"
       @open-shop="openShop('all')"
       @open-expedition="openExpedition"
       @open-synergies="openSynergies"
@@ -230,6 +234,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       <SigilDetailsPanel
         v-if="selectedRole !== null"
         :role-index="selectedRole"
+        :highlighted-ally="boardHoveredAlly"
         @close="closePanel"
         @swap="openPicker(-1)"
         @pick-ally="openPicker"

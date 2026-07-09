@@ -29,6 +29,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: []
   'select-ally': [subSlot: number]
+  /** Hovered ally satellite — mirrored as a row highlight in the details panel. */
+  'hover-ally': [subSlot: number | null]
 }>()
 
 const battleStore = useBattleStore()
@@ -94,6 +96,8 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     :title="ally ?? `${roleDef.label} — Ally ${sub + 1}`"
     :aria-label="ally ? `${ally} (Ally ${sub + 1})` : `Assign Ally ${sub + 1} for ${roleDef.label}`"
     @click.stop="emit('select-ally', sub)"
+    @mouseenter="emit('hover-ally', sub)"
+    @mouseleave="emit('hover-ally', null)"
   >
     <img v-if="ally" :src="allyImage(ally)" :alt="ally" class="sigil-ally-img" />
     <span v-else class="sigil-ally-plus">＋</span>

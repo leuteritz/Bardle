@@ -34,6 +34,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'select-role': [roleIndex: number]
   'select-ally': [roleIndex: number, subSlot: number]
+  /** Hovered ally satellite of the SELECTED role (null = none). */
+  'hover-ally': [subSlot: number | null]
   'open-shop': []
   'open-expedition': []
   'open-synergies': []
@@ -334,6 +336,7 @@ watch(
         :hovered-ally="selectedRole === i ? (hoveredAlly ?? null) : null"
         @select="emit('select-role', i)"
         @select-ally="(sub: number) => emit('select-ally', i, sub)"
+        @hover-ally="(sub: number | null) => selectedRole === i && emit('hover-ally', sub)"
       />
     </div>
 
