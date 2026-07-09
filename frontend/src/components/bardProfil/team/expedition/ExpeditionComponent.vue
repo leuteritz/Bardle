@@ -572,14 +572,14 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* ── Status strip ─────────────────────────────────────────── */
+/* ── Status strip (fixed — only the body below scrolls) ───── */
 .ec-status-strip {
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -645,12 +645,28 @@ export default defineComponent({
 }
 .ec-admin-btn:active { transform: scale(0.95); }
 
-/* ── Body ─────────────────────────────────────────────────── */
+/* ── Body — the panel's only scroll area ──────────────────── */
 .ec-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 14px 14px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.ec-body::-webkit-scrollbar {
+  width: 4px;
+}
+.ec-body::-webkit-scrollbar-track {
+  background: #111;
+}
+.ec-body::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
 }
 
 /* ── Section ──────────────────────────────────────────────── */
