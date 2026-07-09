@@ -33,10 +33,36 @@ const pentagonPath = computed(() =>
   props.rolePoints.map((p) => `${p.x},${p.y}`).join(' '),
 )
 
-/** Pentagram: connect every second pentagon vertex (0→2→4→1→3→0). */
-const pentagramPath = computed(() => {
+interface RoleEdge {
+  id: string
+  a: SigilPoint
+  b: SigilPoint
+  colorA: string
+  colorB: string
+  lit: boolean
+}
+
+function buildEdge(id: string, i: number, j: number): RoleEdge {
+  return {
+    id,
+    a: props.rolePoints[i],
+    b: props.rolePoints[j],
+    colorA: props.roleColors[i],
+    colorB: props.roleColors[j],
+    lit: props.mainFilled[i] && props.mainFilled[j],
+  }
+}
+
+/** Pentagon edges — each link fades from one role's color into the other's
+ *  at the middle of the line. */
+const pentagonEdges = computed(() =>
+  props.rolePoints.map((_, i) => buildEdge(`pent-${i}`, i, (i + 1) % props.rolePoints.length)),
+)
+
+/** Pentagram diagonals (0→2→4→1→3→0) — same two-color gradient treatment. */
+const pentagramEdges = computed(() => {
   const order = [0, 2, 4, 1, 3]
-  return order.map((i) => `${props.rolePoints[i].x},${props.rolePoints[i].y}`).join(' ')
+  return order.map((i, idx) => buildEdge(`star-${i}`, i, order[(idx + 1) % order.length]))
 })
 
 function spokeColor(i: number): string {
@@ -155,23 +181,56 @@ const allyLinks = computed(() => {
       opacity="0.6"
     />
 
-    <!-- pentagon body -->
+    <!-- two-color gradients: each main→main link blends between the two role
+         colors at the middle of the line -->
+    <defs>
+      <linearGradient
+        v-for="e in [...pentagonEdges, ...pentagramEdges]"
+        :id="`sigil-edge-${e.id}`"
+        :key="`grad-${e.id}`"
+        gradientUnits="userSpaceOnUse"
+        :x1="e.a.x"
+        :y1="e.a.y"
+        :x2="e.b.x"
+        :y2="e.b.y"
+      >
+        <stop offset="0%" :stop-color="e.colorA" />
+        <stop offset="42%" :stop-color="e.colorA" />
+        <stop offset="58%" :stop-color="e.colorB" />
+        <stop offset="100%" :stop-color="e.colorB" />
+      </linearGradient>
+    </defs>
+
+    <!-- pentagon body (fill only — edges are drawn as gradient lines) -->
     <polygon
       :points="pentagonPath"
       :fill="showMandala ? `${stage.crestColor}14` : 'rgba(200, 164, 90, 0.04)'"
-      :stroke="showPentagram ? stage.crestColor : 'rgba(200, 164, 90, 0.35)'"
-      stroke-width="1.5"
+      stroke="none"
     />
+    <g stroke-width="1.5" stroke-linecap="round">
+      <line
+        v-for="e in pentagonEdges"
+        :key="e.id"
+        :x1="e.a.x"
+        :y1="e.a.y"
+        :x2="e.b.x"
+        :y2="e.b.y"
+        :stroke="`url(#sigil-edge-${e.id})`"
+        :opacity="e.lit ? 0.9 : 0.4"
+      />
+    </g>
     <!-- pentagram overlay — appears once all 5 mains are set -->
-    <polygon
-      v-if="showPentagram"
-      :points="pentagramPath"
-      fill="none"
-      :stroke="stage.crestColor"
-      stroke-width="1.2"
-      opacity="0.65"
-      class="pentagram"
-    />
+    <g v-if="showPentagram" class="pentagram" stroke-width="1.2" stroke-linecap="round">
+      <line
+        v-for="e in pentagramEdges"
+        :key="e.id"
+        :x1="e.a.x"
+        :y1="e.a.y"
+        :x2="e.b.x"
+        :y2="e.b.y"
+        :stroke="`url(#sigil-edge-${e.id})`"
+      />
+    </g>
 
     <!-- ally links: role main → each filled ally satellite -->
     <g stroke-width="1.5" stroke-linecap="round">
