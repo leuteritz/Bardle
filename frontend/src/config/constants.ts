@@ -282,11 +282,60 @@ export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.4
 export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
 /** Role ability metadata for the objective fight panels (icons registered in USED_GAME_ICONS; colors come from ROLE_BY_KEY) */
 export const OBJECTIVE_ROLE_ABILITIES = {
-  top: { name: 'Challenge', icon: 'game-icons:enrage' },
-  jungle: { name: 'Wild Rally', icon: 'game-icons:uprising' },
-  mid: { name: 'Hex Curse', icon: 'game-icons:cursed-star' },
-  adc: { name: 'Focus Fire', icon: 'game-icons:dead-eye' },
-  support: { name: 'Mend', icon: 'game-icons:healing' },
+  top: {
+    name: 'Challenge',
+    icon: 'game-icons:enrage',
+    desc: 'Roars a challenge — two enemies turn their blades on the Top laner, sparing the team.',
+  },
+  jungle: {
+    name: 'Wild Rally',
+    icon: 'game-icons:uprising',
+    desc: 'Rallies the strongest ally, sharpening their strikes by 40% for a short window.',
+  },
+  mid: {
+    name: 'Hex Curse',
+    icon: 'game-icons:cursed-star',
+    desc: 'Stacks curses on the objective — every cast burns it for the rest of the fight.',
+  },
+  adc: {
+    name: 'Focus Fire',
+    icon: 'game-icons:dead-eye',
+    desc: 'Every shot can crit — while Focus Fire burns, every shot does.',
+  },
+  support: {
+    name: 'Mend',
+    icon: 'game-icons:healing',
+    desc: 'A burst of light that instantly heals every ally still standing.',
+  },
+} as const
+
+/** Role ability metadata for the orbit/universe combat (roleBehaviorStore) — icons registered in USED_GAME_ICONS */
+export const ORBIT_ROLE_ABILITIES = {
+  top: {
+    name: 'Aegis Wall',
+    icon: 'game-icons:bordered-shield',
+    desc: 'Raises a shield that swallows the next enemy shot — reforged every 5 seconds.',
+  },
+  jungle: {
+    name: 'Wild Blessing',
+    icon: 'game-icons:vine-whip',
+    desc: 'Patrols the orbit and blesses nearby planets with potent jungle buffs.',
+  },
+  mid: {
+    name: 'Chaos Curse',
+    icon: 'game-icons:spell-book',
+    desc: 'Every 15 seconds hurls a random curse at the boss — rot, weakness or instant doom.',
+  },
+  adc: {
+    name: 'Piercing Volley',
+    icon: 'game-icons:striking-arrows',
+    desc: 'Looses a focused volley every 5 seconds, striking the boss for heavy bonus damage.',
+  },
+  support: {
+    name: 'Guardian Light',
+    icon: 'game-icons:glowing-hands',
+    desc: 'Mends wounded planets nearby — and the Bard himself when all is calm.',
+  },
 } as const
 
 /** Hard cap on the frozen-time objective fight; resolves by damage lead */
@@ -2455,6 +2504,11 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:healing', // Support "Mend" heal ability (ObjectiveModalComponent)
   'game-icons:heart-shield', // MOST PUNISHED award badge (ObjectiveResultSummary)
   'game-icons:heart-beats', // SURVIVOR award badge (ObjectiveResultSummary)
+  'game-icons:bordered-shield', // Top "Aegis Wall" orbit ability (SigilDetailsPanel)
+  'game-icons:vine-whip', // Jungle "Wild Blessing" orbit ability (SigilDetailsPanel)
+  'game-icons:spell-book', // Mid "Chaos Curse" orbit ability (SigilDetailsPanel)
+  'game-icons:striking-arrows', // ADC "Piercing Volley" orbit ability (SigilDetailsPanel)
+  'game-icons:glowing-hands', // Support "Guardian Light" orbit ability (SigilDetailsPanel)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

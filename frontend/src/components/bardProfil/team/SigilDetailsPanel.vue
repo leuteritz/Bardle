@@ -9,6 +9,8 @@ import {
   ALLIES_PER_ROLE,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SPLASH_HEIGHT,
+  ORBIT_ROLE_ABILITIES,
+  OBJECTIVE_ROLE_ABILITIES,
 } from '@/config/constants'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
@@ -48,6 +50,8 @@ const allies = computed(
   () => secondarySlots.value[props.roleIndex] ?? Array<string | null>(ALLIES_PER_ROLE).fill(null),
 )
 const equipment = computed(() => itemStore.slotEquipment[props.roleIndex])
+const orbitAbility = computed(() => ORBIT_ROLE_ABILITIES[roleDef.value.key])
+const objectiveAbility = computed(() => OBJECTIVE_ROLE_ABILITIES[roleDef.value.key])
 
 const origin = computed(() => (main.value ? getChampionOrigin(main.value) : null))
 const originColor = computed(() => getOriginColor(main.value))
@@ -165,14 +169,50 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 
     <!-- ── scrollable body ── -->
     <div class="sdp-body">
-      <!-- role ability — part of the main champion block -->
-      <div class="sdp-ability">
-        <div class="sdp-ability-icon">
-          <img :src="roleDef.image" :alt="roleDef.label" class="sdp-ability-img" />
+      <!-- role abilities — orbit (universe) + objective fight -->
+      <div>
+        <div class="sdp-section-head">
+          <span class="sdp-section-accent">✦</span>
+          <span class="sdp-section-title">Role Abilities</span>
+          <div class="sdp-section-rule" />
         </div>
-        <div class="sdp-ability-text">
-          <div class="sdp-section-label">Role Ability</div>
-          <div class="sdp-ability-desc">{{ roleDef.abilityCompact }}</div>
+        <div class="sdp-ability-cards">
+          <div class="sdp-ability-card">
+            <div class="sdp-ability-card-icon">
+              <Icon
+                :icon="orbitAbility.icon"
+                width="28"
+                height="28"
+                :style="{ color: roleDef.color }"
+              />
+            </div>
+            <div class="sdp-ability-card-text">
+              <div class="sdp-ability-card-tag">Universe</div>
+              <div class="sdp-ability-card-name" :style="{ color: roleDef.color }">
+                {{ orbitAbility.name }}
+              </div>
+              <div class="sdp-ability-card-desc">{{ orbitAbility.desc }}</div>
+            </div>
+          </div>
+          <div class="sdp-ability-card">
+            <div class="sdp-ability-card-icon">
+              <Icon
+                :icon="objectiveAbility.icon"
+                width="28"
+                height="28"
+                style="color: #e8c040"
+              />
+            </div>
+            <div class="sdp-ability-card-text">
+              <div class="sdp-ability-card-tag sdp-ability-card-tag--gold">
+                Objective · Baron &amp; Drake
+              </div>
+              <div class="sdp-ability-card-name" style="color: #e8c040">
+                {{ objectiveAbility.name }}
+              </div>
+              <div class="sdp-ability-card-desc">{{ objectiveAbility.desc }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -486,19 +526,25 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   border-radius: 2px;
 }
 
-.sdp-ability {
+/* role abilities — two cards: orbit (role-colored) + objective (gold) */
+.sdp-ability-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sdp-ability-card {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 10px 11px;
+  gap: 12px;
+  padding: 11px 12px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(200, 164, 90, 0.12);
   border-left: 3px solid var(--rc);
 }
-.sdp-ability-icon {
-  width: 42px;
-  height: 42px;
+.sdp-ability-card-icon {
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -507,22 +553,31 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   background: #141410;
   border: 1px solid rgba(220, 180, 90, 0.3);
 }
-.sdp-ability-img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
+.sdp-ability-card-text {
+  flex: 1;
+  min-width: 0;
 }
-.sdp-section-label {
-  font-size: 9px;
+.sdp-ability-card-tag {
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(200, 164, 90, 0.6);
 }
-.sdp-ability-desc {
+.sdp-ability-card-tag--gold {
+  color: rgba(232, 192, 64, 0.75);
+}
+.sdp-ability-card-name {
+  font-size: 17px;
+  line-height: 1.15;
+  margin-top: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.sdp-ability-card-desc {
   font-size: 13.5px;
   font-weight: 500;
   color: #dcc99a;
-  line-height: 1.35;
+  line-height: 1.45;
   margin-top: 3px;
 }
 
