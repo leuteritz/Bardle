@@ -735,7 +735,8 @@ function onImgError(e: Event) {
   border: 2px solid rgba(122, 78, 32, 0.55);
   transition:
     border-color 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    transform 0.15s;
 }
 .csp-slot--main .csp-slot-portrait {
   width: 76px;
@@ -751,9 +752,29 @@ function onImgError(e: Event) {
 .csp-slot:hover .csp-slot-portrait {
   border-color: rgba(200, 144, 64, 0.8);
 }
+/* Active slot: unmissable — scaled-up portrait, thick role-colored ring with a
+   strong glow, plus a marker bar underneath */
 .csp-slot--active .csp-slot-portrait {
+  transform: scale(1.12);
+  border-width: 3px;
   border-color: var(--role-c);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--role-c) 45%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--role-c) 35%, transparent),
+    0 0 22px color-mix(in srgb, var(--role-c) 70%, transparent);
+}
+.csp-slot--active .csp-slot-portrait::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: 0;
+  height: 3px;
+  background: var(--role-c);
+  border-radius: 2px 2px 0 0;
+}
+.csp-slot--active .csp-slot-info-name {
+  font-weight: 900;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--role-c) 60%, transparent);
 }
 
 /* Per-champion info beside each portrait */
