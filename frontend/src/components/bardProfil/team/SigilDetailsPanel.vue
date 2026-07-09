@@ -596,9 +596,9 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(10, 7, 4, 0.94) 0%,
-    rgba(10, 7, 4, 0.82) 42%,
-    rgba(10, 7, 4, 0.25) 100%
+    rgba(10, 7, 4, 0.96) 0%,
+    rgba(10, 7, 4, 0.88) 46%,
+    rgba(10, 7, 4, 0.42) 100%
   );
 }
 .sdp-ally-row-main {
@@ -628,14 +628,16 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.78);
   border: 1px solid;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .sdp-mini-chip-icon {
   color: #fff;
