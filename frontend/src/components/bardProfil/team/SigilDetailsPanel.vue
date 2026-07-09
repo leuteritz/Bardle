@@ -104,14 +104,30 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 
 <template>
   <div class="sdp-panel" :style="{ '--rc': roleDef.color }">
-    <!-- ── splash header ── -->
-    <div class="sdp-splash">
+    <!-- ── splash header — the portrait itself is the swap button ── -->
+    <div
+      class="sdp-splash sdp-splash--clickable"
+      role="button"
+      tabindex="0"
+      :aria-label="main ? 'Swap champion' : 'Select champion'"
+      @click="emit('swap')"
+      @keydown.enter.prevent="emit('swap')"
+      @keydown.space.prevent="emit('swap')"
+    >
       <template v-if="main">
         <img :src="mainImage" :alt="main" class="sdp-splash-img" />
         <div class="sdp-splash-fade" />
+        <div class="sdp-splash-swap-hint">
+          <Icon icon="game-icons:cycle" width="18" height="18" />
+          Swap Champion
+        </div>
       </template>
       <div v-else class="sdp-splash-empty">
         <img :src="roleDef.image" :alt="roleDef.label" class="sdp-splash-empty-img" />
+        <div class="sdp-splash-select-cta">
+          <Icon icon="game-icons:cycle" width="18" height="18" />
+          Select Champion
+        </div>
       </div>
 
       <div class="sdp-splash-top">
@@ -156,14 +172,10 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
           </span>
         </div>
       </div>
-      <button class="sdp-close" aria-label="Close details" @click="emit('close')">✕</button>
+      <button class="sdp-close" aria-label="Close details" @click.stop="emit('close')">✕</button>
 
       <div class="sdp-splash-bottom">
         <div class="sdp-name">{{ main ?? 'No Champion' }}</div>
-        <button class="sdp-swap-btn" @click="emit('swap')">
-          <Icon icon="game-icons:cycle" width="15" height="15" />
-          {{ main ? 'Swap' : 'Select' }}
-        </button>
       </div>
     </div>
 
@@ -347,6 +359,13 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   overflow: hidden;
   background: #0a0704;
 }
+.sdp-splash--clickable {
+  cursor: pointer;
+}
+.sdp-splash--clickable:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: -2px;
+}
 .sdp-splash-img {
   position: absolute;
   inset: 0;
@@ -354,6 +373,43 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   height: 100%;
   object-fit: cover;
   object-position: center 16%;
+  transition:
+    transform 0.25s ease-out,
+    filter 0.25s;
+}
+.sdp-splash--clickable:hover .sdp-splash-img {
+  transform: scale(1.04);
+  filter: brightness(0.75);
+}
+/* swap affordance — appears centered on hover */
+.sdp-splash-swap-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateY(4px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid #c89040;
+  color: #e8c040;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.sdp-splash--clickable:hover .sdp-splash-swap-hint,
+.sdp-splash--clickable:focus-visible .sdp-splash-swap-hint {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateY(0);
 }
 .sdp-splash-fade {
   position: absolute;
@@ -369,14 +425,48 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 14px;
 }
 .sdp-splash-empty-img {
   width: 88px;
   height: 88px;
   opacity: 0.4;
   object-fit: contain;
+}
+/* empty state — permanent pulsing call-to-action */
+.sdp-splash-select-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px dashed var(--rc);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--rc);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: sdp-cta-pulse 2s ease-in-out infinite;
+}
+@keyframes sdp-cta-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sdp-splash-select-cta {
+    animation: none;
+    opacity: 1;
+  }
 }
 /* top overlay — badge rows: role + tier on top, origin + traits below */
 .sdp-splash-top {
@@ -481,27 +571,6 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
   flex-shrink: 0;
 }
-.sdp-swap-btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 13px;
-  cursor: pointer;
-  border-radius: 4px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  color: #fff;
-  font-size: 13px;
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: filter 0.15s;
-}
-.sdp-swap-btn:hover {
-  filter: brightness(1.12);
-}
-
 /* ── body ── */
 .sdp-body {
   flex: 1;
