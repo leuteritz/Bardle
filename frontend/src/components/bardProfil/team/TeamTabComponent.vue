@@ -123,22 +123,21 @@ function onSelectorTabChange(subSlot: number) {
   pickerSubSlot.value = subSlot
 }
 
+// The picker never closes itself — the player fills main + allies back to back
+// and dismisses the modal manually (✕ / Escape / backdrop).
 function handleSelect(champion: string) {
   const subSlot = pickerSubSlot.value
   if (subSlot === -1) {
     battleStore.setHeaderSlot(roleIndex.value, champion)
     showToast(`${champion} set as ${roleDef.value.label}!`)
-    closeModal()
-    return
+  } else {
+    battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
+    showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
   }
-  battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
-  showToast(`${champion} assigned as Ally ${subSlot + 1}!`)
-  // Rapid-fire flow: jump to the next empty ally slot of this role; close once the row is full
+  // Rapid-fire flow: advance to the next empty ally slot; stay put once full
   const row = battleStore.secondarySlots[roleIndex.value] ?? []
   const nextEmpty = row.findIndex((s) => s === null)
-  if (nextEmpty === -1) {
-    closeModal()
-  } else {
+  if (nextEmpty !== -1) {
     pickerSubSlot.value = nextEmpty
   }
 }
