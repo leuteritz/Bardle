@@ -236,7 +236,7 @@
           class="ec-offer-list"
         >
           <div
-            v-for="slot in expeditionStore.availableExpeditions"
+            v-for="(slot, slotIdx) in expeditionStore.availableExpeditions"
             :key="slot.id"
             class="ec-card"
             :class="[
@@ -292,6 +292,14 @@
               </div>
 
               <div class="ec-card-side" :title="getTooltipText(slot)">
+                <div
+                  v-if="getQuickstartChance(slot) !== null"
+                  class="ec-qs-chance"
+                  :class="chanceTone(getQuickstartChance(slot)!)"
+                  title="Success chance with the quickstart lineup"
+                >
+                  {{ Math.round(getQuickstartChance(slot)! * 100) }}% success
+                </div>
                 <button
                   class="ec-qs-btn"
                   :class="canQuickstart(slot) ? 'ec-qs-btn--active' : 'ec-qs-btn--disabled'"
@@ -307,7 +315,10 @@
             <!-- Champion Preview Tooltip -->
             <div
               class="ec-preview-tooltip"
-              :class="{ 'ec-preview-tooltip--visible': activeTooltipId === slot.id }"
+              :class="{
+                'ec-preview-tooltip--visible': activeTooltipId === slot.id,
+                'ec-preview-tooltip--below': slotIdx === 0,
+              }"
             >
               <div class="ec-preview-header">Assigned Champions</div>
               <div v-for="p in getQuickstartPreview(slot)" :key="p.role" class="ec-preview-row">
@@ -489,6 +500,23 @@ export default defineComponent({
       activeTooltipId.value = activeTooltipId.value === id ? null : id
     }
 
+    /** Success chance of the quickstart lineup, or null if a role can't be filled. */
+    function getQuickstartChance(slot: AvailableExpeditionSlot): number | null {
+      const preview = getQuickstartPreview(slot)
+      if (preview.some((p) => !p.champion)) return null
+      const assigned = preview.map((p) => ({ name: p.champion!, role: p.role }))
+      return expeditionStore.calculateSuccessChance(
+        assigned,
+        slot.requiredRoles,
+        slot.minPowerThreshold,
+      )
+    }
+    function chanceTone(chance: number): string {
+      if (chance >= 0.7) return 'ec-qs-chance--good'
+      if (chance >= 0.45) return 'ec-qs-chance--mid'
+      return 'ec-qs-chance--bad'
+    }
+
     // ── Bulk Actions ──────────────────────────────────────────
     const canSendAll = computed(
       () =>
@@ -601,6 +629,8 @@ export default defineComponent({
       quickstartExpedition,
       getQuickstartPreview,
       toggleCardTooltip,
+      getQuickstartChance,
+      chanceTone,
       getProgress,
       getTimeRemaining,
       getChampionImage,
@@ -1171,10 +1201,10 @@ export default defineComponent({
 .ec-dur-ico { color: rgba(200, 144, 64, 0.55); flex-shrink: 0; }
 .ec-card-roles { display: flex; align-items: center; gap: 4px; }
 .ec-role-img {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
   flex-shrink: 0;
 }
 .ec-avail-timer {
@@ -1194,7 +1224,21 @@ export default defineComponent({
 .ec-card-side {
   flex-shrink: 0;
   align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
 }
+.ec-qs-chance {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.ec-qs-chance--good { color: #52b830; }
+.ec-qs-chance--mid { color: #e8c040; }
+.ec-qs-chance--bad { color: #cc6050; }
 .ec-qs-btn {
   display: flex;
   align-items: center;
@@ -1242,6 +1286,12 @@ export default defineComponent({
   transform: translateY(4px);
   transition: opacity 0.15s, visibility 0.15s, transform 0.15s;
   pointer-events: none;
+}
+/* Topmost offer: open downward — above would land outside the scroll area */
+.ec-preview-tooltip--below {
+  bottom: auto;
+  top: calc(100% + 6px);
+  transform: translateY(-4px);
 }
 .ec-card--available:hover .ec-preview-tooltip {
   opacity: 1;
