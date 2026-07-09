@@ -67,6 +67,37 @@ function tabChampion(subSlot: number): string | null {
 
 const mainChampion = computed(() => tabChampion(-1))
 
+// ── Role synergy summary: aggregated trait/origin counts across the role's
+// current lineup (main + allies) — what this role contributes at a glance. ──
+const roleSynergies = computed(() => {
+  const counts = new Map<string, { label: string; icon: string; color: string; count: number }>()
+  const lineup = [mainChampion.value, ...allyRow.value].filter(
+    (c): c is string => c !== null,
+  )
+  for (const champ of lineup) {
+    const { traits, origin } = getChampionDetail(champ)
+    for (const trait of traits) {
+      const entry = counts.get(trait.id)
+      if (entry) entry.count++
+      else counts.set(trait.id, { label: trait.name, icon: trait.icon, color: trait.color, count: 1 })
+    }
+    if (origin) {
+      const entry = counts.get(`origin:${origin.origin}`)
+      if (entry) entry.count++
+      else
+        counts.set(`origin:${origin.origin}`, {
+          label: origin.origin,
+          icon: origin.icon,
+          color: origin.color,
+          count: 1,
+        })
+    }
+  }
+  return [...counts.values()].sort(
+    (a, b) => b.count - a.count || a.label.localeCompare(b.label),
+  )
+})
+
 
 const availableTraits = computed(() => {
   const seen = new Set<string>()
@@ -382,6 +413,26 @@ function onImgError(e: Event) {
           <span class="csp-slot-info-name">{{ ally }}</span>
         </span>
       </button>
+    </div>
+
+    <!-- ── Role synergy summary: what main + allies bring together ── -->
+    <div v-if="roleSynergies.length" class="csp-synergy-bar">
+      <span class="csp-synergy-label">
+        <span class="csp-synergy-accent">✦</span>
+        Synergies
+      </span>
+      <div class="csp-synergy-chips">
+        <span
+          v-for="s in roleSynergies"
+          :key="s.label"
+          class="csp-synergy-chip"
+          :style="{ borderColor: s.color, color: s.color }"
+        >
+          <Icon :icon="s.icon" width="16" height="16" class="csp-synergy-icon" />
+          {{ s.label }}
+          <span class="csp-synergy-count">×{{ s.count }}</span>
+        </span>
+      </div>
     </div>
 
     <!-- ── Search + Trait/Origin Filter (harmonized with Champion Shop) ── -->
@@ -835,6 +886,63 @@ function onImgError(e: Event) {
   align-self: stretch;
   margin: 4px 2px;
   background: rgba(122, 78, 32, 0.45);
+}
+
+/* ── Role synergy summary bar (below the slot rail) ── */
+.csp-synergy-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 9px 12px;
+  background: #0e0a06;
+  border-bottom: 1px solid rgba(92, 51, 16, 0.45);
+}
+.csp-synergy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c8a860;
+}
+.csp-synergy-accent {
+  font-size: 11px;
+  color: #e8c040;
+}
+.csp-synergy-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.csp-synergy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.csp-synergy-icon {
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  flex-shrink: 0;
+}
+.csp-synergy-count {
+  font-size: 12px;
+  font-weight: 900;
+  color: #e8c040;
 }
 
 
