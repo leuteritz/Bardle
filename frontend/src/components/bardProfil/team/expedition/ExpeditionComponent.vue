@@ -236,7 +236,7 @@
           class="ec-offer-list"
         >
           <div
-            v-for="(slot, slotIdx) in expeditionStore.availableExpeditions"
+            v-for="slot in expeditionStore.availableExpeditions"
             :key="slot.id"
             class="ec-card"
             :class="[
@@ -244,7 +244,6 @@
               isExpiringSoon(slot) ? 'ec-card--expiring' : ''
             ]"
             :style="cardStyle(slot)"
-            @click.stop="toggleCardTooltip(slot.id)"
           >
             <div class="ec-card-accent"></div>
 
@@ -285,6 +284,33 @@
                   </div>
                 </div>
 
+                <!-- Auto-selected crew: who quickstart sends + their chance share -->
+                <div class="ec-card-crew">
+                  <span
+                    v-for="(p, ci) in getQuickstartPreview(slot)"
+                    :key="p.role"
+                    class="ec-crew-chip"
+                  >
+                    <img
+                      v-if="p.champion"
+                      :src="getChampionImage(p.champion)"
+                      :alt="p.champion"
+                      class="ec-crew-img"
+                    />
+                    <img v-else :src="ROLE_IMG[p.role]" :alt="p.role" class="ec-crew-img ec-crew-img--role" />
+                    <span
+                      class="ec-crew-name"
+                      :class="{ 'ec-crew-name--missing': !p.champion }"
+                      :style="p.champion ? { color: getRoleColor(p.role) } : undefined"
+                    >
+                      {{ p.champion ?? 'no champion' }}
+                    </span>
+                    <span v-if="p.champion && getCrewShares(slot)" class="ec-crew-share">
+                      +{{ getCrewShares(slot)![ci] }}%
+                    </span>
+                  </span>
+                </div>
+
                 <div class="ec-avail-timer" :class="{ 'ec-avail-timer--expiring': isExpiringSoon(slot) }">
                   <span>{{ isExpiringSoon(slot) ? '⚠' : '⏱' }}</span>
                   <span>{{ formatCountdown(slot.availableUntil - now) }} left</span>
@@ -309,33 +335,6 @@
                   <Icon icon="game-icons:plasma-bolt" width="18" height="18" class="ec-qs-ico" />
                   Quickstart
                 </button>
-              </div>
-            </div>
-
-            <!-- Champion Preview Tooltip -->
-            <div
-              class="ec-preview-tooltip"
-              :class="{
-                'ec-preview-tooltip--visible': activeTooltipId === slot.id,
-                'ec-preview-tooltip--below': slotIdx === 0,
-              }"
-            >
-              <div class="ec-preview-header">Assigned Champions</div>
-              <div v-for="p in getQuickstartPreview(slot)" :key="p.role" class="ec-preview-row">
-                <img
-                  v-if="p.champion"
-                  :src="getChampionImage(p.champion)"
-                  class="ec-preview-champ-img"
-                  :alt="p.champion"
-                />
-                <img v-else :src="ROLE_IMG[p.role]" class="ec-preview-role-img" :alt="p.role" />
-                <span
-                  class="ec-preview-champ"
-                  :class="{ 'ec-preview-champ--missing': !p.champion }"
-                  :style="p.champion ? { color: getRoleColor(p.role) } : undefined"
-                >
-                  {{ p.champion ?? '— no champion —' }}
-                </span>
               </div>
             </div>
           </div>
@@ -394,7 +393,6 @@ export default defineComponent({
     const now = ref(Date.now())
     const isDev = import.meta.env.DEV
     const collectFlashing = ref(false)
-    const activeTooltipId = ref<string | null>(null)
     // Collapsible sections — both expanded by default
     const activeCollapsed = ref(false)
     const availableCollapsed = ref(false)
@@ -496,10 +494,6 @@ export default defineComponent({
         return { role, champion }
       })
     }
-    function toggleCardTooltip(id: string) {
-      activeTooltipId.value = activeTooltipId.value === id ? null : id
-    }
-
     /** Success chance of the quickstart lineup, or null if a role can't be filled. */
     function getQuickstartChance(slot: AvailableExpeditionSlot): number | null {
       const preview = getQuickstartPreview(slot)
@@ -515,6 +509,18 @@ export default defineComponent({
       if (chance >= 0.7) return 'ec-qs-chance--good'
       if (chance >= 0.45) return 'ec-qs-chance--mid'
       return 'ec-qs-chance--bad'
+    }
+
+    /** Per-champion share of the total chance (largest-remainder rounding so the
+     *  shares sum exactly to the rounded total shown at the quickstart button). */
+    function getCrewShares(slot: AvailableExpeditionSlot): number[] | null {
+      const chance = getQuickstartChance(slot)
+      if (chance === null) return null
+      const n = slot.requiredRoles.length
+      const totalPct = Math.round(chance * 100)
+      const base = Math.floor(totalPct / n)
+      const remainder = totalPct - base * n
+      return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0))
     }
 
     // ── Bulk Actions ──────────────────────────────────────────
@@ -610,7 +616,6 @@ export default defineComponent({
       now,
       isDev,
       collectFlashing,
-      activeTooltipId,
       activeCollapsed,
       availableCollapsed,
       timeUntilNextSpawn,
@@ -628,9 +633,9 @@ export default defineComponent({
       getTooltipText,
       quickstartExpedition,
       getQuickstartPreview,
-      toggleCardTooltip,
       getQuickstartChance,
       chanceTone,
+      getCrewShares,
       getProgress,
       getTimeRemaining,
       getChampionImage,
@@ -1089,7 +1094,6 @@ export default defineComponent({
   box-shadow: inset 0 0 0 1px rgba(62, 32, 10, 0.6);
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
-  cursor: pointer;
 }
 .ec-card--available:hover {
   border-color: color-mix(in srgb, var(--exp-p, #e8c040) 75%, transparent);
@@ -1269,54 +1273,21 @@ export default defineComponent({
   cursor: not-allowed;
 }
 
-/* Champion Preview Tooltip */
-.ec-preview-tooltip {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  width: min(320px, 100%);
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 10px 12px;
-  z-index: 20;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(4px);
-  transition: opacity 0.15s, visibility 0.15s, transform 0.15s;
-  pointer-events: none;
+/* Auto-selected crew — always visible on the card */
+.ec-card-crew {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
 }
-/* Topmost offer: open downward — above would land outside the scroll area */
-.ec-preview-tooltip--below {
-  bottom: auto;
-  top: calc(100% + 6px);
-  transform: translateY(-4px);
+.ec-crew-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.ec-card--available:hover .ec-preview-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-.ec-preview-tooltip--visible {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(0) !important;
-}
-.ec-preview-header {
-  font-size: 11px;
-  font-weight: 800;
-  color: #c89040;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  margin-bottom: 7px;
-  border-bottom: 1px solid #3e200a;
-  padding-bottom: 5px;
-}
-.ec-preview-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
-.ec-preview-champ-img {
-  width: 32px;
-  height: 32px;
+.ec-crew-img {
+  width: 28px;
+  height: 28px;
   object-fit: cover;
   object-position: center top;
   border-radius: 50%;
@@ -1324,23 +1295,24 @@ export default defineComponent({
   image-rendering: auto;
   flex-shrink: 0;
 }
-.ec-preview-role-img {
-  width: 32px;
-  height: 32px;
-  padding: 6px;
+.ec-crew-img--role {
+  padding: 5px;
   object-fit: contain;
   opacity: 0.6;
-  flex-shrink: 0;
+  border-style: dashed;
 }
-.ec-preview-champ {
-  font-size: 14px;
+.ec-crew-name {
+  font-size: 13px;
   font-weight: 700;
-  color: #e8c040;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.ec-preview-champ--missing { color: rgba(204, 96, 80, 0.65); font-style: italic; }
+.ec-crew-name--missing { color: rgba(204, 96, 80, 0.7); font-style: italic; }
+.ec-crew-share {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd060;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Card transitions (send / collect closure) ───────────── */
 .ec-card-fly-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
