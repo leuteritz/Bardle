@@ -7,7 +7,7 @@ import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/championOrigins'
 import { getChampionTier, getChampionStarLevel, CHAMPION_TIERS_BY_STAR } from '@/config/championTiers'
 import { CHAMPION_DATA } from '@/config/championData'
 import { CHAMPION_ROLES } from '@/config/championRoles'
-import { createEmptyAllyRows } from '@/config/constants'
+import { createEmptyAllyRows, ROLE_BY_KEY } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
 const ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Supp']
@@ -48,14 +48,15 @@ const traitFilterOpen = ref(false)
 // Tier chips / sections are the 12 Champion Tiers (weak→strong), not price tiers.
 const tierEntries = computed(() => CHAMPION_TIERS_BY_STAR)
 
-// Slot tabs generated from the active role's ally row: Main + A1..AN.
+// Slot rail data: the active role's ally row (Main chip + A1..AN chips).
 const allyRow = computed(
   () => props.secondarySlots?.[props.activeSlotIndex] ?? createEmptyAllyRows()[0],
 )
-const slotTabs = computed(() => [
-  { subSlot: -1, label: 'Main' },
-  ...allyRow.value.map((_, k) => ({ subSlot: k, label: `A${k + 1}` })),
-])
+
+/** Accent color of the active role — drives the slot rail's active state. */
+const roleColor = computed(
+  () => (props.roleKey ? ROLE_BY_KEY[props.roleKey]?.color : null) ?? '#e8c060',
+)
 
 /** Champion currently assigned to a slot tab (-1 = main, 0..N-1 = ally). */
 function tabChampion(subSlot: number): string | null {
@@ -195,9 +196,8 @@ function tierTotal(tier: number): number {
   return totalByTier.value.get(tier) ?? 0
 }
 
-// ── Collapsible tier sections (collapsed by default) ──
-const ALL_TIER_KEYS = CHAMPION_TIERS_BY_STAR.map((t) => t.starLevel)
-const collapsedTiers = ref(new Set<number>(ALL_TIER_KEYS))
+// ── Collapsible tier sections (open by default — no accordion friction on open) ──
+const collapsedTiers = ref(new Set<number>())
 // While searching/filtering, force every tier open so matches are never hidden.
 const searchOrFilterActive = computed(
   () => searchQuery.value.trim() !== '' || hasActiveFilter.value,
@@ -249,8 +249,7 @@ function takenLabel(champion: string): string | null {
   if (mainIdx >= 0) return ROLES[mainIdx]
   if (props.secondarySlots) {
     for (let r = 0; r < props.secondarySlots.length; r++) {
-      const sub = props.secondarySlots[r].indexOf(champion)
-      if (sub >= 0) return `${ROLES[r]}·A${sub + 1}`
+      if (props.secondarySlots[r].includes(champion)) return ROLES[r]
     }
   }
   return null
@@ -283,25 +282,46 @@ function onImgError(e: Event) {
 
 <template>
   <div class="csp-root">
-    <!-- ── Slot tabs: Main + one tab per ally sub-slot ── -->
-    <div class="csp-tabs">
+    <!-- ── Slot rail: big Main chip first, compact ally chips after ── -->
+    <div class="csp-slot-rail" :style="{ '--role-c': roleColor }">
       <button
-        v-for="tab in slotTabs"
-        :key="tab.subSlot"
-        class="csp-tab"
-        :class="{ 'csp-tab--active': activeSubSlot === tab.subSlot }"
-        @click="emit('tab-change', tab.subSlot)"
+        class="csp-slot csp-slot--main"
+        :class="{ 'csp-slot--active': activeSubSlot === -1 }"
+        :title="tabChampion(-1) ?? `Assign your ${activeRole} main champion`"
+        @click="emit('tab-change', -1)"
       >
-        <img
-          v-if="tabChampion(tab.subSlot)"
-          :src="battleStore.getChampionImage(tabChampion(tab.subSlot)!)"
-          :alt="tabChampion(tab.subSlot)!"
-          class="csp-tab-img"
-          @error="onImgError"
-        />
-        <span v-else class="csp-tab-img csp-tab-img--empty">＋</span>
-        <span class="csp-tab-gradient" />
-        <span class="csp-tab-label">{{ tab.label }}</span>
+        <span class="csp-slot-portrait">
+          <img
+            v-if="tabChampion(-1)"
+            :src="battleStore.getChampionImage(tabChampion(-1)!)"
+            :alt="tabChampion(-1)!"
+            class="csp-slot-img"
+            @error="onImgError"
+          />
+          <span v-else class="csp-slot-plus">＋</span>
+        </span>
+      </button>
+
+      <span class="csp-slot-rail-sep" aria-hidden="true"></span>
+
+      <button
+        v-for="(ally, k) in allyRow"
+        :key="`slot-${k}`"
+        class="csp-slot csp-slot--ally"
+        :class="{ 'csp-slot--active': activeSubSlot === k }"
+        :title="ally ?? `Assign Ally ${k + 1}`"
+        @click="emit('tab-change', k)"
+      >
+        <span class="csp-slot-portrait csp-slot-portrait--round">
+          <img
+            v-if="ally"
+            :src="battleStore.getChampionImage(ally)"
+            :alt="ally"
+            class="csp-slot-img"
+            @error="onImgError"
+          />
+          <span v-else class="csp-slot-plus">＋</span>
+        </span>
       </button>
     </div>
 
@@ -509,39 +529,40 @@ function onImgError(e: Event) {
             {{ getChampionTierLabel(champion) }}
           </div>
 
-          <!-- Content: name + always-visible trait/origin badges -->
-          <div class="csp-champ-content">
+          <!-- Content: name + trait/origin icon row (names in tooltips) -->
+          <div
+            class="csp-champ-content"
+            :class="{ 'csp-champ-content--lifted': isActiveSelection(champion) }"
+          >
             <span
               class="champion-name"
               :class="takenLabel(champion) ? 'champion-name--dim' : 'champion-name--bright'"
             >
               {{ champion }}
             </span>
-            <div class="card-traits-section">
-              <div
+            <div class="csp-trait-icons">
+              <span
                 v-for="trait in getChampionDetail(champion).traits"
                 :key="trait.id"
-                class="card-trait-badge"
-                :style="{ '--tc': trait.color }"
+                class="csp-trait-icon"
+                :title="trait.name"
+                :style="{ color: trait.color }"
               >
-                <Icon :icon="trait.icon" class="card-trait-icon" />
-                <span>{{ trait.name }}</span>
-              </div>
-              <div
+                <Icon :icon="trait.icon" width="16" height="16" />
+              </span>
+              <span
                 v-if="getChampionDetail(champion).origin"
-                class="card-trait-badge"
-                :style="{ '--tc': getChampionDetail(champion).origin!.color }"
+                class="csp-trait-icon"
+                :title="getChampionDetail(champion).origin!.origin"
+                :style="{ color: getChampionDetail(champion).origin!.color }"
               >
-                <Icon :icon="getChampionDetail(champion).origin!.icon" class="card-trait-icon" />
-                <span>{{ getChampionDetail(champion).origin!.origin }}</span>
-              </div>
+                <Icon :icon="getChampionDetail(champion).origin!.icon" width="16" height="16" />
+              </span>
             </div>
           </div>
 
-          <!-- Selected overlay -->
-          <div v-if="isActiveSelection(champion)" class="csp-active-overlay">
-            <span class="csp-check">✓</span>
-          </div>
+          <!-- Currently equipped in the active slot -->
+          <div v-if="isActiveSelection(champion)" class="csp-equipped-band">✓ Equipped</div>
           <!-- Taken-in-another-slot badge -->
           <div v-else-if="takenLabel(champion)" class="csp-taken-badge">
             {{ takenLabel(champion) }}
@@ -570,126 +591,86 @@ function onImgError(e: Event) {
   overflow: hidden;
 }
 
-/* ── Tabs ── (RPG action-bar styling, shared look with the Team tab) */
-.csp-tabs {
+/* ── Slot rail ── Main chip first (big), ally chips after (compact).
+   Active slot lights up in the role color (--role-c set on the rail root). */
+.csp-slot-rail {
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
-  background: rgba(6, 4, 1, 0.88);
-  border-bottom: 1px solid rgba(122, 78, 32, 0.6);
-  box-shadow:
-    inset 0 -1px 0 rgba(92, 51, 16, 0.3),
-    0 4px 20px rgba(0, 0, 0, 0.5);
-  background-image: linear-gradient(
-    to bottom,
-    rgba(200, 144, 64, 0) calc(100% - 2px),
-    rgba(200, 144, 64, 0.15) 100%
-  );
-}
-.csp-tab {
-  flex: 1;
-  position: relative;
-  height: 72px;
-  padding: 0;
+  padding: 10px 12px;
   background: #0c0906;
-  border: none;
+  border-bottom: 1px solid rgba(122, 78, 32, 0.6);
+}
+/* Chip = the portrait itself, no inner frame. Main square + bigger, allies round. */
+.csp-slot {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
   cursor: pointer;
-  color: rgba(200, 144, 64, 0.55);
   overflow: hidden;
+  background: #0a0704;
+  border: 2px solid rgba(122, 78, 32, 0.55);
+  color: rgba(200, 144, 64, 0.65);
   transition:
-    color 0.15s,
-    background 0.15s;
+    border-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
 }
-.csp-tab + .csp-tab {
-  border-left: 1px solid rgba(92, 51, 16, 0.55);
+.csp-slot:hover {
+  border-color: rgba(200, 144, 64, 0.8);
+  color: #e8c060;
+  transform: translateY(-1px);
 }
-.csp-tab::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 18%;
-  right: 18%;
-  height: 2px;
-  background: rgba(200, 144, 64, 0);
-  border-radius: 2px 2px 0 0;
-  z-index: 4;
-  transition: background 0.2s;
+.csp-slot--active {
+  border-color: var(--role-c);
+  color: var(--role-c);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--role-c) 45%, transparent);
 }
-.csp-tab:hover::after {
-  background: rgba(200, 144, 64, 0.65);
+.csp-slot--main {
+  width: 76px;
+  height: 76px;
+  border-radius: 4px;
 }
-.csp-tab--active::after {
-  background: rgba(200, 144, 64, 0.85);
+.csp-slot--ally {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
 }
-
-/* Full-bleed champion image fills the whole tab button */
-.csp-tab-img {
+.csp-slot-portrait {
   position: absolute;
   inset: 0;
+}
+.csp-slot-portrait--round {
+  border-radius: 50%;
+}
+.csp-slot-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center top;
   display: block;
-  transition:
-    transform 0.25s ease,
-    filter 0.15s;
 }
-.csp-tab:hover .csp-tab-img {
-  transform: scale(1.06);
-  filter: brightness(1.08);
-}
-.csp-tab--active .csp-tab-img {
-  filter: brightness(1.12) saturate(1.08);
-}
-
-.csp-tab-img--empty {
+.csp-slot-plus {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
-  color: rgba(200, 144, 64, 0.3);
-  background: #0c0906;
-  border: 1px dashed rgba(92, 51, 16, 0.55);
+  color: rgba(200, 144, 64, 0.4);
 }
-.csp-tab:hover .csp-tab-img--empty {
-  color: rgba(200, 144, 64, 0.55);
+.csp-slot:hover .csp-slot-plus,
+.csp-slot--active .csp-slot-plus {
+  color: currentColor;
 }
-
-.csp-tab-gradient {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0) 58%);
-  pointer-events: none;
-}
-.csp-tab--active .csp-tab-gradient {
-  box-shadow: inset 0 0 0 1px rgba(200, 144, 64, 0.55);
-}
-
-.csp-tab-label {
-  position: absolute;
-  bottom: 5px;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-}
-.csp-tab:hover .csp-tab-label {
-  color: #f0d870;
-}
-.csp-tab--active .csp-tab-label {
-  color: #f0d870;
+.csp-slot-rail-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: rgba(122, 78, 32, 0.45);
 }
 
 /* ── Search + filter header ──
@@ -744,18 +725,26 @@ function onImgError(e: Event) {
 .csp-tier-group + .csp-tier-group {
   margin-top: 10px;
 }
+/* Sticky tier headers for orientation while scrolling (local only — the
+   shared .tier-header rules in rpg-theme.css stay untouched) */
+.csp-tier-group > .tier-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #14100a;
+}
 
 .csp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
   align-content: start;
 }
 
 /* ── Champion Card ── (shares the Shop's visual DNA) */
 .csp-champ {
   position: relative;
-  height: 140px;
+  height: 210px;
   border-radius: var(--bp-radius);
   cursor: pointer;
   overflow: hidden;
@@ -803,15 +792,13 @@ function onImgError(e: Event) {
   box-shadow: inset 0 0 0 1px rgba(184, 200, 216, 0.3), 0 0 16px rgba(184, 200, 216, 0.35);
 }
 
-/* Selected (active) — green, mirrors the Shop's green state language */
-.csp-champ--active {
+/* Selected (active) — gold, matches the equipped band */
+.csp-champ--active,
+.csp-champ--active[data-role] {
   border-color: #e8c040;
   box-shadow:
-    0 0 22px rgba(110, 192, 64, 0.45),
-    inset 0 0 0 2px rgba(110, 192, 64, 0.55);
-}
-.csp-champ--active[data-role] {
-  border-color: var(--rpg-green-border);
+    0 0 18px rgba(232, 192, 64, 0.35),
+    inset 0 0 0 1px rgba(232, 192, 64, 0.5);
 }
 
 /* Taken in another slot — dimmed + slight grayscale */
@@ -867,26 +854,31 @@ function onImgError(e: Event) {
   transform: translateX(100%);
 }
 
-/* ── Content: name + always-visible trait/origin badges ── */
+/* ── Content: name + trait/origin icon row ── */
 .csp-champ-content {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 3;
-  padding: 6px 7px;
+  padding: 7px 8px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 5px;
   text-align: left;
   pointer-events: none;
+  transition: bottom 0.15s;
+}
+/* Lift the content above the equipped band */
+.csp-champ-content--lifted {
+  bottom: 20px;
 }
 
 /* Name typography (ported from Shop .champion-name).
    text-align:left overrides the <button>'s default centering. */
 .champion-name {
-  font-size: 0.8rem;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -896,51 +888,36 @@ function onImgError(e: Event) {
 .champion-name--bright { color: rgba(255, 255, 255, 0.95); }
 .champion-name--dim { color: rgba(255, 255, 255, 0.45); }
 .csp-champ--active .champion-name {
-  color: #8ed84a;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 12px rgba(110, 192, 64, 0.3);
+  color: #f0d870;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 12px rgba(232, 192, 64, 0.3);
 }
 
-/* Trait/origin badges (ported from Shop .card-trait-badge) */
-.card-traits-section {
+/* Trait/origin icons — names live in the title tooltips, keeps cards clean */
+.csp-trait-icons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 5px;
+  pointer-events: auto;
 }
-.card-trait-badge {
+.csp-trait-icon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px 3px 4px;
-  border-radius: var(--bp-radius);
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid var(--tc, #7a4e20);
-  font-size: 0.52rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--tc, #e8c040);
-  text-transform: uppercase;
-  white-space: nowrap;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
-}
-/* Champion Tier (star level) badge — slightly stronger fill to read as the primary tag */
-.card-cosmic-badge {
-  background: color-mix(in srgb, var(--tc, #7a4e20) 18%, rgba(0, 0, 0, 0.6));
-}
-.card-trait-icon {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.9);
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 /* ── Tier badge: top-left (ported from Shop .tier-badge) ── */
 .tier-badge {
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: 6px;
+  left: 6px;
   z-index: 4;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.04em;
   color: var(--tier-c);
@@ -954,21 +931,23 @@ function onImgError(e: Event) {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
 }
 
-/* Active overlay */
-.csp-active-overlay {
+/* Equipped band — bottom strip on the champion currently in the active slot */
+.csp-equipped-band {
   position: absolute;
-  inset: 0;
-  background: rgba(12, 36, 6, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 4;
-}
-.csp-check {
-  font-size: 26px;
-  color: var(--green);
-  filter: drop-shadow(0 0 8px rgba(110, 192, 64, 0.9));
-  line-height: 1;
+  padding: 3px 0;
+  text-align: center;
+  background: #e8c040;
+  color: #1a1204;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  pointer-events: none;
 }
 
 /* Taken badge */

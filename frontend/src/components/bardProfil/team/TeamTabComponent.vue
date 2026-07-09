@@ -71,6 +71,7 @@ const pickerTitle = computed(() =>
     : `Select Ally ${pickerSubSlot.value + 1}`,
 )
 
+
 // ── Selection ────────────────────────────────────────────────────────────────
 function selectRole(index: number) {
   synergiesOpen.value = false
@@ -249,7 +250,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       v-if="activeModal === 'picker'"
       :title="pickerTitle"
       icon="game-icons:switch-weapon"
-      :subtitle="`Owned champions for the ${roleDef.label} role`"
+      hide-header
       @close="closeModal"
     >
       <ChampionSelectPanel
