@@ -65,6 +65,9 @@ function tabChampion(subSlot: number): string | null {
   return allyRow.value[subSlot] ?? null
 }
 
+const mainChampion = computed(() => tabChampion(-1))
+
+
 const availableTraits = computed(() => {
   const seen = new Set<string>()
   for (const name of props.roleFilteredChampions) {
@@ -341,13 +344,16 @@ function onImgError(e: Event) {
       >
         <span class="csp-slot-portrait">
           <img
-            v-if="tabChampion(-1)"
-            :src="battleStore.getChampionImage(tabChampion(-1)!)"
-            :alt="tabChampion(-1)!"
+            v-if="mainChampion"
+            :src="battleStore.getChampionImage(mainChampion)"
+            :alt="mainChampion"
             class="csp-slot-img"
             @error="onImgError"
           />
           <span v-else class="csp-slot-plus">＋</span>
+        </span>
+        <span v-if="mainChampion" class="csp-slot-info">
+          <span class="csp-slot-info-name">{{ mainChampion }}</span>
         </span>
       </button>
 
@@ -370,6 +376,9 @@ function onImgError(e: Event) {
             @error="onImgError"
           />
           <span v-else class="csp-slot-plus">＋</span>
+        </span>
+        <span v-if="ally" class="csp-slot-info csp-slot-info--ally">
+          <span class="csp-slot-info-name">{{ ally }}</span>
         </span>
       </button>
     </div>
@@ -680,53 +689,89 @@ function onImgError(e: Event) {
 .csp-slot-rail {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 10px 12px;
   flex-shrink: 0;
-  padding: 10px 12px;
+  padding: 10px 44px 10px 12px; /* right padding keeps clear of the floating close */
   background: #0c0906;
   border-bottom: 1px solid rgba(122, 78, 32, 0.6);
 }
-/* Chip = the portrait itself, no inner frame. Main square + bigger, allies round. */
+/* Slot = borderless group of portrait + per-champion info. State ring sits on
+   the portrait; main square + bigger, allies round. */
 .csp-slot {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
   padding: 0;
   cursor: pointer;
-  overflow: hidden;
-  background: #0a0704;
-  border: 2px solid rgba(122, 78, 32, 0.55);
+  background: none;
+  border: none;
   color: rgba(200, 144, 64, 0.65);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+  transition: transform 0.15s;
 }
 .csp-slot:hover {
-  border-color: rgba(200, 144, 64, 0.8);
   color: #e8c060;
   transform: translateY(-1px);
 }
 .csp-slot--active {
-  border-color: var(--role-c);
   color: var(--role-c);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--role-c) 45%, transparent);
-}
-.csp-slot--main {
-  width: 76px;
-  height: 76px;
-  border-radius: 4px;
-}
-.csp-slot--ally {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
 }
 .csp-slot-portrait {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #0a0704;
+  border: 2px solid rgba(122, 78, 32, 0.55);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.csp-slot--main .csp-slot-portrait {
+  width: 76px;
+  height: 76px;
+}
+.csp-slot--ally .csp-slot-portrait {
+  width: 54px;
+  height: 54px;
 }
 .csp-slot-portrait--round {
   border-radius: 50%;
+}
+.csp-slot:hover .csp-slot-portrait {
+  border-color: rgba(200, 144, 64, 0.8);
+}
+.csp-slot--active .csp-slot-portrait {
+  border-color: var(--role-c);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--role-c) 45%, transparent);
+}
+
+/* Per-champion info beside each portrait */
+.csp-slot-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  text-align: left;
+}
+.csp-slot-info-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e8dcc0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+.csp-slot-info--ally .csp-slot-info-name {
+  font-size: 11.5px;
+  max-width: 88px;
+}
+.csp-slot--active .csp-slot-info-name {
+  color: var(--role-c);
 }
 .csp-slot-img {
   width: 100%;
@@ -756,6 +801,7 @@ function onImgError(e: Event) {
   margin: 4px 2px;
   background: rgba(122, 78, 32, 0.45);
 }
+
 
 /* ── Search + filter header ──
    Search row, filter toggle, collapsible panel and chips are shared with
@@ -824,14 +870,6 @@ function onImgError(e: Event) {
    rpg-theme.css → .tier-header*) ── */
 .csp-tier-group + .csp-tier-group {
   margin-top: 10px;
-}
-/* Sticky tier headers for orientation while scrolling (local only — the
-   shared .tier-header rules in rpg-theme.css stay untouched) */
-.csp-tier-group > .tier-header {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: #14100a;
 }
 
 .csp-grid {
