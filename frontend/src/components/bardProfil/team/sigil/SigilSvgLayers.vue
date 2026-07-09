@@ -39,32 +39,40 @@ const pentagramPath = computed(() => {
   return order.map((i) => `${props.rolePoints[i].x},${props.rolePoints[i].y}`).join(' ')
 })
 
-/** Rune ticks — one per FILLED ally slot, placed on the ray from the center
- *  through that ally's satellite, so each tick points dead-center at its
- *  champion image. Empty slots draw no tick at all. */
-const runeTicks = computed(() => {
-  const ticks: Array<{ x1: number; y1: number; x2: number; y2: number; color: string }> = []
-  const inner = SIGIL_RING_RUNE_R - 10
-  const outer = SIGIL_RING_RUNE_R + 10
+function spokeColor(i: number): string {
+  return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
+}
+
+/** Gap around the main node so the link starts at its edge, not under the image. */
+const ALLY_LINK_MAIN_GAP = 54
+/** Gap around the ally satellite so the link ends just before the image. */
+const ALLY_LINK_ALLY_GAP = 27
+
+/** Connectors: role main node → each FILLED ally satellite, trimmed on both
+ *  ends so the champion images stay untouched. */
+const allyLinks = computed(() => {
+  const links: Array<{ x1: number; y1: number; x2: number; y2: number; color: string }> = []
   props.allyPoints.forEach((points, roleIdx) => {
+    const main = props.rolePoints[roleIdx]
     points.forEach((p, sub) => {
       if (!props.allyFilled[roleIdx]?.[sub]) return
-      const angle = Math.atan2(p.y - C, p.x - C)
-      ticks.push({
-        x1: C + inner * Math.cos(angle),
-        y1: C + inner * Math.sin(angle),
-        x2: C + outer * Math.cos(angle),
-        y2: C + outer * Math.sin(angle),
+      const dx = p.x - main.x
+      const dy = p.y - main.y
+      const dist = Math.hypot(dx, dy)
+      if (dist <= ALLY_LINK_MAIN_GAP + ALLY_LINK_ALLY_GAP) return
+      const ux = dx / dist
+      const uy = dy / dist
+      links.push({
+        x1: main.x + ux * ALLY_LINK_MAIN_GAP,
+        y1: main.y + uy * ALLY_LINK_MAIN_GAP,
+        x2: p.x - ux * ALLY_LINK_ALLY_GAP,
+        y2: p.y - uy * ALLY_LINK_ALLY_GAP,
         color: props.roleColors[roleIdx] ?? props.stage.crestColor,
       })
     })
   })
-  return ticks
+  return links
 })
-
-function spokeColor(i: number): string {
-  return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
-}
 </script>
 
 <template>
@@ -115,7 +123,7 @@ function spokeColor(i: number): string {
       />
     </g>
 
-    <!-- rune tick ring — one tick lights per filled slot -->
+    <!-- rune ring (decorative) -->
     <circle
       :cx="C"
       :cy="C"
@@ -125,19 +133,6 @@ function spokeColor(i: number): string {
       stroke-width="1"
       opacity="0.35"
     />
-    <g stroke-width="3" stroke-linecap="round">
-      <line
-        v-for="(tick, k) in runeTicks"
-        :key="k"
-        :x1="tick.x1"
-        :y1="tick.y1"
-        :x2="tick.x2"
-        :y2="tick.y2"
-        :stroke="tick.color"
-        opacity="0.95"
-        class="rune-lit"
-      />
-    </g>
 
     <!-- inner circles -->
     <circle
@@ -177,6 +172,20 @@ function spokeColor(i: number): string {
       opacity="0.65"
       class="pentagram"
     />
+
+    <!-- ally links: role main → each filled ally satellite -->
+    <g stroke-width="1.5" stroke-linecap="round">
+      <line
+        v-for="(l, k) in allyLinks"
+        :key="`ally-link-${k}`"
+        :x1="l.x1"
+        :y1="l.y1"
+        :x2="l.x2"
+        :y2="l.y2"
+        :stroke="l.color"
+        opacity="0.65"
+      />
+    </g>
 
     <!-- spokes: center → role vertex, lit in role color once the main is set -->
     <g stroke-width="1.5" stroke-linecap="round">
@@ -243,9 +252,6 @@ function spokeColor(i: number): string {
 }
 .pentagram {
   animation: pentagram-glow 3s ease-in-out infinite;
-}
-.rune-lit {
-  transition: stroke 0.4s ease;
 }
 @keyframes sigil-rotate {
   to {
