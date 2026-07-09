@@ -42,7 +42,12 @@ const emit = defineEmits<{
 const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
 const synergyStore = useSynergyStore()
-const { newlyUnlockedChampions } = storeToRefs(battleStore)
+const { newlyUnlockedChampions, secondarySlots } = storeToRefs(battleStore)
+
+/** Per role: which ally sub-slots hold a champion — drives the aligned rune ticks. */
+const allyFilled = computed(() =>
+  ROLES.map((_, i) => (secondarySlots.value[i] ?? []).map((s) => s !== null)),
+)
 
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
 const expeditionBadgeCount = computed(
@@ -250,6 +255,8 @@ watch(
         :stage="sigilStage"
         :filled-slots="filledSlots"
         :role-points="rolePoints"
+        :ally-points="allyPoints"
+        :ally-filled="allyFilled"
         :role-colors="roleColors"
         :main-filled="mainFilled"
         :role-full="roleFull"

@@ -6,7 +6,6 @@ import {
   SIGIL_RING_RUNE_R,
   SIGIL_RING_INNER_R,
   SIGIL_RING_CORE_R,
-  SIGIL_TOTAL_SLOTS,
   SIGIL_DIM_COLOR,
 } from '@/config/constants'
 import type { SigilStageDef } from '@/types'
@@ -16,6 +15,10 @@ const props = defineProps<{
   stage: SigilStageDef
   filledSlots: number
   rolePoints: SigilPoint[]
+  /** Ally satellite positions per role — rune ticks align with these. */
+  allyPoints: SigilPoint[][]
+  /** Per role: which ally sub-slots hold a champion. */
+  allyFilled: boolean[][]
   roleColors: string[]
   mainFilled: boolean[]
   roleFull: boolean[]
@@ -36,21 +39,28 @@ const pentagramPath = computed(() => {
   return order.map((i) => `${props.rolePoints[i].x},${props.rolePoints[i].y}`).join(' ')
 })
 
-/** One rune tick per team slot on the rune ring; lit ticks = filled slots. */
-const runeTicks = computed(() =>
-  Array.from({ length: SIGIL_TOTAL_SLOTS }, (_, k) => {
-    const angle = ((-90 + (k * 360) / SIGIL_TOTAL_SLOTS) * Math.PI) / 180
-    const inner = SIGIL_RING_RUNE_R - 10
-    const outer = SIGIL_RING_RUNE_R + 10
-    return {
-      x1: C + inner * Math.cos(angle),
-      y1: C + inner * Math.sin(angle),
-      x2: C + outer * Math.cos(angle),
-      y2: C + outer * Math.sin(angle),
-      lit: k < props.filledSlots,
-    }
-  }),
-)
+/** Rune ticks — one per FILLED ally slot, placed on the ray from the center
+ *  through that ally's satellite, so each tick points dead-center at its
+ *  champion image. Empty slots draw no tick at all. */
+const runeTicks = computed(() => {
+  const ticks: Array<{ x1: number; y1: number; x2: number; y2: number; color: string }> = []
+  const inner = SIGIL_RING_RUNE_R - 10
+  const outer = SIGIL_RING_RUNE_R + 10
+  props.allyPoints.forEach((points, roleIdx) => {
+    points.forEach((p, sub) => {
+      if (!props.allyFilled[roleIdx]?.[sub]) return
+      const angle = Math.atan2(p.y - C, p.x - C)
+      ticks.push({
+        x1: C + inner * Math.cos(angle),
+        y1: C + inner * Math.sin(angle),
+        x2: C + outer * Math.cos(angle),
+        y2: C + outer * Math.sin(angle),
+        color: props.roleColors[roleIdx] ?? props.stage.crestColor,
+      })
+    })
+  })
+  return ticks
+})
 
 function spokeColor(i: number): string {
   return props.mainFilled[i] ? props.roleColors[i] : SIGIL_DIM_COLOR
@@ -123,9 +133,9 @@ function spokeColor(i: number): string {
         :y1="tick.y1"
         :x2="tick.x2"
         :y2="tick.y2"
-        :stroke="tick.lit ? stage.crestColor : SIGIL_DIM_COLOR"
-        :opacity="tick.lit ? 0.95 : 0.5"
-        :class="{ 'rune-lit': tick.lit }"
+        :stroke="tick.color"
+        opacity="0.95"
+        class="rune-lit"
       />
     </g>
 
