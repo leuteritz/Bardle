@@ -51,7 +51,7 @@
       <section v-if="activeCount > 0" class="ec-section">
         <div class="ec-section-head">
           <span class="ec-section-accent">✦</span>
-          <span class="ec-section-title">Active Missions</span>
+          <span class="ec-section-title">Active Expeditions</span>
           <span class="ec-section-count">{{ activeCount }}/{{ MAX_ACTIVE_EXPEDITIONS }}</span>
           <div class="ec-section-rule"></div>
 
@@ -827,25 +827,23 @@ export default defineComponent({
 .ec-status-badge--success { background: rgba(82, 184, 48, 0.12); border-color: rgba(82, 184, 48, 0.35); color: #52b830; }
 .ec-status-badge--failure { background: rgba(204, 96, 80, 0.12); border-color: rgba(204, 96, 80, 0.35); color: #cc6050; }
 
-/* Champion tags */
-.ec-champ-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Champion tags — same look as the quickstart preview rows */
+.ec-champ-tags { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .ec-champ-tag {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 3px 10px 3px 4px;
-  font-size: 12.5px;
+  gap: 10px;
+  font-size: 14px;
   font-weight: 700;
-  background: #1c1c18;
-  border: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #e8c040;
 }
 .ec-champ-img {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   object-fit: cover;
+  object-position: center top;
   border-radius: 50%;
+  border: 1px solid rgba(200, 144, 64, 0.4);
   image-rendering: auto;
   flex-shrink: 0;
 }
