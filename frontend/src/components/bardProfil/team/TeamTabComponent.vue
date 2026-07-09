@@ -333,11 +333,11 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       v-if="activeModal === 'expedition'"
       title="Expeditions"
       icon="game-icons:campfire"
-      subtitle="Send champions on missions for materials"
+      subtitle="Send champions on missions for Chimes"
       @close="closeModal"
     >
       <div class="team-shop-content">
-        <ExpeditionComponent @close="closeModal" />
+        <ExpeditionComponent />
       </div>
     </TeamModalShell>
 

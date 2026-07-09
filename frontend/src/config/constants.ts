@@ -2339,7 +2339,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:house', // Architectural Harmony reward (was building)
   'game-icons:globe', // Planet Song reward (was world-map)
   // Emoji → game-icons replacements
-  'game-icons:plasma-bolt', // ⚡ Quickstart button (ExpeditionCreateComponent)
+  'game-icons:plasma-bolt', // ⚡ Quickstart button (ExpeditionComponent)
   'game-icons:two-handed-sword', // ⚔ Champion damage display (BossArenaSection)
   'game-icons:shield-reflect', // 🛡 Shield damage float (ChampionOrbit)
   'game-icons:war-pick', // ⚔ Equipment empty state (EquipmentPickerPanel)
@@ -2360,7 +2360,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:papyrus', // 🗺️ Expeditions encyclopedia category
   'game-icons:rank-3', // ⬆️ Leveling encyclopedia category
   'game-icons:sundial', // ⏳ Loading indicator in BattleStartScreenComponent
-  'game-icons:hazard-sign', // ⚠ Warning label in ExpeditionCreateComponent
+  'game-icons:hazard-sign', // ⚠ Warning label in ExpeditionComponent
   // Expedition action bar bulk buttons
   'game-icons:chest', // Accept All button (ExpeditionComponent action bar)
   'game-icons:camping-tent', // Send All button (ExpeditionComponent action bar)
