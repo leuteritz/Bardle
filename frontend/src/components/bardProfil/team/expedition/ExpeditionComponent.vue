@@ -226,7 +226,7 @@
 
             <div class="ec-card-body">
               <div class="ec-card-icon-wrap">
-                <Icon :icon="slot.icon" width="42" height="42" :style="{ color: getColor(slot.colorKey).primary }" />
+                <Icon :icon="slot.icon" width="48" height="48" class="ec-card-ico" :style="{ color: getColor(slot.colorKey).primary }" />
               </div>
 
               <div class="ec-card-info">
@@ -995,9 +995,10 @@ export default defineComponent({
   border-color: var(--exp-p, #e8c040);
   box-shadow: inset 0 0 0 1px #3e200a, 0 0 20px rgba(var(--exp-glow, 232,192,64), 0.3);
 }
-.ec-card--available:hover .ec-card-icon-wrap {
-  border-color: var(--exp-p, #e8c040);
-  box-shadow: 0 0 14px rgba(var(--exp-glow, 200,144,64), 0.3), inset 0 0 8px rgba(var(--exp-glow, 200,144,64), 0.08);
+.ec-card--available:hover .ec-card-ico {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 14px rgba(var(--exp-glow, 200, 144, 64), 0.65));
+  transform: scale(1.06);
 }
 .ec-card--locked {
   opacity: 0.52;
@@ -1040,18 +1041,20 @@ export default defineComponent({
   padding: 13px 15px;
   flex: 1;
 }
+/* Frameless icon — floats on the card with a soft glow in the expedition color */
 .ec-card-icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #141410 55%, rgba(var(--exp-glow, 200,144,64), 0.13) 100%);
-  border: 1px solid var(--exp-d, #3e200a);
-  border-radius: 4px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
-  box-shadow: 0 0 6px rgba(var(--exp-glow, 200,144,64), 0.08);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: radial-gradient(circle, rgba(var(--exp-glow, 200, 144, 64), 0.22) 0%, transparent 68%);
+}
+.ec-card-ico {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 8px rgba(var(--exp-glow, 200, 144, 64), 0.35));
+  transition: filter 0.15s, transform 0.15s;
 }
 .ec-card-info { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
 .ec-card-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
