@@ -140,11 +140,17 @@
             class="trait-chip"
             :class="{
               'trait-chip--active': activeTier === t.starLevel,
-              'trait-chip--disabled': t.locked,
+              'trait-chip--disabled': t.locked || !t.available,
             }"
             :style="`--chip-color: ${t.color}`"
-            :disabled="t.locked"
-            :title="t.locked ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}` : `★${t.starLevel} ${t.name}`"
+            :disabled="t.locked || !t.available"
+            :title="
+              t.locked
+                ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}`
+                : !t.available
+                  ? 'No champions in shop'
+                  : `★${t.starLevel} ${t.name}`
+            "
             @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
           >
             <Icon :icon="t.icon" class="trait-chip-icon" />
@@ -647,12 +653,14 @@ export default defineComponent({
     const filterOpen = ref(false)
     const searchInputRef = ref<HTMLInputElement | null>(null)
     // Tier chips / sections are the 6 Champion Tiers (weak→strong), not price tiers.
-    // Galaxy-locked tiers stay visible but greyed out (same lock as the grid sections).
+    // Galaxy-locked tiers stay visible but greyed out (same lock as the grid sections);
+    // tiers with no purchasable champion left grey out like trait/origin chips.
     const tierChips = computed(() =>
       CHAMPION_TIERS_BY_STAR.map((t) => ({
         ...t,
         locked: isTierGalaxyLocked(t.starLevel),
         requiredGalaxy: requiredGalaxyForTier(t.starLevel),
+        available: chipPool.value.some((name) => getChampionStarLevel(name) === t.starLevel),
       })),
     )
     function tierRank(name: string): number {
@@ -946,6 +954,13 @@ const shopChampionNames = computed(() =>
     })
 
     watch(shopChampionNames, () => {
+      // Drop the tier filter once its last purchasable champion is gone.
+      if (
+        activeTier.value !== 'all' &&
+        !chipPool.value.some((name) => getChampionStarLevel(name) === activeTier.value)
+      ) {
+        activeTier.value = 'all'
+      }
       if (activeTraits.value.length === 0) return
       const filtered = activeTraits.value.filter(
         (t) => poolTraitIds.value.has(t) || poolOriginIds.value.has(t),
