@@ -277,7 +277,13 @@
             >
               <div class="ec-preview-header">Assigned Champions</div>
               <div v-for="p in getQuickstartPreview(slot)" :key="p.role" class="ec-preview-row">
-                <img :src="ROLE_IMG[p.role]" class="ec-preview-role-img" :alt="p.role" />
+                <img
+                  v-if="p.champion"
+                  :src="getChampionImage(p.champion)"
+                  class="ec-preview-champ-img"
+                  :alt="p.champion"
+                />
+                <img v-else :src="ROLE_IMG[p.role]" class="ec-preview-role-img" :alt="p.role" />
                 <span class="ec-preview-champ" :class="{ 'ec-preview-champ--missing': !p.champion }">
                   {{ p.champion ?? '— no champion —' }}
                 </span>
@@ -1164,16 +1170,27 @@ export default defineComponent({
   border-bottom: 1px solid #3e200a;
   padding-bottom: 5px;
 }
-.ec-preview-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.ec-preview-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.ec-preview-champ-img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 144, 64, 0.4);
+  image-rendering: auto;
+  flex-shrink: 0;
+}
 .ec-preview-role-img {
-  width: 17px;
-  height: 17px;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
   object-fit: contain;
-  image-rendering: pixelated;
+  opacity: 0.6;
   flex-shrink: 0;
 }
 .ec-preview-champ {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: #e8c040;
   white-space: nowrap;
