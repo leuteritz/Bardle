@@ -239,9 +239,9 @@ function championImage(name: string): string {
       <template v-for="group in sections" :key="group.key">
         <section v-if="group.cards.length > 0" class="tsp-section">
         <div class="tsp-section-head">
-          <span class="tsp-section-title">✦ {{ group.title }}</span>
-          <div class="tsp-section-rule" />
+          <span class="tsp-section-title">{{ group.title }}</span>
           <span class="tsp-section-count">{{ group.cards.length }}</span>
+          <span class="tsp-section-spacer"></span>
         </div>
         <div class="tsp-grid">
           <article
@@ -501,26 +501,50 @@ function championImage(name: string): string {
   flex-direction: column;
   gap: 9px;
 }
+/* Section headline — big glowing title + gradient underline (same design as the
+   Expedition sections and the Champion Shop tier headers) */
 .tsp-section-head {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
+  padding: 2px 2px 10px;
+}
+.tsp-section-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #e8c040,
+    rgba(232, 192, 64, 0.35) 55%,
+    transparent
+  );
 }
 .tsp-section-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #e8c040;
-}
-.tsp-section-rule {
-  flex: 1;
-  height: 1px;
-  background: rgba(200, 164, 90, 0.16);
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
+  white-space: nowrap;
 }
 .tsp-section-count {
-  font-size: 11px;
-  color: rgba(230, 220, 196, 0.4);
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(230, 220, 196, 0.5);
+  font-variant-numeric: tabular-nums;
+  align-self: flex-end;
+  padding-bottom: 2px;
+}
+.tsp-section-spacer {
+  flex: 1;
 }
 
 /* ── cards ── */
