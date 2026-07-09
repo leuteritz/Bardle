@@ -171,6 +171,13 @@ const sections = computed(() => [
 
 const visibleCount = computed(() => sections.value.reduce((sum, g) => sum + g.cards.length, 0))
 
+/** Jump chips: scroll the panel body to a section without manual scrolling. */
+function scrollToSection(key: string) {
+  document
+    .getElementById(`tsp-section-${key}`)
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const hasAnySynergy = computed(() => traitCards.value.length + originCards.value.length > 0)
 
 function championImage(name: string): string {
@@ -217,6 +224,20 @@ function championImage(name: string): string {
         {{ highlightedChampions.length }}
         {{ highlightedChampions.length === 1 ? 'champion' : 'champions' }}
       </div>
+
+      <!-- section jump chips — scroll straight to Traits / Origins -->
+      <div class="tsp-jump">
+        <button
+          v-for="group in sections"
+          :key="`jump-${group.key}`"
+          class="tsp-jump-btn"
+          :disabled="group.cards.length === 0"
+          @click="scrollToSection(group.key)"
+        >
+          {{ group.title }}
+          <span class="tsp-jump-count">{{ group.cards.length }}</span>
+        </button>
+      </div>
     </div>
 
     <div class="tsp">
@@ -237,10 +258,9 @@ function championImage(name: string): string {
     <!-- ── trait / origin sections ── -->
     <template v-if="hasAnySynergy && visibleCount > 0">
       <template v-for="group in sections" :key="group.key">
-        <section v-if="group.cards.length > 0" class="tsp-section">
+        <section v-if="group.cards.length > 0" :id="`tsp-section-${group.key}`" class="tsp-section">
         <div class="tsp-section-head">
           <span class="tsp-section-title">{{ group.title }}</span>
-          <span class="tsp-section-count">{{ group.cards.length }}</span>
           <span class="tsp-section-spacer"></span>
         </div>
         <div class="tsp-grid">
@@ -535,16 +555,79 @@ function championImage(name: string): string {
   text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
   white-space: nowrap;
 }
-.tsp-section-count {
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(230, 220, 196, 0.5);
-  font-variant-numeric: tabular-nums;
-  align-self: flex-end;
-  padding-bottom: 2px;
-}
 .tsp-section-spacer {
   flex: 1;
+}
+
+/* ── section jump — segmented control, full width ── */
+.tsp-jump {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  margin-top: 9px;
+  padding: 3px;
+  background: #14100a;
+  border: 1px solid #3e200a;
+  border-radius: 5px;
+}
+.tsp-jump-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #c8a860;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s, background 0.15s;
+}
+/* gold underline sweeps in on hover — same language as the section headlines */
+.tsp-jump-btn::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #e8c040, rgba(232, 192, 64, 0.3));
+  opacity: 0;
+  transform: scaleX(0.6);
+  transform-origin: left;
+  transition: opacity 0.18s, transform 0.18s;
+}
+.tsp-jump-btn:hover:not(:disabled) {
+  color: #e8c040;
+  background: rgba(232, 192, 64, 0.07);
+}
+.tsp-jump-btn:hover:not(:disabled)::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.tsp-jump-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.tsp-jump-count {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #5c3310;
+  color: #e8c040;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── cards ── */
