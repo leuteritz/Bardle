@@ -170,10 +170,11 @@ const filteredChampions = computed(() => {
   let list = props.roleFilteredChampions
 
   if (activeTraits.value.length > 0) {
+    // AND semantics: a champion must match EVERY selected trait/origin chip.
     list = list.filter((c) => {
       const champTraits = CHAMPION_TRAITS[c] ?? []
       const champOrigin = getChampionOrigin(c)
-      return activeTraits.value.some(
+      return activeTraits.value.every(
         (t) => (champTraits as string[]).includes(t) || champOrigin === t,
       )
     })
