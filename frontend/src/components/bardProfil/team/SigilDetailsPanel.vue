@@ -21,6 +21,8 @@ const emit = defineEmits<{
   'pick-ally': [subSlot: number]
   'clear-ally': [subSlot: number]
   'pick-equipment': [category: ItemCategory]
+  /** Hovered ally row — mirrored as a spotlight on the sigil board (null = none). */
+  'hover-ally': [subSlot: number | null]
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
@@ -207,13 +209,15 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
           <div class="sdp-section-rule" />
           <span class="sdp-section-count">{{ filledAllyCount }}/{{ allies.length }}</span>
         </div>
-        <div class="sdp-ally-rows">
+        <div class="sdp-ally-rows" @mouseleave="emit('hover-ally', null)">
           <button
             v-for="(ally, sub) in allies"
             :key="sub"
             class="sdp-ally-row"
             :class="{ 'sdp-ally-row--filled': !!ally }"
             @click="emit('pick-ally', sub)"
+            @mouseenter="emit('hover-ally', sub)"
+            @mouseleave="emit('hover-ally', null)"
           >
             <template v-if="ally">
               <img :src="allyImage(ally)" :alt="ally" class="sdp-ally-row-img" />

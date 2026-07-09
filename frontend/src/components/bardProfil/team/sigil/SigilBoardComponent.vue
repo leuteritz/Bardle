@@ -27,6 +27,8 @@ const props = defineProps<{
   panelOpen?: boolean
   /** Champions spotlighted by the synergies search — hits pulse, the rest dims. */
   searchHighlights?: string[]
+  /** Ally sub-slot hovered in the details panel — spotlights that satellite of the selected role. */
+  hoveredAlly?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -322,6 +324,7 @@ watch(
         :selected="selectedRole === i"
         :full="roleFull[i]"
         :search-highlights="searchHighlights"
+        :hovered-ally="selectedRole === i ? (hoveredAlly ?? null) : null"
         @select="emit('select-role', i)"
         @select-ally="(sub: number) => emit('select-ally', i, sub)"
       />

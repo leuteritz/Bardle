@@ -43,6 +43,12 @@ const searchHighlights = ref<string[]>([])
 watch(synergiesOpen, (open) => {
   if (!open) searchHighlights.value = []
 })
+/** Ally row hovered in the details panel — spotlighted on the sigil board. */
+const hoveredAllySub = ref<number | null>(null)
+
+watch(selectedRole, () => {
+  hoveredAllySub.value = null
+})
 const activeModal = ref<TeamModal>(null)
 const pickerSubSlot = ref(-1)
 const shopRole = ref<ChampionRole | 'all'>('all')
@@ -210,6 +216,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
       :selected-role="selectedRole"
       :panel-open="synergiesOpen"
       :search-highlights="searchHighlights"
+      :hovered-ally="hoveredAllySub"
       :paused="activeModal !== null"
       @select-role="selectRole"
       @select-ally="selectAlly"
@@ -228,6 +235,7 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
         @pick-ally="openPicker"
         @clear-ally="clearAlly"
         @pick-equipment="openEquipment"
+        @hover-ally="hoveredAllySub = $event"
       />
       <TeamSynergiesPanel
         v-else-if="synergiesOpen"

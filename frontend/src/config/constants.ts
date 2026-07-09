@@ -1627,6 +1627,11 @@ export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 460
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
 export const TEAM_SIGIL_DRAG_THRESHOLD_PX = 5
+/** Ally-hover spotlight — hovering an ally row in the details panel mirrors onto
+ *  the board: the matching satellite scales up + pings once, its siblings dim. */
+export const SIGIL_ALLY_HOVER_SCALE = 1.4
+export const SIGIL_ALLY_HOVER_DIM_OPACITY = 0.45
+export const SIGIL_ALLY_HOVER_PING_MS = 450
 
 // Sigil escalation — the sigil grows more epic with every filled slot:
 // each main lights its pentagon vertex + spoke, each ally lights a rune tick,

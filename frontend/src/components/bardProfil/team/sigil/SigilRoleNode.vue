@@ -3,7 +3,15 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { getChampionTier } from '@/config/championTiers'
-import { ROLES, SIGIL_NODE_SIZE, SIGIL_ALLY_SIZE, ALLIES_PER_ROLE } from '@/config/constants'
+import {
+  ROLES,
+  SIGIL_NODE_SIZE,
+  SIGIL_ALLY_SIZE,
+  ALLIES_PER_ROLE,
+  SIGIL_ALLY_HOVER_SCALE,
+  SIGIL_ALLY_HOVER_DIM_OPACITY,
+  SIGIL_ALLY_HOVER_PING_MS,
+} from '@/config/constants'
 import type { SigilPoint } from '@/composables/useTeamSigil'
 
 const props = defineProps<{
@@ -14,6 +22,8 @@ const props = defineProps<{
   full: boolean
   /** Champions spotlighted by the synergies search — hits pulse gold, the rest dims. */
   searchHighlights?: string[]
+  /** Sub-slot hovered in the details panel — that satellite gets a spotlight, siblings dim. */
+  hoveredAlly?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -47,6 +57,12 @@ function allyHit(ally: string | null): boolean {
   return ally !== null && searchSet.value.has(ally)
 }
 
+// ── Ally-hover spotlight (details panel row → board satellite) ──────────────
+const hoverActive = computed(() => props.hoveredAlly !== null && props.hoveredAlly !== undefined)
+const hoverScale = String(SIGIL_ALLY_HOVER_SCALE)
+const hoverDimOpacity = String(SIGIL_ALLY_HOVER_DIM_OPACITY)
+const hoverPingMs = `${SIGIL_ALLY_HOVER_PING_MS}ms`
+
 function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   return {
     left: `${point.x}px`,
@@ -68,6 +84,8 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
       'sigil-ally--highlight': selected,
       'sigil-ally--search-hit': allyHit(ally),
       'sigil-ally--search-miss': searchActive && !allyHit(ally),
+      'sigil-ally--spotlight': hoveredAlly === sub,
+      'sigil-ally--dimmed': hoverActive && hoveredAlly !== sub,
     }"
     :style="[
       nodeStyle(allyPoints[sub], SIGIL_ALLY_SIZE),
@@ -334,6 +352,42 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
   }
 }
 
+/* ── ally-hover spotlight: hovering a panel row lights its board satellite ── */
+.sigil-ally--spotlight {
+  transform: translate(-50%, -50%) scale(v-bind(hoverScale));
+  background: #0a0704;
+  box-shadow:
+    0 0 0 2px var(--role-color),
+    0 0 18px color-mix(in srgb, var(--role-color) 85%, transparent);
+  z-index: 4;
+  transition-duration: 0.12s;
+  transition-delay: 0ms;
+  animation: sigil-ally-ping v-bind(hoverPingMs) ease-out 1;
+}
+.sigil-ally--spotlight .sigil-ally-plus {
+  opacity: 1;
+}
+.sigil-ally--dimmed {
+  opacity: v-bind(hoverDimOpacity);
+  filter: saturate(0.6);
+  transition-duration: 0.12s;
+  transition-delay: 0ms;
+}
+@keyframes sigil-ally-ping {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--role-color),
+      0 0 18px color-mix(in srgb, var(--role-color) 85%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--role-color) 60%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px var(--role-color),
+      0 0 18px color-mix(in srgb, var(--role-color) 85%, transparent),
+      0 0 0 16px transparent;
+  }
+}
+
 @keyframes sigil-aura {
   0%,
   100% {
@@ -364,6 +418,9 @@ function nodeStyle(point: SigilPoint, size: number): Record<string, string> {
     box-shadow:
       0 0 0 3px #e8c040,
       0 0 14px rgba(232, 192, 64, 0.55);
+  }
+  .sigil-ally--spotlight {
+    animation: none !important;
   }
 }
 </style>
