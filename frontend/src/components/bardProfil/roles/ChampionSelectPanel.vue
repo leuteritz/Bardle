@@ -689,8 +689,7 @@ function onImgError(e: Event) {
 .csp-slot-rail {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 12px;
+  gap: 12px;
   flex-shrink: 0;
   padding: 10px 44px 10px 12px; /* right padding keeps clear of the floating close */
   background: #0c0906;
@@ -713,6 +712,15 @@ function onImgError(e: Event) {
 .csp-slot:hover {
   color: #e8c060;
   transform: translateY(-1px);
+}
+/* Allies share the remaining rail width in equal parts → identical spacing,
+   full header width used. Main keeps its natural (fixed) width. */
+.csp-slot--main {
+  flex-shrink: 0;
+}
+.csp-slot--ally {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .csp-slot--active {
   color: var(--role-c);
@@ -756,6 +764,9 @@ function onImgError(e: Event) {
   min-width: 0;
   text-align: left;
 }
+.csp-slot-info {
+  flex: 1;
+}
 .csp-slot-info-name {
   font-size: 14px;
   font-weight: 700;
@@ -764,11 +775,13 @@ function onImgError(e: Event) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 110px;
+  max-width: 100%;
+}
+.csp-slot--main .csp-slot-info-name {
+  max-width: 130px;
 }
 .csp-slot-info--ally .csp-slot-info-name {
-  font-size: 11.5px;
-  max-width: 88px;
+  font-size: 12px;
 }
 .csp-slot--active .csp-slot-info-name {
   color: var(--role-c);
