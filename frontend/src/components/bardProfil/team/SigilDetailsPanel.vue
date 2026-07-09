@@ -4,7 +4,12 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battleStore'
 import { useItemStore } from '@/stores/itemStore'
-import { ROLES, ALLIES_PER_ROLE, TEAM_SIGIL_DETAILS_PANEL_WIDTH } from '@/config/constants'
+import {
+  ROLES,
+  ALLIES_PER_ROLE,
+  TEAM_SIGIL_DETAILS_PANEL_WIDTH,
+  TEAM_SIGIL_SPLASH_HEIGHT,
+} from '@/config/constants'
 import { getChampionTier } from '@/config/championTiers'
 import { getChampionOrigin, getOriginColor, ORIGIN_SYNERGIES } from '@/config/championOrigins'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/championTraits'
@@ -26,6 +31,7 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+const splashHeightPx = `${TEAM_SIGIL_SPLASH_HEIGHT}px`
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
@@ -104,13 +110,47 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
         <img :src="roleDef.image" :alt="roleDef.label" class="sdp-splash-empty-img" />
       </div>
 
-      <div class="sdp-role-badge">
-        <img :src="roleDef.image" :alt="''" class="sdp-role-badge-img" />
-        <span>{{ roleDef.label }}</span>
-      </div>
-      <div v-if="tier" class="sdp-tier-badge" :style="{ borderColor: tier.color }">
-        <span class="sdp-tier-star" :style="{ color: tier.color }">★{{ tier.starLevel }}</span>
-        <span class="sdp-tier-name">{{ tier.name }}</span>
+      <div class="sdp-splash-top">
+        <!-- row 1: role + tier -->
+        <div class="sdp-badge-row">
+          <div class="sdp-role-badge">
+            <img :src="roleDef.image" :alt="''" class="sdp-role-badge-img" />
+            <span>{{ roleDef.label }}</span>
+          </div>
+          <span
+            v-if="main && tier"
+            class="sdp-hero-chip"
+            :style="{ borderColor: tier.color, color: tier.color }"
+          >
+            ★{{ tier.starLevel }} {{ tier.name }}
+          </span>
+        </div>
+        <!-- row 2: origin + traits -->
+        <div v-if="main" class="sdp-badge-row">
+          <span
+            v-if="origin"
+            class="sdp-hero-chip"
+            :style="{ borderColor: originColor, color: originColor }"
+          >
+            <Icon
+              v-if="originIcon.includes(':')"
+              :icon="originIcon"
+              width="16"
+              height="16"
+              class="sdp-hero-chip-icon"
+            />
+            {{ origin }}
+          </span>
+          <span
+            v-for="trait in traits"
+            :key="trait.id"
+            class="sdp-hero-chip"
+            :style="{ borderColor: trait.color, color: trait.color }"
+          >
+            <Icon :icon="trait.icon" width="16" height="16" class="sdp-hero-chip-icon" />
+            {{ trait.name }}
+          </span>
+        </div>
       </div>
       <button class="sdp-close" aria-label="Close details" @click="emit('close')">✕</button>
 
@@ -125,33 +165,6 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 
     <!-- ── scrollable body ── -->
     <div class="sdp-body">
-      <!-- origin + trait chips -->
-      <div v-if="main" class="sdp-chips">
-        <span
-          v-if="origin"
-          class="sdp-chip"
-          :style="{ borderColor: originColor, color: originColor }"
-        >
-          <Icon
-            v-if="originIcon.includes(':')"
-            :icon="originIcon"
-            width="16"
-            height="16"
-            class="sdp-chip-icon"
-          />
-          {{ origin }}
-        </span>
-        <span
-          v-for="trait in traits"
-          :key="trait.id"
-          class="sdp-chip"
-          :style="{ borderColor: trait.color, color: trait.color }"
-        >
-          <Icon :icon="trait.icon" width="16" height="16" class="sdp-chip-icon" />
-          {{ trait.name }}
-        </span>
-      </div>
-
       <!-- role ability — part of the main champion block -->
       <div class="sdp-ability">
         <div class="sdp-ability-icon">
@@ -289,7 +302,7 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 /* ── splash header ── */
 .sdp-splash {
   position: relative;
-  height: 212px;
+  height: v-bind(splashHeightPx);
   flex-shrink: 0;
   overflow: hidden;
   background: #0a0704;
@@ -305,7 +318,12 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 .sdp-splash-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 34%, rgba(13, 9, 5, 0.98));
+  background: linear-gradient(
+    180deg,
+    transparent 26%,
+    rgba(13, 9, 5, 0.55) 58%,
+    rgba(13, 9, 5, 0.99) 100%
+  );
 }
 .sdp-splash-empty {
   position: absolute;
@@ -320,49 +338,42 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   opacity: 0.4;
   object-fit: contain;
 }
-.sdp-role-badge {
+/* top overlay — badge rows: role + tier on top, origin + traits below */
+.sdp-splash-top {
   position: absolute;
   top: 12px;
   left: 13px;
+  right: 52px;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.sdp-badge-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+}
+.sdp-role-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   border: 1px solid var(--rc);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--rc);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 .sdp-role-badge-img {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
-}
-.sdp-tier-badge {
-  position: absolute;
-  top: 12px;
-  right: 52px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid;
-}
-.sdp-tier-star {
-  font-size: 12px;
-  font-weight: 800;
-}
-.sdp-tier-name {
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(230, 220, 196, 0.55);
 }
 .sdp-close {
   position: absolute;
@@ -393,7 +404,7 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
   position: absolute;
   left: 15px;
   right: 15px;
-  bottom: 11px;
+  bottom: 12px;
   display: flex;
   align-items: flex-end;
   gap: 10px;
@@ -401,13 +412,34 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 .sdp-name {
   flex: 1;
   min-width: 0;
-  font-size: 30px;
+  font-size: 32px;
   color: #f4e6bc;
   line-height: 1;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* tier / origin / trait badges — same badge language as the role badge, colors differ */
+.sdp-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.sdp-hero-chip-icon {
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+  flex-shrink: 0;
 }
 .sdp-swap-btn {
   flex-shrink: 0;
@@ -452,29 +484,6 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 .sdp-body::-webkit-scrollbar-thumb {
   background: #5c3310;
   border-radius: 2px;
-}
-
-.sdp-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.sdp-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.sdp-chip-icon {
-  color: #fff;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
 
 .sdp-ability {

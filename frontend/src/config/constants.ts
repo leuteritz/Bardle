@@ -1623,6 +1623,8 @@ export const TEAM_SIGIL_CAMERA_MS = 450
 /** Width (px) of the role details panel — the board's fit-scale subtracts it while
  *  a role is selected so open/close resolves in a single camera move. */
 export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 460
+/** Height (px) of the details-panel splash header (hero card: name + tier/origin/trait chips). */
+export const TEAM_SIGIL_SPLASH_HEIGHT = 292
 /** Max camera drag-pan as a fraction of the scaled stage size (rubber-band bound). */
 export const TEAM_SIGIL_PAN_MAX_FRACTION = 0.15
 /** Pointer travel (px) below which a pointer-down still counts as a click, not a drag. */
