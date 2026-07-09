@@ -40,7 +40,8 @@ const emit = defineEmits<{
 
 const battleStore = useBattleStore()
 const searchQuery = ref('')
-const activeTrait = ref<string>('all')
+// Multi-select trait/origin filter — mirrors the Champion Shop filter exactly.
+const activeTraits = ref<string[]>([])
 // Active cosmic-tier filter chip — 'all' or a star level (1..MAX_STAR_LEVEL).
 const activeTier = ref<'all' | number>('all')
 const traitFilterOpen = ref(false)
@@ -95,15 +96,61 @@ const searchMatchedTraits = computed(() => {
   return matched
 })
 const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
+const noTraitFound = computed(
+  () => searchQuery.value.trim() !== '' && !hasSearchTraitMatch.value,
+)
 
 // Mirrors the Champion Shop filter toggle: lit dot / active state when a
-// trait or origin is selected.
-const hasActiveFilter = computed(() => activeTrait.value !== 'all' || activeTier.value !== 'all')
+// trait/origin or tier is selected.
+const hasActiveFilter = computed(
+  () => activeTraits.value.length > 0 || activeTier.value !== 'all',
+)
+
+// ── Active filter summary chips (shown even with the panel collapsed) ──
+const activeTierDef = computed(() =>
+  activeTier.value === 'all'
+    ? null
+    : (CHAMPION_TIERS_BY_STAR.find((t) => t.starLevel === activeTier.value) ?? null),
+)
+const activeTraitChips = computed(() =>
+  activeTraits.value.map((id) => {
+    const trait = TRAIT_DEFINITIONS.find((t) => t.id === id)
+    if (trait) return { id, label: trait.name, icon: trait.icon, color: trait.color }
+    const origin = ORIGIN_SYNERGIES[id as keyof typeof ORIGIN_SYNERGIES]
+    return { id, label: id, icon: origin?.icon ?? '', color: origin?.color ?? '#c89040' }
+  }),
+)
+
+function toggleTrait(id: string) {
+  activeTraits.value = activeTraits.value.includes(id)
+    ? activeTraits.value.filter((t) => t !== id)
+    : [...activeTraits.value, id]
+}
+
+/** Clears tier + trait filters but keeps the search text (mirrors the Shop). */
+function clearFilters() {
+  activeTraits.value = []
+  activeTier.value = 'all'
+}
 
 function resetSearch() {
   searchQuery.value = ''
-  activeTrait.value = 'all'
-  activeTier.value = 'all'
+  clearFilters()
+}
+
+/** Arrow-key navigation between filter chips (mirrors the Shop). */
+function onChipKeydown(event: KeyboardEvent, _id: string) {
+  const panel = (event.target as HTMLElement).closest('.cs-filter-panel')
+  if (!panel) return
+  const chips = Array.from(panel.querySelectorAll<HTMLElement>('.trait-chip[tabindex="0"]'))
+  const idx = chips.indexOf(event.target as HTMLElement)
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    chips[(idx + 1) % chips.length]?.focus()
+  } else if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    chips[(idx - 1 + chips.length) % chips.length]?.focus()
+  }
 }
 
 // Auto-open the filter panel while searching, auto-collapse when cleared and
@@ -111,7 +158,7 @@ function resetSearch() {
 watch(searchQuery, (q) => {
   if (q.trim()) {
     traitFilterOpen.value = true
-  } else if (activeTrait.value === 'all') {
+  } else if (activeTraits.value.length === 0) {
     traitFilterOpen.value = false
   }
 })
@@ -119,11 +166,13 @@ watch(searchQuery, (q) => {
 const filteredChampions = computed(() => {
   let list = props.roleFilteredChampions
 
-  if (activeTrait.value !== 'all') {
+  if (activeTraits.value.length > 0) {
     list = list.filter((c) => {
-      const traitMatch = (CHAMPION_TRAITS[c] ?? []).includes(activeTrait.value as never)
-      const originMatch = getChampionOrigin(c) === activeTrait.value
-      return traitMatch || originMatch
+      const champTraits = CHAMPION_TRAITS[c] ?? []
+      const champOrigin = getChampionOrigin(c)
+      return activeTraits.value.some(
+        (t) => (champTraits as string[]).includes(t) || champOrigin === t,
+      )
     })
   }
 
@@ -382,18 +431,46 @@ function onImgError(e: Event) {
         <button v-if="showClose" class="modal-close-btn" @click="emit('close')">✕</button>
       </div>
 
-      <!-- ── Collapsible filter panel ── -->
+      <!-- ── Active filter summary: always visible while filters are set ── -->
+      <div v-if="hasActiveFilter" class="cs-active-filters">
+        <button class="trait-chip trait-chip--clear-all" @click="clearFilters">
+          × Clear filters
+        </button>
+        <span class="filter-sep"></span>
+        <span class="cs-active-label">Active:</span>
+        <button
+          v-if="activeTierDef"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${activeTierDef.color}`"
+          title="Remove tier filter"
+          @click="activeTier = 'all'"
+        >
+          <Icon :icon="activeTierDef.icon" class="trait-chip-icon" />
+          {{ activeTierDef.name }}
+          <span class="chip-dismiss">×</span>
+        </button>
+        <button
+          v-for="chip in activeTraitChips"
+          :key="chip.id"
+          class="trait-chip trait-chip--active"
+          :style="`--chip-color: ${chip.color}`"
+          :title="`Remove ${chip.label} filter`"
+          @click="toggleTrait(chip.id)"
+        >
+          <Icon v-if="chip.icon" :icon="chip.icon" class="trait-chip-icon" />
+          {{ chip.label }}
+          <span class="chip-dismiss">×</span>
+        </button>
+      </div>
+
+      <!-- ── Filter panel: labeled category sections (mirrors the Shop) ── -->
       <Transition name="filter-panel">
         <div v-show="traitFilterOpen" class="cs-filter-panel">
-          <!-- Row 1: ALL reset + tier chips -->
-          <div class="cs-filter-row">
-            <button
-              v-show="!hasSearchTraitMatch"
-              class="trait-chip trait-chip--all"
-              :class="{ 'trait-chip--active': activeTrait === 'all' && activeTier === 'all' }"
-              @click="resetSearch"
-            >ALL</button>
-            <span v-show="!hasSearchTraitMatch" class="filter-sep"></span>
+          <!-- Section: Tier -->
+          <div class="filter-divider">
+            <span class="filter-divider-label">Tier</span>
+          </div>
+          <div class="cs-filter-row cs-filter-row--wrap">
             <button
               v-for="t in tierEntries"
               :key="t.starLevel"
@@ -401,19 +478,20 @@ function onImgError(e: Event) {
               :class="{ 'trait-chip--active': activeTier === t.starLevel }"
               :style="`--chip-color: ${t.color}`"
               :title="`★${t.starLevel} ${t.name}`"
-              @click="activeTier = t.starLevel"
+              @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
             >
               <Icon :icon="t.icon" class="trait-chip-icon" />
               {{ t.name }}
             </button>
           </div>
 
-          <!-- Row 2: Trait chips -->
+          <!-- Section: Traits -->
           <template v-if="availableTraits.length">
             <div class="filter-divider">
               <span class="filter-divider-label">Traits</span>
             </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
+            <div v-if="noTraitFound" class="trait-empty-state">No trait found</div>
+            <div v-else class="cs-filter-row cs-filter-row--wrap">
               <TransitionGroup tag="div" name="chip" class="chip-group">
                 <button
                   v-for="trait in availableTraits"
@@ -421,20 +499,23 @@ function onImgError(e: Event) {
                   v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
                   class="trait-chip"
                   :class="{
-                    'trait-chip--active': activeTrait === trait.id,
-                    'trait-chip--search-match': searchMatchedTraits.has(trait.id) && activeTrait !== trait.id,
+                    'trait-chip--active': activeTraits.includes(trait.id),
+                    'trait-chip--search-match': searchMatchedTraits.has(trait.id) && !activeTraits.includes(trait.id),
                   }"
                   :style="`--chip-color: ${trait.color}`"
-                  @click="activeTrait = trait.id"
+                  tabindex="0"
+                  @click="toggleTrait(trait.id)"
+                  @keydown="onChipKeydown($event, trait.id)"
                 >
                   <Icon :icon="trait.icon" class="trait-chip-icon" />
                   {{ trait.name }}
+                  <span v-if="activeTraits.includes(trait.id)" class="chip-dismiss" @click.stop="toggleTrait(trait.id)">×</span>
                 </button>
               </TransitionGroup>
             </div>
           </template>
 
-          <!-- Row 3: Origin chips -->
+          <!-- Section: Origins -->
           <template v-if="availableOrigins.length">
             <div class="filter-divider">
               <span class="filter-divider-label">Origins</span>
@@ -447,14 +528,17 @@ function onImgError(e: Event) {
                   v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
                   class="trait-chip"
                   :class="{
-                    'trait-chip--active': activeTrait === origin.origin,
-                    'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && activeTrait !== origin.origin,
+                    'trait-chip--active': activeTraits.includes(origin.origin),
+                    'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && !activeTraits.includes(origin.origin),
                   }"
                   :style="`--chip-color: ${origin.color}`"
-                  @click="activeTrait = origin.origin"
+                  tabindex="0"
+                  @click="toggleTrait(origin.origin)"
+                  @keydown="onChipKeydown($event, origin.origin)"
                 >
                   <Icon :icon="origin.icon" class="trait-chip-icon" />
                   {{ origin.origin }}
+                  <span v-if="activeTraits.includes(origin.origin)" class="chip-dismiss" @click.stop="toggleTrait(origin.origin)">×</span>
                 </button>
               </TransitionGroup>
             </div>
@@ -691,6 +775,22 @@ function onImgError(e: Event) {
   position: static;
   flex-shrink: 0;
   transform: none;
+}
+
+/* active filter summary bar (below the search row — mirrors the Shop) */
+.cs-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 2px 1px;
+}
+.cs-active-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 164, 90, 0.55);
+  margin-right: 2px;
 }
 
 /* ── Body / Grid ── */
