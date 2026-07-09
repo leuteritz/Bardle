@@ -680,18 +680,30 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 9px;
-  padding: 2px 4px;
-  border-radius: var(--bp-radius);
+  margin-bottom: 11px;
+  padding: 2px 4px 10px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease;
 }
-.tier-header:hover {
-  background: rgba(200, 144, 64, 0.06);
+/* Headline underline — starts in the tier color and fades out to the right
+   (matches the Expeditions section headline style) */
+.tier-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--tier-c, #c89040),
+    color-mix(in srgb, var(--tier-c, #c89040) 35%, transparent) 55%,
+    transparent
+  );
 }
 .tier-header:hover .tier-header-label {
-  color: color-mix(in srgb, var(--tier-c, #c89040) 75%, #fff);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--tier-c, #c89040) 75%, transparent);
 }
 .tier-header:focus-visible {
   outline: 1px solid var(--tier-c, #c89040);
@@ -699,11 +711,12 @@
 }
 .tier-header-chevron {
   flex-shrink: 0;
-  width: 14px;
+  width: 15px;
   display: inline-block;
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--tier-c, #c89040);
+  opacity: 0.8;
   line-height: 1;
   transition: transform 0.2s ease;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
@@ -717,25 +730,22 @@
      the individual tier title length. Tuned for the fixed 12-name set; biased a
      touch high so the longest label never pushes its stars out of the column (the
      surplus is absorbed by the flexible divider line). */
-  min-width: 168px;
-  font-size: 15px;
-  font-weight: 700;
+  min-width: 205px;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--tier-c, #c89040);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   white-space: nowrap;
   line-height: 1;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--tier-c, #c89040) 45%, transparent);
+  transition: text-shadow 0.15s;
 }
+/* Flexible spacer only — the ::after underline replaces the old divider line */
 .tier-header-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in srgb, var(--tier-c, #5c3310) 55%, #5c3310),
-    transparent
-  );
+  background: none;
 }
 .tier-header-counter {
   display: flex;
@@ -756,7 +766,7 @@
 .tier-header-icon {
   flex-shrink: 0;
   color: var(--tier-c, #c89040);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tier-c, #c89040) 50%, transparent));
 }
 .tier-header-stars {
   flex-shrink: 0;
@@ -793,11 +803,9 @@
   opacity: 0.5;
   filter: grayscale(55%);
 }
-.tier-header.is-galaxy-locked:hover {
-  background: transparent;
-}
 .tier-header.is-galaxy-locked:hover .tier-header-label {
   color: var(--tier-c, #c89040);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
 .tier-header-lock {
   flex-shrink: 0;
