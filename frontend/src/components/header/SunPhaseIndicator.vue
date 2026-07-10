@@ -57,10 +57,12 @@ const dwellText = computed(() => {
 <template>
   <button
     class="sun-phase"
+    :class="{ 'sun-phase--complete': dwellComplete }"
     :title="`${phaseData.name} — open Stats`"
     @click="uiStore.setBardTab('bard')"
   >
     <div class="sun-wrap">
+      <div v-if="dwellComplete" class="sun-ripple" aria-hidden="true"></div>
       <div class="sun" :style="sunStyle"></div>
       <svg class="sun-ring" viewBox="0 0 50 50" aria-hidden="true">
         <circle cx="25" cy="25" r="22" fill="none" stroke="rgba(0, 0, 0, 0.55)" stroke-width="3" />
@@ -83,9 +85,7 @@ const dwellText = computed(() => {
     <div class="info-grp">
       <span class="info-lbl">{{ phaseLabel }}</span>
       <span class="info-name">{{ phaseData.name }}</span>
-      <span class="dwell" :class="{ 'dwell--complete': dwellComplete }">
-        {{ dwellComplete ? '✓' : dwellText }}
-      </span>
+      <span v-if="!dwellComplete" class="dwell">{{ dwellText }}</span>
     </div>
   </button>
 </template>
@@ -183,11 +183,40 @@ const dwellText = computed(() => {
   white-space: nowrap;
 }
 
-.dwell--complete {
+/* ── Completed phase: bigger glowing name + rippling sun ───── */
+.sun-phase--complete .info-name {
+  font-size: clamp(0.85rem, 1vw, 1.1rem);
   color: #8adc50;
-  font-size: clamp(0.7rem, 0.8vw, 0.85rem);
-  text-shadow: 0 0 8px rgba(110, 192, 64, 0.8);
+  text-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
   animation: complete-pulse 2.4s ease-in-out infinite;
+}
+
+.sun-phase--complete .info-lbl {
+  color: rgba(138, 220, 80, 0.6);
+}
+
+.sun-ripple {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 2px solid rgba(110, 192, 64, 0.8);
+  pointer-events: none;
+  animation: ripple-out 2.4s ease-out infinite;
+}
+
+@keyframes ripple-out {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 
 @keyframes complete-pulse {
@@ -197,8 +226,8 @@ const dwellText = computed(() => {
   }
   50% {
     text-shadow:
-      0 0 12px rgba(110, 192, 64, 1),
-      0 0 22px rgba(110, 192, 64, 0.5);
+      0 0 14px rgba(110, 192, 64, 1),
+      0 0 26px rgba(110, 192, 64, 0.5);
   }
 }
 
