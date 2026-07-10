@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import { formatNumber } from '@/config/numberFormat'
 
 const gameStore = useGameStore()
@@ -10,10 +9,6 @@ const galaxyStore = useGalaxyStore()
 
 const isMeepHovered = ref(false)
 const isUniverseBarHovered = ref(false)
-
-const galaxyName = computed(
-  () => GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length].name,
-)
 
 const displayMeeps = ref(gameStore.meeps)
 const isIncreasing = ref(false)
@@ -45,10 +40,7 @@ watch(
     <!-- Row 1: Galaxy icon + name, Meeps flush right -->
     <div class="gx-row">
       <img src="/img/galaxy-far.png" class="gx-icon" alt="Galaxy" />
-      <div class="info-grp">
-        <span class="info-lbl">Galaxy {{ galaxyStore.currentGalaxy }}</span>
-        <span class="info-name">{{ galaxyName }}</span>
-      </div>
+      <span class="info-name">Galaxy {{ galaxyStore.currentGalaxy }}</span>
 
       <div
         class="meep-block"
@@ -113,6 +105,7 @@ watch(
 .gx-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: clamp(5px, 0.7vw, 9px);
   width: 100%;
   min-width: 0;
@@ -136,24 +129,6 @@ watch(
   filter: drop-shadow(0 0 8px rgba(138, 100, 220, 0.85));
 }
 
-.info-grp {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.info-lbl {
-  font-size: clamp(0.48rem, 0.5vw, 0.56rem);
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: rgba(200, 185, 140, 0.5);
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .info-name {
   font-size: clamp(0.72rem, 0.85vw, 0.92rem);
   font-weight: 700;
@@ -172,7 +147,6 @@ watch(
   align-items: center;
   gap: 5px;
   flex-shrink: 0;
-  margin-left: auto;
   isolation: isolate;
   transition: filter 0.3s;
 }
