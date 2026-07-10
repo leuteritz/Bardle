@@ -59,8 +59,8 @@ const dwellText = computed(() => {
 <template>
   <button
     class="sun-phase"
-    :title="`${phaseData.name} — open Star Forge`"
-    @click="uiStore.setBardTab('shop')"
+    :title="`${phaseData.name} — open Stats`"
+    @click="uiStore.setBardTab('bard')"
   >
     <div class="sun-wrap">
       <div class="sun" :style="sunStyle"></div>
