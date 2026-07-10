@@ -46,13 +46,11 @@ const dwellProgress = computed(() => {
 const dwellComplete = computed(() => solarStore.phaseDwellRemainingMs <= 0)
 
 const dwellText = computed(() => {
-  if (dwellComplete.value) return 'phase complete'
   const totalSec = Math.floor(solarStore.phaseDwellElapsedMs / 1000)
   const h = Math.floor(totalSec / 3600)
   const m = Math.floor((totalSec % 3600) / 60)
   const s = totalSec % 60
-  const t = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
-  return `${t} in phase`
+  return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`
 })
 </script>
 
@@ -86,7 +84,7 @@ const dwellText = computed(() => {
       <span class="info-lbl">{{ phaseLabel }}</span>
       <span class="info-name">{{ phaseData.name }}</span>
       <span class="dwell" :class="{ 'dwell--complete': dwellComplete }">
-        <span class="dwell-dot"></span>{{ dwellText }}
+        {{ dwellComplete ? '✓' : dwellText }}
       </span>
     </div>
   </button>
@@ -187,21 +185,21 @@ const dwellText = computed(() => {
 
 .dwell--complete {
   color: #8adc50;
+  font-size: clamp(0.7rem, 0.8vw, 0.85rem);
+  text-shadow: 0 0 8px rgba(110, 192, 64, 0.8);
+  animation: complete-pulse 2.4s ease-in-out infinite;
 }
 
-.dwell-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ffd600;
-  box-shadow: 0 0 6px rgba(255, 214, 0, 0.7);
-  animation: dot-pulse 2.4s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-.dwell--complete .dwell-dot {
-  background: #6ec040;
-  box-shadow: 0 0 6px rgba(110, 192, 64, 0.8);
+@keyframes complete-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 6px rgba(110, 192, 64, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 12px rgba(110, 192, 64, 1),
+      0 0 22px rgba(110, 192, 64, 0.5);
+  }
 }
 
 @keyframes sun-pulse {
@@ -215,17 +213,6 @@ const dwellText = computed(() => {
     box-shadow:
       0 0 19px 5px var(--sun-glow),
       inset -3px -4px 8px rgba(0, 0, 0, 0.45);
-  }
-}
-
-@keyframes dot-pulse {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 11px rgba(255, 214, 0, 0.95);
   }
 }
 </style>
