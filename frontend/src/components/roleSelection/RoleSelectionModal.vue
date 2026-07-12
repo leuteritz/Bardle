@@ -152,7 +152,7 @@ function choose(role: RoleDef) {
       v-if="galaxyStore.pendingRoleSelection"
       class="fixed inset-0 z-[210] flex items-center justify-center role-overlay"
     >
-      <div class="relative w-full max-w-4xl mx-4 overflow-hidden role-frame">
+      <div class="relative w-full mx-4 overflow-hidden role-frame">
         <!-- Gold accent bar -->
         <div class="role-accent-bar"></div>
 
@@ -204,7 +204,7 @@ function choose(role: RoleDef) {
 
         <!-- Role panels -->
         <div
-          class="flex flex-col sm:flex-row gap-4 p-6"
+          class="flex flex-col sm:flex-row gap-3 sm:gap-4 p-5"
           @mouseenter="rolesHovered = true"
           @mouseleave="rolesHovered = false"
         >
@@ -240,21 +240,19 @@ function choose(role: RoleDef) {
                 <h3 class="role-name">{{ role.label }}</h3>
               </div>
 
-              <!-- Subtle hover affordance (text only) -->
-              <span class="role-hint">Roster</span>
-
               <!-- Role-colored bottom border accent -->
               <div class="role-bottom-bar"></div>
 
               <!-- Roster reveal — slides up over the art on hover/focus -->
               <div class="role-roster">
                 <div class="role-roster-header">
+                  <img :src="role.image" alt="" class="role-roster-emblem" />
                   <span class="role-roster-role">{{ role.label }}</span>
                   <span class="role-roster-caption">
                     {{
                       obtainableCount(role.key) > 0
-                        ? `Available · ${obtainableCount(role.key)} to unlock`
-                        : 'All champions unlocked ✓'
+                        ? `${obtainableCount(role.key)} to unlock`
+                        : 'All unlocked ✓'
                     }}
                   </span>
                 </div>
@@ -269,10 +267,9 @@ function choose(role: RoleDef) {
                     <span class="role-roster-name">{{ champ.name }}</span>
                     <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
                       <Icon :icon="champ.tierIcon" class="role-tier-icon" />
-                      <span class="role-tier-star">★{{ champ.star }}</span>
-                      <span v-if="champ.spawnPercent != null" class="role-tier-pct"
-                        >· {{ champ.spawnPercent }}%</span
-                      >
+                      <span v-if="champ.spawnPercent != null" class="role-tier-pct">
+                        {{ champ.spawnPercent }}%
+                      </span>
                     </span>
                   </li>
                 </ul>
@@ -322,6 +319,8 @@ function choose(role: RoleDef) {
 
 /* ── Frame ───────────────────────────────────────────────────────────── */
 .role-frame {
+  /* fluid: compact on 1280-1512 laptops, roomy on 1920+, capped at 1000px */
+  max-width: min(clamp(600px, 48vw + 60px, 1000px), calc(100vw - 32px));
   background: #111008;
   border: 4px solid #7a4e20;
   box-shadow:
@@ -348,12 +347,12 @@ function choose(role: RoleDef) {
 .role-header {
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-  padding: 18px 24px 16px;
+  padding: clamp(12px, 1.5vh, 18px) 24px clamp(10px, 1.3vh, 16px);
   text-align: center;
 }
 
 .role-title {
-  font-size: 26px;
+  font-size: clamp(17px, 1.7vw, 26px);
   font-weight: 900;
   color: #e8c040;
   text-shadow: 0 0 18px rgba(232, 192, 64, 0.55);
@@ -368,7 +367,7 @@ function choose(role: RoleDef) {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 56px;
+  min-height: clamp(44px, 4.5vh, 56px);
   cursor: text;
 }
 
@@ -437,7 +436,7 @@ function choose(role: RoleDef) {
 /* ── Cards ───────────────────────────────────────────────────────────── */
 .role-card {
   position: relative;
-  height: 290px;
+  height: clamp(210px, 24vh + 40px, 300px);
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
@@ -517,7 +516,7 @@ function choose(role: RoleDef) {
 }
 
 .role-name {
-  font-size: 32px;
+  font-size: clamp(23px, 2.1vw, 32px);
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -558,6 +557,15 @@ function choose(role: RoleDef) {
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
   pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+/* the hover roster slides over this corner — fade the badge out so the two
+   never read as overlapping text */
+.role-card:hover .role-count-badge,
+.role-card:focus-within .role-count-badge,
+.role-card--searching .role-count-badge {
+  opacity: 0;
 }
 
 .role-count-badge--complete {
@@ -565,27 +573,6 @@ function choose(role: RoleDef) {
   background: #18260e;
   border-color: #6ec040;
   box-shadow: 0 0 10px rgba(82, 184, 48, 0.45);
-}
-
-/* ── Hover hint (text only — no icon/number) ─────────────────────────── */
-.role-hint {
-  position: absolute;
-  bottom: 12px;
-  right: 14px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #cdb98a;
-  opacity: 0.62;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  pointer-events: none;
-  transition: opacity 0.16s ease;
-}
-
-.role-card:hover .role-hint,
-.role-card:focus-within .role-hint {
-  opacity: 0;
 }
 
 /* ── Roster reveal ───────────────────────────────────────────────────── */
@@ -619,33 +606,69 @@ function choose(role: RoleDef) {
   pointer-events: auto;
 }
 
-/* While searching, every card's roster is open — hide the "Roster" hint. */
-.role-card--searching .role-hint {
-  opacity: 0;
-}
-
 .role-roster-header {
+  position: relative;
   flex: none;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 12px 14px 10px;
-  background: rgba(30, 16, 6, 0.78);
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  /* faint wash of the role color bleeding in from the left */
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--role-color) 17%, rgba(30, 16, 6, 0.82)) 0%,
+    rgba(30, 16, 6, 0.78) 60%
+  );
   border-bottom: 1px solid #5c3310;
 }
 
+/* role-colored rule that draws in from the left as the roster opens */
+.role-roster-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--role-color) 0%, transparent 85%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.08s;
+}
+
+.role-card:hover .role-roster-header::after,
+.role-card:focus-within .role-roster-header::after,
+.role-card--searching .role-roster-header::after {
+  transform: scaleX(1);
+}
+
+/* the role's own crest artwork, shrunk to a seal beside its name */
+.role-roster-emblem {
+  flex: none;
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+}
+
 .role-roster-role {
+  flex: none;
   font-size: 18px;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--role-color);
   text-shadow: 0 0 14px color-mix(in srgb, var(--role-color) 55%, transparent);
 }
 
 .role-roster-caption {
+  min-width: 0;
   font-size: 11px;
   letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #9c8a68;
 }
 
@@ -697,18 +720,18 @@ function choose(role: RoleDef) {
   flex: 1;
   min-width: 0;
   font-size: 14px;
+  line-height: 1.2;
   color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* full names always — wrap instead of truncating */
+  overflow-wrap: break-word;
 }
 
 .role-tier-chip {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 3px 7px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -727,14 +750,7 @@ function choose(role: RoleDef) {
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tier-c) 60%, transparent));
 }
 
-/* Star count (★N) — mirrors the Shop's tier header. */
-.role-tier-star {
-  flex: none;
-  font-weight: 800;
-  color: var(--tier-c);
-}
-
-/* Live spawn chance appended to the tier chip (e.g. "★3 · 30%"). */
+/* Live spawn chance next to the tier glyph (e.g. "30%"). */
 .role-tier-pct {
   flex: none;
   font-weight: 800;
@@ -779,6 +795,10 @@ function choose(role: RoleDef) {
   .role-search-wrap.role-morph-face {
     transition: opacity 0.2s ease-out;
     transform: none !important;
+  }
+
+  .role-roster-header::after {
+    transition: none;
   }
 }
 </style>
