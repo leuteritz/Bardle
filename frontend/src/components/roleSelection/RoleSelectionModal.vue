@@ -166,8 +166,12 @@ function choose(role: RoleDef) {
             }"
             @click="focusSearch"
           >
-            <!-- Resting face: the heading -->
-            <h2 class="role-title role-morph-face">✦ CHOOSE YOUR NEXT CHAMPION ROLE ✦</h2>
+            <!-- Resting face: one-line crest heading (same motif as the bottom-bar crest) -->
+            <div class="role-title role-morph-face">
+              <span class="role-crest-rule role-crest-rule--left" />
+              <h2 class="role-crest-title">Choose a Role</h2>
+              <span class="role-crest-rule role-crest-rule--right" />
+            </div>
 
             <!-- Active face: the search input (filters every roster live) -->
             <div
@@ -370,12 +374,37 @@ function choose(role: RoleDef) {
   text-align: center;
 }
 
+/* ── Crest heading: context and action on one line ───────────────────── */
 .role-title {
-  font-size: clamp(17px, 1.7vw, 26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.role-crest-rule {
+  flex: none;
+  height: 1px;
+  width: clamp(22px, 3.5vw, 52px);
+}
+.role-crest-rule--left {
+  background: linear-gradient(90deg, transparent, #c89040);
+}
+.role-crest-rule--right {
+  background: linear-gradient(90deg, #c89040, transparent);
+}
+
+.role-crest-title {
+  font-size: clamp(15px, 1.3vw, 21px);
   font-weight: 900;
+  letter-spacing: 0.22em;
+  padding-left: 0.22em;
+  text-transform: uppercase;
+  white-space: nowrap;
   color: #e8c040;
-  text-shadow: 0 0 18px rgba(232, 192, 64, 0.55);
-  letter-spacing: 0.06em;
+  text-shadow:
+    0 0 8px rgba(255, 224, 96, 0.5),
+    0 0 20px rgba(232, 192, 64, 0.45);
 }
 
 /* ── Morphing header: title ⇄ search ─────────────────────────────────────
