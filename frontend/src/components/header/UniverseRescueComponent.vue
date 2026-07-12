@@ -93,8 +93,8 @@ watch(
   justify-content: center;
   gap: clamp(3px, 0.5vw, 8px);
   width: 100%;
-  height: clamp(56px, 4.2vw, 115px);
-  padding: 6px 8px 3px;
+  height: var(--header-height);
+  padding: 6px 6px clamp(6px, 0.6vw, 10px);
   box-sizing: border-box;
   min-width: 0;
 }
@@ -105,7 +105,7 @@ watch(
 .gx-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(5px, 0.7vw, 9px);
   width: 100%;
   min-width: 0;
@@ -130,7 +130,7 @@ watch(
 }
 
 .info-name {
-  font-size: clamp(0.72rem, 0.85vw, 0.92rem);
+  font-size: clamp(0.8rem, 0.95vw, 1rem);
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.05;
@@ -146,6 +146,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 5px;
+  margin-left: auto;
   flex-shrink: 0;
   isolation: isolate;
   transition: filter 0.3s;
@@ -156,8 +157,8 @@ watch(
 }
 
 .meep-icon {
-  width: clamp(18px, 1.8vw, 30px);
-  height: clamp(18px, 1.8vw, 30px);
+  width: clamp(22px, 2.2vw, 34px);
+  height: clamp(22px, 2.2vw, 34px);
   object-fit: contain;
   flex-shrink: 0;
   image-rendering: auto;
@@ -177,7 +178,7 @@ watch(
 }
 
 .meep-value {
-  font-size: clamp(0.65rem, 0.9vw, 1rem);
+  font-size: clamp(0.9rem, 1.2vw, 1.35rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fed7aa;

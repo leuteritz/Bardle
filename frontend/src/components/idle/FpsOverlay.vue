@@ -33,7 +33,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /*
-  Das FPS-Overlay sitzt neben dem rechten Rand des Headers (max 1400px, zentriert).
+  Das FPS-Overlay sitzt neben dem rechten Rand des Headers (--header-max-width, zentriert).
   Positionierung: Viewport-Mitte + halbe Header-Breite + kleiner Abstand.
   So wandert es mit dem Header-Rand mit, egal wie breit der Screen ist.
 */
@@ -41,7 +41,7 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0.5rem;
   /* rechts neben Header: gleiche Formel wie EventLogOverlay, aber weiter oben */
-  left: calc(50% + min(700px, 50vw - 0.5rem) + 8px);
+  left: calc(50% + min(var(--header-max-width) / 2, 50vw - 0.5rem) + 8px);
   z-index: 9999;
   pointer-events: none;
 

@@ -21,7 +21,7 @@ const phaseLabel = computed(() => {
   const displayPhase = solarStore.isCometState
     ? 1
     : solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET
-  return `Sun · Phase ${displayPhase}/${SUN_PHASE_DISPLAY_TOTAL}`
+  return `Phase ${displayPhase}/${SUN_PHASE_DISPLAY_TOTAL}`
 })
 
 const glowColor = computed(() =>
@@ -95,8 +95,9 @@ const dwellText = computed(() => {
   display: flex;
   align-items: center;
   gap: clamp(5px, 0.7vw, 9px);
-  min-width: 0;
-  flex-shrink: 0;
+  min-width: clamp(80px, 7vw, 130px);
+  flex-shrink: 1;
+  max-width: clamp(96px, 9vw, 170px);
   background: transparent;
   border: none;
   padding: 0;
@@ -106,8 +107,8 @@ const dwellText = computed(() => {
 
 .sun-wrap {
   position: relative;
-  width: clamp(34px, 3.6vw, 50px);
-  height: clamp(34px, 3.6vw, 50px);
+  width: clamp(30px, 3vw, 44px);
+  height: clamp(30px, 3vw, 44px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -158,6 +159,8 @@ const dwellText = computed(() => {
   color: rgba(200, 185, 140, 0.5);
   line-height: 1;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .info-name {
@@ -181,11 +184,13 @@ const dwellText = computed(() => {
   color: #ffd88a;
   line-height: 1;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Completed phase: bigger glowing name + rippling sun ───── */
 .sun-phase--complete .info-name {
-  font-size: clamp(0.85rem, 1vw, 1.1rem);
+  font-size: clamp(0.8rem, 0.95vw, 1rem);
   color: #8adc50;
   text-shadow: 0 0 10px rgba(110, 192, 64, 0.6);
   animation: complete-pulse 2.4s ease-in-out infinite;

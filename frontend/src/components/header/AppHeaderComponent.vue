@@ -385,8 +385,7 @@ onUnmounted(() => resizeObserver?.disconnect())
     <!-- ════════ RECHTE SEITE ════════ -->
     <div class="flex items-center gap-3 header-side header-side--right">
       <SunPhaseIndicator />
-      <div class="header-sub-divider" aria-hidden="true"></div>
-      <div class="z-[65] header-portal-wrap" style="flex: 1; min-width: 0">
+      <div class="z-[65] header-portal-wrap" style="flex: 1">
         <UniverseRescueComponent />
       </div>
       <div ref="rightDividerRef" class="header-divider" aria-hidden="true"></div>
@@ -451,8 +450,8 @@ onUnmounted(() => resizeObserver?.disconnect())
    HEADER BAR
    ================================================================ */
 .header-bar {
-  max-width: 1400px;
-  height: clamp(56px, 4.2vw, 115px);
+  max-width: var(--header-max-width);
+  height: var(--header-height);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border-radius: 0 0 var(--bard-avatar-radius) var(--bard-avatar-radius);
   overflow: visible;
@@ -473,7 +472,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 .header-portal-wrap {
-  min-width: clamp(80px, 8vw, 180px);
+  min-width: clamp(150px, 15vw, 280px);
   align-self: stretch;
   overflow: hidden;
   display: flex;
@@ -494,6 +493,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 .header-side--right {
   justify-content: flex-end;
+  gap: clamp(5px, 0.6vw, 10px);
   padding-right: clamp(6px, 1.2vw, 14px);
   /* symmetric inner gap towards the center teardrop (matches --left padding-right) */
   padding-left: clamp(8px, 1vw, 16px);
@@ -653,21 +653,6 @@ onUnmounted(() => resizeObserver?.disconnect())
   box-shadow:
     inset 0 0 0 1px rgba(255, 200, 80, 0.08),
     0 0 8px rgba(160, 110, 15, 0.06);
-}
-
-/* Thin sub-divider between sun phase and galaxy block (design .r-vd) */
-.header-sub-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: clamp(32px, calc(-1.5px + 3vw), 62px);
-  align-self: center;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(255, 200, 80, 0.16) 18%,
-    rgba(255, 200, 80, 0.16) 82%,
-    transparent
-  );
 }
 
 /* ================================================================

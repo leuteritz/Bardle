@@ -109,6 +109,8 @@ watch(
   --header-total-height: 50px;
 
   /* Fluid scaling — no breakpoint jumps */
+  --header-max-width: min(1400px, calc(200px + 62vw));
+  --header-height: clamp(62px, calc(30px + 2.9vw), 115px);
   --bard-avatar-radius: clamp(14px, 1.4vw, 40px);
   --avatar-circle-size: clamp(48px, calc(-5px + 4.4vw), 100px);
   --bump-center: clamp(6px, calc(-4px + 1vw), 20px);
@@ -164,7 +166,7 @@ watch(
 .copyright-overlay {
   position: fixed;
   top: 0.5rem;
-  left: calc(50% - min(700px, 50vw - 0.5rem) - 8px);
+  left: calc(50% - min(var(--header-max-width) / 2, 50vw - 0.5rem) - 8px);
   transform: translateX(-100%);
   z-index: 9999;
   pointer-events: none;
@@ -242,7 +244,7 @@ watch(
 
 .planet-rescue-wrapper {
   width: 100%;
-  max-width: 1400px;
+  max-width: var(--header-max-width);
   margin-inline: auto;
   padding-inline: var(--bard-avatar-radius);
 }
