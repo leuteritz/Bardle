@@ -733,13 +733,12 @@ function choose(role: RoleDef) {
 }
 
 .role-roster-portrait {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   flex: none;
   object-fit: cover;
   border-radius: 4px;
-  border: 1px solid #5c3310;
-  background: #141410;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* exactly one line per champion, full name always: long names step down in
@@ -818,8 +817,8 @@ function choose(role: RoleDef) {
   }
 
   .role-roster-portrait {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 }
 
