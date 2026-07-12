@@ -341,7 +341,7 @@ export default defineComponent({
 }
 
 .complete-badge {
-  font-size: 1rem;
+  font-size: 1.35rem;
   letter-spacing: 0.2em;
   color: #e8c040;
   text-transform: uppercase;
@@ -364,11 +364,11 @@ export default defineComponent({
 .next-galaxy-btn {
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
-  border-radius: 5px;
+  border-radius: 6px;
   color: #fff;
-  font-size: 0.8rem;
+  font-size: 1.05rem;
   letter-spacing: 0.12em;
-  padding: 9px 20px;
+  padding: 12px 26px;
   cursor: pointer;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);

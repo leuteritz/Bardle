@@ -1112,8 +1112,8 @@ export const BOTTOM_FRAME_STROKE_SHEEN = 'rgba(190,115,46,0.14)' // subtle warm 
 // Reference geometry at hud-scale 1 (design mock is a 1920×443 layout).
 export const BOTTOM_BAR_HEIGHT = 443 // total bar height
 export const BOTTOM_BAR_SIDE_W = 440 // raised side panel width (minimap / command)
-export const BOTTOM_BAR_CENTER_TOP_Y = 380 // top edge of the low center strip
-export const BOTTOM_BAR_NOTCH_R = 20 // inner notch radius where panels meet the strip
+export const BOTTOM_BAR_CENTER_TOP_Y = 364 // top edge of the low center strip
+export const BOTTOM_BAR_NOTCH_R = 26 // inner notch radius where panels meet the strip
 export const BOTTOM_BAR_EDGE_INSET = 2 // stroke inset from the viewport edges
 // Frame stroke widths (drawn shadow → wood → gold, top edge only)
 export const BOTTOM_FRAME_W_SHADOW = 7

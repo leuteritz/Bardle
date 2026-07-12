@@ -118,12 +118,12 @@ export default defineComponent({
 
 .hud-arrival-row {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 7px;
 }
 
 .hud-arrival-label {
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 0.18em;
   color: #8a6a30;
   text-transform: uppercase;
@@ -131,7 +131,7 @@ export default defineComponent({
 }
 
 .hud-arrival-value {
-  font-size: 26px;
+  font-size: 34px;
   line-height: 1;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -145,11 +145,11 @@ export default defineComponent({
 .hud-metrics {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .hud-metric {
-  font-size: 11px;
+  font-size: 17px;
   color: rgba(232, 192, 64, 0.72);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
@@ -158,7 +158,7 @@ export default defineComponent({
 }
 
 .hud-metric-unit {
-  font-size: 9px;
+  font-size: 13px;
   color: rgba(232, 192, 64, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -166,7 +166,7 @@ export default defineComponent({
 
 .hud-metric-sep {
   width: 1px;
-  height: 10px;
+  height: 15px;
   background: rgba(200, 144, 64, 0.35);
 }
 </style>

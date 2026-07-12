@@ -116,51 +116,20 @@ watch(
   --bump-center: clamp(6px, calc(-4px + 1vw), 20px);
   --bump-profile: clamp(2px, calc(-3px + 0.5vw), 8px);
 
-  /* hud-scale / hud-panel-size affect non-header components — kept as breakpoints */
-  --hud-scale: 0.75;
-  --hud-panel-size: 330px;
+  /* hud-scale drives the whole bottom bar. Fluid and height-aware: the bar
+     tracks the smaller of viewport width and height so it never dominates
+     short screens (e.g. 1440×900 MacBooks). Registered via @property below
+     so JS readers get a resolved number, not a calc() token stream. */
+  /* tan(atan2(a, b)) divides two lengths into a plain <number> — plain
+     calc(100vw / 2560px) is invalid CSS division */
+  --hud-scale: clamp(0.52, min(tan(atan2(100vw, 2560px)), tan(atan2(100vh, 1440px))), 1);
+  --hud-panel-size: calc(440px * var(--hud-scale));
 }
 
-@media (max-width: 1400px) {
-  :root {
-    --hud-scale: 0.65;
-    --hud-panel-size: 286px;
-  }
-}
-
-@media (max-width: 1280px) {
-  :root {
-    --hud-scale: 0.58;
-    --hud-panel-size: 260px;
-  }
-}
-
-@media (max-width: 1024px) {
-  :root {
-    --hud-scale: 0.52;
-    --hud-panel-size: 230px;
-  }
-}
-
-@media (min-width: 1600px) and (max-width: 1919px) {
-  :root {
-    --hud-scale: 0.78;
-    --hud-panel-size: 343px;
-  }
-}
-
-@media (min-width: 1920px) and (max-width: 2559px) {
-  :root {
-    --hud-scale: 0.85;
-    --hud-panel-size: 374px;
-  }
-}
-
-@media (min-width: 2560px) {
-  :root {
-    --hud-scale: 1.0;
-    --hud-panel-size: 440px;
-  }
+@property --hud-scale {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.75;
 }
 
 .copyright-overlay {

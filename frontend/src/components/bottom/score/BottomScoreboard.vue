@@ -58,10 +58,32 @@ const rankEmblem = computed(
   () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
 )
 const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
+/* long tiers (Grandmaster, Challenger) get a compact size so they always fit */
+const isLongRankLabel = computed(() => rankLabel.value.length > 9)
 
 function openBattleTab() {
   uiStore.setBardTab('battle')
 }
+
+/* ── Overflow guard: the LONGEST stat value sets one shared char count on
+   the scoreboard root, so every value shrinks to fit together and all
+   stats stay the same size (see .sb-stat-value). Icons count as ~2 chars. ── */
+function valChars(stat: ScoreStat): number {
+  return stat.value.length + (stat.icon || stat.gameIcon ? 2 : 0)
+}
+const sharedValChars = computed(() =>
+  Math.max(...leftStats.value.map(valChars), ...rightStats.value.map(valChars)),
+)
+const wlCombined = computed(
+  () => formatNumber(totalWins.value).length + formatNumber(totalLosses.value).length + 4,
+)
+/* long records stack W over L — half the line, still readable */
+const wlStacked = computed(() => wlCombined.value > 12)
+const wlChars = computed(() =>
+  wlStacked.value
+    ? Math.max(formatNumber(totalWins.value).length, formatNumber(totalLosses.value).length) + 1
+    : wlCombined.value,
+)
 
 /* ══════════════════════════════════════════════════════════════════════
    Live battle-status line (compact, under the BARDLE crest) — ported
@@ -194,7 +216,7 @@ const hasLiveStatus = computed(
 </script>
 
 <template>
-  <div class="scoreboard">
+  <div class="scoreboard" :style="{ '--val-chars': sharedValChars }">
     <!-- LEFT · combat stats -->
     <div
       class="sb-stats sb-stats--left"
@@ -286,6 +308,7 @@ const hasLiveStatus = computed(
           <span class="sb-stat-label">Rank</span>
           <span
             class="sb-stat-value sb-rank-value"
+            :class="{ 'sb-rank-value--long': isLongRankLabel }"
             :style="{ color: rankColor, '--rank-glow': rankColor }"
           >
             {{ rankLabel }}
@@ -295,10 +318,17 @@ const hasLiveStatus = computed(
 
       <!-- Win / loss cell: two-tone value -->
       <div class="sb-stat">
-        <span class="sb-stat-label">Win / Loss</span>
-        <span class="sb-stat-value">
+        <span class="sb-stat-label">
+          <span class="sb-label-long">Win / Loss</span>
+          <span class="sb-label-short">W / L</span>
+        </span>
+        <span
+          class="sb-stat-value sb-wl-value"
+          :class="{ 'sb-wl-value--stacked': wlStacked }"
+          :style="{ '--val-chars': wlChars }"
+        >
           <span class="sb-wl-win">{{ formatNumber(totalWins) }}W</span>
-          <span class="sb-wl-sep">·</span>
+          <span v-if="!wlStacked" class="sb-wl-sep">·</span>
           <span class="sb-wl-loss">{{ formatNumber(totalLosses) }}L</span>
         </span>
       </div>
@@ -323,21 +353,25 @@ const hasLiveStatus = computed(
 
 <style scoped>
 .scoreboard {
-  /* scale typography with the HUD, but never below readable minimums */
-  --sb-val-size: max(17px, calc(27px * var(--hud-scale, 1)));
-  --sb-label-size: max(8px, calc(10px * var(--hud-scale, 1)));
-  --sb-title-size: max(19px, calc(30px * var(--hud-scale, 1)));
+  /* typography tracks the strip's own width (container queries), so cells
+     can never overlap the crest and wide viewports are used fully */
+  --sb-val-size: clamp(13px, 2.1cqw, 26px);
+  --sb-label-size: clamp(8px, 0.95cqw, 11px);
+  --sb-title-size: clamp(16px, 2.5cqw, 30px);
 
   position: absolute;
   left: calc(440px * var(--hud-scale, 1));
   right: calc(440px * var(--hud-scale, 1));
-  top: calc(376px * var(--hud-scale, 1));
+  /* strip edge (364) + 3px for the gold frame stroke that bites into the
+     top — keeps label-to-top and value-to-bottom optically equal */
+  top: calc(367px * var(--hud-scale, 1));
   bottom: 0;
   z-index: 2;
+  container-type: inline-size;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(8px * var(--hud-scale, 1)) 12px 0;
+  padding: 0 12px;
   min-width: 0;
   pointer-events: none;
 }
@@ -360,13 +394,14 @@ const hasLiveStatus = computed(
 }
 
 .sb-stat {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: clamp(4px, 0.5cqw, 8px);
   min-width: 0;
+  padding-inline: clamp(2px, 0.5cqw, 10px);
 }
 .sb-stat + .sb-stat {
   border-left: 1px solid rgba(122, 78, 32, 0.3);
@@ -379,8 +414,8 @@ const hasLiveStatus = computed(
 }
 
 .sb-rank-emblem {
-  width: max(26px, calc(38px * var(--hud-scale, 1)));
-  height: max(26px, calc(38px * var(--hud-scale, 1)));
+  width: clamp(20px, 2.8cqw, 38px);
+  height: clamp(20px, 2.8cqw, 38px);
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
@@ -394,16 +429,34 @@ const hasLiveStatus = computed(
   min-width: 0;
 }
 
-.sb-rank-value {
+/* doubled class beats the later-defined .sb-stat-value base rule */
+.sb-stat-value.sb-rank-value {
   /* slightly smaller than plain stats so long tiers (Grandmaster) never clip */
-  font-size: max(14px, calc(21px * var(--hud-scale, 1)));
+  font-size: clamp(11px, 1.2cqw, 19px);
   letter-spacing: 0.02em;
+}
+.sb-rank-value.sb-rank-value--long {
+  font-size: clamp(10px, 0.8cqw, 13px);
+  letter-spacing: 0;
   text-shadow:
     0 1px 3px rgba(0, 0, 0, 0.9),
     0 0 10px var(--rank-glow, #d4a020);
 }
 
 /* ── Win / loss cell ── */
+.sb-stat-value.sb-wl-value {
+  /* two numbers + units — sized like the rank value so it never crowds
+     its neighbors on narrow strips; shrinks further with char count */
+  font-size: min(clamp(11px, 1.2cqw, 19px), max(9px, calc(10cqw / var(--val-chars, 8))));
+}
+.sb-stat-value.sb-wl-value.sb-wl-value--stacked {
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.05;
+}
+.sb-label-short {
+  display: none;
+}
 .sb-wl-win {
   color: #74d448;
 }
@@ -419,7 +472,9 @@ const hasLiveStatus = computed(
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--sb-val-size);
+  /* never wider than the cell: long values shrink with their char count
+     (bound as --val-chars from the template) instead of overlapping */
+  font-size: min(var(--sb-val-size), max(9px, calc(10cqw / var(--val-chars, 4))));
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -428,8 +483,10 @@ const hasLiveStatus = computed(
 }
 
 .sb-stat-icon {
-  width: max(15px, calc(22px * var(--hud-scale, 1)));
-  height: max(15px, calc(22px * var(--hud-scale, 1)));
+  /* em-based: tracks the length-adjusted value size, so icon + digits
+     together stay inside the cell */
+  width: 0.85em;
+  height: 0.85em;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -448,11 +505,10 @@ const hasLiveStatus = computed(
 
 /* ── Title crest ── */
 .sb-crest {
-  /* fixed width: sized for the longest live status so nothing around it
-     ever shifts when the text or mode changes */
-  flex: none;
-  width: calc(310px * var(--hud-scale, 1));
-  min-width: 210px;
+  /* fluid width, fixed per viewport size: sized for the longest live status
+     so nothing around it ever shifts when the text or mode changes */
+  flex: 0 0 auto;
+  width: clamp(160px, 24cqw, 300px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -529,7 +585,7 @@ const hasLiveStatus = computed(
 }
 
 .sb-live-text {
-  font-size: max(14px, calc(21px * var(--hud-scale, 1)));
+  font-size: clamp(12px, 1.7cqw, 21px);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -549,8 +605,8 @@ const hasLiveStatus = computed(
 }
 
 .sb-live-icon {
-  width: max(15px, calc(22px * var(--hud-scale, 1)));
-  height: max(15px, calc(22px * var(--hud-scale, 1)));
+  width: clamp(13px, 1.8cqw, 22px);
+  height: clamp(13px, 1.8cqw, 22px);
   object-fit: contain;
 }
 
@@ -628,6 +684,27 @@ const hasLiveStatus = computed(
     background: #c89040;
     transform: scale(1.15);
     box-shadow: 0 0 4px rgba(200, 140, 40, 0.7);
+  }
+}
+
+/* narrow strip: drop the emblem, shorten the W/L label and tighten the
+   title so the rank cell ("Grandmaster") never crowds its neighbors */
+@container (max-width: 1300px) {
+  .sb-rank-emblem {
+    display: none;
+  }
+  .sb-rank-text {
+    align-items: center;
+  }
+  .sb-label-long {
+    display: none;
+  }
+  .sb-label-short {
+    display: inline;
+  }
+  .sb-title {
+    letter-spacing: 0.18em;
+    padding-left: 0.18em;
   }
 }
 

@@ -269,7 +269,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   letter-spacing: 0.03em;
   color: color-mix(in srgb, var(--role-color, #e8c040) 45%, #f0e0c8);
@@ -285,8 +285,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
     0 0 6px rgba(232, 192, 64, 0.7);
 }
 .cmd-tile-bonus-icon {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
 }
 
@@ -302,7 +302,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-tile-hp-value {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   margin-bottom: 2px;
   font-variant-numeric: tabular-nums;
@@ -482,7 +482,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 }
 
 .cmd-tile-cost-value {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   color: #e8c040;
   letter-spacing: 0.04em;
@@ -492,7 +492,7 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 .cmd-tile-unlock-label {
   position: relative;
   z-index: 1;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.1em;
   color: #90e050;

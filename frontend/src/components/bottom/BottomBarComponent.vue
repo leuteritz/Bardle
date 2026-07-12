@@ -93,13 +93,18 @@ onMounted(() => {
     vw.value = shellRef.value.getBoundingClientRect().width
     resizeObserver = new ResizeObserver((entries) => {
       vw.value = entries[0].contentRect.width
-      // --hud-scale breakpoints only change on resize — re-read it here
       readHudScale()
     })
     resizeObserver.observe(shellRef.value)
   }
+  // --hud-scale also tracks viewport height; height-only resizes don't
+  // change the shell's width, so the ResizeObserver alone misses them
+  window.addEventListener('resize', readHudScale)
 })
-onUnmounted(() => resizeObserver?.disconnect())
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  window.removeEventListener('resize', readHudScale)
+})
 
 const barH = computed(() => BOTTOM_BAR_HEIGHT * hudScale.value)
 
