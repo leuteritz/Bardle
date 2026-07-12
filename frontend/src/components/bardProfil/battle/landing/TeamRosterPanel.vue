@@ -307,12 +307,12 @@ const mvpHolder = computed<string | null>(() => {
 .roster-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: clamp(6px, 0.9vh, 10px);
   min-height: 0;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(212, 160, 32, 0.12);
   border-radius: 5px;
-  padding: 14px 16px;
+  padding: clamp(8px, 1.3vh, 13px) clamp(10px, 1vw, 16px);
 }
 
 .roster-head {
@@ -351,7 +351,7 @@ const mvpHolder = computed<string | null>(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(5px, 0.7vh, 8px);
   min-height: 0;
 }
 
@@ -364,7 +364,7 @@ const mvpHolder = computed<string | null>(() => {
   gap: 10px;
   padding: 0;
   border-radius: 5px;
-  min-height: 72px;
+  min-height: clamp(46px, 6.5vh, 66px);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
@@ -498,7 +498,7 @@ const mvpHolder = computed<string | null>(() => {
   padding: 4px 0 4px 10px;
   align-self: center;
   /* Reserved badge column so the center block aligns across all rows */
-  min-width: 120px;
+  min-width: clamp(100px, 8vw, 120px);
   box-sizing: border-box;
 }
 
@@ -506,9 +506,9 @@ const mvpHolder = computed<string | null>(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px 3px 6px;
-  min-width: 104px;
-  font-size: 10px;
+  padding: 2px 8px 2px 5px;
+  min-width: clamp(88px, 7vw, 104px);
+  font-size: clamp(9px, 1vh, 10px);
   font-weight: 700;
   letter-spacing: 1px;
   color: #f0ead8;
@@ -526,7 +526,7 @@ const mvpHolder = computed<string | null>(() => {
 /* Splash portrait: right edge, full row height, fades toward the center */
 .row-champ-img {
   align-self: stretch;
-  width: 92px;
+  width: clamp(64px, 9vh, 88px);
   object-fit: cover;
   flex-shrink: 0;
   -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%);
@@ -535,7 +535,7 @@ const mvpHolder = computed<string | null>(() => {
 
 .row-empty-slot {
   align-self: stretch;
-  width: 92px;
+  width: clamp(64px, 9vh, 88px);
   margin: 6px 6px 6px 0;
   border-radius: 4px;
   border: 2px dashed rgba(90, 60, 20, 0.5);
@@ -565,7 +565,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .row-champ-name {
-  font-size: 18px;
+  font-size: clamp(14px, 1.8vh, 17px);
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -597,7 +597,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .row-stat-value {
-  font-size: 15px;
+  font-size: clamp(12px, 1.5vh, 15px);
   font-weight: 700;
   color: #e8e2d0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);

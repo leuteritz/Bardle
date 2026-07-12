@@ -81,10 +81,10 @@ watch(
                   v-if="item.src"
                   :src="item.src"
                   :alt="item.label"
-                  class="relative z-10 object-contain w-14 h-14"
+                  class="relative z-10 object-contain rp-tab-img"
                   :class="uiStore.bardActiveTab === item.id ? 'rp-tab-img-glow' : ''"
                 />
-                <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 w-10 h-10" />
+                <Icon v-else-if="item.icon.includes(':')" :icon="item.icon" class="relative z-10 rp-tab-icon" />
                 <span v-else class="relative z-10 text-sm">{{ item.icon }}</span>
                 <span v-if="item.label" class="relative z-10 rp-tab-label">{{ item.label }}</span>
                 <span
@@ -366,8 +366,19 @@ watch(
 /* ═══════════════════════════════════════════
    TABS
    ═══════════════════════════════════════════ */
+/* height-aware tab art: smaller header leaves more room for tab content */
+.rp-tab-img {
+  width: clamp(34px, 5vh, 48px);
+  height: clamp(34px, 5vh, 48px);
+}
+
+.rp-tab-icon {
+  width: clamp(26px, 3.8vh, 36px);
+  height: clamp(26px, 3.8vh, 36px);
+}
+
 .rp-tab {
-  padding: 10px 16px;
+  padding: clamp(5px, 0.9vh, 9px) clamp(10px, 1.2vw, 16px);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.5px;

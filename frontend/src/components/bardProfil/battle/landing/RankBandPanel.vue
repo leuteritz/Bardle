@@ -148,8 +148,8 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 .rank-band {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 12px 18px;
+  gap: clamp(10px, 1.1vw, 18px);
+  padding: clamp(7px, 1.1vh, 12px) clamp(12px, 1.1vw, 18px);
   flex-shrink: 0;
   border: 1px solid;
   border-radius: 5px;
@@ -158,8 +158,8 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 /* ── Zone 1: Emblem + rank identity ── */
 .rank-emblem {
   position: relative;
-  width: 74px;
-  height: 74px;
+  width: clamp(52px, 7.5vh, 70px);
+  height: clamp(52px, 7.5vh, 70px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -176,17 +176,17 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .emblem-img {
-  width: 68px;
-  height: 68px;
+  width: clamp(47px, 6.9vh, 64px);
+  height: clamp(47px, 6.9vh, 64px);
   object-fit: contain;
 }
 
 .rank-info {
-  min-width: 190px;
+  min-width: clamp(150px, 12vw, 190px);
 }
 
 .rank-name {
-  font-size: 22px;
+  font-size: clamp(16px, 2.1vh, 21px);
   font-weight: 700;
   letter-spacing: 1px;
   line-height: 1.1;
@@ -247,7 +247,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 .stats-row {
   display: flex;
   justify-content: center;
-  gap: 34px;
+  gap: clamp(16px, 2vw, 34px);
 }
 
 .stat-col {
@@ -255,7 +255,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .stat-num {
-  font-size: 24px;
+  font-size: clamp(17px, 2.3vh, 23px);
   font-weight: 700;
   line-height: 1;
 }
@@ -284,7 +284,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 /* ── Zone 3: Next battle win chance ── */
 .chance-zone {
   flex-shrink: 0;
-  min-width: 220px;
+  min-width: clamp(170px, 14vw, 220px);
   padding-right: 4px;
   text-align: right;
 }
@@ -305,7 +305,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 
 .card-track {
   position: relative;
-  width: 140px;
+  width: clamp(100px, 8.5vw, 140px);
   height: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
@@ -333,7 +333,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .card-value {
-  font-size: 22px;
+  font-size: clamp(16px, 2.1vh, 21px);
   font-weight: 700;
   line-height: 1;
   min-width: 52px;

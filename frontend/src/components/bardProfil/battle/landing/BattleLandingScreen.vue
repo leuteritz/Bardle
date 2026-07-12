@@ -155,8 +155,8 @@ const playtimeStr = computed(() => {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px 24px;
+  gap: clamp(7px, 1.1vh, 12px);
+  padding: clamp(10px, 1.6vh, 18px) clamp(14px, 1.4vw, 24px);
   background: radial-gradient(circle at 50% 0%, #171208, #0b0a07 72%);
   overflow-y: auto;
   scrollbar-width: thin;
@@ -168,14 +168,14 @@ const playtimeStr = computed(() => {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 14px;
+  gap: clamp(8px, 0.9vw, 14px);
 }
 
 .perf-col {
   flex: 1.5;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: clamp(7px, 1.1vh, 12px);
   min-height: 0;
   min-width: 0;
 }
@@ -186,12 +186,12 @@ const playtimeStr = computed(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 12px;
+  gap: clamp(7px, 1.1vh, 12px);
 }
 
 .roster-col {
   flex: 1;
-  min-width: 300px;
+  min-width: clamp(260px, 22vw, 300px);
 }
 
 /* ── Central battle action bar ── */
@@ -220,10 +220,10 @@ const playtimeStr = computed(() => {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  min-width: 440px;
-  padding: 16px 36px;
+  min-width: clamp(300px, 28vw, 420px);
+  padding: clamp(9px, 1.3vh, 14px) clamp(22px, 2.2vw, 34px);
   font-family: inherit;
-  font-size: 19px;
+  font-size: clamp(15px, 1.8vh, 18px);
   font-weight: 700;
   letter-spacing: 4px;
   background: linear-gradient(to bottom, #1e2e12, #131e0c);

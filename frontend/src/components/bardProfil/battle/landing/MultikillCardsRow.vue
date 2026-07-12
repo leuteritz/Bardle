@@ -53,7 +53,7 @@ const multikills = computed(() => ({
 
 .mk-card {
   position: relative;
-  padding: 14px 8px;
+  padding: clamp(7px, 1.2vh, 12px) 8px;
   text-align: center;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 5px;
@@ -87,7 +87,7 @@ const multikills = computed(() => ({
 }
 
 .mk-value {
-  font-size: 30px;
+  font-size: clamp(19px, 2.8vh, 28px);
   font-weight: 700;
   line-height: 1;
 }
