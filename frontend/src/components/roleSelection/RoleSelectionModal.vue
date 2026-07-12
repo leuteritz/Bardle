@@ -248,12 +248,23 @@ function choose(role: RoleDef) {
                 <div class="role-roster-header">
                   <img :src="role.image" alt="" class="role-roster-emblem" />
                   <span class="role-roster-role">{{ role.label }}</span>
-                  <span class="role-roster-caption">
-                    {{
-                      obtainableCount(role.key) > 0
-                        ? `${obtainableCount(role.key)} to unlock`
-                        : 'All unlocked ✓'
-                    }}
+                  <!-- dice + count: "N random possibilities" without a word of copy;
+                       while searching it counts the matches instead -->
+                  <span
+                    class="role-roster-odds"
+                    :title="
+                      searchActive
+                        ? `${availableFor(role.key).length} matching champions`
+                        : obtainableCount(role.key) > 0
+                          ? `${obtainableCount(role.key)} possible picks for this role`
+                          : 'All champions unlocked'
+                    "
+                  >
+                    <template v-if="!searchActive && obtainableCount(role.key) === 0">✓</template>
+                    <template v-else>
+                      <Icon icon="game-icons:rolling-dices" class="role-roster-odds-icon" />
+                      {{ availableFor(role.key).length }}
+                    </template>
                   </span>
                 </div>
 
@@ -264,7 +275,15 @@ function choose(role: RoleDef) {
                     class="role-roster-row"
                   >
                     <img :src="champ.image" :alt="champ.name" class="role-roster-portrait" />
-                    <span class="role-roster-name">{{ champ.name }}</span>
+                    <span
+                      class="role-roster-name"
+                      :class="{
+                        'role-roster-name--long': champ.name.length > 9,
+                        'role-roster-name--xlong': champ.name.length > 12,
+                      }"
+                    >
+                      {{ champ.name }}
+                    </span>
                     <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
                       <Icon :icon="champ.tierIcon" class="role-tier-icon" />
                       <span v-if="champ.spawnPercent != null" class="role-tier-pct">
@@ -662,13 +681,22 @@ function choose(role: RoleDef) {
   text-shadow: 0 0 14px color-mix(in srgb, var(--role-color) 55%, transparent);
 }
 
-.role-roster-caption {
-  min-width: 0;
-  font-size: 11px;
-  letter-spacing: 0.06em;
+.role-roster-odds {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #cdb98a;
+}
+
+.role-roster-odds-icon {
+  width: 16px;
+  height: 16px;
   color: #9c8a68;
 }
 
@@ -694,16 +722,14 @@ function choose(role: RoleDef) {
   border-radius: 4px;
 }
 
+/* rows are read-only info (the click picks the role, never a champion) —
+   no per-row hover highlight that would suggest champion selection */
 .role-roster-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
   border-radius: 4px;
-}
-
-.role-roster-row:hover {
-  background: #1c1c18;
 }
 
 .role-roster-portrait {
@@ -716,14 +742,23 @@ function choose(role: RoleDef) {
   background: #141410;
 }
 
+/* exactly one line per champion, full name always: long names step down in
+   size instead of wrapping or truncating */
 .role-roster-name {
   flex: 1;
   min-width: 0;
   font-size: 14px;
   line-height: 1.2;
+  white-space: nowrap;
   color: #e8dcc0;
-  /* full names always — wrap instead of truncating */
-  overflow-wrap: break-word;
+}
+/* doubled class: must also beat the mobile media-query base rule below */
+.role-roster-name.role-roster-name--long {
+  font-size: 12px;
+}
+.role-roster-name.role-roster-name--xlong {
+  font-size: 10.5px;
+  letter-spacing: -0.01em;
 }
 
 .role-tier-chip {
