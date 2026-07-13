@@ -41,14 +41,7 @@
           >
         </div>
 
-        <div class="bar-center">
-          <Icon
-            v-if="entry.isChampion"
-            icon="game-icons:comet-spark"
-            class="bar-center-icon"
-            :style="{ color: entry.palette.mid, filter: `drop-shadow(0 0 4px ${entry.palette.glow})` }"
-          />
-        </div>
+        <div class="bar-center" />
 
         <div class="bar-side bar-side--right">
           <div
@@ -79,7 +72,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '../../stores/starGroupStore'
 import { usePlanetBossStore } from '../../stores/planetBossStore'
 import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
@@ -340,23 +332,42 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .timer-bar-row--cursed {
   border-radius: 3px;
+}
+
+/* Der Fluch-Glow liegt auf den Füllungen selbst, die per scaleX zur Mitte
+   schrumpfen — so folgt er der tatsächlichen Balkenbreite statt der ganzen Zeile */
+.timer-bar-row--cursed .bar-fill {
+  /* Kräftiger lila Ring direkt auf der Füllung + starkes Innenleuchten,
+     Intensität skaliert mit der Fluch-Restdauer (--curse-ratio) */
   box-shadow:
-    0 0 calc(var(--curse-ratio) * 12px + 2px) 2px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.7)),
-    0 0 calc(var(--curse-ratio) * 24px + 4px) 4px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.4));
+    inset 0 0 0 1.5px rgba(200, 100, 255, calc(var(--curse-ratio) * 0.6 + 0.35)),
+    inset 0 0 14px rgba(170, 50, 230, calc(var(--curse-ratio) * 0.5 + 0.4)),
+    0 0 calc(var(--curse-ratio) * 12px + 4px) 3px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.5 + 0.4)),
+    0 0 calc(var(--curse-ratio) * 24px + 8px) 6px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.35 + 0.25));
   animation: curse-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes curse-pulse {
   0%, 100% {
     box-shadow:
-      0 0 calc(var(--curse-ratio) * 12px + 2px) 2px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.7)),
-      0 0 calc(var(--curse-ratio) * 24px + 4px) 4px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.4));
+      inset 0 0 0 1.5px rgba(200, 100, 255, calc(var(--curse-ratio) * 0.6 + 0.35)),
+      inset 0 0 14px rgba(170, 50, 230, calc(var(--curse-ratio) * 0.5 + 0.4)),
+      0 0 calc(var(--curse-ratio) * 12px + 4px) 3px rgba(160, 40, 220, calc(var(--curse-ratio) * 0.5 + 0.4)),
+      0 0 calc(var(--curse-ratio) * 24px + 8px) 6px rgba(100, 0, 180, calc(var(--curse-ratio) * 0.35 + 0.25));
   }
   50% {
     box-shadow:
-      0 0 calc(var(--curse-ratio) * 18px + 2px) 3px rgba(180, 60, 255, calc(var(--curse-ratio) * 0.9)),
-      0 0 calc(var(--curse-ratio) * 34px + 4px) 6px rgba(120, 0, 200, calc(var(--curse-ratio) * 0.55));
+      inset 0 0 0 2px rgba(215, 130, 255, calc(var(--curse-ratio) * 0.5 + 0.5)),
+      inset 0 0 18px rgba(190, 80, 255, calc(var(--curse-ratio) * 0.4 + 0.55)),
+      0 0 calc(var(--curse-ratio) * 18px + 6px) 4px rgba(180, 60, 255, calc(var(--curse-ratio) * 0.4 + 0.55)),
+      0 0 calc(var(--curse-ratio) * 32px + 10px) 8px rgba(120, 0, 200, calc(var(--curse-ratio) * 0.3 + 0.35));
   }
+}
+
+/* Verfluchte Timer: Sekunden-Label lila einfärben */
+.timer-bar-row--cursed .bar-seconds-label {
+  color: #c77dff;
+  filter: drop-shadow(0 0 6px rgba(160, 40, 220, 0.8)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
 }
 
 .bar-side {
@@ -411,16 +422,6 @@ const sortedEntries = computed<BarEntry[]>(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.bar-center-icon {
-  /* Iconify skaliert ohne width/height mit 1em → hier flüssig 10px–15px */
-  font-size: clamp(10px, 0.35vw + 5.5px, 15px);
-}
-
-.bar-icon {
-  color: var(--icon-color);
-  filter: drop-shadow(0 0 4px var(--icon-color));
-}
-
 .bar-value {
   color: var(--text-color);
   filter: drop-shadow(0 0 3px var(--icon-color));
@@ -429,8 +430,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .bar-seconds-label {
   position: absolute;
   top: 50%;
-  /* Flüssig skaliert für 1280px (~10.5px) bis 2560px (~14px) Viewport-Breite */
-  font-size: clamp(0.65rem, 0.27vw + 0.44rem, 0.875rem);
+  /* Flüssig skaliert für 1280px (~12.5px) bis 2560px (~16.5px) Viewport-Breite */
+  font-size: clamp(0.78rem, 0.3vw + 0.51rem, 1.03rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.06em;
