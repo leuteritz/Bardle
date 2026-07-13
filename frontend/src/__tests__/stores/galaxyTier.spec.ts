@@ -15,6 +15,7 @@ import {
   unlockedChampionTierCount,
   tierSpawnWeights,
   championTierSpawnPercent,
+  perChampionSpawnPercents,
   CHAMPION_TIERS,
   CHAMPION_TIERS_BY_STAR,
 } from '../../config/championTiers'
@@ -202,6 +203,35 @@ describe('Weighted champion-tier spawn', () => {
     // Galaxy 1 → only Tier 1 spawns at 100%
     expect(championTierSpawnPercent(1, 1)).toBe(100)
     expect(championTierSpawnPercent(2, 1)).toBeNull()
+  })
+
+  it('perChampionSpawnPercents splits each tier weight uniformly among its champions', () => {
+    // Galaxy 1 → only Tier 1 (100%) → 4 champions share it at 25% each
+    const g1 = perChampionSpawnPercents(new Map([[1, 4]]), 1)
+    expect(g1.get(1)).toBeCloseTo(25)
+    // Galaxy 3 → [70, 30]: 7 T1 champs → 10% each, 2 T2 champs → 15% each
+    const g3 = perChampionSpawnPercents(new Map([[1, 7], [2, 2]]), 3)
+    expect(g3.get(1)).toBeCloseTo(10)
+    expect(g3.get(2)).toBeCloseTo(15)
+  })
+
+  it('perChampionSpawnPercents drops empty/locked tiers and renormalizes (like the spawn pick)', () => {
+    // Galaxy 6 → [55, 30, 15], but Tier 1 is exhausted for this role:
+    // T2 and T3 renormalize over 45 → 30/45 and 15/45, split per champion.
+    const g6 = perChampionSpawnPercents(new Map([[1, 0], [2, 3], [3, 1]]), 6)
+    expect(g6.has(1)).toBe(false)
+    expect(g6.get(2)).toBeCloseTo((30 / 45) * 100 / 3)
+    expect(g6.get(3)).toBeCloseTo((15 / 45) * 100)
+    // Tier 3 is locked at Galaxy 3 → excluded even if champions were discovered
+    const g3 = perChampionSpawnPercents(new Map([[1, 2], [3, 5]]), 3)
+    expect(g3.has(3)).toBe(false)
+    expect(g3.get(1)).toBeCloseTo(50)
+    // percentages across the pool always sum to 100
+    const total = [...g6.entries()].reduce(
+      (sum, [star, pct]) => sum + pct * (star === 2 ? 3 : 1),
+      0,
+    )
+    expect(total).toBeCloseTo(100)
   })
 })
 

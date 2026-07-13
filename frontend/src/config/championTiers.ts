@@ -148,3 +148,27 @@ export function championTierSpawnPercent(
   if (tierStarLevel < 1 || tierStarLevel > unlocked) return null
   return tierSpawnWeights(unlocked)[tierStarLevel - 1] ?? null
 }
+
+/** Per-champion spawn chance (%) inside an eligible pool, keyed by tier star level.
+ *  Mirrors the pick in planetBossStore: tiers with no eligible champion are dropped
+ *  and the remaining weights renormalized, then a tier's share splits uniformly among
+ *  its champions. `tierCounts` maps star level → number of eligible champions of that
+ *  tier in the pool (e.g. one role's still-obtainable roster). Tiers beyond the
+ *  galaxy's unlocked count never spawn and get no entry. */
+export function perChampionSpawnPercents(
+  tierCounts: Map<number, number>,
+  currentGalaxy: number,
+): Map<number, number> {
+  const unlocked = unlockedChampionTierCount(currentGalaxy)
+  const weights = tierSpawnWeights(unlocked)
+  const present = [...tierCounts.entries()].filter(
+    ([star, count]) => star >= 1 && star <= unlocked && count > 0,
+  )
+  const total = present.reduce((sum, [star]) => sum + (weights[star - 1] ?? 0), 0)
+  const result = new Map<number, number>()
+  if (total <= 0) return result
+  for (const [star, count] of present) {
+    result.set(star, (((weights[star - 1] ?? 0) / total) * 100) / count)
+  }
+  return result
+}

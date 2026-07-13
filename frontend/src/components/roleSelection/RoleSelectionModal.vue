@@ -10,7 +10,7 @@ import {
   getChampionStarLevel,
   getChampionTier,
   isChampionTierUnlocked,
-  championTierSpawnPercent,
+  perChampionSpawnPercents,
 } from '@/config/championTiers'
 import type { ChampionRole } from '@/types'
 
@@ -24,7 +24,7 @@ type AvailableChampion = {
   tierColor: string
   tierIcon: string
   image: string
-  spawnPercent: number | null // this tier's live spawn chance (null when not spawning)
+  spawnPercent: number | null // this champion's own spawn chance within the role pool (null when not spawning)
 }
 
 const displayedRoles = ref<RoleDef[]>([])
@@ -110,17 +110,42 @@ const availableByRole = computed(() => {
       tierColor: tier.color,
       tierIcon: tier.icon,
       image: battleStore.getChampionImage(name),
-      spawnPercent: championTierSpawnPercent(star, galaxyStore.currentGalaxy),
+      spawnPercent: null, // filled below once the role's full pool is known
     }
     for (const role of getChampionRoles(name)) {
       map[role]?.push(entry)
     }
   }
+  // Per-champion odds mirror the actual spawn pick (planetBossStore): tier chosen
+  // by renormalized weight over this role's pool, then uniform within the tier —
+  // so each role's percentages sum to 100.
   for (const role of Object.keys(map) as ChampionRole[]) {
+    const tierCounts = new Map<number, number>()
+    for (const c of map[role]) tierCounts.set(c.star, (tierCounts.get(c.star) ?? 0) + 1)
+    const perChampion = perChampionSpawnPercents(tierCounts, galaxyStore.currentGalaxy)
+    map[role] = map[role].map((c) => ({ ...c, spawnPercent: perChampion.get(c.star) ?? null }))
     map[role].sort((a, b) => a.star - b.star || a.name.localeCompare(b.name))
   }
   return map
 })
+
+// Gacha-style adaptive precision: whole numbers when coarse, decimals when the
+// odds get thin, and a floor ("<0.1%") instead of a misleading rounded 0%.
+function formatSpawnPercent(p: number): string {
+  if (p >= 10) return `${Math.round(p)}%`
+  if (p >= 1) return `${(Math.round(p * 10) / 10).toFixed(1)}%`
+  if (p >= 0.1) return `${(Math.round(p * 100) / 100).toFixed(2)}%`
+  return '<0.1%'
+}
+
+// "1 in N" reading for the tooltip — the odds format players sanity-check with.
+function spawnOddsTitle(champ: AvailableChampion): string {
+  if (champ.spawnPercent == null || champ.spawnPercent <= 0) return ''
+  const oneIn = Math.round(100 / champ.spawnPercent)
+  return oneIn <= 1
+    ? 'Guaranteed next champion for this role'
+    : `≈ 1 in ${oneIn} chance to be the next champion for this role`
+}
 
 const searchActive = computed(() => searchQuery.value.trim().length > 0)
 
@@ -288,10 +313,14 @@ function choose(role: RoleDef) {
                     >
                       {{ champ.name }}
                     </span>
-                    <span class="role-tier-chip" :style="{ '--tier-c': champ.tierColor }">
+                    <span
+                      class="role-tier-chip"
+                      :style="{ '--tier-c': champ.tierColor }"
+                      :title="spawnOddsTitle(champ)"
+                    >
                       <Icon :icon="champ.tierIcon" class="role-tier-icon" />
                       <span v-if="champ.spawnPercent != null" class="role-tier-pct">
-                        {{ champ.spawnPercent }}%
+                        {{ formatSpawnPercent(champ.spawnPercent) }}
                       </span>
                     </span>
                   </li>
