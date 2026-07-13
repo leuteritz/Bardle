@@ -45,8 +45,7 @@
           <Icon
             v-if="entry.isChampion"
             icon="game-icons:comet-spark"
-            width="14"
-            height="14"
+            class="bar-center-icon"
             :style="{ color: entry.palette.mid, filter: `drop-shadow(0 0 4px ${entry.palette.glow})` }"
           />
         </div>
@@ -309,7 +308,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
   display: grid;
   grid-template-columns: var(--bar-side-width, 1fr) 1fr var(--bar-side-width, 1fr);
   align-items: center;
-  height: clamp(20px, 2.4vw, 28px);
+  /* Flüssig skaliert für 1280px (~14px) bis 2560px (~21px) Viewport-Breite */
+  height: clamp(14px, 0.5vw + 7.6px, 22px);
   width: 100%;
   overflow: hidden;
   cursor: pointer;
@@ -411,6 +411,11 @@ const sortedEntries = computed<BarEntry[]>(() => {
   font-variant-numeric: tabular-nums;
 }
 
+.bar-center-icon {
+  /* Iconify skaliert ohne width/height mit 1em → hier flüssig 10px–15px */
+  font-size: clamp(10px, 0.35vw + 5.5px, 15px);
+}
+
 .bar-icon {
   color: var(--icon-color);
   filter: drop-shadow(0 0 4px var(--icon-color));
@@ -424,7 +429,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .bar-seconds-label {
   position: absolute;
   top: 50%;
-  font-size: clamp(0.85rem, 0.6vw + 0.55rem, 1.05rem);
+  /* Flüssig skaliert für 1280px (~10.5px) bis 2560px (~14px) Viewport-Breite */
+  font-size: clamp(0.65rem, 0.27vw + 0.44rem, 0.875rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.06em;
@@ -437,13 +443,13 @@ const sortedEntries = computed<BarEntry[]>(() => {
 
 .bar-seconds-label--left {
   left: calc((1 - var(--fill)) * 100%);
-  transform: translateX(calc(-50% - 18px)) translateY(-50%);
+  transform: translateX(calc(-50% - 1.3em)) translateY(-50%);
   transition: left 0.2s linear;
 }
 
 .bar-seconds-label--right {
   right: calc((1 - var(--fill)) * 100%);
-  transform: translateX(calc(50% + 18px)) translateY(-50%);
+  transform: translateX(calc(50% + 1.3em)) translateY(-50%);
   transition: right 0.2s linear;
 }
 
