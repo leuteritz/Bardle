@@ -39,6 +39,18 @@
             }"
             >{{ entry.secondsInt }}</span
           >
+          <div
+            v-if="entry.fillRatio > 0"
+            class="planet-dots planet-dots--left"
+            :style="{ '--fill': entry.fillRatio }"
+          >
+            <span
+              v-for="i in entry.totalPlanets"
+              :key="i"
+              class="planet-dot"
+              :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+            />
+          </div>
         </div>
 
         <div class="bar-center" />
@@ -64,6 +76,18 @@
             }"
             >{{ entry.secondsInt }}</span
           >
+          <div
+            v-if="entry.fillRatio > 0"
+            class="planet-dots planet-dots--right"
+            :style="{ '--fill': entry.fillRatio }"
+          >
+            <span
+              v-for="i in entry.totalPlanets"
+              :key="i"
+              class="planet-dot"
+              :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+            />
+          </div>
         </div>
       </div>
     </TransitionGroup>
@@ -112,6 +136,8 @@ interface BarEntry {
   palette: Palette
   isCursed: boolean
   curseRatio: number
+  totalPlanets: number
+  clearedPlanets: number
 }
 
 const palettes: Palette[] = [
@@ -235,6 +261,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
           sortKey: remaining,
           isCursed,
           curseRatio,
+          totalPlanets: total,
+          clearedPlanets: cleared,
         })
       }
     } else if (star.starType === 'champion') {
@@ -257,6 +285,8 @@ const sortedEntries = computed<BarEntry[]>(() => {
           sortKey: Number.MAX_SAFE_INTEGER,
           isCursed,
           curseRatio,
+          totalPlanets: total,
+          clearedPlanets: cleared,
         })
       }
     }
@@ -452,6 +482,54 @@ const sortedEntries = computed<BarEntry[]>(() => {
   right: calc((1 - var(--fill)) * 100%);
   transform: translateX(calc(50% + 1.3em)) translateY(-50%);
   transition: right 0.2s linear;
+}
+
+/* ── Planeten-Punkte: 1 Punkt pro Planet, sitzen auf der Füllung direkt
+   innen an der wandernden Balkenkante und ziehen mit ihr zur Mitte.
+   Gefüllt = Planet übrig, hohl/abgedunkelt = gerettet. Kühles Weiß mit
+   dunklem Ring, damit sie sich vom warmen/blauen Balkenverlauf abheben. ── */
+.planet-dots {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.2vw + 2px, 7px);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.planet-dots--left {
+  left: calc((1 - var(--fill)) * 100%);
+  padding-left: clamp(6px, 0.5vw, 12px);
+  transition: left 0.2s linear;
+}
+
+.planet-dots--right {
+  right: calc((1 - var(--fill)) * 100%);
+  padding-right: clamp(6px, 0.5vw, 12px);
+  flex-direction: row-reverse;
+  transition: right 0.2s linear;
+}
+
+.planet-dot {
+  /* Flüssig skaliert für 1280px (~9px) bis 2560px (~13px) Viewport-Breite */
+  width: clamp(9px, 0.3vw + 5px, 13px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #d3e2f6 55%, #9fb8d8);
+  /* Dunkler Ring als Kontrastkern gegen den Farbverlauf der Füllung */
+  box-shadow:
+    0 0 0 1.5px rgba(10, 14, 24, 0.65),
+    0 0 6px rgba(220, 235, 255, 0.55),
+    0 0 10px rgba(190, 215, 255, 0.35);
+}
+
+.planet-dot--cleared {
+  background: transparent;
+  border: 1.5px solid rgba(230, 240, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(10, 14, 24, 0.5);
+  opacity: 0.45;
 }
 
 /* ── Transition: leaving-Element nimmt keinen Platz mehr ein ── */
