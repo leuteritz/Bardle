@@ -232,19 +232,26 @@ function updateDividerPositions() {
   document.documentElement.style.setProperty('--bard-profile-right', `${window.innerWidth - r.right}px`)
 }
 
-onMounted(async () => {
+async function remeasure() {
   updateHeaderHeight()
   updateDividerPositions()
   await measure()
-  resizeObserver = new ResizeObserver(async () => {
-    updateHeaderHeight()
-    updateDividerPositions()
-    await measure()
-  })
+}
+
+onMounted(async () => {
+  await remeasure()
+  resizeObserver = new ResizeObserver(remeasure)
   if (headerRef.value) resizeObserver.observe(headerRef.value)
+  // ResizeObserver feuert nur bei Größenänderung des Headers selbst. Ist der
+  // Header am max-width-Cap, ändert ein Fenster-Resize nur seine Position —
+  // --header-vp-left/right müssen dann trotzdem neu gesetzt werden.
+  window.addEventListener('resize', remeasure)
 })
 
-onUnmounted(() => resizeObserver?.disconnect())
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  window.removeEventListener('resize', remeasure)
+})
 </script>
 
 <template>

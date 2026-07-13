@@ -1,38 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useEventLog } from '@/composables/useEventLog'
 import { typeColor } from '@/config/eventLogTypes'
 
 const { events } = useEventLog()
-const isLogVisible = ref(true)
 </script>
 
 <template>
   <div class="event-log-overlay" aria-live="polite" aria-label="Game Events">
-    <button
-      class="log-toggle-btn"
-      @click="isLogVisible = !isLogVisible"
-      :aria-label="isLogVisible ? 'Collapse log' : 'Expand log'"
-    >
-      <svg
-        class="chevron-icon"
-        :class="{ 'is-expanded': isLogVisible }"
-        width="14"
-        height="14"
-        viewBox="0 0 14 14"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <polyline
-          points="2,4 7,10 12,4"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-      </svg>
-    </button>
-    <TransitionGroup v-show="isLogVisible" name="log-entry" tag="div" class="event-log-inner">
+    <TransitionGroup name="log-entry" tag="div" class="event-log-inner">
       <div
         v-for="evt in events"
         :key="evt.id"
@@ -53,38 +28,17 @@ const isLogVisible = ref(true)
   right: 0.75rem;
   z-index: 9998;
   width: clamp(260px, 19vw, 340px);
+  /* Nie breiter als die freie Spalte rechts neben dem zentrierten Header
+     (--header-vp-right wird vom Header per ResizeObserver aktuell gehalten).
+     Floor von 110px, damit der Log bei untypisch kleinen Fenstern nutzbar bleibt. */
+  max-width: max(calc(var(--header-vp-right, 100vw) - 1.25rem), 110px);
   max-height: clamp(280px, 38vh, 520px);
   overflow: hidden;
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.log-toggle-btn {
-  pointer-events: auto;
-  padding: 5px 8px;
-  line-height: 0;
-  background: rgba(10, 7, 2, 0.9);
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  color: rgba(200, 160, 80, 0.75);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-  flex-shrink: 0;
-}
-.log-toggle-btn:hover {
-  border-color: #c89040;
-  color: #e8c040;
-}
-
-.chevron-icon {
-  display: block;
-  transition: transform 0.2s ease;
-}
-.chevron-icon.is-expanded {
-  transform: rotate(180deg);
+  align-items: stretch;
+  container-type: inline-size;
 }
 
 .event-log-inner {
@@ -93,7 +47,10 @@ const isLogVisible = ref(true)
   gap: 6px;
   padding: 2px 0;
   overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
+  min-width: 0;
+  max-height: 100%;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -171,10 +128,6 @@ const isLogVisible = ref(true)
   .event-log-overlay {
     width: clamp(130px, 14vw, 170px);
     right: 0.4rem;
-  }
-
-  .log-toggle-btn {
-    padding: 3px 6px;
   }
 
   .log-entry {
@@ -274,6 +227,8 @@ const isLogVisible = ref(true)
   .event-log-overlay {
     right: 0.5rem;
     width: min(320px, calc(100vw - 1rem));
+    /* auf mobile gibt es keine Gutter-Spalte neben dem Header — Kappung aufheben */
+    max-width: none;
   }
 
   .log-entry {
@@ -283,6 +238,38 @@ const isLogVisible = ref(true)
 
   .log-msg {
     font-size: clamp(0.8rem, 1vw, 0.92rem);
+  }
+}
+
+/* ================================================================
+   CONTAINER QUERIES — reagieren auf die TATSÄCHLICHE Log-Breite
+   (nach der Gutter-Kappung), nicht auf die Viewport-Breite.
+   So bleibt der Inhalt lesbar, egal wie schmal die freie Spalte
+   neben dem Header bei der jeweiligen Auflösung ausfällt.
+   ================================================================ */
+@container (max-width: 210px) {
+  .log-entry {
+    padding: 3px 6px 3px 5px;
+    gap: 4px;
+  }
+
+  .log-msg {
+    font-size: 0.64rem;
+  }
+
+  .log-time {
+    font-size: 0.54rem;
+  }
+}
+
+@container (max-width: 155px) {
+  /* sehr schmale Spalte: Zeitstempel opfern, Nachricht hat Vorrang */
+  .log-time {
+    display: none;
+  }
+
+  .log-msg {
+    font-size: 0.6rem;
   }
 }
 </style>

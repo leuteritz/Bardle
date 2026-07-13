@@ -134,9 +134,9 @@ watch(
 
 .copyright-overlay {
   position: fixed;
-  top: 0.5rem;
-  left: calc(50% - min(var(--header-max-width) / 2, 50vw - 0.5rem) - 8px);
-  transform: translateX(-100%);
+  /* unten links, direkt über dem oberen Rahmen des Minimap-Panels */
+  bottom: calc(var(--hud-panel-size, 330px) + 8px);
+  left: 0.75rem;
   z-index: 9999;
   pointer-events: none;
   font-size: clamp(0.72rem, 0.9vw, 1rem);
@@ -151,9 +151,6 @@ watch(
 
 @media (max-width: 1200px) {
   .copyright-overlay {
-    left: 0.75rem;
-    transform: none;
-    top: 0.75rem;
     font-size: 1.5rem;
   }
 }
