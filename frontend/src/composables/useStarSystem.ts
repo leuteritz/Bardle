@@ -1,4 +1,4 @@
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 import { useStarGroupStore } from '../stores/starGroupStore'
 import { usePlanetBossStore } from '../stores/planetBossStore'
@@ -7,11 +7,10 @@ import { useWindowFocus } from './useWindowFocus'
 import { useRenderingPaused } from './useRenderingPaused'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { getOrbitPos } from '../utils/orbitMath'
-import { MATERIALS } from '../config/materials'
 import { STAR_SPAWN_DURATION_MS, STAR_SPAWN_FLY_EASING, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_SPEED_MULTIPLIER } from '../config/constants'
 import { usePlanetShopStore } from '../stores/planetShopStore'
 import { useOrbitScale } from './useOrbitScale'
-import type { LabelData, PlanetType, StarType } from '../types'
+import type { PlanetType, StarType } from '../types'
 
 const PLANET_SIZE_CHAMPION = 12
 const PLANET_SIZE_GALAXY_BOSS = 14
@@ -33,7 +32,6 @@ export interface PlanetRenderEntry {
   transform: string
   opacity: number
   isBehind: boolean
-  labelData: LabelData | null
   animState: 'normal' | 'exploding' | 'saved' | 'champion_arriving'
 }
 
@@ -52,6 +50,7 @@ export interface StarRenderEntry {
   orbitTilt: number
   hintOpacity: number
   totalPlanets: number
+  remainingCount: number
   planets: PlanetRenderEntry[]
 }
 
@@ -120,67 +119,23 @@ function spawnVanishEffect(x: number, y: number, starColor: [number, number, num
   }, VANISH_DURATION_MS + 50)
 }
 
-function buildLabelData(
-  planetId: string,
-  cx: number,
-  cy: number,
-  pR: number,
-  starX: number,
-  starY: number,
-): LabelData | null {
-  const bossStore = usePlanetBossStore()
-  const boss = bossStore.activeBosses.find((b) => b.planetId === planetId)
-  if (!boss || boss.defeated || boss.expired) return null
-
-  const firstMaterialSlot = boss.rewardSlots.find((s) => s.type === 'material')
-  const material = firstMaterialSlot?.materialId
-    ? MATERIALS.find((m) => m.id === firstMaterialSlot.materialId)
-    : null
-
-  const championName = boss.homePlanetChampion ?? null
-  const championImg = championName
-    ? championName === 'Bard'
-      ? '/img/BardAbilities/Bard.png'
-      : `/img/champion/${championName}.jpg`
-    : null
-
-  const angle = Math.atan2(cy - starY, cx - starX)
-  const dx = Math.cos(angle)
-  const dy = Math.sin(angle)
-  const gap = 10
-  const anchorY = cy + dy * (pR + gap)
-  const transform =
-    dx >= 0
-      ? `translate(${cx + pR + gap}px, ${anchorY}px) translateY(-50%)`
-      : `translate(${cx - pR - gap}px, ${anchorY}px) translateX(-100%) translateY(-50%)`
-
-  return {
-    planetId,
-    bossName: boss.bossName,
-    currentHP: boss.currentHP,
-    maxHP: boss.maxHP,
-    reward: boss.rewardSlots
-      .filter((s) => s.type === 'chimes')
-      .reduce((sum, s) => sum + (s.amount ?? 0), 0),
-    chimesImage: '/img/BardAbilities/BardChime.png',
-    materialImage: material?.image,
-    materialName: material?.name,
-    materialCount: material?.dropCount,
-    championImage: championImg ?? undefined,
-    championName: championName ?? undefined,
-    isGalaxyBoss: boss.isGalaxyBoss ?? false,
-    transform,
-  }
-}
-
-export function useStarSystem(hoveredStarId?: Ref<string | null>) {
+/**
+ * @param onFrame Wird nach jedem Animations-Tick aufgerufen. `starRenders`
+ *   ist ein shallowRef: Positionsfelder werden pro Frame IN-PLACE mutiert
+ *   (kein Vue-Re-Render); ein neues Array wird nur bei strukturellen
+ *   Änderungen zugewiesen (Stern/Planet kommt/geht, Ebenenwechsel, animState).
+ *   Der Aufrufer schreibt die Positionswerte in onFrame direkt ans DOM.
+ */
+export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () => void) {
   const starGroupStore = useStarGroupStore()
   const bossStore = usePlanetBossStore()
   const galaxyStore = useGalaxyStore()
+  const planetShopStore = usePlanetShopStore()
   const { windowFocused } = useWindowFocus()
   const { isRenderingPaused } = useRenderingPaused()
 
-  const starRenders = ref<StarRenderEntry[]>([])
+  const starRenders = shallowRef<StarRenderEntry[]>([])
+  let structureSig: string | null = null
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -266,7 +221,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
         }
       }
     },
-    { deep: true },
   )
 
   function animate(ts: number) {
@@ -275,7 +229,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
 
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
-    const planetShopStore = usePlanetShopStore()
     const currentSunRadius = planetShopStore.currentSunRadius
     const sunScale = currentSunRadius / SUN_RADIUS
     const orbitScaleVal = orbitScale.value
@@ -290,6 +243,9 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
     const adcActualRx = Math.min(adcFlooredRx, screenCx * 0.85)
 
     const newRenders: StarRenderEntry[] = []
+    let sig = ''
+
+    const bossByPlanet = new Map(bossStore.activeBosses.map((b) => [b.planetId, b]))
 
     for (const star of starGroupStore.activeStars) {
       const speedMul = starSpeedMul.get(star.id) ?? 1.0
@@ -367,8 +323,9 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
       const baseScale = 0.72 + sDepth * 0.56
       const sScale = baseScale * (reducedMotion ? 1 : Math.max(0.05, spawnFactor))
       const sOpacity = starFactor * (0.78 + sDepth * 0.22) * spawnFactor
-      const blurPx = sIsBehind ? ((1 - sDepth) * 2.5).toFixed(1) : '0'
-      const starFilterStyle = parseFloat(blurPx) > 0.1 ? `blur(${blurPx}px)` : ''
+      // Blur auf 0.5px-Stufen quantisieren: weniger Filter-Neuberechnungen pro Frame
+      const blurPx = sIsBehind ? Math.round((1 - sDepth) * 2.5 * 2) / 2 : 0
+      const starFilterStyle = blurPx > 0.1 ? `blur(${blurPx}px)` : ''
 
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 
@@ -408,7 +365,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
           displayY,
         )
 
-        const boss = bossStore.activeBosses.find((b) => b.planetId === slot.planetId)
+        const boss = bossByPlanet.get(slot.planetId)
         const isGalaxyBoss = boss?.isGalaxyBoss ?? false
         const pSize =
           (isGalaxyBoss
@@ -424,9 +381,11 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
         const pScale = 0.72 + pDepth * 0.56
         const pOpacity = (0.2 + pDepth * 0.8) * visibleFactor * spawnFactor
 
+        // Scale quantisiert (1%-Stufen), damit der Compositor das Planeten-SVG
+        // nicht bei jeder Mini-Skalenänderung neu rastern muss.
         const transform =
           `translate(${px}px, ${py}px) ` +
-          `scale(${pScale.toFixed(4)}) ` +
+          `scale(${pScale.toFixed(2)}) ` +
           `translate(${-pR}px, ${-pR}px)`
 
         if (!slot.cleared) {
@@ -444,11 +403,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
           if (ts - planetSavedAt.get(slot.planetId)! > 600) continue
         }
 
-        const labelData =
-          !slot.cleared && !pIsBehind && !sIsBehind
-            ? buildLabelData(slot.planetId, px, py, pR, displayX, displayY)
-            : null
-
         planetEntries.push({
           planetId: slot.planetId,
           type: slot.type,
@@ -458,10 +412,25 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
           transform,
           opacity: pOpacity,
           isBehind: pIsBehind,
-          labelData,
           animState,
         })
       }
+
+      const remainingCount = planetEntries.reduce(
+        (n, p) => n + (p.animState !== 'saved' ? 1 : 0),
+        0,
+      )
+
+      // Struktur-Signatur: alles, was Mount/Unmount beeinflusst. Positionswerte
+      // und die Vor/Hinter-Zuordnung der Planeten (flippt alle ~1,3s pro Planet!)
+      // gehören bewusst NICHT dazu — Layering läuft per Frame über display/zIndex.
+      sig +=
+        `${star.id}|${star.starType}|${sIsBehind ? 1 : 0}|${remainingCount}|` +
+        `${Math.round(scaledOrbitRx)}|${Math.round(scaledOrbitRy)}`
+      for (const p of planetEntries) {
+        sig += `;${p.planetId}|${p.animState}|${p.isGalaxyBoss ? 1 : 0}|${p.size.toFixed(1)}`
+      }
+      sig += '#'
 
       newRenders.push({
         id: star.id,
@@ -478,6 +447,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
         orbitTilt: star.orbitTilt,
         hintOpacity: (1 - visibleFactor) * spawnFactor,
         totalPlanets: star.planetSlots.length,
+        remainingCount,
         planets: planetEntries,
       })
     }
@@ -515,7 +485,33 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>) {
       }
     }
 
-    starRenders.value = newRenders
+    if (sig !== structureSig) {
+      // Strukturelle Änderung → Vue rendert neu (Mount/Unmount/Layer-Wechsel)
+      structureSig = sig
+      starRenders.value = newRenders
+    } else {
+      // Nur Positionen geändert → in-place mutieren, kein Vue-Re-Render.
+      const prev = starRenders.value
+      for (let i = 0; i < newRenders.length; i++) {
+        const n = newRenders[i]
+        const o = prev[i]
+        o.x = n.x
+        o.y = n.y
+        o.scale = n.scale
+        o.opacity = n.opacity
+        o.filterStyle = n.filterStyle
+        o.hintOpacity = n.hintOpacity
+        o.orbitRx = n.orbitRx
+        o.orbitRy = n.orbitRy
+        for (let j = 0; j < n.planets.length; j++) {
+          o.planets[j].transform = n.planets[j].transform
+          o.planets[j].opacity = n.planets[j].opacity
+          o.planets[j].isBehind = n.planets[j].isBehind
+        }
+      }
+    }
+
+    onFrame?.()
     animFrame = requestAnimationFrame(animate)
   }
 

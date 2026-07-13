@@ -1,5 +1,5 @@
 // frontend/src/composables/useProjectileSystem.ts
-import { ref } from 'vue'
+import { shallowRef } from 'vue'
 import { PROJECTILE_SHOT_DURATION_MS } from '../config/constants'
 
 export interface ProjectileShot {
@@ -26,7 +26,10 @@ const SHOT_DURATION_MS = PROJECTILE_SHOT_DURATION_MS
 let _nextId = 0
 
 export function useProjectileSystem() {
-  const shots = ref<ProjectileShot[]>([])
+  // shallowRef mit stabiler Array-Identität: Schüsse werden in-place mutiert,
+  // damit per-Frame-Updates keine Vue-Re-Renders der Eltern-Templates auslösen.
+  // Der Canvas-Projektil-Layer liest das Array imperativ in seiner eigenen rAF-Loop.
+  const shots = shallowRef<ProjectileShot[]>([])
 
   /**
    * Spawnt einen neuen Schuss – NUR wenn Schütze UND Ziel im Vordergrund sind.
@@ -72,8 +75,9 @@ export function useProjectileSystem() {
    * Muss jeden Frame mit dt (ms) aufgerufen werden, um Schüsse zu bewegen und abgelaufene zu entfernen.
    */
   function tickShots(dt: number) {
-    const alive: ProjectileShot[] = []
-    for (const shot of shots.value) {
+    const arr = shots.value
+    let write = 0
+    for (const shot of arr) {
       shot.elapsed += dt
       const t = Math.min(1, shot.elapsed / shot.duration)
       shot.headX = shot.x1 + (shot.x2 - shot.x1) * t
@@ -86,12 +90,12 @@ export function useProjectileSystem() {
       if (shot.interceptCheck?.(shot.headX, shot.headY)) {
         shot.onIntercept?.(shot.headX, shot.headY)
       } else if (t < 1) {
-        alive.push(shot)
+        arr[write++] = shot
       } else {
         shot.onHit?.()
       }
     }
-    shots.value = alive
+    arr.length = write
   }
 
   return { shots, spawnShot, tickShots }

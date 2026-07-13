@@ -1,182 +1,131 @@
 <!-- frontend/src/components/idle/sun/AttackProjectileLayer.vue -->
 <template>
   <Teleport to="body">
-    <svg class="projectile-layer" aria-hidden="true">
-      <defs>
-        <!-- Haupt-Glüh-Filter (stärker, mehrschichtig) -->
-        <filter :id="filterId" x="-150%" y="-150%" width="400%" height="400%">
-          <feGaussianBlur stdDeviation="4" result="blur1" />
-          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
-          <feMerge>
-            <feMergeNode in="blur2" />
-            <feMergeNode in="blur1" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        <!-- Sanfter Halo-Filter für den äußeren Aureolen-Ring -->
-        <filter :id="`${filterId}-halo`" x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="6" result="haloBlur" />
-          <feColorMatrix
-            in="haloBlur"
-            type="matrix"
-            values="1 0 0 0 0
-                    0 0.4 0 0 0
-                    0 0 0.2 0 0
-                    0 0 0 0.6 0"
-            result="coloredHalo"
-          />
-          <feMerge>
-            <feMergeNode in="coloredHalo" />
-          </feMerge>
-        </filter>
-
-        <!-- Intensiver Kern-Filter -->
-        <filter :id="`${filterId}-core`" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="1.5" result="coreBlur" />
-          <feMerge>
-            <feMergeNode in="coreBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        <!-- Linearer Verlauf für den Schweif -->
-        <linearGradient
-          v-for="shot in shots"
-          :key="`grad-${shot.id}`"
-          :id="`${filterId}-trail-${shot.id}`"
-          gradientUnits="userSpaceOnUse"
-          :x1="shot.tailX"
-          :y1="shot.tailY"
-          :x2="shot.headX"
-          :y2="shot.headY"
-        >
-          <stop offset="0%" stop-color="transparent" stop-opacity="0" />
-          <stop offset="40%" :stop-color="shot.trailColor ?? '#cc4444'" stop-opacity="0.15" />
-          <stop
-            offset="100%"
-            :stop-color="shot.trailColor ?? '#cc4444'"
-            :stop-opacity="shot.opacity * 0.85"
-          />
-        </linearGradient>
-      </defs>
-
-      <g v-for="shot in shots" :key="shot.id">
-        <!-- Äußerer Halo (breite, weiche Aureole) -->
-        <line
-          :x1="shot.tailX"
-          :y1="shot.tailY"
-          :x2="shot.headX"
-          :y2="shot.headY"
-          :stroke="shot.trailColor ?? '#cc4444'"
-          stroke-width="10"
-          :stroke-opacity="shot.opacity * 0.18"
-          stroke-linecap="round"
-          :filter="`url(#${filterId}-halo)`"
-        />
-
-        <!-- Mittlerer Schweif mit Farbverlauf -->
-        <line
-          :x1="shot.tailX"
-          :y1="shot.tailY"
-          :x2="shot.headX"
-          :y2="shot.headY"
-          :stroke="`url(#${filterId}-trail-${shot.id})`"
-          stroke-width="5"
-          :stroke-opacity="shot.opacity * 0.9"
-          stroke-linecap="round"
-          :filter="`url(#${filterId})`"
-        />
-
-        <!-- Innerer heller Schweif-Kern -->
-        <line
-          :x1="shot.tailX"
-          :y1="shot.tailY"
-          :x2="shot.headX"
-          :y2="shot.headY"
-          stroke="white"
-          stroke-width="1.5"
-          :stroke-opacity="shot.opacity * 0.55"
-          stroke-linecap="round"
-          :filter="`url(#${filterId}-core)`"
-        />
-
-        <!-- Äußerer Glühring (großer Halo um die Spitze) -->
-        <circle
-          :cx="shot.headX"
-          :cy="shot.headY"
-          r="14"
-          :fill="shot.headColor ?? '#ff7777'"
-          :opacity="shot.opacity * 0.2"
-          :filter="`url(#${filterId}-halo)`"
-        />
-
-        <!-- Mittlere Glühschicht -->
-        <circle
-          :cx="shot.headX"
-          :cy="shot.headY"
-          r="9"
-          :fill="shot.headColor ?? '#ff7777'"
-          :opacity="shot.opacity * 0.55"
-          :filter="`url(#${filterId})`"
-        />
-
-        <!-- Heller Innenkern -->
-        <circle
-          :cx="shot.headX"
-          :cy="shot.headY"
-          r="5"
-          :fill="shot.headColor ?? '#ff7777'"
-          :opacity="shot.opacity"
-          :filter="`url(#${filterId})`"
-        />
-
-        <!-- Weißer Glanzpunkt (Spitzlichter für Kristall-/Magie-Effekt) -->
-        <circle
-          :cx="shot.headX"
-          :cy="shot.headY"
-          r="2"
-          fill="white"
-          :opacity="shot.opacity * 0.9"
-          :filter="`url(#${filterId}-core)`"
-        />
-
-        <!-- Kleine Funken-Spitzen (Kreuz-Glanzlichter) -->
-        <line
-          :x1="shot.headX - 7"
-          :y1="shot.headY"
-          :x2="shot.headX + 7"
-          :y2="shot.headY"
-          stroke="white"
-          stroke-width="1"
-          :stroke-opacity="shot.opacity * 0.6"
-          stroke-linecap="round"
-          :filter="`url(#${filterId}-core)`"
-        />
-        <line
-          :x1="shot.headX"
-          :y1="shot.headY - 7"
-          :x2="shot.headX"
-          :y2="shot.headY + 7"
-          stroke="white"
-          stroke-width="1"
-          :stroke-opacity="shot.opacity * 0.6"
-          stroke-linecap="round"
-          :filter="`url(#${filterId}-core)`"
-        />
-      </g>
-    </svg>
+    <canvas ref="canvasEl" class="projectile-layer" aria-hidden="true" />
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import type { ProjectileShot } from '@/composables/useProjectileSystem'
 
-// Eindeutige Filter-ID pro Instanz – verhindert ID-Kollision wenn
-// PlanetOrbit und ChampionOrbit gleichzeitig je eine Instanz rendern.
-const filterId = `proj-glow-${Math.random().toString(36).slice(2, 7)}`
+// Canvas statt SVG: Die frühere SVG-Variante renderte pro Schuss 7+ Elemente
+// mit mehrstufigen feGaussianBlur-Filtern, die jeden Frame neu gerastert
+// wurden. Der additive Glow ('lighter') mit Gradients erzielt denselben
+// Neon-Look zu einem Bruchteil der Kosten und skaliert auf viele Schüsse.
+const props = defineProps<{ shots: ProjectileShot[] }>()
 
-defineProps<{ shots: ProjectileShot[] }>()
+const canvasEl = ref<HTMLCanvasElement | null>(null)
+let ctx: CanvasRenderingContext2D | null = null
+let raf = 0
+let hadShots = false
+
+const rgbCache = new Map<string, [number, number, number]>()
+function rgba(hex: string, alpha: number): string {
+  let c = rgbCache.get(hex)
+  if (!c) {
+    c = [
+      parseInt(hex.slice(1, 3), 16),
+      parseInt(hex.slice(3, 5), 16),
+      parseInt(hex.slice(5, 7), 16),
+    ]
+    rgbCache.set(hex, c)
+  }
+  return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`
+}
+
+function resize() {
+  const cv = canvasEl.value
+  if (!cv || !ctx) return
+  const dpr = window.devicePixelRatio || 1
+  cv.width = window.innerWidth * dpr
+  cv.height = window.innerHeight * dpr
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+
+function drawShot(c: CanvasRenderingContext2D, shot: ProjectileShot) {
+  const trail = shot.trailColor ?? '#cc4444'
+  const head = shot.headColor ?? '#ff7777'
+  const o = shot.opacity
+
+  // Äußerer Halo-Schweif (breite, weiche Aureole)
+  c.strokeStyle = rgba(trail, 0.16 * o)
+  c.lineWidth = 11
+  c.beginPath()
+  c.moveTo(shot.tailX, shot.tailY)
+  c.lineTo(shot.headX, shot.headY)
+  c.stroke()
+
+  // Mittlerer Schweif mit Farbverlauf
+  const grad = c.createLinearGradient(shot.tailX, shot.tailY, shot.headX, shot.headY)
+  grad.addColorStop(0, 'rgba(0,0,0,0)')
+  grad.addColorStop(0.4, rgba(trail, 0.15 * o))
+  grad.addColorStop(1, rgba(trail, 0.85 * o))
+  c.strokeStyle = grad
+  c.lineWidth = 5
+  c.beginPath()
+  c.moveTo(shot.tailX, shot.tailY)
+  c.lineTo(shot.headX, shot.headY)
+  c.stroke()
+
+  // Innerer heller Schweif-Kern
+  c.strokeStyle = `rgba(255,255,255,${0.5 * o})`
+  c.lineWidth = 1.5
+  c.beginPath()
+  c.moveTo(shot.tailX, shot.tailY)
+  c.lineTo(shot.headX, shot.headY)
+  c.stroke()
+
+  // Glühender Kopf: ein Radial-Gradient ersetzt Halo, Glühschichten und Kern
+  const rg = c.createRadialGradient(shot.headX, shot.headY, 0, shot.headX, shot.headY, 16)
+  rg.addColorStop(0, `rgba(255,255,255,${0.9 * o})`)
+  rg.addColorStop(0.2, rgba(head, 0.9 * o))
+  rg.addColorStop(0.55, rgba(head, 0.35 * o))
+  rg.addColorStop(1, rgba(head, 0))
+  c.fillStyle = rg
+  c.beginPath()
+  c.arc(shot.headX, shot.headY, 16, 0, Math.PI * 2)
+  c.fill()
+
+  // Kreuz-Glanzlichter an der Spitze
+  c.strokeStyle = `rgba(255,255,255,${0.6 * o})`
+  c.lineWidth = 1
+  c.beginPath()
+  c.moveTo(shot.headX - 7, shot.headY)
+  c.lineTo(shot.headX + 7, shot.headY)
+  c.moveTo(shot.headX, shot.headY - 7)
+  c.lineTo(shot.headX, shot.headY + 7)
+  c.stroke()
+}
+
+function draw() {
+  raf = requestAnimationFrame(draw)
+  if (!ctx || !canvasEl.value) return
+  const shots = props.shots
+  if (shots.length === 0 && !hadShots) return
+  hadShots = shots.length > 0
+
+  // Leeren Canvas ausblenden, damit der Compositor ihn überspringt
+  canvasEl.value.style.display = shots.length > 0 ? '' : 'none'
+
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.lineCap = 'round'
+  for (const shot of shots) drawShot(ctx, shot)
+  ctx.globalCompositeOperation = 'source-over'
+}
+
+onMounted(() => {
+  ctx = canvasEl.value?.getContext('2d') ?? null
+  resize()
+  window.addEventListener('resize', resize)
+  raf = requestAnimationFrame(draw)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resize)
+  cancelAnimationFrame(raf)
+})
 </script>
 
 <style scoped>
@@ -187,6 +136,5 @@ defineProps<{ shots: ProjectileShot[] }>()
   height: 100%;
   pointer-events: none;
   z-index: 55;
-  overflow: visible;
 }
 </style>

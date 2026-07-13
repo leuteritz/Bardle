@@ -37,63 +37,35 @@
   <!-- ① Back-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-back" aria-hidden="true">
-      <svg class="orbit-hints-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
-        <defs>
-          <filter id="orbit-blur-champion" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="14" />
-          </filter>
-          <filter id="orbit-blur-resource" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="14" />
-          </filter>
-          <filter id="orbit-blur-galaxy_boss" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="14" />
-          </filter>
-        </defs>
-        <g
-          v-for="star in backStars"
-          :key="'hint-' + star.id"
-          :filter="`url(#orbit-blur-${star.starType})`"
-        >
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="star.orbitRx"
-            :ry="star.orbitRy"
-            :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-            :stroke="orbitHintColor(star)"
-            :stroke-opacity="star.hintOpacity * 0.65"
-            fill="none"
-            :stroke-width="5 * planetShopStore.currentSunRadius / 80"
-          />
-        </g>
-      </svg>
+      <!-- Orbit-Glow-Ringe: Gaussian-Blur wird einmal pro Geometrie in ein
+           Sprite gerendert und per Frame nur noch mit globalAlpha geblittet.
+           Die frühere SVG-Variante hat den Blur jeden Frame neu gerastert. -->
+      <canvas ref="hintBackCanvas" class="orbit-hints-canvas" />
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div class="star-sys-layer star-sys-back" aria-hidden="true">
 
       <template v-for="star in backStars" :key="star.id">
         <div
           class="star-body"
           :class="`star-body--${star.starType}`"
           :style="starBodyBackStyle(star)"
-        />
-        <PlanetComponent
-          v-for="p in star.planets.filter((p) => p.isBehind)"
-          :key="p.planetId"
-          :id="p.planetId"
-          :size="p.size"
-          :planetType="p.type"
-          :transform="p.transform"
-          :opacity="p.opacity"
-          :isRescue="false"
-          :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="null"
-          :animState="p.animState"
-          :championImage="undefined"
-        />
+          :ref="(el) => setMapEl(starBackEls, star.id, el)"
+        >
+          <div class="star-pulse-overlay" />
+        </div>
       </template>
 
-      <template v-for="star in frontStars" :key="'fb-' + star.id">
+      <!-- Alle Planeten existieren in BEIDEN Ebenen; applyFrames() schaltet
+           per display um. So löst der ständige Vor/Hinter-Wechsel der Planeten
+           kein Vue-Re-Render und kein Neu-Zeichnen der Planeten-SVGs aus. -->
+      <template v-for="star in starRenders" :key="'pb-' + star.id">
         <PlanetComponent
-          v-for="p in star.planets.filter((p) => p.isBehind)"
+          v-for="p in star.planets"
           :key="p.planetId"
+          :ref="(inst) => setPlanetEl(planetElsBack, p.planetId, inst)"
           :id="p.planetId"
           :size="p.size"
           :planetType="p.type"
@@ -112,35 +84,13 @@
   <!-- ② Front-Layer -->
   <Teleport to="body">
     <div class="star-sys-layer star-sys-front" aria-hidden="true">
-      <svg class="orbit-hints-front-svg" :viewBox="`0 0 ${screenW} ${screenH}`">
-        <defs>
-          <filter id="orbit-blur-star-front" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="16" />
-          </filter>
-        </defs>
-        <g
-          v-for="star in backStars"
-          :key="'front-hint-' + star.id"
-          filter="url(#orbit-blur-star-front)"
-        >
-          <ellipse
-            :cx="screenCx"
-            :cy="screenCy"
-            :rx="star.orbitRx"
-            :ry="star.orbitRy"
-            :transform="`rotate(${(star.orbitTilt * 180) / Math.PI} ${screenCx} ${screenCy})`"
-            :stroke="orbitHintColor(star)"
-            :stroke-opacity="star.hintOpacity * 0.8"
-            fill="none"
-            :stroke-width="5 * planetShopStore.currentSunRadius / 80"
-          />
-        </g>
-      </svg>
+      <canvas ref="hintFrontCanvas" class="orbit-hints-canvas" />
 
       <template v-for="star in frontStars" :key="star.id">
         <div
           :class="['star-body-wrap', { 'star-hovered': hoveredSummaryStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="starWrapStyle(star)"
+          :ref="(el) => setMapEl(starWrapEls, star.id, el)"
           @click="handleStarClick(star)"
           @mouseenter="hoveredStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
           @mouseleave="hoveredStarId = null; starGroupStore.setHoveredTimerStar(null)"
@@ -152,28 +102,17 @@
             role="button"
             :aria-label="`${star.starType === 'galaxy_boss' ? 'Galaxy Boss' : star.starType === 'champion' ? 'Champion' : 'Resource'} Star – Boss-Fight starten`"
             tabindex="0"
-          />
+          >
+            <div class="star-pulse-overlay" />
+          </div>
         </div>
-        <PlanetComponent
-          v-for="p in star.planets.filter((p) => !p.isBehind)"
-          :key="p.planetId"
-          :id="p.planetId"
-          :size="p.size"
-          :planetType="p.type"
-          :transform="p.transform"
-          :opacity="p.opacity"
-          :isRescue="false"
-          :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="null"
-          :animState="p.animState"
-          :championImage="undefined"
-        />
       </template>
 
-      <template v-for="star in backStars" :key="'ff-' + star.id">
+      <template v-for="star in starRenders" :key="'pf-' + star.id">
         <PlanetComponent
-          v-for="p in star.planets.filter((p) => !p.isBehind)"
+          v-for="p in star.planets"
           :key="p.planetId"
+          :ref="(inst) => setPlanetEl(planetElsFront, p.planetId, inst)"
           :id="p.planetId"
           :size="p.size"
           :planetType="p.type"
@@ -196,6 +135,7 @@
           v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
           :key="'curse-star-ring-wrap-' + star.id"
           class="star-curse-ring-wrap"
+          :ref="(el) => setMapEl(curseRingEls, star.id, el)"
           :style="{
             width: starSize(star.starType) + 32 + 'px',
             height: starSize(star.starType) + 32 + 'px',
@@ -214,6 +154,7 @@
       >
         <div
           class="star-status-badge-anchor"
+          :ref="(el) => setMapEl(curseBadgeEls, star.id, el)"
           :style="{
             transform: `translate(${star.x + starSize(star.starType) / 2 - 30}px, ${star.y - starSize(star.starType) / 2 - 4}px)`,
             zIndex: 16,
@@ -227,8 +168,8 @@
               <img :src="midRoleImage" class="star-badge-icon" alt="" draggable="false" />
               <span
                 class="star-badge-timer"
-                :class="{ 'star-badge-timer--urgent': curseSecsLeft < 3 }"
-              >{{ Math.ceil(curseSecsLeft) }}s</span>
+                :class="{ 'star-badge-timer--urgent': curseSecsLeft <= 3 }"
+              >{{ curseSecsLeft }}s</span>
             </div>
           </Transition>
         </div>
@@ -244,6 +185,7 @@
           "
           :class="['star-reward-summary', { 'star-reward-summary--star-hovered': hoveredStarId === star.id || starGroupStore.hoveredTimerStarId === star.id }]"
           :style="rewardSummaryStyle(star)"
+          :ref="(el) => setMapEl(summaryEls, star.id, el)"
           @click="handleStarClick(star)"
           @mouseenter="hoveredSummaryStarId = star.id; starGroupStore.setHoveredTimerStar(star.id)"
           @mouseleave="hoveredSummaryStarId = null; starGroupStore.setHoveredTimerStar(null)"
@@ -300,12 +242,13 @@
       <template v-for="star in starRenders" :key="'cnt-' + star.id">
         <Transition name="star-cnt">
           <div
-            v-if="remainingPlanetCount(star) > 0"
-            :key="remainingPlanetCount(star)"
+            v-if="star.remainingCount > 0"
+            :key="star.remainingCount"
             class="star-planet-count"
             :style="starCountStyle(star)"
+            :ref="(el) => setMapEl(countEls, star.id, el)"
           >
-            <span class="star-planet-count__current">{{ remainingPlanetCount(star) }}</span>
+            <span class="star-planet-count__current">{{ star.remainingCount }}</span>
             <span class="star-planet-count__sep">/</span>
             <span class="star-planet-count__total">{{ star.totalPlanets }}</span>
           </div>
@@ -317,6 +260,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '../../../composables/useStarSystem'
@@ -367,7 +311,261 @@ const hoveredSummaryStarId = ref<string | null>(null)
 const effectiveHoveredStarId = computed(
   () => hoveredStarId.value ?? hoveredSummaryStarId.value ?? starGroupStore.hoveredTimerStarId,
 )
-const { starRenders } = useStarSystem(effectiveHoveredStarId)
+
+// ── Per-Frame-DOM-Updates am Vue-Rendering vorbei ─────────────────────────────
+// Vue rendert nur bei strukturellen Änderungen (Stern/Planet kommt/geht,
+// Ebenenwechsel). Die 60fps-Positionsupdates schreibt applyFrames() direkt
+// auf die hier registrierten Elemente — ohne VNode-Diffing pro Frame.
+const starBackEls = new Map<string, HTMLElement>()
+const starWrapEls = new Map<string, HTMLElement>()
+const planetElsBack = new Map<string, SVGSVGElement>()
+const planetElsFront = new Map<string, SVGSVGElement>()
+const summaryEls = new Map<string, HTMLElement>()
+const countEls = new Map<string, HTMLElement>()
+const curseRingEls = new Map<string, HTMLElement>()
+const curseBadgeEls = new Map<string, HTMLElement>()
+
+type TemplateRef = Element | ComponentPublicInstance | null | undefined
+
+function setMapEl<T extends Element>(map: Map<string, T>, id: string, el: TemplateRef) {
+  if (el) {
+    map.set(id, el as T)
+  } else {
+    // Beim Ebenenwechsel feuert der alte null-Ref nach dem neuen Set-Ref:
+    // nur löschen, wenn das gespeicherte Element wirklich entfernt wurde.
+    const cur = map.get(id)
+    if (cur && !cur.isConnected) map.delete(id)
+  }
+}
+
+function setPlanetEl(map: Map<string, SVGSVGElement>, id: string, inst: TemplateRef) {
+  const el = (inst as ComponentPublicInstance | null)?.$el as SVGSVGElement | undefined
+  if (el) {
+    map.set(id, el)
+  } else {
+    const cur = map.get(id)
+    if (cur && !cur.isConnected) map.delete(id)
+  }
+}
+
+// Elemente in Transitions bleiben beim Unmount kurz "connected" und würden
+// sonst als verwaiste Map-Einträge liegen bleiben — periodisch aufräumen.
+const ALL_EL_MAPS: Map<string, Element>[] = [
+  starBackEls,
+  starWrapEls,
+  planetElsBack,
+  planetElsFront,
+  summaryEls,
+  countEls,
+  curseRingEls,
+  curseBadgeEls,
+]
+let sweepCounter = 0
+
+// ── Orbit-Glow-Ringe als Canvas-Sprites ──────────────────────────────────────
+// Der Gaussian-Blur der Orbit-Hints ist teuer. Statt ihn (wie früher via SVG-
+// Filter) jeden Frame neu zu rastern, wird der geblurrte Ring EINMAL pro
+// Geometrie/Farbe in ein Offscreen-Sprite gezeichnet und pro Frame nur noch
+// mit globalAlpha auf zwei Fullscreen-Canvases geblittet.
+const hintBackCanvas = ref<HTMLCanvasElement | null>(null)
+const hintFrontCanvas = ref<HTMLCanvasElement | null>(null)
+const hintSpriteCache = new Map<string, HTMLCanvasElement>()
+const HINT_SPRITE_SCALE = 0.5 // Blur verzeiht Skalierung; spart 4× Speicher
+const canvasFilterSupported = 'filter' in CanvasRenderingContext2D.prototype
+let hintCanvasesDirty = false
+
+function hintMargin(blur: number, strokeWidth: number): number {
+  return blur * 2.5 + strokeWidth
+}
+
+function getHintSprite(
+  rx: number,
+  ry: number,
+  strokeWidth: number,
+  blur: number,
+  color: string,
+): HTMLCanvasElement {
+  const key = `${Math.round(rx)}|${Math.round(ry)}|${strokeWidth.toFixed(1)}|${blur}|${color}`
+  const cached = hintSpriteCache.get(key)
+  if (cached) return cached
+
+  const S = HINT_SPRITE_SCALE
+  const margin = hintMargin(blur, strokeWidth)
+  const cv = document.createElement('canvas')
+  cv.width = Math.max(2, Math.ceil((rx + margin) * 2 * S))
+  cv.height = Math.max(2, Math.ceil((ry + margin) * 2 * S))
+  const c = cv.getContext('2d')!
+  c.strokeStyle = color
+  if (canvasFilterSupported) {
+    c.filter = `blur(${blur * S}px)`
+    c.lineWidth = Math.max(0.5, strokeWidth * S)
+    c.beginPath()
+    c.ellipse(cv.width / 2, cv.height / 2, rx * S, ry * S, 0, 0, Math.PI * 2)
+    c.stroke()
+  } else {
+    // Fallback ohne ctx.filter (altes Safari): geschichtete Strokes
+    const layers = [
+      { widthAdd: blur * 2.4, alpha: 0.12 },
+      { widthAdd: blur * 1.1, alpha: 0.25 },
+      { widthAdd: 0, alpha: 0.5 },
+    ]
+    for (const layer of layers) {
+      c.globalAlpha = layer.alpha
+      c.lineWidth = Math.max(0.5, (strokeWidth + layer.widthAdd) * S)
+      c.beginPath()
+      c.ellipse(cv.width / 2, cv.height / 2, rx * S, ry * S, 0, 0, Math.PI * 2)
+      c.stroke()
+    }
+  }
+
+  if (hintSpriteCache.size > 64) hintSpriteCache.clear()
+  hintSpriteCache.set(key, cv)
+  return cv
+}
+
+function drawHintRing(
+  c: CanvasRenderingContext2D,
+  star: StarRenderEntry,
+  blur: number,
+  alpha: number,
+  color: string,
+  strokeWidth: number,
+  cx: number,
+  cy: number,
+) {
+  const sprite = getHintSprite(star.orbitRx, star.orbitRy, strokeWidth, blur, color)
+  const margin = hintMargin(blur, strokeWidth)
+  const dw = (star.orbitRx + margin) * 2
+  const dh = (star.orbitRy + margin) * 2
+  c.save()
+  c.translate(cx, cy)
+  c.rotate(star.orbitTilt)
+  c.globalAlpha = Math.min(1, alpha)
+  c.drawImage(sprite, -dw / 2, -dh / 2, dw, dh)
+  c.restore()
+}
+
+function drawHintCanvases() {
+  const backC = hintBackCanvas.value?.getContext('2d')
+  const frontC = hintFrontCanvas.value?.getContext('2d')
+  if (!backC || !frontC) return
+
+  const stars = starRenders.value.filter((s) => s.isBehind && s.hintOpacity > 0.002)
+  if (stars.length === 0 && !hintCanvasesDirty) return
+
+  const cw = screenW.value
+  const ch = screenH.value
+  backC.clearRect(0, 0, cw, ch)
+  frontC.clearRect(0, 0, cw, ch)
+  hintCanvasesDirty = stars.length > 0
+  // Leere Canvases komplett ausblenden, damit der Compositor sie überspringt
+  const display = stars.length > 0 ? '' : 'none'
+  hintBackCanvas.value!.style.display = display
+  hintFrontCanvas.value!.style.display = display
+  if (stars.length === 0) return
+
+  const strokeWidth = (5 * planetShopStore.currentSunRadius) / 80
+  for (const star of stars) {
+    const color = orbitHintColor(star)
+    drawHintRing(backC, star, 14, star.hintOpacity * 0.65, color, strokeWidth, cw / 2, ch / 2)
+    drawHintRing(frontC, star, 16, star.hintOpacity * 0.8, color, strokeWidth, cw / 2, ch / 2)
+  }
+}
+
+function sizeHintCanvases() {
+  for (const cv of [hintBackCanvas.value, hintFrontCanvas.value]) {
+    if (cv) {
+      cv.width = window.innerWidth
+      cv.height = window.innerHeight
+    }
+  }
+  hintCanvasesDirty = true
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function applyFrames() {
+  if (++sweepCounter >= 300) {
+    sweepCounter = 0
+    for (const map of ALL_EL_MAPS) {
+      for (const [id, el] of map) {
+        if (!el.isConnected) map.delete(id)
+      }
+    }
+  }
+
+  const cursedId = cursedStarId.value
+  for (const star of starRenders.value) {
+    const s = starSize(star.starType)
+    const half = s / 2
+    // Scale auf 1%-Stufen quantisieren: Translation ist für den Compositor
+    // gratis, aber jede Scale-Änderung kann eine Re-Rasterung des Layers
+    // (inkl. der teuren box-shadows) auslösen.
+    const starTransform = `translate(${star.x - half}px, ${star.y - half}px) scale(${star.scale.toFixed(2)})`
+    const starOpacity = star.opacity.toFixed(3)
+
+    if (star.isBehind) {
+      const body = starBackEls.get(star.id)
+      if (body) {
+        body.style.transform = starTransform
+        body.style.opacity = starOpacity
+        body.style.filter = star.filterStyle
+      }
+    } else {
+      const wrap = starWrapEls.get(star.id)
+      if (wrap) {
+        wrap.style.transform = starTransform
+        wrap.style.opacity = starOpacity
+      }
+      const summary = summaryEls.get(star.id)
+      if (summary) {
+        summary.style.transform = `translate(${star.x}px, ${star.y + half + 58}px) translateX(-50%)`
+      }
+    }
+
+    const count = countEls.get(star.id)
+    if (count) {
+      count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
+      count.style.opacity = starOpacity
+    }
+
+    for (const p of star.planets) {
+      const back = planetElsBack.get(p.planetId)
+      if (back) {
+        back.style.display = p.isBehind ? '' : 'none'
+        if (p.isBehind) {
+          back.style.transform = p.transform
+          back.style.opacity = String(p.opacity)
+        }
+      }
+      const front = planetElsFront.get(p.planetId)
+      if (front) {
+        front.style.display = p.isBehind ? 'none' : ''
+        if (!p.isBehind) {
+          front.style.transform = p.transform
+          front.style.opacity = String(p.opacity)
+        }
+      }
+    }
+
+    if (star.id === cursedId) {
+      const ringSize = s + 32
+      const ring = curseRingEls.get(star.id)
+      if (ring) {
+        ring.style.transform = `translate(${star.x - ringSize / 2}px, ${star.y - ringSize / 2}px) scale(${star.scale.toFixed(2)})`
+        ring.style.opacity = starOpacity
+      }
+      const badge = curseBadgeEls.get(star.id)
+      if (badge) {
+        badge.style.transform = `translate(${star.x + half - 30}px, ${star.y - half - 4}px)`
+      }
+    }
+  }
+
+  drawHintCanvases()
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { starRenders } = useStarSystem(effectiveHoveredStarId, applyFrames)
 const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 
@@ -479,6 +677,7 @@ const screenCy = computed(() => screenH.value / 2)
 function onResize() {
   screenW.value = window.innerWidth
   screenH.value = window.innerHeight
+  sizeHintCanvases()
 }
 
 // ── Enemy Planet Attack System ────────────────────────────────────────────────
@@ -617,13 +816,13 @@ function enemyAttackLoop(ts: number) {
       if (!activeStarIds.has(id)) starBurstStates.delete(id)
     }
 
-    // ── Fluch-Timer aktualisieren ─────────────────────────────────────────────
+    // ── Fluch-Timer aktualisieren (ganze Sekunden → max. 1 Re-Render/s) ──────
     const curse = roleBehaviorStore.activeCurse
-    if (curse && Date.now() < curse.activeUntil) {
-      curseSecsLeft.value = Math.max(0, (curse.activeUntil - Date.now()) / 1000)
-    } else {
-      curseSecsLeft.value = 0
-    }
+    const secsLeft =
+      curse && Date.now() < curse.activeUntil
+        ? Math.max(0, Math.ceil((curse.activeUntil - Date.now()) / 1000))
+        : 0
+    if (secsLeft !== curseSecsLeft.value) curseSecsLeft.value = secsLeft
     // ─────────────────────────────────────────────────────────────────────────
   }
 
@@ -643,6 +842,7 @@ watch(isRenderingPaused, (paused) => {
 
 onMounted(() => {
   window.addEventListener('resize', onResize)
+  sizeHintCanvases()
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
 })
 onUnmounted(() => {
@@ -675,7 +875,7 @@ function starBoxShadow(starColor: [number, number, number], s: number): string {
 function starWrapStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
-    transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(4)})`,
+    transform: `translate(${star.x - s / 2}px, ${star.y - s / 2}px) scale(${star.scale.toFixed(2)})`,
     opacity: String(star.opacity.toFixed(3)),
     width: `${s}px`,
     height: `${s}px`,
@@ -723,49 +923,68 @@ function getChampionRoleStyles(name: string): Record<string, string> {
   }
 }
 
-function getStarRewardSummary(star: StarRenderEntry) {
-  let totalChimes = 0
-  const materialMap = new Map<string, { image: string; name: string; count: number }>()
-  let champion: { name: string; image: string } | null = null
+interface StarRewardSummary {
+  totalChimes: number
+  materials: { image: string; name: string; count: number }[]
+  champion: { name: string; image: string } | null
+}
 
-  for (const planet of star.planets) {
-    if (planet.animState === 'saved') continue
-    const boss = bossStore.activeBosses.find(
-      (b) => b.planetId === planet.planetId && !b.defeated && !b.expired,
-    )
-    if (!boss) continue
+const EMPTY_REWARD_SUMMARY: StarRewardSummary = { totalChimes: 0, materials: [], champion: null }
 
-    totalChimes += boss.rewardSlots
-      .filter((s) => s.type === 'chimes')
-      .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+// Memoized pro Stern: rechnet nur bei Boss-/Slot-Änderungen neu, nicht pro Frame.
+// Vorher lief das bis zu 8× pro Stern pro Frame mit find() über alle Bosses (O(n²)).
+const rewardSummaries = computed(() => {
+  const bossByPlanet = new Map(bossStore.activeBosses.map((b) => [b.planetId, b]))
+  const map = new Map<string, StarRewardSummary>()
 
-    for (const slot of boss.rewardSlots.filter((s) => s.type === 'material')) {
-      if (slot.materialId) {
-        const mat = MATERIALS.find((m) => m.id === slot.materialId)
-        if (mat) {
-          const existing = materialMap.get(slot.materialId)
-          if (existing) {
-            existing.count += 1
-          } else {
-            materialMap.set(slot.materialId, {
-              image: mat.image ?? '',
-              name: mat.name,
-              count: 1,
-            })
+  for (const star of starGroupStore.activeStars) {
+    let totalChimes = 0
+    const materialMap = new Map<string, { image: string; name: string; count: number }>()
+    let champion: { name: string; image: string } | null = null
+
+    for (const slot of star.planetSlots) {
+      if (slot.cleared) continue
+      const boss = bossByPlanet.get(slot.planetId)
+      if (!boss || boss.defeated || boss.expired) continue
+
+      totalChimes += boss.rewardSlots
+        .filter((s) => s.type === 'chimes')
+        .reduce((sum, s) => sum + (s.amount ?? 0), 0)
+
+      for (const rewardSlot of boss.rewardSlots.filter((s) => s.type === 'material')) {
+        if (rewardSlot.materialId) {
+          const mat = MATERIALS.find((m) => m.id === rewardSlot.materialId)
+          if (mat) {
+            const existing = materialMap.get(rewardSlot.materialId)
+            if (existing) {
+              existing.count += 1
+            } else {
+              materialMap.set(rewardSlot.materialId, {
+                image: mat.image ?? '',
+                name: mat.name,
+                count: 1,
+              })
+            }
           }
+        }
+      }
+
+      if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
+        champion = {
+          name: boss.homePlanetChampion,
+          image: `/img/champion/${boss.homePlanetChampion}.jpg`,
         }
       }
     }
 
-    if (!champion && boss.isChampionPlanet && boss.homePlanetChampion) {
-      champion = {
-        name: boss.homePlanetChampion,
-        image: `/img/champion/${boss.homePlanetChampion}.jpg`,
-      }
-    }
+    map.set(star.id, { totalChimes, materials: [...materialMap.values()], champion })
   }
 
-  return { totalChimes, materials: [...materialMap.values()], champion }
+  return map
+})
+
+function getStarRewardSummary(star: StarRenderEntry): StarRewardSummary {
+  return rewardSummaries.value.get(star.id) ?? EMPTY_REWARD_SUMMARY
 }
 
 function rewardSummaryStyle(star: StarRenderEntry) {
@@ -773,10 +992,6 @@ function rewardSummaryStyle(star: StarRenderEntry) {
   return {
     transform: `translate(${star.x}px, ${star.y + s / 2 + 58}px) translateX(-50%)`,
   }
-}
-
-function remainingPlanetCount(star: StarRenderEntry): number {
-  return star.planets.filter((p) => p.animState !== 'saved').length
 }
 
 function starCountStyle(star: StarRenderEntry) {
@@ -813,23 +1028,12 @@ function starCountStyle(star: StarRenderEntry) {
   z-index: 7;
 }
 
-.orbit-hints-svg {
+.orbit-hints-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.orbit-hints-front-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
   pointer-events: none;
 }
 
@@ -850,10 +1054,36 @@ function starCountStyle(star: StarRenderEntry) {
   height: 100%;
   border-radius: 50%;
   will-change: transform, filter;
-  animation:
-    star-spawn 0.7s ease-out,
-    star-pulse 2.8s ease-in-out 0.7s infinite;
+  animation: star-spawn 0.7s ease-out;
   pointer-events: none;
+}
+
+/* Puls über Opacity eines Overlays statt filter: brightness() —
+   läuft auf dem Compositor und erzwingt keine Repaints pro Frame. */
+.star-pulse-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 78%
+  );
+  opacity: 0;
+  animation: star-pulse-opacity 2.8s ease-in-out 0.7s infinite;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+@keyframes star-pulse-opacity {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
 .star-body-wrap:hover .star-body,
@@ -929,16 +1159,6 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-@keyframes star-pulse {
-  0%,
-  100% {
-    filter: brightness(1) saturate(1);
-  }
-  50% {
-    filter: brightness(1.45) saturate(1.15);
-  }
-}
-
 @keyframes star-ring-pulse {
   0%,
   100% {
@@ -979,6 +1199,9 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: auto;
   cursor: pointer;
   z-index: 8;
+  /* Eigener Compositor-Layer: bewegt sich pro Frame per transform,
+     ohne will-change malt der Browser die Box samt Schatten jedes Mal neu */
+  will-change: transform;
 }
 
 .summary-inner {
@@ -1145,6 +1368,7 @@ function starCountStyle(star: StarRenderEntry) {
   top: 0;
   left: 0;
   pointer-events: none;
+  will-change: transform;
   user-select: none;
   white-space: nowrap;
   display: inline-flex;
@@ -1154,7 +1378,29 @@ function starCountStyle(star: StarRenderEntry) {
   border: 1px solid rgba(232, 192, 64, 0.55);
   border-radius: 4px;
   padding: 2px 7px;
-  animation: star-count-pulse 2.2s ease-in-out infinite;
+}
+
+/* Border-Puls über Opacity eines Overlays statt border-color-Animation —
+   border-color muss der Browser jeden Frame neu malen, Opacity nicht. */
+.star-planet-count::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(232, 192, 64, 0.95);
+  border-radius: 4px;
+  opacity: 0;
+  animation: star-count-pulse-fade 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes star-count-pulse-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .star-planet-count__current {
@@ -1212,16 +1458,6 @@ function starCountStyle(star: StarRenderEntry) {
 .star-cnt-leave-to {
   opacity: 0;
   scale: 0.7;
-}
-
-@keyframes star-count-pulse {
-  0%,
-  100% {
-    border-color: rgba(232, 192, 64, 0.55);
-  }
-  50% {
-    border-color: rgba(232, 192, 64, 0.95);
-  }
 }
 
 @keyframes curse-ring-spin {

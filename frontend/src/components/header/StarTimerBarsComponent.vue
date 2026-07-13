@@ -29,27 +29,29 @@
               '--glow': entry.palette.glow,
             }"
           />
-          <span
-            v-if="entry.fillRatio > 0"
-            class="bar-seconds-label bar-seconds-label--left"
-            :style="{
-              '--fill': entry.fillRatio,
-              '--label-color': entry.palette.mid,
-              '--label-glow': entry.palette.glow,
-            }"
-            >{{ entry.secondsInt }}</span
-          >
+          <!-- Track-Wrapper wandern per transform (Compositor) statt per
+               left/right (Layout + Paint pro Frame und Balken) -->
           <div
             v-if="entry.fillRatio > 0"
-            class="planet-dots planet-dots--left"
+            class="bar-edge-track bar-edge-track--left"
             :style="{ '--fill': entry.fillRatio }"
           >
             <span
-              v-for="i in entry.totalPlanets"
-              :key="i"
-              class="planet-dot"
-              :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
-            />
+              class="bar-seconds-label bar-seconds-label--left"
+              :style="{
+                '--label-color': entry.palette.mid,
+                '--label-glow': entry.palette.glow,
+              }"
+              >{{ entry.secondsInt }}</span
+            >
+            <div class="planet-dots planet-dots--left">
+              <span
+                v-for="i in entry.totalPlanets"
+                :key="i"
+                class="planet-dot"
+                :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+              />
+            </div>
           </div>
         </div>
 
@@ -66,27 +68,27 @@
               '--glow': entry.palette.glow,
             }"
           />
-          <span
-            v-if="entry.fillRatio > 0"
-            class="bar-seconds-label bar-seconds-label--right"
-            :style="{
-              '--fill': entry.fillRatio,
-              '--label-color': entry.palette.mid,
-              '--label-glow': entry.palette.glow,
-            }"
-            >{{ entry.secondsInt }}</span
-          >
           <div
             v-if="entry.fillRatio > 0"
-            class="planet-dots planet-dots--right"
+            class="bar-edge-track bar-edge-track--right"
             :style="{ '--fill': entry.fillRatio }"
           >
             <span
-              v-for="i in entry.totalPlanets"
-              :key="i"
-              class="planet-dot"
-              :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
-            />
+              class="bar-seconds-label bar-seconds-label--right"
+              :style="{
+                '--label-color': entry.palette.mid,
+                '--label-glow': entry.palette.glow,
+              }"
+              >{{ entry.secondsInt }}</span
+            >
+            <div class="planet-dots planet-dots--right">
+              <span
+                v-for="i in entry.totalPlanets"
+                :key="i"
+                class="planet-dot"
+                :class="{ 'planet-dot--cleared': i > entry.totalPlanets - entry.clearedPlanets }"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -457,6 +459,26 @@ const sortedEntries = computed<BarEntry[]>(() => {
   filter: drop-shadow(0 0 3px var(--icon-color));
 }
 
+/* Track-Wrapper: so breit wie die Balkenseite, wandert per transform mit der
+   Füllkante mit. transform-% bezieht sich auf die eigene Breite (=100% der
+   Seite), daher stimmt die Mathematik mit dem früheren left-calc überein —
+   läuft aber komplett auf dem Compositor statt Layout+Paint pro Frame. */
+.bar-edge-track {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform 0.2s linear;
+  will-change: transform;
+}
+
+.bar-edge-track--left {
+  transform: translateX(calc((1 - var(--fill)) * 100%));
+}
+
+.bar-edge-track--right {
+  transform: translateX(calc((1 - var(--fill)) * -100%));
+}
+
 .bar-seconds-label {
   position: absolute;
   top: 50%;
@@ -473,15 +495,13 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 .bar-seconds-label--left {
-  left: calc((1 - var(--fill)) * 100%);
+  left: 0;
   transform: translateX(calc(-50% - 1.3em)) translateY(-50%);
-  transition: left 0.2s linear;
 }
 
 .bar-seconds-label--right {
-  right: calc((1 - var(--fill)) * 100%);
+  right: 0;
   transform: translateX(calc(50% + 1.3em)) translateY(-50%);
-  transition: right 0.2s linear;
 }
 
 /* ── Planeten-Punkte: 1 Punkt pro Planet, sitzen auf der Füllung direkt
@@ -500,16 +520,14 @@ const sortedEntries = computed<BarEntry[]>(() => {
 }
 
 .planet-dots--left {
-  left: calc((1 - var(--fill)) * 100%);
+  left: 0;
   padding-left: clamp(6px, 0.5vw, 12px);
-  transition: left 0.2s linear;
 }
 
 .planet-dots--right {
-  right: calc((1 - var(--fill)) * 100%);
+  right: 0;
   padding-right: clamp(6px, 0.5vw, 12px);
   flex-direction: row-reverse;
-  transition: right 0.2s linear;
 }
 
 .planet-dot {
