@@ -124,6 +124,10 @@ watch(
      calc(100vw / 2560px) is invalid CSS division */
   --hud-scale: clamp(0.52, min(tan(atan2(100vw, 2560px)), tan(atan2(100vh, 1440px))), 1);
   --hud-panel-size: calc(440px * var(--hud-scale));
+  /* Height of the low center strip (scoreboard) of the bottom bar:
+     (BOTTOM_BAR_HEIGHT 443 − BOTTOM_BAR_CENTER_TOP_Y 364) × hud-scale.
+     Overlays that must end above the scoreboard anchor to this. */
+  --bottom-center-strip-h: calc(79px * var(--hud-scale));
 
   /* team-ui-scale shrinks the fixed-px team-tab panels (shop modals, details
      side panel) on small desktops. Reference design is 1920×1080; below that

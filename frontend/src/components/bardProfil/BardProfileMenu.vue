@@ -329,7 +329,9 @@ watch(
   left: var(--bard-profile-left, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
   right: var(--bard-profile-right, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
   top: calc(var(--level-badge-bottom, calc(var(--header-total-height) + 60px)) + 8px);
-  height: calc(100dvh - var(--level-badge-bottom, 80px) - 88px);
+  /* end 10px above the scoreboard strip instead of a fixed viewport offset —
+     on small hud-scales (e.g. 1440×900 MacBooks) this frees ~35px of height */
+  bottom: calc(var(--bottom-center-strip-h, 79px) + 10px);
 }
 
 .rp-modal {
