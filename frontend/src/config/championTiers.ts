@@ -9,7 +9,8 @@ import { CHAMPION_DATA } from './championData'
 
 // ── Champion Tiers ────────────────────────────────────────────────────────────
 // The spawn-pool axis: exactly 6 Champion Tiers, weakest (★1, most champions) →
-// strongest (★6, fewest). Set explicitly per champion via `championTier` in
+// strongest (★6, fewest). Display names are single words by design — this file
+// is the single source of truth; all UI reads `.name` from here. Set explicitly per champion via `championTier` in
 // championData.ts; also drives the recruit cost (getChampionChimesPrice). Tiers
 // unlock cumulatively by galaxy (CHAMPION_TIER_REQUIRED_GALAXY) and, once unlocked,
 // spawn together by weighted probability (TIER_SPAWN_WEIGHTS). Completely separate
@@ -21,7 +22,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   lone_wanderer: {
     id: 'lone_wanderer',
     starLevel: 1,
-    name: 'Lone Wanderer',
+    name: 'Wanderer',
     icon: 'game-icons:walking-boot',
     color: '#a08c72',
     description: 'A solitary traveler taking the first steps across the cosmos.',
@@ -30,7 +31,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   rift_keeper: {
     id: 'rift_keeper',
     starLevel: 2,
-    name: 'Rift Keeper',
+    name: 'Keeper',
     icon: 'game-icons:star-gate',
     color: '#4e96e0',
     description: 'Warden of the star-rifts that thread the galaxies together.',
@@ -39,7 +40,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   nebula_sage: {
     id: 'nebula_sage',
     starLevel: 3,
-    name: 'Nebula Sage',
+    name: 'Sage',
     icon: 'game-icons:star-prominences',
     color: '#5e86d4',
     description: 'A sage who reads the swirling nebulae for hidden starlight.',
@@ -48,7 +49,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   astral_warden: {
     id: 'astral_warden',
     starLevel: 4,
-    name: 'Astral Warden',
+    name: 'Warden',
     icon: 'game-icons:star-altar',
     color: '#b75ed4',
     description: 'Guardian of the astral altar where star-fire is forged.',
@@ -57,7 +58,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   void_sovereign: {
     id: 'void_sovereign',
     starLevel: 5,
-    name: 'Void Sovereign',
+    name: 'Sovereign',
     icon: 'game-icons:portal',
     color: '#d45e7e',
     description: 'Sovereign of the void-gates between dying galaxies.',
@@ -66,7 +67,7 @@ export const CHAMPION_TIERS: Record<ChampionTierId, ChampionTierDef> = {
   cosmic_sovereign: {
     id: 'cosmic_sovereign',
     starLevel: 6,
-    name: 'Cosmic Sovereign',
+    name: 'Ascendant',
     icon: 'game-icons:queen-crown',
     color: '#d85030',
     description: 'Sovereign of the deepest galaxies, born of pure starlight.',

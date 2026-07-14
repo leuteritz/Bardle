@@ -113,7 +113,7 @@ export const TRAIT_DEFINITIONS: TraitDefinition[] = [
   },
   {
     id: 'dark_star',
-    name: 'Dark Star',
+    name: 'Darkstar',
     icon: 'game-icons:magic-swirl',
     color: '#7040b0',
     thresholds: [

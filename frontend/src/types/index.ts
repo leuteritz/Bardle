@@ -819,18 +819,18 @@ export interface ActiveSynergy extends SynergyDefinition {
 }
 
 export type ChampionOrigin =
-  | 'Bandle City'
+  | 'Bandle'
   | 'Bilgewater'
   | 'Demacia'
   | 'Ionia'
   | 'Ixtal'
   | 'Noxus'
   | 'Piltover'
-  | 'Shadow Isles'
+  | 'Isles'
   | 'Shurima'
   | 'Targon'
-  | 'The Freljord'
-  | 'The Void'
+  | 'Freljord'
+  | 'Void'
   | 'Zaun'
   | 'Runeterra'
 

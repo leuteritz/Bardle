@@ -2395,18 +2395,18 @@ export const USED_GAME_ICONS = new Set<string>([
   // Champion Shop — galaxy-locked Champion Tier row header
   'game-icons:padlock', // Galaxy-locked tier header icon (ChampionShopComponent)
   // Champion Tiers — champion star-level classification (championTiers.ts, TierUnlockPanel, champion cards)
-  'game-icons:walking-boot', // ★1 Lone Wanderer
+  'game-icons:walking-boot', // ★1 Wanderer
   'game-icons:polar-star', // ★2 Star Drifter
   'game-icons:fairy', // ★3 Meep Guardian
-  'game-icons:star-gate', // ★4 Rift Keeper
+  'game-icons:star-gate', // ★4 Keeper
   'game-icons:burning-meteor', // ★5 Comet Rider
-  'game-icons:star-prominences', // ★6 Nebula Sage
+  'game-icons:star-prominences', // ★6 Sage
   'game-icons:spider-web', // ★7 Chime Weaver
-  'game-icons:star-altar', // ★8 Astral Warden
+  'game-icons:star-altar', // ★8 Warden
   'game-icons:moon-orbit', // ★9 Eclipse Herald
-  'game-icons:portal', // ★10 Void Sovereign
+  'game-icons:portal', // ★10 Sovereign
   'game-icons:cosmic-egg', // ★11 Galaxy Warden
-  'game-icons:queen-crown', // ★12 Cosmic Sovereign
+  'game-icons:queen-crown', // ★12 Ascendant
   'game-icons:teleport', // Admin Galaxy Jump — warp button
   'game-icons:sun-radiations', // Admin Star Phase panel — header icon
   'game-icons:sand-clock', // Time-in-phase indicator (BardStatsTab Star Forge stage)
