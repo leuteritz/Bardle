@@ -87,6 +87,10 @@
         </div>
       </template>
 
+      <!-- Angriffs-Cooldown-Ringe: ein einziges Canvas für alle Sterne, im
+           RAF-Loop gezeichnet — kein Per-Stern-DOM, keine Style-Recalcs -->
+      <canvas ref="cooldownCanvas" class="orbit-hints-canvas" />
+
       <!-- ③ Enemy Projectiles -->
       <AttackProjectileLayer :shots="enemyShots" />
 
@@ -315,6 +319,7 @@ let sweepCounter = 0
 // mit globalAlpha auf zwei Fullscreen-Canvases geblittet.
 const hintBackCanvas = ref<HTMLCanvasElement | null>(null)
 const hintFrontCanvas = ref<HTMLCanvasElement | null>(null)
+const cooldownCanvas = ref<HTMLCanvasElement | null>(null)
 const hintSpriteCache = new Map<string, HTMLCanvasElement>()
 const HINT_SPRITE_SCALE = 0.5 // Blur verzeiht Skalierung; spart 4× Speicher
 const canvasFilterSupported = 'filter' in CanvasRenderingContext2D.prototype
@@ -419,7 +424,7 @@ function drawHintCanvases() {
 }
 
 function sizeHintCanvases() {
-  for (const cv of [hintBackCanvas.value, hintFrontCanvas.value]) {
+  for (const cv of [hintBackCanvas.value, hintFrontCanvas.value, cooldownCanvas.value]) {
     if (cv) {
       cv.width = window.innerWidth
       cv.height = window.innerHeight
@@ -620,6 +625,9 @@ const TOP_INTERCEPT_RADIUS = 50
 
 interface StarBurstState {
   cooldownMs: number
+  // Gesamtdauer des laufenden Cooldowns — kann pro Zyklus variieren
+  // (Glaciation-Fluch), wird für die Fortschrittsanzeige gebraucht
+  totalMs: number
   shotsLeft: number
   shotDelayMs: number
 }
@@ -697,6 +705,67 @@ function fireEnemyShot(fromX: number, fromY: number) {
   })
 }
 
+// ── Cooldown-Ringe: alle Sterne auf EINEM Canvas, ein Draw-Pass pro Frame.
+// Canvas-Arcs statt DOM/SVG pro Stern: kein Style-Recalc, keine Layer-
+// Re-Rasterung — konstant billig auch bei 40+ Sternen gleichzeitig.
+const TWO_PI = Math.PI * 2
+let cooldownCanvasWasEmpty = false
+
+function drawCooldownRings() {
+  const cv = cooldownCanvas.value
+  const c = cv?.getContext('2d')
+  if (!cv || !c) return
+
+  const stars = starRenders.value
+  let drewAny = false
+  c.clearRect(0, 0, cv.width, cv.height)
+
+  for (const star of stars) {
+    if (star.isBehind || star.opacity <= 0.02) continue
+    const state = starBurstStates.get(star.id)
+    if (!state) continue
+
+    const r = (starSize(star.starType) / 2 + 9) * star.scale
+    const alpha = star.opacity
+    const bursting = state.shotsLeft > 0
+    const progress = bursting ? 1 : 1 - Math.max(0, state.cooldownMs) / state.totalMs
+    drewAny = true
+
+    // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
+    c.beginPath()
+    c.arc(star.x, star.y, r, 0, TWO_PI)
+    c.strokeStyle = `rgba(255,136,0,${0.1 * alpha})`
+    c.lineWidth = 2
+    c.stroke()
+
+    if (progress <= 0.004) continue
+    const start = -Math.PI / 2
+    const end = start + progress * TWO_PI
+    const hot = bursting || progress > 0.92
+    c.beginPath()
+    c.arc(star.x, star.y, r, start, end)
+    c.strokeStyle = hot ? `rgba(255,205,95,${0.9 * alpha})` : `rgba(255,150,45,${0.55 * alpha})`
+    c.lineWidth = 2
+    c.lineCap = 'round'
+    c.stroke()
+
+    // Glüh-Spitze am Ende des Bogens
+    if (!bursting) {
+      c.beginPath()
+      c.arc(star.x + Math.cos(end) * r, star.y + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+      c.fillStyle = `rgba(255,215,130,${0.85 * alpha})`
+      c.fill()
+    }
+  }
+
+  // Leeres Canvas ausblenden, damit der Compositor es überspringt
+  const empty = !drewAny
+  if (empty !== cooldownCanvasWasEmpty) {
+    cooldownCanvasWasEmpty = empty
+    cv.style.display = empty ? 'none' : ''
+  }
+}
+
 function enemyAttackLoop(ts: number) {
   const dt = enemyLastTs === 0 ? 16 : Math.min(ts - enemyLastTs, 50)
   enemyLastTs = ts
@@ -709,7 +778,12 @@ function enemyAttackLoop(ts: number) {
 
       let state = starBurstStates.get(star.id)
       if (!state) {
-        state = { cooldownMs: STAR_BURST_COOLDOWN, shotsLeft: 0, shotDelayMs: 0 }
+        state = {
+          cooldownMs: STAR_BURST_COOLDOWN,
+          totalMs: STAR_BURST_COOLDOWN,
+          shotsLeft: 0,
+          shotDelayMs: 0,
+        }
         starBurstStates.set(star.id, state)
       }
 
@@ -720,6 +794,7 @@ function enemyAttackLoop(ts: number) {
           state.shotsLeft -= 1
           if (state.shotsLeft === 0) {
             state.cooldownMs = effectiveBurstCooldown()
+            state.totalMs = state.cooldownMs
           } else {
             state.shotDelayMs = STAR_BURST_DELAY_BETWEEN_SHOTS
           }
@@ -733,6 +808,7 @@ function enemyAttackLoop(ts: number) {
             state.shotDelayMs = 0
           } else {
             state.cooldownMs = effectiveBurstCooldown()
+            state.totalMs = state.cooldownMs
           }
         }
       }
@@ -751,6 +827,8 @@ function enemyAttackLoop(ts: number) {
         : 0
     if (secsLeft !== curseSecsLeft.value) curseSecsLeft.value = secsLeft
     // ─────────────────────────────────────────────────────────────────────────
+
+    drawCooldownRings()
   }
 
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
