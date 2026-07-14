@@ -191,6 +191,20 @@ watch(
   { immediate: true },
 )
 
+// While the shop list scrolls, card pulse animations pause and card hover is
+// suppressed (via .is-scrolling) — dozens of animated glows plus hover-expand
+// transitions firing under the cursor otherwise tank the frame rate.
+const shopScrolling = ref(false)
+let shopScrollTimer: ReturnType<typeof setTimeout> | null = null
+function onShopScroll() {
+  shopScrolling.value = true
+  if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
+  shopScrollTimer = setTimeout(() => {
+    shopScrolling.value = false
+    shopScrollTimer = null
+  }, 150)
+}
+
 // Escape closes the modal first, then whichever side panel is open.
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
@@ -209,7 +223,10 @@ onMounted(() => {
   // watcher above wasn't registered yet, so consume the pending request here
   if (uiStore.rolesOpenPending) applyRolesOpenRequest()
 })
-onUnmounted(() => window.removeEventListener('keydown', onEsc))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onEsc)
+  if (shopScrollTimer !== null) clearTimeout(shopScrollTimer)
+})
 </script>
 
 <template>
@@ -322,7 +339,11 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
           {{ cat.label }}
         </button>
       </div>
-      <div class="team-shop-content">
+      <div
+        class="team-shop-content"
+        :class="{ 'is-scrolling': shopScrolling }"
+        @scroll.passive="onShopScroll"
+      >
         <ChampionShopComponent
           v-if="shopTab === 'champions'"
           :initial-role="shopRole"

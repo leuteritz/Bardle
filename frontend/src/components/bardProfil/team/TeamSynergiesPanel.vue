@@ -363,6 +363,8 @@ function championImage(name: string): string {
 <style scoped>
 /* ── side panel shell (mirrors SigilDetailsPanel) ── */
 .tsp-panel {
+  /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops */
+  zoom: var(--team-ui-scale, 1);
   width: v-bind(panelWidthPx);
   flex-shrink: 0;
   display: flex;

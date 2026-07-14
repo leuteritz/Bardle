@@ -124,12 +124,23 @@ watch(
      calc(100vw / 2560px) is invalid CSS division */
   --hud-scale: clamp(0.52, min(tan(atan2(100vw, 2560px)), tan(atan2(100vh, 1440px))), 1);
   --hud-panel-size: calc(440px * var(--hud-scale));
+
+  /* team-ui-scale shrinks the fixed-px team-tab panels (shop modals, details
+     side panel) on small desktops. Reference design is 1920×1080; below that
+     the panels zoom down proportionally, capped at 1 on large screens. */
+  --team-ui-scale: clamp(0.62, min(tan(atan2(100vw, 1920px)), tan(atan2(100vh, 1080px))), 1);
 }
 
 @property --hud-scale {
   syntax: '<number>';
   inherits: true;
   initial-value: 0.75;
+}
+
+@property --team-ui-scale {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.85;
 }
 
 .copyright-overlay {

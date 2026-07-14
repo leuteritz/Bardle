@@ -349,6 +349,8 @@ const filledAllyCount = computed(() => allies.value.filter((ally) => ally !== nu
 
 <style scoped>
 .sdp-panel {
+  /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops */
+  zoom: var(--team-ui-scale, 1);
   width: v-bind(panelWidthPx);
   flex-shrink: 0;
   display: flex;

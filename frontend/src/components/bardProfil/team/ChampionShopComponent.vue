@@ -301,11 +301,10 @@
                 v-for="(champion, index) in group.champions"
                 :key="champion.name"
                 class="champion-card-slot"
-                :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name, 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
+                :class="[getCardClass(champion.name), { 'is-last-row': isLastRow(index, group.champions.length), 'is-first-row': isFirstRow(index) }]"
                 :data-role="CHAMPION_ROLES[champion.name]"
                 @click="handleBuy(champion.name)"
-                @mouseenter="onCardHoverAndDismiss(champion.name)"
-                @mouseleave="onCardLeave"
+                @mouseenter="dismissNewOnHover(champion.name)"
               >
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
@@ -470,11 +469,10 @@
               v-for="champion in crossRoleChampions"
               :key="'cross-' + champion.name"
               class="champion-card-slot cross-role-card"
-              :class="[getCardClass(champion.name), { 'card-expanded': hoveredChampion === champion.name }]"
+              :class="getCardClass(champion.name)"
               :data-role="CHAMPION_ROLES[champion.name]"
               @click="handleBuy(champion.name)"
-              @mouseenter="onCardHoverAndDismiss(champion.name)"
-              @mouseleave="onCardLeave"
+              @mouseenter="dismissNewOnHover(champion.name)"
             >
               <div class="card-inner">
                 <!-- Role badge pill — inside card-inner so it tracks the expanding card edge -->
@@ -1292,9 +1290,6 @@ const shopChampionNames = computed(() =>
       return i >= Math.floor((len - 1) / cols) * cols
     }
 
-    // ── Card expand state ──
-    const hoveredChampion = ref<string | null>(null)
-
     function getChampionDetail(name: string) {
       const traitIds = CHAMPION_TRAITS[name] ?? []
       const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
@@ -1303,15 +1298,6 @@ const shopChampionNames = computed(() =>
       const cosmic = getChampionTier(name)
       const starLevel = getChampionStarLevel(name)
       return { traits, origin, cosmic, starLevel }
-    }
-
-    function onCardHoverAndDismiss(name: string) {
-      dismissNewOnHover(name)
-      hoveredChampion.value = name
-    }
-
-    function onCardLeave() {
-      hoveredChampion.value = null
     }
 
     onMounted(() => {
@@ -1386,10 +1372,8 @@ const shopChampionNames = computed(() =>
       onChipKeydown,
       searchInputRef,
       isNew,
-      hoveredChampion,
+      dismissNewOnHover,
       getChampionDetail,
-      onCardHoverAndDismiss,
-      onCardLeave,
       crossRoleChampions,
       ROLE_BADGE,
       CHIMES_COST_ICON,
@@ -1426,7 +1410,7 @@ const shopChampionNames = computed(() =>
   position: relative;
   z-index: 1;
 }
-.champion-card-slot.card-expanded {
+.champion-card-slot:hover {
   z-index: 20;
 }
 
@@ -1465,8 +1449,9 @@ const shopChampionNames = computed(() =>
     top 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     left 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     right 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+    border-color 0.25s ease;
+  /* box-shadow snaps deliberately — transitioning the large glow blurs forced
+     full repaints every frame of the expand animation */
 }
 /* ── Role-specific card borders ── */
 .champion-card-slot[data-role="top"]     { --role-c: #e05050; --role-c-hi: #f07070; }
@@ -1504,7 +1489,7 @@ const shopChampionNames = computed(() =>
 /* Buyable pulse — role inset glow complements the gold buyable border.
    Shadows are static on pseudo-elements; only opacity animates (compositor-only,
    no per-frame repaints — animating box-shadow directly caused scroll jank). */
-.card-buyable.champion-card-slot:not(.card-expanded)::after {
+.card-buyable.champion-card-slot:not(:hover)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1512,8 +1497,9 @@ const shopChampionNames = computed(() =>
   pointer-events: none;
   box-shadow: 0 0 26px rgba(232, 192, 64, 0.12);
   animation: card-glow-pulse 2.5s ease-in-out infinite;
+  animation-play-state: var(--pulse-play, running);
 }
-.card-buyable.champion-card-slot:not(.card-expanded) .card-inner::after {
+.card-buyable.champion-card-slot:not(:hover) .card-inner::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1521,7 +1507,17 @@ const shopChampionNames = computed(() =>
   pointer-events: none;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--role-c, #e8c040) 35%, transparent);
   animation: card-ring-pulse 2.5s ease-in-out infinite;
+  animation-play-state: var(--pulse-play, running);
 }
+/* While the shop list scrolls (.is-scrolling set by the modal's scroll
+   container), freeze the pulse glows and skip card hit-testing — otherwise
+   the animated shadows plus hover-expands firing under the cursor cause
+   per-frame repaints that tank the scroll frame rate. */
+.is-scrolling .champion-card-slot {
+  pointer-events: none;
+  --pulse-play: paused;
+}
+
 @keyframes card-glow-pulse {
   0%, 100% { opacity: 0; }
   50%      { opacity: 1; }
@@ -1535,7 +1531,7 @@ const shopChampionNames = computed(() =>
   border-color: var(--rpg-gold-dim);
   box-shadow: 0 0 20px rgba(232, 192, 64, 0.12);
 }
-.card-buyable.card-expanded .card-inner {
+.champion-card-slot.card-buyable:hover .card-inner {
   border-color: #e8c040;
   box-shadow:
     0 0 38px rgba(232, 192, 64, 0.55),
@@ -1543,7 +1539,7 @@ const shopChampionNames = computed(() =>
     inset 0 0 0 2px rgba(232, 192, 64, 0.58),
     0 20px 50px rgba(0, 0, 0, 0.95);
 }
-.card-expanded .card-inner {
+.champion-card-slot:hover .card-inner {
   bottom: -100px;
   left: -50px;
   right: -50px;
@@ -1557,27 +1553,27 @@ const shopChampionNames = computed(() =>
 /* ── Edge-column overflow prevention ── */
 /* Mobile: 2-col grid */
 @media (max-width: 639px) {
-  .champion-card-slot:nth-child(2n+1).card-expanded .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(2n).card-expanded .card-inner   { left: -100px; right: 0; }
+  .champion-card-slot:nth-child(2n+1):hover .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(2n):hover .card-inner   { left: -100px; right: 0; }
 }
 /* Small: 3-col grid */
 @media (min-width: 640px) and (max-width: 767px) {
-  .champion-card-slot:nth-child(3n+1).card-expanded .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(3n).card-expanded .card-inner   { left: -100px; right: 0; }
+  .champion-card-slot:nth-child(3n+1):hover .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(3n):hover .card-inner   { left: -100px; right: 0; }
 }
 /* Medium+: 4-col grid */
 @media (min-width: 768px) {
-  .champion-card-slot:nth-child(4n+1).card-expanded .card-inner { left: 0; right: -100px; }
-  .champion-card-slot:nth-child(4n).card-expanded .card-inner   { left: -100px; right: 0; }
+  .champion-card-slot:nth-child(4n+1):hover .card-inner { left: 0; right: -100px; }
+  .champion-card-slot:nth-child(4n):hover .card-inner   { left: -100px; right: 0; }
 }
 
 /* Last-row cards expand upward instead of downward */
-.is-last-row.card-expanded .card-inner {
+.is-last-row:hover .card-inner {
   top: -100px;
   bottom: 0;
 }
 /* First-row cards always expand downward, overriding is-last-row when only one row exists */
-.is-first-row.card-expanded .card-inner {
+.is-first-row:hover .card-inner {
   top: 0;
   bottom: -100px;
 }
@@ -1591,11 +1587,11 @@ const shopChampionNames = computed(() =>
   border-radius: var(--bp-radius);
 }
 
-/* Image scale on expand via card-expanded parent */
+/* Image scale on expand via hovered card slot */
 .card-img-scale {
   transition: transform 0.5s ease;
 }
-.card-expanded .card-img-scale {
+.champion-card-slot:hover .card-img-scale {
   transform: scale(1.04);
 }
 
@@ -1646,9 +1642,8 @@ const shopChampionNames = computed(() =>
   padding: 8px;
   z-index: 10;
   transition: transform var(--text-transition-dur) ease;
-  will-change: transform;
 }
-.card-expanded .card-content {
+.champion-card-slot:hover .card-content {
   transform: translateY(-2px);
 }
 
@@ -1656,18 +1651,17 @@ const shopChampionNames = computed(() =>
 .champion-name {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
   transition: transform var(--text-transition-dur) ease, text-shadow var(--text-transition-dur) ease;
-  will-change: transform;
 }
 .champion-name--bright { color: rgba(255, 255, 255, 0.95); }
 .champion-name--dim { color: rgba(255, 255, 255, 0.45); }
-.card-expanded .champion-name--bright {
+.champion-card-slot:hover .champion-name--bright {
   transform: scale(1.08);
   transform-origin: left bottom;
   text-shadow:
     0 2px 8px rgba(0, 0, 0, 0.9),
     0 0 12px rgba(232, 192, 64, 0.25);
 }
-.card-expanded .champion-name--dim {
+.champion-card-slot:hover .champion-name--dim {
   transform: scale(1.06);
   transform-origin: left bottom;
 }
@@ -1792,7 +1786,7 @@ const shopChampionNames = computed(() =>
   margin: 0;
   transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
 }
-.card-expanded .card-traits-section {
+.champion-card-slot:hover .card-traits-section {
   max-height: 120px;
   opacity: 1;
   margin: 4px 0 2px;
@@ -1879,6 +1873,19 @@ const shopChampionNames = computed(() =>
 
 /* ── Tier section spacing (header styles shared in rpg-theme.css → .tier-header*) ── */
 .tier-group + .tier-group { margin-top: 12px; }
+
+/* Offscreen tier sections are neither painted nor layerized while the list
+   scrolls; the browser keeps the last rendered height for stable scrollbars. */
+.tier-group {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}
+/* Hover-expanded cards can spill past the group box (single-row groups expand
+   downward) — lift the paint containment while a card in the group is hovered
+   so the expansion isn't clipped. */
+.tier-group:has(.champion-card-slot:hover) {
+  content-visibility: visible;
+}
 
 /* Smooth expand/collapse. JS hooks (onTierEnter/Leave) animate height between 0
    and scrollHeight, then clear inline styles so the open body is overflow:visible

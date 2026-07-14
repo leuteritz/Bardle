@@ -55,6 +55,9 @@ const emit = defineEmits<{ close: [] }>()
   background: rgba(4, 3, 2, 0.74);
 }
 .tms-panel {
+  /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops
+     (zoom, unlike transform, participates in layout) */
+  zoom: var(--team-ui-scale, 1);
   position: relative;
   display: flex;
   flex-direction: column;
