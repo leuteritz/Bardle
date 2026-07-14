@@ -11,6 +11,7 @@ import {
   STAR_ORBIT_SPEED_RESOURCE,
   STAR_ORBIT_SPEED_CHAMPION,
   STAR_ORBIT_SPEED_GALAXY_BOSS,
+  STAR_ORBIT_SPEED_BOSS_ESCORT,
   PLANET_ORBIT_SPEED_MIN,
   PLANET_ORBIT_SPEED_RANGE,
   PLANET_ORBIT_SPEED_CHAMP_MIN,
@@ -46,6 +47,16 @@ import {
   GALAXY_BOSS_PLANET_ORBIT_RX,
   GALAXY_BOSS_PLANET_ORBIT_RY,
   GALAXY_BOSS_PLANET_ORBIT_TILT,
+  GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX,
+  GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY,
+  GALAXY_BOSS_ESCORT_PLANET_ORBIT_TILT,
+  GALAXY_BOSS_WAVE_SIZE,
+  GALAXY_BOSS_EXTRA_PLANET_MIN,
+  GALAXY_BOSS_EXTRA_PLANET_RANGE,
+  GALAXY_BOSS_ESCORT_PLANET_MIN,
+  GALAXY_BOSS_ESCORT_PLANET_RANGE,
+  GALAXY_BOSS_STAR_COLORS,
+  GALAXY_BOSS_ESCORT_COLORS,
   RESOURCE_STAR_COLORS,
   ROLE_COLORS,
 } from '../config/constants'
@@ -81,25 +92,6 @@ export interface StarGroup {
   starColor: [number, number, number]
 }
 
-const SPECTRAL_STAR_PALETTE: { weight: number; colors: [number, number, number][] }[] = [
-  { weight: 0.30, colors: [[255, 96, 48], [255, 69, 0]] },
-  { weight: 0.30, colors: [[255, 179, 71], [255, 160, 64]] },
-  { weight: 0.20, colors: [[255, 244, 163], [255, 233, 122]] },
-  { weight: 0.12, colors: [[245, 245, 255], [255, 255, 255]] },
-  { weight: 0.08, colors: [[176, 200, 255], [202, 216, 255]] },
-]
-
-function pickStarColor(): [number, number, number] {
-  const rand = Math.random()
-  let cumulative = 0
-  for (const category of SPECTRAL_STAR_PALETTE) {
-    cumulative += category.weight
-    if (rand < cumulative)
-      return category.colors[Math.floor(Math.random() * category.colors.length)]
-  }
-  return SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1].colors[0]
-}
-
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
@@ -131,6 +123,13 @@ export const useStarGroupStore = defineStore('starGroup', {
     hasActiveGalaxyBossStar(): boolean {
       return this.activeStars.some((s) => s.starType === 'galaxy_boss')
     },
+    // Eskorten der aktuellen Welle, die noch kämpfen (bereits besiegte Sterne
+    // hängen bis zum Removal-Delay noch in activeStars → über Slots zählen).
+    aliveBossEscortCount(): number {
+      return this.activeStars.filter(
+        (s) => s.starType === 'boss_escort' && s.planetSlots.some((p) => !p.cleared),
+      ).length
+    },
     currentFightPlanetId(): string | null {
       if (!this.starFightModalOpen || !this.starFightPlanetQueue.length) return null
       return this.starFightPlanetQueue[this.starFightCurrentIndex] ?? null
@@ -145,14 +144,18 @@ export const useStarGroupStore = defineStore('starGroup', {
     openStarFightModal(starId: string) {
       const star = this.activeStars.find((s) => s.id === starId)
       if (!star) return
-      // Champion-Planet immer ans Ende — seine Belohnung ist die letzte des Sterns
+      const bossStore = usePlanetBossStore()
+      // Hauptplanet immer ans Ende — Champion-Rettung bzw. Galaxieboss ist das
+      // Finale des Sterns, seine Belohnung kommt zuletzt
+      const isMainSlot = (s: StarPlanetSlot) =>
+        s.isChampionPlanet ||
+        (bossStore.activeBosses.find((b) => b.planetId === s.planetId)?.isGalaxyBoss ?? false)
       const openSlots = star.planetSlots.filter((s) => !s.cleared)
       const queue = [
-        ...openSlots.filter((s) => !s.isChampionPlanet),
-        ...openSlots.filter((s) => s.isChampionPlanet),
+        ...openSlots.filter((s) => !isMainSlot(s)),
+        ...openSlots.filter(isMainSlot),
       ].map((s) => s.planetId)
       if (!queue.length) return
-      const bossStore = usePlanetBossStore()
       this.starFightModalOpen = true
       this.activeFightStarId = starId
       this.starFightPlanetQueue = queue
@@ -341,11 +344,53 @@ export const useStarGroupStore = defineStore('starGroup', {
 
     spawnGalaxyBossStar() {
       if (this.hasActiveGalaxyBossStar) return
+      // Der Boss ist das Finale: solange noch Eskorten-Wellen ausstehen,
+      // erscheint er nicht (Choreografie siehe useStarSystem-Watcher)
+      if (useGalaxyStore().bossEscortsRemaining > 0) return
       const bossStore = usePlanetBossStore()
 
+      // Boss-Planet (das Finale, in der Fight-Queue immer zuletzt) …
       const config = pickConfig()
       const planetId = `star-planet-${++planetIdCounter}`
-      bossStore.spawnBoss(planetId, config.type, false)
+      bossStore.spawnBoss(planetId, config.type, false, false, false, { isGalaxyBoss: true })
+
+      const planetSlots: StarPlanetSlot[] = [
+        {
+          planetId,
+          type: config.type,
+          isChampionPlanet: false,
+          orbitAngle: 0,
+          orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
+          orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
+          orbitRx: GALAXY_BOSS_PLANET_ORBIT_RX,
+          orbitRy: GALAXY_BOSS_PLANET_ORBIT_RY,
+          orbitTilt: GALAXY_BOSS_PLANET_ORBIT_TILT,
+          cleared: false,
+        },
+      ]
+
+      // … plus zufällig viele Zusatzplaneten wie bei einem Champion-Stern.
+      // Enrage-frei (isBossEscort), damit der Endkampf nicht softlocken kann.
+      const extraCount =
+        GALAXY_BOSS_EXTRA_PLANET_MIN + Math.floor(Math.random() * GALAXY_BOSS_EXTRA_PLANET_RANGE)
+      const totalCount = 1 + extraCount
+      for (let i = 1; i < totalCount; i++) {
+        const extraConfig = pickConfig()
+        const extraId = `star-planet-${++planetIdCounter}`
+        planetSlots.push({
+          planetId: extraId,
+          type: extraConfig.type,
+          isChampionPlanet: false,
+          orbitAngle: (i / totalCount) * Math.PI * 2,
+          orbitSpeed: PLANET_ORBIT_SPEED_EXTRA_MIN + Math.random() * PLANET_ORBIT_SPEED_EXTRA_RANGE,
+          orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
+          orbitRx: EXTRA_PLANET_ORBIT_RX_MIN + Math.random() * EXTRA_PLANET_ORBIT_RX_RANGE,
+          orbitRy: EXTRA_PLANET_ORBIT_RY_MIN + Math.random() * EXTRA_PLANET_ORBIT_RY_RANGE,
+          orbitTilt: Math.random() * EXTRA_PLANET_ORBIT_TILT_MAX,
+          cleared: false,
+        })
+        bossStore.spawnBoss(extraId, extraConfig.type, false, false, false, { isBossEscort: true })
+      }
 
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
@@ -356,24 +401,67 @@ export const useStarGroupStore = defineStore('starGroup', {
         orbitRy: ORBIT_TIERS.star[1].ry,
         orbitTilt: ORBIT_TIERS.star[1].tiltRad,
         orbitSpeed: STAR_ORBIT_SPEED_GALAXY_BOSS,
-        planetSlots: [
-          {
-            planetId,
-            type: config.type,
-            isChampionPlanet: false,
-            orbitAngle: 0,
-            orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
-            orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
-            orbitRx: GALAXY_BOSS_PLANET_ORBIT_RX,
-            orbitRy: GALAXY_BOSS_PLANET_ORBIT_RY,
-            orbitTilt: GALAXY_BOSS_PLANET_ORBIT_TILT,
-            cleared: false,
-          },
-        ],
-        starColor: pickStarColor(),
+        planetSlots,
+        starColor:
+          GALAXY_BOSS_STAR_COLORS[Math.floor(Math.random() * GALAXY_BOSS_STAR_COLORS.length)],
       }
 
       this.activeStars.push(star)
+    },
+
+    // Nächste Eskorten-Welle des Galaxieboss-Endkampfs. Wird reaktiv ausgelöst
+    // (useStarSystem-Watcher), sobald keine Eskorte mehr lebt und laut
+    // galaxyStore noch welche ausstehen — auch nach einem Reload.
+    spawnBossEscortWave() {
+      const galaxyStore = useGalaxyStore()
+      const remaining = galaxyStore.bossEscortsRemaining
+      if (remaining <= 0 || this.aliveBossEscortCount > 0) return
+      const bossStore = usePlanetBossStore()
+
+      const count = Math.min(GALAXY_BOSS_WAVE_SIZE, remaining)
+      const baseAngle = Math.random() * Math.PI * 2
+      for (let i = 0; i < count; i++) {
+        // Jede Eskorte hat zufällig viele Planeten (1-3) auf gestaffelten
+        // Ring-Orbits — enrage-frei wie der ganze Endkampf
+        const planetCount =
+          GALAXY_BOSS_ESCORT_PLANET_MIN +
+          Math.floor(Math.random() * GALAXY_BOSS_ESCORT_PLANET_RANGE)
+        const planetSlots: StarPlanetSlot[] = []
+        for (let p = 0; p < planetCount; p++) {
+          const config = pickConfig()
+          const planetId = `star-planet-${++planetIdCounter}`
+          planetSlots.push({
+            planetId,
+            type: config.type,
+            isChampionPlanet: false,
+            orbitAngle: Math.random() * Math.PI * 2,
+            orbitSpeed: PLANET_ORBIT_SPEED_BOSS,
+            orbitDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
+            orbitRx: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX * (1 + p * 0.6),
+            orbitRy: GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY * (1 + p * 0.6),
+            orbitTilt: GALAXY_BOSS_ESCORT_PLANET_ORBIT_TILT,
+            cleared: false,
+          })
+          bossStore.spawnBoss(planetId, config.type, false, false, false, { isBossEscort: true })
+        }
+
+        // Eskorten flankieren den Boss: gleichmäßig über den engeren Stern-Orbit
+        // verteilt, abwechselnde Laufrichtung
+        const tier = ORBIT_TIERS.star[0]
+        this.activeStars.push({
+          id: `star-${++starIdCounter}`,
+          starType: 'boss_escort',
+          starAngle: baseAngle + (i / count) * Math.PI * 2,
+          starDirection: (i % 2 === 0 ? 1 : -1) as 1 | -1,
+          orbitRx: tier.rx,
+          orbitRy: tier.ry,
+          orbitTilt: tier.tiltRad,
+          orbitSpeed: STAR_ORBIT_SPEED_BOSS_ESCORT,
+          planetSlots,
+          starColor:
+            GALAXY_BOSS_ESCORT_COLORS[Math.floor(Math.random() * GALAXY_BOSS_ESCORT_COLORS.length)],
+        })
+      }
     },
 
     onBossResult(planetId: string) {
@@ -391,15 +479,25 @@ export const useStarGroupStore = defineStore('starGroup', {
             clearTimeout(adminStarTimeouts.get(star.id))
             adminStarTimeouts.delete(star.id)
           }
-          const idx = this.activeStars.indexOf(star)
-          if (idx !== -1) {
-            setTimeout(() => {
-              this.activeStars.splice(idx, 1)
-            }, STAR_REMOVAL_DELAY_MS)
-          }
+          // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
+          // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
+          // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).
+          setTimeout(() => {
+            const currentIdx = this.activeStars.findIndex((s) => s.id === star.id)
+            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
+          }, STAR_REMOVAL_DELAY_MS)
           if (star.starType === 'champion') {
             const galaxyStore = useGalaxyStore()
             galaxyStore.onChampionStarRescued()
+          }
+          if (star.starType === 'boss_escort') {
+            // Eskorten sind enrage-frei → hier zählt immer ein echter Sieg
+            useGalaxyStore().onBossEscortDefeated()
+          }
+          if (star.starType === 'galaxy_boss') {
+            // Der Galaxieboss gilt erst als besiegt, wenn ALLE Planeten seines
+            // Sterns gerettet sind — nicht schon beim Kill des Boss-Planeten
+            useGalaxyStore().onGalaxyBossDefeated()
           }
         }
         return

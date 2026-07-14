@@ -160,6 +160,8 @@ export function usePersistence() {
         mapSeed: galaxyStore.mapSeed,
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
+        bossEscortsTotal: galaxyStore.bossEscortsTotal,
+        bossEscortsDefeated: galaxyStore.bossEscortsDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
@@ -421,6 +423,12 @@ export function usePersistence() {
         galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
+        // Boss-Eskorten-Wellen: alte Saves ohne die Felder → 0/0, damit ist
+        // die Eskorten-Bedingung in isComplete automatisch erfüllt (Legacy-
+        // Verhalten). Die Sterne selbst spawnen nach dem Reload frisch über
+        // den Escort-Wave-Watcher in useStarSystem.
+        galaxyStore.bossEscortsTotal = gx.bossEscortsTotal ?? 0
+        galaxyStore.bossEscortsDefeated = gx.bossEscortsDefeated ?? 0
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
         galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
         galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0

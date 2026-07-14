@@ -167,13 +167,27 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     },
   )
 
+  // Endkampf-Choreografie am Galaxiekern: zuerst kommen die Eskorten-Wellen —
+  // sobald keine Eskorte mehr lebt und noch welche ausstehen, rückt die
+  // nächste Welle an. Erst wenn ALLE Eskorten besiegt sind, erscheint der
+  // Bossstern als Finale. `immediate` deckt den Reload mitten in der
+  // Bossphase ab (activeStars starten dann leer, egal an welchem Punkt).
   watch(
-    () => galaxyStore.pendingGalaxyBoss,
-    (pending) => {
-      if (pending) {
+    () => ({
+      pendingBoss: galaxyStore.pendingGalaxyBoss,
+      phaseActive: galaxyStore.bossPhaseActive,
+      remaining: galaxyStore.bossEscortsRemaining,
+      alive: starGroupStore.aliveBossEscortCount,
+    }),
+    ({ pendingBoss, phaseActive, remaining, alive }) => {
+      if (!phaseActive || alive > 0) return
+      if (remaining > 0) {
+        starGroupStore.spawnBossEscortWave()
+      } else if (pendingBoss) {
         starGroupStore.spawnGalaxyBossStar()
       }
     },
+    { immediate: true },
   )
 
   watch(
@@ -332,7 +346,14 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       if (allSlotsCleared) {
         if (!vanishFired.has(star.id)) {
           vanishFired.add(star.id)
-          const size = star.starType === 'galaxy_boss' ? 82 : star.starType === 'champion' ? 72 : 62
+          const size =
+            star.starType === 'galaxy_boss'
+              ? 96
+              : star.starType === 'champion'
+                ? 72
+                : star.starType === 'boss_escort'
+                  ? 54
+                  : 62
           spawnVanishEffect(sx, sy, star.starColor, size)
         }
         continue

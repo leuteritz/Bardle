@@ -15,7 +15,11 @@
 
           <!-- ── Rescue progress: saved / required champion stars ── -->
           <div
-            v-if="!galaxyStore.isComplete && !galaxyStore.isGalaxyTransitioning"
+            v-if="
+              !galaxyStore.isComplete &&
+              !galaxyStore.isGalaxyTransitioning &&
+              !galaxyStore.bossPhaseActive
+            "
             class="star-progress"
           >
             <div class="star-progress-row">
@@ -26,6 +30,30 @@
               >
             </div>
             <div class="star-progress-label">Stars rescued</div>
+          </div>
+
+          <!-- ── Boss phase: wave + remaining enemies at the galaxy core ── -->
+          <div
+            v-if="galaxyStore.bossPhaseActive && !galaxyStore.isGalaxyTransitioning"
+            class="star-progress star-progress--boss"
+          >
+            <div class="star-progress-row">
+              <span class="boss-wave-icon">☄</span>
+              <span v-if="galaxyStore.bossEscortsRemaining > 0" class="star-progress-value"
+                >Wave {{ galaxyStore.currentBossWave
+                }}<span class="star-progress-sep">/</span>{{ galaxyStore.bossWavesTotal }}</span
+              >
+              <span v-else class="star-progress-value">BOSS</span>
+            </div>
+            <div class="star-progress-label">
+              {{
+                galaxyStore.bossEscortsRemaining > 0
+                  ? `${galaxyStore.bossEscortsRemaining} escort${
+                      galaxyStore.bossEscortsRemaining === 1 ? '' : 's'
+                    } left`
+                  : 'Defeat the Boss!'
+              }}
+            </div>
           </div>
 
           <!-- ── Minimap-Stern Interaktionsbereich (Arrival-View) ── -->
@@ -127,9 +155,9 @@ export default defineComponent({
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
-          !galaxyStore.pendingGalaxyBoss &&
+          !galaxyStore.bossPhaseActive &&
           !galaxyStore.isComplete) ||
-        galaxyStore.pendingGalaxyBoss ||
+        galaxyStore.bossPhaseActive ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
     )
@@ -309,6 +337,32 @@ export default defineComponent({
   letter-spacing: 0.06em;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Boss-phase variant: magenta wave counter at the same HUD slot ── */
+.star-progress--boss .star-progress-value {
+  font-size: 26px;
+  color: #ff64c8;
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.95),
+    0 0 16px rgba(255, 100, 200, 0.35);
+}
+
+.star-progress--boss .star-progress-sep {
+  color: rgba(255, 100, 200, 0.55);
+}
+
+.star-progress--boss .star-progress-label {
+  color: rgba(255, 120, 200, 0.78);
+}
+
+.boss-wave-icon {
+  font-size: 24px;
+  line-height: 1;
+  color: #ff64c8;
+  text-shadow:
+    0 0 10px rgba(255, 100, 200, 0.65),
+    0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Minimap-Stern Hit-Area (Arrival View) ── */

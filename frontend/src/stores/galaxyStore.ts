@@ -15,6 +15,10 @@ import {
   GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
   GALAXY_STAR_FAILED_SIGNAL_MS,
   GALAXY_BOSS_SPAWN_ANIM_MS,
+  GALAXY_BOSS_ESCORT_BASE,
+  GALAXY_BOSS_ESCORT_PER_GALAXY,
+  GALAXY_BOSS_ESCORT_MAX,
+  GALAXY_BOSS_WAVE_SIZE,
   MAX_STAR_LEVEL,
   TIER_UNLOCK_CHIMES_BASE,
   TIER_UNLOCK_CHIMES_GROWTH,
@@ -33,6 +37,15 @@ export interface TierUnlockCost {
 
 function computeRequired(galaxy: number): number {
   return GALAXY_STARS_BASE_REQUIRED + (galaxy - 1)
+}
+
+// Eskorten-Sterne, die zusammen mit dem Galaxieboss auftauchen — frühe
+// Galaxien wenige, später mehr (exportiert für Tests).
+export function computeBossEscortCount(galaxy: number): number {
+  return Math.min(
+    GALAXY_BOSS_ESCORT_BASE + (galaxy - 1) * GALAXY_BOSS_ESCORT_PER_GALAXY,
+    GALAXY_BOSS_ESCORT_MAX,
+  )
 }
 
 // ── Galaxy Tier helpers (pure, exported for tests) ──────────────────────────
@@ -89,6 +102,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     tierJustUnlocked: false, // transient flag → UI plays the unlock celebration, then resets
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
+    // ── Boss-Eskorten-Wellen ──
+    // Beim Erreichen des Galaxiekerns initialisiert; die Eskorten spawnen in
+    // Wellen à GALAXY_BOSS_WAVE_SIZE (siehe starGroupStore.spawnBossEscortWave).
+    bossEscortsTotal: 0,
+    bossEscortsDefeated: 0,
     // After the last champion star: the ship flies to the FIXED boss star at
     // the galaxy core (same travel flow as a champion star). Replaces the old
     // random boss-search phase.
@@ -124,7 +142,38 @@ export const useGalaxyStore = defineStore('galaxy', {
 
   getters: {
     isComplete(): boolean {
-      return this.starsRescued >= this.starsRequired && this.galaxyBossDefeated
+      return (
+        this.starsRescued >= this.starsRequired &&
+        this.galaxyBossDefeated &&
+        this.bossEscortsDefeated >= this.bossEscortsTotal
+      )
+    },
+
+    bossEscortsRemaining(): number {
+      return Math.max(0, this.bossEscortsTotal - this.bossEscortsDefeated)
+    },
+
+    // Aktive Endkampf-Phase am Galaxiekern: vom Boss-Spawn bis Boss UND alle
+    // Eskorten besiegt sind. Deckt auch den Zwischenzustand "Boss tot, aber
+    // Eskorten leben noch" ab (dort ist pendingGalaxyBoss bereits false).
+    bossPhaseActive(): boolean {
+      return (
+        (this.pendingGalaxyBoss || this.galaxyBossDefeated) &&
+        this.starsRescued >= this.starsRequired &&
+        !this.isComplete
+      )
+    },
+
+    bossWavesTotal(): number {
+      return Math.ceil(this.bossEscortsTotal / GALAXY_BOSS_WAVE_SIZE)
+    },
+
+    currentBossWave(): number {
+      if (this.bossEscortsTotal <= 0) return 0
+      return Math.min(
+        this.bossWavesTotal,
+        Math.floor(this.bossEscortsDefeated / GALAXY_BOSS_WAVE_SIZE) + 1,
+      )
     },
 
     // ── Galaxy Tier getters ──
@@ -236,6 +285,7 @@ export const useGalaxyStore = defineStore('galaxy', {
           // Reached the galaxy core → the boss star spawns right there
           this.travelingToGalaxyBoss = false
           this.championTravelState = 'idle'
+          this.initBossWave()
           this.pendingGalaxyBoss = true
           this.galaxyBossJustSpawned = true
           setTimeout(() => {
@@ -324,6 +374,15 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.pendingGalaxyBoss = false
     },
 
+    initBossWave() {
+      this.bossEscortsTotal = computeBossEscortCount(this.currentGalaxy)
+      this.bossEscortsDefeated = 0
+    },
+
+    onBossEscortDefeated() {
+      if (this.bossEscortsDefeated < this.bossEscortsTotal) this.bossEscortsDefeated++
+    },
+
     setGalaxyTransitioning(val: boolean) {
       this.isGalaxyTransitioning = val
     },
@@ -360,6 +419,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.mapSeed = Math.floor(Math.random() * 0xffffffff)
       this.galaxyBossDefeated = false
       this.pendingGalaxyBoss = false
+      this.bossEscortsTotal = 0
+      this.bossEscortsDefeated = 0
       this.travelingToGalaxyBoss = false
       this.pendingTransition = false
       this.pendingRoleSelection = false

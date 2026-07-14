@@ -190,8 +190,15 @@ const starRemaining = computed<{ secs: number; pct: number } | null>(() => {
   return { secs: Math.ceil(rem / 1000), pct: (rem / star.durationMs) * 100 }
 })
 
+// Galaxieboss + Eskorten enragen nie (siehe planetBossStore.checkEnrage) —
+// ein ablaufender Ring ohne Konsequenz wäre nur irreführend.
+const isEnrageFreeBoss = computed<boolean>(
+  () => !!(activeBoss.value?.isGalaxyBoss || activeBoss.value?.isBossEscort),
+)
+
 const showEnrageTimer = computed<boolean>(
-  () => !isChampionStarPlanet.value || starRemaining.value !== null,
+  () =>
+    !isEnrageFreeBoss.value && (!isChampionStarPlanet.value || starRemaining.value !== null),
 )
 const effectiveSecondsRemaining = computed<number>(() =>
   isChampionStarPlanet.value ? (starRemaining.value?.secs ?? 0) : secondsRemaining.value,

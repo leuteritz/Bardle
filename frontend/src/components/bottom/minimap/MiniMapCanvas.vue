@@ -736,9 +736,9 @@ export default defineComponent({
         ((galaxyStore.championTravelState === 'traveling' ||
           galaxyStore.championTravelState === 'champion_available' ||
           galaxyStore.championTravelState === 'champion_spawned') &&
-          !galaxyStore.pendingGalaxyBoss &&
+          !galaxyStore.bossPhaseActive &&
           !galaxyStore.isComplete) ||
-        galaxyStore.pendingGalaxyBoss ||
+        galaxyStore.bossPhaseActive ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
     )
@@ -871,7 +871,7 @@ export default defineComponent({
 
     function getPlayerWorldPos(dots: DotPos[], attempts: number): { x: number; y: number } {
       // Docked at the boss star in the galaxy core
-      if (galaxyStore.pendingGalaxyBoss || galaxyStore.isComplete) return { x: 0.5, y: 0.5 }
+      if (galaxyStore.bossPhaseActive || galaxyStore.isComplete) return { x: 0.5, y: 0.5 }
       const from = attempts > 0 && dots.length >= attempts ? dots[attempts - 1] : spawnPos.value
       if (galaxyStore.isRescueRotating) return from
       const target = galaxyStore.travelingToGalaxyBoss
@@ -1699,7 +1699,7 @@ export default defineComponent({
         !galaxyStore.isRescueRotating &&
         !galaxyStore.pendingRoleSelection
 
-      if (galaxyStore.pendingGalaxyBoss && !galaxyStore.isComplete) {
+      if (galaxyStore.bossPhaseActive) {
         // Docked at the boss star → hold the zoom on the galaxy core
         dz = MINIMAP_ZOOM_MAX
         dx = 0.5

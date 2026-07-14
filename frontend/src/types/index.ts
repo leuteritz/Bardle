@@ -149,7 +149,7 @@ export type PlanetType =
   | 'jungle'
   | 'ringed'
 
-export type StarType = 'champion' | 'resource' | 'galaxy_boss'
+export type StarType = 'champion' | 'resource' | 'galaxy_boss' | 'boss_escort'
 
 export interface LabelData {
   planetId: string
@@ -252,6 +252,7 @@ export interface PlanetBossEvent {
   noEnrage?: boolean
   homePlanetChampion?: string
   isGalaxyBoss?: boolean
+  isBossEscort?: boolean
   isChampionPlanet?: boolean
   isChampionEscort?: boolean
   sectionId?: number

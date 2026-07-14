@@ -79,7 +79,7 @@
             :class="`star-body--${star.starType}`"
             :style="starBodyVisualStyle(star)"
             role="button"
-            :aria-label="`${star.starType === 'galaxy_boss' ? 'Galaxy Boss' : star.starType === 'champion' ? 'Champion' : 'Resource'} Star – Boss-Fight starten`"
+            :aria-label="`${star.starType === 'galaxy_boss' ? 'Galaxy Boss' : star.starType === 'boss_escort' ? 'Boss Escort' : star.starType === 'champion' ? 'Champion' : 'Resource'} Star – Boss-Fight starten`"
             tabindex="0"
           >
             <div class="star-pulse-overlay" />
@@ -864,7 +864,10 @@ function starSize(type: string): number {
   const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
   if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
   if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
-  return 46 * sunScale
+  // Endkampf-Sterne skalieren zwar mit der Sonne, haben aber eine Mindestgröße —
+  // der Galaxieboss soll auch bei kleiner Sonne episch wirken.
+  if (type === 'boss_escort') return Math.max(30 * sunScale, 20)
+  return Math.max(58 * sunScale, 46)
 }
 
 function starBoxShadow(starColor: [number, number, number], s: number): string {
@@ -1128,14 +1131,84 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+/* ── Galaxieboss: episches Doppelring- + Corona-Styling ─────────────────────
+   Alle Animationen laufen über transform/opacity auf eigenen Pseudo-Layern —
+   Compositor-only, keine Repaints pro Frame. */
 .star-body--galaxy_boss::after {
   content: '';
   position: absolute;
   inset: var(--ring-inset, -14px);
   border-radius: 50%;
-  border: 2px solid rgba(var(--star-rgb), 0.55);
-  animation: star-ring-pulse 2.2s ease-in-out infinite;
+  border: 2.5px solid rgba(var(--star-rgb), 0.75);
+  box-shadow:
+    0 0 12px rgba(var(--star-rgb), 0.55),
+    inset 0 0 10px rgba(var(--star-rgb), 0.4);
+  animation: star-ring-pulse 1.6s ease-in-out infinite;
   pointer-events: none;
+}
+
+/* Rotierende Corona: conic-gradient-Speichen, die langsam ums Zentrum kreisen */
+.star-body--galaxy_boss::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--ring-inset, -14px) * 2.4);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--star-rgb), 0.5) 0deg,
+    transparent 30deg,
+    rgba(var(--star-rgb), 0.28) 60deg,
+    transparent 95deg,
+    rgba(var(--star-rgb), 0.5) 120deg,
+    transparent 150deg,
+    rgba(var(--star-rgb), 0.28) 180deg,
+    transparent 215deg,
+    rgba(var(--star-rgb), 0.5) 240deg,
+    transparent 270deg,
+    rgba(var(--star-rgb), 0.28) 300deg,
+    transparent 335deg,
+    rgba(var(--star-rgb), 0.5) 360deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
+  mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
+  animation: galaxy-boss-corona-spin 9s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+
+@keyframes galaxy-boss-corona-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Herzschlag des Bosses: schnellerer, härterer Kern-Puls als bei normalen Sternen */
+.star-body--galaxy_boss .star-pulse-overlay {
+  animation-duration: 1.4s;
+}
+
+/* Eskorten: kleiner, aggressiver Warnring */
+.star-body--boss_escort::after {
+  content: '';
+  position: absolute;
+  inset: var(--ring-inset, -8px);
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--star-rgb), 0.65);
+  animation: star-ring-pulse 1.3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.star-body--boss_escort .star-pulse-overlay {
+  animation-duration: 1.8s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-body--galaxy_boss::before {
+    animation: none;
+  }
 }
 
 @keyframes star-ring-pulse {

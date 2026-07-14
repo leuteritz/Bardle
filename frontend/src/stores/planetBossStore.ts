@@ -96,6 +96,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       isChampionPlanet = false,
       noEnrage = false,
       isChampionEscort = false,
+      opts: { isGalaxyBoss?: boolean; isBossEscort?: boolean } = {},
     ) {
       const gameStore = useGameStore()
 
@@ -234,7 +235,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         expired: false,
         ...(noEnrage && { noEnrage: true }),
         ...(homePlanetChampion && { homePlanetChampion }),
-        ...(galaxyStore.pendingGalaxyBoss && { isGalaxyBoss: true }),
+        ...(opts.isGalaxyBoss && { isGalaxyBoss: true }),
+        ...(opts.isBossEscort && { isBossEscort: true }),
         ...(isChampionPlanet && { isChampionPlanet: true }),
         ...(isChampionEscort && { isChampionEscort: true }),
         sectionId: sectionStore.activeSectionId,
@@ -345,6 +347,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (boss.isChampionPlanet) continue
         if (boss.isChampionEscort) continue
+        // Endkampf am Galaxiekern kennt kein Enrage: Boss und Eskorten bleiben,
+        // bis sie besiegt sind — sonst droht ein Softlock der Galaxie.
+        if (boss.isGalaxyBoss || boss.isBossEscort) continue
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 
@@ -429,11 +434,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
       const sectionStore = useSectionStore()
       sectionStore.onBossDefeated()
-
-      const galaxyStore = useGalaxyStore()
-      if (galaxyStore.pendingGalaxyBoss) {
-        galaxyStore.onGalaxyBossDefeated()
-      }
+      // Galaxieboss-Sieg wird NICHT hier gemeldet, sondern in
+      // starGroupStore.onBossResult, sobald der ganze Bossstern geräumt ist —
+      // der Bossstern hat mehrere Planeten, der Boss-Kill allein reicht nicht.
     },
 
     openBossModal(planetId?: string) {
@@ -452,6 +455,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
 
         if (boss.isChampionPlanet) continue
         if (boss.isChampionEscort) continue
+        // Endkampf am Galaxiekern kennt kein Enrage: Boss und Eskorten bleiben,
+        // bis sie besiegt sind — sonst droht ein Softlock der Galaxie.
+        if (boss.isGalaxyBoss || boss.isBossEscort) continue
 
         if (starGroupStore.starFightModalOpen && boss.planetId !== this.selectedBossId) continue
 

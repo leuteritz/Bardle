@@ -104,6 +104,7 @@ import { useRoleBehaviorStore } from '../../stores/roleBehaviorStore'
 import { ROLE_MID_CURSE_DURATION_MS, ROLE_COLORS } from '../../config/constants'
 import { CHAMPION_ROLES } from '../../config/championRoles'
 import type { StarGroup } from '../../stores/starGroupStore'
+import type { StarType } from '../../types'
 
 const starGroupStore = useStarGroupStore()
 const planetBossStore = usePlanetBossStore()
@@ -129,7 +130,7 @@ interface Palette {
 
 interface BarEntry {
   starId: string
-  starType: 'resource' | 'champion' | 'galaxy_boss'
+  starType: StarType
   isChampion: boolean
   valueStr: string
   secondsInt: number
@@ -202,7 +203,7 @@ function getBossRemainingMs(planetId: string): number | null {
 }
 
 function getSharedStarRemainingMs(star: {
-  starType: 'resource' | 'champion' | 'galaxy_boss'
+  starType: StarType
   planetSlots: { planetId: string; cleared: boolean }[]
   spawnedAt?: number
   durationMs?: number

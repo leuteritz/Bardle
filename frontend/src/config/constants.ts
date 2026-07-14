@@ -616,6 +616,7 @@ export const STAR_SPAWN_FLY_EASING = 5 // cubic ease-out exponent (higher = more
 export const STAR_ORBIT_SPEED_RESOURCE = 0.000084 // resource star around sun
 export const STAR_ORBIT_SPEED_CHAMPION = 0.000044 // champion star around sun
 export const STAR_ORBIT_SPEED_GALAXY_BOSS = 0.000024 // galaxy boss star around sun
+export const STAR_ORBIT_SPEED_BOSS_ESCORT = 0.00006 // boss escort stars around sun
 export const PLANET_ORBIT_SPEED_MIN = 0.0019 // resource/extra planet min speed
 export const PLANET_ORBIT_SPEED_RANGE = 0.001 // resource/extra planet random range
 export const PLANET_ORBIT_SPEED_CHAMP_MIN = 0.0018 // champion planet min speed
@@ -1362,6 +1363,40 @@ export const GALAXY_BOSS_STAR_ORBIT_TILT = 0.14
 export const GALAXY_BOSS_PLANET_ORBIT_RX = 38
 export const GALAXY_BOSS_PLANET_ORBIT_RY = 22
 export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
+
+// ── Galaxy-Boss Eskorten-Wellen ───────────────────────────────────────────
+// Gesamtzahl der Eskorten-Sterne pro Galaxie: BASE + (galaxy-1) * PER_GALAXY,
+// gedeckelt bei MAX. Sie erscheinen in Wellen à WAVE_SIZE — es sind also nie
+// mehr als WAVE_SIZE Eskorten + Boss gleichzeitig im DOM (FPS-Schutz).
+export const GALAXY_BOSS_ESCORT_BASE = 2
+export const GALAXY_BOSS_ESCORT_PER_GALAXY = 1
+export const GALAXY_BOSS_ESCORT_MAX = 12
+export const GALAXY_BOSS_WAVE_SIZE = 3
+export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_RX = 30
+export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_RY = 17
+export const GALAXY_BOSS_ESCORT_PLANET_ORBIT_TILT = 0.12
+
+// Planeten-Anzahl im Endkampf — wie bei normalen Sternen zufällig:
+// Bossstern: 1 Boss-Planet + MIN..MIN+RANGE-1 Zusatzplaneten (3-4 Fights),
+// Eskorten: MIN..MIN+RANGE-1 Planeten (1-3 Fights).
+export const GALAXY_BOSS_EXTRA_PLANET_MIN = 2
+export const GALAXY_BOSS_EXTRA_PLANET_RANGE = 2
+export const GALAXY_BOSS_ESCORT_PLANET_MIN = 1
+export const GALAXY_BOSS_ESCORT_PLANET_RANGE = 3
+
+// Der Bossstern zieht aus einer eigenen, epischen Palette statt der normalen
+// Spektralfarben — tiefes Magenta/Violett hebt ihn von allen anderen ab.
+export const GALAXY_BOSS_STAR_COLORS: [number, number, number][] = [
+  [255, 72, 190],
+  [186, 85, 255],
+  [255, 96, 96],
+]
+// Eskorten: bedrohliche Rot-/Glut-Töne
+export const GALAXY_BOSS_ESCORT_COLORS: [number, number, number][] = [
+  [255, 74, 58],
+  [255, 122, 40],
+  [214, 52, 132],
+]
 
 /** Role UI colors derived from ROLES[].color — for ChampionSelector, Event Log, etc. */
 export const ROLE_COLORS = Object.fromEntries(ROLES.map((r) => [r.key, r.color])) as Record<

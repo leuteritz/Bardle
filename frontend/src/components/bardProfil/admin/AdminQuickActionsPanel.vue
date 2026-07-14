@@ -12,9 +12,11 @@ import { CHAMPION_ROLES } from '@/config/championRoles'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { useItemStore } from '@/stores/itemStore'
+import { usePlanetBossStore } from '@/stores/planetBossStore'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
   ALLIES_PER_ROLE,
+  GALAXY_BOSS_SPAWN_ANIM_MS,
   createEmptyAllyRows,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
@@ -28,6 +30,7 @@ const galaxyStore = useGalaxyStore()
 const { triggerNow: triggerNebula } = useNebulaTrigger()
 const roleBehaviorStore = useRoleBehaviorStore()
 const itemStore = useItemStore()
+const planetBossStore = usePlanetBossStore()
 
 const editingKey = ref<string | null>(null)
 const editingValue = ref<string>('')
@@ -152,15 +155,53 @@ function spawnStar() {
   starGroupStore.forceSpawnResourceStar()
 }
 
-function spawnGalaxyBoss() {
+// Springt ans Ende der aktuellen Galaxie: alle Rettungssterne gelten als
+// gerettet, das Schiff steht am Galaxiekern und die komplette Boss-Mechanik
+// (Bossstern + Eskorten-Wellen) startet sofort. Erneuter Klick setzt die
+// Bossphase zurück und startet sie frisch — zum schnellen Testen.
+function startBossPhase() {
+  // Laufende Kämpfe schließen und alle aktiven Sterne samt Bossen entfernen
+  starGroupStore.closeStarFightModal()
+  for (const star of starGroupStore.activeStars) {
+    for (const slot of star.planetSlots) planetBossStore.removeBoss(slot.planetId)
+  }
+  starGroupStore.clearAll()
+
+  // Alle Rettungssterne der Galaxie gelten als gerettet (Minimap: ✦-Marker)
+  galaxyStore.starsRescued = galaxyStore.starsRequired
+  galaxyStore.attemptResults = Array.from(
+    { length: galaxyStore.starsRequired },
+    () => 'rescued' as const,
+  )
+
+  // Reise-/Rollenzustand beenden — das Schiff steht direkt am Galaxiekern
+  galaxyStore.pendingRoleSelection = false
+  galaxyStore.travelPendingAfterRotation = false
+  galaxyStore.rescueRotationPhase = 'idle'
+  galaxyStore.championTravelState = 'idle'
+  galaxyStore.travelingToGalaxyBoss = false
+  galaxyStore.resourceStarActive = false
+  galaxyStore.pendingResourceStars = 0
+  galaxyStore.pendingChampionStar = false
+  galaxyStore.galaxyBossDefeated = false
+
+  // Bossphase einleiten — wie tickChampionTravel bei der Kern-Ankunft.
+  // Zuerst kommen die Eskorten-Wellen; der Bossstern erscheint als Finale
+  // automatisch (useStarSystem-Watcher), sobald alle Eskorten besiegt sind.
+  galaxyStore.initBossWave()
   galaxyStore.pendingGalaxyBoss = true
-  starGroupStore.spawnGalaxyBossStar()
+  galaxyStore.galaxyBossJustSpawned = true
+  setTimeout(() => {
+    galaxyStore.galaxyBossJustSpawned = false
+  }, GALAXY_BOSS_SPAWN_ANIM_MS)
+  starGroupStore.spawnBossEscortWave()
 }
 
 function forceCompleteGalaxy() {
   galaxyStore.starsRescued = galaxyStore.starsRequired
   galaxyStore.galaxyBossDefeated = true
   galaxyStore.pendingGalaxyBoss = false
+  galaxyStore.bossEscortsDefeated = galaxyStore.bossEscortsTotal
 }
 
 function forcePrestige() {
@@ -299,9 +340,9 @@ function resetAllCooldowns() {
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"
-        @click="spawnGalaxyBoss"
+        @click="startBossPhase"
       >
-        <Icon icon="game-icons:alien-bug" class="admin-btn-icon" /> Spawn Galaxy Boss
+        <Icon icon="game-icons:alien-bug" class="admin-btn-icon" /> Start Boss Phase
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy flex items-center gap-1.5 px-3 py-1.5"
