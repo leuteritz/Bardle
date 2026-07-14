@@ -153,17 +153,17 @@
         >
           <div class="summary-inner">
             <div v-if="getStarRewardSummary(star).champion" class="summary-champion" :style="getChampionRoleStyles(getStarRewardSummary(star).champion!.name)">
-              <span class="summary-champion__crown">♛</span>
-              <div class="summary-champion__icon-wrap">
-                <img
-                  :src="getStarRewardSummary(star).champion!.image"
-                  :alt="getStarRewardSummary(star).champion!.name"
-                  class="summary-champion__icon"
-                />
-              </div>
-              <span class="summary-champion__name">{{
-                getStarRewardSummary(star).champion!.name
-              }}</span>
+              <img
+                :src="getStarRewardSummary(star).champion!.image"
+                :alt="getStarRewardSummary(star).champion!.name"
+                class="summary-champion__portrait"
+              />
+              <span class="summary-champion__text">
+                <span class="summary-champion__eyebrow">Champion</span>
+                <span class="summary-champion__name">{{
+                  getStarRewardSummary(star).champion!.name
+                }}</span>
+              </span>
             </div>
 
             <div
@@ -1135,8 +1135,11 @@ function starCountStyle(star: StarRenderEntry) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
+  /* Basis-Schriftgröße skaliert mit dem Viewport, alle inneren Größen hängen
+     per em daran: ~11.8px @1440 (MacBook), ~13.4px @1920, ~15px ab 2560 */
+  font-size: clamp(0.65rem, 0.35vw + 0.42rem, 0.95rem);
+  gap: 0.45em;
+  padding: 0.55em 0.9em;
   border-radius: 4px;
   background: linear-gradient(160deg, #0e0b1a 0%, #111008 100%);
   border: 1px solid rgba(232, 192, 64, 0.45);
@@ -1189,24 +1192,24 @@ function starCountStyle(star: StarRenderEntry) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 0.35em;
 }
 
 .summary-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.35em;
 }
 
 .summary-icon {
-  width: 28px;
-  height: 28px;
+  width: 2em;
+  height: 2em;
   object-fit: contain;
   filter: drop-shadow(0 0 4px rgba(232, 192, 64, 0.6));
 }
 
 .summary-count {
-  font-size: 0.85rem;
+  font-size: 1em;
   font-weight: 700;
   color: #e8c040;
   white-space: nowrap;
@@ -1228,57 +1231,76 @@ function starCountStyle(star: StarRenderEntry) {
 .summary-champion {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.6em;
+  padding: 0.1em 0.2em;
 }
 
-.summary-champion__crown {
-  font-size: 13px;
-  color: var(--champ-color, #e8c040);
-  text-shadow: 0 0 8px var(--champ-glow, rgba(232, 192, 64, 0.85));
+.summary-champion__portrait {
+  width: 3.4em;
+  height: 3.4em;
   flex-shrink: 0;
-}
-
-.summary-champion__icon-wrap {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid var(--champ-color, rgba(232, 192, 64, 0.8));
-  box-shadow:
-    0 0 10px var(--champ-glow, rgba(232, 192, 64, 0.5)),
-    0 0 20px var(--champ-glow-dim, rgba(232, 192, 64, 0.25));
-  flex-shrink: 0;
-  animation: champIconPulse 2.2s ease-in-out infinite;
-}
-
-.summary-champion__icon {
-  width: 100%;
-  height: 100%;
   object-fit: cover;
-  object-position: top;
+  object-position: center top;
+  border-radius: 0.55em;
+  border: 1px solid var(--champ-color, rgba(232, 192, 64, 0.8));
+  box-shadow:
+    0 0 12px var(--champ-glow, rgba(232, 192, 64, 0.45)),
+    0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
-.summary-champion__name {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--champ-color, #e8c040);
-  letter-spacing: 0.06em;
+.summary-champion__text {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.summary-champion__eyebrow {
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  text-shadow: 0 0 6px var(--champ-glow, rgba(232, 192, 64, 0.5));
+  color: var(--champ-color, #e8c040);
+  opacity: 0.75;
+  text-shadow: 0 0 8px var(--champ-glow, rgba(232, 192, 64, 0.5));
   white-space: nowrap;
 }
 
-@keyframes champIconPulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 10px var(--champ-glow),
-      0 0 20px var(--champ-glow-dim);
+.summary-champion__name {
+  font-size: 1.35em;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.05;
+  white-space: nowrap;
+  background: linear-gradient(
+    105deg,
+    color-mix(in srgb, var(--champ-color, #e8c040), #fff 35%) 0%,
+    var(--champ-color, #e8c040) 40%,
+    color-mix(in srgb, var(--champ-color, #e8c040), #fff 78%) 50%,
+    var(--champ-color, #e8c040) 60%,
+    color-mix(in srgb, var(--champ-color, #e8c040), #fff 35%) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: champ-shimmer-star 3s linear infinite;
+  filter: drop-shadow(0 0 10px var(--champ-glow, rgba(232, 192, 64, 0.5)))
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+
+@keyframes champ-shimmer-star {
+  from {
+    background-position: 220% 0;
   }
-  50% {
-    box-shadow:
-      0 0 16px var(--champ-glow-bright),
-      0 0 32px var(--champ-glow-mid);
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary-champion__name {
+    animation: none;
   }
 }
 
@@ -1301,10 +1323,13 @@ function starCountStyle(star: StarRenderEntry) {
   display: inline-flex;
   align-items: baseline;
   gap: 1px;
+  /* Basis-Schriftgröße skaliert mit dem Viewport (siehe .summary-inner):
+     ~12.2px @1440, ~14px @1920, capped bei 16px */
+  font-size: clamp(0.68rem, 0.4vw + 0.42rem, 1rem);
   background: rgba(8, 5, 18, 0.82);
   border: 1px solid rgba(232, 192, 64, 0.55);
   border-radius: 4px;
-  padding: 2px 7px;
+  padding: 0.15em 0.55em;
 }
 
 /* Border-Puls über Opacity eines Overlays statt border-color-Animation —
@@ -1331,7 +1356,7 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 .star-planet-count__current {
-  font-size: clamp(1.2rem, 1.9vw, 1.9rem);
+  font-size: 1.45em;
   font-weight: 700;
   color: #e8c040;
   letter-spacing: 0.04em;
@@ -1342,7 +1367,7 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 .star-planet-count__sep {
-  font-size: clamp(0.85rem, 1.3vw, 1.3rem);
+  font-size: 1.05em;
   font-weight: 700;
   color: #e8c040;
   opacity: 0.45;
@@ -1354,7 +1379,7 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 .star-planet-count__total {
-  font-size: clamp(0.85rem, 1.3vw, 1.3rem);
+  font-size: 1.05em;
   font-weight: 700;
   color: #e8c040;
   opacity: 0.4;
