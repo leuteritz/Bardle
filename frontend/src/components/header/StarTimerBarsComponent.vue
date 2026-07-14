@@ -8,6 +8,8 @@
         :class="{
           'timer-bar-row--cursed': entry.isCursed,
           'timer-bar-row--champion': entry.isChampion,
+          'timer-bar-row--escort': entry.starType === 'boss_escort',
+          'timer-bar-row--boss': entry.starType === 'galaxy_boss',
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="{
@@ -37,6 +39,7 @@
             :style="{ '--fill': entry.fillRatio }"
           >
             <span
+              v-if="!entry.timeless"
               class="bar-seconds-label bar-seconds-label--left"
               :style="{
                 '--label-color': entry.palette.mid,
@@ -53,6 +56,17 @@
               />
             </div>
           </div>
+          <!-- Endkampf: Typ-Label mittig auf der Seitenfüllung — die
+               Bildschirmmitte gehört dem Header-Oval + Level-Badge -->
+          <span
+            v-if="entry.timeless"
+            class="bar-type-label"
+            :style="{
+              '--label-color': entry.palette.inner,
+              '--label-glow': entry.palette.glow,
+            }"
+            >{{ entry.starType === 'galaxy_boss' ? '✦ GALAXY BOSS ✦' : '☄ ESCORT' }}</span
+          >
         </div>
 
         <div class="bar-center" />
@@ -74,6 +88,7 @@
             :style="{ '--fill': entry.fillRatio }"
           >
             <span
+              v-if="!entry.timeless"
               class="bar-seconds-label bar-seconds-label--right"
               :style="{
                 '--label-color': entry.palette.mid,
@@ -90,6 +105,15 @@
               />
             </div>
           </div>
+          <span
+            v-if="entry.timeless"
+            class="bar-type-label"
+            :style="{
+              '--label-color': entry.palette.inner,
+              '--label-glow': entry.palette.glow,
+            }"
+            >{{ entry.starType === 'galaxy_boss' ? '✦ GALAXY BOSS ✦' : '☄ ESCORT' }}</span
+          >
         </div>
       </div>
     </TransitionGroup>
@@ -132,6 +156,9 @@ interface BarEntry {
   starId: string
   starType: StarType
   isChampion: boolean
+  // Endkampf-Bars (Eskorten + Galaxieboss) laufen nicht ab: volle statische
+  // Füllung, kein Sekunden-Label — nur Planeten-Punkte und Klick zum Kampf.
+  timeless: boolean
   valueStr: string
   secondsInt: number
   fillRatio: number
@@ -175,12 +202,18 @@ function hexToRgb(hex: string): [number, number, number] {
 
 function roleColorToPalette(hex: string): Palette {
   const [r, g, b] = hexToRgb(hex)
+  return rgbToPalette([r, g, b])
+}
+
+// Endkampf-Bars färben sich nach der tatsächlichen Sternfarbe (Eskorten-Glut
+// bzw. Boss-Magenta) — Bar und Stern lesen sich als ein Gegner.
+function rgbToPalette([r, g, b]: [number, number, number]): Palette {
   const cap = (v: number) => Math.min(255, Math.round(v))
   const toHex = (r: number, g: number, b: number) =>
     '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')
   return {
     outer: toHex(cap(r * 0.6), cap(g * 0.6), cap(b * 0.6)),
-    mid: hex,
+    mid: toHex(r, g, b),
     inner: toHex(cap(r * 1.5), cap(g * 1.5), cap(b * 1.5)),
     glow: `rgba(${r}, ${g}, ${b}, 0.32)`,
   }
@@ -258,6 +291,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           starId: star.id,
           starType: 'resource',
           isChampion: false,
+          timeless: false,
           valueStr: fmtMs(remaining),
           secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
           fillRatio: clamp01(fillRatio),
@@ -282,10 +316,33 @@ const sortedEntries = computed<BarEntry[]>(() => {
           starId: star.id,
           starType: 'champion',
           isChampion: true,
+          timeless: false,
           valueStr: fmtMs(remaining),
           secondsInt: Math.ceil(Math.max(0, remaining) / 1000),
           fillRatio: clamp01(fillRatio),
           sortKey: Number.MAX_SAFE_INTEGER,
+          isCursed,
+          curseRatio,
+          totalPlanets: total,
+          clearedPlanets: cleared,
+        })
+      }
+    } else if (star.starType === 'boss_escort' || star.starType === 'galaxy_boss') {
+      // Endkampf: kein Ablaufdatum — die Bar steht voll, bis der Stern fällt.
+      // Eskorten über den normalen Bars, der Boss als unterste, epischste Zeile.
+      if (!allCleared) {
+        raw.push({
+          starId: star.id,
+          starType: star.starType,
+          isChampion: false,
+          timeless: true,
+          valueStr: '',
+          secondsInt: 0,
+          fillRatio: 1,
+          sortKey:
+            star.starType === 'galaxy_boss'
+              ? Number.MAX_SAFE_INTEGER
+              : Number.MAX_SAFE_INTEGER - 1,
           isCursed,
           curseRatio,
           totalPlanets: total,
@@ -299,8 +356,9 @@ const sortedEntries = computed<BarEntry[]>(() => {
   return raw.map((entry, index) => ({
     ...entry,
     palette: (() => {
-      if (!entry.isChampion) return palettes[index % palettes.length]
       const star = starGroupStore.activeStars.find(s => s.id === entry.starId)
+      if (entry.timeless && star) return rgbToPalette(star.starColor)
+      if (!entry.isChampion) return palettes[index % palettes.length]
       const roleColor = star ? getStarRoleColor(star) : null
       return roleColor ? roleColorToPalette(roleColor) : championPalette
     })(),
@@ -458,6 +516,108 @@ const sortedEntries = computed<BarEntry[]>(() => {
 .bar-value {
   color: var(--text-color);
   filter: drop-shadow(0 0 3px var(--icon-color));
+}
+
+/* ── Endkampf-Bars (zeitlos): Typ-Label mittig auf jeder Seitenfüllung ── */
+.bar-type-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--label-color);
+  filter: drop-shadow(0 0 6px var(--label-glow)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
+/* Eskorten: glimmende Glut — dezent flackernder Schein auf der vollen Füllung */
+.timer-bar-row--escort .bar-fill {
+  animation: escort-ember 2.6s ease-in-out infinite;
+}
+
+@keyframes escort-ember {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px var(--glow),
+      0 0 14px var(--glow),
+      inset 0 1px 0 rgba(255, 236, 190, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 10px var(--glow),
+      0 0 22px var(--glow),
+      inset 0 1px 0 rgba(255, 236, 190, 0.28),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+  }
+}
+
+/* Galaxieboss: höchste Zeile, atmender Magenta-Glow, leuchtendes Banner-Label */
+.timer-bar-row--boss {
+  height: clamp(18px, 0.55vw + 10px, 27px);
+  border-radius: 3px;
+}
+
+.timer-bar-row--boss .bar-fill {
+  animation: boss-bar-breathe 2s ease-in-out infinite;
+}
+
+@keyframes boss-bar-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px var(--glow),
+      0 0 18px var(--glow),
+      inset 0 0 10px rgba(255, 255, 255, 0.12),
+      inset 0 1px 0 rgba(255, 220, 250, 0.25),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 14px var(--glow),
+      0 0 32px var(--glow),
+      0 0 48px var(--glow),
+      inset 0 0 16px rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 220, 250, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+}
+
+.timer-bar-row--boss .bar-type-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  animation: boss-label-glow 2s ease-in-out infinite;
+}
+
+@keyframes boss-label-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px var(--label-glow)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px var(--label-glow)) drop-shadow(0 0 4px var(--label-glow))
+      drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+  }
+}
+
+.timer-bar-row--boss:hover,
+.timer-bar-row--boss.star-hover-active {
+  outline: 1px solid rgba(255, 120, 220, 0.45);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-bar-row--escort .bar-fill,
+  .timer-bar-row--boss .bar-fill,
+  .timer-bar-row--boss .bar-type-label {
+    animation: none;
+  }
 }
 
 /* Track-Wrapper: so breit wie die Balkenseite, wandert per transform mit der

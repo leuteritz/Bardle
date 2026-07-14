@@ -246,7 +246,13 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     starsBackgroundPaused(): boolean {
       if (this.rescueRotationPhase === 'rotating') return false
-      return this.pendingRoleSelection || this.championTravelState === 'champion_spawned'
+      // Auch der komplette Endkampf am Galaxiekern (Eskorten-Wellen + Boss)
+      // friert den Hintergrund ein — wie bei einem erreichten Champion-Stern.
+      return (
+        this.pendingRoleSelection ||
+        this.championTravelState === 'champion_spawned' ||
+        this.bossPhaseActive
+      )
     },
   },
 
