@@ -352,7 +352,12 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="arc-level-badge" :style="{ top: (svgH - badgeOverlapPx) + 'px' }">
+      <div
+        class="arc-level-badge"
+        :style="{ top: (svgH - badgeOverlapPx) + 'px' }"
+        @mouseenter="onCenterEnter"
+        @mouseleave="onCenterLeave"
+      >
         <span class="arc-level-text">{{ gameStore.level }}</span>
       </div>
 
@@ -868,6 +873,7 @@ onUnmounted(() => {
    ================================================================ */
 .arc-level-badge {
   position: absolute;
+  pointer-events: auto;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
