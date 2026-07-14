@@ -58,22 +58,18 @@ const rankEmblem = computed(
   () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
 )
 const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
-/* long tiers (Grandmaster, Challenger) get a compact size so they always fit */
-const isLongRankLabel = computed(() => rankLabel.value.length > 9)
 
 function openBattleTab() {
   uiStore.setBardTab('battle')
 }
 
-/* ── Overflow guard: the LONGEST stat value sets one shared char count on
-   the scoreboard root, so every value shrinks to fit together and all
-   stats stay the same size (see .sb-stat-value). Icons count as ~2 chars. ── */
+/* ── Overflow guard: the LONGEST value across ALL cells (combat stats,
+   rank tier, win/loss record) sets one shared char count on the scoreboard
+   root, so every value shrinks together and stays the same size
+   (see .sb-stat-value). Icons count as ~2 chars. ── */
 function valChars(stat: ScoreStat): number {
   return stat.value.length + (stat.icon || stat.gameIcon ? 2 : 0)
 }
-const sharedValChars = computed(() =>
-  Math.max(...leftStats.value.map(valChars), ...rightStats.value.map(valChars)),
-)
 const wlCombined = computed(
   () => formatNumber(totalWins.value).length + formatNumber(totalLosses.value).length + 4,
 )
@@ -83,6 +79,14 @@ const wlChars = computed(() =>
   wlStacked.value
     ? Math.max(formatNumber(totalWins.value).length, formatNumber(totalLosses.value).length) + 1
     : wlCombined.value,
+)
+const sharedValChars = computed(() =>
+  Math.max(
+    ...leftStats.value.map(valChars),
+    ...rightStats.value.map(valChars),
+    rankLabel.value.length + 2 /* emblem sits beside the text */,
+    wlChars.value,
+  ),
 )
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -306,11 +310,7 @@ const hasLiveStatus = computed(
         <img :src="rankEmblem" :alt="rankLabel" class="sb-rank-emblem" />
         <div class="sb-rank-text">
           <span class="sb-stat-label">Rank</span>
-          <span
-            class="sb-stat-value sb-rank-value"
-            :class="{ 'sb-rank-value--long': isLongRankLabel }"
-            :style="{ color: rankColor, '--rank-glow': rankColor }"
-          >
+          <span class="sb-stat-value" :style="{ color: rankColor }">
             {{ rankLabel }}
           </span>
         </div>
@@ -325,7 +325,6 @@ const hasLiveStatus = computed(
         <span
           class="sb-stat-value sb-wl-value"
           :class="{ 'sb-wl-value--stacked': wlStacked }"
-          :style="{ '--val-chars': wlChars }"
         >
           <span class="sb-wl-win">{{ formatNumber(totalWins) }}W</span>
           <span v-if="!wlStacked" class="sb-wl-sep">·</span>
@@ -425,30 +424,12 @@ const hasLiveStatus = computed(
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  /* same gap as .sb-stat so the Rank label sits on the shared baseline */
+  gap: clamp(4px, 0.5cqw, 8px);
   min-width: 0;
 }
 
-/* doubled class beats the later-defined .sb-stat-value base rule */
-.sb-stat-value.sb-rank-value {
-  /* slightly smaller than plain stats so long tiers (Grandmaster) never clip */
-  font-size: clamp(11px, 1.2cqw, 19px);
-  letter-spacing: 0.02em;
-}
-.sb-rank-value.sb-rank-value--long {
-  font-size: clamp(10px, 0.8cqw, 13px);
-  letter-spacing: 0;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.9),
-    0 0 10px var(--rank-glow, #d4a020);
-}
-
 /* ── Win / loss cell ── */
-.sb-stat-value.sb-wl-value {
-  /* two numbers + units — sized like the rank value so it never crowds
-     its neighbors on narrow strips; shrinks further with char count */
-  font-size: min(clamp(11px, 1.2cqw, 19px), max(9px, calc(10cqw / var(--val-chars, 8))));
-}
 .sb-stat-value.sb-wl-value.sb-wl-value--stacked {
   flex-direction: column;
   gap: 1px;
