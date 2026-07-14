@@ -366,19 +366,24 @@ function drawPlanet(
   y: number,
   r: number,
   seed: number,
-  state: 'unrescued' | 'rescued' | 'target',
+  state: 'unrescued' | 'rescued' | 'target' | 'failed',
   pulse = false,
   palOverride?: typeof STAR_PALETTE,
 ) {
   const rng = seededRng(seed >>> 0)
   const pal = palOverride ?? PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
-  const glowMult = state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : 1.55
+  const glowMult =
+    state === 'target' ? (pulse ? 2.5 : 2.1) : state === 'rescued' ? 1.9 : state === 'failed' ? 1.45 : 1.55
   const glowR = r * glowMult
   const atmoGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, glowR)
   if (state === 'rescued') {
     atmoGrad.addColorStop(0, 'rgba(255,210,50,0.55)')
     atmoGrad.addColorStop(0.55, 'rgba(255,170,20,0.18)')
     atmoGrad.addColorStop(1, 'rgba(255,140,0,0)')
+  } else if (state === 'failed') {
+    atmoGrad.addColorStop(0, 'rgba(200,60,40,0.28)')
+    atmoGrad.addColorStop(0.6, 'rgba(160,40,25,0.1)')
+    atmoGrad.addColorStop(1, 'rgba(120,30,20,0)')
   } else if (state === 'target') {
     const baseAtmo = pal.atmo
     const dimAtmo = baseAtmo.replace(/[\d.]+\)$/, '0.12)')
@@ -403,6 +408,11 @@ function drawPlanet(
     bodyGrad.addColorStop(0.35, '#e8c040')
     bodyGrad.addColorStop(0.72, '#8a5810')
     bodyGrad.addColorStop(1, '#1e0e02')
+  } else if (state === 'failed') {
+    // Burnt-out husk: desaturated ember tones, clearly "lost", never golden
+    bodyGrad.addColorStop(0, '#7a5a50')
+    bodyGrad.addColorStop(0.45, '#4a2c24')
+    bodyGrad.addColorStop(1, '#140806')
   } else {
     bodyGrad.addColorStop(0, pal.highlight)
     bodyGrad.addColorStop(0.45, pal.base)
@@ -430,7 +440,7 @@ function drawPlanet(
     ctx.restore()
   }
 
-  if (pal.ring && state !== 'rescued') {
+  if (pal.ring && state !== 'rescued' && state !== 'failed') {
     ctx.save()
     ctx.globalAlpha = state === 'target' ? (pulse ? 0.78 : 0.62) : 0.48
     ctx.beginPath()
@@ -458,6 +468,11 @@ function drawPlanet(
     ctx.lineWidth = 1.5
     ctx.shadowColor = 'rgba(255,210,60,0.85)'
     ctx.shadowBlur = 9
+  } else if (state === 'failed') {
+    ctx.strokeStyle = 'rgba(220,90,60,0.6)'
+    ctx.lineWidth = 1.2
+    ctx.shadowColor = 'rgba(200,60,30,0.6)'
+    ctx.shadowBlur = 5
   } else {
     ctx.strokeStyle = 'rgba(200,210,235,0.62)'
     ctx.lineWidth = 1
@@ -513,6 +528,18 @@ function drawPlanet(
     ctx.shadowColor = 'rgba(255,240,100,1)'
     ctx.shadowBlur = 6
     ctx.fillText('✦', x, y + 0.5)
+    ctx.shadowBlur = 0
+  }
+
+  if (state === 'failed') {
+    const fSize = Math.max(7, Math.round(r * 0.92))
+    ctx.font = `bold ${fSize}px serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = 'rgba(255,150,120,0.9)'
+    ctx.shadowColor = 'rgba(200,50,20,0.9)'
+    ctx.shadowBlur = 5
+    ctx.fillText('✕', x, y + 0.5)
     ctx.shadowBlur = 0
   }
 }
@@ -683,8 +710,9 @@ export default defineComponent({
     }
 
     const canvasEl = ref<HTMLCanvasElement | null>(null)
+    // dotPositions[i] = world position of champion-star attempt i (in visit
+    // order); the last entry is the upcoming target while the run is active.
     const dotPositions = ref<DotPos[]>([])
-    const rescueOrder = ref<number[]>([])
     const spawnPos = ref<DotPos>({ x: 0.5, y: 0.5 })
 
     let rafId: number | null = null
@@ -710,7 +738,6 @@ export default defineComponent({
           galaxyStore.championTravelState === 'champion_spawned') &&
           !galaxyStore.pendingGalaxyBoss &&
           !galaxyStore.isComplete) ||
-        galaxyStore.isBossSearchActive ||
         galaxyStore.pendingGalaxyBoss ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
@@ -794,31 +821,39 @@ export default defineComponent({
 
     function generateDots() {
       const galaxyKey = galaxyStore.currentGalaxy
-      const totalPlanets = galaxyStore.starsRequired
-      const rng = seededRng(galaxyKey * 31337 + totalPlanets)
+      // One dot per past attempt (rescued or failed) + the upcoming target.
+      const totalDots = galaxyStore.attemptResults.length + 1
+      // Seeded by the per-run mapSeed: a fresh random layout every galaxy
+      // (and every playthrough), stable across reloads and prefix-stable when
+      // extra dots are appended after a failed star.
+      const rng = seededRng(galaxyStore.mapSeed)
       const geo = galaxyGeo(galaxyKey)
       const gauss = () => rng() + rng() + rng() - 1.5
-      // Stars sit ON the galaxy: sampled along the same seeded spiral arms
-      // the particle renderer draws, spread from the bulge edge to the rim.
-      const dots: DotPos[] = []
-      const minDistSq = 0.085 * 0.085
       const clamp = (p: DotPos): DotPos => ({
         x: Math.min(0.94, Math.max(0.06, p.x)),
         y: Math.min(0.94, Math.max(0.06, p.y)),
       })
-      for (let i = 0; i < totalPlanets; i++) {
+      // Spawn: random point anywhere on the OUTER rim of the galaxy disc —
+      // top-left one run, bottom-right the next. Only the boss at the core
+      // is fixed.
+      spawnPos.value = clamp(
+        galaxyPlaneToWorld(geo, rng() * Math.PI * 2, armRadius(geo, 0.9 + rng() * 0.1)),
+      )
+      const dots: DotPos[] = []
+      const minDistSq = 0.085 * 0.085
+      for (let i = 0; i < totalDots; i++) {
+        // Each star lands on a random arm at a random depth — scattered over
+        // the whole galaxy, kept clear of the core so the boss stays alone
+        // at the center.
         let pos: DotPos | null = null
         for (let attempt = 0; attempt < 8; attempt++) {
-          const arm = (i + attempt) % geo.arms
-          const t = Math.min(
-            1,
-            Math.max(0, 0.22 + 0.7 * (i / Math.max(1, totalPlanets - 1)) + gauss() * 0.06),
-          )
+          const arm = Math.floor(rng() * geo.arms)
+          const t = 0.25 + rng() * 0.62
           const candidate = clamp(
             galaxyPlaneToWorld(
               geo,
-              armAngle(geo, arm, t) + gauss() * 0.16,
-              armRadius(geo, t) + gauss() * 0.015,
+              armAngle(geo, arm, t) + gauss() * 0.12,
+              armRadius(geo, t) + gauss() * 0.014,
             ),
           )
           const farEnough = dots.every(
@@ -832,92 +867,55 @@ export default defineComponent({
         dots.push(pos!)
       }
       dotPositions.value = dots
-      // Spawn just outside the bulge, on a random arm
-      const spawnRng = seededRng(galaxyKey * 99997 + totalPlanets * 13)
-      const spawnArm = Math.floor(spawnRng() * geo.arms)
-      const spawnT = 0.1 + spawnRng() * 0.08
-      spawnPos.value = clamp(
-        galaxyPlaneToWorld(
-          geo,
-          armAngle(geo, spawnArm, spawnT) + (spawnRng() - 0.5) * 0.2,
-          armRadius(geo, spawnT),
-        ),
-      )
-      let originIdx = 0
-      let nearestToSpawn = Infinity
-      for (let i = 0; i < dots.length; i++) {
-        const dx = dots[i].x - spawnPos.value.x
-        const dy = dots[i].y - spawnPos.value.y
-        const dist = dx * dx + dy * dy
-        if (dist < nearestToSpawn) {
-          nearestToSpawn = dist
-          originIdx = i
-        }
-      }
-      const order: number[] = [originIdx]
-      const visited = new Set<number>([originIdx])
-      while (order.length < totalPlanets) {
-        const last = order[order.length - 1]
-        const lastDot = dots[last]
-        let nearest = -1
-        let nearestDist = Infinity
-        for (let i = 0; i < dots.length; i++) {
-          if (visited.has(i)) continue
-          const dx = dots[i].x - lastDot.x
-          const dy = dots[i].y - lastDot.y
-          const dist = dx * dx + dy * dy
-          if (dist < nearestDist) {
-            nearestDist = dist
-            nearest = i
-          }
-        }
-        if (nearest === -1) break
-        order.push(nearest)
-        visited.add(nearest)
-      }
-      rescueOrder.value = order
     }
 
-    function getPlayerWorldPos(
-      dots: DotPos[],
-      order: number[],
-      rescued: number,
-    ): { x: number; y: number } {
-      if (galaxyStore.isBossSearchActive) return galaxyStore.bossSearchInterpolatedPos
-      if (galaxyStore.isRescueRotating) {
-        if (rescued > 0) return dots[order[rescued - 1]]
-        return spawnPos.value
-      }
+    function getPlayerWorldPos(dots: DotPos[], attempts: number): { x: number; y: number } {
+      // Docked at the boss star in the galaxy core
+      if (galaxyStore.pendingGalaxyBoss || galaxyStore.isComplete) return { x: 0.5, y: 0.5 }
+      const from = attempts > 0 && dots.length >= attempts ? dots[attempts - 1] : spawnPos.value
+      if (galaxyStore.isRescueRotating) return from
+      const target = galaxyStore.travelingToGalaxyBoss
+        ? { x: 0.5, y: 0.5 }
+        : attempts < dots.length
+          ? dots[attempts]
+          : null
       const state = galaxyStore.championTravelState
-      if (state === 'traveling') {
+      if (state === 'traveling' && target) {
         const startTime = galaxyStore.championTravelStartTime
         const duration = galaxyStore.championTravelDurationMs
         const progress =
           startTime > 0 && duration > 0 ? Math.min((Date.now() - startTime) / duration, 1) : 0
-        const toIdx = rescued < dots.length ? order[rescued] : -1
-        const to = toIdx >= 0 ? dots[toIdx] : { x: 0.5, y: 0.5 }
-        if (rescued > 0) {
-          const from = dots[order[rescued - 1]]
-          return { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress }
-        }
         return {
-          x: spawnPos.value.x + (to.x - spawnPos.value.x) * progress,
-          y: spawnPos.value.y + (to.y - spawnPos.value.y) * progress,
+          x: from.x + (target.x - from.x) * progress,
+          y: from.y + (target.y - from.y) * progress,
         }
       }
-      const targetIdx = rescued < dots.length ? order[rescued] : -1
-      if (targetIdx >= 0) return dots[targetIdx]
-      if (rescued > 0) return dots[order[rescued - 1]]
-      return spawnPos.value
+      const arrived = state === 'champion_available' || state === 'champion_spawned'
+      if (arrived && target) return target
+      return from
     }
 
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const dots = dotPositions.value
-      const order = rescueOrder.value
-      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
+      const results = galaxyStore.attemptResults
+      const attempts = Math.min(results.length, dots.length)
       const isTraveling = galaxyStore.championTravelState === 'traveling'
       const nowMs = Date.now()
-      const targetIdx = rescued < dots.length ? order[rescued] : -1
+      // Only the NEXT star is revealed — and only once a role has been chosen
+      // for it. Every star already visited stays as a rescued/failed marker.
+      const roleChosen = !!galaxyStore.nextStarRole && !galaxyStore.pendingRoleSelection
+      const targetIdx =
+        galaxyStore.starsRescued < galaxyStore.starsRequired && attempts < dots.length && roleChosen
+          ? attempts
+          : -1
+      // Final leg: after the last champion star the destination is the fixed
+      // boss star at the galaxy core.
+      const bossTravel = galaxyStore.travelingToGalaxyBoss
+      const travelDest = bossTravel
+        ? { x: 0.5, y: 0.5 }
+        : targetIdx >= 0
+          ? dots[targetIdx]
+          : null
 
       // Static map with a soft camera: world coords (0..1) map onto the
       // canvas relative to the camera center + zoom (no rotation). At
@@ -1023,9 +1021,11 @@ export default defineComponent({
         MINIMAP_NEARFIELD_FADE[0],
         MINIMAP_NEARFIELD_FADE[1],
       )
-      if (nearAlpha > 0.01 && targetIdx >= 0) {
-        const anchor = dots[targetIdx]
-        const nfRng = seededRng(galaxyStore.currentGalaxy * 7717 + targetIdx * 131)
+      if (nearAlpha > 0.01 && travelDest) {
+        const anchor = travelDest
+        const nfRng = seededRng(
+          galaxyStore.currentGalaxy * 7717 + (bossTravel ? 911 : targetIdx) * 131,
+        )
         ctx.save()
         ctx.globalCompositeOperation = 'lighter'
         for (let i = 0; i < MINIMAP_NEARFIELD_STARS; i++) {
@@ -1040,7 +1040,8 @@ export default defineComponent({
         ctx.restore()
       }
 
-      if (rescued >= 2 && farAlpha > 0.01) {
+      // Flown route so far: spawn point → every visited star, in visit order
+      if (attempts >= 1 && farAlpha > 0.01) {
         ctx.save()
         ctx.globalAlpha = farAlpha
         ctx.beginPath()
@@ -1048,10 +1049,11 @@ export default defineComponent({
         ctx.lineWidth = 2
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        for (let i = 0; i < rescued; i++) {
-          const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-          if (i === 0) ctx.moveTo(sx, sy)
-          else ctx.lineTo(sx, sy)
+        const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
+        ctx.moveTo(spx, spy)
+        for (let i = 0; i < attempts; i++) {
+          const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          ctx.lineTo(sx, sy)
         }
         ctx.stroke()
         ctx.restore()
@@ -1066,10 +1068,10 @@ export default defineComponent({
         x2: number
         y2: number
       } | null = null
-      if (targetIdx >= 0 && isTraveling) {
-        const from = rescued > 0 ? dots[order[rescued - 1]] : spawnPos.value
+      if (travelDest && isTraveling) {
+        const from = attempts > 0 ? dots[attempts - 1] : spawnPos.value
         const [x0, y0] = wToC(from.x, from.y)
-        const [x2, y2] = wToC(dots[targetIdx].x, dots[targetIdx].y)
+        const [x2, y2] = wToC(travelDest.x, travelDest.y)
         const dx = x2 - x0
         const dy = y2 - y0
         const len = Math.sqrt(dx * dx + dy * dy)
@@ -1092,31 +1094,34 @@ export default defineComponent({
         }
       }
 
-      // Overview markers belong to the galaxy overview → fade with it
-      const rescuedSet = new Set(order.slice(0, rescued))
+      // Overview markers belong to the galaxy overview → fade with it.
+      // Only stars already visited are drawn: rescued ✦ or failed ✕ — the
+      // upcoming target is rendered separately, future stars stay hidden.
       const galaxySeed = galaxyStore.currentGalaxy * 10007
       if (farAlpha > 0.01) {
         ctx.save()
         ctx.globalAlpha = farAlpha
-        for (let i = 0; i < dots.length; i++) {
-          if (rescuedSet.has(i)) continue
-          if (targetIdx === i) continue
+        for (let i = 0; i < attempts; i++) {
           const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          drawPlanet(ctx, sx, sy, 9, galaxySeed + i, 'unrescued', false, STAR_PALETTE)
-        }
-        for (let i = 0; i < rescued; i++) {
-          const [sx, sy] = wToC(dots[order[i]].x, dots[order[i]].y)
-          drawPlanet(ctx, sx, sy, 11, galaxySeed + order[i], 'rescued')
+          if (results[i] === 'failed') {
+            drawPlanet(ctx, sx, sy, 9, galaxySeed + i, 'failed')
+          } else {
+            drawPlanet(ctx, sx, sy, 11, galaxySeed + i, 'rescued')
+          }
         }
         ctx.restore()
       }
 
-      if (galaxyStore.needsFinalBoss && !galaxyStore.isBossSearchActive && farAlpha > 0.01) {
-        ctx.save()
-        ctx.globalAlpha = farAlpha
+      // Galaxy-boss star at the core: hidden while champion stars remain —
+      // it reveals itself (pulsing, route-linked) once the last star is saved.
+      // The marker survives the camera dive (grows with the zoom like the
+      // champion target); only the route line fades with the overview.
+      if (galaxyStore.needsFinalBoss) {
         const [bx, by] = wToC(0.5, 0.5)
-        if (rescued > 0) {
-          const last = dots[order[rescued - 1]]
+        if (attempts > 0 && farAlpha > 0.01 && isTraveling) {
+          ctx.save()
+          ctx.globalAlpha = farAlpha
+          const last = dots[attempts - 1]
           const [lx, ly] = wToC(last.x, last.y)
           ctx.beginPath()
           ctx.setLineDash([4, 4])
@@ -1126,37 +1131,42 @@ export default defineComponent({
           ctx.lineTo(bx, by)
           ctx.stroke()
           ctx.setLineDash([])
+          ctx.restore()
         }
+        const bossScale =
+          1 + 1.1 * smoothstep(cam.zoom, MINIMAP_NEARFIELD_FADE[0], MINIMAP_ZOOM_MAX)
+        const bossPulse = 0.8 + 0.2 * Math.sin(nowMs / 420)
         for (const [r, a] of [
           [22, 0.08],
           [16, 0.18],
           [12, 0.32],
         ] as [number, number][]) {
           ctx.beginPath()
-          ctx.arc(bx, by, r, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(200,30,10,${a})`
+          ctx.arc(bx, by, r * bossScale, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(200,30,10,${(a * bossPulse).toFixed(3)})`
           ctx.fill()
         }
         ctx.beginPath()
-        ctx.arc(bx, by, 9, 0, Math.PI * 2)
+        ctx.arc(bx, by, 9 * bossScale, 0, Math.PI * 2)
         ctx.fillStyle = '#9b1020'
         ctx.fill()
         ctx.strokeStyle = '#ff4020'
         ctx.lineWidth = 1.5
         ctx.stroke()
         ctx.beginPath()
-        ctx.arc(bx, by, 5, 0, Math.PI * 2)
+        ctx.arc(bx, by, 5 * bossScale, 0, Math.PI * 2)
         ctx.fillStyle = '#1a0404'
         ctx.fill()
-        ctx.font = 'bold 9px serif'
+        ctx.font = `bold ${Math.round(9 * bossScale)}px serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillStyle = '#ff6040'
         ctx.fillText('☠', bx, by)
-        ctx.restore()
       }
 
-      if (targetIdx >= 0 && isTraveling) {
+      // Next-target star, in the color of the role chosen for it — visible
+      // from the moment the role is confirmed (departure spin, flight, …).
+      if (targetIdx >= 0) {
         const [tx, ty] = wToC(dots[targetIdx].x, dots[targetIdx].y)
         const champStar = starGroupStore.activeStars.find((s) => s.starType === 'champion')
         const nextRole = galaxyStore.nextStarRole
@@ -1189,37 +1199,7 @@ export default defineComponent({
         }
       }
 
-      if (galaxyStore.isBossSearchActive) {
-        // Purple search marker at the interpolated search position
-        const searchPos = galaxyStore.bossSearchInterpolatedPos
-        const [bx, by] = wToC(searchPos.x, searchPos.y)
-        const pulse = 0.6 + 0.4 * Math.sin(nowMs / 400)
-        for (const [r, a] of [
-          [20, 0.08 * pulse],
-          [14, 0.18 * pulse],
-          [10, 0.28 * pulse],
-        ] as [number, number][]) {
-          ctx.beginPath()
-          ctx.arc(bx, by, r, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(120,80,255,${a})`
-          ctx.fill()
-        }
-        ctx.beginPath()
-        ctx.arc(bx, by, 8, 0, Math.PI * 2)
-        ctx.fillStyle = '#2a0f6a'
-        ctx.fill()
-        ctx.strokeStyle = `rgba(160,110,255,${0.8 + 0.2 * pulse})`
-        ctx.lineWidth = 1.8
-        ctx.stroke()
-        ctx.font = 'bold 10px serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillStyle = `rgba(200,160,255,${0.75 + 0.25 * pulse})`
-        ctx.shadowColor = 'rgba(140,80,255,0.9)'
-        ctx.shadowBlur = 8
-        ctx.fillText('?', bx, by)
-        ctx.shadowBlur = 0
-      } else if (flight) {
+      if (flight) {
         // Player comet travelling along the quadratic flight path:
         // glowing white-gold head + tapering tail along the flown route
         const startTime = galaxyStore.championTravelStartTime
@@ -1281,7 +1261,7 @@ export default defineComponent({
       } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
         // Idle: player-sun at the current position (the waiting screen draws
         // its own departure beacon at the flight origin instead)
-        const player = getPlayerWorldPos(dots, order, rescued)
+        const player = getPlayerWorldPos(dots, attempts)
         const [px, py] = wToC(player.x, player.y)
         drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, nowMs)
         drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
@@ -1564,12 +1544,11 @@ export default defineComponent({
       }
     }
 
-    /** World position the next flight departs from (last rescued star or spawn). */
+    /** World position the next flight departs from (last visited star or spawn). */
     function getFlightOrigin(): DotPos {
       const dots = dotPositions.value
-      const order = rescueOrder.value
-      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
-      return rescued > 0 ? dots[order[rescued - 1]] : spawnPos.value
+      const attempts = Math.min(galaxyStore.attemptResults.length, dots.length)
+      return attempts > 0 ? dots[attempts - 1] : spawnPos.value
     }
 
     /** Dark radial scrim behind the sun so it stays readable on the golden
@@ -1625,12 +1604,18 @@ export default defineComponent({
       const w = canvas.offsetWidth
       const h = canvas.offsetHeight
       if (w === 0 || h === 0) return
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w
-        canvas.height = h
+      // Render at device-pixel resolution so the map stays crisp on
+      // HiDPI/Retina displays; all drawing keeps using CSS-pixel coords.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const pw = Math.round(w * dpr)
+      const ph = Math.round(h * dpr)
+      if (canvas.width !== pw || canvas.height !== ph) {
+        canvas.width = pw
+        canvas.height = ph
       }
       const ctx = canvas.getContext('2d')
       if (!ctx) return
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
       if (galaxyStore.pendingRoleSelection) {
         drawWaitingState(ctx, w, h)
@@ -1702,27 +1687,28 @@ export default defineComponent({
       let dy = 0.5
 
       const dots = dotPositions.value
-      const order = rescueOrder.value
-      const rescued = Math.min(galaxyStore.starsRescued, dots.length)
-      const targetIdx = rescued < dots.length ? order[rescued] : -1
-      const target = targetIdx >= 0 ? dots[targetIdx] : null
+      const attempts = Math.min(galaxyStore.attemptResults.length, dots.length)
+      const target = galaxyStore.travelingToGalaxyBoss
+        ? { x: 0.5, y: 0.5 }
+        : galaxyStore.starsRescued < galaxyStore.starsRequired && attempts < dots.length
+          ? dots[attempts]
+          : null
       const isArrived =
-        galaxyStore.championTravelState === 'champion_available' ||
-        galaxyStore.championTravelState === 'champion_spawned'
-      const isBossPhase =
-        galaxyStore.searchingForGalaxyBoss ||
-        galaxyStore.needsFinalBoss ||
-        galaxyStore.pendingGalaxyBoss
+        (galaxyStore.championTravelState === 'champion_available' ||
+          galaxyStore.championTravelState === 'champion_spawned') &&
+        !galaxyStore.isRescueRotating &&
+        !galaxyStore.pendingRoleSelection
 
-      if (isArrived && target) {
+      if (galaxyStore.pendingGalaxyBoss && !galaxyStore.isComplete) {
+        // Docked at the boss star → hold the zoom on the galaxy core
+        dz = MINIMAP_ZOOM_MAX
+        dx = 0.5
+        dy = 0.5
+      } else if (isArrived && target) {
         dz = MINIMAP_ZOOM_MAX
         dx = target.x
         dy = target.y
-      } else if (
-        galaxyStore.championTravelState === 'traveling' &&
-        !isBossPhase &&
-        target
-      ) {
+      } else if (galaxyStore.championTravelState === 'traveling' && target) {
         const remaining = galaxyStore.travelRemainingMs
         if (remaining <= MINIMAP_ZOOM_TRIGGER_MS) {
           const tz = easeInOut(
@@ -1753,7 +1739,11 @@ export default defineComponent({
     }
 
     watch(
-      () => [galaxyStore.currentGalaxy, galaxyStore.starsRequired],
+      () => [
+        galaxyStore.currentGalaxy,
+        galaxyStore.mapSeed,
+        galaxyStore.attemptResults.length,
+      ],
       () => generateDots(),
       { immediate: true },
     )

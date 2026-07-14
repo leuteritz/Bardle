@@ -474,7 +474,6 @@ export const useGameStore = defineStore('game', {
       const planetEventStore = usePlanetEventStore()
       planetEventStore.checkAndMaybeSpawnEvent()
       const galaxyStore = useGalaxyStore()
-      galaxyStore.tickBossSearch(GAME_TICK_INTERVAL_MS)
       galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)
       const starGroupStore = useStarGroupStore()
       starGroupStore.tickChampionStar()

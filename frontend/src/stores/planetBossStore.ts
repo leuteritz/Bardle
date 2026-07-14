@@ -209,7 +209,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         }
         if (chosen) {
           homePlanetChampion = chosen
-          galaxyStore.nextStarRole = null
+          // Do NOT clear nextStarRole here: the role stays selected until the
+          // player confirms the next one (requestRoleSelection). If this star's
+          // window expires, the follow-up star reuses the same role instead of
+          // forcing the role-selection modal open again.
         }
       }
 

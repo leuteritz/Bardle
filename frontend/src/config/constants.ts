@@ -1262,6 +1262,7 @@ export const COMBAT_FLOAT_OFFSET_X_SPREAD = 10
 // Galaxy boss search
 export const GALAXY_STARS_BASE_REQUIRED = 3
 export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
+export const GALAXY_STAR_FAILED_SIGNAL_MS = 2600 // "Star Lost" flash on the minimap
 export const GALAXY_BOSS_SEARCH_SEG_MIN_MS = 3500
 export const GALAXY_BOSS_SEARCH_SEG_RANGE_MS = 4500
 export const GALAXY_BOSS_SEARCH_STEP_MIN = 0.07

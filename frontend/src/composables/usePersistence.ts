@@ -156,6 +156,8 @@ export function usePersistence() {
         currentGalaxy: galaxyStore.currentGalaxy,
         starsRescued: galaxyStore.starsRescued,
         starsRequired: galaxyStore.starsRequired,
+        attemptResults: [...galaxyStore.attemptResults],
+        mapSeed: galaxyStore.mapSeed,
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
@@ -163,7 +165,7 @@ export function usePersistence() {
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
         championTravelBaseDurationMs: galaxyStore.championTravelBaseDurationMs,
-        searchingForGalaxyBoss: galaxyStore.searchingForGalaxyBoss,
+        travelingToGalaxyBoss: galaxyStore.travelingToGalaxyBoss,
         resourceStarActive: galaxyStore.resourceStarActive,
         resourceStarElapsedMs: galaxyStore.resourceStarElapsedMs,
         pendingRoleSelection: galaxyStore.pendingRoleSelection,
@@ -413,19 +415,25 @@ export function usePersistence() {
         galaxyStore.currentGalaxy = gx.currentGalaxy ?? 1
         galaxyStore.starsRescued = gx.starsRescued ?? 0
         galaxyStore.starsRequired = gx.starsRequired ?? 3
+        // Older saves have no attempt history → reconstruct from the rescue count
+        galaxyStore.attemptResults =
+          gx.attemptResults ?? Array.from({ length: galaxyStore.starsRescued }, () => 'rescued')
+        galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
         galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
         galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0
-        // If search phase was active when saving → spawn boss immediately after reload
+        // Legacy saves from the old boss-search phase → spawn boss right away.
+        // While flying toward the boss star, the boss must NOT be pending yet.
+        galaxyStore.travelingToGalaxyBoss = gx.travelingToGalaxyBoss ?? false
         if (gx.searchingForGalaxyBoss && !gx.galaxyBossDefeated) {
-          galaxyStore.searchingForGalaxyBoss = false
           galaxyStore.pendingGalaxyBoss = true
         } else {
           galaxyStore.pendingGalaxyBoss =
             galaxyStore.starsRescued >= galaxyStore.starsRequired &&
-            !galaxyStore.galaxyBossDefeated
+            !galaxyStore.galaxyBossDefeated &&
+            !galaxyStore.travelingToGalaxyBoss
         }
         galaxyStore.pendingRoleSelection = gx.pendingRoleSelection ?? false
         galaxyStore.nextStarRole = gx.nextStarRole ?? null

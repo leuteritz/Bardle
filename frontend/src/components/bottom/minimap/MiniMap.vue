@@ -23,9 +23,6 @@
             @click="onMinimapStarClick"
           />
 
-          <!-- ── Boss-Suche Label ── -->
-          <div v-if="galaxyStore.isBossSearchActive" class="minimap-search-label">???</div>
-
           <!-- ── Galaxie abgeschlossen ── -->
           <div
             v-if="
@@ -48,6 +45,14 @@
           <Transition name="tier-flash-fade">
             <div v-if="galaxyStore.tierJustUnlocked" class="tier-flash" aria-hidden="true">
               <span class="tier-flash-text">✦ Tier {{ galaxyStore.unlockedTier }} Unlocked ✦</span>
+            </div>
+          </Transition>
+
+          <!-- ── Star lost: same role, new target ── -->
+          <Transition name="tier-flash-fade">
+            <div v-if="galaxyStore.starJustFailed" class="star-lost-flash" aria-hidden="true">
+              <span class="star-lost-text">✕ Star Lost ✕</span>
+              <span class="star-lost-sub">New target located — same role</span>
             </div>
           </Transition>
 
@@ -109,7 +114,6 @@ export default defineComponent({
           galaxyStore.championTravelState === 'champion_spawned') &&
           !galaxyStore.pendingGalaxyBoss &&
           !galaxyStore.isComplete) ||
-        galaxyStore.isBossSearchActive ||
         galaxyStore.pendingGalaxyBoss ||
         galaxyStore.isGalaxyTransitioning ||
         galaxyStore.isComplete,
@@ -296,36 +300,6 @@ export default defineComponent({
   }
 }
 
-/* ── Boss-Suche ── */
-.minimap-search-label {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #b090ff;
-  letter-spacing: 0.22em;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 10;
-  user-select: none;
-  animation: search-label-pulse 1s ease-in-out infinite alternate;
-  text-shadow:
-    0 0 14px rgba(150, 80, 255, 0.95),
-    0 0 6px rgba(120, 60, 255, 0.75),
-    0 1px 4px rgba(0, 0, 0, 0.98);
-}
-
-@keyframes search-label-pulse {
-  from {
-    opacity: 0.6;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 /* ── Galaxie abgeschlossen ── */
 .complete-overlay {
   position: absolute;
@@ -441,6 +415,50 @@ export default defineComponent({
 .tier-flash-fade-enter-from,
 .tier-flash-fade-leave-to {
   opacity: 0;
+}
+
+/* ── Star lost flash (failed rescue → same role, new target) ── */
+.star-lost-flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 12;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(200, 40, 20, 0.22) 0%, transparent 65%);
+}
+
+.star-lost-text {
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  color: #ff9878;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 16px rgba(220, 70, 30, 0.95),
+    0 0 6px rgba(180, 40, 20, 0.8),
+    0 1px 4px rgba(0, 0, 0, 0.98);
+  animation: tier-flash-pop 2.4s ease-out forwards;
+}
+
+.star-lost-sub {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: #e8c040;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.8),
+    0 1px 4px rgba(0, 0, 0, 0.98);
+  animation: tier-flash-pop 2.4s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-lost-text,
+  .star-lost-sub {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

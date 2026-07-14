@@ -13,17 +13,8 @@ import {
   RESOURCE_STAR_DURATION_MS,
   GALAXY_STARS_BASE_REQUIRED,
   GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
-  GALAXY_BOSS_SEARCH_SEG_MIN_MS,
-  GALAXY_BOSS_SEARCH_SEG_RANGE_MS,
-  GALAXY_BOSS_SEARCH_STEP_MIN,
-  GALAXY_BOSS_SEARCH_STEP_RANGE,
-  GALAXY_BOSS_SEARCH_BOUNDARY_MIN,
-  GALAXY_BOSS_SEARCH_BOUNDARY_MAX,
-  GALAXY_BOSS_TOTAL_SEARCH_MIN_MS,
-  GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS,
+  GALAXY_STAR_FAILED_SIGNAL_MS,
   GALAXY_BOSS_SPAWN_ANIM_MS,
-  GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG,
-  GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG,
   MAX_STAR_LEVEL,
   TIER_UNLOCK_CHIMES_BASE,
   TIER_UNLOCK_CHIMES_GROWTH,
@@ -32,6 +23,8 @@ import {
 } from '../config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
+
+export type StarAttemptResult = 'rescued' | 'failed'
 
 export interface TierUnlockCost {
   chimes: number
@@ -84,11 +77,22 @@ export const useGalaxyStore = defineStore('galaxy', {
     currentGalaxy: 1,
     starsRescued: 0,
     starsRequired: GALAXY_STARS_BASE_REQUIRED,
+    // Chronological outcome of every champion-star attempt this galaxy —
+    // drives the minimap (rescued ✦ / failed ✕ markers, next-target position).
+    attemptResults: [] as StarAttemptResult[],
+    starJustFailed: false, // transient → minimap "Star Lost" flash
+    // Fresh random seed per galaxy run: spawn point + star placement differ
+    // every playthrough (persisted so the layout survives a reload).
+    mapSeed: Math.floor(Math.random() * 0xffffffff),
     // ── Galaxy Tier system ──
     unlockedTier: 1, // highest tier the player has paid to unlock
     tierJustUnlocked: false, // transient flag → UI plays the unlock celebration, then resets
     galaxyBossDefeated: false,
     pendingGalaxyBoss: false,
+    // After the last champion star: the ship flies to the FIXED boss star at
+    // the galaxy core (same travel flow as a champion star). Replaces the old
+    // random boss-search phase.
+    travelingToGalaxyBoss: false,
     pendingTransition: false,
     isGalaxyTransitioning: false,
     currentThemeIndex: 0,
@@ -103,20 +107,7 @@ export const useGalaxyStore = defineStore('galaxy', {
     _travelTickMs: 0,
     // Champion-Ankunfts-Signal
     championJustArrived: false,
-    // Galaxy-Boss-Suchphase (Multi-Segment)
-    searchingForGalaxyBoss: false,
     galaxyBossJustSpawned: false,
-    // Gesamtfortschritt
-    bossSearchTotalElapsed: 0,
-    bossSearchTotalDuration: 0,
-    // Aktuelles Segment: Start- und Zielposition + Timing
-    bossSearchCurrentX: 0.5,
-    bossSearchCurrentY: 0.5,
-    bossSearchTargetX: 0.5,
-    bossSearchTargetY: 0.5,
-    bossSearchSegmentStart: 0,
-    bossSearchSegmentEnd: 0,
-    bossSearchSegmentAngle: 0,
     // Ressourcen-Stern Flyby
     resourceStarActive: false,
     resourceStarElapsedMs: 0,
@@ -173,21 +164,6 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     isRescueRotating(): boolean {
       return this.rescueRotationPhase === 'rotating'
-    },
-
-    isBossSearchActive(): boolean {
-      return this.searchingForGalaxyBoss && !this.pendingGalaxyBoss
-    },
-
-    bossSearchInterpolatedPos(): { x: number; y: number } {
-      if (!this.searchingForGalaxyBoss) return { x: 0.5, y: 0.5 }
-      const now = Date.now()
-      const duration = this.bossSearchSegmentEnd - this.bossSearchSegmentStart
-      const t = duration > 0 ? Math.max(0, Math.min(1, (now - this.bossSearchSegmentStart) / duration)) : 0
-      return {
-        x: this.bossSearchCurrentX + (this.bossSearchTargetX - this.bossSearchCurrentX) * t,
-        y: this.bossSearchCurrentY + (this.bossSearchTargetY - this.bossSearchCurrentY) * t,
-      }
     },
 
     effectiveTravelDurationMs(): number {
@@ -256,6 +232,17 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
       const elapsed = now - this.championTravelStartTime
       if (elapsed >= this.effectiveTravelDurationMs) {
+        if (this.travelingToGalaxyBoss) {
+          // Reached the galaxy core → the boss star spawns right there
+          this.travelingToGalaxyBoss = false
+          this.championTravelState = 'idle'
+          this.pendingGalaxyBoss = true
+          this.galaxyBossJustSpawned = true
+          setTimeout(() => {
+            this.galaxyBossJustSpawned = false
+          }, GALAXY_BOSS_SPAWN_ANIM_MS)
+          return
+        }
         this.championTravelState = 'champion_available'
         this.championJustArrived = true
         setTimeout(() => {
@@ -282,20 +269,6 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
-    _startBossSearchSegment(fromX: number, fromY: number, angle: number) {
-      const segDuration = GALAXY_BOSS_SEARCH_SEG_MIN_MS + Math.random() * GALAXY_BOSS_SEARCH_SEG_RANGE_MS
-      const step = GALAXY_BOSS_SEARCH_STEP_MIN + Math.random() * GALAXY_BOSS_SEARCH_STEP_RANGE
-      const rad = angle * (Math.PI / 180)
-      const now = Date.now()
-      this.bossSearchCurrentX = fromX
-      this.bossSearchCurrentY = fromY
-      this.bossSearchTargetX = Math.max(GALAXY_BOSS_SEARCH_BOUNDARY_MIN, Math.min(GALAXY_BOSS_SEARCH_BOUNDARY_MAX, fromX + Math.cos(rad) * step))
-      this.bossSearchTargetY = Math.max(GALAXY_BOSS_SEARCH_BOUNDARY_MIN, Math.min(GALAXY_BOSS_SEARCH_BOUNDARY_MAX, fromY + Math.sin(rad) * step))
-      this.bossSearchSegmentStart = now
-      this.bossSearchSegmentEnd = now + segDuration
-      this.bossSearchSegmentAngle = angle
-    },
-
     startRescueRotation() {
       this.rescueRotationPhase = 'rotating'
       this.rescueRotationStartTime = Date.now()
@@ -315,43 +288,35 @@ export const useGalaxyStore = defineStore('galaxy', {
     onChampionStarRescued() {
       if (this.starsRescued >= this.starsRequired) return
       this.starsRescued++
+      this.attemptResults.push('rescued')
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
-        this.championTravelState = 'idle'
-        // Start search phase with first random segment
-        this.searchingForGalaxyBoss = true
-        this.bossSearchTotalElapsed = 0
-        this.bossSearchTotalDuration = GALAXY_BOSS_TOTAL_SEARCH_MIN_MS + Math.random() * GALAXY_BOSS_TOTAL_SEARCH_RANGE_MS
-        this._startBossSearchSegment(0.5, 0.5, Math.random() * 360)
+        // Last star saved → fly to the boss star waiting at the galaxy core,
+        // with the same travel flow as a champion star (route, comet, zoom).
+        this.travelingToGalaxyBoss = true
+        this.startChampionTravel()
       } else {
         this.requestRoleSelection()
       }
     },
 
     onChampionStarExpired() {
-      this.requestRoleSelection()
-    },
-
-    tickBossSearch(deltaMs: number) {
-      if (!this.searchingForGalaxyBoss) return
-      this.bossSearchTotalElapsed += deltaMs
-      if (this.bossSearchTotalElapsed >= this.bossSearchTotalDuration) {
-        this.searchingForGalaxyBoss = false
-        this.pendingGalaxyBoss = true
-        this.galaxyBossJustSpawned = true
-        setTimeout(() => {
-          this.galaxyBossJustSpawned = false
-        }, GALAXY_BOSS_SPAWN_ANIM_MS)
+      // Failed rescue: the chosen role stays locked in — no new role selection.
+      // A fresh star with the same role appears and the ship departs for it;
+      // the lost star stays on the minimap as a failed marker.
+      if (!this.nextStarRole) {
+        this.requestRoleSelection()
         return
       }
-      // Check if current segment has expired
-      const now = Date.now()
-      if (now >= this.bossSearchSegmentEnd) {
-        const curX = this.bossSearchTargetX
-        const curY = this.bossSearchTargetY
-        // Neue Richtung: 60–300° Abweichung von aktueller (kein sofortiges Umkehren)
-        const newAngle = (this.bossSearchSegmentAngle + GALAXY_BOSS_SEARCH_ANGLE_MIN_DEG + Math.random() * GALAXY_BOSS_SEARCH_ANGLE_RANGE_DEG) % 360
-        this._startBossSearchSegment(curX, curY, newAngle)
-      }
+      this.attemptResults.push('failed')
+      this.starJustFailed = true
+      setTimeout(() => {
+        this.starJustFailed = false
+      }, GALAXY_STAR_FAILED_SIGNAL_MS)
+      // Depart straight from the lost star — no rescue rotation (that
+      // animation launches from the map center and reads like a jump back
+      // to the previous star). The ship stays put and flies on from here.
+      this.travelPendingAfterRotation = false
+      this.startChampionTravel()
     },
 
     onGalaxyBossDefeated() {
@@ -390,13 +355,14 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.currentGalaxy++
       this.starsRescued = 0
       this.starsRequired = computeRequired(this.currentGalaxy)
+      this.attemptResults = []
+      this.starJustFailed = false
+      this.mapSeed = Math.floor(Math.random() * 0xffffffff)
       this.galaxyBossDefeated = false
       this.pendingGalaxyBoss = false
+      this.travelingToGalaxyBoss = false
       this.pendingTransition = false
       this.pendingRoleSelection = false
-      this.searchingForGalaxyBoss = false
-      this.bossSearchTotalElapsed = 0
-      this.bossSearchTotalDuration = 0
       this.galaxyBossJustSpawned = false
       this.resourceStarActive = false
       this.resourceStarElapsedMs = 0
