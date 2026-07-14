@@ -145,7 +145,12 @@ export const useStarGroupStore = defineStore('starGroup', {
     openStarFightModal(starId: string) {
       const star = this.activeStars.find((s) => s.id === starId)
       if (!star) return
-      const queue = star.planetSlots.filter((s) => !s.cleared).map((s) => s.planetId)
+      // Champion-Planet immer ans Ende — seine Belohnung ist die letzte des Sterns
+      const openSlots = star.planetSlots.filter((s) => !s.cleared)
+      const queue = [
+        ...openSlots.filter((s) => !s.isChampionPlanet),
+        ...openSlots.filter((s) => s.isChampionPlanet),
+      ].map((s) => s.planetId)
       if (!queue.length) return
       const bossStore = usePlanetBossStore()
       this.starFightModalOpen = true

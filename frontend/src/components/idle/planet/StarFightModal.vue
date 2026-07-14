@@ -18,24 +18,13 @@
         <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
         <div class="sf-topbar" />
 
-        <!-- ── Planet Background (entire modal) ───────────────────────── -->
-        <div
-          ref="modalPlanetBgRef"
-          class="sf-modal-planet-bg"
-          :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
-        />
-
-        <!-- ── Planet Overlay (Readability Dimmer) ─────────────────────── -->
-        <div class="sf-planet-overlay" />
-
         <!-- ── Star Field ──────────────────────────────────────────────── -->
         <div class="sf-starfield" aria-hidden="true">
           <span v-for="i in 40" :key="i" class="sf-star" :style="starStyle(i)" />
         </div>
 
-        <!-- ── Header ──────────────────────────────────────────────────── -->
-        <div class="sf-header" :class="{ 'sf-header--galaxy': isGalaxyBoss }">
-          <span class="sf-star-type">{{ starTypeLabel }}</span>
+        <!-- ── Floating Controls (kein Header mehr) ────────────────────── -->
+        <div class="sf-corner-controls">
           <button
             v-if="activeBoss"
             class="sf-admin-kill-btn"
@@ -46,66 +35,71 @@
             <Icon icon="game-icons:skull" width="12" height="12" />
             ADMIN
           </button>
-          <button class="modal-close-btn" @click="handleClose">✕</button>
+          <button class="sf-close-btn" aria-label="Close" @click="handleClose">✕</button>
         </div>
 
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
         <div class="sf-main">
-          <!-- Section 1: Arena + HP (~60%) -->
+          <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
           <div class="sf-arena-wrap">
-            <div v-if="isGalaxyBoss" class="sf-galaxy-badge">✦ GALAXY BOSS ✦</div>
+            <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
+            <div
+              ref="modalPlanetBgRef"
+              class="sf-modal-planet-bg"
+              :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
+            />
+            <div class="sf-planet-overlay" />
 
             <BossArenaSection
               v-if="activeBoss"
               @shake="handleShake"
             />
 
-            <!-- ── HP Bar ──────────────────────────────────────────── -->
-            <div v-if="activeBoss" class="sf-hp-section">
-              <div class="sf-hp-header">
-                <span class="sf-stat-label"><Icon icon="game-icons:hearts" width="14" height="14" style="color: #cc6050; vertical-align: middle; margin-right: 3px" />HP</span>
-                <span class="sf-hp-numbers">
-                  {{ formatNumber(activeBoss.currentHP) }}
-                  <span class="sf-hp-sep">／</span>
-                  {{ formatNumber(activeBoss.maxHP) }}
+            <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
+            <div v-if="activeBoss" class="sf-hud">
+              <span v-if="isGalaxyBoss" class="sf-boss-galaxy-badge">✦ GALAXY BOSS ✦</span>
+              <div class="sf-name-row">
+                <span class="sf-name-line" />
+                <span class="sf-boss-name" :class="{ 'sf-boss-name--galaxy': isGalaxyBoss }">
+                  {{ activeBoss.bossName }}
                 </span>
+                <span class="sf-name-line" />
               </div>
               <div
                 class="sf-hp-track"
                 :class="{
-                  'sf-hp-track--critical': bossStore.bossHPPercent < 25,
+                  'sf-hp-track--critical': hpPct < 25,
                   'sf-hp-track--galaxy': isGalaxyBoss,
                 }"
               >
+                <div class="sf-hp-ghost" :style="{ width: hpPct + '%' }" />
                 <div
                   class="sf-hp-fill"
                   :class="{
                     'sf-hp-fill--galaxy': isGalaxyBoss,
-                    'sf-hp-fill--low': bossStore.bossHPPercent < 50 && !isGalaxyBoss,
-                    'sf-hp-fill--critical': bossStore.bossHPPercent < 25,
+                    'sf-hp-fill--low': hpPct < 50 && !isGalaxyBoss,
+                    'sf-hp-fill--critical': hpPct < 25,
                   }"
-                  :style="{ width: bossStore.bossHPPercent + '%' }"
+                  :style="{ width: hpPct + '%' }"
                 />
-                <div class="sf-hp-segments">
-                  <div
-                    v-for="seg in 9"
-                    :key="seg"
-                    class="sf-hp-seg"
-                    :style="{ left: seg * 10 + '%' }"
-                  />
-                </div>
+              </div>
+              <div class="sf-hp-readout">
+                <span class="sf-hp-numbers">
+                  {{ formatNumber(activeBoss.currentHP) }}
+                  <span class="sf-hp-sep">/</span>
+                  {{ formatNumber(activeBoss.maxHP) }}
+                </span>
+                <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
+                  {{ Math.round(hpPct) }}%
+                </span>
               </div>
             </div>
-          </div>
 
-          <!-- Section 2: Rewards (~20%) -->
-          <div class="sf-rewards-wrap">
-            <BossRewardSection v-if="activeBoss" />
-          </div>
-
-          <!-- Section 3: Planet list (~20%, scrollbar) -->
-          <div class="sf-planet-list-wrap">
-            <BossPlanetList />
+            <!-- ── Bottom-Dock: Loot-Karte (dieser Boss) + Up-Next-Karte ── -->
+            <div class="sf-bottom-dock">
+              <BossRewardSection v-if="activeBoss" />
+              <BossPlanetList />
+            </div>
           </div>
         </div>
 
@@ -193,14 +187,7 @@ onUnmounted(() => {
 // ── Computed ──────────────────────────────────────────────────────────────
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
-
-const starTypeLabel = computed(() => {
-  const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
-  if (!star) return 'STAR'
-  if (star.starType === 'champion') return '♛ CHAMPION STAR'
-  if (star.starType === 'galaxy_boss') return '✦ GALAXY BOSS STAR'
-  return '★ RESOURCE STAR'
-})
+const hpPct = computed(() => Math.max(0, Math.min(100, bossStore.bossHPPercent)))
 
 // ── Curse ─────────────────────────────────────────────────────────────────
 const activeCurse = computed(() => {
@@ -341,6 +328,7 @@ function starStyle(i: number): Record<string, string> {
 
 .sf-backdrop--shaking {
   animation: sf-shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  will-change: transform;
 }
 
 @keyframes sf-shake {
@@ -377,7 +365,6 @@ function starStyle(i: number): Record<string, string> {
   border-radius: 50%;
   background: radial-gradient(circle, #ff8800 0%, #ff3300 60%, transparent 100%);
   animation: sf-ember-rise linear infinite;
-  filter: blur(0.5px);
 }
 
 .sf-atmosphere--galaxy .sf-ember {
@@ -399,12 +386,16 @@ function starStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Modal ────────────────────────────────────────────────────────────────── */
+/* ── Modal — Breite wie Bard-Profile-Menü, Höhe nutzt fast den ganzen Screen ── */
 .sf-modal {
-  position: relative;
+  position: fixed;
   pointer-events: auto;
-  width: min(960px, 95vw);
-  height: min(960px, 90dvh);
+  left: var(--bard-profile-left, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
+  right: var(--bard-profile-right, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
+  top: calc(var(--header-total-height, 50px) + 12px);
+  /* Unterkante mit Abstand über dem Mittelstreifen der Bottom-Bar
+     (Streifenhöhe = (443 − 364) × --hud-scale, s. BOTTOM_BAR_* constants) */
+  bottom: calc(79px * var(--hud-scale, 1) + 16px);
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #100900 0%, #0a0600 60%, #070400 100%);
@@ -414,11 +405,7 @@ function starStyle(i: number): Record<string, string> {
     0 0 60px rgba(200, 80, 0, 0.22),
     0 0 120px rgba(140, 40, 0, 0.12),
     0 24px 80px rgba(0, 0, 0, 0.97);
-  max-height: 90dvh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  overflow: hidden;
 }
 
 .sf-modal--galaxy {
@@ -438,39 +425,40 @@ function starStyle(i: number): Record<string, string> {
   z-index: 2;
 }
 
-/* ── Modal Planet Background ──────────────────────────────────────────────── */
+/* ── Planet Background — zentriert im Arena-Bereich ──────────────────────── */
 .sf-modal-planet-bg {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.18;
+  opacity: 0.5;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
-  border-radius: 5px;
 }
 
 .sf-modal-planet-bg--galaxy {
-  opacity: 0.26;
+  /* Statischer Glow + Opacity-Pulse — animiertes drop-shadow würde das
+     komplette Planet-SVG jeden Frame neu rastern (FPS-Killer) */
+  filter: drop-shadow(0 0 35px rgba(180, 60, 230, 0.5));
   animation: modal-planet-glow 3s ease-in-out infinite alternate;
 }
 
 @keyframes modal-planet-glow {
   from {
-    filter: drop-shadow(0 0 20px rgba(140, 40, 200, 0.3));
+    opacity: 0.45;
   }
   to {
-    filter: drop-shadow(0 0 50px rgba(200, 80, 255, 0.6));
+    opacity: 0.6;
   }
 }
 
-/* ── Planet Overlay (Readability Dimmer) ─────────────────────────────────── */
+/* ── Planet Overlay (leichter Readability-Dimmer, Planet bleibt sichtbar) ── */
 .sf-planet-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.22) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -504,7 +492,6 @@ function starStyle(i: number): Record<string, string> {
 
 /* All modal children above the planet background ───────────────────────── */
 .sf-topbar,
-.sf-header,
 .sf-main,
 .sf-curse-overlay {
   position: relative;
@@ -518,43 +505,49 @@ function starStyle(i: number): Record<string, string> {
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
   .sf-curse-icon,
-  .sf-curse-overlay,
-  .bpl-active-bar {
+  .sf-curse-overlay {
     animation: none;
   }
 }
 
-/* ── Header ───────────────────────────────────────────────────────────────── */
-.sf-header {
-  position: relative;
+/* ── Floating Controls (ersetzen den Header) ─────────────────────────────── */
+.sf-corner-controls {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 6;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.5rem;
-  background: rgba(16, 8, 0, 0.92);
-  border-bottom: 2px solid rgba(90, 45, 10, 0.6);
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-.sf-header .modal-close-btn {
-  position: static;
-  transform: none;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
-.sf-header--galaxy {
-  background: rgba(20, 0, 35, 0.92);
-  border-bottom-color: rgba(80, 10, 110, 0.7);
-}
-
-.sf-star-type {
-  font-size: 0.88rem;
+.sf-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(120, 60, 10, 0.55);
+  background: rgba(16, 8, 0, 0.75);
+  color: #c8a050;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sf-close-btn:hover {
+  border-color: rgba(200, 146, 42, 0.7);
+  background: rgba(30, 16, 4, 0.9);
   color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.55);
-  text-transform: uppercase;
-  flex: 1;
+  box-shadow: 0 0 8px rgba(200, 146, 42, 0.3);
+}
+
+.sf-close-btn:active {
+  transform: scale(0.94);
 }
 
 
@@ -563,117 +556,237 @@ function starStyle(i: number): Record<string, string> {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 0.75rem 1.25rem 0;
+  padding: 0;
   min-height: 0;
   flex: 1;
   overflow: hidden;
 }
 
 .sf-arena-wrap {
-  flex: 0 0 58%;
+  position: relative;
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   overflow: hidden;
 }
 
-.sf-rewards-wrap {
-  flex: 0 0 auto;
-}
-
-.sf-planet-list-wrap {
+/* Arena füllt den ganzen Bereich — Boss steht mittig auf dem Planeten */
+.sf-arena-wrap :deep(.arena) {
   flex: 1;
-  min-height: 120px;
-  overflow: hidden;
-  border-top: 1px solid rgba(90, 45, 10, 0.35);
-  padding-top: 0.25rem;
-  margin-top: 0.25rem;
+  min-height: 0;
+  height: auto;
+  aspect-ratio: auto;
+  z-index: 1;
 }
 
-.sf-galaxy-badge {
-  text-align: center;
-  font-size: 0.6rem;
+/* Boss etwas kompakter, damit der Planet dahinter voll sichtbar bleibt */
+.sf-arena-wrap :deep(.boss-img) {
+  height: 58%;
+  max-width: 48%;
+}
+
+/* Bossname kommt jetzt oben ins HP-Overlay — Arena-eigenes Overlay ausblenden */
+.sf-arena-wrap :deep(.boss-name-overlay) {
+  display: none;
+}
+
+/* Enrage-Ring: größer und unter den Ecken-Controls (Admin/✕) */
+.sf-arena-wrap :deep(.enrage-ring) {
+  top: 50px;
+  right: 14px;
+  width: 80px;
+  height: 80px;
+}
+.sf-arena-wrap :deep(.enrage-seconds) {
+  font-size: 1.5rem;
+}
+.sf-arena-wrap :deep(.enrage-label) {
+  font-size: 0.56rem;
+}
+
+/* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz ───────────────────── */
+.sf-hud {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(500px, 60%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.sf-boss-galaxy-badge {
+  font-size: 0.55rem;
   font-weight: 900;
   letter-spacing: 0.22em;
-  color: #cc44ff;
-  text-shadow: 0 0 10px rgba(190, 60, 255, 0.6);
-  opacity: 0.85;
-  padding-bottom: 0.15rem;
+  color: rgba(200, 60, 255, 0.85);
   text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(180, 40, 255, 0.5), 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* ── HP Bar ───────────────────────────────────────────────────────────────── */
-.sf-hp-section {
-  padding: 0.4rem 0.5rem 0.3rem;
-  background: transparent;
-  border: none;
+/* Bossname zwischen dünnen HUD-Klammerlinien */
+.sf-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
 }
 
-.sf-hp-header {
+.sf-name-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.45));
+}
+.sf-name-line:last-child {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.45));
+}
+
+.sf-boss-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #e8c040;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 18px rgba(232, 192, 64, 0.6),
+    0 0 40px rgba(200, 130, 20, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 78%;
+}
+
+.sf-boss-name--galaxy {
+  color: #dd99ff;
+  text-shadow:
+    0 0 18px rgba(200, 100, 255, 0.65),
+    0 0 40px rgba(160, 50, 255, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+/* Readout unter der Leiste: Zahlen links, Prozent rechts */
+.sf-hp-readout {
+  width: 100%;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 7px;
+  align-items: baseline;
 }
 
-.sf-stat-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #cc5040;
-  text-transform: uppercase;
-}
-
-.sf-hp-numbers {
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #c8a050;
+.sf-hp-pct {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.sf-hp-pct--critical {
+  color: #ff5040;
+  text-shadow: 0 0 10px rgba(255, 60, 40, 0.6), 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Bottom-Dock: Loot- und Up-Next-Karten nebeneinander ─────────────────── */
+.sf-bottom-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  padding: 1.6rem 0.9rem 0.75rem;
+  background: linear-gradient(
+    to top,
+    rgba(8, 4, 0, 0.94) 0%,
+    rgba(8, 4, 0, 0.6) 62%,
+    transparent 100%
+  );
+}
+
+/* ── HP-Datenstreifen — moderne Leiste mit Ghost-Trail ───────────────────── */
+.sf-hp-numbers {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #d8b868;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .sf-hp-sep {
   opacity: 0.4;
-  margin: 0 2px;
+  margin: 0 3px;
 }
 
 .sf-hp-track {
   position: relative;
-  height: 22px;
-  border-radius: 4px;
-  background: rgba(4, 2, 0, 0.6);
-  border: 1px solid rgba(50, 25, 5, 0.4);
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(232, 192, 64, 0.12);
   overflow: hidden;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 .sf-hp-track--critical {
-  border-color: rgba(140, 20, 20, 0.5);
-  box-shadow: 0 0 18px rgba(200, 20, 20, 0.35);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(200, 40, 40, 0.4),
+    0 0 18px rgba(200, 20, 20, 0.35);
   animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
 }
 .sf-hp-track--galaxy {
-  border-color: rgba(90, 18, 104, 0.7);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(160, 40, 220, 0.35);
 }
 
 @keyframes sf-hp-crit-pulse {
   from {
-    box-shadow: 0 0 6px rgba(180, 20, 20, 0.3);
+    box-shadow:
+      inset 0 1px 3px rgba(0, 0, 0, 0.7),
+      0 0 0 1px rgba(200, 40, 40, 0.4),
+      0 0 6px rgba(180, 20, 20, 0.3);
   }
   to {
-    box-shadow: 0 0 16px rgba(220, 40, 40, 0.65);
+    box-shadow:
+      inset 0 1px 3px rgba(0, 0, 0, 0.7),
+      0 0 0 1px rgba(220, 60, 60, 0.55),
+      0 0 16px rgba(220, 40, 40, 0.65);
   }
 }
 
+/* Ghost-Trail: heller Balken zieht dem echten HP-Stand verzögert hinterher */
+.sf-hp-ghost {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: rgba(255, 235, 200, 0.35);
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .sf-hp-fill {
-  height: 100%;
-  border-radius: 3px;
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
   background: linear-gradient(to right, #1a6010, #40a020, #70d040);
-  transition: width 0.25s ease-out;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: width 0.15s ease-out;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .sf-hp-fill--low {
-  background: linear-gradient(to right, #7a4808, #c07018);
+  background: linear-gradient(to right, #7a4808, #c07018, #e8a030);
 }
 .sf-hp-fill--critical {
   background: linear-gradient(to right, #620606, #c01818, #ff3030);
@@ -682,19 +795,6 @@ function starStyle(i: number): Record<string, string> {
 .sf-hp-fill--galaxy {
   background: linear-gradient(to right, #420060, #8010c0, #cc30ff);
   box-shadow: 0 0 14px rgba(180, 40, 255, 0.5), inset 0 1px 0 rgba(220, 100, 255, 0.2);
-}
-
-.sf-hp-segments {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.sf-hp-seg {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.4);
 }
 
 /* ── Curse Overlay ────────────────────────────────────────────────────────── */

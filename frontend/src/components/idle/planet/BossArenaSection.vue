@@ -181,12 +181,23 @@ const isChampionStarPlanet = computed<boolean>(() => {
   )
 })
 
-const showEnrageTimer = computed<boolean>(() => !isChampionStarPlanet.value)
+// Champion-Stern: kein Boss-Enrage — der Ring zeigt stattdessen die
+// verbleibende Lebenszeit des Sterns (wie der Flyby-Timer beim Ressourcenstern)
+const starRemaining = computed<{ secs: number; pct: number } | null>(() => {
+  const star = starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId)
+  if (!star?.durationMs) return null
+  const rem = Math.max(0, star.spawnedAt + star.durationMs - now.value)
+  return { secs: Math.ceil(rem / 1000), pct: (rem / star.durationMs) * 100 }
+})
+
+const showEnrageTimer = computed<boolean>(
+  () => !isChampionStarPlanet.value || starRemaining.value !== null,
+)
 const effectiveSecondsRemaining = computed<number>(() =>
-  isChampionStarPlanet.value ? 0 : secondsRemaining.value,
+  isChampionStarPlanet.value ? (starRemaining.value?.secs ?? 0) : secondsRemaining.value,
 )
 const effectiveEnragePercent = computed<number>(() =>
-  isChampionStarPlanet.value ? 0 : enragePercent.value,
+  isChampionStarPlanet.value ? (starRemaining.value?.pct ?? 0) : enragePercent.value,
 )
 
 const arenaEl = ref<HTMLDivElement | null>(null)
@@ -228,8 +239,12 @@ const isHit = ref(false)
 let dmgIdCounter = 0
 const damageFloats = reactive<Array<{ id: number; value: number; x: number; y: number }>>([])
 
+const MAX_DAMAGE_FLOATS = 24
+
 function spawnFloat(value: number, x?: number, y?: number) {
   if (!isMounted) return
+  // Deckel gegen Klick-Spam: älteste Zahl verwerfen statt unbegrenzt stapeln
+  if (damageFloats.length >= MAX_DAMAGE_FLOATS) damageFloats.shift()
   const id = ++dmgIdCounter
   let fx = x ?? window.innerWidth / 2
   let fy = y ?? window.innerHeight / 2
@@ -512,6 +527,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 
 .boss-wrapper--hit {
   animation: boss-hit 0.16s ease-out both;
+  will-change: transform, filter;
 }
 .boss-wrapper--critical {
   animation: boss-idle-critical 1.2s ease-in-out infinite;
@@ -566,6 +582,8 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 .boss-aura--galaxy {
   background: radial-gradient(ellipse at center, rgba(180, 40, 255, 0.2) 0%, transparent 70%);
+  /* Blur statisch — animiertes blur() rastert jeden Frame neu */
+  filter: blur(6px);
   animation: aura-pulse-galaxy 1.8s ease-in-out infinite alternate;
 }
 .boss-aura--critical {
@@ -587,12 +605,10 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   from {
     opacity: 0.7;
     transform: scale(0.93);
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: scale(1.08);
-    filter: blur(8px);
   }
 }
 @keyframes aura-pulse-critical {
@@ -615,16 +631,19 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   max-width: 55%;
   object-fit: contain;
   image-rendering: pixelated;
-  filter: drop-shadow(0 0 18px rgba(255, 80, 0, 0.45)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.8));
+  /* Nur EIN drop-shadow: gestapelte Filter rastern das Sprite bei jeder
+     Hit-Animation mehrfach neu (FPS-Killer bei Klick-Spam) */
+  filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   cursor: pointer;
   transition:
     filter 0.12s ease,
     transform 0.1s ease;
   display: block;
+  will-change: transform, filter;
 }
 .boss-img:hover {
   transform: scale(1.05);
-  filter: drop-shadow(0 0 28px rgba(255, 110, 20, 0.7)) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.9));
+  filter: drop-shadow(0 4px 22px rgba(255, 110, 20, 0.65));
 }
 .boss-img:active {
   transform: scale(0.95);
@@ -906,14 +925,13 @@ function champArcStyle(i: number, total: number): Record<string, string> {
   font-size: 1.4rem;
   font-weight: 900;
   color: #ffe040;
+  /* Outline über text-stroke statt 4 Extra-Schatten, nur ein Glow —
+     7 Schatten pro Zahl waren bei Klick-Spam ein FPS-Killer */
+  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.9);
+  paint-order: stroke fill;
   text-shadow:
-    0 0 6px #ff6600,
-    0 0 12px #ff3300,
-    0 1px 3px #000,
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
+    0 0 10px #ff5500,
+    0 2px 3px #000;
   pointer-events: none;
   white-space: nowrap;
   transform: translate(-50%, -50%);
@@ -921,6 +939,7 @@ function champArcStyle(i: number, total: number): Record<string, string> {
 }
 .dmg-float-enter-active {
   animation: dmgUp 0.9s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  will-change: transform, opacity;
 }
 .dmg-float-leave-active {
   display: none;
