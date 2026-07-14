@@ -327,6 +327,31 @@
               {{ getChampionTierLabel(champion.name) }}
             </div>
 
+            <!-- Trait/origin badges — revealed on hover as a right-aligned
+                 column under the role pill (identity group: role → traits) -->
+            <div class="card-top-traits">
+              <div
+                v-for="trait in getChampionDetail(champion.name).traits"
+                :key="trait.id"
+                class="card-trait-badge"
+                :style="{ '--tc': trait.color }"
+              >
+                <Icon :icon="trait.icon" class="card-trait-icon" />
+                <span>{{ trait.name }}</span>
+              </div>
+              <div
+                v-if="getChampionDetail(champion.name).origin"
+                class="card-trait-badge"
+                :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
+              >
+                <Icon
+                  :icon="getChampionDetail(champion.name).origin!.icon"
+                  class="card-trait-icon"
+                />
+                <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
+              </div>
+            </div>
+
             <!-- Image layer: clipped to card-inner bounds -->
             <div class="card-img-layer">
               <img
@@ -379,61 +404,40 @@
                   {{ truncate(champion.name, 12) }}
                 </span>
 
-                <!-- 2. Trait/origin badges — revealed on expand, zero space when collapsed -->
-                <div class="card-traits-section">
-                  <div
-                    v-for="trait in getChampionDetail(champion.name).traits"
-                    :key="trait.id"
-                    class="card-trait-badge"
-                    :style="{ '--tc': trait.color }"
-                  >
-                    <Icon :icon="trait.icon" class="card-trait-icon" />
-                    <span>{{ trait.name }}</span>
-                  </div>
-                  <div
-                    v-if="getChampionDetail(champion.name).origin"
-                    class="card-trait-badge"
-                    :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
-                  >
-                    <Icon
-                      :icon="getChampionDetail(champion.name).origin!.icon"
-                      class="card-trait-icon"
-                    />
-                    <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
-                  </div>
-                </div>
-
-                <!-- 3. Costs + Button -->
+                <!-- 2. Costs — revealed on hover: materials row, chimes row below -->
                 <div class="card-bottom-section">
                   <div
                     v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-                    class="flex flex-wrap gap-1"
+                    class="flex flex-col items-start gap-1.5"
                   >
-                    <span
-                      v-for="(qty, matId) in getMaterialCost(champion.name)"
-                      :key="matId"
-                      class="cost-badge"
-                      :class="
-                        hasEnoughMaterial(String(matId), qty as number)
-                          ? 'cost-badge--ok'
-                          : 'cost-badge--missing'
-                      "
-                    >
-                      <img
-                        :src="getMaterialImage(String(matId))"
-                        :alt="getMaterialName(String(matId))"
-                        class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
-                      />
-                      {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
-                        formatNumber(qty as number)
-                      }}
-                    </span>
+                    <div class="flex flex-wrap items-center gap-1">
+                      <span
+                        v-for="(qty, matId) in getMaterialCost(champion.name)"
+                        :key="matId"
+                        class="cost-badge"
+                        :class="
+                          hasEnoughMaterial(String(matId), qty as number)
+                            ? 'cost-badge--ok'
+                            : 'cost-badge--missing'
+                        "
+                        :style="{ '--cost-c': MATERIAL_COLOR[String(matId)] }"
+                      >
+                        <img
+                          :src="getMaterialImage(String(matId))"
+                          :alt="getMaterialName(String(matId))"
+                          class="rpg-img inline-block w-4 h-4 object-contain align-middle"
+                        />
+                        {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
+                          formatNumber(qty as number)
+                        }}
+                      </span>
+                    </div>
                     <span
                       class="cost-badge chimes-cost-badge"
                       :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
                       :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
                     >
-                      <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img inline-block w-4 h-4 object-contain align-middle" />
+                      <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img chime-cost-img inline-block object-contain align-middle" />
                       {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
                     </span>
                   </div>
@@ -499,6 +503,28 @@
                 >
                   {{ getChampionTierLabel(champion.name) }}
                 </div>
+                <div class="card-top-traits">
+                  <div
+                    v-for="trait in getChampionDetail(champion.name).traits"
+                    :key="trait.id"
+                    class="card-trait-badge"
+                    :style="{ '--tc': trait.color }"
+                  >
+                    <Icon :icon="trait.icon" class="card-trait-icon" />
+                    <span>{{ trait.name }}</span>
+                  </div>
+                  <div
+                    v-if="getChampionDetail(champion.name).origin"
+                    class="card-trait-badge"
+                    :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
+                  >
+                    <Icon
+                      :icon="getChampionDetail(champion.name).origin!.icon"
+                      class="card-trait-icon"
+                    />
+                    <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
+                  </div>
+                </div>
                 <div class="card-img-layer">
                   <img
                     :src="battleStore.getChampionImage(champion.name)"
@@ -541,59 +567,39 @@
                       {{ truncate(champion.name, 12) }}
                     </span>
 
-                    <div class="card-traits-section">
-                      <div
-                        v-for="trait in getChampionDetail(champion.name).traits"
-                        :key="trait.id"
-                        class="card-trait-badge"
-                        :style="{ '--tc': trait.color }"
-                      >
-                        <Icon :icon="trait.icon" class="card-trait-icon" />
-                        <span>{{ trait.name }}</span>
-                      </div>
-                      <div
-                        v-if="getChampionDetail(champion.name).origin"
-                        class="card-trait-badge"
-                        :style="{ '--tc': getChampionDetail(champion.name).origin!.color }"
-                      >
-                        <Icon
-                          :icon="getChampionDetail(champion.name).origin!.icon"
-                          class="card-trait-icon"
-                        />
-                        <span>{{ getChampionDetail(champion.name).origin!.origin }}</span>
-                      </div>
-                    </div>
-
                     <div class="card-bottom-section">
                       <div
                         v-if="isUnlocked(champion.name) && !isOwned(champion.name)"
-                        class="flex flex-wrap gap-1"
+                        class="flex flex-col items-start gap-1.5"
                       >
-                        <span
-                          v-for="(qty, matId) in getMaterialCost(champion.name)"
-                          :key="matId"
-                          class="cost-badge"
-                          :class="
-                            hasEnoughMaterial(String(matId), qty as number)
-                              ? 'cost-badge--ok'
-                              : 'cost-badge--missing'
-                          "
-                        >
-                          <img
-                            :src="getMaterialImage(String(matId))"
-                            :alt="getMaterialName(String(matId))"
-                            class="rpg-img inline-block w-3.5 h-3.5 object-contain align-middle"
-                          />
-                          {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
-                            formatNumber(qty as number)
-                          }}
-                        </span>
+                        <div class="flex flex-wrap items-center gap-1">
+                          <span
+                            v-for="(qty, matId) in getMaterialCost(champion.name)"
+                            :key="matId"
+                            class="cost-badge"
+                            :class="
+                              hasEnoughMaterial(String(matId), qty as number)
+                                ? 'cost-badge--ok'
+                                : 'cost-badge--missing'
+                            "
+                            :style="{ '--cost-c': MATERIAL_COLOR[String(matId)] }"
+                          >
+                            <img
+                              :src="getMaterialImage(String(matId))"
+                              :alt="getMaterialName(String(matId))"
+                              class="rpg-img inline-block w-4 h-4 object-contain align-middle"
+                            />
+                            {{ formatNumber(inventoryStore.collectedMaterials[String(matId)] ?? 0) }}/{{
+                              formatNumber(qty as number)
+                            }}
+                          </span>
+                        </div>
                         <span
                           class="cost-badge chimes-cost-badge"
                           :class="canAffordChimes(champion.name) ? 'cost-badge--ok' : 'cost-badge--missing'"
                           :title="canAffordChimes(champion.name) ? '' : 'Not enough Chimes'"
                         >
-                          <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img inline-block w-4 h-4 object-contain align-middle" />
+                          <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="rpg-img chime-cost-img inline-block object-contain align-middle" />
                           {{ formatNumber(gameStore.chimes) }}/{{ formatNumber(getChimesPrice(champion.name)) }}
                         </span>
                       </div>
@@ -629,7 +635,7 @@ import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, required
 import { useGalaxyStore } from '../../../stores/galaxyStore'
 import { MATERIALS } from '../../../config/materials'
 import { getHomePlanetConfig } from '../../../config/championHomePlanets'
-import { PLANET_TYPE_NAMES, CHIMES_COST_ICON, ROLES } from '../../../config/constants'
+import { PLANET_TYPE_NAMES, CHIMES_COST_ICON, ROLES, MATERIAL_COLOR } from '../../../config/constants'
 import { getChampionNames } from '../../../config/championData'
 import { useActionToast } from '../../../composables/useActionToast'
 import type { ChampionRole } from '../../../types'
@@ -1385,6 +1391,7 @@ const shopChampionNames = computed(() =>
       crossRoleChampions,
       ROLE_BADGE,
       CHIMES_COST_ICON,
+      MATERIAL_COLOR,
     }
   },
 })
@@ -1718,10 +1725,10 @@ const shopChampionNames = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 700;
   line-height: 1;
-  padding: 0.15rem 0.4rem;
+  padding: 0.2rem 0.45rem;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--bp-radius);
@@ -1730,10 +1737,13 @@ const shopChampionNames = computed(() =>
     border-color var(--text-transition-dur) ease,
     color var(--text-transition-dur) ease;
 }
+/* Affordable: tinted in the material's own color (--cost-c, set inline from
+   MATERIAL_COLOR — same palette as the header materials grid). Falls back to
+   the standard chimes gold when no material color is set. */
 .cost-badge--ok {
-  color: #e8c040;
-  background: rgba(232, 192, 64, 0.10);
-  border-color: rgba(232, 192, 64, 0.45);
+  color: var(--cost-c, var(--rpg-gold));
+  background: color-mix(in srgb, var(--cost-c, var(--rpg-gold)) 12%, transparent);
+  border-color: color-mix(in srgb, var(--cost-c, var(--rpg-gold)) 50%, transparent);
 }
 .cost-badge--missing {
   color: #cc6050;
@@ -1743,19 +1753,18 @@ const shopChampionNames = computed(() =>
 
 /* Chimes cost badge: larger and sky-teal to distinguish from material gold */
 .chimes-cost-badge {
-  font-size: 0.9rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.95rem;
+  padding: 0.22rem 0.5rem;
 }
-.chimes-cost-badge.cost-badge--ok {
-  color: #5cc8e8;
-  background: rgba(92, 200, 232, 0.10);
-  border-color: rgba(92, 200, 232, 0.35);
+/* Chime icon: one step above the 16px material icons — explicit px so the
+   500×500 source can never render at natural size */
+.chime-cost-img {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
-.chimes-cost-badge.cost-badge--missing {
-  color: #cc6050;
-  background: rgba(204, 96, 80, 0.10);
-  border-color: rgba(204, 96, 80, 0.45);
-}
+/* Chimes affordable state uses the game-wide chimes gold via the .cost-badge--ok
+   fallback (no --cost-c set on the chimes badge); missing stays red. */
 
 
 /* ── Locked tooltip ── */
@@ -1810,24 +1819,28 @@ const shopChampionNames = computed(() =>
 }
 .champion-badge-fade-leave-to { opacity: 0; }
 
-/* ══ Trait/origin badges ══ */
-.card-traits-section {
+/* ══ Trait/origin badges — hover-only, right-aligned column under the role
+   pill so role → traits → origin read as one identity group at the top ══ */
+.card-top-traits {
+  position: absolute;
+  top: 32px;
+  right: 5px;
+  z-index: 15;
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-height: 0;
-  overflow: hidden;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   opacity: 0;
-  margin: 0;
-  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.25s ease;
 }
-.champion-card-slot:hover .card-traits-section {
-  max-height: 120px;
+.champion-card-slot:hover .card-top-traits {
   opacity: 1;
-  margin: 4px 0 2px;
+  transform: translateY(0);
 }
 /* Costs (materials + chimes) are hover-only — the resting card shows just
-   name, tier and role. Same collapse pattern as .card-traits-section. */
+   name, tier and role. Expands as a stacked column, one row per resource. */
 .card-bottom-section {
   display: flex;
   flex-direction: column;
@@ -1837,9 +1850,9 @@ const shopChampionNames = computed(() =>
   transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
 }
 .champion-card-slot:hover .card-bottom-section {
-  max-height: 140px;
+  max-height: 160px;
   opacity: 1;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 .card-trait-badge {
   display: inline-flex;
@@ -1849,7 +1862,7 @@ const shopChampionNames = computed(() =>
   border-radius: var(--bp-radius);
   background: rgba(0, 0, 0, 0.55);
   border: 1px solid var(--tc, #7a4e20);
-  font-size: 0.58rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1;
   color: var(--tc, #e8c040);
@@ -1863,8 +1876,8 @@ const shopChampionNames = computed(() =>
   border-width: 1px;
 }
 .card-trait-icon {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.9);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
@@ -1874,7 +1887,8 @@ const shopChampionNames = computed(() =>
   .card-content,
   .champion-name,
   .cost-badge,
-  .card-bottom-section {
+  .card-bottom-section,
+  .card-top-traits {
     transition: none !important;
   }
   .card-inner {
