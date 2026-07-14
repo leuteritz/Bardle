@@ -160,7 +160,7 @@ const phaseVars = computed(() => {
 
 const timelineDots = computed(() =>
   STAR_PHASE_DATA.map((p, i) => ({
-    label: p.shortName,
+    label: p.name,
     color: p.phasePrimary,
     glow: p.phaseGlow,
     core: p.core,

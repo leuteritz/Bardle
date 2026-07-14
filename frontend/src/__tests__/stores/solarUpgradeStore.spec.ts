@@ -50,7 +50,7 @@ describe('solarUpgradeStore — comet origin state', () => {
     expect(store.cometStage).toBe(5)
   })
 
-  it('comet dwell time replaces the First Spark dwell time', () => {
+  it('comet dwell time replaces the Spark dwell time', () => {
     const store = useSolarUpgradeStore()
     expect(store.phaseDwellRequiredMs).toBe(COMET_MIN_DWELL_SECONDS * 1000)
     store.isCometState = false
@@ -80,13 +80,13 @@ describe('solarUpgradeStore — comet origin state', () => {
     vi.advanceTimersByTime(2500)
 
     expect(store.isCometState).toBe(false)
-    expect(store.starPhase).toBe(0) // still First Spark, not phase 1
+    expect(store.starPhase).toBe(0) // still Spark, not phase 1
     expect(store.isUpgrading).toBe(false)
     // drift time is tracked separately, never in phaseTimeHistory
     expect(store.cometSeconds).toBeGreaterThanOrEqual(COMET_MIN_DWELL_SECONDS)
     expect(store.totalPhaseSeconds).toBe(0)
     expect(store.phaseTimeHistory).toEqual([])
-    // First Spark's own dwell timer starts at ignition
+    // Spark's own dwell timer starts at ignition
     expect(store.phaseEnteredAt).toBeGreaterThanOrEqual(ignitedAtEarliest)
   })
 
@@ -97,7 +97,7 @@ describe('solarUpgradeStore — comet origin state', () => {
     store.upgradeStar()
     vi.advanceTimersByTime(2500)
 
-    skipDwell(store) // now the First Spark dwell (600s)
+    skipDwell(store) // now the Spark dwell (600s)
     expect(store.canUpgradeStar).toBe(true)
     store.upgradeStar()
     vi.advanceTimersByTime(2500)

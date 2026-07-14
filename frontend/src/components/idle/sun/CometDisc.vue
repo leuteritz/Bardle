@@ -13,7 +13,7 @@ import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { COMET_PHASE_DATA, COMET_STAGE_GOLD } from '@/config/constants'
 
 /**
- * The player's origin body before First Spark: a wandering asteroid with Bard
+ * The player's origin body before Spark: a wandering asteroid with Bard
  * asleep inside. Each of the five Star Forge core rays bought to Lv 1 gilds
  * the rock a little more (solarUpgradeStore.cometStage drives --comet-gold);
  * at stage 0 it is bare grey stone. Shared by every place that renders the

@@ -537,7 +537,7 @@ function onWheel(event: WheelEvent): void {
 
 // ── Phase-colored stage vars (mirrors PlanetSelectTabComponent sunPhaseStyle) ─
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-/** While still a comet, the next evolution target is First Spark (phase 0). */
+/** While still a comet, the next evolution target is Spark (phase 0). */
 const nextStage = computed(() =>
   solarStore.isCometState
     ? STAR_PHASE_DATA[0]

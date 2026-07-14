@@ -51,7 +51,7 @@
           </span>
         </div>
         <div v-if="solarStore.isCometState && solarStore.canUpgradeStar" class="phase-hint">
-          Ignite the comet into <b class="phase-hint-next">First Spark</b> — your first star.
+          Ignite the comet into <b class="phase-hint-next">Spark</b> — your first star.
         </div>
         <div v-else-if="solarStore.isCometState && !solarStore.branchesReadyForEvolve" class="phase-hint">
           Grow all five core rays to Lv 1 to ready the Ignition —
@@ -62,7 +62,7 @@
           <b class="phase-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
         </div>
         <div v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1" class="phase-hint">
-          The sun has reached its <b class="phase-hint-next">Grand Finale</b> — the tree is fully grown.
+          The sun has reached its <b class="phase-hint-next">Finale</b> — the tree is fully grown.
         </div>
         <div v-else-if="solarStore.canUpgradeStar" class="phase-hint">
           Evolve to <b class="phase-hint-next">{{ nextStage.name }}</b> to advance the tree —
@@ -317,7 +317,7 @@ const MATERIAL_CHIP_COLORS: Record<string, string> = {
 
 // ── Phase banner ──────────────────────────────────────────────────────────────
 const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-/** While still a comet, the next evolution target is First Spark (phase 0). */
+/** While still a comet, the next evolution target is Spark (phase 0). */
 const nextStage = computed(() =>
   solarStore.isCometState
     ? STAR_PHASE_DATA[0]

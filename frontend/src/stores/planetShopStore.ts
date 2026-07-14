@@ -340,7 +340,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       if (!slot) return false
       if (!this.canAffordSlot(slot.id)) return false
       const solarStore = useSolarUpgradeStore()
-      // A comet has no planetary system — slot 1 requires phase 0 (First Spark),
+      // A comet has no planetary system — slot 1 requires phase 0 (Spark),
       // which only counts once the comet has ignited into a star.
       if (solarStore.isCometState) return false
       const requiredPhase = PLANET_SLOT_SUN_PHASE_REQUIREMENTS[slotIndex] ?? slotIndex

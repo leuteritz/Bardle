@@ -758,8 +758,8 @@ export const SUN_GROWTH_STAGES: SunGrowthStage[] = [
 ]
 
 /** Required sun phase (starPhase) to unlock each planet slot. Every sun phase after
- *  the comet unlocks one slot: slot index 0 → First Spark (phase 0), …,
- *  slot index 5 → Grand Finale (phase 5). */
+ *  the comet unlocks one slot: slot index 0 → Spark (phase 0), …,
+ *  slot index 5 → Finale (phase 5). */
 export const PLANET_SLOT_SUN_PHASE_REQUIREMENTS: number[] = [0, 1, 2, 3, 4, 5]
 
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
@@ -1577,10 +1577,8 @@ export const SOLAR_DMG_BONUS = 0.25
 
 // Star Evolution Phases (replaces chimes-threshold radius system)
 export interface StarPhaseData {
-  /** Unique Bardle name — the sun's life told as one piece of music */
+  /** Unique Bardle name — one word, so it always fits the header without truncation */
   name: string
-  /** Compact label for tight UI spots (e.g. Stellar Evolution timeline in BardStatsTab) */
-  shortName: string
   /** Scientific star-phase term, shown as secondary context (tooltips) */
   astroName: string
   radius: number
@@ -1755,8 +1753,7 @@ export const SIGIL_EMBER_R_SPREAD = 190
 
 export const STAR_PHASE_DATA: StarPhaseData[] = [
   {
-    name: 'First Spark',
-    shortName: 'Spark',
+    name: 'Spark',
     astroName: 'Protostar',
     radius: 38,
     core: '#fff0e0',
@@ -1771,8 +1768,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Azure Prelude',
-    shortName: 'Prelude',
+    name: 'Prelude',
     astroName: 'Main Sequence (Young)',
     radius: 50,
     core: '#ffffff',
@@ -1787,8 +1783,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '5s',
   },
   {
-    name: 'Golden Crescendo',
-    shortName: 'Crescendo',
+    name: 'Crescendo',
     astroName: 'Main Sequence (Mature)',
     radius: 64,
     core: '#fffce0',
@@ -1803,8 +1798,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '5s',
   },
   {
-    name: 'Amber Swell',
-    shortName: 'Swell',
+    name: 'Swell',
     astroName: 'Subgiant',
     radius: 84,
     core: '#fff0c0',
@@ -1819,8 +1813,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '4s',
   },
   {
-    name: 'Crimson Requiem',
-    shortName: 'Requiem',
+    name: 'Requiem',
     astroName: 'Red Giant',
     radius: 110,
     core: '#ffb0b0',
@@ -1835,8 +1828,7 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     pulseSpeed: '3s',
   },
   {
-    name: 'Grand Finale',
-    shortName: 'Finale',
+    name: 'Finale',
     astroName: 'Supernova',
     radius: 140,
     core: '#ffffff',
@@ -1853,19 +1845,18 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
 ]
 
 // ── Sun phase display numbering ──────────────────────────────────────────────
-// The Wandering Comet counts as display phase 1, so sun phases render as
-// starPhase + SUN_PHASE_DISPLAY_OFFSET (First Spark = 2 … Grand Finale = 7).
+// The Comet counts as display phase 1, so sun phases render as
+// starPhase + SUN_PHASE_DISPLAY_OFFSET (Spark = 2 … Finale = 7).
 export const SUN_PHASE_DISPLAY_OFFSET = 2
 export const SUN_PHASE_DISPLAY_TOTAL = STAR_PHASE_DATA.length + 1 // comet + sun phases
 
-// ── Comet Origin State (pre-phase before First Spark) ────────────────────────
+// ── Comet Origin State (pre-phase before Spark) ──────────────────────────────
 /** The player's celestial body BEFORE its first ignition: a wandering comet with
  *  Bard asleep inside. Not part of STAR_PHASE_DATA on purpose — prepending there
  *  would shift every saved starPhase index. solarUpgradeStore.isCometState flags
  *  this origin state instead; the first Star Forge evolve ("Ignition") clears it. */
 export const COMET_PHASE_DATA = {
-  name: 'Wandering Comet',
-  shortName: 'Comet',
+  name: 'Comet',
   astroName: 'Rogue Planetesimal',
   core: '#8a7a68',
   mid: '#6b5d4f',
@@ -1879,9 +1870,9 @@ export const COMET_PHASE_DATA = {
   pulseSpeed: '6s',
 } as const
 
-/** Minimum drift time (seconds) before the comet may ignite into First Spark. */
+/** Minimum drift time (seconds) before the comet may ignite into Spark. */
 /** Comet growth per Star Forge core ray at Lv 1+ (index 0..5 = rays kindled).
- *  Radius stays well below First Spark's 38 — ignition must feel like a jump. */
+ *  Radius stays well below Spark's 38 — ignition must feel like a jump. */
 export const COMET_STAGE_RADII = [16, 18, 20, 22, 24, 26]
 /** Gold-accent intensity per stage (0 = bare grey rock, 1 = fully gilded). */
 export const COMET_STAGE_GOLD = [0, 0.2, 0.4, 0.6, 0.8, 1]

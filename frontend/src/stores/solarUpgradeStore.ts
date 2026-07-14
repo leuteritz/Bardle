@@ -49,7 +49,7 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     chimesPerSecondLevel: 0 as number,
     dmgPerClickLevel: 0 as number,
     starPhase: 0 as number,
-    /** Origin state: the player starts as a wandering comet BEFORE First Spark.
+    /** Origin state: the player starts as a wandering comet BEFORE Spark.
      *  The first Star Forge evolve ("Ignition") clears this instead of bumping
      *  starPhase. Loaded saves default to false (see usePersistence) so existing
      *  players never regress into the comet. */
@@ -278,13 +278,13 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
       setTimeout(() => {
         const elapsed = Math.floor((Date.now() - this.phaseEnteredAt) / 1000)
         if (this.isCometState) {
-          // Ignition: the comet becomes First Spark — starPhase stays 0, the
-          // First Spark dwell timer starts fresh at this moment.
+          // Ignition: the comet becomes Spark — starPhase stays 0, the
+          // Spark dwell timer starts fresh at this moment.
           this.cometSeconds += elapsed
           this.isCometState = false
           this.phaseEnteredAt = Date.now()
           this.isUpgrading = false
-          console.log('[Bardle] Comet ignited into First Spark')
+          console.log('[Bardle] Comet ignited into Spark')
           return
         }
         this.totalPhaseSeconds += elapsed
