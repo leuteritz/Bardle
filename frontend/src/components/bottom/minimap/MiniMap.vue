@@ -13,6 +13,21 @@
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
 
+          <!-- ── Rescue progress: saved / required champion stars ── -->
+          <div
+            v-if="!galaxyStore.isComplete && !galaxyStore.isGalaxyTransitioning"
+            class="star-progress"
+          >
+            <div class="star-progress-row">
+              <img src="/img/star.png" alt="" class="star-progress-star" />
+              <span class="star-progress-value"
+                >{{ galaxyStore.starsRescued
+                }}<span class="star-progress-sep">/</span>{{ galaxyStore.starsRequired }}</span
+              >
+            </div>
+            <div class="star-progress-label">Stars rescued</div>
+          </div>
+
           <!-- ── Minimap-Stern Interaktionsbereich (Arrival-View) ── -->
           <div
             v-if="isArrived && championStar"
@@ -224,6 +239,76 @@ export default defineComponent({
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+
+/* ── Rescue progress badge (top right, inside the rounded corner arc) ──
+   Mirrors the arrival HUD (top left): same top offset, value size and
+   metric styling, so both read as one instrument row. */
+.star-progress {
+  position: absolute;
+  top: 16px;
+  right: 42px;
+  z-index: 10;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  animation: hud-top-fadein 0.4s ease both;
+}
+
+@keyframes hud-top-fadein {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.star-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Same star artwork as the BARDLE title crest in the bottom scoreboard */
+.star-progress-star {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(255, 220, 90, 0.55)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+}
+
+/* Matches .hud-arrival-value (arrival countdown) */
+.star-progress-value {
+  font-size: 34px;
+  line-height: 1;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.95),
+    0 0 16px rgba(232, 192, 64, 0.3);
+}
+
+.star-progress-sep {
+  font-size: 24px;
+  color: rgba(232, 192, 64, 0.55);
+  margin: 0 3px;
+}
+
+/* Matches .hud-metric (LY/s · LY row) */
+.star-progress-label {
+  font-size: 17px;
+  color: rgba(232, 192, 64, 0.72);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Minimap-Stern Hit-Area (Arrival View) ── */
