@@ -582,6 +582,9 @@
   margin: 0 2px;
   align-self: center;
 }
+/* Chip text keeps the trait's own hue, lightened toward white so every color
+   clears contrast on the dark fill; the full, unaltered trait color lives in
+   the border + icon (same recipe as the shop's .card-trait-badge). */
 .trait-chip {
   display: inline-flex;
   align-items: center;
@@ -592,9 +595,9 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   border-radius: var(--bp-radius);
-  border: 1px solid color-mix(in srgb, var(--chip-color, #7a4e20) 55%, #3e2a0a);
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--chip-color, #e8c040);
+  border: 1px solid var(--chip-color, #7a4e20);
+  background: rgba(10, 8, 4, 0.75);
+  color: color-mix(in srgb, var(--chip-color, #e8c040) 60%, #fff);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
   white-space: nowrap;
@@ -602,7 +605,7 @@
 .trait-chip:hover {
   background: color-mix(in srgb, var(--chip-color, #e8c040) 18%, #0e0c06);
   border-color: var(--chip-color, #c89040);
-  color: var(--chip-color, #e8c040);
+  color: color-mix(in srgb, var(--chip-color, #e8c040) 60%, #fff);
   box-shadow: 0 0 5px color-mix(in srgb, var(--chip-color, #e8c040) 25%, transparent);
 }
 .trait-chip:hover .trait-chip-icon {
@@ -611,7 +614,7 @@
 .trait-chip--active {
   background: color-mix(in srgb, var(--chip-color, #e8c040) 32%, #0e0c06);
   border-color: var(--chip-color, #e8c040);
-  color: var(--chip-color, #e8c040);
+  color: color-mix(in srgb, var(--chip-color, #e8c040) 60%, #fff);
   box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color, #e8c040) 45%, transparent),
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
@@ -623,7 +626,7 @@
   width: 22px;
   height: 22px;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--chip-color, #e8c040);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
 }
 .chip-group { display: contents; }

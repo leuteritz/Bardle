@@ -1854,21 +1854,27 @@ const shopChampionNames = computed(() =>
   opacity: 1;
   margin-top: 6px;
 }
+/* Readability over the busy champion art: near-opaque dark fill, and the text
+   keeps the trait's own hue but lightened toward white (color-mix) so every
+   trait color clears contrast on the dark fill — dark violets/greens included. */
 .card-trait-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 7px 3px 5px;
+  gap: 5px;
+  padding: 4px 8px 4px 6px;
   border-radius: var(--bp-radius);
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(10, 8, 4, 0.92);
   border: 1px solid var(--tc, #7a4e20);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
-  color: var(--tc, #e8c040);
+  color: color-mix(in srgb, var(--tc, #e8c040) 60%, #fff);
   text-transform: uppercase;
   white-space: nowrap;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.65),
+    0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
 }
 /* Champion Tier (star level) badge — slightly stronger fill to read as the primary tag */
 .card-cosmic-badge {
@@ -1879,7 +1885,7 @@ const shopChampionNames = computed(() =>
   width: 15px;
   height: 15px;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--tc, #e8c040);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
