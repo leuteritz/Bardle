@@ -15,8 +15,8 @@
           <Icon
             v-if="isStructureKind"
             icon="game-icons:watchtower"
-            width="40"
-            height="40"
+            width="30"
+            height="30"
             class="banner-structure-icon"
             :class="current.team === 1 ? 'structure-icon--blue' : 'structure-icon--red'"
           />
@@ -262,10 +262,10 @@ const subline = computed(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 320px;
-  max-width: 460px;
-  padding: 10px 26px;
+  gap: 10px;
+  min-width: 250px;
+  max-width: 380px;
+  padding: 6px 20px;
   background: linear-gradient(to right, rgba(17, 16, 8, 0), #111008 18%, #111008 82%, rgba(17, 16, 8, 0));
   overflow: hidden;
 }
@@ -309,8 +309,8 @@ const subline = computed(() => {
   animation: portrait-punch 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 .banner-portrait {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid;
@@ -348,9 +348,9 @@ const subline = computed(() => {
   min-width: 0;
 }
 .banner-headline {
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
   line-height: 1.1;
   white-space: nowrap;
   animation: headline-punch 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
@@ -394,8 +394,8 @@ const subline = computed(() => {
 }
 
 .banner-sub {
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.55);
   margin-top: 2px;
   white-space: nowrap;

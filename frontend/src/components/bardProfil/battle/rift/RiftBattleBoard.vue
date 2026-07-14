@@ -34,6 +34,12 @@ import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
   flex-direction: column;
   background: #0c0b07;
   z-index: 10;
+  /* Size container: header, HUDs and ticker scale with the board via cq units,
+     so every desktop resolution fits without vertical scrolling. */
+  container-type: size;
+  container-name: board;
+  /* Shared team-HUD width — TeamColumn and DrakeBuffBadges both key off it */
+  --hud-w: clamp(148px, 15cqw, 200px);
 }
 
 .board-middle {

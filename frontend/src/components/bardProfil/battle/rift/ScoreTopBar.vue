@@ -106,10 +106,12 @@ watch(bluePercent, (next, prev) => {
 </script>
 
 <style scoped>
+/* Fluid sizing (cq units against .rift-board): the bar shrinks gently on small
+   desktops and caps at the original design size on large ones. */
 .score-bar {
   display: flex;
   align-items: stretch;
-  height: 60px;
+  height: clamp(36px, 6cqh, 48px);
   flex-shrink: 0;
   border-bottom: 2px solid #3e200a;
   background: #0d0c08;
@@ -127,8 +129,8 @@ watch(bluePercent, (next, prev) => {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 18px;
+  gap: clamp(8px, 1.2cqw, 14px);
+  padding: 0 clamp(10px, 1.5cqw, 18px);
   min-width: 0;
 }
 .side--blue {
@@ -140,7 +142,7 @@ watch(bluePercent, (next, prev) => {
 }
 
 .side-name {
-  font-size: 15px;
+  font-size: clamp(11px, 1.05cqw, 13px);
   font-weight: 700;
   letter-spacing: 2px;
   white-space: nowrap;
@@ -153,9 +155,9 @@ watch(bluePercent, (next, prev) => {
 .side-stats {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: clamp(7px, 1.1cqw, 14px);
   margin-left: auto;
-  font-size: 14px;
+  font-size: clamp(10px, 0.95cqw, 12px);
   color: #8ab0e0;
 }
 .side-stats--red {
@@ -176,8 +178,8 @@ watch(bluePercent, (next, prev) => {
 .stat-icon { opacity: 0.8; }
 .stat-icon--inhib { color: #e884d8; }
 .stat-img {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -185,8 +187,8 @@ watch(bluePercent, (next, prev) => {
 .center {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 22px;
+  gap: clamp(9px, 1.1cqw, 14px);
+  padding: 0 clamp(12px, 1.7cqw, 22px);
   background: #0d0c08;
   border-left: 2px solid #3e200a;
   border-right: 2px solid #3e200a;
@@ -194,10 +196,10 @@ watch(bluePercent, (next, prev) => {
 }
 
 .kills {
-  font-size: 34px;
+  font-size: clamp(20px, 3.8cqh, 27px);
   font-weight: 700;
   line-height: 1;
-  min-width: 44px;
+  min-width: clamp(28px, 5cqh, 36px);
   text-align: center;
 }
 .kills--blue { color: #93c5fd; }
@@ -207,12 +209,12 @@ watch(bluePercent, (next, prev) => {
   text-align: center;
 }
 .timer-eyebrow {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 2px;
   color: #6a5820;
 }
 .timer-value {
-  font-size: 22px;
+  font-size: clamp(14px, 2.5cqh, 18px);
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
@@ -224,10 +226,10 @@ watch(bluePercent, (next, prev) => {
 .momentum-meter {
   position: relative;
   flex-shrink: 0;
-  height: 40px;
+  height: clamp(22px, 4cqh, 30px);
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 clamp(10px, 1.2cqw, 14px);
   background:
     linear-gradient(to right, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0) 30%),
     linear-gradient(to left, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0) 30%),
@@ -243,7 +245,7 @@ watch(bluePercent, (next, prev) => {
 }
 
 .momentum-pct {
-  width: 64px;
+  width: clamp(38px, 6.6cqh, 50px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -254,7 +256,7 @@ watch(bluePercent, (next, prev) => {
 }
 
 .momentum-pct-value {
-  font-size: 28px;
+  font-size: clamp(15px, 3cqh, 21px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -282,7 +284,7 @@ watch(bluePercent, (next, prev) => {
 .momentum-delta {
   position: absolute;
   top: 50%;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.5px;
@@ -332,7 +334,7 @@ watch(bluePercent, (next, prev) => {
 .momentum-track {
   position: relative;
   flex: 1;
-  height: 22px;
+  height: clamp(12px, 2.4cqh, 16px);
   display: flex;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -384,7 +386,7 @@ watch(bluePercent, (next, prev) => {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1;
   color: #e8c040;
   text-shadow:

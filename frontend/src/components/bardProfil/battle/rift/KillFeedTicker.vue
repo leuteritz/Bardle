@@ -241,9 +241,11 @@ function structureLabel(e: StructureFeedEntry): string {
 .ticker-root {
   position: relative;
   flex-shrink: 0;
-  /* layout reservation stays 36px so the minimap keeps its exact size —
-     the visible bar below grows upward as an overlay */
-  height: 36px;
+  /* fluid bar height shared between the bar and the docked history panel */
+  --bar-h: clamp(36px, 6.2cqh, 46px);
+  /* layout reservation stays below the bar height so the minimap keeps its
+     size — the visible bar grows upward as an overlay */
+  height: clamp(28px, 4.8cqh, 36px);
   /* above .objective-overlay (40), below .announce-layer (45) — the HUD footer
      must stay fully visible over the modal backdrop */
   z-index: 41;
@@ -255,11 +257,11 @@ function structureLabel(e: StructureFeedEntry): string {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 46px;
+  height: var(--bar-h);
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 16px;
+  gap: clamp(10px, 1.2cqw, 14px);
+  padding: 0 clamp(10px, 1.4cqw, 16px);
   border-top: 2px solid #3e200a;
   background: #0d0c08;
   overflow: hidden;
@@ -303,7 +305,7 @@ function structureLabel(e: StructureFeedEntry): string {
 }
 
 .bar-time {
-  font-size: 14px;
+  font-size: clamp(12px, 1.9cqh, 14px);
   letter-spacing: 1px;
   color: #6a5820;
   flex-shrink: 0;
@@ -311,23 +313,23 @@ function structureLabel(e: StructureFeedEntry): string {
 
 /* Bar-only readability bumps — the expanded panel keeps its compact sizing */
 .ticker-bar .feed-img {
-  width: 28px;
-  height: 28px;
+  width: clamp(22px, 3.8cqh, 28px);
+  height: clamp(22px, 3.8cqh, 28px);
 }
 .ticker-bar .feed-mk {
-  font-size: 13px;
+  font-size: clamp(11px, 1.8cqh, 13px);
 }
 .ticker-bar .feed-structure-label {
-  font-size: 14px;
+  font-size: clamp(12px, 1.9cqh, 14px);
 }
 
 /* ── Expanded history overlay ── */
 .feed-panel {
   position: absolute;
-  bottom: 46px; /* docks onto the top edge of the overlay-grown bar */
+  bottom: var(--bar-h); /* docks onto the top edge of the overlay-grown bar */
   left: 0;
   right: 0;
-  height: 248px;
+  height: min(248px, 42cqh);
   z-index: 8;
   display: flex;
   flex-direction: column;

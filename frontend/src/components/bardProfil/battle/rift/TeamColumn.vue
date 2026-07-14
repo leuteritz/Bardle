@@ -86,13 +86,14 @@ function hpClass(hp: number): string {
 
 <style scoped>
 .team-col {
-  /* slim spectator HUD panel floating above the map */
-  width: 192px;
+  /* slim spectator HUD panel floating above the map — width shared with the
+     drake-badge offsets via --hud-w on .rift-board, sizes fluid via cq units */
+  width: var(--hud-w, 192px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px 7px;
+  gap: clamp(3px, 0.7cqh, 5px);
+  padding: clamp(5px, 1cqh, 8px) clamp(5px, 0.6cqw, 7px);
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -122,8 +123,8 @@ function hpClass(hp: number): string {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  padding: 5px 6px;
+  gap: clamp(2px, 0.4cqh, 3px);
+  padding: clamp(3px, 0.7cqh, 5px) 6px;
   border-radius: 5px;
 }
 .champ-card--blue {
@@ -152,8 +153,8 @@ function hpClass(hp: number): string {
 }
 
 .portrait {
-  width: 34px;
-  height: 34px;
+  width: clamp(26px, 4.6cqh, 34px);
+  height: clamp(26px, 4.6cqh, 34px);
   border-radius: 5px;
   object-fit: cover;
   border: 1px solid #60a5fa;
@@ -201,7 +202,7 @@ function hpClass(hp: number): string {
 .name-block--right { text-align: right; }
 
 .champ-name {
-  font-size: 13px;
+  font-size: clamp(11px, 1.8cqh, 13px);
   color: #dbeafe;
   white-space: nowrap;
   overflow: hidden;
@@ -223,7 +224,7 @@ function hpClass(hp: number): string {
 }
 
 .kda {
-  font-size: 12px;
+  font-size: clamp(10px, 1.7cqh, 12px);
   display: flex;
   align-items: baseline;
   gap: 1px;
@@ -236,7 +237,7 @@ function hpClass(hp: number): string {
 
 .cs-tag {
   margin-left: 6px;
-  font-size: 11px;
+  font-size: clamp(9px, 1.5cqh, 11px);
   color: #8a8070;
 }
 

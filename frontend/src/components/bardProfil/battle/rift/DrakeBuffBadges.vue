@@ -61,13 +61,14 @@ function ownEffectText(d: DrakeTypeDef): string {
   z-index: 7;
   pointer-events: none;
 }
-/* 192px team HUD + 2×8px gap keeps the stacks clear of the floating team columns */
+/* team HUD width (--hud-w from .rift-board) + gaps keeps the stacks clear of
+   the floating team columns at every board size */
 .buff-stack--own {
-  left: 208px;
+  left: calc(var(--hud-w, 192px) + 16px);
   align-items: flex-start;
 }
 .buff-stack--enemy {
-  right: 208px;
+  right: calc(var(--hud-w, 192px) + 16px);
   align-items: flex-end;
 }
 
@@ -89,7 +90,7 @@ function ownEffectText(d: DrakeTypeDef): string {
 }
 
 .badge-img {
-  width: 44px;
+  width: clamp(32px, 5.8cqh, 44px);
   height: auto;
   display: block;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px var(--dk-glow));
@@ -105,7 +106,7 @@ function ownEffectText(d: DrakeTypeDef): string {
   text-align: right;
 }
 .badge-title {
-  font-size: 14px;
+  font-size: clamp(12px, 1.9cqh, 14px);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--dk-color);
@@ -113,7 +114,7 @@ function ownEffectText(d: DrakeTypeDef): string {
   white-space: nowrap;
 }
 .badge-effect {
-  font-size: 11px;
+  font-size: clamp(10px, 1.5cqh, 11px);
   color: #c0b090;
   white-space: nowrap;
 }

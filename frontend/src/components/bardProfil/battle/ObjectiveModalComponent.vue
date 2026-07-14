@@ -1,7 +1,7 @@
 <template>
   <Transition name="obj-pop">
-    <div v-if="show" class="objective-overlay">
-      <div class="objective-modal" :style="themeVars">
+    <div v-if="show" ref="overlayEl" class="objective-overlay">
+      <div ref="modalEl" class="objective-modal" :style="modalStyle">
         <!-- Gold accent bar -->
         <div class="accent-bar" />
 
@@ -391,6 +391,7 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
+import { useFitScale } from '@/composables/useFitScale'
 import ObjectiveResultSummary from './ObjectiveResultSummary.vue'
 import {
   OBJECTIVE_BASE_DPS_PER_CHAMP,
@@ -427,6 +428,17 @@ const themeVars = computed(() => {
   const t = isDrake.value ? drakeDef.value : BARON_THEME
   return { '--obj-color': t.color, '--obj-dark': t.colorDark, '--obj-glow': t.glow }
 })
+
+// The modal is a fixed 880px design; fit-scale it into the board middle so the
+// whole fight is visible on every desktop resolution — no inner scrolling.
+const overlayEl = ref<HTMLElement | null>(null)
+const modalEl = ref<HTMLElement | null>(null)
+const { scale: modalScale } = useFitScale(overlayEl, modalEl, { maxScale: 1.35, padding: 10 })
+
+const modalStyle = computed(() => ({
+  ...themeVars.value,
+  transform: `scale(${modalScale.value})`,
+}))
 
 const objectiveTitle = computed(() =>
   isDrake.value ? drakeDef.value.label.toUpperCase() : 'BARON NASHOR',
@@ -863,21 +875,21 @@ onUnmounted(_stopFloatScheduler)
 }
 
 /* ── Modal card ──────────────────────────────────────────────────────────── */
+/* Fixed 880px design surface — useFitScale shrinks/grows it uniformly so the
+   entire fight always fits the board without any inner scrolling. */
 .objective-modal {
   position: relative;
-  width: min(880px, calc(100% - 32px));
-  max-height: 92%;
+  width: 880px;
+  flex-shrink: 0;
   background: #111008;
   border: 4px solid #7a4e20;
   box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 0 4px #5c3310, 0 20px 50px rgba(0, 0, 0, 0.95);
   border-radius: 4px;
   overflow: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform-origin: center center;
 }
 /* Soft objective-colored haze over the flat dark base */
 .objective-modal::before {
