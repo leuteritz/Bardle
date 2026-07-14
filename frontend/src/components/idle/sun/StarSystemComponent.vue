@@ -1050,22 +1050,6 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-.star-body--champion::before,
-.star-body--resource::before {
-  content: '';
-  position: absolute;
-  inset: -28px;
-  border-radius: 50%;
-  border: 1px dashed rgba(var(--star-rgb), 0.2);
-  animation: star-outer-ring-spin 9s linear infinite;
-  pointer-events: none;
-}
-
-.star-body--resource::before {
-  animation-direction: reverse;
-  animation-duration: 11s;
-}
-
 .star-body--galaxy_boss::after {
   content: '';
   position: absolute;
@@ -1073,16 +1057,6 @@ function starCountStyle(star: StarRenderEntry) {
   border-radius: 50%;
   border: 2px solid rgba(var(--star-rgb), 0.55);
   animation: star-ring-pulse 2.2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.star-body--galaxy_boss::before {
-  content: '';
-  position: absolute;
-  inset: -36px;
-  border-radius: 50%;
-  border: 1px dashed rgba(var(--star-rgb), 0.22);
-  animation: star-outer-ring-spin 7s linear infinite;
   pointer-events: none;
 }
 
@@ -1107,15 +1081,6 @@ function starCountStyle(star: StarRenderEntry) {
   }
   100% {
     filter: brightness(1) saturate(1);
-  }
-}
-
-@keyframes star-outer-ring-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 
