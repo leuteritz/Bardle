@@ -6,7 +6,7 @@ withDefaults(
     title: string
     icon: string
     subtitle?: string
-    size?: 'md' | 'lg'
+    size?: 'md' | 'lg' | 'xl'
     /** Hides the title header — content owns the top area, close floats top-right. */
     hideHeader?: boolean
   }>(),
@@ -77,6 +77,12 @@ const emit = defineEmits<{ close: [] }>()
 .tms-panel--lg {
   width: min(920px, 96%);
   height: min(760px, 94%);
+}
+/* Full-height variant: fills the tab up to the backdrop padding, so the modal
+   keeps the same 20px gap above and below and never overlaps the app header. */
+.tms-panel--xl {
+  width: min(920px, 96%);
+  height: 100%;
 }
 .tms-gold-line {
   height: 3px;

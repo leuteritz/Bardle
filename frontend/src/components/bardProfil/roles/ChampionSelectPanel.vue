@@ -462,7 +462,7 @@ function onImgError(e: Event) {
     <div class="csp-filter-header">
       <div class="cs-search-row">
         <div class="rpg-search-wrap">
-          <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
+          <Icon icon="game-icons:magnifying-glass" width="18" height="18" class="rpg-search-icon" />
           <input
             v-model="searchQuery"
             type="text"
@@ -492,7 +492,7 @@ function onImgError(e: Event) {
           aria-label="Toggle filters"
           @click="traitFilterOpen = !traitFilterOpen"
         >
-          <Icon icon="game-icons:toggles" width="16" height="16" />
+          <Icon icon="game-icons:toggles" width="18" height="18" />
           <span class="filter-toggle-label">Filter</span>
           <span class="filter-toggle-chevron">{{ traitFilterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !traitFilterOpen" class="filter-active-dot"></span>
@@ -509,7 +509,7 @@ function onImgError(e: Event) {
           @keydown.enter.prevent="toggleAllTiers"
           @keydown.space.prevent="toggleAllTiers"
         >
-          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="16" height="16" />
+          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="18" height="18" />
         </button>
 
         <button v-if="showClose" class="modal-close-btn" @click="emit('close')">✕</button>
@@ -695,6 +695,14 @@ function onImgError(e: Event) {
             :title="getChampionDetail(champion).cosmic.name"
           >
             {{ getChampionTierLabel(champion) }}
+          </div>
+
+          <!-- Role badge pill: top-right — champion's role (mirrors the Shop) -->
+          <div
+            class="role-badge-pill"
+            :style="{ background: ROLE_BY_KEY[CHAMPION_ROLES[champion]]?.color }"
+          >
+            {{ ROLE_BY_KEY[CHAMPION_ROLES[champion]]?.short }}
           </div>
 
           <!-- Content: name + trait/origin icon row (names in tooltips) -->
@@ -989,19 +997,36 @@ function onImgError(e: Event) {
    ChampionShopComponent via .cs-* / .trait-chip classes in rpg-theme.css.
    This wrapper mirrors the shop's .cs-header spacing so both filters align. */
 .csp-filter-header {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(92, 51, 16, 0.3);
+  padding: 12px 14px;
   flex-shrink: 0;
 }
-
+/* Same left-anchored fading gold divider as the shop header / tier headers */
+.csp-filter-header::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #c89040,
+    rgba(200, 144, 64, 0.35) 55%,
+    transparent
+  );
+}
 /* Close button flows inline at the end of the search row (mirrors the Shop) */
 .cs-search-row .modal-close-btn {
   position: static;
   flex-shrink: 0;
   transform: none;
+  width: 46px;
+  height: 46px;
 }
 
 /* active filter summary bar (below the search row — mirrors the Shop) */
@@ -1270,6 +1295,27 @@ function onImgError(e: Event) {
 }
 
 /* Taken badge */
+/* Role badge pill: top-right (ported from Shop .role-badge-pill) */
+.role-badge-pill {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 4;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #111008;
+  padding: 3px 7px;
+  border-radius: 3px;
+  line-height: 1.2;
+  pointer-events: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
+}
+/* The taken badge owns the top-right corner — drop the role pill below it */
+.csp-champ:has(.csp-taken-badge) .role-badge-pill {
+  top: 28px;
+}
+
 .csp-taken-badge {
   position: absolute;
   top: 3px;

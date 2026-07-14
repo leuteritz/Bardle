@@ -4,7 +4,7 @@
     <div class="rpg-header cs-header">
       <div class="cs-search-row">
         <div class="rpg-search-wrap">
-          <Icon icon="game-icons:magnifying-glass" width="14" height="14" class="rpg-search-icon" />
+          <Icon icon="game-icons:magnifying-glass" width="18" height="18" class="rpg-search-icon" />
           <input
             ref="searchInputRef"
             v-model="searchQuery"
@@ -36,7 +36,7 @@
           aria-label="Toggle filters"
           @click="filterOpen = !filterOpen"
         >
-          <Icon icon="game-icons:toggles" width="16" height="16" />
+          <Icon icon="game-icons:toggles" width="18" height="18" />
           <span class="filter-toggle-label">Filter</span>
           <span class="filter-toggle-chevron">{{ filterOpen ? '▾' : '▴' }}</span>
           <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
@@ -53,7 +53,7 @@
           @keydown.enter.prevent="toggleAllTiers"
           @keydown.space.prevent="toggleAllTiers"
         >
-          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="16" height="16" />
+          <Icon :icon="allTiersCollapsed ? 'game-icons:expand' : 'game-icons:contract'" width="18" height="18" />
         </button>
 
         <button v-if="showClose" class="modal-close-btn" @click="$emit('close')">✕</button>
@@ -309,6 +309,14 @@
           <!-- Visual card: expands absolutely out of grid slot on hover -->
           <div class="card-inner">
 
+            <!-- Role badge pill: top-right — champion's role -->
+            <div
+              class="role-badge-pill"
+              :style="{ background: ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.color }"
+            >
+              {{ ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]?.label }}
+            </div>
+
             <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
             <div
               v-if="!isOwned(champion.name)"
@@ -361,7 +369,7 @@
               <div class="flex flex-col">
                 <!-- 1. Name — always visible -->
                 <span
-                  class="text-sm font-black leading-tight tracking-wide champion-name"
+                  class="text-base font-black leading-tight tracking-wide champion-name"
                   :class="
                     isOwned(champion.name) || isLocked(champion.name)
                       ? 'champion-name--dim'
@@ -523,7 +531,7 @@
                 <div class="card-content">
                   <div class="flex flex-col">
                     <span
-                      class="text-sm font-black leading-tight tracking-wide champion-name"
+                      class="text-base font-black leading-tight tracking-wide champion-name"
                       :class="
                         isOwned(champion.name) || isLocked(champion.name)
                           ? 'champion-name--dim'
@@ -1389,9 +1397,31 @@ const shopChampionNames = computed(() =>
   box-shadow: none;
   --text-transition-dur: 0.22s;
 }
+/* Header sits on the same deep surface as the tier grid below — no separate
+   panel color, no hard border. The divider is the same left-anchored fading
+   gold line the tier headers use, so search bar and tier sections read as one
+   continuous design. */
 .rpg-header {
-  border-bottom-width: 1px;
-  border-bottom-color: rgba(92, 51, 16, 0.5);
+  background: transparent;
+  border-bottom: none;
+}
+.cs-header {
+  position: relative;
+}
+.cs-header::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    #c89040,
+    rgba(200, 144, 64, 0.35) 55%,
+    transparent
+  );
 }
 
 /* ── Empty state ── */
@@ -1460,7 +1490,9 @@ const shopChampionNames = computed(() =>
 .champion-card-slot[data-role="adc"]     { --role-c: #e89840; --role-c-hi: #f0b060; }
 .champion-card-slot[data-role="support"] { --role-c: #b8c8d8; --role-c-hi: #d0dde8; }
 
+/* Thicker role-colored frame so the champion's role reads at a glance */
 .champion-card-slot[data-role] .card-inner {
+  border-width: 3px;
   border-color: var(--role-c);
 }
 
@@ -1754,7 +1786,7 @@ const shopChampionNames = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 12px 14px;
   flex-shrink: 0;
 }
 /* Shared search row + filter toggle + collapsible filter panel + chips live in
@@ -1764,10 +1796,13 @@ const shopChampionNames = computed(() =>
   position: static;
   flex-shrink: 0;
   transform: none;
+  width: 46px;
+  height: 46px;
 }
 
-/* ── Grid area ── */
-.cs-grid { padding: 8px 10px; }
+/* ── Grid area — same horizontal inset as the header so search bar and tier
+   headers align on one left edge ── */
+.cs-grid { padding: 12px 14px; }
 
 .champion-badge-fade-leave-active {
   transition: opacity 0.2s ease;
@@ -1791,9 +1826,20 @@ const shopChampionNames = computed(() =>
   opacity: 1;
   margin: 4px 0 2px;
 }
+/* Costs (materials + chimes) are hover-only — the resting card shows just
+   name, tier and role. Same collapse pattern as .card-traits-section. */
 .card-bottom-section {
   display: flex;
   flex-direction: column;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+}
+.champion-card-slot:hover .card-bottom-section {
+  max-height: 140px;
+  opacity: 1;
+  margin-top: 4px;
 }
 .card-trait-badge {
   display: inline-flex;
@@ -1827,7 +1873,8 @@ const shopChampionNames = computed(() =>
 @media (prefers-reduced-motion: reduce) {
   .card-content,
   .champion-name,
-  .cost-badge {
+  .cost-badge,
+  .card-bottom-section {
     transition: none !important;
   }
   .card-inner {
@@ -1906,11 +1953,11 @@ const shopChampionNames = computed(() =>
   top: 5px;
   right: 5px;
   z-index: 15;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.06em;
   color: #111008;
-  padding: 2px 5px;
+  padding: 3px 7px;
   border-radius: 3px;
   line-height: 1.2;
   pointer-events: none;
@@ -1955,13 +2002,13 @@ const shopChampionNames = computed(() =>
   top: 5px;
   left: 5px;
   z-index: 15;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.04em;
   color: var(--tier-c);
   background: rgba(0, 0, 0, 0.78);
   border: 1px solid color-mix(in srgb, var(--tier-c) 70%, #111);
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 3px;
   line-height: 1.2;
   pointer-events: none;

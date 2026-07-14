@@ -294,6 +294,7 @@ onUnmounted(() => {
       v-if="activeModal === 'shop'"
       title="Shop"
       icon="game-icons:barbute"
+      size="xl"
       hide-header
       @close="closeModal"
     >

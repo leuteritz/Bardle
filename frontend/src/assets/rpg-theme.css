@@ -413,6 +413,39 @@
   gap: 8px;
 }
 
+/* Search input inside the champion filter — sized up to match the large tier
+   headers below and restyled onto the same surface language as the chips and
+   toggle buttons (dark translucent fill, wood border, gold focus), so the
+   header and the tier sections read as one unit. */
+.cs-search-row .rpg-search {
+  height: 46px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #e8d8b0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+}
+.cs-search-row .rpg-search::placeholder {
+  color: #7a6040;
+  font-weight: 500;
+}
+.cs-search-row .rpg-search:hover {
+  border-color: #7a4e20;
+}
+.cs-search-row .rpg-search:focus {
+  border-color: #c89040;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.3);
+}
+.cs-search-row .rpg-search-icon {
+  color: #8a6030;
+}
+.cs-search-row .rpg-search-wrap:focus-within .rpg-search-icon {
+  color: #c89040;
+}
+
 /* Filter panel toggle button */
 .filter-toggle-btn {
   position: relative;
@@ -420,9 +453,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  height: 34px;
-  padding: 0 10px;
+  gap: 6px;
+  height: 46px;
+  padding: 0 14px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid #5c3310;
   border-radius: var(--bp-radius);
@@ -447,13 +480,13 @@
   color: #c89040;
 }
 .filter-toggle-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 .filter-toggle-chevron {
-  font-size: 10px;
+  font-size: 11px;
   opacity: 0.75;
 }
 .filter-active-dot {
@@ -837,8 +870,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid #5c3310;
   border-radius: var(--bp-radius);
