@@ -57,27 +57,6 @@
           <div class="star-pulse-overlay" />
         </div>
       </template>
-
-      <!-- Alle Planeten existieren in BEIDEN Ebenen; applyFrames() schaltet
-           per display um. So löst der ständige Vor/Hinter-Wechsel der Planeten
-           kein Vue-Re-Render und kein Neu-Zeichnen der Planeten-SVGs aus. -->
-      <template v-for="star in starRenders" :key="'pb-' + star.id">
-        <PlanetComponent
-          v-for="p in star.planets"
-          :key="p.planetId"
-          :ref="(inst) => setPlanetEl(planetElsBack, p.planetId, inst)"
-          :id="p.planetId"
-          :size="p.size"
-          :planetType="p.type"
-          :transform="p.transform"
-          :opacity="p.opacity"
-          :isRescue="false"
-          :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="null"
-          :animState="p.animState"
-          :championImage="undefined"
-        />
-      </template>
     </div>
   </Teleport>
 
@@ -106,24 +85,6 @@
             <div class="star-pulse-overlay" />
           </div>
         </div>
-      </template>
-
-      <template v-for="star in starRenders" :key="'pf-' + star.id">
-        <PlanetComponent
-          v-for="p in star.planets"
-          :key="p.planetId"
-          :ref="(inst) => setPlanetEl(planetElsFront, p.planetId, inst)"
-          :id="p.planetId"
-          :size="p.size"
-          :planetType="p.type"
-          :transform="p.transform"
-          :opacity="p.opacity"
-          :isRescue="false"
-          :isGalaxyBoss="p.isGalaxyBoss"
-          :labelData="null"
-          :animState="p.animState"
-          :championImage="undefined"
-        />
       </template>
 
       <!-- ③ Enemy Projectiles -->
@@ -264,7 +225,6 @@ import type { ComponentPublicInstance } from 'vue'
 import { useStarSystem } from '../../../composables/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import type { StarRenderEntry } from '../../../composables/useStarSystem'
-import PlanetComponent from '../planet/PlanetComponent.vue'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import { useStarGroupStore } from '../../../stores/starGroupStore'
@@ -318,8 +278,6 @@ const effectiveHoveredStarId = computed(
 // auf die hier registrierten Elemente — ohne VNode-Diffing pro Frame.
 const starBackEls = new Map<string, HTMLElement>()
 const starWrapEls = new Map<string, HTMLElement>()
-const planetElsBack = new Map<string, SVGSVGElement>()
-const planetElsFront = new Map<string, SVGSVGElement>()
 const summaryEls = new Map<string, HTMLElement>()
 const countEls = new Map<string, HTMLElement>()
 const curseRingEls = new Map<string, HTMLElement>()
@@ -338,23 +296,11 @@ function setMapEl<T extends Element>(map: Map<string, T>, id: string, el: Templa
   }
 }
 
-function setPlanetEl(map: Map<string, SVGSVGElement>, id: string, inst: TemplateRef) {
-  const el = (inst as ComponentPublicInstance | null)?.$el as SVGSVGElement | undefined
-  if (el) {
-    map.set(id, el)
-  } else {
-    const cur = map.get(id)
-    if (cur && !cur.isConnected) map.delete(id)
-  }
-}
-
 // Elemente in Transitions bleiben beim Unmount kurz "connected" und würden
 // sonst als verwaiste Map-Einträge liegen bleiben — periodisch aufräumen.
 const ALL_EL_MAPS: Map<string, Element>[] = [
   starBackEls,
   starWrapEls,
-  planetElsBack,
-  planetElsFront,
   summaryEls,
   countEls,
   curseRingEls,
@@ -526,25 +472,6 @@ function applyFrames() {
     if (count) {
       count.style.transform = `translate(${star.x}px, ${star.y - half - 25}px) translateX(-50%) translateY(-100%)`
       count.style.opacity = starOpacity
-    }
-
-    for (const p of star.planets) {
-      const back = planetElsBack.get(p.planetId)
-      if (back) {
-        back.style.display = p.isBehind ? '' : 'none'
-        if (p.isBehind) {
-          back.style.transform = p.transform
-          back.style.opacity = String(p.opacity)
-        }
-      }
-      const front = planetElsFront.get(p.planetId)
-      if (front) {
-        front.style.display = p.isBehind ? 'none' : ''
-        if (!p.isBehind) {
-          front.style.transform = p.transform
-          front.style.opacity = String(p.opacity)
-        }
-      }
     }
 
     if (star.id === cursedId) {

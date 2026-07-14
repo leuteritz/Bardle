@@ -23,14 +23,14 @@ const BEHIND_THRESHOLD = -0.05
 const STAR_BEHIND_OPACITY = 0.2
 const SPEED_LERP = 0.04
 
+// Planeten werden nicht mehr um die Sterne gerendert — die Einträge dienen
+// nur noch der Logik (Zähler, Gegner-Salven, Fluch-Zuordnung, Ziel-Positionen).
 export interface PlanetRenderEntry {
   planetId: string
   type: PlanetType
   isChampionPlanet: boolean
   isGalaxyBoss: boolean
   size: number
-  transform: string
-  opacity: number
   isBehind: boolean
   animState: 'normal' | 'exploding' | 'saved' | 'champion_arriving'
 }
@@ -373,20 +373,10 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
             : slot.isChampionPlanet
               ? PLANET_SIZE_CHAMPION
               : PLANET_SIZE_NORMAL) * Math.pow(sunScale, 0.65)
-        const pR = pSize / 2
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
         const pIsBehind = pRelY < -0.05
         const pDepth = Math.max(0, Math.min(1, (pRelY + 1) / 2))
-        const pScale = 0.72 + pDepth * 0.56
-        const pOpacity = (0.2 + pDepth * 0.8) * visibleFactor * spawnFactor
-
-        // Scale quantisiert (1%-Stufen), damit der Compositor das Planeten-SVG
-        // nicht bei jeder Mini-Skalenänderung neu rastern muss.
-        const transform =
-          `translate(${px}px, ${py}px) ` +
-          `scale(${pScale.toFixed(2)}) ` +
-          `translate(${-pR}px, ${-pR}px)`
 
         if (!slot.cleared) {
           const isForeground = !pIsBehind && pDepth > 0.65
@@ -409,8 +399,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
           isChampionPlanet: slot.isChampionPlanet,
           isGalaxyBoss,
           size: pSize,
-          transform,
-          opacity: pOpacity,
           isBehind: pIsBehind,
           animState,
         })
@@ -504,8 +492,6 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         o.orbitRx = n.orbitRx
         o.orbitRy = n.orbitRy
         for (let j = 0; j < n.planets.length; j++) {
-          o.planets[j].transform = n.planets[j].transform
-          o.planets[j].opacity = n.planets[j].opacity
           o.planets[j].isBehind = n.planets[j].isBehind
         }
       }
