@@ -19,51 +19,44 @@
         :style="rowStyle(role, !!battleStore.headerSlots[idx])"
       >
         <template v-if="battleStore.headerSlots[idx]">
-          <!-- Standout badges: uniform labeled ribbons, stacked (max 4 per column).
-               Always rendered so the center block aligns across all rows. -->
-          <div class="row-badges">
-            <div
-              v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
-              :key="badge.key"
-              class="row-ribbon"
-              :style="{
-                background: `linear-gradient(90deg, ${hexToRgba(badge.color, 0.38)}, rgba(10, 8, 4, 0.85))`,
-              }"
-              :title="badge.label"
-            >
-              <Icon
-                :icon="badge.icon"
-                width="24"
-                height="24"
-                class="ribbon-icon"
-                :style="{ color: badge.color }"
-              />
-              <span>{{ badge.label }}</span>
+          <!-- Role column: fixed width so every champion name starts at the same x -->
+          <span class="row-role" :style="{ color: role.color }">{{ role.roleLabel }}</span>
+
+          <div class="row-main">
+            <span class="row-champ-name">{{ battleStore.headerSlots[idx] }}</span>
+            <!-- Standout badges: compact icon tokens, label via tooltip -->
+            <div class="row-badges">
+              <span
+                v-for="badge in badgesFor(battleStore.headerSlots[idx]!)"
+                :key="badge.key"
+                class="row-badge"
+                :title="badge.label"
+              >
+                <Icon
+                  :icon="badge.icon"
+                  class="row-badge-icon"
+                  :style="{ color: badge.color }"
+                />
+              </span>
             </div>
           </div>
 
-          <div class="row-center">
-            <div class="row-name-line">
-              <span class="row-champ-name">{{ battleStore.headerSlots[idx] }}</span>
-              <span class="row-role-label" :style="{ color: role.color }">{{ role.roleLabel }}</span>
+          <div class="row-stats">
+            <div class="row-stat">
+              <span class="row-stat-value row-stat-value--kills">
+                {{ statFor(battleStore.headerSlots[idx]!).kills }}
+              </span>
+              <span class="row-stat-label">KILLS</span>
             </div>
-            <div class="row-stats">
-              <div class="row-stat">
-                <span class="row-stat-value row-stat-value--kills">
-                  {{ statFor(battleStore.headerSlots[idx]!).kills }}
-                </span>
-                <span class="row-stat-label">KILLS</span>
-              </div>
-              <div class="row-stat">
-                <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
-                <span class="row-stat-label">KDA</span>
-              </div>
-              <div class="row-stat">
-                <span class="row-stat-value row-stat-value--mvp">
-                  {{ statFor(battleStore.headerSlots[idx]!).mvps }}
-                </span>
-                <span class="row-stat-label">MVP</span>
-              </div>
+            <div class="row-stat">
+              <span class="row-stat-value">{{ statFor(battleStore.headerSlots[idx]!).kda }}</span>
+              <span class="row-stat-label">KDA</span>
+            </div>
+            <div class="row-stat">
+              <span class="row-stat-value row-stat-value--mvp">
+                {{ statFor(battleStore.headerSlots[idx]!).mvps }}
+              </span>
+              <span class="row-stat-label">MVP</span>
             </div>
           </div>
 
@@ -97,14 +90,11 @@
           </div>
         </template>
         <template v-else>
-          <div class="row-badges" />
-          <div class="row-center">
-            <div class="row-name-line">
-              <span class="row-champ-name row-champ-name--empty">Empty slot</span>
-              <span class="row-role-label" :style="{ color: hexToRgba(role.color, 0.55) }">
-                {{ role.roleLabel }}
-              </span>
-            </div>
+          <span class="row-role" :style="{ color: hexToRgba(role.color, 0.55) }">
+            {{ role.roleLabel }}
+          </span>
+          <div class="row-main">
+            <span class="row-champ-name row-champ-name--empty">Empty slot</span>
           </div>
           <div class="row-empty-slot" :style="{ borderColor: hexToRgba(role.color, 0.45) }" />
         </template>
@@ -309,6 +299,7 @@ const mvpHolder = computed<string | null>(() => {
   flex-direction: column;
   gap: clamp(6px, 0.9vh, 10px);
   min-height: 0;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(212, 160, 32, 0.12);
   border-radius: 5px;
@@ -364,7 +355,7 @@ const mvpHolder = computed<string | null>(() => {
   gap: 10px;
   padding: 0;
   border-radius: 5px;
-  min-height: clamp(46px, 6.5vh, 66px);
+  min-height: clamp(44px, 5.4vh, 68px);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
@@ -378,13 +369,15 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 /* Default content fades out while the stat sheet fades in */
-.row-badges,
-.row-center,
+.row-role,
+.row-main,
+.row-stats,
 .row-champ-img {
   transition: opacity 0.25s ease;
 }
-.roster-row--filled:hover .row-badges,
-.roster-row--filled:hover .row-center,
+.roster-row--filled:hover .row-role,
+.roster-row--filled:hover .row-main,
+.roster-row--filled:hover .row-stats,
 .roster-row--filled:hover .row-champ-img {
   opacity: 0.06;
 }
@@ -417,13 +410,13 @@ const mvpHolder = computed<string | null>(() => {
   gap: 8px;
 }
 .detail-name {
-  font-size: 12px;
+  font-size: clamp(12px, 1.6vh, 15px);
   font-weight: 700;
   letter-spacing: 1px;
   color: #d4a020;
 }
 .detail-role {
-  font-size: 9px;
+  font-size: clamp(9px, 1.2vh, 11px);
   letter-spacing: 2px;
 }
 
@@ -440,7 +433,7 @@ const mvpHolder = computed<string | null>(() => {
   min-width: 0;
 }
 .detail-value {
-  font-size: 13px;
+  font-size: clamp(13px, 1.8vh, 17px);
   font-weight: 700;
   color: #e8e2d0;
   line-height: 1.1;
@@ -448,7 +441,7 @@ const mvpHolder = computed<string | null>(() => {
   white-space: nowrap;
 }
 .detail-label {
-  font-size: 7px;
+  font-size: clamp(7px, 1vh, 9px);
   letter-spacing: 1px;
   color: rgba(232, 226, 208, 0.5);
   white-space: nowrap;
@@ -488,45 +481,54 @@ const mvpHolder = computed<string | null>(() => {
     0 0 12px rgba(212, 160, 32, 0.25);
 }
 
-/* ── Standout badges: uniform ribbons, stacked, max 4 per column ── */
-.row-badges {
+/* ── Role column: fixed width so all champion names align vertically ── */
+.row-role {
   flex-shrink: 0;
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(4, auto);
-  gap: 3px;
-  padding: 4px 0 4px 10px;
-  align-self: center;
-  /* Reserved badge column so the center block aligns across all rows */
-  min-width: clamp(100px, 8vw, 120px);
+  width: clamp(64px, 5vw, 86px);
+  padding-left: clamp(8px, 0.8vw, 14px);
   box-sizing: border-box;
+  font-size: clamp(11px, 1.3vh, 13px);
+  font-weight: 700;
+  letter-spacing: 2px;
 }
 
-.row-ribbon {
+/* ── Name block: champion name with badge icons beneath ── */
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* ── Standout badges: compact icon tokens (label in tooltip) ── */
+.row-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.row-badge {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px 2px 5px;
-  min-width: clamp(88px, 7vw, 104px);
-  font-size: clamp(9px, 1vh, 10px);
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #f0ead8;
+  justify-content: center;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(212, 160, 32, 0.2);
   border-radius: 4px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
 }
-.ribbon-icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
+
+.row-badge-icon {
+  width: clamp(13px, 1.7vh, 17px);
+  height: clamp(13px, 1.7vh, 17px);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 /* Splash portrait: right edge, full row height, fades toward the center */
 .row-champ-img {
   align-self: stretch;
-  width: clamp(64px, 9vh, 88px);
+  width: clamp(64px, 9vh, 96px);
   object-fit: cover;
   flex-shrink: 0;
   -webkit-mask-image: linear-gradient(to left, #000 55%, transparent 100%);
@@ -535,37 +537,16 @@ const mvpHolder = computed<string | null>(() => {
 
 .row-empty-slot {
   align-self: stretch;
-  width: clamp(64px, 9vh, 88px);
+  width: clamp(64px, 9vh, 96px);
   margin: 6px 6px 6px 0;
   border-radius: 4px;
   border: 2px dashed rgba(90, 60, 20, 0.5);
   flex-shrink: 0;
 }
 
-/* ── Center block: name line over mini-stats ── */
-.row-center {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 8px;
-  text-align: center;
-}
-
-.row-name-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  max-width: 100%;
-  min-width: 0;
-}
-
 .row-champ-name {
-  font-size: clamp(14px, 1.8vh, 17px);
+  max-width: 100%;
+  font-size: clamp(15px, 2.1vh, 21px);
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -576,17 +557,12 @@ const mvpHolder = computed<string | null>(() => {
   color: #5a4820;
 }
 
-.row-role-label {
-  font-size: 11px;
-  letter-spacing: 2px;
-  flex-shrink: 0;
-}
-
 /* ── Per-champion career mini-stats ── */
 .row-stats {
+  flex-shrink: 0;
   display: flex;
-  justify-content: center;
-  gap: 14px;
+  gap: clamp(8px, 0.8vw, 14px);
+  padding-right: 4px;
 }
 
 .row-stat {
@@ -597,7 +573,7 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .row-stat-value {
-  font-size: clamp(12px, 1.5vh, 15px);
+  font-size: clamp(13px, 1.9vh, 18px);
   font-weight: 700;
   color: #e8e2d0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
@@ -610,8 +586,41 @@ const mvpHolder = computed<string | null>(() => {
 }
 
 .row-stat-label {
-  font-size: 8px;
+  font-size: clamp(8px, 1.1vh, 10px);
   letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.45);
+}
+
+/* short viewports: flatter rows — mini-stats move into the hover sheet,
+   badges sit inline beside the name so 5 rows always fit under the rank hero */
+@media (max-height: 820px) {
+  .roster-panel {
+    padding: 8px 10px;
+  }
+  .roster-rows {
+    gap: 4px;
+  }
+  .roster-row {
+    min-height: 34px;
+  }
+  .row-stats {
+    display: none;
+  }
+  .row-main {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .row-champ-name {
+    max-width: none;
+    min-width: 0;
+  }
+  .row-badge {
+    padding: 1px;
+  }
+  .row-champ-img,
+  .row-empty-slot {
+    width: clamp(44px, 6vh, 56px);
+  }
 }
 </style>

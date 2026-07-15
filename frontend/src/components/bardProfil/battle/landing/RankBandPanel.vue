@@ -1,72 +1,57 @@
 <template>
-  <div class="rank-band" :style="{ borderColor: rankColorDim, background: bandBg }">
-    <!-- ── Zone 1: Rank identity ── -->
-    <div class="rank-emblem">
-      <div class="emblem-ring" :style="{ borderColor: rankColorDim }" />
-      <img :src="rankImage" :alt="currentRank.tier" class="emblem-img" :style="{ filter: emblemGlow }" />
-    </div>
-
-    <div class="rank-info">
-      <div class="rank-name" :style="{ color: rankColor }">
-        {{ currentRank.tier.toUpperCase() }}<template v-if="!isHighTier"> {{ currentRank.division }}</template>
+  <div class="rank-hero" :style="{ borderColor: rankColorDim, background: heroBg }">
+    <!-- ── Rank identity: big emblem + big rank/LP ── -->
+    <div class="hero-top">
+      <div class="rank-emblem">
+        <div class="emblem-glow" :style="{ background: emblemGlowBg }" />
+        <div class="emblem-ring" :style="{ borderColor: rankColorDim }" />
+        <img :src="rankImage" :alt="currentRank.tier" class="emblem-img" :style="{ filter: emblemGlow }" />
       </div>
-      <div class="lp-line">
-        <div class="lp-track">
-          <div class="lp-fill" :style="{ width: lpPercent + '%', background: rankColor, boxShadow: `0 0 8px ${rankColor}` }" />
-        </div>
-        <span class="lp-value">{{ currentRank.lp }} LP</span>
-      </div>
-      <div class="rank-goal">{{ promotionGoal }}</div>
-    </div>
 
-    <!-- ── Zone 2: Rank stats ── -->
-    <div class="band-divider" />
-
-    <div class="stats-zone">
-      <div class="stats-row">
-        <div class="stat-col">
-          <div class="stat-num stat-num--win">{{ totalWins }}</div>
-          <div class="stat-label">WINS</div>
+      <div class="rank-identity">
+        <div class="rank-name" :style="{ color: rankColor }">{{ rankTitle }}</div>
+        <div class="lp-big">
+          <span class="lp-num">{{ currentRank.lp }}</span>
+          <span class="lp-unit">LP</span>
         </div>
-        <div class="stat-col">
-          <div class="stat-num stat-num--loss">{{ totalLosses }}</div>
-          <div class="stat-label">LOSSES</div>
-        </div>
-        <div class="stat-col">
-          <div class="stat-num stat-num--gold">{{ winRateStr }}%</div>
-          <div class="stat-label">WINRATE</div>
-        </div>
-        <div class="stat-col">
-          <div class="stat-num stat-num--gold" :class="{ 'streak-fire': currentWinStreak >= 3 }">
-            {{ currentWinStreak }}W
-          </div>
-          <div class="stat-label">STREAK</div>
-        </div>
-      </div>
-      <div class="stats-sub">
-        {{ totalBattles }} GAMES · MMR {{ mmr }} · BEST STREAK {{ bestWinStreak }}W
       </div>
     </div>
 
-    <!-- ── Zone 3: Next battle win chance ── -->
-    <div class="band-divider" />
-
-    <div class="chance-zone">
-      <div class="card-eyebrow">NEXT BATTLE</div>
-      <div class="card-row">
-        <div class="card-track">
-          <div class="card-base-tick" :style="{ left: baseTickPercent + '%' }" />
-          <div class="card-fill card-fill--start" :style="{ width: startChancePercent + '%' }" />
-        </div>
-        <span class="card-value card-value--start">{{ startChancePercent }}%</span>
+    <!-- ── LP progress toward the next rank ── -->
+    <div class="lp-block">
+      <div class="lp-track">
+        <div
+          class="lp-fill"
+          :style="{ width: lpPercent + '%', background: rankColor, boxShadow: `0 0 10px ${rankColor}` }"
+        />
       </div>
-      <div class="card-sub" :class="{ 'card-sub--boosted': startBonusPercent > 0 }">
-        <template v-if="startBonusPercent > 0">
-          BASE {{ basePercent }}% + {{ startBonusPercent }}% FROM UPGRADES
-        </template>
-        <template v-else>STARTING WIN CHANCE</template>
+      <span class="rank-goal">{{ promotionGoal }}</span>
+    </div>
+
+    <div class="hero-divider" />
+
+    <!-- ── Ladder record ── -->
+    <div class="stats-row">
+      <div class="stat-col">
+        <div class="stat-num stat-num--win">{{ totalWins }}</div>
+        <div class="stat-label">WINS</div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-num stat-num--loss">{{ totalLosses }}</div>
+        <div class="stat-label">LOSSES</div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-num stat-num--gold">{{ winRateStr }}%</div>
+        <div class="stat-label">WINRATE</div>
+      </div>
+      <div class="stat-col">
+        <div class="stat-num stat-num--gold" :class="{ 'streak-fire': currentWinStreak >= 3 }">
+          {{ currentWinStreak }}W
+        </div>
+        <div class="stat-label">STREAK</div>
       </div>
     </div>
+    <div class="stats-sub">{{ totalBattles }} GAMES · MMR {{ mmr }} · BEST STREAK {{ bestWinStreak }}W</div>
   </div>
 </template>
 
@@ -80,7 +65,6 @@ import {
   LP_GRANDMASTER_PROMOTION_THRESHOLD,
   RANK_TIERS,
   RANK_DIVISIONS,
-  BATTLE_BASE_START_WIN_CHANCE,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
 } from '@/config/constants'
@@ -94,16 +78,24 @@ const rankImage = computed(
 )
 const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
 const rankColorDim = computed(() => rankColor.value + '4d')
-const bandBg = computed(
-  () => `linear-gradient(to right, ${rankColor.value}22, rgba(0, 0, 0, 0.32) 55%)`,
+const heroBg = computed(
+  () => `radial-gradient(circle at 18% 0%, ${rankColor.value}26, rgba(0, 0, 0, 0.35) 62%)`,
 )
 const emblemGlow = computed(
-  () => `drop-shadow(0 0 6px ${rankColor.value}) drop-shadow(0 0 14px ${rankColor.value}66)`,
+  () => `drop-shadow(0 0 8px ${rankColor.value}) drop-shadow(0 0 18px ${rankColor.value}66)`,
+)
+const emblemGlowBg = computed(
+  () => `radial-gradient(circle, ${rankColor.value}33, transparent 70%)`,
 )
 
 const isHighTier = computed(() =>
   ['Master', 'Grandmaster', 'Challenger'].includes(currentRank.value.tier),
 )
+
+const rankTitle = computed(() => {
+  const tier = currentRank.value.tier.toUpperCase()
+  return isHighTier.value ? tier : `${tier} ${currentRank.value.division}`
+})
 
 const lpCap = computed(() => {
   const tier = currentRank.value.tier
@@ -136,34 +128,41 @@ const promotionGoal = computed(() => {
 const winRateStr = computed(() =>
   totalBattles.value === 0 ? '0.0' : ((totalWins.value / totalBattles.value) * 100).toFixed(1),
 )
-
-// ── Next battle win chance ──
-const basePercent = Math.round(BATTLE_BASE_START_WIN_CHANCE * 100)
-const baseTickPercent = basePercent
-const startChancePercent = computed(() => Math.round(battleStore.nextBattleStartWinChance * 100))
-const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 </script>
 
 <style scoped>
-.rank-band {
-  display: flex;
-  align-items: center;
-  gap: clamp(10px, 1.1vw, 18px);
-  padding: clamp(7px, 1.1vh, 12px) clamp(12px, 1.1vw, 18px);
+.rank-hero {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1vh, 11px);
+  padding: clamp(10px, 1.6vh, 18px) clamp(12px, 1.2vw, 20px);
   border: 1px solid;
   border-radius: 5px;
 }
 
-/* ── Zone 1: Emblem + rank identity ── */
+/* ── Rank identity ── */
+.hero-top {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.3vw, 22px);
+}
+
 .rank-emblem {
   position: relative;
-  width: clamp(52px, 7.5vh, 70px);
-  height: clamp(52px, 7.5vh, 70px);
+  width: clamp(68px, 9.5vh, 100px);
+  height: clamp(68px, 9.5vh, 100px);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.emblem-glow {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .emblem-ring {
@@ -176,78 +175,90 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .emblem-img {
-  width: clamp(47px, 6.9vh, 64px);
-  height: clamp(47px, 6.9vh, 64px);
+  width: 88%;
+  height: 88%;
   object-fit: contain;
+  position: relative;
 }
 
-.rank-info {
-  min-width: clamp(150px, 12vw, 190px);
+.rank-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.5vh, 6px);
 }
 
 .rank-name {
-  font-size: clamp(16px, 2.1vh, 21px);
+  font-size: clamp(22px, 3.4vh, 34px);
   font-weight: 700;
-  letter-spacing: 1px;
-  line-height: 1.1;
+  letter-spacing: 2px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lp-line {
+.lp-big {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lp-num {
+  font-size: clamp(20px, 3vh, 30px);
+  font-weight: 700;
+  line-height: 1;
+  color: #e8e2d0;
+}
+
+.lp-unit {
+  font-size: clamp(11px, 1.4vh, 14px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #a08448;
+}
+
+/* ── LP progress: bar and promotion goal share one line ── */
+.lp-block {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 7px;
+  gap: clamp(8px, 0.8vw, 14px);
 }
 
 .lp-track {
   flex: 1;
-  height: 6px;
+  min-width: 0;
+  height: clamp(7px, 1vh, 10px);
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
+  border-radius: 5px;
   overflow: hidden;
 }
 
 .lp-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 5px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.lp-value {
-  font-size: 11px;
-  font-weight: 700;
-  color: #e8e2d0;
-  flex-shrink: 0;
-}
-
 .rank-goal {
-  font-size: 10px;
+  flex-shrink: 0;
+  font-size: clamp(9px, 1.2vh, 11px);
   font-weight: 700;
   letter-spacing: 1.5px;
   color: #c8a058;
-  margin-top: 4px;
 }
 
-/* ── Divider between zones ── */
-.band-divider {
-  align-self: stretch;
-  width: 1px;
-  margin: 4px 0;
+.hero-divider {
+  height: 1px;
   background: rgba(212, 160, 32, 0.15);
-  flex-shrink: 0;
 }
 
-/* ── Zone 2: Rank stats ── */
-.stats-zone {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-
+/* ── Ladder record ── */
 .stats-row {
   display: flex;
-  justify-content: center;
-  gap: clamp(16px, 2vw, 34px);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 clamp(2px, 0.5vw, 10px);
 }
 
 .stat-col {
@@ -255,7 +266,7 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .stat-num {
-  font-size: clamp(17px, 2.3vh, 23px);
+  font-size: clamp(16px, 2.3vh, 23px);
   font-weight: 700;
   line-height: 1;
 }
@@ -268,90 +279,17 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: clamp(8px, 1vh, 10px);
   letter-spacing: 2px;
   color: #a08448;
   margin-top: 4px;
 }
 
 .stats-sub {
-  font-size: 10px;
+  font-size: clamp(8px, 1vh, 10px);
   letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.55);
-  margin-top: 8px;
-}
-
-/* ── Zone 3: Next battle win chance ── */
-.chance-zone {
-  flex-shrink: 0;
-  min-width: clamp(170px, 14vw, 220px);
-  padding-right: 4px;
-  text-align: right;
-}
-
-.card-eyebrow {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #a08448;
-}
-
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 6px;
-}
-
-.card-track {
-  position: relative;
-  width: clamp(100px, 8.5vw, 140px);
-  height: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.card-base-tick {
-  position: absolute;
-  top: -1px;
-  bottom: -1px;
-  width: 2px;
-  background: rgba(255, 255, 255, 0.28);
-  z-index: 1;
-}
-
-.card-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-fill--start {
-  background: linear-gradient(to right, #7a6010, #d4a020);
-  box-shadow: 0 0 10px rgba(212, 160, 32, 0.45);
-}
-
-.card-value {
-  font-size: clamp(16px, 2.1vh, 21px);
-  font-weight: 700;
-  line-height: 1;
-  min-width: 52px;
-}
-
-.card-value--start {
-  color: #e8c040;
-}
-
-.card-sub {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: rgba(232, 226, 208, 0.55);
-  margin-top: 5px;
-}
-
-.card-sub--boosted {
-  color: #52b830;
+  text-align: center;
 }
 
 @keyframes emblem-spin {
@@ -362,6 +300,21 @@ const startBonusPercent = computed(() => startChancePercent.value - basePercent)
 @keyframes streak-pulse {
   0%, 100% { text-shadow: 0 0 12px rgba(240, 104, 32, 0.45); }
   50% { text-shadow: 0 0 28px rgba(240, 104, 32, 0.95); }
+}
+
+/* short viewports: tighten the hero so the roster below keeps all 5 rows */
+@media (max-height: 820px) {
+  .rank-hero {
+    gap: 5px;
+    padding: 8px 12px;
+  }
+  .rank-emblem {
+    width: 58px;
+    height: 58px;
+  }
+  .stats-sub {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

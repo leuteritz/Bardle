@@ -1,11 +1,14 @@
 <template>
   <div class="landing-screen">
-    <!-- ── Rank band ── -->
-    <RankBandPanel />
-
     <!-- ── Main split ── -->
     <div class="landing-main">
-      <!-- Left: performance -->
+      <!-- Left: rank hero with the team roster right beneath it -->
+      <div class="rank-col">
+        <RankBandPanel />
+        <TeamRosterPanel class="roster-panel-slot" />
+      </div>
+
+      <!-- Right: performance -->
       <div class="perf-col">
         <MultikillCardsRow />
         <div class="group-grid">
@@ -15,9 +18,6 @@
           <StatGroupPanel title="VISION &amp; TIME" icon="game-icons:semi-closed-eye" color="#5b8dd9" :rows="visionRows" />
         </div>
       </div>
-
-      <!-- Right: roster -->
-      <TeamRosterPanel class="roster-col" />
     </div>
 
     <!-- ── Central battle action bar ── -->
@@ -121,6 +121,7 @@ const objectiveRows = computed<StatRow[]>(() => [
   { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets + live.value.turrets) },
   { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors + live.value.inhibitors) },
   { label: 'Nexus Kills', value: formatNumber(battleStore.totalWins) },
+  { label: 'Obj. / Game', value: objectivesPerGameStr.value, color: '#a855f7' },
   { label: 'Honors Given', value: formatNumber(battleStore.allTime.honorsGiven) },
 ])
 
@@ -130,8 +131,25 @@ const visionRows = computed<StatRow[]>(() => [
   { label: 'Wards Killed', value: formatNumber(battleStore.allTime.wardsKilled + live.value.wardsKilled) },
   { label: 'Control Wards', value: formatNumber(battleStore.allTime.controlWards + live.value.controlWards) },
   { label: 'Longest Game', value: longestGameStr.value },
+  { label: 'Avg Game', value: avgGameStr.value },
   { label: 'Playtime', value: playtimeStr.value },
 ])
+
+const objectivesPerGameStr = computed(() => {
+  if (battleStore.totalBattles === 0) return '—'
+  const total =
+    battleStore.allTime.dragons +
+    battleStore.allTime.barons +
+    battleStore.allTime.turrets +
+    battleStore.allTime.inhibitors
+  return (total / battleStore.totalBattles).toFixed(1)
+})
+
+const avgGameStr = computed(() => {
+  if (battleStore.totalBattles === 0) return '—'
+  // playtime is tracked in game-seconds, same unit formatTime expects
+  return battleStore.formatTime(Math.round(playtimeGameSeconds.value / battleStore.totalBattles))
+})
 
 const longestGameStr = computed(() => {
   const s = Math.max(battleStore.allTime.longestGameSeconds, live.value.battleSeconds)
@@ -168,11 +186,26 @@ const playtimeStr = computed(() => {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: clamp(8px, 0.9vw, 14px);
+  gap: clamp(10px, 1.1vw, 18px);
+}
+
+/* Left column: rank hero on top, roster fills the rest */
+.rank-col {
+  flex-shrink: 0;
+  width: clamp(340px, 30vw, 480px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, 1.1vh, 12px);
+  min-height: 0;
+}
+
+.roster-panel-slot {
+  flex: 1;
+  min-height: 0;
 }
 
 .perf-col {
-  flex: 1.5;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: clamp(7px, 1.1vh, 12px);
@@ -187,11 +220,6 @@ const playtimeStr = computed(() => {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   gap: clamp(7px, 1.1vh, 12px);
-}
-
-.roster-col {
-  flex: 1;
-  min-width: clamp(260px, 22vw, 300px);
 }
 
 /* ── Central battle action bar ── */
