@@ -390,12 +390,13 @@ function starStyle(i: number): Record<string, string> {
 .sf-modal {
   position: fixed;
   pointer-events: auto;
-  left: var(--bard-profile-left, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
-  right: var(--bard-profile-right, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
+  /* ein einheitlicher Abstand zu den Bottom-Bar-Nachbarn: links → MiniMap,
+     rechts → CommandPanel, unten → Scoreboard-Streifen (wie BardProfileMenu) */
+  --sf-gap: 10px;
+  left: calc(var(--hud-panel-size, 330px) + var(--sf-gap));
+  right: calc(var(--hud-panel-size, 330px) + var(--sf-gap));
   top: calc(var(--header-total-height, 50px) + 12px);
-  /* Unterkante mit Abstand über dem Mittelstreifen der Bottom-Bar
-     (Streifenhöhe = (443 − 364) × --hud-scale, s. BOTTOM_BAR_* constants) */
-  bottom: calc(79px * var(--hud-scale, 1) + 16px);
+  bottom: calc(var(--bottom-center-strip-h, 79px) + var(--sf-gap));
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #100900 0%, #0a0600 60%, #070400 100%);

@@ -326,12 +326,14 @@ watch(
 .rp-wrapper {
   position: fixed;
   z-index: 125;
-  left: var(--bard-profile-left, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
-  right: var(--bard-profile-right, max(calc(var(--hud-panel-size) + 50px), calc(50vw - 700px)));
+  /* one uniform gap to the bottom-bar neighbours: left → MiniMap edge,
+     right → CommandPanel edge, bottom → scoreboard strip. Both side panels
+     are exactly --hud-panel-size wide (BOTTOM_BAR_SIDE_W × --hud-scale). */
+  --bp-gap: 10px;
+  left: calc(var(--hud-panel-size, 330px) + var(--bp-gap));
+  right: calc(var(--hud-panel-size, 330px) + var(--bp-gap));
   top: calc(var(--level-badge-bottom, calc(var(--header-total-height) + 60px)) + 8px);
-  /* end 10px above the scoreboard strip instead of a fixed viewport offset —
-     on small hud-scales (e.g. 1440×900 MacBooks) this frees ~35px of height */
-  bottom: calc(var(--bottom-center-strip-h, 79px) + 10px);
+  bottom: calc(var(--bottom-center-strip-h, 79px) + var(--bp-gap));
 }
 
 .rp-modal {

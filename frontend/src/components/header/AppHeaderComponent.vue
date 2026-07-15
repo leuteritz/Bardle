@@ -122,8 +122,6 @@ function handleReset() {
 
 const headerRef = ref<HTMLElement | null>(null)
 const chimesRef = ref<HTMLElement | null>(null)
-const leftDividerRef = ref<HTMLElement | null>(null)
-const rightDividerRef = ref<HTMLElement | null>(null)
 let resizeObserver: ResizeObserver | null = null
 
 const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgress ?? 0) / 100)))
@@ -224,17 +222,8 @@ function updateHeaderHeight() {
   headerR.value = parseFloat(getComputedStyle(headerRef.value).borderBottomLeftRadius) || 20
 }
 
-function updateDividerPositions() {
-  const l = leftDividerRef.value?.getBoundingClientRect()
-  const r = rightDividerRef.value?.getBoundingClientRect()
-  if (!l || !r) return
-  document.documentElement.style.setProperty('--bard-profile-left', `${l.left}px`)
-  document.documentElement.style.setProperty('--bard-profile-right', `${window.innerWidth - r.right}px`)
-}
-
 async function remeasure() {
   updateHeaderHeight()
-  updateDividerPositions()
   await measure()
 }
 
@@ -274,7 +263,7 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-profile-bump">
         <BardProfileMenu />
       </div>
-      <div ref="leftDividerRef" class="header-divider" aria-hidden="true"></div>
+      <div class="header-divider" aria-hidden="true"></div>
       <HeaderMaterialsComponent style="flex: 1; min-width: 0" />
     </div>
 
@@ -400,7 +389,7 @@ onUnmounted(() => {
       <div class="z-[65] header-portal-wrap" style="flex: 1">
         <UniverseRescueComponent />
       </div>
-      <div ref="rightDividerRef" class="header-divider" aria-hidden="true"></div>
+      <div class="header-divider" aria-hidden="true"></div>
       <div class="flex-shrink-0 header-inventory-bump">
         <button class="btn-gem" title="Open Skill Tree" @click="uiStore.setBardTab('tree')">
           <img src="/img/menu/TREE.png" class="btn-gem-img" alt="Open Skill Tree" />
