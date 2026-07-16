@@ -32,7 +32,7 @@ export const GAME_STATE = {
     color: '#9a6830',
   },
   BATTLE: { key: 'battle', icon: 'game-icons:broadsword', label: 'Battle', color: '#e8c040' },
-  HONOR: { key: 'honor', icon: 'game-icons:trophy', label: 'Honor Phase', color: '#74d448' },
+  HONOR: { key: 'honor', icon: 'game-icons:trophy', label: 'Honor', color: '#74d448' },
 } as const
 
 export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
@@ -354,8 +354,10 @@ export const OBJECTIVE_RESULT_DELAY_MS = 6000
 export const OBJECTIVE_FIGHT_STATUS = {
   drake: { label: 'Drake Fight', image: '/img/dragon.png' },
   baron: { label: 'Baron Fight', image: '/img/baron.png' },
-  leadColor: '#74d448',
-  behindColor: '#cc6050',
+  // Team-Farben aus dem Autobattle-Board (side names/kills in ScoreTopBar):
+  // Blau = eigenes Team vorn, Rot = Gegner-Team vorn
+  leadColor: '#93c5fd',
+  behindColor: '#fca5a5',
   securedText: 'SECURED',
   lostText: 'LOST',
 } as const

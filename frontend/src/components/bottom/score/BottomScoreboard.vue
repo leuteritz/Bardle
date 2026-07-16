@@ -13,6 +13,7 @@ import {
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
 } from '@/config/constants'
+import { DRAKE_TYPES } from '@/config/drakes'
 
 const battleStore = useBattleStore()
 const uiStore = useUiStore()
@@ -105,6 +106,7 @@ const {
   lastLpChange,
   lastAutoBattleResult,
   activeObjective,
+  activeDrakeType,
   objectiveModalOpen,
   objectiveHP,
   objectiveMaxHP,
@@ -135,6 +137,12 @@ const phaseKey = computed<PhaseKey>(() => {
   return 'idle'
 })
 
+/** Kompaktes m:ss ohne führende Null bei den Minuten ("0:04", "12:00"). */
+function shortTime(totalSeconds: number): string {
+  const s = Math.max(0, totalSeconds)
+  return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+}
+
 const gameStateDisplay = computed(() => {
   const _now = now.value
   if (
@@ -148,11 +156,8 @@ const gameStateDisplay = computed(() => {
       5,
       Math.max(0, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000)),
     )
-    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
-    const sec = (elapsed % 60).toString().padStart(2, '0')
     return {
-      label: GAME_STATE.SEARCHING.label,
-      text: `${min}:${sec}`,
+      text: `${GAME_STATE.SEARCHING.label} · ${shortTime(elapsed)}`,
       color: GAME_STATE.SEARCHING.color,
     }
   }
@@ -161,13 +166,17 @@ const gameStateDisplay = computed(() => {
   }
   if (showAutoBattleResult.value) {
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
-    const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
-    return { label: GAME_STATE.HONOR.label, text: `${min}:00`, color: GAME_STATE.HONOR.color }
+    return {
+      text: `${GAME_STATE.HONOR.label} · ${shortTime(elapsed)}`,
+      color: GAME_STATE.HONOR.color,
+    }
   }
   if (battlePhase.value === 'playing' && battlePhaseStartTimestamp.value > 0) {
-    const min = Math.floor(battleTime.value / 60).toString().padStart(2, '0')
-    const { label, color } = GAME_STATE.BATTLE
-    return { label, text: `${min}:00`, color }
+    // Spielzeit tickt in Minutenschritten (60x-Zeitraffer) — Sekunden wären Rauschen
+    return {
+      text: `${GAME_STATE.BATTLE.label} · ${Math.floor(battleTime.value / 60)}:00`,
+      color: GAME_STATE.BATTLE.color,
+    }
   }
   return null
 })
@@ -175,13 +184,17 @@ const gameStateDisplay = computed(() => {
 const objectiveFightDisplay = computed(() => {
   const objective = activeObjective.value
   if (!objective || (!objectiveModalOpen.value && objectiveResult.value === null)) return null
-  const { label, image } = OBJECTIVE_FIGHT_STATUS[objective]
+  const { image } = OBJECTIVE_FIGHT_STATUS[objective]
+  // Kürzester eindeutiger Name: beim Drake der Typ ("Infernal", "Elder"), sonst "Baron"
+  const name =
+    objective === 'drake'
+      ? DRAKE_TYPES[activeDrakeType.value ?? 'infernal'].label.split(' ')[0]
+      : 'Baron'
   if (objectiveResult.value !== null) {
     const won = objectiveResult.value !== 'enemy'
     return {
-      label,
       icon: image,
-      text: won ? OBJECTIVE_FIGHT_STATUS.securedText : OBJECTIVE_FIGHT_STATUS.lostText,
+      text: `${name} ${won ? '✓' : '✗'}`,
       color: won ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
       resolved: true,
     }
@@ -190,20 +203,30 @@ const objectiveFightDisplay = computed(() => {
     objectiveMaxHP.value > 0 ? Math.round((objectiveHP.value / objectiveMaxHP.value) * 100) : 0
   const leading = objectiveOwnDamage.value >= objectiveEnemyDamage.value
   return {
-    label,
     icon: image,
-    text: `${hpPct}%`,
+    text: `${name} · ${hpPct}%`,
     color: leading ? OBJECTIVE_FIGHT_STATUS.leadColor : OBJECTIVE_FIGHT_STATUS.behindColor,
     resolved: false,
   }
 })
 
+/** Wie lange das Win/Lose-Badge den Titel-Slot hält, bevor die
+ *  Honor-Phase mit Sekundenzähler übernimmt (Result-Pause insgesamt:
+ *  BATTLE_RESULT_PAUSE_MS = 8s). */
+const RESULT_BADGE_MS = 3000
+
 const resultBadge = computed(() => {
   if (phaseKey.value !== 'honor' || !lastAutoBattleResult.value) return null
+  // Nach ein paar Sekunden den Slot an die Honor-Anzeige übergeben
+  if (
+    resultPhaseStartTimestamp.value > 0 &&
+    now.value - resultPhaseStartTimestamp.value > RESULT_BADGE_MS
+  )
+    return null
   const won = lastAutoBattleResult.value.won
   const lp = lastLpChange.value
   return {
-    label: won ? 'W' : 'L',
+    label: won ? 'Win' : 'Lose',
     lp: lp >= 0 ? `+${lp}` : `${lp}`,
     color: won ? '#74d448' : '#cc6050',
     glow: won ? 'rgba(116, 212, 72, 0.6)' : 'rgba(204, 96, 80, 0.6)',
@@ -222,6 +245,17 @@ const hasLiveStatus = computed(
     autoBattleEnabled.value ||
     searchingPhaseStartTimestamp.value > 0,
 )
+
+/** Zeichenzahl des aktiven Status (+2 für Icon/Scan-Dots) — bindet die
+ *  Schriftgröße an die Textlänge, damit jeder Status in den Crest passt. */
+const liveChars = computed(() => {
+  const text =
+    objectiveFightDisplay.value?.text ??
+    (resultBadge.value
+      ? `${resultBadge.value.label} ${resultBadge.value.lp} LP`
+      : (gameStateDisplay.value?.text ?? GAME_STATE.SEARCHING.label))
+  return text.length + 2
+})
 </script>
 
 <template>
@@ -257,16 +291,21 @@ const hasLiveStatus = computed(
            ohne explizites type wartet Vue auf deren animationend, das nie feuert,
            und der Swap hängt bis zum 6s-Fallback-Timeout. -->
       <Transition name="crest-swap" mode="out-in" type="transition">
-        <div v-if="hasLiveStatus" key="live" class="sb-live-title">
+        <div
+          v-if="hasLiveStatus"
+          key="live"
+          class="sb-live-title"
+          :style="{ '--live-chars': liveChars }"
+        >
           <template v-if="objectiveFightDisplay">
             <img
               :src="objectiveFightDisplay.icon"
-              :alt="objectiveFightDisplay.label"
+              alt=""
               class="sb-live-icon"
               :class="{ 'sb-status-icon--live': !objectiveFightDisplay.resolved }"
             />
             <span class="sb-live-text" :style="{ color: objectiveFightDisplay.color }">
-              {{ objectiveFightDisplay.label }} · {{ objectiveFightDisplay.text }}
+              {{ objectiveFightDisplay.text }}
             </span>
           </template>
           <template v-else-if="resultBadge">
@@ -284,7 +323,7 @@ const hasLiveStatus = computed(
               <span class="sb-scan-dot" />
             </span>
             <span class="sb-live-text" :style="{ color: gameStateDisplay.color }">
-              {{ gameStateDisplay.label }} · {{ gameStateDisplay.text }}
+              {{ gameStateDisplay.text }}
             </span>
           </template>
           <!-- fallback: battle loop is live but no phase display yet -->
@@ -574,7 +613,14 @@ const hasLiveStatus = computed(
 }
 
 .sb-live-text {
-  font-size: clamp(12px, 1.7cqw, 21px);
+  /* Längenabhängig: lange Status (z. B. "Planet Search · 0:04") schrumpfen so
+     weit, dass sie immer in die Crest-Breite (clamp unten = .sb-crest width)
+     passen; kurze ("Battle · 12:00") behalten die volle Größe. 0.75em ≈
+     mittlere Zeichenbreite der Uppercase-Schrift inkl. letter-spacing. */
+  font-size: min(
+    clamp(12px, 1.7cqw, 21px),
+    max(10px, calc((clamp(160px, 24cqw, 300px) - 24px) / (var(--live-chars, 16) * 0.75)))
+  );
   letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
