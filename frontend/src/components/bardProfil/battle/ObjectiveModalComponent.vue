@@ -233,7 +233,7 @@
               :class="s === 'own' ? 'curse-badge--own' : 'curse-badge--enemy'"
             >
               <span :key="curseStacks(s)" class="curse-count">
-                <Icon icon="game-icons:cursed-star" width="13" height="13" class="curse-icon" />
+                <Icon icon="game-icons:burning-skull" width="13" height="13" class="curse-icon" />
                 ×{{ curseStacks(s) }}
               </span>
               <span class="curse-dmg">
@@ -1609,6 +1609,11 @@ onUnmounted(_stopFloatScheduler)
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  /* faint team-colored hairline lifts the readout off the arena */
+  padding: 3px 8px 4px;
+  border: 1px solid;
+  border-radius: 4px;
+  background: rgba(13, 12, 8, 0.35);
   white-space: nowrap;
   pointer-events: none;
   z-index: 8;
@@ -1617,10 +1622,12 @@ onUnmounted(_stopFloatScheduler)
 .curse-badge--own {
   left: 4%;
   color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.35);
 }
 .curse-badge--enemy {
   right: 4%;
   color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
 }
 
 /* re-keyed per stack so it punches once when the curse deepens */
