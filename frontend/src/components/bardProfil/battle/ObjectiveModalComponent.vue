@@ -171,6 +171,18 @@
                 </div>
                 <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
               </div>
+              <!-- Strike floats anchored beside THIS fighter's card — damage is attributable -->
+              <TransitionGroup name="fdmg" tag="div" class="card-dmg-layer card-dmg-layer--own">
+                <span
+                  v-for="fl in fighterFloatsFor('own' + f.idx)"
+                  :key="'fd' + fl.id"
+                  class="fdmg fdmg--own"
+                  :class="{ 'fdmg--crit': fl.crit }"
+                >
+                  <Icon icon="game-icons:quick-slash" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
+                  -{{ fl.value }}{{ fl.crit ? '!' : '' }}
+                </span>
+              </TransitionGroup>
             </div>
           </div>
 
@@ -231,23 +243,6 @@
             −{{ fmt(Math.round(battleStore.objectiveCurseDamage.enemy)) }}
           </div>
 
-          <!-- Fighter strike floats, timed to the lunge impact -->
-          <TransitionGroup name="fdmg" tag="div" class="dmg-floats">
-            <span
-              v-for="f in fighterFloats"
-              :key="'fd' + f.id"
-              class="fdmg"
-              :class="[f.side === 'own' ? 'fdmg--own' : 'fdmg--enemy', { 'fdmg--crit': f.crit }]"
-              :style="{
-                top: f.top + '%',
-                [f.side === 'own' ? 'left' : 'right']: '6%',
-                '--fd-drift': (f.side === 'own' ? 18 : -18) + 'px',
-              }"
-            >
-              <Icon icon="game-icons:quick-slash" :width="f.crit ? 17 : 13" :height="f.crit ? 17 : 13" class="fdmg-icon" />
-              -{{ f.value }}{{ f.crit ? '!' : '' }}
-            </span>
-          </TransitionGroup>
           </div>
           </div>
 
@@ -357,6 +352,18 @@
                   <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
                 </div>
               </div>
+              <!-- Strike floats anchored beside THIS fighter's card — damage is attributable -->
+              <TransitionGroup name="fdmg" tag="div" class="card-dmg-layer card-dmg-layer--enemy">
+                <span
+                  v-for="fl in fighterFloatsFor('enemy' + f.idx)"
+                  :key="'fd' + fl.id"
+                  class="fdmg fdmg--enemy"
+                  :class="{ 'fdmg--crit': fl.crit }"
+                >
+                  <Icon icon="game-icons:quick-slash" :width="fl.crit ? 17 : 13" :height="fl.crit ? 17 : 13" class="fdmg-icon" />
+                  -{{ fl.value }}{{ fl.crit ? '!' : '' }}
+                </span>
+              </TransitionGroup>
             </div>
           </div>
         </div>
@@ -729,10 +736,14 @@ interface FighterFloat {
   id: number
   value: number
   crit: boolean
-  side: 'own' | 'enemy'
-  top: number
+  /** Card anchor (side + fighter idx) — the float renders beside exactly this card. */
+  key: string
 }
 const fighterFloats = ref<FighterFloat[]>([])
+
+function fighterFloatsFor(key: string): FighterFloat[] {
+  return fighterFloats.value.filter((f) => f.key === key)
+}
 let _fighterFloatId = 0
 let _floatSchedulerId: ReturnType<typeof setInterval> | null = null
 /** Last lunge cycle a float was spawned for, per fighter — exactly one float per cycle. */
@@ -755,7 +766,7 @@ function _spawnFighterFloat(f: ObjectiveFighter, key: string, side: 'own' | 'ene
   const expected = f.weight * OBJECTIVE_BASE_DPS_PER_CHAMP * mult * OBJECTIVE_LUNGE_CYCLE_S
   const crit = value >= expected * ((1 + OBJECTIVE_ADC_CRIT_MULT) / 2)
   const id = ++_fighterFloatId
-  fighterFloats.value.push({ id, value, crit, side, top: 25 + Math.random() * 40 })
+  fighterFloats.value.push({ id, value, crit, key })
   setTimeout(() => {
     fighterFloats.value = fighterFloats.value.filter((x) => x.id !== id)
   }, OBJECTIVE_FIGHTER_FLOAT_LIFETIME_MS)
@@ -1104,6 +1115,18 @@ onUnmounted(_stopFloatScheduler)
   opacity: 0.55;
 }
 
+/* Subtle team tint (blue own / red enemy, same palette as the damage floats).
+   Strongest at the portrait edge, fading toward the arena — podium and
+   ability states further down still override border/background. */
+.fighter-card--own {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: linear-gradient(to right, rgba(96, 165, 250, 0.08), rgba(96, 165, 250, 0.02)) #1c1c18;
+}
+.fighter-card--enemy {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(to left, rgba(248, 113, 113, 0.08), rgba(248, 113, 113, 0.02)) #1c1c18;
+}
+
 .fighter-main {
   display: flex;
   align-items: center;
@@ -1255,10 +1278,10 @@ onUnmounted(_stopFloatScheduler)
   display: block;
 }
 .fighter-portrait--own {
-  border: 2px solid #6ec040;
+  border: 2px solid #60a5fa;
 }
 .fighter-portrait--enemy {
-  border: 2px solid #cc6050;
+  border: 2px solid #f87171;
 }
 .fighter-portrait--dead {
   filter: grayscale(0.85) brightness(0.6);
@@ -1610,6 +1633,10 @@ onUnmounted(_stopFloatScheduler)
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  /* paints above the card-anchored strike floats so drifting numbers can
+     never cover the boss HP bar */
+  position: relative;
+  z-index: 2;
 }
 
 .boss-hp {
@@ -1759,9 +1786,36 @@ onUnmounted(_stopFloatScheduler)
   display: none;
 }
 
-/* Fighter strike floats — spawn at the arena edge, punch in, drift toward the pit */
+/* Fighter strike floats — anchored beside the striking fighter's own card,
+   vertically centered, drifting toward the pit. The zero-width layer sits on
+   the card's arena-facing edge, so floats ride along with the lunge motion. */
+.card-dmg-layer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.card-dmg-layer--own {
+  left: 100%;
+}
+.card-dmg-layer--enemy {
+  right: 100%;
+}
+.card-dmg-layer--own .fdmg {
+  left: 6px;
+  --fd-drift: 14px;
+}
+.card-dmg-layer--enemy .fdmg {
+  right: 6px;
+  --fd-drift: -14px;
+}
+
 .fdmg {
   position: absolute;
+  top: 50%;
+  margin-top: -9px;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -1769,30 +1823,30 @@ onUnmounted(_stopFloatScheduler)
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  z-index: 9;
   white-space: nowrap;
 }
 .fdmg-icon {
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
 }
+/* Team colors match the rest of the HUD: blue = own team, red = enemy */
 .fdmg--own {
-  color: #8ee060;
-  text-shadow: 0 0 8px rgba(82, 184, 48, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
+  color: #60a5fa;
+  text-shadow: 0 0 8px rgba(96, 165, 250, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 .fdmg--enemy {
-  color: #f08070;
-  text-shadow: 0 0 8px rgba(204, 96, 80, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
+  color: #f87171;
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.75), 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 .fdmg--crit {
   font-size: 21px;
   font-weight: 900;
 }
 .fdmg--crit.fdmg--own {
-  text-shadow: 0 0 14px rgba(110, 224, 64, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+  text-shadow: 0 0 14px rgba(96, 165, 250, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
 }
 .fdmg--crit.fdmg--enemy {
-  text-shadow: 0 0 14px rgba(240, 96, 72, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+  text-shadow: 0 0 14px rgba(248, 113, 113, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
 }
 
 .fdmg-enter-active {
