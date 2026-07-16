@@ -1632,30 +1632,32 @@ onUnmounted(_stopFloatScheduler)
 /* frameless two-line stack: icon + stacks on top, the damage tally below */
 .curse-badge {
   position: absolute;
-  top: 4%;
+  /* vertically flush with the mid-laner's card (3rd of 5 = column center):
+     the arena's center sits ~17px below the boss column's center (HP bar +
+     AoE line above it), so lift the anchor by that amount */
+  top: calc(50% - 17px);
+  transform: translateY(-50%);
+  /* same height as a fighter card (62px portrait + 2px borders) */
+  height: 64px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  /* faint team-colored hairline lifts the readout off the arena */
-  padding: 3px 8px 4px;
-  border: 1px solid;
-  border-radius: 4px;
-  background: rgba(13, 12, 8, 0.35);
+  justify-content: center;
+  gap: 3px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 8;
 }
-/* team-colored: the side's curse readout speaks blue (own) or red (enemy) */
+/* team-colored: the side's curse readout speaks blue (own) or red (enemy).
+   Hugging the arena's outer edges — next to the mid card, off the boss art. */
 .curse-badge--own {
-  left: 4%;
+  left: 0;
   color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.35);
 }
 .curse-badge--enemy {
-  right: 4%;
+  right: 0;
   color: #f87171;
-  border-color: rgba(248, 113, 113, 0.35);
 }
 
 /* re-keyed per stack so it punches once when the curse deepens */
