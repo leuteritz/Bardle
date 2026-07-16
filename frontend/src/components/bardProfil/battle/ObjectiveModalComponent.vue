@@ -108,62 +108,65 @@
                   />
                 </div>
               </TransitionGroup>
-              <div class="fighter-main">
-                <div
-                  class="fighter-portrait-wrap"
-                  :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'own') }"
-                >
-                  <img
-                    :src="battleStore.getChampionImage(f.name)"
-                    class="fighter-portrait fighter-portrait--own"
-                    :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
-                    :alt="f.name"
-                  />
-                  <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
-                  <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
-                  <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
-                    <span
-                      v-for="h in hpFloatsFor('own' + f.idx)"
-                      :key="'h' + h.id"
-                      class="hpfl"
-                      :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
-                    >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
-                  </TransitionGroup>
-                </div>
-                <span class="fighter-name">{{ f.name }}</span>
-                <div
-                  v-if="f.alive"
-                  class="skill-btn"
-                  :class="{
-                    'skill-btn--active': isAbilityActive(f),
-                    'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
-                    'skill-btn--off': f.down,
-                  }"
-                  :title="abilityTooltip(f)"
-                >
-                  <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
-                  <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
-                    {{ Math.ceil(abilityCdLeft(f)) }}
-                  </span>
-                </div>
-                <div class="stat-block">
-                  <span class="stat-big-row">
-                    <span class="stat-mini-label">DMG</span>
-                    <span :key="damageBumps['own' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
-                      {{ fmt(displayedDamage(f, 'own')) }}
-                    </span>
-                  </span>
-                  <span class="stat-small-row">
-                    <span class="stat-mini-label">DPS</span>
-                    <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveOwnDpsMult) + '/s' : '—' }}</span>
-                  </span>
-                </div>
+              <!-- full-height portrait bleeding to the card's team-colored edge -->
+              <div
+                class="fighter-portrait-wrap"
+                :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'own') }"
+              >
+                <img
+                  :src="battleStore.getChampionImage(f.name)"
+                  class="fighter-portrait"
+                  :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
+                  :alt="f.name"
+                />
+                <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+                <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
+                <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
+                  <span
+                    v-for="h in hpFloatsFor('own' + f.idx)"
+                    :key="'h' + h.id"
+                    class="hpfl"
+                    :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
+                  >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
+                </TransitionGroup>
               </div>
-              <div v-if="f.alive" class="fighter-hp-row">
-                <div class="fight-hp">
-                  <div class="fight-hp-fill" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+              <div class="fighter-body">
+                <div class="fighter-main">
+                  <span class="fighter-name">{{ f.name }}</span>
+                  <div
+                    v-if="f.alive"
+                    class="skill-btn"
+                    :class="{
+                      'skill-btn--active': isAbilityActive(f),
+                      'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
+                      'skill-btn--off': f.down,
+                    }"
+                    :title="abilityTooltip(f)"
+                  >
+                    <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
+                    <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
+                      {{ Math.ceil(abilityCdLeft(f)) }}
+                    </span>
+                  </div>
+                  <div class="stat-block">
+                    <span class="stat-big-row">
+                      <span class="stat-mini-label">DMG</span>
+                      <span :key="damageBumps['own' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
+                        {{ fmt(displayedDamage(f, 'own')) }}
+                      </span>
+                    </span>
+                    <span class="stat-small-row">
+                      <span class="stat-mini-label">DPS</span>
+                      <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveOwnDpsMult) + '/s' : '—' }}</span>
+                    </span>
+                  </div>
                 </div>
-                <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
+                <div v-if="f.alive" class="fighter-hp-row">
+                  <div class="fight-hp">
+                    <div class="fight-hp-fill" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                  </div>
+                  <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
+                </div>
               </div>
               <!-- Strike floats anchored beside THIS fighter's card — damage is attributable -->
               <TransitionGroup name="fdmg" tag="div" class="card-dmg-layer card-dmg-layer--own">
@@ -288,62 +291,65 @@
                   />
                 </div>
               </TransitionGroup>
-              <div class="fighter-main fighter-main--enemy">
-                <div class="stat-block stat-block--enemy">
-                  <span class="stat-big-row">
-                    <span :key="damageBumps['enemy' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
-                      {{ fmt(displayedDamage(f, 'enemy')) }}
+              <div class="fighter-body">
+                <div class="fighter-main fighter-main--enemy">
+                  <div class="stat-block stat-block--enemy">
+                    <span class="stat-big-row">
+                      <span :key="damageBumps['enemy' + f.idx] ?? 0" class="stat-big fighter-damage--bump">
+                        {{ fmt(displayedDamage(f, 'enemy')) }}
+                      </span>
+                      <span class="stat-mini-label">DMG</span>
                     </span>
-                    <span class="stat-mini-label">DMG</span>
-                  </span>
-                  <span class="stat-small-row">
-                    <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveEnemyDpsMult) + '/s' : '—' }}</span>
-                    <span class="stat-mini-label">DPS</span>
-                  </span>
+                    <span class="stat-small-row">
+                      <span class="stat-small">{{ isStanding(f) ? fighterDps(f, battleStore.objectiveEnemyDpsMult) + '/s' : '—' }}</span>
+                      <span class="stat-mini-label">DPS</span>
+                    </span>
+                  </div>
+                  <div
+                    v-if="f.alive"
+                    class="skill-btn"
+                    :class="{
+                      'skill-btn--active': isAbilityActive(f),
+                      'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
+                      'skill-btn--off': f.down,
+                    }"
+                    :title="abilityTooltip(f)"
+                  >
+                    <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
+                    <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
+                      {{ Math.ceil(abilityCdLeft(f)) }}
+                    </span>
+                  </div>
+                  <span class="fighter-name">{{ f.name }}</span>
                 </div>
-                <div
-                  v-if="f.alive"
-                  class="skill-btn"
-                  :class="{
-                    'skill-btn--active': isAbilityActive(f),
-                    'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
-                    'skill-btn--off': f.down,
-                  }"
-                  :title="abilityTooltip(f)"
-                >
-                  <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
-                  <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
-                    {{ Math.ceil(abilityCdLeft(f)) }}
-                  </span>
-                </div>
-                <span class="fighter-name">{{ f.name }}</span>
-                <div
-                  class="fighter-portrait-wrap"
-                  :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
-                >
-                  <img
-                    :src="battleStore.getChampionImage(f.name)"
-                    class="fighter-portrait fighter-portrait--enemy"
-                    :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
-                    :alt="f.name"
-                  />
-                  <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
-                  <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
-                  <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
-                    <span
-                      v-for="h in hpFloatsFor('enemy' + f.idx)"
-                      :key="'h' + h.id"
-                      class="hpfl"
-                      :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
-                    >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
-                  </TransitionGroup>
+                <div v-if="f.alive" class="fighter-hp-row fighter-hp-row--enemy">
+                  <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
+                  <div class="fight-hp">
+                    <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
+                  </div>
                 </div>
               </div>
-              <div v-if="f.alive" class="fighter-hp-row fighter-hp-row--enemy">
-                <span class="fight-hp-num" :class="hpStage(f)">{{ Math.ceil(f.fightHp) }}/{{ f.fightMaxHp }}</span>
-                <div class="fight-hp">
-                  <div class="fight-hp-fill fight-hp-fill--enemy" :class="hpStage(f)" :style="{ width: hpPct(f) + '%' }" />
-                </div>
+              <!-- full-height portrait bleeding to the card's team-colored edge -->
+              <div
+                class="fighter-portrait-wrap"
+                :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
+              >
+                <img
+                  :src="battleStore.getChampionImage(f.name)"
+                  class="fighter-portrait"
+                  :class="{ 'fighter-portrait--dead': !f.alive || f.down }"
+                  :alt="f.name"
+                />
+                <span v-if="!f.alive" class="fighter-dead-badge">✕</span>
+                <span v-else-if="f.down" class="fighter-down-badge">DOWN</span>
+                <TransitionGroup name="hpfl" tag="div" class="hpfl-layer">
+                  <span
+                    v-for="h in hpFloatsFor('enemy' + f.idx)"
+                    :key="'h' + h.id"
+                    class="hpfl"
+                    :class="h.value < 0 ? 'hpfl--dmg' : 'hpfl--heal'"
+                  >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
+                </TransitionGroup>
               </div>
               <!-- Strike floats anchored beside THIS fighter's card — damage is attributable -->
               <TransitionGroup name="fdmg" tag="div" class="card-dmg-layer card-dmg-layer--enemy">
@@ -1201,12 +1207,13 @@ onUnmounted(_stopFloatScheduler)
   gap: 6px;
 }
 
+/* Card = row: full-height portrait on the outer edge, content column beside it.
+   The card's own border carries the team color — the portrait has no frame. */
 .fighter-card {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px 6px 5px;
+  align-items: stretch;
+  gap: 7px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -1214,16 +1221,40 @@ onUnmounted(_stopFloatScheduler)
 .fighter-card--dead {
   opacity: 0.55;
 }
+/* portrait corners follow the card's rounding on its outer edge
+   (no overflow:hidden — the status pills and strike floats sit outside) */
+.fighter-card--own .fighter-portrait {
+  border-radius: 3px 0 0 3px;
+}
+.fighter-card--enemy .fighter-portrait {
+  border-radius: 0 3px 3px 0;
+}
 
-/* Subtle team tint (blue own / red enemy, same palette as the damage floats).
-   Strongest at the portrait edge, fading toward the arena — podium and
-   ability states further down still override border/background. */
+.fighter-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px 5px;
+}
+.fighter-card--own .fighter-body {
+  padding-left: 0;
+}
+.fighter-card--enemy .fighter-body {
+  padding-right: 0;
+}
+
+/* Team frame (blue own / red enemy, same palette as the damage floats) with a
+   subtle tint fading toward the arena — podium and ability states further
+   down still override border/background. */
 .fighter-card--own {
-  border-color: rgba(96, 165, 250, 0.35);
+  border-color: rgba(96, 165, 250, 0.55);
   background: linear-gradient(to right, rgba(96, 165, 250, 0.08), rgba(96, 165, 250, 0.02)) #1c1c18;
 }
 .fighter-card--enemy {
-  border-color: rgba(248, 113, 113, 0.35);
+  border-color: rgba(248, 113, 113, 0.55);
   background: linear-gradient(to left, rgba(248, 113, 113, 0.08), rgba(248, 113, 113, 0.02)) #1c1c18;
 }
 
@@ -1398,9 +1429,13 @@ onUnmounted(_stopFloatScheduler)
   }
 }
 
+/* full-height, frameless portrait — much larger while the card stays the same */
 .fighter-portrait-wrap {
   position: relative;
   flex-shrink: 0;
+  width: 58px;
+  min-height: 62px;
+  display: flex;
 }
 
 /* Standing fighters periodically lunge toward the pit — the whole card moves.
@@ -1415,25 +1450,18 @@ onUnmounted(_stopFloatScheduler)
   animation-name: attack-lunge-enemy;
 }
 .fighter-portrait {
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
-}
-.fighter-portrait--own {
-  border: 2px solid #60a5fa;
-}
-.fighter-portrait--enemy {
-  border: 2px solid #f87171;
 }
 .fighter-portrait--dead {
   filter: grayscale(0.85) brightness(0.6);
 }
 .fighter-dead-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 2px;
+  right: 2px;
   width: 18px;
   height: 18px;
   display: flex;
