@@ -507,6 +507,7 @@ export interface ChampionCareerStats {
   healing: number
   damageTaken: number
   wardsPlaced: number
+  honors: number
 }
 
 export interface CurrentRank {
@@ -532,6 +533,8 @@ export interface BattleResult {
   mvpName?: string
   /** Hand of Baron: chimes paid out at battle end for slaying the baron */
   baronBounty?: number
+  /** Chimes paid out by the honor ceremony (3 honors, MVP pays double) */
+  honorTribute?: number
 }
 
 export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'

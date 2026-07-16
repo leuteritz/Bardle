@@ -667,6 +667,7 @@ export function usePersistence() {
     battleStore.timelineCursor = 0
     battleStore.killFeed = []
     battleStore.honoredChampions = []
+    battleStore.honorsSettled = false
     // 6. Reset remaining stores
     const inventoryStore = useInventoryStore()
     inventoryStore.$reset()

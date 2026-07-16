@@ -119,16 +119,53 @@ describe('battleStore timeline integration', () => {
     expect(store.totalKills).toBe(store.team1Kills)
   })
 
-  it('honorChampion caps selections and toggles', () => {
+  it('finalizeHonors draws 3 unique champions from both teams, deterministically per seed', () => {
     const store = useBattleStore()
-    store.honorChampion('A')
-    store.honorChampion('B')
-    store.honorChampion('C')
-    store.honorChampion('D')
+    setupBattle(store, 4242)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    store.finalizeHonors()
     expect(store.honoredChampions.length).toBe(HONOR_MAX_SELECTIONS)
-    expect(store.honoredChampions).not.toContain('D')
-    store.honorChampion('B')
-    expect(store.honoredChampions).toEqual(['A', 'C'])
+    expect(new Set(store.honoredChampions).size).toBe(HONOR_MAX_SELECTIONS)
+    for (const name of store.honoredChampions) {
+      expect([...T1_NAMES, ...T2_NAMES]).toContain(name)
+    }
+    const firstDraw = [...store.honoredChampions]
+
+    // same seed → identical ceremony (reload-safe)
+    setActivePinia(createPinia())
+    const replay = useBattleStore()
+    setupBattle(replay, 4242)
+    replay.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    replay.finalizeHonors()
+    expect(replay.honoredChampions).toEqual(firstDraw)
+  })
+
+  it('finalizeHonors settles once and tracks career honors for own champions only', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    store.finalizeHonors()
+    expect(store.allTime.honorsGiven).toBe(HONOR_MAX_SELECTIONS)
+    for (const name of store.honoredChampions) {
+      if (T1_NAMES.includes(name)) {
+        expect(store.championCareer[name].honors).toBe(1)
+      } else {
+        expect(store.championCareer[name]).toBeUndefined()
+      }
+    }
+    // settling twice must not pay or count again
+    const honored = [...store.honoredChampions]
+    store.finalizeHonors()
+    expect(store.allTime.honorsGiven).toBe(HONOR_MAX_SELECTIONS)
+    expect(store.honoredChampions).toEqual(honored)
+  })
+
+  it('honorTributeFor pays own champions only', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    expect(store.honorTributeFor('Garen')).toBeGreaterThan(0)
+    expect(store.honorTributeFor('Darius')).toBe(0)
   })
 
   it('objective override reseed keeps applied history and recomputes the cursor', () => {

@@ -517,6 +517,25 @@ export const MVP_W_OBJECTIVE = 2
 
 // ── Honor phase ────────────────────────────────────────────────────────────
 export const HONOR_MAX_SELECTIONS = 3
+/** Each honored OWN champion pays a chime tribute worth this many seconds of production… */
+export const HONOR_TRIBUTE_PRODUCTION_SECONDS = 5
+/** …or at least this many clicks, whichever is higher (early game floor) */
+export const HONOR_TRIBUTE_MIN_CLICKS = 2
+/** An honored match MVP pays a doubled tribute */
+export const HONOR_MVP_TRIBUTE_MULT = 2
+/** Tribute multiplier when the battle was lost (honors still happen, pay less) */
+export const HONOR_LOSS_TRIBUTE_MULT = 0.5
+// Honor score = mvpScore + the unsung-hero factors below; the ceremony then
+// draws 3 of all 10 champions by weighted random (weight = score^EXP), so
+// strong performances are likely but never guaranteed to be honored.
+export const HONOR_SCORE_HEAL_DIV = 2000
+export const HONOR_SCORE_TANK_DIV = 3000
+export const HONOR_SCORE_WARD_WEIGHT = 0.4
+export const HONOR_WEIGHT_EXP = 1.5
+// Team bias on the honor draw. The rift favors the enemy team by default;
+// future upgrades are meant to shift these multipliers toward the own team.
+export const HONOR_OWN_TEAM_WEIGHT_MULT = 1.0
+export const HONOR_ENEMY_TEAM_WEIGHT_MULT = 1.4
 
 // ── Warp HUD (planet search) ───────────────────────────────────────────────
 export const WARP_DISTANCE_LY_MIN = 1.2
@@ -2521,8 +2540,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)
   'game-icons:stone-tower', // OBJECTIVES stat group header (BattleLandingScreen)
   'game-icons:semi-closed-eye', // VISION & TIME stat group header (BattleLandingScreen)
-  'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow)
-  'game-icons:medal', // Honor pips / grant honor header (HonorGrantPanel)
+  'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow) + MVP band (HonorGrantPanel)
+  'game-icons:medal', // Grant honor header + medal stamp (HonorGrantPanel)
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
   'game-icons:tower-fall', // Turrets destroyed stat (BottomScoreboard)
   'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)

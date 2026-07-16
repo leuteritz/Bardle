@@ -2,117 +2,99 @@
   <div class="honor-panel">
     <!-- Header -->
     <div class="honor-head">
-      <div class="honor-head-left">
-        <Icon icon="game-icons:medal" width="20" height="20" style="color: #e8c040" />
-        <span class="honor-title">GRANT HONOR</span>
-        <span class="honor-pips">
-          <span
-            v-for="p in HONOR_MAX_SELECTIONS"
-            :key="p"
-            class="pip"
-            :class="{ 'pip--filled': p <= battleStore.honoredChampions.length }"
-          />
+      <div class="head-icon-ring">
+        <Icon icon="game-icons:medal" width="24" height="24" style="color: #e8c040" />
+      </div>
+      <div class="head-titles">
+        <span class="honor-title">HONOR CEREMONY</span>
+        <span class="honor-sub">The rift honors {{ HONOR_MAX_SELECTIONS }} champions for their performance</span>
+      </div>
+      <div class="honor-pips">
+        <span
+          v-for="p in HONOR_MAX_SELECTIONS"
+          :key="p"
+          class="pip"
+          :class="{ 'pip--filled': p <= battleStore.honoredChampions.length }"
+        />
+      </div>
+    </div>
+
+    <div class="teams-wrap">
+      <template v-for="side in sides" :key="side.key">
+        <div class="section-label" :class="`section-label--${side.key}`">
+          {{ side.label }}
+        </div>
+        <div class="rows">
+          <div
+            v-for="champ in side.champs"
+            :key="champ.name"
+            class="row"
+            :class="{
+              'row--enemy': side.key === 'enemy',
+              'row--honored': isHonored(champ.name),
+              'row--mvp': champ.name === mvpName,
+            }"
+            :style="honorDelayStyle(champ.name)"
+          >
+            <span class="cell-champ">
+              <span class="portrait-wrap">
+                <img :src="battleStore.getChampionImage(champ.name)" :alt="champ.name" class="portrait" />
+                <span class="level-badge">{{ champ.level }}</span>
+              </span>
+              <span class="champ-names">
+                <span class="champ-name">
+                  {{ champ.name }}
+                  <em v-if="champ.name === mvpName" class="mvp-tag">
+                    <Icon icon="game-icons:laurels-trophy" width="11" height="11" />
+                    MVP
+                  </em>
+                </span>
+                <span class="champ-role">{{ champ.role.toUpperCase() }}</span>
+              </span>
+            </span>
+
+            <span class="cell-kda">
+              <span class="kda-k">{{ champ.kills }}</span><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
+            </span>
+            <span class="cell-stat"><em>{{ shortNum(champ.damage) }}</em>DMG</span>
+            <span class="cell-stat cell-stat--gold"><em>{{ shortNum(champ.gold) }}</em>GOLD</span>
+
+            <span class="cell-honor">
+              <span
+                v-if="isHonored(champ.name) && battleStore.honorTributeFor(champ.name) > 0"
+                class="tribute-chip"
+              >
+                <img src="/img/ChimesPerClick.png" alt="" class="chime-img" />
+                +{{ formatTribute(battleStore.honorTributeFor(champ.name)) }}
+              </span>
+              <span class="medal-stamp" :class="{ 'medal-stamp--on': isHonored(champ.name) }">
+                <Icon icon="game-icons:medal" width="20" height="20" />
+              </span>
+            </span>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Footer: tribute total + continue -->
+    <div class="honor-foot">
+      <div class="tribute-total" :class="{ 'tribute-total--paid': totalTribute > 0 }">
+        <span class="tribute-label">HONOR TRIBUTE</span>
+        <span
+          class="tribute-value"
+          :class="{ 'tribute-value--none': totalTribute === 0 }"
+          :style="{ '--ceremony-delay': ceremonyDelay }"
+        >
+          <img v-if="totalTribute > 0" src="/img/ChimesPerClick.png" alt="" class="chime-img chime-img--big" />
+          {{ totalTribute > 0 ? '+' + formatTribute(totalTribute) + ' CHIMES' : 'NO OWN HONORS' }}
         </span>
       </div>
-      <span class="honor-hint">
-        {{ battleStore.honoredChampions.length }} / {{ HONOR_MAX_SELECTIONS }} selected · click a card to honor
-      </span>
+      <button class="continue-btn" @click="battleStore.confirmHonorAndContinue()">
+        <span class="continue-label">CONTINUE</span>
+        <span class="continue-count">{{ battleStore.resultCountdown }}s</span>
+        <span class="continue-progress" :style="{ width: countdownPercent + '%' }" />
+      </button>
     </div>
-
-    <!-- Column header -->
-    <div class="table-head">
-      <span class="col-champ">CHAMPION</span>
-      <span class="col-kda">KDA</span>
-      <span class="col-cs">CS</span>
-      <span class="col-gold">GOLD</span>
-      <span class="col-dmg">DMG</span>
-      <span class="col-honor">HONOR</span>
-    </div>
-
-    <div class="table-scroll">
-      <!-- Your team -->
-      <div class="section-label section-label--team">YOUR TEAM</div>
-      <div class="rows">
-        <button
-          v-for="champ in ownTeam"
-          :key="champ.name"
-          class="row"
-          :class="rowClass(champ, 1)"
-          :disabled="champ.name === 'Bard'"
-          @click="battleStore.honorChampion(champ.name)"
-        >
-          <span class="col-champ cell-champ">
-            <span class="portrait-wrap">
-              <img :src="battleStore.getChampionImage(champ.name)" :alt="champ.name" class="portrait" />
-              <span class="level-badge">{{ champ.level }}</span>
-            </span>
-            <span class="champ-names">
-              <span class="champ-name" :class="{ 'champ-name--mvp': champ.name === mvpName, 'champ-name--bard': champ.name === 'Bard' }">
-                {{ champ.name }}
-                <em v-if="champ.name === mvpName" class="mvp-tag">MVP</em>
-                <em v-if="champ.name === 'Bard'" class="you-tag">YOU</em>
-              </span>
-              <span class="champ-role">{{ champ.role.toUpperCase() }}</span>
-            </span>
-          </span>
-          <span class="col-kda cell-kda">
-            <span class="kda-k">{{ champ.kills }}</span><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
-          </span>
-          <span class="col-cs cell-plain">{{ champ.cs }}</span>
-          <span class="col-gold cell-gold">{{ shortNum(champ.gold) }}</span>
-          <span class="col-dmg cell-plain">{{ shortNum(champ.damage) }}</span>
-          <span class="col-honor cell-honor">
-            <span v-if="champ.name === 'Bard'" class="self-tag">— self —</span>
-            <span v-else class="honor-circle" :class="{ 'honor-circle--on': isHonored(champ.name) }">
-              <template v-if="isHonored(champ.name)">✓</template>
-            </span>
-          </span>
-        </button>
-      </div>
-
-      <!-- Enemies -->
-      <div class="section-label section-label--enemy">ENEMIES</div>
-      <div class="rows">
-        <button
-          v-for="champ in enemyTeam"
-          :key="champ.name"
-          class="row row--enemy"
-          :class="rowClass(champ, 2)"
-          @click="battleStore.honorChampion(champ.name)"
-        >
-          <span class="col-champ cell-champ">
-            <span class="portrait-wrap">
-              <img :src="battleStore.getChampionImage(champ.name)" :alt="champ.name" class="portrait portrait--enemy" />
-              <span class="level-badge level-badge--enemy">{{ champ.level }}</span>
-            </span>
-            <span class="champ-names">
-              <span class="champ-name champ-name--enemy" :class="{ 'champ-name--mvp': champ.name === mvpName }">
-                {{ champ.name }}
-                <em v-if="champ.name === mvpName" class="mvp-tag">MVP</em>
-              </span>
-              <span class="champ-role">{{ champ.role.toUpperCase() }}</span>
-            </span>
-          </span>
-          <span class="col-kda cell-kda">
-            <span class="kda-k">{{ champ.kills }}</span><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
-          </span>
-          <span class="col-cs cell-plain">{{ champ.cs }}</span>
-          <span class="col-gold cell-gold">{{ shortNum(champ.gold) }}</span>
-          <span class="col-dmg cell-plain">{{ shortNum(champ.damage) }}</span>
-          <span class="col-honor cell-honor">
-            <span class="honor-circle" :class="{ 'honor-circle--on': isHonored(champ.name) }">
-              <template v-if="isHonored(champ.name)">✓</template>
-            </span>
-          </span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Continue button -->
-    <button class="continue-btn" @click="battleStore.confirmHonorAndContinue()">
-      HONOR &amp; CONTINUE →
-      <span class="continue-count">({{ battleStore.resultCountdown }}s)</span>
-    </button>
   </div>
 </template>
 
@@ -120,30 +102,46 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { HONOR_MAX_SELECTIONS } from '@/config/constants'
-import type { ChampionState } from '@/types'
+import { HONOR_MAX_SELECTIONS, BATTLE_RESULT_COUNTDOWN_SECONDS } from '@/config/constants'
 
 const battleStore = useBattleStore()
 
-const ownTeam = computed(() => battleStore.team1.filter((c) => c.name))
-const enemyTeam = computed(() => battleStore.team2.filter((c) => c.name))
+const sides = computed(() => [
+  { key: 'team', label: 'YOUR TEAM', champs: battleStore.team1.filter((c) => c.name) },
+  { key: 'enemy', label: 'ENEMY TEAM', champs: battleStore.team2.filter((c) => c.name) },
+])
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
+const totalTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
 
 function isHonored(name: string): boolean {
   return battleStore.honoredChampions.includes(name)
 }
 
-function rowClass(champ: ChampionState, team: 1 | 2): Record<string, boolean> {
-  return {
-    'row--honored': isHonored(champ.name),
-    'row--mvp': champ.name === mvpName.value,
-    'row--bard': team === 1 && champ.name === 'Bard',
-  }
+/** Staggers the medal reveals in ceremony order (1st, 2nd, 3rd honor). */
+function honorDelayStyle(name: string): Record<string, string> {
+  const idx = battleStore.honoredChampions.indexOf(name)
+  if (idx < 0) return {}
+  return { '--honor-delay': `${0.5 + idx * 0.55}s` }
 }
+
+/** The tribute total pops in right after the last medal has been stamped. */
+const ceremonyDelay = computed(
+  () => `${(0.5 + battleStore.honoredChampions.length * 0.55 + 0.2).toFixed(2)}s`,
+)
+
+const countdownPercent = computed(() =>
+  Math.max(0, Math.min(100, (battleStore.resultCountdown / BATTLE_RESULT_COUNTDOWN_SECONDS) * 100)),
+)
 
 function shortNum(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
   return String(n)
+}
+
+function formatTribute(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 10_000) return Math.round(n / 1000) + 'k'
+  return n.toLocaleString('en-US')
 }
 </script>
 
@@ -152,9 +150,10 @@ function shortNum(n: number): string {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 18px 20px;
-  background: rgba(0, 0, 0, 0.3);
-  border-left: 1px solid rgba(232, 192, 64, 0.16);
+  gap: 10px;
+  padding: 22px 24px 18px;
+  background: linear-gradient(160deg, rgba(20, 18, 10, 0.72), rgba(8, 8, 6, 0.55));
+  border-left: 1px solid rgba(232, 192, 64, 0.22);
   min-width: 0;
   min-height: 0;
 }
@@ -163,270 +162,403 @@ function shortNum(n: number): string {
 .honor-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
+  gap: 13px;
   flex-shrink: 0;
 }
-.honor-head-left {
+.head-icon-ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 192, 64, 0.55);
+  background: radial-gradient(circle, rgba(232, 192, 64, 0.16), transparent 72%);
+  box-shadow: 0 0 18px rgba(232, 192, 64, 0.28);
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.head-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 .honor-title {
-  font-size: 15px;
+  font-size: 21px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 3.5px;
+  line-height: 1;
   color: #e8c040;
+  text-shadow: 0 0 20px rgba(232, 192, 64, 0.4);
+}
+.honor-sub {
+  font-size: 12px;
+  color: #9a854e;
+  letter-spacing: 0.4px;
 }
 .honor-pips {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  margin-left: auto;
 }
 .pip {
-  width: 9px;
-  height: 9px;
+  width: 13px;
+  height: 13px;
   transform: rotate(45deg);
-  background: #1c1c18;
-  border: 1px solid #5c3310;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(232, 192, 64, 0.35);
+  transition: all 0.25s;
 }
 .pip--filled {
   background: #e8c040;
-  border-color: #e8c040;
-  box-shadow: 0 0 6px rgba(232, 192, 64, 0.7);
-}
-.honor-hint {
-  font-size: 11px;
-  color: #6a5820;
+  border-color: #ffe28a;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.8);
 }
 
-/* ── Table ── */
-.table-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 10px 5px;
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: #6a5820;
-  flex-shrink: 0;
-}
-
-.col-champ { width: 190px; flex-shrink: 0; }
-.col-kda { width: 76px; text-align: center; flex-shrink: 0; }
-.col-cs { width: 46px; text-align: center; flex-shrink: 0; }
-.col-gold { width: 56px; text-align: center; flex-shrink: 0; }
-.col-dmg { width: 56px; text-align: center; flex-shrink: 0; }
-.col-honor { flex: 1; text-align: right; }
-
-.table-scroll {
+/* ── Team sections ──
+   No scrolling: the two .rows blocks share the free height and every row
+   flexes, so all 10 champions are always fully visible inside the stage. */
+.teams-wrap {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-
 .section-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
-  margin: 4px 0;
+  letter-spacing: 2.5px;
+  flex-shrink: 0;
 }
-.section-label--team { color: #52b830; }
-.section-label--enemy { color: #cc6050; margin-top: 10px; }
+.section-label--team { color: #6ec86e; }
+.section-label--enemy { color: #d87868; margin-top: 5px; }
 
 .rows {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .row {
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 5px 10px;
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid rgba(96, 165, 250, 0.2);
-  border-radius: 5px;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-}
-.row:hover:not(:disabled) {
-  border-color: rgba(232, 192, 64, 0.55);
-}
-.row:disabled {
-  cursor: default;
+  gap: 12px;
+  padding: 3px 12px;
+  background: linear-gradient(150deg, rgba(96, 165, 250, 0.06), rgba(10, 14, 24, 0.4));
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 9px;
+  min-width: 0;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 .row--enemy {
-  background: rgba(239, 68, 68, 0.05);
-  border-color: rgba(248, 113, 113, 0.18);
-}
-.row--bard {
-  background: rgba(232, 192, 64, 0.05);
-  border-color: rgba(212, 160, 32, 0.3);
+  background: linear-gradient(150deg, rgba(239, 68, 68, 0.05), rgba(24, 10, 10, 0.4));
+  border-color: rgba(248, 113, 113, 0.2);
 }
 .row--mvp {
-  background: rgba(232, 192, 64, 0.09);
-  border-color: rgba(232, 192, 64, 0.5);
+  border-color: rgba(232, 192, 64, 0.45);
 }
 .row--honored {
-  border-color: #e8c040 !important;
-  box-shadow: 0 0 12px rgba(232, 192, 64, 0.35);
-  background: rgba(232, 192, 64, 0.09);
+  border-color: #e8c040;
+  background: linear-gradient(150deg, rgba(232, 192, 64, 0.13), rgba(24, 19, 6, 0.55));
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.28), inset 0 0 24px rgba(232, 192, 64, 0.05);
+  animation: row-glow-in 0.4s ease-out var(--honor-delay, 0s) backwards;
+}
+@keyframes row-glow-in {
+  0% { box-shadow: none; border-color: rgba(96, 165, 250, 0.22); background: rgba(10, 14, 24, 0.4); }
 }
 
-/* ── Cells ── */
+/* ── Champion cell ── */
 .cell-champ {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
+  width: 210px;
+  flex-shrink: 0;
   min-width: 0;
 }
-
 .portrait-wrap {
   position: relative;
   flex-shrink: 0;
 }
 .portrait {
-  width: 32px;
-  height: 32px;
-  border-radius: 5px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   object-fit: cover;
-  border: 1px solid #60a5fa;
+  border: 2px solid rgba(96, 165, 250, 0.55);
   display: block;
+  transition: border-color 0.2s;
 }
-.portrait--enemy { border-color: #f87171; }
-.row--bard .portrait,
-.row--mvp .portrait { border-color: #e8c040; }
+.row--enemy .portrait { border-color: rgba(248, 113, 113, 0.55); }
+.row--mvp .portrait,
+.row--honored .portrait { border-color: #e8c040; }
 
 .level-badge {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 13px;
-  height: 13px;
+  bottom: -4px;
+  right: -4px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: #0d1830;
   border: 1px solid #60a5fa;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 700;
   color: #cfe0ff;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.level-badge--enemy {
+.row--enemy .level-badge {
   background: #300d0d;
   border-color: #f87171;
   color: #ffd0d0;
 }
 
 .champ-names {
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 .champ-name {
-  font-size: 12px;
-  color: #dbeafe;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f2ead2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.15;
 }
-.champ-name--enemy { color: #fee2e2; }
-.champ-name--bard { color: #e8c040; }
-.champ-name--mvp { color: #e8c040; }
+.row--honored .champ-name { color: #ffe28a; }
 .mvp-tag {
-  font-size: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
   font-style: normal;
-  color: #8a7040;
+  font-weight: 700;
   letter-spacing: 1px;
-}
-.you-tag {
-  font-size: 8px;
-  font-style: normal;
-  color: #6a5820;
+  color: #1a1206;
+  background: linear-gradient(to right, #d4a020, #ffe28a);
+  border-radius: 4px;
+  padding: 1px 6px;
 }
 .champ-role {
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: #6a5820;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #8a7238;
 }
 
+/* ── Stat cells ── */
 .cell-kda {
-  font-size: 12px;
+  width: 88px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
 }
 .kda-k { color: #6ee7b7; }
 .kda-d { color: #fca5a5; }
 .kda-a { color: #93c5fd; }
-.kda-sep { color: #555566; }
+.kda-sep { color: #55566a; font-weight: 400; padding: 0 2px; }
 
-.cell-plain {
-  font-size: 12px;
-  color: #e8e2d0;
-}
-.cell-gold {
-  font-size: 12px;
-  color: #e8c040;
-}
-
-.cell-honor {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-.self-tag {
-  font-size: 9px;
-  color: #6a5820;
-}
-.honor-circle {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid rgba(232, 192, 64, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: #e8c040;
-  transition: all 0.15s;
-}
-.honor-circle--on {
-  background: rgba(232, 192, 64, 0.15);
-  border-color: #e8c040;
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
-}
-
-/* ── Continue ── */
-.continue-btn {
-  margin-top: 12px;
+.cell-stat {
+  width: 66px;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #8a7238;
+}
+.cell-stat em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8e2d0;
+  letter-spacing: 0;
+}
+.cell-stat--gold em { color: #e8c040; }
+
+/* ── Honor cell ── */
+.cell-honor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  min-width: 0;
+}
+.tribute-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #ffe28a;
+  background: rgba(232, 192, 64, 0.13);
+  border: 1px solid rgba(232, 192, 64, 0.55);
+  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+  animation: chip-in 0.35s ease-out calc(var(--honor-delay, 0s) + 0.15s) backwards;
+}
+@keyframes chip-in {
+  0% { opacity: 0; transform: translateX(8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.chime-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+.chime-img--big {
+  width: 19px;
+  height: 19px;
+}
+
+.medal-stamp {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 192, 64, 0.22);
+  color: rgba(232, 192, 64, 0.18);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  flex-shrink: 0;
+}
+.medal-stamp--on {
+  color: #ffe28a;
+  border-color: #e8c040;
+  background: radial-gradient(circle, rgba(232, 192, 64, 0.25), transparent 75%);
+  box-shadow: 0 0 14px rgba(232, 192, 64, 0.6);
+  animation: medal-stamp-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) var(--honor-delay, 0s) backwards;
+}
+@keyframes medal-stamp-in {
+  0% { transform: scale(1.8) rotate(-14deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ── Footer ── */
+.honor-foot {
+  display: flex;
+  align-items: stretch;
+  gap: 13px;
+  flex-shrink: 0;
+}
+.tribute-total {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(232, 192, 64, 0.07);
+  border: 1px solid rgba(232, 192, 64, 0.3);
+}
+.tribute-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #8a7238;
+}
+.tribute-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffe28a;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
+  white-space: nowrap;
+  /* Revealed once the last medal has been stamped */
+  animation: tribute-reveal 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) var(--ceremony-delay, 0s) backwards;
+}
+.tribute-total--paid {
+  animation: tribute-flash 0.9s ease-out var(--ceremony-delay, 0s) backwards;
+}
+.tribute-value--none {
+  color: #8a7238;
+  text-shadow: none;
+  font-size: 13px;
+}
+@keyframes tribute-reveal {
+  0% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes tribute-flash {
+  0% { box-shadow: 0 0 0 rgba(232, 192, 64, 0); }
+  30% { box-shadow: 0 0 26px rgba(232, 192, 64, 0.55); border-color: #ffe28a; }
+  100% { box-shadow: 0 0 0 rgba(232, 192, 64, 0); }
+}
+
+.continue-btn {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   padding: 13px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 2px;
-  background: linear-gradient(to bottom, #1e2e12, #131e0c);
+  letter-spacing: 3px;
+  background: linear-gradient(to bottom, #233615, #14200d);
   border: 2px solid #4a8a28;
-  border-radius: 5px;
-  color: #8ee060;
+  border-radius: 10px;
+  color: #9ef070;
   cursor: pointer;
-  box-shadow: 0 0 16px rgba(74, 138, 40, 0.3);
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(74, 138, 40, 0.3);
   transition: all 0.15s;
 }
 .continue-btn:hover {
-  background: linear-gradient(to bottom, #28401a, #1a2a10);
+  background: linear-gradient(to bottom, #2c4419, #1a2a10);
   border-color: #6ec040;
+  box-shadow: 0 0 26px rgba(110, 192, 64, 0.45);
+}
+.continue-label {
+  position: relative;
+  z-index: 1;
 }
 .continue-count {
-  font-size: 11px;
-  opacity: 0.6;
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  opacity: 0.65;
+  min-width: 24px;
+  text-align: left;
+}
+.continue-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(to right, #4a8a28, #9ef070);
+  box-shadow: 0 0 8px rgba(110, 192, 64, 0.7);
+  transition: width 1s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .medal-stamp--on,
+  .tribute-chip,
+  .row--honored,
+  .tribute-value,
+  .tribute-total--paid {
+    animation: none;
+  }
 }
 </style>

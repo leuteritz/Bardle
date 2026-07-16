@@ -70,6 +70,16 @@ import {
   OBJECTIVE_JUNGLE_BUFF_MULT,
   OBJECTIVE_TOP_TAUNT_TARGETS,
   HONOR_MAX_SELECTIONS,
+  HONOR_TRIBUTE_PRODUCTION_SECONDS,
+  HONOR_TRIBUTE_MIN_CLICKS,
+  HONOR_MVP_TRIBUTE_MULT,
+  HONOR_LOSS_TRIBUTE_MULT,
+  HONOR_SCORE_HEAL_DIV,
+  HONOR_SCORE_TANK_DIV,
+  HONOR_SCORE_WARD_WEIGHT,
+  HONOR_WEIGHT_EXP,
+  HONOR_OWN_TEAM_WEIGHT_MULT,
+  HONOR_ENEMY_TEAM_WEIGHT_MULT,
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
   KILL_FEED_MAX,
@@ -176,6 +186,7 @@ export function defaultChampionCareer(): ChampionCareerStats {
     healing: 0,
     damageTaken: 0,
     wardsPlaced: 0,
+    honors: 0,
   }
 }
 
@@ -313,6 +324,8 @@ export const useBattleStore = defineStore('battle', {
     // Per-champion career stats keyed by champion name (own champions only)
     championCareer: {} as Record<string, ChampionCareerStats>,
     honoredChampions: [] as string[],
+    /** Guards the honor payout so a battle can never pay tribute twice. */
+    honorsSettled: false,
 
     drakeAlive: true,
     drakeKilledByTeam: null as (1 | 2) | null,
@@ -972,6 +985,7 @@ export const useBattleStore = defineStore('battle', {
       this.nexusDestroyedByTeam = null
       this.activeObjectiveParticipants = null
       this.honoredChampions = []
+      this.honorsSettled = false
       this.drakeAlive = true
       this.drakeKilledByTeam = null
       this.drakeEventTime = 0
@@ -1263,18 +1277,110 @@ export const useBattleStore = defineStore('battle', {
       return mvpName
     },
 
-    honorChampion(name: string) {
-      const idx = this.honoredChampions.indexOf(name)
-      if (idx >= 0) {
-        this.honoredChampions.splice(idx, 1)
-        return
+    /**
+     * Chimes one honor for this champion pays out. Only own champions pay;
+     * the match MVP pays double, a lost battle pays half.
+     */
+    honorTributeFor(name: string): number {
+      if (!this.team1.some((c) => c.name === name)) return 0
+      const gameStore = useGameStore()
+      let tribute = Math.max(
+        Math.floor(gameStore.chimesPerSecond * HONOR_TRIBUTE_PRODUCTION_SECONDS),
+        Math.floor(gameStore.chimesPerClick * HONOR_TRIBUTE_MIN_CLICKS),
+      )
+      if (this.lastAutoBattleResult?.mvpName === name) tribute *= HONOR_MVP_TRIBUTE_MULT
+      if (this.lastAutoBattleResult?.won === false) {
+        tribute = Math.floor(tribute * HONOR_LOSS_TRIBUTE_MULT)
       }
-      if (this.honoredChampions.length >= HONOR_MAX_SELECTIONS) return
-      this.honoredChampions.push(name)
+      return tribute
+    },
+
+    /**
+     * Settles the honor ceremony exactly once per battle: the rift honors 3
+     * of all 10 champions (both teams) by weighted random draw — the weight
+     * grows with a performance score (MVP score plus healing, tanking and
+     * vision), the draw itself is seeded by the battle so a reload replays
+     * the same ceremony. Own honored champions pay a chime tribute; enemy
+     * honors pay nothing. Fully automatic, no player input.
+     */
+    finalizeHonors() {
+      if (this.honorsSettled) return
+      this.honorsSettled = true
+      this.honoredChampions = []
+
+      // Deterministic per-battle RNG (mulberry32 over the battle seed)
+      let rngState = (this.battleSeed ^ 0x9e3779b9) >>> 0
+      const rng = () => {
+        rngState = (rngState + 0x6d2b79f5) >>> 0
+        let t = rngState
+        t = Math.imul(t ^ (t >>> 15), t | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+      }
+
+      const scoreOf = (champ: ChampionState, objectiveParticipations?: number) =>
+        Math.max(
+          1,
+          mvpScore(champ, objectiveParticipations) +
+            champ.healing / HONOR_SCORE_HEAL_DIV +
+            champ.damageTaken / HONOR_SCORE_TANK_DIV +
+            champ.wardsPlaced * HONOR_SCORE_WARD_WEIGHT,
+        )
+      const pool = [
+        ...this.team1
+          .filter((c) => c.name)
+          .map((c, i) => ({
+            name: c.name,
+            weight:
+              Math.pow(scoreOf(c, this.battleTrack.objectiveParticipationsT1[i]), HONOR_WEIGHT_EXP) *
+              HONOR_OWN_TEAM_WEIGHT_MULT,
+          })),
+        ...this.team2
+          .filter((c) => c.name)
+          .map((c) => ({
+            name: c.name,
+            weight: Math.pow(scoreOf(c), HONOR_WEIGHT_EXP) * HONOR_ENEMY_TEAM_WEIGHT_MULT,
+          })),
+      ]
+
+      // Weighted draw without replacement
+      while (this.honoredChampions.length < HONOR_MAX_SELECTIONS && pool.length > 0) {
+        const total = pool.reduce((sum, p) => sum + p.weight, 0)
+        let roll = rng() * total
+        let picked = pool.length - 1
+        for (let i = 0; i < pool.length; i++) {
+          roll -= pool[i].weight
+          if (roll <= 0) {
+            picked = i
+            break
+          }
+        }
+        this.honoredChampions.push(pool[picked].name)
+        pool.splice(picked, 1)
+      }
+
+      let tribute = 0
+      for (const name of this.honoredChampions) {
+        tribute += this.honorTributeFor(name)
+        // Career honors are tracked for own champions only
+        if (this.team1.some((c) => c.name === name)) {
+          const career = (this.championCareer[name] ??= defaultChampionCareer())
+          career.honors += 1
+        }
+      }
+      this.allTime.honorsGiven += this.honoredChampions.length
+
+      if (tribute > 0) {
+        const gameStore = useGameStore()
+        gameStore.chimes += tribute
+        gameStore.totalChimesEarned += tribute
+        gameStore.chimesEarnedForLevel += tribute
+        gameStore.calculateLevel()
+      }
+      if (this.lastAutoBattleResult) this.lastAutoBattleResult.honorTribute = tribute
     },
 
     confirmHonorAndContinue() {
-      this.allTime.honorsGiven += this.honoredChampions.length
       this.dismissResult()
     },
 
@@ -1419,6 +1525,9 @@ export const useBattleStore = defineStore('battle', {
 
       const result = await this.simulateBattle(this.mmr)
       this.lastAutoBattleResult = result
+      // The ceremony is decided and paid out immediately — the result screen
+      // only presents it, so background tabs never miss the reward.
+      this.finalizeHonors()
       this.showAutoBattleResult = true
       this.isViewingLanding = false
       this.resultPhaseStartTimestamp = Date.now()

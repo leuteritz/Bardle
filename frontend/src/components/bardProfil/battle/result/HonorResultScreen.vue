@@ -21,7 +21,7 @@ const won = computed(() => battleStore.lastAutoBattleResult?.won ?? false)
 
 const screenEl = ref<HTMLElement | null>(null)
 const stageEl = ref<HTMLElement | null>(null)
-const { scale } = useFitScale(screenEl, stageEl, { maxScale: 1.3, padding: 8 })
+const { scale } = useFitScale(screenEl, stageEl, { maxScale: 1.6, padding: 12 })
 </script>
 
 <style scoped>
@@ -47,5 +47,20 @@ const { scale } = useFitScale(screenEl, stageEl, { maxScale: 1.3, padding: 8 })
   flex-shrink: 0;
   display: flex;
   transform-origin: center center;
+  border: 1px solid rgba(232, 192, 64, 0.28);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(6, 7, 5, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(232, 192, 64, 0.07);
+}
+.screen--loss .honor-stage {
+  border-color: rgba(204, 96, 80, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(204, 96, 80, 0.06);
 }
 </style>
