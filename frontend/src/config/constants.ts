@@ -190,7 +190,7 @@ export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 // ── Drake Types (see src/config/drakes.ts for the full definitions) ────────
 /** Chance the second drake of a battle rolls as the Elder Dragon */
 export const ELDER_DRAKE_CHANCE = 0.25
-/** Win-chance swing for Infernal — pure aggression, no secondary effect */
+/** Win-chance swing for Infernal — the biggest basic swing, plus its burn */
 export const DRAKE_WIN_BONUS_MAJOR = 0.1
 /** Win-chance swing for basic drakes that carry a secondary battle effect */
 export const DRAKE_WIN_BONUS_MINOR = 0.06
@@ -206,7 +206,17 @@ export const DRAKE_CLOUD_RESPAWN_MULT = 0.7
 /** Ocean: losing a later objective fight only costs this fraction of win chance */
 export const DRAKE_OCEAN_LOSS_PENALTY_MULT = 0.5
 /** Elder: flat bonus LP when the battle is won */
-export const DRAKE_ELDER_LP_BONUS = 5
+export const DRAKE_ELDER_LP_BONUS = 15
+/** Infernal: flat burn DPS the pit itself takes for the holder's team in later objective fights */
+export const DRAKE_INFERNAL_BURN_DPS = 25
+
+// ── Hand of Baron (battle-scoped buff for the team that slays the baron) ───
+/** Baron's Aegis: a lost battle only costs this fraction of the usual LP */
+export const BARON_LP_LOSS_SHIELD_MULT = 0.5
+/** Baron's Bounty: chimes worth this many seconds of production, paid at battle end */
+export const BARON_BOUNTY_PRODUCTION_SECONDS = 120
+/** Baron's Bounty floor: never less than this many base clicks worth of chimes */
+export const BARON_BOUNTY_MIN_CLICKS = 25
 export const OBJECTIVE_DPS_TICK_MS = 200
 /** Per-tick DPS wobble (±fraction) so the damage race stays dramatic */
 export const OBJECTIVE_DPS_VARIANCE = 0.15

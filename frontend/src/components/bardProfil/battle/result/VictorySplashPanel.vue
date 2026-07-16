@@ -29,6 +29,11 @@
       <div v-if="promoHint" class="promo-hint">▲ {{ promoHint }}</div>
     </div>
 
+    <div v-if="baronBounty > 0" class="baron-bounty">
+      <img src="/img/baron.png" alt="Baron" class="bounty-img" />
+      <span class="bounty-text">HAND OF BARON · +{{ baronBounty.toLocaleString('en-US') }} CHIMES</span>
+    </div>
+
     <div class="meta-row">
       <div class="meta-item">
         <div class="meta-value">{{ durationStr }}</div>
@@ -62,6 +67,7 @@ const lpChange = computed(() => battleStore.lastAutoBattleResult?.lpChange ?? ba
 const teamKills = computed(() => battleStore.lastAutoBattleResult?.teamKills ?? battleStore.team1Kills)
 const enemyKills = computed(() => battleStore.lastAutoBattleResult?.enemyKills ?? battleStore.team2Kills)
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
+const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)
 
 const durationStr = computed(() => {
   const d = battleStore.lastAutoBattleResult?.duration ?? battleStore.battleTime
@@ -254,6 +260,32 @@ const promoHint = computed(() => {
   color: #3cbc78;
   margin-top: 7px;
   text-align: center;
+}
+
+/* ── Hand of Baron bounty ── */
+.baron-bounty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid #5c2a90;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+.bounty-img {
+  width: 26px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.6));
+}
+.bounty-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #c9a0f5;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+  white-space: nowrap;
 }
 
 /* ── Meta row ── */

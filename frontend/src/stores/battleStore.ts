@@ -46,6 +46,10 @@ import {
   DRAKE_CLOUD_RESPAWN_MULT,
   DRAKE_OCEAN_LOSS_PENALTY_MULT,
   DRAKE_ELDER_LP_BONUS,
+  DRAKE_INFERNAL_BURN_DPS,
+  BARON_LP_LOSS_SHIELD_MULT,
+  BARON_BOUNTY_PRODUCTION_SECONDS,
+  BARON_BOUNTY_MIN_CLICKS,
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_DPS_VARIANCE,
   OBJECTIVE_FIGHTER_WEIGHT_MIN,
@@ -381,6 +385,11 @@ export const useBattleStore = defineStore('battle', {
     /** Cloud buff: ally respawn time multiplier for the rest of the battle. */
     allyRespawnMult: (state): number =>
       state.drakeBuffs.includes('cloud') ? DRAKE_CLOUD_RESPAWN_MULT : 1,
+    /** Infernal buff: flat burn DPS credited to the own side in later objective fights. */
+    objectiveBurnDps: (state): number =>
+      state.drakeBuffs.includes('infernal') ? DRAKE_INFERNAL_BURN_DPS : 0,
+    /** Hand of Baron: the own team slew the baron this battle. */
+    hasHandOfBaron: (state): boolean => state.baronKilledByTeam === 1,
     drakeJumpTarget: (state): number => {
       if (state.drakeEventTime <= 0) return -1
       return Math.floor((state.drakeEventTime - 1) / 60) * 60
@@ -1118,10 +1127,26 @@ export const useBattleStore = defineStore('battle', {
 
       const mvpName = this.accumulateBattleStats()
 
+      // Baron's Bounty (Hand of Baron): the slain worm pays out chimes at battle
+      // end — win or lose. Granted here (once per battle) instead of at the kill
+      // so a save/reload timeline replay can never pay it twice.
+      let baronBounty = 0
+      if (this.hasHandOfBaron) {
+        baronBounty = Math.max(
+          Math.floor(gameStore.chimesPerSecond * BARON_BOUNTY_PRODUCTION_SECONDS),
+          Math.floor(gameStore.chimesPerClick * BARON_BOUNTY_MIN_CLICKS),
+        )
+        gameStore.chimes += baronBounty
+        gameStore.totalChimesEarned += baronBounty
+        gameStore.chimesEarnedForLevel += baronBounty
+        gameStore.calculateLevel()
+      }
+
       logger.info('Battle', `Result: ${battleResult ? 'WIN' : 'LOSS'}`, {
         mmrChange: actualMmrChange,
         lpChange: actualLpChange,
         newMMR: this.mmr,
+        baronBounty,
       })
       this.lastAutoBattleResult = {
         won: battleResult,
@@ -1132,6 +1157,7 @@ export const useBattleStore = defineStore('battle', {
         teamKills: this.team1Kills,
         enemyKills: this.team2Kills,
         mvpName,
+        baronBounty,
       }
       this.battleHistory.push(this.lastAutoBattleResult)
       if (this.battleHistory.length > 20) {
@@ -1314,7 +1340,10 @@ export const useBattleStore = defineStore('battle', {
       const mmrFactor = Math.abs(mmrChange) / ELO_K_FACTOR
       // Elder Dragon buff: flat bonus LP on a won battle
       const elderBonus = won && this.drakeBuffs.includes('elder') ? DRAKE_ELDER_LP_BONUS : 0
-      return Math.round(lpChange * mmrFactor) + elderBonus
+      let lp = Math.round(lpChange * mmrFactor) + elderBonus
+      // Baron's Aegis (Hand of Baron): a defeat despite the baron costs only a fraction of the LP
+      if (!won && this.hasHandOfBaron) lp = Math.round(lp * BARON_LP_LOSS_SHIELD_MULT)
+      return lp
     },
 
     mmrToPower(mmr: number) {
@@ -1660,6 +1689,9 @@ export const useBattleStore = defineStore('battle', {
         total += curse
         this.objectiveCurseDamage[side] += curse
       }
+      // Infernal Cinders: the pit smolders for the drake holder's team — side
+      // total only, credited to no fighter (like player clicks)
+      if (side === 'own') total += this.objectiveBurnDps * dt
       return total
     },
 

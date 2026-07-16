@@ -530,6 +530,8 @@ export interface BattleResult {
   teamKills?: number
   enemyKills?: number
   mvpName?: string
+  /** Hand of Baron: chimes paid out at battle end for slaying the baron */
+  baronBounty?: number
 }
 
 export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'

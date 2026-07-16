@@ -19,9 +19,9 @@
             <span class="obj-title">{{ objectiveTitle }}</span>
             <!-- Reward preview lives up here so the arena below gets the full height -->
             <div class="obj-rewards">
-              <span class="reward reward--win">Secure: +{{ winBonusPercent }}% win chance</span>
+              <span class="reward reward--own">You +{{ winBonusPercent }}%</span>
               <span class="reward-divider">·</span>
-              <span class="reward reward--lose">Lose: −{{ loseBonusPercent }}%</span>
+              <span class="reward reward--enemy">Enemy +{{ loseBonusPercent }}%</span>
               <template v-if="effectText">
                 <span class="reward-divider">·</span>
                 <span class="reward-effect" :title="effectText">{{ effectText }}</span>
@@ -425,9 +425,9 @@ import {
   OBJECTIVE_AOE_DPS_BARON,
   ROLE_BY_KEY,
 } from '@/config/constants'
-import { DRAKE_TYPES } from '@/config/drakes'
+import { DRAKE_TYPES, BARON_BUFF } from '@/config/drakes'
 
-const BARON_THEME = { color: '#a855f7', colorDark: '#5c2a90', glow: 'rgba(168, 85, 247, 0.6)' }
+const BARON_THEME = BARON_BUFF
 
 const battleStore = useBattleStore()
 
@@ -768,7 +768,9 @@ const loseBonusPercent = computed(() => {
   const oceanHeld = battleStore.drakeBuffs.includes('ocean')
   return Math.round(winBonus.value * (oceanHeld ? DRAKE_OCEAN_LOSS_PENALTY_MULT : 1) * 100)
 })
-const effectText = computed(() => (isDrake.value ? drakeDef.value.effectText : ''))
+const effectText = computed(() =>
+  isDrake.value ? drakeDef.value.effectText : BARON_BUFF.effectText,
+)
 
 function fmt(n: number): string {
   return n.toLocaleString('en-US')
@@ -1062,8 +1064,9 @@ onUnmounted(_stopFloatScheduler)
   white-space: nowrap;
   flex-shrink: 0;
 }
-.reward--win { color: #6ec040; }
-.reward--lose { color: #e07060; }
+/* Team colors: blue = your team's win-chance gain, red = the enemy's if they secure */
+.reward--own { color: #60a5fa; text-shadow: 0 0 8px rgba(96, 165, 250, 0.45); }
+.reward--enemy { color: #f87171; text-shadow: 0 0 8px rgba(248, 113, 113, 0.45); }
 .reward-divider { color: #7a6030; font-size: 11px; flex-shrink: 0; }
 .reward-effect {
   font-size: 11px;

@@ -8,10 +8,10 @@
         class="buff-badge buff-badge--own"
         :style="{ '--dk-color': d.color, '--dk-dark': d.colorDark, '--dk-glow': d.glow }"
       >
-        <img src="/img/dragon.png" :alt="d.label" class="badge-img" />
+        <img :src="d.img" :alt="d.label" class="badge-img" />
         <div class="badge-text">
           <span class="badge-title">{{ d.label }}</span>
-          <span class="badge-effect">{{ ownEffectText(d) }}</span>
+          <span class="badge-effect">{{ d.effect }}</span>
         </div>
       </div>
     </TransitionGroup>
@@ -27,9 +27,9 @@
       >
         <div class="badge-text badge-text--enemy">
           <span class="badge-title">{{ d.label }}</span>
-          <span class="badge-effect">−{{ Math.round(d.winDelta * 100) }}% your win chance</span>
+          <span class="badge-effect">{{ d.effect }}</span>
         </div>
-        <img src="/img/dragon.png" :alt="d.label" class="badge-img" />
+        <img :src="d.img" :alt="d.label" class="badge-img" />
       </div>
     </TransitionGroup>
   </div>
@@ -38,17 +38,37 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
-import { DRAKE_TYPES, type DrakeTypeDef } from '@/config/drakes'
+import { DRAKE_TYPES, BARON_BUFF, type DrakeTypeDef } from '@/config/drakes'
+
+interface Badge {
+  id: string
+  label: string
+  color: string
+  colorDark: string
+  glow: string
+  img: string
+  effect: string
+}
 
 const battleStore = useBattleStore()
 
-const ownBadges = computed(() => battleStore.drakeBuffs.map((id) => DRAKE_TYPES[id]))
-const enemyBadges = computed(() => battleStore.drakeBuffsT2.map((id) => DRAKE_TYPES[id]))
-
-/** Own side shows the real battle effect; pure win-chance drakes show their swing instead. */
-function ownEffectText(d: DrakeTypeDef): string {
-  return d.effectText || `+${Math.round(d.winDelta * 100)}% win chance`
+/** Both sides show the buff the killer team walked away with — same short copy as the modal. */
+function drakeBadge(d: DrakeTypeDef): Badge {
+  return { ...d, img: '/img/dragon.png', effect: d.effectText || `+${Math.round(d.winDelta * 100)}% win chance` }
 }
+
+function baronBadge(): Badge {
+  return { ...BARON_BUFF, img: '/img/baron.png', effect: BARON_BUFF.effectText }
+}
+
+const ownBadges = computed<Badge[]>(() => [
+  ...battleStore.drakeBuffs.map((id) => drakeBadge(DRAKE_TYPES[id])),
+  ...(battleStore.baronKilledByTeam === 1 ? [baronBadge()] : []),
+])
+const enemyBadges = computed<Badge[]>(() => [
+  ...battleStore.drakeBuffsT2.map((id) => drakeBadge(DRAKE_TYPES[id])),
+  ...(battleStore.baronKilledByTeam === 2 ? [baronBadge()] : []),
+])
 </script>
 
 <style scoped>

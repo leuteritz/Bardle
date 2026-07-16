@@ -49,7 +49,13 @@
         </div>
       </div>
 
-      <span v-if="resultEffectText" class="result-effect">{{ resultEffectText }}</span>
+      <!-- What the securing team walks away with: win chance + battle buff -->
+      <div class="result-rewards">
+        <span class="reward-pill" :class="ownSecured ? 'reward-pill--own' : 'reward-pill--enemy'">
+          {{ ownSecured ? 'YOU' : 'ENEMY' }} +{{ gainedPercent }}% WIN CHANCE
+        </span>
+        <span v-if="gainedEffect" class="reward-pill reward-pill--effect">{{ gainedEffect }}</span>
+      </div>
     </div>
     <!-- Drains over the summary display time — shows how long the stats stay -->
     <div class="result-timer">
@@ -63,8 +69,8 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ObjectiveFighter } from '@/types'
 import { useBattleStore } from '@/stores/battleStore'
-import { OBJECTIVE_RESULT_DELAY_MS } from '@/config/constants'
-import { DRAKE_TYPES } from '@/config/drakes'
+import { OBJECTIVE_RESULT_DELAY_MS, OBJECTIVE_BARON_WIN_BONUS } from '@/config/constants'
+import { DRAKE_TYPES, BARON_BUFF } from '@/config/drakes'
 
 interface Award {
   key: string
@@ -196,11 +202,19 @@ const ownShare = computed(() => {
   return Math.round((ownDamage.value / total) * 100)
 })
 
-const resultEffectText = computed(() => {
-  const r = battleStore.objectiveResult
-  if (!isDrake.value || (r !== 'own' && r !== 'player')) return ''
-  return drakeDef.value.effectText
+// ── Securing team's rewards: win-chance swing + battle buff ────────────────
+const ownSecured = computed(
+  () => battleStore.objectiveResult === 'own' || battleStore.objectiveResult === 'player',
+)
+/** Applied swing when available (interactive fight); nominal value on scripted results. */
+const gainedPercent = computed(() => {
+  const nominal = isDrake.value ? drakeDef.value.winDelta : OBJECTIVE_BARON_WIN_BONUS
+  const d = battleStore.objectiveWinDelta !== 0 ? Math.abs(battleStore.objectiveWinDelta) : nominal
+  return Math.round(d * 100)
 })
+const gainedEffect = computed(() =>
+  isDrake.value ? drakeDef.value.effectText : BARON_BUFF.effectText,
+)
 </script>
 
 <style scoped>
@@ -455,11 +469,42 @@ const resultEffectText = computed(() => {
 .sum-chip--gold { color: #e8c040; }
 .sum-chip--red { color: #f08070; }
 
-.result-effect {
-  font-size: 16px;
-  letter-spacing: 0.06em;
+/* ── Securing team's rewards — big enough to read at a glance ── */
+.result-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  animation: award-in 0.4s ease both;
+  animation-delay: 0.3s;
+}
+.reward-pill {
+  padding: 7px 18px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.reward-pill--own {
+  color: #60a5fa;
+  border-color: #1d4ed8;
+  text-shadow: 0 0 12px rgba(96, 165, 250, 0.7);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+.reward-pill--enemy {
+  color: #f87171;
+  border-color: #991b1b;
+  text-shadow: 0 0 12px rgba(248, 113, 113, 0.7);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+.reward-pill--effect {
   color: var(--obj-color, #e8c040);
-  text-shadow: 0 0 10px var(--obj-glow, rgba(232, 192, 64, 0.6));
+  border-color: var(--obj-dark, #5c3310);
+  text-shadow: 0 0 12px var(--obj-glow, rgba(232, 192, 64, 0.6));
+  box-shadow: 0 0 12px var(--obj-glow, rgba(232, 192, 64, 0.25));
 }
 
 /* Countdown until the summary auto-closes */
@@ -504,7 +549,8 @@ const resultEffectText = computed(() => {
   .result-rays,
   .result-label,
   .result-timer-fill,
-  .award-card {
+  .award-card,
+  .result-rewards {
     animation: none !important;
   }
 }

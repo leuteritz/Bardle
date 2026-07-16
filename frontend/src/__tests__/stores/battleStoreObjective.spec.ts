@@ -18,8 +18,13 @@ import {
   OBJECTIVE_MID_CURSE_DPS,
   OBJECTIVE_SUPPORT_MEND_HEAL,
   OBJECTIVE_ABILITY_CD_S,
+  DRAKE_INFERNAL_BURN_DPS,
+  BARON_LP_LOSS_SHIELD_MULT,
+  BARON_BOUNTY_PRODUCTION_SECONDS,
+  BARON_BOUNTY_MIN_CLICKS,
 } from '../../config/constants'
 import { DRAKE_TYPES } from '../../config/drakes'
+import { useGameStore } from '../../stores/gameStore'
 
 const T1_NAMES = ['Garen', 'Lee Sin', 'Ahri', 'Jinx', 'Bard']
 const T2_NAMES = ['Darius', 'Kha Zix', 'Zed', 'Caitlyn', 'Thresh']
@@ -361,31 +366,37 @@ describe('battleStore frozen-time objective damage race', () => {
   })
 
   it('a living support keeps the most wounded ally healthier than a dead one', () => {
-    // Mend targets the lowest-HP standing ally, so compare the team's weakest
-    // (non-support) fighter across both scenarios
-    const minHp = (s: ReturnType<typeof useBattleStore>) =>
-      Math.min(
-        ...s.objectiveFighters!.t1
-          .filter((f) => f.alive && !f.down && f.role !== 'support')
-          .map((f) => f.fightHp),
-      )
+    // Fixed rng: identical weights, no crit/taunt noise — the dead support is
+    // the ONLY difference between the two runs (unmocked, random swings can
+    // occasionally drown out the Mend heal and flake the comparison).
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5)
+    try {
+      // Under the fixed rng both runs take identical AoE/taunt damage, so the
+      // team's summed non-support HP differs by exactly the Mend heals
+      const sumHp = (s: ReturnType<typeof useBattleStore>) =>
+        s.objectiveFighters!.t1
+          .filter((f) => f.alive && f.role !== 'support')
+          .reduce((total, f) => total + f.fightHp, 0)
 
-    const store = useBattleStore()
-    setupBattle(store)
-    store._openObjectiveModal('drake', null)
-    vi.advanceTimersByTime(4100)
-    const withSupport = minHp(store)
+      const store = useBattleStore()
+      setupBattle(store)
+      store._openObjectiveModal('drake', null)
+      vi.advanceTimersByTime(4100)
+      const withSupport = sumHp(store)
 
-    setActivePinia(createPinia())
-    const store2 = useBattleStore()
-    setupBattle(store2)
-    store2.battleTime = 100
-    store2.respawnUntil.t1 = [0, 0, 0, 0, 9999]
-    store2._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
-    vi.advanceTimersByTime(4100)
-    const withoutSupport = minHp(store2)
+      setActivePinia(createPinia())
+      const store2 = useBattleStore()
+      setupBattle(store2)
+      store2.battleTime = 100
+      store2.respawnUntil.t1 = [0, 0, 0, 0, 9999]
+      store2._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
+      vi.advanceTimersByTime(4100)
+      const withoutSupport = sumHp(store2)
 
-    expect(withSupport).toBeGreaterThan(withoutSupport)
+      expect(withSupport).toBeGreaterThan(withoutSupport)
+    } finally {
+      randomSpy.mockRestore()
+    }
   })
 
   it('Mend heals only the most wounded standing ally when the support casts', () => {
@@ -534,6 +545,91 @@ describe('battleStore frozen-time objective damage race', () => {
     } finally {
       randomSpy.mockRestore()
     }
+  })
+
+  it('full live flow: a hextech drake secured in the pit doubles clicks in the later baron fight', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    playUntilDrakeModal(store)
+    expect(store.objectiveModalOpen).toBe(true)
+
+    // this battle's contested drake is hextech; our team takes it
+    store.activeDrakeType = 'hextech'
+    store.forceResolveObjective(1)
+    vi.advanceTimersByTime(OBJECTIVE_RESULT_DELAY_MS + 100)
+    expect(store.drakeBuffs).toContain('hextech')
+
+    // play on to the baron pit; concede any further drakes along the way
+    for (
+      let i = 0;
+      i < 120 &&
+      store.battlePhase === 'playing' &&
+      !(store.objectiveModalOpen && store.activeObjective === 'baron');
+      i++
+    ) {
+      if (store.objectiveModalOpen && store.activeObjective === 'drake') {
+        store.forceResolveObjective(2)
+        vi.advanceTimersByTime(OBJECTIVE_RESULT_DELAY_MS + 100)
+      }
+      vi.advanceTimersByTime(500)
+    }
+    expect(store.activeObjective).toBe('baron')
+
+    const before = store.objectivePlayerDamage
+    store.clickObjective()
+    expect(store.objectivePlayerDamage - before).toBe(
+      OBJECTIVE_CLICK_DAMAGE * DRAKE_HEXTECH_CLICK_MULT,
+    )
+  })
+
+  it('infernal buff burns the objective for the own side even with every fighter down', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.drakeBuffs = ['infernal']
+    store._openObjectiveModal('baron', null)
+    for (const f of store.objectiveFighters!.t1) f.down = true
+    for (const f of store.objectiveFighters!.t2) f.down = true
+    const dt = OBJECTIVE_DPS_TICK_MS / 1000
+    expect(store._runFightDamageTick('own')).toBeCloseTo(DRAKE_INFERNAL_BURN_DPS * dt, 6)
+    // the enemy side never gets the burn
+    expect(store._runFightDamageTick('enemy')).toBe(0)
+  })
+
+  it("baron's aegis halves the LP loss of a defeat, never the win", () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    const winBase = store.calculateLPChange(20, true)
+    const lossBase = store.calculateLPChange(20, false)
+    store.baronKilledByTeam = 1
+    expect(store.calculateLPChange(20, true)).toBe(winBase)
+    expect(store.calculateLPChange(20, false)).toBe(Math.round(lossBase * BARON_LP_LOSS_SHIELD_MULT))
+    // an enemy baron grants nothing
+    store.baronKilledByTeam = 2
+    expect(store.calculateLPChange(20, false)).toBe(lossBase)
+  })
+
+  it("baron's bounty pays chimes once at battle end and lands in the result", async () => {
+    const store = useBattleStore()
+    const gameStore = useGameStore()
+    setupBattle(store)
+    store.baronKilledByTeam = 1
+    gameStore.chimes = 0
+    gameStore.chimesPerSecond = 10
+    const expected = Math.max(
+      Math.floor(10 * BARON_BOUNTY_PRODUCTION_SECONDS),
+      Math.floor(gameStore.chimesPerClick * BARON_BOUNTY_MIN_CLICKS),
+    )
+    const result = await store.simulateBattle(store.mmr)
+    expect(result.baronBounty).toBe(expected)
+    expect(gameStore.chimes).toBe(expected)
+
+    // without the baron there is no bounty
+    store.baronKilledByTeam = null
+    gameStore.chimes = 0
+    setupBattle(store)
+    const result2 = await store.simulateBattle(store.mmr)
+    expect(result2.baronBounty).toBe(0)
+    expect(gameStore.chimes).toBe(0)
   })
 
   it('does not open the modal on a hidden tab (background catch-up path)', () => {
