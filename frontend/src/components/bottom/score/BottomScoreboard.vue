@@ -142,7 +142,12 @@ const gameStateDisplay = computed(() => {
     !showAutoBattleResult.value &&
     battlePhaseStartTimestamp.value === 0
   ) {
-    const elapsed = Math.min(5, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000))
+    // max(0, …): der 1s-now-Ticker kann beim Klick noch hinter dem frisch
+    // gesetzten Timestamp liegen — ohne Clamp stünde kurz "-1:-1" im Titel.
+    const elapsed = Math.min(
+      5,
+      Math.max(0, Math.floor((_now - searchingPhaseStartTimestamp.value) / 1000)),
+    )
     const min = Math.floor(elapsed / 60).toString().padStart(2, '0')
     const sec = (elapsed % 60).toString().padStart(2, '0')
     return {
@@ -248,7 +253,10 @@ const hasLiveStatus = computed(
         <span class="sb-crest-rule sb-crest-rule--right" />
       </div>
       <!-- title slot: game title when idle, promoted live status when active -->
-      <Transition name="crest-swap" mode="out-in">
+      <!-- type="transition": .sb-title trägt eine infinite Flicker-Animation (6s);
+           ohne explizites type wartet Vue auf deren animationend, das nie feuert,
+           und der Swap hängt bis zum 6s-Fallback-Timeout. -->
+      <Transition name="crest-swap" mode="out-in" type="transition">
         <div v-if="hasLiveStatus" key="live" class="sb-live-title">
           <template v-if="objectiveFightDisplay">
             <img
@@ -616,6 +624,9 @@ const hasLiveStatus = computed(
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
+  /* Flicker-Animation aussetzen: sie animiert ebenfalls opacity und würde
+     die Fade-Transition überschreiben (CSS-Animation schlägt Transition). */
+  animation: none;
 }
 .crest-swap-enter-from {
   opacity: 0;
