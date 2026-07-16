@@ -24,7 +24,7 @@
               <span class="reward reward--lose">Lose: −{{ loseBonusPercent }}%</span>
               <template v-if="effectText">
                 <span class="reward-divider">·</span>
-                <span class="reward-effect">{{ effectText }}</span>
+                <span class="reward-effect" :title="effectText">{{ effectText }}</span>
               </template>
             </div>
           </div>
@@ -938,30 +938,36 @@ onUnmounted(_stopFloatScheduler)
   min-width: 0;
 }
 
-/* Reward preview under the title — replaces the old bottom reward rows */
+/* Reward preview under the title — replaces the old bottom reward rows.
+   Hard single-line: never wraps; an over-long drake effect text gets
+   ellipsized instead of pushing the header onto a second row. */
 .obj-rewards {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   column-gap: 8px;
-  row-gap: 1px;
   max-width: 100%;
+  min-width: 0;
 }
 .reward {
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .reward--win { color: #6ec040; }
 .reward--lose { color: #e07060; }
-.reward-divider { color: #7a6030; font-size: 12px; }
+.reward-divider { color: #7a6030; font-size: 11px; flex-shrink: 0; }
 .reward-effect {
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   white-space: nowrap;
   color: var(--obj-color);
   text-shadow: 0 0 8px var(--obj-glow);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Instant-resolve buttons flanking the title */
