@@ -13,19 +13,24 @@
         { 'champ-card--bard': champ.name === 'Bard' },
       ]"
     >
-      <div class="card-top" :class="{ 'card-top--reverse': side === 'red' }">
-        <div class="portrait-wrap">
-          <img
-            v-if="champ.name"
-            :src="battleStore.getChampionImage(champ.name)"
-            :alt="champ.name"
-            class="portrait"
-            :class="{ 'portrait--dead': champ.respawnState === 'walking-back' }"
-          />
-          <div v-else class="portrait portrait--empty" />
-          <span class="level-badge">{{ champ.level }}</span>
-        </div>
-        <div class="name-block" :class="{ 'name-block--right': side === 'red' }">
+      <!-- Full-bleed portrait: the image IS the card background, no inner frame -->
+      <img
+        v-if="champ.name"
+        :src="battleStore.getChampionImage(champ.name)"
+        :alt="champ.name"
+        class="portrait"
+        :class="{ 'portrait--dead': champ.respawnState === 'walking-back' }"
+      />
+      <div v-else class="portrait portrait--empty" />
+
+      <!-- Team-tinted scrim keeps name/KDA readable over any splash art -->
+      <div class="scrim" />
+
+      <span v-if="champ.respawnState === 'walking-back'" class="respawn-tag">⟳</span>
+
+      <!-- Bottom row: name/KDA on the team side, level medallion on the opposite side -->
+      <div class="info" :class="{ 'info--right': side === 'red' }">
+        <div class="info-text">
           <div class="champ-name">
             {{ champ.name || '—' }}
             <span v-if="champ.name === 'Bard'" class="you-tag">YOU</span>
@@ -36,17 +41,16 @@
             <span class="cs-tag">{{ champ.cs }} cs</span>
           </div>
         </div>
-        <span v-if="champ.respawnState === 'walking-back'" class="respawn-tag">⟳</span>
+        <span v-if="champ.name" class="level-badge">{{ champ.level }}</span>
       </div>
 
-      <div class="card-bottom">
-        <div class="hp-track">
-          <div
-            class="hp-fill"
-            :class="hpClass(champ.hpPercent)"
-            :style="{ width: (champ.respawnState === 'walking-back' ? 100 : champ.hpPercent) + '%', float: side === 'red' ? 'right' : 'none' }"
-          />
-        </div>
+      <!-- HP bar sits flush on the card's bottom edge -->
+      <div class="hp-track">
+        <div
+          class="hp-fill"
+          :class="hpClass(champ.hpPercent)"
+          :style="{ width: (champ.respawnState === 'walking-back' ? 100 : champ.hpPercent) + '%', marginLeft: side === 'red' ? 'auto' : '0' }"
+        />
       </div>
     </div>
   </div>
@@ -86,134 +90,167 @@ function hpClass(hp: number): string {
 
 <style scoped>
 .team-col {
-  /* slim spectator HUD panel floating above the map — width shared with the
-     drake-badge offsets via --hud-w on .rift-board, sizes fluid via cq units */
+  /* floating spectator cards over the map — width shared with the drake-badge
+     offsets via --hud-w on .rift-board, sizes fluid via cq units */
   width: var(--hud-w, 192px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(3px, 0.7cqh, 5px);
-  padding: clamp(5px, 1cqh, 8px) clamp(5px, 0.6cqw, 7px);
+  gap: clamp(4px, 0.9cqh, 7px);
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-  background: rgba(13, 12, 8, 0.82);
-  border: 1px solid #3e200a;
-  border-radius: 5px;
-}
-.team-col--blue {
-  box-shadow: inset 3px 0 0 rgba(59, 130, 246, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
+  scrollbar-color: #5c3310 transparent;
+  /* team accent as CSS vars so every sub-element derives from one hue */
+  --team-rgb: 96, 165, 250;
+  --team-scrim: 7, 14, 30;
 }
 .team-col--red {
-  box-shadow: inset -3px 0 0 rgba(239, 68, 68, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
+  --team-rgb: 248, 113, 113;
+  --team-scrim: 30, 8, 10;
 }
 
 .col-title {
-  font-size: 11px;
+  font-size: clamp(10px, 1.6cqh, 11px);
   font-weight: 700;
   letter-spacing: 2px;
-  padding: 0 2px 2px;
+  padding: 3px 8px;
   flex-shrink: 0;
+  color: rgba(var(--team-rgb), 0.9);
+  background: linear-gradient(
+    to var(--title-dir, right),
+    rgba(var(--team-rgb), 0.18),
+    transparent 80%
+  );
+  border-radius: 4px;
 }
-.col-title--blue { color: #6a7fb0; }
-.col-title--red { color: #c08080; text-align: right; }
+.col-title--red {
+  --title-dir: left;
+  text-align: right;
+}
 
 .champ-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(2px, 0.4cqh, 3px);
-  padding: clamp(3px, 0.7cqh, 5px) 6px;
-  border-radius: 5px;
-}
-.champ-card--blue {
-  background: rgba(59, 130, 246, 0.07);
-  border: 1px solid rgba(96, 165, 250, 0.22);
-}
-.champ-card--red {
-  background: rgba(239, 68, 68, 0.07);
-  border: 1px solid rgba(248, 113, 113, 0.22);
-}
-.champ-card--bard {
-  background: rgba(232, 192, 64, 0.08);
-  border: 1px solid rgba(232, 192, 64, 0.4);
-}
-
-.card-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.card-top--reverse { flex-direction: row-reverse; }
-
-.portrait-wrap {
   position: relative;
+  height: clamp(46px, 8.8cqh, 66px);
   flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(var(--team-scrim), 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
+/* team edge marks the side without framing the portrait */
+.champ-card--blue::after,
+.champ-card--red::after,
+.champ-card--bard::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(var(--team-rgb), 0.9);
+  pointer-events: none;
+}
+.champ-card--blue::after { left: 0; }
+.champ-card--red::after { right: 0; }
+.champ-card--bard { --team-rgb: 232, 192, 64; }
 
 .portrait {
-  width: clamp(26px, 4.6cqh, 34px);
-  height: clamp(26px, 4.6cqh, 34px);
-  border-radius: 5px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 1px solid #60a5fa;
+  /* square champ icons: keep the face band visible in the wide card crop */
+  object-position: center 30%;
   transition: filter 0.3s;
 }
-.champ-card--red .portrait { border-color: #f87171; }
-.champ-card--bard .portrait { border-color: #e8c040; }
-.portrait--dead { filter: grayscale(0.9) brightness(0.6); }
+.portrait--dead {
+  filter: grayscale(0.9) brightness(0.45);
+}
 .portrait--empty {
   background: #141410;
   border: 1px dashed #3e200a;
+  border-radius: 8px;
 }
 
-.level-badge {
+.scrim {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 15px;
-  height: 15px;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(var(--team-scrim), 0.92) 0%,
+    rgba(var(--team-scrim), 0.55) 42%,
+    rgba(var(--team-scrim), 0.08) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Level medallion: opposite end of the bottom row from the champ name */
+.level-badge {
+  flex-shrink: 0;
+  width: clamp(20px, 3.8cqh, 27px);
+  height: clamp(20px, 3.8cqh, 27px);
   border-radius: 50%;
-  background: #0d1830;
-  border: 1px solid #60a5fa;
-  font-size: 9px;
-  font-weight: 700;
-  color: #cfe0ff;
+  background: rgba(var(--team-scrim), 0.9);
+  border: 1.5px solid rgba(var(--team-rgb), 0.95);
+  box-shadow: 0 0 6px rgba(var(--team-rgb), 0.45), 0 1px 3px rgba(0, 0, 0, 0.7);
+  font-size: clamp(11px, 2cqh, 14px);
+  font-weight: 800;
+  color: #f4f6fb;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.champ-card--red .level-badge {
-  background: #300d0d;
-  border-color: #f87171;
-  color: #ffd0d0;
+
+.respawn-tag {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: clamp(12px, 2cqh, 14px);
+  color: #e8c040;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  animation: respawn-spin 1.4s linear infinite;
 }
-.champ-card--bard .level-badge {
-  background: #2a1e05;
-  border-color: #e8c040;
-  color: #ffe9a0;
+.team-col--red .respawn-tag {
+  right: auto;
+  left: 6px;
 }
 
-.name-block {
-  flex: 1;
+.info {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+}
+.info--right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.info-text {
   min-width: 0;
 }
-.name-block--right { text-align: right; }
 
 .champ-name {
   font-size: clamp(11px, 1.8cqh, 13px);
-  color: #dbeafe;
+  font-weight: 700;
+  color: #f4f6fb;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.champ-card--red .champ-name { color: #fee2e2; }
-.champ-card--bard .champ-name { color: #e8c040; }
+.champ-card--bard .champ-name { color: #ffe9a0; }
 
 .you-tag {
   font-size: 9px;
-  color: #6a5820;
+  font-weight: 700;
+  color: #e8c040;
   letter-spacing: 1px;
 }
 .mvp-tag {
@@ -224,41 +261,31 @@ function hpClass(hp: number): string {
 }
 
 .kda {
-  font-size: clamp(10px, 1.7cqh, 12px);
+  font-size: clamp(10px, 1.6cqh, 12px);
   display: flex;
   align-items: baseline;
   gap: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.name-block--right .kda { justify-content: flex-end; }
+.info--right .kda { justify-content: flex-end; }
 .kda-k { color: #6ee7b7; }
 .kda-d { color: #fca5a5; }
 .kda-a { color: #93c5fd; }
-.kda-sep { color: #555566; }
+.kda-sep { color: #8890a0; }
 
 .cs-tag {
   margin-left: 6px;
-  font-size: clamp(9px, 1.5cqh, 11px);
-  color: #8a8070;
-}
-
-.respawn-tag {
-  flex-shrink: 0;
-  font-size: 14px;
-  color: #e8c040;
-  animation: respawn-spin 1.4s linear infinite;
-}
-
-.card-bottom {
-  display: flex;
-  align-items: center;
+  font-size: clamp(9px, 1.4cqh, 11px);
+  color: #c8bda4;
 }
 
 .hp-track {
-  flex: 1;
-  height: 6px;
-  background: #3a1010;
-  border-radius: 2px;
-  overflow: hidden;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.55);
 }
 .hp-fill {
   height: 100%;
