@@ -42,6 +42,7 @@ import BattleLandingScreen from './landing/BattleLandingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { PLANET_SEARCH_ANIM_DURATION_MS } from '@/config/constants'
 
 export default defineComponent({
   name: 'BattleResultComponent',
@@ -62,7 +63,15 @@ export default defineComponent({
 
     async function runUniverseAnimation(): Promise<void> {
       isUniverseAnimating.value = true
+      const t0 = Date.now()
       await universeAnim.value?.trigger()
+      // Wird das Bard-Modal während der Suchphase geschlossen, unmountet die
+      // PlanetSearchComponent und resolved ihr Animations-Promise sofort
+      // (stopAnimation). Die Suchphase ist aber Teil des Spielablaufs, nicht
+      // nur Deko: restliche Dauer real abwarten, sonst springt der Gamestatus
+      // direkt ins Battle. Im Normalfall (Animation komplett) ist remaining ≤ 0.
+      const remaining = PLANET_SEARCH_ANIM_DURATION_MS - (Date.now() - t0)
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining))
       isUniverseAnimating.value = false
     }
 
