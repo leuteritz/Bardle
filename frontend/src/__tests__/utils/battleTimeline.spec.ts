@@ -470,15 +470,15 @@ describe('drake types', () => {
     }
   })
 
-  it('drake types are unique per battle and elder only ever spawns last', () => {
+  it('drake types are unique per battle and the final drake is always the elder', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const tl = generateTimeline(seed, 0.5)
       const types = tl.events
         .filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
         .map((e) => e.drakeType!)
       expect(new Set(types).size).toBe(types.length)
-      const elderIdx = types.indexOf('elder')
-      if (elderIdx !== -1) expect(elderIdx).toBe(types.length - 1)
+      expect(types[types.length - 1]).toBe('elder')
+      expect(types.indexOf('elder')).toBe(types.length - 1)
     }
   })
 
@@ -495,6 +495,7 @@ describe('drake types', () => {
       expect(mergedSpawns.length).toBe(baseSpawns.length)
       const types = mergedSpawns.map((e) => e.drakeType!)
       expect(new Set(types).size).toBe(types.length)
+      expect(types[types.length - 1]).toBe('elder')
     }
   })
 

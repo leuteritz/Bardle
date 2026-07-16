@@ -179,7 +179,7 @@ export const LANE_FIGHT_POSITIONS: Record<'top' | 'mid' | 'bot', { x: number; y:
 
 // ── Objective Modal ────────────────────────────────────────────────────────
 export const OBJECTIVE_DRAKE_SPAWN = 300 // game-seconds when drake appears on minimap
-export const OBJECTIVE_BARON_SPAWN = 2000 // game-seconds when baron appears on minimap (early enough for a full lane push afterwards)
+export const OBJECTIVE_BARON_SPAWN = 2200 // game-seconds when baron appears on minimap — late enough that a 4-drake chain doesn't feel back-to-back, early enough for a full lane push afterwards
 export const DRAKE_OBJECTIVE_HP = 3200
 export const BARON_OBJECTIVE_HP = 4000
 /** Objective DPS contributed by every living champion present at the pit (per team) */
@@ -188,8 +188,6 @@ export const OBJECTIVE_CLICK_DAMAGE = 15
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 
 // ── Drake Types (see src/config/drakes.ts for the full definitions) ────────
-/** Chance the final drake of a battle rolls as the Elder Dragon */
-export const ELDER_DRAKE_CHANCE = 0.25
 /** Win-chance swing for Infernal — the biggest basic swing, plus its burn */
 export const DRAKE_WIN_BONUS_MAJOR = 0.1
 /** Win-chance swing for basic drakes that carry a secondary battle effect */
@@ -364,12 +362,12 @@ export const OBJECTIVE_FIGHT_STATUS = {
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
-// Match script: laning 0-900 → drake chain 900-1920 (2-4 drakes, sequential) →
-// mid fights 1720-1890 → cracks 820-1920 → baron 2000-2120 → final push 3000
-// (50:00) → defense fight at the loser inhibitor ~3200 → nexus turrets
-// ~3400-3490 → nexus 3550
+// Match script: laning 0-900 → drake chain 900-2080 (2-4 drakes, sequential,
+// interleaved with mid fights 1100-1890 and cracks 820-2120) → baron 2200-2320
+// (result ≤2940) → final push 3000 (50:00) → defense fight at the loser
+// inhibitor ~3200 → nexus turrets ~3400-3490 → nexus 3550
 export const TIMELINE_LANING_END = 900
-export const TIMELINE_DRAKE_WINDOW_END = 1920
+export const TIMELINE_DRAKE_WINDOW_END = 2080
 export const TIMELINE_MIDFIGHT_END = 1950
 /** Random extra delay on the baron spawn time */
 export const TIMELINE_BARON_SPAWN_JITTER_T = 120
@@ -441,9 +439,9 @@ export const STRUCTURE_ATTACKERS_MAX = 3
 /** Objective pit participants per team (min/max champions) */
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
-/** Game-seconds between the baron spawn and its scripted result (720 game-s = 12 real-s, leaves room for the click modal); drakes use the shorter TIMELINE_DRAKE_RESULT_DELAY_* so the chain never overlaps */
-export const TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T = 720
-export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 780
+/** Game-seconds between the baron spawn and its scripted result (~10 real-s; must resolve before FINAL_PUSH_START_T even with max spawn jitter); drakes use the shorter TIMELINE_DRAKE_RESULT_DELAY_* so the chain never overlaps */
+export const TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T = 560
+export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 620
 
 // ── Per-champion continuous stat rates (per game-minute unless noted) ──────
 export const CS_RATE_BY_ROLE: Record<string, number> = {

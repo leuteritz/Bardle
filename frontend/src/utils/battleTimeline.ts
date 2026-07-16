@@ -65,7 +65,6 @@ import {
   TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T,
   OBJECTIVE_DRAKE_SPAWN,
   OBJECTIVE_BARON_SPAWN,
-  ELDER_DRAKE_CHANCE,
   TIMELINE_BARON_SPAWN_JITTER_T,
   LANE_FIGHT_POSITIONS,
   DRAKE_POS,
@@ -360,7 +359,7 @@ export interface DrakeGenOptions {
   forcedCount?: number
   /** Basic types already spawned before the cut — never drawn again */
   excludeTypes?: DrakeTypeId[]
-  /** Whether the final generated drake may still roll as the Elder Dragon */
+  /** Whether the final generated drake is the Elder Dragon (false once the elder already spawned before the cut) */
   allowElder?: boolean
 }
 
@@ -413,8 +412,8 @@ export function generateTimeline(
 
   // ── Drake chain — 2-4 drakes back to back; each one's scripted result lands
   // before the next spawn, so at most one drake is ever up. Basic types are
-  // drawn without replacement per battle; the elder only rolls as the final
-  // drake. A reseed forces the remaining planned count and excludes types that
+  // drawn without replacement per battle; the FINAL drake is always the Elder
+  // Dragon. A reseed forces the remaining planned count and excludes types that
   // already spawned before the cut, keeping the predetermined chain intact. ──
   const drakeCount =
     drakeOpts?.forcedCount ?? randInt(rng, TIMELINE_DRAKE_COUNT_MIN, TIMELINE_DRAKE_COUNT_MAX)
@@ -431,24 +430,25 @@ export function generateTimeline(
     for (let i = 0; i < drakeCount; i++) {
       const base = chainStart + slot * i
       const tSpawn = Math.floor(base + rng() * Math.max(1, slot * 0.15))
-      const isElder = allowElder && i === drakeCount - 1 && rng() < ELDER_DRAKE_CHANCE
+      const isElder = allowElder && i === drakeCount - 1
       const drakeType: DrakeTypeId =
         isElder || drakeTypePool.length === 0
           ? 'elder'
           : drakeTypePool.splice(Math.floor(rng() * drakeTypePool.length), 1)[0]
-      // the result must land inside this drake's slot, before the next spawn
+      // the result must land inside this drake's slot AND leave ≥90 game-s of
+      // quiet before the next spawn, so even a 4-drake chain never feels back-to-back
       const resultDelay = Math.min(
         randInt(rng, TIMELINE_DRAKE_RESULT_DELAY_MIN_T, TIMELINE_DRAKE_RESULT_DELAY_MAX_T),
-        Math.max(60, Math.floor(slot * 0.8)),
+        Math.max(60, Math.floor(slot * 0.85) - 90),
       )
       emitObjective(ctx, tSpawn, 'drake', undefined, undefined, drakeType, resultDelay)
     }
   }
 
-  // ── Mid fights ──
+  // ── Mid fights — interleaved with the drake chain, filling the air between spawns ──
   const midFights = randInt(rng, TIMELINE_MID_FIGHTS_MIN, TIMELINE_MID_FIGHTS_MAX)
   for (let i = 0; i < midFights; i++) {
-    const t = randInt(rng, TIMELINE_DRAKE_WINDOW_END - 200, TIMELINE_MIDFIGHT_END - 60)
+    const t = randInt(rng, TIMELINE_LANING_END + 200, TIMELINE_MIDFIGHT_END - 60)
     emitFight(ctx, t, MID_CENTER, randInt(rng, TIMELINE_FIGHT_KILLS_MIN, TIMELINE_FIGHT_KILLS_MAX))
   }
 
