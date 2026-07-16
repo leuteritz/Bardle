@@ -217,25 +217,22 @@
             </span>
           </TransitionGroup>
 
-          <!-- Hex Curse mark — permanent while the mid stands; the cast window stacks it to ×2 -->
-          <div
-            v-if="curseStacks('own') > 0"
-            class="curse-mark curse-mark--own"
-            :class="{ 'curse-mark--stacked': curseStacks('own') > 1 }"
-          >
-            <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
-            <span v-if="curseStacks('own') > 1" class="curse-x2">×{{ curseStacks('own') }}</span>
-            −{{ fmt(Math.round(battleStore.objectiveCurseDamage.own)) }}
-          </div>
-          <div
-            v-if="curseStacks('enemy') > 0"
-            class="curse-mark curse-mark--enemy"
-            :class="{ 'curse-mark--stacked': curseStacks('enemy') > 1 }"
-          >
-            <img :src="midImage" class="curse-mark-img" alt="Hex Curse" />
-            <span v-if="curseStacks('enemy') > 1" class="curse-x2">×{{ curseStacks('enemy') }}</span>
-            −{{ fmt(Math.round(battleStore.objectiveCurseDamage.enemy)) }}
-          </div>
+          <!-- Hex Curse: modern debuff badge per side — team dot, stack pips
+               (diamonds; ×N beyond 5) and the running damage tally -->
+          <template v-for="s in CURSE_SIDES" :key="'curse' + s">
+            <div
+              v-if="curseStacks(s) > 0"
+              class="curse-badge"
+              :class="s === 'own' ? 'curse-badge--own' : 'curse-badge--enemy'"
+            >
+              <span class="curse-team-dot" />
+              <img :src="midImage" class="curse-badge-img" alt="Hex Curse" />
+              <span :key="curseStacks(s)" class="curse-count">×{{ curseStacks(s) }}</span>
+              <span class="curse-dmg">
+                −{{ fmt(Math.round(battleStore.objectiveCurseDamage[s])) }}
+              </span>
+            </div>
+          </template>
 
           </div>
           </div>
@@ -477,6 +474,7 @@ function abilityTooltip(f: ObjectiveFighter): string {
 
 const jungleImage = ROLE_BY_KEY.jungle.image
 const midImage = ROLE_BY_KEY.mid.image
+const CURSE_SIDES = ['own', 'enemy'] as const
 const rallyPercent = Math.round((OBJECTIVE_JUNGLE_BUFF_MULT - 1) * 100)
 
 /** Ticking clock (100ms via the float scheduler) so ability windows render reactively. */
@@ -1586,46 +1584,66 @@ onUnmounted(_stopFloatScheduler)
   filter: grayscale(0.8) brightness(0.5);
 }
 
-/* Hex Curse mark — frameless mid sprite with a soft purple breath above the boss */
-.curse-mark {
+/* Hex Curse badge — modern debuff pill flanking the boss HP bar corners:
+   team dot (who cursed it), mid sprite, one diamond pip per stack, damage tally */
+/* frameless — just dot, sprite and numbers; text shadows carry readability */
+.curse-badge {
   position: absolute;
   top: 4%;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #c9a0f5;
-  text-shadow: 0 0 6px rgba(168, 85, 247, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   pointer-events: none;
   z-index: 8;
-  animation: curse-breathe 1.6s ease-in-out infinite;
 }
-.curse-mark--own { left: 6%; }
-.curse-mark--enemy { right: 6%; }
-.curse-mark-img {
-  width: 28px;
-  height: 28px;
+.curse-badge--own { left: 4%; }
+.curse-badge--enemy { right: 4%; }
+
+.curse-team-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.curse-badge--own .curse-team-dot {
+  background: #60a5fa;
+}
+.curse-badge--enemy .curse-team-dot {
+  background: #f87171;
+}
+
+.curse-badge-img {
+  width: 14px;
+  height: 14px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.9));
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.8));
 }
-/* Second stack: everything burns hotter and breathes faster */
-.curse-mark--stacked {
-  animation-duration: 0.8s;
-}
-.curse-mark--stacked .curse-mark-img {
-  filter: drop-shadow(0 0 9px rgba(168, 85, 247, 1));
-}
-.curse-x2 {
-  font-size: 13px;
+
+/* re-keyed per stack so it punches once when the curse deepens */
+.curse-count {
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: #e0b0ff;
-  text-shadow: 0 0 10px rgba(190, 110, 255, 1), 0 1px 2px rgba(0, 0, 0, 0.9);
-  animation: x2-pulse 0.6s ease-in-out infinite;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.85), 0 1px 2px rgba(0, 0, 0, 0.95);
+  animation: curse-stack-pop 0.3s ease-out;
+}
+
+.curse-dmg {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c9a0f5;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.85), 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+@keyframes curse-stack-pop {
+  0% { transform: scale(1.3); }
+  100% { transform: scale(1); }
 }
 
 .alive-pip--out {
@@ -2104,17 +2122,6 @@ onUnmounted(_stopFloatScheduler)
   50% { filter: drop-shadow(0 0 10px var(--ability-color, #e8c040)); }
 }
 
-/* Curse mark breathes softly over the boss while the objective is cursed */
-@keyframes curse-breathe {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 1; }
-}
-
-@keyframes x2-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.18); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .arena-aura,
   .rune-ring,
@@ -2134,8 +2141,7 @@ onUnmounted(_stopFloatScheduler)
   .hpfl-enter-active,
   .portrait--taunting .fighter-portrait,
   .skill-btn--active .skill-img,
-  .curse-mark,
-  .curse-x2,
+  .curse-count,
   .card-flash-hit,
   .card-flash-heal {
     animation: none !important;
