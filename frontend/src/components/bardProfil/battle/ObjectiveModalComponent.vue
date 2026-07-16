@@ -123,9 +123,6 @@
                     >{{ h.value > 0 ? '+' : '' }}{{ h.value }}</span>
                   </TransitionGroup>
                 </div>
-                <span v-if="rankOf(f, 'own')" class="fighter-rank-badge" :class="`rank--${rankOf(f, 'own')}`">
-                  <Icon icon="game-icons:sport-medal" width="18" height="18" />
-                </span>
                 <span class="fighter-name">{{ f.name }}</span>
                 <div
                   v-if="f.alive"
@@ -321,9 +318,6 @@
                   </span>
                 </div>
                 <span class="fighter-name">{{ f.name }}</span>
-                <span v-if="rankOf(f, 'enemy')" class="fighter-rank-badge" :class="`rank--${rankOf(f, 'enemy')}`">
-                  <Icon icon="game-icons:sport-medal" width="18" height="18" />
-                </span>
                 <div
                   class="fighter-portrait-wrap"
                   :class="{ 'portrait--taunting': isTaunting(f), 'portrait--buffed': isBuffed(f, 'enemy') }"
@@ -1549,24 +1543,6 @@ onUnmounted(_stopFloatScheduler)
   background: #3a382e;
   box-shadow: none;
   transition: background 0.4s ease, box-shadow 0.4s ease;
-}
-
-.fighter-rank-badge {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
-  pointer-events: none;
-}
-.rank--1 {
-  color: #e8c040;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 4px rgba(232, 192, 64, 0.55));
-}
-.rank--2 {
-  color: #b8c4d0;
-}
-.rank--3 {
-  color: #cd7f32;
 }
 
 .fighter-name {
