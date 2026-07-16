@@ -189,6 +189,13 @@
             <span class="boss-hp-num">{{ fmt(Math.ceil(battleStore.objectiveHP)) }} / {{ fmt(battleStore.objectiveMaxHP) }}</span>
           </div>
 
+          <!-- The boss claws every standing fighter each second -->
+          <div class="boss-aoe" title="The objective strikes every standing fighter each second">
+            <Icon icon="game-icons:claw-slashes" width="12" height="12" class="boss-aoe-icon" />
+            <span class="boss-aoe-dps">{{ aoeDps }}/s</span>
+            <span class="boss-aoe-label">to every fighter</span>
+          </div>
+
           <!-- Arena: aura + rune ring + embers + boss -->
           <div
             class="boss-arena"
@@ -225,9 +232,10 @@
               class="curse-badge"
               :class="s === 'own' ? 'curse-badge--own' : 'curse-badge--enemy'"
             >
-              <span class="curse-team-dot" />
-              <img :src="midImage" class="curse-badge-img" alt="Hex Curse" />
-              <span :key="curseStacks(s)" class="curse-count">×{{ curseStacks(s) }}</span>
+              <span :key="curseStacks(s)" class="curse-count">
+                <Icon icon="game-icons:cursed-star" width="13" height="13" class="curse-icon" />
+                ×{{ curseStacks(s) }}
+              </span>
               <span class="curse-dmg">
                 −{{ fmt(Math.round(battleStore.objectiveCurseDamage[s])) }}
               </span>
@@ -407,6 +415,8 @@ import {
   OBJECTIVE_TOP_TAUNT_TARGETS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
   OBJECTIVE_ABILITY_DURATION_S,
+  OBJECTIVE_AOE_DPS_DRAKE,
+  OBJECTIVE_AOE_DPS_BARON,
   ROLE_BY_KEY,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
@@ -439,6 +449,11 @@ const modalStyle = computed(() => ({
 
 const objectiveTitle = computed(() =>
   isDrake.value ? drakeDef.value.label.toUpperCase() : 'BARON NASHOR',
+)
+
+/** Boss AoE: damage the objective deals per second to every standing fighter. */
+const aoeDps = computed(() =>
+  isDrake.value ? OBJECTIVE_AOE_DPS_DRAKE : OBJECTIVE_AOE_DPS_BARON,
 )
 
 /** A fighter lunges at the pit while standing and the fight is still running. */
@@ -1586,56 +1601,48 @@ onUnmounted(_stopFloatScheduler)
 
 /* Hex Curse badge — modern debuff pill flanking the boss HP bar corners:
    team dot (who cursed it), mid sprite, one diamond pip per stack, damage tally */
-/* frameless — just dot, sprite and numbers; text shadows carry readability */
+/* frameless two-line stack: icon + stacks on top, the damage tally below */
 .curse-badge {
   position: absolute;
   top: 4%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 8;
 }
-.curse-badge--own { left: 4%; }
-.curse-badge--enemy { right: 4%; }
-
-.curse-team-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
+/* team-colored: the side's curse readout speaks blue (own) or red (enemy) */
+.curse-badge--own {
+  left: 4%;
+  color: #60a5fa;
 }
-.curse-badge--own .curse-team-dot {
-  background: #60a5fa;
-}
-.curse-badge--enemy .curse-team-dot {
-  background: #f87171;
-}
-
-.curse-badge-img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-  display: block;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 3px rgba(168, 85, 247, 0.8));
+.curse-badge--enemy {
+  right: 4%;
+  color: #f87171;
 }
 
 /* re-keyed per stack so it punches once when the curse deepens */
 .curse-count {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.5px;
-  color: #e0b0ff;
+  line-height: 1;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.85), 0 1px 2px rgba(0, 0, 0, 0.95);
   animation: curse-stack-pop 0.3s ease-out;
 }
+.curse-icon {
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
 
 .curse-dmg {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
-  color: #c9a0f5;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.85), 0 1px 2px rgba(0, 0, 0, 0.95);
@@ -1755,6 +1762,37 @@ onUnmounted(_stopFloatScheduler)
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+}
+
+/* AoE readout under the HP bar — frameless, quiet, objective-colored value */
+.boss-aoe {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 3;
+}
+.boss-aoe-icon {
+  align-self: center;
+  color: var(--obj-color);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
+.boss-aoe-dps {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--obj-color);
+  text-shadow: 0 0 6px var(--obj-glow), 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.boss-aoe-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c8b890;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Arena ───────────────────────────────────────────────────────────────── */

@@ -2536,6 +2536,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:spell-book', // Mid "Chaos Curse" orbit ability (SigilDetailsPanel)
   'game-icons:striking-arrows', // ADC "Piercing Volley" orbit ability (SigilDetailsPanel)
   'game-icons:glowing-hands', // Support "Guardian Light" orbit ability (SigilDetailsPanel)
+  'game-icons:claw-slashes', // Boss AoE damage-per-second readout (ObjectiveModalComponent)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
