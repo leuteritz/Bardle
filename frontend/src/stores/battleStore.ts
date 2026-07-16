@@ -390,9 +390,20 @@ export const useBattleStore = defineStore('battle', {
       state.drakeBuffs.includes('infernal') ? DRAKE_INFERNAL_BURN_DPS : 0,
     /** Hand of Baron: the own team slew the baron this battle. */
     hasHandOfBaron: (state): boolean => state.baronKilledByTeam === 1,
+    /** Spawn time of the next drake in the chain still ahead of the clock, -1 when none remains. */
+    nextDrakeSpawnT: (state): number => {
+      const next = state.timeline?.events.find(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t > state.battleTime,
+      )
+      return next?.t ?? -1
+    },
+    /** Admin shortcut target: the full game-minute before the next upcoming drake spawn. */
     drakeJumpTarget: (state): number => {
-      if (state.drakeEventTime <= 0) return -1
-      return Math.floor((state.drakeEventTime - 1) / 60) * 60
+      const next = state.timeline?.events.find(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t > state.battleTime,
+      )
+      if (!next) return -1
+      return Math.floor((next.t - 1) / 60) * 60
     },
     baronJumpTarget: (state): number => {
       if (state.baronEventTime <= 0) return -1

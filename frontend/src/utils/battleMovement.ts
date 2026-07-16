@@ -142,10 +142,11 @@ function buildChampionSchedule(
       })
     }
     if (e.type === 'objectiveSpawn' && e.location && inFight) {
+      // drakes chain back to back, so their pit hold is shorter than the baron's
       orders.push({
         t: Math.max(0, e.t - MOVE_FIGHT_GATHER_LEAD_T),
         location: jittered(e.location, rng, 4),
-        holdUntil: e.t + 600,
+        holdUntil: e.t + (e.objective === 'baron' ? 600 : 300),
         kind: 'objective',
       })
     }

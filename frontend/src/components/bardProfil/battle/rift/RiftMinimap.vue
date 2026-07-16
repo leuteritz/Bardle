@@ -110,14 +110,18 @@
         <span class="dmg-float dmg-float--second" :style="{ animationDelay: (fi * 0.4 + 0.7) + 's' }">-{{ 90 + ((fight.until * 13) % 260) }}</span>
       </div>
 
-      <!-- Drake marker -->
+      <!-- Drake marker: the live drake, or the countdown to the next one in the chain -->
       <div
         v-if="showDrake"
         class="obj-marker"
-        :style="{ left: DRAKE_POS.x + '%', top: DRAKE_POS.y + '%', '--obj-glow': drakeDef.glow }"
+        :style="{
+          left: DRAKE_POS.x + '%',
+          top: DRAKE_POS.y + '%',
+          '--obj-glow': drakeUp ? drakeDef.glow : 'rgba(110, 224, 160, 0.45)',
+        }"
       >
         <div class="obj-img-wrap">
-          <img src="/img/dragon.png" alt="Drake" class="obj-img" />
+          <img src="/img/dragon.png" alt="Drake" class="obj-img" :class="{ 'obj-img--dormant': !drakeUp }" />
         </div>
         <span
           class="obj-label"
@@ -280,20 +284,25 @@ function hpWidth(pos: { team: 1 | 2; idx: number; walking: boolean }): number {
   return champAt(pos.team, pos.idx)?.hpPercent ?? 100
 }
 
-const showDrake = computed(
-  () => battleStore.drakeEventTime > 0 && battleStore.drakeKilledByTeam === null,
+/** The current drake is up on the map: spawned and not yet resolved. */
+const drakeUp = computed(
+  () =>
+    battleStore.drakeEventTime > 0 &&
+    battleStore.battleTime >= battleStore.drakeEventTime &&
+    battleStore.drakeKilledByTeam === null,
 )
-const drakeUp = computed(() => battleStore.battleTime >= battleStore.drakeEventTime)
+/** Next spawn in the chain — after a kill the marker counts down to it, or vanishes when the chain is done. */
+const nextDrakeT = computed(() => battleStore.nextDrakeSpawnT)
+const showDrake = computed(() => drakeUp.value || nextDrakeT.value > 0)
 const drakeDef = computed(() => DRAKE_TYPES[battleStore.activeDrakeType ?? 'infernal'])
 const drakeLabel = computed(() =>
-  drakeUp.value
-    ? drakeDef.value.label
-    : battleStore.formatSpawnCountdown(battleStore.drakeEventTime),
+  drakeUp.value ? drakeDef.value.label : battleStore.formatSpawnCountdown(nextDrakeT.value),
 )
 const drakeSpawnSoon = computed(
   () =>
     !drakeUp.value &&
-    battleStore.drakeEventTime - battleStore.battleTime <= OBJECTIVE_SPAWN_SOON_T,
+    nextDrakeT.value > 0 &&
+    nextDrakeT.value - battleStore.battleTime <= OBJECTIVE_SPAWN_SOON_T,
 )
 
 const showBaron = computed(

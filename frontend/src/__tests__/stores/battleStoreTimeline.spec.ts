@@ -148,9 +148,13 @@ describe('battleStore timeline integration', () => {
     expect(store.drakeKilledByTeam).toBe(1)
     expect(store.team1Drakes).toBe(1)
     expect(store.objectiveOverrides.length).toBe(1)
-    // no orphan drake result may re-credit the same drake
+    // no orphan drake result may re-credit the same drake — every spawn in the
+    // merged timeline is credited exactly once (live kill + scripted rest)
     store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
-    expect(store.team1Drakes + store.team2Drakes).toBeLessThanOrEqual(3)
+    const drakeSpawns = store.timeline!.events.filter(
+      (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+    ).length
+    expect(store.team1Drakes + store.team2Drakes).toBe(drakeSpawns)
     // cursor points past everything
     expect(store.timelineCursor).toBe(store.timeline!.events.length)
     // reseed never double-destroys a structure

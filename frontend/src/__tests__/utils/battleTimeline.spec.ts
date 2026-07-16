@@ -13,6 +13,7 @@ import {
   BATTLE_TOTAL_GAME_SECONDS,
   TIMELINE_NEXUS_FALL_T,
   TIMELINE_CRACK_WINDOW_START_T,
+  TIMELINE_DRAKE_COUNT_MIN,
   TIMELINE_DRAKE_COUNT_MAX,
   TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
   FINAL_PUSH_FIGHT_T,
@@ -92,12 +93,32 @@ describe('generateTimeline', () => {
     expect(nexus[0].t).toBe(TIMELINE_NEXUS_FALL_T)
   })
 
-  it('contains at least one drake and exactly one baron result', () => {
-    const tl = generateTimeline(2024, 0.5)
-    const drakes = tl.events.filter((e) => e.type === 'objectiveResult' && e.objective === 'drake')
-    const barons = tl.events.filter((e) => e.type === 'objectiveResult' && e.objective === 'baron')
-    expect(drakes.length).toBeGreaterThanOrEqual(1)
-    expect(barons.length).toBe(1)
+  it('contains 2-4 drake results and exactly one baron result', () => {
+    for (const seed of [1, 7, 42, 1337, 2024, 99999]) {
+      const tl = generateTimeline(seed, 0.5)
+      const drakes = tl.events.filter((e) => e.type === 'objectiveResult' && e.objective === 'drake')
+      const barons = tl.events.filter((e) => e.type === 'objectiveResult' && e.objective === 'baron')
+      expect(drakes.length).toBeGreaterThanOrEqual(TIMELINE_DRAKE_COUNT_MIN)
+      expect(drakes.length).toBeLessThanOrEqual(TIMELINE_DRAKE_COUNT_MAX)
+      expect(barons.length).toBe(1)
+    }
+  })
+
+  it('drakes chain sequentially: every result lands before the next spawn, all before baron', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const tl = generateTimeline(seed, 0.5)
+      const spawns = tl.events.filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
+      const results = tl.events.filter((e) => e.type === 'objectiveResult' && e.objective === 'drake')
+      const baronSpawn = tl.events.find((e) => e.type === 'objectiveSpawn' && e.objective === 'baron')!
+      expect(results.length).toBe(spawns.length)
+      for (let i = 0; i < spawns.length; i++) {
+        expect(results[i].t).toBeGreaterThan(spawns[i].t)
+        if (i + 1 < spawns.length) {
+          expect(results[i].t).toBeLessThan(spawns[i + 1].t)
+        }
+        expect(results[i].t).toBeLessThan(baronSpawn.t)
+      }
+    }
   })
 
   it('winner distribution roughly follows the initial win probability', () => {
@@ -449,16 +470,31 @@ describe('drake types', () => {
     }
   })
 
-  it('two drakes never share a type, elder never spawns first', () => {
+  it('drake types are unique per battle and elder only ever spawns last', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const tl = generateTimeline(seed, 0.5)
       const types = tl.events
         .filter((e) => e.type === 'objectiveSpawn' && e.objective === 'drake')
         .map((e) => e.drakeType!)
-      expect(types[0]).not.toBe('elder')
-      if (types.length === 2) {
-        expect(types[0]).not.toBe(types[1])
-      }
+      expect(new Set(types).size).toBe(types.length)
+      const elderIdx = types.indexOf('elder')
+      if (elderIdx !== -1) expect(elderIdx).toBe(types.length - 1)
+    }
+  })
+
+  it('a reseed at the first drake keeps the planned chain length and never re-draws a spawned type', () => {
+    for (const seed of [1, 7, 42, 777, 1337]) {
+      const base = generateTimeline(seed, 0.5)
+      const baseSpawns = base.events.filter(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+      )
+      const merged = reseedTimelineFrom(base, baseSpawns[0].t, seed * 17 + 3, 0.85)
+      const mergedSpawns = merged.events.filter(
+        (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+      )
+      expect(mergedSpawns.length).toBe(baseSpawns.length)
+      const types = mergedSpawns.map((e) => e.drakeType!)
+      expect(new Set(types).size).toBe(types.length)
     }
   })
 

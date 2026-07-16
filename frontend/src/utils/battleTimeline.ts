@@ -28,6 +28,8 @@ import {
   TIMELINE_DRAKE_COUNT_MIN,
   TIMELINE_DRAKE_COUNT_MAX,
   TIMELINE_DRAKE_RESPAWN_MIN_GAP_T,
+  TIMELINE_DRAKE_RESULT_DELAY_MIN_T,
+  TIMELINE_DRAKE_RESULT_DELAY_MAX_T,
   TIMELINE_MID_FIGHTS_MIN,
   TIMELINE_MID_FIGHTS_MAX,
   TIMELINE_FIGHT_KILLS_MIN,
@@ -323,6 +325,7 @@ function emitObjective(
   forcedTeam?: 1 | 2,
   forcedParticipants?: { t1: number[]; t2: number[] },
   drakeType?: DrakeTypeId,
+  resultDelayT?: number,
 ) {
   const location = objective === 'drake' ? DRAKE_POS : BARON_POS
   const participants = forcedParticipants ?? pickParticipants(ctx)
@@ -336,7 +339,10 @@ function emitObjective(
   const winnerTeam = forcedTeam ?? pickTeam(ctx)
   const delta = objective === 'drake' ? TIMELINE_DRAKE_WINPROB_DELTA : TIMELINE_BARON_WINPROB_DELTA
   pushEvent(ctx, {
-    t: tSpawn + randInt(ctx.rng, TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T, TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T),
+    t:
+      tSpawn +
+      (resultDelayT ??
+        randInt(ctx.rng, TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T, TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T)),
     type: 'objectiveResult',
     objective,
     drakeType,
@@ -346,6 +352,16 @@ function emitObjective(
     winProbDelta: winnerTeam === 1 ? delta : -delta,
   })
   return winnerTeam
+}
+
+/** Drake-chain overrides for a reseeded tail — keeps the battle's predetermined chain intact. */
+export interface DrakeGenOptions {
+  /** Exact number of drakes to generate (reseed: the planned drakes still ahead of the cut) */
+  forcedCount?: number
+  /** Basic types already spawned before the cut — never drawn again */
+  excludeTypes?: DrakeTypeId[]
+  /** Whether the final generated drake may still roll as the Elder Dragon */
+  allowElder?: boolean
 }
 
 /**
@@ -365,6 +381,7 @@ export function generateTimeline(
   preDestroyed: ReadonlySet<StructureId> = new Set(),
   baselineProb = initialWinProb,
   forceWinner?: 1 | 2,
+  drakeOpts?: DrakeGenOptions,
 ): BattleTimeline {
   const rng = createRng(seed)
   const ctx: GenContext = {
@@ -394,22 +411,38 @@ export function generateTimeline(
     })
   }
 
-  // ── Drake window ──
-  const drakeCount = randInt(rng, TIMELINE_DRAKE_COUNT_MIN, TIMELINE_DRAKE_COUNT_MAX)
-  const drakeWindow = TIMELINE_DRAKE_WINDOW_END - TIMELINE_LANING_END
-  // basic types drawn without replacement per battle; elder only rolls as the 2nd drake
-  const drakeTypePool = [...BASIC_DRAKE_TYPES]
-  for (let i = 0; i < drakeCount; i++) {
-    const base = TIMELINE_LANING_END + (drakeWindow / drakeCount) * i
-    const tSpawn = Math.max(
-      OBJECTIVE_DRAKE_SPAWN,
-      Math.floor(base + rng() * (drakeWindow / drakeCount - 120)),
-    )
-    const isElder = i === 1 && rng() < ELDER_DRAKE_CHANCE
-    const drakeType: DrakeTypeId = isElder
-      ? 'elder'
-      : drakeTypePool.splice(Math.floor(rng() * drakeTypePool.length), 1)[0]
-    emitObjective(ctx, tSpawn, 'drake', undefined, undefined, drakeType)
+  // ── Drake chain — 2-4 drakes back to back; each one's scripted result lands
+  // before the next spawn, so at most one drake is ever up. Basic types are
+  // drawn without replacement per battle; the elder only rolls as the final
+  // drake. A reseed forces the remaining planned count and excludes types that
+  // already spawned before the cut, keeping the predetermined chain intact. ──
+  const drakeCount =
+    drakeOpts?.forcedCount ?? randInt(rng, TIMELINE_DRAKE_COUNT_MIN, TIMELINE_DRAKE_COUNT_MAX)
+  const allowElder = drakeOpts?.allowElder ?? drakeCount >= 2
+  const excludedTypes = drakeOpts?.excludeTypes ?? []
+  const drakeTypePool = BASIC_DRAKE_TYPES.filter((ty) => !excludedTypes.includes(ty))
+  const chainStart = Math.max(
+    OBJECTIVE_DRAKE_SPAWN,
+    TIMELINE_LANING_END,
+    fromT > 0 ? fromT + TIMELINE_DRAKE_RESPAWN_MIN_GAP_T : 0,
+  )
+  if (drakeCount > 0 && TIMELINE_DRAKE_WINDOW_END > chainStart) {
+    const slot = (TIMELINE_DRAKE_WINDOW_END - chainStart) / drakeCount
+    for (let i = 0; i < drakeCount; i++) {
+      const base = chainStart + slot * i
+      const tSpawn = Math.floor(base + rng() * Math.max(1, slot * 0.15))
+      const isElder = allowElder && i === drakeCount - 1 && rng() < ELDER_DRAKE_CHANCE
+      const drakeType: DrakeTypeId =
+        isElder || drakeTypePool.length === 0
+          ? 'elder'
+          : drakeTypePool.splice(Math.floor(rng() * drakeTypePool.length), 1)[0]
+      // the result must land inside this drake's slot, before the next spawn
+      const resultDelay = Math.min(
+        randInt(rng, TIMELINE_DRAKE_RESULT_DELAY_MIN_T, TIMELINE_DRAKE_RESULT_DELAY_MAX_T),
+        Math.max(60, Math.floor(slot * 0.8)),
+      )
+      emitObjective(ctx, tSpawn, 'drake', undefined, undefined, drakeType, resultDelay)
+    }
   }
 
   // ── Mid fights ──
@@ -552,11 +585,11 @@ export function generateTimeline(
 
 /**
  * Merge filter for a regenerated tail. Objectives already spawned before the
- * cut must not respawn: baron happens once per battle; drakes keep the total
- * count cap and a minimum respawn gap so a just-fought drake can't reappear
- * moments later. Regenerated objectiveResults whose spawn happened before the
- * cut are dropped — that objective was already resolved live (orphan results
- * would double-count).
+ * cut must not respawn: baron happens once per battle; drakes keep the battle's
+ * planned chain length and a minimum respawn gap so a just-fought drake can't
+ * reappear moments later. Regenerated objectiveResults whose spawn happened
+ * before the cut are dropped — that objective was already resolved live
+ * (orphan results would double-count).
  */
 function filterRegeneratedTail(
   currentEvents: BattleEvent[],
@@ -567,6 +600,10 @@ function filterRegeneratedTail(
   const baronAlreadySpawned = currentEvents.some(
     (e) => e.type === 'objectiveSpawn' && e.objective === 'baron' && e.t <= t,
   )
+  // the chain length was predetermined for this battle — the reseed keeps it
+  const plannedDrakeTotal = currentEvents.filter(
+    (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+  ).length
   const preDrakeSpawns = currentEvents.filter(
     (e) => e.type === 'objectiveSpawn' && e.objective === 'drake' && e.t <= t,
   )
@@ -579,7 +616,7 @@ function filterRegeneratedTail(
         if (baronAlreadySpawned) return false
       } else {
         if (
-          drakeCount >= TIMELINE_DRAKE_COUNT_MAX ||
+          drakeCount >= plannedDrakeTotal ||
           e.t < lastDrakeSpawnT + TIMELINE_DRAKE_RESPAWN_MIN_GAP_T
         ) {
           return false
@@ -618,7 +655,29 @@ export function reseedTimelineFrom(
   // Structures already down at the cut stay down: the regenerated tail starts
   // from this world state, so nothing double-falls or skips its lane order.
   const preDestroyed = destroyedStructuresUpTo(current.events, t)
-  const regenerated = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb)
+  // The drake chain is predetermined per battle: the tail regenerates exactly
+  // the drakes still ahead of the cut, never re-drawing an already-spawned type.
+  const allDrakeSpawns = current.events.filter(
+    (e) => e.type === 'objectiveSpawn' && e.objective === 'drake',
+  )
+  const preDrakeSpawns = allDrakeSpawns.filter((e) => e.t <= t)
+  const preDrakeTypes = preDrakeSpawns
+    .map((e) => e.drakeType)
+    .filter((ty): ty is DrakeTypeId => ty !== undefined)
+  const drakeOpts: DrakeGenOptions = {
+    forcedCount: Math.max(0, allDrakeSpawns.length - preDrakeSpawns.length),
+    excludeTypes: preDrakeTypes,
+    allowElder: allDrakeSpawns.length >= 2 && !preDrakeTypes.includes('elder'),
+  }
+  const regenerated = generateTimeline(
+    newSeed,
+    boostedWinProb,
+    t + 1,
+    preDestroyed,
+    baselineProb,
+    undefined,
+    drakeOpts,
+  )
   let futureEvents = filterRegeneratedTail(current.events, t, regenerated.events, preDestroyed)
   let winner = regenerated.winner
   // WYSIWYG guard: the merge filter may have dropped delta-carrying events the
@@ -631,7 +690,7 @@ export function reseedTimelineFrom(
   const displayed = 0.5 + (mergedProb - baselineProb)
   const desired: 1 | 2 | null = displayed > 0.5 ? 1 : displayed < 0.5 ? 2 : null
   if (desired !== null && desired !== winner) {
-    const forced = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb, desired)
+    const forced = generateTimeline(newSeed, boostedWinProb, t + 1, preDestroyed, baselineProb, desired, drakeOpts)
     futureEvents = filterRegeneratedTail(current.events, t, forced.events, preDestroyed)
     winner = desired
   }

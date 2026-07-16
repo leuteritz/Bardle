@@ -188,7 +188,7 @@ export const OBJECTIVE_CLICK_DAMAGE = 15
 export const OBJECTIVE_BARON_WIN_BONUS = 0.12
 
 // ── Drake Types (see src/config/drakes.ts for the full definitions) ────────
-/** Chance the second drake of a battle rolls as the Elder Dragon */
+/** Chance the final drake of a battle rolls as the Elder Dragon */
 export const ELDER_DRAKE_CHANCE = 0.25
 /** Win-chance swing for Infernal — the biggest basic swing, plus its burn */
 export const DRAKE_WIN_BONUS_MAJOR = 0.1
@@ -364,11 +364,12 @@ export const OBJECTIVE_FIGHT_STATUS = {
 
 // ── Battle Event Timeline ──────────────────────────────────────────────────
 // Phase windows in game-seconds (total game = BATTLE_TOTAL_GAME_SECONDS = 3600)
-// Match script: laning 0-900 → drakes 900-1450 → mid fights 1250-1890 →
-// cracks 820-1920 → baron 2000-2120 (result ~2720-2900) → final push 3000 (50:00)
-// → defense fight at the loser inhibitor ~3200 → nexus turrets ~3400-3490 → nexus 3550
+// Match script: laning 0-900 → drake chain 900-1920 (2-4 drakes, sequential) →
+// mid fights 1720-1890 → cracks 820-1920 → baron 2000-2120 → final push 3000
+// (50:00) → defense fight at the loser inhibitor ~3200 → nexus turrets
+// ~3400-3490 → nexus 3550
 export const TIMELINE_LANING_END = 900
-export const TIMELINE_DRAKE_WINDOW_END = 1450
+export const TIMELINE_DRAKE_WINDOW_END = 1920
 export const TIMELINE_MIDFIGHT_END = 1950
 /** Random extra delay on the baron spawn time */
 export const TIMELINE_BARON_SPAWN_JITTER_T = 120
@@ -379,10 +380,13 @@ export const TIMELINE_FIRST_BLOOD_MAX_T = 300
 export const TIMELINE_SOLO_KILL_CHANCE = 0.3
 export const TIMELINE_LANE_FIGHTS_MIN = 4
 export const TIMELINE_LANE_FIGHTS_MAX = 7
-export const TIMELINE_DRAKE_COUNT_MIN = 1
-export const TIMELINE_DRAKE_COUNT_MAX = 2
+export const TIMELINE_DRAKE_COUNT_MIN = 2
+export const TIMELINE_DRAKE_COUNT_MAX = 4
 /** Minimum game-seconds between two drake spawns surviving a timeline reseed */
-export const TIMELINE_DRAKE_RESPAWN_MIN_GAP_T = 300
+export const TIMELINE_DRAKE_RESPAWN_MIN_GAP_T = 120
+/** Game-seconds between a drake spawn and its scripted result — short enough that every drake in the chain resolves before the next one spawns */
+export const TIMELINE_DRAKE_RESULT_DELAY_MIN_T = 150
+export const TIMELINE_DRAKE_RESULT_DELAY_MAX_T = 210
 export const TIMELINE_MID_FIGHTS_MIN = 2
 export const TIMELINE_MID_FIGHTS_MAX = 3
 export const TIMELINE_FIGHT_KILLS_MIN = 2
@@ -437,7 +441,7 @@ export const STRUCTURE_ATTACKERS_MAX = 3
 /** Objective pit participants per team (min/max champions) */
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MIN = 3
 export const TIMELINE_OBJECTIVE_PARTICIPANTS_MAX = 5
-/** Game-seconds between objective spawn and its scripted result (720 game-s = 12 real-s, leaves room for the click modal) */
+/** Game-seconds between the baron spawn and its scripted result (720 game-s = 12 real-s, leaves room for the click modal); drakes use the shorter TIMELINE_DRAKE_RESULT_DELAY_* so the chain never overlaps */
 export const TIMELINE_OBJECTIVE_RESULT_DELAY_MIN_T = 720
 export const TIMELINE_OBJECTIVE_RESULT_DELAY_MAX_T = 780
 
