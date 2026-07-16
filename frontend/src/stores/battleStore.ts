@@ -642,7 +642,11 @@ export const useBattleStore = defineStore('battle', {
       if (this.battleSimIntervalId) clearInterval(this.battleSimIntervalId)
       this.battleSimIntervalId = setInterval(() => {
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
-        const newBattleTime = Math.floor(realElapsedS * 60)
+        // floor(realS) * 60 statt floor(realS * 60): hält battleTime immer
+        // minutengenau. Sub-Sekunden-Versatz des Ankers (Objective-Freeze-Slide,
+        // verzögerte Ticks, Tab-Resume) würde sonst dauerhaft krumme Zeiten
+        // wie 17:31 erzeugen — asynchron zur minutengerundeten Scoreboard-Anzeige.
+        const newBattleTime = Math.floor(realElapsedS) * 60
         this.applyTimelineUpTo(newBattleTime)
         this.battleTime = newBattleTime
 
@@ -1966,7 +1970,8 @@ export const useBattleStore = defineStore('battle', {
           return
         }
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
-        const gameTime = Math.floor(realElapsedS * 60)
+        // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
+        const gameTime = Math.floor(realElapsedS) * 60
         if (gameTime >= BATTLE_TOTAL_GAME_SECONDS) {
           if (this.battleSimIntervalId) {
             clearInterval(this.battleSimIntervalId)
@@ -2059,7 +2064,8 @@ export const useBattleStore = defineStore('battle', {
         this.rebuildTimeline()
         this.timelineCursor = 0
         const realElapsedS = (Date.now() - this.battlePhaseStartTimestamp) / 1000
-        const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS * 60))
+        // minutengenau wie in startBattleSimulation (siehe Kommentar dort)
+        const gameTime = Math.min(BATTLE_TOTAL_GAME_SECONDS, Math.floor(realElapsedS) * 60)
         this.applyTimelineUpTo(gameTime)
         this.battleTime = gameTime
       }
