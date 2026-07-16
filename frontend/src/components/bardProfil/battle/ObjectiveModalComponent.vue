@@ -15,7 +15,19 @@
           >
             SECURE ✦
           </button>
-          <span class="obj-title">{{ objectiveTitle }}</span>
+          <div class="obj-title-wrap">
+            <span class="obj-title">{{ objectiveTitle }}</span>
+            <!-- Reward preview lives up here so the arena below gets the full height -->
+            <div class="obj-rewards">
+              <span class="reward reward--win">Secure: +{{ winBonusPercent }}% win chance</span>
+              <span class="reward-divider">·</span>
+              <span class="reward reward--lose">Lose: −{{ loseBonusPercent }}%</span>
+              <template v-if="effectText">
+                <span class="reward-divider">·</span>
+                <span class="reward-effect">{{ effectText }}</span>
+              </template>
+            </div>
+          </div>
           <button
             class="force-btn force-btn--enemy"
             :disabled="battleStore.objectiveResult !== null"
@@ -368,14 +380,6 @@
             <span v-else class="race-caption-idle">Most total damage secures it — no steals!</span>
           </div>
         </div>
-
-        <!-- Reward preview -->
-        <div class="reward-row">
-          <span class="reward reward--win">Secure: +{{ winBonusPercent }}% win chance</span>
-          <span class="reward-divider">·</span>
-          <span class="reward reward--lose">Lose: −{{ loseBonusPercent }}%</span>
-        </div>
-        <div v-if="effectText" class="reward-effect">{{ effectText }}</div>
 
         <!-- Post-fight summary overlay -->
         <Transition name="result-pop">
@@ -914,10 +918,45 @@ onUnmounted(_stopFloatScheduler)
   width: 100%;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-  padding: 9px 12px 8px;
+  /* side padding keeps the title + reward line clear of the absolute force buttons */
+  padding: 7px 130px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.obj-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Reward preview under the title — replaces the old bottom reward rows */
+.obj-rewards {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 1px;
+  max-width: 100%;
+}
+.reward {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.reward--win { color: #6ec040; }
+.reward--lose { color: #e07060; }
+.reward-divider { color: #7a6030; font-size: 12px; }
+.reward-effect {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--obj-color);
+  text-shadow: 0 0 8px var(--obj-glow);
 }
 
 /* Instant-resolve buttons flanking the title */
@@ -1762,7 +1801,8 @@ onUnmounted(_stopFloatScheduler)
 /* ── Damage race ─────────────────────────────────────────────────────────── */
 .race-section {
   width: calc(100% - 28px);
-  margin: 6px 14px 0;
+  /* now the last block in the modal — bottom margin closes the card cleanly */
+  margin: 6px 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1829,37 +1869,6 @@ onUnmounted(_stopFloatScheduler)
   font-size: 13px;
   color: #8a8070;
   letter-spacing: 0.04em;
-}
-
-/* ── Reward preview ──────────────────────────────────────────────────────── */
-.reward-row {
-  width: calc(100% - 28px);
-  margin: 6px 14px 0;
-  padding: 6px 0 12px;
-  border-top: 1px solid #3e200a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.reward {
-  font-size: 13px;
-  letter-spacing: 0.05em;
-}
-.reward--win { color: #6ec040; }
-.reward--lose { color: #e07060; }
-.reward-divider { color: #7a6030; font-size: 13px; }
-
-/* Drake-specific secondary effect line under the reward row */
-.reward-effect {
-  width: calc(100% - 28px);
-  margin: -6px 14px 0;
-  padding-bottom: 12px;
-  text-align: center;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  color: var(--obj-color);
-  text-shadow: 0 0 8px var(--obj-glow);
 }
 
 /* ── Transitions ─────────────────────────────────────────────────────────── */
