@@ -255,7 +255,7 @@ export const OBJECTIVE_ABILITY_DURATION_S: Record<
   top: 1.5,
   jungle: 2.5,
   mid: 2,
-  adc: 1.5,
+  adc: 2,
   support: 0.8,
 }
 /** Staggered first casts so the pit doesn't fire everything at once */
@@ -274,9 +274,9 @@ export const OBJECTIVE_ADC_CRIT_CHANCE = 0.25
 export const OBJECTIVE_ADC_CRIT_MULT = 2
 /** Mid "Hex Curse": DoT per stack while the mid stands — every cast adds a permanent stack */
 export const OBJECTIVE_MID_CURSE_DPS = 6
-/** Support "Mend": instant burst heal on every standing ally per cast */
+/** Support "Mend": instant burst heal on the most wounded standing ally per cast */
 export const OBJECTIVE_SUPPORT_MEND_HEAL = 24
-/** Jungle "Wild Rally": DPS buff on the strongest standing ally while active */
+/** Jungle "Wild Rally": DPS buff on a random standing ally while active */
 export const OBJECTIVE_JUNGLE_BUFF_MULT = 1.4
 /** Top "Challenge": taunted enemies pour their FULL objective DPS onto the top laner */
 export const OBJECTIVE_TOP_TAUNT_TARGETS = 2
@@ -285,27 +285,27 @@ export const OBJECTIVE_ROLE_ABILITIES = {
   top: {
     name: 'Challenge',
     icon: 'game-icons:enrage',
-    desc: 'Roars a challenge — two enemies turn their blades on the Top laner, sparing the team.',
+    desc: 'Roars a challenge — two enemies turn their full damage on the Top laner instead of the objective, buying the team free swings.',
   },
   jungle: {
     name: 'Wild Rally',
     icon: 'game-icons:uprising',
-    desc: 'Rallies the strongest ally, sharpening their strikes by 40% for a short window.',
+    desc: 'Rallies a random standing ally, sharpening their strikes by 40% for a short window.',
   },
   mid: {
     name: 'Hex Curse',
     icon: 'game-icons:cursed-star',
-    desc: 'Stacks curses on the objective — every cast burns it for the rest of the fight.',
+    desc: 'Stacks a permanent curse on the objective — each stack burns it for 6 damage per second for the rest of the fight, as long as the Mid stands.',
   },
   adc: {
     name: 'Focus Fire',
     icon: 'game-icons:dead-eye',
-    desc: 'Every shot can crit — while Focus Fire burns, every shot does.',
+    desc: 'Every shot can crit for double damage — while Focus Fire burns, every shot does.',
   },
   support: {
     name: 'Mend',
     icon: 'game-icons:healing',
-    desc: 'A burst of light that instantly heals every ally still standing.',
+    desc: 'A burst of light that instantly mends the most wounded ally still standing.',
   },
 } as const
 

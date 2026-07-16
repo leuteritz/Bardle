@@ -360,12 +360,21 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.objectiveFighters!.t1[2].damageTaken).toBe(3 * OBJECTIVE_AOE_DPS_DRAKE)
   })
 
-  it('a living support keeps the team healthier than a dead one', () => {
+  it('a living support keeps the most wounded ally healthier than a dead one', () => {
+    // Mend targets the lowest-HP standing ally, so compare the team's weakest
+    // (non-support) fighter across both scenarios
+    const minHp = (s: ReturnType<typeof useBattleStore>) =>
+      Math.min(
+        ...s.objectiveFighters!.t1
+          .filter((f) => f.alive && !f.down && f.role !== 'support')
+          .map((f) => f.fightHp),
+      )
+
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     vi.advanceTimersByTime(4100)
-    const withSupport = store.objectiveFighters!.t1[2].fightHp
+    const withSupport = minHp(store)
 
     setActivePinia(createPinia())
     const store2 = useBattleStore()
@@ -374,21 +383,23 @@ describe('battleStore frozen-time objective damage race', () => {
     store2.respawnUntil.t1 = [0, 0, 0, 0, 9999]
     store2._openObjectiveModal('drake', { t1: [0, 1, 2, 3, 4], t2: [0, 1, 2, 3, 4] })
     vi.advanceTimersByTime(4100)
-    const withoutSupport = store2.objectiveFighters!.t1[2].fightHp
+    const withoutSupport = minHp(store2)
 
     expect(withSupport).toBeGreaterThan(withoutSupport)
   })
 
-  it('Mend bursts heal all standing allies when the support casts', () => {
+  it('Mend heals only the most wounded standing ally when the support casts', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     const t1 = store.objectiveFighters!.t1
     const support = t1[4]
     t1[2].fightHp = 100
+    t1[3].fightHp = 60 // ADC is the most wounded
     support.abilityCooldownUntil = Date.now() // ready now
     vi.advanceTimersByTime(200) // one tick: cast fires, no AoE yet
-    expect(t1[2].fightHp).toBe(100 + OBJECTIVE_SUPPORT_MEND_HEAL)
+    expect(t1[3].fightHp).toBe(60 + OBJECTIVE_SUPPORT_MEND_HEAL)
+    expect(t1[2].fightHp).toBe(100) // untouched — Mend is single-target now
     // cooldown rescheduled
     expect(support.abilityCooldownUntil).toBeGreaterThan(Date.now())
   })
@@ -404,15 +415,17 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(mid.abilityCooldownUntil).toBe(mid.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S.mid * 1000)
   })
 
-  it('Wild Rally buffs the strongest standing ally', () => {
+  it('Wild Rally buffs a random standing ally', () => {
     const store = useBattleStore()
     setupBattle(store)
     store._openObjectiveModal('drake', null)
     const t1 = store.objectiveFighters!.t1
-    t1[3].damage = 500 // ADC leads
     t1[1].abilityCooldownUntil = Date.now() // jungle ready
+    const rand = vi.spyOn(Math, 'random').mockReturnValue(0.99)
     vi.advanceTimersByTime(200)
-    expect(store.objectiveBuffTarget.own).toBe(3)
+    rand.mockRestore()
+    // 0.99 → last standing fighter in idx order gets the rally
+    expect(store.objectiveBuffTarget.own).toBe(4)
   })
 
   it('a downed fighter stops dealing objective damage', () => {

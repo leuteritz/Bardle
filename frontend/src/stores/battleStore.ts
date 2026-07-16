@@ -1566,8 +1566,9 @@ export const useBattleStore = defineStore('battle', {
 
     /**
      * Auto-cast pass: every standing fighter whose cooldown elapsed opens its
-     * ability window. Support's Mend is an instant burst heal; Jungle's Wild
-     * Rally locks its buff onto the strongest standing ally for the window.
+     * ability window. Support's Mend is an instant burst heal on the most
+     * wounded ally; Jungle's Wild Rally locks its buff onto a random standing
+     * ally for the window.
      */
     _runAbilityCasts() {
       const now = Date.now()
@@ -1580,17 +1581,20 @@ export const useBattleStore = defineStore('battle', {
           f.abilityActiveUntil = now + duration
           f.abilityCooldownUntil = f.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S[f.role] * 1000
           if (f.role === 'support') {
-            for (const ally of fighters) {
-              if (this._isStanding(ally)) {
-                ally.fightHp = Math.min(ally.fightMaxHp, ally.fightHp + OBJECTIVE_SUPPORT_MEND_HEAL)
-              }
+            const standing = fighters.filter((x) => this._isStanding(x))
+            if (standing.length > 0) {
+              const wounded = standing.reduce((low, x) => (x.fightHp < low.fightHp ? x : low))
+              wounded.fightHp = Math.min(
+                wounded.fightMaxHp,
+                wounded.fightHp + OBJECTIVE_SUPPORT_MEND_HEAL,
+              )
             }
           }
           if (f.role === 'jungle') {
             const standing = fighters.filter((x) => this._isStanding(x))
             if (standing.length > 0) {
-              const strongest = standing.reduce((best, x) => (x.damage > best.damage ? x : best))
-              this.objectiveBuffTarget[side] = strongest.idx
+              const target = standing[Math.floor(Math.random() * standing.length)]
+              this.objectiveBuffTarget[side] = target.idx
             }
           }
           if (f.role === 'mid') {
