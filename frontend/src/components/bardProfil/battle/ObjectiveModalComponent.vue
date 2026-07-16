@@ -83,24 +83,31 @@
               ]"
               :style="cardStyle(f, i, false)"
             >
-              <div v-if="isTaunted(f, 'own')" class="taunt-chip">
-                <img
-                  v-if="tauntingTopOf('own')"
-                  :src="battleStore.getChampionImage(tauntingTopOf('own')!.name)"
-                  class="taunt-chip-img"
-                  :alt="tauntingTopOf('own')!.name"
-                />
-                <Icon icon="game-icons:enrage" width="12" height="12" />
-                TAUNTED
-              </div>
-              <div v-else-if="isBuffed(f, 'own')" class="rally-chip">
-                <img :src="jungleImage" class="rally-chip-img" alt="Wild Rally" />
-                RALLY +{{ rallyPercent }}%
-              </div>
-              <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
-                <Icon icon="game-icons:cursed-star" width="12" height="12" />
-                HEX CURSE +1
-              </div>
+              <!-- Status pills: every active effect on THIS fighter, with the
+                   caster's portrait/sprite and a draining duration bar -->
+              <TransitionGroup name="fx" tag="div" class="fx-tray">
+                <div
+                  v-for="fx in fighterEffects(f, 'own')"
+                  :key="fx.key"
+                  class="fx-pill"
+                  :style="{ '--fx-color': fx.color }"
+                >
+                  <img v-if="fx.img" :src="fx.img" class="fx-img" :alt="fx.label" />
+                  <span class="fx-label">{{ fx.label }}</span>
+                  <img
+                    v-for="t in fx.targets ?? []"
+                    :key="t.name"
+                    :src="battleStore.getChampionImage(t.name)"
+                    class="fx-target"
+                    :alt="t.name"
+                  />
+                  <span
+                    v-if="fx.remaining !== null"
+                    class="fx-timer"
+                    :style="{ width: fx.remaining * 100 + '%' }"
+                  />
+                </div>
+              </TransitionGroup>
               <div class="fighter-main">
                 <div
                   class="fighter-portrait-wrap"
@@ -139,16 +146,6 @@
                     {{ Math.ceil(abilityCdLeft(f)) }}
                   </span>
                 </div>
-                <template v-if="isTaunting(f)">
-                  <span class="taunt-arrow">⟶</span>
-                  <img
-                    v-for="t in tauntedEnemiesOf('own')"
-                    :key="'tt' + t.idx"
-                    :src="battleStore.getChampionImage(t.name)"
-                    class="taunt-target-img"
-                    :alt="t.name"
-                  />
-                </template>
                 <div class="stat-block">
                   <span class="stat-big-row">
                     <span class="stat-mini-label">DMG</span>
@@ -261,24 +258,31 @@
               ]"
               :style="cardStyle(f, i, true)"
             >
-              <div v-if="isTaunted(f, 'enemy')" class="taunt-chip">
-                <img
-                  v-if="tauntingTopOf('enemy')"
-                  :src="battleStore.getChampionImage(tauntingTopOf('enemy')!.name)"
-                  class="taunt-chip-img"
-                  :alt="tauntingTopOf('enemy')!.name"
-                />
-                <Icon icon="game-icons:enrage" width="12" height="12" />
-                TAUNTED
-              </div>
-              <div v-else-if="isBuffed(f, 'enemy')" class="rally-chip">
-                <img :src="jungleImage" class="rally-chip-img" alt="Wild Rally" />
-                RALLY +{{ rallyPercent }}%
-              </div>
-              <div v-else-if="f.role === 'mid' && isAbilityActive(f)" class="curse-chip">
-                <Icon icon="game-icons:cursed-star" width="12" height="12" />
-                HEX CURSE +1
-              </div>
+              <!-- Status pills: every active effect on THIS fighter, with the
+                   caster's portrait/sprite and a draining duration bar -->
+              <TransitionGroup name="fx" tag="div" class="fx-tray">
+                <div
+                  v-for="fx in fighterEffects(f, 'enemy')"
+                  :key="fx.key"
+                  class="fx-pill"
+                  :style="{ '--fx-color': fx.color }"
+                >
+                  <img v-if="fx.img" :src="fx.img" class="fx-img" :alt="fx.label" />
+                  <span class="fx-label">{{ fx.label }}</span>
+                  <img
+                    v-for="t in fx.targets ?? []"
+                    :key="t.name"
+                    :src="battleStore.getChampionImage(t.name)"
+                    class="fx-target"
+                    :alt="t.name"
+                  />
+                  <span
+                    v-if="fx.remaining !== null"
+                    class="fx-timer"
+                    :style="{ width: fx.remaining * 100 + '%' }"
+                  />
+                </div>
+              </TransitionGroup>
               <div class="fighter-main fighter-main--enemy">
                 <div class="stat-block stat-block--enemy">
                   <span class="stat-big-row">
@@ -292,16 +296,6 @@
                     <span class="stat-mini-label">DPS</span>
                   </span>
                 </div>
-                <template v-if="isTaunting(f)">
-                  <img
-                    v-for="t in tauntedEnemiesOf('enemy')"
-                    :key="'tt' + t.idx"
-                    :src="battleStore.getChampionImage(t.name)"
-                    class="taunt-target-img"
-                    :alt="t.name"
-                  />
-                  <span class="taunt-arrow">⟵</span>
-                </template>
                 <div
                   v-if="f.alive"
                   class="skill-btn"
@@ -415,6 +409,7 @@ import {
   OBJECTIVE_JUNGLE_BUFF_MULT,
   OBJECTIVE_TOP_TAUNT_TARGETS,
   OBJECTIVE_FIGHTER_FLOAT_TICK_MS,
+  OBJECTIVE_ABILITY_DURATION_S,
   ROLE_BY_KEY,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
@@ -627,6 +622,98 @@ function tauntedEnemiesOf(topSide: 'own' | 'enemy'): ObjectiveFighter[] {
   const victimSide = topSide === 'own' ? 'enemy' : 'own'
   const idxs = tauntedIdxsOf(victimSide)
   return _rawSide(victimSide).filter((f) => idxs.includes(f.idx))
+}
+
+// ── Status pills: everything currently affecting a fighter, attributable ────
+interface FighterFx {
+  key: string
+  label: string
+  /** Effect color = caster's role color — same language as the skill buttons. */
+  color: string
+  img?: string
+  targets?: ObjectiveFighter[]
+  /** Remaining window fraction (1 → 0) driving the pill's drain bar; null = no bar. */
+  remaining: number | null
+}
+
+/** Fraction of the caster's ability window still running. */
+function windowRemaining(caster: ObjectiveFighter): number {
+  const dur = OBJECTIVE_ABILITY_DURATION_S[caster.role] * 1000
+  return Math.max(0, Math.min(1, (caster.abilityActiveUntil - nowMs.value) / dur))
+}
+
+function fighterEffects(f: ObjectiveFighter, side: 'own' | 'enemy'): FighterFx[] {
+  const fx: FighterFx[] = []
+  const tauntingTop = tauntingTopOf(side)
+  if (isTaunted(f, side) && tauntingTop) {
+    fx.push({
+      key: 'taunted',
+      label: 'TAUNTED',
+      color: ROLE_BY_KEY.top.color,
+      img: battleStore.getChampionImage(tauntingTop.name),
+      remaining: windowRemaining(tauntingTop),
+    })
+  }
+  if (isBuffed(f, side)) {
+    const jungle = _rawSide(side).find((x) => x.role === 'jungle')
+    fx.push({
+      key: 'rally',
+      label: `RALLY +${rallyPercent}%`,
+      color: ROLE_BY_KEY.jungle.color,
+      img: jungleImage,
+      remaining: jungle && isAbilityActive(jungle) ? windowRemaining(jungle) : null,
+    })
+  }
+  if (isAbilityActive(f)) {
+    if (f.role === 'top' && !isTaunted(f, side)) {
+      fx.push({
+        key: 'challenge',
+        label: 'CHALLENGE',
+        color: ROLE_BY_KEY.top.color,
+        targets: tauntedEnemiesOf(side),
+        remaining: windowRemaining(f),
+      })
+    }
+    if (f.role === 'mid') {
+      fx.push({
+        key: 'curse',
+        label: 'HEX CURSE +1',
+        color: ROLE_BY_KEY.mid.color,
+        img: midImage,
+        remaining: windowRemaining(f),
+      })
+    }
+    if (f.role === 'adc') {
+      fx.push({
+        key: 'focus',
+        label: `FOCUS FIRE ×${OBJECTIVE_ADC_CRIT_MULT}`,
+        color: ROLE_BY_KEY.adc.color,
+        img: ROLE_BY_KEY.adc.image,
+        remaining: windowRemaining(f),
+      })
+    }
+    if (f.role === 'support') {
+      fx.push({
+        key: 'mendcast',
+        label: 'MEND',
+        color: ROLE_BY_KEY.support.color,
+        img: ROLE_BY_KEY.support.image,
+        remaining: windowRemaining(f),
+      })
+    }
+  }
+  // transient: this ally just received Mend — credit the support on the pill
+  const heal = hpFloatsFor(side + f.idx).find((h) => h.value > 0)
+  if (heal && f.role !== 'support') {
+    fx.push({
+      key: 'mended',
+      label: `MEND +${heal.value}`,
+      color: ROLE_BY_KEY.support.color,
+      img: ROLE_BY_KEY.support.image,
+      remaining: null,
+    })
+  }
+  return fx
 }
 
 /**
@@ -1150,45 +1237,89 @@ onUnmounted(_stopFloatScheduler)
   border-color: #e8a040;
   box-shadow: 0 0 8px rgba(232, 160, 64, 0.5);
 }
-.taunt-chip {
+/* ── Status pills above each card ────────────────────────────────────────── */
+.fx-tray {
   position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: -10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.fx-pill {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 7px;
+  padding: 2px 8px 3px;
+  border-radius: 999px;
+  background: rgba(16, 14, 10, 0.95);
+  border: 1px solid var(--fx-color, #e8c040);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--fx-color, #e8c040) 45%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.fx-label {
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 1px;
-  color: #e8a040;
-  background: #16140e;
-  border: 1px solid #e8a040;
-  border-radius: 4px;
-  white-space: nowrap;
-  z-index: 4;
+  line-height: 1.2;
+  color: var(--fx-color, #e8c040);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-.taunt-chip-img {
-  width: 16px;
-  height: 16px;
+
+.fx-img,
+.fx-target {
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 1px solid #e8a040;
   object-fit: cover;
   display: block;
+  flex-shrink: 0;
+  border: 1px solid var(--fx-color, #e8c040);
 }
-.taunt-arrow {
-  color: #e8a040;
-  font-weight: 700;
+.fx-img {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--fx-color, #e8c040) 70%, transparent));
 }
-.taunt-target-img {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid #e8a040;
-  object-fit: cover;
-  display: block;
-  box-shadow: 0 0 5px rgba(232, 160, 64, 0.6);
+.fx-target + .fx-target {
+  margin-left: -6px;
+}
+
+/* draining window bar along the pill's bottom edge */
+.fx-timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--fx-color, #e8c040);
+  transition: width 0.12s linear;
+}
+
+/* pills pop in, fade out, and shift smoothly when neighbors change */
+.fx-enter-active {
+  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.fx-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.fx-enter-from {
+  opacity: 0;
+  transform: translateY(5px) scale(0.85);
+}
+.fx-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.9);
+}
+.fx-move {
+  transition: transform 0.2s ease;
 }
 
 /* Incoming damage / healing flash — the whole card blinks so hits are unmissable */
@@ -1374,33 +1505,6 @@ onUnmounted(_stopFloatScheduler)
   border-color: #50c060;
   box-shadow: 0 0 8px rgba(80, 192, 96, 0.55);
 }
-.rally-chip {
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 7px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: #6ee080;
-  background: #16140e;
-  border: 1px solid #50c060;
-  border-radius: 4px;
-  white-space: nowrap;
-  z-index: 4;
-}
-.rally-chip-img {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 0 4px rgba(80, 192, 96, 0.8));
-}
-
 /* Top laner taunt window */
 .portrait--taunting .fighter-portrait {
   animation: taunt-pulse 0.6s ease-in-out infinite;
@@ -1522,27 +1626,6 @@ onUnmounted(_stopFloatScheduler)
   color: #e0b0ff;
   text-shadow: 0 0 10px rgba(190, 110, 255, 1), 0 1px 2px rgba(0, 0, 0, 0.9);
   animation: x2-pulse 0.6s ease-in-out infinite;
-}
-
-/* Mid card chip while Hex Curse is channeling */
-.curse-chip {
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 7px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: #c9a0f5;
-  background: #16140e;
-  border: 1px solid #b06cf8;
-  border-radius: 4px;
-  white-space: nowrap;
-  z-index: 4;
 }
 
 .alive-pip--out {
