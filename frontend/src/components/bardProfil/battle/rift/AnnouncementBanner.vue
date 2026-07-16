@@ -1,6 +1,8 @@
 <template>
   <div class="announce-layer">
-    <Transition name="announce">
+    <!-- out-in: the leaving banner is fully gone before the next enters, so a
+         replacement can never sit beside it in the flex row and shove it sideways -->
+    <Transition name="announce" mode="out-in">
       <div
         v-if="current"
         :key="current.id"
@@ -15,8 +17,6 @@
           <Icon
             v-if="isStructureKind"
             icon="game-icons:watchtower"
-            width="30"
-            height="30"
             class="banner-structure-icon"
             :class="current.team === 1 ? 'structure-icon--blue' : 'structure-icon--red'"
           />
@@ -70,6 +70,15 @@ function enqueue(a: Omit<Announcement, 'id'>) {
   if (!canAnnounce()) return
   if (queue.value.length >= ANNOUNCE_QUEUE_MAX) queue.value.shift()
   queue.value.push({ ...a, id: ++idCounter })
+  // A fresh event preempts the banner on screen: drop it immediately so the
+  // new one can spawn centered instead of queueing behind a stale message.
+  if (current.value) {
+    if (displayTimer) {
+      clearTimeout(displayTimer)
+      displayTimer = null
+    }
+    current.value = null
+  }
   pump()
 }
 
@@ -257,49 +266,47 @@ const subline = computed(() => {
   z-index: 45;
 }
 
-/* ── Banner shell ── */
+/* ── Banner shell ──
+   Sizes in cq units so the banner scales with the board on every desktop
+   resolution; the event's accent hue drives hairlines and glow via --ac. */
 .banner {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 250px;
-  max-width: 380px;
-  padding: 6px 20px;
-  background: linear-gradient(to right, rgba(17, 16, 8, 0), #111008 18%, #111008 82%, rgba(17, 16, 8, 0));
+  gap: clamp(7px, 1.2cqh, 10px);
+  min-width: clamp(180px, 20cqw, 230px);
+  max-width: min(340px, 38cqw);
+  padding: clamp(4px, 0.8cqh, 6px) clamp(14px, 1.6cqw, 20px);
+  background: linear-gradient(to right, rgba(17, 16, 8, 0), rgba(14, 13, 8, 0.92) 18%, rgba(14, 13, 8, 0.92) 82%, rgba(17, 16, 8, 0));
   overflow: hidden;
+  --ac: 232, 192, 64;
+  box-shadow: -40px 0 50px -30px rgba(var(--ac), 0.5), 40px 0 50px -30px rgba(var(--ac), 0.5);
 }
-.banner--blue {
-  box-shadow: -40px 0 60px -30px rgba(59, 130, 246, 0.55), 40px 0 60px -30px rgba(59, 130, 246, 0.55);
-}
-.banner--red {
-  box-shadow: -40px 0 60px -30px rgba(239, 68, 68, 0.55), 40px 0 60px -30px rgba(239, 68, 68, 0.55);
-}
-.banner--drake {
-  box-shadow: -40px 0 60px -30px rgba(34, 197, 94, 0.5), 40px 0 60px -30px rgba(34, 197, 94, 0.5);
-}
-.banner--baron {
-  box-shadow: -40px 0 60px -30px rgba(168, 85, 247, 0.5), 40px 0 60px -30px rgba(168, 85, 247, 0.5);
-}
+.banner--blue { --ac: 59, 130, 246; }
+.banner--red { --ac: 239, 68, 68; }
+.banner--drake { --ac: 34, 197, 94; }
+.banner--baron { --ac: 168, 85, 247; }
+.banner--inhibitor { --ac: 216, 100, 200; }
 
 .banner-goldline {
   position: absolute;
   left: 8%;
   right: 8%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, #c89040, #e8c060, #c89040, transparent);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(var(--ac), 0.9), transparent);
 }
 .banner-goldline--top { top: 0; }
 .banner-goldline--bottom { bottom: 0; }
 
+/* one-shot shine on entry — no idle looping */
 .banner-sweep {
   position: absolute;
   top: 0;
   left: 0;
   width: 34%;
   height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255, 220, 130, 0.14), transparent);
-  animation: banner-sweep 1.8s ease-in-out infinite;
+  background: linear-gradient(to right, transparent, rgba(255, 240, 200, 0.13), transparent);
+  animation: banner-sweep 0.9s ease-out 0.15s both;
   pointer-events: none;
 }
 
@@ -309,8 +316,8 @@ const subline = computed(() => {
   animation: portrait-punch 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 .banner-portrait {
-  width: 34px;
-  height: 34px;
+  width: clamp(24px, 4.4cqh, 32px);
+  height: clamp(24px, 4.4cqh, 32px);
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid;
@@ -334,7 +341,9 @@ const subline = computed(() => {
 }
 .banner-structure-icon {
   display: block;
-  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.6));
+  width: clamp(22px, 4cqh, 28px);
+  height: clamp(22px, 4cqh, 28px);
+  filter: drop-shadow(0 0 8px rgba(var(--ac), 0.6));
 }
 .structure-icon--blue {
   color: #60a5fa;
@@ -348,9 +357,9 @@ const subline = computed(() => {
   min-width: 0;
 }
 .banner-headline {
-  font-size: 16px;
+  font-size: clamp(12px, 2.2cqh, 15px);
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 2.5px;
   line-height: 1.1;
   white-space: nowrap;
   animation: headline-punch 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
@@ -394,7 +403,7 @@ const subline = computed(() => {
 }
 
 .banner-sub {
-  font-size: 10px;
+  font-size: clamp(8px, 1.4cqh, 10px);
   letter-spacing: 1.5px;
   color: rgba(232, 226, 208, 0.55);
   margin-top: 2px;
@@ -403,20 +412,22 @@ const subline = computed(() => {
   text-overflow: ellipsis;
 }
 
-/* ── Enter / leave ── */
+/* ── Enter / leave ──
+   Spawns in place at the center: pure fade + scale, no directional travel. */
 .announce-enter-active {
-  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+  transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
+/* fast exit keeps the out-in gap short when a new event preempts */
 .announce-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .announce-enter-from {
   opacity: 0;
-  transform: translateY(-14px) scale(0.9);
+  transform: scale(1.08);
 }
 .announce-leave-to {
   opacity: 0;
-  transform: translateY(8px) scale(0.96);
+  transform: scale(0.97);
 }
 
 /* ── Keyframes ── */
