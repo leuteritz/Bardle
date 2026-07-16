@@ -132,7 +132,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   const galaxyStore = useGalaxyStore()
   const planetShopStore = usePlanetShopStore()
   const { windowFocused } = useWindowFocus()
-  const { isRenderingPaused } = useRenderingPaused()
+  const { isRenderingPaused, isIdleRenderingPaused } = useRenderingPaused()
 
   const starRenders = shallowRef<StarRenderEntry[]>([])
   let structureSig: string | null = null
@@ -522,8 +522,22 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     animFrame = requestAnimationFrame(animate)
   }
 
+  // The orbit loop had no pause guard at all — it kept burning ~60fps of
+  // orbit math under the bard overlay, on blurred windows and hidden tabs.
+  watch(isIdleRenderingPaused, (paused) => {
+    if (paused) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    } else if (!animFrame) {
+      lastTs = 0
+      animFrame = requestAnimationFrame(animate)
+    }
+  })
+
   onMounted(() => {
-    animFrame = requestAnimationFrame(animate)
+    if (!isIdleRenderingPaused.value) {
+      animFrame = requestAnimationFrame(animate)
+    }
   })
 
   onUnmounted(() => {

@@ -118,8 +118,10 @@ export function usePersistence() {
         battlePhaseStartTimestamp: battleStore.battlePhaseStartTimestamp,
         autoBattleTimerEndTimestamp: battleStore.autoBattleTimerEndTimestamp,
         searchingPhaseStartTimestamp: battleStore.searchingPhaseStartTimestamp,
-        allTime: JSON.parse(JSON.stringify(battleStore.allTime)),
-        championCareer: JSON.parse(JSON.stringify(battleStore.championCareer)),
+        // referenced directly — the whole saveData is stringified synchronously
+        // below, so a JSON deep-clone here would just serialize twice
+        allTime: battleStore.allTime,
+        championCareer: battleStore.championCareer,
         battleSeed: battleStore.battleSeed,
         initialWinProbability: battleStore.initialWinProbability,
         startWinChanceBonus: battleStore.startWinChanceBonus,

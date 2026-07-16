@@ -528,7 +528,7 @@ const scaledStarOrbitTiers = computed(() =>
 )
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
-const { isRenderingPaused } = useRenderingPaused()
+const { isIdleRenderingPaused } = useRenderingPaused()
 
 // ── Midlaner Fluch-Timer ──────────────────────────────────────────────────────
 const curseSecsLeft = ref(0)
@@ -834,7 +834,7 @@ function enemyAttackLoop(ts: number) {
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
 }
 
-watch(isRenderingPaused, (paused) => {
+watch(isIdleRenderingPaused, (paused) => {
   if (paused) {
     cancelAnimationFrame(enemyAnimFrame)
     enemyAnimFrame = 0

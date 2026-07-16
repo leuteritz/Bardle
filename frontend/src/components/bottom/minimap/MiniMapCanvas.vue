@@ -1763,6 +1763,9 @@ export default defineComponent({
       { immediate: true },
     )
 
+    // Deliberately the BASE pause signal (not the idle variant): the minimap
+    // keeps flying to the next star while a bard tab is open — the "universe
+    // keeps moving in the background" feel must survive the idle-layer pause.
     const { isRenderingPaused } = useRenderingPaused()
 
     watch(isRenderingPaused, (paused) => {

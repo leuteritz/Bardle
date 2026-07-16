@@ -99,7 +99,7 @@ let prefersReducedMotion = false
 let parallaxTime = 0
 let lastRafTs = 0
 
-const { isRenderingPaused } = useRenderingPaused()
+const { isIdleRenderingPaused } = useRenderingPaused()
 
 // ─── Wolkenlücken ─────────────────────────────────────────────────────────────
 
@@ -313,7 +313,7 @@ function startEvent() {
   active.value = true
   requestAnimationFrame(() => {
     applyPalette(currentPalette)
-    if (!isRenderingPaused.value) {
+    if (!isIdleRenderingPaused.value) {
       rafHandle = requestAnimationFrame(animate)
     }
   })
@@ -393,7 +393,7 @@ watch(triggerRequested, (requested) => {
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
-watch(isRenderingPaused, (paused) => {
+watch(isIdleRenderingPaused, (paused) => {
   if (paused) handleBlur()
   else handleFocus()
 })

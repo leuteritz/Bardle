@@ -2,6 +2,7 @@
 import { watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
+import { useUiStore } from '@/stores/uiStore'
 import { useGalaxyTheme } from '@/composables/useGalaxyTheme'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useSpaceMusic } from '@/composables/useSpaceMusic'
@@ -25,6 +26,7 @@ import PauseOverlay from '@/components/idle/PauseOverlay.vue'
 import BottomBarComponent from '@/components/bottom/BottomBarComponent.vue'
 
 const gameStore = useGameStore()
+const uiStore = useUiStore()
 useGalaxyTheme()
 useSpaceMusic()
 
@@ -66,7 +68,9 @@ watch(
 
       <div class="flex flex-col w-full gap-2">
         <div class="flex justify-center w-full">
-          <div class="w-full">
+          <!-- While a bard tab covers the screen, the idle layer's CSS
+               animations pause — they'd only burn compositor time invisibly -->
+          <div class="w-full" :class="{ 'idle-anim-paused': uiStore.bardActiveTab !== null }">
             <IdleGameComponent />
           </div>
         </div>
@@ -205,6 +209,14 @@ watch(
 .rendering-paused *::after {
   animation-play-state: paused !important;
   transition: none !important;
+}
+
+/* Idle layer hidden behind an open bard tab: freeze its CSS animations only —
+   the bard overlay itself keeps animating normally */
+.idle-anim-paused *,
+.idle-anim-paused *::before,
+.idle-anim-paused *::after {
+  animation-play-state: paused !important;
 }
 
 @keyframes cosmicShift {

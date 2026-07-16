@@ -461,9 +461,9 @@ export default defineComponent({
       { immediate: true, deep: true },
     )
 
-    const { isRenderingPaused } = useRenderingPaused()
+    const { isIdleRenderingPaused } = useRenderingPaused()
 
-    watch(isRenderingPaused, (paused) => {
+    watch(isIdleRenderingPaused, (paused) => {
       if (paused) {
         cancelAnimationFrame(animFrame)
         animFrame = 0

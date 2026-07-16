@@ -1968,14 +1968,14 @@ onUnmounted(_stopFloatScheduler)
   75% { transform: translateX(-2px); }
 }
 
+/* transform-only: animating the drop-shadow filter forced a full sprite
+   re-rasterization every frame — the static glow on .boss-img stays */
 @keyframes boss-breathe {
   0%, 100% {
     transform: scale(1) translateY(0);
-    filter: drop-shadow(0 0 12px var(--obj-glow)) drop-shadow(0 0 30px var(--obj-glow));
   }
   50% {
     transform: scale(1.045) translateY(-4px);
-    filter: drop-shadow(0 0 22px var(--obj-glow)) drop-shadow(0 0 50px var(--obj-glow));
   }
 }
 
