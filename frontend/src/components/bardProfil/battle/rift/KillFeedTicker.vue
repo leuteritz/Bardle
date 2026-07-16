@@ -1,5 +1,5 @@
 <template>
-  <div class="ticker-root" @mouseenter="expanded = true" @mouseleave="onRootLeave">
+  <div class="ticker-root" @mouseleave="onRootLeave">
     <!-- Expanded history overlay — floats above the minimap, flex layout untouched -->
     <Transition name="panel">
       <div v-if="expanded" class="feed-panel">
@@ -94,7 +94,19 @@
         </div>
       </TransitionGroup>
 
-      <span class="ticker-chevron" :class="{ 'ticker-chevron--open': expanded }">▲</span>
+      <!-- Expand trigger: only hovering THIS zone opens the history panel -->
+      <button
+        class="ticker-expand"
+        :class="{ 'ticker-expand--open': expanded }"
+        type="button"
+        title="Kill History"
+        @mouseenter="expanded = true"
+        @click="expanded = !expanded"
+      >
+        <Icon icon="game-icons:scroll-unfurled" class="ticker-expand-scroll" />
+        <span class="ticker-expand-label">History</span>
+        <span class="ticker-expand-chevron">▲</span>
+      </button>
     </div>
 
     <Teleport to="body">
@@ -242,10 +254,10 @@ function structureLabel(e: StructureFeedEntry): string {
   position: relative;
   flex-shrink: 0;
   /* fluid bar height shared between the bar and the docked history panel */
-  --bar-h: clamp(36px, 6.2cqh, 46px);
+  --bar-h: clamp(28px, 4.8cqh, 36px);
   /* layout reservation stays below the bar height so the minimap keeps its
      size — the visible bar grows upward as an overlay */
-  height: clamp(28px, 4.8cqh, 36px);
+  height: clamp(22px, 3.8cqh, 28px);
   /* above .objective-overlay (40), below .announce-layer (45) — the HUD footer
      must stay fully visible over the modal backdrop */
   z-index: 41;
@@ -261,25 +273,59 @@ function structureLabel(e: StructureFeedEntry): string {
   display: flex;
   align-items: center;
   gap: clamp(10px, 1.2cqw, 14px);
-  padding: 0 clamp(10px, 1.4cqw, 16px);
+  padding: 0 0 0 clamp(10px, 1.4cqw, 16px);
   border-top: 2px solid #3e200a;
   background: #0d0c08;
   overflow: hidden;
 }
-.ticker-root:hover .ticker-bar {
+
+/* ── Expand trigger (right edge) — the ONLY hover zone that opens the panel ── */
+.ticker-expand {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 clamp(8px, 1.1cqw, 14px);
+  flex-shrink: 0;
+  border: none;
+  border-left: 1px solid #3e200a;
   background: #12100a;
+  color: #6a5820;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.ticker-expand:hover,
+.ticker-expand--open {
+  background: #1e1a10;
+  color: #e8c040;
+}
+.ticker-expand:hover .ticker-expand-scroll,
+.ticker-expand--open .ticker-expand-scroll {
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.6));
 }
 
-.ticker-chevron {
-  font-size: 10px;
-  color: #6a5820;
+.ticker-expand-scroll {
+  width: clamp(14px, 2.4cqh, 18px);
+  height: clamp(14px, 2.4cqh, 18px);
   flex-shrink: 0;
-  margin-left: auto;
-  transition: transform 0.18s ease, color 0.18s ease;
+  transition: filter 0.18s ease;
 }
-.ticker-chevron--open {
+
+.ticker-expand-label {
+  font-size: clamp(9px, 1.5cqh, 11px);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ticker-expand-chevron {
+  font-size: 9px;
+  transition: transform 0.18s ease;
+}
+.ticker-expand--open .ticker-expand-chevron {
   transform: rotate(180deg);
-  color: #e8c040;
 }
 
 .bar-items {
@@ -305,7 +351,7 @@ function structureLabel(e: StructureFeedEntry): string {
 }
 
 .bar-time {
-  font-size: clamp(12px, 1.9cqh, 14px);
+  font-size: clamp(11px, 1.7cqh, 13px);
   letter-spacing: 1px;
   color: #6a5820;
   flex-shrink: 0;
@@ -313,14 +359,22 @@ function structureLabel(e: StructureFeedEntry): string {
 
 /* Bar-only readability bumps — the expanded panel keeps its compact sizing */
 .ticker-bar .feed-img {
-  width: clamp(22px, 3.8cqh, 28px);
-  height: clamp(22px, 3.8cqh, 28px);
+  width: clamp(18px, 3.2cqh, 24px);
+  height: clamp(18px, 3.2cqh, 24px);
 }
 .ticker-bar .feed-mk {
-  font-size: clamp(11px, 1.8cqh, 13px);
+  font-size: clamp(10px, 1.6cqh, 12px);
 }
 .ticker-bar .feed-structure-label {
-  font-size: clamp(12px, 1.9cqh, 14px);
+  font-size: clamp(11px, 1.7cqh, 13px);
+}
+.ticker-bar .feed-star {
+  width: clamp(15px, 2.6cqh, 18px);
+  height: clamp(15px, 2.6cqh, 18px);
+}
+.ticker-bar .feed-structure-icon {
+  width: clamp(16px, 2.8cqh, 20px);
+  height: clamp(16px, 2.8cqh, 20px);
 }
 
 /* ── Expanded history overlay ── */
