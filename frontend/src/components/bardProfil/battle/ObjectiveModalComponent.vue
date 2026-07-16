@@ -50,7 +50,7 @@
           </span>
           <span class="alive-versus">
             <span class="alive-count alive-count--own">{{ aliveOwn }}</span>
-            <Icon icon="game-icons:duel" width="26" height="26" class="alive-versus-icon" />
+            <Icon icon="game-icons:duel" width="15" height="15" class="alive-versus-icon" />
             <span class="alive-count alive-count--enemy">{{ aliveEnemy }}</span>
           </span>
           <span class="alive-pips alive-pips--enemy">
@@ -1012,10 +1012,12 @@ onUnmounted(_stopFloatScheduler)
 }
 
 /* ── Alive strip ─────────────────────────────────────────────────────────── */
+/* Slim squad indicator (MOBA HUD style): flat skewed segments per standing
+   fighter + a compact "N ⚔ N" readout — half the height of the old pip row. */
 .alive-strip {
   width: calc(100% - 28px);
-  margin: 8px 14px 0;
-  padding: 5px 10px;
+  margin: 6px 14px 0;
+  padding: 3px 10px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -1026,38 +1028,40 @@ onUnmounted(_stopFloatScheduler)
 
 .alive-pips {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 .alive-pips--enemy {
   justify-content: flex-end;
 }
 .alive-pip {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
+  width: 15px;
+  height: 6px;
+  border-radius: 1px;
+  transform: skewX(-18deg);
 }
 .alive-pip--own {
-  background: #52b830;
-  box-shadow: 0 0 4px #52b830;
+  background: linear-gradient(to bottom, #6ec040, #3d8c22);
+  box-shadow: 0 0 4px rgba(82, 184, 48, 0.6);
 }
 .alive-pip--enemy {
-  background: #cc6050;
-  box-shadow: 0 0 4px #cc6050;
+  background: linear-gradient(to bottom, #e07060, #a83a2a);
+  box-shadow: 0 0 4px rgba(204, 96, 80, 0.6);
 }
 
 .alive-versus {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px;
+  gap: 5px;
+  padding: 0 8px;
 }
 .alive-versus-icon {
   color: #e8c040;
 }
 .alive-count {
-  font-size: 27px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .alive-count--own {
