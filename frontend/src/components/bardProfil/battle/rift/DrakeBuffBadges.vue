@@ -1,5 +1,6 @@
 <template>
-  <!-- Persistent drake-effect badges under the header, stacked on the killer team's side -->
+  <!-- Persistent drake-effect badges under the header, stacked on the killer team's side.
+       Compact pills show only the buff name; the effect appears in a hover tooltip. -->
   <div class="buff-stack buff-stack--own">
     <TransitionGroup name="badge">
       <div
@@ -9,10 +10,8 @@
         :style="{ '--dk-color': d.color, '--dk-dark': d.colorDark, '--dk-glow': d.glow }"
       >
         <img :src="d.img" :alt="d.label" class="badge-img" />
-        <div class="badge-text">
-          <span class="badge-title">{{ d.label }}</span>
-          <span class="badge-effect">{{ d.effect }}</span>
-        </div>
+        <span class="badge-title">{{ d.label }}</span>
+        <span class="badge-tooltip badge-tooltip--own">{{ d.effect }}</span>
       </div>
     </TransitionGroup>
   </div>
@@ -25,11 +24,9 @@
         class="buff-badge buff-badge--enemy"
         :style="{ '--dk-color': d.color, '--dk-dark': d.colorDark, '--dk-glow': d.glow }"
       >
-        <div class="badge-text badge-text--enemy">
-          <span class="badge-title">{{ d.label }}</span>
-          <span class="badge-effect">{{ d.effect }}</span>
-        </div>
+        <span class="badge-title">{{ d.label }}</span>
         <img :src="d.img" :alt="d.label" class="badge-img" />
+        <span class="badge-tooltip badge-tooltip--enemy">{{ d.effect }}</span>
       </div>
     </TransitionGroup>
   </div>
@@ -77,8 +74,9 @@ const enemyBadges = computed<Badge[]>(() => [
   top: 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   z-index: 7;
+  /* Stack itself stays transparent to clicks; each pill re-enables hover */
   pointer-events: none;
 }
 /* team HUD width (--hud-w from .rift-board) + gaps keeps the stacks clear of
@@ -93,50 +91,75 @@ const enemyBadges = computed<Badge[]>(() => [
 }
 
 .buff-badge {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 5px 12px;
-  background: rgba(0, 0, 0, 0.65);
+  gap: 6px;
+  padding: 3px 9px;
+  background: rgba(0, 0, 0, 0.6);
   border: 1px solid var(--dk-dark);
-  border-radius: 4px;
+  border-radius: 999px;
+  pointer-events: auto;
+  cursor: default;
 }
 /* Team edge marks whose trophy this is */
 .buff-badge--own {
-  box-shadow: inset 3px 0 0 #3b82f6, 0 0 10px var(--dk-glow);
+  box-shadow: inset 2px 0 0 #3b82f6, 0 0 8px var(--dk-glow);
 }
 .buff-badge--enemy {
-  box-shadow: inset -3px 0 0 #ef4444, 0 0 10px var(--dk-glow);
+  box-shadow: inset -2px 0 0 #ef4444, 0 0 8px var(--dk-glow);
+}
+.buff-badge:hover {
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1;
 }
 
 .badge-img {
-  width: clamp(32px, 5.8cqh, 44px);
+  width: clamp(16px, 3cqh, 22px);
   height: auto;
   display: block;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px var(--dk-glow));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 4px var(--dk-glow));
 }
 
-.badge-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
+.badge-title {
+  font-size: clamp(10px, 1.6cqh, 12px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--dk-color);
+  text-shadow: 0 0 6px var(--dk-glow);
+  white-space: nowrap;
 }
-.badge-text--enemy {
-  align-items: flex-end;
+
+/* Effect tooltip: revealed on hover, floats below the pill so nothing reflows */
+.badge-tooltip {
+  position: absolute;
+  top: calc(100% + 5px);
+  max-width: min(280px, 34cqw);
+  width: max-content;
+  padding: 5px 10px;
+  background: rgba(8, 7, 4, 0.95);
+  border: 1px solid var(--dk-dark);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 8px var(--dk-glow);
+  font-size: clamp(10px, 1.5cqh, 11px);
+  line-height: 1.35;
+  color: #c0b090;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  pointer-events: none;
+}
+.badge-tooltip--own {
+  left: 0;
+  text-align: left;
+}
+.badge-tooltip--enemy {
+  right: 0;
   text-align: right;
 }
-.badge-title {
-  font-size: clamp(12px, 1.9cqh, 14px);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--dk-color);
-  text-shadow: 0 0 8px var(--dk-glow);
-  white-space: nowrap;
-}
-.badge-effect {
-  font-size: clamp(10px, 1.5cqh, 11px);
-  color: #c0b090;
-  white-space: nowrap;
+.buff-badge:hover .badge-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Entrance: punch in with a short glow flare, then rest — no idle looping */
@@ -169,6 +192,9 @@ const enemyBadges = computed<Badge[]>(() => [
 @media (prefers-reduced-motion: reduce) {
   .badge-enter-active {
     animation: none !important;
+  }
+  .badge-tooltip {
+    transition: none;
   }
 }
 </style>
