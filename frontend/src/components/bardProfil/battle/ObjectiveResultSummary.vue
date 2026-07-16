@@ -92,7 +92,7 @@ const resultLabel = computed(() => {
   const r = battleStore.objectiveResult
   if (r === 'player') return 'YOUR HANDS SECURED IT!'
   if (r === 'own') return 'SECURED'
-  return 'LOST TO THE ENEMY'
+  return 'ENEMY SECURED'
 })
 
 const resultClass = computed(() => {
@@ -215,7 +215,7 @@ const resultEffectText = computed(() => {
   overflow: hidden;
 }
 .result-overlay--player { background: rgba(20, 14, 2, 0.88); }
-.result-overlay--own { background: rgba(8, 18, 4, 0.88); }
+.result-overlay--own { background: rgba(6, 12, 22, 0.88); }
 .result-overlay--enemy { background: rgba(22, 8, 6, 0.88); }
 
 .result-rays {
@@ -232,10 +232,10 @@ const resultEffectText = computed(() => {
   background: conic-gradient(from 0deg, transparent 0deg, rgba(232, 192, 64, 0.18) 14deg, transparent 28deg, transparent 62deg, rgba(232, 192, 64, 0.12) 76deg, transparent 90deg);
 }
 .result-overlay--own .result-rays {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(82, 184, 48, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(82, 184, 48, 0.1) 76deg, transparent 90deg);
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(96, 165, 250, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(96, 165, 250, 0.1) 76deg, transparent 90deg);
 }
 .result-overlay--enemy .result-rays {
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(204, 96, 80, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(204, 96, 80, 0.1) 76deg, transparent 90deg);
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(248, 113, 113, 0.16) 14deg, transparent 28deg, transparent 62deg, rgba(248, 113, 113, 0.1) 76deg, transparent 90deg);
 }
 
 .result-close {
@@ -282,12 +282,12 @@ const resultEffectText = computed(() => {
   text-shadow: 0 0 32px rgba(232, 192, 64, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 .result-overlay--own .result-label {
-  color: #6ec040;
-  text-shadow: 0 0 32px rgba(110, 192, 64, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
+  color: #60a5fa;
+  text-shadow: 0 0 32px rgba(96, 165, 250, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 .result-overlay--enemy .result-label {
-  color: #e07060;
-  text-shadow: 0 0 32px rgba(224, 112, 96, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
+  color: #f87171;
+  text-shadow: 0 0 32px rgba(248, 113, 113, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
 }
 
 .summary-panel {
