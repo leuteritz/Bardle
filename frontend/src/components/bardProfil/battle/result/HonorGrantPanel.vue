@@ -42,15 +42,13 @@
                 <span class="level-badge">{{ champ.level }}</span>
               </span>
               <span class="champ-names">
-                <span class="champ-name">
-                  {{ champ.name }}
-                  <em v-if="champ.name === mvpName" class="mvp-tag">
-                    <Icon icon="game-icons:laurels-trophy" width="11" height="11" />
-                    MVP
-                  </em>
-                </span>
+                <span class="champ-name">{{ champ.name }}</span>
                 <span class="champ-role">{{ champ.role.toUpperCase() }}</span>
               </span>
+              <em v-if="champ.name === mvpName" class="mvp-tag">
+                <Icon icon="game-icons:laurels-trophy" />
+                MVP
+              </em>
             </span>
 
             <span class="cell-kda">
@@ -64,8 +62,8 @@
                 v-if="isHonored(champ.name) && battleStore.honorTributeFor(champ.name) > 0"
                 class="tribute-chip"
               >
-                <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
                 +{{ formatTribute(battleStore.honorTributeFor(champ.name)) }}
+                <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
               </span>
               <span class="medal-stamp" :class="{ 'medal-stamp--on': isHonored(champ.name) }">
                 <Icon icon="game-icons:medal" width="20" height="20" />
@@ -247,7 +245,20 @@ function formatTribute(n: number): string {
   border-color: rgba(248, 113, 113, 0.2);
 }
 .row--mvp {
-  border-color: rgba(232, 192, 64, 0.45);
+  position: relative;
+  border-color: rgba(232, 192, 64, 0.6);
+  background: linear-gradient(90deg, rgba(232, 192, 64, 0.16), rgba(232, 192, 64, 0.05) 45%, rgba(10, 14, 24, 0.4));
+  box-shadow: 0 0 14px rgba(232, 192, 64, 0.2), inset 0 0 18px rgba(232, 192, 64, 0.05);
+}
+.row--mvp::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #ffe28a, #d4a020);
+  border-radius: 9px 0 0 9px;
 }
 .row--honored {
   border-color: #e8c040;
@@ -264,8 +275,7 @@ function formatTribute(n: number): string {
   display: flex;
   align-items: center;
   gap: 11px;
-  width: clamp(200px, 24cqw, 340px);
-  flex-shrink: 0;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .portrait-wrap {
@@ -329,15 +339,24 @@ function formatTribute(n: number): string {
 .mvp-tag {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: clamp(9px, 1.5cqh, 13px);
+  align-self: center;
+  gap: 0.3em;
+  margin-left: 2px;
+  font-size: clamp(10px, 1.7cqh, 14px);
   font-style: normal;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 1px;
   color: #1a1206;
   background: linear-gradient(to right, #d4a020, #ffe28a);
-  border-radius: 4px;
-  padding: 1px 6px;
+  border-radius: 5px;
+  padding: 0.3em 0.6em;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.4);
+  flex-shrink: 0;
+}
+.mvp-tag :deep(svg) {
+  width: 1em;
+  height: 1em;
 }
 .champ-role {
   font-size: clamp(9px, 1.5cqh, 13px);
@@ -347,7 +366,7 @@ function formatTribute(n: number): string {
 
 /* ── Stat cells ── */
 .cell-kda {
-  width: clamp(84px, 9cqw, 130px);
+  width: clamp(76px, 6.5cqw, 118px);
   flex-shrink: 0;
   text-align: center;
   font-size: clamp(13px, 2.2cqh, 20px);
@@ -359,7 +378,7 @@ function formatTribute(n: number): string {
 .kda-sep { color: #55566a; font-weight: 400; padding: 0 2px; }
 
 .cell-stat {
-  width: clamp(60px, 7cqw, 104px);
+  width: clamp(52px, 5cqw, 92px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -379,22 +398,29 @@ function formatTribute(n: number): string {
 .cell-stat--gold em { color: #e8c040; }
 
 /* ── Honor cell ── */
+/* Fixed-width slot so the tribute chip is never clipped — the champion
+   cell flexes instead when space gets tight. Sized so the sum of all
+   fixed cells always stays inside the row on every desktop width. */
 .cell-honor {
-  flex: 1;
+  width: clamp(140px, 13cqw, 230px);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
-  min-width: 0;
 }
 .tribute-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: clamp(11px, 1.9cqh, 17px);
+  justify-content: center;
+  align-self: center;
+  gap: 0.4em;
+  padding: 0.3em 0.7em;
+  border-radius: 7px;
+  font-size: clamp(14px, 2.4cqh, 21px);
   font-weight: 700;
+  line-height: 1;
+  text-align: center;
   white-space: nowrap;
   color: #ffe28a;
   background: rgba(232, 192, 64, 0.13);
@@ -407,9 +433,10 @@ function formatTribute(n: number): string {
   100% { opacity: 1; transform: translateX(0); }
 }
 .chime-img {
-  width: clamp(13px, 2.2cqh, 20px);
-  height: clamp(13px, 2.2cqh, 20px);
+  width: clamp(17px, 2.9cqh, 26px);
+  height: clamp(17px, 2.9cqh, 26px);
   object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.55));
 }
 
 .medal-stamp {

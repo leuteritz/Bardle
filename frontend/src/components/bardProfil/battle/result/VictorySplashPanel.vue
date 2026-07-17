@@ -29,6 +29,20 @@
       <div v-if="promoHint" class="promo-hint">▲ {{ promoHint }}</div>
     </div>
 
+    <div v-if="mvpName" class="mvp-showcase">
+      <div class="mvp-portrait-wrap">
+        <img :src="battleStore.getChampionImage(mvpName)" :alt="mvpName" class="mvp-portrait" />
+        <div class="mvp-laurel">
+          <Icon icon="game-icons:laurels-trophy" />
+        </div>
+      </div>
+      <div class="mvp-texts">
+        <span class="mvp-eyebrow">MATCH MVP</span>
+        <span class="mvp-name">{{ mvpName }}</span>
+      </div>
+      <div class="mvp-shine" />
+    </div>
+
     <div
       v-if="honorTribute > 0"
       class="honor-tribute"
@@ -55,16 +69,13 @@
         <div class="meta-value meta-value--kills">{{ teamKills }} – {{ enemyKills }}</div>
         <div class="meta-label">TEAM KILLS</div>
       </div>
-      <div class="meta-item">
-        <div class="meta-value meta-value--mvp">{{ mvpName || '—' }}</div>
-        <div class="meta-label">MVP</div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { formatNumber } from '@/config/numberFormat'
 import {
@@ -281,6 +292,96 @@ const promoHint = computed(() => {
   text-align: center;
 }
 
+/* ── Match MVP showcase ── */
+.mvp-showcase {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.6cqw, 20px);
+  width: 82%;
+  padding: clamp(10px, 1.8cqh, 18px) clamp(14px, 2cqw, 26px);
+  background: linear-gradient(120deg, rgba(232, 192, 64, 0.14), rgba(20, 15, 4, 0.55) 55%);
+  border: 1px solid rgba(232, 192, 64, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 0 24px rgba(232, 192, 64, 0.22), inset 0 0 26px rgba(232, 192, 64, 0.05);
+  overflow: hidden;
+  animation: victory-in 0.5s ease-out 0.15s backwards;
+}
+.mvp-portrait-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.mvp-portrait {
+  width: clamp(48px, 8.5cqh, 84px);
+  height: clamp(48px, 8.5cqh, 84px);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e8c040;
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.55);
+  display: block;
+}
+.mvp-laurel {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(20px, 3.4cqh, 32px);
+  height: clamp(20px, 3.4cqh, 32px);
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #ffe28a, #d4a020);
+  color: #1a1206;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.mvp-laurel :deep(svg) {
+  width: 66%;
+  height: 66%;
+}
+.mvp-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.mvp-eyebrow {
+  font-size: clamp(10px, 1.7cqh, 15px);
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #9a854e;
+}
+.mvp-name {
+  font-size: clamp(19px, 3.6cqh, 34px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffe28a;
+  text-shadow: 0 0 18px rgba(232, 192, 64, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Periodic light sweep across the card */
+.mvp-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 236, 170, 0.16) 48%,
+    rgba(255, 236, 170, 0.28) 50%,
+    rgba(255, 236, 170, 0.16) 52%,
+    transparent 70%
+  );
+  background-size: 300% 100%;
+  animation: mvp-shine-sweep 3.6s ease-in-out infinite;
+}
+@keyframes mvp-shine-sweep {
+  0%, 55% { background-position: 120% 0; }
+  90%, 100% { background-position: -60% 0; }
+}
+
 /* ── Honor tribute (chimes earned by the ceremony) ── */
 .honor-tribute {
   display: flex;
@@ -363,7 +464,6 @@ const promoHint = computed(() => {
   color: #e8e2d0;
 }
 .meta-value--kills { color: #93c5fd; }
-.meta-value--mvp { color: #e8c040; }
 .meta-label {
   font-size: clamp(9px, 1.6cqh, 14px);
   letter-spacing: 1px;
@@ -390,6 +490,6 @@ const promoHint = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-rays, .crest-dashes, .honor-tribute { animation: none; }
+  .splash-rays, .crest-dashes, .honor-tribute, .mvp-showcase, .mvp-shine { animation: none; }
 }
 </style>

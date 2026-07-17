@@ -2540,7 +2540,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:crown-coin', // FARM & ECONOMY stat group header (BattleLandingScreen)
   'game-icons:stone-tower', // OBJECTIVES stat group header (BattleLandingScreen)
   'game-icons:semi-closed-eye', // VISION & TIME stat group header (BattleLandingScreen)
-  'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow) + MVP band (HonorGrantPanel)
+  'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow) + MVP band (HonorGrantPanel) + MVP showcase (VictorySplashPanel)
   'game-icons:medal', // Grant honor header + medal stamp (HonorGrantPanel)
   'game-icons:watchtower', // Turret counter (ScoreTopBar)
   'game-icons:tower-fall', // Turrets destroyed stat (BottomScoreboard)
