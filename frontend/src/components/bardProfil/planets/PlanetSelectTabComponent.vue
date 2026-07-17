@@ -26,6 +26,7 @@ import {
   SUN_PHASE_DISPLAY_OFFSET,
 } from '@/config/constants'
 import { useActionToast } from '@/composables/useActionToast'
+import CometDisc from '@/components/idle/sun/CometDisc.vue'
 
 const CPS_BUILDINGS = [
   { id: 'glockenturm', name: 'Bell Tower', icon: '/img/Glockenturm.png' },
@@ -79,6 +80,16 @@ const activeSlot = computed(() => {
 const activeSlotIndex = computed(() =>
   store.slots.findIndex((s) => s.id === selectedSlotId.value),
 )
+
+// Each slot enters the stage at its own point of the orbit (a stable per-slot
+// phase offset via negative animation-delay), so switching planets never shows
+// them all at the same position — like a real system, every orbit is desynced.
+const ORBIT_PERIOD_SEC = 26
+const orbitPhaseStyle = computed(() => {
+  const idx = Math.max(0, activeSlotIndex.value)
+  const count = Math.max(1, store.slots.length)
+  return { '--orbit-delay': `-${((idx * ORBIT_PERIOD_SEC) / count).toFixed(2)}s` }
+})
 
 // Permanent planet choice: clicking a role arms a confirm step before it locks.
 const pendingRoleId = ref<PlanetRoleType | null>(null)
@@ -509,20 +520,32 @@ function chooseBuilding(buildingId: string) {
               <div class="ps-stage-stars ps-stage-stars--near" />
             </div>
 
-            <!-- Sun + orbiting planet share one centered system -->
-            <div class="ps-system">
-              <div class="ps-stage-sun" />
-              <div class="ps-planet-preview-wrap">
-                <Transition name="ps-planet-swap" mode="out-in">
+            <!-- Central body (comet rock or phase sun) + orbiting planet share
+                 one centered system -->
+            <div class="ps-system" :class="{ 'ps-system--comet': solarStore.isCometState }">
+              <CometDisc v-if="solarStore.isCometState" :diameter="200" />
+              <div v-else class="ps-stage-sun" />
+              <!-- The whole orbit wrapper is keyed per slot: the old planet fades
+                   out at ITS orbit position, the new one fades in at its own —
+                   no visible position jump of a stale image. -->
+              <!-- type="transition" is required: the wrapper runs an INFINITE
+                   orbit keyframe animation, and without the explicit type Vue
+                   would wait for its animationend (never fires) instead of the
+                   0.15s opacity transitionend — deadlocking mode="out-in". -->
+              <Transition name="ps-planet-swap" mode="out-in" type="transition">
+                <div
+                  :key="activeSlot.id"
+                  class="ps-planet-preview-wrap"
+                  :style="orbitPhaseStyle"
+                >
                   <img
-                    :key="activeImage"
                     :src="activeImage"
                     class="ps-planet-preview-img"
                     :class="{ 'ps-planet-preview-img--buffed': activeSlot.jungleBuff?.active }"
                     alt="Planet"
                   />
-                </Transition>
-              </div>
+                </div>
+              </Transition>
             </div>
 
             <div class="ps-planet-role-label" :style="{ color: activeRoleColor }">
@@ -544,7 +567,6 @@ function chooseBuilding(buildingId: string) {
             <!-- HP -->
             <div v-if="activeSlot.maxHp > 0" class="ps-planet-hp">
               <div class="ps-planet-hp-text">
-                <Icon icon="game-icons:heart-bottle" width="20" height="20" class="ps-hp-heart" style="color: #cc6050" />
                 <span class="ps-hp-values">{{ activeSlot.currentHp }} / {{ activeSlot.maxHp }}</span>
               </div>
               <div class="ps-hp-bar-track">
@@ -731,11 +753,11 @@ function chooseBuilding(buildingId: string) {
 /* Left rail: 6 slots filling the full column height */
 .ps-rail {
   flex-shrink: 0;
-  width: 210px;
+  width: clamp(180px, 15vw, 220px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   background: #16120a;
   border-right: 3px solid #5c3310;
   overflow-y: auto;
@@ -743,14 +765,17 @@ function chooseBuilding(buildingId: string) {
   scrollbar-color: #5c3310 #111;
 }
 
-/* Right detail panel */
+/* Right detail panel — row layout: stage (flexible) + upgrade sidebar (fixed).
+   Height is the scarce resource on desktop, so we spend width instead and the
+   whole tab fits without scrolling. */
 .ps-detail {
   position: relative;
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -828,11 +853,11 @@ function chooseBuilding(buildingId: string) {
   position: relative;
   display: flex;
   flex: 1 1 0;
-  min-height: 64px;
+  min-height: 52px;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 6px 10px;
   min-width: 0;
   text-align: left;
   background: #131210;
@@ -848,8 +873,8 @@ function chooseBuilding(buildingId: string) {
 
 .ps-slot-icon {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -858,13 +883,13 @@ function chooseBuilding(buildingId: string) {
 .ps-slot-info {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
 
 .ps-slot-sub {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: rgba(200, 160, 80, 0.7);
@@ -975,23 +1000,23 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-slot-btn-img {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
   border-radius: 3px;
 }
 
 .ps-slot-btn-placeholder {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   color: rgba(90, 142, 224, 0.35);
   line-height: 1;
-  height: 50px;
+  height: 40px;
   display: flex;
   align-items: center;
 }
 
 .ps-slot-btn-label {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1034,12 +1059,13 @@ function chooseBuilding(buildingId: string) {
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.8rem;
-  padding: 1.4rem;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
   overflow: hidden;
 }
 
@@ -1119,12 +1145,16 @@ function chooseBuilding(buildingId: string) {
   animation-delay: -1.2s, -9s;
 }
 
-/* Sun + orbiting planet share one centered system */
+/* Sun + orbiting planet share one centered system. Fills whatever height the
+   stage has left; a container query lets the sun scale to the real free space
+   instead of fixed pixels, so nothing ever overflows. */
 .ps-system {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: clamp(300px, 50vh, 460px);
+  flex: 1;
+  min-height: 160px;
+  container-type: size;
 }
 
 /* Big sun rendered in the CURRENT phase's colors (mirrors SunComponent palette) */
@@ -1132,10 +1162,11 @@ function chooseBuilding(buildingId: string) {
   position: absolute;
   top: 50%;
   left: 50%;
-  /* Diameter scales with the current Sun-Phase (see sunPhaseStyle); capped on
-     narrow viewports. Smooth transition so phase changes grow/shrink the sun. */
-  width: min(var(--ps-sun-d, 380px), 90vw);
-  height: min(var(--ps-sun-d, 380px), 90vw);
+  /* Diameter scales with the current Sun-Phase (see sunPhaseStyle), capped by
+     the system container's smaller edge so it always fits the free space.
+     Smooth transition so phase changes grow/shrink the sun. */
+  width: min(var(--ps-sun-d, 380px), 96cqmin);
+  height: min(var(--ps-sun-d, 380px), 96cqmin);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   transition: width 1.2s ease, height 1.2s ease;
@@ -1162,6 +1193,27 @@ function chooseBuilding(buildingId: string) {
   animation: ps-sun-pulse var(--pulse-speed, 5s) ease-in-out infinite;
 }
 
+/* ── Comet mode: the origin rock replaces the sun as the central body ──────── */
+/* Responsive size override (the component's diameter prop is static px);
+   z-index 1 so the planet's far arc (z 0) passes BEHIND the rock. */
+.ps-system--comet :deep(.comet-root) {
+  width: min(200px, 62cqmin);
+  height: min(200px, 62cqmin);
+  z-index: 1;
+}
+
+/* The comet is far smaller than a sun — tighten the orbit and shrink the
+   planet so the path visually belongs to the rock it circles. */
+.ps-system--comet .ps-planet-preview-wrap {
+  --orb-x: min(122px, 40cqmin);
+  --orb-y: min(34px, 11cqmin);
+}
+
+.ps-system--comet .ps-planet-preview-img {
+  width: min(64px, 17cqmin);
+  height: min(64px, 17cqmin);
+}
+
 /* Planet revolves around the sun on a tilted ellipse, with depth (near = larger
    & in front, far = smaller & behind the sun) so it reads as a real orbit. */
 .ps-planet-preview-wrap {
@@ -1169,8 +1221,14 @@ function chooseBuilding(buildingId: string) {
   top: 50%;
   left: 50%;
   z-index: 3;
+  /* Orbit radii shrink with the container (like the sun) so the far-arc z-swap
+     always happens at the sun's rim, never outside it. */
+  --orb-x: min(150px, 46cqmin);
+  --orb-y: min(40px, 12.5cqmin);
   transform: translate(-50%, -50%);
+  /* 26s must match ORBIT_PERIOD_SEC in the script (per-slot phase offset). */
   animation: ps-planet-orbit 26s linear infinite;
+  animation-delay: var(--orbit-delay, 0s);
 }
 
 @keyframes ps-sun-pulse {
@@ -1178,52 +1236,53 @@ function chooseBuilding(buildingId: string) {
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
 }
 
-/* Tilted ellipse (rx ≈ 150px, ry ≈ 40px). Front/lower arc (in front of sun) takes
-   ~70% of the loop → slow & large; back/upper arc (behind the sun) ~30% → fast,
-   small, fully occluded by the opaque sun core, vanishing one side & reappearing the other. */
+/* Tilted ellipse (rx = --orb-x, ry = --orb-y). Front/lower arc (in front of sun)
+   takes ~70% of the loop → slow & large; back/upper arc (behind the sun) ~30% →
+   fast, small, fully occluded by the opaque sun core, vanishing one side &
+   reappearing the other. 0.707 ≈ cos/sin 45° on the ellipse. */
 @keyframes ps-planet-orbit {
   0% {
-    transform: translate(-50%, -50%) translate(-150px, 0) scale(1);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * -1), 0) scale(1);
     z-index: 3;
   }
   17.5% {
-    transform: translate(-50%, -50%) translate(-106px, 28px) scale(1.08);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * -0.707), calc(var(--orb-y) * 0.707)) scale(1.08);
     z-index: 3;
   }
   35% {
-    transform: translate(-50%, -50%) translate(0, 40px) scale(1.15);
+    transform: translate(-50%, -50%) translate(0, var(--orb-y)) scale(1.15);
     z-index: 3;
   }
   52.5% {
-    transform: translate(-50%, -50%) translate(106px, 28px) scale(1.08);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * 0.707), calc(var(--orb-y) * 0.707)) scale(1.08);
     z-index: 3;
   }
   70% {
-    transform: translate(-50%, -50%) translate(150px, 0) scale(1);
+    transform: translate(-50%, -50%) translate(var(--orb-x), 0) scale(1);
     z-index: 3;
   }
   71% {
-    transform: translate(-50%, -50%) translate(150px, -1px) scale(0.98);
+    transform: translate(-50%, -50%) translate(var(--orb-x), -1px) scale(0.98);
     z-index: 0;
   }
   82% {
-    transform: translate(-50%, -50%) translate(106px, -28px) scale(0.78);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * 0.707), calc(var(--orb-y) * -0.707)) scale(0.78);
     z-index: 0;
   }
   90% {
-    transform: translate(-50%, -50%) translate(0, -40px) scale(0.55);
+    transform: translate(-50%, -50%) translate(0, calc(var(--orb-y) * -1)) scale(0.55);
     z-index: 0;
   }
   95% {
-    transform: translate(-50%, -50%) translate(-106px, -28px) scale(0.72);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * -0.707), calc(var(--orb-y) * -0.707)) scale(0.72);
     z-index: 0;
   }
   99% {
-    transform: translate(-50%, -50%) translate(-150px, -1px) scale(0.98);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * -1), -1px) scale(0.98);
     z-index: 0;
   }
   100% {
-    transform: translate(-50%, -50%) translate(-150px, 0) scale(1);
+    transform: translate(-50%, -50%) translate(calc(var(--orb-x) * -1), 0) scale(1);
     z-index: 3;
   }
 }
@@ -1304,20 +1363,26 @@ function chooseBuilding(buildingId: string) {
   font-size: 0.7rem;
 }
 
-/* ── Attunement upgrade menu (frameless, pinned bottom) ─────────────────────── */
+/* ── Attunement upgrade menu (frameless right sidebar) ──────────────────────── */
 .ps-upgrade {
   --rc: #e8c040;
   flex-shrink: 0;
+  width: clamp(270px, 24vw, 330px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.7rem;
-  padding: 1rem 1.3rem 1.1rem;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
   background: #131009;
-  /* Frameless — integrated into the panel with just a gold separator on top */
-  border-top: 3px solid transparent;
+  /* Frameless — integrated into the panel with just a gold separator on the left */
+  border-left: 3px solid transparent;
   border-image: linear-gradient(
-      to right,
+      to bottom,
       transparent,
       #5c3310 10%,
       #c89040 30%,
@@ -1343,7 +1408,7 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-level-title {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1372,7 +1437,7 @@ function chooseBuilding(buildingId: string) {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 0.5rem 0.5rem 0.45rem;
+  padding: 0.42rem 0.4rem 0.38rem;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   border: 1px solid #6ec040;
   border-radius: var(--bp-radius);
@@ -1479,13 +1544,15 @@ function chooseBuilding(buildingId: string) {
 .ps-preview-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.84rem;
+  gap: 0.4rem;
+  font-size: 0.76rem;
   font-weight: 700;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .ps-preview-label {
-  flex: 0 0 4.6rem;
+  flex: 0 0 3.6rem;
   color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1552,10 +1619,15 @@ function chooseBuilding(buildingId: string) {
 }
 
 /* ── Bulk attune buttons ───────────────────────────────────────────────────── */
+/* Narrow sidebar: primary Attune spans the full width, ×10 and Max share a row */
 .ps-attune-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.4fr;
-  gap: 0.5rem;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 0.45rem;
+}
+
+.ps-attune-row .ps-level-btn:first-child {
+  grid-column: 1 / -1;
 }
 
 .ps-level-btn--alt {
@@ -1566,6 +1638,8 @@ function chooseBuilding(buildingId: string) {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  text-align: center;
   gap: 4px;
   font-size: 0.74rem;
   font-weight: 700;
@@ -1576,10 +1650,16 @@ function chooseBuilding(buildingId: string) {
 /* ── Permanent role choice ─────────────────────────────────────────────────── */
 .ps-choose {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.4rem 1.4rem 1rem;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 
 .ps-choose-head {
@@ -1612,8 +1692,8 @@ function chooseBuilding(buildingId: string) {
 }
 
 .ps-role-grid--choose {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.8rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
 }
 
 /* ── Permanence confirm bar ────────────────────────────────────────────────── */
@@ -1825,12 +1905,6 @@ img.ps-role-icon {
   gap: 0.35rem;
 }
 
-.ps-hp-heart {
-  font-size: 0.85rem;
-  color: #e84040;
-  filter: drop-shadow(0 0 4px rgba(232, 64, 64, 0.5));
-}
-
 .ps-hp-values {
   font-size: 0.92rem;
   font-weight: 700;
@@ -1858,10 +1932,11 @@ img.ps-role-icon {
 /* ── Planetenbild ──────────────────────────────────────────────────────────── */
 /* (positioning handled by the .ps-planet-preview-wrap rule in the stage section) */
 .ps-planet-preview-img {
-  /* Fixed, deliberately small so the sun clearly dominates; orbit depth-scaling
-     then yields a larger near pass and a smaller far pass. */
-  width: var(--ps-planet-d, 96px);
-  height: var(--ps-planet-d, 96px);
+  /* Deliberately small so the sun clearly dominates; capped alongside the sun
+     so it shrinks with the free space. Orbit depth-scaling then yields a larger
+     near pass and a smaller far pass. */
+  width: min(var(--ps-planet-d, 96px), 24cqmin);
+  height: min(var(--ps-planet-d, 96px), 24cqmin);
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
@@ -1869,7 +1944,7 @@ img.ps-role-icon {
 
 /* ── Rollenname ────────────────────────────────────────────────────────────── */
 .ps-planet-role-label {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-align: center;
@@ -2169,17 +2244,22 @@ img.ps-role-icon {
   border-radius: 50%;
 }
 
-/* ── Planet-Bild Transition ────────────────────────────────────────────────── */
+/* ── Planet-Orbit-Wrapper Transition (per-slot swap) ───────────────────────── */
+/* Opacity lives on the wrapper (its transform is owned by the orbit keyframes,
+   so it must never be transitioned there); the scale pop targets the inner img. */
 .ps-planet-swap-enter-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 .ps-planet-swap-leave-active {
   transition: opacity 0.15s ease;
 }
+.ps-planet-swap-enter-active .ps-planet-preview-img {
+  transition: transform 0.2s ease;
+}
 .ps-planet-swap-enter-from {
   opacity: 0;
+}
+.ps-planet-swap-enter-from .ps-planet-preview-img {
   transform: scale(0.82);
 }
 .ps-planet-swap-leave-to {
@@ -2395,8 +2475,8 @@ img.ps-role-icon {
   animation: ps-lock-bob 3s ease-in-out infinite;
 }
 .ps-locked-panel-icon .lock-icon {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   image-rendering: auto;
 }
@@ -2418,15 +2498,15 @@ img.ps-role-icon {
 }
 
 .ps-locked-panel-chime {
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   image-rendering: pixelated;
   filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.7));
   animation: ps-chime-bob 2s ease-in-out infinite;
 }
 
 .ps-locked-panel-cost {
-  font-size: 48px;
+  font-size: clamp(28px, 4.5vh, 40px);
   font-weight: 800;
   color: #e8c040;
   letter-spacing: 0.02em;
@@ -2488,5 +2568,55 @@ img.ps-role-icon {
   font-size: 12px;
   color: rgba(180, 130, 50, 0.5);
   letter-spacing: 0.05em;
+}
+
+/* ── Narrow-window fallback ─────────────────────────────────────────────────── */
+/* Below common desktop widths the sidebar would starve the stage — stack again
+   and allow the detail column to scroll. */
+@media (max-width: 950px) {
+  .ps-detail {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .ps-stage {
+    flex: none;
+  }
+
+  .ps-system {
+    flex: none;
+    height: clamp(240px, 42vh, 400px);
+  }
+
+  .ps-upgrade {
+    width: auto;
+    justify-content: flex-start;
+    overflow-y: visible;
+    border-left: none;
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(
+        to right,
+        transparent,
+        #5c3310 10%,
+        #c89040 30%,
+        #f0d060 50%,
+        #c89040 70%,
+        #5c3310 90%,
+        transparent
+      )
+      1;
+  }
+
+  .ps-attune-row {
+    grid-template-columns: 2fr 1fr 1.4fr;
+  }
+
+  .ps-attune-row .ps-level-btn:first-child {
+    grid-column: auto;
+  }
+
+  .ps-role-grid--choose {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
