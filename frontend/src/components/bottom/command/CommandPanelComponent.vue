@@ -1,18 +1,14 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Icon } from '@iconify/vue'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
-  planetLevelBonusMultiplier,
+  JUNGLE_BUFF_DEFS,
 } from '@/stores/planetShopStore'
 import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
-import {
-  HP_COLOR_THRESHOLD_HIGH,
-  HP_COLOR_THRESHOLD_LOW,
-} from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 
 const planetStore = usePlanetShopStore()
@@ -27,39 +23,24 @@ function roleImage(role: PlanetRoleType): string {
   return PLANET_ROLES[role].image
 }
 
-function hpFillColor(ratio: number): string {
-  if (ratio > HP_COLOR_THRESHOLD_HIGH) return 'linear-gradient(to right, #2e7a1a, #52b830)'
-  if (ratio > HP_COLOR_THRESHOLD_LOW) return 'linear-gradient(to right, #9a6010, #d4a030)'
-  return 'linear-gradient(to right, #7a1a10, #cc3020)'
+// Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, Date.now()
+// nicht — der Intervall-Ref treibt die Restzeit-Bindings der Chips an.
+const buffNow = ref(Date.now())
+let buffTicker = 0
+onMounted(() => {
+  buffTicker = window.setInterval(() => {
+    buffNow.value = Date.now()
+  }, 250)
+})
+onUnmounted(() => window.clearInterval(buffTicker))
+
+function buffMsLeft(slot: PlanetSlot): number {
+  return slot.jungleBuff?.active ? Math.max(0, slot.jungleBuff.activeUntil - buffNow.value) : 0
 }
 
-function hpTextColor(ratio: number): string {
-  if (ratio > HP_COLOR_THRESHOLD_HIGH) return '#52b830'
-  if (ratio > HP_COLOR_THRESHOLD_LOW) return '#d4a030'
-  return '#cc3020'
-}
-
-/** Compact bonus tag shown at the top of a planet tile (e.g. "+2 DPS", "×1.3"). */
-function slotBonusText(slot: PlanetSlot): string {
-  if (!slot.role) return ''
-  const role = PLANET_ROLES[slot.role]
-  const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
-  const v = role.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
-  switch (role.bonusType) {
-    case 'auto_attack_dps':
-      return `+${formatNumber(v)} DPS`
-    case 'material_harvest_rate':
-      return `+${formatNumber(v)} /s`
-    case 'expedition_reward_multiplier':
-      return `×${(1 + v).toFixed(1)}`
-    case 'boss_damage_reduction':
-      return `−${Math.round(v * 100)}%`
-    case 'offline_boost':
-      return `+${Math.round(v * 100)}%`
-    case 'building_cps_multiplier':
-      return `+${Math.round(v * 100)}% CPS`
-  }
-  return ''
+function buffProgress(slot: PlanetSlot): number {
+  if (!slot.role || !slot.jungleBuff?.active) return 0
+  return Math.min(1, buffMsLeft(slot) / JUNGLE_BUFF_DEFS[slot.role].durationMs)
 }
 
 function handleSlotClick(slot: (typeof slots.value)[number]) {
@@ -98,36 +79,17 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
             <img :src="roleImage(slot.role)" class="cmd-tile-planet-img" alt="" draggable="false" />
             <div class="cmd-tile-img-vignette" />
 
-            <!-- Jungle Buff: shimmer overlay -->
+            <!-- Jungle Buff: Schimmer, Einkreis-Ring + Countdown-Chip -->
             <div v-if="slot.jungleBuff?.active" class="cmd-buff-overlay" />
-
-            <!-- Bonus tag top center -->
-            <div class="cmd-tile-bonus" :class="{ 'cmd-tile-bonus--buffed': slot.jungleBuff?.active }">
-              <Icon
-                v-if="slot.jungleBuff?.active"
-                icon="game-icons:lightning-storm"
-                class="cmd-tile-bonus-icon"
-              />
-              {{ slotBonusText(slot) }}
-            </div>
-
-            <!-- HP value + mini bar -->
-            <div class="cmd-tile-hp">
-              <div
-                class="cmd-tile-hp-value"
-                :style="{ color: hpTextColor(slot.currentHp / slot.maxHp) }"
-              >
-                {{ formatNumber(slot.currentHp) }}
-              </div>
-              <div class="cmd-tile-hp-track">
-                <div
-                  class="cmd-tile-hp-fill"
-                  :style="{
-                    width: `${Math.max(0, Math.min(100, (slot.currentHp / slot.maxHp) * 100))}%`,
-                    background: hpFillColor(slot.currentHp / slot.maxHp),
-                  }"
-                />
-              </div>
+            <div v-if="slot.jungleBuff?.active" class="cmd-buff-ring" />
+            <div
+              v-if="slot.jungleBuff?.active"
+              class="cmd-buff-chip"
+              :class="{ 'cmd-buff-chip--urgent': buffMsLeft(slot) < 3000 }"
+              :style="{ '--buff-progress': buffProgress(slot) }"
+              :title="slot.jungleBuff.buffType"
+            >
+              <img src="/img/roles/jungle.png" alt="" draggable="false" />
             </div>
           </template>
 
@@ -256,74 +218,6 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   background: radial-gradient(ellipse at 50% 32%, transparent 38%, rgba(6, 3, 1, 0.78));
   pointer-events: none;
   z-index: 1;
-}
-
-/* ── Bonus tag (top) ── */
-.cmd-tile-bonus {
-  position: absolute;
-  top: 4px;
-  left: 0;
-  right: 0;
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  color: color-mix(in srgb, var(--role-color, #e8c040) 45%, #f0e0c8);
-  text-shadow: 0 1px 2px #000;
-  white-space: nowrap;
-  overflow: hidden;
-  pointer-events: none;
-}
-.cmd-tile-bonus--buffed {
-  color: #f0d060;
-  text-shadow:
-    0 1px 2px #000,
-    0 0 6px rgba(232, 192, 64, 0.7);
-}
-.cmd-tile-bonus-icon {
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-}
-
-/* ── HP value + mini bar (bottom) ── */
-.cmd-tile-hp {
-  position: absolute;
-  bottom: 5px;
-  left: 5px;
-  right: 5px;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.cmd-tile-hp-value {
-  text-align: center;
-  font-size: 11px;
-  line-height: 1;
-  margin-bottom: 2px;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 1px 2px #000,
-    0 0 6px rgba(0, 0, 0, 0.8);
-  transition: color 0.4s ease;
-}
-
-.cmd-tile-hp-track {
-  height: 5px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.7);
-  overflow: hidden;
-}
-
-.cmd-tile-hp-fill {
-  height: 100%;
-  transition:
-    width 0.4s cubic-bezier(0.25, 1, 0.4, 1),
-    background 0.4s ease;
 }
 
 /* ── Empty / locked / buy states ── */
@@ -499,49 +393,95 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   text-shadow: 0 0 6px rgba(144, 224, 80, 0.7);
 }
 
-/* ── Jungle Buff states ── */
+/* ── Jungle Buff states ─────────────────────────────────────────────────────
+   Gleiche Designsprache wie der Countdown-Chip am Orbit-Planeten:
+   Jungle-Grün, weicher Puls-Glow und ein konischer Ring, der mit der
+   Buff-Restdauer abschmilzt. */
 .cmd-planet-tile--buffed {
-  border-color: #e8c040 !important;
-  animation: cmd-buff-pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes cmd-buff-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 8px rgba(232, 192, 64, 0.55),
-      inset 0 1px 0 rgba(255, 220, 80, 0.12);
-  }
-  50% {
-    box-shadow:
-      0 0 18px rgba(232, 192, 64, 0.9),
-      0 0 6px rgba(255, 240, 100, 0.5),
-      inset 0 1px 0 rgba(255, 220, 80, 0.2);
-  }
+  border-color: #5ce66a !important;
+  box-shadow:
+    0 0 16px rgba(92, 230, 106, 0.8),
+    0 0 34px rgba(92, 230, 106, 0.35),
+    inset 0 1px 0 rgba(140, 255, 150, 0.18);
 }
 
 .cmd-buff-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(232, 192, 64, 0.18) 0%, transparent 65%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(92, 230, 106, 0.16) 0%, transparent 65%);
   pointer-events: none;
   z-index: 3;
-  animation: cmd-buff-shimmer 1.8s ease-in-out infinite;
 }
 
-@keyframes cmd-buff-shimmer {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-  }
+/* Einkreis-Ring: pulsierender Kreis mittig um den Planeten */
+.cmd-buff-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 74%;
+  aspect-ratio: 1;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(92, 230, 106, 0.85);
+  box-shadow:
+    0 0 10px rgba(92, 230, 106, 0.7),
+    0 0 22px rgba(92, 230, 106, 0.35),
+    inset 0 0 10px rgba(92, 230, 106, 0.3);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Countdown-Chip (mittig in der Kachel, füllt den Einkreis-Ring) */
+.cmd-buff-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(22, 42, 26, 0.96), rgba(6, 14, 8, 0.96));
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow:
+    0 0 6px rgba(92, 230, 106, 0.5),
+    0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+.cmd-buff-chip::before {
+  content: '';
+  position: absolute;
+  inset: -2.5px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #5ce66a calc(var(--buff-progress, 1) * 360deg),
+    rgba(92, 230, 106, 0.14) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
+}
+
+.cmd-buff-chip img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 2px rgba(92, 230, 106, 0.7));
+}
+
+.cmd-buff-chip--urgent::before {
+  background: conic-gradient(
+    #ff5040 calc(var(--buff-progress, 1) * 360deg),
+    rgba(255, 80, 64, 0.16) 0
+  );
+  filter: drop-shadow(0 0 3px rgba(255, 64, 64, 0.8));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cmd-planet-tile--buffed,
-  .cmd-buff-overlay,
   .cmd-planet-tile--empty-slot,
   .cmd-tile-icon--empty,
   .cmd-planet-tile--buy:not(.cmd-planet-tile--locked),
