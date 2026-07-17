@@ -122,15 +122,15 @@ const promoHint = computed(() => {
 
 <style scoped>
 .splash {
-  width: 380px;
+  width: clamp(320px, 34cqw, 640px);
   flex-shrink: 0;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 30px;
+  gap: clamp(12px, 2.4cqh, 26px);
+  padding: clamp(20px, 4cqh, 44px);
   overflow: hidden;
   animation: victory-in 0.5s ease-out;
 }
@@ -139,8 +139,8 @@ const promoHint = computed(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 620px;
-  height: 620px;
+  width: clamp(520px, 110cqh, 1000px);
+  height: clamp(520px, 110cqh, 1000px);
   transform: translate(-50%, -50%);
   pointer-events: none;
   animation: ray-spin 24s linear infinite;
@@ -171,8 +171,8 @@ const promoHint = computed(() => {
 /* ── Crest ── */
 .crest-wrap {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: clamp(84px, 15cqh, 150px);
+  height: clamp(84px, 15cqh, 150px);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -198,8 +198,8 @@ const promoHint = computed(() => {
 }
 
 .crest-img {
-  width: 52px;
-  height: 52px;
+  width: 54%;
+  height: 54%;
   object-fit: contain;
 }
 .crest--win .crest-img {
@@ -211,7 +211,7 @@ const promoHint = computed(() => {
 
 /* ── Verdict ── */
 .verdict {
-  font-size: 44px;
+  font-size: clamp(38px, 8cqh, 78px);
   font-weight: 700;
   letter-spacing: 6px;
   line-height: 1;
@@ -230,7 +230,7 @@ const promoHint = computed(() => {
   text-align: center;
 }
 .lp-change {
-  font-size: 52px;
+  font-size: clamp(44px, 9.5cqh, 90px);
   font-weight: 700;
   line-height: 1;
 }
@@ -243,7 +243,7 @@ const promoHint = computed(() => {
   text-shadow: 0 0 24px rgba(204, 96, 80, 0.5);
 }
 .lp-sub {
-  font-size: 12px;
+  font-size: clamp(11px, 2cqh, 17px);
   letter-spacing: 3px;
   color: #6a8a50;
   margin-top: 4px;
@@ -257,7 +257,7 @@ const promoHint = computed(() => {
 .lp-progress-head {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: clamp(11px, 1.8cqh, 16px);
   color: #6a5820;
   margin-bottom: 5px;
 }
@@ -275,7 +275,7 @@ const promoHint = computed(() => {
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .promo-hint {
-  font-size: 12px;
+  font-size: clamp(11px, 1.9cqh, 16px);
   color: #3cbc78;
   margin-top: 7px;
   text-align: center;
@@ -300,20 +300,20 @@ const promoHint = computed(() => {
   gap: 10px;
 }
 .tribute-chime-img {
-  width: 34px;
-  height: 34px;
+  width: clamp(30px, 6cqh, 56px);
+  height: clamp(30px, 6cqh, 56px);
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.6));
 }
 .tribute-amount {
-  font-size: 34px;
+  font-size: clamp(30px, 6cqh, 58px);
   font-weight: 700;
   line-height: 1;
   color: #ffe28a;
   text-shadow: 0 0 22px rgba(232, 192, 64, 0.55);
 }
 .tribute-sub {
-  font-size: 11px;
+  font-size: clamp(10px, 1.8cqh, 16px);
   letter-spacing: 2.5px;
   color: #9a854e;
 }
@@ -340,7 +340,7 @@ const promoHint = computed(() => {
   filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.6));
 }
 .bounty-text {
-  font-size: 12px;
+  font-size: clamp(11px, 1.9cqh, 16px);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #c9a0f5;
@@ -351,21 +351,21 @@ const promoHint = computed(() => {
 /* ── Meta row ── */
 .meta-row {
   display: flex;
-  gap: 22px;
+  gap: clamp(18px, 3cqw, 36px);
   margin-top: 4px;
 }
 .meta-item {
   text-align: center;
 }
 .meta-value {
-  font-size: 18px;
+  font-size: clamp(16px, 3cqh, 28px);
   font-weight: 700;
   color: #e8e2d0;
 }
 .meta-value--kills { color: #93c5fd; }
 .meta-value--mvp { color: #e8c040; }
 .meta-label {
-  font-size: 10px;
+  font-size: clamp(9px, 1.6cqh, 14px);
   letter-spacing: 1px;
   color: #6a5820;
   margin-top: 2px;

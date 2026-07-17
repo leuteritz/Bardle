@@ -133,8 +133,8 @@ function formatTribute(n: number): string {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 22px 24px 18px;
+  gap: clamp(8px, 1.6cqh, 18px);
+  padding: clamp(16px, 3cqh, 34px) clamp(18px, 2.4cqw, 44px) clamp(14px, 2.4cqh, 28px);
   background: linear-gradient(160deg, rgba(20, 18, 10, 0.72), rgba(8, 8, 6, 0.55));
   border-left: 1px solid rgba(232, 192, 64, 0.22);
   min-width: 0;
@@ -149,8 +149,8 @@ function formatTribute(n: number): string {
   flex-shrink: 0;
 }
 .head-icon-ring {
-  width: 46px;
-  height: 46px;
+  width: clamp(42px, 7cqh, 66px);
+  height: clamp(42px, 7cqh, 66px);
   border-radius: 50%;
   border: 2px solid rgba(232, 192, 64, 0.55);
   background: radial-gradient(circle, rgba(232, 192, 64, 0.16), transparent 72%);
@@ -160,6 +160,10 @@ function formatTribute(n: number): string {
   justify-content: center;
   flex-shrink: 0;
 }
+.head-icon-ring :deep(svg) {
+  width: 52%;
+  height: 52%;
+}
 .head-titles {
   display: flex;
   flex-direction: column;
@@ -167,7 +171,7 @@ function formatTribute(n: number): string {
   min-width: 0;
 }
 .honor-title {
-  font-size: 21px;
+  font-size: clamp(19px, 3.4cqh, 34px);
   font-weight: 700;
   letter-spacing: 3.5px;
   line-height: 1;
@@ -175,7 +179,7 @@ function formatTribute(n: number): string {
   text-shadow: 0 0 20px rgba(232, 192, 64, 0.4);
 }
 .honor-sub {
-  font-size: 12px;
+  font-size: clamp(11px, 1.9cqh, 17px);
   color: #9a854e;
   letter-spacing: 0.4px;
 }
@@ -185,8 +189,8 @@ function formatTribute(n: number): string {
   margin-left: auto;
 }
 .pip {
-  width: 13px;
-  height: 13px;
+  width: clamp(12px, 2cqh, 18px);
+  height: clamp(12px, 2cqh, 18px);
   transform: rotate(45deg);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(232, 192, 64, 0.35);
@@ -209,7 +213,7 @@ function formatTribute(n: number): string {
   gap: 4px;
 }
 .section-label {
-  font-size: 11px;
+  font-size: clamp(10px, 1.8cqh, 15px);
   font-weight: 700;
   letter-spacing: 2.5px;
   flex-shrink: 0;
@@ -260,7 +264,7 @@ function formatTribute(n: number): string {
   display: flex;
   align-items: center;
   gap: 11px;
-  width: 210px;
+  width: clamp(200px, 24cqw, 340px);
   flex-shrink: 0;
   min-width: 0;
 }
@@ -269,8 +273,8 @@ function formatTribute(n: number): string {
   flex-shrink: 0;
 }
 .portrait {
-  width: 34px;
-  height: 34px;
+  width: clamp(30px, 5.4cqh, 54px);
+  height: clamp(30px, 5.4cqh, 54px);
   border-radius: 8px;
   object-fit: cover;
   border: 2px solid rgba(96, 165, 250, 0.55);
@@ -285,12 +289,12 @@ function formatTribute(n: number): string {
   position: absolute;
   bottom: -4px;
   right: -4px;
-  width: 15px;
-  height: 15px;
+  width: clamp(14px, 2.4cqh, 22px);
+  height: clamp(14px, 2.4cqh, 22px);
   border-radius: 50%;
   background: #0d1830;
   border: 1px solid #60a5fa;
-  font-size: 9px;
+  font-size: clamp(8px, 1.4cqh, 12px);
   font-weight: 700;
   color: #cfe0ff;
   display: flex;
@@ -313,7 +317,7 @@ function formatTribute(n: number): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: clamp(14px, 2.4cqh, 22px);
   font-weight: 700;
   color: #f2ead2;
   white-space: nowrap;
@@ -326,7 +330,7 @@ function formatTribute(n: number): string {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 9px;
+  font-size: clamp(9px, 1.5cqh, 13px);
   font-style: normal;
   font-weight: 700;
   letter-spacing: 1px;
@@ -336,17 +340,17 @@ function formatTribute(n: number): string {
   padding: 1px 6px;
 }
 .champ-role {
-  font-size: 9px;
+  font-size: clamp(9px, 1.5cqh, 13px);
   letter-spacing: 2px;
   color: #8a7238;
 }
 
 /* ── Stat cells ── */
 .cell-kda {
-  width: 88px;
+  width: clamp(84px, 9cqw, 130px);
   flex-shrink: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: clamp(13px, 2.2cqh, 20px);
   font-weight: 700;
 }
 .kda-k { color: #6ee7b7; }
@@ -355,19 +359,19 @@ function formatTribute(n: number): string {
 .kda-sep { color: #55566a; font-weight: 400; padding: 0 2px; }
 
 .cell-stat {
-  width: 66px;
+  width: clamp(60px, 7cqw, 104px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  font-size: 8px;
+  font-size: clamp(8px, 1.3cqh, 11px);
   letter-spacing: 1.5px;
   color: #8a7238;
 }
 .cell-stat em {
   font-style: normal;
-  font-size: 13px;
+  font-size: clamp(12px, 2.1cqh, 19px);
   font-weight: 700;
   color: #e8e2d0;
   letter-spacing: 0;
@@ -389,7 +393,7 @@ function formatTribute(n: number): string {
   gap: 5px;
   padding: 3px 9px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: clamp(11px, 1.9cqh, 17px);
   font-weight: 700;
   white-space: nowrap;
   color: #ffe28a;
@@ -403,14 +407,14 @@ function formatTribute(n: number): string {
   100% { opacity: 1; transform: translateX(0); }
 }
 .chime-img {
-  width: 14px;
-  height: 14px;
+  width: clamp(13px, 2.2cqh, 20px);
+  height: clamp(13px, 2.2cqh, 20px);
   object-fit: contain;
 }
 
 .medal-stamp {
-  width: 30px;
-  height: 30px;
+  width: clamp(28px, 4.8cqh, 46px);
+  height: clamp(28px, 4.8cqh, 46px);
   border-radius: 50%;
   border: 1px solid rgba(232, 192, 64, 0.22);
   color: rgba(232, 192, 64, 0.18);
@@ -418,6 +422,10 @@ function formatTribute(n: number): string {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+.medal-stamp :deep(svg) {
+  width: 62%;
+  height: 62%;
 }
 .medal-stamp--on {
   color: #ffe28a;
@@ -445,9 +453,9 @@ function formatTribute(n: number): string {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 13px;
+  padding: clamp(11px, 2.2cqh, 20px);
   font-family: inherit;
-  font-size: 16px;
+  font-size: clamp(15px, 2.6cqh, 23px);
   font-weight: 700;
   letter-spacing: 3px;
   background: linear-gradient(to bottom, #233615, #14200d);
@@ -471,7 +479,7 @@ function formatTribute(n: number): string {
 .continue-count {
   position: relative;
   z-index: 1;
-  font-size: 13px;
+  font-size: clamp(12px, 2cqh, 17px);
   opacity: 0.65;
   min-width: 24px;
   text-align: left;
