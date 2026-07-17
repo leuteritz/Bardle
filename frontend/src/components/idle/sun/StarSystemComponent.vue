@@ -94,25 +94,7 @@
       <!-- ③ Enemy Projectiles -->
       <AttackProjectileLayer :shots="enemyShots" />
 
-      <!-- Curse-Aura auf dem Stern mit dem verfluchten Planeten -->
-      <template v-if="cursedStarId !== null">
-        <div
-          v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
-          :key="'curse-star-ring-wrap-' + star.id"
-          class="star-curse-ring-wrap"
-          :ref="(el) => setMapEl(curseRingEls, star.id, el)"
-          :style="{
-            width: starSize(star.starType) + 32 + 'px',
-            height: starSize(star.starType) + 32 + 'px',
-            transform: `translate(${star.x - (starSize(star.starType) + 32) / 2}px, ${star.y - (starSize(star.starType) + 32) / 2}px) scale(${star.scale})`,
-            opacity: String(star.opacity),
-          }"
-        >
-          <div class="star-curse-ring" />
-        </div>
-      </template>
-
-      <!-- ⑤ Fluch-Badge am Stern (MMO-Stil) -->
+      <!-- ⑤ Fluch-Chip am Stern (links neben dem Stern, Stil des Jungle-Buff-Chips) -->
       <template
         v-for="star in frontStars.filter((s) => s.id === cursedStarId)"
         :key="'curse-badge-anchor-' + star.id"
@@ -121,20 +103,18 @@
           class="star-status-badge-anchor"
           :ref="(el) => setMapEl(curseBadgeEls, star.id, el)"
           :style="{
-            transform: `translate(${star.x + starSize(star.starType) / 2 - 30}px, ${star.y - starSize(star.starType) / 2 - 4}px)`,
+            transform: `translate(${star.x - starSize(star.starType) / 2 - 48}px, ${star.y - 14}px)`,
             zIndex: 16,
           }"
         >
           <Transition name="curse-badge">
             <div
               v-if="curseSecsLeft > 0"
-              class="star-status-badge star-status-badge--curse"
+              class="star-curse-chip"
+              :class="{ 'star-curse-chip--urgent': curseSecsLeft <= 3 }"
             >
-              <img :src="midRoleImage" class="star-badge-icon" alt="" draggable="false" />
-              <span
-                class="star-badge-timer"
-                :class="{ 'star-badge-timer--urgent': curseSecsLeft <= 3 }"
-              >{{ curseSecsLeft }}s</span>
+              <img :src="midRoleImage" alt="" draggable="false" />
+              <span class="star-curse-secs">{{ curseSecsLeft }}s</span>
             </div>
           </Transition>
         </div>
@@ -250,6 +230,7 @@ import {
   ENEMY_PROJECTILE_DAMAGE,
   ROLE_MID_CURSE_ATTACK_DEBUFF,
   ROLE_MID_CURSE_ATTACK_SLOW,
+  ROLE_MID_CURSE_DURATION_MS,
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
   SUN_RADIUS,
@@ -284,7 +265,6 @@ const starBackEls = new Map<string, HTMLElement>()
 const starWrapEls = new Map<string, HTMLElement>()
 const summaryEls = new Map<string, HTMLElement>()
 const countEls = new Map<string, HTMLElement>()
-const curseRingEls = new Map<string, HTMLElement>()
 const curseBadgeEls = new Map<string, HTMLElement>()
 
 type TemplateRef = Element | ComponentPublicInstance | null | undefined
@@ -307,7 +287,6 @@ const ALL_EL_MAPS: Map<string, Element>[] = [
   starWrapEls,
   summaryEls,
   countEls,
-  curseRingEls,
   curseBadgeEls,
 ]
 let sweepCounter = 0
@@ -480,15 +459,17 @@ function applyFrames() {
     }
 
     if (star.id === cursedId) {
-      const ringSize = s + 32
-      const ring = curseRingEls.get(star.id)
-      if (ring) {
-        ring.style.transform = `translate(${star.x - ringSize / 2}px, ${star.y - ringSize / 2}px) scale(${star.scale.toFixed(2)})`
-        ring.style.opacity = starOpacity
-      }
       const badge = curseBadgeEls.get(star.id)
       if (badge) {
-        badge.style.transform = `translate(${star.x + half - 30}px, ${star.y - half - 4}px)`
+        badge.style.transform = `translate(${star.x - half - 48}px, ${star.y - 14}px)`
+        const curse = roleBehaviorStore.activeCurse
+        if (curse) {
+          const frac = Math.min(
+            1,
+            Math.max(0, (curse.activeUntil - Date.now()) / ROLE_MID_CURSE_DURATION_MS),
+          )
+          badge.style.setProperty('--curse-progress', frac.toFixed(3))
+        }
       }
     }
   }
@@ -1528,16 +1509,13 @@ function starCountStyle(star: StarRenderEntry) {
   scale: 0.7;
 }
 
-@keyframes curse-ring-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ── Curse MMO Badge ──────────────────────────────────────────────────────── */
+/* ── Fluch — Countdown-Chip ───────────────────────────────────────────────
+   Runder Chip im Stil des Jungle-Buff-Chips am Planeten: dunkler Grund,
+   Mid-Rollen-Icon innen, konischer Ring außen, der mit der Restdauer
+   abschmilzt. Feste px-Größe, damit er auf allen Desktop-Auflösungen
+   lesbar bleibt — sitzt LINKS neben dem verfluchten Stern, vertikal
+   mittig, damit er die zentrierte Planeten-Anzeige darüber nicht
+   überlappt. */
 .star-status-badge-anchor {
   position: absolute;
   top: 0;
@@ -1545,62 +1523,74 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-.star-status-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.star-curse-chip {
+  position: relative;
   width: 28px;
-  padding: 3px 2px 2px;
-  border-radius: 4px;
-  background: rgba(12, 4, 20, 0.92);
-}
-
-.star-status-badge--curse {
-  border: 1px solid #c060ff;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(38, 18, 52, 0.96), rgba(12, 4, 20, 0.96));
+  display: grid;
+  place-items: center;
   box-shadow:
     0 0 8px rgba(180, 50, 255, 0.55),
-    inset 0 0 5px rgba(0, 0, 0, 0.6);
-  animation: curse-badge-pulse 2s ease-in-out infinite;
+    0 0 18px rgba(180, 50, 255, 0.25),
+    0 2px 5px rgba(0, 0, 0, 0.55);
 }
 
-.star-badge-icon {
-  width: 20px;
-  height: 20px;
+/* Countdown-Ring: conic-gradient, per Maske auf einen Ring reduziert */
+.star-curse-chip::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #c060ff calc(var(--curse-progress, 1) * 360deg),
+    rgba(192, 96, 255, 0.14) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.7));
+}
+
+.star-curse-chip img {
+  width: 18px;
+  height: 18px;
   object-fit: contain;
-  image-rendering: crisp-edges;
-  filter: drop-shadow(0 0 4px rgba(180, 50, 255, 0.8));
+  display: block;
+  filter: drop-shadow(0 0 3px rgba(180, 50, 255, 0.8));
 }
 
-.star-badge-timer {
+.star-curse-secs {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 800;
   color: #c060ff;
   line-height: 1;
-  margin-top: 2px;
   letter-spacing: 0.04em;
   text-shadow:
-    0 0 5px rgba(180, 50, 255, 0.8),
+    0 0 6px rgba(180, 50, 255, 0.8),
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.star-badge-timer--urgent {
-  color: #ff4040;
+/* Endet gleich: Ring + Text kippen auf Rot und blinken */
+.star-curse-chip--urgent::before {
+  background: conic-gradient(
+    #ff5040 calc(var(--curse-progress, 1) * 360deg),
+    rgba(255, 80, 64, 0.16) 0
+  );
+  filter: drop-shadow(0 0 5px rgba(255, 64, 64, 0.8));
+  animation: timer-urgent-blink 0.5s ease-in-out infinite;
+}
+
+.star-curse-chip--urgent .star-curse-secs {
+  color: #ff5040;
   text-shadow:
     0 0 6px rgba(255, 40, 40, 0.95),
     0 1px 2px rgba(0, 0, 0, 0.9);
   animation: timer-urgent-blink 0.5s ease-in-out infinite;
-}
-
-@keyframes curse-badge-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 6px rgba(180, 50, 255, 0.4);
-  }
-  50% {
-    box-shadow:
-      0 0 14px rgba(210, 80, 255, 0.85),
-      0 0 4px rgba(180, 50, 255, 0.3);
-  }
 }
 
 @keyframes timer-urgent-blink {
@@ -1632,10 +1622,10 @@ function starCountStyle(star: StarRenderEntry) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .star-status-badge--curse {
+  .star-curse-chip--urgent::before {
     animation: none;
   }
-  .star-badge-timer--urgent {
+  .star-curse-chip--urgent .star-curse-secs {
     animation: none;
   }
   .curse-badge-enter-active,
@@ -1644,61 +1634,4 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-/* ── Curse-Aura auf dem Stern ────────────────────────────────────────────── */
-.star-curse-ring-wrap {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
-
-.star-curse-ring {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  pointer-events: none;
-  border: 2px solid rgba(180, 50, 255, 0.75);
-  box-shadow:
-    0 0 28px rgba(180, 50, 255, 0.7),
-    0 0 70px rgba(130, 10, 230, 0.45),
-    inset 0 0 16px rgba(180, 50, 255, 0.3);
-  animation:
-    curse-star-ring-pulse 1.8s ease-in-out infinite alternate,
-    curse-ring-spin 4s linear infinite;
-}
-
-.star-curse-ring::before {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  border: 1px dashed rgba(210, 100, 255, 0.5);
-  animation: curse-ring-spin 6s linear infinite reverse;
-  pointer-events: none;
-}
-
-.star-curse-ring::after {
-  content: '';
-  position: absolute;
-  inset: -24px;
-  border-radius: 50%;
-  border: 1px solid rgba(160, 40, 255, 0.25);
-  animation: curse-ring-spin 10s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes curse-star-ring-pulse {
-  from {
-    box-shadow:
-      0 0 18px rgba(170, 40, 255, 0.55),
-      0 0 40px rgba(120, 0, 220, 0.3),
-      inset 0 0 10px rgba(170, 40, 255, 0.18);
-  }
-  to {
-    box-shadow:
-      0 0 42px rgba(210, 90, 255, 0.92),
-      0 0 90px rgba(165, 40, 250, 0.55),
-      inset 0 0 28px rgba(210, 90, 255, 0.4);
-  }
-}
 </style>
