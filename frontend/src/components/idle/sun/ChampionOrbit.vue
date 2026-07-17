@@ -87,13 +87,13 @@
         :class="{ 'champion-orbit-portrait--dimmed': isChampionDimmed(pos) }"
       />
       <Transition name="ability-icon">
-        <img
+        <span
           v-if="pos.isMain && pos.primaryRole && isAbilityActive(pos.primaryRole)"
-          :src="ROLE_BY_KEY[pos.primaryRole].image"
-          :alt="pos.primaryRole"
+          class="champion-ability-badge"
           :aria-label="pos.primaryRole + ' ability'"
-          class="champion-ability-icon"
-        />
+        >
+          <img :src="ROLE_BY_KEY[pos.primaryRole].image" :alt="pos.primaryRole" />
+        </span>
       </Transition>
     </div>
 
@@ -595,31 +595,6 @@ export default defineComponent({
 }
 
 /* ── Synergie-Glow ──────────────────────────────────────────────────────── */
-.champion-orbit-avatar--synergy::before {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(232, 192, 64, 0.7);
-  animation: synergy-ring-spin 2.5s linear infinite;
-  pointer-events: none;
-}
-
-.champion-orbit-avatar--synergy::after {
-  content: '';
-  position: absolute;
-  inset: -13px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 220, 100, 0.35);
-  animation: synergy-ring-spin 4s linear infinite reverse;
-  pointer-events: none;
-}
-
-@keyframes synergy-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
 @keyframes synergy-shimmer {
   0%, 100% {
     box-shadow:
@@ -662,35 +637,6 @@ export default defineComponent({
     0 0 70px rgba(245, 71, 71, 0.35),
     inset 0 0 14px rgba(245, 71, 71, 0.25);
   animation: shield-pulse 0.7s ease-in-out infinite alternate;
-}
-
-.champion-orbit-avatar--shield::before {
-  content: '';
-  position: absolute;
-  inset: -9px;
-  border-radius: 50%;
-  border: 2px solid rgba(245, 71, 71, 0.65);
-  animation: shield-ring-spin 2.2s linear infinite;
-  pointer-events: none;
-}
-
-.champion-orbit-avatar--shield::after {
-  content: '';
-  position: absolute;
-  inset: -16px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 140, 140, 0.35);
-  animation: shield-ring-spin 3.5s linear infinite reverse;
-  pointer-events: none;
-}
-
-@keyframes shield-ring-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes shield-pulse {
@@ -774,31 +720,6 @@ export default defineComponent({
   animation: mid-ability-pulse 1.2s ease-in-out infinite alternate;
 }
 
-.champion-orbit-avatar--ability-mid::before {
-  content: '';
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  border: 2px solid rgba(85, 152, 246, 0.65);
-  animation: mid-ring-spin 2.8s linear infinite;
-  pointer-events: none;
-}
-
-.champion-orbit-avatar--ability-mid::after {
-  content: '';
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  border: 1px dashed rgba(120, 180, 255, 0.35);
-  animation: mid-ring-spin 4.5s linear infinite reverse;
-  pointer-events: none;
-}
-
-@keyframes mid-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
 @keyframes mid-ability-pulse {
   from {
     border-width: 4px;
@@ -877,31 +798,6 @@ export default defineComponent({
     0 0 80px rgba(62, 234, 88, 0.35),
     inset 0 0 14px rgba(62, 234, 88, 0.25);
   animation: jungle-ability-pulse 1.2s ease-in-out infinite alternate;
-}
-
-.champion-orbit-avatar--ability-jungle::before {
-  content: '';
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  border: 2px solid rgba(62, 234, 88, 0.6);
-  animation: jungle-ring-spin 2.8s linear infinite;
-  pointer-events: none;
-}
-
-.champion-orbit-avatar--ability-jungle::after {
-  content: '';
-  position: absolute;
-  inset: -18px;
-  border-radius: 50%;
-  border: 1px dashed rgba(92, 230, 106, 0.35);
-  animation: jungle-ring-spin 4.5s linear infinite reverse;
-  pointer-events: none;
-}
-
-@keyframes jungle-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
 }
 
 @keyframes jungle-ability-pulse {
@@ -1137,12 +1033,9 @@ export default defineComponent({
   .champion-orbit-avatar--ability-adc {
     animation: none;
   }
-  .champion-orbit-avatar--ability-jungle::before,
-  .champion-orbit-avatar--ability-jungle::after,
-  .champion-orbit-avatar--ability-mid::before,
-  .champion-orbit-avatar--ability-mid::after,
   .champion-orbit-avatar--ability-adc::before,
-  .champion-orbit-avatar--ability-adc::after {
+  .champion-orbit-avatar--ability-adc::after,
+  .champion-ability-badge {
     animation: none;
   }
   .champion-orbit-avatar--role-hover,
@@ -1152,20 +1045,51 @@ export default defineComponent({
   }
 }
 
-/* ── Ability-Icon ──────────────────────────────────────────────────────────── */
-.champion-ability-icon {
+/* ── Ability-Badge ─────────────────────────────────────────────────────────
+   Status-Badge im Messenger-Stil: dunkler Chip mit Rollenfarben-Ring, sitzt
+   unten rechts außerhalb des Avatars. Feste px-Größe und -Offsets: Prozent-
+   werte würden mit der per-Frame wechselnden Avatar-Größe (Parallax) mit-
+   wandern und das Badge sichtbar wackeln lassen. */
+.champion-ability-badge {
   position: absolute;
-  bottom: -8px;
-  right: -8px;
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  display: block;
+  right: -10px;
+  bottom: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(36, 44, 62, 0.96), rgba(8, 11, 20, 0.96));
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
+    0 0 18px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
   pointer-events: none;
   z-index: 4;
-  border-radius: 50%;
-  border: 4px solid color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--role-color, #c89040) 80%, transparent));
+  animation: ability-badge-pulse 1.6s ease-in-out infinite;
+}
+
+.champion-ability-badge img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--role-color, #c89040) 80%, transparent));
+}
+
+@keyframes ability-badge-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 8px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent),
+      0 0 18px color-mix(in srgb, var(--role-color, #c89040) 30%, transparent),
+      0 2px 6px rgba(0, 0, 0, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--role-color, #c89040) 95%, transparent),
+      0 0 26px color-mix(in srgb, var(--role-color, #c89040) 50%, transparent),
+      0 2px 6px rgba(0, 0, 0, 0.55);
+  }
 }
 
 .ability-icon-enter-active,
