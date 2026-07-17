@@ -78,10 +78,6 @@
         class="planet-orbit-portrait"
         :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
       />
-      <span class="planet-bonus-badge" :title="pos.roleLabel">
-        <Icon v-if="pos.roleIcon.includes(':')" :icon="pos.roleIcon" class="planet-badge-gi" />
-        <span v-else>{{ pos.roleIcon }}</span>
-      </span>
     </div>
 
     <!-- HP Bars -->
@@ -155,11 +151,9 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
@@ -185,8 +179,6 @@ interface PlanetRenderPos {
   isTurret: boolean
   zIndex: number
   color: string
-  roleLabel: string
-  roleIcon: string
   hintOpacity: number
   orbitRx: number
   orbitRy: number
@@ -232,28 +224,9 @@ function getOrbitPos(
   }
 }
 
-function slotRoleLabel(slot: PlanetSlot): string {
-  if (!slot.role) return 'No Role — click to assign'
-  const r = PLANET_ROLES[slot.role]
-  switch (r.bonusType) {
-    case 'auto_attack_dps':
-      return `${r.name}: +${r.bonusPerSlot} DPS/s`
-    case 'material_harvest_rate':
-      return `${r.name}: Harvest every 30s`
-    case 'expedition_reward_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Exped. Reward`
-    case 'boss_damage_reduction':
-      return `${r.name}: -${Math.round(r.bonusPerSlot * 100)}% Orbit Damage`
-    case 'offline_boost':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Offline`
-    case 'building_cps_multiplier':
-      return `${r.name}: +${Math.round(r.bonusPerSlot * 100)}% Building CPS`
-  }
-}
-
 export default defineComponent({
   name: 'PlanetOrbit',
-  components: { AttackProjectileLayer, OrbitPath, Icon },
+  components: { AttackProjectileLayer, OrbitPath },
   setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
@@ -368,7 +341,6 @@ export default defineComponent({
         const hintOpacity = Math.max(0, 1 - visibleFactor)
 
         const color = slot.role ? PLANET_ROLES[slot.role].color : '#888888'
-        const roleIcon = slot.role ? PLANET_ROLES[slot.role].icon : '?'
         const isTurret = slot.role === 'turret_planet'
 
         const planetImage = slot.role ? PLANET_ROLES[slot.role].image : '/img/planets/planet.png'
@@ -410,8 +382,6 @@ export default defineComponent({
           isTurret,
           zIndex,
           color,
-          roleLabel: slotRoleLabel(slot),
-          roleIcon,
           hintOpacity,
           orbitRx: rx,
           orbitRy: ry,
@@ -636,30 +606,6 @@ export default defineComponent({
 
 .planet-orbit-item--foreground {
   filter: brightness(1.15) saturate(1.15);
-}
-
-.planet-bonus-badge {
-  position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  font-size: 8px;
-  line-height: 15px;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid var(--planet-color, #aaa);
-  pointer-events: none;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.planet-badge-gi {
-  width: 9px;
-  height: 9px;
-  color: var(--planet-color, #c89040);
 }
 
 @media (prefers-reduced-motion: reduce) {
