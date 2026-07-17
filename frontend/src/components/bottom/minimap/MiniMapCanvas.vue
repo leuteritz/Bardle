@@ -49,6 +49,7 @@ import {
   MINIMAP_GALAXY_BRIGHT_STARS,
   MINIMAP_GALAXY_CORE_RADIUS,
 } from '@/config/constants'
+import { GALAXY_THEMES } from '@/config/galaxyThemes'
 
 const ARRIVAL_TRANSITION_MS = 900
 
@@ -75,26 +76,53 @@ interface GalaxyGeo {
   twist: number
   squash: number
   radiusScale: number
-  accent: string // rgb triplet for outer arms / knots / bright stars
+  armPhase: number // Grundwinkel der Arme (entkoppelt Form von Rotation)
+  armSpread: number // Streubreite der Arm-Partikel (eng gebündelt ↔ diffus)
+  barLen: number // > 0 → Balkenspirale: Zentralbalken in Galaxy-Plane-Einheiten
 }
 
-// Seeded per-galaxy accent palettes: ice blue, ember orange, teal, violet.
-// Core/bulge always stays warm gold — the accent makes galaxies distinct.
-const GALAXY_ACCENTS = ['176, 200, 255', '255, 150, 110', '150, 230, 200', '208, 168, 255']
-
-function galaxyGeo(galaxyKey: number): GalaxyGeo {
-  const rng = seededRng(galaxyKey * 40093 + 11)
+// Vier Formfamilien statt "immer dieselbe Spirale, nur gedreht": klassische
+// Spirale, mehrarmige Spirale, Balkenspirale, lockere weit geöffnete Spirale.
+// Geseedet mit dem per-Run-mapSeed → jede Galaxie sieht in jedem Durchlauf
+// anders aus, bleibt aber über Reloads stabil.
+function galaxyGeo(seed: number): GalaxyGeo {
+  const rng = seededRng(seed * 40093 + 11)
+  const form = rng()
+  let arms: number
+  let twistMul: number
+  let spread: number
+  let barLen = 0
+  if (form < 0.3) {
+    // Klassische Spirale — 2–3 klar gezeichnete Arme
+    arms = rng() < 0.55 ? MINIMAP_GALAXY_ARMS_MIN : MINIMAP_GALAXY_ARMS_MIN + 1
+    twistMul = 0.9 + rng() * 0.45
+    spread = 0.85 + rng() * 0.3
+  } else if (form < 0.55) {
+    // Mehrarmige Spirale — viele kurze, enger gewundene Arme
+    arms = Math.max(MINIMAP_GALAXY_ARMS_MAX, 4) + (rng() < 0.4 ? 1 : 0)
+    twistMul = 0.55 + rng() * 0.3
+    spread = 0.7 + rng() * 0.25
+  } else if (form < 0.8) {
+    // Balkenspirale — zwei Arme, die an den Enden des Zentralbalkens ansetzen
+    arms = 2
+    twistMul = 0.75 + rng() * 0.4
+    spread = 0.8 + rng() * 0.3
+    barLen = MINIMAP_GALAXY_INNER_RADIUS * (1.5 + rng() * 0.8)
+  } else {
+    // Lockere Spirale — weit geöffnete, diffuse Arme
+    arms = rng() < 0.5 ? MINIMAP_GALAXY_ARMS_MIN : MINIMAP_GALAXY_ARMS_MIN + 1
+    twistMul = 0.45 + rng() * 0.3
+    spread = 1.25 + rng() * 0.45
+  }
   return {
-    arms:
-      rng() < 0.6
-        ? MINIMAP_GALAXY_ARMS_MIN
-        : MINIMAP_GALAXY_ARMS_MIN +
-          Math.min(1, MINIMAP_GALAXY_ARMS_MAX - MINIMAP_GALAXY_ARMS_MIN),
+    arms,
     tilt: rng() * Math.PI,
-    twist: MINIMAP_GALAXY_SWIRL_TURNS + (rng() - 0.5) * 1.1,
-    squash: MINIMAP_GALAXY_SQUASH + (rng() - 0.5) * 0.28,
-    radiusScale: 0.9 + rng() * 0.18,
-    accent: GALAXY_ACCENTS[Math.floor(rng() * GALAXY_ACCENTS.length)],
+    twist: (MINIMAP_GALAXY_SWIRL_TURNS + (rng() - 0.5) * 0.9) * twistMul,
+    squash: MINIMAP_GALAXY_SQUASH + (rng() - 0.5) * 0.3,
+    radiusScale: 0.88 + rng() * 0.22,
+    armPhase: rng() * Math.PI * 2,
+    armSpread: spread,
+    barLen,
   }
 }
 
@@ -109,7 +137,7 @@ function galaxyPlaneToWorld(geo: GalaxyGeo, angle: number, r: number): DotPos {
 
 /** Centerline angle of a spiral arm at normalized radius t (0 core → 1 rim). */
 function armAngle(geo: GalaxyGeo, arm: number, t: number): number {
-  return (arm / geo.arms) * Math.PI * 2 + t * geo.twist * Math.PI * 2
+  return geo.armPhase + (arm / geo.arms) * Math.PI * 2 + t * geo.twist * Math.PI * 2
 }
 
 /**
@@ -161,19 +189,21 @@ const GALAXY_PARTICLE_COLORS = ['240, 214, 160', '255, 246, 228']
 let galaxyParticleCache: GalaxyParticle[] = []
 let galaxyParticleCacheKey = -1
 
-function getGalaxyParticles(galaxyKey: number): GalaxyParticle[] {
-  if (galaxyParticleCacheKey === galaxyKey) return galaxyParticleCache
-  const geo = galaxyGeo(galaxyKey)
-  const rng = seededRng(galaxyKey * 91127 + 3)
+function getGalaxyParticles(seed: number): GalaxyParticle[] {
+  if (galaxyParticleCacheKey === seed) return galaxyParticleCache
+  const geo = galaxyGeo(seed)
+  const rng = seededRng(seed * 91127 + 3)
   const gauss = () => rng() + rng() + rng() - 1.5
   const parts: GalaxyParticle[] = []
 
   const bulgeN = Math.round(MINIMAP_GALAXY_PARTICLES * 0.24)
   const hazeN = Math.round(MINIMAP_GALAXY_PARTICLES * 0.14)
+  const barN = geo.barLen > 0 ? Math.round(MINIMAP_GALAXY_PARTICLES * 0.1) : 0
   const armN =
     MINIMAP_GALAXY_PARTICLES -
     bulgeN -
     hazeN -
+    barN -
     MINIMAP_GALAXY_KNOTS -
     MINIMAP_GALAXY_BRIGHT_STARS
 
@@ -188,13 +218,25 @@ function getGalaxyParticles(galaxyKey: number): GalaxyParticle[] {
     })
   }
 
+  // Balkenspirale: leuchtender Zentralbalken, an dessen Enden die Arme ansetzen
+  for (let i = 0; i < barN; i++) {
+    const along = gauss() * 0.55
+    parts.push({
+      angle: geo.armPhase + (along >= 0 ? 0 : Math.PI) + gauss() * 0.14,
+      r: Math.min(Math.abs(along), 1) * geo.barLen,
+      size: 0.5 + rng() * 1.1,
+      color: rng() < 0.7 ? 0 : 1,
+      alpha: 0.28 + rng() * 0.26,
+    })
+  }
+
   // Spiral arms: tight scatter around the centerline, warm → accent outward
   for (let i = 0; i < armN; i++) {
     const arm = i % geo.arms
     const t = Math.pow(rng(), 0.85)
     const tint = rng()
     parts.push({
-      angle: armAngle(geo, arm, t) + gauss() * (0.42 - 0.22 * t),
+      angle: armAngle(geo, arm, t) + gauss() * (0.42 - 0.22 * t) * geo.armSpread,
       r: armRadius(geo, t) + gauss() * 0.012,
       size: 0.5 + rng() * 1.1,
       color: t < 0.35 ? (tint < 0.7 ? 0 : 1) : tint < 0.45 ? 1 : tint < 0.8 ? 2 : 0,
@@ -240,8 +282,27 @@ function getGalaxyParticles(galaxyKey: number): GalaxyParticle[] {
   }
 
   galaxyParticleCache = parts
-  galaxyParticleCacheKey = galaxyKey
+  galaxyParticleCacheKey = seed
   return parts
+}
+
+// Leuchtender Minimap-Akzent aus der Akzentfarbe des aktuellen Galaxie-Themes:
+// Farbton bleibt erhalten, die (bewusst dunkle) Theme-Farbe wird für die
+// additiven Partikel auf Leuchtkraft skaliert und leicht Richtung Weiß gehoben.
+let themeAccentCache = ''
+let themeAccentCacheKey = -1
+
+function minimapAccentForTheme(themeIndex: number): string {
+  if (themeAccentCacheKey === themeIndex) return themeAccentCache
+  const hex = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length].accentColor
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const scale = 225 / Math.max(r, g, b, 1)
+  const lift = (v: number) => Math.round(v * scale + (255 - v * scale) * 0.22)
+  themeAccentCache = `${lift(r)}, ${lift(g)}, ${lift(b)}`
+  themeAccentCacheKey = themeIndex
+  return themeAccentCache
 }
 
 interface WarpParticle {
@@ -820,14 +881,13 @@ export default defineComponent({
     }
 
     function generateDots() {
-      const galaxyKey = galaxyStore.currentGalaxy
       // One dot per past attempt (rescued or failed) + the upcoming target.
       const totalDots = galaxyStore.attemptResults.length + 1
       // Seeded by the per-run mapSeed: a fresh random layout every galaxy
       // (and every playthrough), stable across reloads and prefix-stable when
       // extra dots are appended after a failed star.
       const rng = seededRng(galaxyStore.mapSeed)
-      const geo = galaxyGeo(galaxyKey)
+      const geo = galaxyGeo(galaxyStore.mapSeed)
       const gauss = () => rng() + rng() + rng() - 1.5
       const clamp = (p: DotPos): DotPos => ({
         x: Math.min(0.94, Math.max(0.06, p.x)),
@@ -986,7 +1046,8 @@ export default defineComponent({
       // (bulge / two arms / knots / haze) drawn additively over a two-layer
       // core glow. Follows the camera and fades with the overview layer.
       // Static (no rotation) so the rescue stars stay pinned to the arms.
-      const geo = galaxyGeo(galaxyStore.currentGalaxy)
+      const geo = galaxyGeo(galaxyStore.mapSeed)
+      const themeAccent = minimapAccentForTheme(galaxyStore.currentThemeIndex)
       if (farAlpha > 0.01) {
         ctx.save()
         ctx.globalCompositeOperation = 'lighter'
@@ -1004,10 +1065,10 @@ export default defineComponent({
         ctx.fillStyle = halo
         ctx.fillRect(gcx - coreR * 2, gcy - coreR * 2, coreR * 4, coreR * 4)
 
-        for (const p of getGalaxyParticles(galaxyStore.currentGalaxy)) {
+        for (const p of getGalaxyParticles(galaxyStore.mapSeed)) {
           const wp = galaxyPlaneToWorld(geo, p.angle, p.r)
           const [px, py] = wToC(wp.x, wp.y)
-          const rgb = p.color === 2 ? geo.accent : GALAXY_PARTICLE_COLORS[p.color]
+          const rgb = p.color === 2 ? themeAccent : GALAXY_PARTICLE_COLORS[p.color]
           drawStarParticle(px, py, p.size, rgb, p.alpha * farAlpha)
         }
         ctx.restore()
@@ -1035,7 +1096,7 @@ export default defineComponent({
           const tint = nfRng()
           const a = (0.25 + nfRng() * 0.5) * nearAlpha
           const [px, py] = wToC(wx, wy)
-          drawStarParticle(px, py, size, tint < 0.6 ? '255, 246, 228' : geo.accent, a)
+          drawStarParticle(px, py, size, tint < 0.6 ? '255, 246, 228' : themeAccent, a)
         }
         ctx.restore()
       }
