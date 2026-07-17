@@ -303,28 +303,40 @@ function onSlotLeave() {
   }
 }
 
-/* ── Role label at the bottom ── */
+/* ── Role label at the bottom ──
+   Banner über die volle Kartenbreite: großzügiger Scrim, kräftige
+   Versal-Typo in der Rollenfarbe — füllt die untere Kartenzone. */
 .champ-card-label {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 3;
-  padding: 8px 0 4px;
+  padding: 26px 0 8px;
   text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: rgba(180, 130, 50, 0.7);
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-indent: 0.16em; /* gleicht das letter-spacing des letzten Zeichens aus */
+  color: color-mix(in srgb, var(--role-color, #c89040) 55%, #f0e6d0);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.94));
   line-height: 1;
   pointer-events: none;
-  transition: color 0.2s ease;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 12px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent);
+  transition: color 0.2s ease, text-shadow 0.2s ease;
 }
-.champ-card--filled .champ-card-label {
-  color: #e8c040;
+.champ-card:not(.champ-card--filled) .champ-card-label {
+  color: color-mix(in srgb, var(--role-color, #c89040) 40%, rgba(200, 180, 140, 0.55));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 .champ-card:hover .champ-card-label {
-  color: #f0d060;
+  color: color-mix(in srgb, var(--role-color, #c89040) 40%, #fff);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 16px color-mix(in srgb, var(--role-color, #c89040) 70%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
