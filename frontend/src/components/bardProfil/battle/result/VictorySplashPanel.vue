@@ -29,6 +29,18 @@
       <div v-if="promoHint" class="promo-hint">▲ {{ promoHint }}</div>
     </div>
 
+    <div
+      v-if="honorTribute > 0"
+      class="honor-tribute"
+      :style="{ '--ceremony-delay': ceremonyDelay }"
+    >
+      <div class="tribute-row">
+        <img src="/img/BardAbilities/BardChime.png" alt="" class="tribute-chime-img" />
+        <span class="tribute-amount">+{{ formatNumber(honorTribute) }}</span>
+      </div>
+      <div class="tribute-sub">CHIMES · HONOR TRIBUTE</div>
+    </div>
+
     <div v-if="baronBounty > 0" class="baron-bounty">
       <img src="/img/baron.png" alt="Baron" class="bounty-img" />
       <span class="bounty-text">HAND OF BARON · +{{ baronBounty.toLocaleString('en-US') }} CHIMES</span>
@@ -54,6 +66,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
+import { formatNumber } from '@/config/numberFormat'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,
@@ -68,6 +81,12 @@ const teamKills = computed(() => battleStore.lastAutoBattleResult?.teamKills ?? 
 const enemyKills = computed(() => battleStore.lastAutoBattleResult?.enemyKills ?? battleStore.team2Kills)
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
 const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)
+const honorTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
+
+/** The tribute reveals right after the last medal has been stamped in the honor panel. */
+const ceremonyDelay = computed(
+  () => `${(0.5 + battleStore.honoredChampions.length * 0.55 + 0.2).toFixed(2)}s`,
+)
 
 const durationStr = computed(() => {
   const d = battleStore.lastAutoBattleResult?.duration ?? battleStore.battleTime
@@ -262,6 +281,47 @@ const promoHint = computed(() => {
   text-align: center;
 }
 
+/* ── Honor tribute (chimes earned by the ceremony) ── */
+.honor-tribute {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 26px;
+  background: rgba(232, 192, 64, 0.07);
+  border: 1px solid rgba(232, 192, 64, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(232, 192, 64, 0.18);
+  animation: tribute-reveal 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) var(--ceremony-delay, 0s) backwards;
+}
+.tribute-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tribute-chime-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.6));
+}
+.tribute-amount {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffe28a;
+  text-shadow: 0 0 22px rgba(232, 192, 64, 0.55);
+}
+.tribute-sub {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: #9a854e;
+}
+@keyframes tribute-reveal {
+  0% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 /* ── Hand of Baron bounty ── */
 .baron-bounty {
   display: flex;
@@ -330,6 +390,6 @@ const promoHint = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-rays, .crest-dashes { animation: none; }
+  .splash-rays, .crest-dashes, .honor-tribute { animation: none; }
 }
 </style>

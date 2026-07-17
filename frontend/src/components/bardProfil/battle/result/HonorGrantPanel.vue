@@ -64,7 +64,7 @@
                 v-if="isHonored(champ.name) && battleStore.honorTributeFor(champ.name) > 0"
                 class="tribute-chip"
               >
-                <img src="/img/ChimesPerClick.png" alt="" class="chime-img" />
+                <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
                 +{{ formatTribute(battleStore.honorTributeFor(champ.name)) }}
               </span>
               <span class="medal-stamp" :class="{ 'medal-stamp--on': isHonored(champ.name) }">
@@ -76,19 +76,8 @@
       </template>
     </div>
 
-    <!-- Footer: tribute total + continue -->
+    <!-- Footer: continue -->
     <div class="honor-foot">
-      <div class="tribute-total" :class="{ 'tribute-total--paid': totalTribute > 0 }">
-        <span class="tribute-label">HONOR TRIBUTE</span>
-        <span
-          class="tribute-value"
-          :class="{ 'tribute-value--none': totalTribute === 0 }"
-          :style="{ '--ceremony-delay': ceremonyDelay }"
-        >
-          <img v-if="totalTribute > 0" src="/img/ChimesPerClick.png" alt="" class="chime-img chime-img--big" />
-          {{ totalTribute > 0 ? '+' + formatTribute(totalTribute) + ' CHIMES' : 'NO OWN HONORS' }}
-        </span>
-      </div>
       <button class="continue-btn" @click="battleStore.confirmHonorAndContinue()">
         <span class="continue-label">CONTINUE</span>
         <span class="continue-count">{{ battleStore.resultCountdown }}s</span>
@@ -111,7 +100,6 @@ const sides = computed(() => [
   { key: 'enemy', label: 'ENEMY TEAM', champs: battleStore.team2.filter((c) => c.name) },
 ])
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
-const totalTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
 
 function isHonored(name: string): boolean {
   return battleStore.honoredChampions.includes(name)
@@ -123,11 +111,6 @@ function honorDelayStyle(name: string): Record<string, string> {
   if (idx < 0) return {}
   return { '--honor-delay': `${0.5 + idx * 0.55}s` }
 }
-
-/** The tribute total pops in right after the last medal has been stamped. */
-const ceremonyDelay = computed(
-  () => `${(0.5 + battleStore.honoredChampions.length * 0.55 + 0.2).toFixed(2)}s`,
-)
 
 const countdownPercent = computed(() =>
   Math.max(0, Math.min(100, (battleStore.resultCountdown / BATTLE_RESULT_COUNTDOWN_SECONDS) * 100)),
@@ -424,10 +407,6 @@ function formatTribute(n: number): string {
   height: 14px;
   object-fit: contain;
 }
-.chime-img--big {
-  width: 19px;
-  height: 19px;
-}
 
 .medal-stamp {
   width: 30px;
@@ -459,51 +438,6 @@ function formatTribute(n: number): string {
   gap: 13px;
   flex-shrink: 0;
 }
-.tribute-total {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  background: rgba(232, 192, 64, 0.07);
-  border: 1px solid rgba(232, 192, 64, 0.3);
-}
-.tribute-label {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: #8a7238;
-}
-.tribute-value {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #ffe28a;
-  text-shadow: 0 0 12px rgba(232, 192, 64, 0.45);
-  white-space: nowrap;
-  /* Revealed once the last medal has been stamped */
-  animation: tribute-reveal 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) var(--ceremony-delay, 0s) backwards;
-}
-.tribute-total--paid {
-  animation: tribute-flash 0.9s ease-out var(--ceremony-delay, 0s) backwards;
-}
-.tribute-value--none {
-  color: #8a7238;
-  text-shadow: none;
-  font-size: 13px;
-}
-@keyframes tribute-reveal {
-  0% { opacity: 0; transform: scale(0.7); }
-  100% { opacity: 1; transform: scale(1); }
-}
-@keyframes tribute-flash {
-  0% { box-shadow: 0 0 0 rgba(232, 192, 64, 0); }
-  30% { box-shadow: 0 0 26px rgba(232, 192, 64, 0.55); border-color: #ffe28a; }
-  100% { box-shadow: 0 0 0 rgba(232, 192, 64, 0); }
-}
-
 .continue-btn {
   position: relative;
   flex: 1;
@@ -555,9 +489,7 @@ function formatTribute(n: number): string {
 @media (prefers-reduced-motion: reduce) {
   .medal-stamp--on,
   .tribute-chip,
-  .row--honored,
-  .tribute-value,
-  .tribute-total--paid {
+  .row--honored {
     animation: none;
   }
 }
