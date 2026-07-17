@@ -66,11 +66,11 @@ const champTooltipExtra = computed(() =>
 )
 
 const ROLE_DISPLAY: Record<string, { label: string; color: string }> = {
-  top:     { label: 'Fighter',  color: '#e6813a' },
-  jungle:  { label: 'Assassin', color: '#e8534a' },
-  mid:     { label: 'Mage',     color: '#5b8de8' },
-  adc:     { label: 'Marksman', color: '#61c76f' },
-  support: { label: 'Support',  color: '#c37de0' },
+  top: { label: 'Fighter', color: '#e6813a' },
+  jungle: { label: 'Assassin', color: '#e8534a' },
+  mid: { label: 'Mage', color: '#5b8de8' },
+  adc: { label: 'Marksman', color: '#61c76f' },
+  support: { label: 'Support', color: '#c37de0' },
 }
 
 function getRoleDisplay(name: string) {
@@ -79,7 +79,10 @@ function getRoleDisplay(name: string) {
 }
 
 function onChampBadgeEnter() {
-  if (champHideTimer) { clearTimeout(champHideTimer); champHideTimer = null }
+  if (champHideTimer) {
+    clearTimeout(champHideTimer)
+    champHideTimer = null
+  }
   if (champBadgeRef.value) {
     const rect = champBadgeRef.value.getBoundingClientRect()
     champTooltipStyle.value = {
@@ -93,15 +96,22 @@ function onChampBadgeEnter() {
 }
 
 function onChampBadgeLeave() {
-  champHideTimer = setTimeout(() => { showChampTooltip.value = false }, 120)
+  champHideTimer = setTimeout(() => {
+    showChampTooltip.value = false
+  }, 120)
 }
 
 function onChampTooltipEnter() {
-  if (champHideTimer) { clearTimeout(champHideTimer); champHideTimer = null }
+  if (champHideTimer) {
+    clearTimeout(champHideTimer)
+    champHideTimer = null
+  }
 }
 
 function onChampTooltipLeave() {
-  champHideTimer = setTimeout(() => { showChampTooltip.value = false }, 120)
+  champHideTimer = setTimeout(() => {
+    showChampTooltip.value = false
+  }, 120)
 }
 
 function openChampionInShop(name: string) {
@@ -111,11 +121,7 @@ function openChampionInShop(name: string) {
 }
 
 function handleReset() {
-  if (
-    window.confirm(
-      'Really delete save? This action cannot be undone.',
-    )
-  ) {
+  if (window.confirm('Really delete save? This action cannot be undone.')) {
     resetGame()
   }
 }
@@ -197,13 +203,15 @@ async function measure() {
   // border-radius: 0 0 50% 50% / 0 0 100% 100% → entire left/right sides are elliptical arcs
   // with h-radius = 50%w, v-radius = 100%h, arc center at (w/2, 0) relative to element top.
   const headerRect = headerRef.value!.getBoundingClientRect()
-  const timerBarY = Math.max(0, headerRect.bottom - r.top)   // y from element top to timer-bar row
+  const timerBarY = Math.max(0, headerRect.bottom - r.top) // y from element top to timer-bar row
   const hR = r.width * 0.5
   const vR = r.height
   const t = Math.min(1, timerBarY / vR)
-  const xInset = hR * (1 - Math.sqrt(1 - t * t))       // inset of visible border from box edge
-  document.documentElement.style.setProperty('--bar-side-width',
-    `${Math.max(0, r.left + xInset - headerRect.left)}px`)
+  const xInset = hR * (1 - Math.sqrt(1 - t * t)) // inset of visible border from box edge
+  document.documentElement.style.setProperty(
+    '--bar-side-width',
+    `${Math.max(0, r.left + xInset - headerRect.left)}px`,
+  )
   // Read actual rendered badge height so --level-badge-bottom stays correct at all fluid sizes
   const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
   const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50
@@ -215,8 +223,11 @@ function updateHeaderHeight() {
   if (!headerRef.value) return
   const rect = headerRef.value.getBoundingClientRect()
   document.documentElement.style.setProperty('--header-total-height', `${rect.bottom}px`)
-  document.documentElement.style.setProperty('--header-vp-left',  `${rect.left}px`)
-  document.documentElement.style.setProperty('--header-vp-right', `${window.innerWidth - rect.right}px`)
+  document.documentElement.style.setProperty('--header-vp-left', `${rect.left}px`)
+  document.documentElement.style.setProperty(
+    '--header-vp-right',
+    `${window.innerWidth - rect.right}px`,
+  )
   headerW.value = rect.width
   headerH.value = rect.height
   headerR.value = parseFloat(getComputedStyle(headerRef.value).borderBottomLeftRadius) || 20
@@ -252,10 +263,37 @@ onUnmounted(() => {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_SHADOW" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_WOOD"   stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_GRAIN"  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-      <path :d="headerFramePath" fill="none" :stroke="BOTTOM_FRAME_STROKE_SHEEN"  stroke-width="1"   stroke-linecap="round" />
+      <path
+        :d="headerFramePath"
+        fill="none"
+        :stroke="BOTTOM_FRAME_STROKE_SHADOW"
+        stroke-width="5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        :d="headerFramePath"
+        fill="none"
+        :stroke="BOTTOM_FRAME_STROKE_WOOD"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        :d="headerFramePath"
+        fill="none"
+        :stroke="BOTTOM_FRAME_STROKE_GRAIN"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        :d="headerFramePath"
+        fill="none"
+        :stroke="BOTTOM_FRAME_STROKE_SHEEN"
+        stroke-width="1"
+        stroke-linecap="round"
+      />
     </svg>
 
     <!-- ════════ LINKE SEITE ════════ -->
@@ -317,11 +355,13 @@ onUnmounted(() => {
             <span
               class="sub-stat-value cps-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-            >{{ formatNumber(gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier) }}</span>
+              >{{ formatNumber(gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier) }}</span
+            >
             <span
               class="sub-stat-label cps-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-            >/sec</span>
+              >/sec</span
+            >
           </div>
           <!-- One shared chime between the two stats instead of one each -->
           <img
@@ -334,18 +374,20 @@ onUnmounted(() => {
             <span
               class="sub-stat-value click-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-            >{{ formatNumber(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}</span>
+              >{{ formatNumber(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}</span
+            >
             <span
               class="sub-stat-label click-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-            >/click</span>
+              >/click</span
+            >
           </div>
         </div>
       </div>
 
       <div
         class="arc-level-badge"
-        :style="{ top: (svgH - badgeOverlapPx) + 'px' }"
+        :style="{ top: svgH - badgeOverlapPx + 'px' }"
         @mouseenter="onCenterEnter"
         @mouseleave="onCenterLeave"
       >
@@ -354,7 +396,7 @@ onUnmounted(() => {
 
       <button
         class="center-reset-btn"
-        :style="{ top: (svgH - badgeOverlapPx * 0.5) + 'px' }"
+        :style="{ top: svgH - badgeOverlapPx * 0.5 + 'px' }"
         title="Delete Save"
         @click.stop="handleReset"
       >
@@ -368,7 +410,9 @@ onUnmounted(() => {
           :style="expedBadgeStyle"
           :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
           @click.stop="openTeamTab"
-        >{{ expeditionBadgeCount }}</button>
+        >
+          {{ expeditionBadgeCount }}
+        </button>
       </Transition>
 
       <Transition name="header-badge">
@@ -381,7 +425,9 @@ onUnmounted(() => {
           @click.stop="openTeamTab"
           @mouseenter="onChampBadgeEnter"
           @mouseleave="onChampBadgeLeave"
-        >{{ championBadgeCount }}</button>
+        >
+          {{ championBadgeCount }}
+        </button>
       </Transition>
     </div>
 
@@ -431,12 +477,10 @@ onUnmounted(() => {
             class="champ-tt__item"
             @click="openChampionInShop(name)"
           >
-            <img
-              :src="battleStore.getChampionImage(name)"
-              class="champ-tt__img"
-              :alt="name"
-            />
-            <span class="champ-tt__name" :style="{ color: getRoleDisplay(name).color }">{{ name }}</span>
+            <img :src="battleStore.getChampionImage(name)" class="champ-tt__img" :alt="name" />
+            <span class="champ-tt__name" :style="{ color: getRoleDisplay(name).color }">{{
+              name
+            }}</span>
           </li>
           <li v-if="champTooltipExtra > 0" class="champ-tt__item champ-tt__item--more">
             <span class="champ-tt__more-dots">…</span>
@@ -522,7 +566,14 @@ onUnmounted(() => {
   left: 50%;
   top: 2px;
   bottom: calc(
-    -1 * (min(max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)), clamp(20px, 5dvh, 55px)) + 7px)
+    -1 *
+      (
+        min(
+            max(var(--bump-center), 50dvh - min(480px, 45dvh) - var(--header-total-height)),
+            clamp(20px, 5dvh, 55px)
+          ) +
+          7px
+      )
   );
   transform: translateX(-50%);
   z-index: 20;
@@ -602,6 +653,10 @@ onUnmounted(() => {
   object-fit: contain;
   flex-shrink: 0;
   opacity: 0.9;
+  /* Rendered larger via scale so the layout box (and both stats
+     around it) stays exactly where it is */
+  transform: scale(1.75);
+  transform-origin: center;
 }
 .sub-stat-value {
   font-size: clamp(0.55rem, 0.75vw, 0.85rem);
@@ -610,7 +665,9 @@ onUnmounted(() => {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   /* Smooth hand-back when the MVP buff highlight ends */
-  transition: color 1s ease-out, text-shadow 1s ease-out;
+  transition:
+    color 1s ease-out,
+    text-shadow 1s ease-out;
 }
 /* MVP honor buff: numbers AND their /sec | /click labels get bolder and glow
    stronger in their OWN color (green for /sec, amber for /click) — currentColor
@@ -627,7 +684,8 @@ onUnmounted(() => {
   animation: stat-buffed-pulse 1.2s ease-in-out infinite;
 }
 @keyframes stat-buffed-pulse {
-  0%, 100% {
+  0%,
+  100% {
     text-shadow:
       0 0 3px currentColor,
       0 0 10px currentColor;
@@ -640,7 +698,9 @@ onUnmounted(() => {
 }
 @media (prefers-reduced-motion: reduce) {
   .sub-stat-value.stat-buffed,
-  .sub-stat-label.stat-buffed { animation: none; }
+  .sub-stat-label.stat-buffed {
+    animation: none;
+  }
 }
 .sub-stat-label {
   font-size: clamp(0.45rem, 0.6vw, 0.72rem);
@@ -650,7 +710,9 @@ onUnmounted(() => {
   line-height: 1;
   margin-left: 1px;
   /* Smooth hand-back when the MVP buff highlight ends */
-  transition: color 1s ease-out, text-shadow 1s ease-out;
+  transition:
+    color 1s ease-out,
+    text-shadow 1s ease-out;
 }
 
 /* ================================================================
@@ -730,7 +792,7 @@ onUnmounted(() => {
 }
 .chimes-text-glow {
   filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7))
-          drop-shadow(0 0 24px rgba(251, 191, 36, 0.28));
+    drop-shadow(0 0 24px rgba(251, 191, 36, 0.28));
 }
 .cps-text-glow {
   color: #74d448;
@@ -884,7 +946,7 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  width:  clamp(26px, 2.2vw, 48px);
+  width: clamp(26px, 2.2vw, 48px);
   height: clamp(26px, 2.2vw, 48px);
   border-radius: 50%;
   background: linear-gradient(to bottom, #4a8a28, #2e6018);
@@ -913,8 +975,8 @@ onUnmounted(() => {
   left: calc(50% + 33px);
   z-index: 26;
   pointer-events: auto;
-  width:     clamp(12px, 1.2vw, 18px);
-  height:    clamp(12px, 1.2vw, 18px);
+  width: clamp(12px, 1.2vw, 18px);
+  height: clamp(12px, 1.2vw, 18px);
   font-size: clamp(5px, 0.55vw, 8px);
   font-weight: 900;
   display: flex;
@@ -956,7 +1018,7 @@ onUnmounted(() => {
 .header-notif-badge {
   position: absolute;
   z-index: 27;
-  width:  clamp(20px, 1.8vw, 36px);
+  width: clamp(20px, 1.8vw, 36px);
   height: clamp(20px, 1.8vw, 36px);
   border-radius: 50%;
   display: flex;
@@ -1138,5 +1200,4 @@ onUnmounted(() => {
   opacity: 0;
   transform: translateY(-4px);
 }
-
 </style>
