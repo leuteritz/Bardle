@@ -1277,17 +1277,22 @@ export const useBattleStore = defineStore('battle', {
       return mvpName
     },
 
+    /** Base chime value of a single honor (production-scaled with a click floor). */
+    honorBaseTribute(): number {
+      const gameStore = useGameStore()
+      return Math.max(
+        Math.floor(gameStore.chimesPerSecond * HONOR_TRIBUTE_PRODUCTION_SECONDS),
+        Math.floor(gameStore.chimesPerClick * HONOR_TRIBUTE_MIN_CLICKS),
+      )
+    },
+
     /**
      * Chimes one honor for this champion pays out. Only own champions pay;
      * the match MVP pays double, a lost battle pays half.
      */
     honorTributeFor(name: string): number {
       if (!this.team1.some((c) => c.name === name)) return 0
-      const gameStore = useGameStore()
-      let tribute = Math.max(
-        Math.floor(gameStore.chimesPerSecond * HONOR_TRIBUTE_PRODUCTION_SECONDS),
-        Math.floor(gameStore.chimesPerClick * HONOR_TRIBUTE_MIN_CLICKS),
-      )
+      let tribute = this.honorBaseTribute()
       if (this.lastAutoBattleResult?.mvpName === name) tribute *= HONOR_MVP_TRIBUTE_MULT
       if (this.lastAutoBattleResult?.won === false) {
         tribute = Math.floor(tribute * HONOR_LOSS_TRIBUTE_MULT)
@@ -1370,14 +1375,23 @@ export const useBattleStore = defineStore('battle', {
       }
       this.allTime.honorsGiven += this.honoredChampions.length
 
+      // An OWN match MVP grants a timed 2× chime buff — honored or not.
+      // An enemy MVP grants nothing.
+      const mvpName = this.lastAutoBattleResult?.mvpName ?? ''
+      const mvpBuffGranted = !!mvpName && this.team1.some((c) => c.name === mvpName)
+
+      const gameStore = useGameStore()
       if (tribute > 0) {
-        const gameStore = useGameStore()
         gameStore.chimes += tribute
         gameStore.totalChimesEarned += tribute
         gameStore.chimesEarnedForLevel += tribute
         gameStore.calculateLevel()
       }
-      if (this.lastAutoBattleResult) this.lastAutoBattleResult.honorTribute = tribute
+      if (mvpBuffGranted) gameStore.activateMvpBuff()
+      if (this.lastAutoBattleResult) {
+        this.lastAutoBattleResult.honorTribute = tribute
+        this.lastAutoBattleResult.mvpBuffGranted = mvpBuffGranted
+      }
     },
 
     confirmHonorAndContinue() {

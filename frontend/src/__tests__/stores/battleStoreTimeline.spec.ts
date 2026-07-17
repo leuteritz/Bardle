@@ -1,8 +1,13 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useBattleStore, makeChampionState, defaultAllTimeStats } from '../../stores/battleStore'
+import { useGameStore } from '../../stores/gameStore'
 import { generateTimeline } from '../../utils/battleTimeline'
-import { BATTLE_TOTAL_GAME_SECONDS, HONOR_MAX_SELECTIONS } from '../../config/constants'
+import {
+  BATTLE_TOTAL_GAME_SECONDS,
+  HONOR_MAX_SELECTIONS,
+  HONOR_MVP_BUFF_DURATION_S,
+} from '../../config/constants'
 
 const T1_NAMES = ['Garen', 'Lee Sin', 'Ahri', 'Jinx', 'Bard']
 const T2_NAMES = ['Darius', 'Kha Zix', 'Zed', 'Caitlyn', 'Thresh']
@@ -158,6 +163,36 @@ describe('battleStore timeline integration', () => {
     store.finalizeHonors()
     expect(store.allTime.honorsGiven).toBe(HONOR_MAX_SELECTIONS)
     expect(store.honoredChampions).toEqual(honored)
+  })
+
+  it('finalizeHonors grants the 2× chime buff only when the match MVP is an own champion', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    store.lastAutoBattleResult = {
+      won: true,
+      opponent: { mmr: 1000, power: 1000, rank: { tier: 'Silver', division: 'II', minMMR: 0 } },
+      winProbability: 0.5,
+      mvpName: 'Garen',
+    }
+    store.finalizeHonors()
+    expect(store.lastAutoBattleResult.mvpBuffGranted).toBe(true)
+    expect(useGameStore().mvpBuffSecondsLeft).toBe(HONOR_MVP_BUFF_DURATION_S)
+    expect(useGameStore().mvpBuffMultiplier).toBe(2)
+
+    setActivePinia(createPinia())
+    const enemyMvp = useBattleStore()
+    setupBattle(enemyMvp)
+    enemyMvp.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    enemyMvp.lastAutoBattleResult = {
+      won: true,
+      opponent: { mmr: 1000, power: 1000, rank: { tier: 'Silver', division: 'II', minMMR: 0 } },
+      winProbability: 0.5,
+      mvpName: 'Darius',
+    }
+    enemyMvp.finalizeHonors()
+    expect(enemyMvp.lastAutoBattleResult.mvpBuffGranted).toBe(false)
+    expect(useGameStore().mvpBuffSecondsLeft).toBe(0)
   })
 
   it('honorTributeFor pays own champions only', () => {

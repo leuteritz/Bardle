@@ -535,6 +535,8 @@ export interface BattleResult {
   baronBounty?: number
   /** Chimes paid out by the honor ceremony (3 honors, MVP pays double) */
   honorTribute?: number
+  /** True when the match MVP was an own champion and the 2× chime buff was granted */
+  mvpBuffGranted?: boolean
 }
 
 export type AugmentRarity = 'common' | 'rare' | 'epic' | 'legendary'

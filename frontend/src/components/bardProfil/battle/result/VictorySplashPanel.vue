@@ -39,6 +39,11 @@
       <div class="mvp-texts">
         <span class="mvp-eyebrow">MATCH MVP</span>
         <span class="mvp-name">{{ mvpName }}</span>
+        <span v-if="mvpBuffGranted" class="mvp-bonus">
+          {{ HONOR_MVP_BUFF_MULT }}×
+          <img src="/img/BardAbilities/BardChime.png" alt="" class="mvp-bonus-chime" />
+          <span class="mvp-bonus-label">CHIME BUFF · {{ HONOR_MVP_BUFF_DURATION_S }}s</span>
+        </span>
       </div>
       <div class="mvp-shine" />
     </div>
@@ -82,6 +87,8 @@ import {
   LP_NORMAL_PROMOTION_THRESHOLD,
   LP_MASTER_PROMOTION_THRESHOLD,
   LP_GRANDMASTER_PROMOTION_THRESHOLD,
+  HONOR_MVP_BUFF_MULT,
+  HONOR_MVP_BUFF_DURATION_S,
 } from '@/config/constants'
 
 const battleStore = useBattleStore()
@@ -93,6 +100,7 @@ const enemyKills = computed(() => battleStore.lastAutoBattleResult?.enemyKills ?
 const mvpName = computed(() => battleStore.lastAutoBattleResult?.mvpName ?? '')
 const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)
 const honorTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
+const mvpBuffGranted = computed(() => battleStore.lastAutoBattleResult?.mvpBuffGranted ?? false)
 
 /** The tribute reveals right after the last medal has been stamped in the honor panel. */
 const ceremonyDelay = computed(
@@ -361,6 +369,33 @@ const promoHint = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.mvp-bonus {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.4em;
+  margin-top: 4px;
+  font-size: clamp(15px, 2.6cqh, 24px);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: #ffe28a;
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.55);
+  animation: victory-in 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) 0.45s backwards;
+}
+.mvp-bonus-chime {
+  width: clamp(15px, 2.6cqh, 24px);
+  height: clamp(15px, 2.6cqh, 24px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.55));
+}
+.mvp-bonus-label {
+  font-size: clamp(9px, 1.5cqh, 13px);
+  letter-spacing: 2px;
+  color: #9a854e;
+  text-shadow: none;
+}
+
 /* Periodic light sweep across the card */
 .mvp-shine {
   position: absolute;
@@ -490,6 +525,6 @@ const promoHint = computed(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash-rays, .crest-dashes, .honor-tribute, .mvp-showcase, .mvp-shine { animation: none; }
+  .splash-rays, .crest-dashes, .honor-tribute, .mvp-showcase, .mvp-shine, .mvp-bonus { animation: none; }
 }
 </style>

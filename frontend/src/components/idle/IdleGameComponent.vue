@@ -51,6 +51,7 @@
     <StarSystemComponent />
     <PlayerHPBar />
     <StarSystemRescueTransition />
+    <MvpBuffOverlay />
 
     <div
       :key="chimeGainKey"
@@ -62,7 +63,7 @@
       }"
     >
       <span class="chime-gain-text" :style="{ fontSize: chimePopupFontSize + 'px' }">
-        +{{ $formatNumber(gameStore.chimesPerClick) }}
+        +{{ $formatNumber(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}
       </span>
     </div>
   </div>
@@ -83,6 +84,7 @@ import PlayerHPBar from './sun/PlayerHPBar.vue'
 import StarSystemComponent from './sun/StarSystemComponent.vue'
 import StarSystemRescueTransition from './sun/StarSystemRescueTransition.vue'
 import PlanetOrbit from './sun/PlanetOrbit.vue'
+import MvpBuffOverlay from './MvpBuffOverlay.vue'
 import { playChimeSound } from '../../composables/useChimeSound'
 import {
   CHIME_BURST_COUNT,
@@ -114,6 +116,7 @@ export default defineComponent({
     StarSystemComponent,
     StarSystemRescueTransition,
     PlanetOrbit,
+    MvpBuffOverlay,
   },
   setup() {
     const gameStore = useGameStore()

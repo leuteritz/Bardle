@@ -523,6 +523,10 @@ export const HONOR_TRIBUTE_PRODUCTION_SECONDS = 5
 export const HONOR_TRIBUTE_MIN_CLICKS = 2
 /** An honored match MVP pays a doubled tribute */
 export const HONOR_MVP_TRIBUTE_MULT = 2
+/** When the match MVP is an OWN champion: timed production buff instead of a flat payout */
+export const HONOR_MVP_BUFF_DURATION_S = 10
+/** Multiplier on chimes per second AND per click while the MVP buff runs */
+export const HONOR_MVP_BUFF_MULT = 2
 /** Tribute multiplier when the battle was lost (honors still happen, pay less) */
 export const HONOR_LOSS_TRIBUTE_MULT = 0.5
 // Honor score = mvpScore + the unsung-hero factors below; the ceremony then

@@ -314,29 +314,31 @@ onUnmounted(() => {
         </span>
         <div class="chimes-sub-row">
           <div class="chimes-sub-stat">
-            <img
-              src="/img/BardAbilities/BardChime.png"
-              class="sub-chime-icon chime-glow-green"
-              alt=""
-              aria-hidden="true"
-            />
-            <span class="sub-stat-value cps-text-glow">{{
-              formatNumber(gameStore.chimesPerSecond)
-            }}</span>
-            <span class="sub-stat-label cps-text-glow">/sec</span>
+            <span
+              class="sub-stat-value cps-text-glow"
+              :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
+            >{{ formatNumber(gameStore.chimesPerSecond * gameStore.mvpBuffMultiplier) }}</span>
+            <span
+              class="sub-stat-label cps-text-glow"
+              :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
+            >/sec</span>
           </div>
-          <div class="chimes-sub-divider" aria-hidden="true"></div>
+          <!-- One shared chime between the two stats instead of one each -->
+          <img
+            src="/img/BardAbilities/BardChime.png"
+            class="sub-chime-icon chime-glow-green"
+            alt=""
+            aria-hidden="true"
+          />
           <div class="chimes-sub-stat">
-            <img
-              src="/img/BardAbilities/BardChime.png"
-              class="sub-chime-icon chime-glow-click"
-              alt=""
-              aria-hidden="true"
-            />
-            <span class="sub-stat-value click-text-glow">{{
-              formatNumber(gameStore.chimesPerClick)
-            }}</span>
-            <span class="sub-stat-label click-text-glow">/click</span>
+            <span
+              class="sub-stat-value click-text-glow"
+              :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
+            >{{ formatNumber(gameStore.chimesPerClick * gameStore.mvpBuffMultiplier) }}</span>
+            <span
+              class="sub-stat-label click-text-glow"
+              :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
+            >/click</span>
           </div>
         </div>
       </div>
@@ -594,20 +596,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
 }
-.chimes-sub-divider {
-  width: 1px;
-  height: 14px;
-  border-radius: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(255, 200, 80, 0.3) 30%,
-    rgba(255, 200, 80, 0.3) 70%,
-    transparent
-  );
-  flex-shrink: 0;
-  margin-inline: 2px;
-}
 .sub-chime-icon {
   width: clamp(10px, 1.1vw, 14px);
   height: clamp(10px, 1.1vw, 14px);
@@ -621,6 +609,38 @@ onUnmounted(() => {
   letter-spacing: 0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  /* Smooth hand-back when the MVP buff highlight ends */
+  transition: color 1s ease-out, text-shadow 1s ease-out;
+}
+/* MVP honor buff: numbers AND their /sec | /click labels get bolder and glow
+   stronger in their OWN color (green for /sec, amber for /click) — currentColor
+   keeps each stat in the hue it already has in the header. */
+.sub-stat-value.stat-buffed,
+.sub-stat-label.stat-buffed {
+  opacity: 1;
+  font-weight: 900;
+  -webkit-text-stroke: 0.6px currentColor;
+  letter-spacing: 0.05em;
+  text-shadow:
+    0 0 3px currentColor,
+    0 0 12px currentColor;
+  animation: stat-buffed-pulse 1.2s ease-in-out infinite;
+}
+@keyframes stat-buffed-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 3px currentColor,
+      0 0 10px currentColor;
+  }
+  50% {
+    text-shadow:
+      0 0 4px currentColor,
+      0 0 20px currentColor;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sub-stat-value.stat-buffed,
+  .sub-stat-label.stat-buffed { animation: none; }
 }
 .sub-stat-label {
   font-size: clamp(0.45rem, 0.6vw, 0.72rem);
@@ -629,6 +649,8 @@ onUnmounted(() => {
   opacity: 0.7;
   line-height: 1;
   margin-left: 1px;
+  /* Smooth hand-back when the MVP buff highlight ends */
+  transition: color 1s ease-out, text-shadow 1s ease-out;
 }
 
 /* ================================================================
@@ -706,10 +728,6 @@ onUnmounted(() => {
   filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.5))
     drop-shadow(0 0 14px rgba(52, 211, 153, 0.22));
 }
-.chime-glow-click {
-  filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.55))
-    drop-shadow(0 0 12px rgba(251, 191, 36, 0.22));
-}
 .chimes-text-glow {
   filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7))
           drop-shadow(0 0 24px rgba(251, 191, 36, 0.28));
@@ -719,8 +737,8 @@ onUnmounted(() => {
   filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
 .click-text-glow {
-  color: #fbbf24;
-  filter: drop-shadow(0 0 7px rgba(251, 191, 36, 0.45));
+  color: #74d448;
+  filter: drop-shadow(0 0 7px rgba(116, 212, 72, 0.4));
 }
 .dmg-text-glow {
   color: #ff7a50;

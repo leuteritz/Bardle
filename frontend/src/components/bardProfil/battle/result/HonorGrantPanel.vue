@@ -244,11 +244,17 @@ function formatTribute(n: number): string {
   background: linear-gradient(150deg, rgba(239, 68, 68, 0.05), rgba(24, 10, 10, 0.4));
   border-color: rgba(248, 113, 113, 0.2);
 }
+/* The match MVP row outshines everything — honored rows glow, the MVP burns */
 .row--mvp {
   position: relative;
-  border-color: rgba(232, 192, 64, 0.6);
-  background: linear-gradient(90deg, rgba(232, 192, 64, 0.16), rgba(232, 192, 64, 0.05) 45%, rgba(10, 14, 24, 0.4));
-  box-shadow: 0 0 14px rgba(232, 192, 64, 0.2), inset 0 0 18px rgba(232, 192, 64, 0.05);
+  overflow: hidden;
+  border-color: #ffe28a;
+  background: linear-gradient(90deg, rgba(232, 192, 64, 0.26), rgba(232, 192, 64, 0.1) 45%, rgba(24, 19, 6, 0.55));
+  box-shadow:
+    0 0 0 1px rgba(255, 226, 138, 0.55),
+    0 0 22px rgba(232, 192, 64, 0.45),
+    inset 0 0 26px rgba(232, 192, 64, 0.12);
+  animation: mvp-row-pulse 1.8s ease-in-out infinite;
 }
 .row--mvp::before {
   content: '';
@@ -256,9 +262,43 @@ function formatTribute(n: number): string {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 5px;
   background: linear-gradient(to bottom, #ffe28a, #d4a020);
-  border-radius: 9px 0 0 9px;
+}
+/* Light sweep across the MVP row, same signature as the MVP showcase */
+.row--mvp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 236, 170, 0.14) 48%,
+    rgba(255, 236, 170, 0.26) 50%,
+    rgba(255, 236, 170, 0.14) 52%,
+    transparent 70%
+  );
+  background-size: 300% 100%;
+  animation: mvp-shine-sweep 3.2s ease-in-out infinite;
+}
+@keyframes mvp-row-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 226, 138, 0.55),
+      0 0 16px rgba(232, 192, 64, 0.3),
+      inset 0 0 26px rgba(232, 192, 64, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 226, 138, 0.8),
+      0 0 30px rgba(232, 192, 64, 0.6),
+      inset 0 0 30px rgba(232, 192, 64, 0.16);
+  }
+}
+@keyframes mvp-shine-sweep {
+  0%, 55% { background-position: 120% 0; }
+  90%, 100% { background-position: -60% 0; }
 }
 .row--honored {
   border-color: #e8c040;
@@ -268,6 +308,10 @@ function formatTribute(n: number): string {
 }
 @keyframes row-glow-in {
   0% { box-shadow: none; border-color: rgba(96, 165, 250, 0.22); background: rgba(10, 14, 24, 0.4); }
+}
+/* An honored MVP keeps its pulse (the honored glow-in would otherwise win the cascade) */
+.row--mvp.row--honored {
+  animation: mvp-row-pulse 1.8s ease-in-out infinite;
 }
 
 /* ── Champion cell ── */
@@ -409,23 +453,20 @@ function formatTribute(n: number): string {
   justify-content: flex-end;
   gap: 9px;
 }
+/* Frameless: just the glowing amount + chime, rendered as part of the row */
 .tribute-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   align-self: center;
   gap: 0.4em;
-  padding: 0.3em 0.7em;
-  border-radius: 7px;
-  font-size: clamp(14px, 2.4cqh, 21px);
+  font-size: clamp(15px, 2.6cqh, 23px);
   font-weight: 700;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
   color: #ffe28a;
-  background: rgba(232, 192, 64, 0.13);
-  border: 1px solid rgba(232, 192, 64, 0.55);
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5);
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.55);
   animation: chip-in 0.35s ease-out calc(var(--honor-delay, 0s) + 0.15s) backwards;
 }
 @keyframes chip-in {
@@ -524,7 +565,9 @@ function formatTribute(n: number): string {
 @media (prefers-reduced-motion: reduce) {
   .medal-stamp--on,
   .tribute-chip,
-  .row--honored {
+  .row--honored,
+  .row--mvp,
+  .row--mvp::after {
     animation: none;
   }
 }

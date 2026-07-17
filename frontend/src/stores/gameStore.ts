@@ -44,6 +44,8 @@ import {
   ABILITY_MEEP_COST_MIN_MULTIPLIER,
   ABILITY_CPC_PER_LEVEL_DEFAULT,
   CHIMES_PER_CLICK_BASE,
+  HONOR_MVP_BUFF_DURATION_S,
+  HONOR_MVP_BUFF_MULT,
 } from '../config/constants'
 import type {
   BuildingProduction,
@@ -72,6 +74,8 @@ export const useGameStore = defineStore('game', {
 
     chimes: 0,
     chimesPerSecond: 0,
+    /** Seconds left on the MVP honor buff (2× chimes per second and per click) */
+    mvpBuffSecondsLeft: 0,
     chimesForNextLevel: LEVEL_BASE,
     chimesPerClick: CHIMES_PER_CLICK_BASE,
     baseChimesPerClick: CHIMES_PER_CLICK_BASE,
@@ -142,11 +146,17 @@ export const useGameStore = defineStore('game', {
       }
     },
 
+    /** Grants (or refreshes) the MVP honor buff — 2× chime production for a short window. */
+    activateMvpBuff() {
+      this.mvpBuffSecondsLeft = HONOR_MVP_BUFF_DURATION_S
+    },
+
     // Adds Chimes and updates all dependent values
     addChime() {
       // Golden Echo (Star Forge): chance that a click counts twice
       const doubled = Math.random() < useStarForgeStore().doubleClickChance
-      const gain = doubled ? this.chimesPerClick * 2 : this.chimesPerClick
+      const clickValue = this.chimesPerClick * this.mvpBuffMultiplier
+      const gain = doubled ? clickValue * 2 : clickValue
       this.chimes += gain
       this.chimesForMeep += gain
       this.chimesForNextUniverse += gain
@@ -459,7 +469,8 @@ export const useGameStore = defineStore('game', {
       this.inGameTime++
       useSolarUpgradeStore().tickDwell()
       useStarForgeStore().tick()
-      const cps = this.chimesPerSecond
+      const cps = this.chimesPerSecond * this.mvpBuffMultiplier
+      if (this.mvpBuffSecondsLeft > 0) this.mvpBuffSecondsLeft--
       if (cps > 0) {
         this.chimes += cps
         this.chimesForMeep += cps
@@ -674,6 +685,11 @@ export const useGameStore = defineStore('game', {
     abilityCPCMultiplier(): number {
       const perLevel = this.activeModifier.abilityCPCPerLevel ?? ABILITY_CPC_PER_LEVEL_DEFAULT
       return 1 + this.abilityLevels[3] * perLevel
+    },
+
+    /** 2× while the MVP honor buff runs, otherwise 1. */
+    mvpBuffMultiplier(): number {
+      return this.mvpBuffSecondsLeft > 0 ? HONOR_MVP_BUFF_MULT : 1
     },
 
     universeRescueProgress(): number {
