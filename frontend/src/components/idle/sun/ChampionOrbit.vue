@@ -17,6 +17,7 @@
         'champion-orbit-avatar--role-colored': !!pos.primaryRole,
         'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
+        'champion-orbit-avatar--dim': isChampionDimmed(pos),
       }"
       :style="{
         width: pos.size + 'px',
@@ -69,6 +70,7 @@
         'champion-orbit-avatar--synergy': pos.synergyActive,
         'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
+        'champion-orbit-avatar--dim': isChampionDimmed(pos),
       }"
       :style="{
         width: pos.size + 'px',
@@ -552,6 +554,7 @@ export default defineComponent({
   will-change: transform;
   transition:
     box-shadow 0.3s ease,
+    border-color 0.3s ease,
     filter 0.25s ease;
 }
 
@@ -576,6 +579,7 @@ export default defineComponent({
   opacity: var(--hover-dim-opacity, 0.08);
   filter: grayscale(1) brightness(0.65) blur(1.5px);
 }
+
 
 /* ── Rollen-Farben (via CSS-Variable aus ROLES[].color) ─────────────────── */
 .champion-orbit-avatar--role-colored {
@@ -1066,6 +1070,7 @@ export default defineComponent({
   place-items: center;
   pointer-events: none;
   z-index: 4;
+  transition: opacity 150ms ease;
   animation: ability-badge-pulse 1.6s ease-in-out infinite;
 }
 
@@ -1105,5 +1110,28 @@ export default defineComponent({
 .ability-icon-leave-to {
   opacity: 0;
   transform: scale(0.5);
+}
+
+/* ── Hover-Fokus: gedimmte Champions komplett verstecken ──────────────────
+   MUSS die letzte Avatar-Regel im Stylesheet sein: --role-colored und die
+   Ability-Klassen setzen border-color ebenfalls mit !important — bei
+   gleicher Spezifität gewinnt sonst deren spätere Position. Die doppelte
+   Klasse erhöht zusätzlich die Spezifität. */
+.champion-orbit-avatar--dim.champion-orbit-avatar--dim {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+  filter: none !important;
+}
+
+.champion-orbit-avatar--dim .champion-ability-badge {
+  opacity: 0;
+  animation: none;
+}
+
+/* Burst-Ringe (Curse, ADC, Heal) auf gedimmten Avataren unterdrücken */
+.champion-orbit-avatar--dim::before,
+.champion-orbit-avatar--dim::after {
+  content: none !important;
 }
 </style>

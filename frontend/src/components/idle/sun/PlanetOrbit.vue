@@ -85,6 +85,7 @@
       v-for="pos in frontPlanets"
       :key="'hp-' + pos.id"
       class="planet-hp-wrap"
+      :class="{ 'planet-hp-wrap--dimmed': pos.isDimmed }"
       :style="{
         transform: `translate(${pos.x - Math.max(pos.size, 60) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
         width: Math.max(pos.size, 60) + 'px',
@@ -109,6 +110,7 @@
     <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
       <div
         class="planet-status-badge-anchor"
+        :class="{ 'planet-status-badge-anchor--dimmed': pos.isDimmed }"
         :style="{
           transform: `translate(${pos.x + pos.size * 0.354 - 2}px, ${pos.y - pos.size * 0.354 - 24}px)`,
           zIndex: pos.zIndex + 2,
@@ -625,6 +627,12 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  transition: opacity 150ms ease;
+}
+
+/* Hover-Fokus: blendet mit dem Planeten-Portrait aus */
+.planet-hp-wrap--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
 }
 
 /* Äußerer Rahmen – graviertes Metall */
@@ -726,6 +734,11 @@ export default defineComponent({
   top: 0;
   left: 0;
   pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.planet-status-badge-anchor--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
 }
 
 .planet-buff-chip {

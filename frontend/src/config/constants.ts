@@ -2595,9 +2595,9 @@ export const ROLE_HOVER_COLORS: Record<string, string> = {
 // ── Hover-Focus dim ──────────────────────────────────────────────────────────
 // Opacity applied to non-relevant champions / planets / orbit rings while a
 // champion slot or planet tile is hovered in the Command Panel, so the focused
-// element/role stands out. Single source for both TS logic and the
-// --hover-dim-opacity CSS variable in the orbit components.
-export const HOVER_DIM_OPACITY = 0.08
+// element/role stands out. 0 = fully hidden. Single source for both TS logic
+// and the --hover-dim-opacity CSS variable in the orbit components.
+export const HOVER_DIM_OPACITY = 0
 
 // ── Resource-Star Color Palette ────────────────────────────────────────────
 // Six realistic stellar spectral colors for resource stars (no champion).
