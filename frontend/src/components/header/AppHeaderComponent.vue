@@ -360,7 +360,7 @@ onUnmounted(() => {
             <span
               class="sub-stat-label cps-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-              >/sec</span
+              ><span class="sub-stat-slash">/</span>sec</span
             >
           </div>
           <!-- One shared chime between the two stats instead of one each -->
@@ -379,7 +379,7 @@ onUnmounted(() => {
             <span
               class="sub-stat-label click-text-glow"
               :class="{ 'stat-buffed': gameStore.mvpBuffMultiplier > 1 }"
-              >/click</span
+              ><span class="sub-stat-slash">/</span>click</span
             >
           </div>
         </div>
@@ -645,7 +645,12 @@ onUnmounted(() => {
 .chimes-sub-stat {
   display: flex;
   align-items: center;
-  gap: 4px;
+  /* Small breathing room between the number and its "/unit" label */
+  gap: 2px;
+}
+/* …and the same small gap between the slash and the unit text */
+.sub-stat-slash {
+  margin-right: 2px;
 }
 .sub-chime-icon {
   width: clamp(10px, 1.1vw, 14px);
@@ -677,7 +682,6 @@ onUnmounted(() => {
   opacity: 1;
   font-weight: 900;
   -webkit-text-stroke: 0.6px currentColor;
-  letter-spacing: 0.05em;
   text-shadow:
     0 0 3px currentColor,
     0 0 12px currentColor;
@@ -708,7 +712,6 @@ onUnmounted(() => {
   letter-spacing: 0.05em;
   opacity: 0.7;
   line-height: 1;
-  margin-left: 1px;
   /* Smooth hand-back when the MVP buff highlight ends */
   transition:
     color 1s ease-out,
