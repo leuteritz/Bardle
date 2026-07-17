@@ -10,7 +10,8 @@
         :ry="tierOrbitDimensions[i].ry"
         :tiltDeg="tierOrbitDimensions[i].tiltDeg"
         :visible="tierIsBehind[i]"
-        :dimmed="hoveredChampionRole !== null"
+        :abilityActive="hoveredPlanetTier === i"
+        :dimmed="hoveredChampionRole !== null || (hoveredPlanetSlotId !== null && hoveredPlanetTier !== i)"
       />
     </template>
   </svg>
@@ -28,7 +29,7 @@
       class="planet-orbit-item planet-orbit-item--behind"
       :class="{
         'planet-orbit-item--healing': pos.isHealing,
-        'planet-orbit-item--highlight-behind': pos.isHighlighted,
+        'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
       }"
       :style="{
         width: pos.size + 'px',
@@ -61,6 +62,7 @@
         'planet-orbit-item--turret': pos.isTurret,
         'planet-orbit-item--healing': pos.isHealing,
         'planet-orbit-item--jungle-buffed': pos.isJungleBuffed,
+        'planet-orbit-item--hover-focus': pos.id === hoveredPlanetSlotId,
       }"
       :style="{
         width: pos.size + 'px',
@@ -131,23 +133,6 @@
       </div>
     </template>
 
-    <!-- Hover ring — front and behind planets; behind ring floats above sun via z-index: 8 -->
-    <template v-for="pos in renderPositions" :key="'hover-ring-' + pos.id">
-      <Transition name="champion-ring">
-        <div
-          v-if="pos.isHighlighted"
-          class="planet-champion-hover-ring"
-          :class="{ 'planet-champion-hover-ring--behind': pos.isBehind }"
-          :style="{
-            width: (pos.size + 26) + 'px',
-            height: (pos.size + 26) + 'px',
-            transform: `translate(${pos.x - (pos.size + 26) / 2}px, ${pos.y - (pos.size + 26) / 2}px)`,
-            '--cring-color': pos.highlightColor,
-            zIndex: pos.isBehind ? 8 : pos.zIndex + 1,
-          }"
-        />
-      </Transition>
-    </template>
   </div>
 </template>
 
@@ -196,8 +181,6 @@ interface PlanetRenderPos {
   jungleBuffProgress: number
   jungleBuffType: string
   slotNum: number
-  isHighlighted: boolean
-  highlightColor: string
   isDimmed: boolean
 }
 
@@ -253,6 +236,18 @@ export default defineComponent({
 
     const allSlots = computed(() => planetShopStore.slots)
     const slotsWithRole = computed(() => planetShopStore.purchasedSlots.filter((s) => s.role !== null))
+
+    // Hover-Fokus: Tier des gehoverten Planeten (gleiche Zuordnung wie in
+    // animate(): Index in der Rollen-Slot-Liste modulo Tier-Anzahl), damit
+    // nur dessen Orbit-Linie sichtbar bleibt.
+    const hoveredPlanetSlotId = computed(() => uiStore.hoveredPlanetSlotId)
+    const hoveredPlanetTier = computed(() => {
+      const id = hoveredPlanetSlotId.value
+      if (id === null) return null
+      const idx = slotsWithRole.value.findIndex((s) => s.id === id)
+      return idx >= 0 ? idx % ORBIT_TIERS.planet.length : null
+    })
+
     const backPlanets = computed(() => renderPositions.value.filter((p) => p.isBehind))
     const frontPlanets = computed(() => renderPositions.value.filter((p) => !p.isBehind))
 
@@ -366,8 +361,6 @@ export default defineComponent({
         const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
 
         const hPlanetId = uiStore.hoveredPlanetSlotId
-        const isHighlighted = slot.id === hPlanetId
-        const highlightColor = slot.role ? PLANET_ROLES[slot.role].color : '#c89040'
         // Dim when focusing a champion (all planets recede) or another planet.
         const isDimmed =
           uiStore.hoveredChampionRole !== null || (hPlanetId !== null && slot.id !== hPlanetId)
@@ -399,8 +392,6 @@ export default defineComponent({
           jungleBuffProgress,
           jungleBuffType,
           slotNum,
-          isHighlighted,
-          highlightColor,
           isDimmed,
         })
       }
@@ -503,6 +494,8 @@ export default defineComponent({
     return {
       planetShopStore,
       hoveredChampionRole,
+      hoveredPlanetSlotId,
+      hoveredPlanetTier,
       HOVER_DIM_OPACITY,
       allSlots,
       slotsWithRole,
@@ -850,82 +843,15 @@ export default defineComponent({
   }
 }
 
-/* ── Champion slot / planet tile hover ring ─────────────────────────────── */
-.planet-champion-hover-ring {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  border: 3px solid var(--cring-color);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--cring-color) 28%, transparent),
-    0 0 14px 5px var(--cring-color),
-    0 0 30px 10px color-mix(in srgb, var(--cring-color) 42%, transparent),
-    inset 0 0 10px 3px color-mix(in srgb, var(--cring-color) 22%, transparent);
-  animation: champion-ring-pulse 1.3s ease-in-out infinite;
+/* ── Hover-Fokus: gehoverter Planet klar hervorgehoben ────────────────────
+   Spiegelt das Champion-Hover-Verhalten: steht am Ende des Stylesheets,
+   damit der filter auch den Behind-Blur überschreibt — der Planet bleibt
+   dadurch auch hinter der Sonne deutlich sichtbar. Das !important auf
+   opacity übersteuert die per Frame gesetzte Inline-Tiefen-Opacity. */
+.planet-orbit-item--hover-focus {
+  filter: brightness(1.2) saturate(1.15)
+    drop-shadow(0 0 12px color-mix(in srgb, var(--planet-color, #c89040) 75%, transparent)) !important;
+  opacity: 1 !important;
 }
 
-/* Inner counter-pulse ring */
-.planet-champion-hover-ring::before {
-  content: '';
-  position: absolute;
-  inset: 7px;
-  border-radius: 50%;
-  border: 1px dashed color-mix(in srgb, var(--cring-color) 58%, transparent);
-  animation: champion-ring-inner 1.3s ease-in-out infinite;
-}
-
-/* Behind-sun variant: dashed outer border + stronger glow signals "hidden" location */
-.planet-champion-hover-ring--behind {
-  border-style: dashed;
-  box-shadow:
-    0 0 18px 7px var(--cring-color),
-    0 0 38px 14px color-mix(in srgb, var(--cring-color) 50%, transparent);
-  opacity: 0.88;
-}
-
-@keyframes champion-ring-pulse {
-  0%, 100% {
-    opacity: 0.82;
-    box-shadow:
-      0 0 10px 3px var(--cring-color),
-      inset 0 0 6px 2px color-mix(in srgb, var(--cring-color) 18%, transparent);
-  }
-  50% {
-    opacity: 1;
-    box-shadow:
-      0 0 22px 8px var(--cring-color),
-      0 0 44px 14px color-mix(in srgb, var(--cring-color) 42%, transparent),
-      inset 0 0 12px 4px color-mix(in srgb, var(--cring-color) 28%, transparent);
-  }
-}
-
-@keyframes champion-ring-inner {
-  0%, 100% { opacity: 0.35; }
-  50%       { opacity: 0.88; }
-}
-
-.champion-ring-enter-active {
-  animation: champion-ring-in 0.22s ease-out both;
-}
-.champion-ring-leave-active {
-  animation: champion-ring-in 0.16s ease-in reverse both;
-}
-
-@keyframes champion-ring-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-/* Behind-planet: partially break through the sun blur when highlighted */
-.planet-orbit-item--behind.planet-orbit-item--highlight-behind {
-  filter: blur(0.4px) brightness(1.25) saturate(0.85);
-  opacity: 0.72;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .planet-champion-hover-ring,
-  .planet-champion-hover-ring::before { animation: none; }
-}
 </style>
