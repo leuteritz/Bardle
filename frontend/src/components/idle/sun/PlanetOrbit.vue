@@ -89,8 +89,8 @@
       class="planet-hp-wrap"
       :class="{ 'planet-hp-wrap--dimmed': pos.isDimmed }"
       :style="{
-        transform: `translate(${pos.x - Math.max(pos.size, 60) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
-        width: Math.max(pos.size, 60) + 'px',
+        transform: `translate(${pos.x - Math.max(pos.size, 48) / 2}px, ${pos.y + pos.size / 2 + 5}px)`,
+        width: Math.max(pos.size, 48) + 'px',
         zIndex: pos.zIndex,
       }"
     >
@@ -632,13 +632,13 @@ export default defineComponent({
 .planet-hp-bar-track {
   position: relative;
   width: 100%;
-  height: 8px;
+  height: 5px;
   background: #0a0806;
   border: 1px solid #6b4a1e;
   border-radius: 3px;
   box-shadow:
     0 0 0 1px #1a0f04,
-    inset 0 1px 3px rgba(0, 0, 0, 0.8),
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
     0 1px 0 rgba(255, 200, 80, 0.08);
   overflow: hidden;
 }
@@ -692,14 +692,15 @@ export default defineComponent({
 }
 
 .planet-hp-text {
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #e8c040;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   text-shadow:
-    0 0 4px rgba(232, 160, 20, 0.8),
-    0 1px 3px rgba(0, 0, 0, 0.95);
+    0 0 3px rgba(232, 160, 20, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.95);
   line-height: 1;
 }
 
