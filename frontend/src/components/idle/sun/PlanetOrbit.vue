@@ -109,33 +109,25 @@
       <span class="planet-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
     </div>
 
-    <!-- Jungle Buff Particle Aura -->
+    <!-- Jungle Buff — Countdown-Chip (schräg oben rechts am Planeten) -->
     <template v-for="pos in frontPlanets" :key="'jbuff-' + pos.id">
-      <div
-        v-show="pos.isJungleBuffed"
-        class="jungle-buff-overlay"
-        :title="pos.jungleBuffType"
-        :style="{
-          width: pos.size + 18 + 'px',
-          height: pos.size + 18 + 'px',
-          transform: `translate(${pos.x - (pos.size + 18) / 2}px, ${pos.y - (pos.size + 18) / 2}px)`,
-          zIndex: pos.zIndex,
-        }"
-      />
       <div
         class="planet-status-badge-anchor"
         :style="{
-          transform: `translate(${pos.x + pos.size / 2 - 30}px, ${pos.y - pos.size / 2 - 4}px)`,
+          transform: `translate(${pos.x + pos.size * 0.354 - 2}px, ${pos.y - pos.size * 0.354 - 24}px)`,
           zIndex: pos.zIndex + 2,
         }"
       >
         <Transition name="status-badge">
-          <div v-if="pos.isJungleBuffed" class="planet-status-badge planet-status-badge--buff">
-            <img src="/img/roles/jungle.png" class="status-badge-icon" alt="" draggable="false" />
-            <span
-              class="status-badge-timer"
-              :class="{ 'status-badge-timer--urgent': pos.jungleBuffSecsLeft < 3 }"
-            >{{ Math.ceil(pos.jungleBuffSecsLeft) }}s</span>
+          <div
+            v-if="pos.isJungleBuffed"
+            class="planet-buff-chip"
+            :class="{ 'planet-buff-chip--urgent': pos.jungleBuffSecsLeft < 3 }"
+            :style="{ '--buff-progress': pos.jungleBuffProgress }"
+            :title="pos.jungleBuffType"
+          >
+            <img src="/img/roles/jungle.png" alt="" draggable="false" />
+            <span class="planet-buff-secs">{{ Math.ceil(pos.jungleBuffSecsLeft) }}s</span>
           </div>
         </Transition>
       </div>
@@ -165,7 +157,7 @@
 import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
-import { usePlanetShopStore, PLANET_ROLES } from '../../../stores/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
 import type { PlanetSlot } from '../../../stores/planetShopStore'
 import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
@@ -207,6 +199,7 @@ interface PlanetRenderPos {
   isHealing: boolean
   isJungleBuffed: boolean
   jungleBuffSecsLeft: number
+  jungleBuffProgress: number
   jungleBuffType: string
   slotNum: number
   isHighlighted: boolean
@@ -391,6 +384,10 @@ export default defineComponent({
           ? Math.max(0, (jb!.activeUntil - Date.now()) / 1000)
           : 0
         const jungleBuffType = jb?.buffType ?? ''
+        const jungleBuffDurationMs = slot.role ? JUNGLE_BUFF_DEFS[slot.role].durationMs : 0
+        const jungleBuffProgress = jungleBuffDurationMs > 0
+          ? Math.min(1, (jungleBuffSecsLeft * 1000) / jungleBuffDurationMs)
+          : 0
 
         const slotNum = parseInt(slot.id.replace('slot_', ''), 10) - 1
 
@@ -427,6 +424,7 @@ export default defineComponent({
           isHealing,
           isJungleBuffed,
           jungleBuffSecsLeft,
+          jungleBuffProgress,
           jungleBuffType,
           slotNum,
           isHighlighted,
@@ -773,50 +771,10 @@ export default defineComponent({
   }
 }
 
-/* ── Jungle Buff Particle Aura (external overlay, not clipped) ─────────────── */
-.jungle-buff-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-/* Outer spinning arc */
-.jungle-buff-overlay::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  border-top-color: #5ce66a;
-  border-right-color: #5ce66a66;
-  animation: jungle-spin 2.4s linear infinite;
-}
-
-/* Inner counter-spin dotted arc */
-.jungle-buff-overlay::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  border: 1px dashed #5ce66a55;
-  animation: jungle-spin-rev 3.6s linear infinite;
-}
-
-@keyframes jungle-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes jungle-spin-rev {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
-/* ── MMO Status Badge (Jungle Buff) ──────────────────────────────────────── */
+/* ── Jungle Buff — Countdown-Chip ─────────────────────────────────────────
+   Runder Chip im Stil des Champion-Ability-Badges: dunkler Grund, Jungle-
+   Icon innen, konischer Ring außen, der mit der Restdauer abschmilzt.
+   Feste px-Größe, damit er auf allen Desktop-Auflösungen lesbar bleibt. */
 .planet-status-badge-anchor {
   position: absolute;
   top: 0;
@@ -824,62 +782,74 @@ export default defineComponent({
   pointer-events: none;
 }
 
-.planet-status-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 28px;
-  padding: 3px 2px 2px;
-  border-radius: 4px;
-  background: rgba(6, 14, 6, 0.9);
-}
-
-.planet-status-badge--buff {
-  border: 1px solid #5ce66a;
+.planet-buff-chip {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(22, 42, 26, 0.96), rgba(6, 14, 8, 0.96));
+  display: grid;
+  place-items: center;
   box-shadow:
     0 0 8px rgba(92, 230, 106, 0.55),
-    inset 0 0 5px rgba(0, 0, 0, 0.6);
-  animation: status-buff-pulse 2s ease-in-out infinite;
+    0 0 18px rgba(92, 230, 106, 0.25),
+    0 2px 5px rgba(0, 0, 0, 0.55);
 }
 
-.status-badge-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  image-rendering: crisp-edges;
+/* Countdown-Ring: conic-gradient, per Maske auf einen Ring reduziert */
+.planet-buff-chip::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #5ce66a calc(var(--buff-progress, 1) * 360deg),
+    rgba(92, 230, 106, 0.14) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
   filter: drop-shadow(0 0 4px rgba(92, 230, 106, 0.7));
 }
 
-.status-badge-timer {
+.planet-buff-chip img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 3px rgba(92, 230, 106, 0.7));
+}
+
+.planet-buff-secs {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 800;
   color: #5ce66a;
   line-height: 1;
-  margin-top: 2px;
   letter-spacing: 0.04em;
   text-shadow:
     0 0 5px rgba(92, 230, 106, 0.8),
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.status-badge-timer--urgent {
-  color: #ff4040;
+/* Endet gleich: Ring + Text kippen auf Rot und blinken */
+.planet-buff-chip--urgent::before {
+  background: conic-gradient(
+    #ff5040 calc(var(--buff-progress, 1) * 360deg),
+    rgba(255, 80, 64, 0.16) 0
+  );
+  filter: drop-shadow(0 0 4px rgba(255, 64, 64, 0.8));
+  animation: timer-urgent-blink 0.5s ease-in-out infinite;
+}
+
+.planet-buff-chip--urgent .planet-buff-secs {
+  color: #ff5040;
   text-shadow:
     0 0 6px rgba(255, 40, 40, 0.95),
     0 1px 2px rgba(0, 0, 0, 0.9);
   animation: timer-urgent-blink 0.5s ease-in-out infinite;
-}
-
-@keyframes status-buff-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 6px rgba(92, 230, 106, 0.45);
-  }
-  50% {
-    box-shadow:
-      0 0 14px rgba(92, 230, 106, 0.85),
-      0 0 4px rgba(92, 230, 106, 0.3);
-  }
 }
 
 @keyframes timer-urgent-blink {
@@ -911,10 +881,8 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planet-status-badge--buff {
-    animation: none;
-  }
-  .status-badge-timer--urgent {
+  .planet-buff-chip--urgent::before,
+  .planet-buff-chip--urgent .planet-buff-secs {
     animation: none;
   }
   .status-badge-enter-active,
