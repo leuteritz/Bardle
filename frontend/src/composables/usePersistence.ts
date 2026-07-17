@@ -123,6 +123,7 @@ export function usePersistence() {
         allTime: battleStore.allTime,
         championCareer: battleStore.championCareer,
         battleSeed: battleStore.battleSeed,
+        adminForceOwnMvp: battleStore.adminForceOwnMvp,
         initialWinProbability: battleStore.initialWinProbability,
         startWinChanceBonus: battleStore.startWinChanceBonus,
         battleStartBonus: battleStore.battleStartBonus,
@@ -331,6 +332,7 @@ export function usePersistence() {
           ]),
         )
         battleStore.battleSeed = b.battleSeed ?? 0
+        battleStore.adminForceOwnMvp = b.adminForceOwnMvp ?? false
         battleStore.initialWinProbability = b.initialWinProbability ?? 0.5
         battleStore.currentWinProbability = b.initialWinProbability ?? 0.5
         battleStore.startWinChanceBonus = b.startWinChanceBonus ?? 0
@@ -344,7 +346,7 @@ export function usePersistence() {
                 typeof (o as { newSeed?: unknown }).newSeed === 'number' &&
                 typeof (o as { prob?: unknown }).prob === 'number',
             )
-            .map((o) => ({ ...o }))
+            .map((o: { t: number; newSeed: number; prob: number }) => ({ ...o }))
         }
         // Battle-scoped drake buffs — interactively-resolved drakes are not replayable
         battleStore.drakeBuffs = Array.isArray(b.drakeBuffs)

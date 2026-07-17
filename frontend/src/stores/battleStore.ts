@@ -80,6 +80,8 @@ import {
   HONOR_WEIGHT_EXP,
   HONOR_OWN_TEAM_WEIGHT_MULT,
   HONOR_ENEMY_TEAM_WEIGHT_MULT,
+  MVP_OWN_TEAM_SCORE_MULT,
+  MVP_ENEMY_TEAM_SCORE_MULT,
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
   KILL_FEED_MAX,
@@ -326,6 +328,8 @@ export const useBattleStore = defineStore('battle', {
     honoredChampions: [] as string[],
     /** Guards the honor payout so a battle can never pay tribute twice. */
     honorsSettled: false,
+    /** Admin/testing: when on, a random OWN champion is forced as MVP every battle. */
+    adminForceOwnMvp: false,
 
     drakeAlive: true,
     drakeKilledByTeam: null as (1 | 2) | null,
@@ -1248,12 +1252,16 @@ export const useBattleStore = defineStore('battle', {
       this.allTime.inhibitors += this.team1Inhibs
       this.allTime.longestGameSeconds = Math.max(this.allTime.longestGameSeconds, this.battleTime)
 
-      // MVP across both teams; the award counter only rises for own champions
+      // MVP across both teams; the award counter only rises for own champions.
+      // Enemy scores get a bias multiplier (MVP_ENEMY_TEAM_SCORE_MULT), so the
+      // stats still decide but the red team wins the award more often —
+      // future upgrades are meant to shift this toward the own team.
       let mvpName = ''
       let best = -Infinity
       this.team1.forEach((champ, i) => {
         if (!champ.name) return
-        const score = mvpScore(champ, this.battleTrack.objectiveParticipationsT1[i])
+        const score =
+          mvpScore(champ, this.battleTrack.objectiveParticipationsT1[i]) * MVP_OWN_TEAM_SCORE_MULT
         if (score > best) {
           best = score
           mvpName = champ.name
@@ -1262,11 +1270,19 @@ export const useBattleStore = defineStore('battle', {
       let mvpIsOwn = mvpName !== ''
       for (const champ of this.team2) {
         if (!champ.name) continue
-        const score = mvpScore(champ)
+        const score = mvpScore(champ) * MVP_ENEMY_TEAM_SCORE_MULT
         if (score > best) {
           best = score
           mvpName = champ.name
           mvpIsOwn = false
+        }
+      }
+      // Admin/testing override: force a random OWN champion as MVP
+      if (this.adminForceOwnMvp) {
+        const own = this.team1.filter((c) => c.name)
+        if (own.length > 0) {
+          mvpName = own[Math.floor(Math.random() * own.length)].name
+          mvpIsOwn = true
         }
       }
       if (mvpIsOwn) {

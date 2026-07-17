@@ -540,6 +540,11 @@ export const HONOR_WEIGHT_EXP = 1.5
 // future upgrades are meant to shift these multipliers toward the own team.
 export const HONOR_OWN_TEAM_WEIGHT_MULT = 1.0
 export const HONOR_ENEMY_TEAM_WEIGHT_MULT = 1.4
+// Team bias on the MVP pick itself: enemy scores get a head start, so stats
+// still decide, but the red team wins the award more often. Future upgrades
+// are meant to shift these multipliers toward the own team.
+export const MVP_OWN_TEAM_SCORE_MULT = 1.0
+export const MVP_ENEMY_TEAM_SCORE_MULT = 1.4
 
 // ── Warp HUD (planet search) ───────────────────────────────────────────────
 export const WARP_DISTANCE_LY_MIN = 1.2

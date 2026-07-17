@@ -195,6 +195,17 @@ describe('battleStore timeline integration', () => {
     expect(useGameStore().mvpBuffSecondsLeft).toBe(0)
   })
 
+  it('adminForceOwnMvp forces a random own champion as MVP', () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
+    store.battleTime = BATTLE_TOTAL_GAME_SECONDS
+    store.adminForceOwnMvp = true
+    const mvp = store.accumulateBattleStats()
+    expect(T1_NAMES).toContain(mvp)
+    expect(store.allTime.mvpAwards).toBe(1)
+  })
+
   it('honorTributeFor pays own champions only', () => {
     const store = useBattleStore()
     setupBattle(store)

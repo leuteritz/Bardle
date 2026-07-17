@@ -211,6 +211,19 @@
         <button class="ctrl-btn ctrl-btn--skip" title="Skip battle" @click="battleStore.adminSkipToEnd()">
           ⟳ SKIP
         </button>
+        <button
+          class="ctrl-btn ctrl-btn--mvp"
+          :class="{ 'ctrl-btn--mvp-on': battleStore.adminForceOwnMvp }"
+          :title="battleStore.adminForceOwnMvp
+            ? 'Forced own-team MVP: ON — a random blue champion gets MVP every battle'
+            : 'Forced own-team MVP: OFF — the algorithm picks the MVP'"
+          @click="battleStore.adminForceOwnMvp = !battleStore.adminForceOwnMvp"
+        >
+          MVP
+          <span class="mvp-switch" :class="{ 'mvp-switch--on': battleStore.adminForceOwnMvp }">
+            <span class="mvp-switch-knob" />
+          </span>
+        </button>
       </div>
     </div>
   </div>
@@ -1014,6 +1027,47 @@ const structureMarkers = computed(() => {
 .ctrl-btn--skip {
   border-color: #6b3aa0;
   color: #c084fc;
+}
+
+/* ── Admin toggle: forced own-team MVP ── */
+.ctrl-btn--mvp {
+  border-color: #5c3310;
+  color: #8a7238;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.ctrl-btn--mvp-on {
+  border-color: #e8c040;
+  color: #ffe28a;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.45);
+}
+.mvp-switch {
+  position: relative;
+  width: 22px;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #5c3310;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.mvp-switch--on {
+  background: rgba(232, 192, 64, 0.35);
+  border-color: #e8c040;
+}
+.mvp-switch-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a7238;
+  transition: transform 0.2s, background 0.2s;
+}
+.mvp-switch--on .mvp-switch-knob {
+  transform: translateX(10px);
+  background: #ffe28a;
+  box-shadow: 0 0 6px rgba(232, 192, 64, 0.9);
 }
 .ctrl-img {
   width: 16px;
