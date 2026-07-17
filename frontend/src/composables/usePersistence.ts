@@ -161,6 +161,11 @@ export function usePersistence() {
         starsRequired: galaxyStore.starsRequired,
         attemptResults: [...galaxyStore.attemptResults],
         mapSeed: galaxyStore.mapSeed,
+        galaxyStartedAtInGameTime: galaxyStore.galaxyStartedAtInGameTime,
+        completedGalaxies: galaxyStore.completedGalaxies.map((r) => ({
+          ...r,
+          attemptResults: [...r.attemptResults],
+        })),
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
         bossEscortsTotal: galaxyStore.bossEscortsTotal,
@@ -426,6 +431,13 @@ export function usePersistence() {
         galaxyStore.attemptResults =
           gx.attemptResults ?? Array.from({ length: galaxyStore.starsRescued }, () => 'rescued')
         galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
+        // Ältere Saves kennen die Galaxie-Historie nicht → Zeitmessung der
+        // laufenden Galaxie startet ab jetzt, Archiv beginnt leer.
+        galaxyStore.galaxyStartedAtInGameTime =
+          gx.galaxyStartedAtInGameTime ?? gameStore.inGameTime
+        galaxyStore.completedGalaxies = Array.isArray(gx.completedGalaxies)
+          ? gx.completedGalaxies
+          : []
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         // Boss-Eskorten-Wellen: alte Saves ohne die Felder → 0/0, damit ist

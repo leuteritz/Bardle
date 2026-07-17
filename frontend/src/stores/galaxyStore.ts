@@ -30,6 +30,20 @@ export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 
 
 export type StarAttemptResult = 'rescued' | 'failed'
 
+/** Archived record of a completed galaxy — everything the Bard-Stats
+ *  "Galaxy Archive" needs to re-render the minimap exactly as it was played
+ *  (the snapshot renderer is deterministic in mapSeed + attemptResults). */
+export interface CompletedGalaxyRecord {
+  galaxy: number
+  mapSeed: number
+  themeIndex: number
+  attemptResults: StarAttemptResult[]
+  /** In-game seconds spent from entering the galaxy until the core was freed. */
+  durationSeconds: number
+  /** Wall-clock timestamp of the completion. */
+  completedAt: number
+}
+
 export interface TierUnlockCost {
   chimes: number
   material: Record<string, number>
@@ -123,6 +137,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     // Fresh random seed per galaxy run: spawn point + star placement differ
     // every playthrough (persisted so the layout survives a reload).
     mapSeed: Math.floor(Math.random() * 0xffffffff),
+    // ── Galaxy history (Bard-Stats "Galaxy Archive") ──
+    // gameStore.inGameTime (seconds) at the moment this galaxy was entered —
+    // basis for the per-galaxy completion time.
+    galaxyStartedAtInGameTime: 0,
+    completedGalaxies: [] as CompletedGalaxyRecord[],
     // ── Galaxy Tier system ──
     unlockedTier: 1, // highest tier the player has paid to unlock
     tierJustUnlocked: false, // transient flag → UI plays the unlock celebration, then resets
@@ -407,6 +426,30 @@ export const useGalaxyStore = defineStore('galaxy', {
     onGalaxyBossDefeated() {
       this.galaxyBossDefeated = true
       this.pendingGalaxyBoss = false
+      this.maybeRecordCompletion()
+    },
+
+    // Archive the finished galaxy the moment isComplete flips to true (boss AND
+    // all escorts down). Idempotent — commitAdvance calls it again as a safety
+    // net for legacy saves that load in an already-complete state.
+    maybeRecordCompletion() {
+      if (!this.isComplete) return
+      // One record per galaxy number; a same-run re-call keeps the identical
+      // record, an admin-replay of the galaxy replaces it with the fresh run.
+      const existing = this.completedGalaxies.findIndex(
+        (r) => r.galaxy === this.currentGalaxy,
+      )
+      if (existing >= 0 && this.completedGalaxies[existing].mapSeed === this.mapSeed) return
+      const inGameTime = useGameStore().inGameTime
+      if (existing >= 0) this.completedGalaxies.splice(existing, 1)
+      this.completedGalaxies.push({
+        galaxy: this.currentGalaxy,
+        mapSeed: this.mapSeed,
+        themeIndex: this.currentThemeIndex,
+        attemptResults: [...this.attemptResults],
+        durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
+        completedAt: Date.now(),
+      })
     },
 
     initBossWave() {
@@ -416,6 +459,7 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     onBossEscortDefeated() {
       if (this.bossEscortsDefeated < this.bossEscortsTotal) this.bossEscortsDefeated++
+      this.maybeRecordCompletion()
     },
 
     setGalaxyTransitioning(val: boolean) {
@@ -446,7 +490,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     },
 
     commitAdvance() {
+      // Safety net: archive the outgoing galaxy if the completion moment itself
+      // wasn't captured (e.g. legacy save loaded in an already-complete state).
+      this.maybeRecordCompletion()
       this.currentGalaxy++
+      this.galaxyStartedAtInGameTime = useGameStore().inGameTime
       this.starsRescued = 0
       this.starsRequired = computeRequired(this.currentGalaxy)
       this.attemptResults = []

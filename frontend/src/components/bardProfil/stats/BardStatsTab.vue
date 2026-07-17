@@ -4,12 +4,11 @@ import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/gameStore'
 import { useGalaxyStore } from '@/stores/galaxyStore'
-import { useBattleStore } from '@/stores/battleStore'
 import { useSynergyStore } from '@/stores/synergyStore'
 import { useAugmentStore } from '@/stores/augmentStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useUiStore } from '@/stores/uiStore'
-import { CHAMPION_ROLES } from '@/config/championRoles'
+import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -18,15 +17,14 @@ import {
   SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
+import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import { AUGMENTS } from '@/config/augments'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
+import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
 import type { AugmentDefinition } from '@/types'
-
-const totalChampions = Object.keys(CHAMPION_ROLES).length
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
-const battleStore = useBattleStore()
 const synergyStore = useSynergyStore()
 const augmentStore = useAugmentStore()
 const solarStore = useSolarUpgradeStore()
@@ -39,18 +37,18 @@ const {
   meeps,
   level,
   totalClicks,
+  inGameTime,
+  currentUniverse,
   activeModifier,
   abilityCPSMultiplier,
   abilityCPCMultiplier,
   abilityPowerBonus,
 } = storeToRefs(gameStore)
-const { starsRescued, currentGalaxy } = storeToRefs(galaxyStore)
-const { ownedChampions, currentRank } = storeToRefs(battleStore)
+const { starsRescued, currentGalaxy, completedGalaxies } = storeToRefs(galaxyStore)
 const { cpsSynergyMultiplier, powerSynergyMultiplier, dpsSynergyMultiplier } =
   storeToRefs(synergyStore)
 const { temporaryCPSMultiplier } = storeToRefs(augmentStore)
 
-const championCount = computed(() => ownedChampions.value.filter((c) => c !== 'Bard').length)
 const dpsPct = computed(() => Math.round((dpsSynergyMultiplier.value - 1) * 100))
 
 /* ── Count-up animation on mount ─────────────────────────────── */
@@ -71,7 +69,6 @@ const animChimes = computed(() => Math.floor(totalChimesEarned.value * countUpPr
 const animStars = computed(() => Math.floor(starsRescued.value * countUpProgress.value))
 const animMeeps = computed(() => Math.floor(meeps.value * countUpProgress.value))
 const animClicks = computed(() => Math.floor(totalClicks.value * countUpProgress.value))
-const animChampions = computed(() => Math.floor(championCount.value * countUpProgress.value))
 
 /* ── Generated backdrop starfield ────────────────────────────── */
 /* Seeded PRNG (mulberry32) so the sky layout is identical on every render */
@@ -158,6 +155,12 @@ const phaseVars = computed(() => {
   }
 })
 
+const phaseDisplayLabel = computed(() =>
+  solarStore.isCometState
+    ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
+    : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`,
+)
+
 const timelineDots = computed(() =>
   STAR_PHASE_DATA.map((p, i) => ({
     label: p.name,
@@ -232,6 +235,30 @@ const phaseAge = computed(() => {
   if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
   return `${s}s`
 })
+
+/* ── Non-battle game stats ───────────────────────────────────── */
+const playTime = computed(() => formatDuration(inGameTime.value * 1000))
+
+/* ── Galaxy Archive (completed-galaxy memories) ──────────────── */
+const archive = computed(() =>
+  [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy),
+)
+
+function archiveThemeName(rec: CompletedGalaxyRecord): string {
+  return GALAXY_THEMES[rec.themeIndex % GALAXY_THEMES.length]?.name ?? ''
+}
+
+function archiveRescued(rec: CompletedGalaxyRecord): number {
+  return rec.attemptResults.filter((r) => r === 'rescued').length
+}
+
+function archiveFailed(rec: CompletedGalaxyRecord): number {
+  return rec.attemptResults.filter((r) => r === 'failed').length
+}
+
+function archiveDate(rec: CompletedGalaxyRecord): string {
+  return new Date(rec.completedAt).toLocaleDateString()
+}
 
 /* ── Augment shelf ───────────────────────────────────────────── */
 interface AugCard {
@@ -349,149 +376,126 @@ const filteredAugCards = computed(() => {
 </script>
 
 <template>
-  <div class="sf-root rpg-scrollbar">
-    <!-- ══ Cinematic stage: Bard | stats | sun ══ -->
-    <div class="sf-stage" :style="phaseVars">
-      <div class="sf-stage-bg" aria-hidden="true">
+  <div class="sf-root" :style="phaseVars">
+    <!-- ══ Ambient space backdrop ══ -->
+    <div class="sf-bg" aria-hidden="true">
+      <div
+        v-for="(layer, li) in STAR_LAYERS"
+        :key="li"
+        class="sf-drift"
+        :class="`sf-drift--${li}`"
+      >
+        <span
+          v-for="(s, si) in layer"
+          :key="si"
+          class="sf-star"
+          :class="{
+            'sf-star--bright': s.bright,
+            'sf-star--phase': s.tint === 'phase',
+            'sf-star--blue': s.tint === 'blue',
+          }"
+          :style="{
+            left: s.x + '%',
+            top: s.y + '%',
+            width: s.size + 'px',
+            height: s.size + 'px',
+            '--star-opacity': s.opacity,
+            animationDuration: s.twinkleDur + 's',
+            animationDelay: s.twinkleDelay + 's',
+          }"
+        />
+      </div>
+      <div class="sf-nebula" />
+      <div class="sf-shooting-star" />
+    </div>
+
+    <!-- ══ Solar strip: mini sun + phase identity + evolution timeline ══ -->
+    <section class="sf-panel sf-solar">
+      <div
+        class="sf-solar-id"
+        role="button"
+        title="Open the Solar Shop"
+        @click="uiStore.setBardTab('shop')"
+      >
+        <div class="sf-mini-sun-wrap">
+          <div class="sf-mini-ring" />
+          <div class="sf-mini-sun" />
+        </div>
+        <div class="sf-solar-meta">
+          <span class="sf-kicker">{{ phaseDisplayLabel }}</span>
+          <span class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</span>
+          <span class="sf-solar-age">
+            <Icon icon="game-icons:sand-clock" width="10" height="10" />
+            {{ phaseAge ?? '—' }} in phase
+          </span>
+        </div>
+      </div>
+
+      <div class="sf-timeline">
+        <!-- Dwell timer above the currently filling segment -->
         <div
-          v-for="(layer, li) in STAR_LAYERS"
-          :key="li"
-          class="sf-drift"
-          :class="`sf-drift--${li}`"
+          v-if="!isMax"
+          class="sf-tl-timer"
+          :style="{ left: `calc(7% + 86% * ${timerLabelFrac})` }"
+          :title="`${formatDuration(dwellElapsedMs)} of ${formatDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
         >
-          <span
-            v-for="(s, si) in layer"
-            :key="si"
-            class="sf-star"
-            :class="{
-              'sf-star--bright': s.bright,
-              'sf-star--phase': s.tint === 'phase',
-              'sf-star--blue': s.tint === 'blue',
-            }"
-            :style="{
-              left: s.x + '%',
-              top: s.y + '%',
-              width: s.size + 'px',
-              height: s.size + 'px',
-              '--star-opacity': s.opacity,
-              animationDuration: s.twinkleDur + 's',
-              animationDelay: s.twinkleDelay + 's',
-            }"
+          <span v-if="dwellMet" class="sf-tl-clock is-met">✓ Ready</span>
+          <span v-else class="sf-tl-clock">{{ formatDuration(dwellRemainingMs) }}</span>
+        </div>
+        <div class="sf-timeline-track">
+          <div class="sf-timeline-fill" :style="{ width: timelineFillPct + '%' }" />
+          <!-- Segment current → next phase, filling with dwell progress -->
+          <div
+            v-if="!isMax"
+            class="sf-timeline-fill--active"
+            :class="{ 'is-met': dwellMet }"
+            :style="{ left: activeSegLeftPct + '%', width: activeSegWidthPct + '%' }"
           />
         </div>
-        <span class="sf-sparkle sf-sparkle--1">✦</span>
-        <span class="sf-sparkle sf-sparkle--2">✦</span>
-        <span class="sf-sparkle sf-sparkle--3">✦</span>
-        <div class="sf-galaxy" />
-        <div class="sf-nebula" />
-        <div class="sf-shooting-star" />
-        <div class="sf-shooting-star sf-shooting-star--2" />
-      </div>
-      <img
-        src="/img/BardAbilities/Bard.png"
-        alt="Bard – The Wandering Caretaker"
-        class="sf-bard"
-      />
-
-      <!-- ─ Center stat card ─ -->
-      <div class="sf-card">
-        <div class="sf-card-gold" />
-        <div class="sf-chips">
-          <div class="sf-chip sf-chip--gold">
-            <span class="sf-chip-lbl">Level</span>
-            <span class="sf-chip-val">{{ level }}</span>
+        <div
+          v-for="(dot, i) in timelineDots"
+          :key="i"
+          class="sf-tl-step"
+          :title="`${STAR_PHASE_DATA[i].name} · ${STAR_PHASE_DATA[i].astroName}`"
+        >
+          <div class="sf-tl-dot-slot">
+            <div
+              class="sf-tl-dot"
+              :class="{ 'is-done': dot.done, 'is-current': dot.current }"
+              :style="{
+                width: dot.size + 'px',
+                height: dot.size + 'px',
+                '--dot-color': dot.color,
+                '--dot-glow': dot.glow,
+                '--dot-core': dot.core,
+                '--dot-mid': dot.mid,
+                '--dot-edge': dot.edge,
+              }"
+            />
           </div>
-          <div class="sf-chip sf-chip--green">
-            <span class="sf-chip-lbl">Rank</span>
-            <span class="sf-chip-val sf-chip-val--sm">{{ currentRank.tier }} {{ currentRank.division }}</span>
-          </div>
-          <div class="sf-chip sf-chip--rare">
-            <span class="sf-chip-lbl">Galaxy</span>
-            <span class="sf-chip-val sf-chip-val--sm">{{ currentGalaxy }}</span>
-          </div>
-        </div>
-
-        <div class="sf-hero-row">
-          <img class="sf-row-icon sf-row-icon--lg" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Chimes / Sec</span>
-          <span class="sf-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
-        </div>
-
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Chimes / Click</span>
-          <span class="sf-row-val">{{ $formatNumber(chimesPerClick) }}</span>
-        </div>
-        <div v-if="dpsPct > 0" class="sf-row">
-          <Icon icon="game-icons:crossed-swords" class="sf-row-icon sf-icon-dps" width="19" height="19" />
-          <span class="sf-row-lbl">Combat DPS</span>
-          <span class="sf-row-val sf-row-val--dps">+{{ dpsPct }}%</span>
-        </div>
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Meeps Guided</span>
-          <span class="sf-row-val sf-row-val--green">{{ $formatNumber(animMeeps) }}</span>
-        </div>
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Total Chimes</span>
-          <span class="sf-row-val">{{ $formatNumber(animChimes) }}</span>
-        </div>
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/star.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Stars Rescued</span>
-          <span class="sf-row-val">{{ $formatNumber(animStars) }}</span>
-        </div>
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/menu/TEAM.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Champions</span>
-          <span class="sf-row-val">
-            {{ animChampions }}<span class="sf-row-val-sub"> / {{ totalChampions }}</span>
+          <span class="sf-tl-lbl" :class="{ 'is-current': dot.current }" :style="dot.current ? { color: dot.color } : undefined">
+            {{ dot.label }}
           </span>
-        </div>
-        <div class="sf-row">
-          <img class="sf-row-icon" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
-          <span class="sf-row-lbl">Total Clicks</span>
-          <span class="sf-row-val">{{ $formatNumber(animClicks) }}</span>
         </div>
       </div>
 
-      <!-- ─ Sun column (click → solar shop) ─ -->
-      <div class="sf-sun-col" @click="uiStore.setBardTab('shop')">
-        <div class="sf-sun-wrap">
-          <div class="sf-ring sf-ring--outer" />
-          <div class="sf-ring sf-ring--inner" />
-          <div class="sf-sun" />
-        </div>
-        <div class="sf-phase-kicker">
-          {{ solarStore.isCometState ? `Star Phase · 1 / ${SUN_PHASE_DISPLAY_TOTAL}` : `Star Phase · ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}` }}
-        </div>
-        <div class="sf-phase-name">{{ solarStore.isCometState ? COMET_PHASE_DATA.name : phase.name }}</div>
-        <div class="sf-time">
-          <span class="sf-time-big">{{ phaseAge ?? '—' }}</span>
-          <span class="sf-time-sub">
-            <Icon icon="game-icons:sand-clock" width="12" height="12" class="sf-time-sub-icon" />
-            Time in phase
-          </span>
-        </div>
-        <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved · MAX</div>
-        <div v-else-if="solarStore.canUpgradeStar" class="sf-pill sf-pill--ready">
-          {{ solarStore.isCometState ? 'Ready to Ignite · Shop' : 'Ready to Evolve · Shop' }}
+      <div class="sf-solar-status">
+        <div v-if="isMax" class="sf-pill sf-pill--max">Fully Evolved</div>
+        <div
+          v-else-if="solarStore.canUpgradeStar"
+          class="sf-pill sf-pill--ready"
+          role="button"
+          @click="uiStore.setBardTab('shop')"
+        >
+          {{ solarStore.isCometState ? 'Ignite · Shop' : 'Evolve · Shop' }}
         </div>
         <div v-else-if="solarStore.branchesReadyForEvolve" class="sf-pill sf-pill--wait">
           {{ solarStore.isCometState ? 'Igniting in' : 'Evolving in' }} {{ formatDuration(dwellRemainingMs) }}
         </div>
-        <div v-else class="sf-pill sf-pill--hint">
+        <div v-else class="sf-pill sf-pill--hint" role="button" @click="uiStore.setBardTab('shop')">
           {{ solarStore.isCometState ? 'Ignite in Shop →' : 'Evolve in Shop →' }}
         </div>
-      </div>
-    </div>
-
-    <!-- ══ Bottom band: evolution timeline + augment shelf ══ -->
-    <div class="sf-band" :style="phaseVars">
-      <div class="sf-evo">
-        <div class="sf-band-label">Stellar Evolution</div>
-        <!-- TEMP: admin dwell-skip — remove later (incl. .sf-dev-skip CSS + adminSkipDwellTime in solarUpgradeStore) -->
+        <!-- TEMP: admin dwell-skip — remove later (incl. adminSkipDwellTime in solarUpgradeStore) -->
         <button
           v-if="!isMax && !dwellMet"
           class="sf-dev-skip"
@@ -502,88 +506,105 @@ const filteredAugCards = computed(() => {
           DEV · Skip Time
         </button>
         <!-- /TEMP -->
-        <div class="sf-timeline">
-          <!-- Dwell timer above the currently filling segment -->
-          <div
-            v-if="!isMax"
-            class="sf-tl-timer"
-            :style="{ left: `calc(7% + 86% * ${timerLabelFrac})` }"
-            :title="`${formatDuration(dwellElapsedMs)} of ${formatDuration(dwellRequiredMs)} in this phase — time the sun must spend before it can evolve`"
-          >
-            <span v-if="dwellMet" class="sf-time-big sf-time-big--sm is-met">✓ Ready</span>
-            <span v-else class="sf-time-big sf-time-big--sm">{{ formatDuration(dwellRemainingMs) }}</span>
-          </div>
-          <div class="sf-timeline-track">
-            <div class="sf-timeline-fill" :style="{ width: timelineFillPct + '%' }" />
-            <!-- Segment current → next phase, filling with dwell progress -->
-            <div
-              v-if="!isMax"
-              class="sf-timeline-fill--active"
-              :class="{ 'is-met': dwellMet }"
-              :style="{ left: activeSegLeftPct + '%', width: activeSegWidthPct + '%' }"
-            />
-          </div>
-          <div
-            v-for="(dot, i) in timelineDots"
-            :key="i"
-            class="sf-tl-step"
-            :title="`${STAR_PHASE_DATA[i].name} · ${STAR_PHASE_DATA[i].astroName}`"
-          >
-            <div class="sf-tl-dot-slot">
-              <div
-                class="sf-tl-dot"
-                :class="{ 'is-done': dot.done, 'is-current': dot.current }"
-                :style="{
-                  width: dot.size + 'px',
-                  height: dot.size + 'px',
-                  '--dot-color': dot.color,
-                  '--dot-glow': dot.glow,
-                  '--dot-core': dot.core,
-                  '--dot-mid': dot.mid,
-                  '--dot-edge': dot.edge,
-                }"
-              />
+      </div>
+    </section>
+
+    <!-- ══ Panel deck: stats | augments | galaxy archive ══ -->
+    <div class="sf-deck">
+      <!-- ─ Journey stats ─ -->
+      <section class="sf-panel sf-col">
+        <header class="sf-p-head">
+          <span class="sf-p-title">Journey</span>
+          <span class="sf-p-aside">
+            <Icon icon="game-icons:sand-clock" width="11" height="11" />
+            {{ playTime }}
+          </span>
+        </header>
+        <div class="sf-p-body sf-stats-body rpg-scrollbar">
+          <div class="sf-chips">
+            <div class="sf-chip sf-chip--gold">
+              <span class="sf-chip-lbl">Level</span>
+              <span class="sf-chip-val">{{ level }}</span>
             </div>
-            <span class="sf-tl-lbl" :class="{ 'is-current': dot.current }" :style="dot.current ? { color: dot.color } : undefined">
-              {{ dot.label }}
-            </span>
+            <div class="sf-chip sf-chip--rare">
+              <span class="sf-chip-lbl">Galaxy</span>
+              <span class="sf-chip-val">{{ currentGalaxy }}</span>
+            </div>
+            <div class="sf-chip sf-chip--green">
+              <span class="sf-chip-lbl">Universe</span>
+              <span class="sf-chip-val">{{ currentUniverse }}</span>
+            </div>
+          </div>
+
+          <div class="sf-hero-row">
+            <img class="sf-ico sf-ico--lg" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Chimes / Sec</span>
+            <span class="sf-hero-val">{{ $formatNumber(chimesPerSecond) }}</span>
+          </div>
+
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Chimes / Click</span>
+            <span class="sf-srow-val">{{ $formatNumber(chimesPerClick) }}</span>
+          </div>
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Total Chimes</span>
+            <span class="sf-srow-val">{{ $formatNumber(animChimes) }}</span>
+          </div>
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/BardAbilities/BardMeep.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Meeps Guided</span>
+            <span class="sf-srow-val sf-srow-val--green">{{ $formatNumber(animMeeps) }}</span>
+          </div>
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/BardAbilities/BardChime.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Total Clicks</span>
+            <span class="sf-srow-val">{{ $formatNumber(animClicks) }}</span>
+          </div>
+          <div class="sf-srow">
+            <img class="sf-ico" src="/img/star.png" alt="" aria-hidden="true" />
+            <span class="sf-srow-lbl">Stars Rescued</span>
+            <span class="sf-srow-val">{{ $formatNumber(animStars) }}</span>
+          </div>
+          <div class="sf-srow">
+            <Icon icon="game-icons:galaxy" class="sf-ico sf-ico--tint" width="17" height="17" />
+            <span class="sf-srow-lbl">Galaxies Freed</span>
+            <span class="sf-srow-val">{{ archive.length }}</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="sf-aug-zone">
-        <!-- ─ Left: buff panel with search ─ -->
-        <div class="sf-buff-panel">
-          <div class="sf-buff-head">
-            <span class="sf-band-label">Augments</span>
-            <span class="sf-shelf-count">
-              {{ augmentCount }} <span class="sf-shelf-count-sub">active</span>
-            </span>
-          </div>
+      <!-- ─ Augments & buffs ─ -->
+      <section class="sf-panel sf-col">
+        <header class="sf-p-head">
+          <span class="sf-p-title">
+            Augments
+            <span class="sf-p-count">{{ augmentCount }}</span>
+          </span>
           <input
             v-model="buffSearch"
-            class="sf-buff-search"
+            class="sf-search"
             type="text"
-            placeholder="Search augment or buff…"
+            placeholder="Search…"
           />
-          <div class="sf-buff-chips rpg-scrollbar">
-            <div v-if="filteredChips.length === 0" class="sf-buff-empty">
+        </header>
+        <div class="sf-p-body rpg-scrollbar">
+          <div class="sf-buff-chips">
+            <div v-if="filteredChips.length === 0" class="sf-empty-line">
               {{ totalChips.length === 0 ? 'No buffs active yet' : 'No buffs match' }}
             </div>
             <div v-for="chip in filteredChips" :key="chip.key" class="sf-chip-buff">
-              <Icon :icon="chip.icon" width="15" height="15" class="sf-chip-buff-icon" />
+              <Icon :icon="chip.icon" width="14" height="14" class="sf-chip-buff-icon" />
               <span class="sf-chip-buff-lbl">{{ chip.label }}</span>
               <span class="sf-chip-buff-val" :class="chip.positive ? 'is-up' : 'is-down'">
                 {{ chip.value }}
               </span>
             </div>
           </div>
-        </div>
 
-        <!-- ─ Right: augment card shelf (fixed height) ─ -->
-        <div class="sf-shelf-col">
-          <div v-if="filteredAugCards.length === 0" class="sf-shelf-empty">
-            <Icon icon="game-icons:gems" width="30" height="30" class="sf-shelf-empty-icon" />
+          <div v-if="filteredAugCards.length === 0" class="sf-empty-block">
+            <Icon icon="game-icons:gems" width="28" height="28" class="sf-empty-icon" />
             <span>
               {{
                 augmentCount === 0
@@ -592,67 +613,114 @@ const filteredAugCards = computed(() => {
               }}
             </span>
           </div>
-          <div v-else class="sf-shelf rpg-scrollbar">
+          <div v-else class="sf-aug-grid">
             <div
               v-for="card in filteredAugCards"
               :key="card.key"
               class="sf-aug-card"
               :style="{ '--rarity': card.color }"
-              :title="card.aug.effectLine"
+              :title="`${card.aug.name} — ${card.aug.effectLine}`"
             >
               <div class="sf-aug-icon">
                 <img v-if="card.aug.image" :src="card.aug.image" :alt="card.aug.name" />
                 <Icon
                   v-else-if="card.aug.icon.includes(':')"
                   :icon="card.aug.icon"
-                  width="32"
-                  height="32"
+                  width="22"
+                  height="22"
                 />
                 <span v-else class="sf-aug-emoji">{{ card.aug.icon }}</span>
               </div>
-              <span class="sf-aug-name">{{ card.aug.name }}</span>
-              <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
+              <div class="sf-aug-body">
+                <span class="sf-aug-name">{{ card.aug.name }}</span>
+                <span class="sf-aug-effect">{{ card.aug.effectLine }}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- ─ Galaxy archive ─ -->
+      <section class="sf-panel sf-col">
+        <header class="sf-p-head">
+          <span class="sf-p-title">
+            Galaxy Archive
+            <span class="sf-p-count">{{ archive.length }}</span>
+          </span>
+          <span class="sf-p-aside">freed</span>
+        </header>
+        <div class="sf-p-body rpg-scrollbar">
+          <div v-if="archive.length === 0" class="sf-empty-block">
+            <Icon icon="game-icons:spiral-arrow" width="28" height="28" class="sf-empty-icon" />
+            <span>No galaxies freed yet — rescue every star and defeat the core to preserve your first map here.</span>
+          </div>
+          <div v-else class="sf-arch-list">
+            <div
+              v-for="rec in archive"
+              :key="rec.galaxy"
+              class="sf-arch-card"
+              :title="`Galaxy ${rec.galaxy} · ${archiveThemeName(rec)} — freed ${archiveDate(rec)}`"
+            >
+              <div class="sf-arch-imgwrap">
+                <img
+                  :src="renderGalaxySnapshot(rec)"
+                  :alt="`Minimap of galaxy ${rec.galaxy}`"
+                  class="sf-arch-img"
+                  loading="lazy"
+                />
+                <div class="sf-arch-title">
+                  <span class="sf-arch-galaxy">Galaxy {{ rec.galaxy }}</span>
+                  <span class="sf-arch-theme">{{ archiveThemeName(rec) }}</span>
+                </div>
+              </div>
+              <div class="sf-arch-meta">
+                <span class="sf-arch-stat sf-arch-stat--rescued" title="Stars rescued">
+                  ✦ {{ archiveRescued(rec) }}
+                </span>
+                <span
+                  v-if="archiveFailed(rec) > 0"
+                  class="sf-arch-stat sf-arch-stat--failed"
+                  title="Stars lost"
+                >
+                  ✕ {{ archiveFailed(rec) }}
+                </span>
+                <span class="sf-arch-stat sf-arch-stat--time" title="Time to free this galaxy">
+                  <Icon icon="game-icons:sand-clock" width="11" height="11" />
+                  {{ formatDuration(rec.durationSeconds * 1000) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
 /* ══════════════════════════════════════════════════════════════
-   BARD STATS — "Star Forge": cinematic stage + evolution band
+   BARD STATS — "Command Deck": a fixed-height dashboard.
+   Row 1: solar strip (mini sun + phase + evolution timeline).
+   Row 2: three equal-height panels — Journey | Augments | Archive.
+   The page itself NEVER scrolls; long lists scroll inside their panel.
 ══════════════════════════════════════════════════════════════ */
 
 .sf-root {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: 10px;
   height: 100%;
-  overflow-y: auto;
-  background: var(--rpg-bg-deep);
+  overflow: hidden;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--sun-glow1) 14%, transparent), transparent 45%),
+    radial-gradient(120% 120% at 12% 100%, #16110b, #0a0806 72%);
   color: var(--rpg-text);
 }
 
-/* ─── Cinematic stage ───────────────────────────────────────── */
-.sf-stage {
-  position: relative;
-  flex: 1;
-  min-height: 440px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 24px 30px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 84% 50%, color-mix(in srgb, var(--sun-glow1) 24%, transparent), transparent 40%),
-    radial-gradient(circle at 90% 50%, color-mix(in srgb, var(--sun-glow2) 14%, transparent), transparent 60%),
-    radial-gradient(120% 120% at 12% 50%, #16110b, #0a0806 72%);
-}
-
-/* ─── Animated space backdrop (stars, galaxy, nebula) ───────── */
-.sf-stage-bg {
+/* ─── Ambient backdrop ──────────────────────────────────────── */
+.sf-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -660,11 +728,8 @@ const filteredAugCards = computed(() => {
   overflow: hidden;
 }
 
-/* Generated starfield: three drift layers (slow/mid/fast by star size,
-   seeded PRNG layout) — every star twinkles at its own pace. */
 .sf-drift {
   position: absolute;
-  /* slight overscan so the gentle drift never reveals hard edges */
   inset: -14px;
   animation: sf-stars-drift 90s ease-in-out infinite alternate;
 }
@@ -711,7 +776,6 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Barely-there parallax drift (≤8px), run with `alternate` */
 @keyframes sf-stars-drift {
   from {
     transform: translate(0, 0);
@@ -721,45 +785,18 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Distant spiral galaxy: tilted ellipse slowly rotating in the
-   upper-left quadrant — cool violet counterpoint to the warm sun. */
-.sf-galaxy {
-  position: absolute;
-  top: 6%;
-  left: 8%;
-  width: 200px;
-  height: 200px;
-  opacity: 0.22;
-  background:
-    radial-gradient(ellipse 50% 14% at 50% 50%, rgba(232, 224, 255, 0.9) 0%, rgba(160, 130, 220, 0.5) 34%, transparent 72%),
-    radial-gradient(ellipse 26% 8% at 50% 50%, rgba(255, 255, 255, 0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 62% 22% at 50% 50%, rgba(128, 96, 192, 0.35) 0%, transparent 78%);
-  animation: sf-galaxy-spin 240s linear infinite;
-}
-
-@keyframes sf-galaxy-spin {
-  from {
-    transform: rotate(-24deg);
-  }
-  to {
-    transform: rotate(336deg);
-  }
-}
-
-/* Nebula wisp: large soft blob near the top center, tinted to the
-   current star phase so it recolors on evolution. */
 .sf-nebula {
   position: absolute;
-  top: -20%;
-  left: 30%;
-  width: 46%;
-  height: 70%;
+  top: -25%;
+  left: 28%;
+  width: 50%;
+  height: 75%;
   background: radial-gradient(
     ellipse 50% 40% at 50% 50%,
     color-mix(in srgb, var(--phase-glow) 60%, #6040a0) 0%,
     transparent 70%
   );
-  opacity: 0.07;
+  opacity: 0.06;
   animation: sf-nebula-drift 60s ease-in-out infinite alternate;
 }
 
@@ -772,8 +809,6 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Rare shooting star: one streak crossing the upper stage, visible
-   for a blink (~6% of a 14s cycle) — rarity keeps it charming. */
 .sf-shooting-star {
   position: absolute;
   top: 14%;
@@ -806,314 +841,125 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Second shooting star: opposite direction, off-sync cycle */
-.sf-shooting-star--2 {
-  top: 34%;
-  left: auto;
-  right: -8%;
-  width: 70px;
-  background: linear-gradient(to right, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.2) 60%, transparent);
-  transform: rotate(-170deg);
-  animation: sf-shooting-2 19s linear infinite;
-  animation-delay: -7s;
-}
-
-@keyframes sf-shooting-2 {
-  0%,
-  90% {
-    transform: translate(0, 0) rotate(-170deg);
-    opacity: 0;
-  }
-  91% {
-    opacity: 0.8;
-  }
-  96% {
-    transform: translate(-46vw, 10vh) rotate(-170deg);
-    opacity: 0;
-  }
-  100% {
-    transform: translate(-46vw, 10vh) rotate(-170deg);
-    opacity: 0;
-  }
-}
-
-/* Sparkle stars: four-point ✦ glints pinging at their own cadence */
-.sf-sparkle {
-  position: absolute;
-  font-size: 13px;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
-  animation: sf-sparkle-ping 5s ease-in-out infinite;
-}
-.sf-sparkle--1 {
-  top: 18%;
-  left: 40%;
-}
-.sf-sparkle--2 {
-  top: 66%;
-  left: 12%;
-  font-size: 10px;
-  color: color-mix(in srgb, white 75%, var(--phase-primary));
-  text-shadow: 0 0 6px var(--phase-glow);
-  animation-duration: 7s;
-  animation-delay: -2.8s;
-}
-.sf-sparkle--3 {
-  top: 8%;
-  left: 74%;
-  font-size: 11px;
-  animation-duration: 6s;
-  animation-delay: -4.4s;
-}
-
-@keyframes sf-sparkle-ping {
-  0%,
-  100% {
-    transform: scale(0.5) rotate(0deg);
-    opacity: 0.15;
-  }
-  50% {
-    transform: scale(1.15) rotate(45deg);
-    opacity: 0.9;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .sf-timeline-fill--active,
   .sf-drift,
   .sf-star,
-  .sf-galaxy,
   .sf-nebula,
   .sf-shooting-star,
-  .sf-sparkle,
-  .sf-bard,
-  .sf-sun,
-  .sf-ring {
+  .sf-mini-sun,
+  .sf-mini-ring {
     animation: none;
   }
 }
 
-/* ─ Bard hero ─ */
-.sf-bard {
+/* ─── Shared panel chrome ───────────────────────────────────── */
+.sf-panel {
   position: relative;
   z-index: 1;
-  width: clamp(170px, 24%, 300px);
-  height: auto;
-  flex-shrink: 1;
-  object-fit: contain;
-  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 22px rgba(232, 192, 64, 0.3));
-  animation: sf-floaty 7s ease-in-out infinite;
-}
-
-@keyframes sf-floaty {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-/* ─ Center stat card ─ */
-.sf-card {
-  position: relative;
-  z-index: 1;
-  flex: 0 1 384px;
-  min-width: 300px;
   display: flex;
+  background: rgba(13, 12, 7, 0.85);
+  border: 1px solid #4a2c12;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #2c1806, 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.sf-col {
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 18px;
-  background: rgba(13, 12, 7, 0.82);
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  box-shadow: inset 0 0 0 1px #3e200a, 0 12px 34px rgba(0, 0, 0, 0.55);
+  min-height: 0;
+  min-width: 0;
 }
 
-.sf-card-gold {
-  height: 3px;
-  margin: -16px -18px 2px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c040, #d4a020, #c89040, #5c3310);
-  border-radius: 5px 5px 0 0;
-}
-
-.sf-chips {
-  display: flex;
-  gap: 6px;
-}
-
-.sf-chip {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 4px;
-  background: #111008;
-  border-radius: 5px;
-}
-.sf-chip--gold {
-  border: 1px solid #5c3310;
-}
-.sf-chip--green {
-  border: 1px solid #4a6a2a;
-}
-.sf-chip--rare {
-  border: 1px solid #6a4a80;
-}
-
-.sf-chip-lbl {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #7a6848;
-}
-
-.sf-chip-val {
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
-}
-.sf-chip-val--sm {
-  font-size: 14px;
-}
-.sf-chip--green .sf-chip-val {
-  color: var(--rpg-green-light);
-}
-.sf-chip--rare .sf-chip-val {
-  color: var(--rpg-rarity-rare);
-}
-
-/* ─ Hero CPS row ─ */
-.sf-hero-row {
+.sf-p-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  background: linear-gradient(to right, #1a1008, #120d07);
-  border: 1px solid #3e200a;
-  border-radius: 5px;
-}
-
-.sf-hero-val {
-  font-size: 27px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--rpg-gold);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* ─ Compact stat rows ─ */
-.sf-row {
-  display: flex;
-  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 7px 12px;
-  border-top: 1px solid #241a0c;
+  border-bottom: 1px solid #2c1806;
 }
 
-.sf-row-icon {
-  width: 19px;
-  height: 19px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-.sf-row-icon--lg {
-  width: 26px;
-  height: 26px;
-}
-.sf-icon-dps {
-  color: #c060a0;
-}
-
-.sf-row-lbl {
-  flex: 1;
-  min-width: 0;
-  font-size: 11px;
+.sf-p-title {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--rpg-text-muted);
+  color: var(--rpg-wood);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.sf-row-val {
-  font-size: 18px;
+.sf-p-count {
+  font-size: 13px;
   font-weight: 900;
-  line-height: 1;
+  letter-spacing: 0;
   color: var(--rpg-gold);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.sf-row-val--dps {
-  color: #c060a0;
-}
-.sf-row-val--green {
-  color: var(--rpg-green-light);
-}
-.sf-row-val-sub {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--rpg-text-dim);
 }
 
-/* ─ Sun column ─ */
-.sf-sun-col {
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
-  width: clamp(220px, 27%, 320px);
+.sf-p-aside {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sf-p-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+/* ─── Solar strip (row 1) ───────────────────────────────────── */
+.sf-solar {
+  flex-shrink: 0;
+  align-items: center;
+  gap: clamp(14px, 2.5vw, 34px);
+  padding: 8px 16px;
+}
+
+.sf-solar-id {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
 }
 
-.sf-sun-wrap {
+.sf-mini-sun-wrap {
   position: relative;
-  width: clamp(190px, 90%, 300px);
-  aspect-ratio: 1;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
 }
 
-.sf-ring {
+.sf-mini-ring {
   position: absolute;
+  inset: -4px;
   border-radius: 50%;
-  pointer-events: none;
-}
-.sf-ring--outer {
-  inset: -6px;
-  border: 1px solid color-mix(in srgb, var(--phase-glow) 25%, transparent);
-  animation: sf-cw 30s linear infinite;
-}
-.sf-ring--inner {
-  inset: 8%;
-  border: 1px dashed color-mix(in srgb, var(--phase-glow) 17%, transparent);
-  animation: sf-ccw 18s linear infinite;
+  border: 1px dashed color-mix(in srgb, var(--phase-glow) 30%, transparent);
+  animation: sf-cw 24s linear infinite;
 }
 @keyframes sf-cw {
   to {
     transform: rotate(360deg);
   }
 }
-@keyframes sf-ccw {
-  to {
-    transform: rotate(-360deg);
-  }
-}
 
-.sf-sun {
+/* The sun, shrunk to an emblem: same phase palette, tight glow */
+.sf-mini-sun {
   position: absolute;
-  inset: 14%;
+  inset: 6px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 38% 35%,
@@ -1124,10 +970,8 @@ const filteredAugCards = computed(() => {
     var(--sun-edge) 100%
   );
   box-shadow:
-    0 0 50px 18px color-mix(in srgb, var(--sun-glow1) 75%, transparent),
-    0 0 110px 44px color-mix(in srgb, var(--sun-glow1) 45%, transparent),
-    0 0 190px 80px color-mix(in srgb, var(--sun-glow2) 28%, transparent),
-    0 0 250px 110px color-mix(in srgb, var(--sun-glow3) 14%, transparent);
+    0 0 12px 3px color-mix(in srgb, var(--sun-glow1) 70%, transparent),
+    0 0 30px 10px color-mix(in srgb, var(--sun-glow2) 30%, transparent);
   animation: sf-sun-pulse var(--pulse-speed) ease-in-out infinite;
 }
 
@@ -1138,108 +982,85 @@ const filteredAugCards = computed(() => {
     filter: brightness(1);
   }
   50% {
-    transform: scale(1.05);
-    filter: brightness(1.2);
+    transform: scale(1.06);
+    filter: brightness(1.18);
   }
 }
 
-.sf-phase-kicker {
-  font-size: 11px;
+.sf-solar-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 118px;
+}
+
+.sf-kicker {
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.32em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #b0a080;
-  text-align: center;
+  white-space: nowrap;
 }
 
 .sf-phase-name {
-  font-size: 34px;
+  font-size: 21px;
+  line-height: 1.05;
   letter-spacing: 0.04em;
   color: var(--phase-primary);
-  line-height: 1.15;
-  text-align: center;
-  animation: sf-name-pulse var(--pulse-speed) ease-in-out infinite;
-}
-
-@keyframes sf-name-pulse {
-  0%,
-  100% {
-    text-shadow: 0 0 12px var(--phase-glow), 0 0 26px var(--phase-glow);
-  }
-  50% {
-    text-shadow: 0 0 4px var(--phase-glow);
-  }
-}
-
-.sf-time {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-
-/* Shared time-display style: big gold value + muted uppercase sub-label —
-   used by the timeline dwell timer and the sun's "Time in phase". */
-.sf-time-big {
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  color: var(--rpg-gold);
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.45);
-  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px var(--phase-glow);
   white-space: nowrap;
 }
-.sf-time-big.is-met {
-  color: #7ac060;
-  text-shadow: 0 0 10px rgba(82, 184, 48, 0.6);
-}
-/* Compact variant: same look, sized to fit between two timeline dots */
-.sf-time-big--sm {
-  font-size: 13px;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4);
-}
-.sf-time-big--sm.is-met {
-  text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
+.sf-solar-id:hover .sf-phase-name {
+  text-shadow: 0 0 14px var(--phase-glow), 0 0 26px var(--phase-glow);
 }
 
-.sf-time-sub {
+.sf-solar-age {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--rpg-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.sf-time-sub-icon {
-  color: var(--rpg-text-muted);
+
+.sf-solar-status {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 128px;
 }
 
 .sf-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  font-size: 11px;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
   border-radius: 5px;
-  transition: box-shadow 0.15s;
+  white-space: nowrap;
+  transition: box-shadow 0.15s, color 0.15s, border-color 0.15s;
 }
 .sf-pill--ready {
   background: rgba(26, 42, 16, 0.9);
   border: 1px solid #52b830;
   color: #7ac060;
-  box-shadow: 0 0 16px rgba(82, 184, 48, 0.3);
+  box-shadow: 0 0 14px rgba(82, 184, 48, 0.3);
+  cursor: pointer;
 }
-.sf-sun-col:hover .sf-pill--ready {
-  box-shadow: 0 0 24px rgba(82, 184, 48, 0.5);
+.sf-pill--ready:hover {
+  box-shadow: 0 0 22px rgba(82, 184, 48, 0.5);
 }
 .sf-pill--max {
   background: #1e1a06;
@@ -1256,47 +1077,17 @@ const filteredAugCards = computed(() => {
   background: #16130c;
   border: 1px solid #3e200a;
   color: var(--rpg-text-dim);
+  cursor: pointer;
 }
-.sf-sun-col:hover .sf-pill--hint {
+.sf-pill--hint:hover {
   color: var(--phase-primary);
   border-color: #5c3310;
 }
 
-/* ─── Bottom band ───────────────────────────────────────────── */
-.sf-band {
-  flex-shrink: 0;
-  background: #1a1008;
-  border-top: 2px solid #5c3310;
-  padding: 18px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sf-band-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--rpg-wood);
-}
-
-/* ─ Stellar Evolution timeline ─ */
-.sf-evo {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* TEMP: admin dwell-skip chip — absolutely positioned, zero layout impact */
+/* TEMP: admin dwell-skip chip */
 .sf-dev-skip {
-  position: absolute;
-  top: -4px;
-  right: 0;
-  z-index: 3;
   padding: 3px 8px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1304,7 +1095,7 @@ const filteredAugCards = computed(() => {
   background: #16100c;
   border: 1px dashed #cc6050;
   border-radius: 4px;
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: pointer;
   transition: opacity 0.15s, box-shadow 0.15s;
 }
@@ -1313,24 +1104,35 @@ const filteredAugCards = computed(() => {
   box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
 }
 
+/* ─ Evolution timeline (inside the solar strip) ─ */
 .sf-timeline {
   position: relative;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0;
+  /* headroom for the dwell clock floating above the track */
+  padding-top: 14px;
 }
 
 .sf-timeline-track {
   position: absolute;
-  /* vertical center of the 36px dot slot */
-  top: 17px;
+  /* vertical center of the 36px dot slot (+14px clock headroom) */
+  top: 31px;
   /* 7 columns × 14% + space-between → first/last dot centers sit exactly
      at 7% / 93%, so the line starts at the first sun and ends at the last */
   left: 7%;
   right: 7%;
   height: 2px;
   background: #2a1a08;
+}
+
+.sf-timeline-fill {
+  height: 100%;
+  background: var(--phase-primary);
+  box-shadow: 0 0 6px var(--phase-glow);
+  transition: width 0.6s ease;
 }
 
 /* Dwell progress creeping from the current dot toward the next phase */
@@ -1358,40 +1160,30 @@ const filteredAugCards = computed(() => {
   }
 }
 
-/* Big on-graph dwell timer above the active segment */
+/* Floating dwell clock above the active segment */
 .sf-tl-timer {
   position: absolute;
-  /* just below the track, in the gap between the two dot labels */
-  top: 28px;
+  top: 0;
   transform: translateX(-50%);
   /* fixed box: ticking digits never resize or shift the label */
   width: 76px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  /* hoverable: title tooltip carries the elapsed/total detail */
-  cursor: help;
   text-align: center;
+  cursor: help;
   z-index: 2;
 }
 
-/* Countdown reads as a neutral clock, not another gold stat value */
-.sf-tl-timer .sf-time-big--sm {
+.sf-tl-clock {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
   color: #e8e4d8;
   text-shadow: 0 0 8px rgba(232, 228, 216, 0.35);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.sf-tl-timer .sf-time-big--sm.is-met {
+.sf-tl-clock.is-met {
   color: #7ac060;
   text-shadow: 0 0 8px rgba(82, 184, 48, 0.55);
-}
-
-
-.sf-timeline-fill {
-  height: 100%;
-  background: var(--phase-primary);
-  box-shadow: 0 0 6px var(--phase-glow);
-  transition: width 0.6s ease;
 }
 
 .sf-tl-step {
@@ -1399,7 +1191,7 @@ const filteredAugCards = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 3px;
   width: 14%;
   z-index: 1;
 }
@@ -1455,55 +1247,149 @@ const filteredAugCards = computed(() => {
   text-transform: uppercase;
   color: #6a5a3a;
   text-align: center;
+  white-space: nowrap;
 }
 .sf-tl-lbl.is-current {
-  font-size: 10px;
   font-weight: 900;
 }
 
-/* ─ Augment zone: fixed height in every state ─ */
-.sf-aug-zone {
-  display: flex;
-  gap: 14px;
-  height: 190px;
+/* ─── Panel deck (row 2) ────────────────────────────────────── */
+.sf-deck {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(228px, 290px) minmax(0, 1fr) minmax(238px, 330px);
+  gap: 10px;
 }
 
-/* Left: buff panel with shared search */
-.sf-buff-panel {
-  flex-shrink: 0;
-  width: 300px;
-  height: 100%;
+/* ─ Journey stats panel ─ */
+.sf-stats-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-right: 14px;
-  border-right: 1px solid #3e200a;
+  gap: 6px;
 }
 
-.sf-buff-head {
+.sf-chips {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
-.sf-shelf-count {
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--rpg-gold);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+.sf-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 4px;
+  background: #111008;
+  border-radius: 5px;
 }
-.sf-shelf-count-sub {
-  font-size: 11px;
+.sf-chip--gold {
+  border: 1px solid #5c3310;
+}
+.sf-chip--green {
+  border: 1px solid #4a6a2a;
+}
+.sf-chip--rare {
+  border: 1px solid #6a4a80;
+}
+
+.sf-chip-lbl {
+  font-size: 8px;
   font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: #7a6848;
 }
 
-.sf-buff-search {
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 12px;
+.sf-chip-val {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+}
+.sf-chip--green .sf-chip-val {
+  color: var(--rpg-green-light);
+}
+.sf-chip--rare .sf-chip-val {
+  color: var(--rpg-rarity-rare);
+}
+
+.sf-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: linear-gradient(to right, #1a1008, #120d07);
+  border: 1px solid #3e200a;
+  border-radius: 5px;
+}
+
+.sf-hero-val {
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sf-srow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px;
+  background: #141008;
+  border: 1px solid #241a0c;
+  border-radius: 5px;
+}
+
+.sf-ico {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.sf-ico--lg {
+  width: 24px;
+  height: 24px;
+}
+.sf-ico--tint {
+  color: #c89040;
+}
+
+.sf-srow-lbl {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sf-srow-val {
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sf-srow-val--green {
+  color: var(--rpg-green-light);
+}
+
+/* ─ Augments panel ─ */
+.sf-search {
+  width: min(150px, 45%);
+  padding: 4px 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--rpg-text);
@@ -1513,30 +1399,26 @@ const filteredAugCards = computed(() => {
   outline: none;
   transition: border-color 0.15s;
 }
-.sf-buff-search::placeholder {
+.sf-search::placeholder {
   color: var(--rpg-text-dim);
   font-weight: 400;
 }
-.sf-buff-search:focus {
+.sf-search:focus {
   border-color: #7a4e20;
 }
 
 .sf-buff-chips {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 6px;
-  overflow-y: auto;
-  padding-right: 4px;
+  gap: 5px;
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid #241a0c;
 }
 
-.sf-buff-empty {
+.sf-empty-line {
   width: 100%;
-  align-self: center;
-  text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--rpg-text-dim);
@@ -1545,9 +1427,8 @@ const filteredAugCards = computed(() => {
 .sf-chip-buff {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: fit-content;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 4px 9px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -1557,16 +1438,18 @@ const filteredAugCards = computed(() => {
   flex-shrink: 0;
 }
 .sf-chip-buff-lbl {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--rpg-text-muted);
+  white-space: nowrap;
 }
 .sf-chip-buff-val {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .sf-chip-buff-val.is-up {
   color: var(--rpg-gold);
@@ -1575,67 +1458,37 @@ const filteredAugCards = computed(() => {
   color: #52b830;
 }
 
-/* Right: augment card shelf */
-.sf-shelf-col {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  display: flex;
-}
-
-.sf-shelf-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--rpg-text-dim);
-}
-.sf-shelf-empty-icon {
-  color: #5c4a30;
-  flex-shrink: 0;
-}
-
-.sf-shelf {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  gap: 9px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  min-width: 0;
+/* Horizontal augment cards in a fluid grid — each row ~52px, so even a
+   long collection stays scannable inside the panel scroll. */
+.sf-aug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 7px;
 }
 
 .sf-aug-card {
-  flex-shrink: 0;
-  width: 120px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
   align-items: center;
-  padding: 12px 10px;
+  gap: 9px;
+  min-width: 0;
+  padding: 7px 9px;
   background: #1c1c18;
   border: 1px solid #3e200a;
-  border-top: 3px solid var(--rarity);
+  border-left: 3px solid var(--rarity);
   border-radius: 5px;
-  box-shadow: inset 0 0 12px color-mix(in srgb, var(--rarity) 10%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--rarity) 8%, transparent);
   transition: box-shadow 0.15s, background 0.15s;
 }
 .sf-aug-card:hover {
   background: #221f18;
   box-shadow:
-    inset 0 0 12px color-mix(in srgb, var(--rarity) 16%, transparent),
-    0 0 10px color-mix(in srgb, var(--rarity) 30%, transparent);
+    inset 0 0 10px color-mix(in srgb, var(--rarity) 15%, transparent),
+    0 0 8px color-mix(in srgb, var(--rarity) 30%, transparent);
 }
 
 .sf-aug-icon {
-  width: 56px;
-  height: 56px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1653,34 +1506,154 @@ const filteredAugCards = computed(() => {
   display: block;
 }
 .sf-aug-emoji {
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
 }
 
-.sf-aug-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--rarity);
-  text-align: center;
-  line-height: 1.05;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.sf-aug-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* The buff is the card's key info — biggest text, anchored to the bottom
-   so the card's full height is used. */
+.sf-aug-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--rarity);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sf-aug-effect {
-  margin-top: auto;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
   color: var(--rpg-gold);
-  text-align: center;
-  line-height: 1.15;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  line-height: 1.1;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─ Galaxy archive panel ─ */
+.sf-arch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sf-arch-card {
+  flex-shrink: 0;
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 5px;
+  overflow: hidden;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.sf-arch-card:hover {
+  border-color: #7a4e20;
+  box-shadow: 0 0 12px rgba(232, 192, 64, 0.22);
+}
+
+.sf-arch-imgwrap {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: #0b0806;
+}
+
+.sf-arch-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Name plate over the map's lower edge — readable on any galaxy color */
+.sf-arch-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 9px 5px;
+  background: linear-gradient(to top, rgba(8, 6, 3, 0.92), rgba(8, 6, 3, 0));
+}
+
+.sf-arch-galaxy {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--rpg-gold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+.sf-arch-theme {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpg-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sf-arch-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 9px 6px;
+  border-top: 1px solid #241a0c;
+}
+
+.sf-arch-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sf-arch-stat--rescued {
+  color: var(--rpg-gold);
+}
+.sf-arch-stat--failed {
+  color: #cc6050;
+}
+.sf-arch-stat--time {
+  margin-left: auto;
+  color: var(--rpg-text-muted);
+}
+
+/* ─ Shared empty states ─ */
+.sf-empty-block {
+  height: 100%;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  color: var(--rpg-text-dim);
+}
+.sf-empty-icon {
+  color: #5c4a30;
+  flex-shrink: 0;
 }
 </style>
