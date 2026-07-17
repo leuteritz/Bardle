@@ -6,6 +6,8 @@ import { CHAMPION_TIERS_BY_STAR, requiredGalaxyForTier } from '@/config/champion
 import { GALAXY_JUMP_WARP_MS } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
+withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
+
 const galaxyStore = useGalaxyStore()
 
 const input = ref<number | null>(null)
@@ -66,7 +68,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <AdminCollapsiblePanel title="Galaxy Jump" icon="game-icons:teleport">
+  <AdminCollapsiblePanel title="Galaxy Jump" icon="game-icons:teleport" :collapsible="!dashboard">
     <template #meta>Current: Galaxy {{ galaxyStore.currentGalaxy }}</template>
 
     <div class="gj-body">
@@ -89,7 +91,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Tier presets: jump to the galaxy that unlocks each champion tier -->
-      <div class="gj-tier-grid">
+      <div class="gj-tier-grid" :class="{ 'gj-tier-grid--dashboard': dashboard }">
         <button
           v-for="t in tierPresets"
           :key="t.starLevel"
@@ -181,6 +183,12 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
+}
+
+/* Dashboard: 6 Tiers als ausgewogenes 3×2-Raster */
+.gj-tier-grid--dashboard {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .gj-tier {

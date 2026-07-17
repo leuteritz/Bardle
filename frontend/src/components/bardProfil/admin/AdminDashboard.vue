@@ -1,121 +1,44 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import AdminQuickActionsPanel from './AdminQuickActionsPanel.vue'
 import AdminGalaxyJumpPanel from './AdminGalaxyJumpPanel.vue'
 import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
-
-const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
-
-const isOpen = ref(false)
-
-function toggle() {
-  isOpen.value = !isOpen.value
-}
-
-function onKeydown(e: KeyboardEvent) {
-  if (props.inline) return
-  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-    e.preventDefault()
-    toggle()
-  }
-  if (e.key === 'Escape' && isOpen.value) {
-    isOpen.value = false
-  }
-}
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <!-- ── STANDALONE MODE ─────────────────────────────────────────── -->
-  <template v-if="!inline">
-    <!-- Backdrop -->
-    <Transition name="fade">
-      <div v-if="isOpen" class="fixed inset-0 z-[110] rpg-overlay" @click.self="isOpen = false" />
-    </Transition>
-
-    <!-- Modal -->
-    <Transition name="slide-up">
-      <div
-        v-if="isOpen"
-        class="fixed z-[120] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(780px,95vw)] max-h-[88vh] flex flex-col rpg-frame"
-      >
-        <!-- Gold accent bar -->
-        <div class="rpg-accent-bar" />
-
-        <!-- Header -->
-        <div class="relative flex items-center gap-2 px-5 py-3 rpg-header">
-          <Icon icon="game-icons:wrench" width="20" height="20" class="admin-icon" style="color: #e8c040" />
-          <span class="admin-title">Admin Dashboard</span>
-          <span class="admin-shortcut ml-auto">Ctrl+Shift+A</span>
-          <button class="modal-close-btn" @click="isOpen = false">✕</button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto rpg-scrollbar">
-          <AdminQuickActionsPanel />
-          <div class="flex flex-col gap-3 px-5 pb-4">
-            <AdminGalaxyJumpPanel />
-            <AdminStarPhasePanel />
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </template>
-
-  <!-- ── INLINE MODE (inside App.vue modal) ─────────────────────── -->
-  <template v-else>
-    <AdminQuickActionsPanel />
-    <div class="flex flex-col gap-3 px-5 pb-4">
-      <AdminGalaxyJumpPanel />
-      <AdminStarPhasePanel />
+  <!-- Dashboard-Raster: füllt die volle Modalhöhe, kein Y-Scroll.
+       Links Quick Actions, rechts Galaxy Jump + Star Phase. -->
+  <div class="admin-dash">
+    <AdminQuickActionsPanel dashboard />
+    <div class="admin-dash-right">
+      <AdminGalaxyJumpPanel dashboard />
+      <AdminStarPhasePanel dashboard />
     </div>
-  </template>
+  </div>
 </template>
 
 <style scoped>
-/* ── Transitions ── */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translate(-50%, -48%);
+.admin-dash {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(10px, 1.3vw, 18px);
+  padding: clamp(10px, 1.8vh, 20px);
+  overflow: hidden;
 }
 
-/* ── Header text ── */
-.admin-icon {
-  color: var(--rpg-gold);
-  font-size: 1.125rem;
+.admin-dash-right {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 16px);
+  min-height: 0;
 }
-.admin-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--rpg-gold);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.admin-dash-right > :first-child {
+  flex: 0 0 auto;
 }
-.admin-shortcut {
-  font-size: 0.75rem;
-  color: var(--rpg-text-dim);
-}
-.rpg-header .modal-close-btn {
-  position: static;
-  flex-shrink: 0;
-  transform: none;
+.admin-dash-right > :last-child {
+  flex: 1;
+  min-height: 0;
 }
 </style>

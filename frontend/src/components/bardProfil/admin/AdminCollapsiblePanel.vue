@@ -2,18 +2,23 @@
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title: string
     icon: string
     defaultOpen?: boolean
+    /** false → statische Karte ohne Einklapp-Funktion (Dashboard-Modus) */
+    collapsible?: boolean
+    /** true → Panel füllt die volle Höhe des Eltern-Containers */
+    fill?: boolean
   }>(),
-  { defaultOpen: true },
+  { defaultOpen: true, collapsible: true, fill: false },
 )
 
 const collapsed = ref(false)
 
 function toggle() {
+  if (!props.collapsible) return
   collapsed.value = !collapsed.value
 }
 
@@ -41,13 +46,13 @@ function onLeave(el: Element) {
 </script>
 
 <template>
-  <div class="ac-panel">
+  <div class="ac-panel" :class="{ 'ac-panel--fill': fill }">
     <div
       class="ac-header"
-      :class="{ 'is-collapsed': collapsed }"
-      role="button"
-      tabindex="0"
-      :aria-expanded="!collapsed"
+      :class="{ 'is-collapsed': collapsed, 'ac-header--static': !collapsible }"
+      :role="collapsible ? 'button' : undefined"
+      :tabindex="collapsible ? 0 : undefined"
+      :aria-expanded="collapsible ? !collapsed : undefined"
       @click="toggle"
       @keydown.enter.prevent="toggle"
       @keydown.space.prevent="toggle"
@@ -55,7 +60,7 @@ function onLeave(el: Element) {
       <Icon :icon="icon" width="18" height="18" class="ac-header-icon" />
       <span class="ac-header-title">{{ title }}</span>
       <span class="ac-header-meta"><slot name="meta" /></span>
-      <span class="ac-header-chevron">▾</span>
+      <span v-if="collapsible" class="ac-header-chevron">▾</span>
     </div>
 
     <Transition @enter="onEnter" @after-enter="onAfterEnter" @leave="onLeave">
@@ -76,6 +81,20 @@ function onLeave(el: Element) {
   overflow: hidden;
 }
 
+.ac-panel--fill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.ac-panel--fill .ac-body-outer {
+  flex: 1;
+  min-height: 0;
+}
+.ac-panel--fill .ac-body {
+  height: 100%;
+}
+
 /* ── Header strip (clickable) ──────────────────────────────────────────────── */
 
 .ac-header {
@@ -93,6 +112,13 @@ function onLeave(el: Element) {
 
 .ac-header:hover {
   background: #25160a;
+}
+
+.ac-header--static {
+  cursor: default;
+}
+.ac-header--static:hover {
+  background: var(--rpg-bg-header);
 }
 
 .ac-header:focus-visible {

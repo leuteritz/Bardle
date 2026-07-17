@@ -8,6 +8,8 @@ import {
 } from '@/config/constants'
 import AdminCollapsiblePanel from './AdminCollapsiblePanel.vue'
 
+withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
+
 const solarStore = useSolarUpgradeStore()
 
 function setStarPhase(phase: number) {
@@ -34,7 +36,12 @@ function setCometState() {
 </script>
 
 <template>
-  <AdminCollapsiblePanel title="Star Phase Override" icon="game-icons:sun-radiations">
+  <AdminCollapsiblePanel
+    title="Star Phase Override"
+    icon="game-icons:sun-radiations"
+    :collapsible="!dashboard"
+    :fill="dashboard"
+  >
     <template #meta>
       Current:
       {{
@@ -44,7 +51,7 @@ function setCometState() {
       }}
     </template>
 
-    <div class="star-phase-btns">
+    <div class="star-phase-btns" :class="{ 'star-phase-btns--dashboard': dashboard }">
       <button
         class="star-phase-btn"
         :class="{ 'star-phase-btn--active': solarStore.isCometState }"
@@ -74,6 +81,18 @@ function setCometState() {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
+}
+
+/* Dashboard: 7 Phasen als 4×2-Raster, Buttons strecken sich in die Resthöhe */
+.star-phase-btns--dashboard {
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(52px, 1fr);
+  gap: 8px;
+  height: 100%;
+}
+.star-phase-btns--dashboard .star-phase-btn {
+  justify-content: center;
+  padding: 6px;
 }
 
 .star-phase-btn {

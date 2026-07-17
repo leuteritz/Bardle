@@ -21,6 +21,8 @@ import {
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
+withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
+
 const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
@@ -268,11 +270,26 @@ function resetAllCooldowns() {
 </script>
 
 <template>
-  <div class="px-5 py-3 admin-quick-actions">
-    <div class="mb-2 admin-section-label">Quick Actions</div>
+  <div
+    class="admin-quick-actions"
+    :class="dashboard ? 'admin-quick-actions--card' : 'px-5 py-3 admin-quick-actions--strip'"
+  >
+    <div v-if="dashboard" class="qa-card-header">
+      <Icon icon="game-icons:lightning-arc" width="18" height="18" class="qa-card-icon" />
+      <span class="qa-card-title">Quick Actions</span>
+    </div>
+
+    <div :class="{ 'qa-card-body': dashboard }">
+    <div v-if="!dashboard" class="mb-2 admin-section-label">Quick Actions</div>
 
     <!-- Inline Editable Values + Stepper -->
-    <div class="grid grid-cols-2 mb-3 gap-x-3 gap-y-3 sm:grid-cols-4">
+    <div
+      :class="
+        dashboard
+          ? 'qa-fields--dashboard'
+          : 'grid grid-cols-2 mb-3 gap-x-3 gap-y-3 sm:grid-cols-4'
+      "
+    >
       <div
         v-for="qf in quickFields"
         :key="qf.key"
@@ -325,7 +342,7 @@ function resetAllCooldowns() {
     </div>
 
     <!-- Spawn / Action Buttons -->
-    <div class="flex flex-wrap gap-2">
+    <div :class="dashboard ? 'qa-actions--dashboard' : 'flex flex-wrap gap-2'">
       <button
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
         @click="spawnStar"
@@ -381,13 +398,92 @@ function resetAllCooldowns() {
         <Icon icon="game-icons:time-trap" class="admin-btn-icon" /> Reset Cooldowns
       </button>
     </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.admin-quick-actions {
+.admin-quick-actions--strip {
   background: var(--rpg-bg-dark);
   border-bottom: 1px solid var(--rpg-wood-mid);
+}
+
+/* ── Dashboard-Karte (Inline-Admin-Tab) ──────────────────────────────────────── */
+
+.admin-quick-actions--card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--rpg-bg-dark);
+  border: 1px solid var(--rpg-wood-mid);
+  border-radius: var(--bp-radius);
+  overflow: hidden;
+}
+
+/* Header-Leiste im Stil von AdminCollapsiblePanel */
+.qa-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 12px;
+  flex-shrink: 0;
+  background: var(--rpg-bg-header);
+  border-bottom: 2px solid var(--rpg-wood-mid);
+  user-select: none;
+}
+.qa-card-icon {
+  flex-shrink: 0;
+  color: var(--rpg-gold-dim);
+}
+.qa-card-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rpg-gold);
+}
+
+.qa-card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 16px);
+  padding: 12px;
+}
+
+.qa-fields--dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 12px;
+  flex-shrink: 0;
+}
+
+.qa-actions--dashboard {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* 9 Buttons → symmetrisches 3×3-Raster auf jeder Desktop-Auflösung */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(38px, 1fr);
+  gap: 8px;
+}
+/* Buttons als Dashboard-Kacheln: Icon oben, Label darunter */
+.qa-actions--dashboard .admin-spawn-btn {
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(4px, 0.8vh, 10px);
+  min-width: 0;
+  padding: 8px;
+  font-size: clamp(0.75rem, 1.3vh, 0.95rem);
+  text-align: center;
+}
+.qa-actions--dashboard .admin-btn-icon,
+.qa-actions--dashboard .star-icon {
+  width: clamp(18px, 2.8vh, 30px);
+  height: clamp(18px, 2.8vh, 30px);
 }
 
 .admin-section-label {

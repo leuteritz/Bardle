@@ -139,9 +139,9 @@ watch(
               <div
                 v-else-if="uiStore.bardActiveTab === 'admin'"
                 key="admin"
-                class="h-full overflow-y-auto rp-scrollbar"
+                class="h-full overflow-hidden"
               >
-                <AdminDashboard :inline="true" />
+                <AdminDashboard />
               </div>
             </Transition>
           </div>
