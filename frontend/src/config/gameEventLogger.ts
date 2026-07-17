@@ -59,18 +59,3 @@ export function logInfo(message: string) {
   const { addEvent } = useEventLog()
   addEvent(message, 'info')
 }
-
-export function logBattleStarted(opponentLabel: string) {
-  const { addEvent } = useEventLog()
-  addEvent(`Battle vs ${opponentLabel}.`, 'combat')
-}
-
-export function logBattleEnded(won: boolean) {
-  const { addEvent } = useEventLog()
-  addEvent(won ? 'Victory.' : 'Defeat.', 'combat')
-}
-
-export function logChampionDefeated(killerName: string, victimName: string) {
-  const { addEvent } = useEventLog()
-  addEvent(`${killerName} slays ${victimName}.`, 'combat')
-}

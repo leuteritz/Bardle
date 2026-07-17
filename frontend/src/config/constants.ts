@@ -1632,7 +1632,6 @@ export const CPS_INTERVAL_1HOUR_MS = 60_000
 // Battle — initial state
 export const BATTLE_INITIAL_MMR = 1000
 export const BATTLE_DEFAULT_RANK_TIER = 'Silver'
-export const BATTLE_KILL_LOG_THROTTLE_MS = 3000
 
 // Solar Upgrade Tree
 export const SOLAR_STAR_SPEED_BONUS = 0.35

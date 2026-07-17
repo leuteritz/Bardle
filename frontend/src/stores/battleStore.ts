@@ -34,7 +34,6 @@ import {
   BATTLE_BIG_BANG_POWER_MULTIPLIER,
   BATTLE_INITIAL_MMR,
   BATTLE_DEFAULT_RANK_TIER,
-  BATTLE_KILL_LOG_THROTTLE_MS,
   DRAKE_OBJECTIVE_HP,
   BARON_OBJECTIVE_HP,
   OBJECTIVE_BASE_DPS_PER_CHAMP,
@@ -118,9 +117,6 @@ import {
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
-import { logBattleStarted, logBattleEnded, logChampionDefeated } from '../config/gameEventLogger'
-
-let _lastKillLogMs = 0
 let _visibilityHandler: (() => void) | null = null
 
 export function zeroLiveBattleStats(): LiveBattleStats {
@@ -673,7 +669,6 @@ export const useBattleStore = defineStore('battle', {
           this.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
           this.battleTime = BATTLE_TOTAL_GAME_SECONDS
           this.battlePhase = 'result'
-          logBattleEnded(this.predeterminedWin ?? false)
           if (this.autoBattleTimer) {
             clearTimeout(this.autoBattleTimer)
             this.autoBattleTimer = null
@@ -749,11 +744,6 @@ export const useBattleStore = defineStore('battle', {
             })
             if (this.killFeed.length > KILL_FEED_MAX)
               this.killFeed.splice(0, this.killFeed.length - KILL_FEED_MAX)
-            const now = Date.now()
-            if (now - _lastKillLogMs >= BATTLE_KILL_LOG_THROTTLE_MS) {
-              _lastKillLogMs = now
-              logChampionDefeated(killer.name, victim.name)
-            }
           }
           this._shiftWinProbability(e.winProbDelta)
           break
@@ -1105,7 +1095,6 @@ export const useBattleStore = defineStore('battle', {
         // Timestamp hier setzen – erst jetzt beginnt die echte Spielzeit.
         this.battlePhaseStartTimestamp = Date.now()
         this.startBattleSimulation()
-        logBattleStarted(this.currentOpponentLabel)
       }
     },
 
@@ -2120,7 +2109,6 @@ export const useBattleStore = defineStore('battle', {
           this.applyTimelineUpTo(BATTLE_TOTAL_GAME_SECONDS)
           this.battleTime = BATTLE_TOTAL_GAME_SECONDS
           this.battlePhase = 'result'
-          logBattleEnded(this.predeterminedWin ?? false)
           this.runBattleCycle()
           return
         }
