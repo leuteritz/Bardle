@@ -204,6 +204,23 @@ function forceCompleteGalaxy() {
   galaxyStore.galaxyBossDefeated = true
   galaxyStore.pendingGalaxyBoss = false
   galaxyStore.bossEscortsDefeated = galaxyStore.bossEscortsTotal
+  // Tier-Gate überspringen: ohne das würde die Minimap statt des
+  // "» Next Galaxy «"-Buttons das TierUnlockPanel mit den Freischaltkosten
+  // zeigen (requestTransition blockt bei nextTierLocked). Unbedingt anheben,
+  // damit auch inkonsistente Spielstände (unlockedTier hinter currentTier)
+  // sicher aufgelöst werden.
+  galaxyStore.unlockedTier = Math.max(
+    galaxyStore.unlockedTier,
+    galaxyStore.currentTier,
+    galaxyStore.nextTier,
+  )
+  // Reise-/Rollenzustände auflösen — pendingRoleSelection oder ein gespawnter
+  // Champion pausieren sonst die Hintergrund-Animation (starsBackgroundPaused)
+  // und die Warp-Animation des Next-Galaxy-Buttons würde nie starten.
+  galaxyStore.pendingRoleSelection = false
+  galaxyStore.travelPendingAfterRotation = false
+  galaxyStore.rescueRotationPhase = 'idle'
+  galaxyStore.championTravelState = 'idle'
 }
 
 function forcePrestige() {
