@@ -76,13 +76,39 @@ export function computeTierUnlockCost(tier: number): TierUnlockCost {
   return { chimes, material }
 }
 
-function pickRandomThemeIndex(current: number): number {
-  if (GALAXY_THEMES.length <= 1) return 0
-  let next: number
-  do {
-    next = Math.floor(Math.random() * GALAXY_THEMES.length)
-  } while (next === current)
-  return next
+// Theme 0 (Blue Veil) ist fest für Galaxie 1 reserviert — jede weitere Galaxie
+// zieht zufällig aus den noch nicht besuchten Themes, damit sich innerhalb
+// eines Durchlaufs keine Galaxiefarbe wiederholt.
+function allNonHomeThemeIndices(): number[] {
+  return GALAXY_THEMES.map((_, i) => i).filter((i) => i !== 0)
+}
+
+function hexToHue(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  if (d === 0) return 0
+  let h: number
+  if (max === r) h = ((g - b) / d) % 6
+  else if (max === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  return (h * 60 + 360) % 360
+}
+
+function hueDistance(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
+// Mindest-Farbton-Abstand zur Vorgänger-Galaxie: verhindert, dass zwei
+// ähnliche Farbwelten (z. B. zwei Grüntöne) direkt aufeinander folgen.
+const MIN_THEME_HUE_DISTANCE = 60
+
+function themeHue(index: number): number {
+  return hexToHue(GALAXY_THEMES[index].accentColor)
 }
 
 export const useGalaxyStore = defineStore('galaxy', {
@@ -114,6 +140,9 @@ export const useGalaxyStore = defineStore('galaxy', {
     pendingTransition: false,
     isGalaxyTransitioning: false,
     currentThemeIndex: 0,
+    // Alle in diesem Durchlauf bereits verwendeten Theme-Indizes — verhindert,
+    // dass sich eine Galaxiefarbe wiederholt, bevor alle Themes durch sind.
+    usedThemeIndices: [0] as number[],
     // Role selection modal
     pendingRoleSelection: true,
     nextStarRole: null as ChampionRole | null,
@@ -436,7 +465,30 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.resourceStarDurationMs = 0
       this.pendingResourceStars = 0
       this.pendingChampionStar = false
-      this.currentThemeIndex = pickRandomThemeIndex(this.currentThemeIndex)
+      if (this.currentGalaxy === 1) {
+        // Galaxie 1 ist immer das vertraute Blau (Blue Veil).
+        this.currentThemeIndex = 0
+        this.usedThemeIndices = [0]
+      } else {
+        let available = allNonHomeThemeIndices().filter(
+          (i) => !this.usedThemeIndices.includes(i),
+        )
+        if (available.length === 0) {
+          // Alle Themes gesehen → Zyklus neu starten, aber ohne direkte Wiederholung.
+          this.usedThemeIndices = [0]
+          available = allNonHomeThemeIndices().filter((i) => i !== this.currentThemeIndex)
+        }
+        // Deutlich anders als die Vorgänger-Galaxie: nur Themes mit genug
+        // Farbton-Abstand zulassen — falls keins übrig ist, Regel lockern.
+        const currentHue = themeHue(this.currentThemeIndex)
+        const contrasting = available.filter(
+          (i) => hueDistance(themeHue(i), currentHue) >= MIN_THEME_HUE_DISTANCE,
+        )
+        if (contrasting.length > 0) available = contrasting
+        const next = available[Math.floor(Math.random() * available.length)]
+        this.currentThemeIndex = next
+        this.usedThemeIndices.push(next)
+      }
       this.requestRoleSelection()
     },
 

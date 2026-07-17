@@ -166,6 +166,7 @@ export function usePersistence() {
         bossEscortsTotal: galaxyStore.bossEscortsTotal,
         bossEscortsDefeated: galaxyStore.bossEscortsDefeated,
         currentThemeIndex: galaxyStore.currentThemeIndex,
+        usedThemeIndices: [...galaxyStore.usedThemeIndices],
         championTravelState: galaxyStore.championTravelState,
         championTravelStartTime: galaxyStore.championTravelStartTime,
         championTravelDurationMs: galaxyStore.championTravelDurationMs,
@@ -434,6 +435,10 @@ export function usePersistence() {
         galaxyStore.bossEscortsTotal = gx.bossEscortsTotal ?? 0
         galaxyStore.bossEscortsDefeated = gx.bossEscortsDefeated ?? 0
         galaxyStore.currentThemeIndex = gx.currentThemeIndex ?? 0
+        // Alte Saves kennen die Liste nicht → aus dem aktuellen Theme rekonstruieren.
+        galaxyStore.usedThemeIndices = gx.usedThemeIndices ?? [
+          ...new Set([0, galaxyStore.currentThemeIndex]),
+        ]
         galaxyStore.resourceStarActive = gx.resourceStarActive ?? false
         galaxyStore.resourceStarElapsedMs = gx.resourceStarElapsedMs ?? 0
         // Legacy saves from the old boss-search phase → spawn boss right away.
