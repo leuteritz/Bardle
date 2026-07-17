@@ -75,7 +75,7 @@
             "
             class="complete-overlay"
           >
-            <span class="complete-badge">✦ Galaxy Liberated ✦</span>
+            <span class="complete-badge">✦ Galaxy Saved ✦</span>
 
             <!-- Next tier still locked → show the unlock gate; otherwise the warp button -->
             <TierUnlockPanel v-if="galaxyStore.nextTierLocked" />
