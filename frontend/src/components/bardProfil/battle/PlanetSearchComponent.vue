@@ -383,7 +383,7 @@ export default defineComponent({
 
     onUnmounted(stopAnimation)
 
-    expose({ trigger })
+    expose({ trigger, stopAnimation })
 
     return { isAnimating, showPlanetFound, universeCanvas, containerRef }
   },

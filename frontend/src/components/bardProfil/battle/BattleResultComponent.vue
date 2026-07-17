@@ -35,7 +35,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, watch } from 'vue'
+import { defineComponent, computed, onMounted, ref, watch } from 'vue'
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
 import BattleLandingScreen from './landing/BattleLandingScreen.vue'
@@ -59,7 +59,9 @@ export default defineComponent({
 
     const isStarting = ref(false)
     const isUniverseAnimating = ref(false)
-    const universeAnim = ref<{ trigger: () => Promise<void> } | null>(null)
+    const universeAnim = ref<{ trigger: () => Promise<void>; stopAnimation: () => void } | null>(
+      null,
+    )
 
     async function runUniverseAnimation(): Promise<void> {
       isUniverseAnimating.value = true
@@ -85,6 +87,39 @@ export default defineComponent({
         }
       },
     )
+
+    // Re-entering the battle tab mid-search: the component remounts with
+    // isUniverseAnimating=false while the search phase (driven by timestamps,
+    // it kept running in the background) is still active — without this the
+    // tab would jump straight to the battle board. Resume the warp visual for
+    // the remaining search time; beginSimulation() is NOT called here, the
+    // original (still pending) chain from before the unmount handles that.
+    onMounted(async () => {
+      if (
+        !battleStore.isAutoBattleInitialized ||
+        battleStore.searchingPhaseStartTimestamp <= 0 ||
+        battleStore.battlePhaseStartTimestamp > 0 ||
+        battleStore.showAutoBattleResult
+      ) {
+        return
+      }
+      const remaining =
+        PLANET_SEARCH_ANIM_DURATION_MS -
+        (Date.now() - battleStore.searchingPhaseStartTimestamp)
+      if (remaining < 150) return
+      isUniverseAnimating.value = true
+      void universeAnim.value?.trigger()
+      const deadline = Date.now() + remaining
+      while (
+        Date.now() < deadline &&
+        battleStore.battlePhaseStartTimestamp === 0 &&
+        !battleStore.showAutoBattleResult
+      ) {
+        await new Promise((r) => setTimeout(r, 100))
+      }
+      universeAnim.value?.stopAnimation()
+      isUniverseAnimating.value = false
+    })
 
     const startBattle = async () => {
       if (isStarting.value) return

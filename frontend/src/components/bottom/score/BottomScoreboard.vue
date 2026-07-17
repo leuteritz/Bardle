@@ -8,6 +8,7 @@ import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats
 import { formatNumber } from '@/config/numberFormat'
 import {
   GAME_STATE,
+  BATTLE_RESULT_COUNTDOWN_SECONDS,
   OBJECTIVE_FIGHT_STATUS,
   SCOREBOARD_STAT_COLORS,
   RANK_EMBLEM_IMAGES,
@@ -165,9 +166,12 @@ const gameStateDisplay = computed(() => {
     return null
   }
   if (showAutoBattleResult.value) {
+    // Countdown wie im Honor-Screen des Battle-Tabs: von 8 runter auf 0,
+    // bei 0 beginnt die nächste Planet-Search-Phase
     const elapsed = Math.max(0, Math.floor((_now - resultPhaseStartTimestamp.value) / 1000))
+    const remaining = Math.max(0, BATTLE_RESULT_COUNTDOWN_SECONDS - elapsed)
     return {
-      text: `${GAME_STATE.HONOR.label} · ${shortTime(elapsed)}`,
+      text: `${GAME_STATE.HONOR.label} · ${shortTime(remaining)}`,
       color: GAME_STATE.HONOR.color,
     }
   }
