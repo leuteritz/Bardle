@@ -17,7 +17,6 @@ import {
   SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
-import { GALAXY_THEMES } from '@/config/galaxyThemes'
 import { AUGMENTS } from '@/config/augments'
 import { AUGMENT_RARITY_COLOR } from '@/composables/useRarityColors'
 import { renderGalaxySnapshot } from '@/utils/galaxySnapshot'
@@ -243,10 +242,6 @@ const playTime = computed(() => formatDuration(inGameTime.value * 1000))
 const archive = computed(() =>
   [...completedGalaxies.value].sort((a, b) => b.galaxy - a.galaxy),
 )
-
-function archiveThemeName(rec: CompletedGalaxyRecord): string {
-  return GALAXY_THEMES[rec.themeIndex % GALAXY_THEMES.length]?.name ?? ''
-}
 
 function archiveRescued(rec: CompletedGalaxyRecord): number {
   return rec.attemptResults.filter((r) => r === 'rescued').length
@@ -659,7 +654,7 @@ const filteredAugCards = computed(() => {
               v-for="rec in archive"
               :key="rec.galaxy"
               class="sf-arch-card"
-              :title="`Galaxy ${rec.galaxy} · ${archiveThemeName(rec)} — freed ${archiveDate(rec)}`"
+              :title="`Galaxy ${rec.galaxy} — freed ${archiveDate(rec)}`"
             >
               <div class="sf-arch-imgwrap">
                 <img
@@ -670,7 +665,6 @@ const filteredAugCards = computed(() => {
                 />
                 <div class="sf-arch-title">
                   <span class="sf-arch-galaxy">Galaxy {{ rec.galaxy }}</span>
-                  <span class="sf-arch-theme">{{ archiveThemeName(rec) }}</span>
                 </div>
               </div>
               <div class="sf-arch-meta">
@@ -1593,17 +1587,6 @@ const filteredAugCards = computed(() => {
   color: var(--rpg-gold);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
-}
-
-.sf-arch-theme {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rpg-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sf-arch-meta {
