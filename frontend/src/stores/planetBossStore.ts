@@ -40,6 +40,7 @@ import { usePlayerStore } from './playerStore'
 import { useStarGroupStore } from './starGroupStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
+import { useMeepTreeStore } from './meepTreeStore'
 import { SECTIONS } from '../config/sections'
 import { logger } from '../utils/logger'
 
@@ -276,7 +277,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const banished =
         activeMidCurse.type === 'banishment' && Date.now() < activeMidCurse.activeUntil
       const cursed = banished ? amount * ROLE_MID_CURSE_DAMAGE_AMP : amount
-      const effective = Math.round(cursed * useStarForgeStore().bossDamageMult)
+      const effective = Math.round(
+        cursed * useStarForgeStore().bossDamageMult * useMeepTreeStore().fx.bossDamageMult,
+      )
 
       boss.currentHP = Math.max(0, boss.currentHP - effective)
       boss.totalDamageDealt += effective

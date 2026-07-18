@@ -3,6 +3,7 @@ import { useGameStore } from './gameStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useStarForgeStore } from './starForgeStore'
+import { useMeepTreeStore } from './meepTreeStore'
 import { getChampionRoles } from '../config/championRoles'
 import { useEventLog, type GameEventType } from '../composables/useEventLog'
 import { formatNumber } from '../config/numberFormat'
@@ -157,8 +158,9 @@ export const useExpeditionStore = defineStore('expedition', {
       const icon = pickRandom(iconPool)
 
       const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
-      // Solar Sails (Star Forge): expeditions complete faster
-      const speedMult = useStarForgeStore().expeditionSpeedMult
+      // Solar Sails (Star Forge) + Portal Winds (Meep Tree): expeditions complete faster
+      const speedMult =
+        useStarForgeStore().expeditionSpeedMult * useMeepTreeStore().fx.expeditionSpeedMult
       const durationSeconds = Math.max(
         5,
         Math.round((randInt(tierDef.durMin, tierDef.durMax) * speedMult) / 5) * 5,
@@ -268,8 +270,9 @@ export const useExpeditionStore = defineStore('expedition', {
           const success = Math.random() < expedition.successChance
           expedition.status = success ? 'success' : 'failure'
           const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
+          const treeRewardMul = useMeepTreeStore().fx.expeditionRewardMult
           expedition.reward = success
-            ? Math.floor(expedition.baseReward * relayMul)
+            ? Math.floor(expedition.baseReward * relayMul * treeRewardMul)
             : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
           logger.info(
             'Expedition',

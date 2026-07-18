@@ -7,6 +7,7 @@ import {
   DAMAGE_FLOAT_DURATION_MS,
 } from '@/config/constants'
 import { useStarForgeStore } from './starForgeStore'
+import { useMeepTreeStore } from './meepTreeStore'
 
 export const usePlayerStore = defineStore('player', {
   state: () => ({
@@ -29,11 +30,20 @@ export const usePlayerStore = defineStore('player', {
     regenTick() {
       // Base regen + Regeneration branch / Eternal Cadence (Star Forge)
       const forgeRegen = useStarForgeStore().hpRegenPerSec
-      this.currentHP = Math.min(this.maxHP, this.currentHP + PLAYER_HP_REGEN_PER_SEC + forgeRegen)
+      const treeRegen = useMeepTreeStore().fx.hpRegenPerSec
+      this.currentHP = Math.min(
+        this.maxHP,
+        this.currentHP + PLAYER_HP_REGEN_PER_SEC + forgeRegen + treeRegen,
+      )
     },
     takeDamage(amount: number = PLAYER_HP_LOSS_ON_ENRAGE) {
       // Aegis branch / Bulwark Choir (Star Forge): reduce incoming damage
-      const reduced = Math.max(1, Math.round(amount * useStarForgeStore().damageTakenMult))
+      const reduced = Math.max(
+        1,
+        Math.round(
+          amount * useStarForgeStore().damageTakenMult * useMeepTreeStore().fx.damageTakenMult,
+        ),
+      )
       this.currentHP = Math.max(0, this.currentHP - reduced)
       this.damageFloats.push({
         id: this._nextFloatId++,

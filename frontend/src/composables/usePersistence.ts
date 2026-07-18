@@ -14,6 +14,7 @@ import { usePlayerStore } from '@/stores/playerStore'
 import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/starForgeStore'
+import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import {
   LEVEL_BASE,
   LEVEL_EXPONENT,
@@ -57,6 +58,7 @@ export function usePersistence() {
     const planetShopStore = usePlanetShopStore()
     const solarStore = useSolarUpgradeStore()
     const starForgeStore = useStarForgeStore()
+    const meepTreeStore = useMeepTreeStore()
 
     const saveData = {
       version: SAVE_VERSION,
@@ -219,6 +221,9 @@ export function usePersistence() {
         bargainRestockAt: starForgeStore.bargainRestockAt,
         bargainPurchased: starForgeStore.bargainPurchased,
         activeBuffs: starForgeStore.activeBuffs.map((b) => ({ ...b })),
+      },
+      meepTree: {
+        bought: [...meepTreeStore.bought],
       },
     }
 
@@ -546,6 +551,10 @@ export function usePersistence() {
         )
       }
 
+      // Restore meepTreeStore — missing key (old saves) keeps an empty tree
+      const meepTreeStore = useMeepTreeStore()
+      meepTreeStore.bought = [...(saved.meepTree?.bought ?? [])]
+
       // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
@@ -555,11 +564,16 @@ export function usePersistence() {
       const savedAt = saved.savedAt as number | undefined
       if (savedAt && typeof savedAt === 'number') {
         const rawSeconds = Math.floor((now - savedAt) / 1000)
-        const maxOfflineHours = OFFLINE_MAX_HOURS + starForgeStore.offlineMaxHoursBonus
+        const maxOfflineHours =
+          OFFLINE_MAX_HOURS +
+          starForgeStore.offlineMaxHoursBonus +
+          meepTreeStore.fx.offlineMaxHoursBonus
         const cappedSeconds = Math.min(rawSeconds, maxOfflineHours * 3600)
         if (cappedSeconds >= OFFLINE_MIN_SECONDS) {
           const offlineMul =
-            planetShopStore.planetOfflineBoostMultiplier * starForgeStore.offlineEarningsMult
+            planetShopStore.planetOfflineBoostMultiplier *
+            starForgeStore.offlineEarningsMult *
+            meepTreeStore.fx.offlineEarningsMult
           const earned = Math.floor(
             gameStore.chimesPerSecond * OFFLINE_CPS_RATE * offlineMul * cappedSeconds,
           )
@@ -715,6 +729,9 @@ export function usePersistence() {
     // 7d. Reset starForgeStore
     const starForgeStoreR = useStarForgeStore()
     starForgeStoreR.$reset()
+
+    // 7e. Reset meepTreeStore
+    useMeepTreeStore().$reset()
 
     // 7b. Reset planetShopStore – alle Slots zurücksetzen
     const planetShopStoreR = usePlanetShopStore()

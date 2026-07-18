@@ -1,154 +1,142 @@
 <script setup lang="ts">
 import { computed, markRaw, onMounted, nextTick } from 'vue'
-import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
+import {
+  VueFlow,
+  useVueFlow,
+  type Node,
+  type Edge,
+  type NodeTypesObject,
+} from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { useGameStore } from '@/stores/gameStore'
-import SkillNode from './SkillNode.vue'
+import { useMeepTreeStore } from '@/stores/meepTreeStore'
+import { MEEP_TREE_BRANCHES } from '@/config/meepTree'
+import MeepSkillNode from './MeepSkillNode.vue'
+import MeepStartNode from './MeepStartNode.vue'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
 
-const gameStore = useGameStore()
+const meepTree = useMeepTreeStore()
 const { fitView } = useVueFlow()
 
 onMounted(async () => {
   await nextTick()
-  setTimeout(() => fitView({ padding: 0.3, duration: 400 }), 100)
+  // Wie in klassischen Skill-Webs: lesbar starten (Zoom-Clamp), Rest per Pan/Zoom
+  setTimeout(() => fitView({ padding: 0.06, minZoom: 0.62, maxZoom: 0.9, duration: 400 }), 100)
 })
 
-const SKILL_MEEP_COSTS = [3, 8, 20, 45] as const
+// ── Radiales Netz-Layout ───────────────────────────────────
+// Ein Startknoten in der Mitte, fünf Pfade strahlen in alle
+// Richtungen aus; leichter Zickzack pro Stufe für den organischen
+// "Netz"-Look. Die y-Achse ist leicht gestaucht (Breitbild), die
+// Radien sind so gewählt, dass sich Kreise und Labels nie überlappen.
+const BASE_ANGLES = [-90, -18, 54, 126, 198] // Grad, gleichmäßig über 360°
+const TIER_JITTER = [0, 10, -9, 10, -8] // Zickzack pro Stufe
+const TIER_RADIUS = [200, 355, 510, 665, 820]
+const Y_SQUASH = 0.85
 
-const skills = [
-  {
-    key: 'Q',
-    icon: '/img/BardAbilities/BardQ.png',
-    effect: '+75% CPS',
-    description: '1.75× Chimes/s',
-  },
-  {
-    key: 'W',
-    icon: '/img/BardAbilities/BardW.png',
-    effect: '+1500 Power',
-    description: '+1500 Battle Power',
-  },
-  {
-    key: 'E',
-    icon: '/img/BardAbilities/BardE.png',
-    effect: '−50% Meep Cost',
-    description: 'Halved Costs',
-  },
-  {
-    key: 'R',
-    icon: '/img/BardAbilities/BardR.png',
-    effect: '+125% CPC',
-    description: '2.25× Chimes/Click',
-  },
-]
+// Kreis-Mittelpunkt-Offsets innerhalb der Node-Wrapper (müssen zum CSS passen)
+const SKILL_CENTER = { x: 78, y: 40 }
+const START_CENTER = { x: 80, y: 48 }
 
-const positions = [
-  { x: 60, y: 60 },
-  { x: 320, y: 200 },
-  { x: 100, y: 380 },
-  { x: 520, y: 360 },
-]
-
-function skillState(idx: number): 'bought' | 'buyable' | 'locked' {
-  if (gameStore.abilityLevels[idx] > 0) return 'bought'
-  if (
-    (idx === 0 || gameStore.abilityLevels[idx - 1] > 0) &&
-    gameStore.meeps >= SKILL_MEEP_COSTS[idx]
-  )
-    return 'buyable'
-  return 'locked'
+function nodeCenter(branchIdx: number, tierIdx: number): { x: number; y: number } {
+  const angleDeg = BASE_ANGLES[branchIdx] + TIER_JITTER[tierIdx]
+  const rad = (angleDeg * Math.PI) / 180
+  const r = TIER_RADIUS[tierIdx]
+  return { x: Math.cos(rad) * r, y: Math.sin(rad) * r * Y_SQUASH }
 }
 
-const nodes = computed(() =>
-  skills.map((skill, idx) => ({
-    id: skill.key,
-    type: 'skill',
-    position: positions[idx],
-    style: { background: 'transparent', border: 'none', padding: 0 },
-    data: { skill, index: idx, cost: SKILL_MEEP_COSTS[idx] },
-  })),
-)
+const nodes = computed<Node[]>(() => {
+  const result: Node[] = [
+    {
+      id: 'start',
+      type: 'start',
+      position: { x: -START_CENTER.x, y: -START_CENTER.y },
+      draggable: false,
+      data: {},
+    },
+  ]
 
-const edgeDefs = [
-  { source: 'Q', target: 'W', targetIdx: 1 },
-  { source: 'W', target: 'E', targetIdx: 2 },
-  { source: 'E', target: 'R', targetIdx: 3 },
-]
+  MEEP_TREE_BRANCHES.forEach((branch, i) => {
+    branch.nodes.forEach((node, idx) => {
+      const c = nodeCenter(i, idx)
+      result.push({
+        id: node.id,
+        type: 'skill',
+        position: { x: c.x - SKILL_CENTER.x, y: c.y - SKILL_CENTER.y },
+        draggable: false,
+        data: { node, color: branch.color, tier: idx + 1 },
+      })
+    })
+  })
 
-const edges = computed(() =>
-  edgeDefs.map(({ source, target, targetIdx }) => {
-    const s = skillState(targetIdx)
-    // ── Farben im RPG-Wood-Schema ──────────────────────────
-    const color =
-      s === 'bought'
-        ? '#e8c040' // --rpg-gold
-        : s === 'buyable'
-          ? '#6ec040' // --rpg-green-border
-          : 'rgba(92, 51, 16, 0.45)' // --rpg-wood-mid gedimmt
-    return {
-      id: `${source}-${target}`,
-      source,
-      target,
-      type: 'smoothstep',
-      animated: s === 'buyable',
-      label: `${SKILL_MEEP_COSTS[targetIdx]} Meeps`,
-      labelStyle: {
-        fill: s === 'bought' ? '#e8c040' : s === 'buyable' ? '#6ec040' : 'rgba(136, 88, 40, 0.7)',
-        fontWeight: '700',
-        fontSize: '16px',
-      },
-      labelBgStyle: { fill: 'rgba(17, 16, 8, 0.92)', rx: 4, ry: 4 },
-      labelBgPadding: [6, 4] as [number, number],
-      style: { stroke: color, strokeWidth: s === 'bought' ? 2.5 : 1.5 },
-      markerEnd: { type: MarkerType.ArrowClosed, color },
-    }
-  }),
-)
+  return result
+})
 
-const nodeTypes = { skill: markRaw(SkillNode) }
+const edges = computed<Edge[]>(() => {
+  const result: Edge[] = []
+
+  MEEP_TREE_BRANCHES.forEach((branch) => {
+    branch.nodes.forEach((node, idx) => {
+      const state = meepTree.nodeState(node.id)
+      const bought = state === 'bought'
+      const buyable = state === 'buyable'
+      const color = bought ? branch.color : buyable ? '#6ec040' : 'rgba(122, 78, 32, 0.5)'
+      result.push({
+        id: `e-${node.id}`,
+        source: idx === 0 ? 'start' : branch.nodes[idx - 1].id,
+        target: node.id,
+        type: 'straight',
+        animated: buyable,
+        style: {
+          stroke: color,
+          strokeWidth: bought ? 3.5 : 2.5,
+          // Ketten-Optik wie im klassischen Skill-Web: offene Pfade gestrichelt
+          strokeDasharray: bought ? undefined : '7 5',
+        },
+      })
+    })
+  })
+
+  return result
+})
+
+// Vue Flow erwartet NodeProps-kompatible Komponenten — unsere Nodes nutzen nur `data`,
+// daher der Cast (gleiche Struktur wie in den Vue-Flow-Beispielen üblich).
+const nodeTypes = {
+  skill: markRaw(MeepSkillNode),
+  start: markRaw(MeepStartNode),
+} as unknown as NodeTypesObject
 </script>
 
 <template>
-  <div class="st-wrapper">
-    <div class="st-canvas">
-      <VueFlow
-        :nodes="nodes"
-        :edges="edges"
-        :node-types="nodeTypes"
-        :nodes-draggable="false"
-        :nodes-connectable="false"
-        :elements-selectable="false"
-        :select-nodes-on-drag="false"
-        :min-zoom="0.3"
-        :max-zoom="2.5"
-        :fit-view-on-init="false"
-        class="!bg-transparent"
-      >
-        <Background variant="dots" :gap="24" pattern-color="#2a2a2a" :size="1" />
-        <Controls position="bottom-right" />
-      </VueFlow>
-    </div>
+  <div class="st-canvas">
+    <VueFlow
+      :nodes="nodes"
+      :edges="edges"
+      :node-types="nodeTypes"
+      :nodes-draggable="false"
+      :nodes-connectable="false"
+      :elements-selectable="false"
+      :select-nodes-on-drag="false"
+      :min-zoom="0.25"
+      :max-zoom="2"
+      :fit-view-on-init="false"
+      class="!bg-transparent"
+    >
+      <Background variant="dots" :gap="26" pattern-color="#2a2418" :size="1.2" />
+      <Controls position="bottom-right" />
+    </VueFlow>
   </div>
 </template>
 
 <style scoped>
-/* ── Wrapper: nutzt .rpg-frame aus globalem Theme ──────── */
-.st-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  /* rpg-frame liefert: bg-deep, wood-border, inset-shadows */
-}
-
-/* ── Canvas ──────────────────────────────────────────────── */
+/* ── Canvas füllt den ganzen Tab ─────────────────────────── */
 .st-canvas {
   width: 100%;
-  flex: 1;
+  height: 100%;
   min-height: 0;
   position: relative;
   background: var(--rpg-bg-deep);

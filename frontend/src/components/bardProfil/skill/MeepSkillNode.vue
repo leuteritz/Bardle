@@ -1,0 +1,242 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { Handle, Position } from '@vue-flow/core'
+import { useMeepTreeStore } from '@/stores/meepTreeStore'
+import { useActionToast } from '@/composables/useActionToast'
+import { MEEP_TREE_PLACEHOLDER_ICON, type MeepTreeNodeDef } from '@/config/meepTree'
+
+const props = defineProps<{
+  data: {
+    node: MeepTreeNodeDef
+    color: string
+    tier: number
+  }
+}>()
+
+const meepTree = useMeepTreeStore()
+const { showToast } = useActionToast()
+
+const state = computed(() => meepTree.nodeState(props.data.node.id))
+/** Vorgänger gekauft, aber noch nicht genug Meeps → weniger stark gedimmt */
+const reachable = computed(() => state.value === 'locked' && meepTree.isUnlocked(props.data.node.id))
+
+const tooltip = computed(
+  () => `${props.data.node.name} — ${props.data.node.effect}\n${props.data.node.desc}`,
+)
+
+function handleBuy() {
+  if (state.value !== 'buyable') return
+  if (meepTree.buyNode(props.data.node.id)) {
+    showToast(`${props.data.node.name} learned!`)
+  }
+}
+</script>
+
+<template>
+  <div
+    :class="['msn-root', `msn-root--${state}`, { 'msn-root--reachable': reachable }]"
+    :style="{ '--branch-color': data.color }"
+    :title="tooltip"
+  >
+    <!-- Unsichtbare Handles im Kreiszentrum → Kanten laufen exakt auf die Mitte zu -->
+    <Handle type="target" :position="Position.Top" class="msn-handle" />
+    <Handle type="source" :position="Position.Bottom" class="msn-handle" />
+
+    <button
+      class="msn-circle"
+      style="pointer-events: all"
+      :disabled="state !== 'buyable'"
+      @click.stop="handleBuy"
+    >
+      <img :src="MEEP_TREE_PLACEHOLDER_ICON" :alt="data.node.name" class="msn-icon" />
+
+      <!-- Kosten- / Aktiv-Badge am unteren Kreisrand -->
+      <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
+      <span v-else class="msn-badge" :class="`msn-badge--${state}`">
+        <img src="/img/BardAbilities/BardMeep.png" alt="Meeps" class="msn-badge__icon" />
+        {{ data.node.cost }}
+      </span>
+    </button>
+
+    <div class="msn-label">
+      <span class="msn-name">{{ data.node.name }}</span>
+      <span class="msn-effect">{{ data.node.effect }}</span>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* ── Root ─────────────────────────────────────────────────── */
+.msn-root {
+  position: relative;
+  width: 156px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.msn-root--locked {
+  opacity: 0.42;
+  filter: grayscale(55%);
+}
+
+.msn-root--reachable {
+  opacity: 0.75;
+  filter: grayscale(15%);
+}
+
+/* Handles unsichtbar im Kreiszentrum stapeln */
+.msn-handle {
+  opacity: 0;
+  width: 2px;
+  height: 2px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ── Kreis-Knoten ─────────────────────────────────────────── */
+.msn-circle {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--rpg-border-row);
+  background: radial-gradient(circle at 35% 30%, #232018, var(--rpg-bg-icon) 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+/* Gekauft → Zweigfarbe + Glow */
+.msn-root--bought .msn-circle {
+  border-color: var(--branch-color);
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--branch-color) 22%, var(--rpg-bg-dark)),
+    var(--rpg-bg-dark) 75%
+  );
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--branch-color) 45%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--branch-color) 20%, transparent);
+  cursor: default;
+}
+
+/* Kaufbar → Grün, pulsierend */
+.msn-root--buyable .msn-circle {
+  border-color: var(--rpg-green-border);
+  background: radial-gradient(circle at 35% 30%, #1d3a10, #0d1d07 75%);
+  cursor: pointer;
+  animation: msn-pulse 2s ease-in-out infinite;
+}
+
+.msn-root--buyable .msn-circle:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 22px rgba(80, 180, 40, 0.6);
+}
+
+.msn-root--buyable .msn-circle:active {
+  transform: scale(0.95);
+}
+
+.msn-root--locked .msn-circle {
+  cursor: not-allowed;
+}
+
+@keyframes msn-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 7px rgba(80, 180, 40, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(80, 180, 40, 0.55);
+  }
+}
+
+.msn-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+}
+
+/* ── Badge am Kreisrand ───────────────────────────────────── */
+.msn-badge {
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rpg-border-row);
+  background: var(--rpg-bg-deep);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--rpg-text-dim);
+  white-space: nowrap;
+}
+
+.msn-badge__icon {
+  height: 14px;
+  width: auto;
+}
+
+.msn-badge--buyable {
+  border-color: var(--rpg-green-bottom);
+  background: #142808;
+  color: var(--rpg-green-top);
+}
+
+.msn-badge--bought {
+  border-color: color-mix(in srgb, var(--branch-color) 65%, var(--rpg-border-row));
+  background: var(--rpg-bg-deep);
+  color: var(--branch-color);
+  font-size: 13px;
+  padding: 1px 9px;
+}
+
+/* ── Label unter dem Kreis ────────────────────────────────── */
+.msn-label {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-align: center;
+}
+
+.msn-name {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--rpg-text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.msn-effect {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--branch-color);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.msn-root--buyable .msn-effect {
+  color: var(--rpg-green-top);
+}
+</style>

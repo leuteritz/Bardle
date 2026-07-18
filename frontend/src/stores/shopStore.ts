@@ -10,6 +10,7 @@ import { usePlanetShopStore } from './planetShopStore'
 import { useSynergyStore } from './synergyStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
+import { useMeepTreeStore } from './meepTreeStore'
 import {
   SECONDS_PER_HOUR,
   EFFICIENCY_STARS_DIVISOR,
@@ -295,8 +296,9 @@ export const useShopStore = defineStore('shop', {
       const solarCPS = solar.cpsBonus
       const flightMul = solar.flightSpeedMultiplier
       const forgeMul = useStarForgeStore().cpsMult
+      const treeMul = useMeepTreeStore().fx.cpsMult
       return Math.floor(
-        (baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul * forgeMul,
+        (baseCPS + solarCPS) * gameStore.abilityCPSMultiplier * cpsMul * flightMul * forgeMul * treeMul,
       )
     },
 
@@ -312,11 +314,12 @@ export const useShopStore = defineStore('shop', {
       const baseCPC = mod.baseChimesPerClick ?? gameStore.baseChimesPerClick
       const cpcMul = mod.cpcMultiplier ?? 1
       const forge = useStarForgeStore()
-      // Resonance / Midas Bell (Star Forge): clicks gain a fraction of total CpS
-      const cpsPortion =
-        forge.cpcFromCpsPct > 0 ? this.calculateTotalCPS() * forge.cpcFromCpsPct : 0
+      const tree = useMeepTreeStore().fx
+      // Resonance / Midas Bell (Star Forge) + Worldbell (Meep Tree): clicks gain a fraction of total CpS
+      const fromCpsPct = forge.cpcFromCpsPct + tree.cpcFromCpsPct
+      const cpsPortion = fromCpsPct > 0 ? this.calculateTotalCPS() * fromCpsPct : 0
       return Math.floor(
-        (baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul * forge.cpcMult +
+        (baseCPC + upgradeBonus) * gameStore.abilityCPCMultiplier * cpcMul * forge.cpcMult * tree.cpcMult +
           cpsPortion,
       )
     },

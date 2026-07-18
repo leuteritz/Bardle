@@ -13,6 +13,7 @@ import { useRoleBehaviorStore } from './roleBehaviorStore'
 import { usePlanetShopStore } from './planetShopStore'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { useStarForgeStore } from './starForgeStore'
+import { useMeepTreeStore } from './meepTreeStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/math'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
@@ -138,8 +139,9 @@ export const useGameStore = defineStore('game', {
             Math.ceil(MEEP_BASE_COST * Math.pow(this.meeps, MEEP_COST_EXPONENT)),
           )
           const meepCostMod = this.activeModifier.meepCostMultiplier ?? 1
+          const treeCostMod = useMeepTreeStore().fx.meepCostMult
           this.meepChimeRequirement = Math.ceil(
-            baseCost * this.abilityMeepCostMultiplier * meepCostMod,
+            baseCost * this.abilityMeepCostMultiplier * meepCostMod * treeCostMod,
           )
           this.chimesForMeep = 0
         }, MEEP_ADD_DELAY_MS)
@@ -153,8 +155,10 @@ export const useGameStore = defineStore('game', {
 
     // Adds Chimes and updates all dependent values
     addChime() {
-      // Golden Echo (Star Forge): chance that a click counts twice
-      const doubled = Math.random() < useStarForgeStore().doubleClickChance
+      // Golden Echo (Star Forge) + Twin Echo (Meep Tree): chance that a click counts twice
+      const doubleChance =
+        useStarForgeStore().doubleClickChance + useMeepTreeStore().fx.doubleClickChance
+      const doubled = Math.random() < doubleChance
       const clickValue = this.chimesPerClick * this.mvpBuffMultiplier
       const gain = doubled ? clickValue * 2 : clickValue
       this.chimes += gain
@@ -418,6 +422,7 @@ export const useGameStore = defineStore('game', {
       this.buildingProductionHistory = {}
       this.totalBuildingProduction = {}
       // totalChimesEarned & totalClicks persist across prestiges
+      useMeepTreeStore().resetTree()
       const augmentStore = useAugmentStore()
       augmentStore.$reset()
       const shopStore = useShopStore()
@@ -662,8 +667,11 @@ export const useGameStore = defineStore('game', {
       const eloPowerMod = this.activeModifier.eloPowerMultiplier ?? 1
       const itemPowerMul = useItemStore().totalPowerMultiplier
       const synergyPowerMul = useSynergyStore().powerSynergyMultiplier
+      const tree = useMeepTreeStore().fx
       return Math.floor(
-        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod + this.abilityPowerBonus) *
+        (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod * tree.meepPowerMult +
+          this.abilityPowerBonus +
+          tree.powerBonus) *
           eloPowerMod *
           itemPowerMul *
           synergyPowerMul,
