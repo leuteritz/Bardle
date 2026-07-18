@@ -18,7 +18,6 @@ import {
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
-import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 const props = defineProps<{
   selectedRole: number | null
@@ -233,9 +232,6 @@ watch(
     @click.capture="onClickCapture"
     @dragstart.prevent
   >
-    <!-- shared cosmic backdrop (same starfield as Shop / Planets / Skill Tree) -->
-    <CosmicStageBackground />
-
     <!-- board actions: shop + expedition (always reachable) -->
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
@@ -354,9 +350,9 @@ watch(
   min-width: 0;
   height: 100%;
   overflow: hidden;
-  /* flat deep-space base — same #111008 as Shop / Planets / Skill Tree so the
-     shared starfield reads identically bright in every tab */
-  background: #111008;
+  /* transparent: the cosmic backdrop lives on the .team-tab wrapper so it
+     spans the whole tab — the board must not paint over it */
+  background: transparent;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -373,15 +369,6 @@ watch(
    animations so they stop compositing behind it; they resume on close */
 .sigil-board--paused :deep(*) {
   animation-play-state: paused !important;
-}
-
-.sigil-board::after {
-  content: '';
-  position: absolute;
-  inset: 14px;
-  border: 1px solid rgba(200, 164, 90, 0.12);
-  border-radius: 5px;
-  pointer-events: none;
 }
 
 /* ── board actions (shop / expedition) ── */

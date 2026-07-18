@@ -9,6 +9,7 @@ import { useActionToast } from '@/composables/useActionToast'
 import { ROLES } from '@/config/constants'
 import { getChampionRoles } from '@/config/championRoles'
 import type { ChampionRole, ItemCategory } from '@/types'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
 import TeamModalShell from './TeamModalShell.vue'
@@ -231,6 +232,11 @@ onUnmounted(() => {
 
 <template>
   <div class="team-tab">
+    <!-- shared cosmic backdrop — spans the ENTIRE tab content, edge to edge,
+         beneath the sigil board and both slide-in side panels. Star animations
+         pause while a modal covers the tab (same as the board's own effects). -->
+    <CosmicStageBackground :class="{ 'cosmic-paused': activeModal !== null }" />
+
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
@@ -392,6 +398,9 @@ onUnmounted(() => {
   min-height: 0;
   overflow: hidden;
   background: #111008; /* same deep-space base as Shop / Planets / Skill Tree */
+}
+.cosmic-paused :deep(*) {
+  animation-play-state: paused !important;
 }
 .team-modal-fill {
   flex: 1;

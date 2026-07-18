@@ -451,7 +451,6 @@ watch(
   position: absolute;
   inset: 0;
   z-index: 1;
-  padding: 1rem;
   overflow: hidden;
 }
 

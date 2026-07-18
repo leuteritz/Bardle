@@ -10,10 +10,6 @@ import { MEEP_TREE_START_ICON } from '@/config/meepTree'
     <div class="mst-circle">
       <img :src="MEEP_TREE_START_ICON" alt="Start" class="mst-icon" />
     </div>
-
-    <div class="mst-label">
-      <span class="mst-name">The First Chime</span>
-    </div>
   </div>
 </template>
 
@@ -82,17 +78,4 @@ import { MEEP_TREE_START_ICON } from '@/config/meepTree'
   object-fit: contain;
 }
 
-.mst-label {
-  margin-top: 8px;
-  text-align: center;
-}
-
-.mst-name {
-  font-size: 14px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--rpg-gold);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-}
 </style>
