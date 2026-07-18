@@ -5,18 +5,23 @@
 // Nur Animationen und visuelle Effekte stoppen.
 
 import { ref, readonly } from 'vue'
+import { FOCUS_POLL_INTERVAL_MS } from '@/config/constants'
 
 const windowFocused = ref(true)
 const _listeners: Array<(focused: boolean) => void> = []
 
+function setFocused(focused: boolean) {
+  if (windowFocused.value === focused) return
+  windowFocused.value = focused
+  _listeners.forEach((fn) => fn(focused))
+}
+
 function handleFocus() {
-  windowFocused.value = true
-  _listeners.forEach((fn) => fn(true))
+  setFocused(true)
 }
 
 function handleBlur() {
-  windowFocused.value = false
-  _listeners.forEach((fn) => fn(false))
+  setFocused(false)
 }
 
 let initialized = false
@@ -27,6 +32,13 @@ export function useWindowFocus() {
     windowFocused.value = document.hasFocus()
     window.addEventListener('focus', handleFocus)
     window.addEventListener('blur', handleBlur)
+    // Polling-Fallback: Chrome feuert focus/blur auf Multi-Monitor-Setups nicht
+    // zuverlässig. Ohne diesen Abgleich bliebe windowFocused nach einem
+    // verpassten Event dauerhaft falsch → alle Render-Loops (Sterne, Sonne,
+    // Orbits, Minimap, Nebula) blieben bis zum Reload eingefroren.
+    setInterval(() => {
+      setFocused(document.hasFocus())
+    }, FOCUS_POLL_INTERVAL_MS)
   }
 
   function onFocusChange(fn: (focused: boolean) => void) {

@@ -39,6 +39,12 @@ export type GameStateKey = (typeof GAME_STATE)[keyof typeof GAME_STATE]['key']
 export const MMR_TO_POWER_MULTIPLIER = 1.5
 
 // Star background (App.vue)
+/**
+ * Polling interval for document.hasFocus() — fallback because Chrome does not
+ * reliably fire window focus/blur events on multi-monitor setups. Used by
+ * useWindowFocus (global) and useStarBackground (loop watchdog).
+ */
+export const FOCUS_POLL_INTERVAL_MS = 500
 export const STAR_COUNT = 400
 /** Floor for the area-scaled star count so a small contained instance (Shop) is never empty. */
 export const STAR_BG_MIN_STARS = 60

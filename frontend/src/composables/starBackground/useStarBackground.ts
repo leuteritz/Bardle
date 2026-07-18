@@ -73,6 +73,7 @@ import {
   COMET_BG_TWIN_OFFSET_MAX,
   COMET_BG_TWIN_SCALE,
   COMET_BG_TINT_WHITE_MIX,
+  FOCUS_POLL_INTERVAL_MS,
 } from '../../config/constants'
 import { GALAXY_THEMES } from '../../config/galaxyThemes'
 import { useWindowFocus } from '../useWindowFocus'
@@ -1332,9 +1333,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
   // ── Loop starten / stoppen ─────────────────────────────────────────────────
   function startLoop(): void {
+    // showCanvas VOR dem Guard: falls der Canvas durch eine verpasste
+    // Event-Reihenfolge versteckt blieb, macht jeder Start-Versuch ihn wieder
+    // sichtbar — auch wenn die Loop bereits läuft.
+    showCanvas()
     if (animFrame) return // läuft bereits
     lastTimestamp = 0
-    showCanvas()
     animFrame = requestAnimationFrame(animateStars)
   }
 
@@ -1398,8 +1402,23 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         onWindowBlur()
       } else if (hasFocus && !isWindowFocused) {
         onWindowFocus()
+      } else if (
+        // Watchdog: Loop sollte laufen, ist aber tot (z.B. verpasste
+        // Event-Reihenfolge bei Tab-/Monitor-Wechsel) → neu starten, damit
+        // der Hintergrund nie dauerhaft schwarz bleibt.
+        hasFocus &&
+        isWindowFocused &&
+        animFrame === 0 &&
+        !document.hidden &&
+        uiStoreForPause.bardActiveTab === null &&
+        !prefersReducedMotion.value &&
+        stars.length > 0
+      ) {
+        startLoop()
+        scheduleNextGalaxy()
+        scheduleNextEmission()
       }
-    }, 500)
+    }, FOCUS_POLL_INTERVAL_MS)
   }
 
   function stopFocusPolling(): void {
@@ -1516,6 +1535,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
   function scheduleNextGalaxy(): void {
     if (isFrozen) return
+    // Bestehenden Timer ersetzen — mehrere Restart-Pfade (Fokus, Modal,
+    // Watchdog) dürfen keine parallelen Spawn-Ketten aufbauen.
+    if (galaxySpawnTimeout) clearTimeout(galaxySpawnTimeout)
     const delay =
       GALAXY_SPAWN_INTERVAL_MIN +
       Math.random() * (GALAXY_SPAWN_INTERVAL_MAX - GALAXY_SPAWN_INTERVAL_MIN)
@@ -1570,6 +1592,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
   function scheduleNextEmission(): void {
     if (isFrozen) return
+    if (emissionSpawnTimeout) clearTimeout(emissionSpawnTimeout)
     const delay = EMISSION_SPAWN_MIN + Math.random() * (EMISSION_SPAWN_MAX - EMISSION_SPAWN_MIN)
     emissionSpawnTimeout = setTimeout(() => {
       spawnEmissionNebula()
@@ -2495,6 +2518,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         emissionSpawnTimeout = null
       }
     } else {
+      // Fokus-Zustand direkt neu abfragen statt dem gecachten Flag zu trauen —
+      // beim Tab-Rückwechsel kann das focus-Event nach visibilitychange kommen
+      // (oder ganz ausbleiben), dann wäre isWindowFocused hier noch veraltet.
+      isWindowFocused = document.hasFocus()
       if (!prefersReducedMotion.value && stars.length > 0 && isWindowFocused) {
         startLoop()
         scheduleNextGalaxy()
