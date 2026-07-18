@@ -9,124 +9,115 @@
         aria-label="Game Paused"
         @click.self="unpause"
       >
-        <!-- Cosmic star particles -->
+        <!-- Drifting star dust -->
         <div class="pause-particles" aria-hidden="true">
-          <span v-for="i in 20" :key="i" class="particle" :style="particleStyle(i)" />
+          <span v-for="i in 14" :key="i" class="particle" :style="particleStyle(i)" />
         </div>
 
-        <div class="pause-card">
-          <div class="card-top-glow" aria-hidden="true" />
+        <div class="pause-panel">
+          <!-- Header -->
+          <header class="pause-header">
+            <span class="pause-eyebrow">
+              <span class="eyebrow-line" aria-hidden="true" />
+              The galaxy holds its breath
+              <span class="eyebrow-line" aria-hidden="true" />
+            </span>
+            <h1 class="pause-title">Paused</h1>
+            <span class="pause-timer" aria-label="Pause duration">{{ pauseDuration }}</span>
+            <span class="pause-meta">Level {{ gameStore.level }} · Universe {{ gameStore.currentUniverse }}</span>
+          </header>
 
-          <!-- Title -->
-          <div class="pause-header">
-            <span class="pause-title">Paused</span>
-            <span class="pause-hint">Click anywhere to resume</span>
+          <!-- Hero: frozen orbit + accumulating chimes -->
+          <div class="orbit-hero" aria-hidden="false">
+            <div class="orbit-ring orbit-ring--outer" aria-hidden="true">
+              <span class="orbit-body orbit-body--outer" />
+            </div>
+            <div class="orbit-ring orbit-ring--inner" aria-hidden="true">
+              <span class="orbit-body orbit-body--inner" />
+            </div>
+            <img src="/img/BardAbilities/BardChime.png" alt="" class="orbit-chime" />
           </div>
 
-          <div class="divider" />
+          <div class="chime-readout">
+            <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
+            <span class="chime-label">Chimes while paused</span>
+          </div>
 
-          <!-- HP Section -->
-          <div class="hp-section" :class="hpSectionClass">
-            <div class="hp-top">
-              <Icon icon="game-icons:hearts" width="16" height="16" class="hp-icon" style="color: #cc6050" aria-hidden="true" />
-              <span class="hp-numbers">
-                <span class="hp-current">{{
-                  Math.round(playerStore.currentHP)
-                }}</span>
-                <span class="hp-sep">/</span>
-                <span class="hp-max">{{ playerStore.maxHP }}</span>
+          <!-- Stat tiles -->
+          <div class="stat-grid">
+            <div class="stat-tile" :class="{ 'stat-tile--crit': hpPercent <= 25 }">
+              <span class="stat-tile__label">
+                <Icon icon="game-icons:hearts" width="13" height="13" class="stat-tile__icon stat-tile__icon--hp" aria-hidden="true" />
+                Health
               </span>
+              <span class="stat-tile__value">
+                {{ Math.round(playerStore.currentHP) }}<span class="stat-tile__sub">/{{ playerStore.maxHP }}</span>
+              </span>
+              <div class="hp-bar-track">
+                <div class="hp-bar-fill" :class="hpColor" :style="{ width: hpPercent + '%' }" />
+              </div>
             </div>
-            <div class="hp-bar-track">
-              <div class="hp-bar-fill" :class="hpColor" :style="{ width: hpPercent + '%' }" />
-              <div v-if="hpPercent <= 25" class="hp-danger-pulse" />
+
+            <div class="stat-tile">
+              <span class="stat-tile__label">
+                <Icon icon="game-icons:crossed-swords" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
+                Kills
+              </span>
+              <span class="stat-tile__value">{{ formatNumber(pauseKills) }}</span>
+              <span class="stat-tile__hint">while paused</span>
+            </div>
+
+            <div class="stat-tile">
+              <span class="stat-tile__label">
+                <Icon icon="game-icons:ore" width="13" height="13" class="stat-tile__icon" aria-hidden="true" />
+                Materials
+              </span>
+              <span v-if="pauseMaterialEntries.length === 0" class="stat-tile__value stat-tile__value--dim">—</span>
+              <div v-else class="material-row">
+                <span
+                  v-for="mat in pauseMaterialEntries.slice(0, 3)"
+                  :key="mat.id"
+                  class="material-chip"
+                  :title="mat.name"
+                >
+                  <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="material-chip__img" />
+                  <span class="material-chip__amount">{{ formatNumber(mat.amount) }}</span>
+                </span>
+                <span v-if="pauseMaterialEntries.length > 3" class="material-chip material-chip--more">
+                  +{{ pauseMaterialEntries.length - 3 }}
+                </span>
+              </div>
+              <span class="stat-tile__hint">while paused</span>
             </div>
           </div>
 
-          <div class="divider" />
-
-          <!-- Chimes -->
-          <div class="chime-section">
-            <img src="/img/BardAbilities/BardChime.png" alt="Chime" class="chime-img" />
-            <div class="chime-info">
-              <span class="chime-label">Chimes while paused</span>
-              <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-            </div>
-          </div>
-
-          <!-- Champion Found Event -->
-          <div v-if="isPlanetDiscovered" class="champion-found">
-            <Icon icon="game-icons:barbute" width="36" height="36" class="champion-found__icon" aria-hidden="true" />
-            <span class="champion-found__label">Champion Found</span>
-          </div>
-
-          <!-- Notification badges -->
-          <div v-if="hasNotifications" class="notif-row">
-            <div
-              v-if="gameStore.pendingAugmentSelections.length > 0"
-              class="notif-pill notif-pill--gold"
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <polyline points="18 15 12 9 6 15" />
-              </svg>
-              Level-Up ×{{ gameStore.pendingAugmentSelections.length }}
-            </div>
-            <div v-if="pendingStars > 0" class="notif-pill notif-pill--green">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                />
-              </svg>
-              Stars ×{{ pendingStars }}
-            </div>
-            <div v-if="pauseKills > 0" class="notif-pill notif-pill--red">
-              ☠ Kills ×{{ pauseKills }}
-            </div>
-            <div v-if="pauseMaterialEntries.length > 0" class="notif-pill notif-pill--teal">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <polygon
-                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                />
-              </svg>
-              {{ pauseMaterialEntries.length }} Materials
+          <!-- Awaiting on return -->
+          <div v-if="hasCallouts" class="callout-section">
+            <span class="callout-heading">Awaiting your return</span>
+            <div class="callout-row">
+              <div v-if="isPlanetDiscovered" class="callout callout--champion">
+                <Icon icon="game-icons:barbute" width="18" height="18" aria-hidden="true" />
+                Champion found
+              </div>
+              <div v-if="gameStore.pendingAugmentSelections.length > 0" class="callout callout--gold">
+                <Icon icon="game-icons:upgrade" width="16" height="16" aria-hidden="true" />
+                Level-Up ×{{ gameStore.pendingAugmentSelections.length }}
+              </div>
+              <div v-if="pendingStars > 0" class="callout callout--green">
+                <Icon icon="game-icons:star-formation" width="16" height="16" aria-hidden="true" />
+                Stars ×{{ pendingStars }}
+              </div>
             </div>
           </div>
 
           <!-- Continue -->
           <button class="continue-btn" @click="unpause">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <polygon points="6 3 21 12 6 21 6 3" />
             </svg>
-            Continue
+            Resume journey
           </button>
+          <span class="pause-hint">or click anywhere to continue</span>
         </div>
       </div>
     </Transition>
@@ -157,11 +148,6 @@ const hpColor = computed(() => {
   return 'hp--red'
 })
 
-const hpSectionClass = computed(() => {
-  if (hpPercent.value <= 25) return 'hp-section--crit'
-  return ''
-})
-
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
@@ -172,6 +158,7 @@ watch(
     if (!focused) {
       gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
+      pauseTick.value = 0
       pauseInterval = setInterval(() => {
         pauseTick.value++
       }, 1000)
@@ -195,6 +182,13 @@ const accumulatedChimes = computed(() => {
   return Math.max(0, gameStore.chimes - pauseStartChimes.value)
 })
 
+const pauseDuration = computed(() => {
+  const total = pauseTick.value
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+})
+
 const pauseKills = computed(() => gameStore.pauseStats.kills)
 const pauseMaterialEntries = computed(() =>
   Object.entries(gameStore.pauseStats.materialsEarned).map(([id, amount]) => {
@@ -203,16 +197,15 @@ const pauseMaterialEntries = computed(() =>
   }),
 )
 
-const hasNotifications = computed(
-  () =>
-    gameStore.pendingAugmentSelections.length > 0 ||
-    pendingStars.value > 0 ||
-    pauseKills.value > 0 ||
-    pauseMaterialEntries.value.length > 0,
-)
-
 const isPlanetDiscovered = computed(
   () => galaxyStore.championTravelState === 'champion_available',
+)
+
+const hasCallouts = computed(
+  () =>
+    isPlanetDiscovered.value ||
+    gameStore.pendingAugmentSelections.length > 0 ||
+    pendingStars.value > 0,
 )
 
 function unpause() {
@@ -220,21 +213,14 @@ function unpause() {
 }
 
 function particleStyle(i: number): Record<string, string> {
-  const angle = (i / 20) * 360
-  const dist = 160 + ((i * 23) % 160)
-  const size = 2 + (i % 5)
-  const delay = ((i * 0.35) % 3).toFixed(1)
-  const duration = (3.5 + (i % 5)).toFixed(1)
-  const x = Math.cos((angle * Math.PI) / 180) * dist
-  const y = Math.sin((angle * Math.PI) / 180) * dist
+  const left = (i * 137.5) % 100
+  const top = (i * 61.8 + 13) % 100
+  const size = 1.5 + (i % 4)
+  const delay = ((i * 0.45) % 4).toFixed(1)
+  const duration = (4 + (i % 6)).toFixed(1)
   return {
-    '--x': `${x}px`,
-    '--y': `${y}px`,
-    '--size': `${size}px`,
-    '--delay': `${delay}s`,
-    '--duration': `${duration}s`,
-    left: `calc(50% + ${x}px)`,
-    top: `calc(50% + ${y}px)`,
+    left: `${left}%`,
+    top: `${top}%`,
     width: `${size}px`,
     height: `${size}px`,
     animationDelay: `${delay}s`,
@@ -252,12 +238,13 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(
-    ellipse at 50% 30%,
-    rgba(60, 20, 0, 0.68) 0%,
-    rgba(0, 0, 0, 0.92) 70%
-  );
-  backdrop-filter: blur(4px);
+  padding: clamp(12px, 3vh, 40px);
+  background:
+    radial-gradient(ellipse at 50% 110%, rgba(255, 200, 80, 0.08) 0%, transparent 55%),
+    rgba(8, 4, 0, 0.85);
+  backdrop-filter: blur(10px) saturate(0.85);
+  -webkit-backdrop-filter: blur(10px) saturate(0.85);
+  overflow-y: auto;
 }
 
 /* ── Particles ────────────────────────────────────────── */
@@ -270,62 +257,38 @@ function particleStyle(i: number): Record<string, string> {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, #e8c04099 0%, transparent 70%);
-  animation: particle-float var(--duration, 5s) ease-in-out var(--delay, 0s) infinite alternate;
-  opacity: 0.35;
+  background: radial-gradient(circle, rgba(240, 224, 180, 0.8) 0%, transparent 70%);
+  animation: particle-drift 6s ease-in-out infinite alternate;
+  opacity: 0.3;
 }
-@keyframes particle-float {
-  0% {
-    transform: translateY(0) scale(1);
-    opacity: 0.2;
+@keyframes particle-drift {
+  from {
+    transform: translateY(0);
+    opacity: 0.12;
   }
-  50% {
-    opacity: 0.55;
-  }
-  100% {
-    transform: translateY(-28px) scale(1.4);
-    opacity: 0.1;
+  to {
+    transform: translateY(-22px);
+    opacity: 0.4;
   }
 }
 
-/* ── Card ─────────────────────────────────────────────── */
-.pause-card {
+/* ── Panel ────────────────────────────────────────────── */
+.pause-panel {
   position: relative;
   z-index: 1;
-  width: min(400px, 92vw);
-  background: #0d0a05;
-  border: 1px solid rgba(200, 144, 64, 0.4);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(92, 51, 16, 0.5),
-    0 32px 80px rgba(0, 0, 0, 0.95),
-    inset 0 1px 0 rgba(232, 192, 64, 0.1);
+  width: min(520px, 94vw);
+  max-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 0 0 24px;
-}
-
-.card-top-glow {
-  height: 4px;
-  background: linear-gradient(
-    to right,
-    #2a0e00,
-    #7a3a10,
-    #c89040,
-    #f0d060,
-    #c89040,
-    #7a3a10,
-    #2a0e00
-  );
-  flex-shrink: 0;
-}
-
-/* ── Divider ──────────────────────────────────────────── */
-.divider {
-  margin: 0 20px;
-  border-top: 1px solid rgba(200, 144, 64, 0.1);
+  align-items: center;
+  gap: clamp(14px, 2.4vh, 24px);
+  padding: clamp(22px, 4vh, 40px) clamp(20px, 4vw, 44px) clamp(18px, 3vh, 30px);
+  background: #1e1006;
+  border: 1px solid rgba(122, 78, 32, 0.8);
+  border-radius: 18px;
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 200, 80, 0.12);
 }
 
 /* ── Header ───────────────────────────────────────────── */
@@ -333,110 +296,231 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 20px 24px 16px;
+  gap: 6px;
 }
-.pause-title {
-  font-size: clamp(2rem, 8vw, 2.8rem);
-  font-weight: 900;
-  color: #f0d060;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  text-shadow:
-    0 0 28px rgba(240, 208, 96, 0.55),
-    0 0 60px rgba(200, 144, 64, 0.25);
-  line-height: 1;
-}
-.pause-hint {
-  font-size: 0.72rem;
-  color: rgba(200, 185, 140, 0.38);
-  letter-spacing: 0.08em;
-  font-style: italic;
-}
-
-/* ── HP Section ───────────────────────────────────────── */
-.hp-section {
-  padding: 16px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease;
-}
-.hp-section--crit {
-  background: rgba(204, 96, 80, 0.04);
-  animation: crit-section-pulse 0.9s ease-in-out infinite alternate;
-}
-@keyframes crit-section-pulse {
-  from {
-    background: rgba(204, 96, 80, 0.03);
-  }
-  to {
-    background: rgba(204, 96, 80, 0.09);
-  }
-}
-
-.hp-top {
+.pause-eyebrow {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: clamp(0.62rem, 0.9vw, 0.72rem);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.5);
+  white-space: nowrap;
 }
-.hp-icon {
-  font-size: 1.1rem;
-  animation: heartbeat 1.6s ease-in-out infinite;
-  flex-shrink: 0;
+.eyebrow-line {
+  width: clamp(18px, 3vw, 34px);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(240, 208, 96, 0.35));
 }
-@keyframes heartbeat {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  14% {
-    transform: scale(1.22);
-  }
-  28% {
-    transform: scale(1);
-  }
-  42% {
-    transform: scale(1.15);
-  }
-  56% {
-    transform: scale(1);
-  }
+.eyebrow-line:last-child {
+  transform: scaleX(-1);
 }
-
-.hp-numbers {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex: 1;
-}
-.hp-current {
-  font-size: clamp(1.8rem, 6vw, 2.4rem);
-  font-weight: 900;
+.pause-title {
+  margin: 0;
+  font-family: 'MedievalSharp', cursive;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+  font-weight: 400;
   line-height: 1;
+  color: #f4e2a0;
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 0 30px rgba(240, 208, 96, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.pause-timer {
+  font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #e8d8b0;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.12em;
+  color: rgba(216, 200, 160, 0.55);
 }
-.hp-sep {
-  font-size: 1rem;
-  color: rgba(200, 185, 140, 0.25);
-}
-.hp-max {
-  font-size: 0.95rem;
+.pause-meta {
+  font-size: clamp(0.62rem, 0.85vw, 0.7rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: rgba(200, 185, 140, 0.4);
 }
 
-/* HP Bar */
+/* ── Orbit hero ───────────────────────────────────────── */
+.orbit-hero {
+  position: relative;
+  width: clamp(120px, 16vh, 170px);
+  height: clamp(120px, 16vh, 170px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(240, 208, 96, 0.28);
+}
+.orbit-ring--outer {
+  inset: 0;
+  transform: rotate(-18deg);
+  animation: ring-breathe 4.5s ease-in-out infinite;
+}
+.orbit-ring--inner {
+  inset: 17%;
+  transform: rotate(42deg);
+  border-color: rgba(255, 200, 80, 0.18);
+  animation: ring-breathe 4.5s ease-in-out 1.4s infinite;
+}
+@keyframes ring-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.orbit-body {
+  position: absolute;
+  border-radius: 50%;
+}
+.orbit-body--outer {
+  top: 12%;
+  right: 8%;
+  width: 9px;
+  height: 9px;
+  background: #f0d060;
+  box-shadow: 0 0 10px rgba(240, 208, 96, 0.9);
+}
+.orbit-body--inner {
+  bottom: 10%;
+  left: 14%;
+  width: 6px;
+  height: 6px;
+  background: #c89040;
+  box-shadow: 0 0 8px rgba(200, 144, 64, 0.9);
+}
+.orbit-chime {
+  width: 46%;
+  height: 46%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 14px rgba(232, 192, 64, 0.6));
+  animation: chime-float 5s ease-in-out infinite;
+}
+@keyframes chime-float {
+  0%,
+  100% {
+    transform: translateY(3px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ── Chime readout ────────────────────────────────────── */
+.chime-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: calc(-1 * clamp(6px, 1vh, 12px));
+}
+.chime-value {
+  font-size: clamp(1.9rem, 3.2vw, 2.7rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #f0d060;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 24px rgba(240, 208, 96, 0.5),
+    0 0 50px rgba(200, 144, 64, 0.25);
+}
+.chime-label {
+  font-size: clamp(0.66rem, 0.9vw, 0.76rem);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.5);
+}
+
+/* ── Stat tiles ───────────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px, 1.2vw, 12px);
+  width: 100%;
+}
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: clamp(10px, 1.4vh, 14px) clamp(10px, 1.4vw, 14px);
+  background: rgba(255, 200, 80, 0.05);
+  border: 1px solid rgba(122, 78, 32, 0.55);
+  border-radius: 12px;
+  min-width: 0;
+}
+.stat-tile--crit {
+  border-color: rgba(204, 96, 80, 0.4);
+  animation: crit-pulse 1s ease-in-out infinite alternate;
+}
+@keyframes crit-pulse {
+  from {
+    background: rgba(204, 96, 80, 0.04);
+  }
+  to {
+    background: rgba(204, 96, 80, 0.12);
+  }
+}
+.stat-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(0.6rem, 0.85vw, 0.7rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.5);
+  white-space: nowrap;
+}
+.stat-tile__icon {
+  color: rgba(216, 200, 160, 0.55);
+  flex-shrink: 0;
+}
+.stat-tile__icon--hp {
+  color: #cc6050;
+}
+.stat-tile__value {
+  font-size: clamp(1.05rem, 1.6vw, 1.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ece0c0;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-tile__value--dim {
+  color: rgba(216, 200, 160, 0.3);
+}
+.stat-tile__sub {
+  font-size: 0.68em;
+  font-weight: 600;
+  color: rgba(216, 200, 160, 0.45);
+}
+.stat-tile__hint {
+  font-size: clamp(0.58rem, 0.8vw, 0.66rem);
+  color: rgba(216, 200, 160, 0.32);
+  letter-spacing: 0.05em;
+}
+
+/* HP bar */
 .hp-bar-track {
   position: relative;
   width: 100%;
-  height: 14px;
-  background: #060402;
-  border: 1px solid rgba(62, 32, 10, 0.9);
-  border-radius: 4px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 3px;
   overflow: hidden;
 }
 .hp-bar-fill {
@@ -445,234 +529,207 @@ function particleStyle(i: number): Record<string, string> {
   transition:
     width 600ms cubic-bezier(0.25, 1, 0.5, 1),
     background 600ms ease;
-  position: relative;
 }
-.hp-bar-fill::after {
-  content: '';
-  position: absolute;
-  inset: 2px 4px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.18), transparent);
-  border-radius: 2px;
-  pointer-events: none;
-}
-.hp-danger-pulse {
-  position: absolute;
-  inset: 0;
-  background: rgba(204, 96, 80, 0.18);
-  animation: danger-pulse 0.8s ease-in-out infinite alternate;
-  z-index: 2;
-  pointer-events: none;
-}
-@keyframes danger-pulse {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* HP color fills */
 .hp--green {
   background: linear-gradient(to right, #2e7a1a, #52b830);
-  box-shadow: 0 0 8px rgba(82, 184, 48, 0.45);
+  box-shadow: 0 0 6px rgba(82, 184, 48, 0.5);
 }
 .hp--yellow {
   background: linear-gradient(to right, #7a5010, #d4a020);
-  box-shadow: 0 0 8px rgba(212, 160, 32, 0.45);
+  box-shadow: 0 0 6px rgba(212, 160, 32, 0.5);
 }
 .hp--red {
   background: linear-gradient(to right, #6a1a10, #cc6050);
-  box-shadow: 0 0 8px rgba(204, 96, 80, 0.55);
+  box-shadow: 0 0 6px rgba(204, 96, 80, 0.6);
 }
 
-/* ── Chime Section ────────────────────────────────────── */
-.chime-section {
-  padding: 14px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.chime-img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.55));
-}
-.chime-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.chime-label {
-  font-size: 0.7rem;
-  color: rgba(200, 185, 140, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-.chime-value {
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-  font-weight: 900;
-  color: #f0d060;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 20px rgba(240, 208, 96, 0.6),
-    0 0 40px rgba(200, 144, 64, 0.25);
-  animation: chime-glow 2.5s ease-in-out infinite;
-}
-@keyframes chime-glow {
-  0%,
-  100% {
-    text-shadow:
-      0 0 16px rgba(240, 208, 96, 0.5),
-      0 0 32px rgba(200, 144, 64, 0.2);
-  }
-  50% {
-    text-shadow:
-      0 0 28px rgba(240, 208, 96, 0.85),
-      0 0 56px rgba(200, 144, 64, 0.45);
-  }
-}
-
-/* ── Champion Found ───────────────────────────────────── */
-.champion-found {
-  margin: 4px 20px;
-  padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  animation: champion-found-glow 2.5s ease-in-out infinite;
-}
-.champion-found__icon {
-  color: #e8c040;
-  filter: drop-shadow(0 0 8px rgba(232, 192, 64, 0.65));
-  flex-shrink: 0;
-}
-.champion-found__label {
-  font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #f0d060;
-  text-shadow:
-    0 0 20px rgba(240, 208, 96, 0.65),
-    0 1px 4px rgba(0, 0, 0, 0.9);
-}
-@keyframes champion-found-glow {
-  0%,
-  100% {
-    opacity: 0.85;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ── Notification pills ───────────────────────────────── */
-.notif-row {
+/* Materials */
+.material-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  padding: 8px 20px 0;
+  gap: 4px;
+  align-items: center;
 }
-.notif-pill {
+.material-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border-radius: 20px;
-  font-size: 0.78rem;
+  gap: 3px;
+  padding: 2px 6px 2px 3px;
+  background: rgba(64, 192, 180, 0.08);
+  border: 1px solid rgba(64, 192, 180, 0.22);
+  border-radius: 8px;
+  font-size: clamp(0.62rem, 0.85vw, 0.72rem);
+  font-weight: 700;
+  color: #7fd8d0;
+  font-variant-numeric: tabular-nums;
+}
+.material-chip--more {
+  padding: 2px 6px;
+  color: rgba(216, 200, 160, 0.5);
+  background: rgba(255, 200, 80, 0.06);
+  border-color: rgba(122, 78, 32, 0.5);
+}
+.material-chip__img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* ── Callouts ─────────────────────────────────────────── */
+.callout-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.callout-heading {
+  font-size: clamp(0.6rem, 0.85vw, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+}
+.callout-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: clamp(0.72rem, 1vw, 0.82rem);
   font-weight: 700;
   letter-spacing: 0.04em;
   border: 1px solid;
 }
-.notif-pill--gold {
-  background: rgba(232, 192, 64, 0.1);
-  border-color: rgba(232, 192, 64, 0.35);
+.callout--champion {
+  background: rgba(232, 192, 64, 0.14);
+  border-color: rgba(232, 192, 64, 0.5);
+  color: #f0d060;
+  animation: callout-glow 2.2s ease-in-out infinite;
+}
+@keyframes callout-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(232, 192, 64, 0);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(232, 192, 64, 0.35);
+  }
+}
+.callout--gold {
+  background: rgba(232, 192, 64, 0.08);
+  border-color: rgba(232, 192, 64, 0.3);
   color: #e8c040;
 }
-.notif-pill--green {
+.callout--green {
   background: rgba(82, 184, 48, 0.1);
   border-color: rgba(82, 184, 48, 0.3);
   color: #62d840;
 }
-.notif-pill--red {
-  background: rgba(204, 96, 80, 0.1);
-  border-color: rgba(204, 96, 80, 0.35);
-  color: #e06050;
-}
-.notif-pill--teal {
-  background: rgba(64, 192, 180, 0.08);
-  border-color: rgba(64, 192, 180, 0.28);
-  color: #40c8be;
-}
 
-/* ── Continue Button ──────────────────────────────────── */
+/* ── Continue button ──────────────────────────────────── */
 .continue-btn {
-  margin: 12px 20px 0;
-  padding: 13px 0;
-  width: calc(100% - 40px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: linear-gradient(to bottom, #4aaa28, #2d7818);
-  border: 1px solid #6ec040;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 0.95rem;
+  gap: 9px;
+  width: 100%;
+  padding: clamp(11px, 1.6vh, 15px) 0;
+  background: linear-gradient(to bottom, rgba(240, 208, 96, 0.16), rgba(200, 144, 64, 0.1));
+  border: 1px solid rgba(240, 208, 96, 0.45);
+  border-radius: 12px;
+  color: #f4e2a0;
+  font-size: clamp(0.82rem, 1.15vw, 0.95rem);
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 2px 16px rgba(78, 168, 40, 0.4);
   transition:
-    filter 0.15s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
     transform 0.1s ease;
 }
 .continue-btn:hover {
-  filter: brightness(1.15);
+  background: linear-gradient(to bottom, rgba(240, 208, 96, 0.26), rgba(200, 144, 64, 0.16));
+  border-color: rgba(240, 208, 96, 0.75);
+  box-shadow: 0 0 24px rgba(240, 208, 96, 0.25);
   transform: translateY(-1px);
 }
 .continue-btn:active {
-  filter: brightness(0.9);
   transform: translateY(0);
+  box-shadow: none;
+}
+.continue-btn:focus-visible {
+  outline: 2px solid #f0d060;
+  outline-offset: 3px;
+}
+.pause-hint {
+  font-size: clamp(0.62rem, 0.85vw, 0.7rem);
+  color: rgba(216, 200, 160, 0.35);
+  letter-spacing: 0.08em;
+  font-style: italic;
 }
 
 /* ── Transitions ──────────────────────────────────────── */
 .pause-fade-enter-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.3s ease;
+}
+.pause-fade-enter-active .pause-panel {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .pause-fade-leave-active {
   transition: opacity 0.18s ease;
 }
 .pause-fade-enter-from {
   opacity: 0;
-  transform: scale(0.93) translateY(10px);
+}
+.pause-fade-enter-from .pause-panel {
+  transform: scale(0.94) translateY(14px);
 }
 .pause-fade-leave-to {
   opacity: 0;
 }
 
+/* ── Small heights (720p) ─────────────────────────────── */
+@media (max-height: 760px) {
+  .orbit-hero {
+    width: 104px;
+    height: 104px;
+  }
+}
+
+/* ── Narrow screens ───────────────────────────────────── */
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stat-tile:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .particle,
-  .hp-icon,
-  .chime-value,
-  .hp-danger-pulse,
-  .hp-section--crit,
-  .champion-found {
+  .orbit-ring--outer,
+  .orbit-ring--inner,
+  .orbit-chime,
+  .stat-tile--crit,
+  .callout--champion {
     animation: none;
   }
   .continue-btn,
   .pause-fade-enter-active,
-  .pause-fade-leave-active {
+  .pause-fade-leave-active,
+  .pause-fade-enter-active .pause-panel {
     transition: opacity 0.15s;
   }
 }
