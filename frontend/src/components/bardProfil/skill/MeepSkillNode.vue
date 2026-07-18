@@ -3,7 +3,11 @@ import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { useActionToast } from '@/composables/useActionToast'
-import { MEEP_TREE_PLACEHOLDER_ICON, type MeepTreeNodeDef } from '@/config/meepTree'
+import {
+  MEEP_TREE_BADGE_ICON,
+  MEEP_TREE_PLACEHOLDER_ICON,
+  type MeepTreeNodeDef,
+} from '@/config/meepTree'
 
 const props = defineProps<{
   data: {
@@ -53,7 +57,7 @@ function handleBuy() {
       <!-- Kosten- / Aktiv-Badge am unteren Kreisrand -->
       <span v-if="state === 'bought'" class="msn-badge msn-badge--bought">✓</span>
       <span v-else class="msn-badge" :class="`msn-badge--${state}`">
-        <img src="/img/BardAbilities/BardMeep.png" alt="Meeps" class="msn-badge__icon" />
+        <img :src="MEEP_TREE_BADGE_ICON" alt="Meeps" class="msn-badge__icon" />
         {{ data.node.cost }}
       </span>
     </button>
@@ -73,16 +77,24 @@ function handleBuy() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: opacity 0.2s, filter 0.2s;
+  transition: opacity 0.2s;
 }
 
+/* Grayscale nur aufs kleine Icon statt auf den ganzen Node-Subtree —
+   Filter auf großen Flächen machen Pan/Zoom im Vue-Flow-Canvas teuer. */
 .msn-root--locked {
   opacity: 0.42;
+}
+
+.msn-root--locked .msn-icon {
   filter: grayscale(55%);
 }
 
 .msn-root--reachable {
   opacity: 0.75;
+}
+
+.msn-root--reachable .msn-icon {
   filter: grayscale(15%);
 }
 
@@ -133,11 +145,23 @@ function handleBuy() {
   cursor: default;
 }
 
-/* Kaufbar → Grün, pulsierend */
+/* Kaufbar → Grün, pulsierend. Der Glow liegt in einem Pseudo-Element mit
+   statischem box-shadow; animiert wird nur dessen opacity (GPU-kompositiert)
+   — eine box-shadow-Animation würde jeden Frame einen Repaint erzwingen. */
 .msn-root--buyable .msn-circle {
   border-color: var(--rpg-green-border);
   background: radial-gradient(circle at 35% 30%, #1d3a10, #0d1d07 75%);
   cursor: pointer;
+}
+
+.msn-root--buyable .msn-circle::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(80, 180, 40, 0.55);
+  opacity: 0;
+  pointer-events: none;
   animation: msn-pulse 2s ease-in-out infinite;
 }
 
@@ -157,18 +181,19 @@ function handleBuy() {
 @keyframes msn-pulse {
   0%,
   100% {
-    box-shadow: 0 0 7px rgba(80, 180, 40, 0.3);
+    opacity: 0.45;
   }
   50% {
-    box-shadow: 0 0 18px rgba(80, 180, 40, 0.55);
+    opacity: 1;
   }
 }
 
+/* Kein image-rendering: crisp-edges — Nearest-Neighbor-Downscaling macht die
+   Icons matschig; glattes Bicubic-Scaling der 128px-Quelle bleibt scharf. */
 .msn-icon {
   width: 48px;
   height: 48px;
   object-fit: contain;
-  image-rendering: crisp-edges;
 }
 
 /* ── Badge am Kreisrand ───────────────────────────────────── */

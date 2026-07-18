@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, computed } from 'vue'
+import { watch, computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
@@ -40,10 +40,17 @@ const menuItems: {
   { id: 'admin', label: 'Admin', icon: 'game-icons:settings-knobs', src: '' },
 ]
 
+/* Tree-Tab lazy mounten und danach behalten (v-show): der Vue-Flow-Remount
+   (26 Nodes + fitView) bei jedem Tab-Wechsel verursachte spürbare FPS-Drops. */
+const treeTabMounted = ref(false)
+
 watch(
   () => uiStore.bardActiveTab,
   (val) => {
     document.body.classList.toggle('bard-modal-open', val !== null)
+    if (val === 'tree') treeTabMounted.value = true
+    // Modal geschlossen → Wrapper (v-if) zerstört alle Tabs mit
+    else if (val === null) treeTabMounted.value = false
   },
 )
 </script>
@@ -106,6 +113,12 @@ watch(
               <BattleResultComponent />
             </div>
 
+            <!-- Tree-Tab: nach erstem Öffnen gemountet lassen (v-show) — spart
+                 den teuren Vue-Flow-Remount bei jedem erneuten Reintappen -->
+            <div v-show="uiStore.bardActiveTab === 'tree'" class="tree-tab-layer">
+              <SkillTreeComponent v-if="treeTabMounted" />
+            </div>
+
             <Transition name="tab-fade" mode="out-in">
               <div v-if="uiStore.bardActiveTab === 'bard'" key="bard" class="h-full">
                 <BardStatsTab />
@@ -116,13 +129,6 @@ watch(
                 class="h-full overflow-y-auto rp-scrollbar"
               >
                 <ShopComponent />
-              </div>
-              <div
-                v-else-if="uiStore.bardActiveTab === 'tree'"
-                key="tree"
-                class="h-full p-4 overflow-hidden"
-              >
-                <SkillTreeComponent />
               </div>
               <div v-else-if="uiStore.bardActiveTab === 'team'" key="team" class="h-full">
                 <TeamTabComponent />
@@ -439,6 +445,14 @@ watch(
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
+}
+
+.tree-tab-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1rem;
+  overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════

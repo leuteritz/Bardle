@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
+import { MEEP_TREE_START_ICON } from '@/config/meepTree'
 </script>
 
 <template>
@@ -7,7 +8,7 @@ import { Handle, Position } from '@vue-flow/core'
     <Handle type="source" :position="Position.Bottom" class="mst-handle" />
 
     <div class="mst-circle">
-      <img src="/img/BardAbilities/BardChime.png" alt="Start" class="mst-icon" />
+      <img :src="MEEP_TREE_START_ICON" alt="Start" class="mst-icon" />
     </div>
 
     <div class="mst-label">
@@ -40,6 +41,7 @@ import { Handle, Position } from '@vue-flow/core'
 }
 
 .mst-circle {
+  position: relative;
   width: 96px;
   height: 96px;
   border-radius: 50%;
@@ -48,20 +50,29 @@ import { Handle, Position } from '@vue-flow/core'
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 0 14px rgba(232, 192, 64, 0.16);
+}
+
+/* Glow als Pseudo-Element mit statischem box-shadow; animiert wird nur die
+   opacity (GPU-kompositiert) — animierte box-shadows repainten jeden Frame. */
+.mst-circle::after {
+  content: '';
+  position: absolute;
+  inset: -3.5px;
+  border-radius: 50%;
+  box-shadow: 0 0 26px rgba(232, 192, 64, 0.55);
+  opacity: 0.6;
+  pointer-events: none;
   animation: mst-glow 3s ease-in-out infinite;
 }
 
 @keyframes mst-glow {
   0%,
   100% {
-    box-shadow:
-      0 0 14px rgba(232, 192, 64, 0.35),
-      inset 0 0 12px rgba(232, 192, 64, 0.12);
+    opacity: 0.55;
   }
   50% {
-    box-shadow:
-      0 0 26px rgba(232, 192, 64, 0.55),
-      inset 0 0 16px rgba(232, 192, 64, 0.2);
+    opacity: 1;
   }
 }
 
@@ -69,7 +80,6 @@ import { Handle, Position } from '@vue-flow/core'
   width: 58px;
   height: 58px;
   object-fit: contain;
-  image-rendering: crisp-edges;
 }
 
 .mst-label {

@@ -4,8 +4,16 @@
  * All icons share one placeholder image until per-node artwork exists.
  */
 
-/** Placeholder artwork for every node — swap per-node `icon` fields later. */
-export const MEEP_TREE_PLACEHOLDER_ICON = '/img/BardAbilities/Bard.png'
+/** Placeholder artwork for every node — swap per-node `icon` fields later.
+ *  Pre-scaled 128px variant: the full-size originals (1–2 MB PNGs) made the
+ *  tree blurry when downscaled and slow to decode on tab mount. */
+export const MEEP_TREE_PLACEHOLDER_ICON = '/img/BardAbilities/Bard-128.png'
+
+/** Meep cost badge icon (pre-scaled, shown at ~14px in every node badge). */
+export const MEEP_TREE_BADGE_ICON = '/img/BardAbilities/BardMeep-64.png'
+
+/** Start node artwork (pre-scaled 128px variant of BardChime.png). */
+export const MEEP_TREE_START_ICON = '/img/BardAbilities/BardChime-128.png'
 
 /** Folded effect bag produced by the store from all bought nodes. */
 export interface MeepTreeEffects {

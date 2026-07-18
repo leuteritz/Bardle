@@ -23,8 +23,10 @@ const { fitView } = useVueFlow()
 
 onMounted(async () => {
   await nextTick()
-  // Wie in klassischen Skill-Webs: lesbar starten (Zoom-Clamp), Rest per Pan/Zoom
-  setTimeout(() => fitView({ padding: 0.06, minZoom: 0.62, maxZoom: 0.9, duration: 400 }), 100)
+  // Wie in klassischen Skill-Webs: lesbar starten (Zoom-Clamp), Rest per Pan/Zoom.
+  // Ohne duration → sofortiger Snap; die Zoomanimation direkt beim Mount
+  // kollidierte mit den Mount-Kosten und drückte die FPS.
+  setTimeout(() => fitView({ padding: 0.06, minZoom: 0.62, maxZoom: 0.9 }), 100)
 })
 
 // ── Radiales Netz-Layout ───────────────────────────────────
@@ -75,12 +77,19 @@ const nodes = computed<Node[]>(() => {
   return result
 })
 
+// Primitiver Key → Edges werden nur neu gebaut, wenn ein Node-Status wirklich
+// kippt, nicht bei jeder Meep-Änderung (die nodeState reaktiv triggert).
+const allNodeIds = MEEP_TREE_BRANCHES.flatMap((branch) => branch.nodes.map((n) => n.id))
+const edgeStateKey = computed(() => allNodeIds.map((id) => meepTree.nodeState(id)).join(','))
+
 const edges = computed<Edge[]>(() => {
+  const states = edgeStateKey.value.split(',')
   const result: Edge[] = []
+  let flatIdx = 0
 
   MEEP_TREE_BRANCHES.forEach((branch) => {
     branch.nodes.forEach((node, idx) => {
-      const state = meepTree.nodeState(node.id)
+      const state = states[flatIdx++]
       const bought = state === 'bought'
       const buyable = state === 'buyable'
       const color = bought ? branch.color : buyable ? '#6ec040' : 'rgba(122, 78, 32, 0.5)'
@@ -89,7 +98,6 @@ const edges = computed<Edge[]>(() => {
         source: idx === 0 ? 'start' : branch.nodes[idx - 1].id,
         target: node.id,
         type: 'straight',
-        animated: buyable,
         style: {
           stroke: color,
           strokeWidth: bought ? 3.5 : 2.5,
