@@ -1,10 +1,12 @@
 import { ref, computed } from 'vue'
 import { SUN_RADIUS, SUN_GROWTH_STAGES } from '@/config/constants'
+import { getOrbitSunScale } from '@/utils/orbitMath'
 
-// Outermost possible orbit: star tier 2 at max sun stage (stage 6)
+// Outermost possible orbit: star tier 2 at max sun stage (stage 6),
+// using the dampened orbit scale (orbits grow slower than the sun itself).
 const MAX_BASE_ORBIT_RX = SUN_RADIUS * 16.5
-const MAX_SUN_SCALE = SUN_GROWTH_STAGES[SUN_GROWTH_STAGES.length - 1].radius / SUN_RADIUS
-const MAX_ORBIT_AT_FULL_SCALE = MAX_BASE_ORBIT_RX * MAX_SUN_SCALE  // 1320 × 1.8 = 2376px
+const MAX_SUN_SCALE = getOrbitSunScale(SUN_GROWTH_STAGES[SUN_GROWTH_STAGES.length - 1].radius)
+const MAX_ORBIT_AT_FULL_SCALE = MAX_BASE_ORBIT_RX * MAX_SUN_SCALE
 
 const viewportMin = ref(Math.min(window.innerWidth, window.innerHeight))
 window.addEventListener('resize', () => {

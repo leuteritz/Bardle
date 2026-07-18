@@ -233,7 +233,6 @@ import {
   ROLE_MID_CURSE_DURATION_MS,
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
-  SUN_RADIUS,
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
@@ -394,7 +393,7 @@ function drawHintCanvases() {
   hintFrontCanvas.value!.style.display = display
   if (stars.length === 0) return
 
-  const strokeWidth = (5 * planetShopStore.currentSunRadius) / 80
+  const strokeWidth = 5 * planetShopStore.orbitSunScale
   for (const star of stars) {
     const color = orbitHintColor(star)
     drawHintRing(backC, star, 14, star.hintOpacity * 0.65, color, strokeWidth, cw / 2, ch / 2)
@@ -498,7 +497,7 @@ const scaledStarOrbitTiers = computed(() =>
     if (activeStar) {
       return { ...tier, rx: activeStar.orbitRx, ry: activeStar.orbitRy }
     }
-    const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+    const sunScale = planetShopStore.orbitSunScale
     const starSunScale = Math.max(0.9, sunScale)
     return {
       ...tier,
@@ -526,7 +525,7 @@ const VIEWPORT_RY_BY_ROLE: Record<string, number> = {
 }
 
 const activeRoleOrbits = computed(() => {
-  const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+  const sunScale = planetShopStore.orbitSunScale
   const orbitScaleVal = orbitScale.value
   const vMin = Math.min(screenW.value, screenH.value)
 
@@ -536,7 +535,7 @@ const activeRoleOrbits = computed(() => {
     .map((role) => {
       const roleTier = ROLE_BY_KEY[role].orbit
       const minRy = Math.max(
-        planetShopStore.currentSunRadius * (MIN_RY_BY_ROLE[role] ?? 1.5),
+        planetShopStore.orbitSunRadius * (MIN_RY_BY_ROLE[role] ?? 1.5),
         vMin * (VIEWPORT_RY_BY_ROLE[role] ?? 0.10),
       )
       const aspectRatio = roleTier.rx / roleTier.ry
@@ -842,7 +841,7 @@ function orbitHintColor(star: StarRenderEntry): string {
 }
 
 function starSize(type: string): number {
-  const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+  const sunScale = planetShopStore.orbitSunScale
   if (type === 'champion') return ORBIT_TIERS.star[0].size * sunScale
   if (type === 'resource') return ORBIT_TIERS.star[1].size * sunScale
   // Endkampf-Sterne skalieren zwar mit der Sonne, haben aber eine Mindestgröße —

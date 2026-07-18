@@ -1,3 +1,23 @@
+import {
+  ORBIT_SUN_GROWTH_FACTOR,
+  ORBIT_SUN_SCALE_ANCHOR_RADIUS,
+  SUN_RADIUS,
+} from '@/config/constants'
+
+/** Dampened sun radius driving all orbit visuals: identical to the real sun
+ *  radius up to the comet anchor, compressed growth above it. */
+export function getOrbitSunRadius(sunRadius: number): number {
+  if (sunRadius <= ORBIT_SUN_SCALE_ANCHOR_RADIUS) return sunRadius
+  return (
+    ORBIT_SUN_SCALE_ANCHOR_RADIUS + (sunRadius - ORBIT_SUN_SCALE_ANCHOR_RADIUS) * ORBIT_SUN_GROWTH_FACTOR
+  )
+}
+
+/** Orbit scale factor relative to the reference SUN_RADIUS, using the dampened radius. */
+export function getOrbitSunScale(sunRadius: number): number {
+  return getOrbitSunRadius(sunRadius) / SUN_RADIUS
+}
+
 /**
  * 3D elliptical orbit position — shared by usePlanetOrbit and usePlanetBackground.
  * Identical to the calculation used in ChampionOrbit.

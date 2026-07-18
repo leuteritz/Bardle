@@ -1961,6 +1961,14 @@ export const COMET_PHASE_DATA = {
 /** Comet growth per Star Forge core ray at Lv 1+ (index 0..5 = rays kindled).
  *  Radius stays well below Spark's 38 — ignition must feel like a jump. */
 export const COMET_STAGE_RADII = [16, 18, 20, 22, 24, 26]
+
+/** Orbit visuals (planet/champion/star orbits, sprites, ring strokes) grow slower
+ *  than the sun itself. Up to the anchor radius (largest comet stage) they track
+ *  the sun 1:1; above it every extra sun pixel only contributes
+ *  ORBIT_SUN_GROWTH_FACTOR pixels of effective orbit radius. Keeps late star
+ *  phases from crowding the viewport while orbits still grow every phase. */
+export const ORBIT_SUN_SCALE_ANCHOR_RADIUS = COMET_STAGE_RADII[COMET_STAGE_RADII.length - 1]
+export const ORBIT_SUN_GROWTH_FACTOR = 0.7
 /** Gold-accent intensity per stage (0 = bare grey rock, 1 = fully gilded). */
 export const COMET_STAGE_GOLD = [0, 0.2, 0.4, 0.6, 0.8, 1]
 

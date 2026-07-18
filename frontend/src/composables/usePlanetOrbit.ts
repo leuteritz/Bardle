@@ -2,7 +2,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 import { activePlanetPositions } from '@/utils/activePlanetPositions'
-import { ORBIT_RADIUS_SCALE, SUN_RADIUS } from '@/config/constants'
+import { ORBIT_RADIUS_SCALE } from '@/config/constants'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { getOrbitPos } from '@/utils/orbitMath'
 
@@ -57,7 +57,7 @@ export function usePlanetOrbit(baseSize: number, getPlanets: () => PlanetOrbitPa
     const planets = getPlanets()
     const newPositions: PlanetRenderPos[] = []
 
-    const sunScale = usePlanetShopStore().currentSunRadius / SUN_RADIUS
+    const sunScale = usePlanetShopStore().orbitSunScale
     const orbitScaleVal = orbitScale.value
     for (const p of planets) {
       const targetRx = p.orbitRadiusX * ORBIT_RADIUS_SCALE * sunScale * orbitScaleVal

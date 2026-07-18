@@ -145,7 +145,6 @@ import {
   SUPPORT_ANGLE_OFFSET,
   ROLES,
   ROLE_BY_KEY,
-  SUN_RADIUS,
   BEHIND_SUN_SPEED_MULTIPLIER,
   HOVER_DIM_OPACITY,
 } from '@/config/constants'
@@ -289,7 +288,7 @@ export default defineComponent({
       const adcChampion = adcName ? champions.find((ch) => ch.name === adcName) : null
       const adcDir = adcChampion?.direction ?? 1
 
-      const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+      const sunScale = planetShopStore.orbitSunScale
       const orbitScaleVal = orbitScale.value
 
       for (let ci = 0; ci < champions.length; ci++) {
@@ -312,7 +311,7 @@ export default defineComponent({
         const minRyFactor = primaryRole ? (MIN_RY_BY_ROLE[primaryRole] ?? 1.5) : 1.6
         const viewportFactor = primaryRole ? (VIEWPORT_RY_BY_ROLE[primaryRole] ?? 0.10) : 0.12
         const minRy = Math.max(
-          planetShopStore.currentSunRadius * minRyFactor,
+          planetShopStore.orbitSunRadius * minRyFactor,
           vMin * viewportFactor,
         )
         const aspectRatio = roleTier ? roleTier.rx / roleTier.ry : planetTier.rx / planetTier.ry

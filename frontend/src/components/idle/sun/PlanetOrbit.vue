@@ -141,7 +141,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, SUN_RADIUS, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
@@ -273,7 +273,7 @@ export default defineComponent({
       const purchased = planetShopStore.purchasedSlots.filter((s) => s.role !== null)
       const newPositions: PlanetRenderPos[] = []
 
-      const sunScale = planetShopStore.currentSunRadius / SUN_RADIUS
+      const sunScale = planetShopStore.orbitSunScale
       const orbitScaleVal = orbitScale.value
       for (const slot of purchased) {
         const slotIdx = purchased.indexOf(slot)
@@ -287,7 +287,7 @@ export default defineComponent({
         const MIN_RY_FACTORS = [1.5, 2.0]
         const VIEWPORT_RY_FACTORS = [0.10, 0.15]
         const minRy = Math.max(
-          planetShopStore.currentSunRadius * MIN_RY_FACTORS[slotIdx % MIN_RY_FACTORS.length],
+          planetShopStore.orbitSunRadius * MIN_RY_FACTORS[slotIdx % MIN_RY_FACTORS.length],
           vMin * VIEWPORT_RY_FACTORS[slotIdx % VIEWPORT_RY_FACTORS.length],
         )
         const flooredRy = Math.max(rawRy, minRy)

@@ -47,7 +47,7 @@
       fill="none"
       :stroke="color"
       :stroke-opacity="opacity"
-      :stroke-width="28 * strokeWidth * (currentSunRadius / 80)"
+      :stroke-width="28 * strokeWidth * orbitSunScale"
     />
   </g>
 
@@ -113,7 +113,7 @@ withDefaults(
   { strokeWidth: 0.3, opacity: 0.2, visible: true, abilityActive: false, dimmed: false },
 )
 
-const { currentSunRadius } = storeToRefs(usePlanetShopStore())
+const { orbitSunScale } = storeToRefs(usePlanetShopStore())
 const uid = `orbit-glow-${getCurrentInstance()!.uid}`
 </script>
 

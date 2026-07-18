@@ -243,15 +243,14 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
 
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
-    const currentSunRadius = planetShopStore.currentSunRadius
-    const sunScale = currentSunRadius / SUN_RADIUS
+    const sunScale = planetShopStore.orbitSunScale
     const orbitScaleVal = orbitScale.value
 
     const vMin = Math.min(window.innerWidth, window.innerHeight)
     const adcBaseRy = SUN_RADIUS * 5.43
     const adcBaseRx = SUN_RADIUS * 12.67
     const adcRawRy = adcBaseRy * sunScale * orbitScaleVal
-    const adcMinRy = Math.max(currentSunRadius * 2.6, vMin * 0.22)
+    const adcMinRy = Math.max(planetShopStore.orbitSunRadius * 2.6, vMin * 0.22)
     const adcFlooredRy = Math.max(adcRawRy, adcMinRy)
     const adcFlooredRx = adcFlooredRy * (adcBaseRx / adcBaseRy)
     const adcActualRx = Math.min(adcFlooredRx, screenCx * 0.85)

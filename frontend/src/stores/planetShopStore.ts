@@ -24,6 +24,7 @@ import {
   PLANET_RANK_TIERS,
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
+import { getOrbitSunRadius, getOrbitSunScale } from '../utils/orbitMath'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -228,6 +229,16 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return solar.isCometState
         ? COMET_STAGE_RADII[solar.cometStage]
         : STAR_PHASE_DATA[solar.starPhase].radius
+    },
+
+    /** Dampened radius driving orbit visuals — grows slower than the sun above comet size. */
+    orbitSunRadius(): number {
+      return getOrbitSunRadius(this.currentSunRadius)
+    },
+
+    /** Orbit scale factor (dampened radius relative to reference SUN_RADIUS). */
+    orbitSunScale(): number {
+      return getOrbitSunScale(this.currentSunRadius)
     },
 
     purchasedSlots(state): PlanetSlot[] {
