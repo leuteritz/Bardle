@@ -434,6 +434,9 @@ const structureMarkers = computed(() => {
   position: relative;
   width: min(100cqw, 100cqh);
   height: min(100cqw, 100cqh);
+  /* opaque base: the map art is 65% opacity — without this the cosmic
+     starfield behind the board would twinkle through the map itself */
+  background: #111008;
 }
 
 .map-bg {

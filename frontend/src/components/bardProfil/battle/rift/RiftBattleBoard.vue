@@ -3,6 +3,9 @@
     <ScoreTopBar />
     <!-- Spectator layout: the map owns the whole middle, team HUDs float above it -->
     <div class="board-middle">
+      <!-- shared cosmic backdrop — fills the gutters beside the square map,
+           behind both team HUD columns (same starfield as the other tabs) -->
+      <CosmicStageBackground />
       <RiftMinimap class="map-layer" />
       <TeamColumn side="blue" class="hud hud--left" />
       <TeamColumn side="red" class="hud hud--right" />
@@ -18,6 +21,7 @@
 
 <script setup lang="ts">
 import ScoreTopBar from './ScoreTopBar.vue'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import TeamColumn from './TeamColumn.vue'
 import RiftMinimap from './RiftMinimap.vue'
 import KillFeedTicker from './KillFeedTicker.vue'
@@ -32,7 +36,7 @@ import ObjectiveModalComponent from '../ObjectiveModalComponent.vue'
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #0c0b07;
+  background: #111008; /* same deep-space base as Shop / Planets / Team / Skill Tree */
   z-index: 10;
   /* Size container: header, HUDs and ticker scale with the board via cq units,
      so every desktop resolution fits without vertical scrolling. */
