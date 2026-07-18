@@ -92,15 +92,17 @@ const edges = computed<Edge[]>(() => {
       const state = states[flatIdx++]
       const bought = state === 'bought'
       const buyable = state === 'buyable'
-      const color = bought ? branch.color : buyable ? '#6ec040' : 'rgba(122, 78, 32, 0.5)'
+      // Immer die Zweigfarbe — gesperrt schwach, kaufbar kräftig, gekauft voll.
+      // Alpha als Hex-Suffix (Branch-Farben sind 6-stellige Hex-Werte).
+      const stroke = bought ? branch.color : buyable ? `${branch.color}e0` : `${branch.color}55`
       result.push({
         id: `e-${node.id}`,
         source: idx === 0 ? 'start' : branch.nodes[idx - 1].id,
         target: node.id,
         type: 'straight',
         style: {
-          stroke: color,
-          strokeWidth: bought ? 3.5 : 2.5,
+          stroke,
+          strokeWidth: bought ? 3.5 : buyable ? 2.75 : 2.25,
           // Ketten-Optik wie im klassischen Skill-Web: offene Pfade gestrichelt
           strokeDasharray: bought ? undefined : '7 5',
         },

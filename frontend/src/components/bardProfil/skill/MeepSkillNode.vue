@@ -83,7 +83,7 @@ function handleBuy() {
 /* Grayscale nur aufs kleine Icon statt auf den ganzen Node-Subtree —
    Filter auf großen Flächen machen Pan/Zoom im Vue-Flow-Canvas teuer. */
 .msn-root--locked {
-  opacity: 0.42;
+  opacity: 0.5;
 }
 
 .msn-root--locked .msn-icon {
@@ -91,7 +91,7 @@ function handleBuy() {
 }
 
 .msn-root--reachable {
-  opacity: 0.75;
+  opacity: 0.82;
 }
 
 .msn-root--reachable .msn-icon {
@@ -145,12 +145,17 @@ function handleBuy() {
   cursor: default;
 }
 
-/* Kaufbar → Grün, pulsierend. Der Glow liegt in einem Pseudo-Element mit
-   statischem box-shadow; animiert wird nur dessen opacity (GPU-kompositiert)
-   — eine box-shadow-Animation würde jeden Frame einen Repaint erzwingen. */
+/* Kaufbar → kräftige Zweigfarbe, pulsierend. Der Glow liegt in einem
+   Pseudo-Element mit statischem box-shadow; animiert wird nur dessen opacity
+   (GPU-kompositiert) — eine box-shadow-Animation würde jeden Frame einen
+   Repaint erzwingen. */
 .msn-root--buyable .msn-circle {
-  border-color: var(--rpg-green-border);
-  background: radial-gradient(circle at 35% 30%, #1d3a10, #0d1d07 75%);
+  border-color: color-mix(in srgb, var(--branch-color) 85%, #fff);
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--branch-color) 16%, var(--rpg-bg-dark)),
+    var(--rpg-bg-dark) 75%
+  );
   cursor: pointer;
 }
 
@@ -159,7 +164,7 @@ function handleBuy() {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  box-shadow: 0 0 18px rgba(80, 180, 40, 0.55);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--branch-color) 60%, transparent);
   opacity: 0;
   pointer-events: none;
   animation: msn-pulse 2s ease-in-out infinite;
@@ -167,15 +172,22 @@ function handleBuy() {
 
 .msn-root--buyable .msn-circle:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 22px rgba(80, 180, 40, 0.6);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--branch-color) 65%, transparent);
 }
 
 .msn-root--buyable .msn-circle:active {
   transform: scale(0.95);
 }
 
+/* Zweig-Identität vor dem Kauf: Border schon leicht in der Zweigfarbe getönt,
+   ab "reachable" etwas kräftiger — voll gefärbt erst nach dem Kauf. */
 .msn-root--locked .msn-circle {
   cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--branch-color) 32%, var(--rpg-border-row));
+}
+
+.msn-root--reachable .msn-circle {
+  border-color: color-mix(in srgb, var(--branch-color) 50%, var(--rpg-border-row));
 }
 
 @keyframes msn-pulse {
@@ -221,10 +233,17 @@ function handleBuy() {
   width: auto;
 }
 
+/* Kosten-Badge in der Zweigfarbe — gesperrt dezent getönt, kaufbar kräftig
+   aufgehellt; "kaufbar" signalisiert zusätzlich der Puls-Glow am Kreis. */
+.msn-badge--locked {
+  border-color: color-mix(in srgb, var(--branch-color) 35%, var(--rpg-border-row));
+  color: color-mix(in srgb, var(--branch-color) 55%, var(--rpg-text-dim));
+}
+
 .msn-badge--buyable {
-  border-color: var(--rpg-green-bottom);
-  background: #142808;
-  color: var(--rpg-green-top);
+  border-color: color-mix(in srgb, var(--branch-color) 80%, var(--rpg-border-row));
+  background: color-mix(in srgb, var(--branch-color) 14%, var(--rpg-bg-deep));
+  color: color-mix(in srgb, var(--branch-color) 85%, #fff);
 }
 
 .msn-badge--bought {
@@ -261,7 +280,6 @@ function handleBuy() {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-.msn-root--buyable .msn-effect {
-  color: var(--rpg-green-top);
-}
+/* Effekt-Text bleibt in jeder Phase in der Zweigfarbe — der grüne Kosten-Badge
+   ist das alleinige "kaufbar"-Signal. */
 </style>
