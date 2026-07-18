@@ -1686,6 +1686,9 @@ export const STAR_PHASE_MIN_DWELL_SECONDS = [600, 1_800, 5_400, 14_400, 86_400]
 /** Stellar-Evolution timeline (BardStatsTab): dot diameter = phase radius × this scale,
  *  so the timeline circles stay true to the in-game sun proportions (7.5px…35px). */
 export const STATS_TAB_PHASE_DOT_SCALE = 0.25
+/** Comet dot diameter (px) on the Stellar-Evolution timeline (BardStatsTab) —
+ *  fixed tiny size below every sun dot, true to the comet being a small rock. */
+export const STATS_TAB_COMET_DOT_PX = 8
 
 // ── Star Forge (Shop tab) ─────────────────────────────────────────────────────
 // Tree geometry — the tree lives on a square stage, nodes placed on 3 polar rings.

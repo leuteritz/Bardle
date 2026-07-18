@@ -14,6 +14,7 @@ import {
   COMET_PHASE_DATA,
   STATS_TAB_STARFIELD,
   STATS_TAB_PHASE_DOT_SCALE,
+  STATS_TAB_COMET_DOT_PX,
   SUN_PHASE_DISPLAY_OFFSET,
   SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
@@ -124,8 +125,11 @@ const STAR_LAYERS: BgStar[][] = (() => {
 
 /* ── Star phase (sun + timeline) ─────────────────────────────── */
 const totalPhases = STAR_PHASE_DATA.length
+/* Timeline steps include the Comet origin as step 0 (7 total) */
+const totalSteps = SUN_PHASE_DISPLAY_TOTAL
+const displayIndex = computed(() => (solarStore.isCometState ? 0 : solarStore.starPhase + 1))
 const phase = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-const isMax = computed(() => solarStore.starPhase >= totalPhases - 1)
+const isMax = computed(() => !solarStore.isCometState && solarStore.starPhase >= totalPhases - 1)
 
 const phaseVars = computed(() => {
   if (solarStore.isCometState) {
@@ -160,9 +164,25 @@ const phaseDisplayLabel = computed(() =>
     : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`,
 )
 
-const timelineDots = computed(() =>
-  STAR_PHASE_DATA.map((p, i) => ({
+const timelineDots = computed(() => [
+  /* Step 0 — the Comet origin: a tiny rock with a gold tail, before any sun */
+  {
+    label: COMET_PHASE_DATA.name,
+    astro: COMET_PHASE_DATA.astroName,
+    comet: true,
+    color: COMET_PHASE_DATA.accent,
+    glow: COMET_PHASE_DATA.glow,
+    core: COMET_PHASE_DATA.core,
+    mid: COMET_PHASE_DATA.mid,
+    edge: COMET_PHASE_DATA.edge,
+    size: STATS_TAB_COMET_DOT_PX,
+    done: !solarStore.isCometState,
+    current: solarStore.isCometState,
+  },
+  ...STAR_PHASE_DATA.map((p, i) => ({
     label: p.name,
+    astro: p.astroName,
+    comet: false,
     color: p.phasePrimary,
     glow: p.phaseGlow,
     core: p.core,
@@ -173,9 +193,9 @@ const timelineDots = computed(() =>
     done: !solarStore.isCometState && i < solarStore.starPhase,
     current: !solarStore.isCometState && i === solarStore.starPhase,
   })),
-)
+])
 
-const timelineFillPct = computed(() => (solarStore.starPhase / (totalPhases - 1)) * 100)
+const timelineFillPct = computed(() => (displayIndex.value / (totalSteps - 1)) * 100)
 
 /* ── Time in phase ticker ────────────────────────────────────── */
 const now = ref(Date.now())
@@ -217,10 +237,10 @@ const dwellPct = computed(() =>
 )
 
 /* Active timeline segment (current dot → next dot) filled by dwell progress */
-const activeSegLeftPct = computed(() => (solarStore.starPhase / (totalPhases - 1)) * 100)
-const activeSegWidthPct = computed(() => (dwellPct.value / 100 / (totalPhases - 1)) * 100)
+const activeSegLeftPct = computed(() => (displayIndex.value / (totalSteps - 1)) * 100)
+const activeSegWidthPct = computed(() => (dwellPct.value / 100 / (totalSteps - 1)) * 100)
 /* Timer label centers on the active segment's midpoint (track coordinates) */
-const timerLabelFrac = computed(() => (solarStore.starPhase + 0.5) / (totalPhases - 1))
+const timerLabelFrac = computed(() => (displayIndex.value + 0.5) / (totalSteps - 1))
 
 const phaseAge = computed(() => {
   if (!solarStore.phaseEnteredAt) return null
@@ -451,12 +471,12 @@ const filteredAugCards = computed(() => {
           v-for="(dot, i) in timelineDots"
           :key="i"
           class="sf-tl-step"
-          :title="`${STAR_PHASE_DATA[i].name} · ${STAR_PHASE_DATA[i].astroName}`"
+          :title="`${dot.label} · ${dot.astro}`"
         >
           <div class="sf-tl-dot-slot">
             <div
               class="sf-tl-dot"
-              :class="{ 'is-done': dot.done, 'is-current': dot.current }"
+              :class="{ 'is-done': dot.done, 'is-current': dot.current, 'sf-tl-dot--comet': dot.comet }"
               :style="{
                 width: dot.size + 'px',
                 height: dot.size + 'px',
@@ -1224,6 +1244,23 @@ const filteredAugCards = computed(() => {
   box-shadow: 0 0 12px var(--dot-glow), 0 0 22px color-mix(in srgb, var(--dot-glow) 50%, transparent);
   animation: sf-dot-pulse var(--pulse-speed) ease-in-out infinite;
 }
+/* Comet origin dot — a rocky speck with a faint gold rim; it marks the very
+   START of the evolution line, so nothing extends to its left. */
+.sf-tl-dot--comet.is-done,
+.sf-tl-dot--comet.is-current {
+  /* rocky body: grey core with a faint gold rim instead of a sun corona */
+  background: radial-gradient(
+    circle at 38% 35%,
+    var(--dot-core),
+    var(--dot-mid) 55%,
+    var(--dot-edge)
+  );
+  box-shadow: 0 0 6px color-mix(in srgb, var(--dot-glow) 45%, transparent);
+}
+.sf-tl-dot--comet.is-done {
+  opacity: 0.75;
+}
+
 @keyframes sf-dot-pulse {
   0%,
   100% {
