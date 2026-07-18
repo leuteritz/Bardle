@@ -1,10 +1,7 @@
 <template>
   <div ref="panelEl" class="tree-panel" :style="stageStyle" @wheel.prevent="onWheel">
-    <!-- Cosmic backdrop — mirrors the Planets tab (.ps-stage-*) -->
-    <div class="tree-stage-bg" aria-hidden="true" />
-    <div class="tree-stage-stars tree-stage-stars--far" aria-hidden="true" />
-    <div class="tree-stage-stars tree-stage-stars--mid" aria-hidden="true" />
-    <div class="tree-stage-stars tree-stage-stars--near" aria-hidden="true" />
+    <!-- shared cosmic backdrop (same starfield as Team / Planets / Skill Tree) -->
+    <CosmicStageBackground />
 
     <!-- Phase dock — current sun phase, progress & evolve -->
     <div class="phase-dock" :class="{ 'phase-dock--ready': solarStore.canUpgradeStar }">
@@ -249,6 +246,7 @@ import { formatNumber } from '@/config/numberFormat'
 import { useActionToast } from '@/composables/useActionToast'
 import type { ForgeNodeDef } from '@/types'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import {
   SOLAR_MAX_LEVELS,
   STAR_PHASE_DATA,
@@ -691,89 +689,6 @@ const nextPhasePreviewStyle = computed(() => ({
   position: relative;
   overflow: hidden;
   height: 100%;
-  background: radial-gradient(ellipse 60% 60% at 50% 46%, rgba(255, 200, 60, 0.06), transparent 70%);
-}
-
-/* ══════════════════════════════════════════════════
-   COSMIC BACKDROP — mirror of PlanetSelectTabComponent
-══════════════════════════════════════════════════ */
-.tree-stage-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.55), transparent 60%);
-}
-
-.tree-stage-stars {
-  position: absolute;
-  inset: -12px;
-  pointer-events: none;
-  z-index: 0;
-  animation:
-    tree-stars-twinkle 6s ease-in-out infinite,
-    tree-stars-drift 80s ease-in-out infinite alternate;
-}
-
-.tree-stage-stars--far {
-  background-image:
-    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.3), transparent),
-    radial-gradient(1px 1px at 26% 64%, rgba(255, 255, 255, 0.24), transparent),
-    radial-gradient(1px 1px at 38% 32%, rgba(255, 255, 255, 0.28), transparent),
-    radial-gradient(1px 1px at 47% 82%, rgba(255, 255, 255, 0.22), transparent),
-    radial-gradient(1px 1px at 58% 14%, rgba(255, 255, 255, 0.3), transparent),
-    radial-gradient(1px 1px at 66% 54%, rgba(255, 255, 255, 0.24), transparent),
-    radial-gradient(1px 1px at 74% 88%, rgba(255, 255, 255, 0.26), transparent),
-    radial-gradient(1px 1px at 84% 38%, rgba(255, 255, 255, 0.3), transparent),
-    radial-gradient(1px 1px at 92% 70%, rgba(255, 255, 255, 0.22), transparent),
-    radial-gradient(1px 1px at 6% 46%, rgba(255, 255, 255, 0.26), transparent);
-  animation-duration: 7s, 90s;
-}
-
-.tree-stage-stars--mid {
-  background-image:
-    radial-gradient(1.5px 1.5px at 16% 22%, rgba(255, 255, 255, 0.48), transparent),
-    radial-gradient(1.5px 1.5px at 30% 78%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(1.5px 1.5px at 44% 40%, rgba(255, 255, 255, 0.42), transparent),
-    radial-gradient(1.5px 1.5px at 55% 66%, rgba(255, 255, 255, 0.34), transparent),
-    radial-gradient(1.5px 1.5px at 70% 24%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(1.5px 1.5px at 82% 60%, rgba(255, 255, 255, 0.36), transparent),
-    radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.34), transparent),
-    radial-gradient(1.5px 1.5px at 10% 88%, rgba(255, 255, 255, 0.32), transparent),
-    radial-gradient(1.5px 1.5px at 62% 92%, rgba(255, 255, 255, 0.3), transparent);
-  animation-duration: 5.5s, 70s;
-  animation-delay: -2.5s, -18s;
-  animation-direction: alternate, alternate-reverse;
-}
-
-.tree-stage-stars--near {
-  background-image:
-    radial-gradient(2px 2px at 22% 30%, rgba(255, 255, 255, 0.66), transparent),
-    radial-gradient(2px 2px at 48% 18%, rgba(255, 255, 255, 0.56), transparent),
-    radial-gradient(
-      2px 2px at 36% 70%,
-      color-mix(in srgb, white 82%, var(--phase-glow, #ff8c42)) 0%,
-      transparent 100%
-    ),
-    radial-gradient(2px 2px at 68% 78%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(
-      2px 2px at 80% 44%,
-      color-mix(in srgb, white 84%, var(--phase-primary, #ffb347)) 0%,
-      transparent 100%
-    ),
-    radial-gradient(2px 2px at 14% 52%, rgba(255, 255, 255, 0.5), transparent);
-  animation-duration: 4.2s, 58s;
-  animation-delay: -1.2s, -9s;
-}
-
-@keyframes tree-stars-twinkle {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes tree-stars-drift {
-  from { transform: translate(0, 0); }
-  to { transform: translate(5px, -4px); }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1375,8 +1290,7 @@ const nextPhasePreviewStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .node-circle--affordable,
   .sun-wrapper.sun-flash,
-  .dock-evolve-btn,
-  .tree-stage-stars {
+  .dock-evolve-btn {
     animation: none;
   }
 }

@@ -7,8 +7,8 @@ import {
   type Edge,
   type NodeTypesObject,
 } from '@vue-flow/core'
-import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { useMeepTreeStore } from '@/stores/meepTreeStore'
 import { MEEP_TREE_BRANCHES } from '@/config/meepTree'
 import MeepSkillNode from './MeepSkillNode.vue'
@@ -123,6 +123,7 @@ const nodeTypes = {
 
 <template>
   <div class="st-canvas">
+    <CosmicStageBackground />
     <VueFlow
       :nodes="nodes"
       :edges="edges"
@@ -134,9 +135,8 @@ const nodeTypes = {
       :min-zoom="0.25"
       :max-zoom="2"
       :fit-view-on-init="false"
-      class="!bg-transparent"
+      class="st-flow !bg-transparent"
     >
-      <Background variant="dots" :gap="26" pattern-color="#2a2418" :size="1.2" />
       <Controls position="bottom-right" />
     </VueFlow>
   </div>
@@ -150,6 +150,12 @@ const nodeTypes = {
   min-height: 0;
   position: relative;
   background: var(--rpg-bg-deep);
+}
+
+/* Skill web floats above the shared cosmic backdrop */
+.st-flow {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Vue-Flow Controls → RPG-Holzrahmen-Stil ─────────────── */
