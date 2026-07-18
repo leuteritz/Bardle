@@ -472,9 +472,6 @@ export function usePersistence() {
         galaxyStore.pendingRoleSelection = gx.pendingRoleSelection ?? false
         galaxyStore.nextStarRole = gx.nextStarRole ?? null
         galaxyStore.travelPendingAfterRotation = false
-        if (gx.travelPendingAfterRotation) {
-          galaxyStore.startChampionTravel()
-        }
         if (gx.championTravelState && gx.championTravelState !== 'champion_spawned') {
           galaxyStore.championTravelState = gx.championTravelState
           galaxyStore.championTravelStartTime = gx.championTravelStartTime ?? 0
@@ -484,6 +481,28 @@ export function usePersistence() {
             gx.championTravelBaseDurationMs ?? gx.championTravelDurationMs ?? galaxyStore.championTravelBaseDurationMs
         } else {
           galaxyStore.startChampionTravel()
+        }
+        // Save aus der Mitte der Rettungsrotation (State dort noch 'idle',
+        // travelPendingAfterRotation true): die Rotation selbst wird nicht
+        // persistiert, also nach dem State-Restore direkt losfliegen. Muss
+        // NACH dem championTravelState-Restore laufen, sonst überschreibt
+        // das gespeicherte 'idle' den frisch gestarteten Travel wieder.
+        if (gx.travelPendingAfterRotation) {
+          galaxyStore.startChampionTravel()
+        }
+        // Rettungsanker gegen tote Spielstände: 'idle' ohne Rollenwahl, ohne
+        // Bossphase und ohne fertige Galaxie zeigt weder Minimap noch HUD und
+        // kann sich nie mehr selbst auflösen. Zurück in einen gültigen
+        // Zustand: mit bekannter Rolle weiterfliegen, sonst Rollenwahl öffnen.
+        if (
+          galaxyStore.championTravelState === 'idle' &&
+          !galaxyStore.pendingRoleSelection &&
+          !galaxyStore.travelingToGalaxyBoss &&
+          !galaxyStore.bossPhaseActive &&
+          !galaxyStore.isComplete
+        ) {
+          if (galaxyStore.nextStarRole) galaxyStore.startChampionTravel()
+          else galaxyStore.requestRoleSelection()
         }
       }
 
