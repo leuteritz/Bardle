@@ -2188,6 +2188,18 @@ export const GALAXY_JUMP_WARP_MS = 420
 // Champion badge tooltip — max visible entries before "+N more" overflow
 export const CHAMP_TOOLTIP_MAX_VISIBLE = 5
 
+// Header notification badges — placed along the center-arc ellipse with a
+// UNIFORM edge-to-edge pixel gap between neighbours (level badge at the arc
+// apex → forge → champion on the right, expedition mirrored left). Positions
+// are solved numerically in AppHeaderComponent from the measured arc size, so
+// the visible gap is identical between every pair at every desktop resolution.
+// Badge diameter mirror of the .header-notif-badge CSS clamp(20px,1.8vw,36px):
+export const HEADER_NOTIF_BADGE_MIN_PX = 20
+export const HEADER_NOTIF_BADGE_VW = 0.018
+export const HEADER_NOTIF_BADGE_MAX_PX = 36
+// Edge gap between neighbouring badges as a fraction of the badge diameter.
+export const HEADER_BADGE_EDGE_GAP_FRAC = 0.5
+
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
 

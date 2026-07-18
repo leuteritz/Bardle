@@ -4,6 +4,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { useUiStore } from '../../stores/uiStore'
 import { useBattleStore } from '../../stores/battleStore'
 import { useExpeditionStore } from '../../stores/expeditionStore'
+import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
 import { CHAMPION_ROLES } from '../../config/championRoles'
@@ -13,6 +14,10 @@ import {
   BOTTOM_FRAME_STROKE_GRAIN,
   BOTTOM_FRAME_STROKE_SHEEN,
   CHAMP_TOOLTIP_MAX_VISIBLE,
+  HEADER_NOTIF_BADGE_MIN_PX,
+  HEADER_NOTIF_BADGE_VW,
+  HEADER_NOTIF_BADGE_MAX_PX,
+  HEADER_BADGE_EDGE_GAP_FRAC,
 } from '../../config/constants'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
@@ -23,29 +28,72 @@ const gameStore = useGameStore()
 const uiStore = useUiStore()
 const battleStore = useBattleStore()
 const expeditionStore = useExpeditionStore()
+const solarStore = useSolarUpgradeStore()
 const { resetGame } = usePersistence()
 
 const championBadgeCount = computed(() => battleStore.newlyUnlockedChampions.length)
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
+const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 
-const expedBadgeStyle = computed(() => {
-  const xFrac = 0.22
-  const t = (xFrac - 0.5) / 0.5
+/* Badge anchors on the arc ellipse (θ = π/2 at the apex where the level badge
+   sits). Slots are solved numerically so the edge-to-edge pixel gap is the
+   SAME between every neighbour pair (level↔forge, forge↔champion, and the
+   mirrored level↔expedition) at every arc size / desktop resolution. Equal
+   x-steps would NOT work: towards the arc ends the vertical component grows,
+   so equal horizontal spacing looks increasingly stretched. */
+const badgeSlotStyles = computed(() => {
+  const W = svgW.value
+  const H = svgH.value
+  const overlap = badgeOverlapPx.value
+  const levelR = (overlap * 2.5) / 2 // overlap = 0.4 × level-badge height
+  const nD = notifBadgePx.value
+  const nR = nD / 2
+  const gap = nD * HEADER_BADGE_EDGE_GAP_FRAC
+  const cx = W / 2
+
+  // Badge CENTERS: notify badges hang `overlap` above the ellipse line, the
+  // level badge hangs the same way off the apex — offsets included below.
+  const levelCenter = { x: cx, y: H - overlap + levelR }
+  const notifCenter = (th: number) => ({
+    x: cx + cx * Math.cos(th),
+    y: H * Math.sin(th) - overlap + nR,
+  })
+
+  const thetas: number[] = []
+  let last = levelCenter
+  let need = levelR + nR + gap // level ↔ first badge
+  for (let th = Math.PI / 2; th > 0.02 && thetas.length < 2; th -= 0.003) {
+    const p = notifCenter(th)
+    if (Math.hypot(p.x - last.x, p.y - last.y) >= need) {
+      thetas.push(th)
+      last = p
+      need = nD + gap // badge ↔ badge
+    }
+  }
+  // Arc too short to fit both slots → spread the remainder evenly.
+  while (thetas.length < 2) thetas.push((thetas[thetas.length - 1] ?? Math.PI / 2) / 2)
+
+  const styleAt = (th: number) => ({
+    left: `${cx + cx * Math.cos(th)}px`,
+    top: `${H * Math.sin(th) - overlap}px`,
+  })
   return {
-    top: `${svgH.value * Math.sqrt(Math.max(0, 1 - t * t)) - badgeOverlapPx.value}px`,
-    left: `${svgW.value * xFrac}px`,
+    expedition: styleAt(Math.PI - thetas[0]), // mirrored to the left side
+    forge: styleAt(thetas[0]),
+    champion: styleAt(thetas[1]),
   }
 })
-const champBadgeStyle = computed(() => {
-  const xFrac = 0.78
-  const t = (xFrac - 0.5) / 0.5
-  return {
-    top: `${svgH.value * Math.sqrt(Math.max(0, 1 - t * t)) - badgeOverlapPx.value}px`,
-    left: `${svgW.value * xFrac}px`,
-  }
-})
+
+const expedBadgeStyle = computed(() => badgeSlotStyles.value.expedition)
+const forgeBadgeStyle = computed(() => badgeSlotStyles.value.forge)
+const champBadgeStyle = computed(() => badgeSlotStyles.value.champion)
+
+function openShopTab() {
+  uiStore.openBardModal()
+  uiStore.setBardTab('shop')
+}
 
 function openTeamTab() {
   uiStore.openBardModal()
@@ -135,6 +183,8 @@ const xpProgress = computed(() => Math.max(0, Math.min(1, (gameStore.levelProgre
 const svgW = ref(360)
 const svgH = ref(100)
 const badgeOverlapPx = ref(20)
+// rendered notify-badge diameter — JS mirror of the CSS clamp, kept fresh on resize
+const notifBadgePx = ref(28)
 
 const headerW = ref(0)
 const headerH = ref(0)
@@ -216,6 +266,10 @@ async function measure() {
   const badgeEl = headerRef.value?.querySelector('.arc-level-badge') as HTMLElement | null
   const badgeH = badgeEl ? badgeEl.getBoundingClientRect().height : 50
   badgeOverlapPx.value = badgeH * 0.4
+  notifBadgePx.value = Math.min(
+    HEADER_NOTIF_BADGE_MAX_PX,
+    Math.max(HEADER_NOTIF_BADGE_MIN_PX, window.innerWidth * HEADER_NOTIF_BADGE_VW),
+  )
   document.documentElement.style.setProperty('--level-badge-bottom', `${r.bottom + badgeH * 0.6}px`)
 }
 
@@ -394,14 +448,7 @@ onUnmounted(() => {
         <span class="arc-level-text">{{ gameStore.level }}</span>
       </div>
 
-      <button
-        class="center-reset-btn"
-        :style="{ top: svgH - badgeOverlapPx * 0.5 + 'px' }"
-        title="Delete Save"
-        @click.stop="handleReset"
-      >
-        ✕
-      </button>
+      <button class="center-reset-btn" title="Delete Save" @click.stop="handleReset">✕</button>
 
       <Transition name="header-badge">
         <button
@@ -412,6 +459,19 @@ onUnmounted(() => {
           @click.stop="openTeamTab"
         >
           {{ expeditionBadgeCount }}
+        </button>
+      </Transition>
+
+      <Transition name="header-badge">
+        <button
+          v-if="forgeBadgeReady"
+          class="header-notif-badge header-notif-badge--forge"
+          :style="forgeBadgeStyle"
+          aria-label="Sun evolution ready"
+          title="Sun evolution ready — open Star Forge"
+          @click.stop="openShopTab"
+        >
+          ✦
         </button>
       </Transition>
 
@@ -971,11 +1031,14 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   RESET-BUTTON (Center, immer sichtbar)
+   RESET-BUTTON (temporär — wird später entfernt)
+   Top corner of the center chimes panel, fully outside the arc lane so
+   the whole arc stays free for the level badge + notification badges.
    ================================================================ */
 .center-reset-btn {
   position: absolute;
-  left: calc(50% + 33px);
+  top: 4px;
+  right: 6px;
   z-index: 26;
   pointer-events: auto;
   width: clamp(12px, 1.2vw, 18px);
@@ -1039,14 +1102,27 @@ onUnmounted(() => {
 }
 
 .header-notif-badge--expedition {
-  background: linear-gradient(to bottom, #e8af34, #c87028);
-  border: 2px solid #ffcf60;
+  background: linear-gradient(to bottom, #a855f7, #7c3aed);
+  border: 2px solid #c9a0ff;
   box-shadow:
-    0 0 8px rgba(232, 175, 52, 0.6),
+    0 0 8px rgba(168, 85, 247, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  --badge-glow-a: rgba(232, 175, 52, 0.5);
-  --badge-glow-b: rgba(232, 175, 52, 0.9);
-  --badge-glow-c: rgba(200, 112, 40, 0.4);
+  --badge-glow-a: rgba(168, 85, 247, 0.5);
+  --badge-glow-b: rgba(168, 85, 247, 0.9);
+  --badge-glow-c: rgba(124, 58, 237, 0.4);
+}
+
+.header-notif-badge--forge {
+  background: linear-gradient(to bottom, #f0d060, #c89040);
+  border: 2px solid #ffe080;
+  color: #2a1608;
+  text-shadow: 0 1px 0 rgba(255, 240, 180, 0.5);
+  box-shadow:
+    0 0 8px rgba(232, 192, 64, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --badge-glow-a: rgba(232, 192, 64, 0.55);
+  --badge-glow-b: rgba(240, 208, 96, 0.95);
+  --badge-glow-c: rgba(200, 144, 64, 0.45);
 }
 
 .header-notif-badge--champion {

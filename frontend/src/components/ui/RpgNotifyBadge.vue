@@ -20,6 +20,8 @@ const display = computed(() => String(props.count))
 </template>
 
 <style scoped>
+/* default variant = expedition (purple) — gold is reserved for the
+   Star-Forge/sun-evolution badge, cyan for the champion shop */
 .rpg-notify-badge {
   position: absolute;
   top: 4px;
@@ -29,8 +31,8 @@ const display = computed(() => String(props.count))
   height: 16px;
   padding: 0 3px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #e8af34, #cc6050);
-  border: 1.5px solid #ffcf60;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: 1.5px solid #c9a0ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,9 +42,9 @@ const display = computed(() => String(props.count))
   line-height: 1;
   pointer-events: none;
   animation: rpg-badge-pulse 1.8s ease-in-out infinite;
-  --badge-glow-a: rgba(232, 175, 52, 0.5);
-  --badge-glow-b: rgba(232, 175, 52, 0.9);
-  --badge-glow-c: rgba(204, 96, 80, 0.4);
+  --badge-glow-a: rgba(168, 85, 247, 0.5);
+  --badge-glow-b: rgba(168, 85, 247, 0.9);
+  --badge-glow-c: rgba(124, 58, 237, 0.4);
 }
 
 .rpg-notify-badge--shop {

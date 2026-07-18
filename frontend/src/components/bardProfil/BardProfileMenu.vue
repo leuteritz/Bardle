@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/uiStore'
 import { useExpeditionStore } from '@/stores/expeditionStore'
 import { useBattleStore } from '@/stores/battleStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import type { BardTabId } from '@/stores/uiStore'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
 import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
@@ -18,12 +19,14 @@ import ActionToast from '@/components/bardProfil/ActionToast.vue'
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
+const solarStore = useSolarUpgradeStore()
 const { newlyUnlockedChampions } = storeToRefs(battleStore)
 
 const expeditionBadgeCount = computed(
   () => expeditionStore.activeExpeditions.filter((e) => e.status !== 'active').length,
 )
 const shopBadgeCount = computed(() => newlyUnlockedChampions.value.length)
+const forgeBadgeReady = computed(() => solarStore.canUpgradeStar)
 
 const menuItems: {
   id: BardTabId
@@ -101,6 +104,9 @@ watch(
                 <div v-if="item.id === 'team'" class="team-badge-row">
                   <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                   <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                </div>
+                <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
+                  <span class="mini-badge mini-badge--forge">✦</span>
                 </div>
               </button>
             </div>
@@ -297,11 +303,21 @@ watch(
 }
 
 .mini-badge--expedition {
-  background: linear-gradient(135deg, #e8af34, #cc6050);
-  border: 1.5px solid #ffcf60;
-  --tb-glow-a: rgba(232, 175, 52, 0.5);
-  --tb-glow-b: rgba(232, 175, 52, 0.9);
-  --tb-glow-c: rgba(204, 96, 80, 0.4);
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: 1.5px solid #c9a0ff;
+  --tb-glow-a: rgba(168, 85, 247, 0.5);
+  --tb-glow-b: rgba(168, 85, 247, 0.9);
+  --tb-glow-c: rgba(124, 58, 237, 0.4);
+}
+
+.mini-badge--forge {
+  background: linear-gradient(135deg, #f0d060, #c89040);
+  border: 1.5px solid #ffe080;
+  color: #2a1608;
+  text-shadow: 0 1px 0 rgba(255, 240, 180, 0.5);
+  --tb-glow-a: rgba(232, 192, 64, 0.55);
+  --tb-glow-b: rgba(240, 208, 96, 0.95);
+  --tb-glow-c: rgba(200, 144, 64, 0.45);
 }
 
 .mini-badge--shop {
