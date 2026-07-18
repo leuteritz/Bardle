@@ -782,6 +782,12 @@ export const SUN_BG_DISC_RADIUS_FACTOR = 4
 export const SHOP_SUN_MIN_DIAMETER = 170
 export const SHOP_SUN_MAX_DIAMETER = 240
 
+/** Pause overlay sun hero — disc diameter band (px) scaled by viewport height so the
+ *  paused sun reads large on every desktop resolution without dwarfing the panel. */
+export const PAUSE_SUN_MIN_DIAMETER = 160
+export const PAUSE_SUN_MAX_DIAMETER = 300
+export const PAUSE_SUN_VH_FACTOR = 0.24
+
 export interface SunGrowthStage {
   stage: number
   chimesThreshold: number

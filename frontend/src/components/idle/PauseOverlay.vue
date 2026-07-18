@@ -33,20 +33,22 @@
             </div>
           </header>
 
-          <!-- Hero: frozen orbit + accumulating chimes -->
-          <div class="orbit-hero" aria-hidden="false">
-            <div class="orbit-ring orbit-ring--outer" aria-hidden="true">
-              <span class="orbit-body orbit-body--outer" />
-            </div>
-            <div class="orbit-ring orbit-ring--inner" aria-hidden="true">
-              <span class="orbit-body orbit-body--inner" />
-            </div>
-            <img src="/img/BardAbilities/BardChime.png" alt="" class="orbit-chime" />
+          <!-- Hero: the live sun in its current phase (no planets, no champions) -->
+          <div class="sun-hero" aria-hidden="true">
+            <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
+            <PhaseSunDisc v-else :diameter="sunDiameter" />
           </div>
+          <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
+            {{ sunPhase.name }}
+            <span class="sun-phase-label__astro">{{ sunPhase.astroName }}</span>
+          </span>
 
           <div class="chime-readout">
-            <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-            <span class="chime-label">Chimes while paused</span>
+            <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+            <div class="chime-col">
+              <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
+              <span class="chime-label">Chimes while paused</span>
+            </div>
           </div>
 
           <!-- Stat tiles -->
@@ -102,23 +104,28 @@
             <span class="callout-heading">Awaiting your return</span>
             <div class="callout-row">
               <div v-if="isPlanetDiscovered" class="callout callout--champion">
-                <Icon icon="game-icons:barbute" width="18" height="18" aria-hidden="true" />
-                Champion found
+                <span class="callout-orb" aria-hidden="true">
+                  <Icon icon="game-icons:barbute" width="16" height="16" class="callout-orb__icon" />
+                </span>
+                <span class="callout__text">Champion found</span>
               </div>
-              <div v-if="gameStore.pendingAugmentSelections.length > 0" class="callout callout--gold">
-                <Icon icon="game-icons:upgrade" width="16" height="16" aria-hidden="true" />
-                Level-Up ×{{ gameStore.pendingAugmentSelections.length }}
+              <div v-if="gameStore.pendingAugmentSelections.length > 0" class="callout callout--level">
+                <span class="callout-orb" aria-hidden="true">
+                  <Icon icon="game-icons:upgrade" width="16" height="16" class="callout-orb__icon" />
+                </span>
+                <span class="callout__text">
+                  Level-Up
+                  <span class="callout__count">×{{ gameStore.pendingAugmentSelections.length }}</span>
+                </span>
               </div>
               <div v-if="pendingStars > 0" class="callout callout--star">
-                <span class="star-orb" aria-hidden="true">
-                  <Icon icon="game-icons:star-formation" width="16" height="16" class="star-orb__icon" />
+                <span class="callout-orb" aria-hidden="true">
+                  <Icon icon="game-icons:star-formation" width="16" height="16" class="callout-orb__icon" />
                 </span>
-                <span class="star-callout__text">
+                <span class="callout__text">
                   {{ pendingStars === 1 ? 'Star spawned' : 'Stars spawned' }}
-                  <span class="star-callout__count">×{{ pendingStars }}</span>
+                  <span class="callout__count">×{{ pendingStars }}</span>
                 </span>
-                <span class="star-sparkle star-sparkle--a" aria-hidden="true">✦</span>
-                <span class="star-sparkle star-sparkle--b" aria-hidden="true">✦</span>
               </div>
             </div>
           </div>
@@ -138,19 +145,58 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useWindowFocus } from '@/composables/useWindowFocus'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { usePlayerStore } from '@/stores/playerStore'
+import { usePlanetShopStore } from '@/stores/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { formatNumber } from '@/config/numberFormat'
 import { MATERIALS } from '@/config/materials'
+import {
+  STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
+  PAUSE_SUN_MIN_DIAMETER,
+  PAUSE_SUN_MAX_DIAMETER,
+  PAUSE_SUN_VH_FACTOR,
+} from '@/config/constants'
+import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
+import CometDisc from '@/components/idle/sun/CometDisc.vue'
 
 const { windowFocused } = useWindowFocus()
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 const playerStore = usePlayerStore()
+const planetShopStore = usePlanetShopStore()
+const solarStore = useSolarUpgradeStore()
+
+function computeSunDiameter(): number {
+  return Math.round(
+    Math.min(
+      PAUSE_SUN_MAX_DIAMETER,
+      Math.max(PAUSE_SUN_MIN_DIAMETER, window.innerHeight * PAUSE_SUN_VH_FACTOR),
+    ),
+  )
+}
+
+const sunDiameter = ref(computeSunDiameter())
+function onResize() {
+  sunDiameter.value = computeSunDiameter()
+}
+
+onMounted(() => window.addEventListener('resize', onResize))
+
+const sunPhase = computed(() =>
+  solarStore.isCometState
+    ? COMET_PHASE_DATA
+    : (STAR_PHASE_DATA[planetShopStore.currentSunStage] ?? STAR_PHASE_DATA[0]),
+)
+const sunPhaseLabelColor = computed(() => {
+  const p = sunPhase.value
+  return 'phasePrimary' in p ? p.phasePrimary : p.accent
+})
 
 const pendingStars = computed(() => galaxyStore.pendingResourceStars)
 const hpPercent = computed(() => playerStore.hpPercent)
@@ -188,6 +234,7 @@ watch(
 
 onUnmounted(() => {
   if (pauseInterval !== null) clearInterval(pauseInterval)
+  window.removeEventListener('resize', onResize)
 })
 
 const accumulatedChimes = computed(() => {
@@ -289,7 +336,7 @@ function particleStyle(i: number): Record<string, string> {
 .pause-panel {
   position: relative;
   z-index: 1;
-  width: min(520px, 94vw);
+  width: min(560px, 94vw);
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -375,89 +422,66 @@ function particleStyle(i: number): Record<string, string> {
   background: rgba(200, 185, 140, 0.35);
 }
 
-/* ── Orbit hero ───────────────────────────────────────── */
-.orbit-hero {
+/* ── Sun hero ─────────────────────────────────────────── */
+.sun-hero {
   position: relative;
-  width: clamp(120px, 16vh, 170px);
-  height: clamp(120px, 16vh, 170px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: clamp(160px, 24vh, 300px);
+  height: clamp(160px, 24vh, 300px);
   flex-shrink: 0;
+  pointer-events: none;
 }
-.orbit-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px dashed rgba(240, 208, 96, 0.28);
+.sun-phase-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: calc(-1 * clamp(10px, 1.6vh, 18px));
+  font-family: 'MedievalSharp', cursive;
+  font-size: clamp(1.05rem, 1.6vw, 1.5rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px currentColor;
 }
-.orbit-ring--outer {
-  inset: 0;
-  transform: rotate(-18deg);
-  animation: ring-breathe 4.5s ease-in-out infinite;
-}
-.orbit-ring--inner {
-  inset: 17%;
-  transform: rotate(42deg);
-  border-color: rgba(255, 200, 80, 0.18);
-  animation: ring-breathe 4.5s ease-in-out 1.4s infinite;
-}
-@keyframes ring-breathe {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.orbit-body {
-  position: absolute;
-  border-radius: 50%;
-}
-.orbit-body--outer {
-  top: 12%;
-  right: 8%;
-  width: 9px;
-  height: 9px;
-  background: #f0d060;
-  box-shadow: 0 0 10px rgba(240, 208, 96, 0.9);
-}
-.orbit-body--inner {
-  bottom: 10%;
-  left: 14%;
-  width: 6px;
-  height: 6px;
-  background: #c89040;
-  box-shadow: 0 0 8px rgba(200, 144, 64, 0.9);
-}
-.orbit-chime {
-  width: 46%;
-  height: 46%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 14px rgba(232, 192, 64, 0.6));
-  animation: chime-float 5s ease-in-out infinite;
-}
-@keyframes chime-float {
-  0%,
-  100% {
-    transform: translateY(3px);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
+.sun-phase-label__astro {
+  font-family: inherit;
+  font-size: 0.52em;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: rgba(216, 200, 160, 0.45);
+  text-shadow: none;
 }
 
 /* ── Chime readout ────────────────────────────────────── */
 .chime-readout {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  margin-top: calc(-1 * clamp(6px, 1vh, 12px));
+  gap: clamp(12px, 1.6vw, 20px);
+}
+.chime-img {
+  width: clamp(46px, 6.5vh, 72px);
+  height: clamp(46px, 6.5vh, 72px);
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 16px rgba(232, 192, 64, 0.65));
+  animation: chime-float 5s ease-in-out infinite;
+}
+@keyframes chime-float {
+  0%,
+  100% {
+    transform: translateY(3px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(3deg);
+  }
+}
+.chime-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 .chime-value {
-  font-size: clamp(1.9rem, 3.2vw, 2.7rem);
+  font-size: clamp(2.1rem, 3.6vw, 3.2rem);
   font-weight: 800;
   line-height: 1;
   color: #f0d060;
@@ -467,7 +491,7 @@ function particleStyle(i: number): Record<string, string> {
     0 0 50px rgba(200, 144, 64, 0.25);
 }
 .chime-label {
-  font-size: clamp(0.66rem, 0.9vw, 0.76rem);
+  font-size: clamp(0.66rem, 0.9vw, 0.78rem);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -628,72 +652,66 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: center;
   gap: 8px;
 }
+/* One shared callout style — modifiers only swap the accent color (--co-color). */
 .callout {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 14px;
+  gap: 9px;
+  padding: 7px 16px 7px 8px;
   border-radius: 999px;
   font-size: clamp(0.72rem, 1vw, 0.82rem);
   font-weight: 700;
   letter-spacing: 0.04em;
-  border: 1px solid;
+  border: 1px solid color-mix(in srgb, var(--co-color) 45%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--co-color) 14%, transparent),
+    color-mix(in srgb, var(--co-color) 5%, transparent)
+  );
+  color: color-mix(in srgb, var(--co-color) 55%, #f2ead0);
+  overflow: visible;
+  animation: callout-glow 2.6s ease-in-out infinite;
 }
 .callout--champion {
-  background: rgba(232, 192, 64, 0.14);
-  border-color: rgba(232, 192, 64, 0.5);
-  color: #f0d060;
-  animation: callout-glow 2.2s ease-in-out infinite;
+  --co-color: #f0d060;
+}
+.callout--level {
+  --co-color: #74d448;
+}
+.callout--star {
+  --co-color: #7fd8d0;
 }
 @keyframes callout-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 rgba(232, 192, 64, 0);
+    box-shadow: 0 0 0 color-mix(in srgb, var(--co-color) 0%, transparent);
   }
   50% {
-    box-shadow: 0 0 18px rgba(232, 192, 64, 0.35);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--co-color) 32%, transparent);
   }
 }
-.callout--gold {
-  background: rgba(232, 192, 64, 0.08);
-  border-color: rgba(232, 192, 64, 0.3);
-  color: #e8c040;
-}
-.callout--star {
-  position: relative;
-  padding: 7px 16px 7px 8px;
-  background: linear-gradient(135deg, rgba(240, 208, 96, 0.14), rgba(64, 192, 180, 0.08));
-  border-color: rgba(240, 208, 96, 0.45);
-  color: #f4e2a0;
-  overflow: visible;
-  animation: star-glow 2.6s ease-in-out infinite;
-}
-@keyframes star-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(240, 208, 96, 0);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(240, 208, 96, 0.3);
-  }
-}
-.star-orb {
+.callout-orb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, rgba(255, 236, 160, 0.35), rgba(240, 208, 96, 0.08) 70%);
-  border: 1px solid rgba(240, 208, 96, 0.5);
+  background: radial-gradient(
+    circle at 40% 35%,
+    color-mix(in srgb, var(--co-color) 35%, transparent),
+    color-mix(in srgb, var(--co-color) 8%, transparent) 70%
+  );
+  border: 1px solid color-mix(in srgb, var(--co-color) 50%, transparent);
   flex-shrink: 0;
 }
-.star-orb__icon {
-  color: #f0d060;
-  filter: drop-shadow(0 0 5px rgba(240, 208, 96, 0.8));
-  animation: star-twinkle 2.6s ease-in-out infinite;
+.callout-orb__icon {
+  color: var(--co-color);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--co-color) 80%, transparent));
+  animation: orb-twinkle 2.6s ease-in-out infinite;
 }
-@keyframes star-twinkle {
+@keyframes orb-twinkle {
   0%,
   100% {
     transform: scale(1) rotate(0deg);
@@ -704,46 +722,17 @@ function particleStyle(i: number): Record<string, string> {
     opacity: 1;
   }
 }
-.star-callout__text {
+.callout__text {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
 }
-.star-callout__count {
+.callout__count {
   font-size: 1.05em;
   font-weight: 800;
-  color: #f0d060;
+  color: var(--co-color);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 10px rgba(240, 208, 96, 0.55);
-}
-.star-sparkle {
-  position: absolute;
-  font-size: 8px;
-  line-height: 1;
-  color: rgba(240, 208, 96, 0.85);
-  pointer-events: none;
-  animation: sparkle-blink 2.2s ease-in-out infinite;
-}
-.star-sparkle--a {
-  top: -4px;
-  right: 10px;
-}
-.star-sparkle--b {
-  bottom: -3px;
-  left: 14px;
-  font-size: 6px;
-  animation-delay: 1.1s;
-}
-@keyframes sparkle-blink {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  text-shadow: 0 0 10px color-mix(in srgb, var(--co-color) 55%, transparent);
 }
 
 /* ── Continue button ──────────────────────────────────── */
@@ -810,14 +799,6 @@ function particleStyle(i: number): Record<string, string> {
   opacity: 0;
 }
 
-/* ── Small heights (720p) ─────────────────────────────── */
-@media (max-height: 760px) {
-  .orbit-hero {
-    width: 104px;
-    height: 104px;
-  }
-}
-
 /* ── Narrow screens ───────────────────────────────────── */
 @media (max-width: 480px) {
   .stat-grid {
@@ -831,14 +812,10 @@ function particleStyle(i: number): Record<string, string> {
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .particle,
-  .orbit-ring--outer,
-  .orbit-ring--inner,
-  .orbit-chime,
+  .chime-img,
   .stat-tile--crit,
-  .callout--champion,
-  .callout--star,
-  .star-orb__icon,
-  .star-sparkle {
+  .callout,
+  .callout-orb__icon {
     animation: none;
   }
   .continue-btn,
