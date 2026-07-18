@@ -135,7 +135,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
 
 .cmd-panel {
   position: absolute;
-  inset: 14px 20px 16px 20px;
+  /* oben 22px = 2px Frame-Inset + 20px Abstand zur Rahmenlinie — damit ist der
+     Abstand oben identisch mit den 20px links und die 40px-Rundung der ersten
+     Rollenkarte liegt konzentrisch im 60px-Bogen der Panel-Silhouette */
+  inset: 22px 20px 16px 20px;
   pointer-events: auto;
   display: flex;
   flex-direction: column;

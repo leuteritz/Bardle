@@ -158,12 +158,13 @@ function onSlotLeave() {
   transition: box-shadow 0.2s ease;
 }
 /* top-left corner follows the panel silhouette arc (frame geometry — exception
-   to the 4-5px radius rule, matches the 60px shell arc); the right panel edge
-   sits flush with the screen edge, so the last card stays square up top */
+   to the 4-5px radius rule): shell arc 60px minus 20px panel gap = 40px, so the
+   card corner runs concentric to the frame curve; the right panel edge sits
+   flush with the screen edge, so the last card stays square up top */
 .champ-card--first .champ-card-body {
   border-top: 5px solid var(--role-color, #c89040);
   border-bottom-left-radius: 5px;
-  border-top-left-radius: 44px;
+  border-top-left-radius: 40px;
 }
 .champ-card:hover .champ-card-body {
   box-shadow:
