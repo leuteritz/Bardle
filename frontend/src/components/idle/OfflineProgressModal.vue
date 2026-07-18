@@ -107,40 +107,17 @@ function claim() {
           <!-- Cosmic star particles -->
           <div class="stars" aria-hidden="true">
             <span
-              v-for="n in 28"
+              v-for="n in 20"
               :key="n"
               class="star"
-              :style="`--x:${Math.random() * 100}%;--y:${Math.random() * 100}%;--s:${0.5 + Math.random() * 1.2}px;--d:${Math.random() * 4}s;--op:${0.3 + Math.random() * 0.5}`"
+              :style="`--x:${Math.random() * 100}%;--y:${Math.random() * 100}%;--s:${0.5 + Math.random() * 1.2}px;--d:${Math.random() * 4}s;--op:${0.25 + Math.random() * 0.45}`"
             />
           </div>
 
-          <!-- Hero: Chime count -->
+          <!-- Hero -->
           <div class="hero-section">
-            <div class="chime-glyph" aria-hidden="true">
-              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="32" cy="52" rx="10" ry="3" fill="rgba(232,192,64,0.18)" />
-                <path
-                  d="M32 8C20 8 14 18 14 30c0 8 4 14 8 18h20c4-4 8-10 8-18C50 18 44 8 32 8z"
-                  fill="url(#bg)"
-                  stroke="#c89040"
-                  stroke-width="1.5"
-                />
-                <path d="M28 56h8" stroke="#c89040" stroke-width="2" stroke-linecap="round" />
-                <circle cx="32" cy="10" r="2.5" fill="#e8c040" />
-                <defs>
-                  <linearGradient
-                    id="bg"
-                    x1="32"
-                    y1="8"
-                    x2="32"
-                    y2="56"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop offset="0%" stop-color="#3a2008" />
-                    <stop offset="100%" stop-color="#1a0e04" />
-                  </linearGradient>
-                </defs>
-              </svg>
+            <div class="away-eyebrow">
+              Away for <span class="away-value">{{ formattedDuration }}</span>
             </div>
 
             <div
@@ -154,19 +131,12 @@ function claim() {
             <div v-else class="chime-sublabel chime-sublabel--hint">
               Build shrines for idle income
             </div>
-          </div>
 
-          <!-- Away duration -->
-          <div class="away-row">
-            <span class="away-label">Away for</span>
-            <span class="away-value">{{ formattedDuration }}</span>
+            <p class="flavour">{{ flavourText }}</p>
           </div>
-
-          <!-- Flavour -->
-          <p class="flavour">{{ flavourText }}</p>
 
           <!-- Minigame zone -->
-          <Transition name="mg-slide">
+          <Transition name="mg-slide" mode="out-in">
             <div v-if="minigamePhase === 'playing'" class="minigame-zone">
               <OfflineMinigame @win="onWin" @skip="onSkip" />
             </div>
@@ -219,23 +189,24 @@ function claim() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(4px);
 }
 
 /* ── Modal shell ───────────────────────────────────────── */
 .offline-modal {
   position: relative;
-  width: min(420px, 94vw);
-  background: #0d0a05;
+  width: min(600px, 94vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  background: var(--rpg-bg-deep, #111008);
   border: 1px solid rgba(200, 144, 64, 0.35);
-  border-radius: 6px;
-  overflow: hidden;
+  border-radius: 8px;
   box-shadow:
     0 0 0 1px rgba(92, 51, 16, 0.5),
     0 32px 80px rgba(0, 0, 0, 0.95),
     inset 0 1px 0 rgba(232, 192, 64, 0.08);
-  padding: 0 0 28px;
+  padding: 0 0 32px;
 }
 
 /* ── Cosmic stars ──────────────────────────────────────── */
@@ -254,7 +225,7 @@ function claim() {
   width: var(--s);
   height: var(--s);
   border-radius: 50%;
-  background: #e8c040;
+  background: var(--rpg-gold, #e8c040);
   opacity: var(--op);
   animation: twinkle var(--d) ease-in-out infinite alternate;
 }
@@ -277,21 +248,26 @@ function claim() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 32px 20px;
-  gap: 8px;
+  padding: 44px 40px 8px;
+  gap: 10px;
 }
 
-.chime-glyph {
-  width: 52px;
-  height: 52px;
-  margin-bottom: 4px;
-  filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.45));
+.away-eyebrow {
+  font-size: 0.75rem;
+  color: rgba(200, 185, 140, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.away-value {
+  color: rgba(200, 160, 80, 0.85);
+  font-weight: 700;
 }
 
 .chime-count {
-  font-size: clamp(3rem, 12vw, 4.5rem);
+  font-size: clamp(3.2rem, 10vw, 5rem);
   font-weight: 900;
-  color: #e8c040;
+  color: var(--rpg-gold, #e8c040);
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -304,10 +280,10 @@ function claim() {
 }
 
 .chime-sublabel {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: rgba(200, 185, 140, 0.45);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
 }
 
 .chime-sublabel--hint {
@@ -328,48 +304,20 @@ function claim() {
   }
 }
 
-/* ── Away row ──────────────────────────────────────────── */
-.away-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 32px 4px;
-}
-
-.away-label {
-  font-size: 0.75rem;
-  color: rgba(200, 185, 140, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.away-value {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: rgba(200, 160, 80, 0.8);
-}
-
 /* ── Flavour ───────────────────────────────────────────── */
 .flavour {
-  position: relative;
-  z-index: 1;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: rgba(200, 185, 140, 0.38);
   text-align: center;
   font-style: italic;
-  padding: 0 40px;
-  margin: 0 0 20px;
-  max-width: 100%;
+  margin: 2px 0 0;
 }
 
 /* ── Minigame zone ─────────────────────────────────────── */
 .minigame-zone {
   position: relative;
   z-index: 1;
-  padding: 0 24px 4px;
+  padding: 16px 32px 4px;
 }
 
 .result-badge {
@@ -379,10 +327,10 @@ function claim() {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin: 0 24px 4px;
-  padding: 10px 16px;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  margin: 20px 32px 4px;
+  padding: 12px 16px;
+  border-radius: 5px;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -390,7 +338,7 @@ function claim() {
 .result-badge--win {
   background: rgba(80, 192, 40, 0.1);
   border: 1px solid rgba(80, 192, 40, 0.3);
-  color: #6ec040;
+  color: var(--rpg-green-border, #6ec040);
   text-shadow: 0 0 12px rgba(110, 192, 64, 0.6);
 }
 
@@ -404,15 +352,15 @@ function claim() {
 .footer {
   position: relative;
   z-index: 1;
-  padding: 16px 24px 0;
+  padding: 20px 32px 0;
 }
 
 .claim-btn {
   width: 100%;
-  padding: 14px 0;
-  border-radius: 4px;
+  padding: 16px 0;
+  border-radius: 5px;
   border: none;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -420,7 +368,11 @@ function claim() {
   transition:
     filter 0.15s ease,
     transform 0.1s ease;
-  background: linear-gradient(to bottom, #4aaa28, #2a6814);
+  background: linear-gradient(
+    to bottom,
+    var(--rpg-green-top, #52b830),
+    var(--rpg-green-bottom, #2e7a1a)
+  );
   color: #fff;
   box-shadow: 0 2px 16px rgba(42, 104, 20, 0.5);
 }
@@ -470,7 +422,7 @@ function claim() {
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .mg-slide-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 .mg-slide-enter-from {
   opacity: 0;
