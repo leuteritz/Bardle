@@ -1313,6 +1313,27 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     starCanvas.value.height = starsContainer.value.clientHeight || window.innerHeight
   }
 
+  // ── Context-Loss-Heilung ───────────────────────────────────────────────────
+  // Chrome darf den Backing-Store eines 2D-Canvas verwerfen, wenn der Tab
+  // lange im Hintergrund war (GPU-Speicherdruck). Danach werden alle
+  // Zeichenbefehle stillschweigend verworfen — die Loop läuft, aber der
+  // Canvas bleibt bis zum Reload leer. Das Neusetzen von width/height
+  // erzwingt einen frischen Backing-Store; die Loop übermalt ihn im
+  // nächsten Frame ohnehin komplett.
+  function resetCanvasIfContextLost(): void {
+    const ctx = starCanvas.value?.getContext('2d') as
+      | (CanvasRenderingContext2D & { isContextLost?: () => boolean })
+      | null
+      | undefined
+    if (ctx?.isContextLost?.()) resizeCanvas()
+  }
+
+  function handleContextRestored(): void {
+    // Nach Browser-seitiger Wiederherstellung ist der Buffer leer und der
+    // Context-Zustand zurückgesetzt — Dimensionen neu setzen räumt beides auf.
+    resizeCanvas()
+  }
+
   // Per-area density: scale element counts by container area vs. the viewport, so a contained
   // instance (Shop) renders at the same star density as the full-screen one (Planet) — capped at 1.
   function densityScale(): number {
@@ -1398,6 +1419,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   function startFocusPolling(): void {
     focusPollingInterval = setInterval(() => {
       const hasFocus = document.hasFocus()
+      if (hasFocus) resetCanvasIfContextLost()
       if (!hasFocus && isWindowFocused) {
         onWindowBlur()
       } else if (hasFocus && !isWindowFocused) {
@@ -2522,6 +2544,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // beim Tab-Rückwechsel kann das focus-Event nach visibilitychange kommen
       // (oder ganz ausbleiben), dann wäre isWindowFocused hier noch veraltet.
       isWindowFocused = document.hasFocus()
+      // Nach langem Hintergrund-Aufenthalt kann der Canvas-Backing-Store vom
+      // Browser verworfen worden sein → hart neu allozieren (Loop übermalt
+      // den frischen Buffer im nächsten Frame vollständig).
+      resizeCanvas()
       if (!prefersReducedMotion.value && stars.length > 0 && isWindowFocused) {
         startLoop()
         scheduleNextGalaxy()
@@ -2560,6 +2586,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     starClusters.length = 0
     bgComets.length = 0
     window.removeEventListener('resize', handleResize)
+    starCanvas.value?.removeEventListener('contextrestored', handleContextRestored)
     removeFocusListener?.()
     if (resizeTimeout) clearTimeout(resizeTimeout)
   }
@@ -2580,6 +2607,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       startFocusPolling()
 
       setTimeout(createStars, 100)
+      starCanvas.value?.addEventListener('contextrestored', handleContextRestored)
       window.addEventListener('resize', handleResize)
       scheduleNextGalaxy()
       scheduleNextEmission()

@@ -219,6 +219,7 @@ import { usePlayerStore } from '../../../stores/playerStore'
 import { useRoleBehaviorStore } from '../../../stores/roleBehaviorStore'
 import { useUiStore } from '../../../stores/uiStore'
 import { useRenderingPaused } from '../../../composables/useRenderingPaused'
+import { resetCanvasIfContextLost } from '../../../utils/canvasContext'
 import { useOrbitScale } from '../../../composables/useOrbitScale'
 import { useProjectileSystem } from '../../../composables/useProjectileSystem'
 import { MATERIALS } from '../../../config/materials'
@@ -819,6 +820,13 @@ watch(isIdleRenderingPaused, (paused) => {
     cancelAnimationFrame(enemyAnimFrame)
     enemyAnimFrame = 0
   } else if (!enemyAnimFrame) {
+    // Nach langem Hintergrund-Aufenthalt können die Canvas-Buffer vom Browser
+    // verworfen worden sein → frisch allozieren; hintCanvasesDirty erzwingt
+    // den vollständigen Neuaufbau der Orbit-Hints im nächsten Frame.
+    resetCanvasIfContextLost(hintBackCanvas.value)
+    resetCanvasIfContextLost(hintFrontCanvas.value)
+    resetCanvasIfContextLost(cooldownCanvas.value)
+    hintCanvasesDirty = true
     enemyLastTs = 0
     enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
   }

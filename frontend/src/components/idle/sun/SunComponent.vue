@@ -33,6 +33,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { resetCanvasIfContextLost } from '@/utils/canvasContext'
 import { useCombatStore } from '@/stores/combatStore'
 import { usePlanetShopStore } from '@/stores/planetShopStore'
 import { useGameStore } from '@/stores/gameStore'
@@ -185,6 +186,7 @@ export default defineComponent({
         cancelAnimationFrame(animFrame)
         animFrame = 0
       } else if (!animFrame) {
+        resetCanvasIfContextLost(canvasEl.value)
         animFrame = requestAnimationFrame(animate)
       }
     })

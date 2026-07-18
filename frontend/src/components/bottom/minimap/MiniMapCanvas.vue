@@ -5,6 +5,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
+import { resetCanvasIfContextLost } from '@/utils/canvasContext'
 import { useGalaxyStore } from '@/stores/galaxyStore'
 import { useGameStore } from '@/stores/gameStore'
 import { useStarGroupStore } from '@/stores/starGroupStore'
@@ -1310,6 +1311,7 @@ export default defineComponent({
           rafId = null
         }
       } else if (show.value && rafId === null) {
+        resetCanvasIfContextLost(canvasEl.value)
         rafId = requestAnimationFrame(rafTick)
       }
     })
