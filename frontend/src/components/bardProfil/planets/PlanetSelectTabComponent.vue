@@ -7,17 +7,12 @@ import {
   PLANET_ROLES_LIST,
   PLANET_ROLES,
   planetLevelBonusMultiplier,
-  planetMilestoneCount,
-  planetRankTier,
   computePlanetMaxHp,
 } from '@/stores/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { MATERIALS } from '@/config/materials'
 import {
-  PLANET_MILESTONE_INTERVAL,
-  PLANET_MILESTONE_BONUS,
-  PLANET_BULK_LEVEL_STEP,
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
   PLANET_TAB_SUN_MIN_DIAMETER,
@@ -234,12 +229,7 @@ function bonusText(role: PlanetRole, level = 1): string {
   }
 }
 
-// ── Attunement (per-planet leveling) ──────────────────────────────────────
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-function attunementLabel(level: number): string {
-  return level <= ROMAN.length ? ROMAN[level - 1] : String(level)
-}
-
+// ── Per-planet leveling ────────────────────────────────────────────────────
 const levelUpCost = computed(() =>
   activeSlot.value ? store.getPlanetLevelUpCost(activeSlot.value.id) : 0,
 )
@@ -249,7 +239,6 @@ const levelUpReqPhase = computed(() =>
 const levelUpReason = computed(() =>
   activeSlot.value ? store.planetLevelUpBlockReason(activeSlot.value.id) : null,
 )
-const canLevelUp = computed(() => levelUpReason.value === null)
 
 const activeSlotBonusText = computed(() => {
   const role = activeSlot.value?.role
@@ -257,43 +246,27 @@ const activeSlotBonusText = computed(() => {
   return bonusText(PLANET_ROLES[role], activeSlot.value!.level)
 })
 
-// ── Rank tier ──────────────────────────────────────────────────────────────
-const rankTier = computed(() => planetRankTier(activeSlot.value?.level ?? 1))
-
-// ── Next-level preview ─────────────────────────────────────────────────────
-const nextBonusText = computed(() => {
-  const role = activeSlot.value?.role
-  if (!role) return ''
-  return bonusText(PLANET_ROLES[role], (activeSlot.value!.level ?? 1) + 1)
-})
-const currentMaxHp = computed(() => computePlanetMaxHp(activeSlot.value?.level ?? 1))
-const nextMaxHp = computed(() => computePlanetMaxHp((activeSlot.value?.level ?? 1) + 1))
-
-// ── Milestone tracker ──────────────────────────────────────────────────────
-const milestoneInterval = PLANET_MILESTONE_INTERVAL
-const milestoneBonusPct = Math.round(PLANET_MILESTONE_BONUS * 100)
-const levelsToNextMilestone = computed(() => {
-  const lvl = activeSlot.value?.level ?? 1
-  return milestoneInterval - (lvl % milestoneInterval)
-})
-const nextMilestoneLevel = computed(() => (activeSlot.value?.level ?? 1) + levelsToNextMilestone.value)
-const milestonesReached = computed(() => planetMilestoneCount(activeSlot.value?.level ?? 1))
-// Progress (0–100%) through the current milestone band.
-const milestoneProgressPct = computed(() => {
-  const lvl = activeSlot.value?.level ?? 1
-  return ((lvl % milestoneInterval) / milestoneInterval) * 100
-})
-
-// ── Bulk attune ────────────────────────────────────────────────────────────
+// ── Max attune (the only buy action) ───────────────────────────────────────
 const maxAffordableCount = computed(() =>
   activeSlot.value ? store.getMaxAffordableLevelCount(activeSlot.value.id) : 0,
 )
-const bulkStep = PLANET_BULK_LEVEL_STEP
-const bulkStepCost = computed(() =>
-  activeSlot.value ? store.getBulkLevelUpCost(activeSlot.value.id, bulkStep) : 0,
-)
 const maxCost = computed(() =>
   activeSlot.value ? store.getBulkLevelUpCost(activeSlot.value.id, maxAffordableCount.value) : 0,
+)
+
+// ── Upgrade preview ────────────────────────────────────────────────────────
+// The single "Max" buy attunes as many levels as affordable, so the preview
+// shows the state AFTER that buy. With nothing affordable it falls back to a
+// +1 preview so the player still sees what the next attunement would bring.
+const previewLevelGain = computed(() => Math.max(1, maxAffordableCount.value))
+const nextBonusText = computed(() => {
+  const role = activeSlot.value?.role
+  if (!role) return ''
+  return bonusText(PLANET_ROLES[role], (activeSlot.value!.level ?? 1) + previewLevelGain.value)
+})
+const currentMaxHp = computed(() => computePlanetMaxHp(activeSlot.value?.level ?? 1))
+const nextMaxHp = computed(() =>
+  computePlanetMaxHp((activeSlot.value?.level ?? 1) + previewLevelGain.value),
 )
 
 function attune(count: number) {
@@ -303,8 +276,8 @@ function attune(count: number) {
   if (gained > 0) {
     showToast(
       gained === 1
-        ? `Planet attuned to Attunement ${attunementLabel(activeSlot.value.level)}!`
-        : `Attuned +${gained} → Attunement ${attunementLabel(activeSlot.value.level)} (was ${attunementLabel(before)})`,
+        ? `Planet reached Lvl ${activeSlot.value.level}!`
+        : `+${gained} Levels → Lvl ${activeSlot.value.level} (was ${before})`,
     )
   }
 }
@@ -418,7 +391,7 @@ function chooseBuilding(buildingId: string) {
                 :style="slot.role ? { color: PLANET_ROLES[slot.role].color } : {}"
               >
                 {{ slot.role ? PLANET_ROLES[slot.role].name : 'No role' }}
-                <span class="ps-slot-sub-att">· Att {{ attunementLabel(slot.level) }}</span>
+                <span class="ps-slot-sub-att">· Lvl {{ slot.level }}</span>
               </span>
               <div v-if="slot.maxHp > 0" class="ps-slot-btn-hp-track">
                 <div
@@ -585,25 +558,23 @@ function chooseBuilding(buildingId: string) {
             </Transition>
           </div>
 
-          <!-- Upgrade menu: frameless, pinned to bottom, identical for every planet type -->
-          <div class="ps-upgrade" :style="{ '--rc': activeRoleColor }">
-            <div class="ps-level-info">
-              <span class="ps-level-title">Attunement {{ attunementLabel(activeSlot.level) }}</span>
-              <span
-                class="ps-rank-badge"
-                :style="{ color: rankTier.color, borderColor: rankTier.color }"
-              >
-                {{ rankTier.name }}
-              </span>
+          <!-- Upgrade dock: one slim bar — level/rank, effect preview, Max buy.
+               Hints only appear when the buy is actually blocked. -->
+          <div class="ps-dock" :style="{ '--rc': activeRoleColor }">
+            <div class="ps-dock-status">
+              <span class="ps-level-label">Level</span>
+              <span class="ps-level-value">{{ activeSlot.level }}</span>
             </div>
 
-            <!-- Next-level preview -->
-            <div class="ps-preview">
+            <div class="ps-dock-effect">
               <div class="ps-preview-row">
                 <span class="ps-preview-label">Effect</span>
                 <span class="ps-preview-now">{{ activeSlotBonusText }}</span>
                 <span class="ps-preview-arrow">→</span>
-                <span class="ps-preview-next">{{ nextBonusText }}</span>
+                <span class="ps-preview-next-wrap">
+                  <span class="ps-preview-next">{{ nextBonusText }}</span>
+                  <span v-if="maxAffordableCount > 0" class="ps-preview-gain">after +{{ maxAffordableCount }}</span>
+                </span>
               </div>
               <div class="ps-preview-row">
                 <span class="ps-preview-label">Max HP</span>
@@ -613,71 +584,27 @@ function chooseBuilding(buildingId: string) {
               </div>
             </div>
 
-            <!-- Milestone tracker -->
-            <div class="ps-milestone">
-              <div class="ps-milestone-head">
-                <span class="ps-milestone-count">★ {{ milestonesReached }} milestone<span v-if="milestonesReached !== 1">s</span></span>
-                <span class="ps-milestone-next">
-                  Next at {{ attunementLabel(nextMilestoneLevel) }} · +{{ milestoneBonusPct }}% power
-                </span>
-              </div>
-              <div class="ps-milestone-track">
-                <div class="ps-milestone-fill" :style="{ width: milestoneProgressPct + '%' }" />
-              </div>
-            </div>
-
-            <!-- Bulk attune buttons -->
-            <div class="ps-attune-row">
+            <div class="ps-dock-buy">
               <button
                 class="ps-level-btn"
-                :class="{ 'ps-level-btn--locked': !canLevelUp }"
-                :disabled="!canLevelUp"
-                :title="canLevelUp ? 'Attune once' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
-                @click="attune(1)"
-              >
-                <span class="ps-level-btn-main">✦ Attune</span>
-                <span class="ps-level-btn-cost">
-                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                  {{ $formatNumber(levelUpCost) }}
-                </span>
-              </button>
-              <button
-                class="ps-level-btn ps-level-btn--alt"
-                :class="{ 'ps-level-btn--locked': !canLevelUp }"
-                :disabled="!canLevelUp"
-                title="Attune up to ten times"
-                @click="attune(bulkStep)"
-              >
-                <span class="ps-level-btn-main">×{{ bulkStep }}</span>
-                <span class="ps-level-btn-cost">
-                  <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                  {{ $formatNumber(bulkStepCost) }}
-                </span>
-              </button>
-              <button
-                class="ps-level-btn ps-level-btn--alt"
                 :class="{ 'ps-level-btn--locked': maxAffordableCount === 0 }"
                 :disabled="maxAffordableCount === 0"
-                title="Attune as much as you can afford"
+                :title="maxAffordableCount > 0 ? 'Level up as much as you can afford' : (levelUpReason === 'phase' ? `Requires Sun Phase ${levelUpReqPhase}` : 'Not enough Chimes')"
                 @click="attune(maxAffordableCount)"
               >
-                <span class="ps-level-btn-main">Max +{{ maxAffordableCount }}</span>
+                <span class="ps-level-btn-main">
+                  ✦ Level Up<template v-if="maxAffordableCount > 0"> +{{ maxAffordableCount }}</template>
+                </span>
                 <span class="ps-level-btn-cost">
                   <img src="/img/BardAbilities/BardChime.png" class="ps-level-chime" alt="" />
-                  {{ $formatNumber(maxCost) }}
+                  {{ $formatNumber(maxAffordableCount > 0 ? maxCost : levelUpCost) }}
                 </span>
               </button>
+              <span v-if="levelUpReason === 'chimes'" class="ps-level-hint">Not enough Chimes</span>
+              <span v-else-if="levelUpReason === 'phase'" class="ps-level-hint">
+                Requires Sun Phase {{ levelUpReqPhase }} · current {{ store.currentSunStage }}
+              </span>
             </div>
-
-            <!-- Phase gate + block hint -->
-            <div class="ps-level-gate">
-              <Icon icon="game-icons:sun" width="14" height="14" />
-              Next tier needs Sun Phase {{ levelUpReqPhase }} · current {{ store.currentSunStage }}
-            </div>
-            <span v-if="levelUpReason === 'chimes'" class="ps-level-hint">Not enough Chimes</span>
-            <span v-else-if="levelUpReason === 'phase'" class="ps-level-hint">
-              Reach Sun Phase {{ levelUpReqPhase }} to keep attuning
-            </span>
           </div>
 
           <!-- Config picker popover overlay -->
@@ -765,9 +692,9 @@ function chooseBuilding(buildingId: string) {
   scrollbar-color: #5c3310 #111;
 }
 
-/* Right detail panel — row layout: stage (flexible) + upgrade sidebar (fixed).
-   Height is the scarce resource on desktop, so we spend width instead and the
-   whole tab fits without scrolling. */
+/* Right detail panel — column layout: stage (flexible, dominates) on top +
+   compact horizontal upgrade dock pinned to the bottom. The sun system gets
+   the full remaining width AND height, so it stays the visual hero. */
 .ps-detail {
   position: relative;
   flex: 1;
@@ -775,7 +702,7 @@ function chooseBuilding(buildingId: string) {
   min-height: 0;
   overflow: hidden;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -1363,26 +1290,23 @@ function chooseBuilding(buildingId: string) {
   font-size: 0.7rem;
 }
 
-/* ── Attunement upgrade menu (frameless right sidebar) ──────────────────────── */
-.ps-upgrade {
+/* ── Attunement upgrade dock (slim bar under the stage) ─────────────────────── */
+/* One row: status | effect preview | buy. Frameless — integrated via a gold
+   separator on top, so the stage above keeps nearly all the vertical space.
+   flex-wrap + the effect zone's flex-basis make it reflow on narrow panels
+   without any breakpoints. */
+.ps-dock {
   --rc: #e8c040;
   flex-shrink: 0;
-  width: clamp(270px, 24vw, 330px);
-  min-height: 0;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 0.9rem 1rem;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
   background: #131009;
-  /* Frameless — integrated into the panel with just a gold separator on the left */
-  border-left: 3px solid transparent;
+  border-top: 3px solid transparent;
   border-image: linear-gradient(
-      to bottom,
+      to right,
       transparent,
       #5c3310 10%,
       #c89040 30%,
@@ -1394,27 +1318,76 @@ function chooseBuilding(buildingId: string) {
     1;
 }
 
+/* Zone 1: level + rank, stacked tight */
+.ps-dock-status {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+/* Zone 2: effect + HP preview — takes the flexible middle, wraps below when
+   the panel gets too narrow for one row */
+.ps-dock-effect {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* Zone 3: Max button (+ hint only when blocked) */
+.ps-dock-buy {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  min-width: 165px;
+}
+
+/* Target value + its "after +N" tag stay glued together when the row wraps */
+.ps-preview-next-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+/* Marks the preview target as the post-Max state ("after +N") */
+.ps-preview-gain {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
 /* Back-compat alias retained for shared inner rules */
 .ps-level-block {
   --rc: #e8c040;
 }
 
-.ps-level-info {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
-  width: 100%;
+/* Modern level readout: small muted caps label over a big bold number */
+.ps-level-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
 }
 
-.ps-level-title {
-  font-size: 0.95rem;
+.ps-level-value {
+  font-size: 1.55rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  line-height: 1;
   color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.3);
-  white-space: nowrap;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.35);
+  font-variant-numeric: tabular-nums;
 }
 
 .ps-level-bonus {
@@ -1516,31 +1489,7 @@ function chooseBuilding(buildingId: string) {
   text-align: center;
 }
 
-/* ── Rank badge ────────────────────────────────────────────────────────────── */
-.ps-rank-badge {
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.16rem 0.6rem;
-  border: 1px solid;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.35);
-  text-shadow: 0 0 8px currentColor;
-  white-space: nowrap;
-}
-
-/* ── Next-level preview ────────────────────────────────────────────────────── */
-.ps-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.5rem 0.6rem;
-  background: #100f0a;
-  border: 1px solid #2e1e0a;
-  border-radius: 4px;
-}
-
+/* ── Effect preview rows ───────────────────────────────────────────────────── */
 .ps-preview-row {
   display: flex;
   align-items: center;
@@ -1572,79 +1521,6 @@ function chooseBuilding(buildingId: string) {
   color: var(--rc, #e8c040);
   font-weight: 800;
   text-shadow: 0 0 6px color-mix(in oklch, var(--rc, #e8c040) 40%, transparent);
-}
-
-/* ── Milestone tracker ─────────────────────────────────────────────────────── */
-.ps-milestone {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.ps-milestone-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.ps-milestone-count {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #e8c040;
-  letter-spacing: 0.03em;
-}
-
-.ps-milestone-next {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.ps-milestone-track {
-  width: 100%;
-  height: 7px;
-  background: #1c1c18;
-  border: 1px solid #3a2a10;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.ps-milestone-fill {
-  height: 100%;
-  background: linear-gradient(to right, #c89040, #f0d060);
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* ── Bulk attune buttons ───────────────────────────────────────────────────── */
-/* Narrow sidebar: primary Attune spans the full width, ×10 and Max share a row */
-.ps-attune-row {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 0.45rem;
-}
-
-.ps-attune-row .ps-level-btn:first-child {
-  grid-column: 1 / -1;
-}
-
-.ps-level-btn--alt {
-  background: linear-gradient(to bottom, #3a8a48, #236014);
-}
-
-.ps-level-gate {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  text-align: center;
-  gap: 4px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: rgba(224, 160, 64, 0.7);
-  letter-spacing: 0.02em;
 }
 
 /* ── Permanent role choice ─────────────────────────────────────────────────── */
@@ -2571,11 +2447,11 @@ img.ps-role-icon {
 }
 
 /* ── Narrow-window fallback ─────────────────────────────────────────────────── */
-/* Below common desktop widths the sidebar would starve the stage — stack again
-   and allow the detail column to scroll. */
+/* Below common desktop widths the three dock zones would squeeze each other —
+   stack them and let the detail column scroll while the stage keeps a sane
+   minimum height. */
 @media (max-width: 950px) {
   .ps-detail {
-    flex-direction: column;
     overflow-y: auto;
   }
 
@@ -2586,33 +2462,6 @@ img.ps-role-icon {
   .ps-system {
     flex: none;
     height: clamp(240px, 42vh, 400px);
-  }
-
-  .ps-upgrade {
-    width: auto;
-    justify-content: flex-start;
-    overflow-y: visible;
-    border-left: none;
-    border-top: 3px solid transparent;
-    border-image: linear-gradient(
-        to right,
-        transparent,
-        #5c3310 10%,
-        #c89040 30%,
-        #f0d060 50%,
-        #c89040 70%,
-        #5c3310 90%,
-        transparent
-      )
-      1;
-  }
-
-  .ps-attune-row {
-    grid-template-columns: 2fr 1fr 1.4fr;
-  }
-
-  .ps-attune-row .ps-level-btn:first-child {
-    grid-column: auto;
   }
 
   .ps-role-grid--choose {

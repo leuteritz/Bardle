@@ -2092,11 +2092,11 @@ export const COMET_BG_TINT_WHITE_MIX = 0.55
 
 // ── Planet Tab stage sizing ───────────────────────────────────────────────────
 /** Sun image diameter (px) in the Planet Tab at the smallest phase radius. */
-export const PLANET_TAB_SUN_MIN_DIAMETER = 300
+export const PLANET_TAB_SUN_MIN_DIAMETER = 340
 /** Sun image diameter (px) in the Planet Tab at the largest phase radius. */
-export const PLANET_TAB_SUN_MAX_DIAMETER = 470
+export const PLANET_TAB_SUN_MAX_DIAMETER = 560
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
-export const PLANET_TAB_PLANET_DIAMETER = 96
+export const PLANET_TAB_PLANET_DIAMETER = 112
 
 // ── Bard Stats Tab starfield ──────────────────────────────────────────────────
 /** Generated backdrop starfield on the Star Forge stage (BardStatsTab).
