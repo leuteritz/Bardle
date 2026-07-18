@@ -24,7 +24,13 @@
             </span>
             <h1 class="pause-title">Paused</h1>
             <span class="pause-timer" aria-label="Pause duration">{{ pauseDuration }}</span>
-            <span class="pause-meta">Level {{ gameStore.level }} · Universe {{ gameStore.currentUniverse }}</span>
+            <div class="pause-meta-row">
+              <span class="meta-chip">Level {{ gameStore.level }}</span>
+              <span class="meta-divider" aria-hidden="true" />
+              <span class="meta-chip">Universe {{ gameStore.currentUniverse }}</span>
+              <span class="meta-divider" aria-hidden="true" />
+              <span class="meta-chip">Galaxy {{ galaxyStore.currentGalaxy }}</span>
+            </div>
           </header>
 
           <!-- Hero: frozen orbit + accumulating chimes -->
@@ -103,9 +109,16 @@
                 <Icon icon="game-icons:upgrade" width="16" height="16" aria-hidden="true" />
                 Level-Up ×{{ gameStore.pendingAugmentSelections.length }}
               </div>
-              <div v-if="pendingStars > 0" class="callout callout--green">
-                <Icon icon="game-icons:star-formation" width="16" height="16" aria-hidden="true" />
-                Stars ×{{ pendingStars }}
+              <div v-if="pendingStars > 0" class="callout callout--star">
+                <span class="star-orb" aria-hidden="true">
+                  <Icon icon="game-icons:star-formation" width="16" height="16" class="star-orb__icon" />
+                </span>
+                <span class="star-callout__text">
+                  {{ pendingStars === 1 ? 'Star spawned' : 'Stars spawned' }}
+                  <span class="star-callout__count">×{{ pendingStars }}</span>
+                </span>
+                <span class="star-sparkle star-sparkle--a" aria-hidden="true">✦</span>
+                <span class="star-sparkle star-sparkle--b" aria-hidden="true">✦</span>
               </div>
             </div>
           </div>
@@ -336,12 +349,30 @@ function particleStyle(i: number): Record<string, string> {
   letter-spacing: 0.12em;
   color: rgba(216, 200, 160, 0.55);
 }
-.pause-meta {
+.pause-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: clamp(0.62rem, 0.85vw, 0.7rem);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(200, 185, 140, 0.4);
+  color: rgba(200, 185, 140, 0.45);
+  white-space: nowrap;
+}
+.meta-divider {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(200, 185, 140, 0.35);
 }
 
 /* ── Orbit hero ───────────────────────────────────────── */
@@ -628,10 +659,91 @@ function particleStyle(i: number): Record<string, string> {
   border-color: rgba(232, 192, 64, 0.3);
   color: #e8c040;
 }
-.callout--green {
-  background: rgba(82, 184, 48, 0.1);
-  border-color: rgba(82, 184, 48, 0.3);
-  color: #62d840;
+.callout--star {
+  position: relative;
+  padding: 7px 16px 7px 8px;
+  background: linear-gradient(135deg, rgba(240, 208, 96, 0.14), rgba(64, 192, 180, 0.08));
+  border-color: rgba(240, 208, 96, 0.45);
+  color: #f4e2a0;
+  overflow: visible;
+  animation: star-glow 2.6s ease-in-out infinite;
+}
+@keyframes star-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(240, 208, 96, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(240, 208, 96, 0.3);
+  }
+}
+.star-orb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 236, 160, 0.35), rgba(240, 208, 96, 0.08) 70%);
+  border: 1px solid rgba(240, 208, 96, 0.5);
+  flex-shrink: 0;
+}
+.star-orb__icon {
+  color: #f0d060;
+  filter: drop-shadow(0 0 5px rgba(240, 208, 96, 0.8));
+  animation: star-twinkle 2.6s ease-in-out infinite;
+}
+@keyframes star-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.18) rotate(12deg);
+    opacity: 1;
+  }
+}
+.star-callout__text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.star-callout__count {
+  font-size: 1.05em;
+  font-weight: 800;
+  color: #f0d060;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(240, 208, 96, 0.55);
+}
+.star-sparkle {
+  position: absolute;
+  font-size: 8px;
+  line-height: 1;
+  color: rgba(240, 208, 96, 0.85);
+  pointer-events: none;
+  animation: sparkle-blink 2.2s ease-in-out infinite;
+}
+.star-sparkle--a {
+  top: -4px;
+  right: 10px;
+}
+.star-sparkle--b {
+  bottom: -3px;
+  left: 14px;
+  font-size: 6px;
+  animation-delay: 1.1s;
+}
+@keyframes sparkle-blink {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ── Continue button ──────────────────────────────────── */
@@ -723,7 +835,10 @@ function particleStyle(i: number): Record<string, string> {
   .orbit-ring--inner,
   .orbit-chime,
   .stat-tile--crit,
-  .callout--champion {
+  .callout--champion,
+  .callout--star,
+  .star-orb__icon,
+  .star-sparkle {
     animation: none;
   }
   .continue-btn,
