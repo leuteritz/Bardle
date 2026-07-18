@@ -1716,11 +1716,12 @@ export const FORGE_BARGAIN_RESTOCK_MS = 8 * 3_600_000
 export const FORGE_BARGAIN_REROLL_MATERIAL = 'dark_matter'
 export const FORGE_BARGAIN_REROLL_COST = 1
 
-// Tree zoom (wheel + buttons)
+// Tree zoom (wheel + buttons). The default starts zoomed-in on the sun and
+// its five core rays; zooming out reveals the branch and leaf rings.
 export const FORGE_TREE_ZOOM_MIN = 0.55
-export const FORGE_TREE_ZOOM_MAX = 1.4
+export const FORGE_TREE_ZOOM_MAX = 2.2
 export const FORGE_TREE_ZOOM_STEP = 0.15
-export const FORGE_TREE_ZOOM_DEFAULT = 0.92
+export const FORGE_TREE_ZOOM_DEFAULT = 1.7
 
 // ── Battle Sigil (Team tab) ───────────────────────────────────────────────────
 // Sigil geometry — the sigil lives on a square stage; the 5 role nodes sit on a

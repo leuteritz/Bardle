@@ -261,7 +261,10 @@ export const useStarForgeStore = defineStore('starForge', {
     // ── Effect getters (one per integration point) ────────────────────────────
     /** Multiplier on expedition durations (< 1 = faster). */
     expeditionSpeedMult(): number {
-      return Math.max(MIN_EXPEDITION_MULT, 1 - this.branchEffect('solarSails') / 100)
+      return Math.max(
+        MIN_EXPEDITION_MULT,
+        1 - (this.branchEffect('solarSails') + this.relicEffect('stellarCompass')) / 100,
+      )
     },
 
     /** Multiplier on offline earnings. */
@@ -312,14 +315,15 @@ export const useStarForgeStore = defineStore('starForge', {
       return Math.max(MIN_DWELL_MULT, 1 - this.branchEffect('allegro') / 100)
     },
 
-    /** Multiplier on orbiting champion DPS (Warcry + Choir of Champions). */
+    /** Multiplier on orbiting champion DPS (Warcry + Choir of Champions + Hunter's Vigil). */
     championDpsMult(): number {
-      return 1 + (this.branchEffect('warcry') + this.relicEffect('choirOfChampions')) / 100
+      const vigil = this.constellationForged('huntersVigil') ? 10 : 0
+      return 1 + (this.branchEffect('warcry') + this.relicEffect('choirOfChampions') + vigil) / 100
     },
 
-    /** Multiplier on damage dealt to bosses. */
+    /** Multiplier on damage dealt to bosses (Shatter + Ember Crown). */
     bossDamageMult(): number {
-      return 1 + this.branchEffect('shatter') / 100
+      return 1 + (this.branchEffect('shatter') + this.relicEffect('emberCrown')) / 100
     },
 
     /** Fraction of click damage splashed to all enemies (Percussive Nova). */
@@ -334,9 +338,10 @@ export const useStarForgeStore = defineStore('starForge', {
       return stellar * buff
     },
 
-    /** Multiplier on total CpC (Midas Cadence buff). */
+    /** Multiplier on total CpC (Golden Tempest + Midas Cadence buff). */
     cpcMult(): number {
-      return this.buffActive('cpcX2') ? 2 : 1
+      const tempest = this.constellationForged('goldenTempest') ? 1.12 : 1
+      return tempest * (this.buffActive('cpcX2') ? 2 : 1)
     },
   },
 
@@ -348,7 +353,9 @@ export const useStarForgeStore = defineStore('starForge', {
       const hadBuffs = this.activeBuffs.length > 0
       this.activeBuffs = this.activeBuffs.filter((b) => b.expiresAt > this.forgeNow)
       if (hadBuffs && this.activeBuffs.length === 0) this.recalcRates()
-      if (this.bargainDealId === '' || this.forgeNow >= this.bargainRestockAt) {
+      // Restock also when a persisted deal id no longer exists in the pool —
+      // otherwise the shop would show no deal until the next restock window.
+      if (!this.activeDeal || this.forgeNow >= this.bargainRestockAt) {
         this.restockBargain()
       }
     },
@@ -442,6 +449,11 @@ export const useStarForgeStore = defineStore('starForge', {
           const remaining = solar.phaseDwellRemainingMs
           solar.phaseEnteredAt -= Math.floor(remaining * (def.dwellSkipPct ?? 0))
           solar.tickDwell()
+          break
+        }
+        case 'heal': {
+          const player = usePlayerStore()
+          player.currentHP = player.maxHP
           break
         }
       }

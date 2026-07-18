@@ -19,14 +19,16 @@ import StarForgePanel from './StarForgePanel.vue'
   overflow: hidden;
 }
 
+/* Tree gets every spare pixel; the forge column stays a readable, bounded
+   width across common desktop resolutions (1280 → 4K). */
 .shop-tree-col {
-  flex: 1.15;
+  flex: 1;
   min-width: 0;
   border-right: 2px solid #2a1a08;
 }
 
 .shop-forge-col {
-  flex: 1;
+  flex: 0 0 clamp(340px, 32vw, 440px);
   min-width: 0;
 }
 

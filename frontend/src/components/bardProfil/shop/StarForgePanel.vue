@@ -6,101 +6,13 @@
       <span class="forge-tagline">Grow the tree outward. Craft its light into legend.</span>
     </div>
 
-    <!-- Currency chips -->
-    <div class="chip-row">
-      <div class="chip">
-        <img src="/img/BardGold.png" class="chip-img chip-img--gold" alt="Chimes" />
-        <span class="chip-value chip-value--gold">{{ formatNumber(gameStore.chimes) }}</span>
+    <!-- Active blessings — running bargain buffs with countdown -->
+    <div v-if="activeBuffs.length > 0" class="blessing-row">
+      <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
+        <Icon icon="game-icons:magic-swirl" width="14" height="14" class="blessing-icon" />
+        <span class="blessing-name">{{ buffLabel(buff.id) }}</span>
+        <span class="blessing-time">{{ formatDuration(buff.expiresAt - forgeStore.forgeNow) }}</span>
       </div>
-      <div
-        v-for="mat in MATERIALS"
-        :key="mat.id"
-        class="chip"
-        :class="{ 'chip--empty': (inventoryStore.collectedMaterials[mat.id] ?? 0) === 0 }"
-        :title="mat.name"
-      >
-        <img v-if="mat.image" :src="mat.image" class="chip-img" :alt="mat.name" />
-        <span class="chip-value" :style="{ color: MATERIAL_CHIP_COLORS[mat.id] }">
-          {{ inventoryStore.collectedMaterials[mat.id] ?? 0 }}
-        </span>
-      </div>
-    </div>
-
-    <!-- Phase status banner -->
-    <div class="phase-banner" :class="{ 'phase-banner--ready': solarStore.canUpgradeStar }">
-      <Icon
-        :icon="solarStore.isCometState ? 'game-icons:asteroid' : 'game-icons:sunbeams'"
-        width="30"
-        height="30"
-        class="phase-banner-icon"
-      />
-      <div class="phase-banner-body">
-        <div class="phase-banner-title-row">
-          <span
-            class="phase-name"
-            :style="{ color: solarStore.isCometState ? COMET_PHASE_DATA.accent : currentStage.phasePrimary }"
-          >
-            {{ solarStore.isCometState ? COMET_PHASE_DATA.name : currentStage.name }}
-          </span>
-          <span class="phase-count">
-            {{
-              solarStore.isCometState
-                ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
-                : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`
-            }}
-          </span>
-        </div>
-        <div v-if="solarStore.isCometState && solarStore.canUpgradeStar" class="phase-hint">
-          Ignite the comet into <b class="phase-hint-next">Spark</b> — your first star.
-        </div>
-        <div v-else-if="solarStore.isCometState && !solarStore.branchesReadyForEvolve" class="phase-hint">
-          Grow all five core rays to Lv 1 to ready the Ignition —
-          <b class="phase-hint-next">{{ solarStore.cometStage }} / 5 kindled</b>
-        </div>
-        <div v-else-if="solarStore.isCometState" class="phase-hint">
-          The comet must drift a while longer — ready in
-          <b class="phase-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
-        </div>
-        <div v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1" class="phase-hint">
-          The sun has reached its <b class="phase-hint-next">Finale</b> — the tree is fully grown.
-        </div>
-        <div v-else-if="solarStore.canUpgradeStar" class="phase-hint">
-          Evolve to <b class="phase-hint-next">{{ nextStage.name }}</b> to advance the tree —
-          <b class="phase-hint-unlock">{{ nextPhaseUnlockText }}</b>
-        </div>
-        <div v-else-if="!solarStore.branchesReadyForEvolve" class="phase-hint">
-          Grow all five core rays to Lv {{ solarStore.starPhase + 1 }} to ready the next evolution.
-        </div>
-        <div v-else class="phase-hint">
-          The sun must dwell in this phase — ready in
-          <b class="phase-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
-        </div>
-      </div>
-      <button
-        v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
-        class="evolve-btn"
-        :disabled="solarStore.isUpgrading"
-        @click="handleEvolve"
-      >
-        {{
-          solarStore.isUpgrading
-            ? solarStore.isCometState ? 'Igniting…' : 'Evolving…'
-            : solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
-        }}
-      </button>
-      <span v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1" class="ready-badge">✦ COMPLETE</span>
-    </div>
-
-    <!-- Phase progress pips -->
-    <div class="phase-pips">
-      <span
-        v-for="(phase, i) in STAR_PHASE_DATA"
-        :key="phase.name"
-        class="phase-pip"
-        :class="{ 'phase-pip--done': !solarStore.isCometState && i <= solarStore.starPhase }"
-        :style="!solarStore.isCometState && i <= solarStore.starPhase ? { background: phase.phasePrimary, boxShadow: `0 0 5px ${phase.phaseGlow}` } : {}"
-        :title="phase.name"
-      />
     </div>
 
     <!-- ── CRAFTED RELICS ─────────────────────────────────────────────────── -->
@@ -268,15 +180,26 @@
         </button>
       </div>
     </div>
+
+    <!-- Placeholder while no deal is stocked (e.g. right after a save migration) -->
+    <div v-else class="bargain-card bargain-card--empty">
+      <div class="bargain-top">
+        <div class="bargain-icon-box bargain-icon-box--empty">
+          <Icon icon="game-icons:night-sky" width="28" height="28" class="bargain-icon-empty" />
+        </div>
+        <div class="bargain-info">
+          <span class="bargain-name bargain-name--empty">The merchant drifts between stars…</span>
+          <span class="bargain-desc">A new bargain arrives with the next restock.</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/gameStore'
 import { useInventoryStore } from '@/stores/inventoryStore'
-import { useSolarUpgradeStore } from '@/stores/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/starForgeStore'
 import { MATERIALS } from '@/config/materials'
 import {
@@ -285,58 +208,25 @@ import {
   getForgeNode,
 } from '@/config/starForge'
 import {
-  STAR_PHASE_DATA,
-  COMET_PHASE_DATA,
   FORGE_CONSTELLATION_REQUIRED_LEVEL,
   FORGE_BARGAIN_REROLL_COST,
   FORGE_BARGAIN_REROLL_MATERIAL,
-  FORGE_BRANCH_UNLOCK_PHASE,
-  FORGE_LEAF_UNLOCK_PHASE,
-  SUN_PHASE_DISPLAY_OFFSET,
-  SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 import { formatNumber } from '@/config/numberFormat'
 import { useActionToast } from '@/composables/useActionToast'
-import type { ForgeRelicDef, ForgeConstellationDef } from '@/types'
+import type { ForgeRelicDef, ForgeConstellationDef, ForgeActiveBuff } from '@/types'
 
-const gameStore = useGameStore()
 const inventoryStore = useInventoryStore()
-const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
 const { showToast } = useActionToast()
 
-/** Chip text colors per material — tuned to each material's artwork. */
-const MATERIAL_CHIP_COLORS: Record<string, string> = {
-  stardust: '#f0d878',
-  moon_crystal: '#a8d8ff',
-  nebula_quartz: '#86d0ff',
-  solar_essence: '#ffb860',
-  void_shard: '#b98cff',
-  dark_matter: '#c060ff',
-}
-
-// ── Phase banner ──────────────────────────────────────────────────────────────
-const currentStage = computed(() => STAR_PHASE_DATA[solarStore.starPhase])
-/** While still a comet, the next evolution target is Spark (phase 0). */
-const nextStage = computed(() =>
-  solarStore.isCometState
-    ? STAR_PHASE_DATA[0]
-    : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, STAR_PHASE_DATA.length - 1)],
+// ── Active blessings (running bargain buffs) ─────────────────────────────────
+const activeBuffs = computed(() =>
+  forgeStore.activeBuffs.filter((b) => b.expiresAt > forgeStore.forgeNow),
 )
 
-const nextPhaseUnlockText = computed(() => {
-  const nextPhase = solarStore.starPhase + 1
-  if (nextPhase === FORGE_BRANCH_UNLOCK_PHASE) return '10 new branches open on the tree'
-  if (nextPhase === FORGE_LEAF_UNLOCK_PHASE) return '10 leaves open on the tree'
-  return 'branches gain +1 max level'
-})
-
-function handleEvolve(): void {
-  if (!solarStore.canUpgradeStar) return
-  const wasComet = solarStore.isCometState
-  const targetName = nextStage.value.name
-  solarStore.upgradeStar()
-  showToast(wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`)
+function buffLabel(id: ForgeActiveBuff['id']): string {
+  return id === 'cpcX2' ? '2× Chimes / Click' : '2× Chimes / Sec'
 }
 
 // ── Relics ────────────────────────────────────────────────────────────────────
@@ -436,6 +326,12 @@ function formatDuration(ms: number): string {
   scrollbar-color: #5c3310 #111;
 }
 
+/* Cards must never be squashed by the flex column — children with
+   overflow:hidden (e.g. the bargain card) would otherwise shrink to a sliver. */
+.forge-panel > * {
+  flex-shrink: 0;
+}
+
 /* ══════════════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════════════ */
@@ -458,167 +354,40 @@ function formatDuration(ms: number): string {
 }
 
 /* ══════════════════════════════════════════════════
-   CURRENCY CHIPS
+   ACTIVE BLESSINGS
 ══════════════════════════════════════════════════ */
-.chip-row {
+.blessing-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.blessing-chip {
+  display: inline-flex;
   align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(150, 80, 220, 0.1);
+  border: 1px solid rgba(150, 80, 220, 0.35);
+  border-radius: 6px;
 }
 
-.chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: #1e1006;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-}
-
-.chip--empty {
-  opacity: 0.45;
-}
-
-.chip-img {
-  height: 15px;
-  width: auto;
-  object-fit: contain;
-}
-
-.chip-img--gold {
-  width: 18px;
-  height: 18px;
-}
-
-.chip-value {
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.chip-value--gold {
-  color: #e8c040;
-}
-
-/* ══════════════════════════════════════════════════
-   PHASE BANNER
-══════════════════════════════════════════════════ */
-.phase-banner {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 12px 13px;
-  background: linear-gradient(120deg, #16120c, #100d07);
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-}
-
-.phase-banner--ready {
-  background: linear-gradient(120deg, #12160c, #0d1207);
-  border-color: #4a8a28;
-  box-shadow: inset 0 0 22px rgba(82, 184, 48, 0.1);
-}
-
-.phase-banner-icon {
-  color: #8fe060;
+.blessing-icon {
+  color: #c9a0ff;
   flex-shrink: 0;
 }
 
-.phase-banner:not(.phase-banner--ready) .phase-banner-icon {
-  color: #c89040;
-}
-
-.phase-banner-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.phase-banner-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.phase-name {
-  font-size: 14px;
-  font-weight: 900;
-}
-
-.phase-count {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.phase-hint {
+.blessing-name {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1.4;
+  font-weight: 900;
+  color: #c9a0ff;
 }
 
-.phase-hint-next {
-  color: #ffb347;
-}
-
-.phase-hint-unlock {
-  color: #8fe060;
-}
-
-.ready-badge {
+.blessing-time {
   font-size: 10px;
-  font-weight: 900;
-  color: #a0ffa0;
-  background: rgba(82, 184, 48, 0.15);
-  border: 1px solid rgba(82, 184, 48, 0.4);
-  border-radius: 3px;
-  padding: 4px 9px;
-  flex-shrink: 0;
-}
-
-.evolve-btn {
-  padding: 8px 16px;
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  color: #08130a;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  animation: sf-ready 2s ease-in-out infinite;
-}
-
-.evolve-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  animation: none;
-}
-
-/* ══════════════════════════════════════════════════
-   PHASE PIPS
-══════════════════════════════════════════════════ */
-.phase-pips {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 2px;
-}
-
-.phase-pip {
-  flex: 1;
-  height: 5px;
-  border-radius: 2px;
-  background: #2a1a08;
-  border: 1px solid #3e200a;
-}
-
-.phase-pip--done {
-  border: none;
+  font-weight: 700;
+  color: rgba(201, 160, 255, 0.6);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ══════════════════════════════════════════════════
@@ -681,13 +450,19 @@ function formatDuration(ms: number): string {
    RELIC CARDS
 ══════════════════════════════════════════════════ */
 .relic-card {
-  background: #16140e;
-  border: 2px solid #3e200a;
-  border-radius: 4px;
-  padding: 11px 13px;
+  background: linear-gradient(150deg, #17130b, #120f08);
+  border: 1px solid #3e200a;
+  border-radius: 8px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.relic-card:not(.relic-card--locked):hover {
+  border-color: #5c3310;
+  transform: translateY(-1px);
 }
 
 .relic-card--ready {
@@ -714,7 +489,7 @@ function formatDuration(ms: number): string {
 .relic-icon-box {
   width: 42px;
   height: 42px;
-  border-radius: 4px;
+  border-radius: 8px;
   background: #12100a;
   border: 1px solid #5c3310;
   display: flex;
@@ -863,7 +638,7 @@ function formatDuration(ms: number): string {
   margin-left: auto;
   padding: 7px 16px;
   border: 1px solid #6ec040;
-  border-radius: 4px;
+  border-radius: 6px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   color: #08130a;
   font-size: 12px;
@@ -896,10 +671,15 @@ function formatDuration(ms: number): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  background: #16140e;
-  border: 2px solid #3e200a;
-  border-radius: 4px;
+  padding: 10px 13px;
+  background: linear-gradient(150deg, #17130b, #120f08);
+  border: 1px solid #3e200a;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.constellation-row:not(.constellation-row--locked):hover {
+  border-color: #5c3310;
 }
 
 .constellation-row--forged {
@@ -948,8 +728,8 @@ function formatDuration(ms: number): string {
 ══════════════════════════════════════════════════ */
 .bargain-card {
   position: relative;
-  border-radius: 4px;
-  border: 2px solid #7a4e20;
+  border-radius: 8px;
+  border: 1px solid #7a4e20;
   padding: 13px;
   background: linear-gradient(120deg, #1c130a, #241608);
   overflow: hidden;
@@ -974,10 +754,30 @@ function formatDuration(ms: number): string {
   gap: 12px;
 }
 
+.bargain-card--empty {
+  border-color: #3e200a;
+  background: linear-gradient(150deg, #16110a, #110e07);
+}
+
+.bargain-icon-box.bargain-icon-box--empty {
+  background: #12100a;
+  border-color: #3e200a;
+  box-shadow: none;
+}
+
+.bargain-icon-empty {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.bargain-name.bargain-name--empty {
+  color: rgba(255, 223, 128, 0.55);
+  font-size: 13px;
+}
+
 .bargain-icon-box {
   width: 50px;
   height: 50px;
-  border-radius: 4px;
+  border-radius: 8px;
   background: radial-gradient(circle at 40% 35%, #ffe6a0, #c88018 75%);
   border: 1px solid #e8c060;
   display: flex;
@@ -1044,7 +844,7 @@ function formatDuration(ms: number): string {
   margin-left: auto;
   padding: 7px 16px;
   border: 1px solid #e8c060;
-  border-radius: 4px;
+  border-radius: 6px;
   background: linear-gradient(to bottom, #e8c040, #b8860a);
   color: #2a1a04;
   font-size: 12px;
@@ -1066,7 +866,7 @@ function formatDuration(ms: number): string {
 .reroll-btn {
   padding: 7px 12px;
   border: 1px solid #5c3310;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #1e1006;
   color: #c9a0ff;
   font-size: 11px;

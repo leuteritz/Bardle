@@ -6,24 +6,84 @@
     <div class="tree-stage-stars tree-stage-stars--mid" aria-hidden="true" />
     <div class="tree-stage-stars tree-stage-stars--near" aria-hidden="true" />
 
-    <!-- Legend -->
-    <div class="tree-legend">
-      <div class="legend-row">
-        <span class="legend-dot" style="--dot: #e8c040" />
-        <span class="legend-text legend-text--strong">Root · Core Ray</span>
+    <!-- Phase dock — current sun phase, progress & evolve -->
+    <div class="phase-dock" :class="{ 'phase-dock--ready': solarStore.canUpgradeStar }">
+      <Icon
+        :icon="solarStore.isCometState ? 'game-icons:asteroid' : 'game-icons:sunbeams'"
+        width="26"
+        height="26"
+        class="dock-icon"
+      />
+      <div class="dock-body">
+        <div class="dock-title-row">
+          <span
+            class="dock-phase-name"
+            :style="{ color: solarStore.isCometState ? COMET_PHASE_DATA.accent : currentStage.phasePrimary }"
+          >
+            {{ solarStore.isCometState ? COMET_PHASE_DATA.name : currentStage.name }}
+          </span>
+          <span class="dock-phase-count">
+            {{
+              solarStore.isCometState
+                ? `Phase 1 / ${SUN_PHASE_DISPLAY_TOTAL}`
+                : `Phase ${solarStore.starPhase + SUN_PHASE_DISPLAY_OFFSET} / ${SUN_PHASE_DISPLAY_TOTAL}`
+            }}
+          </span>
+          <span class="dock-pips">
+            <span
+              v-for="(phase, i) in STAR_PHASE_DATA"
+              :key="phase.name"
+              class="dock-pip"
+              :class="{ 'dock-pip--done': !solarStore.isCometState && i <= solarStore.starPhase }"
+              :style="!solarStore.isCometState && i <= solarStore.starPhase ? { background: phase.phasePrimary, boxShadow: `0 0 4px ${phase.phaseGlow}` } : {}"
+              :title="phase.name"
+            />
+          </span>
+        </div>
+        <div class="dock-hint">
+          <template v-if="solarStore.isCometState && solarStore.canUpgradeStar">
+            Ignite the comet into <b class="dock-hint-next">Spark</b> — your first star.
+          </template>
+          <template v-else-if="solarStore.isCometState && !solarStore.branchesReadyForEvolve">
+            Grow all five core rays to Lv 1 —
+            <b class="dock-hint-next">{{ solarStore.cometStage }} / 5 kindled</b>
+          </template>
+          <template v-else-if="solarStore.isCometState">
+            The comet must drift a while longer — ready in
+            <b class="dock-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
+          </template>
+          <template v-else-if="solarStore.starPhase >= STAR_PHASE_DATA.length - 1">
+            The sun has reached its <b class="dock-hint-next">Finale</b> — the tree is fully grown.
+          </template>
+          <template v-else-if="solarStore.canUpgradeStar">
+            Evolve to <b class="dock-hint-next">{{ nextStage.name }}</b> —
+            <b class="dock-hint-unlock">{{ nextPhaseUnlockText }}</b>
+          </template>
+          <template v-else-if="!solarStore.branchesReadyForEvolve">
+            Grow all five core rays to Lv {{ solarStore.starPhase + 1 }} to ready the next evolution.
+          </template>
+          <template v-else>
+            The sun must dwell in this phase — ready in
+            <b class="dock-hint-next">{{ formatDuration(solarStore.phaseDwellRemainingMs) }}</b>
+          </template>
+        </div>
       </div>
-      <div class="legend-row">
-        <span class="legend-dot" style="--dot: #7bb8ff" />
-        <span class="legend-text">Branch · unlocked now</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-dot" style="--dot: #c89040" />
-        <span class="legend-text">Ready to grow</span>
-      </div>
-      <div class="legend-row">
-        <span class="legend-dot legend-dot--flat" style="--dot: #7a5a30" />
-        <span class="legend-text legend-text--dim">Leaf · future phase</span>
-      </div>
+      <button
+        v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
+        class="dock-evolve-btn"
+        :disabled="solarStore.isUpgrading"
+        @click="handleEvolve"
+      >
+        {{
+          solarStore.isUpgrading
+            ? solarStore.isCometState ? 'Igniting…' : 'Evolving…'
+            : solarStore.isCometState ? '✦ Ignite' : '✦ Evolve'
+        }}
+      </button>
+      <span
+        v-else-if="!solarStore.isCometState && solarStore.starPhase >= STAR_PHASE_DATA.length - 1"
+        class="dock-complete"
+      >✦ COMPLETE</span>
     </div>
 
     <!-- Zoom control -->
@@ -36,7 +96,13 @@
     </div>
 
     <!-- Scaled tree stage -->
-    <div class="tree-stage" :style="{ transform: `translate(-50%, -50%) scale(${totalScale})` }">
+    <div
+      class="tree-stage"
+      :style="{
+        transform: `translate(-50%, -50%) scale(${totalScale})`,
+        '--inv-scale': (1 / totalScale).toFixed(4),
+      }"
+    >
       <svg
         class="tree-svg"
         :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
@@ -200,6 +266,7 @@ import {
   FORGE_TREE_ZOOM_STEP,
   FORGE_TREE_ZOOM_DEFAULT,
   SUN_PHASE_DISPLAY_OFFSET,
+  SUN_PHASE_DISPLAY_TOTAL,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -457,8 +524,11 @@ function lockReason(node: TreeNode): string {
 }
 
 function isTooltipBelow(angleDeg: number): boolean {
+  // Open tooltips toward the stage center: top-half nodes open downward,
+  // bottom-half nodes upward — so they never clip the panel edge or the
+  // phase dock, even at high zoom.
   const n = ((angleDeg % 360) + 360) % 360
-  return n > 0 && n < 180
+  return n >= 180
 }
 
 function materialImage(matId: string): string | undefined {
@@ -480,6 +550,31 @@ function flashSun(): void {
   }, 500)
 }
 
+// ── Phase dock (evolve & status) ──────────────────────────────────────────────
+const nextPhaseUnlockText = computed(() => {
+  const nextPhase = solarStore.starPhase + 1
+  if (nextPhase === FORGE_BRANCH_UNLOCK_PHASE) return '10 new branches open on the tree'
+  if (nextPhase === FORGE_LEAF_UNLOCK_PHASE) return '10 leaves open on the tree'
+  return 'branches gain +1 max level'
+})
+
+function handleEvolve(): void {
+  if (!solarStore.canUpgradeStar) return
+  const wasComet = solarStore.isCometState
+  const targetName = nextStage.value.name
+  solarStore.upgradeStar()
+  showToast(wasComet ? `The comet ignites into ${targetName}…` : `Star evolving to ${targetName}…`)
+}
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(h)}:${pad(m)}:${pad(s)}`
+}
+
 function handleNodeClick(node: TreeNode): void {
   if (node.tier === 'root') {
     const before = solarStore.branchLevel(node.id as SolarBranchId)
@@ -497,6 +592,9 @@ function handleNodeClick(node: TreeNode): void {
 }
 
 // ── Zoom (buttons + wheel) with container fit ─────────────────────────────────
+/** Vertical space (px) reserved for the floating phase dock at the top. */
+const PHASE_DOCK_HEADROOM = 96
+
 const panelEl = ref<HTMLElement | null>(null)
 const zoom = ref(FORGE_TREE_ZOOM_DEFAULT)
 const fitScale = ref(1)
@@ -508,7 +606,11 @@ onMounted(() => {
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (!rect) return
-    fitScale.value = Math.min(rect.width, rect.height) / FORGE_STAGE_SIZE
+    // Leave headroom for the floating phase dock so top nodes stay visible.
+    fitScale.value = Math.max(
+      0.3,
+      Math.min(rect.width - 16, rect.height - PHASE_DOCK_HEADROOM) / FORGE_STAGE_SIZE,
+    )
   })
   resizeObserver.observe(panelEl.value)
 })
@@ -675,67 +777,152 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 /* ══════════════════════════════════════════════════
-   LEGEND & ZOOM
+   PHASE DOCK
 ══════════════════════════════════════════════════ */
-.tree-legend {
+.phase-dock {
   position: absolute;
   top: 12px;
-  left: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 9px 11px;
-  background: rgba(16, 14, 8, 0.9);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-}
-
-.legend-row {
-  display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
+  width: min(560px, calc(100% - 24px));
+  padding: 10px 14px;
+  background: rgba(18, 14, 8, 0.82);
+  border: 1px solid rgba(200, 144, 64, 0.35);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.3s ease;
 }
 
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--dot);
-  box-shadow: 0 0 5px var(--dot);
+.phase-dock--ready {
+  border-color: rgba(110, 192, 64, 0.55);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    inset 0 0 26px rgba(82, 184, 48, 0.08);
+}
+
+.dock-icon {
+  color: #c89040;
   flex-shrink: 0;
 }
 
-.legend-dot--flat {
-  box-shadow: none;
+.phase-dock--ready .dock-icon {
+  color: #8fe060;
 }
 
-.legend-text {
+.dock-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dock-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dock-phase-name {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.dock-phase-count {
   font-size: 10px;
-  color: #c9b890;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
 }
 
-.legend-text--strong {
-  color: #e8d8b0;
-  font-weight: 700;
+.dock-pips {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.legend-text--dim {
-  color: #8a7a5a;
+.dock-pip {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: #2a1a08;
+  border: 1px solid #3e200a;
 }
 
+.dock-pip--done {
+  border: none;
+}
+
+.dock-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+}
+
+.dock-hint-next {
+  color: #ffb347;
+}
+
+.dock-hint-unlock {
+  color: #8fe060;
+}
+
+.dock-evolve-btn {
+  padding: 8px 16px;
+  border: 1px solid #6ec040;
+  border-radius: 7px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  color: #08130a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: node-ready 2s ease-in-out infinite;
+}
+
+.dock-evolve-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.dock-complete {
+  font-size: 10px;
+  font-weight: 900;
+  color: #a0ffa0;
+  background: rgba(82, 184, 48, 0.15);
+  border: 1px solid rgba(82, 184, 48, 0.4);
+  border-radius: 6px;
+  padding: 4px 9px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════
+   ZOOM
+══════════════════════════════════════════════════ */
 .tree-zoom {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  bottom: 14px;
+  right: 14px;
   z-index: 20;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
-  background: rgba(16, 14, 8, 0.9);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
+  padding: 6px 10px;
+  background: rgba(18, 14, 8, 0.82);
+  border: 1px solid rgba(200, 144, 64, 0.25);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .zoom-btn {
@@ -784,7 +971,8 @@ const nextPhasePreviewStyle = computed(() => ({
 ══════════════════════════════════════════════════ */
 .tree-stage {
   position: absolute;
-  top: 50%;
+  /* Centered in the area below the floating phase dock (headroom / 2). */
+  top: calc(50% + 48px);
   left: 50%;
   width: 820px;
   height: 820px;
@@ -1060,26 +1248,32 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-tooltip {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  width: 190px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 8px 10px 9px;
+  /* Counter-scale against the stage zoom so the tooltip always renders at a
+     constant, readable screen size — regardless of zoom level or resolution. */
+  transform: translateX(-50%) scale(var(--inv-scale, 1));
+  width: 230px;
+  background: rgba(20, 16, 9, 0.94);
+  border: 1px solid rgba(200, 144, 64, 0.45);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 10px 12px 11px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   z-index: 30;
   pointer-events: none;
 }
 
 .node-tooltip--below {
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
+  transform-origin: top center;
 }
 
 .node-tooltip--above {
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
+  transform-origin: bottom center;
 }
 
 .tt-head {
@@ -1090,32 +1284,32 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .tt-name {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.3px;
 }
 
 .tt-tier {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   color: rgba(255, 255, 255, 0.35);
 }
 
 .tt-desc {
-  font-size: 10px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .tt-lock {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  color: rgba(255, 200, 80, 0.6);
+  color: rgba(255, 200, 80, 0.65);
 }
 
 .tt-maxed {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   color: #e8c040;
   text-align: center;
@@ -1123,14 +1317,14 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .tt-next {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
-  color: #52b830;
+  color: #6ecc44;
 }
 
 .tt-arrow {
   color: rgba(255, 255, 255, 0.3);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .tt-cost-row {
@@ -1141,7 +1335,7 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .tt-cost {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   color: #a0ffa0;
   background: rgba(82, 184, 48, 0.15);
@@ -1159,8 +1353,8 @@ const nextPhasePreviewStyle = computed(() => ({
 .tt-mat {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font-size: 10px;
+  gap: 3px;
+  font-size: 11px;
   font-weight: 900;
   color: #e8d8b0;
 }
@@ -1170,7 +1364,7 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .tt-mat-img {
-  height: 13px;
+  height: 15px;
   width: auto;
   object-fit: contain;
 }
@@ -1181,6 +1375,7 @@ const nextPhasePreviewStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .node-circle--affordable,
   .sun-wrapper.sun-flash,
+  .dock-evolve-btn,
   .tree-stage-stars {
     animation: none;
   }

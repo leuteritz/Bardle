@@ -708,7 +708,7 @@ export interface ForgeConstellationDef {
   pairLabel: string
 }
 
-export type ForgeBargainKind = 'buff' | 'materials' | 'gold' | 'dwellSkip'
+export type ForgeBargainKind = 'buff' | 'materials' | 'gold' | 'dwellSkip' | 'heal'
 
 export interface ForgeBargainDef {
   id: string
