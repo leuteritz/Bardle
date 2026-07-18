@@ -17,19 +17,29 @@
         <div class="pause-panel">
           <!-- Header -->
           <header class="pause-header">
-            <span class="pause-eyebrow">
-              <span class="eyebrow-line" aria-hidden="true" />
-              The galaxy holds its breath
-              <span class="eyebrow-line" aria-hidden="true" />
-            </span>
             <h1 class="pause-title">Paused</h1>
-            <span class="pause-timer" aria-label="Pause duration">{{ pauseDuration }}</span>
+            <div class="pause-timer" role="timer" aria-label="Pause duration">
+              <span class="pause-timer__value">
+                <span
+                  v-for="(ch, i) in timerChars"
+                  :key="i"
+                  :class="ch === ':' ? 'timer-sep' : 'timer-digit'"
+                >{{ ch }}</span>
+              </span>
+            </div>
             <div class="pause-meta-row">
-              <span class="meta-chip">Level {{ gameStore.level }}</span>
-              <span class="meta-divider" aria-hidden="true" />
-              <span class="meta-chip">Universe {{ gameStore.currentUniverse }}</span>
-              <span class="meta-divider" aria-hidden="true" />
-              <span class="meta-chip">Galaxy {{ galaxyStore.currentGalaxy }}</span>
+              <span class="meta-chip">
+                <span class="meta-chip__label">Level</span>
+                <span class="meta-chip__value">{{ gameStore.level }}</span>
+              </span>
+              <span class="meta-chip">
+                <span class="meta-chip__label">Universe</span>
+                <span class="meta-chip__value">{{ gameStore.currentUniverse }}</span>
+              </span>
+              <span class="meta-chip">
+                <span class="meta-chip__label">Galaxy</span>
+                <span class="meta-chip__value">{{ galaxyStore.currentGalaxy }}</span>
+              </span>
             </div>
           </header>
 
@@ -45,10 +55,7 @@
 
           <div class="chime-readout">
             <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
-            <div class="chime-col">
-              <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-              <span class="chime-label">Chimes while paused</span>
-            </div>
+            <span class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
           </div>
 
           <!-- Stat tiles -->
@@ -242,11 +249,14 @@ const accumulatedChimes = computed(() => {
   return Math.max(0, gameStore.chimes - pauseStartChimes.value)
 })
 
-const pauseDuration = computed(() => {
+const timerChars = computed(() => {
   const total = pauseTick.value
-  const m = Math.floor(total / 60)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
   const s = total % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  return `${h > 0 ? h + ':' : ''}${mm}:${ss}`.split('')
 })
 
 const pauseKills = computed(() => gameStore.pauseStats.kills)
@@ -358,29 +368,10 @@ function particleStyle(i: number): Record<string, string> {
   align-items: center;
   gap: 6px;
 }
-.pause-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: clamp(0.62rem, 0.9vw, 0.72rem);
-  font-weight: 600;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
-  white-space: nowrap;
-}
-.eyebrow-line {
-  width: clamp(18px, 3vw, 34px);
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(240, 208, 96, 0.35));
-}
-.eyebrow-line:last-child {
-  transform: scaleX(-1);
-}
 .pause-title {
   margin: 0;
   font-family: 'MedievalSharp', cursive;
-  font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+  font-size: clamp(2.8rem, 5.2vw, 4.2rem);
   font-weight: 400;
   line-height: 1;
   color: #f4e2a0;
@@ -390,36 +381,76 @@ function particleStyle(i: number): Record<string, string> {
     0 2px 6px rgba(0, 0, 0, 0.8);
 }
 .pause-timer {
-  font-size: clamp(0.8rem, 1.1vw, 0.95rem);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.12em;
-  color: rgba(216, 200, 160, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: clamp(6px, 1vh, 10px);
+}
+.pause-timer__value {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #f0d060;
+  text-shadow:
+    0 0 22px rgba(240, 208, 96, 0.45),
+    0 0 48px rgba(200, 144, 64, 0.22);
+  animation: timer-breathe 5s ease-in-out infinite;
+}
+/* Every glyph sits in a fixed-width cell so nothing shifts as digits change. */
+.timer-digit {
+  display: inline-block;
+  width: 0.74em;
+  text-align: center;
+}
+.timer-sep {
+  display: inline-block;
+  width: 0.44em;
+  text-align: center;
+  transform: translateY(-0.04em);
+}
+@keyframes timer-breathe {
+  0%,
+  100% {
+    text-shadow:
+      0 0 22px rgba(240, 208, 96, 0.45),
+      0 0 48px rgba(200, 144, 64, 0.22);
+  }
+  50% {
+    text-shadow:
+      0 0 30px rgba(240, 208, 96, 0.7),
+      0 0 64px rgba(200, 144, 64, 0.35);
+  }
 }
 .pause-meta-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: clamp(16px, 2.2vw, 28px);
+  margin-top: clamp(8px, 1.2vh, 14px);
 }
 .meta-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: clamp(0.62rem, 0.85vw, 0.7rem);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(200, 185, 140, 0.45);
+  align-items: baseline;
+  gap: 8px;
   white-space: nowrap;
 }
-.meta-divider {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(200, 185, 140, 0.35);
+.meta-chip__label {
+  font-size: clamp(0.66rem, 0.9vw, 0.76rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.55);
+}
+.meta-chip__value {
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #ece0c0;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(236, 224, 192, 0.25);
 }
 
 /* ── Sun hero ─────────────────────────────────────────── */
@@ -458,44 +489,31 @@ function particleStyle(i: number): Record<string, string> {
   gap: clamp(12px, 1.6vw, 20px);
 }
 .chime-img {
-  width: clamp(46px, 6.5vh, 72px);
-  height: clamp(46px, 6.5vh, 72px);
+  width: clamp(54px, 7.5vh, 84px);
+  height: clamp(54px, 7.5vh, 84px);
   object-fit: contain;
-  image-rendering: pixelated;
   filter: drop-shadow(0 0 16px rgba(232, 192, 64, 0.65));
-  animation: chime-float 5s ease-in-out infinite;
+  animation: chime-glow 5s ease-in-out infinite;
 }
-@keyframes chime-float {
+@keyframes chime-glow {
   0%,
   100% {
-    transform: translateY(3px) rotate(-3deg);
+    filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.5));
   }
   50% {
-    transform: translateY(-4px) rotate(3deg);
+    filter: drop-shadow(0 0 22px rgba(232, 192, 64, 0.8));
   }
 }
-.chime-col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
 .chime-value {
-  font-size: clamp(2.1rem, 3.6vw, 3.2rem);
+  font-size: clamp(2.4rem, 4.2vw, 3.6rem);
   font-weight: 800;
   line-height: 1;
+  transform: translateY(0.06em);
   color: #f0d060;
   font-variant-numeric: tabular-nums;
   text-shadow:
     0 0 24px rgba(240, 208, 96, 0.5),
     0 0 50px rgba(200, 144, 64, 0.25);
-}
-.chime-label {
-  font-size: clamp(0.66rem, 0.9vw, 0.78rem);
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
 }
 
 /* ── Stat tiles ───────────────────────────────────────── */
@@ -815,7 +833,8 @@ function particleStyle(i: number): Record<string, string> {
   .chime-img,
   .stat-tile--crit,
   .callout,
-  .callout-orb__icon {
+  .callout-orb__icon,
+  .pause-timer__value {
     animation: none;
   }
   .continue-btn,
