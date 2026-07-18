@@ -391,7 +391,7 @@ onUnmounted(() => {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #0d0a03;
+  background: #111008; /* same deep-space base as Shop / Planets / Skill Tree */
 }
 .team-modal-fill {
   flex: 1;

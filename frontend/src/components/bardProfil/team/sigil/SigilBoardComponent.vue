@@ -354,8 +354,9 @@ watch(
   min-width: 0;
   height: 100%;
   overflow: hidden;
-  /* flat deep-space base — the shared starfield provides all the texture */
-  background: #0d0a03;
+  /* flat deep-space base — same #111008 as Shop / Planets / Skill Tree so the
+     shared starfield reads identically bright in every tab */
+  background: #111008;
   cursor: grab;
   touch-action: none;
   user-select: none;

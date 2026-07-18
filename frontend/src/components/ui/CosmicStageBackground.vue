@@ -20,11 +20,16 @@
 }
 
 /* Layered parallax starfield: three depth layers, each twinkling at its own
-   rate with a barely-there drift, so it reads alive but stays subtle. */
+   rate with a barely-there drift, so it reads alive but stays subtle.
+   Each layer tiles at a FIXED size (background-size + repeat) so star density
+   is identical on every surface — a huge board shows proportionally more
+   stars instead of stretching the same handful thin. Different tile sizes
+   per layer keep the repeats from ever lining up into a visible grid. */
 .csb-stars {
   position: absolute;
   /* slight overscan so the gentle drift never reveals hard edges */
   inset: -12px;
+  background-repeat: repeat;
   animation:
     csb-stars-twinkle 6s ease-in-out infinite,
     csb-stars-drift 80s ease-in-out infinite alternate;
@@ -43,6 +48,7 @@
     radial-gradient(1px 1px at 84% 38%, rgba(255, 255, 255, 0.3), transparent),
     radial-gradient(1px 1px at 92% 70%, rgba(255, 255, 255, 0.22), transparent),
     radial-gradient(1px 1px at 6% 46%, rgba(255, 255, 255, 0.26), transparent);
+  background-size: 460px 460px;
   animation-duration: 7s, 90s;
 }
 
@@ -58,6 +64,7 @@
     radial-gradient(1.5px 1.5px at 90% 84%, rgba(255, 255, 255, 0.34), transparent),
     radial-gradient(1.5px 1.5px at 10% 88%, rgba(255, 255, 255, 0.32), transparent),
     radial-gradient(1.5px 1.5px at 62% 92%, rgba(255, 255, 255, 0.3), transparent);
+  background-size: 620px 620px;
   animation-duration: 5.5s, 70s;
   animation-delay: -2.5s, -18s;
   animation-direction: alternate, alternate-reverse;
@@ -81,6 +88,7 @@
       transparent 100%
     ),
     radial-gradient(2px 2px at 14% 52%, rgba(255, 255, 255, 0.5), transparent);
+  background-size: 780px 780px;
   animation-duration: 4.2s, 58s;
   animation-delay: -1.2s, -9s;
 }
