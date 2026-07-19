@@ -21,31 +21,6 @@
         <!-- ── Cosmic Background (shared, wie Shop/Team/Planets) ───────── -->
         <CosmicStageBackground />
 
-        <!-- ── Star-Despawn-Ringe — synchron links & rechts ────────────── -->
-        <div
-          v-for="side in starSecsLeft !== null ? ['left', 'right'] : []"
-          :key="side"
-          class="sf-star-ring"
-          :class="[`sf-star-ring--${side}`, starTimerStateClass]"
-          title="Time until the star vanishes"
-        >
-          <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
-            <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
-            <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
-            <circle
-              cx="50"
-              cy="50"
-              r="44"
-              class="sf-star-ring-arc"
-              :style="{ strokeDasharray: starRingDashArray }"
-            />
-          </svg>
-          <div class="sf-star-ring-inner">
-            <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
-            <span class="sf-star-ring-label">SEC</span>
-          </div>
-        </div>
-
         <!-- ── Floating Controls (kein Header mehr) ────────────────────── -->
         <div class="sf-corner-controls">
           <button
@@ -87,13 +62,37 @@
                 </span>
                 <span class="sf-name-line" />
               </div>
-              <div
-                class="sf-hp-track"
-                :class="{
-                  'sf-hp-track--critical': hpPct < 25,
-                  'sf-hp-track--galaxy': isGalaxyBoss,
-                }"
-              >
+              <div class="sf-hp-row">
+                <div
+                  v-if="starSecsLeft !== null"
+                  class="sf-star-ring"
+                  :class="starTimerStateClass"
+                  title="Time until the star vanishes"
+                >
+                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
+                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
+                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      class="sf-star-ring-arc"
+                      :style="{ strokeDasharray: starRingDashArray }"
+                    />
+                  </svg>
+                  <div class="sf-star-ring-inner">
+                    <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
+                    <span class="sf-star-ring-label">SEC</span>
+                  </div>
+                </div>
+
+                <div
+                  class="sf-hp-track"
+                  :class="{
+                    'sf-hp-track--critical': hpPct < 25,
+                    'sf-hp-track--galaxy': isGalaxyBoss,
+                  }"
+                >
                 <div class="sf-hp-ghost" :style="{ width: hpPct + '%' }" />
                 <div
                   class="sf-hp-fill"
@@ -104,16 +103,41 @@
                   }"
                   :style="{ width: hpPct + '%' }"
                 />
-              </div>
-              <div class="sf-hp-readout">
-                <span class="sf-hp-numbers">
-                  {{ formatNumber(activeBoss.currentHP) }}
-                  <span class="sf-hp-sep">/</span>
-                  {{ formatNumber(activeBoss.maxHP) }}
-                </span>
-                <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
-                  {{ Math.round(hpPct) }}%
-                </span>
+                <div class="sf-hp-ticks" aria-hidden="true" />
+                <div class="sf-hp-inline">
+                  <span class="sf-hp-numbers">
+                    {{ formatNumber(activeBoss.currentHP) }}
+                    <span class="sf-hp-sep">/</span>
+                    {{ formatNumber(activeBoss.maxHP) }}
+                  </span>
+                  <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
+                    {{ Math.round(hpPct) }}%
+                  </span>
+                  </div>
+                </div>
+
+                <div
+                  v-if="starSecsLeft !== null"
+                  class="sf-star-ring"
+                  :class="starTimerStateClass"
+                  title="Time until the star vanishes"
+                >
+                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
+                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
+                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      class="sf-star-ring-arc"
+                      :style="{ strokeDasharray: starRingDashArray }"
+                    />
+                  </svg>
+                  <div class="sf-star-ring-inner">
+                    <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
+                    <span class="sf-star-ring-label">SEC</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -561,21 +585,13 @@ function emberStyle(i: number): Record<string, string> {
   transform: scale(0.94);
 }
 
-/* ── Star-Despawn-Ringe — synchron oben links + rechts ───────────────────── */
+/* ── Star-Despawn-Ringe — flankieren die HP-Bar, synchron links + rechts ── */
 .sf-star-ring {
-  position: absolute;
-  top: 54px;
+  position: relative;
   width: 100px;
   height: 100px;
-  z-index: 5;
+  flex-shrink: 0;
   pointer-events: none;
-}
-
-.sf-star-ring--left {
-  left: 18px;
-}
-.sf-star-ring--right {
-  right: 18px;
 }
 
 .sf-star-ring-svg {
@@ -726,16 +742,31 @@ function emberStyle(i: number): Record<string, string> {
 /* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz ───────────────────── */
 .sf-hud {
   position: absolute;
-  top: 14px;
+  /* nicht mehr am oberen Rand — sitzt auf Höhe der Star-Ringe, näher am Boss */
+  top: 58px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(500px, 60%);
+  width: min(860px, 76%);
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   pointer-events: none;
+}
+
+/* Ring — HP-Bar — Ring: eine Reihe, alle drei vertikal zentriert */
+.sf-hp-row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.sf-hp-row .sf-hp-track {
+  flex: 1;
+  min-width: 0;
 }
 
 .sf-boss-galaxy-badge {
@@ -765,7 +796,7 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 .sf-boss-name {
-  font-size: 1.25rem;
+  font-size: 1.8rem;
   font-weight: 900;
   letter-spacing: 0.1em;
   color: #e8c040;
@@ -789,26 +820,45 @@ function emberStyle(i: number): Record<string, string> {
     0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
-/* Readout unter der Leiste: Zahlen links, Prozent rechts */
-.sf-hp-readout {
-  width: 100%;
+/* Werte leben jetzt IN der Leiste: Zahlen links, Prozent rechts */
+.sf-hp-inline {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  padding: 0 14px;
 }
 
 .sf-hp-pct {
-  font-size: 0.82rem;
+  font-size: 1.15rem;
   font-weight: 900;
-  color: #e8c040;
+  color: #ffe9b0;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .sf-hp-pct--critical {
-  color: #ff5040;
-  text-shadow: 0 0 10px rgba(255, 60, 40, 0.6), 0 1px 3px rgba(0, 0, 0, 0.9);
+  color: #ffb0a8;
+  text-shadow: 0 0 10px rgba(255, 60, 40, 0.7), 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Segment-Ticks alle 10 % — liest sich wie ein Raid-Boss-Balken */
+.sf-hp-ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(10% - 1px),
+    rgba(0, 0, 0, 0.4) calc(10% - 1px),
+    rgba(0, 0, 0, 0.4) 10%
+  );
+  pointer-events: none;
 }
 
 /* ── Bottom-Dock: Loot- und Up-Next-Karten nebeneinander ─────────────────── */
@@ -833,58 +883,61 @@ function emberStyle(i: number): Record<string, string> {
   );
 }
 
-/* ── HP-Datenstreifen — moderne Leiste mit Ghost-Trail ───────────────────── */
+/* ── Epische Boss-HP-Leiste — groß, segmentiert, Werte innenliegend ──────── */
 .sf-hp-numbers {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #d8b868;
-  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #f4ead0;
+  letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 8px rgba(0, 0, 0, 0.7);
 }
 
 .sf-hp-sep {
-  opacity: 0.4;
-  margin: 0 3px;
+  opacity: 0.45;
+  margin: 0 4px;
 }
 
 .sf-hp-track {
   position: relative;
   width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  height: 32px;
+  border-radius: 4px;
+  background: rgba(6, 3, 0, 0.78);
+  border: 1px solid #5c3310;
   box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(232, 192, 64, 0.12);
+    inset 0 2px 6px rgba(0, 0, 0, 0.8),
+    0 0 22px rgba(200, 130, 20, 0.18),
+    0 4px 14px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
 .sf-hp-track--critical {
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(200, 40, 40, 0.4),
-    0 0 18px rgba(200, 20, 20, 0.35);
+  border-color: #8a2018;
   animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
 }
 .sf-hp-track--galaxy {
+  border-color: #5a2478;
   box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(160, 40, 220, 0.35);
+    inset 0 2px 6px rgba(0, 0, 0, 0.8),
+    0 0 22px rgba(160, 40, 220, 0.22),
+    0 4px 14px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes sf-hp-crit-pulse {
   from {
     box-shadow:
-      inset 0 1px 3px rgba(0, 0, 0, 0.7),
-      0 0 0 1px rgba(200, 40, 40, 0.4),
-      0 0 6px rgba(180, 20, 20, 0.3);
+      inset 0 2px 6px rgba(0, 0, 0, 0.8),
+      0 0 8px rgba(180, 20, 20, 0.3),
+      0 4px 14px rgba(0, 0, 0, 0.6);
   }
   to {
     box-shadow:
-      inset 0 1px 3px rgba(0, 0, 0, 0.7),
-      0 0 0 1px rgba(220, 60, 60, 0.55),
-      0 0 16px rgba(220, 40, 40, 0.65);
+      inset 0 2px 6px rgba(0, 0, 0, 0.8),
+      0 0 26px rgba(220, 40, 40, 0.65),
+      0 4px 14px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -892,29 +945,35 @@ function emberStyle(i: number): Record<string, string> {
 .sf-hp-ghost {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: rgba(255, 235, 200, 0.35);
+  background: rgba(255, 235, 200, 0.3);
   transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sf-hp-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: linear-gradient(to right, #1a6010, #40a020, #70d040);
+  background: linear-gradient(to bottom, #58c030 0%, #2e7a1a 55%, #236012 100%);
   transition: width 0.15s ease-out;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 .sf-hp-fill--low {
-  background: linear-gradient(to right, #7a4808, #c07018, #e8a030);
+  background: linear-gradient(to bottom, #e8a030 0%, #c07018 55%, #8a5410 100%);
 }
 .sf-hp-fill--critical {
-  background: linear-gradient(to right, #620606, #c01818, #ff3030);
-  box-shadow: 0 0 14px rgba(220, 30, 30, 0.55), inset 0 1px 0 rgba(255, 100, 100, 0.2);
+  background: linear-gradient(to bottom, #ff4030 0%, #c01818 55%, #801010 100%);
+  box-shadow:
+    0 0 16px rgba(220, 30, 30, 0.55),
+    inset 0 2px 0 rgba(255, 140, 120, 0.3),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 .sf-hp-fill--galaxy {
-  background: linear-gradient(to right, #420060, #8010c0, #cc30ff);
-  box-shadow: 0 0 14px rgba(180, 40, 255, 0.5), inset 0 1px 0 rgba(220, 100, 255, 0.2);
+  background: linear-gradient(to bottom, #c040f0 0%, #8010c0 55%, #58087a 100%);
+  box-shadow:
+    0 0 16px rgba(180, 40, 255, 0.5),
+    inset 0 2px 0 rgba(230, 150, 255, 0.3),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Curse Overlay ────────────────────────────────────────────────────────── */
