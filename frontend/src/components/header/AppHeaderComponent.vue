@@ -426,7 +426,11 @@ onUnmounted(() => {
       </div>
       <div class="header-divider" aria-hidden="true"></div>
       <div class="flex-shrink-0 header-inventory-bump">
-        <button class="btn-gem" title="Open Skill Tree" @click="uiStore.setBardTab('tree')">
+        <button
+          class="btn-gem btn-gem--corner-right"
+          title="Open Skill Tree"
+          @click="uiStore.setBardTab('tree')"
+        >
           <img src="/img/menu/TREE.png" class="btn-gem-img" alt="Open Skill Tree" />
         </button>
       </div>
@@ -439,6 +443,10 @@ onUnmounted(() => {
    HEADER BAR
    ================================================================ */
 .header-bar {
+  /* One gap value for the corner buttons: same distance to the left/right
+     edge, to the bottom edge and to the top — and it feeds the nested
+     corner radius so the button arc runs parallel to the frame arc. */
+  --header-corner-gap: clamp(7px, 0.65vw, 13px);
   max-width: var(--header-max-width);
   height: var(--header-height);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
@@ -476,14 +484,14 @@ onUnmounted(() => {
 }
 .header-side--left {
   justify-content: flex-start;
-  padding-left: clamp(6px, 1.2vw, 14px);
+  padding-left: var(--header-corner-gap);
   /* symmetric inner gap towards the center teardrop (matches --right padding-left) */
   padding-right: clamp(8px, 1vw, 16px);
 }
 .header-side--right {
   justify-content: flex-end;
   gap: clamp(5px, 0.6vw, 10px);
-  padding-right: clamp(6px, 1.2vw, 14px);
+  padding-right: var(--header-corner-gap);
   /* symmetric inner gap towards the center teardrop (matches --left padding-right) */
   padding-left: clamp(8px, 1vw, 16px);
 }
@@ -493,7 +501,6 @@ onUnmounted(() => {
   align-items: center;
   align-self: stretch;
   flex-shrink: 0;
-  padding: 0 6px;
 }
 
 /* ================================================================
@@ -783,8 +790,11 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   HEADER GEM BUTTONS (Shop & Tree) – runde Holzrahmen-Buttons
+   HEADER GEM BUTTONS (Shop & Tree) – Corner Plates mit Nested Radius
    (global: auch von BardProfileMenu verwendet)
+   Größe = Header-Höhe − 2×Gap → oben/unten/außen exakt gleicher
+   Abstand; die äußere untere Ecke übernimmt den Header-Radius
+   minus Gap, sodass beide Rundungen parallel verlaufen.
    ================================================================ */
 .header-inventory-bump {
   display: flex;
@@ -794,59 +804,67 @@ onUnmounted(() => {
 }
 .btn-gem {
   position: relative;
-  width: clamp(44px, 3.4vw, 64px);
-  height: clamp(44px, 3.4vw, 64px);
-  border-radius: 50%;
+  width: calc(var(--header-height) - 2 * var(--header-corner-gap));
+  height: calc(var(--header-height) - 2 * var(--header-corner-gap));
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   padding: 0;
-  background: radial-gradient(circle at 40% 32%, #2a1a0a, #120a03);
-  border: 2px solid #c89040;
+  /* Tonal statt Medaillon: gleiche warme rgba-Sprache wie center-chimes
+     und die Divider, damit der Button im Header-Grund aufgeht. */
+  background: linear-gradient(to bottom, rgba(255, 200, 80, 0.07), rgba(255, 200, 80, 0.02));
+  border: 1px solid rgba(200, 144, 64, 0.32);
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 3px 8px rgba(0, 0, 0, 0.7),
-    0 0 10px rgba(232, 192, 64, 0.2);
+    inset 0 1px 0 rgba(255, 200, 80, 0.08),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.28);
   transition:
-    transform 0.2s,
+    background 0.2s,
+    border-color 0.2s,
     box-shadow 0.2s;
+}
+/* Nested-Radius: innere Rundung = äußere Rundung − Abstand */
+.btn-gem--corner-left {
+  border-bottom-left-radius: max(6px, calc(var(--bard-avatar-radius) - var(--header-corner-gap)));
+}
+.btn-gem--corner-right {
+  border-bottom-right-radius: max(6px, calc(var(--bard-avatar-radius) - var(--header-corner-gap)));
 }
 .btn-gem::before {
   content: '';
   position: absolute;
-  top: 8%;
-  left: 17%;
-  right: 30%;
+  top: 4%;
+  left: 8%;
+  right: 8%;
   height: 22%;
-  border-radius: 50%;
-  background: linear-gradient(to bottom, rgba(255, 230, 160, 0.25), transparent);
+  border-radius: 4px 4px 50% 50%;
+  background: linear-gradient(to bottom, rgba(255, 230, 160, 0.08), transparent);
   pointer-events: none;
 }
+/* Kein Scale im Hover: der Button bliebe sonst nicht parallel zur
+   Header-Rundung — Gold erscheint erst hier, als dezenter Akzent. */
 .btn-gem:hover {
-  transform: scale(1.06);
+  background: linear-gradient(to bottom, rgba(255, 200, 80, 0.13), rgba(255, 200, 80, 0.04));
+  border-color: rgba(232, 192, 64, 0.65);
   box-shadow:
-    inset 0 0 0 2px #3e200a,
-    0 0 16px rgba(232, 192, 64, 0.55),
-    0 3px 10px rgba(0, 0, 0, 0.5);
+    inset 0 1px 0 rgba(255, 200, 80, 0.14),
+    0 0 12px rgba(232, 192, 64, 0.22);
 }
-.btn-gem:active {
-  transform: scale(0.95);
+.btn-gem:hover .btn-gem-img {
+  transform: scale(1.08);
+}
+.btn-gem:active .btn-gem-img {
+  transform: scale(0.94);
 }
 .btn-gem-img {
-  width: 70%;
-  height: 70%;
+  width: 72%;
+  height: 72%;
   object-fit: contain;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+  transition: transform 0.18s ease;
 }
-@media (max-width: 768px) {
-  .btn-gem {
-    width: clamp(40px, 5vh, 52px);
-    height: clamp(40px, 5vh, 52px);
-  }
-}
-
 /* ================================================================
    LEGACY
    ================================================================ */

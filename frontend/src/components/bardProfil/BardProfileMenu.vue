@@ -63,7 +63,7 @@ watch(
 </script>
 
 <template>
-  <button class="btn-gem" title="Open Shop" @click="uiStore.setBardTab('shop')">
+  <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
     <img src="/img/menu/SHOP.png" class="btn-gem-img" alt="Open Shop" />
   </button>
 
