@@ -10,7 +10,10 @@
       class="champ-card"
       :class="[
         side === 'blue' ? 'champ-card--blue' : 'champ-card--red',
-        { 'champ-card--bard': champ.name === 'Bard' },
+        {
+          'champ-card--bard': champ.name === 'Bard',
+          'champ-card--mvp': champ.name && champ.name === mvpLiveName,
+        },
       ]"
     >
       <!-- Full-bleed portrait: the image IS the card background, no inner frame -->
@@ -28,13 +31,15 @@
 
       <span v-if="champ.respawnState === 'walking-back'" class="respawn-tag">⟳</span>
 
+      <!-- Live-MVP chip: gold banner in the card's top corner (mirrored per side) -->
+      <span v-if="champ.name && champ.name === mvpLiveName" class="mvp-chip">♛ MVP</span>
+
       <!-- Bottom row: name/KDA on the team side, level medallion on the opposite side -->
       <div class="info" :class="{ 'info--right': side === 'red' }">
         <div class="info-text">
           <div class="champ-name">
             {{ champ.name || '—' }}
             <span v-if="champ.name === 'Bard'" class="you-tag">YOU</span>
-            <span v-if="champ.name && champ.name === mvpLiveName" class="mvp-tag">MVP</span>
           </div>
           <div class="kda">
             <span class="kda-k">{{ champ.kills }}</span><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
@@ -253,11 +258,76 @@ function hpClass(hp: number): string {
   color: #e8c040;
   letter-spacing: 1px;
 }
-.mvp-tag {
-  font-size: 9px;
-  font-weight: 700;
-  color: #e8c040;
-  letter-spacing: 1px;
+/* ── Live-MVP highlight ─────────────────────────────────────────────────
+   The MVP card gets a breathing gold ring + halo and a crown chip, so the
+   current best performer reads at a glance across both columns. */
+.champ-card--mvp {
+  /* inset ring — the column is a scroll container, outer shadows would clip */
+  box-shadow:
+    inset 0 0 0 2px #e8c040,
+    inset 0 0 14px rgba(232, 192, 64, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.45);
+  animation: mvp-ring-pulse 2.2s ease-in-out infinite;
+}
+/* the team edge line turns gold on the MVP card */
+.champ-card--mvp::after {
+  background: #e8c040;
+  box-shadow: 0 0 8px rgba(232, 192, 64, 0.9);
+}
+/* warm gold wash over the scrim so the whole card reads "golden" */
+.champ-card--mvp .scrim {
+  background:
+    linear-gradient(to top, rgba(120, 88, 12, 0.38), transparent 60%),
+    linear-gradient(
+      to top,
+      rgba(var(--team-scrim), 0.92) 0%,
+      rgba(var(--team-scrim), 0.55) 42%,
+      rgba(var(--team-scrim), 0.08) 75%,
+      transparent 100%
+    );
+}
+.champ-card--mvp .champ-name {
+  color: #ffe9a0;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(232, 192, 64, 0.6);
+}
+
+.mvp-chip {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 1px;
+  font-size: clamp(9px, 1.5cqh, 11px);
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  line-height: 1.2;
+  color: #1e1006;
+  background: linear-gradient(to bottom, #ffe9a0, #e8c060 45%, #c89040);
+  border: 1px solid #8a5c18;
+  border-radius: 4px;
+  box-shadow:
+    0 0 10px rgba(232, 192, 64, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.6);
+}
+.team-col--red .mvp-chip {
+  left: auto;
+  right: 6px;
+}
+
+@keyframes mvp-ring-pulse {
+  50% {
+    box-shadow:
+      inset 0 0 0 2px #ffe9a0,
+      inset 0 0 22px rgba(232, 192, 64, 0.75),
+      0 4px 12px rgba(0, 0, 0, 0.45);
+  }
 }
 
 .kda {
@@ -302,5 +372,6 @@ function hpClass(hp: number): string {
 
 @media (prefers-reduced-motion: reduce) {
   .respawn-tag { animation: none; }
+  .champ-card--mvp { animation: none; }
 }
 </style>
