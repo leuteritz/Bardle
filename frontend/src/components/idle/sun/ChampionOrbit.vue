@@ -71,6 +71,8 @@
         'champion-orbit-avatar--role-hover': hoveredChampionRole !== null,
         'champion-orbit-avatar--role-hover-primary': pos.primaryRole === hoveredChampionRole && pos.isMain,
         'champion-orbit-avatar--dim': isChampionDimmed(pos),
+        'champion-orbit-avatar--hit': pos.isHit,
+        'champion-orbit-avatar--down': pos.isDown,
       }"
       :style="{
         width: pos.size + 'px',
@@ -98,6 +100,37 @@
         </span>
       </Transition>
     </div>
+
+    <!-- Champion HP Bars — nur Mains mit HP-Pool, Stil wie Planeten-Bars -->
+    <template v-for="pos in frontChampions" :key="'chp-' + pos.name">
+      <div
+        v-if="pos.isMain && pos.maxHp > 0"
+        class="champ-hp-wrap"
+        :class="{ 'champ-hp-wrap--dimmed': isChampionDimmed(pos) }"
+        :style="{
+          transform: `translate(${pos.x - Math.max(pos.size, 52) / 2}px, ${pos.y + pos.size / 2 + 6}px)`,
+          width: Math.max(pos.size, 52) + 'px',
+          zIndex: pos.zIndex,
+          '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
+        }"
+      >
+        <div class="champ-hp-bar-track">
+          <div
+            class="champ-hp-bar-fill"
+            :class="{
+              'champ-hp-bar-fill--low': pos.hpPercent < 25,
+              'champ-hp-bar-fill--mid': pos.hpPercent >= 25 && pos.hpPercent < 60,
+            }"
+            :style="{ width: pos.hpPercent + '%' }"
+          />
+          <div class="champ-hp-bar-shine" />
+        </div>
+        <span v-if="pos.isDown" class="champ-hp-text champ-hp-text--down">
+          DOWN {{ pos.downSecs }}s
+        </span>
+        <span v-else class="champ-hp-text">{{ pos.currentHp }} / {{ pos.maxHp }}</span>
+      </div>
+    </template>
 
     <!-- Floating damage numbers -->
     <Teleport to="body">
@@ -147,6 +180,7 @@ import {
   ROLE_BY_KEY,
   BEHIND_SUN_SPEED_MULTIPLIER,
   HOVER_DIM_OPACITY,
+  CHAMPION_HIT_FLASH_MS,
 } from '@/config/constants'
 import AttackProjectileLayer from './AttackProjectileLayer.vue'
 import { useProjectileSystem } from '@/composables/useProjectileSystem'
@@ -178,6 +212,12 @@ interface ChampionRenderPos {
   tiltDeg: number
   orbitColor: string
   synergyActive: boolean
+  hpPercent: number
+  currentHp: number
+  maxHp: number
+  isDown: boolean
+  downSecs: number
+  isHit: boolean
 }
 
 interface Assignment {
@@ -396,6 +436,14 @@ export default defineComponent({
           renderY += roleBehaviorStore.tankInterceptDirY * INTERCEPT_MAX_OFFSET * progress
         }
 
+        // ── Champion-HP (nur Mains haben einen HP-Pool) ────────────────────
+        const hpPool = isMain && primaryRole ? roleBehaviorStore.championHp[primaryRole] : null
+        const nowMs = Date.now()
+        const downUntil =
+          isMain && primaryRole ? roleBehaviorStore.championDownUntil[primaryRole] : 0
+        const isDown = downUntil > nowMs
+        const hitAt = isMain && primaryRole ? roleBehaviorStore.championHitAt[primaryRole] : 0
+
         newPositions.push({
           name: c.name,
           img: battleStore.getChampionImage(c.name),
@@ -415,6 +463,12 @@ export default defineComponent({
           tiltDeg,
           orbitColor,
           synergyActive: !!synergyStore.championSynergyMap[c.name]?.length,
+          hpPercent: hpPool && hpPool.max > 0 ? (hpPool.current / hpPool.max) * 100 : 100,
+          currentHp: Math.round(hpPool?.current ?? 0),
+          maxHp: hpPool?.max ?? 0,
+          isDown,
+          downSecs: isDown ? Math.ceil((downUntil - nowMs) / 1000) : 0,
+          isHit: !isDown && nowMs - hitAt < CHAMPION_HIT_FLASH_MS,
         })
       }
 
@@ -870,6 +924,134 @@ export default defineComponent({
   100% { opacity: 0; transform: scale(2.5); }
 }
 
+/* ── Boss-Treffer am Champion: roter Flash + Ruckeln ─────────────────────── */
+.champion-orbit-avatar--hit {
+  animation: champ-boss-hit 0.45s ease-out;
+}
+
+@keyframes champ-boss-hit {
+  0% {
+    filter: brightness(2.2) saturate(0.4) sepia(0.5) hue-rotate(-30deg);
+    box-shadow:
+      0 0 18px rgba(255, 60, 40, 1),
+      0 0 40px rgba(220, 30, 20, 0.6);
+  }
+  30% {
+    translate: -3px 1px;
+  }
+  55% {
+    translate: 3px -1px;
+    filter: brightness(1.4) saturate(0.8);
+  }
+  100% {
+    translate: 0 0;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* ── Champion am Boden — ausgegraut bis zum Revive ───────────────────────── */
+.champion-orbit-avatar--down {
+  filter: grayscale(1) brightness(0.55) !important;
+  border-color: #5a2020 !important;
+  box-shadow: 0 0 10px rgba(120, 20, 20, 0.5) !important;
+  animation: none !important;
+}
+
+/* ── Champion HP Bars — RPG-Stil wie Planeten-Bars ───────────────────────── */
+.champ-hp-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: opacity 150ms ease;
+}
+
+.champ-hp-wrap--dimmed {
+  opacity: var(--hover-dim-opacity, 0.08);
+}
+
+.champ-hp-bar-track {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  background: #0a0806;
+  border: 1px solid color-mix(in srgb, var(--role-color, #c89040) 55%, #1a0f04);
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px #1a0f04,
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 200, 80, 0.08);
+  overflow: hidden;
+}
+
+.champ-hp-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #5de84a 0%, #2eaa1e 45%, #1d7a12 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(120, 255, 100, 0.45),
+    0 0 6px rgba(60, 200, 40, 0.5);
+  transition: width 0.25s linear;
+  position: relative;
+}
+
+.champ-hp-bar-fill--mid {
+  background: linear-gradient(to bottom, #f5d84a 0%, #d4960e 45%, #9a6508 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 120, 0.45),
+    0 0 6px rgba(220, 160, 20, 0.55);
+}
+
+.champ-hp-bar-fill--low {
+  background: linear-gradient(to bottom, #ff5f5f 0%, #cc1e1e 45%, #8a0d0d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 140, 140, 0.45),
+    0 0 8px rgba(220, 30, 30, 0.7);
+  animation: champ-hp-pulse 1.1s ease-in-out infinite;
+}
+
+.champ-hp-bar-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+@keyframes champ-hp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.champ-hp-text {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8c040;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px rgba(232, 160, 20, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.95);
+  line-height: 1;
+}
+
+.champ-hp-text--down {
+  color: #ff6050;
+  text-shadow:
+    0 0 4px rgba(255, 60, 40, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
 /* ── Schadenszahlen ───────────────────────────────────────────────────────── */
 .champion-dmg-overlay {
   position: fixed;
@@ -1029,6 +1211,8 @@ export default defineComponent({
 
 @media (prefers-reduced-motion: reduce) {
   .champion-orbit-avatar--attacking,
+  .champion-orbit-avatar--hit,
+  .champ-hp-bar-fill--low,
   .champion-orbit-avatar--top-hit,
   .champion-orbit-avatar--intercept,
   .champion-orbit-avatar--ability-jungle,

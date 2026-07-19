@@ -13,6 +13,12 @@ import {
   ROLE_ADC_BURST_DAMAGE,
   ROLE_ADC_BURST_INTERVAL_MS,
   ROLE_STAR_ATTACKS,
+  CHAMPION_BASE_HP_BY_ROLE,
+  CHAMPION_HP_PER_STAR,
+  BOSS_CHAMPION_ATTACK_DPS,
+  BOSS_GALAXY_CHAMPION_DPS_MULT,
+  CHAMPION_REVIVE_MS,
+  CHAMPION_HP_REGEN_FRAC,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -28,6 +34,7 @@ import {
   JUNGLE_BUFF_FLASH_ANIM_MS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
+import { getChampionStarLevel } from '../config/championTiers'
 import { usePlayerStore } from './playerStore'
 import { useBattleStore } from './battleStore'
 import { usePlanetBossStore } from './planetBossStore'
@@ -134,6 +141,30 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       ChampionRole,
       number
     >,
+
+    // Champion HP per role — max scales with the slotted champion's star level
+    championHp: {
+      top: { current: 0, max: 0 },
+      jungle: { current: 0, max: 0 },
+      mid: { current: 0, max: 0 },
+      adc: { current: 0, max: 0 },
+      support: { current: 0, max: 0 },
+    } as Record<ChampionRole, { current: number; max: number }>,
+    // Which champion the HP pool belongs to — swap in slot resets the pool
+    championHpOwner: { top: null, jungle: null, mid: null, adc: null, support: null } as Record<
+      ChampionRole,
+      string | null
+    >,
+    // Timestamp until which a downed champion stays out of the fight (0 = alive)
+    championDownUntil: { top: 0, jungle: 0, mid: 0, adc: 0, support: 0 } as Record<
+      ChampionRole,
+      number
+    >,
+    // Last boss-hit timestamp per role — drives hit-flash animations in the UI
+    championHitAt: { top: 0, jungle: 0, mid: 0, adc: 0, support: 0 } as Record<
+      ChampionRole,
+      number
+    >,
   }),
 
   actions: {
@@ -144,13 +175,97 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const TICK_MS = GAME_TICK_INTERVAL_MS
       const roles = getOrbitingRoles()
 
+      this._syncChampionHp()
       this._expireJungleBuffs()
+      this._tickBossAttack(roles, TICK_MS)
       this._tickSupport(roles, TICK_MS)
       this._tickTop(roles, TICK_MS)
       this._tickMid(roles, TICK_MS)
       this._tickAdc(roles, TICK_MS)
       this._tickJungler(roles, TICK_MS)
       this._tickRoleAttacks(roles, TICK_MS)
+    },
+
+    /** Keep the per-role HP pool in sync with the slotted champion — max HP
+     *  scales with the champion's star level; a swap resets the pool. */
+    _syncChampionHp() {
+      const battleStore = useBattleStore()
+      for (let i = 0; i < ROLES.length; i++) {
+        const role = ROLES[i].key
+        const name = battleStore.headerSlots[i]
+        if (name === this.championHpOwner[role]) continue
+        this.championHpOwner[role] = name
+        this.championDownUntil[role] = 0
+        if (!name) {
+          this.championHp[role] = { current: 0, max: 0 }
+          continue
+        }
+        const star = getChampionStarLevel(name)
+        const max = Math.round(
+          CHAMPION_BASE_HP_BY_ROLE[role] * (1 + (star - 1) * CHAMPION_HP_PER_STAR),
+        )
+        this.championHp[role] = { current: max, max }
+      }
+    },
+
+    /** The active boss strikes back: dmg/s on every orbiting champion. Downed
+     *  champions revive at full HP after CHAMPION_REVIVE_MS; without an active
+     *  boss the squad slowly regenerates. */
+    _tickBossAttack(roles: Set<string>, tickMs: number) {
+      const bossStore = usePlanetBossStore()
+      const activeBoss = bossStore.activeBoss
+      const bossAlive = !!activeBoss && !activeBoss.defeated && !activeBoss.expired
+      const combatStore = useCombatStore()
+      const { addEvent } = useEventLog()
+      const now = Date.now()
+
+      for (const role of Object.keys(this.championHp) as ChampionRole[]) {
+        if (!roles.has(role)) continue
+        const hp = this.championHp[role]
+        if (hp.max <= 0) continue
+
+        // Revive-Fenster
+        if (this.championDownUntil[role] > 0) {
+          if (now >= this.championDownUntil[role]) {
+            this.championDownUntil[role] = 0
+            hp.current = hp.max
+            addEvent(`${getChampionNameByRole(role)} is back in the fight!`, role)
+          }
+          continue
+        }
+
+        if (!bossAlive) {
+          // Out of combat: langsam regenerieren
+          if (hp.current < hp.max) {
+            hp.current = Math.min(hp.max, hp.current + hp.max * CHAMPION_HP_REGEN_FRAC * (tickMs / 1000))
+          }
+          continue
+        }
+
+        const dps =
+          BOSS_CHAMPION_ATTACK_DPS * (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1)
+        const dmg = Math.round(dps * (tickMs / 1000))
+        hp.current = Math.max(0, hp.current - dmg)
+        this.championHitAt[role] = now
+
+        const champName = getChampionNameByRole(role)
+        const champ = combatStore.champions.find((c) => c.name === champName)
+        if (champ && (champ.screenX !== 0 || champ.screenY !== 0)) {
+          spawnFloat(dmg, champ.screenX + (Math.random() - 0.5) * 24, champ.screenY - 34, 900)
+        }
+
+        if (hp.current <= 0) {
+          this.championDownUntil[role] = now + CHAMPION_REVIVE_MS
+          addEvent(
+            `${champName} is knocked out by ${activeBoss.bossName}! (${CHAMPION_REVIVE_MS / 1000}s)`,
+            role,
+          )
+        } else {
+          throttledEvent(`boss-champ-hit-${role}`, 8000, () => {
+            addEvent(`${activeBoss.bossName} strikes ${champName}: ${dmg} dmg/s.`, role)
+          })
+        }
+      }
     },
 
     /** Every orbiting role fires a star attack at the active boss on its own
@@ -167,6 +282,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           this.roleAttackCooldownMs[role] = def.intervalMs
           continue
         }
+
+        // Am Boden liegende Champions greifen nicht an — Cooldown friert ein
+        if (this.championDownUntil[role] > Date.now()) continue
 
         this.roleAttackCooldownMs[role] = Math.max(0, this.roleAttackCooldownMs[role] - tickMs)
         if (this.roleAttackCooldownMs[role] > 0) continue

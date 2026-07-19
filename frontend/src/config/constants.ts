@@ -839,6 +839,23 @@ export const ROLE_STAR_ATTACKS: Record<ChampionRole, { damage: number; intervalM
   support: { damage: 12, intervalMs: 5000 }, // light chime blast
 }
 
+// ── Champion HP — every role champion has HP scaled by its champion tier;
+//    the active star/planet boss strikes back at all orbiting champions
+//    (roleBehaviorStore._syncChampionHp / _tickBossAttack) ──────────────────
+export const CHAMPION_BASE_HP_BY_ROLE: Record<ChampionRole, number> = {
+  top: 280, // tank frontline
+  jungle: 210,
+  mid: 170,
+  adc: 150, // squishy carry
+  support: 190,
+}
+export const CHAMPION_HP_PER_STAR = 0.35 // +35% max HP per champion star level above ★1
+export const BOSS_CHAMPION_ATTACK_DPS = 6 // boss dmg/s dealt to each orbiting champion
+export const BOSS_GALAXY_CHAMPION_DPS_MULT = 2 // galaxy bosses hit twice as hard
+export const CHAMPION_REVIVE_MS = 8000 // downed champion revives at full HP after this
+export const CHAMPION_HP_REGEN_FRAC = 0.04 // out-of-combat regen: fraction of max HP per second
+export const CHAMPION_HIT_FLASH_MS = 450 // hit-flash animation window on champion portraits
+
 // ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
 export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats

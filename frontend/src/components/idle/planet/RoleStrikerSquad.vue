@@ -7,7 +7,11 @@
       v-for="s in strikers"
       :key="s.role"
       class="rsq-item"
-      :class="{ 'rsq-item--firing': firingRoles.has(s.role) }"
+      :class="{
+        'rsq-item--firing': firingRoles.has(s.role),
+        'rsq-item--hit': hitRoles.has(s.role),
+        'rsq-item--down': s.isDown,
+      }"
       :style="{
         '--rc': s.color,
         '--ax': s.ax + 'px',
@@ -29,13 +33,29 @@
       </svg>
       <div class="rsq-badge"><img :src="s.roleImage" alt="" draggable="false" /></div>
 
+      <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
+      <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
+
       <!-- Cooldown-Pill am unteren Portraitrand -->
-      <span class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs <= 1 }">
+      <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs <= 1 }">
         {{ s.secs }}s
       </span>
 
-      <!-- Info-Plate: Champion-Name + Rolle · Schaden -->
+      <!-- Info-Plate: HP-Bar + Champion-Name + Rolle · Schaden -->
       <div class="rsq-plate">
+        <div class="rsq-hp-track">
+          <div
+            class="rsq-hp-fill"
+            :class="{
+              'rsq-hp-fill--low': s.hpPct < 25,
+              'rsq-hp-fill--mid': s.hpPct >= 25 && s.hpPct < 60,
+            }"
+            :style="{ width: s.hpPct + '%' }"
+          />
+        </div>
+        <span class="rsq-hp-text" :class="{ 'rsq-hp-text--down': s.isDown }">
+          {{ s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}` }}
+        </span>
         <span class="rsq-plate-name">{{ s.champion }}</span>
         <span class="rsq-plate-stats">{{ s.roleShort }} · {{ s.attackDamage }} dmg</span>
       </div>
@@ -76,7 +96,7 @@
           v-for="f in floatsFor(s.role)"
           :key="f.id"
           class="rsq-float"
-          :class="`rsq-float--${s.role}`"
+          :class="`rsq-float--${f.kind}`"
         >
           -{{ f.value }}
         </span>
@@ -109,6 +129,9 @@ import {
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
   STRIKER_ATTACK_LUNGE_PX,
+  BOSS_CHAMPION_ATTACK_DPS,
+  BOSS_GALAXY_CHAMPION_DPS_MULT,
+  CHAMPION_HIT_FLASH_MS,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -145,6 +168,9 @@ const rootEl = ref<HTMLDivElement | null>(null)
 const arenaSize = ref({ w: 0, h: 0 })
 let resizeObserver: ResizeObserver | null = null
 
+// Sekundentakt für Down-Countdown (Store-Timestamps sind statisch)
+const nowTick = ref(Date.now())
+
 const strikers = computed(() =>
   SQUAD_ROLES.flatMap((role) => {
     const champion = battleStore.headerSlots[SLOT_BY_ROLE[role]]
@@ -152,6 +178,10 @@ const strikers = computed(() =>
     const def = ROLE_STAR_ATTACKS[role]
     const remaining = Math.max(0, roleBehaviorStore.roleAttackCooldownMs[role])
     const readyFrac = Math.max(0, Math.min(1, 1 - remaining / def.intervalMs))
+
+    const hp = roleBehaviorStore.championHp[role]
+    const downUntil = roleBehaviorStore.championDownUntil[role]
+    const isDown = downUntil > nowTick.value
 
     // Position auf dem Halbkreis — in % der Arena, skaliert mit jeder Auflösung
     const rad = (STRIKER_ARC_ANGLES[role] * Math.PI) / 180
@@ -175,6 +205,11 @@ const strikers = computed(() =>
         attackDamage: def.damage,
         secs: Math.ceil(remaining / 1000),
         dash: `${(readyFrac * RING_CIRCUMFERENCE).toFixed(1)} ${RING_CIRCUMFERENCE.toFixed(1)}`,
+        hpPct: hp.max > 0 ? Math.max(0, Math.min(100, (hp.current / hp.max) * 100)) : 100,
+        hpCur: Math.round(hp.current),
+        hpMax: hp.max,
+        isDown,
+        downSecs: isDown ? Math.ceil((downUntil - nowTick.value) / 1000) : 0,
         xPct: Math.round(xPct * 10) / 10,
         yPct: Math.round(yPct * 10) / 10,
         px,
@@ -261,6 +296,7 @@ interface StrikerFloat {
   id: number
   role: ChampionRole
   value: number
+  kind: 'dot' | 'hit'
 }
 
 const floats = ref<StrikerFloat[]>([])
@@ -270,21 +306,41 @@ function floatsFor(role: ChampionRole): StrikerFloat[] {
   return floats.value.filter((f) => f.role === role)
 }
 
-function pushFloat(role: ChampionRole, value: number) {
+function pushFloat(role: ChampionRole, value: number, kind: StrikerFloat['kind']) {
   if (floats.value.length >= STRIKER_FLOAT_MAX) floats.value.shift()
   const id = ++floatId
-  floats.value.push({ id, role, value })
+  floats.value.push({ id, role, value, kind })
   later(STRIKER_FLOAT_DURATION_MS, () => {
     floats.value = floats.value.filter((f) => f.id !== id)
   })
+}
+
+// ── Boss-Treffer: Hit-Flash + rote Schadenszahl am Striker ───────────────
+const hitRoles = reactive(new Set<ChampionRole>())
+
+for (const role of SQUAD_ROLES) {
+  watch(
+    () => roleBehaviorStore.championHitAt[role],
+    () => {
+      hitRoles.delete(role)
+      hitRoles.add(role)
+      later(CHAMPION_HIT_FLASH_MS, () => hitRoles.delete(role))
+      const boss = bossStore.activeBoss
+      const dmg = Math.round(
+        BOSS_CHAMPION_ATTACK_DPS * (boss?.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1),
+      )
+      pushFloat(role, dmg, 'hit')
+    },
+  )
 }
 
 let dotInterval: number | null = null
 
 onMounted(() => {
   dotInterval = window.setInterval(() => {
+    nowTick.value = Date.now()
     if (roleBehaviorStore.activeCurse?.type === 'corruption' && hasLiveBoss.value) {
-      pushFloat('mid', ROLE_MID_CURSE_DOT_DPS)
+      pushFloat('mid', ROLE_MID_CURSE_DOT_DPS, 'dot')
     }
   }, GAME_TICK_INTERVAL_MS)
 
@@ -502,6 +558,128 @@ onUnmounted(() => {
     transform: translate(0, 0) scale(1);
     filter: brightness(1);
   }
+}
+
+/* ── Boss-Treffer: roter Flash + Ruckeln am Portrait ─────────────────────── */
+.rsq-item--hit .rsq-portrait {
+  animation: rsq-boss-hit 0.45s ease-out;
+}
+
+@keyframes rsq-boss-hit {
+  0% {
+    filter: brightness(2.2) saturate(0.4) sepia(0.5) hue-rotate(-30deg);
+    box-shadow:
+      0 0 0 2px rgba(6, 3, 0, 0.9),
+      0 0 20px rgba(255, 60, 40, 1),
+      0 0 44px rgba(220, 30, 20, 0.6);
+  }
+  30% {
+    translate: -3px 1px;
+  }
+  55% {
+    translate: 3px -1px;
+    filter: brightness(1.4) saturate(0.8);
+  }
+  100% {
+    translate: 0 0;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* ── Champion am Boden — ausgegraut bis zum Revive ───────────────────────── */
+.rsq-item--down .rsq-portrait {
+  filter: grayscale(1) brightness(0.5);
+  border-color: #5a2020;
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    0 0 10px rgba(120, 20, 20, 0.5);
+}
+
+.rsq-item--down .rsq-ring-arc {
+  stroke: #5a2020;
+  filter: none;
+}
+
+.rsq-down {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #ff6050;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 10px rgba(255, 60, 40, 0.8),
+    0 1px 2px #000;
+  z-index: 3;
+}
+
+/* ── HP-Bar in der Info-Plate ────────────────────────────────────────────── */
+.rsq-hp-track {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  margin-top: 2px;
+  background: #0a0806;
+  border: 1px solid color-mix(in srgb, var(--rc, #c8922a) 55%, #1a0f04);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+.rsq-hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #5de84a 0%, #2eaa1e 45%, #1d7a12 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(120, 255, 100, 0.45),
+    0 0 6px rgba(60, 200, 40, 0.5);
+  transition: width 0.25s linear;
+}
+
+.rsq-hp-fill--mid {
+  background: linear-gradient(to bottom, #f5d84a 0%, #d4960e 45%, #9a6508 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 120, 0.45),
+    0 0 6px rgba(220, 160, 20, 0.55);
+}
+
+.rsq-hp-fill--low {
+  background: linear-gradient(to bottom, #ff5f5f 0%, #cc1e1e 45%, #8a0d0d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 140, 140, 0.45),
+    0 0 8px rgba(220, 30, 30, 0.7);
+  animation: rsq-hp-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes rsq-hp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.rsq-hp-text {
+  font-size: 0.56rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8c040;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  line-height: 1.2;
+}
+
+.rsq-hp-text--down {
+  color: #ff6050;
+  text-shadow:
+    0 0 4px rgba(255, 60, 40, 0.7),
+    0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Info-Plate unter dem Portrait ───────────────────────────────────────── */
@@ -740,9 +918,14 @@ onUnmounted(() => {
   z-index: 3;
 }
 
-.rsq-float--mid {
+.rsq-float--dot {
   color: #d99bff;
   text-shadow: 0 0 12px #a030ff;
+}
+
+.rsq-float--hit {
+  color: #ff7060;
+  text-shadow: 0 0 12px #e03020;
 }
 
 .rsq-pop-enter-active {
@@ -774,6 +957,8 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .rsq-item--firing .rsq-portrait,
+  .rsq-item--hit .rsq-portrait,
+  .rsq-hp-fill--low,
   .rsq-cdpill--ready,
   .rsq-muzzle,
   .rsq-proj,
