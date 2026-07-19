@@ -509,9 +509,33 @@ export const GOLD_PASSIVE_PER_MIN = 210
 export const GOLD_PER_CS = 21
 export const GOLD_PER_KILL = 300
 export const GOLD_PER_ASSIST = 150
-/** Champion levels 1→18 spread over the game: one level per this many game-seconds */
-export const CHAMPION_LEVEL_SECONDS = 210
 export const CHAMPION_MAX_LEVEL = 18
+
+// ── Champion XP model (per-champion levels, LoL-style) ─────────────────────
+// Level thresholds mirror League: level 2 costs XP_LEVEL_BASE + XP_LEVEL_STEP,
+// each further level costs XP_LEVEL_STEP more than the previous one
+// (280, 380, 480 … 1880 — 18 360 XP total from 1 to 18).
+export const XP_LEVEL_BASE = 180
+export const XP_LEVEL_STEP = 100
+/** Universal passive XP per game-minute — every living champion earns this
+ *  identically each tick (LoL-style ambient XP), independent of role and noise. */
+export const XP_PASSIVE_PER_MIN = 120
+/** Farm/lane XP per game-minute on top of the passive tick income — solo lanes
+ *  level fastest, the shared bot lane slower, support slowest (no farm). */
+export const XP_RATE_BY_ROLE: Record<string, number> = {
+  top: 170,
+  jungle: 150,
+  mid: 180,
+  adc: 145,
+  support: 100,
+}
+export const XP_PER_KILL = 300
+export const XP_PER_ASSIST = 150
+/** Each death costs this many game-minutes of passive XP (respawn + walk back). */
+export const XP_DEATH_DOWNTIME_MINUTES = 2.5
+/** How strongly the per-champion stat noise bleeds into XP gain (0 = none, 1 = full).
+ *  Damped so level spread stays believable (~±10 %) while CS/damage spread stays wide. */
+export const XP_NOISE_DAMPING = 0.4
 /** Per-champion stat-rate noise range (multiplier drawn from the battle seed) */
 export const STAT_NOISE_MIN = 0.75
 export const STAT_NOISE_MAX = 1.3

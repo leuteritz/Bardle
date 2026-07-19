@@ -6,6 +6,8 @@ import {
   replayWinProbability,
   championNoise,
   continuousStatsAt,
+  championXpAt,
+  levelFromXp,
   bountyGold,
   mvpScore,
 } from '@/utils/battleTimeline'
@@ -25,6 +27,8 @@ import {
   GOLD_PER_KILL,
   GOLD_PER_ASSIST,
   GOLD_PER_CS,
+  XP_PASSIVE_PER_MIN,
+  XP_RATE_BY_ROLE,
 } from '@/config/constants'
 import {
   STRUCTURE_POSITIONS,
@@ -544,6 +548,62 @@ describe('championNoise / continuousStatsAt', () => {
     const sup = continuousStatsAt('support', 1, 3000)
     const adc = continuousStatsAt('adc', 1, 3000)
     expect(sup.cs).toBeLessThan(adc.cs / 3)
+  })
+})
+
+describe('champion XP levels', () => {
+  it('levelFromXp follows the LoL curve (280 XP to level 2, +100 per step)', () => {
+    expect(levelFromXp(0)).toBe(1)
+    expect(levelFromXp(279)).toBe(1)
+    expect(levelFromXp(280)).toBe(2)
+    expect(levelFromXp(280 + 380 - 1)).toBe(2)
+    expect(levelFromXp(280 + 380)).toBe(3)
+    // full curve: 18 360 XP total from 1 to 18
+    expect(levelFromXp(18359)).toBe(17)
+    expect(levelFromXp(18360)).toBe(CHAMPION_MAX_LEVEL)
+    expect(levelFromXp(1_000_000)).toBe(CHAMPION_MAX_LEVEL)
+  })
+
+  it('kills and assists raise a champion above an even-farm twin', () => {
+    const fed = continuousStatsAt('mid', 1, 1800, { kills: 8, assists: 6, deaths: 0 })
+    const even = continuousStatsAt('mid', 1, 1800, { kills: 0, assists: 0, deaths: 0 })
+    expect(fed.level).toBeGreaterThan(even.level)
+  })
+
+  it('deaths cost XP downtime and can lower the level', () => {
+    const feeding = championXpAt('top', 1, 1800, { kills: 0, assists: 0, deaths: 6 })
+    const clean = championXpAt('top', 1, 1800, { kills: 0, assists: 0, deaths: 0 })
+    expect(feeding).toBeLessThan(clean)
+    expect(championXpAt('top', 1, 60, { kills: 0, assists: 0, deaths: 10 })).toBe(0)
+  })
+
+  it('every living champion earns the universal passive tick XP regardless of role', () => {
+    const none = { kills: 0, assists: 0, deaths: 0 }
+    // even the lowest farm role always clears the pure passive income
+    expect(championXpAt('support', 1, 3600, none)).toBeGreaterThanOrEqual(XP_PASSIVE_PER_MIN * 60)
+    // with identical noise the role gap is exactly the farm-rate gap — the
+    // passive part contributes equally to everyone
+    const gap = championXpAt('mid', 1, 3600, none) - championXpAt('support', 1, 3600, none)
+    expect(gap).toBe((XP_RATE_BY_ROLE.mid - XP_RATE_BY_ROLE.support) * 60)
+  })
+
+  it('solo laners outlevel the support at equal scores', () => {
+    const none = { kills: 0, assists: 0, deaths: 0 }
+    const mid = continuousStatsAt('mid', 1, 2400, none)
+    const sup = continuousStatsAt('support', 1, 2400, none)
+    expect(mid.level).toBeGreaterThan(sup.level)
+  })
+
+  it('teams end the game with mixed, not uniform, levels', () => {
+    const roles = ['top', 'jungle', 'mid', 'adc', 'support'] as const
+    const levels = roles.map((role, i) =>
+      continuousStatsAt(role, championNoise(42, 1, i), 3000, {
+        kills: i,
+        assists: i * 2,
+        deaths: 4 - i,
+      }).level,
+    )
+    expect(new Set(levels).size).toBeGreaterThan(1)
   })
 })
 

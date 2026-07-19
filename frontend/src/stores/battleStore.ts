@@ -908,7 +908,11 @@ export const useBattleStore = defineStore('battle', {
           const champ = team[i]
           if (!champ.name) continue
           const noise = championNoise(this.battleSeed, teamNo, i)
-          const cont = continuousStatsAt(champ.role, noise, gameTime)
+          const cont = continuousStatsAt(champ.role, noise, gameTime, {
+            kills: champ.kills,
+            assists: champ.assists,
+            deaths: champ.deaths,
+          })
           champ.cs = cont.cs
           champ.gold = cont.goldPassive + bountyGold(champ.kills, champ.assists, cont.cs)
           champ.damage = cont.damage

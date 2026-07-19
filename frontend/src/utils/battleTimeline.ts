@@ -83,9 +83,16 @@ import {
   GOLD_PER_CS,
   GOLD_PER_KILL,
   GOLD_PER_ASSIST,
-  CHAMPION_LEVEL_SECONDS,
   MOVE_RESPAWN_WALK_SECONDS,
   CHAMPION_MAX_LEVEL,
+  XP_LEVEL_BASE,
+  XP_LEVEL_STEP,
+  XP_PASSIVE_PER_MIN,
+  XP_RATE_BY_ROLE,
+  XP_PER_KILL,
+  XP_PER_ASSIST,
+  XP_DEATH_DOWNTIME_MINUTES,
+  XP_NOISE_DAMPING,
   STAT_NOISE_MIN,
   STAT_NOISE_MAX,
   MVP_W_KILL,
@@ -815,10 +822,67 @@ export interface ContinuousStats {
   items: number
 }
 
-/** Closed-form continuous stats as a pure function of game-time (kills/gold bounties come from events). */
-export function continuousStatsAt(role: BattleRole, noise: number, gameTime: number): ContinuousStats {
+/** Kill/assist/death tallies feeding the XP model — deaths cost farm downtime. */
+export interface CombatTally {
+  kills: number
+  assists: number
+  deaths: number
+}
+
+/** Level reached with `xp` total XP on the LoL curve (280, 380, … 1880 per level-up). */
+export function levelFromXp(xp: number): number {
+  let level = 1
+  let cost = XP_LEVEL_BASE + XP_LEVEL_STEP
+  let remaining = xp
+  while (level < CHAMPION_MAX_LEVEL && remaining >= cost) {
+    remaining -= cost
+    level++
+    cost += XP_LEVEL_STEP
+  }
+  return level
+}
+
+/**
+ * Per-champion XP at `gameTime`: a universal passive tick income every living
+ * champion earns identically (LoL-style ambient XP), role-based farm/lane XP
+ * on top (mildly scaled by the champion's seed noise), plus kill/assist XP
+ * from the timeline, minus everything missed during each death's respawn
+ * downtime. Pure and re-derivable — replaying the same events at the same
+ * time always yields the same XP.
+ */
+export function championXpAt(
+  role: BattleRole,
+  noise: number,
+  gameTime: number,
+  combat: CombatTally,
+): number {
+  const xpNoise = 1 + (noise - 1) * XP_NOISE_DAMPING
+  const aliveMinutes = Math.max(
+    0,
+    gameTime / 60 - combat.deaths * XP_DEATH_DOWNTIME_MINUTES,
+  )
+  return Math.floor(
+    XP_PASSIVE_PER_MIN * aliveMinutes +
+      XP_RATE_BY_ROLE[role] * aliveMinutes * xpNoise +
+      combat.kills * XP_PER_KILL +
+      combat.assists * XP_PER_ASSIST,
+  )
+}
+
+/**
+ * Closed-form continuous stats as a pure function of game-time (kills/gold
+ * bounties come from events). When `combat` is given, the level derives from
+ * the champion's individual XP (role rate, kills, assists, death downtime) —
+ * without it, only passive XP counts.
+ */
+export function continuousStatsAt(
+  role: BattleRole,
+  noise: number,
+  gameTime: number,
+  combat: CombatTally = { kills: 0, assists: 0, deaths: 0 },
+): ContinuousStats {
   const minutes = gameTime / 60
-  const level = Math.min(CHAMPION_MAX_LEVEL, 1 + Math.floor(gameTime / CHAMPION_LEVEL_SECONDS))
+  const level = levelFromXp(championXpAt(role, noise, gameTime, combat))
   return {
     cs: Math.floor(CS_RATE_BY_ROLE[role] * minutes * noise),
     goldPassive: Math.floor(GOLD_PASSIVE_PER_MIN * minutes),
