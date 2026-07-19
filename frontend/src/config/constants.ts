@@ -2673,6 +2673,12 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:glowing-hands', // Support "Guardian Light" orbit ability (SigilDetailsPanel)
   'game-icons:claw-slashes', // Boss AoE damage-per-second readout (ObjectiveModalComponent)
   'game-icons:burning-skull', // Hex Curse stack/damage badge on the boss (ObjectiveModalComponent)
+  // BottomScoreboard stat icons
+  'game-icons:piercing-sword', // Kills stat (BottomScoreboard)
+  'game-icons:dead-head', // Deaths stat (BottomScoreboard)
+  'game-icons:three-friends', // Assists stat (BottomScoreboard)
+  'game-icons:grass', // CS stat (BottomScoreboard)
+  'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
