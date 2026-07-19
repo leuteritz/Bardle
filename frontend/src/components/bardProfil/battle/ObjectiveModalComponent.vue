@@ -50,7 +50,7 @@
           </span>
           <span class="alive-versus">
             <span class="alive-count alive-count--own">{{ aliveOwn }}</span>
-            <Icon icon="game-icons:duel" width="15" height="15" class="alive-versus-icon" />
+            <span class="alive-versus-label">VS</span>
             <span class="alive-count alive-count--enemy">{{ aliveEnemy }}</span>
           </span>
           <span class="alive-pips alive-pips--enemy">
@@ -1175,13 +1175,23 @@ onUnmounted(_stopFloatScheduler)
   gap: 5px;
   padding: 0 8px;
 }
-.alive-versus-icon {
+.alive-versus-label {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  /* MedievalSharp caps sit optically higher than digits — nudge down to align */
+  transform: translateY(2px);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
   color: #e8c040;
+  text-shadow: 0 0 6px rgba(232, 192, 64, 0.5);
 }
 .alive-count {
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .alive-count--own {

@@ -2690,7 +2690,6 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:medal', // Grant honor header + medal stamp (HonorGrantPanel)
   'game-icons:watchtower', // Turrets (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BottomScoreboard, BattleLandingScreen)
   'game-icons:floating-crystal', // Inhibitors (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BattleLandingScreen)
-  'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
   'game-icons:sport-medal', // Top-3 damage rank badge (ObjectiveModalComponent)
   'game-icons:imperial-crown', // TEAM MVP badge (TeamRosterPanel)
   'game-icons:bloody-sword', // TOP KILLS badge (TeamRosterPanel)
