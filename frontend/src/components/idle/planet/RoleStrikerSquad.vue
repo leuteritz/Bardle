@@ -10,6 +10,8 @@
       :class="{ 'rsq-item--firing': firingRoles.has(s.role) }"
       :style="{
         '--rc': s.color,
+        '--ax': s.ax + 'px',
+        '--ay': s.ay + 'px',
         left: `${s.xPct}%`,
         top: `${s.yPct}%`,
       }"
@@ -106,6 +108,7 @@ import {
   STRIKER_BOSS_ANCHOR_X_PCT,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
+  STRIKER_ATTACK_LUNGE_PX,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -181,6 +184,9 @@ const strikers = computed(() =>
         // Mündungsblitz am Portraitrand Richtung Boss
         mx: Math.round((px / dist) * 52),
         my: Math.round((py / dist) * 52),
+        // Angriffs-Lunge: Portrait stößt Richtung Boss vor
+        ax: Math.round((px / dist) * STRIKER_ATTACK_LUNGE_PX),
+        ay: Math.round((py / dist) * STRIKER_ATTACK_LUNGE_PX),
       },
     ]
   }),
@@ -451,25 +457,49 @@ onUnmounted(() => {
   }
 }
 
-/* Abschuss-Puls */
+/* Abschuss: Lunge Richtung Boss → Recoil → abklingender Shake + Glow */
 .rsq-item--firing .rsq-portrait {
-  animation: rsq-fire-flash 0.5s ease-out;
+  animation: rsq-attack 0.5s cubic-bezier(0.3, 0, 0.4, 1);
+  will-change: transform, filter;
 }
 
-@keyframes rsq-fire-flash {
+@keyframes rsq-attack {
   0% {
+    transform: translate(0, 0) scale(1);
+    filter: brightness(1);
+  }
+  /* Ausholen: kurz vom Boss weg */
+  10% {
+    transform: translate(calc(var(--ax, 0px) * -0.35), calc(var(--ay, 0px) * -0.35)) scale(0.94);
+    filter: brightness(0.85);
+  }
+  /* Vorstoß Richtung Boss + hellster Moment */
+  26% {
+    transform: translate(var(--ax, 0px), var(--ay, 0px)) scale(1.1);
+    filter: brightness(1.8) saturate(1.3);
     box-shadow:
       0 0 0 2px rgba(6, 3, 0, 0.9),
       0 0 28px var(--rc, #c8922a),
       0 0 46px color-mix(in srgb, var(--rc) 55%, transparent),
       0 5px 12px rgba(0, 0, 0, 0.7);
-    filter: brightness(1.6);
+  }
+  /* Recoil über die Mitte hinaus */
+  44% {
+    transform: translate(calc(var(--ax, 0px) * -0.28), calc(var(--ay, 0px) * -0.28)) scale(0.98);
+    filter: brightness(1.15);
+  }
+  /* abklingender Shake */
+  58% {
+    transform: translate(calc(var(--ax, 0px) * 0.14), calc(var(--ay, 0px) * 0.14)) scale(1.02);
+  }
+  72% {
+    transform: translate(calc(var(--ax, 0px) * -0.07), calc(var(--ay, 0px) * -0.07)) scale(1);
+  }
+  86% {
+    transform: translate(calc(var(--ax, 0px) * 0.03), calc(var(--ay, 0px) * 0.03)) scale(1);
   }
   100% {
-    box-shadow:
-      0 0 0 2px rgba(6, 3, 0, 0.9),
-      0 0 16px color-mix(in srgb, var(--rc) 55%, transparent),
-      0 5px 12px rgba(0, 0, 0, 0.7);
+    transform: translate(0, 0) scale(1);
     filter: brightness(1);
   }
 }
