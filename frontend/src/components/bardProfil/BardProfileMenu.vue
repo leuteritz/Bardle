@@ -274,7 +274,10 @@ watch(
   overflow: hidden;
   background: #111008;
   border: 4px solid #7a4e20;
-  border-radius: var(--bp-radius);
+  /* same curve as the bottom-bar notches directly beside the modal, where the
+     minimap/command panels meet the scoreboard strip (BOTTOM_BAR_NOTCH_R ×
+     --hud-scale) — corner and notch share one curvature at every resolution */
+  border-radius: calc(var(--bottom-notch-r, 26px) * var(--hud-scale, 1));
   box-shadow:
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,

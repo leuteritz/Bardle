@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import './assets/main.css'
 import { formatNumber } from './config/numberFormat'
-import { BARD_PROFILE_RADIUS } from './config/constants'
+import { BARD_PROFILE_RADIUS, BOTTOM_BAR_NOTCH_R } from './config/constants'
 import { usePersistence } from './composables/usePersistence'
 import { useBattleStore } from './stores/battleStore'
 
@@ -15,6 +15,7 @@ app.config.globalProperties.$formatNumber = formatNumber
 
 app.mount('#app')
 document.documentElement.style.setProperty('--bp-radius', `${BARD_PROFILE_RADIUS}px`)
+document.documentElement.style.setProperty('--bottom-notch-r', `${BOTTOM_BAR_NOTCH_R}px`)
 
 const { loadGame, saveGame } = usePersistence()
 loadGame()
