@@ -39,7 +39,13 @@
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
         <div class="sf-main">
           <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
-          <div class="sf-arena-wrap" :class="{ 'sf-arena-wrap--strike': bossStrikeActive }">
+          <div
+            class="sf-arena-wrap"
+            :class="{
+              'sf-arena-wrap--strike': bossStrikeActive,
+              'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive,
+            }"
+          >
             <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
             <div
               ref="modalPlanetBgRef"
@@ -144,7 +150,7 @@
               </div>
 
               <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
-              <div class="sf-boss-atk">Boss Attack · {{ bossDps }} dmg/s per champion</div>
+              <div class="sf-boss-atk">{{ bossDps }} dmg/s per champion</div>
             </div>
 
             <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
@@ -192,6 +198,8 @@ import {
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   CHAMPION_HIT_FLASH_MS,
+  BOSS_HIT_REACT_MS,
+  STRIKER_PROJECTILE_FLIGHT_MS,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
@@ -300,6 +308,43 @@ watch(
 
 onUnmounted(() => {
   if (bossStrikeTimeout) clearTimeout(bossStrikeTimeout)
+})
+
+// ── Boss-Treffer-Reaktion: Flinch, wenn ein Champion-Projektil einschlägt ─
+const bossHitActive = ref(false)
+let bossHitDelayTimeout: ReturnType<typeof setTimeout> | null = null
+let bossHitEndTimeout: ReturnType<typeof setTimeout> | null = null
+
+function triggerBossHitReact() {
+  // Verzögert um die Projektil-Flugzeit — Flinch genau beim Einschlag
+  if (bossHitDelayTimeout) clearTimeout(bossHitDelayTimeout)
+  bossHitDelayTimeout = setTimeout(() => {
+    bossHitActive.value = false
+    requestAnimationFrame(() => {
+      bossHitActive.value = true
+      if (bossHitEndTimeout) clearTimeout(bossHitEndTimeout)
+      bossHitEndTimeout = setTimeout(() => {
+        bossHitActive.value = false
+      }, BOSS_HIT_REACT_MS)
+    })
+  }, STRIKER_PROJECTILE_FLIGHT_MS)
+}
+
+watch(
+  () => Object.values(roleBehaviorStore.roleAttackShots).reduce((a, b) => a + b, 0),
+  triggerBossHitReact,
+)
+
+watch(
+  () => roleBehaviorStore.adcBurstActive,
+  (active) => {
+    if (active) triggerBossHitReact()
+  },
+)
+
+onUnmounted(() => {
+  if (bossHitDelayTimeout) clearTimeout(bossHitDelayTimeout)
+  if (bossHitEndTimeout) clearTimeout(bossHitEndTimeout)
 })
 
 // ── Planet Background ─────────────────────────────────────────────────────
@@ -555,6 +600,7 @@ function emberStyle(i: number): Record<string, string> {
   .sf-star-ring--critical .sf-star-ring-secs,
   .sf-curse-mark-icon,
   .sf-arena-wrap--strike :deep(.boss-img),
+  .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave {
     animation: none;
   }
@@ -1045,6 +1091,38 @@ function emberStyle(i: number): Record<string, string> {
   }
   100% {
     transform: translateY(0) scale(1) rotate(0deg);
+    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
+  }
+}
+
+/* ── Boss-Treffer-Reaktion: seitlicher Flinch + Weißblitz — bewusst kürzer
+   und knackiger als der wuchtige Angriffs-Slam ───────────────────────────── */
+.sf-arena-wrap--hit :deep(.boss-img) {
+  animation: sf-boss-flinch 0.35s cubic-bezier(0.2, 0, 0.3, 1);
+  transform-origin: 50% 85%;
+}
+
+@keyframes sf-boss-flinch {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
+  }
+  /* Einschlag: weggedrückt + Weißblitz */
+  18% {
+    transform: translateX(-12px) rotate(-2.5deg) scale(0.96);
+    filter: drop-shadow(0 0 26px rgba(255, 240, 220, 0.9)) brightness(3) saturate(0);
+  }
+  /* Gegenruck */
+  45% {
+    transform: translateX(8px) rotate(1.5deg) scale(1.01);
+    filter: drop-shadow(0 3px 18px rgba(255, 120, 40, 0.6)) brightness(1.5) saturate(0.7);
+  }
+  70% {
+    transform: translateX(-3px) rotate(-0.5deg) scale(1);
+    filter: drop-shadow(0 4px 15px rgba(255, 80, 0, 0.5)) brightness(1.1);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
     filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
 }

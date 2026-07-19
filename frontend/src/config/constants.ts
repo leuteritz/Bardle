@@ -855,6 +855,7 @@ export const BOSS_GALAXY_CHAMPION_DPS_MULT = 2 // galaxy bosses hit twice as har
 export const CHAMPION_REVIVE_MS = 8000 // downed champion revives at full HP after this
 export const CHAMPION_HP_REGEN_FRAC = 0.04 // out-of-combat regen: fraction of max HP per second
 export const CHAMPION_HIT_FLASH_MS = 450 // hit-flash animation window on champion portraits
+export const BOSS_HIT_REACT_MS = 350 // boss flinch animation when a champion projectile lands
 
 // ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
