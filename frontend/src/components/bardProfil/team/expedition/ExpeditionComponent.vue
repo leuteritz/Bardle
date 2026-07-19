@@ -79,8 +79,8 @@
             Collect All
             <RpgBadgeTooltip>
               <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" hoverable />
-              <template #tip>
-                <ExpeditionReadyTip />
+              <template #tip="{ close }">
+                <ExpeditionReadyTip @collected="close" />
               </template>
             </RpgBadgeTooltip>
           </button>

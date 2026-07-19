@@ -108,8 +108,8 @@ watch(
                 <div v-if="item.id === 'team'" class="team-badge-row">
                   <RpgBadgeTooltip>
                     <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                    <template #tip>
-                      <ExpeditionReadyTip />
+                    <template #tip="{ close }">
+                      <ExpeditionReadyTip @collected="close" />
                     </template>
                   </RpgBadgeTooltip>
                   <RpgBadgeTooltip>

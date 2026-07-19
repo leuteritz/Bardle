@@ -256,8 +256,8 @@ watch(
       Expedition
       <RpgBadgeTooltip>
         <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" hoverable />
-        <template #tip>
-          <ExpeditionReadyTip />
+        <template #tip="{ close }">
+          <ExpeditionReadyTip @collected="close" />
         </template>
       </RpgBadgeTooltip>
     </button>

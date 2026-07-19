@@ -378,8 +378,8 @@ onUnmounted(() => {
             {{ expeditionBadgeCount }}
           </button>
         </Transition>
-        <template #tip>
-          <ExpeditionReadyTip />
+        <template #tip="{ close }">
+          <ExpeditionReadyTip @collected="close" />
         </template>
       </RpgBadgeTooltip>
 

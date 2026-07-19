@@ -2,14 +2,28 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/expeditionStore'
+import { useActionToast } from '@/composables/useActionToast'
 
 /* Tooltip body for every expedition notify badge: lists the resolved
-   expeditions (success/failure) that are waiting to be collected. */
+   expeditions (success/failure) waiting to be collected and lets the player
+   collect them all right from the tooltip (same store logic as the modal's
+   "Collect All" button). */
+const emit = defineEmits<{ collected: [] }>()
+
 const expeditionStore = useExpeditionStore()
+const { showToast } = useActionToast()
 
 const readyExpeditions = computed(() =>
   expeditionStore.activeExpeditions.filter((e) => e.status !== 'active'),
 )
+
+function collectAll() {
+  const ready = [...readyExpeditions.value]
+  if (ready.length === 0) return
+  for (const exp of ready) expeditionStore.collectExpedition(exp.id)
+  showToast('Expedition rewards collected!')
+  emit('collected')
+}
 </script>
 
 <template>
@@ -32,7 +46,10 @@ const readyExpeditions = computed(() =>
         </span>
       </li>
     </ul>
-    <div class="ex-tt__hint">Collect rewards in Team → Expeditions</div>
+    <button class="ex-tt__collect" @click.stop="collectAll">
+      Collect
+      <span class="ex-tt__collect-count">{{ readyExpeditions.length }}</span>
+    </button>
   </div>
 </template>
 
@@ -102,11 +119,51 @@ const readyExpeditions = computed(() =>
   border: 1px solid rgba(204, 96, 80, 0.4);
 }
 
-.ex-tt__hint {
-  padding: 5px 12px 0;
-  border-top: 1px solid #3e200a;
-  font-size: 0.72rem;
-  color: rgba(200, 200, 220, 0.45);
-  letter-spacing: 0.03em;
+.ex-tt__collect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: calc(100% - 24px);
+  margin: 6px 12px 3px;
+  padding: 6px 10px;
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    filter 0.12s,
+    transform 0.12s;
+}
+
+.ex-tt__collect:hover {
+  filter: brightness(1.12);
+}
+
+.ex-tt__collect:active {
+  transform: scale(0.97);
+}
+
+.ex-tt__collect-count {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
 }
 </style>
