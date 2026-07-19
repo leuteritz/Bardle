@@ -41,10 +41,11 @@
     </div>
   </div>
 
-  <!-- Live victory momentum meter -->
-  <div class="momentum-meter" :class="{ 'is-shifting': isShifting }">
+  <!-- Live victory momentum meter — presentation escalates with dominance:
+       neutral around 50/50, the leading team's side lights up in tiers -->
+  <div class="momentum-meter" :class="meterClasses">
     <div class="momentum-row">
-      <div class="momentum-pct momentum-pct--blue" :class="{ 'is-dominant': bluePercent >= highThreshold }">
+      <div class="momentum-pct momentum-pct--blue">
         <span class="momentum-pct-value">{{ bluePercent }}%</span>
       </div>
       <div class="momentum-track">
@@ -63,7 +64,7 @@
           class="momentum-delta momentum-delta--red"
         >▲ +{{ -lastDelta }}%</span>
       </div>
-      <div class="momentum-pct momentum-pct--red" :class="{ 'is-dominant': bluePercent <= lowThreshold }">
+      <div class="momentum-pct momentum-pct--red">
         <span class="momentum-pct-value">{{ 100 - bluePercent }}%</span>
       </div>
     </div>
@@ -77,14 +78,32 @@ import { useBattleStore } from '@/stores/battleStore'
 import { formatNumber } from '@/config/numberFormat'
 import {
   MOMENTUM_HIGH_THRESHOLD,
-  MOMENTUM_LOW_THRESHOLD,
+  MOMENTUM_NEUTRAL_BAND,
+  MOMENTUM_CRUSHING_THRESHOLD,
   MOMENTUM_DELTA_CHIP_MS,
 } from '@/config/constants'
 
 const battleStore = useBattleStore()
 const bluePercent = computed(() => Math.round(battleStore.liveWinMomentum * 100))
-const highThreshold = MOMENTUM_HIGH_THRESHOLD * 100
-const lowThreshold = MOMENTUM_LOW_THRESHOLD * 100
+
+/* Dominance tiers drive the meter's visual escalation:
+   0 = neutral (within ±band of 50), 1 = leaning, 2 = dominant, 3 = crushing */
+const leadPercent = computed(() => Math.max(bluePercent.value, 100 - bluePercent.value))
+const leader = computed<'blue' | 'red' | null>(() => {
+  if (leadPercent.value <= 50 + MOMENTUM_NEUTRAL_BAND * 100) return null
+  return bluePercent.value > 50 ? 'blue' : 'red'
+})
+const dominanceTier = computed(() => {
+  if (!leader.value) return 0
+  if (leadPercent.value >= MOMENTUM_CRUSHING_THRESHOLD * 100) return 3
+  if (leadPercent.value >= MOMENTUM_HIGH_THRESHOLD * 100) return 2
+  return 1
+})
+const meterClasses = computed(() => ({
+  'is-shifting': isShifting.value,
+  [`lead-${leader.value}`]: leader.value !== null,
+  [`tier-${dominanceTier.value}`]: dominanceTier.value > 0,
+}))
 
 const lastDelta = ref(0)
 const deltaKey = ref(0)
@@ -148,6 +167,8 @@ watch(bluePercent, (next, prev) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* MedievalSharp metric fix — keep the whole bar row optically centered */
+  transform: translateY(0.1em);
 }
 .side-name--blue { color: #93c5fd; }
 .side-name--red { color: #fca5a5; }
@@ -159,6 +180,8 @@ watch(bluePercent, (next, prev) => {
   margin-left: auto;
   font-size: clamp(10px, 0.95cqw, 12px);
   color: #8ab0e0;
+  /* MedievalSharp metric fix — keep the whole bar row optically centered */
+  transform: translateY(0.1em);
 }
 .side-stats--red {
   margin-left: 0;
@@ -201,6 +224,9 @@ watch(bluePercent, (next, prev) => {
   line-height: 1;
   min-width: clamp(28px, 5cqh, 36px);
   text-align: center;
+  /* Same MedievalSharp metric fix as the momentum values: digits render high
+     in their em box, nudge down for equal space above and below */
+  transform: translateY(0.1em);
 }
 .kills--blue { color: #93c5fd; }
 .kills--red { color: #fca5a5; }
@@ -260,25 +286,88 @@ watch(bluePercent, (next, prev) => {
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  transition: text-shadow 0.4s ease;
+  /* MedievalSharp digits sit high in their em box — nudge down so the number
+     is visually centered on the momentum track at every size.
+     Scale factor grows with the leading team's dominance tier. */
+  transform: translateY(0.1em) scale(var(--pct-scale, 1));
+  transition:
+    transform 0.5s ease,
+    opacity 0.5s ease,
+    color 0.4s ease,
+    filter 0.5s ease,
+    text-shadow 0.4s ease;
 }
+/* Scale away from the track so the growing number keeps its gap */
 .momentum-pct--blue .momentum-pct-value {
+  transform-origin: right center;
   color: #93c5fd;
   text-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
 }
 .momentum-pct--red .momentum-pct-value {
+  transform-origin: left center;
   color: #fca5a5;
   text-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
 }
-.momentum-pct--blue.is-dominant .momentum-pct-value {
+
+/* ── Dominance escalation: leading number grows + glows, trailing number fades ── */
+.tier-1 .momentum-pct-value { --pct-scale: 1.06; }
+.tier-2 .momentum-pct-value { --pct-scale: 1.14; }
+.tier-3 .momentum-pct-value { --pct-scale: 1.24; }
+
+.lead-blue .momentum-pct--blue .momentum-pct-value {
   text-shadow:
-    0 0 10px rgba(59, 130, 246, 0.9),
-    0 0 24px rgba(59, 130, 246, 0.5);
+    0 0 10px rgba(59, 130, 246, 0.75),
+    0 0 22px rgba(59, 130, 246, 0.4);
 }
-.momentum-pct--red.is-dominant .momentum-pct-value {
+.lead-red .momentum-pct--red .momentum-pct-value {
   text-shadow:
-    0 0 10px rgba(239, 68, 68, 0.9),
-    0 0 24px rgba(239, 68, 68, 0.5);
+    0 0 10px rgba(239, 68, 68, 0.75),
+    0 0 22px rgba(239, 68, 68, 0.4);
+}
+.lead-blue.tier-3 .momentum-pct--blue .momentum-pct-value {
+  color: #dbeafe;
+  text-shadow:
+    0 0 10px rgba(59, 130, 246, 1),
+    0 0 26px rgba(59, 130, 246, 0.7);
+  animation: momentum-value-pulse-blue 1.6s ease-in-out infinite;
+}
+.lead-red.tier-3 .momentum-pct--red .momentum-pct-value {
+  color: #fee2e2;
+  text-shadow:
+    0 0 10px rgba(239, 68, 68, 1),
+    0 0 26px rgba(239, 68, 68, 0.7);
+  animation: momentum-value-pulse-red 1.6s ease-in-out infinite;
+}
+/* The trailing side steps back — dimmer and desaturated as the gap widens */
+.lead-blue .momentum-pct--red .momentum-pct-value,
+.lead-red .momentum-pct--blue .momentum-pct-value {
+  --pct-scale: 1;
+  opacity: 0.75;
+}
+.lead-blue.tier-2 .momentum-pct--red .momentum-pct-value,
+.lead-red.tier-2 .momentum-pct--blue .momentum-pct-value {
+  opacity: 0.55;
+  filter: saturate(0.6);
+}
+.lead-blue.tier-3 .momentum-pct--red .momentum-pct-value,
+.lead-red.tier-3 .momentum-pct--blue .momentum-pct-value {
+  opacity: 0.4;
+  filter: saturate(0.35);
+}
+
+@keyframes momentum-value-pulse-blue {
+  50% {
+    text-shadow:
+      0 0 14px rgba(59, 130, 246, 1),
+      0 0 36px rgba(59, 130, 246, 0.9);
+  }
+}
+@keyframes momentum-value-pulse-red {
+  50% {
+    text-shadow:
+      0 0 14px rgba(239, 68, 68, 1),
+      0 0 36px rgba(239, 68, 68, 0.9);
+  }
 }
 
 .momentum-delta {
@@ -346,7 +435,8 @@ watch(bluePercent, (next, prev) => {
   height: 100%;
   transition:
     width 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.4s ease;
+    box-shadow 0.4s ease,
+    filter 0.5s ease;
 }
 .momentum-fill--blue {
   background: linear-gradient(to right, #1d4ed8, #3b82f6);
@@ -367,6 +457,89 @@ watch(bluePercent, (next, prev) => {
   box-shadow:
     inset 0 1px 0 rgba(252, 165, 165, 0.4),
     0 0 12px rgba(239, 68, 68, 0.8);
+}
+
+/* ── Dominance: the leading fill radiates, the trailing fill cools down ── */
+.lead-blue.tier-1 .momentum-fill--blue {
+  box-shadow:
+    inset 0 1px 0 rgba(147, 197, 253, 0.4),
+    0 0 8px rgba(59, 130, 246, 0.5);
+}
+.lead-red.tier-1 .momentum-fill--red {
+  box-shadow:
+    inset 0 1px 0 rgba(252, 165, 165, 0.4),
+    0 0 8px rgba(239, 68, 68, 0.5);
+}
+.lead-blue.tier-2 .momentum-fill--blue {
+  background: linear-gradient(to right, #2563eb, #60a5fa);
+  box-shadow:
+    inset 0 1px 0 rgba(191, 219, 254, 0.55),
+    0 0 14px rgba(59, 130, 246, 0.75);
+}
+.lead-red.tier-2 .momentum-fill--red {
+  background: linear-gradient(to left, #dc2626, #f87171);
+  box-shadow:
+    inset 0 1px 0 rgba(254, 202, 202, 0.55),
+    0 0 14px rgba(239, 68, 68, 0.75);
+}
+/* Crushing: brightest gradient + light sweep across the leading fill */
+.lead-blue.tier-3 .momentum-fill--blue {
+  background:
+    linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)
+      0 0 / 200% 100% no-repeat,
+    linear-gradient(to right, #3b82f6, #93c5fd);
+  box-shadow:
+    inset 0 1px 0 rgba(219, 234, 254, 0.7),
+    0 0 20px rgba(59, 130, 246, 0.95);
+  animation: momentum-shimmer 1.8s linear infinite;
+}
+.lead-red.tier-3 .momentum-fill--red {
+  background:
+    linear-gradient(-110deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)
+      0 0 / 200% 100% no-repeat,
+    linear-gradient(to left, #ef4444, #fca5a5);
+  box-shadow:
+    inset 0 1px 0 rgba(254, 226, 226, 0.7),
+    0 0 20px rgba(239, 68, 68, 0.95);
+  animation: momentum-shimmer 1.8s linear infinite;
+}
+.lead-blue .momentum-fill--red,
+.lead-red .momentum-fill--blue {
+  filter: saturate(0.75) brightness(0.85);
+}
+.lead-blue.tier-3 .momentum-fill--red,
+.lead-red.tier-3 .momentum-fill--blue {
+  filter: saturate(0.45) brightness(0.7);
+}
+
+@keyframes momentum-shimmer {
+  to {
+    background-position: 200% 0, 0 0;
+  }
+}
+
+/* Crushing tier also haloes the whole track in the leading team's color */
+.lead-blue.tier-3 .momentum-track {
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.35);
+}
+.lead-red.tier-3 .momentum-track {
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+
+/* Meter backdrop tilts toward the leading side once dominance is clear */
+.momentum-meter.lead-blue.tier-2,
+.momentum-meter.lead-blue.tier-3 {
+  background:
+    linear-gradient(to right, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0) 45%),
+    linear-gradient(to left, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0) 25%),
+    #0d0c08;
+}
+.momentum-meter.lead-red.tier-2,
+.momentum-meter.lead-red.tier-3 {
+  background:
+    linear-gradient(to left, rgba(239, 68, 68, 0.28), rgba(239, 68, 68, 0) 45%),
+    linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0) 25%),
+    #0d0c08;
 }
 
 .momentum-center-tick {
@@ -395,5 +568,12 @@ watch(bluePercent, (next, prev) => {
   transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .momentum-pct-value,
+  .momentum-fill {
+    animation: none !important;
+  }
 }
 </style>

@@ -414,6 +414,10 @@ export const BATTLE_BASE_START_WIN_CHANCE = 0.5
 /** Victory momentum meter: dominance glow thresholds + fill transition */
 export const MOMENTUM_HIGH_THRESHOLD = 0.65
 export const MOMENTUM_LOW_THRESHOLD = 0.35
+/** Dominance tiers for the meter visuals: within ±band of 50% reads as neutral,
+ * at/above the crushing threshold the strongest (pulsing) presentation kicks in */
+export const MOMENTUM_NEUTRAL_BAND = 0.03
+export const MOMENTUM_CRUSHING_THRESHOLD = 0.8
 export const MOMENTUM_BAR_TRANSITION_MS = 800
 /** Victory momentum meter: delta chip fade-out duration */
 export const MOMENTUM_DELTA_CHIP_MS = 1200
