@@ -88,23 +88,24 @@ function materialsOf(boss: PlanetBossEvent) {
 </script>
 
 <style scoped>
-/* ── Glaskarte (gleiches System wie die Loot-Karte) ──────────────────────── */
+/* ── Sekundärkarte — bewusst kompakter & gedimmter als die Loot-Karte ────── */
 .next-card {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0.5rem 0.75rem 0.55rem;
-  border-radius: 10px;
+  gap: 4px;
+  padding: 0.45rem 0.7rem 0.5rem;
+  border-radius: 4px;
   /* Kein backdrop-filter: müsste beim Screen-Shake jeden Frame neu blurren */
-  background: rgba(12, 6, 0, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(12, 8, 3, 0.72);
+  border: 1px solid #3a2410;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   animation: nextReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
 }
 
 .next-card--galaxy {
-  border-color: rgba(180, 40, 255, 0.22);
+  border-color: #45205c;
 }
 
 @keyframes nextReveal {
@@ -123,18 +124,19 @@ function materialsOf(boss: PlanetBossEvent) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(200, 180, 140, 0.65);
+  letter-spacing: 0.2em;
+  color: rgba(200, 180, 140, 0.55);
   white-space: nowrap;
 }
 
 .next-star-icon {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   object-fit: contain;
+  opacity: 0.75;
 }
 
 /* ── Chips ────────────────────────────────────────────────────────────────── */
@@ -142,30 +144,30 @@ function materialsOf(boss: PlanetBossEvent) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 18px;
+  gap: 5px 12px;
   min-width: 0;
 }
 
 .next-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.92rem;
+  gap: 6px;
+  font-size: 0.76rem;
   font-weight: 800;
-  color: #c8c8c8;
+  color: #a8a8a8;
   white-space: nowrap;
-  line-height: 1.4;
+  line-height: 1.35;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .next-chip--chimes {
-  color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.55), 0 1px 3px rgba(0, 0, 0, 0.9);
+  color: #c8a838;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.4), 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .next-chip-icon {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
@@ -176,23 +178,23 @@ function materialsOf(boss: PlanetBossEvent) {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  padding-right: 16px;
+  gap: 8px;
+  padding-right: 12px;
   margin-right: 2px;
-  border-right: 1px solid rgba(74, 144, 217, 0.25);
+  border-right: 1px solid rgba(74, 144, 217, 0.2);
 }
 
 .next-champion-portrait {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
-  border-radius: 8px;
-  border: 1px solid rgba(130, 185, 255, 0.45);
+  border-radius: 4px;
+  border: 1px solid #5c88b8;
   box-shadow:
-    0 0 16px rgba(74, 144, 217, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.8);
+    0 0 10px rgba(74, 144, 217, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 .next-champion-text {
@@ -202,50 +204,24 @@ function materialsOf(boss: PlanetBossEvent) {
 }
 
 .next-champion-eyebrow {
-  font-size: 0.52rem;
+  font-size: 0.46rem;
   font-weight: 900;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: rgba(130, 185, 255, 0.75);
-  text-shadow: 0 0 8px rgba(74, 144, 217, 0.5);
+  color: rgba(130, 185, 255, 0.6);
 }
 
 .next-champion-name {
-  font-size: 1.25rem;
+  font-size: 0.95rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.05;
   white-space: nowrap;
-  background: linear-gradient(
-    105deg,
-    #9cc8ff 0%,
-    #4a90d9 40%,
-    #d8ecff 50%,
-    #4a90d9 60%,
-    #9cc8ff 100%
-  );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: next-champ-shimmer 3s linear infinite;
-  filter: drop-shadow(0 0 12px rgba(74, 144, 217, 0.5)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
-}
-
-@keyframes next-champ-shimmer {
-  from {
-    background-position: 220% 0;
-  }
-  to {
-    background-position: 0% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .next-champion-name {
-    animation: none;
-  }
+  color: #88b4e8;
+  text-shadow:
+    0 0 10px rgba(74, 144, 217, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Letzter Planet ───────────────────────────────────────────────────────── */

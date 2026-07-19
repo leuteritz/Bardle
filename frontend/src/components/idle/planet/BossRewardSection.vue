@@ -77,23 +77,43 @@ const stackedMaterials = computed(() => {
 </script>
 
 <style scoped>
-/* ── Glaskarte ────────────────────────────────────────────────────────────── */
+/* ── Primärkarte — Loot des aktuellen Bosses, dominiert das Bottom-Dock ──── */
 .reward-card {
-  flex: 1;
+  flex: 1.7;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0.5rem 0.75rem 0.55rem;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 0.7rem 0.95rem 0.75rem;
+  border-radius: 4px;
   /* Kein backdrop-filter: müsste beim Screen-Shake jeden Frame neu blurren */
-  background: rgba(12, 6, 0, 0.74);
-  border: 1px solid rgba(232, 192, 64, 0.16);
+  background: rgba(17, 12, 4, 0.86);
+  border: 1px solid #5c3310;
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(232, 192, 64, 0.08);
+  overflow: hidden;
   animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
 }
 
+/* Goldene Signatur-Linie oben — markiert die Hauptkarte */
+.reward-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
+}
+
 .reward-card--galaxy {
-  border-color: rgba(180, 40, 255, 0.22);
+  border-color: #5a2478;
+}
+
+.reward-card--galaxy::before {
+  background: linear-gradient(to right, #3a1050, #9040c8, #cc70ff, #a850e0, #9040c8, #3a1050);
 }
 
 @keyframes rewardReveal {
@@ -109,12 +129,26 @@ const stackedMaterials = computed(() => {
 
 /* ── Eyebrow ──────────────────────────────────────────────────────────────── */
 .reward-eyebrow {
-  font-size: 0.58rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.62rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(232, 192, 64, 0.7);
+  letter-spacing: 0.2em;
+  color: #e8c040;
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
   white-space: nowrap;
+}
+
+/* kleiner Akzentbalken vor dem Eyebrow — moderne Sektionsmarke */
+.reward-eyebrow::before {
+  content: '';
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #c89040, #e8c060);
+  flex-shrink: 0;
 }
 
 /* ── Chips ────────────────────────────────────────────────────────────────── */
@@ -129,10 +163,10 @@ const stackedMaterials = computed(() => {
 .reward-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.92rem;
+  gap: 9px;
+  font-size: 1.02rem;
   font-weight: 800;
-  color: #c8c8c8;
+  color: #d0d0d0;
   white-space: nowrap;
   line-height: 1.4;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -144,8 +178,8 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-chip-icon {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
@@ -163,15 +197,15 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-champion-portrait {
-  width: 46px;
-  height: 46px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
-  border-radius: 8px;
-  border: 1px solid rgba(130, 185, 255, 0.45);
+  border-radius: 4px;
+  border: 1px solid #82b9ff;
   box-shadow:
-    0 0 16px rgba(74, 144, 217, 0.45),
+    0 0 18px rgba(74, 144, 217, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
@@ -191,41 +225,16 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-champion-name {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1.05;
   white-space: nowrap;
-  background: linear-gradient(
-    105deg,
-    #9cc8ff 0%,
-    #4a90d9 40%,
-    #d8ecff 50%,
-    #4a90d9 60%,
-    #9cc8ff 100%
-  );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: champ-shimmer 3s linear infinite;
-  filter: drop-shadow(0 0 12px rgba(74, 144, 217, 0.5)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
-}
-
-@keyframes champ-shimmer {
-  from {
-    background-position: 220% 0;
-  }
-  to {
-    background-position: 0% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reward-champion-name {
-    animation: none;
-  }
+  color: #9cc8ff;
+  text-shadow:
+    0 0 14px rgba(74, 144, 217, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Rarities ─────────────────────────────────────────────────────────────── */

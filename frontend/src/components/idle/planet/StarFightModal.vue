@@ -820,7 +820,9 @@ function emberStyle(i: number): Record<string, string> {
   z-index: 3;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  /* Sekundärkarte (Up Next) dockt unten an und bleibt niedriger als die
+     Primärkarte — bewusste Größen-Hierarchie */
+  align-items: flex-end;
   gap: 10px;
   padding: 1.6rem 0.9rem 0.75rem;
   background: linear-gradient(
