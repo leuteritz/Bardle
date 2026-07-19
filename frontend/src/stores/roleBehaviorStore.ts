@@ -12,6 +12,7 @@ import {
   ROLE_MID_CURSE_DAMNATION_FRAC,
   ROLE_ADC_BURST_DAMAGE,
   ROLE_ADC_BURST_INTERVAL_MS,
+  ROLE_STAR_ATTACKS,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -123,6 +124,16 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
     jungleBuffCooldownMs: 0,
     jungleBuffFlashActive: false,
+
+    // Star attacks: every orbiting role strikes the active boss on its own CD
+    roleAttackCooldownMs: Object.fromEntries(
+      Object.entries(ROLE_STAR_ATTACKS).map(([role, def]) => [role, def.intervalMs]),
+    ) as Record<ChampionRole, number>,
+    // Monotonic shot counters — the Star Fight Modal watches these to fire projectiles
+    roleAttackShots: { top: 0, jungle: 0, mid: 0, adc: 0, support: 0 } as Record<
+      ChampionRole,
+      number
+    >,
   }),
 
   actions: {
@@ -139,6 +150,44 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this._tickMid(roles, TICK_MS)
       this._tickAdc(roles, TICK_MS)
       this._tickJungler(roles, TICK_MS)
+      this._tickRoleAttacks(roles, TICK_MS)
+    },
+
+    /** Every orbiting role fires a star attack at the active boss on its own
+     *  cooldown — on top of its normal role ability. */
+    _tickRoleAttacks(roles: Set<string>, tickMs: number) {
+      const bossStore = usePlanetBossStore()
+      const activeBoss = bossStore.activeBoss
+      const { addEvent } = useEventLog()
+
+      for (const role of Object.keys(ROLE_STAR_ATTACKS) as ChampionRole[]) {
+        const def = ROLE_STAR_ATTACKS[role]
+
+        if (!roles.has(role)) {
+          this.roleAttackCooldownMs[role] = def.intervalMs
+          continue
+        }
+
+        this.roleAttackCooldownMs[role] = Math.max(0, this.roleAttackCooldownMs[role] - tickMs)
+        if (this.roleAttackCooldownMs[role] > 0) continue
+        this.roleAttackCooldownMs[role] = def.intervalMs
+
+        if (!activeBoss || activeBoss.defeated || activeBoss.expired) continue
+
+        const defeated = bossStore.dealDamage(def.damage)
+        this.roleAttackShots[role]++
+
+        throttledEvent(`role-attack-${role}`, 4000, () => {
+          addEvent(`${getChampionNameByRole(role)} strikes the boss: ${def.damage} dmg.`, role)
+        })
+
+        if (!defeated) {
+          const pos = activePlanetPositions.get(activeBoss.planetId)
+          if (pos) {
+            spawnFloat(def.damage, pos.cx + (Math.random() - 0.5) * 36, pos.cy - 48, 1100)
+          }
+        }
+      }
     },
 
     _expireJungleBuffs() {

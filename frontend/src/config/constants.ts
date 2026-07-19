@@ -828,9 +828,26 @@ export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.2 // Damnation: instant 20% of bo
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 
+// ── Role Star Attacks — every orbiting role fires an attack at the active
+//    star/planet boss on its own cooldown, on top of its normal role ability
+//    (roleBehaviorStore._tickRoleAttacks / RoleStrikerSquad.vue) ────────────
+export const ROLE_STAR_ATTACKS: Record<ChampionRole, { damage: number; intervalMs: number }> = {
+  top: { damage: 35, intervalMs: 7000 }, // heavy slow smash
+  jungle: { damage: 20, intervalMs: 4000 }, // quick raking strikes
+  mid: { damage: 25, intervalMs: 6000 }, // arcane bolt
+  adc: { damage: 15, intervalMs: 3000 }, // rapid shots (burst stays separate)
+  support: { damage: 12, intervalMs: 5000 }, // light chime blast
+}
+
 // ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
 export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats
+export const STRIKER_ITEM_PX = 72 // striker portrait diameter (matches .rsq-item CSS)
+export const STRIKER_GAP_PX = 34 // flex gap between strikers (matches .rsq CSS)
+export const STRIKER_PROJECTILE_RISE_PX = 190 // vertical flight distance striker → boss
+export const STRIKER_PROJECTILE_FLIGHT_MS = 550 // projectile travel time
+export const STRIKER_IMPACT_MS = 900 // impact burst + damage number lifetime
+export const STRIKER_FIRE_FLASH_MS = 500 // portrait glow pulse after firing
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
