@@ -1886,7 +1886,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
     if (lastTimestamp === 0) lastTimestamp = timestamp
     const rawDelta = (timestamp - lastTimestamp) / 1000
-    const delta = Math.min(rawDelta, 0.1)
+    let delta = Math.min(rawDelta, 0.1)
     lastTimestamp = timestamp
 
     // Frozen (Shop): kein Heranfliegen, keine Galaxy-/Warp-/Rescue-Mutationen.
@@ -1922,10 +1922,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     if (galaxyStore.starsBackgroundPaused) {
-      animFrame = requestAnimationFrame(animateStars)
-      return
-    }
-
+      // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
+      // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
+      // handleVisibilityChange() den Canvas-Backing-Store via resizeCanvas()
+      // neu (leert ihn dabei) — ohne Neuzeichnen blieben sonst alle Sterne
+      // unsichtbar, bis die Pause endet (Champion-Stern besiegt).
+      delta = 0
+    } else {
     const pendingTrans = galaxyStore.pendingTransition
 
     if (pendingTrans && !wasPendingTransition) {
@@ -1974,6 +1977,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       speedMultiplier = hyperActive
         ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
         : flightBonus * cometBoost
+    }
     }
     }
 
