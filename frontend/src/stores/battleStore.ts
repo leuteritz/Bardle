@@ -85,6 +85,7 @@ import {
   STRUCTURE_FEED_MAX,
   KILL_FEED_MAX,
   BUFF_FEED_MAX,
+  JUNGLE_BUFF_CARRY_DURATION_T,
   WINPROB_MIN,
   WINPROB_MAX,
   BATTLE_BASE_START_WIN_CHANCE,
@@ -437,6 +438,16 @@ export const useBattleStore = defineStore('battle', {
       const raw = BATTLE_BASE_START_WIN_CHANCE + state.startWinChanceBonus
       return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
     },
+    /** Cosmetic jungle-buff auras a team's jungler currently carries (recent camp clears). */
+    junglerBuffs: (state) => (team: 1 | 2): Array<'blue' | 'red'> =>
+      state.buffFeed
+        .filter(
+          (e) =>
+            e.team === team &&
+            state.battleTime >= e.t &&
+            state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T,
+        )
+        .map((e) => e.buffType),
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
     team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
     team1Gold: (state): number => state.team1.reduce((s, c) => s + c.gold, 0),

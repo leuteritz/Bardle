@@ -104,7 +104,7 @@ export const RED_JUNGLE_CIRCUIT: MapPoint[] = [
 export const JUNGLE_BUFF_CAMPS: Record<1 | 2, Record<'blue' | 'red', MapPoint>> = {
   1: {
     blue: { x: 29, y: 47 },
-    red: { x: 53, y: 70 },
+    red: { x: 53, y: 72 },
   },
   2: {
     blue: { x: 73, y: 54 },

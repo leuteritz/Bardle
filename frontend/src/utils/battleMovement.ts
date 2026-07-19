@@ -181,9 +181,11 @@ function buildChampionSchedule(
         kind: 'roam',
       })
     }
+    // circuit roam starts after the early two-buff script; later re-clear
+    // orders simply interleave with the roam
     const roamStart =
-      buffEvents.length > 0
-        ? buffEvents[buffEvents.length - 1].t + JUNGLE_ROAM_AFTER_BUFFS_T
+      buffEvents.length > 1
+        ? buffEvents[1].t + JUNGLE_ROAM_AFTER_BUFFS_T
         : MOVE_WALKOUT_END_T + 60
     for (let t = roamStart; t < TIMELINE_NEXUS_FALL_T - 400; t += 260 + Math.floor(rng() * 200)) {
       orders.push({

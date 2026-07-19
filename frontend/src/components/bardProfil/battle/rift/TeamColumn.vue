@@ -34,6 +34,20 @@
       <!-- Live-MVP chip: gold banner in the card's top corner (mirrored per side) -->
       <span v-if="champ.name && champ.name === mvpLiveName" class="mvp-chip">♛ MVP</span>
 
+      <!-- Cosmetic jungle-buff auras (jungler only): glowing pills at the top edge -->
+      <span v-if="idx === 1 && junglerBuffs.length" class="card-buffs">
+        <span
+          v-for="b in junglerBuffs"
+          :key="b"
+          class="card-buff-pill"
+          :class="`card-buff-pill--${b}`"
+          :title="b === 'blue' ? 'Blue Buff' : 'Red Buff'"
+        >
+          <span class="card-buff-orb" :class="`card-buff-orb--${b}`" />
+          {{ b === 'blue' ? 'BLUE' : 'RED' }}
+        </span>
+      </span>
+
       <!-- Bottom row: name/KDA on the team side, level medallion on the opposite side -->
       <div class="info" :class="{ 'info--right': side === 'red' }">
         <div class="info-text">
@@ -70,6 +84,9 @@ const props = defineProps<{ side: 'blue' | 'red' }>()
 
 const battleStore = useBattleStore()
 const team = computed(() => (props.side === 'blue' ? battleStore.team1 : battleStore.team2))
+
+/** Cosmetic buff auras the team's jungler currently carries. */
+const junglerBuffs = computed(() => battleStore.junglerBuffs(props.side === 'blue' ? 1 : 2))
 
 /** Live MVP across both teams (updates as the battle progresses). */
 const mvpLiveName = computed(() => {
@@ -330,6 +347,64 @@ function hpClass(hp: number): string {
   }
 }
 
+/* ── Jungle-buff auras on the jungler card ──
+   Unmissable pills at the top edge: glowing orb + BLUE/RED label with a
+   breathing halo. Centered — clear of the MVP chip (corner) and respawn ⟳ */
+.card-buffs {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 1;
+}
+.card-buff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 3px;
+  border-radius: 4px;
+  border: 1px solid;
+  background: rgba(10, 8, 6, 0.82);
+  font-size: clamp(8px, 1.5cqh, 10px);
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1.3;
+}
+.card-buff-pill--blue {
+  color: #bfdbfe;
+  border-color: rgba(96, 165, 250, 0.9);
+  animation: card-buff-halo-blue 2s ease-in-out infinite;
+}
+.card-buff-pill--red {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.9);
+  animation: card-buff-halo-red 2s ease-in-out infinite;
+}
+.card-buff-orb {
+  width: clamp(9px, 1.7cqh, 12px);
+  height: clamp(9px, 1.7cqh, 12px);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.card-buff-orb--blue {
+  background: radial-gradient(circle at 35% 30%, #bfdbfe, #3b82f6 55%, #1d4ed8);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.95);
+}
+.card-buff-orb--red {
+  background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 55%, #b91c1c);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.95);
+}
+@keyframes card-buff-halo-blue {
+  0%, 100% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 12px rgba(59, 130, 246, 1); }
+}
+@keyframes card-buff-halo-red {
+  0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 12px rgba(239, 68, 68, 1); }
+}
+
 .kda {
   font-size: clamp(10px, 1.6cqh, 12px);
   display: flex;
@@ -373,5 +448,6 @@ function hpClass(hp: number): string {
 @media (prefers-reduced-motion: reduce) {
   .respawn-tag { animation: none; }
   .champ-card--mvp { animation: none; }
+  .card-buff-pill { animation: none; }
 }
 </style>

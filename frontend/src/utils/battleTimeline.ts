@@ -99,6 +99,10 @@ import {
   JUNGLE_FIRST_BUFF_CLEAR_MAX_T,
   JUNGLE_SECOND_BUFF_GAP_MIN_T,
   JUNGLE_SECOND_BUFF_GAP_MAX_T,
+  JUNGLE_BUFF_RESPAWN_T,
+  JUNGLE_BUFF_RECLEAR_GAP_MIN_T,
+  JUNGLE_BUFF_RECLEAR_GAP_MAX_T,
+  JUNGLE_BUFF_LATE_MARGIN_T,
 } from '../config/constants'
 import { JUNGLE_BUFF_CAMPS } from '../config/battleRoutes'
 
@@ -422,6 +426,30 @@ export function generateTimeline(
       location: JUNGLE_BUFF_CAMPS[team][secondBuff],
       winProbDelta: 0,
     })
+    // buffs respawn 5:00 after their clear — the jungler keeps re-taking them,
+    // alternating camps, until the endgame choreography takes over
+    const lastClear: Record<'blue' | 'red', number> = {
+      blue: startBuff === 'blue' ? firstClearT : secondClearT,
+      red: startBuff === 'red' ? firstClearT : secondClearT,
+    }
+    let nextBuff = startBuff
+    for (;;) {
+      const tClear =
+        lastClear[nextBuff] +
+        JUNGLE_BUFF_RESPAWN_T +
+        randInt(rng, JUNGLE_BUFF_RECLEAR_GAP_MIN_T, JUNGLE_BUFF_RECLEAR_GAP_MAX_T)
+      if (tClear > TIMELINE_NEXUS_FALL_T - JUNGLE_BUFF_LATE_MARGIN_T) break
+      pushEvent(ctx, {
+        t: tClear,
+        type: 'buff',
+        team,
+        buffType: nextBuff,
+        location: JUNGLE_BUFF_CAMPS[team][nextBuff],
+        winProbDelta: 0,
+      })
+      lastClear[nextBuff] = tClear
+      nextBuff = nextBuff === 'blue' ? 'red' : 'blue'
+    }
   }
 
   // ── Laning (0–TIMELINE_LANING_END) ──

@@ -633,6 +633,16 @@ export const JUNGLE_SECOND_BUFF_GAP_MAX_T = 280
 export const JUNGLE_BUFF_CLEAR_DURATION_T = 45
 /** Game-seconds after the second buff clear before the regular jungle roam starts */
 export const JUNGLE_ROAM_AFTER_BUFFS_T = 60
+/** Game-seconds a slain buff camp needs to respawn (5:00, like on the Rift) */
+export const JUNGLE_BUFF_RESPAWN_T = 300
+/** Minimum game-seconds after a buff respawn until the jungler re-clears it */
+export const JUNGLE_BUFF_RECLEAR_GAP_MIN_T = 60
+/** Maximum game-seconds after a buff respawn until the jungler re-clears it */
+export const JUNGLE_BUFF_RECLEAR_GAP_MAX_T = 240
+/** No buff re-clears are scripted later than this margin before the nexus falls */
+export const JUNGLE_BUFF_LATE_MARGIN_T = 600
+/** Game-seconds the cosmetic buff aura stays on the jungler after a clear */
+export const JUNGLE_BUFF_CARRY_DURATION_T = 150
 
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100

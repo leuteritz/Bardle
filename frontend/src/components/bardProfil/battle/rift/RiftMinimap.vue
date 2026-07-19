@@ -48,23 +48,32 @@
         :style="{ left: dot.x + '%', top: dot.y + '%' }"
       />
 
-      <!-- Jungle buff camps: monster icon glows while the buff is up, goes
-           grey + ✕ once the jungler slew it (short colored burst on the kill) -->
+      <!-- Jungle buff camps: monster icon glows while the buff is up; slain →
+           grey + ✕ with the 5:00 respawn countdown underneath (like drake/baron) -->
       <div
         v-for="camp in buffCamps"
         :key="camp.key"
-        class="buff-camp"
-        :class="[`buff-camp--${camp.buffType}`, { 'buff-camp--cleared': camp.cleared }]"
+        class="buff-camp-wrap"
         :style="{ left: camp.x + '%', top: camp.y + '%' }"
       >
-        <Icon
-          :icon="camp.buffType === 'blue' ? 'game-icons:golem-head' : 'game-icons:lizardman'"
-          width="11"
-          height="11"
-          class="buff-camp-icon"
-        />
-        <span v-if="camp.cleared" class="buff-camp-x">✕</span>
-        <div v-if="camp.justCleared" class="buff-camp-burst" />
+        <div
+          class="buff-camp"
+          :class="[`buff-camp--${camp.buffType}`, { 'buff-camp--cleared': camp.cleared }]"
+        >
+          <Icon
+            :icon="camp.buffType === 'blue' ? 'game-icons:golem-head' : 'game-icons:lizardman'"
+            width="11"
+            height="11"
+            class="buff-camp-icon"
+          />
+          <span v-if="camp.cleared" class="buff-camp-x">✕</span>
+          <div v-if="camp.justCleared" class="buff-camp-burst" />
+        </div>
+        <span
+          v-if="camp.cleared"
+          class="buff-cd"
+          :class="[`buff-cd--${camp.buffType}`, { 'buff-cd--soon': camp.spawnSoon }]"
+        >{{ camp.countdown }}</span>
       </div>
 
       <!-- Nexus markers: biggest structure symbol, always visible -->
@@ -200,6 +209,14 @@
             {{ champAt(pos.team, pos.idx)?.level ?? 1 }}
           </span>
           <span v-if="pos.walking" class="walk-indicator">⟳</span>
+          <span v-if="champBuffs(pos.team, pos.idx).length" class="champ-buffs">
+            <span
+              v-for="b in champBuffs(pos.team, pos.idx)"
+              :key="b"
+              class="champ-buff-orb"
+              :class="`champ-buff-orb--${b}`"
+            />
+          </span>
         </div>
         <div class="champ-hp">
           <div class="champ-hp-fill" :class="hpClass(champAt(pos.team, pos.idx))" :style="{ width: hpWidth(pos) + '%' }" />
@@ -259,6 +276,7 @@ import {
   OBJECTIVE_SPAWN_SOON_T,
   STRUCTURE_BURST_GAME_SECONDS,
   FINAL_PUSH_START_T,
+  JUNGLE_BUFF_RESPAWN_T,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
@@ -357,26 +375,39 @@ const nexusPos = computed(() =>
   battleStore.nexusDestroyedByTeam === 1 ? RED_NEXUS_MAP_POSITION : BLUE_NEXUS_MAP_POSITION,
 )
 
-/** All four buff camps; a camp reads as cleared once its jungler's buff event applied. */
+/** All four buff camps. Slain camps count down their 5:00 respawn, then read as up again. */
 const buffCamps = computed(() => {
+  const now = battleStore.battleTime
   const out = []
   for (const team of [1, 2] as const) {
     for (const buffType of ['blue', 'red'] as const) {
       const pos = JUNGLE_BUFF_CAMPS[team][buffType]
-      const feed = battleStore.buffFeed.find((e) => e.team === team && e.buffType === buffType)
+      let lastClearT = -Infinity
+      for (const e of battleStore.buffFeed) {
+        if (e.team === team && e.buffType === buffType && e.t <= now && e.t > lastClearT)
+          lastClearT = e.t
+      }
+      const respawnT = lastClearT + JUNGLE_BUFF_RESPAWN_T
+      const cleared = now < respawnT
       out.push({
         key: `buff-${team}-${buffType}`,
         x: pos.x,
         y: pos.y,
         buffType,
-        cleared: feed !== undefined,
-        justCleared:
-          feed !== undefined && battleStore.battleTime - feed.t < STRUCTURE_BURST_GAME_SECONDS,
+        cleared,
+        justCleared: cleared && now - lastClearT < STRUCTURE_BURST_GAME_SECONDS,
+        countdown: cleared ? battleStore.formatSpawnCountdown(respawnT) : '',
+        spawnSoon: cleared && respawnT - now <= OBJECTIVE_SPAWN_SOON_T,
       })
     }
   }
   return out
 })
+
+/** Cosmetic buff orbs on a champion's minimap marker — only the jungler carries them. */
+function champBuffs(team: 1 | 2, idx: number): Array<'blue' | 'red'> {
+  return idx === 1 ? battleStore.junglerBuffs(team) : []
+}
 
 const nexusMarkers = computed(() => [
   { team: 1 as const, ...BLUE_NEXUS_MAP_POSITION, dead: battleStore.nexusDestroyedByTeam === 2 },
@@ -725,20 +756,34 @@ const structureMarkers = computed(() => {
 
 /* ── Jungle buff camps ── */
 /* Up: dark badge disc, buff-colored monster icon + ring, breathing glow.
-   Slain: badge dims to grey, icon desaturates, red ✕ stamps over it. */
-.buff-camp {
+   Slain: badge dims to grey, icon desaturates, red ✕ stamps over it and the
+   respawn countdown ticks underneath (same pattern as drake/baron). */
+.buff-camp-wrap {
   position: absolute;
-  width: 16px;
-  height: 16px;
   transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+.buff-camp {
+  position: relative;
+  /* scales with the square minimap (cqmin) — clearly bigger than champ dots,
+     still below the drake/baron sprites in the hierarchy */
+  width: clamp(24px, 6.5cqmin, 40px);
+  height: clamp(24px, 6.5cqmin, 40px);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 1.5px solid;
+  border: 2px solid;
   background: rgba(10, 8, 6, 0.78);
-  pointer-events: none;
-  z-index: 1;
+}
+.buff-camp-icon {
+  width: 62%;
+  height: 62%;
 }
 .buff-camp--blue {
   border-color: rgba(147, 197, 253, 0.85);
@@ -747,9 +792,6 @@ const structureMarkers = computed(() => {
 .buff-camp--red {
   border-color: rgba(252, 165, 165, 0.85);
   animation: buff-glow-red 2.2s ease-in-out infinite;
-}
-.buff-camp-icon {
-  flex-shrink: 0;
 }
 .buff-camp--blue .buff-camp-icon {
   color: #93c5fd;
@@ -786,7 +828,7 @@ const structureMarkers = computed(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -54%) rotate(-12deg);
-  font-size: 11px;
+  font-size: clamp(16px, 4.2cqmin, 26px);
   font-weight: 700;
   color: #ff4a3a;
   text-shadow: 0 0 3px #000, 0 0 7px rgba(255, 74, 58, 0.55);
@@ -804,6 +846,69 @@ const structureMarkers = computed(() => {
 }
 .buff-camp--blue .buff-camp-burst { border-color: rgba(96, 165, 250, 0.85); }
 .buff-camp--red .buff-camp-burst { border-color: rgba(248, 113, 113, 0.85); }
+
+/* Respawn countdown under the slain camp — drake/baron countdown language,
+   one step smaller than their 13px timers so the hierarchy stays intact */
+.buff-cd {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+.buff-cd--blue { color: #93c5fd; }
+.buff-cd--red { color: #fca5a5; }
+.buff-cd--soon {
+  animation: spawn-soon 1.2s ease-in-out infinite;
+}
+.buff-cd--blue.buff-cd--soon { --obj-glow: rgba(59, 130, 246, 0.9); }
+.buff-cd--red.buff-cd--soon { --obj-glow: rgba(239, 68, 68, 0.9); }
+
+/* Cosmetic buff auras on the jungler's map marker — bold orbs with a
+   breathing halo ring at the portrait edge, readable at map scale */
+.champ-buffs {
+  position: absolute;
+  bottom: -4px;
+  right: -7px;
+  display: flex;
+  gap: 3px;
+}
+.champ-buff-orb {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.75);
+}
+.champ-buff-orb::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  animation: champ-buff-halo 1.8s ease-out infinite;
+}
+.champ-buff-orb--blue {
+  background: radial-gradient(circle at 35% 30%, #bfdbfe, #3b82f6 55%, #1d4ed8);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 1);
+}
+.champ-buff-orb--blue::after {
+  border-color: rgba(147, 197, 253, 0.9);
+}
+.champ-buff-orb--red {
+  background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 55%, #b91c1c);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 1);
+}
+.champ-buff-orb--red::after {
+  border-color: rgba(252, 165, 165, 0.9);
+}
+@keyframes champ-buff-halo {
+  0% { opacity: 0.9; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
 
 /* ── Nexus markers ── */
 .nexus-marker {
@@ -1248,6 +1353,8 @@ const structureMarkers = computed(() => {
   .buff-camp--blue,
   .buff-camp--red,
   .buff-camp-burst,
+  .buff-cd--soon,
+  .champ-buff-orb::after,
   .lane-glow--pending,
   .lane-glow-core,
   .lane-push-label,
