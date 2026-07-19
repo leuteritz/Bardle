@@ -419,7 +419,9 @@ export interface BattleEvent {
 export interface BuffFeedEntry {
   team: 1 | 2
   buffType: 'blue' | 'red'
-  junglerName: string
+  /** Champion who slew the camp — carries the cosmetic buff aura afterwards. */
+  championName: string
+  championIdx: number
   t: number
 }
 

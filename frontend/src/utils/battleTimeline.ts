@@ -401,9 +401,15 @@ export function generateTimeline(
     destroyed: new Set(preDestroyed),
   }
 
-  // ── Jungle buff route — each jungler starts on a random buff (blue or red),
-  // has a gank window in between (the early lane fights below already include
-  // the junglers), then clears the other buff ──
+  // ── Jungle buff route (opening) — each jungler starts on a random buff
+  // (blue or red), has a gank window in between (the early lane fights below
+  // already include the junglers), then clears the other buff. The first two
+  // buffs of each team ALWAYS go to the jungler; re-clears after the respawn
+  // are generated later (after the fights) so any living champion can take them ──
+  const buffPlan: Record<1 | 2, { lastClear: Record<'blue' | 'red', number>; nextBuff: 'blue' | 'red' }> = {
+    1: { lastClear: { blue: 0, red: 0 }, nextBuff: 'blue' },
+    2: { lastClear: { blue: 0, red: 0 }, nextBuff: 'blue' },
+  }
   for (const team of [1, 2] as const) {
     const startBuff: 'blue' | 'red' = rng() < 0.5 ? 'blue' : 'red'
     const secondBuff: 'blue' | 'red' = startBuff === 'blue' ? 'red' : 'blue'
@@ -415,6 +421,7 @@ export function generateTimeline(
       type: 'buff',
       team,
       buffType: startBuff,
+      killerIdx: 1,
       location: JUNGLE_BUFF_CAMPS[team][startBuff],
       winProbDelta: 0,
     })
@@ -423,32 +430,16 @@ export function generateTimeline(
       type: 'buff',
       team,
       buffType: secondBuff,
+      killerIdx: 1,
       location: JUNGLE_BUFF_CAMPS[team][secondBuff],
       winProbDelta: 0,
     })
-    // buffs respawn 5:00 after their clear — the jungler keeps re-taking them,
-    // alternating camps, until the endgame choreography takes over
-    const lastClear: Record<'blue' | 'red', number> = {
-      blue: startBuff === 'blue' ? firstClearT : secondClearT,
-      red: startBuff === 'red' ? firstClearT : secondClearT,
-    }
-    let nextBuff = startBuff
-    for (;;) {
-      const tClear =
-        lastClear[nextBuff] +
-        JUNGLE_BUFF_RESPAWN_T +
-        randInt(rng, JUNGLE_BUFF_RECLEAR_GAP_MIN_T, JUNGLE_BUFF_RECLEAR_GAP_MAX_T)
-      if (tClear > TIMELINE_NEXUS_FALL_T - JUNGLE_BUFF_LATE_MARGIN_T) break
-      pushEvent(ctx, {
-        t: tClear,
-        type: 'buff',
-        team,
-        buffType: nextBuff,
-        location: JUNGLE_BUFF_CAMPS[team][nextBuff],
-        winProbDelta: 0,
-      })
-      lastClear[nextBuff] = tClear
-      nextBuff = nextBuff === 'blue' ? 'red' : 'blue'
+    buffPlan[team] = {
+      lastClear: {
+        blue: startBuff === 'blue' ? firstClearT : secondClearT,
+        red: startBuff === 'red' ? firstClearT : secondClearT,
+      },
+      nextBuff: startBuff,
     }
   }
 
@@ -510,6 +501,50 @@ export function generateTimeline(
   for (let i = 0; i < midFights; i++) {
     const t = randInt(rng, TIMELINE_LANING_END + 200, TIMELINE_MIDFIGHT_END - 60)
     emitFight(ctx, t, MID_CENTER, randInt(rng, TIMELINE_FIGHT_KILLS_MIN, TIMELINE_FIGHT_KILLS_MAX))
+  }
+
+  // ── Jungle buff re-clears — buffs respawn 5:00 after their clear. Unlike the
+  // scripted jungler opening, ANY champion of the team may take a respawned
+  // buff — but only one who is actually alive (not on the respawn walk) at that
+  // moment. With nobody alive to take it, the camp simply stays up and the
+  // attempt shifts back. Generated after the fights so deaths are known. ──
+  const aliveTeamAt = (team: 1 | 2, t: number): number[] => {
+    const walkingBack = new Set<number>()
+    for (const ev of ctx.events) {
+      if (ev.type !== 'kill' || ev.team === team || ev.victimIdx === undefined) continue
+      if (ev.t <= t && t < ev.t + MOVE_RESPAWN_WALK_SECONDS) walkingBack.add(ev.victimIdx)
+    }
+    return [0, 1, 2, 3, 4].filter((idx) => !walkingBack.has(idx))
+  }
+  for (const team of [1, 2] as const) {
+    const plan = buffPlan[team]
+    let guard = 0
+    while (guard++ < 60) {
+      const nextBuff = plan.nextBuff
+      const tClear =
+        plan.lastClear[nextBuff] +
+        JUNGLE_BUFF_RESPAWN_T +
+        randInt(rng, JUNGLE_BUFF_RECLEAR_GAP_MIN_T, JUNGLE_BUFF_RECLEAR_GAP_MAX_T)
+      if (tClear > TIMELINE_NEXUS_FALL_T - JUNGLE_BUFF_LATE_MARGIN_T) break
+      const alive = aliveTeamAt(team, tClear)
+      if (alive.length === 0) {
+        // nobody there to kill the camp — it stays up, try again later
+        plan.lastClear[nextBuff] = tClear
+        continue
+      }
+      const killerIdx = pick(rng, alive)
+      pushEvent(ctx, {
+        t: tClear,
+        type: 'buff',
+        team,
+        buffType: nextBuff,
+        killerIdx,
+        location: JUNGLE_BUFF_CAMPS[team][nextBuff],
+        winProbDelta: 0,
+      })
+      plan.lastClear[nextBuff] = tClear
+      plan.nextBuff = nextBuff === 'blue' ? 'red' : 'blue'
+    }
   }
 
   // ── Crack phase — each team fully cracks one random enemy lane before baron;

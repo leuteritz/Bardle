@@ -13,6 +13,8 @@
         {
           'champ-card--bard': champ.name === 'Bard',
           'champ-card--mvp': champ.name && champ.name === mvpLiveName,
+          'champ-card--buff-blue': hasBuff(idx, 'blue'),
+          'champ-card--buff-red': hasBuff(idx, 'red'),
         },
       ]"
     >
@@ -34,21 +36,8 @@
       <!-- Live-MVP chip: gold banner in the card's top corner (mirrored per side) -->
       <span v-if="champ.name && champ.name === mvpLiveName" class="mvp-chip">♛ MVP</span>
 
-      <!-- Cosmetic jungle-buff auras (jungler only): glowing pills at the top edge -->
-      <span v-if="idx === 1 && junglerBuffs.length" class="card-buffs">
-        <span
-          v-for="b in junglerBuffs"
-          :key="b"
-          class="card-buff-pill"
-          :class="`card-buff-pill--${b}`"
-          :title="b === 'blue' ? 'Blue Buff' : 'Red Buff'"
-        >
-          <span class="card-buff-orb" :class="`card-buff-orb--${b}`" />
-          {{ b === 'blue' ? 'BLUE' : 'RED' }}
-        </span>
-      </span>
-
-      <!-- Bottom row: name/KDA on the team side, level medallion on the opposite side -->
+      <!-- Bottom row: name/KDA on the team side, buff pills + level medallion
+           grouped on the inner side (flex — nothing can overlap) -->
       <div class="info" :class="{ 'info--right': side === 'red' }">
         <div class="info-text">
           <div class="champ-name">
@@ -60,7 +49,26 @@
             <span class="cs-tag">{{ champ.cs }} cs</span>
           </div>
         </div>
-        <span v-if="champ.name" class="level-badge">{{ champ.level }}</span>
+        <div class="info-side">
+          <span v-if="champBuffs(idx).length" class="card-buffs">
+            <span
+              v-for="b in champBuffs(idx)"
+              :key="b.type"
+              class="card-buff-badge"
+              :class="`card-buff-badge--${b.type}`"
+              :title="b.type === 'blue' ? 'Blue Buff' : 'Red Buff'"
+            >
+              <span
+                class="card-buff-ring"
+                :style="{ '--p': (b.remaining / JUNGLE_BUFF_CARRY_DURATION_T) * 100 + '%' }"
+              >
+                <span class="card-buff-orb" :class="`card-buff-orb--${b.type}`" />
+              </span>
+              <span class="card-buff-time">{{ battleStore.formatTime(Math.ceil(b.remaining / 60) * 60) }}</span>
+            </span>
+          </span>
+          <span v-if="champ.name" class="level-badge">{{ champ.level }}</span>
+        </div>
       </div>
 
       <!-- HP bar sits flush on the card's bottom edge -->
@@ -79,14 +87,21 @@
 import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { mvpScore } from '@/utils/battleTimeline'
+import { JUNGLE_BUFF_CARRY_DURATION_T } from '@/config/constants'
 
 const props = defineProps<{ side: 'blue' | 'red' }>()
 
 const battleStore = useBattleStore()
 const team = computed(() => (props.side === 'blue' ? battleStore.team1 : battleStore.team2))
 
-/** Cosmetic buff auras the team's jungler currently carries. */
-const junglerBuffs = computed(() => battleStore.junglerBuffs(props.side === 'blue' ? 1 : 2))
+/** Cosmetic buff auras a champion of this column currently carries. */
+function champBuffs(idx: number) {
+  return battleStore.championBuffs(props.side === 'blue' ? 1 : 2, idx)
+}
+
+function hasBuff(idx: number, type: 'blue' | 'red'): boolean {
+  return champBuffs(idx).some((b) => b.type === type)
+}
 
 /** Live MVP across both teams (updates as the battle progresses). */
 const mvpLiveName = computed(() => {
@@ -225,18 +240,18 @@ function hpClass(hp: number): string {
   justify-content: center;
 }
 
+/* Death overlay: spinner centered on the greyed-out portrait — the card
+   center is the only zone no other badge (MVP, buffs, level, name) uses */
 .respawn-tag {
   position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: clamp(12px, 2cqh, 14px);
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(16px, 3cqh, 22px);
   color: #e8c040;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.8);
   animation: respawn-spin 1.4s linear infinite;
-}
-.team-col--red .respawn-tag {
-  right: auto;
-  left: 6px;
+  z-index: 1;
 }
 
 .info {
@@ -275,17 +290,50 @@ function hpClass(hp: number): string {
   color: #e8c040;
   letter-spacing: 1px;
 }
+/* ── Buff aura on the whole card ────────────────────────────────────────
+   Subtle inset glow in the carried buff's color; with both buffs the blue
+   aura breathes in from the left edge, the red one from the right.
+   Declared BEFORE the MVP highlight so the gold MVP ring always wins. */
+.champ-card--buff-blue {
+  box-shadow:
+    inset 0 0 0 2px rgba(96, 165, 250, 0.95),
+    inset 0 0 26px rgba(59, 130, 246, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.champ-card--buff-red {
+  box-shadow:
+    inset 0 0 0 2px rgba(248, 113, 113, 0.95),
+    inset 0 0 26px rgba(239, 68, 68, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.champ-card--buff-blue.champ-card--buff-red {
+  box-shadow:
+    inset 16px 0 26px -6px rgba(59, 130, 246, 0.8),
+    inset -16px 0 26px -6px rgba(239, 68, 68, 0.8),
+    0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
 /* ── Live-MVP highlight ─────────────────────────────────────────────────
    The MVP card gets a breathing gold ring + halo and a crown chip, so the
    current best performer reads at a glance across both columns. */
 .champ-card--mvp {
   /* inset ring — the column is a scroll container, outer shadows would clip */
   box-shadow:
-    inset 0 0 0 2px #e8c040,
-    inset 0 0 14px rgba(232, 192, 64, 0.45),
+    inset 0 0 0 2.5px #e8c040,
+    inset 0 0 24px rgba(232, 192, 64, 0.6),
     0 4px 12px rgba(0, 0, 0, 0.45);
   animation: mvp-ring-pulse 2.2s ease-in-out infinite;
 }
+/* the gold MVP ring beats any buff aura, whatever the combination */
+.champ-card--mvp.champ-card--buff-blue,
+.champ-card--mvp.champ-card--buff-red,
+.champ-card--mvp.champ-card--buff-blue.champ-card--buff-red {
+  box-shadow:
+    inset 0 0 0 2.5px #e8c040,
+    inset 0 0 24px rgba(232, 192, 64, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
 /* the team edge line turns gold on the MVP card */
 .champ-card--mvp::after {
   background: #e8c040;
@@ -341,69 +389,87 @@ function hpClass(hp: number): string {
 @keyframes mvp-ring-pulse {
   50% {
     box-shadow:
-      inset 0 0 0 2px #ffe9a0,
-      inset 0 0 22px rgba(232, 192, 64, 0.75),
+      inset 0 0 0 3px #ffe9a0,
+      inset 0 0 34px rgba(232, 192, 64, 0.95),
       0 4px 12px rgba(0, 0, 0, 0.45);
   }
 }
 
-/* ── Jungle-buff auras on the jungler card ──
-   Unmissable pills at the top edge: glowing orb + BLUE/RED label with a
-   breathing halo. Centered — clear of the MVP chip (corner) and respawn ⟳ */
-.card-buffs {
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  transform: translateX(-50%);
+/* ── Jungle-buff auras ──
+   Glowing pills grouped with the level medallion in the bottom row's inner
+   cluster — part of the flex layout, so nothing can ever overlap; the champ
+   name simply truncates when space runs out. */
+/* pills stack ABOVE the level medallion, flush with the card's inner edge */
+.info-side {
   display: flex;
-  gap: 4px;
-  z-index: 1;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
 }
-.card-buff-pill {
+.info--right .info-side {
+  align-items: flex-start;
+}
+.card-buffs {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 2px;
+}
+/* Buff token: dark badge holding an orb wrapped in a radial cooldown ring
+   (conic gradient drains with the remaining duration) + minute countdown.
+   Game-HUD language — reads instantly over any splash art. */
+.card-buff-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 6px 1px 3px;
-  border-radius: 4px;
+  padding: 2px 5px 2px 2px;
+  border-radius: 9px;
   border: 1px solid;
-  background: rgba(10, 8, 6, 0.82);
-  font-size: clamp(8px, 1.5cqh, 10px);
-  font-weight: 800;
-  letter-spacing: 1px;
-  line-height: 1.3;
+  background: rgba(10, 8, 6, 0.85);
 }
-.card-buff-pill--blue {
-  color: #bfdbfe;
-  border-color: rgba(96, 165, 250, 0.9);
-  animation: card-buff-halo-blue 2s ease-in-out infinite;
+.card-buff-badge--blue {
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
+  --ring-c: #60a5fa;
 }
-.card-buff-pill--red {
-  color: #fecaca;
-  border-color: rgba(248, 113, 113, 0.9);
-  animation: card-buff-halo-red 2s ease-in-out infinite;
+.card-buff-badge--red {
+  border-color: rgba(248, 113, 113, 0.55);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+  --ring-c: #f87171;
+}
+
+/* cooldown ring: buff color for the remaining fraction, dark track for the rest */
+.card-buff-ring {
+  width: clamp(13px, 2.4cqh, 16px);
+  height: clamp(13px, 2.4cqh, 16px);
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(var(--ring-c) var(--p, 100%), rgba(255, 255, 255, 0.14) 0);
+  flex-shrink: 0;
+  display: flex;
 }
 .card-buff-orb {
-  width: clamp(9px, 1.7cqh, 12px);
-  height: clamp(9px, 1.7cqh, 12px);
+  flex: 1;
   border-radius: 50%;
-  flex-shrink: 0;
 }
 .card-buff-orb--blue {
   background: radial-gradient(circle at 35% 30%, #bfdbfe, #3b82f6 55%, #1d4ed8);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.95);
 }
 .card-buff-orb--red {
   background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 55%, #b91c1c);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.95);
 }
-@keyframes card-buff-halo-blue {
-  0%, 100% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.5); }
-  50% { box-shadow: 0 0 12px rgba(59, 130, 246, 1); }
+
+.card-buff-time {
+  font-size: clamp(9px, 1.6cqh, 11px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
-@keyframes card-buff-halo-red {
-  0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 12px rgba(239, 68, 68, 1); }
-}
+.card-buff-badge--blue .card-buff-time { color: #9ecbff; }
+.card-buff-badge--red .card-buff-time { color: #ffa294; }
 
 .kda {
   font-size: clamp(10px, 1.6cqh, 12px);
@@ -441,13 +507,12 @@ function hpClass(hp: number): string {
 .hp--low { background: #d15a37; }
 
 @keyframes respawn-spin {
-  0% { transform: rotate(0); }
-  100% { transform: rotate(360deg); }
+  0% { transform: translate(-50%, -50%) rotate(0); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .respawn-tag { animation: none; }
   .champ-card--mvp { animation: none; }
-  .card-buff-pill { animation: none; }
 }
 </style>

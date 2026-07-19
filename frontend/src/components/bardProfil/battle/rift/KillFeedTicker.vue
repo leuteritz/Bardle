@@ -50,8 +50,8 @@
             </template>
             <template v-else>
               <div class="feed-item">
-                <span class="feed-name" :class="row.buff.team === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.buff.junglerName }}</span>
-                <img :src="battleStore.getChampionImage(row.buff.junglerName)" :alt="row.buff.junglerName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+                <span class="feed-name" :class="row.buff.team === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.buff.championName }}</span>
+                <img :src="battleStore.getChampionImage(row.buff.championName)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
                 <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
                 <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
               </div>
@@ -100,7 +100,7 @@
             <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
           </div>
           <div v-else class="feed-item">
-            <img :src="battleStore.getChampionImage(row.buff.junglerName)" :alt="row.buff.junglerName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+            <img :src="battleStore.getChampionImage(row.buff.championName)" :alt="row.buff.championName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
             <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
             <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
           </div>
@@ -168,11 +168,11 @@
         <template v-else>
           <div class="tip-headline">BUFF SECURED</div>
           <div class="tip-line">
-            <span :class="hoveredRow.buff.team === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.buff.junglerName }}</span>
+            <span :class="hoveredRow.buff.team === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.buff.championName }}</span>
             <span class="tip-verb"> claimed the </span>
             <span :class="`feed-buff-label--${hoveredRow.buff.buffType}`">{{ buffLabel(hoveredRow.buff) }}</span>
           </div>
-          <div class="tip-time">{{ formatFeedTime(hoveredRow.t) }} · {{ hoveredRow.buff.team === 1 ? 'Blue Team' : 'Red Team' }} jungle</div>
+          <div class="tip-time">{{ formatFeedTime(hoveredRow.t) }} · {{ hoveredRow.buff.team === 1 ? 'Blue Team' : 'Red Team' }}</div>
         </template>
       </div>
     </Teleport>

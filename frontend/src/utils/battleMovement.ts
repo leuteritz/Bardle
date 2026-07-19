@@ -164,28 +164,31 @@ function buildChampionSchedule(
     }
   }
 
-  // jungler: scripted early buff route (start buff → gank window → other buff),
-  // then the regular circuit roam takes over
-  const buffEvents =
-    role === 'jungle'
-      ? timeline.events
-          .filter((e) => e.type === 'buff' && e.team === team && e.location)
-          .sort((a, b) => a.t - b.t)
-      : []
+  // Buff-camp clears: whoever the timeline scripted as the killer walks to the
+  // camp and MUST be there for the clear (priority order, arrival before the
+  // event). The first two clears per team are the jungler's; re-clears can
+  // belong to any champion.
+  const teamBuffEvents = timeline.events
+    .filter((e) => e.type === 'buff' && e.team === team && e.location)
+    .sort((a, b) => a.t - b.t)
+  for (const e of teamBuffEvents) {
+    if ((e.killerIdx ?? 1) !== idx) continue
+    orders.push({
+      t: Math.max(MOVE_WALKOUT_END_T, e.t - JUNGLE_BUFF_CLEAR_DURATION_T),
+      location: jittered(e.location!, rng, 1.5),
+      holdUntil: e.t + 15,
+      kind: 'roam',
+      priority: true,
+      travelT: JUNGLE_BUFF_CLEAR_DURATION_T - 10,
+    })
+  }
+
   if (role === 'jungle') {
-    for (const e of buffEvents) {
-      orders.push({
-        t: Math.max(MOVE_WALKOUT_END_T, e.t - JUNGLE_BUFF_CLEAR_DURATION_T),
-        location: jittered(e.location!, rng, 1.5),
-        holdUntil: e.t + 15,
-        kind: 'roam',
-      })
-    }
     // circuit roam starts after the early two-buff script; later re-clear
     // orders simply interleave with the roam
     const roamStart =
-      buffEvents.length > 1
-        ? buffEvents[1].t + JUNGLE_ROAM_AFTER_BUFFS_T
+      teamBuffEvents.length > 1
+        ? teamBuffEvents[1].t + JUNGLE_ROAM_AFTER_BUFFS_T
         : MOVE_WALKOUT_END_T + 60
     for (let t = roamStart; t < TIMELINE_NEXUS_FALL_T - 400; t += 260 + Math.floor(rng() * 200)) {
       orders.push({
@@ -273,7 +276,7 @@ function buildChampionSchedule(
   const segments: MovementSegment[] = []
   // walkout: fountain → lane hold point along the real lane path;
   // the jungler heads straight to its scripted first buff camp instead
-  const jungleWalkoutTarget = buffEvents[0]?.location ?? circuit[0]
+  const jungleWalkoutTarget = teamBuffEvents[0]?.location ?? circuit[0]
   const walkoutPath =
     role === 'jungle'
       ? [fountain, ...subPath(lanePath, team === 1 ? 0.06 : 0.94, team === 1 ? 0.2 : 0.8, 3).slice(1), { ...jungleWalkoutTarget }]

@@ -438,16 +438,20 @@ export const useBattleStore = defineStore('battle', {
       const raw = BATTLE_BASE_START_WIN_CHANCE + state.startWinChanceBonus
       return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
     },
-    /** Cosmetic jungle-buff auras a team's jungler currently carries (recent camp clears). */
-    junglerBuffs: (state) => (team: 1 | 2): Array<'blue' | 'red'> =>
+    /** Cosmetic jungle-buff auras a champion currently carries, with remaining game-seconds. */
+    championBuffs: (state) => (team: 1 | 2, idx: number): Array<{ type: 'blue' | 'red'; remaining: number }> =>
       state.buffFeed
         .filter(
           (e) =>
             e.team === team &&
+            e.championIdx === idx &&
             state.battleTime >= e.t &&
             state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T,
         )
-        .map((e) => e.buffType),
+        .map((e) => ({
+          type: e.buffType,
+          remaining: JUNGLE_BUFF_CARRY_DURATION_T - (state.battleTime - e.t),
+        })),
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
     team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
     team1Gold: (state): number => state.team1.reduce((s, c) => s + c.gold, 0),
@@ -821,9 +825,16 @@ export const useBattleStore = defineStore('battle', {
         }
         case 'buff': {
           if (!e.team || !e.buffType) break
-          const jungler = (e.team === 1 ? this.team1 : this.team2)[1]
-          if (!jungler?.name) break
-          this.buffFeed.push({ team: e.team, buffType: e.buffType, junglerName: jungler.name, t: e.t })
+          const championIdx = e.killerIdx ?? 1
+          const champion = (e.team === 1 ? this.team1 : this.team2)[championIdx]
+          if (!champion?.name) break
+          this.buffFeed.push({
+            team: e.team,
+            buffType: e.buffType,
+            championName: champion.name,
+            championIdx,
+            t: e.t,
+          })
           if (this.buffFeed.length > BUFF_FEED_MAX)
             this.buffFeed.splice(0, this.buffFeed.length - BUFF_FEED_MAX)
           break

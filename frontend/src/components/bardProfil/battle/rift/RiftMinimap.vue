@@ -202,6 +202,8 @@
                 'champ-img--bard': champAt(pos.team, pos.idx)?.name === 'Bard',
                 'champ-img--walking': pos.walking,
                 'champ-img--victor': revealedWinner !== null && pos.team === revealedWinner,
+                'champ-img--buff-blue': champBuffs(pos.team, pos.idx).includes('blue'),
+                'champ-img--buff-red': champBuffs(pos.team, pos.idx).includes('red'),
               },
             ]"
           />
@@ -404,9 +406,9 @@ const buffCamps = computed(() => {
   return out
 })
 
-/** Cosmetic buff orbs on a champion's minimap marker — only the jungler carries them. */
+/** Cosmetic buff orbs on a champion's minimap marker — whoever slew the camp carries them. */
 function champBuffs(team: 1 | 2, idx: number): Array<'blue' | 'red'> {
-  return idx === 1 ? battleStore.junglerBuffs(team) : []
+  return battleStore.championBuffs(team, idx).map((b) => b.type)
 }
 
 const nexusMarkers = computed(() => [
@@ -1143,6 +1145,30 @@ const structureMarkers = computed(() => {
   color: #f87171;
   box-shadow: 0 0 9px rgba(239, 68, 68, 0.65);
 }
+/* Buff carrier: bold outer ring in the buff's color, separated from the
+   team border by a dark gap so it reads instantly on both team colors */
+.champ-img--buff-blue {
+  box-shadow:
+    0 0 0 2px #0d0c08,
+    0 0 0 4px #60a5fa,
+    0 0 16px rgba(59, 130, 246, 1);
+}
+.champ-img--buff-red {
+  box-shadow:
+    0 0 0 2px #0d0c08,
+    0 0 0 4px #f87171,
+    0 0 16px rgba(239, 68, 68, 1);
+}
+/* both buffs: concentric blue + red double ring */
+.champ-img--buff-blue.champ-img--buff-red {
+  box-shadow:
+    0 0 0 2px #0d0c08,
+    0 0 0 4px #60a5fa,
+    0 0 0 5.5px #0d0c08,
+    0 0 0 7.5px #f87171,
+    0 0 18px rgba(239, 68, 68, 0.9);
+}
+
 .champ-img--bard {
   border-color: #e8c040 !important;
   box-shadow: 0 0 12px rgba(232, 192, 64, 0.9) !important;
