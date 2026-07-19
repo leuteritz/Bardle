@@ -1228,6 +1228,26 @@ export const SCOREBOARD_STAT_COLORS = {
 } as const
 export const SCOREBOARD_LABEL_COLOR = '#7a6a44'
 
+// ── Battle stat visuals — canonical mapping shared by BottomScoreboard,
+//    ScoreTopBar and BattleLandingScreen: the same stat always carries the
+//    same icon/image everywhere in the UI. ──────────────────────────────
+export const BATTLE_STAT_GAME_ICONS = {
+  kills: 'game-icons:piercing-sword',
+  deaths: 'game-icons:dead-head',
+  assists: 'game-icons:three-friends',
+  cs: 'game-icons:minions',
+  damage: 'game-icons:sabers-choc',
+  turrets: 'game-icons:watchtower',
+  inhibitors: 'game-icons:floating-crystal',
+  winLoss: 'game-icons:podium-winner',
+} as const
+
+export const BATTLE_STAT_IMAGES = {
+  gold: '/img/BardGold.png',
+  dragons: '/img/dragon_icon.png',
+  barons: '/img/baron_icon.png',
+} as const
+
 // Rank emblem art + tier accent colors (shared: RankBandPanel, BottomScoreboard)
 export const RANK_EMBLEM_IMAGES: Record<string, string> = {
   Iron: '/img/RankBorder/RankIron.png',
@@ -2347,9 +2367,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:trident',
   'game-icons:lightning-shout',
   'game-icons:bullseye',
-  // ScoreTopBar live team stats
-  'game-icons:minions', // team creep score (CS)
-  'game-icons:sabers-choc', // team total damage dealt
+  // Battle stat visuals (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BottomScoreboard, BattleLandingScreen)
+  'game-icons:minions', // CS / team creep score
+  'game-icons:sabers-choc', // damage dealt
   // RiftMinimap jungle buff camps
   'game-icons:golem-head', // Blue Buff sentinel marker
   'game-icons:lizardman', // Red Buff brambleback marker
@@ -2644,9 +2664,8 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:semi-closed-eye', // VISION & TIME stat group header (BattleLandingScreen)
   'game-icons:laurels-trophy', // MVP awards card (MultikillCardsRow) + MVP band (HonorGrantPanel) + MVP showcase (VictorySplashPanel)
   'game-icons:medal', // Grant honor header + medal stamp (HonorGrantPanel)
-  'game-icons:watchtower', // Turret counter (ScoreTopBar)
-  'game-icons:tower-fall', // Turrets destroyed stat (BottomScoreboard)
-  'game-icons:floating-crystal', // Inhibitor counter (ScoreTopBar)
+  'game-icons:watchtower', // Turrets (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BottomScoreboard, BattleLandingScreen)
+  'game-icons:floating-crystal', // Inhibitors (BATTLE_STAT_GAME_ICONS — ScoreTopBar, BattleLandingScreen)
   'game-icons:duel', // Alive-count versus strip (ObjectiveModalComponent)
   'game-icons:sport-medal', // Top-3 damage rank badge (ObjectiveModalComponent)
   'game-icons:imperial-crown', // TEAM MVP badge (TeamRosterPanel)
@@ -2673,11 +2692,10 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:glowing-hands', // Support "Guardian Light" orbit ability (SigilDetailsPanel)
   'game-icons:claw-slashes', // Boss AoE damage-per-second readout (ObjectiveModalComponent)
   'game-icons:burning-skull', // Hex Curse stack/damage badge on the boss (ObjectiveModalComponent)
-  // BottomScoreboard stat icons
-  'game-icons:piercing-sword', // Kills stat (BottomScoreboard)
-  'game-icons:dead-head', // Deaths stat (BottomScoreboard)
-  'game-icons:three-friends', // Assists stat (BottomScoreboard)
-  'game-icons:grass', // CS stat (BottomScoreboard)
+  // Battle stat visuals (BATTLE_STAT_GAME_ICONS — BottomScoreboard, BattleLandingScreen)
+  'game-icons:piercing-sword', // Kills stat
+  'game-icons:dead-head', // Deaths stat
+  'game-icons:three-friends', // Assists stat
   'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
 ])
 

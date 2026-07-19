@@ -13,6 +13,8 @@ import {
   SCOREBOARD_STAT_COLORS,
   RANK_EMBLEM_IMAGES,
   RANK_TIER_COLORS,
+  BATTLE_STAT_GAME_ICONS,
+  BATTLE_STAT_IMAGES,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
 
@@ -32,17 +34,17 @@ interface ScoreStat {
 }
 
 const leftStats = computed<ScoreStat[]>(() => [
-  { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, label: 'Kills', gameIcon: 'game-icons:piercing-sword' },
-  { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, label: 'Deaths', gameIcon: 'game-icons:dead-head' },
-  { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, label: 'Assists', gameIcon: 'game-icons:three-friends' },
-  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, label: 'Gold', icon: '/img/BardGold.png' },
-  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, label: 'CS', gameIcon: 'game-icons:grass' },
+  { key: 'kills', value: formatNumber(kills.value), color: SCOREBOARD_STAT_COLORS.kills, label: 'Kills', gameIcon: BATTLE_STAT_GAME_ICONS.kills },
+  { key: 'deaths', value: formatNumber(deaths.value), color: SCOREBOARD_STAT_COLORS.deaths, label: 'Deaths', gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
+  { key: 'assists', value: formatNumber(assists.value), color: SCOREBOARD_STAT_COLORS.assists, label: 'Assists', gameIcon: BATTLE_STAT_GAME_ICONS.assists },
+  { key: 'gold', value: formatNumber(gold.value), color: SCOREBOARD_STAT_COLORS.gold, label: 'Gold', icon: BATTLE_STAT_IMAGES.gold },
+  { key: 'cs', value: formatNumber(cs.value), color: SCOREBOARD_STAT_COLORS.cs, label: 'CS', gameIcon: BATTLE_STAT_GAME_ICONS.cs },
 ])
 
 const rightStats = computed<ScoreStat[]>(() => [
-  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, label: 'Turrets', gameIcon: 'game-icons:tower-fall' },
-  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: '/img/dragon_icon.png' },
-  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: '/img/baron_icon.png' },
+  { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, label: 'Turrets', gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
+  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: BATTLE_STAT_IMAGES.dragons },
+  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: BATTLE_STAT_IMAGES.barons },
 ])
 
 /* ── Rank + win/loss cells (right side, next to the crest) ── */
@@ -382,7 +384,7 @@ const liveChars = computed(() => {
         <span class="sb-stat-label">Win / Loss</span>
         <div class="sb-stat-main">
           <Icon
-            icon="game-icons:podium-winner"
+            :icon="BATTLE_STAT_GAME_ICONS.winLoss"
             width="32"
             height="32"
             class="sb-stat-icon"

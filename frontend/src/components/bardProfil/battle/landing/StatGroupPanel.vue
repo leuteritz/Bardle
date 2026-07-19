@@ -6,7 +6,18 @@
     </div>
     <div class="group-rows">
       <div v-for="row in rows" :key="row.label" class="group-row">
-        <span class="row-value" :style="row.color ? { color: row.color } : undefined">{{ row.value }}</span>
+        <span class="row-value-line">
+          <img v-if="row.image" :src="row.image" :alt="row.label" class="row-icon" />
+          <Icon
+            v-else-if="row.gameIcon"
+            :icon="row.gameIcon"
+            width="15"
+            height="15"
+            class="row-icon"
+            :style="row.color ? { color: row.color } : undefined"
+          />
+          <span class="row-value" :style="row.color ? { color: row.color } : undefined">{{ row.value }}</span>
+        </span>
         <span class="row-label">{{ row.label }}</span>
       </div>
     </div>
@@ -20,6 +31,10 @@ export interface StatRow {
   label: string
   value: string
   color?: string
+  /* canonical battle-stat visuals (BATTLE_STAT_GAME_ICONS / BATTLE_STAT_IMAGES)
+     so the landing page mirrors the scoreboards' iconography */
+  gameIcon?: string
+  image?: string
 }
 
 defineProps<{
@@ -75,6 +90,22 @@ defineProps<{
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+}
+
+.row-value-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.row-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  object-fit: contain;
+  color: #b0a890;
+  opacity: 0.9;
 }
 
 .row-value {

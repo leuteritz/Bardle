@@ -66,6 +66,7 @@ import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleScoreboardStats } from '@/composables/useBattleScoreboardStats'
 import { formatNumber } from '@/config/numberFormat'
+import { BATTLE_STAT_GAME_ICONS, BATTLE_STAT_IMAGES } from '@/config/constants'
 import RankBandPanel from './RankBandPanel.vue'
 import MultikillCardsRow from './MultikillCardsRow.vue'
 import StatGroupPanel, { type StatRow } from './StatGroupPanel.vue'
@@ -91,9 +92,9 @@ function perMinute(total: number): number {
 }
 
 const combatRows = computed<StatRow[]>(() => [
-  { label: 'Kills', value: formatNumber(kills.value), color: '#6ee7b7' },
-  { label: 'Deaths', value: formatNumber(deaths.value), color: '#fca5a5' },
-  { label: 'Assists', value: formatNumber(assists.value), color: '#93c5fd' },
+  { label: 'Kills', value: formatNumber(kills.value), color: '#6ee7b7', gameIcon: BATTLE_STAT_GAME_ICONS.kills },
+  { label: 'Deaths', value: formatNumber(deaths.value), color: '#fca5a5', gameIcon: BATTLE_STAT_GAME_ICONS.deaths },
+  { label: 'Assists', value: formatNumber(assists.value), color: '#93c5fd', gameIcon: BATTLE_STAT_GAME_ICONS.assists },
   { label: 'KDA', value: kdaStr.value, color: '#e8c040' },
   { label: 'Kill Part.', value: `${killPartPct.value}%` },
   {
@@ -105,21 +106,21 @@ const combatRows = computed<StatRow[]>(() => [
 ])
 
 const economyRows = computed<StatRow[]>(() => [
-  { label: 'Total CS', value: formatNumber(battleStore.allTime.cs + live.value.cs) },
+  { label: 'Total CS', value: formatNumber(battleStore.allTime.cs + live.value.cs), gameIcon: BATTLE_STAT_GAME_ICONS.cs },
   { label: 'CS / min', value: perMinute(battleStore.allTime.cs + live.value.cs).toFixed(1), color: '#e8c040' },
-  { label: 'Total Gold', value: formatNumber(battleStore.allTime.gold + live.value.gold), color: '#e8c040' },
+  { label: 'Total Gold', value: formatNumber(battleStore.allTime.gold + live.value.gold), color: '#e8c040', image: BATTLE_STAT_IMAGES.gold },
   { label: 'Gold / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.gold + live.value.gold))) },
-  { label: 'Champ Dmg', value: formatNumber(battleStore.allTime.damage + live.value.damage) },
+  { label: 'Champ Dmg', value: formatNumber(battleStore.allTime.damage + live.value.damage), gameIcon: BATTLE_STAT_GAME_ICONS.damage },
   { label: 'Dmg / min', value: formatNumber(Math.round(perMinute(battleStore.allTime.damage + live.value.damage))) },
   { label: 'Healing', value: formatNumber(battleStore.allTime.healing + live.value.healing) },
   { label: 'Dmg Taken', value: formatNumber(battleStore.allTime.damageTaken + live.value.damageTaken) },
 ])
 
 const objectiveRows = computed<StatRow[]>(() => [
-  { label: 'Dragons', value: formatNumber(battleStore.allTime.dragons + live.value.dragons), color: '#6ee0a0' },
-  { label: 'Barons', value: formatNumber(battleStore.allTime.barons + live.value.barons), color: '#c9a0f5' },
-  { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets + live.value.turrets) },
-  { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors + live.value.inhibitors) },
+  { label: 'Dragons', value: formatNumber(battleStore.allTime.dragons + live.value.dragons), color: '#6ee0a0', image: BATTLE_STAT_IMAGES.dragons },
+  { label: 'Barons', value: formatNumber(battleStore.allTime.barons + live.value.barons), color: '#c9a0f5', image: BATTLE_STAT_IMAGES.barons },
+  { label: 'Turrets', value: formatNumber(battleStore.allTime.turrets + live.value.turrets), gameIcon: BATTLE_STAT_GAME_ICONS.turrets },
+  { label: 'Inhibitors', value: formatNumber(battleStore.allTime.inhibitors + live.value.inhibitors), gameIcon: BATTLE_STAT_GAME_ICONS.inhibitors },
   { label: 'Nexus Kills', value: formatNumber(battleStore.totalWins) },
   { label: 'Obj. / Game', value: objectivesPerGameStr.value, color: '#a855f7' },
   { label: 'Honors Given', value: formatNumber(battleStore.allTime.honorsGiven) },
