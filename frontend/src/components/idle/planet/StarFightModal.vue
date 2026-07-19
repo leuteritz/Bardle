@@ -18,10 +18,8 @@
         <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
         <div class="sf-topbar" />
 
-        <!-- ── Star Field ──────────────────────────────────────────────── -->
-        <div class="sf-starfield" aria-hidden="true">
-          <span v-for="i in 40" :key="i" class="sf-star" :style="starStyle(i)" />
-        </div>
+        <!-- ── Cosmic Background (shared, wie Shop/Team/Planets) ───────── -->
+        <CosmicStageBackground />
 
         <!-- ── Star-Despawn-Ringe — synchron links & rechts ────────────── -->
         <div
@@ -73,7 +71,6 @@
               class="sf-modal-planet-bg"
               :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
             />
-            <div class="sf-planet-overlay" />
 
             <BossArenaSection
               v-if="activeBoss"
@@ -169,8 +166,6 @@
             </div>
           </div>
         </Transition>
-
-        <div class="sf-scanlines" aria-hidden="true" />
       </div>
     </div>
   </Transition>
@@ -192,6 +187,7 @@ import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import BossPlanetList from '@/components/idle/planet/BossPlanetList.vue'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
@@ -359,22 +355,6 @@ function emberStyle(i: number): Record<string, string> {
     opacity: `${0.4 + (i % 4) * 0.15}`,
   }
 }
-
-function starStyle(i: number): Record<string, string> {
-  const top = (i * 7.3 + 13) % 100
-  const left = (i * 11.7 + 5) % 100
-  const size = 1 + (i % 3)
-  const duration = 2 + (i % 9) * 0.5
-  const delay = (i % 13) * -0.4
-  return {
-    top: `${top}%`,
-    left: `${left}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDuration: `${duration}s`,
-    animationDelay: `${delay}s`,
-  }
-}
 </script>
 
 <style scoped>
@@ -463,7 +443,9 @@ function starStyle(i: number): Record<string, string> {
   bottom: calc(var(--bottom-center-strip-h, 79px) + var(--sf-gap));
   display: flex;
   flex-direction: column;
-  background: linear-gradient(160deg, #100900 0%, #0a0600 60%, #070400 100%);
+  /* flacher Deep-Space-Ton wie im Shop (#111008) — kein Verlauf, damit der
+     geteilte CosmicStageBackground identisch wirkt */
+  background: #111008;
   border: 1px solid rgba(120, 60, 10, 0.55);
   border-radius: 5px;
   box-shadow:
@@ -519,42 +501,6 @@ function starStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Planet Overlay (leichter Readability-Dimmer, Planet bleibt sichtbar) ── */
-.sf-planet-overlay {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.22) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── Star Field ──────────────────────────────────────────────────────────── */
-.sf-starfield {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-}
-
-.sf-star {
-  position: absolute;
-  border-radius: 50%;
-  background: #ffffff;
-  animation: sf-star-twinkle ease-in-out infinite alternate;
-}
-
-@keyframes sf-star-twinkle {
-  from {
-    opacity: 0.04;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 0.55;
-    transform: scale(1.2);
-  }
-}
-
 /* All modal children above the planet background ───────────────────────── */
 .sf-topbar,
 .sf-main,
@@ -565,7 +511,6 @@ function starStyle(i: number): Record<string, string> {
 
 /* ── prefers-reduced-motion ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .sf-star,
   .sf-ember,
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
@@ -1117,21 +1062,6 @@ function starStyle(i: number): Record<string, string> {
 .curse-fade-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-
-/* ── Scanlines ────────────────────────────────────────────────────────────── */
-.sf-scanlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 3px,
-    rgba(0, 0, 0, 0.05) 3px,
-    rgba(0, 0, 0, 0.05) 4px
-  );
-  z-index: 5;
 }
 
 /* ── Admin Kill Button ────────────────────────────────────────────────────── */
