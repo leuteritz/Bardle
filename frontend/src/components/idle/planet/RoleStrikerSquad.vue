@@ -621,18 +621,24 @@ onUnmounted(() => {
   z-index: 3;
 }
 
-/* ── HP-Bar in der Info-Plate — Energie-Leiste in Rollenfarbe ────────────── */
+/* ── HP-Bar in der Info-Plate — schräge Esports-Energiezelle in Rollenfarbe:
+   skewed Track, Diagonal-Sheen im Fill, glühende Energie-Spitze ──────────── */
 .rsq-hp-track {
   position: relative;
-  width: 100%;
-  height: 6px;
-  margin-top: 2px;
-  background: rgba(6, 3, 0, 0.85);
-  border: 1px solid color-mix(in srgb, var(--rc, #c8922a) 50%, #0a0806);
-  border-radius: 4px;
+  width: calc(100% - 8px);
+  height: 7px;
+  margin: 3px 4px 0;
+  transform: skewX(-16deg);
+  background: linear-gradient(
+    to bottom,
+    rgba(4, 2, 0, 0.9),
+    color-mix(in srgb, var(--rc, #c8922a) 12%, rgba(6, 3, 0, 0.9))
+  );
+  border: 1px solid color-mix(in srgb, var(--rc, #c8922a) 55%, #0a0806);
+  border-radius: 2px;
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.85),
-    0 0 8px color-mix(in srgb, var(--rc, #c8922a) 22%, transparent);
+    0 0 10px color-mix(in srgb, var(--rc, #c8922a) 26%, transparent);
   overflow: hidden;
 }
 
@@ -653,35 +659,65 @@ onUnmounted(() => {
 .rsq-hp-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--rc, #c8922a) 80%, #fff) 0%,
-    var(--rc, #c8922a) 45%,
-    color-mix(in srgb, var(--rc, #c8922a) 55%, #000) 100%
-  );
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 4px,
+      rgba(255, 255, 255, 0.14) 4px 6px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--rc, #c8922a) 78%, #fff) 0%,
+      var(--rc, #c8922a) 45%,
+      color-mix(in srgb, var(--rc, #c8922a) 55%, #000) 100%
+    );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 0 7px color-mix(in srgb, var(--rc, #c8922a) 60%, transparent);
+    0 0 8px color-mix(in srgb, var(--rc, #c8922a) 65%, transparent);
   transition: width 0.25s linear;
 }
 
+/* Energie-Spitze: heller glühender Saum an der aktuellen HP-Kante */
+.rsq-hp-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2px;
+  background: color-mix(in srgb, var(--rc, #c8922a) 35%, #fff);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--rc, #c8922a) 40%, #fff);
+}
+
 .rsq-hp-fill--low {
-  background: linear-gradient(to bottom, #ff5f5f 0%, #cc1e1e 45%, #8a0d0d 100%);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 4px,
+      rgba(255, 255, 255, 0.12) 4px 6px
+    ),
+    linear-gradient(to bottom, #ff5f5f 0%, #cc1e1e 45%, #8a0d0d 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 140, 140, 0.45),
     0 0 8px rgba(220, 30, 30, 0.7);
   animation: rsq-hp-pulse 1.1s ease-in-out infinite;
 }
 
+.rsq-hp-fill--low::after {
+  background: #ffd0c8;
+  box-shadow: 0 0 6px rgba(255, 120, 100, 0.9);
+}
+
+/* Segment-Zellen: schmale Schrägschnitte alle 20 % */
 .rsq-hp-ticks {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
     to right,
     transparent 0,
-    transparent calc(25% - 1px),
-    rgba(0, 0, 0, 0.55) calc(25% - 1px),
-    rgba(0, 0, 0, 0.55) 25%
+    transparent calc(20% - 2px),
+    rgba(0, 0, 0, 0.6) calc(20% - 2px),
+    rgba(0, 0, 0, 0.6) 20%
   );
   pointer-events: none;
 }
@@ -701,7 +737,7 @@ onUnmounted(() => {
   font-size: 1.05rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: #f4ead0;
+  color: color-mix(in srgb, var(--rc, #c8922a) 38%, #fff);
   letter-spacing: 0.03em;
   white-space: nowrap;
   -webkit-text-stroke: 1px rgba(10, 5, 0, 0.85);
