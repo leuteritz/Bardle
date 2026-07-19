@@ -2321,6 +2321,9 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:trident',
   'game-icons:lightning-shout',
   'game-icons:bullseye',
+  // ScoreTopBar live team stats
+  'game-icons:minions', // team creep score (CS)
+  'game-icons:sabers-choc', // team total damage dealt
   // Battle Result Modal
   'game-icons:trophy-cup',
   'game-icons:skull',

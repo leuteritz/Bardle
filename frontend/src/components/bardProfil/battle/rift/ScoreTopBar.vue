@@ -6,14 +6,26 @@
   >
     <!-- Blue side -->
     <div class="side side--blue">
-      <span class="side-name side-name--blue">BARD'S VANGUARD</span>
       <div class="side-stats">
-        <span class="stat" title="Turrets destroyed"><Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
-        <span class="stat" title="Inhibitors destroyed"><Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
-        <span class="stat" title="Drakes secured"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
-        <span class="stat" title="Barons secured"><img src="/img/baron.png" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
-        <span class="stat stat--gold">◈ {{ formatNumber(battleStore.team1Gold) }}</span>
+        <span class="stat stat--obj" title="Turrets destroyed"><Icon icon="game-icons:watchtower" width="17" height="17" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
+        <span class="stat stat--obj" title="Inhibitors destroyed"><Icon icon="game-icons:floating-crystal" width="17" height="17" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
+        <span class="stat stat--obj" title="Drakes secured"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
+        <span class="stat stat--obj" title="Barons secured"><img src="/img/baron.png" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
+        <span class="stat-divider" />
+        <span class="stat stat--cs" title="Team creep score"><Icon icon="game-icons:minions" width="17" height="17" class="stat-icon stat-icon--cs" /> {{ formatNumber(team1CS) }}</span>
+        <span class="stat stat--dmg" title="Total damage dealt"><Icon icon="game-icons:sabers-choc" width="17" height="17" class="stat-icon stat-icon--dmg" /> {{ formatNumber(team1Damage) }}</span>
+        <span class="stat-divider" />
+        <span class="stat stat--gold"><img src="/img/BardGold.png" alt="Gold" class="stat-img stat-img--gold" /> {{ formatNumber(battleStore.team1Gold) }}</span>
+        <span class="stat-divider" />
         <span class="stat stat--level">Lv {{ battleStore.team1AvgLevel }}</span>
+        <span class="alive-pips" title="Champions alive">
+          <span
+            v-for="(alive, i) in team1Alive"
+            :key="i"
+            class="pip pip--blue"
+            :class="{ 'pip--dead': !alive }"
+          />
+        </span>
       </div>
     </div>
 
@@ -29,14 +41,26 @@
 
     <!-- Red side -->
     <div class="side side--red">
-      <span class="side-name side-name--red">CRIMSON PACT</span>
       <div class="side-stats side-stats--red">
+        <span class="alive-pips" title="Champions alive">
+          <span
+            v-for="(alive, i) in team2Alive"
+            :key="i"
+            class="pip pip--red"
+            :class="{ 'pip--dead': !alive }"
+          />
+        </span>
         <span class="stat stat--level">Lv {{ battleStore.team2AvgLevel }}</span>
-        <span class="stat stat--gold">{{ formatNumber(battleStore.team2Gold) }} ◈</span>
-        <span class="stat" title="Barons secured">{{ battleStore.team2Barons }} <img src="/img/baron.png" alt="Barons" class="stat-img" /></span>
-        <span class="stat" title="Drakes secured">{{ battleStore.team2Drakes }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
-        <span class="stat" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon icon="game-icons:floating-crystal" width="14" height="14" class="stat-icon stat-icon--inhib" /></span>
-        <span class="stat" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="14" height="14" class="stat-icon" /></span>
+        <span class="stat-divider" />
+        <span class="stat stat--gold">{{ formatNumber(battleStore.team2Gold) }} <img src="/img/BardGold.png" alt="Gold" class="stat-img stat-img--gold" /></span>
+        <span class="stat-divider" />
+        <span class="stat stat--dmg" title="Total damage dealt">{{ formatNumber(team2Damage) }} <Icon icon="game-icons:sabers-choc" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
+        <span class="stat stat--cs" title="Team creep score">{{ formatNumber(team2CS) }} <Icon icon="game-icons:minions" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
+        <span class="stat-divider" />
+        <span class="stat stat--obj" title="Barons secured">{{ battleStore.team2Barons }} <img src="/img/baron.png" alt="Barons" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Drakes secured">{{ battleStore.team2Drakes }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon icon="game-icons:floating-crystal" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
+        <span class="stat stat--obj" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="17" height="17" class="stat-icon" /></span>
       </div>
     </div>
   </div>
@@ -85,6 +109,18 @@ import {
 
 const battleStore = useBattleStore()
 const bluePercent = computed(() => Math.round(battleStore.liveWinMomentum * 100))
+
+/* Live team aggregates for the score bar */
+const team1CS = computed(() => battleStore.team1.reduce((s, c) => s + c.cs, 0))
+const team2CS = computed(() => battleStore.team2.reduce((s, c) => s + c.cs, 0))
+const team1Damage = computed(() => battleStore.team1.reduce((s, c) => s + c.damage, 0))
+const team2Damage = computed(() => battleStore.team2.reduce((s, c) => s + c.damage, 0))
+const team1Alive = computed(() =>
+  battleStore.team1.filter((c) => c.name).map((c) => c.respawnState === 'alive'),
+)
+const team2Alive = computed(() =>
+  battleStore.team2.filter((c) => c.name).map((c) => c.respawnState === 'alive'),
+)
 
 /* Dominance tiers drive the meter's visual escalation:
    0 = neutral (within ±band of 50), 1 = leaning, 2 = dominant, 3 = crushing */
@@ -144,67 +180,126 @@ watch(bluePercent, (next, prev) => {
   filter: brightness(1.25);
 }
 
+/* Team names dropped — each side is a single stats row hugging the center
+   (blue right-aligned, red left-aligned) so both rows mirror around the
+   kills block. */
 .side {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: clamp(8px, 1.2cqw, 14px);
   padding: 0 clamp(10px, 1.5cqw, 18px);
   min-width: 0;
 }
 .side--blue {
+  justify-content: flex-end;
   background: linear-gradient(to right, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.03));
 }
 .side--red {
-  flex-direction: row-reverse;
+  justify-content: flex-start;
   background: linear-gradient(to left, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.03));
 }
-
-.side-name {
-  font-size: clamp(11px, 1.05cqw, 13px);
-  font-weight: 700;
-  letter-spacing: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* MedievalSharp metric fix — keep the whole bar row optically centered */
-  transform: translateY(0.1em);
-}
-.side-name--blue { color: #93c5fd; }
-.side-name--red { color: #fca5a5; }
 
 .side-stats {
   display: flex;
   align-items: center;
-  gap: clamp(7px, 1.1cqw, 14px);
-  margin-left: auto;
-  font-size: clamp(10px, 0.95cqw, 12px);
-  color: #8ab0e0;
-  /* MedievalSharp metric fix — keep the whole bar row optically centered */
-  transform: translateY(0.1em);
+  gap: clamp(6px, 1.2cqw, 16px);
+  font-size: clamp(13px, 1.3cqw, 16px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #a8c4e8;
+  /* MedievalSharp metric fix — digits sit high in their em box */
+  transform: translateY(0.08em);
 }
 .side-stats--red {
-  margin-left: 0;
-  margin-right: auto;
-  color: #e0a0a0;
+  color: #e8b0b0;
 }
 
+/* Fixed slot widths per stat type — growing values never push neighbors.
+   Blue side anchors content left (icon first), red side anchors right. */
 .stat {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
+  flex-shrink: 0;
+  justify-content: flex-start;
 }
-.stat--gold { color: #e8c040; }
-.stat--level { color: #e8e2d0; }
+.side-stats--red .stat {
+  justify-content: flex-end;
+}
+.stat--obj { width: 40px; }
+.stat--cs { width: 58px; }
+.stat--dmg { width: 68px; }
+.stat--gold {
+  width: 76px;
+  color: #e8c040;
+  font-size: clamp(14px, 1.4cqw, 17px);
+  text-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
+}
+.stat--level {
+  width: 46px;
+  color: #e8e2d0;
+}
 
-.stat-icon { opacity: 0.8; }
-.stat-icon--inhib { color: #e884d8; }
+.stat-divider {
+  width: 1px;
+  height: clamp(11px, 2cqh, 14px);
+  background: #3e200a;
+  flex-shrink: 0;
+}
+
+/* Icons & images keep an identical, immutable 17px box — as flex children
+   they would otherwise get squeezed when the number next to them grows. */
+.stat-icon,
 .stat-img {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  /* Cancel the digit-baseline nudge of .side-stats (same trick as .alive-pips)
+     so icons sit on the same optical centerline as the text next to them */
+  transform: translateY(-0.08em);
+}
+.stat-icon { opacity: 0.85; }
+.stat-icon--inhib { color: #e884d8; }
+.stat-icon--cs { color: #b0a878; }
+.stat-icon--dmg { color: #e08850; }
+
+/* Alive pips — one dot per fielded champion, dimmed while dead */
+.alive-pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  /* Cancel the digit-baseline nudge of .side-stats for the dots */
+  transform: translateY(-0.08em);
+}
+.pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.pip--blue {
+  background: #3b82f6;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.7);
+}
+.pip--red {
+  background: #ef4444;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.7);
+}
+.pip--dead {
+  background: #3a362c;
+  box-shadow: none;
+}
+.stat-img {
   border-radius: 50%;
   object-fit: cover;
+}
+.stat-img--gold {
+  border-radius: 0;
+  object-fit: contain;
 }
 
 .center {
@@ -219,10 +314,10 @@ watch(bluePercent, (next, prev) => {
 }
 
 .kills {
-  font-size: clamp(20px, 3.8cqh, 27px);
+  font-size: clamp(22px, 4.4cqh, 30px);
   font-weight: 700;
   line-height: 1;
-  min-width: clamp(28px, 5cqh, 36px);
+  min-width: clamp(30px, 5.4cqh, 40px);
   text-align: center;
   /* Same MedievalSharp metric fix as the momentum values: digits render high
      in their em box, nudge down for equal space above and below */
@@ -235,12 +330,13 @@ watch(bluePercent, (next, prev) => {
   text-align: center;
 }
 .timer-eyebrow {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: #6a5820;
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  line-height: 1;
+  color: #8a7430;
 }
 .timer-value {
-  font-size: clamp(14px, 2.5cqh, 18px);
+  font-size: clamp(15px, 2.9cqh, 20px);
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;

@@ -117,6 +117,7 @@ import {
 import { fetchChampionNames } from '../utils/champions'
 import { logger } from '../utils/logger'
 import { CHAMPION_HOME_PLANETS } from '../config/championHomePlanets'
+import { CHAMPION_ROLES } from '../config/championRoles'
 let _visibilityHandler: (() => void) | null = null
 
 export function zeroLiveBattleStats(): LiveBattleStats {
@@ -903,7 +904,7 @@ export const useBattleStore = defineStore('battle', {
 
     async refreshTeams() {
       const champions = await this.loadChampions()
-      const selected = this.getRandomChampions(champions, 5)
+      const selected = this.getRandomChampions(champions)
       this.team1 = this.headerSlots.map((slot, i) =>
         makeChampionState(slot ?? '', slot ? this.currentRank.tier : 'Silver', i),
       )
@@ -922,14 +923,21 @@ export const useBattleStore = defineStore('battle', {
       this.team2 = build(t2)
     },
 
-    getRandomChampions(champions: string[], count: number) {
-      const arr = [...champions]
-      const result = []
-      for (let i = 0; i < count; i++) {
-        const idx = Math.floor(Math.random() * arr.length)
-        result.push(arr.splice(idx, 1)[0])
-      }
-      return result
+    /**
+     * One random champion per battle role (top/jungle/mid/adc/support), each
+     * drawn only from champions whose real role assignment matches — no more
+     * Kassadin-ADC lineups. Falls back to any remaining champion if a role
+     * pool is exhausted.
+     */
+    getRandomChampions(champions: string[]) {
+      const taken = new Set<string>()
+      return BATTLE_ROLES.map((role) => {
+        let pool = champions.filter((n) => CHAMPION_ROLES[n] === role && !taken.has(n))
+        if (pool.length === 0) pool = champions.filter((n) => !taken.has(n))
+        const pick = pool[Math.floor(Math.random() * pool.length)] ?? ''
+        if (pick) taken.add(pick)
+        return pick
+      })
     },
 
     resetTeamStats(team: ChampionState[]) {
