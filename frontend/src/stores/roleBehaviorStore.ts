@@ -323,11 +323,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             `${champName} is knocked out by ${activeBoss.bossName}! (${CHAMPION_REVIVE_MS / 1000}s)`,
             role,
           )
-        } else {
-          throttledEvent(`boss-champ-hit-${role}`, 8000, () => {
-            addEvent(`${activeBoss.bossName} strikes ${champName}: ${dmg} dmg/s.`, role)
-          })
         }
+        // Routine-Treffer werden nicht geloggt — nur Knockouts und Revives
       }
     },
 
@@ -358,9 +355,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         const defeated = bossStore.dealDamage(def.damage)
         this.roleAttackShots[role]++
 
-        throttledEvent(`role-attack-${role}`, 4000, () => {
-          addEvent(`${getChampionNameByRole(role)} strikes the boss: ${def.damage} dmg.`, role)
-        })
+        // Kein Log pro Routine-Angriff — 5 Rollen im Sekundenrhythmus würden
+        // das Event-Log fluten
 
         if (!defeated) {
           const pos = activePlanetPositions.get(activeBoss.planetId)
@@ -528,7 +524,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       // ── Active Curse: Verderbnis DoT ────────────────────────────────────────
       if (this.activeCurse?.type === 'corruption' && activeBoss && !activeBoss.defeated && !activeBoss.expired) {
         const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
-        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 3000, () => {
+        throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 10000, () => {
           addEvent(`${championName} Corruption: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
         })
         if (!defeated) {
@@ -608,7 +604,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           const defeated = bossStore.dealDamage(ROLE_ADC_BURST_DAMAGE)
 
-          throttledEvent(`adc-burst-${activeBoss.planetId}`, 2500, () => {
+          throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
             addEvent(`${championName} burst: ${ROLE_ADC_BURST_DAMAGE} dmg.`, 'adc')
           })
 

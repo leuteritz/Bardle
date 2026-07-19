@@ -26,7 +26,9 @@ const { events } = useEventLog()
   position: fixed;
   top: 0.45rem;
   right: 0.75rem;
-  z-index: 9998;
+  /* Unter dem Star-Fight-Modal (z-index 1000) — das Log darf den Bosskampf
+     nie überlagern */
+  z-index: 900;
   /* Breite = freie Spalte rechts neben dem zentrierten Header.
      --header-vp-right (Abstand Header-Rechtskante → Viewport-Rechtskante) wird
      vom Header per ResizeObserver aktuell gehalten; 1.25rem = right-Offset
