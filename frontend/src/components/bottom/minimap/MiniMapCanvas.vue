@@ -39,6 +39,8 @@ import {
   MINIMAP_TARGET_MAX_R,
   MINIMAP_WAIT_SUN_R,
   MINIMAP_GALAXY_CORE_RADIUS,
+  MINIMAP_ROUTE_ARROW_SIZE,
+  MINIMAP_ROUTE_ARROW_GAP,
 } from '@/config/constants'
 import {
   seededRng,
@@ -50,6 +52,7 @@ import {
   minimapAccentForTheme,
   STAR_PALETTE,
   drawPlanet,
+  drawRouteArrowhead,
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 
@@ -592,6 +595,24 @@ export default defineComponent({
           ctx.lineTo(sx, sy)
         }
         ctx.stroke()
+        // One chevron per flown leg, just before its destination star —
+        // the route reads as a followable trail of arrowheads.
+        let [ax, ay] = [spx, spy]
+        for (let i = 0; i < attempts; i++) {
+          const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          drawRouteArrowhead(
+            ctx,
+            ax,
+            ay,
+            sx,
+            sy,
+            MINIMAP_ROUTE_ARROW_GAP,
+            MINIMAP_ROUTE_ARROW_SIZE,
+            'rgba(240, 205, 96, 0.85)',
+            2,
+          )
+          ;[ax, ay] = [sx, sy]
+        }
         ctx.restore()
       }
 

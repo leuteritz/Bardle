@@ -1227,6 +1227,11 @@ export const RANK_TIER_COLORS: Record<string, string> = {
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
+export const MINIMAP_ROUTE_ARROW_SIZE = 5 // chevron wing length on flown-route segments (live map)
+export const MINIMAP_ROUTE_ARROW_GAP = 14 // chevron tip distance before the segment endpoint (clears the star marker)
+export const MINIMAP_ROUTE_ARROW_SPREAD = 0.48 // half-opening angle of the chevron in radians (~27°)
+export const SNAPSHOT_ROUTE_ARROW_SIZE = 3.5 // chevron wing length in the archive snapshot (smaller canvas)
+export const SNAPSHOT_ROUTE_ARROW_GAP = 12 // chevron tip distance before the endpoint in the snapshot
 export const MINIMAP_COMET_HEAD_R = 4.5 // player comet head radius (× √zoom)
 export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the flight curve
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count

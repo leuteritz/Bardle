@@ -13,9 +13,15 @@ import {
   GALAXY_PARTICLE_COLORS,
   minimapAccentForTheme,
   drawPlanet,
+  drawRouteArrowhead,
   generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import { MINIMAP_TWINKLE_COUNT, MINIMAP_GALAXY_CORE_RADIUS } from '@/config/constants'
+import {
+  MINIMAP_TWINKLE_COUNT,
+  MINIMAP_GALAXY_CORE_RADIUS,
+  SNAPSHOT_ROUTE_ARROW_SIZE,
+  SNAPSHOT_ROUTE_ARROW_GAP,
+} from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/galaxyStore'
 
 /** Logical snapshot size (rendered at 2× for crisp HiDPI display). */
@@ -115,6 +121,27 @@ export function renderGalaxySnapshot(record: CompletedGalaxyRecord): string {
   }
   ctx.lineTo(gcx, gcy)
   ctx.stroke()
+
+  // Chevron per flown leg (incl. the final approach to the freed core) so the
+  // archived journey stays readable as a directed trail.
+  {
+    let [ax, ay] = [spx, spy]
+    for (let i = 0; i <= attempts; i++) {
+      const [sx, sy] = i < attempts ? wToC(dots[i].x, dots[i].y) : [gcx, gcy]
+      drawRouteArrowhead(
+        ctx,
+        ax,
+        ay,
+        sx,
+        sy,
+        SNAPSHOT_ROUTE_ARROW_GAP,
+        SNAPSHOT_ROUTE_ARROW_SIZE,
+        'rgba(240, 205, 96, 0.85)',
+        1.6,
+      )
+      ;[ax, ay] = [sx, sy]
+    }
+  }
 
   // Spawn marker: small warm departure dot with a gold ring
   const spawnGlow = ctx.createRadialGradient(spx, spy, 0, spx, spy, 8)

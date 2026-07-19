@@ -15,6 +15,7 @@ import {
   MINIMAP_GALAXY_BULGE_R,
   MINIMAP_GALAXY_KNOTS,
   MINIMAP_GALAXY_BRIGHT_STARS,
+  MINIMAP_ROUTE_ARROW_SPREAD,
 } from '@/config/constants'
 import { GALAXY_THEMES } from '@/config/galaxyThemes'
 
@@ -508,6 +509,47 @@ export function drawPlanet(
     ctx.fillText('✕', x, y + 0.5)
     ctx.shadowBlur = 0
   }
+}
+
+/* ── Route arrowheads ────────────────────────────────────────────────────── */
+
+/** Open chevron on a route segment, tip placed `gap` px before the endpoint
+ *  so it never overlaps the star marker. Skips segments too short to fit it. */
+export function drawRouteArrowhead(
+  ctx: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  gap: number,
+  size: number,
+  strokeStyle: string,
+  lineWidth: number,
+) {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len < gap + size * 2) return
+  const ang = Math.atan2(dy, dx)
+  const tipX = x1 - (dx / len) * gap
+  const tipY = y1 - (dy / len) * gap
+  ctx.save()
+  ctx.beginPath()
+  ctx.strokeStyle = strokeStyle
+  ctx.lineWidth = lineWidth
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.moveTo(
+    tipX - size * Math.cos(ang - MINIMAP_ROUTE_ARROW_SPREAD),
+    tipY - size * Math.sin(ang - MINIMAP_ROUTE_ARROW_SPREAD),
+  )
+  ctx.lineTo(tipX, tipY)
+  ctx.lineTo(
+    tipX - size * Math.cos(ang + MINIMAP_ROUTE_ARROW_SPREAD),
+    tipY - size * Math.sin(ang + MINIMAP_ROUTE_ARROW_SPREAD),
+  )
+  ctx.stroke()
+  ctx.restore()
 }
 
 /* ── Seeded star placement ───────────────────────────────────────────────── */
