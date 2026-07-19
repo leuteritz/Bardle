@@ -84,8 +84,8 @@ const stackedMaterials = computed(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0.7rem 0.95rem 0.75rem;
+  gap: 12px;
+  padding: 1rem 1.3rem 1.1rem;
   border-radius: 4px;
   /* Kein backdrop-filter: müsste beim Screen-Shake jeden Frame neu blurren */
   background: rgba(17, 12, 4, 0.86);
@@ -131,8 +131,8 @@ const stackedMaterials = computed(() => {
 .reward-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.62rem;
+  gap: 9px;
+  font-size: 0.8rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -144,8 +144,8 @@ const stackedMaterials = computed(() => {
 /* kleiner Akzentbalken vor dem Eyebrow — moderne Sektionsmarke */
 .reward-eyebrow::before {
   content: '';
-  width: 14px;
-  height: 3px;
+  width: 20px;
+  height: 4px;
   border-radius: 2px;
   background: linear-gradient(to right, #c89040, #e8c060);
   flex-shrink: 0;
@@ -156,15 +156,15 @@ const stackedMaterials = computed(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 18px;
+  gap: 12px 28px;
   min-width: 0;
 }
 
 .reward-chip {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  font-size: 1.02rem;
+  gap: 12px;
+  font-size: 1.45rem;
   font-weight: 800;
   color: #d0d0d0;
   white-space: nowrap;
@@ -178,8 +178,8 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-chip-icon {
-  width: 34px;
-  height: 34px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
@@ -190,15 +190,15 @@ const stackedMaterials = computed(() => {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  padding-right: 16px;
-  margin-right: 2px;
+  gap: 14px;
+  padding-right: 24px;
+  margin-right: 4px;
   border-right: 1px solid rgba(74, 144, 217, 0.25);
 }
 
 .reward-champion-portrait {
-  width: 56px;
-  height: 56px;
+  width: 84px;
+  height: 84px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
@@ -212,11 +212,11 @@ const stackedMaterials = computed(() => {
 .reward-champion-text {
   display: inline-flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
 }
 
 .reward-champion-eyebrow {
-  font-size: 0.52rem;
+  font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.28em;
   text-transform: uppercase;
@@ -225,7 +225,7 @@ const stackedMaterials = computed(() => {
 }
 
 .reward-champion-name {
-  font-size: 1.4rem;
+  font-size: 2rem;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
