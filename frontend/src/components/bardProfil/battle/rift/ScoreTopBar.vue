@@ -265,32 +265,34 @@ watch(bluePercent, (next, prev) => {
 .stat-icon--cs { color: #b0a878; }
 .stat-icon--dmg { color: #e08850; }
 
-/* Alive pips — one dot per fielded champion, dimmed while dead */
+/* Alive pips — same skewed-bar shape as the objective-fight modal's
+   alive strip, in team colors; dimmed while the champion is dead */
 .alive-pips {
   display: flex;
   align-items: center;
   gap: 3px;
-  /* Cancel the digit-baseline nudge of .side-stats for the dots */
+  /* Cancel the digit-baseline nudge of .side-stats for the bars */
   transform: translateY(-0.08em);
 }
 .pip {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  width: clamp(11px, 1.1cqw, 15px);
+  height: clamp(5px, 1cqh, 6px);
+  border-radius: 1px;
+  transform: skewX(-18deg);
   transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease;
+    background 0.4s ease,
+    box-shadow 0.4s ease;
 }
 .pip--blue {
-  background: #3b82f6;
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.7);
+  background: linear-gradient(to bottom, #60a5fa, #2563eb);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
 }
 .pip--red {
-  background: #ef4444;
-  box-shadow: 0 0 5px rgba(239, 68, 68, 0.7);
+  background: linear-gradient(to bottom, #f87171, #b91c1c);
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
 }
 .pip--dead {
-  background: #3a362c;
+  background: #3a382e;
   box-shadow: none;
 }
 .stat-img {
