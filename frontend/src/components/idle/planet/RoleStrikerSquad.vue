@@ -43,15 +43,14 @@
 
       <!-- Info-Plate: HP-Bar + Champion-Name + Rolle · Schaden -->
       <div class="rsq-plate">
-        <div class="rsq-hp-track">
+        <div class="rsq-hp-track" :class="{ 'rsq-hp-track--low': s.hpPct < 25 }">
+          <div class="rsq-hp-ghost" :style="{ width: s.hpPct + '%' }" />
           <div
             class="rsq-hp-fill"
-            :class="{
-              'rsq-hp-fill--low': s.hpPct < 25,
-              'rsq-hp-fill--mid': s.hpPct >= 25 && s.hpPct < 60,
-            }"
+            :class="{ 'rsq-hp-fill--low': s.hpPct < 25 }"
             :style="{ width: s.hpPct + '%' }"
           />
+          <div class="rsq-hp-ticks" />
         </div>
         <span class="rsq-hp-text" :class="{ 'rsq-hp-text--down': s.isDown }">
           {{ s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}` }}
@@ -616,34 +615,48 @@ onUnmounted(() => {
   z-index: 3;
 }
 
-/* ── HP-Bar in der Info-Plate ────────────────────────────────────────────── */
+/* ── HP-Bar in der Info-Plate — Energie-Leiste in Rollenfarbe ────────────── */
 .rsq-hp-track {
   position: relative;
   width: 100%;
-  height: 5px;
+  height: 6px;
   margin-top: 2px;
-  background: #0a0806;
-  border: 1px solid color-mix(in srgb, var(--rc, #c8922a) 55%, #1a0f04);
-  border-radius: 3px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+  background: rgba(6, 3, 0, 0.85);
+  border: 1px solid color-mix(in srgb, var(--rc, #c8922a) 50%, #0a0806);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 8px color-mix(in srgb, var(--rc, #c8922a) 22%, transparent);
   overflow: hidden;
 }
 
-.rsq-hp-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, #5de84a 0%, #2eaa1e 45%, #1d7a12 100%);
+.rsq-hp-track--low {
+  border-color: #8a2018;
   box-shadow:
-    inset 0 1px 0 rgba(120, 255, 100, 0.45),
-    0 0 6px rgba(60, 200, 40, 0.5);
-  transition: width 0.25s linear;
+    inset 0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 10px rgba(220, 30, 30, 0.35);
 }
 
-.rsq-hp-fill--mid {
-  background: linear-gradient(to bottom, #f5d84a 0%, #d4960e 45%, #9a6508 100%);
+.rsq-hp-ghost {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(255, 235, 200, 0.32);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rsq-hp-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rc, #c8922a) 80%, #fff) 0%,
+    var(--rc, #c8922a) 45%,
+    color-mix(in srgb, var(--rc, #c8922a) 55%, #000) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 240, 120, 0.45),
-    0 0 6px rgba(220, 160, 20, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 7px color-mix(in srgb, var(--rc, #c8922a) 60%, transparent);
+  transition: width 0.25s linear;
 }
 
 .rsq-hp-fill--low {
@@ -652,6 +665,19 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 140, 140, 0.45),
     0 0 8px rgba(220, 30, 30, 0.7);
   animation: rsq-hp-pulse 1.1s ease-in-out infinite;
+}
+
+.rsq-hp-ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(25% - 1px),
+    rgba(0, 0, 0, 0.55) calc(25% - 1px),
+    rgba(0, 0, 0, 0.55) 25%
+  );
+  pointer-events: none;
 }
 
 @keyframes rsq-hp-pulse {

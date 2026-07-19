@@ -114,15 +114,14 @@
           '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
         }"
       >
-        <div class="champ-hp-bar-track">
+        <div class="champ-hp-bar-track" :class="{ 'champ-hp-bar-track--low': pos.hpPercent < 25 }">
+          <div class="champ-hp-ghost" :style="{ width: pos.hpPercent + '%' }" />
           <div
             class="champ-hp-bar-fill"
-            :class="{
-              'champ-hp-bar-fill--low': pos.hpPercent < 25,
-              'champ-hp-bar-fill--mid': pos.hpPercent >= 25 && pos.hpPercent < 60,
-            }"
+            :class="{ 'champ-hp-bar-fill--low': pos.hpPercent < 25 }"
             :style="{ width: pos.hpPercent + '%' }"
           />
+          <div class="champ-hp-ticks" />
           <div class="champ-hp-bar-shine" />
         </div>
         <span v-if="pos.isDown" class="champ-hp-text champ-hp-text--down">
@@ -974,36 +973,49 @@ export default defineComponent({
   opacity: var(--hover-dim-opacity, 0.08);
 }
 
+/* Energie-Leiste in Rollenfarbe — bewusst anders als die grünen Planeten-
+   Bars: segmentiert, mit Ghost-Trail und Rollenfarben-Glow. Rot nur kritisch. */
 .champ-hp-bar-track {
   position: relative;
   width: 100%;
-  height: 5px;
-  background: #0a0806;
-  border: 1px solid color-mix(in srgb, var(--role-color, #c89040) 55%, #1a0f04);
-  border-radius: 3px;
+  height: 7px;
+  background: rgba(6, 3, 0, 0.85);
+  border: 1px solid color-mix(in srgb, var(--role-color, #c89040) 50%, #0a0806);
+  border-radius: 4px;
   box-shadow:
-    0 0 0 1px #1a0f04,
-    inset 0 1px 2px rgba(0, 0, 0, 0.8),
-    0 1px 0 rgba(255, 200, 80, 0.08);
+    inset 0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 8px color-mix(in srgb, var(--role-color, #c89040) 22%, transparent);
   overflow: hidden;
 }
 
-.champ-hp-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, #5de84a 0%, #2eaa1e 45%, #1d7a12 100%);
+.champ-hp-bar-track--low {
+  border-color: #8a2018;
   box-shadow:
-    inset 0 1px 0 rgba(120, 255, 100, 0.45),
-    0 0 6px rgba(60, 200, 40, 0.5);
-  transition: width 0.25s linear;
-  position: relative;
+    inset 0 1px 2px rgba(0, 0, 0, 0.85),
+    0 0 10px rgba(220, 30, 30, 0.35);
 }
 
-.champ-hp-bar-fill--mid {
-  background: linear-gradient(to bottom, #f5d84a 0%, #d4960e 45%, #9a6508 100%);
+/* Ghost-Trail: heller Balken zieht dem HP-Stand verzögert hinterher */
+.champ-hp-ghost {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(255, 235, 200, 0.32);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.champ-hp-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--role-color, #c89040) 80%, #fff) 0%,
+    var(--role-color, #c89040) 45%,
+    color-mix(in srgb, var(--role-color, #c89040) 55%, #000) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 240, 120, 0.45),
-    0 0 6px rgba(220, 160, 20, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 7px color-mix(in srgb, var(--role-color, #c89040) 60%, transparent);
+  transition: width 0.25s linear;
 }
 
 .champ-hp-bar-fill--low {
@@ -1014,11 +1026,25 @@ export default defineComponent({
   animation: champ-hp-pulse 1.1s ease-in-out infinite;
 }
 
+/* Segment-Ticks alle 25 % — liest sich als Energie-Zellen */
+.champ-hp-ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(25% - 1px),
+    rgba(0, 0, 0, 0.55) calc(25% - 1px),
+    rgba(0, 0, 0, 0.55) 25%
+  );
+  pointer-events: none;
+}
+
 .champ-hp-bar-shine {
   position: absolute;
   inset: 0;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0%, transparent 55%);
+  border-radius: 3px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -1036,11 +1062,11 @@ export default defineComponent({
   font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #e8c040;
+  color: color-mix(in srgb, var(--role-color, #c89040) 55%, #f0e6cc);
   letter-spacing: 0.02em;
   white-space: nowrap;
   text-shadow:
-    0 0 3px rgba(232, 160, 20, 0.6),
+    0 0 3px color-mix(in srgb, var(--role-color, #c89040) 45%, transparent),
     0 1px 2px rgba(0, 0, 0, 0.95);
   line-height: 1;
 }
