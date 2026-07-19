@@ -50,7 +50,6 @@
           </div>
           <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
             {{ sunPhase.name }}
-            <span class="sun-phase-label__astro">{{ sunPhase.astroName }}</span>
           </span>
 
           <div class="chime-readout">
@@ -79,7 +78,6 @@
                 Kills
               </span>
               <span class="stat-tile__value">{{ formatNumber(pauseKills) }}</span>
-              <span class="stat-tile__hint">while paused</span>
             </div>
 
             <div class="stat-tile">
@@ -102,7 +100,6 @@
                   +{{ pauseMaterialEntries.length - 3 }}
                 </span>
               </div>
-              <span class="stat-tile__hint">while paused</span>
             </div>
           </div>
 
@@ -473,15 +470,6 @@ function particleStyle(i: number): Record<string, string> {
   text-transform: uppercase;
   text-shadow: 0 0 18px currentColor;
 }
-.sun-phase-label__astro {
-  font-family: inherit;
-  font-size: 0.52em;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  color: rgba(216, 200, 160, 0.45);
-  text-shadow: none;
-}
-
 /* ── Chime readout ────────────────────────────────────── */
 .chime-readout {
   display: flex;
@@ -526,8 +514,12 @@ function particleStyle(i: number): Record<string, string> {
 .stat-tile {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 7px;
   padding: clamp(10px, 1.4vh, 14px) clamp(10px, 1.4vw, 14px);
+  min-height: clamp(64px, 9vh, 84px);
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
   border-radius: 12px;
@@ -581,12 +573,6 @@ function particleStyle(i: number): Record<string, string> {
   font-weight: 600;
   color: rgba(216, 200, 160, 0.45);
 }
-.stat-tile__hint {
-  font-size: clamp(0.58rem, 0.8vw, 0.66rem);
-  color: rgba(216, 200, 160, 0.32);
-  letter-spacing: 0.05em;
-}
-
 /* HP bar */
 .hp-bar-track {
   position: relative;
@@ -622,6 +608,7 @@ function particleStyle(i: number): Record<string, string> {
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+  justify-content: center;
 }
 .material-chip {
   display: inline-flex;
