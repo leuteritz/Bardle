@@ -236,7 +236,7 @@
           title="Jump to Drake"
           @click="battleStore.jumpToGameTime(battleStore.drakeJumpTarget)"
         >
-          <img src="/img/dragon.png" alt="Drake" class="ctrl-img" />
+          <img src="/img/dragon_icon.png" alt="Drake" class="ctrl-img" />
         </button>
         <button
           v-if="battleStore.baronJumpTarget > battleStore.battleTime"
@@ -244,7 +244,7 @@
           title="Jump to Baron"
           @click="battleStore.jumpToGameTime(battleStore.baronJumpTarget)"
         >
-          <img src="/img/baron.png" alt="Baron" class="ctrl-img" />
+          <img src="/img/baron_icon.png" alt="Baron" class="ctrl-img" />
         </button>
         <button class="ctrl-btn ctrl-btn--skip" title="Skip battle" @click="battleStore.adminSkipToEnd()">
           ⟳ SKIP
@@ -1329,8 +1329,7 @@ const structureMarkers = computed(() => {
 .ctrl-img {
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* ── Animations ── */

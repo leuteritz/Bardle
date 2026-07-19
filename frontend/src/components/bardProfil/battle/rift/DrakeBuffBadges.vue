@@ -90,11 +90,11 @@ function toSegments(effect: string): EffectSegment[] {
 /** Both sides show the buff the killer team walked away with — same short copy as the modal. */
 function drakeBadge(d: DrakeTypeDef): Badge {
   const effect = d.effectText || `+${Math.round(d.winDelta * 100)}% win chance`
-  return { ...d, img: '/img/dragon.png', segments: toSegments(effect) }
+  return { ...d, img: '/img/dragon_icon.png', segments: toSegments(effect) }
 }
 
 function baronBadge(): Badge {
-  return { ...BARON_BUFF, img: '/img/baron.png', segments: toSegments(BARON_BUFF.effectText) }
+  return { ...BARON_BUFF, img: '/img/baron_icon.png', segments: toSegments(BARON_BUFF.effectText) }
 }
 
 const ownBadges = computed<Badge[]>(() => [

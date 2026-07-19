@@ -41,8 +41,8 @@ const leftStats = computed<ScoreStat[]>(() => [
 
 const rightStats = computed<ScoreStat[]>(() => [
   { key: 'turrets', value: formatNumber(turrets.value), color: SCOREBOARD_STAT_COLORS.turrets, label: 'Turrets', gameIcon: 'game-icons:tower-fall' },
-  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: '/img/dragon.png' },
-  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: '/img/baron.png' },
+  { key: 'dragons', value: formatNumber(dragons.value), color: SCOREBOARD_STAT_COLORS.dragons, label: 'Dragons', icon: '/img/dragon_icon.png' },
+  { key: 'barons', value: formatNumber(barons.value), color: SCOREBOARD_STAT_COLORS.barons, label: 'Barons', icon: '/img/baron_icon.png' },
 ])
 
 /* ── Rank + win/loss cells (right side, next to the crest) ── */

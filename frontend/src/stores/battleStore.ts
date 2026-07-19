@@ -438,20 +438,28 @@ export const useBattleStore = defineStore('battle', {
       const raw = BATTLE_BASE_START_WIN_CHANCE + state.startWinChanceBonus
       return Math.max(WINPROB_MIN, Math.min(WINPROB_MAX, raw))
     },
-    /** Cosmetic jungle-buff auras a champion currently carries, with remaining game-seconds. */
-    championBuffs: (state) => (team: 1 | 2, idx: number): Array<{ type: 'blue' | 'red'; remaining: number }> =>
-      state.buffFeed
+    /** Cosmetic jungle-buff auras a champion currently carries, with remaining
+     * game-seconds. Death strips buffs: a dead/walking-back champion shows
+     * none, and a buff earned before the latest death never comes back. */
+    championBuffs: (state) => (team: 1 | 2, idx: number): Array<{ type: 'blue' | 'red'; remaining: number }> => {
+      const champ = (team === 1 ? state.team1 : state.team2)[idx]
+      if (!champ || champ.respawnState === 'walking-back') return []
+      const respawnUntil = (team === 1 ? state.respawnUntil.t1 : state.respawnUntil.t2)[idx] ?? 0
+      const lastDeathT = respawnUntil - MOVE_RESPAWN_WALK_SECONDS
+      return state.buffFeed
         .filter(
           (e) =>
             e.team === team &&
             e.championIdx === idx &&
             state.battleTime >= e.t &&
-            state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T,
+            state.battleTime - e.t < JUNGLE_BUFF_CARRY_DURATION_T &&
+            lastDeathT <= e.t,
         )
         .map((e) => ({
           type: e.buffType,
           remaining: JUNGLE_BUFF_CARRY_DURATION_T - (state.battleTime - e.t),
-        })),
+        }))
+    },
     team1Kills: (state): number => state.team1.reduce((s, c) => s + c.kills, 0),
     team2Kills: (state): number => state.team2.reduce((s, c) => s + c.kills, 0),
     team1Gold: (state): number => state.team1.reduce((s, c) => s + c.gold, 0),

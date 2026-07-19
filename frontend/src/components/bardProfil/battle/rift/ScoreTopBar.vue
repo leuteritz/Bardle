@@ -9,8 +9,8 @@
       <div class="side-stats">
         <span class="stat stat--obj" title="Turrets destroyed"><Icon icon="game-icons:watchtower" width="17" height="17" class="stat-icon" /> {{ battleStore.team1Turrets }}</span>
         <span class="stat stat--obj" title="Inhibitors destroyed"><Icon icon="game-icons:floating-crystal" width="17" height="17" class="stat-icon stat-icon--inhib" /> {{ battleStore.team1Inhibs }}</span>
-        <span class="stat stat--obj" title="Drakes secured"><img src="/img/dragon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
-        <span class="stat stat--obj" title="Barons secured"><img src="/img/baron.png" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
+        <span class="stat stat--obj" title="Drakes secured"><img src="/img/dragon_icon.png" alt="Drakes" class="stat-img" /> {{ battleStore.team1Drakes }}</span>
+        <span class="stat stat--obj" title="Barons secured"><img src="/img/baron_icon.png" alt="Barons" class="stat-img" /> {{ battleStore.team1Barons }}</span>
         <span class="stat-divider" />
         <span class="stat stat--cs" title="Team creep score"><Icon icon="game-icons:minions" width="17" height="17" class="stat-icon stat-icon--cs" /> {{ formatNumber(team1CS) }}</span>
         <span class="stat stat--dmg" title="Total damage dealt"><Icon icon="game-icons:sabers-choc" width="17" height="17" class="stat-icon stat-icon--dmg" /> {{ formatNumber(team1Damage) }}</span>
@@ -57,8 +57,8 @@
         <span class="stat stat--dmg" title="Total damage dealt">{{ formatNumber(team2Damage) }} <Icon icon="game-icons:sabers-choc" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
         <span class="stat stat--cs" title="Team creep score">{{ formatNumber(team2CS) }} <Icon icon="game-icons:minions" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
         <span class="stat-divider" />
-        <span class="stat stat--obj" title="Barons secured">{{ battleStore.team2Barons }} <img src="/img/baron.png" alt="Barons" class="stat-img" /></span>
-        <span class="stat stat--obj" title="Drakes secured">{{ battleStore.team2Drakes }} <img src="/img/dragon.png" alt="Drakes" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Barons secured">{{ battleStore.team2Barons }} <img src="/img/baron_icon.png" alt="Barons" class="stat-img" /></span>
+        <span class="stat stat--obj" title="Drakes secured">{{ battleStore.team2Drakes }} <img src="/img/dragon_icon.png" alt="Drakes" class="stat-img" /></span>
         <span class="stat stat--obj" title="Inhibitors destroyed">{{ battleStore.team2Inhibs }} <Icon icon="game-icons:floating-crystal" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
         <span class="stat stat--obj" title="Turrets destroyed">{{ battleStore.team2Turrets }} <Icon icon="game-icons:watchtower" width="17" height="17" class="stat-icon" /></span>
       </div>
@@ -309,12 +309,8 @@ watch(bluePercent, (next, prev) => {
   background: #3a382e;
   box-shadow: none;
 }
+/* pre-scaled square sprites (alpha-trimmed) — no crop, no rounding, stays crisp */
 .stat-img {
-  border-radius: 50%;
-  object-fit: cover;
-}
-.stat-img--gold {
-  border-radius: 0;
   object-fit: contain;
 }
 
