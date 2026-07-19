@@ -39,7 +39,7 @@
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
         <div class="sf-main">
           <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
-          <div class="sf-arena-wrap">
+          <div class="sf-arena-wrap" :class="{ 'sf-arena-wrap--strike': bossStrikeActive }">
             <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
             <div
               ref="modalPlanetBgRef"
@@ -51,6 +51,9 @@
               v-if="activeBoss"
               @shake="handleShake"
             />
+
+            <!-- Boss-Angriff: Schockwelle vom Boss Richtung Champion-Halbkreis -->
+            <span v-if="bossStrikeActive" class="sf-boss-wave" />
 
             <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
             <div v-if="activeBoss" class="sf-hud">
@@ -139,6 +142,12 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
+              <div class="sf-boss-atk" :class="{ 'sf-boss-atk--striking': bossStrikeActive }">
+                <span class="sf-boss-atk-dot" />
+                Boss Attack · {{ bossDps }} dmg/s per champion
+              </div>
             </div>
 
             <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
@@ -183,6 +192,9 @@ import {
   BOSS_REMOVAL_DELAY_MS,
   STAR_FIGHT_TIMER_WARNING_S,
   STAR_FIGHT_TIMER_CRITICAL_S,
+  BOSS_CHAMPION_ATTACK_DPS,
+  BOSS_GALAXY_CHAMPION_DPS_MULT,
+  CHAMPION_HIT_FLASH_MS,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
@@ -264,6 +276,34 @@ const curseSecsLeft = computed(() =>
     : 0,
 )
 const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
+
+// ── Boss-Gegenangriff: dmg/s-Label + Strike-Animation ─────────────────────
+const bossDps = computed(() =>
+  Math.round(BOSS_CHAMPION_ATTACK_DPS * (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1)),
+)
+
+const bossStrikeActive = ref(false)
+let bossStrikeTimeout: ReturnType<typeof setTimeout> | null = null
+
+// Jeder Boss-Tick stempelt championHitAt — der jüngste Wert triggert die Welle
+watch(
+  () => Math.max(...Object.values(roleBehaviorStore.championHitAt)),
+  () => {
+    bossStrikeActive.value = false
+    if (bossStrikeTimeout) clearTimeout(bossStrikeTimeout)
+    // Re-Trigger im nächsten Frame, damit die CSS-Animation neu startet
+    requestAnimationFrame(() => {
+      bossStrikeActive.value = true
+      bossStrikeTimeout = setTimeout(() => {
+        bossStrikeActive.value = false
+      }, CHAMPION_HIT_FLASH_MS)
+    })
+  },
+)
+
+onUnmounted(() => {
+  if (bossStrikeTimeout) clearTimeout(bossStrikeTimeout)
+})
 
 // ── Planet Background ─────────────────────────────────────────────────────
 function renderModalPlanet() {
@@ -516,7 +556,10 @@ function emberStyle(i: number): Record<string, string> {
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
   .sf-star-ring--critical .sf-star-ring-secs,
-  .sf-curse-mark-icon {
+  .sf-curse-mark-icon,
+  .sf-arena-wrap--strike :deep(.boss-img),
+  .sf-boss-wave,
+  .sf-boss-atk-dot {
     animation: none;
   }
 }
@@ -962,6 +1005,113 @@ function emberStyle(i: number): Record<string, string> {
     0 0 16px rgba(180, 40, 255, 0.5),
     inset 0 2px 0 rgba(230, 150, 255, 0.3),
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Boss-Angriff: Lunge des Boss-Sprites + Schockwelle ──────────────────── */
+.sf-arena-wrap--strike :deep(.boss-img) {
+  animation: sf-boss-strike 0.45s cubic-bezier(0.3, 0, 0.4, 1);
+}
+
+@keyframes sf-boss-strike {
+  0% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
+  }
+  /* kurz aufbäumen */
+  22% {
+    transform: translateY(-8px) scale(1.06);
+    filter: drop-shadow(0 6px 20px rgba(255, 90, 10, 0.7)) brightness(1.25);
+  }
+  /* Schlag nach unten Richtung Halbkreis */
+  42% {
+    transform: translateY(10px) scale(1.02);
+    filter: drop-shadow(0 2px 26px rgba(255, 60, 0, 0.85)) brightness(1.4) saturate(1.3);
+  }
+  70% {
+    transform: translateY(-2px) scale(1);
+    filter: drop-shadow(0 4px 16px rgba(255, 80, 0, 0.55));
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
+  }
+}
+
+/* Schockwelle am Boss-Anker (50 % / 41 % — STRIKER_BOSS_ANCHOR_*_PCT) */
+.sf-boss-wave {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  width: 130px;
+  height: 130px;
+  margin: -65px 0 0 -65px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 70, 40, 0.85);
+  box-shadow:
+    0 0 18px rgba(255, 60, 30, 0.6),
+    inset 0 0 14px rgba(255, 90, 40, 0.35);
+  pointer-events: none;
+  z-index: 3;
+  animation: sf-boss-wave-expand 0.45s ease-out forwards;
+}
+
+@keyframes sf-boss-wave-expand {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(4.6);
+  }
+}
+
+/* ── Boss-Angriffswert unter der HP-Leiste ───────────────────────────────── */
+.sf-boss-atk {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+  padding: 3px 12px;
+  border-radius: 10px;
+  background: rgba(30, 8, 4, 0.85);
+  border: 1px solid rgba(160, 50, 30, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e08060;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  transition: color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+
+.sf-boss-atk-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff5040;
+  box-shadow: 0 0 6px rgba(255, 60, 30, 0.8);
+  animation: sf-boss-atk-dot-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes sf-boss-atk-dot-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Aufglühen im Moment des Schlags */
+.sf-boss-atk--striking {
+  color: #ffab90;
+  border-color: rgba(255, 80, 50, 0.85);
+  box-shadow:
+    0 0 14px rgba(255, 60, 30, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Attacker Squad — Halbkreis um den Boss (RoleStrikerSquad positioniert
