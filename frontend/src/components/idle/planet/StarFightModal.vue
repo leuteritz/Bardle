@@ -30,6 +30,15 @@
           </div>
         </Transition>
 
+        <!-- ── Boss-Rage: glühender Crimson-Saum + Hitzeschlieren ─────────── -->
+        <Transition name="curse-veil-fade">
+          <div v-if="rageActive" class="sf-rage-veil" aria-hidden="true">
+            <span class="sf-rage-veil-layer sf-rage-veil-layer--edge" />
+            <span class="sf-rage-veil-layer sf-rage-veil-layer--flames" />
+            <span class="sf-rage-veil-info">Rage · ×{{ BOSS_RAGE_DMG_MULT }} dmg</span>
+          </div>
+        </Transition>
+
         <!-- ── Floating Controls (kein Header mehr) ────────────────────── -->
         <div class="sf-corner-controls">
           <button
@@ -134,11 +143,15 @@
                   </div>
                 </div>
 
+                <!-- Rage-Ring: Cooldown bis zur nächsten Rage bzw. Restdauer -->
                 <div
-                  v-if="starSecsLeft !== null"
-                  class="sf-star-ring"
-                  :class="starTimerStateClass"
-                  title="Time until the star vanishes"
+                  class="sf-rage-ring"
+                  :class="{ 'sf-rage-ring--active': rageActive }"
+                  :title="
+                    rageActive
+                      ? 'The boss is raging — double damage!'
+                      : 'Time until the boss enrages'
+                  "
                 >
                   <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
                     <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
@@ -147,19 +160,19 @@
                       cx="50"
                       cy="50"
                       r="44"
-                      class="sf-star-ring-arc"
-                      :style="{ strokeDasharray: starRingDashArray }"
+                      class="sf-rage-ring-arc"
+                      :style="{ strokeDasharray: rageRingDashArray }"
                     />
                   </svg>
                   <div class="sf-star-ring-inner">
-                    <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
-                    <span class="sf-star-ring-label">SEC</span>
+                    <span class="sf-rage-ring-secs">{{ rageSecsLeft }}</span>
+                    <span class="sf-rage-ring-label">RAGE</span>
                   </div>
                 </div>
               </div>
 
               <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
-              <div class="sf-boss-atk">
+              <div class="sf-boss-atk" :class="{ 'sf-boss-atk--rage': rageActive }">
                 <span class="sf-boss-atk-num">{{ bossDps }}</span>
                 dmg/s per champion
               </div>
@@ -199,6 +212,7 @@ import {
   CHAMPION_HIT_FLASH_MS,
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
+  BOSS_RAGE_DMG_MULT,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
@@ -282,9 +296,36 @@ const curseSecsLeft = computed(() =>
 const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
 
 
+// ── Boss-Rage: rechter Radial-Ring + epische Vignette ─────────────────────
+const rageActive = computed(() => roleBehaviorStore.rageActiveUntil > now.value)
+
+const rageSecsLeft = computed(() =>
+  rageActive.value
+    ? Math.max(0, Math.ceil((roleBehaviorStore.rageActiveUntil - now.value) / 1000))
+    : Math.max(0, Math.ceil(roleBehaviorStore.rageCooldownMs / 1000)),
+)
+
+// Cooldown-Phase: Arc füllt sich zur Rage hin; aktive Phase: Arc läuft ab
+const rageRingPct = computed(() => {
+  if (rageActive.value) {
+    const dur = roleBehaviorStore.rageDurationMs || 1
+    return Math.max(0, Math.min(1, (roleBehaviorStore.rageActiveUntil - now.value) / dur))
+  }
+  const interval = roleBehaviorStore.rageIntervalMs || 1
+  return Math.max(0, Math.min(1, 1 - roleBehaviorStore.rageCooldownMs / interval))
+})
+
+const rageRingDashArray = computed(
+  () => `${rageRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
+)
+
 // ── Boss-Gegenangriff: dmg/s-Label + Strike-Animation ─────────────────────
 const bossDps = computed(() =>
-  Math.round(BOSS_CHAMPION_ATTACK_DPS * (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1)),
+  Math.round(
+    BOSS_CHAMPION_ATTACK_DPS *
+      (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+      (rageActive.value ? BOSS_RAGE_DMG_MULT : 1),
+  ),
 )
 
 const bossStrikeActive = ref(false)
@@ -600,6 +641,9 @@ function emberStyle(i: number): Record<string, string> {
   .sf-star-ring--critical .sf-star-ring-secs,
   .sf-curse-veil-layer--edge,
   .sf-curse-veil-layer--smoke,
+  .sf-rage-veil-layer--edge,
+  .sf-rage-veil-layer--flames,
+  .sf-rage-ring--active .sf-rage-ring-secs,
   .sf-arena-wrap--strike :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave {
@@ -711,6 +755,69 @@ function emberStyle(i: number): Record<string, string> {
   letter-spacing: 0.26em;
   color: rgba(232, 192, 64, 0.6);
   text-transform: uppercase;
+}
+
+/* ── Rage-Ring — Crimson, klar getrennt vom goldenen Stern-Timer ─────────── */
+.sf-rage-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.sf-rage-ring-arc {
+  fill: none;
+  stroke: #ff2e63;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.2s linear;
+}
+
+.sf-rage-ring-secs {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #ff2e63;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 14px rgba(255, 46, 99, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-rage-ring-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: rgba(255, 46, 99, 0.6);
+  text-transform: uppercase;
+}
+
+/* Aktive Rage: Ring + Zahl glühen heller und pulsieren (transform/opacity) */
+.sf-rage-ring--active .sf-rage-ring-arc {
+  stroke: #ff5c85;
+}
+
+.sf-rage-ring--active .sf-rage-ring-secs {
+  color: #ffb0c4;
+  text-shadow:
+    0 0 18px rgba(255, 46, 99, 0.85),
+    0 0 38px rgba(255, 30, 80, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+  animation: sf-rage-secs-pulse 0.6s ease-in-out infinite alternate;
+}
+
+.sf-rage-ring--active .sf-rage-ring-label {
+  color: rgba(255, 120, 150, 0.85);
+}
+
+@keyframes sf-rage-secs-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
 }
 
 /* Warnung ≤ STAR_FIGHT_TIMER_WARNING_S */
@@ -1170,6 +1277,24 @@ function emberStyle(i: number): Record<string, string> {
     0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
+/* Rage: das ganze Label kippt in Crimson */
+.sf-boss-atk--rage {
+  color: rgba(255, 120, 150, 0.8);
+  text-shadow:
+    0 0 12px rgba(255, 46, 99, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-boss-atk--rage .sf-boss-atk-num {
+  color: #ffc4d4;
+  -webkit-text-stroke: 1px rgba(110, 0, 30, 0.85);
+  text-shadow:
+    0 0 12px rgba(255, 70, 120, 0.95),
+    0 0 30px rgba(255, 46, 99, 0.6),
+    0 0 56px rgba(220, 20, 70, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
 /* Die Zahl als epischer Held des Labels — groß, heiß glühend, konturiert */
 .sf-boss-atk-num {
   font-size: 1.9rem;
@@ -1259,7 +1384,8 @@ function emberStyle(i: number): Record<string, string> {
 /* Dezente Fluch-Info oben im Rauch — reine Typo, kein Badge */
 .sf-curse-veil-info {
   position: absolute;
-  top: 13px;
+  /* unter der Rage-Zeile — beide Effekte können gleichzeitig aktiv sein */
+  top: 34px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.78rem;
@@ -1272,6 +1398,80 @@ function emberStyle(i: number): Record<string, string> {
   text-shadow:
     0 0 14px rgba(190, 80, 255, 0.75),
     0 0 34px rgba(140, 40, 220, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* ── Rage-Vignette: glühender Crimson-Saum + Hitzeschlieren ──────────────
+   Wie die Fluch-Vignette rein opacity/transform-animiert (GPU) */
+.sf-rage-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.sf-rage-veil-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.sf-rage-veil-layer--edge {
+  box-shadow:
+    inset 0 0 70px 18px rgba(220, 30, 70, 0.45),
+    inset 0 0 170px 44px rgba(160, 15, 45, 0.3);
+  animation: sf-rage-veil-breathe 1.4s ease-in-out infinite alternate;
+}
+
+/* Hitzeschlieren: glühende Schwaden, unten dichter — der Boss "kocht" */
+.sf-rage-veil-layer--flames {
+  inset: -4%;
+  background:
+    radial-gradient(46% 22% at 18% 102%, rgba(255, 70, 40, 0.35), transparent 70%),
+    radial-gradient(52% 20% at 58% 103%, rgba(255, 46, 99, 0.32), transparent 70%),
+    radial-gradient(42% 18% at 90% 102%, rgba(255, 90, 30, 0.3), transparent 70%),
+    radial-gradient(18% 40% at -2% 55%, rgba(255, 46, 99, 0.24), transparent 70%),
+    radial-gradient(18% 40% at 102% 45%, rgba(255, 60, 60, 0.24), transparent 70%),
+    radial-gradient(44% 16% at 40% -2%, rgba(220, 30, 70, 0.22), transparent 70%);
+  animation:
+    sf-rage-veil-breathe 1.9s ease-in-out infinite alternate-reverse,
+    sf-rage-veil-drift 5s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes sf-rage-veil-breathe {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sf-rage-veil-drift {
+  from {
+    transform: scale(1) rotate(-0.3deg);
+  }
+  to {
+    transform: scale(1.06) rotate(0.3deg);
+  }
+}
+
+.sf-rage-veil-info {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #ffb0c4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow:
+    0 0 16px rgba(255, 46, 99, 0.85),
+    0 0 38px rgba(255, 30, 80, 0.4),
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 

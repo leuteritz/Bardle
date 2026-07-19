@@ -19,6 +19,11 @@ import {
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   CHAMPION_REVIVE_MS,
   CHAMPION_HP_REGEN_FRAC,
+  BOSS_RAGE_DMG_MULT,
+  BOSS_RAGE_INTERVAL_MIN_MS,
+  BOSS_RAGE_INTERVAL_MAX_MS,
+  BOSS_RAGE_DURATION_MIN_MS,
+  BOSS_RAGE_DURATION_MAX_MS,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -165,6 +170,13 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       ChampionRole,
       number
     >,
+
+    // Boss Rage — interval + duration are rolled fresh for every boss
+    rageBossPlanetId: null as string | null,
+    rageIntervalMs: 0,
+    rageDurationMs: 0,
+    rageCooldownMs: 0,
+    rageActiveUntil: 0,
   }),
 
   actions: {
@@ -177,6 +189,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       this._syncChampionHp()
       this._expireJungleBuffs()
+      this._tickBossRage(TICK_MS)
       this._tickBossAttack(roles, TICK_MS)
       this._tickSupport(roles, TICK_MS)
       this._tickTop(roles, TICK_MS)
@@ -205,6 +218,52 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           CHAMPION_BASE_HP_BY_ROLE[role] * (1 + (star - 1) * CHAMPION_HP_PER_STAR),
         )
         this.championHp[role] = { current: max, max }
+      }
+    },
+
+    /** Boss Rage: every boss periodically enrages and deals double damage.
+     *  Interval and duration are rolled fresh whenever a new boss appears. */
+    _tickBossRage(tickMs: number) {
+      const bossStore = usePlanetBossStore()
+      const activeBoss = bossStore.activeBoss
+      const { addEvent } = useEventLog()
+      const now = Date.now()
+
+      if (!activeBoss || activeBoss.defeated || activeBoss.expired) {
+        this.rageBossPlanetId = null
+        this.rageActiveUntil = 0
+        return
+      }
+
+      // Neuer Boss → Rage-Profil frisch auswürfeln
+      if (this.rageBossPlanetId !== activeBoss.planetId) {
+        this.rageBossPlanetId = activeBoss.planetId
+        this.rageIntervalMs =
+          BOSS_RAGE_INTERVAL_MIN_MS +
+          Math.random() * (BOSS_RAGE_INTERVAL_MAX_MS - BOSS_RAGE_INTERVAL_MIN_MS)
+        this.rageDurationMs =
+          BOSS_RAGE_DURATION_MIN_MS +
+          Math.random() * (BOSS_RAGE_DURATION_MAX_MS - BOSS_RAGE_DURATION_MIN_MS)
+        this.rageCooldownMs = this.rageIntervalMs
+        this.rageActiveUntil = 0
+      }
+
+      if (this.rageActiveUntil > 0) {
+        if (now >= this.rageActiveUntil) {
+          this.rageActiveUntil = 0
+          this.rageCooldownMs = this.rageIntervalMs
+          addEvent(`${activeBoss.bossName}'s rage subsides.`, 'combat')
+        }
+        return
+      }
+
+      this.rageCooldownMs = Math.max(0, this.rageCooldownMs - tickMs)
+      if (this.rageCooldownMs <= 0) {
+        this.rageActiveUntil = now + this.rageDurationMs
+        addEvent(
+          `${activeBoss.bossName} flies into a rage! (×${BOSS_RAGE_DMG_MULT} dmg, ${Math.round(this.rageDurationMs / 1000)}s)`,
+          'combat',
+        )
       }
     },
 
@@ -242,8 +301,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           continue
         }
 
+        const raging = this.rageActiveUntil > now
         const dps =
-          BOSS_CHAMPION_ATTACK_DPS * (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1)
+          BOSS_CHAMPION_ATTACK_DPS *
+          (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+          (raging ? BOSS_RAGE_DMG_MULT : 1)
         const dmg = Math.round(dps * (tickMs / 1000))
         hp.current = Math.max(0, hp.current - dmg)
         this.championHitAt[role] = now

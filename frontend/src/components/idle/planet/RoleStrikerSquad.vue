@@ -130,6 +130,7 @@ import {
   STRIKER_ATTACK_LUNGE_PX,
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
+  BOSS_RAGE_DMG_MULT,
   CHAMPION_HIT_FLASH_MS,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
@@ -324,8 +325,11 @@ for (const role of SQUAD_ROLES) {
       hitRoles.add(role)
       later(CHAMPION_HIT_FLASH_MS, () => hitRoles.delete(role))
       const boss = bossStore.activeBoss
+      const raging = roleBehaviorStore.rageActiveUntil > Date.now()
       const dmg = Math.round(
-        BOSS_CHAMPION_ATTACK_DPS * (boss?.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1),
+        BOSS_CHAMPION_ATTACK_DPS *
+          (boss?.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+          (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
       pushFloat(role, dmg, 'hit')
     },

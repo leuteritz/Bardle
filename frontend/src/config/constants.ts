@@ -857,6 +857,14 @@ export const CHAMPION_HP_REGEN_FRAC = 0.04 // out-of-combat regen: fraction of m
 export const CHAMPION_HIT_FLASH_MS = 450 // hit-flash animation window on champion portraits
 export const BOSS_HIT_REACT_MS = 350 // boss flinch animation when a champion projectile lands
 
+// ── Boss Rage — every boss periodically enrages and deals double damage;
+//    interval and duration are rolled per boss (roleBehaviorStore._tickBossRage)
+export const BOSS_RAGE_DMG_MULT = 2 // damage multiplier while raging
+export const BOSS_RAGE_INTERVAL_MIN_MS = 9000 // min cooldown between rages
+export const BOSS_RAGE_INTERVAL_MAX_MS = 16000 // max cooldown between rages
+export const BOSS_RAGE_DURATION_MIN_MS = 5000 // min rage duration
+export const BOSS_RAGE_DURATION_MAX_MS = 12000 // max rage duration
+
 // ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
 export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats
