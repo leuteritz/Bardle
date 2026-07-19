@@ -364,7 +364,9 @@ function stopAttackCycles() {
 onMounted(async () => {
   isMounted = true
   isMountedRef.value = true
-  nowTimer = window.setInterval(() => { now.value = Date.now() }, 100)
+  // 250 ms statt 100 ms — das Intervall re-rendert die ganze Arena-Subtree;
+  // 10×/s war im Star-Fight-Modal ein spürbarer FPS-Fresser
+  nowTimer = window.setInterval(() => { now.value = Date.now() }, 250)
   await discoverBossImages()
   if (!isMounted) return
   bossImage.value = pickRandomBossImage()

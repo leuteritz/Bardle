@@ -10,7 +10,7 @@
     >
       <!-- ── Ember Atmosphere ───────────────────────────────────────────── -->
       <div class="sf-atmosphere" :class="{ 'sf-atmosphere--galaxy': isGalaxyBoss }">
-        <span v-for="i in 22" :key="i" class="sf-ember" :style="emberStyle(i)" />
+        <span v-for="i in 12" :key="i" class="sf-ember" :style="emberStyle(i)" />
       </div>
 
       <!-- ── Modal ─────────────────────────────────────────────────────── -->
@@ -20,6 +20,15 @@
 
         <!-- ── Cosmic Background (shared, wie Shop/Team/Planets) ───────── -->
         <CosmicStageBackground />
+
+        <!-- ── Aktiver Fluch: lila Rauch hüllt den inneren Modal-Rand ein ── -->
+        <Transition name="curse-veil-fade">
+          <div v-if="activeCurse" class="sf-curse-veil" aria-hidden="true">
+            <span class="sf-curse-veil-layer sf-curse-veil-layer--edge" />
+            <span class="sf-curse-veil-layer sf-curse-veil-layer--smoke" />
+            <span class="sf-curse-veil-info">{{ curseDef?.name }} · {{ curseSecsLeft }}s</span>
+          </div>
+        </Transition>
 
         <!-- ── Floating Controls (kein Header mehr) ────────────────────── -->
         <div class="sf-corner-controls">
@@ -156,19 +165,6 @@
               </div>
             </div>
 
-            <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
-            <Transition name="curse-fade">
-              <div v-if="activeCurse" class="sf-curse-mark">
-                <Icon
-                  v-if="curseDef?.icon?.includes(':')"
-                  :icon="curseDef.icon"
-                  class="sf-curse-mark-icon"
-                />
-                <span v-else class="sf-curse-mark-icon">{{ curseDef?.icon }}</span>
-                <span class="sf-curse-mark-name">{{ curseDef?.name }}</span>
-                <span class="sf-curse-mark-info">{{ curseDef?.effect }} · {{ curseSecsLeft }}s</span>
-              </div>
-            </Transition>
 
             <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
             <div v-if="activeBoss" class="sf-squad">
@@ -284,6 +280,7 @@ const curseSecsLeft = computed(() =>
     : 0,
 )
 const curseDef = computed(() => (activeCurse.value ? CURSE_DEFS[activeCurse.value.type] : null))
+
 
 // ── Boss-Gegenangriff: dmg/s-Label + Strike-Animation ─────────────────────
 const bossDps = computed(() =>
@@ -601,7 +598,8 @@ function emberStyle(i: number): Record<string, string> {
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
   .sf-star-ring--critical .sf-star-ring-secs,
-  .sf-curse-mark-icon,
+  .sf-curse-veil-layer--edge,
+  .sf-curse-veil-layer--smoke,
   .sf-arena-wrap--strike :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave {
@@ -989,9 +987,21 @@ function emberStyle(i: number): Record<string, string> {
   overflow: hidden;
 }
 
+/* Critical-Puls über opacity eines Pseudo-Glows — animierter box-shadow
+   würde die breite HP-Leiste jede Frame neu painten */
 .sf-hp-track--critical {
   border-color: #8a2018;
+}
+
+.sf-hp-track--critical::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 18px rgba(220, 40, 40, 0.6);
+  pointer-events: none;
   animation: sf-hp-crit-pulse 0.7s ease-in-out infinite alternate;
+  z-index: 2;
 }
 .sf-hp-track--galaxy {
   border-color: #5a2478;
@@ -1003,16 +1013,10 @@ function emberStyle(i: number): Record<string, string> {
 
 @keyframes sf-hp-crit-pulse {
   from {
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.8),
-      0 0 8px rgba(180, 20, 20, 0.3),
-      0 4px 14px rgba(0, 0, 0, 0.6);
+    opacity: 0.25;
   }
   to {
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.8),
-      0 0 26px rgba(220, 40, 40, 0.65),
-      0 4px 14px rgba(0, 0, 0, 0.6);
+    opacity: 1;
   }
 }
 
@@ -1192,76 +1196,94 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
 }
 
-/* ── Curse-Marke — kompakter Chip am Boss (statt breitem Overlay) ────────── */
-.sf-curse-mark {
+/* ── Fluch-Vignette: lila Rauch hüllt den inneren Modal-Rand ein ─────────
+   Beide Layer werden einmal gerastert und nur per opacity/transform
+   animiert — GPU-kompositiert, kein Repaint pro Frame */
+.sf-curse-veil {
   position: absolute;
-  top: 178px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, rgba(40, 0, 65, 0.94), rgba(60, 0, 92, 0.94));
-  border: 1px solid rgba(140, 30, 200, 0.5);
-  box-shadow: 0 0 16px rgba(120, 30, 200, 0.4);
+  inset: 0;
   pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
 }
 
-.sf-curse-mark-icon {
-  font-size: 1.25rem;
-  width: 1.25rem;
-  height: 1.25rem;
-  line-height: 1;
-  flex-shrink: 0;
-  color: #cc44ff;
-  filter: drop-shadow(0 0 6px rgba(180, 80, 255, 0.9));
-  animation: sf-curse-mark-pulse 1.2s ease-in-out infinite alternate;
+.sf-curse-veil-layer {
+  position: absolute;
+  inset: 0;
 }
 
-@keyframes sf-curse-mark-pulse {
+/* Innerer Rand-Glow: dichter violetter Saum entlang aller vier Kanten */
+.sf-curse-veil-layer--edge {
+  box-shadow:
+    inset 0 0 70px 18px rgba(110, 25, 180, 0.5),
+    inset 0 0 160px 40px rgba(80, 15, 140, 0.3);
+  animation: sf-curse-veil-breathe 3.2s ease-in-out infinite alternate;
+}
+
+/* Rauchschwaden: weiche Nebelballen entlang der Kanten, driften langsam */
+.sf-curse-veil-layer--smoke {
+  inset: -4%;
+  background:
+    radial-gradient(42% 20% at 12% 0%, rgba(150, 50, 230, 0.34), transparent 70%),
+    radial-gradient(50% 16% at 62% -2%, rgba(120, 30, 200, 0.3), transparent 70%),
+    radial-gradient(20% 42% at 100% 28%, rgba(140, 40, 220, 0.3), transparent 70%),
+    radial-gradient(18% 38% at 101% 74%, rgba(110, 25, 190, 0.28), transparent 70%),
+    radial-gradient(48% 18% at 76% 102%, rgba(150, 50, 230, 0.32), transparent 70%),
+    radial-gradient(44% 16% at 24% 101%, rgba(120, 30, 200, 0.3), transparent 70%),
+    radial-gradient(18% 40% at -1% 66%, rgba(140, 40, 220, 0.3), transparent 70%),
+    radial-gradient(20% 44% at -2% 22%, rgba(110, 25, 190, 0.28), transparent 70%);
+  animation:
+    sf-curse-veil-breathe 4.4s ease-in-out infinite alternate-reverse,
+    sf-curse-veil-drift 9s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes sf-curse-veil-breathe {
   from {
-    transform: scale(0.95);
+    opacity: 0.65;
   }
   to {
-    transform: scale(1.05);
+    opacity: 1;
   }
 }
 
-.sf-curse-mark-name {
-  font-size: 0.72rem;
+@keyframes sf-curse-veil-drift {
+  from {
+    transform: scale(1) rotate(0.3deg);
+  }
+  to {
+    transform: scale(1.05) rotate(-0.3deg);
+  }
+}
+
+/* Dezente Fluch-Info oben im Rauch — reine Typo, kein Badge */
+.sf-curse-veil-info {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #e6b8ff;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(210, 70, 255, 0.6);
-  white-space: nowrap;
-}
-
-.sf-curse-mark-info {
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: #c78bff;
-  white-space: nowrap;
+  color: #dcaaff;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow:
+    0 0 14px rgba(190, 80, 255, 0.75),
+    0 0 34px rgba(140, 40, 220, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
-.curse-fade-enter-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+.curse-veil-fade-enter-active {
+  transition: opacity 0.5s ease;
 }
-.curse-fade-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+.curse-veil-fade-leave-active {
+  transition: opacity 0.35s ease;
 }
-.curse-fade-enter-from,
-.curse-fade-leave-to {
+.curse-veil-fade-enter-from,
+.curse-veil-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-6px);
 }
 
 /* ── Admin Kill Button ────────────────────────────────────────────────────── */
