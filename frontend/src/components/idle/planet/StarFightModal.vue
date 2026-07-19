@@ -144,10 +144,7 @@
               </div>
 
               <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
-              <div class="sf-boss-atk" :class="{ 'sf-boss-atk--striking': bossStrikeActive }">
-                <span class="sf-boss-atk-dot" />
-                Boss Attack · {{ bossDps }} dmg/s per champion
-              </div>
+              <div class="sf-boss-atk">Boss Attack · {{ bossDps }} dmg/s per champion</div>
             </div>
 
             <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
@@ -558,8 +555,7 @@ function emberStyle(i: number): Record<string, string> {
   .sf-star-ring--critical .sf-star-ring-secs,
   .sf-curse-mark-icon,
   .sf-arena-wrap--strike :deep(.boss-img),
-  .sf-boss-wave,
-  .sf-boss-atk-dot {
+  .sf-boss-wave {
     animation: none;
   }
 }
@@ -1010,29 +1006,45 @@ function emberStyle(i: number): Record<string, string> {
 /* ── Boss-Angriff: Lunge des Boss-Sprites + Schockwelle ──────────────────── */
 .sf-arena-wrap--strike :deep(.boss-img) {
   animation: sf-boss-strike 0.45s cubic-bezier(0.3, 0, 0.4, 1);
+  transform-origin: 50% 85%;
 }
 
 @keyframes sf-boss-strike {
   0% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotate(0deg);
     filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
-  /* kurz aufbäumen */
-  22% {
-    transform: translateY(-8px) scale(1.06);
-    filter: drop-shadow(0 6px 20px rgba(255, 90, 10, 0.7)) brightness(1.25);
+  /* mächtig aufbäumen — hoch, groß, leicht zurückgelehnt */
+  16% {
+    transform: translateY(-20px) scale(1.14) rotate(-4deg);
+    filter: drop-shadow(0 10px 30px rgba(255, 90, 10, 0.8)) brightness(1.3);
   }
-  /* Schlag nach unten Richtung Halbkreis */
-  42% {
-    transform: translateY(10px) scale(1.02);
-    filter: drop-shadow(0 2px 26px rgba(255, 60, 0, 0.85)) brightness(1.4) saturate(1.3);
+  /* Spannung halten, Gegenrotation */
+  28% {
+    transform: translateY(-24px) scale(1.18) rotate(3deg);
+    filter: drop-shadow(0 12px 36px rgba(255, 110, 20, 0.95)) brightness(1.6) saturate(1.4);
   }
-  70% {
-    transform: translateY(-2px) scale(1);
-    filter: drop-shadow(0 4px 16px rgba(255, 80, 0, 0.55));
+  /* Slam nach unten — gestaucht + Weißblitz */
+  40% {
+    transform: translateY(18px) scale(1.12, 0.86) rotate(0deg);
+    filter: drop-shadow(0 0 40px rgba(255, 60, 0, 1)) brightness(2.4) saturate(0.6);
+  }
+  /* Abprall */
+  52% {
+    transform: translateY(6px) scale(0.96, 1.05);
+    filter: drop-shadow(0 3px 24px rgba(255, 70, 0, 0.8)) brightness(1.5) saturate(1.3);
+  }
+  /* Nachbeben */
+  66% {
+    transform: translateY(-5px) translateX(-3px) scale(1.03);
+    filter: drop-shadow(0 5px 18px rgba(255, 80, 0, 0.6)) brightness(1.15);
+  }
+  80% {
+    transform: translateY(2px) translateX(2px) scale(0.99);
+    filter: drop-shadow(0 4px 15px rgba(255, 80, 0, 0.5)) brightness(1.05);
   }
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotate(0deg);
     filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
 }
@@ -1066,52 +1078,19 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Boss-Angriffswert unter der HP-Leiste ───────────────────────────────── */
+/* ── Boss-Angriffswert unter der HP-Leiste — reine Typo, statisch ────────── */
 .sf-boss-atk {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 2px;
-  padding: 3px 12px;
-  border-radius: 10px;
-  background: rgba(30, 8, 4, 0.85);
-  border: 1px solid rgba(160, 50, 30, 0.55);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-  font-size: 0.62rem;
+  margin-top: 4px;
+  font-size: 1.05rem;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #e08060;
+  color: #ff7858;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  transition: color 0.25s, border-color 0.25s, box-shadow 0.25s;
-}
-
-.sf-boss-atk-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ff5040;
-  box-shadow: 0 0 6px rgba(255, 60, 30, 0.8);
-  animation: sf-boss-atk-dot-pulse 1s ease-in-out infinite alternate;
-}
-
-@keyframes sf-boss-atk-dot-pulse {
-  from {
-    opacity: 0.55;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Aufglühen im Moment des Schlags */
-.sf-boss-atk--striking {
-  color: #ffab90;
-  border-color: rgba(255, 80, 50, 0.85);
-  box-shadow:
-    0 0 14px rgba(255, 60, 30, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 0 16px rgba(255, 60, 30, 0.55),
+    0 0 36px rgba(200, 40, 10, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Attacker Squad — Halbkreis um den Boss (RoleStrikerSquad positioniert
