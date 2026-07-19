@@ -15,6 +15,10 @@ import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import ActionToast from '@/components/bardProfil/ActionToast.vue'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
+import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
+import ForgeReadyTip from '@/components/ui/ForgeReadyTip.vue'
 
 const uiStore = useUiStore()
 const expeditionStore = useExpeditionStore()
@@ -102,11 +106,26 @@ watch(
                   class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                 />
                 <div v-if="item.id === 'team'" class="team-badge-row">
-                  <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                  <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                  <RpgBadgeTooltip>
+                    <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
+                    <template #tip>
+                      <ExpeditionReadyTip />
+                    </template>
+                  </RpgBadgeTooltip>
+                  <RpgBadgeTooltip>
+                    <span v-if="shopBadgeCount > 0" class="mini-badge mini-badge--shop">{{ shopBadgeCount }}</span>
+                    <template #tip="{ close }">
+                      <NewChampionsTip @picked="close" />
+                    </template>
+                  </RpgBadgeTooltip>
                 </div>
                 <div v-if="item.id === 'shop' && forgeBadgeReady" class="team-badge-row">
-                  <span class="mini-badge mini-badge--forge">✦</span>
+                  <RpgBadgeTooltip>
+                    <span class="mini-badge mini-badge--forge">✦</span>
+                    <template #tip>
+                      <ForgeReadyTip />
+                    </template>
+                  </RpgBadgeTooltip>
                 </div>
               </button>
             </div>
@@ -163,118 +182,7 @@ watch(
   </Teleport>
 </template>
 
-<!-- Globale Styles für teleportierte Elemente -->
-<style>
-.xp-tt {
-  position: fixed;
-  transform: translateX(-50%);
-  z-index: 122;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 9px 16px;
-  background: linear-gradient(to bottom, #1e1a0e, #130f09);
-  border: 2px solid #7a4e20;
-  border-radius: var(--bp-radius);
-  white-space: nowrap;
-  min-width: 158px;
-  box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.92),
-    inset 0 0 0 1px rgba(255, 200, 80, 0.09),
-    inset 0 1px 0 rgba(255, 200, 80, 0.06);
-}
-
-.xp-tt__caret {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-bottom: 8px solid #7a4e20;
-}
-.xp-tt__caret::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: -5px;
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 6px solid #1e1a0e;
-}
-
-.xp-tt__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(255, 200, 80, 0.38);
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-.xp-tt__row {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-}
-.xp-tt__current {
-  font-size: 14px;
-  font-weight: 900;
-  color: #e8c040;
-}
-.xp-tt__sep {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.22);
-}
-.xp-tt__total {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.52);
-}
-.xp-tt__unit {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.2);
-  margin-left: 3px;
-}
-
-.xp-tt__bar-track {
-  height: 3px;
-  background: rgba(255, 200, 80, 0.1);
-  border-radius: 2px;
-  margin-top: 6px;
-  overflow: hidden;
-}
-.xp-tt__bar-fill {
-  height: 100%;
-  background: linear-gradient(to right, #c89040, #f0d060);
-  border-radius: 2px;
-  box-shadow: 0 0 6px rgba(240, 208, 96, 0.5);
-  transition: width 0.8s ease;
-}
-
-.xp-tt-enter-active,
-.xp-tt-leave-active {
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-.xp-tt-enter-from,
-.xp-tt-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-5px);
-}
-.xp-tt-enter-to,
-.xp-tt-leave-from {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-</style>
+<!-- xp-tt Level-Tooltip → ersetzt durch ui/RpgBadgeTooltip.vue + LevelProgressTip.vue -->
 
 <style scoped>
 .team-badge-row {
@@ -283,11 +191,14 @@ watch(
   right: 4px;
   display: flex;
   gap: 2px;
+  /* the row itself stays click-through; the badges re-enable hover so their
+     tooltips work — clicks on a badge still bubble to the tab button */
   pointer-events: none;
   z-index: 20;
 }
 
 .mini-badge {
+  pointer-events: auto;
   min-width: 16px;
   height: 16px;
   padding: 0 3px;

@@ -18,6 +18,9 @@ import {
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
+import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
 
 const props = defineProps<{
   selectedRole: number | null
@@ -236,12 +239,27 @@ watch(
     <button class="sigil-action sigil-action--shop" @click.stop="emit('open-shop')">
       <Icon icon="game-icons:shopping-bag" width="26" height="26" class="sigil-action-icon" />
       Shop
-      <RpgNotifyBadge :count="shopBadgeCount" variant="shop" label="Champions available in shop" />
+      <RpgBadgeTooltip>
+        <RpgNotifyBadge
+          :count="shopBadgeCount"
+          variant="shop"
+          label="Champions available in shop"
+          hoverable
+        />
+        <template #tip="{ close }">
+          <NewChampionsTip @picked="close" />
+        </template>
+      </RpgBadgeTooltip>
     </button>
     <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
       Expedition
-      <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
+      <RpgBadgeTooltip>
+        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" hoverable />
+        <template #tip>
+          <ExpeditionReadyTip />
+        </template>
+      </RpgBadgeTooltip>
     </button>
 
     <!-- scaled sigil stage -->

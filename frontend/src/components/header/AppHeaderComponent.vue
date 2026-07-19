@@ -7,18 +7,22 @@ import { useExpeditionStore } from '../../stores/expeditionStore'
 import { useSolarUpgradeStore } from '../../stores/solarUpgradeStore'
 import { formatNumber } from '../../config/numberFormat'
 import { usePersistence } from '../../composables/usePersistence'
-import { CHAMPION_ROLES } from '../../config/championRoles'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
   BOTTOM_FRAME_STROKE_GRAIN,
   BOTTOM_FRAME_STROKE_SHEEN,
-  CHAMP_TOOLTIP_MAX_VISIBLE,
   HEADER_NOTIF_BADGE_MIN_PX,
   HEADER_NOTIF_BADGE_VW,
   HEADER_NOTIF_BADGE_MAX_PX,
   HEADER_BADGE_EDGE_GAP_FRAC,
+  CENTER_CHIMES_TOOLTIP_GAP_PX,
 } from '../../config/constants'
+import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import ExpeditionReadyTip from '../ui/ExpeditionReadyTip.vue'
+import NewChampionsTip from '../ui/NewChampionsTip.vue'
+import ForgeReadyTip from '../ui/ForgeReadyTip.vue'
+import LevelProgressTip from '../ui/LevelProgressTip.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
@@ -100,74 +104,6 @@ function openTeamTab() {
   uiStore.setBardTab('team')
 }
 
-// ── Champion badge tooltip ────────────────────────────────────────────────────
-const champBadgeRef = ref<HTMLButtonElement | null>(null)
-const showChampTooltip = ref(false)
-const champTooltipStyle = ref<Record<string, string>>({ left: '0px', top: '0px', transform: '' })
-let champHideTimer: ReturnType<typeof setTimeout> | null = null
-
-const champTooltipList = computed(() =>
-  battleStore.newlyUnlockedChampions.slice(0, CHAMP_TOOLTIP_MAX_VISIBLE),
-)
-const champTooltipExtra = computed(() =>
-  Math.max(0, battleStore.newlyUnlockedChampions.length - CHAMP_TOOLTIP_MAX_VISIBLE),
-)
-
-const ROLE_DISPLAY: Record<string, { label: string; color: string }> = {
-  top: { label: 'Fighter', color: '#e6813a' },
-  jungle: { label: 'Assassin', color: '#e8534a' },
-  mid: { label: 'Mage', color: '#5b8de8' },
-  adc: { label: 'Marksman', color: '#61c76f' },
-  support: { label: 'Support', color: '#c37de0' },
-}
-
-function getRoleDisplay(name: string) {
-  const role = CHAMPION_ROLES[name] ?? 'mid'
-  return ROLE_DISPLAY[role] ?? { label: 'Mage', color: '#5b8de8' }
-}
-
-function onChampBadgeEnter() {
-  if (champHideTimer) {
-    clearTimeout(champHideTimer)
-    champHideTimer = null
-  }
-  if (champBadgeRef.value) {
-    const rect = champBadgeRef.value.getBoundingClientRect()
-    champTooltipStyle.value = {
-      left: `${rect.left}px`,
-      top: `${rect.bottom + 8}px`,
-      transform: 'none',
-      '--caret-x': `${rect.width / 2}px`,
-    }
-  }
-  showChampTooltip.value = true
-}
-
-function onChampBadgeLeave() {
-  champHideTimer = setTimeout(() => {
-    showChampTooltip.value = false
-  }, 120)
-}
-
-function onChampTooltipEnter() {
-  if (champHideTimer) {
-    clearTimeout(champHideTimer)
-    champHideTimer = null
-  }
-}
-
-function onChampTooltipLeave() {
-  champHideTimer = setTimeout(() => {
-    showChampTooltip.value = false
-  }, 120)
-}
-
-function openChampionInShop(name: string) {
-  showChampTooltip.value = false
-  uiStore.pendingChampionSearch = name
-  uiStore.setBardTab('team')
-}
-
 function handleReset() {
   if (window.confirm('Really delete save? This action cannot be undone.')) {
     resetGame()
@@ -216,29 +152,6 @@ const arcLen = computed(() => {
 })
 
 const arcDashoffset = computed(() => arcLen.value * (1 - xpProgress.value))
-
-const chimesForLevel = computed(() => ({
-  current: gameStore.currentLevelChimes,
-  total: gameStore.totalChimesThisLevel,
-}))
-
-const showCenterTooltip = ref(false)
-const centerTooltipStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
-
-function onCenterEnter() {
-  if (chimesRef.value) {
-    const rect = chimesRef.value.getBoundingClientRect()
-    centerTooltipStyle.value = {
-      left: `${rect.left + rect.width / 2}px`,
-      top: `${rect.bottom + 40}px`,
-    }
-  }
-  showCenterTooltip.value = true
-}
-
-function onCenterLeave() {
-  showCenterTooltip.value = false
-}
 
 async function measure() {
   await nextTick()
@@ -394,11 +307,10 @@ onUnmounted(() => {
         />
       </svg>
 
+      <RpgBadgeTooltip :gap="CENTER_CHIMES_TOOLTIP_GAP_PX">
       <div
         ref="chimesRef"
         class="center-chimes"
-        @mouseenter="onCenterEnter"
-        @mouseleave="onCenterLeave"
         @click="uiStore.setBardTab('bard')"
       >
         <span class="chimes-value chimes-text-glow">
@@ -438,57 +350,72 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <template #tip>
+        <LevelProgressTip />
+      </template>
+      </RpgBadgeTooltip>
 
-      <div
-        class="arc-level-badge"
-        :style="{ top: svgH - badgeOverlapPx + 'px' }"
-        @mouseenter="onCenterEnter"
-        @mouseleave="onCenterLeave"
-      >
-        <span class="arc-level-text">{{ gameStore.level }}</span>
-      </div>
+      <RpgBadgeTooltip>
+        <div class="arc-level-badge" :style="{ top: svgH - badgeOverlapPx + 'px' }">
+          <span class="arc-level-text">{{ gameStore.level }}</span>
+        </div>
+        <template #tip>
+          <LevelProgressTip />
+        </template>
+      </RpgBadgeTooltip>
 
       <button class="center-reset-btn" title="Delete Save" @click.stop="handleReset">✕</button>
 
-      <Transition name="header-badge">
-        <button
-          v-if="expeditionBadgeCount > 0"
-          class="header-notif-badge header-notif-badge--expedition"
-          :style="expedBadgeStyle"
-          :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
-          @click.stop="openTeamTab"
-        >
-          {{ expeditionBadgeCount }}
-        </button>
-      </Transition>
+      <RpgBadgeTooltip>
+        <Transition name="header-badge">
+          <button
+            v-if="expeditionBadgeCount > 0"
+            class="header-notif-badge header-notif-badge--expedition"
+            :style="expedBadgeStyle"
+            :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
+            @click.stop="openTeamTab"
+          >
+            {{ expeditionBadgeCount }}
+          </button>
+        </Transition>
+        <template #tip>
+          <ExpeditionReadyTip />
+        </template>
+      </RpgBadgeTooltip>
 
-      <Transition name="header-badge">
-        <button
-          v-if="forgeBadgeReady"
-          class="header-notif-badge header-notif-badge--forge"
-          :style="forgeBadgeStyle"
-          aria-label="Sun evolution ready"
-          title="Sun evolution ready — open Star Forge"
-          @click.stop="openShopTab"
-        >
-          ✦
-        </button>
-      </Transition>
+      <RpgBadgeTooltip>
+        <Transition name="header-badge">
+          <button
+            v-if="forgeBadgeReady"
+            class="header-notif-badge header-notif-badge--forge"
+            :style="forgeBadgeStyle"
+            aria-label="Sun evolution ready"
+            @click.stop="openShopTab"
+          >
+            ✦
+          </button>
+        </Transition>
+        <template #tip>
+          <ForgeReadyTip />
+        </template>
+      </RpgBadgeTooltip>
 
-      <Transition name="header-badge">
-        <button
-          v-if="championBadgeCount > 0"
-          ref="champBadgeRef"
-          class="header-notif-badge header-notif-badge--champion"
-          :style="champBadgeStyle"
-          :aria-label="`${championBadgeCount} new champion(s)`"
-          @click.stop="openTeamTab"
-          @mouseenter="onChampBadgeEnter"
-          @mouseleave="onChampBadgeLeave"
-        >
-          {{ championBadgeCount }}
-        </button>
-      </Transition>
+      <RpgBadgeTooltip>
+        <Transition name="header-badge">
+          <button
+            v-if="championBadgeCount > 0"
+            class="header-notif-badge header-notif-badge--champion"
+            :style="champBadgeStyle"
+            :aria-label="`${championBadgeCount} new champion(s)`"
+            @click.stop="openTeamTab"
+          >
+            {{ championBadgeCount }}
+          </button>
+        </Transition>
+        <template #tip="{ close }">
+          <NewChampionsTip @picked="close" />
+        </template>
+      </RpgBadgeTooltip>
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
@@ -505,51 +432,6 @@ onUnmounted(() => {
       </div>
     </div>
   </header>
-
-  <Teleport to="body">
-    <Transition name="xp-tt">
-      <div v-if="showCenterTooltip" class="xp-tt" :style="centerTooltipStyle" aria-hidden="true">
-        <div class="xp-tt__caret" />
-        <span class="xp-tt__label">Next Level</span>
-        <div class="xp-tt__row">
-          <span class="xp-tt__current">{{ chimesForLevel.current.toLocaleString('en-US') }}</span>
-          <span class="xp-tt__sep">/</span>
-          <span class="xp-tt__total">{{ chimesForLevel.total.toLocaleString('en-US') }}</span>
-          <span class="xp-tt__unit">Chimes</span>
-        </div>
-        <div class="xp-tt__percent">{{ Math.round(xpProgress * 100) }} % to next Level</div>
-      </div>
-    </Transition>
-
-    <Transition name="champ-tt">
-      <div
-        v-if="showChampTooltip && champTooltipList.length > 0"
-        class="champ-tt"
-        :style="champTooltipStyle"
-        @mouseenter="onChampTooltipEnter"
-        @mouseleave="onChampTooltipLeave"
-      >
-        <div class="champ-tt__caret" />
-        <ul class="champ-tt__list">
-          <li
-            v-for="name in champTooltipList"
-            :key="name"
-            class="champ-tt__item"
-            @click="openChampionInShop(name)"
-          >
-            <img :src="battleStore.getChampionImage(name)" class="champ-tt__img" :alt="name" />
-            <span class="champ-tt__name" :style="{ color: getRoleDisplay(name).color }">{{
-              name
-            }}</span>
-          </li>
-          <li v-if="champTooltipExtra > 0" class="champ-tt__item champ-tt__item--more">
-            <span class="champ-tt__more-dots">…</span>
-            <span class="champ-tt__more-count">+{{ champTooltipExtra }} more</span>
-          </li>
-        </ul>
-      </div>
-    </Transition>
-  </Teleport>
 </template>
 
 <style>
@@ -1068,17 +950,6 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   TOOLTIP: PROZENT-ZEILE
-   ================================================================ */
-.xp-tt__percent {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255, 200, 80, 0.55);
-  letter-spacing: 0.04em;
-  margin-top: 1px;
-}
-
-/* ================================================================
    HEADER NOTIFICATION BADGES (arc-positioned, number-only)
    ================================================================ */
 .header-notif-badge {
@@ -1169,114 +1040,6 @@ onUnmounted(() => {
 }
 
 /* ================================================================
-   CHAMPION BADGE TOOLTIP
+   CHAMPION BADGE TOOLTIP → moved to ui/RpgBadgeTooltip.vue + NewChampionsTip.vue
    ================================================================ */
-.champ-tt {
-  position: fixed;
-  z-index: 200;
-  min-width: 260px;
-  background: #111008;
-  border: 4px solid #7a4e20;
-  border-radius: 4px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9);
-  pointer-events: auto;
-  overflow: hidden;
-}
-
-.champ-tt__caret {
-  position: absolute;
-  top: -6px;
-  left: var(--caret-x, 20px);
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid #7a4e20;
-}
-
-.champ-tt__list {
-  list-style: none;
-  margin: 0;
-  padding: 4px 0;
-}
-
-.champ-tt__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.champ-tt__item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.champ-tt__img {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  object-fit: cover;
-  object-position: top;
-  flex-shrink: 0;
-  display: block;
-}
-
-.champ-tt__name {
-  font-size: 1rem;
-  font-weight: 700;
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.champ-tt__item--more {
-  cursor: default;
-  gap: 6px;
-  padding: 5px 12px 6px;
-  border-top: 1px solid #3e200a;
-}
-
-.champ-tt__item--more:hover {
-  background: none;
-}
-
-.champ-tt__more-dots {
-  font-size: 0.875rem;
-  color: rgba(200, 200, 220, 0.35);
-  font-style: italic;
-}
-
-.champ-tt__more-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(200, 200, 220, 0.45);
-  letter-spacing: 0.03em;
-}
-
-.champ-tt-enter-active {
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.champ-tt-leave-active {
-  transition:
-    opacity 0.12s ease,
-    transform 0.1s ease;
-}
-
-.champ-tt-enter-from {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.champ-tt-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
 </style>

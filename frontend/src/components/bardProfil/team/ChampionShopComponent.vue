@@ -454,14 +454,25 @@
           </div>
 
           <!-- New champion badge (outside card-inner so it's not clipped) -->
-          <Transition name="champion-badge-fade">
-            <RpgNotifyBadge
-              v-if="isNew(champion.name)"
-              :count="1"
-              variant="shop"
-              label="New champion"
-            />
-          </Transition>
+          <RpgBadgeTooltip>
+            <Transition name="champion-badge-fade">
+              <RpgNotifyBadge
+                v-if="isNew(champion.name)"
+                :count="1"
+                variant="shop"
+                label="New champion"
+                hoverable
+              />
+            </Transition>
+            <template #tip>
+              <div class="new-champ-tip">
+                <div class="new-champ-tip__title">New Champion</div>
+                <div class="new-champ-tip__text">
+                  {{ champion.name }} was recently unlocked — recruit to add them to your roster.
+                </div>
+              </div>
+            </template>
+          </RpgBadgeTooltip>
             </div>
               </div>
               <p v-else class="tier-all-recruited">All recruited ✓</p>
@@ -627,6 +638,7 @@ import { useInventoryStore } from '../../../stores/inventoryStore'
 import { useGameStore } from '../../../stores/gameStore'
 import { useUiStore } from '../../../stores/uiStore'
 import RpgNotifyBadge from '../../ui/RpgNotifyBadge.vue'
+import RpgBadgeTooltip from '../../ui/RpgBadgeTooltip.vue'
 import { truncate, formatNumber } from '../../../config/numberFormat'
 import { getChampionRoles, CHAMPION_ROLES } from '../../../config/championRoles'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '../../../config/championTraits'
@@ -643,7 +655,7 @@ import type { ChampionRole } from '../../../types'
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon, RpgNotifyBadge },
+  components: { Icon, RpgNotifyBadge, RpgBadgeTooltip },
   props: {
     initialRole: { type: String, default: 'all' },
     showClose: { type: Boolean, default: false },
@@ -1812,6 +1824,27 @@ const shopChampionNames = computed(() =>
 /* ── Grid area — same horizontal inset as the header so search bar and tier
    headers align on one left edge ── */
 .cs-grid { padding: 12px 14px; }
+
+/* ── New-champion badge tooltip content (panel frame lives in RpgBadgeTooltip) ── */
+.new-champ-tip {
+  padding: 8px 12px 9px;
+  max-width: 240px;
+}
+
+.new-champ-tip__title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e8c040;
+  margin-bottom: 4px;
+}
+
+.new-champ-tip__text {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #e8e0cc;
+}
 
 .champion-badge-fade-leave-active {
   transition: opacity 0.2s ease;
