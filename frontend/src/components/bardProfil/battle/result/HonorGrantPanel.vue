@@ -7,7 +7,9 @@
       </div>
       <div class="head-titles">
         <span class="honor-title">HONOR CEREMONY</span>
-        <span class="honor-sub">The rift honors {{ HONOR_MAX_SELECTIONS }} champions for their performance</span>
+        <span class="honor-sub"
+          >The rift honors {{ HONOR_MAX_SELECTIONS }} champions for their performance</span
+        >
       </div>
       <div class="honor-pips">
         <span
@@ -38,7 +40,11 @@
           >
             <span class="cell-champ">
               <span class="portrait-wrap">
-                <img :src="battleStore.getChampionImage(champ.name)" :alt="champ.name" class="portrait" />
+                <img
+                  :src="battleStore.getChampionImage(champ.name)"
+                  :alt="champ.name"
+                  class="portrait"
+                />
                 <span class="level-badge">{{ champ.level }}</span>
               </span>
               <span class="champ-names">
@@ -52,10 +58,18 @@
             </span>
 
             <span class="cell-kda">
-              <span class="kda-k">{{ champ.kills }}</span><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
+              <span class="kda-k">{{ champ.kills }}</span
+              ><span class="kda-sep">/</span><span class="kda-d">{{ champ.deaths }}</span
+              ><span class="kda-sep">/</span><span class="kda-a">{{ champ.assists }}</span>
             </span>
-            <span class="cell-stat"><em>{{ shortNum(champ.damage) }}</em>DMG</span>
-            <span class="cell-stat cell-stat--gold"><em>{{ shortNum(champ.gold) }}</em>GOLD</span>
+            <span class="cell-stat"
+              ><em>{{ shortNum(champ.damage) }}</em
+              >DMG</span
+            >
+            <span class="cell-stat cell-stat--gold"
+              ><em>{{ shortNum(champ.gold) }}</em
+              >GOLD</span
+            >
 
             <span class="cell-honor">
               <span
@@ -216,8 +230,13 @@ function formatTribute(n: number): string {
   letter-spacing: 2.5px;
   flex-shrink: 0;
 }
-.section-label--team { color: #6ec86e; }
-.section-label--enemy { color: #d87868; margin-top: 5px; }
+.section-label--team {
+  color: #6ec86e;
+}
+.section-label--enemy {
+  color: #d87868;
+  margin-top: 5px;
+}
 
 .rows {
   flex: 1;
@@ -228,6 +247,8 @@ function formatTribute(n: number): string {
 }
 
 .row {
+  position: relative;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -238,7 +259,10 @@ function formatTribute(n: number): string {
   border: 1px solid rgba(96, 165, 250, 0.22);
   border-radius: 9px;
   min-width: 0;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
 }
 .row--enemy {
   background: linear-gradient(150deg, rgba(239, 68, 68, 0.05), rgba(24, 10, 10, 0.4));
@@ -249,7 +273,12 @@ function formatTribute(n: number): string {
   position: relative;
   overflow: hidden;
   border-color: #ffe28a;
-  background: linear-gradient(90deg, rgba(232, 192, 64, 0.26), rgba(232, 192, 64, 0.1) 45%, rgba(24, 19, 6, 0.55));
+  background: linear-gradient(
+    90deg,
+    rgba(232, 192, 64, 0.26),
+    rgba(232, 192, 64, 0.1) 45%,
+    rgba(24, 19, 6, 0.55)
+  );
   box-shadow:
     0 0 0 1px rgba(255, 226, 138, 0.55),
     0 0 22px rgba(232, 192, 64, 0.45),
@@ -263,6 +292,7 @@ function formatTribute(n: number): string {
   top: 0;
   bottom: 0;
   width: 5px;
+  z-index: 1;
   background: linear-gradient(to bottom, #ffe28a, #d4a020);
 }
 /* Light sweep across the MVP row, same signature as the MVP showcase */
@@ -283,7 +313,8 @@ function formatTribute(n: number): string {
   animation: mvp-shine-sweep 3.2s ease-in-out infinite;
 }
 @keyframes mvp-row-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 1px rgba(255, 226, 138, 0.55),
       0 0 16px rgba(232, 192, 64, 0.3),
@@ -297,17 +328,29 @@ function formatTribute(n: number): string {
   }
 }
 @keyframes mvp-shine-sweep {
-  0%, 55% { background-position: 120% 0; }
-  90%, 100% { background-position: -60% 0; }
+  0%,
+  55% {
+    background-position: 120% 0;
+  }
+  90%,
+  100% {
+    background-position: -60% 0;
+  }
 }
 .row--honored {
   border-color: #e8c040;
   background: linear-gradient(150deg, rgba(232, 192, 64, 0.13), rgba(24, 19, 6, 0.55));
-  box-shadow: 0 0 16px rgba(232, 192, 64, 0.28), inset 0 0 24px rgba(232, 192, 64, 0.05);
+  box-shadow:
+    0 0 16px rgba(232, 192, 64, 0.28),
+    inset 0 0 24px rgba(232, 192, 64, 0.05);
   animation: row-glow-in 0.4s ease-out var(--honor-delay, 0s) backwards;
 }
 @keyframes row-glow-in {
-  0% { box-shadow: none; border-color: rgba(96, 165, 250, 0.22); background: rgba(10, 14, 24, 0.4); }
+  0% {
+    box-shadow: none;
+    border-color: rgba(96, 165, 250, 0.22);
+    background: rgba(10, 14, 24, 0.4);
+  }
 }
 /* An honored MVP keeps its pulse (the honored glow-in would otherwise win the cascade) */
 .row--mvp.row--honored {
@@ -322,27 +365,28 @@ function formatTribute(n: number): string {
   flex: 1 1 auto;
   min-width: 0;
 }
+/* Frameless full-bleed portrait: fills the entire row height, flush with the
+   row's left edge, and dissolves into the row background on the right */
 .portrait-wrap {
   position: relative;
   flex-shrink: 0;
+  align-self: stretch;
+  margin: -3px 0 -3px -12px;
+  width: clamp(52px, 9cqh, 92px);
 }
 .portrait {
-  width: clamp(30px, 5.4cqh, 54px);
-  height: clamp(30px, 5.4cqh, 54px);
-  border-radius: 8px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 2px solid rgba(96, 165, 250, 0.55);
   display: block;
-  transition: border-color 0.2s;
+  -webkit-mask-image: linear-gradient(to right, #000 58%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 58%, transparent 100%);
 }
-.row--enemy .portrait { border-color: rgba(248, 113, 113, 0.55); }
-.row--mvp .portrait,
-.row--honored .portrait { border-color: #e8c040; }
 
 .level-badge {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
+  top: 15px;
+  left: 5px;
   width: clamp(14px, 2.4cqh, 22px);
   height: clamp(14px, 2.4cqh, 22px);
   border-radius: 50%;
@@ -379,7 +423,9 @@ function formatTribute(n: number): string {
   text-overflow: ellipsis;
   line-height: 1.15;
 }
-.row--honored .champ-name { color: #ffe28a; }
+.row--honored .champ-name {
+  color: #ffe28a;
+}
 .mvp-tag {
   display: inline-flex;
   align-items: center;
@@ -416,10 +462,20 @@ function formatTribute(n: number): string {
   font-size: clamp(13px, 2.2cqh, 20px);
   font-weight: 700;
 }
-.kda-k { color: #6ee7b7; }
-.kda-d { color: #fca5a5; }
-.kda-a { color: #93c5fd; }
-.kda-sep { color: #55566a; font-weight: 400; padding: 0 2px; }
+.kda-k {
+  color: #6ee7b7;
+}
+.kda-d {
+  color: #fca5a5;
+}
+.kda-a {
+  color: #93c5fd;
+}
+.kda-sep {
+  color: #55566a;
+  font-weight: 400;
+  padding: 0 2px;
+}
 
 .cell-stat {
   width: clamp(52px, 5cqw, 92px);
@@ -439,7 +495,9 @@ function formatTribute(n: number): string {
   color: #e8e2d0;
   letter-spacing: 0;
 }
-.cell-stat--gold em { color: #e8c040; }
+.cell-stat--gold em {
+  color: #e8c040;
+}
 
 /* ── Honor cell ── */
 /* Fixed-width slot so the tribute chip is never clipped — the champion
@@ -470,8 +528,14 @@ function formatTribute(n: number): string {
   animation: chip-in 0.35s ease-out calc(var(--honor-delay, 0s) + 0.15s) backwards;
 }
 @keyframes chip-in {
-  0% { opacity: 0; transform: translateX(8px); }
-  100% { opacity: 1; transform: translateX(0); }
+  0% {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 .chime-img {
   width: clamp(17px, 2.9cqh, 26px);
@@ -503,8 +567,14 @@ function formatTribute(n: number): string {
   animation: medal-stamp-in 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) var(--honor-delay, 0s) backwards;
 }
 @keyframes medal-stamp-in {
-  0% { transform: scale(1.8) rotate(-14deg); opacity: 0; }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
+  0% {
+    transform: scale(1.8) rotate(-14deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
 }
 
 /* ── Footer ── */
