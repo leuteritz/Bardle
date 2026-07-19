@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useUiStore } from '@/stores/uiStore'
 import { CHAMPION_ROLES } from '@/config/championRoles'
-import { CHAMP_TOOLTIP_MAX_VISIBLE, TOOLTIP_ROLE_DISPLAY } from '@/config/constants'
+import { CHAMP_TOOLTIP_MAX_VISIBLE, ROLE_BY_KEY } from '@/config/constants'
+import type { ChampionRole } from '@/types'
 
 /* Tooltip body for every "new champions" notify badge: lists the newly
    unlocked champions; clicking one deep-links into the Champion Shop. */
@@ -17,8 +18,9 @@ const extra = computed(() =>
   Math.max(0, battleStore.newlyUnlockedChampions.length - CHAMP_TOOLTIP_MAX_VISIBLE),
 )
 
-function roleColor(name: string): string {
-  return TOOLTIP_ROLE_DISPLAY[CHAMPION_ROLES[name] ?? 'mid']?.color ?? '#5b8de8'
+/* Game-wide role palette (ROLE_BY_KEY) — same colors as orbit, shop & roster. */
+function roleOf(name: string) {
+  return ROLE_BY_KEY[(CHAMPION_ROLES[name] ?? 'mid') as ChampionRole]
 }
 
 function pick(name: string) {
@@ -33,7 +35,14 @@ function pick(name: string) {
     <ul class="nc-tt__list">
       <li v-for="name in list" :key="name" class="nc-tt__item" @click.stop="pick(name)">
         <img :src="battleStore.getChampionImage(name)" class="nc-tt__img" :alt="name" />
-        <span class="nc-tt__name" :style="{ color: roleColor(name) }">{{ name }}</span>
+        <span class="nc-tt__name" :style="{ color: roleOf(name).color }">{{ name }}</span>
+        <span
+          class="nc-tt__role"
+          :style="{
+            color: roleOf(name).color,
+            borderColor: roleOf(name).color,
+          }"
+        >{{ roleOf(name).short }}</span>
       </li>
       <li v-if="extra > 0" class="nc-tt__item nc-tt__item--more">
         <span class="nc-tt__more-dots">…</span>
@@ -97,6 +106,18 @@ function pick(name: string) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.nc-tt__role {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 3px 5px;
+  border: 1px solid;
+  border-radius: 3px;
+  opacity: 0.85;
 }
 
 .nc-tt__item--more {

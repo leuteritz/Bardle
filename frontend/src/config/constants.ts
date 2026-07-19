@@ -2208,14 +2208,8 @@ export const BADGE_TOOLTIP_CARET_INSET_PX = 12
 // Larger gap for the center-chimes level tooltip: the arc-level badge hangs
 // below the chimes box and would otherwise be covered by the panel.
 export const CENTER_CHIMES_TOOLTIP_GAP_PX = 40
-// Role display used by the new-champions tooltip (label + accent per role).
-export const TOOLTIP_ROLE_DISPLAY: Record<string, { label: string; color: string }> = {
-  top: { label: 'Fighter', color: '#e6813a' },
-  jungle: { label: 'Assassin', color: '#e8534a' },
-  mid: { label: 'Mage', color: '#5b8de8' },
-  adc: { label: 'Marksman', color: '#61c76f' },
-  support: { label: 'Support', color: '#c37de0' },
-}
+// The new-champions tooltip colors names + role tags via ROLE_BY_KEY — the
+// game-wide role palette (orbit, shop, roster).
 
 // Header notification badges — placed along the center-arc ellipse with a
 // UNIFORM edge-to-edge pixel gap between neighbours (level badge at the arc
