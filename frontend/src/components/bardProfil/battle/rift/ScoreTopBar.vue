@@ -32,8 +32,7 @@
     <!-- Center: kills + timer -->
     <div class="center">
       <span class="kills kills--blue">{{ battleStore.team1Kills }}</span>
-      <div class="timer-block">
-        <div class="timer-eyebrow">GAME TIME</div>
+      <div class="timer-block" title="Game time">
         <div class="timer-value">{{ battleStore.formatTime(battleStore.battleTime) }}</div>
       </div>
       <span class="kills kills--red">{{ battleStore.team2Kills }}</span>
@@ -342,20 +341,21 @@ watch(bluePercent, (next, prev) => {
 
 .timer-block {
   text-align: center;
-}
-.timer-eyebrow {
-  font-size: 8px;
-  letter-spacing: 2.5px;
-  line-height: 1;
-  color: #8a7430;
+  /* fixed slot sized for "88:88" at the timer's own font size — ticking
+     digits (9:59 → 10:00) never nudge the kills blocks beside it */
+  min-width: clamp(58px, 11.8cqh, 79px);
+  flex-shrink: 0;
 }
 .timer-value {
-  font-size: clamp(15px, 2.9cqh, 20px);
+  /* no eyebrow label anymore — the timer owns the full block height */
+  font-size: clamp(19px, 3.9cqh, 26px);
   font-weight: 700;
   color: #e8c040;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1;
   text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
+  /* MedievalSharp digits sit high in their em box — same nudge as .kills */
+  transform: translateY(0.08em);
 }
 
 /* ── Compact modes: on narrow boards every stat stays visible — fonts,
