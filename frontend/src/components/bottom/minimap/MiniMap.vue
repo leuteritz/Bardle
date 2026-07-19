@@ -18,7 +18,8 @@
             v-if="
               !galaxyStore.isComplete &&
               !galaxyStore.isGalaxyTransitioning &&
-              !galaxyStore.bossPhaseActive
+              !galaxyStore.bossPhaseActive &&
+              !isArrived
             "
             class="star-progress"
           >
