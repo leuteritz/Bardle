@@ -141,6 +141,25 @@
               </div>
             </div>
 
+            <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
+            <Transition name="curse-fade">
+              <div v-if="activeCurse" class="sf-curse-mark">
+                <Icon
+                  v-if="curseDef?.icon?.includes(':')"
+                  :icon="curseDef.icon"
+                  class="sf-curse-mark-icon"
+                />
+                <span v-else class="sf-curse-mark-icon">{{ curseDef?.icon }}</span>
+                <span class="sf-curse-mark-name">{{ curseDef?.name }}</span>
+                <span class="sf-curse-mark-info">{{ curseDef?.effect }} · {{ curseSecsLeft }}s</span>
+              </div>
+            </Transition>
+
+            <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
+            <div v-if="activeBoss" class="sf-squad">
+              <RoleStrikerSquad />
+            </div>
+
             <!-- ── Bottom-Dock: Loot-Karte (dieser Boss) + Up-Next-Karte ── -->
             <div class="sf-bottom-dock">
               <BossRewardSection v-if="activeBoss" />
@@ -148,48 +167,6 @@
             </div>
           </div>
         </div>
-
-        <!-- ── Curse Overlay ────────────────────────────────────────────── -->
-        <Transition name="curse-fade">
-          <div
-            v-if="activeCurse"
-            class="sf-curse-overlay"
-            :class="{ 'sf-curse-overlay--galaxy': isGalaxyBoss }"
-          >
-            <div class="sf-curse-inner">
-              <Icon v-if="curseDef?.icon?.includes(':')" :icon="curseDef.icon" class="sf-curse-icon" />
-              <span v-else class="sf-curse-icon">{{ curseDef?.icon }}</span>
-              <div class="sf-curse-text">
-                <span class="sf-curse-name">{{ curseDef?.name }}</span>
-                <span class="sf-curse-effect">{{ curseDef?.effect }}</span>
-              </div>
-              <div class="sf-curse-timer">
-                <svg class="sf-curse-ring" viewBox="0 0 36 36">
-                  <circle class="sf-curse-ring-bg" cx="18" cy="18" r="15" />
-                  <circle
-                    class="sf-curse-ring-fill"
-                    cx="18"
-                    cy="18"
-                    r="15"
-                    :stroke-dashoffset="
-                      94.2 -
-                      (curseSecsLeft /
-                        (activeCurse?.activeUntil
-                          ? Math.ceil(
-                              (activeCurse.activeUntil -
-                                (activeCurse.activeUntil - curseSecsLeft * 1000)) /
-                                1000,
-                            )
-                          : 1)) *
-                        94.2
-                    "
-                  />
-                </svg>
-                <span class="sf-curse-secs">{{ curseSecsLeft }}s</span>
-              </div>
-            </div>
-          </div>
-        </Transition>
       </div>
     </div>
   </Transition>
@@ -209,6 +186,7 @@ import {
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
+import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import BossPlanetList from '@/components/idle/planet/BossPlanetList.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
@@ -527,8 +505,7 @@ function emberStyle(i: number): Record<string, string> {
 
 /* All modal children above the planet background ───────────────────────── */
 .sf-topbar,
-.sf-main,
-.sf-curse-overlay {
+.sf-main {
   position: relative;
   z-index: 1;
 }
@@ -539,8 +516,7 @@ function emberStyle(i: number): Record<string, string> {
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
   .sf-star-ring--critical .sf-star-ring-secs,
-  .sf-curse-icon,
-  .sf-curse-overlay {
+  .sf-curse-mark-icon {
     animation: none;
   }
 }
@@ -736,6 +712,15 @@ function emberStyle(i: number): Record<string, string> {
 /* Arena-eigener Enrage-/Star-Ring aus — ersetzt durch die beiden
    synchronen .sf-star-ring-Countdowns oben links + rechts */
 .sf-arena-wrap :deep(.enrage-ring) {
+  display: none;
+}
+
+/* Eckige Arc-Portraits + Mini-Curse-Badge der Arena aus — ersetzt durch das
+   Role-Striker-Squad (Cooldown-Ringe) und die kompakte Curse-Marke */
+.sf-arena-wrap :deep(.champ-arc) {
+  display: none;
+}
+.sf-arena-wrap :deep(.arena-curse-badge) {
   display: none;
 }
 
@@ -976,56 +961,46 @@ function emberStyle(i: number): Record<string, string> {
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
-/* ── Curse Overlay ────────────────────────────────────────────────────────── */
-.sf-curse-overlay {
-  display: flex;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(40, 0, 65, 0.92) 20%,
-    rgba(55, 0, 85, 0.96) 50%,
-    rgba(40, 0, 65, 0.92) 80%,
-    transparent 100%
-  );
-  border-top: 1px solid rgba(140, 30, 200, 0.45);
-  border-bottom: 1px solid rgba(140, 30, 200, 0.45);
-  animation: sf-curse-glow 1.6s ease-in-out infinite alternate;
-  position: relative;
-  z-index: 1;
+/* ── Attacker Squad — Reihe unter dem Boss, über dem Loot-Dock ───────────── */
+.sf-squad {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 168px;
+  z-index: 4;
+  pointer-events: none;
 }
 
-.sf-curse-overlay--galaxy {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(60, 0, 90, 0.95) 20%,
-    rgba(80, 0, 120, 0.98) 50%,
-    rgba(60, 0, 90, 0.95) 80%,
-    transparent 100%
-  );
-}
-
-.sf-curse-inner {
-  display: flex;
+/* ── Curse-Marke — kompakter Chip am Boss (statt breitem Overlay) ────────── */
+.sf-curse-mark {
+  position: absolute;
+  top: 178px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: inline-flex;
   align-items: center;
-  gap: 1rem;
-  max-width: 520px;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(40, 0, 65, 0.94), rgba(60, 0, 92, 0.94));
+  border: 1px solid rgba(140, 30, 200, 0.5);
+  box-shadow: 0 0 16px rgba(120, 30, 200, 0.4);
+  pointer-events: none;
 }
 
-.sf-curse-icon {
-  font-size: 2.4rem;
-  width: 2.4rem;
-  height: 2.4rem;
+.sf-curse-mark-icon {
+  font-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
   line-height: 1;
   flex-shrink: 0;
   color: #cc44ff;
-  filter: drop-shadow(0 0 12px rgba(200, 60, 255, 0.8));
-  animation: sf-curse-icon-pulse 1.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(180, 80, 255, 0.9));
+  animation: sf-curse-mark-pulse 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes sf-curse-icon-pulse {
+@keyframes sf-curse-mark-pulse {
   from {
     transform: scale(0.95);
   }
@@ -1034,79 +1009,22 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-.sf-curse-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.sf-curse-name {
-  font-size: 1rem;
+.sf-curse-mark-name {
+  font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.14em;
-  color: #e060ff;
-  text-shadow:
-    0 0 12px rgba(210, 70, 255, 0.8),
-    0 0 30px rgba(180, 40, 255, 0.4);
+  letter-spacing: 0.06em;
+  color: #e6b8ff;
   text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(210, 70, 255, 0.6);
+  white-space: nowrap;
 }
 
-.sf-curse-effect {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #c050e8;
-  letter-spacing: 0.05em;
-  opacity: 0.9;
-}
-
-.sf-curse-timer {
-  position: relative;
-  width: 50px;
-  height: 50px;
-  flex-shrink: 0;
-}
-
-.sf-curse-ring {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.sf-curse-ring-bg {
-  fill: none;
-  stroke: rgba(100, 20, 140, 0.4);
-  stroke-width: 3;
-}
-.sf-curse-ring-fill {
-  fill: none;
-  stroke: #cc44ff;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 94.2;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 0.25s linear;
-  filter: drop-shadow(0 0 4px rgba(200, 60, 255, 0.8));
-}
-
-.sf-curse-secs {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #dd88ff;
-  letter-spacing: 0.02em;
-}
-
-@keyframes sf-curse-glow {
-  from {
-    box-shadow: inset 0 0 14px rgba(140, 20, 255, 0.12);
-  }
-  to {
-    box-shadow: inset 0 0 30px rgba(190, 60, 255, 0.28);
-  }
+.sf-curse-mark-info {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #c78bff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .curse-fade-enter-active {
@@ -1122,7 +1040,7 @@ function emberStyle(i: number): Record<string, string> {
 .curse-fade-enter-from,
 .curse-fade-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateX(-50%) translateY(-6px);
 }
 
 /* ── Admin Kill Button ────────────────────────────────────────────────────── */

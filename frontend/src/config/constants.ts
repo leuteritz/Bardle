@@ -828,6 +828,10 @@ export const ROLE_MID_CURSE_DAMNATION_FRAC = 0.2 // Damnation: instant 20% of bo
 export const ROLE_ADC_BURST_DAMAGE = 80 // bonus burst hit on boss
 export const ROLE_ADC_BURST_INTERVAL_MS = 5000 // every 5s
 
+// ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
+export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
+export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats
+
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 
