@@ -423,7 +423,7 @@ const liveChars = computed(() => {
   /* typography tracks the strip's own width (container queries), so cells
      can never overlap the crest and wide viewports are used fully */
   --sb-val-size: clamp(13px, 2.1cqw, 26px);
-  --sb-label-size: clamp(8px, 0.95cqw, 11px);
+  --sb-label-size: clamp(9px, 1.1cqw, 13px);
   --sb-title-size: clamp(16px, 2.5cqw, 30px);
   /* width-fluid, but also capped by the strip's real height (79px ×
      hud-scale) minus the label row — short strips (ultrawide FHD) get
@@ -568,11 +568,13 @@ const liveChars = computed(() => {
      never truncated, on any resolution */
   font-size: min(var(--sb-label-size), calc((var(--sb-cell-w) - 8px) / 9));
   letter-spacing: 0.16em;
-  color: #7a6a44;
+  font-weight: 700;
+  color: #c9a95c;
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
   max-width: 100%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Title crest ── */
