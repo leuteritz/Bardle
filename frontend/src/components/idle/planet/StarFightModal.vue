@@ -150,7 +150,10 @@
               </div>
 
               <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
-              <div class="sf-boss-atk">{{ bossDps }} dmg/s per champion</div>
+              <div class="sf-boss-atk">
+                <span class="sf-boss-atk-num">{{ bossDps }}</span>
+                dmg/s per champion
+              </div>
             </div>
 
             <!-- ── Aktiver Fluch am Boss — kompakte Marke wie im Design ── -->
@@ -1158,16 +1161,34 @@ function emberStyle(i: number): Record<string, string> {
 
 /* ── Boss-Angriffswert unter der HP-Leiste — reine Typo, statisch ────────── */
 .sf-boss-atk {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   margin-top: 4px;
-  font-size: 1.05rem;
+  font-size: 0.82rem;
   font-weight: 900;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #ff7858;
-  font-variant-numeric: tabular-nums;
+  color: rgba(255, 120, 88, 0.75);
   text-shadow:
-    0 0 16px rgba(255, 60, 30, 0.55),
-    0 0 36px rgba(200, 40, 10, 0.3),
+    0 0 12px rgba(255, 60, 30, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+/* Die Zahl als epischer Held des Labels — groß, heiß glühend, konturiert */
+.sf-boss-atk-num {
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #ffd9c0;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-stroke: 1px rgba(120, 20, 0, 0.85);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 10px rgba(255, 120, 40, 0.95),
+    0 0 26px rgba(255, 70, 20, 0.65),
+    0 0 52px rgba(220, 40, 0, 0.35),
     0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
