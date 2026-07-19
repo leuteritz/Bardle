@@ -617,6 +617,22 @@ export const STRUCTURE_BURST_GAME_SECONDS = 90
 export const STRUCTURE_FEED_MAX = 10
 /** Maximum retained kill-feed entries */
 export const KILL_FEED_MAX = 30
+/** Maximum retained jungle-buff-feed entries */
+export const BUFF_FEED_MAX = 8
+
+// ── Jungle buff route (early-game jungler script) ──────────────────────────
+/** Earliest game-second the first buff camp falls (jungler arrives via walkout at 90) */
+export const JUNGLE_FIRST_BUFF_CLEAR_MIN_T = 150
+/** Latest game-second the first buff camp falls */
+export const JUNGLE_FIRST_BUFF_CLEAR_MAX_T = 195
+/** Minimum gap between first and second buff clear (gank window sits in between) */
+export const JUNGLE_SECOND_BUFF_GAP_MIN_T = 150
+/** Maximum gap between first and second buff clear */
+export const JUNGLE_SECOND_BUFF_GAP_MAX_T = 280
+/** Game-seconds the jungler stands at a camp before its clear event fires */
+export const JUNGLE_BUFF_CLEAR_DURATION_T = 45
+/** Game-seconds after the second buff clear before the regular jungle roam starts */
+export const JUNGLE_ROAM_AFTER_BUFFS_T = 60
 
 // LP thresholds
 export const LP_NORMAL_PROMOTION_THRESHOLD = 100
@@ -2324,6 +2340,9 @@ export const USED_GAME_ICONS = new Set<string>([
   // ScoreTopBar live team stats
   'game-icons:minions', // team creep score (CS)
   'game-icons:sabers-choc', // team total damage dealt
+  // RiftMinimap jungle buff camps
+  'game-icons:golem-head', // Blue Buff sentinel marker
+  'game-icons:lizardman', // Red Buff brambleback marker
   // Battle Result Modal
   'game-icons:trophy-cup',
   'game-icons:skull',

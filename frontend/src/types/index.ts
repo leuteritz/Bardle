@@ -381,6 +381,7 @@ export type BattleEventType =
   | 'turret'
   | 'inhibitor'
   | 'nexus'
+  | 'buff'
 
 export type StructureTier = 'outer' | 'inner' | 'inhibTurret' | 'inhibitor' | 'nexusTurret'
 
@@ -409,7 +410,17 @@ export interface BattleEvent {
   /** Set on turret/inhibitor events; `team` stays the attacker, the owner is encoded in the id. */
   structureId?: StructureId
   structureTier?: StructureTier
+  /** Set on jungle 'buff' events — which buff camp the team's jungler cleared. */
+  buffType?: 'blue' | 'red'
   winProbDelta: number
+}
+
+/** One cleared jungle buff in the live feed (derived from the timeline, never persisted). */
+export interface BuffFeedEntry {
+  team: 1 | 2
+  buffType: 'blue' | 'red'
+  junglerName: string
+  t: number
 }
 
 /** One destroyed structure in the live feed (derived from the timeline, never persisted). */

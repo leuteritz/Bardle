@@ -95,7 +95,12 @@ import {
   MVP_W_DAMAGE_DIV,
   MVP_W_GOLD_DIV,
   MVP_W_OBJECTIVE,
+  JUNGLE_FIRST_BUFF_CLEAR_MIN_T,
+  JUNGLE_FIRST_BUFF_CLEAR_MAX_T,
+  JUNGLE_SECOND_BUFF_GAP_MIN_T,
+  JUNGLE_SECOND_BUFF_GAP_MAX_T,
 } from '../config/constants'
+import { JUNGLE_BUFF_CAMPS } from '../config/battleRoutes'
 
 /** mulberry32 — small, fast, deterministic PRNG */
 export function createRng(seed: number): () => number {
@@ -390,6 +395,33 @@ export function generateTimeline(
     firstBloodDone: fromT > TIMELINE_FIRST_BLOOD_MAX_T,
     fromT,
     destroyed: new Set(preDestroyed),
+  }
+
+  // ── Jungle buff route — each jungler starts on a random buff (blue or red),
+  // has a gank window in between (the early lane fights below already include
+  // the junglers), then clears the other buff ──
+  for (const team of [1, 2] as const) {
+    const startBuff: 'blue' | 'red' = rng() < 0.5 ? 'blue' : 'red'
+    const secondBuff: 'blue' | 'red' = startBuff === 'blue' ? 'red' : 'blue'
+    const firstClearT = randInt(rng, JUNGLE_FIRST_BUFF_CLEAR_MIN_T, JUNGLE_FIRST_BUFF_CLEAR_MAX_T)
+    const secondClearT =
+      firstClearT + randInt(rng, JUNGLE_SECOND_BUFF_GAP_MIN_T, JUNGLE_SECOND_BUFF_GAP_MAX_T)
+    pushEvent(ctx, {
+      t: firstClearT,
+      type: 'buff',
+      team,
+      buffType: startBuff,
+      location: JUNGLE_BUFF_CAMPS[team][startBuff],
+      winProbDelta: 0,
+    })
+    pushEvent(ctx, {
+      t: secondClearT,
+      type: 'buff',
+      team,
+      buffType: secondBuff,
+      location: JUNGLE_BUFF_CAMPS[team][secondBuff],
+      winProbDelta: 0,
+    })
   }
 
   // ── Laning (0–TIMELINE_LANING_END) ──

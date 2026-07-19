@@ -48,6 +48,25 @@
         :style="{ left: dot.x + '%', top: dot.y + '%' }"
       />
 
+      <!-- Jungle buff camps: monster icon glows while the buff is up, goes
+           grey + ✕ once the jungler slew it (short colored burst on the kill) -->
+      <div
+        v-for="camp in buffCamps"
+        :key="camp.key"
+        class="buff-camp"
+        :class="[`buff-camp--${camp.buffType}`, { 'buff-camp--cleared': camp.cleared }]"
+        :style="{ left: camp.x + '%', top: camp.y + '%' }"
+      >
+        <Icon
+          :icon="camp.buffType === 'blue' ? 'game-icons:golem-head' : 'game-icons:lizardman'"
+          width="11"
+          height="11"
+          class="buff-camp-icon"
+        />
+        <span v-if="camp.cleared" class="buff-camp-x">✕</span>
+        <div v-if="camp.justCleared" class="buff-camp-burst" />
+      </div>
+
       <!-- Nexus markers: biggest structure symbol, always visible -->
       <div
         v-for="n in nexusMarkers"
@@ -231,6 +250,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useBattleMovement, type ChampionTrail } from '@/composables/useBattleMovement'
 import {
@@ -241,7 +261,7 @@ import {
   FINAL_PUSH_START_T,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/drakes'
-import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION } from '@/config/battleRoutes'
+import { BLUE_NEXUS_MAP_POSITION, RED_NEXUS_MAP_POSITION, JUNGLE_BUFF_CAMPS } from '@/config/battleRoutes'
 import {
   ALL_STRUCTURE_IDS,
   STRUCTURE_POSITIONS,
@@ -336,6 +356,27 @@ const baronSpawnSoon = computed(
 const nexusPos = computed(() =>
   battleStore.nexusDestroyedByTeam === 1 ? RED_NEXUS_MAP_POSITION : BLUE_NEXUS_MAP_POSITION,
 )
+
+/** All four buff camps; a camp reads as cleared once its jungler's buff event applied. */
+const buffCamps = computed(() => {
+  const out = []
+  for (const team of [1, 2] as const) {
+    for (const buffType of ['blue', 'red'] as const) {
+      const pos = JUNGLE_BUFF_CAMPS[team][buffType]
+      const feed = battleStore.buffFeed.find((e) => e.team === team && e.buffType === buffType)
+      out.push({
+        key: `buff-${team}-${buffType}`,
+        x: pos.x,
+        y: pos.y,
+        buffType,
+        cleared: feed !== undefined,
+        justCleared:
+          feed !== undefined && battleStore.battleTime - feed.t < STRUCTURE_BURST_GAME_SECONDS,
+      })
+    }
+  }
+  return out
+})
 
 const nexusMarkers = computed(() => [
   { team: 1 as const, ...BLUE_NEXUS_MAP_POSITION, dead: battleStore.nexusDestroyedByTeam === 2 },
@@ -681,6 +722,88 @@ const structureMarkers = computed(() => {
     transform: scale(1.1);
   }
 }
+
+/* ── Jungle buff camps ── */
+/* Up: dark badge disc, buff-colored monster icon + ring, breathing glow.
+   Slain: badge dims to grey, icon desaturates, red ✕ stamps over it. */
+.buff-camp {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid;
+  background: rgba(10, 8, 6, 0.78);
+  pointer-events: none;
+  z-index: 1;
+}
+.buff-camp--blue {
+  border-color: rgba(147, 197, 253, 0.85);
+  animation: buff-glow-blue 2.2s ease-in-out infinite;
+}
+.buff-camp--red {
+  border-color: rgba(252, 165, 165, 0.85);
+  animation: buff-glow-red 2.2s ease-in-out infinite;
+}
+.buff-camp-icon {
+  flex-shrink: 0;
+}
+.buff-camp--blue .buff-camp-icon {
+  color: #93c5fd;
+  filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.9));
+}
+.buff-camp--red .buff-camp-icon {
+  color: #fca5a5;
+  filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.9));
+}
+
+@keyframes buff-glow-blue {
+  0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+  50% { box-shadow: 0 0 11px rgba(59, 130, 246, 0.95); }
+}
+@keyframes buff-glow-red {
+  0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 11px rgba(239, 68, 68, 0.95); }
+}
+
+/* Slain state — clearly "not up": grey badge, muted icon, red ✕ stamp */
+.buff-camp--cleared {
+  border-color: #4a4436;
+  background: rgba(10, 8, 6, 0.88);
+  animation: none;
+  box-shadow: none;
+}
+.buff-camp--cleared .buff-camp-icon {
+  color: #6a6456;
+  filter: none;
+  opacity: 0.65;
+}
+.buff-camp-x {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -54%) rotate(-12deg);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff4a3a;
+  text-shadow: 0 0 3px #000, 0 0 7px rgba(255, 74, 58, 0.55);
+  line-height: 1;
+}
+
+/* Kill moment: short expanding ring burst in the buff's color */
+.buff-camp-burst {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid;
+  animation: clash-ring 0.9s ease-out 3;
+  opacity: 0;
+}
+.buff-camp--blue .buff-camp-burst { border-color: rgba(96, 165, 250, 0.85); }
+.buff-camp--red .buff-camp-burst { border-color: rgba(248, 113, 113, 0.85); }
 
 /* ── Nexus markers ── */
 .nexus-marker {
@@ -1122,6 +1245,9 @@ const structureMarkers = computed(() => {
   .structure-x--punch,
   .nexus-core,
   .nexus-ring,
+  .buff-camp--blue,
+  .buff-camp--red,
+  .buff-camp-burst,
   .lane-glow--pending,
   .lane-glow-core,
   .lane-push-label,

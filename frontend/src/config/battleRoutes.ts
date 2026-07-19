@@ -93,6 +93,25 @@ export const RED_JUNGLE_CIRCUIT: MapPoint[] = [
   { x: 66, y: 28 },
 ]
 
+// ── Jungle buff camps ────────────────────────────────────────────────────────
+// Real-map semantics: the blue team's Blue Sentinel sits in its upper jungle
+// quadrant (toward top lane), its Red Brambleback in the lower one (toward bot
+// lane). The red side is the point mirror — which lands its blue buff near bot
+// and its red buff near top, exactly like on the Rift.
+// Positions match the real Summoner's Rift minimap proportions: the blue
+// buff sits deep in the upper jungle pocket between top and mid, the red
+// buff deep in the lower pocket between mid and bot — not near the river.
+export const JUNGLE_BUFF_CAMPS: Record<1 | 2, Record<'blue' | 'red', MapPoint>> = {
+  1: {
+    blue: { x: 29, y: 47 },
+    red: { x: 53, y: 70 },
+  },
+  2: {
+    blue: { x: 73, y: 54 },
+    red: { x: 48, y: 30 },
+  },
+}
+
 /** Fraction along the lane path where each side holds during the laning phase. */
 export const LANE_HOLD_FRACTION_BLUE = 0.42
 export const LANE_HOLD_FRACTION_RED = 0.58

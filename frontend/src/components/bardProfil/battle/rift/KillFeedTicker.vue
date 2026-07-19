@@ -36,7 +36,7 @@
                 <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
               </div>
             </template>
-            <template v-else>
+            <template v-else-if="row.type === 'structure'">
               <div class="feed-item feed-item--structure">
                 <Icon
                   :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
@@ -46,6 +46,14 @@
                   :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
                 />
                 <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
+              </div>
+            </template>
+            <template v-else>
+              <div class="feed-item">
+                <span class="feed-name" :class="row.buff.team === 1 ? 'feed-name--blue' : 'feed-name--red'">{{ row.buff.junglerName }}</span>
+                <img :src="battleStore.getChampionImage(row.buff.junglerName)" :alt="row.buff.junglerName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+                <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
+                <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
               </div>
             </template>
           </div>
@@ -81,7 +89,7 @@
             <img v-else :src="battleStore.getChampionImage(row.kill.victimName)" :alt="row.kill.victimName" class="feed-img feed-img--dead" :class="row.kill.killerTeam === 1 ? 'feed-img--red' : 'feed-img--blue'" />
             <span v-if="row.kill.multikillTier" class="feed-mk">{{ multikillLabel(row.kill.multikillTier) }}</span>
           </div>
-          <div v-else class="feed-item feed-item--structure">
+          <div v-else-if="row.type === 'structure'" class="feed-item feed-item--structure">
             <Icon
               :icon="row.structure.tier === 'inhibitor' ? 'game-icons:floating-crystal' : 'game-icons:watchtower'"
               width="22"
@@ -90,6 +98,11 @@
               :class="row.structure.team === 1 ? 'feed-structure-icon--blue' : 'feed-structure-icon--red'"
             />
             <span class="feed-structure-label">{{ structureLabel(row.structure) }}</span>
+          </div>
+          <div v-else class="feed-item">
+            <img :src="battleStore.getChampionImage(row.buff.junglerName)" :alt="row.buff.junglerName" class="feed-img" :class="row.buff.team === 1 ? 'feed-img--blue' : 'feed-img--red'" />
+            <span class="buff-orb" :class="`buff-orb--${row.buff.buffType}`" />
+            <span class="feed-buff-label" :class="`feed-buff-label--${row.buff.buffType}`">{{ buffLabel(row.buff) }}</span>
           </div>
         </div>
       </TransitionGroup>
@@ -143,7 +156,7 @@
           </div>
           <div class="tip-time">{{ formatFeedTime(hoveredRow.t) }} · {{ hoveredRow.kill.killerTeam === 1 ? 'Blue Team' : 'Red Team' }} kill</div>
         </template>
-        <template v-else>
+        <template v-else-if="hoveredRow.type === 'structure'">
           <div class="tip-headline">STRUCTURE DESTROYED</div>
           <div class="tip-line">
             <span :class="hoveredRow.structure.team === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.structure.team === 1 ? 'Blue Team' : 'Red Team' }}</span>
@@ -151,6 +164,15 @@
             <span class="tip-structure">{{ structureLabel(hoveredRow.structure) }}</span>
           </div>
           <div class="tip-time">{{ formatFeedTime(hoveredRow.t) }}</div>
+        </template>
+        <template v-else>
+          <div class="tip-headline">BUFF SECURED</div>
+          <div class="tip-line">
+            <span :class="hoveredRow.buff.team === 1 ? 'tip-name--blue' : 'tip-name--red'">{{ hoveredRow.buff.junglerName }}</span>
+            <span class="tip-verb"> claimed the </span>
+            <span :class="`feed-buff-label--${hoveredRow.buff.buffType}`">{{ buffLabel(hoveredRow.buff) }}</span>
+          </div>
+          <div class="tip-time">{{ formatFeedTime(hoveredRow.t) }} · {{ hoveredRow.buff.team === 1 ? 'Blue Team' : 'Red Team' }} jungle</div>
         </template>
       </div>
     </Teleport>
@@ -162,13 +184,14 @@ import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { multikillLabel } from '@/utils/battleMovement'
-import type { KillFeedEntry, StructureFeedEntry, StructureTier } from '@/types'
+import type { BuffFeedEntry, KillFeedEntry, StructureFeedEntry, StructureTier } from '@/types'
 
 const battleStore = useBattleStore()
 
 type FeedRow =
   | { type: 'kill'; t: number; key: string; kill: KillFeedEntry }
   | { type: 'structure'; t: number; key: string; structure: StructureFeedEntry }
+  | { type: 'buff'; t: number; key: string; buff: BuffFeedEntry }
 
 const feedEntries = computed<FeedRow[]>(() => {
   const rows: FeedRow[] = [
@@ -178,9 +201,16 @@ const feedEntries = computed<FeedRow[]>(() => {
     ...battleStore.structureFeed.map(
       (e): FeedRow => ({ type: 'structure', t: e.t, key: e.id, structure: e }),
     ),
+    ...battleStore.buffFeed.map(
+      (e): FeedRow => ({ type: 'buff', t: e.t, key: `buff-${e.team}-${e.buffType}-${e.t}`, buff: e }),
+    ),
   ]
   return rows.sort((a, b) => a.t - b.t).reverse()
 })
+
+function buffLabel(buff: BuffFeedEntry): string {
+  return buff.buffType === 'blue' ? 'Blue Buff' : 'Red Buff'
+}
 
 const barEntries = computed<FeedRow[]>(() => feedEntries.value)
 
@@ -210,6 +240,7 @@ function formatFeedTime(t: number): string {
 
 function rowAccentClass(row: FeedRow): string {
   if (row.type === 'structure') return 'feed-row--gold'
+  if (row.type === 'buff') return row.buff.team === 1 ? 'feed-row--blue' : 'feed-row--red'
   return row.kill.killerTeam === 1 ? 'feed-row--blue' : 'feed-row--red'
 }
 
@@ -582,6 +613,29 @@ function structureLabel(e: StructureFeedEntry): string {
   color: #e8c040;
   white-space: nowrap;
 }
+
+/* ── Jungle buff rows ── */
+.buff-orb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.buff-orb--blue {
+  background: radial-gradient(circle at 35% 30%, #bfdbfe, #3b82f6 55%, #1d4ed8);
+  box-shadow: 0 0 7px rgba(59, 130, 246, 0.9);
+}
+.buff-orb--red {
+  background: radial-gradient(circle at 35% 30%, #fecaca, #ef4444 55%, #b91c1c);
+  box-shadow: 0 0 7px rgba(239, 68, 68, 0.9);
+}
+.feed-buff-label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.feed-buff-label--blue { color: #93c5fd; }
+.feed-buff-label--red { color: #fca5a5; }
 
 /* ── Transitions ── */
 .panel-enter-active,

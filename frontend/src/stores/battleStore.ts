@@ -84,6 +84,7 @@ import {
   MOVE_RESPAWN_WALK_SECONDS,
   STRUCTURE_FEED_MAX,
   KILL_FEED_MAX,
+  BUFF_FEED_MAX,
   WINPROB_MIN,
   WINPROB_MAX,
   BATTLE_BASE_START_WIN_CHANCE,
@@ -95,6 +96,7 @@ import type {
   BattleResult,
   BattleRole,
   BattleTimeline,
+  BuffFeedEntry,
   ChampionCareerStats,
   ChampionState,
   KillFeedEntry,
@@ -307,6 +309,7 @@ export const useBattleStore = defineStore('battle', {
     // Derived from timeline replay — never persisted (rebuilt via applyTimelineUpTo)
     destroyedStructures: [] as StructureId[],
     structureFeed: [] as StructureFeedEntry[],
+    buffFeed: [] as BuffFeedEntry[],
     team1Turrets: 0,
     team2Turrets: 0,
     team1Inhibs: 0,
@@ -805,6 +808,15 @@ export const useBattleStore = defineStore('battle', {
           this._recordStructureFall(e)
           break
         }
+        case 'buff': {
+          if (!e.team || !e.buffType) break
+          const jungler = (e.team === 1 ? this.team1 : this.team2)[1]
+          if (!jungler?.name) break
+          this.buffFeed.push({ team: e.team, buffType: e.buffType, junglerName: jungler.name, t: e.t })
+          if (this.buffFeed.length > BUFF_FEED_MAX)
+            this.buffFeed.splice(0, this.buffFeed.length - BUFF_FEED_MAX)
+          break
+        }
         case 'nexus': {
           this.nexusDestroyedByTeam = (e.team ?? this.timeline?.winner ?? 1) as 1 | 2
           // the slam delta pins the momentum bar to the winner's end
@@ -976,6 +988,7 @@ export const useBattleStore = defineStore('battle', {
       this.battleTrack = defaultBattleTrack()
       this.destroyedStructures = []
       this.structureFeed = []
+      this.buffFeed = []
       this.team1Turrets = 0
       this.team2Turrets = 0
       this.team1Inhibs = 0
