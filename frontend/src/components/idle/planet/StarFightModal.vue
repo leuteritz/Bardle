@@ -676,13 +676,14 @@ function emberStyle(i: number): Record<string, string> {
   stroke-width: 5;
 }
 
+/* Kein drop-shadow: der Arc transitioniert alle 200 ms — ein Filter würde
+   das SVG dauerhaft jede Frame neu rastern */
 .sf-star-ring-arc {
   fill: none;
   stroke: #e8c040;
   stroke-width: 5;
   stroke-linecap: round;
   transition: stroke-dasharray 0.2s linear;
-  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.55));
 }
 
 .sf-star-ring-inner {
@@ -717,7 +718,6 @@ function emberStyle(i: number): Record<string, string> {
 /* Warnung ≤ STAR_FIGHT_TIMER_WARNING_S */
 .sf-star-ring--warning .sf-star-ring-arc {
   stroke: #e8a030;
-  filter: drop-shadow(0 0 6px rgba(232, 160, 48, 0.6));
 }
 .sf-star-ring--warning .sf-star-ring-secs {
   color: #e8a030;
@@ -734,7 +734,6 @@ function emberStyle(i: number): Record<string, string> {
 /* Kritisch ≤ STAR_FIGHT_TIMER_CRITICAL_S */
 .sf-star-ring--critical .sf-star-ring-arc {
   stroke: #ff5040;
-  filter: drop-shadow(0 0 7px rgba(255, 60, 40, 0.7));
 }
 .sf-star-ring--critical .sf-star-ring-secs {
   color: #ff5040;
@@ -1053,48 +1052,43 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 /* ── Boss-Angriff: Lunge des Boss-Sprites + Schockwelle ──────────────────── */
+/* Nur transform animieren — filter-Keyframes würden das große Boss-Sprite
+   jede Frame neu rastern (FPS-Killer bei 1 Angriff/s) */
 .sf-arena-wrap--strike :deep(.boss-img) {
   animation: sf-boss-strike 0.45s cubic-bezier(0.3, 0, 0.4, 1);
   transform-origin: 50% 85%;
+  will-change: transform;
 }
 
 @keyframes sf-boss-strike {
   0% {
     transform: translateY(0) scale(1) rotate(0deg);
-    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
   /* mächtig aufbäumen — hoch, groß, leicht zurückgelehnt */
   16% {
     transform: translateY(-20px) scale(1.14) rotate(-4deg);
-    filter: drop-shadow(0 10px 30px rgba(255, 90, 10, 0.8)) brightness(1.3);
   }
   /* Spannung halten, Gegenrotation */
   28% {
     transform: translateY(-24px) scale(1.18) rotate(3deg);
-    filter: drop-shadow(0 12px 36px rgba(255, 110, 20, 0.95)) brightness(1.6) saturate(1.4);
   }
-  /* Slam nach unten — gestaucht + Weißblitz */
+  /* Slam nach unten — gestaucht */
   40% {
     transform: translateY(18px) scale(1.12, 0.86) rotate(0deg);
-    filter: drop-shadow(0 0 40px rgba(255, 60, 0, 1)) brightness(2.4) saturate(0.6);
   }
   /* Abprall */
   52% {
     transform: translateY(6px) scale(0.96, 1.05);
-    filter: drop-shadow(0 3px 24px rgba(255, 70, 0, 0.8)) brightness(1.5) saturate(1.3);
   }
   /* Nachbeben */
   66% {
     transform: translateY(-5px) translateX(-3px) scale(1.03);
-    filter: drop-shadow(0 5px 18px rgba(255, 80, 0, 0.6)) brightness(1.15);
   }
   80% {
     transform: translateY(2px) translateX(2px) scale(0.99);
-    filter: drop-shadow(0 4px 15px rgba(255, 80, 0, 0.5)) brightness(1.05);
   }
   100% {
     transform: translateY(0) scale(1) rotate(0deg);
-    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
 }
 
@@ -1103,30 +1097,26 @@ function emberStyle(i: number): Record<string, string> {
 .sf-arena-wrap--hit :deep(.boss-img) {
   animation: sf-boss-flinch 0.35s cubic-bezier(0.2, 0, 0.3, 1);
   transform-origin: 50% 85%;
+  will-change: transform;
 }
 
 @keyframes sf-boss-flinch {
   0% {
     transform: translateX(0) rotate(0deg) scale(1);
-    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
-  /* Einschlag: weggedrückt + Weißblitz */
+  /* Einschlag: weggedrückt */
   18% {
     transform: translateX(-12px) rotate(-2.5deg) scale(0.96);
-    filter: drop-shadow(0 0 26px rgba(255, 240, 220, 0.9)) brightness(3) saturate(0);
   }
   /* Gegenruck */
   45% {
     transform: translateX(8px) rotate(1.5deg) scale(1.01);
-    filter: drop-shadow(0 3px 18px rgba(255, 120, 40, 0.6)) brightness(1.5) saturate(0.7);
   }
   70% {
     transform: translateX(-3px) rotate(-0.5deg) scale(1);
-    filter: drop-shadow(0 4px 15px rgba(255, 80, 0, 0.5)) brightness(1.1);
   }
   100% {
     transform: translateX(0) rotate(0deg) scale(1);
-    filter: drop-shadow(0 4px 14px rgba(255, 80, 0, 0.45));
   }
 }
 
@@ -1146,6 +1136,7 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
   z-index: 3;
   animation: sf-boss-wave-expand 0.45s ease-out forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes sf-boss-wave-expand {

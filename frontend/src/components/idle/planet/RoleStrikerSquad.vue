@@ -427,13 +427,14 @@ onUnmounted(() => {
   stroke-width: 4;
 }
 
+/* Kein drop-shadow: der Arc transitioniert quasi durchgehend (0.9 s pro
+   Sekundentick × 5 Ringe) — ein Filter würde die SVGs permanent neu rastern */
 .rsq-ring-arc {
   fill: none;
   stroke: var(--rc, #c8922a);
   stroke-width: 4;
   stroke-linecap: round;
   transition: stroke-dasharray 0.9s linear;
-  filter: drop-shadow(0 0 4px var(--rc, #c8922a));
 }
 
 /* ── Rollen-Badge (oben links) ───────────────────────────────────────────── */
@@ -488,59 +489,47 @@ onUnmounted(() => {
   transition: box-shadow 0.25s, border-color 0.25s;
 }
 
-/* Kurz vor dem Abschuss aufglühen */
+/* Kurz vor dem Abschuss aufglühen — Puls über opacity (GPU), nicht box-shadow */
 .rsq-cdpill--ready {
   border-color: var(--rc, #c8922a);
   color: #fff;
   box-shadow:
-    0 0 12px color-mix(in srgb, var(--rc) 75%, transparent),
+    0 0 14px color-mix(in srgb, var(--rc) 80%, transparent),
     0 2px 5px rgba(0, 0, 0, 0.75);
   animation: rsq-cdpill-pulse 0.6s ease-in-out infinite alternate;
 }
 
 @keyframes rsq-cdpill-pulse {
   from {
-    box-shadow:
-      0 0 8px color-mix(in srgb, var(--rc) 50%, transparent),
-      0 2px 5px rgba(0, 0, 0, 0.75);
+    opacity: 0.72;
   }
   to {
-    box-shadow:
-      0 0 18px color-mix(in srgb, var(--rc) 90%, transparent),
-      0 2px 5px rgba(0, 0, 0, 0.75);
+    opacity: 1;
   }
 }
 
-/* Abschuss: Lunge Richtung Boss → Recoil → abklingender Shake + Glow */
+/* Abschuss: Lunge Richtung Boss → Recoil → abklingender Shake — nur transform
+   (GPU); das Aufglühen übernimmt der Mündungsblitz */
 .rsq-item--firing .rsq-portrait {
   animation: rsq-attack 0.5s cubic-bezier(0.3, 0, 0.4, 1);
-  will-change: transform, filter;
+  will-change: transform;
 }
 
 @keyframes rsq-attack {
   0% {
     transform: translate(0, 0) scale(1);
-    filter: brightness(1);
   }
   /* Ausholen: kurz vom Boss weg */
   10% {
     transform: translate(calc(var(--ax, 0px) * -0.35), calc(var(--ay, 0px) * -0.35)) scale(0.94);
-    filter: brightness(0.85);
   }
-  /* Vorstoß Richtung Boss + hellster Moment */
+  /* Vorstoß Richtung Boss */
   26% {
     transform: translate(var(--ax, 0px), var(--ay, 0px)) scale(1.1);
-    filter: brightness(1.8) saturate(1.3);
-    box-shadow:
-      0 0 0 2px rgba(6, 3, 0, 0.9),
-      0 0 28px var(--rc, #c8922a),
-      0 0 46px color-mix(in srgb, var(--rc) 55%, transparent),
-      0 5px 12px rgba(0, 0, 0, 0.7);
   }
   /* Recoil über die Mitte hinaus */
   44% {
     transform: translate(calc(var(--ax, 0px) * -0.28), calc(var(--ay, 0px) * -0.28)) scale(0.98);
-    filter: brightness(1.15);
   }
   /* abklingender Shake */
   58% {
@@ -554,33 +543,47 @@ onUnmounted(() => {
   }
   100% {
     transform: translate(0, 0) scale(1);
-    filter: brightness(1);
   }
 }
 
-/* ── Boss-Treffer: roter Flash + Ruckeln am Portrait ─────────────────────── */
+/* ── Boss-Treffer: Ruckeln (transform) + roter Overlay-Blitz (opacity) —
+   beides GPU-kompositierbar, kein Filter-Rastern jede Sekunde ×5 ─────────── */
 .rsq-item--hit .rsq-portrait {
   animation: rsq-boss-hit 0.45s ease-out;
 }
 
 @keyframes rsq-boss-hit {
-  0% {
-    filter: brightness(2.2) saturate(0.4) sepia(0.5) hue-rotate(-30deg);
-    box-shadow:
-      0 0 0 2px rgba(6, 3, 0, 0.9),
-      0 0 20px rgba(255, 60, 40, 1),
-      0 0 44px rgba(220, 30, 20, 0.6);
+  0%,
+  100% {
+    translate: 0 0;
   }
   30% {
     translate: -3px 1px;
   }
   55% {
     translate: 3px -1px;
-    filter: brightness(1.4) saturate(0.8);
+  }
+  80% {
+    translate: -1px 0;
+  }
+}
+
+.rsq-item--hit .rsq-portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 90, 60, 0.6) 0%, rgba(255, 40, 20, 0.3) 65%, transparent 100%);
+  animation: rsq-hitflash-fade 0.45s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes rsq-hitflash-fade {
+  0% {
+    opacity: 1;
   }
   100% {
-    translate: 0 0;
-    filter: brightness(1) saturate(1);
+    opacity: 0;
   }
 }
 
@@ -994,6 +997,7 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .rsq-item--firing .rsq-portrait,
   .rsq-item--hit .rsq-portrait,
+  .rsq-item--hit .rsq-portrait::after,
   .rsq-hp-fill--low,
   .rsq-cdpill--ready,
   .rsq-muzzle,
