@@ -842,12 +842,25 @@ export const ROLE_STAR_ATTACKS: Record<ChampionRole, { damage: number; intervalM
 // ── Star Fight Modal — Role Striker Squad (RoleStrikerSquad.vue) ──────────
 export const STRIKER_FLOAT_DURATION_MS = 1400 // floating dmg number lifetime above a striker
 export const STRIKER_FLOAT_MAX = 8 // cap on simultaneous striker damage floats
-export const STRIKER_ITEM_PX = 72 // striker portrait diameter (matches .rsq-item CSS)
-export const STRIKER_GAP_PX = 34 // flex gap between strikers (matches .rsq CSS)
-export const STRIKER_PROJECTILE_RISE_PX = 190 // vertical flight distance striker → boss
 export const STRIKER_PROJECTILE_FLIGHT_MS = 550 // projectile travel time
 export const STRIKER_IMPACT_MS = 900 // impact burst + damage number lifetime
 export const STRIKER_FIRE_FLASH_MS = 500 // portrait glow pulse after firing
+// Halbkreis unterhalb des Boss-Bilds: Winkel in Grad (0° = rechts, 90° = unten)
+// je Rolle — Top ganz links, Mid unten Mitte, Support rechts. Alle Maße in %
+// der Arena, damit das Layout auf Full-HD wie auf 2K identisch sitzt.
+export const STRIKER_ARC_ANGLES: Record<ChampionRole, number> = {
+  top: 191,
+  jungle: 141,
+  mid: 90,
+  adc: 39,
+  support: -11,
+}
+export const STRIKER_ARC_RX_PCT = 36 // horizontal semi-axis of the striker arc (% arena width)
+export const STRIKER_ARC_RY_PCT = 10 // vertical semi-axis of the striker arc (% arena height)
+export const STRIKER_ARC_CENTER_Y_PCT = 60 // arc center as % of arena height (below the boss)
+export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
+export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
+export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80

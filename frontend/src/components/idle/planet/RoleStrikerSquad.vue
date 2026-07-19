@@ -1,11 +1,18 @@
 <template>
-  <div v-if="strikers.length" class="rsq" aria-hidden="true">
+  <div v-if="strikers.length" ref="rootEl" class="rsq" aria-hidden="true">
+    <!-- Halbkreis-Führungslinie hinter den Strikern -->
+    <div class="rsq-arc-guide" :style="arcGuideStyle" />
+
     <div
-      v-for="(s, i) in strikers"
+      v-for="s in strikers"
       :key="s.role"
       class="rsq-item"
       :class="{ 'rsq-item--firing': firingRoles.has(s.role) }"
-      :style="{ '--rc': s.color }"
+      :style="{
+        '--rc': s.color,
+        left: `${s.xPct}%`,
+        top: `${s.yPct}%`,
+      }"
     >
       <div class="rsq-portrait">
         <img
@@ -13,38 +20,50 @@
           :alt="s.champion"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
-        <div v-if="s.secs > 0" class="rsq-veil" :style="{ '--el': s.readyDeg + 'deg' }" />
       </div>
       <svg class="rsq-ring" viewBox="0 0 100 100">
         <circle class="rsq-ring-track" cx="50" cy="50" r="44" />
         <circle class="rsq-ring-arc" cx="50" cy="50" r="44" :style="{ strokeDasharray: s.dash }" />
       </svg>
       <div class="rsq-badge"><img :src="s.roleImage" alt="" draggable="false" /></div>
-      <div
-        class="rsq-ability"
-        :class="{ 'rsq-ability--lit': s.abilityLit }"
-        :title="s.abilityName"
-      >
-        <Icon :icon="s.abilityIcon" width="13" height="13" />
-      </div>
-      <span class="rsq-cd">{{ s.secs }}</span>
-      <span class="rsq-label">{{ s.label }}</span>
 
-      <!-- Projektile + Impacts dieses Strikers (fliegen zum Boss hoch) -->
+      <!-- Cooldown-Pill am unteren Portraitrand -->
+      <span class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs <= 1 }">
+        {{ s.secs }}s
+      </span>
+
+      <!-- Info-Plate: Champion-Name + Rolle · Schaden -->
+      <div class="rsq-plate">
+        <span class="rsq-plate-name">{{ s.champion }}</span>
+        <span class="rsq-plate-stats">{{ s.roleShort }} · {{ s.attackDamage }} dmg</span>
+      </div>
+
+      <!-- Mündungsblitz Richtung Boss beim Abschuss -->
+      <span
+        v-if="firingRoles.has(s.role)"
+        class="rsq-muzzle"
+        :style="{ '--mx': s.mx + 'px', '--my': s.my + 'px' }"
+      />
+
+      <!-- Projektile + Impacts dieses Strikers -->
       <template v-for="shot in shotsFor(s.role)" :key="shot.id">
         <span
           v-if="shot.phase === 'fly'"
           class="rsq-proj"
-          :style="{ '--px': projDx(i) + 'px', '--py': -STRIKER_PROJECTILE_RISE_PX + 'px' }"
+          :style="{ '--px': s.px + 'px', '--py': s.py + 'px', '--rot': s.rot + 'deg' }"
         />
         <span
           v-else
           class="rsq-impact"
-          :style="{
-            transform: `translate(calc(-50% + ${projDx(i)}px), ${-STRIKER_PROJECTILE_RISE_PX}px)`,
-          }"
+          :style="{ transform: `translate(${s.px}px, ${s.py}px)` }"
         >
           <span class="rsq-impact-burst" />
+          <span
+            v-for="k in 6"
+            :key="k"
+            class="rsq-spark"
+            :style="{ '--sx': SPARK_DIRS[k - 1].x + 'px', '--sy': SPARK_DIRS[k - 1].y + 'px' }"
+          />
           <span class="rsq-impact-num">-{{ shot.value }}</span>
         </span>
       </template>
@@ -66,7 +85,6 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, watch, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
@@ -75,16 +93,19 @@ import {
   ROLE_STAR_ATTACKS,
   ROLE_ADC_BURST_DAMAGE,
   ROLE_MID_CURSE_DOT_DPS,
-  ORBIT_ROLE_ABILITIES,
   GAME_TICK_INTERVAL_MS,
   STRIKER_FLOAT_DURATION_MS,
   STRIKER_FLOAT_MAX,
-  STRIKER_ITEM_PX,
-  STRIKER_GAP_PX,
-  STRIKER_PROJECTILE_RISE_PX,
   STRIKER_PROJECTILE_FLIGHT_MS,
   STRIKER_IMPACT_MS,
   STRIKER_FIRE_FLASH_MS,
+  STRIKER_ARC_ANGLES,
+  STRIKER_ARC_RX_PCT,
+  STRIKER_ARC_RY_PCT,
+  STRIKER_ARC_CENTER_Y_PCT,
+  STRIKER_BOSS_ANCHOR_X_PCT,
+  STRIKER_BOSS_ANCHOR_Y_PCT,
+  STRIKER_PROJECTILE_IMPACT_FRAC,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 
@@ -106,21 +127,20 @@ const SLOT_BY_ROLE: Record<ChampionRole, number> = {
 
 const SQUAD_ROLES = Object.keys(ROLE_STAR_ATTACKS) as ChampionRole[]
 
-// ── Normale Rollen-Fähigkeit: Badge leuchtet wenn bereit / aktiv ─────────
-function abilityLit(role: ChampionRole): boolean {
-  switch (role) {
-    case 'top':
-      return roleBehaviorStore.tankShieldActive
-    case 'jungle':
-      return roleBehaviorStore.jungleBuffCooldownMs <= 0
-    case 'mid':
-      return roleBehaviorStore.activeCurse !== null || roleBehaviorStore.midCurseCooldownMs <= 0
-    case 'adc':
-      return roleBehaviorStore.adcBurstActive || roleBehaviorStore.adcBurstCooldownMs <= 0
-    case 'support':
-      return roleBehaviorStore.supportPlanetHealActive
-  }
-}
+// Funken-Richtungen für den Impact (fixe Streuung, kein Math.random pro Frame)
+const SPARK_DIRS = [
+  { x: 24, y: -8 },
+  { x: 14, y: -22 },
+  { x: -10, y: -24 },
+  { x: -24, y: -6 },
+  { x: -16, y: 18 },
+  { x: 18, y: 16 },
+]
+
+// Arena-Größe in px — nötig für die Projektil-Flugvektoren (transform braucht px)
+const rootEl = ref<HTMLDivElement | null>(null)
+const arenaSize = ref({ w: 0, h: 0 })
+let resizeObserver: ResizeObserver | null = null
 
 const strikers = computed(() =>
   SQUAD_ROLES.flatMap((role) => {
@@ -129,6 +149,18 @@ const strikers = computed(() =>
     const def = ROLE_STAR_ATTACKS[role]
     const remaining = Math.max(0, roleBehaviorStore.roleAttackCooldownMs[role])
     const readyFrac = Math.max(0, Math.min(1, 1 - remaining / def.intervalMs))
+
+    // Position auf dem Halbkreis — in % der Arena, skaliert mit jeder Auflösung
+    const rad = (STRIKER_ARC_ANGLES[role] * Math.PI) / 180
+    const xPct = 50 + Math.cos(rad) * STRIKER_ARC_RX_PCT
+    const yPct = STRIKER_ARC_CENTER_Y_PCT + Math.sin(rad) * STRIKER_ARC_RY_PCT
+
+    // Flugvektor zum Boss-Anker in px (Impact kurz vor dem Boss)
+    const { w, h } = arenaSize.value
+    const px = Math.round(((STRIKER_BOSS_ANCHOR_X_PCT - xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC)
+    const py = Math.round(((STRIKER_BOSS_ANCHOR_Y_PCT - yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC)
+    const dist = Math.hypot(px, py) || 1
+
     return [
       {
         role,
@@ -136,23 +168,31 @@ const strikers = computed(() =>
         img: battleStore.getChampionImage(champion),
         roleImage: ROLE_BY_KEY[role].image,
         color: ROLE_BY_KEY[role].color,
-        label: `${ROLE_BY_KEY[role].short} · ${def.damage} dmg`,
-        abilityIcon: ORBIT_ROLE_ABILITIES[role].icon,
-        abilityName: ORBIT_ROLE_ABILITIES[role].name,
-        abilityLit: abilityLit(role),
+        roleShort: ROLE_BY_KEY[role].short,
+        attackDamage: def.damage,
         secs: Math.ceil(remaining / 1000),
-        readyDeg: Math.round(readyFrac * 360),
         dash: `${(readyFrac * RING_CIRCUMFERENCE).toFixed(1)} ${RING_CIRCUMFERENCE.toFixed(1)}`,
+        xPct: Math.round(xPct * 10) / 10,
+        yPct: Math.round(yPct * 10) / 10,
+        px,
+        py,
+        // Schweif zeigt der Flugrichtung entgegen
+        rot: Math.round((Math.atan2(py, px) * 180) / Math.PI) + 90,
+        // Mündungsblitz am Portraitrand Richtung Boss
+        mx: Math.round((px / dist) * 52),
+        my: Math.round((py / dist) * 52),
       },
     ]
   }),
 )
 
-/** Horizontaler Versatz vom Striker i zur Squad-Mitte (= Boss-Achse) */
-function projDx(i: number): number {
-  const n = strikers.value.length
-  return -Math.round((i - (n - 1) / 2) * (STRIKER_ITEM_PX + STRIKER_GAP_PX))
-}
+// Halbkreis-Führungslinie (Ellipse, oberer Teil ausgeblendet) — reine %-Maße
+const arcGuideStyle = computed(() => ({
+  width: `${STRIKER_ARC_RX_PCT * 2}%`,
+  height: `${STRIKER_ARC_RY_PCT * 2}%`,
+  left: `${50 - STRIKER_ARC_RX_PCT}%`,
+  top: `${STRIKER_ARC_CENTER_Y_PCT - STRIKER_ARC_RY_PCT}%`,
+}))
 
 // ── Projektile: Striker → Boss, dann Impact-Burst + Schadenszahl ─────────
 interface StrikerShot {
@@ -241,10 +281,27 @@ onMounted(() => {
       pushFloat('mid', ROLE_MID_CURSE_DOT_DPS)
     }
   }, GAME_TICK_INTERVAL_MS)
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const rect = entries[0]?.contentRect
+    if (rect) arenaSize.value = { w: rect.width, h: rect.height }
+  })
+})
+
+// rootEl existiert erst, wenn v-if greift — Observer dann (re-)anbinden
+watch(rootEl, (el, prev) => {
+  if (prev && resizeObserver) resizeObserver.unobserve(prev)
+  if (el && resizeObserver) {
+    resizeObserver.observe(el)
+    const rect = el.getBoundingClientRect()
+    arenaSize.value = { w: rect.width, h: rect.height }
+  }
 })
 
 onUnmounted(() => {
   if (dotInterval !== null) window.clearInterval(dotInterval)
+  resizeObserver?.disconnect()
+  resizeObserver = null
   timeouts.forEach(window.clearTimeout)
   timeouts.length = 0
 })
@@ -252,19 +309,26 @@ onUnmounted(() => {
 
 <style scoped>
 .rsq {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  /* Muss STRIKER_GAP_PX entsprechen (Projektil-Geometrie) */
-  gap: 34px;
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
+/* ── Halbkreis-Führungslinie — verbindet die Striker optisch ─────────────── */
+.rsq-arc-guide {
+  position: absolute;
+  border: 1px dashed rgba(232, 192, 64, 0.22);
+  border-radius: 50%;
+  /* nur der untere Bogen: oberen Teil ausblenden */
+  -webkit-mask: linear-gradient(to bottom, transparent 0 26%, #000 44%);
+  mask: linear-gradient(to bottom, transparent 0 26%, #000 44%);
+}
+
 .rsq-item {
-  position: relative;
-  /* Muss STRIKER_ITEM_PX entsprechen (Projektil-Geometrie) */
-  width: 72px;
-  height: 72px;
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -50%);
 }
 
 /* ── Portrait ────────────────────────────────────────────────────────────── */
@@ -276,8 +340,8 @@ onUnmounted(() => {
   border: 2px solid var(--rc, #c8922a);
   box-shadow:
     0 0 0 2px rgba(6, 3, 0, 0.9),
-    0 0 14px color-mix(in srgb, var(--rc) 55%, transparent),
-    0 4px 10px rgba(0, 0, 0, 0.7);
+    0 0 16px color-mix(in srgb, var(--rc) 55%, transparent),
+    0 5px 12px rgba(0, 0, 0, 0.7);
 }
 
 .rsq-portrait img {
@@ -288,24 +352,12 @@ onUnmounted(() => {
   display: block;
 }
 
-/* Dunkler Kegel = verbleibender Cooldown (dreht sich mit Fortschritt weg) */
-.rsq-veil {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from -90deg,
-    transparent 0 var(--el, 0deg),
-    rgba(3, 1, 0, 0.74) var(--el, 0deg) 360deg
-  );
-}
-
 /* ── Cooldown-Ring ───────────────────────────────────────────────────────── */
 .rsq-ring {
   position: absolute;
-  inset: -5px;
-  width: calc(100% + 10px);
-  height: calc(100% + 10px);
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
   transform: rotate(-90deg);
 }
 
@@ -327,10 +379,10 @@ onUnmounted(() => {
 /* ── Rollen-Badge (oben links) ───────────────────────────────────────────── */
 .rsq-badge {
   position: absolute;
-  top: -6px;
-  left: -6px;
-  width: 26px;
-  height: 26px;
+  top: -5px;
+  left: -5px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #0c0803;
   border: 1.5px solid var(--rc, #c8922a);
@@ -342,56 +394,61 @@ onUnmounted(() => {
 }
 
 .rsq-badge img {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   object-fit: contain;
 }
 
-/* ── Fähigkeits-Badge (unten rechts): leuchtet wenn Ability bereit/aktiv ── */
-.rsq-ability {
+/* ── Cooldown-Pill am unteren Portraitrand ───────────────────────────────── */
+.rsq-cdpill {
   position: absolute;
-  bottom: -5px;
-  right: -7px;
-  width: 23px;
-  height: 23px;
-  border-radius: 50%;
-  background: #0c0803;
-  border: 1.5px solid #3a2410;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6a5a40;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
-  z-index: 2;
-  transition:
-    border-color 0.25s,
-    color 0.25s,
-    box-shadow 0.25s;
-}
-
-.rsq-ability--lit {
-  border-color: var(--rc, #c8922a);
-  color: var(--rc, #c8922a);
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  min-width: 34px;
+  padding: 2px 8px;
+  border-radius: 9px;
+  text-align: center;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--rc) 32%, #16100a),
+    #0c0803
+  );
+  border: 1px solid color-mix(in srgb, var(--rc) 65%, #3a2410);
   box-shadow:
-    0 0 8px color-mix(in srgb, var(--rc) 60%, transparent),
-    0 2px 5px rgba(0, 0, 0, 0.7);
+    0 0 8px color-mix(in srgb, var(--rc) 35%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.75);
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #f4ead0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  z-index: 3;
+  transition: box-shadow 0.25s, border-color 0.25s;
 }
 
-/* ── Countdown ───────────────────────────────────────────────────────────── */
-.rsq-cd {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-  font-weight: 900;
+/* Kurz vor dem Abschuss aufglühen */
+.rsq-cdpill--ready {
+  border-color: var(--rc, #c8922a);
   color: #fff;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 8px rgba(0, 0, 0, 0.9),
-    0 1px 2px #000;
-  z-index: 2;
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--rc) 75%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.75);
+  animation: rsq-cdpill-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes rsq-cdpill-pulse {
+  from {
+    box-shadow:
+      0 0 8px color-mix(in srgb, var(--rc) 50%, transparent),
+      0 2px 5px rgba(0, 0, 0, 0.75);
+  }
+  to {
+    box-shadow:
+      0 0 18px color-mix(in srgb, var(--rc) 90%, transparent),
+      0 2px 5px rgba(0, 0, 0, 0.75);
+  }
 }
 
 /* Abschuss-Puls */
@@ -403,72 +460,134 @@ onUnmounted(() => {
   0% {
     box-shadow:
       0 0 0 2px rgba(6, 3, 0, 0.9),
-      0 0 26px var(--rc, #c8922a),
-      0 0 42px color-mix(in srgb, var(--rc) 55%, transparent),
-      0 4px 10px rgba(0, 0, 0, 0.7);
+      0 0 28px var(--rc, #c8922a),
+      0 0 46px color-mix(in srgb, var(--rc) 55%, transparent),
+      0 5px 12px rgba(0, 0, 0, 0.7);
     filter: brightness(1.6);
   }
   100% {
     box-shadow:
       0 0 0 2px rgba(6, 3, 0, 0.9),
-      0 0 14px color-mix(in srgb, var(--rc) 55%, transparent),
-      0 4px 10px rgba(0, 0, 0, 0.7);
+      0 0 16px color-mix(in srgb, var(--rc) 55%, transparent),
+      0 5px 12px rgba(0, 0, 0, 0.7);
     filter: brightness(1);
   }
 }
 
-/* ── Label-Chip unter dem Portrait ───────────────────────────────────────── */
-.rsq-label {
+/* ── Info-Plate unter dem Portrait ───────────────────────────────────────── */
+.rsq-plate {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: 3px;
-  background: rgba(8, 5, 2, 0.9);
-  border: 1px solid color-mix(in srgb, var(--rc) 45%, #3a2410);
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--rc) 55%, #f0e6cc);
-  white-space: nowrap;
-  text-transform: uppercase;
+  gap: 1px;
+  min-width: 96px;
+  padding: 4px 10px 5px;
+  border-radius: 4px;
+  background: rgba(8, 5, 2, 0.92);
+  border: 1px solid color-mix(in srgb, var(--rc) 40%, #3a2410);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Projektil: Orb in Rollenfarbe fliegt vom Striker zum Boss ───────────── */
+/* Goldlinie oben — wie die Modal-Karten */
+.rsq-plate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--rc) 75%, #e8c060),
+    transparent
+  );
+}
+
+.rsq-plate-name {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #f0e6cc;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.rsq-plate-stats {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--rc) 65%, #f0e6cc);
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mündungsblitz Richtung Boss ─────────────────────────────────────────── */
+.rsq-muzzle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--rc, #c8922a) 40%, transparent 70%);
+  transform: translate(var(--mx), var(--my));
+  animation: rsq-muzzle 0.28s ease-out forwards;
+  z-index: 3;
+}
+
+@keyframes rsq-muzzle {
+  0% {
+    opacity: 1;
+    transform: translate(var(--mx), var(--my)) scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--mx), var(--my)) scale(1.5);
+  }
+}
+
+/* ── Projektil: Komet in Rollenfarbe fliegt zum Boss ─────────────────────── */
 .rsq-proj {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: radial-gradient(circle, #fff 0%, var(--rc, #c8922a) 45%, transparent 75%);
   box-shadow:
-    0 0 10px var(--rc, #c8922a),
-    0 0 22px color-mix(in srgb, var(--rc) 60%, transparent);
+    0 0 12px var(--rc, #c8922a),
+    0 0 26px color-mix(in srgb, var(--rc) 60%, transparent);
   animation: rsq-proj-fly 0.55s cubic-bezier(0.3, 0, 0.75, 0.5) forwards;
   will-change: transform, opacity;
   z-index: 3;
 }
 
-/* Schweif */
+/* Schweif — entgegen der Flugrichtung rotiert */
 .rsq-proj::after {
   content: '';
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 4px;
-  height: 26px;
-  transform: translate(-50%, -12%);
-  border-radius: 2px;
+  width: 5px;
+  height: 32px;
+  transform: translate(-50%, -10%) rotate(var(--rot, 0deg));
+  transform-origin: top center;
+  border-radius: 3px;
   background: linear-gradient(
     to bottom,
-    transparent,
-    color-mix(in srgb, var(--rc) 70%, transparent)
+    color-mix(in srgb, var(--rc) 85%, #fff),
+    transparent
   );
   filter: blur(1px);
 }
@@ -484,11 +603,11 @@ onUnmounted(() => {
   }
   100% {
     opacity: 1;
-    transform: translate(var(--px), var(--py)) scale(1.05);
+    transform: translate(var(--px), var(--py)) scale(1.1);
   }
 }
 
-/* ── Impact am Boss: Burst-Ring + Schadenszahl ───────────────────────────── */
+/* ── Impact am Boss: Schockwelle + Funken + Schadenszahl ─────────────────── */
 .rsq-impact {
   position: absolute;
   left: 50%;
@@ -501,25 +620,49 @@ onUnmounted(() => {
   position: absolute;
   left: 50%;
   top: 0;
-  width: 26px;
-  height: 26px;
-  margin-left: -13px;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
   border-radius: 50%;
   border: 2px solid var(--rc, #c8922a);
   box-shadow:
-    0 0 12px var(--rc, #c8922a),
-    inset 0 0 8px color-mix(in srgb, var(--rc) 60%, transparent);
+    0 0 14px var(--rc, #c8922a),
+    inset 0 0 10px color-mix(in srgb, var(--rc) 60%, transparent);
   animation: rsq-impact-burst 0.45s ease-out forwards;
 }
 
 @keyframes rsq-impact-burst {
   0% {
     opacity: 1;
-    transform: scale(0.35);
+    transform: scale(0.3);
   }
   100% {
     opacity: 0;
-    transform: scale(1.6);
+    transform: scale(1.7);
+  }
+}
+
+.rsq-spark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--rc) 80%, #fff);
+  box-shadow: 0 0 6px var(--rc, #c8922a);
+  animation: rsq-spark-fly 0.5s ease-out forwards;
+}
+
+@keyframes rsq-spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--sx), var(--sy)) scale(0.4);
   }
 }
 
@@ -528,7 +671,7 @@ onUnmounted(() => {
   left: 50%;
   top: 0;
   transform: translateX(-50%);
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 900;
   color: #fff;
   -webkit-text-stroke: 3px rgba(0, 0, 0, 0.9);
@@ -545,11 +688,11 @@ onUnmounted(() => {
   }
   18% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-6px) scale(1.15);
+    transform: translateX(-50%) translateY(-8px) scale(1.2);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-34px) scale(0.85);
+    transform: translateX(-50%) translateY(-38px) scale(0.85);
   }
 }
 
@@ -601,8 +744,11 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .rsq-item--firing .rsq-portrait,
+  .rsq-cdpill--ready,
+  .rsq-muzzle,
   .rsq-proj,
   .rsq-impact-burst,
+  .rsq-spark,
   .rsq-impact-num,
   .rsq-pop-enter-active {
     animation: none;

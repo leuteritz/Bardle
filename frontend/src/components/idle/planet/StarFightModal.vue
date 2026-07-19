@@ -689,19 +689,22 @@ function emberStyle(i: number): Record<string, string> {
   overflow: hidden;
 }
 
-/* Arena füllt den ganzen Bereich — Boss steht mittig auf dem Planeten */
+/* Arena füllt den ganzen Bereich — Boss steht mittig auf dem Planeten.
+   padding-bottom hebt den Boss an, damit der Striker-Halbkreis komplett
+   unterhalb des Boss-Bilds Platz hat (auflösungsunabhängig) */
 .sf-arena-wrap :deep(.arena) {
   flex: 1;
   min-height: 0;
   height: auto;
   aspect-ratio: auto;
   z-index: 1;
+  padding-bottom: 18%;
 }
 
-/* Boss etwas kompakter, damit der Planet dahinter voll sichtbar bleibt */
+/* Boss kompakter, damit Planet + Striker-Halbkreis sichtbar bleiben */
 .sf-arena-wrap :deep(.boss-img) {
-  height: 58%;
-  max-width: 48%;
+  height: 44%;
+  max-width: 40%;
 }
 
 /* Bossname kommt jetzt oben ins HP-Overlay — Arena-eigenes Overlay ausblenden */
@@ -961,12 +964,11 @@ function emberStyle(i: number): Record<string, string> {
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
-/* ── Attacker Squad — Reihe unter dem Boss, über dem Loot-Dock ───────────── */
+/* ── Attacker Squad — Halbkreis um den Boss (RoleStrikerSquad positioniert
+   die Striker selbst auf dem Ellipsenbogen) ──────────────────────────────── */
 .sf-squad {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 168px;
+  inset: 0;
   z-index: 4;
   pointer-events: none;
 }
