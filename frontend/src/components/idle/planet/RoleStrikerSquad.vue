@@ -56,7 +56,7 @@
           {{ s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}` }}
         </span>
         <span class="rsq-plate-name">{{ s.champion }}</span>
-        <span class="rsq-plate-stats">{{ s.roleShort }} · {{ s.attackDamage }} dmg</span>
+        <span class="rsq-plate-stats">{{ s.attackDamage }} dmg</span>
       </div>
 
       <!-- Mündungsblitz Richtung Boss beim Abschuss -->
@@ -200,7 +200,6 @@ const strikers = computed(() =>
         img: battleStore.getChampionImage(champion),
         roleImage: ROLE_BY_KEY[role].image,
         color: ROLE_BY_KEY[role].color,
-        roleShort: ROLE_BY_KEY[role].short,
         attackDamage: def.damage,
         secs: Math.ceil(remaining / 1000),
         dash: `${(readyFrac * RING_CIRCUMFERENCE).toFixed(1)} ${RING_CIRCUMFERENCE.toFixed(1)}`,
@@ -690,22 +689,30 @@ onUnmounted(() => {
   }
 }
 
+/* HP-Zahl als Held der Plate — groß, konturiert, Rollenfarben-Glow */
 .rsq-hp-text {
-  font-size: 0.56rem;
-  font-weight: 700;
+  font-size: 1.05rem;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: #e8c040;
-  letter-spacing: 0.02em;
+  color: #f4ead0;
+  letter-spacing: 0.03em;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
-  line-height: 1.2;
+  -webkit-text-stroke: 1px rgba(10, 5, 0, 0.85);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--rc, #c8922a) 65%, transparent),
+    0 0 24px color-mix(in srgb, var(--rc, #c8922a) 30%, transparent),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+  line-height: 1.15;
+  margin-top: 1px;
 }
 
 .rsq-hp-text--down {
   color: #ff6050;
   text-shadow:
-    0 0 4px rgba(255, 60, 40, 0.7),
-    0 1px 2px rgba(0, 0, 0, 0.95);
+    0 0 10px rgba(255, 60, 40, 0.75),
+    0 0 24px rgba(220, 30, 20, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Info-Plate unter dem Portrait ───────────────────────────────────────── */
@@ -744,23 +751,26 @@ onUnmounted(() => {
 }
 
 .rsq-plate-name {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
-  color: #f0e6cc;
+  letter-spacing: 0.08em;
+  color: rgba(240, 230, 204, 0.85);
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .rsq-plate-stats {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--rc) 65%, #f0e6cc);
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--rc) 70%, #f0e6cc);
   text-transform: uppercase;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 8px color-mix(in srgb, var(--rc) 40%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Mündungsblitz Richtung Boss ─────────────────────────────────────────── */
