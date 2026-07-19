@@ -9,6 +9,7 @@ import {
 import type { PlanetRoleType, PlanetSlot } from '@/stores/planetShopStore'
 import { useUiStore } from '@/stores/uiStore'
 import { formatNumber } from '@/config/numberFormat'
+import { PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR } from '@/config/constants'
 import ChampionSelectorComponent from '@/components/bottom/command/ChampionSelectorComponent.vue'
 
 const planetStore = usePlanetShopStore()
@@ -20,7 +21,9 @@ function roleColor(role: PlanetRoleType): string {
 }
 
 function roleImage(role: PlanetRoleType): string {
-  return PLANET_ROLES[role].image
+  // pre-scaled thumb: the ~700px originals blur when the browser minifies
+  // them straight down to the ~60px tile
+  return PLANET_ROLES[role].image.replace(PLANET_IMAGE_DIR, PLANET_IMAGE_THUMB_DIR)
 }
 
 // Ticker für den Buff-Countdown-Ring: activeUntil ist reaktiv, Date.now()
@@ -207,12 +210,10 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   height: 100%;
   object-fit: cover;
   display: block;
-  transform: translateZ(0);
   transition: transform 0.18s ease;
-  backface-visibility: hidden;
 }
 .cmd-planet-tile:hover .cmd-tile-planet-img {
-  transform: translateZ(0) scale(1.06);
+  transform: scale(1.06);
 }
 
 .cmd-tile-img-vignette {

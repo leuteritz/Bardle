@@ -86,6 +86,11 @@ export const PLANET_EVENT_PRESTIGE_BONUS = 0.35
 // Planet material drop chance (probability that a rescue planet carries material)
 export const PLANET_MATERIAL_CHANCE = 0.6
 
+// Pre-scaled planet thumbnails (256px, HQ resampling) for small UI tiles —
+// browsers blur when minifying the ~700px originals down to ~60px in one step
+export const PLANET_IMAGE_DIR = '/img/planets/'
+export const PLANET_IMAGE_THUMB_DIR = '/img/planets/thumb/'
+
 // ── Material display (header materials grid) ────────────────────────────────
 // Count color per material id.
 export const MATERIAL_COLOR: Record<string, string> = {
