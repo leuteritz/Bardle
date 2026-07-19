@@ -202,8 +202,12 @@ watch(bluePercent, (next, prev) => {
 .side-stats {
   display: flex;
   align-items: center;
-  gap: clamp(6px, 1.2cqw, 16px);
-  font-size: clamp(13px, 1.3cqw, 16px);
+  /* fill the whole half: stats spread edge to edge, the gap is only the
+     minimum spacing — extra width turns into even breathing room */
+  width: 100%;
+  justify-content: space-between;
+  gap: clamp(6px, 1.2cqw, 10px);
+  font-size: clamp(13px, 1.3cqw, 15px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -228,11 +232,13 @@ watch(bluePercent, (next, prev) => {
 .side-stats--red .stat {
   justify-content: flex-end;
 }
-.stat--obj { width: 40px; }
-.stat--cs { width: 58px; }
-.stat--dmg { width: 68px; }
+/* slot widths grow with the container so the larger icons always fit,
+   but stay fixed at any given size — values changing never shift the row */
+.stat--obj { width: clamp(42px, 3.7cqw, 46px); }
+.stat--cs { width: clamp(56px, 4.8cqw, 58px); }
+.stat--dmg { width: clamp(60px, 5.3cqw, 66px); }
 .stat--gold {
-  width: 76px;
+  width: clamp(66px, 5.8cqw, 76px);
   color: #e8c040;
   font-size: clamp(14px, 1.4cqw, 17px);
   text-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
@@ -243,18 +249,26 @@ watch(bluePercent, (next, prev) => {
 }
 
 .stat-divider {
-  width: 1px;
-  height: clamp(11px, 2cqh, 14px);
-  background: #3e200a;
+  width: 2px;
+  height: clamp(16px, 3.2cqh, 22px);
+  border-radius: 1px;
+  /* soft-edged gold-brown blade — clearly visible, still subordinate to the stats */
+  background: linear-gradient(to bottom, transparent, #8a5c22 25%, #c89040 50%, #8a5c22 75%, transparent);
   flex-shrink: 0;
+  align-self: center;
+  /* cancel the parent's baseline nudge — without this the bar sits lower than
+     its siblings and reads as a "different" divider next to tall content */
+  transform: translateY(-0.08em);
 }
 
-/* Icons & images keep an identical, immutable 17px box — as flex children
-   they would otherwise get squeezed when the number next to them grows. */
+/* Icons & images share one identical, immutable box — big and readable,
+   scaling with the bar height (cqh) so they never outgrow the row. As flex
+   children they would otherwise get squeezed when the number next to them
+   grows, hence the hard flex-shrink lock. */
 .stat-icon,
 .stat-img {
-  width: 17px;
-  height: 17px;
+  width: clamp(19px, 3.8cqh, 26px);
+  height: clamp(19px, 3.8cqh, 26px);
   flex-shrink: 0;
   /* Cancel the digit-baseline nudge of .side-stats (same trick as .alive-pips)
      so icons sit on the same optical centerline as the text next to them */
@@ -275,8 +289,8 @@ watch(bluePercent, (next, prev) => {
   transform: translateY(-0.08em);
 }
 .pip {
-  width: clamp(11px, 1.1cqw, 15px);
-  height: clamp(5px, 1cqh, 6px);
+  width: clamp(8px, 1cqw, 12px);
+  height: clamp(4px, 0.9cqh, 6px);
   border-radius: 1px;
   transform: skewX(-18deg);
   transition:
@@ -344,6 +358,72 @@ watch(bluePercent, (next, prev) => {
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   text-shadow: 0 0 12px rgba(232, 192, 64, 0.5);
+}
+
+/* ── Compact modes: on narrow boards every stat stays visible — fonts,
+   icons, slots and gaps step down together instead of overflowing ── */
+@container board (max-width: 1600px) {
+  .side { padding: 0 8px; }
+  .side-stats {
+    font-size: 11px;
+    gap: 5px;
+  }
+  .stat-icon,
+  .stat-img { width: 16px; height: 16px; }
+  .stat-divider { height: 12px; }
+  .stat--obj { width: 34px; }
+  .stat--cs { width: 46px; }
+  .stat--dmg { width: 52px; }
+  .stat--gold { width: 58px; font-size: 12px; }
+  .stat--level { width: 38px; }
+  .pip { width: 9px; height: 5px; }
+  .alive-pips { gap: 2px; }
+}
+
+@container board (max-width: 1150px) {
+  .side { padding: 0 5px; }
+  .side-stats {
+    font-size: 9.5px;
+    gap: 3px;
+  }
+  .stat { gap: 3px; }
+  .stat-icon,
+  .stat-img { width: 13px; height: 13px; }
+  .stat-divider { height: 10px; }
+  .stat--obj { width: 26px; }
+  .stat--cs { width: 36px; }
+  .stat--dmg { width: 42px; }
+  .stat--gold { width: 48px; font-size: 10.5px; }
+  .stat--level { width: 30px; }
+  .pip { width: 7px; height: 4px; }
+  .alive-pips { gap: 1px; }
+  .center {
+    gap: 6px;
+    padding: 0 8px;
+  }
+}
+
+@container board (max-width: 900px) {
+  .side { padding: 0 3px; }
+  .side-stats {
+    font-size: 8.5px;
+    gap: 2px;
+  }
+  .stat { gap: 2px; }
+  .stat-icon,
+  .stat-img { width: 11px; height: 11px; }
+  .stat-divider { height: 8px; }
+  .stat--obj { width: 22px; }
+  .stat--cs { width: 32px; }
+  .stat--dmg { width: 38px; }
+  .stat--gold { width: 44px; font-size: 9.5px; }
+  .stat--level { width: 28px; }
+  .pip { width: 6px; height: 4px; }
+  .center {
+    gap: 4px;
+    padding: 0 6px;
+  }
+  .kills { min-width: 24px; }
 }
 
 /* ── Victory momentum meter ── */
