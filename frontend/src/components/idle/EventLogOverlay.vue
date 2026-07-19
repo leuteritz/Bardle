@@ -27,11 +27,14 @@ const { events } = useEventLog()
   top: 0.45rem;
   right: 0.75rem;
   z-index: 9998;
-  width: clamp(260px, 19vw, 340px);
-  /* Nie breiter als die freie Spalte rechts neben dem zentrierten Header
-     (--header-vp-right wird vom Header per ResizeObserver aktuell gehalten).
-     Floor von 110px, damit der Log bei untypisch kleinen Fenstern nutzbar bleibt. */
-  max-width: max(calc(var(--header-vp-right, 100vw) - 1.25rem), 110px);
+  /* Breite = freie Spalte rechts neben dem zentrierten Header.
+     --header-vp-right (Abstand Header-Rechtskante → Viewport-Rechtskante) wird
+     vom Header per ResizeObserver aktuell gehalten; 1.25rem = right-Offset
+     (0.75rem) + Gap zum Header (0.5rem), damit die linke Log-Kante nie über
+     die Header-Rechtskante hinausragt.
+     Floor 150px hält den Log bei untypisch schmalen Guttern nutzbar,
+     Cap 500px begrenzt die Zeilenlänge auf Ultrawide-Auflösungen. */
+  width: clamp(150px, calc(var(--header-vp-right, 22vw) - 1.25rem), 500px);
   max-height: clamp(280px, 38vh, 520px);
   overflow: hidden;
   pointer-events: none;
@@ -64,7 +67,7 @@ const { events } = useEventLog()
   border-left: 3px solid var(--entry-color, #c8b89a);
   border-top: 1px solid rgba(255, 200, 80, 0.08);
   border-bottom: 1px solid rgba(0, 0, 0, 0.42);
-  border-radius: 8px;
+  border-radius: 5px;
   box-shadow:
     inset 0 0 0 1px rgba(255, 200, 80, 0.04),
     0 2px 10px rgba(0, 0, 0, 0.6);
@@ -123,102 +126,10 @@ const { events } = useEventLog()
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ≤ 1024px: most compact — narrowest column, smallest text */
-@media (max-width: 1024px) {
-  .event-log-overlay {
-    width: clamp(130px, 14vw, 170px);
-    right: 0.4rem;
-  }
-
-  .log-entry {
-    padding: 3px 6px 3px 5px;
-    gap: 4px;
-  }
-
-  .log-msg {
-    font-size: clamp(0.58rem, 0.62vw, 0.68rem);
-  }
-
-  .log-time {
-    font-size: clamp(0.48rem, 0.52vw, 0.58rem);
-  }
-}
-
-/* 1024–1279px: compact mode */
-@media (max-width: 1279px) {
-  .event-log-overlay {
-    width: clamp(180px, 17vw, 240px);
-    right: 0.5rem;
-  }
-
-  .log-entry {
-    padding: 5px 8px 5px 7px;
-    gap: 5px;
-  }
-
-  .log-msg {
-    font-size: clamp(0.65rem, 0.7vw, 0.78rem);
-  }
-
-  .log-time {
-    font-size: clamp(0.55rem, 0.6vw, 0.68rem);
-  }
-}
-
-/* 1280–1439px: medium mode */
-@media (min-width: 1280px) and (max-width: 1439px) {
-  .event-log-overlay {
-    width: clamp(220px, 18vw, 280px);
-  }
-
-  .log-msg {
-    font-size: clamp(0.72rem, 0.8vw, 0.86rem);
-  }
-
-  .log-time {
-    font-size: clamp(0.62rem, 0.68vw, 0.74rem);
-  }
-}
-
-/* 1440–1919px: standard mode (base styles apply, explicit for clarity) */
-@media (min-width: 1440px) and (max-width: 1919px) {
-  .event-log-overlay {
-    width: clamp(260px, 19vw, 340px);
-  }
-
-  .log-msg {
-    font-size: clamp(0.78rem, 0.85vw, 0.92rem);
-  }
-
-  .log-time {
-    font-size: clamp(0.66rem, 0.72vw, 0.78rem);
-  }
-}
-
-/* 1920px+: full display */
-@media (min-width: 1920px) {
-  .event-log-overlay {
-    width: clamp(180px, 12.5vw, 240px);
-  }
-
-  .log-msg {
-    font-size: clamp(0.84rem, 0.95vw, 1rem);
-  }
-
-  .log-time {
-    font-size: clamp(0.7rem, 0.76vw, 0.8rem);
-  }
-}
-
-/* 2560px+: ultra-wide */
+/* 2560px+: ultra-wide — etwas mehr Abstand zum Rand */
 @media (min-width: 2560px) {
   .event-log-overlay {
     right: 1.5rem;
-    width: clamp(300px, 20vw, 520px);
-  }
-
-  .log-msg {
-    font-size: clamp(0.95rem, 0.9vw, 1.1rem);
   }
 }
 
@@ -226,50 +137,74 @@ const { events } = useEventLog()
 @media (max-width: 900px) {
   .event-log-overlay {
     right: 0.5rem;
+    /* auf mobile gibt es keine Gutter-Spalte neben dem Header —
+       feste Breite statt Gutter-Kopplung */
     width: min(320px, calc(100vw - 1rem));
-    /* auf mobile gibt es keine Gutter-Spalte neben dem Header — Kappung aufheben */
-    max-width: none;
+  }
+}
+
+/* ================================================================
+   CONTAINER QUERIES — Typografie skaliert mit der TATSÄCHLICHEN
+   Log-Breite (der Gutter-Spalte neben dem Header), nicht mit der
+   Viewport-Breite. So bleibt der Inhalt auf jeder Desktop-Auflösung
+   lesbar, egal wie schmal oder breit die freie Spalte ausfällt.
+   ================================================================ */
+
+/* breite Spalte (≥ 380px): komfortable Lesegröße */
+@container (min-width: 380px) {
+  .log-msg {
+    font-size: 0.95rem;
+  }
+
+  .log-time {
+    font-size: 0.78rem;
+  }
+
+  .log-entry {
+    padding: 8px 14px 8px 11px;
+  }
+}
+
+/* mittlere Spalte (261–299px): leicht reduziert */
+@container (max-width: 300px) {
+  .log-msg {
+    font-size: 0.8rem;
+  }
+
+  .log-time {
+    font-size: 0.66rem;
   }
 
   .log-entry {
     padding: 6px 10px 6px 8px;
     gap: 6px;
   }
-
-  .log-msg {
-    font-size: clamp(0.8rem, 1vw, 0.92rem);
-  }
 }
 
-/* ================================================================
-   CONTAINER QUERIES — reagieren auf die TATSÄCHLICHE Log-Breite
-   (nach der Gutter-Kappung), nicht auf die Viewport-Breite.
-   So bleibt der Inhalt lesbar, egal wie schmal die freie Spalte
-   neben dem Header bei der jeweiligen Auflösung ausfällt.
-   ================================================================ */
-@container (max-width: 210px) {
+/* schmale Spalte (≤ 240px): kompakt */
+@container (max-width: 240px) {
   .log-entry {
-    padding: 3px 6px 3px 5px;
-    gap: 4px;
+    padding: 4px 7px 4px 6px;
+    gap: 5px;
   }
 
   .log-msg {
-    font-size: 0.64rem;
+    font-size: 0.7rem;
   }
 
   .log-time {
-    font-size: 0.54rem;
+    font-size: 0.58rem;
   }
 }
 
-@container (max-width: 155px) {
+@container (max-width: 175px) {
   /* sehr schmale Spalte: Zeitstempel opfern, Nachricht hat Vorrang */
   .log-time {
     display: none;
   }
 
   .log-msg {
-    font-size: 0.6rem;
+    font-size: 0.64rem;
   }
 }
 </style>
