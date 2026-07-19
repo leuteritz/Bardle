@@ -235,7 +235,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
-      // Neuer Boss → Rage-Profil frisch auswürfeln
+      // Neuer Boss → Rage-Profil frisch auswürfeln; die erste Rage kommt
+      // erst nach Ablauf des Cooldowns
       if (this.rageBossPlanetId !== activeBoss.planetId) {
         this.rageBossPlanetId = activeBoss.planetId
         this.rageIntervalMs =
