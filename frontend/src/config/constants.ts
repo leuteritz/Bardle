@@ -131,6 +131,8 @@ export const RESOURCE_STAR_INTERVAL_MS = 120_000 // every 2 min a flyby
 export const RESOURCE_STAR_DURATION_MS = 45_000 // flyby lasts 45s
 export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
+export const STAR_FIGHT_TIMER_WARNING_S = 20 // star-fight timer turns amber below this
+export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pulses below this
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200

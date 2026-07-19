@@ -23,6 +23,31 @@
           <span v-for="i in 40" :key="i" class="sf-star" :style="starStyle(i)" />
         </div>
 
+        <!-- ── Star-Despawn-Ringe — synchron links & rechts ────────────── -->
+        <div
+          v-for="side in starSecsLeft !== null ? ['left', 'right'] : []"
+          :key="side"
+          class="sf-star-ring"
+          :class="[`sf-star-ring--${side}`, starTimerStateClass]"
+          title="Time until the star vanishes"
+        >
+          <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
+            <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
+            <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
+            <circle
+              cx="50"
+              cy="50"
+              r="44"
+              class="sf-star-ring-arc"
+              :style="{ strokeDasharray: starRingDashArray }"
+            />
+          </svg>
+          <div class="sf-star-ring-inner">
+            <span class="sf-star-ring-secs">{{ starSecsLeft }}</span>
+            <span class="sf-star-ring-label">SEC</span>
+          </div>
+        </div>
+
         <!-- ── Floating Controls (kein Header mehr) ────────────────────── -->
         <div class="sf-corner-controls">
           <button
@@ -158,7 +183,11 @@ import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
-import { BOSS_REMOVAL_DELAY_MS } from '@/config/constants'
+import {
+  BOSS_REMOVAL_DELAY_MS,
+  STAR_FIGHT_TIMER_WARNING_S,
+  STAR_FIGHT_TIMER_CRITICAL_S,
+} from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
@@ -188,6 +217,41 @@ onUnmounted(() => {
 const activeBoss = computed(() => bossStore.activeBoss)
 const isGalaxyBoss = computed(() => activeBoss.value?.isGalaxyBoss ?? false)
 const hpPct = computed(() => Math.max(0, Math.min(100, bossStore.bossHPPercent)))
+
+// ── Star-Despawn-Timer ────────────────────────────────────────────────────
+const fightStar = computed(
+  () => starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId) ?? null,
+)
+
+const starSecsLeft = computed<number | null>(() => {
+  const s = fightStar.value
+  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return null
+  return Math.max(0, Math.ceil((s.spawnedAt + s.durationMs - now.value) / 1000))
+})
+
+const starTimePct = computed(() => {
+  const s = fightStar.value
+  if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return 0
+  const remaining = (s.spawnedAt + s.durationMs - now.value) / s.durationMs
+  return Math.max(0, Math.min(100, remaining * 100))
+})
+
+// Ring-Geometrie: r=44 im 100er-viewBox → Umfang 2πr
+const STAR_RING_CIRCUMFERENCE = 2 * Math.PI * 44
+
+const starRingDashArray = computed(
+  () =>
+    `${(starTimePct.value / 100) * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
+)
+
+const starTimerStateClass = computed(() => ({
+  'sf-star-ring--warning':
+    starSecsLeft.value !== null &&
+    starSecsLeft.value <= STAR_FIGHT_TIMER_WARNING_S &&
+    starSecsLeft.value > STAR_FIGHT_TIMER_CRITICAL_S,
+  'sf-star-ring--critical':
+    starSecsLeft.value !== null && starSecsLeft.value <= STAR_FIGHT_TIMER_CRITICAL_S,
+}))
 
 // ── Curse ─────────────────────────────────────────────────────────────────
 const activeCurse = computed(() => {
@@ -505,6 +569,7 @@ function starStyle(i: number): Record<string, string> {
   .sf-ember,
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
+  .sf-star-ring--critical .sf-star-ring-secs,
   .sf-curse-icon,
   .sf-curse-overlay {
     animation: none;
@@ -551,6 +616,121 @@ function starStyle(i: number): Record<string, string> {
   transform: scale(0.94);
 }
 
+/* ── Star-Despawn-Ringe — synchron oben links + rechts ───────────────────── */
+.sf-star-ring {
+  position: absolute;
+  top: 54px;
+  width: 100px;
+  height: 100px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.sf-star-ring--left {
+  left: 18px;
+}
+.sf-star-ring--right {
+  right: 18px;
+}
+
+.sf-star-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.sf-star-ring-disc {
+  fill: rgba(10, 5, 0, 0.62);
+  stroke: rgba(120, 60, 10, 0.4);
+  stroke-width: 1;
+}
+
+.sf-star-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 5;
+}
+
+.sf-star-ring-arc {
+  fill: none;
+  stroke: #e8c040;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.2s linear;
+  filter: drop-shadow(0 0 5px rgba(232, 192, 64, 0.55));
+}
+
+.sf-star-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.sf-star-ring-secs {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-star-ring-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: rgba(232, 192, 64, 0.6);
+  text-transform: uppercase;
+}
+
+/* Warnung ≤ STAR_FIGHT_TIMER_WARNING_S */
+.sf-star-ring--warning .sf-star-ring-arc {
+  stroke: #e8a030;
+  filter: drop-shadow(0 0 6px rgba(232, 160, 48, 0.6));
+}
+.sf-star-ring--warning .sf-star-ring-secs {
+  color: #e8a030;
+}
+.sf-star-ring--warning .sf-star-ring-secs {
+  text-shadow:
+    0 0 14px rgba(232, 160, 48, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+.sf-star-ring--warning .sf-star-ring-label {
+  color: rgba(232, 160, 48, 0.65);
+}
+
+/* Kritisch ≤ STAR_FIGHT_TIMER_CRITICAL_S */
+.sf-star-ring--critical .sf-star-ring-arc {
+  stroke: #ff5040;
+  filter: drop-shadow(0 0 7px rgba(255, 60, 40, 0.7));
+}
+.sf-star-ring--critical .sf-star-ring-secs {
+  color: #ff5040;
+  text-shadow:
+    0 0 14px rgba(255, 60, 40, 0.65),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+  animation: sf-star-ring-crit-pulse 0.7s ease-in-out infinite alternate;
+}
+.sf-star-ring--critical .sf-star-ring-label {
+  color: rgba(255, 80, 64, 0.7);
+}
+
+@keyframes sf-star-ring-crit-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+
 
 /* ── Main Layout ──────────────────────────────────────────────────────────── */
 .sf-main {
@@ -592,18 +772,10 @@ function starStyle(i: number): Record<string, string> {
   display: none;
 }
 
-/* Enrage-Ring: größer und unter den Ecken-Controls (Admin/✕) */
+/* Arena-eigener Enrage-/Star-Ring aus — ersetzt durch die beiden
+   synchronen .sf-star-ring-Countdowns oben links + rechts */
 .sf-arena-wrap :deep(.enrage-ring) {
-  top: 50px;
-  right: 14px;
-  width: 80px;
-  height: 80px;
-}
-.sf-arena-wrap :deep(.enrage-seconds) {
-  font-size: 1.5rem;
-}
-.sf-arena-wrap :deep(.enrage-label) {
-  font-size: 0.56rem;
+  display: none;
 }
 
 /* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz ───────────────────── */
