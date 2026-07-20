@@ -37,6 +37,7 @@ import {
   HEAL_FLOAT_PLAYER_Y_OFFSET,
   INTERCEPT_SHIELD_ANIM_MS,
   JUNGLE_BUFF_FLASH_ANIM_MS,
+  STRIKER_PROJECTILE_FLIGHT_MS,
 } from '../config/constants'
 import { getOrbitingRoles } from '../utils/getOrbitingRoles'
 import { getChampionStarLevel } from '../config/championTiers'
@@ -369,18 +370,24 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         if (!activeBoss || activeBoss.defeated || activeBoss.expired) continue
 
-        const defeated = bossStore.dealDamage(def.damage)
+        // Abschuss sofort (treibt Projektil-Animation) — der SCHADEN landet
+        // erst beim visuellen Einschlag des Projektils am Boss
         this.roleAttackShots[role]++
 
         // Kein Log pro Routine-Angriff — 5 Rollen im Sekundenrhythmus würden
         // das Event-Log fluten
 
-        if (!defeated) {
-          const pos = activePlanetPositions.get(activeBoss.planetId)
-          if (pos) {
-            spawnFloat(def.damage, pos.cx + (Math.random() - 0.5) * 36, pos.cy - 48, 1100)
+        const target = activeBoss
+        window.setTimeout(() => {
+          if (target.defeated || target.expired) return
+          const defeated = bossStore.dealDamageToBoss(target, def.damage)
+          if (!defeated) {
+            const pos = activePlanetPositions.get(target.planetId)
+            if (pos) {
+              spawnFloat(def.damage, pos.cx + (Math.random() - 0.5) * 36, pos.cy - 48, 1100)
+            }
           }
-        }
+        }, STRIKER_PROJECTILE_FLIGHT_MS)
       }
     },
 
@@ -619,26 +626,30 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         const championName = getChampionNameByRole('adc')
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
-          const defeated = bossStore.dealDamage(ROLE_ADC_BURST_DAMAGE)
-
           throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
             addEvent(`${championName} burst: ${ROLE_ADC_BURST_DAMAGE} dmg.`, 'adc')
           })
 
-          if (!defeated) {
-            const pos = activePlanetPositions.get(activeBoss.planetId)
-            if (pos) {
-              spawnFloat(
-                ROLE_ADC_BURST_DAMAGE,
-                pos.cx + (Math.random() - 0.5) * 30,
-                pos.cy - 45,
-                1200,
-                { adcFloat: true },
-              )
+          // Auch der Burst fliegt als Projektil — Schaden erst beim Einschlag
+          const target = activeBoss
+          window.setTimeout(() => {
+            if (target.defeated || target.expired) return
+            const defeated = bossStore.dealDamageToBoss(target, ROLE_ADC_BURST_DAMAGE)
+            if (!defeated) {
+              const pos = activePlanetPositions.get(target.planetId)
+              if (pos) {
+                spawnFloat(
+                  ROLE_ADC_BURST_DAMAGE,
+                  pos.cx + (Math.random() - 0.5) * 30,
+                  pos.cy - 45,
+                  1200,
+                  { adcFloat: true },
+                )
+              }
+            } else {
+              addEvent(`${championName} slays boss (${formatSlotId(target.planetId)}).`, 'adc')
             }
-          } else {
-            addEvent(`${championName} slays boss (${formatSlotId(activeBoss.planetId)}).`, 'adc')
-          }
+          }, STRIKER_PROJECTILE_FLIGHT_MS)
         }
       }
     },
