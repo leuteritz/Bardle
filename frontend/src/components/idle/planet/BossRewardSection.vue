@@ -34,9 +34,10 @@
         :key="entry.material.id"
         class="loot-chip"
         :class="`rarity--${entry.material.rarity}`"
+        :title="entry.material.name"
       >
         <img :src="entry.material.image" :alt="entry.material.name" class="loot-chip-icon" />
-        {{ entry.material.name }}<template v-if="entry.count > 1"> ×{{ entry.count }}</template>
+        {{ entry.count }}
       </span>
     </div>
   </div>
