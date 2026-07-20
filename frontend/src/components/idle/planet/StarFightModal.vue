@@ -86,6 +86,27 @@
 
             <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
             <div v-if="activeBoss" class="sf-hud">
+              <!-- Planeten-Fortschritt des Sterns: wo stehe ich, wie viele gibt es -->
+              <div v-if="planetProgress" class="sf-pp">
+                <div class="sf-pp-bars" aria-hidden="true">
+                  <span
+                    v-for="i in planetProgress.total"
+                    :key="i"
+                    class="sf-pp-pip"
+                    :class="{
+                      'sf-pp-pip--cleared': i <= planetProgress.cleared,
+                      'sf-pp-pip--current': i === planetProgress.current,
+                    }"
+                  />
+                </div>
+                <span class="sf-pp-label">
+                  Planet
+                  <span class="sf-pp-num">{{ planetProgress.current }}</span>
+                  <span class="sf-pp-sep">/</span>
+                  {{ planetProgress.total }}
+                </span>
+              </div>
+
               <span v-if="isGalaxyBoss" class="sf-boss-galaxy-badge">✦ GALAXY BOSS ✦</span>
               <div class="sf-name-row">
                 <span class="sf-name-line" />
@@ -259,6 +280,15 @@ const starSecsLeft = computed<number | null>(() => {
   const s = fightStar.value
   if (!s || s.spawnedAt === undefined || s.durationMs === undefined) return null
   return Math.max(0, Math.ceil((s.spawnedAt + s.durationMs - now.value) / 1000))
+})
+
+// Planeten-Fortschritt: Position des aktuellen Kampfs innerhalb des Sterns
+const planetProgress = computed(() => {
+  const s = fightStar.value
+  if (!s || s.planetSlots.length === 0) return null
+  const total = s.planetSlots.length
+  const cleared = s.planetSlots.filter((p) => p.cleared).length
+  return { total, cleared, current: Math.min(cleared + 1, total) }
 })
 
 const starTimePct = computed(() => {
@@ -643,6 +673,7 @@ function emberStyle(i: number): Record<string, string> {
   .sf-modal-planet-bg--galaxy,
   .sf-hp-track--critical,
   .sf-star-ring--critical .sf-star-ring-secs,
+  .sf-pp-pip--current,
   .sf-curse-veil-layer--edge,
   .sf-curse-veil-layer--smoke,
   .sf-rage-veil-layer--edge,
@@ -951,6 +982,77 @@ function emberStyle(i: number): Record<string, string> {
 .sf-hp-row .sf-hp-track {
   flex: 1;
   min-width: 0;
+}
+
+/* ── Planeten-Fortschritt — Segment-Pips + großes Label über der HP-Zeile ── */
+.sf-pp {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sf-pp-bars {
+  display: flex;
+  gap: 6px;
+}
+
+.sf-pp-pip {
+  width: 28px;
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(120, 60, 10, 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Geschafft: grün gefüllt — gleiche Signatur wie "kaufbar/aktiv" */
+.sf-pp-pip--cleared {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border-color: #6ec040;
+  box-shadow: 0 0 8px rgba(82, 184, 48, 0.4);
+}
+
+/* Aktueller Planet: gold glühend, sanfter Puls */
+.sf-pp-pip--current {
+  background: linear-gradient(to bottom, #e8c060, #c89040);
+  border-color: #e8c040;
+  box-shadow: 0 0 10px rgba(232, 192, 64, 0.55);
+  animation: sf-pp-current-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes sf-pp-current-pulse {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sf-pp-label {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 192, 64, 0.85);
+  white-space: nowrap;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-pp-num {
+  font-size: 1.35rem;
+  color: #ffe9b0;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-pp-sep {
+  opacity: 0.5;
+  margin: 0 2px;
 }
 
 .sf-boss-galaxy-badge {
