@@ -1,5 +1,5 @@
 <template>
-  <div v-if="turrets.length > 0 && bossAlive" ref="rootEl" class="tbh" aria-hidden="true">
+  <div v-if="bossAlive" ref="rootEl" class="tbh" aria-hidden="true">
     <!-- Gestrichelte Führungslinie im Stil der Striker-Arc-Guide: ein runder
          Ellipsenbogen um den Boss, auf dem alle 6 Slot-Anker liegen.
          pathLength normiert die Dash-Länge unabhängig von der Arena-Größe. -->
@@ -7,32 +7,35 @@
       <path :d="guidePath" pathLength="400" vector-effect="non-scaling-stroke" />
     </svg>
 
-    <!-- Turrets an ihren festen Slot-Ankern: Slot 1–3 links, Slot 4–6 rechts -->
+    <!-- ALLE 6 Planet-Slots an ihren festen Ankern: Slot 1–3 links, 4–6
+         rechts — gefüllte Slots zeigen das Planet-Image ihrer Rolle, leere
+         einen Geister-Platzhalter. Nur Turrets feuern zurück. -->
     <div
-      v-for="t in turrets"
+      v-for="t in entries"
       :key="t.slotId"
       class="tbh-turret"
       :class="t.isLeft ? 'tbh-turret--left' : 'tbh-turret--right'"
-      :style="{ left: `${t.xPct}%`, top: `${t.yPct}%` }"
+      :style="{ left: `${t.xPct}%`, top: `${t.yPct}%`, '--tc': t.color }"
     >
       <!-- Die gesamte Einheit (Planet + Pill + Plate) schnipst beim Angriff
-           gemeinsam — wie die rsq-unit der Champions -->
+           gemeinsam — wie die rsq-unit der Champions (nur Turrets feuern) -->
       <div
         class="tbh-unit"
-        :class="{ 'tbh-unit--firing': volleyFlash }"
-        :style="lungeStyle(t)"
+        :class="{ 'tbh-unit--firing': t.isTurret && volleyFlash }"
+        :style="t.isTurret ? lungeStyle(t) : undefined"
       >
         <div
+          v-if="t.filled"
           class="tbh-planet"
           :class="{ 'tbh-planet--hit': hitFlash || autoHitSlotId === t.slotId }"
         >
-          <img :src="turretImage" alt="" draggable="false" />
+          <img :src="t.image" alt="" draggable="false" />
 
-          <!-- Cooldown-Pill wie bei den Champions — eigener 100ms-Ticker in
+          <!-- Cooldown-Pill nur für Turrets — eigener 100ms-Ticker in
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
-          <TurretCdPill />
+          <TurretCdPill v-if="t.isTurret" />
 
-          <!-- Roter Schadens-Float: Nova (alle Turrets) -->
+          <!-- Roter Schadens-Float: Nova (alle Planeten) -->
           <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
             -{{ hitDmg }}
           </span>
@@ -47,14 +50,19 @@
           </span>
         </div>
 
-        <!-- Info-Plate wie bei den Champions: HP-Bar → Slot-Nummer → dmg/s -->
-        <div class="tbh-plate-anchor">
+        <!-- Leerer Slot: Geister-Platzhalter auf dem Anker -->
+        <div v-else class="tbh-planet tbh-planet--vacant">
+          <span class="tbh-vacant-num">{{ t.slotNum }}</span>
+        </div>
+
+        <!-- Info-Plate: HP-Bar → Slot-Nummer → dmg/s (Turret) bzw. Rolle -->
+        <div v-if="t.filled" class="tbh-plate-anchor">
           <StrikerInfoPlate
-            :color="turretColor"
+            :color="t.color"
             :hp-pct="t.hpPct"
             :hp-text="`${t.hpCur} / ${t.hpMax}`"
             :name="`Slot ${t.slotNum}`"
-            :stats="`${t.dmg} dmg/s`"
+            :stats="t.isTurret ? `${t.dmg} dmg/s` : t.roleName"
           />
         </div>
       </div>
@@ -139,8 +147,7 @@ const bossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
-const turretImage = PLANET_ROLES.turret_planet.image
-const turretColor = PLANET_ROLES.turret_planet.color
+const VACANT_COLOR = '#8a8070'
 
 // Slot-Winkel auf dem Ellipsenbogen (Striker-Konvention: 0° = rechts,
 // 90° = unten): linke Reihen um 180° gefächert, rechte um 0°/360° — Reihe 0
@@ -155,10 +162,15 @@ const bossAlive = computed(() => {
   return !!boss && !boss.defeated && !boss.expired
 })
 
-interface TurretEntry {
+interface SlotEntry {
   slotId: string
   slotNum: number
   isLeft: boolean
+  filled: boolean
+  isTurret: boolean
+  image: string
+  color: string
+  roleName: string
   dmg: number
   hpPct: number
   hpCur: number
@@ -167,47 +179,55 @@ interface TurretEntry {
   yPct: number
 }
 
-// Feste Slot-Anker auf dem Ellipsenbogen: Slot 1–3 → linke Bogenhälfte
-// (Reihe 0–2), Slot 4–6 → rechte — die Position spiegelt immer den belegten
-// Planet-Slot; alle Anker liegen exakt auf der gestrichelten Führungslinie
-const turrets = computed<TurretEntry[]>(() =>
-  planetShopStore.purchasedSlots
-    .filter((s) => s.role === 'turret_planet')
-    .map((s) => {
-      const slotNum = parseInt(s.id.replace('slot_', ''), 10)
-      const isLeft = slotNum <= 3
-      const row = (slotNum - 1) % 3
-      const rad = (turretArcAngleDeg(isLeft, row) * Math.PI) / 180
-      const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
-      const hpCur = s.currentHp ?? PLANET_SLOT_MAX_HP
-      const hpMax = s.maxHp ?? PLANET_SLOT_MAX_HP
-      return {
-        slotId: s.id,
-        slotNum,
-        isLeft,
-        hpCur: Math.round(hpCur),
-        hpMax,
-        hpPct: hpMax > 0 ? Math.max(0, Math.min(100, (hpCur / hpMax) * 100)) : 100,
-        dmg:
-          Math.round(
-            PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
-          ) / 10,
-        xPct: Math.round((50 + Math.cos(rad) * TURRET_ARC_RX_PCT) * 10) / 10,
-        yPct:
-          Math.round((TURRET_ARC_CENTER_Y_PCT + Math.sin(rad) * TURRET_ARC_RY_PCT) * 10) / 10,
-      }
-    }),
+// ALLE 6 Slot-Anker auf dem Ellipsenbogen: Slot 1–3 → linke Bogenhälfte
+// (Reihe 0–2), Slot 4–6 → rechte. Gefüllte Slots tragen das Planet-Image
+// ihrer Rolle; nur Turrets feuern zurück und zeigen dmg/s.
+const entries = computed<SlotEntry[]>(() =>
+  planetShopStore.slots.map((s) => {
+    const slotNum = parseInt(s.id.replace('slot_', ''), 10)
+    const isLeft = slotNum <= 3
+    const row = (slotNum - 1) % 3
+    const rad = (turretArcAngleDeg(isLeft, row) * Math.PI) / 180
+    const filled = s.purchased && s.role !== null
+    const roleDef = filled ? PLANET_ROLES[s.role!] : null
+    const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
+    const hpCur = s.currentHp ?? PLANET_SLOT_MAX_HP
+    const hpMax = s.maxHp ?? PLANET_SLOT_MAX_HP
+    return {
+      slotId: s.id,
+      slotNum,
+      isLeft,
+      filled,
+      isTurret: filled && s.role === 'turret_planet',
+      image: roleDef?.image ?? '',
+      color: roleDef?.color ?? VACANT_COLOR,
+      roleName: roleDef?.name ?? '',
+      hpCur: Math.round(hpCur),
+      hpMax,
+      hpPct: hpMax > 0 ? Math.max(0, Math.min(100, (hpCur / hpMax) * 100)) : 100,
+      dmg:
+        Math.round(
+          PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
+        ) / 10,
+      xPct: Math.round((50 + Math.cos(rad) * TURRET_ARC_RX_PCT) * 10) / 10,
+      yPct:
+        Math.round((TURRET_ARC_CENTER_Y_PCT + Math.sin(rad) * TURRET_ARC_RY_PCT) * 10) / 10,
+    }
+  }),
 )
 
-// ── Boss-Treffer auf die Turrets: Flash + roter Float ─────────────────────
+// Nur Turret-Slots feuern Volleys und tragen Cooldown-Ringe
+const turretEntries = computed(() => entries.value.filter((e) => e.isTurret))
+
+// ── Nova-Treffer auf alle Planeten: Flash + roter Float ───────────────────
 const hitFlash = ref(false)
 const hitSeq = ref(0)
-const hitDmg = computed(() => roleBehaviorStore.turretHitDmg)
+const hitDmg = computed(() => roleBehaviorStore.planetHitDmg)
 
 // Um BOSS_WAVE_HIT_DELAY_MS verzögert — Flash + Damage-Label treffen die
 // Planeten genau, wenn die Boss-Schockwelle sie optisch erreicht
 watch(
-  () => roleBehaviorStore.turretHitAt,
+  () => roleBehaviorStore.planetHitAt,
   () => {
     later(BOSS_WAVE_HIT_DELAY_MS, () => {
       hitSeq.value++
@@ -252,7 +272,7 @@ watch(
     const dmg = roleBehaviorStore.autoDmg
 
     // Bolt: Boss-Anker → Position des getroffenen Turrets (px-Vektor)
-    const target = turrets.value.find((t) => t.slotId === slotId)
+    const target = entries.value.find((t) => t.filled && t.slotId === slotId)
     const { w, h } = arenaSize.value
     if (target && w > 0 && h > 0) {
       const id = ++autoBoltId
@@ -327,7 +347,7 @@ function drawRings() {
       ? 1
       : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
 
-    for (const t of turrets.value) {
+    for (const t of turretEntries.value) {
       const cx = (t.xPct / 100) * w
       const cy = (t.yPct / 100) * h
 
@@ -383,7 +403,7 @@ watch(ringCanvas, (cv) => {
 
 // Schnips-Vektor: Einheitsvektor Richtung Boss × Lunge-Distanz — jeder
 // Turret stößt entlang seiner eigenen Flugachse vor
-function lungeStyle(t: TurretEntry): Record<string, string> {
+function lungeStyle(t: SlotEntry): Record<string, string> {
   const { w, h } = arenaSize.value
   const dx = ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w
   const dy = ((STRIKER_BOSS_ANCHOR_Y_PCT - t.yPct) / 100) * h
@@ -423,7 +443,7 @@ function later(ms: number, fn: () => void) {
 }
 
 function fireVolley() {
-  if (!bossAlive.value || turrets.value.length === 0) return
+  if (!bossAlive.value || turretEntries.value.length === 0) return
   lastVolleyMs = Date.now()
 
   volleyFlash.value = false
@@ -433,7 +453,7 @@ function fireVolley() {
 
   const { w, h } = arenaSize.value
 
-  for (const t of turrets.value) {
+  for (const t of turretEntries.value) {
     const id = ++volleyId
     const px = Math.round(
       ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
@@ -495,7 +515,7 @@ onUnmounted(() => {
   z-index: 2;
   /* Style/Layout/Paint-Invalidierungen bleiben im HUD-Subtree */
   contain: layout style paint;
-  --tc: v-bind(turretColor);
+  /* --tc kommt pro Slot-Eintrag als Inline-Var (Rollenfarbe des Planeten) */
   /* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px.
      Muss mit planetPx in drawRings() übereinstimmen (54 / 7vh / 76) */
   --tbh-size: clamp(54px, 7vh, 76px);
@@ -558,6 +578,28 @@ onUnmounted(() => {
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* ── Leerer Slot: Geister-Platzhalter — gestrichelter Ring + Slot-Nummer ── */
+.tbh-planet--vacant {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(138, 128, 112, 0.5);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+.tbh-planet--vacant::before {
+  display: none;
+}
+
+.tbh-vacant-num {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: rgba(138, 128, 112, 0.75);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Pill und

@@ -906,7 +906,7 @@ export const TURRET_PROJECTILE_FLIGHT_MS = 420 // turret comet travel time to th
 export const TURRET_DAMAGE_FLOAT_MS = 1000 // lifetime of the turret damage float at the boss
 export const TURRET_ATTACK_LUNGE_PX = 16 // how far a turret planet snaps toward the boss on volley
 export const TURRET_CD_TICK_MS = 100 // UI refresh of the turret cooldown pill (sub-second display)
-export const BOSS_TURRET_ATTACK_DPS = 3 // boss dmg/s dealt to each turret planet while it fights
+export const BOSS_PLANET_ATTACK_DPS = 3 // boss dmg/s dealt to each player planet slot during the fight
 // Boss-Schockwelle: der Ring läuft sichtbar bis über Champions + Turrets;
 // Hit-Flash und Damage-Labels feuern erst, wenn der Ring die Ziele erreicht
 export const BOSS_WAVE_TRAVEL_MS = 800 // full lifetime of the expanding boss shockwave ring

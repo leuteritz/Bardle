@@ -78,9 +78,9 @@
               @shake="handleShake"
             />
 
-            <!-- ── Turret Battery: ein Eintrag pro Turret-Planet, Salven im
-                 geteilten Takt mit den Idle-Orbit-Schüssen ── -->
-            <TurretBatteryHUD v-if="activeBoss" />
+            <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
+                 Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
+            <PlanetBatteryHUD v-if="activeBoss" />
 
             <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
                  bis über Champions und Turret-Planeten hinausläuft -->
@@ -309,7 +309,7 @@ import type { ChampionRole } from '@/types'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
-import TurretBatteryHUD from '@/components/idle/planet/TurretBatteryHUD.vue'
+import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────

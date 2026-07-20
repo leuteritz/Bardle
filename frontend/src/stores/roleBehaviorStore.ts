@@ -16,7 +16,7 @@ import {
   CHAMPION_BASE_HP_BY_ROLE,
   CHAMPION_HP_PER_STAR,
   BOSS_CHAMPION_ATTACK_DPS,
-  BOSS_TURRET_ATTACK_DPS,
+  BOSS_PLANET_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   CHAMPION_REVIVE_MS,
   CHAMPION_HP_REGEN_FRAC,
@@ -177,10 +177,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       number
     >,
 
-    // Boss-Gegenschlag auf die Turret-Planeten: Zeitstempel + Schadenswert des
-    // letzten Treffers (treibt Flash + rote Floats in der Turret-Battery)
-    turretHitAt: 0,
-    turretHitDmg: 0,
+    // Boss-Gegenschlag auf die Spieler-Planeten (alle Slots): Zeitstempel +
+    // Schadenswert des letzten Treffers (treibt Flash + Floats im Planet-HUD)
+    planetHitAt: 0,
+    planetHitDmg: 0,
 
     // Boss ability "Shock Nova" — the AoE wave runs on this cooldown; the
     // idle-orbit star of the active boss mirrors it 1:1. novaCounter is a
@@ -407,22 +407,20 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         // Routine-Treffer werden nicht geloggt — nur Knockouts und Revives
       }
 
-      // Die Nova trifft auch die Turret-Planeten des Spielers — die
-      // Turret-Battery im Star-Fight-Modal koppelt Flash + Floats daran
+      // Die Nova trifft ALLE Spieler-Planeten (jede Planetenart) — das
+      // Planet-HUD im Star-Fight-Modal koppelt Flash + Floats daran
       const planetShopStore = usePlanetShopStore()
-      const turretDmg = Math.round(
-        BOSS_TURRET_ATTACK_DPS *
+      const planetDmg = Math.round(
+        BOSS_PLANET_ATTACK_DPS *
           (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
           (raging ? BOSS_RAGE_DMG_MULT : 1) *
           novaSecs,
       )
-      const turretSlots = planetShopStore.purchasedSlots.filter(
-        (s) => s.role === 'turret_planet',
-      )
-      if (turretDmg > 0 && turretSlots.length > 0) {
-        for (const slot of turretSlots) planetShopStore.takeDamage(slot.id, turretDmg)
-        this.turretHitAt = now
-        this.turretHitDmg = turretDmg
+      const planetSlots = planetShopStore.activeSlots
+      if (planetDmg > 0 && planetSlots.length > 0) {
+        for (const slot of planetSlots) planetShopStore.takeDamage(slot.id, planetDmg)
+        this.planetHitAt = now
+        this.planetHitDmg = planetDmg
       }
 
       // ... und den Spieler in der Orbit-Mitte — der Stern-Schuss im
@@ -430,8 +428,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       usePlayerStore().takeDamage(BOSS_NOVA_PLAYER_DAMAGE)
     },
 
-    /** Zielpool des Strikes: lebende Orbit-Champions + Turret-Planeten mit
-     *  Rest-HP. Liefert ein zufällig gewähltes Ziel oder null. */
+    /** Zielpool des Strikes: lebende Orbit-Champions + Spieler-Planeten
+     *  (jede Planetenart) mit Rest-HP. Liefert ein Zufallsziel oder null. */
     _rollStrikeTarget(
       roles: Set<string>,
     ): { role: ChampionRole } | { slotId: string } | null {
@@ -443,16 +441,16 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           this.championHp[role].current > 0 &&
           this.championDownUntil[role] <= 0,
       )
-      const turretTargets = planetShopStore.purchasedSlots.filter(
-        (s) => s.role === 'turret_planet' && (s.currentHp ?? 1) > 0,
+      const planetTargets = planetShopStore.activeSlots.filter(
+        (s) => (s.currentHp ?? 1) > 0,
       )
-      const poolSize = champTargets.length + turretTargets.length
+      const poolSize = champTargets.length + planetTargets.length
       if (poolSize === 0) return null
 
       const pick = Math.floor(Math.random() * poolSize)
       return pick < champTargets.length
         ? { role: champTargets[pick] }
-        : { slotId: turretTargets[pick - champTargets.length].id }
+        : { slotId: planetTargets[pick - champTargets.length].id }
     },
 
     /** Boss ability "Strike": on a short cooldown the boss jabs ONE living
