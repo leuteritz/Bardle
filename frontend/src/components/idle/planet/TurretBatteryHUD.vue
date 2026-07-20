@@ -64,6 +64,14 @@
          statt 6 SVGs mit durchgehender stroke-dasharray-Animation -->
     <canvas ref="ringCanvas" class="tbh-ring-canvas" />
 
+    <!-- Strike-Bolt: Projektil vom Boss zum per Auto-Attack getroffenen Turret -->
+    <span
+      v-for="b in autoBolts"
+      :key="'bolt-' + b.id"
+      class="tbh-strike-bolt"
+      :style="{ '--px': b.px + 'px', '--py': b.py + 'px' }"
+    />
+
     <!-- Kometen-Volleys Richtung Boss -->
     <span
       v-for="v in volleys"
@@ -206,11 +214,19 @@ watch(
   },
 )
 
-// ── Boss-Auto-Attack "Strike": trifft EINEN Turret-Planeten — Flash + Float
-// nur am getroffenen Slot, getimt auf den Kontaktmoment des Boss-Jabs
+// ── Boss-Auto-Attack "Strike": trifft EINEN Turret-Planeten — sichtbarer
+// Bolt vom Boss zum Slot, Flash + Float exakt beim Einschlag
 const autoHitSlotId = ref<string | null>(null)
 const autoHitSeq = ref(0)
 const autoHitDmg = ref(0)
+
+interface AutoBolt {
+  id: number
+  px: number
+  py: number
+}
+const autoBolts = ref<AutoBolt[]>([])
+let autoBoltId = 0
 
 watch(
   () => roleBehaviorStore.autoCounter,
@@ -218,6 +234,22 @@ watch(
     const slotId = roleBehaviorStore.autoTargetSlotId
     if (!slotId) return
     const dmg = roleBehaviorStore.autoDmg
+
+    // Bolt: Boss-Anker → Position des getroffenen Turrets (px-Vektor)
+    const target = turrets.value.find((t) => t.slotId === slotId)
+    const { w, h } = arenaSize.value
+    if (target && w > 0 && h > 0) {
+      const id = ++autoBoltId
+      autoBolts.value.push({
+        id,
+        px: Math.round(((target.xPct - STRIKER_BOSS_ANCHOR_X_PCT) / 100) * w),
+        py: Math.round(((target.yPct - STRIKER_BOSS_ANCHOR_Y_PCT) / 100) * h),
+      })
+      later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
+        autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
+      })
+    }
+
     later(BOSS_AUTO_HIT_DELAY_MS, () => {
       autoHitSlotId.value = slotId
       autoHitDmg.value = dmg
@@ -593,6 +625,40 @@ onUnmounted(() => {
   }
 }
 
+/* ── Strike-Bolt: Bone-Silber-Komet Boss → getroffener Turret — Flugzeit =
+   BOSS_AUTO_HIT_DELAY_MS (0.18s), Einschlag löst Flash + Float ───────────── */
+.tbh-strike-bolt {
+  position: absolute;
+  /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
+  left: 50%;
+  top: 41%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #d8d0c0 45%, transparent 75%);
+  box-shadow: 0 0 14px rgba(232, 220, 190, 0.9);
+  pointer-events: none;
+  z-index: 3;
+  animation: tbh-strike-bolt-fly 0.18s cubic-bezier(0.35, 0, 0.8, 0.6) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes tbh-strike-bolt-fly {
+  0% {
+    opacity: 0.4;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--px) * 0.1), calc(var(--py) * 0.1)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(var(--px), var(--py)) scale(1.2);
+  }
+}
+
 /* ── Boss-Treffer: roter Flash-Overlay (nur ::after — kollidiert nicht mit
    der Snap-Animation auf dem Element selbst) ─────────────────────────────── */
 .tbh-planet--hit::after {
@@ -728,6 +794,7 @@ onUnmounted(() => {
   .tbh-hitfloat,
   .tbh-hitfloat::before,
   .tbh-impact-num,
+  .tbh-strike-bolt,
   .tbh-comet {
     animation: none;
   }

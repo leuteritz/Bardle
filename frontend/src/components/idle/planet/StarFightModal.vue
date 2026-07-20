@@ -1494,11 +1494,14 @@ function emberStyle(i: number): Record<string, string> {
   }
   /* kurz zurücklehnen … */
   30% {
-    transform: translateY(-7px) scale(1.05) rotate(-1.5deg);
+    transform: translateY(-11px) scale(1.08) rotate(-2.5deg);
   }
-  /* … und zustoßen */
+  /* … und zustoßen (Kontakt ≈ 60 % = BOSS_AUTO_HIT_DELAY_MS) */
   60% {
-    transform: translateY(7px) scale(1.04, 0.94) rotate(0.5deg);
+    transform: translateY(10px) scale(1.06, 0.92) rotate(1deg);
+  }
+  80% {
+    transform: translateY(-3px) scale(0.99, 1.02);
   }
   100% {
     transform: translateY(0) scale(1);

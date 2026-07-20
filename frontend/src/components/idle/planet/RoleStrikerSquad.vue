@@ -6,6 +6,14 @@
       <path :d="arcGuidePath" pathLength="400" vector-effect="non-scaling-stroke" />
     </svg>
 
+    <!-- Strike-Bolt: Projektil vom Boss zum per Auto-Attack getroffenen Champion -->
+    <span
+      v-for="b in autoBolts"
+      :key="'bolt-' + b.id"
+      class="rsq-strike-bolt"
+      :style="{ '--px': b.px + 'px', '--py': b.py + 'px' }"
+    />
+
     <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
          Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
     <button
@@ -492,14 +500,40 @@ for (const role of SQUAD_ROLES) {
   )
 }
 
-// ── Boss-Auto-Attack "Strike": trifft EINEN Champion — Flash + Damage-Label
-// kurz verzögert auf den Kontaktmoment des schnellen Boss-Jabs
+// ── Boss-Auto-Attack "Strike": trifft EINEN Champion — sichtbarer Bolt vom
+// Boss zum Ziel, Flash + Damage-Label exakt beim Einschlag des Bolts
+interface AutoBolt {
+  id: number
+  px: number
+  py: number
+}
+const autoBolts = ref<AutoBolt[]>([])
+let autoBoltId = 0
+
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
     const role = roleBehaviorStore.autoTargetRole
     if (!role) return
     const dmg = roleBehaviorStore.autoDmg
+
+    // Bolt: Boss-Anker → Arc-Position des getroffenen Strikers (px-Vektor)
+    const rad = (STRIKER_ARC_ANGLES[role] * Math.PI) / 180
+    const toXPct = 50 + Math.cos(rad) * STRIKER_ARC_RX_PCT
+    const toYPct = STRIKER_ARC_CENTER_Y_PCT + Math.sin(rad) * STRIKER_ARC_RY_PCT
+    const { w, h } = arenaSize.value
+    if (w > 0 && h > 0) {
+      const id = ++autoBoltId
+      autoBolts.value.push({
+        id,
+        px: Math.round(((toXPct - STRIKER_BOSS_ANCHOR_X_PCT) / 100) * w),
+        py: Math.round(((toYPct - STRIKER_BOSS_ANCHOR_Y_PCT) / 100) * h),
+      })
+      later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
+        autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
+      })
+    }
+
     later(BOSS_AUTO_HIT_DELAY_MS, () => {
       hitRoles.delete(role)
       hitRoles.add(role)
@@ -1290,6 +1324,40 @@ onUnmounted(() => {
   text-shadow: 0 0 12px #a030ff;
 }
 
+/* ── Strike-Bolt: schneller Bone-Silber-Komet Boss → getroffener Champion —
+   Flugzeit = BOSS_AUTO_HIT_DELAY_MS (0.18s), Einschlag löst Flash + Label ── */
+.rsq-strike-bolt {
+  position: absolute;
+  /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
+  left: 50%;
+  top: 41%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #d8d0c0 45%, transparent 75%);
+  box-shadow: 0 0 14px rgba(232, 220, 190, 0.9);
+  pointer-events: none;
+  z-index: 3;
+  animation: rsq-strike-bolt-fly 0.18s cubic-bezier(0.35, 0, 0.8, 0.6) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes rsq-strike-bolt-fly {
+  0% {
+    opacity: 0.4;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--px) * 0.1), calc(var(--py) * 0.1)) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(var(--px), var(--py)) scale(1.2);
+  }
+}
+
 /* Boss-Treffer: großer Crit-Slam statt kleinem Float — die Zahl knallt von
    oben rein, überschwingt und schwebt dann glühend davon */
 .rsq-float--hit {
@@ -1398,6 +1466,7 @@ onUnmounted(() => {
   .rsq-impact-num,
   .rsq-pop-enter-active,
   .rsq-float--hit::before,
+  .rsq-strike-bolt,
   .rsq-atk-enter-active,
   .rsq-vacant-emblem,
   .rsq-vacant-ring,

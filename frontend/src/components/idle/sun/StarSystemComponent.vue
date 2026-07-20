@@ -671,6 +671,45 @@ watch(
   },
 )
 
+// ── Boss-Auto-Attack "Strike": der Boss-Stern feuert EINEN Schuss auf exakt
+// das Ziel, das auch im Star-Fight-Modal getroffen wurde (Champion-Orbit
+// bzw. Planeten-Slot) — Schaden ist autoritativ im Store verrechnet
+const STRIKE_TRAIL_COLOR = '#b0a890'
+const STRIKE_HEAD_COLOR = '#f4ecd8'
+const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
+  top: 0,
+  jungle: 1,
+  mid: 2,
+  adc: 3,
+  support: 4,
+}
+
+watch(
+  () => roleBehaviorStore.autoCounter,
+  () => {
+    if (reducedMotion || isIdleRenderingPaused.value) return
+    const starId = novaStarId.value
+    if (!starId) return
+    const star = starRenders.value.find((s) => s.id === starId)
+    if (!star || star.isBehind || star.opacity <= 0.02) return
+
+    const strikeOpts = { trailColor: STRIKE_TRAIL_COLOR, headColor: STRIKE_HEAD_COLOR }
+    const role = roleBehaviorStore.autoTargetRole
+    if (role) {
+      const name = battleStore.headerSlots[ROLE_SLOT_INDEX[role]]
+      if (!name || activeChampionBehindState[name]) return
+      const champ = combatStore.champions.find((c) => c.name === name)
+      if (!champ || (champ.screenX === 0 && champ.screenY === 0)) return
+      spawnEnemyShot(star.x, star.y, champ.screenX, champ.screenY, true, true, strikeOpts)
+    } else if (roleBehaviorStore.autoTargetSlotId) {
+      const pos = activePlayerPlanetPositions.get(roleBehaviorStore.autoTargetSlotId)
+      if (pos?.isForeground) {
+        spawnEnemyShot(star.x, star.y, pos.cx, pos.cy, true, true, strikeOpts)
+      }
+    }
+  },
+)
+
 let enemyAnimFrame = 0
 let enemyLastTs = 0
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
