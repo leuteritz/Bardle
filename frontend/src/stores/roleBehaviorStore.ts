@@ -200,6 +200,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     autoTargetRole: null as ChampionRole | null,
     autoTargetSlotId: null as string | null,
     autoDmg: 0,
+    // Vorab ausgewürfeltes NÄCHSTES Strike-Ziel — das UI kündigt es an,
+    // der nächste Strike trifft exakt dieses Ziel (sofern noch am Leben)
+    autoNextTargetRole: null as ChampionRole | null,
+    autoNextTargetSlotId: null as string | null,
 
     // Boss Rage — interval + duration are rolled fresh PER STAR: the cooldown
     // keeps counting across boss transitions within the same star fight
@@ -426,31 +430,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       usePlayerStore().takeDamage(BOSS_NOVA_PLAYER_DAMAGE)
     },
 
-    /** Boss ability "Strike": on a short cooldown the boss jabs ONE random
-     *  living target — an orbiting champion or a turret planet. Rage doubles
-     *  this damage too, which is what makes the rage phase truly dangerous. */
-    _tickBossAutoAttack(roles: Set<string>, tickMs: number) {
-      const bossStore = usePlanetBossStore()
-      const activeBoss = bossStore.activeBoss
-      const bossAlive = !!activeBoss && !activeBoss.defeated && !activeBoss.expired
-      const now = Date.now()
-
-      if (!bossAlive) {
-        this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
-        this.autoReadyAt = 0
-        this.autoTargetRole = null
-        this.autoTargetSlotId = null
-        return
-      }
-
-      this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
-      this.autoReadyAt = now + this.autoCooldownMs
-      if (this.autoCooldownMs > 0) return
-
-      this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
-      this.autoReadyAt = now + BOSS_AUTO_INTERVAL_MS
-
-      // Zielpool: lebende Orbit-Champions + Turret-Planeten mit Rest-HP
+    /** Zielpool des Strikes: lebende Orbit-Champions + Turret-Planeten mit
+     *  Rest-HP. Liefert ein zufällig gewähltes Ziel oder null. */
+    _rollStrikeTarget(
+      roles: Set<string>,
+    ): { role: ChampionRole } | { slotId: string } | null {
       const planetShopStore = usePlanetShopStore()
       const champTargets = (Object.keys(this.championHp) as ChampionRole[]).filter(
         (role) =>
@@ -463,7 +447,60 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         (s) => s.role === 'turret_planet' && (s.currentHp ?? 1) > 0,
       )
       const poolSize = champTargets.length + turretTargets.length
-      if (poolSize === 0) return
+      if (poolSize === 0) return null
+
+      const pick = Math.floor(Math.random() * poolSize)
+      return pick < champTargets.length
+        ? { role: champTargets[pick] }
+        : { slotId: turretTargets[pick - champTargets.length].id }
+    },
+
+    /** Boss ability "Strike": on a short cooldown the boss jabs ONE living
+     *  target — an orbiting champion or a turret planet. The NEXT victim is
+     *  pre-rolled and announced via autoNextTarget*; rage doubles the damage,
+     *  which is what makes the rage phase truly dangerous. */
+    _tickBossAutoAttack(roles: Set<string>, tickMs: number) {
+      const bossStore = usePlanetBossStore()
+      const activeBoss = bossStore.activeBoss
+      const bossAlive = !!activeBoss && !activeBoss.defeated && !activeBoss.expired
+      const now = Date.now()
+
+      if (!bossAlive) {
+        this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
+        this.autoReadyAt = 0
+        this.autoTargetRole = null
+        this.autoTargetSlotId = null
+        this.autoNextTargetRole = null
+        this.autoNextTargetSlotId = null
+        return
+      }
+
+      // Angekündigtes Ziel validieren bzw. (nach)würfeln — das Label zeigt
+      // damit immer den Gegner, den der nächste Strike treffen wird
+      const nextRole = this.autoNextTargetRole
+      const nextValid = nextRole
+        ? roles.has(nextRole) &&
+          this.championHp[nextRole].current > 0 &&
+          this.championDownUntil[nextRole] <= 0
+        : this.autoNextTargetSlotId
+          ? usePlanetShopStore().purchasedSlots.some(
+              (s) => s.id === this.autoNextTargetSlotId && (s.currentHp ?? 1) > 0,
+            )
+          : false
+      if (!nextValid) {
+        const rolled = this._rollStrikeTarget(roles)
+        this.autoNextTargetRole = rolled && 'role' in rolled ? rolled.role : null
+        this.autoNextTargetSlotId = rolled && 'slotId' in rolled ? rolled.slotId : null
+      }
+
+      this.autoCooldownMs = Math.max(0, this.autoCooldownMs - tickMs)
+      this.autoReadyAt = now + this.autoCooldownMs
+      if (this.autoCooldownMs > 0) return
+
+      this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
+      this.autoReadyAt = now + BOSS_AUTO_INTERVAL_MS
+
+      if (!this.autoNextTargetRole && !this.autoNextTargetSlotId) return
 
       const raging = this.rageActiveUntil > now
       const dmg = Math.round(
@@ -472,9 +509,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
 
-      const pick = Math.floor(Math.random() * poolSize)
-      if (pick < champTargets.length) {
-        const role = champTargets[pick]
+      if (this.autoNextTargetRole) {
+        const role = this.autoNextTargetRole
         const hp = this.championHp[role]
         hp.current = Math.max(0, hp.current - dmg)
         this.autoTargetRole = role
@@ -488,15 +524,19 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
             role,
           )
         }
-      } else {
-        const slot = turretTargets[pick - champTargets.length]
-        planetShopStore.takeDamage(slot.id, dmg)
+      } else if (this.autoNextTargetSlotId) {
+        usePlanetShopStore().takeDamage(this.autoNextTargetSlotId, dmg)
         this.autoTargetRole = null
-        this.autoTargetSlotId = slot.id
+        this.autoTargetSlotId = this.autoNextTargetSlotId
       }
 
       this.autoDmg = dmg
       this.autoCounter++
+
+      // Direkt das nächste Opfer ankündigen
+      const rolled = this._rollStrikeTarget(roles)
+      this.autoNextTargetRole = rolled && 'role' in rolled ? rolled.role : null
+      this.autoNextTargetSlotId = rolled && 'slotId' in rolled ? rolled.slotId : null
     },
 
     /** Every orbiting role fires a star attack at the active boss on its own

@@ -176,10 +176,12 @@
                     </div>
                   </div>
 
-                  <!-- Strike-Callout: welches Random-Ziel gerade getroffen wird -->
-                  <Transition name="sf-callout">
-                    <div v-if="strikeCallout" :key="strikeCallout.id" class="sf-strike-callout">
-                      {{ strikeCallout.text }}
+                  <!-- Strike-Ziel: kündigt an, wen der nächste Strike trifft -->
+                  <Transition name="sf-callout" mode="out-in">
+                    <div v-if="strikeNextTarget" :key="strikeNextTarget" class="sf-strike-next">
+                      <span class="sf-strike-next-label">Next Strike</span>
+                      <span class="sf-strike-next-arrow">→</span>
+                      <span class="sf-strike-next-name">{{ strikeNextTarget }}</span>
                     </div>
                   </Transition>
                 </div>
@@ -203,7 +205,7 @@
                   </svg>
                   <div class="sf-star-ring-inner">
                     <span class="sf-auto-ring-secs">{{ autoSecsLeft }}</span>
-                    <span class="sf-auto-ring-label">ATK</span>
+                    <span class="sf-auto-ring-label">STRIKE</span>
                   </div>
                   <span class="sf-ring-dmg sf-ring-dmg--auto">{{ autoDmgDisplay }} dmg</span>
                 </div>
@@ -494,9 +496,14 @@ const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
   support: 4,
 }
 
-const strikeCallout = ref<{ id: number; text: string } | null>(null)
-let strikeCalloutId = 0
-let strikeCalloutTimeout: ReturnType<typeof setTimeout> | null = null
+// Ziel-Ansage: zeigt permanent, welchen Gegner der NÄCHSTE Strike trifft —
+// der Store würfelt das Ziel vorab aus (autoNextTarget*)
+const strikeNextTarget = computed(() => {
+  const role = roleBehaviorStore.autoNextTargetRole
+  if (role) return battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase()
+  const slotId = roleBehaviorStore.autoNextTargetSlotId
+  return slotId ? slotId.replace('slot_', 'Slot ') : null
+})
 
 watch(
   () => roleBehaviorStore.autoCounter,
@@ -509,28 +516,11 @@ watch(
         bossJabActive.value = false
       }, 300)
     })
-
-    // Callout: Zielname auflösen (Champion-Slot bzw. Planet-Slot)
-    const role = roleBehaviorStore.autoTargetRole
-    const slotId = roleBehaviorStore.autoTargetSlotId
-    const target = role
-      ? (battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase())
-      : slotId
-        ? slotId.replace('slot_', 'Slot ')
-        : null
-    if (target) {
-      strikeCallout.value = { id: ++strikeCalloutId, text: `Strike → ${target}` }
-      if (strikeCalloutTimeout) clearTimeout(strikeCalloutTimeout)
-      strikeCalloutTimeout = setTimeout(() => {
-        strikeCallout.value = null
-      }, 1600)
-    }
   },
 )
 
 onUnmounted(() => {
   if (bossJabTimeout) clearTimeout(bossJabTimeout)
-  if (strikeCalloutTimeout) clearTimeout(strikeCalloutTimeout)
 })
 
 const bossStrikeActive = ref(false)
@@ -1696,22 +1686,46 @@ function emberStyle(i: number): Record<string, string> {
   text-transform: uppercase;
 }
 
-/* ── Strike-Callout: kurzer Hinweis unter der HP-Leiste, wen es trifft ───── */
-.sf-strike-callout {
+/* ── Strike-Ziel-Ansage unter der HP-Leiste: "STRIKE → NAME" — kurz,
+   eindeutig, der Name als heller Held der Zeile ──────────────────────────── */
+.sf-strike-next {
   position: absolute;
   top: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
   white-space: nowrap;
-  color: #f0e4c8;
-  text-shadow:
-    0 0 12px rgba(232, 220, 190, 0.55),
-    0 2px 3px rgba(0, 0, 0, 0.95);
   pointer-events: none;
+}
+
+.sf-strike-next-label {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(216, 208, 192, 0.65);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-strike-next-arrow {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: rgba(240, 228, 200, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-strike-next-name {
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff4d8;
+  text-shadow:
+    0 0 14px rgba(232, 220, 190, 0.7),
+    0 0 30px rgba(216, 208, 192, 0.3),
+    0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
 .sf-callout-enter-active {
