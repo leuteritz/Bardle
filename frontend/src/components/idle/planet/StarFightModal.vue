@@ -258,9 +258,11 @@ const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  // 250 statt 200 ms: treibt Star-/Rage-Ring + Countdowns — 4 Hz reichen
+  // visuell, spart aber ein Fünftel der Modal-Re-Renders und Arc-Repaints
   tickInterval = setInterval(() => {
     now.value = Date.now()
-  }, 200)
+  }, 250)
 })
 onUnmounted(() => {
   if (tickInterval) clearInterval(tickInterval)

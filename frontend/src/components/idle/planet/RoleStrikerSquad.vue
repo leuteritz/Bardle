@@ -511,6 +511,8 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Style/Layout/Paint-Invalidierungen bleiben im Squad-Subtree */
+  contain: layout style paint;
 }
 
 /* ── Halbkreis-Führungslinie — verbindet die Striker optisch ─────────────── */

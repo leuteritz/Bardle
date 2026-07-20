@@ -18,10 +18,9 @@
         <div class="tbh-planet" :class="{ 'tbh-planet--hit': hitFlash }">
           <img :src="turretImage" alt="" draggable="false" />
 
-          <!-- Cooldown-Pill wie bei den Champions — Zehntel, da 1s-Takt -->
-          <span class="tbh-cdpill" :class="{ 'tbh-cdpill--ready': cdReady }">
-            {{ cdDisplay }}s
-          </span>
+          <!-- Cooldown-Pill wie bei den Champions — eigener 100ms-Ticker in
+               der Kind-Komponente, re-rendert nicht die ganze Batterie -->
+          <TurretCdPill />
 
           <!-- Roter Schadens-Float, wenn der Boss die Turrets trifft -->
           <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
@@ -80,12 +79,12 @@ import {
   planetLevelBonusMultiplier,
 } from '@/stores/planetShopStore'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
+import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,
   CHAMPION_HIT_FLASH_MS,
-  TURRET_CD_TICK_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_BATTERY_LEFT_X_PCT,
   TURRET_BATTERY_RIGHT_X_PCT,
@@ -150,13 +149,6 @@ const turrets = computed<TurretEntry[]>(() =>
       }
     }),
 )
-
-// ── Cooldown-Pill: geteilter 1s-Takt, darum Zehntel-Anzeige ───────────────
-const cdLeft = ref(1)
-let cdInterval: ReturnType<typeof setInterval> | null = null
-
-const cdDisplay = computed(() => cdLeft.value.toFixed(1))
-const cdReady = computed(() => cdLeft.value <= 0.1)
 
 // ── Boss-Treffer auf die Turrets: Flash + roter Float ─────────────────────
 const hitFlash = ref(false)
@@ -338,12 +330,6 @@ watch(
 )
 
 onMounted(() => {
-  cdInterval = setInterval(() => {
-    cdLeft.value = Math.max(
-      0,
-      (lastVolleyMs + GAME_TICK_INTERVAL_MS - Date.now()) / 1000,
-    )
-  }, TURRET_CD_TICK_MS)
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (rect) arenaSize.value = { w: rect.width, h: rect.height }
@@ -360,7 +346,6 @@ watch(rootEl, (el, prev) => {
 })
 
 onUnmounted(() => {
-  if (cdInterval) clearInterval(cdInterval)
   cancelAnimationFrame(ringAnimFrame)
   resizeObserver?.disconnect()
   resizeObserver = null
@@ -376,6 +361,8 @@ onUnmounted(() => {
   pointer-events: none;
   /* über der .arena (z-index 1), unter HUD (3) und Squad (4) */
   z-index: 2;
+  /* Style/Layout/Paint-Invalidierungen bleiben im HUD-Subtree */
+  contain: layout style paint;
   --tc: v-bind(turretColor);
   /* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px.
      Muss mit planetPx in drawRings() übereinstimmen (54 / 7vh / 76) */
@@ -507,42 +494,6 @@ onUnmounted(() => {
     opacity: 1;
     transform: translate(var(--px), var(--py)) scale(1.15);
   }
-}
-
-/* ── Cooldown-Pill am unteren Planetenrand — wie rsq-cdpill, Zehntel-Takt ── */
-.tbh-cdpill {
-  position: absolute;
-  left: 50%;
-  bottom: -8px;
-  transform: translateX(-50%);
-  min-width: 40px;
-  padding: 1px 7px;
-  border-radius: 8px;
-  text-align: center;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--tc, #cc4444) 32%, #16100a),
-    #0c0803
-  );
-  border: 1px solid color-mix(in srgb, var(--tc, #cc4444) 65%, #3a2410);
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--tc, #cc4444) 35%, transparent),
-    0 2px 5px rgba(0, 0, 0, 0.75);
-  font-size: 0.62rem;
-  font-weight: 900;
-  color: #f4ead0;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  z-index: 3;
-}
-
-.tbh-cdpill--ready {
-  border-color: var(--tc, #cc4444);
-  color: #fff;
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--tc, #cc4444) 80%, transparent),
-    0 2px 5px rgba(0, 0, 0, 0.75);
 }
 
 /* ── Boss-Treffer: roter Flash-Overlay (nur ::after — kollidiert nicht mit
