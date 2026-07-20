@@ -64,7 +64,6 @@
         <circle class="rsq-ring-track" cx="50" cy="50" r="44" />
         <circle class="rsq-ring-arc" cx="50" cy="50" r="44" :style="{ strokeDasharray: s.dash }" />
       </svg>
-      <div class="rsq-badge"><img :src="s.roleImage" alt="" draggable="false" /></div>
 
       <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
       <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
@@ -252,7 +251,6 @@ const strikers = computed(() =>
         role,
         champion,
         img: battleStore.getChampionImage(champion),
-        roleImage: ROLE_BY_KEY[role].image,
         color: ROLE_BY_KEY[role].color,
         attackDamage: def.damage,
         secs: Math.ceil(remaining / 1000),
@@ -540,7 +538,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--rc, #c8922a) 55%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.7);
   z-index: 2;
 }
 
