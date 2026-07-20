@@ -73,8 +73,13 @@
 
             <BossArenaSection
               v-if="activeBoss"
+              disable-arc-attacks
               @shake="handleShake"
             />
+
+            <!-- ── Orbital Support: passive DPS (10% CPS) als sichtbare
+                 Planeten-Salven auf den Boss ── -->
+            <OrbitalSupportHUD v-if="activeBoss" />
 
             <!-- Boss-Angriff: Schockwelle vom Boss Richtung Champion-Halbkreis -->
             <span v-if="bossStrikeActive" class="sf-boss-wave" />
@@ -217,6 +222,7 @@ import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
+import OrbitalSupportHUD from '@/components/idle/planet/OrbitalSupportHUD.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────

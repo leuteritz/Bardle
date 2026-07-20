@@ -892,6 +892,12 @@ export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X 
 export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
 
+// Orbital Support — passive-DPS visualization in the Star Fight Modal
+export const ORBITAL_SUPPORT_FLIGHT_MS = 420 // comet travel time from support planet to boss
+export const ORBITAL_SUPPORT_FLOAT_MS = 1000 // lifetime of the golden passive-damage float
+export const ORBITAL_SUPPORT_X_PCT = 13 // support planet anchor X (% arena width)
+export const ORBITAL_SUPPORT_Y_PCT = 38 // support planet anchor Y (% arena height)
+
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 

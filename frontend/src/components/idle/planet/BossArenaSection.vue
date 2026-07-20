@@ -127,7 +127,13 @@ const CYCLE_MS = 2600
 const IMPACT_OFFSET_MS = Math.round(0.36 * CYCLE_MS)
 const STAGGER_MS = 650
 
-defineProps<{ championDamage?: number }>()
+const props = defineProps<{
+  championDamage?: number
+  /** True im Star-Fight-Modal: der Champ-Arc ist dort ausgeblendet und durch
+   *  das Role-Striker-Squad ersetzt — seine unsichtbaren Angriffs-Zyklen
+   *  würden sonst verdeckt Boss-HP abziehen. */
+  disableArcAttacks?: boolean
+}>()
 
 const emit = defineEmits<{ shake: [ms: number] }>()
 
@@ -335,6 +341,7 @@ function fireAttack(i: number) {
 
 function startAttackCycles() {
   stopAttackCycles()
+  if (props.disableArcAttacks) return
   if (!activeBoss.value) return
   teamChampions.value.forEach((_, i) => {
     attackCounts[i] = 0

@@ -53,6 +53,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     cpsPenaltyActive: false,
     cpsPenaltyExpiresAt: 0,
     lastDroppedMaterialId: null as string | null,
+    // Monotoner Zähler: inkrementiert, wenn der AKTIVE Boss passiven Schaden
+    // erhält — das Star-Fight-Modal koppelt seine Orbital-Support-Salve daran
+    passiveHitCounter: 0,
   }),
 
   getters: {
@@ -328,6 +331,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         const effectiveDPS = Math.max(1, boss.passiveDPS)
         boss.currentHP -= effectiveDPS
         boss.totalDamageDealt += effectiveDPS
+
+        if (this.activeBoss?.planetId === boss.planetId) this.passiveHitCounter++
 
         if (boss.currentHP <= 0) {
           boss.currentHP = 0
