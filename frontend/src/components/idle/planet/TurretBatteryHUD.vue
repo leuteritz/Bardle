@@ -5,34 +5,40 @@
       v-for="t in turrets"
       :key="t.slotId"
       class="tbh-turret"
+      :class="t.isLeft ? 'tbh-turret--left' : 'tbh-turret--right'"
       :style="{ left: `${t.xPct}%`, top: `${t.yPct}%` }"
     >
+      <!-- Die gesamte Einheit (Planet + Pill + Plate) schnipst beim Angriff
+           gemeinsam — wie die rsq-unit der Champions -->
       <div
-        class="tbh-planet"
-        :class="{ 'tbh-planet--firing': volleyFlash, 'tbh-planet--hit': hitFlash }"
+        class="tbh-unit"
+        :class="{ 'tbh-unit--firing': volleyFlash }"
         :style="lungeStyle(t)"
       >
-        <img :src="turretImage" alt="" draggable="false" />
+        <div class="tbh-planet" :class="{ 'tbh-planet--hit': hitFlash }">
+          <img :src="turretImage" alt="" draggable="false" />
 
-        <!-- Cooldown-Pill wie bei den Champions — Zehntel, da 1s-Takt -->
-        <span class="tbh-cdpill" :class="{ 'tbh-cdpill--ready': cdReady }">
-          {{ cdDisplay }}s
-        </span>
+          <!-- Cooldown-Pill wie bei den Champions — Zehntel, da 1s-Takt -->
+          <span class="tbh-cdpill" :class="{ 'tbh-cdpill--ready': cdReady }">
+            {{ cdDisplay }}s
+          </span>
 
-        <!-- Roter Schadens-Float, wenn der Boss die Turrets trifft -->
-        <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
-          -{{ hitDmg }}
-        </span>
-      </div>
-      <!-- Info-Plate wie bei den Champions: HP-Bar → Slot-Nummer → dmg/s -->
-      <div class="tbh-plate-anchor">
-        <StrikerInfoPlate
-          :color="turretColor"
-          :hp-pct="t.hpPct"
-          :hp-text="`${t.hpCur} / ${t.hpMax}`"
-          :name="`Slot ${t.slotNum}`"
-          :stats="`${t.dmg} dmg/s`"
-        />
+          <!-- Roter Schadens-Float, wenn der Boss die Turrets trifft -->
+          <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
+            -{{ hitDmg }}
+          </span>
+        </div>
+
+        <!-- Info-Plate wie bei den Champions: HP-Bar → Slot-Nummer → dmg/s -->
+        <div class="tbh-plate-anchor">
+          <StrikerInfoPlate
+            :color="turretColor"
+            :hp-pct="t.hpPct"
+            :hp-text="`${t.hpCur} / ${t.hpMax}`"
+            :name="`Slot ${t.slotNum}`"
+            :stats="`${t.dmg} dmg/s`"
+          />
+        </div>
       </div>
     </div>
 
@@ -107,6 +113,7 @@ const bossAlive = computed(() => {
 interface TurretEntry {
   slotId: string
   slotNum: number
+  isLeft: boolean
   dmg: number
   hpPct: number
   hpCur: number
@@ -130,6 +137,7 @@ const turrets = computed<TurretEntry[]>(() =>
       return {
         slotId: s.id,
         slotNum,
+        isLeft,
         hpCur: Math.round(hpCur),
         hpMax,
         hpPct: hpMax > 0 ? Math.max(0, Math.min(100, (hpCur / hpMax) * 100)) : 100,
@@ -375,15 +383,16 @@ onUnmounted(() => {
 }
 
 /* ── Turret-Eintrag: Planet + Ring + Info-Plate ──────────────────────────
-   Anker (left/top) = PLANET-Zentrum, nicht Container-Mitte: nur so liegt
-   der Canvas-Ring exakt um das Planet-Bild — die Plate hängt frei darunter */
+   Container-Box = Planet (die Plate ist absolut positioniert) — der Anker
+   (left/top) ist damit exakt das Planet-Zentrum für den Canvas-Ring */
 .tbh-turret {
   position: absolute;
-  transform: translate(-50%, calc(var(--tbh-size) / -2));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
+  transform: translate(-50%, -50%);
+}
+
+/* Einheit = Planet-Box (Plate ist absolut) — Schnips bewegt beides zusammen */
+.tbh-unit {
+  position: relative;
 }
 
 .tbh-planet {
@@ -415,9 +424,9 @@ onUnmounted(() => {
   display: block;
 }
 
-/* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Ring
-   Richtung Boss vorschnellen und federnd zurück — wie die Striker */
-.tbh-planet--firing {
+/* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Pill und
+   Info-Plate Richtung Boss vorschnellen und federnd zurück — wie die Striker */
+.tbh-unit--firing {
   animation: tbh-snap 0.5s linear;
   will-change: transform;
 }
@@ -454,11 +463,21 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* ── Info-Plate unter dem Planeten — Karte selbst kommt aus der geteilten
-   StrikerInfoPlate-Komponente, hier nur Abstand + kompaktere Mindestbreite ── */
+/* ── Info-Plate seitlich neben dem Planeten — linke Flanke links vom Image,
+   rechte Flanke rechts davon; Karte kommt aus der geteilten StrikerInfoPlate ── */
 .tbh-plate-anchor {
-  margin-top: 6px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   --sip-min-w: 82px;
+}
+
+.tbh-turret--left .tbh-plate-anchor {
+  right: calc(100% + 12px);
+}
+
+.tbh-turret--right .tbh-plate-anchor {
+  left: calc(100% + 12px);
 }
 
 /* ── Komet Richtung Boss ─────────────────────────────────────────────────── */
@@ -618,7 +637,7 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tbh-planet--firing,
+  .tbh-unit--firing,
   .tbh-planet--hit::after,
   .tbh-hitfloat,
   .tbh-impact-num,
