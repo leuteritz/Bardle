@@ -1,35 +1,41 @@
 <template>
-  <div class="reward-card" :class="{ 'reward-card--galaxy': isGalaxyBoss }">
-    <span class="reward-eyebrow">Loot · This Boss</span>
+  <div class="loot" :class="{ 'loot--galaxy': isGalaxyBoss }">
+    <!-- Eyebrow zwischen HUD-Klammerlinien — spiegelt den Bossnamen oben -->
+    <div class="loot-head">
+      <span class="loot-line" />
+      <span class="loot-eyebrow">✦ Loot ✦</span>
+      <span class="loot-line loot-line--right" />
+    </div>
 
-    <div class="reward-chips">
+    <!-- Rewards als frei stehende, glühende Elemente — keine Karte -->
+    <div class="loot-row">
       <!-- Champion zuerst — die Hauptbelohnung -->
-      <span v-if="homePlanetChampion" class="reward-champion">
+      <span v-if="homePlanetChampion" class="loot-champion">
         <img
           v-if="homePlanetChampionImage"
           :src="homePlanetChampionImage"
           :alt="homePlanetChampion"
-          class="reward-champion-portrait"
+          class="loot-champion-portrait"
           @error="($event.target as HTMLImageElement).style.display = 'none'"
         />
-        <span class="reward-champion-text">
-          <span class="reward-champion-eyebrow">Champion</span>
-          <span class="reward-champion-name">{{ homePlanetChampion }}</span>
+        <span class="loot-champion-text">
+          <span class="loot-champion-eyebrow">Champion</span>
+          <span class="loot-champion-name">{{ homePlanetChampion }}</span>
         </span>
       </span>
 
-      <span v-if="totalChimes > 0" class="reward-chip reward-chip--chimes">
-        <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="reward-chip-icon" />
+      <span v-if="totalChimes > 0" class="loot-chip loot-chip--chimes">
+        <img src="/img/BardAbilities/BardChime.png" alt="Chimes" class="loot-chip-icon" />
         {{ totalChimes }}
       </span>
 
       <span
         v-for="entry in stackedMaterials"
         :key="entry.material.id"
-        class="reward-chip"
+        class="loot-chip"
         :class="`rarity--${entry.material.rarity}`"
       >
-        <img :src="entry.material.image" :alt="entry.material.name" class="reward-chip-icon" />
+        <img :src="entry.material.image" :alt="entry.material.name" class="loot-chip-icon" />
         {{ entry.material.name }}<template v-if="entry.count > 1"> ×{{ entry.count }}</template>
       </span>
     </div>
@@ -77,49 +83,21 @@ const stackedMaterials = computed(() => {
 </script>
 
 <style scoped>
-/* ── Primärkarte — Loot des aktuellen Bosses, dominiert das Bottom-Dock ──── */
-.reward-card {
-  flex: 1.7;
-  min-width: 0;
-  position: relative;
+/* ── Rahmenloses Loot-Banner im HUD-Stil des Modals: keine Karte, nur frei
+   stehende, glühende Elemente über dem Planeten — wie Bossname + HP oben ── */
+.loot {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 1rem 1.3rem 1.1rem;
-  border-radius: 4px;
-  /* Kein backdrop-filter: müsste beim Screen-Shake jeden Frame neu blurren */
-  background: rgba(17, 12, 4, 0.86);
-  border: 1px solid #5c3310;
-  box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(232, 192, 64, 0.08);
-  overflow: hidden;
-  animation: rewardReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
-/* Goldene Signatur-Linie oben — markiert die Hauptkarte */
-.reward-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-}
-
-.reward-card--galaxy {
-  border-color: #5a2478;
-}
-
-.reward-card--galaxy::before {
-  background: linear-gradient(to right, #3a1050, #9040c8, #cc70ff, #a850e0, #9040c8, #3a1050);
-}
-
-@keyframes rewardReveal {
+@keyframes loot-reveal {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -127,105 +105,129 @@ const stackedMaterials = computed(() => {
   }
 }
 
-/* ── Eyebrow ──────────────────────────────────────────────────────────────── */
-.reward-eyebrow {
-  display: inline-flex;
+/* ── Eyebrow zwischen dünnen Klammerlinien ────────────────────────────────── */
+.loot-head {
+  display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 0.8rem;
+  gap: 0.7rem;
+  width: min(420px, 80%);
+}
+
+.loot-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.45));
+}
+
+.loot-line--right {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.45));
+}
+
+.loot-eyebrow {
+  font-size: 0.72rem;
   font-weight: 900;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
   color: #e8c040;
-  text-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
   white-space: nowrap;
+  text-shadow:
+    0 0 10px rgba(232, 192, 64, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* kleiner Akzentbalken vor dem Eyebrow — moderne Sektionsmarke */
-.reward-eyebrow::before {
-  content: '';
-  width: 20px;
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, #c89040, #e8c060);
-  flex-shrink: 0;
+.loot--galaxy .loot-eyebrow {
+  color: #dd99ff;
+  text-shadow:
+    0 0 10px rgba(200, 100, 255, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Chips ────────────────────────────────────────────────────────────────── */
-.reward-chips {
+.loot--galaxy .loot-line {
+  background: linear-gradient(to right, transparent, rgba(200, 100, 255, 0.45));
+}
+
+.loot--galaxy .loot-line--right {
+  background: linear-gradient(to left, transparent, rgba(200, 100, 255, 0.45));
+}
+
+/* ── Reward-Reihe ─────────────────────────────────────────────────────────── */
+.loot-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 28px;
+  justify-content: center;
+  gap: 8px 30px;
   min-width: 0;
 }
 
-.reward-chip {
+.loot-chip {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #d0d0d0;
+  gap: 10px;
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #e6e0d0;
   white-space: nowrap;
-  line-height: 1.4;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  line-height: 1.3;
+  -webkit-text-stroke: 1px rgba(10, 5, 0, 0.7);
+  paint-order: stroke fill;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.95),
+    0 0 14px rgba(0, 0, 0, 0.6);
 }
 
-.reward-chip--chimes {
-  color: #e8c040;
-  text-shadow: 0 0 10px rgba(232, 192, 64, 0.55), 0 1px 3px rgba(0, 0, 0, 0.9);
+.loot-chip--chimes {
+  color: #ffd970;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
-.reward-chip-icon {
-  width: 52px;
-  height: 52px;
+.loot-chip-icon {
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.8));
 }
 
 /* ── Champion — die Hauptbelohnung, episch hervorgehoben ─────────────────── */
-.reward-champion {
+.loot-champion {
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
-  gap: 14px;
-  padding-right: 24px;
-  margin-right: 4px;
-  border-right: 1px solid rgba(74, 144, 217, 0.25);
+  gap: 12px;
 }
 
-.reward-champion-portrait {
-  width: 84px;
-  height: 84px;
+.loot-champion-portrait {
+  width: 62px;
+  height: 62px;
   flex-shrink: 0;
   object-fit: cover;
   object-position: center top;
   border-radius: 4px;
   border: 1px solid #82b9ff;
   box-shadow:
-    0 0 18px rgba(74, 144, 217, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.8);
+    0 0 20px rgba(74, 144, 217, 0.55),
+    0 3px 10px rgba(0, 0, 0, 0.85);
 }
 
-.reward-champion-text {
+.loot-champion-text {
   display: inline-flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
-.reward-champion-eyebrow {
-  font-size: 0.7rem;
+.loot-champion-eyebrow {
+  font-size: 0.62rem;
   font-weight: 900;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(130, 185, 255, 0.75);
-  text-shadow: 0 0 8px rgba(74, 144, 217, 0.5);
+  color: rgba(130, 185, 255, 0.8);
+  text-shadow: 0 0 8px rgba(74, 144, 217, 0.5), 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
-.reward-champion-name {
-  font-size: 2rem;
+.loot-champion-name {
+  font-size: 1.55rem;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -233,21 +235,30 @@ const stackedMaterials = computed(() => {
   white-space: nowrap;
   color: #9cc8ff;
   text-shadow:
-    0 0 14px rgba(74, 144, 217, 0.55),
-    0 2px 3px rgba(0, 0, 0, 0.9);
+    0 0 16px rgba(74, 144, 217, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* ── Rarities ─────────────────────────────────────────────────────────────── */
 .rarity--common {
-  color: #b8b8b8;
+  color: #c8c8c8;
 }
 .rarity--uncommon {
-  color: #1eff00;
+  color: #4dff35;
+  text-shadow: 0 0 12px rgba(30, 255, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 .rarity--rare {
-  color: #3a9aff;
+  color: #5aabff;
+  text-shadow: 0 0 12px rgba(58, 154, 255, 0.45), 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 .rarity--epic {
-  color: #b45aff;
+  color: #c37aff;
+  text-shadow: 0 0 12px rgba(180, 90, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loot {
+    animation: none;
+  }
 }
 </style>

@@ -179,15 +179,14 @@
             </div>
 
 
+            <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
+            <div v-if="activeBoss" class="sf-loot">
+              <BossRewardSection />
+            </div>
+
             <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
             <div v-if="activeBoss" class="sf-squad">
               <RoleStrikerSquad />
-            </div>
-
-            <!-- ── Bottom-Dock: Loot-Karte (dieser Boss) + Up-Next-Karte ── -->
-            <div class="sf-bottom-dock">
-              <BossRewardSection v-if="activeBoss" />
-              <BossPlanetList />
             </div>
           </div>
         </div>
@@ -218,7 +217,6 @@ import { NS, drawPlanet } from '@/utils/planetDraw'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
-import BossPlanetList from '@/components/idle/planet/BossPlanetList.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────
@@ -1041,26 +1039,18 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
 }
 
-/* ── Bottom-Dock: Loot- und Up-Next-Karten nebeneinander ─────────────────── */
-.sf-bottom-dock {
+/* ── Loot-Banner — rahmenlos, zentriert unter dem Boss-Bild, im leeren
+   Raum innerhalb des Striker-Halbkreises ─────────────────────────────────── */
+.sf-loot {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 3;
+  top: 57%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(820px, 54%);
+  z-index: 2;
   display: flex;
-  flex-direction: row;
-  /* Sekundärkarte (Up Next) dockt unten an und bleibt niedriger als die
-     Primärkarte — bewusste Größen-Hierarchie */
-  align-items: flex-end;
-  gap: 10px;
-  padding: 1.6rem 0.9rem 0.75rem;
-  background: linear-gradient(
-    to top,
-    rgba(8, 4, 0, 0.94) 0%,
-    rgba(8, 4, 0, 0.6) 62%,
-    transparent 100%
-  );
+  justify-content: center;
+  pointer-events: none;
 }
 
 /* ── Epische Boss-HP-Leiste — groß, segmentiert, Werte innenliegend ──────── */

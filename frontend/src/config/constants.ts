@@ -887,7 +887,7 @@ export const STRIKER_ARC_ANGLES: Record<ChampionRole, number> = {
 }
 export const STRIKER_ARC_RX_PCT = 36 // horizontal semi-axis of the striker arc (% arena width)
 export const STRIKER_ARC_RY_PCT = 10 // vertical semi-axis of the striker arc (% arena height)
-export const STRIKER_ARC_CENTER_Y_PCT = 60 // arc center as % of arena height (below the boss)
+export const STRIKER_ARC_CENTER_Y_PCT = 67 // arc center as % of arena height (below boss + loot banner)
 export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
 export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
