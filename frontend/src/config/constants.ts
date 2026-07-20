@@ -873,6 +873,7 @@ export const STRIKER_PROJECTILE_FLIGHT_MS = 550 // projectile travel time
 export const STRIKER_IMPACT_MS = 900 // impact burst + damage number lifetime
 export const STRIKER_FIRE_FLASH_MS = 500 // portrait attack animation (lunge + shake + glow)
 export const STRIKER_ATTACK_LUNGE_PX = 22 // how far the portrait lunges toward the boss on attack
+export const STRIKER_ATTACK_LABEL_MS = 850 // "Attack!" callout lifetime above the striker portrait
 // Halbkreis unterhalb des Boss-Bilds: Winkel in Grad (0° = rechts, 90° = unten)
 // je Rolle — Top ganz links, Mid unten Mitte, Support rechts. Alle Maße in %
 // der Arena, damit das Layout auf Full-HD wie auf 2K identisch sitzt.

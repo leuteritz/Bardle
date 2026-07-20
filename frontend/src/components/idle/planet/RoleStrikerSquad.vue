@@ -62,14 +62,26 @@
       </div>
       <svg class="rsq-ring" viewBox="0 0 100 100">
         <circle class="rsq-ring-track" cx="50" cy="50" r="44" />
-        <circle class="rsq-ring-arc" cx="50" cy="50" r="44" :style="{ strokeDasharray: s.dash }" />
+        <circle
+          class="rsq-ring-arc"
+          :class="{ 'rsq-ring-arc--full': s.secs === 0 && !s.isDown }"
+          cx="50"
+          cy="50"
+          r="44"
+          :style="{ strokeDasharray: s.dash }"
+        />
       </svg>
+
+      <!-- "Attack!"-Callout im Moment des Abschusses -->
+      <Transition name="rsq-atk">
+        <span v-if="attackLabelRoles.has(s.role)" class="rsq-atk">Attack!</span>
+      </Transition>
 
       <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
       <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
 
       <!-- Cooldown-Pill am unteren Portraitrand -->
-      <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs <= 1 }">
+      <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs === 0 }">
         {{ s.secs }}s
       </span>
 
@@ -162,6 +174,7 @@ import {
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
   STRIKER_ATTACK_LUNGE_PX,
+  STRIKER_ATTACK_LABEL_MS,
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_RAGE_DMG_MULT,
@@ -229,7 +242,13 @@ const strikers = computed(() =>
     if (!champion) return []
     const def = ROLE_STAR_ATTACKS[role]
     const remaining = Math.max(0, roleBehaviorStore.roleAttackCooldownMs[role])
-    const readyFrac = Math.max(0, Math.min(1, 1 - remaining / def.intervalMs))
+    // Ring-Zeitbasis um ZWEI Store-Ticks verschoben (die Pill um einen, siehe
+    // secs unten): der Zielwert "voll" wird schon beim Flip auf "1s" gesetzt,
+    // die 0.9s-Dasharray-Transition schließt damit exakt beim Erscheinen der
+    // "0s" ab — der Ring steht dann komplett, danach kommt der Angriff
+    const dispInterval = Math.max(1, def.intervalMs - 2000)
+    const dispRemaining = Math.max(0, remaining - 2000)
+    const readyFrac = Math.max(0, Math.min(1, 1 - dispRemaining / dispInterval))
 
     const hp = roleBehaviorStore.championHp[role]
     const downUntil = roleBehaviorStore.championDownUntil[role]
@@ -253,7 +272,10 @@ const strikers = computed(() =>
         img: battleStore.getChampionImage(champion),
         color: ROLE_BY_KEY[role].color,
         attackDamage: def.damage,
-        secs: Math.ceil(remaining / 1000),
+        // Der Store tickt sekündlich und setzt beim Feuern sofort auf das
+        // volle Intervall zurück — der Rohwert erreicht sichtbar nie 0.
+        // Um einen Tick verschoben zählt die Pill … 2, 1, 0 → Angriff.
+        secs: Math.max(0, Math.ceil(remaining / 1000) - 1),
         dash: `${(readyFrac * RING_CIRCUMFERENCE).toFixed(1)} ${RING_CIRCUMFERENCE.toFixed(1)}`,
         hpPct: hp.max > 0 ? Math.max(0, Math.min(100, (hp.current / hp.max) * 100)) : 100,
         hpCur: Math.round(hp.current),
@@ -316,6 +338,8 @@ interface StrikerShot {
 
 const shots = ref<StrikerShot[]>([])
 const firingRoles = reactive(new Set<ChampionRole>())
+// "Attack!"-Callout über dem Portrait — etwas länger sichtbar als der Blitz
+const attackLabelRoles = reactive(new Set<ChampionRole>())
 let shotId = 0
 const timeouts: number[] = []
 
@@ -332,6 +356,8 @@ function fireProjectile(role: ChampionRole, value: number) {
   shots.value.push({ id, role, value, phase: 'fly' })
   firingRoles.add(role)
   later(STRIKER_FIRE_FLASH_MS, () => firingRoles.delete(role))
+  attackLabelRoles.add(role)
+  later(STRIKER_ATTACK_LABEL_MS, () => attackLabelRoles.delete(role))
   later(STRIKER_PROJECTILE_FLIGHT_MS, () => {
     const shot = shots.value.find((s) => s.id === id)
     if (shot) shot.phase = 'hit'
@@ -522,7 +548,14 @@ onUnmounted(() => {
   stroke: var(--rc, #c8922a);
   stroke-width: 4;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.9s linear;
+  transition: stroke-dasharray 0.9s linear, stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+/* Ring voll (0s): heller + dicker als Ready-Signal — bewusst ohne Filter,
+   der Arc transitioniert quasi durchgehend (kein Rastern pro Frame) */
+.rsq-ring-arc--full {
+  stroke: color-mix(in srgb, var(--rc, #c8922a) 55%, #fff);
+  stroke-width: 6;
 }
 
 /* ── Rollen-Badge (oben links) ───────────────────────────────────────────── */
@@ -1222,6 +1255,58 @@ onUnmounted(() => {
   }
 }
 
+/* ── "Attack!"-Callout — knallt beim Abschuss über dem Portrait auf ──────── */
+.rsq-atk {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  transform: translateX(-50%);
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--rc, #c8922a) 35%, #fff);
+  -webkit-text-stroke: 3px rgba(10, 5, 0, 0.9);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  text-shadow:
+    0 0 12px color-mix(in srgb, var(--rc, #c8922a) 75%, transparent),
+    0 0 26px color-mix(in srgb, var(--rc, #c8922a) 40%, transparent),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Slam-In: groß reinknallen, kurz überschwingen, stehen bleiben */
+.rsq-atk-enter-active {
+  animation: rsq-atk-slam 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+  will-change: transform, opacity;
+}
+
+.rsq-atk-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.rsq-atk-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+@keyframes rsq-atk-slam {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(2.1);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(-50%) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
 /* ── DoT-Ticks über dem Striker (Corruption) ─────────────────────────────── */
 .rsq-float {
   position: absolute;
@@ -1285,6 +1370,7 @@ onUnmounted(() => {
   .rsq-spark,
   .rsq-impact-num,
   .rsq-pop-enter-active,
+  .rsq-atk-enter-active,
   .rsq-vacant-emblem,
   .rsq-vacant-ring,
   .rsq-vacant-pill {
