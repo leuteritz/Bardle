@@ -63,6 +63,7 @@
               'sf-arena-wrap--strike': bossStrikeActive,
               'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
               'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
+              'sf-arena-wrap--eclipsed': bossBehindSun,
             }"
           >
             <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
@@ -121,6 +122,14 @@
                 </span>
                 <span class="sf-name-line" />
               </div>
+
+              <!-- Eclipse-Status: Boss steht hinter der Sonne — kein Kampf,
+                   alle Fähigkeiten warten bei vollem Ring -->
+              <Transition name="sf-callout">
+                <div v-if="bossBehindSun" class="sf-eclipse-chip">
+                  ✦ Behind the Sun — combat paused
+                </div>
+              </Transition>
               <div class="sf-hp-row">
                 <div
                   v-if="starSecsLeft !== null"
@@ -305,6 +314,7 @@ import {
   BOSS_RAGE_DMG_MULT,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
+import { bossPlanetInForeground } from '@/utils/foregroundGate'
 import type { ChampionRole } from '@/types'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
@@ -495,6 +505,15 @@ const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
   adc: 3,
   support: 4,
 }
+
+// ── Eclipse-Status: Boss hinter der Sonne? (250ms-Tick liest die 60fps-
+// aktualisierte, nicht-reaktive Positions-Map) ───────────────────────────
+const bossBehindSun = computed(() => {
+  void now.value
+  const boss = activeBoss.value
+  if (!boss) return false
+  return !bossPlanetInForeground(boss.planetId)
+})
 
 // Ziel-Ansage: zeigt permanent, welchen Gegner der NÄCHSTE Strike trifft —
 // der Store würfelt das Ziel vorab aus (autoNextTarget*)
@@ -844,7 +863,8 @@ function emberStyle(i: number): Record<string, string> {
   .sf-arena-wrap--jab :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave,
-  .sf-boss-flare {
+  .sf-boss-flare,
+  .sf-eclipse-chip {
     animation: none;
   }
 }
@@ -1684,6 +1704,38 @@ function emberStyle(i: number): Record<string, string> {
   letter-spacing: 0.26em;
   color: rgba(216, 208, 192, 0.6);
   text-transform: uppercase;
+}
+
+/* ── Eclipse: Boss hinter der Sonne — gedimmt + Status-Chip ──────────────── */
+.sf-arena-wrap--eclipsed :deep(.boss-img) {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+.sf-eclipse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(232, 192, 64, 0.75);
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+  animation: sf-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes sf-eclipse-breathe {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Strike-Ziel-Ansage unter der HP-Leiste: "STRIKE → NAME" — kurz,

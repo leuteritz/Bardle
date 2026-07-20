@@ -21,13 +21,19 @@
            gemeinsam — wie die rsq-unit der Champions (nur Turrets feuern) -->
       <div
         class="tbh-unit"
-        :class="{ 'tbh-unit--firing': t.isTurret && volleyFlash }"
+        :class="{
+          'tbh-unit--firing': t.isTurret && volleyFlash && !behindSlotIds.has(t.slotId),
+        }"
         :style="t.isTurret ? lungeStyle(t) : undefined"
       >
         <div
           v-if="t.filled"
           class="tbh-planet"
-          :class="{ 'tbh-planet--hit': hitFlash || autoHitSlotId === t.slotId }"
+          :class="{
+            'tbh-planet--hit':
+              (hitFlash && !behindSlotIds.has(t.slotId)) || autoHitSlotId === t.slotId,
+            'tbh-planet--eclipsed': behindSlotIds.has(t.slotId),
+          }"
         >
           <img :src="t.image" alt="" draggable="false" />
 
@@ -35,8 +41,15 @@
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
           <TurretCdPill v-if="t.isTurret" />
 
-          <!-- Roter Schadens-Float: Nova (alle Planeten) -->
-          <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
+          <!-- Eclipse-Tag: Planet steht hinter der Sonne — kein Kampf -->
+          <span v-if="behindSlotIds.has(t.slotId)" class="tbh-eclipse">Eclipsed</span>
+
+          <!-- Roter Schadens-Float: Nova (alle sichtbaren Planeten) -->
+          <span
+            v-if="hitSeq > 0 && !behindSlotIds.has(t.slotId)"
+            :key="'hit-' + hitSeq"
+            class="tbh-hitfloat"
+          >
             -{{ hitDmg }}
           </span>
 
@@ -124,6 +137,7 @@ import {
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
 import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
+import { playerSlotInForeground } from '@/utils/foregroundGate'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   GAME_TICK_INTERVAL_MS,
@@ -218,6 +232,20 @@ const entries = computed<SlotEntry[]>(() =>
 
 // Nur Turret-Slots feuern Volleys und tragen Cooldown-Ringe
 const turretEntries = computed(() => entries.value.filter((e) => e.isTurret))
+
+// ── Eclipse-Zustand: 2Hz-Tick liest die nicht-reaktive Positions-Map —
+// Planeten hinter der Sonne kämpfen nicht und werden nicht getroffen
+const behindTick = ref(0)
+let behindInterval: number | null = null
+
+const behindSlotIds = computed(() => {
+  void behindTick.value
+  const behind = new Set<string>()
+  for (const e of entries.value) {
+    if (e.filled && !playerSlotInForeground(e.slotId)) behind.add(e.slotId)
+  }
+  return behind
+})
 
 // ── Nova-Treffer auf alle Planeten: Flash + roter Float ───────────────────
 const hitFlash = ref(false)
@@ -348,6 +376,8 @@ function drawRings() {
       : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
 
     for (const t of turretEntries.value) {
+      // Turrets hinter der Sonne pausieren — kein Cooldown-Ring
+      if (behindSlotIds.value.has(t.slotId)) continue
       const cx = (t.xPct / 100) * w
       const cy = (t.yPct / 100) * h
 
@@ -454,6 +484,8 @@ function fireVolley() {
   const { w, h } = arenaSize.value
 
   for (const t of turretEntries.value) {
+    // Turrets hinter der Sonne feuern nicht
+    if (behindSlotIds.value.has(t.slotId)) continue
     const id = ++volleyId
     const px = Math.round(
       ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
@@ -482,10 +514,13 @@ watch(
 )
 
 onMounted(() => {
-  resizeObserver = new ResizeObserver((entries) => {
-    const rect = entries[0]?.contentRect
+  resizeObserver = new ResizeObserver((observed) => {
+    const rect = observed[0]?.contentRect
     if (rect) arenaSize.value = { w: rect.width, h: rect.height }
   })
+  behindInterval = window.setInterval(() => {
+    behindTick.value++
+  }, 500)
 })
 
 watch(rootEl, (el, prev) => {
@@ -501,6 +536,7 @@ onUnmounted(() => {
   cancelAnimationFrame(ringAnimFrame)
   resizeObserver?.disconnect()
   resizeObserver = null
+  if (behindInterval) window.clearInterval(behindInterval)
   timeouts.forEach(window.clearTimeout)
   timeouts.length = 0
 })
@@ -578,6 +614,33 @@ onUnmounted(() => {
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+/* ── Eclipse: Planet hinter der Sonne — gedimmt, kämpft nicht ────────────── */
+.tbh-planet--eclipsed {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+.tbh-eclipse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(10, 6, 0, 0.82);
+  border: 1px solid rgba(232, 192, 64, 0.4);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(232, 192, 64, 0.85);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  z-index: 4;
+  pointer-events: none;
 }
 
 /* ── Leerer Slot: Geister-Platzhalter — gestrichelter Ring + Slot-Nummer ── */

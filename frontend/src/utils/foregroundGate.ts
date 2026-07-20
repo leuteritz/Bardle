@@ -2,9 +2,10 @@
 // Kampf passiert nur im Sonnen-Vordergrund: Objekte hinter der Sonne greifen
 // nicht an und werden nicht getroffen. Cooldowns laufen normal weiter — eine
 // bei 0 angekommene Fähigkeit WARTET, bis Akteur und Ziel wieder sichtbar
-// sind. Ist der Idle-Layer pausiert (Star-Fight-Modal/Profil offen), gelten
-// alle Objekte als im Vordergrund — die eingefrorenen Orbit-Positionen dürfen
-// den Kampf im Modal nicht blockieren.
+// sind. Das gilt auch bei offenem Star-Fight-Modal — der Idle-Layer läuft
+// dort weiter. Nur wenn er wirklich pausiert ist (Profil offen, Tab im
+// Hintergrund), gelten alle Objekte als im Vordergrund, damit eingefrorene
+// Orbit-Positionen den Kampf nicht blockieren.
 import { activeChampionBehindState } from './activeChampionBehindState'
 import { activePlayerPlanetPositions } from './activePlayerPlanetPositions'
 import { activePlanetPositions } from './activePlanetPositions'

@@ -62,6 +62,7 @@
         'rsq-item--firing': firingRoles.has(s.role),
         'rsq-item--hit': hitRoles.has(s.role),
         'rsq-item--down': s.isDown,
+        'rsq-item--behind': s.behind && !s.isDown,
       }"
       :style="{
         '--rc': s.color,
@@ -108,6 +109,9 @@
 
         <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
         <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
+
+        <!-- Eclipse-Tag: Champion steht hinter der Sonne — kämpft nicht -->
+        <span v-if="s.behind && !s.isDown" class="rsq-eclipse">Eclipsed</span>
 
         <!-- Cooldown-Pill am unteren Portraitrand -->
         <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs === 0 }">
@@ -210,6 +214,7 @@ import {
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
+import { activeChampionBehindState } from '@/utils/activeChampionBehindState'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -311,6 +316,8 @@ const strikers = computed(() =>
         hpMax: hp.max,
         isDown,
         downSecs: isDown ? Math.ceil((downUntil - nowTick.value) / 1000) : 0,
+        // Hinter der Sonne: kämpft nicht, wird nicht getroffen (reaktives Record)
+        behind: activeChampionBehindState[champion] ?? false,
         xPct: Math.round(xPct * 10) / 10,
         yPct: Math.round(yPct * 10) / 10,
         px,
@@ -1343,6 +1350,33 @@ onUnmounted(() => {
 .rsq-float--dot {
   color: #d99bff;
   text-shadow: 0 0 12px #a030ff;
+}
+
+/* ── Eclipse: Champion hinter der Sonne — gedimmt, kämpft nicht ──────────── */
+.rsq-item--behind .rsq-unit {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+.rsq-eclipse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(10, 6, 0, 0.82);
+  border: 1px solid rgba(232, 192, 64, 0.4);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 192, 64, 0.85);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  z-index: 4;
+  pointer-events: none;
 }
 
 /* ── Strike-Bolt: schneller Bone-Silber-Komet Boss → getroffener Champion —
