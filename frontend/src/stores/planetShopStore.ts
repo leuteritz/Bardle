@@ -25,6 +25,7 @@ import {
 } from '@/config/constants'
 import { useSolarUpgradeStore } from './solarUpgradeStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '../utils/orbitMath'
+import { playerSlotInForeground } from '../utils/foregroundGate'
 
 export type PlanetRoleType =
   | 'turret_planet'
@@ -252,6 +253,23 @@ export const usePlanetShopStore = defineStore('planetShop', {
     autoAttackDPS(state): number {
       return state.slots
         .filter((s) => s.purchased && s.role === 'turret_planet')
+        .reduce((sum, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return (
+            sum +
+            PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
+          )
+        }, 0)
+    },
+
+    /** DPS nur der Turrets im Sonnen-Vordergrund — Turrets hinter der Sonne
+     *  feuern nicht (Kampf passiert nur im Vordergrund). */
+    foregroundAutoAttackDPS(state): number {
+      return state.slots
+        .filter(
+          (s) =>
+            s.purchased && s.role === 'turret_planet' && playerSlotInForeground(s.id),
+        )
         .reduce((sum, slot) => {
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           return (

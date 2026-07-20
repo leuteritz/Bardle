@@ -54,6 +54,11 @@ import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS, type PlanetSlot } f
 import { useStarGroupStore } from './starGroupStore'
 import { activePlanetPositions } from '../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../utils/activePlayerPlanetPositions'
+import {
+  championInForeground,
+  playerSlotInForeground,
+  bossPlanetInForeground,
+} from '../utils/foregroundGate'
 import { activeMidCurse } from '../utils/activeMidCurse'
 import type { ChampionRole, MidCurseType, ActiveCurse } from '../types'
 import { useEventLog } from '@/composables/useEventLog'
@@ -126,6 +131,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
     tankShieldActive: false,
     tankShieldBrokenMs: 0,
+    // Rebuild fertig, aber Top (noch) hinter der Sonne — Log erst bei Aktivierung
+    tankShieldRebuildPending: false,
 
     tankInterceptActive: false,
     tankInterceptStartMs: 0,
@@ -370,6 +377,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.novaReadyAt = now + this.novaCooldownMs
       if (this.novaCooldownMs > 0) return
 
+      // Vordergrund-Gate: Steht der Boss hinter der Sonne, wartet die Nova
+      // bei vollem Ring, bis er wieder sichtbar ist
+      if (!bossPlanetInForeground(activeBoss.planetId)) return
+
       this.novaCooldownMs = BOSS_NOVA_INTERVAL_MS
       this.novaReadyAt = now + BOSS_NOVA_INTERVAL_MS
       this.novaCounter++
@@ -387,6 +398,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         if (!roles.has(role)) continue
         const hp = this.championHp[role]
         if (hp.max <= 0 || this.championDownUntil[role] > 0) continue
+        // Hinter der Sonne wird nicht getroffen
+        if (!championInForeground(getChampionNameByRole(role))) continue
 
         hp.current = Math.max(0, hp.current - dmg)
         this.championHitAt[role] = now
@@ -416,7 +429,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           (raging ? BOSS_RAGE_DMG_MULT : 1) *
           novaSecs,
       )
-      const planetSlots = planetShopStore.activeSlots
+      // Hinter der Sonne wird nicht getroffen — nur sichtbare Slots
+      const planetSlots = planetShopStore.activeSlots.filter((s) =>
+        playerSlotInForeground(s.id),
+      )
       if (planetDmg > 0 && planetSlots.length > 0) {
         for (const slot of planetSlots) planetShopStore.takeDamage(slot.id, planetDmg)
         this.planetHitAt = now
@@ -495,10 +511,17 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this.autoReadyAt = now + this.autoCooldownMs
       if (this.autoCooldownMs > 0) return
 
+      if (!this.autoNextTargetRole && !this.autoNextTargetSlotId) return
+
+      // Vordergrund-Gate: Boss UND Ziel müssen sichtbar sein — der Strike
+      // wartet bei vollem Ring (CD 0), bis beide vor der Sonne stehen
+      const targetVisible = this.autoNextTargetRole
+        ? championInForeground(getChampionNameByRole(this.autoNextTargetRole))
+        : playerSlotInForeground(this.autoNextTargetSlotId!)
+      if (!bossPlanetInForeground(activeBoss.planetId) || !targetVisible) return
+
       this.autoCooldownMs = BOSS_AUTO_INTERVAL_MS
       this.autoReadyAt = now + BOSS_AUTO_INTERVAL_MS
-
-      if (!this.autoNextTargetRole && !this.autoNextTargetSlotId) return
 
       const raging = this.rageActiveUntil > now
       const dmg = Math.round(
@@ -556,9 +579,22 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
         this.roleAttackCooldownMs[role] = Math.max(0, this.roleAttackCooldownMs[role] - tickMs)
         if (this.roleAttackCooldownMs[role] > 0) continue
-        this.roleAttackCooldownMs[role] = def.intervalMs
 
-        if (!activeBoss || activeBoss.defeated || activeBoss.expired) continue
+        if (!activeBoss || activeBoss.defeated || activeBoss.expired) {
+          this.roleAttackCooldownMs[role] = def.intervalMs
+          continue
+        }
+
+        // Vordergrund-Gate: Schütze und Boss müssen vor der Sonne stehen —
+        // der Angriff wartet bei CD 0, bis beide wieder sichtbar sind
+        if (
+          !championInForeground(getChampionNameByRole(role)) ||
+          !bossPlanetInForeground(activeBoss.planetId)
+        ) {
+          continue
+        }
+
+        this.roleAttackCooldownMs[role] = def.intervalMs
 
         // Abschuss sofort (treibt Projektil-Animation) — der SCHADEN landet
         // erst beim visuellen Einschlag des Projektils am Boss
@@ -614,6 +650,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         return
       }
 
+      // Vordergrund-Gate: Heals wirken nur, wenn der Support vor der Sonne
+      // steht — die Cooldowns laufen weiter und warten bei 0
+      if (!championInForeground(supportName)) return
+
       if (this.supportHealCooldownMs <= 0) {
         this.supportHealCooldownMs = ROLE_SUPPORT_HEAL_INTERVAL_MS
       }
@@ -633,7 +673,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         .filter((entry) => entry !== null)
 
       const healablePlanets = damagedCandidates
-        .filter((entry) => entry.slot.currentHp < entry.slot.maxHp)
+        // Planeten hinter der Sonne empfangen keinen Heal
+        .filter(
+          (entry) =>
+            entry.slot.currentHp < entry.slot.maxHp && playerSlotInForeground(entry.slot.id),
+        )
         .map((entry) => {
           const dist = Math.hypot(
             supportChampion.screenX - entry.pos.cx,
@@ -691,21 +735,29 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       if (!roles.has('top')) {
         this.tankShieldActive = false
         this.tankShieldBrokenMs = 0
+        this.tankShieldRebuildPending = false
         return
       }
 
       if (this.tankShieldBrokenMs > 0) {
         this.tankShieldBrokenMs = Math.max(0, this.tankShieldBrokenMs - tickMs)
-        if (this.tankShieldBrokenMs === 0) {
-          this.tankShieldActive = true
-          const { addEvent } = useEventLog()
-          const championName = getChampionNameByRole('top')
-          addEvent(`${championName}'s shield is restored.`, 'top')
-        }
-        return
+        if (this.tankShieldBrokenMs > 0) return
+        // Rebuild-Timer abgelaufen — Aktivierung unten (Vordergrund-Gate)
+        this.tankShieldRebuildPending = true
       }
 
+      if (this.tankShieldActive) return
+
+      // Vordergrund-Gate: das Schild aktiviert sich erst, wenn Top wieder
+      // vor der Sonne steht — der Rebuild-Timer ist dann bereits durch
+      if (!championInForeground(getChampionNameByRole('top'))) return
+
       this.tankShieldActive = true
+      if (this.tankShieldRebuildPending) {
+        this.tankShieldRebuildPending = false
+        const { addEvent } = useEventLog()
+        addEvent(`${getChampionNameByRole('top')}'s shield is restored.`, 'top')
+      }
     },
 
     _tickMid(roles: Set<string>, tickMs: number) {
@@ -735,8 +787,15 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         activeMidCurse.activeUntil = 0
       }
 
-      // ── Active Curse: Verderbnis DoT ────────────────────────────────────────
-      if (this.activeCurse?.type === 'corruption' && activeBoss && !activeBoss.defeated && !activeBoss.expired) {
+      // ── Active Curse: Verderbnis DoT — tickt nur, solange der Boss vor
+      // der Sonne steht (hinter der Sonne wird nicht getroffen) ──────────────
+      if (
+        this.activeCurse?.type === 'corruption' &&
+        activeBoss &&
+        !activeBoss.defeated &&
+        !activeBoss.expired &&
+        bossPlanetInForeground(activeBoss.planetId)
+      ) {
         const defeated = bossStore.dealDamage(ROLE_MID_CURSE_DOT_DPS)
         throttledEvent(`mid-curse-dot-${activeBoss.planetId}`, 10000, () => {
           addEvent(`${championName} Corruption: ${ROLE_MID_CURSE_DOT_DPS} dmg.`, 'mid')
@@ -764,6 +823,14 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const midName = getChampionNameByRole('mid')
       const midChamp = combatStore.champions.find((c) => c.name === midName)
       if (!midChamp || (midChamp.screenX === 0 && midChamp.screenY === 0)) return
+
+      // Vordergrund-Gate: Fluch wartet bei CD 0, bis Mid und Boss sichtbar sind
+      if (
+        !championInForeground(midName) ||
+        !bossPlanetInForeground(activeBoss.planetId)
+      ) {
+        return
+      }
 
       const bossPos = activePlanetPositions.get(activeBoss.planetId)
       if (!bossPos) return
@@ -803,17 +870,29 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _tickAdc(roles: Set<string>, tickMs: number) {
       if (!roles.has('adc')) return
 
-      this.adcBurstCooldownMs -= tickMs
+      this.adcBurstCooldownMs = Math.max(0, this.adcBurstCooldownMs - tickMs)
 
       if (this.adcBurstCooldownMs <= 0) {
-        this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
-        this.adcBurstActive = true
-        window.setTimeout(() => { this.adcBurstActive = false }, 350)
-
         const bossStore = usePlanetBossStore()
         const activeBoss = bossStore.activeBoss
         const { addEvent } = useEventLog()
         const championName = getChampionNameByRole('adc')
+
+        // Vordergrund-Gate: bei lebendem Boss warten Burst + Cooldown bei 0,
+        // bis ADC und Boss vor der Sonne stehen
+        if (
+          activeBoss &&
+          !activeBoss.defeated &&
+          !activeBoss.expired &&
+          (!championInForeground(championName) ||
+            !bossPlanetInForeground(activeBoss.planetId))
+        ) {
+          return
+        }
+
+        this.adcBurstCooldownMs = ROLE_ADC_BURST_INTERVAL_MS
+        this.adcBurstActive = true
+        window.setTimeout(() => { this.adcBurstActive = false }, 350)
 
         if (activeBoss && !activeBoss.defeated && !activeBoss.expired) {
           throttledEvent(`adc-burst-${activeBoss.planetId}`, 10000, () => {
@@ -882,6 +961,10 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
 
       if (!jungleChamp || (jungleChamp.screenX === 0 && jungleChamp.screenY === 0)) return
 
+      // Vordergrund-Gate: der Jungler bufft nur, wenn er vor der Sonne steht —
+      // der Cooldown wartet bei 0
+      if (!championInForeground(jungleName)) return
+
       const planetShopStore = usePlanetShopStore()
       const { addEvent: logEvent } = useEventLog()
       let triggered = false
@@ -889,6 +972,8 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       for (const slot of planetShopStore.purchasedSlots) {
         if (!slot.role) continue
         if (slot.jungleBuff?.active) continue
+        // Planeten hinter der Sonne empfangen keinen Buff
+        if (!playerSlotInForeground(slot.id)) continue
         const pos = activePlayerPlanetPositions.get(slot.id)
         if (!pos) continue
         const dist = Math.hypot(jungleChamp.screenX - pos.cx, jungleChamp.screenY - pos.cy)

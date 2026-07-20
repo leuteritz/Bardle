@@ -16,6 +16,7 @@ import { useStarForgeStore } from './starForgeStore'
 import { useMeepTreeStore } from './meepTreeStore'
 import { universes } from '../config/universes'
 import { clampPercent } from '../utils/math'
+import { bossPlanetInForeground } from '../utils/foregroundGate'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '../config/augments'
 import { useAugmentStore } from './augmentStore'
 import {
@@ -511,12 +512,14 @@ export const useGameStore = defineStore('game', {
       const planetShopStore = usePlanetShopStore()
       // turret_planet: automatic damage to active Boss — die Salve zählt den
       // geteilten Volley-Counter hoch (treibt Idle-Orbit-Schüsse + Star-Fight-
-      // Turret-Battery), der Schaden landet erst beim Projektil-Einschlag
-      const autoAttackDPS = planetShopStore.autoAttackDPS
+      // Planet-Battery), der Schaden landet erst beim Projektil-Einschlag.
+      // Vordergrund-Gate: nur sichtbare Turrets feuern, und ein Boss hinter
+      // der Sonne wird nicht beschossen (Salve setzt dann einen Takt aus)
+      const autoAttackDPS = planetShopStore.foregroundAutoAttackDPS
       if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
         const target = planetBossStore.activeBoss
-        planetBossStore.turretVolleyCounter++
-        if (target && !target.defeated && !target.expired) {
+        if (target && !target.defeated && !target.expired && bossPlanetInForeground(target.planetId)) {
+          planetBossStore.turretVolleyCounter++
           setTimeout(() => {
             if (target.defeated || target.expired) return
             planetBossStore.dealDamageToBoss(target, autoAttackDPS)
