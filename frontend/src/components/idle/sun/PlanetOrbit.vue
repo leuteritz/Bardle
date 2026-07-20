@@ -81,19 +81,12 @@
         :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
       />
 
-      <!-- Turret-Cooldown-Ring: füllt sich im geteilten Salven-Takt (1s) und
-           startet bei jedem Abschuss neu — synchron zur Star-Fight-Battery -->
-      <svg
-        v-if="pos.isTurret && pos.isForeground"
-        :key="'turret-ring-' + turretVolleyCounter"
-        class="planet-turret-ring"
-        viewBox="0 0 100 100"
-        aria-hidden="true"
-      >
-        <circle class="planet-turret-ring-track" cx="50" cy="50" r="46" pathLength="100" />
-        <circle class="planet-turret-ring-arc" cx="50" cy="50" r="46" pathLength="100" />
-      </svg>
     </div>
+
+    <!-- Turret-Cooldown-Ringe: EIN Canvas für alle Turret-Planeten, gezeichnet
+         im selben Stil wie die Stern-Cooldown-Ringe — Fortschritt läuft im
+         geteilten Salven-Takt, synchron zur Turret-Battery im Star-Fight-Modal -->
+    <canvas ref="turretRingCanvas" class="planet-turret-ring-canvas" aria-hidden="true" />
 
     <!-- HP Bars -->
     <div
@@ -154,7 +147,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import { useRenderingPaused } from '@/composables/useRenderingPaused'
 import { usePlanetShopStore, PLANET_ROLES, JUNGLE_BUFF_DEFS } from '../../../stores/planetShopStore'
 import { usePlanetBossStore } from '../../../stores/planetBossStore'
-import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY } from '@/config/constants'
+import { ORBIT_TIERS, PLANET_SLOT_MAX_HP, BEHIND_SUN_SPEED_MULTIPLIER, HOVER_DIM_OPACITY, GAME_TICK_INTERVAL_MS } from '@/config/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { activePlanetPositions } from '../../../utils/activePlanetPositions'
 import { activePlayerPlanetPositions } from '../../../utils/activePlayerPlanetPositions'
@@ -275,11 +268,85 @@ export default defineComponent({
     let animFrame = 0
     let lastTs = 0
 
+    // ── Turret-Cooldown-Ringe: alle Turrets auf EINEM Canvas, ein Draw-Pass
+    // pro Frame — gleicher Stil wie die Stern-Cooldown-Ringe (Track + Arc +
+    // Glüh-Spitze). Fortschritt = Zeit seit der letzten geteilten Salve.
+    const turretRingCanvas = ref<HTMLCanvasElement | null>(null)
+    const TWO_PI = Math.PI * 2
+    let turretRingCanvasWasEmpty = false
+    let turretLastVolleyMs = Date.now()
+
+    function sizeTurretRingCanvas() {
+      const cv = turretRingCanvas.value
+      if (cv) {
+        cv.width = window.innerWidth
+        cv.height = window.innerHeight
+      }
+    }
+
+    function drawTurretRings(positions: PlanetRenderPos[]) {
+      const cv = turretRingCanvas.value
+      const c = cv?.getContext('2d')
+      if (!cv || !c) return
+
+      c.clearRect(0, 0, cv.width, cv.height)
+      let drewAny = false
+      const progress = reducedMotion
+        ? 1
+        : Math.min(1, (Date.now() - turretLastVolleyMs) / GAME_TICK_INTERVAL_MS)
+
+      // Ohne lebenden Boss ruht der Salven-Takt — kein Ring, statt eines
+      // eingefrorenen "voll"-Zustands ohne Ziel
+      const hasLiveBoss = planetBossStore.activeBosses.some((b) => !b.defeated && !b.expired)
+
+      for (const pos of positions) {
+        if (!hasLiveBoss) break
+        if (!pos.isTurret || pos.isBehind || pos.opacity <= 0.02) continue
+        const r = pos.size / 2 + 8
+        const alpha = pos.opacity
+        drewAny = true
+
+        // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
+        c.beginPath()
+        c.arc(pos.x, pos.y, r, 0, TWO_PI)
+        c.strokeStyle = `rgba(204,68,68,${0.12 * alpha})`
+        c.lineWidth = 2
+        c.stroke()
+
+        if (progress <= 0.004) continue
+        const start = -Math.PI / 2
+        const end = start + progress * TWO_PI
+        const hot = progress > 0.92
+        c.beginPath()
+        c.arc(pos.x, pos.y, r, start, end)
+        c.strokeStyle = hot ? `rgba(255,150,140,${0.9 * alpha})` : `rgba(220,90,80,${0.55 * alpha})`
+        c.lineWidth = 2
+        c.lineCap = 'round'
+        c.stroke()
+
+        // Glüh-Spitze am Ende des Bogens
+        if (progress < 1) {
+          c.beginPath()
+          c.arc(pos.x + Math.cos(end) * r, pos.y + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+          c.fillStyle = `rgba(255,180,170,${0.85 * alpha})`
+          c.fill()
+        }
+      }
+
+      // Leeres Canvas ausblenden, damit der Compositor es überspringt
+      const empty = !drewAny
+      if (empty !== turretRingCanvasWasEmpty) {
+        turretRingCanvasWasEmpty = empty
+        cv.style.display = empty ? 'none' : ''
+      }
+    }
+
     // Turret-Abschuss: exakt im Takt der echten Turret-Salve (gameStore-Tick),
     // geteilt mit der Turret-Battery im Star-Fight-Modal — kein eigener Timer
     watch(
       () => planetBossStore.turretVolleyCounter,
       () => {
+        turretLastVolleyMs = Date.now()
         if (reducedMotion) return
         const turretPlanets = renderPositions.value.filter((p) => p.isTurret && p.isForeground)
         if (turretPlanets.length === 0 || planetBossStore.activeBosses.length === 0) return
@@ -475,6 +542,7 @@ export default defineComponent({
       if (!reducedMotion) {
         tickShots(dt)
       }
+      drawTurretRings(newPositions)
       // ─────────────────────────────────────────────────────────────────────────
 
       animFrame = requestAnimationFrame(animate)
@@ -494,22 +562,23 @@ export default defineComponent({
 
     onMounted(() => {
       window.addEventListener('resize', updateScreenCenter)
+      window.addEventListener('resize', sizeTurretRingCanvas)
+      sizeTurretRingCanvas()
       animFrame = requestAnimationFrame(animate)
     })
 
     onUnmounted(() => {
       window.removeEventListener('resize', updateScreenCenter)
+      window.removeEventListener('resize', sizeTurretRingCanvas)
       cancelAnimationFrame(animFrame)
     })
 
     const screenW = computed(() => screenCx.value * 2)
     const screenH = computed(() => screenCy.value * 2)
 
-    const turretVolleyCounter = computed(() => planetBossStore.turretVolleyCounter)
-
     return {
       planetShopStore,
-      turretVolleyCounter,
+      turretRingCanvas,
       hoveredChampionRole,
       hoveredPlanetSlotId,
       hoveredPlanetTier,
@@ -594,44 +663,12 @@ export default defineComponent({
   filter: grayscale(1) brightness(0.65) blur(1.5px);
 }
 
-/* ── Turret-Cooldown-Ring — füllt sich über den 1s-Salventakt ────────────── */
-.planet-turret-ring {
-  position: absolute;
-  inset: -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
-  transform: rotate(-90deg);
+/* ── Turret-Cooldown-Ring-Canvas — ein Layer über allen Planeten ─────────── */
+.planet-turret-ring-canvas {
+  position: fixed;
+  inset: 0;
   pointer-events: none;
-}
-
-.planet-turret-ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 5;
-}
-
-.planet-turret-ring-arc {
-  fill: none;
-  stroke: var(--planet-color, #cc4444);
-  stroke-width: 5;
-  stroke-linecap: round;
-  animation: planet-turret-refill 1s linear forwards;
-}
-
-@keyframes planet-turret-refill {
-  from {
-    stroke-dasharray: 0 100;
-  }
-  to {
-    stroke-dasharray: 100 100;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .planet-turret-ring-arc {
-    animation: none;
-    stroke-dasharray: 100 100;
-  }
+  z-index: 16;
 }
 
 .planet-orbit-item--behind {
