@@ -14,6 +14,14 @@
       :style="{ '--px': b.px + 'px', '--py': b.py + 'px' }"
     />
 
+    <!-- Ziel-Reticle: markiert den anvisierten Striker während des Bolt-Flugs -->
+    <span
+      v-for="m in autoMarks"
+      :key="'mark-' + m.id"
+      class="rsq-strike-mark"
+      :style="{ left: m.xPct + '%', top: m.yPct + '%' }"
+    />
+
     <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
          Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
     <button
@@ -510,6 +518,15 @@ interface AutoBolt {
 const autoBolts = ref<AutoBolt[]>([])
 let autoBoltId = 0
 
+// Ziel-Markierung: pulsierender Reticle-Ring am anvisierten Striker,
+// solange der Bolt fliegt — macht das Random-Ziel sofort ablesbar
+interface AutoMark {
+  id: number
+  xPct: number
+  yPct: number
+}
+const autoMarks = ref<AutoMark[]>([])
+
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
@@ -529,8 +546,12 @@ watch(
         px: Math.round(((toXPct - STRIKER_BOSS_ANCHOR_X_PCT) / 100) * w),
         py: Math.round(((toYPct - STRIKER_BOSS_ANCHOR_Y_PCT) / 100) * h),
       })
+      autoMarks.value.push({ id, xPct: toXPct, yPct: toYPct })
       later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
+      })
+      later(BOSS_AUTO_HIT_DELAY_MS + 250, () => {
+        autoMarks.value = autoMarks.value.filter((m) => m.id !== id)
       })
     }
 
@@ -1331,15 +1352,18 @@ onUnmounted(() => {
   /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
   left: 50%;
   top: 41%;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
   border-radius: 50%;
   background: radial-gradient(circle, #fff 0%, #d8d0c0 45%, transparent 75%);
-  box-shadow: 0 0 14px rgba(232, 220, 190, 0.9);
+  box-shadow:
+    0 0 18px rgba(232, 220, 190, 0.95),
+    0 0 40px rgba(216, 208, 192, 0.45);
   pointer-events: none;
   z-index: 3;
-  animation: rsq-strike-bolt-fly 0.18s cubic-bezier(0.35, 0, 0.8, 0.6) forwards;
+  /* Flugzeit = BOSS_AUTO_HIT_DELAY_MS (0.45s) — deutlich sichtbar */
+  animation: rsq-strike-bolt-fly 0.45s cubic-bezier(0.4, 0, 0.7, 0.5) forwards;
   will-change: transform, opacity;
 }
 
@@ -1348,13 +1372,52 @@ onUnmounted(() => {
     opacity: 0.4;
     transform: translate(0, 0) scale(0.4);
   }
-  20% {
+  15% {
     opacity: 1;
-    transform: translate(calc(var(--px) * 0.1), calc(var(--py) * 0.1)) scale(1);
+    transform: translate(calc(var(--px) * 0.06), calc(var(--py) * 0.06)) scale(1);
   }
   100% {
     opacity: 1;
-    transform: translate(var(--px), var(--py)) scale(1.2);
+    transform: translate(var(--px), var(--py)) scale(1.25);
+  }
+}
+
+/* ── Ziel-Reticle: schnappt von außen aufs Ziel und pulsiert bis zum Einschlag ── */
+.rsq-strike-mark {
+  position: absolute;
+  width: 118px;
+  height: 118px;
+  margin: -59px 0 0 -59px;
+  border-radius: 50%;
+  border: 2px dashed rgba(240, 228, 200, 0.85);
+  box-shadow:
+    0 0 18px rgba(232, 220, 190, 0.45),
+    inset 0 0 14px rgba(232, 220, 190, 0.25);
+  pointer-events: none;
+  z-index: 3;
+  animation:
+    rsq-strike-mark-in 0.18s ease-out both,
+    rsq-strike-mark-pulse 0.3s ease-in-out 0.18s infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes rsq-strike-mark-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.9) rotate(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes rsq-strike-mark-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.09);
   }
 }
 
@@ -1467,6 +1530,7 @@ onUnmounted(() => {
   .rsq-pop-enter-active,
   .rsq-float--hit::before,
   .rsq-strike-bolt,
+  .rsq-strike-mark,
   .rsq-atk-enter-active,
   .rsq-vacant-emblem,
   .rsq-vacant-ring,

@@ -72,6 +72,14 @@
       :style="{ '--px': b.px + 'px', '--py': b.py + 'px' }"
     />
 
+    <!-- Ziel-Reticle: markiert den anvisierten Turret während des Bolt-Flugs -->
+    <span
+      v-for="m in autoMarks"
+      :key="'mark-' + m.id"
+      class="tbh-strike-mark"
+      :style="{ left: m.xPct + '%', top: m.yPct + '%' }"
+    />
+
     <!-- Kometen-Volleys Richtung Boss -->
     <span
       v-for="v in volleys"
@@ -228,6 +236,14 @@ interface AutoBolt {
 const autoBolts = ref<AutoBolt[]>([])
 let autoBoltId = 0
 
+// Ziel-Markierung: Reticle am anvisierten Turret während des Bolt-Flugs
+interface AutoMark {
+  id: number
+  xPct: number
+  yPct: number
+}
+const autoMarks = ref<AutoMark[]>([])
+
 watch(
   () => roleBehaviorStore.autoCounter,
   () => {
@@ -245,8 +261,12 @@ watch(
         px: Math.round(((target.xPct - STRIKER_BOSS_ANCHOR_X_PCT) / 100) * w),
         py: Math.round(((target.yPct - STRIKER_BOSS_ANCHOR_Y_PCT) / 100) * h),
       })
+      autoMarks.value.push({ id, xPct: target.xPct, yPct: target.yPct })
       later(BOSS_AUTO_HIT_DELAY_MS + 80, () => {
         autoBolts.value = autoBolts.value.filter((b) => b.id !== id)
+      })
+      later(BOSS_AUTO_HIT_DELAY_MS + 250, () => {
+        autoMarks.value = autoMarks.value.filter((m) => m.id !== id)
       })
     }
 
@@ -632,15 +652,18 @@ onUnmounted(() => {
   /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
   left: 50%;
   top: 41%;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
   border-radius: 50%;
   background: radial-gradient(circle, #fff 0%, #d8d0c0 45%, transparent 75%);
-  box-shadow: 0 0 14px rgba(232, 220, 190, 0.9);
+  box-shadow:
+    0 0 18px rgba(232, 220, 190, 0.95),
+    0 0 40px rgba(216, 208, 192, 0.45);
   pointer-events: none;
   z-index: 3;
-  animation: tbh-strike-bolt-fly 0.18s cubic-bezier(0.35, 0, 0.8, 0.6) forwards;
+  /* Flugzeit = BOSS_AUTO_HIT_DELAY_MS (0.45s) — deutlich sichtbar */
+  animation: tbh-strike-bolt-fly 0.45s cubic-bezier(0.4, 0, 0.7, 0.5) forwards;
   will-change: transform, opacity;
 }
 
@@ -649,13 +672,52 @@ onUnmounted(() => {
     opacity: 0.4;
     transform: translate(0, 0) scale(0.4);
   }
-  20% {
+  15% {
     opacity: 1;
-    transform: translate(calc(var(--px) * 0.1), calc(var(--py) * 0.1)) scale(1);
+    transform: translate(calc(var(--px) * 0.06), calc(var(--py) * 0.06)) scale(1);
   }
   100% {
     opacity: 1;
-    transform: translate(var(--px), var(--py)) scale(1.2);
+    transform: translate(var(--px), var(--py)) scale(1.25);
+  }
+}
+
+/* ── Ziel-Reticle: schnappt aufs Ziel und pulsiert bis zum Einschlag ─────── */
+.tbh-strike-mark {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border-radius: 50%;
+  border: 2px dashed rgba(240, 228, 200, 0.85);
+  box-shadow:
+    0 0 18px rgba(232, 220, 190, 0.45),
+    inset 0 0 14px rgba(232, 220, 190, 0.25);
+  pointer-events: none;
+  z-index: 3;
+  animation:
+    tbh-strike-mark-in 0.18s ease-out both,
+    tbh-strike-mark-pulse 0.3s ease-in-out 0.18s infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes tbh-strike-mark-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.9) rotate(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes tbh-strike-mark-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.09);
   }
 }
 
@@ -795,6 +857,7 @@ onUnmounted(() => {
   .tbh-hitfloat::before,
   .tbh-impact-num,
   .tbh-strike-bolt,
+  .tbh-strike-mark,
   .tbh-comet {
     animation: none;
   }

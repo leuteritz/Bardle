@@ -176,6 +176,12 @@
                     </div>
                   </div>
 
+                  <!-- Strike-Callout: welches Random-Ziel gerade getroffen wird -->
+                  <Transition name="sf-callout">
+                    <div v-if="strikeCallout" :key="strikeCallout.id" class="sf-strike-callout">
+                      {{ strikeCallout.text }}
+                    </div>
+                  </Transition>
                 </div>
 
                 <!-- Strike-Ring: Auto-Attack des Bosses — kurzer Cooldown,
@@ -279,6 +285,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/starGroupStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/roleBehaviorStore'
 import { formatNumber } from '@/config/numberFormat'
 import {
@@ -296,6 +303,7 @@ import {
   BOSS_RAGE_DMG_MULT,
 } from '@/config/constants'
 import { NS, drawPlanet } from '@/utils/planetDraw'
+import type { ChampionRole } from '@/types'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
@@ -305,6 +313,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 // ── Stores ───────────────────────────────────────────────────────────────
 const starGroupStore = useStarGroupStore()
 const bossStore = usePlanetBossStore()
+const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 
 // ── Reactive values ───────────────────────────────────────────────────────
@@ -472,9 +481,22 @@ const autoRingDashArray = computed(
   () => `${autoRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
 )
 
-// Schneller Jab des Boss-Sprites bei jedem Auto-Attack
+// Schneller Jab des Boss-Sprites bei jedem Auto-Attack + Info-Callout,
+// welches Random-Ziel (Champion oder Planet) getroffen wurde
 const bossJabActive = ref(false)
 let bossJabTimeout: ReturnType<typeof setTimeout> | null = null
+
+const ROLE_SLOT_INDEX: Record<ChampionRole, number> = {
+  top: 0,
+  jungle: 1,
+  mid: 2,
+  adc: 3,
+  support: 4,
+}
+
+const strikeCallout = ref<{ id: number; text: string } | null>(null)
+let strikeCalloutId = 0
+let strikeCalloutTimeout: ReturnType<typeof setTimeout> | null = null
 
 watch(
   () => roleBehaviorStore.autoCounter,
@@ -487,11 +509,28 @@ watch(
         bossJabActive.value = false
       }, 300)
     })
+
+    // Callout: Zielname auflösen (Champion-Slot bzw. Planet-Slot)
+    const role = roleBehaviorStore.autoTargetRole
+    const slotId = roleBehaviorStore.autoTargetSlotId
+    const target = role
+      ? (battleStore.headerSlots[ROLE_SLOT_INDEX[role]] ?? role.toUpperCase())
+      : slotId
+        ? slotId.replace('slot_', 'Slot ')
+        : null
+    if (target) {
+      strikeCallout.value = { id: ++strikeCalloutId, text: `Strike → ${target}` }
+      if (strikeCalloutTimeout) clearTimeout(strikeCalloutTimeout)
+      strikeCalloutTimeout = setTimeout(() => {
+        strikeCallout.value = null
+      }, 1600)
+    }
   },
 )
 
 onUnmounted(() => {
   if (bossJabTimeout) clearTimeout(bossJabTimeout)
+  if (strikeCalloutTimeout) clearTimeout(strikeCalloutTimeout)
 })
 
 const bossStrikeActive = ref(false)
@@ -1655,6 +1694,47 @@ function emberStyle(i: number): Record<string, string> {
   letter-spacing: 0.26em;
   color: rgba(216, 208, 192, 0.6);
   text-transform: uppercase;
+}
+
+/* ── Strike-Callout: kurzer Hinweis unter der HP-Leiste, wen es trifft ───── */
+.sf-strike-callout {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #f0e4c8;
+  text-shadow:
+    0 0 12px rgba(232, 220, 190, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+
+.sf-callout-enter-active {
+  animation: sf-callout-in 0.22s ease-out;
+}
+
+.sf-callout-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.sf-callout-leave-to {
+  opacity: 0;
+}
+
+@keyframes sf-callout-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(1.25);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 
 /* ── Damage-Badges unter den Fähigkeits-Ringen — Wert direkt am Cooldown ── */
