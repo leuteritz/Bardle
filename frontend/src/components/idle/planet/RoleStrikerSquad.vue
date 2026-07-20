@@ -1,7 +1,34 @@
 <template>
-  <div v-if="strikers.length" ref="rootEl" class="rsq" aria-hidden="true">
+  <div ref="rootEl" class="rsq" aria-hidden="true">
     <!-- Halbkreis-Führungslinie hinter den Strikern -->
     <div class="rsq-arc-guide" :style="arcGuideStyle" />
+
+    <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position -->
+    <div
+      v-for="v in vacantSlots"
+      :key="`vacant-${v.role}`"
+      class="rsq-item rsq-vacant"
+      :style="{
+        '--rc': v.color,
+        left: `${v.xPct}%`,
+        top: `${v.yPct}%`,
+      }"
+    >
+      <div class="rsq-portrait rsq-vacant-portrait">
+        <img class="rsq-vacant-emblem" :src="v.roleImage" alt="" draggable="false" />
+      </div>
+      <svg class="rsq-ring rsq-vacant-ring" viewBox="0 0 100 100">
+        <circle class="rsq-vacant-ring-dash" cx="50" cy="50" r="44" />
+      </svg>
+      <div class="rsq-badge rsq-vacant-badge">
+        <img :src="v.roleImage" alt="" draggable="false" />
+      </div>
+      <span class="rsq-cdpill rsq-vacant-pill">＋</span>
+      <div class="rsq-plate rsq-vacant-plate">
+        <span class="rsq-plate-name rsq-vacant-name">{{ v.label }} · Vacant</span>
+        <span class="rsq-plate-stats rsq-vacant-hint">Assign a champion</span>
+      </div>
+    </div>
 
     <div
       v-for="s in strikers"
@@ -221,6 +248,27 @@ const strikers = computed(() =>
         // Angriffs-Lunge: Portrait stößt Richtung Boss vor
         ax: Math.round((px / dist) * STRIKER_ATTACK_LUNGE_PX),
         ay: Math.round((py / dist) * STRIKER_ATTACK_LUNGE_PX),
+      },
+    ]
+  }),
+)
+
+// Unbesetzte Rollen — gleiche Arc-Position wie befüllte Striker, aber als
+// Geister-Platzhalter ("Vacant"), damit sichtbar bleibt, dass hier ein
+// Champion kämpfen könnte
+const vacantSlots = computed(() =>
+  SQUAD_ROLES.flatMap((role) => {
+    if (battleStore.headerSlots[SLOT_BY_ROLE[role]]) return []
+    const rad = (STRIKER_ARC_ANGLES[role] * Math.PI) / 180
+    return [
+      {
+        role,
+        label: ROLE_BY_KEY[role].label,
+        roleImage: ROLE_BY_KEY[role].image,
+        color: ROLE_BY_KEY[role].color,
+        xPct: Math.round((50 + Math.cos(rad) * STRIKER_ARC_RX_PCT) * 10) / 10,
+        yPct:
+          Math.round((STRIKER_ARC_CENTER_Y_PCT + Math.sin(rad) * STRIKER_ARC_RY_PCT) * 10) / 10,
       },
     ]
   }),
@@ -816,6 +864,121 @@ onUnmounted(() => {
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
+/* ── Vacant Slot — Geister-Platzhalter für unbesetzte Rollen ─────────────
+   Gleiche Geometrie wie ein Striker, aber gedimmt: gestrichelter, langsam
+   rotierender Ring, ausgegrautes Rollen-Emblem, pulsierendes ＋ und eine
+   Plate mit "Assign a champion"-Hinweis */
+.rsq-vacant {
+  opacity: 0.82;
+}
+
+.rsq-vacant-portrait {
+  border: 2px dashed color-mix(in srgb, var(--rc, #c8922a) 45%, #3a2410);
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      color-mix(in srgb, var(--rc, #c8922a) 10%, transparent) 0%,
+      transparent 68%
+    ),
+    rgba(8, 5, 2, 0.72);
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    inset 0 0 22px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Rollen-Emblem als geisterhafte Silhouette — "hier gehört jemand hin" */
+.rsq-vacant-emblem {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: grayscale(0.85) brightness(1.2);
+  opacity: 0.32;
+  animation: rsq-vacant-breathe 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes rsq-vacant-breathe {
+  from {
+    opacity: 0.22;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 0.45;
+    transform: scale(1.03);
+  }
+}
+
+/* Gestrichelter Warte-Ring — rotiert langsam (nur transform, GPU) */
+.rsq-vacant-ring {
+  animation: rsq-vacant-spin 14s linear infinite;
+  will-change: transform;
+}
+
+.rsq-vacant-ring-dash {
+  fill: none;
+  stroke: color-mix(in srgb, var(--rc, #c8922a) 55%, transparent);
+  stroke-width: 3;
+  stroke-dasharray: 7 11;
+  stroke-linecap: round;
+}
+
+@keyframes rsq-vacant-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+.rsq-vacant-badge {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.rsq-vacant-badge img {
+  filter: grayscale(0.6);
+  opacity: 0.8;
+}
+
+/* ＋-Pill statt Cooldown — lädt zum Befüllen des Slots ein */
+.rsq-vacant-pill {
+  font-size: 0.8rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--rc, #c8922a) 55%, #fff);
+  animation: rsq-vacant-pill-pulse 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes rsq-vacant-pill-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rsq-vacant-plate {
+  border-style: dashed;
+  background: rgba(8, 5, 2, 0.82);
+}
+
+.rsq-vacant-plate::before {
+  opacity: 0.55;
+}
+
+.rsq-vacant-name {
+  color: rgba(240, 230, 204, 0.6);
+}
+
+.rsq-vacant-hint {
+  color: color-mix(in srgb, var(--rc, #c8922a) 55%, #f0e6cc);
+  opacity: 0.75;
+}
+
 /* ── Mündungsblitz Richtung Boss ─────────────────────────────────────────── */
 .rsq-muzzle {
   position: absolute;
@@ -1045,7 +1208,10 @@ onUnmounted(() => {
   .rsq-impact-burst,
   .rsq-spark,
   .rsq-impact-num,
-  .rsq-pop-enter-active {
+  .rsq-pop-enter-active,
+  .rsq-vacant-emblem,
+  .rsq-vacant-ring,
+  .rsq-vacant-pill {
     animation: none;
   }
 }
