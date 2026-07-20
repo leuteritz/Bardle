@@ -1352,14 +1352,15 @@ onUnmounted(() => {
   /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
   left: 50%;
   top: 41%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
   border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, #d8d0c0 45%, transparent 75%);
+  background: radial-gradient(circle, #fff 0%, #f0e6d0 30%, #d8d0c0 55%, transparent 78%);
   box-shadow:
-    0 0 18px rgba(232, 220, 190, 0.95),
-    0 0 40px rgba(216, 208, 192, 0.45);
+    0 0 30px rgba(232, 220, 190, 1),
+    0 0 70px rgba(216, 208, 192, 0.6),
+    0 0 120px rgba(216, 208, 192, 0.3);
   pointer-events: none;
   z-index: 3;
   /* Flugzeit = BOSS_AUTO_HIT_DELAY_MS (0.45s) — deutlich sichtbar */
