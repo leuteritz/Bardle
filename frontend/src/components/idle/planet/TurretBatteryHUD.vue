@@ -14,10 +14,15 @@
       >
         <img :src="turretImage" alt="" draggable="false" />
       </div>
-      <!-- Info-Plate im Striker-Stil: Slot-Nummer + dmg/s -->
-      <div class="tbh-plate">
-        <span class="tbh-plate-name">Slot {{ t.slotNum }}</span>
-        <span class="tbh-plate-stats">{{ t.dmg }} dmg/s</span>
+      <!-- Info-Plate wie bei den Champions: HP-Bar → Slot-Nummer → dmg/s -->
+      <div class="tbh-plate-anchor">
+        <StrikerInfoPlate
+          :color="turretColor"
+          :hp-pct="t.hpPct"
+          :hp-text="`${t.hpCur} / ${t.hpMax}`"
+          :name="`Slot ${t.slotNum}`"
+          :stats="`${t.dmg} dmg/s`"
+        />
       </div>
     </div>
 
@@ -55,8 +60,10 @@ import {
   PLANET_ROLES,
   planetLevelBonusMultiplier,
 } from '@/stores/planetShopStore'
+import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import {
   GAME_TICK_INTERVAL_MS,
+  PLANET_SLOT_MAX_HP,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_BATTERY_LEFT_X_PCT,
   TURRET_BATTERY_RIGHT_X_PCT,
@@ -84,6 +91,9 @@ interface TurretEntry {
   slotId: string
   slotNum: number
   dmg: number
+  hpPct: number
+  hpCur: number
+  hpMax: number
   xPct: number
   yPct: number
 }
@@ -98,9 +108,14 @@ const turrets = computed<TurretEntry[]>(() =>
       const isLeft = slotNum <= 3
       const row = (slotNum - 1) % 3
       const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
+      const hpCur = s.currentHp ?? PLANET_SLOT_MAX_HP
+      const hpMax = s.maxHp ?? PLANET_SLOT_MAX_HP
       return {
         slotId: s.id,
         slotNum,
+        hpCur: Math.round(hpCur),
+        hpMax,
+        hpPct: hpMax > 0 ? Math.max(0, Math.min(100, (hpCur / hpMax) * 100)) : 100,
         dmg:
           Math.round(
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
@@ -389,61 +404,11 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* ── Info-Plate unter dem Planeten — gleicher Stil wie die Striker-Plates
-   (.rsq-plate): dunkle Karte, Farb-Signaturlinie oben, Name + Stats ──────── */
-.tbh-plate {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  min-width: 74px;
+/* ── Info-Plate unter dem Planeten — Karte selbst kommt aus der geteilten
+   StrikerInfoPlate-Komponente, hier nur Abstand + kompaktere Mindestbreite ── */
+.tbh-plate-anchor {
   margin-top: 6px;
-  padding: 3px 9px 4px;
-  border-radius: 4px;
-  background: rgba(8, 5, 2, 0.92);
-  border: 1px solid color-mix(in srgb, var(--tc) 40%, #3a2410);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
-}
-
-/* Signaturlinie oben — wie bei den Striker-Plates */
-.tbh-plate::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in srgb, var(--tc) 75%, #e8c060),
-    transparent
-  );
-}
-
-.tbh-plate-name {
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: rgba(240, 230, 204, 0.85);
-  text-transform: uppercase;
-  white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-.tbh-plate-stats {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  color: color-mix(in srgb, var(--tc) 70%, #f0e6cc);
-  text-transform: uppercase;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  text-shadow:
-    0 0 8px color-mix(in srgb, var(--tc) 40%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.9);
+  --sip-min-w: 82px;
 }
 
 /* ── Komet Richtung Boss ─────────────────────────────────────────────────── */
