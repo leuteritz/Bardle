@@ -56,6 +56,9 @@ export const usePlanetBossStore = defineStore('planetBoss', {
     // Monotoner Zähler: inkrementiert, wenn der AKTIVE Boss passiven Schaden
     // erhält — das Star-Fight-Modal koppelt seine Orbital-Support-Salve daran
     passiveHitCounter: 0,
+    // Monotoner Zähler: inkrementiert bei jeder Turret-Salve (gameStore-Tick) —
+    // Idle-Orbit-Schüsse UND Star-Fight-Turret-Battery teilen diesen Takt
+    turretVolleyCounter: 0,
   }),
 
   getters: {

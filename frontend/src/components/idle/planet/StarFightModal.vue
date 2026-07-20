@@ -81,6 +81,10 @@
                  Planeten-Salven auf den Boss ── -->
             <OrbitalSupportHUD v-if="activeBoss" />
 
+            <!-- ── Turret Battery: ein Eintrag pro Turret-Planet, Salven im
+                 geteilten Takt mit den Idle-Orbit-Schüssen ── -->
+            <TurretBatteryHUD v-if="activeBoss" />
+
             <!-- Boss-Angriff: Schockwelle vom Boss Richtung Champion-Halbkreis -->
             <span v-if="bossStrikeActive" class="sf-boss-wave" />
 
@@ -223,6 +227,7 @@ import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
 import OrbitalSupportHUD from '@/components/idle/planet/OrbitalSupportHUD.vue'
+import TurretBatteryHUD from '@/components/idle/planet/TurretBatteryHUD.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 
 // ── Stores ───────────────────────────────────────────────────────────────

@@ -28,6 +28,7 @@ import {
   MAX_ABILITY_LEVEL,
   SKILL_MEEP_COSTS,
   BOSS_PASSIVE_DPS_FRACTION,
+  TURRET_PROJECTILE_FLIGHT_MS,
   GAME_TICK_INTERVAL_MS,
   MEEP_ADD_DELAY_MS,
   AUGMENT_CHOICE_COUNT,
@@ -508,10 +509,19 @@ export const useGameStore = defineStore('game', {
       const augmentStore = useAugmentStore()
       augmentStore.onTick()
       const planetShopStore = usePlanetShopStore()
-      // turret_planet: automatic damage to active Boss
+      // turret_planet: automatic damage to active Boss — die Salve zählt den
+      // geteilten Volley-Counter hoch (treibt Idle-Orbit-Schüsse + Star-Fight-
+      // Turret-Battery), der Schaden landet erst beim Projektil-Einschlag
       const autoAttackDPS = planetShopStore.autoAttackDPS
       if (autoAttackDPS > 0 && planetBossStore.isBossActive) {
-        planetBossStore.dealDamage(autoAttackDPS)
+        const target = planetBossStore.activeBoss
+        planetBossStore.turretVolleyCounter++
+        if (target && !target.defeated && !target.expired) {
+          setTimeout(() => {
+            if (target.defeated || target.expired) return
+            planetBossStore.dealDamageToBoss(target, autoAttackDPS)
+          }, TURRET_PROJECTILE_FLIGHT_MS)
+        }
       }
       // harvest_node: periodic material harvest
       planetShopStore.tickHarvest(this.inGameTime)

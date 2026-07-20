@@ -898,6 +898,14 @@ export const ORBITAL_SUPPORT_FLOAT_MS = 1000 // lifetime of the golden passive-d
 export const ORBITAL_SUPPORT_X_PCT = 13 // support planet anchor X (% arena width)
 export const ORBITAL_SUPPORT_Y_PCT = 38 // support planet anchor Y (% arena height)
 
+// Turret Battery — turret-planet volleys in the Star Fight Modal, synced with
+// the idle-orbit turret shots via planetBossStore.turretVolleyCounter
+export const TURRET_PROJECTILE_FLIGHT_MS = 420 // turret comet travel time to the boss
+export const TURRET_BATTERY_X_PCT = 87 // battery column anchor X (% arena width)
+export const TURRET_BATTERY_Y_PCT = 38 // battery column center Y (% arena height)
+export const TURRET_BATTERY_SPACING_PCT = 13 // vertical spacing between turret entries (% arena height)
+export const TURRET_BATTERY_MAX_VISIBLE = 4 // cap of displayed turrets — the rest folds into a +N chip
+
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
 

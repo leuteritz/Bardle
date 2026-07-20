@@ -80,6 +80,19 @@
         class="planet-orbit-portrait"
         :class="{ 'planet-orbit-portrait--dimmed': pos.isDimmed }"
       />
+
+      <!-- Turret-Cooldown-Ring: füllt sich im geteilten Salven-Takt (1s) und
+           startet bei jedem Abschuss neu — synchron zur Star-Fight-Battery -->
+      <svg
+        v-if="pos.isTurret && pos.isForeground"
+        :key="'turret-ring-' + turretVolleyCounter"
+        class="planet-turret-ring"
+        viewBox="0 0 100 100"
+        aria-hidden="true"
+      >
+        <circle class="planet-turret-ring-track" cx="50" cy="50" r="46" pathLength="100" />
+        <circle class="planet-turret-ring-arc" cx="50" cy="50" r="46" pathLength="100" />
+      </svg>
     </div>
 
     <!-- HP Bars -->
@@ -151,7 +164,6 @@ import { useProjectileSystem } from '@/composables/useProjectileSystem'
 import { useOrbitScale } from '@/composables/useOrbitScale'
 
 const BEHIND_SPEED_LERP = 0.04
-const TURRET_FIRE_INTERVAL_MS = 1000
 const MIN_SHOT_DISTANCE = 32
 
 interface PlanetRenderPos {
@@ -262,7 +274,41 @@ export default defineComponent({
 
     let animFrame = 0
     let lastTs = 0
-    let turretAccumMs = 0
+
+    // Turret-Abschuss: exakt im Takt der echten Turret-Salve (gameStore-Tick),
+    // geteilt mit der Turret-Battery im Star-Fight-Modal — kein eigener Timer
+    watch(
+      () => planetBossStore.turretVolleyCounter,
+      () => {
+        if (reducedMotion) return
+        const turretPlanets = renderPositions.value.filter((p) => p.isTurret && p.isForeground)
+        if (turretPlanets.length === 0 || planetBossStore.activeBosses.length === 0) return
+
+        const bossPlanetIds = planetBossStore.activeBosses
+          .filter((b) => !b.defeated && !b.expired)
+          .map((b) => b.planetId)
+
+        for (const turret of turretPlanets) {
+          let nearestDist = Infinity
+          let targetPos: { cx: number; cy: number; isForeground: boolean } | null = null
+
+          for (const planetId of bossPlanetIds) {
+            const pos = activePlanetPositions.get(planetId)
+            if (!pos || !pos.isForeground) continue
+            const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
+            if (dist < MIN_SHOT_DISTANCE) continue
+            if (dist < nearestDist) {
+              nearestDist = dist
+              targetPos = pos
+            }
+          }
+
+          if (targetPos) {
+            spawnShot(turret.x, turret.y, targetPos.cx, targetPos.cy, true, true)
+          }
+        }
+      },
+    )
 
     function animate(ts: number) {
       const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50)
@@ -424,42 +470,10 @@ export default defineComponent({
         if (tierIsBehind.value[i] !== behind) tierIsBehind.value[i] = behind
       }
 
-      // ── Turret-Schuss-System ──────────────────────────────────────────────────
+      // ── Turret-Projektile weiterbewegen (Abschuss triggert der geteilte
+      //    Volley-Counter aus dem planetBossStore, siehe watch unten) ─────────
       if (!reducedMotion) {
         tickShots(dt)
-        turretAccumMs += dt
-
-        if (turretAccumMs >= TURRET_FIRE_INTERVAL_MS) {
-          turretAccumMs -= TURRET_FIRE_INTERVAL_MS
-
-          const turretPlanets = newPositions.filter((p) => p.isTurret && p.isForeground)
-
-          if (turretPlanets.length > 0 && planetBossStore.activeBosses.length > 0) {
-            const bossPlanetIds = planetBossStore.activeBosses
-              .filter((b) => !b.defeated && !b.expired)
-              .map((b) => b.planetId)
-
-            for (const turret of turretPlanets) {
-              let nearestDist = Infinity
-              let targetPos: { cx: number; cy: number; isForeground: boolean } | null = null
-
-              for (const planetId of bossPlanetIds) {
-                const pos = activePlanetPositions.get(planetId)
-                if (!pos || !pos.isForeground) continue
-                const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
-                if (dist < MIN_SHOT_DISTANCE) continue
-                if (dist < nearestDist) {
-                  nearestDist = dist
-                  targetPos = pos
-                }
-              }
-
-              if (targetPos) {
-                spawnShot(turret.x, turret.y, targetPos.cx, targetPos.cy, true, true)
-              }
-            }
-          }
-        }
       }
       // ─────────────────────────────────────────────────────────────────────────
 
@@ -491,8 +505,11 @@ export default defineComponent({
     const screenW = computed(() => screenCx.value * 2)
     const screenH = computed(() => screenCy.value * 2)
 
+    const turretVolleyCounter = computed(() => planetBossStore.turretVolleyCounter)
+
     return {
       planetShopStore,
+      turretVolleyCounter,
       hoveredChampionRole,
       hoveredPlanetSlotId,
       hoveredPlanetTier,
@@ -575,6 +592,46 @@ export default defineComponent({
 .planet-orbit-portrait--dimmed {
   opacity: var(--hover-dim-opacity, 0.08);
   filter: grayscale(1) brightness(0.65) blur(1.5px);
+}
+
+/* ── Turret-Cooldown-Ring — füllt sich über den 1s-Salventakt ────────────── */
+.planet-turret-ring {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.planet-turret-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 5;
+}
+
+.planet-turret-ring-arc {
+  fill: none;
+  stroke: var(--planet-color, #cc4444);
+  stroke-width: 5;
+  stroke-linecap: round;
+  animation: planet-turret-refill 1s linear forwards;
+}
+
+@keyframes planet-turret-refill {
+  from {
+    stroke-dasharray: 0 100;
+  }
+  to {
+    stroke-dasharray: 100 100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-turret-ring-arc {
+    animation: none;
+    stroke-dasharray: 100 100;
+  }
 }
 
 .planet-orbit-item--behind {
