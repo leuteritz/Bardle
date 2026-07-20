@@ -214,6 +214,29 @@
                     <span class="sf-rage-ring-label">RAGE</span>
                   </div>
                 </div>
+
+                <!-- Nova-Ring: Cooldown der Shock Nova — läuft synchron zum
+                     Ring des Boss-Sterns im Idle-Orbit -->
+                <div
+                  class="sf-nova-ring"
+                  title="Shock Nova — the boss unleashes a wave that hits every champion, every turret planet and the player"
+                >
+                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
+                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
+                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      class="sf-nova-ring-arc"
+                      :style="{ strokeDasharray: novaRingDashArray }"
+                    />
+                  </svg>
+                  <div class="sf-star-ring-inner">
+                    <span class="sf-nova-ring-secs">{{ novaSecsLeft }}</span>
+                    <span class="sf-nova-ring-label">NOVA</span>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -249,6 +272,7 @@ import {
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_WAVE_TRAVEL_MS,
+  BOSS_NOVA_INTERVAL_MS,
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   BOSS_RAGE_DMG_MULT,
@@ -369,6 +393,19 @@ const rageRingDashArray = computed(
   () => `${rageRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
 )
 
+// ── Shock Nova: Cooldown-Ring (synchron zum Boss-Stern im Idle-Orbit) ────
+const novaSecsLeft = computed(() =>
+  Math.max(0, Math.ceil(roleBehaviorStore.novaCooldownMs / 1000)),
+)
+
+const novaRingPct = computed(() =>
+  Math.max(0, Math.min(1, 1 - roleBehaviorStore.novaCooldownMs / BOSS_NOVA_INTERVAL_MS)),
+)
+
+const novaRingDashArray = computed(
+  () => `${novaRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
+)
+
 // ── Boss-Gegenangriff: dmg/s-Label + Strike-Animation ─────────────────────
 const bossDps = computed(() =>
   Math.round(
@@ -381,9 +418,9 @@ const bossDps = computed(() =>
 const bossStrikeActive = ref(false)
 let bossStrikeTimeout: ReturnType<typeof setTimeout> | null = null
 
-// Jeder Boss-Tick stempelt championHitAt — der jüngste Wert triggert die Welle
+// Jede Shock-Nova-Auslösung triggert die Welle
 watch(
-  () => Math.max(...Object.values(roleBehaviorStore.championHitAt)),
+  () => roleBehaviorStore.novaCounter,
   () => {
     bossStrikeActive.value = false
     if (bossStrikeTimeout) clearTimeout(bossStrikeTimeout)
@@ -843,6 +880,42 @@ function emberStyle(i: number): Record<string, string> {
   font-weight: 800;
   letter-spacing: 0.26em;
   color: rgba(255, 46, 99, 0.6);
+  text-transform: uppercase;
+}
+
+/* ── Nova-Ring — Ember-Orange, gleicher Stil wie Star-/Rage-Ring ─────────── */
+.sf-nova-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.sf-nova-ring-arc {
+  fill: none;
+  stroke: #ff8a30;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.2s linear;
+}
+
+.sf-nova-ring-secs {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #ff8a30;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 14px rgba(255, 138, 48, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-nova-ring-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: rgba(255, 138, 48, 0.6);
   text-transform: uppercase;
 }
 
@@ -1803,18 +1876,21 @@ function emberStyle(i: number): Record<string, string> {
   }
 
   .sf-star-ring,
-  .sf-rage-ring {
+  .sf-rage-ring,
+  .sf-nova-ring {
     width: 72px;
     height: 72px;
   }
 
   .sf-star-ring-secs,
-  .sf-rage-ring-secs {
+  .sf-rage-ring-secs,
+  .sf-nova-ring-secs {
     font-size: 1.3rem;
   }
 
   .sf-star-ring-label,
-  .sf-rage-ring-label {
+  .sf-rage-ring-label,
+  .sf-nova-ring-label {
     font-size: 0.48rem;
   }
 

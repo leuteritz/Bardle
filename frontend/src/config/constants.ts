@@ -911,6 +911,12 @@ export const BOSS_TURRET_ATTACK_DPS = 3 // boss dmg/s dealt to each turret plane
 // Hit-Flash und Damage-Labels feuern erst, wenn der Ring die Ziele erreicht
 export const BOSS_WAVE_TRAVEL_MS = 800 // full lifetime of the expanding boss shockwave ring
 export const BOSS_WAVE_HIT_DELAY_MS = 500 // moment the ring reaches champions/turrets → hit flash + damage labels
+// Boss-Fähigkeit "Shock Nova": die AoE-Welle ist eine Fähigkeit mit Cooldown —
+// pro Auslösung trifft sie alle Champions, alle Turret-Planeten UND den Spieler.
+// Schaden pro Welle = DPS × Intervall (balance-neutral zum alten Sekundentakt).
+// Der Idle-Orbit-Stern des aktiven Bosses teilt sich exakt diesen Cooldown.
+export const BOSS_NOVA_INTERVAL_MS = 5000 // cooldown between two Shock Nova waves
+export const BOSS_NOVA_PLAYER_DAMAGE = 5 // damage each nova deals to the player (Bard) in the orbit center
 // 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
 // Striker-Halbkreis): Slots 1–3 auf der linken Bogenhälfte, 4–6 rechts —
 // jeder Turret sitzt immer an der Position seines Slots

@@ -25,6 +25,8 @@ import {
   BOSS_RAGE_INTERVAL_MAX_MS,
   BOSS_RAGE_DURATION_MIN_MS,
   BOSS_RAGE_DURATION_MAX_MS,
+  BOSS_NOVA_INTERVAL_MS,
+  BOSS_NOVA_PLAYER_DAMAGE,
   SUPPORT_HEAL_RANGE,
   SUPPORT_PLANET_HEAL_AMOUNT,
   SUPPORT_PLANET_HEAL_INTERVAL_MS,
@@ -178,6 +180,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     turretHitAt: 0,
     turretHitDmg: 0,
 
+    // Boss ability "Shock Nova" — the AoE wave runs on this cooldown; the
+    // idle-orbit star of the active boss mirrors it 1:1. novaCounter is a
+    // monotonic firing counter the UI layers watch for wave/projectile FX.
+    novaCooldownMs: BOSS_NOVA_INTERVAL_MS,
+    novaCounter: 0,
+
     // Boss Rage — interval + duration are rolled fresh PER STAR: the cooldown
     // keeps counting across boss transitions within the same star fight
     rageStarId: null as string | null,
@@ -292,9 +300,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       }
     },
 
-    /** The active boss strikes back: dmg/s on every orbiting champion. Downed
-     *  champions revive at full HP after CHAMPION_REVIVE_MS; without an active
-     *  boss the squad slowly regenerates. */
+    /** Boss ability "Shock Nova": on a fixed cooldown the boss unleashes an
+     *  AoE wave that hits every orbiting champion, every turret planet AND
+     *  the player. Damage per wave = dps × interval — balance-neutral to the
+     *  old per-second strike. Downed champions revive at full HP after
+     *  CHAMPION_REVIVE_MS; without an active boss the squad regenerates and
+     *  the nova cooldown stays fully wound up. */
     _tickBossAttack(roles: Set<string>, tickMs: number) {
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
@@ -303,12 +314,12 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       const { addEvent } = useEventLog()
       const now = Date.now()
 
+      // Revive-Fenster + Out-of-Combat-Regeneration laufen im Sekundentakt
       for (const role of Object.keys(this.championHp) as ChampionRole[]) {
         if (!roles.has(role)) continue
         const hp = this.championHp[role]
         if (hp.max <= 0) continue
 
-        // Revive-Fenster
         if (this.championDownUntil[role] > 0) {
           if (now >= this.championDownUntil[role]) {
             this.championDownUntil[role] = 0
@@ -318,20 +329,37 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           continue
         }
 
-        if (!bossAlive) {
-          // Out of combat: langsam regenerieren
-          if (hp.current < hp.max) {
-            hp.current = Math.min(hp.max, hp.current + hp.max * CHAMPION_HP_REGEN_FRAC * (tickMs / 1000))
-          }
-          continue
+        if (!bossAlive && hp.current < hp.max) {
+          hp.current = Math.min(hp.max, hp.current + hp.max * CHAMPION_HP_REGEN_FRAC * (tickMs / 1000))
         }
+      }
 
-        const raging = this.rageActiveUntil > now
-        const dps =
-          BOSS_CHAMPION_ATTACK_DPS *
+      // ── Shock Nova: Cooldown herunterzählen, bei 0 die Welle auslösen ──────
+      if (!bossAlive) {
+        this.novaCooldownMs = BOSS_NOVA_INTERVAL_MS
+        return
+      }
+
+      this.novaCooldownMs = Math.max(0, this.novaCooldownMs - tickMs)
+      if (this.novaCooldownMs > 0) return
+
+      this.novaCooldownMs = BOSS_NOVA_INTERVAL_MS
+      this.novaCounter++
+
+      const raging = this.rageActiveUntil > now
+      const novaSecs = BOSS_NOVA_INTERVAL_MS / 1000
+      const dmg = Math.round(
+        BOSS_CHAMPION_ATTACK_DPS *
           (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
-          (raging ? BOSS_RAGE_DMG_MULT : 1)
-        const dmg = Math.round(dps * (tickMs / 1000))
+          (raging ? BOSS_RAGE_DMG_MULT : 1) *
+          novaSecs,
+      )
+
+      for (const role of Object.keys(this.championHp) as ChampionRole[]) {
+        if (!roles.has(role)) continue
+        const hp = this.championHp[role]
+        if (hp.max <= 0 || this.championDownUntil[role] > 0) continue
+
         hp.current = Math.max(0, hp.current - dmg)
         this.championHitAt[role] = now
 
@@ -351,26 +379,27 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
         // Routine-Treffer werden nicht geloggt — nur Knockouts und Revives
       }
 
-      // Der Boss-Flächenschlag trifft auch die Turret-Planeten des Spielers —
-      // die Turret-Battery im Star-Fight-Modal koppelt Flash + Floats daran
-      if (bossAlive) {
-        const planetShopStore = usePlanetShopStore()
-        const raging = this.rageActiveUntil > now
-        const turretDmg = Math.round(
-          BOSS_TURRET_ATTACK_DPS *
-            (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
-            (raging ? BOSS_RAGE_DMG_MULT : 1) *
-            (tickMs / 1000),
-        )
-        const turretSlots = planetShopStore.purchasedSlots.filter(
-          (s) => s.role === 'turret_planet',
-        )
-        if (turretDmg > 0 && turretSlots.length > 0) {
-          for (const slot of turretSlots) planetShopStore.takeDamage(slot.id, turretDmg)
-          this.turretHitAt = now
-          this.turretHitDmg = turretDmg
-        }
+      // Die Nova trifft auch die Turret-Planeten des Spielers — die
+      // Turret-Battery im Star-Fight-Modal koppelt Flash + Floats daran
+      const planetShopStore = usePlanetShopStore()
+      const turretDmg = Math.round(
+        BOSS_TURRET_ATTACK_DPS *
+          (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+          (raging ? BOSS_RAGE_DMG_MULT : 1) *
+          novaSecs,
+      )
+      const turretSlots = planetShopStore.purchasedSlots.filter(
+        (s) => s.role === 'turret_planet',
+      )
+      if (turretDmg > 0 && turretSlots.length > 0) {
+        for (const slot of turretSlots) planetShopStore.takeDamage(slot.id, turretDmg)
+        this.turretHitAt = now
+        this.turretHitDmg = turretDmg
       }
+
+      // ... und den Spieler in der Orbit-Mitte — der Stern-Schuss im
+      // Idle-Orbit ist die Visualisierung dieses Treffers
+      usePlayerStore().takeDamage(BOSS_NOVA_PLAYER_DAMAGE)
     },
 
     /** Every orbiting role fires a star attack at the active boss on its own
@@ -378,7 +407,6 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     _tickRoleAttacks(roles: Set<string>, tickMs: number) {
       const bossStore = usePlanetBossStore()
       const activeBoss = bossStore.activeBoss
-      const { addEvent } = useEventLog()
 
       for (const role of Object.keys(ROLE_STAR_ATTACKS) as ChampionRole[]) {
         const def = ROLE_STAR_ATTACKS[role]

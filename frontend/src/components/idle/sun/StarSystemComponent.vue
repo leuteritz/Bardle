@@ -234,6 +234,7 @@ import {
   ROLE_MID_CURSE_DURATION_MS,
   STAR_BURST_COOLDOWN,
   STAR_BURST_DELAY_BETWEEN_SHOTS,
+  BOSS_NOVA_INTERVAL_MS,
 } from '../../../config/constants'
 import { CHAMPION_ROLES } from '../../../config/championRoles'
 import { activeChampionBehindState } from '../../../utils/activeChampionBehindState'
@@ -614,6 +615,62 @@ interface StarBurstState {
 }
 const starBurstStates = new Map<string, StarBurstState>()
 
+// ── Shock Nova: der Stern des aktiven Bosses folgt NICHT dem normalen
+// Burst-Takt — sein Ring spiegelt 1:1 den Nova-Cooldown aus dem
+// roleBehaviorStore (synchron zum Nova-Ring im Star-Fight-Modal)
+const novaStarId = computed(() => {
+  const boss = bossStore.activeBoss
+  if (!boss || boss.defeated || boss.expired) return null
+  return (
+    starGroupStore.activeStars.find((s) =>
+      s.planetSlots.some((p) => p.planetId === boss.planetId),
+    )?.id ?? null
+  )
+})
+
+const NOVA_TRAIL_COLOR = '#ff4400'
+const NOVA_HEAD_COLOR = '#ffd080'
+
+// Nova gezündet → der Boss-Stern feuert eine Salve auf alle Orbit-Champions,
+// alle Spieler-Planeten und den Spieler in der Mitte. Der Schaden ist bereits
+// autoritativ im roleBehaviorStore verrechnet — die Schüsse hier sind die
+// Visualisierung des Treffers im Idle-Orbit.
+watch(
+  () => roleBehaviorStore.novaCounter,
+  () => {
+    if (reducedMotion || isIdleRenderingPaused.value) return
+    const starId = novaStarId.value
+    if (!starId) return
+    const star = starRenders.value.find((s) => s.id === starId)
+    if (!star || star.isBehind || star.opacity <= 0.02) return
+
+    const novaOpts = { trailColor: NOVA_TRAIL_COLOR, headColor: NOVA_HEAD_COLOR }
+
+    // Spieler in der Orbit-Mitte
+    spawnEnemyShot(
+      star.x,
+      star.y,
+      window.innerWidth / 2,
+      window.innerHeight / 2,
+      true,
+      true,
+      novaOpts,
+    )
+
+    // Alle sichtbaren Spieler-Planeten
+    for (const [, pos] of activePlayerPlanetPositions) {
+      if (pos.isForeground) spawnEnemyShot(star.x, star.y, pos.cx, pos.cy, true, true, novaOpts)
+    }
+
+    // Alle Orbit-Champions (mit bekannter Screen-Position, nicht hinter der Sonne)
+    for (const champ of combatStore.champions) {
+      if (champ.screenX === 0 && champ.screenY === 0) continue
+      if (activeChampionBehindState[champ.name]) continue
+      spawnEnemyShot(star.x, star.y, champ.screenX, champ.screenY, true, true, novaOpts)
+    }
+  },
+)
+
 let enemyAnimFrame = 0
 let enemyLastTs = 0
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -703,20 +760,31 @@ function drawCooldownRings() {
 
   for (const star of stars) {
     if (star.isBehind || star.opacity <= 0.02) continue
+
+    // Boss-Stern: Ring spiegelt den Shock-Nova-Cooldown aus dem Store —
+    // exakt synchron zum Nova-Ring im Star-Fight-Modal
+    const isNovaStar = star.id === novaStarId.value
     const state = starBurstStates.get(star.id)
-    if (!state) continue
+    if (!state && !isNovaStar) continue
 
     const r = (starSize(star.starType) / 2 + 9) * star.scale
     const alpha = star.opacity
-    const bursting = state.shotsLeft > 0
-    const progress = bursting ? 1 : 1 - Math.max(0, state.cooldownMs) / state.totalMs
+    const bursting = !isNovaStar && state!.shotsLeft > 0
+    const progress = isNovaStar
+      ? 1 - Math.max(0, roleBehaviorStore.novaCooldownMs) / BOSS_NOVA_INTERVAL_MS
+      : bursting
+        ? 1
+        : 1 - Math.max(0, state!.cooldownMs) / state!.totalMs
+    const lineW = isNovaStar ? 3 : 2
     drewAny = true
 
     // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
     c.beginPath()
     c.arc(star.x, star.y, r, 0, TWO_PI)
-    c.strokeStyle = `rgba(255,136,0,${0.1 * alpha})`
-    c.lineWidth = 2
+    c.strokeStyle = isNovaStar
+      ? `rgba(255,80,0,${0.14 * alpha})`
+      : `rgba(255,136,0,${0.1 * alpha})`
+    c.lineWidth = lineW
     c.stroke()
 
     if (progress <= 0.004) continue
@@ -725,8 +793,14 @@ function drawCooldownRings() {
     const hot = bursting || progress > 0.92
     c.beginPath()
     c.arc(star.x, star.y, r, start, end)
-    c.strokeStyle = hot ? `rgba(255,205,95,${0.9 * alpha})` : `rgba(255,150,45,${0.55 * alpha})`
-    c.lineWidth = 2
+    c.strokeStyle = isNovaStar
+      ? hot
+        ? `rgba(255,190,120,${0.95 * alpha})`
+        : `rgba(255,105,30,${0.7 * alpha})`
+      : hot
+        ? `rgba(255,205,95,${0.9 * alpha})`
+        : `rgba(255,150,45,${0.55 * alpha})`
+    c.lineWidth = lineW
     c.lineCap = 'round'
     c.stroke()
 
@@ -756,6 +830,13 @@ function enemyAttackLoop(ts: number) {
 
     for (const star of starRenders.value) {
       if (star.isBehind) continue
+
+      // Boss-Stern: feuert nicht im Burst-Takt — seine Shock Nova läuft über
+      // den Store-Cooldown (siehe novaCounter-Watch), Ring kommt aus dem Store
+      if (star.id === novaStarId.value) {
+        starBurstStates.delete(star.id)
+        continue
+      }
 
       let state = starBurstStates.get(star.id)
       if (!state) {
