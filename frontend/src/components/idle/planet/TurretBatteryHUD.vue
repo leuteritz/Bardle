@@ -304,23 +304,27 @@ onUnmounted(() => {
   /* über der .arena (z-index 1), unter HUD (3) und Squad (4) */
   z-index: 2;
   --tc: v-bind(turretColor);
+  /* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px.
+     Muss mit planetPx in drawRings() übereinstimmen (54 / 7vh / 76) */
+  --tbh-size: clamp(54px, 7vh, 76px);
 }
 
-/* ── Turret-Eintrag: Planet + Ring + Schadenswert ────────────────────────── */
+/* ── Turret-Eintrag: Planet + Ring + Info-Plate ──────────────────────────
+   Anker (left/top) = PLANET-Zentrum, nicht Container-Mitte: nur so liegt
+   der Canvas-Ring exakt um das Planet-Bild — die Plate hängt frei darunter */
 .tbh-turret {
   position: absolute;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, calc(var(--tbh-size) / -2));
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
 }
 
-/* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px */
 .tbh-planet {
   position: relative;
-  width: clamp(54px, 7vh, 76px);
-  height: clamp(54px, 7vh, 76px);
+  width: var(--tbh-size);
+  height: var(--tbh-size);
 }
 
 /* Glow als statisches ::before statt drop-shadow-Filter: der Filter würde
