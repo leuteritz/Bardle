@@ -13,14 +13,13 @@
         :style="lungeStyle(t)"
       >
         <img :src="turretImage" alt="" draggable="false" />
-        <!-- Cooldown-Ring: füllt sich über den 1s-Salventakt, Restart pro Salve -->
-        <svg :key="'ring-' + volleyCount" class="tbh-ring" viewBox="0 0 100 100">
-          <circle class="tbh-ring-track" cx="50" cy="50" r="46" pathLength="100" />
-          <circle class="tbh-ring-arc" cx="50" cy="50" r="46" pathLength="100" />
-        </svg>
       </div>
       <span class="tbh-dmg">{{ t.dmg }} dmg</span>
     </div>
+
+    <!-- Cooldown-Ringe: EIN Canvas für alle Turrets, ein Draw-Pass pro Frame —
+         statt 6 SVGs mit durchgehender stroke-dasharray-Animation -->
+    <canvas ref="ringCanvas" class="tbh-ring-canvas" />
 
     <!-- Ein Label pro belegter Flanke, unter der Spalte -->
     <div
@@ -64,6 +63,7 @@ import {
   planetLevelBonusMultiplier,
 } from '@/stores/planetShopStore'
 import {
+  GAME_TICK_INTERVAL_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_BATTERY_LEFT_X_PCT,
   TURRET_BATTERY_RIGHT_X_PCT,
@@ -142,6 +142,81 @@ const rootEl = ref<HTMLDivElement | null>(null)
 const arenaSize = ref({ w: 0, h: 0 })
 let resizeObserver: ResizeObserver | null = null
 
+// ── Cooldown-Ringe auf EINEM Canvas — ein Draw-Pass pro Frame statt sechs
+// dauerhaft repaintender SVG-dasharray-Animationen ────────────────────────
+const ringCanvas = ref<HTMLCanvasElement | null>(null)
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const TWO_PI = Math.PI * 2
+let lastVolleyMs = Date.now()
+let ringAnimFrame = 0
+
+function drawRings() {
+  const cv = ringCanvas.value
+  const c = cv?.getContext('2d')
+  if (cv && c) {
+    c.clearRect(0, 0, cv.width, cv.height)
+    const { w, h } = arenaSize.value
+    // Radius folgt der CSS-Planetengröße: clamp(54px, 7vh, 76px) / 2 + Saum
+    const planetPx = Math.max(54, Math.min(76, window.innerHeight * 0.07))
+    const r = planetPx / 2 + 7
+    const progress = reducedMotion
+      ? 1
+      : Math.min(1, (Date.now() - lastVolleyMs) / GAME_TICK_INTERVAL_MS)
+
+    for (const t of turrets.value) {
+      const cx = (t.xPct / 100) * w
+      const cy = (t.yPct / 100) * h
+
+      // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
+      c.beginPath()
+      c.arc(cx, cy, r, 0, TWO_PI)
+      c.strokeStyle = 'rgba(255,255,255,0.09)'
+      c.lineWidth = 3
+      c.stroke()
+
+      if (progress <= 0.004) continue
+      const start = -Math.PI / 2
+      const end = start + progress * TWO_PI
+      const hot = progress > 0.92
+      c.beginPath()
+      c.arc(cx, cy, r, start, end)
+      c.strokeStyle = hot ? 'rgba(255,150,140,0.9)' : 'rgba(220,90,80,0.6)'
+      c.lineWidth = 3
+      c.lineCap = 'round'
+      c.stroke()
+
+      // Glüh-Spitze am Ende des Bogens
+      if (progress < 1) {
+        c.beginPath()
+        c.arc(cx + Math.cos(end) * r, cy + Math.sin(end) * r, hot ? 3 : 2.2, 0, TWO_PI)
+        c.fillStyle = 'rgba(255,180,170,0.85)'
+        c.fill()
+      }
+    }
+  }
+  // Bei reduced motion steht der Ring statisch voll — kein Dauer-Loop nötig
+  if (!reducedMotion) ringAnimFrame = requestAnimationFrame(drawRings)
+}
+
+function sizeRingCanvas() {
+  const cv = ringCanvas.value
+  if (cv) {
+    cv.width = arenaSize.value.w
+    cv.height = arenaSize.value.h
+  }
+}
+
+watch(arenaSize, sizeRingCanvas)
+
+// Canvas existiert nur, solange das Root-v-if greift — Loop daran koppeln
+watch(ringCanvas, (cv) => {
+  cancelAnimationFrame(ringAnimFrame)
+  if (cv) {
+    sizeRingCanvas()
+    ringAnimFrame = requestAnimationFrame(drawRings)
+  }
+})
+
 // Schnips-Vektor: Einheitsvektor Richtung Boss × Lunge-Distanz — jeder
 // Turret stößt entlang seiner eigenen Flugachse vor
 function lungeStyle(t: TurretEntry): Record<string, string> {
@@ -167,7 +242,6 @@ interface Volley {
 const volleys = ref<Volley[]>([])
 const floats = ref<{ id: number; value: number }[]>([])
 const volleyFlash = ref(false)
-const volleyCount = ref(0)
 let volleyId = 0
 const timeouts: number[] = []
 
@@ -177,7 +251,7 @@ function later(ms: number, fn: () => void) {
 
 function fireVolley() {
   if (!bossAlive.value || turrets.value.length === 0) return
-  volleyCount.value++
+  lastVolleyMs = Date.now()
 
   volleyFlash.value = false
   requestAnimationFrame(() => {
@@ -238,6 +312,7 @@ watch(rootEl, (el, prev) => {
 })
 
 onUnmounted(() => {
+  cancelAnimationFrame(ringAnimFrame)
   resizeObserver?.disconnect()
   resizeObserver = null
   timeouts.forEach(window.clearTimeout)
@@ -272,13 +347,27 @@ onUnmounted(() => {
   height: clamp(54px, 7vh, 76px);
 }
 
+/* Glow als statisches ::before statt drop-shadow-Filter: der Filter würde
+   das Image bei jeder Snap-Animation (×6 pro Sekunde) neu rastern */
+.tbh-planet::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--tc, #cc4444) 32%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
 .tbh-planet img {
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--tc) 45%, transparent))
-    drop-shadow(0 3px 6px rgba(0, 0, 0, 0.8));
 }
 
 /* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Ring
@@ -313,37 +402,11 @@ onUnmounted(() => {
   }
 }
 
-/* ── Cooldown-Ring: füllt sich linear über den 1s-Salventakt ─────────────── */
-.tbh-ring {
+/* ── Cooldown-Ring-Canvas — ein Layer über allen Turrets ─────────────────── */
+.tbh-ring-canvas {
   position: absolute;
-  inset: -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
-  transform: rotate(-90deg);
+  inset: 0;
   pointer-events: none;
-}
-
-.tbh-ring-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.09);
-  stroke-width: 4;
-}
-
-.tbh-ring-arc {
-  fill: none;
-  stroke: var(--tc, #cc4444);
-  stroke-width: 4;
-  stroke-linecap: round;
-  animation: tbh-ring-refill 1s linear forwards;
-}
-
-@keyframes tbh-ring-refill {
-  from {
-    stroke-dasharray: 0 100;
-  }
-  to {
-    stroke-dasharray: 100 100;
-  }
 }
 
 .tbh-dmg {
@@ -396,9 +459,7 @@ onUnmounted(() => {
   margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: radial-gradient(circle, #fff 0%, var(--tc, #cc4444) 45%, transparent 75%);
-  box-shadow:
-    0 0 12px var(--tc, #cc4444),
-    0 0 26px color-mix(in srgb, var(--tc) 55%, transparent);
+  box-shadow: 0 0 12px var(--tc, #cc4444);
   animation: tbh-comet-fly 0.42s cubic-bezier(0.3, 0, 0.75, 0.5) forwards;
   will-change: transform, opacity;
   z-index: 1;
@@ -462,11 +523,6 @@ onUnmounted(() => {
   .tbh-comet,
   .tbh-pop-enter-active {
     animation: none;
-  }
-
-  .tbh-ring-arc {
-    animation: none;
-    stroke-dasharray: 100 100;
   }
 }
 </style>

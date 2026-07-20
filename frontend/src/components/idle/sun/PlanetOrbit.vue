@@ -348,6 +348,9 @@ export default defineComponent({
       () => {
         turretLastVolleyMs = Date.now()
         if (reducedMotion) return
+        // Idle-Layer pausiert (Star-Fight-Modal / Profil offen): keine Schüsse
+        // ansammeln, die beim Fortsetzen alle gleichzeitig losfliegen würden
+        if (isIdleRenderingPaused.value) return
         // Gleiche Bedingung wie der Cooldown-Ring (nicht hinter der Sonne):
         // jeder Turret, dessen Ring voll läuft, verschießt auch ein Projektil
         const turretPlanets = renderPositions.value.filter((p) => p.isTurret && !p.isBehind)
