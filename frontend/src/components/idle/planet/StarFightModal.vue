@@ -1641,9 +1641,9 @@ function emberStyle(i: number): Record<string, string> {
    und dmg/s-Anzeige nicht kollidieren. */
 @media (max-height: 1100px) {
   .sf-arena-wrap :deep(.boss-img) {
-    height: 34%;
-    max-height: 250px;
-    max-width: 34%;
+    height: 48%;
+    max-height: 400px;
+    max-width: 42%;
   }
 
   .sf-hud {
