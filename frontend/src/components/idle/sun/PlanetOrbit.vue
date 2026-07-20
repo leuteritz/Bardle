@@ -348,7 +348,9 @@ export default defineComponent({
       () => {
         turretLastVolleyMs = Date.now()
         if (reducedMotion) return
-        const turretPlanets = renderPositions.value.filter((p) => p.isTurret && p.isForeground)
+        // Gleiche Bedingung wie der Cooldown-Ring (nicht hinter der Sonne):
+        // jeder Turret, dessen Ring voll läuft, verschießt auch ein Projektil
+        const turretPlanets = renderPositions.value.filter((p) => p.isTurret && !p.isBehind)
         if (turretPlanets.length === 0 || planetBossStore.activeBosses.length === 0) return
 
         const bossPlanetIds = planetBossStore.activeBosses
@@ -358,11 +360,18 @@ export default defineComponent({
         for (const turret of turretPlanets) {
           let nearestDist = Infinity
           let targetPos: { cx: number; cy: number; isForeground: boolean } | null = null
+          let fallbackPos: { cx: number; cy: number; isForeground: boolean } | null = null
+          let fallbackDist = Infinity
 
           for (const planetId of bossPlanetIds) {
             const pos = activePlanetPositions.get(planetId)
-            if (!pos || !pos.isForeground) continue
+            if (!pos) continue
             const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
+            // nächstes Ziel überhaupt — Fallback, falls alle zu nah stehen
+            if (dist < fallbackDist) {
+              fallbackDist = dist
+              fallbackPos = pos
+            }
             if (dist < MIN_SHOT_DISTANCE) continue
             if (dist < nearestDist) {
               nearestDist = dist
@@ -370,8 +379,9 @@ export default defineComponent({
             }
           }
 
-          if (targetPos) {
-            spawnShot(turret.x, turret.y, targetPos.cx, targetPos.cy, true, true)
+          const target = targetPos ?? fallbackPos
+          if (target) {
+            spawnShot(turret.x, turret.y, target.cx, target.cy, true, true)
           }
         }
       },
