@@ -171,8 +171,9 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       number
     >,
 
-    // Boss Rage — interval + duration are rolled fresh for every boss
-    rageBossPlanetId: null as string | null,
+    // Boss Rage — interval + duration are rolled fresh PER STAR: the cooldown
+    // keeps counting across boss transitions within the same star fight
+    rageStarId: null as string | null,
     rageIntervalMs: 0,
     rageDurationMs: 0,
     rageCooldownMs: 0,
@@ -222,23 +223,39 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
     },
 
     /** Boss Rage: every boss periodically enrages and deals double damage.
-     *  Interval and duration are rolled fresh whenever a new boss appears. */
+     *  Interval, duration and the running cooldown are shared per STAR — when
+     *  the next boss of the same star steps up, the cooldown keeps counting
+     *  down instead of restarting. A fresh profile is only rolled when the
+     *  fight moves to a different star. */
     _tickBossRage(tickMs: number) {
       const bossStore = usePlanetBossStore()
+      const starGroupStore = useStarGroupStore()
       const activeBoss = bossStore.activeBoss
       const { addEvent } = useEventLog()
       const now = Date.now()
 
       if (!activeBoss || activeBoss.defeated || activeBoss.expired) {
-        this.rageBossPlanetId = null
-        this.rageActiveUntil = 0
+        // Boss besiegt/weg: eine laufende Rage gilt als verbraucht — der
+        // Stern-Cooldown bleibt jedoch stehen und läuft beim nächsten Boss
+        // desselben Sterns weiter
+        if (this.rageActiveUntil > 0) {
+          this.rageActiveUntil = 0
+          this.rageCooldownMs = this.rageIntervalMs
+        }
         return
       }
 
-      // Neuer Boss → Rage-Profil frisch auswürfeln; die erste Rage kommt
+      // Stern des aktiven Bosses ermitteln (Fallback: planetId, falls der
+      // Boss keinem aktiven Stern zugeordnet ist)
+      const starId =
+        starGroupStore.activeStars.find((s) =>
+          s.planetSlots.some((p) => p.planetId === activeBoss.planetId),
+        )?.id ?? activeBoss.planetId
+
+      // Neuer Stern → Rage-Profil frisch auswürfeln; die erste Rage kommt
       // erst nach Ablauf des Cooldowns
-      if (this.rageBossPlanetId !== activeBoss.planetId) {
-        this.rageBossPlanetId = activeBoss.planetId
+      if (this.rageStarId !== starId) {
+        this.rageStarId = starId
         this.rageIntervalMs =
           BOSS_RAGE_INTERVAL_MIN_MS +
           Math.random() * (BOSS_RAGE_INTERVAL_MAX_MS - BOSS_RAGE_INTERVAL_MIN_MS)
