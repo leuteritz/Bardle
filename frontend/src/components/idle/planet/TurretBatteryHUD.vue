@@ -9,10 +9,20 @@
     >
       <div
         class="tbh-planet"
-        :class="{ 'tbh-planet--firing': volleyFlash }"
+        :class="{ 'tbh-planet--firing': volleyFlash, 'tbh-planet--hit': hitFlash }"
         :style="lungeStyle(t)"
       >
         <img :src="turretImage" alt="" draggable="false" />
+
+        <!-- Cooldown-Pill wie bei den Champions — Zehntel, da 1s-Takt -->
+        <span class="tbh-cdpill" :class="{ 'tbh-cdpill--ready': cdReady }">
+          {{ cdDisplay }}s
+        </span>
+
+        <!-- Roter Schadens-Float, wenn der Boss die Turrets trifft -->
+        <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
+          -{{ hitDmg }}
+        </span>
       </div>
       <!-- Info-Plate wie bei den Champions: HP-Bar → Slot-Nummer → dmg/s -->
       <div class="tbh-plate-anchor">
@@ -43,12 +53,15 @@
       }"
     />
 
-    <!-- Schadenszahl am Boss beim Einschlag -->
-    <TransitionGroup name="tbh-pop">
-      <span v-for="f in floats" :key="f.id" class="tbh-float" :style="{ left: '50%', top: '33%' }">
-        -{{ f.value }}
-      </span>
-    </TransitionGroup>
+    <!-- Schadenszahl pro Projektil am Einschlagpunkt — wie bei den Champions -->
+    <span
+      v-for="f in impactFloats"
+      :key="f.id"
+      class="tbh-impact-num"
+      :style="{ left: `calc(${f.xPct}% + ${f.px}px)`, top: `calc(${f.yPct}% + ${f.py}px)` }"
+    >
+      -{{ f.value }}
+    </span>
   </div>
 </template>
 
@@ -61,9 +74,12 @@ import {
   planetLevelBonusMultiplier,
 } from '@/stores/planetShopStore'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
+import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,
+  CHAMPION_HIT_FLASH_MS,
+  TURRET_CD_TICK_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_BATTERY_LEFT_X_PCT,
   TURRET_BATTERY_RIGHT_X_PCT,
@@ -78,6 +94,7 @@ import {
 
 const bossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
+const roleBehaviorStore = useRoleBehaviorStore()
 
 const turretImage = PLANET_ROLES.turret_planet.image
 const turretColor = PLANET_ROLES.turret_planet.color
@@ -126,7 +143,31 @@ const turrets = computed<TurretEntry[]>(() =>
     }),
 )
 
-const totalDps = computed(() => Math.round(planetShopStore.autoAttackDPS * 10) / 10)
+// ── Cooldown-Pill: geteilter 1s-Takt, darum Zehntel-Anzeige ───────────────
+const cdLeft = ref(1)
+let cdInterval: ReturnType<typeof setInterval> | null = null
+
+const cdDisplay = computed(() => cdLeft.value.toFixed(1))
+const cdReady = computed(() => cdLeft.value <= 0.1)
+
+// ── Boss-Treffer auf die Turrets: Flash + roter Float ─────────────────────
+const hitFlash = ref(false)
+const hitSeq = ref(0)
+const hitDmg = computed(() => roleBehaviorStore.turretHitDmg)
+
+watch(
+  () => roleBehaviorStore.turretHitAt,
+  () => {
+    hitSeq.value++
+    hitFlash.value = false
+    requestAnimationFrame(() => {
+      hitFlash.value = true
+      later(CHAMPION_HIT_FLASH_MS, () => {
+        hitFlash.value = false
+      })
+    })
+  },
+)
 
 // Arena-Größe für Kometen-Flugvektoren + Schnips-Richtung
 const rootEl = ref<HTMLDivElement | null>(null)
@@ -230,8 +271,17 @@ interface Volley {
   py: number
 }
 
+interface ImpactFloat {
+  id: number
+  xPct: number
+  yPct: number
+  px: number
+  py: number
+  value: number
+}
+
 const volleys = ref<Volley[]>([])
-const floats = ref<{ id: number; value: number }[]>([])
+const impactFloats = ref<ImpactFloat[]>([])
 const volleyFlash = ref(false)
 let volleyId = 0
 const timeouts: number[] = []
@@ -250,34 +300,27 @@ function fireVolley() {
   })
 
   const { w, h } = arenaSize.value
-  const groupId = ++volleyId
 
   for (const t of turrets.value) {
     const id = ++volleyId
-    volleys.value.push({
-      id,
-      fromXPct: t.xPct,
-      fromYPct: t.yPct,
-      px: Math.round(
-        ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
-      ),
-      py: Math.round(
-        ((STRIKER_BOSS_ANCHOR_Y_PCT - t.yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC,
-      ),
-    })
+    const px = Math.round(
+      ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
+    )
+    const py = Math.round(
+      ((STRIKER_BOSS_ANCHOR_Y_PCT - t.yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC,
+    )
+    volleys.value.push({ id, fromXPct: t.xPct, fromYPct: t.yPct, px, py })
+
+    // Einschlag: Komet entfernen, Schadenszahl dieses Schusses am Impact-Punkt
     later(TURRET_PROJECTILE_FLIGHT_MS, () => {
       volleys.value = volleys.value.filter((v) => v.id !== id)
+      if (!bossAlive.value) return
+      impactFloats.value.push({ id, xPct: t.xPct, yPct: t.yPct, px, py, value: t.dmg })
+      later(TURRET_DAMAGE_FLOAT_MS, () => {
+        impactFloats.value = impactFloats.value.filter((f) => f.id !== id)
+      })
     })
   }
-
-  // Eine gebündelte Schadenszahl beim Einschlag (Gesamt-DPS der Batterie)
-  later(TURRET_PROJECTILE_FLIGHT_MS, () => {
-    if (!bossAlive.value) return
-    floats.value.push({ id: groupId, value: totalDps.value })
-    later(TURRET_DAMAGE_FLOAT_MS, () => {
-      floats.value = floats.value.filter((f) => f.id !== groupId)
-    })
-  })
 }
 
 // Geteilter Takt: dieselbe Salve treibt Idle-Orbit-Schüsse und dieses HUD
@@ -287,6 +330,12 @@ watch(
 )
 
 onMounted(() => {
+  cdInterval = setInterval(() => {
+    cdLeft.value = Math.max(
+      0,
+      (lastVolleyMs + GAME_TICK_INTERVAL_MS - Date.now()) / 1000,
+    )
+  }, TURRET_CD_TICK_MS)
   resizeObserver = new ResizeObserver((entries) => {
     const rect = entries[0]?.contentRect
     if (rect) arenaSize.value = { w: rect.width, h: rect.height }
@@ -303,6 +352,7 @@ watch(rootEl, (el, prev) => {
 })
 
 onUnmounted(() => {
+  if (cdInterval) clearInterval(cdInterval)
   cancelAnimationFrame(ringAnimFrame)
   resizeObserver?.disconnect()
   resizeObserver = null
@@ -440,48 +490,139 @@ onUnmounted(() => {
   }
 }
 
-/* ── Schadenszahl am Boss ────────────────────────────────────────────────── */
-.tbh-float {
+/* ── Cooldown-Pill am unteren Planetenrand — wie rsq-cdpill, Zehntel-Takt ── */
+.tbh-cdpill {
   position: absolute;
+  left: 50%;
+  bottom: -8px;
   transform: translateX(-50%);
-  font-size: 1.1rem;
+  min-width: 40px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  text-align: center;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--tc, #cc4444) 32%, #16100a),
+    #0c0803
+  );
+  border: 1px solid color-mix(in srgb, var(--tc, #cc4444) 65%, #3a2410);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--tc, #cc4444) 35%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.75);
+  font-size: 0.62rem;
   font-weight: 900;
-  color: color-mix(in srgb, var(--tc) 35%, #fff);
+  color: #f4ead0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  z-index: 3;
+}
+
+.tbh-cdpill--ready {
+  border-color: var(--tc, #cc4444);
+  color: #fff;
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--tc, #cc4444) 80%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.75);
+}
+
+/* ── Boss-Treffer: roter Flash-Overlay (nur ::after — kollidiert nicht mit
+   der Snap-Animation auf dem Element selbst) ─────────────────────────────── */
+.tbh-planet--hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 90, 60, 0.55) 0%,
+    rgba(255, 40, 20, 0.28) 65%,
+    transparent 100%
+  );
+  animation: tbh-hitflash-fade 0.45s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes tbh-hitflash-fade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Roter Schadens-Float über dem Planeten, wenn der Boss trifft */
+.tbh-hitfloat {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #ff7060;
   -webkit-text-stroke: 3px rgba(0, 0, 0, 0.9);
   paint-order: stroke fill;
   white-space: nowrap;
-  text-shadow: 0 0 12px var(--tc, #cc4444);
-  z-index: 2;
-}
-
-.tbh-pop-enter-active {
-  animation: tbh-float-up 1s ease-out forwards;
+  text-shadow: 0 0 12px #e03020;
+  animation: tbh-hitfloat-up 1s ease-out forwards;
   will-change: transform, opacity;
+  z-index: 3;
 }
 
-.tbh-pop-leave-active {
-  display: none;
-}
-
-@keyframes tbh-float-up {
+@keyframes tbh-hitfloat-up {
   0% {
     opacity: 0;
     transform: translateX(-50%) translateY(6px) scale(0.8);
   }
-  18% {
+  16% {
     opacity: 1;
-    transform: translateX(-50%) translateY(-6px) scale(1.1);
+    transform: translateX(-50%) translateY(-4px) scale(1.12);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-42px) scale(0.8);
+    transform: translateX(-50%) translateY(-38px) scale(0.8);
+  }
+}
+
+/* ── Schadenszahl am Einschlagpunkt — wie rsq-impact-num der Champions ───── */
+.tbh-impact-num {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.9);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  text-shadow: 0 0 12px var(--tc, #cc4444);
+  animation: tbh-impact-num 0.9s ease-out forwards;
+  will-change: transform, opacity;
+  z-index: 2;
+  pointer-events: none;
+}
+
+@keyframes tbh-impact-num {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.8);
+  }
+  18% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-8px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-36px) scale(0.85);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tbh-planet--firing,
-  .tbh-comet,
-  .tbh-pop-enter-active {
+  .tbh-planet--hit::after,
+  .tbh-hitfloat,
+  .tbh-impact-num,
+  .tbh-comet {
     animation: none;
   }
 }

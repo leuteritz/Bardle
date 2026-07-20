@@ -16,6 +16,7 @@ import {
   CHAMPION_BASE_HP_BY_ROLE,
   CHAMPION_HP_PER_STAR,
   BOSS_CHAMPION_ATTACK_DPS,
+  BOSS_TURRET_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   CHAMPION_REVIVE_MS,
   CHAMPION_HP_REGEN_FRAC,
@@ -171,6 +172,11 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       ChampionRole,
       number
     >,
+
+    // Boss-Gegenschlag auf die Turret-Planeten: Zeitstempel + Schadenswert des
+    // letzten Treffers (treibt Flash + rote Floats in der Turret-Battery)
+    turretHitAt: 0,
+    turretHitDmg: 0,
 
     // Boss Rage — interval + duration are rolled fresh PER STAR: the cooldown
     // keeps counting across boss transitions within the same star fight
@@ -343,6 +349,27 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
           )
         }
         // Routine-Treffer werden nicht geloggt — nur Knockouts und Revives
+      }
+
+      // Der Boss-Flächenschlag trifft auch die Turret-Planeten des Spielers —
+      // die Turret-Battery im Star-Fight-Modal koppelt Flash + Floats daran
+      if (bossAlive) {
+        const planetShopStore = usePlanetShopStore()
+        const raging = this.rageActiveUntil > now
+        const turretDmg = Math.round(
+          BOSS_TURRET_ATTACK_DPS *
+            (activeBoss.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+            (raging ? BOSS_RAGE_DMG_MULT : 1) *
+            (tickMs / 1000),
+        )
+        const turretSlots = planetShopStore.purchasedSlots.filter(
+          (s) => s.role === 'turret_planet',
+        )
+        if (turretDmg > 0 && turretSlots.length > 0) {
+          for (const slot of turretSlots) planetShopStore.takeDamage(slot.id, turretDmg)
+          this.turretHitAt = now
+          this.turretHitDmg = turretDmg
+        }
       }
     },
 
