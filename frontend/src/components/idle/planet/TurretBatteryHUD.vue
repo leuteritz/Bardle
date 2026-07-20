@@ -1,24 +1,20 @@
 <template>
   <div v-if="turrets.length > 0 && bossAlive" ref="rootEl" class="tbh" aria-hidden="true">
-    <!-- Batterie-Spalte: ein Eintrag pro Turret-Planet -->
+    <!-- Turrets an ihren festen Slot-Ankern: Slot 1–3 links, Slot 4–6 rechts -->
     <div
-      v-for="(t, i) in visibleTurrets"
+      v-for="t in turrets"
       :key="t.slotId"
       class="tbh-turret"
-      :style="{ left: `${TURRET_BATTERY_X_PCT}%`, top: `${turretYPct(i)}%` }"
+      :style="{ left: `${t.xPct}%`, top: `${t.yPct}%` }"
     >
       <div
         class="tbh-planet"
         :class="{ 'tbh-planet--firing': volleyFlash }"
-        :style="lungeStyle(i)"
+        :style="lungeStyle(t)"
       >
         <img :src="turretImage" alt="" draggable="false" />
         <!-- Cooldown-Ring: füllt sich über den 1s-Salventakt, Restart pro Salve -->
-        <svg
-          :key="'ring-' + volleyCount"
-          class="tbh-ring"
-          viewBox="0 0 100 100"
-        >
+        <svg :key="'ring-' + volleyCount" class="tbh-ring" viewBox="0 0 100 100">
           <circle class="tbh-ring-track" cx="50" cy="50" r="46" pathLength="100" />
           <circle class="tbh-ring-arc" cx="50" cy="50" r="46" pathLength="100" />
         </svg>
@@ -26,22 +22,15 @@
       <span class="tbh-dmg">{{ t.dmg }} dmg</span>
     </div>
 
-    <!-- Overflow-Chip, wenn mehr Turrets als Plätze -->
+    <!-- Ein Label pro belegter Flanke, unter der Spalte -->
     <div
-      v-if="hiddenCount > 0"
-      class="tbh-more"
-      :style="{ left: `${TURRET_BATTERY_X_PCT}%`, top: `${turretYPct(visibleTurrets.length)}%` }"
-    >
-      +{{ hiddenCount }}
-    </div>
-
-    <!-- Label unter der Batterie -->
-    <div
+      v-for="side in activeSides"
+      :key="'caption-' + side.key"
       class="tbh-caption"
-      :style="{ left: `${TURRET_BATTERY_X_PCT}%`, top: `${captionYPct}%` }"
+      :style="{ left: `${side.xPct}%`, top: `${captionYPct}%` }"
     >
       <span class="tbh-caption-title">Turret Battery</span>
-      <span class="tbh-caption-dps">{{ totalDps }} dmg/s</span>
+      <span class="tbh-caption-dps">{{ side.dps }} dmg/s</span>
     </div>
 
     <!-- Kometen-Volleys Richtung Boss -->
@@ -50,7 +39,7 @@
       :key="v.id"
       class="tbh-comet"
       :style="{
-        left: `${TURRET_BATTERY_X_PCT}%`,
+        left: `${v.fromXPct}%`,
         top: `${v.fromYPct}%`,
         '--px': v.px + 'px',
         '--py': v.py + 'px',
@@ -76,10 +65,10 @@ import {
 } from '@/stores/planetShopStore'
 import {
   TURRET_PROJECTILE_FLIGHT_MS,
-  TURRET_BATTERY_X_PCT,
+  TURRET_BATTERY_LEFT_X_PCT,
+  TURRET_BATTERY_RIGHT_X_PCT,
   TURRET_BATTERY_Y_PCT,
   TURRET_BATTERY_SPACING_PCT,
-  TURRET_BATTERY_MAX_VISIBLE,
   TURRET_DAMAGE_FLOAT_MS,
   TURRET_ATTACK_LUNGE_PX,
   STRIKER_BOSS_ANCHOR_X_PCT,
@@ -98,11 +87,22 @@ const bossAlive = computed(() => {
   return !!boss && !boss.defeated && !boss.expired
 })
 
-// Alle Turret-Planeten des Spielers mit ihrem individuellen Schadensanteil
-const turrets = computed(() =>
+interface TurretEntry {
+  slotId: string
+  dmg: number
+  xPct: number
+  yPct: number
+}
+
+// Feste Slot-Anker: Slot 1–3 → linke Flanke (Reihe 0–2), Slot 4–6 → rechte
+// Flanke (Reihe 0–2) — die Position spiegelt immer den belegten Planet-Slot
+const turrets = computed<TurretEntry[]>(() =>
   planetShopStore.purchasedSlots
     .filter((s) => s.role === 'turret_planet')
     .map((s) => {
+      const slotNum = parseInt(s.id.replace('slot_', ''), 10)
+      const isLeft = slotNum <= 3
+      const row = (slotNum - 1) % 3
       const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
       return {
         slotId: s.id,
@@ -110,34 +110,44 @@ const turrets = computed(() =>
           Math.round(
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
           ) / 10,
+        xPct: isLeft ? TURRET_BATTERY_LEFT_X_PCT : TURRET_BATTERY_RIGHT_X_PCT,
+        yPct: TURRET_BATTERY_Y_PCT + (row - 1) * TURRET_BATTERY_SPACING_PCT,
       }
     }),
 )
 
-const visibleTurrets = computed(() => turrets.value.slice(0, TURRET_BATTERY_MAX_VISIBLE))
-const hiddenCount = computed(() => Math.max(0, turrets.value.length - TURRET_BATTERY_MAX_VISIBLE))
-const totalDps = computed(
-  () => Math.round(planetShopStore.autoAttackDPS * 10) / 10,
-)
-
-// Vertikale Verteilung: Spalte zentriert um TURRET_BATTERY_Y_PCT
-function turretYPct(index: number): number {
-  const count = visibleTurrets.value.length + (hiddenCount.value > 0 ? 1 : 0)
-  const start = TURRET_BATTERY_Y_PCT - ((count - 1) / 2) * TURRET_BATTERY_SPACING_PCT
-  return start + index * TURRET_BATTERY_SPACING_PCT
-}
-
-const captionYPct = computed(() => {
-  const count = visibleTurrets.value.length + (hiddenCount.value > 0 ? 1 : 0)
-  return TURRET_BATTERY_Y_PCT + ((count - 1) / 2) * TURRET_BATTERY_SPACING_PCT + 9
+// Label pro belegter Flanke mit der Flanken-Summe
+const activeSides = computed(() => {
+  const sides: { key: string; xPct: number; dps: number }[] = []
+  for (const [key, xPct] of [
+    ['left', TURRET_BATTERY_LEFT_X_PCT],
+    ['right', TURRET_BATTERY_RIGHT_X_PCT],
+  ] as const) {
+    const dps = turrets.value
+      .filter((t) => t.xPct === xPct)
+      .reduce((sum, t) => sum + t.dmg, 0)
+    if (dps > 0) sides.push({ key, xPct, dps: Math.round(dps * 10) / 10 })
+  }
+  return sides
 })
 
-// Schnips-Vektor pro Turret: Einheitsvektor Richtung Boss × Lunge-Distanz —
-// jeder Planet stößt entlang seiner eigenen Flugachse vor
-function lungeStyle(index: number): Record<string, string> {
+const totalDps = computed(() => Math.round(planetShopStore.autoAttackDPS * 10) / 10)
+
+const captionYPct = computed(
+  () => TURRET_BATTERY_Y_PCT + TURRET_BATTERY_SPACING_PCT + 10,
+)
+
+// Arena-Größe für Kometen-Flugvektoren + Schnips-Richtung
+const rootEl = ref<HTMLDivElement | null>(null)
+const arenaSize = ref({ w: 0, h: 0 })
+let resizeObserver: ResizeObserver | null = null
+
+// Schnips-Vektor: Einheitsvektor Richtung Boss × Lunge-Distanz — jeder
+// Turret stößt entlang seiner eigenen Flugachse vor
+function lungeStyle(t: TurretEntry): Record<string, string> {
   const { w, h } = arenaSize.value
-  const dx = ((STRIKER_BOSS_ANCHOR_X_PCT - TURRET_BATTERY_X_PCT) / 100) * w
-  const dy = ((STRIKER_BOSS_ANCHOR_Y_PCT - turretYPct(index)) / 100) * h
+  const dx = ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w
+  const dy = ((STRIKER_BOSS_ANCHOR_Y_PCT - t.yPct) / 100) * h
   const dist = Math.hypot(dx, dy) || 1
   return {
     '--ax': `${Math.round((dx / dist) * TURRET_ATTACK_LUNGE_PX)}px`,
@@ -145,14 +155,10 @@ function lungeStyle(index: number): Record<string, string> {
   }
 }
 
-// Arena-Größe für die Kometen-Flugvektoren
-const rootEl = ref<HTMLDivElement | null>(null)
-const arenaSize = ref({ w: 0, h: 0 })
-let resizeObserver: ResizeObserver | null = null
-
 // ── Volleys + Floats — getrieben vom geteilten Salven-Counter ─────────────
 interface Volley {
   id: number
+  fromXPct: number
   fromYPct: number
   px: number
   py: number
@@ -170,7 +176,7 @@ function later(ms: number, fn: () => void) {
 }
 
 function fireVolley() {
-  if (!bossAlive.value || visibleTurrets.value.length === 0) return
+  if (!bossAlive.value || turrets.value.length === 0) return
   volleyCount.value++
 
   volleyFlash.value = false
@@ -181,23 +187,23 @@ function fireVolley() {
   const { w, h } = arenaSize.value
   const groupId = ++volleyId
 
-  visibleTurrets.value.forEach((_, i) => {
-    const fromYPct = turretYPct(i)
+  for (const t of turrets.value) {
     const id = ++volleyId
     volleys.value.push({
       id,
-      fromYPct,
+      fromXPct: t.xPct,
+      fromYPct: t.yPct,
       px: Math.round(
-        ((STRIKER_BOSS_ANCHOR_X_PCT - TURRET_BATTERY_X_PCT) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
+        ((STRIKER_BOSS_ANCHOR_X_PCT - t.xPct) / 100) * w * STRIKER_PROJECTILE_IMPACT_FRAC,
       ),
       py: Math.round(
-        ((STRIKER_BOSS_ANCHOR_Y_PCT - fromYPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC,
+        ((STRIKER_BOSS_ANCHOR_Y_PCT - t.yPct) / 100) * h * STRIKER_PROJECTILE_IMPACT_FRAC,
       ),
     })
     later(TURRET_PROJECTILE_FLIGHT_MS, () => {
       volleys.value = volleys.value.filter((v) => v.id !== id)
     })
-  })
+  }
 
   // Eine gebündelte Schadenszahl beim Einschlag (Gesamt-DPS der Batterie)
   later(TURRET_PROJECTILE_FLIGHT_MS, () => {
@@ -259,10 +265,11 @@ onUnmounted(() => {
   gap: 3px;
 }
 
+/* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px */
 .tbh-planet {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: clamp(54px, 7vh, 76px);
+  height: clamp(54px, 7vh, 76px);
 }
 
 .tbh-planet img {
@@ -340,7 +347,7 @@ onUnmounted(() => {
 }
 
 .tbh-dmg {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 900;
   color: color-mix(in srgb, var(--tc) 55%, #f0e6cc);
   font-variant-numeric: tabular-nums;
@@ -350,19 +357,7 @@ onUnmounted(() => {
     0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Overflow-Chip ───────────────────────────────────────────────────────── */
-.tbh-more {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: color-mix(in srgb, var(--tc) 60%, #fff);
-  text-shadow:
-    0 0 10px color-mix(in srgb, var(--tc) 50%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.95);
-}
-
-/* ── Caption ─────────────────────────────────────────────────────────────── */
+/* ── Caption pro Flanke ──────────────────────────────────────────────────── */
 .tbh-caption {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -373,7 +368,7 @@ onUnmounted(() => {
 }
 
 .tbh-caption-title {
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   font-weight: 900;
   letter-spacing: 0.26em;
   text-transform: uppercase;
@@ -383,7 +378,7 @@ onUnmounted(() => {
 }
 
 .tbh-caption-dps {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 900;
   color: color-mix(in srgb, var(--tc) 45%, #fff);
   font-variant-numeric: tabular-nums;

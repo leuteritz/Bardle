@@ -897,10 +897,12 @@ export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fr
 export const TURRET_PROJECTILE_FLIGHT_MS = 420 // turret comet travel time to the boss
 export const TURRET_DAMAGE_FLOAT_MS = 1000 // lifetime of the turret damage float at the boss
 export const TURRET_ATTACK_LUNGE_PX = 16 // how far a turret planet snaps toward the boss on volley
-export const TURRET_BATTERY_X_PCT = 87 // battery column anchor X (% arena width)
-export const TURRET_BATTERY_Y_PCT = 38 // battery column center Y (% arena height)
-export const TURRET_BATTERY_SPACING_PCT = 13 // vertical spacing between turret entries (% arena height)
-export const TURRET_BATTERY_MAX_VISIBLE = 4 // cap of displayed turrets — the rest folds into a +N chip
+// 6 feste Anker: Planet-Slots 1–3 flankieren links, Slots 4–6 rechts — jeder
+// Turret sitzt immer an der Position seines Slots
+export const TURRET_BATTERY_LEFT_X_PCT = 13 // left flank column X (% arena width, slots 1–3)
+export const TURRET_BATTERY_RIGHT_X_PCT = 87 // right flank column X (% arena width, slots 4–6)
+export const TURRET_BATTERY_Y_PCT = 38 // column center Y (% arena height)
+export const TURRET_BATTERY_SPACING_PCT = 14 // vertical spacing between the 3 rows (% arena height)
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80
