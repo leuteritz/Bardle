@@ -3,16 +3,20 @@
     <!-- Halbkreis-Führungslinie hinter den Strikern -->
     <div class="rsq-arc-guide" :style="arcGuideStyle" />
 
-    <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position -->
-    <div
+    <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
+         Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
+    <button
       v-for="v in vacantSlots"
       :key="`vacant-${v.role}`"
+      type="button"
       class="rsq-item rsq-vacant"
+      :title="`${v.label} – Select Champion`"
       :style="{
         '--rc': v.color,
         left: `${v.xPct}%`,
         top: `${v.yPct}%`,
       }"
+      @click="openRolePicker(v.role)"
     >
       <div class="rsq-portrait rsq-vacant-portrait">
         <img class="rsq-vacant-emblem" :src="v.roleImage" alt="" draggable="false" />
@@ -28,7 +32,7 @@
         <span class="rsq-plate-name rsq-vacant-name">{{ v.label }} · Vacant</span>
         <span class="rsq-plate-stats rsq-vacant-hint">Assign a champion</span>
       </div>
-    </div>
+    </button>
 
     <div
       v-for="s in strikers"
@@ -46,6 +50,8 @@
         left: `${s.xPct}%`,
         top: `${s.yPct}%`,
       }"
+      :title="`${s.champion} (${roleLabel(s.role)}) – click to change`"
+      @click="openRolePicker(s.role)"
     >
       <div class="rsq-portrait">
         <img
@@ -136,6 +142,8 @@ import { computed, ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useBattleStore } from '@/stores/battleStore'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import { usePlanetBossStore } from '@/stores/planetBossStore'
+import { useStarGroupStore } from '@/stores/starGroupStore'
+import { useUiStore } from '@/stores/uiStore'
 import {
   ROLE_BY_KEY,
   ROLE_STAR_ATTACKS,
@@ -165,6 +173,20 @@ import type { ChampionRole } from '@/types'
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const bossStore = usePlanetBossStore()
+const starGroupStore = useStarGroupStore()
+const uiStore = useUiStore()
+
+// Klick auf einen Vacant-Slot: Fight-Modal schließen (liegt über dem
+// Profil-Menü) und den Team-Tab direkt mit dem Rollen-Slot öffnen — gleiches
+// Verhalten wie die Champion-Karten im Command Panel
+function openRolePicker(role: ChampionRole) {
+  starGroupStore.closeStarFightModal()
+  uiStore.requestOpenRolesTab(SLOT_BY_ROLE[role])
+}
+
+function roleLabel(role: ChampionRole): string {
+  return ROLE_BY_KEY[role].label
+}
 
 // r=44 im 100er-viewBox → Umfang 2πr (wie sf-star-ring im Modal)
 const RING_CIRCUMFERENCE = 2 * Math.PI * 44
@@ -441,6 +463,18 @@ onUnmounted(() => {
   width: 96px;
   height: 96px;
   transform: translate(-50%, -50%);
+  /* klickbar trotz pointer-events: none auf .rsq — öffnet den Team-Tab
+     mit dem Rollen-Slot (befüllt wie unbesetzt) */
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Hover auf befüllten Strikern: Portrait glüht stärker in Rollenfarbe */
+.rsq-item:not(.rsq-vacant):hover .rsq-portrait {
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    0 0 24px color-mix(in srgb, var(--rc, #c8922a) 80%, transparent),
+    0 5px 12px rgba(0, 0, 0, 0.7);
 }
 
 /* ── Portrait ────────────────────────────────────────────────────────────── */
@@ -870,6 +904,44 @@ onUnmounted(() => {
    Plate mit "Assign a champion"-Hinweis */
 .rsq-vacant {
   opacity: 0.82;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: opacity 0.18s ease;
+}
+
+.rsq-vacant:hover {
+  opacity: 1;
+}
+
+.rsq-vacant:hover .rsq-vacant-portrait {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--rc, #c8922a) 75%, #3a2410);
+  box-shadow:
+    0 0 0 2px rgba(6, 3, 0, 0.9),
+    0 0 16px color-mix(in srgb, var(--rc, #c8922a) 45%, transparent),
+    inset 0 0 22px rgba(0, 0, 0, 0.8),
+    0 5px 12px rgba(0, 0, 0, 0.7);
+}
+
+.rsq-vacant:hover .rsq-vacant-emblem {
+  /* Breathe-Animation aus, sonst überschreiben ihre Keyframes die Opacity */
+  animation: none;
+  opacity: 0.6;
+  transform: scale(1.03);
+}
+
+.rsq-vacant:hover .rsq-vacant-ring-dash {
+  stroke: color-mix(in srgb, var(--rc, #c8922a) 85%, transparent);
+}
+
+.rsq-vacant:hover .rsq-vacant-hint {
+  opacity: 1;
+  color: color-mix(in srgb, var(--rc, #c8922a) 45%, #fff);
+}
+
+.rsq-vacant:active {
+  transform: translate(-50%, -50%) scale(0.96);
 }
 
 .rsq-vacant-portrait {
