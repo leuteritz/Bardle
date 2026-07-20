@@ -937,6 +937,12 @@ function emberStyle(i: number): Record<string, string> {
   max-width: 40%;
 }
 
+/* Boden-Schatten der Arena aus — der Boss schwebt hier frei über dem
+   Planeten, ein Kontakt-Schatten wirkt deplatziert */
+.sf-arena-wrap :deep(.boss-ground-shadow) {
+  display: none;
+}
+
 /* Bossname kommt jetzt oben ins HP-Overlay — Arena-eigenes Overlay ausblenden */
 .sf-arena-wrap :deep(.boss-name-overlay) {
   display: none;

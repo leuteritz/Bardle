@@ -83,15 +83,43 @@ const stackedMaterials = computed(() => {
 </script>
 
 <style scoped>
-/* ── Rahmenloses Loot-Banner im HUD-Stil des Modals: keine Karte, nur frei
-   stehende, glühende Elemente über dem Planeten — wie Bossname + HP oben ── */
+/* ── Loot-Plate unter dem Boss: flache dunkle Karte mit Gold-Akzentlinie —
+   hebt die Rewards klar vom Planeten-Hintergrund ab ─────────────────────── */
 .loot {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
+  padding: 10px 24px 13px;
+  background: rgba(12, 7, 2, 0.82);
+  border: 1px solid #5c3310;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 192, 64, 0.06),
+    0 10px 28px rgba(0, 0, 0, 0.65);
   animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+/* Goldene Akzentlinie am oberen Plate-Rand — Echo der Modal-Goldlinie */
+.loot::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #c89040, #e8c060, #c89040, transparent);
+}
+
+.loot--galaxy {
+  border-color: #5a2478;
+}
+
+.loot--galaxy::before {
+  background: linear-gradient(to right, transparent, #a050e0, #dd99ff, #a050e0, transparent);
 }
 
 @keyframes loot-reveal {
@@ -156,39 +184,36 @@ const stackedMaterials = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px 30px;
+  gap: 8px 22px;
   min-width: 0;
 }
 
+/* Rewards frei stehend auf der Plate — kein eigener Rahmen, Rarity färbt Text */
 .loot-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1.3rem;
+  gap: 8px;
+  font-size: 1.1rem;
   font-weight: 900;
   color: #e6e0d0;
   white-space: nowrap;
   line-height: 1.3;
-  -webkit-text-stroke: 1px rgba(10, 5, 0, 0.7);
-  paint-order: stroke fill;
-  text-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.95),
-    0 0 14px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 .loot-chip--chimes {
   color: #ffd970;
   text-shadow:
-    0 0 14px rgba(232, 192, 64, 0.6),
+    0 0 14px rgba(232, 192, 64, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 .loot-chip-icon {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
 /* ── Champion — die Hauptbelohnung, episch hervorgehoben ─────────────────── */
@@ -239,7 +264,7 @@ const stackedMaterials = computed(() => {
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* ── Rarities ─────────────────────────────────────────────────────────────── */
+/* ── Rarities — färben den Reward-Text ───────────────────────────────────── */
 .rarity--common {
   color: #c8c8c8;
 }
