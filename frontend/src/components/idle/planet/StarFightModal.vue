@@ -202,10 +202,16 @@
                 </div>
               </div>
 
-              <!-- Boss-Angriffswert: dmg/s auf jeden Champion im Orbit -->
-              <div class="sf-boss-atk" :class="{ 'sf-boss-atk--rage': rageActive }">
-                <span class="sf-boss-atk-num">{{ bossDps }}</span>
-                dmg/s per champion
+              <!-- Threat-Anzeige: Boss-Schaden pro Sekunde — rahmenlos, weich
+                   in den Hintergrund verschmolzen, bei Rage kippt sie in Crimson -->
+              <div
+                class="sf-atk-emblem"
+                :class="{ 'sf-atk-emblem--rage': rageActive }"
+                title="Damage per second dealt to every champion and turret"
+              >
+                <span class="sf-atk-num">{{ bossDps }}</span>
+                <span class="sf-atk-unit">dmg<span class="sf-atk-per">/s</span></span>
+                <span v-if="rageActive" class="sf-atk-mult">×{{ BOSS_RAGE_DMG_MULT }}</span>
               </div>
             </div>
 
@@ -689,7 +695,8 @@ function emberStyle(i: number): Record<string, string> {
   .sf-arena-wrap--strike :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave,
-  .sf-boss-flare {
+  .sf-boss-flare,
+  .sf-atk-mult {
     animation: none;
   }
 }
@@ -1429,43 +1436,39 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Boss-Angriffswert unter der HP-Leiste — reine Typo, statisch ────────── */
-.sf-boss-atk {
+/* ── Threat-Anzeige unter der HP-Leiste — rahmenlos, weich verschmolzen ──
+   Kein Rahmen, kein hartes Panel: ein weicher radialer Glut-Schleier hinter
+   der Zahl bindet sie an den Hintergrund; bei Rage kippt alles in Crimson */
+.sf-atk-emblem {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 9px;
   margin-top: 4px;
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255, 120, 88, 0.75);
-  text-shadow:
-    0 0 12px rgba(255, 60, 30, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.95);
+  padding: 6px 26px 8px;
+  background: radial-gradient(
+    ellipse 100% 130% at 50% 50%,
+    rgba(50, 16, 4, 0.6) 0%,
+    rgba(30, 10, 2, 0.35) 45%,
+    transparent 72%
+  );
+  pointer-events: auto;
 }
 
-/* Rage: das ganze Label kippt in Crimson */
-.sf-boss-atk--rage {
-  color: rgba(255, 120, 150, 0.8);
-  text-shadow:
-    0 0 12px rgba(255, 46, 99, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.95);
+/* Feine Glut-Linie darunter, die zu den Rändern hin ausläuft */
+.sf-atk-emblem::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 110, 55, 0.55), transparent);
 }
 
-.sf-boss-atk--rage .sf-boss-atk-num {
-  color: #ffc4d4;
-  -webkit-text-stroke: 1px rgba(110, 0, 30, 0.85);
-  text-shadow:
-    0 0 12px rgba(255, 70, 120, 0.95),
-    0 0 30px rgba(255, 46, 99, 0.6),
-    0 0 56px rgba(220, 20, 70, 0.35),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-/* Die Zahl als epischer Held des Labels — groß, heiß glühend, konturiert */
-.sf-boss-atk-num {
-  font-size: 1.9rem;
+/* Die Zahl als Held des Emblems — heiß glühend, konturiert */
+.sf-atk-num {
+  font-size: 1.7rem;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -1478,6 +1481,72 @@ function emberStyle(i: number): Record<string, string> {
     0 0 26px rgba(255, 70, 20, 0.65),
     0 0 52px rgba(220, 40, 0, 0.35),
     0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-atk-unit {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 140, 100, 0.7);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.sf-atk-per {
+  opacity: 0.7;
+  letter-spacing: 0;
+}
+
+/* Rage-Multiplikator-Chip — pulsiert, solange der Boss tobt */
+.sf-atk-mult {
+  align-self: center;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: linear-gradient(to bottom, #a01430, #6a0a1e);
+  border: 1px solid #ff5c85;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #ffd9e2;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 8px rgba(255, 46, 99, 0.8);
+  animation: sf-atk-mult-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes sf-atk-mult-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+
+/* Rage: der Glut-Schleier und die Linie kippen in Crimson */
+.sf-atk-emblem--rage {
+  background: radial-gradient(
+    ellipse 100% 130% at 50% 50%,
+    rgba(60, 6, 20, 0.6) 0%,
+    rgba(36, 4, 12, 0.35) 45%,
+    transparent 72%
+  );
+}
+
+.sf-atk-emblem--rage::after {
+  background: linear-gradient(to right, transparent, rgba(255, 46, 99, 0.6), transparent);
+}
+
+.sf-atk-emblem--rage .sf-atk-num {
+  color: #ffc4d4;
+  -webkit-text-stroke: 1px rgba(110, 0, 30, 0.85);
+  text-shadow:
+    0 0 12px rgba(255, 70, 120, 0.95),
+    0 0 30px rgba(255, 46, 99, 0.6),
+    0 0 56px rgba(220, 20, 70, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-atk-emblem--rage .sf-atk-unit {
+  color: rgba(255, 140, 165, 0.75);
 }
 
 /* ── Attacker Squad — Halbkreis um den Boss (RoleStrikerSquad positioniert
@@ -1776,13 +1845,14 @@ function emberStyle(i: number): Record<string, string> {
     height: 6px;
   }
 
-  .sf-boss-atk {
+  .sf-atk-emblem {
     margin-top: 2px;
-    font-size: 0.7rem;
+    gap: 7px;
+    padding: 4px 20px 6px;
   }
 
-  .sf-boss-atk-num {
-    font-size: 1.4rem;
+  .sf-atk-num {
+    font-size: 1.35rem;
   }
 
   /* Loot-Banner als Block skalieren — Innenmaße leben in BossRewardSection */
