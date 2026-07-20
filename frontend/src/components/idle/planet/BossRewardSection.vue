@@ -83,8 +83,10 @@ const stackedMaterials = computed(() => {
 </script>
 
 <style scoped>
-/* ── Loot-Plate unter dem Boss: flache dunkle Karte mit Gold-Akzentlinie —
-   hebt die Rewards klar vom Planeten-Hintergrund ab ─────────────────────── */
+/* ── Loot unter dem Boss: rahmenlos, weich verschmolzen ──────────────────
+   Kein hartes Panel: ein warmer Gold-Schleier läuft zu allen Seiten in den
+   Planeten-Hintergrund aus und hebt die Rewards trotzdem klar hervor —
+   gleiche Design-Sprache wie die Threat-Anzeige unter der HP-Leiste */
 .loot {
   position: relative;
   display: flex;
@@ -93,33 +95,38 @@ const stackedMaterials = computed(() => {
   gap: 8px;
   width: auto;
   max-width: 100%;
-  padding: 10px 24px 13px;
-  background: rgba(12, 7, 2, 0.82);
-  border: 1px solid #5c3310;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 0 0 1px rgba(232, 192, 64, 0.06),
-    0 10px 28px rgba(0, 0, 0, 0.65);
+  padding: 12px 38px 14px;
+  background: radial-gradient(
+    ellipse 100% 130% at 50% 50%,
+    rgba(34, 22, 6, 0.62) 0%,
+    rgba(22, 14, 4, 0.35) 45%,
+    transparent 74%
+  );
   animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
 
-/* Goldene Akzentlinie am oberen Plate-Rand — Echo der Modal-Goldlinie */
-.loot::before {
+/* Feine Goldlinie darunter, die zu den Rändern hin ausläuft */
+.loot::after {
   content: '';
   position: absolute;
-  top: -1px;
-  left: 8%;
-  right: 8%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, #c89040, #e8c060, #c89040, transparent);
+  bottom: 3px;
+  left: 16%;
+  right: 16%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.5), transparent);
 }
 
 .loot--galaxy {
-  border-color: #5a2478;
+  background: radial-gradient(
+    ellipse 100% 130% at 50% 50%,
+    rgba(30, 12, 44, 0.62) 0%,
+    rgba(18, 8, 28, 0.35) 45%,
+    transparent 74%
+  );
 }
 
-.loot--galaxy::before {
-  background: linear-gradient(to right, transparent, #a050e0, #dd99ff, #a050e0, transparent);
+.loot--galaxy::after {
+  background: linear-gradient(to right, transparent, rgba(200, 100, 255, 0.5), transparent);
 }
 
 @keyframes loot-reveal {
