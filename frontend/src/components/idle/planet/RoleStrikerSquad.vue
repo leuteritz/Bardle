@@ -189,6 +189,7 @@ import {
   BOSS_RAGE_DMG_MULT,
   CHAMPION_HIT_FLASH_MS,
   BOSS_WAVE_HIT_DELAY_MS,
+  BOSS_AUTO_HIT_DELAY_MS,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
@@ -490,6 +491,23 @@ for (const role of SQUAD_ROLES) {
     },
   )
 }
+
+// ── Boss-Auto-Attack "Strike": trifft EINEN Champion — Flash + Damage-Label
+// kurz verzögert auf den Kontaktmoment des schnellen Boss-Jabs
+watch(
+  () => roleBehaviorStore.autoCounter,
+  () => {
+    const role = roleBehaviorStore.autoTargetRole
+    if (!role) return
+    const dmg = roleBehaviorStore.autoDmg
+    later(BOSS_AUTO_HIT_DELAY_MS, () => {
+      hitRoles.delete(role)
+      hitRoles.add(role)
+      later(CHAMPION_HIT_FLASH_MS, () => hitRoles.delete(role))
+      pushFloat(role, dmg, 'hit')
+    })
+  },
+)
 
 let dotInterval: number | null = null
 

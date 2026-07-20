@@ -917,6 +917,12 @@ export const BOSS_WAVE_HIT_DELAY_MS = 500 // moment the ring reaches champions/t
 // Der Idle-Orbit-Stern des aktiven Bosses teilt sich exakt diesen Cooldown.
 export const BOSS_NOVA_INTERVAL_MS = 5000 // cooldown between two Shock Nova waves
 export const BOSS_NOVA_PLAYER_DAMAGE = 5 // damage each nova deals to the player (Bard) in the orbit center
+// Boss-Fähigkeit "Strike" (Auto-Attack): kurzer Cooldown, trifft EIN zufällig
+// gewähltes lebendes Ziel (Champion oder Turret-Planet) — Rage verdoppelt
+// auch diesen Schaden, wodurch die Rage-Phase deutlich bedrohlicher wird
+export const BOSS_AUTO_INTERVAL_MS = 2000 // cooldown between two boss auto-attacks
+export const BOSS_AUTO_ATTACK_DAMAGE = 8 // base single-target damage per auto-attack
+export const BOSS_AUTO_HIT_DELAY_MS = 180 // contact moment of the quick jab animation → flash + damage label
 // 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
 // Striker-Halbkreis): Slots 1–3 auf der linken Bogenhälfte, 4–6 rechts —
 // jeder Turret sitzt immer an der Position seines Slots

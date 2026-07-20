@@ -770,8 +770,18 @@ function drawCooldownRings() {
     const r = (starSize(star.starType) / 2 + 9) * star.scale
     const alpha = star.opacity
     const bursting = !isNovaStar && state!.shotsLeft > 0
+    // Nova: Zeitstempel-Interpolation pro Frame — smooth wie die Burst-Ringe,
+    // statt im 1s-Raster des Store-Ticks zu springen
     const progress = isNovaStar
-      ? 1 - Math.max(0, roleBehaviorStore.novaCooldownMs) / BOSS_NOVA_INTERVAL_MS
+      ? roleBehaviorStore.novaReadyAt > 0
+        ? Math.max(
+            0,
+            Math.min(
+              1,
+              1 - (roleBehaviorStore.novaReadyAt - Date.now()) / BOSS_NOVA_INTERVAL_MS,
+            ),
+          )
+        : 0
       : bursting
         ? 1
         : 1 - Math.max(0, state!.cooldownMs) / state!.totalMs

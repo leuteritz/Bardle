@@ -61,7 +61,8 @@
             class="sf-arena-wrap"
             :class="{
               'sf-arena-wrap--strike': bossStrikeActive,
-              'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive,
+              'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
+              'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
             }"
           >
             <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
@@ -175,17 +176,30 @@
                     </div>
                   </div>
 
-                  <!-- Threat-Anzeige: hängt direkt an der Unterkante der
-                       HP-Leiste — der Glut-Schleier tritt aus ihr aus -->
-                  <div
-                    class="sf-atk-emblem"
-                    :class="{ 'sf-atk-emblem--rage': rageActive }"
-                    title="Damage per second dealt to every champion and turret"
-                  >
-                    <span class="sf-atk-num">{{ bossDps }}</span>
-                    <span class="sf-atk-unit">dmg<span class="sf-atk-per">/s</span></span>
-                    <span v-if="rageActive" class="sf-atk-mult">×{{ BOSS_RAGE_DMG_MULT }}</span>
+                </div>
+
+                <!-- Strike-Ring: Auto-Attack des Bosses — kurzer Cooldown,
+                     trifft EIN zufälliges Ziel (Champion oder Turret) -->
+                <div
+                  class="sf-auto-ring"
+                  title="Strike — the boss jabs one random living champion or turret planet"
+                >
+                  <svg viewBox="0 0 100 100" class="sf-star-ring-svg" aria-hidden="true">
+                    <circle cx="50" cy="50" r="46" class="sf-star-ring-disc" />
+                    <circle cx="50" cy="50" r="44" class="sf-star-ring-track" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      class="sf-auto-ring-arc"
+                      :style="{ strokeDasharray: autoRingDashArray }"
+                    />
+                  </svg>
+                  <div class="sf-star-ring-inner">
+                    <span class="sf-auto-ring-secs">{{ autoSecsLeft }}</span>
+                    <span class="sf-auto-ring-label">ATK</span>
                   </div>
+                  <span class="sf-ring-dmg sf-ring-dmg--auto">{{ autoDmgDisplay }} dmg</span>
                 </div>
 
                 <!-- Rage-Ring: Cooldown bis zur nächsten Rage bzw. Restdauer -->
@@ -213,6 +227,7 @@
                     <span class="sf-rage-ring-secs">{{ rageSecsLeft }}</span>
                     <span class="sf-rage-ring-label">RAGE</span>
                   </div>
+                  <span class="sf-ring-dmg sf-ring-dmg--rage">×{{ BOSS_RAGE_DMG_MULT }} dmg</span>
                 </div>
 
                 <!-- Nova-Ring: Cooldown der Shock Nova — läuft synchron zum
@@ -236,6 +251,7 @@
                     <span class="sf-nova-ring-secs">{{ novaSecsLeft }}</span>
                     <span class="sf-nova-ring-label">NOVA</span>
                   </div>
+                  <span class="sf-ring-dmg sf-ring-dmg--nova">{{ novaDmgDisplay }} dmg</span>
                 </div>
               </div>
 
@@ -273,6 +289,8 @@ import {
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_WAVE_TRAVEL_MS,
   BOSS_NOVA_INTERVAL_MS,
+  BOSS_AUTO_INTERVAL_MS,
+  BOSS_AUTO_ATTACK_DAMAGE,
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   BOSS_RAGE_DMG_MULT,
@@ -379,14 +397,17 @@ const rageSecsLeft = computed(() =>
     : Math.max(0, Math.ceil(roleBehaviorStore.rageCooldownMs / 1000)),
 )
 
-// Cooldown-Phase: Arc füllt sich zur Rage hin; aktive Phase: Arc läuft ab
+// Cooldown-Phase: Arc füllt sich zur Rage hin; aktive Phase: Arc läuft ab.
+// Beide Phasen interpolieren aus Zeitstempeln (readyAt/activeUntil) — das
+// 250ms-now + 0.2s-Transition füllt den Ring smooth statt in 1s-Stufen
 const rageRingPct = computed(() => {
   if (rageActive.value) {
     const dur = roleBehaviorStore.rageDurationMs || 1
     return Math.max(0, Math.min(1, (roleBehaviorStore.rageActiveUntil - now.value) / dur))
   }
+  if (roleBehaviorStore.rageReadyAt <= 0) return 0
   const interval = roleBehaviorStore.rageIntervalMs || 1
-  return Math.max(0, Math.min(1, 1 - roleBehaviorStore.rageCooldownMs / interval))
+  return Math.max(0, Math.min(1, 1 - (roleBehaviorStore.rageReadyAt - now.value) / interval))
 })
 
 const rageRingDashArray = computed(
@@ -394,26 +415,84 @@ const rageRingDashArray = computed(
 )
 
 // ── Shock Nova: Cooldown-Ring (synchron zum Boss-Stern im Idle-Orbit) ────
+// Zeitstempel-basiert wie der Star-Despawn-Ring — füllt smooth statt in
+// 1s-Tick-Stufen
 const novaSecsLeft = computed(() =>
-  Math.max(0, Math.ceil(roleBehaviorStore.novaCooldownMs / 1000)),
+  roleBehaviorStore.novaReadyAt > 0
+    ? Math.max(0, Math.ceil((roleBehaviorStore.novaReadyAt - now.value) / 1000))
+    : Math.ceil(BOSS_NOVA_INTERVAL_MS / 1000),
 )
 
-const novaRingPct = computed(() =>
-  Math.max(0, Math.min(1, 1 - roleBehaviorStore.novaCooldownMs / BOSS_NOVA_INTERVAL_MS)),
-)
+const novaRingPct = computed(() => {
+  if (roleBehaviorStore.novaReadyAt <= 0) return 0
+  return Math.max(
+    0,
+    Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - now.value) / BOSS_NOVA_INTERVAL_MS),
+  )
+})
 
 const novaRingDashArray = computed(
   () => `${novaRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
 )
 
-// ── Boss-Gegenangriff: dmg/s-Label + Strike-Animation ─────────────────────
-const bossDps = computed(() =>
+// ── Damage-Badges unter den Fähigkeits-Ringen ────────────────────────────
+const autoDmgDisplay = computed(() =>
   Math.round(
-    BOSS_CHAMPION_ATTACK_DPS *
+    BOSS_AUTO_ATTACK_DAMAGE *
       (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
       (rageActive.value ? BOSS_RAGE_DMG_MULT : 1),
   ),
 )
+
+const novaDmgDisplay = computed(() =>
+  Math.round(
+    BOSS_CHAMPION_ATTACK_DPS *
+      (isGalaxyBoss.value ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
+      (rageActive.value ? BOSS_RAGE_DMG_MULT : 1) *
+      (BOSS_NOVA_INTERVAL_MS / 1000),
+  ),
+)
+
+// ── Strike (Auto-Attack): Cooldown-Ring + schneller Boss-Jab ─────────────
+const autoSecsLeft = computed(() =>
+  roleBehaviorStore.autoReadyAt > 0
+    ? Math.max(0, Math.ceil((roleBehaviorStore.autoReadyAt - now.value) / 1000))
+    : Math.ceil(BOSS_AUTO_INTERVAL_MS / 1000),
+)
+
+const autoRingPct = computed(() => {
+  if (roleBehaviorStore.autoReadyAt <= 0) return 0
+  return Math.max(
+    0,
+    Math.min(1, 1 - (roleBehaviorStore.autoReadyAt - now.value) / BOSS_AUTO_INTERVAL_MS),
+  )
+})
+
+const autoRingDashArray = computed(
+  () => `${autoRingPct.value * STAR_RING_CIRCUMFERENCE} ${STAR_RING_CIRCUMFERENCE}`,
+)
+
+// Schneller Jab des Boss-Sprites bei jedem Auto-Attack
+const bossJabActive = ref(false)
+let bossJabTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(
+  () => roleBehaviorStore.autoCounter,
+  () => {
+    bossJabActive.value = false
+    if (bossJabTimeout) clearTimeout(bossJabTimeout)
+    requestAnimationFrame(() => {
+      bossJabActive.value = true
+      bossJabTimeout = setTimeout(() => {
+        bossJabActive.value = false
+      }, 300)
+    })
+  },
+)
+
+onUnmounted(() => {
+  if (bossJabTimeout) clearTimeout(bossJabTimeout)
+})
 
 const bossStrikeActive = ref(false)
 let bossStrikeTimeout: ReturnType<typeof setTimeout> | null = null
@@ -733,10 +812,10 @@ function emberStyle(i: number): Record<string, string> {
   .sf-rage-veil-layer--flames,
   .sf-rage-ring--active .sf-rage-ring-secs,
   .sf-arena-wrap--strike :deep(.boss-img),
+  .sf-arena-wrap--jab :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
   .sf-boss-wave,
-  .sf-boss-flare,
-  .sf-atk-mult {
+  .sf-boss-flare {
     animation: none;
   }
 }
@@ -1401,6 +1480,31 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
+/* ── Auto-Attack-Jab: kurzer, schneller Stoß — deutlich leichter als der
+   wuchtige Nova-Slam; Kontakt bei ~60 % (= BOSS_AUTO_HIT_DELAY_MS) ──────── */
+.sf-arena-wrap--jab :deep(.boss-img) {
+  animation: sf-boss-jab 0.3s cubic-bezier(0.3, 0, 0.4, 1);
+  transform-origin: 50% 85%;
+  will-change: transform;
+}
+
+@keyframes sf-boss-jab {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  /* kurz zurücklehnen … */
+  30% {
+    transform: translateY(-7px) scale(1.05) rotate(-1.5deg);
+  }
+  /* … und zustoßen */
+  60% {
+    transform: translateY(7px) scale(1.04, 0.94) rotate(0.5deg);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ── Boss-Treffer-Reaktion: seitlicher Flinch + Weißblitz — bewusst kürzer
    und knackiger als der wuchtige Angriffs-Slam ───────────────────────────── */
 .sf-arena-wrap--hit :deep(.boss-img) {
@@ -1514,108 +1618,67 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* ── Threat-Anzeige unter der HP-Leiste — rahmenlos, weich verschmolzen ──
-   Kein Rahmen, kein hartes Panel: ein weicher radialer Glut-Schleier hinter
-   der Zahl bindet sie an den Hintergrund; bei Rage kippt alles in Crimson */
-.sf-atk-emblem {
-  /* hängt exakt an der Unterkante der HP-Leiste (−2px Überlappung) — der
-     oben verankerte Glut-Schleier tritt direkt aus der Leiste aus */
+/* ── Strike-Ring (Auto-Attack) — Bone-Silber, Stil wie Star-/Rage-Ring ──── */
+.sf-auto-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.sf-auto-ring-arc {
+  fill: none;
+  stroke: #d8d0c0;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.2s linear;
+}
+
+.sf-auto-ring-secs {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #d8d0c0;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 14px rgba(216, 208, 192, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.sf-auto-ring-label {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: rgba(216, 208, 192, 0.6);
+  text-transform: uppercase;
+}
+
+/* ── Damage-Badges unter den Fähigkeits-Ringen — Wert direkt am Cooldown ── */
+.sf-ring-dmg {
   position: absolute;
   top: calc(100% - 2px);
   left: 50%;
   transform: translateX(-50%);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 9px;
-  padding: 7px 26px 8px;
-  white-space: nowrap;
-  background: radial-gradient(
-    ellipse 100% 160% at 50% 0%,
-    rgba(50, 16, 4, 0.6) 0%,
-    rgba(30, 10, 2, 0.35) 45%,
-    transparent 75%
-  );
-  pointer-events: auto;
-}
-
-/* Feine Glut-Linie darunter, die zu den Rändern hin ausläuft */
-.sf-atk-emblem::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 14%;
-  right: 14%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255, 110, 55, 0.55), transparent);
-}
-
-/* Die Zahl als Held des Emblems — heiß glühend, konturiert */
-.sf-atk-num {
-  font-size: 1.7rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  color: #ffd9c0;
-  font-variant-numeric: tabular-nums;
-  -webkit-text-stroke: 1px rgba(120, 20, 0, 0.85);
-  paint-order: stroke fill;
-  text-shadow:
-    0 0 10px rgba(255, 120, 40, 0.95),
-    0 0 26px rgba(255, 70, 20, 0.65),
-    0 0 52px rgba(220, 40, 0, 0.35),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-atk-unit {
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 140, 100, 0.7);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.sf-atk-per {
-  opacity: 0.7;
-  letter-spacing: 0;
-}
-
-/* Rage-Multiplikator-Chip — pulsiert, solange der Boss tobt */
-.sf-atk-mult {
-  align-self: center;
-  padding: 2px 7px;
-  border-radius: 3px;
-  background: linear-gradient(to bottom, #a01430, #6a0a1e);
-  border: 1px solid #ff5c85;
-  font-size: 0.78rem;
-  font-weight: 900;
-  color: #ffd9e2;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 8px rgba(255, 46, 99, 0.8);
-  animation: sf-atk-mult-pulse 0.7s ease-in-out infinite alternate;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-@keyframes sf-atk-mult-pulse {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.12);
-  }
+.sf-ring-dmg--auto {
+  color: rgba(216, 208, 192, 0.75);
 }
 
-/* Rage: der Glut-Schleier und die Linie kippen in Crimson */
-.sf-atk-emblem--rage {
-  background: radial-gradient(
-    ellipse 100% 160% at 50% 0%,
-    rgba(60, 6, 20, 0.6) 0%,
-    rgba(36, 4, 12, 0.35) 45%,
-    transparent 75%
-  );
+.sf-ring-dmg--rage {
+  color: rgba(255, 92, 133, 0.75);
 }
 
-.sf-atk-emblem--rage::after {
-  background: linear-gradient(to right, transparent, rgba(255, 46, 99, 0.6), transparent);
+.sf-ring-dmg--nova {
+  color: rgba(255, 138, 48, 0.75);
 }
 
 .sf-atk-emblem--rage .sf-atk-num {
@@ -1877,21 +1940,28 @@ function emberStyle(i: number): Record<string, string> {
 
   .sf-star-ring,
   .sf-rage-ring,
-  .sf-nova-ring {
+  .sf-nova-ring,
+  .sf-auto-ring {
     width: 72px;
     height: 72px;
   }
 
   .sf-star-ring-secs,
   .sf-rage-ring-secs,
-  .sf-nova-ring-secs {
+  .sf-nova-ring-secs,
+  .sf-auto-ring-secs {
     font-size: 1.3rem;
   }
 
   .sf-star-ring-label,
   .sf-rage-ring-label,
-  .sf-nova-ring-label {
+  .sf-nova-ring-label,
+  .sf-auto-ring-label {
     font-size: 0.48rem;
+  }
+
+  .sf-ring-dmg {
+    font-size: 0.58rem;
   }
 
   .sf-hp-track {

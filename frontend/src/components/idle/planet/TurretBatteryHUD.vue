@@ -22,16 +22,28 @@
         :class="{ 'tbh-unit--firing': volleyFlash }"
         :style="lungeStyle(t)"
       >
-        <div class="tbh-planet" :class="{ 'tbh-planet--hit': hitFlash }">
+        <div
+          class="tbh-planet"
+          :class="{ 'tbh-planet--hit': hitFlash || autoHitSlotId === t.slotId }"
+        >
           <img :src="turretImage" alt="" draggable="false" />
 
           <!-- Cooldown-Pill wie bei den Champions — eigener 100ms-Ticker in
                der Kind-Komponente, re-rendert nicht die ganze Batterie -->
           <TurretCdPill />
 
-          <!-- Roter Schadens-Float, wenn der Boss die Turrets trifft -->
+          <!-- Roter Schadens-Float: Nova (alle Turrets) -->
           <span v-if="hitSeq > 0" :key="'hit-' + hitSeq" class="tbh-hitfloat">
             -{{ hitDmg }}
+          </span>
+
+          <!-- Roter Schadens-Float: Strike (nur das getroffene Ziel) -->
+          <span
+            v-if="autoHitSlotId === t.slotId && autoHitSeq > 0"
+            :key="'auto-' + autoHitSeq"
+            class="tbh-hitfloat"
+          >
+            -{{ autoHitDmg }}
           </span>
         </div>
 
@@ -94,6 +106,7 @@ import {
   PLANET_SLOT_MAX_HP,
   CHAMPION_HIT_FLASH_MS,
   BOSS_WAVE_HIT_DELAY_MS,
+  BOSS_AUTO_HIT_DELAY_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_ARC_RX_PCT,
   TURRET_ARC_RY_PCT,
@@ -188,6 +201,29 @@ watch(
         later(CHAMPION_HIT_FLASH_MS, () => {
           hitFlash.value = false
         })
+      })
+    })
+  },
+)
+
+// ── Boss-Auto-Attack "Strike": trifft EINEN Turret-Planeten — Flash + Float
+// nur am getroffenen Slot, getimt auf den Kontaktmoment des Boss-Jabs
+const autoHitSlotId = ref<string | null>(null)
+const autoHitSeq = ref(0)
+const autoHitDmg = ref(0)
+
+watch(
+  () => roleBehaviorStore.autoCounter,
+  () => {
+    const slotId = roleBehaviorStore.autoTargetSlotId
+    if (!slotId) return
+    const dmg = roleBehaviorStore.autoDmg
+    later(BOSS_AUTO_HIT_DELAY_MS, () => {
+      autoHitSlotId.value = slotId
+      autoHitDmg.value = dmg
+      autoHitSeq.value++
+      later(CHAMPION_HIT_FLASH_MS, () => {
+        if (autoHitSlotId.value === slotId) autoHitSlotId.value = null
       })
     })
   },
