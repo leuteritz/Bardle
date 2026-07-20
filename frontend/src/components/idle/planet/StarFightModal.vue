@@ -930,7 +930,8 @@ function emberStyle(i: number): Record<string, string> {
   padding-bottom: 18%;
 }
 
-/* Boss kompakter, damit Planet + Striker-Halbkreis sichtbar bleiben */
+/* Boss kompakter, damit Planet + Striker-Halbkreis sichtbar bleiben.
+   Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten. */
 .sf-arena-wrap :deep(.boss-img) {
   height: 44%;
   max-width: 40%;
@@ -1631,6 +1632,117 @@ function emberStyle(i: number): Record<string, string> {
     color: #cc5040;
     border-color: #6a1818;
     box-shadow: none;
+  }
+}
+
+/* ── Kompakt-Layout für Full-HD-Höhen (Viewport ≤ 1100px) ─────────────────
+   Auf 1080p ist die Arena deutlich flacher als auf 1440p+ — HUD, Boss,
+   Loot und Striker skalieren gemeinsam herunter, damit Boss, HP-Leiste
+   und dmg/s-Anzeige nicht kollidieren. */
+@media (max-height: 1100px) {
+  .sf-arena-wrap :deep(.boss-img) {
+    height: 34%;
+    max-height: 250px;
+    max-width: 34%;
+  }
+
+  .sf-hud {
+    top: 44px;
+    gap: 5px;
+    width: min(720px, 70%);
+  }
+
+  .sf-hp-row {
+    gap: 12px;
+  }
+
+  .sf-star-ring,
+  .sf-rage-ring {
+    width: 72px;
+    height: 72px;
+  }
+
+  .sf-star-ring-secs,
+  .sf-rage-ring-secs {
+    font-size: 1.3rem;
+  }
+
+  .sf-star-ring-label,
+  .sf-rage-ring-label {
+    font-size: 0.48rem;
+  }
+
+  .sf-hp-track {
+    height: 24px;
+  }
+
+  .sf-hp-inline {
+    padding: 0 10px;
+  }
+
+  .sf-hp-numbers {
+    font-size: 0.85rem;
+  }
+
+  .sf-hp-pct {
+    font-size: 0.95rem;
+  }
+
+  .sf-boss-name {
+    font-size: 1.35rem;
+  }
+
+  .sf-pp {
+    gap: 10px;
+  }
+
+  .sf-pp-label {
+    font-size: 0.85rem;
+  }
+
+  .sf-pp-num {
+    font-size: 1.05rem;
+  }
+
+  .sf-pp-pip {
+    width: 22px;
+    height: 6px;
+  }
+
+  .sf-boss-atk {
+    margin-top: 2px;
+    font-size: 0.7rem;
+  }
+
+  .sf-boss-atk-num {
+    font-size: 1.4rem;
+  }
+
+  /* Loot-Banner als Block skalieren — Innenmaße leben in BossRewardSection */
+  .sf-loot {
+    transform: translateX(-50%) scale(0.85);
+    transform-origin: top center;
+  }
+
+  /* Striker-Portraits kompakter — Positionen auf dem Bogen bleiben (%) */
+  .sf-squad :deep(.rsq-item) {
+    width: 76px;
+    height: 76px;
+  }
+
+  .sf-squad :deep(.rsq-badge) {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sf-squad :deep(.rsq-badge img) {
+    width: 15px;
+    height: 15px;
+  }
+
+  .sf-squad :deep(.rsq-cdpill) {
+    min-width: 28px;
+    font-size: 0.6rem;
   }
 }
 
