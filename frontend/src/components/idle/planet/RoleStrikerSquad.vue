@@ -39,6 +39,7 @@
       :key="s.role"
       class="rsq-item"
       :class="{
+        'rsq-item--windup': windupRoles.has(s.role) && !firingRoles.has(s.role),
         'rsq-item--firing': firingRoles.has(s.role),
         'rsq-item--hit': hitRoles.has(s.role),
         'rsq-item--down': s.isDown,
@@ -53,62 +54,72 @@
       :title="`${s.champion} (${roleLabel(s.role)}) – click to change`"
       @click="openRolePicker(s.role)"
     >
-      <div class="rsq-portrait">
-        <img
-          :src="s.img"
-          :alt="s.champion"
-          @error="($event.target as HTMLImageElement).style.display = 'none'"
-        />
-      </div>
-      <svg class="rsq-ring" viewBox="0 0 100 100">
-        <circle class="rsq-ring-track" cx="50" cy="50" r="44" />
-        <circle
-          class="rsq-ring-arc"
-          :class="{ 'rsq-ring-arc--full': s.secs === 0 && !s.isDown }"
-          cx="50"
-          cy="50"
-          r="44"
-          :style="{ strokeDasharray: s.dash }"
-        />
-      </svg>
-
-      <!-- "Attack!"-Callout im Moment des Abschusses -->
-      <Transition name="rsq-atk">
-        <span v-if="attackLabelRoles.has(s.role)" class="rsq-atk">Attack!</span>
-      </Transition>
-
-      <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
-      <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
-
-      <!-- Cooldown-Pill am unteren Portraitrand -->
-      <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs === 0 }">
-        {{ s.secs }}s
-      </span>
-
-      <!-- Info-Plate: HP-Bar + Champion-Name + Rolle · Schaden -->
-      <div class="rsq-plate">
-        <div class="rsq-hp-track" :class="{ 'rsq-hp-track--low': s.hpPct < 25 }">
-          <div class="rsq-hp-ghost" :style="{ width: s.hpPct + '%' }" />
-          <div
-            class="rsq-hp-fill"
-            :class="{ 'rsq-hp-fill--low': s.hpPct < 25 }"
-            :style="{ width: s.hpPct + '%' }"
+      <!-- Die komplette Rollen-Einheit (Portrait, Ring, Pill, Plate, Label,
+           Muzzle) schnipst beim Angriff als Ganzes — Projektile und Floats
+           bleiben außerhalb und fliegen unabhängig -->
+      <div class="rsq-unit">
+        <div class="rsq-portrait">
+          <img
+            :src="s.img"
+            :alt="s.champion"
+            @error="($event.target as HTMLImageElement).style.display = 'none'"
           />
-          <div class="rsq-hp-ticks" />
         </div>
-        <span class="rsq-hp-text" :class="{ 'rsq-hp-text--down': s.isDown }">
-          {{ s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}` }}
-        </span>
-        <span class="rsq-plate-name">{{ s.champion }}</span>
-        <span class="rsq-plate-stats">{{ s.attackDamage }} dmg</span>
-      </div>
+        <svg class="rsq-ring" viewBox="0 0 100 100">
+          <circle class="rsq-ring-track" cx="50" cy="50" r="44" />
+          <circle
+            class="rsq-ring-arc"
+            :class="{ 'rsq-ring-arc--full': s.secs === 0 && !s.isDown }"
+            cx="50"
+            cy="50"
+            r="44"
+            :style="{ strokeDasharray: s.dash }"
+          />
+        </svg>
 
-      <!-- Mündungsblitz Richtung Boss beim Abschuss -->
-      <span
-        v-if="firingRoles.has(s.role)"
-        class="rsq-muzzle"
-        :style="{ '--mx': s.mx + 'px', '--my': s.my + 'px' }"
-      />
+        <!-- "Attack!"-Callout über die gesamte Choreografie (Windup + Schnips) -->
+        <Transition name="rsq-atk">
+          <span
+            v-if="windupRoles.has(s.role) || firingRoles.has(s.role)"
+            class="rsq-atk"
+          >
+            Attack!
+          </span>
+        </Transition>
+
+        <!-- Down-Overlay: Champion liegt am Boden bis zum Revive -->
+        <span v-if="s.isDown" class="rsq-down">{{ s.downSecs }}s</span>
+
+        <!-- Cooldown-Pill am unteren Portraitrand -->
+        <span v-if="!s.isDown" class="rsq-cdpill" :class="{ 'rsq-cdpill--ready': s.secs === 0 }">
+          {{ s.secs }}s
+        </span>
+
+        <!-- Info-Plate: HP-Bar + Champion-Name + Rolle · Schaden -->
+        <div class="rsq-plate">
+          <div class="rsq-hp-track" :class="{ 'rsq-hp-track--low': s.hpPct < 25 }">
+            <div class="rsq-hp-ghost" :style="{ width: s.hpPct + '%' }" />
+            <div
+              class="rsq-hp-fill"
+              :class="{ 'rsq-hp-fill--low': s.hpPct < 25 }"
+              :style="{ width: s.hpPct + '%' }"
+            />
+            <div class="rsq-hp-ticks" />
+          </div>
+          <span class="rsq-hp-text" :class="{ 'rsq-hp-text--down': s.isDown }">
+            {{ s.isDown ? `DOWN ${s.downSecs}s` : `${s.hpCur} / ${s.hpMax}` }}
+          </span>
+          <span class="rsq-plate-name">{{ s.champion }}</span>
+          <span class="rsq-plate-stats">{{ s.attackDamage }} dmg</span>
+        </div>
+
+        <!-- Mündungsblitz Richtung Boss beim Abschuss -->
+        <span
+          v-if="muzzleRoles.has(s.role)"
+          class="rsq-muzzle"
+          :style="{ '--mx': s.mx + 'px', '--my': s.my + 'px' }"
+        />
+      </div>
 
       <!-- Projektile + Impacts dieses Strikers -->
       <template v-for="shot in shotsFor(s.role)" :key="shot.id">
@@ -174,7 +185,8 @@ import {
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
   STRIKER_ATTACK_LUNGE_PX,
-  STRIKER_ATTACK_LABEL_MS,
+  STRIKER_ATTACK_WINDUP_MS,
+  STRIKER_MUZZLE_MS,
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_RAGE_DMG_MULT,
@@ -337,9 +349,13 @@ interface StrikerShot {
 }
 
 const shots = ref<StrikerShot[]>([])
+// windupRoles = Ausholphase: startet SOFORT, wenn die Pill "0s" zeigt (ein
+// Store-Tick vor dem Feuern) — die Einheit zieht sich zurück und hält gespannt
+const windupRoles = reactive(new Set<ChampionRole>())
+// firingRoles = Schnips-Phase beim Store-Feuer: Vorstoß → Impact → Rückkehr
 const firingRoles = reactive(new Set<ChampionRole>())
-// "Attack!"-Callout über dem Portrait — etwas länger sichtbar als der Blitz
-const attackLabelRoles = reactive(new Set<ChampionRole>())
+// muzzleRoles = Mündungsblitz im Schnips-Moment
+const muzzleRoles = reactive(new Set<ChampionRole>())
 let shotId = 0
 const timeouts: number[] = []
 
@@ -352,12 +368,15 @@ function later(ms: number, fn: () => void) {
 }
 
 function fireProjectile(role: ChampionRole, value: number) {
-  const id = ++shotId
-  shots.value.push({ id, role, value, phase: 'fly' })
+  // Windup endet, Schnips übernimmt nahtlos aus der gehaltenen Position
+  windupRoles.delete(role)
   firingRoles.add(role)
   later(STRIKER_FIRE_FLASH_MS, () => firingRoles.delete(role))
-  attackLabelRoles.add(role)
-  later(STRIKER_ATTACK_LABEL_MS, () => attackLabelRoles.delete(role))
+
+  const id = ++shotId
+  shots.value.push({ id, role, value, phase: 'fly' })
+  muzzleRoles.add(role)
+  later(STRIKER_MUZZLE_MS, () => muzzleRoles.delete(role))
   later(STRIKER_PROJECTILE_FLIGHT_MS, () => {
     const shot = shots.value.find((s) => s.id === id)
     if (shot) shot.phase = 'hit'
@@ -377,6 +396,29 @@ for (const role of SQUAD_ROLES) {
   watch(
     () => roleBehaviorStore.roleAttackShots[role],
     () => fireProjectile(role, ROLE_STAR_ATTACKS[role].damage),
+  )
+}
+
+// Ausholen startet exakt mit der "0s"-Anzeige: der Cooldown betritt seine
+// letzte Store-Sekunde — ein Tick später feuert der Store den Angriff
+for (const role of SQUAD_ROLES) {
+  watch(
+    () => roleBehaviorStore.roleAttackCooldownMs[role],
+    (ms) => {
+      const champion = battleStore.headerSlots[SLOT_BY_ROLE[role]]
+      const isDown = roleBehaviorStore.championDownUntil[role] > Date.now()
+      if (
+        ms > 0 &&
+        ms <= STRIKER_ATTACK_WINDUP_MS &&
+        champion &&
+        !isDown &&
+        hasLiveBoss.value
+      ) {
+        windupRoles.add(role)
+      } else if (ms > STRIKER_ATTACK_WINDUP_MS) {
+        windupRoles.delete(role)
+      }
+    },
   )
 }
 
@@ -631,38 +673,64 @@ onUnmounted(() => {
   }
 }
 
-/* Abschuss: Lunge Richtung Boss → Recoil → abklingender Shake — nur transform
-   (GPU); das Aufglühen übernimmt der Mündungsblitz */
-.rsq-item--firing .rsq-portrait {
-  animation: rsq-attack 0.5s cubic-bezier(0.3, 0, 0.4, 1);
+/* Die Rollen-Einheit: füllt das Item, alle Kinder positionieren sich wie
+   bisher — beim Angriff bewegt sich die gesamte Einheit gemeinsam */
+.rsq-unit {
+  position: absolute;
+  inset: 0;
+}
+
+/* Zweiphasige Angriffs-Choreografie, nur transform (GPU):
+   Phase 1 — Windup (1s = STRIKER_ATTACK_WINDUP_MS): startet exakt mit der
+   "0s"-Anzeige; die Einheit zieht sich weich vom Boss zurück und hält die
+   Spannung am Umkehrpunkt (fill: both friert die Endpose ein).
+   Phase 2 — Schnips (0.55s = STRIKER_FIRE_FLASH_MS): beim Store-Feuer
+   übernimmt der Vorstoß nahtlos aus der gehaltenen Pose. */
+.rsq-item--windup .rsq-unit {
+  animation: rsq-windup 1s cubic-bezier(0.35, 0, 0.25, 1) both;
+  will-change: transform;
+}
+
+@keyframes rsq-windup {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  /* zügig weit zurückziehen … */
+  62% {
+    transform: translate(calc(var(--ax, 0px) * -0.88), calc(var(--ay, 0px) * -0.88)) scale(1.06);
+  }
+  /* … und die letzten Pixel ganz langsam in den Umkehrpunkt kriechen —
+     wirkt wie angespanntes Zittern vor dem Schuss */
+  100% {
+    transform: translate(calc(var(--ax, 0px) * -0.95), calc(var(--ay, 0px) * -0.95)) scale(1.09);
+  }
+}
+
+.rsq-item--firing .rsq-unit {
+  animation: rsq-attack 0.55s linear both;
   will-change: transform;
 }
 
 @keyframes rsq-attack {
+  /* Start = gehaltene Windup-Pose → kein Sprung beim Phasenwechsel */
   0% {
-    transform: translate(0, 0) scale(1);
+    transform: translate(calc(var(--ax, 0px) * -0.95), calc(var(--ay, 0px) * -0.95)) scale(1.09);
+    animation-timing-function: cubic-bezier(0.7, 0, 0.3, 1);
   }
-  /* Ausholen: kurz vom Boss weg */
-  10% {
-    transform: translate(calc(var(--ax, 0px) * -0.35), calc(var(--ay, 0px) * -0.35)) scale(0.94);
-  }
-  /* Vorstoß Richtung Boss */
+  /* Schnips: hart beschleunigt Richtung Boss vorschnellen */
   26% {
-    transform: translate(var(--ax, 0px), var(--ay, 0px)) scale(1.1);
+    transform: translate(calc(var(--ax, 0px) * 1.18), calc(var(--ay, 0px) * 1.18)) scale(1.12);
+    animation-timing-function: cubic-bezier(0.2, 0.9, 0.35, 1);
   }
-  /* Recoil über die Mitte hinaus */
-  44% {
-    transform: translate(calc(var(--ax, 0px) * -0.28), calc(var(--ay, 0px) * -0.28)) scale(0.98);
+  /* Impact-Halt: weich abbremsen, kurz vorne stehen — der Schlag sitzt */
+  46% {
+    transform: translate(calc(var(--ax, 0px) * 1.02), calc(var(--ay, 0px) * 1.02)) scale(1.05);
+    animation-timing-function: cubic-bezier(0.35, 0, 0.3, 1);
   }
-  /* abklingender Shake */
-  58% {
-    transform: translate(calc(var(--ax, 0px) * 0.14), calc(var(--ay, 0px) * 0.14)) scale(1.02);
-  }
-  72% {
-    transform: translate(calc(var(--ax, 0px) * -0.07), calc(var(--ay, 0px) * -0.07)) scale(1);
-  }
-  86% {
-    transform: translate(calc(var(--ax, 0px) * 0.03), calc(var(--ay, 0px) * 0.03)) scale(1);
+  /* zurückfedern — einmal minimal über die Ruhelage hinaus */
+  78% {
+    transform: translate(calc(var(--ax, 0px) * -0.08), calc(var(--ay, 0px) * -0.08)) scale(0.99);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.45, 1);
   }
   100% {
     transform: translate(0, 0) scale(1);
@@ -1359,7 +1427,8 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rsq-item--firing .rsq-portrait,
+  .rsq-item--windup .rsq-unit,
+  .rsq-item--firing .rsq-unit,
   .rsq-item--hit .rsq-portrait,
   .rsq-item--hit .rsq-portrait::after,
   .rsq-hp-fill--low,
