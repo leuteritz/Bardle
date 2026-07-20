@@ -7,7 +7,11 @@
       class="tbh-turret"
       :style="{ left: `${TURRET_BATTERY_X_PCT}%`, top: `${turretYPct(i)}%` }"
     >
-      <div class="tbh-planet" :class="{ 'tbh-planet--firing': volleyFlash }">
+      <div
+        class="tbh-planet"
+        :class="{ 'tbh-planet--firing': volleyFlash }"
+        :style="lungeStyle(i)"
+      >
         <img :src="turretImage" alt="" draggable="false" />
         <!-- Cooldown-Ring: füllt sich über den 1s-Salventakt, Restart pro Salve -->
         <svg
@@ -76,7 +80,8 @@ import {
   TURRET_BATTERY_Y_PCT,
   TURRET_BATTERY_SPACING_PCT,
   TURRET_BATTERY_MAX_VISIBLE,
-  ORBITAL_SUPPORT_FLOAT_MS,
+  TURRET_DAMAGE_FLOAT_MS,
+  TURRET_ATTACK_LUNGE_PX,
   STRIKER_BOSS_ANCHOR_X_PCT,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STRIKER_PROJECTILE_IMPACT_FRAC,
@@ -126,6 +131,19 @@ const captionYPct = computed(() => {
   const count = visibleTurrets.value.length + (hiddenCount.value > 0 ? 1 : 0)
   return TURRET_BATTERY_Y_PCT + ((count - 1) / 2) * TURRET_BATTERY_SPACING_PCT + 9
 })
+
+// Schnips-Vektor pro Turret: Einheitsvektor Richtung Boss × Lunge-Distanz —
+// jeder Planet stößt entlang seiner eigenen Flugachse vor
+function lungeStyle(index: number): Record<string, string> {
+  const { w, h } = arenaSize.value
+  const dx = ((STRIKER_BOSS_ANCHOR_X_PCT - TURRET_BATTERY_X_PCT) / 100) * w
+  const dy = ((STRIKER_BOSS_ANCHOR_Y_PCT - turretYPct(index)) / 100) * h
+  const dist = Math.hypot(dx, dy) || 1
+  return {
+    '--ax': `${Math.round((dx / dist) * TURRET_ATTACK_LUNGE_PX)}px`,
+    '--ay': `${Math.round((dy / dist) * TURRET_ATTACK_LUNGE_PX)}px`,
+  }
+}
 
 // Arena-Größe für die Kometen-Flugvektoren
 const rootEl = ref<HTMLDivElement | null>(null)
@@ -185,7 +203,7 @@ function fireVolley() {
   later(TURRET_PROJECTILE_FLIGHT_MS, () => {
     if (!bossAlive.value) return
     floats.value.push({ id: groupId, value: totalDps.value })
-    later(ORBITAL_SUPPORT_FLOAT_MS, () => {
+    later(TURRET_DAMAGE_FLOAT_MS, () => {
       floats.value = floats.value.filter((f) => f.id !== groupId)
     })
   })
@@ -256,20 +274,35 @@ onUnmounted(() => {
     drop-shadow(0 3px 6px rgba(0, 0, 0, 0.8));
 }
 
-/* Abschuss-Puls beim Salvenstart */
-.tbh-planet--firing img {
-  animation: tbh-fire-pulse 0.45s cubic-bezier(0.2, 1.2, 0.4, 1);
+/* Schnips beim Salvenstart: kurz vom Boss weg ausholen, dann samt Ring
+   Richtung Boss vorschnellen und federnd zurück — wie die Striker */
+.tbh-planet--firing {
+  animation: tbh-snap 0.5s linear;
+  will-change: transform;
 }
 
-@keyframes tbh-fire-pulse {
+@keyframes tbh-snap {
   0% {
-    transform: scale(1);
+    transform: translate(0, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
   }
-  35% {
-    transform: scale(1.16);
+  /* Ausholen: vom Boss weg, leicht aufgeladen */
+  24% {
+    transform: translate(calc(var(--ax, 0px) * -0.7), calc(var(--ay, 0px) * -0.7)) scale(1.06);
+    animation-timing-function: cubic-bezier(0.7, 0, 0.25, 1);
+  }
+  /* Schnips: Richtung Boss vorschnellen */
+  48% {
+    transform: translate(var(--ax, 0px), var(--ay, 0px)) scale(1.14);
+    animation-timing-function: cubic-bezier(0.25, 0.8, 0.35, 1);
+  }
+  /* weich abbremsen und zurückfedern */
+  72% {
+    transform: translate(calc(var(--ax, 0px) * -0.1), calc(var(--ay, 0px) * -0.1)) scale(0.99);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.45, 1);
   }
   100% {
-    transform: scale(1);
+    transform: translate(0, 0) scale(1);
   }
 }
 
@@ -430,7 +463,7 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tbh-planet--firing img,
+  .tbh-planet--firing,
   .tbh-comet,
   .tbh-pop-enter-active {
     animation: none;

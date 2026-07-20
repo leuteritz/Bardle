@@ -892,15 +892,11 @@ export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X 
 export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
 
-// Orbital Support — passive-DPS visualization in the Star Fight Modal
-export const ORBITAL_SUPPORT_FLIGHT_MS = 420 // comet travel time from support planet to boss
-export const ORBITAL_SUPPORT_FLOAT_MS = 1000 // lifetime of the golden passive-damage float
-export const ORBITAL_SUPPORT_X_PCT = 13 // support planet anchor X (% arena width)
-export const ORBITAL_SUPPORT_Y_PCT = 38 // support planet anchor Y (% arena height)
-
 // Turret Battery — turret-planet volleys in the Star Fight Modal, synced with
 // the idle-orbit turret shots via planetBossStore.turretVolleyCounter
 export const TURRET_PROJECTILE_FLIGHT_MS = 420 // turret comet travel time to the boss
+export const TURRET_DAMAGE_FLOAT_MS = 1000 // lifetime of the turret damage float at the boss
+export const TURRET_ATTACK_LUNGE_PX = 16 // how far a turret planet snaps toward the boss on volley
 export const TURRET_BATTERY_X_PCT = 87 // battery column anchor X (% arena width)
 export const TURRET_BATTERY_Y_PCT = 38 // battery column center Y (% arena height)
 export const TURRET_BATTERY_SPACING_PCT = 13 // vertical spacing between turret entries (% arena height)
