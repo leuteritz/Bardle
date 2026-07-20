@@ -907,12 +907,19 @@ export const TURRET_DAMAGE_FLOAT_MS = 1000 // lifetime of the turret damage floa
 export const TURRET_ATTACK_LUNGE_PX = 16 // how far a turret planet snaps toward the boss on volley
 export const TURRET_CD_TICK_MS = 100 // UI refresh of the turret cooldown pill (sub-second display)
 export const BOSS_TURRET_ATTACK_DPS = 3 // boss dmg/s dealt to each turret planet while it fights
-// 6 feste Anker: Planet-Slots 1–3 flankieren links, Slots 4–6 rechts — jeder
-// Turret sitzt immer an der Position seines Slots
-export const TURRET_BATTERY_LEFT_X_PCT = 13 // left flank column X (% arena width, slots 1–3)
-export const TURRET_BATTERY_RIGHT_X_PCT = 87 // right flank column X (% arena width, slots 4–6)
-export const TURRET_BATTERY_Y_PCT = 38 // column center Y (% arena height)
-export const TURRET_BATTERY_SPACING_PCT = 14 // vertical spacing between the 3 rows (% arena height)
+// 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
+// Striker-Halbkreis): Slots 1–3 auf der linken Bogenhälfte, 4–6 rechts —
+// jeder Turret sitzt immer an der Position seines Slots
+export const TURRET_ARC_RX_PCT = 37 // horizontal semi-axis of the turret arc (% arena width)
+export const TURRET_ARC_RY_PCT = 28 // vertical semi-axis of the turret arc (% arena height)
+export const TURRET_ARC_CENTER_Y_PCT = 38 // arc center as % of arena height (boss level)
+export const TURRET_ARC_ROW_ANGLE_DEG = 30 // angular spacing of the 3 rows from the horizontal axis
+// Gestrichelte Guide-Linien (Turret-Bogen + Striker-Halbkreis) laufen über die
+// äußersten Slots hinaus weiter, bis sie die zentrale Planeten-Silhouette
+// erreichen — so wirkt es, als schlössen sie sich hinter dem Planeten
+export const ARC_GUIDE_PLANET_RADIUS_FRAC = 0.42 // planet silhouette radius as fraction of min(arena w, h)
+export const ARC_GUIDE_MAX_EXTEND_DEG = 80 // safety cap for extending a guide past its outermost slot
+export const ARC_GUIDE_STEP_DEG = 1 // angular resolution of the planet-edge search
 
 /** Visual radius of the sun in pixels. All ORBIT_TIERS dimensions scale relative to this value. */
 export const SUN_RADIUS = 80

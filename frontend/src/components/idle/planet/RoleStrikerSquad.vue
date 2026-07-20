@@ -1,7 +1,10 @@
 <template>
   <div ref="rootEl" class="rsq" aria-hidden="true">
-    <!-- Halbkreis-Führungslinie hinter den Strikern -->
-    <div class="rsq-arc-guide" :style="arcGuideStyle" />
+    <!-- Halbkreis-Führungslinie hinter den Strikern — beidseitig bis an die
+         Planeten-Silhouette verlängert, als schlösse sie sich dahinter -->
+    <svg class="rsq-arc-guide" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path :d="arcGuidePath" pathLength="400" vector-effect="non-scaling-stroke" />
+    </svg>
 
     <!-- Unbesetzte Rollen: Geister-Platzhalter auf derselben Arc-Position —
          Klick öffnet den Team-Tab mit dem passenden Rollen-Slot -->
@@ -188,6 +191,7 @@ import {
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
+import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -327,13 +331,24 @@ const vacantSlots = computed(() =>
   }),
 )
 
-// Halbkreis-Führungslinie (Ellipse, oberer Teil ausgeblendet) — reine %-Maße
-const arcGuideStyle = computed(() => ({
-  width: `${STRIKER_ARC_RX_PCT * 2}%`,
-  height: `${STRIKER_ARC_RY_PCT * 2}%`,
-  left: `${50 - STRIKER_ARC_RX_PCT}%`,
-  top: `${STRIKER_ARC_CENTER_Y_PCT - STRIKER_ARC_RY_PCT}%`,
-}))
+// Halbkreis-Führungslinie: unterer Ellipsenbogen durch alle Striker, an
+// beiden Enden über Top/Support hinaus verlängert, bis die Linie die
+// Planeten-Silhouette erreicht — gleicher Look wie die Turret-Guide
+const STRIKER_GUIDE_ELLIPSE: ArcGuideEllipse = {
+  rxPct: STRIKER_ARC_RX_PCT,
+  ryPct: STRIKER_ARC_RY_PCT,
+  centerYPct: STRIKER_ARC_CENTER_Y_PCT,
+}
+
+const arcGuidePath = computed(() => {
+  const { w, h } = arenaSize.value
+  // links über Top (150°) hinaus aufwärts, rechts über Support (30°) hinaus
+  const endL = guideEndAngleDeg(STRIKER_ARC_ANGLES.top, 1, STRIKER_GUIDE_ELLIPSE, w, h)
+  const endR = guideEndAngleDeg(STRIKER_ARC_ANGLES.support, -1, STRIKER_GUIDE_ELLIPSE, w, h)
+  const p1 = ellipsePointPct(endL, STRIKER_GUIDE_ELLIPSE)
+  const p2 = ellipsePointPct(endR, STRIKER_GUIDE_ELLIPSE)
+  return `M ${p1.x} ${p1.y} A ${STRIKER_ARC_RX_PCT} ${STRIKER_ARC_RY_PCT} 0 1 0 ${p2.x} ${p2.y}`
+})
 
 // ── Projektile: Striker → Boss, dann Impact-Burst + Schadenszahl ─────────
 interface StrikerShot {
@@ -515,14 +530,22 @@ onUnmounted(() => {
   contain: layout style paint;
 }
 
-/* ── Halbkreis-Führungslinie — verbindet die Striker optisch ─────────────── */
+/* ── Halbkreis-Führungslinie — verbindet die Striker optisch, gleicher Look
+   wie die Turret-Guide (.tbh-arc-guide) ──────────────────────────────────── */
 .rsq-arc-guide {
   position: absolute;
-  border: 1px dashed rgba(232, 192, 64, 0.22);
-  border-radius: 50%;
-  /* nur der untere Bogen: oberen Teil ausblenden */
-  -webkit-mask: linear-gradient(to bottom, transparent 0 26%, #000 44%);
-  mask: linear-gradient(to bottom, transparent 0 26%, #000 44%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.rsq-arc-guide path {
+  fill: none;
+  stroke: rgba(232, 192, 64, 0.22);
+  stroke-width: 1;
+  /* mit pathLength="400" ≈ gleiche Dash-Optik wie 1px dashed border */
+  stroke-dasharray: 1 1;
 }
 
 .rsq-item {

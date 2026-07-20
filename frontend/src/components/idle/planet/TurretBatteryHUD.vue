@@ -1,5 +1,12 @@
 <template>
   <div v-if="turrets.length > 0 && bossAlive" ref="rootEl" class="tbh" aria-hidden="true">
+    <!-- Gestrichelte Führungslinie im Stil der Striker-Arc-Guide: ein runder
+         Ellipsenbogen um den Boss, auf dem alle 6 Slot-Anker liegen.
+         pathLength normiert die Dash-Länge unabhängig von der Arena-Größe. -->
+    <svg class="tbh-arc-guide" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path :d="guidePath" pathLength="400" vector-effect="non-scaling-stroke" />
+    </svg>
+
     <!-- Turrets an ihren festen Slot-Ankern: Slot 1–3 links, Slot 4–6 rechts -->
     <div
       v-for="t in turrets"
@@ -80,16 +87,17 @@ import {
 } from '@/stores/planetShopStore'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
 import TurretCdPill from '@/components/idle/planet/TurretCdPill.vue'
+import { guideEndAngleDeg, ellipsePointPct, type ArcGuideEllipse } from '@/utils/arcGuide'
 import { useRoleBehaviorStore } from '@/stores/roleBehaviorStore'
 import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,
   CHAMPION_HIT_FLASH_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
-  TURRET_BATTERY_LEFT_X_PCT,
-  TURRET_BATTERY_RIGHT_X_PCT,
-  TURRET_BATTERY_Y_PCT,
-  TURRET_BATTERY_SPACING_PCT,
+  TURRET_ARC_RX_PCT,
+  TURRET_ARC_RY_PCT,
+  TURRET_ARC_CENTER_Y_PCT,
+  TURRET_ARC_ROW_ANGLE_DEG,
   TURRET_DAMAGE_FLOAT_MS,
   TURRET_ATTACK_LUNGE_PX,
   STRIKER_BOSS_ANCHOR_X_PCT,
@@ -103,6 +111,14 @@ const roleBehaviorStore = useRoleBehaviorStore()
 
 const turretImage = PLANET_ROLES.turret_planet.image
 const turretColor = PLANET_ROLES.turret_planet.color
+
+// Slot-Winkel auf dem Ellipsenbogen (Striker-Konvention: 0° = rechts,
+// 90° = unten): linke Reihen um 180° gefächert, rechte um 0°/360° — Reihe 0
+// sitzt oben, Reihe 2 unten, die mittlere exakt auf der Horizontalen
+function turretArcAngleDeg(isLeft: boolean, row: number): number {
+  const off = (row - 1) * TURRET_ARC_ROW_ANGLE_DEG
+  return isLeft ? 180 - off : off
+}
 
 const bossAlive = computed(() => {
   const boss = bossStore.activeBoss
@@ -121,8 +137,9 @@ interface TurretEntry {
   yPct: number
 }
 
-// Feste Slot-Anker: Slot 1–3 → linke Flanke (Reihe 0–2), Slot 4–6 → rechte
-// Flanke (Reihe 0–2) — die Position spiegelt immer den belegten Planet-Slot
+// Feste Slot-Anker auf dem Ellipsenbogen: Slot 1–3 → linke Bogenhälfte
+// (Reihe 0–2), Slot 4–6 → rechte — die Position spiegelt immer den belegten
+// Planet-Slot; alle Anker liegen exakt auf der gestrichelten Führungslinie
 const turrets = computed<TurretEntry[]>(() =>
   planetShopStore.purchasedSlots
     .filter((s) => s.role === 'turret_planet')
@@ -130,6 +147,7 @@ const turrets = computed<TurretEntry[]>(() =>
       const slotNum = parseInt(s.id.replace('slot_', ''), 10)
       const isLeft = slotNum <= 3
       const row = (slotNum - 1) % 3
+      const rad = (turretArcAngleDeg(isLeft, row) * Math.PI) / 180
       const mul = s.jungleBuff?.active ? s.jungleBuff.multiplier : 1
       const hpCur = s.currentHp ?? PLANET_SLOT_MAX_HP
       const hpMax = s.maxHp ?? PLANET_SLOT_MAX_HP
@@ -144,8 +162,9 @@ const turrets = computed<TurretEntry[]>(() =>
           Math.round(
             PLANET_ROLES.turret_planet.bonusPerSlot * planetLevelBonusMultiplier(s.level) * mul * 10,
           ) / 10,
-        xPct: isLeft ? TURRET_BATTERY_LEFT_X_PCT : TURRET_BATTERY_RIGHT_X_PCT,
-        yPct: TURRET_BATTERY_Y_PCT + (row - 1) * TURRET_BATTERY_SPACING_PCT,
+        xPct: Math.round((50 + Math.cos(rad) * TURRET_ARC_RX_PCT) * 10) / 10,
+        yPct:
+          Math.round((TURRET_ARC_CENTER_Y_PCT + Math.sin(rad) * TURRET_ARC_RY_PCT) * 10) / 10,
       }
     }),
 )
@@ -173,6 +192,26 @@ watch(
 const rootEl = ref<HTMLDivElement | null>(null)
 const arenaSize = ref({ w: 0, h: 0 })
 let resizeObserver: ResizeObserver | null = null
+
+// Führungslinie: EIN durchgehender Ellipsenbogen um den Boss — von den
+// untersten Slots aus beidseitig bis an die Planeten-Silhouette verlängert,
+// als liefe die Linie hinter dem Planeten weiter und schlösse sich dort
+const TURRET_GUIDE_ELLIPSE: ArcGuideEllipse = {
+  rxPct: TURRET_ARC_RX_PCT,
+  ryPct: TURRET_ARC_RY_PCT,
+  centerYPct: TURRET_ARC_CENTER_Y_PCT,
+}
+
+const guidePath = computed(() => {
+  const { w, h } = arenaSize.value
+  // beide Enden wandern vom untersten Slot einwärts Richtung 90° (untere
+  // Mitte), bis sie den Planeten treffen
+  const endL = guideEndAngleDeg(turretArcAngleDeg(true, 2), -1, TURRET_GUIDE_ELLIPSE, w, h)
+  const endR = guideEndAngleDeg(turretArcAngleDeg(false, 2), 1, TURRET_GUIDE_ELLIPSE, w, h)
+  const p1 = ellipsePointPct(endL, TURRET_GUIDE_ELLIPSE)
+  const p2 = ellipsePointPct(endR, TURRET_GUIDE_ELLIPSE)
+  return `M ${p1.x} ${p1.y} A ${TURRET_ARC_RX_PCT} ${TURRET_ARC_RY_PCT} 0 1 1 ${p2.x} ${p2.y}`
+})
 
 // ── Cooldown-Ringe auf EINEM Canvas — ein Draw-Pass pro Frame statt sechs
 // dauerhaft repaintender SVG-dasharray-Animationen ────────────────────────
@@ -367,6 +406,23 @@ onUnmounted(() => {
   /* Skaliert mit der Viewport-Höhe — auf 1080p ≈ 72px, auf Laptops ≈ 58px.
      Muss mit planetPx in drawRings() übereinstimmen (54 / 7vh / 76) */
   --tbh-size: clamp(54px, 7vh, 76px);
+}
+
+/* ── Führungslinie — gleicher Look wie .rsq-arc-guide der Striker ────────── */
+.tbh-arc-guide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tbh-arc-guide path {
+  fill: none;
+  stroke: rgba(232, 192, 64, 0.22);
+  stroke-width: 1;
+  /* mit pathLength="400" ≈ gleiche Dash-Optik wie 1px dashed border */
+  stroke-dasharray: 1 1;
 }
 
 /* ── Turret-Eintrag: Planet + Ring + Info-Plate ──────────────────────────
