@@ -133,6 +133,7 @@ export const RESOURCE_STAR_PLANET_COUNT = 3 // max. planets per flyby
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
 export const STAR_FIGHT_TIMER_WARNING_S = 20 // star-fight timer turns amber below this
 export const STAR_FIGHT_TIMER_CRITICAL_S = 10 // star-fight timer turns red + pulses below this
+export const BATTLE_RETURN_TICK_MS = 250 // countdown refresh of the "Return to Battle" button
 
 // Planet Boss Fight
 export const BOSS_BASE_HP = 200
@@ -2788,6 +2789,7 @@ export const USED_GAME_ICONS = new Set<string>([
   'game-icons:dead-head', // Deaths stat
   'game-icons:three-friends', // Assists stat
   'game-icons:podium-winner', // Win/Loss stat (BottomScoreboard)
+  'game-icons:sword-spin', // "Return to Battle" floating button (BattleReturnButton)
 ])
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────

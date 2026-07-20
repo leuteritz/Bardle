@@ -21,6 +21,7 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import NewChampionsTip from '@/components/ui/NewChampionsTip.vue'
 import ExpeditionReadyTip from '@/components/ui/ExpeditionReadyTip.vue'
+import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 
 const props = defineProps<{
   selectedRole: number | null
@@ -251,6 +252,10 @@ watch(
         </template>
       </RpgBadgeTooltip>
     </button>
+
+    <!-- Rücksprung zum laufenden StarFight — mittig zwischen Shop + Expedition -->
+    <BattleReturnButton />
+
     <button class="sigil-action sigil-action--expedition" @click.stop="emit('open-expedition')">
       <Icon icon="game-icons:campfire" width="26" height="26" class="sigil-action-icon" />
       Expedition

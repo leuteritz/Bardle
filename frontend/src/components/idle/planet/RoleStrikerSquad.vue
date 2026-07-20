@@ -176,10 +176,14 @@ const bossStore = usePlanetBossStore()
 const starGroupStore = useStarGroupStore()
 const uiStore = useUiStore()
 
-// Klick auf einen Vacant-Slot: Fight-Modal schließen (liegt über dem
+// Klick auf einen Rollen-Slot: Fight-Modal schließen (liegt über dem
 // Profil-Menü) und den Team-Tab direkt mit dem Rollen-Slot öffnen — gleiches
-// Verhalten wie die Champion-Karten im Command Panel
+// Verhalten wie die Champion-Karten im Command Panel. Die Stern-ID wird als
+// Battle-Return-Kontext gemerkt, damit das Profil-Modal einen großen
+// "Return to Battle"-Button für den direkten Rücksprung anzeigen kann.
 function openRolePicker(role: ChampionRole) {
+  const starId = starGroupStore.activeFightStarId
+  if (starId) uiStore.setBattleReturn(starId)
   starGroupStore.closeStarFightModal()
   uiStore.requestOpenRolesTab(SLOT_BY_ROLE[role])
 }

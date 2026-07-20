@@ -16,6 +16,10 @@ export const useUiStore = defineStore('ui', () => {
   const planetActiveSlotId = ref<string | null>(null)
   const pendingChampionSearch = ref('')
   const hoveredChampionRole = ref<ChampionRole | null>(null)
+  // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
+  // heraus geöffnet wurde — solange gesetzt (und der Stern lebt), zeigt das
+  // Profil-Modal einen "Return to Battle"-Button für den Rücksprung
+  const battleReturnStarId = ref<string | null>(null)
   const hoveredChampionSlotIndex = ref<number | null>(null)
   const hoveredPlanetSlotId = ref<string | null>(null)
 
@@ -61,6 +65,14 @@ export const useUiStore = defineStore('ui', () => {
     pendingChampionSearch.value = ''
   }
 
+  function setBattleReturn(starId: string) {
+    battleReturnStarId.value = starId
+  }
+
+  function clearBattleReturn() {
+    battleReturnStarId.value = null
+  }
+
   function setHoveredChampionRole(role: ChampionRole | null) {
     hoveredChampionRole.value = role
   }
@@ -81,6 +93,9 @@ export const useUiStore = defineStore('ui', () => {
     rolesOpenPending,
     planetActiveSlotId,
     pendingChampionSearch,
+    battleReturnStarId,
+    setBattleReturn,
+    clearBattleReturn,
     hoveredChampionRole,
     hoveredChampionSlotIndex,
     hoveredPlanetSlotId,
