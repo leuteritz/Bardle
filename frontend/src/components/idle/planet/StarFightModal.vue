@@ -144,33 +144,47 @@
                   </div>
                 </div>
 
-                <div
-                  class="sf-hp-track"
-                  :class="{
-                    'sf-hp-track--critical': hpPct < 25,
-                    'sf-hp-track--galaxy': isGalaxyBoss,
-                  }"
-                >
-                <div class="sf-hp-ghost" :style="{ width: hpPct + '%' }" />
-                <div
-                  class="sf-hp-fill"
-                  :class="{
-                    'sf-hp-fill--galaxy': isGalaxyBoss,
-                    'sf-hp-fill--low': hpPct < 50 && !isGalaxyBoss,
-                    'sf-hp-fill--critical': hpPct < 25,
-                  }"
-                  :style="{ width: hpPct + '%' }"
-                />
-                <div class="sf-hp-ticks" aria-hidden="true" />
-                <div class="sf-hp-inline">
-                  <span class="sf-hp-numbers">
-                    {{ formatNumber(activeBoss.currentHP) }}
-                    <span class="sf-hp-sep">/</span>
-                    {{ formatNumber(activeBoss.maxHP) }}
-                  </span>
-                  <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
-                    {{ Math.round(hpPct) }}%
-                  </span>
+                <div class="sf-hp-center">
+                  <div
+                    class="sf-hp-track"
+                    :class="{
+                      'sf-hp-track--critical': hpPct < 25,
+                      'sf-hp-track--galaxy': isGalaxyBoss,
+                    }"
+                  >
+                    <div class="sf-hp-ghost" :style="{ width: hpPct + '%' }" />
+                    <div
+                      class="sf-hp-fill"
+                      :class="{
+                        'sf-hp-fill--galaxy': isGalaxyBoss,
+                        'sf-hp-fill--low': hpPct < 50 && !isGalaxyBoss,
+                        'sf-hp-fill--critical': hpPct < 25,
+                      }"
+                      :style="{ width: hpPct + '%' }"
+                    />
+                    <div class="sf-hp-ticks" aria-hidden="true" />
+                    <div class="sf-hp-inline">
+                      <span class="sf-hp-numbers">
+                        {{ formatNumber(activeBoss.currentHP) }}
+                        <span class="sf-hp-sep">/</span>
+                        {{ formatNumber(activeBoss.maxHP) }}
+                      </span>
+                      <span class="sf-hp-pct" :class="{ 'sf-hp-pct--critical': hpPct < 25 }">
+                        {{ Math.round(hpPct) }}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Threat-Anzeige: hängt direkt an der Unterkante der
+                       HP-Leiste — der Glut-Schleier tritt aus ihr aus -->
+                  <div
+                    class="sf-atk-emblem"
+                    :class="{ 'sf-atk-emblem--rage': rageActive }"
+                    title="Damage per second dealt to every champion and turret"
+                  >
+                    <span class="sf-atk-num">{{ bossDps }}</span>
+                    <span class="sf-atk-unit">dmg<span class="sf-atk-per">/s</span></span>
+                    <span v-if="rageActive" class="sf-atk-mult">×{{ BOSS_RAGE_DMG_MULT }}</span>
                   </div>
                 </div>
 
@@ -202,17 +216,6 @@
                 </div>
               </div>
 
-              <!-- Threat-Anzeige: Boss-Schaden pro Sekunde — rahmenlos, weich
-                   in den Hintergrund verschmolzen, bei Rage kippt sie in Crimson -->
-              <div
-                class="sf-atk-emblem"
-                :class="{ 'sf-atk-emblem--rage': rageActive }"
-                title="Damage per second dealt to every champion and turret"
-              >
-                <span class="sf-atk-num">{{ bossDps }}</span>
-                <span class="sf-atk-unit">dmg<span class="sf-atk-per">/s</span></span>
-                <span v-if="rageActive" class="sf-atk-mult">×{{ BOSS_RAGE_DMG_MULT }}</span>
-              </div>
             </div>
 
 
@@ -1001,7 +1004,9 @@ function emberStyle(i: number): Record<string, string> {
   gap: 16px;
 }
 
-.sf-hp-row .sf-hp-track {
+/* Mittelspalte der HP-Zeile: Leiste + daran hängende Threat-Anzeige */
+.sf-hp-row .sf-hp-center {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
@@ -1440,17 +1445,22 @@ function emberStyle(i: number): Record<string, string> {
    Kein Rahmen, kein hartes Panel: ein weicher radialer Glut-Schleier hinter
    der Zahl bindet sie an den Hintergrund; bei Rage kippt alles in Crimson */
 .sf-atk-emblem {
-  position: relative;
+  /* hängt exakt an der Unterkante der HP-Leiste (−2px Überlappung) — der
+     oben verankerte Glut-Schleier tritt direkt aus der Leiste aus */
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: baseline;
   gap: 9px;
-  margin-top: 4px;
-  padding: 6px 26px 8px;
+  padding: 7px 26px 8px;
+  white-space: nowrap;
   background: radial-gradient(
-    ellipse 100% 130% at 50% 50%,
+    ellipse 100% 160% at 50% 0%,
     rgba(50, 16, 4, 0.6) 0%,
     rgba(30, 10, 2, 0.35) 45%,
-    transparent 72%
+    transparent 75%
   );
   pointer-events: auto;
 }
@@ -1524,10 +1534,10 @@ function emberStyle(i: number): Record<string, string> {
 /* Rage: der Glut-Schleier und die Linie kippen in Crimson */
 .sf-atk-emblem--rage {
   background: radial-gradient(
-    ellipse 100% 130% at 50% 50%,
+    ellipse 100% 160% at 50% 0%,
     rgba(60, 6, 20, 0.6) 0%,
     rgba(36, 4, 12, 0.35) 45%,
-    transparent 72%
+    transparent 75%
   );
 }
 
@@ -1846,9 +1856,8 @@ function emberStyle(i: number): Record<string, string> {
   }
 
   .sf-atk-emblem {
-    margin-top: 2px;
     gap: 7px;
-    padding: 4px 20px 6px;
+    padding: 5px 20px 6px;
   }
 
   .sf-atk-num {
