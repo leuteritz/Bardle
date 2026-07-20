@@ -907,6 +907,10 @@ export const TURRET_DAMAGE_FLOAT_MS = 1000 // lifetime of the turret damage floa
 export const TURRET_ATTACK_LUNGE_PX = 16 // how far a turret planet snaps toward the boss on volley
 export const TURRET_CD_TICK_MS = 100 // UI refresh of the turret cooldown pill (sub-second display)
 export const BOSS_TURRET_ATTACK_DPS = 3 // boss dmg/s dealt to each turret planet while it fights
+// Boss-Schockwelle: der Ring läuft sichtbar bis über Champions + Turrets;
+// Hit-Flash und Damage-Labels feuern erst, wenn der Ring die Ziele erreicht
+export const BOSS_WAVE_TRAVEL_MS = 800 // full lifetime of the expanding boss shockwave ring
+export const BOSS_WAVE_HIT_DELAY_MS = 500 // moment the ring reaches champions/turrets → hit flash + damage labels
 // 6 feste Anker auf einem Ellipsenbogen um den Boss (Gegenstück zum unteren
 // Striker-Halbkreis): Slots 1–3 auf der linken Bogenhälfte, 4–6 rechts —
 // jeder Turret sitzt immer an der Position seines Slots

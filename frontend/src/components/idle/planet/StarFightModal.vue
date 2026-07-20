@@ -81,8 +81,13 @@
                  geteilten Takt mit den Idle-Orbit-Schüssen ── -->
             <TurretBatteryHUD v-if="activeBoss" />
 
-            <!-- Boss-Angriff: Schockwelle vom Boss Richtung Champion-Halbkreis -->
-            <span v-if="bossStrikeActive" class="sf-boss-wave" />
+            <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
+                 bis über Champions und Turret-Planeten hinausläuft -->
+            <template v-if="bossStrikeActive">
+              <span class="sf-boss-flare" />
+              <span class="sf-boss-wave" />
+              <span class="sf-boss-wave sf-boss-wave--echo" />
+            </template>
 
             <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
             <div v-if="activeBoss" class="sf-hud">
@@ -234,7 +239,7 @@ import {
   STAR_FIGHT_TIMER_CRITICAL_S,
   BOSS_CHAMPION_ATTACK_DPS,
   BOSS_GALAXY_CHAMPION_DPS_MULT,
-  CHAMPION_HIT_FLASH_MS,
+  BOSS_WAVE_TRAVEL_MS,
   BOSS_HIT_REACT_MS,
   STRIKER_PROJECTILE_FLIGHT_MS,
   BOSS_RAGE_DMG_MULT,
@@ -378,7 +383,7 @@ watch(
       bossStrikeActive.value = true
       bossStrikeTimeout = setTimeout(() => {
         bossStrikeActive.value = false
-      }, CHAMPION_HIT_FLASH_MS)
+      }, BOSS_WAVE_TRAVEL_MS)
     })
   },
 )
@@ -683,7 +688,8 @@ function emberStyle(i: number): Record<string, string> {
   .sf-rage-ring--active .sf-rage-ring-secs,
   .sf-arena-wrap--strike :deep(.boss-img),
   .sf-arena-wrap--hit :deep(.boss-img),
-  .sf-boss-wave {
+  .sf-boss-wave,
+  .sf-boss-flare {
     animation: none;
   }
 }
@@ -1338,33 +1344,88 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* Schockwelle am Boss-Anker (50 % / 41 % — STRIKER_BOSS_ANCHOR_*_PCT) */
+/* Schockwelle am Boss-Anker (50 % / 41 % — STRIKER_BOSS_ANCHOR_*_PCT).
+   Arena-relativ dimensioniert: Endradius ≈ 50 % der Arena-Breite — der Ring
+   überstreicht Champions UND Turret-Planeten auf jeder Auflösung. Bei ~62 %
+   der Laufzeit (= BOSS_WAVE_HIT_DELAY_MS von BOSS_WAVE_TRAVEL_MS) passiert
+   der Ring die Ziele — dort feuern Hit-Flash + Damage-Labels. */
 .sf-boss-wave {
   position: absolute;
   left: 50%;
   top: 41%;
-  width: 130px;
-  height: 130px;
-  margin: -65px 0 0 -65px;
+  width: 9%;
+  aspect-ratio: 1;
   border-radius: 50%;
-  border: 2px solid rgba(255, 70, 40, 0.85);
+  border: 3px solid rgba(255, 70, 40, 0.9);
   box-shadow:
-    0 0 18px rgba(255, 60, 30, 0.6),
-    inset 0 0 14px rgba(255, 90, 40, 0.35);
+    0 0 26px rgba(255, 60, 30, 0.65),
+    inset 0 0 18px rgba(255, 90, 40, 0.4);
+  opacity: 0;
   pointer-events: none;
   z-index: 3;
-  animation: sf-boss-wave-expand 0.45s ease-out forwards;
+  animation: sf-boss-wave-expand 0.8s cubic-bezier(0.16, 0.6, 0.4, 1) both;
   will-change: transform, opacity;
+}
+
+/* Nachzügler-Ring: dünner, minimal verzögert — gibt der Welle Tiefe */
+.sf-boss-wave--echo {
+  border-width: 2px;
+  border-color: rgba(255, 130, 60, 0.7);
+  box-shadow: 0 0 16px rgba(255, 90, 30, 0.45);
+  animation-delay: 0.1s;
 }
 
 @keyframes sf-boss-wave-expand {
   0% {
-    opacity: 0.9;
-    transform: scale(0.4);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.12);
+  }
+  10% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(7.6);
   }
   100% {
     opacity: 0;
-    transform: scale(4.6);
+    transform: translate(-50%, -50%) scale(11);
+  }
+}
+
+/* Abschuss-Blitz am Boss: kurzer heißer Kern im Moment des Slams */
+.sf-boss-flare {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  width: 12%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 170, 100, 0.85) 0%,
+    rgba(255, 70, 30, 0.45) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  animation: sf-boss-flare 0.35s ease-out both;
+  will-change: transform, opacity;
+}
+
+@keyframes sf-boss-flare {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
   }
 }
 

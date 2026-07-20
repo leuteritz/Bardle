@@ -188,6 +188,7 @@ import {
   BOSS_GALAXY_CHAMPION_DPS_MULT,
   BOSS_RAGE_DMG_MULT,
   CHAMPION_HIT_FLASH_MS,
+  BOSS_WAVE_HIT_DELAY_MS,
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import StrikerInfoPlate from '@/components/idle/planet/StrikerInfoPlate.vue'
@@ -465,15 +466,14 @@ function pushFloat(role: ChampionRole, value: number, kind: StrikerFloat['kind']
 }
 
 // ── Boss-Treffer: Hit-Flash + rote Schadenszahl am Striker ───────────────
+// Um BOSS_WAVE_HIT_DELAY_MS verzögert: Flash + Damage-Label feuern genau in
+// dem Moment, in dem die Boss-Schockwelle die Striker optisch erreicht
 const hitRoles = reactive(new Set<ChampionRole>())
 
 for (const role of SQUAD_ROLES) {
   watch(
     () => roleBehaviorStore.championHitAt[role],
     () => {
-      hitRoles.delete(role)
-      hitRoles.add(role)
-      later(CHAMPION_HIT_FLASH_MS, () => hitRoles.delete(role))
       const boss = bossStore.activeBoss
       const raging = roleBehaviorStore.rageActiveUntil > Date.now()
       const dmg = Math.round(
@@ -481,7 +481,12 @@ for (const role of SQUAD_ROLES) {
           (boss?.isGalaxyBoss ? BOSS_GALAXY_CHAMPION_DPS_MULT : 1) *
           (raging ? BOSS_RAGE_DMG_MULT : 1),
       )
-      pushFloat(role, dmg, 'hit')
+      later(BOSS_WAVE_HIT_DELAY_MS, () => {
+        hitRoles.delete(role)
+        hitRoles.add(role)
+        later(CHAMPION_HIT_FLASH_MS, () => hitRoles.delete(role))
+        pushFloat(role, dmg, 'hit')
+      })
     },
   )
 }
@@ -1267,9 +1272,71 @@ onUnmounted(() => {
   text-shadow: 0 0 12px #a030ff;
 }
 
+/* Boss-Treffer: großer Crit-Slam statt kleinem Float — die Zahl knallt von
+   oben rein, überschwingt und schwebt dann glühend davon */
 .rsq-float--hit {
-  color: #ff7060;
-  text-shadow: 0 0 12px #e03020;
+  top: -26px;
+  font-size: 1.7rem;
+  color: #ff8a70;
+  -webkit-text-stroke: 4px rgba(30, 2, 0, 0.92);
+  text-shadow:
+    0 0 14px rgba(255, 60, 30, 0.95),
+    0 0 34px rgba(230, 40, 20, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+/* Ring-Burst hinter der Zahl im Moment des Einschlags */
+.rsq-float--hit::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 80, 40, 0.75);
+  box-shadow: 0 0 16px rgba(255, 60, 30, 0.5);
+  animation: rsq-hit-ring 0.5s ease-out forwards;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes rsq-hit-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+/* Slam-Choreografie überschreibt das sanfte rsq-float-up der DoT-Ticks */
+.rsq-pop-enter-active.rsq-float--hit {
+  animation: rsq-hit-slam 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes rsq-hit-slam {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(2.6) rotate(-7deg);
+  }
+  16% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(2px) scale(0.92) rotate(3deg);
+  }
+  28% {
+    transform: translateX(-50%) translateY(-2px) scale(1.14) rotate(-1deg);
+  }
+  45% {
+    transform: translateX(-50%) translateY(-14px) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-62px) scale(0.85);
+  }
 }
 
 .rsq-pop-enter-active {
@@ -1312,6 +1379,7 @@ onUnmounted(() => {
   .rsq-spark,
   .rsq-impact-num,
   .rsq-pop-enter-active,
+  .rsq-float--hit::before,
   .rsq-atk-enter-active,
   .rsq-vacant-emblem,
   .rsq-vacant-ring,

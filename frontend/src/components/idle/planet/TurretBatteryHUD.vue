@@ -93,6 +93,7 @@ import {
   GAME_TICK_INTERVAL_MS,
   PLANET_SLOT_MAX_HP,
   CHAMPION_HIT_FLASH_MS,
+  BOSS_WAVE_HIT_DELAY_MS,
   TURRET_PROJECTILE_FLIGHT_MS,
   TURRET_ARC_RX_PCT,
   TURRET_ARC_RY_PCT,
@@ -174,15 +175,19 @@ const hitFlash = ref(false)
 const hitSeq = ref(0)
 const hitDmg = computed(() => roleBehaviorStore.turretHitDmg)
 
+// Um BOSS_WAVE_HIT_DELAY_MS verzögert — Flash + Damage-Label treffen die
+// Planeten genau, wenn die Boss-Schockwelle sie optisch erreicht
 watch(
   () => roleBehaviorStore.turretHitAt,
   () => {
-    hitSeq.value++
-    hitFlash.value = false
-    requestAnimationFrame(() => {
-      hitFlash.value = true
-      later(CHAMPION_HIT_FLASH_MS, () => {
-        hitFlash.value = false
+    later(BOSS_WAVE_HIT_DELAY_MS, () => {
+      hitSeq.value++
+      hitFlash.value = false
+      requestAnimationFrame(() => {
+        hitFlash.value = true
+        later(CHAMPION_HIT_FLASH_MS, () => {
+          hitFlash.value = false
+        })
       })
     })
   },
@@ -578,36 +583,74 @@ onUnmounted(() => {
   }
 }
 
-/* Roter Schadens-Float über dem Planeten, wenn der Boss trifft */
+/* Boss-Treffer: großer Crit-Slam über dem Planeten — gleiche Choreografie
+   wie der Champion-Hit-Float (rsq-float--hit) */
 .tbh-hitfloat {
   position: absolute;
   left: 50%;
-  top: -12px;
+  top: -22px;
   transform: translateX(-50%);
-  font-size: 0.9rem;
+  font-size: 1.5rem;
   font-weight: 900;
-  color: #ff7060;
-  -webkit-text-stroke: 3px rgba(0, 0, 0, 0.9);
+  color: #ff8a70;
+  -webkit-text-stroke: 4px rgba(30, 2, 0, 0.92);
   paint-order: stroke fill;
   white-space: nowrap;
-  text-shadow: 0 0 12px #e03020;
-  animation: tbh-hitfloat-up 1s ease-out forwards;
+  text-shadow:
+    0 0 14px rgba(255, 60, 30, 0.95),
+    0 0 34px rgba(230, 40, 20, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.95);
+  animation: tbh-hitfloat-slam 1.1s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
   will-change: transform, opacity;
   z-index: 3;
 }
 
-@keyframes tbh-hitfloat-up {
+/* Ring-Burst hinter der Zahl im Moment des Einschlags */
+.tbh-hitfloat::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 80, 40, 0.75);
+  box-shadow: 0 0 16px rgba(255, 60, 30, 0.5);
+  animation: tbh-hit-ring 0.5s ease-out forwards;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes tbh-hit-ring {
   0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(6px) scale(0.8);
-  }
-  16% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px) scale(1.12);
+    opacity: 0.9;
+    transform: scale(0.3);
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-38px) scale(0.8);
+    transform: scale(1.8);
+  }
+}
+
+@keyframes tbh-hitfloat-slam {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(2.4) rotate(-6deg);
+  }
+  16% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(2px) scale(0.92) rotate(3deg);
+  }
+  28% {
+    transform: translateX(-50%) translateY(-2px) scale(1.12) rotate(-1deg);
+  }
+  45% {
+    transform: translateX(-50%) translateY(-12px) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-48px) scale(0.85);
   }
 }
 
@@ -647,6 +690,7 @@ onUnmounted(() => {
   .tbh-unit--firing,
   .tbh-planet--hit::after,
   .tbh-hitfloat,
+  .tbh-hitfloat::before,
   .tbh-impact-num,
   .tbh-comet {
     animation: none;
