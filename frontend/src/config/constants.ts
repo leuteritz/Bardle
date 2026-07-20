@@ -878,14 +878,18 @@ export const STRIKER_ATTACK_LUNGE_PX = 22 // how far the portrait lunges toward 
 // Halbkreis unterhalb des Boss-Bilds: Winkel in Grad (0° = rechts, 90° = unten)
 // je Rolle — Top ganz links, Mid unten Mitte, Support rechts. Alle Maße in %
 // der Arena, damit das Layout auf Full-HD wie auf 2K identisch sitzt.
+// Winkel so gewählt, dass die fünf Striker HORIZONTAL gleichmäßig verteilt
+// sind (x = 24 / 37 / 50 / 63 / 76 % — je 13 % Abstand), mid exakt unten
+// mittig; der schmalere Bogen hält die Außenrollen klar von den
+// Turret-Battery-Spalten (13 % / 87 %) frei
 export const STRIKER_ARC_ANGLES: Record<ChampionRole, number> = {
-  top: 191,
-  jungle: 141,
+  top: 150,
+  jungle: 116,
   mid: 90,
-  adc: 39,
-  support: -11,
+  adc: 64,
+  support: 30,
 }
-export const STRIKER_ARC_RX_PCT = 36 // horizontal semi-axis of the striker arc (% arena width)
+export const STRIKER_ARC_RX_PCT = 30 // horizontal semi-axis of the striker arc (% arena width)
 export const STRIKER_ARC_RY_PCT = 10 // vertical semi-axis of the striker arc (% arena height)
 export const STRIKER_ARC_CENTER_Y_PCT = 67 // arc center as % of arena height (below boss + loot banner)
 export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
